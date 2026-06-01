@@ -1005,6 +1005,7 @@
       "pushFailed": "Push başarısız: {{error}}",
       "pullSuccess": "Pull başarılı",
       "pullFailed": "Pull başarısız: {{error}}",
+      "fetchFailed": "Fetch başarısız: {{error}}",
       "publishSuccess": "Publish başarılı",
       "publishFailed": "Publish başarısız: {{error}}",
       "uncommittedChanges": "Commit edilmemiş değişiklikleriniz var",

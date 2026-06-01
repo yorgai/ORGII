@@ -66,7 +66,7 @@ export function useEditorStatusBarGit({
   }, [isMultiRoot, repoName, workspaceName, workspaceFolders]);
 
   const repoPath = currentRepo?.path || currentRepo?.fs_uri;
-  const { push, pull, publish, isLoading } = useGitOperations({
+  const { push, pull, fetch, publish, isLoading } = useGitOperations({
     repoId: selectedRepoId || undefined,
     repoPath,
   });
@@ -91,7 +91,6 @@ export function useEditorStatusBarGit({
 
   const [syncInProgress, setSyncInProgress] = useState(false);
 
-  // Pull is unconditional — the local behind count may be stale when the remote has new commits we haven't fetched yet.
   const handleSync = useCallback(async () => {
     if (needsPublish) {
       await handlePublish();
@@ -100,12 +99,22 @@ export function useEditorStatusBarGit({
 
     setSyncInProgress(true);
     try {
-      const pullResult = await pull();
-      if (!pullResult.success) {
-        Message.error(
-          t("git.messages.pullFailed", { error: pullResult.errorType })
-        );
-        return;
+      if (behindCount === 0) {
+        const fetchResult = await fetch();
+        if (!fetchResult.success) {
+          Message.error(
+            t("git.messages.fetchFailed", { error: fetchResult.errorType })
+          );
+          return;
+        }
+      } else {
+        const pullResult = await pull();
+        if (!pullResult.success) {
+          Message.error(
+            t("git.messages.pullFailed", { error: pullResult.errorType })
+          );
+          return;
+        }
       }
 
       if (aheadCount > 0) {
@@ -127,7 +136,16 @@ export function useEditorStatusBarGit({
     } finally {
       setSyncInProgress(false);
     }
-  }, [push, pull, behindCount, aheadCount, needsPublish, handlePublish, t]);
+  }, [
+    push,
+    pull,
+    fetch,
+    behindCount,
+    aheadCount,
+    needsPublish,
+    handlePublish,
+    t,
+  ]);
 
   const isPublishing = isLoading.publish;
   const isSyncBusy =
