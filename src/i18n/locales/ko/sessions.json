@@ -78,7 +78,17 @@
     "followLabel": "현재 Kanban",
     "view": {
       "kanban": "칸반",
+      "list": "List",
       "diary": "다이어리"
+    },
+    "list": {
+      "updated": "Updated",
+      "timeRange": "Time Range",
+      "started": "Started",
+      "lastUpdated": "Last Updated",
+      "agentModel": "Agent · Model",
+      "emptyTitle": "No sessions match these filters",
+      "emptyDescription": "Try a different status, Agent type, or time window."
     },
     "timeFilter": {
       "6h": "6h",
