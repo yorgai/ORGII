@@ -7,6 +7,8 @@ use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use tokio::sync::Mutex;
 
+use crate::intelligence::skills::builtin;
+
 use super::{map_err, merge_additional_dirs, ActiveAllowedDir, WorkspaceStateHandle};
 use crate::tools::impls::coding::action_router::ActionRouter;
 use crate::tools::names as tool_names;
@@ -198,6 +200,10 @@ impl Tool for ReadFileTool {
         let offset = optional_int(&params, "offset");
         let limit = optional_int(&params, "limit").map(|v| v.max(1) as usize);
 
+        if let Some(output) = read_embedded_builtin_skill(&raw_path, offset, limit)? {
+            return Ok(output);
+        }
+
         if let Some(ref router) = self.router {
             if router.should_route() {
                 if let Some(result) = router
@@ -300,6 +306,65 @@ fn format_file_unchanged_stub(path: &str, entry: &ReadCacheEntry) -> String {
     )
 }
 
+fn read_embedded_builtin_skill(
+    path: &str,
+    offset: Option<i64>,
+    limit: Option<usize>,
+) -> Result<Option<String>, ToolError> {
+    let Some(skill_name) = embedded_builtin_skill_name(path) else {
+        return Ok(None);
+    };
+    let content = builtin::load_builtin_skill(&skill_name).ok_or_else(|| {
+        ToolError::ExecutionFailed(format!("Built-in skill not found: {}", skill_name))
+    })?;
+    let resolved_path = PathBuf::from(format!("builtin://{}/SKILL.md", skill_name));
+    let result = crate::tool_infra::file::format_text_result(
+        content,
+        content.len() as u64,
+        0,
+        resolved_path,
+        offset,
+        limit,
+    )
+    .map_err(ToolError::ExecutionFailed)?;
+    let mut output = result.content;
+    if result.truncated || result.lines_read < result.total_lines {
+        output.push_str(&format!(
+            "\n\n[Showing lines {}-{} of {} total ({:.1} KB). \
+             Use offset and limit to read other sections.]",
+            result.start_line,
+            result.start_line + result.lines_read.saturating_sub(1),
+            result.total_lines,
+            result.total_bytes as f64 / 1024.0,
+        ));
+    }
+    Ok(Some(format!("[action: read_text]\n{}", output)))
+}
+
+fn embedded_builtin_skill_name(path: &str) -> Option<String> {
+    let trimmed = path.trim();
+    if let Some(without_scheme) = trimmed.strip_prefix("builtin://") {
+        return Some(
+            without_scheme
+                .strip_suffix("/SKILL.md")
+                .unwrap_or(without_scheme)
+                .to_string(),
+        );
+    }
+
+    let global_skills_dir = app_paths::global_skills_dir();
+    let skill_file = PathBuf::from(trimmed);
+    let skill_dir = skill_file.parent()?;
+    if skill_file.file_name().and_then(|name| name.to_str()) != Some("SKILL.md") {
+        return None;
+    }
+    if skill_dir.parent()? != global_skills_dir {
+        return None;
+    }
+    let skill_name = skill_dir.file_name()?.to_str()?;
+    builtin::load_builtin_skill(skill_name).map(|_| skill_name.to_string())
+}
+
 /// Classify a `read_file` result into a concrete action so the frontend can
 /// pick the right renderer without filename pattern matching.
 ///
@@ -349,6 +414,79 @@ mod tests {
     fn classify_read_action_defaults_to_text() {
         assert_eq!(classify_read_action("README.md", "hello"), "read_text");
         assert_eq!(classify_read_action("noext", ""), "read_text");
+    }
+
+    #[tokio::test]
+    async fn reads_embedded_builtin_skill_uri() {
+        let tool = ReadFileTool::new(None);
+        let output = tool
+            .execute(serde_json::json!({ "path": "builtin://create-orgii-agent/SKILL.md" }))
+            .await
+            .unwrap();
+
+        assert!(
+            output.contains("[action: read_text]"),
+            "output was: {output}"
+        );
+        assert!(
+            output.contains("create-orgii-agent"),
+            "output was: {output}"
+        );
+        assert!(
+            output.contains("agent-definitions.json"),
+            "output was: {output}"
+        );
+    }
+
+    #[tokio::test]
+    async fn embedded_builtin_skill_uri_supports_ranges() {
+        let tool = ReadFileTool::new(None);
+        let output = tool
+            .execute(serde_json::json!({
+                "path": "builtin://create-orgii-agent/SKILL.md",
+                "offset": 1,
+                "limit": 3
+            }))
+            .await
+            .unwrap();
+
+        assert!(output.contains("     1│---"), "output was: {output}");
+        assert!(output.contains("Showing lines 1-3"), "output was: {output}");
+    }
+
+    #[tokio::test]
+    async fn reads_embedded_builtin_skill_from_global_skill_path() {
+        let tool = ReadFileTool::new(None);
+        let path = app_paths::global_skills_dir()
+            .join("create-orgii-agent")
+            .join("SKILL.md");
+        let output = tool
+            .execute(serde_json::json!({ "path": path.to_string_lossy() }))
+            .await
+            .unwrap();
+
+        assert!(
+            output.contains("create-orgii-agent"),
+            "output was: {output}"
+        );
+        assert!(
+            output.contains("agent-definitions.json"),
+            "output was: {output}"
+        );
+    }
+
+    #[tokio::test]
+    async fn unknown_embedded_builtin_skill_errors_explicitly() {
+        let tool = ReadFileTool::new(None);
+        let err = tool
+            .execute(serde_json::json!({ "path": "builtin://missing-skill/SKILL.md" }))
+            .await
+            .unwrap_err();
+
+        assert!(
+            matches!(err, ToolError::ExecutionFailed(ref message) if message.contains("Built-in skill not found: missing-skill")),
+            "unexpected error: {err:?}"
+        );
     }
 
     #[tokio::test]
