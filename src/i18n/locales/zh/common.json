@@ -1005,6 +1005,7 @@
       "pushFailed": "Push failed: {{error}}",
       "pullSuccess": "Successfully pulled changes from remote",
       "pullFailed": "Pull failed: {{error}}",
+      "fetchFailed": "获取失败：{{error}}",
       "publishSuccess": "Successfully published branch to remote",
       "publishFailed": "Publish failed: {{error}}",
       "uncommittedChanges": "You have uncommitted changes",
