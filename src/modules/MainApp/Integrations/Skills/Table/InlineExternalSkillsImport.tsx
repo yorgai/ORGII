@@ -113,6 +113,7 @@ const InlineExternalSkillsImport: React.FC<InlineExternalSkillsImportProps> = ({
                 }}
                 emptyTitle={t("common:actions.noResults")}
                 noPx
+                searchHeaderClassName="-mx-4 w-[calc(100%+2rem)]"
                 className="table-settings-expanded-compact"
               />
             )}

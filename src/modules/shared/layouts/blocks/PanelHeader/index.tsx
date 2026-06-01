@@ -280,7 +280,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = memo(
     const displayIconElement = searchQuery ? undefined : iconElement;
     const isListVariant = variant === "list";
     const paddingClass = isListVariant ? "px-3" : "px-4";
-    const baseClasses = `flex h-10 flex-shrink-0 items-center gap-2 ${paddingClass}`;
+    const baseClasses = `relative z-30 flex h-10 flex-shrink-0 items-center gap-2 ${paddingClass}`;
     const borderClasses =
       borderBottom && !isListVariant ? "border-b border-border-2" : "";
     const contextSurface = useContext(PanelHeaderSurfaceContext);
