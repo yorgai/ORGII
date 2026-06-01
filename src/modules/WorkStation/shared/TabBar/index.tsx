@@ -338,7 +338,7 @@ export const TabBar: React.FC<TabBarProps> = memo(
           </div>
 
           <div
-            className="h-8 min-w-8 flex-1"
+            className="h-8 min-w-px flex-1"
             data-tauri-drag-region
             style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
             aria-hidden
