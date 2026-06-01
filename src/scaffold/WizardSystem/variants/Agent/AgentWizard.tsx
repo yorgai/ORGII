@@ -1,0 +1,563 @@
+/**
+ * AgentWizard — wizard for creating/configuring a custom agent.
+ *
+ * Used from:
+ * 1. The "Agents" tab (full-page via WizardShell)
+ * 2. The OrgWizard "+ Add agent" action (as a modal overlay)
+ *
+ * Tabs: Core | Models | Sub-Agents. Personality (`soulContent`) lives at the top of Core.
+ *
+ * Tools / MCP / Skills / Rules editors live on the per-agent detail view
+ * (where each section can be wired to the actual agent id). The wizard
+ * intentionally omits them so a custom-agent edit cannot silently rewrite
+ * OS or SDE Agent state via OS/SDE-bound hooks.
+ *
+ * State and form logic live in useAgentWizard.ts.
+ */
+import { type FC, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
+import Button from "@src/components/Button";
+import Input from "@src/components/Input";
+import NumberInput from "@src/components/NumberInput";
+import Select from "@src/components/Select";
+import Switch from "@src/components/Switch";
+import TabPill from "@src/components/TabPill";
+import Textarea from "@src/components/Textarea";
+import SubAgentsEditor from "@src/modules/MainApp/AgentOrgs/config/shared/SubAgentsEditor";
+import type { AgentDefinition } from "@src/modules/MainApp/AgentOrgs/types";
+import MarkdownEditor from "@src/modules/shared/components/MarkdownEditor";
+import {
+  SECTION_DESCRIPTION_CLASSES,
+  SECTION_GAP_CLASSES,
+  SECTION_LABEL_CLASSES,
+  SectionContainer,
+  SectionRow,
+} from "@src/modules/shared/layouts/SectionLayout";
+import { SECTION_CONTROL_STYLE } from "@src/modules/shared/layouts/SectionLayout/tokens";
+import {
+  DETAIL_PANEL_TOKENS,
+  InternalHeader,
+} from "@src/modules/shared/layouts/blocks";
+import {
+  WizardShell,
+  WizardStepLayout,
+} from "@src/scaffold/WizardSystem/primitives";
+
+import { useAgentWizard } from "./useAgentWizard";
+
+interface AgentWizardProps {
+  onSave: (agent: AgentDefinition) => void | Promise<void>;
+  onCancel: () => void;
+}
+
+function onChangeIfDefined<T>(setter: (val: T) => void) {
+  return (val: T | undefined) => {
+    if (val !== undefined) setter(val);
+  };
+}
+
+const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
+  const { t } = useTranslation("integrations");
+  const { t: tSettings } = useTranslation("settings");
+  const w = useAgentWizard(onSave);
+
+  const headerTabs = useMemo(
+    () => (
+      <TabPill
+        tabs={w.tabs}
+        activeTab={w.activeTab}
+        onChange={w.setActiveTab}
+        variant="simple"
+        fillWidth={false}
+        size="large"
+      />
+    ),
+    [w.tabs, w.activeTab, w.setActiveTab]
+  );
+
+  const afterHeader = useMemo(
+    () => (
+      <InternalHeader
+        contentPadding
+        className={DETAIL_PANEL_TOKENS.headerWidth}
+        tabs={headerTabs}
+      />
+    ),
+    [headerTabs]
+  );
+
+  const soulEditorTabs = useMemo(
+    () => (
+      <TabPill
+        tabs={w.editorTabs}
+        activeTab={w.soulTab}
+        onChange={w.setSoulTab}
+        variant="pill"
+        fillWidth={false}
+      />
+    ),
+    [w.editorTabs, w.soulTab, w.setSoulTab]
+  );
+
+  return (
+    <WizardShell
+      title={t("agentOrgs.agentWizard.title")}
+      onCancel={onCancel}
+      testId="agent-orgs-agent-wizard-root"
+      afterHeader={afterHeader}
+    >
+      <WizardStepLayout
+        currentStep={1}
+        totalSteps={1}
+        fillWidth
+        noPadding
+        onCancel={onCancel}
+        cancelTestId="agent-orgs-agent-wizard-cancel-button"
+        hideStepIndicator
+        actions={
+          <Button
+            variant="primary"
+            size="small"
+            disabled={!w.canCreate}
+            data-testid="agent-orgs-agent-wizard-create-button"
+            onClick={w.handleCreate}
+          >
+            {t("common:actions.create")}
+          </Button>
+        }
+      >
+        {w.activeTab === "core" && (
+          <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
+            <div className={DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop}>
+              <div className={SECTION_GAP_CLASSES}>
+                <SectionContainer>
+                  <div className="flex flex-col gap-2 py-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className={SECTION_LABEL_CLASSES}>
+                          {tSettings("sharedAgentConfig.personality.label")}
+                        </div>
+                        <div className={SECTION_DESCRIPTION_CLASSES}>
+                          {tSettings(
+                            "sharedAgentConfig.personality.description"
+                          )}
+                        </div>
+                      </div>
+                      {soulEditorTabs}
+                    </div>
+                    <MarkdownEditor
+                      value={w.soulContent}
+                      onChange={w.setSoulContent}
+                      dataTestId="agent-orgs-agent-wizard-soul-editor"
+                      hideHeader
+                      activeTab={w.soulTab}
+                      onTabChange={w.setSoulTab}
+                    />
+                  </div>
+                </SectionContainer>
+
+                <SectionContainer>
+                  <SectionRow
+                    label={t("agentOrgs.agentWizard.nameLabel")}
+                    description={t("agentOrgs.agentWizard.nameDesc")}
+                  >
+                    <Input
+                      value={w.agentName}
+                      onChange={w.setAgentName}
+                      placeholder={t("agentOrgs.agentWizard.namePlaceholder")}
+                      data-testid="agent-orgs-agent-wizard-name-input"
+                      size="default"
+                      autoFocus
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                    />
+                  </SectionRow>
+                  <SectionRow
+                    label={t("agentOrgs.agentWizard.descriptionLabel")}
+                    description={t("agentOrgs.agentWizard.descriptionDesc")}
+                    layout="vertical"
+                  >
+                    <Textarea
+                      value={w.description}
+                      onChange={w.setDescription}
+                      placeholder={t(
+                        "agentOrgs.agentWizard.descriptionPlaceholder"
+                      )}
+                      autoSize={{ minRows: 3, maxRows: 6 }}
+                    />
+                  </SectionRow>
+                </SectionContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {w.activeTab === "models" && (
+          <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
+            <div className={DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop}>
+              <div className={SECTION_GAP_CLASSES}>
+                <SectionContainer>
+                  <SectionRow
+                    label={tSettings("sharedAgentConfig.contextWindow")}
+                    description={
+                      w.isCustomContextWindow
+                        ? tSettings("sharedAgentConfig.contextWindowCustomDesc")
+                        : tSettings("sharedAgentConfig.contextWindowAuto")
+                    }
+                  >
+                    <Select
+                      value={w.isCustomContextWindow ? "custom" : "auto"}
+                      options={w.contextWindowOptions}
+                      onChange={(val) =>
+                        w.setContextWindow(val === "auto" ? 0 : 128000)
+                      }
+                      style={SECTION_CONTROL_STYLE}
+                    />
+                  </SectionRow>
+                  {w.isCustomContextWindow && (
+                    <SectionRow label="" description="" indent>
+                      <NumberInput
+                        value={w.contextWindow}
+                        onChange={onChangeIfDefined(w.setContextWindow)}
+                        min={16000}
+                        step={1000}
+                        controlsPosition="sides"
+                        style={SECTION_CONTROL_STYLE}
+                      />
+                    </SectionRow>
+                  )}
+                  <SectionRow
+                    label={tSettings("sharedAgentConfig.maxTokens")}
+                    description={tSettings("sharedAgentConfig.maxTokensDesc")}
+                  >
+                    <NumberInput
+                      value={w.maxTokens}
+                      onChange={onChangeIfDefined(w.setMaxTokens)}
+                      min={256}
+                      max={65536}
+                      step={256}
+                      controlsPosition="sides"
+                      style={SECTION_CONTROL_STYLE}
+                    />
+                  </SectionRow>
+                  <SectionRow
+                    label={tSettings("sharedAgentConfig.temperature")}
+                    description={tSettings("sharedAgentConfig.temperatureDesc")}
+                  >
+                    <NumberInput
+                      value={w.temperature}
+                      onChange={onChangeIfDefined(w.setTemperature)}
+                      min={0}
+                      max={2}
+                      step={0.1}
+                      controlsPosition="sides"
+                      style={SECTION_CONTROL_STYLE}
+                    />
+                  </SectionRow>
+                </SectionContainer>
+                <SectionContainer>
+                  <SectionRow
+                    label={tSettings("sharedAgentConfig.compactionEnabled")}
+                    description={tSettings(
+                      "sharedAgentConfig.compactionEnabledDesc"
+                    )}
+                  >
+                    <Switch
+                      checked={w.compactionEnabled}
+                      onChange={w.setCompactionEnabled}
+                    />
+                  </SectionRow>
+                  {w.compactionEnabled && (
+                    <>
+                      <SectionRow
+                        label={tSettings(
+                          "sharedAgentConfig.compactionTriggerRatio"
+                        )}
+                        description={tSettings(
+                          "sharedAgentConfig.compactionTriggerRatioDesc"
+                        )}
+                        indent
+                      >
+                        <NumberInput
+                          value={w.compactionTriggerRatio}
+                          onChange={onChangeIfDefined(
+                            w.setCompactionTriggerRatio
+                          )}
+                          min={0.1}
+                          max={1.0}
+                          step={0.05}
+                          controlsPosition="sides"
+                          style={SECTION_CONTROL_STYLE}
+                        />
+                      </SectionRow>
+                      <SectionRow
+                        label={tSettings(
+                          "sharedAgentConfig.compactionKeepRatio"
+                        )}
+                        description={tSettings(
+                          "sharedAgentConfig.compactionKeepRatioDesc"
+                        )}
+                        indent
+                      >
+                        <NumberInput
+                          value={w.compactionKeepRatio}
+                          onChange={onChangeIfDefined(w.setCompactionKeepRatio)}
+                          min={0.1}
+                          max={0.9}
+                          step={0.05}
+                          controlsPosition="sides"
+                          style={SECTION_CONTROL_STYLE}
+                        />
+                      </SectionRow>
+                      <SectionRow
+                        label={tSettings("sharedAgentConfig.compactionModel")}
+                        description={tSettings(
+                          "sharedAgentConfig.compactionModelDescFallback"
+                        )}
+                        indent
+                      >
+                        <Input
+                          value={w.compactionModel}
+                          onChange={w.setCompactionModel}
+                          placeholder={tSettings(
+                            "sharedAgentConfig.compactionModelPlaceholder"
+                          )}
+                          style={SECTION_CONTROL_STYLE}
+                        />
+                      </SectionRow>
+                      <SectionRow
+                        label={tSettings(
+                          "sharedAgentConfig.compactionSummaryMaxTokens"
+                        )}
+                        description={tSettings(
+                          "sharedAgentConfig.compactionSummaryMaxTokensDesc"
+                        )}
+                        indent
+                      >
+                        <NumberInput
+                          value={w.compactionSummaryMaxTokens}
+                          onChange={onChangeIfDefined(
+                            w.setCompactionSummaryMaxTokens
+                          )}
+                          min={512}
+                          step={256}
+                          controlsPosition="sides"
+                          style={SECTION_CONTROL_STYLE}
+                        />
+                      </SectionRow>
+                      <SectionRow
+                        label={tSettings(
+                          "sharedAgentConfig.compactionMinMessages"
+                        )}
+                        description={tSettings(
+                          "sharedAgentConfig.compactionMinMessagesDesc"
+                        )}
+                        indent
+                      >
+                        <NumberInput
+                          value={w.compactionMinMessages}
+                          onChange={onChangeIfDefined(
+                            w.setCompactionMinMessages
+                          )}
+                          min={1}
+                          max={50}
+                          step={1}
+                          controlsPosition="sides"
+                          style={SECTION_CONTROL_STYLE}
+                        />
+                      </SectionRow>
+                      <SectionRow
+                        label={tSettings(
+                          "sharedAgentConfig.compactionFloorTokens"
+                        )}
+                        description={tSettings(
+                          "sharedAgentConfig.compactionFloorTokensDesc"
+                        )}
+                        indent
+                      >
+                        <NumberInput
+                          value={w.compactionFloorTokens}
+                          onChange={onChangeIfDefined(
+                            w.setCompactionFloorTokens
+                          )}
+                          min={4000}
+                          step={1000}
+                          controlsPosition="sides"
+                          style={SECTION_CONTROL_STYLE}
+                        />
+                      </SectionRow>
+                      <SectionRow
+                        label={tSettings(
+                          "sharedAgentConfig.compactionReservedSummaryTokens"
+                        )}
+                        description={tSettings(
+                          "sharedAgentConfig.compactionReservedSummaryTokensDesc"
+                        )}
+                        indent
+                      >
+                        <NumberInput
+                          value={w.compactionReservedSummaryTokens}
+                          onChange={onChangeIfDefined(
+                            w.setCompactionReservedSummaryTokens
+                          )}
+                          min={1000}
+                          step={1000}
+                          controlsPosition="sides"
+                          style={SECTION_CONTROL_STYLE}
+                        />
+                      </SectionRow>
+                      <SectionRow
+                        label={tSettings(
+                          "sharedAgentConfig.compactionBufferTokens"
+                        )}
+                        description={tSettings(
+                          "sharedAgentConfig.compactionBufferTokensDesc"
+                        )}
+                        indent
+                      >
+                        <NumberInput
+                          value={w.compactionBufferTokens}
+                          onChange={onChangeIfDefined(
+                            w.setCompactionBufferTokens
+                          )}
+                          min={0}
+                          step={1000}
+                          controlsPosition="sides"
+                          style={SECTION_CONTROL_STYLE}
+                        />
+                      </SectionRow>
+                    </>
+                  )}
+                </SectionContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {w.activeTab === "capabilities" && (
+          <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
+            <div className={DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop}>
+              <div className={SECTION_GAP_CLASSES}>
+                <SectionContainer>
+                  <div className="flex flex-col gap-2 py-3">
+                    <div className={SECTION_LABEL_CLASSES}>
+                      {tSettings("sharedAgentConfig.capabilities.title")}
+                    </div>
+                    <div className={SECTION_DESCRIPTION_CLASSES}>
+                      {tSettings("sharedAgentConfig.capabilities.description")}
+                    </div>
+                  </div>
+                  <SectionRow
+                    label={tSettings("sharedAgentConfig.capabilities.coding")}
+                    description={tSettings(
+                      "sharedAgentConfig.capabilities.codingDesc"
+                    )}
+                  >
+                    <Switch checked={w.capCoding} onChange={w.setCapCoding} />
+                  </SectionRow>
+                  {w.capCoding && (
+                    <SectionRow
+                      label={tSettings(
+                        "sharedAgentConfig.capabilities.codingModeSwitch"
+                      )}
+                      description={tSettings(
+                        "sharedAgentConfig.capabilities.codingModeSwitchDesc"
+                      )}
+                      indent
+                    >
+                      <Switch
+                        checked={w.capCodingModeSwitch}
+                        onChange={w.setCapCodingModeSwitch}
+                      />
+                    </SectionRow>
+                  )}
+                  <SectionRow
+                    label={tSettings("sharedAgentConfig.capabilities.desktop")}
+                    description={tSettings(
+                      "sharedAgentConfig.capabilities.desktopDesc"
+                    )}
+                  >
+                    <Switch checked={w.capDesktop} onChange={w.setCapDesktop} />
+                  </SectionRow>
+                  <SectionRow
+                    label={tSettings(
+                      "sharedAgentConfig.capabilities.browserExternal"
+                    )}
+                    description={tSettings(
+                      "sharedAgentConfig.capabilities.browserExternalDesc"
+                    )}
+                  >
+                    <Switch
+                      checked={w.capBrowserExternal}
+                      onChange={w.setCapBrowserExternal}
+                    />
+                  </SectionRow>
+                  <SectionRow
+                    label={tSettings(
+                      "sharedAgentConfig.capabilities.browserInternal"
+                    )}
+                    description={tSettings(
+                      "sharedAgentConfig.capabilities.browserInternalDesc"
+                    )}
+                  >
+                    <Switch
+                      checked={w.capBrowserInternal}
+                      onChange={w.setCapBrowserInternal}
+                    />
+                  </SectionRow>
+                  <SectionRow
+                    label={tSettings("sharedAgentConfig.capabilities.gateway")}
+                    description={tSettings(
+                      "sharedAgentConfig.capabilities.gatewayDesc"
+                    )}
+                  >
+                    <Switch checked={w.capGateway} onChange={w.setCapGateway} />
+                  </SectionRow>
+                  <SectionRow
+                    label={tSettings("sharedAgentConfig.capabilities.data")}
+                    description={tSettings(
+                      "sharedAgentConfig.capabilities.dataDesc"
+                    )}
+                  >
+                    <Switch checked={w.capData} onChange={w.setCapData} />
+                  </SectionRow>
+                  <SectionRow
+                    label={tSettings(
+                      "sharedAgentConfig.capabilities.management"
+                    )}
+                    description={tSettings(
+                      "sharedAgentConfig.capabilities.managementDesc"
+                    )}
+                  >
+                    <Switch
+                      checked={w.capManagement}
+                      onChange={w.setCapManagement}
+                    />
+                  </SectionRow>
+                </SectionContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {w.activeTab === "subagents" && (
+          <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
+            <div className={DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop}>
+              <SubAgentsEditor
+                subAgents={w.subAgents}
+                onChange={w.setSubAgents}
+                maxToolUseConcurrency={w.maxToolUseConcurrency}
+                onMaxToolUseConcurrencyChange={w.setMaxToolUseConcurrency}
+                t={t}
+              />
+            </div>
+          </div>
+        )}
+      </WizardStepLayout>
+    </WizardShell>
+  );
+};
+
+export default AgentWizard;

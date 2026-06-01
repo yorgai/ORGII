@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "welcome": {
+      "title": "Hoş Geldiniz",
+      "description": "ORGII ile başlayın"
+    },
+    "devPassport": {
+      "description": "Geliştirici kimliğiniz"
+    },
+    "github": {
+      "title": "GitHub",
+      "description": "Hesabınızı bağlayın"
+    },
+    "workspace": {
+      "title": "Proje",
+      "description": "Bir proje açın veya klonlayın"
+    },
+    "theme": {
+      "title": "Tema",
+      "description": "Görünümü özelleştirin"
+    },
+    "complete": {
+      "title": "Tamamlandı",
+      "description": "Başlamaya hazır"
+    }
+  },
+  "welcome": {
+    "title": "ORGII'a Hoş Geldiniz",
+    "description": "Birkaç hızlı adımda çalışma alanınızı yapılandıralım."
+  },
+  "devPassport": {
+    "title": "Dev Passport Kurulumu",
+    "description": "Her vibe mühendisinin bir kimliğe ihtiyacı var.",
+    "role": "Vibe Mühendisi",
+    "codeName": "Kod Adı",
+    "codeNamePlaceholder": "Kod adınızı girin...",
+    "randomNameTooltip": "Rastgele kod adı oluştur",
+    "avatar": "Profil resmi",
+    "selectImage": "Bir resim seçin",
+    "avatarHint": "Projelerdeki görsel kimliğiniz",
+    "generateButton": "Vibe Passport Oluştur",
+    "passportTitle": "Vibe Passport'unuz",
+    "passportWelcome": "Hoş geldiniz, {{name}}. Kimliğiniz hazır."
+  },
+  "github": {
+    "title": "GitHub'ı Bağla",
+    "description": "Depolara erişmek, commit oluşturmak ve pull request'leri doğrudan ORGII'dan yönetmek için GitHub hesabınızı bağlayın.",
+    "connectButton": "GitHub Hesabını Bağla",
+    "hint": "GitHub'ı daha sonra Ayarlar > Entegrasyonlar'dan da bağlayabilirsiniz"
+  },
+  "workspace": {
+    "title": "Bir Proje Açın",
+    "description": "Çalışmaya başlamak için yerel bir klasör açın veya bir depo klonlayın. ORGII, akıllı kod yardımı için kod tabanınızı otomatik olarak indeksleyecektir.",
+    "openFolder": "Klasör Aç",
+    "cloneRepo": "Depo Klonla",
+    "hint": "Bu adımı atlayabilir ve daha sonra bir proje açabilirsiniz"
+  },
+  "theme": {
+    "title": "Temanızı Seçin",
+    "description": "Tercihinize uygun bir tema seçin. Bunu istediğiniz zaman Ayarlar'dan değiştirebilirsiniz.",
+    "light": "Açık",
+    "dark": "Koyu"
+  },
+  "complete": {
+    "title": "Hazırsınız!",
+    "description": "Çalışma alanınız hazır. Yapay zeka yardımıyla kodlamaya başlamak için yeni bir Session başlatın veya tüm özellikleri keşfetmek için uygulamayı inceleyin.",
+    "startSession": "Yeni Session Başlat"
+  },
+  "navigation": {
+    "skipSetup": "Kurulumu Atla",
+    "getStarted": "Başla",
+    "goToSettings": "Ayarlara Git"
+  }
+}

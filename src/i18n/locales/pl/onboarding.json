@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "welcome": {
+      "title": "Witamy",
+      "description": "Zacznij pracę z ORGII"
+    },
+    "devPassport": {
+      "description": "Twoja tożsamość dewelopera"
+    },
+    "github": {
+      "title": "GitHub",
+      "description": "Połącz swoje konto"
+    },
+    "workspace": {
+      "title": "Workspace",
+      "description": "Otwórz lub sklonuj projekt"
+    },
+    "theme": {
+      "title": "Motyw",
+      "description": "Dostosuj wygląd"
+    },
+    "complete": {
+      "title": "Gotowe",
+      "description": "Wszystko gotowe do startu"
+    }
+  },
+  "welcome": {
+    "title": "Witamy w ORGII",
+    "description": "Skonfigurujmy Twoje środowisko w kilku szybkich krokach."
+  },
+  "devPassport": {
+    "title": "Skonfiguruj Dev Passport",
+    "description": "Każdy vibe engineer potrzebuje własnej tożsamości.",
+    "role": "Vibe Engineer",
+    "codeName": "Pseudonim",
+    "codeNamePlaceholder": "Wpisz swój pseudonim...",
+    "randomNameTooltip": "Wygeneruj losowy pseudonim",
+    "avatar": "Awatar",
+    "selectImage": "Wybierz obraz",
+    "avatarHint": "Twoja wizualna tożsamość w historiach",
+    "generateButton": "Wygeneruj Vibe Passport",
+    "passportTitle": "Twój Vibe Passport",
+    "passportWelcome": "Witaj, {{name}}. Twoja tożsamość jest gotowa."
+  },
+  "github": {
+    "title": "Połącz GitHub",
+    "description": "Połącz swoje konto GitHub, aby uzyskać dostęp do repo, tworzyć commity i zarządzać pull requestami bezpośrednio z ORGII.",
+    "connectButton": "Połącz konto GitHub",
+    "hint": "GitHub możesz też podłączyć później w Ustawienia > Integracje"
+  },
+  "workspace": {
+    "title": "Otwórz Workspace",
+    "description": "Otwórz lokalny folder lub sklonuj repo, aby rozpocząć pracę. ORGII automatycznie zaindeksuje Twój kod, aby zapewnić inteligentne wsparcie.",
+    "openFolder": "Otwórz folder",
+    "cloneRepo": "Sklonuj repo",
+    "hint": "Możesz pominąć ten krok i otworzyć workspace później"
+  },
+  "theme": {
+    "title": "Wybierz motyw",
+    "description": "Wybierz motyw, który Ci odpowiada. Możesz go zmienić w dowolnym momencie w Ustawieniach.",
+    "light": "Jasny",
+    "dark": "Ciemny"
+  },
+  "complete": {
+    "title": "Wszystko gotowe!",
+    "description": "Twój workspace jest gotowy. Uruchom nową sesję, aby zacząć kodować ze wsparciem AI, lub przejrzyj aplikację i odkryj wszystkie funkcje.",
+    "startSession": "Uruchom nową sesję"
+  },
+  "navigation": {
+    "skipSetup": "Pomiń konfigurację",
+    "getStarted": "Rozpocznij",
+    "goToSettings": "Przejdź do Ustawień"
+  }
+}

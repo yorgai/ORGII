@@ -1,0 +1,324 @@
+.tool-event-preview {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tool-event-preview-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// Preview containers extend .wp__chat__history for chat-like rendering
+// CSS variables are set via inline style in the component
+
+// Form field styles
+.tool-event-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  &--inline {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.tool-event-field-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-2);
+}
+
+// Select component overrides
+.tool-event-select {
+  min-width: 180px;
+
+  &--wide {
+    min-width: 280px;
+  }
+}
+
+.tool-event-preview-error {
+  color: var(--color-danger-6);
+  font-size: 13px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--color-danger-6) 10%, transparent);
+  border-radius: 6px;
+}
+
+// Single Event Preview
+.tool-event-single {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.tool-event-single-controls {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.tool-event-single-controls-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.tool-event-single-with-sidebar {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+// Token override controls row
+.tool-event-token-controls {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--color-fill-1);
+  border-radius: 8px;
+  border: 1px solid var(--color-border-2);
+}
+
+.tool-event-editor-textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  min-height: 200px;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-2);
+  background: var(--color-fill-2);
+  color: var(--color-text-1);
+  font-size: 12px;
+  line-height: 1.5;
+  resize: none;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary-6);
+  }
+
+  &::placeholder {
+    color: var(--color-text-4);
+  }
+}
+
+// ============================================
+// Preview Shell - shared chat + simulator playground frame
+// ============================================
+
+.tool-event-preview-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  overflow: hidden;
+
+  &--chat {
+    border: 1px solid var(--color-border-2);
+    background: var(--color-bg-2);
+  }
+}
+
+// Real simulator frame embed (matches Workstation AppShell SimulatorFrame)
+.tool-event-preview-simulator-frame {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+// Content area
+.tool-event-preview-shell__content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+
+  &--chat {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
+
+// Session Simulator
+.tool-event-session {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// Session top row: reuse single-event control strip + align labels/controls with select
+.tool-event-session-controls-row {
+  align-items: flex-end;
+}
+
+.tool-event-session-preview {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tool-event-live-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-fill-1);
+}
+
+.tool-event-live-input__textarea {
+  min-height: 88px;
+}
+
+.tool-event-live-input__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.tool-event-live-script {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tool-event-live-script__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tool-event-live-script__textarea {
+  min-height: 200px;
+}
+
+// ============================================
+// Token Override Styles
+// ============================================
+
+.token-override-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+// Font size override - applies to all text elements
+.token-override-font {
+  --chat-font-size: var(--token-font-size, 13px);
+
+  * {
+    font-size: var(--token-font-size) !important;
+  }
+
+  // Preserve relative sizing for specific elements
+  .text-\[10px\],
+  .text-\[11px\] {
+    font-size: calc(var(--token-font-size) - 2px) !important;
+  }
+
+  .text-\[14px\],
+  .text-\[15px\] {
+    font-size: calc(var(--token-font-size) + 1px) !important;
+  }
+}
+
+// Primary color override
+.token-override-primary {
+  // Override primary color variables
+  --color-primary-6: var(--token-primary-color);
+
+  .text-primary-6 {
+    color: var(--token-primary-color) !important;
+  }
+
+  .bg-primary-6\/10 {
+    background-color: color-mix(
+      in srgb,
+      var(--token-primary-color) 10%,
+      transparent
+    ) !important;
+  }
+
+  .border-primary-6 {
+    border-color: var(--token-primary-color) !important;
+  }
+}
+
+// Text color override
+.token-override-text {
+  .text-text-1 {
+    color: var(--token-text-color) !important;
+  }
+
+  .text-text-2 {
+    color: color-mix(
+      in srgb,
+      var(--token-text-color) 80%,
+      transparent
+    ) !important;
+  }
+
+  .text-text-3 {
+    color: color-mix(
+      in srgb,
+      var(--token-text-color) 60%,
+      transparent
+    ) !important;
+  }
+}
+
+// Spacing override
+.token-override-spacing {
+  .p-3,
+  .p-4,
+  .px-3,
+  .px-4,
+  .py-2,
+  .py-3 {
+    padding: var(--token-padding) !important;
+  }
+
+  .gap-2,
+  .gap-3 {
+    gap: var(--token-gap) !important;
+  }
+}
+
+// Border radius override
+.token-override-radius {
+  .rounded,
+  .rounded-lg,
+  .rounded-xl {
+    border-radius: var(--token-border-radius) !important;
+  }
+}

@@ -1,0 +1,115 @@
+/**
+ * ChatCodeBlock Styles
+ *
+ * Only third-party component overrides remain (not expressible in Tailwind).
+ * Container and layout classes have been moved to inline Tailwind.
+ */
+
+/* Horizontal scrollbar: hidden by default, show on hover or while scrolling */
+.chat-code-block__scroll-hover {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    height: 4px;
+    background: transparent;
+    display: none;
+  }
+
+  &:hover::-webkit-scrollbar,
+  &:active::-webkit-scrollbar,
+  &[data-scrolling]::-webkit-scrollbar {
+    display: block;
+  }
+
+  &:hover,
+  &[data-scrolling] {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.32) transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.32) !important;
+    border-radius: 2px;
+  }
+}
+
+.chat-code-block__code-container {
+  // Override ModernCodeViewer styles for better integration
+  .modern-code-viewer,
+  .modern-split-diff {
+    border-radius: 0;
+  }
+
+  .cm-editor {
+    font-size: var(--chat-code-font-size, 13px);
+    min-width: min-content;
+
+    .cm-scroller {
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+    }
+
+    .cm-gutters {
+      padding-left: 4px;
+      background-color: var(--color-event-block) !important;
+      z-index: 2;
+    }
+
+    .cm-lineNumbers {
+      .cm-gutterElement {
+        min-width: 32px;
+        padding: 0 8px 0 4px;
+        text-align: right;
+      }
+    }
+  }
+
+  // CodeMirror scrollbar: show on hover with transparent track
+  .cm-scroller {
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      height: 4px;
+      display: none;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.32) !important;
+      border: none !important;
+      border-radius: 2px;
+    }
+  }
+
+  &:hover .cm-scroller,
+  &[data-scrolling] .cm-scroller {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.32) transparent !important;
+  }
+
+  &:hover .cm-scroller::-webkit-scrollbar,
+  &[data-scrolling] .cm-scroller::-webkit-scrollbar {
+    display: block;
+    background: transparent !important;
+  }
+
+  &:hover .cm-scroller::-webkit-scrollbar-track,
+  &[data-scrolling] .cm-scroller::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+
+  &:hover .cm-scroller::-webkit-scrollbar-thumb,
+  &[data-scrolling] .cm-scroller::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.32) !important;
+    border: none !important;
+  }
+
+  // ModernDiff - allow horizontal scroll for long lines
+  .modern-split-diff-content {
+    .cm-merge-view {
+      .cm-scroller {
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+      }
+    }
+  }
+}

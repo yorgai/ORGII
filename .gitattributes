@@ -1,0 +1,8 @@
+# Auto-merge i18n JSON files to avoid conflicts when multiple branches add keys
+src/i18n/locales/*/common.json merge=json-merge
+src/i18n/locales/*/navigation.json merge=json-merge
+src/i18n/locales/*/settings.json merge=json-merge
+src/i18n/locales/*/market.json merge=json-merge
+src/i18n/locales/*/auth.json merge=json-merge
+src/i18n/locales/*/onboarding.json merge=json-merge
+src/i18n/locales/*/integrations.json merge=json-merge

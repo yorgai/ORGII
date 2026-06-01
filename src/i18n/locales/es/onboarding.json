@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "welcome": {
+      "title": "Bienvenido",
+      "description": "Comienza con ORGII"
+    },
+    "devPassport": {
+      "description": "Tu identidad de desarrollador"
+    },
+    "github": {
+      "title": "GitHub",
+      "description": "Conecta tu cuenta"
+    },
+    "workspace": {
+      "title": "Proyecto",
+      "description": "Abre o clona un proyecto"
+    },
+    "theme": {
+      "title": "Tema",
+      "description": "Personaliza la apariencia"
+    },
+    "complete": {
+      "title": "Completado",
+      "description": "Listo para comenzar"
+    }
+  },
+  "welcome": {
+    "title": "Bienvenido a ORGII",
+    "description": "Configuremos tu espacio de trabajo en unos pocos pasos."
+  },
+  "devPassport": {
+    "title": "Configura tu Dev Passport",
+    "description": "Todo vibe engineer necesita una identidad.",
+    "role": "Vibe Engineer",
+    "codeName": "Nombre clave",
+    "codeNamePlaceholder": "Ingresa tu nombre clave...",
+    "randomNameTooltip": "Generar nombre clave aleatorio",
+    "avatar": "Foto de perfil",
+    "selectImage": "Selecciona una imagen",
+    "avatarHint": "Tu identidad visual en proyectos",
+    "generateButton": "Generar Vibe Passport",
+    "passportTitle": "Tu Vibe Passport",
+    "passportWelcome": "Bienvenido, {{name}}. Tu identidad est? lista."
+  },
+  "github": {
+    "title": "Conectar GitHub",
+    "description": "Conecta tu cuenta de GitHub para acceder a repos, crear commits y gestionar pull requests directamente desde ORGII.",
+    "connectButton": "Conectar cuenta de GitHub",
+    "hint": "Tambi?n puedes conectar GitHub m?s tarde desde Configuraci?n > Integraciones"
+  },
+  "workspace": {
+    "title": "Abrir un proyecto",
+    "description": "Abre una carpeta local o clona un repo para comenzar a trabajar. ORGII indexar? autom?ticamente tu c?digo para asistencia inteligente.",
+    "openFolder": "Abrir carpeta",
+    "cloneRepo": "Clonar repo",
+    "hint": "Puedes omitir este paso y abrir un proyecto m?s tarde"
+  },
+  "theme": {
+    "title": "Elige tu tema",
+    "description": "Selecciona un tema que se adapte a tu preferencia. Puedes cambiarlo en cualquier momento en Configuraci?n.",
+    "light": "Claro",
+    "dark": "Oscuro"
+  },
+  "complete": {
+    "title": "?Todo listo!",
+    "description": "Tu espacio de trabajo est? listo. Inicia una nueva Session para comenzar a programar con asistencia de IA, o explora la aplicaci?n para descubrir todas las funciones.",
+    "startSession": "Iniciar nueva Session"
+  },
+  "navigation": {
+    "skipSetup": "Omitir configuraci?n",
+    "getStarted": "Comenzar",
+    "goToSettings": "Ir a Ajustes"
+  }
+}

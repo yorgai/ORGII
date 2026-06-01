@@ -1,0 +1,395 @@
+/**
+ * E2EBootstrap
+ *
+ * Dev-only helper that exposes Tauri commands to WebDriver-driven tests.
+ * Mounted at app root; renders nothing; no-op until a spec calls into it.
+ *
+ * Public API on `window.__e2e`:
+ *
+ *   addAccount({ openaiApiKey, model, baseUrl?, accountName? })
+ *     → creates (or updates) an `openai_api` BYOK account via `save_key` with
+ *       `enabled_models`/`available_models` pre-populated so downstream
+ *       validation (`isPairCompatible`) accepts the pair. Returns the masked
+ *       KeyInfo.
+ *
+ *   listAccounts()
+ *     → passthrough to `list_keys`. Useful for add-account spec assertions.
+ *
+ *   removeAccount(id)
+ *     → passthrough to `delete_key_by_id`. Used to keep CI idempotent.
+ *
+ *   pinSession({ accountId, model, accountName?, category?, cliAgentType? })
+ *     → sets `sessionCreatorStateAtom`, picks a repo (waits up to 15s for
+ *       `reposAtom` to populate), and writes `creatorDefaultModelSelectionAtom`.
+ *       Returns the chosen repo id.
+ *
+ *   configure({ openaiApiKey, model, ... })
+ *     → convenience: addAccount then pinSession. Used by agent-chat spec.
+ *
+ *   configureWithExistingKey({ accountName, model?, baseUrl?, agentType? })
+ *     → reuses a key already present in the user's keyvault (typed via the
+ *       app UI — no `OPENAI_API_KEY` in `.env` needed). Locates the account
+ *       by `agent_type` + `name`, picks a model that is `enabled` on it
+ *       (preferring `model` if requested), then pins the session. Returns
+ *       the chosen `accountId` / `modelId` / `repoId`.
+ *
+ * All methods return `{ ok: true, ... } | { ok: false, error }` so failures
+ * surface with a structured message instead of rejecting.
+ */
+import { useStore } from "jotai";
+import { type FC, useEffect } from "react";
+
+import { INTERNAL_AGENT_IDS } from "@src/modules/MainApp/AgentOrgs/config/agentConstants";
+import {
+  agentDefsLoadErrorAtom,
+  agentDefsLoadedAtom,
+  allAgentDefsAtom,
+  builtInAgentsAtom,
+  customAgentsAtom,
+} from "@src/modules/MainApp/AgentOrgs/store/builtInAgentsAtom";
+import type { AgentDefinition } from "@src/modules/MainApp/AgentOrgs/types";
+
+import {
+  addAccount,
+  addClaudeCodeAccount,
+  addCodexAccount,
+  addCursorNativeAccount,
+  cloneCursorNativeAccountWithoutApiKey,
+  listAccounts,
+  removeAccount,
+} from "./e2e/helpers/accounts";
+import { createAgentOrgHelpers } from "./e2e/helpers/agentOrgs";
+import { createConfigHelpers } from "./e2e/helpers/config";
+import { createDebugEndpointHelpers } from "./e2e/helpers/debugEndpoints";
+import { createExternalToolHelpers } from "./e2e/helpers/externalTools";
+import { createMcpHelpers } from "./e2e/helpers/mcp";
+import { createMemoryHelpers } from "./e2e/helpers/memory";
+import { createNavigationHelpers } from "./e2e/helpers/navigation";
+import { createPolicyHelpers } from "./e2e/helpers/policies";
+import { createProjectHelpers } from "./e2e/helpers/projects";
+import { createRuntimeDebugHelpers } from "./e2e/helpers/runtimeDebug";
+import { createSessionConfigHelpers } from "./e2e/helpers/sessionConfig";
+import { createSessionHelpers } from "./e2e/helpers/sessions";
+import { createWorkspaceHelpers } from "./e2e/helpers/workspace";
+import { registerE2EHelpers } from "./e2e/registerE2EHelpers";
+import { asError } from "./e2e/result";
+import type { E2EHelpers, Json, Result } from "./e2e/types";
+
+export const E2EBootstrap: FC = () => {
+  const store = useStore();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Defense-in-depth: callers should already gate this component behind
+    // `process.env.NODE_ENV !== "production"` in AppBootstrap, but refuse to
+    // install `window.__e2e` here too so a missed gate cannot leak the helper.
+    if (process.env.NODE_ENV === "production") return;
+
+    const {
+      pinSession,
+      configure,
+      configureWithExistingKey,
+      inspectCreatorSelection,
+      setAgentOrgMemberDraftConfig,
+      createCliPatchSession,
+      patchSessionModel,
+    } = createSessionConfigHelpers({ store });
+
+    const {
+      getAgentDef,
+      updateAgentDefPatch,
+      resetAgentDefBuiltin,
+      removeAgentDef,
+      listAgentDefs,
+      listAllTools,
+      getIntegrations,
+      updateIntegrationsPatch,
+      getAgentConfigBlob,
+      updateAgentConfigBlob,
+      readSettings,
+      writeSettingsPartial,
+      getSettingsRegistryKeys,
+      getDesktopConfig,
+      setDesktopConfig,
+      listAutomationRules,
+      addAutomationRule,
+      removeAutomationRule,
+    } = createConfigHelpers();
+
+    const refreshAgentDefs = async (): Promise<Result<{ defs: Json[] }>> => {
+      try {
+        const result = await listAgentDefs();
+        if (!result.ok) return result;
+        const defs = result.defs as unknown as AgentDefinition[];
+        store.set(allAgentDefsAtom, defs);
+        store.set(
+          builtInAgentsAtom,
+          defs.filter(
+            (agent) => agent.builtIn && !INTERNAL_AGENT_IDS.has(agent.id)
+          )
+        );
+        store.set(
+          customAgentsAtom,
+          defs.filter((agent) => !agent.builtIn)
+        );
+        store.set(agentDefsLoadedAtom, true);
+        store.set(agentDefsLoadErrorAtom, null);
+        return result;
+      } catch (err) {
+        return asError(err);
+      }
+    };
+
+    const {
+      getOrgiiRoot,
+      getSelectedRepoPath,
+      ensureRepoSelected,
+      seedMultiRootWorkspace,
+      readSessionWorkspaceFromDb,
+    } = createWorkspaceHelpers(store);
+
+    const { readSessionPromptEnvironmentBlock, readSdeTranscript } =
+      createDebugEndpointHelpers();
+
+    const {
+      writeProject,
+      deleteProject,
+      listRoutines,
+      upsertRoutine,
+      deleteRoutine,
+      fireRoutine,
+      readWorkItem,
+      writeWorkItem,
+      deleteWorkItem,
+      readWorkItemsEnriched,
+      testWorkItemScheduleLookup,
+      runWorkItemSchedulerOnce,
+      launchWorkItemRuntimeProbe,
+    } = createProjectHelpers(store);
+
+    const {
+      listPolicies,
+      createPolicy,
+      readPolicy,
+      updatePolicy,
+      setPolicyAgents,
+      setPolicyScope,
+      togglePolicy,
+      deletePolicy,
+    } = createPolicyHelpers();
+
+    const {
+      listWorkspaceMemory,
+      readWorkspaceMemory,
+      writeWorkspaceMemory,
+      deleteWorkspaceMemory,
+      clearWorkspaceMemory,
+      workspaceMemoryStatus,
+      workspaceMemoryIndex,
+      debugMemoryPrefetchSection,
+      learningsList,
+      learningsUpdateBody,
+      learningsSetStatus,
+      learningsDelete,
+      learningsGetStatus,
+      learningsTriggerReflection,
+      learningsDeprecate,
+      debugSeedLearning,
+      lspGetWorkspaceConfig,
+      lspSetServerEnabled,
+      lintGetWorkspaceConfig,
+      lintSetToolEnabled,
+    } = createMemoryHelpers();
+
+    const {
+      promptDump: promptDumpHelper,
+      getActiveSessionId,
+      inspectCliSessionStatus,
+      inspectCliHistoryMutation,
+      resetToNewSession,
+      openSession,
+      launchSession,
+      getSessionAggregateRow,
+      seedChatEvents,
+      seedModeSwitchSession,
+      seedPlanCard,
+      inspectChatState,
+    } = createSessionHelpers(store);
+
+    const {
+      debugSessionSecuritySnapshot,
+      debugSessionValidateCommand,
+      debugSessionSubagentSnapshot,
+      debugSessionModelSnapshot,
+      debugSessionToolsSnapshot,
+      listEffectiveToolsForSession,
+      debugSessionSkillsSnapshot,
+      debugSessionGeneralSnapshot,
+    } = createRuntimeDebugHelpers();
+
+    const agentOrgHelpers = createAgentOrgHelpers();
+
+    const {
+      importDetect,
+      importApply,
+      listSkills,
+      readSkill,
+      createSkill,
+      validateSkillName,
+      toggleSkill,
+      moveSkill,
+      readSkillFiles,
+      writeSkillFiles,
+    } = createExternalToolHelpers();
+
+    const {
+      mcpListServers,
+      mcpGetConfig,
+      mcpUpdateServers,
+      mcpTestServer,
+      mcpListServerTools,
+      mcpReconnectServer,
+      mcpSetServerDisabled,
+    } = createMcpHelpers();
+
+    const { navigateTo, getLocationPathname, openAgentTab } =
+      createNavigationHelpers(store);
+
+    const helpers: E2EHelpers = {
+      addAccount,
+      addCursorNativeAccount,
+      addClaudeCodeAccount,
+      addCodexAccount,
+      cloneCursorNativeAccountWithoutApiKey,
+      listAccounts,
+      removeAccount,
+      createCliPatchSession,
+      patchSessionModel,
+      pinSession,
+      configure,
+      configureWithExistingKey,
+      inspectCreatorSelection,
+      setAgentOrgMemberDraftConfig,
+      getAgentDef,
+      updateAgentDefPatch,
+      resetAgentDefBuiltin,
+      removeAgentDef,
+      listAgentDefs,
+      refreshAgentDefs,
+      listAllTools,
+      getIntegrations,
+      updateIntegrationsPatch,
+      getAgentConfigBlob,
+      updateAgentConfigBlob,
+      readSettings,
+      writeSettingsPartial,
+      getSettingsRegistryKeys,
+      getOrgiiRoot,
+      getSelectedRepoPath,
+      ensureRepoSelected,
+      seedMultiRootWorkspace,
+      readSessionWorkspaceFromDb,
+      readSessionPromptEnvironmentBlock,
+      readSdeTranscript,
+      writeProject,
+      deleteProject,
+      listRoutines,
+      upsertRoutine,
+      deleteRoutine,
+      fireRoutine,
+      projects: {
+        listRoutines,
+        upsertRoutine,
+        deleteRoutine,
+        fireRoutine,
+      },
+      readWorkItem,
+      writeWorkItem,
+      deleteWorkItem,
+      readWorkItemsEnriched,
+      testWorkItemScheduleLookup,
+      runWorkItemSchedulerOnce,
+      getDesktopConfig,
+      setDesktopConfig,
+      listAutomationRules,
+      addAutomationRule,
+      removeAutomationRule,
+      listPolicies,
+      createPolicy,
+      readPolicy,
+      updatePolicy,
+      setPolicyAgents,
+      setPolicyScope,
+      togglePolicy,
+      deletePolicy,
+      listWorkspaceMemory,
+      readWorkspaceMemory,
+      writeWorkspaceMemory,
+      deleteWorkspaceMemory,
+      clearWorkspaceMemory,
+      workspaceMemoryStatus,
+      workspaceMemoryIndex,
+      debugMemoryPrefetchSection,
+      learningsList,
+      learningsUpdateBody,
+      learningsSetStatus,
+      learningsDelete,
+      learningsGetStatus,
+      learningsTriggerReflection,
+      learningsDeprecate,
+      debugSeedLearning,
+      lspGetWorkspaceConfig,
+      lspSetServerEnabled,
+      lintGetWorkspaceConfig,
+      lintSetToolEnabled,
+      promptDump: promptDumpHelper,
+      getActiveSessionId,
+      inspectCliSessionStatus,
+      inspectCliHistoryMutation,
+      resetToNewSession,
+      openSession,
+      debugSessionSecuritySnapshot,
+      debugSessionValidateCommand,
+      debugSessionSubagentSnapshot,
+      debugSessionModelSnapshot,
+      debugSessionToolsSnapshot,
+      listEffectiveToolsForSession,
+      launchWorkItemRuntimeProbe,
+      ...agentOrgHelpers,
+      launchSession,
+      getSessionAggregateRow,
+      seedChatEvents,
+      seedModeSwitchSession,
+      seedPlanCard,
+      inspectChatState,
+      debugSessionSkillsSnapshot,
+      debugSessionGeneralSnapshot,
+      importDetect,
+      importApply,
+      listSkills,
+      readSkill,
+      createSkill,
+      validateSkillName,
+      toggleSkill,
+      moveSkill,
+      readSkillFiles,
+      writeSkillFiles,
+      mcpListServers,
+      mcpGetConfig,
+      mcpUpdateServers,
+      mcpTestServer,
+      mcpListServerTools,
+      mcpReconnectServer,
+      mcpSetServerDisabled,
+      navigateTo,
+      getLocationPathname,
+      openAgentTab,
+    };
+
+    registerE2EHelpers(helpers);
+  }, [store]);
+
+  return null;
+};
+
+export default E2EBootstrap;

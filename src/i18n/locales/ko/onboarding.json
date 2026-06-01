@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "welcome": {
+      "title": "환영합니다",
+      "description": "ORGII 시작하기"
+    },
+    "devPassport": {
+      "description": "개발자 아이덴티티"
+    },
+    "github": {
+      "title": "GitHub",
+      "description": "계정 연결"
+    },
+    "workspace": {
+      "title": "프로젝트",
+      "description": "프로젝트 열기 또는 클론"
+    },
+    "theme": {
+      "title": "테마",
+      "description": "외관 사용자 지정"
+    },
+    "complete": {
+      "title": "완료",
+      "description": "시작할 준비 완료"
+    }
+  },
+  "welcome": {
+    "title": "ORGII에 오신 것을 환영합니다",
+    "description": "몇 가지 간단한 단계로 작업 공간을 구성해 보겠습니다."
+  },
+  "devPassport": {
+    "title": "Dev Passport 설정",
+    "description": "모든 Vibe Engineer에게는 아이덴티티가 필요합니다.",
+    "role": "Vibe Engineer",
+    "codeName": "코드명",
+    "codeNamePlaceholder": "코드명을 입력하세요...",
+    "randomNameTooltip": "랜덤 코드명 생성",
+    "avatar": "아바타",
+    "selectImage": "이미지 선택",
+    "avatarHint": "프로젝트에서의 당신의 시각적 아이덴티티",
+    "generateButton": "Vibe Passport 생성",
+    "passportTitle": "당신의 Vibe Passport",
+    "passportWelcome": "환영합니다, {{name}}. 아이덴티티가 준비되었습니다."
+  },
+  "github": {
+    "title": "GitHub 연결",
+    "description": "GitHub 계정을 연결하여 ORGII에서 직접 저장소에 액세스하고, 커밋을 생성하고, 풀 리퀘스트를 관리하세요.",
+    "connectButton": "GitHub 계정 연결",
+    "hint": "나중에 설정 > 통합에서도 GitHub를 연결할 수 있습니다"
+  },
+  "workspace": {
+    "title": "프로젝트 열기",
+    "description": "로컬 폴더를 열거나 저장소를 클론하여 작업을 시작하세요. ORGII가 자동으로 코드베이스를 인덱싱하여 지능형 코드 지원을 제공합니다.",
+    "openFolder": "폴더 열기",
+    "cloneRepo": "저장소 클론",
+    "hint": "이 단계를 건너뛰고 나중에 프로젝트를 열 수도 있습니다"
+  },
+  "theme": {
+    "title": "테마 선택",
+    "description": "선호하는 테마를 선택하세요. 설정에서 언제든지 변경할 수 있습니다.",
+    "light": "라이트",
+    "dark": "다크"
+  },
+  "complete": {
+    "title": "모든 준비 완료!",
+    "description": "작업 공간이 준비되었습니다. 새 Session을 시작하여 AI 지원으로 코딩을 시작하거나, 앱을 탐색하여 모든 기능을 발견하세요.",
+    "startSession": "새 Session 시작"
+  },
+  "navigation": {
+    "skipSetup": "설정 건너뛰기",
+    "getStarted": "시작하기",
+    "goToSettings": "설정으로 이동"
+  }
+}

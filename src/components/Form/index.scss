@@ -1,0 +1,195 @@
+/**
+ * Form Component Styles
+ *
+ * Form layout and validation styling following Arco Design patterns.
+ */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  // Inline layout
+  &.form-inline {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 16px;
+
+    .form-item {
+      flex: 0 0 auto;
+      margin-bottom: 0;
+    }
+  }
+
+  // Form item
+  .form-item {
+    display: flex;
+    margin-bottom: 0;
+
+    // Vertical layout
+    &.form-item-vertical {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    // Horizontal layout
+    &.form-item-horizontal {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    // Inline layout
+    &.form-item-inline {
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+    }
+
+    // Label
+    .form-item-label {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      color: var(--color-text-1);
+      line-height: 32px;
+      flex-shrink: 0;
+
+      label {
+        cursor: pointer;
+      }
+
+      &.form-item-label-left {
+        justify-content: flex-start;
+      }
+
+      &.form-item-label-right {
+        justify-content: flex-end;
+      }
+
+      // Required indicator
+      &.form-item-label-required {
+        &::before {
+          content: "*";
+          color: var(--color-danger-6);
+          margin-right: 4px;
+        }
+      }
+
+      .form-item-colon {
+        margin-left: 2px;
+        margin-right: 8px;
+      }
+    }
+
+    // Horizontal layout label width
+    &.form-item-horizontal .form-item-label {
+      min-width: 120px;
+      padding-right: 12px;
+    }
+
+    // Control wrapper
+    .form-item-control {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .form-item-control-input {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+
+      // Make child inputs take full width
+      > * {
+        width: 100%;
+      }
+    }
+
+    // Help text (error/success messages)
+    .form-item-help {
+      font-size: 13px;
+      line-height: 1.5;
+      margin-top: 4px;
+      min-height: 20px;
+      transition: color 0.15s ease;
+    }
+
+    // Extra description
+    .form-item-extra {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--color-text-3);
+      margin-top: 4px;
+    }
+
+    // Validation states
+    &.form-item-error {
+      .form-item-help {
+        color: var(--color-danger-6);
+      }
+
+      .form-item-control-input {
+        input,
+        textarea,
+        select {
+          border-color: var(--color-danger-6);
+
+          &:focus {
+            border-color: var(--color-danger-6);
+            box-shadow: 0 0 0 2px
+              color-mix(in srgb, var(--color-danger-6) 10%, transparent);
+          }
+        }
+      }
+    }
+
+    &.form-item-warning {
+      .form-item-help {
+        color: var(--color-warning-6);
+      }
+
+      .form-item-control-input {
+        input,
+        textarea,
+        select {
+          border-color: var(--color-warning-6);
+
+          &:focus {
+            border-color: var(--color-warning-6);
+            box-shadow: 0 0 0 2px
+              color-mix(in srgb, var(--color-warning-6) 10%, transparent);
+          }
+        }
+      }
+    }
+
+    &.form-item-success {
+      .form-item-help {
+        color: var(--color-success-6);
+      }
+
+      .form-item-control-input {
+        input,
+        textarea,
+        select {
+          border-color: var(--color-success-6);
+
+          &:focus {
+            border-color: var(--color-success-6);
+            box-shadow: 0 0 0 2px
+              color-mix(in srgb, var(--color-success-6) 10%, transparent);
+          }
+        }
+      }
+    }
+
+    &.form-item-validating {
+      .form-item-help {
+        color: var(--color-primary-6);
+      }
+    }
+  }
+}

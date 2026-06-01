@@ -1,0 +1,78 @@
+name: Frontend Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vitest.config.ts"
+      - "tsconfig.json"
+      - ".github/workflows/frontend-test.yaml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vitest.config.ts"
+      - "tsconfig.json"
+      - ".github/workflows/frontend-test.yaml"
+
+jobs:
+  lint:
+    name: Lint & Dead Code Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check circular dependencies
+        run: npm run check:circular
+
+      - name: Check unused exports (informational)
+        run: npm run check:unused-exports || true
+        continue-on-error: true
+
+  unit:
+    name: vitest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test
+
+      - name: Coverage report
+        run: npm run test:coverage
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-html
+          path: coverage/
+          if-no-files-found: ignore

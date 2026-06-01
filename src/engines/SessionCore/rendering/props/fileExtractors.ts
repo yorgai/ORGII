@@ -1,0 +1,61 @@
+/**
+ * File read data extractor.
+ */
+import { getFileName } from "@src/util/file/pathUtils";
+
+import type {
+  ExtractedFileData,
+  UniversalEventProps,
+} from "../types/universalProps";
+import {
+  detectLanguage,
+  extractSuccessData,
+  safeText,
+  stripLineNumberPrefixes,
+} from "./extractorShared";
+
+export function extractFileData(props: UniversalEventProps): ExtractedFileData {
+  if (props.rustExtracted?.kind === "file") {
+    const { filePath, fileName, content, language, lineCount } =
+      props.rustExtracted;
+    return { filePath, fileName, content, language, lineCount };
+  }
+
+  const { args, result } = props;
+  const successData = extractSuccessData(result);
+
+  const filePath =
+    (args?.file_path as string) ||
+    (args?.target_file as string) ||
+    (args?.path as string) ||
+    (successData?.path as string) ||
+    (successData?.file_path as string) ||
+    (successData?.target_file as string) ||
+    (result?.file_path as string) ||
+    (result?.path as string) ||
+    (result?.target_file as string) ||
+    "";
+
+  const directFileName =
+    (args?.file_name as string) ||
+    (successData?.file_name as string) ||
+    (result?.file_name as string);
+
+  const fileName = filePath ? getFileName(filePath) : directFileName || "";
+
+  const rawContent =
+    (successData?.content as string) ||
+    safeText(result?.output) ||
+    safeText(result?.content) ||
+    safeText(result?.file_content) ||
+    safeText(result?.observation) ||
+    undefined;
+
+  const stripped = rawContent ? stripLineNumberPrefixes(rawContent) : undefined;
+  const content = stripped?.content;
+  const lineCount = stripped?.lineCount;
+
+  const language = detectLanguage(fileName);
+
+  return { filePath, fileName, content, language, lineCount };
+}

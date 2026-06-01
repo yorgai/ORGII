@@ -1,0 +1,51 @@
+/**
+ * Org chart connector styles.
+ *
+ * Draws vertical + horizontal lines between parent and children nodes
+ * using ::before / ::after pseudo-elements on .org-child-branch.
+ */
+
+.org-chart {
+  min-width: fit-content;
+}
+
+/* Vertical line from the horizontal rail down to each child node */
+.org-child-connected::before {
+  content: "";
+  display: block;
+  width: 1px;
+  height: 24px;
+  background: var(--color-border-2);
+  margin: 0 auto;
+}
+
+/* Horizontal connector rail across sibling branches */
+.org-child-connected::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--color-border-2);
+}
+
+/* Position context for the horizontal rail */
+.org-child-branch {
+  position: relative;
+}
+
+/* First child: clip horizontal line to start from center */
+.org-child-first::after {
+  left: 50%;
+}
+
+/* Last child: clip horizontal line to end at center */
+.org-child-last::after {
+  right: 50%;
+}
+
+/* Single child: no horizontal rail needed */
+.org-child-branch:only-child::after {
+  display: none;
+}

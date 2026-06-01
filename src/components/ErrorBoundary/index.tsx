@@ -1,0 +1,229 @@
+import React, { Component, ReactNode } from "react";
+
+import ErrorPage from "@src/modules/shared/Error";
+import {
+  hasGlobalErrorAtom,
+  isAppQuittingAtom,
+} from "@src/store/ui/overlayAtom";
+import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
+
+const getJotaiStore = () => {
+  try {
+    return getInstrumentedStore();
+  } catch (error) {
+    console.error("[ErrorBoundary] Failed to get instrumented store:", error);
+    return null;
+  }
+};
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+  errorInfo?: React.ErrorInfo;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    const jotaiStore = getJotaiStore();
+    if (jotaiStore) {
+      jotaiStore.set(hasGlobalErrorAtom, true);
+    }
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("React Error Boundary caught an error:", error, errorInfo);
+
+    if (
+      error.message?.includes("Loading chunk") ||
+      error.message?.includes("ChunkLoadError") ||
+      error.name === "ChunkLoadError"
+    ) {
+      console.warn(
+        "Chunk loading error in React boundary, reloading page:",
+        error.message
+      );
+      window.location.reload();
+      return;
+    }
+
+    if (
+      error.message?.includes(
+        "A component suspended while responding to synchronous input"
+      ) ||
+      errorInfo.componentStack?.includes("throwException") ||
+      errorInfo.componentStack?.includes("renderRootSync")
+    ) {
+      console.warn(
+        "React Suspense error detected, redirecting to error page:",
+        error.message
+      );
+      setTimeout(() => {
+        window.location.href = window.location.origin + "/error.html";
+      }, 100);
+      return;
+    }
+
+    this.setState({
+      hasError: true,
+      error,
+      errorInfo,
+    });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <ErrorPage error={this.state.error} />;
+    }
+
+    return this.props.children;
+  }
+}
+
+const GlobalErrorHandler: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const [globalError, setGlobalError] = React.useState<Error | null>(null);
+
+  React.useEffect(() => {
+    const shouldSuppressError = (message?: string): boolean => {
+      if (!message) return false;
+      return (
+        message.includes("ResizeObserver") ||
+        message.includes("Script error.") ||
+        (message.includes("window['_") &&
+          (message.includes("is not a function") ||
+            message.includes("is undefined"))) ||
+        message.includes("Failed to load resource") ||
+        message.includes("unsupported URL") ||
+        message.includes("Failed to decode") ||
+        message.includes("Image decode failed")
+      );
+    };
+
+    const isChunkError = (message?: string, filename?: string): boolean => {
+      return !!(
+        message?.includes("Loading chunk") ||
+        message?.includes("ChunkLoadError") ||
+        filename?.includes("vendors-node_modules")
+      );
+    };
+
+    const errorHandler = (event: ErrorEvent) => {
+      const jotaiStore = getJotaiStore();
+      if (jotaiStore?.get(isAppQuittingAtom)) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
+      if (
+        !event.message &&
+        event.target instanceof HTMLElement &&
+        event.target !== document.documentElement
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
+      if (isChunkError(event.message, event.filename)) {
+        window.location.reload();
+        return;
+      }
+
+      if (shouldSuppressError(event.message)) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
+      const error =
+        event.error instanceof Error
+          ? event.error
+          : new Error(event.message || "An unexpected error occurred");
+      setGlobalError(error);
+      if (jotaiStore) {
+        jotaiStore.set(hasGlobalErrorAtom, true);
+      }
+    };
+
+    const rejectionHandler = (event: PromiseRejectionEvent) => {
+      const jotaiStore = getJotaiStore();
+      if (jotaiStore?.get(isAppQuittingAtom)) {
+        event.preventDefault();
+        return;
+      }
+
+      const message = event.reason?.message;
+
+      if (shouldSuppressError(message)) {
+        event.preventDefault();
+        return;
+      }
+
+      // Soft-fail rejections that carry no diagnostic payload. These show up
+      // when a Tauri `invoke()` is aborted mid-flight (e.g. user clicks Stop
+      // and the backend drops the pending future) or when a library throws a
+      // non-Error value. Escalating these to the full-screen ErrorPage makes
+      // a transient cancel look like a fatal app crash.
+      //
+      // Real Error objects (with stack) still escalate so genuine bugs
+      // remain visible.
+      const reason = event.reason;
+      const isMeaningfulError =
+        reason instanceof Error &&
+        typeof reason.message === "string" &&
+        reason.message.length > 0;
+      if (!isMeaningfulError) {
+        console.warn(
+          "[GlobalErrorHandler] Suppressing empty-reason unhandled rejection:",
+          reason
+        );
+        event.preventDefault();
+        return;
+      }
+
+      setGlobalError(reason);
+      if (jotaiStore) {
+        jotaiStore.set(hasGlobalErrorAtom, true);
+      }
+    };
+
+    window.addEventListener("error", errorHandler, true);
+    window.addEventListener("unhandledrejection", rejectionHandler);
+
+    return () => {
+      window.removeEventListener("error", errorHandler, true);
+      window.removeEventListener("unhandledrejection", rejectionHandler);
+    };
+  }, []);
+
+  if (globalError) {
+    return <ErrorPage error={globalError} />;
+  }
+
+  return <>{children}</>;
+};
+
+const CombinedErrorBoundary: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  return (
+    <ErrorBoundary>
+      <GlobalErrorHandler>{children}</GlobalErrorHandler>
+    </ErrorBoundary>
+  );
+};
+
+export default CombinedErrorBoundary;
+export { ErrorBoundary, GlobalErrorHandler };

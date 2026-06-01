@@ -1,0 +1,6 @@
+---
+source: src/agent_sessions/cli/parsers/tests/acp_common_tests.rs
+expression: result
+---
+content: data
+success: true

@@ -1,0 +1,22 @@
+[package]
+name = "file_ops"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# File-utility leaf: binary extension/content detection (no external deps —
+# compares against in-tree extension lists), gitignore-pattern path filtering,
+# directory tree listing. Pure leaf — no back-edges into `app`. Owns a small
+# set of `#[tauri::command]`s, re-registered from `commands/handler_list.inc`
+# via bare `file_ops::…` paths.
+
+[lib]
+name = "file_ops"
+path = "src/lib.rs"
+
+[dependencies]
+base64 = { workspace = true }
+regex = "1.9"
+serde = { version = "1.0", features = ["derive"] }
+tauri = { workspace = true }
+tokio = { workspace = true }

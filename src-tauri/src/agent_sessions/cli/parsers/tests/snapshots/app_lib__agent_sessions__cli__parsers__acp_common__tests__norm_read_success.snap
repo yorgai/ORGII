@@ -1,0 +1,9 @@
+---
+source: src/agent_sessions/cli/parsers/tests/acp_common_tests.rs
+expression: result
+---
+success:
+  content: file content
+  fileSize: 0
+  path: ""
+  totalLines: 0

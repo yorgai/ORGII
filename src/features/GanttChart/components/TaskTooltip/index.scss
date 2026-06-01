@@ -1,0 +1,140 @@
+/**
+ * GanttTaskTooltip Styles
+ */
+
+.gantt-task-tooltip-panel {
+  min-width: 280px;
+  max-width: 400px;
+  padding: 0;
+}
+
+.gantt-task-tooltip {
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-1);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__body {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  &__icon {
+    color: var(--color-text-3);
+    flex-shrink: 0;
+  }
+
+  &__label {
+    color: var(--color-text-2);
+    flex: 1;
+  }
+
+  &__status-badge {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    color: white;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+    white-space: nowrap;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  &__progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--color-fill-2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  &__progress-fill {
+    height: 100%;
+    background: var(--color-primary-6);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+
+  &__progress-text {
+    font-size: 12px;
+    color: var(--color-text-3);
+    min-width: 35px;
+    text-align: right;
+  }
+
+  &__health-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    flex: 1;
+  }
+
+  &__health-text {
+    font-size: 11px;
+    color: var(--color-text-3);
+    white-space: nowrap;
+  }
+
+  &__footer {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--color-border-2);
+  }
+
+  &__action {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--color-text-2);
+    background: var(--color-fill-1);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: var(--color-fill-2);
+      color: var(--color-text-1);
+    }
+
+    &--danger {
+      color: #ef4444;
+
+      &:hover {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+      }
+    }
+  }
+}

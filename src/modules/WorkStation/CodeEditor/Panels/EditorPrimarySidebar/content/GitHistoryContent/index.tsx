@@ -1,0 +1,530 @@
+/**
+ * GitHistoryContent Component
+ *
+ * Displays git commit graph in the source control sidebar.
+ * Each commit is clickable and opens a commit detail tab in the main pane.
+ *
+ * Graph mode renders a metro-style SVG lane visualization using parent_shas
+ * to compute branch/merge topology.
+ */
+import { Loader2 } from "lucide-react";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useTranslation } from "react-i18next";
+
+import { getGitCommits } from "@src/api/http/git/commits";
+import type { GitCommitInfo } from "@src/api/http/git/types";
+import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
+import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
+import {
+  type UseWorkStationTabsReturn,
+  useWorkStationTabs,
+} from "@src/hooks/workStation/tabs/useWorkStationTabs";
+import { useActionSystem } from "@src/modules/WorkStation/ActionSystem";
+import { PRIMARY_SIDEBAR_HOVER } from "@src/modules/WorkStation/shared/tokens";
+import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import {
+  SOURCE_CONTROL_CHANGES_TAB_ID,
+  type SourceControlHistorySelection,
+  createGitCommitDetailTab,
+} from "@src/store/workstation/tabs";
+import { formatCompactTimeAgo } from "@src/util/data/formatters/date";
+
+import GitHistoryContextMenu from "./GitHistoryContextMenu";
+import {
+  type CommitGraphNode,
+  DOT_RADIUS,
+  LANE_WIDTH,
+  assignLanesIncremental,
+  createGraphState,
+} from "./graphLayout";
+
+// ============================================
+// Constants
+// ============================================
+
+const COMMITS_PAGE_SIZE = 25;
+
+// ============================================
+// Helpers
+// ============================================
+
+// ============================================
+// Graph SVG Row Component
+// ============================================
+
+/** Row height must match the button's rendered height for lines to connect */
+const ROW_HEIGHT = 36;
+
+interface GraphSvgProps {
+  graphNode: CommitGraphNode;
+  svgWidth: number;
+  isFirst: boolean;
+}
+
+const GraphSvg: React.FC<GraphSvgProps> = memo(
+  ({ graphNode, svgWidth, isFirst }) => {
+    const centerY = ROW_HEIGHT / 2;
+    const dotX = graphNode.lane * LANE_WIDTH + LANE_WIDTH / 2;
+
+    return (
+      <svg width={svgWidth} height={ROW_HEIGHT} className="flex-shrink-0">
+        {/* Lines */}
+        {graphNode.lines.map((line, lineIdx) => {
+          const fromX = line.fromLane * LANE_WIDTH + LANE_WIDTH / 2;
+          const toX = line.toLane * LANE_WIDTH + LANE_WIDTH / 2;
+
+          // Skip top lines on the very first commit row (nothing above)
+          if (
+            isFirst &&
+            line.segment === "top" &&
+            line.fromLane === graphNode.lane &&
+            line.toLane === graphNode.lane
+          ) {
+            return null;
+          }
+
+          if (line.segment === "top") {
+            return (
+              <line
+                key={`line-${lineIdx}`}
+                x1={fromX}
+                y1={0}
+                x2={toX}
+                y2={centerY}
+                stroke={line.color}
+                strokeWidth={1.5}
+              />
+            );
+          }
+          return (
+            <line
+              key={`line-${lineIdx}`}
+              x1={fromX}
+              y1={centerY}
+              x2={toX}
+              y2={ROW_HEIGHT}
+              stroke={line.color}
+              strokeWidth={1.5}
+            />
+          );
+        })}
+
+        {/* Commit dot */}
+        <circle cx={dotX} cy={centerY} r={DOT_RADIUS} fill={graphNode.color} />
+      </svg>
+    );
+  }
+);
+
+GraphSvg.displayName = "GraphSvg";
+
+// ============================================
+// Commit Row Component
+// ============================================
+
+interface CommitRowProps {
+  commit: GitCommitInfo;
+  isSelected: boolean;
+  graphNode?: CommitGraphNode;
+  svgWidth?: number;
+  isFirst?: boolean;
+  onSelect: (commit: GitCommitInfo) => void;
+  onContextMenu: (event: React.MouseEvent, commit: GitCommitInfo) => void;
+}
+
+const CommitRow: React.FC<CommitRowProps> = memo(
+  ({
+    commit,
+    isSelected,
+    graphNode,
+    svgWidth,
+    isFirst = false,
+    onSelect,
+    onContextMenu,
+  }) => {
+    const handleClick = useCallback(() => {
+      onSelect(commit);
+    }, [commit, onSelect]);
+
+    const authorName = commit.author?.name ?? "Unknown";
+    const authorDate = commit.author?.date ?? "";
+
+    return (
+      <button
+        className={`group flex w-full items-center gap-1 pl-2 pr-3 text-left transition-colors ${
+          isSelected ? SURFACE_TOKENS.selected : PRIMARY_SIDEBAR_HOVER.row
+        }`}
+        style={{ height: `${ROW_HEIGHT}px` }}
+        onClick={handleClick}
+        onContextMenu={(event) => onContextMenu(event, commit)}
+        title={`${commit.summary}\n\n${commit.short_sha} by ${authorName}`}
+      >
+        {/* Graph SVG column — all rows use same width for text alignment */}
+        {graphNode && svgWidth && (
+          <GraphSvg
+            graphNode={graphNode}
+            svgWidth={svgWidth}
+            isFirst={isFirst}
+          />
+        )}
+
+        {/* Commit info */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="min-w-0 flex-1 truncate text-[12px] leading-tight text-text-1">
+              {commit.summary}
+            </span>
+          </div>
+          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-text-3">
+            <span className="truncate">{authorName}</span>
+            {authorDate && (
+              <span className="flex-shrink-0">
+                {formatCompactTimeAgo(authorDate)}
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+    );
+  }
+);
+
+CommitRow.displayName = "CommitRow";
+
+// ============================================
+// Main Component
+// ============================================
+
+export type GitHistoryViewMode = "list" | "graph";
+
+export interface GitHistoryContentProps {
+  repoPath: string;
+  repoId: string;
+  viewMode?: GitHistoryViewMode;
+  /** Expose refresh callback to parent via ref-like pattern */
+  onRefreshReady?: (refresh: () => void) => void;
+  /** Receives the selected commit when the host wants inline detail rendering. */
+  onHistorySelectionChange?: (selection: SourceControlHistorySelection) => void;
+}
+
+type GitHistoryTabsApi = Pick<
+  UseWorkStationTabsReturn,
+  "openTab" | "activeTab" | "updateTabData" | "switchTab"
+>;
+
+type GitHistoryContentInnerProps = GitHistoryContentProps & GitHistoryTabsApi;
+
+const GitHistoryContentInner: React.FC<GitHistoryContentInnerProps> = ({
+  repoPath,
+  repoId,
+  viewMode = "graph",
+  onRefreshReady,
+  onHistorySelectionChange,
+  openTab,
+  activeTab,
+  updateTabData,
+  switchTab,
+}) => {
+  const isGraphMode = viewMode === "graph";
+  const { t } = useTranslation();
+  const { dispatch } = useActionSystem();
+
+  const activeHistorySelection =
+    activeTab?.type === "source-control"
+      ? ((activeTab.data.historySelection ??
+          null) as SourceControlHistorySelection | null)
+      : null;
+  const activeCommitSha =
+    activeTab?.type === "git-commit-detail"
+      ? (activeTab.data.commitSha as string)
+      : activeHistorySelection?.type === "commit"
+        ? activeHistorySelection.commitSha
+        : null;
+
+  const [commits, setCommits] = useState<GitCommitInfo[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [contextMenuCommit, setContextMenuCommit] =
+    useState<GitCommitInfo | null>(null);
+  const lastLoadedKeyRef = useRef<string | null>(null);
+  const latestInitialLoadRequestIdRef = useRef(0);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const loadingMoreRef = useRef(false);
+
+  const loadInitialCommits = useCallback(
+    async ({ force = false }: { force?: boolean } = {}) => {
+      if (!repoId) return;
+
+      const loadKey = `${repoId}:${repoPath}`;
+      if (!force && lastLoadedKeyRef.current === loadKey) return;
+
+      const requestId = ++latestInitialLoadRequestIdRef.current;
+      setLoading(true);
+      setError(null);
+
+      try {
+        const result = await getGitCommits({
+          repo_id: repoId,
+          repo_path: repoPath,
+          limit: COMMITS_PAGE_SIZE,
+        });
+
+        if (requestId !== latestInitialLoadRequestIdRef.current) return;
+
+        if (result?.commits) {
+          setCommits(result.commits);
+          setHasMore(result.commits.length >= COMMITS_PAGE_SIZE);
+          lastLoadedKeyRef.current = loadKey;
+        } else {
+          setError("Failed to load commit history");
+        }
+      } catch (err) {
+        if (requestId !== latestInitialLoadRequestIdRef.current) return;
+
+        setError(err instanceof Error ? err.message : "Failed to load commits");
+      } finally {
+        if (requestId === latestInitialLoadRequestIdRef.current) {
+          setLoading(false);
+        }
+      }
+    },
+    [repoId, repoPath]
+  );
+
+  // Load commits on mount or when repo changes
+  useEffect(() => {
+    void loadInitialCommits();
+  }, [loadInitialCommits]);
+
+  // Refresh: clear cache and re-fetch from scratch
+  const handleRefresh = useCallback(() => {
+    lastLoadedKeyRef.current = null;
+    setHasMore(false);
+    setError(null);
+    void loadInitialCommits({ force: true });
+  }, [loadInitialCommits]);
+
+  // Register refresh callback with parent
+  useEffect(() => {
+    onRefreshReady?.(handleRefresh);
+  }, [onRefreshReady, handleRefresh]);
+
+  // Load more commits (called by IntersectionObserver)
+  const handleLoadMore = useCallback(async () => {
+    if (!repoId || loadingMoreRef.current || !hasMore) return;
+
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const result = await getGitCommits({
+        repo_id: repoId,
+        repo_path: repoPath,
+        limit: COMMITS_PAGE_SIZE,
+        skip: commits.length,
+      });
+
+      if (result?.commits) {
+        setCommits((prev) => [...prev, ...result.commits]);
+        setHasMore(result.commits.length >= COMMITS_PAGE_SIZE);
+      } else {
+        setHasMore(false);
+      }
+    } catch {
+      setHasMore(false);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [repoId, repoPath, commits.length, hasMore]);
+
+  // Infinite scroll via IntersectionObserver on sentinel element
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loadingMoreRef.current) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0, rootMargin: "100px" }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, handleLoadMore]);
+
+  // Compute graph layout — pure function, deterministic output for same input
+  const graphData = useMemo(() => {
+    if (!isGraphMode || commits.length === 0) {
+      return { nodeMap: new Map<string, CommitGraphNode>(), maxLanes: 1 };
+    }
+    const state = createGraphState();
+    assignLanesIncremental(state, commits);
+    const nodeMap = new Map<string, CommitGraphNode>();
+    let maxLanes = 1;
+    for (const node of state.nodes) {
+      nodeMap.set(node.commit.sha, node);
+      if (node.activeLaneCount > maxLanes) maxLanes = node.activeLaneCount;
+    }
+    return { nodeMap, maxLanes };
+  }, [commits, isGraphMode]);
+
+  const graphSvgWidth = graphData.maxLanes * LANE_WIDTH;
+
+  const openCommitInNewTab = useCallback(
+    (commit: GitCommitInfo) => {
+      const tab = createGitCommitDetailTab(
+        commit.sha,
+        commit.short_sha,
+        commit.summary
+      );
+      openTab(tab);
+    },
+    [openTab]
+  );
+
+  const handleCommitSelect = useCallback(
+    (commit: GitCommitInfo) => {
+      const selection: SourceControlHistorySelection = {
+        type: "commit",
+        commitSha: commit.sha,
+        shortSha: commit.short_sha,
+        commitMessage: commit.summary,
+      };
+
+      if (onHistorySelectionChange) {
+        onHistorySelectionChange(selection);
+        return;
+      }
+
+      if (activeTab?.type === "source-control") {
+        updateTabData(SOURCE_CONTROL_CHANGES_TAB_ID, {
+          historySelection: selection,
+        });
+        switchTab(SOURCE_CONTROL_CHANGES_TAB_ID);
+        return;
+      }
+
+      openCommitInNewTab(commit);
+    },
+    [
+      activeTab?.type,
+      onHistorySelectionChange,
+      openCommitInNewTab,
+      switchTab,
+      updateTabData,
+    ]
+  );
+
+  const handleCommitContextMenu = useCallback(
+    (event: React.MouseEvent, commit: GitCommitInfo) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setContextMenuCommit(commit);
+    },
+    []
+  );
+
+  // Loading state
+  if (loading) {
+    return (
+      <Placeholder variant="loading" placement="sidebar" fillParentHeight />
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Placeholder
+        variant="error"
+        title={t("placeholders.failedToLoadHistory")}
+        subtitle={error}
+      />
+    );
+  }
+
+  // Empty state
+  if (commits.length === 0) {
+    return (
+      <Placeholder
+        variant="empty"
+        placement="sidebar"
+        title={t("placeholders.noCommitHistory")}
+        fillParentHeight
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col overflow-auto scrollbar-hide">
+      {commits.map((commit, index) => (
+        <CommitRow
+          key={commit.sha}
+          commit={commit}
+          isSelected={commit.sha === activeCommitSha}
+          graphNode={
+            isGraphMode ? graphData.nodeMap.get(commit.sha) : undefined
+          }
+          svgWidth={graphSvgWidth}
+          isFirst={index === 0}
+          onSelect={handleCommitSelect}
+          onContextMenu={handleCommitContextMenu}
+        />
+      ))}
+
+      {/* Infinite scroll sentinel + loading indicator */}
+      {hasMore && (
+        <div
+          ref={sentinelRef}
+          className="flex items-center justify-center py-2"
+        >
+          {loadingMore && (
+            <Loader2
+              size={SPINNER_TOKENS.default}
+              className="animate-spin text-text-3"
+            />
+          )}
+        </div>
+      )}
+
+      {contextMenuCommit && (
+        <GitHistoryContextMenu
+          commit={contextMenuCommit}
+          repoId={repoId}
+          repoPath={repoPath}
+          isHeadCommit={commits[0]?.sha === contextMenuCommit.sha}
+          dispatch={dispatch}
+          onOpenInNewTab={openCommitInNewTab}
+          onActionComplete={handleRefresh}
+          onClose={() => setContextMenuCommit(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+const GitHistoryContent: React.FC<GitHistoryContentProps> = (props) => {
+  const { openTab, activeTab, updateTabData, switchTab } = useWorkStationTabs();
+  return (
+    <GitHistoryContentInner
+      {...props}
+      openTab={openTab}
+      activeTab={activeTab}
+      updateTabData={updateTabData}
+      switchTab={switchTab}
+    />
+  );
+};
+
+export default memo(GitHistoryContent);

@@ -1,0 +1,415 @@
+/**
+ * Lead, Members, Teams, Labels, and Linked Repos field rows.
+ * Extracted to keep ProjectPropertyFields under the UI line limit.
+ */
+import { Code2, Plane, Settings, Tag, User, Users } from "lucide-react";
+import React from "react";
+
+import Avatar from "@src/components/Avatar";
+import {
+  FieldRow,
+  type FieldRowVariant,
+  Option,
+  SearchableDropdown,
+} from "@src/components/PropertyField/PropertyFieldEditable";
+
+import type {
+  Label,
+  LinkedRepoOption,
+  Person,
+  PickerType,
+  ProjectData,
+  ProjectPropertyFieldKey,
+  Team,
+} from "../types";
+
+export interface PeopleTeamsLabelsFieldsProps {
+  project: ProjectData;
+  openPicker: PickerType;
+  togglePicker: (key: PickerType) => void;
+  availableMembers: Person[];
+  availableTeams: Team[];
+  availableLabels: Label[];
+  availableRepos: LinkedRepoOption[] | undefined;
+  handleLeadChange: (person: Person | undefined) => void;
+  handleMemberToggle: (person: Person) => void;
+  handleTeamToggle: (team: Team) => void;
+  handleLabelToggle: (label: Label) => void;
+  handleLinkedRepoToggle: (repo: LinkedRepoOption) => void;
+  linkedRepoLabel: string;
+  linkedRepoCount: number;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+  fieldVariant?: FieldRowVariant;
+  visibleFields: Set<ProjectPropertyFieldKey>;
+}
+
+const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
+  project,
+  openPicker,
+  togglePicker,
+  availableMembers,
+  availableTeams,
+  availableLabels,
+  availableRepos,
+  handleLeadChange,
+  handleMemberToggle,
+  handleTeamToggle,
+  handleLabelToggle,
+  handleLinkedRepoToggle,
+  linkedRepoLabel,
+  linkedRepoCount,
+  t,
+  fieldVariant = "row",
+  visibleFields,
+}) => (
+  <>
+    {/* Lead */}
+    {(visibleFields.has("lead") || openPicker === "lead") && (
+      <div
+        className={
+          fieldVariant === "pill"
+            ? "relative flex min-h-7 min-w-0 max-w-[220px] items-center"
+            : "relative flex min-h-[36px] w-full items-center"
+        }
+      >
+        <FieldRow
+          icon={
+            project.lead ? (
+              <Avatar
+                size={16}
+                src={project.lead.avatar}
+                style={{
+                  backgroundColor: project.lead.color || "var(--color-fill-3)",
+                  color: "var(--color-text-white)",
+                  fontSize: "11px",
+                }}
+              >
+                {project.lead.name.charAt(0).toUpperCase()}
+              </Avatar>
+            ) : (
+              <User size={14} />
+            )
+          }
+          label={t("properties.lead")}
+          value={project.lead?.name || t("properties.addLead")}
+          isSelected={!!project.lead}
+          isActive={openPicker === "lead"}
+          variant={fieldVariant}
+          onClick={() => togglePicker("lead")}
+        />
+        {openPicker === "lead" && (
+          <SearchableDropdown
+            placeholder={t("properties.searchMembers")}
+            widthMode={fieldVariant === "pill" ? "menu" : "match-parent"}
+            align={fieldVariant === "pill" ? "auto" : "left"}
+          >
+            {(searchQuery) => {
+              const filtered = searchQuery
+                ? availableMembers.filter((person) =>
+                    person.name
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase())
+                  )
+                : availableMembers;
+              return (
+                <>
+                  {!searchQuery && (
+                    <Option
+                      icon={<User size={14} />}
+                      label={t("properties.noLead")}
+                      onClick={() => handleLeadChange(undefined)}
+                    />
+                  )}
+                  {filtered.map((person) => (
+                    <Option
+                      key={person.id}
+                      isSelected={project.lead?.id === person.id}
+                      label={person.name}
+                      onClick={() => handleLeadChange(person)}
+                    >
+                      <Avatar
+                        size={16}
+                        src={person.avatar}
+                        style={{
+                          backgroundColor:
+                            person.color || "var(--color-fill-3)",
+                          color: "var(--color-text-white)",
+                          fontSize: "11px",
+                        }}
+                      >
+                        {person.name.charAt(0).toUpperCase()}
+                      </Avatar>
+                      <span className="flex-1 truncate">{person.name}</span>
+                    </Option>
+                  ))}
+                </>
+              );
+            }}
+          </SearchableDropdown>
+        )}
+      </div>
+    )}
+
+    {/* Members */}
+    {(visibleFields.has("members") || openPicker === "members") && (
+      <div
+        className={
+          fieldVariant === "pill"
+            ? "relative flex min-h-7 min-w-0 max-w-[220px] items-center"
+            : "relative flex min-h-[36px] w-full items-center"
+        }
+      >
+        <FieldRow
+          icon={<Users size={14} />}
+          label={t("properties.members")}
+          value={
+            project.members && project.members.length > 0
+              ? t("properties.memberCount", { count: project.members.length })
+              : t("properties.addMembers")
+          }
+          isSelected={!!project.members && project.members.length > 0}
+          isActive={openPicker === "members"}
+          showChevron
+          variant={fieldVariant}
+          onClick={() => togglePicker("members")}
+        />
+        {openPicker === "members" && (
+          <SearchableDropdown
+            placeholder={t("properties.searchMembers")}
+            widthMode={fieldVariant === "pill" ? "menu" : "match-parent"}
+            align={fieldVariant === "pill" ? "auto" : "left"}
+          >
+            {(searchQuery) => {
+              const filtered = searchQuery
+                ? availableMembers.filter((person) =>
+                    person.name
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase())
+                  )
+                : availableMembers;
+              return filtered.map((person) => {
+                const isSelected = project.members?.some(
+                  (item) => item.id === person.id
+                );
+                return (
+                  <Option
+                    key={person.id}
+                    isSelected={isSelected}
+                    label={person.name}
+                    onClick={() => handleMemberToggle(person)}
+                  >
+                    <Avatar
+                      size={16}
+                      src={person.avatar}
+                      style={{
+                        backgroundColor: person.color || "var(--color-fill-3)",
+                        color: "var(--color-text-white)",
+                        fontSize: "11px",
+                      }}
+                    >
+                      {person.name.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <span className="flex-1 truncate">{person.name}</span>
+                  </Option>
+                );
+              });
+            }}
+          </SearchableDropdown>
+        )}
+      </div>
+    )}
+
+    {/* Teams */}
+    {(visibleFields.has("teams") || openPicker === "teams") && (
+      <div
+        className={
+          fieldVariant === "pill"
+            ? "relative flex min-h-7 min-w-0 max-w-[220px] items-center"
+            : "relative flex min-h-[36px] w-full items-center"
+        }
+      >
+        <FieldRow
+          icon={<Plane size={14} />}
+          label={t("properties.teams")}
+          value={
+            project.teams && project.teams.length > 0
+              ? project.teams.map((team) => team.name).join(", ")
+              : t("properties.addTeams")
+          }
+          isSelected={!!project.teams && project.teams.length > 0}
+          isActive={openPicker === "teams"}
+          variant={fieldVariant}
+          onClick={() => togglePicker("teams")}
+        />
+        {openPicker === "teams" && (
+          <SearchableDropdown
+            placeholder={t("properties.searchTeams")}
+            widthMode={fieldVariant === "pill" ? "menu" : "match-parent"}
+            align={fieldVariant === "pill" ? "auto" : "left"}
+          >
+            {(searchQuery) => {
+              const filtered = searchQuery
+                ? availableTeams.filter((team) =>
+                    team.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                : availableTeams;
+              if (filtered.length === 0) {
+                return (
+                  <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
+                    <Settings size={20} className="text-text-3" />
+                    <p className="text-[12px] text-text-3">
+                      {t("properties.noTeamsHint")}
+                    </p>
+                  </div>
+                );
+              }
+              return filtered.map((team) => {
+                const isSelected = project.teams?.some(
+                  (item) => item.id === team.id
+                );
+                return (
+                  <Option
+                    key={team.id}
+                    label={team.name}
+                    isSelected={isSelected}
+                    onClick={() => handleTeamToggle(team)}
+                  >
+                    <Plane size={14} style={{ color: team.color }} />
+                    <span className="flex-1 truncate">{team.name}</span>
+                  </Option>
+                );
+              });
+            }}
+          </SearchableDropdown>
+        )}
+      </div>
+    )}
+
+    {/* Labels */}
+    {(visibleFields.has("labels") || openPicker === "labels") && (
+      <div
+        className={
+          fieldVariant === "pill"
+            ? "relative flex min-h-7 min-w-0 max-w-[220px] items-center"
+            : "relative flex min-h-[36px] w-full items-center"
+        }
+      >
+        <FieldRow
+          icon={<Tag size={14} />}
+          label={t("properties.labels")}
+          value={
+            project.labels && project.labels.length > 0
+              ? project.labels.map((label) => label.name).join(", ")
+              : t("properties.addLabels")
+          }
+          isSelected={!!project.labels && project.labels.length > 0}
+          isActive={openPicker === "labels"}
+          variant={fieldVariant}
+          onClick={() => togglePicker("labels")}
+        />
+        {openPicker === "labels" && (
+          <SearchableDropdown
+            placeholder={t("properties.searchLabels")}
+            widthMode={fieldVariant === "pill" ? "menu" : "match-parent"}
+            align={fieldVariant === "pill" ? "auto" : "left"}
+          >
+            {(searchQuery) => {
+              const filtered = searchQuery
+                ? availableLabels.filter((label) =>
+                    label.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                : availableLabels;
+              return filtered.map((label) => {
+                const isSelected = project.labels?.some(
+                  (item) => item.id === label.id
+                );
+                return (
+                  <Option
+                    key={label.id}
+                    label={label.name}
+                    isSelected={isSelected}
+                    onClick={() => handleLabelToggle(label)}
+                  >
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: label.color }}
+                    />
+                    <span className="flex-1 truncate">{label.name}</span>
+                  </Option>
+                );
+              });
+            }}
+          </SearchableDropdown>
+        )}
+      </div>
+    )}
+
+    {/* Linked Repos */}
+    {availableRepos !== undefined &&
+      (visibleFields.has("linkedRepos") || openPicker === "linkedRepos") && (
+        <div
+          className={
+            fieldVariant === "pill"
+              ? "relative flex min-h-7 min-w-0 max-w-[220px] items-center"
+              : "relative flex min-h-[36px] w-full items-center"
+          }
+        >
+          <FieldRow
+            icon={<Code2 size={14} />}
+            label={t("properties.repos")}
+            value={linkedRepoLabel}
+            isSelected={linkedRepoCount > 0}
+            isActive={openPicker === "linkedRepos"}
+            showChevron
+            variant={fieldVariant}
+            onClick={() => togglePicker("linkedRepos")}
+          />
+          {openPicker === "linkedRepos" && (
+            <SearchableDropdown
+              placeholder={t("properties.searchRepos")}
+              widthMode={fieldVariant === "pill" ? "menu" : "match-parent"}
+              align={fieldVariant === "pill" ? "auto" : "left"}
+            >
+              {(searchQuery) => {
+                const filtered = searchQuery
+                  ? availableRepos.filter((repo) =>
+                      repo.name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase())
+                    )
+                  : availableRepos;
+                if (filtered.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
+                      <Code2 size={20} className="text-text-3" />
+                      <p className="text-[12px] text-text-3">
+                        {t("properties.noReposHint")}
+                      </p>
+                    </div>
+                  );
+                }
+                return filtered.map((repo) => {
+                  const isSelected = project.linkedRepos?.some(
+                    (item) => item.id === repo.id
+                  );
+                  return (
+                    <Option
+                      key={repo.id}
+                      label={repo.name}
+                      isSelected={isSelected}
+                      onClick={() => handleLinkedRepoToggle(repo)}
+                    >
+                      <Code2 size={14} className="text-text-3" />
+                      <span className="flex-1 truncate">{repo.name}</span>
+                    </Option>
+                  );
+                });
+              }}
+            </SearchableDropdown>
+          )}
+        </div>
+      )}
+  </>
+);
+
+export default PeopleTeamsLabelsFields;

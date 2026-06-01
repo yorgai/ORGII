@@ -1,0 +1,70 @@
+//! Agent Org task-board tool entries.
+
+use super::aliases::*;
+
+pub(super) static TOOLS: &[ToolEntry] = &[
+    ToolEntry {
+        name: tool_names::TASK_CREATE,
+        description: "Create a task on the Agent Org task board.",
+        description_detail: "Creates a shared task-board item for the current Agent Org run, including subject, description, active form, owner, status, and dependency edges.",
+        category: tool_categories::ORCHESTRATION,
+        icon_id: "clipboard-copy",
+        simulator_app: AppChannels,
+        app_subtool: SubTodo,
+        chat_block: CbOrgTask,
+        hidden: true,
+        label_running: "tools.taskCreateRunning",
+        label_done: "tools.taskCreateDone",
+        label_failed: "tools.taskCreateFailed",
+        required_capability: CapOrch,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::TASK_UPDATE,
+        description: "Update a task on the Agent Org task board.",
+        description_detail: "Updates a shared Agent Org task-board item, including status, owner, active form, dependency edges, and deletion semantics.",
+        category: tool_categories::ORCHESTRATION,
+        icon_id: "clipboard-pen",
+        simulator_app: AppChannels,
+        app_subtool: SubTodo,
+        chat_block: CbOrgTask,
+        hidden: true,
+        label_running: "tools.taskUpdateRunning",
+        label_done: "tools.taskUpdateDone",
+        label_failed: "tools.taskUpdateFailed",
+        required_capability: CapOrch,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::TASK_LIST,
+        description: "List tasks on the Agent Org task board.",
+        description_detail: "Lists shared task-board items for the current Agent Org run, optionally filtered by owner or status.",
+        category: tool_categories::ORCHESTRATION,
+        icon_id: "list-checks",
+        simulator_app: AppChannels,
+        app_subtool: SubTodo,
+        chat_block: CbOrgTask,
+        hidden: true,
+        label_running: "tools.taskListRunning",
+        label_done: "tools.taskListDone",
+        label_failed: "tools.taskListFailed",
+        required_capability: CapOrch,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::TASK_GET,
+        description: "Fetch one Agent Org task.",
+        description_detail: "Fetches one shared Agent Org task-board item by id with the full task payload.",
+        category: tool_categories::ORCHESTRATION,
+        icon_id: "clipboard-list",
+        simulator_app: AppChannels,
+        app_subtool: SubTodo,
+        chat_block: CbOrgTask,
+        hidden: true,
+        label_running: "tools.taskGetRunning",
+        label_done: "tools.taskGetDone",
+        label_failed: "tools.taskGetFailed",
+        required_capability: CapOrch,
+        ..DEFAULT_TOOL_ENTRY
+    },
+];

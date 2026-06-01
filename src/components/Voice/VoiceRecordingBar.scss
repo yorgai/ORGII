@@ -1,0 +1,84 @@
+/**
+ * Voice recording waveform — decorative audio-level visualization.
+ *
+ * Layout matches the reference screenshot: a long dotted baseline stretches
+ * across the available space, and the live waveform bars sit at the right
+ * end, suggesting the "now" position of the audio stream.
+ */
+
+.composer-voice-waveform {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 6px;
+
+  &__baseline {
+    position: absolute;
+    left: 8px;
+    right: 80px;
+    top: 50%;
+    height: 1px;
+    transform: translateY(-50%);
+    background-image: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-text-3) 70%, transparent) 0,
+      color-mix(in srgb, var(--color-text-3) 70%, transparent) 2px,
+      transparent 2px,
+      transparent 6px
+    );
+    background-size: 6px 1px;
+    background-repeat: repeat-x;
+    pointer-events: none;
+  }
+
+  &__bars {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  &__bar {
+    display: block;
+    width: 2px;
+    background-color: var(--color-text-2);
+    border-radius: 1px;
+    transform-origin: center;
+    height: 20%;
+    animation: composer-voice-bar 720ms ease-in-out infinite alternate;
+    animation-delay: 0ms;
+  }
+}
+
+@keyframes composer-voice-bar {
+  0% {
+    height: 14%;
+    opacity: 0.55;
+  }
+
+  60% {
+    height: calc(var(--peak, 0.6) * 100%);
+    opacity: 1;
+  }
+
+  100% {
+    height: 18%;
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer-voice-waveform__bar {
+    animation: none;
+    height: calc(var(--peak, 0.6) * 60%);
+  }
+}

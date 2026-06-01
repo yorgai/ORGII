@@ -1,0 +1,84 @@
+[package]
+name = "integrations"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+
+# External-service integration crate. Bundles four adapters:
+#
+# - `auth`              — OAuth/session-token store for browser-flow logins
+# - `computer_use_lock` — file lock + abort hotkey state for the Computer Use
+#                         tools (single-session-at-a-time semantics)
+# - `external_ide`      — `open_in_external_ide` / `show_in_folder` Tauri cmds
+# - `github`            — gh-cli detection, OAuth profile, REST helpers
+# - `proxy`             — local MITM HTTPS proxy for Cursor / Kiro / Copilot
+#                         sessions, plus the ORGII-cloud allocate/release HTTP
+#                         calls that issue per-session proxy tokens
+#
+# Keeps its `#[tauri::command]` macros in-crate (key-vault / cursor-bridge
+# pattern); the `app` crate just re-registers them in
+# `commands/handler_list.inc`. The single back-edge into `app` —
+# `computer_use_lock::request_abort` broadcasting `agent:computer_use_aborted`
+# — is wired through `integrations::computer_use_lock::register_abort_broadcaster`,
+# called once from `app::lib::run` so this crate never depends on `agent_core`.
+
+[lib]
+name = "integrations"
+
+[dependencies]
+# Workspace crates
+app_paths = { path = "../app-paths" }
+app_utils = { path = "../app-utils" }
+core_types = { path = "../types" }
+git = { path = "../git" }
+
+# Tauri
+tauri = { workspace = true }
+
+# Serde + JSON
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Async runtime
+tokio = { workspace = true }
+
+# HTTP client (proxy ORGII cloud calls + GitHub API)
+reqwest = { workspace = true }
+
+# Web framework — used by `proxy::sse_sanitizer`
+axum = { workspace = true }
+bytes = "1"
+futures-util = "0.3"
+
+# `github::profile` future combinators
+futures = "0.3"
+
+# Date helpers — `github::profile` formats GitHub timestamps
+chrono = { workspace = true }
+
+# MITM proxy plumbing
+rcgen = { version = "0.13", features = ["x509-parser"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "tls12", "ring"] }
+rustls-pemfile = "2"
+url = "2"
+time = "0.3"
+
+# GitHub username encoding
+urlencoding = "2.1"
+
+# Logging
+tracing = "0.1"
+log = "0.4"
+
+# `github::detect` resolves `~/.config/gh/hosts.yml` (and macOS Keychain
+# fallbacks) to discover an existing `gh` CLI install.
+dirs = "6.0"
+
+# Mozilla CA roots for the upstream TLS connection in `proxy::server`.
+webpki-roots = { workspace = true }
+
+# `computer_use_lock` PID liveness probe (`kill(pid, 0)` returning success
+# means the lock-file owner is still alive). Unix-only; on Windows the lock
+# is best-effort and the liveness check is gated out.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

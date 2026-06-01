@@ -1,0 +1,4 @@
+# Separate rust-analyzer's check artifacts from the main build.
+# Eliminates lock contention and cache invalidation between RA and cargo build/dev.
+[cargo]
+targetDir = "target/ra"

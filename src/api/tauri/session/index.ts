@@ -1,0 +1,117 @@
+/**
+ * Session API
+ *
+ * TypeScript wrappers for cross-system session list Rust commands (CLI + SDE + OS).
+ */
+import { rpc } from "@src/api/tauri/rpc";
+import type {
+  AggregateStats,
+  SessionAggregateRecord,
+  SessionFilter,
+  SessionListResponse,
+} from "@src/api/tauri/rpc/schemas/sessionAggregate";
+import type { Session } from "@src/store/session/sessionAtom/types";
+
+import type { KeySource } from "./dispatchTypes";
+
+// Re-export from zero-dep module so callers keep the same import path.
+export type { DispatchCategory, KeySource } from "./dispatchTypes";
+export {
+  DISPATCH_CATEGORY,
+  KEY_SOURCE,
+  isHostedKey,
+  isOwnKey,
+} from "./dispatchTypes";
+
+// Re-export session aggregate types from RPC schemas (single source of truth).
+export type {
+  AggregateStats,
+  SessionAggregateRecord,
+  SessionFilter,
+  SessionListResponse,
+};
+
+// ============================================================================
+// API Functions
+// ============================================================================
+
+/**
+ * Get all sessions with statistics.
+ *
+ * This replaces the frontend's parallel loading from multiple Tauri commands
+ * with a single unified session_aggregate_list call.
+ */
+export async function sessionAggregateList(
+  filter?: SessionFilter
+): Promise<SessionListResponse> {
+  return rpc.sessionAggregate.list({ filter }) as Promise<SessionListResponse>;
+}
+
+/**
+ * Get aggregate statistics for sessions.
+ *
+ * Optionally filter by session IDs or key source.
+ */
+export async function sessionGetAggregateStats(
+  sessionIds?: string[],
+  keySource?: KeySource
+): Promise<AggregateStats> {
+  return rpc.sessionAggregate.getStats({
+    sessionIds,
+    keySource,
+  }) as Promise<AggregateStats>;
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+export function toFrontendSession(record: SessionAggregateRecord): Session {
+  return {
+    session_id: record.sessionId,
+    status: record.status,
+    created_at: record.createdAt,
+    updated_at: record.updatedAt,
+    created_time: record.createdAt,
+    updated_time: record.updatedAt,
+    user_input: record.userInput,
+    repo_name: record.repoName || "",
+    name: record.name,
+    branch: record.branch || "",
+    is_active: record.isActive,
+    category: record.category,
+    cliAgentType: record.cliAgentType,
+    model: record.model,
+    keySource: record.keySource,
+    accountId: record.accountId,
+    tier: record.tier,
+    pid: record.pid ?? null,
+    repoPath: record.repoPath,
+    worktreePath: record.worktreePath,
+    worktreeBranch: record.worktreeBranch,
+    baseBranch: record.baseBranch,
+    mergeStatus: record.mergeStatus,
+    background: record.background,
+    parentSessionId: record.parentSessionId,
+    orgMemberId: record.orgMemberId,
+    agentOrgId: record.agentOrgId,
+    agentOrgName: record.agentOrgName,
+    agentDefinitionId: record.agentDefinitionId,
+    agentIconId: record.agentIconId,
+    agentDisplayName: record.agentDisplayName,
+    agentExecMode: record.agentExecMode,
+    draftText: record.draftText,
+    replyTargetEventId: record.replyTargetEventId,
+    tags: record.tags,
+    pinned: record.pinned,
+  };
+}
+
+/**
+ * Convert SessionAggregateRecord rows to frontend Session format.
+ */
+export function toFrontendSessions(
+  records: SessionAggregateRecord[]
+): Session[] {
+  return records.map(toFrontendSession);
+}

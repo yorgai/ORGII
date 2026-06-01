@@ -1,0 +1,72 @@
+// Chat-context headings - compact sizes suitable for conversation bubbles.
+// Using em so they scale with the parent chat font-size token, but kept
+// deliberately small so H1/H2 don't dwarf surrounding prose.
+.chat-markdown-body h1,
+.chat-markdown-body h2,
+.chat-markdown-body h3,
+.chat-markdown-body h4,
+.chat-markdown-body h5,
+.chat-markdown-body h6 {
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-text-1);
+}
+
+.chat-markdown-body h1 {
+  margin-top: 20px;
+  margin-bottom: 8px;
+  font-size: 1.15em;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.chat-markdown-body h2 {
+  margin-top: 16px;
+  margin-bottom: 6px;
+  font-size: 1.08em;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.chat-markdown-body h3 {
+  margin-top: 14px;
+  margin-bottom: 6px;
+  font-size: 1em;
+}
+
+.chat-markdown-body h4 {
+  margin-top: 12px;
+  margin-bottom: 4px;
+  font-size: 0.95em;
+}
+
+.chat-markdown-body h5 {
+  margin-top: 10px;
+  margin-bottom: 4px;
+  font-size: 0.9em;
+}
+
+.chat-markdown-body h6 {
+  margin-top: 10px;
+  margin-bottom: 4px;
+  font-size: 0.85em;
+  color: var(--color-text-2);
+}
+
+// Cursor-style paragraphs
+.chat-markdown-body p {
+  margin-top: 8px;
+  margin-bottom: 12px;
+  line-height: 1.7;
+}
+
+// Cursor-style blockquote
+.chat-markdown-body blockquote {
+  margin: 12px 0;
+  padding: 8px 16px;
+  color: var(--color-text-2);
+  background: var(--color-fill-1);
+  border-left: 3px solid var(--color-primary-6);
+  border-radius: 0 6px 6px 0;
+  font-style: italic;
+}

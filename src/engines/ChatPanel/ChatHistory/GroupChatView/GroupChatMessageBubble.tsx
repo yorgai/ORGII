@@ -1,0 +1,193 @@
+import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
+import { ChatBubbleBody } from "@src/components/ChatBubble";
+import Markdown from "@src/components/MarkDown";
+import {
+  formatSmartDateTime,
+  toIntlLocaleTag,
+} from "@src/util/data/formatters/date";
+
+import type { GroupChatToolUseSummary } from "./groupChatUtils";
+
+interface GroupChatMessageBubbleProps {
+  senderName: string;
+  recipientName: string | null;
+  bodyMarkdown: string;
+  timestamp: string;
+  showSenderChrome: boolean;
+  toolUseSummary?: GroupChatToolUseSummary | null;
+}
+
+const AVATAR_COLORS = [
+  "bg-primary-1 text-primary-6",
+  "bg-success-1 text-success-6",
+  "bg-warning-1 text-warning-6",
+  "bg-purple-1 text-purple-6",
+  "bg-danger-1 text-danger-6",
+  "bg-fill-2 text-text-2",
+] as const;
+
+function avatarColorForName(name: string): string {
+  let hash = 0;
+  for (const char of name) {
+    hash = (hash * 31 + char.charCodeAt(0)) % AVATAR_COLORS.length;
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function avatarLetterForName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return "A";
+  return trimmed[0].toLocaleUpperCase();
+}
+
+function formatSummaryPart(
+  translate: (key: string, options: { count: number }) => string,
+  key: string,
+  count: number
+): string | null {
+  if (count <= 0) return null;
+  return translate(key, { count });
+}
+
+const GroupChatMessageBubble: React.FC<GroupChatMessageBubbleProps> = ({
+  senderName,
+  recipientName,
+  bodyMarkdown,
+  timestamp,
+  showSenderChrome,
+  toolUseSummary = null,
+}) => {
+  const { t, i18n } = useTranslation(["common", "sessions"]);
+  const trimmedRecipient = recipientName?.trim() ?? null;
+  const trimmedBody = bodyMarkdown.trim();
+  const { firstLine, restBody } = useMemo(() => {
+    if (!trimmedRecipient) return { firstLine: "", restBody: trimmedBody };
+    const breakIndex = trimmedBody.search(/\r?\n/);
+    if (breakIndex < 0) return { firstLine: trimmedBody, restBody: "" };
+    return {
+      firstLine: trimmedBody.slice(0, breakIndex),
+      restBody: trimmedBody.slice(breakIndex).replace(/^\r?\n+/, ""),
+    };
+  }, [trimmedBody, trimmedRecipient]);
+
+  const timestampLabel = formatSmartDateTime(timestamp, {
+    yesterdayLabel: t("relativeDate.yesterday"),
+    locale: toIntlLocaleTag(i18n.resolvedLanguage),
+  });
+
+  const toolUseSummaryLabel = useMemo(() => {
+    if (!toolUseSummary) return null;
+    const parts = [
+      formatSummaryPart(
+        t,
+        "sessions:groupChat.toolUseSummary.readFiles",
+        toolUseSummary.readFiles
+      ),
+      formatSummaryPart(
+        t,
+        "sessions:groupChat.toolUseSummary.editedFiles",
+        toolUseSummary.editedFiles
+      ),
+      formatSummaryPart(
+        t,
+        "sessions:groupChat.toolUseSummary.terminalUses",
+        toolUseSummary.terminalUses
+      ),
+      formatSummaryPart(
+        t,
+        "sessions:groupChat.toolUseSummary.explorations",
+        toolUseSummary.explorations
+      ),
+      formatSummaryPart(
+        t,
+        "sessions:groupChat.toolUseSummary.otherTools",
+        toolUseSummary.otherTools
+      ),
+    ].filter((part): part is string => Boolean(part));
+    if (parts.length === 0) return null;
+    return t("sessions:groupChat.toolUseSummary.note", {
+      sender: senderName,
+      summary: parts.join(" · "),
+    });
+  }, [senderName, t, toolUseSummary]);
+
+  const avatar = (
+    <div
+      className={`flex w-8 shrink-0 items-center pl-1 ${showSenderChrome ? "h-9" : "h-0"}`}
+      aria-hidden={!showSenderChrome}
+    >
+      {showSenderChrome && (
+        <div
+          className={`flex aspect-square h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-medium ${avatarColorForName(
+            senderName
+          )}`}
+          title={senderName}
+        >
+          {avatarLetterForName(senderName)}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div
+      data-testid="agent-org-group-chat-message"
+      data-sender-name={senderName}
+      data-recipient-name={trimmedRecipient ?? ""}
+      className="flex gap-1"
+    >
+      {avatar}
+      <div className="min-w-0 flex-1 overflow-hidden">
+        {showSenderChrome && (
+          <div className="flex h-9 items-center">
+            <div className="flex h-4 items-center gap-2 leading-none">
+              <span className="text-[13px] font-medium leading-none text-text-1">
+                {senderName}
+              </span>
+              <span className="text-[11px] leading-none text-text-3">
+                {timestampLabel}
+              </span>
+            </div>
+          </div>
+        )}
+        <ChatBubbleBody variant="neutral" className="!px-2 !py-2">
+          {trimmedRecipient ? (
+            <>
+              <div className="break-words">
+                <span className="text-primary-6">@{trimmedRecipient}</span>
+                {"  "}
+                {firstLine}
+              </div>
+              {restBody && (
+                <Markdown
+                  textContent={restBody}
+                  useChatCodeBlock={true}
+                  enableFileNavigation={true}
+                  skipPreprocess={false}
+                />
+              )}
+            </>
+          ) : (
+            <Markdown
+              textContent={trimmedBody}
+              useChatCodeBlock={true}
+              enableFileNavigation={true}
+              skipPreprocess={false}
+            />
+          )}
+        </ChatBubbleBody>
+        {toolUseSummaryLabel && (
+          <div className="mt-1 px-2 text-[13px] leading-5 text-text-3">
+            {toolUseSummaryLabel}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+GroupChatMessageBubble.displayName = "GroupChatMessageBubble";
+
+export default GroupChatMessageBubble;

@@ -1,0 +1,238 @@
+/**
+ * BaseStatusBar Component
+ *
+ * Shared base component for status bars across Workstation apps.
+ * Provides consistent styling and layout structure.
+ *
+ * Used by:
+ * - EditorStatusBar (CodeEditor)
+ * - DatabaseStatusBar (Database Manager)
+ * - BrowserStatusBar (Browser)
+ * - ProjectStatusBar (Project Manager)
+ *
+ * Layout:
+ * ┌────────────────────────────────────────────────┐
+ * │ [Left Content]  [Center Content]  [Right Content] │
+ * └────────────────────────────────────────────────┘
+ */
+import React, { memo } from "react";
+
+import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
+import { classNames } from "@src/util/ui/classNames";
+
+import { STATUS_BAR_TOKENS } from "./statusBarTokens";
+
+// ============================================
+// Types
+// ============================================
+
+export interface BaseStatusBarProps {
+  /** Content for the left section */
+  leftContent?: React.ReactNode;
+  /** Content for the center section (optional, absolute positioned) */
+  centerContent?: React.ReactNode;
+  /** Content for the right section */
+  rightContent?: React.ReactNode;
+  /** Whether to use rounded bottom corners (for simulator frame) */
+  roundedBottom?: boolean;
+  /** Additional class name */
+  className?: string;
+}
+
+// ============================================
+// Sub-components for composition
+// ============================================
+
+/**
+ * Visual variant for {@link StatusBarButton}.
+ * - `ghost` (default): transparent, hover fill — used for icon toggles
+ *   and inline counters.
+ * - `primary`: brand-filled call-to-action — for actions like
+ *   "Add to Chat".
+ */
+export type StatusBarButtonVariant = "ghost" | "primary";
+
+export interface StatusBarButtonProps {
+  /** Button content */
+  children: React.ReactNode;
+  /** Click handler */
+  onClick?: () => void;
+  /** Whether the button is disabled */
+  disabled?: boolean;
+  /** Tooltip text */
+  title?: string;
+  /** Whether the button is active/selected (ghost only) */
+  active?: boolean;
+  /** Visual variant — see {@link StatusBarButtonVariant} */
+  variant?: StatusBarButtonVariant;
+  /** Additional class name */
+  className?: string;
+  dataTestId?: string;
+}
+
+/**
+ * Styled button for use within status bars.
+ */
+export const StatusBarButton: React.FC<StatusBarButtonProps> = memo(
+  ({
+    children,
+    onClick,
+    disabled = false,
+    title,
+    active = false,
+    variant = "ghost",
+    className,
+    dataTestId,
+  }) => {
+    // `active` only applies to the ghost variant — the primary fill
+    // already reads as a pressed CTA, so adding bg-fill-2 on top would
+    // mute the brand color.
+    const activeClass =
+      variant === "ghost" && active ? SURFACE_TOKENS.selected : "";
+    const variantClass =
+      variant === "primary"
+        ? STATUS_BAR_TOKENS.buttonPrimary
+        : STATUS_BAR_TOKENS.buttonGhost;
+
+    return (
+      <button
+        type="button"
+        className={classNames(
+          STATUS_BAR_TOKENS.button,
+          variantClass,
+          activeClass,
+          disabled && "cursor-not-allowed opacity-50",
+          className
+        )}
+        onClick={onClick}
+        disabled={disabled}
+        title={title}
+        aria-label={title}
+        data-testid={dataTestId}
+      >
+        {children}
+      </button>
+    );
+  }
+);
+
+StatusBarButton.displayName = "StatusBarButton";
+
+/**
+ * Non-interactive row matching {@link StatusBarButton} padding and height (icon + label groups).
+ */
+export interface StatusBarSegmentProps {
+  children: React.ReactNode;
+  /** Native tooltip */
+  title?: string;
+  className?: string;
+}
+
+export const StatusBarSegment: React.FC<StatusBarSegmentProps> = memo(
+  ({ children, title, className }) => (
+    <div
+      className={classNames(STATUS_BAR_TOKENS.segment, className)}
+      title={title}
+    >
+      {children}
+    </div>
+  )
+);
+
+StatusBarSegment.displayName = "StatusBarSegment";
+
+export interface StatusBarTextProps {
+  /** Text content */
+  children: React.ReactNode;
+  /** Whether text should be muted */
+  muted?: boolean;
+  /** Native tooltip — useful for truncated labels */
+  title?: string;
+  /** Additional class name */
+  className?: string;
+}
+
+/**
+ * Plain text segment — same horizontal padding and height alignment as {@link StatusBarButton}.
+ */
+export const StatusBarText: React.FC<StatusBarTextProps> = memo(
+  ({ children, muted = false, title, className }) => {
+    return (
+      <span
+        className={classNames(
+          STATUS_BAR_TOKENS.text,
+          muted ? "text-text-3" : "text-text-1",
+          className
+        )}
+        title={title}
+      >
+        {children}
+      </span>
+    );
+  }
+);
+
+StatusBarText.displayName = "StatusBarText";
+
+export interface StatusBarDividerProps {
+  /** Additional class name */
+  className?: string;
+}
+
+/**
+ * Visual divider between status bar sections.
+ */
+export const StatusBarDivider: React.FC<StatusBarDividerProps> = memo(
+  ({ className }) => {
+    return <span className={classNames("text-text-3", className)}>·</span>;
+  }
+);
+
+StatusBarDivider.displayName = "StatusBarDivider";
+
+// ============================================
+// Main Component
+// ============================================
+
+export const BaseStatusBar: React.FC<BaseStatusBarProps> = memo(
+  ({
+    leftContent,
+    centerContent,
+    rightContent,
+    roundedBottom = false,
+    className,
+  }) => {
+    return (
+      <div
+        className={classNames(
+          STATUS_BAR_TOKENS.barShell,
+          STATUS_BAR_TOKENS.heightClass,
+          STATUS_BAR_TOKENS.textSizeClass,
+          STATUS_BAR_TOKENS.barPaddingClass,
+          // Top hairline = boundary with the content area above. The
+          // bottom hairline (boundary with the dock) is owned by
+          // `StationDockChrome` so every consumer renders the same line
+          // at the same DOM depth — see comment in StationDockChrome.
+          "border-t border-border-2 text-text-1",
+          roundedBottom && "rounded-b-page",
+          className
+        )}
+      >
+        {/* Left section */}
+        <div className={STATUS_BAR_TOKENS.leftCluster}>{leftContent}</div>
+
+        {/* Center section (absolute positioned) */}
+        {centerContent && (
+          <div className={STATUS_BAR_TOKENS.centerCluster}>{centerContent}</div>
+        )}
+
+        {/* Right section */}
+        <div className={STATUS_BAR_TOKENS.rightCluster}>{rightContent}</div>
+      </div>
+    );
+  }
+);
+
+BaseStatusBar.displayName = "BaseStatusBar";
+
+export default BaseStatusBar;

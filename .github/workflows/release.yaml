@@ -1,0 +1,208 @@
+# Build, sign, notarize, and release ORGII for macOS (Apple Silicon).
+#
+# Trigger: push a tag matching v* (e.g. v0.2.0, v0.2.0-rc.1)
+#
+# Required GitHub Secrets:
+#   APPLE_CERTIFICATE               — base64-encoded .p12 Developer ID certificate
+#   APPLE_CERTIFICATE_PASSWORD      — password for the .p12
+#   APPLE_SIGNING_IDENTITY          — e.g. "Developer ID Application: ORGII AI Inc (XXXXXXXXXX)"
+#   APPLE_ID                        — Apple account email for notarization
+#   APPLE_PASSWORD                  — app-specific password for notarization
+#   APPLE_TEAM_ID                   — 10-char Apple Team ID
+#   TAURI_SIGNING_PRIVATE_KEY       — Tauri updater ed25519 private key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — password for the updater key
+#   AZURE_STORAGE_CONNECTION_STRING — Azure Blob Storage connection string (for updater hosting)
+
+name: "Release ORGII (macOS)"
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # needed to create releases and upload assets
+
+jobs:
+  build-and-release:
+    name: Build & Release (macOS aarch64)
+    runs-on: macos-latest # Apple Silicon runner
+    env:
+      HAS_APPLE_CERT: ${{ secrets.APPLE_CERTIFICATE != '' }}
+    steps:
+      # ── Checkout ──────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── Stamp version from git tag ──────────────────────────
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"  # v0.2.0-rc.1 → 0.2.0-rc.1
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "=== Release version: $VERSION ==="
+
+          # Patch tauri.conf.json
+          sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+
+          # Patch package.json
+          sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
+
+          # Verify
+          grep '"version"' src-tauri/tauri.conf.json package.json
+
+      # ── Node.js + pnpm ───────────────────────────────────────
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ── Rust ──────────────────────────────────────────────────
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+          shared-key: "release-macos-aarch64" # shared across all tag refs
+
+      # ── Apple code-signing certificate (skipped if secret not set) ─
+      - name: Import Apple certificate
+        if: env.HAS_APPLE_CERT == 'true'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          # Create a temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import the certificate
+          echo "$APPLE_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          # Allow codesign to access the keychain without prompting
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Add to the search list so codesign can find it
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+      # ── Build Tauri app (sign + notarize + updater artifacts) ─
+      - name: Build ORGII
+        env:
+          # Apple signing & notarization (Tauri reads these automatically)
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Tauri updater signing
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        # Semantic search archived; no extra `--features` needed.
+        run: pnpm tauri build --target aarch64-apple-darwin
+
+      # ── Locate build artifacts ────────────────────────────────
+      - name: Gather release artifacts
+        id: artifacts
+        run: |
+          BUNDLE_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle"
+
+          # .dmg installer
+          DMG=$(find "$BUNDLE_DIR/dmg" -name "*.dmg" | head -1)
+          echo "dmg=$DMG" >> "$GITHUB_OUTPUT"
+
+          # Updater: .app.tar.gz and .app.tar.gz.sig
+          UPDATER_TAR=$(find "$BUNDLE_DIR/macos" -name "*.app.tar.gz" ! -name "*.sig" | head -1)
+          UPDATER_SIG=$(find "$BUNDLE_DIR/macos" -name "*.app.tar.gz.sig" | head -1)
+          echo "updater_tar=$UPDATER_TAR" >> "$GITHUB_OUTPUT"
+          echo "updater_sig=$UPDATER_SIG" >> "$GITHUB_OUTPUT"
+          echo "updater_tar_name=$(basename "$UPDATER_TAR")" >> "$GITHUB_OUTPUT"
+          echo "updater_sig_name=$(basename "$UPDATER_SIG")" >> "$GITHUB_OUTPUT"
+
+          echo "=== Release artifacts ==="
+          echo "DMG:         $DMG"
+          echo "Updater tar: $UPDATER_TAR"
+          echo "Updater sig: $UPDATER_SIG"
+
+      # ── Generate updater manifest (latest.json) ───────────────
+      - name: Generate latest.json for updater
+        env:
+          TAG: ${{ github.ref_name }}
+          BLOB_BASE_URL: ${{ vars.AZURE_BLOB_BASE_URL }}
+        run: |
+          SIGNATURE=$(cat "${{ steps.artifacts.outputs.updater_sig }}")
+          TAR_NAME="${{ steps.artifacts.outputs.updater_tar_name }}"
+          DOWNLOAD_URL="${BLOB_BASE_URL}/${TAR_NAME}"
+
+          jq -n \
+            --arg version "${TAG#v}" \
+            --arg notes "Release ${TAG}" \
+            --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg signature "$SIGNATURE" \
+            --arg url "$DOWNLOAD_URL" \
+            '{ version: $version, notes: $notes, pub_date: $pub_date, platforms: { "darwin-aarch64": { signature: $signature, url: $url } } }' \
+            > latest.json
+
+          echo "=== latest.json ==="
+          cat latest.json
+
+      # ── Upload updater artifacts to Azure Blob Storage ────────
+      - name: Upload to Azure Blob Storage
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+        run: |
+          brew install azure-cli
+          az storage blob upload \
+            --container-name releases \
+            --file "${{ steps.artifacts.outputs.updater_tar }}" \
+            --name "${{ steps.artifacts.outputs.updater_tar_name }}" \
+            --overwrite
+          az storage blob upload \
+            --container-name releases \
+            --file "${{ steps.artifacts.outputs.updater_sig }}" \
+            --name "${{ steps.artifacts.outputs.updater_sig_name }}" \
+            --overwrite
+          az storage blob upload \
+            --container-name releases \
+            --file latest.json \
+            --name latest.json \
+            --overwrite
+          echo "=== Uploaded to Azure Blob Storage ==="
+
+      # ── Create GitHub Release (for team manual download) ──────
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          generate_release_notes: true
+          files: |
+            ${{ steps.artifacts.outputs.dmg }}
+
+      # ── Cleanup keychain (only if certificate was imported) ────
+      - name: Cleanup keychain
+        if: always() && env.HAS_APPLE_CERT == 'true'
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi

@@ -1,0 +1,120 @@
+.chat-markdown-body .mermaid {
+  border: var(--border-in-light);
+  margin-bottom: 10px;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: var(--white);
+}
+
+#dmermaid {
+  display: none;
+}
+
+// ============================================
+// MermaidBlock Component Styles
+// ============================================
+
+.mermaid-block {
+  margin: 8px 0;
+
+  &__expand-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: transparent;
+    color: var(--color-text-3);
+    border-radius: 6px;
+    cursor: pointer;
+    opacity: 0;
+    transition:
+      color 0.15s ease,
+      background-color 0.15s ease,
+      opacity 0.15s ease;
+
+    &:hover {
+      background: var(--color-fill-2);
+      color: var(--color-text-1);
+    }
+  }
+
+  .group\/chat-block-header:hover &__expand-btn {
+    opacity: 1;
+  }
+
+  &__error-badge {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-danger-6);
+    background: var(--color-danger-1);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  &__svg {
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
+
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+  }
+
+  &__shimmer {
+    height: 120px;
+    margin: 16px;
+    border-radius: 6px;
+    background: linear-gradient(
+      90deg,
+      var(--color-fill-2, #f2f3f5) 25%,
+      var(--color-fill-1, #f7f8fa) 50%,
+      var(--color-fill-2, #f2f3f5) 75%
+    );
+    background-size: 200% 100%;
+    animation: mermaid-shimmer 1.5s ease-in-out infinite;
+  }
+
+  &__code {
+    margin: 0;
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-text-2, #4e5969);
+    background: var(--color-fill-1, #f7f8fa);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  &__error-msg {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--color-danger-6);
+    border-top: 1px solid var(--color-border-2, #e5e6eb);
+  }
+
+  &--dark {
+    .mermaid-block__expand-btn {
+      color: var(--color-text-3);
+
+      &:hover {
+        background: var(--color-fill-2);
+        color: var(--color-text-1);
+      }
+    }
+  }
+}
+
+@keyframes mermaid-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}

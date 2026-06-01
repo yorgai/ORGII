@@ -1,0 +1,67 @@
+/**
+ * useFileHandlers Hook
+ *
+ * Handles file drops into the chat input by routing them through
+ * `droppedFilesAtom` (consumed by useInputAreaEffects).
+ */
+import { useSetAtom } from "jotai";
+import { useCallback } from "react";
+
+import { droppedFilesAtom } from "@src/store/ui/dragDropAtom";
+import { editorChatVisibleAtom } from "@src/store/workstation/codeEditor/editor";
+
+import type { DroppedFileInfo } from "../types";
+
+export interface UseFileHandlersReturn {
+  handleIdeFileDrop: (
+    filePath: string,
+    fileName?: string,
+    isFolder?: boolean
+  ) => void;
+  handleBrowserFileDrop: (file: File, isFolder?: boolean) => void;
+}
+
+export function useFileHandlers(): UseFileHandlersReturn {
+  const setDroppedFiles = useSetAtom(droppedFilesAtom);
+  const setIsShowChat = useSetAtom(editorChatVisibleAtom);
+
+  const handleIdeFileDrop = useCallback(
+    (filePath: string, fileName?: string, isFolder?: boolean) => {
+      const pathParts = filePath.split("/");
+      const finalFileName =
+        fileName || pathParts[pathParts.length - 1] || "Unknown";
+
+      const file: DroppedFileInfo = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: finalFileName,
+        path: filePath,
+        type: isFolder ? "folder" : "file",
+      };
+
+      setDroppedFiles((prev) => [...prev, file]);
+      setIsShowChat(true);
+    },
+    [setDroppedFiles, setIsShowChat]
+  );
+
+  const handleBrowserFileDrop = useCallback(
+    (browserFile: File, isFolder?: boolean) => {
+      const file: DroppedFileInfo = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: browserFile.name || "dropped-file",
+        path: browserFile.name || "dropped-file",
+        type: isFolder ? "folder" : "file",
+        browserFile,
+      };
+
+      setDroppedFiles((prev) => [...prev, file]);
+      setIsShowChat(true);
+    },
+    [setDroppedFiles, setIsShowChat]
+  );
+
+  return {
+    handleIdeFileDrop,
+    handleBrowserFileDrop,
+  };
+}

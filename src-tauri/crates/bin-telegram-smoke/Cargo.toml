@@ -1,0 +1,20 @@
+[package]
+name = "bin_telegram_smoke"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Telegram channel smoke-test. Talks the same `agent_core::channels` and
+# `agent_core::bus` surface the production app uses, but isolates the
+# HTTP in/out from the Gateway/LLM stack so a Telegram regression can be
+# triaged without spinning up the full Tauri app.
+
+[[bin]]
+name = "telegram-smoke"
+path = "src/main.rs"
+
+[dependencies]
+agent_core = { path = "../agent-core" }
+tokio = { workspace = true }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }

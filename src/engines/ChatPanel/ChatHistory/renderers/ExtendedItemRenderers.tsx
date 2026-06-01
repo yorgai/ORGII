@@ -1,0 +1,217 @@
+/**
+ * Extended Item Renderers
+ *
+ * Renderers for grouped/optimized chat item types:
+ * - readFileGroup
+ * - activityStackGroup, threadSelector
+ *
+ * Extracted from ChatItemRenderer for modularity.
+ */
+import i18next from "i18next";
+import { AlertCircle, Chrome, FileSymlink, Globe, Search } from "lucide-react";
+import React from "react";
+
+import ToolCallBlock from "@src/engines/ChatPanel/blocks/ToolCallBlock";
+import { StackedBlock } from "@src/engines/ChatPanel/blocks/primitives";
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+
+import ActionSummaryGroup from "../../ChatItems/ActionSummaryGroup";
+import ReadFileGroup from "../../ChatItems/ReadFileGroup";
+import ActivityChatItem from "../ActivityRouter";
+import type { OptimizedChatItem } from "../chatItemPipeline";
+import ChatItemWrap from "./ChatItemWrap";
+import {
+  MemoizedThreadSelector,
+  type ThreadSelectorChatItem,
+} from "./MemoizedItems";
+
+// ============================================
+// Renderer Functions
+// ============================================
+
+export function renderActivity(
+  chatItem: OptimizedChatItem,
+  index: number,
+  itemKey: string
+): React.ReactElement | null {
+  const event = chatItem.event;
+  if (!event && process.env.NODE_ENV === "development") {
+    console.warn("[ChatItemRenderer] activity item missing event:", chatItem);
+  }
+  if (!event) return null;
+
+  // willEventRenderContent is already applied by the pipeline (chatItemPipeline.ts)
+  // before items reach the renderer. A second call here is redundant overhead.
+
+  const isTextActivity = event.actionType === "assistant";
+  // repeatedErrorCount stores extra occurrences beyond the first, so total = count + 1.
+  const extraRepeats = chatItem.repeatedErrorCount;
+  const totalOccurrences =
+    extraRepeats !== undefined ? extraRepeats + 1 : undefined;
+
+  return (
+    <ChatItemWrap key={itemKey} variant={isTextActivity ? "text" : "default"}>
+      <ActivityChatItem
+        event={event}
+        status={event.activityStatus || "agent"}
+        itemIndex={index}
+        isStreaming={event.isDelta === true}
+      />
+      {totalOccurrences !== undefined && totalOccurrences >= 2 && (
+        <div className="mt-1 flex items-center gap-1.5 px-2 py-1 text-xs text-warning-6">
+          <AlertCircle size={11} className="flex-shrink-0" />
+          <span>
+            {i18next.t("sessions:tools.repeatedErrorNotice", {
+              count: totalOccurrences,
+            })}
+          </span>
+        </div>
+      )}
+    </ChatItemWrap>
+  );
+}
+
+export function renderReadFileGroup(
+  chatItem: OptimizedChatItem,
+  itemKey: string
+): React.ReactElement | null {
+  if (!chatItem.readFileEvents || chatItem.readFileEvents.length === 0) {
+    return null;
+  }
+  return (
+    <ChatItemWrap key={itemKey}>
+      <ReadFileGroup events={chatItem.readFileEvents} />
+    </ChatItemWrap>
+  );
+}
+
+export function renderActionSummaryGroup(
+  chatItem: OptimizedChatItem,
+  itemKey: string
+): React.ReactElement | null {
+  if (
+    !chatItem.actionSummaryEntries ||
+    chatItem.actionSummaryEntries.length === 0
+  ) {
+    return null;
+  }
+  return (
+    <ChatItemWrap key={itemKey}>
+      <ActionSummaryGroup
+        entries={chatItem.actionSummaryEntries}
+        items={chatItem.actionSummaryItems}
+        closedByBoundary={chatItem.actionSummaryClosedByBoundary}
+      />
+    </ChatItemWrap>
+  );
+}
+
+function getStackGroupPresentation(events: SessionEvent[]): {
+  icon: React.ReactNode;
+  label: string;
+} {
+  // Prefer uiCanonical (pre-computed, alias-resolved) over the raw functionName
+  // so that matching is stable even when the Rust backend renames tool aliases.
+  const canonical = (ev: SessionEvent) => ev.uiCanonical || ev.functionName;
+
+  const hasBrowser = events.some(
+    (ev) =>
+      canonical(ev) === "browser" ||
+      (canonical(ev)?.startsWith("browser_") ?? false)
+  );
+  const hasSearch = events.some(
+    (ev) => canonical(ev) === "web_search" || canonical(ev) === "WebSearch"
+  );
+  const hasFetch = events.some(
+    (ev) => canonical(ev) === "web_fetch" || canonical(ev) === "WebFetch"
+  );
+
+  const iconCls = "text-text-2";
+  if (hasSearch && !hasBrowser && !hasFetch)
+    return {
+      icon: <Search size={14} className={iconCls} />,
+      label: i18next.t("sessions:chat.webSearchGroup"),
+    };
+  if (hasFetch && !hasBrowser && !hasSearch)
+    return {
+      icon: <FileSymlink size={14} className={iconCls} />,
+      label: i18next.t("sessions:chat.webFetchGroup"),
+    };
+  if (hasBrowser && !hasSearch && !hasFetch)
+    return {
+      icon: <Chrome size={14} className={iconCls} />,
+      label: i18next.t("sessions:chat.browserGroup"),
+    };
+  return {
+    icon: <Globe size={14} className={iconCls} />,
+    label: i18next.t("sessions:chat.webActivityGroup"),
+  };
+}
+
+export function renderActivityStackGroup(
+  chatItem: OptimizedChatItem,
+  itemKey: string
+): React.ReactElement | null {
+  const stackGroup = chatItem.activityStackGroup;
+  if (!stackGroup || stackGroup.events.length === 0) return null;
+
+  const actionCount = stackGroup.events.length;
+  const countLabel = i18next.t("sessions:chat.actionCount", {
+    count: actionCount,
+  });
+  const { icon, label } = getStackGroupPresentation(stackGroup.events);
+
+  return (
+    <ChatItemWrap key={itemKey}>
+      <StackedBlock
+        items={stackGroup.events}
+        icon={icon}
+        label={label}
+        groupSummary={countLabel}
+        defaultCollapsed={false}
+        renderItem={(event) => (
+          <ToolCallBlock
+            toolName={event.functionName || "browser"}
+            args={event.args}
+            result={event.result}
+            eventId={event.id}
+            sessionId={event.sessionId}
+            payloadRefs={event.payloadRefs}
+          />
+        )}
+      />
+    </ChatItemWrap>
+  );
+}
+
+export function renderThreadSelector(
+  chatItem: OptimizedChatItem,
+  itemKey: string
+): React.ReactElement | null {
+  const threadItem = chatItem as unknown as ThreadSelectorChatItem;
+  if (!threadItem.threadSelectorData) return null;
+  const { threads, threadFirstEventMap } = threadItem.threadSelectorData;
+  return (
+    <ChatItemWrap key={itemKey}>
+      <MemoizedThreadSelector
+        threads={threads}
+        threadFirstEventMap={threadFirstEventMap}
+      />
+    </ChatItemWrap>
+  );
+}
+
+export function renderDefault(
+  chatItem: OptimizedChatItem,
+  _index: number,
+  _itemKey: string
+): React.ReactElement | null {
+  if (process.env.NODE_ENV === "development") {
+    console.warn(
+      "[ChatItemRenderer] Unknown chat type, using default:",
+      chatItem.type,
+      chatItem
+    );
+  }
+  return null;
+}

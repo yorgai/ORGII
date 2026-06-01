@@ -1,0 +1,616 @@
+/**
+ * CLI Session Adapter
+ *
+ * Extracts history loading and real-time event handling from
+ * the old useCliSessionSync into a non-hook adapter.
+ *
+ * History: cli_agent_chunks + cli_agent_status → processChunksRust (Rust pipeline)
+ * Events:
+ *   - Deltas are accumulated locally for the typewriter effect
+ *   - Rust's StreamingBuffer accumulates in parallel and emits
+ *     `agent:streaming_complete` with the authoritative final event
+ *   - Non-delta chunks (tool_call, user_message, etc.) are normalized via Rust
+ */
+import { convertFileSrc, invoke as tauriInvoke } from "@tauri-apps/api/core";
+
+import { enterAgentOrgSessionIntervention } from "@src/api/tauri/agent";
+import type { MergeStatus } from "@src/api/tauri/rpc/schemas/validation";
+import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import {
+  normalizeChunkRust,
+  processChunksRust,
+} from "@src/engines/SessionCore/ingestion/rustBridge";
+import { handleInteractionFinalized } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/toolHandlers";
+import {
+  createStreamMessageId,
+  createStreamThinkingId,
+} from "@src/engines/SessionCore/sync/utils/activityIds";
+import {
+  clearPendingPlanApproval,
+  pendingPlanApprovalsAtom,
+  upsertPendingPlanApproval,
+} from "@src/store/session/planApprovalAtom";
+import { upsertSession } from "@src/store/session/sessionAtom/mutations";
+import type {
+  ActivityChunk,
+  CliSessionStatus,
+} from "@src/types/session/session";
+import {
+  getInstrumentedStore,
+  isStoreInitialized,
+} from "@src/util/core/state/instrumentedStore";
+
+import type {
+  AdapterSendInput,
+  EventHandlerCallbacks,
+  PostLoadResult,
+  RawSessionEvent,
+  SessionAdapter,
+  SessionEventHandler,
+} from "../types";
+import {
+  makeAssistantEvent,
+  makeThinkingEvent,
+  makeToolCallEvent,
+} from "./shared/eventBuilders";
+import {
+  buildToolArgsFromParsed,
+  parsePartialToolArgs,
+} from "./shared/streamingParsers";
+import type { AgentWSEvent } from "./shared/types";
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Build a streaming event for the live typewriter effect.
+ * Uses shared makeAssistantEvent/makeThinkingEvent with CLI-specific fields.
+ */
+function buildStreamingEvent(
+  streamEventId: string,
+  sessionId: string,
+  content: string,
+  kind: "message" | "thinking",
+  createdAt: string
+): SessionEvent {
+  const isMsg = kind === "message";
+  const baseEvent = isMsg
+    ? makeAssistantEvent(streamEventId, sessionId, content, true)
+    : makeThinkingEvent(streamEventId, sessionId, content, true);
+
+  return {
+    ...baseEvent,
+    createdAt,
+    result: isMsg
+      ? { content, observation: content, role: "assistant", is_delta: true }
+      : { thought: content, content, observation: content, is_delta: true },
+  };
+}
+
+function convertResultImages(event: SessionEvent): SessionEvent {
+  const result = event.result as Record<string, unknown> | undefined;
+  if (!result?.images || !Array.isArray(result.images)) return event;
+  const converted = (result.images as string[]).map((imgRef) =>
+    imgRef.startsWith("data:") ? imgRef : convertFileSrc(imgRef)
+  );
+  return { ...event, result: { ...result, images: converted } };
+}
+
+interface StoredSession {
+  status: string;
+  errorMessage?: string | null;
+  totalTokens?: number;
+}
+
+// ============================================================================
+// Adapter
+// ============================================================================
+
+export const cliAdapter: SessionAdapter = {
+  category: "cli",
+
+  async loadHistory(
+    sessionId: string,
+    signal: AbortSignal
+  ): Promise<SessionEvent[]> {
+    const chunks = await tauriInvoke<ActivityChunk[]>("cli_agent_chunks", {
+      sessionId,
+    });
+    if (signal.aborted || !Array.isArray(chunks)) return [];
+    const events = await processChunksRust(chunks, sessionId);
+    if (signal.aborted) return [];
+    return events.map(convertResultImages);
+  },
+
+  async postLoad(
+    sessionId: string,
+    signal: AbortSignal
+  ): Promise<PostLoadResult> {
+    const result: PostLoadResult = {};
+    try {
+      const storedSession = await tauriInvoke<StoredSession | null>(
+        "cli_agent_status",
+        { sessionId }
+      );
+      if (signal.aborted || !storedSession) return result;
+
+      if (typeof storedSession.totalTokens === "number") {
+        result.contextTokens = storedSession.totalTokens;
+      }
+
+      const status = storedSession.status as CliSessionStatus;
+      if (status !== "idle") {
+        result.runStatus = status;
+        if (
+          (status === "failed" || status === "error") &&
+          storedSession.errorMessage
+        ) {
+          result.runError = storedSession.errorMessage;
+        }
+      }
+    } catch (err) {
+      console.warn("[CliAdapter] postLoad status fetch failed:", err);
+    }
+    return result;
+  },
+
+  createEventHandler(
+    sessionId: string,
+    callbacks: EventHandlerCallbacks
+  ): SessionEventHandler {
+    let _streaming = false;
+    let cancelled = false;
+
+    // Lightweight local accumulators for the typewriter effect only.
+    // Rust's StreamingBuffer is the authoritative source; these are
+    // replaced when `agent:streaming_complete` arrives.
+    let msgContent = "";
+    let msgStreamId = "";
+    let msgStartedAt = "";
+    let thinkContent = "";
+    let thinkStreamId = "";
+    let thinkStartedAt = "";
+    const finalizedStreamEventIds = new Set<string>();
+    const toolCallDeltaBuffers = new Map<
+      number,
+      { toolCallId?: string; toolName?: string; argsJson: string }
+    >();
+
+    function setStreamingMode(active: boolean): void {
+      if (_streaming !== active) {
+        _streaming = active;
+        eventStoreProxy.setStreaming(active, sessionId);
+      }
+    }
+
+    function clearMessageStream(): void {
+      msgContent = "";
+      msgStreamId = "";
+      msgStartedAt = "";
+    }
+
+    function clearThinkingStream(): void {
+      thinkContent = "";
+      thinkStreamId = "";
+      thinkStartedAt = "";
+    }
+
+    function clearToolCallDeltaBuffers(): void {
+      toolCallDeltaBuffers.clear();
+    }
+
+    function asString(value: unknown): string | undefined {
+      return typeof value === "string" && value.length > 0 ? value : undefined;
+    }
+
+    function getStore() {
+      return isStoreInitialized() ? getInstrumentedStore() : null;
+    }
+
+    function rawString(raw: RawSessionEvent, key: string): string | undefined {
+      const value = raw[key];
+      return typeof value === "string" && value.length > 0 ? value : undefined;
+    }
+
+    function handlePlanReadyForApproval(raw: RawSessionEvent): void {
+      const store = getStore();
+      if (!store) return;
+      const planPath = rawString(raw, "planPath");
+      if (!planPath) return;
+      store.set(pendingPlanApprovalsAtom, (prev) =>
+        upsertPendingPlanApproval(prev, {
+          sessionId,
+          planPath,
+          planTitle: rawString(raw, "planTitle") ?? "",
+          planContent: rawString(raw, "planContent") ?? "",
+          toolCallId: rawString(raw, "toolCallId"),
+          planId: rawString(raw, "planId"),
+          planRevisionId: rawString(raw, "planRevisionId"),
+          originToolCallId: rawString(raw, "originToolCallId"),
+        })
+      );
+    }
+
+    function handleExitPlanMode(raw: RawSessionEvent): void {
+      const store = getStore();
+      if (!store) return;
+      store.set(pendingPlanApprovalsAtom, (prev) =>
+        clearPendingPlanApproval(prev, sessionId, rawString(raw, "toolCallId"))
+      );
+    }
+
+    function handlePlanApprovalActivity(chunk: ActivityChunk): boolean {
+      if (chunk.action_type !== "plan_approval") return false;
+      const store = getStore();
+      if (!store) return true;
+      const args = chunk.args ?? {};
+      const planPath = asString(args.planPath);
+      if (!planPath) return true;
+      store.set(pendingPlanApprovalsAtom, (prev) =>
+        upsertPendingPlanApproval(prev, {
+          sessionId,
+          planPath,
+          planTitle: asString(args.title) ?? "",
+          planContent: asString(args.content) ?? "",
+          toolCallId: asString(args.planRevisionId),
+          planId: asString(args.planId),
+          planRevisionId: asString(args.planRevisionId),
+          originToolCallId: asString(args.originToolCallId),
+        })
+      );
+      normalizeChunkRust(chunk, sessionId)
+        .then((event) => {
+          eventStoreProxy.upsert(event, sessionId);
+        })
+        .catch((err) => {
+          console.warn("[CliAdapter] normalizeChunkRust failed:", err);
+        });
+      return true;
+    }
+
+    function handleToolCallDeltaActivity(chunk: ActivityChunk): void {
+      setStreamingMode(true);
+      const indexValue = chunk.result?.index;
+      const index = typeof indexValue === "number" ? indexValue : 0;
+      const existing = toolCallDeltaBuffers.get(index) ?? { argsJson: "" };
+      const toolCallId =
+        asString(chunk.result?.tool_call_id) ??
+        asString(chunk.result?.toolCallId) ??
+        existing.toolCallId;
+      const toolName =
+        asString(chunk.result?.tool_name) ??
+        asString(chunk.result?.toolName) ??
+        existing.toolName;
+      const argumentsDelta =
+        asString(chunk.result?.arguments_delta) ??
+        asString(chunk.result?.argumentsDelta) ??
+        "";
+      const nextBuffer = {
+        toolCallId,
+        toolName,
+        argsJson: existing.argsJson + argumentsDelta,
+      };
+      toolCallDeltaBuffers.set(index, nextBuffer);
+
+      if (!nextBuffer.toolCallId) return;
+
+      const parsed = parsePartialToolArgs(nextBuffer.argsJson);
+      const args = buildToolArgsFromParsed(parsed);
+      eventStoreProxy.upsert(
+        makeToolCallEvent(
+          `tool-call-${nextBuffer.toolCallId}`,
+          sessionId,
+          nextBuffer.toolName,
+          nextBuffer.toolCallId,
+          args,
+          true
+        ),
+        sessionId
+      );
+    }
+
+    function handleActivity(chunk: ActivityChunk): void {
+      if (
+        chunk.function === "user_message" &&
+        (chunk.action_type === "raw" || chunk.action_type === "raw_event")
+      ) {
+        return;
+      }
+
+      if (cancelled) {
+        cancelled = false;
+      }
+
+      const isDelta = chunk.result?.is_delta === true;
+      const actionType = chunk.action_type;
+
+      if (handlePlanApprovalActivity(chunk)) {
+        return;
+      }
+
+      const isMessageType =
+        actionType === "assistant" ||
+        actionType === "assistant_delta" ||
+        actionType === "message" ||
+        actionType === "message_delta";
+
+      const isThinkingType =
+        actionType === "llm_thinking" || actionType === "llm_thinking_delta";
+
+      if (actionType === "tool_call_delta") {
+        handleToolCallDeltaActivity(chunk);
+        return;
+      }
+
+      // ── Delta: accumulate locally for the typewriter effect ──
+      // Rust's StreamingBuffer accumulates in parallel and will emit
+      // agent:streaming_complete with the authoritative final content.
+      if (isDelta && isMessageType) {
+        setStreamingMode(true);
+        const deltaText =
+          (chunk.result?.content as string) ||
+          (chunk.result?.observation as string) ||
+          "";
+        if (!msgStreamId) {
+          msgStreamId = createStreamMessageId(sessionId);
+          msgStartedAt = chunk.created_at || new Date().toISOString();
+        }
+        msgContent += deltaText;
+        eventStoreProxy.upsert(
+          buildStreamingEvent(
+            msgStreamId,
+            sessionId,
+            msgContent,
+            "message",
+            msgStartedAt
+          ),
+          sessionId
+        );
+        return;
+      }
+
+      if (isDelta && isThinkingType) {
+        setStreamingMode(true);
+        const deltaText =
+          (chunk.result?.thought as string) ||
+          (chunk.result?.content as string) ||
+          (chunk.result?.observation as string) ||
+          "";
+        if (!thinkStreamId) {
+          thinkStreamId = createStreamThinkingId(sessionId);
+          thinkStartedAt = chunk.created_at || new Date().toISOString();
+        }
+        thinkContent += deltaText;
+        eventStoreProxy.upsert(
+          buildStreamingEvent(
+            thinkStreamId,
+            sessionId,
+            thinkContent,
+            "thinking",
+            thinkStartedAt
+          ),
+          sessionId
+        );
+        return;
+      }
+
+      // ── Completion chunks (is_delta !== true) for message/thinking ──
+      // Rust usually follows deltas with `agent:streaming_complete`, but some
+      // CLI streams also emit a final activity chunk. If a TS placeholder is
+      // already visible, replace it with the finalized event instead of
+      // appending a duplicate assistant/thinking message.
+      if (isMessageType || isThinkingType) {
+        const tempId = isMessageType ? msgStreamId : thinkStreamId;
+        normalizeChunkRust(chunk, sessionId)
+          .then((event) => {
+            if (finalizedStreamEventIds.has(event.id)) return;
+            if (tempId && tempId !== event.id) {
+              if (isMessageType) {
+                clearMessageStream();
+              } else {
+                clearThinkingStream();
+              }
+              finalizedStreamEventIds.add(event.id);
+              eventStoreProxy.replaceAndRemove(tempId, event, sessionId);
+              return;
+            }
+            eventStoreProxy.append([event], sessionId);
+          })
+          .catch((err) => {
+            console.warn("[CliAdapter] normalizeChunkRust failed:", err);
+          });
+        return;
+      }
+
+      // ── Normal (non-delta) activity: tool_call, user_message, etc. ──
+      normalizeChunkRust(chunk, sessionId)
+        .then((event) => {
+          if (actionType === "tool_call") {
+            for (const [index, buffer] of toolCallDeltaBuffers.entries()) {
+              if (buffer.toolCallId && buffer.toolCallId === event.callId) {
+                toolCallDeltaBuffers.delete(index);
+              }
+            }
+            eventStoreProxy.upsert(event, sessionId);
+            return;
+          }
+          eventStoreProxy.append([event], sessionId);
+        })
+        .catch((err) => {
+          console.warn("[CliAdapter] normalizeChunkRust failed:", err);
+        });
+    }
+
+    function handleStreamingComplete(raw: RawSessionEvent): void {
+      const payload = raw.payload as Record<string, unknown> | undefined;
+      const completeEvent = payload?.event as SessionEvent | undefined;
+      const streamType = payload?.streamType as "message" | "thinking";
+
+      if (!completeEvent) {
+        console.warn("[CliAdapter] streaming_complete missing event payload");
+        return;
+      }
+      if (finalizedStreamEventIds.has(completeEvent.id)) return;
+      finalizedStreamEventIds.add(completeEvent.id);
+
+      // Streaming stays true through tool execution — only terminal
+      // status (completed/failed/error/cancelled) or reset turns it off.
+
+      if (streamType === "message") {
+        const tsTempId = msgStreamId;
+        clearMessageStream();
+        // Remove the TS-side placeholder and insert Rust's authoritative event atomically.
+        // The TS placeholder has a per-turn unique ID (stream-msg-ts-*) to avoid
+        // overwriting the previous turn's completed assistant message. If they differ,
+        // swap them; if they happen to be the same (no delta arrived), just upsert.
+        if (tsTempId && tsTempId !== completeEvent.id) {
+          eventStoreProxy.replaceAndRemove(tsTempId, completeEvent, sessionId);
+        } else {
+          eventStoreProxy.upsert(completeEvent, sessionId);
+        }
+      } else if (streamType === "thinking") {
+        const tsTempId = thinkStreamId;
+        clearThinkingStream();
+        if (tsTempId && tsTempId !== completeEvent.id) {
+          eventStoreProxy.replaceAndRemove(tsTempId, completeEvent, sessionId);
+        } else {
+          eventStoreProxy.upsert(completeEvent, sessionId);
+        }
+      } else {
+        eventStoreProxy.upsert(completeEvent, sessionId);
+      }
+    }
+
+    function handleStatusChange(status: string, errorMessage?: string): void {
+      callbacks.onStatusChange?.(status, errorMessage);
+
+      if (
+        status === "completed" ||
+        status === "failed" ||
+        status === "error" ||
+        status === "cancelled"
+      ) {
+        clearMessageStream();
+        clearThinkingStream();
+        clearToolCallDeltaBuffers();
+        setStreamingMode(false);
+        if (status === "cancelled") {
+          cancelled = true;
+        }
+        callbacks.onAgentComplete?.();
+      }
+
+      if (status === "running") {
+        cancelled = false;
+      }
+    }
+
+    function handleTokenUpdate(totalTokens: number): void {
+      callbacks.onTokenUpdate?.(totalTokens);
+    }
+
+    return {
+      handleEvent(raw: RawSessionEvent): void {
+        const msgSessionId =
+          (raw.session_id as string) || (raw.sessionId as string);
+        if (msgSessionId !== sessionId) return;
+
+        if (raw.type === "agent:interaction_finalized") {
+          handleInteractionFinalized(raw as unknown as AgentWSEvent, sessionId);
+        } else if (raw.type === "agent:plan_ready_for_approval") {
+          handlePlanReadyForApproval(raw);
+        } else if (raw.type === "agent:exit_plan_mode") {
+          handleExitPlanMode(raw);
+        } else if (raw.type === "code_session.activity" && raw.chunk) {
+          handleActivity(raw.chunk as unknown as ActivityChunk);
+        } else if (raw.type === "agent:streaming_complete") {
+          handleStreamingComplete(raw);
+        } else if (raw.type === "code_session.status_changed") {
+          handleStatusChange(
+            raw.status as string,
+            raw.error_message as string | undefined
+          );
+        } else if (raw.type === "code_session.token_usage_updated") {
+          const total = raw.total_tokens;
+          if (typeof total === "number") {
+            handleTokenUpdate(total);
+          }
+        } else if (raw.type === "code_session.worktree_created") {
+          // Worktree creation tracking
+          upsertSession({
+            session_id: msgSessionId,
+            worktreePath: raw.worktree_path as string | undefined,
+            worktreeBranch: raw.branch as string | undefined,
+            baseBranch: raw.base_branch as string | undefined,
+            mergeStatus: "pending",
+            created_at: "",
+            updated_at: "",
+            status: "pending",
+          });
+        } else if (raw.type === "code_session.merge_result") {
+          // Merge result tracking
+          const status = raw.status as MergeStatus | undefined;
+          if (status) {
+            upsertSession({
+              session_id: msgSessionId,
+              mergeStatus: status,
+              created_at: "",
+              updated_at: "",
+              status: "completed",
+            });
+          }
+        }
+      },
+
+      reset(): void {
+        clearMessageStream();
+        clearThinkingStream();
+        clearToolCallDeltaBuffers();
+        cancelled = false;
+        _streaming = false;
+        eventStoreProxy.setStreaming(false, sessionId);
+      },
+
+      get isStreaming(): boolean {
+        return _streaming;
+      },
+
+      dispose(): void {
+        this.reset();
+      },
+    };
+  },
+
+  async sendMessage(input: AdapterSendInput): Promise<void> {
+    const {
+      sessionId,
+      content,
+      model,
+      accountId,
+      mode,
+      imageDataUrls,
+      ideContext,
+      isResume,
+    } = input;
+    if (!isResume && content.trim()) {
+      await enterAgentOrgSessionIntervention(sessionId);
+    }
+    await tauriInvoke("cli_agent_message", {
+      sessionId,
+      content,
+      ...(model ? { model } : {}),
+      ...(accountId ? { accountId } : {}),
+      ...(mode ? { mode } : {}),
+      ...(imageDataUrls && imageDataUrls.length > 0
+        ? { images: imageDataUrls }
+        : {}),
+      ...(ideContext ? { ideContext } : {}),
+    });
+  },
+
+  async stopSession(sessionId: string): Promise<void> {
+    await tauriInvoke("cli_agent_cancel", { sessionId });
+  },
+};

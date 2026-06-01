@@ -1,0 +1,180 @@
+/**
+ * useEditorAppearance Hook
+ *
+ * Applies editor appearance settings as CSS custom properties.
+ * These CSS variables are consumed by CodeMirror and other editor components.
+ *
+ * Settings applied:
+ * - --code-font-family: Font family for all code surfaces
+ * - --cm-font-family: Font family for CodeMirror (mirrors --code-font-family)
+ * - --cm-font-size: Font size in pixels
+ * - --cm-line-height: Line height multiplier
+ * - --cm-tab-size: Tab width (CSS tab-size property)
+ * - --cm-editor-background / --cm-editor-gutter-bg: match the resolved CodeMirror theme
+ *   canvas (same defaults as getCodeMirrorTheme). _editor-tokens only flips these under
+ *   data-theme=dark or .dark, which the app does not use.
+ */
+import { useAtomValue } from "jotai";
+import { useEffect } from "react";
+
+import {
+  COLOR_PRIMARY_VARIABLE_KEYS,
+  DEFAULT_PRIMARY_COLOR_PRESET,
+  PRIMARY_COLOR_PALETTES,
+} from "@src/config/appearance/primaryColors";
+import { getEditorChromeSurface } from "@src/features/CodeMirror/config/editorChromeSurface";
+import {
+  type EditorLineNumbers,
+  editorFontSizeAtom,
+  editorHighlightActiveLineAtom,
+  editorLineHeightAtom,
+  editorLineNumbersAtom,
+  editorShowIndentGuidesAtom,
+  editorShowMinimapAtom,
+  editorShowTreeIndentGuidesAtom,
+  editorTabSizeAtom,
+  editorWordWrapAtom,
+  resolvedCodeFontFamilyAtom,
+  resolvedEditorThemeAtom,
+} from "@src/store/ui/editorSettingsAtom";
+import { isDarkThemeAtom, primaryColorPresetAtom } from "@src/store/ui/uiAtom";
+import {
+  ANSI_COLOR_CSS_KEYS,
+  getAnsiColorCssVars,
+} from "@src/util/ui/terminal/themes";
+
+/**
+ * Editor appearance settings object
+ */
+export interface EditorAppearanceSettings {
+  fontSize: number;
+  lineHeight: number;
+  tabSize: number;
+  fontFamily: string;
+  lineNumbers: EditorLineNumbers;
+  wordWrap: boolean;
+  showMinimap: boolean;
+  showIndentGuides: boolean;
+  showTreeIndentGuides: boolean;
+  highlightActiveLine: boolean;
+}
+
+/**
+ * Hook to read all editor appearance settings
+ * Returns the current values for use in components
+ */
+export function useEditorAppearanceSettings(): EditorAppearanceSettings {
+  const fontSize = useAtomValue(editorFontSizeAtom);
+  const lineHeight = useAtomValue(editorLineHeightAtom);
+  const tabSize = useAtomValue(editorTabSizeAtom);
+  const fontFamily = useAtomValue(resolvedCodeFontFamilyAtom);
+  const lineNumbers = useAtomValue(editorLineNumbersAtom);
+  const wordWrap = useAtomValue(editorWordWrapAtom);
+  const showMinimap = useAtomValue(editorShowMinimapAtom);
+  const showIndentGuides = useAtomValue(editorShowIndentGuidesAtom);
+  const showTreeIndentGuides = useAtomValue(editorShowTreeIndentGuidesAtom);
+  const highlightActiveLine = useAtomValue(editorHighlightActiveLineAtom);
+
+  return {
+    fontSize,
+    lineHeight,
+    tabSize,
+    fontFamily,
+    lineNumbers,
+    wordWrap,
+    showMinimap,
+    showIndentGuides,
+    showTreeIndentGuides,
+    highlightActiveLine,
+  };
+}
+
+/**
+ * Hook to apply editor appearance settings as CSS custom properties
+ * Call this once at the app root level to apply settings globally
+ */
+export function useEditorAppearanceStyles(): void {
+  const fontSize = useAtomValue(editorFontSizeAtom);
+  const lineHeight = useAtomValue(editorLineHeightAtom);
+  const tabSize = useAtomValue(editorTabSizeAtom);
+  const fontFamily = useAtomValue(resolvedCodeFontFamilyAtom);
+  const primaryColorPreset = useAtomValue(primaryColorPresetAtom);
+  const isDark = useAtomValue(isDarkThemeAtom);
+  const resolvedEditorTheme = useAtomValue(resolvedEditorThemeAtom);
+
+  useEffect(() => {
+    const root = document.documentElement;
+
+    root.style.setProperty("--code-font-family", fontFamily);
+    root.style.setProperty("--cm-font-family", fontFamily);
+
+    root.style.setProperty("--cm-font-size", `${fontSize}px`);
+    root.style.setProperty(
+      "--cm-font-size-small",
+      `${Math.max(fontSize - 1, 10)}px`
+    );
+    root.style.setProperty("--cm-line-height", String(lineHeight));
+    root.style.setProperty("--cm-tab-size", String(tabSize));
+
+    return () => {
+      root.style.removeProperty("--code-font-family");
+      root.style.removeProperty("--cm-font-family");
+      root.style.removeProperty("--cm-font-size");
+      root.style.removeProperty("--cm-font-size-small");
+      root.style.removeProperty("--cm-line-height");
+      root.style.removeProperty("--cm-tab-size");
+    };
+  }, [fontSize, lineHeight, tabSize, fontFamily]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const chrome = getEditorChromeSurface(isDark, resolvedEditorTheme);
+    root.style.setProperty("--cm-editor-background", chrome.background);
+    root.style.setProperty("--cm-editor-gutter-bg", chrome.gutterBackground);
+
+    return () => {
+      root.style.removeProperty("--cm-editor-background");
+      root.style.removeProperty("--cm-editor-gutter-bg");
+    };
+  }, [isDark, resolvedEditorTheme]);
+
+  useEffect(() => {
+    const body = document.body;
+    const vars = getAnsiColorCssVars(isDark ? "dark" : "light");
+    Object.entries(vars).forEach(([key, value]) => {
+      body.style.setProperty(key, value);
+    });
+    return () => {
+      ANSI_COLOR_CSS_KEYS.forEach((key) => {
+        body.style.removeProperty(key);
+      });
+    };
+  }, [isDark]);
+
+  useEffect(() => {
+    const body = document.body;
+    const clearPrimaryPalette = () => {
+      COLOR_PRIMARY_VARIABLE_KEYS.forEach((key) => {
+        body.style.removeProperty(key);
+      });
+    };
+
+    if (primaryColorPreset === DEFAULT_PRIMARY_COLOR_PRESET) {
+      clearPrimaryPalette();
+      return;
+    }
+
+    const themedPalette =
+      PRIMARY_COLOR_PALETTES[
+        primaryColorPreset as Exclude<typeof primaryColorPreset, "blue">
+      ];
+    const palette = isDark ? themedPalette.dark : themedPalette.light;
+    COLOR_PRIMARY_VARIABLE_KEYS.forEach((key) => {
+      body.style.setProperty(key, palette[key]);
+    });
+
+    return clearPrimaryPalette;
+  }, [primaryColorPreset, isDark]);
+}
+
+export default useEditorAppearanceSettings;

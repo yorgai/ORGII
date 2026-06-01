@@ -1,0 +1,171 @@
+//! Web & Browser tool entries (external Chrome + web search/fetch + internal Tauri webviews).
+
+use super::aliases::*;
+use super::macros::action_sub;
+
+const BROWSER_CLI_ACTION_ICONS: &[(&str, &str)] = &[
+    ("open", "globe"),
+    ("click", "mouse-pointer-click"),
+    ("type", "text-cursor-input"),
+    ("press", "keyboard"),
+    ("hover", "mouse-pointer"),
+    ("fill", "list-checks"),
+    ("evaluate", "braces"),
+    ("wait", "clock"),
+    ("scroll", "move-vertical"),
+    ("select", "list-filter"),
+    ("snapshot", "fullscreen"),
+    ("screenshot", "fullscreen"),
+    ("tabs", "panel-top"),
+    ("console", "terminal"),
+    ("close", "x"),
+];
+
+const AGENT_BROWSER_CLI_ACTIONS: &[ActionEntry] = &[
+    action_sub!("open", "Open a URL through agent-browser CLI", SubBrowser, labels: "tools.browserOpenRunning", "tools.browserOpenDone", "tools.browserOpenFailed"),
+    action_sub!("click", "Click an element through agent-browser CLI", SubBrowser, labels: "tools.browserClickRunning", "tools.browserClickDone", "tools.browserClickFailed"),
+    action_sub!("type", "Type text through agent-browser CLI", SubBrowser, labels: "tools.browserTypeRunning", "tools.browserTypeDone", "tools.browserTypeFailed"),
+    action_sub!("press", "Press a key through agent-browser CLI", SubBrowser, labels: "tools.browserPressRunning", "tools.browserPressDone", "tools.browserPressFailed"),
+    action_sub!("hover", "Hover an element through agent-browser CLI", SubBrowser, labels: "tools.browserHoverRunning", "tools.browserHoverDone", "tools.browserHoverFailed"),
+    action_sub!("fill", "Fill a form through agent-browser CLI", SubBrowser, labels: "tools.browserFillRunning", "tools.browserFillDone", "tools.browserFillFailed"),
+    action_sub!("evaluate", "Evaluate JavaScript through agent-browser CLI", SubBrowser, labels: "tools.browserEvaluateRunning", "tools.browserEvaluateDone", "tools.browserEvaluateFailed"),
+    action_sub!("wait", "Wait for browser state through agent-browser CLI", SubBrowser, labels: "tools.browserWaitRunning", "tools.browserWaitDone", "tools.browserWaitFailed"),
+    action_sub!("scroll", "Scroll the page through agent-browser CLI", SubBrowser, labels: "tools.browserScrollRunning", "tools.browserScrollDone", "tools.browserScrollFailed"),
+    action_sub!("select", "Select an option through agent-browser CLI", SubBrowser, labels: "tools.browserSelectRunning", "tools.browserSelectDone", "tools.browserSelectFailed"),
+    action_sub!("snapshot", "Capture the current page snapshot", SubBrowser, labels: "tools.browserSnapshotRunning", "tools.browserSnapshotDone", "tools.browserSnapshotFailed"),
+    action_sub!("screenshot", "Write a screenshot with agent-browser CLI", SubBrowser, labels: "tools.browserScreenshotRunning", "tools.browserScreenshotDone", "tools.browserScreenshotFailed"),
+    action_sub!("tabs", "List browser tabs through agent-browser CLI", SubBrowser, labels: "tools.browserTabsRunning", "tools.browserTabsDone", "tools.browserTabsFailed"),
+    action_sub!("console", "Read browser console through agent-browser CLI", SubBrowser, labels: "tools.browserConsoleRunning", "tools.browserConsoleDone", "tools.browserConsoleFailed"),
+    action_sub!("close", "Close the managed browser session", SubBrowser, labels: "tools.browserCloseRunning", "tools.browserCloseDone", "tools.browserCloseFailed"),
+];
+
+const INTERNAL_BROWSER_ACTION_ICONS: &[(&str, &str)] = &[
+    ("get_state", "scan-eye"),
+    ("click", "mouse-pointer-click"),
+    ("input", "text-cursor-input"),
+    ("select", "list-filter"),
+    ("scroll", "move-vertical"),
+    ("show_mask", "eye"),
+    ("hide_mask", "eye-off"),
+    ("clean_up", "sparkles"),
+];
+
+const INTERNAL_BROWSER_ACTIONS: &[ActionEntry] = &[
+    action_sub!("get_state", "Read the internal browser state", SubInternalBrowser, labels: "tools.internalBrowserGetStateRunning", "tools.internalBrowserGetStateDone", "tools.internalBrowserGetStateFailed"),
+    action_sub!("click", "Click an indexed element in the internal browser", SubInternalBrowser, labels: "tools.internalBrowserClickRunning", "tools.internalBrowserClickDone", "tools.internalBrowserClickFailed"),
+    action_sub!("input", "Input text into an indexed element in the internal browser", SubInternalBrowser, labels: "tools.internalBrowserInputRunning", "tools.internalBrowserInputDone", "tools.internalBrowserInputFailed"),
+    action_sub!("select", "Select an option in the internal browser", SubInternalBrowser, labels: "tools.internalBrowserSelectRunning", "tools.internalBrowserSelectDone", "tools.internalBrowserSelectFailed"),
+    action_sub!("scroll", "Scroll the internal browser viewport", SubInternalBrowser, labels: "tools.internalBrowserScrollRunning", "tools.internalBrowserScrollDone", "tools.internalBrowserScrollFailed"),
+    action_sub!("show_mask", "Show the internal browser element mask", SubInternalBrowser, labels: "tools.internalBrowserShowMaskRunning", "tools.internalBrowserShowMaskDone", "tools.internalBrowserShowMaskFailed"),
+    action_sub!("hide_mask", "Hide the internal browser element mask", SubInternalBrowser, labels: "tools.internalBrowserHideMaskRunning", "tools.internalBrowserHideMaskDone", "tools.internalBrowserHideMaskFailed"),
+    action_sub!("clean_up", "Clean up internal browser overlays", SubInternalBrowser, labels: "tools.internalBrowserCleanUpRunning", "tools.internalBrowserCleanUpDone", "tools.internalBrowserCleanUpFailed"),
+];
+
+const PLAYWRIGHT_CLI_ACTIONS: &[ActionEntry] = &[
+    action_sub!("open", "Open a URL through playwright-cli", SubBrowser, labels: "tools.browserOpenRunning", "tools.browserOpenDone", "tools.browserOpenFailed"),
+    action_sub!("click", "Click an element through playwright-cli", SubBrowser, labels: "tools.browserClickRunning", "tools.browserClickDone", "tools.browserClickFailed"),
+    action_sub!("type", "Type text through playwright-cli", SubBrowser, labels: "tools.browserTypeRunning", "tools.browserTypeDone", "tools.browserTypeFailed"),
+    action_sub!("press", "Press a key through playwright-cli", SubBrowser, labels: "tools.browserPressRunning", "tools.browserPressDone", "tools.browserPressFailed"),
+    action_sub!("hover", "Hover an element through playwright-cli", SubBrowser, labels: "tools.browserHoverRunning", "tools.browserHoverDone", "tools.browserHoverFailed"),
+    action_sub!("fill", "Fill a form through playwright-cli", SubBrowser, labels: "tools.browserFillRunning", "tools.browserFillDone", "tools.browserFillFailed"),
+    action_sub!("evaluate", "Evaluate JavaScript through playwright-cli", SubBrowser, labels: "tools.browserEvaluateRunning", "tools.browserEvaluateDone", "tools.browserEvaluateFailed"),
+    action_sub!("wait", "Wait for browser state through playwright-cli", SubBrowser, labels: "tools.browserWaitRunning", "tools.browserWaitDone", "tools.browserWaitFailed"),
+    action_sub!("scroll", "Scroll the page through playwright-cli", SubBrowser, labels: "tools.browserScrollRunning", "tools.browserScrollDone", "tools.browserScrollFailed"),
+    action_sub!("select", "Select an option through playwright-cli", SubBrowser, labels: "tools.browserSelectRunning", "tools.browserSelectDone", "tools.browserSelectFailed"),
+    action_sub!("snapshot", "Capture the current page snapshot", SubBrowser, labels: "tools.browserSnapshotRunning", "tools.browserSnapshotDone", "tools.browserSnapshotFailed"),
+    action_sub!("screenshot", "Write a screenshot with playwright-cli", SubBrowser, labels: "tools.browserScreenshotRunning", "tools.browserScreenshotDone", "tools.browserScreenshotFailed"),
+    action_sub!("tabs", "List browser tabs through playwright-cli", SubBrowser, labels: "tools.browserTabsRunning", "tools.browserTabsDone", "tools.browserTabsFailed"),
+    action_sub!("console", "Read browser console through playwright-cli", SubBrowser, labels: "tools.browserConsoleRunning", "tools.browserConsoleDone", "tools.browserConsoleFailed"),
+    action_sub!("close", "Close the managed browser session", SubBrowser, labels: "tools.browserCloseRunning", "tools.browserCloseDone", "tools.browserCloseFailed"),
+];
+
+pub(super) static TOOLS: &[ToolEntry] = &[
+    ToolEntry {
+        name: tool_names::WEB_SEARCH,
+        description: "Search the web for information via Brave Search API.",
+        description_detail: "Queries the Brave Search API for ranked results and snippets when fresh public information is required beyond the training cutoff.",
+        category: tool_categories::WEB,
+        icon_id: "globe",
+        simulator_app: AppBrowser,
+        app_subtool: SubBrowser,
+        chat_block: CbWebSearch,
+        label_running: "tools.webSearchRunning",
+        label_done: "tools.webSearchDone",
+        label_failed: "tools.webSearchFailed",
+        actions: &[
+            action_sub!("search", "Query Brave Search and return ranked results with snippets", SubBrowser, labels: "tools.webSearchSearchRunning", "tools.webSearchSearchDone", "tools.webSearchSearchFailed"),
+        ],
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::WEB_FETCH,
+        description: "Fetch a web page and return its text content.",
+        description_detail: "Retrieves a URL and returns extracted readable text. Use to quote documentation, verify release notes, or summarize a single page.",
+        category: tool_categories::WEB,
+        icon_id: "globe",
+        simulator_app: AppBrowser,
+        app_subtool: SubBrowser,
+        chat_block: CbWebSearch,
+        label_running: "tools.webFetchRunning",
+        label_done: "tools.webFetchDone",
+        label_failed: "tools.webFetchFailed",
+        actions: &[
+            action_sub!("fetch", "Fetch a URL and extract readable text content", SubBrowser, labels: "tools.webFetchFetchRunning", "tools.webFetchFetchDone", "tools.webFetchFetchFailed"),
+        ],
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::CONTROL_BROWSER_WITH_AGENT_BROWSER,
+        description: "Run raw browser automation commands through Vercel agent-browser CLI.",
+        description_detail: "Executes the selected subcommand with ORGII's managed session flags: agent-browser --session orgii --json <command>. Use for open, snapshot, screenshot, close, and other supported agent-browser commands.",
+        category: tool_categories::WEB,
+        icon_id: "chrome",
+        simulator_app: AppBrowser,
+        app_subtool: SubBrowser,
+        chat_block: CbFallback,
+        human_tool_key: Some(HtBrowser),
+        action_icons: BROWSER_CLI_ACTION_ICONS,
+        label_running: "tools.browserRunning",
+        label_done: "tools.browserDone",
+        label_failed: "tools.browserFailed",
+        actions: AGENT_BROWSER_CLI_ACTIONS,
+        required_capability: CapBrowserExt,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::CONTROL_BROWSER_WITH_PLAYWRIGHT,
+        description: "Run raw browser automation commands through playwright-cli.",
+        description_detail: "Executes the selected subcommand with ORGII's managed session flag: playwright-cli -s=orgii <command>. Use for open, snapshot, screenshot, close, and other supported playwright-cli commands.",
+        category: tool_categories::WEB,
+        icon_id: "chrome",
+        simulator_app: AppBrowser,
+        app_subtool: SubBrowser,
+        chat_block: CbFallback,
+        human_tool_key: Some(HtBrowser),
+        action_icons: BROWSER_CLI_ACTION_ICONS,
+        label_running: "tools.browserRunning",
+        label_done: "tools.browserDone",
+        label_failed: "tools.browserFailed",
+        actions: PLAYWRIGHT_CLI_ACTIONS,
+        required_capability: CapBrowserExt,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::CONTROL_INTERNAL_BROWSER,
+        description: "Internal browser automation is currently unavailable to agents.",
+        description_detail: "Agents should use the selected external browser CLI provider tool for browser automation, or ask the user to use the Workstation Browser UI. Frontend/Tauri Workstation Browser commands remain available outside the agent tool runtime.",
+        category: tool_categories::WEB,
+        icon_id: "mouse-pointer-click",
+        simulator_app: AppBrowser,
+        app_subtool: SubInternalBrowser,
+        chat_block: CbFallback,
+        human_tool_key: Some(HtBrowser),
+        action_icons: INTERNAL_BROWSER_ACTION_ICONS,
+        label_running: "tools.internalBrowserRunning",
+        label_done: "tools.internalBrowserDone",
+        label_failed: "tools.internalBrowserFailed",
+        actions: INTERNAL_BROWSER_ACTIONS,
+        required_capability: CapBrowserInt,
+        ..DEFAULT_TOOL_ENTRY
+    },
+];

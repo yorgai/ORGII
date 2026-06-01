@@ -1,0 +1,105 @@
+import {
+  MenuItem,
+  PredefinedMenuItem,
+  Menu as TauriMenu,
+} from "@tauri-apps/api/menu";
+import { type MouseEvent, useCallback } from "react";
+
+import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
+import type { Session } from "@src/store/session";
+import {
+  isCliSession,
+  isCursorIdeSession,
+} from "@src/util/session/sessionDispatch";
+
+import type { UseRenameSessionModalResult } from "./useRenameSessionModal";
+
+interface UseWorkstationSidebarContextMenuParams {
+  sessionMap: Map<string, Session>;
+  rename: UseRenameSessionModalResult;
+  handleDeleteSession: (sessionId: string) => Promise<void>;
+  handleExportMarkdown: (sessionId: string) => Promise<void>;
+  handleTogglePin: (sessionId: string) => Promise<void>;
+  handleAddTag: (sessionId: string) => Promise<void>;
+  tCommon: (key: string, defaultValue?: string) => string;
+}
+
+export function useWorkstationSidebarContextMenu({
+  sessionMap,
+  rename,
+  handleDeleteSession,
+  handleExportMarkdown,
+  handleTogglePin,
+  handleAddTag,
+  tCommon,
+}: UseWorkstationSidebarContextMenuParams): (
+  event: MouseEvent,
+  _key: string,
+  item: NavigationMenuItem
+) => Promise<void> {
+  return useCallback(
+    async (event: MouseEvent, _key: string, item: NavigationMenuItem) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (!sessionMap.has(item.id)) return;
+
+      if (isCursorIdeSession(item.id)) return;
+
+      const session = sessionMap.get(item.id);
+      const isCliSessionItem = isCliSession(item.id);
+
+      try {
+        const renameItem = await MenuItem.new({
+          text: tCommon("actions.rename"),
+          action: () => rename.open(item.id, sessionMap),
+        });
+        const exportItem = await MenuItem.new({
+          text: tCommon("sessions:chat.exportAsMarkdown", "Export as Markdown"),
+          action: () => handleExportMarkdown(item.id),
+        });
+        const pinLabel = session?.pinned
+          ? tCommon("sessions:chat.unpinSession", "Unpin from Top")
+          : tCommon("sessions:chat.pinSession", "Pin to Top");
+        const pinItem = await MenuItem.new({
+          text: pinLabel,
+          action: () => handleTogglePin(item.id),
+        });
+        const addTagItem = await MenuItem.new({
+          text: tCommon("sessions:chat.addTag", "Add Tag…"),
+          action: () => handleAddTag(item.id),
+        });
+        const deleteItem = await MenuItem.new({
+          text: tCommon("actions.delete"),
+          action: () => handleDeleteSession(item.id),
+        });
+        const menuSeparator = await PredefinedMenuItem.new({
+          item: "Separator",
+        });
+        const menuItems = isCliSessionItem
+          ? [renameItem, exportItem, menuSeparator, deleteItem]
+          : [
+              renameItem,
+              exportItem,
+              pinItem,
+              addTagItem,
+              menuSeparator,
+              deleteItem,
+            ];
+        const menu = await TauriMenu.new({ items: menuItems });
+        await menu.popup();
+      } catch (error) {
+        console.error("[WorkstationSidebar] Context menu failed:", error);
+      }
+    },
+    [
+      sessionMap,
+      tCommon,
+      rename,
+      handleDeleteSession,
+      handleExportMarkdown,
+      handleTogglePin,
+      handleAddTag,
+    ]
+  );
+}

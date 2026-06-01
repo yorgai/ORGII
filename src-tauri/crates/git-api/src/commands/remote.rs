@@ -1,0 +1,450 @@
+/**
+ * Remote Operations
+ *
+ * Manage remotes, push, pull, fetch.
+ * All operations use retry logic for transient errors.
+ */
+#[cfg(test)]
+#[path = "tests/remote_tests.rs"]
+mod tests;
+
+use super::utils::run_git;
+use crate::types::*;
+use std::path::Path;
+
+/// List remotes
+pub fn list_remotes(repo_path: &Path) -> Result<Vec<GitRemoteInfo>, String> {
+    let output = run_git(repo_path, &["remote", "-v"])?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut remotes: std::collections::HashMap<String, GitRemoteInfo> =
+        std::collections::HashMap::new();
+
+    for line in stdout.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() < 3 {
+            continue;
+        }
+
+        let name = parts[0].to_string();
+        let url = parts[1].to_string();
+        let url_type = parts[2].trim_matches(|c| c == '(' || c == ')');
+
+        let remote = remotes.entry(name.clone()).or_insert(GitRemoteInfo {
+            name: name.clone(),
+            url: url.clone(),
+            fetch_url: None,
+            push_url: None,
+        });
+
+        match url_type {
+            "fetch" => remote.fetch_url = Some(url),
+            "push" => remote.push_url = Some(url),
+            _ => {}
+        }
+    }
+
+    Ok(remotes.into_values().collect())
+}
+
+/// Add a remote
+pub fn add_remote(repo_path: &Path, name: &str, url: &str) -> Result<GitRemoteInfo, String> {
+    let output = run_git(repo_path, &["remote", "add", name, url])?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    Ok(GitRemoteInfo {
+        name: name.to_string(),
+        url: url.to_string(),
+        fetch_url: Some(url.to_string()),
+        push_url: Some(url.to_string()),
+    })
+}
+
+/// Update remote URL
+pub fn update_remote(repo_path: &Path, name: &str, url: &str) -> Result<GitRemoteInfo, String> {
+    let output = run_git(repo_path, &["remote", "set-url", name, url])?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    Ok(GitRemoteInfo {
+        name: name.to_string(),
+        url: url.to_string(),
+        fetch_url: Some(url.to_string()),
+        push_url: Some(url.to_string()),
+    })
+}
+
+/// Delete a remote
+pub fn delete_remote(repo_path: &Path, name: &str) -> Result<(), String> {
+    let output = run_git(repo_path, &["remote", "remove", name])?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    Ok(())
+}
+
+/// Detect error type from push error message
+pub(crate) fn detect_push_error_type(message: &str) -> GitErrorType {
+    let lower = message.to_lowercase();
+
+    // Non-fast-forward (remote has changes we don't have)
+    if lower.contains("non-fast-forward")
+        || lower.contains("fetch first")
+        || lower.contains("updates were rejected")
+        || lower.contains("failed to push some refs")
+    {
+        return GitErrorType::NonFastForward;
+    }
+
+    // Protected branch
+    if lower.contains("protected branch")
+        || lower.contains("branch is protected")
+        || lower.contains("cannot push to")
+        || lower.contains("pre-receive hook declined")
+        || lower.contains("remote rejected")
+    {
+        return GitErrorType::ProtectedBranch;
+    }
+
+    // Authentication failed
+    if lower.contains("authentication failed")
+        || lower.contains("invalid credentials")
+        || lower.contains("could not read username")
+        || lower.contains("permission denied")
+        || lower.contains("fatal: authentication")
+    {
+        return GitErrorType::AuthenticationFailed;
+    }
+
+    // Network error
+    if lower.contains("could not resolve host")
+        || lower.contains("connection refused")
+        || lower.contains("network is unreachable")
+        || lower.contains("unable to access")
+        || lower.contains("connection timed out")
+    {
+        return GitErrorType::NetworkError;
+    }
+
+    GitErrorType::Unknown
+}
+
+/// Push to remote
+pub fn push_to_remote(
+    repo_path: &Path,
+    remote: Option<&str>,
+    branch: Option<&str>,
+    set_upstream: bool,
+    force: bool,
+) -> Result<GitPushResult, String> {
+    let remote_name = remote.unwrap_or("origin");
+
+    // Get current branch name
+    let current_branch = run_git(repo_path, &["rev-parse", "--abbrev-ref", "HEAD"])
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
+
+    // Check if upstream exists and matches current branch name
+    let upstream_branch = current_branch.as_ref().and_then(|cb| {
+        let upstream_ref = format!("{}@{{upstream}}", cb);
+        run_git(repo_path, &["rev-parse", "--abbrev-ref", &upstream_ref])
+            .ok()
+            .filter(|o| o.status.success())
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+    });
+
+    // Determine if we need to set upstream
+    // Set upstream if:
+    // 1. Explicitly requested
+    // 2. No upstream exists
+    // 3. Upstream branch name doesn't match local branch name (renamed branch scenario)
+    let needs_set_upstream = set_upstream
+        || upstream_branch.as_ref().is_none_or(|upstream| {
+            if let Some(ref current) = current_branch {
+                // Extract branch name from "origin/branch-name"
+                let upstream_short = upstream.split('/').next_back().unwrap_or(upstream);
+                upstream_short != current
+            } else {
+                false
+            }
+        });
+
+    let mut args = vec!["push"];
+
+    if needs_set_upstream {
+        args.push("-u");
+    }
+
+    if force {
+        args.push("--force");
+    }
+
+    args.push(remote_name);
+
+    // Use explicit branch name if provided, otherwise use current branch
+    if let Some(b) = branch {
+        args.push(b);
+    } else if let Some(ref cb) = current_branch {
+        // Push current branch to same-named remote branch
+        args.push(cb);
+    }
+
+    log::info!("[GitAPI] Executing: git {:?}", args);
+
+    let output = run_git(repo_path, &args)?;
+
+    let message = if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Git often writes success info to stderr
+        if stdout.is_empty() {
+            stderr.to_string()
+        } else {
+            stdout.to_string()
+        }
+    } else {
+        String::from_utf8_lossy(&output.stderr).to_string()
+    };
+
+    let error_type = if output.status.success() {
+        GitErrorType::None
+    } else {
+        detect_push_error_type(&message)
+    };
+
+    Ok(GitPushResult {
+        success: output.status.success(),
+        message,
+        error_type,
+    })
+}
+
+/// Detect error type from pull error message
+pub(crate) fn detect_pull_error_type(message: &str) -> (GitErrorType, Option<Vec<String>>) {
+    let lower = message.to_lowercase();
+
+    // Uncommitted changes would be overwritten
+    if lower.contains("would be overwritten")
+        || lower.contains("your local changes")
+        || lower.contains("uncommitted changes")
+        || lower.contains("please commit your changes or stash them")
+    {
+        // Try to extract affected files
+        let mut affected_files = Vec::new();
+        for line in message.lines() {
+            let trimmed = line.trim();
+            // Git usually lists files with a tab prefix
+            if trimmed.starts_with('\t') || trimmed.starts_with("    ") {
+                let file = trimmed.trim();
+                if !file.is_empty() && !file.contains(' ') {
+                    affected_files.push(file.to_string());
+                }
+            }
+        }
+        return (
+            GitErrorType::UncommittedChanges,
+            if affected_files.is_empty() {
+                None
+            } else {
+                Some(affected_files)
+            },
+        );
+    }
+
+    // Merge conflicts
+    if lower.contains("conflict") || lower.contains("automatic merge failed") {
+        return (GitErrorType::MergeConflicts, None);
+    }
+
+    // Authentication failed
+    if lower.contains("authentication failed")
+        || lower.contains("invalid credentials")
+        || lower.contains("could not read username")
+    {
+        return (GitErrorType::AuthenticationFailed, None);
+    }
+
+    // Network error
+    if lower.contains("could not resolve host")
+        || lower.contains("connection refused")
+        || lower.contains("network is unreachable")
+        || lower.contains("unable to access")
+    {
+        return (GitErrorType::NetworkError, None);
+    }
+
+    (GitErrorType::Unknown, None)
+}
+
+/// Pull from remote
+pub fn pull_from_remote(
+    repo_path: &Path,
+    remote: Option<&str>,
+    branch: Option<&str>,
+    strategy: Option<&str>,
+) -> Result<GitPullResult, String> {
+    let mut args = vec!["pull"];
+
+    match strategy {
+        Some("rebase") => args.push("--rebase"),
+        Some("ff-only") => args.push("--ff-only"),
+        Some("merge") | None | Some(_) => args.push("--no-rebase"), // merge or unknown → explicit merge
+    }
+
+    if let Some(r) = remote {
+        args.push(r);
+    }
+
+    if let Some(b) = branch {
+        args.push(b);
+    }
+
+    let output = run_git(repo_path, &args)?;
+
+    let message = if output.status.success() {
+        String::from_utf8_lossy(&output.stdout).to_string()
+    } else {
+        String::from_utf8_lossy(&output.stderr).to_string()
+    };
+
+    // Check for conflicts
+    let conflicts = if message.contains("CONFLICT") || message.contains("conflict") {
+        // Get list of conflicted files (also uses retry via run_git)
+        run_git(repo_path, &["diff", "--name-only", "--diff-filter=U"])
+            .ok()
+            .map(|o| {
+                String::from_utf8_lossy(&o.stdout)
+                    .lines()
+                    .map(|s| s.to_string())
+                    .collect()
+            })
+    } else {
+        None
+    };
+
+    let (error_type, affected_files) = if output.status.success() {
+        (GitErrorType::None, None)
+    } else {
+        detect_pull_error_type(&message)
+    };
+
+    Ok(GitPullResult {
+        success: output.status.success(),
+        message,
+        conflicts,
+        error_type,
+        affected_files,
+    })
+}
+
+/// Parse deleted branches from fetch output
+fn parse_deleted_branches(message: &str) -> Option<Vec<String>> {
+    let mut deleted = Vec::new();
+
+    for line in message.lines() {
+        let trimmed = line.trim();
+        // Git prune output format: " - [deleted]         (none)     -> origin/branch-name"
+        if trimmed.contains("[deleted]") {
+            // Extract branch name after "->"
+            if let Some(pos) = trimmed.find("->") {
+                let branch = trimmed[pos + 2..].trim().to_string();
+                if !branch.is_empty() {
+                    deleted.push(branch);
+                }
+            }
+        }
+    }
+
+    if deleted.is_empty() {
+        None
+    } else {
+        Some(deleted)
+    }
+}
+
+/// Detect error type from fetch error message
+pub(crate) fn detect_fetch_error_type(message: &str) -> GitErrorType {
+    let lower = message.to_lowercase();
+
+    // Authentication failed
+    if lower.contains("authentication failed")
+        || lower.contains("invalid credentials")
+        || lower.contains("could not read username")
+    {
+        return GitErrorType::AuthenticationFailed;
+    }
+
+    // Network error
+    if lower.contains("could not resolve host")
+        || lower.contains("connection refused")
+        || lower.contains("network is unreachable")
+        || lower.contains("unable to access")
+        || lower.contains("connection timed out")
+    {
+        return GitErrorType::NetworkError;
+    }
+
+    GitErrorType::Unknown
+}
+
+/// Fetch from remote
+pub fn fetch_from_remote(
+    repo_path: &Path,
+    remote: Option<&str>,
+    prune: bool,
+) -> Result<GitFetchResult, String> {
+    let mut args = vec!["fetch"];
+
+    if prune {
+        args.push("--prune");
+    }
+
+    if let Some(r) = remote {
+        args.push(r);
+    } else {
+        args.push("--all");
+    }
+
+    let output = run_git(repo_path, &args)?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let message = format!("{}{}", stdout, stderr);
+
+    // Parse deleted branches if prune was requested
+    let deleted_branches = if prune {
+        parse_deleted_branches(&message)
+    } else {
+        None
+    };
+
+    let error_type = if output.status.success() {
+        // Check if we have deleted branches that might affect current branch
+        if deleted_branches.is_some() {
+            GitErrorType::RemoteBranchDeleted
+        } else {
+            GitErrorType::None
+        }
+    } else {
+        detect_fetch_error_type(&message)
+    };
+
+    Ok(GitFetchResult {
+        success: output.status.success(),
+        message,
+        error_type,
+        deleted_branches,
+    })
+}

@@ -1,0 +1,306 @@
+/**
+ * DataGrid Styles
+ *
+ * Styling for ali-react-table based data grid.
+ * Uses CSS variables for theming consistency.
+ */
+
+.data-grid {
+  // --row-height is set via inline style on BaseTable
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+
+  // Table container - BaseTable handles its own scrolling (for sticky headers)
+  &__table-container {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  // Table wrapper
+  &__table {
+    height: 100%;
+
+    // Override ali-react-table CSS variables
+    --bgcolor: transparent;
+    --header-bgcolor: var(--color-bg-3);
+    --hover-bgcolor: var(--color-fill-1);
+    --header-hover-bgcolor: var(--color-fill-2);
+    --highlight-bgcolor: var(--color-fill-2);
+    --header-highlight-bgcolor: color-mix(
+      in srgb,
+      var(--color-primary-6) 10%,
+      transparent
+    );
+    --color: var(--color-text-1);
+    --header-color: var(--color-text-1);
+    --border-color: var(--color-border-1);
+    --cell-padding: 0;
+    --lock-shadow: 0 1px 2px 0 var(--color-border-2);
+
+    // Table element - remove outer borders
+    .art-table {
+      font-size: 12px;
+      border-left: none;
+      border-right: none;
+    }
+
+    // Header cells - taller for two lines
+    .art-table-header-cell {
+      padding: 0 8px 0 0;
+      height: 44px;
+      vertical-align: middle;
+
+      // Wrapper from ali-react-table
+      > div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 100%;
+        gap: 4px;
+      }
+    }
+
+    // Checkbox column header (first column) - center and no padding
+    .art-table-header-cell:first-child {
+      padding: 0;
+
+      > div {
+        justify-content: center;
+      }
+    }
+
+    // Table cells - input is direct child, no wrapper
+    .art-table-cell {
+      padding: 0;
+      border-right: 1px solid var(--color-border-1);
+      box-sizing: border-box;
+      vertical-align: top;
+      overflow: hidden;
+
+      &:last-child {
+        border-right: none;
+      }
+    }
+
+    // Selected row - fill-2 background on all cells
+    .data-grid__row--selected {
+      .art-table-cell {
+        background: var(--color-fill-2) !important;
+      }
+
+      .data-grid__input {
+        background: transparent !important;
+      }
+    }
+
+    // Hover row - fill-1 background on all cells
+    .art-table-row:hover {
+      .art-table-cell {
+        background: var(--color-fill-1) !important;
+      }
+
+      .data-grid__input {
+        background: transparent !important;
+      }
+    }
+
+    // Selected row takes priority over hover
+    .data-grid__row--selected:hover {
+      .art-table-cell {
+        background: var(--color-fill-2) !important;
+      }
+    }
+
+    // Remove left border on first cell
+    .art-table-header-cell:first-child,
+    .art-table-cell:first-child {
+      border-left: none;
+    }
+  }
+
+  // Header cell content - two lines
+  &__header-cell {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1px;
+    padding: 4px 0 4px 8px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__header-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    font-size: 12px;
+  }
+
+  &__header-type {
+    font-size: 10px;
+    color: var(--color-text-3);
+  }
+
+  &__pk-badge {
+    padding: 1px 4px;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--color-primary-6);
+    background: color-mix(in srgb, var(--color-primary-6) 15%, transparent);
+    border-radius: 3px;
+  }
+
+  // Checkbox column
+  &__checkbox-header,
+  &__checkbox-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
+  &__checkbox-cell--deleted {
+    opacity: 0.4;
+  }
+
+  // Cell content
+  &__cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    height: 28px;
+    cursor: default;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    line-height: 28px;
+
+    &--selected {
+      background: color-mix(in srgb, var(--color-primary-6) 15%, transparent);
+      outline: 1px solid var(--color-primary-6);
+      outline-offset: -1px;
+    }
+
+    // Modified cell (single cell edit)
+    &--modified {
+      background: color-mix(in srgb, var(--color-warning-6) 15%, transparent);
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--color-warning-6);
+      }
+    }
+
+    // Deleted row
+    &--deleted {
+      background: color-mix(in srgb, var(--color-danger-6) 10%, transparent);
+      text-decoration: line-through;
+      color: var(--color-text-4);
+      cursor: not-allowed;
+    }
+
+    // Inserted row
+    &--inserted {
+      background: color-mix(in srgb, var(--color-success-6) 10%, transparent);
+
+      &::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background: var(--color-success-6);
+      }
+    }
+
+    // Updated row (row has changes but this cell wasn't changed)
+    &--updated-row {
+      background: color-mix(in srgb, var(--color-warning-6) 5%, transparent);
+    }
+  }
+
+  // Cell value types
+  &__null {
+    color: var(--color-text-4);
+    font-style: italic;
+    font-size: 11px;
+  }
+
+  &__undefined {
+    color: var(--color-text-4);
+  }
+
+  &__boolean {
+    color: #722ed1;
+    font-weight: 500;
+  }
+
+  &__number {
+    color: #14c9c9;
+    font-family: ui-monospace, monospace;
+  }
+
+  // Input cell - direct child of .art-table-cell
+  &__input {
+    height: var(--row-height);
+    line-height: var(--row-height);
+    margin: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    box-sizing: border-box;
+  }
+
+  // Status bar
+  &__status {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 6px 12px;
+    border-top: 1px solid var(--color-border-1);
+    background: var(--color-bg-3);
+    font-size: 11px;
+    color: var(--color-text-3);
+  }
+
+  &__table-name {
+    font-weight: 500;
+    color: var(--color-text-2);
+  }
+
+  &__row-count {
+    &::before {
+      content: "Rows: ";
+      color: var(--color-text-4);
+    }
+  }
+
+  &__duration {
+    &::before {
+      content: "Query: ";
+      color: var(--color-text-4);
+    }
+  }
+
+  // Empty content inside table
+  &__empty-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100px;
+  }
+}

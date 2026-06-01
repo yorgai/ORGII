@@ -1,0 +1,31 @@
+// Monospace font family for code elements
+.chat-markdown-body tt,
+.chat-markdown-body code,
+.chat-markdown-body samp {
+  font-family: var(
+    --code-font-family,
+    "SF Mono",
+    "Menlo",
+    "Monaco",
+    "Consolas",
+    monospace
+  );
+  font-size: 12px;
+}
+
+.chat-markdown-body pre {
+  margin-top: 8px;
+  margin-bottom: 0;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    SF Mono,
+    Menlo,
+    Consolas,
+    Liberation Mono,
+    monospace;
+  font-size: 12px;
+  word-wrap: normal;
+  width: 100%;
+  max-width: 100%;
+}

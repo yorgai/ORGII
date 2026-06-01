@@ -1,0 +1,178 @@
+import { stat } from "@tauri-apps/plugin-fs";
+import type React from "react";
+import { useCallback } from "react";
+
+import type { AddWorkspaceModalStage, useAddWorkspaceFlow } from "../../hooks";
+import {
+  expandHomePath,
+  looksLikeWorkspacePath,
+  showInvalidWorkspacePathDialog,
+} from "./pathImport";
+import type { AddMenuKind, RepoPaletteText } from "./types";
+
+interface UseRepoPaletteNavigationArgs {
+  modalStage: AddWorkspaceModalStage;
+  addMenuKind: AddMenuKind;
+  asBody: boolean;
+  effectiveInitialStage: AddWorkspaceModalStage;
+  initialAddMenu: boolean;
+  onClose: () => void;
+  onGoBackToParent?: () => void;
+  setModalStage: (stage: AddWorkspaceModalStage) => void;
+  setAddMenuKind: (kind: AddMenuKind) => void;
+  setSearchQuery: (query: string) => void;
+  addWorkspaceFlow: ReturnType<typeof useAddWorkspaceFlow>;
+  searchQuery: string;
+  paletteText: RepoPaletteText;
+}
+
+export function useRepoPaletteNavigation({
+  modalStage,
+  addMenuKind,
+  asBody,
+  effectiveInitialStage,
+  initialAddMenu,
+  onClose,
+  onGoBackToParent,
+  setModalStage,
+  setAddMenuKind,
+  setSearchQuery,
+  addWorkspaceFlow,
+  searchQuery,
+  paletteText,
+}: UseRepoPaletteNavigationArgs) {
+  const shouldReturnInitialStageToParent =
+    !!onGoBackToParent && !!effectiveInitialStage;
+  const shouldReturnInitialAddMenuToParent =
+    !!onGoBackToParent && initialAddMenu;
+
+  const handleGoBack = useCallback(() => {
+    if (modalStage) {
+      if (
+        modalStage === "create-workspace" &&
+        effectiveInitialStage === "create-workspace"
+      ) {
+        setModalStage(null);
+        setAddMenuKind("add");
+        setSearchQuery("");
+        return;
+      }
+
+      if (shouldReturnInitialStageToParent) {
+        onGoBackToParent?.();
+        return;
+      }
+
+      addWorkspaceFlow.handleGoBack();
+      return;
+    }
+
+    if (addMenuKind) {
+      if (shouldReturnInitialAddMenuToParent) {
+        onGoBackToParent?.();
+        return;
+      }
+
+      setAddMenuKind(null);
+      setSearchQuery("");
+      return;
+    }
+
+    if (onGoBackToParent) {
+      onGoBackToParent();
+      return;
+    }
+
+    if (asBody) {
+      onClose();
+    }
+  }, [
+    addMenuKind,
+    addWorkspaceFlow,
+    asBody,
+    effectiveInitialStage,
+    modalStage,
+    onClose,
+    onGoBackToParent,
+    setAddMenuKind,
+    setModalStage,
+    setSearchQuery,
+    shouldReturnInitialAddMenuToParent,
+    shouldReturnInitialStageToParent,
+  ]);
+
+  const handlePathImportSubmit = useCallback(async () => {
+    if (modalStage || addMenuKind) return false;
+
+    const candidatePath = searchQuery.trim();
+    if (!looksLikeWorkspacePath(candidatePath)) return false;
+
+    try {
+      const expandedPath = await expandHomePath(candidatePath);
+      const metadata = await stat(expandedPath);
+      if (!metadata.isDirectory) {
+        await showInvalidWorkspacePathDialog(
+          paletteText.invalidPathTitle,
+          paletteText.invalidPathMessage(candidatePath)
+        );
+        return true;
+      }
+
+      await addWorkspaceFlow.localWorkspaceForm.handleImportWorkspace(
+        expandedPath
+      );
+      return true;
+    } catch {
+      await showInvalidWorkspacePathDialog(
+        paletteText.invalidPathTitle,
+        paletteText.invalidPathMessage(candidatePath)
+      );
+      return true;
+    }
+  }, [
+    addMenuKind,
+    addWorkspaceFlow.localWorkspaceForm,
+    modalStage,
+    paletteText,
+    searchQuery,
+  ]);
+
+  const handleExternalKeyDown = useCallback(
+    (
+      event: React.KeyboardEvent<HTMLInputElement>,
+      internal: (event: React.KeyboardEvent<HTMLInputElement>) => void
+    ) => {
+      if (
+        (event.key === "Backspace" || event.key === "Delete") &&
+        searchQuery === "" &&
+        (!!modalStage || !!addMenuKind || asBody || !!onGoBackToParent)
+      ) {
+        event.preventDefault();
+        handleGoBack();
+        return;
+      }
+
+      if (event.key === "Enter" && looksLikeWorkspacePath(searchQuery)) {
+        event.preventDefault();
+        void handlePathImportSubmit();
+        return;
+      }
+
+      internal(event);
+    },
+    [
+      addMenuKind,
+      asBody,
+      handleGoBack,
+      handlePathImportSubmit,
+      modalStage,
+      onGoBackToParent,
+      searchQuery,
+    ]
+  );
+
+  return {
+    handleGoBack,
+    handleExternalKeyDown,
+  };
+}

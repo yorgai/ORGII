@@ -1,0 +1,818 @@
+//! Session-scoped system prompt section cache.
+//!
+//! Stable prompt sections are cached for the lifetime of a conversation and
+//! volatile sections opt out explicitly. Each section declares a
+//! [`PromptCachePolicy`], and live sessions keep a [`SessionPromptCache`] so
+//! expensive stable sections are rendered once per session instead of on every
+//! turn.
+
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::hash::{Hash, Hasher};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+use serde_json::Value;
+
+use crate::skills::loader::SkillListingEntry;
+
+const MAX_SECTION_CACHE_ENTRIES: usize = 64;
+const MAX_SKILL_LISTING_CACHE_ENTRIES: usize = 32;
+const MAX_SKILL_SENT_AGENT_ENTRIES: usize = 64;
+const MAX_LEARNINGS_CACHE_ENTRIES: usize = 128;
+pub const ORGII_SYSTEM_CACHE_SCOPE_KEY: &str = "_orgii_cache_scope";
+
+const MAX_CACHE_BREAK_SAMPLES: usize = 64;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PromptCacheInvalidationReason {
+    SessionReset,
+    AgentDefinitionChanged,
+    WorkspaceSnapshotChanged,
+    SkillCatalogChanged,
+    LearningsChanged,
+    Compaction,
+    Resume,
+}
+
+impl PromptCacheInvalidationReason {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            PromptCacheInvalidationReason::SessionReset => "session_reset",
+            PromptCacheInvalidationReason::AgentDefinitionChanged => "agent_definition_changed",
+            PromptCacheInvalidationReason::WorkspaceSnapshotChanged => "workspace_snapshot_changed",
+            PromptCacheInvalidationReason::SkillCatalogChanged => "skill_catalog_changed",
+            PromptCacheInvalidationReason::LearningsChanged => "learnings_changed",
+            PromptCacheInvalidationReason::Compaction => "compaction",
+            PromptCacheInvalidationReason::Resume => "resume",
+        }
+    }
+}
+
+/// Cache behavior for a prompt section.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PromptCachePolicy {
+    /// Render once per live session and reuse until the session is cleared or
+    /// recreated. This is for text whose inputs are session-stable snapshots.
+    StableUntilClear,
+    /// Rendered content is reusable only while a caller-supplied revision key
+    /// remains unchanged.
+    RevisionKeyed,
+    /// Render every prompt build. Use this for sections whose inputs can change
+    /// between turns or whose current implementation still performs live reads.
+    Volatile,
+}
+
+impl PromptCachePolicy {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            PromptCachePolicy::StableUntilClear => "stable_until_clear",
+            PromptCachePolicy::RevisionKeyed => "revision_keyed",
+            PromptCachePolicy::Volatile => "volatile",
+        }
+    }
+
+    pub fn is_cacheable(self) -> bool {
+        matches!(self, PromptCachePolicy::StableUntilClear)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CacheStats {
+    pub hits: u64,
+    pub misses: u64,
+    pub entries: usize,
+}
+
+impl CacheStats {
+    pub fn reset_counts(&mut self) {
+        self.hits = 0;
+        self.misses = 0;
+    }
+}
+
+#[derive(Debug)]
+struct BoundedMap<K, V> {
+    map: HashMap<K, V>,
+    order: VecDeque<K>,
+    max_entries: usize,
+}
+
+impl<K, V> BoundedMap<K, V>
+where
+    K: Clone + Eq + Hash,
+{
+    fn new(max_entries: usize) -> Self {
+        Self {
+            map: HashMap::new(),
+            order: VecDeque::new(),
+            max_entries,
+        }
+    }
+
+    fn get(&self, key: &K) -> Option<&V> {
+        self.map.get(key)
+    }
+
+    fn insert(&mut self, key: K, value: V) {
+        if self.max_entries == 0 {
+            return;
+        }
+        if !self.map.contains_key(&key) {
+            self.order.push_back(key.clone());
+        }
+        self.map.insert(key, value);
+        self.evict_overflow();
+    }
+
+    fn clear(&mut self) {
+        self.map.clear();
+        self.order.clear();
+    }
+
+    fn len(&self) -> usize {
+        self.map.len()
+    }
+
+    fn evict_overflow(&mut self) {
+        while self.map.len() > self.max_entries {
+            let Some(oldest) = self.order.pop_front() else {
+                break;
+            };
+            self.map.remove(&oldest);
+        }
+    }
+}
+
+impl<K, V> Default for BoundedMap<K, V>
+where
+    K: Clone + Eq + Hash,
+{
+    fn default() -> Self {
+        Self::new(64)
+    }
+}
+
+/// Per-session storage for rendered prompt sections.
+#[derive(Debug)]
+pub struct SessionPromptCache {
+    sections: BoundedMap<&'static str, Option<String>>,
+    stats: CacheStats,
+}
+
+impl Default for SessionPromptCache {
+    fn default() -> Self {
+        Self {
+            sections: BoundedMap::new(MAX_SECTION_CACHE_ENTRIES),
+            stats: CacheStats::default(),
+        }
+    }
+}
+
+impl SessionPromptCache {
+    pub fn get(&mut self, section_id: &'static str) -> Option<Option<String>> {
+        let value = self.sections.get(&section_id).cloned();
+        if value.is_some() {
+            self.stats.hits += 1;
+        } else {
+            self.stats.misses += 1;
+        }
+        value
+    }
+
+    pub fn insert(&mut self, section_id: &'static str, content: Option<String>) {
+        self.sections.insert(section_id, content);
+        self.stats.entries = self.sections.len();
+    }
+
+    pub fn clear(&mut self) {
+        self.sections.clear();
+        self.stats.entries = 0;
+        self.stats.reset_counts();
+    }
+
+    pub fn stats(&self) -> CacheStats {
+        CacheStats {
+            entries: self.sections.len(),
+            ..self.stats
+        }
+    }
+
+    pub fn reset_stats(&mut self) {
+        self.stats.reset_counts();
+        self.stats.entries = self.sections.len();
+    }
+
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.sections.len()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SkillListingCacheKey {
+    workspace_root: PathBuf,
+    disabled_skills: Vec<String>,
+    include_filter: Option<Vec<String>>,
+    agent_id: String,
+    load_workspace_settings: bool,
+}
+
+impl SkillListingCacheKey {
+    pub fn new(
+        workspace_root: &Path,
+        disabled_skills: &[String],
+        include_filter: Option<&[String]>,
+        agent_id: &str,
+        load_workspace_settings: bool,
+    ) -> Self {
+        let mut disabled = disabled_skills.to_vec();
+        disabled.sort();
+        disabled.dedup();
+
+        let include = include_filter.map(|filter| {
+            let mut values = filter.to_vec();
+            values.sort();
+            values.dedup();
+            values
+        });
+
+        Self {
+            workspace_root: workspace_root.to_path_buf(),
+            disabled_skills: disabled,
+            include_filter: include,
+            agent_id: agent_id.to_string(),
+            load_workspace_settings,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillListingDeltaStats {
+    pub scanned_count: usize,
+    pub new_count: usize,
+    pub sent_count: usize,
+    pub suppressed: bool,
+}
+
+#[derive(Debug)]
+pub struct SkillListingCache {
+    entries: BoundedMap<SkillListingCacheKey, Vec<SkillListingEntry>>,
+    sent_names: BoundedMap<String, HashSet<String>>,
+    stats: CacheStats,
+    last_delta: SkillListingDeltaStats,
+    suppress_next_listing: bool,
+}
+
+impl Default for SkillListingCache {
+    fn default() -> Self {
+        Self {
+            entries: BoundedMap::new(MAX_SKILL_LISTING_CACHE_ENTRIES),
+            sent_names: BoundedMap::new(MAX_SKILL_SENT_AGENT_ENTRIES),
+            stats: CacheStats::default(),
+            last_delta: SkillListingDeltaStats::default(),
+            suppress_next_listing: false,
+        }
+    }
+}
+
+impl SkillListingCache {
+    pub fn get(&mut self, key: &SkillListingCacheKey) -> Option<Vec<SkillListingEntry>> {
+        let value = self.entries.get(key).cloned();
+        if value.is_some() {
+            self.stats.hits += 1;
+        } else {
+            self.stats.misses += 1;
+        }
+        value
+    }
+
+    pub fn insert(&mut self, key: SkillListingCacheKey, listing: Vec<SkillListingEntry>) {
+        self.entries.insert(key, listing);
+        self.stats.entries = self.entries.len();
+    }
+
+    pub fn new_entries_for_agent(
+        &mut self,
+        agent_key: &str,
+        entries: &[SkillListingEntry],
+    ) -> Vec<SkillListingEntry> {
+        if self.suppress_next_listing {
+            self.suppress_next_listing = false;
+            self.last_delta = SkillListingDeltaStats {
+                scanned_count: entries.len(),
+                new_count: 0,
+                sent_count: self
+                    .sent_names
+                    .get(&agent_key.to_string())
+                    .map(HashSet::len)
+                    .unwrap_or(0),
+                suppressed: true,
+            };
+            return Vec::new();
+        }
+
+        let mut sent = self
+            .sent_names
+            .get(&agent_key.to_string())
+            .cloned()
+            .unwrap_or_default();
+        let new_entries: Vec<SkillListingEntry> = entries
+            .iter()
+            .filter(|entry| !sent.contains(&entry.name))
+            .cloned()
+            .collect();
+        for entry in &new_entries {
+            sent.insert(entry.name.clone());
+        }
+        let sent_count = sent.len();
+        self.sent_names.insert(agent_key.to_string(), sent);
+        self.last_delta = SkillListingDeltaStats {
+            scanned_count: entries.len(),
+            new_count: new_entries.len(),
+            sent_count,
+            suppressed: new_entries.is_empty(),
+        };
+        new_entries
+    }
+
+    pub fn suppress_next_listing(&mut self) {
+        self.suppress_next_listing = true;
+    }
+
+    pub fn clear_catalog(&mut self) {
+        self.entries.clear();
+        self.stats.entries = 0;
+        self.stats.reset_counts();
+    }
+
+    pub fn clear_all(&mut self) {
+        self.entries.clear();
+        self.sent_names.clear();
+        self.suppress_next_listing = false;
+        self.last_delta = SkillListingDeltaStats::default();
+        self.stats.entries = 0;
+        self.stats.reset_counts();
+    }
+
+    pub fn clear(&mut self) {
+        self.clear_all();
+    }
+
+    pub fn stats(&self) -> CacheStats {
+        CacheStats {
+            entries: self.entries.len(),
+            ..self.stats
+        }
+    }
+
+    pub fn last_delta_stats(&self) -> SkillListingDeltaStats {
+        self.last_delta.clone()
+    }
+
+    pub fn reset_stats(&mut self) {
+        self.stats.reset_counts();
+        self.stats.entries = self.entries.len();
+        self.last_delta = SkillListingDeltaStats::default();
+    }
+
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LearningsPromptCacheKey {
+    agent_scope: String,
+    row_count: u64,
+    revision: Option<String>,
+}
+
+impl LearningsPromptCacheKey {
+    pub fn new(agent_scope: impl Into<String>, row_count: u64, revision: Option<String>) -> Self {
+        Self {
+            agent_scope: agent_scope.into(),
+            row_count,
+            revision,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct LearningsPromptCache {
+    entries: BoundedMap<LearningsPromptCacheKey, Option<String>>,
+    stats: CacheStats,
+}
+
+impl Default for LearningsPromptCache {
+    fn default() -> Self {
+        Self {
+            entries: BoundedMap::new(MAX_LEARNINGS_CACHE_ENTRIES),
+            stats: CacheStats::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RenderedSystemBlockScope {
+    Global,
+    Org,
+    Session,
+    Volatile,
+}
+
+impl RenderedSystemBlockScope {
+    pub fn is_cacheable(self) -> bool {
+        !matches!(self, RenderedSystemBlockScope::Volatile)
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RenderedSystemBlockScope::Global => "global",
+            RenderedSystemBlockScope::Org => "org",
+            RenderedSystemBlockScope::Session => "session",
+            RenderedSystemBlockScope::Volatile => "volatile",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RenderedSystemBlock {
+    pub text: String,
+    pub cache_scope: RenderedSystemBlockScope,
+}
+
+impl RenderedSystemBlock {
+    pub fn new(text: impl Into<String>, cache_scope: RenderedSystemBlockScope) -> Self {
+        Self {
+            text: text.into(),
+            cache_scope,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CacheBreakSample {
+    pub system_hash: u64,
+    pub tools_hash: u64,
+    pub model_hash: u64,
+    pub cache_read_tokens: i64,
+    pub cache_write_tokens: i64,
+    pub prompt_tokens: i64,
+    pub broke_cache: bool,
+}
+
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CacheBreakStats {
+    pub samples: usize,
+    pub breaks: u64,
+    pub last: Option<CacheBreakSample>,
+}
+
+#[derive(Debug, Default)]
+pub struct PromptCacheBreakTracker {
+    samples: VecDeque<CacheBreakSample>,
+    breaks: u64,
+}
+
+pub fn rendered_system_blocks_from_messages(messages: &[Value]) -> Vec<RenderedSystemBlock> {
+    let mut blocks = Vec::new();
+    for message in messages {
+        if message.get("role").and_then(Value::as_str) != Some("system") {
+            continue;
+        }
+        if let Some(content_blocks) = message.get("content").and_then(Value::as_array) {
+            for block in content_blocks {
+                let Some(text) = block.get("text").and_then(Value::as_str) else {
+                    continue;
+                };
+                let scope = block
+                    .get(ORGII_SYSTEM_CACHE_SCOPE_KEY)
+                    .and_then(Value::as_str)
+                    .and_then(parse_rendered_system_block_scope)
+                    .unwrap_or(RenderedSystemBlockScope::Volatile);
+                blocks.push(RenderedSystemBlock::new(text, scope));
+            }
+        } else if let Some(text) = message.get("content").and_then(Value::as_str) {
+            blocks.push(RenderedSystemBlock::new(
+                text,
+                RenderedSystemBlockScope::Session,
+            ));
+        }
+    }
+    blocks
+}
+
+fn parse_rendered_system_block_scope(raw: &str) -> Option<RenderedSystemBlockScope> {
+    match raw {
+        "global" => Some(RenderedSystemBlockScope::Global),
+        "org" => Some(RenderedSystemBlockScope::Org),
+        "session" => Some(RenderedSystemBlockScope::Session),
+        "volatile" => Some(RenderedSystemBlockScope::Volatile),
+        _ => None,
+    }
+}
+
+impl PromptCacheBreakTracker {
+    pub fn record(
+        &mut self,
+        system_blocks: &[RenderedSystemBlock],
+        tools: Option<&[Value]>,
+        model: &str,
+        prompt_tokens: i64,
+        cache_read_tokens: i64,
+        cache_write_tokens: i64,
+    ) -> CacheBreakSample {
+        let system_hash =
+            stable_hash_json(&serde_json::to_value(system_blocks).unwrap_or(Value::Null));
+        let tools_hash = stable_hash_json(&serde_json::to_value(tools).unwrap_or(Value::Null));
+        let model_hash = stable_hash_text(model);
+        let has_cacheable_blocks = system_blocks
+            .iter()
+            .any(|block| block.cache_scope.is_cacheable());
+        let broke_cache = has_cacheable_blocks
+            && cache_read_tokens == 0
+            && cache_write_tokens > 0
+            && self.samples.back().is_some_and(|previous| {
+                previous.system_hash == system_hash
+                    && previous.tools_hash == tools_hash
+                    && previous.model_hash == model_hash
+            });
+
+        if broke_cache {
+            self.breaks += 1;
+        }
+
+        let sample = CacheBreakSample {
+            system_hash,
+            tools_hash,
+            model_hash,
+            cache_read_tokens,
+            cache_write_tokens,
+            prompt_tokens,
+            broke_cache,
+        };
+        self.samples.push_back(sample.clone());
+        while self.samples.len() > MAX_CACHE_BREAK_SAMPLES {
+            self.samples.pop_front();
+        }
+        sample
+    }
+
+    pub fn stats(&self) -> CacheBreakStats {
+        CacheBreakStats {
+            samples: self.samples.len(),
+            breaks: self.breaks,
+            last: self.samples.back().cloned(),
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.samples.clear();
+        self.breaks = 0;
+    }
+}
+
+// ── Git branch volatile cache ────────────────────────────────────────────────
+
+/// Short-lived cache for `git rev-parse --abbrev-ref HEAD` results.
+///
+/// Each process call takes ~5–30ms; with many prompt builds per turn this
+/// adds up. We cache per repo-path with a 150ms TTL, which is short enough
+/// that branch switches mid-session are reflected within one user turn.
+const GIT_BRANCH_CACHE_TTL: Duration = Duration::from_millis(150);
+
+struct GitBranchEntry {
+    branch: Option<String>,
+    fetched_at: Instant,
+}
+
+/// Process-wide cache for git branch reads. Wrapped in `Arc<Mutex<_>>` so
+/// it can be accessed from multiple async contexts without session state.
+#[derive(Clone, Default)]
+pub struct GitBranchCache {
+    inner: Arc<Mutex<HashMap<PathBuf, GitBranchEntry>>>,
+}
+
+impl GitBranchCache {
+    pub fn get_or_fetch(&self, repo_path: &Path) -> Option<String> {
+        let mut guard = self
+            .inner
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some(entry) = guard.get(repo_path) {
+            if entry.fetched_at.elapsed() < GIT_BRANCH_CACHE_TTL {
+                return entry.branch.clone();
+            }
+        }
+        let branch = git::git_command()
+            .ok()
+            .and_then(|mut command| {
+                command
+                    .args(["rev-parse", "--abbrev-ref", "HEAD"])
+                    .current_dir(repo_path)
+                    .output()
+                    .ok()
+            })
+            .filter(|out| out.status.success())
+            .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string());
+        guard.insert(
+            repo_path.to_path_buf(),
+            GitBranchEntry {
+                branch: branch.clone(),
+                fetched_at: Instant::now(),
+            },
+        );
+        branch
+    }
+}
+
+fn stable_hash_text(text: &str) -> u64 {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    text.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn stable_hash_json(value: &Value) -> u64 {
+    stable_hash_text(&serde_json::to_string(value).unwrap_or_default())
+}
+
+impl LearningsPromptCache {
+    pub fn get(&mut self, key: &LearningsPromptCacheKey) -> Option<Option<String>> {
+        let value = self.entries.get(key).cloned();
+        if value.is_some() {
+            self.stats.hits += 1;
+        } else {
+            self.stats.misses += 1;
+        }
+        value
+    }
+
+    pub fn insert(&mut self, key: LearningsPromptCacheKey, content: Option<String>) {
+        self.entries.insert(key, content);
+        self.stats.entries = self.entries.len();
+    }
+
+    pub fn clear(&mut self) {
+        self.entries.clear();
+        self.stats.entries = 0;
+        self.stats.reset_counts();
+    }
+
+    pub fn stats(&self) -> CacheStats {
+        CacheStats {
+            entries: self.entries.len(),
+            ..self.stats
+        }
+    }
+
+    pub fn reset_stats(&mut self) {
+        self.stats.reset_counts();
+        self.stats.entries = self.entries.len();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        rendered_system_blocks_from_messages, PromptCacheBreakTracker, RenderedSystemBlockScope,
+        SkillListingCache, SkillListingCacheKey, ORGII_SYSTEM_CACHE_SCOPE_KEY,
+    };
+    use crate::skills::loader::SkillListingEntry;
+    use std::path::Path;
+
+    #[test]
+    fn skill_listing_cache_key_normalizes_filter_order() {
+        let disabled_a = vec!["beta".to_string(), "alpha".to_string(), "alpha".to_string()];
+        let include_a = vec![
+            "gamma".to_string(),
+            "alpha".to_string(),
+            "gamma".to_string(),
+        ];
+        let disabled_b = vec!["alpha".to_string(), "beta".to_string()];
+        let include_b = vec!["alpha".to_string(), "gamma".to_string()];
+
+        let first =
+            SkillListingCacheKey::new(
+                Path::new("/tmp/project"),
+                &disabled_a,
+                Some(&include_a),
+                "agent-a",
+                true,
+            );
+        let second =
+            SkillListingCacheKey::new(
+                Path::new("/tmp/project"),
+                &disabled_b,
+                Some(&include_b),
+                "agent-a",
+                true,
+            );
+
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn skill_listing_cache_distinguishes_empty_filter_from_no_filter() {
+        let disabled: Vec<String> = Vec::new();
+        let empty_include: Vec<String> = Vec::new();
+        let no_filter = SkillListingCacheKey::new(Path::new("/tmp/project"), &disabled, None, "agent-a", true);
+        let empty_filter =
+            SkillListingCacheKey::new(
+                Path::new("/tmp/project"),
+                &disabled,
+                Some(&empty_include),
+                "agent-a",
+                true,
+            );
+
+        assert_ne!(no_filter, empty_filter);
+    }
+
+    #[test]
+    fn skill_listing_cache_tracks_sent_name_delta() {
+        let key = SkillListingCacheKey::new(Path::new("/tmp/project"), &[], None, "agent-a", true);
+        let mut cache = SkillListingCache::default();
+        let entries = vec![
+            SkillListingEntry {
+                name: "alpha".to_string(),
+                line: "- **alpha**".to_string(),
+            },
+            SkillListingEntry {
+                name: "beta".to_string(),
+                line: "- **beta**".to_string(),
+            },
+        ];
+
+        assert_eq!(cache.get(&key), None);
+        cache.insert(key.clone(), entries.clone());
+        assert_eq!(cache.get(&key), Some(entries.clone()));
+        assert_eq!(cache.len(), 1);
+        assert_eq!(cache.new_entries_for_agent("agent:one", &entries), entries);
+        let cached_entries = cache.get(&key).unwrap();
+        assert!(cache
+            .new_entries_for_agent("agent:one", &cached_entries)
+            .is_empty());
+        assert!(cache.last_delta_stats().suppressed);
+    }
+
+    #[test]
+    fn skill_listing_cache_resume_suppresses_next_delta_once() {
+        let mut cache = SkillListingCache::default();
+        let entries = vec![SkillListingEntry {
+            name: "alpha".to_string(),
+            line: "- **alpha**".to_string(),
+        }];
+        cache.suppress_next_listing();
+        assert!(cache
+            .new_entries_for_agent("agent:one", &entries)
+            .is_empty());
+        assert!(cache.last_delta_stats().suppressed);
+        assert_eq!(cache.new_entries_for_agent("agent:one", &entries), entries);
+    }
+
+    #[test]
+    fn rendered_system_blocks_from_messages_preserves_cache_scope() {
+        let messages = vec![serde_json::json!({
+            "role": "system",
+            "content": [{
+                "type": "text",
+                "text": "stable",
+                (ORGII_SYSTEM_CACHE_SCOPE_KEY): "session"
+            }]
+        })];
+        let blocks = rendered_system_blocks_from_messages(&messages);
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].text, "stable");
+        assert_eq!(blocks[0].cache_scope, RenderedSystemBlockScope::Session);
+    }
+
+    #[test]
+    fn cache_break_tracker_flags_recreation_without_read_for_same_prefix() {
+        let messages = vec![serde_json::json!({
+            "role": "system",
+            "content": [{
+                "type": "text",
+                "text": "stable",
+                (ORGII_SYSTEM_CACHE_SCOPE_KEY): "session"
+            }]
+        })];
+        let blocks = rendered_system_blocks_from_messages(&messages);
+        let tools = vec![serde_json::json!({"name": "read_file"})];
+        let mut tracker = PromptCacheBreakTracker::default();
+        let first = tracker.record(&blocks, Some(&tools), "model", 100, 0, 100);
+        assert!(!first.broke_cache);
+        let second = tracker.record(&blocks, Some(&tools), "model", 100, 0, 90);
+        assert!(second.broke_cache);
+        assert_eq!(tracker.stats().breaks, 1);
+    }
+}

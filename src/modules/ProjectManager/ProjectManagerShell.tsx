@@ -1,0 +1,100 @@
+/**
+ * ProjectManagerShell Component
+ *
+ * Wraps ProjectManagerCore inside a SimulatorFrame for the project view mode.
+ * Handles repo selection, status bar (settings opens from status bar), and layout.
+ */
+import { useAtomValue, useSetAtom } from "jotai";
+import React, { memo, useCallback, useEffect, useMemo } from "react";
+
+import SimulatorFrame from "@src/engines/Simulator/components/SimulatorFrame";
+import { useWorkStationTabs } from "@src/hooks/workStation";
+import { currentRepoAtom } from "@src/store/repo";
+import {
+  perAppStatusBarCallbacksAtom,
+  workStationStatusBarHiddenAtom,
+  workStationTitleBarHiddenAtom,
+} from "@src/store/ui/workStationAtom";
+import { createProjectSettingsTab } from "@src/store/workstation/tabs";
+
+import { StatusBarRenderer } from "../WorkStation/shared";
+import { WORK_STATION_PLACEHOLDER_PAGE_BG_CLASS } from "../WorkStation/shared/tokens";
+import ProjectManagerCore from "./ProjectManagerCore";
+
+const getFolderName = (path: string): string => {
+  if (!path) return "";
+  const cleanPath = path.replace(/\/+$/, "");
+  const segments = cleanPath.split("/").filter(Boolean);
+  return segments[segments.length - 1] || "";
+};
+
+interface ProjectManagerShellProps {
+  isActive?: boolean;
+  isFullMode?: boolean;
+}
+
+const ProjectManagerShell: React.FC<ProjectManagerShellProps> = memo(
+  ({ isActive: _isActive = true, isFullMode = false }) => {
+    const titleBarHidden = useAtomValue(workStationTitleBarHiddenAtom);
+    const statusBarHidden = useAtomValue(workStationStatusBarHiddenAtom);
+
+    const currentRepo = useAtomValue(currentRepoAtom);
+    const repoPath = currentRepo?.path ?? currentRepo?.fs_uri ?? "";
+    const repoName = useMemo(() => {
+      if (currentRepo?.name) return currentRepo.name;
+      return getFolderName(repoPath) || "Project Manager";
+    }, [currentRepo?.name, repoPath]);
+
+    const { openTab: openProjectTab } = useWorkStationTabs();
+
+    const handleOpenSettings = useCallback(() => {
+      openProjectTab(createProjectSettingsTab());
+    }, [openProjectTab]);
+
+    const setPerAppStatusBarCallbacks = useSetAtom(
+      perAppStatusBarCallbacksAtom
+    );
+    useEffect(() => {
+      setPerAppStatusBarCallbacks((prev) => ({
+        ...prev,
+        project: {
+          ...prev.project,
+          onOpenSettings: handleOpenSettings,
+        },
+      }));
+      return () => {
+        setPerAppStatusBarCallbacks((prev) => ({
+          ...prev,
+          project: {
+            ...prev.project,
+            onOpenSettings: undefined,
+          },
+        }));
+      };
+    }, [handleOpenSettings, setPerAppStatusBarCallbacks]);
+
+    return (
+      <SimulatorFrame
+        title="Project Manager"
+        radius={isFullMode ? 0 : 20}
+        containerClassName="!bg-bg-2"
+        showHeader={!titleBarHidden}
+        headerBackgroundColor="var(--color-bg-1)"
+        headerTextColor="var(--color-text-2)"
+        showHeaderBorder={true}
+        contentClassName="p-0 flex flex-col"
+      >
+        <div
+          className={`flex min-h-0 flex-1 flex-col ${WORK_STATION_PLACEHOLDER_PAGE_BG_CLASS}`}
+        >
+          <ProjectManagerCore repoPath={repoPath} repoName={repoName} />
+        </div>
+        {!isFullMode && !statusBarHidden && <StatusBarRenderer />}
+      </SimulatorFrame>
+    );
+  }
+);
+
+ProjectManagerShell.displayName = "ProjectManagerShell";
+
+export default ProjectManagerShell;

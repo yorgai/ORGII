@@ -1,0 +1,194 @@
+@use "../../styles/mixins/scrollbar";
+
+// Neutral inline code style (less colorful, more readable)
+.chat-markdown-body code,
+.chat-markdown-body tt {
+  padding: 1px 5px;
+  margin: 1px 2px;
+  font-size: 12px;
+  font-family: var(
+    --code-font-family,
+    "SF Mono",
+    "Menlo",
+    "Monaco",
+    "Consolas",
+    monospace
+  );
+  white-space: break-spaces;
+  background: var(--color-fill-2);
+  color: var(--color-text-1);
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+// When code contains multiple spans (syntax highlighted code blocks),
+// remove border and padding to let syntax highlighter handle styling
+.chat-markdown-body code:has(span + span) {
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+}
+
+.chat-markdown-body code br,
+.chat-markdown-body tt br {
+  display: none;
+}
+
+.chat-markdown-body del code {
+  text-decoration: inherit;
+}
+
+.chat-markdown-body samp {
+  font-size: 85%;
+}
+
+// Code blocks - reset inline code styles
+.chat-markdown-body pre code {
+  padding: 0;
+  margin: 0;
+  font-size: 12px;
+  background: transparent !important;
+  color: inherit;
+  border: none;
+  font-weight: normal;
+}
+
+.chat-markdown-body pre div {
+  @apply rounded-lg;
+}
+
+.chat-markdown-body pre > code {
+  padding: 0;
+  margin: 0;
+  word-break: normal;
+  white-space: pre;
+  border: 0;
+  background: transparent !important;
+  color: inherit;
+}
+
+// Code block wrapper — uses fill-2 for consistent theming
+.chat-markdown-body .code-block-wrapper {
+  margin: 8px 0;
+  border-radius: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--color-fill-2);
+  width: 100%;
+  max-width: 100%;
+
+  & > div {
+    min-width: 100%;
+    background: transparent !important;
+  }
+
+  code,
+  span {
+    font-family: var(
+      --code-font-family,
+      "SF Mono",
+      "Menlo",
+      "Monaco",
+      "Consolas",
+      monospace
+    ) !important;
+    font-size: var(--chat-code-font-size, 13px) !important;
+    line-height: 1.6 !important;
+  }
+
+  // SyntaxHighlighter uses PreTag=div but still wraps tokens in <code>. Global
+  // `.chat-markdown-body code` applies inline-code pill bg; `:has(span + span)` misses
+  // single-token lines. Only the wrapper should provide the block surface.
+  code {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border-radius: 0;
+    font-weight: normal;
+    white-space: pre;
+  }
+
+  code span {
+    background: transparent !important;
+  }
+
+  @include scrollbar.scrollbar-unified;
+}
+
+// When inside fill-2 or primary surfaces, bump code bg to bg-2 for contrast
+.bg-fill-2,
+[class*="bg-primary-"] {
+  .chat-markdown-body {
+    code,
+    tt {
+      background: var(--color-bg-2);
+    }
+
+    .code-block-wrapper {
+      background: var(--color-bg-2);
+    }
+
+    // Do not re-apply surface onto Prism's inner <code> (see .code-block-wrapper)
+    .code-block-wrapper code,
+    .code-block-wrapper code span {
+      background: transparent !important;
+    }
+  }
+}
+
+// Dark theme adjustments
+.dark .chat-markdown-body {
+  blockquote {
+    background: rgba(255, 255, 255, 0.03);
+    border-left-color: var(--color-border-2);
+  }
+}
+
+.chat-markdown-body .highlight {
+  margin-bottom: 16px;
+}
+
+.chat-markdown-body .highlight pre {
+  margin-bottom: 0;
+  word-break: normal;
+}
+
+.chat-markdown-body .highlight pre,
+.chat-markdown-body pre {
+  margin-left: 0;
+  padding: 0;
+  overflow-x: auto; /* Horizontal scroll for wide code */
+  overflow-y: visible;
+  font-size: var(--chat-code-font-size, 13px);
+  line-height: 1.6;
+  border-radius: 8px;
+  direction: ltr;
+  background: transparent;
+  min-width: 0; /* KEY: Prevents flex overflow issues */
+  width: 100%;
+  max-width: 100%;
+
+  /* Prevent word wrapping in code */
+  word-wrap: normal;
+  overflow-wrap: normal;
+  white-space: pre;
+}
+
+.chat-markdown-body pre code,
+.chat-markdown-body pre tt {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  padding: 0;
+  margin: 0;
+  overflow-x: visible; /* Let parent pre handle scrolling */
+  overflow-y: visible;
+  line-height: inherit;
+  word-wrap: normal;
+  overflow-wrap: normal;
+  white-space: pre;
+  background-color: transparent;
+  border: 0;
+}

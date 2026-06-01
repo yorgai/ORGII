@@ -1,0 +1,110 @@
+/**
+ * Shared dropdown list chrome for app switchers (My Station route picker +
+ * Agent Station dock picker). Row hover/selected use {@link DROPDOWN_CLASSES}
+ * (`itemHover` → fill-2, `itemSelected` → primary-1) with callers supplying
+ * selection semantics only.
+ */
+import type { LucideIcon } from "lucide-react";
+import React, { memo } from "react";
+import { createPortal } from "react-dom";
+
+import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_PANEL,
+} from "@src/components/Dropdown/tokens";
+import type { DropdownEnginePosition } from "@src/hooks/dropdown/useDropdownEngine";
+
+export interface AppSwitcherMenuItem {
+  id: string;
+  /**
+   * Optional leading icon. When omitted, the row renders label-only.
+   * Used by the Agent Org member picker which mirrors the icon-less
+   * chat-panel switcher style.
+   */
+  icon?: LucideIcon;
+  label: string;
+  /**
+   * When true, the row is rendered greyed out and clicks are ignored.
+   * Used by the Agent Org member picker to suppress members that have
+   * not received any tasks yet.
+   */
+  disabled?: boolean;
+  /**
+   * Optional right-aligned secondary label (e.g. "No tasks", runtime
+   * status). Rendered before the selected-check.
+   */
+  trailingLabel?: string;
+}
+
+export interface AppSwitcherDropdownPanelProps {
+  panelRef: React.RefObject<HTMLDivElement | null>;
+  panelPosition: DropdownEnginePosition;
+  items: readonly AppSwitcherMenuItem[];
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  onClose: () => void;
+}
+
+const AppSwitcherDropdownPanelComponent: React.FC<
+  AppSwitcherDropdownPanelProps
+> = ({ panelRef, panelPosition, items, activeId, onSelect, onClose }) =>
+  createPortal(
+    <div
+      ref={panelRef as React.Ref<HTMLDivElement>}
+      className={`${DROPDOWN_CLASSES.panel} w-max`}
+      style={{
+        position: "fixed",
+        ...(panelPosition.top !== undefined
+          ? { top: panelPosition.top }
+          : { bottom: panelPosition.bottom }),
+        left: panelPosition.left,
+        minWidth: panelPosition.width,
+        width: "max-content",
+        zIndex: DROPDOWN_PANEL.zIndex,
+      }}
+    >
+      <div className={`${DROPDOWN_CLASSES.optionsContainer} w-full`}>
+        {items.map((item) => {
+          const ItemIcon = item.icon;
+          const isActive = item.id === activeId;
+          const isDisabled = item.disabled === true;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              disabled={isDisabled}
+              aria-disabled={isDisabled || undefined}
+              className={`${DROPDOWN_CLASSES.itemCompact} ${
+                isActive
+                  ? DROPDOWN_CLASSES.itemSelected
+                  : DROPDOWN_CLASSES.itemHover
+              } w-full justify-between whitespace-nowrap text-left ${
+                isDisabled ? "cursor-not-allowed opacity-50" : ""
+              }`}
+              onClick={() => {
+                if (isDisabled) return;
+                onClose();
+                onSelect(item.id);
+              }}
+            >
+              {ItemIcon && (
+                <ItemIcon size={14} strokeWidth={1.75} className="shrink-0" />
+              )}
+              <span className="flex-1 whitespace-nowrap">{item.label}</span>
+              {item.trailingLabel && (
+                <span className="shrink-0 whitespace-nowrap text-[11px] text-text-3">
+                  {item.trailingLabel}
+                </span>
+              )}
+              {isActive && <DropdownSelectedCheck />}
+            </button>
+          );
+        })}
+      </div>
+    </div>,
+    document.body
+  );
+
+export const AppSwitcherDropdownPanel = memo(AppSwitcherDropdownPanelComponent);
+AppSwitcherDropdownPanel.displayName = "AppSwitcherDropdownPanel";

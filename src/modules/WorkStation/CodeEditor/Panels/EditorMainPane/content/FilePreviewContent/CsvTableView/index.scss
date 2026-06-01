@@ -1,0 +1,141 @@
+/**
+ * CsvTableView Styles
+ *
+ * Table styling for CSV/TSV preview.
+ */
+
+.csv-table-view {
+  &--error,
+  &--empty {
+    height: 100%;
+    padding: 24px;
+  }
+
+  &__header {
+    flex-shrink: 0;
+  }
+
+  &__content {
+    position: relative;
+  }
+}
+
+.csv-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+
+  &__thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--color-fill-1);
+  }
+
+  &__header-row {
+    th {
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 1px solid var(--color-border-1);
+    }
+  }
+
+  &__header-cell {
+    padding: 8px 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+    background: var(--color-fill-1);
+    border-right: 1px solid var(--color-border-1);
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &--sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.1s;
+
+      &:hover {
+        background: var(--color-fill-2);
+      }
+    }
+  }
+
+  &__header-content {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__header-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__sort-icon {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary-6);
+  }
+
+  &__row {
+    &:hover {
+      background: var(--color-fill-1);
+    }
+
+    &:nth-child(even) {
+      background: var(--color-fill-1);
+
+      &:hover {
+        background: var(--color-fill-2);
+      }
+    }
+  }
+
+  &__row-number {
+    padding: 6px 8px;
+    text-align: right;
+    color: var(--color-text-4);
+    font-size: 11px;
+    background: var(--color-fill-1);
+    border-right: 1px solid var(--color-border-1);
+    min-width: 40px;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+
+    // Header row number styling
+    .csv-table__header-row & {
+      background: var(--color-fill-1);
+      font-weight: 600;
+    }
+  }
+
+  &__cell {
+    padding: 6px 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+    cursor: pointer;
+    border-right: 1px solid var(--color-border-1);
+    transition: background-color 0.1s;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &:hover {
+      background: var(--color-fill-2);
+    }
+  }
+}

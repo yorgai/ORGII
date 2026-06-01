@@ -1,0 +1,279 @@
+/**
+ * useBranchFetch Hook
+ *
+ * Handles fetching branches from both Rust/Python backends and GitHub API.
+ * Implements caching strategy: show cached data immediately, refresh in background.
+ */
+import { useAtom, useAtomValue } from "jotai";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { gitApi } from "@src/api/http/git";
+import { useGitHubConnections } from "@src/hooks/git";
+import {
+  branchCacheAtom,
+  branchLoadingRepoIdsAtom,
+  currentRepoAtom,
+  getBranchesFromCache,
+  isBranchCacheFresh,
+  repoMapAtom,
+  setBranchCacheWithLRU,
+} from "@src/store/repo";
+
+import type { BranchItem } from "../../types";
+import type { UseBranchFetchOptions } from "./types";
+
+export function useBranchFetch(options: UseBranchFetchOptions) {
+  const {
+    isOpen,
+    repoId,
+    repoPath: repoPathProp,
+    isGitHubRepo,
+    githubConnectionId,
+    githubRepoFullName,
+  } = options;
+
+  // ============ ATOMS ============
+  const [branchCache, setBranchCacheAtom] = useAtom(branchCacheAtom);
+  const [loadingRepoIds, setLoadingRepoIds] = useAtom(branchLoadingRepoIdsAtom);
+  const repoMap = useAtomValue(repoMapAtom);
+  const currentRepo = useAtomValue(currentRepoAtom);
+
+  // ============ STATE ============
+  // Initialize branches directly from cache so first render is never blank.
+  const [branches, setBranches] = useState<BranchItem[]>(() => {
+    if (isGitHubRepo) return [];
+    const cached = getBranchesFromCache(branchCache, repoId);
+    return cached && cached.branches.length > 0
+      ? (cached.branches as BranchItem[])
+      : [];
+  });
+  const [isFetching, setIsFetching] = useState(false);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const hasFetchedRef = useRef<string | null>(null);
+  const intendedRepoIdRef = useRef<string | null>(null);
+
+  // ============ GITHUB CONNECTIONS ============
+  const {
+    getBranchesForRepo: getGitHubBranches,
+    branchesCache: githubBranchesCache,
+  } = useGitHubConnections({ autoFetch: false });
+
+  // Get repo path from multiple sources (with fallbacks)
+  const repoPath = useMemo(() => {
+    if (repoPathProp) return repoPathProp;
+
+    const repo = repoMap.get(repoId);
+    if (repo?.path || repo?.fs_uri) {
+      return repo.path || repo.fs_uri || "";
+    }
+
+    if (currentRepo && currentRepo.id === repoId) {
+      return currentRepo.path || currentRepo.fs_uri || "";
+    }
+
+    return "";
+  }, [repoPathProp, repoMap, repoId, currentRepo]);
+
+  // Derive isLoading from both local fetching and global loading state
+  const isLoading = isFetching || loadingRepoIds.has(repoId);
+
+  // Effective repo identifier for caching
+  const effectiveRepoIdentifier = isGitHubRepo
+    ? `${githubConnectionId}:${githubRepoFullName}`
+    : repoId;
+
+  // ============ RESET ON REPO CHANGE ============
+  useEffect(() => {
+    if (hasFetchedRef.current !== effectiveRepoIdentifier) {
+      hasFetchedRef.current = null;
+      setBranches([]);
+    }
+    intendedRepoIdRef.current = repoId;
+  }, [effectiveRepoIdentifier, repoId]);
+
+  // ============ RESET ON OPEN ============
+  useEffect(() => {
+    if (isOpen) {
+      hasFetchedRef.current = null;
+    }
+  }, [isOpen]);
+
+  // ============ FETCH GITHUB BRANCHES ============
+  useEffect(() => {
+    if (
+      !isOpen ||
+      !isGitHubRepo ||
+      !githubConnectionId ||
+      !githubRepoFullName
+    ) {
+      return;
+    }
+
+    const cacheKey = `${githubConnectionId}:${githubRepoFullName}`;
+
+    // Check cache first
+    const cached = githubBranchesCache.get(cacheKey);
+    if (cached && cached.length > 0) {
+      const branchItems: BranchItem[] = cached.map((branch) => ({
+        name: branch.name,
+        lastCommitDate: new Date().toISOString(),
+        isCurrent: branch.is_default,
+        isDefault: branch.is_default,
+        isRemote: true,
+        protected: branch.protected,
+      }));
+      setBranches(branchItems);
+      setIsFetching(false);
+      return;
+    }
+
+    // Fetch from GitHub
+    if (hasFetchedRef.current !== cacheKey) {
+      hasFetchedRef.current = cacheKey;
+      setIsFetching(true);
+      getGitHubBranches(githubConnectionId, githubRepoFullName)
+        .then((githubBranches) => {
+          const branchItems: BranchItem[] = githubBranches.map((branch) => ({
+            name: branch.name,
+            lastCommitDate: new Date().toISOString(),
+            isCurrent: branch.is_default,
+            isDefault: branch.is_default,
+            isRemote: true,
+            protected: branch.protected,
+          }));
+          setBranches(branchItems);
+        })
+        .catch((error) => {
+          console.error(
+            "[useBranchFetch] Error fetching GitHub branches:",
+            error
+          );
+        })
+        .finally(() => {
+          setIsFetching(false);
+        });
+    }
+  }, [
+    isOpen,
+    isGitHubRepo,
+    githubConnectionId,
+    githubRepoFullName,
+    githubBranchesCache,
+    getGitHubBranches,
+  ]);
+
+  // ============ SYNC FROM CACHE ============
+  useEffect(() => {
+    if (!repoId || isGitHubRepo) return;
+
+    const cached = getBranchesFromCache(branchCache, repoId);
+    if (cached && cached.branches.length > 0) {
+      setBranches(cached.branches as BranchItem[]);
+    }
+  }, [repoId, branchCache, isGitHubRepo]);
+
+  // ============ FETCH BRANCHES ============
+  useEffect(() => {
+    if (!isOpen || !repoId || isGitHubRepo) return;
+
+    if (loadingRepoIds.has(repoId)) return;
+
+    const cached = getBranchesFromCache(branchCache, repoId);
+    const hasCachedData = cached && cached.branches.length > 0;
+
+    if (hasCachedData && isBranchCacheFresh(branchCache, repoId)) {
+      hasFetchedRef.current = repoId;
+      return;
+    }
+
+    if (hasFetchedRef.current === repoId) return;
+    hasFetchedRef.current = repoId;
+    const fetchRepoId = repoId;
+    intendedRepoIdRef.current = fetchRepoId;
+
+    let cancelled = false;
+
+    async function fetchBranches() {
+      if (!hasCachedData) {
+        setLoadingRepoIds((prev) => new Set(prev).add(fetchRepoId));
+        setIsFetching(true);
+      }
+
+      try {
+        const response = await gitApi.getGitBranches({
+          repo_id: fetchRepoId,
+          ...(repoPath ? { repo_path: repoPath } : {}),
+          include_remote: true,
+        });
+
+        if (cancelled || intendedRepoIdRef.current !== fetchRepoId) return;
+
+        if (response?.branches) {
+          const branchList = (response.branches || []).map(
+            (branch: unknown) => {
+              const branchData = branch as {
+                name: string;
+                is_current: boolean;
+                branch_type: string;
+                last_commit_date?: string;
+              };
+              return {
+                name: branchData.name,
+                isCurrent: branchData.is_current,
+                isRemote: branchData.branch_type === "remote",
+                lastCommitDate: branchData.last_commit_date,
+              };
+            }
+          );
+
+          setBranchCacheAtom((prev) =>
+            setBranchCacheWithLRU(prev, fetchRepoId, {
+              branches: branchList,
+              currentBranch: response.current_branch || "",
+              fetchedAt: Date.now(),
+            })
+          );
+        }
+      } catch (error) {
+        if (cancelled || intendedRepoIdRef.current !== fetchRepoId) return;
+        console.error("[useBranchFetch] Failed to fetch branches:", error);
+      } finally {
+        if (!cancelled && intendedRepoIdRef.current === fetchRepoId) {
+          setIsFetching(false);
+          setLoadingRepoIds((prev) => {
+            const next = new Set(prev);
+            next.delete(fetchRepoId);
+            return next;
+          });
+        }
+      }
+    }
+
+    fetchBranches();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, repoId, repoPath, refreshNonce]);
+
+  const refresh = useCallback(() => {
+    hasFetchedRef.current = null;
+    if (repoId) {
+      setBranchCacheAtom((prev) => {
+        if (!prev.has(repoId)) return prev;
+        const next = new Map(prev);
+        next.delete(repoId);
+        return next;
+      });
+    }
+    setRefreshNonce((n) => n + 1);
+  }, [repoId, setBranchCacheAtom]);
+
+  return {
+    branches,
+    isLoading,
+    repoPath,
+    refresh,
+  };
+}

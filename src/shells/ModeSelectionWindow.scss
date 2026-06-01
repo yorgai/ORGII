@@ -1,0 +1,331 @@
+/**
+ * ModeSelectionWindow Page Styles
+ * Xcode-style welcome window
+ */
+
+.mode-selection-window-page-container {
+  background: var(--color-bg-2);
+  border-radius: 12px;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.25),
+    0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 0.5px solid var(--color-border-2);
+  overflow: hidden;
+  position: relative;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+}
+
+// Invisible draggable regions around edges
+.mode-selection-drag-region {
+  cursor: default;
+}
+
+.mode-selection-window-layout {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+// Left Column - Logo and Actions
+.mode-selection-left-column {
+  flex: 0 0 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 60px;
+  gap: 32px;
+  background: var(--color-bg-1);
+}
+
+// Right Column - Repo List
+.mode-selection-right-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg-3);
+  border-left: 0.5px solid var(--color-border-2);
+}
+
+// Logo Section
+.mode-selection-logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.mode-selection-app-icon {
+  width: 128px;
+  height: 128px;
+  border-radius: 24px;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-5) 0%,
+    var(--color-primary-6) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 8px 24px color-mix(in srgb, var(--color-primary-6) 30%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      transparent 50%
+    );
+  }
+
+  .app-icon-text {
+    font-size: 56px;
+    font-weight: 300;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.mode-selection-title {
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--color-text-1);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.mode-selection-version {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-3);
+  margin: 0;
+}
+
+// Action Buttons Section
+.mode-selection-actions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  max-width: 340px;
+  background: var(--color-border-2);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.mode-selection-action-item {
+  background: var(--color-bg-1);
+  border-radius: 0;
+  transition: background-color 0.12s ease;
+  position: relative;
+
+  &:first-child {
+    border-radius: 10px 10px 0 0;
+  }
+
+  &:last-child {
+    border-radius: 0 0 10px 10px;
+  }
+
+  &:hover {
+    background: var(--color-fill-1);
+  }
+
+  &:active {
+    background: var(--color-fill-2);
+  }
+}
+
+.mode-selection-action-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  width: 100%;
+
+  .action-icon {
+    color: var(--color-text-2);
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+  }
+
+  .action-label {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--color-text-1);
+    flex: 1;
+    text-align: left;
+  }
+}
+
+// Repo List
+.mode-selection-repo-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-fill-3);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+
+    &:hover {
+      background: var(--color-fill-4);
+      background-clip: padding-box;
+    }
+  }
+}
+
+.mode-selection-repo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+  border-radius: 6px;
+  margin: 2px 0;
+
+  &:hover {
+    background: var(--color-fill-1);
+  }
+
+  &:active,
+  &.selected {
+    background: var(--color-primary-6);
+
+    .mode-selection-repo-icon,
+    .mode-selection-repo-name,
+    .mode-selection-repo-path {
+      color: white;
+    }
+
+    .mode-selection-repo-icon-wrapper {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
+}
+
+.mode-selection-repo-icon-wrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-5) 0%,
+    var(--color-primary-6) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  &--folder {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  }
+}
+
+.mode-selection-repo-icon {
+  font-size: 16px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.mode-selection-repo-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.mode-selection-repo-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mode-selection-repo-path {
+  font-size: 11px;
+  color: var(--color-text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Empty State
+.mode-selection-repo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.mode-selection-loading-icon {
+  font-size: 24px;
+  color: var(--color-text-3);
+  margin-bottom: 12px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mode-selection-repo-empty-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-2);
+  margin: 0 0 4px 0;
+}
+
+.mode-selection-repo-empty-hint {
+  font-size: 12px;
+  color: var(--color-text-3);
+  margin: 0;
+}
+
+// Dark mode adjustments
+body[theme-mode="dark"] {
+  .mode-selection-window-page-container {
+    box-shadow:
+      0 24px 80px rgba(0, 0, 0, 0.5),
+      0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+}

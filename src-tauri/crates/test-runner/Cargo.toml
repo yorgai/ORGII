@@ -1,0 +1,28 @@
+[package]
+name = "test_runner"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Multi-framework test runner: discovery, execution, and result streaming.
+# Pure leaf — no back-edges into `app`. Owns 5 `#[tauri::command]`s,
+# re-registered from `commands/handler_list.inc` via bare `test_runner::…`
+# paths.
+
+[lib]
+name = "test_runner"
+path = "src/lib.rs"
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
+ignore = "0.4"
+regex = "1.9"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+tauri = { workspace = true }
+tokio = { workspace = true }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+app_utils = { path = "../app-utils", features = ["testing"] }

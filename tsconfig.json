@@ -1,0 +1,108 @@
+/**
+ * TypeScript Configuration
+ *
+ * Configures the TypeScript compiler for the project.
+ *
+ * Notes:
+ * - Type checking is handled by IDE for performance (see webpack.config.js)
+ * - Webpack uses esbuild-loader (fast) or ts-loader with transpileOnly: true
+ * - This config is mainly for IDE type checking and tooling support
+ *
+ * Build Process:
+ * - Development (default): esbuild-loader (10-100x faster)
+ * - Development (SLOW_DEV=true): ts-loader with transpileOnly
+ * - Production: esbuild-loader with optimizations
+ *
+ * Related Files:
+ * - webpack.config.js - Build configuration
+ * - .eslintrc.js - Linting configuration
+ * - types/ - Global type definitions
+ */
+
+{
+  "compilerOptions": {
+    // ============================================
+    // Module Resolution & Paths
+    // ============================================
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@src/*": ["src/*"],
+      "@api/*": ["src/api/*"],
+      "@common/*": ["src/common/*"],
+      "@page/*": ["src/page/*"],
+      "@assets/*": ["src/assets/*"]
+    },
+    "moduleResolution": "node",
+
+    // ============================================
+    // Module & Target
+    // ============================================
+
+    "module": "ESNext", // Modern ES modules (better tree-shaking)
+    "target": "ES2020", // Modern JS features (optional chaining, nullish coalescing)
+    "lib": [
+      "ES2020", // Modern JavaScript features
+      "DOM", // Browser DOM APIs
+      "DOM.Iterable" // Iterable DOM collections
+    ],
+
+    // ============================================
+    // JSX & React
+    // ============================================
+
+    "jsx": "react-jsx", // New JSX transform (no need to import React)
+
+    // ============================================
+    // Type Checking
+    // ============================================
+
+    "strict": true, // Enable all strict type checking
+    "strictNullChecks": true, // Strict null checking (already included in strict)
+    "noImplicitAny": true, // Error on expressions with implied 'any'
+    "noUnusedLocals": false, // Allow unused locals (enforced by ESLint)
+    "noUnusedParameters": false, // Allow unused params (enforced by ESLint)
+    "noFallthroughCasesInSwitch": true, // Error on switch fallthrough
+    "forceConsistentCasingInFileNames": true, // Enforce case sensitivity in imports
+
+    // ============================================
+    // Module Features
+    // ============================================
+
+    "esModuleInterop": true, // Better CommonJS/ES6 module compatibility
+    "allowSyntheticDefaultImports": true, // Allow default imports from modules
+    "resolveJsonModule": true, // Allow importing JSON files
+    "isolatedModules": true, // Ensure each file can be transpiled independently
+
+    // ============================================
+    // Performance & Build
+    // ============================================
+
+    "skipLibCheck": true, // Skip type checking of declaration files (faster)
+    "outDir": "dist", // Output directory for compiled files
+
+    // ============================================
+    // Type Declarations
+    // ============================================
+
+    "types": ["node", "vitest/globals"] // Node + Vitest globals for *.test.ts (vitest.config globals: true)
+  },
+
+  // ============================================
+  // Files to Include/Exclude
+  // ============================================
+
+  "include": [
+    "src/**/*", // All source files
+    "types/**/*.d.ts" // Global type definitions
+  ],
+
+  "exclude": [
+    "node_modules", // Dependencies (explicitly exclude all node_modules)
+    "**/node_modules/**", // Explicitly exclude node_modules at any level
+    "dist", // Build output
+    "build", // Webpack build output
+    ".market" // Archived market business; not part of any build (see Documentation/Shared/oss-market-extraction--0507.md)
+  ]
+}

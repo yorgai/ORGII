@@ -1,0 +1,203 @@
+/**
+ * Code Editor WebSocket Client
+ *
+ * Connects to the unified Rust HTTP server (port 13847) WebSocket for real-time
+ * code-editor events:
+ * - File watcher updates (repo:status_updated, file:changed)
+ * - LSP diagnostics (lsp:diagnostics)
+ * - Git status changes
+ *
+ * This replaces the unreliable Tauri event system for push notifications.
+ */
+import { parseCodeEditorWebSocketMessage } from "./websocket/schemas";
+
+export interface CodeEditorWebSocketMessage {
+  type:
+    | "repo:status_updated"
+    | "file:changed"
+    | "repo:watcher_health"
+    | "lsp:diagnostics";
+  repo_id?: string;
+  language?: string;
+  data?: unknown;
+  payload?: unknown;
+  status?: unknown;
+  files?: unknown[];
+  timestamp: number;
+}
+
+type EventHandler<T = CodeEditorWebSocketMessage> = (data: T) => void;
+
+export class CodeEditorWebSocketClient {
+  private ws: WebSocket | null = null;
+  private handlers: Map<string, Set<EventHandler>> = new Map();
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 10;
+  private reconnectDelay = 1000; // Start with 1s
+  private maxReconnectDelay = 30000; // Max 30s
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private url: string;
+  private isIntentionallyClosed = false;
+
+  constructor(url = "ws://localhost:13847/ws") {
+    this.url = url;
+  }
+
+  connect(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        resolve();
+        return;
+      }
+
+      this.isIntentionallyClosed = false;
+
+      try {
+        this.ws = new WebSocket(this.url);
+
+        this.ws.onopen = () => {
+          this.reconnectAttempts = 0;
+          this.reconnectDelay = 1000;
+          this.emit("connected", { timestamp: Date.now() });
+          resolve();
+        };
+
+        this.ws.onmessage = (event) => {
+          try {
+            const data = parseCodeEditorWebSocketMessage(event.data);
+            this.handleMessage(data);
+          } catch (err) {
+            console.error("[CodeEditorWS] Failed to parse message:", err);
+          }
+        };
+
+        this.ws.onclose = (event) => {
+          this.emit("disconnected", { code: event.code, reason: event.reason });
+
+          // Auto-reconnect if not intentionally closed
+          if (
+            !this.isIntentionallyClosed &&
+            !event.wasClean &&
+            this.reconnectAttempts < this.maxReconnectAttempts
+          ) {
+            this.scheduleReconnect();
+          }
+        };
+
+        this.ws.onerror = (error) => {
+          console.error("[CodeEditorWS] WebSocket error:", error);
+          reject(error);
+        };
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  disconnect(): void {
+    this.isIntentionallyClosed = true;
+    this.cancelReconnect();
+
+    if (this.ws) {
+      this.ws.close(1000, "Client disconnect");
+      this.ws = null;
+    }
+  }
+
+  get isConnected(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  on<T extends CodeEditorWebSocketMessage = CodeEditorWebSocketMessage>(
+    eventType: string | "*",
+    handler: EventHandler<T>
+  ): () => void {
+    if (!this.handlers.has(eventType)) {
+      this.handlers.set(eventType, new Set());
+    }
+    this.handlers.get(eventType)!.add(handler as EventHandler);
+
+    // Return unsubscribe function
+    return () => {
+      this.handlers.get(eventType)?.delete(handler as EventHandler);
+    };
+  }
+
+  onAny(handler: EventHandler): () => void {
+    return this.on("*", handler);
+  }
+
+  off(eventType: string | "*"): void {
+    this.handlers.delete(eventType);
+  }
+
+  removeAllListeners(): void {
+    this.handlers.clear();
+  }
+
+  private handleMessage(data: CodeEditorWebSocketMessage): void {
+    const eventType = data.type;
+
+    // Emit to specific event type handlers
+    this.emit(eventType, data);
+
+    // Emit to wildcard handlers
+    this.emit("*", data);
+  }
+
+  private emit(eventType: string, data: unknown): void {
+    const handlers = this.handlers.get(eventType);
+    if (handlers && handlers.size > 0) {
+      for (const handler of handlers) {
+        try {
+          handler(data as CodeEditorWebSocketMessage);
+        } catch (err) {
+          console.error(`[CodeEditorWS] Handler error for ${eventType}:`, err);
+        }
+      }
+    }
+  }
+
+  private scheduleReconnect(): void {
+    this.cancelReconnect();
+    this.reconnectAttempts++;
+
+    const delay = Math.min(
+      this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
+      this.maxReconnectDelay
+    );
+    this.reconnectTimer = setTimeout(() => {
+      this.connect().catch((err) => {
+        console.error("[CodeEditorWS] Reconnect failed:", err);
+      });
+    }, delay);
+  }
+
+  private cancelReconnect(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+}
+
+// Global singleton instance
+let wsClientInstance: CodeEditorWebSocketClient | null = null;
+
+export function getCodeEditorWebSocket(): CodeEditorWebSocketClient | null {
+  return wsClientInstance;
+}
+
+// Initialize on module load
+if (typeof window !== "undefined") {
+  // Auto-connect when app loads
+  wsClientInstance = new CodeEditorWebSocketClient();
+  wsClientInstance.connect().catch((err) => {
+    console.error("[CodeEditorWS] Failed to connect on init:", err);
+  });
+
+  // Expose globally for debugging
+  (
+    window as unknown as { __codeEditorWebSocket__: CodeEditorWebSocketClient }
+  ).__codeEditorWebSocket__ = wsClientInstance;
+}

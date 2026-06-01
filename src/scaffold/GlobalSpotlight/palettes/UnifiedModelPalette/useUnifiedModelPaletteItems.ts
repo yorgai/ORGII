@@ -1,0 +1,313 @@
+import { useCallback, useMemo } from "react";
+
+import { KEY_SOURCE } from "@src/api/tauri/session";
+import { ORGII_ORCHESTRATOR } from "@src/assets/providers";
+import type { AdvancedConfig } from "@src/features/SessionCreator/types";
+import type { KeyVaultAccount } from "@src/hooks/keyVault/types";
+import { isPairCompatible } from "@src/hooks/models/modelPairCompatibility";
+import type { RecentModelEntry } from "@src/store/session/recentModelEntriesAtom";
+import { resolveDefaultVariant } from "@src/util/defaultModelVariant";
+import { resolveModelVariantFields } from "@src/util/modelVariants";
+
+import type { SpotlightItem } from "../../types";
+import {
+  MODEL_SECTION,
+  buildGroupByModel,
+  buildSectionHeader,
+  entryMatchesActiveConfig,
+  getActiveModelId,
+} from "./modelSection";
+import {
+  buildAllModelItems,
+  buildModelSelectionSpotlightItem,
+} from "./modelSelectionItems";
+import { buildSourceItems } from "./sourceItems";
+import type { SourceOption } from "./types";
+import type { UnifiedModelPaletteData } from "./useUnifiedModelPaletteData";
+
+interface UseUnifiedModelPaletteItemsParams {
+  advancedConfig: AdvancedConfig;
+  accounts: KeyVaultAccount[];
+  accountLookup: UnifiedModelPaletteData["accountLookup"];
+  orgiiModelSet: UnifiedModelPaletteData["orgiiModelSet"];
+  orgiiCategoryIds: UnifiedModelPaletteData["orgiiCategoryIds"];
+  orgiiPoolEnabled: boolean;
+  recentEntries: RecentModelEntry[];
+  sourceOptions: SourceOption[];
+  selectedModelId: string | null;
+  selectedGroupModelIds: string[];
+  handleModelSelect: (
+    modelId: string,
+    modelLabel: string,
+    groupModelIds: string[]
+  ) => void;
+  handleSourceSelect: (source: SourceOption) => void;
+  handleRecentSelect: (entry: RecentModelEntry) => void;
+  saveKey: UnifiedModelPaletteData["saveKey"];
+  modelAliasVersion: number;
+  tCommon: (key: string) => string;
+}
+
+export function useUnifiedModelPaletteItems({
+  advancedConfig,
+  accounts,
+  accountLookup,
+  orgiiModelSet,
+  orgiiCategoryIds,
+  orgiiPoolEnabled,
+  recentEntries,
+  sourceOptions,
+  selectedModelId,
+  selectedGroupModelIds,
+  handleModelSelect,
+  handleSourceSelect,
+  handleRecentSelect,
+  saveKey,
+  modelAliasVersion,
+  tCommon,
+}: UseUnifiedModelPaletteItemsParams) {
+  const compatibleRecentEntries = useMemo(
+    () =>
+      recentEntries.filter((entry) =>
+        isPairCompatible(entry, {
+          accounts,
+          orgiiPoolEnabled,
+          orgiiModelSet,
+          orgiiCategoryIds,
+        })
+      ),
+    [recentEntries, accounts, orgiiPoolEnabled, orgiiModelSet, orgiiCategoryIds]
+  );
+
+  const persistDefaultVariantForAccount = useCallback(
+    (accountId: string, baseModel: string, modelId: string) => {
+      const account = accounts.find((entry) => entry.id === accountId);
+      if (!account) return;
+
+      const nextDefaults = (account.defaultVariants ?? []).filter(
+        (variant) => variant.base_model !== baseModel
+      );
+      nextDefaults.push({ base_model: baseModel, model: modelId });
+
+      void saveKey({
+        id: account.id,
+        agent_type: account.modelType,
+        default_variants: nextDefaults,
+      });
+    },
+    [accounts, saveKey]
+  );
+
+  const groupByModel = useMemo(
+    () => buildGroupByModel(accountLookup.keys()),
+    [accountLookup]
+  );
+
+  const activeModelId = getActiveModelId(advancedConfig);
+
+  const recentEntriesExcludingCurrent = useMemo(
+    () =>
+      compatibleRecentEntries.filter(
+        (entry) => !entryMatchesActiveConfig(entry, advancedConfig)
+      ),
+    [compatibleRecentEntries, advancedConfig]
+  );
+
+  const currentModelEntry = useMemo((): RecentModelEntry | null => {
+    if (!activeModelId) return null;
+
+    const fromRecents = compatibleRecentEntries.find((entry) =>
+      entryMatchesActiveConfig(entry, advancedConfig)
+    );
+    if (fromRecents) return fromRecents;
+
+    const account = advancedConfig.selectedAccountId
+      ? accounts.find((entry) => entry.id === advancedConfig.selectedAccountId)
+      : undefined;
+
+    return {
+      modelId: activeModelId,
+      sourceType: advancedConfig.keySource ?? KEY_SOURCE.OWN,
+      accountId: advancedConfig.selectedAccountId,
+      accountName: advancedConfig.selectedSourceLabel ?? account?.name,
+      modelType:
+        advancedConfig.selectedSourceModelType ??
+        advancedConfig.listingModelType ??
+        account?.modelType ??
+        ORGII_ORCHESTRATOR,
+      cliAgentType: advancedConfig.cliAgentType,
+    };
+  }, [activeModelId, advancedConfig, compatibleRecentEntries, accounts]);
+
+  const recentItems = useMemo((): SpotlightItem[] => {
+    return recentEntriesExcludingCurrent.map((entry) =>
+      buildModelSelectionSpotlightItem({
+        entry,
+        section: MODEL_SECTION.RECENT,
+        idPrefix: "recent",
+        isCurrentSelection: false,
+        accounts,
+        groupByModel,
+        onSelect: handleRecentSelect,
+        persistDefaultVariantForAccount,
+        modelAliasVersion,
+      })
+    );
+  }, [
+    accounts,
+    groupByModel,
+    handleRecentSelect,
+    modelAliasVersion,
+    persistDefaultVariantForAccount,
+    recentEntriesExcludingCurrent,
+  ]);
+
+  const currentModelItem = useMemo((): SpotlightItem | null => {
+    if (!currentModelEntry) return null;
+    return buildModelSelectionSpotlightItem({
+      entry: currentModelEntry,
+      section: MODEL_SECTION.CURRENT,
+      idPrefix: "current",
+      isCurrentSelection: true,
+      accounts,
+      groupByModel,
+      onSelect: handleRecentSelect,
+      persistDefaultVariantForAccount,
+      modelAliasVersion,
+    });
+  }, [
+    accounts,
+    currentModelEntry,
+    groupByModel,
+    handleRecentSelect,
+    modelAliasVersion,
+    persistDefaultVariantForAccount,
+  ]);
+
+  const resolveGroupLaunchModel = useCallback(
+    (sortedVariants: string[]): string => {
+      if (sortedVariants.length === 0) return "";
+
+      const variantInfos = sortedVariants.map((modelId) =>
+        resolveModelVariantFields(modelId)
+      );
+      const baseModel = variantInfos[0]?.base_model ?? sortedVariants[0];
+      const variantModelSet = new Set(sortedVariants);
+
+      let persistedModel: string | undefined;
+      for (const account of accounts) {
+        const match = (account.defaultVariants ?? []).find(
+          (variant) =>
+            variant.base_model === baseModel &&
+            variantModelSet.has(variant.model)
+        );
+        if (match) {
+          persistedModel = match.model;
+          break;
+        }
+      }
+
+      return (
+        resolveDefaultVariant(baseModel, variantInfos, persistedModel) ??
+        sortedVariants[0]
+      );
+    },
+    [accounts]
+  );
+
+  const allModelItems = useMemo(
+    (): SpotlightItem[] =>
+      buildAllModelItems({
+        accountLookup,
+        handleModelSelect,
+        modelAliasVersion,
+        resolveGroupLaunchModel,
+      }),
+    [
+      accountLookup,
+      handleModelSelect,
+      modelAliasVersion,
+      resolveGroupLaunchModel,
+    ]
+  );
+
+  const sourceItems = useMemo(
+    (): SpotlightItem[] =>
+      buildSourceItems({
+        sourceOptions,
+        selectedModelId,
+        selectedGroupModelIds,
+        handleSourceSelect,
+        accounts,
+        persistDefaultVariantForAccount,
+      }),
+    [
+      sourceOptions,
+      selectedModelId,
+      selectedGroupModelIds,
+      handleSourceSelect,
+      accounts,
+      persistDefaultVariantForAccount,
+    ]
+  );
+
+  const currentHeader = useMemo(
+    () =>
+      buildSectionHeader(
+        MODEL_SECTION.CURRENT,
+        tCommon("selectors.modelSelector.currentModel")
+      ),
+    [tCommon]
+  );
+
+  const recentHeader = useMemo(
+    () =>
+      buildSectionHeader(
+        MODEL_SECTION.RECENT,
+        tCommon("selectors.modelSelector.recentModels")
+      ),
+    [tCommon]
+  );
+
+  const allHeader = useMemo(
+    () =>
+      buildSectionHeader(
+        MODEL_SECTION.ALL,
+        tCommon("selectors.modelSelector.allModels")
+      ),
+    [tCommon]
+  );
+
+  const rawItems = useMemo((): SpotlightItem[] => {
+    const items: SpotlightItem[] = [];
+    if (currentModelItem) {
+      items.push(currentHeader);
+      items.push(currentModelItem);
+    }
+    if (recentItems.length > 0) {
+      items.push(recentHeader);
+      items.push(...recentItems);
+    }
+    items.push(allHeader);
+    items.push(...allModelItems);
+    return items;
+  }, [
+    currentModelItem,
+    currentHeader,
+    recentItems,
+    allModelItems,
+    recentHeader,
+    allHeader,
+  ]);
+
+  return {
+    rawItems,
+    currentModelItem,
+    currentHeader,
+    recentItems,
+    allModelItems,
+    recentHeader,
+    allHeader,
+    sourceItems,
+  };
+}

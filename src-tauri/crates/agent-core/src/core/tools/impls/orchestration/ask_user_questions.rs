@@ -1,0 +1,253 @@
+//! Question tool — structured user input mid-conversation.
+//!
+//! Lets the agent ask the user multiple-choice questions, blocking
+//! until the user responds via the frontend.
+
+use async_trait::async_trait;
+use serde_json::Value;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+
+use crate::tools::names as tool_names;
+use crate::tools::traits::{Tool, ToolError};
+
+use crate::interaction::finalize::{await_with_cancel, FinalizedStatus, InteractionOutcome};
+use crate::interaction::question::QuestionManager;
+
+/// Shared context so the question tool can access the session's QuestionManager.
+pub struct QuestionToolContext {
+    pub session_id: Mutex<Option<String>>,
+    pub manager: Arc<QuestionManager>,
+}
+
+impl QuestionToolContext {
+    pub fn new(manager: Arc<QuestionManager>) -> Self {
+        Self {
+            session_id: Mutex::new(None),
+            manager,
+        }
+    }
+}
+
+pub struct QuestionTool {
+    context: Arc<QuestionToolContext>,
+}
+
+impl QuestionTool {
+    pub fn new(context: Arc<QuestionToolContext>) -> Self {
+        Self { context }
+    }
+}
+
+#[async_trait]
+impl Tool for QuestionTool {
+    fn name(&self) -> &str {
+        tool_names::ASK_USER_QUESTIONS
+    }
+
+    fn description(&self) -> &str {
+        "Ask the user structured questions during execution. Use to:\n\
+         1. Gather user preferences or requirements\n\
+         2. Clarify ambiguous instructions\n\
+         3. Get decisions on implementation choices\n\
+         4. Offer choices about what direction to take\n\n\
+         Notes:\n\
+         - A 'Type your own answer' option is added automatically; don't include 'Other'\n\
+         - Each option must have a unique `id` (snake_case); answers are returned as arrays of option ids\n\
+         - Each option should include a `description` explaining trade-offs or implications of that choice\n\
+         - Set multiSelect=true for multi-select\n\
+         - If you recommend a specific option, make it first and add '(Recommended)' to the label"
+    }
+
+    fn category(&self) -> &str {
+        crate::tools::categories::AGENT
+    }
+
+    fn parameters(&self) -> Value {
+        serde_json::json!({
+            "type": "object",
+            "required": ["questions"],
+            "properties": {
+                "questions": {
+                    "type": "array",
+                    "description": "Questions to ask the user",
+                    "minItems": 1,
+                    "items": {
+                        "type": "object",
+                        "required": ["question", "header", "options"],
+                        "properties": {
+                            "question": {
+                                "type": "string",
+                                "description": "Complete question text"
+                            },
+                            "header": {
+                                "type": "string",
+                                "description": "Very short label (max 30 chars)"
+                            },
+                            "options": {
+                                "type": "array",
+                                "description": "The available choices for this question. Must have 2-4 options. Each option should be a distinct, mutually exclusive choice (unless multiSelect is enabled). There should be no 'Other' option, that will be provided automatically.",
+                                "minItems": 2,
+                                "maxItems": 4,
+                                "items": {
+                                    "type": "object",
+                                    "required": ["label", "description"],
+                                    "properties": {
+                                        "id": {
+                                            "type": "string",
+                                            "description": "Unique identifier for this option (snake_case, e.g. 'use_redis'). Used as the submitted answer value."
+                                        },
+                                        "label": {
+                                            "type": "string",
+                                            "description": "The display text for this option that the user will see and select. Should be concise (1-5 words) and clearly describe the choice."
+                                        },
+                                        "description": {
+                                            "type": "string",
+                                            "description": "Explanation of what this option means or what will happen if chosen. Useful for providing context about trade-offs or implications."
+                                        }
+                                    }
+                                }
+                            },
+                            "multiSelect": {
+                                "type": "boolean",
+                                "description": "Set to true to allow the user to select multiple options instead of just one. Use when choices are not mutually exclusive. Default: false."
+                            }
+                        }
+                    }
+                }
+            }
+        })
+    }
+
+    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+        let session_id = self
+            .context
+            .session_id
+            .lock()
+            .await
+            .clone()
+            .ok_or_else(|| ToolError::ExecutionFailed("No session context set".into()))?;
+
+        let questions = params
+            .get("questions")
+            .ok_or_else(|| ToolError::InvalidParams("Missing 'questions' array".into()))?;
+
+        let questions_arr = questions
+            .as_array()
+            .ok_or_else(|| ToolError::InvalidParams("'questions' must be an array".into()))?;
+
+        if questions_arr.is_empty() {
+            return Err(ToolError::InvalidParams(
+                "Provide at least one question".into(),
+            ));
+        }
+
+        let request_id = format!("question-{}", uuid::Uuid::new_v4());
+
+        // Read the framework-injected tool_call_id from `params` (see
+        // `tool_execution::inject_call_id`). The `__call_id` key is the
+        // single source of truth for per-call identity across all tool
+        // dispatch paths; the QuestionManager no longer needs a
+        // side-channel Mutex to thread this through.
+        let tool_call_id = params
+            .get(crate::core::turn_executor::tool_execution::TOOL_CALL_ID_KEY)
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        // Send question to frontend and return a receiver.
+        let receiver = self
+            .context
+            .manager
+            .ask(&session_id, &request_id, questions, tool_call_id.as_deref())
+            .await;
+
+        // Cancel-aware wait (Stop button) with a 5-minute backstop timeout.
+        // The `AutoTimeoutPolicy` slot is intentionally left empty — future
+        // work can plug in per-user auto-skip behavior without touching the
+        // tool itself.
+        let cancel_flag = self.context.manager.cancel_flag();
+        let outcome = await_with_cancel(
+            receiver,
+            cancel_flag,
+            Some(crate::interaction::finalize::AutoTimeoutPolicy {
+                timeout: std::time::Duration::from_secs(300),
+                on_expire: Box::new(|| crate::interaction::finalize::AutoTimeoutAction::Report),
+            }),
+        )
+        .await;
+
+        let answers = match outcome {
+            InteractionOutcome::Responded(a) | InteractionOutcome::AutoResponded(a) => a,
+            InteractionOutcome::Cancelled => {
+                self.context
+                    .manager
+                    .cancel_pending(&request_id, FinalizedStatus::Cancelled)
+                    .await;
+                return Err(ToolError::ExecutionFailed(
+                    "Question cancelled by user (stop)".into(),
+                ));
+            }
+            InteractionOutcome::TimedOut => {
+                self.context
+                    .manager
+                    .cancel_pending(&request_id, FinalizedStatus::TimedOut)
+                    .await;
+                return Err(ToolError::Timeout(
+                    "User did not respond within 5 minutes".into(),
+                ));
+            }
+            InteractionOutcome::Dropped => {
+                return Err(ToolError::ExecutionFailed(
+                    "Question request was cancelled".into(),
+                ));
+            }
+        };
+
+        // Empty answers = user dismissed
+        if answers.is_empty() {
+            return Err(ToolError::ExecutionFailed(
+                "The user dismissed the question".into(),
+            ));
+        }
+
+        // Format answers for the LLM — resolve ids back to labels for readability.
+        // This must stay in lock-step with `question::format_answers_for_llm` so
+        // the UI's finalized content matches what the LLM sees next turn.
+        let formatted: Vec<String> = questions_arr
+            .iter()
+            .zip(answers.iter())
+            .map(|(q, a)| {
+                let question_text = q.get("question").and_then(|v| v.as_str()).unwrap_or("?");
+                let answer_text = if a.is_empty() {
+                    "Unanswered".to_string()
+                } else {
+                    let options = q.get("options").and_then(|v| v.as_array());
+                    a.iter()
+                        .map(|selected_id| {
+                            options
+                                .and_then(|opts| {
+                                    opts.iter().find(|opt| {
+                                        opt.get("id").and_then(|v| v.as_str()) == Some(selected_id)
+                                    })
+                                })
+                                .and_then(|opt| opt.get("label").and_then(|v| v.as_str()))
+                                .map(|label| format!("{} ({})", label, selected_id))
+                                .unwrap_or_else(|| selected_id.clone())
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                };
+                format!("\"{}\" = \"{}\"", question_text, answer_text)
+            })
+            .collect();
+
+        Ok(format!(
+            "User has answered your questions: {}. You can now continue with the user's answers in mind.",
+            formatted.join(", ")
+        ))
+    }
+
+    async fn set_session_key(&self, session_key: &str) {
+        *self.context.session_id.lock().await = Some(session_key.to_string());
+    }
+}

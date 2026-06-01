@@ -1,0 +1,777 @@
+[workspace]
+# `crates/cursor-bridge` drives a running Cursor.app over the
+# Chrome DevTools Protocol exposed by `--remote-debugging-port=<port>`
+# so the user can submit prompts (start + follow-up) without leaving
+# this app. The lib is wired into the main `app` binary via the
+# `cursor_bridge` dep below; the probe binary
+# (`cursor-bridge-probe`) ships alongside as internal tooling.
+members = [
+    ".",
+    "crates/agent-cli",
+    "crates/agent-core",
+    "crates/advanced-search",
+    "crates/api-search",
+    "crates/app-paths",
+    "crates/app-platform",
+    "crates/app-utils",
+    "crates/app-window",
+    "crates/bin-gateway-chat-cli",
+    "crates/bin-provider-key-check",
+    "crates/bin-telegram-smoke",
+    "crates/browser",
+    "crates/container",
+    "crates/ui-indexer",
+    "crates/cursor-bridge",
+    "crates/cursor-bridge-app",
+    "crates/database",
+    "crates/db-browser",
+    "crates/db-clients",
+    "crates/dev-record",
+    "crates/e2e-test",
+    "crates/file-ops",
+    "crates/git",
+    "crates/git-api",
+    "crates/inbox",
+    "crates/integrations",
+    "crates/key-vault",
+    "crates/lsp",
+    "crates/mobile-remote",
+    "crates/perf-utils",
+    "crates/project-management",
+    "crates/search",
+    "crates/session-persistence",
+    "crates/settings",
+    "crates/shared-state",
+    "crates/orgii-mobile-relay",
+    "crates/orgii-protocol",
+    "crates/system-services",
+    "crates/terminal",
+    "crates/test-helpers",
+    "crates/test-runner",
+    "crates/transport",
+    "crates/types",
+]
+
+# ---------------------------------------------------------------------------
+# Workspace dependencies — single source of truth for any third-party crate
+# that more than one workspace member declares. We only list deps with
+# non-trivial features (where drift between two manifests would silently
+# pull in two different feature sets and cause cargo to fail to unify or
+# silently double-compile transitively). Plain `serde = "1"` style deps
+# stay inline because the cost of a fork is exactly zero.
+#
+# Members that want to use a workspace dep declare it as
+# `<name> = { workspace = true }` (optionally adding extra features in
+# `features = […]`). Adding `features = […]` here is union with anything a
+# member adds locally.
+# ---------------------------------------------------------------------------
+[workspace.dependencies]
+# Pinned to =2.10.3: tauri-macros 2.6 (in tauri 2.11) introduced a new
+# `__tauri_command_name_*` companion to the existing `__cmd__*` symbol
+# that `generate_handler!` resolves alongside, breaking 13 handler
+# entries in `handler_list.inc` that re-export only `__cmd__*`. Bump
+# to 2.11+ once those re-exports are extended (tracked separately).
+tauri = { version = "=2.10.3", features = [
+    "protocol-asset",
+    "macos-private-api",
+    "tray-icon",
+    "image-ico",
+    "image-png",
+    "image",
+    "unstable",
+] }
+reqwest = { version = "0.13", default-features = false, features = [
+    "json",
+    "blocking",
+    "stream",
+    "multipart",
+    "rustls-no-provider",
+    "socks",
+    "query",
+    "form",
+    "http2",
+] }
+rmcp = { version = "1.5", default-features = false, features = [
+    "client",
+    "base64",
+    "macros",
+    "transport-child-process",
+    "transport-streamable-http-client",
+    "transport-streamable-http-client-reqwest",
+    "client-side-sse",
+    "reqwest-tls-no-provider",
+    "auth",
+] }
+tokio-tungstenite = { version = "0.29", default-features = false, features = [
+    "connect",
+    "rustls-tls-native-roots",
+] }
+notify = { version = "8.2", default-features = false, features = [
+    "macos_fsevent",
+] }
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", default-features = false }
+petgraph = { version = "0.6.4", default-features = false, features = ["serde-1"] }
+chrono = { version = "0.4", features = ["serde"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+axum = { version = "0.8", features = ["ws"] }
+
+# Modern Objective-C bindings (replaces the unmaintained `objc 0.2` /
+# `cocoa 0.26` / `dispatch 0.2` / `block 0.1` stack). Centralised here so
+# the four crates that talk to AppKit/Foundation (`agent-core`,
+# `app-window`, `browser`, `app`) all pull in the same versions and Cargo
+# doesn't end up unifying two parallel objc runtimes in the same binary.
+# `objc2-app-kit` and `objc2-foundation` use their default feature set
+# (every NS class) — unused classes are dead-coded out of the final
+# binary by Cargo, so the cost of `default-features = true` is small at
+# link time even though `cargo info` shows a long feature list.
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-app-kit = "0.3"
+block2 = "0.6"
+dispatch2 = "0.3"
+
+# Cross-crate-pinned third-party deps. Hoisting these to the workspace
+# avoids two crates landing on different minor versions (which Cargo
+# treats as separate compilation units, so we'd ship two copies of the
+# same library and pay the build cost twice).
+zip = "2"                # ZIP compression — used by app, agent-core, extensions, lsp
+lzma-sys = { version = "0.1.20", features = ["static"] } # Static liblzma so distributed macOS apps do not depend on Homebrew xz
+sysinfo = "0.38"         # CPU / memory / process metrics — used by perf-utils, dev-record, terminal
+rand = "0.9"             # CSPRNG — used by app, project-management, orgii-mobile-relay
+webpki-roots = "1.0"     # TLS root certs — used by integrations
+base64 = "0.22"          # Base64 codec — used by 8 crates (app, agent-core, app-window, browser, extensions, git, key-vault, project-management, shared-state)
+thiserror = "2"          # Derive macros for error types — used by app, agent-core, cursor-bridge, lsp, orgii-mobile-relay
+schemars = "1.0"         # JSON Schema generation for tool params — used by app, agent-core
+
+[package]
+name = "app"
+version = "0.1.0"
+description = "A Tauri App"
+authors = ["you"]
+license = "AGPL-3.0-or-later"
+repository = ""
+edition = "2021"
+rust-version = "1.85.0"
+default-run = "app"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+# cargo-machete cannot see through the `tauri::generate_handler!` macro
+# expansion, which is the only consumer for these three workspace crates
+# inside `src/commands/handler_list.inc`. Without this allow-list machete
+# flags them as unused on every run. Removing any of these entries will
+# silently drop ~30 Tauri commands at runtime.
+[package.metadata.cargo-machete]
+ignored = ["agent_cli", "cursor_bridge_app", "db_clients"]
+
+[lib]
+name = "app_lib"
+crate-type = ["rlib"]
+
+# `e2e-test` lives in `crates/e2e-test/` (its own workspace member) so the
+# 25k LOC of test code doesn't get type-checked alongside the `app`
+# library every time rust-analyzer or `cargo check --workspace` runs.
+# Build with `cargo build -p e2e-test`.
+
+[build-dependencies]
+tauri-build = { version = "2.5.6", features = [] }
+cc = "1.0"
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+schemars = { workspace = true }
+log = "0.4"
+tauri = { workspace = true }
+tauri-plugin-shell = "2"
+tauri-plugin-fs = { version = "=2.4.5", features = ["watch"] }
+tauri-plugin-deep-link = "2"
+tauri-plugin-oauth = "2"
+tauri-plugin-updater = "=2.9.0"
+tauri-plugin-dialog = "=2.6.0"
+tauri-plugin-process = "2.2.0"
+tauri-plugin-opener = "2"
+tauri-plugin-auth-session = "0.2.2"
+tauri-plugin-store = "2"
+tauri-plugin-drag = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-webdriver-automation = { version = "0.1", optional = true }
+tauri-plugin-liquid-glass = "0.1"
+open = "5"     # Open URLs/files in default app
+portable-pty = "0.9"
+tokio = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
+
+# Tauri-side wrapper around `cursor_bridge`: command handlers,
+# isolated probe-instance lifecycle, and `state.vscdb` diffing. Keeps its
+# `#[tauri::command]` macros in-crate (key-vault / git pattern); the
+# `app` crate just re-registers them in `commands/handler_list.inc`.
+cursor_bridge_app = { path = "crates/cursor-bridge-app" }
+
+# Shared cross-crate type definitions (Phase 1 of workspace migration).
+# See `Documentation/RustBackend/modularization-plan--0504.md`.
+core_types = { path = "crates/types" }
+
+# Filesystem path resolution (`~/.orgii/`, sensitive-file permissions).
+# Single source of truth for every workspace crate; behavior crate, but
+# leaf-most (only `dirs` + `tracing`). The `app::infrastructure::storage_commands`
+# disk-usage report composes these paths into a per-category summary.
+app_paths = { path = "crates/app-paths" }
+
+# Platform-specific FFI shims (e.g. `objc_bridge::with_objc_catch` for
+# macOS Cocoa calls). Hoisted from `infrastructure::platform::*` so
+# `agent_core` can resolve them without depending on `app`.
+app_platform = { path = "crates/app-platform" }
+
+# Small JSON file I/O helpers (read, write, merge, atomic save). Used by
+# CLI agent config modules and sensitive-token stores (auth, github,
+# extension secrets). Depends only on `app_paths` for the
+# `set_sensitive_file_permissions` chmod.
+app_utils = { path = "crates/app-utils" }
+
+# Native window helpers (macOS traffic-light positioning + liquid-glass
+# background, Windows DWM rounded corners, "Open new window" /
+# "Recreate main window" flows). Used by `app::lib`, the macOS app menu,
+# and `browser::windows`. Synchronous Tauri operations only — no IoC
+# hooks, no async runtime.
+app_window = { path = "crates/app-window" }
+
+# Standalone browser windows + inline webviews + DOM/cookies/screenshot
+# tooling. Owns ~85 `#[tauri::command]`s (re-registered from
+# `commands/handler_list.inc` via bare `browser::…` paths). Depends on
+# `app_window` for native chrome and `shared_state` for the shared
+# `BrowserSidecar` / `ScreenshotStore` runtime handles. No back-edge into
+# `app` — `agent_core` reaches into `browser::inline` / `browser::logging`
+# directly via the public crate API.
+browser = { path = "crates/browser" }
+
+# Local Docker container inspection and lifecycle commands for Launchpad.
+# Pure leaf — `app` re-registers its Tauri commands in `commands/handler_list.inc`.
+container = { path = "crates/container" }
+
+# Tauri commands for reading / writing the on-disk config files of
+# external CLI agents (Cursor, Claude Code, Codex). The `app` crate just
+# re-registers the commands in `commands/handler_list.inc` (key-vault /
+# git pattern); the crate has no parent-crate dependency.
+agent_cli = { path = "crates/agent-cli" }
+
+# ORGII agent runtime — configuration, LLM providers, model context, tool
+# registry, turn execution, agent definitions, session management, prompt
+# builders, intelligence subsystems (memory, skills, MCP, plugins,
+# automation), integration channels, and ~179 `#[tauri::command]`s. Keeps
+# its commands in-crate (key-vault / git / project_management pattern); the
+# `app` crate re-registers them in `commands/handler_list.inc`. The four
+# back-edges that used to require this crate to live inside `app` are now
+# inverted via IoC slots in `agent_core::foundation::{bus,
+# event_pipeline_bridge, db_bridge, session_bridge}`; the wire crate fills
+# them in once at startup from `app::run()`.
+agent_core = { path = "crates/agent-core" }
+
+# Frontend-source-aware component index: parses tsx/jsx/vue/svelte to
+# build a component-name → source-location map for the Browser inspector
+# (jump-to-source from a clicked DOM element), plus the lazy
+# `ui_index_extract_props` / `extract_projects` / token-extraction
+# Tauri commands that power the Component Catalog and "Storybook for
+# AI" surfaces. Pure leaf — `app` only registers the commands in
+# `commands/handler_list.inc` and `.manage()`s the `UiIndexState`
+# in `run()`.
+ui_indexer = { path = "crates/ui-indexer" }
+
+# Local-only developer activity timeline: heartbeat collector, external
+# IDE detection, retroactive backfill from git/IDE history, and the Tauri
+# queries that surface the daily/IDE/file stats. Schema init and the few
+# bootstrap calls (`record_file_change`, `cleanup_old_data`,
+# `backfill_offline_activity`, `heartbeat_import::scan_all`) are wired
+# from `app::lib::run` and `register_database_schemas`. The crate has no
+# parent-crate dependency.
+dev_record = { path = "crates/dev-record" }
+
+# LLM provider key vault, validation, and auto-detection. Keeps its
+# `#[tauri::command]` macros in-crate (cursor-bridge pattern); the
+# `app` crate just re-registers them in `commands/handler_list.inc`.
+key_vault = { path = "crates/key-vault" }
+
+# Wire protocol shared between desktop bridge, mobile relay, and PWA. Pure
+# data, no IO. Used by `api::mobile_remote` to type RPC frames, pairing
+# DTOs, permission tiers, and identifier newtypes.
+orgii_protocol = { path = "crates/orgii-protocol" }
+
+# SQLite connection plumbing. Leaf crate — depends only on `app_paths`. The
+# schema-init dispatcher lives here as a registration cell;
+# `app::register_database_schemas` wires every domain initializer into it
+# once at the top of `run()`.
+database = { path = "crates/database" }
+
+# Remote SQL client feature: 6 `#[tauri::command]`s that connect to
+# user-supplied PostgreSQL / MySQL servers and run ad-hoc queries. Owns
+# the `sqlx` dep tree privately so it never enters `cargo check -p app`.
+# See `crates/db-clients/Cargo.toml` for the full rationale and the
+# naming-disambiguation note (this is NOT the `database` SQLite crate
+# above, NOR the `work_station::db_browser` module that opens local
+# .sqlite files in the editor).
+db_clients = { path = "crates/db-clients" }
+
+
+# git2-backed repo + worktree operations, status watcher, bundle export.
+# Keeps its `#[tauri::command]` macros in-crate (key-vault pattern); the
+# `app` crate re-registers them in `commands/handler_list.inc`. IoC hooks in
+# `git::hooks` keep the crate a leaf — `app::register_git_hooks` wires the
+# websocket / dev_record / automation callbacks once at startup.
+git = { path = "crates/git" }
+
+# Inbox message persistence (SQLite) + Tauri commands. Leaf crate — depends
+# only on `database`. Schema init is wired into `register_database_schemas`
+# in `lib.rs`; the `app` crate re-registers the Tauri commands in
+# `commands/handler_list.inc`.
+inbox = { path = "crates/inbox" }
+
+# Projects, orchestrator, lineage, and outbox-based sync framework.
+# Owns the `~/.orgii/projects/projects.db` store and the workflow state
+# machine. Keeps its `#[tauri::command]` macros in-crate (key-vault / git
+# pattern); the `app` crate re-registers them in `commands/handler_list.inc`.
+# Schema init for lineage + projects tables is wired into
+# `register_database_schemas`. IoC: lineage → git diff is wired through
+# `lineage::git_bridge::get_commit_diff` from `git_api::lineage_bridge`,
+# called once at boot from `app::run()`.
+project_management = { path = "crates/project-management" }
+
+# Language Server Protocol manager + lint tooling. Owns LSP server processes,
+# JSON-RPC parsing, lint-tool catalog (eslint/ruff/mypy/golangci-lint/clippy),
+# and per-workspace LSP/lint config. Keeps its `#[tauri::command]` macros
+# in-crate (key-vault / cursor-bridge pattern); the `app` crate re-registers
+# them in `commands/handler_list.inc`. IoC hook in `lsp::broadcast` lets
+# `app::register_lsp_hooks` wire the IDE WebSocket broadcaster in once at
+# startup so the diagnostics pipeline never depends back into `app::api`.
+lsp = { path = "crates/lsp" }
+
+# Code/file/symbol search engine: ripgrep streaming regex search, nucleo
+# fuzzy file matcher, tree-sitter scope resolution, and the merkle-tree
+# workspace cache. The `app` crate re-registers its Tauri commands in
+# `commands/handler_list.inc`. The agent-core `search` tool composes these
+# commands via the public `search::*` API (one-way dependency); the HTTP route
+# handlers in the `api_search` crate likewise wrap them. Pure leaf — no
+# back-edges into `app`.
+search = { path = "crates/search" }
+advanced_search = { path = "crates/advanced-search" }
+
+# External-service integration adapters: OAuth token store, computer-use
+# lock, external-IDE openers, GitHub REST/gh-cli detect, and the per-session
+# MITM HTTPS proxy + ORGII-cloud allocate/release calls. Keeps its
+# `#[tauri::command]` macros in-crate (key-vault / cursor-bridge pattern); the
+# `app` crate re-registers them in `commands/handler_list.inc`. The single
+# back-edge into `app` (computer-use abort broadcast) is wired through
+# `integrations::computer_use_lock::register_abort_broadcaster` in
+# `register_integrations_hooks`, called once at startup so this crate never
+# depends on `agent_core`.
+integrations = { path = "crates/integrations" }
+
+# Cross-cutting runtime handles (browser sidecar, screenshot store) that
+# `agent_core` and `browser` both touch. Lives in its own crate so neither
+# side depends on the other.
+shared_state = { path = "crates/shared-state" }
+
+# VS-Code-style user settings: read/write `~/.orgii/settings.jsonc`, watch
+# for external changes, expose Tauri commands. IoC hook in
+# `settings::hooks` lets `app::register_settings_hooks` push HTTP-version
+# preference changes into `agent_core` without `settings` knowing about it.
+settings = { path = "crates/settings" }
+
+# Performance-critical leaf utilities: image luminance (rayon-parallel),
+# binary detection (memchr + infer magic-byte sniffing), fast JSON parsing
+# (simd-json), hashing (sha2 + blake3), diff/patch (similar), process
+# metrics (sysinfo). Owns ~36 `#[tauri::command]`s — `app` re-registers them
+# in `commands/handler_list.inc` via bare `perf_utils::…` paths. Pure leaf —
+# no back-edges into `app`.
+perf_utils = { path = "crates/perf-utils" }
+
+# File-utility leaf (binary detection, gitignore filtering, directory tree).
+# Pure leaf — no external deps beyond `serde`+`tauri`. Owns ~9
+# `#[tauri::command]`s; `app` re-registers them in
+# `commands/handler_list.inc` via bare `file_ops::…` paths.
+file_ops = { path = "crates/file-ops" }
+
+# Cross-platform event-emitter abstraction (Tauri + Mock adapters,
+# global `TransportEmitter`). Pure leaf — `app::run()` installs the global
+# emitter once at startup, after which call sites reach it through the
+# `transport::emitter::global()` accessor without depending back into `app`.
+transport = { path = "crates/transport" }
+
+# Multi-framework test runner (Jest/Vitest/Mocha/Pytest/`cargo test`):
+# discovery, execution, and result streaming. Owns 5 `#[tauri::command]`s —
+# `app` re-registers them in `commands/handler_list.inc` via bare
+# `test_runner::…` paths. Pure leaf — no back-edges into `app`.
+test_runner = { path = "crates/test-runner" }
+
+# DB Browser — Tauri commands for opening/querying arbitrary SQLite files
+# from the WorkStation code editor panel (replaces the WASM sql.js
+# `SqliteService`/`SqliteProvider` frontend layers). Owns ~12
+# `#[tauri::command]`s — `app` re-registers them in
+# `commands/handler_list.inc` via bare `db_browser::…` paths. Pure leaf.
+db_browser = { path = "crates/db-browser" }
+
+# OS-integration Tauri commands (macOS dock/tray/app-menu/recent-files,
+# native notifications, VPN interface detection, ipinfo geolocation,
+# host-toolchain dependency probing). Owns 16 `#[tauri::command]`s,
+# re-registered from `commands/handler_list.inc` via bare
+# `system_services::…` paths. Distinct from the lower-level
+# `app_platform` crate (which only ships the macOS Objective-C
+# `@try/@catch` FFI trampoline). Pure leaf.
+system_services = { path = "crates/system-services" }
+
+# Git HTTP API — axum router + utoipa OpenAPI docs covering status,
+# branches, commits, remotes, staging, stash, diff, merge/rebase/cherry-pick,
+# blame, file blob/mtime. Composed into `app::api::server` at startup
+# rather than running its own listener. Owns 1 `#[tauri::command]`
+# (`generate_commit_message`) re-registered from
+# `commands/handler_list.inc` via the bare `git_api::…` path.
+git_api = { path = "crates/git-api" }
+
+# Search HTTP API — axum router + utoipa OpenAPI annotations covering
+# fuzzy file search and symbol lookup. Composed into the unified
+# `app::api::server` router; this crate does not run its own listener.
+# Pure leaf — depends only on the underlying `search` engine crate.
+api_search = { path = "crates/api-search" }
+
+# Session-specific SQLite persistence: event cache (FTS5), branching,
+# file-change aggregation, token usage. Owns ~23 `#[tauri::command]`s
+# that the `app` crate re-registers from `commands/handler_list.inc`
+# via the bare `session_persistence::…` path. Wires concrete impls
+# into `agent_core::foundation::{db_bridge, session_bridge}` at boot
+# via `agent_core_bridge::register()`. Pure leaf — no back-edges
+# into `app`.
+session_persistence = { path = "crates/session-persistence" }
+
+# Mobile Remote Control — desktop-side bridge to the ORGII mobile relay.
+# Connect-with-reconnect WS client, RPC dispatch, pairing flow,
+# allowlist + audit, optional in-process LAN relay. Pure leaf — the
+# `DispatchHost` trait is the integration point; the production
+# `TauriDispatchHost` impl lives in `app::api::mobile_remote_host`
+# and is plugged in via `BridgeSupervisor::set_host_factory` at boot.
+# Owns ~12 `#[tauri::command]`s, re-registered from
+# `commands/handler_list.inc` via bare `mobile_remote::…` paths.
+mobile_remote = { path = "crates/mobile-remote" }
+
+# PTY session management + agent-core terminal tool plumbing. Hoisting
+# both halves into one crate collapses what used to be a cycle between
+# `work_station::terminal` (Tauri commands) and
+# `agent_core::foundation::tool_infra::terminal` (LLM-tool helpers) into
+# an internal call between sibling modules (`pty_commands` <-> `agent_tool`).
+# Pure leaf — no back-edges into `app`. The `app` crate just re-registers
+# the Tauri commands in `commands/handler_list.inc`.
+terminal = { path = "crates/terminal" }
+
+
+# File search / parallelism — only the crates `app/src` actually imports.
+# Search-stack crates live in the `search` workspace crate. Keeping them out
+# of `app` shrinks the rust-analyzer index for `cargo check -p app` and
+# clarifies ownership.
+rayon = "1.8"            # Parallel processing — used by api/git diff_ops
+
+parking_lot = "0.12"           # Fast RwLock for state store
+rusqlite = { workspace = true } # SQLite driver
+# `sqlx` (Postgres + MySQL async drivers) used to live here, but `app/src`
+# never imported it — the only consumer was `work_station/database/mod.rs`,
+# the DB Browser feature. That moved to the `db_browser` workspace crate
+# above; sqlx now compiles only when `db_browser` does, not on every
+# `cargo check -p app`. Removing it from `app`'s direct deps drops three
+# top-15 fattest transitive crates (sqlx-core, sqlx-postgres, sqlx-mysql)
+# from rust-analyzer's index for `app`.
+dirs = "6.0"             # Get user directories (~/.orgii/data)
+chrono = { workspace = true }  # Date/time handling
+zip = { workspace = true }
+base64 = { workspace = true }
+
+# AWS SDK for SSO OIDC archived alongside `crates/cursor-bridge` notes.
+# `aws-config` + `aws-sdk-ssooidc` (and the transitive `aws-lc-sys` BoringSSL
+# C build) were used only by the direct-AWS-SDK Kiro Pro SSO login in
+# `agent_sessions/cli/platform_adapters/kiro/sso.rs` — that file is now in
+# `.archive/kiro-sso/`. The PTY-driven `kiro-cli login` flow in
+# `kiro_auth.rs` covers the same user-facing feature without the SDK.
+# Restore: see `.archive/kiro-sso/archived-deps.txt`.
+
+# HTTP Server with OpenAPI documentation
+axum = { workspace = true }                              # Fast, ergonomic web framework with WebSocket support
+utoipa = { version = "5", features = ["axum_extras"] }  # OpenAPI code-first documentation (v5: OpenAPI 3.1 only, schemas auto-collected)
+utoipa-swagger-ui = { version = "9", features = ["axum", "vendored"] }  # Swagger UI integration; `vendored` ships the swagger-ui assets in-tree so build.rs never downloads from GitHub (offline-friendly, deterministic)
+tower-http = { version = "0.6", features = ["cors", "timeout"] }  # CORS + response timeout
+async-stream = "0.3"                                     # Async stream macros for SSE
+# WebSocket + TLS via rustls (native-roots so corporate / on-prem PKI works
+# the same way it did under native-tls). Used by Feishu / Discord / WeCom
+# `connect_async()` callers in `agent_core::integrations::channels::*`.
+tokio-tungstenite = { workspace = true }
+futures-util = "0.3"                                     # Stream utilities for WebSocket
+
+# Git operations (libgit2 bindings) — local-only.
+#
+# `default-features = false` drops `https` (→ openssl-sys), `ssh`
+# (→ libssh2-sys), and `ssh_key_from_memory`. Network ops shell out to
+# the system `git` CLI in `integrations::github::commands::
+# github_clone_repo` (ORGII already requires `git` on PATH —
+# `git/bundle.rs` shells out for `git bundle create`), so libgit2 only
+# needs the local-repo half of its API: open / diff / blame / log /
+# status / tree walks under `api/git/commands/diff/*` and
+# `git/repos/*`.
+#
+# `vendored-libgit2` is required because libgit2-sys with no features
+# defaults to `pkg-config libgit2` against the system, which dev
+# machines almost never have installed. Vendoring builds libgit2 from
+# C source (~150 MB of artifacts) — orders of magnitude cheaper than
+# the previous `vendored-openssl` which compiled ~2k OpenSSL C files
+# (~1–2 GB).
+git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
+
+# File type detection via magic bytes
+infer = "0.19"  # Detects file types by magic number signatures
+
+# ===========================================
+# Code Search & Parsing — extracted to other crates
+# ===========================================
+#
+# Search, LSP, and browser parsing dependencies live in their owning
+# workspace crates (`search`, `ui_indexer`, `browser`). Don't add them back
+# here unless `app/src` directly imports them.
+
+# Utilities for code search
+regex = "1.9.5"
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+tracing-appender = "0.2"
+blake3 = "1.5"
+async-trait = "0.1"
+thiserror = { workspace = true }
+anyhow = "1.0"
+futures = "0.3"
+# HTTP client — rustls only. `default-features = false` strips out
+# reqwest's `default-tls` (which would otherwise drag in `hyper-tls`,
+# `native-tls`, and `openssl 0.10.x` even when we asked for `rustls-tls`,
+# because Cargo unifies features across the workspace).
+#
+# Note: reqwest 0.11 has HTTP/2 unconditionally on (no feature gate
+# needed; `.http2_adaptive_window` / `.http2_prior_knowledge` in
+# `build_http_client` keep working). `charset` and
+# `macos-system-configuration` are 0.12+ features and don't exist here.
+reqwest = { workspace = true }
+time = "0.3"               # Date/time for certificate validity periods
+# `default-features = false` + explicit `ring` provider drops the
+# `aws-lc-rs` / `aws-lc-sys` BoringSSL C build (~5–10 min cold compile,
+# ~150 MB intermediate artifacts). `ring` is already in the graph via
+# reqwest 0.11 + rustls 0.21 / 0.22, so picking it here lets Cargo
+# unify on a single crypto provider across all rustls versions instead
+# of pulling both.
+tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "tls12", "ring"] }
+url = "2"                 # URL parsing for proxy routing
+urlencoding = "2.1"      # URL encoding/decoding for Cursor token parsing
+
+# ===========================================
+# Performance Optimizations
+# ===========================================
+# Hot-path leaf utilities (image luminance, simd-json, sha2/blake3 batch
+# hashing, similar diff/patch, sysinfo memory breakdown, memchr binary
+# sniffing, infer magic-byte detection) moved to the `perf_utils` workspace
+# crate. `app/src` only needs the two remainders: `rayon` for the api/git
+# diff_ops parallelism and `sha2` for the mobile-remote pairing QR digest.
+sha2 = "0.10"            # SHA-256 for mobile-remote pairing QR digest
+hex = "0.4"              # Hex encoding for QR digest + db_browser bytea rendering
+rand = { workspace = true }   # CSPRNG for OAuth PKCE (state + code_verifier)
+
+# ===========================================
+# Model Context Protocol (MCP) — official Rust SDK
+# ===========================================
+# The rmcp crate replaces our hand-rolled JSON-RPC client. Features
+# pinned to the client-only subset (full feature list lives on the
+# `[workspace.dependencies]` block at the top of this file). Note on the
+# `reqwest-tls-no-provider` choice over `reqwest`: the latter would force
+# rustls 0.23 to enable `aws-lc-rs` (BoringSSL C build), and we need
+# rustls's crypto provider to come from our `tokio-rustls` (ring) dep so
+# Cargo can unify across the workspace.
+http = "1"           # HeaderName / HeaderValue for rmcp custom_headers
+tokio-util = { workspace = true }  # CancellationToken (in default surface) for rmcp serve_with_ct + wingman
+csv = "1.4.0"
+calamine = "0.35.0"
+rust_xlsxwriter = "0.95.0"
+
+# ===========================================
+# Unix-only dependencies
+# ===========================================
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[features]
+default = []
+# E2E WebDriver automation plugin (debug/test only). Enable with --features webdriver.
+webdriver = ["dep:tauri-plugin-webdriver-automation"]
+semantic-search = ["advanced_search/semantic-search"]
+[target."cfg(any(target_os = \"macos\", windows, target_os = \"linux\"))".dependencies]
+tauri-plugin-single-instance = { version = "2.0.0", features = ["deep-link"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Dwm",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { workspace = true }
+objc2-foundation = { workspace = true }
+objc2-app-kit = { workspace = true }
+block2 = { workspace = true }
+dispatch2 = { workspace = true }
+core-foundation = "0.10"
+core-graphics = { version = "0.24", features = ["highsierra", "elcapitan"] }  # CGEvent input simulation, CGWindowList, CGImage
+foreign-types = "0.5"   # ForeignType trait used by core-graphics types
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "=2.9.0"
+
+[dev-dependencies]
+tempfile = "3.13"
+insta = { version = "1", features = ["yaml", "redactions"] }
+assert_matches = "1"
+# HTTP mock server for sync adapter integration tests.
+wiremock = "0.6"
+
+# Pull in the `testing` feature only for `app`'s test build so
+# `crate::test_utils::temp_dir_with_files` (re-exported from `app_utils`)
+# resolves. Production builds of `app` don't link `tempfile`.
+app_utils = { path = "crates/app-utils", features = ["testing"] }
+
+# Process-wide test sandbox (env-var lock + tempdir RAII guard) hoisted from
+# `src/test_utils/test_env.rs`. Only consumed from `#[cfg(test)]` code; the
+# parent `app::test_utils::test_env` shim re-exports the public surface and
+# uses `ctor` below to register the multi-table schema-prime hook before any
+# test calls `sandbox()`.
+test_helpers = { path = "crates/test-helpers" }
+
+# Eager registration of the `test_helpers::test_env` after-env hook from
+# `app::test_utils::test_env`. `#[ctor::ctor]` runs the registration before
+# `main`, so test-only call sites that import directly from `test_helpers`
+# still get the schema-prime side effect that the in-tree `prime_schema()`
+# used to provide. Test-only dep — never linked into production.
+ctor = "0.2"
+
+# ─── Duplicate-version compilations (do not try to "fix" these) ───────────
+# `cargo tree --duplicates` reports ~30 transitive crates compiled at two
+# or more versions (~116 extra rustc invocations on a clean build). All
+# of the offenders root in tauri's own dependency tree:
+#
+#   base64  0.21 ← swift-rs ← tauri-utils
+#   schemars 0.8 ← tauri-build (build-dep)
+#   rand 0.7    ← phf_generator 0.8 ← phf_codegen 0.8 ← selectors ← kuchikiki ← tauri-utils
+#   phf 0.8/0.10 ← cssparser/selectors ← kuchikiki ← tauri-utils
+#   indexmap 1, hashbrown 0.12 ← schemars 0.8 ← tauri-build
+#   html5ever 0.29, png 0.17, bitflags 1 ← kuchikiki / ico ← tauri-utils
+#   darling 0.21 ← serde_with ← tauri-utils ; darling 0.23 ← rmcp-macros (ours)
+#
+# A few of our own deps clash with tauri's transitive ones:
+#   chrono-tz pulls phf 0.12; image 0.25 pulls png 0.18; html2text pulls
+#   html5ever 0.31. Each of those is the latest published version — the
+#   only way to dedupe further is to fork / downgrade tauri-utils, which
+#   trades a one-time multi-minute rustc speedup for a permanent
+#   maintenance burden. Don't do it. When tauri 3 ships, revisit.
+# ──────────────────────────────────────────────────────────────────────────
+
+# Release profile optimizations for better performance
+[profile.release]
+# Link-time optimization - enables cross-crate inlining
+lto = true
+# Maximum optimization level
+opt-level = 3
+# Single codegen unit for better optimization (slower compile, faster runtime)
+codegen-units = 1
+# Abort on panic for smaller binary size
+panic = "abort"
+# Strip symbols from binary
+strip = true
+
+# Development profile - faster builds.
+#
+# History: this used to set `[profile.dev.package."*"] opt-level = 2`, which
+# meant every one of the ~900 transitive deps got -O2 on a clean build. That
+# bought ~5-15% runtime speedup on hot paths but cost a multi-minute cold
+# wall-clock on every fresh `target/`, and ballooned `target/` disk usage.
+# We now leave deps at the default `opt-level = 0` and only opt in the
+# specific crates whose inner loops the user actually feels (tree-sitter
+# parses, image luminance, hashing, diffing, compression, regex, ripgrep
+# walkers). See per-package overrides below.
+[profile.dev]
+incremental = true
+# Minimal debug info for faster builds (still allows backtraces)
+debug = 1
+# Split debuginfo for faster linking on macOS
+split-debuginfo = "unpacked"
+
+# No debug info for any external dep (massive linker speedup, no impact on
+# the ability to debug *our* code — local crates still get `debug = 1`).
+[profile.dev.package."*"]
+debug = false
+
+# Build-script + proc-macro overrides: build scripts are run at compile
+# time, so opt-level=0 there means slower codegen at compile time. Keep
+# them at -O1 so things like serde_derive and tauri's invoke macro expand
+# fast.
+[profile.dev.build-override]
+opt-level = 1
+debug = false
+
+# Hot-path crates that still get -O2 in dev because their inner loops are
+# user-perceivable (search latency, image processing, hashing, diff/patch,
+# compression). Adding a name here trades ~3-15s of cold compile per crate
+# for noticeably snappier dev-mode behavior; remove names that don't pay
+# their way.
+[profile.dev.package.tree-sitter]
+opt-level = 2
+[profile.dev.package.image]
+opt-level = 2
+[profile.dev.package.png]
+opt-level = 2
+[profile.dev.package.zune-jpeg]
+opt-level = 2
+[profile.dev.package.simd-json]
+opt-level = 2
+[profile.dev.package.blake3]
+opt-level = 2
+[profile.dev.package.sha2]
+opt-level = 2
+[profile.dev.package.similar]
+opt-level = 2
+[profile.dev.package.regex]
+opt-level = 2
+[profile.dev.package.regex-automata]
+opt-level = 2
+[profile.dev.package.memchr]
+opt-level = 2
+[profile.dev.package.rayon]
+opt-level = 2
+[profile.dev.package.rayon-core]
+opt-level = 2
+[profile.dev.package.flate2]
+opt-level = 2
+[profile.dev.package.miniz_oxide]
+opt-level = 2
+[profile.dev.package.zstd-safe]
+opt-level = 2
+[profile.dev.package.zstd-sys]
+opt-level = 2
+[profile.dev.package.xz2]
+opt-level = 2
+[profile.dev.package.lzma-sys]
+opt-level = 2
+[profile.dev.package.zip]
+opt-level = 2
+[profile.dev.package.ignore]
+opt-level = 2
+[profile.dev.package.globset]
+opt-level = 2
+[profile.dev.package.aho-corasick]
+opt-level = 2
+[profile.dev.package.nucleo-matcher]
+opt-level = 2
+
+# Fast test build: produces a real .app bundle without release-mode LTO/opts.
+# Use with: npm run tauri:build:fast
+[profile.dev-build]
+inherits = "dev"
+opt-level = 1
+debug = false
+strip = true

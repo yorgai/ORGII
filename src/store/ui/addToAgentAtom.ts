@@ -1,0 +1,46 @@
+/**
+ * addToAgentAtom
+ *
+ * Holds a pending "add to agent" request from the WorkStation code editor
+ * text-selection dropdown. Written by the editor handler; consumed and cleared
+ * by useInputAreaEffects when the InputArea mounts or when the value changes.
+ *
+ * Using an atom instead of a CustomEvent avoids the race condition where the
+ * ChatPanel InputArea is not mounted (chat panel closed / floating input
+ * collapsed), which caused the event to fire with no listener.
+ */
+import { atom } from "jotai";
+
+export type AddToAgentRequest =
+  | {
+      type: "file";
+      filePath: string;
+      fileName: string;
+    }
+  | {
+      type: "lines";
+      filePath: string;
+      fileName: string;
+      lineStart: number;
+      lineEnd: number;
+    }
+  | {
+      type: "terminal";
+      /** Raw selected text from the terminal */
+      text: string;
+      /** Display label for the pill (e.g. "Terminal (1-12)") */
+      displayName?: string;
+    }
+  | {
+      type: "dom-element";
+      /**
+       * Structured text blob describing the element. Rendered as a pill and
+       * resolved back to full content via the pill-text store.
+       */
+      text: string;
+      /** Short display label for the pill (e.g. "div.hp_trivia_outer"). */
+      displayName: string;
+    };
+
+export const addToAgentAtom = atom<AddToAgentRequest | null>(null);
+addToAgentAtom.debugLabel = "addToAgentAtom";

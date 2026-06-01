@@ -1,0 +1,102 @@
+/**
+ * Fallback formatter for unregistered tools only.
+ * Built-in tool/action labels must come from the Rust tool registry.
+ */
+export function formatToolName(toolName: string): string {
+  return toolName
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+/**
+ * Extract the primary "argument" for a tool call — used as secondary text in
+ * the simulator sidebar and block headers. Returns just the base name for
+ * path-like args (e.g. `/src/App.tsx` → `App.tsx`) so rows stay compact.
+ *
+ * NOT localized. Callers should treat `undefined` as "no arg to show".
+ */
+export function formatToolArg(
+  toolName: string,
+  args: Record<string, unknown> | undefined
+): string | undefined {
+  if (!args || typeof args !== "object") return undefined;
+
+  const nestedArgs = (value: unknown): Record<string, unknown> | undefined => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return undefined;
+    }
+    return value as Record<string, unknown>;
+  };
+
+  const argSources = [
+    args,
+    nestedArgs(args.input),
+    nestedArgs(args.params),
+    nestedArgs(args.arguments),
+    nestedArgs(args.tool_input),
+    nestedArgs(args.toolInput),
+  ].filter((source): source is Record<string, unknown> => Boolean(source));
+
+  const pickString = (...keys: string[]): string | undefined => {
+    for (const source of argSources) {
+      for (const key of keys) {
+        const v = source[key];
+        if (typeof v === "string" && v.trim().length > 0) return v.trim();
+      }
+    }
+    return undefined;
+  };
+
+  const baseName = (p: string): string => {
+    const parts = p.split("/").filter(Boolean);
+    return parts.length > 0 ? parts[parts.length - 1] : p;
+  };
+
+  // File-path tools → basename of the target file.
+  const pathArg = pickString(
+    "file_path",
+    "filePath",
+    "target_file",
+    "targetFile",
+    "path"
+  );
+  if (pathArg) return baseName(pathArg);
+
+  // Directory-list tools → trailing folder name.
+  const dirArg = pickString("target_directory", "targetDirectory", "dir");
+  if (dirArg) {
+    const trimmed = dirArg.replace(/\/+$/, "");
+    return trimmed.length > 0 ? `${baseName(trimmed)}/` : "./";
+  }
+
+  // Search-style tools → the query/pattern.
+  const queryArg = pickString(
+    "query",
+    "pattern",
+    "glob_pattern",
+    "globPattern",
+    "search_query"
+  );
+  if (queryArg) return queryArg;
+
+  // Shell-style tools → command keyword.
+  const cmdArg = pickString("command", "cmd");
+  if (cmdArg) return cmdArg.split(/\s+/)[0];
+
+  // URL-based tools.
+  const urlArg = pickString("url", "href");
+  if (urlArg) {
+    try {
+      return new URL(urlArg).hostname || urlArg;
+    } catch {
+      return urlArg;
+    }
+  }
+
+  // Action-style tools (LSP, worktree, manage_*). Use the action name itself.
+  const actionArg = pickString("action", "kind", "op");
+  if (actionArg) return actionArg;
+
+  return undefined;
+}

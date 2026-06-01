@@ -1,0 +1,54 @@
+/**
+ * Diff Mixins
+ *
+ * Reusable SCSS mixins for diff-related styling.
+ * Import this file in component SCSS files that need diff styling.
+ *
+ * CSS variables are defined in _diff-tokens.scss and loaded globally.
+ */
+
+// ============================================
+// Gutter Marker Mixins
+// ============================================
+
+@mixin diff-gutter-base {
+  width: var(--diff-gutter-width, 4px);
+  min-width: var(--diff-gutter-width, 4px);
+  max-width: var(--diff-gutter-width, 4px);
+}
+
+@mixin diff-gutter-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--diff-gutter-bar-width, 2px);
+  height: 100%;
+}
+
+// ============================================
+// Line Background Mixins
+// ============================================
+
+@mixin diff-line-added {
+  background-color: var(--diff-added-bg);
+}
+
+@mixin diff-line-modified {
+  background-color: var(--diff-modified-bg);
+}
+
+@mixin diff-line-deleted {
+  background-color: var(--diff-deleted-bg);
+}
+
+// ============================================
+// Chunk (Word-level) Mixins
+// ============================================
+
+@mixin diff-chunk-added {
+  background-color: var(--diff-added-chunk);
+}
+
+@mixin diff-chunk-deleted {
+  background-color: var(--diff-deleted-chunk);
+}

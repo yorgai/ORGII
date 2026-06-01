@@ -1,0 +1,6 @@
+---
+source: src/agent_core/integrations/automation/tests/types_tests.rs
+expression: trigger
+---
+type: timer
+intervalSecs: 300

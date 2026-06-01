@@ -1,0 +1,65 @@
+/**
+ * MarkdownEditor styles
+ *
+ * Border states match Textarea component:
+ *   default → border-border-2
+ *   hover   → border-border-3
+ *   focus   → primary-6 ring
+ *
+ * Embedded editors use the same surface as the wrapper (`--color-bg-2`). The global
+ * CodeMirror theme targets `--cm-editor-background` from :root (standalone editor chrome);
+ * we override `.cm-*` backgrounds under `.markdown-editor-content` so there is no darker
+ * “code panel” inside this component.
+ */
+
+.markdown-editor-root {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.markdown-editor-wrapper {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-bg-2);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: var(--color-border-3);
+  }
+
+  &:focus-within {
+    border-color: var(--color-primary-6);
+    box-shadow: 0 0 0 2px
+      color-mix(in srgb, var(--color-primary-6) 15%, transparent);
+  }
+}
+
+.markdown-editor-content {
+  height: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+
+  .codemirror-editor-wrapper {
+    .cm-editor,
+    .cm-scroller,
+    .cm-gutters {
+      background-color: var(--color-bg-2) !important;
+    }
+  }
+}
+
+.markdown-editor-preview {
+  min-width: 0;
+  max-width: 100%;
+  overflow: auto;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--color-text-2);
+  user-select: text;
+}

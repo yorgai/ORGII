@@ -1,0 +1,92 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "ORGII",
+  "version": "0.1.3",
+  "identifier": "yorg.orgii",
+  "build": {
+    "frontendDist": "../build",
+    "devUrl": "http://localhost:1998",
+    "beforeDevCommand": "npm run start:fast",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "ORGII",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 450,
+        "minHeight": 300,
+        "resizable": true,
+        "maximized": true,
+        "fullscreen": false,
+        "decorations": true,
+        "hiddenTitle": true,
+        "transparent": true,
+        "titleBarStyle": "Overlay",
+        "trafficLightPosition": { "x": 20, "y": 28.5 }
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' 'nonce-orgii-codemirror-style'; img-src 'self' asset: http://asset.localhost https: data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost ipc://localhost https: http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* wss:; media-src 'self' asset: http://asset.localhost blob:; worker-src 'self' blob:; frame-src 'self' https:; object-src 'none'; base-uri 'self'",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$HOME/.orgii/**", "$HOME/.cursor/plugins/cache/**"]
+      }
+    }
+  },
+  "bundle": {
+    "externalBin": [],
+    "resources": {
+      "model/": "model/",
+      "../scripts/tools/download.py": "scripts/tools/download.py",
+      "../node_modules/dugite/git/": "git/",
+      "bin/agent-browser-aarch64-apple-darwin": "bin/agent-browser-aarch64-apple-darwin",
+      "bin/peekaboo": "bin/peekaboo",
+      "bin/peekaboo-LICENSE": "bin/peekaboo-LICENSE",
+      "bin/peekaboo-VERSION": "bin/peekaboo-VERSION",
+      "bin/peekaboo-aarch64-apple-darwin": "bin/peekaboo-aarch64-apple-darwin",
+      "bin/peekaboo-x86_64-apple-darwin": "bin/peekaboo-x86_64-apple-darwin",
+      "resources/drag-icons/": "resources/drag-icons/"
+    },
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "createUpdaterArtifacts": true,
+    "macOS": {
+      "entitlements": "entitlements.plist",
+      "signingIdentity": "Developer ID Application: HOUYi HE (S4UG24G7HJ)",
+      "providerShortName": "S4UG24G7HJ",
+      "minimumSystemVersion": "10.15"
+    }
+  },
+  "plugins": {
+    "fs": {
+      "requireLiteralLeadingDot": false
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": ["yorgai"]
+      }
+    },
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://soydrelease.blob.core.windows.net/releases/latest.json"
+      ],
+      "dialog": false,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU1NDMyREQ2MUFBMTkyRTQKUldUa2txRWExaTFENVY5TzdsbVpzUk9DN1h2emZ1WVhMQi9BSVJqZE4xajVVb3Zmci9pbXZaOUkK"
+    },
+    "shell": {
+      "open": "^((mailto:\\w+)|(tel:\\w+)|(https?://[^\\s]+)|(vscode://\\S+)|(cursor://\\S+)|(idea://\\S+)|(subl://\\S+)|(x-apple\\.systempreferences:\\S+)|(ms-settings:\\S+))"
+    }
+  }
+}

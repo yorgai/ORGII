@@ -1,0 +1,116 @@
+[package]
+name = "lsp"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+
+# Language Server Protocol manager + lint tooling.
+#
+# Spawns and supervises external LSP server processes (rust-analyzer,
+# typescript-language-server, pyright, gopls, etc.), parses their JSON-RPC
+# `textDocument/publishDiagnostics` notifications, and forwards them to the
+# IDE WebSocket so the frontend can render diagnostics in-place. Also owns
+# the lint-tool catalog (eslint, ruff, mypy, golangci-lint, clippy, …) and
+# the per-workspace LSP/lint config that gates which servers auto-start.
+#
+# Inversion-of-control points (so this crate never depends back into `app`):
+# - `broadcast::register_broadcast` — `app::run` registers the IDE WebSocket
+#   `api::websocket_handler::broadcast` function pointer at startup so the
+#   diagnostics pipeline can publish updates without compile-time coupling.
+# - System-dependency cache is read directly via `app_paths::dependencies_cache`
+#   instead of calling back into `infrastructure::platform::dependencies`.
+#
+# Tauri command surface stays in-crate (browser / key-vault / cursor-bridge
+# pattern). `app::commands::handler_list` registers each via bare
+# `lsp::commands::…` paths.
+
+[lib]
+name = "lsp"
+
+[dependencies]
+# Workspace crates
+app_paths = { path = "../app-paths" }
+app_utils = { path = "../app-utils" }
+core_types = { path = "../types" }
+git = { path = "../git" }
+
+# Tauri (commands + State)
+tauri = { workspace = true }
+
+# Serde + JSON for protocol payloads + config files
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Typed Language Server Protocol message bodies (`InitializeParams`,
+# `Hover`, `GotoDefinitionResponse`, `PublishDiagnosticsParams`, …).
+# We still own the JSON-RPC envelope (`core_types::jsonrpc`) and the
+# stdio framing layer (`protocol::format_lsp_message`) — `lsp-types`
+# only models the LSP-level payloads.
+lsp-types = "0.97"
+
+# Async runtime — server.rs spawns LSP processes and reads stdout streams
+tokio = { workspace = true }
+
+# `tokio_util::codec::{Decoder, FramedRead}` drives the LSP framing
+# layer (`Content-Length: N\r\n\r\n<body>`). `codec` opts into the
+# Decoder/Encoder traits — the workspace base of `tokio-util` ships
+# with `default-features = false`, so we have to enable it here.
+tokio-util = { workspace = true, features = ["codec"] }
+
+# `LspCodec` returns body bytes as `bytes::Bytes` so the listener
+# avoids one copy per message. `bytes` is already pulled in via
+# `reqwest` etc., declaring it directly so we don't depend on a
+# transitive.
+bytes = "1"
+
+# `manager::shutdown` joins many `LspServer::shutdown` futures so we can
+# reap every child process in parallel during app teardown.
+futures = "0.3"
+
+# `server::pending_requests` is a hot in-memory map touched on every
+# response from the LSP child. Replacing the async `tokio::sync::Mutex`
+# with a synchronous `parking_lot::Mutex` removes per-message await
+# overhead — there is no real contention here and we never hold the
+# guard across a `.await`, so a sync mutex is strictly better.
+parking_lot = "0.12"
+
+# Workspace scan needs gitignore-aware traversal
+ignore = "0.4"
+
+# Spawning helper-tool tempdirs (eslint config probing, etc.).
+# Pinned to match `app/Cargo.toml` to avoid duplicate compilations.
+tempfile = "3.13"
+
+# `which` is used to locate binaries that bypass the dependency cache
+# (e.g. ad-hoc tool detection inside install_pipeline). Pinned to match
+# `app/Cargo.toml`.
+which = "8"
+
+# Logging — most call sites still use `log::warn!` for parity with the
+# rest of the IDE backend. `tracing` is used in newer files.
+log = "0.4"
+tracing = "0.1"
+
+# `commands/cache.rs` uses `chrono::DateTime::parse_from_rfc3339` to gate
+# stale lsp / lint caches on a 1-hour TTL.
+chrono = { workspace = true }
+
+# `config::ConfigError` derives `thiserror::Error`.
+thiserror = { workspace = true }
+# `install_pipeline` downloads LSP server release archives from GitHub. Use
+# `rustls-no-provider` so we share the process-wide ring crypto provider
+# wired up in `app::run` instead of pulling aws-lc-rs into the build.
+reqwest = { workspace = true }
+
+# `install_pipeline` extracts downloaded LSP server archives. GitHub releases
+# ship as `.tar.gz`, `.tar.xz`, or `.zip` depending on the project, so all
+# three decompressors are mandatory rather than feature-gated.
+flate2 = "1.1.9"
+tar = "0.4.44"
+xz2 = "0.1"
+lzma-sys = { workspace = true }
+zip = { workspace = true }
+
+# `commands/server.rs` decodes percent-encoded `file://` URIs the frontend
+# passes for `textDocument/didOpen`-style commands.
+urlencoding = "2.1"

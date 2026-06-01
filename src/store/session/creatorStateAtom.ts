@@ -1,0 +1,246 @@
+/**
+ * Session Creator State Atom
+ *
+ * Shared state for session creator page that the toolbar can access
+ * for displaying and modifying session mode and location.
+ *
+ * Persists to localStorage so selections are remembered across sessions.
+ */
+import { atom } from "jotai";
+import { atomWithStorage } from "jotai/utils";
+
+import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
+import type { DispatchCategory } from "@src/api/tauri/session";
+
+// ============================================
+// Type Definitions
+// ============================================
+
+export const SESSION_TARGET_KIND = {
+  AGENT: "agent",
+  AGENT_ORG: "agent_org",
+  CLI_AGENT: "cli_agent",
+} as const;
+
+export type SessionTargetKind =
+  (typeof SESSION_TARGET_KIND)[keyof typeof SESSION_TARGET_KIND];
+
+export const SESSION_SOURCE_TYPE = {
+  LOCAL: "local",
+  GITHUB: "github",
+  SYSTEM_PATH: "system_path",
+} as const;
+
+export const SYSTEM_PATH_ID = {
+  HOME: "home",
+} as const;
+
+/** Unified source type for session creation */
+export type SessionSourceType =
+  (typeof SESSION_SOURCE_TYPE)[keyof typeof SESSION_SOURCE_TYPE];
+
+export type SystemPathId = (typeof SYSTEM_PATH_ID)[keyof typeof SYSTEM_PATH_ID];
+
+/** Unified source selection for session creation */
+export interface SessionSource {
+  /** Source type: local repo/folder, github remote repo, or system path scope */
+  type: SessionSourceType;
+
+  // Local repo fields
+  /** Repository ID (when type is 'local') */
+  repoId?: string;
+  /** Repository name (when type is 'local' or 'github') */
+  repoName?: string;
+  /** Repository path (when type is 'local') */
+  repoPath?: string;
+
+  // System path fields
+  /** System path identifier (when type is 'system_path') */
+  systemPathId?: SystemPathId;
+
+  // GitHub repo fields
+  /** GitHub connection ID (when type is 'github') */
+  githubConnectionId?: string;
+  /** GitHub repo full name (when type is 'github') */
+  githubRepoFullName?: string;
+
+  // Common fields
+  /** Branch name */
+  branch?: string;
+}
+
+export interface SessionCreatorState {
+  /** Dispatch category: "cli_agent" or "rust_agent" */
+  dispatchCategory: DispatchCategory;
+  /** Launch target kind layered above dispatch routing. */
+  targetKind: SessionTargetKind;
+  /** Unified source selection */
+  source: SessionSource | null;
+  /** Selected AgentDefinition ID for Rust agents */
+  selectedAgentDefinitionId: string | null;
+  /** Selected Agent Org ID when targetKind is agent_org */
+  selectedAgentOrgId: string | null;
+  /** Display name of the selected agent (Rust, CLI, or Agent Org) */
+  agentName: string | null;
+  /** Icon identifier for the selected agent */
+  agentIconId: string | null;
+  /** CLI agent type — only set when dispatchCategory is "cli_agent" */
+  cliAgentType: CliAgentType | null;
+}
+
+// ============================================
+// Default State
+// ============================================
+
+const DEFAULT_STATE: SessionCreatorState = {
+  dispatchCategory: "rust_agent",
+  targetKind: SESSION_TARGET_KIND.AGENT,
+  source: null,
+  selectedAgentDefinitionId: null,
+  selectedAgentOrgId: null,
+  agentName: null,
+  agentIconId: null,
+  cliAgentType: null,
+};
+
+// ============================================
+// Atoms
+// ============================================
+
+/**
+ * Session creator state atom - shared between toolbar and SessionCreator
+ * Persists to localStorage so user's last selections are remembered
+ */
+export const sessionCreatorStateAtom = atomWithStorage<SessionCreatorState>(
+  "orgii:sessionCreatorState",
+  DEFAULT_STATE,
+  {
+    getItem: (key, initialValue) => {
+      try {
+        const item = localStorage.getItem(key);
+        if (!item) return initialValue;
+        const parsed = JSON.parse(item);
+        return { ...initialValue, ...parsed };
+      } catch (error) {
+        console.warn("[SessionCreatorState] Failed to load state:", error);
+        return initialValue;
+      }
+    },
+    setItem: (key, value) => {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (error) {
+        console.error("[SessionCreatorState] Failed to save state:", error);
+      }
+    },
+    removeItem: (key) => {
+      localStorage.removeItem(key);
+    },
+  }
+);
+
+/**
+ * Derived atom for unified source selection
+ */
+export const sessionSourceAtom = atom(
+  (get) => get(sessionCreatorStateAtom).source,
+  (get, set, source: SessionSource | null) => {
+    set(sessionCreatorStateAtom, {
+      ...get(sessionCreatorStateAtom),
+      source,
+    });
+  }
+);
+
+/**
+ * Derived atom for dispatch category
+ */
+export const dispatchCategoryAtom = atom(
+  (get) => get(sessionCreatorStateAtom).dispatchCategory,
+  (get, set, category: DispatchCategory) => {
+    const previous = get(sessionCreatorStateAtom);
+    set(sessionCreatorStateAtom, {
+      ...previous,
+      dispatchCategory: category,
+      targetKind:
+        category === "cli_agent"
+          ? SESSION_TARGET_KIND.CLI_AGENT
+          : SESSION_TARGET_KIND.AGENT,
+      selectedAgentOrgId: null,
+    });
+  }
+);
+
+/**
+ * Derived atom for selected AgentDefinition ID.
+ */
+export const selectedAgentDefinitionIdAtom = atom(
+  (get) => get(sessionCreatorStateAtom).selectedAgentDefinitionId,
+  (get, set, agentDefinitionId: string | null) => {
+    const previous = get(sessionCreatorStateAtom);
+    set(sessionCreatorStateAtom, {
+      ...previous,
+      selectedAgentDefinitionId: agentDefinitionId,
+      targetKind: agentDefinitionId
+        ? SESSION_TARGET_KIND.AGENT
+        : previous.targetKind,
+      selectedAgentOrgId: agentDefinitionId
+        ? null
+        : previous.selectedAgentOrgId,
+    });
+  }
+);
+
+/**
+ * Derived atom for the launch target kind.
+ */
+export const sessionTargetKindAtom = atom(
+  (get) => get(sessionCreatorStateAtom).targetKind,
+  (get, set, targetKind: SessionTargetKind) => {
+    set(sessionCreatorStateAtom, {
+      ...get(sessionCreatorStateAtom),
+      targetKind,
+    });
+  }
+);
+
+/**
+ * Derived atom for the selected Agent Org ID.
+ */
+export const selectedAgentOrgIdAtom = atom(
+  (get) => get(sessionCreatorStateAtom).selectedAgentOrgId,
+  (get, set, agentOrgId: string | null) => {
+    const previous = get(sessionCreatorStateAtom);
+    set(sessionCreatorStateAtom, {
+      ...previous,
+      selectedAgentOrgId: agentOrgId,
+      targetKind: agentOrgId
+        ? SESSION_TARGET_KIND.AGENT_ORG
+        : previous.targetKind,
+      selectedAgentDefinitionId: agentOrgId
+        ? null
+        : previous.selectedAgentDefinitionId,
+    });
+  }
+);
+
+/**
+ * Derived atom for the selected target's display name (Rust, CLI, or Agent Org).
+ */
+export const agentNameAtom = atom(
+  (get) => get(sessionCreatorStateAtom).agentName
+);
+
+/**
+ * Derived atom for the selected agent's icon ID.
+ */
+export const agentIconIdAtom = atom(
+  (get) => get(sessionCreatorStateAtom).agentIconId
+);
+
+/**
+ * Derived atom for the selected CLI agent type.
+ */
+export const cliAgentTypeAtom = atom(
+  (get) => get(sessionCreatorStateAtom).cliAgentType
+);

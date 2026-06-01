@@ -1,0 +1,13 @@
+---
+source: src/cli_agents/parsers/acp_common_tests.rs
+expression: result
+---
+- content: Task A
+  id: "1"
+  status: pending
+- content: Task B
+  id: "2"
+  status: pending
+- content: Task C
+  id: "3"
+  status: pending

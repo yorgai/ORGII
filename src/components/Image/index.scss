@@ -1,0 +1,140 @@
+/**
+ * Image Component Styles
+ *
+ * Enhanced image styling following Arco Design patterns.
+ */
+
+.image-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-fill-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+
+  &.image-preview-enabled {
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 0.85;
+    }
+  }
+}
+
+// Loading state
+.image-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text-4);
+  font-size: 48px;
+
+  svg {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}
+
+// Error state
+.image-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text-4);
+  font-size: 14px;
+
+  svg {
+    font-size: 48px;
+  }
+
+  span {
+    font-size: 12px;
+  }
+}
+
+// Preview overlay
+.image-preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  cursor: zoom-out;
+  animation: fadeIn 0.2s ease;
+}
+
+.image-preview-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+  animation: zoomIn 0.2s ease;
+
+  img {
+    max-width: 100%;
+    max-height: 90vh;
+    display: block;
+    border-radius: 4px;
+  }
+
+  .image-preview-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    font-size: 24px;
+    color: white;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+}
+
+// Animations
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes zoomIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

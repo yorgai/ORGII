@@ -1,0 +1,589 @@
+//! Unified event handler for agent sessions.
+//!
+//! `UnifiedEventHandler` is the one `TurnEventHandler` implementation used
+//! by every session type. Behavior is driven by capability flags on
+//! [`EventHandlerConfig`] (workspace_path, lsp_manager, …) rather than
+//! session-type checks.
+//!
+//! Responsibilities:
+//! - Broadcast agent events over the per-session Tauri IPC channel
+//!   (and tee to the debug WebSocket).
+//! - Persist messages and tool-call rows.
+//! - Take per-tool-call file_history snapshots so rewinds are safe under
+//!   concurrent sessions against the same workspace_path.
+//! - Fire `.orgii/hooks.json` user hooks for `Pre/PostToolUse`.
+//! - Run LSP post-edit diagnostics for file-modifying tools.
+//!
+//! ## Submodule layout
+//!
+//! - [`event_factory`] — pure builders for `SessionEvent` rows
+//! - [`snapshots`] — per-tool-call file_history capture
+//! - [`wingman_tee`] — tee tool lifecycle to the Wingman bar overlay
+//! - [`hooks_dispatch`] — `.orgii/hooks.json` dispatch + LSP
+//! - [`helpers`] — `tool_status_preview_from_args`, `parse_hook_decision`
+
+mod event_factory;
+mod helpers;
+mod hooks_dispatch;
+mod snapshots;
+mod wingman_tee;
+
+// Re-exported solely so `intelligence::hooks::tests` can reach the helper
+// at this stable path. Internal callers (`hooks_dispatch::dispatch_pre_tool`)
+// use `super::helpers::parse_hook_decision` directly.
+#[cfg(test)]
+pub use helpers::parse_hook_decision;
+
+use async_trait::async_trait;
+use serde_json::Value;
+use std::collections::HashSet;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::{Arc, Mutex};
+use tracing::warn;
+
+use crate::bus::broadcast_event;
+use crate::bus::event_pipeline_bridge;
+use crate::foundation::streaming::{StreamType, StreamingBuffer};
+use crate::intelligence::hooks::HookExecutor;
+use crate::tools::names as tool_names;
+use crate::turn_executor::{ToolHookIntervention, TurnEventHandler};
+use core_types::session_event::SessionEvent;
+
+use super::super::persistence as unified_persistence;
+
+fn tool_result_is_error(result: &str) -> bool {
+    if result.starts_with("Error") {
+        return true;
+    }
+
+    let Ok(value) = serde_json::from_str::<Value>(result) else {
+        return false;
+    };
+
+    match value {
+        Value::String(text) => text.starts_with("Error"),
+        Value::Object(object) => ["content", "observation", "error"]
+            .iter()
+            .filter_map(|field| object.get(*field).and_then(Value::as_str))
+            .any(|text| text.starts_with("Error")),
+        _ => false,
+    }
+}
+
+fn should_push_assistant_event(
+    has_tool_calls: bool,
+    has_active_message_stream: bool,
+    consumed_streamed_message: bool,
+) -> bool {
+    if has_active_message_stream {
+        return false;
+    }
+    !has_tool_calls || !consumed_streamed_message
+}
+
+/// Configuration for the unified event handler.
+#[derive(Clone, Default)]
+pub struct EventHandlerConfig {
+    /// Workspace path for file operations.
+    pub workspace_path: Option<PathBuf>,
+
+    /// LSP manager for post-edit diagnostics.
+    pub lsp_manager: Option<Arc<tokio::sync::Mutex<lsp::LspManager>>>,
+
+    /// Tauri app handle for events.
+    pub app_handle: Option<tauri::AppHandle>,
+
+    /// Lifecycle hook executor (loaded from `.orgii/hooks.json`).
+    pub hook_executor: Option<Arc<HookExecutor>>,
+}
+
+/// Unified event handler for agent turns.
+/// Handles streaming, file tracking, and user hooks.
+pub struct UnifiedEventHandler {
+    config: EventHandlerConfig,
+    tool_call_count: AtomicU32,
+    /// Set to `true` the first time `manage_todo` is invoked during this turn.
+    /// Read by the processor after `execute_turn` to decide whether to reset
+    /// the nag-reminder counter.
+    todo_called: AtomicBool,
+    /// Streaming buffer for message/thinking accumulation (Rust single source of truth).
+    streaming_buffer: StreamingBuffer,
+    flushed_message_sessions: Mutex<HashSet<String>>,
+}
+
+impl UnifiedEventHandler {
+    /// Creates a new unified event handler.
+    pub fn new(config: EventHandlerConfig) -> Self {
+        Self {
+            config,
+            tool_call_count: AtomicU32::new(0),
+            todo_called: AtomicBool::new(false),
+            streaming_buffer: StreamingBuffer::with_default_timeout(),
+            flushed_message_sessions: Mutex::new(HashSet::new()),
+        }
+    }
+
+    /// Drain pending message/thinking streams and broadcast the authoritative
+    /// segments. The frontend `handleStreamingComplete` upserts them into
+    /// the parent EventStore (retired in commit 5 in favour of a direct
+    /// Rust push, as subagents already do).
+    pub fn flush_streaming(&self, session_id: &str) {
+        // Thinking must be flushed before the assistant message so that
+        // `push_to_store` assigns a lower `history_sequence` to the thinking
+        // event than to the message. SQLite orders by
+        // `COALESCE(history_sequence, 0) ASC, created_at ASC`, so reversing
+        // this order would render Thought *after* the answer on reload.
+        if let Some(event) = self.streaming_buffer.complete_thinking(session_id) {
+            self.push_to_store(session_id, event.clone());
+            broadcast_event(
+                "agent:streaming_complete",
+                serde_json::json!({
+                    "sessionId": session_id,
+                    "streamType": "thinking",
+                    "event": event,
+                }),
+            );
+        }
+        if let Some(event) = self.streaming_buffer.complete_message(session_id) {
+            if let Ok(mut sessions) = self.flushed_message_sessions.lock() {
+                sessions.insert(session_id.to_string());
+            }
+            self.push_to_store(session_id, event.clone());
+            broadcast_event(
+                "agent:streaming_complete",
+                serde_json::json!({
+                    "sessionId": session_id,
+                    "streamType": "message",
+                    "event": event,
+                }),
+            );
+        }
+    }
+
+    /// Returns the number of tool calls made during this handler's lifetime.
+    pub fn tool_call_count(&self) -> u32 {
+        self.tool_call_count.load(Ordering::Relaxed)
+    }
+
+    /// Returns `true` if `manage_todo` was called at least once during this
+    /// turn. Used by the processor to reset the nag-reminder counter.
+    pub fn todo_was_called(&self) -> bool {
+        self.todo_called.load(Ordering::Relaxed)
+    }
+
+    /// Push a SessionEvent into the session's EventStore so frontend
+    /// subscribers receive it via `es:changed`. Silently no-op when the
+    /// handler was constructed without an app handle (tests / non-Tauri
+    /// callers).
+    fn push_to_store(&self, session_id: &str, event: SessionEvent) {
+        let Some(ref handle) = self.config.app_handle else {
+            return;
+        };
+        event_pipeline_bridge::push_events(handle, session_id, vec![event]);
+    }
+
+    /// Flip `is_delta` to `false` on all TS-side streaming placeholders in
+    /// the EventStore. Called right before pushing a `tool_call` event so
+    /// the resulting `es:changed` snapshot already has `isDelta: false` on
+    /// the assistant message — preventing the frontend from rendering a
+    /// stale `StreamingCursor` during tool execution.
+    fn finalize_streaming_in_store(&self, session_id: &str) {
+        let Some(ref handle) = self.config.app_handle else {
+            return;
+        };
+        event_pipeline_bridge::finalize_streaming(handle, session_id);
+    }
+}
+
+#[async_trait]
+impl TurnEventHandler for UnifiedEventHandler {
+    fn on_message_delta(&self, session_id: &str, content: &str) {
+        broadcast_event(
+            "agent:message_delta",
+            serde_json::json!({
+                "sessionId": session_id,
+                "content": content,
+            }),
+        );
+        self.streaming_buffer
+            .append_message_delta(session_id, content);
+    }
+
+    fn on_thinking_delta(&self, session_id: &str, thinking: &str) {
+        broadcast_event(
+            "agent:thinking_delta",
+            serde_json::json!({
+                "sessionId": session_id,
+                "content": thinking,
+            }),
+        );
+        self.streaming_buffer
+            .append_thinking_delta(session_id, thinking);
+    }
+
+    fn on_tool_call_delta(
+        &self,
+        session_id: &str,
+        index: usize,
+        tool_call_id: Option<&str>,
+        tool_name: Option<&str>,
+        arguments_delta: Option<&str>,
+    ) {
+        // A tool block starts when the provider emits id+name (Anthropic
+        // `content_block_start` for a `tool_use`, OpenAI first delta of a
+        // new tool_call). The arguments_delta-only deltas that follow are
+        // mid-block and must not re-flush.
+        //
+        // Flushing here turns any pending text/thinking accumulation into
+        // its own `streaming_complete` segment, so an
+        // `[Text_A, Tool, Text_B]` response renders as three distinct
+        // events instead of a single `Text_A+Text_B` glued blob.
+        let is_block_start = tool_call_id.is_some() || tool_name.is_some();
+        if is_block_start {
+            self.flush_streaming(session_id);
+            self.finalize_streaming_in_store(session_id);
+        }
+
+        broadcast_event(
+            "agent:tool_call_delta",
+            serde_json::json!({
+                "sessionId": session_id,
+                "index": index,
+                "toolCallId": tool_call_id,
+                "tool": tool_name,
+                "argumentsDelta": arguments_delta,
+            }),
+        );
+    }
+
+    fn on_tool_call(
+        &self,
+        session_id: &str,
+        tool_call_id: &str,
+        tool_name: &str,
+        display_name: &str,
+        args: &Value,
+    ) {
+        self.tool_call_count.fetch_add(1, Ordering::Relaxed);
+        if tool_name == tool_names::MANAGE_TODO {
+            self.todo_called.store(true, Ordering::Relaxed);
+        }
+
+        // Flush pending streaming before tool call so message/thinking
+        // streams complete before tool execution.
+        self.flush_streaming(session_id);
+
+        let args_str = args.to_string();
+        if let Err(err) =
+            unified_persistence::save_tool_call_msg(session_id, tool_call_id, tool_name, &args_str)
+        {
+            warn!("[unified_handler] Failed to persist tool call: {}", err);
+        }
+
+        // Subagent pre-start phase: inject action="assign" so the frontend
+        // renders TitleOnly until AgentTool::execute patches it to "delegate"
+        // with the child session id.
+        let stored_args = if tool_name == tool_names::AGENT {
+            let mut patched = args.clone();
+            if let Some(obj) = patched.as_object_mut() {
+                obj.entry("action")
+                    .or_insert_with(|| serde_json::json!("assign"));
+            }
+            patched
+        } else {
+            args.clone()
+        };
+
+        // Finalize streaming placeholders (isDelta → false) so the next
+        // push_to_store snapshot already carries the final state; otherwise
+        // the StreamingCursor lingers until the frontend async replaceAndRemove
+        // completes.
+        self.finalize_streaming_in_store(session_id);
+
+        let event = event_factory::build_tool_call_event(
+            session_id,
+            tool_call_id,
+            tool_name,
+            display_name,
+            &stored_args,
+        );
+        self.push_to_store(session_id, event);
+
+        broadcast_event(
+            "agent:tool_call",
+            serde_json::json!({
+                "sessionId": session_id,
+                "toolCallId": tool_call_id,
+                "tool": tool_name,
+                "args": stored_args,
+            }),
+        );
+
+        wingman_tee::tee_tool_call(session_id, tool_name, args);
+    }
+
+    fn on_file_change(&self, session_id: &str, tool_name: &str, file_paths: &[String]) {
+        let workspace_path = self
+            .config
+            .workspace_path
+            .as_ref()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_default();
+
+        broadcast_event(
+            "agent:file_change",
+            serde_json::json!({
+                "sessionId": session_id,
+                "tool": tool_name,
+                "files": file_paths,
+                "workspacePath": workspace_path,
+            }),
+        );
+    }
+
+    fn on_tool_result(
+        &self,
+        session_id: &str,
+        tool_call_id: &str,
+        tool_name: &str,
+        display_name: &str,
+        result: &str,
+    ) {
+        if let Err(err) =
+            unified_persistence::save_tool_result_msg(session_id, tool_call_id, tool_name, result)
+        {
+            warn!("[unified_handler] Failed to persist tool result: {}", err);
+        }
+
+        if super::streaming::is_file_modifying_tool(tool_name) && tool_result_is_error(result) {
+            match crate::tools::file_history::discard_tool_call_snapshots(session_id, tool_call_id) {
+                Ok(stats) if stats.db_rows_removed > 0 || stats.manifests_removed > 0 => warn!(
+                    "[unified_handler] discarded failed tool snapshot session={} tool_call_id={} tool={} db_rows={} manifests={}",
+                    session_id,
+                    tool_call_id,
+                    tool_name,
+                    stats.db_rows_removed,
+                    stats.manifests_removed
+                ),
+                Ok(_) => {}
+                Err(err) => warn!(
+                    "[unified_handler] failed to discard failed tool snapshot session={} tool_call_id={} tool={}: {}",
+                    session_id, tool_call_id, tool_name, err
+                ),
+            }
+        }
+
+        // Push into parent session's EventStore — EventStore::merge_events
+        // folds this into the matching tool_call via call_id.
+        let event = event_factory::build_tool_result_event(
+            session_id,
+            tool_call_id,
+            tool_name,
+            display_name,
+            result,
+        );
+        self.push_to_store(session_id, event);
+
+        let preview: String = result.chars().take(4000).collect();
+        broadcast_event(
+            "agent:tool_result",
+            serde_json::json!({
+                "sessionId": session_id,
+                "toolCallId": tool_call_id,
+                "tool": tool_name,
+                "result": preview,
+            }),
+        );
+
+        wingman_tee::tee_tool_result(session_id, tool_name, result);
+    }
+
+    fn on_assistant_iteration_complete(
+        &self,
+        session_id: &str,
+        content: Option<&str>,
+        has_tool_calls: bool,
+        model: &str,
+    ) {
+        // Persist one `assistant` row per LLM iteration that produced text.
+        //
+        // Iterations with only tool_calls (no text) are skipped here: the
+        // tool_call rows written by `on_tool_call` already carry enough
+        // structure for `load_llm_history::flush_pending` to synthesize an
+        // assistant-with-tool_calls envelope during replay, so an empty
+        // assistant row would be redundant.
+        //
+        // This matches the pre-existing `processor.rs` guard shape
+        // (`!response_text.is_empty()`), just moved one layer down so every
+        // iteration gets a chance — previously only the final iteration did.
+        let Some(text) = content else { return };
+        if text.is_empty() {
+            return;
+        }
+
+        if let Err(err) = unified_persistence::save_assistant_msg(session_id, text, model) {
+            warn!(
+                "[unified_handler] Failed to persist assistant iteration: {}",
+                err
+            );
+        }
+
+        let has_active_message_stream = self
+            .streaming_buffer
+            .has_stream(StreamType::Message, session_id);
+        let consumed_streamed_message = self
+            .flushed_message_sessions
+            .lock()
+            .map(|mut sessions| sessions.remove(session_id))
+            .unwrap_or(false);
+
+        if should_push_assistant_event(
+            has_tool_calls,
+            has_active_message_stream,
+            consumed_streamed_message,
+        ) {
+            self.push_to_store(
+                session_id,
+                event_factory::build_assistant_message_event(session_id, text),
+            );
+        }
+    }
+
+    fn on_tool_execute_start(
+        &self,
+        session_id: &str,
+        tool_call_id: &str,
+        tool_name: &str,
+        args: &Value,
+    ) {
+        snapshots::take_snapshot(
+            self.config.workspace_path.as_deref(),
+            session_id,
+            tool_call_id,
+            tool_name,
+            args,
+        );
+    }
+
+    async fn before_tool_execute(
+        &self,
+        session_id: &str,
+        tool_name: &str,
+        args: &Value,
+    ) -> Option<ToolHookIntervention> {
+        hooks_dispatch::dispatch_pre_tool(
+            self.config.hook_executor.as_ref(),
+            session_id,
+            tool_name,
+            args,
+        )
+        .await
+    }
+
+    async fn after_tool_execute(
+        &self,
+        session_id: &str,
+        _tool_call_id: &str,
+        tool_name: &str,
+        _args: &Value,
+        result: &str,
+        error: Option<&str>,
+        duration_ms: u64,
+    ) {
+        hooks_dispatch::dispatch_post_tool(
+            self.config.hook_executor.as_ref(),
+            session_id,
+            tool_name,
+            result,
+            error,
+            duration_ms,
+        )
+        .await
+    }
+
+    async fn post_tool_hook(&self, tool_name: &str, args: &Value, result: &str) -> Option<String> {
+        hooks_dispatch::lsp_post_edit_diagnostics(
+            self.config.lsp_manager.as_ref(),
+            self.config.app_handle.as_ref(),
+            self.config.workspace_path.as_ref(),
+            tool_name,
+            args,
+            result,
+        )
+        .await
+    }
+
+    fn on_stream_retry(
+        &self,
+        session_id: &str,
+        kind: &str,
+        attempt: u32,
+        max_attempts: u32,
+        backoff_ms: u64,
+    ) {
+        // Low-key observability. The frontend uses this to render a footer
+        // indicator ("Reconnecting… attempt N/M"). NEVER broadcast this as
+        // `agent:message_delta` — that would poison the chat bubble with
+        // retry internals.
+        broadcast_event(
+            "agent:stream_retry",
+            serde_json::json!({
+                "sessionId": session_id,
+                "kind": kind,
+                "attempt": attempt,
+                "maxAttempts": max_attempts,
+                "backoffMs": backoff_ms,
+            }),
+        );
+    }
+
+    fn on_stream_error_exhausted(
+        &self,
+        session_id: &str,
+        kind: &str,
+        attempts: u32,
+        user_message: &str,
+    ) {
+        // Terminal failure. Clear the retry footer and surface a dedicated
+        // error event so the frontend can render a persistent "Connection
+        // failed" banner. The accompanying `final_content` injected by
+        // turn_executor handles the in-chat assistant message; this event
+        // is only for the footer, so the two responsibilities never
+        // overlap.
+        broadcast_event(
+            "agent:stream_error_exhausted",
+            serde_json::json!({
+                "sessionId": session_id,
+                "kind": kind,
+                "attempts": attempts,
+                "message": user_message,
+            }),
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_push_assistant_event;
+
+    #[test]
+    fn assistant_event_pushes_for_non_streaming_text_with_tool_calls() {
+        assert!(should_push_assistant_event(true, false, false));
+    }
+
+    #[test]
+    fn assistant_event_skips_when_active_stream_will_flush() {
+        assert!(!should_push_assistant_event(false, true, false));
+    }
+
+    #[test]
+    fn assistant_event_skips_streamed_text_tool_call_duplicate() {
+        assert!(!should_push_assistant_event(true, false, true));
+    }
+
+    #[test]
+    fn assistant_event_pushes_terminal_text_after_prior_streamed_segment() {
+        assert!(should_push_assistant_event(false, false, true));
+    }
+}

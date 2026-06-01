@@ -1,0 +1,119 @@
+//! Session Manager Commands
+//!
+//! Multi-session management: set active, pin/unpin, evict, buffer events.
+//!
+//! With per-session `EventStore` instances, "switching" no longer swaps
+//! events in and out of a shared store — each session already has its own.
+//! These commands now just mutate the registry and notify.
+
+use tauri::{AppHandle, State};
+
+use crate::agent_sessions::event_pipeline::types::SessionEvent;
+
+use super::{schedule_notify, EventStoreState};
+
+/// Set the active session (the default target for commands without an
+/// explicit `session_id`). Returns true if a store for the session already
+/// exists (i.e. events are in-memory), false if the caller should load from
+/// SQLite.
+#[tauri::command]
+pub async fn es_switch_session(
+    app: AppHandle,
+    state: State<'_, EventStoreState>,
+    session_id: String,
+) -> Result<bool, String> {
+    let (hit, evicted) = {
+        let mut mgr = state
+            .session_manager
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let evicted = mgr.set_active(&session_id);
+        let hit = {
+            let stores = state.stores.lock().unwrap_or_else(|e| e.into_inner());
+            stores.contains_key(&session_id)
+        };
+        (hit, evicted)
+    };
+
+    if !evicted.is_empty() {
+        let mut stores = state.stores.lock().unwrap_or_else(|e| e.into_inner());
+        for sid in &evicted {
+            stores.remove(sid);
+        }
+    }
+
+    schedule_notify(&app, &state, &session_id);
+    Ok(hit)
+}
+
+/// Pin a session (agent running — prevent LRU eviction).
+#[tauri::command]
+pub async fn es_pin_session(
+    state: State<'_, EventStoreState>,
+    session_id: String,
+) -> Result<(), String> {
+    let mut mgr = state
+        .session_manager
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
+    mgr.pin(&session_id);
+    Ok(())
+}
+
+/// Unpin a session (agent finished).
+#[tauri::command]
+pub async fn es_unpin_session(
+    state: State<'_, EventStoreState>,
+    session_id: String,
+) -> Result<(), String> {
+    let evicted = {
+        let mut mgr = state
+            .session_manager
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        mgr.unpin(&session_id)
+    };
+    if !evicted.is_empty() {
+        let mut stores = state.stores.lock().unwrap_or_else(|e| e.into_inner());
+        for sid in &evicted {
+            stores.remove(sid);
+        }
+    }
+    Ok(())
+}
+
+/// Evict a session from the in-memory cache.
+#[tauri::command]
+pub async fn es_evict_session(
+    state: State<'_, EventStoreState>,
+    session_id: String,
+) -> Result<(), String> {
+    {
+        let mut mgr = state
+            .session_manager
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        mgr.evict(&session_id);
+    }
+    {
+        let mut stores = state.stores.lock().unwrap_or_else(|e| e.into_inner());
+        stores.remove(&session_id);
+    }
+    Ok(())
+}
+
+/// Buffer events for a (possibly non-active) session's store.
+///
+/// In the per-session model this is just `append` targeting a specific session —
+/// kept under the old name for API compatibility with existing TS callers.
+#[tauri::command]
+pub async fn es_buffer_events(
+    app: AppHandle,
+    state: State<'_, EventStoreState>,
+    session_id: String,
+    events: Vec<SessionEvent>,
+) -> Result<(), String> {
+    state.with_store_mut(&session_id, |store| store.append(events));
+    schedule_notify(&app, &state, &session_id);
+    Ok(())
+}

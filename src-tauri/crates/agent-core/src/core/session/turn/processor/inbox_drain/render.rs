@@ -1,0 +1,314 @@
+//! Inbox attachment XML renderer.
+//!
+//! `render_inbox_attachment`, `render_one_row`, `render_payload`, and the
+//! XML escaper live here so the main drain logic stays focused on flow
+//! control and persistence.
+
+use crate::coordination::agent_inbox::{
+    AgentInboxRecord, AgentMessage, MemberIdleReason, MemberTerminationReason, USER_SENDER_ID,
+};
+use crate::coordination::agent_org_runs::AgentOrgRunContext;
+
+pub(super) fn render_inbox_attachment(
+    rows: &[AgentInboxRecord],
+    ctx: &AgentOrgRunContext,
+) -> String {
+    let mut out = String::new();
+    out.push_str(&format!(
+        "<inbox-batch run_id=\"{}\" org=\"{}\">\n",
+        xml_escape(&ctx.run_id),
+        xml_escape(&ctx.org_name),
+    ));
+    if rows.iter().any(|row| row.sender_agent_id == USER_SENDER_ID) {
+        out.push_str("  <inbox-priority>Messages from from_member_id=\"user\" are high-priority group chat input. Answer the user first, then continue with the remaining inbox messages.</inbox-priority>\n");
+    }
+    for row in rows {
+        out.push_str(&render_one_row(row));
+        out.push('\n');
+    }
+    out.push_str("</inbox-batch>");
+    out
+}
+
+pub(super) fn render_inbox_transcript(rows: &[AgentInboxRecord]) -> String {
+    rows.iter()
+        .filter_map(|row| match row.decode_payload() {
+            Ok(message) => {
+                let body = render_payload_for_transcript(&message);
+                let trimmed = body.trim();
+                (!trimmed.is_empty()).then(|| trimmed.to_string())
+            }
+            Err(_) => None,
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+fn render_one_row(row: &AgentInboxRecord) -> String {
+    let request_id_attr = match &row.request_id {
+        Some(rid) => format!(" request_id=\"{}\"", xml_escape(rid)),
+        None => String::new(),
+    };
+
+    let body = match row.decode_payload() {
+        Ok(msg) => render_payload(&msg),
+        Err(err) => format!(
+            "<raw decode_error=\"{}\">{}</raw>",
+            xml_escape(&err),
+            xml_escape(&row.payload_json)
+        ),
+    };
+
+    let sender_label = row.sender_member_id.as_deref().unwrap_or_else(|| {
+        if row.sender_agent_id == USER_SENDER_ID {
+            "user"
+        } else {
+            "system"
+        }
+    });
+
+    format!(
+        "  <inbox-message id=\"{}\" from_member_id=\"{}\" kind=\"{}\" created_at=\"{}\"{}>{}</inbox-message>",
+        row.id,
+        xml_escape(sender_label),
+        xml_escape(&row.payload_kind),
+        xml_escape(&row.created_at),
+        request_id_attr,
+        body,
+    )
+}
+
+fn render_payload_for_transcript(msg: &AgentMessage) -> String {
+    match msg {
+        AgentMessage::Plain { text, .. } => text.trim().to_string(),
+        AgentMessage::ShutdownRequest { reason, .. } => reason
+            .as_ref()
+            .map(|value| format!("Shutdown requested\n{value}"))
+            .unwrap_or_else(|| "Shutdown requested".to_string()),
+        AgentMessage::ShutdownResponse { accepted, note, .. } => {
+            let status = if *accepted { "accepted" } else { "rejected" };
+            join_non_empty([
+                format!("Shutdown response: {status}"),
+                note.clone().unwrap_or_default(),
+            ])
+        }
+        AgentMessage::PlanApprovalRequest {
+            plan_title,
+            plan_path,
+            plan_content,
+            ..
+        } => join_non_empty([
+            format!("Plan approval requested: {plan_title}"),
+            plan_path.clone(),
+            plan_content.clone(),
+        ]),
+        AgentMessage::PlanApprovalResponse {
+            accepted,
+            feedback,
+            next_mode,
+            ..
+        } => {
+            let status = if *accepted { "approved" } else { "rejected" };
+            let mode = next_mode
+                .map(|mode| format!("Next mode: {}", mode.as_str()))
+                .unwrap_or_else(|| "Next mode: unchanged".to_string());
+            join_non_empty([
+                format!("Plan {status}"),
+                mode,
+                feedback.clone().unwrap_or_default(),
+            ])
+        }
+        AgentMessage::MemberTerminated { member_name, .. } => {
+            format!("{member_name} shut down.")
+        }
+        AgentMessage::MemberIdle {
+            member_name,
+            reason,
+            summary,
+            failure_reason,
+            ..
+        } => {
+            let status = match reason {
+                MemberIdleReason::Available => "available",
+                MemberIdleReason::Interrupted => "interrupted",
+                MemberIdleReason::Failed => "failed",
+            };
+            join_non_empty([
+                format!("{member_name} is {status}."),
+                summary.clone().unwrap_or_default(),
+                failure_reason.clone().unwrap_or_default(),
+            ])
+        }
+        AgentMessage::TaskAssigned {
+            task_id,
+            subject,
+            description,
+            assigned_by,
+        } => join_non_empty([
+            format!("Task assigned by {assigned_by}: {subject}"),
+            format!("Task ID: {task_id}"),
+            description.clone(),
+        ]),
+        AgentMessage::ExecModeSetRequest { mode, reason, .. } => join_non_empty([
+            format!("Execution mode requested: {}", mode.as_str()),
+            reason.clone().unwrap_or_default(),
+        ]),
+    }
+}
+
+fn join_non_empty(lines: impl IntoIterator<Item = String>) -> String {
+    lines
+        .into_iter()
+        .map(|line| line.trim().to_string())
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+pub(super) fn render_payload(msg: &AgentMessage) -> String {
+    match msg {
+        AgentMessage::Plain { summary, text } => format!(
+            "<plain summary=\"{}\">{}</plain>",
+            xml_escape(summary),
+            xml_escape(text)
+        ),
+        AgentMessage::ShutdownRequest { reason, .. } => match reason {
+            Some(r) => format!("<shutdown_request reason=\"{}\"/>", xml_escape(r)),
+            None => "<shutdown_request/>".to_string(),
+        },
+        AgentMessage::ShutdownResponse { accepted, note, .. } => format!(
+            "<shutdown_response accepted=\"{}\">{}</shutdown_response>",
+            accepted,
+            note.as_deref().map(xml_escape).unwrap_or_default(),
+        ),
+        AgentMessage::PlanApprovalRequest {
+            plan_title,
+            plan_path,
+            plan_content,
+            ..
+        } => format!(
+            "<plan_approval_request title=\"{}\" path=\"{}\">{}</plan_approval_request>",
+            xml_escape(plan_title),
+            xml_escape(plan_path),
+            xml_escape(plan_content),
+        ),
+        AgentMessage::PlanApprovalResponse {
+            accepted,
+            feedback,
+            next_mode,
+            ..
+        } => {
+            let mode_attr = match next_mode {
+                Some(mode) => format!(" next_mode=\"{}\"", xml_escape(mode.as_str())),
+                None => String::new(),
+            };
+            format!(
+                "<plan_approval_response accepted=\"{}\"{}>{}</plan_approval_response>",
+                accepted,
+                mode_attr,
+                feedback.as_deref().map(xml_escape).unwrap_or_default(),
+            )
+        }
+        AgentMessage::MemberTerminated {
+            member_id,
+            member_name,
+            reason,
+        } => format!(
+            "<member_terminated member_id=\"{}\" member_name=\"{}\" reason=\"{}\"/>",
+            xml_escape(member_id),
+            xml_escape(member_name),
+            // `reason` is a serde-snake_case enum; render its tag string
+            // verbatim so the LLM can branch on it without re-parsing.
+            xml_escape(match reason {
+                MemberTerminationReason::Shutdown => "shutdown",
+            }),
+        ),
+        AgentMessage::MemberIdle {
+            member_id,
+            member_name,
+            reason,
+            current_mode,
+            summary,
+            failure_reason,
+        } => {
+            // `reason` -> stable wire string for the LLM.
+            let reason_str = match reason {
+                MemberIdleReason::Available => "available",
+                MemberIdleReason::Interrupted => "interrupted",
+                MemberIdleReason::Failed => "failed",
+            };
+            // Optional fields rendered as inline attributes when present
+            // so the LLM can read them in one pass; absent fields are
+            // simply omitted (no empty attribute noise).
+            let mode_attr = match current_mode {
+                Some(mode) => format!(" current_mode=\"{}\"", xml_escape(mode.as_str())),
+                None => String::new(),
+            };
+            let summary_attr = match summary {
+                Some(s) if !s.trim().is_empty() => {
+                    format!(" summary=\"{}\"", xml_escape(s))
+                }
+                _ => String::new(),
+            };
+            let failure_attr = match failure_reason {
+                Some(s) if !s.trim().is_empty() => {
+                    format!(" failure_reason=\"{}\"", xml_escape(s))
+                }
+                _ => String::new(),
+            };
+            format!(
+                "<member_idle member_id=\"{}\" member_name=\"{}\" reason=\"{}\"{}{}{}/>",
+                xml_escape(member_id),
+                xml_escape(member_name),
+                xml_escape(reason_str),
+                mode_attr,
+                summary_attr,
+                failure_attr,
+            )
+        }
+        AgentMessage::TaskAssigned {
+            task_id,
+            subject,
+            description,
+            assigned_by,
+        } => format!(
+            "<task_assigned task_id=\"{}\" subject=\"{}\" assigned_by=\"{}\">{}</task_assigned>",
+            xml_escape(task_id),
+            xml_escape(subject),
+            xml_escape(assigned_by),
+            xml_escape(description),
+        ),
+        AgentMessage::ExecModeSetRequest { mode, reason, .. } => {
+            let reason_attr = match reason {
+                Some(r) if !r.trim().is_empty() => {
+                    format!(" reason=\"{}\"", xml_escape(r))
+                }
+                _ => String::new(),
+            };
+            format!(
+                "<exec_mode_set_request mode=\"{}\"{}/>",
+                xml_escape(mode.as_str()),
+                reason_attr,
+            )
+        }
+    }
+}
+
+/// Minimal XML attribute-safe escape. Sufficient for the small set of
+/// characters that show up in agent_id, sender names, payload action
+/// strings, etc. Not a general-purpose XML escaper — we control all
+/// inputs that flow through here.
+pub(super) fn xml_escape(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    for ch in input.chars() {
+        match ch {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&apos;"),
+            other => out.push(other),
+        }
+    }
+    out
+}

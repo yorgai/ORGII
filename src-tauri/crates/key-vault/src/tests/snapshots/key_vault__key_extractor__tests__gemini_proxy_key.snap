@@ -1,0 +1,10 @@
+---
+source: src/key_vault/tests/key_extractor_tests.rs
+expression: result
+---
+api_key: sk-testkey1234567890abcdefghijklmnopqrstuvwxyz1234
+base_url: ~
+key_type: gemini_cli
+confidence: high
+notes:
+  - Found gemini_cli key

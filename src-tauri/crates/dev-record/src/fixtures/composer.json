@@ -1,0 +1,87 @@
+{
+  "_v": 16,
+  "composerId": "cc76f024-ef8b-455d-8088-2c2a7449f1e7",
+  "fullConversationHeadersOnly": [
+    {
+      "bubbleId": "c5b5b69e-3e72-473f-8dae-06d5bc3c6744",
+      "type": 1,
+      "grouping": {
+        "isRenderable": true,
+        "hasText": true,
+        "isShortPlainText": true
+      }
+    },
+    {
+      "bubbleId": "9b28a03f-390b-4940-9cd1-63e1717b7a5e",
+      "type": 2,
+      "grouping": {
+        "isRenderable": true,
+        "hasText": true,
+        "isShortPlainText": true,
+        "isKeptFinalAiVisibleOutsideWorkedForGroup": true
+      }
+    },
+    {
+      "bubbleId": "bfb4a6ab-a94b-4ba3-bd4b-7b93758b4a89",
+      "type": 2,
+      "grouping": {
+        "isRenderable": true,
+        "capabilityType": 15,
+        "toolFormerTool": 41,
+        "toolCallId": "toolu_01Wjhm7rQAR5CVEqwHaUQFGt",
+        "isToolGroupable": true
+      }
+    },
+    {
+      "bubbleId": "52045a81-a0ca-4c4a-aa7a-a63cd9fb2d05",
+      "type": 2,
+      "grouping": {
+        "isRenderable": true,
+        "capabilityType": 15,
+        "toolFormerTool": 41,
+        "toolCallId": "toolu_01NnML66GSJFHnXSUErquiEx",
+        "isToolGroupable": true
+      }
+    },
+    {
+      "bubbleId": "e9711385-40fa-4237-ab24-11627fecc664",
+      "type": 2,
+      "grouping": {
+        "isRenderable": true,
+        "capabilityType": 15,
+        "toolFormerTool": 40,
+        "toolCallId": "toolu_01ChDZzGS12DgRXZGLiSEHSZ",
+        "isToolGroupable": true
+      }
+    },
+    {
+      "bubbleId": "bd2e2469-69bc-4753-9995-e1bddba027fd",
+      "type": 2,
+      "grouping": {
+        "isRenderable": true,
+        "hasText": true,
+        "isShortPlainText": true,
+        "isKeptFinalAiVisibleOutsideWorkedForGroup": true
+      }
+    }
+  ],
+  "status": "completed",
+  "createdAt": 1777652233106,
+  "name": "Inbox sidebar data loading from database",
+  "unifiedMode": "agent",
+  "contextTokensUsed": 169519,
+  "modelConfig": {
+    "modelName": "op-4.6-relay",
+    "maxMode": false,
+    "selectedModels": [
+      {
+        "modelId": "op-4.6-relay",
+        "parameters": []
+      }
+    ]
+  },
+  "totalLinesAdded": 1595,
+  "totalLinesRemoved": 921,
+  "isAgentic": true,
+  "filesChangedCount": 39
+}

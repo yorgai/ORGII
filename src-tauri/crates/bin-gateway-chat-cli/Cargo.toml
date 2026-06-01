@@ -1,0 +1,22 @@
+[package]
+name = "bin_gateway_chat_cli"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Interactive dogfood CLI for the Gateway Agent. Talks to a running
+# `npm run tauri:dev` instance over the localhost agent HTTP API only —
+# no `agent_core`, no `tauri`, no `app_lib` deps. The debug-only
+# `/test/gateway/outbound-tap/*` endpoints it relies on are gated by
+# `#![cfg(debug_assertions)]` in the API layer, so a release build of
+# the app rejects every request this CLI makes (the routes don't
+# exist).
+
+[[bin]]
+name = "gateway-chat-cli"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { workspace = true }
+reqwest = { workspace = true }
+serde_json = "1"

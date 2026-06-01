@@ -1,0 +1,10 @@
+---
+source: src/agent_sessions/cli/parsers/tests/acp_common_tests.rs
+expression: result
+---
+- content: Done task
+  id: "1"
+  status: completed
+- content: Pending task
+  id: "2"
+  status: pending

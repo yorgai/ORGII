@@ -1,0 +1,177 @@
+/**
+ * useSourceControlSidebarModule
+ *
+ * Self-contained Source Control sidebar tab. Owns its own filter state,
+ * view-mode toggle, action button list, inner refs, and filter-mode dropdown
+ * header (Uncommitted / Unstaged / Staged / Stashed / Git History).
+ * Any sidebar (Code Editor, Control Tower peek, future tab-specific
+ * sidebars) can mount it with just `repoPath` + `repoId`.
+ *
+ * Returns a `PrimarySidebarTab` ready to be passed to
+ * `PrimarySidebarLayoutWithSections`.
+ */
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import type { SectionHeaderAction } from "@src/components/TreePanelSidebar/types";
+import { useRefreshSpin } from "@src/hooks/ui";
+import {
+  ICON_CONFIG,
+  PANEL_CONSTANTS,
+} from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/config";
+import GitHistoryContent from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/content/GitHistoryContent";
+import { useSourceControlActions } from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/hooks";
+import {
+  type SourceControlTabHandle,
+  useSourceControlTabConfig,
+} from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/tabs/SourceControlTab";
+import type { PrimarySidebarTab } from "@src/modules/WorkStation/shared/PrimarySidebarLayout";
+import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
+import type { GitFile } from "@src/types/git/types";
+
+import type { SourceControlFilterMode } from "./SourceControlFilterHeader";
+
+const HistoryRefreshIcon = ICON_CONFIG.refresh;
+
+export interface UseSourceControlSidebarModuleOptions {
+  repoPath: string;
+  repoId: string;
+  /** Optional callback when a git file is clicked — opens diff tab in caller. */
+  onGitFileSelect?: (file: GitFile) => void;
+  /** Optional callback when a history node is selected for inline display. */
+  onGitHistorySelectionChange?: (
+    selection: SourceControlHistorySelection
+  ) => void;
+  /**
+   * Optional callback when the sidebar's current git file list changes.
+   * `scopeRepoRoot` identifies which pane reported the update (host repo or
+   * a worktree path) so the consumer can scope a bulk replace.
+   */
+  onGitFilesChange?: (files: GitFile[], scopeRepoRoot?: string) => void;
+  /** Multi-root workspace? (changes header layout to per-folder collapse rows.) */
+  isMultiRoot?: boolean;
+  /** Shared filter mode owned by the host header. */
+  filterMode?: SourceControlFilterMode;
+  /** Notify parent on row click without updating sidebar selection. */
+  navigateWithoutSelecting?: boolean;
+}
+
+export interface UseSourceControlSidebarModuleResult {
+  /** Drop-in `PrimarySidebarTab` config (key, label, icon, sections). */
+  tab: PrimarySidebarTab;
+  /** Imperative handle for `refresh()` from outside (status-bar Sync button etc.). */
+  ref: React.RefObject<SourceControlTabHandle>;
+}
+
+export function useSourceControlSidebarModule({
+  repoPath,
+  repoId,
+  onGitFileSelect,
+  onGitHistorySelectionChange,
+  onGitFilesChange,
+  isMultiRoot = false,
+  filterMode: controlledFilterMode,
+  navigateWithoutSelecting = false,
+}: UseSourceControlSidebarModuleOptions): UseSourceControlSidebarModuleResult {
+  const { t } = useTranslation();
+  const sourceControlRef = useRef<SourceControlTabHandle>(null);
+  const historyRefreshRef = useRef<(() => void) | null>(null);
+
+  const [showFilter, setShowFilter] = useState(false);
+  const [viewMode, setViewMode] = useState<"list-tree" | "list">("list-tree");
+  const filterMode = controlledFilterMode ?? "uncommitted";
+  const isHistoryMode = filterMode === "history";
+  // Narrow the working-tree section filter (drop stashed/history — those
+  // are routed via showOnlyStashes / sourceControlContentOverride).
+  const sectionFilter: "uncommitted" | "staged" | "unstaged" =
+    filterMode === "staged" || filterMode === "unstaged"
+      ? filterMode
+      : "uncommitted";
+
+  const handleToggleFilter = useCallback(() => {
+    setShowFilter((prev) => !prev);
+  }, []);
+  const handleToggleViewMode = useCallback(() => {
+    setViewMode((prev) => (prev === "list-tree" ? "list" : "list-tree"));
+  }, []);
+  const handleRefresh = useCallback(() => {
+    sourceControlRef.current?.refresh();
+  }, []);
+  const handleHistoryRefreshReady = useCallback((refresh: () => void) => {
+    historyRefreshRef.current = refresh;
+  }, []);
+  const handleHistoryRefresh = useCallback(() => {
+    historyRefreshRef.current?.();
+  }, []);
+
+  const sourceControlActions = useSourceControlActions({
+    showFilter,
+    viewMode,
+    onToggleFilter: handleToggleFilter,
+    onToggleViewMode: handleToggleViewMode,
+    onRefresh: handleRefresh,
+  });
+
+  const {
+    spinClass: historyRefreshSpinClass,
+    handleClick: handleHistoryRefreshClick,
+  } = useRefreshSpin(handleHistoryRefresh, false);
+
+  const historyActions = useMemo<SectionHeaderAction[]>(
+    () => [
+      {
+        key: "refresh-git-history",
+        icon: (
+          <HistoryRefreshIcon
+            size={PANEL_CONSTANTS.ACTION_ICON_SIZE}
+            strokeWidth={PANEL_CONSTANTS.ACTION_ICON_STROKE}
+            className={historyRefreshSpinClass}
+          />
+        ),
+        tooltip: "",
+        onClick: handleHistoryRefreshClick,
+      },
+    ],
+    [handleHistoryRefreshClick, historyRefreshSpinClass]
+  );
+
+  const actions = isHistoryMode ? historyActions : sourceControlActions;
+  const sectionTitle = isHistoryMode
+    ? t("common:labels.gitHistory")
+    : t("tabs.sourceControl");
+
+  const historyContent = useMemo(
+    () => (
+      <div className="flex h-full min-h-0 flex-col">
+        <GitHistoryContent
+          repoPath={repoPath}
+          repoId={repoId}
+          viewMode="graph"
+          onRefreshReady={handleHistoryRefreshReady}
+          onHistorySelectionChange={onGitHistorySelectionChange}
+        />
+      </div>
+    ),
+    [handleHistoryRefreshReady, onGitHistorySelectionChange, repoPath, repoId]
+  );
+
+  const tab = useSourceControlTabConfig({
+    repoPath,
+    repoId,
+    onGitFileSelect,
+    onGitFilesChange,
+    onGitHistorySelectionChange,
+    showFilter,
+    viewMode,
+    sourceControlRef,
+    actions,
+    isMultiRoot,
+    showOnlyStashes: filterMode === "stashed",
+    sectionFilter,
+    navigateWithoutSelecting,
+    sourceControlTitleOverride: sectionTitle,
+    sourceControlContentOverride: isHistoryMode ? historyContent : undefined,
+  });
+
+  return useMemo(() => ({ tab, ref: sourceControlRef }), [tab]);
+}

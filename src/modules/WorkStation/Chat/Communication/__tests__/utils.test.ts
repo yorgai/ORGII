@@ -1,0 +1,343 @@
+/**
+ * SimulatorMessages utilities: extraction, sender, truncation.
+ */
+import { describe, expect, it } from "vitest";
+
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+
+import { deriveMessagesState } from "../config";
+import { derivePlanTitle } from "../planDocUtils";
+import {
+  extractMessageContent,
+  getMessageSender,
+  isChatEvent,
+  isThinkEvent,
+  truncateContent,
+} from "../utils";
+
+function minimalSessionEvent(
+  overrides: Partial<SessionEvent> = {}
+): SessionEvent {
+  return {
+    chunk_id: null,
+    id: "evt-1",
+    sessionId: "sess-1",
+    createdAt: "2026-03-29T12:00:00.000Z",
+    functionName: "assistant",
+    uiCanonical: "",
+    actionType: "tool_call",
+    args: {},
+    result: {},
+    source: "assistant",
+    displayText: "",
+    displayStatus: "completed",
+    displayVariant: "tool_call",
+    activityStatus: "agent",
+    ...overrides,
+  };
+}
+
+describe("isChatEvent / isThinkEvent", () => {
+  it("detects chat-related function names", () => {
+    expect(isChatEvent("send_message")).toBe(true);
+    expect(isChatEvent("assistant_delta")).toBe(true);
+    expect(isChatEvent("agent_message")).toBe(true);
+    expect(isChatEvent("agent_message_delta")).toBe(true);
+  });
+
+  it("detects thinking-related function names", () => {
+    expect(isThinkEvent("thinking_delta")).toBe(true);
+    expect(isThinkEvent("llm_thinking")).toBe(true);
+  });
+});
+
+describe("extractMessageContent", () => {
+  it("prefers args.message then args.content", () => {
+    expect(
+      extractMessageContent(
+        minimalSessionEvent({ args: { message: "from args" } })
+      )
+    ).toBe("from args");
+    expect(
+      extractMessageContent(minimalSessionEvent({ args: { content: "body" } }))
+    ).toBe("body");
+  });
+
+  it("reads result.message.content string (Rust shape)", () => {
+    const event = minimalSessionEvent({
+      result: {
+        message: { content: "hello from rust", role: "assistant" },
+      },
+    });
+    expect(extractMessageContent(event)).toBe("hello from rust");
+  });
+
+  it("reads text blocks from result.message.content array (market shape)", () => {
+    const event = minimalSessionEvent({
+      result: {
+        message: {
+          content: [{ type: "text", text: "chunk" }],
+        },
+      },
+    });
+    expect(extractMessageContent(event)).toBe("chunk");
+  });
+});
+
+describe("getMessageSender", () => {
+  it("returns user for explicit user source", () => {
+    expect(getMessageSender(minimalSessionEvent({ source: "user" }))).toBe(
+      "user"
+    );
+  });
+
+  it("returns user for user_response in function name", () => {
+    expect(
+      getMessageSender(
+        minimalSessionEvent({ functionName: "user_response_submit" })
+      )
+    ).toBe("user");
+  });
+
+  it("defaults to agent for assistant-style events", () => {
+    expect(getMessageSender(minimalSessionEvent())).toBe("agent");
+  });
+
+  it("returns user for ui_canonical user function", () => {
+    expect(
+      getMessageSender(minimalSessionEvent({ functionName: "user" }))
+    ).toBe("user");
+  });
+
+  it("returns agent for ui_canonical agent_message function", () => {
+    expect(
+      getMessageSender(
+        minimalSessionEvent({
+          functionName: "agent_message",
+          source: "assistant",
+        })
+      )
+    ).toBe("agent");
+  });
+
+  it("returns agent for Agent Org inbox transcripts persisted as user messages", () => {
+    expect(
+      getMessageSender(
+        minimalSessionEvent({
+          functionName: "user_message",
+          source: "user",
+          args: { agentOrgInboxTranscript: true },
+          result: {
+            type: "user",
+            agentOrgInboxTranscript: true,
+            message: {
+              content: "Reviewed reports from subagents.",
+              role: "user",
+            },
+          },
+        })
+      )
+    ).toBe("agent");
+  });
+});
+
+describe("derivePlanTitle", () => {
+  it("falls back to the first markdown heading", () => {
+    expect(derivePlanTitle("", "# Improve Button Component\n\nBody")).toBe(
+      "Improve Button Component"
+    );
+  });
+});
+
+describe("deriveMessagesState", () => {
+  it("keeps plan documents in the interaction bucket for aggregate Messages rendering", () => {
+    const userMessage = minimalSessionEvent({
+      id: "user-1",
+      functionName: "raw_event",
+      source: "user",
+      result: { type: "user", message: "Please write a plan" },
+    });
+    const planEvent = minimalSessionEvent({
+      id: "plan-event-1",
+      callId: "tool-call-plan-1",
+      functionName: "create_plan",
+      uiCanonical: "create_plan",
+      source: "assistant",
+      args: {
+        planId: "plan-1",
+        planRevisionId: "plan-revision-1",
+        title: "",
+        content: "# Improve Button Component\n\nBody",
+        streamContent: "# Improve Button Component\n\nBody",
+      },
+      result: { status: "pending" },
+    });
+
+    const state = deriveMessagesState([userMessage, planEvent], null);
+
+    expect(state.chatMessages.map((message) => message.order)).toEqual([0]);
+    expect(state.interactionMessages.map((message) => message.order)).toEqual([
+      1,
+    ]);
+    expect(state.chatMessages.map((message) => message.eventId)).toEqual([
+      "user-1",
+    ]);
+    expect(state.interactionMessages.map((message) => message.eventId)).toEqual(
+      ["plan-event-1"]
+    );
+  });
+
+  it("anchors archived plan revisions to their original turn order", () => {
+    const firstPlan = minimalSessionEvent({
+      id: "plan-event-1",
+      callId: "tool-call-plan-1",
+      functionName: "create_plan",
+      uiCanonical: "create_plan",
+      source: "assistant",
+      args: {
+        planId: "plan-1",
+        planRevisionId: "plan-revision-1",
+        title: "First Plan",
+        content: "# First Plan",
+      },
+      result: { status: "pending" },
+    });
+    const secondUserMessage = minimalSessionEvent({
+      id: "user-2",
+      functionName: "raw_event",
+      source: "user",
+      result: { type: "user", message: "Update it" },
+    });
+    const secondPlan = minimalSessionEvent({
+      id: "plan-event-2",
+      callId: "tool-call-plan-2",
+      functionName: "create_plan",
+      uiCanonical: "create_plan",
+      source: "assistant",
+      args: {
+        planId: "plan-1",
+        planRevisionId: "plan-revision-2",
+        title: "Second Plan",
+        content: "# Second Plan",
+      },
+      result: { status: "pending" },
+    });
+    const archivedFirstPlan = minimalSessionEvent({
+      id: "plan-archived-1",
+      functionName: "plan_approval",
+      uiCanonical: "plan_approval",
+      actionType: "plan_approval",
+      source: "assistant",
+      args: {
+        planId: "plan-1",
+        planRevisionId: "plan-revision-1",
+        originToolCallId: "plan-1",
+      },
+      result: {
+        status: "archived",
+        planId: "plan-1",
+        planRevisionId: "plan-revision-1",
+        originToolCallId: "plan-1",
+      },
+    });
+
+    const state = deriveMessagesState(
+      [firstPlan, secondUserMessage, secondPlan, archivedFirstPlan],
+      null
+    );
+
+    expect(state.interactionMessages.map((message) => message.order)).toEqual([
+      0, 2,
+    ]);
+    expect(
+      state.interactionMessages.map((message) => message.event.result.status)
+    ).toEqual(["archived", "pending"]);
+    expect(state.interactionMessages[0].event.args.title).toBe("First Plan");
+  });
+
+  it("keeps archived plan status updates at their revision timestamp without loaded anchor", () => {
+    const firstUserMessage = minimalSessionEvent({
+      id: "user-1",
+      functionName: "raw_event",
+      source: "user",
+      createdAt: "2026-05-15T00:00:00.000Z",
+      result: { type: "user", message: "Make a plan" },
+    });
+    const archivedFirstPlan = minimalSessionEvent({
+      id: "plan-archived-1",
+      functionName: "plan_approval",
+      uiCanonical: "plan_approval",
+      actionType: "plan_approval",
+      source: "assistant",
+      createdAt: "2026-05-15T00:00:01.000Z",
+      args: {
+        planId: "plan-1",
+        planRevisionId: "plan-revision-1",
+        title: "First Plan",
+        content: "# First Plan",
+      },
+      result: {
+        status: "archived",
+        planId: "plan-1",
+        planRevisionId: "plan-revision-1",
+      },
+    });
+    const secondUserMessage = minimalSessionEvent({
+      id: "user-2",
+      functionName: "raw_event",
+      source: "user",
+      createdAt: "2026-05-15T00:00:02.000Z",
+      result: { type: "user", message: "Update it" },
+    });
+    const secondPlan = minimalSessionEvent({
+      id: "plan-event-2",
+      callId: "tool-call-plan-2",
+      functionName: "create_plan",
+      uiCanonical: "create_plan",
+      source: "assistant",
+      createdAt: "2026-05-15T00:00:03.000Z",
+      args: {
+        planId: "plan-1",
+        planRevisionId: "plan-revision-2",
+        title: "Second Plan",
+        content: "# Second Plan",
+      },
+      result: { status: "pending" },
+    });
+
+    const state = deriveMessagesState(
+      [firstUserMessage, secondUserMessage, secondPlan, archivedFirstPlan],
+      null
+    );
+
+    expect(state.interactionMessages.map((message) => message.eventId)).toEqual(
+      ["plan-archived-1", "plan-event-2"]
+    );
+    expect(state.interactionMessages.map((message) => message.order)).toEqual([
+      3, 2,
+    ]);
+    expect(
+      [...state.chatMessages, ...state.interactionMessages]
+        .sort((messageA, messageB) => {
+          const timestampDelta =
+            new Date(messageA.timestamp).getTime() -
+            new Date(messageB.timestamp).getTime();
+          return timestampDelta || messageA.order - messageB.order;
+        })
+        .map((message) => message.eventId)
+    ).toEqual(["user-1", "plan-archived-1", "user-2", "plan-event-2"]);
+  });
+});
+
+describe("truncateContent", () => {
+  it("returns empty for empty input", () => {
+    expect(truncateContent("", 80)).toBe("");
+  });
+
+  it("strips markdown noise and truncates with ellipsis", () => {
+    const long = `# Title\n\n${"word ".repeat(40)}`;
+    const out = truncateContent(long, 20);
+    expect(out.endsWith("…")).toBe(true);
+    expect(out.length).toBeLessThanOrEqual(21);
+  });
+});

@@ -1,0 +1,134 @@
+/**
+ * SqlQueryEditor Styles
+ */
+
+.sql-query-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+
+  // Toolbar
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--color-border-1);
+    background: var(--color-bg-2);
+  }
+
+  &__toolbar-left,
+  &__toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  // Buttons
+  &__btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: var(--cm-gutter-padding, 4px) 10px;
+    border: none;
+    border-radius: var(--cm-border-radius, 4px);
+    background: transparent;
+    color: var(--color-text-2);
+    font-size: var(--cm-font-size-small, 12px);
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover:not(:disabled) {
+      background: var(--color-fill-2);
+      color: var(--color-text-1);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &--primary {
+      background: var(--color-primary-6);
+      color: white;
+
+      &:hover:not(:disabled) {
+        background: var(--color-primary-7);
+        color: white;
+      }
+    }
+  }
+
+  // History dropdown
+  &__history-container {
+    position: relative;
+  }
+
+  &__history-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 100;
+    min-width: 300px;
+    max-width: 400px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: var(--cm-gutter-padding, 4px);
+    border: 1px solid var(--color-border-2);
+    border-radius: var(--cm-border-radius, 4px);
+    background: var(--color-bg-2);
+    box-shadow: var(--cm-dropdown-shadow);
+  }
+
+  &__history-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    padding: var(--cm-content-padding, 8px) var(--cm-line-padding-left, 12px);
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: var(--color-fill-2);
+    }
+
+    &:not(:last-child) {
+      border-bottom: 1px solid var(--color-border-1);
+    }
+  }
+
+  &__history-sql {
+    font-size: var(--cm-font-size-small, 12px);
+    color: var(--color-text-1);
+    font-family: var(--cm-font-family);
+    word-break: break-all;
+  }
+
+  &__history-time {
+    font-size: 10px; // Intentionally smaller than small
+    color: var(--color-text-4);
+  }
+
+  // Editor container
+  &__editor {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+
+    .cm-editor {
+      height: 100%;
+    }
+
+    .cm-scroller {
+      font-family: var(--cm-font-family);
+      font-size: var(--cm-font-size, 13px);
+    }
+  }
+}

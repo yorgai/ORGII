@@ -1,0 +1,191 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Fix PATH for GUI Git clients (SourceTree, Tower, etc.)
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# 1. lint-staged (eslint --fix + prettier on staged files) — must run first
+echo "Running lint-staged..."
+npx lint-staged || {
+  echo "❌ lint-staged failed."
+  exit 1
+}
+echo "✓ lint-staged passed"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. Parallel: TypeScript check + Rust clippy + commit-stats
+#    These are independent and can run concurrently for faster commits.
+# ─────────────────────────────────────────────────────────────────────────────
+
+STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx')
+STAGED_RS=$(git diff --cached --name-only --diff-filter=ACMR -- '*.rs')
+
+# Create temp files for parallel task results
+TMPDIR="${TMPDIR:-/tmp}"
+TSC_RESULT_FILE=$(mktemp "$TMPDIR/tsc_result.XXXXXX")
+CLIPPY_RESULT_FILE=$(mktemp "$TMPDIR/clippy_result.XXXXXX")
+STATS_RESULT_FILE=$(mktemp "$TMPDIR/stats_result.XXXXXX")
+
+cleanup() {
+  rm -f "$TSC_RESULT_FILE" "$CLIPPY_RESULT_FILE" "$STATS_RESULT_FILE"
+}
+trap cleanup EXIT
+
+# ── Task A: TypeScript check (incremental) ──
+run_tsc_check() {
+  if [ -z "$STAGED_TS" ]; then
+    echo "0:✓ No TypeScript files staged, skipping type check" > "$TSC_RESULT_FILE"
+    return
+  fi
+
+  echo "Running TypeScript check (scoped to staged files)..."
+  
+  # Use incremental compilation with tsbuildinfo cache for speed
+  # --incremental reuses previous compilation results
+  TSC_OUTPUT=$(npx tsc --noEmit --incremental --tsBuildInfoFile .git/.tsbuildinfo 2>&1) || true
+  TSC_EXIT=$?
+
+  if [ "$TSC_EXIT" -ne 0 ]; then
+    STAGED_ERRORS=""
+    for file in $STAGED_TS; do
+      FILE_ERRORS=$(echo "$TSC_OUTPUT" | grep "^${file}(" || true)
+      if [ -n "$FILE_ERRORS" ]; then
+        STAGED_ERRORS="${STAGED_ERRORS}${FILE_ERRORS}
+"
+      fi
+    done
+
+    if [ -n "$(echo "$STAGED_ERRORS" | tr -d '[:space:]')" ]; then
+      echo "1:❌ TypeScript errors in staged files:
+$STAGED_ERRORS" > "$TSC_RESULT_FILE"
+    else
+      echo "0:⚠ TypeScript errors exist in unstaged files (ignored for this commit)" > "$TSC_RESULT_FILE"
+    fi
+  else
+    echo "0:✓ TypeScript type check passed" > "$TSC_RESULT_FILE"
+  fi
+}
+
+# ── Task B: Rust clippy (scoped to the workspace crates that own staged files) ──
+#
+# Rationale: `cargo clippy --lib` defaults to `-p app`, which transitively
+# pulls every workspace member through codegen and grabs the package-cache
+# lock on the shared `target-dir`. With multiple agents / IDEs sharing the
+# same target dir that serializes everything. Resolve the staged files to
+# their owning packages via `scripts/git/staged-rs-crates.mjs` and clippy only
+# those — leaf crates (e.g. `app_paths`, `integrations`, `app_window`)
+# finish in seconds and never touch the rest of the workspace.
+run_clippy_check() {
+  if [ -z "$STAGED_RS" ]; then
+    echo "0:✓ No Rust files staged, skipping clippy" > "$CLIPPY_RESULT_FILE"
+    return
+  fi
+
+  AFFECTED_CRATES=$(printf '%s\n' "$STAGED_RS" | node scripts/git/staged-rs-crates.mjs 2>/dev/null || true)
+
+  if [ -z "$(echo "$AFFECTED_CRATES" | tr -d '[:space:]')" ]; then
+    echo "0:✓ Staged Rust files are outside the cargo workspace, skipping clippy" > "$CLIPPY_RESULT_FILE"
+    return
+  fi
+
+  CLIPPY_ARGS=""
+  CRATE_LIST=""
+  for crate in $AFFECTED_CRATES; do
+    CLIPPY_ARGS="$CLIPPY_ARGS -p $crate"
+    if [ -z "$CRATE_LIST" ]; then
+      CRATE_LIST="$crate"
+    else
+      CRATE_LIST="$CRATE_LIST, $crate"
+    fi
+  done
+
+  echo "Running cargo clippy (scoped to: $CRATE_LIST)..."
+  CLIPPY_OUTPUT=$(cd src-tauri && cargo clippy --lib --message-format=short $CLIPPY_ARGS 2>&1) || true
+  CLIPPY_EXIT=$?
+
+  if [ "$CLIPPY_EXIT" -ne 0 ]; then
+    STAGED_ERRORS=""
+    for file in $STAGED_RS; do
+      CRATE_REL=$(echo "$file" | sed 's|^src-tauri/||')
+      FILE_ERRORS=$(echo "$CLIPPY_OUTPUT" | grep "^${CRATE_REL}:" || true)
+      if [ -n "$FILE_ERRORS" ]; then
+        STAGED_ERRORS="${STAGED_ERRORS}${FILE_ERRORS}
+"
+      fi
+    done
+
+    if [ -n "$(echo "$STAGED_ERRORS" | tr -d '[:space:]')" ]; then
+      echo "1:❌ Clippy errors in staged Rust files:
+$STAGED_ERRORS" > "$CLIPPY_RESULT_FILE"
+    else
+      echo "0:⚠ Clippy issues exist in unstaged Rust files (ignored for this commit)" > "$CLIPPY_RESULT_FILE"
+    fi
+  else
+    echo "0:✓ Cargo clippy passed ($CRATE_LIST)" > "$CLIPPY_RESULT_FILE"
+  fi
+}
+
+# ── Task C: Collect stats ──
+run_stats_check() {
+  echo "Collecting eslint/circular stats..."
+  STATS_OUTPUT=$(node scripts/git/commit-stats.mjs 2>&1)
+  STATS_EXIT=$?
+  if [ $STATS_EXIT -ne 0 ]; then
+    echo "1:$STATS_OUTPUT" > "$STATS_RESULT_FILE"
+  else
+    echo "0:$STATS_OUTPUT" > "$STATS_RESULT_FILE"
+  fi
+}
+
+# ── Run all tasks in parallel ──
+run_tsc_check &
+TSC_PID=$!
+
+run_clippy_check &
+CLIPPY_PID=$!
+
+run_stats_check &
+STATS_PID=$!
+
+# Wait for all background tasks.
+# Use `|| true` so `sh -e` (used by husky) does not abort on non-zero wait
+# return codes — the actual pass/fail is read from the result files below.
+wait $TSC_PID || true
+wait $CLIPPY_PID || true
+wait $STATS_PID || true
+
+# ── Collect results ──
+FINAL_EXIT=0
+
+# TypeScript result
+TSC_RESULT=$(cat "$TSC_RESULT_FILE")
+TSC_EXIT_CODE=$(echo "$TSC_RESULT" | head -1 | cut -d: -f1)
+TSC_MESSAGE=$(echo "$TSC_RESULT" | cut -d: -f2-)
+echo "$TSC_MESSAGE"
+if [ "$TSC_EXIT_CODE" = "1" ]; then
+  FINAL_EXIT=1
+fi
+
+# Clippy result
+CLIPPY_RESULT=$(cat "$CLIPPY_RESULT_FILE")
+CLIPPY_EXIT_CODE=$(echo "$CLIPPY_RESULT" | head -1 | cut -d: -f1)
+CLIPPY_MESSAGE=$(echo "$CLIPPY_RESULT" | cut -d: -f2-)
+echo "$CLIPPY_MESSAGE"
+if [ "$CLIPPY_EXIT_CODE" = "1" ]; then
+  FINAL_EXIT=1
+fi
+
+# Stats result
+STATS_RESULT=$(cat "$STATS_RESULT_FILE")
+STATS_EXIT_CODE=$(echo "$STATS_RESULT" | head -1 | cut -d: -f1)
+STATS_MESSAGE=$(echo "$STATS_RESULT" | cut -d: -f2-)
+echo "$STATS_MESSAGE"
+if [ "$STATS_EXIT_CODE" = "1" ]; then
+  FINAL_EXIT=1
+fi
+
+if [ $FINAL_EXIT -eq 0 ]; then
+  echo "✓ Lint stats collected"
+fi
+
+exit $FINAL_EXIT

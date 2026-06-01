@@ -1,0 +1,119 @@
+.chat-markdown-body .pl-c {
+  color: var(--color-prettylights-syntax-comment);
+}
+
+.chat-markdown-body .pl-c1,
+.chat-markdown-body .pl-s .pl-v {
+  color: var(--color-prettylights-syntax-constant);
+}
+
+.chat-markdown-body .pl-e,
+.chat-markdown-body .pl-en {
+  color: var(--color-prettylights-syntax-entity);
+}
+
+.chat-markdown-body .pl-smi,
+.chat-markdown-body .pl-s .pl-s1 {
+  color: var(--color-prettylights-syntax-storage-modifier-import);
+}
+
+.chat-markdown-body .pl-ent {
+  color: var(--color-prettylights-syntax-entity-tag);
+}
+
+.chat-markdown-body .pl-k {
+  color: var(--color-prettylights-syntax-keyword);
+}
+
+.chat-markdown-body .pl-s,
+.chat-markdown-body .pl-pds,
+.chat-markdown-body .pl-s .pl-pse .pl-s1,
+.chat-markdown-body .pl-sr,
+.chat-markdown-body .pl-sr .pl-cce,
+.chat-markdown-body .pl-sr .pl-sre,
+.chat-markdown-body .pl-sr .pl-sra {
+  color: var(--color-prettylights-syntax-string);
+}
+
+.chat-markdown-body .pl-v,
+.chat-markdown-body .pl-smw {
+  color: var(--color-prettylights-syntax-variable);
+}
+
+.chat-markdown-body .pl-bu {
+  color: var(--color-prettylights-syntax-brackethighlighter-unmatched);
+}
+
+.chat-markdown-body .pl-ii {
+  color: var(--color-prettylights-syntax-invalid-illegal-text);
+  background-color: var(--color-prettylights-syntax-invalid-illegal-bg);
+}
+
+.chat-markdown-body .pl-c2 {
+  color: var(--color-prettylights-syntax-carriage-return-text);
+  background-color: var(--color-prettylights-syntax-carriage-return-bg);
+}
+
+.chat-markdown-body .pl-sr .pl-cce {
+  font-weight: bold;
+  color: var(--color-prettylights-syntax-string-regexp);
+}
+
+.chat-markdown-body .pl-ml {
+  color: var(--color-prettylights-syntax-markup-list);
+}
+
+.chat-markdown-body .pl-mh,
+.chat-markdown-body .pl-mh .pl-en,
+.chat-markdown-body .pl-ms {
+  font-weight: bold;
+  color: var(--color-prettylights-syntax-markup-heading);
+}
+
+.chat-markdown-body .pl-mi {
+  font-style: italic;
+  color: var(--color-prettylights-syntax-markup-italic);
+}
+
+.chat-markdown-body .pl-mb {
+  font-weight: bold;
+  color: var(--color-prettylights-syntax-markup-bold);
+}
+
+.chat-markdown-body .pl-md {
+  color: var(--color-prettylights-syntax-markup-deleted-text);
+  background-color: var(--color-prettylights-syntax-markup-deleted-bg);
+}
+
+.chat-markdown-body .pl-mi1 {
+  color: var(--color-prettylights-syntax-markup-inserted-text);
+  background-color: var(--color-prettylights-syntax-markup-inserted-bg);
+}
+
+.chat-markdown-body .pl-mc {
+  color: var(--color-prettylights-syntax-markup-changed-text);
+  background-color: var(--color-prettylights-syntax-markup-changed-bg);
+}
+
+.chat-markdown-body .pl-mi2 {
+  color: var(--color-prettylights-syntax-markup-ignored-text);
+  background-color: var(--color-prettylights-syntax-markup-ignored-bg);
+}
+
+.chat-markdown-body .pl-mdr {
+  font-weight: bold;
+  color: var(--color-prettylights-syntax-meta-diff-range);
+}
+
+.chat-markdown-body .pl-ba {
+  color: var(--color-prettylights-syntax-brackethighlighter-angle);
+}
+
+.chat-markdown-body .pl-sg {
+  color: var(--color-prettylights-syntax-sublimelinter-gutter-mark);
+}
+
+.chat-markdown-body .pl-corl {
+  text-decoration: underline;
+  color: var(--color-prettylights-syntax-constant-other-reference-link);
+}

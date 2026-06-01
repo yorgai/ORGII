@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "welcome": {
+      "title": "Bienvenue",
+      "description": "Commencez avec ORGII"
+    },
+    "devPassport": {
+      "description": "Votre identité de développeur"
+    },
+    "github": {
+      "title": "GitHub",
+      "description": "Connectez votre compte"
+    },
+    "workspace": {
+      "title": "Projet",
+      "description": "Ouvrir ou cloner un projet"
+    },
+    "theme": {
+      "title": "Thème",
+      "description": "Personnaliser l'apparence"
+    },
+    "complete": {
+      "title": "Terminé",
+      "description": "Prêt à commencer"
+    }
+  },
+  "welcome": {
+    "title": "Bienvenue sur ORGII",
+    "description": "Configurons votre espace de travail en quelques étapes."
+  },
+  "devPassport": {
+    "title": "Configurer Dev Passport",
+    "description": "Tout vibe engineer a besoin d'une identité.",
+    "role": "Vibe Engineer",
+    "codeName": "Nom de code",
+    "codeNamePlaceholder": "Entrez votre nom de code...",
+    "randomNameTooltip": "Générer un nom de code aléatoire",
+    "avatar": "Photo de profil",
+    "selectImage": "Sélectionner une image",
+    "avatarHint": "Votre identité visuelle dans les projets",
+    "generateButton": "Générer Vibe Passport",
+    "passportTitle": "Votre Vibe Passport",
+    "passportWelcome": "Bienvenue, {{name}}. Votre identité est prête."
+  },
+  "github": {
+    "title": "Connecter GitHub",
+    "description": "Connectez votre compte GitHub pour accéder aux dépôts, créer des commits et gérer les pull requests directement depuis ORGII.",
+    "connectButton": "Connecter le compte GitHub",
+    "hint": "Vous pouvez aussi connecter GitHub plus tard depuis Paramètres > Intégrations"
+  },
+  "workspace": {
+    "title": "Ouvrir un projet",
+    "description": "Ouvrez un dossier local ou clonez un dépôt pour commencer à travailler. ORGII indexera automatiquement votre code pour une assistance intelligente.",
+    "openFolder": "Ouvrir un dossier",
+    "cloneRepo": "Cloner un dépôt",
+    "hint": "Vous pouvez ignorer cette étape et ouvrir un projet plus tard"
+  },
+  "theme": {
+    "title": "Choisissez votre thème",
+    "description": "Sélectionnez un thème qui correspond à vos préférences. Vous pouvez le modifier à tout moment dans les Paramètres.",
+    "light": "Clair",
+    "dark": "Sombre"
+  },
+  "complete": {
+    "title": "Vous êtes prêt !",
+    "description": "Votre espace de travail est prêt. Démarrez une nouvelle Session pour commencer à coder avec l'assistance IA, ou explorez l'application pour découvrir toutes les fonctionnalités.",
+    "startSession": "Démarrer une nouvelle Session"
+  },
+  "navigation": {
+    "skipSetup": "Ignorer la configuration",
+    "getStarted": "Commencer",
+    "goToSettings": "Aller aux Paramètres"
+  }
+}

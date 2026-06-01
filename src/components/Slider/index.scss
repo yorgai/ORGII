@@ -1,0 +1,329 @@
+// Slider Component Styles
+.slider {
+  position: relative;
+  padding: 16px 0 32px 0;
+  cursor: pointer;
+
+  &-no-padding {
+    padding: 0;
+  }
+
+  &-vertical {
+    height: 200px;
+    padding: 0 8px;
+    width: auto;
+    display: inline-flex;
+  }
+
+  // Rail (background track)
+  &-rail {
+    position: relative;
+    width: 100%;
+    height: 3px;
+    background: var(--color-fill-3);
+    border-radius: 1.5px;
+    transition: background 0.15s ease;
+
+    .slider-vertical & {
+      width: 3px;
+      height: 100%;
+    }
+  }
+
+  // Track (filled portion)
+  &-track {
+    position: absolute;
+    background: var(--color-primary-6);
+    border-radius: 1.5px;
+    transition: background 0.15s ease;
+    will-change: width, height;
+
+    .slider-vertical & {
+      width: 100%;
+    }
+
+    .slider:not(.slider-vertical) & {
+      height: 100%;
+    }
+  }
+
+  // No transitions during drag for instant response
+  &-dragging &-track {
+    transition: none;
+  }
+
+  // Handle (draggable dot); bar-area hover accent below.
+  // Resting state must contrast with bg-fill-2 rails (replay strip): ring + light pill, not bg-2.
+  &-handle {
+    position: absolute;
+    width: 16px;
+    height: 14px;
+    background: #fff;
+    border: none;
+    border-radius: 100px;
+    transform: translate(-50%, -50%);
+    cursor: grab;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.12),
+      0 1px 2px rgba(0, 0, 0, 0.06);
+    transition:
+      background 0.15s ease,
+      backdrop-filter 0.15s ease,
+      box-shadow 0.15s ease;
+    z-index: 2;
+    will-change: transform;
+
+    .slider-vertical & {
+      left: 50%;
+      transform: translate(-50%, 50%);
+    }
+
+    .slider:not(.slider-vertical) & {
+      top: 50%;
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary-6);
+      outline-offset: 2px;
+    }
+  }
+
+  // Liquid glass on handle when pointer is anywhere on the slider (rail + padding), not only on the thumb
+  &:not(.slider-disabled):not(.slider-dragging):hover &-handle {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.3) inset,
+      0 0 0 1px rgba(0, 0, 0, 0.12),
+      0 1px 2px rgba(0, 0, 0, 0.06);
+
+    .slider-vertical & {
+      transform: translate(-50%, 50%);
+    }
+  }
+
+  &-dragging {
+    .slider-handle {
+      cursor: grabbing;
+      background: rgba(255, 255, 255, 0.35);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.3) inset,
+        0 0 0 1px rgba(0, 0, 0, 0.12),
+        0 0 0 6px color-mix(in srgb, var(--color-primary-6) 15%, transparent);
+      transition: none;
+    }
+  }
+
+  // Tooltip - regular style (no liquid glass)
+  &-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 8px;
+    background: var(--color-bg-2);
+    border: 1px solid var(--color-border-2);
+    border-radius: 4px;
+    color: var(--color-text-1);
+    font-size: 12px;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 4px solid transparent;
+      border-top-color: var(--color-border-2);
+    }
+
+    .slider-vertical & {
+      bottom: auto;
+      left: calc(100% + 8px);
+      transform: translateY(50%);
+
+      &::after {
+        top: 50%;
+        left: auto;
+        right: 100%;
+        transform: translateY(-50%);
+        border-top-color: transparent;
+        border-right-color: var(--color-border-2);
+      }
+    }
+  }
+
+  // Marks
+  &-marks {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  &-mark {
+    position: absolute;
+    transform: translateX(-50%);
+
+    .slider-vertical & {
+      transform: translateY(50%);
+      left: 50%;
+    }
+
+    .slider:not(.slider-vertical) & {
+      top: 50%;
+    }
+  }
+
+  &-mark-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--fill-3);
+    border: 1px solid var(--border-2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+
+    .slider-vertical & {
+      transform: translate(-50%, 50%);
+    }
+  }
+
+  &-mark-label {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: var(--text-3);
+    white-space: nowrap;
+
+    .slider-vertical & {
+      top: 50%;
+      left: 20px;
+      transform: translateY(-50%);
+    }
+  }
+
+  // Disabled state
+  &-disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+
+    .slider-rail {
+      background: var(--fill-2);
+    }
+
+    .slider-track {
+      background: var(--text-4);
+    }
+
+    .slider-handle {
+      cursor: not-allowed;
+      border-color: var(--text-4);
+
+      &:hover {
+        transform: translate(-50%, -50%);
+        box-shadow: none;
+
+        .slider-vertical & {
+          transform: translate(-50%, 50%);
+        }
+      }
+    }
+  }
+
+  // Dark mode
+  &-dark {
+    .slider-rail {
+      background: var(--color-fill-4);
+    }
+
+    // Light pill + ring so thumb is visible on bg-fill-2 strips without hovering the slider
+    .slider-handle {
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.35),
+        0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    &:not(.slider-disabled):not(.slider-dragging):hover .slider-handle {
+      background: rgba(232, 232, 232, 0.4);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.25) inset,
+        0 0 0 1px rgba(0, 0, 0, 0.35),
+        0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .slider-tooltip {
+      background: var(--color-bg-2);
+      border-color: var(--color-border-3);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+      &::after {
+        border-top-color: var(--color-border-3);
+      }
+
+      .slider-vertical &::after {
+        border-right-color: var(--color-border-3);
+      }
+    }
+
+    .slider-mark-dot {
+      background: var(--fill-4);
+      border-color: var(--border-3);
+    }
+  }
+
+  &-dark.slider-dragging {
+    .slider-handle {
+      background: rgba(232, 232, 232, 0.35);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.2) inset,
+        0 0 0 1px rgba(0, 0, 0, 0.35),
+        0 0 0 6px color-mix(in srgb, var(--color-primary-6) 15%, transparent);
+      transition: none;
+    }
+  }
+
+  // Opt-in visible border on the handle (handleBordered prop). Gives the
+  // thumb a crisp 2px primary-6 outline with an opaque white fill so it
+  // reads against low-contrast surfaces (e.g. a thin rail sitting on a
+  // bg-fill-2 strip). Overrides the default translucent + blur hover/drag
+  // states so the border stays visible — translucency over a near-white
+  // surface is what made the thumb look faded despite the border.
+  &-handle-bordered {
+    .slider-handle {
+      background: #fff;
+      border: 2px solid var(--color-primary-6);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    &:not(.slider-disabled):not(.slider-dragging):hover .slider-handle {
+      background: #fff;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+    }
+
+    &.slider-dragging .slider-handle {
+      background: #fff;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.16),
+        0 0 0 6px color-mix(in srgb, var(--color-primary-6) 18%, transparent);
+    }
+  }
+}

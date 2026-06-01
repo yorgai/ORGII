@@ -1,0 +1,311 @@
+/**
+ * WorkStationShell Styles
+ *
+ * Base styles for the shared Workstation layout shell.
+ * Individual apps can extend these styles with their own SCSS.
+ *
+ * Layout:
+ * - Flex mode (no secondaryPanelConfig): primary sidebar + content.
+ * - Grid mode (with secondaryPanelConfig): primary sidebar + content +
+ *   a single secondary panel that flips between right rail and bottom
+ *   via grid-template-areas (no remount).
+ */
+
+.work-station-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: transparent;
+
+  &--comfort {
+    .work-station-shell__container,
+    .work-station-shell__grid {
+      background-color: var(--cm-editor-background, var(--color-bg-1));
+    }
+  }
+
+  // Main container holding side panel(s) and content
+  &__container {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+
+    // Reversed layout (side panel on right) - just flip flex direction
+    // This is much faster than re-ordering React elements
+    &--reversed {
+      flex-direction: row-reverse;
+    }
+  }
+
+  // Side panel (left or right depending on layoutMode)
+  // Note: No border-right here - the resize handle provides the visual separator
+  &__side-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background-color: transparent;
+
+    &--comfort {
+      padding: 8px;
+      background-color: var(--cm-editor-background, var(--color-bg-1));
+      min-height: 0;
+
+      .station-sidebar-scroll-area {
+        overflow: hidden;
+        border: 1px solid var(--color-border-1);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgb(0 0 0 / 3%);
+      }
+    }
+
+    // Collapsed state - hide with CSS instead of unmounting
+    // This preserves component state and avoids expensive remounting
+    &--collapsed {
+      display: none;
+    }
+  }
+
+  // Main content panel (contains main content + optional bottom panel)
+  // Uses CodeMirror canvas so every Workstation pane shares the editor surface.
+  &__content-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    background-color: var(--cm-editor-background);
+  }
+
+  // Main content area (above bottom panel)
+  &__main-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  // ------------------------------------------------------------------
+  // Grid layout (used when a shared secondaryPanelConfig is supplied).
+  //
+  // Same DOM tree regardless of secondary position (right vs bottom);
+  // grid-template-areas change to relocate the secondary slot without
+  // React unmount/remount. Keeps the panel content state intact when
+  // the user toggles the DevTools / editor panel position.
+  // ------------------------------------------------------------------
+  &__grid {
+    display: grid;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+
+    // Default: secondary on the right
+    grid-template-columns: auto auto 1fr auto auto;
+    grid-template-rows: 1fr;
+    grid-template-areas: "sidebar sidebar-handle content secondary-handle secondary";
+
+    &--secondary-bottom {
+      grid-template-columns: auto auto 1fr;
+      grid-template-rows: 1fr auto auto;
+      grid-template-areas:
+        "sidebar sidebar-handle content"
+        "sidebar sidebar-handle secondary-handle"
+        "sidebar sidebar-handle secondary";
+    }
+
+    // Reversed layout: primary sidebar on the right side.
+    //
+    // Column/row order is mirrored vs. the normal layout, so the
+    // collapsed overrides must also be mirrored:
+    //   normal : "sidebar sidebar-handle content secondary-handle secondary"
+    //   reversed: "secondary secondary-handle content sidebar-handle sidebar"
+    // Collapse zeros out the secondary columns (1-2 in reversed, 4-5 in normal).
+    &--reversed {
+      // Secondary on the right rail: sidebar moves to the far right.
+      &.work-station-shell__grid--secondary-right {
+        grid-template-columns: auto auto 1fr auto auto;
+        grid-template-areas: "secondary secondary-handle content sidebar-handle sidebar";
+
+        &.work-station-shell__grid--secondary-collapsed {
+          grid-template-columns: 0 0 1fr auto auto;
+        }
+      }
+
+      // Secondary at the bottom: sidebar also moves to the right.
+      &.work-station-shell__grid--secondary-bottom {
+        grid-template-columns: 1fr auto auto;
+        grid-template-areas:
+          "content sidebar-handle sidebar"
+          "secondary-handle sidebar-handle sidebar"
+          "secondary sidebar-handle sidebar";
+
+        // Collapsed: zero out the bottom two rows (handle + panel).
+        &.work-station-shell__grid--secondary-collapsed {
+          grid-template-rows: 1fr 0 0;
+        }
+      }
+    }
+  }
+
+  &__grid-sidebar {
+    grid-area: sidebar;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  &__grid-sidebar-handle {
+    grid-area: sidebar-handle;
+    display: flex;
+    min-height: 0;
+    // Handle cell must NOT clip — its hit-area extends 6px into neighbors.
+    overflow: visible;
+  }
+
+  &__grid-content {
+    grid-area: content;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  // Secondary handle cell: sits between content and secondary. Overflow must
+  // be visible so the handle's hit-area (extending 6px past the cell edge)
+  // remains draggable.
+  &__grid-secondary-handle {
+    grid-area: secondary-handle;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    overflow: visible;
+    // Promote to its own stacking context so the hit-area (which extends
+    // 6px past the cell into the neighboring content/panel cells) always
+    // paints on top of those cells. Grid items honour `z-index` without
+    // `position`, but some browsers are iffy about stacking of overflow-
+    // visible content from non-positioned items — setting position
+    // explicitly makes this bulletproof.
+    position: relative;
+    z-index: 10;
+  }
+
+  // When the secondary panel is at the bottom, the handle inside this cell
+  // is `HorizontalResizeHandle` (h-[1px]). Flex-row's default
+  // `align-items: stretch` only stretches cross-axis (vertically) — the
+  // handle's width collapses to 0 (no content). Switching to a column
+  // flex stretches the child horizontally, giving the handle a full-width
+  // hit-target.
+  &__grid--secondary-bottom &__grid-secondary-handle {
+    flex-direction: column;
+  }
+
+  &__grid-secondary {
+    grid-area: secondary;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  // Secondary panel (shared right/bottom). Single-mount content.
+  &__secondary-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background-color: var(--cm-editor-background);
+
+    &--comfort {
+      padding: 8px;
+      background-color: var(--cm-editor-background, var(--color-bg-1));
+
+      &.work-station-shell__secondary-panel--left {
+        padding: 8px 0 8px 8px;
+      }
+
+      &.work-station-shell__secondary-panel--right {
+        padding: 8px 8px 8px 0;
+      }
+
+      &.work-station-shell__secondary-panel--bottom {
+        padding: 0 8px 8px 0;
+      }
+
+      > * {
+        overflow: hidden;
+        border: 1px solid var(--color-border-1);
+        border-radius: 8px;
+        background-color: var(--cm-editor-background, var(--color-bg-1));
+        box-shadow: 0 2px 8px rgb(0 0 0 / 3%);
+      }
+    }
+
+    &--collapsed {
+      display: none;
+    }
+  }
+
+  &__grid--reversed
+    &__secondary-panel--comfort.work-station-shell__secondary-panel--bottom {
+    padding: 0 0 8px 8px;
+  }
+
+  &__grid--primary-collapsed
+    &__secondary-panel--comfort.work-station-shell__secondary-panel--bottom {
+    padding: 0 8px 8px;
+  }
+
+  // When secondary collapsed, collapse its grid track to 0 (handle cell too).
+  // The reversed-right override lives inside &--reversed above.
+  &__grid--secondary-collapsed {
+    &.work-station-shell__grid--secondary-right {
+      grid-template-columns: auto auto 1fr 0 0;
+    }
+
+    &.work-station-shell__grid--secondary-bottom {
+      grid-template-rows: 1fr 0 0;
+    }
+  }
+
+  // When secondary is maximized (bottom only), content row collapses and
+  // secondary takes the full height of the main area.
+  &__grid--secondary-maximized.work-station-shell__grid--secondary-bottom {
+    grid-template-rows: 0 auto 1fr;
+
+    .work-station-shell__grid-content {
+      display: none;
+    }
+  }
+
+  button,
+  a,
+  input,
+  textarea,
+  select,
+  [role="button"],
+  .noDrag {
+    -webkit-app-region: no-drag;
+  }
+
+  // Note: Resize handles now use shared Tailwind classes from ResizeHandle component
+}
+
+// Editor chrome: file bars match CodeMirror canvas (--cm-editor-background).
+// Active tab pills use primary-1 from TabBar / SortableTab (not forced to editor canvas).
+.work-station-shell {
+  .work-station-file-bar {
+    background-color: var(--cm-editor-background);
+  }
+}
+
+// Panes share the CodeMirror canvas (--cm-editor-background) via __content-panel.

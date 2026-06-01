@@ -1,0 +1,21 @@
+[package]
+name = "app_platform"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "Platform-specific FFI shims (e.g. macOS Cocoa `with_objc_catch` wrapper). Hoisted out of `app::infrastructure::platform` so `agent_core` and other workspace crates can depend on it without depending back on `app`."
+publish = false
+
+[lib]
+name = "app_platform"
+path = "src/lib.rs"
+
+# `cc` compiles `objc_catch.m` (Objective-C @try/@catch trampoline) on
+# macOS so Rust can turn NSExceptions into `Err` values instead of
+# aborting the process.
+[build-dependencies]
+cc = "1.0"
+
+# Pure runtime dependencies are intentionally empty: `objc_bridge.rs`
+# uses only `std` and links the C symbols produced by the build script.
+[dependencies]

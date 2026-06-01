@@ -1,0 +1,27 @@
+/**
+ * Shared progress-bar styling for replay surfaces (Simulator dock,
+ * Kanban canvas border). The rail (unfilled) is 1px and the track
+ * (filled) is 2px, both anchored at top:0 so the bar's TOP edge is
+ * pixel-stable when neighboring chrome (status pill, dock border)
+ * sits flush against it.
+ */
+.replay-progress-bar {
+  .slider-rail {
+    height: 1px;
+    border-radius: 0.5px;
+  }
+
+  .slider:not(.slider-vertical) .slider-track {
+    height: 2px;
+    top: 0;
+    border-radius: 1px;
+  }
+
+  // In follow mode the playhead is pinned to the right edge, so showing
+  // the drag handle would just be visual noise. Hide it. In replay mode
+  // the handle is always visible for easy scrubbing.
+  &[data-follow-mode="true"] .slider-handle {
+    opacity: 0;
+    pointer-events: none;
+  }
+}

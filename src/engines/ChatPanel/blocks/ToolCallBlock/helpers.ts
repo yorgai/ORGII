@@ -1,0 +1,46 @@
+/**
+ * Tool-call block helpers — re-exported from split modules for backwards
+ * compatibility. All imports of "./helpers" continue to resolve correctly.
+ *
+ * Source files:
+ *   helpers/argsSummary.ts   — screenshot utilities + extractArgsSummary
+ *   helpers/resultParsers.ts — extractResultText, parseSearchFiles, …
+ *   helpers/cardParsers.ts   — parseFileCard, parseWebsiteCard, …
+ */
+export {
+  hasStyledOutput,
+  isBrowserTool,
+  isSearchTool,
+  isShellTool,
+} from "@src/engines/SessionCore/rendering/registry/toolCategories";
+
+export {
+  extractArgsSummary,
+  extractScreenshotIds,
+  stripScreenshotMarkers,
+} from "./helpers/argsSummary";
+
+export {
+  buildWorkspaceInfoRows,
+  extractResultText,
+  extractScreenshot,
+  hasNonEmptyResultValues,
+  isBrowserSnapshotResult,
+  isErrorResult,
+  parseAwaitListingResult,
+  parseManageWorkspaceResult,
+  parseProjectToolListResult,
+  parseSearchFilesResult,
+} from "./helpers/resultParsers";
+
+export {
+  parseAgentMessageCard,
+  parseCommandResult,
+  parseFileCardResult,
+  parseProjectCardResult,
+  parseWebsiteCardResult,
+  parseWorkItemCardResult,
+} from "./helpers/cardParsers";
+
+export { extractToolSource } from "./helpers/toolSource";
+export type { ToolSourceTarget } from "./helpers/toolSource";

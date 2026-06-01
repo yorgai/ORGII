@@ -1,0 +1,25 @@
+// ChatCodeBlock / Mermaid replace <pre> — restore bottom spacing after fenced blocks
+// (native `pre` gets margin from the group rule below; custom components do not)
+.chat-markdown-body .chat-markdown-fenced-block {
+  margin-bottom: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+// Code syntax tokens - only apply in code blocks
+.chat-markdown-body pre,
+.chat-markdown-body .code-block-wrapper {
+  .token,
+  span {
+    font-family: var(
+      --code-font-family,
+      "SF Mono",
+      "Menlo",
+      "Monaco",
+      "Consolas",
+      monospace
+    );
+    font-size: 12px;
+    line-height: 1.6;
+  }
+}

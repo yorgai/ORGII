@@ -1,0 +1,3 @@
+behavior:
+  update_mode: new
+  glob_fail_fast: true

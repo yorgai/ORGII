@@ -1,0 +1,25 @@
+.ops-control-page {
+  .kanban-board.kanban-board--linear {
+    .kanban-board__columns {
+      width: 100%;
+      min-width: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      justify-content: flex-start;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    .kanban-column {
+      flex: 0 0 300px;
+      width: 300px;
+      min-width: 300px;
+      max-width: 300px;
+      height: 100%;
+    }
+  }
+}

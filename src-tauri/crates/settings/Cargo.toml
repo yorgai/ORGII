@@ -1,0 +1,20 @@
+[package]
+name = "settings"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "VS-Code-style user settings: read/write `~/.orgii/settings.jsonc`, watch for external changes, expose Tauri commands."
+publish = false
+
+[lib]
+name = "settings"
+path = "src/lib.rs"
+
+[dependencies]
+app_paths = { path = "../app-paths" }
+
+tauri = { workspace = true }
+
+serde_json = "1.0"
+notify = { workspace = true }
+tracing = "0.1"

@@ -1,0 +1,218 @@
+//! Conversion functions for transforming backend session records into unified aggregate format.
+//!
+//! Each backend (CLI agent, SDE Agent, OS Agent) has its own session record type.
+//! This module provides functions to convert them into the common `SessionAggregateRecord`.
+
+use crate::agent_sessions::cli::persistence as cli_session_persistence;
+use agent_core::session::persistence as session_persistence;
+
+use super::display::generate_display_label;
+use super::status::is_active_status;
+use super::types::{SessionAggregateRecord, SessionCategory};
+
+fn resolve_agent_metadata(
+    session_id: &str,
+    persisted_definition_id: Option<&str>,
+) -> (Option<String>, Option<String>, Option<String>) {
+    let definition_id = persisted_definition_id.map(str::to_string).or_else(|| {
+        agent_core::core::definitions::prefix_lookup::BUILTIN_PREFIX_REGISTRY
+            .iter()
+            .find(|entry| session_id.starts_with(entry.prefix))
+            .map(|entry| entry.agent_id.to_string())
+    });
+
+    let Some(def_id) = definition_id else {
+        return (None, None, None);
+    };
+
+    let store = agent_core::definitions::AgentDefinitionsStore::new();
+    match agent_core::definitions::resolver::resolve_definition_by_id(&def_id, Some(&store)) {
+        Ok(definition) => (Some(def_id), definition.icon_id, Some(definition.name)),
+        Err(err) => {
+            tracing::warn!(
+                "[unified_stats] Failed to resolve agent definition '{def_id}' for aggregate metadata: {err}"
+            );
+            (Some(def_id), None, None)
+        }
+    }
+}
+
+// ============================================================================
+// CLI Agent Conversion
+// ============================================================================
+
+/// Convert a CLI agent session to the unified aggregate record format.
+pub fn cli_session_to_aggregate_record(
+    session: cli_session_persistence::CodeSession,
+) -> SessionAggregateRecord {
+    let repo_name = session
+        .repo_path
+        .as_ref()
+        .and_then(|p| std::path::Path::new(p).file_name())
+        .and_then(|n| n.to_str())
+        .map(String::from);
+
+    let status_str = session.status.as_ref();
+    let is_active = is_active_status(status_str);
+    let display_label = generate_display_label(&session.name, session.user_input.as_deref());
+
+    SessionAggregateRecord {
+        session_id: session.session_id,
+        name: session.name,
+        status: status_str.to_string(),
+        created_at: session.created_at,
+        updated_at: session.updated_at,
+        category: SessionCategory::Cli,
+        user_input: session.user_input,
+        repo_path: session.repo_path,
+        repo_name,
+        branch: session.branch,
+        model: session.model,
+        account_id: session.account_id,
+        cli_agent_type: session.cli_agent_type,
+        key_source: session.key_source,
+        tier: session.tier,
+        pid: session.pid,
+        total_tokens: session.total_tokens,
+        worktree_path: session.worktree_path,
+        worktree_branch: session.worktree_branch,
+        base_branch: session.base_branch,
+        merge_status: session.merge_status,
+        background: session.background,
+        is_active,
+        display_label,
+        parent_session_id: None,
+        org_member_id: None,
+        agent_org_id: None,
+        agent_org_name: None,
+        agent_definition_id: None,
+        agent_icon_id: None,
+        agent_display_name: None,
+        agent_exec_mode: session.agent_exec_mode,
+        draft_text: session.draft_text,
+        reply_target_event_id: session.reply_target_event_id,
+        tags: vec![],
+        pinned: false,
+    }
+}
+
+// ============================================================================
+// SDE Agent Conversion
+// ============================================================================
+
+/// Convert a SDE Agent session (unified record) to the unified aggregate record format.
+pub fn sde_session_to_aggregate_record(
+    session: session_persistence::UnifiedSessionRecord,
+) -> SessionAggregateRecord {
+    let repo_name = session
+        .workspace_path
+        .as_ref()
+        .and_then(|p| std::path::Path::new(p).file_name())
+        .and_then(|n| n.to_str())
+        .map(String::from);
+
+    let is_active = is_active_status(&session.status);
+    let display_label = generate_display_label(&session.name, session.user_input.as_deref());
+    let (agent_definition_id, agent_icon_id, agent_display_name) =
+        resolve_agent_metadata(&session.session_id, session.agent_definition_id.as_deref());
+
+    SessionAggregateRecord {
+        session_id: session.session_id,
+        name: session.name,
+        status: session.status,
+        created_at: session.created_at,
+        updated_at: session.updated_at,
+        category: SessionCategory::Agent,
+        user_input: session.user_input,
+        repo_path: session.workspace_path.clone(),
+        repo_name,
+        branch: None,
+        model: session.model,
+        account_id: session.account_id,
+        cli_agent_type: None,
+        key_source: session.key_source,
+        tier: None,
+        pid: None,
+        total_tokens: session.total_tokens,
+        worktree_path: session.worktree_path,
+        worktree_branch: session.worktree_branch,
+        base_branch: session.base_branch,
+        merge_status: session.merge_status,
+        background: false,
+        is_active,
+        display_label,
+        parent_session_id: session.parent_session_id,
+        org_member_id: session.org_member_id,
+        agent_org_id: None,
+        agent_org_name: None,
+        agent_definition_id,
+        agent_icon_id,
+        agent_display_name,
+        agent_exec_mode: session.agent_exec_mode,
+        draft_text: session.draft_text,
+        reply_target_event_id: session.reply_target_event_id,
+        tags: session
+            .tags_json
+            .as_deref()
+            .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
+            .unwrap_or_default(),
+        pinned: session.pinned,
+    }
+}
+
+// ============================================================================
+// OS Agent Conversion
+// ============================================================================
+
+/// Convert a OS Agent session (unified record) to the unified aggregate record format.
+pub fn os_session_to_aggregate_record(
+    session: session_persistence::UnifiedSessionRecord,
+) -> SessionAggregateRecord {
+    let is_active = is_active_status(&session.status);
+    let display_label = generate_display_label(&session.name, session.user_input.as_deref());
+    let (agent_definition_id, agent_icon_id, agent_display_name) =
+        resolve_agent_metadata(&session.session_id, session.agent_definition_id.as_deref());
+
+    SessionAggregateRecord {
+        session_id: session.session_id,
+        name: session.name,
+        status: session.status,
+        created_at: session.created_at,
+        updated_at: session.updated_at,
+        category: SessionCategory::Os,
+        user_input: session.user_input,
+        repo_path: None,
+        repo_name: None,
+        branch: None,
+        model: session.model,
+        account_id: session.account_id,
+        cli_agent_type: None,
+        key_source: session.key_source,
+        tier: None,
+        pid: None,
+        total_tokens: session.total_tokens,
+        worktree_path: None,
+        worktree_branch: None,
+        base_branch: None,
+        merge_status: None,
+        background: false,
+        is_active,
+        display_label,
+        parent_session_id: session.parent_session_id,
+        org_member_id: session.org_member_id,
+        agent_org_id: None,
+        agent_org_name: None,
+        agent_definition_id,
+        agent_icon_id,
+        agent_display_name,
+        agent_exec_mode: session.agent_exec_mode,
+        draft_text: session.draft_text,
+        reply_target_event_id: session.reply_target_event_id,
+        tags: session
+            .tags_json
+            .as_deref()
+            .and_then(|s| serde_json::from_str::<Vec<String>>(s).ok())
+            .unwrap_or_default(),
+        pinned: session.pinned,
+    }
+}

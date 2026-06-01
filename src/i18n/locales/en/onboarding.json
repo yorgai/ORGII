@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "welcome": {
+      "title": "Welcome",
+      "description": "Get started with ORGII"
+    },
+    "devPassport": {
+      "description": "Your developer identity"
+    },
+    "github": {
+      "title": "GitHub",
+      "description": "Connect your account"
+    },
+    "workspace": {
+      "title": "Workspace",
+      "description": "Open or clone a project"
+    },
+    "theme": {
+      "title": "Theme",
+      "description": "Customize appearance"
+    },
+    "complete": {
+      "title": "Complete",
+      "description": "Ready to go"
+    }
+  },
+  "welcome": {
+    "title": "Welcome to ORGII",
+    "description": "Let's configure your workspace in a few quick steps."
+  },
+  "devPassport": {
+    "title": "Set up Dev Passport",
+    "description": "Every vibe engineer needs an identity.",
+    "role": "Vibe Engineer",
+    "codeName": "Code Name",
+    "codeNamePlaceholder": "Enter your code name...",
+    "randomNameTooltip": "Generate random code name",
+    "avatar": "Avatar",
+    "selectImage": "Select an image",
+    "avatarHint": "Your visual identity in projects",
+    "generateButton": "Generate Vibe Passport",
+    "passportTitle": "Your Vibe Passport",
+    "passportWelcome": "Welcome, {{name}}. Your identity is ready."
+  },
+  "github": {
+    "title": "Connect GitHub",
+    "description": "Connect your GitHub account to access repos, create commits, and manage pull requests directly from ORGII.",
+    "connectButton": "Connect GitHub Account",
+    "hint": "You can also connect GitHub later from Settings > Integrations"
+  },
+  "workspace": {
+    "title": "Open a Workspace",
+    "description": "Open a local folder or clone a repo to start working. ORGII will automatically index your codebase for intelligent code assistance.",
+    "openFolder": "Open Folder",
+    "cloneRepo": "Clone Repo",
+    "hint": "You can skip this step and open a workspace later"
+  },
+  "theme": {
+    "title": "Choose Your Theme",
+    "description": "Select a theme that suits your preference. You can change this anytime in Settings.",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "complete": {
+    "title": "You're All Set!",
+    "description": "Your workspace is ready. Start a new session to begin coding with AI assistance, or explore the app to discover all features.",
+    "startSession": "Start New Session"
+  },
+  "navigation": {
+    "skipSetup": "Skip Setup",
+    "getStarted": "Get Started",
+    "goToSettings": "Go to Settings"
+  }
+}

@@ -1,0 +1,719 @@
+// ==========================================
+// Table Component Styles
+// ==========================================
+
+.table-wrapper {
+  width: 100%;
+}
+
+.table-container {
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.table-scroll {
+  overflow: auto;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--fill-3);
+    border-radius: 4px;
+
+    &:hover {
+      background: var(--fill-4);
+    }
+  }
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: 14px;
+  color: var(--text-1);
+}
+
+// ==========================================
+// Table Header
+// ==========================================
+
+.table-thead {
+  background: var(--fill-1);
+  border-bottom: 1px solid var(--border-2);
+}
+
+.table-th {
+  padding: 12px 16px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border-2);
+  transition: background 0.2s ease;
+
+  &.table-th-sortable {
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      background: var(--fill-2);
+    }
+  }
+}
+
+.table-th-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.table-th-content-right {
+  justify-content: flex-end;
+}
+
+.table-th-content-center {
+  justify-content: center;
+}
+
+.table-sorter {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-3);
+
+  .table-th-sortable:hover & {
+    color: var(--color-text-2);
+  }
+}
+
+// ==========================================
+// Table Body
+// ==========================================
+
+.table-tbody {
+  background: var(--bg-1);
+}
+
+.table-row,
+.table-expanded-row {
+  transition: background 0.15s ease;
+
+  .table-hover & {
+    &:hover {
+      background: var(--fill-1);
+    }
+  }
+
+  .table-clickable & {
+    &:hover {
+      background: color-mix(in srgb, var(--color-fill-3) 40%, transparent);
+    }
+  }
+}
+
+.table-row-hover-suppressed:hover {
+  background: transparent !important;
+}
+
+.table-td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-1);
+}
+
+// Striped rows
+.table-stripe {
+  .table-row:nth-child(even) {
+    background: var(--fill-1);
+  }
+}
+
+// ==========================================
+// Size Variants
+// ==========================================
+
+.table-size-mini {
+  .table-th,
+  .table-td {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+.table-size-small {
+  .table-th,
+  .table-td {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+
+.table-size-default {
+  .table-th,
+  .table-td {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}
+
+.table-size-large {
+  .table-th,
+  .table-td {
+    padding: 16px 20px;
+    font-size: 15px;
+  }
+}
+
+// ==========================================
+// Settings Preset
+// ==========================================
+
+.table-settings {
+  .table-container {
+    position: relative;
+    overflow: visible;
+    border-radius: 0;
+  }
+
+  .table-container::before,
+  .table-container::after {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 21;
+    width: 28px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 120ms ease;
+    content: "";
+  }
+
+  .table-container::before {
+    left: 0;
+    background: linear-gradient(
+      90deg,
+      var(--color-surface-container) 0%,
+      transparent 100%
+    );
+  }
+
+  .table-container::after {
+    right: 0;
+    background: linear-gradient(
+      270deg,
+      var(--color-surface-container) 0%,
+      transparent 100%
+    );
+  }
+
+  &.table-scroll-has-left .table-container::before,
+  &.table-scroll-has-right .table-container::after {
+    opacity: 1;
+  }
+
+  .table-fixed-header {
+    position: sticky;
+    top: var(--search-bar-h, 0px);
+    z-index: 20;
+    min-width: 0;
+    overflow: hidden;
+    background: var(--color-surface-container);
+    box-shadow: 0 -1px 0 0 var(--color-surface-container);
+  }
+
+  .table-scroll {
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
+  .table {
+    min-width: 100%;
+    width: max-content;
+  }
+
+  .table-fixed-header .table-th {
+    position: static;
+  }
+
+  .table-thead {
+    background: transparent;
+    border-bottom: none;
+  }
+
+  /*
+   * Typography mirrors SECTION_TABLE_HEADER_CLASSES
+   * (`text-[12px] font-medium text-text-2`) in SectionLayout/tokens.ts.
+   * Background mirrors the new card surface token.
+   */
+  .table-th {
+    position: sticky;
+    top: var(--search-bar-h, 0px);
+    /*
+     * Must sit above table body content — including row-level controls
+     * (Switch, Button), expanded inline cards, and any element that
+     * creates a stacking context inside a row. Toolbar above sits at
+     * z-[21] in SettingsTable/index.tsx; keep this strictly lower.
+     */
+    z-index: 20;
+    padding: 8px 0;
+    background: var(--color-surface-container);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-2);
+    vertical-align: middle;
+    /*
+     * Paint a 1px upward extension over the search bar so subpixel
+     * rounding between `--search-bar-h` and the actual search bar
+     * height never leaves a sliver where scrolling rows can bleed
+     * through above the sticky header.
+     */
+    box-shadow: 0 -1px 0 0 var(--color-surface-container);
+  }
+
+  .table-tbody {
+    background: transparent;
+  }
+
+  .table-td {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-2);
+    font-size: 13px;
+    vertical-align: middle;
+  }
+
+  /* min-height on td is ignored by browsers; apply to inner div instead */
+  .table-td-inner {
+    display: flex;
+    align-items: center;
+    min-height: 24px; /* 8 + 24 + 8 padding = 40px row */
+  }
+
+  .table-td-fill {
+    overflow: hidden;
+
+    .table-td-inner {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+
+  .table-td-align-right .table-td-inner {
+    justify-content: flex-end;
+  }
+
+  .table-td-align-center .table-td-inner {
+    justify-content: center;
+  }
+
+  .table-row:last-child .table-td {
+    border-bottom: none;
+  }
+
+  .table-th,
+  .table-td {
+    padding-left: 16px;
+
+    &:last-child {
+      padding-right: 16px;
+    }
+  }
+
+  &.table-settings-dense .table-td {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  &.table-settings-dense .table-td-inner {
+    min-height: 36px; /* 4 + 36 + 4 padding = 44px row */
+  }
+
+  /* Tighter vertical padding on expandable sub-rows (e.g. ModelTable group view). */
+  &.table-settings-expanded-compact .table-expanded-row .table-td {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  &.table-settings-expanded-compact .table-expanded-row .table-td-inner {
+    min-height: unset;
+  }
+
+  &.table-settings-expanded-compact .table-expanded-row-last .table-td {
+    padding-bottom: 10px;
+  }
+
+  &.table-settings-tall .table-th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    background: var(--color-surface-container);
+  }
+
+  &.table-settings-header-border .table-th {
+    border-bottom: 1px solid var(--color-border-2);
+  }
+
+  &.table-settings-no-sticky .table-fixed-header,
+  &.table-settings-no-sticky .table-th {
+    position: static;
+  }
+
+  &.table-settings-no-header .table-thead {
+    display: none;
+  }
+
+  &.table-settings-cell-top {
+    .table-th {
+      vertical-align: top;
+    }
+
+    .table-td {
+      vertical-align: top;
+    }
+
+    .table-td-inner {
+      align-items: flex-start;
+    }
+  }
+
+  &.table-settings-no-px {
+    .table-th,
+    .table-td {
+      &:first-child {
+        padding-left: 0;
+      }
+
+      &:last-child {
+        padding-right: 0;
+      }
+    }
+  }
+
+  &.table-settings-pin-last-column {
+    .table-thead tr > .table-th:last-child,
+    .table-row > .table-td:last-child {
+      position: sticky;
+      right: 0;
+      z-index: 22;
+      background: var(--color-surface-container);
+
+      &::before {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -28px;
+        width: 28px;
+        pointer-events: none;
+        opacity: 0;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          var(--color-surface-container) 100%
+        );
+        transition: opacity 120ms ease;
+        content: "";
+      }
+    }
+
+    &.table-scroll-has-right {
+      .table-thead tr > .table-th:last-child,
+      .table-row > .table-td:last-child {
+        &::before {
+          opacity: 1;
+        }
+      }
+    }
+
+    .table-thead tr > .table-th:last-child {
+      z-index: 23;
+    }
+
+    &.table-hover .table-row:hover > .table-td:last-child,
+    &.table-clickable .table-row:hover > .table-td:last-child {
+      background: var(--color-fill-1);
+
+      &::before {
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          var(--color-fill-1) 100%
+        );
+      }
+    }
+  }
+
+  .table-expand-cell {
+    padding-left: 4px;
+    padding-right: 0;
+    height: 1px; // allow child flex container to use h-full
+  }
+
+  &.table-hover .table-row,
+  &.table-hover .table-expanded-row {
+    &:hover {
+      background: var(--color-fill-1);
+    }
+  }
+
+  &.table-expanded-no-hover .table-expanded-row:hover {
+    background: transparent;
+  }
+
+  &.table-policy-fixed-layout .table {
+    table-layout: fixed;
+  }
+
+  &.table-policy-fixed-layout .table-expanded-row td > div {
+    contain: inline-size;
+  }
+
+  &.table-policy-fixed-layout .policy-markdown-scroll {
+    contain: inline-size;
+  }
+
+  &.table-settings-rounded-top {
+    .table-thead .table-th:first-child {
+      border-top-left-radius: 8px;
+    }
+
+    .table-thead .table-th:last-child {
+      border-top-right-radius: 8px;
+    }
+  }
+
+  &.table-settings-no-footer.table-hover {
+    .table-row:last-child:hover .table-td:first-child,
+    .table-expanded-row-last:hover .table-td:first-child {
+      border-bottom-left-radius: 8px;
+    }
+
+    .table-row:last-child:hover .table-td:last-child,
+    .table-expanded-row-last:hover .table-td:last-child {
+      border-bottom-right-radius: 8px;
+    }
+  }
+
+  .table-expanded-row + .table-row .table-td {
+    border-top: none;
+  }
+
+  /* Padding below when last row is expanded */
+  .table-expanded-row-last td {
+    padding-bottom: 16px;
+  }
+}
+
+.settings-table-root {
+  container-type: inline-size;
+}
+
+@container (max-width: 500px) {
+  .table-col-hide-sm {
+    display: none;
+  }
+}
+
+@container (max-width: 640px) {
+  .table-col-hide-md {
+    display: none;
+  }
+}
+
+// Inverse-radius corners for sticky search header inside bg-fill-2 card.
+// Paints bg-bg-2 in the tiny triangles outside the rounded-t-lg curve
+// so the parent card background doesn't leak through.
+.settings-search-corners::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    radial-gradient(
+        circle 8px at 100% 100%,
+        transparent 7.5px,
+        var(--color-bg-2) 8px
+      )
+      left top / 8px 8px no-repeat,
+    radial-gradient(
+        circle 8px at 0% 100%,
+        transparent 7.5px,
+        var(--color-bg-2) 8px
+      )
+      right top / 8px 8px no-repeat;
+}
+
+// Fixed layout — forces columns to respect assigned widths
+// so fill columns truncate instead of expanding the table.
+.table-layout-fixed .table {
+  table-layout: fixed;
+}
+
+// ==========================================
+// Border
+// ==========================================
+
+.table-border {
+  .table-container {
+    border: 1px solid var(--border-2);
+  }
+
+  .table-th,
+  .table-td {
+    border-right: 1px solid var(--border-1);
+
+    &:last-child {
+      border-right: none;
+    }
+  }
+}
+
+// ==========================================
+// Row Selection
+// ==========================================
+
+.table-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary-6);
+}
+
+// ==========================================
+// Empty State
+// ==========================================
+
+.table-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  color: var(--text-3);
+  font-size: 14px;
+}
+
+// ==========================================
+// Pagination
+// ==========================================
+
+.table-pagination-wrapper {
+  padding: 16px;
+  border-top: 1px solid var(--border-1);
+  background: var(--bg-1);
+  border-radius: 0 0 8px 8px;
+}
+
+.table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.table-pagination-left,
+.table-pagination-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.table-pagination-size {
+  padding: 4px 8px;
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  background: var(--bg-1);
+  color: var(--text-1);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: var(--border-3);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary-6);
+  }
+}
+
+.table-pagination-total {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.table-pagination-info {
+  font-size: 13px;
+  color: var(--text-1);
+  min-width: 100px;
+  text-align: center;
+}
+
+.table-pagination-jumper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-2);
+
+  input {
+    width: 50px;
+    padding: 4px 8px;
+    border: 1px solid var(--border-2);
+    border-radius: 4px;
+    background: var(--bg-1);
+    color: var(--text-1);
+    font-size: 13px;
+    text-align: center;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: var(--border-3);
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary-6);
+    }
+  }
+}
+
+// ==========================================
+// Dark Mode
+// ==========================================
+
+.table-dark {
+  .table-thead {
+    background: var(--fill-2);
+  }
+
+  .table-tbody {
+    background: var(--bg-2);
+  }
+}
+
+// ==========================================
+// Responsive
+// ==========================================
+
+@media (max-width: 768px) {
+  .table-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .table-pagination-left,
+  .table-pagination-right {
+    justify-content: center;
+  }
+}

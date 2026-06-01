@@ -1,0 +1,186 @@
+.chat-markdown-body .octicon {
+  display: inline-block;
+  fill: currentColor;
+  vertical-align: text-bottom;
+}
+
+.chat-markdown-body h1:hover .anchor .octicon-link:before,
+.chat-markdown-body h2:hover .anchor .octicon-link:before,
+.chat-markdown-body h3:hover .anchor .octicon-link:before,
+.chat-markdown-body h4:hover .anchor .octicon-link:before,
+.chat-markdown-body h5:hover .anchor .octicon-link:before,
+.chat-markdown-body h6:hover .anchor .octicon-link:before {
+  width: 16px;
+  height: 16px;
+  content: " ";
+  display: inline-block;
+  background-color: currentColor;
+  -webkit-mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' version='1.1' aria-hidden='true'><path fill-rule='evenodd' d='M7.775 3.275a.75.75 0 001.06 1.06l1.25-1.25a2 2 0 112.83 2.83l-2.5 2.5a2 2 0 01-2.83 0 .75.75 0 00-1.06 1.06 3.5 3.5 0 004.95 0l2.5-2.5a3.5 3.5 0 00-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 010-2.83l2.5-2.5a2 2 0 012.83 0 .75.75 0 001.06-1.06 3.5 3.5 0 00-4.95 0l-2.5 2.5a3.5 3.5 0 004.95 4.95l1.25-1.25a.75.75 0 00-1.06-1.06l-1.25 1.25a2 2 0 01-2.83 0z'></path></svg>");
+  mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' version='1.1' aria-hidden='true'><path fill-rule='evenodd' d='M7.775 3.275a.75.75 0 001.06 1.06l1.25-1.25a2 2 0 112.83 2.83l-2.5 2.5a2 2 0 01-2.83 0 .75.75 0 00-1.06 1.06 3.5 3.5 0 004.95 0l2.5-2.5a3.5 3.5 0 00-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 010-2.83l2.5-2.5a2 2 0 012.83 0 .75.75 0 001.06-1.06 3.5 3.5 0 00-4.95 0l-2.5 2.5a3.5 3.5 0 004.95 4.95l1.25-1.25a.75.75 0 00-1.06-1.06l-1.25 1.25a2 2 0 01-2.83 0z'></path></svg>");
+}
+
+.chat-markdown-body details,
+.chat-markdown-body figcaption,
+.chat-markdown-body figure {
+  display: block;
+}
+
+.chat-markdown-body summary {
+  display: list-item;
+}
+
+.chat-markdown-body [hidden] {
+  display: none !important;
+}
+
+// Cursor-style links
+.chat-markdown-body a {
+  background-color: transparent;
+  color: var(--color-primary-6);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.15s ease;
+
+  &:hover {
+    text-decoration: underline;
+    opacity: 0.85;
+  }
+}
+
+.chat-markdown-body abbr[title] {
+  border-bottom: none;
+  text-decoration: underline dotted;
+}
+
+// Cursor-style strong text
+.chat-markdown-body b,
+.chat-markdown-body strong {
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.chat-markdown-body dfn {
+  font-style: italic;
+}
+
+// H1 base is overridden below in heading section
+
+.chat-markdown-body mark {
+  background-color: var(--color-attention-subtle);
+  color: var(--color-fg-default);
+}
+
+.chat-markdown-body small {
+  font-size: 90%;
+}
+
+.chat-markdown-body sub,
+.chat-markdown-body sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+.chat-markdown-body sub {
+  bottom: -0.25em;
+}
+
+.chat-markdown-body sup {
+  top: -0.5em;
+}
+
+.chat-markdown-body img {
+  border-style: none;
+  max-width: 100%;
+  box-sizing: content-box;
+  background-color: var(--color-canvas-default);
+}
+
+.chat-markdown-body code,
+.chat-markdown-body kbd,
+.chat-markdown-body pre,
+.chat-markdown-body samp {
+  font-family: monospace;
+  font-size: 1em;
+}
+
+.chat-markdown-body figure {
+  margin: 1em 40px;
+}
+
+// Cursor-style horizontal rule
+.chat-markdown-body hr {
+  box-sizing: content-box;
+  overflow: hidden;
+  background: transparent;
+  height: 1px;
+  padding: 0;
+  margin: 16px 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--color-border-2),
+    transparent
+  );
+  border: 0;
+}
+
+.chat-markdown-body input {
+  font: inherit;
+  margin: 0;
+  overflow: visible;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.chat-markdown-body [type="button"],
+.chat-markdown-body [type="reset"],
+.chat-markdown-body [type="submit"] {
+  -webkit-appearance: button;
+}
+
+.chat-markdown-body [type="checkbox"],
+.chat-markdown-body [type="radio"] {
+  box-sizing: border-box;
+  padding: 0;
+}
+
+.chat-markdown-body [type="number"]::-webkit-inner-spin-button,
+.chat-markdown-body [type="number"]::-webkit-outer-spin-button {
+  height: auto;
+}
+
+.chat-markdown-body [type="search"]::-webkit-search-cancel-button,
+.chat-markdown-body [type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+.chat-markdown-body ::-webkit-input-placeholder {
+  color: inherit;
+  opacity: 0.54;
+}
+
+.chat-markdown-body ::-webkit-file-upload-button {
+  -webkit-appearance: button;
+  font: inherit;
+}
+
+// hover already defined above
+
+.chat-markdown-body ::placeholder {
+  color: var(--color-fg-subtle);
+  opacity: 1;
+}
+
+.chat-markdown-body hr::before {
+  display: table;
+  content: "";
+}
+
+.chat-markdown-body hr::after {
+  display: table;
+  clear: both;
+  content: "";
+}

@@ -1,0 +1,13 @@
+---
+source: crates/agent-core/src/core/turn_executor/../../tests/processor_tests.rs
+assertion_line: 177
+expression: "messages[0]"
+---
+_mc_ts: "[timestamp]"
+content: ~
+role: assistant
+tool_calls:
+  - function:
+      name: edit_file
+    id: tc1
+    type: function

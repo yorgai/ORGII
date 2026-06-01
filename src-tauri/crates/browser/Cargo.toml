@@ -1,0 +1,78 @@
+[package]
+name = "browser"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+
+# Browser & WebView management. Two surface areas:
+#
+# - Standalone browser windows (`windows.rs`) for opening external URLs in
+#   their own native window, with macOS traffic-light positioning + Windows
+#   DWM rounded corners delegated to `app_window`.
+# - Inline webviews embedded in the main app window (`inline.rs`,
+#   `layering.rs`), plus DOM editing (`dom_editor.rs`), screenshot capture
+#   (`capture.rs`, `screenshot_store.rs`), HttpOnly cookie access via WK
+#   (`cookies.rs`), navigation/console/network logging (`logging.rs`), and
+#   anti-bot / inspector / page-agent JS injection (`scripts/`).
+#
+# Plus the `automation` command surface: controls the selected agent browser
+# engine and proxies HTTP requests to it. The `AgentBrowserController` and
+# `ScreenshotStore` types themselves live in `shared_state` to break the
+# old cycle with tools/agents — this crate just re-exports them and owns
+# the Tauri command surface.
+#
+# Keeps its `#[tauri::command]` macros in-crate (key-vault / cursor-bridge
+# pattern); `app::commands::handler_list` registers them via bare
+# `browser::…` paths.
+
+[lib]
+name = "browser"
+
+[dependencies]
+# Workspace crates
+app_window = { path = "../app-window" }
+shared_state = { path = "../shared-state" }
+
+# Tauri
+tauri = { workspace = true }
+
+# Serde + JSON
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Async runtime — `automation::commands` and `dom_editor` use tokio::time
+tokio = { workspace = true }
+
+# Screenshot pipeline emits base64 PNG over IPC
+base64 = { workspace = true }
+# Browser window IDs
+uuid = { version = "1", features = ["v4"] }
+
+# URL parsing for navigation events + cookie domain matching
+url = "2"
+
+# Tracing for logging.rs warn paths
+tracing = "0.1"
+
+# `orgii_preview.rs` (ORGII's component-preview webview, à la Storybook —
+# loads `orgii-preview.html` from the webpack dev server and renders
+# isolated React components with custom props) compiles each component's
+# `.scss` to CSS via `grass` and post-processes the output with `regex`
+# to add `!important` to color/background/border properties so injected
+# styles beat the host page's specificity.
+grass = "0.13"
+regex = "1.9.5"
+
+# macOS-specific: vibrancy on standalone browser windows + ObjC bridges
+# for WKWebView cookie store, NSHTTPCookieStorage fallback, NSStringFrom*.
+[target.'cfg(target_os = "macos")'.dependencies]
+window-vibrancy = "0.6"
+
+# Modern Objective-C bindings (`objc2` / `block2`). `block2::RcBlock` is
+# the heap-retained replacement for the legacy `block 0.1.6` callback
+# type used by WKHTTPCookieStore in `cookies.rs`, `capture.rs`, and the
+# WKWebView snapshot/eval completion handlers in `logging.rs`.
+objc2 = { workspace = true }
+objc2-foundation = { workspace = true }
+objc2-app-kit = { workspace = true }
+block2 = { workspace = true }

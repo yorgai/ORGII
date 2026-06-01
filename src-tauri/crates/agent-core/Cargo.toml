@@ -1,0 +1,179 @@
+[package]
+name = "agent_core"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "ORGII agent runtime: configuration, LLM providers, model context, tool registry, turn execution, agent definitions, session management, prompt builders, intelligence (memory, skills, MCP, plugins, automation), integrations (channels, gateway), and Tauri command surface for the agent core."
+publish = false
+
+[lib]
+name = "agent_core"
+path = "src/lib.rs"
+
+# ---------------------------------------------------------------------------
+# Features
+# ---------------------------------------------------------------------------
+# OSS app builds do not forward the Swift/AppKit feature.
+# ---------------------------------------------------------------------------
+[features]
+default = []
+wingman-bar-native = []
+# ---------------------------------------------------------------------------
+# Workspace dependencies
+# ---------------------------------------------------------------------------
+[dependencies]
+# Pure data / leaf crates.
+core_types = { path = "../types" }
+app_paths = { path = "../app-paths" }
+app_platform = { path = "../app-platform" }
+app_utils = { path = "../app-utils" }
+
+# Runtime infrastructure agent_core composes against (no back-edges from
+# any of these crates into agent_core — IoC slots inside agent_core
+# break the few cycles that used to exist).
+database = { path = "../database" }
+inbox = { path = "../inbox" }
+key_vault = { path = "../key-vault" }
+shared_state = { path = "../shared-state" }
+
+# Sibling subsystems that agent_core orchestrates over. Each is a leaf
+# from agent_core's perspective.
+browser = { path = "../browser" }
+git = { path = "../git" }
+integrations = { path = "../integrations" }
+lsp = { path = "../lsp" }
+project_management = { path = "../project-management" }
+search = { path = "../search" }
+settings = { path = "../settings" }
+terminal = { path = "../terminal" }
+
+# ---------------------------------------------------------------------------
+# Tauri — feature set lives on `[workspace.dependencies]` in the root
+# Cargo.toml so this crate cannot drift from the root `app` crate.
+# ---------------------------------------------------------------------------
+tauri = { workspace = true }
+
+# ---------------------------------------------------------------------------
+# Async + futures
+# ---------------------------------------------------------------------------
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+async-trait = "0.1"
+futures = "0.3"
+futures-util = "0.3"
+backoff = { version = "0.4", features = ["tokio"] }
+
+# ---------------------------------------------------------------------------
+# Serialization / data formats
+# ---------------------------------------------------------------------------
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+schemars = { workspace = true }
+# ---------------------------------------------------------------------------
+# Persistence / IO
+# ---------------------------------------------------------------------------
+rusqlite = { workspace = true }
+parking_lot = "0.12"
+
+# ---------------------------------------------------------------------------
+# Time / IDs
+# ---------------------------------------------------------------------------
+chrono = { workspace = true }
+chrono-tz = "0.10.4"
+uuid = { version = "1", features = ["v4"] }
+
+# ---------------------------------------------------------------------------
+# Crypto / hashing / encoding
+# ---------------------------------------------------------------------------
+base64 = { workspace = true }
+sha2 = "0.10"
+
+# ---------------------------------------------------------------------------
+# Logging / errors
+# ---------------------------------------------------------------------------
+tracing = "0.1.37"
+log = "0.4"
+thiserror = { workspace = true }
+# ---------------------------------------------------------------------------
+# HTTP / networking — feature flag union with root `app` is enforced by
+# `[workspace.dependencies]` so the workspace cargo unify pass cannot
+# silently drift.
+# ---------------------------------------------------------------------------
+reqwest = { workspace = true }
+axum = { workspace = true }
+tokio-tungstenite = { workspace = true }
+url = "2"
+
+# ---------------------------------------------------------------------------
+# Search / parsing
+# ---------------------------------------------------------------------------
+regex = "1.9.5"
+
+# ---------------------------------------------------------------------------
+# Misc utilities
+# ---------------------------------------------------------------------------
+scopeguard = "1.2"
+tempfile = "3.13"
+tiktoken-rs = "0.9"
+similar = "2.6"
+blake3 = "1.5"
+which = "8"
+dirs = "6.0"
+open = "5"
+urlencoding = "2.1"
+html2text = "0.14"
+pdf-extract = "0.7"
+flate2 = "1.1.9"
+tar = "0.4.44"
+zip = { workspace = true }
+ignore = "0.4"
+croner = "2"
+notify = { workspace = true }
+
+# ---------------------------------------------------------------------------
+# Model Context Protocol — feature set lives on `[workspace.dependencies]`
+# so this crate cannot drift from the root `app` crate (see the comment in
+# the root Cargo.toml about the `reqwest-tls-no-provider` choice).
+# ---------------------------------------------------------------------------
+rmcp = { workspace = true }
+globset = "0.4.18"
+prost = "0.14.3"
+prost-types = "0.14.3"
+bytes = "1.11.1"
+async-stream = "0.3.6"
+
+# ---------------------------------------------------------------------------
+# Unix-only deps (libc on POSIX paths, fcntl, file locking, etc.)
+# ---------------------------------------------------------------------------
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+# ---------------------------------------------------------------------------
+# macOS-only deps for the wingman / accessibility / desktop tooling layer.
+# ---------------------------------------------------------------------------
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { workspace = true }
+objc2-foundation = { workspace = true }
+objc2-app-kit = { workspace = true }
+dispatch2 = { workspace = true }
+core-foundation = "0.10"
+core-graphics = { version = "0.24", features = ["highsierra", "elcapitan"] }
+foreign-types = "0.5"
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+[dev-dependencies]
+tempfile = "3.13"
+test_helpers = { path = "../test-helpers" }
+app_utils = { path = "../app-utils", features = ["testing"] }
+serial_test = "3"
+wiremock = "0.6"
+insta = { version = "1", features = ["yaml", "redactions"] }
+assert_matches = "1"
+
+[build-dependencies]
+prost = "0.14.3"
+prost-types = "0.14.3"
+prost-build = "0.14.3"

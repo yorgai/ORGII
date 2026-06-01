@@ -1,0 +1,430 @@
+/* global describe, before, it, process */
+import {
+  API_AGENT_TYPE,
+  BUILTIN_SDE_AGENT_ID,
+  E2E_REPO_PATH,
+  DEFAULT_AGENT_ORG_ID,
+  DEFAULT_AGENT_ORG_MEMBER_IDS,
+  RUN_ID,
+  SHARED_CLI_AGENT_ID,
+  SHARED_CLI_AGENT_TYPE,
+  AGENT_ORG_COORDINATOR_MEMBER_ID,
+  AGENT_ORG_TASK_STATUS,
+  assertCrashRecoveryBannerAbsent,
+  assertLongTaskRenderedCollapsed,
+  assertNoCurrentPlanBuildSurface,
+  assertNoFalseFinality,
+  assertNoMemberIntervention,
+  assertRenderedGroupChatNoQuoteOrUnreadPreview,
+  assertRenderedGroupChatToggleIsIdempotent,
+  assertRenderedInboxPinBarAbsent,
+  clickGroupChatResumeButton,
+  clickRenderedMemberSwitcher,
+  clickReturnToWorkAndWaitCleared,
+  configureCreatorForAgentOrg,
+  configureCreatorForDefaultAgentOrg,
+  createLongTaskPrecondition,
+  createRenderedStrictTwoMemberAgentOrg,
+  ensureMemberHasSwitchableInbox,
+  executeCreatePlanAsMember,
+  getApiAccount,
+  invokeE2E,
+  openAgentOrgOverviewPanel,
+  openRenderedGroupChatView,
+  openRenderedSidebarSession,
+  parseInboxPayload,
+  refreshRenderedAgentOrgOverview,
+  removeAgentOrgsByName,
+  selectMemberOverrideModel,
+  selectPreferredModel,
+  selectRenderedAgentOrg,
+  selectRenderedDefaultAgentOrg,
+  selectRenderedExecMode,
+  sendCoordinatorOrgMessage,
+  sendFromRenderedCreator,
+  sendRenderedGroupChatMentionPrompt,
+  sendRenderedChatPrompt,
+  unwrap,
+  waitForActiveSessionExecMode,
+  waitForAgentOrgByName,
+  waitForAgentOrgRunView,
+  waitForAgentOrgRunViewByOrg,
+  waitForCoordinatorRuntimeStatus,
+  waitForGroupChatPausedBanner,
+  waitForGroupChatPendingTarget,
+  waitForInboxRow,
+  waitForInboxRowRead,
+  waitForIntervention,
+  waitForMemberPostMessageActivity,
+  waitForPlanApprovalRequest,
+  waitForPromptDump,
+  waitForRenderedAssistantReply,
+  waitForRenderedGroupChatActive,
+  waitForRenderedGroupChatMessage,
+  waitForRenderedGroupChatUserTurn,
+  waitForRenderedInterventionPin,
+  waitForRenderedReleasedTask,
+  waitForSessionAggregateRow,
+  waitForSessionOrgRuntimeSnapshot,
+  waitForApp,
+  assertE2ERepoFixture,
+} from "../../support/core/agentOrgUiDriver.mjs";
+
+
+describe("Agent Org settings and topology rendered UI", () => {
+  before(async () => {
+    assertE2ERepoFixture();
+    await waitForApp();
+  });
+
+  it("creates strict Agent Org structure in settings and launches that persisted runtime topology", async () => {
+    const account = await getApiAccount();
+    const model = selectPreferredModel(account);
+    const orgName = `E2E Strict Org ${RUN_ID}`;
+    const leadName = `E2E Lead ${RUN_ID}`;
+    const childName = `E2E Child ${RUN_ID}`;
+    await removeAgentOrgsByName(orgName);
+
+    const org = await createRenderedStrictTwoMemberAgentOrg({
+      orgName,
+      leadName,
+      childName,
+    });
+    if (typeof org.id !== "string") {
+      throw new Error(
+        `Created org did not expose an id: ${JSON.stringify(org)}`
+      );
+    }
+
+    await configureCreatorForAgentOrg({ account, model, agentOrgId: org.id });
+    await selectRenderedAgentOrg(org.id);
+    const launchPrompt = `E2E true positive custom strict Agent Org topology ${RUN_ID}. Reply briefly.`;
+    const sessionId = await sendFromRenderedCreator(launchPrompt);
+    if (!sessionId) {
+      throw new Error(
+        "Custom strict Agent Org launch did not create a session id"
+      );
+    }
+    await waitForRenderedAssistantReply("custom strict Agent Org launch");
+
+    await waitForAgentOrgRunView(
+      sessionId,
+      (view) => {
+        const members = view?.members ?? [];
+        const lead = members.find((member) => member.name === leadName);
+        const child = members.find((member) => member.name === childName);
+        return Boolean(
+          view?.currentMemberId === AGENT_ORG_COORDINATOR_MEMBER_ID &&
+          view?.context?.runId &&
+          lead?.memberId &&
+          child?.memberId &&
+          lead.agentId === BUILTIN_SDE_AGENT_ID &&
+          child.agentId === BUILTIN_SDE_AGENT_ID &&
+          !lead.parentMemberId &&
+          child.parentMemberId === lead.memberId &&
+          lead.sessionRuntime?.sessionId &&
+          child.sessionRuntime?.sessionId
+        );
+      },
+      "custom strict Agent Org persisted members consumed by runtime"
+    );
+  });
+
+  it("applies member launch overrides once and persists them only when requested", async () => {
+    const account = await getApiAccount();
+    const model = selectPreferredModel(account);
+    const overrideModel = selectMemberOverrideModel(account, model);
+    const orgName = `E2E Member Override Org ${RUN_ID}`;
+    const leadName = `E2E Override Lead ${RUN_ID}`;
+    const childName = `E2E Override Child ${RUN_ID}`;
+    await removeAgentOrgsByName(orgName);
+
+    const org = await createRenderedStrictTwoMemberAgentOrg({
+      orgName,
+      leadName,
+      childName,
+    });
+    const lead = (org.children ?? []).find(
+      (member) => member.name === leadName
+    );
+    const child = lead?.children?.find((member) => member.name === childName);
+    if (!child?.id) {
+      throw new Error(
+        `Override test could not resolve child member: ${JSON.stringify(org)}`
+      );
+    }
+
+    await configureCreatorForAgentOrg({ account, model, agentOrgId: org.id });
+    await selectRenderedAgentOrg(org.id);
+    const launchOnlyDraft = {
+      agentOrgMemberOverrides: {
+        [child.id]: {
+          runtimeConfig: {
+            keySource: "own_key",
+            accountId: account.id,
+            model: overrideModel,
+            selectedSourceLabel: account.name ?? account.id,
+            selectedSourceModelType: account.agent_type,
+          },
+        },
+      },
+      applyAgentOrgMemberOverridesForFuture: false,
+    };
+    unwrap(
+      await invokeE2E("setAgentOrgMemberDraftConfig", launchOnlyDraft, org.id),
+      "set launch-only member override draft"
+    );
+
+    const launchOnlyResult = unwrap(
+      await invokeE2E("launchSession", {
+        category: "rust_agent",
+        content: `E2E launch-only member override ${RUN_ID}. Reply briefly.`,
+        workspacePath: E2E_REPO_PATH,
+        keySource: "own_key",
+        accountId: account.id,
+        model,
+        agentDefinitionId: BUILTIN_SDE_AGENT_ID,
+        agentOrgId: org.id,
+        agentOrgMemberOverrides: launchOnlyDraft.agentOrgMemberOverrides,
+        applyAgentOrgMemberOverridesForFuture: false,
+        background: false,
+      }),
+      "launchSession launch-only member override"
+    ).result;
+    const launchOnlySessionId =
+      launchOnlyResult?.sessionId ?? launchOnlyResult?.session_id;
+    if (!launchOnlySessionId) {
+      throw new Error(
+        `Launch-only member override did not create a session: ${JSON.stringify(launchOnlyResult)}`
+      );
+    }
+    const launchOnlyRunState = await waitForAgentOrgRunViewByOrg(
+      org.id,
+      (view) => {
+        const overriddenMember = (view?.members ?? []).find(
+          (member) => member.memberId === child.id
+        );
+        return Boolean(overriddenMember?.sessionRuntime?.sessionId);
+      },
+      "launch-only member override materialized"
+    );
+    const launchOnlyChildRuntime = (
+      launchOnlyRunState?.view?.members ?? []
+    ).find((member) => member.memberId === child.id)?.sessionRuntime;
+    const launchOnlyChildSessionId = launchOnlyChildRuntime?.sessionId;
+    if (!launchOnlyChildSessionId) {
+      throw new Error(
+        `Launch-only override did not materialize child session: ${JSON.stringify(launchOnlyRunState)}`
+      );
+    }
+    await waitForSessionAggregateRow(
+      launchOnlyChildSessionId,
+      (session) =>
+        session.model === overrideModel && session.accountId === account.id,
+      "launch-only child model/account override"
+    );
+
+    const afterLaunchOnlyOrg = unwrap(
+      await invokeE2E("listAgentOrgs"),
+      "listAgentOrgs after launch-only override"
+    ).orgs.find((candidate) => candidate?.id === org.id);
+    const afterLaunchOnlyChild =
+      afterLaunchOnlyOrg?.children?.[0]?.children?.find(
+        (member) => member.id === child.id
+      );
+    if (afterLaunchOnlyChild?.runtimeConfig) {
+      throw new Error(
+        `Launch-only override persisted unexpectedly: ${JSON.stringify(afterLaunchOnlyChild)}`
+      );
+    }
+
+    await configureCreatorForAgentOrg({ account, model, agentOrgId: org.id });
+    await selectRenderedAgentOrg(org.id);
+    const persistedDraft = {
+      ...launchOnlyDraft,
+      applyAgentOrgMemberOverridesForFuture: true,
+    };
+    unwrap(
+      await invokeE2E("setAgentOrgMemberDraftConfig", persistedDraft, org.id),
+      "set persisted member override draft"
+    );
+
+    const persistedResult = unwrap(
+      await invokeE2E("launchSession", {
+        category: "rust_agent",
+        content: `E2E persisted member override ${RUN_ID}. Reply briefly.`,
+        workspacePath: E2E_REPO_PATH,
+        keySource: "own_key",
+        accountId: account.id,
+        model,
+        agentDefinitionId: BUILTIN_SDE_AGENT_ID,
+        agentOrgId: org.id,
+        agentOrgMemberOverrides: persistedDraft.agentOrgMemberOverrides,
+        applyAgentOrgMemberOverridesForFuture: true,
+        background: false,
+      }),
+      "launchSession persisted member override"
+    ).result;
+    const persistedSessionId =
+      persistedResult?.sessionId ?? persistedResult?.session_id;
+    if (!persistedSessionId) {
+      throw new Error(
+        `Persisted member override did not create a session: ${JSON.stringify(persistedResult)}`
+      );
+    }
+    const persistedRunState = await waitForAgentOrgRunViewByOrg(
+      org.id,
+      (view) => {
+        const overriddenMember = (view?.members ?? []).find(
+          (member) => member.memberId === child.id
+        );
+        return Boolean(overriddenMember?.sessionRuntime?.sessionId);
+      },
+      "persisted member override materialized"
+    );
+    const persistedChildRuntime = (persistedRunState?.view?.members ?? []).find(
+      (member) => member.memberId === child.id
+    )?.sessionRuntime;
+    const persistedChildSessionId = persistedChildRuntime?.sessionId;
+    if (!persistedChildSessionId) {
+      throw new Error(
+        `Persisted override did not materialize child session: ${JSON.stringify(persistedRunState)}`
+      );
+    }
+    await waitForSessionAggregateRow(
+      persistedChildSessionId,
+      (session) =>
+        session.model === overrideModel && session.accountId === account.id,
+      "persisted child model/account override"
+    );
+
+    const persistedOrg = unwrap(
+      await invokeE2E("listAgentOrgs"),
+      "listAgentOrgs after persisted override"
+    ).orgs.find((candidate) => candidate?.id === org.id);
+    const persistedChild = persistedOrg?.children?.[0]?.children?.find(
+      (member) => member.id === child.id
+    );
+    if (persistedChild?.runtimeConfig?.model !== overrideModel) {
+      throw new Error(
+        `Persisted override missing from org definition: ${JSON.stringify(persistedChild)}`
+      );
+    }
+    if (persistedChild.runtimeConfig.accountId !== account.id) {
+      throw new Error(
+        `Persisted override account mismatch: ${JSON.stringify(persistedChild)}`
+      );
+    }
+  });
+
+  it("materializes multiple Agent Org CLI members from the same CLI source without collapsing them", async () => {
+    const account = await getApiAccount();
+    const model = selectPreferredModel(account);
+    const orgName = `E2E Shared CLI Org ${RUN_ID}`;
+    const leadName = `E2E CLI Lead ${RUN_ID}`;
+    const childName = `E2E CLI Child ${RUN_ID}`;
+    await removeAgentOrgsByName(orgName);
+
+    const org = await createRenderedStrictTwoMemberAgentOrg({
+      orgName,
+      leadName,
+      childName,
+      memberAgentId: SHARED_CLI_AGENT_ID,
+    });
+    const lead = (org.children ?? []).find(
+      (member) => member.name === leadName
+    );
+    const child = lead?.children?.find((member) => member.name === childName);
+    if (
+      lead?.agentId !== SHARED_CLI_AGENT_ID ||
+      child?.agentId !== SHARED_CLI_AGENT_ID
+    ) {
+      throw new Error(
+        `Created shared CLI org did not persist both members on ${SHARED_CLI_AGENT_ID}: ${JSON.stringify(org)}`
+      );
+    }
+
+    await configureCreatorForAgentOrg({ account, model, agentOrgId: org.id });
+    await selectRenderedAgentOrg(org.id);
+    const launchPrompt = `E2E true positive shared CLI Agent Org topology ${RUN_ID}. Reply briefly.`;
+    const sessionId = await sendFromRenderedCreator(launchPrompt);
+    if (!sessionId) {
+      throw new Error(
+        "Shared CLI Agent Org launch did not create a session id"
+      );
+    }
+    await waitForRenderedAssistantReply("shared CLI Agent Org launch");
+
+    let leadMemberId = null;
+    let childMemberId = null;
+    let leadSessionId = null;
+    let childSessionId = null;
+    await waitForAgentOrgRunView(
+      sessionId,
+      (view) => {
+        const members = view?.members ?? [];
+        const leadRuntime = members.find((member) => member.name === leadName);
+        const childRuntime = members.find(
+          (member) => member.name === childName
+        );
+        leadMemberId = leadRuntime?.memberId ?? null;
+        childMemberId = childRuntime?.memberId ?? null;
+        leadSessionId = leadRuntime?.sessionRuntime?.sessionId ?? null;
+        childSessionId = childRuntime?.sessionRuntime?.sessionId ?? null;
+        return Boolean(
+          view?.currentMemberId === AGENT_ORG_COORDINATOR_MEMBER_ID &&
+          view?.context?.runId &&
+          leadMemberId &&
+          childMemberId &&
+          leadMemberId !== childMemberId &&
+          leadRuntime?.agentId === SHARED_CLI_AGENT_ID &&
+          childRuntime?.agentId === SHARED_CLI_AGENT_ID &&
+          !leadRuntime.parentMemberId &&
+          childRuntime.parentMemberId === leadMemberId &&
+          !leadRuntime.sessionRuntime?.agentDefinitionId &&
+          !childRuntime.sessionRuntime?.agentDefinitionId &&
+          leadRuntime.sessionRuntime?.cliAgentType === SHARED_CLI_AGENT_TYPE &&
+          childRuntime.sessionRuntime?.cliAgentType === SHARED_CLI_AGENT_TYPE &&
+          leadRuntime.sessionRuntime?.memberId === leadMemberId &&
+          childRuntime.sessionRuntime?.memberId === childMemberId &&
+          leadSessionId &&
+          childSessionId &&
+          leadSessionId !== childSessionId
+        );
+      },
+      "shared CLI Agent Org members materialized by member_id"
+    );
+
+    await ensureMemberHasSwitchableInbox(
+      sessionId,
+      leadMemberId,
+      "shared CLI lead"
+    );
+    await clickRenderedMemberSwitcher(leadMemberId, leadSessionId);
+    await waitForAgentOrgRunView(
+      leadSessionId,
+      (view) => view?.currentMemberId === leadMemberId,
+      "shared CLI lead member rendered switch"
+    );
+    unwrap(
+      await invokeE2E("openSession", sessionId),
+      "openSession(coordinator)"
+    );
+    await waitForAgentOrgRunView(
+      sessionId,
+      (view) => view?.currentMemberId === AGENT_ORG_COORDINATOR_MEMBER_ID,
+      "shared CLI coordinator restored before child switch"
+    );
+    await ensureMemberHasSwitchableInbox(
+      sessionId,
+      childMemberId,
+      "shared CLI child"
+    );
+    await clickRenderedMemberSwitcher(childMemberId, childSessionId);
+    await waitForAgentOrgRunView(
+      childSessionId,
+      (view) => view?.currentMemberId === childMemberId,
+      "shared CLI child member rendered switch"
+    );
+  });
+});

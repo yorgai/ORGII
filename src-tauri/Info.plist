@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        Document Types — enables Dock Exposé recent files, Apple menu > Recent Items,
+        and "Open With" in Finder. Merged into the .app bundle at build time by Tauri CLI.
+        NOT active during `tauri dev` (bare binary, no bundle). Use `tauri build - -debug`
+        to test Exposé / system-level recent documents.
+    -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <!-- Folder/Directory support - for opening repositories -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Folder</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.folder</string>
+                <string>public.directory</string>
+            </array>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+        </dict>
+        <!-- All files - for opening individual files -->
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>All Files</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.item</string>
+            </array>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
+        </dict>
+    </array>
+    
+    <!-- URL Schemes - already configured in tauri.conf.json but can be added here too -->
+
+    <!-- Services - none for now -->
+
+    <!--
+        Microphone usage description.
+        REQUIRED on macOS 10.14+ for any code path that calls
+        `getUserMedia({ audio: true })` from the WKWebView — without this
+        key the call throws `NotAllowedError` immediately and the OS
+        permission prompt never appears. Active only inside the .app
+        bundle (tauri build); `tauri dev` runs a bare binary that cannot
+        request TCC permissions, so test voice input with
+        `npm run tauri build -- --debug`.
+    -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>ORGII needs microphone access to transcribe your voice when you dictate prompts to agents.</string>
+
+    <!--
+        Speech recognition usage description.
+        Set proactively in case we move from the WebKit Web Speech API to
+        the on-device SFSpeechRecognizer; harmless to declare today.
+    -->
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>ORGII uses speech recognition to turn your dictation into prompt text.</string>
+</dict>
+</plist>

@@ -1,0 +1,385 @@
+/**
+ * TabBar Component
+ *
+ * Shared tab bar for Workstation apps showing open tabs with status indicators.
+ * Displays icon, name, and status (M/D/U/R) in a horizontal layout.
+ * Includes control bar with actions for viewing all changes and split view.
+ * Uses dnd-kit for drag and drop reordering.
+ *
+ * Shared by: CodeEditor, DatabaseManager, Browser
+ *
+ * Tab strip uses bg-workstation-bg by default; tabs are 32px pills on the 40px row.
+ * The tab row has no bottom divider.
+ */
+import { useActionSystemOptional } from "@/src/modules/WorkStation/ActionSystem";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { useAtomValue } from "jotai";
+import React, { Fragment, memo, useCallback, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+
+import FileTypeIcon from "@src/components/FileTypeIcon";
+import {
+  COLLAPSED_SIDEBAR_CHROME_OFFSET,
+  useShouldOffsetWorkStationTopBar,
+} from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
+import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
+import { CollapsedSidebarButton } from "@src/scaffold/NavigationSidebar/CollapsedSidebarButton";
+import { tabScrollRevealAtom } from "@src/store/workstation/tabs";
+
+import { NoDragRegion } from "../NoDragRegion";
+import TabContextMenu from "./TabContextMenu";
+import {
+  SortableTab,
+  TabBarControls,
+  WORK_STATION_TAB_PILL_DRAG_OVERLAY_CLASS,
+} from "./components";
+import {
+  TAB_BAR_HEIGHT,
+  TAB_PAIR_SEPARATOR_SLOT_CLASS,
+  TAB_STRIP_SECTION_RULE_CLASS,
+} from "./config";
+import {
+  useAutoScrollToActive,
+  useTabDrag,
+  useTabLabelCollapse,
+} from "./hooks";
+import type { WorkStationTab } from "./types";
+
+// ============================================
+// Types
+// ============================================
+
+export interface TabBarProps {
+  /** Pane identifier for this tab bar */
+  paneId?: string;
+  /** List of open tabs */
+  tabs: WorkStationTab[];
+  /** Currently active tab id */
+  activeTabId: string | null;
+  /** Callback when tab is clicked */
+  onTabClick: (tabId: string) => void;
+  /** Callback when tab close button is clicked */
+  onTabClose: (tabId: string) => void;
+  /** Callback when tabs are reordered via drag and drop */
+  onTabReorder?: (startIndex: number, endIndex: number) => void;
+  /** Callback when more-options button is clicked */
+  onMoreOptions?: () => void;
+  /** Opens a new tab (e.g. Browser); shows + in the right control section */
+  onNewTab?: () => void;
+  /** Callback to close all other tabs */
+  onCloseOtherTabs?: (tabId: string) => void;
+  /** Callback to close all saved tabs */
+  onCloseSavedTabs?: () => void;
+  /** Repository path for relative path calculation */
+  repoPath?: string;
+  /** Optional leading element rendered before the scroll row (fixed; not scrolled with tabs). */
+  leadingSlot?: React.ReactNode;
+  /**
+   * Optional prefix rendered inside the tab scroll row before sortable tabs (same scroll
+   * container). Use for surfaces that should visually read as one strip with tabs.
+   */
+  tabRowPrefix?: React.ReactNode;
+  /** Optional trailing element rendered after control buttons (e.g., panel toggles) */
+  trailingSlot?: React.ReactNode;
+  /** Optional tab-row surface override; defaults to bg-workstation-bg. */
+  surfaceClassName?: string;
+  /**
+   * When true, if the tab strip overflows horizontally, inactive tabs show icon only;
+   * the selected tab keeps its text label. Widen the strip to show all labels again.
+   */
+  collapseInactiveTabLabelsOnOverflow?: boolean;
+}
+
+// ============================================
+// Main Component
+// ============================================
+
+export const TabBar: React.FC<TabBarProps> = memo(
+  ({
+    paneId = "primary",
+    tabs,
+    activeTabId,
+    onTabClick,
+    onTabClose,
+    onTabReorder,
+    onMoreOptions,
+    onNewTab,
+    onCloseOtherTabs,
+    onCloseSavedTabs,
+    repoPath = "",
+    leadingSlot,
+    tabRowPrefix,
+    trailingSlot,
+    surfaceClassName = "bg-workstation-bg",
+    collapseInactiveTabLabelsOnOverflow = false,
+  }) => {
+    const actionSystem = useActionSystemOptional();
+    const dispatch = actionSystem?.dispatch;
+    const shouldOffsetLeftChrome = useShouldOffsetWorkStationTopBar();
+    const isCompactLayout = useIsCompactLayout();
+
+    const scrollReveal = useAtomValue(tabScrollRevealAtom);
+
+    const tabsContainerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const sensors = useSensors(
+      useSensor(PointerSensor, {
+        activationConstraint: { distance: 8 },
+      }),
+      useSensor(KeyboardSensor, {
+        coordinateGetter: sortableKeyboardCoordinates,
+      })
+    );
+
+    useAutoScrollToActive({
+      activeTabId,
+      tabsLength: tabs?.length ?? 0,
+      containerRef: tabsContainerRef,
+      scrollReveal,
+    });
+
+    const {
+      draggingTabId,
+      draggingTab,
+      handleDragStart,
+      handleDragMove,
+      handleDragEnd,
+      handleDragCancel,
+    } = useTabDrag({
+      paneId,
+      tabs,
+      onTabReorder,
+    });
+
+    const [contextMenu, setContextMenu] = useState<{
+      position: { x: number; y: number };
+      tab: WorkStationTab;
+    } | null>(null);
+
+    const hideInactiveTabLabels = useTabLabelCollapse({
+      enabled: collapseInactiveTabLabelsOnOverflow,
+      tabsDependency: tabs,
+      activeTabDependency: activeTabId,
+      containerRef: tabsContainerRef,
+    });
+
+    const handleTabClick = useCallback(
+      (tabId: string) => onTabClick(tabId),
+      [onTabClick]
+    );
+
+    const handleCloseClick = useCallback(
+      (e: React.MouseEvent, tabId: string) => {
+        e.stopPropagation();
+        onTabClose(tabId);
+      },
+      [onTabClose]
+    );
+
+    const handleContextMenu = useCallback(
+      (e: React.MouseEvent, tab: WorkStationTab) => {
+        e.preventDefault();
+        setContextMenu({ position: { x: e.clientX, y: e.clientY }, tab });
+      },
+      []
+    );
+
+    const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
+
+    const hasTabStrip = (tabs && tabs.length > 0) || Boolean(tabRowPrefix);
+    const hasTabs = tabs && tabs.length > 0;
+
+    if (!hasTabStrip && !leadingSlot && !trailingSlot) {
+      return null;
+    }
+
+    const tabIds = hasTabs ? tabs.map((tab) => tab.id) : [];
+
+    return (
+      <div
+        ref={containerRef}
+        data-pane-id={paneId}
+        data-is-dragging={draggingTabId ? "true" : undefined}
+        className={`work-station-tab-bar relative flex shrink-0 overflow-hidden ${surfaceClassName}`}
+        data-tauri-drag-region
+        style={
+          {
+            height: `${TAB_BAR_HEIGHT + (isCompactLayout ? 8 : 0)}px`,
+            paddingLeft: shouldOffsetLeftChrome
+              ? COLLAPSED_SIDEBAR_CHROME_OFFSET
+              : undefined,
+            WebkitAppRegion: "drag",
+          } as React.CSSProperties
+        }
+      >
+        <div
+          className={`flex h-9 min-w-0 flex-1 items-center ${isCompactLayout ? "mt-2" : ""}`}
+        >
+          {shouldOffsetLeftChrome ? <CollapsedSidebarButton /> : null}
+          {leadingSlot ? (
+            <div
+              className="flex h-full shrink-0 items-stretch"
+              data-tauri-drag-region
+              style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+            >
+              {leadingSlot}
+            </div>
+          ) : null}
+
+          <div
+            ref={tabsContainerRef}
+            className="relative flex h-full min-w-0 max-w-full shrink items-center overflow-x-auto overflow-y-hidden scrollbar-hide"
+            style={{ scrollBehavior: "smooth" } as React.CSSProperties}
+          >
+            {tabRowPrefix ? (
+              <NoDragRegion className="flex h-full shrink-0 items-center gap-1">
+                {tabRowPrefix}
+              </NoDragRegion>
+            ) : null}
+            {tabRowPrefix && hasTabs ? (
+              <span className={TAB_STRIP_SECTION_RULE_CLASS} aria-hidden />
+            ) : null}
+            {hasTabs ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragMove={handleDragMove}
+                onDragEnd={handleDragEnd}
+                onDragCancel={handleDragCancel}
+              >
+                <div
+                  className="flex min-w-max shrink-0 items-center"
+                  role="tablist"
+                >
+                  <SortableContext
+                    items={tabIds}
+                    strategy={horizontalListSortingStrategy}
+                  >
+                    <span
+                      className={`${TAB_PAIR_SEPARATOR_SLOT_CLASS} bg-transparent`}
+                      aria-hidden
+                    />
+                    {tabs.map((tab, i) => {
+                      const next = tabs[i + 1];
+                      const separatorVisible =
+                        !!next &&
+                        tab.id !== activeTabId &&
+                        next.id !== activeTabId;
+                      return (
+                        <Fragment key={tab.id}>
+                          <NoDragRegion>
+                            <SortableTab
+                              tab={tab}
+                              isActive={tab.id === activeTabId}
+                              isDraggable={!!onTabReorder && !tab.pinned}
+                              onTabClick={handleTabClick}
+                              onCloseClick={handleCloseClick}
+                              onContextMenu={handleContextMenu}
+                              hideLabel={
+                                tab.pinned ||
+                                (collapseInactiveTabLabelsOnOverflow &&
+                                  hideInactiveTabLabels &&
+                                  tab.id !== activeTabId)
+                              }
+                            />
+                          </NoDragRegion>
+                          {next && (
+                            <span
+                              className={`${TAB_PAIR_SEPARATOR_SLOT_CLASS} ${
+                                separatorVisible
+                                  ? "bg-border-2"
+                                  : "bg-transparent"
+                              }`}
+                              aria-hidden
+                            />
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </SortableContext>
+                </div>
+
+                {createPortal(
+                  <DragOverlay dropAnimation={null}>
+                    {draggingTab && (
+                      <div
+                        className={WORK_STATION_TAB_PILL_DRAG_OVERLAY_CLASS}
+                        style={{ zIndex: 9999 }}
+                      >
+                        <FileTypeIcon
+                          fileName={draggingTab.title}
+                          size="small"
+                        />
+                        <span className="max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-primary-6">
+                          {draggingTab.title}
+                        </span>
+                      </div>
+                    )}
+                  </DragOverlay>,
+                  document.body
+                )}
+              </DndContext>
+            ) : null}
+          </div>
+
+          <div
+            className="h-8 min-w-8 flex-1"
+            data-tauri-drag-region
+            style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+            aria-hidden
+          />
+
+          <NoDragRegion>
+            <TabBarControls
+              hasTabs={hasTabs}
+              onNewTab={onNewTab}
+              onMoreOptions={onMoreOptions}
+              trailingSlot={trailingSlot}
+            />
+          </NoDragRegion>
+        </div>
+
+        {contextMenu && (
+          <TabContextMenu
+            position={contextMenu.position}
+            tab={contextMenu.tab}
+            repoPath={repoPath}
+            onClose={handleCloseContextMenu}
+            onCloseTab={onTabClose}
+            onCloseOtherTabs={onCloseOtherTabs ?? (() => {})}
+            onCloseSavedTabs={onCloseSavedTabs ?? (() => {})}
+            dispatch={dispatch}
+          />
+        )}
+      </div>
+    );
+  }
+);
+
+TabBar.displayName = "TabBar";
+
+export default TabBar;
+
+// Re-export types and config
+export type { WorkStationTab } from "./types";
+export {
+  TAB_BAR_HEIGHT,
+  MAX_VISIBLE_TABS,
+  STATUS_LABELS,
+  TAB_STRIP_SECTION_RULE_CLASS,
+} from "./config";

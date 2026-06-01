@@ -1,0 +1,143 @@
+/**
+ * SpotlightFooter Component
+ *
+ * Keyboard shortcut hints for selectors.
+ * - `spotlight` (default): below the main LiquidGlass panel — pill, specular, spotlight shadow.
+ * - `dropdown`: same hints with `DROPDOWN_CLASSES.panel` (e.g. @-mention menu).
+ */
+import { ArrowDown, ArrowUp } from "lucide-react";
+import React, { useContext } from "react";
+import { useTranslation } from "react-i18next";
+
+import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  KEYBOARD_SHORTCUT_VARIANT,
+  KeyboardShortcut,
+} from "@src/components/KeyboardShortcut";
+import LiquidGlass from "@src/components/LiquidGlass";
+
+import { SpotlightFooterMaterialContext } from "./spotlightFooterMaterialContext";
+
+// ============ TYPES ============
+
+/**
+ * Which chip to show when {@link SpotlightFooterProps.hasActiveAction} is true.
+ *
+ * - `back` — Backspace + "Back" (drill-in palettes, e.g. RepoPalette).
+ * - `switchColumn` — Tab + "Switch column" (two-column palettes like
+ *   UnifiedModelPalette, where Backspace is intentionally inert and
+ *   Tab/ArrowLeft hand focus back to the left column).
+ * - `switchSection` — Tab + "Switch section" for palettes with a pinned
+ *   action section below the main result list.
+ */
+export const SPOTLIGHT_FOOTER_ACTIVE_CHIP = {
+  back: "back",
+  switchColumn: "switchColumn",
+  switchSection: "switchSection",
+} as const;
+export type SpotlightFooterActiveChip =
+  (typeof SPOTLIGHT_FOOTER_ACTIVE_CHIP)[keyof typeof SPOTLIGHT_FOOTER_ACTIVE_CHIP];
+
+export interface SpotlightFooterProps {
+  /** Whether there's an active path (items selected) */
+  hasActiveAction: boolean;
+  /**
+   * `spotlight` — LiquidGlass pill + spotlight shadow (default, GlobalSpotlight shell).
+   * `dropdown` — `DROPDOWN_CLASSES.panel` (border-border-2, bg-bg-2, shadow-dropdown).
+   */
+  variant?: "spotlight" | "dropdown";
+  /**
+   * Which chip to render in the "active action" slot. Defaults to `back`
+   * (Backspace + Return) to match historical drill-in palettes.
+   */
+  activeActionChip?: SpotlightFooterActiveChip;
+}
+
+// ============ COMPONENT ============
+
+export const SpotlightFooter: React.FC<SpotlightFooterProps> = ({
+  hasActiveAction,
+  variant = "spotlight",
+  activeActionChip = SPOTLIGHT_FOOTER_ACTIVE_CHIP.back,
+}) => {
+  const { t } = useTranslation();
+  const material = useContext(SpotlightFooterMaterialContext);
+
+  const inner = (
+    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-2 text-[11px] text-text-2">
+      <span className="flex items-center gap-1.5">
+        {/* `↑↓` stays as a hand-rolled paired pill: the shared
+            KeyboardShortcut component renders one pill per key, but the
+            macOS convention is to show navigation arrows joined inside a
+            single pill. Background/height match the spotlightFooter
+            variant so the look is consistent. */}
+        <kbd className="flex h-[18px] items-center gap-0.5 rounded bg-fill-3 px-1.5 font-medium leading-none text-text-2">
+          <ArrowUp size={10} strokeWidth={2} />
+          <ArrowDown size={10} strokeWidth={2} />
+        </kbd>
+        <span>{t("selectors.spotlightFooter.navigate")}</span>
+      </span>
+
+      <span className="flex items-center gap-1.5">
+        <KeyboardShortcut
+          shortcut="enter"
+          variant={KEYBOARD_SHORTCUT_VARIANT.spotlightFooter}
+        />
+        <span>{t("selectors.spotlightFooter.select")}</span>
+      </span>
+
+      {hasActiveAction &&
+        (activeActionChip === SPOTLIGHT_FOOTER_ACTIVE_CHIP.switchColumn ||
+        activeActionChip === SPOTLIGHT_FOOTER_ACTIVE_CHIP.switchSection ? (
+          <span className="flex items-center gap-1.5">
+            <KeyboardShortcut
+              shortcut="tab"
+              variant={KEYBOARD_SHORTCUT_VARIANT.spotlightFooter}
+            />
+            <span>
+              {activeActionChip === SPOTLIGHT_FOOTER_ACTIVE_CHIP.switchSection
+                ? t("selectors.spotlightFooter.switchSection")
+                : t("selectors.spotlightFooter.switchColumn")}
+            </span>
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5">
+            <KeyboardShortcut
+              shortcut="backspace"
+              variant={KEYBOARD_SHORTCUT_VARIANT.spotlightFooter}
+            />
+            <span>{t("actions.back")}</span>
+          </span>
+        ))}
+
+      <span className="flex items-center gap-1.5">
+        <KeyboardShortcut
+          shortcut="esc"
+          variant={KEYBOARD_SHORTCUT_VARIANT.spotlightFooter}
+        />
+        <span>{t("actions.close")}</span>
+      </span>
+    </div>
+  );
+
+  if (variant === "dropdown") {
+    return (
+      <div className={`${DROPDOWN_CLASSES.panel} mx-auto w-fit max-w-full`}>
+        {inner}
+      </div>
+    );
+  }
+
+  return (
+    <LiquidGlass
+      material={material}
+      radius={999}
+      enableSpecular={true}
+      className="spotlight-shadow mx-auto w-fit max-w-full overflow-hidden"
+    >
+      {inner}
+    </LiquidGlass>
+  );
+};
+
+export default SpotlightFooter;

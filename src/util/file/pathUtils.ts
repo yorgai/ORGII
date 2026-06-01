@@ -1,0 +1,128 @@
+/**
+ * File Path Utilities
+ *
+ * Shared utilities for extracting file information from paths.
+ * Consolidates duplicate implementations across the codebase.
+ */
+
+// Matches backslash-escaped octal byte sequences (\NNN where N is 0-7)
+// produced by git and some Rust serializers for non-ASCII filenames.
+const OCTAL_ESCAPE_RE = /\\([0-3][0-7]{2})/g;
+
+/**
+ * Decode a path that may contain git/Rust-style octal-escaped bytes.
+ *
+ * Git and some Tauri serializers represent non-ASCII filename bytes as
+ * `\NNN` (backslash + 3 octal digits). This converts them back to the
+ * original UTF-8 characters. Also strips surrounding double-quotes that
+ * git adds to escaped filenames.
+ *
+ * @example
+ * decodeOctalPath('"Cafe\\303\\251.pdf"') // "Cafeé.pdf"
+ * decodeOctalPath("plain-ascii.ts")              // "plain-ascii.ts" (no-op)
+ */
+export function decodeOctalPath(path: string): string {
+  if (!path.includes("\\")) return path;
+
+  let cleaned = path;
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.slice(1, -1);
+  }
+
+  if (!OCTAL_ESCAPE_RE.test(cleaned)) return cleaned;
+
+  const bytes: number[] = [];
+  let idx = 0;
+  while (idx < cleaned.length) {
+    if (
+      cleaned[idx] === "\\" &&
+      idx + 3 < cleaned.length &&
+      /^[0-3][0-7]{2}$/.test(cleaned.slice(idx + 1, idx + 4))
+    ) {
+      bytes.push(parseInt(cleaned.slice(idx + 1, idx + 4), 8));
+      idx += 4;
+    } else {
+      bytes.push(cleaned.charCodeAt(idx));
+      idx += 1;
+    }
+  }
+
+  return new TextDecoder().decode(new Uint8Array(bytes));
+}
+
+/**
+ * Get file extension from file path
+ * @param filePath - Full file path or filename
+ * @returns File extension (without dot) or empty string if no extension
+ *
+ * @example
+ * getFileExtension("src/components/Button.tsx") // "tsx"
+ * getFileExtension("README") // ""
+ * getFileExtension(".gitignore") // "gitignore"
+ */
+export function getFileExtension(filePath: string): string {
+  if (!filePath) return "";
+  const parts = filePath.split(".");
+  return parts.length > 1 ? parts[parts.length - 1] : "";
+}
+
+/**
+ * Get file name from file path
+ * @param filePath - Full file path
+ * @returns File name (with extension) or original path if no separator
+ *
+ * @example
+ * getFileName("src/components/Button.tsx") // "Button.tsx"
+ * getFileName("README.md") // "README.md"
+ * getFileName("file") // "file"
+ */
+export function getFileName(filePath: string): string {
+  if (!filePath) return "";
+  const normalized = filePath.replace(/\\/g, "/");
+  const parts = normalized.split("/");
+  return parts[parts.length - 1] || filePath;
+}
+
+/**
+ * Get base name (filename without extension) from file path
+ * @param filePath - Full file path
+ * @returns Base name without extension
+ *
+ * @example
+ * getBaseName("src/components/Button.tsx") // "Button"
+ * getBaseName("README.md") // "README"
+ * getBaseName("file") // "file"
+ */
+export function getBaseName(filePath: string): string {
+  const fileName = getFileName(filePath);
+  const extension = getFileExtension(fileName);
+  if (!extension) return fileName;
+  return fileName.slice(0, fileName.length - extension.length - 1);
+}
+
+/**
+ * Get directory path from file path
+ * @param filePath - Full file path
+ * @returns Directory path (without filename) or empty string if no directory
+ *
+ * @example
+ * getDirectory("src/components/Button.tsx") // "src/components"
+ * getDirectory("README.md") // ""
+ * getDirectory("file") // ""
+ */
+export function getDirectory(filePath: string): string {
+  if (!filePath) return "";
+  const normalized = filePath.replace(/\\/g, "/");
+  const lastSlashIndex = normalized.lastIndexOf("/");
+  return lastSlashIndex === -1 ? "" : normalized.substring(0, lastSlashIndex);
+}
+
+/**
+ * Get file extension in lowercase
+ * Convenience function for case-insensitive extension matching
+ * @param filePath - Full file path or filename
+ * @returns Lowercase file extension
+ */
+export function getFileExtensionLower(filePath: string): string {
+  return getFileExtension(filePath).toLowerCase();
+}

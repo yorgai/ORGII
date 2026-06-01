@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "welcome": {
+      "title": "Добро пожаловать",
+      "description": "Начните работу с ORGII"
+    },
+    "devPassport": {
+      "description": "Ваша личность разработчика"
+    },
+    "github": {
+      "title": "GitHub",
+      "description": "Подключите аккаунт"
+    },
+    "workspace": {
+      "title": "Проект",
+      "description": "Откройте или клонируйте проект"
+    },
+    "theme": {
+      "title": "Тема",
+      "description": "Настройка внешнего вида"
+    },
+    "complete": {
+      "title": "Готово",
+      "description": "Всё готово к работе"
+    }
+  },
+  "welcome": {
+    "title": "Добро пожаловать в ORGII",
+    "description": "Давайте настроим ваше рабочее пространство за несколько шагов."
+  },
+  "devPassport": {
+    "title": "Настройка Dev Passport",
+    "description": "Каждому vibe engineer нужна своя личность.",
+    "role": "Vibe Engineer",
+    "codeName": "Кодовое имя",
+    "codeNamePlaceholder": "Введите кодовое имя...",
+    "randomNameTooltip": "Сгенерировать случайное кодовое имя",
+    "avatar": "Аватар",
+    "selectImage": "Выберите изображение",
+    "avatarHint": "Ваша визуальная идентичность в проектах",
+    "generateButton": "Создать Vibe Passport",
+    "passportTitle": "Ваш Vibe Passport",
+    "passportWelcome": "Добро пожаловать, {{name}}. Ваша личность готова."
+  },
+  "github": {
+    "title": "Подключить GitHub",
+    "description": "Подключите аккаунт GitHub для доступа к репо, создания коммитов и управления pull request'ами прямо из ORGII.",
+    "connectButton": "Подключить аккаунт GitHub",
+    "hint": "Вы также можете подключить GitHub позже в Настройки > Интеграции"
+  },
+  "workspace": {
+    "title": "Открыть проект",
+    "description": "Откройте локальную папку или клонируйте репо, чтобы начать работу. ORGII автоматически проиндексирует код для интеллектуальной помощи.",
+    "openFolder": "Открыть папку",
+    "cloneRepo": "Клонировать репо",
+    "hint": "Вы можете пропустить этот шаг и открыть проект позже"
+  },
+  "theme": {
+    "title": "Выберите тему",
+    "description": "Выберите тему по своему вкусу. Вы можете изменить её в любое время в Настройках.",
+    "light": "Светлая",
+    "dark": "Тёмная"
+  },
+  "complete": {
+    "title": "Всё готово!",
+    "description": "Ваше рабочее пространство готово. Начните новую Session для программирования с помощью ИИ или исследуйте приложение, чтобы открыть все функции.",
+    "startSession": "Начать новую Session"
+  },
+  "navigation": {
+    "skipSetup": "Пропустить настройку",
+    "getStarted": "Начать",
+    "goToSettings": "Перейти к настройкам"
+  }
+}

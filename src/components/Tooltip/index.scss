@@ -1,0 +1,180 @@
+// ==========================================
+// Tooltip Component Styles
+// Uses "native-tooltip" prefix to match component class names
+// ==========================================
+
+.native-tooltip {
+  position: fixed;
+  z-index: 1060;
+  max-width: 320px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  word-wrap: break-word;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.95);
+  // Only transition opacity and transform, NOT position (top/left) to prevent "flying" effect
+  transition:
+    opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.native-tooltip-visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  &.native-tooltip-interactive.native-tooltip-visible {
+    pointer-events: auto;
+  }
+
+  // Color themes
+  &.native-tooltip-dark {
+    background: rgba(0, 0, 0, 0.85);
+    color: #ffffff;
+
+    .native-tooltip-arrow {
+      background: rgba(0, 0, 0, 0.85);
+    }
+  }
+
+  &.native-tooltip-light {
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--color-text-1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+    .native-tooltip-arrow {
+      background: rgba(255, 255, 255, 0.95);
+    }
+  }
+
+  &.native-tooltip-panel {
+    background: var(--color-bg-2);
+    color: var(--color-text-1);
+    border: 1px solid var(--color-border-2);
+
+    .native-tooltip-arrow {
+      background: var(--color-bg-2);
+    }
+  }
+
+  // Shortcut tooltips share `SessionHoverCard`'s shadow + border surface,
+  // but keep a tighter 6px radius — the tooltip is small enough that a
+  // 12px corner looks overly soft next to the 4px key chips inside.
+  &.native-tooltip-framed-panel {
+    width: max-content;
+    max-width: calc(100vw - 16px);
+    white-space: nowrap;
+    background: var(--cm-editor-background, var(--color-bg-2));
+    color: var(--color-text-1);
+    border: 1px solid var(--color-border-2);
+    box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.1);
+
+    kbd {
+      color: var(--color-text-1);
+    }
+  }
+}
+
+.native-tooltip-content {
+  position: relative;
+  z-index: 1;
+}
+
+.native-tooltip-content-inner {
+  // Content inner styling
+}
+
+.native-tooltip-arrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+// Arrow positions
+.native-tooltip-top,
+.native-tooltip-top-start,
+.native-tooltip-top-end {
+  .native-tooltip-arrow {
+    bottom: -4px;
+    left: 50%;
+    margin-left: -4px;
+  }
+}
+
+.native-tooltip-top-start .native-tooltip-arrow {
+  left: 16px;
+  margin-left: 0;
+}
+
+.native-tooltip-top-end .native-tooltip-arrow {
+  left: auto;
+  right: 16px;
+  margin-left: 0;
+}
+
+.native-tooltip-bottom,
+.native-tooltip-bottom-start,
+.native-tooltip-bottom-end {
+  .native-tooltip-arrow {
+    top: -4px;
+    left: 50%;
+    margin-left: -4px;
+  }
+}
+
+.native-tooltip-bottom-start .native-tooltip-arrow {
+  left: 16px;
+  margin-left: 0;
+}
+
+.native-tooltip-bottom-end .native-tooltip-arrow {
+  left: auto;
+  right: 16px;
+  margin-left: 0;
+}
+
+.native-tooltip-left,
+.native-tooltip-left-start,
+.native-tooltip-left-end {
+  .native-tooltip-arrow {
+    right: -4px;
+    top: 50%;
+    margin-top: -4px;
+  }
+}
+
+.native-tooltip-left-start .native-tooltip-arrow {
+  top: 12px;
+  margin-top: 0;
+}
+
+.native-tooltip-left-end .native-tooltip-arrow {
+  top: auto;
+  bottom: 12px;
+  margin-top: 0;
+}
+
+.native-tooltip-right,
+.native-tooltip-right-start,
+.native-tooltip-right-end {
+  .native-tooltip-arrow {
+    left: -4px;
+    top: 50%;
+    margin-top: -4px;
+  }
+}
+
+.native-tooltip-right-start .native-tooltip-arrow {
+  top: 12px;
+  margin-top: 0;
+}
+
+.native-tooltip-right-end .native-tooltip-arrow {
+  top: auto;
+  bottom: 12px;
+  margin-top: 0;
+}

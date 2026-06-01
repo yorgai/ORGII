@@ -1,0 +1,190 @@
+//! Post-turn dispatch: broadcasts, hooks, locks, fire-and-forget jobs.
+//!
+//! Runs after `turn_executor::execute_turn` returns. Order matters:
+//!
+//! 1. **`agent:complete` broadcast** — first, so the user sees "done"
+//!    before any background work fires.
+//! 2. **`HookEvent::Stop`** — `.orgii/hooks.json` `Stop` hook.
+//! 3. **Computer Use lock release** — best-effort, no-op if not held.
+//! 4. **Session memory extraction** — fire-and-forget, 60s timeout.
+//! 5. **Extract memories** — forked extractor agent, fire-and-forget.
+//! 6. **Auto-dream** — periodic memory consolidation, fire-and-forget.
+//! 7. **Long-turn digest** — only if `should_summarize(tool_calls,
+//!    wall_time)`; broadcast via `agent:turn_summary`.
+//!
+//! All four spawns above use [`should_run_post_turn_work`] to skip the
+//! work for cancelled turns (the user explicitly stopped — we don't
+//! want to charge them tokens summarizing a turn they killed).
+
+use tracing::info;
+
+use super::{should_run_post_turn_work, UnifiedMessageProcessor};
+use crate::core::session::types::DialogTurnState;
+use crate::turn_executor::TurnResult;
+
+use super::super::post_turn as post_turn_jobs;
+use super::super::streaming::{broadcast_agent_complete, AgentCompleteParams};
+use super::super::summary;
+
+/// Inputs for [`UnifiedMessageProcessor::dispatch_post_turn_work`].
+///
+/// Bundled into a struct so the call site stays a single line. The
+/// processor reads everything it needs off `&self`; this carries only
+/// per-turn outputs (the result, the in-memory message list,
+/// metrics, the cancel-derived turn state).
+pub(super) struct PostTurnInputs<'a> {
+    pub session_id: &'a str,
+    pub turn_id: &'a str,
+    pub response_text: &'a str,
+    pub messages: &'a [serde_json::Value],
+    pub result: &'a TurnResult,
+    pub tool_calls_count: u32,
+    pub wall_time_secs: u64,
+    pub turn_completed_at: &'a str,
+    pub final_turn_state: DialogTurnState,
+}
+
+impl UnifiedMessageProcessor {
+    /// Runs every post-turn step (broadcast, Stop hook, CU lock release,
+    /// four fire-and-forget spawns) in order.
+    pub(super) async fn dispatch_post_turn_work(&self, inputs: PostTurnInputs<'_>) {
+        let PostTurnInputs {
+            session_id,
+            turn_id,
+            response_text,
+            messages,
+            result,
+            tool_calls_count,
+            wall_time_secs,
+            turn_completed_at,
+            final_turn_state,
+        } = inputs;
+
+        // 9. Broadcast completion FIRST — user sees "done" immediately.
+        broadcast_agent_complete(&AgentCompleteParams {
+            session_id,
+            turn_id,
+            content: response_text,
+            model: &self.runtime.model,
+            is_stream_error: result.is_stream_error,
+            prompt_tokens: result.prompt_tokens,
+            completion_tokens: result.completion_tokens,
+            total_tokens: result.total_tokens,
+            context_tokens: result.context_tokens,
+        });
+
+        // 9a. Fire HookEvent::Stop — agent turn concluded.
+        if let Some(ref executor) = self.event_handler_config.hook_executor {
+            if executor.has_hooks_for(crate::intelligence::hooks::HookEvent::Stop) {
+                let ctx = crate::intelligence::hooks::events::HookContext::for_session(session_id)
+                    .with_var("ORGII_TURN_ID", turn_id)
+                    .with_var("ORGII_TOOL_CALLS", tool_calls_count.to_string())
+                    .with_var("ORGII_TOTAL_TOKENS", result.total_tokens.to_string());
+                let stop_executor = executor.clone();
+                tokio::spawn(async move {
+                    stop_executor
+                        .run(crate::intelligence::hooks::HookEvent::Stop, &ctx)
+                        .await;
+                });
+            }
+        }
+
+        // 9a½. Release Computer Use lock if held (zero-syscall check for non-CU turns).
+        if integrations::computer_use_lock::is_held_locally() {
+            let released = integrations::computer_use_lock::release(session_id);
+            if released {
+                info!(
+                    "[unified_processor] Computer use lock released for session {}",
+                    session_id
+                );
+                crate::bus::broadcast_event(
+                    "agent:computer_use_exited",
+                    serde_json::json!({ "sessionId": session_id }),
+                );
+            }
+        }
+
+        let fork_provider = post_turn_jobs::ForkProviderSpec {
+            model: self.runtime.model.clone(),
+            account_id: self.runtime.account_id.clone(),
+            reliability: self.runtime.resolved.reliability.clone(),
+            native_harness_type: self.runtime.native_harness_type,
+            workspace: self.runtime.workspace_state.read().clone(),
+        };
+
+        // 9b. Session memory extraction (fire-and-forget, 60s timeout).
+        if should_run_post_turn_work(self.sm_config.enabled, final_turn_state) {
+            post_turn_jobs::spawn_session_memory_extraction(
+                post_turn_jobs::SessionMemoryExtractionInput {
+                    session_id,
+                    messages,
+                    prompt_tokens: result.prompt_tokens,
+                    tool_calls_count,
+                    sm_state: self.sm_state.clone(),
+                    sm_config: self.sm_config.clone(),
+                    fork_provider: fork_provider.clone(),
+                },
+            )
+            .await;
+        }
+
+        // 9c. Extract memories — forked extractor agent (fire-and-forget).
+        // Subagents bypass this branch structurally (they don't go through
+        // UnifiedMessageProcessor), so no explicit agent_id check is needed.
+        if should_run_post_turn_work(
+            self.runtime.resolved.learnings.extract_memories_enabled,
+            final_turn_state,
+        ) && !result.is_stream_error
+        {
+            if let Some(ws_path) = self.workspace_root() {
+                post_turn_jobs::spawn_extract_memories(post_turn_jobs::ExtractMemoriesInput {
+                    session_id,
+                    ws_path,
+                    messages,
+                    final_text: result.content.as_deref(),
+                    em_state: self.session.em_state.clone(),
+                    fork_provider: fork_provider.clone(),
+                    tool_registry: self.runtime.tool_registry.clone(),
+                })
+                .await;
+            }
+        }
+
+        // 9d. Auto-dream — periodic memory consolidation (fire-and-forget).
+        if should_run_post_turn_work(
+            self.runtime.resolved.learnings.auto_dream_enabled,
+            final_turn_state,
+        ) {
+            if let Some(ws_path) = self.workspace_root() {
+                post_turn_jobs::spawn_auto_dream(post_turn_jobs::AutoDreamInput {
+                    session_id,
+                    ws_path,
+                    messages: messages.to_vec(),
+                    ad_state: self.session.ad_state.clone(),
+                    fork_provider: fork_provider.clone(),
+                    tool_registry: self.runtime.tool_registry.clone(),
+                })
+                .await;
+            }
+        }
+
+        // 10. Long-turn completion digest (fire-and-forget).
+        //
+        // Broadcast via `agent:turn_summary` (not returned in ProcessingResult)
+        // so the scheduler isn't blocked while the LLM generates it.
+        if final_turn_state == DialogTurnState::Completed
+            && summary::should_summarize(tool_calls_count, wall_time_secs)
+        {
+            post_turn_jobs::spawn_turn_summary(post_turn_jobs::TurnSummaryInput {
+                session_id,
+                turn_id,
+                created_at: turn_completed_at,
+                messages: messages.to_vec(),
+                fork_provider: fork_provider.clone(),
+                tool_calls_count,
+                wall_time_secs,
+                last_turn_summary: self.session.last_turn_summary.clone(),
+            });
+        }
+    }
+}

@@ -1,0 +1,310 @@
+/**
+ * Global Utility Styles
+ * 
+ * Reusable CSS classes for common patterns
+ */
+
+@use "./mixins/scrollbar";
+
+// ============================================
+// CSS Variables
+// ============================================
+
+:root {
+  // Border radius for page containers (used by Tailwind's rounded-page).
+  // Overridden per host OS in applyHostDesktopWindowChromeRadius() (see src/config/windowChromeRadius.ts).
+  --radius-page: 20px;
+}
+
+// ============================================
+// Button Utilities
+// ============================================
+
+/**
+ * Danger Close Button
+ * Red hover/active states for close buttons (X)
+ * 
+ * Usage: Add class to Button component
+ * <Button className="btn-close-danger" ... />
+ */
+.btn-close-danger {
+  &:hover:not(:disabled) {
+    background: color-mix(
+      in srgb,
+      var(--color-danger-6) 10%,
+      transparent
+    ) !important;
+    color: var(--color-danger-6) !important;
+  }
+
+  &:active:not(:disabled) {
+    background: color-mix(
+      in srgb,
+      var(--color-danger-6) 20%,
+      transparent
+    ) !important;
+    color: var(--color-danger-6) !important;
+  }
+}
+
+/**
+ * Refresh Icon Animation
+ *
+ * Standardized spin classes for RefreshCw icons.
+ * Every refresh icon in the app should use one of these instead of
+ * Tailwind's `animate-spin` (which only does 1 revolution per second).
+ *
+ * - .btn-refresh        — hover state for refresh buttons (fill-2 bg, primary text)
+ * - .btn-refresh-spin   — one-shot 2-round spin (apply on trigger, auto-stops)
+ * - .refresh-spinning   — continuous 2-round spin while class is present
+ *
+ * Usage (prefer REFRESH_ICON_TOKENS from @src/components/RefreshIcon/tokens):
+ *   <RefreshCw className={loading ? REFRESH_ICON_TOKENS.spin : ""} />
+ *   <RefreshCw className={isSpinning ? REFRESH_ICON_TOKENS.oneShot : ""} />
+ */
+.btn-refresh {
+  &:hover:not(:disabled) {
+    background: var(--color-fill-2) !important;
+    color: var(--color-primary-6) !important;
+  }
+}
+
+.btn-refresh-spin {
+  animation: refresh-rotate-2x 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.refresh-spinning {
+  animation: refresh-rotate-2x 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes refresh-rotate-2x {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(720deg);
+  }
+}
+
+/**
+ * Fill-3 Hover Button
+ * Subtle fill-3 hover state for navigation/secondary buttons
+ * 
+ * Usage: Add class to Button component
+ * <Button className="btn-hover-fill-3" ... />
+ */
+.btn-hover-fill-2 {
+  &:hover:not(:disabled) {
+    background: var(--color-fill-2) !important;
+  }
+}
+
+// ============================================
+// Tree Row Utilities
+// ============================================
+
+/**
+ * Tree Row Drag State
+ * Applied via DOM manipulation to avoid re-renders during drag
+ * 
+ * Usage: Applied by TreeNodeInner during dragstart/dragend
+ * rowRef.current?.classList.add("is-dragging");
+ */
+.tree-row-base.is-dragging {
+  opacity: 0.5;
+}
+
+/**
+ * Tree Indent Guide Hover
+ * Guides are invisible by default, revealed when the panel is hovered.
+ */
+.tree-indent-guide {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.tree-guide-scope:hover .tree-indent-guide {
+  opacity: 1;
+}
+
+// ============================================
+// Composer Shell Breathing
+// ============================================
+
+/**
+ * Breathing glow animation for composer shells (chat input, session creators).
+ *
+ * States:
+ *   - Rest      : slow breathing — glow pulses between dim and bright
+ *   - Hover     : breathing continues while the border lifts to border-3
+ *   - Active    : sharp inhale burst (click / mousedown)
+ *   - Focus     : focused breathing — primary ring stays visible while glow pulses
+ *
+ * Apply `.composer-breathing` to the shell element alongside
+ * shellInteractionClasses. The CSS-only approach means zero JS overhead.
+ */
+
+@keyframes composer-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(0, 0, 0, 0.02),
+      0 20px 52px -26px
+        color-mix(in srgb, var(--color-primary-6) 42%, transparent),
+      0 8px 22px -18px
+        color-mix(in srgb, var(--color-primary-6) 30%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(0, 0, 0, 0.02),
+      0 24px 60px -22px
+        color-mix(in srgb, var(--color-primary-6) 78%, transparent),
+      0 10px 28px -16px
+        color-mix(in srgb, var(--color-primary-6) 62%, transparent);
+  }
+}
+
+@keyframes composer-breathe-focused {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--color-primary-6) 15%, transparent),
+      0 20px 52px -26px
+        color-mix(in srgb, var(--color-primary-6) 42%, transparent),
+      0 8px 22px -18px
+        color-mix(in srgb, var(--color-primary-6) 30%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--color-primary-6) 15%, transparent),
+      0 24px 60px -22px
+        color-mix(in srgb, var(--color-primary-6) 78%, transparent),
+      0 10px 28px -16px
+        color-mix(in srgb, var(--color-primary-6) 62%, transparent);
+  }
+}
+
+.composer-breathing {
+  animation: composer-breathe 3.6s ease-in-out infinite;
+
+  &:focus-within {
+    animation-name: composer-breathe-focused;
+  }
+}
+
+// ============================================
+// Scroll Utilities
+// ============================================
+
+/**
+ * Prevent layout shift when scrollbars appear/disappear by reserving gutter space.
+ * Works in modern Chromium / Firefox; safely ignored elsewhere.
+ *
+ * Usage: add `scrollbar-gutter-stable` to a scroll container.
+ */
+.scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+}
+
+/**
+ * Thin overlay scrollbar — unified styling across the app.
+ * Doesn't occupy layout space (overlay). Use instead of scrollbar-hide
+ * on detail panels, wizard steps, subpages, and sidebars.
+ */
+.scrollbar-overlay {
+  @include scrollbar.scrollbar-unified;
+}
+
+/**
+ * Hide scrollbars on a sidebar wrapper AND all its descendants.
+ *
+ * Applied at the outermost wrapper of WorkStation primary sidebars
+ * (PrimarySidebarLayoutWithSections), the Browser secondary panel
+ * (WebDevTools / WebInspector), and the AgentOrgs EditPanel so every
+ * nested scroll region inherits the hidden treatment without each leaf
+ * component having to opt in individually.
+ *
+ * Scroll behaviour is unchanged — only the visible track/thumb is removed.
+ * CodeMirror scrollers (.cm-scroller) are explicitly preserved.
+ */
+.station-sidebar-scroll-area {
+  &,
+  *:not(.cm-scroller) {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+}
+
+/**
+ * Hide scrollbars for the Settings app shell and all nested scroll regions.
+ * Applied on `.settings-page` roots (Settings module + AgentOrgs/Integrations).
+ */
+.settings-page {
+  &,
+  *:not(.cm-scroller) {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+}
+
+/**
+ * Scroll Fade (top/bottom edge)
+ * Masks content at viewport edges to create a fade effect when scrolling.
+ * Position-aware: combine with .scroll-fade-at-top / .scroll-fade-at-bottom
+ * to suppress the fade at the edge the user has already reached.
+ *
+ * - scroll-fade-y: 24px fade zone (panels, main content)
+ * - scroll-fade-y-sm: 12px fade zone (compact non-dropdown lists)
+ */
+@mixin scroll-fade-mask {
+  --scroll-fade-top: var(--scroll-fade-height);
+  --scroll-fade-bottom: var(--scroll-fade-height);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black var(--scroll-fade-top),
+    black calc(100% - var(--scroll-fade-bottom)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black var(--scroll-fade-top),
+    black calc(100% - var(--scroll-fade-bottom)),
+    transparent 100%
+  );
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-position: 0 0;
+  mask-position: 0 0;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.scroll-fade-y {
+  --scroll-fade-height: 24px;
+  @include scroll-fade-mask;
+}
+
+.scroll-fade-y-sm {
+  --scroll-fade-height: 12px;
+  @include scroll-fade-mask;
+}
+
+.scroll-fade-at-top {
+  --scroll-fade-top: 0px;
+}
+
+.scroll-fade-at-bottom {
+  --scroll-fade-bottom: 0px;
+}

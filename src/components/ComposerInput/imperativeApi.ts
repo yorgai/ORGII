@@ -1,0 +1,175 @@
+/**
+ * Imperative-handle factory for ComposerInput.
+ *
+ * Exposes the exact `TiptapInputRef` surface used across the codebase. The
+ * façade returned by `getEditor()` covers the chainable insert-content
+ * pattern (`useTiptapInput.handleAtMentionClick` and `useSlashCommand` both
+ * use `editor.chain().focus().insertContent("...").run()`).
+ */
+import {
+  type ComposerEditorChain,
+  type ComposerEditorFacade,
+  type ComposerInputRef,
+  type ComposerPillAttrs,
+  type ComposerSnapshot,
+  type PillIconType,
+} from "./types";
+import {
+  collectContextPillTextsFromDom,
+  extractPlainText,
+  extractTextWithPills,
+  snapshotPillsFromDom,
+} from "./utils";
+
+export interface ImperativeApiContext {
+  host: () => HTMLDivElement | null;
+  insertPill: (attrs: ComposerPillAttrs) => void;
+  insertTextAtCaret: (text: string) => void;
+  setHostContent: (text: string) => void;
+  restoreSnapshot: (snapshot: ComposerSnapshot) => void;
+  captureSnapshot: () => ComposerSnapshot;
+  clearHost: () => void;
+  focusHost: () => void;
+  removePillByPath: (filePath: string) => void;
+  isHostEmpty: () => boolean;
+  triggerAtMention: () => void;
+  /** Pulls the currently-active mention state (used by insertFilePill) */
+  getAtMentionState: () => { active: boolean; hasAtChar?: boolean };
+  /** Clears any active mention state (used after inserting via dropdown) */
+  closeAtMention: () => void;
+  /** Delete the trigger character + query that opened the mention popover. */
+  consumeMentionQuery: () => void;
+}
+
+export function buildImperativeApi(
+  ctx: ImperativeApiContext
+): ComposerInputRef {
+  const buildFacade = (): ComposerEditorFacade => {
+    const chain = (): ComposerEditorChain => {
+      const api: ComposerEditorChain = {
+        focus: () => {
+          ctx.focusHost();
+          return api;
+        },
+        insertContent: (content: string) => {
+          ctx.insertTextAtCaret(content);
+          return api;
+        },
+        run: () => true,
+      };
+      return api;
+    };
+    return {
+      chain,
+      commands: {
+        focus: () => {
+          ctx.focusHost();
+          return true;
+        },
+      },
+    };
+  };
+
+  return {
+    getText: () => {
+      const host = ctx.host();
+      return host ? extractPlainText(host) : "";
+    },
+    getTextWithPills: () => {
+      const host = ctx.host();
+      return host ? extractTextWithPills(host) : "";
+    },
+    getTerminalPillTexts: () => {
+      const host = ctx.host();
+      return host ? collectContextPillTextsFromDom(host) : {};
+    },
+    getHTML: () => {
+      const host = ctx.host();
+      return host?.innerHTML ?? "";
+    },
+    getSnapshot: () => ctx.captureSnapshot(),
+    setContent: (content) => {
+      if (typeof content === "string") {
+        ctx.setHostContent(content);
+      } else {
+        ctx.restoreSnapshot(content);
+      }
+    },
+    clear: () => {
+      ctx.clearHost();
+    },
+    focus: () => {
+      ctx.focusHost();
+    },
+    isEmpty: () => ctx.isHostEmpty(),
+    insertMentionText: (text: string) => {
+      const mention = ctx.getAtMentionState();
+      if (mention.active) {
+        ctx.consumeMentionQuery();
+      }
+      ctx.insertTextAtCaret(text);
+      if (mention.active) {
+        ctx.closeAtMention();
+      }
+    },
+    insertFilePill: (
+      filePath: string,
+      isFolder = false,
+      iconType?: PillIconType,
+      displayName?: string
+    ) => {
+      const fileName = displayName || filePath.split("/").pop() || filePath;
+      const mention = ctx.getAtMentionState();
+      if (mention.active) {
+        ctx.consumeMentionQuery();
+      }
+      ctx.insertPill({
+        filePath,
+        fileName,
+        isFolder,
+        iconType: (iconType ?? null) as PillIconType | null,
+        lineStart: null,
+        lineEnd: null,
+      });
+      // Trailing space so the next typed character lands after the pill
+      // without nudging the caret back into it.
+      ctx.insertTextAtCaret(" ");
+      if (mention.active) {
+        ctx.closeAtMention();
+      }
+    },
+    insertFileReference: (options) => {
+      const fileName =
+        options.fileName ||
+        options.filePath.split("/").pop() ||
+        options.filePath;
+      const mention = ctx.getAtMentionState();
+      if (mention.active) {
+        ctx.consumeMentionQuery();
+      }
+      ctx.insertPill({
+        filePath: options.filePath,
+        fileName,
+        isFolder: false,
+        iconType: "file",
+        lineStart: options.lineStart,
+        lineEnd: options.lineEnd,
+      });
+      ctx.insertTextAtCaret(" ");
+      if (mention.active) {
+        ctx.closeAtMention();
+      }
+    },
+    removeFilePill: (filePath: string) => {
+      ctx.removePillByPath(filePath);
+    },
+    getFilePills: () => {
+      const host = ctx.host();
+      return host ? snapshotPillsFromDom(host) : [];
+    },
+    getEditor: () => buildFacade(),
+    triggerAtMention: () => {
+      ctx.triggerAtMention();
+    },
+  };
+}

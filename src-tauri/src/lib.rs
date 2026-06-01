@@ -1,0 +1,1114 @@
+//! ORGII Tauri Application Library
+//!
+//! This is the main library crate for the ORGII desktop application built with Tauri.
+//! It provides the Rust backend for the frontend React application.
+//!
+//! # Architecture Overview
+//!
+//! The application is structured into several modules:
+//!
+//! - **[`api`]**: HTTP/WebSocket server for Git operations, search, and real-time events
+//! - **[`git`]**: Git utilities, bundle creation, and file system watching
+//! - **[`search`]**: File search (fuzzy) and code search (regex, symbols)
+//! - **[`session`]**: Session management, indexing, and folder archiving
+//! - **[`processes`]**: External process management (sidecars)
+//! - **[`platform`]**: Platform-specific features (notifications, system tray)
+//! - **[`terminal`]**: PTY (pseudo-terminal) management for integrated terminal
+//! - **[`browser`]**: Browser windows and inline webviews
+//! - **[`integrations`]**: External integrations (external IDEs, Cursor credentials)
+//! - **[`lsp`]**: Language Server Protocol client for code intelligence
+//! - **[`test_runner`]**: Test discovery and execution for various frameworks
+//!
+//! # Initialization Sequence
+//!
+//! The [`run()`] function initializes the application in the following order:
+//!
+//! 1. Tauri plugins (single-instance, deep-link, OAuth, filesystem, shell, notifications)
+//! 2. Repository watch manager for real-time git status
+//! 3. WebSocket broadcast channel for frontend events
+//! 4. CLI sessions (CLI agent spawning, parsing, persistence)
+//! 5. Proxy integration (ORGII billing, MITM for Cursor/Kiro/Copilot)
+//! 5. Unified IDE server (Git API + Search API + WebSocket on port 13847)
+//! 6. Centralized index manager for lightweight workspace indexing
+//! 7. Test runner, PTY, and LSP state managers
+//!
+//! # Tauri Commands
+//!
+//! Commands are exposed to the frontend via `tauri::command` and registered in
+//! the `invoke_handler` (see `commands/handler_list.inc`, referenced from the generated
+//! include in [`run`]).
+//! They are grouped by area in that file (e.g. browser, search, agents).
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+use tauri::Manager;
+
+const DEFAULT_WORKTREE_CLEANUP_INTERVAL_HOURS: u64 = 6;
+const WORKTREE_CLEANUP_INTERVAL_SETTING: &str = "git.worktree.cleanupIntervalHours";
+
+#[cfg(unix)]
+fn write_panic_report_to_stderr(report: &str) {
+    unsafe {
+        libc::write(libc::STDERR_FILENO, report.as_ptr().cast(), report.len());
+    }
+}
+
+#[cfg(not(unix))]
+fn write_panic_report_to_stderr(report: &str) {
+    let _ = std::io::Write::write_all(&mut std::io::stderr().lock(), report.as_bytes());
+}
+
+// ============================================
+// Module Declarations
+// ============================================
+
+// `agent_core` is now a workspace crate at `crates/agent-core/`. The
+// `commands/handler_list.inc` and call sites inside `app/src/` reach it
+// directly as `agent_core::…`.
+
+// Workstation (IDE functionality and development tools)
+pub mod agent_sessions; // Agent session management (CLI, event pipeline, persistence, aggregation)
+pub mod api;
+pub mod benchmark;
+pub mod cursor_ide_watch; // cursor_ide streaming delta watch commands
+pub mod infrastructure; // In-tree-only cross-cutting infrastructure (paths, platform, archive, index_manager, jsonrpc, housekeeping). Leaf pieces live in their own workspace crates.
+
+#[cfg(test)]
+pub mod test_utils;
+
+use infrastructure::index_manager::IndexManager;
+
+// ============================================
+// Global State
+// ============================================
+
+// Python sidecar (`newmain`) has been removed.
+// All backend functionality is now handled natively in Rust:
+// - Session execution: cli_session module (CLI agent spawning + parsing)
+// - Proxy billing: proxy module (token allocation + MITM proxy)
+// - Config/Providers: key_vault module (reads credentials.json)
+// - Git operations: api/git module (git2 crate)
+// - Repo management: git/repos module (SQLite + git watcher)
+// See Documentation/Architecture-Guide/unified-proxy-architecture-0210.md
+
+/// Main entry point for the Tauri application.
+///
+/// This function:
+/// 1. Configures Tauri plugins (deep-link, OAuth, FS, shell, notifications, store, process, updater)
+/// 2. Registers all Tauri command handlers organized by module
+/// 3. Runs the setup hook which initializes all backend services
+///
+/// # Panics
+///
+/// Panics if the Tauri application fails to build or run. Individual subsystems
+/// (sidecar, etc.) fail gracefully without crashing the app.
+///
+/// # Example
+///
+/// ```ignore
+/// // Called from main.rs
+/// app_lib::run();
+/// ```
+/// Prune stale agent worktrees whose sessions no longer exist in the DB.
+fn prune_stale_agent_worktrees() -> Result<(), String> {
+    let cli_sessions = agent_sessions::cli::persistence::list_sessions()
+        .map_err(|err| format!("DB error listing CLI sessions: {}", err))?;
+    let rust_sessions = agent_core::session::persistence::list_sessions(
+        &agent_core::session::SessionListFilter::default(),
+    )
+    .map_err(|err| format!("DB error listing Rust agent sessions: {}", err))?;
+
+    let active_ids: Vec<String> = cli_sessions
+        .iter()
+        .map(|session| session.session_id.clone())
+        .chain(
+            rust_sessions
+                .iter()
+                .map(|session| session.session_id.clone()),
+        )
+        .collect();
+
+    // Group sessions by repo_path/workspace_path so we prune per-repo.
+    let mut repos_seen = std::collections::HashSet::new();
+    for session in &cli_sessions {
+        if let Some(ref repo_path) = session.repo_path {
+            if !repo_path.is_empty() {
+                repos_seen.insert(repo_path.clone());
+            }
+        }
+    }
+    for session in &rust_sessions {
+        if let Some(ref workspace_path) = session.workspace_path {
+            if !workspace_path.is_empty() {
+                repos_seen.insert(workspace_path.clone());
+            }
+        }
+    }
+
+    let mut total_pruned = 0u32;
+    for repo_path in &repos_seen {
+        let repo = std::path::Path::new(repo_path);
+        if !repo.is_dir() {
+            continue;
+        }
+        match git::worktree::prune_stale_worktrees(repo, &active_ids) {
+            Ok(pruned) => total_pruned += pruned,
+            Err(err) => tracing::warn!(
+                "[worktree] Failed to prune worktrees for {}: {}",
+                repo_path,
+                err
+            ),
+        }
+    }
+
+    if total_pruned > 0 {
+        tracing::info!("[worktree] Pruned {} stale agent worktrees", total_pruned);
+    }
+
+    Ok(())
+}
+
+fn worktree_cleanup_interval_hours() -> u64 {
+    settings::file_io::read_settings()
+        .ok()
+        .and_then(|settings| {
+            settings
+                .get(WORKTREE_CLEANUP_INTERVAL_SETTING)
+                .and_then(|value| value.as_u64())
+        })
+        .filter(|hours| *hours > 0)
+        .unwrap_or(DEFAULT_WORKTREE_CLEANUP_INTERVAL_HOURS)
+}
+
+async fn run_worktree_cleanup_loop() {
+    loop {
+        if let Err(err) = prune_stale_agent_worktrees() {
+            tracing::warn!("[worktree] Failed to prune stale agent worktrees: {}", err);
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs(
+            worktree_cleanup_interval_hours().saturating_mul(60 * 60),
+        ))
+        .await;
+    }
+}
+
+/// Wire the per-domain schema initializers into the `database` crate's
+/// dispatcher.
+///
+/// `database` is a leaf crate (it doesn't depend on `app`), so each domain
+/// module's `init_*_tables` is registered here as a function pointer. The
+/// dispatcher then runs them in this order on the first call to
+/// `database::db::get_connection()` / `get_projects_connection()` — once
+/// per physical DB path per process.
+///
+/// Tests get the same registration via `test_utils::test_env::prime_schema`.
+fn register_database_schemas() {
+    fn init_sessions(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
+        session_persistence::init_session_tables(conn)?;
+
+        agent_core::persistence::session_snapshots::ensure_tables_with(conn)?;
+        agent_core::session::persistence::init(conn)?;
+
+        agent_sessions::cli::init_cli_agent_tables(conn)?;
+
+        inbox::init_inbox_tables(conn)?;
+
+        // Drop legacy knowledge graph tables (removed in the L3 memory rebuild).
+        // IF EXISTS is safe on fresh installs. Best-effort: any error is non-fatal.
+        let _ = conn.execute_batch(
+            "DROP TABLE IF EXISTS kg_entities_fts;\n\
+             DROP TABLE IF EXISTS kg_relations;\n\
+             DROP TABLE IF EXISTS kg_entities;\n\
+             DROP TABLE IF EXISTS group_chat_session_links;\n\
+             DROP TABLE IF EXISTS group_chat_messages;\n\
+             DROP TABLE IF EXISTS group_chat_members;\n\
+             DROP TABLE IF EXISTS group_chats;",
+        );
+
+        dev_record::schema::init_tables(conn)?;
+
+        project_management::lineage::schema::init_lineage_tables(conn)?;
+
+        // Orchestrator runtime state lives in `workitem_extras.extras_json`
+        // on `projects.db` — there is no longer a parallel mirror table on
+        // `sessions.db`. See `projects::io::orchestrator_view` for the read
+        // path used by orchestrator commands and recovery.
+
+        // Unified session persistence returns a non-sqlite error type; we
+        // demote it to a warning because failure here is recoverable (the
+        // unified layer is optional for most sessions).
+        if let Err(err) = agent_core::session::persistence::init(conn) {
+            tracing::warn!(
+                "[database::db] Unified session persistence init failed: {}",
+                err
+            );
+        }
+
+        agent_core::coordination::agent_org_runs::init_schema(conn)?;
+        agent_core::coordination::agent_inbox::init_schema(conn)?;
+        agent_core::coordination::agent_org_tasks::init_schema(conn)?;
+        agent_core::coordination::agent_member_interventions::init_schema(conn)?;
+
+        // Pending plan-approval snapshots (one row per session with a Build
+        // button still awaiting the user). Persists the pending action so the
+        // Build button is restored when the session is re-opened after an app
+        // restart, instead of being silently lost.
+        agent_core::interaction::plan_approval::persistence::init_schema(conn)?;
+
+        Ok(())
+    }
+
+    fn init_projects(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
+        project_management::projects::schema::init_project_tables(conn)
+    }
+
+    database::register_sessions_init(init_sessions);
+    database::register_projects_init(init_projects);
+}
+
+/// Wire the inversion-of-control hooks the `git` crate uses to call back into
+/// the rest of the app (websocket broadcast, dev_record telemetry, automation
+/// bridge). Registered once at startup before any git watcher can fire.
+fn register_git_hooks() {
+    git::hooks::register_websocket_broadcast(Box::new(|msg| {
+        api::websocket_handler::broadcast(msg);
+    }));
+    git::hooks::register_file_change(Box::new(
+        |project, file_path, lines_added, lines_removed| {
+            dev_record::collector::record_file_change(
+                project,
+                file_path,
+                lines_added,
+                lines_removed,
+            );
+        },
+    ));
+    git::hooks::register_git_event(Box::new(|ev| {
+        agent_core::automation::bridge::send_git_event(agent_core::automation::GitBroadcastEvent {
+            operation: ev.operation,
+            repo_id: ev.repo_id,
+            change_type: ev.change_type,
+        });
+    }));
+}
+
+/// Wire the inversion-of-control hook the `settings` crate uses to push
+/// settings-file changes back into `agent_core` (HTTP version preference,
+/// applied to new provider clients without restart). Registered once at
+/// startup before the settings watcher spins up so the very first change
+/// event after launch is delivered.
+fn register_settings_hooks() {
+    settings::hooks::register_on_settings_changed(Box::new(|value| {
+        if let Some(http_version) = value.get("network.httpVersion").and_then(|v| v.as_str()) {
+            let pref = agent_core::utils::HttpVersionPref::from_setting(http_version);
+            agent_core::utils::set_global_http_version_pref(pref);
+        }
+    }));
+}
+
+/// Wire the inversion-of-control hook `integrations::computer_use_lock` uses
+/// to broadcast the user-initiated abort (ESC) to the frontend. Registered
+/// once at startup so the `integrations` crate doesn't have to depend on
+/// `agent_core::bus`.
+fn register_integrations_hooks() {
+    integrations::computer_use_lock::register_abort_broadcaster(Box::new(|session_id| {
+        agent_core::bus::broadcast_event(
+            "agent:computer_use_aborted",
+            serde_json::json!({ "sessionId": session_id }),
+        );
+    }));
+}
+
+/// Wire the inversion-of-control hook the `lsp` crate uses to publish
+/// language-server diagnostics over the IDE WebSocket. Registered once at
+/// startup so the `lsp` crate never has to depend on `api::websocket_handler`.
+fn register_lsp_hooks() {
+    lsp::register_broadcast(api::websocket_handler::broadcast);
+}
+
+/// Wire the IoC hooks the `agent_core::bus` module uses to reach the IDE
+/// WebSocket / IPC layer for event broadcast and subscriber counting.
+/// Registered once at startup so `agent_core` (and the future extracted
+/// `agent-core` crate) never has to depend on `api::websocket_handler`.
+fn register_agent_core_bus_hooks() {
+    agent_core::bus::register_broadcast(api::websocket_handler::broadcast);
+    agent_core::bus::register_subscriber_count(api::websocket_handler::frontend_subscriber_count);
+}
+
+/// Wire the IoC slots `agent_core::bus::event_pipeline_bridge` uses to drive
+/// the live `EventStore` pipeline (push, notify, write-through stamps,
+/// pin/unpin, streaming flush). Registered once at startup so `agent_core`
+/// never has to depend on `agent_sessions::event_pipeline::commands`.
+fn register_event_pipeline_bridge() {
+    agent_sessions::event_pipeline::agent_core_bridge::register();
+}
+
+/// Wire the IoC slot `agent_core::foundation::db_bridge` uses to open
+/// `rusqlite::Connection`s for memory, consolidation, reflection, and
+/// learnings persistence. Registered once at startup so `agent_core`
+/// never has to depend on `session_persistence::get_connection`.
+fn register_persistence_bridge() {
+    session_persistence::agent_core_bridge::register();
+}
+
+/// Wire the `core_types::session_event::EXTRACTOR` slot to the real
+/// `event_pipeline::extractors::extract_event_data` implementation.
+/// Registered once at startup so `SessionEvent::recompute_extracted`
+/// keeps producing typed rendering envelopes after the type was lifted
+/// into `core_types`. Without this, `recompute_extracted` is a silent
+/// no-op and frontend blocks would render against raw `args`/`result`
+/// JSON.
+fn register_session_event_extractor() {
+    agent_sessions::event_pipeline::extractors::register_extractor_hook();
+}
+
+/// Wire `project_management::lineage::git_bridge` to the real
+/// `git2`-backed `get_commit_diff`. `commit_tracker` matches commit
+/// hunks against `node_provenance` and needs the diff at every commit;
+/// without this register, the slot panics with a clear message.
+fn register_lineage_git_bridge() {
+    git_api::lineage_bridge::register();
+}
+
+/// Wire the `agent_core::foundation::session_bridge::launch_cli_agent`
+/// slot to the real `cli_agent_create` + `cli_agent_run` adapter in
+/// `agent_sessions::cli::agent_core_bridge`. Paired with
+/// `register_persistence_bridge`, which fills the session_bridge's
+/// token-usage and event-rollback slots from the same wire crate.
+fn register_cli_launch_bridge() {
+    crate::agent_sessions::cli::agent_core_bridge::register();
+}
+
+pub fn run() {
+    // Wire schema initializers into the `database` crate before any other
+    // setup runs — anything that opens a connection (logging dir creation,
+    // background tasks, the Tauri setup hook) relies on the dispatcher
+    // already being populated.
+    register_database_schemas();
+
+    // Wire the git core's IoC hooks before any watcher can spin up.
+    register_git_hooks();
+
+    // Wire the settings IoC hook so external `settings.jsonc` edits push
+    // back into `agent_core` (HTTP version preference). Must run before
+    // the watcher in `setup` starts, otherwise the first change event
+    // after launch silently drops the HTTP-version update.
+    register_settings_hooks();
+
+    // Wire `integrations::computer_use_lock`'s abort broadcaster so the ESC
+    // hotkey can fan an event out to the frontend without the `integrations`
+    // crate depending on `agent_core::bus`.
+    register_integrations_hooks();
+
+    // Wire the LSP diagnostics broadcast pointer so the `lsp` crate can
+    // publish `textDocument/publishDiagnostics` notifications to the IDE
+    // WebSocket without depending back into `api::websocket_handler`.
+    register_lsp_hooks();
+
+    // Wire the agent_core bus IoC pointers (frontend broadcast +
+    // subscriber-count) so `agent_core::bus::broadcast_event` and
+    // `ActionBridge::has_frontend` can reach the IDE WebSocket / IPC layer
+    // without depending back into `api::websocket_handler`. This is the
+    // counterpart to the LSP hook above.
+    register_agent_core_bus_hooks();
+
+    // Wire the event-pipeline bridge so `agent_core` can drive the live
+    // `EventStore` (push events, notify, stamp tool_call args, pin/unpin
+    // child sessions, flush streaming) without depending on
+    // `agent_sessions::event_pipeline::commands`.
+    register_event_pipeline_bridge();
+
+    // Wire the persistence bridge so `agent_core` (memory, consolidation,
+    // reflection, learnings) can open SQLite connections without
+    // depending on `session_persistence::get_connection`.
+    register_persistence_bridge();
+
+    // Wire `SessionEvent::recompute_extracted` to the real extractor in
+    // `event_pipeline::extractors`. Must run before any session ingests
+    // events, otherwise the first batch's `extracted` envelopes are
+    // silently `None` and the rendering layer falls back to raw JSON.
+    register_session_event_extractor();
+
+    // Wire `project_management::lineage::git_bridge::get_commit_diff` to
+    // the `git2`-backed implementation in `git_api::commands::diff`.
+    // Must run before the first git commit fires its post-commit hook,
+    // otherwise the slot panics.
+    register_lineage_git_bridge();
+
+    // Wire `agent_core::foundation::session_bridge::launch_cli_agent` to
+    // the `cli_agent_create` + `cli_agent_run` adapter. Required for any
+    // CLI launch path (`launch_session` -> `launch_cli_agent`).
+    register_cli_launch_bridge();
+
+    // Install the process-wide rustls crypto provider before any TLS code
+    // runs. We use the `rustls-no-provider` feature on reqwest (and on
+    // tokio-rustls / rmcp) to avoid pulling aws-lc-rs into the build, so
+    // we must explicitly tell rustls to use `ring`. Without this, the
+    // first reqwest::Client::new() panics with `No provider set` from
+    // inside an FFI callback (Cocoa NSApplicationDelegate), aborting the
+    // process before any window appears.
+    if let Err(err) = tokio_rustls::rustls::crypto::ring::default_provider().install_default() {
+        tracing::warn!(
+            error = ?err,
+            "failed to install rustls ring crypto provider; it may already be installed"
+        );
+    }
+
+    // ============================================
+    // Initialize Tracing (file logging)
+    // ============================================
+    // Logs to ~/.orgii/logs/orgii.log (daily rotation)
+    {
+        use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+        let log_dir = app_paths::logs_dir();
+        std::fs::create_dir_all(&log_dir).ok();
+
+        let file_appender = tracing_appender::rolling::daily(&log_dir, "orgii.log");
+        let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+        // Leak the guard so it lives for the entire process lifetime
+        std::mem::forget(_guard);
+
+        let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+            EnvFilter::new(
+                "info,\
+                 key_vault=debug,\
+                 app_lib::osagent=debug,\
+                 app_lib::agent_core=debug,\
+                 app_lib::agent_core::tool_infra=debug,\
+                 hyper=warn,\
+                 tungstenite=warn,\
+                 tokio_tungstenite=warn",
+            )
+        });
+
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(
+                fmt::layer()
+                    .with_target(true)
+                    .with_thread_ids(true)
+                    .with_ansi(false)
+                    .with_writer(non_blocking),
+            )
+            .init();
+
+        tracing::info!(
+            "Tracing initialized — log file: {}/orgii.log",
+            log_dir.display()
+        );
+    }
+
+    // Panic hook: ensure any panic — even one inside an FFI callback like
+    // tao's NSApplicationDelegate — gets its message captured to the log
+    // file and stderr before the process aborts. Without this, a panic in
+    // setup() shows only an opaque `panic_cannot_unwind` backtrace with no
+    // location or message.
+    std::panic::set_hook(Box::new(|info| {
+        let location = info
+            .location()
+            .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+            .unwrap_or_else(|| "<unknown>".to_string());
+        let message = info
+            .payload()
+            .downcast_ref::<&str>()
+            .map(|s| s.to_string())
+            .or_else(|| info.payload().downcast_ref::<String>().cloned())
+            .unwrap_or_else(|| "<no message>".to_string());
+        let backtrace = std::backtrace::Backtrace::force_capture();
+        let report = format!(
+            "\n=== PANIC ===\nat {location}\nmessage: {message}\n\n{backtrace}\n=============\n"
+        );
+        write_panic_report_to_stderr(&report);
+        tracing::error!(location = %location, message = %message, "panic caught by hook");
+    }));
+
+    let builder = tauri::Builder::default();
+
+    // E2E WebDriver automation — only when built with `--features webdriver` (debug/test only).
+    #[cfg(all(debug_assertions, feature = "webdriver"))]
+    let builder = builder.plugin(tauri_plugin_webdriver_automation::init());
+
+    builder
+        // NOTE: Single-instance disabled for development - uncomment for production
+        // .plugin(tauri_plugin_single_instance::init(|_app, argv, _cwd| {
+        //   tracing::info!(?argv, "a new app instance was opened and the deep link event was already triggered");
+        //   // when defining deep link schemes at runtime, you must also check `argv` here
+        // }))
+        .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_oauth::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_auth_session::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_drag::init())
+        .plugin(tauri_plugin_liquid_glass::init())
+        .invoke_handler(include!(concat!(
+            env!("OUT_DIR"),
+            "/tauri_invoke_handler_expr.rs"
+        )))
+        .setup(|app| {
+            // Python sidecar removed — all backend logic now in Rust.
+
+            #[cfg(all(debug_assertions, feature = "webdriver"))]
+            {
+                use tauri::Manager;
+                if let Some(main_window) = app.handle().get_webview_window("main") {
+                    let _ = main_window.show();
+                    let _ = main_window.set_focus();
+                    tracing::info!("[WebDriver] Ensured main window is visible for E2E automation");
+                } else {
+                    app_window::recreate_main_window(app.handle())?;
+                    tracing::info!("[WebDriver] Recreated main window for E2E automation");
+                }
+            }
+
+            // Windows 11+: align native frame rounding with web `--radius-page` (DWM small corners).
+            {
+                use tauri::Manager;
+                if let Some(main_window) = app.handle().get_webview_window("main") {
+                    app_window::apply_host_desktop_window_chrome(&main_window);
+                }
+            }
+
+            // macOS: apply Liquid Glass (NSGlassEffectView on macOS 26+, falls back to
+            // NSVisualEffectView on older macOS). This replaces the window-vibrancy
+            // HudWindow material on macOS — all other platforms are a safe no-op.
+            #[cfg(target_os = "macos")]
+            {
+                use tauri::Manager;
+                use tauri_plugin_liquid_glass::{
+                    GlassMaterialVariant, LiquidGlassConfig, LiquidGlassExt,
+                };
+                if let Some(main_window) = app.handle().get_webview_window("main") {
+                    let config = LiquidGlassConfig {
+                        corner_radius: 26.0,
+                        variant: GlassMaterialVariant::Sidebar,
+                        tint_color: Some("#ffffff18".into()),
+                        ..Default::default()
+                    };
+                    if let Err(err) = app.handle().liquid_glass().set_effect(&main_window, config) {
+                        tracing::warn!("[LiquidGlass] Failed to apply effect: {}", err);
+                    } else {
+                        tracing::debug!("[LiquidGlass] Liquid Glass applied to main window");
+                    }
+                }
+            }
+
+            // Initialize transport layer (unified event emission)
+            {
+                use std::sync::Arc;
+                use transport::{TauriTransportAdapter, TransportEmitter};
+
+                let adapter = Arc::new(TauriTransportAdapter::new(app.handle().clone()));
+                let emitter = Arc::new(TransportEmitter::new(adapter));
+
+                if transport::emitter::set_global_transport_emitter(emitter).is_err() {
+                    tracing::warn!("[Transport] Failed to set global transport emitter");
+                } else {
+                    tracing::info!("[Transport] Transport layer initialized");
+                }
+            }
+
+            dev_record::collector::cleanup_old_data();
+            tracing::info!("[CodingTracker] Activity tracker initialized");
+
+            perf_utils::ram_history::start_sampler();
+            tracing::info!("[RamHistory] Background RAM sampler started");
+
+            match agent_sessions::cli::persistence::sweep_stale_sessions() {
+                Ok(count) if count > 0 => {
+                    tracing::info!(count, "[CLI Sessions] swept stale sessions to failed");
+                }
+                Ok(_) => {}
+                Err(err) => {
+                    tracing::warn!(error = %err, "[CLI Sessions] Failed to sweep stale sessions");
+                }
+            }
+
+            system_services::app_menu::setup_menu_events(app.handle());
+            tracing::info!("[AppMenu] Menu event handlers registered");
+
+            system_services::app_menu::initialize_recent_paths(app.handle());
+
+            system_services::dock_menu::install_dock_menu();
+            system_services::dock_menu::install_dock_menu_action(app.handle());
+
+            match system_services::tray::setup_tray(app.handle()) {
+                Ok(()) => tracing::info!("[Tray] System tray initialized"),
+                Err(err) => tracing::warn!(error = %err, "[Tray] Failed to setup tray"),
+            }
+
+            git::watch::RepoWatchManager::initialize(app.handle().clone());
+            tracing::info!("[RepoWatch] Event-driven repository watch manager initialized");
+
+            git::repos::hydrate_repos_into_watcher();
+            tracing::info!("[RepoWatch] Persisted repos loaded from DB");
+
+            // Start L3 offline consolidation tick (60s interval, fires on
+            // idle/forced triggers). Non-blocking, runs on its own thread +
+            // ad-hoc tokio runtime.
+            agent_core::intelligence::memory::consolidation::spawn_consolidation_tick();
+
+            // Retroactive backfill: scan git history + IDE databases for offline activity,
+            // then scan IDE local history for file-edit timestamps
+            std::thread::spawn(|| {
+                dev_record::retroactive::backfill_offline_activity();
+                if let Err(err) = dev_record::heartbeat_import::scan_all() {
+                    tracing::warn!(error = %err, "[heartbeat_import] Startup scan failed");
+                }
+            });
+
+            // Create WebSocket broadcast channel for real-time events
+            let (ws_tx, _ws_rx) = tokio::sync::broadcast::channel::<String>(1000);
+
+            // Initialize the global WebSocket broadcaster
+            api::init_broadcaster(ws_tx.clone());
+
+            // Dev-only: store AppHandle for test API endpoints
+            #[cfg(debug_assertions)]
+            api::init_app_handle(app.handle().clone());
+
+            // Start unified IDE server (Git API + Search API + WebSocket) in background thread
+            std::thread::spawn(move || match tokio::runtime::Runtime::new() {
+                Ok(rt) => {
+                    rt.block_on(async {
+                        match api::start_server(ws_tx).await {
+                            Ok(_) => tracing::info!("[IDE Server] Server stopped"),
+                            Err(err) => {
+                                tracing::error!(error = %err, "[IDE Server] Failed to start unified server")
+                            }
+                        }
+                    });
+                }
+                Err(err) => tracing::error!(error = %err, "[IDE Server] Failed to create tokio runtime"),
+            });
+
+            // Initialize Rust EventStore state
+            app.manage(agent_sessions::event_pipeline::commands::EventStoreState::new());
+            tracing::info!("[EventStore] Rust event store initialized");
+
+            // Initialize centralized Index Manager
+            let index_manager = std::sync::Arc::new(std::sync::Mutex::new(IndexManager::new()));
+            app.manage(index_manager);
+            tracing::info!("[IndexManager] Centralized index manager initialized");
+
+            // Initialize Test Runner state
+            app.manage(test_runner::TestRunnerState::new());
+            tracing::info!("[TestRunner] Test runner state initialized");
+
+            // Initialize PTY state for terminal sessions
+            let pty_state = ::terminal::pty_commands::pty::PtyState::new();
+            let pty_sessions_arc = pty_state.sessions_arc();
+            app.manage(pty_state);
+            tracing::info!("[PTY] Terminal PTY state initialized");
+
+            // Initialize LSP Manager
+            let lsp_manager =
+                std::sync::Arc::new(tokio::sync::Mutex::new(lsp::LspManager::new()));
+            app.manage(lsp_manager);
+            tracing::info!("[LSP] LSP manager initialized");
+
+            // Initialize Component Index state (for DOM-to-source mapping)
+            app.manage(ui_indexer::UiIndexState::new());
+            tracing::info!("[UiIndexer] Component index state initialized");
+
+
+            let agent_browser_config = match settings::file_io::read_settings() {
+                Ok(settings_value) => shared_state::AgentBrowserConfig::from_settings(&settings_value),
+                Err(err) => {
+                    tracing::warn!(
+                        "[Browser] Failed to read Agent Browser settings; using defaults: {}",
+                        err
+                    );
+                    shared_state::AgentBrowserConfig::default()
+                }
+            };
+
+            // Initialize independent browser and screenshot state (to avoid circular dependencies)
+            let agent_browser = std::sync::Arc::new(tokio::sync::Mutex::new(
+                shared_state::AgentBrowserController::with_config(agent_browser_config),
+            ));
+            let screenshot_store = std::sync::Arc::new(shared_state::ScreenshotStore::new());
+
+            // Manage browser and screenshot state independently for dependency injection
+            app.manage(agent_browser.clone());
+            app.manage(screenshot_store.clone());
+            tracing::info!("[Browser] Agent browser controller and screenshot store initialized");
+
+            // Initialize Unified Agent State (replaces separate OS/SDE states)
+            let mut unified_state = agent_core::state::AgentAppState::with_browser(
+                agent_browser.clone(),
+                screenshot_store.clone(),
+            );
+            unified_state.set_pty_sessions(pty_sessions_arc.clone());
+            unified_state.set_app_handle(app.handle().clone());
+
+            // Install the production `MemberShutdownHook` for the
+            // inbox-drain side effect that fires when the coordinator
+            // accepts a member's `ShutdownResponse{accepted=true}`.
+            // The hook resolves `(member_agent_id, run_id) →
+            // session_id` via the org store and dispatches an
+            // `AgentState::cancel_session`.
+            agent_core::core::session::turn::inbox_drain::install_member_shutdown_hook(
+                agent_core::tools::impls::orchestration::member_shutdown::AppHandleMemberShutdownHook::new(
+                    app.handle().clone(),
+                ),
+            );
+            tracing::info!("[InboxDrain] Member shutdown hook installed");
+
+            // Install the production `MemberIdleHook` so every worker
+            // turn-end (success or cancel) posts a `MemberIdle`
+            // envelope into the coordinator's inbox and wakes the
+            // coordinator to keep draining open org work.
+            agent_core::core::session::turn::member_idle::install_member_idle_hook(
+                agent_core::tools::impls::orchestration::member_idle::InboxStoreMemberIdleHook::new(
+                    agent_core::tools::impls::orchestration::inbox_wake::AppHandleInboxWakeHook::new(
+                        app.handle().clone(),
+                    ),
+                ),
+            );
+            tracing::info!("[MemberIdle] Member idle hook installed");
+
+            app.manage(unified_state);
+            tracing::info!("[UnifiedAgent] Unified agent state initialized");
+
+            // Spawn work item schedule executor
+            {
+                let scheduler_handle = app.handle().clone();
+                agent_core::coordination::work_item_scheduler::spawn(scheduler_handle);
+                tracing::info!("[scheduler] Work item scheduler started");
+            }
+
+            // Spawn pluggable sync worker. Drains `outbox_entries`
+            // rows on the configured push tick and runs a pull cycle
+            // on the longer pull tick. The AppHandle is stashed via
+            // `sync::events::init_emitter` so every cycle can emit
+            // `orgii-project-sync-status` events to the frontend.
+            project_management::sync::start_worker(app.handle().clone());
+            tracing::info!("[sync::worker] Sync worker started");
+
+            // Boot the mobile-remote bridge through its supervisor
+            // so subsequent Settings actions (URL change, first
+            // pairing, device revoke) can call `restart` and have
+            // the live bridge actually pick the change up. Without
+            // the supervisor the returned handle would drop here,
+            // leaving the spawned tasks orphaned and unreachable.
+            //
+            // If the user has no paired devices, the bridge stays
+            // inactive (`start` returns `Ok(None)`); the supervisor
+            // records that state and the next `pair_complete` will
+            // drive a restart.
+            let mobile_remote_app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let supervisor = mobile_remote::supervisor::BridgeSupervisor::global();
+                // Install the production `DispatchHost` factory before
+                // `start`. The factory captures the live `AppHandle` and
+                // builds a fresh `TauriDispatchHost` for every restart
+                // — this is what keeps `mobile_remote` a pure leaf
+                // crate (it doesn't depend on `agent_core` /
+                // `agent_sessions`; the impl lives here).
+                let factory_handle = mobile_remote_app_handle.clone();
+                supervisor
+                    .set_host_factory(move || {
+                        let h = factory_handle.clone();
+                        std::sync::Arc::new(crate::api::mobile_remote_host::TauriDispatchHost::new(
+                            h,
+                        ))
+                    })
+                    .await;
+                if let Err(err) = supervisor.start().await {
+                    tracing::warn!(?err, "[mobile_remote] bridge start failed");
+                }
+            });
+
+            // Restore previously-enabled channels (e.g. feishu was toggled on last run)
+            let app_handle_for_restore = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let state = app_handle_for_restore.state::<agent_core::state::AgentAppState>();
+                match agent_core::state::commands::channel_handler::restore_enabled_channels(&state)
+                    .await
+                {
+                    Ok(()) => tracing::info!("Enabled channels restored"),
+                    Err(err) => tracing::error!("Failed to restore channels: {err}"),
+                }
+            });
+
+            // Ensure agent session (SDE) DB tables exist. The database schema
+            // dispatcher owns the full foundation + unified session migration chain.
+            if let Err(err) = agent_core::persistence::session_snapshots::ensure_tables() {
+                tracing::warn!(error = %err, "[agent_session] Failed to create tables");
+            }
+            tracing::info!("[agent_session] Agent session state initialized with shared PTY");
+
+            tauri::async_runtime::spawn(run_worktree_cleanup_loop());
+
+            // One-time migration: pull workspace-memory files out of the old
+            // nested `~/.orgii/personal/workspace/.orgii/workspace-memory/` into
+            // the flat `~/.orgii/personal/workspace-memory/` location now used
+            // by `memory_dir()`. Idempotent — no-op once the legacy dir is
+            // gone. See `agent_core::memory::workspace_memory::memory_dir`.
+            tauri::async_runtime::spawn(async {
+                match agent_core::memory::workspace_memory::migrate_personal_workspace_memory(
+                ) {
+                    Ok(0) => {}
+                    Ok(moved) => tracing::info!(
+                        "[startup] Migrated {} personal-workspace memory file(s) to {}",
+                        moved,
+                        app_paths::personal_root()
+                            .join("workspace-memory")
+                            .display()
+                    ),
+                    Err(err) => tracing::warn!(
+                        "[startup] Failed to migrate personal-workspace memory: {}",
+                        err
+                    ),
+                }
+            });
+
+            // Prune orphan per-session file-history directories whose owning
+            // session no longer exists in the DB. This replaces the legacy
+            // shadow-git prune.
+            tauri::async_runtime::spawn(async {
+                let live_ids: Vec<String> = match database::db::get_connection() {
+                    Ok(conn) => match conn.prepare("SELECT session_id FROM agent_sessions") {
+                        Ok(mut stmt) => stmt
+                            .query_map([], |row| row.get::<_, String>(0))
+                            .and_then(|rows| rows.collect::<Result<Vec<_>, _>>())
+                            .unwrap_or_default(),
+                        Err(err) => {
+                            tracing::warn!(
+                                "[startup] failed to prepare live-session query: {}",
+                                err
+                            );
+                            Vec::new()
+                        }
+                    },
+                    Err(err) => {
+                        tracing::warn!(
+                            "[startup] failed to open DB for live-session query: {}",
+                            err
+                        );
+                        Vec::new()
+                    }
+                };
+                match agent_core::tools::file_history::prune_orphan_sessions(&live_ids) {
+                    Ok(0) => {}
+                    Ok(n) => {
+                        tracing::info!("[startup] Pruned {} orphan file-history session(s)", n)
+                    }
+                    Err(err) => tracing::warn!(
+                        "[startup] Failed to prune orphan file-history sessions: {}",
+                        err
+                    ),
+                }
+            });
+
+            // Deferred background housekeeping. Waits
+            // DEFERRED_CLEANUP_DELAY_SECS after boot so we don't compete
+            // with startup I/O, then runs one pass over file-history TTL,
+            // per-session manifest caps, and log file retention.
+            tauri::async_runtime::spawn(async {
+                tokio::time::sleep(std::time::Duration::from_secs(
+                    infrastructure::housekeeping::DEFERRED_CLEANUP_DELAY_SECS,
+                ))
+                .await;
+                tokio::task::spawn_blocking(|| {
+                    let _ = infrastructure::housekeeping::run_deferred_cleanup();
+                });
+            });
+
+            // Load skill env vars from ~/.orgii/skill-env.json into the process
+            agent_core::skills::loader::load_and_apply_skill_env();
+
+            // Initialize cursor_ide streaming delta watch state
+            app.manage(cursor_ide_watch::WatchHandlesState::new());
+            tracing::info!("[CursorIdeWatch] Watch handles state initialized");
+
+            // Initialize MCP state
+            app.manage(agent_core::mcp::commands::McpState::new());
+            tracing::info!("[MCP] MCP server manager initialized");
+
+            // Agent Definitions and Orgs
+
+            // Initialize Agent Definitions store
+            app.manage(agent_core::definitions::AgentDefinitionsStore::new());
+            tracing::info!("[AgentDefinitions] Custom agent definitions loaded");
+
+            app.manage(agent_core::definitions::orgs::AgentOrgsStore::new());
+            tracing::info!("[AgentOrgs] Agent organizations loaded");
+
+            // Initialize Settings state and file watcher
+            let settings_state = settings::SettingsState::new();
+            match settings::watcher::start_watching(app.handle().clone()) {
+                Ok(handle) => {
+                    match settings_state.watcher_handle.lock() {
+                        Ok(mut watcher_handle) => {
+                            *watcher_handle = Some(handle);
+                            tracing::info!("[Settings] File watcher started for ~/.orgii/settings.jsonc");
+                        }
+                        Err(err) => {
+                            tracing::error!(error = %err, "[Settings] Failed to lock watcher handle");
+                        }
+                    }
+                }
+                Err(err) => {
+                    tracing::warn!(error = %err, "[Settings] Failed to start file watcher");
+                }
+            }
+            app.manage(settings_state);
+
+            // System power state — holds the platform sleep-inhibitor handle
+            // while at least one agent session is actively working AND the
+            // `general.preventSleepWhileRunning` setting is enabled.
+            app.manage(system_services::power::PowerState::new());
+
+            // Apply HTTP version preference from settings.jsonc so the
+            // provider HTTP clients (created lazily per-session) honor it.
+            if let Ok(settings) = settings::file_io::read_settings() {
+                if let Some(val) = settings.get("network.httpVersion").and_then(|v| v.as_str()) {
+                    let pref = agent_core::utils::HttpVersionPref::from_setting(val);
+                    agent_core::utils::set_global_http_version_pref(pref);
+                    tracing::info!(http_version = val, "[Network] HTTP version preference applied");
+                }
+            }
+
+            // Prewarm the Wingman floating windows (hidden) so the first
+            // "Share screen" click opens them instantly (Zoom/Feishu-style).
+            // Done after a short delay so it doesn't compete with main-window
+            // paint, and on the main thread because Tauri window builders
+            // must run there.
+            {
+                let app_for_prewarm = app.handle().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    let app_for_main = app_for_prewarm.clone();
+                    let _ = app_for_prewarm.run_on_main_thread(move || {
+                        agent_core::session::wingman::prewarm_wingman_windows(&app_for_main);
+                    });
+                });
+            }
+
+            // tauri_plugin_log removed — tracing_subscriber handles file logging.
+            Ok(())
+        })
+        // macOS: hide the main window on close (red traffic light) instead of destroying it.
+        // This keeps the process alive so the dock icon can reopen it.
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                // Only hide the "main" window — let auxiliary windows close normally
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
+        .on_page_load(|webview, payload| {
+            use tauri::webview::PageLoadEvent;
+            if webview.label() == "main" && matches!(payload.event(), PageLoadEvent::Started) {
+                let app = webview.app_handle().clone();
+                match browser::inline::close_all_inline_webviews(app) {
+                    Ok(closed) if !closed.is_empty() => {
+                        tracing::info!(count = closed.len(), ?closed, "[PageReload] Closed inline webviews");
+                    }
+                    Err(err) => {
+                        tracing::warn!(error = %err, "[PageReload] Failed to close inline webviews");
+                    }
+                    _ => {}
+                }
+            }
+        })
+        .build(tauri::generate_context!())
+        .unwrap_or_else(|err| {
+            tracing::error!(error = %err, "error while building tauri application");
+            std::process::exit(1);
+        })
+        .run(|app_handle, event| {
+            match event {
+                // Handle macOS file/folder open events (from Dock, Finder, Expose)
+                #[cfg(target_os = "macos")]
+                tauri::RunEvent::Opened { urls } => {
+                    handle_opened_urls(app_handle, urls);
+                }
+                // macOS: clicking the dock icon when all windows are closed should reopen the main window
+                #[cfg(target_os = "macos")]
+                tauri::RunEvent::Reopen {
+                    has_visible_windows,
+                    ..
+                } => {
+                    if !has_visible_windows {
+                        if let Err(err) = app_window::recreate_main_window(app_handle) {
+                            tracing::error!(error = %err, "[Reopen] Failed to recreate main window");
+                        }
+                    }
+                }
+                // Keep the process alive when all windows are hidden (red traffic light hides, not destroys).
+                // Without this, Tauri exits the run loop when no visible windows remain.
+                // code.is_none() means it's an automatic exit (last window closed), not an explicit exit(0).
+                tauri::RunEvent::ExitRequested { api, code, .. } => {
+                    if code.is_none() {
+                        api.prevent_exit();
+                    } else {
+                        // Explicit exit — mark active orchestrator workflows as interrupted
+                        agent_core::coordination::work_item_recovery::mark_all_interrupted_sync();
+                        // Release computer-use lock if held
+                        integrations::computer_use_lock::force_release_on_exit();
+                    }
+                }
+                _ => {}
+            }
+        });
+}
+
+/// Handle files/folders opened via macOS Dock, Finder, or Expose
+///
+/// This is triggered when:
+/// - User drops a file/folder on the app icon in Dock
+/// - User right-clicks a file and selects "Open With" → ORGII
+/// - User clicks a recent file in Expose/Mission Control
+/// - User clicks a recent file in Dock right-click menu
+fn handle_opened_urls(app_handle: &tauri::AppHandle, urls: Vec<url::Url>) {
+    use tauri::Emitter;
+
+    // Convert URLs to file paths
+    let paths: Vec<String> = urls
+        .iter()
+        .filter_map(|url| {
+            if url.scheme() == "file" {
+                url.to_file_path()
+                    .ok()
+                    .map(|p| p.to_string_lossy().to_string())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if paths.is_empty() {
+        return;
+    }
+
+    tracing::info!(
+        count = paths.len(),
+        ?paths,
+        "[OpenedFiles] Received paths from macOS"
+    );
+
+    // Emit event to frontend so it can handle the opened files/folders
+    // The frontend can then:
+    // - If it's a folder: add it as a repo and select it
+    // - If it's a file: open it in the editor
+    if let Err(err) = app_handle.emit("macos-open-files", &paths) {
+        tracing::error!(error = %err, "[OpenedFiles] Failed to emit event");
+    }
+
+    // Also add to recent documents for the circular flow
+    for path in &paths {
+        let _ = system_services::recent_files::add_to_recent_documents(path.clone());
+    }
+}

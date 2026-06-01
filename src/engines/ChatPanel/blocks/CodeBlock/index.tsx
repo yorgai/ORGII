@@ -1,0 +1,434 @@
+/**
+ * ChatCodeBlock Component
+ *
+ * A code block component for chat history display.
+ * Features:
+ * - Collapsible header with smooth animation
+ * - Language-specific icons
+ * - NO internal scrolling - shows limited lines with "Show more" button
+ * - Hover to show collapse controls
+ * - Diff syntax highlighting with + (green) and - (red)
+ * - Intersection observer for lazy syntax highlighting
+ * - Virtual scrolling for large code blocks (>100 lines)
+ */
+import { Eye, EyeOff } from "lucide-react";
+import React, { memo } from "react";
+import { useTranslation } from "react-i18next";
+
+import ExpandOverlay from "@src/components/ExpandOverlay";
+import FileTypeIcon from "@src/components/FileTypeIcon";
+import ModernCodeViewer from "@src/features/CodeViewer/ModernCodeViewer";
+import { VirtualizedModernDiff } from "@src/features/CodeViewer/VirtualizedModernDiff";
+
+import {
+  EVENT_BLOCK_FADE_FROM,
+  EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES,
+  EVENT_LOADING_SHIMMER_TEXT_CLASSES,
+  EVENT_SNIPPET_INNER_PADDING_CLASS,
+  EventBlockHeader,
+  EventBlockHeaderIcon,
+  EventBlockHeaderSubtitle,
+  getEventBlockContainerClasses,
+} from "../primitives";
+import { useBlockHeader } from "../useBlockLocate";
+import CodePreview from "./CodePreview";
+import { STYLE_CONFIG } from "./config";
+import "./index.scss";
+import { useCodeBlockState } from "./useCodeBlockState";
+
+// ============================================
+// Constants
+// ============================================
+
+const TRAILING_TAG_TONE_CLASS = {
+  success: "font-medium text-success-6",
+  danger: "font-medium text-danger-6",
+  muted: "font-medium text-text-3",
+  secondary: "font-medium text-text-2",
+} as const;
+
+// ============================================
+// Types
+// ============================================
+
+export interface ChatCodeBlockProps {
+  code: string;
+  language?: string;
+  filePath?: string;
+  title?: string;
+  subtitle?: string;
+  actionTitle?: string;
+  actionIcon?: React.ReactNode;
+  separateTitle?: boolean;
+  defaultCollapsed?: boolean;
+  maxHeight?: number;
+  containerWidth?: number;
+  showLineNumbers?: boolean;
+  className?: string;
+  hideHeader?: boolean;
+  visibleLines?: number;
+  linesAdded?: number;
+  linesRemoved?: number;
+  showLineCount?: boolean;
+  trailingTags?: ReadonlyArray<{
+    tone: "success" | "danger" | "muted" | "secondary";
+    text: string;
+  }>;
+  hasContent?: boolean;
+  eventId?: string;
+  isLoading?: boolean;
+  isFailed?: boolean;
+}
+
+// ============================================
+// Component
+// ============================================
+
+const ChatCodeBlock: React.FC<ChatCodeBlockProps> = memo(
+  ({
+    code,
+    language,
+    filePath,
+    title,
+    subtitle,
+    actionTitle,
+    actionIcon,
+    separateTitle = false,
+    defaultCollapsed = false,
+    containerWidth,
+    showLineNumbers: _showLineNumbers = true,
+    className = "",
+    hideHeader = false,
+    visibleLines,
+    linesAdded,
+    linesRemoved,
+    showLineCount = true,
+    trailingTags,
+    hasContent = true,
+    eventId,
+    isLoading = false,
+    isFailed = false,
+  }) => {
+    const {
+      isCollapsed,
+      isHeaderHovered,
+      handleHeaderClick,
+      handleHeaderMouseEnter,
+      handleHeaderMouseLeave,
+      handleLocate,
+    } = useBlockHeader({ defaultCollapsed, eventId, collapseAllValue: true });
+    const { t } = useTranslation("sessions");
+
+    const {
+      useTerminalLayout,
+      isExpanded,
+      setIsExpanded,
+      isPreviewOpen,
+      handleTogglePreview,
+      detectedLanguage,
+      isPreviewable,
+      iconFileName,
+      displayTitle,
+      isDiff,
+      addedLines,
+      removedLines,
+      shouldShowLineCount,
+      needsExpand,
+      displayedCode,
+      displayedDiff,
+      contentHeight,
+      useVirtualScroll,
+      virtualListHeight,
+      isScrolling,
+      containerRefCb,
+      streamingWrapperRef,
+    } = useCodeBlockState({
+      code,
+      language,
+      filePath,
+      title,
+      actionTitle,
+      separateTitle,
+      isLoading,
+      visibleLines,
+      linesAdded,
+      linesRemoved,
+      showLineCount,
+      isCollapsed,
+    });
+
+    const containerClass = useTerminalLayout
+      ? `group group/expand ${getEventBlockContainerClasses(false)}`
+      : `group ${getEventBlockContainerClasses()} ${className}`;
+
+    return (
+      <div className={containerClass}>
+        {!hideHeader && (
+          <EventBlockHeader
+            isCollapsed={isCollapsed}
+            className={
+              useTerminalLayout || isCollapsed || (isLoading && !code)
+                ? "border-b border-solid border-transparent"
+                : "border-b border-solid border-border-1"
+            }
+            onClick={hasContent ? handleLocate : undefined}
+            onNavigate={eventId ? handleLocate : undefined}
+            onMouseEnter={handleHeaderMouseEnter}
+            onMouseLeave={handleHeaderMouseLeave}
+            withHover={!useTerminalLayout && hasContent}
+          >
+            <EventBlockHeaderIcon
+              icon={
+                actionIcon || (
+                  <FileTypeIcon
+                    fileName={iconFileName}
+                    size="small"
+                    className="text-primary-6"
+                  />
+                )
+              }
+              isCollapsed={isCollapsed}
+              isHeaderHovered={isHeaderHovered}
+              iconSize={16}
+              onToggle={handleHeaderClick}
+              hasContent={hasContent}
+              revealChevronOnIconHoverOnly={Boolean(eventId)}
+              isLoading={isLoading}
+              isFailed={isFailed}
+            />
+
+            {actionTitle && (
+              <span
+                className={`shrink-0 ${isLoading ? `font-bold ${EVENT_LOADING_SHIMMER_TEXT_CLASSES}` : "font-medium text-text-1"}`}
+              >
+                {actionTitle}
+              </span>
+            )}
+
+            {!useTerminalLayout && (
+              <>
+                {filePath ? (
+                  <div
+                    className={`min-w-0 flex-initial cursor-pointer truncate hover:underline ${
+                      isLoading
+                        ? `font-bold ${EVENT_LOADING_SHIMMER_TEXT_CLASSES}`
+                        : actionTitle
+                          ? "text-text-2"
+                          : "font-medium text-text-1"
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      document.dispatchEvent(
+                        new CustomEvent("open-file-in-editor", {
+                          detail: { path: filePath, isDirectory: false },
+                        })
+                      );
+                    }}
+                    title={filePath}
+                  >
+                    {displayTitle}
+                  </div>
+                ) : (
+                  <div
+                    className={`min-w-0 flex-initial truncate ${
+                      isLoading
+                        ? `font-bold ${EVENT_LOADING_SHIMMER_TEXT_CLASSES}`
+                        : actionTitle
+                          ? "text-text-2"
+                          : "font-medium text-text-1"
+                    }`}
+                  >
+                    {displayTitle}
+                  </div>
+                )}
+
+                {subtitle && (
+                  <EventBlockHeaderSubtitle
+                    isLoading={isLoading}
+                    title={subtitle}
+                  >
+                    {subtitle}
+                  </EventBlockHeaderSubtitle>
+                )}
+
+                {(shouldShowLineCount ||
+                  (trailingTags && trailingTags.length > 0)) && (
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {shouldShowLineCount && addedLines > 0 && (
+                      <span className={TRAILING_TAG_TONE_CLASS.success}>
+                        +{addedLines}
+                      </span>
+                    )}
+                    {shouldShowLineCount && removedLines > 0 && (
+                      <span className={TRAILING_TAG_TONE_CLASS.danger}>
+                        -{removedLines}
+                      </span>
+                    )}
+                    {trailingTags?.map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className={TRAILING_TAG_TONE_CLASS[tag.tone]}
+                      >
+                        {tag.text}
+                      </span>
+                    ))}
+                  </span>
+                )}
+
+                {isPreviewable && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTogglePreview();
+                    }}
+                    className={`ml-auto flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
+                      isPreviewOpen
+                        ? "bg-primary-6/15 text-primary-6 hover:bg-primary-6/25"
+                        : "text-text-4 hover:bg-fill-3 hover:text-text-2"
+                    }`}
+                    title={
+                      isPreviewOpen
+                        ? t("codePreview.hidePreview")
+                        : t("codePreview.showPreview")
+                    }
+                  >
+                    {isPreviewOpen ? <EyeOff size={11} /> : <Eye size={11} />}
+                    {t("codePreview.preview")}
+                  </button>
+                )}
+              </>
+            )}
+          </EventBlockHeader>
+        )}
+
+        {hasContent && !isCollapsed && !(isLoading && !code) && (
+          <div
+            ref={
+              isLoading && !useTerminalLayout ? streamingWrapperRef : undefined
+            }
+            className={
+              useTerminalLayout
+                ? EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES
+                : `group/expand relative ${isLoading ? "scrollbar-hide" : isExpanded && needsExpand ? "scrollbar-hide" : ""}`
+            }
+            style={
+              useTerminalLayout
+                ? undefined
+                : isLoading
+                  ? {
+                      maxHeight: (visibleLines ?? 15) * 18 + 16,
+                      overflowY: "auto",
+                      overflowX: "hidden",
+                      transition: `opacity ${STYLE_CONFIG.animationDuration}ms ease-out`,
+                    }
+                  : {
+                      opacity: isCollapsed ? 0 : 1,
+                      overflow:
+                        isExpanded && needsExpand ? undefined : "hidden",
+                      maxHeight: isExpanded && needsExpand ? "40vh" : undefined,
+                      overflowY: isExpanded && needsExpand ? "auto" : undefined,
+                      overflowX:
+                        isExpanded && needsExpand ? "hidden" : undefined,
+                      transition: `opacity ${STYLE_CONFIG.animationDuration}ms ease-out`,
+                    }
+            }
+          >
+            {useTerminalLayout && filePath && (
+              <div
+                className={`flex items-center gap-2 ${EVENT_SNIPPET_INNER_PADDING_CLASS}`}
+              >
+                <FileTypeIcon
+                  fileName={filePath}
+                  size="small"
+                  className="flex-shrink-0 text-text-2"
+                />
+                <span
+                  className="min-w-0 flex-1 cursor-pointer truncate text-text-1 hover:underline"
+                  title={filePath}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    document.dispatchEvent(
+                      new CustomEvent("open-file-in-editor", {
+                        detail: { path: filePath, isDirectory: false },
+                      })
+                    );
+                  }}
+                >
+                  {displayTitle}
+                </span>
+              </div>
+            )}
+
+            <div
+              className={
+                useTerminalLayout
+                  ? "relative border-t border-solid border-border-1 pt-1"
+                  : "py-1"
+              }
+            >
+              <div
+                ref={containerRefCb}
+                className="chat-code-block__code-container chat-code-block__scroll-hover w-full min-w-0 max-w-full overflow-x-auto overflow-y-hidden"
+                data-scrolling={isScrolling || undefined}
+              >
+                {isDiff && displayedDiff ? (
+                  <VirtualizedModernDiff
+                    oldValue={displayedDiff.oldValue}
+                    newValue={displayedDiff.newValue}
+                    filePath={filePath}
+                    height={contentHeight}
+                    width={containerWidth}
+                    collapseUnchanged={true}
+                    contextLines={3}
+                    showFilePath={false}
+                    showStatsBar={false}
+                    showLineNumbers={false}
+                    internalScroll={false}
+                    noWrapper={true}
+                    allowExpand={false}
+                    indicatorStyle="border"
+                    oldStartLine={displayedDiff.oldStartLine}
+                    newStartLine={displayedDiff.newStartLine}
+                  />
+                ) : (
+                  <ModernCodeViewer
+                    content={useVirtualScroll ? code : displayedCode}
+                    language={detectedLanguage}
+                    showLineNumbers={false}
+                    internalScroll={useVirtualScroll}
+                    height={
+                      useVirtualScroll ? virtualListHeight : contentHeight
+                    }
+                    width={containerWidth}
+                    noWrapper={true}
+                  />
+                )}
+              </div>
+
+              {needsExpand && !isLoading && (
+                <ExpandOverlay
+                  isExpanded={isExpanded}
+                  onToggle={() => setIsExpanded(!isExpanded)}
+                  fadeFrom={EVENT_BLOCK_FADE_FROM}
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {isPreviewable && isPreviewOpen && (
+          <CodePreview
+            code={code}
+            language={detectedLanguage}
+            onClose={handleTogglePreview}
+          />
+        )}
+      </div>
+    );
+  }
+);
+
+ChatCodeBlock.displayName = "ChatCodeBlock";
+
+export default ChatCodeBlock;

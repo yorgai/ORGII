@@ -1,0 +1,350 @@
+//! Unified session launch command.
+//!
+//! This file only adapts the frontend Tauri DTO into either the canonical
+//! Rust-agent launch service or the CLI launch bridge.
+
+use key_vault::{AuthMethod, ModelType};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+use crate::definitions::orgs::{AgentOrgsStore, OrgMemberLaunchOverride};
+use crate::session::launch::{
+    launch_rust_agent_run, AgentRunLaunchRequest, AgentRunTarget, LaunchProvenance,
+    LaunchResourceSelection, WorkspaceLaunchTarget,
+};
+use crate::session::IdeContext;
+use crate::state::AgentAppState;
+
+const MAX_AUTO_NAME_LEN: usize = 80;
+
+/// Wire value for `SessionLaunchParams.category` selecting the Rust-native
+/// agent stack (OS / SDE / Custom / Gateway). Frontend mirror lives in
+/// `src/api/tauri/session/dispatchTypes.ts` (`DispatchCategory`).
+pub const SESSION_CATEGORY_RUST_AGENT: &str = "rust_agent";
+
+/// Wire value for `SessionLaunchParams.category` selecting an external CLI
+/// process (Cursor CLI, Claude Code, Codex, Gemini, …).
+pub const SESSION_CATEGORY_CLI_AGENT: &str = "cli_agent";
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionLaunchParams {
+    /// "rust_agent" or "cli_agent"
+    pub category: String,
+    /// User message content
+    pub content: String,
+    /// Project / repo path
+    pub workspace_path: Option<String>,
+
+    // Model / Key / provider override
+    pub key_source: Option<String>,
+    pub account_id: Option<String>,
+    pub model: Option<String>,
+    pub native_harness_type: Option<String>,
+
+    // CLI-specific
+    /// CLI agent type (wire name: `platform`)
+    pub platform: Option<String>,
+    pub branch: Option<String>,
+
+    // Market-specific
+    pub hosted_token: Option<String>,
+    pub tier: Option<String>,
+
+    // Optional
+    pub name: Option<String>,
+    #[serde(default)]
+    pub background: bool,
+    pub images: Option<Vec<String>>,
+    pub ide_context: Option<IdeContext>,
+    pub agent_definition_id: Option<String>,
+    pub agent_org_id: Option<String>,
+    #[serde(default)]
+    pub agent_org_member_overrides: HashMap<String, OrgMemberLaunchOverride>,
+    #[serde(default)]
+    pub apply_agent_org_member_overrides_for_future: bool,
+    #[serde(default)]
+    pub isolate: bool,
+    pub mode: Option<String>,
+
+    // Work-item / orchestrator fields (rust_agent only)
+    pub work_item_id: Option<String>,
+    pub agent_role: Option<String>,
+    pub worktree_path: Option<String>,
+    pub project_slug: Option<String>,
+
+    /// Extra workspace folders granted at launch time (multi-root IDE
+    /// workspaces). Each path is injected into the session's
+    /// `SessionWorkspace.additional_directories` with
+    /// [`DirectorySource::Session`] scope before the first turn runs,
+    /// so file tools honouring `effective_roots()` see them from turn 1.
+    ///
+    /// Empty for single-repo launches. Absolute, canonicalised paths
+    /// are expected; the frontend is responsible for filtering out the
+    /// primary folder (which is passed via `workspace_path`).
+    #[serde(default)]
+    pub additional_directories: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionLaunchResult {
+    pub session_id: String,
+    pub category: String,
+    pub name: String,
+    pub status: String,
+    pub created_at: String,
+    pub user_input: String,
+    pub workspace_path: Option<String>,
+    pub branch: Option<String>,
+    #[serde(default)]
+    pub background: bool,
+    pub model: Option<String>,
+    pub cli_agent_type: Option<String>,
+    pub account_id: Option<String>,
+    pub agent_org_id: Option<String>,
+    pub agent_org_run_id: Option<String>,
+    pub worktree_path: Option<String>,
+}
+
+pub async fn session_launch_impl(
+    state: &AgentAppState,
+    org_store: Option<&AgentOrgsStore>,
+    params: SessionLaunchParams,
+) -> Result<SessionLaunchResult, String> {
+    let auto_name = derive_name(params.name.as_deref(), &params.content);
+
+    match params.category.as_str() {
+        SESSION_CATEGORY_RUST_AGENT => launch_rust_agent(state, org_store, params, auto_name).await,
+        SESSION_CATEGORY_CLI_AGENT => launch_cli_agent(params, auto_name).await,
+        other => Err(format!("Unknown session category: {other}")),
+    }
+}
+
+async fn launch_rust_agent(
+    state: &AgentAppState,
+    org_store: Option<&AgentOrgsStore>,
+    params: SessionLaunchParams,
+    name: String,
+) -> Result<SessionLaunchResult, String> {
+    let content = params.content.clone();
+    let model = params.model.clone();
+    let account_id = params.account_id.clone();
+    let branch = params.branch.clone();
+    let background = params.background;
+    let target = match params
+        .agent_org_id
+        .clone()
+        .filter(|id| !id.trim().is_empty())
+    {
+        Some(agent_org_id) => AgentRunTarget::AgentOrg {
+            agent_org_id,
+            agent_definition_id: params.agent_definition_id.clone(),
+            member_overrides: params.agent_org_member_overrides.clone(),
+            apply_member_overrides_for_future: params.apply_agent_org_member_overrides_for_future,
+        },
+        None => AgentRunTarget::AgentDefinition {
+            agent_definition_id: params.agent_definition_id.clone(),
+        },
+    };
+    let workspace_path = params
+        .workspace_path
+        .clone()
+        .filter(|path| !path.is_empty())
+        .unwrap_or_default();
+    let workspace = if params.isolate
+        || params
+            .worktree_path
+            .as_deref()
+            .is_some_and(|path| !path.is_empty())
+    {
+        WorkspaceLaunchTarget::Worktree {
+            workspace_path,
+            worktree_path: params.worktree_path.clone(),
+            branch: params.branch.clone(),
+            create_isolated: params.isolate,
+            additional_directories: params.additional_directories.clone(),
+        }
+    } else {
+        WorkspaceLaunchTarget::LocalWorkspace {
+            workspace_path,
+            additional_directories: params.additional_directories.clone(),
+        }
+    };
+    let provenance = match (params.project_slug.clone(), params.work_item_id.clone()) {
+        (Some(project_slug), Some(work_item_id)) => LaunchProvenance::WorkItem {
+            project_slug,
+            work_item_id,
+            agent_role: params.agent_role.clone(),
+        },
+        _ => LaunchProvenance::UserSession,
+    };
+
+    let result = launch_rust_agent_run(
+        state,
+        org_store,
+        AgentRunLaunchRequest {
+            content: params.content,
+            target,
+            resources: LaunchResourceSelection {
+                key_source: params.key_source,
+                account_id: params.account_id,
+                model: params.model,
+                native_harness_type: params.native_harness_type,
+            },
+            workspace,
+            provenance,
+            mode: params.mode,
+            name: Some(name.clone()),
+            images: params.images,
+            ide_context: params.ide_context,
+            sub_agent_ids: Vec::new(),
+        },
+    )
+    .await?;
+
+    Ok(SessionLaunchResult {
+        session_id: result.session_id,
+        category: SESSION_CATEGORY_RUST_AGENT.to_string(),
+        name,
+        status: result.status.session_status().as_str().to_string(),
+        created_at: result.created_at,
+        user_input: content,
+        workspace_path: result.workspace_path,
+        branch,
+        background,
+        model,
+        cli_agent_type: None,
+        account_id,
+        agent_org_id: result.agent_org_id,
+        agent_org_run_id: result.agent_org_run_id,
+        worktree_path: result.worktree_path,
+    })
+}
+
+async fn ensure_cli_account_key_fresh(
+    platform: &str,
+    account_id: Option<&str>,
+) -> Result<(), String> {
+    if platform != ModelType::ClaudeCode.as_str() && platform != ModelType::Codex.as_str() {
+        return Ok(());
+    }
+    let Some(account_id) = account_id else {
+        return Ok(());
+    };
+    let Some(key) = key_vault::key_store::KEY_SERVICE.get_key_by_id(account_id) else {
+        return Ok(());
+    };
+    if key.auth_method != AuthMethod::Oauth {
+        return Ok(());
+    }
+
+    match key.model_type {
+        ModelType::ClaudeCode => {
+            key_vault::key_store::KEY_SERVICE
+                .ensure_claude_code_oauth_key_fresh(account_id)
+                .await?;
+        }
+        ModelType::Codex => {
+            key_vault::key_store::KEY_SERVICE
+                .ensure_codex_oauth_key_fresh(account_id)
+                .await?;
+        }
+        ModelType::GeminiCli => {
+            key_vault::key_store::KEY_SERVICE
+                .ensure_gemini_oauth_key_fresh(account_id)
+                .await?;
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+async fn launch_cli_agent(
+    params: SessionLaunchParams,
+    name: String,
+) -> Result<SessionLaunchResult, String> {
+    use crate::foundation::session_bridge::{launch_cli_agent, CliLaunchParams};
+
+    let platform = params
+        .platform
+        .clone()
+        .unwrap_or_else(|| "claude_code".to_string());
+    let content = params.content.clone();
+    let model = params.model.clone();
+    let account_id = params.account_id.clone();
+    let background = params.background;
+    let branch = params.branch.clone();
+    let workspace_path = params.workspace_path.clone();
+
+    let extras = if params.additional_directories.is_empty() {
+        None
+    } else {
+        Some(params.additional_directories.clone())
+    };
+
+    ensure_cli_account_key_fresh(&platform, account_id.as_deref()).await?;
+
+    let bridge_params = CliLaunchParams {
+        name: Some(name.clone()),
+        cli_agent_type: platform.clone(),
+        model: params.model,
+        tier: params.tier,
+        account_id: params.account_id,
+        repo_path: params.workspace_path,
+        branch: params.branch,
+        hosted_token: params.hosted_token,
+        isolate: params.isolate,
+        background: params.background,
+        key_source: params.key_source,
+        additional_directories: extras,
+        parent_session_id: None,
+        org_member_id: None,
+        user_input: params.content,
+        ide_context: params.ide_context,
+        mode: params.mode,
+        images: params.images,
+    };
+
+    let outcome = launch_cli_agent(bridge_params).await?;
+    let session_id = outcome.session_id;
+    let created_at = outcome.created_at;
+
+    Ok(SessionLaunchResult {
+        session_id,
+        category: SESSION_CATEGORY_CLI_AGENT.to_string(),
+        name,
+        status: crate::session::SessionStatus::Pending.as_str().to_string(),
+        created_at,
+        user_input: content,
+        workspace_path,
+        branch,
+        background,
+        model,
+        cli_agent_type: Some(platform),
+        account_id,
+        agent_org_id: None,
+        agent_org_run_id: None,
+        worktree_path: None,
+    })
+}
+
+fn derive_name(explicit: Option<&str>, content: &str) -> String {
+    if let Some(name) = explicit {
+        if !name.is_empty() {
+            return name.to_string();
+        }
+    }
+    let trimmed = content.trim();
+    if trimmed.is_empty() {
+        return "New session".to_string();
+    }
+    if trimmed.len() <= MAX_AUTO_NAME_LEN {
+        return trimmed.to_string();
+    }
+    let mut boundary = MAX_AUTO_NAME_LEN;
+    while boundary > 0 && !trimmed.is_char_boundary(boundary) {
+        boundary -= 1;
+    }
+    format!("{}...", &trimmed[..boundary])
+}

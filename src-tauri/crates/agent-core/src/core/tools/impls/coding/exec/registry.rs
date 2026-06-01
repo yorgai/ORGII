@@ -1,0 +1,465 @@
+//! Background job registry — tracks backgrounded shell processes and subagents
+//! for the Await tool.
+//!
+//! When `ExecTool` backgrounds a subprocess or `AgentTool` launches a background
+//! subagent, it registers the job here so `AwaitTool` can subscribe to live output
+//! and query status using a unified string handle.
+
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, VecDeque};
+use std::path::PathBuf;
+use std::sync::{LazyLock, Mutex};
+use std::time::Instant;
+use tokio::sync::broadcast;
+use tokio::task::JoinHandle;
+
+/// Status of a background job.
+#[derive(Debug, Clone)]
+pub enum JobStatus {
+    Running,
+    Exited(i32),
+    Killed,
+    Completed,
+    Failed,
+}
+
+/// What kind of background job this is.
+#[derive(Debug, Clone)]
+pub enum JobKind {
+    Shell {
+        pid: u32,
+        log_path: PathBuf,
+    },
+    Subagent {
+        subagent_type: String,
+        agent_name: String,
+    },
+}
+
+/// Lightweight snapshot returned by `list_jobs`.
+#[derive(Debug, Clone)]
+pub struct JobSnapshot {
+    pub handle: String,
+    pub label: String,
+    pub kind_label: String,
+    pub status: JobStatus,
+    pub age_ms: u64,
+    pub has_unread_output: bool,
+}
+
+const MAX_RECENT_LINES: usize = 200;
+
+/// A registered background job (shell process or subagent).
+pub struct BackgroundJob {
+    pub handle: String,
+    pub label: String,
+    pub kind: JobKind,
+    pub session_id: String,
+    pub started_at: Instant,
+    pub status: JobStatus,
+    pub final_result: Option<String>,
+    output_tx: broadcast::Sender<String>,
+    recent_lines: VecDeque<String>,
+    /// Tokio JoinHandle for background subagents — `abort()` cancels the task.
+    join_handle: Option<JoinHandle<()>>,
+    /// Set to `true` once the agent has read the completed job's output via
+    /// `AwaitTool` (monitor/wait_for). Acknowledged completed jobs are excluded
+    /// from the per-turn system reminder to avoid the stale-reminder
+    /// problem common to background bash notifications.
+    output_acknowledged: bool,
+}
+
+impl BackgroundJob {
+    pub fn subscribe(&self) -> broadcast::Receiver<String> {
+        self.output_tx.subscribe()
+    }
+
+    pub fn is_running(&self) -> bool {
+        matches!(self.status, JobStatus::Running)
+    }
+
+    pub fn log_path(&self) -> Option<&PathBuf> {
+        match &self.kind {
+            JobKind::Shell { log_path, .. } => Some(log_path),
+            JobKind::Subagent { .. } => None,
+        }
+    }
+
+    pub fn push_recent_line(&mut self, line: String) {
+        if self.recent_lines.len() >= MAX_RECENT_LINES {
+            self.recent_lines.pop_front();
+        }
+        self.recent_lines.push_back(line);
+    }
+
+    pub fn recent_output(&self) -> String {
+        self.recent_lines
+            .iter()
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn snapshot(&self) -> JobSnapshot {
+        let kind_label = match &self.kind {
+            JobKind::Shell { .. } => "shell".to_string(),
+            JobKind::Subagent { subagent_type, .. } => format!("subagent:{subagent_type}"),
+        };
+        let has_unread_output = !self.output_acknowledged && !self.is_running();
+        JobSnapshot {
+            handle: self.handle.clone(),
+            label: self.label.clone(),
+            kind_label,
+            status: self.status.clone(),
+            age_ms: self.started_at.elapsed().as_millis() as u64,
+            has_unread_output,
+        }
+    }
+}
+
+const BROADCAST_CAPACITY: usize = 512;
+
+static REGISTRY: LazyLock<Mutex<HashMap<String, BackgroundJob>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// Register a backgrounded shell process. Returns a `broadcast::Sender` the
+/// caller should use to feed live output lines.
+pub fn register_shell(
+    pid: u32,
+    command: String,
+    log_path: PathBuf,
+    session_id: String,
+) -> broadcast::Sender<String> {
+    let handle = pid.to_string();
+    let (tx, _) = broadcast::channel(BROADCAST_CAPACITY);
+    let sender = tx.clone();
+    let job = BackgroundJob {
+        handle: handle.clone(),
+        label: command,
+        kind: JobKind::Shell { pid, log_path },
+        session_id,
+        started_at: Instant::now(),
+        status: JobStatus::Running,
+        final_result: None,
+        output_tx: tx,
+        recent_lines: VecDeque::new(),
+        join_handle: None,
+        output_acknowledged: false,
+    };
+    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.insert(handle, job);
+    sender
+}
+
+/// Register a background subagent. Returns a `broadcast::Sender` the caller
+/// should use to feed text summaries of subagent events.
+pub fn register_subagent(
+    handle: String,
+    subagent_type: String,
+    agent_name: String,
+    session_id: String,
+) -> broadcast::Sender<String> {
+    let (tx, _) = broadcast::channel(BROADCAST_CAPACITY);
+    let sender = tx.clone();
+    let job = BackgroundJob {
+        handle: handle.clone(),
+        label: agent_name.clone(),
+        kind: JobKind::Subagent {
+            subagent_type,
+            agent_name,
+        },
+        session_id,
+        started_at: Instant::now(),
+        status: JobStatus::Running,
+        final_result: None,
+        output_tx: tx,
+        recent_lines: VecDeque::new(),
+        join_handle: None,
+        output_acknowledged: false,
+    };
+    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.insert(handle, job);
+    sender
+}
+
+/// Mark a job as exited/completed/failed. The entry remains for a grace period
+/// so `AwaitTool` can still read final status.
+pub fn mark_exited(handle: &str, status: JobStatus) {
+    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(job) = reg.get_mut(handle) {
+        job.status = status;
+    }
+}
+
+/// Store the final result text for a completed subagent job.
+pub fn set_final_result(handle: &str, result: String) {
+    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(job) = reg.get_mut(handle) {
+        job.final_result = Some(result);
+    }
+}
+
+/// Remove a job from the registry (called after grace period).
+pub fn remove(handle: &str) {
+    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.remove(handle);
+}
+
+/// Retrieve a snapshot of job metadata. Returns `None` if not found.
+pub fn get_status(handle: &str) -> Option<(JobStatus, JobKind)> {
+    let reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.get(handle)
+        .map(|job| (job.status.clone(), job.kind.clone()))
+}
+
+/// Get the final result text for a job.
+pub fn get_final_result(handle: &str) -> Option<String> {
+    let reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.get(handle).and_then(|job| job.final_result.clone())
+}
+
+/// Subscribe to a job's live output stream. Returns `None` if not found.
+pub fn subscribe(handle: &str) -> Option<broadcast::Receiver<String>> {
+    let reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.get(handle).map(|job| job.subscribe())
+}
+
+/// List active (running) shell jobs for a session.
+pub fn list_shell_for_session(session_id: &str) -> Vec<(u32, String)> {
+    let reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.values()
+        .filter(|job| job.session_id == session_id && job.is_running())
+        .filter_map(|job| match &job.kind {
+            JobKind::Shell { pid, .. } => Some((*pid, job.label.clone())),
+            JobKind::Subagent { .. } => None,
+        })
+        .collect()
+}
+
+/// List all jobs (shells + subagents). Pass `Some(session_id)` for session
+/// scope, `None` for global scope.
+pub fn list_jobs(session_id: Option<&str>) -> Vec<JobSnapshot> {
+    let reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.values()
+        .filter(|job| match session_id {
+            Some(sid) => job.session_id == sid,
+            None => true,
+        })
+        .map(|job| job.snapshot())
+        .collect()
+}
+
+/// Mark a completed job's output as acknowledged. Once acknowledged, the job
+/// is excluded from the per-turn system-reminder injection. This avoids
+/// stale "has new output" reminders for jobs whose output has already been
+/// read.
+pub fn acknowledge_output(handle: &str) {
+    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(job) = reg.get_mut(handle) {
+        job.output_acknowledged = true;
+    }
+}
+
+/// List jobs that should appear in the per-turn system reminder.
+///
+/// Includes:
+/// - All **running** jobs (agent needs to know they're still going)
+/// - **Completed/failed** jobs whose output has **not** been acknowledged
+///
+/// Excludes:
+/// - Completed jobs whose output was already read via `AwaitTool`
+pub fn list_jobs_for_reminder(session_id: &str) -> Vec<JobSnapshot> {
+    let reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.values()
+        .filter(|job| {
+            job.session_id == session_id && (job.is_running() || !job.output_acknowledged)
+        })
+        .map(|job| job.snapshot())
+        .collect()
+}
+
+/// Lightweight snapshot of a running shell job, suitable for frontend
+/// reconciliation on reload. Only includes shell jobs with `Running` status.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RunningShellJob {
+    pub session_id: String,
+    pub pid: u32,
+    pub command: String,
+    pub log_path: Option<String>,
+}
+
+/// List all currently running shell jobs across all sessions.
+///
+/// Used by the frontend `useProcessReconciliation` hook to reseed
+/// `shellProcessMapAtom` after a hot reload / page refresh.
+pub fn list_running_shell_jobs() -> Vec<RunningShellJob> {
+    let reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.values()
+        .filter(|job| job.is_running())
+        .filter_map(|job| match &job.kind {
+            JobKind::Shell { pid, log_path } => Some(RunningShellJob {
+                session_id: job.session_id.clone(),
+                pid: *pid,
+                command: job.label.clone(),
+                log_path: Some(log_path.to_string_lossy().into_owned()),
+            }),
+            JobKind::Subagent { .. } => None,
+        })
+        .collect()
+}
+
+/// Get the recent output buffer for a subagent job (or empty string for
+/// shells — use `read_log_body` for shells instead).
+pub fn get_recent_output(handle: &str) -> Option<String> {
+    let reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    reg.get(handle).map(|job| job.recent_output())
+}
+
+/// Append a line to the job's rolling buffer. Used by `BroadcastingHandler`
+/// to keep a tail window for subagent output.
+pub fn push_output_line(handle: &str, line: String) {
+    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(job) = reg.get_mut(handle) {
+        job.push_recent_line(line);
+    }
+}
+
+/// Store the JoinHandle for a background subagent so it can be aborted later.
+pub fn set_join_handle(handle: &str, jh: JoinHandle<()>) {
+    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(job) = reg.get_mut(handle) {
+        job.join_handle = Some(jh);
+    }
+}
+
+#[cfg(unix)]
+fn send_signal_to_process_tree(pid: u32, signal: libc::c_int) -> Result<(), std::io::Error> {
+    let pid = pid as libc::pid_t;
+    let group_result = unsafe { libc::kill(-pid, signal) };
+    if group_result == 0 {
+        return Ok(());
+    }
+
+    let group_error = std::io::Error::last_os_error();
+    let process_result = unsafe { libc::kill(pid, signal) };
+    if process_result == 0 {
+        return Ok(());
+    }
+
+    let process_error = std::io::Error::last_os_error();
+    if group_error.raw_os_error() == Some(libc::ESRCH)
+        && process_error.raw_os_error() == Some(libc::ESRCH)
+    {
+        return Err(process_error);
+    }
+
+    Err(process_error)
+}
+
+#[cfg(unix)]
+fn process_tree_exists(pid: u32) -> bool {
+    let pid = pid as libc::pid_t;
+    unsafe { libc::kill(-pid, 0) == 0 || libc::kill(pid, 0) == 0 }
+}
+
+#[cfg(unix)]
+pub async fn terminate_shell_process_tree(pid: u32) -> Result<String, String> {
+    if pid == 0 {
+        return Err("Refusing to kill PID 0 (would signal entire process group)".to_string());
+    }
+
+    match send_signal_to_process_tree(pid, libc::SIGTERM) {
+        Ok(()) => {}
+        Err(err) if err.raw_os_error() == Some(libc::ESRCH) => {
+            return Ok(format!("Process {} already exited", pid));
+        }
+        Err(err) => return Err(format!("Failed to send SIGTERM to {}: {}", pid, err)),
+    }
+
+    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    if process_tree_exists(pid) {
+        match send_signal_to_process_tree(pid, libc::SIGKILL) {
+            Ok(()) => Ok(format!("Process {} killed (SIGKILL)", pid)),
+            Err(err) if err.raw_os_error() == Some(libc::ESRCH) => {
+                Ok(format!("Process {} terminated (SIGTERM)", pid))
+            }
+            Err(err) => Err(format!("Failed to send SIGKILL to {}: {}", pid, err)),
+        }
+    } else {
+        Ok(format!("Process {} terminated (SIGTERM)", pid))
+    }
+}
+
+#[cfg(windows)]
+pub async fn terminate_shell_process_tree(pid: u32) -> Result<String, String> {
+    if pid == 0 {
+        return Err("Refusing to kill PID 0".to_string());
+    }
+
+    let output = tokio::process::Command::new("taskkill")
+        .args(["/PID", &pid.to_string(), "/T", "/F"])
+        .output()
+        .await
+        .map_err(|err| format!("Failed to kill process {}: {}", pid, err))?;
+
+    if output.status.success() {
+        Ok(format!("Process {} killed", pid))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if stderr.contains("not found") || stderr.contains("not running") {
+            Ok(format!("Process {} already exited", pid))
+        } else {
+            Err(format!("Failed to kill process {}: {}", pid, stderr))
+        }
+    }
+}
+
+/// Kill a shell process by PID (SIGTERM, grace period, then SIGKILL).
+/// Returns `Ok(())` on success or `Err(msg)` if the handle is not found or
+/// not a shell job.
+pub async fn kill_shell(handle: &str) -> Result<(), String> {
+    let pid = {
+        let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+        let job = reg
+            .get_mut(handle)
+            .ok_or_else(|| format!("handle '{handle}' not found"))?;
+        let pid = match &job.kind {
+            JobKind::Shell { pid, .. } => *pid,
+            JobKind::Subagent { .. } => {
+                return Err("not a shell job — use the agent tool to kill subagents".into())
+            }
+        };
+        if !job.is_running() {
+            return Err(format!("job '{handle}' already exited"));
+        }
+        job.status = JobStatus::Killed;
+        pid
+    };
+
+    terminate_shell_process_tree(pid).await.map(|_| ())
+}
+
+/// Abort a background subagent by cancelling its JoinHandle.
+/// Returns `Ok(())` on success or `Err(msg)` if the handle is not found or
+/// not a subagent.
+pub fn kill_subagent(handle: &str) -> Result<(), String> {
+    let mut reg = REGISTRY.lock().unwrap_or_else(|e| e.into_inner());
+    let job = reg
+        .get_mut(handle)
+        .ok_or_else(|| format!("handle '{handle}' not found"))?;
+    match &job.kind {
+        JobKind::Shell { .. } => {
+            return Err("not a subagent — use run_shell to kill shell processes".into())
+        }
+        JobKind::Subagent { .. } => {}
+    }
+    if !job.is_running() {
+        return Err(format!("subagent '{handle}' already finished"));
+    }
+
+    if let Some(jh) = job.join_handle.take() {
+        jh.abort();
+    }
+    job.status = JobStatus::Killed;
+    Ok(())
+}

@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "welcome": {
+      "title": "ようこそ",
+      "description": "ORGII を始めましょう"
+    },
+    "devPassport": {
+      "description": "開発者としてのアイデンティティ"
+    },
+    "github": {
+      "title": "GitHub",
+      "description": "アカウントを接続"
+    },
+    "workspace": {
+      "title": "プロジェクト",
+      "description": "プロジェクトを開くまたはクローン"
+    },
+    "theme": {
+      "title": "テーマ",
+      "description": "外観をカスタマイズ"
+    },
+    "complete": {
+      "title": "完了",
+      "description": "準備完了"
+    }
+  },
+  "welcome": {
+    "title": "ORGII へようこそ",
+    "description": "いくつかの簡単なステップでワークスペースを設定しましょう。"
+  },
+  "devPassport": {
+    "title": "Dev Passport を設定",
+    "description": "すべての Vibe Engineer にはアイデンティティが必要です。",
+    "role": "Vibe Engineer",
+    "codeName": "コードネーム",
+    "codeNamePlaceholder": "コードネームを入力...",
+    "randomNameTooltip": "ランダムなコードネームを生成",
+    "avatar": "アバター",
+    "selectImage": "画像を選択",
+    "avatarHint": "プロジェクトでのあなたのビジュアルアイデンティティ",
+    "generateButton": "Vibe Passport を生成",
+    "passportTitle": "あなたの Vibe Passport",
+    "passportWelcome": "ようこそ、{{name}}。アイデンティティの準備ができました。"
+  },
+  "github": {
+    "title": "GitHub を接続",
+    "description": "GitHub アカウントを接続して、リポジトリへのアクセス、コミットの作成、プルリクエストの管理を ORGII から直接行えます。",
+    "connectButton": "GitHub アカウントを接続",
+    "hint": "後から設定 > 連携からも GitHub を接続できます"
+  },
+  "workspace": {
+    "title": "プロジェクトを開く",
+    "description": "ローカルフォルダを開くか、リポジトリをクローンして作業を開始します。ORGII はコードベースを自動的にインデックス化し、インテリジェントなコード支援を提供します。",
+    "openFolder": "フォルダを開く",
+    "cloneRepo": "リポジトリをクローン",
+    "hint": "このステップをスキップして、後でプロジェクトを開くこともできます"
+  },
+  "theme": {
+    "title": "テーマを選択",
+    "description": "お好みに合ったテーマを選択してください。設定からいつでも変更できます。",
+    "light": "ライト",
+    "dark": "ダーク"
+  },
+  "complete": {
+    "title": "準備完了！",
+    "description": "ワークスペースの準備ができました。新しいSessionを開始して AI アシスタンスでコーディングを始めるか、アプリを探索してすべての機能を発見しましょう。",
+    "startSession": "新しいSessionを開始"
+  },
+  "navigation": {
+    "skipSetup": "セットアップをスキップ",
+    "getStarted": "始める",
+    "goToSettings": "設定へ移動"
+  }
+}

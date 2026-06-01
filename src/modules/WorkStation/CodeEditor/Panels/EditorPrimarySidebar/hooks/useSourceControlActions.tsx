@@ -1,0 +1,100 @@
+/**
+ * useSourceControlActions
+ *
+ * Builds the action button list for the Source Control sidebar tab header.
+ * Extracted from `useExplorerActions` so the Source Control sidebar module
+ * can be reused outside the Code Editor (e.g. Control Tower peek).
+ */
+import { useMemo } from "react";
+
+import type { SectionHeaderAction } from "@src/components/TreePanelSidebar/types";
+import { useRefreshSpin } from "@src/hooks/ui";
+
+import { ICON_CONFIG, PANEL_CONSTANTS } from "../config";
+
+const {
+  filter: FilterIcon,
+  refresh: RefreshIcon,
+  listTree: ListTreeIcon,
+  list: ListIcon,
+} = ICON_CONFIG;
+
+export interface UseSourceControlActionsOptions {
+  showFilter: boolean;
+  viewMode: "list-tree" | "list";
+  onToggleFilter: () => void;
+  onToggleViewMode: () => void;
+  onRefresh: () => void;
+  /** Whether refresh is in progress (drives spin animation). */
+  refreshLoading?: boolean;
+}
+
+export function useSourceControlActions({
+  showFilter,
+  viewMode,
+  onToggleFilter,
+  onToggleViewMode,
+  onRefresh,
+  refreshLoading = false,
+}: UseSourceControlActionsOptions): SectionHeaderAction[] {
+  const { spinClass: refreshSpinClass, handleClick: handleRefreshClick } =
+    useRefreshSpin(onRefresh, refreshLoading);
+
+  return useMemo<SectionHeaderAction[]>(() => {
+    const actions: SectionHeaderAction[] = [
+      {
+        key: "filter-git",
+        icon: (
+          <FilterIcon
+            size={PANEL_CONSTANTS.ACTION_ICON_SIZE}
+            strokeWidth={PANEL_CONSTANTS.ACTION_ICON_STROKE}
+            className={showFilter ? "text-primary-6" : ""}
+          />
+        ),
+        tooltip: "Filter",
+        onClick: onToggleFilter,
+      },
+      {
+        key: "view-mode-toggle",
+        icon:
+          viewMode === "list" ? (
+            <ListTreeIcon
+              size={PANEL_CONSTANTS.ACTION_ICON_SIZE}
+              strokeWidth={PANEL_CONSTANTS.ACTION_ICON_STROKE}
+            />
+          ) : (
+            <ListIcon
+              size={PANEL_CONSTANTS.ACTION_ICON_SIZE}
+              strokeWidth={PANEL_CONSTANTS.ACTION_ICON_STROKE}
+            />
+          ),
+        tooltip:
+          viewMode === "list-tree"
+            ? "Switch to list view"
+            : "Switch to tree view",
+        onClick: onToggleViewMode,
+      },
+      {
+        key: "refresh-git",
+        icon: (
+          <RefreshIcon
+            size={PANEL_CONSTANTS.ACTION_ICON_SIZE}
+            strokeWidth={PANEL_CONSTANTS.ACTION_ICON_STROKE}
+            className={refreshSpinClass}
+          />
+        ),
+        tooltip: "",
+        onClick: handleRefreshClick,
+      },
+    ];
+
+    return actions;
+  }, [
+    showFilter,
+    viewMode,
+    onToggleFilter,
+    onToggleViewMode,
+    refreshSpinClass,
+    handleRefreshClick,
+  ]);
+}

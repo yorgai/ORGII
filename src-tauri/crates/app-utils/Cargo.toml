@@ -1,0 +1,22 @@
+[package]
+name = "app_utils"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+app_paths = { path = "../app-paths" }
+
+serde_json = "1"
+tracing = "0.1"
+
+# Optional, only pulled in by downstream crates that enable the `testing`
+# feature in their `[dev-dependencies]`. Keeps `tempfile` out of the runtime
+# build of `app_utils` so production binaries don't link it.
+tempfile = { version = "3.13", optional = true }
+
+[features]
+testing = ["dep:tempfile"]

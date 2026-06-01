@@ -1,0 +1,11 @@
+/**
+ * Selector Core
+ *
+ * Shared kernel used by all palettes. Chrome (glass/portal/footer) is
+ * provided by SpotlightShell in `../../shell`.
+ */
+export { useSelector as useSelectorKernel } from "../../hooks/selectors/useSelector";
+export type {
+  UseSelectorOptions,
+  UseSelectorReturn,
+} from "../../hooks/selectors/useSelector";

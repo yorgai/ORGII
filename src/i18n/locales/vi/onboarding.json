@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "welcome": {
+      "title": "Chào mừng",
+      "description": "Bắt đầu với ORGII"
+    },
+    "devPassport": {
+      "description": "Danh tính nhà phát triển của bạn"
+    },
+    "github": {
+      "title": "GitHub",
+      "description": "Kết nối tài khoản"
+    },
+    "workspace": {
+      "title": "Dự án",
+      "description": "Mở hoặc clone dự án"
+    },
+    "theme": {
+      "title": "Giao diện",
+      "description": "Tùy chỉnh giao diện"
+    },
+    "complete": {
+      "title": "Hoàn tất",
+      "description": "Sẵn sàng bắt đầu"
+    }
+  },
+  "welcome": {
+    "title": "Chào mừng đến với ORGII",
+    "description": "Hãy cấu hình không gian làm việc của bạn trong vài bước nhanh."
+  },
+  "devPassport": {
+    "title": "Thiết lập Dev Passport",
+    "description": "Mỗi kỹ sư vibe cần một danh tính.",
+    "role": "Kỹ sư Vibe",
+    "codeName": "Tên mã",
+    "codeNamePlaceholder": "Nhập tên mã của bạn...",
+    "randomNameTooltip": "Tạo tên mã ngẫu nhiên",
+    "avatar": "Ảnh đại diện",
+    "selectImage": "Chọn hình ảnh",
+    "avatarHint": "Danh tính hình ảnh của bạn trong các dự án",
+    "generateButton": "Tạo Vibe Passport",
+    "passportTitle": "Vibe Passport của bạn",
+    "passportWelcome": "Chào mừng, {{name}}. Danh tính của bạn đã sẵn sàng."
+  },
+  "github": {
+    "title": "Kết nối GitHub",
+    "description": "Kết nối tài khoản GitHub của bạn để truy cập kho lưu trữ, tạo commits và quản lý pull requests trực tiếp từ ORGII.",
+    "connectButton": "Kết nối tài khoản GitHub",
+    "hint": "Bạn cũng có thể kết nối GitHub sau từ Cài đặt > Tích hợp"
+  },
+  "workspace": {
+    "title": "Mở dự án",
+    "description": "Mở thư mục cục bộ hoặc clone kho lưu trữ để bắt đầu làm việc. ORGII sẽ tự động lập chỉ mục mã nguồn của bạn để hỗ trợ mã thông minh.",
+    "openFolder": "Mở thư mục",
+    "cloneRepo": "Clone kho lưu trữ",
+    "hint": "Bạn có thể bỏ qua bước này và mở dự án sau"
+  },
+  "theme": {
+    "title": "Chọn giao diện",
+    "description": "Chọn giao diện phù hợp với sở thích của bạn. Bạn có thể thay đổi điều này bất cứ lúc nào trong Cài đặt.",
+    "light": "Sáng",
+    "dark": "Tối"
+  },
+  "complete": {
+    "title": "Bạn đã sẵn sàng!",
+    "description": "Không gian làm việc của bạn đã sẵn sàng. Bắt đầu Session mới để bắt đầu lập trình với sự hỗ trợ của AI, hoặc khám phá ứng dụng để tìm hiểu tất cả tính năng.",
+    "startSession": "Bắt đầu Session mới"
+  },
+  "navigation": {
+    "skipSetup": "Bỏ qua thiết lập",
+    "getStarted": "Bắt đầu",
+    "goToSettings": "Đi đến Cài đặt"
+  }
+}

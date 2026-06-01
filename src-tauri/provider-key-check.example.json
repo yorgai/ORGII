@@ -1,0 +1,98 @@
+{
+  "checks": [
+    {
+      "agent_type": "cursor_cli",
+      "api_key_env": "CURSOR_API_KEY",
+      "session_token_env": "CURSOR_SESSION_TOKEN"
+    },
+    {
+      "agent_type": "copilot",
+      "api_key_env": "GH_TOKEN"
+    },
+    {
+      "agent_type": "codex",
+      "api_key_env": "OPENAI_API_KEY",
+      "base_url_env": "OPENAI_BASE_URL"
+    },
+    {
+      "agent_type": "gemini_cli",
+      "api_key_env": "GEMINI_API_KEY",
+      "base_url_env": "GOOGLE_GEMINI_BASE_URL"
+    },
+    {
+      "agent_type": "claude_code",
+      "api_key_env": "ANTHROPIC_API_KEY",
+      "base_url_env": "ANTHROPIC_BASE_URL"
+    },
+    {
+      "agent_type": "kiro",
+      "api_key_env": "KIRO_API_KEY"
+    },
+    {
+      "agent_type": "kimi",
+      "api_key_env": "MOONSHOT_API_KEY"
+    },
+    {
+      "agent_type": "openai_api",
+      "api_key_env": "OPENAI_API_KEY",
+      "base_url_env": "OPENAI_BASE_URL"
+    },
+    {
+      "agent_type": "anthropic_api",
+      "api_key_env": "ANTHROPIC_API_KEY",
+      "base_url_env": "ANTHROPIC_BASE_URL"
+    },
+    {
+      "agent_type": "gemini_api",
+      "api_key_env": "GEMINI_API_KEY",
+      "base_url_env": "GOOGLE_GEMINI_BASE_URL"
+    },
+    {
+      "agent_type": "deepseek_api",
+      "api_key_env": "DEEPSEEK_API_KEY"
+    },
+    {
+      "agent_type": "groq_api",
+      "api_key_env": "GROQ_API_KEY"
+    },
+    {
+      "agent_type": "zhipu_api",
+      "api_key_env": "ZHIPU_API_KEY"
+    },
+    {
+      "agent_type": "dashscope_api",
+      "api_key_env": "DASHSCOPE_API_KEY"
+    },
+    {
+      "agent_type": "moonshot_api",
+      "api_key_env": "MOONSHOT_API_KEY"
+    },
+    {
+      "agent_type": "openrouter_api",
+      "api_key_env": "OPENROUTER_API_KEY"
+    },
+    {
+      "agent_type": "aihubmix_api",
+      "api_key_env": "AIHUBMIX_API_KEY"
+    },
+    {
+      "agent_type": "vllm_api",
+      "api_key_env": "VLLM_API_KEY",
+      "base_url_env": "VLLM_BASE_URL"
+    },
+    {
+      "agent_type": "azure_openai_api",
+      "api_key_env": "AZURE_OPENAI_API_KEY",
+      "base_url_env": "AZURE_OPENAI_ENDPOINT"
+    },
+    {
+      "agent_type": "azure_anthropic_api",
+      "api_key_env": "AZURE_ANTHROPIC_API_KEY",
+      "base_url_env": "AZURE_ANTHROPIC_ENDPOINT"
+    },
+    {
+      "agent_type": "orgii_orchestrator",
+      "api_key_env": "ORGII_ORCHESTRATOR_API_KEY"
+    }
+  ]
+}

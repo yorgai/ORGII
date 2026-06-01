@@ -1,0 +1,46 @@
+/**
+ * KeyVaultWizard Configuration
+ *
+ * Provider data (CLI agents, API providers, env config) is loaded from Rust backend.
+ * Use `useProviderRegistry` hook to get unified provider grid.
+ * Use `useProviderConfig` hook to get env config for a specific provider.
+ */
+import type { ModelType } from "@src/api/types/keys";
+
+import type { WizardData } from "../types";
+
+// Re-export hooks for convenience
+export {
+  useProviderConfig,
+  preloadProviderConfigs,
+  type ProviderEnvConfig,
+} from "../hooks/useProviderConfig";
+
+export {
+  useProviderRegistry,
+  preloadProviderRegistry,
+  isPrimaryProvider,
+  type UnifiedProvider,
+  type UnifiedProviderVariant,
+  type UseProviderRegistryOptions,
+  type UseProviderRegistryResult,
+} from "../hooks/useProviderRegistry";
+
+// ============================================
+// Default Wizard Data
+// ============================================
+
+export const DEFAULT_WIZARD_DATA: WizardData = {
+  name: "",
+  description: "",
+  agent_type: "" as ModelType,
+  raw_key_input: "",
+  env_vars: [],
+  validated: false,
+  available_models: [],
+  enabled_models: [],
+  custom_models: [],
+  model_aliases: [],
+  model_variants: [],
+  default_variants: [],
+};

@@ -1,0 +1,284 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+
+import {
+  handlePlanApprovalArchived,
+  handlePlanReadyForApproval,
+} from "../agentSpecific";
+import { handleToolCallDelta } from "../streamHandlers";
+import { handleToolCall, handleToolResult } from "../toolHandlers";
+import type { EventHandlerContext } from "../types";
+
+vi.hoisted(() => {
+  const storage = new Map<string, string>();
+  Object.defineProperty(globalThis, "localStorage", {
+    value: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        storage.set(key, value);
+      },
+      removeItem: (key: string) => {
+        storage.delete(key);
+      },
+      clear: () => {
+        storage.clear();
+      },
+    },
+    configurable: true,
+  });
+});
+
+const {
+  storeEvents,
+  upsertSpy,
+  appendSpy,
+  mergeSpy,
+  patchByIdsSpy,
+  completeLastRunningSpy,
+} = vi.hoisted(() => {
+  const events = new Map<string, SessionEvent>();
+  const upsert = vi.fn((event: SessionEvent) => {
+    events.set(event.id, event);
+  });
+  const append = vi.fn((incomingEvents: SessionEvent[]) => {
+    for (const event of incomingEvents) events.set(event.id, event);
+  });
+  const patchByIds = vi.fn(
+    (ids: string[], patch: Partial<SessionEvent>): number => {
+      let count = 0;
+      for (const id of ids) {
+        const existing = events.get(id);
+        if (!existing) continue;
+        events.set(id, { ...existing, ...patch });
+        count += 1;
+      }
+      return count;
+    }
+  );
+  const merge = vi.fn((incomingEvents: SessionEvent[]) => {
+    for (const event of incomingEvents) {
+      if (event.actionType === "tool_result" && event.callId) {
+        const target = Array.from(events.values()).find(
+          (existing) =>
+            existing.actionType === "tool_call" &&
+            existing.callId === event.callId
+        );
+        if (target) {
+          events.set(target.id, {
+            ...target,
+            result: event.result,
+            displayStatus: "completed",
+            activityStatus: "processed",
+          });
+          continue;
+        }
+      }
+      events.set(event.id, event);
+    }
+  });
+  return {
+    storeEvents: events,
+    upsertSpy: upsert,
+    appendSpy: append,
+    mergeSpy: merge,
+    patchByIdsSpy: patchByIds,
+    completeLastRunningSpy: vi.fn(),
+  };
+});
+
+vi.mock("@src/engines/SessionCore/core/store/EventStoreProxy", () => ({
+  eventStoreProxy: {
+    upsert: upsertSpy,
+    append: appendSpy,
+    mergeEvents: mergeSpy,
+    patchByIds: patchByIdsSpy,
+    completeLastRunning: completeLastRunningSpy,
+  },
+}));
+
+vi.mock(
+  "@src/engines/ChatPanel/blocks/CanvasInlineCard/openInSimulatorCanvas",
+  () => ({
+    openInSimulatorCanvas: vi.fn(),
+  })
+);
+
+vi.mock("@src/store/session/mcpProgressAtom", () => ({
+  clearMcpProgressForCallAtom: {},
+}));
+
+function ref<T>(value: T): { current: T } {
+  return { current: value };
+}
+
+function createCtx(
+  overrides: Partial<EventHandlerContext> = {}
+): EventHandlerContext {
+  return {
+    filterSessionIdRef: ref("session-1"),
+    assistantStreamRef: ref({ idRef: ref(""), contentRef: ref("") }),
+    thinkingStreamRef: ref({ idRef: ref(""), contentRef: ref("") }),
+    inlineThinkingIdRef: ref(""),
+    toolCallDeltaBuffersRef: ref(new Map()),
+    execOutputBufferRef: ref(""),
+    onAgentCompleteRef: ref(undefined),
+    onStatusChangeRef: ref(undefined),
+    onQuestionRequestRef: ref(undefined),
+    setStreaming: vi.fn(),
+    features: { hasToolCallDelta: true },
+    getDefaultStore: () => null,
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  storeEvents.clear();
+  upsertSpy.mockClear();
+  appendSpy.mockClear();
+  mergeSpy.mockClear();
+  patchByIdsSpy.mockClear();
+  completeLastRunningSpy.mockClear();
+  vi.stubGlobal("window", {
+    dispatchEvent: vi.fn(),
+  });
+  vi.stubGlobal(
+    "CustomEvent",
+    class CustomEventStub {
+      type: string;
+      detail: unknown;
+      constructor(type: string, init?: { detail?: unknown }) {
+        this.type = type;
+        this.detail = init?.detail;
+      }
+    }
+  );
+});
+
+describe("create_plan streaming finalization", () => {
+  it("marks the UI turn completed as soon as create_plan is ready for approval", () => {
+    const setSpy = vi.fn();
+    const statusSpy = vi.fn();
+    const streamingSpy = vi.fn();
+    const ctx = createCtx({
+      getDefaultStore: () => ({ set: setSpy }) as never,
+      onStatusChangeRef: ref(statusSpy),
+      setStreaming: streamingSpy,
+    });
+
+    handlePlanReadyForApproval(
+      {
+        type: "agent:plan_ready_for_approval",
+        sessionId: "session-1",
+        planPath: "/tmp/plan.md",
+        planTitle: "Plan",
+        planContent: "body",
+        toolCallId: "call_plan_1",
+        planEventSource: "create_plan",
+      },
+      "session-1",
+      ctx
+    );
+
+    expect(setSpy).toHaveBeenCalledTimes(1);
+    expect(streamingSpy).toHaveBeenCalledWith(false);
+    expect(statusSpy).toHaveBeenCalledWith("completed");
+  });
+
+  it("patches archived plan approval lifecycle events onto the original transcript card", () => {
+    handlePlanApprovalArchived(
+      {
+        type: "agent:plan_approval_archived",
+        sessionId: "session-1",
+        planPath: "/tmp/plan.md",
+        planTitle: "Old plan",
+        planContent: "old body",
+        toolCallId: "call_plan_1",
+        planId: "plan-1",
+        planRevisionId: "call_plan_1",
+        originToolCallId: "call_plan_1",
+      },
+      "session-1"
+    );
+
+    expect(patchByIdsSpy).toHaveBeenCalledWith(
+      ["call_plan_1", "tool-call-call_plan_1"],
+      expect.objectContaining({
+        displayStatus: "completed",
+        activityStatus: "processed",
+        result: expect.objectContaining({
+          status: "archived",
+          planRevisionId: "call_plan_1",
+        }),
+      }),
+      "session-1"
+    );
+    expect(upsertSpy).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: "call_plan_1-archived" }),
+      "session-1"
+    );
+  });
+
+  it("keeps streamed draft, final tool call, and tool result on one stable event id", () => {
+    const ctx = createCtx();
+
+    handleToolCallDelta(
+      {
+        type: "agent:tool_call_delta",
+        tool: "create_plan",
+        toolCallId: "call_plan_1",
+        argumentsDelta: '{"title":"Plan","content":"draft"}',
+        index: 0,
+      },
+      "session-1",
+      ctx
+    );
+
+    expect(storeEvents.has("tool-call-call_plan_1")).toBe(true);
+    expect(storeEvents.has("tool-call-draft-call_plan_1")).toBe(false);
+    expect(storeEvents.get("tool-call-call_plan_1")?.displayStatus).toBe(
+      "awaiting_user"
+    );
+
+    handleToolCall(
+      {
+        type: "agent:tool_call",
+        tool: "create_plan",
+        toolCallId: "call_plan_1",
+        args: { title: "Plan", content: "final" },
+      },
+      "session-1",
+      "session-1",
+      ctx
+    );
+
+    expect(upsertSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        id: "tool-call-call_plan_1",
+        callId: "call_plan_1",
+        functionName: "create_plan",
+      }),
+      "session-1"
+    );
+    expect(storeEvents.size).toBe(1);
+
+    handleToolResult(
+      {
+        type: "agent:tool_result",
+        tool: "create_plan",
+        toolCallId: "call_plan_1",
+        result: "PLAN_SUBMITTED_END_TURN:{}",
+      },
+      "session-1",
+      ctx
+    );
+
+    const finalEvent = storeEvents.get("tool-call-call_plan_1");
+    expect(finalEvent?.displayStatus).toBe("completed");
+    expect(finalEvent?.result).toMatchObject({
+      content: "PLAN_SUBMITTED_END_TURN:{}",
+    });
+    expect(storeEvents.has("tool-result-call_plan_1")).toBe(false);
+    expect(completeLastRunningSpy).not.toHaveBeenCalled();
+  });
+});

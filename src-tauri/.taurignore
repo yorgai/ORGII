@@ -1,0 +1,14 @@
+# Paths Tauri's dev watcher should NOT trigger rebuilds on.
+# Same syntax as .gitignore. Lives next to tauri.conf.json.
+
+# Rust build output (already implicit, but make explicit)
+target/
+# Sidecar build outputs
+sidecar/**/node_modules/
+sidecar/**/dist/
+sidecar/**/build/
+
+# Misc
+*.log
+*.tmp
+.DS_Store

@@ -1,0 +1,7 @@
+---
+source: src/cli_agents/parsers/acp_common_tests.rs
+expression: result
+---
+- content: abc. Not a number prefix
+  id: "1"
+  status: pending

@@ -1,0 +1,39 @@
+/**
+ * DevPassport Custom CSS
+ * 
+ * Custom 3D transforms and utilities for the DevPassport component
+ */
+
+.perspective-1500 {
+  perspective: 1500px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+}
+
+.transform-origin-left {
+  transform-origin: left center;
+  -webkit-transform-origin: left center;
+}
+
+.translate-z-\[-5px\] {
+  transform: translateZ(-5px);
+}
+
+/* Smooth page flip animation */
+.page-flip-transition {
+  /* Only animate transform. Z-index should be immediate to prevent clipping. */
+  transition: transform 1s cubic-bezier(0.645, 0.045, 0.355, 1);
+  -webkit-transition: transform 1s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+/* Add subtle shadow during flip for depth */
+.passport-sheet {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.passport-sheet:hover {
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));
+}

@@ -1,0 +1,22 @@
+[package]
+name = "core_types"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "Shared type definitions used across all backend crates. Pure data, zero behavior, no Tauri."
+publish = false
+
+[lib]
+name = "core_types"
+path = "src/lib.rs"
+
+# This crate intentionally has the smallest possible dep surface so it
+# stays at the bottom of the workspace dep graph and never causes a
+# cycle. Add a dep here only when a type genuinely needs it (e.g. serde
+# derives, or chrono::DateTime in a public field). Behavior dependencies
+# (tokio, reqwest, sqlx, tauri) are forbidden.
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { workspace = true }
+uuid = { version = "1", features = ["v4"] }

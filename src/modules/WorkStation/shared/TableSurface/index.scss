@@ -1,0 +1,227 @@
+.table-surface {
+  background: var(--cm-editor-background, var(--color-bg-1));
+  color: var(--cm-editor-foreground, var(--color-text-1));
+
+  &__control-bar {
+    min-width: 0;
+    background: var(--color-pane-raised);
+  }
+
+  &__control-separator {
+    flex-shrink: 0;
+    width: 1px;
+    height: 16px;
+    margin: 0 6px;
+    background: var(--color-border-2);
+    pointer-events: none;
+  }
+
+  &__viewport {
+    position: relative;
+    overflow: auto;
+    outline: none;
+    background: var(--cm-editor-background, var(--color-bg-1));
+  }
+
+  &__canvas {
+    position: relative;
+    min-width: 100%;
+    min-height: 100%;
+  }
+
+  &__corner-cell,
+  &__column-header,
+  &__row-header,
+  &__cell {
+    position: absolute;
+    top: 0;
+    left: 0;
+    box-sizing: border-box;
+    border-right: 1px solid var(--color-border-2);
+    border-bottom: 1px solid var(--color-border-2);
+  }
+
+  &__corner-cell,
+  &__column-header,
+  &__row-header {
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cm-editor-gutter-fg, var(--color-text-3));
+    background: var(--color-pane-raised);
+    user-select: none;
+    will-change: transform;
+  }
+
+  &__corner-cell {
+    z-index: 5;
+  }
+
+  &__column-header {
+    z-index: 4;
+    gap: 6px;
+    border-top: none;
+    border-left: none;
+    padding: 0 8px;
+    text-align: left;
+    font-size: 12px;
+  }
+
+  &__column-header--sortable {
+    cursor: pointer;
+  }
+
+  &__column-header--sortable:hover {
+    background: var(--color-fill-1);
+  }
+
+  &__column-header--sorted {
+    color: var(--color-text-1);
+  }
+
+  &__column-header-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__column-badge,
+  &__sort-indicator {
+    flex: 0 0 auto;
+    color: var(--color-text-3);
+    font-size: 10px;
+  }
+
+  &__sort-indicator {
+    color: var(--color-primary-6);
+    font-size: 11px;
+  }
+
+  &__row-header {
+    z-index: 4;
+    font-size: 12px;
+  }
+
+  &__cell {
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    background: var(--cm-editor-background, var(--color-bg-1));
+    cursor: cell;
+    user-select: none;
+  }
+
+  &__cell:not(.table-surface__cell--selected):hover {
+    background: var(--color-fill-1);
+  }
+
+  &__cell--selected {
+    background: var(--color-fill-1);
+  }
+
+  &__cell--active {
+    z-index: 2;
+    border: 1px solid var(--color-primary-6);
+  }
+
+  &__cell--editing {
+    z-index: 6;
+    padding: 0;
+    background: var(--cm-editor-background, var(--color-bg-1));
+  }
+
+  &__cell-text {
+    min-width: 0;
+    overflow: hidden;
+    padding: 0 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    line-height: 31px;
+  }
+
+  &__cell-input {
+    width: 100%;
+    height: 100%;
+    border: none;
+    outline: none;
+    padding: 0 9px;
+    color: var(--cm-editor-foreground, var(--color-text-1));
+    caret-color: var(--color-primary-6);
+    background: var(--cm-editor-background, var(--color-bg-1));
+    font: inherit;
+    font-size: 13px;
+  }
+
+  &__load-more-row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+    border: none;
+    color: var(--color-primary-6);
+    background: var(--cm-editor-gutter-bg, var(--color-bg-2));
+    cursor: pointer;
+    font-size: 12px;
+    will-change: transform;
+  }
+
+  &__load-more-row:hover {
+    background: var(--color-fill-1);
+  }
+
+  &__formula-cell-label {
+    flex: 0 0 auto;
+    min-width: 42px;
+    color: var(--color-text-3);
+    font-size: 12px;
+    text-align: center;
+  }
+
+  &__formula-cell-input {
+    min-width: 0;
+    flex: 1;
+
+    .input-inner {
+      background: var(--color-pane-raised);
+    }
+  }
+
+  &__pagination {
+    position: sticky;
+    bottom: 0;
+    z-index: 7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 36px;
+    border-top: 1px solid var(--color-border-2);
+    background: var(--color-pane-raised);
+  }
+
+  &__pagination-button {
+    border: 1px solid var(--color-border-2);
+    border-radius: 6px;
+    padding: 3px 8px;
+    color: var(--color-text-2);
+    background: var(--color-bg-1);
+    font-size: 12px;
+  }
+
+  &__pagination-button:disabled {
+    opacity: 0.5;
+  }
+
+  &__pagination-label {
+    color: var(--color-text-3);
+    font-size: 12px;
+  }
+}

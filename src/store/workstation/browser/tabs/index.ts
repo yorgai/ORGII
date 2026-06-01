@@ -1,0 +1,475 @@
+/**
+ * Browser Tabs Store
+ *
+ * Centralized tab system for the Browser surface:
+ * - Browser sessions (webview tabs)
+ * - Component previews (Storybook for AI)
+ * - Token categories (design tokens)
+ *
+ * All workstation tabs live in the single `workstationLayoutAtom.mainPane`
+ * pool. The atoms exported from this module are **derived views / writers**
+ * that slice that single source of truth down to the browser-family tabs,
+ * keeping their public names and signatures stable so existing consumers
+ * do not need to change.
+ */
+import { atom } from "jotai";
+
+import { getSiteNameFromUrl } from "@src/store/ui/globalTabsAtom";
+import type { PanelState } from "@src/store/workstation/tabs";
+import { workstationLayoutAtom } from "@src/store/workstation/tabs/atoms";
+import {
+  closeOtherTabs as closeOtherTabsMutation,
+  closeSavedTabs as closeSavedTabsMutation,
+  closeTab as closeTabMutation,
+  openTab as openTabMutation,
+  reorderTabs as reorderTabsMutation,
+  switchTab as switchTabMutation,
+} from "@src/store/workstation/tabs/tabMutations";
+import type {
+  WorkStationTab,
+  WorkStationTabType,
+} from "@src/store/workstation/tabs/types";
+
+// ============================================
+// Types
+// ============================================
+
+export interface BrowserSessionData {
+  sessionId: string;
+  url: string;
+  incognito?: boolean;
+  isLoading?: boolean;
+}
+
+export interface ComponentPreviewData {
+  id: string;
+  name: string;
+  filePath: string;
+  line: number;
+  kind: string;
+}
+
+export interface TokenCategoryData {
+  category: string;
+}
+
+// ============================================
+// Tab ID Helpers
+// ============================================
+
+export function createBrowserSessionTabId(sessionId: string): string {
+  return `browser:${sessionId}`;
+}
+
+export function createComponentPreviewTabId(previewId: string): string {
+  return `preview:${previewId}`;
+}
+
+export function createTokenCategoryTabId(category: string): string {
+  return `token:${category}`;
+}
+
+export function isBrowserSessionTab(tabId: string): boolean {
+  return tabId.startsWith("browser:");
+}
+
+export function isComponentPreviewTab(tabId: string): boolean {
+  return tabId.startsWith("preview:");
+}
+
+export function isTokenCategoryTab(tabId: string): boolean {
+  return tabId.startsWith("token:");
+}
+
+export function extractSessionId(tabId: string): string {
+  return tabId.replace("browser:", "");
+}
+
+export function extractPreviewId(tabId: string): string {
+  return tabId.replace("preview:", "");
+}
+
+export function extractTokenCategory(tabId: string): string {
+  return tabId.replace("token:", "");
+}
+
+// ============================================
+// Display helpers
+// ============================================
+
+/**
+ * Resolve the display title for a browser session.
+ * Prefers the page title (when not the placeholder "New Tab"), then the URL's
+ * site name, then "New Tab" as a final fallback.
+ */
+export function getBrowserSessionDisplayTitle(session: {
+  title?: string;
+  url?: string;
+}): string {
+  if (session.title && session.title !== "New Tab") {
+    return session.title;
+  }
+  if (session.url) {
+    return getSiteNameFromUrl(session.url);
+  }
+  return "New Tab";
+}
+
+// ============================================
+// Tab Factories
+// ============================================
+
+export function createBrowserSessionTab(
+  sessionId: string,
+  title: string,
+  data: Partial<BrowserSessionData> = {}
+): WorkStationTab {
+  return {
+    id: createBrowserSessionTabId(sessionId),
+    type: "browser-session",
+    title: title || "New Tab",
+    // Intentionally omit `icon`: SortableTab's `type === "browser-session"`
+    // branch renders FaviconIcon, which prefers the URL-derived favicon over
+    // the Lucide Globe fallback. Setting a Lucide name here would short-circuit
+    // that branch and force a Globe regardless of the URL.
+    data: {
+      sessionId,
+      url: data.url ?? "",
+      incognito: data.incognito ?? false,
+      isLoading: data.isLoading ?? false,
+    },
+    hasUnsavedChanges: false,
+  };
+}
+
+export function createComponentPreviewTab(
+  previewId: string,
+  name: string,
+  data: Omit<ComponentPreviewData, "id" | "name">
+): WorkStationTab {
+  return {
+    id: createComponentPreviewTabId(previewId),
+    type: "component-preview",
+    title: name,
+    icon: "Code2",
+    data: {
+      id: previewId,
+      name,
+      filePath: data.filePath,
+      line: data.line,
+      kind: data.kind,
+    },
+    hasUnsavedChanges: false,
+  };
+}
+
+export function createTokenCategoryTab(category: string): WorkStationTab {
+  return {
+    id: createTokenCategoryTabId(category),
+    type: "token-category",
+    title: `Tokens: ${category}`,
+    icon: "Palette",
+    data: {
+      category,
+    },
+    hasUnsavedChanges: false,
+  };
+}
+
+/**
+ * Create a consolidated color tokens tab
+ * Shows all color tokens with category filtering
+ */
+export function createColorTokensTab(): WorkStationTab {
+  return {
+    id: "token:color-tokens",
+    type: "token-category",
+    title: "Color Tokens",
+    icon: "Palette",
+    data: {
+      category: "color-tokens",
+    },
+    hasUnsavedChanges: false,
+  };
+}
+
+// ============================================
+// Browser-family tab classification
+// ============================================
+
+const BROWSER_TAB_TYPES: ReadonlySet<WorkStationTabType> = new Set([
+  "browser-session",
+  "component-preview",
+  "token-category",
+]);
+
+function isBrowserFamilyTab(tab: WorkStationTab): boolean {
+  return BROWSER_TAB_TYPES.has(tab.type);
+}
+
+/**
+ * Project a `PanelState` slice that contains only the browser-family
+ * tabs from `mainPane`. `activeTabId` is preserved only if it points to
+ * a browser-family tab; otherwise `null`.
+ */
+function projectBrowserSlice(mainPane: PanelState): PanelState {
+  const tabs = mainPane.tabs.filter(isBrowserFamilyTab);
+  const activeTabId = tabs.some((tab) => tab.id === mainPane.activeTabId)
+    ? mainPane.activeTabId
+    : null;
+  return { tabs, activeTabId };
+}
+
+/**
+ * Splice an updated browser slice back into the full `mainPane` pool.
+ *
+ * Strategy: replace browser-family entries in-place to preserve the
+ * relative interleaving with non-browser tabs (file tabs, project tabs,
+ * etc.). New browser tabs in `next.tabs` that were not in `prev.tabs`
+ * are appended at the end of the pool; removed browser tabs are
+ * deleted. The pane's `activeTabId` adopts `next.activeTabId` only when
+ * it is a browser-family tab id — non-browser tabs retain their own
+ * focus story (the user might be on a file tab while the browser slice
+ * also has a session active).
+ */
+function applyBrowserSlice(mainPane: PanelState, next: PanelState): PanelState {
+  const nextById = new Map(next.tabs.map((tab) => [tab.id, tab]));
+  const result: WorkStationTab[] = [];
+  let insertCursor = -1;
+  for (let i = 0; i < mainPane.tabs.length; i++) {
+    const existing = mainPane.tabs[i];
+    if (!isBrowserFamilyTab(existing)) {
+      result.push(existing);
+      continue;
+    }
+    if (insertCursor === -1) insertCursor = result.length;
+    const replacement = nextById.get(existing.id);
+    if (replacement) {
+      result.push(replacement);
+      nextById.delete(existing.id);
+    }
+    // dropped browser tabs are not appended
+  }
+
+  // Append any net-new browser tabs in their `next.tabs` order at the
+  // first browser-family slot (so they cluster with siblings). If there
+  // were no browser tabs before, append at the end.
+  const leftovers = next.tabs.filter((tab) => nextById.has(tab.id));
+  if (leftovers.length) {
+    if (insertCursor === -1) {
+      result.push(...leftovers);
+    } else {
+      result.splice(insertCursor, 0, ...leftovers);
+    }
+  }
+
+  // Adopt the next active id only when it points to a browser tab still
+  // present in `result`; otherwise keep mainPane's activeTabId so
+  // non-browser focus is unaffected by browser slice writes.
+  const adoptingActive =
+    next.activeTabId &&
+    result.some(
+      (tab) => tab.id === next.activeTabId && isBrowserFamilyTab(tab)
+    );
+  return {
+    tabs: result,
+    activeTabId: adoptingActive ? next.activeTabId : mainPane.activeTabId,
+  };
+}
+
+// ============================================
+// Main Atom (derived read + write)
+// ============================================
+
+/**
+ * Browser tabs atom — derived view + writer over the browser-family
+ * slice of `workstationLayoutAtom.mainPane`.
+ */
+export const browserTabsAtom = atom(
+  (get): PanelState => {
+    const layout = get(workstationLayoutAtom);
+    return projectBrowserSlice(
+      layout?.mainPane ?? { tabs: [], activeTabId: null }
+    );
+  },
+  (
+    get,
+    set,
+    nextOrUpdater: PanelState | ((prev: PanelState) => PanelState)
+  ) => {
+    const layout = get(workstationLayoutAtom);
+    if (!layout) return;
+    const prev = projectBrowserSlice(layout.mainPane);
+    const next =
+      typeof nextOrUpdater === "function"
+        ? (nextOrUpdater as (s: PanelState) => PanelState)(prev)
+        : nextOrUpdater;
+    set(workstationLayoutAtom, {
+      ...layout,
+      mainPane: applyBrowserSlice(layout.mainPane, next),
+    });
+  }
+);
+browserTabsAtom.debugLabel = "browserTabsAtom";
+
+// ============================================
+// Derived Atoms
+// ============================================
+
+/**
+ * Active tab in browser
+ */
+export const activeBrowserTabAtom = atom((get) => {
+  const state = get(browserTabsAtom);
+  return state.tabs.find((tab) => tab.id === state.activeTabId) ?? null;
+});
+activeBrowserTabAtom.debugLabel = "activeBrowserTabAtom";
+
+/**
+ * Check if showing a browser session
+ */
+export const isShowingBrowserSessionAtom = atom((get) => {
+  const activeTab = get(activeBrowserTabAtom);
+  return activeTab?.type === "browser-session";
+});
+
+/**
+ * Check if showing a component preview
+ */
+export const isShowingComponentPreviewAtom = atom((get) => {
+  const activeTab = get(activeBrowserTabAtom);
+  return activeTab?.type === "component-preview";
+});
+
+/**
+ * Check if showing a token category
+ */
+export const isShowingTokenCategoryAtom = atom((get) => {
+  const activeTab = get(activeBrowserTabAtom);
+  return activeTab?.type === "token-category";
+});
+
+/**
+ * Get all browser session tabs
+ */
+export const browserSessionTabsAtom = atom((get) => {
+  const state = get(browserTabsAtom);
+  return state.tabs.filter((tab) => tab.type === "browser-session");
+});
+
+/**
+ * Get all component preview tabs
+ */
+export const componentPreviewTabsAtom = atom((get) => {
+  const state = get(browserTabsAtom);
+  return state.tabs.filter((tab) => tab.type === "component-preview");
+});
+
+/**
+ * Get all token category tabs
+ */
+export const tokenCategoryTabsAtom = atom((get) => {
+  const state = get(browserTabsAtom);
+  return state.tabs.filter((tab) => tab.type === "token-category");
+});
+
+// ============================================
+// Action Atoms (for convenience)
+// ============================================
+
+/**
+ * Open a tab (or switch to it if exists)
+ */
+export const openBrowserTabAtom = atom(
+  null,
+  (get, set, tab: WorkStationTab) => {
+    const state = get(browserTabsAtom);
+    set(browserTabsAtom, openTabMutation(state, tab));
+  }
+);
+
+/**
+ * Close a tab
+ */
+export const closeBrowserTabAtom = atom(null, (get, set, tabId: string) => {
+  const state = get(browserTabsAtom);
+  set(browserTabsAtom, closeTabMutation(state, tabId));
+});
+
+/**
+ * Switch to a tab
+ */
+export const switchBrowserTabAtom = atom(null, (get, set, tabId: string) => {
+  const state = get(browserTabsAtom);
+  set(browserTabsAtom, switchTabMutation(state, tabId));
+});
+
+/**
+ * Reorder tabs
+ */
+export const reorderBrowserTabsAtom = atom(
+  null,
+  (
+    get,
+    set,
+    { startIndex, endIndex }: { startIndex: number; endIndex: number }
+  ) => {
+    const state = get(browserTabsAtom);
+    set(browserTabsAtom, reorderTabsMutation(state, startIndex, endIndex));
+  }
+);
+
+/**
+ * Close other tabs
+ */
+export const closeOtherBrowserTabsAtom = atom(
+  null,
+  (get, set, tabId: string) => {
+    const state = get(browserTabsAtom);
+    set(browserTabsAtom, closeOtherTabsMutation(state, tabId));
+  }
+);
+
+/**
+ * Close saved tabs
+ */
+export const closeSavedBrowserTabsAtom = atom(null, (get, set) => {
+  const state = get(browserTabsAtom);
+  set(browserTabsAtom, closeSavedTabsMutation(state));
+});
+
+/**
+ * Update tab data (e.g., update URL for browser session)
+ */
+export const updateBrowserTabDataAtom = atom(
+  null,
+  (
+    get,
+    set,
+    { tabId, data }: { tabId: string; data: Partial<Record<string, unknown>> }
+  ) => {
+    const state = get(browserTabsAtom);
+    set(browserTabsAtom, {
+      ...state,
+      tabs: state.tabs.map((tab) =>
+        tab.id === tabId ? { ...tab, data: { ...tab.data, ...data } } : tab
+      ),
+    });
+  }
+);
+
+/**
+ * Update tab title
+ */
+export const updateBrowserTabTitleAtom = atom(
+  null,
+  (get, set, { tabId, title }: { tabId: string; title: string }) => {
+    const state = get(browserTabsAtom);
+    set(browserTabsAtom, {
+      ...state,
+      tabs: state.tabs.map((tab) =>
+        tab.id === tabId ? { ...tab, title } : tab
+      ),
+    });
+  }
+);

@@ -1,0 +1,68 @@
+[package]
+name = "db_clients"
+version = "0.1.0"
+edition = "2021"
+
+# Remote SQL client feature: connect to user-supplied PostgreSQL or
+# MySQL servers, run ad-hoc queries, list tables / columns. The 6
+# `#[tauri::command]`s here (`db_sql_connect`, `db_sql_query`,
+# `db_sql_execute`, `db_sql_disconnect`, `db_sql_get_tables`,
+# `db_sql_get_table_schema`) back the frontend `DatabasePalette` and
+# DB-connection management surfaces. Re-registered from
+# `commands/handler_list.inc` via bare `db_clients::…` paths.
+#
+# Lives in its own crate so the entire `sqlx` tree (sqlx-core,
+# sqlx-postgres, sqlx-mysql + their MySQL/Postgres binary protocol
+# stacks — three of the top-15 fattest crates in the workspace) doesn't
+# get pulled into `cargo check -p app`. Editing anywhere in `agent_core`
+# no longer triggers sqlx recompilation, and rust-analyzer's index for
+# `app` shrinks accordingly.
+#
+# Naming carefully: the workspace already has TWO unrelated database
+# things to disambiguate from:
+#   - `database` crate          → local SQLite (`rusqlite`) connection
+#                                 plumbing + schema-init dispatcher used
+#                                 by every domain (key-vault, git, ...)
+#   - `work_station::db_browser` module → local SQLite *file* browser
+#                                 (open a `.sqlite` from disk, run
+#                                 queries against it) — also rusqlite.
+# This crate is the third, distinct thing: remote network SQL clients.
+# That's why it's called `db_clients`, not `db_browser` or `database`.
+
+# Cargo features for per-engine driver opt-in. Both default-on so that
+# `npm run dev` and the production binary keep shipping Postgres + MySQL
+# unchanged. Stripped builds (CI smoke tests, mobile relay, future
+# embedded targets) can drop one or both via `--no-default-features`.
+#
+# Why this matters: enabling `mysql` pulls 15 MySQL-specific crates
+# (rsa, num-bigint-dig, pkcs1, pkcs8, pem-rfc7468, der, spki,
+# signature, sha1, base64ct, lazy_static, num-integer, num-iter, spin,
+# sqlx-mysql) that the Postgres driver doesn't need — MySQL 8+'s default
+# `caching_sha2_password` auth plugin requires the full RSA stack and
+# sqlx-mysql hardwires that in (no upstream feature toggle exists, see
+# https://docs.rs/crate/sqlx-mysql/0.8.6/features). Postgres in contrast
+# adds only `sqlx-postgres` itself on top of the shared sqlx-core/rustls
+# base because it reuses the SHA-2 / HMAC code already pulled in by the
+# TLS stack. So `--no-default-features --features postgres` yields
+# noticeably faster cold compiles than the full default.
+[features]
+default = ["postgres", "mysql"]
+postgres = ["sqlx/postgres"]
+mysql = ["sqlx/mysql"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { workspace = true }
+tokio = { workspace = true }
+
+# The whole point of this crate. `default-features = false` strips out
+# sqlx's native-tls path; `tls-rustls` keeps everything ring-based.
+# `json` is needed for `try_get::<serde_json::Value, _>` against
+# Postgres JSONB / MySQL JSON columns. The actual `postgres` /
+# `mysql` engine features come from THIS crate's [features] block
+# above, not enabled here directly.
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "json"] }
+
+[lib]
+path = "src/lib.rs"

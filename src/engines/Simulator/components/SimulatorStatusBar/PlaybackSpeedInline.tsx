@@ -1,0 +1,114 @@
+import React, { useMemo } from "react";
+import { createPortal } from "react-dom";
+
+import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_PANEL,
+} from "@src/components/Dropdown/tokens";
+import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
+import { REPLAY_SPEED_OPTIONS } from "@src/config/workspace/replayConfig";
+import { useDropdownEngine } from "@src/hooks/dropdown/useDropdownEngine";
+
+import { STATUS_BAR_TEXT_20 } from "./tokens";
+
+interface PlaybackSpeedInlineProps {
+  value: number;
+  onChange: (speed: number) => void;
+  disabled: boolean;
+}
+
+export const PlaybackSpeedInline: React.FC<PlaybackSpeedInlineProps> = ({
+  value,
+  onChange,
+  disabled,
+}) => {
+  const {
+    isOpen,
+    isPositioned,
+    triggerRef,
+    panelRef,
+    panelPosition,
+    toggle,
+    close,
+  } = useDropdownEngine<HTMLButtonElement>({
+    placement: "top",
+    align: "right",
+    disabled,
+    gap: DROPDOWN_PANEL.triggerGapCompact,
+  });
+
+  const panelPositionStyle = useMemo(() => {
+    const pos = panelPosition;
+    return {
+      ...(pos.top !== undefined
+        ? { top: `${pos.top}px` }
+        : { bottom: `${pos.bottom}px` }),
+      ...(pos.right !== undefined
+        ? { right: `${pos.right}px` }
+        : { left: `${pos.left}px` }),
+      ...(pos.width > 0 ? { minWidth: `${pos.width}px` } : {}),
+    };
+  }, [panelPosition]);
+
+  const label = `${value}x`;
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        disabled={disabled}
+        onClick={toggle}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        className={`${STATUS_BAR_TEXT_20} ml-1 shrink-0 transform-gpu justify-center rounded-full px-2 tabular-nums disabled:cursor-not-allowed disabled:opacity-40 ${
+          isOpen
+            ? "bg-fill-3 text-primary-6"
+            : `text-text-2 ${SURFACE_TOKENS.hover} hover:text-primary-6`
+        }`}
+      >
+        {label}
+      </button>
+      {isOpen &&
+        isPositioned &&
+        createPortal(
+          <div
+            ref={panelRef}
+            className={`${DROPDOWN_CLASSES.panel} fixed ${DROPDOWN_PANEL.zIndexClass} ${DROPDOWN_PANEL.paddingClass} min-w-[80px]`}
+            style={panelPositionStyle}
+          >
+            <div
+              className={`flex flex-col ${DROPDOWN_PANEL.itemsGapClass}`}
+              role="listbox"
+            >
+              {REPLAY_SPEED_OPTIONS.map((speed) => {
+                const selected = speed === value;
+                return (
+                  <button
+                    key={speed}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    className={`${DROPDOWN_CLASSES.itemCompact} ${
+                      selected
+                        ? DROPDOWN_CLASSES.itemSelected
+                        : DROPDOWN_CLASSES.itemHover
+                    } w-full justify-between tabular-nums`}
+                    onClick={() => {
+                      onChange(speed);
+                      close();
+                    }}
+                  >
+                    <span>{speed}x</span>
+                    {selected && <DropdownSelectedCheck />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
+  );
+};
