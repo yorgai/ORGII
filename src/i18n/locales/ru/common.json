@@ -1004,6 +1004,7 @@
       "pushFailed": "Push не удался: {{error}}",
       "pullSuccess": "Pull выполнен успешно",
       "pullFailed": "Pull не удался: {{error}}",
+      "fetchFailed": "Не удалось выполнить fetch: {{error}}",
       "publishSuccess": "Publish выполнен успешно",
       "publishFailed": "Publish не удался: {{error}}",
       "uncommittedChanges": "Есть незафиксированные изменения",

@@ -1005,6 +1005,7 @@
       "pushFailed": "Push thất bại: {{error}}",
       "pullSuccess": "Pull thành công",
       "pullFailed": "Pull thất bại: {{error}}",
+      "fetchFailed": "Fetch failed: {{error}}",
       "publishSuccess": "Publish thành công",
       "publishFailed": "Publish thất bại: {{error}}",
       "uncommittedChanges": "Bạn có các thay đổi chưa commit",

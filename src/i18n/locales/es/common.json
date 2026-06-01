@@ -1004,6 +1004,7 @@
       "pushFailed": "Push fallido: {{error}}",
       "pullSuccess": "Pull exitoso",
       "pullFailed": "Pull fallido: {{error}}",
+      "fetchFailed": "Error al obtener: {{error}}",
       "publishSuccess": "Publish exitoso",
       "publishFailed": "Publish fallido: {{error}}",
       "uncommittedChanges": "Tienes cambios sin confirmar",

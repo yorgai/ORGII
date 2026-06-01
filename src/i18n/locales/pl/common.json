@@ -1004,6 +1004,7 @@
       "pushFailed": "Push nieudany: {{error}}",
       "pullSuccess": "Pomyślnie pobrano zmiany z zdalnego",
       "pullFailed": "Pull nieudany: {{error}}",
+      "fetchFailed": "Fetch nie powiódł się: {{error}}",
       "publishSuccess": "Pomyślnie opublikowano gałąź do zdalnego",
       "publishFailed": "Publikacja nieudana: {{error}}",
       "uncommittedChanges": "Masz niezakomitowane zmiany",

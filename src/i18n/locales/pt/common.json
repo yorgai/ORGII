@@ -1004,6 +1004,7 @@
       "pushFailed": "Falha no push: {{error}}",
       "pullSuccess": "Alterações baixadas (pull) do remote com sucesso",
       "pullFailed": "Falha no pull: {{error}}",
+      "fetchFailed": "Falha ao buscar: {{error}}",
       "publishSuccess": "Branch publicado no remote com sucesso",
       "publishFailed": "Falha na publicação: {{error}}",
       "uncommittedChanges": "Você tem alterações não commitadas",

@@ -25,6 +25,9 @@ pub const DEFAULT_RETRIES: u32 = 5;
 /// Base delay between retries in milliseconds
 const RETRY_BASE_DELAY_MS: u64 = 50;
 
+const GIT_EXEC_PATH_ENV: &str = "GIT_EXEC_PATH";
+const GIT_LIBEXEC_SEGMENTS: &[&str] = &["libexec", "git-core"];
+
 // ============================================
 // Error Detection
 // ============================================
@@ -99,12 +102,37 @@ pub fn resolved_git_executable() -> Result<PathBuf, String> {
     })
 }
 
+pub fn resolved_git_exec_path(git_executable: &Path) -> Option<PathBuf> {
+    let git_root = git_executable.parent()?.parent()?;
+    let git_exec_path = GIT_LIBEXEC_SEGMENTS
+        .iter()
+        .fold(git_root.to_path_buf(), |path, segment| path.join(segment));
+
+    if git_exec_path.is_dir() {
+        Some(git_exec_path)
+    } else {
+        None
+    }
+}
+
 pub fn git_command() -> Result<Command, String> {
-    Ok(Command::new(resolved_git_executable()?))
+    let git_executable = resolved_git_executable()?;
+    let git_exec_path = resolved_git_exec_path(&git_executable);
+    let mut command = Command::new(git_executable);
+    if let Some(path) = git_exec_path {
+        command.env(GIT_EXEC_PATH_ENV, path);
+    }
+    Ok(command)
 }
 
 pub fn tokio_git_command() -> Result<tokio::process::Command, String> {
-    Ok(tokio::process::Command::new(resolved_git_executable()?))
+    let git_executable = resolved_git_executable()?;
+    let git_exec_path = resolved_git_exec_path(&git_executable);
+    let mut command = tokio::process::Command::new(git_executable);
+    if let Some(path) = git_exec_path {
+        command.env(GIT_EXEC_PATH_ENV, path);
+    }
+    Ok(command)
 }
 
 #[cfg(unix)]

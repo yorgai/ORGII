@@ -141,3 +141,26 @@ fn operation_name_unknown() {
 fn operation_name_empty() {
     assert_eq!(operation_name_from_args(&[]), "this operation");
 }
+
+#[test]
+fn resolved_git_exec_path_uses_bundled_libexec() {
+    let root = std::env::temp_dir().join(format!(
+        "orgii-git-util-test-{}",
+        std::process::id()
+    ));
+    let git_bin = root.join("git").join("bin");
+    let git_core = root.join("git").join("libexec").join("git-core");
+    std::fs::create_dir_all(&git_bin).unwrap();
+    std::fs::create_dir_all(&git_core).unwrap();
+
+    let git_executable = git_bin.join("git");
+    assert_eq!(resolved_git_exec_path(&git_executable), Some(git_core));
+
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn resolved_git_exec_path_requires_existing_libexec() {
+    let git_executable = std::path::Path::new("/app/Resources/git/bin/git");
+    assert_eq!(resolved_git_exec_path(git_executable), None);
+}
