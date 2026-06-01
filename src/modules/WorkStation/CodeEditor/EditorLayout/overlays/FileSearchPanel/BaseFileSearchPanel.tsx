@@ -1,0 +1,304 @@
+/**
+ * BaseFileSearchPanel Component
+ *
+ * Shared base component for file search panels with fuzzy matching.
+ * Features keyboard navigation and quick file selection.
+ * (This is a file picker like Ctrl+P, not a code search panel)
+ *
+ * Used by:
+ * - FileSearchPanel (sidebar variant)
+ * - SingleFileSearchPanel (with spinner and close button)
+ */
+import type { FileSearchResult } from "@/src/hooks/workStation/useCodeEditor";
+import { Loader2, X } from "lucide-react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import FolderIcon from "@src/assets/fileTypeIcons/folder-base.svg";
+import FileTypeIcon from "@src/components/FileTypeIcon";
+import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
+import { useListNavigation } from "@src/hooks/keyboard/useListNavigation";
+import { Placeholder } from "@src/modules/shared/layouts/blocks";
+
+import { SearchInput } from "../../../Panels/shared";
+
+// ============================================
+// Types
+// ============================================
+
+export interface FileSearchPanelProps {
+  /** Whether the panel is visible */
+  visible: boolean;
+  /** Search query */
+  searchQuery: string;
+  /** Search results */
+  searchResults: FileSearchResult[];
+  /** Loading state */
+  loading: boolean;
+  /** Repository path (for relative paths) */
+  repoPath: string;
+  /** Callback when search query changes */
+  onSearchChange: (query: string) => void;
+  /** Callback when a file is selected */
+  onFileSelect: (path: string) => void;
+  /** Callback to close the panel */
+  onClose: () => void;
+}
+
+export interface BaseFileSearchPanelProps extends FileSearchPanelProps {
+  /** Show loading spinner in header */
+  showLoadingSpinner?: boolean;
+  /** Show explicit close button in header */
+  showCloseButton?: boolean;
+  /** SearchInput variant */
+  searchInputVariant?: "panel" | "sidebar";
+}
+
+// ============================================
+// Helper Functions
+// ============================================
+
+/**
+ * Get relative path from repo root
+ */
+function getRelativePath(filePath: string, repoPath: string): string {
+  if (!filePath || !repoPath) return filePath;
+
+  const normalizedFile = filePath.replace(/\\/g, "/");
+  const normalizedRepo = repoPath.replace(/\\/g, "/");
+
+  if (normalizedFile.startsWith(normalizedRepo)) {
+    return normalizedFile.slice(normalizedRepo.length).replace(/^\//, "");
+  }
+
+  return filePath;
+}
+
+/**
+ * Get directory path from full path
+ */
+function getDirectoryPath(filePath: string): string {
+  const parts = filePath.split("/");
+  parts.pop(); // Remove filename
+  return parts.join("/") || "/";
+}
+
+// ============================================
+// Main Component
+// ============================================
+
+export const BaseFileSearchPanel: React.FC<BaseFileSearchPanelProps> = memo(
+  ({
+    visible,
+    searchQuery,
+    searchResults,
+    loading,
+    repoPath,
+    onSearchChange,
+    onFileSelect,
+    onClose,
+    // Configurable options
+    showLoadingSpinner = false,
+    showCloseButton = false,
+    searchInputVariant = "panel",
+  }) => {
+    const { t } = useTranslation();
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const [prevResultsLength, setPrevResultsLength] = useState(
+      searchResults.length
+    );
+    const inputRef = React.useRef<HTMLInputElement>(null);
+
+    // Reset selectedIndex when results change (getDerivedStateFromProps pattern)
+    if (prevResultsLength !== searchResults.length) {
+      setPrevResultsLength(searchResults.length);
+      setSelectedIndex(0);
+    }
+
+    // Clamp selected index to valid range
+    const currentSelectedIndex = Math.min(
+      selectedIndex,
+      Math.max(0, searchResults.length - 1)
+    );
+
+    // Handle result click
+    const handleResultClick = useCallback(
+      (result: FileSearchResult) => {
+        if (result.type === "file") {
+          onFileSelect(result.path);
+          onClose();
+        }
+      },
+      [onFileSelect, onClose]
+    );
+
+    // Convert results to ListItem format for useListNavigation
+    const listItems = useMemo(
+      () =>
+        searchResults.map((result) => ({
+          ...result,
+          // Only file items are selectable
+          _isFile: result.type === "file",
+        })),
+      [searchResults]
+    );
+
+    // Use unified list navigation hook
+    const { handleKeyDown: _handleKeyDown, scrollContainerRef } =
+      useListNavigation({
+        items: listItems,
+        selectedIndex: currentSelectedIndex,
+        onSelectedIndexChange: setSelectedIndex,
+        onSelect: (item) => {
+          if (item._isFile) {
+            onFileSelect(item.path as string);
+            onClose();
+          }
+        },
+        onClose,
+        isItemSelectable: (item) => item._isFile === true,
+        enableAutoScroll: true,
+        enableGlobalListener: visible,
+        inputRef,
+      });
+
+    // Focus input when panel opens
+    useEffect(() => {
+      if (visible && inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, [visible]);
+
+    if (!visible) return null;
+
+    // Determine if we need the complex header layout (with spinner/close button)
+    const needsComplexHeader = showLoadingSpinner || showCloseButton;
+
+    return (
+      <>
+        {/* Backdrop */}
+        <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
+
+        {/* Search panel */}
+        <div className="fixed left-1/2 top-[15%] z-50 w-[600px] max-w-[90vw] -translate-x-1/2 rounded-lg border border-border-2 bg-bg-2 shadow-xl">
+          {/* Search input header */}
+          {needsComplexHeader ? (
+            <div className="flex items-center border-b border-border-2 pr-2">
+              <div className="flex-1">
+                <SearchInput
+                  variant={searchInputVariant}
+                  value={searchQuery}
+                  onChange={onSearchChange}
+                  placeholder={t("placeholders.searchFiles")}
+                  inputRef={inputRef}
+                />
+              </div>
+              {showLoadingSpinner && loading && (
+                <div className="px-2">
+                  <Loader2
+                    size={SPINNER_TOKENS.default}
+                    className="animate-spin text-text-3"
+                  />
+                </div>
+              )}
+              {showCloseButton && (
+                <button
+                  onClick={onClose}
+                  className="flex items-center justify-center rounded p-1 text-text-3 transition-colors hover:bg-fill-3"
+                  title={t("tooltips.closeEsc")}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="border-b border-border-2">
+              <SearchInput
+                variant={searchInputVariant}
+                value={searchQuery}
+                onChange={onSearchChange}
+                placeholder={t("placeholders.searchFiles")}
+                inputRef={inputRef}
+                onClose={onClose}
+              />
+            </div>
+          )}
+
+          {/* Results list */}
+          <div
+            ref={scrollContainerRef}
+            className="max-h-[400px] overflow-y-auto scrollbar-hide"
+          >
+            {searchResults.length > 0 ? (
+              searchResults.map((result, index) => {
+                const isSelected = index === currentSelectedIndex;
+                const relativePath = getRelativePath(result.path, repoPath);
+                const directory = getDirectoryPath(relativePath);
+
+                return (
+                  <div
+                    key={result.path}
+                    data-spotlight-item-index={index}
+                    className={`flex cursor-pointer items-center gap-3 border-b border-border-2 px-4 py-3 transition-colors last:border-0 ${
+                      isSelected ? "bg-fill-1" : "hover:bg-fill-3"
+                    }`}
+                    onClick={() => handleResultClick(result)}
+                    onMouseEnter={() => setSelectedIndex(index)}
+                    onMouseLeave={() => setSelectedIndex(-1)}
+                  >
+                    {/* Icon */}
+                    {result.type === "folder" ? (
+                      <FolderIcon
+                        width={16}
+                        height={16}
+                        className="flex-shrink-0"
+                      />
+                    ) : (
+                      <FileTypeIcon
+                        fileName={result.filename}
+                        size="medium"
+                        className="flex-shrink-0"
+                      />
+                    )}
+
+                    {/* File info */}
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className={`truncate text-[13px] ${
+                          isSelected ? "font-medium text-text-1" : "text-text-2"
+                        }`}
+                        title={result.filename}
+                      >
+                        {result.filename}
+                      </div>
+                      <div
+                        className="truncate text-[11px] text-text-4"
+                        title={directory}
+                      >
+                        {directory}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : searchQuery.trim() && !loading ? (
+              <Placeholder
+                variant="no-results"
+                title={t("placeholders.noFilesFound")}
+              />
+            ) : !searchQuery.trim() ? (
+              <Placeholder
+                variant="empty"
+                title={t("placeholders.typeToSearchFiles")}
+              />
+            ) : null}
+          </div>
+        </div>
+      </>
+    );
+  }
+);
+
+BaseFileSearchPanel.displayName = "BaseFileSearchPanel";
+
+export default BaseFileSearchPanel;

@@ -1,0 +1,9 @@
+---
+source: crates/agent-core/src/core/turn_executor/../../tests/processor_tests.rs
+assertion_line: 213
+expression: "messages[0]"
+---
+content: file contents here
+name: read_file
+role: tool
+tool_call_id: tc-1

@@ -1,0 +1,173 @@
+/**
+ * useEditMode Hook
+ *
+ * Encapsulates edit mode logic for InputArea:
+ * - Initial content injection with retry (waits for TipTap init)
+ * - Parses serialized pill format back into TipTap filePill nodes
+ * - Submit and cancel handlers
+ * - Click-outside-to-close behavior
+ * - Escape key handler
+ */
+import React, { useCallback, useEffect, useRef } from "react";
+
+import { applyParsedContent } from "../utils/pillContentParser";
+
+// ============================================
+// Hook
+// ============================================
+
+interface UseEditModeOptions {
+  /** Whether edit mode is active */
+  effectiveEditMode: boolean;
+  /** Same as effectiveEditMode (kept for draft-save gating) */
+  isEditMode: boolean;
+  /** Initial text to pre-fill */
+  initialContent?: string;
+  /** Callback when edit is submitted */
+  onEditSubmit?: (text: string) => void;
+  /** Callback when edit is cancelled */
+  onEditCancel?: () => void;
+  /** Ref to the TipTap editor handle */
+  tiptapRef: React.RefObject<{
+    getEditor: () => unknown | null;
+    setContent: (content: string) => void;
+    getText: () => string;
+    getTextWithPills: () => string;
+    focus: () => void;
+  } | null>;
+}
+
+interface UseEditModeReturn {
+  /** Ref to attach to the edit container (for click-outside detection) */
+  editContainerRef: React.RefObject<HTMLDivElement>;
+  /** Submit handler for edit mode */
+  handleEditSubmit: () => void;
+  /** KeyDown handler for Escape to cancel */
+  handleEditKeyDown: (event: React.KeyboardEvent) => void;
+}
+
+export function useEditMode({
+  effectiveEditMode,
+  isEditMode,
+  initialContent,
+  onEditSubmit,
+  onEditCancel,
+  tiptapRef,
+}: UseEditModeOptions): UseEditModeReturn {
+  const editContainerRef = useRef<HTMLDivElement>(null);
+  const savedDraftRef = useRef<string | null>(null);
+
+  // Save current draft before entering edit mode, restore when leaving
+  useEffect(() => {
+    if (!isEditMode) return;
+
+    const editor = tiptapRef.current;
+    const currentText = editor?.getTextWithPills()?.trim() ?? "";
+    savedDraftRef.current = currentText || null;
+
+    return () => {
+      if (!editor) return;
+      const draft = savedDraftRef.current;
+      savedDraftRef.current = null;
+      if (draft) {
+        applyParsedContent(editor, draft);
+      } else {
+        editor.setContent("");
+      }
+    };
+  }, [isEditMode, tiptapRef]);
+
+  // Set initial content with retry (TipTap may not be ready immediately)
+  useEffect(() => {
+    if (!effectiveEditMode || !initialContent) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 20;
+    const RETRY_INTERVAL_MS = 50;
+
+    const trySetContent = () => {
+      if (cancelled || attempts >= MAX_ATTEMPTS) return;
+      attempts++;
+
+      if (!tiptapRef.current?.getEditor()) {
+        setTimeout(trySetContent, RETRY_INTERVAL_MS);
+        return;
+      }
+
+      applyParsedContent(tiptapRef.current, initialContent);
+      if (isEditMode) {
+        setTimeout(() => tiptapRef.current?.focus(), 50);
+      }
+    };
+
+    trySetContent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveEditMode, isEditMode, initialContent, tiptapRef]);
+
+  // Handle edit mode submit
+  const handleEditSubmit = useCallback(() => {
+    if (tiptapRef.current && onEditSubmit) {
+      // Use getTextWithPills to preserve pill serialization format
+      const text = tiptapRef.current.getTextWithPills().trim();
+      if (text) {
+        onEditSubmit(text);
+      }
+    }
+  }, [onEditSubmit, tiptapRef]);
+
+  // Handle edit mode cancel (Escape key)
+  const handleEditKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === "Escape" && onEditCancel) {
+        event.preventDefault();
+        onEditCancel();
+      }
+    },
+    [onEditCancel]
+  );
+
+  // Click outside to close edit mode.
+  // Guard: do not close when the click lands inside a portal-rendered overlay
+  // (e.g. the UnifiedModelPalette spotlight), which lives outside the
+  // editContainerRef DOM tree even though it is logically part of the input UI.
+  useEffect(() => {
+    if (!isEditMode || !onEditCancel) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      // Ignore clicks inside any open spotlight / selector portal
+      const spotlightContainer = document.querySelector(
+        "[data-spotlight-container]"
+      );
+      if (spotlightContainer?.contains(target)) return;
+
+      if (
+        editContainerRef.current &&
+        !editContainerRef.current.contains(target)
+      ) {
+        onEditCancel();
+      }
+    };
+
+    // Add listener with a small delay to prevent immediate close
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isEditMode, onEditCancel]);
+
+  return {
+    editContainerRef,
+    handleEditSubmit,
+    handleEditKeyDown,
+  };
+}

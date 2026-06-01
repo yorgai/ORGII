@@ -1,0 +1,196 @@
+// Tag Component Styles
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  cursor: default;
+  white-space: nowrap;
+  border: 1px solid transparent;
+
+  // Default color
+  background: var(--color-fill-2);
+  color: var(--color-text-2);
+
+  &-icon {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+  }
+
+  &-content {
+    display: flex;
+    align-items: center;
+  }
+
+  &-close {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+    margin-left: 4px;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  // Color variants
+  &-default {
+    background: var(--color-fill-2);
+    color: var(--color-text-2);
+
+    &.tag-bordered {
+      background: transparent;
+      border-color: var(--color-border-2);
+    }
+  }
+
+  &-primary {
+    background: color-mix(in srgb, var(--color-primary-6) 10%, transparent);
+    color: var(--color-primary-6);
+
+    &.tag-bordered {
+      background: transparent;
+      border-color: var(--color-primary-6);
+    }
+  }
+
+  &-success {
+    background: color-mix(in srgb, var(--color-success-6) 10%, transparent);
+    color: var(--color-success-6);
+
+    &.tag-bordered {
+      background: transparent;
+      border-color: var(--color-success-6);
+    }
+  }
+
+  &-warning {
+    background: color-mix(in srgb, var(--color-warning-6) 10%, transparent);
+    color: var(--color-warning-6);
+
+    &.tag-bordered {
+      background: transparent;
+      border-color: var(--color-warning-6);
+    }
+  }
+
+  &-danger {
+    background: color-mix(in srgb, var(--color-danger-6) 10%, transparent);
+    color: var(--color-danger-6);
+
+    &.tag-bordered {
+      background: transparent;
+      border-color: var(--color-danger-6);
+    }
+  }
+
+  &-processing {
+    background: color-mix(in srgb, var(--color-primary-6) 10%, transparent);
+    color: var(--color-primary-6);
+    animation: orgii-tag-pulse 1.2s ease-in-out infinite;
+
+    &.tag-bordered {
+      background: transparent;
+      border-color: var(--color-primary-6);
+    }
+  }
+
+  // Pill shape (fully rounded sides)
+  &-pill {
+    border-radius: 999px;
+  }
+
+  // Sizes
+  &-size-mini {
+    padding: 2px 8px;
+    font-size: 12px;
+
+    .tag-icon {
+      font-size: 12px;
+    }
+  }
+
+  &-size-small {
+    padding: 3px 10px;
+    font-size: 13px;
+
+    .tag-icon {
+      font-size: 13px;
+    }
+  }
+
+  &-size-large {
+    padding: 6px 16px;
+    font-size: 15px;
+
+    .tag-icon {
+      font-size: 16px;
+    }
+  }
+
+  // Checkable variant
+  &-checkable {
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  &-checked {
+    background: var(--color-primary-6);
+    color: #fff;
+    border-color: var(--color-primary-6);
+
+    &.tag-bordered {
+      background: var(--color-primary-6);
+    }
+
+    .tag-close {
+      color: #fff;
+    }
+  }
+
+  // Closable
+  &-closable {
+    padding-right: 8px;
+  }
+
+  // Dark mode
+  &-dark {
+    &.tag-default {
+      background: var(--color-fill-3);
+      color: var(--color-text-2);
+
+      &.tag-bordered {
+        background: transparent;
+        border-color: var(--color-border-3);
+      }
+    }
+  }
+}
+
+// Animations
+@keyframes orgii-tag-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}

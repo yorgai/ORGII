@@ -1,0 +1,565 @@
+/**
+ * GitDiffContent Component
+ *
+ * Content-only component for displaying git diff.
+ * Tab bar is rendered by parent (RightPanel) - this only handles content area.
+ * Supports unified/split diff views and conflict resolution.
+ *
+ * Performance optimizations:
+ * - Custom memo comparison to avoid rerenders on callback reference changes
+ * - Uses refs for callbacks to prevent child component rebuilds
+ */
+import { writeTextFile } from "@tauri-apps/plugin-fs";
+import React, {
+  Suspense,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useTranslation } from "react-i18next";
+
+import { useGitStatus } from "@src/contexts/git";
+import {
+  CodeMirrorConflictEditor,
+  CodeMirrorDiff,
+  type ConflictResolutionChoice,
+  hasConflictMarkers,
+} from "@src/features/CodeMirror";
+import {
+  type DiffViewMode,
+  FileHeader,
+  FloatingBar,
+} from "@src/modules/WorkStation/shared";
+import { HUMANTOOLS_TEXT_KEYS } from "@src/modules/WorkStation/shared/textTokens";
+import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import type { GitFile } from "@src/types/git/types";
+import { isBinaryByExtension } from "@src/util/file/binaryDetection";
+import {
+  getPreviewType,
+  supportsSourceControlWorkingCopyPreview,
+} from "@src/util/file/previewTypes";
+
+import { ImageDiffView } from "./ImageDiffView";
+import { useGitDiffLoader } from "./useGitDiffLoader";
+
+const LazyVideoPreview = React.lazy(
+  () => import("../FilePreviewContent/VideoPreview")
+);
+const LazyPdfPreview = React.lazy(
+  () => import("../FilePreviewContent/PdfPreview")
+);
+const LazyDocxPreview = React.lazy(
+  () => import("../FilePreviewContent/DocxPreview")
+);
+const LazyPptxPreview = React.lazy(
+  () => import("../FilePreviewContent/PptxPreview")
+);
+const LazyPagesPreview = React.lazy(
+  () => import("../FilePreviewContent/PagesPreview")
+);
+
+// ============================================
+// Types
+// ============================================
+
+export interface GitDiffContentProps {
+  /** Selected git file with diff content */
+  gitFile: GitFile | null;
+  /** Loading state */
+  loading: boolean;
+  /** Repository path */
+  repoPath?: string;
+  /** Callback when conflict is resolved */
+  onResolveConflict?: (
+    filePath: string,
+    conflictId: string,
+    choice: ConflictResolutionChoice
+  ) => void;
+  /** Callback when file content changes (for conflict resolution) */
+  onContentChange?: (filePath: string, newContent: string) => void;
+  /** Callback when reload is requested */
+  onReload?: () => void;
+  /** Callback when a file is selected from breadcrumb dropdown */
+  onFileSelect?: (filePath: string) => void;
+  /** Notify parent when local unsaved state changes (tab bar dot vs close) */
+  onUnsavedChange?: (hasUnsaved: boolean) => void;
+  /** Optional content rendered before the breadcrumb in the file header. */
+  leadingHeaderSlot?: React.ReactNode;
+  /**
+   * When true, the file header is published into the global workstation tab
+   * header. Source Control focus mode renders it inline above the diff editor.
+   */
+  publishHeaderToWorkstation?: boolean;
+}
+
+// ============================================
+// Custom memo comparison - prevents rerenders on callback changes
+// ============================================
+
+function arePropsEqual(
+  prevProps: GitDiffContentProps,
+  nextProps: GitDiffContentProps
+): boolean {
+  // Compare data props strictly
+  if (prevProps.loading !== nextProps.loading) return false;
+  if (prevProps.repoPath !== nextProps.repoPath) return false;
+
+  // Compare gitFile by its key values, not reference
+  const prevFile = prevProps.gitFile;
+  const nextFile = nextProps.gitFile;
+
+  if (!prevFile && !nextFile) {
+    // Both null, consider equal
+  } else if (!prevFile || !nextFile) {
+    return false; // One null, one not
+  } else {
+    // Compare by actual content
+    if (prevFile.path !== nextFile.path) return false;
+    if (prevFile.oldContent !== nextFile.oldContent) return false;
+    if (prevFile.newContent !== nextFile.newContent) return false;
+    if (prevFile.status !== nextFile.status) return false;
+  }
+
+  // Only check callback existence, not reference
+  if (!!prevProps.onResolveConflict !== !!nextProps.onResolveConflict)
+    return false;
+  if (!!prevProps.onContentChange !== !!nextProps.onContentChange) return false;
+  if (!!prevProps.onReload !== !!nextProps.onReload) return false;
+  if (!!prevProps.onUnsavedChange !== !!nextProps.onUnsavedChange) return false;
+  if (prevProps.leadingHeaderSlot !== nextProps.leadingHeaderSlot) return false;
+  if (
+    prevProps.publishHeaderToWorkstation !==
+    nextProps.publishHeaderToWorkstation
+  )
+    return false;
+  return true;
+}
+
+// ============================================
+// Callback refs type
+// ============================================
+
+interface CallbackRefs {
+  onResolveConflict?: GitDiffContentProps["onResolveConflict"];
+  onContentChange?: GitDiffContentProps["onContentChange"];
+  onReload?: GitDiffContentProps["onReload"];
+}
+
+// ============================================
+// Main Component
+// ============================================
+
+const GitDiffContentInner: React.FC<GitDiffContentProps> = ({
+  gitFile,
+  loading,
+  repoPath = "",
+  onResolveConflict,
+  onContentChange,
+  onReload,
+  onFileSelect,
+  onUnsavedChange,
+  leadingHeaderSlot,
+  publishHeaderToWorkstation = true,
+}) => {
+  const { t } = useTranslation();
+
+  // ============================================
+  // Callback refs for stable handler references
+  // ============================================
+  const callbackRefs = useRef<CallbackRefs>({});
+
+  useEffect(() => {
+    callbackRefs.current = { onResolveConflict, onContentChange, onReload };
+  });
+
+  // View mode state for diff display
+  const [viewMode, setViewMode] = useState<DiffViewMode>("unified");
+
+  // Local state for edited content
+  const [editedContent, setEditedContent] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Reset edited content when git file changes
+  useEffect(() => {
+    setEditedContent(null);
+    setHasUnsavedChanges(false);
+  }, [gitFile?.path]);
+
+  const onUnsavedChangeRef = useRef(onUnsavedChange);
+  useEffect(() => {
+    onUnsavedChangeRef.current = onUnsavedChange;
+  });
+
+  useEffect(() => {
+    onUnsavedChangeRef.current?.(hasUnsavedChanges);
+  }, [hasUnsavedChanges]);
+
+  const { effectiveGitFile, selfFetching } = useGitDiffLoader({
+    gitFile,
+    repoPath,
+  });
+
+  // Check if the file has merge conflict markers — reads from effective
+  // content so the self-fetched diff feeds into conflict detection.
+  const fileHasConflicts = useMemo(() => {
+    const content = editedContent ?? effectiveGitFile?.newContent ?? "";
+    return hasConflictMarkers(content);
+  }, [editedContent, effectiveGitFile?.newContent]);
+
+  // Store gitFile in ref for stable callback access
+  const gitFileRef = useRef(effectiveGitFile);
+  useEffect(() => {
+    gitFileRef.current = effectiveGitFile;
+  });
+
+  // Handle content changes in the diff editor - uses refs
+  const handleContentChange = useCallback((newContent: string) => {
+    const currentGitFile = gitFileRef.current;
+    setEditedContent(newContent);
+    setHasUnsavedChanges(newContent !== currentGitFile?.newContent);
+    // Notify parent of content change (for conflict resolution)
+    if (currentGitFile?.path) {
+      callbackRefs.current.onContentChange?.(currentGitFile.path, newContent);
+    }
+  }, []);
+
+  // Handle conflict resolution - uses refs
+  const handleResolveConflict = useCallback(
+    (conflictId: string, choice: ConflictResolutionChoice) => {
+      const currentGitFile = gitFileRef.current;
+      if (currentGitFile?.path) {
+        callbackRefs.current.onResolveConflict?.(
+          currentGitFile.path,
+          conflictId,
+          choice
+        );
+      }
+    },
+    []
+  );
+
+  // Handle reload - uses refs
+  const handleReload = useCallback(() => {
+    callbackRefs.current.onReload?.();
+  }, []);
+
+  // Git status context for refreshing after save
+  const { forceRefresh } = useGitStatus();
+
+  // Handle save
+  const handleSave = useCallback(async () => {
+    if (!gitFile || !editedContent || !hasUnsavedChanges) return;
+
+    setSaving(true);
+    try {
+      // Write file using Tauri fs
+      await writeTextFile(gitFile.path, editedContent);
+      setHasUnsavedChanges(false);
+      // Refresh git status so source control panel updates immediately
+      forceRefresh();
+    } catch (error) {
+      console.error("[GitDiffContent] Save error:", error);
+    } finally {
+      setSaving(false);
+    }
+  }, [gitFile, editedContent, hasUnsavedChanges, forceRefresh]);
+
+  // Keyboard shortcut for save (Cmd/Ctrl+S)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleSave]);
+
+  // Loading spinner only when we have nothing else to show. Once a file
+  // diff has been resolved we keep rendering it (and its FileHeader) even
+  // if `loading` flicks back to true on the next git-status refresh —
+  // otherwise the teleported breadcrumb / pill in the workstation tab-header
+  // strip would pop in and out on every poll.
+  if (loading && !effectiveGitFile) {
+    return (
+      <Placeholder
+        variant="loading"
+        placement="detail-panel"
+        fillParentHeight
+      />
+    );
+  }
+
+  // No file selected
+  if (!effectiveGitFile) {
+    return (
+      <Placeholder
+        variant="empty"
+        placement="detail-panel"
+        title={t("placeholders.selectFileToViewChanges")}
+        fillParentHeight
+      />
+    );
+  }
+
+  // Content still missing — either the self-fetch is in flight or the parent
+  // is still hydrating `gitDiffState.filesByPath`. Show a loading spinner
+  // rather than fall through to the empty-content "file not found" branch.
+  if (effectiveGitFile.oldContent === undefined) {
+    return (
+      <Placeholder
+        variant="loading"
+        placement="detail-panel"
+        fillParentHeight
+      />
+    );
+  }
+
+  // getPreviewType drives all binary routing — single source of truth
+  const previewType = getPreviewType(effectiveGitFile.path);
+  const isBinaryPreviewType =
+    previewType !== "code" &&
+    previewType !== "markdown" &&
+    previewType !== "html" &&
+    previewType !== "json" &&
+    previewType !== "csv";
+
+  // File not found or empty content (VSCode-style error)
+  // Only show error if BOTH old and new are empty (file doesn't exist at either point)
+  const oldContentEmpty =
+    !effectiveGitFile.oldContent || effectiveGitFile.oldContent.trim() === "";
+  const newContentEmpty =
+    !effectiveGitFile.newContent || effectiveGitFile.newContent.trim() === "";
+
+  // A file is binary if the diff cache set the sentinel OR the extension is binary
+  const isBinaryFile =
+    effectiveGitFile.oldContent === "Binary file - content not displayed" ||
+    effectiveGitFile.newContent === "Binary file - content not displayed";
+  const isBinary = isBinaryFile || isBinaryByExtension(effectiveGitFile.path);
+
+  // Route all binary/previewable files through a single switch on previewType.
+  // This covers both sentinel-tagged files and untracked/new files that never
+  // get a sentinel (e.g. a newly added PNG in source control).
+  if (isBinary || isBinaryPreviewType) {
+    const isDeleted = effectiveGitFile.status === "deleted";
+    const effectiveRepoPath = effectiveGitFile.repoRoot ?? repoPath;
+    const absoluteFilePath = effectiveGitFile.path.startsWith("/")
+      ? effectiveGitFile.path
+      : `${effectiveRepoPath}/${effectiveGitFile.path}`;
+    const relativePath = effectiveGitFile.path.startsWith(
+      effectiveRepoPath + "/"
+    )
+      ? effectiveGitFile.path.slice(effectiveRepoPath.length + 1)
+      : effectiveGitFile.path;
+
+    const fileHeader = (
+      <FileHeader
+        publishToHost={publishHeaderToWorkstation ? "code" : undefined}
+        leadingSlot={leadingHeaderSlot}
+        filePath={effectiveGitFile.path}
+        repoPath={repoPath}
+        additions={effectiveGitFile.additions}
+        deletions={effectiveGitFile.deletions}
+        onReload={onReload ? handleReload : undefined}
+        loading={loading || selfFetching}
+        onFileSelect={onFileSelect}
+        showOpenFileAction={!!onFileSelect}
+      />
+    );
+
+    // Images get a dedicated side-by-side diff view
+    if (previewType === "image") {
+      return (
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          {fileHeader}
+          <div className="flex min-h-0 flex-1 flex-col">
+            <ImageDiffView
+              filePath={absoluteFilePath}
+              relativePath={relativePath}
+              repoPath={effectiveRepoPath}
+              status={effectiveGitFile.status}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // Non-deleted previewable binary types: show the working-copy preview
+    let PreviewEl: React.ReactNode = null;
+    if (!isDeleted && supportsSourceControlWorkingCopyPreview(previewType)) {
+      switch (previewType) {
+        case "video":
+          PreviewEl = (
+            <LazyVideoPreview filePath={absoluteFilePath} className="flex-1" />
+          );
+          break;
+        case "pdf":
+          PreviewEl = (
+            <LazyPdfPreview filePath={absoluteFilePath} className="flex-1" />
+          );
+          break;
+        case "docx":
+          PreviewEl = (
+            <LazyDocxPreview filePath={absoluteFilePath} className="flex-1" />
+          );
+          break;
+        case "pptx":
+          PreviewEl = (
+            <LazyPptxPreview filePath={absoluteFilePath} className="flex-1" />
+          );
+          break;
+        case "pages":
+          PreviewEl = (
+            <LazyPagesPreview filePath={absoluteFilePath} className="flex-1" />
+          );
+          break;
+        default:
+          break;
+      }
+    }
+
+    if (PreviewEl) {
+      return (
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          {fileHeader}
+          <div className="flex min-h-0 flex-1 flex-col">
+            <Suspense
+              fallback={
+                <Placeholder
+                  variant="loading"
+                  placement="detail-panel"
+                  fillParentHeight
+                />
+              }
+            >
+              {PreviewEl}
+            </Suspense>
+          </div>
+        </div>
+      );
+    }
+
+    // Deleted or unsupported binary — single informational placeholder
+    return (
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        {fileHeader}
+        <Placeholder
+          variant="empty"
+          placement="detail-panel"
+          title={t("placeholders.unsupportedFileType")}
+          subtitle={t("placeholders.binaryUnsupportedEncoding")}
+          fillParentHeight
+        />
+      </div>
+    );
+  }
+
+  if (oldContentEmpty && newContentEmpty) {
+    return (
+      <Placeholder
+        variant="empty"
+        placement="detail-panel"
+        title={t("placeholders.editorCouldNotOpenFileMissing")}
+        subtitle={effectiveGitFile.path}
+        fillParentHeight
+      />
+    );
+  }
+
+  // Show diff with header
+  return (
+    <>
+      {/* File header with view mode toggle */}
+      <FileHeader
+        publishToHost={publishHeaderToWorkstation ? "code" : undefined}
+        leadingSlot={leadingHeaderSlot}
+        filePath={effectiveGitFile.path}
+        repoPath={repoPath}
+        additions={effectiveGitFile.additions}
+        deletions={effectiveGitFile.deletions}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onReload={onReload ? handleReload : undefined}
+        loading={loading || selfFetching}
+        onFileSelect={onFileSelect}
+        showOpenFileAction={!!onFileSelect}
+      />
+
+      {/* Content - Conflict Editor or Diff View */}
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        {fileHasConflicts ? (
+          /* Conflict Resolution Editor */
+          <CodeMirrorConflictEditor
+            content={editedContent ?? (effectiveGitFile.newContent || "")}
+            filePath={effectiveGitFile.path}
+            readOnly={false}
+            onChange={handleContentChange}
+            onResolveConflict={handleResolveConflict}
+            height="100%"
+          />
+        ) : (
+          /* Regular Diff View */
+          <CodeMirrorDiff
+            oldValue={effectiveGitFile.oldContent || ""}
+            newValue={editedContent ?? (effectiveGitFile.newContent || "")}
+            filePath={effectiveGitFile.path}
+            changeType={effectiveGitFile.status}
+            height="100%"
+            viewMode={viewMode}
+            readOnly={viewMode === "split"}
+            mergeControls={false}
+            collapseUnchanged={true}
+            onChange={viewMode === "unified" ? handleContentChange : undefined}
+          />
+        )}
+
+        {((!fileHasConflicts && viewMode === "unified" && hasUnsavedChanges) ||
+          (fileHasConflicts && hasUnsavedChanges)) && (
+          <FloatingBar.Layer>
+            {!fileHasConflicts &&
+              viewMode === "unified" &&
+              hasUnsavedChanges && (
+                <FloatingBar
+                  variant="unsaved"
+                  message={t(HUMANTOOLS_TEXT_KEYS.placeholders.unsavedEdits)}
+                  saving={saving}
+                  onSave={handleSave}
+                  onDiscard={() => {
+                    setEditedContent(null);
+                    setHasUnsavedChanges(false);
+                  }}
+                />
+              )}
+            {fileHasConflicts && hasUnsavedChanges && (
+              <FloatingBar
+                variant="unsaved"
+                message={t(
+                  HUMANTOOLS_TEXT_KEYS.placeholders.unsavedConflictResolutions
+                )}
+                saving={saving}
+                onSave={handleSave}
+                onDiscard={() => {
+                  setEditedContent(null);
+                  setHasUnsavedChanges(false);
+                }}
+              />
+            )}
+          </FloatingBar.Layer>
+        )}
+      </div>
+    </>
+  );
+};
+
+// Memoize with custom comparison to prevent rerenders on callback changes
+export const GitDiffContent = memo(GitDiffContentInner, arePropsEqual);
+
+GitDiffContent.displayName = "GitDiffContent";
+
+export default GitDiffContent;

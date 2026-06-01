@@ -1,0 +1,87 @@
+/**
+ * CustomScrollbar Styles
+ *
+ * IDE-style custom scrollbar with optional markers
+ */
+
+.custom-scrollbar-track {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 14px;
+  height: 100%;
+  background: transparent;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+
+  &.visible {
+    opacity: 1;
+    // Track stays transparent - only thumb is visible
+  }
+}
+
+.custom-scrollbar-thumb {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  width: 10px;
+  min-height: 30px;
+  background: rgba(128, 128, 128, 0.4);
+  border-radius: 5px;
+  cursor: grab;
+  pointer-events: auto;
+  opacity: 0;
+  will-change: transform, opacity;
+  transition:
+    opacity 0.2s ease,
+    background-color 0.15s ease;
+
+  &.visible {
+    opacity: 1;
+  }
+
+  &:hover {
+    background: rgba(128, 128, 128, 0.6);
+  }
+
+  &:active {
+    background: rgba(128, 128, 128, 0.8);
+    cursor: grabbing;
+  }
+}
+
+.custom-scrollbar-marker {
+  position: absolute;
+  right: 2px;
+  width: 10px;
+  min-height: 4px;
+  border-radius: 2px;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 11;
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
+
+  &:hover {
+    transform: scaleX(1.2);
+    filter: brightness(1.1);
+  }
+}
+
+// Dark mode styles - track stays transparent
+
+:root[data-theme="dark"] .custom-scrollbar-thumb,
+.dark .custom-scrollbar-thumb {
+  background: rgba(180, 180, 180, 0.3);
+
+  &:hover {
+    background: rgba(180, 180, 180, 0.5);
+  }
+
+  &:active {
+    background: rgba(180, 180, 180, 0.7);
+  }
+}

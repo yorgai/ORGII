@@ -1,0 +1,286 @@
+/**
+ * Unified Rust Agent Event Handlers
+ *
+ * Dispatches real-time agent WebSocket events into the EventStore.
+ * Handles message streaming, tool calls, exec output, subagent tracking,
+ * permission/question requests, file changes, and coding session bridging.
+ *
+ * All events use a single `agent:*` namespace. Feature flags control
+ * which capabilities are active per session (not per variant).
+ */
+import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import { createLogger } from "@src/hooks/logger";
+
+import {
+  SPAWNED_SESSION_RE,
+  findActiveSubagentCallIndex,
+} from "../../shared/subagentTracking";
+import type { AgentWSEvent } from "../../shared/types";
+import {
+  handleExitPlanMode,
+  handleIdeAction,
+  handlePermissionRequest,
+  handlePlanApprovalArchived,
+  handlePlanReadyForApproval,
+  handleQuestionRequest,
+  handleTerminalCreated,
+  handleTodosUpdated,
+} from "./agentSpecific";
+import {
+  handleFileChange,
+  handleHeartbeat,
+  handleSetupRepoUpdate,
+} from "./fileChangeHandlers";
+import { handleMcpProgress } from "./mcpHandlers";
+import {
+  clearStreamRetryStatus,
+  handleComplete,
+  handleError,
+  handleSessionEvicted,
+  handleStreamErrorExhausted,
+  handleStreamRetry,
+  handleTurnSummary,
+  handleWarning,
+} from "./sessionHandlers";
+import {
+  handleMessageDelta,
+  handleStreamingComplete,
+  handleThinkingDelta,
+  handleToolCallDelta,
+} from "./streamHandlers";
+import { getEventSessionId } from "./streamHelpers";
+import { handleCodingSessionEvent } from "./subagentHandlers";
+import {
+  handleExecOutput,
+  handleInteractionFinalized,
+  handleShellProcessBackgrounded,
+  handleShellProcessExited,
+  handleShellProcessStarted,
+  handleToolCall,
+  handleToolResult,
+} from "./toolHandlers";
+import type { EventHandlerContext } from "./types";
+
+const unknownEventLogger = createLogger("AgentEventDispatch");
+
+// Re-export types and context factory
+export type {
+  EventHandlerCallbacksInternal,
+  EventHandlerContext,
+  RustAgentFeatures,
+} from "./types";
+export { createEventHandlerContext } from "./context";
+
+// ============================================================================
+// Main dispatcher
+// ============================================================================
+
+const STREAM_RETRY_RECOVERY_EVENTS = new Set<string>([
+  "agent:message_delta",
+  "agent:thinking_delta",
+  "agent:tool_call_delta",
+  "agent:tool_call",
+  "agent:streaming_complete",
+  "agent:tool_result",
+  "agent:interaction_finalized",
+  "agent:complete",
+  "agent:plan_ready_for_approval",
+  "agent:plan_approval_archived",
+  "agent:exit_plan_mode",
+  "agent:question_request",
+  "permission:request",
+  "agent:shell_process_started",
+  "agent:shell_process_backgrounded",
+  "agent:shell_process_exited",
+  "agent:mcp_progress",
+]);
+
+export async function dispatchAgentEvent(
+  event: AgentWSEvent,
+  ctx: EventHandlerContext
+): Promise<void> {
+  const eventSessionId = getEventSessionId(event);
+  const sessionId = ctx.filterSessionIdRef.current || "";
+
+  // Coding session bridge (enabled via hasCodingSessionBridge feature flag)
+  if (
+    ctx.features.hasCodingSessionBridge &&
+    eventSessionId &&
+    ctx.trackedCodingSessionsRef
+  ) {
+    const parentEventId =
+      ctx.trackedCodingSessionsRef.current.get(eventSessionId);
+    if (parentEventId) {
+      handleCodingSessionEvent(event, parentEventId, ctx);
+      return;
+    }
+
+    // Auto-track new spawned coding sessions
+    if (
+      SPAWNED_SESSION_RE.test(eventSessionId) &&
+      !ctx.trackedCodingSessionsRef.current.has(eventSessionId)
+    ) {
+      const currentEvents = await eventStoreProxy.getEvents();
+      const activeIdx = findActiveSubagentCallIndex(currentEvents);
+      if (activeIdx >= 0) {
+        const parentId = currentEvents[activeIdx].id;
+        ctx.trackedCodingSessionsRef.current.set(eventSessionId, parentId);
+        handleCodingSessionEvent(event, parentId, ctx);
+      }
+      return;
+    }
+  }
+
+  // Filter by session ID
+  if (
+    ctx.filterSessionIdRef.current &&
+    eventSessionId &&
+    eventSessionId !== ctx.filterSessionIdRef.current
+  ) {
+    return;
+  }
+
+  // Any subsequent successful activity from the same session means the retry
+  // episode recovered. Clear the footer pill before dispatching the real event
+  // so plan/tool/question surfaces do not leave a ghost "Reconnecting" state.
+  if (STREAM_RETRY_RECOVERY_EVENTS.has(event.type)) {
+    clearStreamRetryStatus(ctx, sessionId);
+  }
+
+  switch (event.type) {
+    case "agent:message_delta":
+      handleMessageDelta(event, sessionId, ctx);
+      break;
+    case "agent:thinking_delta":
+      handleThinkingDelta(event, sessionId, ctx);
+      break;
+    case "agent:streaming_complete":
+      await handleStreamingComplete(event, sessionId, ctx);
+      break;
+    case "agent:tool_call_delta":
+      handleToolCallDelta(event, sessionId, ctx);
+      break;
+    case "agent:tool_call":
+      handleToolCall(event, sessionId, eventSessionId, ctx);
+      break;
+    case "agent:stream_retry":
+      handleStreamRetry(event, ctx);
+      break;
+    case "agent:stream_error_exhausted":
+      handleStreamErrorExhausted(event, sessionId, ctx);
+      break;
+    case "agent:exec_output":
+      handleExecOutput(event, ctx);
+      break;
+    case "agent:tool_result":
+      await handleToolResult(event, sessionId, ctx);
+      break;
+    case "agent:interaction_finalized":
+      await handleInteractionFinalized(event, sessionId);
+      break;
+    case "agent:complete":
+      handleComplete(event, sessionId, ctx);
+      break;
+    case "agent:error":
+      handleError(event, sessionId, ctx);
+      break;
+    case "agent:warning":
+      handleWarning(event);
+      break;
+    case "agent:turn_summary":
+      handleTurnSummary(event, sessionId);
+      break;
+    case "agent:terminal_created":
+      if (ctx.features.hasCodingSessionBridge) handleTerminalCreated(event);
+      break;
+    case "agent:ide_action":
+      handleIdeAction(event);
+      break;
+    case "agent:todos_updated":
+      if (ctx.features.hasFileChangeEvents)
+        handleTodosUpdated(event, eventSessionId, ctx);
+      break;
+    case "permission:request":
+      if (ctx.features.hasPermissionRequest)
+        handlePermissionRequest(event, eventSessionId, ctx);
+      break;
+    case "agent:plan_ready_for_approval":
+      handlePlanReadyForApproval(event, eventSessionId, ctx);
+      break;
+    case "agent:plan_approval_archived":
+      handlePlanApprovalArchived(event, eventSessionId);
+      break;
+    case "agent:exit_plan_mode":
+      handleExitPlanMode(event, eventSessionId, ctx);
+      break;
+    case "agent:question_request":
+      handleQuestionRequest(event, eventSessionId, ctx);
+      break;
+    case "agent:shell_process_started":
+      handleShellProcessStarted(event, eventSessionId, ctx);
+      break;
+    case "agent:shell_process_backgrounded":
+      handleShellProcessBackgrounded(event, eventSessionId, ctx);
+      break;
+    case "agent:shell_process_exited":
+      handleShellProcessExited(event, eventSessionId, ctx);
+      break;
+    case "agent:mcp_progress":
+      handleMcpProgress(event, eventSessionId, ctx);
+      break;
+    case "agent:session_evicted":
+      handleSessionEvicted(ctx, sessionId);
+      break;
+    case "agent:file_change":
+      // Side-channel: the agent wrote files. Forwarded as a window event
+      // so the file tree / git status / open editors can refresh.
+      handleFileChange(event, eventSessionId);
+      break;
+    case "agent:setup_repo_update":
+      // Side-channel: setup_repo clone/checkout/install progress. The Rust
+      // payload omits `sessionId`, so fall back to the channel's session.
+      handleSetupRepoUpdate(event, eventSessionId || sessionId);
+      break;
+    case "agent:heartbeat":
+      // Side-channel: long-running automation liveness ping. The Rust
+      // payload carries no `sessionId`, so fall back to the channel's
+      // session — the heartbeat is per-session by routing.
+      handleHeartbeat(event, eventSessionId || sessionId);
+      break;
+    // `agent:queue_status` is consumed by the adapter's status state machine
+    // (createRustAgentAdapter), not here — it carries no transcript content.
+    // `agent:computer_use_entered/exited/aborted` are CU-lock lifecycle
+    // signals also tracked by the adapter as ALWAYS_TRAILING_EVENTS; they
+    // intentionally produce no EventStore row.
+    case "agent:queue_status":
+    case "agent:computer_use_entered":
+    case "agent:computer_use_exited":
+    case "agent:computer_use_aborted":
+      break;
+    default:
+      // Unknown event type. Logged once so a new Rust wire event that the
+      // frontend has not been taught to handle is visible instead of
+      // silently vanishing into the default branch.
+      logUnknownAgentEvent(event.type);
+      break;
+  }
+}
+
+/**
+ * Track event types we have already warned about so a high-frequency
+ * unknown event does not flood the log. Bounded to avoid unbounded growth.
+ */
+const _warnedUnknownEventTypes = new Set<string>();
+const MAX_WARNED_EVENT_TYPES = 100;
+
+function logUnknownAgentEvent(eventType: string): void {
+  if (_warnedUnknownEventTypes.has(eventType)) return;
+  if (_warnedUnknownEventTypes.size >= MAX_WARNED_EVENT_TYPES) {
+    _warnedUnknownEventTypes.clear();
+  }
+  _warnedUnknownEventTypes.add(eventType);
+  unknownEventLogger.warn(
+    `unhandled agent wire event "${eventType}" — no dispatcher case. ` +
+      `Add a handler or an explicit no-op case.`
+  );
+}

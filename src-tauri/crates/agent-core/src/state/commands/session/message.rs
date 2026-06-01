@@ -1,0 +1,475 @@
+//! Session messaging logic (`agent_send_message` implementation).
+
+use std::sync::Arc;
+
+use crate::persistence::AgentResponse;
+use crate::session::persistence as session_persistence;
+use crate::state::AgentAppState;
+
+use super::identity::{resolve_session_identity, IdentityOverrides};
+use crate::coordination::agent_member_interventions::{
+    AgentMemberInterventionStore, EnterMemberInterventionParams, DEFAULT_INTERVENTION_TTL_SECS,
+};
+
+/// Wake-only entry point for the inbox auto-resume hook.
+///
+/// Equivalent to calling [`send_message_impl`] with empty content,
+/// `is_resume = true`, and otherwise default identity. The combination
+/// `(content="", is_resume=true)` triggers the
+/// `should_save_user_msg = !(context.is_resume && content.is_empty())`
+/// branch in the unified processor, which deliberately skips persisting
+/// an empty user row. The `inbox_drain` hook then injects the
+/// recipient's unread inbox payload as the actual user attachment at
+/// turn-boundary entry, so the resumed turn opens with a real user
+/// message instead of a synthetic empty one.
+pub async fn send_message_impl_for_wake(
+    state: &AgentAppState,
+    session_id: String,
+) -> Result<AgentResponse, String> {
+    send_message_impl(
+        state,
+        session_id,
+        String::new(),
+        IdentityOverrides::default(),
+        None,
+        None,
+        None,
+        true,
+        false,
+        None,
+    )
+    .await
+}
+
+/// Mobile-remote-control entry point for forwarding a follow-up
+/// message from a paired phone into a running session.
+///
+/// The mobile bridge dispatch layer (`api::mobile_remote::dispatch`)
+/// resolves `AgentAppState` from the held `AppHandle` and delegates
+/// here rather than re-invoking `agent_send_message` through Tauri's
+/// IPC layer (which would force a serde round-trip and re-marshal
+/// every argument). Exposed as `pub` for the same reason
+/// [`send_message_impl_for_wake`] is: the underlying
+/// [`send_message_impl`] is `pub(super)` and we don't widen its
+/// visibility just for one external caller.
+///
+/// Mobile peers do not carry `IdentityOverrides` on the wire today,
+/// so this helper passes a default — letting `send_message_impl`'s
+/// resolver fall back to the session's in-memory `SessionRuntime`
+/// cache and then its DB persistence row. That matches "use whatever
+/// the desktop last used for this session", which is the least
+/// surprising behavior for a remote-control follow-up.
+pub async fn send_message_impl_for_mobile_remote(
+    state: &AgentAppState,
+    session_id: String,
+    content: String,
+) -> Result<AgentResponse, String> {
+    send_message_impl(
+        state,
+        session_id,
+        content,
+        IdentityOverrides::default(),
+        None,
+        None,
+        None,
+        false,
+        true,
+        None,
+    )
+    .await
+}
+
+/// Debug-only entry point for E2E follow-up turns.
+///
+/// The production `agent_send_message` Tauri command is `pub` but
+/// requires `tauri::State<'_, AgentAppState>` (only constructible
+/// inside a Tauri command handler), and `send_message_impl` is
+/// `pub(super)`. This thin wrapper exposes the same call shape to
+/// debug HTTP endpoints without widening visibility on the prod
+/// implementation. Used by `/test/agent-org/follow-up-message` to
+/// drive a second turn on an existing org session.
+#[cfg(debug_assertions)]
+pub async fn send_message_impl_for_test(
+    state: &AgentAppState,
+    session_id: String,
+    content: String,
+    model: Option<String>,
+    account_id: Option<String>,
+) -> Result<AgentResponse, String> {
+    send_message_impl(
+        state,
+        session_id,
+        content,
+        IdentityOverrides {
+            model,
+            account_id,
+            workspace_root: None,
+            native_harness_type: None,
+        },
+        None,
+        None,
+        None,
+        false,
+        false,
+        None,
+    )
+    .await
+}
+
+/// Implementation of agent_send_message.
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn send_message_impl(
+    state: &AgentAppState,
+    session_id: String,
+    content: String,
+    overrides: IdentityOverrides,
+    mode: Option<String>,
+    images: Option<Vec<String>>,
+    ide_context: Option<crate::session::IdeContext>,
+    is_resume: bool,
+    mark_direct_user_intervention: bool,
+    client_message_id: Option<String>,
+) -> Result<AgentResponse, String> {
+    let default_mode = crate::session::AgentExecMode::Build.as_str();
+    tracing::info!(
+        "[agent_send_message] session={}, model={:?}, account={:?}, mode={:?}, images={}",
+        session_id,
+        overrides.model.as_deref().unwrap_or("<default>"),
+        overrides.account_id.as_deref().unwrap_or("<default>"),
+        mode.as_deref().unwrap_or(default_mode),
+        images
+            .as_ref()
+            .map(|v| format!("{} image(s)", v.len()))
+            .unwrap_or_else(|| "none".to_string())
+    );
+
+    // ── 1. Resolve session identity (unified — single code path) ─────────
+    let identity = resolve_session_identity(state, &session_id, overrides).await?;
+
+    let effective_model = identity.model;
+    let effective_account_id = identity.account_id;
+    let effective_workspace_root = identity.workspace_root;
+    let effective_native_harness_type = identity.native_harness_type;
+
+    // ── 2. Ensure session is initialized (lazy runtime creation) ─────────
+    let launch_spec = crate::init::launch_spec::AgentLaunchSpec::from_session_sources(
+        state,
+        &session_id,
+        effective_workspace_root.clone(),
+        effective_account_id.clone(),
+        Some(effective_model.clone()),
+        effective_native_harness_type,
+    )
+    .await?;
+
+    let _runtime = crate::init::init_session(state, launch_spec).await?;
+
+    // Wingman resume: reopen the bottom bar. On fresh start the frontend
+    // sends `wingman_start` which opens the bar, but after app restart
+    // the frontend doesn't re-send that command. Best-effort — a missing
+    // bar doesn't block the session.
+    if crate::definitions::prefix_lookup::is_wingman_session_id(&session_id) {
+        if let Some(ref app_h) = state.app_handle {
+            crate::session::wingman::open_wingman_bar(app_h, &session_id, "Active", None);
+        }
+    }
+
+    // ── 3. Snapshot session resources (single lookup) ─────────────────────
+    //
+    // After `ensure_session_initialized` the session is guaranteed to exist
+    // in memory, so we look it up once and extract everything we need.
+    // `session_handle` stays alive for the enqueue step at the end;
+    // `agent_session_arc` (clone) is moved into the async closure.
+    let session_handle = state
+        .get_session(&session_id)
+        .await
+        .ok_or_else(|| format!("Session not found after init: {}", session_id))?;
+
+    session_handle.refresh_last_active().await;
+
+    let cancel_flag = Arc::clone(&session_handle.cancel_flag);
+    let session_for_closure = Arc::clone(&session_handle);
+
+    if !is_resume && !content.trim().is_empty() {
+        let _ = super::org_tasks::resume_paused_run_for_user_message(state, &session_id).await?;
+    }
+
+    if mark_direct_user_intervention && !is_resume && !content.trim().is_empty() {
+        let runtime_snapshot = session_handle.runtime.read().await.clone();
+        if let Some(runtime) = runtime_snapshot {
+            if let Some(org_context) = runtime.agent_org_context.as_ref() {
+                let org_run_id = org_context.run_id.clone();
+                let org_context = org_context.clone();
+                let session_id_for_intervention = session_id.clone();
+                tokio::task::spawn_blocking(move || {
+                    let member_id =
+                        crate::session::persistence::get_session(&session_id_for_intervention)
+                            .map_err(|err| err.to_string())?
+                            .and_then(|record| record.org_member_id)
+                            .ok_or_else(|| {
+                                format!(
+                                    "Agent Org session {} has no canonical member_id",
+                                    session_id_for_intervention
+                                )
+                            })?;
+                    let agent_id = org_context.require_participant_agent_id(&member_id)?;
+                    AgentMemberInterventionStore::enter(EnterMemberInterventionParams {
+                        org_run_id,
+                        member_id,
+                        agent_id,
+                        session_id: session_id_for_intervention,
+                        reason: Some("direct_user_chat".to_string()),
+                        ttl_secs: DEFAULT_INTERVENTION_TTL_SECS,
+                    })
+                })
+                .await
+                .map_err(|err| err.to_string())??;
+            }
+        }
+    }
+
+    let app_handle = state.app_handle.clone();
+
+    // ── 4. Persist initial status and user_input (single DB write) ───────
+    {
+        let sid = session_id.clone();
+        let input_preview: String = content.chars().take(100).collect();
+        let model_clone = effective_model.clone();
+        tokio::task::spawn_blocking(move || {
+            if let Ok(Some(mut db_session)) = session_persistence::get_session(&sid) {
+                db_session.status = crate::session::SessionStatus::Running.as_str().to_owned();
+                if db_session.user_input.is_none() {
+                    db_session.user_input = Some(input_preview);
+                    db_session.model = Some(model_clone);
+                }
+                if let Err(err) = session_persistence::upsert_session(&db_session) {
+                    tracing::warn!("[session] Failed to upsert session {sid}: {err}");
+                }
+            } else {
+                tracing::warn!("[session] DB row missing for {sid}, cannot persist status");
+            }
+        })
+        .await
+        .map_err(|err| err.to_string())?;
+    }
+
+    // ── 5. Build the processing closure ──────────────────────────────────
+    let sid_for_closure = session_id.clone();
+    let content_for_closure = content.clone();
+    let workspace_root_for_closure = effective_workspace_root.clone();
+    // If the coordinator queued an `ExecModeSetRequest` override on
+    // this member, consume it now (before defaulting to the
+    // wire-supplied mode). The override is one-shot — `take` clears
+    // it so a follow-up turn falls back to the regular wire value
+    // unless the coordinator sends another override.
+    let coordinator_mode_override = session_handle.requested_exec_mode_cache.take(&session_id);
+    let agent_mode = match coordinator_mode_override {
+        Some(forced) => forced,
+        None => resolve_agent_mode(mode.as_deref())?,
+    };
+
+    // Track the Plan-mode pre-mode snapshot.
+    {
+        let session = &session_handle;
+        let current_mode = agent_mode;
+        if matches!(current_mode, crate::session::AgentExecMode::Plan) {
+            if session.pre_plan_mode_cache.get(&session_id).is_none() {
+                let previous = restore_mode_before_plan_entry(
+                    session.last_non_plan_mode_cache.get(&session_id),
+                );
+                session.pre_plan_mode_cache.set(&session_id, previous);
+            }
+        } else {
+            session
+                .last_non_plan_mode_cache
+                .set(&session_id, current_mode);
+        }
+    }
+
+    let execute: crate::session::scheduler::ExecuteFn = Box::new(move || {
+        let sid = sid_for_closure;
+        let content = content_for_closure;
+        let workspace_root = workspace_root_for_closure;
+        let session = session_for_closure;
+
+        Box::pin(async move {
+            session.begin_turn(content.clone()).await;
+
+            let input = crate::session::TurnInput {
+                content: content.clone(),
+                agent_mode: Some(agent_mode),
+                images,
+                ide_context,
+                is_resume,
+                channel: None,
+                chat_id: None,
+            };
+
+            let response =
+                crate::session::process_message(Arc::clone(&session), input, app_handle.clone())
+                    .await;
+
+            let final_turn_state = if cancel_flag.load(std::sync::atomic::Ordering::SeqCst) {
+                crate::session::DialogTurnState::Cancelled
+            } else if response.is_ok() {
+                crate::session::DialogTurnState::Completed
+            } else {
+                crate::session::DialogTurnState::Failed
+            };
+
+            let stats = response
+                .as_ref()
+                .ok()
+                .map(|r| crate::session::TurnStats {
+                    prompt_tokens: r.prompt_tokens,
+                    completion_tokens: r.completion_tokens,
+                    total_tokens: r.total_tokens,
+                    context_tokens: 0,
+                    tool_calls_count: r.tool_calls_count,
+                    duration: None,
+                })
+                .unwrap_or_default();
+            session.end_turn(final_turn_state, stats).await;
+
+            let content_result = response.map(|r| r.content);
+
+            crate::lifecycle::finalize_session(
+                &sid,
+                &content_result,
+                app_handle.as_ref(),
+                Some(workspace_root.as_path()),
+            )
+            .await;
+
+            cancel_flag.store(false, std::sync::atomic::Ordering::SeqCst);
+
+            content_result
+        })
+    });
+
+    // ── 6. Enqueue and return immediately ────────────────────────────────
+    let msg = crate::session::ScheduledMessage {
+        message_id: uuid::Uuid::new_v4().to_string(),
+        generation: 0,
+        client_message_id,
+        content,
+        execute,
+    };
+
+    let enqueue_result = session_handle
+        .scheduler
+        .enqueue(msg)
+        .await
+        .map_err(|err| format!("Failed to enqueue message: {}", err))?;
+
+    tracing::info!(
+        "[agent_send_message] Enqueued message {} at position {} for session {}",
+        enqueue_result.message_id,
+        enqueue_result.queue_position,
+        session_id
+    );
+
+    Ok(AgentResponse {
+        content: serde_json::json!({
+            "queued": true,
+            "messageId": enqueue_result.message_id,
+            "queuePosition": enqueue_result.queue_position,
+            "duplicate": enqueue_result.duplicate,
+        })
+        .to_string(),
+        session_id,
+        model: effective_model,
+    })
+}
+
+fn restore_mode_before_plan_entry(
+    last_non_plan_mode: Option<crate::session::AgentExecMode>,
+) -> crate::session::AgentExecMode {
+    last_non_plan_mode.unwrap_or(crate::session::AgentExecMode::Plan)
+}
+
+/// Resolve the requested exec mode for an inbound `agent_send_message` call.
+///
+/// Wire contract:
+///   * `None` or empty string → `AgentExecMode::Build` (historical wire default).
+///   * `Some("plan" | "build" | …)` → parsed via `AgentExecMode::parse`.
+///   * `Some(<unknown>)` → `Err(...)` so a typo cannot silently downgrade a
+///     read-only mode (`Plan` / `Investigate` / `Review`) into `Build` (full
+///     write access).
+///
+/// **Pinned invariant for `send_message_impl_for_wake`**: that helper
+/// always passes `mode = None`, so a wake-resumed turn ALWAYS opens in
+/// `Build`. This is what the plan-approval flow depends on — after the
+/// coordinator approves a member's plan and wakes the member session,
+/// the resumed turn must run in `Build` (write-enabled), not stay in
+/// `Plan` (read-only). Changing the `None` arm to anything other than
+/// `Build` would silently strand approved members in read-only mode;
+/// the `wake_defaults_to_build` unit test below pins this contract.
+/// `#[doc(hidden)]` — the only external caller is the
+/// `app::api::agent::test::workspace` debug route, reached through
+/// `agent_core::debug::resolve_agent_mode`. Internal callers in
+/// `agent_send_message` use the same function.
+#[doc(hidden)]
+pub fn resolve_agent_mode(mode: Option<&str>) -> Result<crate::session::AgentExecMode, String> {
+    match mode.map(str::trim).filter(|s| !s.is_empty()) {
+        None => Ok(crate::session::AgentExecMode::Build),
+        Some(value) => crate::session::AgentExecMode::parse(value)
+            .ok_or_else(|| format!("Unknown agent exec mode: {value:?}")),
+    }
+}
+
+#[cfg(test)]
+mod resolve_agent_mode_tests {
+    use super::{resolve_agent_mode, restore_mode_before_plan_entry};
+    use crate::session::AgentExecMode;
+
+    /// Pins the implicit contract used by `send_message_impl_for_wake`:
+    /// passing `None` (the wake helper's default) yields `Build`. If
+    /// this assertion ever flips, the plan-approval wake path silently
+    /// keeps the member session in `Plan` mode after the coordinator
+    /// approves, leaving the resumed turn read-only when it should be
+    /// write-enabled.
+    #[test]
+    fn wake_defaults_to_build() {
+        assert_eq!(resolve_agent_mode(None).unwrap(), AgentExecMode::Build);
+    }
+
+    #[test]
+    fn empty_string_defaults_to_build() {
+        assert_eq!(resolve_agent_mode(Some("")).unwrap(), AgentExecMode::Build);
+        assert_eq!(
+            resolve_agent_mode(Some("   ")).unwrap(),
+            AgentExecMode::Build
+        );
+    }
+
+    #[test]
+    fn explicit_plan_parses() {
+        assert_eq!(
+            resolve_agent_mode(Some("plan")).unwrap(),
+            AgentExecMode::Plan
+        );
+    }
+
+    #[test]
+    fn plan_entry_without_prior_non_plan_mode_restores_to_plan() {
+        assert_eq!(restore_mode_before_plan_entry(None), AgentExecMode::Plan);
+    }
+
+    #[test]
+    fn plan_entry_after_build_restores_to_build() {
+        assert_eq!(
+            restore_mode_before_plan_entry(Some(AgentExecMode::Build)),
+            AgentExecMode::Build
+        );
+    }
+
+    #[test]
+    fn unknown_mode_is_rejected_not_silently_downgraded() {
+        let err = resolve_agent_mode(Some("plann")).unwrap_err();
+        assert!(
+            err.contains("Unknown agent exec mode"),
+            "expected typo to fail loudly, got: {err}"
+        );
+    }
+}

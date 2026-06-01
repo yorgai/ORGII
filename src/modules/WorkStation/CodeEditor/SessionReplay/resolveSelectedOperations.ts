@@ -1,0 +1,150 @@
+/**
+ * resolveSelectedOperations
+ *
+ * Pure helpers to compute the "currently selected" operation for each panel
+ * (file, shell, explore, tool) in the Simulator IDE replay hook.
+ *
+ * Extracted from useCodeEditorReplay.ts to keep that hook under 600 lines.
+ */
+import { resolveFileOperationPayload } from "./resolveFilePayload";
+import type {
+  ExploreOperationEntry,
+  FileOperationEntry,
+  ShellOperationEntry,
+  ToolOperationEntry,
+} from "./types";
+
+// ── File operation ────────────────────────────────────────────────────────────
+
+function resolveConsolidatedFileEntry(
+  found: FileOperationEntry,
+  targetEventId: string
+): FileOperationEntry {
+  if (!found.relatedOperations || found.eventId === targetEventId) return found;
+
+  const specificOp = found.relatedOperations.find(
+    (op) => op.eventId === targetEventId
+  );
+  if (!specificOp) return found;
+
+  const specificPayload = resolveFileOperationPayload(specificOp);
+  if (
+    !specificPayload ||
+    (specificPayload.oldContent === undefined &&
+      specificPayload.newContent === undefined &&
+      specificPayload.content === undefined)
+  ) {
+    return found;
+  }
+
+  return {
+    ...found,
+    content: specificPayload.content,
+    oldContent: specificPayload.oldContent,
+    newContent: specificPayload.newContent,
+    linesAdded: specificOp.linesAdded,
+    linesRemoved: specificOp.linesRemoved,
+    isCurrent: true,
+  };
+}
+
+export function resolveSelectedFileOperation(
+  allFileOperations: FileOperationEntry[],
+  filteredFileOperations: FileOperationEntry[],
+  currentFileOperation: FileOperationEntry | null,
+  userSelectedFileEventId: string | null,
+  currentEventId: string | undefined
+): FileOperationEntry | null {
+  if (userSelectedFileEventId) {
+    const found = allFileOperations.find(
+      (op) =>
+        op.eventId === userSelectedFileEventId ||
+        op.relatedEventIds?.includes(userSelectedFileEventId)
+    );
+    if (found)
+      return resolveConsolidatedFileEntry(found, userSelectedFileEventId);
+  }
+
+  if (!userSelectedFileEventId && currentEventId) {
+    const found = allFileOperations.find(
+      (op) =>
+        op.eventId === currentEventId ||
+        op.relatedEventIds?.includes(currentEventId)
+    );
+    if (found) return resolveConsolidatedFileEntry(found, currentEventId);
+  }
+
+  if (currentFileOperation) return currentFileOperation;
+
+  if (filteredFileOperations.length > 0) {
+    return filteredFileOperations[filteredFileOperations.length - 1];
+  }
+
+  return null;
+}
+
+// ── Shell operation ───────────────────────────────────────────────────────────
+
+export function resolveSelectedShellOperation(
+  allShellOperations: ShellOperationEntry[],
+  currentShellOperation: ShellOperationEntry | null,
+  userSelectedShellEventId: string | null
+): ShellOperationEntry | null {
+  // A running command always takes priority over any manual selection so that
+  // live streamOutput is visible without requiring user interaction. Once the
+  // command finishes, control returns to the user's prior selection.
+  const runningOp = allShellOperations.find((op) => op.isLoading);
+  if (runningOp) return runningOp;
+
+  if (userSelectedShellEventId) {
+    const found = allShellOperations.find(
+      (op) => op.eventId === userSelectedShellEventId
+    );
+    if (found) return found;
+  }
+
+  if (currentShellOperation) return currentShellOperation;
+  return allShellOperations[0] || null;
+}
+
+// ── Explore operation ─────────────────────────────────────────────────────────
+
+export function resolveSelectedExploreOperation(
+  allExploreOperations: ExploreOperationEntry[],
+  userSelectedExploreEventId: string | null
+): ExploreOperationEntry | null {
+  if (userSelectedExploreEventId) {
+    const found = allExploreOperations.find(
+      (op) => op.eventId === userSelectedExploreEventId
+    );
+    if (found) return found;
+  }
+
+  const current = allExploreOperations.find((op) => op.isCurrent);
+  if (current) return current;
+
+  return allExploreOperations.length > 0
+    ? allExploreOperations[allExploreOperations.length - 1]
+    : null;
+}
+
+// ── Tool operation ────────────────────────────────────────────────────────────
+
+export function resolveSelectedToolOperation(
+  allToolOperations: ToolOperationEntry[],
+  userSelectedToolEventId: string | null
+): ToolOperationEntry | null {
+  if (userSelectedToolEventId) {
+    const found = allToolOperations.find(
+      (op) => op.eventId === userSelectedToolEventId
+    );
+    if (found) return found;
+  }
+
+  const current = allToolOperations.find((op) => op.isCurrent);
+  if (current) return current;
+
+  return allToolOperations.length > 0
+    ? allToolOperations[allToolOperations.length - 1]
+    : null;
+}

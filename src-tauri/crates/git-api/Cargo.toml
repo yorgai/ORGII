@@ -1,0 +1,76 @@
+[package]
+name = "git_api"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Git HTTP API — axum router + utoipa OpenAPI docs covering status,
+# branches, commits, remotes, staging, stash, diff, merge/rebase/cherry-pick,
+# blame, and file blob/mtime endpoints. Composed into the main app's
+# combined `axum::Router` at startup rather than running its own listener.
+# Owns 1 `#[tauri::command]` (`generate_commit_message`), re-registered
+# from `commands/handler_list.inc` via the bare `git_api::…` path.
+# Internal-tooling routes that shell out to `git` live alongside the
+# `git2`-backed routes and share the same `axum::Router`.
+
+[lib]
+name = "git_api"
+path = "src/lib.rs"
+
+[dependencies]
+# Web framework
+axum = { workspace = true }
+tower-http = { version = "0.6", features = ["cors", "timeout"] }
+utoipa = { version = "5", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "9", features = ["axum", "vendored"] }
+
+# Git
+git = { path = "../git" }
+git2 = { version = "0.20", default-features = false, features = [
+    "vendored-libgit2",
+] }
+
+# Workspace crates this depends on
+agent_core = { path = "../agent-core" }
+key_vault = { path = "../key-vault" }
+project_management = { path = "../project-management" }
+
+# Tauri runtime (for the single `generate_commit_message` Tauri command)
+tauri = { workspace = true }
+
+# Async + streaming
+async-stream = "0.3"
+futures = "0.3"
+tokio = { workspace = true }
+
+# Date/time handling
+chrono = { workspace = true }
+
+# Cursor session token parsing (URL decoding) + UUID generation
+urlencoding = "2.1"
+uuid = { version = "1", features = ["v4"] }
+
+# Disk paths (~/.cursor sessions)
+dirs = "6.0"
+
+# Logging
+log = "0.4"
+
+# Unix-only signal handling for streaming git child processes
+libc = "0.2"
+
+# Encoding / serialization
+base64 = { workspace = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+
+# Cursor session DB readback for `cursor_chat` + commit-message helpers
+reqwest = { workspace = true }
+rusqlite = { workspace = true }
+
+# Performance
+rayon = "1.8"
+
+# Errors + logging
+thiserror = { workspace = true }
+tracing = "0.1"

@@ -1,0 +1,113 @@
+/* DevPassport Custom Styles */
+
+/* 3D Perspective */
+.perspective-1500 {
+  perspective: 1500px;
+}
+
+/* Preserve 3D transforms */
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+/* Transform origin */
+.transform-origin-left {
+  transform-origin: left center;
+}
+
+/* Backface visibility */
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Rotate Y transforms */
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Translate Z */
+.translate-z-\[-5px\] {
+  transform: translateZ(-5px);
+}
+
+/* Paper texture background */
+.bg-paper-texture {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.03) 0px,
+      transparent 1px,
+      transparent 40px,
+      rgba(0, 0, 0, 0.03) 41px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.03) 0px,
+      transparent 1px,
+      transparent 40px,
+      rgba(0, 0, 0, 0.03) 41px
+    );
+}
+
+/* Leather texture background */
+.bg-leather-texture {
+  background-color: #1a1614;
+  background-image: linear-gradient(135deg, #1a1614 0%, #0f0c0b 100%);
+}
+
+/* Stamp slam animation */
+@keyframes stamp-slam {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1) rotate(5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.animate-stamp-slam {
+  animation: stamp-slam 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Fade in up animation */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out;
+}
+
+/* Font family fallbacks */
+.font-mono {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}
+
+.font-serif {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

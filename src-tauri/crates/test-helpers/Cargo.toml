@@ -1,0 +1,14 @@
+[package]
+name = "test_helpers"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "Process-wide test sandbox: single env-var lock + tempdir RAII guard hoisted from `src/test_utils/test_env.rs`. Pure leaf — no `app`/`agent_core` types. Schema priming is wired in via `register_after_env_hook` from the `app` crate's test setup."
+publish = false
+
+[lib]
+name = "test_helpers"
+path = "src/lib.rs"
+
+[dependencies]
+tempfile = "3.13"

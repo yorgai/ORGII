@@ -1,0 +1,49 @@
+[package]
+name = "e2e-test"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# E2E integration tests for OS Agent, SDE Agent, and the gateway/sync stack.
+#
+# Pure HTTP client against the running Tauri app's `#[cfg(debug_assertions)]`
+# `/agent/test/*` routes — does NOT embed the agent runtime, only drives
+# scenarios via natural-language prompts and validates responses + tool
+# traces.
+#
+# Lived under `app/src/bin/e2e_test/` until 0504. Carved out into its own
+# workspace crate so:
+#   - rust-analyzer / `cargo check --workspace` no longer type-check 25k
+#     LOC of test code as part of the `app` library.
+#   - The pre-commit clippy hook (which scopes by crate) only runs against
+#     this crate when e2e-test source actually changes.
+#   - `cargo build -p e2e-test` is the canonical build invocation; the
+#     old `cargo build --bin e2e-test` (which built the whole `app` crate
+#     to get at the binary target) is gone.
+#
+# `agent_core` is pulled in directly for constants and deterministic helper
+# coverage that do not require an HTTP route.
+
+[[bin]]
+name = "e2e-test"
+path = "src/main.rs"
+
+[dependencies]
+agent_core = { path = "../agent-core" }
+
+reqwest = { workspace = true }
+tokio = { workspace = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+chrono = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
+rusqlite = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "tls12", "ring"] }
+urlencoding = "2.1"
+dirs = "6.0"
+libc = "0.2"

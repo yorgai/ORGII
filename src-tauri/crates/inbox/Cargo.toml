@@ -1,0 +1,21 @@
+[package]
+name = "inbox"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "Inbox message persistence (SQLite) and Tauri commands."
+publish = false
+
+[lib]
+name = "inbox"
+path = "src/lib.rs"
+
+[dependencies]
+database = { path = "../database" }
+
+tauri = { workspace = true }
+
+serde = { version = "1.0", features = ["derive"] }
+chrono = { workspace = true }
+tokio = { workspace = true }
+rusqlite = { workspace = true }

@@ -1,0 +1,100 @@
+/**
+ * Imperative helpers for opening GlobalSpotlight from outside React trees
+ * (Zod actions, DOM event handlers, services, etc.).
+ *
+ * These go through the same jotai atoms as the React-side openers, so the
+ * unified spotlight state stays single-source-of-truth. Callers wanting an
+ * second-layer sub-flow should use the typed open helpers below — they open
+ * the main Spotlight and prime the matching URL-like route state.
+ */
+import {
+  type SpotlightInitialEditorMode,
+  type SpotlightInitialQuery,
+  spotlightInitialQueryAtom,
+  spotlightOpenAtom,
+} from "@src/store/ui/uiAtom";
+import {
+  getInstrumentedStore,
+  isStoreInitialized,
+} from "@src/util/core/state/instrumentedStore";
+
+export function createEditorSpotlightRequest(
+  query = "",
+  mode?: SpotlightInitialEditorMode
+): SpotlightInitialQuery {
+  return {
+    query,
+    layer: { kind: "editor", mode },
+  };
+}
+
+export function createWorkspaceSpotlightRequest(
+  mode: "switch" | "add" | "create"
+): SpotlightInitialQuery {
+  return {
+    query: "",
+    layer: { kind: "workspace", mode },
+  };
+}
+
+export function createBranchSpotlightRequest(): SpotlightInitialQuery {
+  return { query: "", layer: { kind: "branch" } };
+}
+
+export function createAgentSessionSearchSpotlightRequest(): SpotlightInitialQuery {
+  return { query: "", layer: { kind: "agentSessionSearch" } };
+}
+
+export function openGlobalSpotlight(): void {
+  if (!isStoreInitialized()) return;
+  getInstrumentedStore().set(spotlightOpenAtom, true);
+}
+
+export function closeGlobalSpotlight(): void {
+  if (!isStoreInitialized()) return;
+  getInstrumentedStore().set(spotlightOpenAtom, false);
+}
+
+/**
+ * Open the main GlobalSpotlight in an editor-scoped sub-flow.
+ * Supported default modes let command search open with an empty input while
+ * preserving the explicit prefixes used by editor-local shortcuts.
+ */
+export function openEditorSpotlight(
+  query = "",
+  mode?: SpotlightInitialEditorMode
+): void {
+  if (!isStoreInitialized()) return;
+  const store = getInstrumentedStore();
+  store.set(
+    spotlightInitialQueryAtom,
+    createEditorSpotlightRequest(query, mode)
+  );
+  store.set(spotlightOpenAtom, true);
+}
+
+export function openWorkspaceSpotlight(
+  mode: "switch" | "add" | "create"
+): void {
+  if (!isStoreInitialized()) return;
+  const store = getInstrumentedStore();
+  store.set(spotlightInitialQueryAtom, createWorkspaceSpotlightRequest(mode));
+  store.set(spotlightOpenAtom, true);
+}
+
+export function openBranchSpotlight(): void {
+  if (!isStoreInitialized()) return;
+  const store = getInstrumentedStore();
+  store.set(spotlightInitialQueryAtom, createBranchSpotlightRequest());
+  store.set(spotlightOpenAtom, true);
+}
+
+export function openAgentSessionSearchSpotlight(): void {
+  if (!isStoreInitialized()) return;
+  const store = getInstrumentedStore();
+  store.set(
+    spotlightInitialQueryAtom,
+    createAgentSessionSearchSpotlightRequest()
+  );
+  store.set(spotlightOpenAtom, true);
+}

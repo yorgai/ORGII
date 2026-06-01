@@ -1,0 +1,317 @@
+/**
+ * CodeMirrorEditor Component
+ *
+ * A wrapper around CodeMirror 6 for code editing with native syntax highlighting.
+ * Provides a consistent interface for file editing in Lite IDE.
+ *
+ * Features:
+ * - Native CodeMirror syntax highlighting via Lezer parsers
+ * - Autocomplete support
+ * - Line numbers
+ * - Theme support (light/dark)
+ * - Keyboard shortcuts
+ * - Dirty diff gutter (when originalValue is provided)
+ *
+ * Performance optimizations:
+ * - Extensions use refs for callbacks to prevent recreation on callback changes
+ * - Extensions array only recreates when file path, language, theme, or feature flags change
+ * - Callback refs are updated without triggering extension rebuilds
+ */
+import CodeMirror from "@uiw/react-codemirror";
+import { useAtomValue } from "jotai";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
+
+import { CustomScrollbar } from "@src/components/CustomScrollbar";
+import { useGitBlame } from "@src/hooks/git/useGitBlame";
+import {
+  removeCodeMirrorMemoryEntry,
+  updateCodeMirrorMemoryEntry,
+} from "@src/hooks/perf/runtimeMemoryStats";
+import { useEditorAppearanceSettings } from "@src/hooks/settings";
+import { resolvedEditorThemeAtom } from "@src/store/ui/editorSettingsAtom";
+import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
+
+import { BASIC_SETUP_CONFIG, getCodeMirrorTheme } from "../config";
+import {
+  useCopyExtension,
+  useCursorExtension,
+  useEditorExtensions,
+  useEditorServiceRegistration,
+  useLargeFileHandling,
+  useLazyLanguageExtension,
+  useSelectionExtension,
+} from "./hooks";
+import "./index.scss";
+import type { CallbackRefs, CodeMirrorEditorProps } from "./types";
+
+const MAX_SCROLL_STATE_ENTRIES = 100;
+const editorScrollTopByKey = new Map<string, number>();
+
+function rememberEditorScrollTop(key: string, scrollTop: number): void {
+  if (editorScrollTopByKey.has(key)) {
+    editorScrollTopByKey.delete(key);
+  }
+  editorScrollTopByKey.set(key, scrollTop);
+  if (editorScrollTopByKey.size > MAX_SCROLL_STATE_ENTRIES) {
+    const oldestKey = editorScrollTopByKey.keys().next().value;
+    if (oldestKey) editorScrollTopByKey.delete(oldestKey);
+  }
+}
+
+// Re-export types for consumers
+export type {
+  CodeMirrorEditorProps,
+  CursorPosition,
+  TextSelectionInfo,
+} from "./types";
+
+// ============================================
+// Main Component
+// ============================================
+
+export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
+  value,
+  originalValue,
+  filePath,
+  language,
+  height: _height = "100%",
+  readOnly = false,
+  onChange,
+  onCursorChange,
+  onTextSelection,
+  onDiagnosticsChange,
+  className = "",
+  enableMinimap: enableMinimapProp,
+  enableIndentGuides: enableIndentGuidesProp,
+  enableGoToLine = true,
+  enableFindReplace = true,
+  enableLinting = true,
+  enableDirtyDiff = true,
+  isDeletedFile = false,
+  registerWithService = true,
+  enableGitBlame = false,
+  repoPath,
+}) => {
+  const { isDark } = useCurrentTheme();
+
+  // ============================================
+  // APPEARANCE SETTINGS: Read from global store
+  // Props can override global settings when explicitly provided
+  // ============================================
+  const appearanceSettings = useEditorAppearanceSettings();
+
+  // Merge global settings with props (props take precedence when defined)
+  const enableMinimap = enableMinimapProp ?? appearanceSettings.showMinimap;
+  const enableIndentGuides =
+    enableIndentGuidesProp ?? appearanceSettings.showIndentGuides;
+
+  // ============================================
+  // GIT BLAME: Fetch blame data for inline annotations
+  // ============================================
+  const { blameDataRef } = useGitBlame({
+    filePath,
+    repoPath,
+    enabled: enableGitBlame,
+  });
+
+  // ============================================
+  // REFS
+  // ============================================
+  const containerRef = useRef<HTMLDivElement>(null);
+  const minimapHostRef = useRef<HTMLDivElement>(null);
+  const memoryStatsKeyRef = useRef(Symbol("codemirror-memory"));
+  const scrollStateKey = filePath || language || null;
+
+  // ============================================
+  // EDITOR SERVICE: Register EditorView for AI/service access
+  // ============================================
+  const { handleCreateEditor, scrollElement, totalLines } =
+    useEditorServiceRegistration({
+      registerWithService,
+    });
+
+  useEffect(() => {
+    if (!scrollElement || !scrollStateKey) return;
+
+    const savedScrollTop = editorScrollTopByKey.get(scrollStateKey);
+    const frameId = window.requestAnimationFrame(() => {
+      if (savedScrollTop === undefined) return;
+      const maxScrollTop = Math.max(
+        0,
+        scrollElement.scrollHeight - scrollElement.clientHeight
+      );
+      scrollElement.scrollTop = Math.min(savedScrollTop, maxScrollTop);
+    });
+
+    const handleScroll = () => {
+      rememberEditorScrollTop(scrollStateKey, scrollElement.scrollTop);
+    };
+
+    scrollElement.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      rememberEditorScrollTop(scrollStateKey, scrollElement.scrollTop);
+      scrollElement.removeEventListener("scroll", handleScroll);
+    };
+  }, [scrollElement, scrollStateKey]);
+
+  useEffect(() => {
+    const key = memoryStatsKeyRef.current;
+    updateCodeMirrorMemoryEntry(key, {
+      bytes: value.length * 2 + (originalValue?.length ?? 0) * 2,
+      items: totalLines || 1,
+      label: filePath || language || "untitled",
+    });
+    return () => removeCodeMirrorMemoryEntry(key);
+  }, [filePath, language, originalValue, totalLines, value]);
+
+  // ============================================
+  // LARGE FILE HANDLING: Auto-disable expensive features
+  // ============================================
+  const { effectiveMinimap, effectiveIndentGuides, effectiveLinting } =
+    useLargeFileHandling({
+      value,
+      enableMinimap,
+      enableIndentGuides,
+      enableLinting,
+    });
+
+  // ============================================
+  // LAZY LOADING: Language extension
+  // ============================================
+  const lazyLangExtension = useLazyLanguageExtension({ filePath, language });
+
+  // ============================================
+  // PERFORMANCE OPTIMIZATION: Use refs for callbacks
+  // This prevents extension recreation when callbacks change
+  // ============================================
+  const callbackRefs = useRef<CallbackRefs>({});
+
+  // Update refs on every render (cheap, no re-renders triggered)
+  useEffect(() => {
+    callbackRefs.current = {
+      onCursorChange,
+      onTextSelection,
+      onDiagnosticsChange,
+      onChange,
+      filePath,
+    };
+  });
+
+  // ============================================
+  // DIRTY DIFF: Ref for original value
+  // ============================================
+  const originalValueRef = useRef<string>(originalValue ?? "");
+
+  // Update ref in effect (not during render) to satisfy React purity rules
+  useEffect(() => {
+    originalValueRef.current = originalValue ?? "";
+  }, [originalValue]);
+
+  // ============================================
+  // EXTENSIONS: Individual extension hooks
+  // ============================================
+  const hasCursorCallback = !!onCursorChange;
+  const hasSelectionCallback = !!onTextSelection;
+
+  const cursorExtension = useCursorExtension(callbackRefs, hasCursorCallback);
+  const selectionExtension = useSelectionExtension(
+    callbackRefs,
+    hasSelectionCallback
+  );
+  const copyExtension = useCopyExtension(callbackRefs, filePath);
+
+  // ============================================
+  // EXTENSIONS: Build complete extensions array
+  // ============================================
+  const extensions = useEditorExtensions({
+    isDark,
+    filePath,
+    originalValueRef,
+    enableDirtyDiff,
+    originalValue,
+    isDeletedFile,
+    enableGoToLine,
+    enableFindReplace,
+    effectiveMinimap,
+    effectiveIndentGuides,
+    effectiveLinting,
+    lazyLangExtension,
+    cursorExtension,
+    selectionExtension,
+    copyExtension,
+    minimapHostRef,
+    callbackRefs,
+    onDiagnosticsChange,
+    enableGitBlame,
+    blameDataRef,
+  });
+
+  // ============================================
+  // HANDLERS
+  // ============================================
+  const handleChange = useCallback((newValue: string) => {
+    callbackRefs.current.onChange?.(newValue);
+  }, []);
+
+  // ============================================
+  // THEME
+  // ============================================
+  const editorThemeName = useAtomValue(resolvedEditorThemeAtom);
+  const theme = getCodeMirrorTheme(isDark, editorThemeName);
+
+  // The minimap extension renders into a sibling host outside CodeMirror's DOM.
+  // Remount the editor when the host is added/removed so the view plugin and
+  // the external host lifecycle stay in sync.
+  const editorInstanceKey = effectiveMinimap ? "minimap-on" : "minimap-off";
+
+  // Dynamic basicSetup config based on appearance settings
+  const basicSetupConfig = useMemo(
+    () => ({
+      ...BASIC_SETUP_CONFIG,
+      lineNumbers: appearanceSettings.lineNumbers === "on",
+      highlightActiveLine: appearanceSettings.highlightActiveLine,
+      highlightActiveLineGutter: appearanceSettings.highlightActiveLine,
+    }),
+    [appearanceSettings.lineNumbers, appearanceSettings.highlightActiveLine]
+  );
+
+  // ============================================
+  // RENDER
+  // ============================================
+  return (
+    <div
+      ref={containerRef}
+      className={`codemirror-editor-wrapper ${className}`}
+    >
+      {/* Flex container for editor + minimap */}
+      <div className="codemirror-editor-shell">
+        {/* Main editor */}
+        <div className="codemirror-editor">
+          <CodeMirror
+            key={editorInstanceKey}
+            value={value}
+            height="100%"
+            style={{ height: "100%", flex: 1, minHeight: 0 }}
+            theme={theme}
+            extensions={extensions}
+            onChange={handleChange}
+            readOnly={readOnly}
+            basicSetup={basicSetupConfig}
+            onCreateEditor={handleCreateEditor}
+          />
+        </div>
+
+        {/* Minimap host - sibling element for proper flex layout */}
+        {effectiveMinimap && (
+          <div ref={minimapHostRef} className="codemirror-minimap-host" />
+        )}
+      </div>
+      <CustomScrollbar scrollElement={scrollElement} totalLines={totalLines} />
+    </div>
+  );
+};
+
+CodeMirrorEditor.displayName = "CodeMirrorEditor";
+
+export default CodeMirrorEditor;

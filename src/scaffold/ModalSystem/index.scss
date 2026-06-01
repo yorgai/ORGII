@@ -1,0 +1,380 @@
+// ==========================================
+// Custom Modal Component - No Arco Dependencies
+// Clean solid background design
+// ==========================================
+
+// Modal Wrapper - Full screen overlay
+.liquid-modal-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999; // Ensure modal is above all content
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modal-wrapper-fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  isolation: isolate; // Create new stacking context
+  border-radius: var(
+    --border-radius-window
+  ); // Match window corner radius (26px)
+  overflow: hidden; // Clip children to rounded corners
+}
+
+// Modal Mask - Simple Dim Overlay
+.liquid-modal-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0; // Mask is behind modal content
+  background: rgba(0, 0, 0, 0.6);
+  animation: mask-fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(
+    --border-radius-window
+  ); // Match window corner radius (26px)
+
+  [data-theme="dark"] & {
+    background: rgba(0, 0, 0, 0.7);
+  }
+}
+
+// Modal Container - Centers the modal
+.liquid-modal-container {
+  position: relative;
+  z-index: 10; // Modal content above mask
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100vw;
+  max-height: 100vh;
+  padding: 32px;
+}
+
+// Modal Content Container - Solid Background
+.liquid-modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 400px;
+  max-width: 90vw;
+  max-height: 90vh;
+  background: var(--color-bg-2);
+  border-radius: 16px;
+  overflow: hidden;
+  animation: modal-scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  // Shadow for depth
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.2),
+    0 5px 15px rgba(0, 0, 0, 0.15);
+
+  // Dark theme - deeper shadows
+  [data-theme="dark"] & {
+    box-shadow:
+      0 25px 70px rgba(0, 0, 0, 0.5),
+      0 8px 20px rgba(0, 0, 0, 0.4);
+  }
+}
+
+// Modal Header
+.liquid-modal-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+
+  [data-theme="dark"] & {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.liquid-modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 26px;
+  color: var(--color-text-1);
+  text-align: left;
+  letter-spacing: -0.01em;
+}
+
+// Close Button
+.liquid-modal-close {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-2);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: var(--color-text-1);
+    transform: scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.95);
+    background: rgba(0, 0, 0, 0.12);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary-6);
+    outline-offset: 2px;
+  }
+
+  [data-theme="dark"] & {
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &:active {
+      background: rgba(255, 255, 255, 0.15);
+    }
+  }
+}
+
+// Modal Body - Clean and Simple
+.liquid-modal-body {
+  flex: 1;
+  padding: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  color: var(--color-text-1);
+  font-size: 14px;
+  line-height: 22px;
+
+  // Smooth scroll behavior
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+
+  @import "../../styles/mixins/scrollbar";
+  @include scrollbar-unified;
+}
+
+// Modal Footer
+.liquid-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  height: 48px;
+  padding: 0 12px;
+  border-top: 1px solid var(--color-border-2);
+}
+
+// ==========================================
+// Size Variants
+// ==========================================
+
+.liquid-modal-content {
+  &.modal-small {
+    min-width: 320px;
+    max-width: 420px;
+  }
+
+  &.modal-medium {
+    min-width: 400px;
+    max-width: 600px;
+  }
+
+  &.modal-large {
+    min-width: 600px;
+    max-width: 900px;
+  }
+
+  &.modal-fullscreen {
+    min-width: calc(100vw - 64px);
+    max-width: calc(100vw - 64px);
+    min-height: calc(100vh - 64px);
+    max-height: calc(100vh - 64px);
+  }
+}
+
+// ==========================================
+// Animations - Optimized for Performance
+// ==========================================
+
+@keyframes modal-wrapper-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mask-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes modal-scale-out {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92) translateY(20px);
+  }
+}
+
+// Exit animation for modal (applied when closing)
+.liquid-modal-wrapper--closing {
+  animation: modal-wrapper-fade-out 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+
+  .liquid-modal-content {
+    animation: modal-scale-out 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+}
+
+@keyframes modal-wrapper-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+// ==========================================
+// Responsive Design
+// ==========================================
+
+@media (max-width: 768px) {
+  .liquid-modal-content {
+    min-width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 64px);
+
+    &.modal-small,
+    &.modal-medium,
+    &.modal-large {
+      min-width: calc(100vw - 32px);
+      max-width: calc(100vw - 32px);
+    }
+
+    &.modal-fullscreen {
+      min-width: 100vw;
+      max-width: 100vw;
+      min-height: 100vh;
+      max-height: 100vh;
+      border-radius: 0 !important;
+    }
+  }
+
+  .liquid-modal-header {
+    padding: 16px 20px;
+  }
+
+  .liquid-modal-title {
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .liquid-modal-body {
+    padding: 20px;
+  }
+
+  .liquid-modal-footer {
+    padding: 0 12px;
+    flex-wrap: wrap;
+
+    // Stack buttons on very small screens
+    @media (max-width: 400px) {
+      flex-direction: column-reverse;
+
+      > * {
+        width: 100%;
+      }
+    }
+  }
+
+  .liquid-modal-close {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+// ==========================================
+// Accessibility Preferences
+// ==========================================
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+  .liquid-modal-content {
+    border: 2px solid var(--color-text-1);
+  }
+
+  .liquid-modal-header,
+  .liquid-modal-footer {
+    border-color: var(--color-text-2);
+  }
+}
+
+// ==========================================
+// Utility Classes
+// ==========================================
+
+// Remove padding from body for custom layouts
+.liquid-modal-body--no-padding {
+  padding: 0;
+}
+
+// Centered content
+.liquid-modal-body--centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+// Scrollable content indicator
+.liquid-modal-body--scrollable {
+  position: relative;
+
+  &::before {
+    content: "";
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--color-primary-6) 50%,
+      transparent
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+}

@@ -1,0 +1,8 @@
+---
+source: src/agent_sessions/cli/parsers/tests/acp_common_tests.rs
+expression: result
+---
+success:
+  exitCode: 0
+  stderr: ""
+  stdout: output text

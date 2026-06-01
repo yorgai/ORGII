@@ -1,0 +1,552 @@
+//! Lightweight git-status runner with timeout and output parsing
+//!
+//! Provides both async (for Tauri commands) and sync (for the event processor)
+//! variants. All subprocess calls go through `crate::util` for
+//! pre-exec FD safety.
+use std::path::Path;
+use std::process::Output;
+use std::time::Duration;
+use tokio::time::timeout;
+
+use super::types::{GitStatus, GitStatusFile};
+use crate::types::WorkingDirectoryFile;
+use crate::util::run_git_status_with_retry;
+
+const GIT_TIMEOUT_SECONDS: u64 = 5;
+
+// ============================================
+// Local wrapper for git status commands
+// ============================================
+
+/// Spawn a git command with retry logic for status operations.
+/// Delegates to shared git_util module with --no-optional-locks flag.
+fn spawn_git_with_retry(args: &[&str], cwd: &Path, max_retries: u32) -> Result<Output, String> {
+    run_git_status_with_retry(cwd, args, max_retries)
+}
+
+/// Refresh git status for a repository (async wrapper)
+/// Delegates to the sync version via spawn_blocking to reuse the consolidated
+/// single-call implementation with pre_exec FD fix.
+pub async fn refresh_git_status(repo_path: &Path) -> Result<GitStatus, String> {
+    let path = repo_path.to_path_buf();
+
+    timeout(
+        Duration::from_secs(GIT_TIMEOUT_SECONDS),
+        tokio::task::spawn_blocking(move || refresh_git_status_sync(&path)),
+    )
+    .await
+    .map_err(|_| "Git status command timed out".to_string())?
+    .map_err(|e| format!("Task join error: {}", e))?
+}
+
+// ============================================
+// Synchronous versions (for use in std::thread)
+// ============================================
+
+/// Refresh git status synchronously (for event processor thread)
+pub fn refresh_git_status_sync(repo_path: &Path) -> Result<GitStatus, String> {
+    run_git_status_sync(repo_path)
+}
+
+/// Run git status synchronously and parse results
+/// OPTIMIZED (Jan 24, 2026): Consolidated from 5-6 git calls to 1 git call
+/// Uses `git status --porcelain=v2 -b` which provides:
+/// - Branch name (# branch.head)
+/// - Upstream branch (# branch.upstream)
+/// - Ahead/behind counts (# branch.ab)
+/// - Commit hash (# branch.oid)
+/// - All file status info
+///   See: Documentation/Development/bad-file-descriptor-root-cause-0124.md
+fn run_git_status_sync(repo_path: &Path) -> Result<GitStatus, String> {
+    let canonical_path = repo_path
+        .canonicalize()
+        .map_err(|e| format!("Failed to canonicalize path {:?}: {}", repo_path, e))?;
+
+    // ONE git call to get everything: branch info + file status
+    let output = spawn_git_with_retry(&["status", "--porcelain=v2", "-b"], &canonical_path, 3)?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Git status failed: {}", stderr));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Parse header lines for branch info
+    let mut branch = String::from("main");
+    let mut commit_hash = String::new();
+    let mut ahead: u32 = 0;
+    let mut behind: u32 = 0;
+
+    // Parse file status
+    let mut staged = 0u32;
+    let mut unstaged = 0u32;
+    let mut untracked = 0u32;
+    let mut conflicted = 0u32;
+    let mut files: Vec<GitStatusFile> = Vec::new();
+
+    for line in stdout.lines() {
+        if line.starts_with("# branch.head ") {
+            // # branch.head <branch name>
+            branch = line
+                .strip_prefix("# branch.head ")
+                .unwrap_or("main")
+                .to_string();
+        } else if line.starts_with("# branch.oid ") {
+            // # branch.oid <commit hash>
+            commit_hash = line.strip_prefix("# branch.oid ").unwrap_or("").to_string();
+            // Handle "(initial)" for new repos with no commits
+            if commit_hash == "(initial)" {
+                commit_hash = String::new();
+            }
+        } else if line.starts_with("# branch.ab ") {
+            // # branch.ab +<ahead> -<behind>
+            let ab = line.strip_prefix("# branch.ab ").unwrap_or("+0 -0");
+            let parts: Vec<&str> = ab.split_whitespace().collect();
+            if parts.len() >= 2 {
+                ahead = parts[0].trim_start_matches('+').parse().unwrap_or(0);
+                behind = parts[1].trim_start_matches('-').parse().unwrap_or(0);
+            }
+        } else if line.starts_with("# ") {
+            // Skip other header lines (# branch.upstream, etc.)
+            continue;
+        } else if line.starts_with("1 ") {
+            // Ordinary changed files: "1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>"
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 9 {
+                let xy = parts[1];
+                let path = parts[8..].join(" "); // Path may contain spaces
+
+                if xy.len() >= 2 {
+                    let x = xy.chars().next().unwrap_or('.');
+                    let y = xy.chars().nth(1).unwrap_or('.');
+
+                    // Track counts
+                    if x != '.' {
+                        staged += 1;
+                    }
+                    if y != '.' {
+                        unstaged += 1;
+                    }
+
+                    // Create file entries
+                    if x != '.' && y != '.' {
+                        files.push(GitStatusFile {
+                            path: path.clone(),
+                            status: x.to_string(),
+                            staged: true,
+                            original_path: None,
+                        });
+                        files.push(GitStatusFile {
+                            path: path.clone(),
+                            status: y.to_string(),
+                            staged: false,
+                            original_path: None,
+                        });
+                    } else if x != '.' {
+                        files.push(GitStatusFile {
+                            path: path.clone(),
+                            status: x.to_string(),
+                            staged: true,
+                            original_path: None,
+                        });
+                    } else {
+                        files.push(GitStatusFile {
+                            path: path.clone(),
+                            status: y.to_string(),
+                            staged: false,
+                            original_path: None,
+                        });
+                    }
+                }
+            }
+        } else if line.starts_with("2 ") {
+            // Renamed/copied files: "2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <X><score> <path>\t<origPath>"
+            // The path and origPath are separated by a tab character
+            if let Some(tab_pos) = line.find('\t') {
+                let before_tab = &line[..tab_pos];
+                let orig_path = line[tab_pos + 1..].to_string();
+
+                let parts: Vec<&str> = before_tab.split_whitespace().collect();
+                if parts.len() >= 9 {
+                    let xy = parts[1];
+                    let path = parts[9..].join(" "); // Path after the score field
+
+                    if xy.len() >= 2 {
+                        let x = xy.chars().next().unwrap_or('.');
+                        let y = xy.chars().nth(1).unwrap_or('.');
+
+                        // Track counts
+                        if x != '.' {
+                            staged += 1;
+                        }
+                        if y != '.' {
+                            unstaged += 1;
+                        }
+
+                        // Create file entries
+                        if x != '.' && y != '.' {
+                            files.push(GitStatusFile {
+                                path: path.clone(),
+                                status: x.to_string(),
+                                staged: true,
+                                original_path: Some(orig_path.clone()),
+                            });
+                            files.push(GitStatusFile {
+                                path: path.clone(),
+                                status: y.to_string(),
+                                staged: false,
+                                original_path: Some(orig_path),
+                            });
+                        } else if x != '.' {
+                            files.push(GitStatusFile {
+                                path: path.clone(),
+                                status: x.to_string(),
+                                staged: true,
+                                original_path: Some(orig_path),
+                            });
+                        } else {
+                            files.push(GitStatusFile {
+                                path: path.clone(),
+                                status: y.to_string(),
+                                staged: false,
+                                original_path: Some(orig_path),
+                            });
+                        }
+                    }
+                }
+            }
+        } else if line.starts_with("u ") {
+            // Unmerged (conflicted) files
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 11 {
+                let path = parts[10..].join(" ");
+                conflicted += 1;
+                files.push(GitStatusFile {
+                    path,
+                    status: "U".to_string(),
+                    staged: false,
+                    original_path: None,
+                });
+            }
+        } else if let Some(after) = line.strip_prefix("? ") {
+            // Untracked file or directory
+            let path_str = after.trim();
+            let full_path = canonical_path.join(path_str);
+
+            if full_path.is_dir() {
+                // Use git ls-files to list untracked files, respecting .gitignore
+                if let Ok(entries) = list_untracked_in_directory(&canonical_path, path_str) {
+                    for file_path in entries {
+                        untracked += 1;
+                        files.push(GitStatusFile {
+                            path: file_path,
+                            status: "?".to_string(),
+                            staged: false,
+                            original_path: None,
+                        });
+                    }
+                }
+            } else {
+                untracked += 1;
+                files.push(GitStatusFile {
+                    path: path_str.to_string(),
+                    status: "?".to_string(),
+                    staged: false,
+                    original_path: None,
+                });
+            }
+        }
+    }
+
+    // Detect git operation states (merge, rebase, cherry-pick, etc.) - filesystem check, no git call
+    let op_states = detect_git_operation_states(repo_path);
+
+    Ok(GitStatus {
+        branch,
+        ahead,
+        behind,
+        staged,
+        unstaged,
+        untracked,
+        conflicted,
+        last_commit_hash: commit_hash,
+        last_commit_message: String::new(), // No longer fetched - not needed by frontend
+        files,
+        merge_in_progress: op_states.0,
+        rebase_in_progress: op_states.1,
+        cherry_pick_in_progress: op_states.2,
+        revert_in_progress: op_states.3,
+        bisect_in_progress: op_states.4,
+    })
+}
+
+/// Detect git operation states by checking for special files in .git directory
+/// Returns (merge, rebase, cherry_pick, revert, bisect)
+fn detect_git_operation_states(repo_path: &Path) -> (bool, bool, bool, bool, bool) {
+    let git_dir = repo_path.join(".git");
+
+    // If .git is a file (worktree), read the actual git dir path.
+    //
+    // We've already confirmed the file exists. A read failure here
+    // (permission, partial mount, etc.) and a missing `gitdir: `
+    // prefix (corrupted worktree pointer) both cause us to fall
+    // back to using `.git` itself as the operation-state dir,
+    // which silently produces "no operation in progress" while a
+    // merge/rebase may actually be running. Warn so the cause is
+    // visible — the UI will still render, but the operator will
+    // know why the merge/rebase indicator is missing.
+    let actual_git_dir = if git_dir.is_file() {
+        match std::fs::read_to_string(&git_dir) {
+            Ok(content) => {
+                if let Some(path) = content.strip_prefix("gitdir: ") {
+                    std::path::PathBuf::from(path.trim())
+                } else {
+                    tracing::warn!(
+                        path = %git_dir.display(),
+                        "git::watch::detect_git_operation_states: .git file is missing the 'gitdir: ' prefix; operation-state detection will be incorrect"
+                    );
+                    git_dir
+                }
+            }
+            Err(err) => {
+                tracing::warn!(
+                    path = %git_dir.display(),
+                    error = %err,
+                    "git::watch::detect_git_operation_states: .git file read failed; operation-state detection will be incorrect"
+                );
+                git_dir
+            }
+        }
+    } else {
+        git_dir
+    };
+
+    let merge_in_progress = actual_git_dir.join("MERGE_HEAD").exists();
+
+    // Rebase can be in rebase-merge (interactive) or rebase-apply (am/plain)
+    let rebase_in_progress = actual_git_dir.join("rebase-merge").exists()
+        || actual_git_dir.join("rebase-apply").exists();
+
+    let cherry_pick_in_progress = actual_git_dir.join("CHERRY_PICK_HEAD").exists();
+
+    let revert_in_progress = actual_git_dir.join("REVERT_HEAD").exists();
+
+    let bisect_in_progress = actual_git_dir.join("BISECT_LOG").exists();
+
+    (
+        merge_in_progress,
+        rebase_in_progress,
+        cherry_pick_in_progress,
+        revert_in_progress,
+        bisect_in_progress,
+    )
+}
+
+// ============================================
+// Detailed File Status (for API responses)
+// ============================================
+
+/// Get detailed file status with individual file entries
+/// This is used by the HTTP API to return the full file list
+pub fn get_detailed_file_status_sync(
+    repo_path: &Path,
+) -> Result<Vec<WorkingDirectoryFile>, String> {
+    let canonical_path = repo_path
+        .canonicalize()
+        .map_err(|e| format!("Failed to canonicalize path {:?}: {}", repo_path, e))?;
+
+    // Use resilient spawn helper with retries
+    let output = spawn_git_with_retry(&["status", "--porcelain=v2"], &canonical_path, 3)?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Git status failed: {}", stderr));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut files = Vec::new();
+
+    for line in stdout.lines() {
+        // Skip branch/header lines
+        if line.starts_with('#') {
+            continue;
+        }
+
+        if line.starts_with("1 ") {
+            // Ordinary changed files: "1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>"
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 9 {
+                let xy = parts[1];
+                let path = parts[8..].join(" "); // Path may contain spaces
+
+                if xy.len() >= 2 {
+                    let x = xy.chars().next().unwrap_or('.');
+                    let y = xy.chars().nth(1).unwrap_or('.');
+
+                    let (status, staged) = if x != '.' {
+                        (x.to_string(), true)
+                    } else {
+                        (y.to_string(), false)
+                    };
+
+                    files.push(WorkingDirectoryFile {
+                        path: path.clone(),
+                        status,
+                        staged,
+                        original_path: None,
+                    });
+                }
+            }
+        } else if line.starts_with("2 ") {
+            // Renamed/copied files: "2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <X><score> <path>\t<origPath>"
+            // The path and origPath are separated by a tab character
+            if let Some(tab_pos) = line.find('\t') {
+                let before_tab = &line[..tab_pos];
+                let orig_path = line[tab_pos + 1..].to_string();
+
+                let parts: Vec<&str> = before_tab.split_whitespace().collect();
+                if parts.len() >= 9 {
+                    let xy = parts[1];
+                    let path = parts[9..].join(" "); // Path after the score field
+
+                    if xy.len() >= 2 {
+                        let x = xy.chars().next().unwrap_or('.');
+                        let y = xy.chars().nth(1).unwrap_or('.');
+
+                        let (status, staged) = if x != '.' {
+                            (x.to_string(), true)
+                        } else {
+                            (y.to_string(), false)
+                        };
+
+                        files.push(WorkingDirectoryFile {
+                            path: path.clone(),
+                            status,
+                            staged,
+                            original_path: Some(orig_path),
+                        });
+                    }
+                }
+            }
+        } else if line.starts_with("u ") {
+            // Unmerged (conflicted) files: "u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>"
+            // XY values: DD, AU, UD, UA, DU, AA, UU (conflict types)
+            // We report these as status "U" (Unmerged) which frontend maps to "C" (Conflict)
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 11 {
+                let path = parts[10..].join(" "); // Path may contain spaces
+
+                files.push(WorkingDirectoryFile {
+                    path,
+                    status: "U".to_string(), // U = Unmerged/Conflict
+                    staged: false,           // Conflict files are not staged
+                    original_path: None,
+                });
+            }
+        } else if let Some(after) = line.strip_prefix("? ") {
+            // Untracked file or directory: "? <path>"
+            let path_str = after.trim();
+            let full_path = canonical_path.join(path_str);
+
+            // Check if this is a directory - if so, use git ls-files to list contents
+            if full_path.is_dir() {
+                // Use git ls-files to list untracked files, respecting .gitignore
+                if let Ok(entries) = list_untracked_in_directory(&canonical_path, path_str) {
+                    for file_path in entries {
+                        files.push(WorkingDirectoryFile {
+                            path: file_path,
+                            status: "?".to_string(),
+                            staged: false,
+                            original_path: None,
+                        });
+                    }
+                }
+            } else {
+                // Regular untracked file
+                files.push(WorkingDirectoryFile {
+                    path: path_str.to_string(),
+                    status: "?".to_string(),
+                    staged: false,
+                    original_path: None,
+                });
+            }
+        }
+    }
+
+    Ok(files)
+}
+
+/// List untracked files in a directory, respecting .gitignore rules.
+/// Uses `git ls-files --others --exclude-standard` which properly handles all gitignore patterns.
+///
+/// This replaces the old manual walkdir approach which didn't respect .gitignore,
+/// causing node_modules/ and other ignored directories to show up with 1000+ files.
+fn list_untracked_in_directory(
+    repo_path: &std::path::Path,
+    relative_dir: &str,
+) -> Result<Vec<String>, String> {
+    let dir_path = relative_dir.trim_end_matches('/');
+
+    // Use git ls-files to list untracked files, respecting .gitignore
+    let output = spawn_git_with_retry(
+        &["ls-files", "--others", "--exclude-standard", dir_path],
+        repo_path,
+        3,
+    )?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("git ls-files failed for {}: {}", dir_path, stderr));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let files: Vec<String> = stdout
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|line| line.to_string())
+        .collect();
+
+    Ok(files)
+}
+
+/// Get upstream tracking branch name for current branch
+/// Uses spawn_git_with_retry to prevent "bad file descriptor" errors from WebView FD inheritance
+pub fn get_upstream_branch(repo_path: &Path) -> Option<String> {
+    let canonical_path = match repo_path.canonicalize() {
+        Ok(p) => p,
+        Err(_) => return None,
+    };
+
+    // Get current branch using resilient spawn helper
+    let branch_output =
+        spawn_git_with_retry(&["rev-parse", "--abbrev-ref", "HEAD"], &canonical_path, 3).ok()?;
+
+    if !branch_output.status.success() {
+        return None;
+    }
+
+    let branch = String::from_utf8_lossy(&branch_output.stdout)
+        .trim()
+        .to_string();
+
+    // Get upstream for this branch using resilient spawn helper
+    let upstream_ref = format!("{}@{{upstream}}", branch);
+    let upstream_output = spawn_git_with_retry(
+        &["rev-parse", "--abbrev-ref", &upstream_ref],
+        &canonical_path,
+        3,
+    )
+    .ok()?;
+
+    if upstream_output.status.success() {
+        let upstream = String::from_utf8_lossy(&upstream_output.stdout)
+            .trim()
+            .to_string();
+        if !upstream.is_empty() {
+            return Some(upstream);
+        }
+    }
+
+    None
+}

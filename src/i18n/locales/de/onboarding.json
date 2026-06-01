@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "welcome": {
+      "title": "Willkommen",
+      "description": "Erste Schritte mit ORGII"
+    },
+    "devPassport": {
+      "description": "Ihre Entwickleridentität"
+    },
+    "github": {
+      "title": "GitHub",
+      "description": "Konto verbinden"
+    },
+    "workspace": {
+      "title": "Projekt",
+      "description": "Projekt öffnen oder klonen"
+    },
+    "theme": {
+      "title": "Design",
+      "description": "Erscheinungsbild anpassen"
+    },
+    "complete": {
+      "title": "Fertig",
+      "description": "Bereit loszulegen"
+    }
+  },
+  "welcome": {
+    "title": "Willkommen bei ORGII",
+    "description": "Lassen Sie uns Ihren Arbeitsbereich in wenigen Schritten konfigurieren."
+  },
+  "devPassport": {
+    "title": "Dev Passport einrichten",
+    "description": "Jeder Vibe-Engineer braucht eine Identität.",
+    "role": "Vibe Engineer",
+    "codeName": "Code-Name",
+    "codeNamePlaceholder": "Geben Sie Ihren Code-Namen ein...",
+    "randomNameTooltip": "Zufälligen Code-Namen generieren",
+    "avatar": "Profilbild",
+    "selectImage": "Bild auswählen",
+    "avatarHint": "Ihre visuelle Identität in Projekten",
+    "generateButton": "Vibe Passport generieren",
+    "passportTitle": "Ihr Vibe Passport",
+    "passportWelcome": "Willkommen, {{name}}. Ihre Identität ist bereit."
+  },
+  "github": {
+    "title": "GitHub verbinden",
+    "description": "Verbinden Sie Ihr GitHub-Konto, um auf Repos zuzugreifen, Commits zu erstellen und Pull Requests direkt aus ORGII zu verwalten.",
+    "connectButton": "GitHub-Konto verbinden",
+    "hint": "Sie können GitHub auch später unter Einstellungen > Integrationen verbinden"
+  },
+  "workspace": {
+    "title": "Projekt öffnen",
+    "description": "Öffnen Sie einen lokalen Ordner oder klonen Sie ein Repo. ORGII indiziert Ihre Codebasis automatisch für intelligente Code-Unterstützung.",
+    "openFolder": "Ordner öffnen",
+    "cloneRepo": "Repo klonen",
+    "hint": "Sie können diesen Schritt überspringen und später ein Projekt öffnen"
+  },
+  "theme": {
+    "title": "Design wählen",
+    "description": "Wählen Sie ein Design nach Ihren Vorlieben. Sie können dies jederzeit in den Einstellungen ändern.",
+    "light": "Hell",
+    "dark": "Dunkel"
+  },
+  "complete": {
+    "title": "Alles bereit!",
+    "description": "Ihr Arbeitsbereich ist fertig. Starten Sie eine neue Session, um mit KI-Unterstützung zu programmieren, oder erkunden Sie die App.",
+    "startSession": "Neue Session starten"
+  },
+  "navigation": {
+    "skipSetup": "Einrichtung überspringen",
+    "getStarted": "Loslegen",
+    "goToSettings": "Zu den Einstellungen"
+  }
+}

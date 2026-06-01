@@ -1,0 +1,62 @@
+/**
+ * OutputContent Styles
+ * Uses shared bottom panel mixins and Terminal component styles
+ * Minimal panel-specific overrides
+ */
+@import "../../../../../../../styles/mixins/bottom-panel";
+
+.output-panel {
+  @include panel-container;
+
+  // Content - scrollable area with shared scrollbar styling
+  &__content {
+    @include panel-content;
+  }
+
+  // Prevent double scrollbar - TerminalOutput should not have its own scroll
+  &__terminal-output {
+    overflow: visible !important;
+    max-height: none !important;
+
+    // Enable text selection for copy/paste
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+
+    // Apply to all nested elements (pre, spans, divs)
+    * {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      -moz-user-select: text !important;
+      -ms-user-select: text !important;
+    }
+  }
+
+  // Empty states (use shared mixin)
+  &__empty,
+  &__empty-channel {
+    @include panel-empty-state;
+  }
+
+  &__empty-text {
+    font-size: 13px;
+  }
+}
+
+// Search highlight marks (injected by useOutputSearch)
+.output-search-highlight {
+  background-color: color-mix(in srgb, var(--color-primary-6) 25%, transparent);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0;
+
+  &--active {
+    background-color: color-mix(
+      in srgb,
+      var(--color-primary-6) 55%,
+      transparent
+    );
+    outline: 1px solid var(--color-primary-6);
+  }
+}

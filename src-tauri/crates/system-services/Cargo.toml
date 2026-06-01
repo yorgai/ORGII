@@ -1,0 +1,57 @@
+[package]
+name = "system_services"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# OS-integration Tauri commands: macOS dock + tray + app menu, native
+# notifications, NSDocumentController-backed recent files, VPN interface
+# detection, ipinfo geolocation lookup, host-toolchain dependency probing.
+# Pure leaf — no back-edges into `app`. Owns ~16 `#[tauri::command]`s,
+# re-registered from `commands/handler_list.inc` via bare
+# `system_services::…` paths. Distinct from `app_platform` (FFI
+# trampoline only).
+
+[lib]
+name = "system_services"
+path = "src/lib.rs"
+
+[dependencies]
+# Tauri runtime
+tauri = { workspace = true }
+tauri-plugin-notification = "2"
+
+# Workspace crates this depends on
+app_paths = { path = "../app-paths" }       # ~/.orgii/dependencies cache path
+app_window = { path = "../app-window" }     # main-window recreate from tray
+integrations = { path = "../integrations" } # external IDE detection
+
+# Async + concurrency
+chrono = { workspace = true }
+futures = "0.3"
+reqwest = { workspace = true }
+tokio = { workspace = true }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+
+# Logging
+tracing = "0.1"
+
+# Open URLs/files in default app
+open = "5"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+dispatch2 = { workspace = true }
+objc2 = { workspace = true }
+objc2-app-kit = { workspace = true }
+objc2-foundation = { workspace = true }
+# IOPMAssertion FFI for "prevent system sleep" power-management assertions
+core-foundation = "0.10"
+
+[target.'cfg(windows)'.dependencies]
+# SetThreadExecutionState for "prevent system sleep"
+windows = { version = "0.61", features = [
+  "Win32_System_Power",
+] }

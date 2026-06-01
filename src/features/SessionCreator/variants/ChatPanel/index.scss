@@ -1,0 +1,41 @@
+.session-creator-chat-panel-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+
+  .wp_text_area {
+    height: auto !important;
+    min-height: auto;
+  }
+
+  .session-creator-chat-panel-fullscreen-composer {
+    position: relative;
+  }
+
+  .session-creator-chat-panel-fullscreen-composer [data-testid="chat-input"] {
+    position: relative;
+    z-index: 2;
+  }
+
+  .session-creator-chat-panel-fullscreen-input-shell {
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(0, 0, 0, 0.02) !important;
+
+    &:focus-within {
+      box-shadow:
+        0 0 0 2px color-mix(in srgb, var(--color-primary-6) 15%, transparent),
+        0 1px 3px rgba(0, 0, 0, 0.05),
+        0 0 0 1px rgba(0, 0, 0, 0.02) !important;
+    }
+  }
+
+  .session-creator-chat-panel-fullscreen-repo-row {
+    position: relative;
+    z-index: 1;
+    margin-top: -6px;
+    border-radius: 0 0 12px 12px;
+    background: var(--color-chat-container);
+    box-shadow: none;
+  }
+}

@@ -1,0 +1,34 @@
+import cn from "classnames";
+import React from "react";
+
+export interface InlineInfoCardProps {
+  children: React.ReactNode;
+  className?: string;
+  contentClassName?: string;
+}
+
+const InlineInfoCard: React.FC<InlineInfoCardProps> = ({
+  children,
+  className,
+  contentClassName,
+}) => {
+  return (
+    <div
+      className={cn(
+        "w-0 min-w-full max-w-full overflow-hidden px-2 py-2 [contain:inline-size]",
+        className
+      )}
+    >
+      <div
+        className={cn(
+          "relative min-w-0 max-w-full overflow-hidden rounded-lg border border-border-2 bg-chat-input px-4 py-2 [contain:inline-size]",
+          contentClassName
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
+
+export default InlineInfoCard;

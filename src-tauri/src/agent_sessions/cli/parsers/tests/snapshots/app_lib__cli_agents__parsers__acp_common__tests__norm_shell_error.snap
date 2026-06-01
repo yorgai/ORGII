@@ -1,0 +1,7 @@
+---
+source: src/cli_agents/parsers/acp_common_tests.rs
+expression: result
+---
+error:
+  stderr: ""
+  stdout: error msg

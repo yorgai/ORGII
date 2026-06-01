@@ -1,0 +1,22 @@
+/**
+ * AddConnectionModal Styles
+ */
+
+.add-connection-modal {
+  // Ensure proper modal sizing
+  max-height: 90vh;
+  overflow-y: auto;
+
+  // Form input focus states
+  input:focus {
+    box-shadow: 0 0 0 1px var(--color-primary-6);
+  }
+
+  // Database type buttons active state
+  button[type="button"] {
+    &:focus-visible {
+      outline: 2px solid var(--color-primary-6);
+      outline-offset: 2px;
+    }
+  }
+}

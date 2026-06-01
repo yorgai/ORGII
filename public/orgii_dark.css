@@ -1,0 +1,80 @@
+/**
+ * Design Tokens CSS - Dark Theme
+ *
+ * Contains CSS variables for colors, spacing, and theming (dark theme variant).
+ *
+ * Note: These variables are actively used throughout the codebase via Tailwind config
+ * and direct CSS variable references. Migration to custom tokens can be done incrementally.
+ */
+body {
+  --color-bg-1: #0f0f0f;
+  --color-bg-2: #141414;
+  --color-bg-3: #2a2a2b;
+  --color-bg-4: #313132;
+  --color-neutral-1: #f7f8fa;
+  --color-neutral-6: #86909c;
+  --color-text-1: #e8e8e8;
+  --color-text-2: #b9b9ba;
+  --color-text-3: #8b8b8d;
+  --color-text-4: #5d5d5f;
+  --color-text-white: #e8e8e8;
+  --color-border-1: #2e2e30;
+  --color-border-2: #3c3c3c;
+  --color-border-3: #5f5f60;
+  --color-fill-1: #1f1f1f;
+  --color-fill-2: #212121;
+  --color-fill-3: #2a2a2a;
+  --color-fill-4: #3c3c3f;
+  /* Shared surfaces */
+  --color-surface-hover: color-mix(
+    in srgb,
+    var(--color-fill-2) 85%,
+    transparent
+  );
+  --color-surface-selected: var(--color-fill-2);
+  --color-surface-selected-hover: var(--color-fill-2);
+
+  /* Workstation */
+  --color-workstation-bg: #1a1a1a;
+  --color-pane-raised: var(--color-bg-2);
+  --color-pane-input: var(--color-chat-input);
+  --color-button-hover: var(--color-fill-3);
+
+  /* Main App */
+  --color-surface-container: #1a1a1a;
+
+  /* Chat Panel */
+  --color-chat-pane: var(--color-workstation-bg);
+  --color-chat-container: #202020;
+  --color-chat-input: var(--color-fill-2);
+  --color-event-block: #181818;
+  --color-event-block-fade: var(--color-event-block);
+  --color-diff-add: #123a1b;
+  --color-diff-delete: #450c0f;
+  --color-diff-collapse: #0e52a5;
+  --color-primary-1: #1e2a3a;
+  --color-primary-2: #033479;
+  --color-primary-3: #0e52a5;
+  --color-primary-4: #1e74d1;
+  --color-primary-5: #349afd;
+  --color-primary-6: #43aafd;
+  --color-primary-7: #6ec2fe;
+  --color-danger-1: #4d0000;
+  --color-danger-2: #6f0f0f;
+  --color-danger-3: #942020;
+  --color-danger-4: #be3434;
+  --color-danger-5: #dd4141;
+  --color-danger-6: #f14c4c;
+  --color-success-1: #003d16;
+  --color-success-2: #04521f;
+  --color-success-3: #0f682b;
+  --color-success-4: #25873c;
+  --color-success-5: #55ae53;
+  --color-success-6: #89d185;
+  --color-warning-1: #fff7e8;
+  --color-warning-2: #ffe4ba;
+  --color-warning-3: #ffcf8b;
+  --color-warning-4: #ffb65d;
+  --color-warning-5: #ff9a2e;
+  --color-warning-6: #ff7d00;
+}

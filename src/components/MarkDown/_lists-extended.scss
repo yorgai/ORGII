@@ -1,0 +1,62 @@
+.chat-markdown-body ol[type="a"] {
+  list-style-type: lower-alpha;
+}
+
+.chat-markdown-body ol[type="A"] {
+  list-style-type: upper-alpha;
+}
+
+.chat-markdown-body ol[type="i"] {
+  list-style-type: lower-roman;
+}
+
+.chat-markdown-body ol[type="I"] {
+  list-style-type: upper-roman;
+}
+
+.chat-markdown-body ol[type="1"] {
+  list-style-type: decimal;
+}
+
+.chat-markdown-body div > ol:not([type]) {
+  list-style-type: decimal;
+}
+
+.chat-markdown-body ul ul,
+.chat-markdown-body ul ol,
+.chat-markdown-body ol ol,
+.chat-markdown-body ol ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+// Cursor-style list items
+.chat-markdown-body li > p {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.chat-markdown-body li + li {
+  margin-top: 4px;
+}
+
+.chat-markdown-body li {
+  line-height: 1.6;
+}
+
+.chat-markdown-body dl {
+  padding: 0;
+}
+
+.chat-markdown-body dl dt {
+  padding: 0;
+  margin-top: 16px;
+  font-size: 1em;
+  font-style: italic;
+  font-weight: var(--base-text-weight-semibold, 600);
+}
+
+.chat-markdown-body dl dd {
+  padding: 0 16px;
+  margin-bottom: 16px;
+}

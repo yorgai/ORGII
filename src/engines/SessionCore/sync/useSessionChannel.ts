@@ -1,0 +1,246 @@
+/**
+ * useSessionChannel — Tauri IPC Channel subscription for session events
+ *
+ * Subscribes to the Rust backend's ChannelRegistry for a specific session_id.
+ * Events are delivered via Tauri's IPC Channel mechanism, replacing raw
+ * WebSocket connections for session-scoped events.
+ *
+ * On mount: invokes `subscribe_session_events` with a Channel callback.
+ *   The backend returns a unique `channelId` for this registration.
+ * On unmount: invokes `unsubscribe_session_events` with the exact
+ *   `channelId`, so only THIS channel is removed — other channels for the
+ *   same session (from a concurrent re-mount) are not affected.
+ *
+ * ## Race-condition hardening
+ *
+ * Three failure shapes are explicitly defended against:
+ *
+ *   1. **Cleanup before subscribe resolves.** A fast session switch
+ *      can fire the cleanup function before the backend has assigned a
+ *      `channelId`. We chain the unsubscribe onto the subscribe promise
+ *      so we always have the correct id to send, even if it arrives
+ *      after the React effect is gone.
+ *
+ *   2. **Late events on a stale channel.** Tauri may deliver a message
+ *      on the OLD channel between the time we call `unsubscribe_session_events`
+ *      and the time the backend actually processes it. Without
+ *      gating, those messages would be forwarded to the CURRENT
+ *      `onEvent` (which is updated via a ref), so a session-A event
+ *      could end up applied to session-B's adapter. We gate every
+ *      message through a per-effect `destroyed` flag that is set
+ *      synchronously in cleanup, so post-cleanup deliveries are
+ *      dropped cleanly.
+ *
+ *   3. **Silent unsubscribe failures.** The previous implementation
+ *      swallowed unsubscribe rejections with `.catch(() => {})`,
+ *      hiding diagnostic information when the backend refused the
+ *      call (registry mismatch, dead session, transport error). We
+ *      log a warning so the leak — if any — is at least visible in
+ *      the console.
+ *
+ * The race-condition logic itself is exposed as
+ * {@link SessionChannelLifecycle} so it can be unit-tested without a
+ * React renderer.
+ */
+import { Channel, invoke } from "@tauri-apps/api/core";
+import { useEffect, useRef } from "react";
+
+import { parseRawSessionEvent } from "@src/engines/SessionCore/core/schemas";
+
+export function validateSessionChannelMessage(message: string): string {
+  parseRawSessionEvent(message);
+  return message;
+}
+
+/**
+ * Drivers required by {@link SessionChannelLifecycle} so the
+ * lifecycle logic stays decoupled from Tauri and React. The hook
+ * supplies concrete implementations backed by `invoke` / `Channel`;
+ * tests supply mocks.
+ */
+export interface SessionChannelDrivers {
+  /** Subscribe; returns the backend-assigned channel id. */
+  subscribe: () => Promise<number>;
+  /** Unsubscribe a previously-subscribed channel id. */
+  unsubscribe: (channelId: number) => Promise<void>;
+  /** Hook for warnings — typically `console.warn`. */
+  warn: (message: string, error?: unknown) => void;
+}
+
+/**
+ * Lifecycle state machine for a single `useSessionChannel` effect
+ * invocation. Tracks the destroyed flag, queues the unsubscribe
+ * behind the subscribe promise, and drops late events deterministically.
+ *
+ * Use:
+ *   const lifecycle = new SessionChannelLifecycle("session-1", drivers);
+ *   lifecycle.start();
+ *   // ...
+ *   lifecycle.onMessage(rawJson); // returns true if delivered, false if dropped
+ *   // ...
+ *   lifecycle.dispose();
+ */
+export class SessionChannelLifecycle {
+  private readonly sessionId: string;
+  private readonly drivers: SessionChannelDrivers;
+  private readonly onDelivered: (raw: string) => void;
+  private destroyed = false;
+  private subscribePromise: Promise<number | null> | null = null;
+  // For tests / diagnostics: keep the latest assigned channelId.
+  private channelId: number | null = null;
+
+  constructor(
+    sessionId: string,
+    drivers: SessionChannelDrivers,
+    onDelivered: (raw: string) => void
+  ) {
+    this.sessionId = sessionId;
+    this.drivers = drivers;
+    this.onDelivered = onDelivered;
+  }
+
+  /**
+   * Kick off the subscribe IPC. Idempotent — subsequent calls
+   * return the same in-flight promise. Failure is reported via
+   * `drivers.warn` (unless already destroyed) and resolves to
+   * `null`, signalling "no channel id; no unsubscribe needed".
+   */
+  start(): Promise<number | null> {
+    if (this.subscribePromise !== null) return this.subscribePromise;
+    this.subscribePromise = this.drivers.subscribe().then(
+      (channelId) => {
+        this.channelId = channelId;
+        return channelId;
+      },
+      (err) => {
+        if (!this.destroyed) {
+          this.drivers.warn(
+            `[SessionChannel] Failed to subscribe (session=${this.sessionId}):`,
+            err
+          );
+        }
+        return null;
+      }
+    );
+    return this.subscribePromise;
+  }
+
+  /**
+   * Deliver a message. Returns `true` if it was forwarded to the
+   * consumer, `false` if it was dropped because the lifecycle is
+   * already torn down. Validation failures inside `onDelivered`
+   * are caught and reported as warnings — they never bubble up.
+   */
+  onMessage(raw: string): boolean {
+    if (this.destroyed) return false;
+    try {
+      this.onDelivered(validateSessionChannelMessage(raw));
+      return true;
+    } catch (error) {
+      this.drivers.warn(
+        "[SessionChannel] Dropped invalid event payload:",
+        error
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Final tear-down. Sets the `destroyed` flag (which blocks
+   * subsequent `onMessage` deliveries) and queues an `unsubscribe`
+   * IPC behind whatever the subscribe promise resolves to. Both
+   * paths log on failure rather than swallowing silently.
+   *
+   * Returns a promise that resolves once the unsubscribe has either
+   * gone out the door or been short-circuited because no channel
+   * id was ever assigned. Callers don't need to await it — it's
+   * exposed for tests that want to assert on the post-cleanup
+   * state.
+   */
+  dispose(): Promise<void> {
+    if (this.destroyed) return Promise.resolve();
+    this.destroyed = true;
+    const inFlight = this.subscribePromise;
+    if (inFlight === null) return Promise.resolve();
+    return inFlight
+      .then((channelId) => {
+        if (channelId === null) return;
+        return this.drivers.unsubscribe(channelId).catch((err) => {
+          this.drivers.warn(
+            `[SessionChannel] Failed to unsubscribe (session=${this.sessionId}, channelId=${channelId}):`,
+            err
+          );
+        });
+      })
+      .then(() => undefined);
+  }
+
+  /** Whether `dispose()` has been called. */
+  isDestroyed(): boolean {
+    return this.destroyed;
+  }
+
+  /** Channel id once assigned by the backend, otherwise `null`. */
+  getChannelId(): number | null {
+    return this.channelId;
+  }
+}
+
+/**
+ * Subscribe to Tauri IPC Channel events for a specific session.
+ *
+ * @param sessionId - Session to subscribe to (null = no subscription)
+ * @param onEvent - Callback invoked with the raw JSON string for each event
+ */
+export function useSessionChannel(
+  sessionId: string | null,
+  onEvent: (raw: string) => void
+): void {
+  // Keep the latest `onEvent` reachable from the long-lived channel
+  // callback without retriggering the subscribe effect every time
+  // the consumer reshuffles its closure.
+  const onEventRef = useRef(onEvent);
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  }, [onEvent]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const channel = new Channel<string>();
+    const lifecycle = new SessionChannelLifecycle(
+      sessionId,
+      {
+        subscribe: () =>
+          invoke<number>("subscribe_session_events", {
+            sessionId,
+            onEvent: channel,
+          }),
+        unsubscribe: (channelId) =>
+          invoke("unsubscribe_session_events", {
+            sessionId,
+            channelId,
+          }) as Promise<void>,
+        warn: (message, error) => console.warn(message, error),
+      },
+      (raw) => onEventRef.current(raw)
+    );
+
+    channel.onmessage = (message: string) => {
+      lifecycle.onMessage(message);
+    };
+
+    lifecycle.start();
+
+    return () => {
+      // Sever the message path eagerly so even if Tauri delivers more
+      // events between now and the unsubscribe IPC landing, the
+      // dispose flag inside `onMessage` is checked AND the closure
+      // identity can be GC'd once the Channel object is released.
+      // Replacing with a no-op (rather than `null`) avoids any
+      // "missing handler" warning Tauri may print in the future.
+      channel.onmessage = () => undefined;
+      void lifecycle.dispose();
+    };
+  }, [sessionId]);
+}

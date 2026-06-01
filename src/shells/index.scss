@@ -1,0 +1,192 @@
+.window-container {
+  overflow: hidden;
+  position: relative;
+
+  /* Disable all scroll behavior */
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: none;
+  touch-action: none;
+
+  ::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  /* Title bar (traffic light) button styles */
+  .title-bar-buttons {
+    display: flex;
+    align-items: center;
+
+    div[data-tauri-drag-region] {
+      margin-left: 4px;
+    }
+
+    div.rounded-full {
+      transition: opacity 0.2s;
+
+      &:hover {
+        opacity: 0.8;
+      }
+
+      &:active {
+        opacity: 0.6;
+      }
+    }
+  }
+}
+
+/* Editor placeholder styles */
+.editor-placeholder {
+  height: 220px;
+  overflow: hidden;
+  background-color: var(--bg-1);
+  border-radius: 6px;
+
+  div {
+    font-size: 14px;
+    font-style: italic;
+  }
+}
+
+.new-empty-workspace-window {
+  overflow: hidden !important;
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+  position: static;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+.add-workitem-window {
+  overflow: hidden !important;
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+  position: static;
+  overscroll-behavior: none;
+  touch-action: none;
+
+  // Work item row styles
+  .work-item-row {
+    &:hover {
+      background-color: var(--color-fill-1);
+    }
+
+    &.selected {
+      background-color: var(--color-primary-1);
+      border-color: var(--color-primary-6);
+    }
+  }
+
+  // Mode toggle button styles
+  .mode-toggle {
+    .mode-button {
+      transition: all 0.2s ease;
+
+      &.active {
+        color: var(--color-primary-6);
+        font-weight: 500;
+      }
+
+      &:hover:not(.active) {
+        color: var(--color-text-1);
+      }
+    }
+  }
+
+  // Search input container styles
+  .search-container {
+    .search-input {
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      border-bottom: none;
+    }
+  }
+
+  // Work items list container styles
+  .work-items-container {
+    border-top: none;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+  }
+}
+
+.add-issue-window {
+  overflow: hidden !important;
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+  position: static;
+  overscroll-behavior: none;
+  touch-action: none;
+
+  // Select component styles
+
+  // Rich text editor toolbar styles
+  .editor-toolbar {
+    .toolbar-button {
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: var(--color-fill-2);
+        color: var(--color-text-1);
+      }
+
+      &.active {
+        background-color: var(--color-primary-1);
+        color: var(--color-primary-6);
+      }
+    }
+  }
+
+  // Tag button styles
+  .tag-button {
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: var(--color-fill-2);
+      border-color: var(--color-border-3);
+    }
+
+    &.active {
+      background-color: var(--color-primary-1);
+      border-color: var(--color-primary-6);
+      color: var(--color-primary-6);
+    }
+  }
+
+  // Editor textarea styles
+  textarea {
+    &::placeholder {
+      color: var(--color-text-3);
+      font-style: italic;
+    }
+
+    &:focus {
+      outline: none;
+    }
+  }
+}
+
+.user-switch-modal {
+}
+.select-repo-modal {
+}
+
+.create-session-select {
+}
+.load-session-input {
+}
+.editable-content:empty::before {
+  content: "Enter your message here. You can use @ to show files to Atlas.";
+  color: gray;
+  pointer-events: none;
+}
+.textareaBtn {
+}
+
+.typebtn {
+}

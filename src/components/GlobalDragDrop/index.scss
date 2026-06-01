@@ -1,0 +1,53 @@
+.global-drag-drop__repository-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 48px;
+  border-radius: 16px;
+  background-color: rgba(var(--bg-2), 0.95);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--color-primary-6);
+  color: var(--color-primary-6);
+}
+
+.global-drag-drop__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-primary-6);
+}
+
+.global-drag-drop__description {
+  font-size: 14px;
+  color: var(--color-text-1);
+}
+
+[data-chat-drop-target] {
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+body[data-chat-file-dragging="true"] [data-chat-drop-target] {
+  border-color: var(--color-primary-6) !important;
+  box-shadow:
+    0 0 0 1px var(--color-primary-6),
+    0 0 0 6px color-mix(in srgb, var(--color-primary-6) 14%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--color-primary-6) 7%,
+    var(--color-bg-1)
+  ) !important;
+}
+
+body[data-chat-file-dragging="true"] [data-chat-drop-target]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--color-primary-6);
+  border-radius: inherit;
+  pointer-events: none;
+}

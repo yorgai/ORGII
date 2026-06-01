@@ -1,0 +1,10 @@
+---
+source: src/key_vault/tests/key_extractor_tests.rs
+expression: result
+---
+api_key: sk_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+base_url: ~
+key_type: anthropic
+confidence: high
+notes:
+  - Found anthropic key

@@ -1,0 +1,90 @@
+/**
+ * Diff Color Tokens
+ *
+ * Centralized color system for all diff-related UI:
+ * - Editor dirty diff gutter markers
+ * - Diff view line backgrounds
+ * - Conflict editor highlighting
+ * - Merge view changes
+ *
+ * Colors match VS Code's diff styling for familiarity.
+ * Uses CSS custom properties for future theme customization.
+ */
+
+// ============================================
+// Base Colors (VS Code matching)
+// ============================================
+
+$diff-added-base: #2ea043; // Green - new/added lines
+$diff-modified-base: #0078d4; // Blue - modified lines
+$diff-deleted-base: #f85149; // Red - removed lines
+$diff-conflict-current: #2ea043; // Green - "ours" in conflicts
+$diff-conflict-incoming: #0078d4; // Blue - "theirs" in conflicts
+$diff-conflict-separator: #6c757d; // Gray - conflict separator
+
+// ============================================
+// Root CSS Custom Properties
+// Themes can override these values
+// ============================================
+
+:root {
+  // Solid colors for gutter bars
+  --diff-added-color: #{$diff-added-base};
+  --diff-modified-color: #{$diff-modified-base};
+  --diff-deleted-color: #{$diff-deleted-base};
+
+  // Line background colors (subtle, ~12-15% opacity)
+  --diff-added-bg: rgba(46, 160, 67, 0.12);
+  --diff-modified-bg: rgba(0, 120, 212, 0.1);
+  --diff-deleted-bg: rgba(248, 81, 73, 0.12);
+
+  // Stronger line backgrounds for markers/headers
+  --diff-added-bg-strong: rgba(46, 160, 67, 0.2);
+  --diff-modified-bg-strong: rgba(0, 120, 212, 0.18);
+  --diff-deleted-bg-strong: rgba(248, 81, 73, 0.18);
+
+  // Inline chunk colors (word-level diffs, ~25% opacity)
+  --diff-added-chunk: rgba(46, 160, 67, 0.25);
+  --diff-deleted-chunk: rgba(248, 81, 73, 0.25);
+
+  // Conflict-specific colors
+  --diff-conflict-current-color: #{$diff-conflict-current};
+  --diff-conflict-incoming-color: #{$diff-conflict-incoming};
+  --diff-conflict-separator-color: #{$diff-conflict-separator};
+
+  --diff-conflict-current-bg: rgba(46, 160, 67, 0.15);
+  --diff-conflict-incoming-bg: rgba(0, 120, 212, 0.15);
+  --diff-conflict-separator-bg: rgba(108, 117, 125, 0.2);
+
+  // Gutter dimensions
+  --diff-gutter-width: 4px;
+  --diff-gutter-bar-width: 2px;
+}
+
+// ============================================
+// Dark Mode Overrides
+// Slightly adjusted opacity for better visibility
+// ============================================
+
+:root[data-theme="dark"],
+.dark {
+  --diff-added-bg: rgba(46, 160, 67, 0.15);
+  --diff-modified-bg: rgba(0, 120, 212, 0.12);
+  --diff-deleted-bg: rgba(248, 81, 73, 0.15);
+
+  --diff-added-bg-strong: rgba(46, 160, 67, 0.25);
+  --diff-modified-bg-strong: rgba(0, 120, 212, 0.22);
+  --diff-deleted-bg-strong: rgba(248, 81, 73, 0.22);
+
+  --diff-added-chunk: rgba(46, 160, 67, 0.3);
+  --diff-deleted-chunk: rgba(248, 81, 73, 0.3);
+
+  --diff-conflict-current-bg: rgba(46, 160, 67, 0.12);
+  --diff-conflict-incoming-bg: rgba(0, 120, 212, 0.12);
+  --diff-conflict-separator-bg: rgba(108, 117, 125, 0.18);
+}
+
+// ============================================
+// Note: Mixins are in _diff-mixins.scss
+// Import that file in component SCSS files
+// ============================================

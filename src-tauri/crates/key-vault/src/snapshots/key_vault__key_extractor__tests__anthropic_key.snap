@@ -1,0 +1,11 @@
+---
+source: src/key_vault/tests/key_extractor_tests.rs
+expression: result
+---
+api_key: sk_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+base_url: "https://proxy.example.com/api"
+key_type: claude_code
+confidence: high
+notes:
+  - Found claude_code key
+  - Found base URL

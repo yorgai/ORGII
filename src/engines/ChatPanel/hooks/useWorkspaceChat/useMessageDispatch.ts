@@ -1,0 +1,132 @@
+/**
+ * useMessageDispatch
+ *
+ * Encapsulates message routing logic for all session types via the
+ * dispatch registry. Each session category (rust_agent, cli_agent)
+ * has its own dispatcher; this hook gathers React dependencies and
+ * delegates to the correct one.
+ */
+import { useSetAtom } from "jotai";
+import { useCallback } from "react";
+
+import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
+import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import { SessionService } from "@src/engines/SessionCore/services/SessionService";
+import { createSyntheticUserEvent } from "@src/engines/SessionCore/sync/adapters/shared";
+import { markSessionActive } from "@src/store/session";
+import {
+  lastUserMessageAtom,
+  sessionRuntimeStatusAtom,
+} from "@src/store/session/cliSessionStatusAtom";
+import { creatorDefaultExecModeAtom } from "@src/store/session/creatorDefaultExecModeAtom";
+import {
+  type LastModelSelection,
+  creatorDefaultModelSelectionAtom,
+} from "@src/store/session/creatorDefaultModelAtom";
+import { sessionMapAtom } from "@src/store/session/sessionAtom";
+import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
+import { resolveModelForMessage } from "@src/util/session/resolveModelForMessage";
+import { selectionFromSession } from "@src/util/session/selectionFromSession";
+import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
+
+interface UseMessageDispatchOptions {
+  getSessionId: () => string | null;
+}
+
+export function useMessageDispatch(options: UseMessageDispatchOptions) {
+  const { getSessionId } = options;
+  const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
+  const setLastUserMessage = useSetAtom(lastUserMessageAtom);
+
+  const addUserMessage = useCallback(
+    async (content: string, imageDataUrls?: string[]): Promise<void> => {
+      const sessionId = getSessionId();
+      if (!sessionId) {
+        throw new Error(
+          "[useMessageDispatch] addUserMessage: no active sessionId"
+        );
+      }
+      const userEvent = createSyntheticUserEvent(sessionId, content, {
+        imageDataUrls,
+      });
+      await eventStoreProxy.append([userEvent], sessionId);
+
+      // Capture the exact text/images the user sent so the cancel-restore
+      // path (Scenario A: cancel before any assistant output) can put it
+      // back into the input box.
+      setLastUserMessage({ displayContent: content, imageDataUrls });
+    },
+    [getSessionId, setLastUserMessage]
+  );
+
+  const dispatchMessageBySessionType = useCallback(
+    async (
+      sessionId: string,
+      content: string,
+      imageDataUrls?: string[],
+      modelSelectionOverride?: LastModelSelection
+    ): Promise<void> => {
+      // Read directly from the store at call time to avoid stale-closure
+      // race: if the user changes the mode pill and immediately sends a
+      // message in the same React render batch, useAtomValue subscriptions
+      // haven't re-rendered yet, so a closure-captured sessionMap would
+      // still hold the pre-patch agentExecMode. getInstrumentedStore() reads
+      // the live atom value synchronously, bypassing the render cycle.
+      const store = getInstrumentedStore();
+      const sessionMap = store.get(sessionMapAtom);
+      const creatorDefaultSelection = store.get(
+        creatorDefaultModelSelectionAtom
+      );
+      const creatorDefaultMode = store.get(creatorDefaultExecModeAtom);
+
+      const session = sessionMap.get(sessionId);
+      const lastModelSelection: LastModelSelection | null =
+        modelSelectionOverride ??
+        selectionFromSession(session, creatorDefaultSelection);
+      const agentExecMode: AgentExecMode =
+        (session?.agentExecMode as AgentExecMode | undefined) ??
+        creatorDefaultMode;
+      const { model, accountId } = resolveModelForMessage(lastModelSelection);
+
+      // Optimistically mark the session as running so the planning indicator
+      // (usePlanningIndicator) starts immediately on the cold-start path too.
+      // Mirrors the queued-dispatch path in useQueueDispatch; without this the
+      // very first message on a fresh session has no "Planning next step..."
+      // line because isSessionActive stays false until Rust's first
+      // status_changed event arrives. Rust will overwrite this the moment a
+      // real status event lands; failures below reset it back to "idle".
+      setSessionRuntimeStatus("running");
+
+      try {
+        await SessionService.sendMessage({
+          sessionId,
+          content,
+          model,
+          accountId,
+          mode: agentExecMode,
+          imageDataUrls,
+        });
+        // Bump the row's `updated_at` to "now" so the sidebar /
+        // Kanban "recent activity" views float this session to the
+        // top immediately. The backend's authoritative timestamp
+        // lands on the next session list refresh and overwrites
+        // this — see `markSessionActive` doc for the policy.
+        markSessionActive(sessionId);
+        if (isCursorIdeSession(sessionId)) {
+          setSessionRuntimeStatus("idle");
+        }
+      } catch (err) {
+        // IPC failed before Rust even received the message — reset so the UI
+        // does not stay stuck in the optimistic "running" state.
+        setSessionRuntimeStatus("idle");
+        throw err;
+      }
+    },
+    [setSessionRuntimeStatus]
+  );
+
+  return {
+    addUserMessage,
+    dispatchMessageBySessionType,
+  };
+}

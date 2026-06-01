@@ -1,0 +1,211 @@
+import { z } from "zod";
+
+import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
+
+import { ACTION_ID } from "../../actionIds";
+import { defineZodAction } from "../../schema/defineZodAction";
+
+const NAVIGATION_SHORTCUT_OPTIONS = {
+  toggleChatPanelMaximizedWhenActive: true,
+} as const;
+
+async function getWorkStationViewService() {
+  const { WorkStationViewService } = await import("@src/services/workStation");
+  return WorkStationViewService;
+}
+
+export const workstationToggleChatFocus = defineZodAction(
+  {
+    id: ACTION_ID.WORKSTATION_TOGGLE_CHAT_FOCUS,
+    category: "view",
+    description: "Focus the Workstation chat panel or restore Workstation",
+    params: z.object({}),
+    shortcut: getShortcutKeys("maximize_chat"),
+    tags: ["workstation", "chat", "view"],
+    examples: [
+      "focus chat panel",
+      "hide work station",
+      "show work station",
+      "restore work station",
+    ],
+  },
+  async () => {
+    const workStationViewService = await getWorkStationViewService();
+    const success = await workStationViewService.toggleChatPanelMaximized();
+    return success
+      ? { success: true, message: "Toggled Workstation chat focus" }
+      : { success: false, message: "Workstation chat focus is not available" };
+  }
+);
+
+export const workstationToggleChatPanelVisibility = defineZodAction(
+  {
+    id: ACTION_ID.WORKSTATION_TOGGLE_CHAT_PANEL_VISIBILITY,
+    category: "view",
+    description: "Maximize Workstation or restore the Chat Panel",
+    params: z.object({}),
+    shortcut: getShortcutKeys("maximize_work_station"),
+    tags: ["workstation", "chat", "view"],
+    examples: [
+      "maximize work station",
+      "hide chat panel",
+      "restore chat panel",
+      "show chat panel",
+    ],
+  },
+  async () => {
+    const workStationViewService = await getWorkStationViewService();
+    const success = await workStationViewService.showWorkStation();
+    return success
+      ? { success: true, message: "Toggled Workstation chat panel" }
+      : { success: false, message: "Workstation chat panel is not available" };
+  }
+);
+
+export const workstationToggleSidebar = defineZodAction(
+  {
+    id: ACTION_ID.WORKSTATION_TOGGLE_SIDEBAR,
+    category: "view",
+    description:
+      "Toggle the Workstation sidebar between collapsed and expanded",
+    params: z.object({}),
+    shortcut: getShortcutKeys("toggle_sidebar"),
+    tags: ["workstation", "work-station-sidebar", "tool-sidebar", "view"],
+    examples: [
+      "toggle work station sidebar",
+      "hide work station sidebar",
+      "show work station sidebar",
+      "toggle tool sidebar",
+    ],
+  },
+  async () => {
+    const workStationViewService = await getWorkStationViewService();
+    const success = await workStationViewService.toggleWorkstationSidebar();
+    return success
+      ? { success: true, message: "Toggled Workstation sidebar" }
+      : { success: false, message: "Workstation sidebar is not available" };
+  }
+);
+
+export const workstationOpenCodeEditorTab = defineZodAction(
+  {
+    id: ACTION_ID.WORKSTATION_OPEN_CODE_EDITOR_TAB,
+    category: "navigation",
+    description: "Open the Code Editor and focus a specific pinned tab",
+    params: z.object({
+      tabId: z.string().min(1).describe("Code Editor tab ID to focus"),
+    }),
+    tags: ["workstation", "code-editor", "tab"],
+    examples: ["open code editor tab", "focus code editor tab"],
+  },
+  async ({ tabId }) => {
+    const workStationViewService = await getWorkStationViewService();
+    const success = await workStationViewService.openCodeEditorTab(tabId);
+    return success
+      ? { success: true, message: "Opened Code Editor tab" }
+      : { success: false, message: "Code Editor tab is not available" };
+  }
+);
+
+export const workstationOpenFileFolderTab = defineZodAction(
+  {
+    id: ACTION_ID.WORKSTATION_OPEN_FILE_FOLDER_TAB,
+    category: "navigation",
+    description:
+      "Open the last visited regular file tab or the default File Folder tab",
+    params: z.object({}),
+    shortcut: getShortcutKeys("open_file_folder_tab"),
+    tags: ["workstation", "code-editor", "file", "folder"],
+    examples: ["open file folder", "go to last file", "show explorer"],
+  },
+  async () => {
+    const workStationViewService = await getWorkStationViewService();
+    const success = await workStationViewService.openFileFolderTab(
+      NAVIGATION_SHORTCUT_OPTIONS
+    );
+    return success
+      ? { success: true, message: "Opened File Folder tab" }
+      : { success: false, message: "File Folder tab is not available" };
+  }
+);
+
+export const workstationOpenSourceControlTab = defineZodAction(
+  {
+    id: ACTION_ID.WORKSTATION_OPEN_SOURCE_CONTROL_TAB,
+    category: "navigation",
+    description: "Open the Code Editor Source Control tab",
+    params: z.object({}),
+    shortcut: getShortcutKeys("open_source_control_tab"),
+    tags: ["workstation", "code-editor", "source-control", "git"],
+    examples: ["open source control", "show git changes"],
+  },
+  async () => {
+    const workStationViewService = await getWorkStationViewService();
+    const success = await workStationViewService.openSourceControlTab(
+      NAVIGATION_SHORTCUT_OPTIONS
+    );
+    return success
+      ? { success: true, message: "Opened Source Control tab" }
+      : { success: false, message: "Source Control tab is not available" };
+  }
+);
+
+export const workstationOpenSearchSidebar = defineZodAction(
+  {
+    id: ACTION_ID.WORKSTATION_OPEN_SEARCH_SIDEBAR,
+    category: "navigation",
+    description:
+      "Open the Code Editor Search sidebar and focus the search input",
+    params: z.object({
+      query: z
+        .string()
+        .optional()
+        .describe("Optional search query to populate"),
+    }),
+    shortcut: getShortcutKeys("search_files"),
+    tags: ["workstation", "code-editor", "search", "sidebar"],
+    examples: ["open search sidebar", "search in files", "focus search"],
+  },
+  async ({ query }) => {
+    const workStationViewService = await getWorkStationViewService();
+    const success = await workStationViewService.openSearchSidebar(
+      query,
+      NAVIGATION_SHORTCUT_OPTIONS
+    );
+    return success
+      ? { success: true, message: "Opened Search sidebar" }
+      : { success: false, message: "Search sidebar is not available" };
+  }
+);
+
+export const workstationOpenTerminalTab = defineZodAction(
+  {
+    id: ACTION_ID.WORKSTATION_OPEN_TERMINAL_TAB,
+    category: "navigation",
+    description: "Open the Code Editor Terminal tab",
+    params: z.object({}),
+    shortcut: getShortcutKeys("open_terminal_tab"),
+    tags: ["workstation", "code-editor", "terminal"],
+    examples: ["open terminal tab", "show terminal"],
+  },
+  async () => {
+    const workStationViewService = await getWorkStationViewService();
+    const success = await workStationViewService.openTerminalTab(
+      NAVIGATION_SHORTCUT_OPTIONS
+    );
+    return success
+      ? { success: true, message: "Opened Terminal tab" }
+      : { success: false, message: "Terminal tab is not available" };
+  }
+);
+
+export const workStationViewZodActions = [
+  workstationToggleChatFocus,
+  workstationToggleChatPanelVisibility,
+  workstationToggleSidebar,
+  workstationOpenCodeEditorTab,
+  workstationOpenFileFolderTab,
+  workstationOpenSourceControlTab,
+  workstationOpenSearchSidebar,
+  workstationOpenTerminalTab,
+];

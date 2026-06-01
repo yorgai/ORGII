@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "welcome": {
+      "title": "欢迎",
+      "description": "开始使用 ORGII"
+    },
+    "devPassport": {
+      "description": "您的开发者身份"
+    },
+    "github": {
+      "title": "GitHub",
+      "description": "连接您的账户"
+    },
+    "workspace": {
+      "title": "项目",
+      "description": "打开或克隆项目"
+    },
+    "theme": {
+      "title": "主题",
+      "description": "自定义外观"
+    },
+    "complete": {
+      "title": "完成",
+      "description": "准备就绪"
+    }
+  },
+  "welcome": {
+    "title": "欢迎使用 ORGII",
+    "description": "让我们通过几个简单的步骤来配置您的工作区。"
+  },
+  "devPassport": {
+    "title": "设置 Dev Passport",
+    "description": "每个 Vibe Engineer 都需要一个身份。",
+    "role": "Vibe Engineer",
+    "codeName": "代号",
+    "codeNamePlaceholder": "输入您的代号...",
+    "randomNameTooltip": "生成随机代号",
+    "avatar": "头像",
+    "selectImage": "选择图片",
+    "avatarHint": "您在项目中的视觉身份",
+    "generateButton": "生成 Vibe Passport",
+    "passportTitle": "您的 Vibe Passport",
+    "passportWelcome": "欢迎，{{name}}。您的身份已准备就绪。"
+  },
+  "github": {
+    "title": "连接 GitHub",
+    "description": "连接您的 GitHub 账户，直接从 ORGII 访问仓库、创建提交和管理拉取请求。",
+    "connectButton": "连接 GitHub 账户",
+    "hint": "您也可以稍后在设置 > 集成中连接 GitHub"
+  },
+  "workspace": {
+    "title": "打开项目",
+    "description": "打开本地文件夹或克隆仓库以开始工作。ORGII 将自动索引您的代码库，提供智能代码辅助。",
+    "openFolder": "打开文件夹",
+    "cloneRepo": "克隆仓库",
+    "hint": "您可以跳过此步骤，稍后再打开项目"
+  },
+  "theme": {
+    "title": "选择主题",
+    "description": "选择适合您偏好的主题。您可以随时在设置中更改。",
+    "light": "浅色",
+    "dark": "深色"
+  },
+  "complete": {
+    "title": "一切就绪！",
+    "description": "您的工作区已准备就绪。开始新的 Session，使用 AI 辅助进行编码，或探索应用程序以发现所有功能。",
+    "startSession": "开始新 Session"
+  },
+  "navigation": {
+    "skipSetup": "跳过设置",
+    "getStarted": "开始使用",
+    "goToSettings": "前往设置"
+  }
+}

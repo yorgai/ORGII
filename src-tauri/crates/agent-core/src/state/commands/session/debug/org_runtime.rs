@@ -1,0 +1,414 @@
+//! Debug-only Tauri commands for Agent Org runtime wiring.
+//!
+//! These commands let E2E specs assert the live Agent Org execution path:
+//! org-run context capture, org-only tool registration, typed inbox delivery,
+//! and task persistence. They intentionally expose only the Agent Org
+//! orchestration tools, not arbitrary tool execution.
+
+use std::sync::Arc;
+
+use serde::Serialize;
+use serde_json::Value;
+
+use crate::coordination::agent_inbox::{
+    AgentInboxRecord, AgentInboxStore, AgentMessage, InsertInboxParams, MemberIdleReason,
+    SYSTEM_SENDER_ID,
+};
+use crate::coordination::agent_org_runs::{
+    AgentOrgRunContext, AgentOrgRunStore, COORDINATOR_MEMBER_ID,
+};
+use crate::coordination::agent_org_tasks::{AgentOrgTaskStore, Task};
+use crate::definitions::orgs::AgentOrgsStore;
+use crate::session::persistence;
+use crate::state::AgentAppState;
+use crate::tools::impls::orchestration::agent_org::tasks::{
+    TaskCreateTool, TaskGetTool, TaskListTool, TaskToolsContext, TaskUpdateTool,
+};
+use crate::tools::impls::orchestration::org_send_message::{
+    NoopInboxWakeHook, NoopSelfAbortHook, OrgSendMessageTool,
+};
+use crate::tools::names;
+use crate::tools::traits::{Tool, ToolExecuteResult};
+
+const DETACHED_ORG_RUNTIME_TOOL_NAMES: &[&str] = &[
+    names::ORG_SEND_MESSAGE,
+    names::TASK_CREATE,
+    names::TASK_UPDATE,
+    names::TASK_LIST,
+    names::TASK_GET,
+];
+
+const SESSION_ORG_RUNTIME_TOOL_NAMES: &[&str] = &[
+    names::ORG_SEND_MESSAGE,
+    names::TASK_CREATE,
+    names::TASK_UPDATE,
+    names::TASK_LIST,
+    names::TASK_GET,
+    names::CREATE_PLAN,
+];
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DebugOrgToolResult {
+    pub ok: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result: Option<ToolExecuteResult>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+impl DebugOrgToolResult {
+    fn from_tool_result(result: Result<ToolExecuteResult, String>) -> Self {
+        match result {
+            Ok(result) => Self {
+                ok: true,
+                result: Some(result),
+                error: None,
+            },
+            Err(error) => Self {
+                ok: false,
+                result: None,
+                error: Some(error),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionOrgRuntimeSnapshot {
+    pub session_id: String,
+    pub agent_id: String,
+    pub member_id: Option<String>,
+    pub is_coordinator: bool,
+    pub is_org_member: bool,
+    pub org_context: Option<AgentOrgRunContext>,
+    pub registered_org_tool_names: Vec<String>,
+    pub requested_exec_mode: Option<String>,
+    pub has_plan_slot: bool,
+    pub has_pre_plan_mode: bool,
+}
+
+#[tauri::command]
+pub async fn debug_session_org_runtime_snapshot(
+    state: tauri::State<'_, AgentAppState>,
+    session_id: String,
+) -> Result<SessionOrgRuntimeSnapshot, String> {
+    let session = state
+        .get_session(&session_id)
+        .await
+        .ok_or_else(|| format!("session not found: {session_id}"))?;
+
+    let runtime = session
+        .runtime
+        .read()
+        .await
+        .clone()
+        .ok_or_else(|| format!("session runtime not initialized: {session_id}"))?;
+
+    let agent_id = session.definition.id.clone();
+    let org_context = runtime.agent_org_context.clone();
+    let member_id = persistence::get_session(&session_id)
+        .map_err(|err| err.to_string())?
+        .and_then(|record| record.org_member_id);
+    let is_coordinator =
+        member_id.as_deref() == Some(crate::coordination::agent_org_runs::COORDINATOR_MEMBER_ID);
+    let is_org_member = org_context.is_some() && member_id.is_some() && !is_coordinator;
+
+    let mut registered_org_tool_names: Vec<String> = SESSION_ORG_RUNTIME_TOOL_NAMES
+        .iter()
+        .copied()
+        .filter(|name| runtime.tool_registry.has(name))
+        .map(str::to_string)
+        .collect();
+    registered_org_tool_names.sort();
+
+    let requested_exec_mode = session
+        .requested_exec_mode_cache
+        .peek(&session.id)
+        .map(|mode| mode.as_str().to_string());
+    let has_plan_slot = session.plan_slot_cache.get(&session.id).is_some();
+    let has_pre_plan_mode = session.pre_plan_mode_cache.get(&session.id).is_some();
+
+    Ok(SessionOrgRuntimeSnapshot {
+        session_id,
+        agent_id,
+        member_id,
+        is_coordinator,
+        is_org_member,
+        org_context,
+        registered_org_tool_names,
+        requested_exec_mode,
+        has_plan_slot,
+        has_pre_plan_mode,
+    })
+}
+
+#[tauri::command]
+pub async fn debug_session_execute_tool(
+    state: tauri::State<'_, AgentAppState>,
+    session_id: String,
+    tool_name: String,
+    params: Value,
+) -> Result<DebugOrgToolResult, String> {
+    if !matches!(tool_name.as_str(), names::READ_FILE) {
+        return Err(format!(
+            "debug_session_execute_tool only allows safe audited tools [read_file]; got '{tool_name}'"
+        ));
+    }
+
+    let session = state
+        .get_session(&session_id)
+        .await
+        .ok_or_else(|| format!("session not found: {session_id}"))?;
+
+    let runtime = session
+        .runtime
+        .read()
+        .await
+        .clone()
+        .ok_or_else(|| format!("session runtime not initialized: {session_id}"))?;
+
+    let mut result = runtime
+        .tool_registry
+        .execute(&tool_name, params.clone())
+        .await
+        .map_err(|err| err.to_string());
+
+    if tool_name == names::READ_FILE {
+        if let Ok(ref mut rich_result) = result {
+            if let Some(path) = params.get("path").and_then(|value| value.as_str()) {
+                if let Some(extra) = runtime
+                    .policy_context_activator
+                    .as_deref()
+                    .and_then(|activator| activator.augment_for_read_paths(&[path.to_string()]))
+                {
+                    rich_result.text.push_str(&extra);
+                }
+            }
+        }
+    }
+
+    Ok(DebugOrgToolResult::from_tool_result(result))
+}
+
+#[tauri::command]
+pub async fn debug_session_execute_org_tool(
+    state: tauri::State<'_, AgentAppState>,
+    session_id: String,
+    tool_name: String,
+    params: Value,
+) -> Result<DebugOrgToolResult, String> {
+    if !SESSION_ORG_RUNTIME_TOOL_NAMES
+        .iter()
+        .any(|name| *name == tool_name)
+    {
+        return Err(format!(
+            "debug_session_execute_org_tool only allows Agent Org session tools [{}]; got '{tool_name}'",
+            SESSION_ORG_RUNTIME_TOOL_NAMES.join(", ")
+        ));
+    }
+
+    let session = state
+        .get_session(&session_id)
+        .await
+        .ok_or_else(|| format!("session not found: {session_id}"))?;
+
+    let runtime = session
+        .runtime
+        .read()
+        .await
+        .clone()
+        .ok_or_else(|| format!("session runtime not initialized: {session_id}"))?;
+
+    if runtime.agent_org_context.is_none() {
+        return Err(format!(
+            "session '{session_id}' is not participating in an Agent Org run"
+        ));
+    }
+
+    Ok(DebugOrgToolResult::from_tool_result(
+        runtime
+            .tool_registry
+            .execute(&tool_name, params)
+            .await
+            .map_err(|err| err.to_string()),
+    ))
+}
+
+#[tauri::command]
+pub async fn debug_agent_org_execute_tool_as_agent(
+    org_store: tauri::State<'_, AgentOrgsStore>,
+    run_id: String,
+    sender_member_id: String,
+    tool_name: String,
+    params: Value,
+) -> Result<DebugOrgToolResult, String> {
+    if !DETACHED_ORG_RUNTIME_TOOL_NAMES
+        .iter()
+        .any(|name| *name == tool_name)
+    {
+        return Err(format!(
+            "debug_agent_org_execute_tool_as_agent only allows detached Agent Org tools [{}]; got '{tool_name}'",
+            DETACHED_ORG_RUNTIME_TOOL_NAMES.join(", ")
+        ));
+    }
+
+    let org_context = AgentOrgRunStore::context_for_run(&run_id, &org_store)?
+        .ok_or_else(|| format!("Agent Org run not found: {run_id}"))?;
+    let sender = org_context
+        .participant_by_member_id(&sender_member_id)
+        .ok_or_else(|| {
+            format!("sender_member_id '{sender_member_id}' not found in this Agent Org")
+        })?;
+    let sender_agent_id = sender.agent_id.clone();
+    let org_context = Arc::new(org_context);
+
+    let result = match tool_name.as_str() {
+        names::ORG_SEND_MESSAGE => OrgSendMessageTool::with_hooks(
+            Arc::clone(&org_context),
+            sender_member_id.clone(),
+            Arc::new(NoopInboxWakeHook),
+            Arc::new(NoopSelfAbortHook),
+        )
+        .execute(params)
+        .await
+        .map_err(|err| err.to_string()),
+        names::TASK_CREATE => {
+            let context =
+                task_tools_context(org_context, sender_agent_id, sender_member_id.clone());
+            TaskCreateTool::new(context)
+                .execute(params)
+                .await
+                .map_err(|err| err.to_string())
+        }
+        names::TASK_UPDATE => {
+            let context =
+                task_tools_context(org_context, sender_agent_id, sender_member_id.clone());
+            TaskUpdateTool::new(context)
+                .execute(params)
+                .await
+                .map_err(|err| err.to_string())
+        }
+        names::TASK_LIST => {
+            let context =
+                task_tools_context(org_context, sender_agent_id, sender_member_id.clone());
+            TaskListTool::new(context)
+                .execute(params)
+                .await
+                .map_err(|err| err.to_string())
+        }
+        names::TASK_GET => {
+            let context =
+                task_tools_context(org_context, sender_agent_id, sender_member_id.clone());
+            TaskGetTool::new(context)
+                .execute(params)
+                .await
+                .map_err(|err| err.to_string())
+        }
+        _ => Err(format!("unsupported Agent Org tool: {tool_name}")),
+    };
+
+    Ok(DebugOrgToolResult::from_tool_result(result))
+}
+
+fn task_tools_context(
+    org_context: Arc<AgentOrgRunContext>,
+    caller_agent_id: String,
+    caller_member_id: String,
+) -> Arc<TaskToolsContext> {
+    Arc::new(TaskToolsContext {
+        org_context,
+        caller_agent_id,
+        caller_member_id,
+        wake_hook: Arc::new(NoopInboxWakeHook),
+    })
+}
+
+#[tauri::command]
+pub async fn debug_agent_org_emit_member_idle(
+    org_store: tauri::State<'_, AgentOrgsStore>,
+    run_id: String,
+    member_id: String,
+    reason: String,
+    failure_reason: Option<String>,
+    current_mode: Option<String>,
+) -> Result<Value, String> {
+    let reason = match reason.as_str() {
+        "available" => MemberIdleReason::Available,
+        "interrupted" => MemberIdleReason::Interrupted,
+        "failed" => MemberIdleReason::Failed,
+        other => {
+            return Err(format!(
+                "reason must be one of available|interrupted|failed (got {other:?})"
+            ));
+        }
+    };
+    if reason == MemberIdleReason::Failed
+        && failure_reason
+            .as_deref()
+            .map(str::trim)
+            .unwrap_or_default()
+            .is_empty()
+    {
+        return Err("failure_reason is required when reason is failed".to_string());
+    }
+    let current_mode = match current_mode.as_deref() {
+        Some(value) => Some(crate::session::AgentExecMode::parse(value).ok_or_else(|| {
+            format!("current_mode must be a known AgentExecMode (got {value:?})")
+        })?),
+        None => None,
+    };
+    let context = AgentOrgRunStore::context_for_run(&run_id, &org_store)?
+        .ok_or_else(|| format!("Agent Org run not found: {run_id}"))?;
+    let member = context
+        .participant_by_member_id(&member_id)
+        .ok_or_else(|| format!("member_id '{member_id}' not found in Agent Org run '{run_id}'"))?;
+    let member_name = if member.member_id == COORDINATOR_MEMBER_ID {
+        context.coordinator_name.clone()
+    } else {
+        context
+            .members
+            .iter()
+            .find(|candidate| candidate.member_id == member.member_id)
+            .map(|candidate| candidate.name.clone())
+            .unwrap_or_else(|| member.member_id.clone())
+    };
+    let message = AgentMessage::MemberIdle {
+        member_id: member.member_id.clone(),
+        member_name,
+        reason,
+        current_mode,
+        summary: None,
+        failure_reason,
+    };
+    message.validate()?;
+
+    let before_count = AgentInboxStore::list_by_run(&run_id)?.len();
+    AgentInboxStore::insert(InsertInboxParams {
+        recipient_agent_id: context.coordinator_agent_id.clone(),
+        recipient_member_id: Some(COORDINATOR_MEMBER_ID.to_string()),
+        sender_agent_id: SYSTEM_SENDER_ID.to_string(),
+        sender_member_id: None,
+        org_run_id: Some(run_id.clone()),
+        message,
+    })?;
+    let after_count = AgentInboxStore::list_by_run(&run_id)?.len();
+
+    Ok(serde_json::json!({
+        "ok": true,
+        "emitted": after_count > before_count,
+        "beforeCount": before_count,
+        "afterCount": after_count,
+    }))
+}
+
+#[tauri::command]
+pub async fn debug_agent_org_inbox_list(run_id: String) -> Result<Vec<AgentInboxRecord>, String> {
+    AgentInboxStore::list_by_run(&run_id)
+}
+
+#[tauri::command]
+pub async fn debug_agent_org_tasks_list(run_id: String) -> Result<Vec<Task>, String> {
+    AgentOrgTaskStore::list(&run_id)
+}

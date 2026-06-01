@@ -1,0 +1,20 @@
+[package]
+name = "bin_provider_key_check"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Headless provider API key validation harness. Reuses `key_vault`'s
+# `run_validate_key` so CI uses the exact same validators the in-app
+# Key Vault wizard does. No back-edge into `app` — all the GUI code
+# stays out.
+
+[[bin]]
+name = "provider-key-check"
+path = "src/main.rs"
+
+[dependencies]
+key_vault = { path = "../key-vault" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+tokio = { workspace = true }

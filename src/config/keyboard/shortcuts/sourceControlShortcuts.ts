@@ -1,0 +1,60 @@
+import type { ShortcutEntry } from "./types";
+
+export const SOURCE_CONTROL_SHORTCUTS: ShortcutEntry[] = [
+  {
+    id: "git_commit",
+    command: "Commit changes",
+    macKeys: "⌘+Enter",
+    winKeys: "Ctrl+Enter",
+    scope: "source-control",
+    category: "source-control",
+  },
+  {
+    id: "git_stage_all",
+    command: "Stage all changes",
+    macKeys: "⌘K",
+    winKeys: "Ctrl+K",
+    scope: "source-control",
+    category: "source-control",
+  },
+  {
+    id: "git_unstage_all",
+    command: "Unstage all changes",
+    macKeys: "⇧⌘K",
+    winKeys: "Ctrl+Shift+K",
+    scope: "source-control",
+    category: "source-control",
+  },
+  {
+    id: "git_refresh",
+    command: "Refresh git status",
+    macKeys: "⌘R",
+    winKeys: "Ctrl+R",
+    scope: "source-control",
+    category: "source-control",
+  },
+  {
+    id: "git_toggle_stage",
+    command: "Stage/unstage file",
+    macKeys: "Space",
+    winKeys: "Space",
+    scope: "source-control",
+    category: "source-control",
+  },
+  {
+    id: "git_open_diff",
+    command: "Open diff",
+    macKeys: "Enter",
+    winKeys: "Enter",
+    scope: "source-control",
+    category: "source-control",
+  },
+  {
+    id: "git_discard",
+    command: "Discard changes",
+    macKeys: "⌫",
+    winKeys: "Delete",
+    scope: "source-control",
+    category: "source-control",
+  },
+];

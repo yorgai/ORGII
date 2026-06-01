@@ -1,0 +1,505 @@
+/**
+ * MultiRootSourceControlContent
+ *
+ * Renders per-folder source control sections for multi-root workspaces.
+ * Each workspace folder gets its own independent git status fetch via
+ * usePerRepoSourceControl (HTTP API per repo), NOT the global
+ * gitStatusAtom which only tracks the primary repo.
+ *
+ * PERFORMANCE: Each folder section only mounts its hook when expanded (lazy).
+ */
+import { useAtomValue } from "jotai";
+import React, {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useTranslation } from "react-i18next";
+
+import type { GitWorktreeEntry } from "@src/api/http/git/types";
+import { FolderHeaderRow } from "@src/modules/WorkStation/shared/FolderHeaderRow";
+import { FOLDER_HEADER } from "@src/modules/WorkStation/shared/tokens";
+import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import { workspaceGitStatusMapAtom } from "@src/store/git";
+import { reposAtom } from "@src/store/repo";
+import { activeFolderAtom } from "@src/store/workspace/derived";
+import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
+import type { GitFile } from "@src/types/git/types";
+import type { GitRepositoryStatus } from "@src/types/session/steps";
+import type { WorkspaceFolder } from "@src/types/workspace";
+
+import {
+  type UsePerRepoSourceControlResult,
+  usePerRepoSourceControl,
+} from "../../hooks/usePerRepoSourceControl";
+import SourceControlContent from "../SourceControlContent";
+import { WorktreeSourceControlSection } from "../WorktreeSourceControlSection";
+
+// ============================================
+// Types
+// ============================================
+
+export interface MultiRootSourceControlContentProps {
+  workspaceFolders: WorkspaceFolder[];
+  onGitFileSelect?: (file: GitFile) => void;
+  onGitFilesChange?: (files: GitFile[], scopeRepoRoot: string) => void;
+  onGitHistorySelectionChange?: (
+    selection: SourceControlHistorySelection
+  ) => void;
+  showFilter: boolean;
+  viewMode: "list-tree" | "list";
+  worktrees?: GitWorktreeEntry[];
+  navigateWithoutSelecting?: boolean;
+  /** Working-tree section filter forwarded to every per-folder pane. */
+  sectionFilter?: "uncommitted" | "staged" | "unstaged";
+}
+
+export interface MultiRootSourceControlContentHandle {
+  refresh: () => Promise<void>;
+}
+
+// ============================================
+// Per-folder section header + lazy content
+// ============================================
+
+export interface FolderSectionHandle {
+  refresh: () => Promise<void>;
+}
+
+function computeChangeCount(status: GitRepositoryStatus | undefined): number {
+  if (!status) return 0;
+  const files = status.working_directory?.files ?? [];
+  const staged = files.filter((file) => file.staged).length;
+  const unstaged = files.filter(
+    (file) => !file.staged && file.status !== "?"
+  ).length;
+  const untracked = files.filter((file) => file.status === "?").length;
+  return staged + unstaged + untracked;
+}
+
+function toAbsoluteFolderFile(file: GitFile, folderPath: string): GitFile {
+  const absolutePath = file.path.startsWith("/")
+    ? file.path
+    : `${folderPath}/${file.path}`;
+  return { ...file, path: absolutePath, repoRoot: folderPath };
+}
+
+function normalizeFsPath(path: string | undefined): string {
+  if (!path) return "";
+  const stripped = path.startsWith("file://")
+    ? path.replace("file://", "")
+    : path;
+  return stripped.replace(/\/+$/, "");
+}
+
+interface FolderSectionProps {
+  folder: WorkspaceFolder;
+  onGitFileSelect?: (file: GitFile) => void;
+  onGitFilesChange?: (files: GitFile[], scopeRepoRoot: string) => void;
+  onGitHistorySelectionChange?: (
+    selection: SourceControlHistorySelection
+  ) => void;
+  showFilter: boolean;
+  viewMode: "list-tree" | "list";
+  navigateWithoutSelecting?: boolean;
+  defaultExpanded: boolean;
+  isActive: boolean;
+  changeCount: number;
+  sectionFilter?: "uncommitted" | "staged" | "unstaged";
+}
+
+const FolderSection = React.forwardRef<FolderSectionHandle, FolderSectionProps>(
+  (
+    {
+      folder,
+      onGitFileSelect,
+      onGitFilesChange,
+      onGitHistorySelectionChange,
+      showFilter,
+      viewMode,
+      navigateWithoutSelecting,
+      defaultExpanded,
+      isActive,
+      changeCount,
+      sectionFilter,
+    },
+    ref
+  ) => {
+    const [expanded, setExpanded] = useState(defaultExpanded || isActive);
+    const [branchName, setBranchName] = useState<string | undefined>();
+    const contentRef = useRef<FolderSectionContentHandle>(null);
+    const [prevActive, setPrevActive] = useState(isActive);
+
+    if (isActive !== prevActive) {
+      setPrevActive(isActive);
+      if (isActive && !expanded) {
+        setExpanded(true);
+      }
+    }
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        refresh: async () => {
+          await contentRef.current?.refresh();
+        },
+      }),
+      []
+    );
+
+    const toggle = useCallback(() => setExpanded((prev) => !prev), []);
+
+    return (
+      <div
+        className={`${FOLDER_HEADER.section} flex flex-col ${
+          expanded ? "min-h-0 flex-1 overflow-hidden" : "flex-shrink-0"
+        }`}
+      >
+        <FolderHeaderRow
+          name={folder.name}
+          expanded={expanded}
+          onToggle={toggle}
+          branchName={branchName}
+          badgeCount={changeCount}
+        />
+
+        {expanded && (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <FolderSectionContent
+              ref={contentRef}
+              folder={folder}
+              onGitFileSelect={onGitFileSelect}
+              onGitFilesChange={onGitFilesChange}
+              onGitHistorySelectionChange={onGitHistorySelectionChange}
+              showFilter={showFilter}
+              viewMode={viewMode}
+              navigateWithoutSelecting={navigateWithoutSelecting}
+              onBranchChange={setBranchName}
+              sectionFilter={sectionFilter}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+
+FolderSection.displayName = "FolderSection";
+
+// ============================================
+// Content wrapper (lazy mounts per-repo hook)
+// ============================================
+
+export interface FolderSectionContentHandle {
+  refresh: () => Promise<void>;
+}
+
+interface FolderSectionContentProps {
+  folder: WorkspaceFolder;
+  onGitFileSelect?: (file: GitFile) => void;
+  onGitFilesChange?: (files: GitFile[], scopeRepoRoot: string) => void;
+  onGitHistorySelectionChange?: (
+    selection: SourceControlHistorySelection
+  ) => void;
+  showFilter: boolean;
+  viewMode: "list-tree" | "list";
+  navigateWithoutSelecting?: boolean;
+  onBranchChange?: (branch: string | undefined) => void;
+  sectionFilter?: "uncommitted" | "staged" | "unstaged";
+}
+
+const FolderSectionContent = React.forwardRef<
+  FolderSectionContentHandle,
+  FolderSectionContentProps
+>(
+  (
+    {
+      folder,
+      onGitFileSelect,
+      onGitFilesChange,
+      onGitHistorySelectionChange: _onGitHistorySelectionChange,
+      showFilter,
+      viewMode,
+      navigateWithoutSelecting,
+      onBranchChange,
+      sectionFilter,
+    },
+    ref
+  ) => {
+    const handleGitFileSelect = useCallback(
+      (file: GitFile) => {
+        onGitFileSelect?.(toAbsoluteFolderFile(file, folder.path));
+      },
+      [folder.path, onGitFileSelect]
+    );
+
+    const { state, refresh, loading }: UsePerRepoSourceControlResult =
+      usePerRepoSourceControl({
+        repoPath: folder.path,
+        repoId: folder.id,
+        onGitFileSelect: handleGitFileSelect,
+      });
+
+    const absoluteFiles = useMemo(
+      () => state.files.map((file) => toAbsoluteFolderFile(file, folder.path)),
+      [folder.path, state.files]
+    );
+
+    useEffect(() => {
+      onGitFilesChange?.(absoluteFiles, folder.path);
+    }, [absoluteFiles, folder.path, onGitFilesChange]);
+
+    useImperativeHandle(ref, () => ({ refresh }), [refresh]);
+
+    // Report branch name to parent header
+    useEffect(() => {
+      onBranchChange?.(state.branchName);
+    }, [state.branchName, onBranchChange]);
+
+    const handleRefresh = useCallback(() => {
+      refresh();
+    }, [refresh]);
+
+    const files = state.files;
+    const selectFile = state.onFileSelect;
+
+    const handleContentFileSelect = useCallback(
+      (fileId: string) => {
+        if (!navigateWithoutSelecting) {
+          selectFile(fileId);
+          return;
+        }
+        const file = files.find((candidate) => candidate.id === fileId);
+        if (file) {
+          handleGitFileSelect(file);
+        }
+      },
+      [files, handleGitFileSelect, navigateWithoutSelecting, selectFile]
+    );
+
+    return (
+      <SourceControlContent
+        files={state.files}
+        filteredFiles={state.filteredFiles}
+        selectedFileId={navigateWithoutSelecting ? "" : state.selectedFileId}
+        loading={loading}
+        error={state.error}
+        onFileSelect={handleContentFileSelect}
+        onStageToggle={state.onStageToggle}
+        onDiscard={state.onDiscard}
+        onStageAll={state.onStageAll}
+        onUnstageAll={state.onUnstageAll}
+        onDiscardAll={state.onDiscardAll}
+        commitMessage={state.commitMessage}
+        onCommitMessageChange={state.onCommitMessageChange}
+        onCommit={state.onCommit}
+        commitLoading={state.commitLoading}
+        generateCommitMessageLoading={state.generateCommitMessageLoading}
+        onGenerateCommitMessage={state.onGenerateCommitMessage}
+        stagedFilesCount={state.stagedFilesCount}
+        branchName={state.branchName}
+        searchQuery={state.searchQuery}
+        onSearchChange={state.onSearchChange}
+        showFilter={showFilter}
+        viewMode={viewMode}
+        sectionFilter={sectionFilter}
+        navigateWithoutSelecting={navigateWithoutSelecting}
+        onRefresh={handleRefresh}
+        ahead={state.ahead}
+        behind={state.behind}
+        hasUpstream={state.hasUpstream}
+        repoId={folder.id}
+        repoPath={folder.path}
+      />
+    );
+  }
+);
+
+FolderSectionContent.displayName = "FolderSectionContent";
+
+// ============================================
+// Worktree section (collapsible, lazy content)
+// ============================================
+
+interface WorktreeSectionProps {
+  worktree: GitWorktreeEntry;
+  onGitFileSelect?: (file: GitFile) => void;
+  showFilter: boolean;
+  viewMode: "list-tree" | "list";
+  navigateWithoutSelecting?: boolean;
+  sectionFilter?: "uncommitted" | "staged" | "unstaged";
+}
+
+const WorktreeSection: React.FC<WorktreeSectionProps> = ({
+  worktree,
+  onGitFileSelect,
+  showFilter,
+  viewMode,
+  navigateWithoutSelecting,
+  sectionFilter,
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const toggle = useCallback(() => setExpanded((prev) => !prev), []);
+
+  const folderName = worktree.path.split("/").pop() || "worktree";
+  const worktreeId = `worktree:${worktree.path}`;
+
+  return (
+    <div className={FOLDER_HEADER.section}>
+      <FolderHeaderRow
+        name={folderName}
+        expanded={expanded}
+        onToggle={toggle}
+        branchName={worktree.branch || undefined}
+      />
+      {expanded && (
+        <div className="flex min-h-[280px] flex-col overflow-hidden">
+          <WorktreeSourceControlSection
+            worktreePath={worktree.path}
+            worktreeId={worktreeId}
+            onGitFileSelect={onGitFileSelect}
+            showFilter={showFilter}
+            viewMode={viewMode}
+            navigateWithoutSelecting={navigateWithoutSelecting}
+            sectionFilter={sectionFilter}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+WorktreeSection.displayName = "WorktreeSection";
+
+// ============================================
+// Main Component
+// ============================================
+
+export const MultiRootSourceControlContent = React.forwardRef<
+  MultiRootSourceControlContentHandle,
+  MultiRootSourceControlContentProps
+>(
+  (
+    {
+      workspaceFolders,
+      onGitFileSelect,
+      onGitFilesChange,
+      onGitHistorySelectionChange,
+      showFilter,
+      viewMode,
+      worktrees = [],
+      navigateWithoutSelecting,
+      sectionFilter,
+    },
+    ref
+  ) => {
+    const repos = useAtomValue(reposAtom);
+    const folderList = useMemo(() => {
+      const repoNameById = new Map<string, string>(
+        repos.map((repo) => [repo.id, String(repo.name ?? "")])
+      );
+      const repoNameByPath = new Map<string, string>(
+        repos
+          .map((repo): [string, string] => [
+            normalizeFsPath(repo.fs_uri ?? repo.path),
+            String(repo.name ?? ""),
+          ])
+          .filter(([path]) => Boolean(path))
+      );
+
+      return workspaceFolders
+        .filter((folder) => folder.path)
+        .map((folder) => {
+          const repoName = folder.repoId
+            ? repoNameById.get(folder.repoId)
+            : undefined;
+          const pathName = repoNameByPath.get(normalizeFsPath(folder.path));
+          return { ...folder, name: repoName ?? pathName ?? folder.name };
+        });
+    }, [repos, workspaceFolders]);
+
+    const activeFolder = useAtomValue(activeFolderAtom);
+    const gitStatusMap = useAtomValue(workspaceGitStatusMapAtom);
+
+    // Track child handles via callback refs (avoids ref-during-render lint)
+    const [handlesMap] = useState(() => new Map<string, FolderSectionHandle>());
+
+    const makeCallbackRef = useCallback(
+      (folderId: string) => (node: FolderSectionHandle | null) => {
+        if (node) {
+          handlesMap.set(folderId, node);
+        } else {
+          handlesMap.delete(folderId);
+        }
+      },
+      [handlesMap]
+    );
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        refresh: async () => {
+          const promises: Promise<void>[] = [];
+          for (const handle of handlesMap.values()) {
+            promises.push(handle.refresh());
+          }
+          await Promise.all(promises);
+        },
+      }),
+      [handlesMap]
+    );
+
+    const { t: tMain } = useTranslation();
+
+    if (folderList.length === 0) {
+      return (
+        <Placeholder
+          variant="empty"
+          placement="sidebar"
+          title={tMain("placeholders.noWorkspaceFolders")}
+          fillParentHeight
+        />
+      );
+    }
+
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {folderList.map((folder, index) => (
+          <FolderSection
+            key={folder.id}
+            ref={makeCallbackRef(folder.id)}
+            folder={folder}
+            onGitFileSelect={onGitFileSelect}
+            onGitFilesChange={onGitFilesChange}
+            onGitHistorySelectionChange={onGitHistorySelectionChange}
+            showFilter={showFilter}
+            viewMode={viewMode}
+            navigateWithoutSelecting={navigateWithoutSelecting}
+            defaultExpanded={index < 3}
+            isActive={folder.id === activeFolder?.id}
+            changeCount={computeChangeCount(gitStatusMap.get(folder.path))}
+            sectionFilter={sectionFilter}
+          />
+        ))}
+        {worktrees.map((worktree) => (
+          <WorktreeSection
+            key={worktree.path}
+            worktree={worktree}
+            onGitFileSelect={onGitFileSelect}
+            showFilter={showFilter}
+            viewMode={viewMode}
+            navigateWithoutSelecting={navigateWithoutSelecting}
+            sectionFilter={sectionFilter}
+          />
+        ))}
+      </div>
+    );
+  }
+);
+
+MultiRootSourceControlContent.displayName = "MultiRootSourceControlContent";
+
+export default MultiRootSourceControlContent;

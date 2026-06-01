@@ -1,0 +1,1341 @@
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, LazyLock};
+
+use chrono::Utc;
+use git::worktree::create_session_worktree;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use tokio::io::{AsyncBufReadExt, BufReader as TokioBufReader};
+use tokio::process::Command;
+use tokio::sync::Mutex;
+use uuid::Uuid;
+
+const BENCHMARK_KIND_SWE_BENCH_PRO: &str = "swe_bench_pro";
+const BENCHMARK_KIND_TERMINAL_BENCH: &str = "terminal_bench";
+const EVALUATION_MODE_PATCH_ONLY: &str = "patch_only";
+const EVALUATION_MODE_LOCAL_DOCKER: &str = "local_docker";
+const EVALUATION_MODE_MODAL: &str = "modal";
+const BENCHMARK_RUN_STATUS_RUNNING: &str = "running";
+const BENCHMARK_RUN_STATUS_PASSED: &str = "passed";
+const BENCHMARK_RUN_STATUS_FAILED: &str = "failed";
+const BENCHMARK_RUN_STATUS_CANCELLED: &str = "cancelled";
+const BENCHMARK_RUN_STATUS_APPLIED: &str = "applied";
+const SWE_BENCH_PRO_REPO_PATH: &str = "/Users/laptop-h/Documents/GitHub/SWE-bench_Pro-os";
+const SWE_BENCH_PRO_EVALUATOR_SCRIPT: &str = "swe_bench_pro_eval.py";
+const SWE_BENCH_PRO_RUN_SCRIPTS_DIR: &str = "run_scripts";
+const SWE_BENCH_PRO_DOCKERHUB_USERNAME: &str = "jefzda";
+const MAX_RUN_LOG_LINES: usize = 1_000;
+
+static BENCHMARK_RUNS: LazyLock<Arc<Mutex<HashMap<String, BenchmarkRunStatus>>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkListTasksRequest {
+    pub kind: String,
+    pub source_path: String,
+    pub query: Option<String>,
+    pub limit: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkGetTaskRequest {
+    pub kind: String,
+    pub source_path: String,
+    pub task_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkPreflightRequest {
+    pub kind: String,
+    pub source_path: String,
+    pub evaluation_mode: String,
+    pub task_id: Option<String>,
+    pub repo_path: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkCreateRunPlanRequest {
+    pub kind: String,
+    pub source_path: String,
+    pub task_id: String,
+    pub patch: String,
+    pub evaluation_mode: String,
+    pub repo_path: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkStartRunRequest {
+    pub kind: String,
+    pub source_path: String,
+    pub task_id: String,
+    pub patch: String,
+    pub evaluation_mode: String,
+    pub repo_path: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkGetRunStatusRequest {
+    pub run_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkCancelRunRequest {
+    pub run_id: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkTaskIndexRow {
+    pub benchmark_kind: String,
+    pub task_id: String,
+    pub title: String,
+    pub source_path: String,
+    pub repo: Option<String>,
+    pub word_count: usize,
+    pub char_count: usize,
+    pub tags: Vec<String>,
+    pub difficulty: Option<String>,
+    pub metadata: Value,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkTaskDetail {
+    #[serde(flatten)]
+    pub index: BenchmarkTaskIndexRow,
+    pub instruction: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkPreflightCheck {
+    pub id: String,
+    pub label: String,
+    pub ok: bool,
+    pub detail: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkPreflightResult {
+    pub benchmark_kind: String,
+    pub evaluation_mode: String,
+    pub ready: bool,
+    pub checks: Vec<BenchmarkPreflightCheck>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkRunPlan {
+    pub run_id: String,
+    pub benchmark_kind: String,
+    pub evaluation_mode: String,
+    pub task_id: String,
+    pub source_path: String,
+    pub repo_path: Option<String>,
+    pub patch_path: String,
+    pub output_dir: String,
+    pub evaluator_script: Option<String>,
+    pub scripts_dir: Option<String>,
+    pub worktree_path: Option<String>,
+    pub command_preview: Vec<String>,
+    pub preflight: BenchmarkPreflightResult,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkRunStatus {
+    pub run_id: String,
+    pub benchmark_kind: String,
+    pub evaluation_mode: String,
+    pub task_id: String,
+    pub status: String,
+    pub source_path: String,
+    pub repo_path: Option<String>,
+    pub patch_path: String,
+    pub output_dir: String,
+    pub worktree_path: Option<String>,
+    pub started_at: Option<String>,
+    pub finished_at: Option<String>,
+    pub exit_code: Option<i32>,
+    pub process_id: Option<u32>,
+    pub logs: Vec<String>,
+    pub result: Option<Value>,
+    pub error: Option<String>,
+}
+
+#[tauri::command]
+pub async fn benchmark_list_tasks(
+    request: BenchmarkListTasksRequest,
+) -> Result<Vec<BenchmarkTaskIndexRow>, String> {
+    ensure_swe_bench_pro(&request.kind)?;
+    let query = request.query.unwrap_or_default().to_lowercase();
+    let limit = request.limit.unwrap_or(250);
+    let mut rows = Vec::new();
+
+    for row in read_swe_bench_rows(&request.source_path)? {
+        let detail = swe_bench_row_to_detail(&request.source_path, row)?;
+        if !query.is_empty() && !task_matches_query(&detail, &query) {
+            continue;
+        }
+        rows.push(detail.index);
+        if rows.len() >= limit {
+            break;
+        }
+    }
+
+    Ok(rows)
+}
+
+#[tauri::command]
+pub async fn benchmark_get_task(
+    request: BenchmarkGetTaskRequest,
+) -> Result<BenchmarkTaskDetail, String> {
+    ensure_swe_bench_pro(&request.kind)?;
+    read_swe_bench_task(&request.source_path, &request.task_id)
+}
+
+#[tauri::command]
+pub async fn benchmark_preflight(
+    request: BenchmarkPreflightRequest,
+) -> Result<BenchmarkPreflightResult, String> {
+    match request.kind.as_str() {
+        BENCHMARK_KIND_SWE_BENCH_PRO => {
+            run_swe_bench_preflight(
+                &request.kind,
+                &request.source_path,
+                &request.evaluation_mode,
+                request.task_id.as_deref(),
+                request.repo_path.as_deref(),
+            )
+            .await
+        }
+        BENCHMARK_KIND_TERMINAL_BENCH => {
+            run_terminal_bench_preflight(&request.source_path, &request.evaluation_mode).await
+        }
+        other => Err(format!("Unsupported benchmark kind: {other}")),
+    }
+}
+
+#[tauri::command]
+pub async fn benchmark_create_run_plan(
+    request: BenchmarkCreateRunPlanRequest,
+) -> Result<BenchmarkRunPlan, String> {
+    ensure_swe_bench_pro(&request.kind)?;
+    ensure_supported_swe_bench_mode(&request.evaluation_mode)?;
+    let plan = build_swe_bench_run_plan(
+        &request.kind,
+        &request.source_path,
+        &request.task_id,
+        &request.patch,
+        &request.evaluation_mode,
+        request.repo_path.as_deref(),
+    )
+    .await?;
+    Ok(plan)
+}
+
+#[tauri::command]
+pub async fn benchmark_start_run(
+    request: BenchmarkStartRunRequest,
+) -> Result<BenchmarkRunStatus, String> {
+    ensure_swe_bench_pro(&request.kind)?;
+    ensure_supported_swe_bench_mode(&request.evaluation_mode)?;
+    let plan = build_swe_bench_run_plan(
+        &request.kind,
+        &request.source_path,
+        &request.task_id,
+        &request.patch,
+        &request.evaluation_mode,
+        request.repo_path.as_deref(),
+    )
+    .await?;
+    if !plan.preflight.ready {
+        return Err(format!(
+            "Benchmark preflight is not ready for {} execution",
+            plan.evaluation_mode
+        ));
+    }
+
+    if plan.evaluation_mode == EVALUATION_MODE_PATCH_ONLY {
+        return run_swe_bench_patch_only_worktree(plan).await;
+    }
+
+    let status = BenchmarkRunStatus {
+        run_id: plan.run_id.clone(),
+        benchmark_kind: plan.benchmark_kind.clone(),
+        evaluation_mode: plan.evaluation_mode.clone(),
+        task_id: plan.task_id.clone(),
+        status: BENCHMARK_RUN_STATUS_RUNNING.to_string(),
+        source_path: plan.source_path.clone(),
+        repo_path: plan.repo_path.clone(),
+        patch_path: plan.patch_path.clone(),
+        output_dir: plan.output_dir.clone(),
+        worktree_path: plan.worktree_path.clone(),
+        started_at: Some(Utc::now().to_rfc3339()),
+        finished_at: None,
+        exit_code: None,
+        process_id: None,
+        logs: vec![format!("Starting SWE-bench Pro Docker run {}", plan.run_id)],
+        result: None,
+        error: None,
+    };
+
+    BENCHMARK_RUNS
+        .lock()
+        .await
+        .insert(plan.run_id.clone(), status.clone());
+
+    tokio::spawn(run_swe_bench_process(plan));
+
+    Ok(status)
+}
+
+#[tauri::command]
+pub async fn benchmark_get_run_status(
+    request: BenchmarkGetRunStatusRequest,
+) -> Result<BenchmarkRunStatus, String> {
+    BENCHMARK_RUNS
+        .lock()
+        .await
+        .get(&request.run_id)
+        .cloned()
+        .ok_or_else(|| format!("Benchmark run not found: {}", request.run_id))
+}
+
+#[tauri::command]
+pub async fn benchmark_cancel_run(
+    request: BenchmarkCancelRunRequest,
+) -> Result<BenchmarkRunStatus, String> {
+    let process_id = {
+        let mut runs = BENCHMARK_RUNS.lock().await;
+        let status = runs
+            .get_mut(&request.run_id)
+            .ok_or_else(|| format!("Benchmark run not found: {}", request.run_id))?;
+        if status.status == BENCHMARK_RUN_STATUS_RUNNING {
+            status.status = BENCHMARK_RUN_STATUS_CANCELLED.to_string();
+            status.finished_at = Some(Utc::now().to_rfc3339());
+            status
+                .logs
+                .push("Cancel requested for evaluator process.".to_string());
+            trim_logs(&mut status.logs);
+        }
+        status.process_id
+    };
+
+    if let Some(pid) = process_id {
+        terminate_process(pid).await?;
+    }
+
+    BENCHMARK_RUNS
+        .lock()
+        .await
+        .get(&request.run_id)
+        .cloned()
+        .ok_or_else(|| format!("Benchmark run not found: {}", request.run_id))
+}
+
+async fn run_swe_bench_preflight(
+    kind: &str,
+    source_path: &str,
+    evaluation_mode: &str,
+    task_id: Option<&str>,
+    repo_path: Option<&str>,
+) -> Result<BenchmarkPreflightResult, String> {
+    ensure_swe_bench_pro(kind)?;
+    let mut checks = Vec::new();
+    let source_path_buf = PathBuf::from(source_path);
+    let source_exists = source_path_buf.is_file();
+    checks.push(BenchmarkPreflightCheck {
+        id: "source_path".to_string(),
+        label: "SWE-bench Pro JSONL source".to_string(),
+        ok: source_exists,
+        detail: Some(source_path.to_string()),
+    });
+
+    let mut readable_rows = 0usize;
+    if source_exists {
+        match read_swe_bench_rows(source_path) {
+            Ok(rows) => readable_rows = rows.len(),
+            Err(error) => checks.push(BenchmarkPreflightCheck {
+                id: "source_read".to_string(),
+                label: "Read source rows".to_string(),
+                ok: false,
+                detail: Some(error),
+            }),
+        }
+    }
+    checks.push(BenchmarkPreflightCheck {
+        id: "task_rows".to_string(),
+        label: "Task rows loaded".to_string(),
+        ok: readable_rows > 0,
+        detail: Some(format!("{readable_rows} rows")),
+    });
+
+    let python = command_version("python3", &["--version"]).await;
+    checks.push(BenchmarkPreflightCheck {
+        id: "python".to_string(),
+        label: "Python 3".to_string(),
+        ok: python.is_ok(),
+        detail: Some(python.unwrap_or_else(|error| error)),
+    });
+
+    match evaluation_mode {
+        EVALUATION_MODE_PATCH_ONLY => {
+            checks.push(BenchmarkPreflightCheck {
+                id: "evaluation_mode".to_string(),
+                label: "Patch-only worktree mode".to_string(),
+                ok: true,
+                detail: Some(
+                    "Creates a git worktree and applies the patch without Docker.".to_string(),
+                ),
+            });
+            if let Some(selected_task_id) = task_id {
+                push_selected_task_checks(&mut checks, source_path, selected_task_id);
+            }
+            push_patch_only_worktree_checks(&mut checks, repo_path, source_path, task_id).await;
+        }
+        EVALUATION_MODE_LOCAL_DOCKER => {
+            push_swe_bench_local_docker_checks(&mut checks, task_id).await;
+            if let Some(selected_task_id) = task_id {
+                push_selected_task_checks(&mut checks, source_path, selected_task_id);
+            }
+        }
+        EVALUATION_MODE_MODAL => {
+            let modal = command_version("modal", &["--version"]).await;
+            checks.push(BenchmarkPreflightCheck {
+                id: "modal_cli".to_string(),
+                label: "Modal CLI".to_string(),
+                ok: modal.is_ok(),
+                detail: Some(modal.unwrap_or_else(|error| error)),
+            });
+            let modal_config = modal_config_path();
+            checks.push(BenchmarkPreflightCheck {
+                id: "modal_config".to_string(),
+                label: "Modal config".to_string(),
+                ok: modal_config.is_file(),
+                detail: Some(modal_config.display().to_string()),
+            });
+        }
+        other => {
+            checks.push(BenchmarkPreflightCheck {
+                id: "evaluation_mode".to_string(),
+                label: "Evaluation mode".to_string(),
+                ok: false,
+                detail: Some(format!("Unsupported evaluation mode: {other}")),
+            });
+        }
+    }
+
+    let ready = checks.iter().all(|check| check.ok);
+    Ok(BenchmarkPreflightResult {
+        benchmark_kind: kind.to_string(),
+        evaluation_mode: evaluation_mode.to_string(),
+        ready,
+        checks,
+    })
+}
+
+async fn push_patch_only_worktree_checks(
+    checks: &mut Vec<BenchmarkPreflightCheck>,
+    repo_path: Option<&str>,
+    source_path: &str,
+    task_id: Option<&str>,
+) {
+    let repo_path_value = repo_path.unwrap_or_default().trim();
+    let repo_path_buf = PathBuf::from(repo_path_value);
+    checks.push(BenchmarkPreflightCheck {
+        id: "repo_path".to_string(),
+        label: "Target repo checkout".to_string(),
+        ok: !repo_path_value.is_empty() && repo_path_buf.is_dir(),
+        detail: Some(if repo_path_value.is_empty() {
+            "Set a local repository path for worktree mode.".to_string()
+        } else {
+            repo_path_value.to_string()
+        }),
+    });
+
+    if !repo_path_value.is_empty() && repo_path_buf.is_dir() {
+        let git_check = command_version_in_dir(
+            &repo_path_buf,
+            "git",
+            &["rev-parse", "--is-inside-work-tree"],
+        )
+        .await;
+        checks.push(BenchmarkPreflightCheck {
+            id: "repo_git".to_string(),
+            label: "Target repo is a git worktree".to_string(),
+            ok: git_check.as_deref() == Ok("true"),
+            detail: Some(git_check.unwrap_or_else(|error| error)),
+        });
+    }
+
+    if let Some(selected_task_id) = task_id {
+        let base_commit = find_swe_bench_row(source_path, selected_task_id)
+            .ok()
+            .and_then(|row| string_field(&row, "base_commit"));
+        let base_commit_value = base_commit.unwrap_or_default();
+        checks.push(BenchmarkPreflightCheck {
+            id: "base_commit".to_string(),
+            label: "Task base commit".to_string(),
+            ok: !base_commit_value.trim().is_empty(),
+            detail: Some(base_commit_value.clone()),
+        });
+
+        if !base_commit_value.trim().is_empty()
+            && !repo_path_value.is_empty()
+            && repo_path_buf.is_dir()
+        {
+            let commit_check = command_version_in_dir(
+                &repo_path_buf,
+                "git",
+                &[
+                    "cat-file",
+                    "-e",
+                    &format!("{}^{{commit}}", base_commit_value.trim()),
+                ],
+            )
+            .await;
+            checks.push(BenchmarkPreflightCheck {
+                id: "base_commit_exists".to_string(),
+                label: "Base commit exists in target repo".to_string(),
+                ok: commit_check.is_ok(),
+                detail: Some(commit_check.unwrap_or_else(|error| error)),
+            });
+        }
+    }
+}
+
+async fn push_swe_bench_local_docker_checks(
+    checks: &mut Vec<BenchmarkPreflightCheck>,
+    task_id: Option<&str>,
+) {
+    let docker_version = command_version("docker", &["--version"]).await;
+    checks.push(BenchmarkPreflightCheck {
+        id: "docker_cli".to_string(),
+        label: "Docker CLI".to_string(),
+        ok: docker_version.is_ok(),
+        detail: Some(docker_version.unwrap_or_else(|error| error)),
+    });
+
+    let docker_info = command_version("docker", &["info", "--format", "{{.ServerVersion}}"]).await;
+    checks.push(BenchmarkPreflightCheck {
+        id: "docker_daemon".to_string(),
+        label: "Docker daemon".to_string(),
+        ok: docker_info.is_ok(),
+        detail: Some(docker_info.unwrap_or_else(|error| error)),
+    });
+
+    for package_name in ["docker", "pandas"] {
+        let package_check =
+            command_version("python3", &["-c", &format!("import {package_name}")]).await;
+        checks.push(BenchmarkPreflightCheck {
+            id: format!("python_package_{package_name}"),
+            label: format!("Python package: {package_name}"),
+            ok: package_check.is_ok(),
+            detail: Some(package_check.unwrap_or_else(|error| error)),
+        });
+    }
+
+    let evaluator_script = swe_bench_evaluator_script_path();
+    checks.push(BenchmarkPreflightCheck {
+        id: "evaluator_script".to_string(),
+        label: "SWE-bench Pro evaluator script".to_string(),
+        ok: evaluator_script.is_file(),
+        detail: Some(evaluator_script.display().to_string()),
+    });
+
+    let scripts_dir = swe_bench_run_scripts_dir();
+    checks.push(BenchmarkPreflightCheck {
+        id: "run_scripts_dir".to_string(),
+        label: "SWE-bench Pro run scripts".to_string(),
+        ok: scripts_dir.is_dir(),
+        detail: Some(scripts_dir.display().to_string()),
+    });
+
+    if let Some(selected_task_id) = task_id {
+        let run_script = scripts_dir.join(selected_task_id).join("run_script.sh");
+        checks.push(BenchmarkPreflightCheck {
+            id: "task_run_script".to_string(),
+            label: "Selected task run script".to_string(),
+            ok: run_script.is_file(),
+            detail: Some(run_script.display().to_string()),
+        });
+
+        let parser_script = scripts_dir.join(selected_task_id).join("parser.py");
+        checks.push(BenchmarkPreflightCheck {
+            id: "task_parser_script".to_string(),
+            label: "Selected task parser script".to_string(),
+            ok: parser_script.is_file(),
+            detail: Some(parser_script.display().to_string()),
+        });
+    }
+}
+
+async fn run_terminal_bench_preflight(
+    source_path: &str,
+    evaluation_mode: &str,
+) -> Result<BenchmarkPreflightResult, String> {
+    let mut checks = Vec::new();
+    let source_path_buf = PathBuf::from(source_path);
+    checks.push(BenchmarkPreflightCheck {
+        id: "adapter_boundary".to_string(),
+        label: "Terminal-Bench adapter boundary".to_string(),
+        ok: false,
+        detail: Some(
+            "Terminal-Bench uses tb run with an agent harness; it is intentionally separate from SWE-bench Pro patch evaluation."
+                .to_string(),
+        ),
+    });
+    checks.push(BenchmarkPreflightCheck {
+        id: "dataset_path".to_string(),
+        label: "Terminal-Bench dataset path".to_string(),
+        ok: source_path_buf.exists(),
+        detail: Some(source_path.to_string()),
+    });
+
+    let tb = command_version("tb", &["--help"]).await;
+    checks.push(BenchmarkPreflightCheck {
+        id: "tb_cli".to_string(),
+        label: "Terminal-Bench tb CLI".to_string(),
+        ok: tb.is_ok(),
+        detail: Some(tb.unwrap_or_else(|error| error)),
+    });
+
+    let uv_tb = command_version("uv", &["run", "tb", "--help"]).await;
+    checks.push(BenchmarkPreflightCheck {
+        id: "uv_tb_cli".to_string(),
+        label: "Terminal-Bench via uv run tb".to_string(),
+        ok: uv_tb.is_ok(),
+        detail: Some(uv_tb.unwrap_or_else(|error| error)),
+    });
+
+    let docker_info = command_version("docker", &["info", "--format", "{{.ServerVersion}}"]).await;
+    checks.push(BenchmarkPreflightCheck {
+        id: "docker_daemon".to_string(),
+        label: "Docker daemon".to_string(),
+        ok: docker_info.is_ok(),
+        detail: Some(docker_info.unwrap_or_else(|error| error)),
+    });
+
+    Ok(BenchmarkPreflightResult {
+        benchmark_kind: BENCHMARK_KIND_TERMINAL_BENCH.to_string(),
+        evaluation_mode: evaluation_mode.to_string(),
+        ready: false,
+        checks,
+    })
+}
+
+fn push_selected_task_checks(
+    checks: &mut Vec<BenchmarkPreflightCheck>,
+    source_path: &str,
+    task_id: &str,
+) {
+    match find_swe_bench_row(source_path, task_id) {
+        Ok(row) => {
+            checks.push(BenchmarkPreflightCheck {
+                id: "selected_task".to_string(),
+                label: "Selected SWE-bench Pro task".to_string(),
+                ok: true,
+                detail: Some(task_id.to_string()),
+            });
+            for key in [
+                "instance_id",
+                "before_repo_set_cmd",
+                "selected_test_files_to_run",
+                "base_commit",
+                "FAIL_TO_PASS",
+                "PASS_TO_PASS",
+                "repo",
+            ] {
+                checks.push(BenchmarkPreflightCheck {
+                    id: format!("task_metadata_{key}"),
+                    label: format!("Task metadata: {key}"),
+                    ok: !string_field(&row, key)
+                        .unwrap_or_default()
+                        .trim()
+                        .is_empty()
+                        || row.get(key).is_some_and(|value| !value.is_null()),
+                    detail: row
+                        .get(key)
+                        .map(|value| truncate_detail(&value.to_string(), 160)),
+                });
+            }
+        }
+        Err(error) => checks.push(BenchmarkPreflightCheck {
+            id: "selected_task".to_string(),
+            label: "Selected SWE-bench Pro task".to_string(),
+            ok: false,
+            detail: Some(error),
+        }),
+    }
+}
+
+async fn build_swe_bench_run_plan(
+    kind: &str,
+    source_path: &str,
+    task_id: &str,
+    patch: &str,
+    evaluation_mode: &str,
+    repo_path: Option<&str>,
+) -> Result<BenchmarkRunPlan, String> {
+    if patch.trim().is_empty() {
+        return Err("Patch content is required to run SWE-bench Pro evaluation".to_string());
+    }
+    let task = read_swe_bench_task(source_path, task_id)?;
+
+    let preflight =
+        run_swe_bench_preflight(kind, source_path, evaluation_mode, Some(task_id), repo_path)
+            .await?;
+    let run_id = format!("swe-{}", Uuid::new_v4());
+    let output_dir = benchmark_run_output_dir(&run_id);
+    std::fs::create_dir_all(&output_dir)
+        .map_err(|error| format!("Failed to create run output dir: {error}"))?;
+    let patch_path = if evaluation_mode == EVALUATION_MODE_PATCH_ONLY {
+        let patch_path = output_dir.join("patch.diff");
+        std::fs::write(&patch_path, patch)
+            .map_err(|error| format!("Failed to write patch diff: {error}"))?;
+        patch_path
+    } else {
+        let patch_path = output_dir.join("patches.json");
+        let patch_json = serde_json::json!([{
+            "instance_id": task_id,
+            "patch": patch,
+            "prefix": run_id,
+        }]);
+        let patch_file = File::create(&patch_path)
+            .map_err(|error| format!("Failed to create patch JSON: {error}"))?;
+        serde_json::to_writer_pretty(patch_file, &patch_json)
+            .map_err(|error| format!("Failed to write patch JSON: {error}"))?;
+        patch_path
+    };
+
+    let evaluator_script = if evaluation_mode == EVALUATION_MODE_LOCAL_DOCKER {
+        Some(swe_bench_evaluator_script_path())
+    } else {
+        None
+    };
+    let scripts_dir = if evaluation_mode == EVALUATION_MODE_LOCAL_DOCKER {
+        Some(swe_bench_run_scripts_dir())
+    } else {
+        None
+    };
+    let repo_path_string = repo_path
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned);
+    let worktree_path = None;
+    let command_preview = if evaluation_mode == EVALUATION_MODE_PATCH_ONLY {
+        swe_bench_patch_only_command_preview(&task, &patch_path)
+    } else {
+        swe_bench_command_preview(source_path, &patch_path, &output_dir)
+    };
+
+    Ok(BenchmarkRunPlan {
+        run_id,
+        benchmark_kind: kind.to_string(),
+        evaluation_mode: evaluation_mode.to_string(),
+        task_id: task_id.to_string(),
+        source_path: source_path.to_string(),
+        repo_path: repo_path_string,
+        patch_path: patch_path.display().to_string(),
+        output_dir: output_dir.display().to_string(),
+        evaluator_script: evaluator_script.map(|path| path.display().to_string()),
+        scripts_dir: scripts_dir.map(|path| path.display().to_string()),
+        worktree_path,
+        command_preview,
+        preflight,
+    })
+}
+
+async fn run_swe_bench_patch_only_worktree(
+    plan: BenchmarkRunPlan,
+) -> Result<BenchmarkRunStatus, String> {
+    let repo_path = plan
+        .repo_path
+        .as_deref()
+        .ok_or_else(|| "Target repo path is required for patch-only worktree mode".to_string())?;
+    let task_row = find_swe_bench_row(&plan.source_path, &plan.task_id)?;
+    let base_commit = string_field(&task_row, "base_commit")
+        .ok_or_else(|| format!("Task {} is missing base_commit", plan.task_id))?;
+    let repo_path_buf = PathBuf::from(repo_path);
+    let started_at = Utc::now().to_rfc3339();
+    let mut logs = vec![
+        format!(
+            "Starting SWE-bench Pro patch-only worktree run {}",
+            plan.run_id
+        ),
+        format!("Target repo: {repo_path}"),
+        format!("Base commit: {base_commit}"),
+        format!("Patch diff: {}", plan.patch_path),
+    ];
+
+    let worktree = create_session_worktree(&repo_path_buf, &plan.run_id, Some(&base_commit), None)?;
+    logs.push(format!("Created worktree: {}", worktree.path));
+    logs.push(format!("Created branch: {}", worktree.branch));
+
+    let patch_output = git::tokio_git_command()?
+        .arg("apply")
+        .arg("--whitespace=nowarn")
+        .arg(&plan.patch_path)
+        .current_dir(&worktree.path)
+        .output()
+        .await
+        .map_err(|error| format!("Failed to apply patch in worktree: {error}"))?;
+
+    let status = if patch_output.status.success() {
+        logs.push("Patch applied cleanly to worktree.".to_string());
+        BENCHMARK_RUN_STATUS_APPLIED
+    } else {
+        let stderr = String::from_utf8_lossy(&patch_output.stderr)
+            .trim()
+            .to_string();
+        logs.push(if stderr.is_empty() {
+            format!("git apply exited with {}", patch_output.status)
+        } else {
+            format!("git apply failed: {stderr}")
+        });
+        BENCHMARK_RUN_STATUS_FAILED
+    };
+
+    let diff_stat = command_version_in_dir(Path::new(&worktree.path), "git", &["diff", "--stat"])
+        .await
+        .unwrap_or_else(|error| format!("Unable to read diff stat: {error}"));
+    if !diff_stat.trim().is_empty() {
+        logs.push("Diff stat:".to_string());
+        logs.extend(diff_stat.lines().map(ToOwned::to_owned));
+    }
+
+    let result = serde_json::json!({
+        "applied": status == BENCHMARK_RUN_STATUS_APPLIED,
+        "officialEvaluation": false,
+        "message": "Patch-only worktree mode applies the patch but does not run the official SWE-bench test harness."
+    });
+    let status_value = BenchmarkRunStatus {
+        run_id: plan.run_id.clone(),
+        benchmark_kind: plan.benchmark_kind.clone(),
+        evaluation_mode: plan.evaluation_mode.clone(),
+        task_id: plan.task_id.clone(),
+        status: status.to_string(),
+        source_path: plan.source_path.clone(),
+        repo_path: plan.repo_path.clone(),
+        patch_path: plan.patch_path.clone(),
+        output_dir: plan.output_dir.clone(),
+        worktree_path: Some(worktree.path),
+        started_at: Some(started_at),
+        finished_at: Some(Utc::now().to_rfc3339()),
+        exit_code: patch_output.status.code(),
+        process_id: None,
+        logs,
+        result: Some(result),
+        error: if status == BENCHMARK_RUN_STATUS_FAILED {
+            Some("Patch did not apply cleanly to the worktree.".to_string())
+        } else {
+            None
+        },
+    };
+
+    BENCHMARK_RUNS
+        .lock()
+        .await
+        .insert(plan.run_id.clone(), status_value.clone());
+
+    Ok(status_value)
+}
+
+async fn run_swe_bench_process(plan: BenchmarkRunPlan) {
+    append_run_log(&plan.run_id, format!("Output dir: {}", plan.output_dir)).await;
+    append_run_log(&plan.run_id, format!("Patch JSON: {}", plan.patch_path)).await;
+
+    let Some(evaluator_script) = plan.evaluator_script.as_deref() else {
+        finish_run(
+            &plan.run_id,
+            BENCHMARK_RUN_STATUS_FAILED,
+            None,
+            Some("Missing evaluator script for Docker run".to_string()),
+        )
+        .await;
+        return;
+    };
+    let Some(scripts_dir) = plan.scripts_dir.as_deref() else {
+        finish_run(
+            &plan.run_id,
+            BENCHMARK_RUN_STATUS_FAILED,
+            None,
+            Some("Missing run scripts directory for Docker run".to_string()),
+        )
+        .await;
+        return;
+    };
+
+    let mut command = Command::new("python3");
+    command
+        .arg(evaluator_script)
+        .arg("--raw_sample_path")
+        .arg(&plan.source_path)
+        .arg("--patch_path")
+        .arg(&plan.patch_path)
+        .arg("--output_dir")
+        .arg(&plan.output_dir)
+        .arg("--scripts_dir")
+        .arg(scripts_dir)
+        .arg("--dockerhub_username")
+        .arg(SWE_BENCH_PRO_DOCKERHUB_USERNAME)
+        .arg("--use_local_docker")
+        .arg("--num_workers")
+        .arg("1")
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(error) => {
+            finish_run(
+                &plan.run_id,
+                BENCHMARK_RUN_STATUS_FAILED,
+                None,
+                Some(format!("Failed to spawn evaluator: {error}")),
+            )
+            .await;
+            return;
+        }
+    };
+
+    if let Some(process_id) = child.id() {
+        set_run_process_id(&plan.run_id, process_id).await;
+    }
+
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+    let run_id_for_stdout = plan.run_id.clone();
+    let run_id_for_stderr = plan.run_id.clone();
+
+    let stdout_task = tokio::spawn(async move {
+        if let Some(stdout_pipe) = stdout {
+            let mut lines = TokioBufReader::new(stdout_pipe).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                append_run_log(&run_id_for_stdout, format!("stdout: {line}")).await;
+            }
+        }
+    });
+
+    let stderr_task = tokio::spawn(async move {
+        if let Some(stderr_pipe) = stderr {
+            let mut lines = TokioBufReader::new(stderr_pipe).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                append_run_log(&run_id_for_stderr, format!("stderr: {line}")).await;
+            }
+        }
+    });
+
+    let wait_result = child.wait().await;
+    let _ = tokio::join!(stdout_task, stderr_task);
+
+    match wait_result {
+        Ok(exit_status) => {
+            let exit_code = exit_status.code();
+            let result = read_eval_result(&plan.output_dir, &plan.task_id).ok();
+            let result_passed = result
+                .as_ref()
+                .and_then(|value| value.as_bool())
+                .unwrap_or(false);
+            let status = if exit_status.success() && result_passed {
+                BENCHMARK_RUN_STATUS_PASSED
+            } else {
+                BENCHMARK_RUN_STATUS_FAILED
+            };
+            finish_run_with_result(&plan.run_id, status, exit_code, result, None).await;
+        }
+        Err(error) => {
+            finish_run(
+                &plan.run_id,
+                BENCHMARK_RUN_STATUS_FAILED,
+                None,
+                Some(format!("Failed while waiting for evaluator: {error}")),
+            )
+            .await;
+        }
+    }
+}
+
+async fn set_run_process_id(run_id: &str, process_id: u32) {
+    let mut runs = BENCHMARK_RUNS.lock().await;
+    if let Some(status) = runs.get_mut(run_id) {
+        status.process_id = Some(process_id);
+        status
+            .logs
+            .push(format!("Evaluator process started with PID {process_id}"));
+        trim_logs(&mut status.logs);
+    }
+}
+
+async fn append_run_log(run_id: &str, line: String) {
+    let mut runs = BENCHMARK_RUNS.lock().await;
+    if let Some(status) = runs.get_mut(run_id) {
+        if status.status == BENCHMARK_RUN_STATUS_CANCELLED {
+            return;
+        }
+        status.logs.push(line);
+        trim_logs(&mut status.logs);
+    }
+}
+
+async fn finish_run(
+    run_id: &str,
+    status_value: &str,
+    exit_code: Option<i32>,
+    error: Option<String>,
+) {
+    finish_run_with_result(run_id, status_value, exit_code, None, error).await;
+}
+
+async fn finish_run_with_result(
+    run_id: &str,
+    status_value: &str,
+    exit_code: Option<i32>,
+    result: Option<Value>,
+    error: Option<String>,
+) {
+    let mut runs = BENCHMARK_RUNS.lock().await;
+    if let Some(status) = runs.get_mut(run_id) {
+        if status.status == BENCHMARK_RUN_STATUS_CANCELLED {
+            return;
+        }
+        status.status = status_value.to_string();
+        status.finished_at = Some(Utc::now().to_rfc3339());
+        status.exit_code = exit_code;
+        status.result = result;
+        status.error = error.clone();
+        if let Some(message) = error {
+            status.logs.push(message);
+        }
+        status
+            .logs
+            .push(format!("Run finished with status: {status_value}"));
+        trim_logs(&mut status.logs);
+    }
+}
+
+fn ensure_swe_bench_pro(kind: &str) -> Result<(), String> {
+    if kind == BENCHMARK_KIND_SWE_BENCH_PRO {
+        Ok(())
+    } else {
+        Err(format!("Unsupported benchmark kind: {kind}"))
+    }
+}
+
+fn ensure_supported_swe_bench_mode(evaluation_mode: &str) -> Result<(), String> {
+    if matches!(
+        evaluation_mode,
+        EVALUATION_MODE_LOCAL_DOCKER | EVALUATION_MODE_PATCH_ONLY
+    ) {
+        Ok(())
+    } else {
+        Err(format!(
+            "Unsupported benchmark run mode: {evaluation_mode}. Supported modes: local_docker, patch_only."
+        ))
+    }
+}
+
+fn read_swe_bench_rows(source_path: &str) -> Result<Vec<Value>, String> {
+    let path = Path::new(source_path);
+    let file =
+        File::open(path).map_err(|error| format!("Failed to open {source_path}: {error}"))?;
+    let reader = BufReader::new(file);
+    let mut rows = Vec::new();
+    for (line_index, line) in reader.lines().enumerate() {
+        let line =
+            line.map_err(|error| format!("Failed to read line {}: {error}", line_index + 1))?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let row: Value = serde_json::from_str(&line)
+            .map_err(|error| format!("Invalid JSONL line {}: {error}", line_index + 1))?;
+        rows.push(row);
+    }
+    Ok(rows)
+}
+
+fn read_swe_bench_task(source_path: &str, task_id: &str) -> Result<BenchmarkTaskDetail, String> {
+    swe_bench_row_to_detail(source_path, find_swe_bench_row(source_path, task_id)?)
+}
+
+fn find_swe_bench_row(source_path: &str, task_id: &str) -> Result<Value, String> {
+    for row in read_swe_bench_rows(source_path)? {
+        let instance_id = string_field(&row, "instance_id").unwrap_or_default();
+        if instance_id == task_id {
+            return Ok(row);
+        }
+    }
+    Err(format!("SWE-bench Pro task not found: {task_id}"))
+}
+
+fn swe_bench_row_to_detail(source_path: &str, row: Value) -> Result<BenchmarkTaskDetail, String> {
+    let task_id = string_field(&row, "instance_id")
+        .ok_or_else(|| "SWE-bench Pro row is missing instance_id".to_string())?;
+    let problem_statement = string_field(&row, "problem_statement").unwrap_or_default();
+    let requirements = string_field(&row, "requirements").unwrap_or_default();
+    let interface = string_field(&row, "interface").unwrap_or_default();
+    let instruction = compose_swe_bench_instruction(&problem_statement, &requirements, &interface);
+    let title = first_non_empty_line(&problem_statement).unwrap_or_else(|| task_id.clone());
+    let repo = string_field(&row, "repo").or_else(|| string_field(&row, "repo_name"));
+    let char_count = instruction.chars().count();
+    let word_count = instruction.split_whitespace().count();
+
+    let metadata = serde_json::json!({
+        "baseCommit": string_field(&row, "base_commit"),
+        "imageName": string_field(&row, "image_name"),
+        "dockerhubTag": string_field(&row, "dockerhub_tag"),
+        "selectedTestFilesToRun": row.get("selected_test_files_to_run").cloned(),
+        "failToPass": row.get("FAIL_TO_PASS").cloned(),
+        "passToPass": row.get("PASS_TO_PASS").cloned(),
+    });
+
+    Ok(BenchmarkTaskDetail {
+        index: BenchmarkTaskIndexRow {
+            benchmark_kind: BENCHMARK_KIND_SWE_BENCH_PRO.to_string(),
+            task_id,
+            title,
+            source_path: source_path.to_string(),
+            repo,
+            word_count,
+            char_count,
+            tags: vec!["swe-bench-pro".to_string()],
+            difficulty: None,
+            metadata,
+        },
+        instruction,
+    })
+}
+
+fn compose_swe_bench_instruction(
+    problem_statement: &str,
+    requirements: &str,
+    interface: &str,
+) -> String {
+    let mut parts = Vec::new();
+    if !problem_statement.trim().is_empty() {
+        parts.push(problem_statement.trim().to_string());
+    }
+    if !requirements.trim().is_empty() {
+        parts.push(format!("Requirements:\n{}", requirements.trim()));
+    }
+    if !interface.trim().is_empty() {
+        parts.push(format!("New interfaces introduced:\n{}", interface.trim()));
+    }
+    parts.join("\n\n")
+}
+
+fn first_non_empty_line(value: &str) -> Option<String> {
+    value
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .map(|line| line.chars().take(120).collect())
+}
+
+fn task_matches_query(detail: &BenchmarkTaskDetail, query: &str) -> bool {
+    detail.index.task_id.to_lowercase().contains(query)
+        || detail.index.title.to_lowercase().contains(query)
+        || detail
+            .index
+            .repo
+            .as_ref()
+            .map(|repo| repo.to_lowercase().contains(query))
+            .unwrap_or(false)
+}
+
+fn string_field(row: &Value, key: &str) -> Option<String> {
+    row.get(key).and_then(string_value)
+}
+
+fn string_value(value: &Value) -> Option<String> {
+    match value {
+        Value::String(text) => Some(text.clone()),
+        Value::Number(number) => Some(number.to_string()),
+        _ => None,
+    }
+}
+
+async fn command_version(command: &str, args: &[&str]) -> Result<String, String> {
+    run_command_for_stdout(None, command, args).await
+}
+
+async fn command_version_in_dir(
+    cwd: &Path,
+    command: &str,
+    args: &[&str],
+) -> Result<String, String> {
+    run_command_for_stdout(Some(cwd), command, args).await
+}
+
+async fn run_command_for_stdout(
+    cwd: Option<&Path>,
+    command: &str,
+    args: &[&str],
+) -> Result<String, String> {
+    let mut command_builder = Command::new(command);
+    command_builder.args(args);
+    if let Some(current_dir) = cwd {
+        command_builder.current_dir(current_dir);
+    }
+    let output = command_builder
+        .output()
+        .await
+        .map_err(|error| format!("Failed to run {command}: {error}"))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            format!("{command} exited with {}", output.status)
+        } else {
+            stderr
+        });
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Ok(stdout)
+}
+
+async fn terminate_process(process_id: u32) -> Result<(), String> {
+    #[cfg(unix)]
+    let output = Command::new("kill")
+        .arg("-TERM")
+        .arg(process_id.to_string())
+        .output()
+        .await;
+
+    #[cfg(windows)]
+    let output = Command::new("taskkill")
+        .arg("/PID")
+        .arg(process_id.to_string())
+        .arg("/T")
+        .arg("/F")
+        .output()
+        .await;
+
+    let output =
+        output.map_err(|error| format!("Failed to terminate process {process_id}: {error}"))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        Err(if stderr.is_empty() {
+            format!("Process termination exited with {}", output.status)
+        } else {
+            stderr
+        })
+    }
+}
+
+fn modal_config_path() -> PathBuf {
+    app_paths::home_dir().join(".modal.toml")
+}
+
+fn swe_bench_repo_path() -> PathBuf {
+    PathBuf::from(SWE_BENCH_PRO_REPO_PATH)
+}
+
+fn swe_bench_evaluator_script_path() -> PathBuf {
+    swe_bench_repo_path().join(SWE_BENCH_PRO_EVALUATOR_SCRIPT)
+}
+
+fn swe_bench_run_scripts_dir() -> PathBuf {
+    swe_bench_repo_path().join(SWE_BENCH_PRO_RUN_SCRIPTS_DIR)
+}
+
+fn benchmark_runs_dir() -> PathBuf {
+    app_paths::orgii_root().join("benchmark-runs")
+}
+
+fn benchmark_run_output_dir(run_id: &str) -> PathBuf {
+    benchmark_runs_dir().join(run_id)
+}
+
+fn swe_bench_command_preview(
+    source_path: &str,
+    patch_path: &Path,
+    output_dir: &Path,
+) -> Vec<String> {
+    vec![
+        "python3".to_string(),
+        swe_bench_evaluator_script_path().display().to_string(),
+        "--raw_sample_path".to_string(),
+        source_path.to_string(),
+        "--patch_path".to_string(),
+        patch_path.display().to_string(),
+        "--output_dir".to_string(),
+        output_dir.display().to_string(),
+        "--scripts_dir".to_string(),
+        swe_bench_run_scripts_dir().display().to_string(),
+        "--dockerhub_username".to_string(),
+        SWE_BENCH_PRO_DOCKERHUB_USERNAME.to_string(),
+        "--use_local_docker".to_string(),
+        "--num_workers".to_string(),
+        "1".to_string(),
+    ]
+}
+
+fn swe_bench_patch_only_command_preview(
+    task: &BenchmarkTaskDetail,
+    patch_path: &Path,
+) -> Vec<String> {
+    let base_commit = task
+        .index
+        .metadata
+        .get("base_commit")
+        .and_then(string_value)
+        .unwrap_or_else(|| "<base_commit>".to_string());
+    vec![
+        "git".to_string(),
+        "worktree".to_string(),
+        "add".to_string(),
+        "-b".to_string(),
+        "benchmark/<run-id>".to_string(),
+        "<worktree-path>".to_string(),
+        base_commit,
+        "&&".to_string(),
+        "git".to_string(),
+        "-C".to_string(),
+        "<worktree-path>".to_string(),
+        "apply".to_string(),
+        "--whitespace=nowarn".to_string(),
+        patch_path.display().to_string(),
+    ]
+}
+
+fn read_eval_result(output_dir: &str, task_id: &str) -> Result<Value, String> {
+    let results_path = Path::new(output_dir).join("eval_results.json");
+    let file = File::open(&results_path)
+        .map_err(|error| format!("Failed to open eval results: {error}"))?;
+    let results: Value = serde_json::from_reader(file)
+        .map_err(|error| format!("Failed to parse eval results: {error}"))?;
+    Ok(results
+        .get(task_id)
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({ "raw": results })))
+}
+
+fn trim_logs(logs: &mut Vec<String>) {
+    if logs.len() > MAX_RUN_LOG_LINES {
+        let drain_count = logs.len() - MAX_RUN_LOG_LINES;
+        logs.drain(0..drain_count);
+    }
+}
+
+fn truncate_detail(value: &str, max_chars: usize) -> String {
+    if value.chars().count() <= max_chars {
+        return value.to_string();
+    }
+    let mut truncated: String = value.chars().take(max_chars).collect();
+    truncated.push('…');
+    truncated
+}

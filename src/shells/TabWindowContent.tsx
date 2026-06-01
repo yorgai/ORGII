@@ -1,0 +1,91 @@
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { EditorProvider } from "@src/contexts/workstation";
+import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import { TabWindowData } from "@src/util/ui/window/windowManager";
+
+// Lazy load components for different tab types
+const SuggestionsPage = React.lazy(
+  () => import("@/src/modules/MainApp/StartPage")
+);
+
+const Settings = React.lazy(() => import("@/src/modules/MainApp/Settings"));
+const Editor = React.lazy(() => import("@src/modules/WorkStation"));
+
+interface TabWindowContentProps {
+  tabData: TabWindowData;
+}
+
+const TabWindowContent: React.FC<TabWindowContentProps> = ({ tabData }) => {
+  const navigate = useNavigate();
+
+  // Navigate to the appropriate route based on tab data
+  useEffect(() => {
+    if (tabData.routePath) {
+      // Extract just the path without the /codebase prefix for local routing
+      const localPath = tabData.routePath.replace("/codebase", "");
+      navigate(localPath || "/");
+    }
+  }, [tabData, navigate]);
+
+  // Render content based on tab type, wrapped with appropriate provider
+  // This mirrors the provider wrapping pattern in src/page/Orgii/index.tsx
+  const renderContent = () => {
+    const { type, routePath } = tabData;
+
+    // Workstation routes (editor, session workspace, workstation/*) all render Editor
+    const isEditorContent =
+      routePath?.includes("/workstation") ||
+      routePath?.includes("/editor") ||
+      type === "editor";
+
+    if (isEditorContent) {
+      return (
+        <EditorProvider>
+          <Editor />
+        </EditorProvider>
+      );
+    }
+
+    // Routes that don't require special providers
+    if (routePath) {
+      if (routePath.includes("/home")) {
+        return <SuggestionsPage />;
+      }
+
+      if (routePath.includes("/settings")) {
+        return <Settings />;
+      }
+    }
+
+    // Fallback based on tab type (for types without special providers)
+    switch (type) {
+      case "main":
+        return <SuggestionsPage />;
+      case "settings":
+        return <Settings />;
+      default:
+        return (
+          <div className="flex h-full items-center justify-center">
+            <div className="text-center">
+              <h2 className="mb-2 text-xl font-bold text-text-1">
+                {tabData.title}
+              </h2>
+              <p className="text-sm text-text-2">Tab type: {type}</p>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="h-full w-full overflow-hidden bg-bg-1">
+      <React.Suspense fallback={<Placeholder variant="loading" />}>
+        {renderContent()}
+      </React.Suspense>
+    </div>
+  );
+};
+
+export default TabWindowContent;

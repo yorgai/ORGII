@@ -1,0 +1,413 @@
+/**
+ * useContextMenu Hook
+ *
+ * Description: Manages state and keyboard navigation for the unified context menu.
+ *
+ * Features:
+ * - Keyboard navigation (up/down/left/right/enter/escape)
+ * - Multi-level menu support
+ * - Native file search integration
+ * - Search query management
+ */
+import {
+  KEYBOARD_CONFIG,
+  MENU_ITEMS,
+  MenuItemId,
+  SecondLayerId,
+} from "@/src/scaffold/ContextMenu/config";
+import type {
+  SearchResultItem,
+  UseContextMenuOptions,
+  UseContextMenuReturn,
+} from "@/src/scaffold/ContextMenu/types";
+import { useAtomValue } from "jotai";
+import {
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import { useRepoSuggestions } from "@src/engines/ChatPanel/hooks/useInputArea/useRepoSuggestions";
+import {
+  DEBOUNCE_DELAYS,
+  useDebouncedCallback,
+} from "@src/hooks/perf/useDebouncedCallback";
+import { currentRepoAtom } from "@src/store/repo/derived";
+import { sessionsAtom } from "@src/store/session/sessionAtom";
+import { globalTabsAtom } from "@src/store/ui/globalTabsAtom";
+import { terminalSessionsAtom } from "@src/store/workstation/codeEditor/terminal";
+
+import {
+  type DrilledProject,
+  searchBrowserTabs,
+  searchCodebase,
+  searchFiles,
+  searchProjects,
+  searchSessions,
+  searchTerminals,
+} from "./contextMenuSearchHandlers";
+
+// Default configuration
+const DEFAULT_OPTIONS: UseContextMenuOptions = {
+  repoPath: undefined,
+  onSelect: undefined,
+  onClose: undefined,
+};
+
+/**
+ * Hook for managing context menu state and navigation
+ */
+export function useContextMenu(
+  options: UseContextMenuOptions = {}
+): UseContextMenuReturn {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const { getFilteredRepos } = useRepoSuggestions();
+
+  // Store callbacks in refs to avoid stale closures
+  const onSelectRef = useRef(opts.onSelect);
+  const onCloseRef = useRef(opts.onClose);
+
+  // Keep refs up to date
+  onSelectRef.current = opts.onSelect;
+  onCloseRef.current = opts.onClose;
+
+  // Fallback repo path — always available even when session repoPath is not set
+  const currentRepo = useAtomValue(currentRepoAtom);
+  const effectiveRepoPath = opts.repoPath || currentRepo?.path || "";
+
+  // Get terminal sessions from editor state (same terminals as Workstation panel)
+  const editorTerminalSessions = useAtomValue(terminalSessionsAtom);
+  // Get browser tabs from global state
+  const globalTabs = useAtomValue(globalTabsAtom);
+  const browserTabs = globalTabs.browser;
+  // Get all sessions for @sessions search
+  const allSessions = useAtomValue(sessionsAtom);
+
+  const drilledProjectRef = useRef<DrilledProject | null>(null);
+  const [drilledProjectName, setDrilledProjectName] = useState<string | null>(
+    null
+  );
+
+  // State — internal (used when user clicks menu items, NOT for inline @query)
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [internalSecondLayer, setInternalSecondLayer] =
+    useState<SecondLayerId | null>(null);
+  const [internalSearchQuery, setInternalSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [secondLayerActiveIndex, setSecondLayerActiveIndex] = useState(0);
+
+  // Derive effective values — when externalSearchQuery is provided, override
+  // without any setState.  This eliminates the 2-setState cascade that was
+  // previously done via a useEffect in ContextMenu/index.tsx.
+  const hasExternalQuery =
+    !!opts.externalSearchQuery && opts.externalSearchQuery.length > 0;
+  const secondLayer: SecondLayerId | null = hasExternalQuery
+    ? "files"
+    : internalSecondLayer;
+  const searchQuery: string = hasExternalQuery
+    ? opts.externalSearchQuery!
+    : internalSearchQuery;
+
+  // Expose setters that write to the internal state
+  const setSecondLayer = setInternalSecondLayer;
+  const setSearchQuery = setInternalSearchQuery;
+
+  // Get total menu items count
+  const menuItemsCount = MENU_ITEMS.length;
+
+  // Helper: set search results AND reset active index in one batch
+  // (React 18 batches these into a single render)
+  const updateSearchResults = useCallback((results: SearchResultItem[]) => {
+    setSearchResults(results);
+    setSecondLayerActiveIndex(0);
+  }, []);
+
+  const performSearch = useCallback(
+    async (query: string, type: SecondLayerId, allowEmpty: boolean = false) => {
+      if (!query.trim() && !allowEmpty) {
+        updateSearchResults([]);
+        return;
+      }
+      setSearchLoading(true);
+      try {
+        let results: SearchResultItem[];
+        if (type === "files") {
+          results = await searchFiles(
+            query,
+            opts.repoPath ?? "",
+            getFilteredRepos
+          );
+        } else if (type === "terminals") {
+          results = searchTerminals(query, editorTerminalSessions);
+        } else if (type === "sessions") {
+          results = searchSessions(query, allSessions);
+        } else if (type === "browser") {
+          results = searchBrowserTabs(query, browserTabs);
+        } else if (type === "projects") {
+          results = await searchProjects(
+            query,
+            effectiveRepoPath,
+            drilledProjectRef.current
+          );
+        } else if (type === "codebase") {
+          results = await searchCodebase(query, effectiveRepoPath);
+        } else {
+          results = [];
+        }
+        updateSearchResults(results);
+      } catch (error) {
+        console.error("[ContextMenu] Search failed:", error);
+        updateSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    },
+    [
+      opts.repoPath,
+      effectiveRepoPath,
+      editorTerminalSessions,
+      browserTabs,
+      allSessions,
+      updateSearchResults,
+      getFilteredRepos,
+    ]
+  );
+
+  // Debounced context menu search — leading: true fires first call immediately
+  // so entering a layer shows results without waiting for the debounce delay
+  const debouncedContextSearch = useDebouncedCallback(
+    (query: string, layer: SecondLayerId, showAll: boolean) => {
+      performSearch(query, layer, showAll);
+    },
+    DEBOUNCE_DELAYS.SEARCH,
+    { leading: true }
+  );
+
+  // Handle search query changes with debounce.
+  // NOTE: `performSearch` is intentionally NOT in the deps — it changes
+  // whenever editorTerminalSessions/browserTabs change, which
+  // would trigger spurious re-searches.  The ref-based callback inside
+  // useDebouncedCallback keeps the function fresh.
+  useEffect(() => {
+    if (secondLayer) {
+      // When entering files layer without query, still search to show all files
+      debouncedContextSearch(searchQuery, secondLayer, !searchQuery);
+    } else if (!searchQuery) {
+      debouncedContextSearch.cancel();
+      updateSearchResults([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, secondLayer, debouncedContextSearch]);
+
+  // Handle item selection - uses refs to avoid stale closures
+  // Intercepts "project" clicks in the projects layer to drill in
+  const handleSelect = useCallback(
+    (type: MenuItemId, value?: string, displayName?: string) => {
+      if (
+        type === "project" &&
+        secondLayer === "projects" &&
+        !drilledProjectRef.current &&
+        value
+      ) {
+        drilledProjectRef.current = {
+          slug: value,
+          name: displayName || value,
+        };
+        setDrilledProjectName(displayName || value);
+        setSecondLayerActiveIndex(0);
+        // Bypass debounce — drill-down must fire immediately
+        performSearch("", "projects", true);
+        return;
+      }
+      onSelectRef.current?.(type, value, displayName);
+      onCloseRef.current?.();
+    },
+    [secondLayer, performSearch] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  // Go back — from drilled project to project list, or from project list to main menu
+  const goBack = useCallback(() => {
+    if (drilledProjectRef.current) {
+      drilledProjectRef.current = null;
+      setDrilledProjectName(null);
+      setSecondLayerActiveIndex(0);
+      // Bypass debounce — back navigation must fire immediately
+      performSearch("", "projects", true);
+    } else {
+      setSecondLayer(null);
+      setSearchQuery("");
+      updateSearchResults([]);
+    }
+  }, [updateSearchResults, setSearchQuery, setSecondLayer, performSearch]);
+
+  // Reset state
+  const reset = useCallback(() => {
+    setActiveIndex(0);
+    setSecondLayer(null);
+    setSearchQuery("");
+    updateSearchResults([]);
+    setSearchLoading(false);
+    drilledProjectRef.current = null;
+    setDrilledProjectName(null);
+  }, [updateSearchResults, setSearchQuery, setSecondLayer]);
+
+  // Handle keyboard navigation - returns true if the event was handled
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent): boolean => {
+      const { key } = e;
+
+      // Handle escape - go back or close
+      if (key === KEYBOARD_CONFIG.escape) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (secondLayer) {
+          goBack();
+        } else {
+          onCloseRef.current?.();
+        }
+        return true;
+      }
+
+      // In second layer mode (secondLayer is set when user clicks a menu item or types after @)
+      if (secondLayer) {
+        switch (key) {
+          case KEYBOARD_CONFIG.up:
+            e.preventDefault();
+            e.stopPropagation();
+            if (searchResults.length > 0) {
+              setSecondLayerActiveIndex((prev) =>
+                prev > 0 ? prev - 1 : searchResults.length - 1
+              );
+            }
+            return true;
+
+          case KEYBOARD_CONFIG.down:
+            e.preventDefault();
+            e.stopPropagation();
+            if (searchResults.length > 0) {
+              setSecondLayerActiveIndex((prev) =>
+                prev < searchResults.length - 1 ? prev + 1 : 0
+              );
+            }
+            return true;
+
+          case KEYBOARD_CONFIG.enter:
+            e.preventDefault();
+            e.stopPropagation();
+            if (searchResults.length > 0) {
+              const selected = searchResults[secondLayerActiveIndex];
+              // Use iconType for repo/branch, otherwise secondLayer (files/folder/codebase)
+              let selectType: MenuItemId = secondLayer;
+              if (selected.iconType === "repo") {
+                selectType = "repo";
+              } else if (selected.iconType === "branch") {
+                selectType = "branch";
+              } else if (selected.iconType === "project") {
+                selectType = "project";
+              } else if (selected.iconType === "workitem") {
+                selectType = "workitem";
+              } else if (secondLayer === "codebase") {
+                selectType = "codebase";
+              } else if (
+                secondLayer === "files" &&
+                selected.type === "folder"
+              ) {
+                selectType = "folder";
+              }
+              handleSelect(selectType, selected.path, selected.name);
+            }
+            return true;
+
+          case KEYBOARD_CONFIG.left:
+            // Left arrow goes back to main menu
+            e.preventDefault();
+            e.stopPropagation();
+            goBack();
+            return true;
+
+          case KEYBOARD_CONFIG.tab:
+            e.preventDefault();
+            e.stopPropagation();
+            if (searchResults.length > 0) {
+              setSecondLayerActiveIndex((prev) =>
+                prev < searchResults.length - 1 ? prev + 1 : 0
+              );
+            }
+            return true;
+        }
+        // Don't capture other keys (like right arrow for cursor movement)
+        return false;
+      }
+
+      // In main menu
+      switch (key) {
+        case KEYBOARD_CONFIG.up:
+          e.preventDefault();
+          e.stopPropagation();
+          setActiveIndex((prev) => (prev > 0 ? prev - 1 : menuItemsCount - 1));
+          return true;
+
+        case KEYBOARD_CONFIG.down:
+          e.preventDefault();
+          e.stopPropagation();
+          setActiveIndex((prev) => (prev < menuItemsCount - 1 ? prev + 1 : 0));
+          return true;
+
+        case KEYBOARD_CONFIG.right:
+        case KEYBOARD_CONFIG.enter: {
+          e.preventDefault();
+          e.stopPropagation();
+          const item = MENU_ITEMS[activeIndex];
+          if (item.hasSecondLayer) {
+            setSecondLayer(item.id as SecondLayerId);
+          } else {
+            handleSelect(item.id);
+          }
+          return true;
+        }
+
+        case KEYBOARD_CONFIG.tab:
+          e.preventDefault();
+          e.stopPropagation();
+          // Tab cycles through items
+          setActiveIndex((prev) => (prev < menuItemsCount - 1 ? prev + 1 : 0));
+          return true;
+      }
+
+      return false;
+    },
+    [
+      secondLayer,
+      searchResults,
+      secondLayerActiveIndex,
+      activeIndex,
+      menuItemsCount,
+      handleSelect,
+      goBack,
+      setSecondLayer,
+    ]
+  );
+
+  return {
+    activeIndex,
+    setActiveIndex,
+    secondLayer,
+    setSecondLayer,
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    searchLoading,
+    secondLayerActiveIndex,
+    setSecondLayerActiveIndex,
+    handleKeyDown,
+    handleSelect,
+    goBack,
+    reset,
+    drilledProjectName,
+  };
+}
+
+export default useContextMenu;

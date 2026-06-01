@@ -1,0 +1,7 @@
+---
+source: crates/agent-core/src/integrations/automation/tests/types_tests.rs
+assertion_line: 116
+expression: trigger
+---
+type: timer
+intervalSecs: 300

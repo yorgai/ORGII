@@ -1,0 +1,258 @@
+/**
+ * Native Textarea Styles
+ *
+ * Follows same pattern as Input component.
+ */
+
+.textarea-wrapper {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  transition: all 0.1s cubic-bezier(0, 0, 1, 1);
+
+  // Inner wrapper handles the visual styling
+  .textarea-inner {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  // Size variants - horizontal padding matches Input for alignment
+  &.textarea-size-mini {
+    font-size: 12px;
+
+    .textarea {
+      padding: 6px 8px;
+      font-size: 12px;
+    }
+  }
+
+  &.textarea-size-small {
+    font-size: 13px;
+
+    .textarea {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+  }
+
+  &.textarea-size-default {
+    font-size: 14px;
+
+    .textarea {
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+  }
+
+  &.textarea-size-large {
+    font-size: 14px;
+
+    .textarea {
+      padding: 10px 16px;
+      font-size: 14px;
+    }
+  }
+
+  // Hover state (matching Input component)
+  &:hover:not(.textarea-disabled):not(.textarea-readonly):not(
+      .textarea-focused
+    ) {
+    .textarea-inner {
+      border-color: var(--color-border-3);
+    }
+  }
+
+  // Focus state (matching Input component)
+  &.textarea-focused {
+    .textarea-inner {
+      border-color: var(--color-primary-6);
+      box-shadow: 0 0 0 2px
+        color-mix(in srgb, var(--color-primary-6) 15%, transparent);
+    }
+  }
+
+  // Error state (matching Input component)
+  &.textarea-error {
+    .textarea-inner {
+      border-color: var(--color-danger-6);
+      box-shadow: 0 0 0 2px
+        color-mix(in srgb, var(--color-danger-6) 15%, transparent);
+    }
+
+    &.textarea-focused {
+      .textarea-inner {
+        border-color: var(--color-danger-6);
+        box-shadow: 0 0 0 2px
+          color-mix(in srgb, var(--color-danger-6) 20%, transparent);
+      }
+    }
+  }
+
+  // Disabled state
+  &.textarea-disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+
+    .textarea {
+      cursor: not-allowed;
+    }
+  }
+
+  // Readonly state
+  &.textarea-readonly {
+    cursor: default;
+
+    .textarea-inner {
+      opacity: 0.8;
+    }
+  }
+
+  &.textarea-pane-surface {
+    .textarea-inner {
+      background: var(--color-pane-input);
+    }
+  }
+}
+
+.textarea {
+  // Internal textarea - has padding for proper alignment and resize handle positioning
+  // Horizontal padding MUST match Input component for text alignment
+  width: 100%;
+  min-height: 60px;
+  max-height: 300px;
+  padding: 8px 12px; // Default - overridden by size variants
+  margin: 0;
+  background: transparent;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  color: var(--color-text-1);
+  caret-color: var(--color-primary-6);
+  font-family: inherit;
+  line-height: 1.5;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  box-sizing: border-box;
+
+  // Placeholder styling
+  &::placeholder {
+    color: var(--color-text-3);
+  }
+
+  // Remove focus ring - wrapper handles focus styling
+  &:focus {
+    outline: none;
+    box-shadow: none;
+    border: none;
+    background: transparent;
+  }
+
+  // Remove any inherited styles
+  &:hover {
+    border: none;
+    outline: none;
+    box-shadow: none;
+  }
+
+  &:active {
+    border: none;
+    outline: none;
+    box-shadow: none;
+  }
+
+  // Scrollbar styling
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-fill-3);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-fill-4);
+  }
+}
+
+// Override any global textarea styles that might interfere
+.textarea-wrapper textarea.textarea {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  background-color: transparent;
+  box-shadow: none;
+  outline: none;
+
+  &:hover,
+  &:focus,
+  &:active {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    background-color: transparent;
+    box-shadow: none;
+    outline: none;
+  }
+}
+
+// Footer with clear button and word limit
+.textarea-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 4px 8px;
+}
+
+// Clear button
+.textarea-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  color: var(--color-text-3);
+  font-size: 14px;
+  transition: color 0.1s;
+
+  &:hover {
+    color: var(--color-text-2);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// Word limit
+.textarea-word-limit {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--color-text-3);
+  white-space: nowrap;
+}

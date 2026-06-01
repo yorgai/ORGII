@@ -1,0 +1,10 @@
+---
+source: src/agent_sessions/cli/parsers/tests/acp_common_tests.rs
+expression: result
+---
+- content: First item
+  id: "1"
+  status: pending
+- content: Second item
+  id: "2"
+  status: pending

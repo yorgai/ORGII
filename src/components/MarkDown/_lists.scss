@@ -1,0 +1,58 @@
+// Cursor-style lists
+.chat-markdown-body ul,
+.chat-markdown-body ol {
+  margin-top: 6px;
+  margin-bottom: 10px;
+  padding-left: 1.5em;
+}
+
+.chat-markdown-body ul {
+  list-style: none;
+
+  & > li {
+    position: relative;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: -1.1em;
+      top: 0.6em;
+      width: 5px;
+      height: 5px;
+      background: var(--color-primary-6);
+      border-radius: 50%;
+      opacity: 0.7;
+    }
+
+    // Task list items use checkboxes instead of bullet dots
+    &.task-list-item::before {
+      display: none;
+    }
+  }
+}
+
+.chat-markdown-body ol {
+  list-style: decimal;
+
+  & > li::marker {
+    color: var(--color-primary-6);
+    font-weight: 600;
+    font-size: 12px;
+  }
+}
+
+.chat-markdown-body ol ol,
+.chat-markdown-body ul ol {
+  list-style-type: lower-roman;
+}
+
+.chat-markdown-body ul ul ol,
+.chat-markdown-body ul ol ol,
+.chat-markdown-body ol ul ol,
+.chat-markdown-body ol ol ol {
+  list-style-type: lower-alpha;
+}
+
+.chat-markdown-body dd {
+  margin-left: 0;
+}

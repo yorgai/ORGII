@@ -1,0 +1,148 @@
+.wp__chat__history {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+
+  background: transparent;
+
+  // CSS Variables for customization (set via inline style)
+  // --chat-font-size: 14px;        (main body text)
+  // --chat-code-font-size: 13px;   (code/mono content)
+  // --chat-line-height: 1.6;
+
+  // Derived font-size tokens — all relative to --chat-font-size
+  --chat-block-xs-size: calc(
+    var(--chat-font-size, 14px) - 3px
+  ); // 11px — labels, badges, section headers
+  --chat-block-content-size: var(
+    --chat-code-font-size,
+    13px
+  ); // code/content areas
+  --chat-block-title-size: calc(
+    var(--chat-font-size, 14px) - 1px
+  ); // 13px — block headers, meta
+  --chat-block-md-size: var(--chat-font-size, 14px); // main body text
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chat-markdown-body {
+    max-width: 100%;
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto; // Internal scrolling allowed for wide content
+    overflow-y: visible;
+    line-height: var(--chat-line-height, 1.6);
+
+    > pre {
+      max-width: 100%;
+      width: 100%;
+      overflow-x: auto;
+      min-width: 0;
+    }
+
+    // Code blocks use code font size
+    pre,
+    code {
+      font-size: var(--chat-code-font-size, 13px) !important;
+    }
+  }
+
+  // Chat font size wrapper - applies to all chat message content
+  // Font size is set via inline style on parent .wp__chat__history
+  .chat-font-size-wrapper {
+    font-size: inherit;
+    line-height: var(--chat-line-height, 1.6);
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: visible; // Allow horizontal scroll for wide content (code blocks, tables)
+    // Note: vertical spacing is handled by CHAT_ITEM_GAP token in ChatItemWrap.
+    // Do NOT add padding-bottom here — it conflicts with the Tailwind gap classes.
+
+    // Text selection is enabled via the `allow-select-deep` class
+    // (defined in src/index.scss) applied to .chat-font-size-wrapper.
+    // No per-component !important overrides needed.
+
+    // Main message content areas
+    .resultBgc,
+    .question-text,
+    .markdown-container {
+      font-size: inherit !important;
+      line-height: var(--chat-line-height, 1.6);
+    }
+
+    // User message content - the div with dangerouslySetInnerHTML
+    //
+    // ⚠️ The bare `.group` selector below is a footgun: Tailwind's generic
+    // `group` utility is used by many Chat blocks for hover-reveal children.
+    // Any Block whose outer wrapper uses bare `className="group …"` will
+    // match this rule and lose the `.chat-block-header` 16px size (falling
+    // back to the parent's 17px `--chat-font-size`).
+    //
+    // Rule: Chat blocks MUST use NAMED Tailwind group variants on their outer
+    // wrapper (`group/explore`, `group/shell`, `group/chat-block-header`, …).
+    // See `.cursor/rules/session-rendering.mdc` → "Tailwind `group` class —
+    // use named variants".
+    > div > .group > div,
+    .group > div[style] {
+      font-size: inherit !important;
+      line-height: var(--chat-line-height, 1.6);
+    }
+
+    // Agent message content in Markdown
+    .chat-markdown-body {
+      font-size: inherit !important;
+      line-height: var(--chat-line-height, 1.6);
+
+      // Code blocks use code font size
+      pre,
+      code {
+        font-size: var(--chat-code-font-size, 13px) !important;
+      }
+    }
+
+    // Ask user chat item text
+    .ask-user-chat-item {
+      .question-text {
+        font-size: inherit !important;
+        line-height: var(--chat-line-height, 1.6);
+      }
+    }
+  }
+
+  // Chat block header — uses --chat-block-title-size (1px smaller than main text)
+  .chat-block-header {
+    font-size: var(--chat-block-title-size, 13px);
+  }
+
+  // Chat block icon — sized to match block title text
+  .chat-block-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    align-self: center;
+    width: var(--chat-block-title-size, 13px);
+    height: var(--chat-block-title-size, 13px);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  }
+}
+
+// ============================================
+// Search Text Highlight Styles (like code editor)
+// ============================================
+
+// Text highlight for search matches
+mark.search-text-highlight {
+  background-color: rgba(255, 213, 0, 0.45);
+  color: inherit;
+  padding: 0 1px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 213, 0, 0.3);
+}

@@ -1,0 +1,735 @@
+.component-issue-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  animation: componentModalFade 0.16s ease-out;
+}
+
+.component-issue-modal-container {
+  width: 520px;
+  max-width: 95vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-2);
+  border-radius: 12px;
+  border: 1px solid var(--color-border-2);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: componentModalScale 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.component-issue-modal-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 20px;
+  background: var(--color-fill-1);
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.component-issue-modal-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.component-issue-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.component-issue-modal-subtitle {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+.component-issue-search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+// Custom Tabs Styling
+.component-issue-tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 100%;
+
+  .tabs-nav-wrapper {
+    padding: 0 20px;
+    background: var(--color-fill-1);
+    border-bottom: 1px solid var(--color-border-2);
+    margin: 0;
+    width: 100%;
+  }
+
+  .tabs-nav {
+    width: 100%;
+    border-bottom: none;
+
+    &::before {
+      display: none;
+    }
+  }
+
+  .tabs-tab {
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-2);
+
+    &:hover {
+      color: var(--color-text-1);
+    }
+  }
+
+  .tabs-tab-active,
+  .tabs-tab-active:hover {
+    color: var(--color-primary-6) !important;
+    font-weight: 600;
+  }
+
+  .tabs-active-indicator {
+    background: var(--color-primary-6);
+    height: 2px;
+    border-radius: 1px;
+  }
+
+  .tabs-content {
+    flex: 1;
+    overflow: auto;
+    width: 100%;
+  }
+
+  .tabs-pane {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+}
+
+.component-issue-tab-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.component-issue-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-primary-6);
+  color: #ffffff;
+  border-radius: 10px;
+  line-height: 1;
+}
+
+.component-issue-search-input {
+  flex: 1;
+
+  // Style the custom Input wrapper
+  .input-wrapper {
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--color-border-2);
+    background: var(--color-bg-2);
+    font-size: 13px;
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+
+    &:focus-within {
+      border-color: var(--color-primary-6);
+      box-shadow: 0 0 0 2px
+        color-mix(in srgb, var(--color-primary-6) 10%, transparent);
+    }
+  }
+
+  input {
+    font-size: 13px;
+    color: var(--color-text-1);
+
+    &::placeholder {
+      color: var(--color-text-4);
+    }
+  }
+}
+
+.component-issue-match-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.component-issue-match-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-2);
+  min-width: 32px;
+  text-align: center;
+}
+
+.component-issue-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: var(--color-fill-2);
+  color: var(--color-text-2);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--color-fill-3);
+    color: var(--color-text-1);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.component-issue-highlight {
+  display: inline;
+  background: color-mix(in srgb, var(--color-primary-6) 40%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-weight: 500;
+  box-shadow: 0 0 0 1px
+    color-mix(in srgb, var(--color-primary-6) 20%, transparent);
+  // Ensure text selection works - highlight should not interfere
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+
+  // Ensure it works inside code elements
+  code & {
+    display: inline;
+    background: color-mix(in srgb, var(--color-primary-6) 40%, transparent);
+    font-weight: 600;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+  }
+
+  // Ensure it works inside pre elements
+  pre & {
+    display: inline;
+    background: color-mix(in srgb, var(--color-primary-6) 40%, transparent);
+    font-weight: 600;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+  }
+
+  // Make it more visible in code blocks
+  .component-issue-code & {
+    background: color-mix(in srgb, var(--color-primary-6) 50%, transparent);
+    color: var(--color-text-1);
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+  }
+
+  // Make it more visible in HTML snippets
+  .component-issue-html & {
+    background: color-mix(in srgb, var(--color-primary-6) 50%, transparent);
+    color: var(--color-text-1);
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+  }
+
+  // Ensure selection highlight is visible over the search highlight
+  &::selection {
+    background: color-mix(in srgb, var(--color-primary-6) 60%, transparent);
+    color: var(--color-text-1);
+  }
+
+  &::-moz-selection {
+    background: color-mix(in srgb, var(--color-primary-6) 60%, transparent);
+    color: var(--color-text-1);
+  }
+}
+
+.component-issue-section-focused {
+  background: color-mix(in srgb, var(--color-primary-6) 8%, transparent);
+  border-radius: 8px;
+  margin: -8px;
+  padding: 8px;
+}
+
+.component-issue-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-3);
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--color-fill-3);
+    color: var(--color-text-1);
+  }
+}
+
+.component-issue-modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  // Ensure text selection works throughout the content
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.component-issue-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.component-issue-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--color-text-3);
+}
+
+.component-issue-label-text {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.component-issue-copy-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-3);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: var(--color-fill-3);
+    color: var(--color-text-1);
+  }
+}
+
+.component-issue-hint {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--color-text-4);
+}
+
+.component-issue-value {
+  font-size: 13px;
+  color: var(--color-text-1);
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+
+  // Ensure all child elements allow text selection
+  * {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+  }
+}
+
+.component-issue-code {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-2);
+  background: var(--color-fill-2);
+  font-family: var(--code-font-family, "SF Mono", "Consolas", monospace);
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+  // Ensure text is searchable
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.component-issue-inline-code {
+  font-family: var(--code-font-family, "SF Mono", "Consolas", monospace);
+  background: var(--color-fill-2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.component-issue-meta-grid {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 6px 12px;
+  align-items: center;
+  font-size: 12px;
+
+  span {
+    color: var(--color-text-3);
+    text-transform: uppercase;
+  }
+
+  code {
+    font-family: var(--code-font-family, "SF Mono", "Consolas", monospace);
+    color: var(--color-text-1);
+    word-break: break-word;
+    user-select: text;
+  }
+}
+
+.component-issue-html {
+  max-height: 180px;
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-2);
+  background: var(--color-fill-2);
+  font-size: 12px;
+  font-family: var(--code-font-family, "SF Mono", "Consolas", monospace);
+  overflow: auto;
+  user-select: text;
+}
+
+.component-issue-color-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.component-issue-color-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-fill-2);
+  font-family: var(--code-font-family, "SF Mono", "Consolas", monospace);
+  color: var(--color-text-1);
+}
+
+.component-issue-color-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.component-issue-color-token {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.component-issue-color-hex {
+  font-weight: 600;
+}
+
+.component-issue-color-plus {
+  font-size: 12px;
+  color: var(--color-text-4);
+}
+
+.component-issue-color-variable {
+  font-size: 12px;
+  color: var(--color-text-2);
+  letter-spacing: 0.2px;
+}
+
+.component-issue-color-property {
+  font-size: 10px;
+  color: var(--color-text-4);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.component-issue-color-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.component-issue-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-border-2);
+  background: var(--color-fill-1);
+}
+
+.component-issue-empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-2);
+}
+
+.component-issue-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-2);
+  background: var(--color-fill-3);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-2);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+}
+
+.component-issue-preview-shell {
+  padding: 12px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-fill-2);
+}
+
+.component-issue-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 12px;
+  background: var(--color-bg-1);
+  border-radius: 6px;
+
+  > * {
+    max-width: 100%;
+  }
+}
+
+// Component Suggestions Section
+.component-issue-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.component-issue-suggestion-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-fill-2);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+
+  &:hover {
+    border-color: var(--color-primary-6);
+    background: color-mix(in srgb, var(--color-primary-6) 5%, transparent);
+  }
+}
+
+.component-issue-suggestion-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.component-issue-suggestion-copy {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-3);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--color-fill-3);
+    color: var(--color-text-1);
+  }
+
+  &:active {
+    background: var(--color-fill-4);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.component-issue-confidence {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.component-issue-suggestion-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  font-family: var(--code-font-family, "SF Mono", "Consolas", monospace);
+  word-break: break-word;
+}
+
+.component-issue-suggestion-file {
+  font-size: 12px;
+  font-family: var(--code-font-family, "SF Mono", "Consolas", monospace);
+  color: var(--color-primary-6);
+  word-break: break-all;
+  padding-left: 20px;
+
+  &::before {
+    content: "📁 ";
+  }
+}
+
+.component-issue-suggestion-reason {
+  font-size: 11px;
+  color: var(--color-text-4);
+  padding-left: 20px;
+  font-style: italic;
+}
+
+// Empty state for components tab
+.component-issue-empty-suggestions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.component-issue-empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.component-issue-empty-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-2);
+  margin-bottom: 6px;
+}
+
+.component-issue-empty-hint {
+  font-size: 13px;
+  color: var(--color-text-4);
+}
+
+// Legend for components tab
+.component-issue-legend {
+  margin-top: auto;
+  padding: 14px;
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  background: var(--color-fill-1);
+}
+
+.component-issue-legend-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--color-text-3);
+  margin-bottom: 8px;
+}
+
+.component-issue-legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-2);
+}
+
+@keyframes componentModalFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes componentModalScale {
+  from {
+    transform: translateY(12px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}

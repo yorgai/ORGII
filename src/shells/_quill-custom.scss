@@ -1,0 +1,244 @@
+.custom-quill-editor {
+  .ql-toolbar.ql-snow {
+    border: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: transparent;
+    // border-bottom: 1px solid var(--color-border-2);
+
+    .ql-formats {
+      margin-right: 8px;
+      display: flex;
+      gap: 2px;
+
+      &:last-child {
+        margin-right: 0;
+      }
+    }
+
+    button {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border: none;
+      border-radius: 4px;
+      background-color: transparent;
+      color: var(--color-text-2);
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: var(--color-fill-2);
+        color: var(--color-text-1);
+      }
+
+      &.ql-active {
+        background-color: var(--color-primary-6);
+        color: white;
+      }
+
+      svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: currentColor;
+      }
+    }
+
+    /* Fix SVG icon styles */
+    .ql-stroke {
+      stroke: currentColor !important;
+      fill: none !important;
+      stroke-width: 2px !important;
+    }
+
+    .ql-fill {
+      fill: currentColor !important;
+      stroke: none !important;
+    }
+
+    .ql-even {
+      fill-rule: evenodd !important;
+    }
+  }
+
+  .ql-container.ql-snow {
+    border: none;
+    font-size: 14px;
+
+    .ql-editor {
+      min-height: 65px;
+      max-height: 200px;
+      padding: 12px;
+      padding-top: 0px;
+      color: var(--color-text-1);
+      line-height: 1.5;
+
+      &.ql-blank::before {
+        color: var(--color-text-3);
+        font-style: normal;
+      }
+    }
+  }
+}
+
+// Expanded state styles
+.input-expanded .custom-quill-editor .ql-container.ql-snow .ql-editor {
+  min-height: 160px;
+}
+
+/* Styles for hidden toolbar */
+.custom-quill-editor.hide-toolbar .ql-toolbar.ql-snow {
+  display: none !important;
+}
+
+/* Adjust editor border styles when toolbar is hidden */
+.custom-quill-editor.hide-toolbar .ql-container.ql-snow {
+  padding-top: 10px;
+}
+
+.quill-wrapper {
+  position: relative;
+
+  &.expanded {
+    .custom-quill-editor {
+      .ql-editor {
+        min-height: 250px;
+      }
+    }
+  }
+}
+
+/* Hide toolbar */
+.custom-quill-editor.hide-toolbar {
+  .ql-toolbar {
+    display: none !important;
+  }
+
+  .ql-container {
+    border-top: none !important;
+  }
+}
+
+/* Adapt to dark theme */
+.ql-snow.ql-container,
+.ql-snow .ql-container {
+  background-color: transparent !important;
+}
+
+/* Remove white areas */
+.ql-snow .ql-tooltip {
+  background-color: var(--color-bg-2) !important;
+  border-color: var(--color-border-2) !important;
+  color: var(--color-text-2) !important;
+  box-shadow: none !important;
+}
+
+/* Dark theme specific styles */
+.custom-quill-editor.dark-theme {
+  /* Force remove all white backgrounds */
+  *,
+  *::before,
+  *::after {
+    background-color: transparent !important;
+  }
+
+  .ql-editor {
+    background-color: transparent !important;
+    color: var(--color-text-2) !important;
+
+    &.ql-blank::before {
+      color: var(--color-text-3) !important;
+      font-style: normal !important;
+    }
+  }
+
+  /* Remove possible white background elements */
+  .ql-clipboard,
+  .ql-tooltip {
+    background-color: var(--color-bg-2) !important;
+    color: var(--color-text-2) !important;
+  }
+
+  /* Force dark background */
+  div[contenteditable="true"] {
+    background-color: transparent !important;
+  }
+
+  .ql-container.ql-snow {
+    background-color: transparent !important;
+    border: none !important;
+  }
+
+  /* Fix special elements */
+  [class^="ql-"] {
+    background-color: transparent !important;
+  }
+}
+
+/* Force show placeholder - higher specificity rule */
+.custom-quill-editor .ql-editor.ql-blank::before {
+  content: attr(data-placeholder) !important;
+  color: var(--color-text-3) !important;
+  font-style: normal !important;
+  position: absolute !important;
+  left: 15px !important;
+  top: 1px !important;
+  pointer-events: none !important;
+}
+
+.custom-quill-editor.dark-theme .ql-editor.ql-blank::before {
+  color: var(--color-text-3) !important;
+  font-style: normal !important;
+}
+
+/* Ensure placeholder displays in all cases */
+.ql-snow .ql-editor.ql-blank::before {
+  color: var(--color-text-3) !important;
+  font-style: normal !important;
+}
+
+/* Fix IME input overlay issue */
+.custom-quill-editor .ql-editor {
+  /* Ensure IME composition text appears above placeholder */
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* Completely hide placeholder during input */
+.custom-quill-editor .ql-editor:focus.ql-blank::before {
+  display: none !important;
+}
+
+/* Hide placeholder when editor is focused, prevent display during IME input */
+.custom-quill-editor .ql-editor:focus-within.ql-blank::before {
+  display: none !important;
+}
+
+/* Lower placeholder z-index with higher specificity */
+.custom-quill-editor.dark-theme .ql-editor.ql-blank::before,
+.custom-quill-editor .ql-editor.ql-blank::before {
+  z-index: 1 !important;
+  position: absolute !important;
+}
+
+/* Ensure composition text displays correctly during input, with higher specificity */
+.custom-quill-editor .ql-editor:focus,
+.custom-quill-editor .ql-editor:focus-within {
+  z-index: 20 !important;
+}
+
+/* IME input method style fix */
+.custom-quill-editor .ql-editor p {
+  position: relative !important;
+  z-index: 15 !important;
+}
+
+/* IME composition state styles */
+.custom-quill-editor .ql-editor[data-ime-composing="true"].ql-blank::before {
+  display: none !important;
+}

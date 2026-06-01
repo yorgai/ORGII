@@ -1,0 +1,147 @@
+/**
+ * CodeMirror Editor Tokens
+ *
+ * Centralized design tokens for all CodeMirror styling:
+ * - Typography (fonts, sizes, line height)
+ * - Spacing (padding, margins)
+ * - UI elements (icons, shadows, borders)
+ *
+ * Uses CSS custom properties for theme customization.
+ */
+
+// ============================================
+// Root CSS Custom Properties
+// ============================================
+
+:root {
+  // ----------------------------------------
+  // Typography Tokens
+  // ----------------------------------------
+  // Canonical code font variable (set by useEditorAppearanceStyles)
+  --code-font-family:
+    "SF Mono", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New",
+    monospace;
+  // CodeMirror font mirrors the canonical code font
+  --cm-font-family: var(--code-font-family);
+  --cm-font-size: 13px;
+  --cm-font-size-small: 12px;
+  --cm-font-size-large: 14px;
+  --cm-line-height: 1.5;
+
+  // ----------------------------------------
+  // Spacing Tokens
+  // ----------------------------------------
+  --cm-line-padding-left: 12px;
+  --cm-line-padding-right: 16px;
+  --cm-gutter-padding: 4px;
+  --cm-content-padding: 8px;
+
+  // ----------------------------------------
+  // UI Tokens
+  // ----------------------------------------
+  --cm-icon-size: 14px;
+  --cm-icon-size-small: 12px;
+  --cm-border-radius: 4px;
+  --cm-border-radius-small: 2px;
+
+  // ----------------------------------------
+  // Shadow Tokens
+  // ----------------------------------------
+  --cm-tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --cm-dropdown-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  // ----------------------------------------
+  // Lint/Diagnostic Tokens
+  // ----------------------------------------
+  --cm-lint-error-color: 244, 63, 94; // RGB values for danger/error
+  --cm-lint-warning-color: 245, 158, 11; // RGB values for warning
+  --cm-lint-info-color: 79, 109, 255; // RGB values for info/primary
+}
+
+// ============================================
+// Syntax Highlighting Tokens
+// ============================================
+
+:root {
+  // Editor chrome
+  --cm-editor-background: #fff;
+  --cm-editor-foreground: #24292e;
+  --cm-editor-selection: #bbdfff;
+  --cm-editor-gutter-bg: var(--cm-editor-background);
+  --cm-editor-gutter-fg: #6e7781;
+  --cm-editor-line-highlight: transparent;
+
+  // Syntax colors - Light theme (GitHub-inspired)
+  --cm-syntax-keyword: #d73a49;
+  --cm-syntax-string: #032f62;
+  --cm-syntax-comment: #6a737d;
+  --cm-syntax-function: #6f42c1;
+  --cm-syntax-variable: #005cc5;
+  --cm-syntax-number: #005cc5;
+  --cm-syntax-operator: #005cc5;
+  --cm-syntax-tag: #116329;
+  --cm-syntax-attribute: #005cc5;
+  --cm-syntax-property: #6f42c1;
+  --cm-syntax-type: #d73a49;
+  --cm-syntax-constant: #e36209;
+  --cm-syntax-link: #032f62;
+  --cm-syntax-invalid: #cb2431;
+  --cm-syntax-deleted: #b31d28;
+  --cm-syntax-deleted-bg: #ffeef0;
+}
+
+:root[data-theme="dark"],
+.dark {
+  // Editor chrome - Dark theme
+  --cm-editor-background: #0d1117;
+  --cm-editor-foreground: #c9d1d9;
+  --cm-editor-selection: #003d73;
+  --cm-editor-gutter-bg: var(--cm-editor-background);
+  --cm-editor-gutter-fg: #8b949e;
+  --cm-editor-line-highlight: #36334280;
+
+  // Syntax colors - Dark theme (GitHub-inspired)
+  --cm-syntax-keyword: #ff7b72;
+  --cm-syntax-string: #a5d6ff;
+  --cm-syntax-comment: #8b949e;
+  --cm-syntax-function: #d2a8ff;
+  --cm-syntax-variable: #79c0ff;
+  --cm-syntax-number: #79c0ff;
+  --cm-syntax-operator: #79c0ff;
+  --cm-syntax-tag: #7ee787;
+  --cm-syntax-attribute: #79c0ff;
+  --cm-syntax-property: #d2a8ff;
+  --cm-syntax-type: #ff7b72;
+  --cm-syntax-constant: #ffab70;
+  --cm-syntax-link: #a5d6ff;
+  --cm-syntax-invalid: #f97583;
+  --cm-syntax-deleted: #ffdcd7;
+  --cm-syntax-deleted-bg: #ffeef0;
+}
+
+// ============================================
+// SCSS Variables for Lint Squiggles
+// (Used in SVG data URIs which can't use CSS vars)
+// ============================================
+
+$cm-lint-error-rgb: "rgb(244, 63, 94)";
+$cm-lint-warning-rgb: "rgb(245, 158, 11)";
+$cm-lint-info-rgb: "rgb(79, 109, 255)";
+
+// ============================================
+// SCSS Variables for Icons (Lucide SVG data URIs)
+// ============================================
+
+// Lucide chevrons-up-down (for collapsed/unchanged sections)
+$cm-icon-chevrons-up-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E");
+
+// ============================================
+// Dark Mode Overrides
+// ============================================
+
+:root[data-theme="dark"],
+.dark {
+  // Shadows are slightly more prominent in dark mode
+  --cm-tooltip-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --cm-dropdown-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}

@@ -1,0 +1,120 @@
+import React from "react";
+
+// ============================================
+// Lazy page components
+// ============================================
+
+export const SuggestionsPage = React.lazy(
+  () =>
+    import(/* webpackChunkName: "workspace" */ "@src/modules/MainApp/StartPage")
+);
+
+export const SelectRepoPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "workspace" */ "@src/modules/MainApp/SelectRepo"
+    )
+);
+
+export const InboxPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "inbox", webpackPrefetch: true */ "@src/modules/MainApp/Inbox"
+    )
+);
+
+export const Settings = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "settings", webpackPrefetch: true */ "@/src/modules/MainApp/Settings"
+    )
+);
+
+export const AgentOrgsPage = React.lazy(
+  () =>
+    import(/* webpackChunkName: "mainapp" */ "@src/modules/MainApp/AgentOrgs")
+);
+
+export const MyRolePage = React.lazy(
+  () => import(/* webpackChunkName: "mainapp" */ "@src/modules/MainApp/MyRole")
+);
+
+export const DevRecordPage = React.lazy(
+  () => import(/* webpackChunkName: "misc" */ "@src/modules/MainApp/DevRecord")
+);
+
+export const IdeaAreaPage = React.lazy(
+  () => import(/* webpackChunkName: "misc" */ "@src/modules/MainApp/IdeaArea")
+);
+
+// Market routes (Consumer Wallet, Profile, Provider Earnings/Boost, Creator
+// Studio, Delegation History) all resolve to the OSS unavailable-page
+// placeholder. The real implementations live out-of-app on the ORGII
+// website. We keep the named exports so the route tree (`routeGroups.tsx`)
+// continues to compile; the placeholder points the user at the ORGII site.
+const MarketUnavailable = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "market-unavailable" */ "@src/router/routes/OpenSourceMarketUnavailablePage"
+    )
+);
+
+export const ConsumerWallet = MarketUnavailable;
+export const Profile = MarketUnavailable;
+export const PublicProfilePage = MarketUnavailable;
+export const ProviderEarnings = MarketUnavailable;
+export const ProviderBoost = MarketUnavailable;
+export const AgentStudioPage = MarketUnavailable;
+export const DelegationHistoryPage = MarketUnavailable;
+
+// Auth0 OAuth callback — NOT a market feature. Required for login to work
+// in any build (OSS or hosted). Path stays "/orgii/marketplace/callback"
+// for compatibility with the Auth0 application's Allowed Callback URLs.
+export const AuthCallback = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "auth-callback" */ "@src/modules/AppLogin/AuthCallback"
+    )
+);
+
+export const TabWindow = React.lazy(
+  () => import(/* webpackChunkName: "windows" */ "@src/shells/TabWindow")
+);
+
+export const ModeSelectionWindow = React.lazy(
+  () =>
+    import(/* webpackChunkName: "windows" */ "@src/shells/ModeSelectionWindow")
+);
+
+export const WingmanWindow = React.lazy(
+  () => import(/* webpackChunkName: "windows" */ "@src/windows/WingmanWindow")
+);
+
+export const SessionDiffWindowPage = React.lazy(
+  () =>
+    import(/* webpackChunkName: "windows" */ "@src/windows/SessionDiffWindow")
+);
+
+export const WorktreeCompareWindowPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "windows" */ "@src/windows/WorktreeCompareWindow"
+    )
+);
+
+export const LoginPage = React.lazy(
+  () => import(/* webpackChunkName: "auth" */ "@/src/modules/AppLogin")
+);
+
+export const SetupWalkthrough = React.lazy(
+  () => import(/* webpackChunkName: "auth" */ "@/src/modules/SetupWalkthrough")
+);
+
+export const FlowAwarenessTestPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "dev-tools" */ "@src/components/FlowAwarenessTest"
+    )
+);
+
+// Route preloading functions live in ./preload.ts (cycle-free)

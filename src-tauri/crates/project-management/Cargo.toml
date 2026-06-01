@@ -1,0 +1,57 @@
+[package]
+name = "project_management"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "Projects, orchestrator, lineage, and sync domain. Owns the projects.db SQLite store, the workflow state machine, code-lineage tracking, and the pluggable outbox-based sync framework. Keeps its `#[tauri::command]` macros in-crate (key-vault / git pattern); the `app` crate just re-registers them in `commands/handler_list.inc`."
+publish = false
+
+[lib]
+name = "project_management"
+path = "src/lib.rs"
+
+[dependencies]
+core_types = { path = "../types" }
+app_paths = { path = "../app-paths" }
+app_utils = { path = "../app-utils" }
+database = { path = "../database" }
+git = { path = "../git" }
+search = { path = "../search" }
+
+# Tauri command macro surface plus `Emitter`. Workspace-shared so cargo
+# unifies features across the workspace (see root Cargo.toml).
+tauri = { workspace = true }
+# Used by `sync::oauth::linear` to open the browser-based OAuth consent URL
+# directly (mirrors how the root crate invokes the same plugin).
+tauri-plugin-opener = "2"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+chrono = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+tracing = "0.1.37"
+log = "0.4"
+async-trait = "0.1"
+rusqlite = { workspace = true }
+sha2 = "0.10"
+hmac = "0.12"
+subtle = "2.6"
+base64 = { workspace = true }
+hex = "0.4"
+rand = { workspace = true }
+urlencoding = "2.1"
+
+# HTTP client — rustls only. Workspace-shared so cargo unifies feature
+# flags with the root crate and other consumers.
+reqwest = { workspace = true }
+
+# Webhook listener + OAuth callback HTTP layer.
+axum = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.13"
+test_helpers = { path = "../test-helpers" }
+tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "tls12", "ring"] }
+wiremock = "0.6"

@@ -1,0 +1,7 @@
+---
+source: src/agent_core/integrations/automation/tests/types_tests.rs
+expression: action
+---
+type: injectPrompt
+prompt: do something
+sessionId: sess-1

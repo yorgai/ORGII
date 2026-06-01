@@ -1,0 +1,51 @@
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import { estimateRuntimeValueBytes } from "@src/hooks/perf/runtimeMemoryStats";
+
+const MAX_HYDRATED_EVENTS = 600;
+
+const hydratedEvents = new Map<string, SessionEvent>();
+
+function touch(event: SessionEvent): void {
+  hydratedEvents.delete(event.id);
+  hydratedEvents.set(event.id, event);
+}
+
+function prune(): void {
+  while (hydratedEvents.size > MAX_HYDRATED_EVENTS) {
+    const oldestId = hydratedEvents.keys().next().value;
+    if (oldestId === undefined) return;
+    hydratedEvents.delete(oldestId);
+  }
+}
+
+export function hydrateFullEventWindow(events: SessionEvent[]): SessionEvent[] {
+  const hydrated: SessionEvent[] = [];
+  for (const event of events) {
+    touch(event);
+    hydrated.push(event);
+  }
+  prune();
+  return hydrated;
+}
+
+export function releaseHydratedEventsExcept(
+  retainedIds: ReadonlySet<string>
+): void {
+  for (const eventId of hydratedEvents.keys()) {
+    if (!retainedIds.has(eventId)) {
+      hydratedEvents.delete(eventId);
+    }
+  }
+}
+
+export function clearHydratedEvents(): void {
+  hydratedEvents.clear();
+}
+
+export function getHydratedEventStats(): { entries: number; bytes: number } {
+  let bytes = 0;
+  for (const event of hydratedEvents.values()) {
+    bytes += estimateRuntimeValueBytes(event);
+  }
+  return { entries: hydratedEvents.size, bytes };
+}

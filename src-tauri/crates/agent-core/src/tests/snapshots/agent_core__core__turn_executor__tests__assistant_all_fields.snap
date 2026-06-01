@@ -1,0 +1,11 @@
+---
+source: crates/agent-core/src/core/turn_executor/../../tests/processor_tests.rs
+assertion_line: 196
+expression: "messages[0]"
+---
+_mc_ts: "[timestamp]"
+content: text
+reasoning_content: reason
+role: assistant
+tool_calls:
+  - id: tc1

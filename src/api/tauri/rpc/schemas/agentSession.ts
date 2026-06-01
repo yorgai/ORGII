@@ -1,0 +1,301 @@
+import { z } from "zod/v4";
+
+import type {
+  AgentExecModeConfig,
+  AgentStatusInfo,
+  FileResolution,
+  PendingQuestion,
+  RevertResult,
+  SessionFileRecord,
+  SessionInfo,
+  SessionMessage,
+  SessionMeta,
+  SnapshotRecord,
+  TodoItem,
+} from "@src/api/tauri/agent/types";
+
+const JsonRecordSchema = z.record(z.string(), z.unknown());
+
+export const SessionIdInput = z.object({
+  sessionId: z.string(),
+});
+
+export const SessionRequestIdInput = z.object({
+  sessionId: z.string(),
+  requestId: z.string(),
+});
+
+export const SessionInfoSchema = z.object({
+  sessionId: z.string(),
+  agentId: z.string(),
+  agentName: z.string(),
+  isSingleton: z.boolean(),
+}) as z.ZodType<SessionInfo, SessionInfo>;
+
+export const SessionMessageSchema = z
+  .object({
+    id: z.string(),
+    role: z.string(),
+    content: z.string(),
+    toolName: z.string().optional(),
+    toolInput: z.string().optional(),
+    createdAt: z.string(),
+  })
+  .catchall(z.unknown()) as z.ZodType<SessionMessage, SessionMessage>;
+
+export const SessionMetaSchema = z
+  .object({
+    sessionId: z.string(),
+    name: z.string().optional(),
+    status: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    workspacePath: z.string().nullable().optional(),
+    model: z.string().nullable().optional(),
+    accountId: z.string().nullable().optional(),
+    workItemId: z.string().nullable().optional(),
+    agentDefinitionId: z.string().nullable().optional(),
+    userInput: z.string().nullable().optional(),
+    totalTokens: z.number().optional(),
+    errorMessage: z.string().nullable().optional(),
+  })
+  .catchall(z.unknown()) as unknown as z.ZodType<SessionMeta, SessionMeta>;
+
+export const CancelReasonSchema = z.enum([
+  "user_stop",
+  "force_send",
+  "org_pause",
+  "programmatic_shutdown",
+  "session_eviction",
+  "mode_switch_abort",
+]);
+
+export const CancelSessionInput = z.object({
+  sessionId: z.string(),
+  reason: CancelReasonSchema,
+});
+
+export const TruncateAfterMessageInput = z.object({
+  sessionId: z.string(),
+  createdAt: z.string(),
+  revertFiles: z.boolean(),
+});
+
+export const CheckSnapshotChangesInput = z.object({
+  sessionId: z.string(),
+  createdAt: z.string(),
+});
+
+export const UpdateSessionStatusInput = z.object({
+  sessionId: z.string(),
+  status: z.string(),
+});
+
+export const SaveSessionInput = z.object({
+  session: SessionMetaSchema,
+});
+
+export const QuestionResponseInput = z.object({
+  sessionId: z.string(),
+  requestId: z.string(),
+  answers: z.array(z.array(z.string())),
+});
+
+export const PermissionResponseInput = z.object({
+  sessionId: z.string(),
+  requestId: z.string(),
+  response: z.enum(["allow", "deny", "always_allow"]),
+  toolName: z.string().optional(),
+  toolArgs: JsonRecordSchema.optional(),
+});
+
+export const ModeSwitchResponseInput = z.object({
+  sessionId: z.string(),
+  choice: z.enum(["switch", "skip"]),
+  targetMode: z.string().optional(),
+});
+
+export const PendingQuestionSchema = z
+  .object({
+    id: z.string(),
+    question: z.string(),
+    options: z.array(z.string()).optional(),
+    timestamp: z.string(),
+  })
+  .catchall(z.unknown()) as z.ZodType<PendingQuestion, PendingQuestion>;
+
+export const PendingQuestionsOutput = z.object({
+  pendingQuestions: z.array(PendingQuestionSchema),
+});
+
+export const PendingPlanApprovalSchema = z
+  .object({
+    sessionId: z.string(),
+    planPath: z.string(),
+    planTitle: z.string(),
+    planContent: z.string(),
+    toolCallId: z.string().optional(),
+    planId: z.string().optional(),
+    planRevisionId: z.string().optional(),
+    originToolCallId: z.string().optional(),
+  })
+  .nullable();
+
+export const PlanApprovalResponseInput = z.object({
+  sessionId: z.string(),
+  choice: z.enum(["approve", "approve_with_edits", "reject"]),
+  editedContent: z.string().optional(),
+  model: z.string().nullable(),
+  accountId: z.string().nullable(),
+  workspacePath: z.string().nullable(),
+});
+
+export const SessionFileRecordSchema = z
+  .object({
+    path: z.string(),
+    count: z.number(),
+    additions: z.number(),
+    deletions: z.number(),
+    lineCount: z.number(),
+  })
+  .catchall(z.unknown()) as z.ZodType<SessionFileRecord, SessionFileRecord>;
+
+export const SessionFilesSchema = z.array(SessionFileRecordSchema);
+
+export const SnapshotRecordSchema = z.object({
+  sessionId: z.string(),
+  toolCallId: z.string(),
+  hash: z.string(),
+  createdAt: z.string(),
+}) as z.ZodType<SnapshotRecord, SnapshotRecord>;
+
+export const RevertInput = z.object({
+  createdAt: z.string(),
+  sessionId: z.string(),
+});
+
+export const RestoreSnapshotInput = z.object({
+  sessionId: z.string(),
+  snapshotId: z.string(),
+});
+
+export const RevertResultSchema = z
+  .object({
+    reverted: z.number(),
+    restored: z.number(),
+    deleted: z.number(),
+    skipped: z.number(),
+    failed: z.number(),
+    createdAt: z.string().optional(),
+    redoAnchors: z
+      .array(
+        z.object({
+          sessionId: z.string(),
+          snapshotId: z.string(),
+          createdAt: z.string(),
+        })
+      )
+      .optional(),
+  })
+  .catchall(z.unknown()) as z.ZodType<RevertResult, RevertResult>;
+
+export const RevertFileReviewInput = z.object({
+  workspacePath: z.string(),
+  filePath: z.string(),
+  sessionId: z.string(),
+  createdAt: z.string(),
+});
+
+export const RevertFileInput = z.object({
+  workspacePath: z.string(),
+  snapshotHash: z.string(),
+  filePath: z.string(),
+  sessionId: z.string(),
+});
+
+export const TodoItemSchema = z.object({
+  id: z.string(),
+  content: z.string(),
+  activeForm: z.string().optional(),
+  status: z.enum(["pending", "in_progress", "completed", "cancelled"]),
+}) as z.ZodType<TodoItem, TodoItem>;
+
+export const AgentExecModeConfigSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+}) as z.ZodType<AgentExecModeConfig, AgentExecModeConfig>;
+
+export const FileResolutionInput = z.object({
+  sessionId: z.string(),
+  filePath: z.string(),
+  resolution: z.enum(["accepted", "rejected", "reverted"]),
+});
+
+export const FileResolutionSchema = z.object({
+  path: z.string(),
+  resolution: z.enum(["accepted", "rejected", "reverted"]),
+}) as z.ZodType<FileResolution, FileResolution>;
+
+export const AgentStatusInfoSchema = z.object({
+  running: z.boolean(),
+  gatewayRunning: z.boolean(),
+  activeSessions: z.number(),
+  sessionIds: z.array(z.string()),
+}) as z.ZodType<AgentStatusInfo, AgentStatusInfo>;
+
+export const SessionLaunchInput = z.object({
+  params: z.record(z.string(), z.unknown()),
+});
+
+export const SessionLaunchResultSchema = z
+  .object({
+    sessionId: z.string(),
+    category: z.string(),
+    name: z.string(),
+    status: z.string(),
+    createdAt: z.string(),
+    userInput: z.string(),
+    workspacePath: z.string().optional(),
+    branch: z.string().optional(),
+    background: z.boolean(),
+    model: z.string().optional(),
+    cliAgentType: z.string().optional(),
+    accountId: z.string().optional(),
+    agentOrgId: z.string().optional(),
+    agentOrgRunId: z.string().optional(),
+    worktreePath: z.string().optional(),
+  })
+  .catchall(z.unknown());
+
+export const WingmanStartInput = z.object({
+  sessionId: z.string(),
+  mission: z.string(),
+  monitorIndex: z.number().optional(),
+});
+
+export const WingmanOpenWindowInput = z.object({
+  sessionId: z.string().optional(),
+  monitorIndex: z.number().optional(),
+  desktopControlTest: z.boolean().optional(),
+});
+
+export const WingmanMonitorSchema = z.object({
+  index: z.number(),
+  name: z.string(),
+  x: z.number(),
+  y: z.number(),
+  width: z.number(),
+  height: z.number(),
+  workX: z.number(),
+  workY: z.number(),
+  workWidth: z.number(),
+  workHeight: z.number(),
+  scaleFactor: z.number(),
+  isPrimary: z.boolean(),
+});
+
+export const IdeActionResultInput = z.object({
+  requestId: z.string(),
+  result: z.string(),
+});

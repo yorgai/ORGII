@@ -1,0 +1,9 @@
+---
+source: src/agent_core/tests/processor_tests.rs
+assertion_line: 150
+expression: "messages[0]"
+---
+_mc_ts: "[timestamp]"
+content: ok
+reasoning_content: thinking...
+role: assistant

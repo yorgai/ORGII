@@ -1,0 +1,215 @@
+import React, { Suspense } from "react";
+import { useTranslation } from "react-i18next";
+
+import { Placeholder } from "@src/modules/shared/layouts/blocks";
+
+import ProjectManagerCore from "../../ProjectManager/ProjectManagerCore";
+import CodeEditor from "../CodeEditor";
+import { LspInstallPrompt } from "../CodeEditor/LspInstallPrompt";
+import { WORK_STATION_PLACEHOLDER_PAGE_BG_CLASS } from "../shared/tokens";
+
+const Browser = React.lazy(() => import("../Browser"));
+const DatabaseManager = React.lazy(() => import("../DatabaseManager"));
+const OpsControl = React.lazy(() => import("@src/modules/MainApp/OpsControl"));
+const ActivitySimulator = React.lazy(() =>
+  import("@src/engines/Simulator").then((module) => ({
+    default: module.ActivitySimulator,
+  }))
+);
+
+interface AppShellContentProps {
+  repoPath: string;
+  repoName: string;
+  pathExists: boolean | null;
+  lastSeenPath: string;
+  isActive: boolean;
+  chatPanelFocused: boolean;
+  isAgentStation: boolean;
+  isKanbanStation: boolean;
+  opsControlPeekHost: "code" | "browser" | "data" | "project" | null;
+  hasVisitedAgentStation: boolean;
+  hasVisitedKanbanStation: boolean;
+  hasVisitedCode: boolean;
+  hasVisitedData: boolean;
+  hasVisitedBrowser: boolean;
+  hasVisitedProject: boolean;
+  isCodeMode: boolean;
+  isDataMode: boolean;
+  isBrowserMode: boolean;
+  isProjectMode: boolean;
+  codeContentVisible: boolean;
+  browserContentVisible: boolean;
+  dataContentVisible: boolean;
+  projectContentVisible: boolean;
+  handleSelectRepo: () => void;
+}
+
+function AppShellLoadingPlaceholder() {
+  return (
+    <Placeholder
+      variant="loading"
+      placement="detail-panel"
+      fillParentHeight
+      className={WORK_STATION_PLACEHOLDER_PAGE_BG_CLASS}
+    />
+  );
+}
+
+export function AppShellContent({
+  repoPath,
+  repoName,
+  pathExists,
+  lastSeenPath,
+  isActive,
+  chatPanelFocused,
+  isAgentStation,
+  isKanbanStation,
+  opsControlPeekHost,
+  hasVisitedAgentStation,
+  hasVisitedKanbanStation,
+  hasVisitedCode,
+  hasVisitedData,
+  hasVisitedBrowser,
+  hasVisitedProject,
+  isCodeMode,
+  isDataMode,
+  isBrowserMode,
+  isProjectMode,
+  codeContentVisible,
+  browserContentVisible,
+  dataContentVisible,
+  projectContentVisible,
+  handleSelectRepo,
+}: AppShellContentProps) {
+  const { t } = useTranslation();
+
+  const renderCodeEditor = () => {
+    if (!repoPath) {
+      return (
+        <Placeholder
+          variant="empty"
+          placement="detail-panel"
+          fillParentHeight
+          className={WORK_STATION_PLACEHOLDER_PAGE_BG_CLASS}
+          title={t("placeholders.noRepositorySelected")}
+          subtitle={t("placeholders.selectRepositoryFromHome")}
+          action={{
+            label: t("actions.selectRepository"),
+            onClick: handleSelectRepo,
+          }}
+        />
+      );
+    }
+
+    if (pathExists === false && lastSeenPath) {
+      return (
+        <Placeholder
+          variant="error"
+          placement="detail-panel"
+          fillParentHeight
+          className={WORK_STATION_PLACEHOLDER_PAGE_BG_CLASS}
+          title={t("placeholders.cannotFindRepo", { repoName })}
+          subtitle={t("placeholders.lastSeenAtPath", { path: lastSeenPath })}
+          action={{
+            label: t("actions.selectRepository"),
+            onClick: handleSelectRepo,
+          }}
+        />
+      );
+    }
+
+    return (
+      <CodeEditor
+        repoPath={repoPath}
+        repoName={repoName}
+        isActive={codeContentVisible}
+      />
+    );
+  };
+
+  return (
+    <>
+      {(isAgentStation || hasVisitedAgentStation) && !chatPanelFocused && (
+        <div
+          className="h-full w-full"
+          style={{ display: isAgentStation ? "block" : "none" }}
+        >
+          <Suspense fallback={<AppShellLoadingPlaceholder />}>
+            <ActivitySimulator />
+          </Suspense>
+        </div>
+      )}
+
+      {(isKanbanStation || hasVisitedKanbanStation) && (
+        <div
+          className="h-full w-full"
+          style={{
+            display:
+              isKanbanStation && opsControlPeekHost === null ? "block" : "none",
+          }}
+        >
+          <Suspense fallback={<AppShellLoadingPlaceholder />}>
+            <OpsControl />
+          </Suspense>
+        </div>
+      )}
+
+      <div
+        className="h-full w-full"
+        style={{
+          display:
+            isAgentStation || (isKanbanStation && opsControlPeekHost === null)
+              ? "none"
+              : "contents",
+        }}
+      >
+        {(isCodeMode || hasVisitedCode || opsControlPeekHost === "code") && (
+          <div
+            className="relative h-full w-full"
+            style={{ display: codeContentVisible ? "block" : "none" }}
+          >
+            {renderCodeEditor()}
+            {codeContentVisible && isActive && !isAgentStation && (
+              <LspInstallPrompt />
+            )}
+          </div>
+        )}
+
+        {(isDataMode || hasVisitedData) && (
+          <div
+            className="h-full w-full"
+            style={{ display: dataContentVisible ? "block" : "none" }}
+          >
+            <Suspense fallback={<AppShellLoadingPlaceholder />}>
+              <DatabaseManager repoPath={repoPath} repoName={repoName} />
+            </Suspense>
+          </div>
+        )}
+
+        {(isBrowserMode || hasVisitedBrowser) && (
+          <div
+            className="h-full w-full"
+            style={{ display: browserContentVisible ? "block" : "none" }}
+          >
+            <Suspense fallback={<AppShellLoadingPlaceholder />}>
+              <Browser
+                repoPath={repoPath}
+                repoName={repoName}
+                isActive={isActive && browserContentVisible}
+              />
+            </Suspense>
+          </div>
+        )}
+
+        {(isProjectMode || hasVisitedProject) && (
+          <div
+            className="h-full w-full"
+            style={{ display: projectContentVisible ? "block" : "none" }}
+          >
+            <ProjectManagerCore repoPath={repoPath} repoName={repoName} />
+          </div>
+        )}
+      </div>
+    </>
+  );
+}

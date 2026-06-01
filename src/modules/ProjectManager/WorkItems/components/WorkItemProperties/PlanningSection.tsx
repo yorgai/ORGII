@@ -1,0 +1,173 @@
+import { BookDashed, BookOpen, Diamond } from "lucide-react";
+
+import { PropertyDropdownField } from "@src/components/PropertyField/PropertyDropdownField";
+import {
+  FieldRow,
+  type FieldRowVariant,
+  Option,
+  SearchableDropdown,
+} from "@src/components/PropertyField/PropertyFieldEditable";
+import type {
+  WorkItem as WorkItemExtended,
+  WorkItemMilestone,
+  WorkItemProject,
+} from "@src/types/core/workItem";
+
+import type {
+  WorkItemPropertyFieldKey,
+  WorkItemPropertyHandlers,
+  WorkItemPropertyPicker,
+  WorkItemPropertyTranslator,
+} from "./types";
+
+interface PlanningSectionProps {
+  workItem: WorkItemExtended;
+  openPicker: WorkItemPropertyPicker;
+  togglePicker: (picker: WorkItemPropertyPicker) => void;
+  availableProjects: WorkItemProject[];
+  availableMilestones: WorkItemMilestone[];
+  handlers: WorkItemPropertyHandlers;
+  t: WorkItemPropertyTranslator;
+  fieldVariant?: FieldRowVariant;
+  visibleFields?: Set<WorkItemPropertyFieldKey>;
+}
+
+export function PlanningSection({
+  workItem,
+  openPicker,
+  togglePicker,
+  availableProjects,
+  availableMilestones,
+  handlers,
+  t,
+  fieldVariant = "row",
+  visibleFields,
+}: PlanningSectionProps) {
+  const showProject = !visibleFields || visibleFields.has("project");
+  const showMilestone = !visibleFields || visibleFields.has("milestone");
+  if (!showProject && !showMilestone) return null;
+
+  return (
+    <>
+      {showProject && (
+        <PropertyDropdownField
+          value={workItem.project?.id ?? "__none__"}
+          label={workItem.project?.name ?? t("workItems.properties.noProject")}
+          icon={
+            workItem.project ? <BookOpen size={14} /> : <BookDashed size={14} />
+          }
+          iconColor={workItem.project?.color}
+          options={[]}
+          placement="inline"
+          fieldVariant={fieldVariant}
+          triggerVariant={fieldVariant}
+          searchable
+          searchPlaceholder={t("workItems.properties.searchProjects")}
+          selected={!!workItem.project}
+          active={openPicker === "project"}
+          onActiveChange={(active) => togglePicker(active ? "project" : null)}
+          onClear={() => handlers.handleProjectChange(null)}
+          renderOptions={(searchQuery, close) => {
+            const filtered = searchQuery
+              ? availableProjects.filter((project) =>
+                  project.name.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+              : availableProjects;
+            const select = (project: WorkItemProject | null) => {
+              handlers.handleProjectChange(project);
+              close();
+            };
+            return (
+              <>
+                {!searchQuery && (
+                  <Option
+                    icon={<BookDashed size={14} />}
+                    label={t("workItems.properties.noProject")}
+                    isSelected={!workItem.project}
+                    onClick={() => select(null)}
+                  />
+                )}
+                {filtered.length === 0 && searchQuery && (
+                  <div className="px-3 py-2 text-[12px] text-text-3">
+                    {t("common:common.noResults")}
+                  </div>
+                )}
+                {filtered.map((projectItem) => (
+                  <Option
+                    key={projectItem.id}
+                    icon={<BookOpen size={14} />}
+                    iconColor={projectItem.color}
+                    label={projectItem.name}
+                    isSelected={workItem.project?.id === projectItem.id}
+                    onClick={() => select(projectItem)}
+                  />
+                ))}
+              </>
+            );
+          }}
+        />
+      )}
+
+      {showMilestone && (
+        <div
+          className={
+            fieldVariant === "pill"
+              ? "relative flex min-h-7 min-w-0 max-w-[220px] items-center"
+              : "relative flex min-h-[36px] w-full items-center"
+          }
+        >
+          <FieldRow
+            icon={<Diamond size={14} />}
+            value={
+              workItem.milestone?.name || t("workItems.properties.noMilestone")
+            }
+            isSelected={!!workItem.milestone}
+            isActive={openPicker === "milestone"}
+            showChevron
+            variant={fieldVariant}
+            onClear={() => handlers.handleMilestoneChange(null)}
+            onClick={() => togglePicker("milestone")}
+          />
+          {openPicker === "milestone" && (
+            <SearchableDropdown
+              placeholder={t("workItems.properties.searchMilestones")}
+              widthMode={fieldVariant === "pill" ? "menu" : "match-parent"}
+              align={fieldVariant === "pill" ? "auto" : "left"}
+            >
+              {(searchQuery) => {
+                const filtered = searchQuery
+                  ? availableMilestones.filter((milestone) =>
+                      milestone.name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase())
+                    )
+                  : availableMilestones;
+                return (
+                  <>
+                    {!searchQuery && (
+                      <Option
+                        label={t("workItems.properties.noMilestone")}
+                        onClick={() => handlers.handleMilestoneChange(null)}
+                      />
+                    )}
+                    {filtered.map((milestone) => (
+                      <Option
+                        key={milestone.id}
+                        icon={<Diamond size={14} />}
+                        label={milestone.name}
+                        isSelected={workItem.milestone?.id === milestone.id}
+                        onClick={() =>
+                          handlers.handleMilestoneChange(milestone)
+                        }
+                      />
+                    ))}
+                  </>
+                );
+              }}
+            </SearchableDropdown>
+          )}
+        </div>
+      )}
+    </>
+  );
+}

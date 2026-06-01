@@ -1,0 +1,31 @@
+/**
+ * Types for SetupWalkthrough module
+ */
+import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+
+// ============================================
+// AnimatedTitle Types
+// ============================================
+
+export interface AnimatedTitleProps {
+  title: string;
+  subtitle?: string;
+  /** If true, title stays visible (doesn't fade out) */
+  persistent?: boolean;
+  /** If true, hide the small header at top */
+  hideSmallTitle?: boolean;
+}
+
+// ============================================
+// Step Configuration Types
+// ============================================
+
+/** Step config with translation keys instead of static strings */
+export interface StepConfig {
+  id: string;
+  /** Translation key under steps.{key}.title */
+  i18nKey: string;
+  icon: LucideIcon;
+  content: ReactNode;
+}

@@ -1,0 +1,28 @@
+[package]
+name = "terminal"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "PTY session management (front-side Tauri commands) + agent-core LLM tool plumbing (back-side). Hoisted from app::work_station::terminal and app::agent_core::foundation::tool_infra::terminal so the back-edge between them collapses into an internal call inside this crate."
+publish = false
+
+[lib]
+name = "terminal"
+path = "src/lib.rs"
+
+[dependencies]
+tauri = { workspace = true }
+
+portable-pty = "0.9"
+tokio = { workspace = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tracing = "0.1.37"
+dirs = "6.0"
+sysinfo = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3.13"

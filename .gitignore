@@ -1,0 +1,134 @@
+node_modules/
+/dist/
+/build/
+coverage/
+.DS_Store
+.history
+**/.DS_Store
+yarn.lock
+package-lock.json
+_internal/
+main
+# config/
+Atlas/
+# src-tauri/
+node-*
+
+/data/
+/log/
+# For windows user
+src-tauri/NSIS
+src-tauri/target
+src-tauri/WixTools314
+
+*.exe
+src-tauri/target/release/bundle
+newmain-aarch64-apple-darwin
+newmain
+
+lib/
+# Allow src/lib/ to be tracked (important utilities and wrappers)
+!src/lib/
+*storybook.log
+
+# Orgii Session - Critical Excludes (auto-added)
+*.egg-info/
+*.pyc
+*.pyd
+*.pyo
+*.rar
+*.so
+*.swo
+*.swp
+*.tar.gz
+*.zip
+
+# Large model files (download via scripts/download_models.py)
+*.gguf
+*.ggml
+*.safetensors
+*.onnx
+*.onnx.data
+src-tauri/model/coderank/
+src-tauri/model/coderank_ggml/
+src-tauri/model/coderank_onnx/
+src-tauri/model/jina/
+.Python
+.env
+.env.local
+.idea/
+.venv/
+.vscode/
+# Allow workspace settings and configuration to be tracked
+!.vscode/settings.json
+!.vscode/css_custom_data.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+.worktrees/
+Thumbs.db
+__pycache__/
+dist/
+venv/
+
+# Orgii Session - Critical Excludes (auto-added)
+build/
+
+# Sensitive files
+encoded_key.txt
+
+# Runtime lock files
+init.lock
+
+# Build artifacts
+latest.json
+npminstall-debug.log
+
+# Runtime directories
+None/
+
+# Temporary/test files
+text.html
+test.js
+test-flow-awareness.js
+verify-flow-awareness.md
+chathistory.json
+
+# IDE-specific configuration - all settings.json files are tracked
+
+# Local sidecar symlinks (machine-specific paths)
+ORGII Helper (Backend)-*
+src-tauri/bin/ORGII Helper (Semantic)-*
+SOYD Helper (Backend)-*
+src-tauri/bin/SOYD Helper (Semantic)-*
+
+# Local machine-specific paths
+.orgiiproject/
+.soydproject/
+
+# Agent transcript dumps (never check these in)
+chathistory.json
+cursor_chat_export.json
+subagent_history.json
+*_subagent_history.json
+
+# Downloaded / locally built sidecar binaries
+src-tauri/bin/agent-browser-*
+src-tauri/bin/peekaboo*
+src-tauri/bin/qdrant-*
+
+# Local test/data dumps
+data.json
+
+# IDE / tool artifacts
+.eslintcache
+.cursor/
+.orgii/
+.soyd/
+
+# macOS copy-conflict duplicates (e.g. "file 2.rs", "file 3.rs")
+*\ [0-9].*
+# Code server binary (downloaded dependency)
+code-server-bin/
+BitFun/
+archive/
+**/.build/

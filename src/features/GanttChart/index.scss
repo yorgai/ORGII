@@ -1,0 +1,12 @@
+/**
+ * GanttChart Styles
+ * 
+ * Main layout uses Tailwind (in index.tsx).
+ * Only imports component styles that still need SCSS.
+ */
+
+// Components using SCSS (for complex interactions/pseudo-elements)
+@import "./components/Timeline/index.scss";
+@import "./components/TaskTooltip/index.scss";
+@import "./components/Milestone/index.scss";
+@import "./components/DependencyLines/index.scss";

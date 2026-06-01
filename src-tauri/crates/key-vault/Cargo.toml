@@ -1,0 +1,66 @@
+[package]
+name = "key_vault"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "LLM provider key CRUD, OAuth capture flows, and provider validation."
+publish = false
+
+[lib]
+name = "key_vault"
+path = "src/lib.rs"
+
+# Phase 2 of the workspace migration. See
+# `Documentation/RustBackend/modularization-plan--0504.md`. The crate keeps its
+# `#[tauri::command]` macros (mirroring `crates/cursor-bridge`) so the
+# `app` crate still re-registers them in `commands/handler_list.inc` without a
+# command shell shim.
+[dependencies]
+core_types = { path = "../types" }
+app_paths = { path = "../app-paths" }
+app_utils = { path = "../app-utils" }
+cursor_bridge_app = { path = "../cursor-bridge-app" }
+
+# Tauri command macro surface only — no AppHandle / Manager / Emitter use here.
+tauri = { workspace = true }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { workspace = true }
+tokio = { workspace = true }
+
+# HTTP client — rustls only, mirroring the root crate so cargo unifies
+# features across the workspace and doesn't drag native-tls in.
+reqwest = { workspace = true }
+
+regex = "1.9.5"
+log = "0.4"
+tracing = "0.1.37"
+uuid = { version = "1", features = ["v4"] }
+dirs = "6.0"
+
+# `auto_detect/cursor.rs` reads the Cursor IDE's SQLite vault to capture the
+# user's existing session token; the encoded value is base64.
+rusqlite = { workspace = true }
+base64 = { workspace = true }
+# Provider validation flows construct request URLs and decode quota responses.
+url = "2"
+urlencoding = "2"
+
+# Fuzzy matching — used by `key_extractor` to score candidate keys.
+nucleo-matcher = "0.3"
+
+# Clipboard access for `clipboard_write_text`. The webview's
+# `navigator.clipboard.writeText` falls back to this command when the
+# permission is denied.
+arboard = "3"
+
+[dev-dependencies]
+tempfile = "3.13"
+insta = { version = "1", features = ["yaml", "redactions"] }
+# Reqwest is built with `rustls-no-provider`, so any test that constructs a
+# `reqwest::Client` (e.g. `CursorValidator::new()`) panics with "No provider
+# set" unless the test initializes a crypto provider first. We pin
+# `tokio-rustls` here purely for that one-time install — same `ring` feature
+# the root `app` crate uses, kept in lockstep so cargo unifies the dep graph.
+tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "tls12", "ring"] }

@@ -1,0 +1,418 @@
+/**
+ * Native Input Styles
+ * 
+ * Input styling with our design system.
+ * 
+ * Architecture:
+ * - Wrapper (.input-wrapper) handles ALL visual styling
+ * - Input element (.input) is completely transparent
+ * - This prevents double borders and conflicting styles
+ */
+
+.input-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  transition: all 0.1s cubic-bezier(0, 0, 1, 1);
+
+  // Inner wrapper handles the visual styling
+  .input-inner {
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--color-border-2);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  // Size variants
+  &.input-size-mini {
+    height: 24px;
+    font-size: 12px;
+
+    .input-inner {
+      padding: 0 8px;
+    }
+
+    .input {
+      font-size: 12px;
+    }
+  }
+
+  &.input-size-small {
+    height: 28px;
+    font-size: 14px;
+
+    .input-inner {
+      padding: 0 12px;
+    }
+
+    .input {
+      font-size: 14px;
+    }
+  }
+
+  &.input-size-default {
+    height: 32px;
+    font-size: 14px;
+
+    .input-inner {
+      padding: 0 12px;
+    }
+
+    .input {
+      font-size: 14px;
+    }
+  }
+
+  &.input-size-large {
+    height: 36px;
+    font-size: 14px;
+
+    .input-inner {
+      padding: 0 16px;
+    }
+
+    .input {
+      font-size: 14px;
+    }
+  }
+
+  // Hover state
+  &:hover:not(.input-disabled):not(.input-readonly):not(.input-focused) {
+    .input-inner {
+      border-color: var(--color-border-3);
+    }
+  }
+
+  // Focus state
+  &.input-focused {
+    .input-inner {
+      border-color: var(--color-primary-6);
+      box-shadow: 0 0 0 2px
+        color-mix(in srgb, var(--color-primary-6) 15%, transparent);
+    }
+  }
+
+  // Error state
+  &.input-error {
+    .input-inner {
+      border-color: var(--color-danger-6);
+      box-shadow: 0 0 0 2px
+        color-mix(in srgb, var(--color-danger-6) 15%, transparent);
+    }
+
+    &.input-focused {
+      .input-inner {
+        border-color: var(--color-danger-6);
+        box-shadow: 0 0 0 2px
+          color-mix(in srgb, var(--color-danger-6) 20%, transparent);
+      }
+    }
+  }
+
+  // Disabled state
+  &.input-disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+
+    .input {
+      cursor: not-allowed;
+    }
+  }
+
+  // Readonly state
+  &.input-readonly {
+    cursor: default;
+
+    .input-inner {
+      opacity: 0.8;
+    }
+  }
+
+  &.input-pane-surface {
+    .input-inner {
+      background: var(--color-pane-input);
+    }
+  }
+
+  &.input-borderless {
+    .input-inner {
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    &:hover:not(.input-disabled):not(.input-readonly):not(.input-focused) {
+      .input-inner {
+        border-color: transparent;
+      }
+    }
+
+    &.input-focused {
+      .input-inner {
+        border-color: transparent;
+        box-shadow: none;
+      }
+    }
+  }
+
+  &.input-bgless {
+    .input-inner {
+      background: transparent;
+      background-color: transparent;
+    }
+  }
+
+  &.input-auto-height {
+    height: auto;
+
+    .input-inner {
+      min-height: 0;
+      padding: 0;
+    }
+
+    .input {
+      height: auto;
+      line-height: inherit;
+    }
+  }
+}
+
+.input {
+  // Internal input - completely transparent, no visual effects
+  // The wrapper handles ALL visual styling
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  color: var(--color-text-1);
+  caret-color: var(--color-primary-6);
+  font-family: inherit;
+  line-height: 1.5;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  // Placeholder styling
+  &::placeholder {
+    color: var(--color-text-3);
+  }
+
+  // Remove all default browser styles
+  &::-webkit-search-decoration,
+  &::-webkit-search-cancel-button,
+  &::-webkit-search-results-button,
+  &::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+  }
+
+  // Number input arrows
+  &[type="number"]::-webkit-inner-spin-button,
+  &[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  &[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  // Password reveal button (native browser)
+  &::-ms-reveal,
+  &::-ms-clear {
+    display: none;
+  }
+
+  // Remove focus ring - wrapper handles focus styling
+  &:focus {
+    outline: none;
+    box-shadow: none;
+    border: none;
+    background: transparent;
+  }
+
+  // Remove any inherited styles
+  &:hover {
+    border: none;
+    outline: none;
+    box-shadow: none;
+  }
+
+  &:active {
+    border: none;
+    outline: none;
+    box-shadow: none;
+  }
+}
+
+// Override any global input styles that might interfere
+// Higher specificity ensures our styles take precedence
+.input-wrapper input.input,
+.input-wrapper input.input[type="text"],
+.input-wrapper input.input[type="password"],
+.input-wrapper input.input[type="email"],
+.input-wrapper input.input[type="number"],
+.input-wrapper input.input[type="search"],
+.input-wrapper input.input[type="tel"],
+.input-wrapper input.input[type="url"] {
+  // Override any global input styles through specificity
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  background-color: transparent;
+  box-shadow: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+
+  &:hover,
+  &:focus,
+  &:active {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    background-color: transparent;
+    box-shadow: none;
+    outline: none;
+  }
+}
+
+// Prefix and suffix
+.input-prefix,
+.input-suffix {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--color-text-3);
+  font-size: inherit;
+}
+
+.input-prefix {
+  margin-right: 6px;
+}
+
+.input-suffix {
+  margin-left: 6px;
+}
+
+// Clear button
+.input-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  color: var(--color-text-3);
+  font-size: 14px;
+  transition: color 0.1s;
+
+  &:hover {
+    color: var(--color-text-2);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// Password toggle
+.input-password-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  color: var(--color-text-3);
+  font-size: 14px;
+  transition: color 0.1s;
+
+  &:hover {
+    color: var(--color-text-2);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// Field wrapper — used when an error message is rendered with the input
+.input-field {
+  display: inline-flex;
+  width: 100%;
+  gap: 8px;
+
+  // Error message below the input
+  &.input-field-bottom {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  // Error message to the left of the input. The input keeps its own width;
+  // the message takes the remaining space and ellipsizes when tight.
+  &.input-field-left {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+
+    .input-wrapper {
+      flex-shrink: 0;
+    }
+
+    .input-error-message {
+      flex: 1;
+      min-width: 0;
+      text-align: right;
+    }
+  }
+}
+
+// Single-line error message
+.input-error-message {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-danger-6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Word limit
+.input-word-limit {
+  flex-shrink: 0;
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--color-text-3);
+  white-space: nowrap;
+}

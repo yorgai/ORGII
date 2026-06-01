@@ -1,0 +1,1 @@
+export { TerminalTabSidebar } from "./TerminalTabSidebar";

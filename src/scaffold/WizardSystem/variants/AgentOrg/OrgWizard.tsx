@@ -1,0 +1,247 @@
+/**
+ * OrgWizard — Single-page wizard for creating or editing an agent
+ * organization. Sections: Org name, Coordinator (root agent), Preview, and
+ * Team members.
+ *
+ * Follows the WizardShell → WizardStepLayout → SectionLayout pattern.
+ *
+ * The form body itself lives in `OrgFormSections` so OrgWizard and
+ * OrgDetailView render the exact same controls; this file owns only the
+ * single-step submit chrome and the inline-create AgentWizard overlay.
+ */
+import { useAtomValue } from "jotai";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import Button from "@src/components/Button";
+import type { TeamMember } from "@src/components/TeamMemberTable";
+import { buildAgentOptions } from "@src/modules/MainApp/AgentOrgs/components/org/config";
+import "@src/modules/MainApp/AgentOrgs/components/org/index.scss";
+import { builtInAgentsAtom } from "@src/modules/MainApp/AgentOrgs/store/builtInAgentsAtom";
+import {
+  type AgentDefinition,
+  type AvailableCliAgent,
+  DEFAULT_HIERARCHY_MODE,
+  type HierarchyMode,
+  type OrgMember,
+} from "@src/modules/MainApp/AgentOrgs/types";
+import { SECTION_GAP_CLASSES } from "@src/modules/shared/layouts/SectionLayout";
+import { DETAIL_PANEL_TOKENS } from "@src/modules/shared/layouts/blocks";
+import {
+  WizardShell,
+  WizardStepLayout,
+} from "@src/scaffold/WizardSystem/primitives";
+import AgentWizard from "@src/scaffold/WizardSystem/variants/Agent/AgentWizard";
+
+import OrgFormSections, { isOrgDraftValid } from "./OrgFormSections";
+import { buildOrgTreeFromMembers, flattenOrgToMembers } from "./orgTree";
+
+// ── Types ──
+
+interface OrgWizardProps {
+  onSave: (org: OrgMember) => void;
+  onCancel: () => void;
+  /** When provided, wizard opens in single-step edit mode */
+  initialOrg?: OrgMember;
+  /** Custom agents created by user (from Agents tab + inline) */
+  customAgents?: AgentDefinition[];
+  /** Installed CLI agents that can be selected as org participants. */
+  cliAgents?: AvailableCliAgent[];
+  /** Called to refresh the CLI agents list (e.g. re-run which detection). */
+  onCliAgentRefresh?: () => Promise<void>;
+  /** Called when a new custom agent is created inline */
+  onAgentCreate?: (agent: AgentDefinition) => void | Promise<void>;
+}
+
+// ── Component ──
+
+const OrgWizard: React.FC<OrgWizardProps> = ({
+  onSave,
+  onCancel,
+  initialOrg,
+  customAgents = [],
+  cliAgents = [],
+  onCliAgentRefresh,
+  onAgentCreate,
+}) => {
+  const { t } = useTranslation("integrations");
+  const builtInAgents = useAtomValue(builtInAgentsAtom);
+  const isEditMode = !!initialOrg;
+
+  const [orgName, setOrgName] = useState(initialOrg?.name ?? "");
+  const [orgDescription, setOrgDescription] = useState(
+    initialOrg?.description ?? ""
+  );
+  const [coordinatorAgentId, setCoordinatorAgentId] = useState<string>(
+    initialOrg?.agentId ?? ""
+  );
+  const [hierarchyMode, setHierarchyMode] = useState<HierarchyMode>(
+    initialOrg?.hierarchyMode ?? DEFAULT_HIERARCHY_MODE
+  );
+  const [members, setMembers] = useState<TeamMember[]>(() =>
+    initialOrg ? flattenOrgToMembers(initialOrg.children) : []
+  );
+
+  const [showAgentWizard, setShowAgentWizard] = useState(false);
+  const [membersTab, setMembersTab] = useState<"edit" | "preview">("edit");
+
+  useEffect(() => {
+    void onCliAgentRefresh?.();
+  }, [onCliAgentRefresh]);
+
+  const canSave = isOrgDraftValid({ orgName, coordinatorAgentId, members });
+
+  const allAgents = useMemo(
+    () => [...builtInAgents, ...customAgents],
+    [builtInAgents, customAgents]
+  );
+
+  const agentOptions = useMemo(
+    () => buildAgentOptions(customAgents, builtInAgents, cliAgents),
+    [customAgents, builtInAgents, cliAgents]
+  );
+
+  const previewRoot = useMemo<OrgMember>(
+    () => ({
+      id: initialOrg?.id ?? "preview-root",
+      name: orgName.trim() || "Org",
+      role: "org",
+      agentId: coordinatorAgentId,
+      description: orgDescription.trim() || undefined,
+      hierarchyMode,
+      children: buildOrgTreeFromMembers(members),
+    }),
+    [
+      orgName,
+      orgDescription,
+      coordinatorAgentId,
+      hierarchyMode,
+      members,
+      initialOrg,
+    ]
+  );
+
+  const handleSave = useCallback(() => {
+    const trimmedDescription = orgDescription.trim();
+    const root: OrgMember = {
+      id: initialOrg?.id ?? crypto.randomUUID(),
+      name: orgName.trim(),
+      role: "org",
+      agentId: coordinatorAgentId,
+      description:
+        trimmedDescription.length > 0 ? trimmedDescription : undefined,
+      hierarchyMode,
+      children: buildOrgTreeFromMembers(members),
+    };
+    onSave(root);
+  }, [
+    orgName,
+    orgDescription,
+    coordinatorAgentId,
+    hierarchyMode,
+    members,
+    onSave,
+    initialOrg,
+  ]);
+
+  // ── Inline agent creation ──
+
+  const handleAddAgent = useCallback(() => {
+    setShowAgentWizard(true);
+  }, []);
+
+  const handleAgentWizardSave = useCallback(
+    (agent: AgentDefinition) => {
+      onAgentCreate?.(agent);
+      setShowAgentWizard(false);
+    },
+    [onAgentCreate]
+  );
+
+  const handleAgentWizardCancel = useCallback(() => {
+    setShowAgentWizard(false);
+  }, []);
+
+  const wizardTitle = isEditMode
+    ? t("common:actions.edit")
+    : t("agentOrgs.orgWizard.title");
+
+  // ── Inline agent wizard overlay ──
+  if (showAgentWizard) {
+    return (
+      <AgentWizard
+        onSave={handleAgentWizardSave}
+        onCancel={handleAgentWizardCancel}
+      />
+    );
+  }
+
+  const primaryLabel = isEditMode
+    ? t("common:actions.save")
+    : t("common:actions.create");
+
+  return (
+    <WizardShell
+      title={wizardTitle}
+      onCancel={onCancel}
+      testId="agent-orgs-org-wizard-root"
+    >
+      <WizardStepLayout
+        currentStep={1}
+        totalSteps={1}
+        fillWidth
+        noPadding
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              data-testid="agent-orgs-org-wizard-cancel-button"
+              onClick={onCancel}
+            >
+              {t("common:actions.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              disabled={!canSave}
+              data-testid="agent-orgs-org-wizard-save-button"
+              onClick={handleSave}
+            >
+              {primaryLabel}
+            </Button>
+          </>
+        }
+      >
+        <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
+          <div
+            className={DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop}
+            data-testid="agent-orgs-org-wizard-content"
+          >
+            <div className={SECTION_GAP_CLASSES}>
+              <OrgFormSections
+                orgName={orgName}
+                onOrgNameChange={setOrgName}
+                orgDescription={orgDescription}
+                onOrgDescriptionChange={setOrgDescription}
+                coordinatorAgentId={coordinatorAgentId}
+                onCoordinatorAgentIdChange={setCoordinatorAgentId}
+                hierarchyMode={hierarchyMode}
+                onHierarchyModeChange={setHierarchyMode}
+                members={members}
+                onMembersChange={setMembers}
+                membersTab={membersTab}
+                onMembersTabChange={setMembersTab}
+                agentOptions={agentOptions}
+                allAgents={allAgents}
+                previewRoot={previewRoot}
+                onAddAgent={handleAddAgent}
+                autoFocusName
+              />
+            </div>
+          </div>
+        </div>
+      </WizardStepLayout>
+    </WizardShell>
+  );
+};
+
+export default OrgWizard;

@@ -1,0 +1,1142 @@
+//! Master Tauri command handler list
+//!
+//! This file is `#[rustfmt::skip]`-friendly — it exists solely to be included
+//! via `tauri::generate_handler![…]` in `main.rs`. Every Tauri command exposed
+//! to the frontend must appear here; commands not listed are silently unreachable.
+
+// Window commands - Centralized window management
+app_window::create_app_window,
+app_window::show_or_create_app_window,
+app_window::close_app_window,
+app_window::focus_app_window,
+app_window::set_window_vibrancy,
+app_window::set_liquid_glass_thickness,
+app_window::set_main_webview_zoom,
+// Integration commands - External IDE
+integrations::external_ide::open_in_external_ide,
+integrations::external_ide::show_in_folder,
+integrations::external_ide::open_folder,
+// Browser commands - Windows
+browser::open_browser_window,
+browser::close_browser_window,
+browser::navigate_browser_window,
+browser::get_webview_url,
+// Browser commands - Inline Webviews
+browser::create_inline_webview,
+browser::update_inline_webview_position,
+browser::set_inline_webview_visibility,
+browser::reposition_and_show_webview,
+browser::close_inline_webview,
+browser::close_all_inline_webviews,
+browser::hide_all_inline_webviews,
+browser::navigate_inline_webview,
+browser::reload_inline_webview,
+// Browser commands - Logging & Cookies
+browser::get_webview_console_logs,
+browser::get_webview_network_logs,
+browser::get_webview_cookies,
+// Browser commands - Element Inspector
+browser::toggle_webview_inspect_mode,
+browser::enable_webview_inspect_mode,
+browser::disable_webview_inspect_mode,
+browser::get_selected_element_info,
+browser::clear_element_selection,
+// Browser commands - DOM Tree & Bidirectional Inspector
+browser::get_webview_dom_tree,
+browser::check_webview_dom_dirty,
+browser::highlight_element_by_xpath,
+browser::select_element_by_xpath,
+browser::clear_element_highlight,
+browser::set_element_style,
+browser::get_element_computed_styles,
+browser::get_element_path,
+// Browser commands - Native DevTools
+browser::open_webview_devtools,
+browser::close_webview_devtools,
+browser::is_webview_devtools_open,
+// Browser commands - DOM Editor (CRUD operations)
+browser::insert_element,
+browser::insert_html,
+browser::delete_element,
+browser::update_element,
+browser::clone_element,
+browser::move_element,
+browser::undo_dom_operation,
+browser::redo_dom_operation,
+browser::get_dom_history_state,
+browser::serialize_dom_to_html,
+// Browser commands - DOM Editor (Multi-Select, Bounds, Resize)
+browser::multi_select_add,
+browser::multi_select_remove,
+browser::multi_select_toggle,
+browser::get_multi_selection,
+browser::clear_multi_selection,
+browser::get_element_bounds,
+browser::get_multiple_bounds,
+browser::resize_element,
+browser::set_element_position,
+// Browser commands - DOM Editor (Save)
+browser::save_html_to_file,
+browser::get_full_html_document,
+// Browser commands - Automation (sidecar + Playwright)
+browser::automation::commands::browser_automation_start,
+browser::automation::commands::browser_automation_stop,
+browser::automation::commands::browser_automation_status,
+browser::automation::commands::browser_automation_takeover,
+browser::automation::commands::browser_automation_resume,
+browser::automation::commands::browser_screenshot_get,
+// Browser commands - Inline webview capture (Camera button → chat attachment)
+browser::browser_inline_capture,
+// Browser commands - Inline webview z-order layering (send-to-back / bring-to-front)
+browser::browser_webview_send_to_back,
+browser::browser_webview_bring_to_front,
+browser::browser_webviews_set_layer_for_all,
+// Browser commands - ORGII Preview (Component Isolation)
+browser::create_orgii_preview,
+browser::orgii_preview_load_component,
+browser::orgii_preview_update_args,
+browser::orgii_preview_set_args,
+browser::orgii_preview_get_state,
+browser::orgii_preview_reset,
+browser::orgii_preview_inject_css,
+browser::orgii_preview_inject_component_css,
+browser::orgii_preview_show,
+browser::orgii_preview_hide,
+browser::orgii_preview_update_position,
+browser::orgii_preview_close,
+browser::compile_component_styles,
+browser::compile_style_files,
+// Browser commands - Internal browser automation (DOM automation for inline webviews)
+browser::internal_browser_get_state,
+browser::internal_browser_click,
+browser::internal_browser_input,
+browser::internal_browser_select,
+browser::internal_browser_scroll,
+browser::internal_browser_show_mask,
+browser::internal_browser_hide_mask,
+browser::internal_browser_clean_up,
+browser::internal_browser_is_ready,
+// Benchmark commands
+benchmark::benchmark_list_tasks,
+benchmark::benchmark_get_task,
+benchmark::benchmark_preflight,
+benchmark::benchmark_create_run_plan,
+benchmark::benchmark_start_run,
+benchmark::benchmark_get_run_status,
+benchmark::benchmark_cancel_run,
+// Runner commands - Cursor session capture
+agent_sessions::cli::platform_adapters::cursor::session_capture::start_cursor_native_oauth_login,
+agent_sessions::cli::platform_adapters::cursor::session_capture::poll_cursor_native_oauth_token,
+agent_sessions::cli::platform_adapters::cursor::session_capture::create_cursor_session_webview,
+agent_sessions::cli::platform_adapters::cursor::session_capture::poll_cursor_session,
+agent_sessions::cli::platform_adapters::cursor::session_capture::close_cursor_session_webview,
+agent_sessions::cli::platform_adapters::cursor::session_capture::stop_cursor_session_polling,
+agent_sessions::cli::platform_adapters::cursor::session_capture::clear_cursor_session,
+// Runner commands - Claude Code OAuth login
+agent_sessions::cli::platform_adapters::claude_code::oauth::start_claude_code_oauth_login,
+agent_sessions::cli::platform_adapters::claude_code::oauth::exchange_claude_code_oauth_code,
+agent_sessions::cli::platform_adapters::claude_code::oauth::create_claude_code_oauth_webview,
+agent_sessions::cli::platform_adapters::claude_code::oauth::close_claude_code_oauth_webview,
+// Runner commands - Codex OAuth login
+agent_sessions::cli::platform_adapters::codex::oauth::start_codex_oauth_login,
+agent_sessions::cli::platform_adapters::codex::oauth::exchange_codex_oauth_code,
+agent_sessions::cli::platform_adapters::codex::oauth::create_codex_oauth_webview,
+agent_sessions::cli::platform_adapters::codex::oauth::close_codex_oauth_webview,
+// Runner commands - Gemini OAuth login
+agent_sessions::cli::platform_adapters::gemini::oauth::start_gemini_oauth_login,
+agent_sessions::cli::platform_adapters::gemini::oauth::exchange_gemini_oauth_code,
+agent_sessions::cli::platform_adapters::gemini::oauth::create_gemini_oauth_webview,
+agent_sessions::cli::platform_adapters::gemini::oauth::close_gemini_oauth_webview,
+// Runner commands - Kiro Credentials (PTY-driven `kiro-cli login` flow).
+// The direct-AWS-SDK SSO variant (`start_kiro_sso_login` / `cancel_kiro_sso_login`)
+// has been archived to `.archive/kiro-sso/` to drop the AWS SDK dep tree.
+agent_sessions::cli::platform_adapters::kiro::kiro_auth::start_kiro_login,
+agent_sessions::cli::platform_adapters::kiro::kiro_auth::cancel_kiro_login,
+agent_sessions::cli::platform_adapters::kiro::kiro_auth::read_kiro_tokens,
+agent_sessions::cli::platform_adapters::kiro::kiro_auth::create_kiro_auth_webview,
+agent_sessions::cli::platform_adapters::kiro::kiro_auth::close_kiro_auth_webview,
+// Kiro ACP session listing
+agent_sessions::cli::parsers::kiro::list_kiro_sessions_cmd,
+// Auth0 commands (bypass CORS for token exchange)
+integrations::auth::auth0_exchange_code,
+integrations::auth::auth0_refresh_token,
+integrations::auth::auth0_exchange_and_store,
+integrations::auth::auth0_refresh_and_store,
+integrations::auth::auth0_revoke_token,
+// Secure token storage (local file)
+integrations::auth::secure_store_tokens,
+integrations::auth::secure_get_auth_state,
+integrations::auth::secure_get_access_token,
+integrations::auth::secure_get_refresh_token,
+integrations::auth::secure_is_token_expiring,
+integrations::auth::secure_clear_tokens,
+// GitHub local API commands
+integrations::github::commands::github_store_token,
+integrations::github::commands::github_list_repos,
+integrations::github::commands::github_list_branches,
+integrations::github::commands::github_create_branch,
+integrations::github::commands::github_create_pr,
+integrations::github::commands::github_clone_repo,
+integrations::github::commands::github_check_token,
+integrations::github::commands::github_clear_token,
+integrations::github::detect::detect_github_credentials,
+integrations::github::detect::github_store_detected_token,
+integrations::github::profile::github_fetch_profile,
+// Platform commands
+system_services::notifications::send_notification,
+system_services::notifications::check_notification_permission,
+system_services::notifications::request_notification_permission,
+system_services::notifications::set_dock_badge,
+system_services::notifications::clear_dock_badge,
+// Platform commands - Recent Files (macOS system-level)
+system_services::recent_files::add_to_recent_documents,
+system_services::recent_files::add_multiple_to_recent_documents,
+system_services::recent_files::clear_recent_documents,
+system_services::recent_files::get_max_recent_documents,
+// Platform commands - App Menu (File > Open Recent)
+system_services::app_menu::menu_add_recent,
+system_services::app_menu::menu_get_recent,
+system_services::app_menu::menu_clear_recent,
+// Platform commands - Power management (prevent sleep while sessions run)
+system_services::power::system_power_acquire_sleep_inhibitor,
+system_services::power::system_power_release_sleep_inhibitor,
+// File search commands
+search::file::search_files_fuzzy,
+search::file::index_project_files,
+search::file::prewarm_file_index,
+search::file::clear_file_index_cache,
+search::file::find_files_by_extension,
+// Code search commands
+search::code::commands::search_code_regex,
+search::code::commands::search_code_streaming,
+search::code::commands::search_code_fast,
+search::code::commands::cancel_search,
+search::code::commands::clear_search_cache,
+search::code::commands::search_symbols,
+search::code::commands::get_file_symbols,
+search::code::commands::goto_definition,
+search::code::commands::find_references,
+search::code::commands::get_supported_languages,
+// Optional Tantivy and semantic search commands
+advanced_search::commands::index_repository_tantivy,
+advanced_search::commands::search_tantivy,
+advanced_search::commands::get_tantivy_index_info,
+advanced_search::commands::remove_repository_tantivy,
+advanced_search::commands::clear_tantivy_index,
+advanced_search::commands::incremental_index_files,
+advanced_search::commands::remove_files_from_index,
+advanced_search::commands::check_semantic_available,
+advanced_search::commands::check_embedding_model_status,
+advanced_search::commands::download_embedding_model,
+advanced_search::commands::delete_embedding_model,
+advanced_search::commands::set_model_dir,
+advanced_search::commands::get_model_dir_path,
+advanced_search::commands::get_model_info,
+advanced_search::commands::search_semantic,
+advanced_search::commands::index_repository_semantic,
+advanced_search::commands::incremental_index_semantic,
+advanced_search::commands::remove_repository_semantic,
+advanced_search::commands::cancel_semantic_indexing,
+advanced_search::commands::stop_embedder,
+advanced_search::commands::debug_qdrant_collection_info,
+advanced_search::commands::check_advanced_search_enabled,
+// Merkle tree commands
+search::merkle::commands::merkle_build_tree,
+search::merkle::commands::merkle_diff_since_snapshot,
+search::merkle::commands::merkle_get_stats,
+// Index management commands
+infrastructure::index_manager::get_index_status,
+infrastructure::index_manager::get_all_indexes,
+infrastructure::index_manager::start_indexing,
+infrastructure::index_manager::release_index,
+// Spreadsheet CSV/TSV paging commands
+infrastructure::spreadsheet_csv::spreadsheet_csv_read_page,
+infrastructure::spreadsheet_csv::spreadsheet_csv_save_patches,
+// Spreadsheet XLSX paging commands
+infrastructure::spreadsheet_xlsx::spreadsheet_xlsx_workbook_info,
+infrastructure::spreadsheet_xlsx::spreadsheet_xlsx_read_page,
+infrastructure::spreadsheet_xlsx::spreadsheet_xlsx_save_patches,
+// Repository Watch commands (event-driven git status)
+git::watch::commands::watch_repos,
+git::watch::commands::unwatch_repo,
+git::watch::commands::unwatch_all_repos,
+git::watch::commands::get_repo_status,
+git::watch::commands::force_refresh_repo,
+git::watch::commands::get_all_repo_statuses,
+git::watch::commands::get_watcher_health,
+git::watch::commands::get_watch_status,
+git::watch::commands::set_window_focus,
+// Folder Archive commands (for cloud session upload - legacy ZIP)
+infrastructure::archive::create_folder_archive,
+infrastructure::archive::get_folder_info,
+// Session Persistence commands (SQLite + FTS5 for fast local storage)
+session_persistence::cache_save_events,
+session_persistence::cache_load_events,
+session_persistence::cache_load_turn_index,
+session_persistence::cache_search_events,
+session_persistence::cache_search_all_sessions,
+session_persistence::cache_get_session_metadata,
+session_persistence::cache_delete_session,
+session_persistence::cache_clear_old_sessions,
+session_persistence::cache_get_all_sessions,
+session_persistence::cache_get_stats,
+// Full session commands (events + specs + timeRange)
+session_persistence::cache_save_session,
+session_persistence::cache_load_session,
+session_persistence::cache_update_session_specs,
+// Session Persistence - Message Editing commands
+session_persistence::cache_truncate_after_event,
+session_persistence::cache_delete_event,
+session_persistence::cache_update_event,
+session_persistence::cache_clear_session_history,
+session_persistence::cache_get_event,
+// File Changes Statistics
+session_persistence::cache_get_file_changes,
+// Session Unified Diff (file-history based, works without worktree)
+session_persistence::cache_get_session_diff,
+// Lineage - Chat Session Impact Graph
+project_management::lineage::get_session_impact,
+project_management::lineage::get_provenance_session_ids,
+// Per-round token usage
+session_persistence::get_session_token_usage_records,
+// Stream Recovery - Crash Recovery for Streaming Messages
+agent_sessions::stream_recovery::partial_save,
+agent_sessions::stream_recovery::partial_load,
+agent_sessions::stream_recovery::partial_delete,
+agent_sessions::stream_recovery::partial_exists,
+agent_sessions::stream_recovery::partial_list_all,
+agent_sessions::stream_recovery::partial_cleanup_stale,
+// Git Bundle commands (for cloud session upload - preserves git history)
+git::bundle::create_git_bundle,
+git::bundle::get_git_repo_info,
+// Git Bundle Sync commands (for pull/push during cloud sessions)
+git::bundle::apply_git_bundle,
+git::bundle::create_push_bundle,
+git::bundle::merge_cloud_ref,
+git::bundle::get_local_head_sha,
+git::bundle::get_local_branch,
+git::bundle::get_repo_branches,
+git::bundle::get_local_commit_history,
+git::bundle::calculate_ahead_behind,
+// Git operations for conflict resolution
+git::bundle::git_add_all,
+git::bundle::git_commit,
+// Git proxy detection
+git::util::get_git_proxy_config,
+git::util::set_git_proxy_config,
+git::util::unset_git_proxy_config,
+git::util::get_git_user_identity,
+// AI-powered git utilities
+git_api::commands::ai::generate_commit_message,
+// Network detection
+system_services::network::detect_vpn,
+system_services::network::fetch_geo_info,
+// System dependency detection
+system_services::dependencies::detect_system_dependencies,
+system_services::dependencies::get_cached_dependencies,
+// Test Runner commands
+test_runner::detect_test_framework,
+test_runner::discover_tests,
+test_runner::run_tests,
+test_runner::stop_tests,
+test_runner::get_test_patterns,
+// Container commands
+container::container_engine_ping,
+container::container_engine_candidates,
+container::container_list,
+container::container_inspect,
+container::container_start,
+container::container_stop,
+container::container_restart,
+// LSP commands
+lsp::commands::lsp_start_server,
+lsp::commands::lsp_stop_server,
+lsp::commands::lsp_did_open,
+lsp::commands::lsp_did_change,
+lsp::commands::lsp_did_close,
+lsp::commands::lsp_shutdown,
+lsp::commands::lsp_get_server_log,
+lsp::commands::lsp_get_cached_diagnostics,
+lsp::commands::lsp_get_supported_languages,
+lsp::commands::lsp_check_installed,
+lsp::commands::lsp_get_cached,
+lsp::commands::lint_check_installed,
+lsp::commands::lint_get_cached,
+lsp::commands::lsp_get_install_command,
+lsp::commands::lsp_get_uninstall_command,
+lsp::commands::lint_get_install_command,
+lsp::commands::lint_get_uninstall_command,
+lsp::commands::lsp_get_global_config,
+lsp::commands::lsp_set_global_config,
+lsp::commands::lsp_set_auto_install,
+lsp::commands::lsp_set_server_enabled_global,
+lsp::commands::lsp_reload_global_config,
+lsp::workspace_config::lsp_get_workspace_config,
+lsp::workspace_config::lsp_set_server_enabled,
+lsp::workspace_config::lsp_is_server_enabled,
+lsp::workspace_config::lint_get_workspace_config,
+lsp::workspace_config::lint_set_tool_enabled,
+lsp::workspace_config::lint_is_tool_enabled,
+lsp::workspace_scan::lint_scan_get_tools,
+lsp::workspace_scan::lint_scan_run_tool,
+lsp::workspace_scan::lint_get_eslint_targets,
+lsp::workspace_scan::lint_scan_diff_files,
+lsp::workspace_scan::orchestrator::lint_scan_orchestrated,
+// Terminal PTY commands
+terminal::pty_commands::pty::create_pty,
+terminal::pty_commands::pty::write_pty,
+terminal::pty_commands::pty::resize_pty,
+terminal::pty_commands::pty::close_pty,
+terminal::pty_commands::pty::check_pty_exists,
+terminal::pty_commands::pty::get_pty_info,
+terminal::pty_commands::pty::list_pty_sessions,
+terminal::pty_commands::pty::get_pty_memory_usage,
+terminal::pty_commands::pty::get_pty_foreground_process,
+terminal::pty_commands::pty::get_pty_cwd,
+terminal::pty_commands::pty::ack_pty_data,
+terminal::pty_commands::shells::detect_available_shells,
+// UI Indexer commands — frontend source-code analysis powering the embedded
+// browser inspector: DOM→source mapping, component catalog prop extraction,
+// ORGII project extraction, and CSS design-token scanning.
+// Crate: src-tauri/crates/ui-indexer.
+ui_indexer::ui_index_build_repo,
+ui_indexer::ui_index_lookup_component,
+ui_indexer::ui_index_update_file,
+ui_indexer::ui_index_clear,
+ui_indexer::ui_index_is_repo_indexed,
+ui_indexer::ui_index_get_stats,
+ui_indexer::ui_index_extract_props,
+ui_indexer::ui_index_list_components,
+ui_indexer::list_story_files,
+ui_indexer::extract_stories,
+ui_indexer::ui_index_get_component_stories,
+ui_indexer::extract_tokens,
+ui_indexer::extract_tokens_from_files,
+ui_indexer::scan_global_tokens,
+ui_indexer::extract_token_definitions,
+// Validation commands (key validation for AI providers)
+key_vault::validate_key,
+key_vault::test_model_availability,
+key_vault::fetch_key_quota,
+key_vault::validate_keys_from_file,
+key_vault::get_cursor_cli_models,
+key_vault::cursor_list_models_native,
+key_vault::claude_code_oauth_list_models,
+key_vault::codex_oauth_list_models,
+// Key storage commands (CRUD for ~/.orgii/credentials.json)
+key_vault::list_keys,
+key_vault::get_key,
+key_vault::get_key_by_id,
+key_vault::get_full_key,
+key_vault::save_key,
+key_vault::delete_key,
+key_vault::delete_key_by_id,
+key_vault::update_key_health,
+key_vault::get_env_for_agent,
+key_vault::get_all_keys_for_agent,
+key_vault::clipboard_write_text,
+// Auto-detection commands
+key_vault::auto_detect_key,
+// Proxy commands (ORGII proxy token allocation + MITM proxy for Cursor/Kiro/Copilot)
+integrations::proxy::proxy_allocate,
+integrations::proxy::proxy_release,
+integrations::proxy::proxy_cert_status,
+integrations::proxy::proxy_generate_ca,
+integrations::proxy::proxy_install_cert,
+integrations::proxy::proxy_uninstall_cert,
+integrations::proxy::proxy_ensure_ca_trusted,
+// Hosted service proxy (bypasses WebView CORS for hosted backend calls)
+integrations::proxy::hosted_service_proxy,
+// Provider & agent discovery
+key_vault::commands::get_available_agents,
+key_vault::commands::get_available_api_providers,
+key_vault::commands::auto_install_cli,
+key_vault::commands::get_provider_config,
+key_vault::commands::get_all_provider_configs,
+// Repository management commands
+git::repos::server_list_repos,
+git::repos::server_import_repo,
+git::repos::server_delete_repo,
+git::repos::server_get_repo,
+git::repos::server_clone_github,
+git::repos::server_update_repo_visibility,
+git::repos::server_check_github_visibility,
+git::repos::server_create_empty_repo,
+git::repos::server_import_folder,
+git::repos::server_create_folder,
+git::repos::server_check_is_git_repo,
+// Workspace preset commands
+git::repos::server_list_workspaces,
+git::repos::server_create_workspace,
+git::repos::server_update_workspace,
+git::repos::server_delete_workspace,
+// IDE detection & opening
+integrations::external_ide::server_detect_ides,
+// Session event channel commands (Tauri IPC Channels)
+api::websocket_handler::subscribe_session_events,
+api::websocket_handler::unsubscribe_session_events,
+// Code session commands (spawn CLI agents, manage sessions)
+agent_sessions::cli::commands::cli_agent_create,
+agent_sessions::cli::commands::cli_agent_run,
+agent_sessions::cli::commands::cli_agent_message,
+agent_sessions::cli::commands::cli_agent_approval_response,
+agent_sessions::cli::commands::cli_agent_status,
+agent_sessions::cli::commands::cli_agent_history_mutation,
+agent_sessions::cli::commands::cli_agent_cancel,
+agent_sessions::cli::commands::cli_agent_list,
+agent_sessions::cli::commands::cli_agent_chunks,
+agent_sessions::cli::commands::cli_agent_truncate_after_chunk,
+agent_sessions::cli::commands::cli_agent_delete,
+agent_sessions::cli::commands::cli_agent_resume,
+agent_sessions::cli::commands::cli_agent_merge,
+agent_sessions::cli::commands::cli_agent_worktree_diff,
+agent_sessions::cli::commands::cli_agent_worktree_discard,
+// Inbox commands (message persistence)
+inbox::commands::inbox_list,
+inbox::commands::inbox_upsert,
+inbox::commands::inbox_update_status,
+inbox::commands::inbox_delete,
+// Regex-based key extraction (fast, no LLM needed)
+key_vault::extract_keys_from_text,
+// Project store commands (~/.orgii/projects/projects.db)
+project_management::projects::commands::project_personal_workspace,
+project_management::projects::commands::project_read_orgs,
+project_management::projects::commands::project_create_org,
+project_management::projects::commands::project_configure_org_git_folder_sync,
+project_management::projects::commands::project_sync_org_git_folder,
+project_management::projects::commands::project_resolve_org_git_folder_conflict,
+project_management::projects::commands::project_read_projects,
+project_management::projects::commands::project_read_project,
+project_management::projects::commands::project_write_project,
+project_management::projects::commands::project_delete_project,
+project_management::projects::commands::project_read_labels,
+project_management::projects::commands::project_write_labels,
+project_management::projects::commands::project_read_milestones,
+project_management::projects::commands::project_write_milestones,
+project_management::projects::commands::project_read_members,
+project_management::projects::commands::project_write_members,
+//   Work items (CRUD / atomic / batch) + assets.
+project_management::projects::commands::project_read_work_items,
+project_management::projects::commands::project_read_work_items_enriched,
+project_management::projects::commands::project_read_work_items_view_data,
+project_management::projects::commands::project_read_work_item,
+project_management::projects::commands::project_write_work_item,
+project_management::projects::commands::project_delete_work_item,
+project_management::projects::commands::project_restore_work_item,
+project_management::projects::commands::project_purge_expired_deleted_work_items,
+project_management::projects::commands::project_update_work_item_partial,
+project_management::projects::commands::project_move_work_item,
+project_management::projects::commands::project_allocate_work_item_id,
+project_management::projects::commands::project_batch_delete_work_items,
+project_management::projects::commands::project_batch_update_work_items,
+project_management::projects::commands::project_list_routines,
+project_management::projects::commands::project_read_routine,
+project_management::projects::commands::project_upsert_routine,
+project_management::projects::commands::project_delete_routine,
+project_management::projects::commands::project_list_routine_fires,
+agent_core::state::commands::project_fire_routine,
+project_management::projects::commands::project_save_asset,
+project_management::projects::commands::project_delete_asset,
+project_management::projects::commands::project_list_assets,
+project_management::projects::commands::project_resolve_asset_path,
+// Pluggable sync framework
+project_management::projects::commands::sync_connection_list,
+project_management::projects::commands::sync_connection_create_pat,
+project_management::projects::commands::sync_connection_rename,
+project_management::projects::commands::sync_connection_delete,
+project_management::projects::commands::sync_connection_oauth_start,
+project_management::projects::commands::sync_connection_oauth_complete,
+project_management::projects::commands::sync_connection_oauth_cancel,
+project_management::projects::commands::project_sync_attach_adapter,
+project_management::projects::commands::project_sync_detach_adapter,
+project_management::projects::commands::project_sync_status,
+project_management::projects::commands::project_sync_force_push,
+project_management::projects::commands::project_sync_force_pull,
+project_management::projects::commands::project_sync_list_adapters,
+// Pluggable sync framework — outbox problems UI
+project_management::projects::commands::project_sync_list_problems,
+project_management::projects::commands::project_sync_retry_entry,
+project_management::projects::commands::project_sync_discard_entry,
+project_management::projects::commands::project_sync_metrics_tail,
+// Pluggable sync framework — webhook ingestion
+project_management::projects::commands::project_sync_webhook_install,
+project_management::projects::commands::project_sync_webhook_status,
+project_management::projects::commands::project_sync_webhook_rotate,
+// Pluggable sync framework — bulk historical import
+project_management::projects::commands::project_sync_import_status,
+project_management::projects::commands::project_sync_import_cancel,
+project_management::projects::commands::project_sync_import_retry,
+// Pluggable sync framework — conflict resolution
+project_management::projects::commands::project_sync_conflicts_list,
+project_management::projects::commands::project_sync_conflicts_count,
+project_management::projects::commands::project_sync_conflict_use_local,
+project_management::projects::commands::project_sync_conflict_use_remote,
+project_management::projects::commands::project_sync_conflict_dismiss,
+// Linear-native Projects view
+project_management::projects::commands::linear_projects_list,
+project_management::projects::commands::linear_project_get,
+project_management::projects::commands::linear_teams_list,
+project_management::projects::commands::linear_workflow_states_list,
+project_management::projects::commands::linear_workflow_state_create,
+project_management::projects::commands::linear_workflow_state_update,
+project_management::projects::commands::linear_workflow_state_archive,
+project_management::projects::commands::linear_project_create,
+project_management::projects::commands::linear_project_update,
+project_management::projects::commands::linear_project_archive,
+project_management::projects::commands::linear_project_issues_list,
+project_management::projects::commands::linear_issue_create,
+project_management::projects::commands::linear_issue_update,
+project_management::projects::commands::linear_issue_archive,
+// File operations commands (binary detection, ignore filtering)
+file_ops::is_binary_by_extension,
+file_ops::is_binary_content,
+file_ops::is_binary_file,
+file_ops::convert_pages_to_html,
+file_ops::should_ignore_path,
+file_ops::should_ignore_paths_batch,
+file_ops::filter_ignored_paths,
+file_ops::list_directory_filtered,
+file_ops::list_directory_tree,
+// Performance optimization commands
+// - Image luminance calculation (for adaptive UI theming)
+perf_utils::calculate_image_luminance,
+perf_utils::calculate_single_region_luminance,
+perf_utils::calculate_luminance_from_base64,
+// - Binary file detection (SIMD-accelerated + magic bytes)
+perf_utils::check_binary_by_path,
+perf_utils::check_binary_content,
+perf_utils::check_file_is_binary,
+perf_utils::check_binary_content_enhanced,
+perf_utils::check_file_is_binary_enhanced,
+// - Fast JSON processing (simd-json)
+perf_utils::parse_json_fast,
+perf_utils::stringify_json_fast,
+perf_utils::validate_json_fast,
+perf_utils::parse_json_file,
+perf_utils::parse_json_batch,
+// - Hash computation (SHA-256, Blake3)
+perf_utils::compute_sha256,
+perf_utils::compute_sha256_bytes,
+perf_utils::compute_blake3,
+perf_utils::compute_blake3_bytes,
+perf_utils::compute_file_hash,
+perf_utils::compute_blake3_batch,
+// - Diff and patch (fuzzy matching for AI code edits)
+perf_utils::diff_patch::compute_diff,
+perf_utils::diff_patch::apply_patch,
+perf_utils::diff_patch::apply_fuzzy_patch,
+perf_utils::diff_patch::merge_three_way,
+perf_utils::diff_patch::compute_dirty_diff_markers,
+perf_utils::diff_patch::compute_structured_diff,
+perf_utils::diff_patch::compute_aligned_diff,
+perf_utils::diff_patch::convert_patch_to_unified,
+perf_utils::diff_patch::compute_diff_with_hunks,
+// - Process metrics (memory, CPU monitoring)
+perf_utils::get_process_metrics,
+perf_utils::get_memory_usage,
+perf_utils::get_system_memory,
+perf_utils::get_system_info,
+perf_utils::get_memory_breakdown,
+perf_utils::get_child_processes_memory,
+perf_utils::get_ram_history,
+// Disk usage
+infrastructure::storage_commands::get_disk_usage,
+infrastructure::storage_commands::get_memory_storage_path,
+infrastructure::storage_commands::clear_storage_category,
+infrastructure::storage_commands::get_temp_dir,
+// Frontend log persistence
+infrastructure::frontend_log::write_frontend_log,
+infrastructure::frontend_log::get_logs_directory,
+// Shared tool commands (agent-type-agnostic).
+// `init_tool_registry` is the unified bootstrap call — it returns the
+// full tool list (with `simulator_app` already on each row) plus the
+// CLI alias map, so the standalone `builtin_simulator_app_map` /
+// `cli_tool_alias_map` commands were retired.
+agent_core::state::commands::tools::agent_list_tools,
+agent_core::state::commands::tools::agent_list_effective_tools_for_session,
+agent_core::state::commands::tools::list_all_tools,
+agent_core::state::commands::tools::init_tool_registry,
+agent_core::state::commands::tools::agent_check_keys,
+// Channel agent commands
+// Structured introspection of the live system prompt — used by
+// dev/E2E surfaces (frontend `__e2e.promptDump`) and by
+// `audit-session-flow.spec.mjs` to replace log-grep with structural
+// assertions over the section registry. Always-on at the wire level
+// (cheap; just rebuilds a `PromptCtx` and walks the registry once);
+// the frontend gates exposure behind `debug_assertions || WEBDRIVER=1`.
+agent_core::state::commands::session::debug::prompt::prompt_dump,
+// Structured introspection of the live runtime `SecurityPolicy` for an
+// active session. Used by `audit-security-*.spec.mjs` to prove the
+// L4→L5 hop: whatever sits in `AgentDefinition.agent_policy` is what
+// `init/mod.rs::to_runtime_security` actually constructs at session
+// launch, and what `validate_command_execution` actually enforces.
+// Always-on at the wire layer (cheap; just rebuilds a fresh
+// `SecurityPolicy` and reads its fields); the frontend gates exposure
+// behind `debug_assertions || WEBDRIVER=1` like `prompt_dump`.
+agent_core::state::commands::session::debug::security::debug_session_security_snapshot,
+agent_core::state::commands::session::debug::security::debug_session_validate_command,
+// Structured introspection of the live `agent` (sub-agent delegation)
+// tool's allowlist for an active session. Used by
+// `audit-subagents-llm.spec.mjs` to prove the L4→L5 hop:
+// `AgentDefinition.sub_agents` → `init/tool_assembly.rs::build_agent_tool`
+// → `AgentToolConfig.allowed_subagents`. Reports the resolved
+// sub_agents list, the org-aware effective allowlist, and the
+// `agent_id`s the LLM would see in the tool's dynamic description.
+// Always-on at the wire layer; the frontend gates exposure behind
+// `debug_assertions || WEBDRIVER=1` like the other `debug_session_*`
+// commands.
+agent_core::state::commands::session::debug::subagent::debug_session_subagent_snapshot,
+api::agent::test::core::debug_work_item_runtime_launch,
+api::agent::test::core::debug_work_item_scheduler_run_once,
+// Structured introspection of the live model + fallback chain for an
+// active session. Used by `audit-models-llm.spec.mjs` to prove the
+// L4→L5 hop: `AgentDefinition.{selectedModelId, selectedAccountId}`
+// → `ResolvedAgent` → `runtime.model` / `runtime.account_id` /
+// `reliability.fallback_models`. Reports the at-launch active model +
+// account, the resolved selections, and the fallback list. Same
+// `debug_assertions || WEBDRIVER=1` gating as the other
+// `debug_session_*` commands at the frontend layer.
+agent_core::state::commands::session::debug::model::debug_session_model_snapshot,
+// Structured introspection of the live tool selection for an active
+// session. Used by `audit-tools-llm.spec.mjs` to prove the L4→L5 hop:
+// `AgentDefinition.tools.{systemRestrictToTools, userAllowedTools,
+// excludedTools, disabledMcpServers, disabledMcpTools}` →
+// `ResolvedToolSelection.{restrict_to, excluded, disabled_mcp_servers,
+// disabled_mcp_tools}` → effective `ToolRegistry.tool_names()`. Same
+// `debug_assertions || WEBDRIVER=1` gating as the other
+// `debug_session_*` commands at the frontend layer.
+agent_core::state::commands::session::debug::tools::debug_session_tools_snapshot,
+// Structured introspection of the live skills configuration for an
+// active session. Used by `audit-skills-llm.spec.mjs` to prove the
+// L4→L5 hop: `AgentDefinition.skills_config.{enabled, include,
+// exclude}` → `ResolvedAgent.skills.{enabled, disabled}` AND the
+// parallel `SessionRuntime.skills_config` capture →
+// effective per-turn `(disabled, include_filter)` that
+// `processor::prompt::build_dynamic_sections` feeds to
+// `SkillsLoader::build_skill_listing_attachment`. Same
+// `debug_assertions || WEBDRIVER=1` gating as the other
+// `debug_session_*` commands at the frontend layer.
+agent_core::state::commands::session::debug::skills::debug_session_skills_snapshot,
+// Debug-only: dump the General-tab triple
+// (`AgentDefinition.{soul_content, session_model.max_iterations,
+// exec_timeout}`) alongside the resolved/effective runtime values
+// (`runtime.agent_soul`, `runtime.resolved.session_model.max_iterations`,
+// `runtime.resolved.exec_timeout`) for E2E. Pairs with `prompt_dump` for
+// Personality: this command exposes the captured-at-launch
+// `runtime.agent_soul` AND mirrors the live re-read `prompt_dump` does
+// against the singleton `AgentDefinitionsStore`, so a single round-trip
+// can prove (a) the resolver default-fill (e.g. `exec_timeout: None →
+// 60s`), (b) the `Some(resolved)` shape of `turn_max_iterations_from_
+// session_model`, and (c) the no-mid-session-drift invariant for all
+// three fields. Same `debug_assertions || WEBDRIVER=1` gating as the
+// other `debug_session_*` commands at the frontend layer.
+agent_core::state::commands::session::debug::general::debug_session_general_snapshot,
+agent_core::state::commands::desktop::agent_check_desktop_permissions,
+agent_core::state::commands::desktop::agent_request_desktop_permissions,
+agent_core::state::commands::desktop::agent_get_desktop_config,
+agent_core::state::commands::desktop::agent_set_desktop_config,
+agent_core::state::commands::session::channel::agent_probe_channel,
+agent_core::state::commands::session::channel::agent_ide_action_result,
+// Agent shell commands
+agent_core::utils::shell_commands::agent_kill_shell_process,
+agent_core::utils::shell_commands::agent_list_running_shell_jobs,
+// Settings commands (JSONC file at ~/.orgii/settings.jsonc)
+settings::commands::settings_read,
+settings::commands::settings_write,
+settings::commands::settings_write_partial,
+settings::commands::settings_reset,
+settings::commands::settings_get_path,
+settings::commands::settings_write_schema,
+// Codex config (~/.codex/config.toml)
+agent_cli::codex::commands::codex_config_read,
+agent_cli::codex::commands::codex_config_write_partial,
+agent_cli::codex::commands::codex_config_get_path,
+agent_cli::codex::commands::codex_config_read_raw,
+agent_cli::codex::commands::codex_config_write_raw,
+// Claude Code config (~/.claude/settings.json)
+agent_cli::claude_code::commands::claude_code_config_read,
+agent_cli::claude_code::commands::claude_code_config_write_partial,
+agent_cli::claude_code::commands::claude_code_config_get_path,
+agent_cli::claude_code::commands::claude_code_config_read_raw,
+agent_cli::claude_code::commands::claude_code_config_write_raw,
+// Cursor CLI config (~/.cursor/cli-config.json & sandbox.json)
+agent_cli::cursor::commands::cursor_cli_config_read,
+agent_cli::cursor::commands::cursor_cli_config_write_partial,
+agent_cli::cursor::commands::cursor_cli_config_get_path,
+agent_cli::cursor::commands::cursor_cli_config_read_raw,
+agent_cli::cursor::commands::cursor_cli_config_write_raw,
+agent_cli::cursor::commands::cursor_sandbox_config_read,
+agent_cli::cursor::commands::cursor_sandbox_config_write_partial,
+agent_cli::cursor::commands::cursor_sandbox_config_get_path,
+agent_cli::cursor::plugins::cursor_plugins_list,
+// Gateway (channels)
+agent_core::state::commands::channel_handler::agent_toggle_channel,
+agent_core::state::commands::channel_handler::agent_set_gateway_model,
+// Learnings (L3 memory) — per-agent enable/disable lives in agent-config
+agent_core::memory::commands::session_trigger_reflection,
+agent_core::memory::commands::session_list_learnings,
+agent_core::memory::commands::session_deprecate_learning,
+agent_core::memory::commands::learnings_list,
+agent_core::memory::commands::learnings_update_body,
+agent_core::memory::commands::learnings_set_status,
+agent_core::memory::commands::learnings_delete,
+agent_core::memory::commands::learnings_get_status,
+// Workspace Memory (L2) — file-based, workspace-scoped
+agent_core::memory::commands::workspace_memory_list,
+agent_core::memory::commands::workspace_memory_read,
+agent_core::memory::commands::workspace_memory_write,
+agent_core::memory::commands::workspace_memory_status,
+agent_core::memory::commands::workspace_memory_index,
+agent_core::memory::commands::workspace_memory_delete,
+agent_core::memory::commands::workspace_memory_clear,
+// Debug-only e2e helpers. The impls carry `#[cfg(debug_assertions)]`
+// so release builds compile them out; in debug builds they are exposed
+// as Tauri commands. Used by audit-memory-*.spec.mjs to drive the
+// L3/L2 surfaces structurally without triggering reflection or
+// scraping the debug HTTP server.
+agent_core::memory::commands::debug_seed_learning,
+agent_core::memory::commands::debug_memory_prefetch_section,
+// Custom Agent Definitions
+agent_core::definitions::commands::agent_definitions_list_all,
+agent_core::definitions::commands::agent_definitions_add,
+agent_core::definitions::commands::agent_definitions_update,
+agent_core::definitions::commands::agent_definitions_remove,
+// Typed agent-definition + integrations patch RPCs
+agent_core::definitions::commands::agent_def_get,
+agent_core::definitions::commands::agent_command_risk_rules_default,
+agent_core::definitions::commands::agent_def_update_patch,
+agent_core::definitions::commands::agent_def_reset_builtin,
+agent_core::definitions::commands::integrations_get,
+agent_core::definitions::commands::integrations_update_patch,
+// Agent Organizations
+agent_core::definitions::commands::agent_orgs_list,
+agent_core::definitions::commands::agent_orgs_add,
+agent_core::definitions::commands::agent_orgs_update,
+agent_core::definitions::commands::agent_orgs_remove,
+agent_core::definitions::commands::agent_org_run_list,
+agent_core::state::commands::session::debug::org_runtime::debug_session_org_runtime_snapshot,
+agent_core::state::commands::session::debug::org_runtime::debug_session_execute_tool,
+agent_core::state::commands::session::debug::org_runtime::debug_session_execute_org_tool,
+agent_core::state::commands::session::debug::org_runtime::debug_agent_org_execute_tool_as_agent,
+agent_core::state::commands::session::debug::org_runtime::debug_agent_org_emit_member_idle,
+agent_core::state::commands::session::debug::org_runtime::debug_agent_org_inbox_list,
+agent_core::state::commands::session::debug::org_runtime::debug_agent_org_tasks_list,
+agent_core::state::commands::session::org_tasks::agent_org_session_run_view,
+agent_core::state::commands::session::org_tasks::agent_org_session_enter_intervention,
+agent_core::state::commands::session::org_tasks::agent_org_session_intervention_state,
+agent_core::state::commands::session::org_tasks::agent_org_session_return_to_work,
+agent_core::state::commands::session::org_tasks::agent_org_send_group_chat_message,
+agent_core::state::commands::session::org_tasks::agent_org_send_user_message_to_member,
+agent_core::state::commands::session::org_tasks::agent_org_pause_run,
+agent_core::state::commands::session::org_tasks::agent_org_resume_run,
+// Automation (trigger->action rules)
+agent_core::state::commands::automation::agent_automation_list_rules,
+agent_core::state::commands::automation::agent_automation_add_rule,
+agent_core::state::commands::automation::agent_automation_update_rule,
+agent_core::state::commands::automation::agent_automation_remove_rule,
+agent_core::state::commands::automation::agent_automation_get_status,
+agent_core::state::commands::automation::agent_automation_fire_webhook,
+agent_core::intelligence::policies::policies_list,
+agent_core::intelligence::policies::policies_read,
+agent_core::intelligence::policies::policies_create,
+agent_core::intelligence::policies::policies_update,
+agent_core::intelligence::policies::policies_delete,
+agent_core::intelligence::policies::policies_toggle,
+agent_core::intelligence::policies::policies_set_agents,
+agent_core::intelligence::policies::policies_set_scope,
+// External-agent artifact auto-import (Cursor / Claude Code / Copilot / Kiro
+// rule-flavored sources in Phase 1; skill / agent-definition imports follow.)
+agent_core::intelligence::external_import::external_import_detect,
+agent_core::intelligence::external_import::external_import_apply,
+// Orchestrator commands (work item multi-agent lifecycle)
+project_management::orchestrator::commands::orchestrator_start,
+project_management::orchestrator::commands::orchestrator_cancel,
+project_management::orchestrator::commands::orchestrator_retry,
+project_management::orchestrator::commands::orchestrator_get_status,
+project_management::orchestrator::commands::orchestrator_list_sessions,
+project_management::orchestrator::commands::orchestrator_create_follow_up,
+project_management::orchestrator::commands::orchestrator_get_interrupted_items,
+project_management::orchestrator::commands::orchestrator_get_diff_stats,
+project_management::orchestrator::commands::orchestrator_set_pr,
+// MCP commands
+agent_core::mcp::commands::mcp_list_servers,
+agent_core::mcp::commands::mcp_update_servers,
+agent_core::mcp::commands::mcp_test_server,
+agent_core::mcp::commands::mcp_list_server_tools,
+agent_core::mcp::commands::mcp_reconnect_server,
+agent_core::mcp::commands::mcp_set_server_disabled,
+agent_core::mcp::commands::mcp_bulk_set_disabled,
+agent_core::mcp::commands::mcp_bulk_reconnect,
+agent_core::mcp::commands::mcp_get_config,
+agent_core::mcp::commands::mcp_list_resources,
+agent_core::mcp::commands::mcp_read_resource,
+agent_core::mcp::commands::mcp_list_resource_templates,
+agent_core::mcp::commands::mcp_list_prompts,
+agent_core::mcp::commands::mcp_list_all_prompts,
+agent_core::mcp::commands::mcp_get_prompt,
+agent_core::mcp::commands::mcp_render_prompt,
+// Skills commands
+agent_core::skills::loader::skills_list,
+agent_core::skills::loader::skills_read,
+agent_core::skills::loader::skills_toggle,
+// Single-file bundled skill IO was retired — only the batch endpoints
+// (`skills_read_files_batch`, `skills_write_files_batch`) ship; bundled
+// file deletion has no UI surface yet.
+agent_core::skills::loader::skills_validate_name,
+agent_core::skills::loader::skills_create,
+agent_core::skills::loader::skills_update,
+agent_core::skills::loader::skills_move,
+agent_core::skills::loader::skills_write_files_batch,
+agent_core::skills::loader::skills_read_files_batch,
+agent_core::skills::loader::skill_env_get,
+agent_core::skills::loader::skill_env_save,
+agent_core::skills::market::search::skills_hub_search,
+agent_core::skills::market::browse::skills_hub_browse,
+agent_core::skills::market::detail::skills_hub_detail,
+agent_core::skills::market::install::skills_hub_install,
+agent_core::skills::market::install::skills_hub_uninstall,
+agent_core::skills::market::cache::skills_hub_detail_cache_read,
+agent_core::skills::market::cache::skills_hub_detail_cache_write,
+agent_core::skills::market::update::skills_check_updates,
+agent_core::skills::market::update::skills_hub_update,
+// MCP Hub commands (Official MCP Registry)
+agent_core::mcp::registries::hub::mcp_hub_search,
+agent_core::mcp::registries::hub::mcp_hub_detail,
+agent_core::mcp::registries::hub::mcp_hub_install,
+// Smithery MCP Registry
+agent_core::mcp::registries::smithery::smithery_search,
+agent_core::mcp::registries::smithery::smithery_detail,
+agent_core::mcp::registries::smithery::smithery_install,
+// MCP.Bar Registry
+agent_core::mcp::registries::bar::mcpbar_search,
+agent_core::mcp::registries::bar::mcpbar_detail,
+agent_core::mcp::registries::bar::mcpbar_install,
+// Glama MCP Directory
+agent_core::mcp::registries::glama::glama_search,
+agent_core::mcp::registries::glama::glama_detail,
+// Tokenizer
+// Coding Activity Tracker
+dev_record::dev_record_get_summary,
+dev_record::dev_record_get_language_stats,
+dev_record::dev_record_get_heatmap,
+dev_record::dev_record_get_ide_usage,
+dev_record::dev_record_get_streaks,
+dev_record::dev_record_get_active_ides,
+dev_record::dev_record_get_sessions,
+dev_record::dev_record_get_session_count,
+dev_record::dev_record_get_cursor_sessions,
+dev_record::cursor_ide_chunks,
+dev_record::cursor_ide_initial_window,
+dev_record::cursor_ide_full_refresh,
+dev_record::cursor_ide_turn_window,
+dev_record::cursor_ide_list_sessions,
+// Cursor IDE control — drive a running Cursor.app via CDP `Input.*`
+// so users can submit prompts (start + follow-up) without leaving ORGII.
+// See `crates/cursor-bridge-app/src/lib.rs` and
+// `crates/cursor-bridge/README.md`.
+cursor_bridge_app::cursor_bridge_ensure_running,
+cursor_bridge_app::cursor_bridge_ensure_real_cursor_running,
+cursor_bridge_app::cursor_bridge_restart_real_cursor_with_debug_port,
+cursor_bridge_app::cursor_bridge_status,
+cursor_bridge_app::cursor_bridge_attach_mode,
+cursor_bridge_app::cursor_bridge_send,
+// Composer-targeted routing + agent enumeration.
+cursor_bridge_app::cursor_bridge_route,
+cursor_bridge_app::cursor_bridge_list_agents,
+// Dynamic model picker (live CDP + state.vscdb fallback).
+cursor_bridge_app::cursor_bridge_list_models,
+cursor_bridge_app::cursor_bridge_set_model,
+cursor_bridge_app::cursor_bridge_get_composer_model,
+cursor_bridge_app::cursor_bridge_get_default_model,
+cursor_bridge_app::cursor_bridge_composer_last_updated_at,
+// Unified-mode picker (Agent / Plan / Debug / Ask / Multitask /
+// Project) — mirrors the model picker shape with a live-CDP listing
+// and a per-composer state.vscdb fallback.
+cursor_bridge_app::cursor_bridge_list_modes,
+cursor_bridge_app::cursor_bridge_get_composer_mode,
+cursor_bridge_app::cursor_bridge_set_mode,
+// Open a fresh composer + seed first prompt — backs the session
+// creator's "Cursor IDE" agent option.
+cursor_bridge_app::cursor_bridge_new_composer,
+// cursor_ide streaming delta watch — long-lived CDP connection that
+// forwards Runtime.bindingCalled events to the frontend IPC channel.
+cursor_ide_watch::cursor_bridge_watch_composer,
+cursor_ide_watch::cursor_bridge_unwatch_composer,
+dev_record::dev_record_get_claude_sessions,
+dev_record::dev_record_get_cli_sessions,
+dev_record::dev_record_get_file_hotspots,
+dev_record::dev_record_cleanup,
+dev_record::dev_record_import_heartbeats,
+// Remote SQL client commands (PostgreSQL + MySQL via sqlx).
+// Crate: src-tauri/crates/db-clients. Owns the `sqlx` dep tree privately
+// so it never enters `cargo check -p app`. See the crate's Cargo.toml
+// for the naming-disambiguation note vs `database` and `db_browser`.
+db_clients::db_sql_connect,
+db_clients::db_sql_disconnect,
+db_clients::db_sql_query,
+db_clients::db_sql_execute,
+db_clients::db_sql_get_tables,
+db_clients::db_sql_get_table_schema,
+// DB Browser commands (arbitrary SQLite file viewer — replaces WASM sql.js)
+db_browser::commands::db_open,
+db_browser::commands::db_close,
+db_browser::commands::db_get_tables,
+db_browser::commands::db_get_table_schema,
+db_browser::commands::db_query,
+db_browser::commands::db_get_table_data,
+db_browser::commands::db_execute,
+db_browser::commands::db_insert,
+db_browser::commands::db_update,
+db_browser::commands::db_delete,
+db_browser::commands::db_is_valid_sqlite_file,
+// EventStore commands — Rust-side session event management
+agent_sessions::event_pipeline::commands::es_set_repo_context,
+agent_sessions::event_pipeline::commands::es_set,
+agent_sessions::event_pipeline::commands::es_append,
+agent_sessions::event_pipeline::commands::es_upsert,
+agent_sessions::event_pipeline::commands::es_update_by_id,
+agent_sessions::event_pipeline::commands::es_merge_events,
+agent_sessions::event_pipeline::commands::es_merge_round_window_events,
+agent_sessions::event_pipeline::commands::es_merge_tool_results,
+agent_sessions::event_pipeline::commands::es_set_streaming,
+agent_sessions::event_pipeline::commands::es_clear,
+agent_sessions::event_pipeline::commands::es_truncate_before_id,
+agent_sessions::event_pipeline::commands::es_switch_session,
+agent_sessions::event_pipeline::commands::es_pin_session,
+agent_sessions::event_pipeline::commands::es_unpin_session,
+agent_sessions::event_pipeline::commands::es_evict_session,
+agent_sessions::event_pipeline::commands::es_buffer_events,
+agent_sessions::event_pipeline::commands::es_get_snapshot,
+agent_sessions::event_pipeline::commands::es_get_events,
+agent_sessions::event_pipeline::commands::es_export_markdown,
+agent_sessions::event_pipeline::commands::es_load_from_cache,
+agent_sessions::event_pipeline::commands::es_load_initial_turn_window,
+agent_sessions::event_pipeline::commands::es_unload_turn_body,
+agent_sessions::event_pipeline::commands::es_save_to_cache,
+agent_sessions::event_pipeline::commands::cache_save_session_events,
+agent_sessions::event_pipeline::commands::cache_load_session_events,
+agent_sessions::event_pipeline::commands::cache_load_session_turn_body,
+agent_sessions::event_pipeline::commands::cache_load_session_initial_turn_window,
+agent_sessions::event_pipeline::commands::cache_search_session_events,
+agent_sessions::event_pipeline::commands::cache_update_session_event,
+agent_sessions::event_pipeline::commands::cache_get_session_event,
+agent_sessions::event_pipeline::commands::cache_load_event_payload,
+agent_sessions::event_pipeline::commands::cache_save_full_session,
+agent_sessions::event_pipeline::commands::cache_load_full_session,
+// Analytics commands
+agent_sessions::event_pipeline::commands::es_compute_analytics,
+agent_sessions::event_pipeline::commands::es_compute_cached_session_analytics,
+agent_sessions::event_pipeline::commands::es_compute_multi_session_analytics,
+// Pagination commands
+agent_sessions::event_pipeline::commands::es_paginate_events,
+agent_sessions::event_pipeline::commands::es_paginate_cached_events,
+agent_sessions::event_pipeline::commands::es_count_matching_events,
+agent_sessions::event_pipeline::commands::es_get_distinct_functions,
+// Batch update commands
+agent_sessions::event_pipeline::commands::es_complete_last_running,
+agent_sessions::event_pipeline::commands::es_patch_by_ids,
+agent_sessions::event_pipeline::commands::es_remove_by_id_prefix,
+agent_sessions::event_pipeline::commands::es_remove_synthetic_user_inputs,
+agent_sessions::event_pipeline::commands::es_replace_and_remove,
+agent_sessions::event_pipeline::commands::es_update_active_task_args,
+agent_sessions::event_pipeline::commands::es_update_last_shell_output,
+agent_sessions::event_pipeline::commands::es_update_last_shell_process,
+agent_sessions::event_pipeline::commands::es_has_active_task,
+agent_sessions::event_pipeline::commands::es_ingest_chunks,
+agent_sessions::event_pipeline::commands::es_process_chunks,
+agent_sessions::event_pipeline::commands::es_normalize_chunk,
+agent_sessions::event_pipeline::commands::es_extract_event_data,
+agent_sessions::event_pipeline::commands::es_extract_all_event_data,
+agent_sessions::event_pipeline::commands::es_search_chat_events,
+agent_sessions::event_pipeline::commands::es_strip_line_prefixes,
+agent_sessions::event_pipeline::commands::es_convert_patch_to_diff,
+agent_sessions::event_pipeline::commands::es_query_session_history,
+agent_sessions::event_pipeline::commands::es_get_recent_sessions,
+agent_sessions::event_pipeline::commands::es_group_sessions,
+agent_sessions::event_pipeline::commands::es_compute_session_statistics,
+agent_sessions::event_pipeline::commands::es_get_child_sessions,
+agent_sessions::event_pipeline::commands::es_get_parent_session,
+// Unified Session API commands
+agent_sessions::unified_stats::commands::session_aggregate_list,
+agent_sessions::unified_stats::commands::session_check_health,
+agent_sessions::unified_stats::commands::session_get_aggregate_stats,
+agent_sessions::unified_stats::commands::session_get_history,
+agent_sessions::unified_stats::commands::session_usage_list,
+agent_sessions::unified_stats::patch::session_patch,
+// Flow Awareness commands (user activity tracking for intent inference)
+agent_core::flow_awareness::commands::flow_record_activity,
+agent_core::flow_awareness::commands::flow_record_activities,
+agent_core::flow_awareness::commands::flow_get_context,
+agent_core::flow_awareness::commands::flow_get_summary,
+agent_core::flow_awareness::commands::flow_clear_session,
+// Unified Agent Architecture commands (new template-based system)
+agent_core::state::commands::agent_session_list,
+agent_core::state::commands::agent_session_cancel,
+agent_core::state::commands::agent_session_info,
+agent_core::state::commands::agent_session_remove,
+agent_core::state::commands::agent_session_add_directory,
+agent_core::state::commands::agent_session_remove_directory,
+agent_core::state::commands::agent_session_list_workspaces,
+agent_core::state::commands::agent_session_enter_worktree,
+agent_core::state::commands::agent_session_apply_worktree,
+agent_core::state::commands::agent_session_delete_worktree,
+agent_core::state::commands::agent_is_running,
+agent_core::state::commands::gateway_is_running,
+agent_core::state::commands::gateway_start,
+agent_core::state::commands::gateway_stop,
+agent_core::state::commands::gateway_status,
+// Unified Agent Persistence commands (route by session ID prefix)
+agent_core::state::commands::agent_load_messages,
+agent_core::state::commands::agent_get_session,
+agent_core::state::commands::agent_list_all_sessions,
+agent_core::state::commands::agent_delete_session,
+agent_core::state::commands::agent_clear_messages,
+agent_core::state::commands::agent_truncate_after_message,
+agent_core::state::commands::agent_check_snapshot_changes,
+agent_core::state::commands::agent_update_session_status,
+agent_core::state::commands::agent_save_session,
+agent_core::state::commands::agent_get_session_workspace_path,
+// Unified Agent Interaction commands
+agent_core::state::commands::agent_question_response,
+agent_core::state::commands::agent_question_reject,
+agent_core::state::commands::agent_permission_response,
+agent_core::state::commands::agent_get_pending_questions,
+agent_core::state::commands::agent_mode_switch_response,
+agent_core::state::commands::agent_plan_approval_response,
+agent_core::state::commands::agent_get_pending_plan_approval,
+// Unified Agent SDE-specific wrappers
+agent_core::state::commands::agent_get_session_files,
+agent_core::state::commands::agent_get_snapshots,
+agent_core::state::commands::agent_revert,
+agent_core::state::commands::agent_restore_snapshot,
+agent_core::state::commands::agent_revert_file_review,
+agent_core::state::commands::agent_revert_file,
+agent_core::state::commands::agent_get_todos,
+agent_core::state::commands::agent_list_modes,
+agent_core::state::commands::agent_resolve_review,
+agent_core::state::commands::agent_save_file_resolution,
+agent_core::state::commands::agent_get_file_resolutions,
+// Unified Agent Status (legacy AgentConfig commands retired)
+agent_core::state::commands::agent_get_status,
+// Unified Agent Routing commands (session_launch is the unified
+// create + send entry; agent_send_message handles follow-up turns).
+agent_core::state::commands::agent_send_message,
+agent_core::state::commands::session_launch,
+// Wingman mode — observation loop start / stop / window
+agent_core::state::commands::session::wingman_start,
+agent_core::state::commands::session::wingman_stop,
+agent_core::state::commands::session::wingman_open_window,
+agent_core::state::commands::session::wingman_close_windows,
+agent_core::state::commands::session::wingman_toggle_panel,
+agent_core::state::commands::session::wingman_list_monitors,
+// Mobile remote control — pair / list / revoke + relay URL config.
+// Phase 4: HTTP pairing flow is real; the WS dispatch layer compiles
+// but no command drives it yet (NoopDispatchHost is the wired default).
+mobile_remote::pairing::commands::mobile_remote_pair_init,
+mobile_remote::pairing::commands::mobile_remote_pair_complete,
+mobile_remote::pairing::commands::mobile_remote_list_devices,
+mobile_remote::pairing::commands::mobile_remote_sync_devices,
+mobile_remote::pairing::commands::mobile_remote_revoke_device,
+mobile_remote::pairing::commands::mobile_remote_set_primary_desktop,
+mobile_remote::pairing::commands::mobile_remote_set_relay_url,
+mobile_remote::pairing::commands::mobile_remote_get_relay_url,

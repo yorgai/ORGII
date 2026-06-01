@@ -1,0 +1,475 @@
+[
+  {
+    "value": "auto",
+    "label": "Auto (Browser)",
+    "labelKey": "auto",
+    "offset": "0",
+    "offsetMinutes": 0
+  },
+  {
+    "value": "utc",
+    "label": "UTC",
+    "labelKey": "utc",
+    "offset": "+0",
+    "offsetMinutes": 0
+  },
+  {
+    "value": "Pacific/Auckland",
+    "label": "Auckland",
+    "labelKey": "auckland",
+    "offset": "+12",
+    "offsetMinutes": 720,
+    "aliases": ["Wellington", "Christchurch"],
+    "region": "Pacific"
+  },
+  {
+    "value": "Australia/Sydney",
+    "label": "Sydney",
+    "labelKey": "sydney",
+    "offset": "+10",
+    "offsetMinutes": 600,
+    "aliases": ["Melbourne", "Brisbane", "Canberra", "Perth"],
+    "region": "Australia"
+  },
+  {
+    "value": "Australia/Adelaide",
+    "label": "Adelaide",
+    "labelKey": "adelaide",
+    "offset": "+9:30",
+    "offsetMinutes": 570,
+    "aliases": ["Darwin"],
+    "region": "Australia"
+  },
+  {
+    "value": "Asia/Tokyo",
+    "label": "Tokyo",
+    "labelKey": "tokyo",
+    "offset": "+9",
+    "offsetMinutes": 540,
+    "aliases": ["Osaka", "Kyoto", "Yokohama", "Fukuoka", "Nagoya"],
+    "region": "Asia"
+  },
+  {
+    "value": "Asia/Seoul",
+    "label": "Seoul",
+    "labelKey": "seoul",
+    "offset": "+9",
+    "offsetMinutes": 540,
+    "aliases": ["Busan", "Incheon"],
+    "region": "Asia"
+  },
+  {
+    "value": "Asia/Shanghai",
+    "label": "Shanghai",
+    "labelKey": "shanghai",
+    "offset": "+8",
+    "offsetMinutes": 480,
+    "aliases": [
+      "Beijing",
+      "Guangzhou",
+      "Shenzhen",
+      "Taipei",
+      "Chengdu",
+      "Wuhan",
+      "Nanjing",
+      "Hangzhou",
+      "Suzhou",
+      "Xiamen",
+      "Tianjin",
+      "Xi'an",
+      "Chongqing",
+      "Harbin",
+      "Dalian",
+      "Changsha",
+      "Zhengzhou",
+      "Kunming",
+      "Fuzhou",
+      "Hefei",
+      "Qingdao",
+      "Jinan",
+      "Shenyang",
+      "Guiyang"
+    ],
+    "region": "Asia"
+  },
+  {
+    "value": "Asia/Hong_Kong",
+    "label": "Hong Kong",
+    "labelKey": "hongKong",
+    "offset": "+8",
+    "offsetMinutes": 480,
+    "aliases": ["Macau"],
+    "region": "Asia"
+  },
+  {
+    "value": "Asia/Singapore",
+    "label": "Singapore",
+    "labelKey": "singapore",
+    "offset": "+8",
+    "offsetMinutes": 480,
+    "aliases": ["Kuala Lumpur", "Manila", "Makati"],
+    "region": "Asia"
+  },
+  {
+    "value": "Asia/Bangkok",
+    "label": "Bangkok",
+    "labelKey": "bangkok",
+    "offset": "+7",
+    "offsetMinutes": 420,
+    "aliases": [
+      "Jakarta",
+      "Hanoi",
+      "Ho Chi Minh City",
+      "Phnom Penh",
+      "Bandung"
+    ],
+    "region": "Asia"
+  },
+  {
+    "value": "Asia/Dhaka",
+    "label": "Dhaka",
+    "labelKey": "dhaka",
+    "offset": "+6",
+    "offsetMinutes": 360,
+    "aliases": ["Chittagong", "Almaty", "Bishkek"],
+    "region": "Asia"
+  },
+  {
+    "value": "Asia/Kathmandu",
+    "label": "Kathmandu",
+    "labelKey": "kathmandu",
+    "offset": "+5:45",
+    "offsetMinutes": 345,
+    "aliases": ["Pokhara"],
+    "region": "Asia"
+  },
+  {
+    "value": "Asia/Kolkata",
+    "label": "Mumbai",
+    "labelKey": "mumbai",
+    "offset": "+5:30",
+    "offsetMinutes": 330,
+    "aliases": [
+      "Delhi",
+      "Bangalore",
+      "Chennai",
+      "Kolkata",
+      "Hyderabad",
+      "Pune",
+      "Ahmedabad",
+      "Jaipur",
+      "Lucknow",
+      "Chandigarh"
+    ],
+    "region": "Asia"
+  },
+  {
+    "value": "Asia/Karachi",
+    "label": "Karachi",
+    "labelKey": "karachi",
+    "offset": "+5",
+    "offsetMinutes": 300,
+    "aliases": ["Lahore", "Islamabad", "Tashkent", "Faisalabad"],
+    "region": "Asia"
+  },
+  {
+    "value": "Asia/Dubai",
+    "label": "Dubai",
+    "labelKey": "dubai",
+    "offset": "+4",
+    "offsetMinutes": 240,
+    "aliases": ["Abu Dhabi", "Muscat", "Baku", "Tbilisi"],
+    "region": "Asia"
+  },
+  {
+    "value": "Europe/Istanbul",
+    "label": "Istanbul",
+    "labelKey": "istanbul",
+    "offset": "+3",
+    "offsetMinutes": 180,
+    "aliases": ["Ankara", "Izmir"],
+    "region": "Europe"
+  },
+  {
+    "value": "Asia/Riyadh",
+    "label": "Riyadh",
+    "labelKey": "riyadh",
+    "offset": "+3",
+    "offsetMinutes": 180,
+    "aliases": ["Jeddah", "Mecca", "Medina", "Doha", "Kuwait City"],
+    "region": "Asia"
+  },
+  {
+    "value": "Europe/Moscow",
+    "label": "Moscow",
+    "labelKey": "moscow",
+    "offset": "+3",
+    "offsetMinutes": 180,
+    "aliases": ["St. Petersburg", "Minsk"],
+    "region": "Europe"
+  },
+  {
+    "value": "Africa/Nairobi",
+    "label": "Nairobi",
+    "labelKey": "nairobi",
+    "offset": "+3",
+    "offsetMinutes": 180,
+    "aliases": ["Addis Ababa", "Dar es Salaam", "Kampala", "Mogadishu"],
+    "region": "Africa"
+  },
+  {
+    "value": "Africa/Cairo",
+    "label": "Cairo",
+    "labelKey": "cairo",
+    "offset": "+2",
+    "offsetMinutes": 120,
+    "aliases": ["Alexandria", "Giza"],
+    "region": "Africa"
+  },
+  {
+    "value": "Europe/Helsinki",
+    "label": "Helsinki",
+    "labelKey": "helsinki",
+    "offset": "+2",
+    "offsetMinutes": 120,
+    "aliases": [
+      "Tallinn",
+      "Riga",
+      "Vilnius",
+      "Bucharest",
+      "Athens",
+      "Nicosia",
+      "Sofia"
+    ],
+    "region": "Europe"
+  },
+  {
+    "value": "Africa/Johannesburg",
+    "label": "Johannesburg",
+    "labelKey": "johannesburg",
+    "offset": "+2",
+    "offsetMinutes": 120,
+    "aliases": ["Cape Town", "Pretoria", "Harare", "Durban"],
+    "region": "Africa"
+  },
+  {
+    "value": "Europe/Berlin",
+    "label": "Berlin",
+    "labelKey": "berlin",
+    "offset": "+1",
+    "offsetMinutes": 60,
+    "aliases": [
+      "Frankfurt",
+      "Munich",
+      "Vienna",
+      "Warsaw",
+      "Prague",
+      "Copenhagen",
+      "Stockholm",
+      "Oslo",
+      "Zurich",
+      "Bern",
+      "Amsterdam",
+      "Brussels",
+      "Bratislava",
+      "Ljubljana",
+      "Sarajevo",
+      "Podgorica",
+      "Skopje",
+      "Luxembourg City"
+    ],
+    "region": "Europe"
+  },
+  {
+    "value": "Europe/Paris",
+    "label": "Paris",
+    "labelKey": "paris",
+    "offset": "+1",
+    "offsetMinutes": 60,
+    "aliases": [
+      "Rome",
+      "Madrid",
+      "Milan",
+      "Barcelona",
+      "Naples",
+      "Turin",
+      "Seville"
+    ],
+    "region": "Europe"
+  },
+  {
+    "value": "Africa/Lagos",
+    "label": "Lagos",
+    "labelKey": "lagos",
+    "offset": "+1",
+    "offsetMinutes": 60,
+    "aliases": ["Accra", "Abuja", "Casablanca", "Dakar", "Douala"],
+    "region": "Africa"
+  },
+  {
+    "value": "Europe/London",
+    "label": "London",
+    "labelKey": "london",
+    "offset": "+0",
+    "offsetMinutes": 0,
+    "aliases": ["Edinburgh", "Manchester", "Birmingham", "Glasgow", "Cardiff"],
+    "region": "Europe"
+  },
+  {
+    "value": "Europe/Lisbon",
+    "label": "Lisbon",
+    "labelKey": "lisbon",
+    "offset": "+0",
+    "offsetMinutes": 0,
+    "aliases": ["Dublin", "Porto", "Reykjavik", "Galway"],
+    "region": "Europe"
+  },
+  {
+    "value": "America/Argentina/Buenos_Aires",
+    "label": "Buenos Aires",
+    "labelKey": "buenosAires",
+    "offset": "-3",
+    "offsetMinutes": -180,
+    "aliases": ["Montevideo", "Cordoba", "Rosario"],
+    "region": "America"
+  },
+  {
+    "value": "America/Sao_Paulo",
+    "label": "São Paulo",
+    "labelKey": "saoPaulo",
+    "offset": "-3",
+    "offsetMinutes": -180,
+    "aliases": ["Rio de Janeiro", "Brasilia", "Belo Horizonte"],
+    "region": "America"
+  },
+  {
+    "value": "America/Santiago",
+    "label": "Santiago",
+    "labelKey": "santiago",
+    "offset": "-4",
+    "offsetMinutes": -240,
+    "aliases": ["Valparaiso"],
+    "region": "America"
+  },
+  {
+    "value": "America/New_York",
+    "label": "New York",
+    "labelKey": "newYork",
+    "offset": "-5",
+    "offsetMinutes": -300,
+    "aliases": [
+      "Eastern Time",
+      "ET",
+      "NYC",
+      "Washington DC",
+      "Boston",
+      "Miami",
+      "Atlanta",
+      "Charlotte",
+      "Orlando",
+      "Tampa",
+      "Raleigh",
+      "Pittsburgh",
+      "Detroit",
+      "Philadelphia",
+      "Bogota",
+      "Lima",
+      "Havana"
+    ],
+    "region": "America"
+  },
+  {
+    "value": "America/Toronto",
+    "label": "Toronto",
+    "labelKey": "toronto",
+    "offset": "-5",
+    "offsetMinutes": -300,
+    "aliases": ["Montreal", "Ottawa", "Quebec City"],
+    "region": "America"
+  },
+  {
+    "value": "America/Mexico_City",
+    "label": "Mexico City",
+    "labelKey": "mexicoCity",
+    "offset": "-6",
+    "offsetMinutes": -360,
+    "aliases": ["Guadalajara", "Monterrey", "Puebla"],
+    "region": "America"
+  },
+  {
+    "value": "America/Chicago",
+    "label": "Chicago",
+    "labelKey": "chicago",
+    "offset": "-6",
+    "offsetMinutes": -360,
+    "aliases": [
+      "Central Time",
+      "CT",
+      "Austin",
+      "Dallas",
+      "Houston",
+      "Nashville",
+      "Minneapolis",
+      "San Antonio",
+      "New Orleans"
+    ],
+    "region": "America"
+  },
+  {
+    "value": "America/Denver",
+    "label": "Denver",
+    "labelKey": "denver",
+    "offset": "-7",
+    "offsetMinutes": -420,
+    "aliases": [
+      "Mountain Time",
+      "MT",
+      "Salt Lake City",
+      "Phoenix",
+      "Albuquerque",
+      "Boise"
+    ],
+    "region": "America"
+  },
+  {
+    "value": "America/Los_Angeles",
+    "label": "Los Angeles",
+    "labelKey": "losAngeles",
+    "offset": "-8",
+    "offsetMinutes": -480,
+    "aliases": [
+      "Pacific Time",
+      "PT",
+      "LA",
+      "San Francisco",
+      "Seattle",
+      "Vancouver",
+      "Portland",
+      "San Diego",
+      "San Jose",
+      "Palo Alto",
+      "Silicon Valley",
+      "Irvine",
+      "Tijuana"
+    ],
+    "region": "America"
+  },
+  {
+    "value": "America/Anchorage",
+    "label": "Anchorage",
+    "labelKey": "anchorage",
+    "offset": "-9",
+    "offsetMinutes": -540,
+    "aliases": ["Fairbanks", "Juneau"],
+    "region": "America"
+  },
+  {
+    "value": "Pacific/Honolulu",
+    "label": "Honolulu",
+    "labelKey": "honolulu",
+    "offset": "-10",
+    "offsetMinutes": -600,
+    "aliases": ["Maui"],
+    "region": "Pacific"
+  }
+]

@@ -1,0 +1,85 @@
+/**
+ * Repo Adapter
+ *
+ * Converts RepoItem domain objects into SpotlightItem format.
+ * Shared across RepoSelector, SessionSourceSelector, and the main spotlight.
+ */
+import type { ReactNode } from "react";
+
+import { isSystemPathRepoItem } from "@src/features/SessionCreator/utils/systemPathSource";
+import { REPO_KIND } from "@src/store/repo";
+
+import { ICONS } from "../../config";
+import type { RepoItem, SpotlightItem, SpotlightItemData } from "../../types";
+
+export interface BuildRepoItemOptions {
+  currentRepoId?: string;
+  onAction: (repo: RepoItem) => void;
+  /** Prefix for item IDs (avoids collisions in combined lists) */
+  idPrefix?: string;
+  /** Optional manage-mode action rendered on the right of each row. */
+  manageAction?: (repo: RepoItem) => ReactNode;
+  /** Optional manage-mode multi-select state for the row's leading checkbox. */
+  getSelectionState?: (
+    repo: RepoItem
+  ) => SpotlightItemData["selectionState"] | undefined;
+}
+
+/**
+ * Converts a single RepoItem to a SpotlightItem.
+ */
+export function buildRepoSpotlightItem(
+  repo: RepoItem,
+  options: BuildRepoItemOptions
+): SpotlightItem {
+  const {
+    currentRepoId,
+    onAction,
+    idPrefix = "",
+    manageAction,
+    getSelectionState,
+  } = options;
+  const inManageMode = !!manageAction;
+  return {
+    id: `${idPrefix}${repo.id}`,
+    label: repo.name,
+    icon: isSystemPathRepoItem(repo)
+      ? ICONS.home
+      : repo.kind === REPO_KIND.FOLDER
+        ? ICONS.folder
+        : ICONS.repo,
+    type: "repo" as const,
+    data: {
+      ...repo,
+      isSelector: true,
+      isCurrentSelection: repo.id === currentRepoId,
+      gitStatus: inManageMode ? undefined : repo.gitStatus,
+      rightContent: inManageMode ? manageAction(repo) : undefined,
+      selectionState: getSelectionState?.(repo),
+    },
+    action: () => onAction(repo),
+  };
+}
+
+/**
+ * Converts an array of RepoItems to SpotlightItems.
+ */
+export function buildRepoSpotlightItems(
+  repos: RepoItem[],
+  options: BuildRepoItemOptions
+): SpotlightItem[] {
+  return repos.map((repo) => buildRepoSpotlightItem(repo, options));
+}
+
+/**
+ * Sorts repo items so the currently-selected repo appears first.
+ */
+export function sortRepoItemsSelectedFirst(
+  items: SpotlightItem[]
+): SpotlightItem[] {
+  return [...items].sort((itemA, itemB) => {
+    if (itemA.data?.isCurrentSelection) return -1;
+    if (itemB.data?.isCurrentSelection) return 1;
+    return 0;
+  });
+}

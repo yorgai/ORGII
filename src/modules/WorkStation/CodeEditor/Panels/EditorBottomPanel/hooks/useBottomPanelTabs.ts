@@ -1,0 +1,40 @@
+/**
+ * useBottomPanelTabs Hook
+ *
+ * Manages bottom panel tab state and tab change actions.
+ */
+import { useActionSystem } from "@/src/modules/WorkStation/ActionSystem";
+import { useCallback } from "react";
+
+import { useBottomPanelState } from "@src/hooks/workStation";
+import type { BottomPanelTab } from "@src/store/ui/workStationAtom";
+
+interface UseBottomPanelTabsOptions {
+  onTabChange?: (tab: BottomPanelTab) => void;
+}
+
+export function useBottomPanelTabs({
+  onTabChange,
+}: UseBottomPanelTabsOptions = {}) {
+  const { dispatch } = useActionSystem();
+  const { bottomPanelTab, bottomPanelCollapsed } = useBottomPanelState();
+
+  const handleTabChange = useCallback(
+    (tab: BottomPanelTab) => {
+      dispatch("panel.showBottom", { panel: tab }, "user");
+      onTabChange?.(tab);
+    },
+    [dispatch, onTabChange]
+  );
+
+  const handleTogglePanel = useCallback(() => {
+    dispatch("panel.toggleBottom", {}, "user");
+  }, [dispatch]);
+
+  return {
+    activeTab: bottomPanelTab,
+    isCollapsed: bottomPanelCollapsed,
+    handleTabChange,
+    handleTogglePanel,
+  };
+}

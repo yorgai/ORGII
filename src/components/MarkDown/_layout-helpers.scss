@@ -1,0 +1,146 @@
+.chat-markdown-body .octicon {
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.chat-markdown-body input::-webkit-outer-spin-button,
+.chat-markdown-body input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.chat-markdown-body::before {
+  display: table;
+  content: "";
+}
+
+.chat-markdown-body::after {
+  display: table;
+  clear: both;
+  content: "";
+}
+
+.chat-markdown-body > *:first-child {
+  margin-top: 0 !important;
+}
+
+.chat-markdown-body > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.chat-markdown-body a:not([href]) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.chat-markdown-body .absent {
+  color: var(--color-danger-fg);
+}
+
+.chat-markdown-body .anchor {
+  float: left;
+  padding-right: 4px;
+  margin-left: -20px;
+  line-height: 1;
+}
+
+.chat-markdown-body .anchor:focus {
+  outline: none;
+}
+
+.chat-markdown-body p,
+.chat-markdown-body blockquote,
+.chat-markdown-body ul,
+.chat-markdown-body ol,
+.chat-markdown-body dl,
+.chat-markdown-body table,
+.chat-markdown-body pre,
+.chat-markdown-body details {
+  margin-bottom: 12px;
+}
+
+.chat-markdown-body blockquote > :first-child {
+  margin-top: 0;
+}
+
+.chat-markdown-body blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.chat-markdown-body h1 .octicon-link,
+.chat-markdown-body h2 .octicon-link,
+.chat-markdown-body h3 .octicon-link,
+.chat-markdown-body h4 .octicon-link,
+.chat-markdown-body h5 .octicon-link,
+.chat-markdown-body h6 .octicon-link {
+  color: var(--color-fg-default);
+  vertical-align: middle;
+  visibility: hidden;
+}
+
+.chat-markdown-body h1:hover .anchor,
+.chat-markdown-body h2:hover .anchor,
+.chat-markdown-body h3:hover .anchor,
+.chat-markdown-body h4:hover .anchor,
+.chat-markdown-body h5:hover .anchor,
+.chat-markdown-body h6:hover .anchor {
+  text-decoration: none;
+}
+
+.chat-markdown-body h1:hover .anchor .octicon-link,
+.chat-markdown-body h2:hover .anchor .octicon-link,
+.chat-markdown-body h3:hover .anchor .octicon-link,
+.chat-markdown-body h4:hover .anchor .octicon-link,
+.chat-markdown-body h5:hover .anchor .octicon-link,
+.chat-markdown-body h6:hover .anchor .octicon-link {
+  visibility: visible;
+}
+
+.chat-markdown-body h1 tt,
+.chat-markdown-body h1 code,
+.chat-markdown-body h2 tt,
+.chat-markdown-body h2 code,
+.chat-markdown-body h3 tt,
+.chat-markdown-body h3 code,
+.chat-markdown-body h4 tt,
+.chat-markdown-body h4 code,
+.chat-markdown-body h5 tt,
+.chat-markdown-body h5 code,
+.chat-markdown-body h6 tt,
+.chat-markdown-body h6 code {
+  padding: 0 0.2em;
+  font-size: inherit;
+}
+
+.chat-markdown-body summary h1,
+.chat-markdown-body summary h2,
+.chat-markdown-body summary h3,
+.chat-markdown-body summary h4,
+.chat-markdown-body summary h5,
+.chat-markdown-body summary h6 {
+  display: inline-block;
+}
+
+.chat-markdown-body summary h1 .anchor,
+.chat-markdown-body summary h2 .anchor,
+.chat-markdown-body summary h3 .anchor,
+.chat-markdown-body summary h4 .anchor,
+.chat-markdown-body summary h5 .anchor,
+.chat-markdown-body summary h6 .anchor {
+  margin-left: -40px;
+}
+
+.chat-markdown-body summary h1,
+.chat-markdown-body summary h2 {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.chat-markdown-body ul.no-list,
+.chat-markdown-body ol.no-list {
+  padding: 0;
+  list-style-type: none;
+}

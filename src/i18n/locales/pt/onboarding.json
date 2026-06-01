@@ -1,0 +1,74 @@
+{
+  "steps": {
+    "welcome": {
+      "title": "Bem-vindo",
+      "description": "Comece a usar o ORGII"
+    },
+    "devPassport": {
+      "description": "Sua identidade de desenvolvedor"
+    },
+    "github": {
+      "title": "GitHub",
+      "description": "Conecte sua conta"
+    },
+    "workspace": {
+      "title": "Workspace",
+      "description": "Abra ou clone um projeto"
+    },
+    "theme": {
+      "title": "Tema",
+      "description": "Personalize a aparência"
+    },
+    "complete": {
+      "title": "Concluído",
+      "description": "Tudo pronto"
+    }
+  },
+  "welcome": {
+    "title": "Bem-vindo ao ORGII",
+    "description": "Vamos configurar seu workspace em alguns passos rápidos."
+  },
+  "devPassport": {
+    "title": "Configure o Dev Passport",
+    "description": "Todo vibe engineer precisa de uma identidade.",
+    "role": "Vibe Engineer",
+    "codeName": "Codinome",
+    "codeNamePlaceholder": "Digite seu codinome...",
+    "randomNameTooltip": "Gerar codinome aleatório",
+    "avatar": "Avatar",
+    "selectImage": "Selecione uma imagem",
+    "avatarHint": "Sua identidade visual nas histórias",
+    "generateButton": "Gerar Vibe Passport",
+    "passportTitle": "Seu Vibe Passport",
+    "passportWelcome": "Bem-vindo, {{name}}. Sua identidade está pronta."
+  },
+  "github": {
+    "title": "Conectar GitHub",
+    "description": "Conecte sua conta do GitHub para acessar repos, criar commits e gerenciar pull requests diretamente pelo ORGII.",
+    "connectButton": "Conectar conta do GitHub",
+    "hint": "Você também pode conectar o GitHub depois em Configurações > Integrações"
+  },
+  "workspace": {
+    "title": "Abrir um Workspace",
+    "description": "Abra uma pasta local ou clone um repo para começar. O ORGII vai indexar automaticamente seu código para oferecer assistência inteligente.",
+    "openFolder": "Abrir pasta",
+    "cloneRepo": "Clonar repo",
+    "hint": "Você pode pular este passo e abrir um workspace depois"
+  },
+  "theme": {
+    "title": "Escolha seu tema",
+    "description": "Selecione um tema do seu gosto. Você pode alterar isso quando quiser nas Configurações.",
+    "light": "Claro",
+    "dark": "Escuro"
+  },
+  "complete": {
+    "title": "Tudo pronto!",
+    "description": "Seu workspace está pronto. Inicie uma nova sessão para começar a programar com assistência de IA ou explore o app para descobrir todos os recursos.",
+    "startSession": "Iniciar nova sessão"
+  },
+  "navigation": {
+    "skipSetup": "Pular configuração",
+    "getStarted": "Começar",
+    "goToSettings": "Ir para Configurações"
+  }
+}

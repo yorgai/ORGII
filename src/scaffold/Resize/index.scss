@@ -1,0 +1,168 @@
+/**
+ * Resize Feature - Global Styles
+ *
+ * These styles are critical for performance during resize operations.
+ * They ensure cursor consistency and prevent unwanted interactions.
+ */
+
+// ============================================
+// Global Resize State
+// ============================================
+
+/**
+ * Applied to body when any resize is active
+ * Ensures consistent cursor and prevents selection
+ *
+ * NOTE: Removed aggressive cursor: inherit rule that was breaking other resize handlers
+ */
+body.resize-active {
+  // Force cursor on body only (not all elements)
+  user-select: none !important;
+
+  // Disable hover effects during resize
+  .hover\:bg-primary-6\/50:hover {
+    background-color: transparent !important;
+  }
+
+  // Prevent iframe interactions
+  iframe {
+    pointer-events: none !important;
+  }
+}
+
+// Vertical resize cursor
+body.resize-active[data-resize-axis="y"] {
+  cursor: row-resize !important;
+}
+
+// ============================================
+// Ghost Layer
+// ============================================
+
+.ghost-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  display: none;
+
+  // GPU acceleration
+  will-change: width, height;
+  contain: strict;
+
+  // Default visual style
+  background: color-mix(in srgb, var(--color-primary-6) 8%, transparent);
+
+  // Border indicator
+  &[data-axis="x"] {
+    border-right: 2px solid var(--color-primary-6);
+  }
+
+  &[data-axis="y"] {
+    border-bottom: 2px solid var(--color-primary-6);
+  }
+}
+
+// ============================================
+// Resizable Shell
+// ============================================
+
+.resizable-shell {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  // Content container
+  .resizable-content {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+}
+
+// ============================================
+// Resize Handle
+// ============================================
+
+// ResizeHandle.tsx uses Tailwind classes for all layout (position, z-index,
+// flex-shrink, cursor, size) and hover/active states (group-hover, isResizing
+// prop). Only keep the focus-visible rule below — everything else is handled
+// by the component's Tailwind classes.
+
+// ============================================
+// Split Group
+// ============================================
+
+.split-group {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+
+  &[data-axis="x"] {
+    flex-direction: row;
+  }
+
+  &[data-axis="y"] {
+    flex-direction: column;
+  }
+}
+
+.split-pane-wrapper {
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+.split-handle {
+  position: relative;
+  z-index: 20;
+  flex-shrink: 0;
+  background-color: var(--color-border-2);
+  transition: background-color 150ms ease;
+
+  // NOTE: Use rgba() not rgb() with "/" — CSS vars use comma-separated values
+  &:hover {
+    background-color: color-mix(
+      in srgb,
+      var(--color-primary-6) 50%,
+      transparent
+    );
+  }
+
+  &.is-resizing {
+    background-color: var(--color-primary-6);
+  }
+}
+
+// ============================================
+// Accessibility
+// ============================================
+
+.resize-handle:focus-visible,
+.split-handle:focus-visible {
+  outline: 2px solid var(--color-primary-6);
+  outline-offset: 2px;
+}
+
+// ============================================
+// Performance Optimizations
+// ============================================
+
+// Disable transitions during resize for smoother performance
+body.resize-active {
+  .resizable-shell,
+  .split-pane-wrapper {
+    transition: none !important;
+  }
+}
+
+// GPU layer promotion for elements that will animate
+.resizable-shell,
+.split-pane-wrapper {
+  // Only promote during resize
+  body.resize-active & {
+    will-change: width, height;
+    contain: layout style;
+  }
+}

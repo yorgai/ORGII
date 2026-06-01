@@ -1,0 +1,150 @@
+import { z } from "zod/v4";
+
+import { defineProcedure } from "../invoke";
+import * as schemas from "../schemas";
+
+export const agentSession = {
+  listSessions: defineProcedure("agent_session_list")
+    .output(z.array(z.string()))
+    .build(),
+  getSessionInfo: defineProcedure("agent_session_info")
+    .input(schemas.agentSession.SessionIdInput)
+    .output(schemas.agentSession.SessionInfoSchema.nullable())
+    .build(),
+  cancelSession: defineProcedure("agent_session_cancel")
+    .input(schemas.agentSession.CancelSessionInput)
+    .output(z.boolean())
+    .build(),
+  removeSession: defineProcedure("agent_session_remove")
+    .input(schemas.agentSession.SessionIdInput)
+    .build(),
+  isAgentRunning: defineProcedure("agent_is_running")
+    .output(z.boolean())
+    .build(),
+  loadMessages: defineProcedure("agent_load_messages")
+    .input(schemas.agentSession.SessionIdInput)
+    .output(z.array(schemas.agentSession.SessionMessageSchema))
+    .build(),
+  getSession: defineProcedure("agent_get_session")
+    .input(schemas.agentSession.SessionIdInput)
+    .output(schemas.agentSession.SessionMetaSchema.nullable())
+    .build(),
+  listAllSessions: defineProcedure("agent_list_all_sessions")
+    .output(z.array(schemas.agentSession.SessionMetaSchema))
+    .build(),
+  deleteSession: defineProcedure("agent_delete_session")
+    .input(schemas.agentSession.SessionIdInput)
+    .build(),
+  clearMessages: defineProcedure("agent_clear_messages")
+    .input(schemas.agentSession.SessionIdInput)
+    .output(z.number())
+    .build(),
+  truncateAfterMessage: defineProcedure("agent_truncate_after_message")
+    .input(schemas.agentSession.TruncateAfterMessageInput)
+    .output(z.number())
+    .build(),
+  checkSnapshotChanges: defineProcedure("agent_check_snapshot_changes")
+    .input(schemas.agentSession.CheckSnapshotChangesInput)
+    .output(z.boolean())
+    .build(),
+  updateSessionStatus: defineProcedure("agent_update_session_status")
+    .input(schemas.agentSession.UpdateSessionStatusInput)
+    .output(z.boolean())
+    .build(),
+  saveSession: defineProcedure("agent_save_session")
+    .input(schemas.agentSession.SaveSessionInput)
+    .build(),
+  respondQuestion: defineProcedure("agent_question_response")
+    .input(schemas.agentSession.QuestionResponseInput)
+    .build(),
+  rejectQuestion: defineProcedure("agent_question_reject")
+    .input(schemas.agentSession.SessionRequestIdInput)
+    .build(),
+  respondPermission: defineProcedure("agent_permission_response")
+    .input(schemas.agentSession.PermissionResponseInput)
+    .build(),
+  getPendingQuestions: defineProcedure("agent_get_pending_questions")
+    .input(schemas.agentSession.SessionIdInput)
+    .output(schemas.agentSession.PendingQuestionsOutput)
+    .build(),
+  respondModeSwitch: defineProcedure("agent_mode_switch_response")
+    .input(schemas.agentSession.ModeSwitchResponseInput)
+    .build(),
+  getPendingPlanApproval: defineProcedure("agent_get_pending_plan_approval")
+    .input(schemas.agentSession.SessionIdInput)
+    .output(schemas.agentSession.PendingPlanApprovalSchema)
+    .build(),
+  respondPlanApproval: defineProcedure("agent_plan_approval_response")
+    .input(schemas.agentSession.PlanApprovalResponseInput)
+    .build(),
+  getSessionFiles: defineProcedure("agent_get_session_files")
+    .input(schemas.agentSession.SessionIdInput)
+    .output(schemas.agentSession.SessionFilesSchema)
+    .build(),
+  getSessionWorkspacePath: defineProcedure("agent_get_session_workspace_path")
+    .input(schemas.agentSession.SessionIdInput)
+    .output(z.string().nullable())
+    .build(),
+  getSnapshots: defineProcedure("agent_get_snapshots")
+    .input(schemas.agentSession.SessionIdInput)
+    .output(z.array(schemas.agentSession.SnapshotRecordSchema))
+    .build(),
+  revertToSnapshot: defineProcedure("agent_revert")
+    .input(schemas.agentSession.RevertInput)
+    .output(schemas.agentSession.RevertResultSchema)
+    .build(),
+  restoreSnapshot: defineProcedure("agent_restore_snapshot")
+    .input(schemas.agentSession.RestoreSnapshotInput)
+    .output(schemas.agentSession.RevertResultSchema)
+    .build(),
+  revertFileReview: defineProcedure("agent_revert_file_review")
+    .input(schemas.agentSession.RevertFileReviewInput)
+    .output(z.boolean())
+    .build(),
+  revertFile: defineProcedure("agent_revert_file")
+    .input(schemas.agentSession.RevertFileInput)
+    .output(z.boolean())
+    .build(),
+  getTodos: defineProcedure("agent_get_todos")
+    .input(schemas.agentSession.SessionIdInput)
+    .output(z.array(schemas.agentSession.TodoItemSchema))
+    .build(),
+  listModes: defineProcedure("agent_list_modes")
+    .output(z.array(schemas.agentSession.AgentExecModeConfigSchema))
+    .build(),
+  resolveReview: defineProcedure("agent_resolve_review")
+    .input(schemas.agentSession.SessionIdInput)
+    .output(z.number())
+    .build(),
+  saveFileResolution: defineProcedure("agent_save_file_resolution")
+    .input(schemas.agentSession.FileResolutionInput)
+    .build(),
+  getFileResolutions: defineProcedure("agent_get_file_resolutions")
+    .input(schemas.agentSession.SessionIdInput)
+    .output(z.array(schemas.agentSession.FileResolutionSchema))
+    .build(),
+  getAgentStatus: defineProcedure("agent_get_status")
+    .output(schemas.agentSession.AgentStatusInfoSchema)
+    .build(),
+  sessionLaunch: defineProcedure("session_launch")
+    .input(schemas.agentSession.SessionLaunchInput)
+    .output(schemas.agentSession.SessionLaunchResultSchema)
+    .build(),
+  wingmanStart: defineProcedure("wingman_start")
+    .input(schemas.agentSession.WingmanStartInput)
+    .build(),
+  wingmanStop: defineProcedure("wingman_stop")
+    .input(schemas.agentSession.SessionIdInput)
+    .build(),
+  wingmanOpenWindow: defineProcedure("wingman_open_window")
+    .input(schemas.agentSession.WingmanOpenWindowInput)
+    .build(),
+  wingmanCloseWindows: defineProcedure("wingman_close_windows").build(),
+  wingmanTogglePanel: defineProcedure("wingman_toggle_panel").build(),
+  wingmanListMonitors: defineProcedure("wingman_list_monitors")
+    .output(z.array(schemas.agentSession.WingmanMonitorSchema))
+    .build(),
+  sendIdeActionResult: defineProcedure("agent_ide_action_result")
+    .input(schemas.agentSession.IdeActionResultInput)
+    .build(),
+} as const;

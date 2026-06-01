@@ -1,0 +1,107 @@
+/**
+ * GanttMilestone Styles
+ */
+
+.gantt-milestone {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 20;
+  cursor: pointer;
+  pointer-events: auto;
+
+  &__line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  &__marker {
+    position: relative;
+    width: 16px;
+    height: 16px;
+    transform: rotate(45deg);
+    border: 2px solid;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    margin-top: -8px;
+  }
+
+  &__icon {
+    transform: rotate(-45deg);
+    font-size: 10px;
+    font-weight: bold;
+    color: white;
+    line-height: 1;
+  }
+
+  &__label {
+    position: absolute;
+    top: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-text-2);
+    background: var(--color-bg-1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: all 0.2s ease;
+    pointer-events: none;
+  }
+
+  &:hover {
+    .gantt-milestone__marker {
+      transform: rotate(45deg) scale(1.2);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .gantt-milestone__label {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .gantt-milestone__line {
+      opacity: 0.6;
+    }
+  }
+
+  // ============================================
+  // Tooltip Content
+  // ============================================
+
+  &__tooltip {
+    min-width: 200px;
+  }
+
+  &__tooltip-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-1);
+    margin-bottom: 4px;
+  }
+
+  &__tooltip-date {
+    font-size: 12px;
+    color: var(--color-text-3);
+    margin-bottom: 8px;
+  }
+
+  &__tooltip-description {
+    font-size: 12px;
+    color: var(--color-text-2);
+    line-height: 1.5;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border-1);
+  }
+}

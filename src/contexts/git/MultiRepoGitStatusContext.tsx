@@ -1,0 +1,469 @@
+/**
+ * MultiRepoGitStatusContext - SINGLETON
+ *
+ * Single source of truth for multi-repo git status fetching.
+ * Replaces multiple useMultiRepoGitStatus instances with one centralized provider.
+ *
+ * Architecture:
+ * - One provider handles all git status fetching for repo lists
+ * - Components use useMultiRepoGitStatusContext() to read from cache
+ * - Requests to fetch are debounced and deduplicated
+ * - Prevents file descriptor exhaustion from concurrent git operations
+ *
+ * Usage:
+ * - Wrap app with <MultiRepoGitStatusProvider>
+ * - Components call useMultiRepoGitStatusContext() to get:
+ *   - gitStatusMap: Map of repoId -> status
+ *   - requestRefresh(repoIds, selectedRepoId): Request status fetch
+ *   - isLoading: Whether any fetches are in progress
+ */
+import {
+  GIT_STATUS_CACHE_CONFIG,
+  RepoGitStatusSummary,
+  gitStatusFetchingReposAtom,
+  repoGitStatusCacheAtom,
+} from "@/src/store/git";
+import { useAtomValue, useSetAtom } from "jotai";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
+
+import { gitApi } from "@src/api/http/git";
+import { repoMapAtom } from "@src/store/repo";
+import { gitStatusBatchManager } from "@src/util/api/batchRequest";
+
+// ============================================
+// Types
+// ============================================
+
+interface MultiRepoGitStatusContextValue {
+  /** Git status map (repoId -> status summary) */
+  gitStatusMap: Map<string, RepoGitStatusSummary>;
+  /** Request a refresh for specific repos */
+  requestRefresh: (repoIds: string[], selectedRepoId?: string) => void;
+  /** Whether any repos are currently being fetched */
+  isLoading: boolean;
+  /** Attach git status to repo objects */
+  attachGitStatus: <T extends { id: string }>(
+    repos: T[]
+  ) => (T & { gitStatus?: RepoGitStatusSummary })[];
+}
+
+// ============================================
+// Context
+// ============================================
+
+const MultiRepoGitStatusContext =
+  createContext<MultiRepoGitStatusContextValue | null>(null);
+
+// ============================================
+// Provider
+// ============================================
+
+export const MultiRepoGitStatusProvider: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => {
+  // Atoms
+  const cache = useAtomValue(repoGitStatusCacheAtom);
+  const setCache = useSetAtom(repoGitStatusCacheAtom);
+  const fetchingRepos = useAtomValue(gitStatusFetchingReposAtom);
+  const setFetchingRepos = useSetAtom(gitStatusFetchingReposAtom);
+  const repoMap = useAtomValue(repoMapAtom);
+
+  // Refs for debouncing and request management
+  const pendingRequestRef = useRef<{
+    repoIds: Set<string>;
+    selectedRepoId?: string;
+    timeoutId: ReturnType<typeof setTimeout> | null;
+  }>({
+    repoIds: new Set(),
+    selectedRepoId: undefined,
+    timeoutId: null,
+  });
+
+  const abortControllerRef = useRef<AbortController | null>(null);
+  // Track if a fetch is currently in progress to prevent overlap
+  const isFetchingRef = useRef(false);
+  // Concurrency limit for parallel fetches
+  const MAX_CONCURRENT_FETCHES = 2;
+
+  // STARTUP OPTIMIZATION (Jan 24, 2026):
+  // Track if initial startup is complete. During startup, only fetch selected repo
+  // to prevent "bad file descriptor" errors from too many concurrent git processes.
+  // Other repos are lazily loaded when user opens components that need them.
+  // See: Documentation/Development/bad-file-descriptor-root-cause-0124.md
+  const startupCompleteRef = useRef(false);
+
+  // ============================================
+  // Derived: Git Status Map
+  // ============================================
+
+  const gitStatusMap = useMemo(() => {
+    const map = new Map<string, RepoGitStatusSummary>();
+    cache.forEach((cached, repoId) => {
+      map.set(repoId, cached.status);
+    });
+    return map;
+  }, [cache]);
+
+  // ============================================
+  // Check if repo needs refresh
+  // ============================================
+
+  const needsRefresh = useCallback(
+    (repoId: string, isPriority: boolean): boolean => {
+      const cached = cache.get(repoId);
+      if (!cached) return true;
+
+      const age = Date.now() - cached.fetchedAt;
+      const threshold = isPriority
+        ? GIT_STATUS_CACHE_CONFIG.ACTIVE_REPO_TTL // 30 seconds for priority
+        : GIT_STATUS_CACHE_CONFIG.INACTIVE_REPO_TTL; // 5 minutes for others
+
+      return age > threshold;
+    },
+    [cache]
+  );
+
+  // ============================================
+  // Fetch single repo status
+  // ============================================
+
+  const fetchRepoStatus = useCallback(
+    async (repoId: string, priority: number = 0) => {
+      try {
+        const repo = repoMap.get(repoId);
+        const repoPath = repo?.path || repo?.fs_uri;
+
+        if (!repoPath) {
+          console.warn(
+            `[MultiRepoGitStatusContext] No path found for repo ${repoId}`
+          );
+          return;
+        }
+        const statusResponse = await gitStatusBatchManager.add(
+          repoId,
+          () =>
+            gitApi.getGitStatus({
+              repo_id: repoId,
+              repo_path: repoPath,
+              include_untracked: true,
+            }),
+          { priority }
+        );
+
+        const statusData =
+          (statusResponse as unknown as { data?: unknown })?.data ||
+          statusResponse;
+
+        if (!statusData) {
+          console.warn(
+            `[MultiRepoGitStatusContext] ❌ No status data for ${repoId}`
+          );
+          return;
+        }
+
+        // Type the git status response from Rust backend
+        const typedStatus = statusData as {
+          working_directory?: { files?: unknown[] };
+          branch_ahead_behind?: { ahead?: number; behind?: number };
+          do_conflicted_files_exist?: boolean;
+          current_upstream_branch?: string;
+        };
+
+        const uncommittedFiles =
+          typedStatus.working_directory?.files?.length || 0;
+        const ahead = typedStatus.branch_ahead_behind?.ahead || 0;
+        const behind = typedStatus.branch_ahead_behind?.behind || 0;
+        const hasConflicts = typedStatus.do_conflicted_files_exist || false;
+        const needsPublish = !typedStatus.current_upstream_branch;
+        setCache((prev) => {
+          const updated = new Map(prev);
+          updated.set(repoId, {
+            status: {
+              uncommittedFiles,
+              ahead,
+              behind,
+              hasConflicts,
+              needsPublish,
+            },
+            fetchedAt: Date.now(),
+            lastAccessed: Date.now(),
+          });
+          return updated;
+        });
+      } catch (error) {
+        console.error(
+          `[MultiRepoGitStatusContext] ❌ Error fetching ${repoId}:`,
+          error
+        );
+      }
+    },
+    [repoMap, setCache]
+  );
+
+  // ============================================
+  // Execute batch fetch
+  // ============================================
+
+  const executeFetch = useCallback(async () => {
+    // Prevent overlapping fetches
+    if (isFetchingRef.current) {
+      return;
+    }
+
+    const pending = pendingRequestRef.current;
+    const repoIds = Array.from(pending.repoIds);
+    const selectedRepoId = pending.selectedRepoId;
+
+    // Clear pending
+    pending.repoIds.clear();
+    pending.selectedRepoId = undefined;
+    pending.timeoutId = null;
+
+    if (repoIds.length === 0) return;
+
+    // Filter repos that actually need refresh
+    const reposToFetch = repoIds.filter((repoId) => {
+      if (fetchingRepos.has(repoId)) return false;
+      const isPriority = repoId === selectedRepoId;
+      return needsRefresh(repoId, isPriority);
+    });
+
+    if (reposToFetch.length === 0) {
+      return;
+    }
+
+    // Sort: priority repo first, then limit to MAX_CONCURRENT_FETCHES
+    const sortedRepos = [...reposToFetch].sort((a, b) => {
+      if (a === selectedRepoId) return -1;
+      if (b === selectedRepoId) return 1;
+      return 0;
+    });
+
+    // Limit concurrent fetches to prevent file descriptor exhaustion
+    const limitedRepos = sortedRepos.slice(0, MAX_CONCURRENT_FETCHES);
+    // Abort previous fetch
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    isFetchingRef.current = true;
+
+    // Mark as fetching
+    setFetchingRepos((prev) => {
+      const updated = new Set(prev);
+      limitedRepos.forEach((id) => updated.add(id));
+      return updated;
+    });
+
+    try {
+      // Fetch limited repos (priority repo gets higher priority)
+      await Promise.allSettled(
+        limitedRepos.map(async (repoId) => {
+          const priority = repoId === selectedRepoId ? 10 : 0;
+          await fetchRepoStatus(repoId, priority);
+        })
+      );
+
+      // Mark startup as complete after first successful batch
+      // Future requests can now lazily load uncached repos
+      if (!startupCompleteRef.current) {
+        startupCompleteRef.current = true;
+      }
+    } finally {
+      isFetchingRef.current = false;
+
+      // Clear fetching state
+      setFetchingRepos((prev) => {
+        const updated = new Set(prev);
+        limitedRepos.forEach((id) => updated.delete(id));
+        return updated;
+      });
+
+      // If there are remaining repos to fetch, queue another batch
+      const remainingRepos = sortedRepos.slice(MAX_CONCURRENT_FETCHES);
+      if (remainingRepos.length > 0) {
+        // Queue remaining repos for next batch (with longer delay)
+        remainingRepos.forEach((id) =>
+          pendingRequestRef.current.repoIds.add(id)
+        );
+        pendingRequestRef.current.timeoutId = setTimeout(() => {
+          executeFetch();
+        }, 1000); // Longer delay between batches
+      }
+    }
+  }, [fetchingRepos, needsRefresh, fetchRepoStatus, setFetchingRepos]);
+
+  // ============================================
+  // Request refresh (optimized - priority repo only by default)
+  // STARTUP OPTIMIZATION: Only fetch selected repo on startup
+  // ============================================
+
+  const requestRefresh = useCallback(
+    (repoIds: string[], selectedRepoId?: string) => {
+      const pending = pendingRequestRef.current;
+
+      // OPTIMIZATION: Only check priority repo on repeated opens
+      // Other repos use cached values - refreshed on first load or when explicitly stale
+      if (selectedRepoId) {
+        // Check if priority repo needs refresh (30s TTL)
+        if (needsRefresh(selectedRepoId, true)) {
+          pending.repoIds.add(selectedRepoId);
+          pending.selectedRepoId = selectedRepoId;
+        }
+      }
+
+      // STARTUP OPTIMIZATION (Jan 24, 2026):
+      // During startup, ONLY fetch the selected repo to prevent file descriptor exhaustion
+      // from too many concurrent git processes. Other repos are lazily loaded when user
+      // explicitly opens components that need them (e.g., Spotlight dropdown).
+      // See: Documentation/Development/bad-file-descriptor-root-cause-0124.md
+      if (startupCompleteRef.current) {
+        // After startup: add repos not in cache (lazy load)
+        for (const repoId of repoIds) {
+          if (!cache.has(repoId)) {
+            pending.repoIds.add(repoId);
+          }
+        }
+      } else {
+        // During startup: only add selected repo (already added above if needed)
+        // Skip adding all uncached repos - they'll be fetched when user opens relevant UI
+      }
+
+      // Nothing to fetch? Skip the debounce machinery
+      if (pending.repoIds.size === 0) {
+        return;
+      }
+
+      // Cancel existing timeout
+      if (pending.timeoutId) {
+        clearTimeout(pending.timeoutId);
+      }
+
+      // Debounce: wait 800ms before executing to let rapid switching stabilize
+      pending.timeoutId = setTimeout(() => {
+        executeFetch();
+      }, 800);
+    },
+    [executeFetch, needsRefresh, cache]
+  );
+
+  // ============================================
+  // Attach git status helper
+  // ============================================
+
+  const attachGitStatus = useMemo(
+    () =>
+      <T extends { id: string }>(
+        repos: T[]
+      ): (T & { gitStatus?: RepoGitStatusSummary })[] => {
+        return repos.map((repo) => ({
+          ...repo,
+          gitStatus: gitStatusMap.get(repo.id),
+        }));
+      },
+    [gitStatusMap]
+  );
+
+  // ============================================
+  // Cleanup on unmount
+  // ============================================
+
+  useEffect(() => {
+    // Capture refs to local variables for cleanup
+    const pendingRequest = pendingRequestRef.current;
+    const abortController = abortControllerRef.current;
+
+    return () => {
+      if (pendingRequest.timeoutId) {
+        clearTimeout(pendingRequest.timeoutId);
+      }
+      abortController?.abort();
+    };
+  }, []);
+
+  // ============================================
+  // Context Value
+  // ============================================
+
+  const isLoading = fetchingRepos.size > 0;
+
+  const value: MultiRepoGitStatusContextValue = {
+    gitStatusMap,
+    requestRefresh,
+    isLoading,
+    attachGitStatus,
+  };
+
+  return (
+    <MultiRepoGitStatusContext.Provider value={value}>
+      {children}
+    </MultiRepoGitStatusContext.Provider>
+  );
+};
+
+// ============================================
+// Hook
+// ============================================
+
+export function useMultiRepoGitStatusContext(): MultiRepoGitStatusContextValue {
+  const context = useContext(MultiRepoGitStatusContext);
+  if (!context) {
+    throw new Error(
+      "useMultiRepoGitStatusContext must be used within MultiRepoGitStatusProvider"
+    );
+  }
+  return context;
+}
+
+/**
+ * Convenience hook that matches the old useRepoGitStatus API
+ * for easier migration
+ */
+export function useRepoGitStatusFromContext(options: {
+  repoIds: string[];
+  selectedRepoId?: string;
+  enabled?: boolean;
+}) {
+  const { repoIds, selectedRepoId, enabled = true } = options;
+  const { gitStatusMap, requestRefresh, isLoading, attachGitStatus } =
+    useMultiRepoGitStatusContext();
+
+  // Request refresh when enabled and repoIds change
+  useEffect(() => {
+    if (enabled && repoIds.length > 0) {
+      requestRefresh(repoIds, selectedRepoId);
+    }
+  }, [enabled, repoIds, selectedRepoId, requestRefresh]);
+
+  // Convert Map to Record for compatibility
+  const gitStatusRecord = useMemo(() => {
+    const record: Record<
+      string,
+      { uncommittedFiles: number; ahead: number; behind: number }
+    > = {};
+    gitStatusMap.forEach((status, repoId) => {
+      record[repoId] = {
+        uncommittedFiles: status.uncommittedFiles,
+        ahead: status.ahead,
+        behind: status.behind,
+      };
+    });
+    return record;
+  }, [gitStatusMap]);
+
+  return {
+    gitStatusMap: gitStatusRecord,
+    attachGitStatus,
+    isLoading,
+  };
+}
+
+export default MultiRepoGitStatusContext;

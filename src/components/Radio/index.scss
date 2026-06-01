@@ -1,0 +1,263 @@
+// Radio Component Styles
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: all 0.2s ease;
+
+  &:hover:not(&-disabled) {
+    .radio-icon {
+      border-color: var(--color-primary-6);
+    }
+  }
+
+  // Hidden native input
+  &-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  // Custom radio icon
+  &-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--color-border-3);
+    border-radius: 50%;
+    background: var(--color-bg-1);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  // Radio dot (inner circle)
+  &-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-primary-6);
+    transform: scale(0);
+    animation: orgii-radio-zoom-in 0.2s cubic-bezier(0.12, 0.4, 0.29, 1.46);
+    animation-fill-mode: forwards;
+  }
+
+  // Label text
+  &-label {
+    color: var(--color-text-1);
+    transition: color 0.2s ease;
+  }
+
+  // Checked state
+  &-checked {
+    .radio-icon {
+      border-color: var(--color-primary-6);
+    }
+  }
+
+  // Disabled state
+  &-disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+
+    .radio-icon {
+      background: var(--color-fill-2);
+      border-color: var(--color-border-2);
+    }
+
+    .radio-label {
+      color: var(--color-text-4);
+    }
+  }
+
+  // Focus state (keyboard navigation)
+  &-input:focus-visible + &-icon {
+    outline: 2px solid var(--color-primary-6);
+    outline-offset: 2px;
+  }
+
+  // Sizes
+  &-size-mini {
+    font-size: 12px;
+
+    .radio-icon {
+      width: 14px;
+      height: 14px;
+    }
+
+    .radio-dot {
+      width: 6px;
+      height: 6px;
+    }
+  }
+
+  &-size-small {
+    font-size: 13px;
+
+    .radio-icon {
+      width: 15px;
+      height: 15px;
+    }
+
+    .radio-dot {
+      width: 7px;
+      height: 7px;
+    }
+  }
+
+  &-size-large {
+    font-size: 15px;
+
+    .radio-icon {
+      width: 18px;
+      height: 18px;
+    }
+
+    .radio-dot {
+      width: 10px;
+      height: 10px;
+    }
+  }
+
+  // Dark mode
+  &-dark {
+    .radio-icon {
+      background: var(--color-bg-2);
+      border-color: var(--color-border-3);
+    }
+
+    &.radio-disabled {
+      .radio-icon {
+        background: var(--color-fill-3);
+      }
+    }
+  }
+}
+
+// Radio Button Variant
+.radio-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  border: 1px solid var(--color-border-2);
+  background: var(--color-bg-1);
+  color: var(--color-text-2);
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:first-child {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+  }
+
+  &:last-child {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+  }
+
+  &:not(:first-child) {
+    margin-left: -1px;
+  }
+
+  &:hover:not(&-disabled) {
+    color: var(--color-primary-6);
+    border-color: var(--color-primary-6);
+    z-index: 1;
+  }
+
+  // Hidden native input
+  .radio-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  &-content {
+    display: flex;
+    align-items: center;
+  }
+
+  // Checked state
+  &-checked {
+    background: var(--color-primary-6);
+    border-color: var(--color-primary-6);
+    color: #fff;
+    z-index: 2;
+  }
+
+  // Disabled state
+  &-disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    background: var(--color-fill-2);
+    color: var(--color-text-4);
+  }
+
+  // Focus state
+  .radio-input:focus-visible ~ &-content {
+    outline: 2px solid var(--color-primary-6);
+    outline-offset: 2px;
+  }
+
+  // Sizes
+  &.radio-size-mini {
+    padding: 4px 12px;
+    font-size: 12px;
+  }
+
+  &.radio-size-small {
+    padding: 5px 14px;
+    font-size: 13px;
+  }
+
+  &.radio-size-large {
+    padding: 8px 20px;
+    font-size: 15px;
+  }
+}
+
+// Radio Group Styles
+.radio-group {
+  display: flex;
+  gap: 16px;
+
+  &-horizontal {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  &-vertical {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  // Button group (no gap, connected buttons)
+  &-button {
+    gap: 0;
+  }
+}
+
+// Animations
+@keyframes orgii-radio-zoom-in {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}

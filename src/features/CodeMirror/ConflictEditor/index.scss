@@ -1,0 +1,131 @@
+/**
+ * CodeMirrorConflictEditor Styles
+ *
+ * Cursor/VSCode-style conflict highlighting and action links.
+ * Uses shared tokens from _diff-tokens.scss for consistent colors.
+ */
+
+// Import shared diff mixins (CSS variables are loaded globally in src/index.scss)
+@import "../styles/diff-mixins";
+
+// Wrapper to position scrollbar markers
+.codemirror-conflict-editor-wrapper {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.codemirror-conflict-editor {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+
+  .cm-editor {
+    height: 100%;
+  }
+
+  .cm-scroller {
+    overflow: auto;
+    // Scrollbar handled globally in index.scss
+  }
+
+  // ============================================
+  // Conflict Line Highlighting (Cursor-style)
+  // Uses shared tokens for consistency with diff views
+  // ============================================
+
+  // Current (ours) section - green tint
+  .cm-conflict-current-line {
+    background-color: var(--diff-conflict-current-bg) !important;
+  }
+
+  // Incoming (theirs) section - blue tint
+  .cm-conflict-incoming-line {
+    background-color: var(--diff-conflict-incoming-bg) !important;
+  }
+
+  // Start marker line (<<<<<<< xxx) - green background like current
+  .cm-conflict-start-marker-line {
+    background-color: var(--diff-added-bg-strong) !important;
+  }
+
+  // End marker line (>>>>>>> xxx) - blue background like incoming
+  .cm-conflict-end-marker-line {
+    background-color: var(--diff-modified-bg-strong) !important;
+  }
+
+  // Separator line (=======) - subtle dark background
+  .cm-conflict-separator-line {
+    background-color: var(--diff-conflict-separator-bg) !important;
+  }
+
+  // ============================================
+  // Inline Labels (at end of marker lines)
+  // ============================================
+
+  .conflict-inline-label {
+    margin-left: var(--cm-content-padding, 8px);
+    font-size: var(--cm-font-size-small, 12px);
+    font-weight: 400;
+
+    &--current {
+      color: var(--diff-conflict-current-color);
+    }
+
+    &--incoming {
+      color: var(--diff-conflict-incoming-color);
+    }
+  }
+}
+
+// ============================================
+// Action Bar Widget (CodeMirror widget)
+// ============================================
+
+.conflict-actions-widget {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px var(--cm-content-padding, 8px) 2px 52px; // Left padding to align with code (after line numbers)
+  font-size: var(--cm-font-size-small, 12px);
+  line-height: var(--cm-line-height, 1.5);
+  background: transparent;
+  white-space: nowrap;
+}
+
+.conflict-action-link {
+  color: var(--color-primary-6);
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: var(--color-primary-7);
+    text-decoration: underline;
+  }
+}
+
+.conflict-action-separator {
+  color: var(--color-text-4);
+  user-select: none;
+}
+
+// Import shared custom scrollbar styles
+@import "../../../components/CustomScrollbar/index.scss";
+
+// ============================================
+// Dark Mode Adjustments
+// Colors are now handled by shared tokens in _diff-tokens.scss
+// Only link-specific overrides needed here
+// ============================================
+
+:root[data-theme="dark"] .conflict-action-link,
+.dark .conflict-action-link {
+  color: var(--color-primary-6);
+
+  &:hover {
+    color: var(--color-primary-5);
+  }
+}
+
+// Dark mode custom scrollbar styles are imported from CustomScrollbar.scss

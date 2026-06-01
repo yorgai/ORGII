@@ -1,0 +1,268 @@
+//! Subcommand implementations: `wait_for`, `monitor`, `list`.
+//!
+//! Each method is invoked via `AwaitTool::execute_text` after the dispatcher
+//! validates `command`. Implementations live here so `mod.rs` only owns the
+//! `Tool` trait surface.
+
+use ::regex::Regex;
+use std::time::Duration;
+use tokio::time::Instant;
+
+use super::super::registry;
+use super::body::{find_match_line, read_body};
+use super::params::{
+    lookup_job, parse_handles, parse_tail_lines, parse_wait_mode, WaitMode, DEFAULT_BLOCK_MS,
+    POLL_INTERVAL_MS,
+};
+use super::response::{build_list_response, build_response};
+use super::snapshot::{running_snapshot, terminal_snapshot, HandleSnapshot, AWAIT_STATUS_RUNNING};
+use super::AwaitTool;
+use crate::tools::traits::ToolError;
+use serde_json::Value;
+
+impl AwaitTool {
+    /// `command=wait_for` — block until some termination / pattern-match condition
+    /// is met across one or many handles, or the block timeout elapses.
+    pub(super) async fn run_wait_for(&self, params: &Value) -> Result<String, ToolError> {
+        let handles = parse_handles(params)?;
+        let pattern_str = params.get("pattern").and_then(|v| v.as_str());
+        let block_ms = params
+            .get("block_until_ms")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(DEFAULT_BLOCK_MS);
+        let tail_count = parse_tail_lines(params);
+        let wait_mode = parse_wait_mode(params)?;
+
+        // Pattern matching only makes sense for a single handle — with multiple
+        // handles it's ambiguous which job's output should be matched.
+        if pattern_str.is_some() && handles.len() > 1 {
+            return Err(ToolError::InvalidParams(
+                "`pattern` is only supported with a single handle; \
+                 call wait_for per-handle if you need pattern matching across jobs"
+                    .into(),
+            ));
+        }
+
+        let regex = if let Some(pat) = pattern_str {
+            Some(
+                Regex::new(pat)
+                    .map_err(|err| ToolError::InvalidParams(format!("Invalid regex: {}", err)))?,
+            )
+        } else {
+            None
+        };
+
+        // Resolve all handles up-front so missing ones fail fast with a clean error.
+        let jobs: Vec<(String, registry::JobKind)> = handles
+            .iter()
+            .map(|h| lookup_job(h).map(|(_, kind)| (h.clone(), kind)))
+            .collect::<Result<_, _>>()?;
+
+        // Non-blocking call (block_until_ms=0): return immediate snapshots.
+        if block_ms == 0 {
+            let snapshots: Vec<HandleSnapshot> = jobs
+                .iter()
+                .map(|(h, kind)| {
+                    let (status, _) = registry::get_status(h)
+                        .unwrap_or((registry::JobStatus::Completed, kind.clone()));
+                    let body = read_body(h, kind);
+                    if matches!(status, registry::JobStatus::Running) {
+                        let matched = regex.as_ref().map(|re| re.is_match(&body));
+                        let match_line = regex
+                            .as_ref()
+                            .and_then(|re| find_match_line(&body, re).map(String::from));
+                        running_snapshot(h, kind, 0, matched, match_line, body)
+                    } else {
+                        registry::acknowledge_output(h);
+                        terminal_snapshot(h, kind, &status, body)
+                    }
+                })
+                .collect();
+            return Ok(build_response(&snapshots, tail_count));
+        }
+
+        // Subscribe to every handle before we start checking so we don't miss
+        // output chunks emitted between the initial `read_body` and the poll
+        // loop.
+        let mut receivers: Vec<Option<tokio::sync::broadcast::Receiver<String>>> =
+            jobs.iter().map(|(h, _)| registry::subscribe(h)).collect();
+        let mut accumulated: Vec<String> =
+            jobs.iter().map(|(h, kind)| read_body(h, kind)).collect();
+        let start = Instant::now();
+        let deadline = start + Duration::from_millis(block_ms);
+
+        // Pattern pre-check against existing buffered output.
+        if let Some(ref re) = regex {
+            if let Some(body) = accumulated.first() {
+                if re.is_match(body) {
+                    let (h, kind) = &jobs[0];
+                    let match_line = find_match_line(body, re).map(String::from);
+                    let snap = running_snapshot(
+                        h,
+                        kind,
+                        0,
+                        Some(true),
+                        match_line,
+                        std::mem::take(&mut accumulated[0]),
+                    );
+                    return Ok(build_response(&[snap], tail_count));
+                }
+            }
+        }
+
+        // Shared poll loop across all handles. We don't spawn per-handle tasks
+        // because (a) broadcast::Receiver isn't Sync for easy joining, and (b)
+        // poll rates are low (250ms). Iterating handles per tick keeps the
+        // implementation straightforward.
+        let mut terminated: Vec<bool> = vec![false; jobs.len()];
+        loop {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                break;
+            }
+            let poll_dur = remaining.min(Duration::from_millis(POLL_INTERVAL_MS));
+            tokio::time::sleep(poll_dur).await;
+
+            // Drain any buffered output chunks from each handle's receiver
+            // and re-check termination/pattern.
+            for (idx, (h, kind)) in jobs.iter().enumerate() {
+                if terminated[idx] {
+                    continue;
+                }
+
+                if let Some(receiver) = receivers[idx].as_mut() {
+                    while let Ok(chunk) = receiver.try_recv() {
+                        accumulated[idx].push_str(&chunk);
+                    }
+                } else {
+                    accumulated[idx] = read_body(h, kind);
+                }
+
+                // Pattern match is only valid for single-handle calls.
+                if let Some(ref re) = regex {
+                    if re.is_match(&accumulated[idx]) {
+                        let match_line = find_match_line(&accumulated[idx], re).map(String::from);
+                        let waited = start.elapsed().as_millis() as u64;
+                        let snap = running_snapshot(
+                            h,
+                            kind,
+                            waited,
+                            Some(true),
+                            match_line,
+                            std::mem::take(&mut accumulated[idx]),
+                        );
+                        return Ok(build_response(&[snap], tail_count));
+                    }
+                }
+
+                // Termination check.
+                let is_terminal = match registry::get_status(h) {
+                    Some((status, _)) => !matches!(status, registry::JobStatus::Running),
+                    // Gone from registry — treat as completed (cleaned up).
+                    None => true,
+                };
+                if is_terminal {
+                    terminated[idx] = true;
+                }
+            }
+
+            let done_count = terminated.iter().filter(|&&t| t).count();
+            let short_circuit = match wait_mode {
+                WaitMode::Any => done_count > 0,
+                WaitMode::All => done_count == terminated.len(),
+            };
+            if short_circuit {
+                break;
+            }
+        }
+
+        // Build final snapshots for every handle.
+        let waited = start.elapsed().as_millis() as u64;
+        let snapshots: Vec<HandleSnapshot> = jobs
+            .iter()
+            .enumerate()
+            .map(|(idx, (h, kind))| {
+                let body = read_body(h, kind);
+                accumulated[idx] = body.clone();
+                match registry::get_status(h) {
+                    Some((status, _)) if !matches!(status, registry::JobStatus::Running) => {
+                        registry::acknowledge_output(h);
+                        terminal_snapshot(h, kind, &status, body)
+                    }
+                    None => {
+                        registry::acknowledge_output(h);
+                        terminal_snapshot(h, kind, &registry::JobStatus::Completed, body)
+                    }
+                    Some(_) => {
+                        let matched = regex.as_ref().map(|re| re.is_match(&body));
+                        let match_line = regex
+                            .as_ref()
+                            .and_then(|re| find_match_line(&body, re).map(String::from));
+                        running_snapshot(h, kind, waited, matched, match_line, body)
+                    }
+                }
+            })
+            .collect();
+
+        let mut response = build_response(&snapshots, tail_count);
+
+        // Add a hint for single-handle pattern searches that timed out.
+        if handles.len() == 1 {
+            let snap = &snapshots[0];
+            if let Some(pat) = pattern_str {
+                if snap.status == AWAIT_STATUS_RUNNING && snap.pattern_matched == Some(false) {
+                    response.push_str(&format!(
+                        "\nPattern \"{}\" not matched. To keep waiting:\n  await_output(command=\"wait_for\", handles=[\"{}\"], pattern=\"{}\", block_until_ms={})",
+                        pat, snap.handle, pat, block_ms * 2
+                    ));
+                }
+            }
+        }
+
+        Ok(response)
+    }
+
+    /// `command=monitor` — non-blocking snapshot of one or many handles.
+    ///
+    /// For each handle: current status + its own `--- [<handle>] last N lines ---`
+    /// tail block. Replaces the old `status` / `tail` subcommands (both were
+    /// semantically identical non-blocking snapshots).
+    pub(super) async fn run_monitor(&self, params: &Value) -> Result<String, ToolError> {
+        let handles = parse_handles(params)?;
+        let tail_count = parse_tail_lines(params);
+
+        let snapshots: Vec<HandleSnapshot> = handles
+            .iter()
+            .map(|h| {
+                let (status, kind) = lookup_job(h)?;
+                let body = read_body(h, &kind);
+                if !matches!(status, registry::JobStatus::Running) {
+                    registry::acknowledge_output(h);
+                    Ok(terminal_snapshot(h, &kind, &status, body))
+                } else {
+                    Ok(running_snapshot(h, &kind, 0, None, None, body))
+                }
+            })
+            .collect::<Result<_, ToolError>>()?;
+
+        Ok(build_response(&snapshots, tail_count))
+    }
+
+    /// `command=list` — list background jobs for the current session (or globally).
+    pub(super) async fn run_list(&self, params: &Value) -> Result<String, ToolError> {
+        let scope = params
+            .get("scope")
+            .and_then(|v| v.as_str())
+            .unwrap_or("session");
+
+        let session_filter = if scope == "global" {
+            None
+        } else {
+            let session_key = self.session_key.lock().await;
+            session_key.clone()
+        };
+
+        let snapshots = registry::list_jobs(session_filter.as_deref());
+        Ok(build_list_response(&snapshots))
+    }
+}

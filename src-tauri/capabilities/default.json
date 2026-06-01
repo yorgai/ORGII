@@ -1,0 +1,152 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "enables the default permissions",
+  "windows": [
+    "main",
+    "add-context-window",
+    "new-project-window",
+    "exist-project-window",
+    "new-project-workflow-window",
+    "add-workitem-window",
+    "mode-selection-window-*",
+    "workspace-*",
+    "ui-agent-window",
+    "browser-*",
+    "tab-*",
+    "shell-*",
+    "app-window-*"
+  ],
+  "permissions": [
+    "core:default",
+    "liquid-glass:default",
+    "shell:allow-open",
+    "shell:default",
+    "shell:allow-spawn",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "sh",
+          "cmd": "sh",
+          "args": true
+        },
+        {
+          "name": "curl",
+          "cmd": "curl",
+          "args": true
+        },
+        {
+          "name": "python3",
+          "cmd": "python3",
+          "args": true
+        }
+      ]
+    },
+    "fs:default",
+    "fs:scope-home-recursive",
+    "deep-link:default",
+    "auth-session:allow-start",
+    "oauth:allow-start",
+    "oauth:allow-cancel",
+    "core:window:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-decorations",
+    "core:window:allow-set-size",
+    "core:window:allow-center",
+    "core:window:allow-set-background-color",
+    "dialog:default",
+    "dialog:allow-ask",
+    "dialog:allow-message",
+    "updater:default",
+    "updater:allow-check",
+    "updater:allow-download-and-install",
+    "process:allow-restart",
+    "process:allow-exit",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-create",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
+    "core:window:allow-is-visible",
+    "core:window:allow-set-title",
+    "core:window:allow-set-position",
+    "core:window:allow-set-skip-taskbar",
+    "core:webview:default",
+    "core:webview:allow-create-webview",
+    "core:webview:allow-create-webview-window",
+    "core:webview:allow-set-webview-position",
+    "core:webview:allow-set-webview-size",
+    "core:webview:allow-webview-close",
+    "core:webview:allow-webview-hide",
+    "core:webview:allow-webview-show",
+    "core:webview:allow-set-webview-focus",
+    "core:event:default",
+    "core:event:allow-listen",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://**"
+        },
+        {
+          "url": "http://**"
+        }
+      ]
+    },
+    "opener:default",
+    "store:default",
+    "fs:allow-home-read-recursive",
+    "fs:allow-home-write-recursive",
+    "fs:allow-create",
+    "fs:allow-remove",
+    "fs:allow-rename",
+    "fs:allow-copy-file",
+    "fs:allow-mkdir",
+    "fs:allow-exists",
+    "drag:default",
+    "notification:default",
+    "notification:allow-is-permission-granted",
+    "notification:allow-request-permission",
+    "notification:allow-notify",
+    "notification:allow-show",
+    "fs:allow-watch",
+    "fs:allow-unwatch",
+    "core:menu:default",
+    "core:menu:allow-new",
+    "core:menu:allow-popup",
+    "core:menu:allow-append",
+    "core:menu:allow-prepend",
+    "core:menu:allow-insert",
+    "core:menu:allow-remove",
+    "core:menu:allow-remove-at",
+    "core:menu:allow-items",
+    "core:menu:allow-get",
+    "core:menu:allow-text",
+    "core:menu:allow-set-text",
+    "core:menu:allow-is-enabled",
+    "core:menu:allow-set-enabled",
+    "core:menu:allow-set-accelerator",
+    "core:menu:allow-set-as-app-menu",
+    "core:menu:allow-set-as-window-menu",
+    {
+      "identifier": "fs:allow-read-dir",
+      "allow": [{ "path": "**" }, { "path": "$HOME/**" }]
+    },
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [{ "path": "$TEMP/**" }]
+    }
+  ]
+}

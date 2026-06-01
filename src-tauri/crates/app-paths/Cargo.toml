@@ -1,0 +1,25 @@
+[package]
+name = "app_paths"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "Filesystem path resolution for `~/.orgii/` and related app data directories. Single source of truth shared by every workspace crate."
+publish = false
+
+[lib]
+name = "app_paths"
+path = "src/lib.rs"
+
+# Pure helpers: `dirs` for home-dir resolution, `tracing` for the
+# best-effort warn paths in `set_sensitive_file_permissions`. No Tauri,
+# no async runtime, no DB, no HTTP.
+[dependencies]
+dirs = "6.0"
+tracing = "0.1"
+
+# `libc::getuid()` powers `orgii_temp_root()` on Unix so the per-user
+# scratchpad path includes the UID. Lives in this crate so leaf consumers
+# (including `agent-core` and `session_persistence`) don't need any
+# back-edge into the `app` crate.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

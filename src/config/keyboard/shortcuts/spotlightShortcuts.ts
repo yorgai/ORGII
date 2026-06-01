@@ -1,0 +1,52 @@
+import type { ShortcutEntry } from "./types";
+
+export const SPOTLIGHT_SHORTCUTS: ShortcutEntry[] = [
+  {
+    id: "spotlight_open",
+    command: "Open command palette",
+    macKeys: "⇧⌘P",
+    winKeys: "Ctrl+Shift+P",
+    scope: "global",
+    category: "navigation",
+  },
+  {
+    id: "agent_session_search",
+    command: "Search Agent sessions",
+    macKeys: "⌘K",
+    winKeys: "Ctrl+K",
+    scope: "global",
+    category: "navigation",
+  },
+  {
+    id: "spotlight_down",
+    command: "Move down",
+    macKeys: "↓",
+    winKeys: "↓",
+    scope: "spotlight",
+    category: "navigation",
+  },
+  {
+    id: "spotlight_up",
+    command: "Move up",
+    macKeys: "↑",
+    winKeys: "↑",
+    scope: "spotlight",
+    category: "navigation",
+  },
+  {
+    id: "spotlight_select",
+    command: "Select item",
+    macKeys: "Enter",
+    winKeys: "Enter",
+    scope: "spotlight",
+    category: "navigation",
+  },
+  {
+    id: "spotlight_close",
+    command: "Close spotlight",
+    macKeys: "Esc",
+    winKeys: "Esc",
+    scope: "spotlight",
+    category: "navigation",
+  },
+];

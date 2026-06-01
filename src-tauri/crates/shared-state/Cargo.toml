@@ -1,0 +1,26 @@
+[package]
+name = "shared_state"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "Shared application state (agent browser controller, screenshot store) used to break cycles between agent_core and browser."
+publish = false
+
+[lib]
+name = "shared_state"
+path = "src/lib.rs"
+
+[dependencies]
+app_paths = { path = "../app-paths" }
+
+tauri = { workspace = true }
+
+serde_json = "1.0"
+tokio = { workspace = true }
+tracing = "0.1"
+base64 = { workspace = true }
+reqwest = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

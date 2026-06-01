@@ -1,0 +1,63 @@
+# Cargo build configuration
+
+# ── FFmpeg environment (ac-ffmpeg linking, ARM Homebrew) ──────────────────────
+[env]
+PKG_CONFIG_PATH    = { value = "/opt/homebrew/lib/pkgconfig:/opt/homebrew/opt/openssl@3/lib/pkgconfig", force = true }
+OPENSSL_DIR        = { value = "/opt/homebrew/opt/openssl@3",               force = true }
+FFMPEG_LIB_DIR     = { value = "/opt/homebrew/Cellar/ffmpeg/8.0.1_2/lib",  force = false }
+FFMPEG_INCLUDE_DIR = { value = "/opt/homebrew/Cellar/ffmpeg/8.0.1_2/include", force = false }
+
+# ── Build performance ─────────────────────────────────────────────────────────
+# Cap parallel rustc processes to limit memory usage (~4-5 GB each).
+# 10 jobs = ~45 GB peak; 5 jobs = ~22 GB peak (good balance on 16/32 GB Mac).
+#
+# `incremental = false`: Incremental compilation is intentionally OFF.
+#
+# Symptom it eliminates:
+#
+#     error: failed to create dependency graph at
+#     `…/incremental/app_lib-XXX/s-YYY-ZZZ-working/dep-graph.part.bin`:
+#     No such file or directory (os error 2)
+#
+# Root cause: incremental compilation maintains a per-build session
+# dir at `incremental/<crate-hash>/s-<query-hash>-<rand>-working/`
+# which rustc atomically renames to `s-…-finalized/` on success, and
+# Cargo periodically GCs old finalized dirs. With our setup —
+# user-global `~/.cargo/shared-target` shared across IDE
+# (rust-analyzer) + `npm run tauri:dev` + `cargo test` from the
+# terminal — three concurrent cargo processes race on the same
+# `incremental/` tree. One process's GC can yank a directory out
+# from under another's writer, producing the error above.
+#
+# Why turning it off is fine here:
+#
+#   1. We use `sccache` as `rustc-wrapper` (set in `~/.cargo/config.toml`).
+#      sccache caches whole-crate compile artifacts keyed on input
+#      hashes, which is what most edit-rebuild cycles actually hit.
+#      Incremental's value over sccache is only on *intra-crate*
+#      single-function changes — and that's exactly where it races.
+#
+#   2. Tauri's release builds disable incremental anyway (LTO needs
+#      whole-crate codegen units), so this just makes dev match release.
+#
+#   3. Rust's own CI disables incremental for the same reason: it
+#      trades correctness/reliability for ~10–20 % speed on tiny edits.
+#      We choose reliability here.
+#
+# If you want incremental back for a specific session: set
+# `CARGO_INCREMENTAL=1` in that shell and hope you don't have two
+# cargo processes running. Re-enabling here permanently will bring
+# the "dep-graph.part.bin: No such file" errors back.
+[build]
+jobs = 5
+incremental = false
+
+# ── macOS / Apple Silicon target ─────────────────────────────────────────────
+[target.aarch64-apple-darwin]
+rustflags = [
+  # FFmpeg library search paths (arm64 Homebrew)
+  "-L", "/opt/homebrew/lib",
+  "-L", "/opt/homebrew/Cellar/ffmpeg/8.0.1_2/lib",
+  # lld linker disabled — ld64.lld not installed (brew install lld to re-enable)
+  # "-C", "link-arg=-fuse-ld=/opt/homebrew/bin/ld64.lld",
+]

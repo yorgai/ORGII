@@ -1,0 +1,251 @@
+/**
+ * SelectorPill
+ *
+ * Shared pill trigger button used by ModePill, RunningLocationPill, and the
+ * Launchpad agent selector. The session creator's model/source row and
+ * repo/branch row use `PillGroup` instead, which renders an invisible row of
+ * segments separated by `|` until a segment is hovered or active.
+ *
+ * Pattern: icon + label; on hover (or when active) the icon swaps to
+ * ArrowLeftRight to signal the pill is interactive.
+ *
+ * Size tokens for sm/md are sourced from CompoundPill/config to stay in sync
+ * with the CompoundPill segment dimensions.
+ */
+import { ChevronDown, ChevronUp } from "lucide-react";
+import React, { forwardRef, useCallback, useState } from "react";
+
+import {
+  PILL_SM_HEIGHT_CLASS,
+  PILL_SM_ICON_CONTAINER_CLASS,
+  PILL_SM_ICON_SIZE,
+} from "@src/components/CompoundPill/config";
+import Tooltip from "@src/components/Tooltip";
+
+// ── Size variants ────────────────────────────────────────────────────────────
+// "sm" — h-[28px] px-3 text-[12px]  14px icon  (toolbar pills: ModePill, RunningLocationPill)
+// "md" — h-[32px] px-3 text-[14px]  14px icon  (standalone selector pill: Launchpad agent selector)
+// "lg" — inline hero selector        20px icon  (ChatPanel inline header)
+// "xl" — large hero button           28px icon  (ChatPanel session creator)
+
+const SIZE_CLASSES = {
+  sm: `${PILL_SM_HEIGHT_CLASS} px-3 text-[12px]`,
+  md: "h-[32px] px-3 text-[14px]",
+  lg: "min-h-[42px] px-1.5 text-[24px] font-medium tracking-wide leading-[1.2] overflow-visible",
+  xl: "px-4 py-2 text-[28px] font-bold tracking-wide overflow-visible",
+} as const;
+
+const GAP_CLASSES = {
+  sm: "gap-2",
+  md: "gap-3",
+  lg: "gap-2",
+  xl: "gap-2",
+} as const;
+
+const ICON_CONTAINER_CLASSES = {
+  sm: PILL_SM_ICON_CONTAINER_CLASS,
+  md: PILL_SM_ICON_CONTAINER_CLASS,
+  lg: "relative inline-flex h-[20px] w-[20px] items-center justify-center",
+  xl: "relative inline-flex h-[28px] w-[28px] items-center justify-center",
+} as const;
+
+const ICON_SIZES = {
+  sm: PILL_SM_ICON_SIZE,
+  md: PILL_SM_ICON_SIZE,
+  lg: 20,
+  xl: 28,
+} as const;
+
+export type SelectorPillSize = keyof typeof SIZE_CLASSES;
+export type SelectorPillVariant = "default" | "ghost" | "input";
+
+export interface SelectorPillProps {
+  /** Icon shown at rest (before hover). Pass null to show nothing at rest. */
+  icon: React.ReactNode;
+  /** Label text */
+  label: string;
+  /** Native title attribute (fallback tooltip) */
+  title?: string;
+  /** Styled tooltip content shown via the Tooltip component on hover */
+  tooltip?: React.ReactNode;
+  /** Framed-panel tooltip style (matches chat header / PillGroup segments) */
+  tooltipFramed?: boolean;
+  /** Tooltip position — defaults to "top" */
+  tooltipPosition?: "top" | "bottom" | "left" | "right";
+  /** Whether the pill is in an open/active state */
+  active?: boolean;
+  /** Render label in danger color to signal a missing required selection */
+  danger?: boolean;
+  /** Size variant */
+  size?: SelectorPillSize;
+  /** Visual variant */
+  variant?: SelectorPillVariant;
+  /** Show a persistent right-side chevron instead of swapping the leading icon on hover */
+  trailingChevron?: boolean;
+  onClick?: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  ariaLabel?: string;
+  className?: string;
+  dataTestId?: string;
+  disabled?: boolean;
+}
+
+export const SelectorPill = forwardRef<HTMLButtonElement, SelectorPillProps>(
+  (
+    {
+      icon,
+      label,
+      title,
+      tooltip,
+      tooltipFramed = false,
+      tooltipPosition = "top",
+      active = false,
+      danger = false,
+      size = "sm",
+      variant = "default",
+      trailingChevron = false,
+      onClick,
+      onMouseEnter,
+      onMouseLeave,
+      ariaLabel,
+      className = "",
+      dataTestId,
+      disabled,
+    },
+    ref
+  ) => {
+    const labelColor = danger
+      ? "text-warning-6"
+      : active
+        ? "text-primary-6"
+        : "text-text-1";
+    const iconSize = ICON_SIZES[size];
+    const iconColor = danger ? "text-warning-6" : "text-text-1";
+    const chevronColor = danger
+      ? "text-warning-6"
+      : active
+        ? "text-primary-6"
+        : "text-text-1";
+    const variantClasses =
+      variant === "input"
+        ? active
+          ? "border-border-2 bg-chat-input"
+          : "border-transparent bg-chat-input hover:border-border-2 hover:bg-chat-input"
+        : variant === "ghost"
+          ? active
+            ? "border-transparent bg-fill-2"
+            : "border-transparent hover:border-transparent hover:bg-fill-2"
+          : active
+            ? "border-border-2 bg-fill-2"
+            : "border-transparent hover:border-border-2 hover:bg-fill-2";
+
+    // Controlled tooltip visibility so that opening the dropdown (active=true)
+    // immediately hides the tooltip instead of leaving it covering the panel.
+    // We track hover/focus intent only; the effective visibility is gated on
+    // `active` so no effect is needed to re-hide when the pill activates.
+    const [hoverIntent, setHoverIntent] = useState(false);
+    const tooltipVisible = hoverIntent && !active;
+    const handleTooltipVisibleChange = useCallback((next: boolean) => {
+      setHoverIntent(next);
+    }, []);
+
+    const buttonSizeClass =
+      label && variant === "input" && size === "sm"
+        ? `${PILL_SM_HEIGHT_CLASS} px-2 text-[12px]`
+        : label
+          ? SIZE_CLASSES[size]
+          : "h-[28px] w-[28px] justify-center px-0";
+
+    const button = (
+      <button
+        ref={ref}
+        type="button"
+        onClick={onClick}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        data-testid={dataTestId}
+        title={tooltip ? undefined : (title ?? label)}
+        className={`group/pill flex items-center rounded-full border border-solid font-medium transition-all duration-200 focus:outline-none ${label ? GAP_CLASSES[size] : ""} ${buttonSizeClass} ${variantClasses} ${className}`}
+      >
+        <span
+          className={`relative inline-flex shrink-0 items-center justify-center ${ICON_CONTAINER_CLASSES[size]}`}
+        >
+          {trailingChevron ? (
+            <span
+              className={`inline-flex items-center justify-center ${iconColor}`}
+            >
+              {icon}
+            </span>
+          ) : (
+            <>
+              {icon !== null && (
+                <span
+                  className={`${active ? "hidden" : "group-hover/pill:hidden"} ${iconColor}`}
+                >
+                  {icon}
+                </span>
+              )}
+              {active ? (
+                <ChevronUp
+                  size={iconSize}
+                  strokeWidth={1.75}
+                  className={`absolute block ${chevronColor}`}
+                />
+              ) : (
+                <ChevronDown
+                  size={iconSize}
+                  strokeWidth={1.75}
+                  className={`absolute hidden ${chevronColor} group-hover/pill:block`}
+                />
+              )}
+            </>
+          )}
+        </span>
+
+        {label && (
+          <span
+            className={`${size === "xl" ? "" : "truncate"} leading-[1.2] ${labelColor}`}
+          >
+            {label}
+          </span>
+        )}
+
+        {trailingChevron && (
+          <span
+            className={`inline-flex shrink-0 items-center justify-center ${chevronColor}`}
+          >
+            {active ? (
+              <ChevronUp size={14} strokeWidth={2} />
+            ) : (
+              <ChevronDown size={14} strokeWidth={2} />
+            )}
+          </span>
+        )}
+      </button>
+    );
+
+    if (tooltip) {
+      return (
+        <Tooltip
+          content={tooltip}
+          position={tooltipPosition}
+          mouseEnterDelay={400}
+          popupVisible={tooltipVisible}
+          onVisibleChange={handleTooltipVisibleChange}
+          framedPanel={tooltipFramed}
+        >
+          {button}
+        </Tooltip>
+      );
+    }
+
+    return button;
+  }
+);
+
+SelectorPill.displayName = "SelectorPill";
+
+export default SelectorPill;

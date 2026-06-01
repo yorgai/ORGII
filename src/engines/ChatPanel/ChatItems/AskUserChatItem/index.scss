@@ -1,0 +1,33 @@
+.ask-user-chat-item {
+  // Input field styles - Use multiple selectors to ensure Arco default styles are overridden
+  .ask-user-input {
+    background: var(--color-bg-1) !important;
+    border: 1px solid var(--color-border-2) !important;
+    border-radius: 12px !important;
+    outline: none !important;
+
+    &:hover {
+      border-color: var(--color-border-3) !important;
+    }
+
+    &:focus,
+    &:focus-within,
+    &:focus-visible,
+    
+    // Internal input/textarea elements
+    textarea,
+    input {
+      background: transparent !important;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+
+      &:focus,
+      &:focus-visible {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+      }
+    }
+  }
+}

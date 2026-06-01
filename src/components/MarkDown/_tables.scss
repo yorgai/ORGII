@@ -1,0 +1,34 @@
+// Cursor-style table cells
+.chat-markdown-body table th {
+  font-weight: 600;
+  background: var(--color-fill-2);
+  color: var(--color-text-1);
+}
+
+.chat-markdown-body table th,
+.chat-markdown-body table td {
+  padding: 8px 12px;
+  border-right: 1px solid var(--color-border-2);
+  border-bottom: 1px solid var(--color-border-2);
+  text-align: left;
+
+  &:last-child {
+    border-right: none;
+  }
+}
+
+.chat-markdown-body table tr {
+  transition: background 0.15s ease;
+}
+
+.chat-markdown-body table tbody tr {
+  background-color: var(--color-fill-1);
+
+  &:last-child td {
+    border-bottom: none;
+  }
+}
+
+.chat-markdown-body table img {
+  background-color: transparent;
+}

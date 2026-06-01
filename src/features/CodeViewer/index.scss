@@ -1,0 +1,778 @@
+/**
+ * ModernDiff Styles
+ * 
+ * A beautiful, modern diff viewer with AI-tool aesthetic
+ * Features smooth animations, subtle gradients, and elegant typography
+ */
+
+// Code font - matches ModernCodeViewer/CodeMirror style
+$font-mono: var(
+  --code-font-family,
+  "SF Mono",
+  "Menlo",
+  "Monaco",
+  "Consolas",
+  "Liberation Mono",
+  "Courier New",
+  monospace
+);
+
+.modern-diff,
+.modern-diff-no-wrapper {
+  display: flex;
+  flex-direction: column;
+  // Match ChatHistory code font
+  font-family: $font-mono !important;
+  font-size: var(--chat-code-font-size, 13px) !important;
+  line-height: 1.5 !important;
+  // Critical: Allow flex child to shrink properly
+  min-height: 0;
+  max-height: 100%;
+  // Force width containment - this is the key fix
+  contain: inline-size;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  // Ensure content is clipped within rounded containers
+  > * {
+    min-height: 0;
+  }
+}
+
+.modern-diff {
+  background: var(--color-bg-2);
+  border-radius: 12px;
+  border: 1px solid var(--color-border-2);
+}
+
+.modern-diff-no-wrapper {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+// Stats bar - fixed height, no shrink (shared by both)
+.modern-diff-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, var(--color-fill-1) 0%, transparent 100%);
+  border-bottom: 1px solid var(--color-border-2);
+
+  .stats-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .stats-path {
+    font-size: 12px;
+    color: var(--color-text-3);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stats-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .stats-additions {
+    font-size: 12px;
+    font-weight: 600;
+    color: #2ea043;
+    padding: 2px 8px;
+    background: rgba(63, 185, 80, 0.1);
+    border-radius: 6px;
+  }
+
+  .stats-deletions {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f85149;
+    padding: 2px 8px;
+    background: rgba(248, 81, 73, 0.1);
+    border-radius: 6px;
+  }
+}
+
+// ============================================
+// Cherry Pick Styles (Unified View)
+// ============================================
+
+.diff-cherry-pick-all {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--color-fill-2);
+  flex-shrink: 0;
+  color: transparent;
+
+  &:hover {
+    background: var(--color-fill-3);
+  }
+
+  &-checked {
+    background: var(--color-primary-6);
+    color: white;
+
+    &:hover {
+      background: var(--color-primary-5);
+    }
+  }
+}
+
+// Multi-select column (left side)
+.diff-cherry-pick-multi {
+  width: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  color: transparent;
+
+  &:hover {
+    filter: brightness(0.92);
+  }
+
+  // Context lines - gray, no click
+  &-context {
+    cursor: default;
+    background: transparent;
+
+    &:hover {
+      filter: none;
+    }
+  }
+
+  // Checked state - solid primary color
+  &-checked {
+    background: var(--color-primary-6);
+    color: white;
+
+    &:hover {
+      background: var(--color-primary-5);
+      filter: none;
+    }
+  }
+
+  // Unchecked add - match green add line color
+  &-add {
+    background: rgba(63, 185, 80, 0.15);
+
+    &:hover {
+      background: rgba(63, 185, 80, 0.25);
+      filter: none;
+    }
+  }
+
+  // Unchecked remove - match red remove line color
+  &-remove {
+    background: rgba(248, 81, 73, 0.15);
+
+    &:hover {
+      background: rgba(248, 81, 73, 0.25);
+      filter: none;
+    }
+  }
+}
+
+// Individual line cherry-pick column
+.diff-cherry-pick {
+  width: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-3);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  color: transparent;
+
+  &:hover {
+    filter: brightness(0.92);
+  }
+
+  // Empty state for context/collapse lines - match context gutter color
+  &-empty {
+    cursor: default;
+    background: transparent;
+
+    &:hover {
+      filter: none;
+    }
+  }
+
+  // Checked state - solid primary color full height
+  &-checked {
+    background: var(--color-primary-6) !important;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: var(--color-primary-5) !important;
+      filter: none;
+    }
+  }
+
+  // Unchecked add - match green add line gutter color
+  &-add {
+    background: rgba(63, 185, 80, 0.15);
+
+    &:hover {
+      background: rgba(63, 185, 80, 0.25) !important;
+      filter: none;
+    }
+  }
+
+  // Unchecked remove - match red remove line gutter color
+  &-remove {
+    background: rgba(248, 81, 73, 0.15);
+
+    &:hover {
+      background: rgba(248, 81, 73, 0.25) !important;
+      filter: none;
+    }
+  }
+}
+
+// Content area - scrollable (shared by both wrapper and no-wrapper)
+.modern-diff-content {
+  flex: 1;
+  padding: 0;
+  // Critical: Allow flex child to shrink and scroll
+  min-height: 0;
+  // Let parent handle scrolling when internalScroll={false}
+  overflow: visible;
+}
+
+// Static (non-virtualized) list for embedded contexts
+.modern-diff-static-list {
+  display: block;
+  min-width: max-content;
+}
+
+// Hide Virtuoso scrollbar
+.virtuoso-no-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
+  // Target the internal scroller div
+  > div {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+
+    &::-webkit-scrollbar {
+      width: 0 !important;
+      height: 0 !important;
+      display: none !important;
+    }
+  }
+}
+
+// Diff line base
+.diff-line {
+  display: flex;
+  align-items: stretch;
+  min-height: 24px;
+  transition: background-color 0.15s ease;
+  // min-width: 100% ensures line fills container width
+  // The container (via Virtuoso styling) expands to fit the longest line
+  min-width: 100%;
+
+  // Line number gutters - sticky on horizontal scroll
+  &-gutter {
+    flex-shrink: 0;
+    width: 48px;
+    padding: 0 8px;
+    text-align: right;
+    font-size: var(--chat-code-font-size, 13px);
+    color: var(--color-text-4);
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    background: var(--color-bg-3);
+    // Sticky positioning for horizontal scroll
+    position: sticky;
+    left: 0;
+    z-index: 1;
+  }
+
+  // Change indicator
+  &-indicator {
+    flex-shrink: 0;
+    width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-4);
+  }
+
+  // Line content - no individual scrollbar, parent handles scrolling
+  &-content {
+    flex: 1;
+    padding: 0 16px 0 8px;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    // No overflow here - let the parent scroll horizontally
+    overflow: visible;
+    // Enable text selection and copy-paste
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+
+    // Force font on ALL elements including react-syntax-highlighter tokens
+    // Using high specificity selector to override inline styles
+    &,
+    pre,
+    code,
+    span,
+    .diff-syntax-content,
+    .diff-syntax-content span,
+    .diff-syntax-content code {
+      margin: 0;
+      font-family: $font-mono !important;
+      font-size: var(--chat-code-font-size, 13px) !important;
+      line-height: 1.5 !important;
+      white-space: pre;
+      tab-size: 4;
+      background: transparent !important;
+      // Enable text selection for all nested elements
+      user-select: text;
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+    }
+
+    // Force all child elements to use the same font
+    * {
+      font-family: $font-mono !important;
+      font-size: var(--chat-code-font-size, 13px) !important;
+      line-height: 1.5 !important;
+      // Enable text selection for all nested elements
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      -moz-user-select: text !important;
+      -ms-user-select: text !important;
+    }
+
+    // Override highlight.js default styles
+    code,
+    .hljs {
+      font-family: $font-mono !important;
+      font-size: var(--chat-code-font-size, 13px) !important;
+      background: transparent !important;
+    }
+
+    // Use highlight.js vs2015 theme with visibility fixes
+    // Fix: vs2015 uses #DCDCDC for titles which is too light
+    .hljs-title,
+    .hljs-title\.function {
+      color: #dcdcaa; // Yellow - more visible for function names
+    }
+
+    .hljs-function {
+      color: #dcdcaa;
+    }
+
+    .hljs-params {
+      color: #9cdcfe; // Light blue for parameters
+    }
+
+    .hljs-subst {
+      color: #9cdcfe;
+    }
+  }
+
+  // Addition line
+  &-add {
+    background: rgba(46, 160, 67, 0.12);
+
+    .diff-line-gutter {
+      background: rgba(46, 160, 67, 0.18);
+      color: #2ea043;
+    }
+
+    .diff-line-indicator {
+      color: #2ea043;
+    }
+
+    // Ensure text is readable on green background
+    .diff-line-content {
+      // Force darker text colors for better contrast
+      color: var(--color-text-1);
+
+      // Override syntax highlighting to be darker on green bg
+      .hljs-string,
+      .hljs-attr {
+        color: #0a3069;
+      }
+
+      .hljs-tag,
+      .hljs-name {
+        color: #0550ae;
+      }
+
+      .hljs-attribute {
+        color: #953800;
+      }
+    }
+  }
+
+  // Deletion line
+  &-remove {
+    background: rgba(248, 81, 73, 0.12);
+
+    .diff-line-gutter {
+      background: rgba(248, 81, 73, 0.18);
+      color: #cf222e;
+    }
+
+    .diff-line-indicator {
+      color: #cf222e;
+    }
+
+    .diff-line-content {
+      text-decoration: line-through;
+      text-decoration-color: rgba(248, 81, 73, 0.5);
+      opacity: 0.7;
+      color: var(--color-text-1);
+    }
+  }
+
+  // Context line
+  &-context {
+    background: transparent;
+
+    .diff-cherry-pick-multi,
+    .diff-cherry-pick {
+      background: transparent;
+    }
+
+    .diff-line-gutter {
+      background: transparent;
+      color: var(--color-text-3);
+    }
+
+    .diff-line-content {
+      // Don't set color - let syntax highlighting show through
+      opacity: 0.8; // Slightly dim context lines
+    }
+  }
+
+  // Collapsed lines
+  &-collapse {
+    cursor: pointer;
+    background: transparent;
+    margin: 0;
+    min-height: 32px;
+
+    .diff-cherry-pick-multi,
+    .diff-cherry-pick {
+      background: transparent;
+    }
+
+    .diff-line-gutter {
+      background: rgba(56, 139, 253, 0.1);
+      color: var(--color-text-3);
+    }
+
+    .collapse-icon {
+      color: var(--color-text-3);
+    }
+
+    .collapse-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: $font-mono !important;
+      font-size: var(--chat-code-font-size, 13px) !important;
+      line-height: 1.5 !important;
+      color: var(--color-text-3);
+      font-weight: 500;
+      padding: 0;
+      background: transparent;
+      border-radius: 0;
+      transition: all 0.2s ease;
+
+      svg {
+        opacity: 0.7;
+      }
+    }
+
+    &:hover {
+      background: transparent;
+
+      .diff-cherry-pick-multi,
+      .diff-cherry-pick {
+        background: transparent;
+      }
+
+      .collapse-label {
+        background: transparent;
+        color: var(--color-text-3);
+
+        svg {
+          opacity: 1;
+        }
+      }
+    }
+
+    // Disabled state - no hover effects, no pointer cursor (for chat panel)
+    &-disabled {
+      cursor: default;
+
+      &:hover {
+        .collapse-label {
+          color: var(--color-text-3);
+
+          svg {
+            opacity: 0.7;
+          }
+        }
+      }
+    }
+  }
+
+  // ============================================
+  // Border Style Mode (Cursor-like left border)
+  // ============================================
+  &-border-style {
+    // Left border indicator for add lines (green)
+    &.diff-line-add {
+      border-left: 2px solid #2ea043;
+      padding-left: 0;
+
+      .diff-line-content {
+        padding-left: 12px;
+      }
+    }
+
+    // Left border indicator for remove lines (red)
+    &.diff-line-remove {
+      border-left: 2px solid #f85149;
+      padding-left: 0;
+
+      .diff-line-content {
+        padding-left: 12px;
+      }
+    }
+
+    // Context lines - no border
+    &.diff-line-context {
+      border-left: 2px solid transparent;
+      padding-left: 0;
+
+      .diff-line-content {
+        padding-left: 12px;
+      }
+    }
+  }
+}
+
+// Empty state
+.modern-diff-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--color-text-3);
+
+  &-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  &-text {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  &-subtext {
+    font-size: 12px;
+    margin-top: 4px;
+    opacity: 0.7;
+  }
+}
+
+// Animation for expanding collapsed sections
+@keyframes expand-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.diff-line-context {
+  animation: expand-in 0.2s ease-out;
+}
+
+// ============================================
+// ModernCodeViewer Styles
+// ============================================
+
+.modern-code-viewer {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modern-code-viewer-no-wrapper {
+  display: inline-block;
+  min-width: 100%;
+  background: transparent;
+  border-radius: 0;
+}
+
+.modern-code-viewer-content {
+  flex: 1;
+  padding: 0;
+  min-height: 0;
+  // Let parent handle scrolling when internalScroll={false}
+  overflow: visible;
+}
+
+// Hide horizontal scrollbar for code viewer parent containers
+// Applied to the parent that wraps ModernCodeViewer with overflow-auto
+.code-viewer-scroll-container {
+  scrollbar-width: none; // Firefox
+  -ms-overflow-style: none; // IE/Edge
+
+  &::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+}
+
+.modern-code-viewer-static-list {
+  display: block;
+  min-width: max-content;
+}
+
+// Code line base
+.code-line {
+  display: flex;
+  align-items: stretch;
+  min-height: 24px;
+  min-width: 100%;
+  background: transparent;
+
+  // Line number gutter - sticky on horizontal scroll
+  &-gutter {
+    flex-shrink: 0;
+    width: 48px;
+    padding: 0 8px;
+    text-align: right;
+    font-size: var(--chat-code-font-size, 13px);
+    color: var(--color-text-4);
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    // Sticky positioning for horizontal scroll
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--color-bg-2);
+    // Subtle border to separate from content when scrolled
+    box-shadow: 1px 0 0 var(--color-border-2);
+  }
+
+  &-gutter--plain {
+    box-shadow: none;
+  }
+
+  // Line content
+  &-content {
+    flex: 1;
+    padding: 0 16px 0 8px;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    overflow: visible;
+    // Enable text selection and copy-paste
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+
+    &,
+    pre,
+    code,
+    span,
+    .code-syntax-content,
+    .code-syntax-content span,
+    .code-syntax-content code {
+      margin: 0;
+      font-family: $font-mono !important;
+      font-size: var(--chat-code-font-size, 13px) !important;
+      line-height: 1.5 !important;
+      white-space: pre;
+      tab-size: 4;
+      background: transparent !important;
+      // Enable text selection for all nested elements
+      user-select: text;
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+    }
+
+    * {
+      font-family: $font-mono !important;
+      font-size: var(--chat-code-font-size, 13px) !important;
+      line-height: 1.5 !important;
+      // Enable text selection for all nested elements
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      -moz-user-select: text !important;
+      -ms-user-select: text !important;
+    }
+
+    code,
+    .hljs {
+      font-family: $font-mono !important;
+      font-size: var(--chat-code-font-size, 13px) !important;
+      background: transparent !important;
+      // Enable text selection for code elements
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      -moz-user-select: text !important;
+      -ms-user-select: text !important;
+    }
+  }
+}

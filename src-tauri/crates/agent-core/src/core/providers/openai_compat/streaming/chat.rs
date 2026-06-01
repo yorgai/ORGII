@@ -1,0 +1,178 @@
+//! Non-streaming `chat()` implementation for OpenAI-compatible providers.
+
+use serde_json::Value;
+use std::collections::HashMap;
+use tracing::{info, warn};
+
+use super::super::client::OpenAICompatClient;
+use super::super::types::{ChatCompletionRequest, ChatCompletionResponse, RequestBuilderExt};
+use crate::providers::openai_policy::ChatTokenLimitField;
+use crate::providers::safe_truncate::safe_truncate_utf8;
+use crate::providers::traits::{finish_reason as finish, LLMResponse, ProviderError};
+use crate::providers::wire_sanitize::{
+    sanitize_openai_compat_messages, strip_tool_schema_cache_scopes,
+};
+use crate::utils::http_retry::extract_retry_after_secs;
+
+pub(super) async fn run_chat(
+    this: &OpenAICompatClient,
+    messages: &[Value],
+    tools: Option<&[Value]>,
+    model: &str,
+    max_tokens: u32,
+    _temperature: f32,
+) -> Result<LLMResponse, ProviderError> {
+    // Azure gateway: strip provider prefix but don't add litellm prefix.
+    // The Azure endpoint expects the bare deployment/model name.
+    let resolved_model = if this.config.is_azure {
+        this.strip_provider_prefix(model)
+    } else {
+        crate::providers::model_hints::wire_model_name(this.provider_spec, model)
+    };
+
+    // Always expand MCP image sidecars into follow-up
+    // `role:"user"` messages with `image_url` content
+    // blocks. We deliberately do not gate on a keyword allow-list:
+    // proxies, custom-named deployments, and private hosts must
+    // not silently drop images. If the model can't accept
+    // `image_url` blocks, the API will return 400 — fail-loud is
+    // strictly better than fail-silent.
+    let sanitized_messages = sanitize_openai_compat_messages(messages);
+    let wire_messages =
+        super::super::wire_expand::expand_tool_images_for_openai_wire(&sanitized_messages);
+
+    info!(
+        "LLM call: provider={}, model={}, messages={} (wire={}), tools={}, azure_gw={}",
+        this.provider_spec.name,
+        resolved_model,
+        messages.len(),
+        wire_messages.len(),
+        tools.map_or(0, |t| t.len()),
+        this.config.is_azure,
+    );
+
+    let wire_tools = tools.map(strip_tool_schema_cache_scopes);
+    let wire_policy = this.chat_wire_policy(&resolved_model);
+    let request_body = ChatCompletionRequest {
+        model: resolved_model.clone(),
+        messages: wire_messages,
+        tools: wire_tools,
+        tool_choice: if wire_policy.send_tool_choice_auto {
+            tools.map(|_| Value::String("auto".to_string()))
+        } else {
+            None
+        },
+        max_tokens: match wire_policy.token_limit_field {
+            ChatTokenLimitField::MaxTokens => Some(max_tokens),
+            ChatTokenLimitField::MaxCompletionTokens => None,
+        },
+        max_completion_tokens: match wire_policy.token_limit_field {
+            ChatTokenLimitField::MaxTokens => None,
+            ChatTokenLimitField::MaxCompletionTokens => Some(max_tokens),
+        },
+        temperature: if wire_policy.send_temperature {
+            Some(_temperature)
+        } else {
+            None
+        },
+        stream: false,
+        stream_options: None,
+    };
+
+    let url = this.chat_url(&resolved_model);
+    let mut request = this
+        .client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .bearer_token(&this.config.api_key);
+
+    for (key, value) in &this.config.extra_headers {
+        request = request.header(key, value);
+    }
+
+    if this.is_azure() {
+        request = request.header("api-key", &this.config.api_key);
+    } else if this.provider_spec.name == crate::providers::registry::provider_id::ANTHROPIC {
+        request = request
+            .header("x-api-key", &this.config.api_key)
+            .header("anthropic-version", "2023-06-01");
+    }
+
+    let response = request
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|err| ProviderError::RequestFailed(err.to_string()))?;
+
+    let status = response.status().as_u16();
+    let retry_after = extract_retry_after_secs(&response);
+    let body = response
+        .text()
+        .await
+        .map_err(|err| ProviderError::ParseError(err.to_string()))?;
+
+    if status != 200 {
+        return Err(OpenAICompatClient::parse_error_response(
+            status,
+            &body,
+            retry_after,
+        ));
+    }
+
+    // Some proxies ignore `stream: false` and return SSE chunks anyway.
+    // Detect this and reassemble into a single ChatCompletionResponse.
+    if body.starts_with("data:") {
+        warn!("Provider returned SSE stream despite stream:false — reassembling chunks");
+        return OpenAICompatClient::reassemble_sse_to_response(&body);
+    }
+
+    let parsed: ChatCompletionResponse = serde_json::from_str(&body).map_err(|err| {
+        ProviderError::ParseError(format!(
+            "Failed to parse response: {}. Body: {}",
+            err,
+            safe_truncate_utf8(&body, 500)
+        ))
+    })?;
+
+    let choice = parsed
+        .choices
+        .into_iter()
+        .next()
+        .ok_or_else(|| ProviderError::ParseError("No choices in response".to_string()))?;
+
+    let mut usage = HashMap::new();
+    if let Some(api_usage) = parsed.usage {
+        usage.insert("prompt_tokens".to_string(), api_usage.prompt_tokens);
+        usage.insert("completion_tokens".to_string(), api_usage.completion_tokens);
+        usage.insert("total_tokens".to_string(), api_usage.total_tokens);
+    }
+
+    let tool_calls = choice
+        .message
+        .tool_calls
+        .as_ref()
+        .map(|tcs| OpenAICompatClient::parse_tool_calls(tcs))
+        .unwrap_or_default();
+
+    let response = LLMResponse {
+        content: choice.message.content,
+        tool_calls,
+        finish_reason: choice
+            .finish_reason
+            .unwrap_or_else(|| finish::STOP.to_string()),
+        usage,
+        reasoning_content: choice.message.reasoning_content,
+        blocks: Vec::new(),
+        stream_error_kind: None,
+        retry_after_ms: None,
+    };
+
+    info!(
+        "LLM response: finish_reason={}, tool_calls={}, content_len={}",
+        response.finish_reason,
+        response.tool_calls.len(),
+        response.content.as_ref().map_or(0, |c| c.len()),
+    );
+
+    Ok(response)
+}

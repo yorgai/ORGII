@@ -1,0 +1,145 @@
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
+import SettingsTable, {
+  SETTINGS_TABLE_CELL,
+  SETTINGS_TABLE_COL,
+  type SettingsTableColumn,
+} from "@src/components/SettingsTable";
+import { CollapsibleSection } from "@src/modules/shared/layouts/blocks";
+import { formatCompactTimeAgo } from "@src/util/data/formatters/date";
+
+import { STAT_CARD_CONFIG } from "../../statCardConfig";
+import type { ContributorStats } from "./types";
+
+export interface ContributorStatsSectionProps {
+  rows: ContributorStats[];
+  authorColorMap: Map<string, string>;
+  excludeRenames: boolean;
+}
+
+export function ContributorStatsSection({
+  rows,
+  authorColorMap,
+  excludeRenames,
+}: ContributorStatsSectionProps) {
+  const { t } = useTranslation();
+
+  const contributorColumns = useMemo<SettingsTableColumn<ContributorStats>[]>(
+    () => [
+      {
+        key: "author",
+        label: t("gitDashboard.author"),
+        width: SETTINGS_TABLE_COL.fill,
+        renderCell: (row) => (
+          <span className="flex items-center gap-1.5">
+            <span
+              className="inline-block h-2 w-2 shrink-0 rounded-full"
+              style={{
+                backgroundColor:
+                  authorColorMap.get(row.name) ?? "var(--color-primary-6)",
+              }}
+            />
+            <span className={`${SETTINGS_TABLE_CELL.primary} truncate`}>
+              {row.name}
+            </span>
+          </span>
+        ),
+      },
+      {
+        key: "commits",
+        label: t(STAT_CARD_CONFIG.commits.labelKey),
+        width: "80px",
+        align: "right",
+        sorter: (rowA, rowB) => rowA.commitCount - rowB.commitCount,
+        renderCell: (row) => (
+          <span className={`${SETTINGS_TABLE_CELL.value} tabular-nums`}>
+            {row.commitCount}
+          </span>
+        ),
+      },
+      {
+        key: "files",
+        label: t(STAT_CARD_CONFIG.filesChanged.labelKey),
+        width: "80px",
+        align: "right",
+        sorter: (rowA, rowB) => {
+          const metricsA = excludeRenames ? rowA.contentOnly : rowA.all;
+          const metricsB = excludeRenames ? rowB.contentOnly : rowB.all;
+          return metricsA.filesChanged - metricsB.filesChanged;
+        },
+        renderCell: (row) => {
+          const metrics = excludeRenames ? row.contentOnly : row.all;
+          return metrics.filesChanged > 0 ? (
+            <span className={`${SETTINGS_TABLE_CELL.value} tabular-nums`}>
+              {metrics.filesChanged}
+            </span>
+          ) : (
+            <span className={SETTINGS_TABLE_CELL.muted}>—</span>
+          );
+        },
+      },
+      {
+        key: "diff",
+        label: t(STAT_CARD_CONFIG.linesChanged.labelKey),
+        width: "200px",
+        align: "right",
+        sorter: (rowA, rowB) => {
+          const metricsA = excludeRenames ? rowA.contentOnly : rowA.all;
+          const metricsB = excludeRenames ? rowB.contentOnly : rowB.all;
+          return (
+            metricsA.additions +
+            metricsA.deletions -
+            (metricsB.additions + metricsB.deletions)
+          );
+        },
+        renderCell: (row) => {
+          const metrics = excludeRenames ? row.contentOnly : row.all;
+          return metrics.additions > 0 || metrics.deletions > 0 ? (
+            <span className="inline-grid grid-cols-[1fr_1fr] gap-x-3 text-right tabular-nums">
+              <span className="text-green-500">
+                +{metrics.additions.toLocaleString()}
+              </span>
+              <span className="text-red-400">
+                -{metrics.deletions.toLocaleString()}
+              </span>
+            </span>
+          ) : (
+            <span className={SETTINGS_TABLE_CELL.muted}>—</span>
+          );
+        },
+      },
+      {
+        key: "lastActive",
+        label: t("gitDashboard.lastActive"),
+        width: SETTINGS_TABLE_COL.valueMd,
+        align: "right",
+        sorter: (rowA, rowB) =>
+          new Date(rowA.lastCommitDate).getTime() -
+          new Date(rowB.lastCommitDate).getTime(),
+        renderCell: (row) =>
+          row.lastCommitDate ? (
+            <span className={`${SETTINGS_TABLE_CELL.muted} whitespace-nowrap`}>
+              {formatCompactTimeAgo(row.lastCommitDate)}
+            </span>
+          ) : (
+            <span className={SETTINGS_TABLE_CELL.muted}>—</span>
+          ),
+      },
+    ],
+    [t, authorColorMap, excludeRenames]
+  );
+
+  return (
+    <CollapsibleSection title={t("gitDashboard.contributors")}>
+      <SettingsTable<ContributorStats>
+        columns={contributorColumns}
+        rows={rows}
+        getRowKey={(row) => row.name}
+        headerHeight="tall"
+        pageSize={50}
+        className="[&_.table]:table-fixed"
+      />
+    </CollapsibleSection>
+  );
+}

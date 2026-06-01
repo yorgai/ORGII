@@ -1,0 +1,116 @@
+/**
+ * JsonTreeView Styles
+ *
+ * Tree view styling for JSON preview with syntax highlighting.
+ */
+
+.json-tree-view {
+  &--error {
+    height: 100%;
+    padding: 24px;
+  }
+
+  &__header {
+    flex-shrink: 0;
+  }
+
+  &__content {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+}
+
+.json-node {
+  &__row {
+    display: flex;
+    align-items: center;
+    min-height: 24px;
+    border-radius: 4px;
+    transition: background-color 0.1s;
+
+    &:hover {
+      background-color: var(--color-fill-1);
+    }
+
+    &--expandable {
+      cursor: pointer;
+    }
+  }
+
+  &__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    flex-shrink: 0;
+    color: var(--color-text-3);
+    transition: color 0.1s;
+
+    &:hover {
+      color: var(--color-text-1);
+    }
+  }
+
+  &__toggle-placeholder {
+    width: 20px;
+    flex-shrink: 0;
+  }
+
+  &__more {
+    color: var(--color-text-3);
+    font-style: italic;
+    padding: 4px 0;
+  }
+}
+
+// Key styling
+.json-key {
+  color: var(--color-primary-6);
+  font-weight: 500;
+}
+
+.json-colon {
+  color: var(--color-text-3);
+}
+
+// Bracket styling
+.json-bracket {
+  color: var(--color-text-2);
+}
+
+// Collapsed preview
+.json-preview {
+  color: var(--color-text-3);
+  margin-left: 4px;
+}
+
+// Value styling with type-specific colors
+.json-value {
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background-color 0.1s;
+
+  &:hover {
+    background-color: var(--color-fill-2);
+  }
+
+  &--null {
+    color: #7c7c7c;
+    font-style: italic;
+  }
+
+  &--boolean {
+    color: #569cd6; // Blue for booleans
+  }
+
+  &--number {
+    color: #b5cea8; // Green for numbers
+  }
+
+  &--string {
+    color: #ce9178; // Orange/brown for strings
+    word-break: break-word;
+  }
+}
+
+// Dark mode adjustments handled by CSS variables

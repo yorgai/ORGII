@@ -1,0 +1,84 @@
+/**
+ * DetailPanelHeader Component
+ *
+ * Header for detail panels with title, navigation (prev/next), close, and optional actions.
+ * Uses shared WorkStation header tokens for consistent styling.
+ */
+import { ChevronDown, ChevronUp, X } from "lucide-react";
+import React from "react";
+
+import {
+  HEADER_BUTTON,
+  HEADER_CLASSES,
+  HEADER_ICON_SIZE,
+} from "@src/config/workstation/tokens";
+
+export interface DetailPanelHeaderProps {
+  /** Title to display */
+  title: string;
+  /** Callback when close button is clicked */
+  onClose: () => void;
+  /** Optional navigation callback */
+  onNavigate?: (direction: "prev" | "next") => void;
+  /** Whether previous navigation is available */
+  hasPrev?: boolean;
+  /** Whether next navigation is available */
+  hasNext?: boolean;
+  /** Optional extra actions rendered before the nav/close buttons */
+  actions?: React.ReactNode;
+}
+
+const DetailPanelHeader: React.FC<DetailPanelHeaderProps> = ({
+  title,
+  onClose,
+  onNavigate,
+  hasPrev = false,
+  hasNext = false,
+  actions,
+}) => {
+  return (
+    <div className={HEADER_CLASSES.pageHeader}>
+      <div className="flex min-w-0 flex-1 items-center">
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text-1">
+          {title}
+        </span>
+      </div>
+
+      <div className="flex flex-shrink-0 items-center gap-1.5">
+        {actions}
+        {actions && (
+          <span aria-hidden className="h-4 w-px flex-shrink-0 bg-border-2" />
+        )}
+        {onNavigate && (
+          <>
+            <button
+              className={HEADER_BUTTON.actionDisabled}
+              onClick={() => onNavigate("prev")}
+              disabled={!hasPrev}
+              title="Previous"
+            >
+              <ChevronUp size={HEADER_ICON_SIZE.sm} />
+            </button>
+            <button
+              className={HEADER_BUTTON.actionDisabled}
+              onClick={() => onNavigate("next")}
+              disabled={!hasNext}
+              title="Next"
+            >
+              <ChevronDown size={HEADER_ICON_SIZE.sm} />
+            </button>
+          </>
+        )}
+        <button
+          className={HEADER_BUTTON.action}
+          onClick={onClose}
+          title="Close"
+        >
+          <X size={HEADER_ICON_SIZE.sm} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default DetailPanelHeader;

@@ -1,0 +1,53 @@
+/**
+ * GanttDependencyLines Styles
+ */
+
+.gantt-dependency-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+
+  &__group {
+    pointer-events: auto;
+  }
+
+  &__hover-target {
+    cursor: pointer;
+
+    &:hover + .gantt-dependency-lines__line {
+      stroke: var(--color-primary-6);
+      stroke-width: 2.5px;
+      opacity: 1;
+    }
+  }
+
+  &__line {
+    fill: none;
+    stroke: var(--color-border-3);
+    stroke-width: 1.5px;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+    color: var(--color-text-4);
+
+    &--highlighted {
+      stroke: var(--color-primary-6);
+      stroke-width: 2.5px;
+      opacity: 1;
+      animation: pulse-line 2s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes pulse-line {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}

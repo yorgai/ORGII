@@ -1,0 +1,379 @@
+/**
+ * Workspace management logic for RepoPalette.
+ *
+ * Handles:
+ *   - Saved workspaces atom reads/writes
+ *   - Workspace selection, edit, delete, and bulk-delete handlers
+ *   - Derivation of workspace SpotlightItems (including manage-mode JSX)
+ *
+ * Extracted to keep RepoPalette/index.tsx under the UI component line limit.
+ */
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { Code } from "lucide-react";
+import { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
+import { repoApi } from "@src/api/tauri/repo";
+import {
+  type WorkspaceRecord,
+  deleteWorkspace,
+  listWorkspaces,
+} from "@src/api/tauri/workspace";
+import Message from "@src/components/Toast";
+import {
+  activeWorkspaceIdAtom,
+  activeWorkspaceNameAtom,
+  savedWorkspacesAtom,
+  setWorkspaceFoldersAtom,
+} from "@src/store/ui/workspaceFoldersAtom";
+import type { WorkspaceFolder } from "@src/types/workspace";
+import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
+
+import { ICONS } from "../../config";
+import type { AddWorkspaceModalStage } from "../../hooks";
+import type { RepoItem, SpotlightItem } from "../../types";
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface UseRepoPaletteWorkspaceOptions {
+  repos: RepoItem[];
+  isManageMode: boolean;
+  selectedIds: Set<string>;
+  toggleSelection: (id: string) => void;
+  clearSelection: () => void;
+  setModalStage: (stage: AddWorkspaceModalStage) => void;
+  onClose: () => void;
+  refreshReposForce: () => Promise<void>;
+  /** multiRepoWorkspaceForm from useAddWorkspaceFlow — only `setEditingWorkspace` is needed */
+  setEditingWorkspace: (ws: WorkspaceRecord) => void;
+}
+
+export interface UseRepoPaletteWorkspaceReturn {
+  workspaceItems: SpotlightItem[];
+  handleBulkDelete: () => Promise<void>;
+}
+
+function normalizeFsPath(path: string | undefined): string {
+  if (!path) return "";
+  const stripped = path.startsWith("file://")
+    ? path.replace("file://", "")
+    : path;
+  return stripped.replace(/\/+$/, "");
+}
+
+function buildWorkspaceRepoNameResolver(repos: RepoItem[]) {
+  const byId = new Map<string, string>(
+    repos.map((repo) => [repo.id, String(repo.name ?? "")])
+  );
+  const byPath = new Map<string, string>(
+    repos
+      .map((repo): [string, string] => [
+        normalizeFsPath(repo.fs_uri),
+        String(repo.name ?? ""),
+      ])
+      .filter(([path]) => Boolean(path))
+  );
+
+  return (folder: WorkspaceRecord["folders"][number]): string => {
+    if (folder.repoId) {
+      const name = byId.get(folder.repoId);
+      if (name) return name;
+    }
+
+    const name = byPath.get(normalizeFsPath(folder.folderPath));
+    return name ?? folder.folderName;
+  };
+}
+
+// ============================================================================
+// Hook
+// ============================================================================
+
+export function useRepoPaletteWorkspace({
+  repos,
+  isManageMode,
+  selectedIds,
+  toggleSelection,
+  clearSelection,
+  setModalStage,
+  onClose,
+  refreshReposForce,
+  setEditingWorkspace,
+}: UseRepoPaletteWorkspaceOptions): UseRepoPaletteWorkspaceReturn {
+  const { t } = useTranslation();
+  const [savedWorkspaces, setSavedWorkspaces] = useAtom(savedWorkspacesAtom);
+  const activeWorkspaceId = useAtomValue(activeWorkspaceIdAtom);
+  const dispatchSetFolders = useSetAtom(setWorkspaceFoldersAtom);
+  const setActiveWorkspaceName = useSetAtom(activeWorkspaceNameAtom);
+
+  const resolveWorkspaceRepoName = useMemo(
+    () => buildWorkspaceRepoNameResolver(repos),
+    [repos]
+  );
+
+  const handleWorkspaceSelect = useCallback(
+    (ws: WorkspaceRecord) => {
+      const folders: WorkspaceFolder[] = ws.folders.map((folder) => ({
+        id: crypto.randomUUID(),
+        name: resolveWorkspaceRepoName(folder),
+        path: folder.folderPath,
+        uri: `file://${folder.folderPath}`,
+        isPrimary: folder.isPrimary,
+        repoId: folder.repoId ?? undefined,
+        kind: folder.kind === "folder" ? ("folder" as const) : ("git" as const),
+      }));
+      dispatchSetFolders(folders, ws.workspaceId);
+      setActiveWorkspaceName(ws.name);
+      onClose();
+    },
+    [
+      dispatchSetFolders,
+      resolveWorkspaceRepoName,
+      setActiveWorkspaceName,
+      onClose,
+    ]
+  );
+
+  const handleEditWorkspace = useCallback(
+    (ws: WorkspaceRecord) => {
+      setEditingWorkspace(ws);
+      setModalStage("create-workspace");
+    },
+    [setEditingWorkspace, setModalStage]
+  );
+
+  const handleDeleteWorkspace = useCallback(
+    async (ws: WorkspaceRecord) => {
+      const confirmed = await confirmDestructiveAction({
+        title: t("confirmation.deleteWorkspaceTitle", { name: ws.name }),
+        message: t("confirmation.deleteWorkspaceMessage"),
+        okLabel: t("actions.delete"),
+        cancelLabel: t("actions.cancel"),
+      });
+      if (!confirmed) return;
+      try {
+        await deleteWorkspace(ws.workspaceId);
+        if (ws.workspaceId === activeWorkspaceId) {
+          dispatchSetFolders([], null);
+        }
+        const refreshed = await listWorkspaces();
+        setSavedWorkspaces(refreshed);
+        Message.success(
+          t("selectors.spotlight.toast.workspaceRemoved", "Workspace deleted")
+        );
+      } catch (error) {
+        console.error("Error deleting workspace:", error);
+        Message.error(
+          error instanceof Error
+            ? error.message
+            : t(
+                "selectors.spotlight.toast.workspaceRemoveFailed",
+                "Failed to delete workspace"
+              )
+        );
+      }
+    },
+    [t, activeWorkspaceId, dispatchSetFolders, setSavedWorkspaces]
+  );
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+
+    const workspaceTargets: WorkspaceRecord[] = [];
+    const repoTargetIds: string[] = [];
+    for (const id of selectedIds) {
+      if (id.startsWith("workspace-")) {
+        const wsId = id.slice("workspace-".length);
+        const ws = savedWorkspaces.find((w) => w.workspaceId === wsId);
+        if (ws) workspaceTargets.push(ws);
+      } else {
+        repoTargetIds.push(id);
+      }
+    }
+
+    const total = workspaceTargets.length + repoTargetIds.length;
+    if (total === 0) return;
+
+    const confirmed = await confirmDestructiveAction({
+      title: t("confirmation.deleteSelectedTitle", {
+        count: total,
+      }),
+      message: t(
+        "confirmation.deleteSelectedMessage",
+        "This removes the selected workspaces and unlinks the selected repos. Repo files on disk are not deleted."
+      ),
+      okLabel: t("actions.delete"),
+      cancelLabel: t("actions.cancel"),
+    });
+    if (!confirmed) return;
+
+    const workspaceResults = await Promise.allSettled(
+      workspaceTargets.map(async (ws) => {
+        await deleteWorkspace(ws.workspaceId);
+        return ws;
+      })
+    );
+    const repoResults = await Promise.allSettled(
+      repoTargetIds.map(async (repoId) => {
+        await repoApi.deleteRepo(repoId);
+        return repoId;
+      })
+    );
+
+    let deletedCount = 0;
+    let failedCount = 0;
+    let activeWorkspaceWasDeleted = false;
+
+    for (let idx = 0; idx < workspaceResults.length; idx += 1) {
+      const result = workspaceResults[idx];
+      const target = workspaceTargets[idx];
+      if (result.status === "fulfilled") {
+        deletedCount += 1;
+        if (target.workspaceId === activeWorkspaceId) {
+          activeWorkspaceWasDeleted = true;
+        }
+      } else {
+        console.error("Error deleting workspace:", result.reason);
+        failedCount += 1;
+      }
+    }
+    for (const result of repoResults) {
+      if (result.status === "fulfilled") {
+        deletedCount += 1;
+      } else {
+        console.error("Error removing repo:", result.reason);
+        failedCount += 1;
+      }
+    }
+
+    if (activeWorkspaceWasDeleted) dispatchSetFolders([], null);
+
+    if (workspaceTargets.length > 0) {
+      try {
+        setSavedWorkspaces(await listWorkspaces());
+      } catch (error) {
+        console.error("Error refreshing workspaces:", error);
+      }
+    }
+    if (repoTargetIds.length > 0) {
+      try {
+        await refreshReposForce();
+      } catch (error) {
+        console.error("Error refreshing repos:", error);
+      }
+    }
+
+    clearSelection();
+
+    if (failedCount === 0) {
+      Message.success(
+        t("selectors.spotlight.toast.bulkDeleted", {
+          count: deletedCount,
+        })
+      );
+    } else {
+      Message.error(
+        t("selectors.spotlight.toast.bulkDeleteFailed", {
+          count: failedCount,
+        })
+      );
+    }
+  }, [
+    selectedIds,
+    savedWorkspaces,
+    activeWorkspaceId,
+    dispatchSetFolders,
+    setSavedWorkspaces,
+    refreshReposForce,
+    clearSelection,
+    t,
+  ]);
+
+  const workspaceItems = useMemo((): SpotlightItem[] => {
+    const orderedWorkspaces = [...savedWorkspaces].sort(
+      (workspaceA, workspaceB) => {
+        if (workspaceA.workspaceId === activeWorkspaceId) return -1;
+        if (workspaceB.workspaceId === activeWorkspaceId) return 1;
+        return 0;
+      }
+    );
+
+    return orderedWorkspaces.map((ws: WorkspaceRecord) => {
+      const names = ws.folders.map(resolveWorkspaceRepoName);
+      const isActive = ws.workspaceId === activeWorkspaceId;
+      const repoCount = ws.folders.length;
+      const itemId = `workspace-${ws.workspaceId}`;
+      const isChecked = selectedIds.has(itemId);
+      const repoCountBadge = (
+        <span
+          className="flex items-center gap-1 text-[12px] text-text-2"
+          title={`${repoCount} repo${repoCount !== 1 ? "s" : ""}: ${names.join(", ")}`}
+        >
+          {repoCount}
+          <Code size={12} />
+        </span>
+      );
+      const manageActions = (
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditWorkspace(ws);
+            }}
+            className="flex items-center justify-center rounded-md p-1 text-text-2 transition-colors hover:bg-fill-3 hover:text-text-1"
+            title={t("actions.edit", "Edit")}
+          >
+            <ICONS.editRepo size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              void handleDeleteWorkspace(ws);
+            }}
+            className="hover:text-error-6 flex items-center justify-center rounded-md p-1 text-text-2 transition-colors hover:bg-fill-3"
+            title={t("actions.delete", "Delete")}
+          >
+            <ICONS.removeRepo size={14} />
+          </button>
+        </div>
+      );
+      return {
+        id: itemId,
+        label: ws.name,
+        icon: ICONS.workspace,
+        type: "repo" as const,
+        data: {
+          isCurrentSelection: isActive,
+          rightContent: isManageMode ? manageActions : repoCountBadge,
+          selectionState: isManageMode
+            ? { checked: isChecked, onToggle: () => toggleSelection(itemId) }
+            : undefined,
+        },
+        action: () => {
+          if (isManageMode) {
+            toggleSelection(itemId);
+          } else {
+            handleWorkspaceSelect(ws);
+          }
+        },
+      };
+    });
+  }, [
+    savedWorkspaces,
+    activeWorkspaceId,
+    handleWorkspaceSelect,
+    handleEditWorkspace,
+    handleDeleteWorkspace,
+    resolveWorkspaceRepoName,
+    isManageMode,
+    selectedIds,
+    toggleSelection,
+    t,
+  ]);
+
+  return { workspaceItems, handleBulkDelete };
+}

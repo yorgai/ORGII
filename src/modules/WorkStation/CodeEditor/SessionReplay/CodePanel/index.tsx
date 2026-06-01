@@ -1,0 +1,372 @@
+/**
+ * CodePanel Component
+ *
+ * Displays file content, diff, or search results in the top panel.
+ * Supports combined diff view for consolidated file operations.
+ * Uses shared FileHeader with breadcrumbs and code/preview toggle.
+ */
+import { useAtomValue } from "jotai";
+import { Terminal } from "lucide-react";
+import React, { memo, useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import { AppType } from "@src/engines/Simulator/types/appTypes";
+import { VirtualizedModernDiff } from "@src/features/CodeViewer/VirtualizedModernDiff";
+import { ImagePreview } from "@src/modules/WorkStation/CodeEditor/Panels/EditorMainPane/content/FilePreviewContent/ImagePreview";
+import {
+  NoTabsPlaceholder,
+  useSimulatorAwaitingAgentCaption,
+  useSimulatorPlaceholderActions,
+} from "@src/modules/WorkStation/shared";
+import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
+import { FileHeader } from "@src/modules/shared/components/FileHeader";
+import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import { simulatorEffectiveDockAppAtom } from "@src/store/ui/simulatorAtom";
+import {
+  getPreviewType,
+  supportsPreviewToggle,
+} from "@src/util/file/previewTypes";
+
+import { resolveFileOperationPayload } from "../resolveFilePayload";
+import {
+  CODE_PANEL_MODE,
+  type ExploreOperationEntry,
+  FILE_OPERATION_TYPE,
+} from "../types";
+import {
+  getExploreDisplayName,
+  getExploreDisplayParts,
+} from "../utils/exploreDisplayUtils";
+import { CombinedDiffView } from "./CombinedDiffView";
+import { PreviewContent } from "./PreviewContent";
+import { SearchResultsContent } from "./SearchResultsContent";
+import { SessionReplayCodeMirrorViewer } from "./SessionReplayCodeMirrorViewer";
+import { TerminalContent } from "./TerminalContent";
+import { ToolPanel } from "./ToolPanel";
+import { simulatorSearchHeaderIcon } from "./searchIcons";
+import type { CodePanelProps, PreviewModeState } from "./types";
+
+export { type CodePanelProps } from "./types";
+// Re-export atomic components for SimulatorVariant usage
+export { SessionReplayCodeMirrorViewer } from "./SessionReplayCodeMirrorViewer";
+export type { SessionReplayCodeMirrorViewerProps } from "./SessionReplayCodeMirrorViewer";
+export { PreviewContent } from "./PreviewContent";
+export { TerminalContent } from "./TerminalContent";
+export { SearchResultsContent } from "./SearchResultsContent";
+export { simulatorSearchHeaderIcon } from "./searchIcons";
+
+/**
+ * Header for the simulator's explore panel.
+ *
+ * Mirrors the chat panel's `SearchBlock` / `GlobBlock` header text: the
+ * current lifecycle label (e.g. "Searching code" / "Found files") followed
+ * by the active pattern/query as a subtitle. Keeping a single source of
+ * truth for the labels guarantees the two surfaces stay in sync.
+ */
+const ExploreHeader: React.FC<{
+  operation: ExploreOperationEntry;
+  publishEnabled: boolean;
+}> = memo(({ operation, publishEnabled }) => {
+  const funcName = operation.event?.functionName || "";
+  const titleParts = getExploreDisplayParts(operation);
+  const titleText = getExploreDisplayName(operation);
+
+  return (
+    <FileHeader
+      filePath={funcName}
+      disableNavigation
+      useFileTypeIcon={false}
+      headerIcon={simulatorSearchHeaderIcon(funcName)}
+      publishToHost="simulator"
+      publishEnabled={publishEnabled}
+      titleSlot={
+        <div
+          className="flex min-w-0 items-center gap-1.5 text-[12px]"
+          title={titleText}
+        >
+          <span className="shrink-0 font-medium text-text-1">
+            {titleParts.primary}
+          </span>
+          {titleParts.secondary ? (
+            <>
+              <span className="shrink-0 text-text-4">·</span>
+              <span className="min-w-0 truncate text-text-3">
+                {titleParts.secondary}
+              </span>
+            </>
+          ) : null}
+        </div>
+      }
+    />
+  );
+});
+
+ExploreHeader.displayName = "ExploreHeader";
+
+export const CodePanel: React.FC<CodePanelProps> = memo(
+  ({
+    operation,
+    exploreOperation,
+    shellOperation,
+    toolOperation,
+    mode = CODE_PANEL_MODE.FILE,
+    sessionReplayMode = "simulation",
+  }) => {
+    const { t } = useTranslation("sessions");
+    const effectiveDockApp = useAtomValue(simulatorEffectiveDockAppAtom);
+    const publishHeaderToSimulator = effectiveDockApp === AppType.CODE_EDITOR;
+    const simulatorPlaceholderActions =
+      useSimulatorPlaceholderActions(sessionReplayMode);
+    const simulatorAwaitingAgentCaption = useSimulatorAwaitingAgentCaption();
+    const [previewModeState, setPreviewModeState] =
+      useState<PreviewModeState | null>(null);
+
+    const currentFilePath =
+      mode === CODE_PANEL_MODE.FILE ? operation?.filePath : undefined;
+
+    const isPreviewMode =
+      currentFilePath && previewModeState?.filePath === currentFilePath
+        ? previewModeState.active
+        : false;
+
+    const handleTogglePreview = useCallback(() => {
+      if (!currentFilePath) return;
+      setPreviewModeState((prev) =>
+        prev?.filePath === currentFilePath
+          ? { filePath: currentFilePath, active: !prev.active }
+          : { filePath: currentFilePath, active: true }
+      );
+    }, [currentFilePath]);
+
+    const resolvedPayload = useMemo(
+      () => (operation ? resolveFileOperationPayload(operation) : null),
+      [operation]
+    );
+
+    if (mode === CODE_PANEL_MODE.TERMINAL) {
+      if (!shellOperation) {
+        return (
+          <NoTabsPlaceholder
+            icon="editor"
+            caption={simulatorAwaitingAgentCaption}
+            actions={simulatorPlaceholderActions}
+          />
+        );
+      }
+
+      const shellHeaderLabel =
+        shellOperation.commandKeywords ||
+        shellOperation.shortCommand ||
+        t("simulator.replay.ide.shell.noCommand");
+
+      return (
+        <div className="flex h-full w-full flex-col overflow-hidden">
+          <FileHeader
+            filePath={shellHeaderLabel}
+            plainTitle
+            disableNavigation
+            useFileTypeIcon={false}
+            publishToHost="simulator"
+            publishEnabled={publishHeaderToSimulator}
+            headerIcon={
+              <Terminal
+                size={HEADER_ICON_SIZE.sm}
+                className="shrink-0 text-text-2"
+              />
+            }
+          />
+          {shellOperation.isFailed ? (
+            <Placeholder
+              variant="error"
+              placement="detail-panel"
+              fillParentHeight
+              title={t("tools.failedPlaceholder")}
+            />
+          ) : (
+            <div className="code-viewer-scroll-container relative min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+              <TerminalContent operation={shellOperation} />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (mode === CODE_PANEL_MODE.TOOL) {
+      if (!toolOperation) {
+        return (
+          <NoTabsPlaceholder
+            icon="editor"
+            caption={simulatorAwaitingAgentCaption}
+            actions={simulatorPlaceholderActions}
+          />
+        );
+      }
+
+      return (
+        <ToolPanel
+          operation={toolOperation}
+          publishEnabled={publishHeaderToSimulator}
+        />
+      );
+    }
+
+    if (mode === CODE_PANEL_MODE.EXPLORE) {
+      if (!exploreOperation) {
+        return (
+          <NoTabsPlaceholder
+            icon="editor"
+            caption={simulatorAwaitingAgentCaption}
+            actions={simulatorPlaceholderActions}
+          />
+        );
+      }
+
+      return (
+        <div className="flex h-full w-full flex-col overflow-hidden">
+          <ExploreHeader
+            operation={exploreOperation}
+            publishEnabled={publishHeaderToSimulator}
+          />
+          {exploreOperation.isFailed ? (
+            <Placeholder
+              variant="error"
+              placement="detail-panel"
+              fillParentHeight
+              title={t("tools.failedPlaceholder")}
+            />
+          ) : (
+            <div className="code-viewer-scroll-container relative min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+              <SearchResultsContent operation={exploreOperation} />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (!operation) {
+      return (
+        <NoTabsPlaceholder
+          icon="editor"
+          caption={simulatorAwaitingAgentCaption}
+          actions={simulatorPlaceholderActions}
+        />
+      );
+    }
+
+    const { filePath, type, language, relatedOperations } = operation;
+
+    if (operation.isFailed) {
+      return (
+        <div className="flex h-full w-full flex-col overflow-hidden">
+          <FileHeader
+            filePath={filePath}
+            disableNavigation
+            publishToHost="simulator"
+            publishEnabled={publishHeaderToSimulator}
+          />
+          <Placeholder
+            variant="error"
+            placement="detail-panel"
+            fillParentHeight
+            title={t("tools.failedPlaceholder")}
+          />
+        </div>
+      );
+    }
+
+    const content = resolvedPayload?.content;
+    const oldContent = resolvedPayload?.oldContent;
+    const newContent = resolvedPayload?.newContent;
+    const resolvedLanguage = resolvedPayload?.language ?? language;
+
+    const hasMultipleEdits =
+      relatedOperations &&
+      relatedOperations.length > 1 &&
+      type === FILE_OPERATION_TYPE.WRITE;
+
+    const showPreviewToggle =
+      type === FILE_OPERATION_TYPE.READ &&
+      !!content &&
+      supportsPreviewToggle(filePath);
+
+    return (
+      <div className="flex h-full w-full flex-col overflow-hidden">
+        <FileHeader
+          filePath={filePath}
+          isMarkdownFile={showPreviewToggle}
+          isPreviewMode={isPreviewMode}
+          onTogglePreview={handleTogglePreview}
+          disableNavigation
+          publishToHost="simulator"
+          publishEnabled={publishHeaderToSimulator}
+        />
+
+        <div
+          className={`code-viewer-scroll-container relative min-h-0 flex-1 ${hasMultipleEdits ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden"}`}
+        >
+          {type === FILE_OPERATION_TYPE.DELETE ? (
+            <Placeholder
+              variant="empty"
+              placement="detail-panel"
+              title={t("tools.deleted")}
+              fillParentHeight
+            />
+          ) : type === FILE_OPERATION_TYPE.READ ? (
+            getPreviewType(filePath) === "image" ? (
+              <ImagePreview filePath={filePath} />
+            ) : content !== undefined ? (
+              isPreviewMode && showPreviewToggle ? (
+                <PreviewContent filePath={filePath} content={content} />
+              ) : (
+                <SessionReplayCodeMirrorViewer
+                  content={
+                    content.length > 50000
+                      ? content.slice(0, 50000) +
+                        t("simulator.replay.ide.codePanel.truncatedSuffix")
+                      : content
+                  }
+                  language={resolvedLanguage}
+                  filePath={filePath}
+                />
+              )
+            ) : (
+              <NoTabsPlaceholder
+                icon="editor"
+                caption={simulatorAwaitingAgentCaption}
+                actions={simulatorPlaceholderActions}
+              />
+            )
+          ) : hasMultipleEdits ? (
+            <CombinedDiffView
+              operations={relatedOperations}
+              filePath={filePath}
+            />
+          ) : oldContent !== undefined || newContent !== undefined ? (
+            <VirtualizedModernDiff
+              oldValue={oldContent || ""}
+              newValue={newContent || ""}
+              filePath={filePath}
+              height="100%"
+              oldStartLine={resolvedPayload?.oldStartLine}
+              newStartLine={resolvedPayload?.newStartLine}
+              contextLines={3}
+              collapseUnchanged={true}
+              showFilePath={false}
+              showStatsBar={false}
+              noWrapper={true}
+              internalScroll={true}
+            />
+          ) : (
+            <div className="p-4 text-[13px] text-success-6">
+              {t("simulator.replay.ide.codePanel.fileEditedSuccess")}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+
+CodePanel.displayName = "CodePanel";
+
+export default CodePanel;

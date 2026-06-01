@@ -1,0 +1,63 @@
+.chat-markdown-body g-emoji {
+  display: inline-block;
+  min-width: 1ch;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  font-size: 1em;
+  font-style: normal !important;
+  font-weight: var(--base-text-weight-normal, 400);
+  line-height: 1;
+  vertical-align: -0.075em;
+}
+
+.chat-markdown-body g-emoji img {
+  width: 1em;
+  height: 1em;
+}
+
+.chat-markdown-body .task-list-item {
+  list-style-type: none;
+}
+
+.chat-markdown-body .task-list-item label {
+  font-weight: var(--base-text-weight-normal, 400);
+}
+
+.chat-markdown-body .task-list-item.enabled label {
+  cursor: pointer;
+}
+
+.chat-markdown-body .task-list-item + .task-list-item {
+  margin-top: 4px;
+}
+
+.chat-markdown-body .task-list-item .handle {
+  display: none;
+}
+
+.chat-markdown-body .task-list-item-checkbox {
+  margin: 0 0.2em 0.25em -1.4em;
+  vertical-align: middle;
+}
+
+.chat-markdown-body .contains-task-list:dir(rtl) .task-list-item-checkbox {
+  margin: 0 -1.6em 0.25em 0.2em;
+}
+
+.chat-markdown-body .contains-task-list {
+  position: relative;
+}
+
+.chat-markdown-body .contains-task-list:hover .task-list-item-convert-container,
+.chat-markdown-body
+  .contains-task-list:focus-within
+  .task-list-item-convert-container {
+  display: block;
+  width: auto;
+  height: 24px;
+  overflow: visible;
+  clip: auto;
+}
+
+.chat-markdown-body ::-webkit-calendar-picker-indicator {
+  filter: invert(50%);
+}

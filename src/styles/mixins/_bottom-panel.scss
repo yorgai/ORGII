@@ -1,0 +1,110 @@
+/**
+ * Bottom Panel Mixins
+ * 
+ * Shared styles for bottom panel components (Terminal, Output, Problems, Test Results)
+ * Provides consistent scrollbar styling and panel container patterns
+ */
+
+// ============================================
+// Scrollbar Styling (consistent across all panels)
+// ============================================
+
+@mixin panel-scrollbar {
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-bg-2);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-fill-2);
+    border-radius: 5px;
+
+    &:hover {
+      background: var(--color-fill-3);
+    }
+  }
+}
+
+// ============================================
+// Overlay Scrollbar (doesn't take up space, shows on hover/scroll)
+// ============================================
+
+@mixin overlay-scrollbar {
+  // Thin scrollbar for Firefox
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  // Webkit browsers (Chrome, Safari, Edge)
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 3px;
+    transition: background 0.2s ease;
+  }
+
+  // Show scrollbar on hover
+  &:hover {
+    scrollbar-color: var(--color-fill-3) transparent;
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--color-fill-3);
+    }
+  }
+
+  // Scrollbar thumb hover state
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-fill-4);
+  }
+}
+
+// ============================================
+// Panel Container (full height, scrollable content area)
+// ============================================
+
+@mixin panel-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-2);
+  overflow: hidden;
+}
+
+// ============================================
+// Panel Content (scrollable area)
+// ============================================
+
+@mixin panel-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--color-bg-2);
+
+  @include panel-scrollbar;
+}
+
+// ============================================
+// Empty State (centered message)
+// ============================================
+
+@mixin panel-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-3);
+  font-size: 13px;
+}

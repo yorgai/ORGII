@@ -1,0 +1,400 @@
+//! SSE parser for the Anthropic streaming Messages protocol.
+//!
+//! The stream is a sequence of `event: ...\ndata: {...}\n\n` records. We
+//! only consume `data:` lines (events are inferred from the JSON `type`
+//! tag), accumulate per-block content into `BlockAcc`, and emit
+//! per-delta callbacks plus the running flat aggregates that
+//! `LLMResponse` requires.
+//!
+//! Block ordering is preserved by indexing every accumulator with the
+//! Anthropic-supplied `index` field — a sort at finalization time
+//! reconstructs the original text → tool → text interleave.
+
+use std::collections::HashMap;
+
+use serde_json::Value;
+use tracing::warn;
+
+use super::types::StreamEvent;
+use super::usage;
+use crate::providers::traits::{
+    finish_reason as finish, AssistantBlock, StreamDelta, StreamErrorKind, ToolCallDelta,
+    ToolCallRequest,
+};
+
+// Anthropic API protocol `stop_reason` values. Mapped to the unified
+// `finish_reason` values from `traits` at end-of-stream.
+const ANTHROPIC_STOP_END_TURN: &str = "end_turn";
+const ANTHROPIC_STOP_TOOL_USE: &str = "tool_use";
+
+/// Per-index accumulator for Anthropic streaming content blocks.
+///
+/// Each top-level content block in Anthropic's Messages streaming protocol
+/// has a stable `index`; deltas for that block always carry the same index.
+/// We keep state per index (not one global text/reasoning buffer) so the
+/// final response can emit `AssistantBlock`s in source order with accurate
+/// boundaries between segments.
+pub(super) enum BlockAcc {
+    Text(String),
+    Thinking {
+        text: String,
+        signature: Option<String>,
+    },
+    ToolUse {
+        id: String,
+        name: String,
+        args: String,
+    },
+}
+
+/// Mutable state threaded through every iteration of the SSE read loop.
+///
+/// Bundled so the per-event handlers can take a single `&mut StreamState`
+/// instead of nine independent borrows. Default is the start-of-stream
+/// state (empty buffers, finish_reason = STOP).
+pub(super) struct StreamState {
+    pub accumulated_content: String,
+    pub accumulated_reasoning: String,
+    pub block_accumulators: HashMap<usize, BlockAcc>,
+    pub finish_reason: String,
+    pub stream_error_kind: Option<StreamErrorKind>,
+    pub usage: HashMap<String, i64>,
+    pub unknown_frame_count: usize,
+}
+
+impl Default for StreamState {
+    fn default() -> Self {
+        Self {
+            accumulated_content: String::new(),
+            accumulated_reasoning: String::new(),
+            block_accumulators: HashMap::new(),
+            finish_reason: finish::STOP.to_string(),
+            stream_error_kind: None,
+            usage: HashMap::new(),
+            unknown_frame_count: 0,
+        }
+    }
+}
+
+impl StreamState {
+    /// Returns true when *any* segment of the response has been received.
+    /// Used by the read loop to decide whether a connection error should
+    /// degrade to `STREAM_ERROR` (preserving partial output) or surface as
+    /// a hard provider error (no recoverable state).
+    pub fn has_partial_data(&self) -> bool {
+        !self.accumulated_content.is_empty()
+            || !self.accumulated_reasoning.is_empty()
+            || !self.block_accumulators.is_empty()
+    }
+
+    /// Mark the stream as failed with the given error kind, preserving any
+    /// partial output for the turn executor's recovery path.
+    pub fn mark_stream_error(&mut self, kind: StreamErrorKind) {
+        self.finish_reason = finish::STREAM_ERROR.to_string();
+        self.stream_error_kind = Some(kind);
+    }
+}
+
+/// Outcome of dispatching a single SSE event.
+pub(super) enum EventOutcome {
+    /// Continue reading the stream.
+    Continue,
+    /// Stream is done — drain any remaining events and exit the read loop.
+    StreamDone,
+    /// Hard error — the connection is fine but Anthropic told us we have
+    /// no recoverable state. Caller surfaces as a `ProviderError`.
+    HardError(String),
+}
+
+/// Dispatch a single parsed `StreamEvent`, mutating `state` and emitting
+/// per-delta callbacks for the streaming consumer.
+pub(super) fn handle_event(
+    event: StreamEvent,
+    state: &mut StreamState,
+    on_delta: &(dyn Fn(StreamDelta) + Send + Sync),
+    resolved_model: &str,
+) -> EventOutcome {
+    match event {
+        StreamEvent::ContentBlockStart {
+            index,
+            content_block,
+        } => handle_block_start(state, on_delta, index, &content_block),
+        StreamEvent::ContentBlockDelta { index, delta } => {
+            handle_block_delta(state, on_delta, index, &delta)
+        }
+        StreamEvent::MessageDelta { delta, usage: u } => {
+            if let Some(reason) = delta.get("stop_reason").and_then(|r| r.as_str()) {
+                state.finish_reason = match reason {
+                    ANTHROPIC_STOP_END_TURN => finish::STOP.to_string(),
+                    ANTHROPIC_STOP_TOOL_USE => finish::TOOL_CALLS.to_string(),
+                    other => other.to_string(),
+                };
+            }
+            usage::merge_message_delta_output(&mut state.usage, u.as_ref());
+            EventOutcome::Continue
+        }
+        StreamEvent::MessageStart { message } => {
+            usage::merge_message_start(&mut state.usage, message.as_ref());
+            EventOutcome::Continue
+        }
+        StreamEvent::Error { error } => handle_error_event(state, &error, resolved_model),
+        _ => EventOutcome::Continue,
+    }
+}
+
+fn handle_block_start(
+    state: &mut StreamState,
+    on_delta: &(dyn Fn(StreamDelta) + Send + Sync),
+    index: usize,
+    content_block: &Value,
+) -> EventOutcome {
+    match content_block.get("type").and_then(|t| t.as_str()) {
+        Some("text") => {
+            state
+                .block_accumulators
+                .insert(index, BlockAcc::Text(String::new()));
+        }
+        Some("thinking") => {
+            state.block_accumulators.insert(
+                index,
+                BlockAcc::Thinking {
+                    text: String::new(),
+                    signature: None,
+                },
+            );
+        }
+        Some("tool_use") => {
+            let id = content_block
+                .get("id")
+                .and_then(|i| i.as_str())
+                .unwrap_or("")
+                .to_string();
+            let name = content_block
+                .get("name")
+                .and_then(|n| n.as_str())
+                .unwrap_or("")
+                .to_string();
+            state.block_accumulators.insert(
+                index,
+                BlockAcc::ToolUse {
+                    id: id.clone(),
+                    name: name.clone(),
+                    args: String::new(),
+                },
+            );
+            on_delta(StreamDelta {
+                content: None,
+                reasoning: None,
+                tool_call_delta: Some(ToolCallDelta {
+                    index,
+                    id: Some(id),
+                    name: Some(name),
+                    arguments_delta: None,
+                }),
+                finish_reason: None,
+                usage: None,
+            });
+        }
+        Some(other) => {
+            state.unknown_frame_count += 1;
+            warn!(
+                block_type = other,
+                sample = %bounded_value_sample(content_block),
+                "Anthropic stream emitted unknown content block type"
+            );
+        }
+        None => {
+            state.unknown_frame_count += 1;
+            warn!(
+                sample = %bounded_value_sample(content_block),
+                "Anthropic stream emitted content block without type"
+            );
+        }
+    }
+    EventOutcome::Continue
+}
+
+fn handle_block_delta(
+    state: &mut StreamState,
+    on_delta: &(dyn Fn(StreamDelta) + Send + Sync),
+    index: usize,
+    delta: &Value,
+) -> EventOutcome {
+    let delta_type = delta.get("type").and_then(|t| t.as_str());
+    match delta_type {
+        Some("text_delta") => {
+            if let Some(text) = delta.get("text").and_then(|t| t.as_str()) {
+                state.accumulated_content.push_str(text);
+                if let Some(BlockAcc::Text(buf)) = state.block_accumulators.get_mut(&index) {
+                    buf.push_str(text);
+                }
+                on_delta(StreamDelta {
+                    content: Some(text.to_string()),
+                    reasoning: None,
+                    tool_call_delta: None,
+                    finish_reason: None,
+                    usage: None,
+                });
+            }
+        }
+        Some("input_json_delta") => {
+            if let Some(partial) = delta.get("partial_json").and_then(|p| p.as_str()) {
+                if let Some(BlockAcc::ToolUse { args, .. }) =
+                    state.block_accumulators.get_mut(&index)
+                {
+                    args.push_str(partial);
+                }
+                on_delta(StreamDelta {
+                    content: None,
+                    reasoning: None,
+                    tool_call_delta: Some(ToolCallDelta {
+                        index,
+                        id: None,
+                        name: None,
+                        arguments_delta: Some(partial.to_string()),
+                    }),
+                    finish_reason: None,
+                    usage: None,
+                });
+            }
+        }
+        Some("thinking_delta") => {
+            if let Some(thinking) = delta.get("thinking").and_then(|t| t.as_str()) {
+                state.accumulated_reasoning.push_str(thinking);
+                if let Some(BlockAcc::Thinking { text, .. }) =
+                    state.block_accumulators.get_mut(&index)
+                {
+                    text.push_str(thinking);
+                }
+                on_delta(StreamDelta {
+                    content: None,
+                    reasoning: Some(thinking.to_string()),
+                    tool_call_delta: None,
+                    finish_reason: None,
+                    usage: None,
+                });
+            }
+        }
+        Some("signature_delta") => {
+            if let Some(signature) = delta.get("signature").and_then(|value| value.as_str()) {
+                if let Some(BlockAcc::Thinking {
+                    signature: saved, ..
+                }) = state.block_accumulators.get_mut(&index)
+                {
+                    *saved = Some(signature.to_string());
+                }
+            }
+        }
+        Some(other) => {
+            state.unknown_frame_count += 1;
+            warn!(
+                delta_type = other,
+                sample = %bounded_value_sample(delta),
+                "Anthropic stream emitted unknown content block delta type"
+            );
+        }
+        None => {
+            state.unknown_frame_count += 1;
+            warn!(
+                sample = %bounded_value_sample(delta),
+                "Anthropic stream emitted content block delta without type"
+            );
+        }
+    }
+    EventOutcome::Continue
+}
+
+fn bounded_value_sample(value: &Value) -> String {
+    value.to_string().chars().take(500).collect()
+}
+
+fn handle_error_event(
+    state: &mut StreamState,
+    error: &Value,
+    resolved_model: &str,
+) -> EventOutcome {
+    let msg = error
+        .get("message")
+        .and_then(|m| m.as_str())
+        .unwrap_or("Unknown streaming error");
+    let error_type = error.get("type").and_then(|t| t.as_str()).unwrap_or("");
+    warn!(
+        "Anthropic stream error event (model={}, type={}): {}",
+        resolved_model, error_type, msg
+    );
+
+    if state.has_partial_data() {
+        let is_overloaded =
+            error_type == "overloaded_error" || msg.to_lowercase().contains("overloaded");
+        let kind = if is_overloaded {
+            StreamErrorKind::Overloaded
+        } else {
+            StreamErrorKind::ProviderError
+        };
+        state.mark_stream_error(kind);
+        return EventOutcome::StreamDone;
+    }
+    EventOutcome::HardError(msg.to_string())
+}
+
+/// Collapse per-index accumulators into ordered `(blocks, tool_calls)`.
+///
+/// The block list preserves the source-order interleave Anthropic emitted;
+/// `tool_calls` is the order-insensitive flat copy used by message-history
+/// consumers. Empty text/thinking segments and malformed tool calls
+/// (missing id/name from stream interruption) are dropped — they carry
+/// no information and would only pollute the UI.
+pub(super) fn finalize_blocks(
+    state: &mut StreamState,
+) -> (Vec<AssistantBlock>, Vec<ToolCallRequest>) {
+    let mut tool_calls: Vec<ToolCallRequest> = Vec::new();
+    let mut blocks: Vec<AssistantBlock> = Vec::with_capacity(state.block_accumulators.len());
+    let mut indices: Vec<usize> = state.block_accumulators.keys().cloned().collect();
+    indices.sort();
+    let mut pending_anthropic_thinking: Option<Value> = None;
+    for index in indices {
+        let Some(acc) = state.block_accumulators.remove(&index) else {
+            continue;
+        };
+        match acc {
+            BlockAcc::Text(text) => {
+                if !text.is_empty() {
+                    blocks.push(AssistantBlock::Text { text });
+                }
+            }
+            BlockAcc::Thinking { text, signature } => {
+                if !text.is_empty() {
+                    if let Some(sig) = signature {
+                        pending_anthropic_thinking = Some(serde_json::json!({
+                            "anthropic": {
+                                "thinking": text,
+                                "signature": sig,
+                            }
+                        }));
+                    }
+                    blocks.push(AssistantBlock::Reasoning { text });
+                }
+            }
+            BlockAcc::ToolUse { id, name, args } => {
+                if id.is_empty() || name.is_empty() {
+                    warn!(
+                        "Discarding incomplete tool call at index {} (missing id/name)",
+                        index
+                    );
+                    continue;
+                }
+                let arguments: Value = serde_json::from_str(&args)
+                    .unwrap_or_else(|_| Value::Object(serde_json::Map::new()));
+                let tool_call = ToolCallRequest {
+                    id,
+                    name,
+                    arguments,
+                    thought_signature: pending_anthropic_thinking.take(),
+                };
+                tool_calls.push(tool_call.clone());
+                blocks.push(AssistantBlock::ToolCall(tool_call));
+            }
+        }
+    }
+    (blocks, tool_calls)
+}

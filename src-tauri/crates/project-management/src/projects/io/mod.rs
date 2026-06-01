@@ -1,0 +1,48 @@
+//! SQLite-backed IO for projects, labels, milestones, and members.
+//!
+//! The store is global: every project / work item / label / milestone /
+//! member lives in `~/.orgii/projects/projects.db` and is identified by
+//! its row ID, not by a filesystem location.
+
+mod assets;
+mod git_folder_sync;
+mod helpers;
+mod labels;
+mod members;
+mod milestones;
+mod orgs;
+mod projects;
+pub mod repo_resolver;
+mod routines;
+mod work_items;
+
+pub use assets::{delete_asset, list_assets, resolve_asset_path, save_asset};
+pub use git_folder_sync::{resolve_project_org_git_folder_conflict, sync_project_org_git_folder};
+pub use labels::{read_labels, write_labels};
+pub use members::{
+    member_id_from_email, read_members, sync_members_from_git, write_members, SyncMembersResult,
+};
+pub use milestones::{read_milestones, write_milestones};
+pub use orgs::{
+    configure_project_org_git_folder_sync, create_project_org, read_project_org, read_project_orgs,
+};
+pub use projects::{
+    delete_project, derive_work_item_prefix, normalize_custom_work_item_prefix, read_all_projects,
+    read_all_projects_scoped, read_project, read_project_scoped, write_project,
+};
+pub use routines::{
+    create_routine_fire, delete_routine, list_routine_fires, list_routines,
+    mark_routine_fire_failed, mark_routine_fire_started, read_routine, upsert_routine,
+};
+pub use work_items::orchestrator_view;
+pub use work_items::{
+    allocate_short_id, apply_remote_merge, batch_delete_work_items, batch_update_work_items,
+    delete_work_item, find_by_external_ref, move_work_item, purge_expired_deleted_work_items,
+    read_all_work_items, read_all_work_items_enriched, read_all_work_items_enriched_scoped,
+    read_all_work_items_scoped, read_sync_metadata, read_work_item, read_work_item_enriched,
+    read_work_item_enriched_scoped, read_work_item_scoped, read_work_items_view_data,
+    read_work_items_view_data_scoped, restore_work_item, update_work_item_atomic,
+    update_work_item_atomic_with_revisions, update_work_item_partial,
+    update_work_item_partial_enriched, update_work_item_partial_with_revisions, write_work_item,
+    FieldRevision, SyncMetadata, REVISION_SOURCE_LOCAL,
+};

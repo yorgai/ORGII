@@ -1,0 +1,11 @@
+---
+source: src/key_vault/tests/key_extractor_tests.rs
+expression: result
+---
+api_key: sk-testkey000000000000000000
+base_url: "https://nexusacc.itssx.com/api/codex/codex"
+key_type: codex
+confidence: high
+notes:
+  - Found codex key
+  - Found base URL

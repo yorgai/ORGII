@@ -1,0 +1,23 @@
+[package]
+name = "db_browser"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# DB Browser — Tauri commands for opening/querying arbitrary SQLite files
+# from the WorkStation code editor panel. Replaces the WASM sql.js
+# `SqliteService` / `SqliteProvider` frontend layers. Pure leaf — no
+# back-edges into `app`. Owns ~12 `#[tauri::command]`s, re-registered from
+# `commands/handler_list.inc` via bare `db_browser::…` paths.
+
+[lib]
+name = "db_browser"
+path = "src/lib.rs"
+
+[dependencies]
+hex = "0.4"
+rusqlite = { workspace = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+tauri = { workspace = true }
+tokio = { workspace = true }

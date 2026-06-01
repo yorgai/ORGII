@@ -1,0 +1,60 @@
+[package]
+name = "git"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "git2-backed repo + worktree operations, status watcher, bundle export, branch utilities."
+publish = false
+
+[lib]
+name = "git"
+path = "src/lib.rs"
+
+# The crate keeps its `#[tauri::command]` macros (mirroring `crates/key-vault`
+# and `crates/cursor-bridge`) so the `app` crate just re-registers them
+# in `commands/handler_list.inc` without a command-shell shim. The IoC hooks
+# in `hooks.rs` keep the crate a true leaf — `agent_core`, `dev_record`, and
+# `api/git` callbacks are wired up from `app::lib::register_git_hooks`.
+[dependencies]
+core_types = { path = "../types" }
+app_paths = { path = "../app-paths" }
+database = { path = "../database" }
+
+# Tauri command macro surface plus `Emitter` (used in `bundle.rs` and
+# `watch/event_emitter.rs`). Feature set kept identical to the root `app`
+# crate so cargo unifies features across the workspace.
+tauri = { workspace = true }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { workspace = true }
+tokio = { workspace = true }
+tracing = "0.1.37"
+log = "0.4"
+
+# Local-repo libgit2 bindings — only used by `bundle::calculate_ahead_behind`
+# for `graph_ahead_behind`. Feature set mirrors the root crate (vendored
+# libgit2, no https/ssh) so cargo unifies on a single libgit2 build.
+git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
+
+# File system watcher for the repo watch layer. Pinned to notify 8 to unify
+# with `tauri-plugin-fs`'s notify 8 dep — without this the binary ships two
+# parallel notify event-loop trees. We do our own debouncing in
+# `watch/debounce.rs`, so `notify-debouncer-full` is not pulled in.
+notify = { workspace = true }
+crossbeam-channel = "0.5"
+parking_lot = "0.12"
+
+# Shared SQLite driver for `repos/repo_db.rs` + `repos/workspace_db.rs`.
+# Connection plumbing comes from the `database` crate; the driver itself
+# is pulled in here so `rusqlite::params!` and `Row` types resolve.
+rusqlite = { workspace = true }
+
+# Hash + base64 used by `worktree.rs` (deterministic worktree-name hash) and
+# `bundle.rs` (base64-encode bundle bytes for the frontend).
+sha2 = "0.10"
+base64 = { workspace = true }
+uuid = { version = "1", features = ["v4"] }
+dirs = "6.0"
+libc = "0.2"
+reqwest = { workspace = true }

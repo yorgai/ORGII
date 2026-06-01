@@ -1,0 +1,253 @@
+/**
+ * OrgDetailView — Inline-editable detail view for a saved Agent Org.
+ *
+ * Layout mirrors OrgWizard (same `OrgFormSections` body — see that file).
+ * Edits are buffered locally; a sticky Save / Cancel footer appears once
+ * the form is dirty (same UX as the markdown / JSON editors in this app).
+ * Cancel reverts to the persisted value; Save invokes `onOrgSave`.
+ */
+import { useAtomValue } from "jotai";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import TabPill from "@src/components/TabPill";
+import { type TeamMember } from "@src/components/TeamMemberTable";
+import { SECTION_GAP_CLASSES } from "@src/modules/shared/layouts/SectionLayout";
+import {
+  DETAIL_PANEL_TOKENS,
+  DetailPanelContainer,
+  InternalHeader,
+  PanelFooter,
+} from "@src/modules/shared/layouts/blocks";
+import OrgFormSections, {
+  isOrgDraftValid,
+} from "@src/scaffold/WizardSystem/variants/AgentOrg/OrgFormSections";
+import {
+  buildOrgTreeFromMembers,
+  flattenOrgToMembers,
+} from "@src/scaffold/WizardSystem/variants/AgentOrg/orgTree";
+
+import { builtInAgentsAtom } from "../store/builtInAgentsAtom";
+import {
+  type AgentDefinition,
+  type AvailableCliAgent,
+  DEFAULT_HIERARCHY_MODE,
+  type HierarchyMode,
+  type OrgMember,
+} from "../types";
+import { buildAgentOptions } from "./org/config";
+import "./org/index.scss";
+
+interface OrgDetailViewProps {
+  selectedOrg: OrgMember;
+  customAgents: AgentDefinition[];
+  cliAgents: AvailableCliAgent[];
+  onOrgSave: (org: OrgMember) => void | Promise<void>;
+  onOrgDelete: (orgId: string) => void | Promise<void>;
+}
+
+const OrgDetailView: React.FC<OrgDetailViewProps> = ({
+  selectedOrg,
+  customAgents,
+  cliAgents,
+  onOrgSave,
+  onOrgDelete,
+}) => {
+  const { t } = useTranslation("integrations");
+  const builtInAgents = useAtomValue(builtInAgentsAtom);
+
+  const allAgents = useMemo(
+    () => [...builtInAgents, ...customAgents],
+    [builtInAgents, customAgents]
+  );
+
+  const tabs = useMemo(
+    () => [{ key: "core", label: t("agentOrgs.cliAgentDetail.tabCore") }],
+    [t]
+  );
+  const handleCoreTabChange = useCallback(() => {}, []);
+
+  const [orgName, setOrgName] = useState(selectedOrg.name);
+  const [orgDescription, setOrgDescription] = useState(
+    selectedOrg.description ?? ""
+  );
+  const [coordinatorAgentId, setCoordinatorAgentId] = useState(
+    selectedOrg.agentId
+  );
+  const [hierarchyMode, setHierarchyMode] = useState<HierarchyMode>(
+    selectedOrg.hierarchyMode ?? DEFAULT_HIERARCHY_MODE
+  );
+  const [members, setMembers] = useState<TeamMember[]>(() =>
+    flattenOrgToMembers(selectedOrg.children)
+  );
+  const [saving, setSaving] = useState(false);
+  const [membersTab, setMembersTab] = useState<"edit" | "preview">("edit");
+
+  // When the user picks a different org row, reset the local edit buffer.
+  useEffect(() => {
+    setOrgName(selectedOrg.name);
+    setOrgDescription(selectedOrg.description ?? "");
+    setCoordinatorAgentId(selectedOrg.agentId);
+    setHierarchyMode(selectedOrg.hierarchyMode ?? DEFAULT_HIERARCHY_MODE);
+    setMembers(flattenOrgToMembers(selectedOrg.children));
+    setSaving(false);
+  }, [selectedOrg]);
+
+  const agentOptions = useMemo(
+    () => buildAgentOptions(customAgents, builtInAgents, cliAgents),
+    [customAgents, builtInAgents, cliAgents]
+  );
+
+  const persistedMembersJson = useMemo(
+    () => JSON.stringify(flattenOrgToMembers(selectedOrg.children)),
+    [selectedOrg]
+  );
+  const draftMembersJson = useMemo(() => JSON.stringify(members), [members]);
+
+  const previewRoot = useMemo<OrgMember>(
+    () => ({
+      id: selectedOrg.id,
+      name: orgName.trim() || selectedOrg.name,
+      role: "org",
+      agentId: coordinatorAgentId,
+      description: orgDescription.trim() || undefined,
+      hierarchyMode,
+      children: buildOrgTreeFromMembers(members),
+    }),
+    [
+      selectedOrg,
+      orgName,
+      orgDescription,
+      coordinatorAgentId,
+      hierarchyMode,
+      members,
+    ]
+  );
+
+  const persistedDescription = selectedOrg.description ?? "";
+  const persistedHierarchyMode =
+    selectedOrg.hierarchyMode ?? DEFAULT_HIERARCHY_MODE;
+  const isDirty =
+    orgName !== selectedOrg.name ||
+    orgDescription !== persistedDescription ||
+    coordinatorAgentId !== selectedOrg.agentId ||
+    hierarchyMode !== persistedHierarchyMode ||
+    draftMembersJson !== persistedMembersJson;
+
+  const isValid = isOrgDraftValid({ orgName, coordinatorAgentId, members });
+
+  const handleCancel = useCallback(() => {
+    setOrgName(selectedOrg.name);
+    setOrgDescription(selectedOrg.description ?? "");
+    setCoordinatorAgentId(selectedOrg.agentId);
+    setHierarchyMode(selectedOrg.hierarchyMode ?? DEFAULT_HIERARCHY_MODE);
+    setMembers(flattenOrgToMembers(selectedOrg.children));
+  }, [selectedOrg]);
+
+  const handleSave = useCallback(async () => {
+    if (!isValid || saving) return;
+    setSaving(true);
+    try {
+      const trimmedDescription = orgDescription.trim();
+      const next: OrgMember = {
+        id: selectedOrg.id,
+        name: orgName.trim(),
+        role: "org",
+        agentId: coordinatorAgentId,
+        description:
+          trimmedDescription.length > 0 ? trimmedDescription : undefined,
+        hierarchyMode,
+        children: buildOrgTreeFromMembers(members),
+      };
+      await onOrgSave(next);
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    isValid,
+    saving,
+    selectedOrg,
+    orgName,
+    orgDescription,
+    coordinatorAgentId,
+    hierarchyMode,
+    members,
+    onOrgSave,
+  ]);
+
+  const headerTabs = useMemo(
+    () => (
+      <TabPill
+        tabs={tabs}
+        activeTab="core"
+        onChange={handleCoreTabChange}
+        variant="simple"
+        fillWidth={false}
+        size="large"
+      />
+    ),
+    [tabs, handleCoreTabChange]
+  );
+
+  const handleDelete = useCallback(() => {
+    onOrgDelete(selectedOrg.id);
+  }, [onOrgDelete, selectedOrg.id]);
+
+  return (
+    <DetailPanelContainer testId="agent-orgs-org-detail">
+      <InternalHeader
+        noPanelHeader
+        contentPadding
+        className={DETAIL_PANEL_TOKENS.headerWidth}
+        tabs={headerTabs}
+      />
+      <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
+        <div className={DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop}>
+          <div className={SECTION_GAP_CLASSES}>
+            <OrgFormSections
+              orgName={orgName}
+              onOrgNameChange={setOrgName}
+              orgDescription={orgDescription}
+              onOrgDescriptionChange={setOrgDescription}
+              coordinatorAgentId={coordinatorAgentId}
+              onCoordinatorAgentIdChange={setCoordinatorAgentId}
+              hierarchyMode={hierarchyMode}
+              onHierarchyModeChange={setHierarchyMode}
+              members={members}
+              onMembersChange={setMembers}
+              membersTab={membersTab}
+              onMembersTabChange={setMembersTab}
+              agentOptions={agentOptions}
+              allAgents={allAgents}
+              previewRoot={previewRoot}
+              onDelete={handleDelete}
+            />
+          </div>
+        </div>
+      </div>
+      {isDirty && (
+        <PanelFooter
+          secondaryActions={[
+            {
+              label: t("common:actions.cancel"),
+              onClick: handleCancel,
+              disabled: saving,
+              dataTestId: "agent-orgs-org-detail-cancel-button",
+            },
+          ]}
+          primaryAction={{
+            label: saving
+              ? `${t("common:actions.save")}...`
+              : t("common:actions.save"),
+            onClick: handleSave,
+            disabled: !isValid || saving,
+            loading: saving,
+            dataTestId: "agent-orgs-org-detail-save-button",
+          }}
+        />
+      )}
+    </DetailPanelContainer>
+  );
+};
+
+export default OrgDetailView;

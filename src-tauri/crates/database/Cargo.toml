@@ -1,0 +1,21 @@
+[package]
+name = "database"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "SQLite connection plumbing: pool, PRAGMA configuration, DB-file path resolution, and a registration-based schema-init dispatcher that lets the `app` crate own the actual table DDL while leaf crates depend only on this one."
+publish = false
+
+[lib]
+name = "database"
+path = "src/lib.rs"
+
+# Leaf crate: zero `#[tauri::command]` macros and intentionally does not
+# depend on `tauri`. The schema-initialization dispatcher inverts control via
+# `register_sessions_init` / `register_projects_init`, both invoked once from
+# `app`'s `run()` setup.
+[dependencies]
+app_paths = { path = "../app-paths" }
+rusqlite = { workspace = true }
+tracing = "0.1"
+dirs = "6.0"

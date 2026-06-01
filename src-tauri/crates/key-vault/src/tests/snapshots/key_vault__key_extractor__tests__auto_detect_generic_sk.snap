@@ -1,0 +1,10 @@
+---
+source: src/key_vault/tests/key_extractor_tests.rs
+expression: result
+---
+api_key: sk-proj-testkey000000000000000
+base_url: ~
+key_type: unknown
+confidence: high
+notes:
+  - Found unknown key

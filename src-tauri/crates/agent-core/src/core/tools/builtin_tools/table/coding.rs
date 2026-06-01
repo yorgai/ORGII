@@ -1,0 +1,473 @@
+//! Coding-category tool entries.
+
+use super::aliases::*;
+use super::macros::action_sub;
+
+pub(super) static TOOLS: &[ToolEntry] = &[
+    // ── Coding (shared) ──
+    ToolEntry {
+        name: tool_names::READ_FILE,
+        description: "Read the contents of a file.",
+        description_detail: "Reads text from a workspace-relative or absolute file path. Honors repository boundaries and configured size limits where applicable. Use before editing, for code review, or to pull excerpts into the conversation.",
+        category: tool_categories::CODING,
+        icon_id: "file-text",
+        simulator_app: AppCode,
+        app_subtool: FileRead,
+        chat_block: CbReadFile,
+        human_tool_key: Some(HtCode),
+        action_icons: &[
+            ("read_image", "image"),
+            ("read_pdf", "file-box"),
+        ],
+        label_running: "tools.readFileRunning",
+        label_done: "tools.readFileDone",
+        label_failed: "tools.readFileFailed",
+        actions: &[
+            action_sub!("read_text", "Read text file contents with optional line range", FileRead, labels: "tools.readTextRunning", "tools.readTextDone", "tools.readTextFailed"),
+            action_sub!("read_image", "Read image file into context for vision analysis", FileRead, labels: "tools.readImageRunning", "tools.readImageDone", "tools.readImageFailed"),
+            action_sub!("read_pdf", "Extract text from a PDF document", FileRead, labels: "tools.readPdfRunning", "tools.readPdfDone", "tools.readPdfFailed"),
+        ],
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::LIST_DIR,
+        description: "List files and directories in a given path.",
+        description_detail: "Enumerates entries under a directory with optional filtering. Helps map project layout, find configuration files, or choose targets for search and edits without opening every file.",
+        category: tool_categories::CODING,
+        icon_id: "folder-open",
+        simulator_app: AppCode,
+        app_subtool: Explore,
+        chat_block: CbExplore,
+        human_tool_key: Some(HtCode),
+        label_running: "tools.listDirRunning",
+        label_done: "tools.listDirDone",
+        label_failed: "tools.listDirFailed",
+        actions: &[
+            action_sub!("list", "List files and subdirectories at a given path", Explore, labels: "tools.listDirListRunning", "tools.listDirListDone", "tools.listDirListFailed"),
+        ],
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::RUN_SHELL,
+        description: "Execute a shell command (subprocess or PTY).",
+        description_detail: "Runs shell commands with captured stdout, stderr, and exit status, or attaches to a pseudo-terminal for interactive-style programs. Use for builds, tests, package managers, and scripts according to agent policy.",
+        category: tool_categories::CODING,
+        icon_id: "terminal",
+        simulator_app: AppCode,
+        app_subtool: Shell,
+        chat_block: CbShell,
+        human_tool_key: Some(Terminal),
+        label_running: "tools.runShellRunning",
+        label_done: "tools.runShellDone",
+        label_failed: "tools.runShellFailed",
+        status_labels: &[
+            ("background", "tools.shellStatus.background"),
+            ("exited", "tools.shellStatus.exited"),
+            ("killed", "tools.shellStatus.killed"),
+        ],
+        actions: &[
+            action_sub!(
+                "run",
+                "Execute a shell command and capture output",
+                Shell,
+                labels: "tools.runShellRunRunning", "tools.runShellRunDone", "tools.runShellRunFailed"
+            ),
+            action_sub!(
+                "kill",
+                "Kill a backgrounded process by handle (SIGTERM + SIGKILL)",
+                Shell,
+                labels: "tools.killProcessRunning", "tools.killProcessDone", "tools.killProcessFailed"
+            ),
+        ],
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::AWAIT_OUTPUT,
+        description: "Monitor background jobs (shell processes and subagents).",
+        description_detail: "Multi-command tool for monitoring backgrounded processes and subagents. Supports blocking wait_for with regex matching, non-blocking monitor snapshots, and session-scoped job listing.",
+        category: tool_categories::CODING,
+        // `wait_for` keeps the default `timer` icon (it counts down). The other
+        // two subcommands map to dedicated icons via `action_icons` below so
+        // the chat-history row visually distinguishes "snapshot one task"
+        // (focus) from "list all tasks" (list-tree).
+        icon_id: "timer",
+        simulator_app: AppCode,
+        app_subtool: Shell,
+        action_icons: &[
+            ("monitor", "focus"),
+            ("list", "list-tree"),
+        ],
+        // Tool-level default: each subcommand action overrides chat_block below.
+        // `wait_for` / `monitor` render as TitleOnly rows (icon + title + subtitle,
+        // no body); `list` renders via the Explore/ToolCallBlock stack list to
+        // reuse the `manage_workspace > list` geometry.
+        chat_block: CbTitleOnly,
+        human_tool_key: Some(Terminal),
+        // Fallback labels (used when action is not supplied — rare, since
+        // every call specifies `command`). Action-specific labels below
+        // carry the real wording.
+        label_running: "tools.awaitOutputRunning",
+        label_done: "tools.awaitOutputDone",
+        label_failed: "tools.awaitOutputFailed",
+        status_labels: &[
+            ("pattern_matched", "tools.awaitOutputPatternMatched"),
+            ("keep_waiting", "tools.awaitOutputKeepWaiting"),
+            ("still_running", "tools.awaitOutputStillRunning"),
+            ("killed", "tools.awaitOutputKilled"),
+            ("not_found", "tools.awaitOutputNotFound"),
+        ],
+        actions: &[
+            action_sub!(
+                "wait_for",
+                "Block until a regex pattern matches, the job completes, or the timeout elapses",
+                Shell,
+                chat: CbTitleOnly,
+                labels: "tools.awaitOutputWaitForRunning", "tools.awaitOutputWaitForDone", "tools.awaitOutputWaitForFailed"
+            ),
+            action_sub!(
+                "monitor",
+                "Non-blocking snapshot of a background job (current status + last N lines)",
+                Shell,
+                chat: CbTitleOnly,
+                labels: "tools.awaitOutputMonitorRunning", "tools.awaitOutputMonitorDone", "tools.awaitOutputMonitorFailed"
+            ),
+            action_sub!(
+                "list",
+                "List all background jobs for this session",
+                Explore,
+                chat: CbFallback,
+                labels: "tools.awaitOutputListRunning", "tools.awaitOutputListDone", "tools.awaitOutputListFailed"
+            ),
+        ],
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::CODE_SEARCH,
+        description: "Code and file search via ripgrep + glob.",
+        description_detail: "Fast content search backed by ripgrep with optional path scopes and glob patterns. Locates symbols, literals, and regex patterns across the codebase for navigation and impact analysis.",
+        category: tool_categories::CODING,
+        icon_id: "search",
+        simulator_app: AppCode,
+        app_subtool: SubSearch,
+        chat_block: CbSearch,
+        human_tool_key: Some(HtCode),
+        action_icons: &[
+            ("find_files", "folder-search"),
+            ("check_status", "activity"),
+        ],
+        label_running: "tools.searchGrepRunning",
+        label_done: "tools.searchGrepDone",
+        label_failed: "tools.searchGrepFailed",
+        actions: &[
+            action_sub!("grep", "Regex content search via ripgrep", SubSearch, labels: "tools.searchGrepRunning", "tools.searchGrepDone", "tools.searchGrepFailed"),
+            action_sub!("find_files", "Fuzzy file name search", SubGlob, chat: CbGlob, labels: "tools.searchFindFilesRunning", "tools.searchFindFilesDone", "tools.searchFindFilesFailed"),
+            action_sub!("glob", "True glob pattern matching (e.g. src/**/*.ts)", SubGlob, chat: CbGlob, labels: "tools.searchGlobRunning", "tools.searchGlobDone", "tools.searchGlobFailed"),
+            action_sub!("symbols", "Search for code symbols (functions, classes, types)", SubSearch, labels: "tools.searchSymbolsRunning", "tools.searchSymbolsDone", "tools.searchSymbolsFailed"),
+            action_sub!("check_status", "Check search status for a repository", OtherTool, chat: CbFallback, labels: "tools.searchCheckStatusRunning", "tools.searchCheckStatusDone", "tools.searchCheckStatusFailed"),
+        ],
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::MANAGE_WORKSPACE,
+        description: "Manage orgii workspaces (git repos and work folders) tracked by the IDE.",
+        description_detail: "Unified tool for listing, adding, cloning, creating, and removing workspaces. Actions: `list` enumerates tracked workspaces (names, paths, kinds); `add` registers an existing directory (auto-detects git vs folder, runs git init if needed); `clone` clones a remote git URL into a target dir; `create` creates a brand-new workspace (git=true|false); `remove` unregisters a workspace without touching files on disk.",
+        category: tool_categories::CODING,
+        icon_id: "folder-git-2",
+        simulator_app: AppCode,
+        app_subtool: Explore,
+        // CbFallback routes to ToolCallBlock which has a dedicated
+        // `ListWorkspacesOutput` styled renderer (Code2 icon for git repos,
+        // Folder icon for plain folders). All actions share the same
+        // `[kind] name → path` line format, so the single renderer works
+        // uniformly across every sub-action — add/clone/create/remove emit a
+        // single-entry list representing the changed workspace.
+        chat_block: CbFallback,
+        human_tool_key: Some(HtCode),
+        label_running: "tools.manageWorkspaceListRunning",
+        label_done: "tools.manageWorkspaceListDone",
+        label_failed: "tools.manageWorkspaceListFailed",
+        action_icons: &[
+            ("list", "folder-git-2"),
+            ("add", "folder-plus"),
+            ("clone", "git-branch"),
+            ("create", "folder-pen"),
+            ("remove", "folder-minus"),
+        ],
+        actions: &[
+            action_sub!("list", "List all tracked workspaces with paths and kinds", Explore, chat: CbFallback, labels: "tools.manageWorkspaceListRunning", "tools.manageWorkspaceListDone", "tools.manageWorkspaceListFailed"),
+            action_sub!(
+                "add",
+                "Register an existing local directory as a workspace (auto-detects git vs folder, runs git init if needed)",
+                Explore,
+                chat: CbFallback,
+                labels: "tools.manageWorkspaceAddRunning",
+                "tools.manageWorkspaceAddDone",
+                "tools.manageWorkspaceAddFailed"
+            ),
+            action_sub!(
+                "clone",
+                "Clone a remote git repository into target_dir/<name> and register it",
+                Explore,
+                chat: CbFallback,
+                labels: "tools.manageWorkspaceCloneRunning",
+                "tools.manageWorkspaceCloneDone",
+                "tools.manageWorkspaceCloneFailed"
+            ),
+            action_sub!(
+                "create",
+                "Create a new empty workspace (git=true by default; set git=false for a plain folder)",
+                Explore,
+                chat: CbFallback,
+                labels: "tools.manageWorkspaceCreateRunning",
+                "tools.manageWorkspaceCreateDone",
+                "tools.manageWorkspaceCreateFailed"
+            ),
+            action_sub!(
+                "remove",
+                "Unregister a workspace by path or repo_id (files on disk are preserved)",
+                Explore,
+                chat: CbFallback,
+                labels: "tools.manageWorkspaceRemoveRunning",
+                "tools.manageWorkspaceRemoveDone",
+                "tools.manageWorkspaceRemoveFailed"
+            ),
+        ],
+        ..DEFAULT_TOOL_ENTRY
+    },
+    // ── Coding (SDE-primary; also registered on OS) ──
+    ToolEntry {
+        name: tool_names::EDIT_FILE,
+        description: "Create, overwrite, or edit files with fuzzy search-and-replace.",
+        description_detail: "Unified file editing tool with two modes:\n\n\
+             **Create/Overwrite mode**: Provide `file_path` + `content` to create a new file or overwrite an existing one. Creates parent directories automatically.\n\n\
+             **Edit mode**: Provide `file_path` + `old_string` + `new_string` for surgical search-and-replace. Uses 9 fuzzy matching strategies (whitespace, indentation, escapes) so minor formatting differences resolve automatically.",
+        category: tool_categories::CODING,
+        icon_id: "file-pen-line",
+        simulator_app: AppCode,
+        app_subtool: FileWrite,
+        chat_block: CbDiff,
+        human_tool_key: Some(HtCode),
+        label_running: "tools.editFileRunning",
+        label_done: "tools.editFileDone",
+        label_failed: "tools.editFileFailed",
+        actions: &[
+            action_sub!("create", "Create a new file with full content", FileWrite, labels: "tools.editFileCreateRunning", "tools.editFileCreateDone", "tools.editFileCreateFailed"),
+            action_sub!("overwrite", "Replace entire file contents", FileWrite, labels: "tools.editFileOverwriteRunning", "tools.editFileOverwriteDone", "tools.editFileOverwriteFailed"),
+            action_sub!("edit", "Apply a search-and-replace edit with fuzzy matching", FileWrite, labels: "tools.editFileEditRunning", "tools.editFileEditDone", "tools.editFileEditFailed"),
+        ],
+        required_capability: CapCoding,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::DELETE_FILE,
+        description: "Delete a single file from the workspace.",
+        description_detail: "Deletes exactly one file after workspace sandbox validation. Refuses to delete directories. Use apply_patch for coordinated multi-file patch workflows.",
+        category: tool_categories::CODING,
+        icon_id: "trash-2",
+        simulator_app: AppCode,
+        app_subtool: FileWrite,
+        chat_block: CbDiff,
+        human_tool_key: Some(HtCode),
+        label_running: "tools.deleteFileRunning",
+        label_done: "tools.deleteFileDone",
+        label_failed: "tools.deleteFileFailed",
+        actions: &[
+            action_sub!("delete", "Delete a single file", FileWrite, labels: "tools.deleteFileDeleteRunning", "tools.deleteFileDeleteDone", "tools.deleteFileDeleteFailed"),
+        ],
+        required_capability: CapCoding,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::APPLY_PATCH,
+        description: "Apply structured multi-file patches.",
+        description_detail: "Applies structured patch payloads across one or many paths in one step. Use for coordinated file changes that mirror patch- or diff-style workflows.",
+        category: tool_categories::CODING,
+        icon_id: "file-diff",
+        simulator_app: AppCode,
+        app_subtool: FileWrite,
+        chat_block: CbDiff,
+        human_tool_key: Some(HtCode),
+        label_running: "tools.applyPatchRunning",
+        label_done: "tools.applyPatchDone",
+        label_failed: "tools.applyPatchFailed",
+        actions: &[
+            action_sub!("apply", "Apply a structured multi-file patch", FileWrite, labels: "tools.applyPatchApplyRunning", "tools.applyPatchApplyDone", "tools.applyPatchApplyFailed"),
+        ],
+        required_capability: CapCoding,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::QUERY_LSP,
+        description: "Query language servers for diagnostics, completions, and symbols.",
+        description_detail: "Talks to installed Language Servers for diagnostics, completions, definitions, references, and document symbols. Grounds edits in real type and project structure.",
+        category: tool_categories::CODING,
+        icon_id: "braces",
+        simulator_app: AppCode,
+        app_subtool: Explore,
+        chat_block: CbExplore,
+        human_tool_key: Some(HtCode),
+        label_running: "tools.queryLspRunning",
+        label_done: "tools.queryLspDone",
+        label_failed: "tools.queryLspFailed",
+        actions: &[
+            action_sub!("diagnostics", "Get lint/type errors for one or more files/directories", Explore, labels: "tools.queryLspDiagnosticsRunning", "tools.queryLspDiagnosticsDone", "tools.queryLspDiagnosticsFailed"),
+            action_sub!("definition", "Go to definition at a position", Explore, labels: "tools.queryLspDefinitionRunning", "tools.queryLspDefinitionDone", "tools.queryLspDefinitionFailed"),
+            action_sub!("references", "Find all references of a symbol", Explore, labels: "tools.queryLspReferencesRunning", "tools.queryLspReferencesDone", "tools.queryLspReferencesFailed"),
+            action_sub!("hover", "Get type info and documentation at a position", Explore, labels: "tools.queryLspHoverRunning", "tools.queryLspHoverDone", "tools.queryLspHoverFailed"),
+        ],
+        required_capability: CapCoding,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::MANAGE_LSP,
+        description: "Inspect, configure, and control installed language servers.",
+        description_detail: "Lists supported language servers, reports installed and running status, returns install or uninstall commands, toggles workspace enablement, and starts or stops LSP processes. It does not execute package manager commands directly.",
+        category: tool_categories::CODING,
+        icon_id: "braces",
+        simulator_app: AppCode,
+        app_subtool: OtherTool,
+        chat_block: CbFallback,
+        human_tool_key: Some(HtCode),
+        label_running: "tools.manageLspRunning",
+        label_done: "tools.manageLspDone",
+        label_failed: "tools.manageLspFailed",
+        actions: &[
+            action_sub!("list", "List supported servers with installed, running, and workspace-enabled status", OtherTool, labels: "tools.manageLspListRunning", "tools.manageLspListDone", "tools.manageLspListFailed"),
+            action_sub!("running", "List currently running language servers", OtherTool, labels: "tools.manageLspRunningRunning", "tools.manageLspRunningDone", "tools.manageLspRunningFailed"),
+            action_sub!("status", "Inspect one language server in detail", OtherTool, labels: "tools.manageLspStatusRunning", "tools.manageLspStatusDone", "tools.manageLspStatusFailed"),
+            action_sub!("install_command", "Return the command needed to install a language server", OtherTool, labels: "tools.manageLspInstallCommandRunning", "tools.manageLspInstallCommandDone", "tools.manageLspInstallCommandFailed"),
+            action_sub!("uninstall_command", "Return the command needed to uninstall a language server", OtherTool, labels: "tools.manageLspUninstallCommandRunning", "tools.manageLspUninstallCommandDone", "tools.manageLspUninstallCommandFailed"),
+            action_sub!("enable", "Enable a language server for the workspace", OtherTool, labels: "tools.manageLspEnableRunning", "tools.manageLspEnableDone", "tools.manageLspEnableFailed"),
+            action_sub!("disable", "Disable a language server for the workspace", OtherTool, labels: "tools.manageLspDisableRunning", "tools.manageLspDisableDone", "tools.manageLspDisableFailed"),
+            action_sub!("start", "Start a language server process", OtherTool, labels: "tools.manageLspStartRunning", "tools.manageLspStartDone", "tools.manageLspStartFailed"),
+            action_sub!("stop", "Stop a language server process", OtherTool, labels: "tools.manageLspStopRunning", "tools.manageLspStopDone", "tools.manageLspStopFailed"),
+        ],
+        required_capability: CapCoding,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::MANAGE_TODO,
+        description: "Session-scoped task tracking (write and read todo lists).",
+        description_detail: "Creates, updates, and reads in-session todo items for plans, checklists, and progress tracking visible across turns.",
+        category: tool_categories::CODING,
+        icon_id: "list-todo",
+        simulator_app: AppChannels,
+        app_subtool: SubTodo,
+        chat_block: CbTodo,
+        label_running: "tools.manageTodoRunning",
+        label_done: "tools.manageTodoDone",
+        label_failed: "tools.manageTodoFailed",
+        actions: &[
+            action_sub!("write", "Replace the entire todo list for this session", SubTodo, labels: "tools.manageTodoWriteRunning", "tools.manageTodoWriteDone", "tools.manageTodoWriteFailed"),
+            action_sub!("read", "Fetch the current todo list", SubTodo, labels: "tools.manageTodoReadRunning", "tools.manageTodoReadDone", "tools.manageTodoReadFailed"),
+        ],
+        required_capability: CapCoding,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    // ── Plan mode — Cursor-style non-blocking plan approval ──
+    ToolEntry {
+        name: tool_names::CREATE_PLAN,
+        description: "Write the session plan document and submit it for review.",
+        description_detail: "Only available in Plan mode. In a top-level session or coordinator turn, this submits the plan to the user-facing Build approval surface. In a non-coordinator Agent Org member turn, this submits a typed plan approval request to the coordinator inbox. Calling again with the same title overwrites the same file; pass `new_plan: true` to rotate the slug.",
+        category: tool_categories::CODING,
+        icon_id: "clipboard-list",
+        simulator_app: AppChannels,
+        app_subtool: OtherInteractions,
+        chat_block: CbPlanDoc,
+        label_running: "tools.createPlanRunning",
+        label_done: "tools.createPlanDone",
+        label_failed: "tools.createPlanFailed",
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::SETUP_REPO,
+        description: "Report setup status and environment variables to the App Launcher.",
+        description_detail: "Surfaces detected runtimes, dependency state, and relevant environment variables to the App Launcher for onboarding and reproducible dev setup.",
+        category: tool_categories::CODING,
+        icon_id: "folder-cog",
+        simulator_app: AppCode,
+        app_subtool: OtherTool,
+        chat_block: CbFallback,
+        label_running: "tools.setupRepoRunning",
+        label_done: "tools.setupRepoDone",
+        label_failed: "tools.setupRepoFailed",
+        actions: &[
+            action_sub!("report_status", "Report detected runtimes and dependency state", OtherTool, labels: "tools.setupRepoReportStatusRunning", "tools.setupRepoReportStatusDone", "tools.setupRepoReportStatusFailed"),
+            action_sub!("update_env", "Update environment variable configuration", OtherTool, labels: "tools.setupRepoUpdateEnvRunning", "tools.setupRepoUpdateEnvDone", "tools.setupRepoUpdateEnvFailed"),
+            action_sub!("add_env_vars", "Add new environment variables to the setup", OtherTool, labels: "tools.setupRepoAddEnvVarsRunning", "tools.setupRepoAddEnvVarsDone", "tools.setupRepoAddEnvVarsFailed"),
+        ],
+        required_capability: CapCoding,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::WORKTREE,
+        description: "Manage git worktrees for isolated parallel work.",
+        description_detail: "Creates and manages git worktrees so the agent can work on a branch in an isolated checkout without disturbing the main workspace. Useful for parallel session sandboxing and safe refactors.",
+        category: tool_categories::CODING,
+        icon_id: "git-branch",
+        simulator_app: AppCode,
+        app_subtool: OtherTool,
+        chat_block: CbFallback,
+        human_tool_key: Some(HtCode),
+        action_icons: &[],
+        label_running: "tools.worktreeRunning",
+        label_done: "tools.worktreeDone",
+        label_failed: "tools.worktreeFailed",
+        actions: &[
+            action_sub!("add", "Create a worktree for a branch and switch into it", OtherTool,
+                labels: "tools.worktreeAddRunning", "tools.worktreeAddDone", "tools.worktreeAddFailed"),
+            action_sub!("leave", "Leave the current worktree and return to the main workspace", OtherTool,
+                labels: "tools.worktreeLeaveRunning", "tools.worktreeLeaveDone", "tools.worktreeLeaveFailed"),
+            action_sub!("list", "Show all active worktrees for the repository", OtherTool, labels: "tools.worktreeListRunning", "tools.worktreeListDone", "tools.worktreeListFailed"),
+        ],
+        required_capability: CapCoding,
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::RENDER_INLINE_CANVAS,
+        description: "Render interactive UI inline in the chat panel.",
+        description_detail: "Displays an interactive preview card directly in the chat stream. \
+            Supports three modes: \"html\" (self-contained HTML/SVG/CSS rendered in a sandboxed iframe), \
+            \"url\" (HTTPS URL embedded in an iframe), and \"a2ui\" (structured JSONL element stream \
+            for headings, text, code blocks, images, buttons, and lists). \
+            Available to both SDE Agent and OS Agent.",
+        category: tool_categories::CODING,
+        icon_id: "layout",
+        simulator_app: AppCode,
+        app_subtool: OtherTool,
+        chat_block: CbFallback,
+        label_running: "tools.renderInlineCanvasRunning",
+        label_done: "tools.renderInlineCanvasDone",
+        label_failed: "tools.renderInlineCanvasFailed",
+        actions: &[
+            action_sub!("html", "Render a self-contained HTML/SVG/CSS snippet", OtherTool, labels: "tools.renderInlineCanvasHtmlRunning", "tools.renderInlineCanvasHtmlDone", "tools.renderInlineCanvasHtmlFailed"),
+            action_sub!("url", "Embed an HTTPS URL in a sandboxed iframe", OtherTool, labels: "tools.renderInlineCanvasUrlRunning", "tools.renderInlineCanvasUrlDone", "tools.renderInlineCanvasUrlFailed"),
+            action_sub!("a2ui", "Stream typed UI elements (heading, text, code, image, button, list)", OtherTool, labels: "tools.renderInlineCanvasA2uiRunning", "tools.renderInlineCanvasA2uiDone", "tools.renderInlineCanvasA2uiFailed"),
+        ],
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
+        name: tool_names::MANAGE_FILE_HISTORY,
+        description: "Inspect and rewind file-history snapshots for this session.",
+        description_detail: "Lists captured snapshots and their files. \
+            Use `rewind` to restore all files to their state before a given \
+            message — this undoes every agent file edit since that point. \
+            Use `redo` to re-apply the most recent rewind if a redo snapshot exists.",
+        category: tool_categories::CODING,
+        icon_id: "history",
+        simulator_app: AppCode,
+        app_subtool: OtherTool,
+        chat_block: CbFallback,
+        human_tool_key: Some(HtCode),
+        label_running: "tools.manageFileHistoryRunning",
+        label_done: "tools.manageFileHistoryDone",
+        label_failed: "tools.manageFileHistoryFailed",
+        actions: &[
+            action_sub!("list", "List all snapshots for this session", OtherTool, labels: "tools.manageFileHistoryListRunning", "tools.manageFileHistoryListDone", "tools.manageFileHistoryListFailed"),
+            action_sub!("rewind", "Revert all files to their state before a message", OtherTool, labels: "tools.manageFileHistoryRewindRunning", "tools.manageFileHistoryRewindDone", "tools.manageFileHistoryRewindFailed"),
+            action_sub!("redo", "Re-apply the most recent rewind", OtherTool, labels: "tools.manageFileHistoryRedoRunning", "tools.manageFileHistoryRedoDone", "tools.manageFileHistoryRedoFailed"),
+        ],
+        required_capability: CapCoding,
+        ..DEFAULT_TOOL_ENTRY
+    },
+];

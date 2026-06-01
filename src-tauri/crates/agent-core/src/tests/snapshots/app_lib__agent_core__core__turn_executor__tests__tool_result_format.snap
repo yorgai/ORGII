@@ -1,0 +1,8 @@
+---
+source: src/agent_core/tests/processor_tests.rs
+expression: "messages[0]"
+---
+content: file contents here
+name: read_file
+role: tool
+tool_call_id: tc-1

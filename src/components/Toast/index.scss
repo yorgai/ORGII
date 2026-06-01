@@ -1,0 +1,154 @@
+/**
+ * Toast/Message Styles
+ * 
+ */
+
+.toast-container {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.toast-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 300px;
+  max-width: 500px;
+  padding: 12px 16px;
+  background: var(--color-bg-2);
+  border: 1px solid var(--color-border-2);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: auto;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-1);
+  backdrop-filter: blur(10px);
+
+  // Type variants
+  &-success {
+    border-color: color-mix(in srgb, var(--color-success-6) 30%, transparent);
+
+    .toast-icon {
+      color: var(--color-success-6);
+    }
+  }
+
+  &-error {
+    border-color: color-mix(in srgb, var(--color-danger-6) 30%, transparent);
+
+    .toast-icon {
+      color: var(--color-danger-6);
+    }
+  }
+
+  &-warning {
+    border-color: color-mix(in srgb, var(--color-warning-6) 30%, transparent);
+
+    .toast-icon {
+      color: var(--color-warning-6);
+    }
+  }
+
+  &-info {
+    border-color: color-mix(in srgb, var(--color-primary-6) 30%, transparent);
+
+    .toast-icon {
+      color: var(--color-primary-6);
+    }
+  }
+
+  // Animations
+  &-enter {
+    animation: toast-slide-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  &-exit {
+    animation: toast-slide-out 0.3s cubic-bezier(0.4, 0, 1, 1);
+  }
+}
+
+.toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+
+  svg {
+    font-size: 18px;
+  }
+}
+
+.toast-content {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.toast-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin-left: 8px;
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  color: var(--color-text-3);
+  font-size: 14px;
+  border-radius: 4px;
+  transition: all 0.1s;
+
+  &:hover {
+    background-color: var(--color-fill-2);
+    color: var(--color-text-2);
+  }
+
+  svg {
+    font-size: 14px;
+  }
+}
+
+// Animations
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-slide-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+}
+
+// Note: Light/dark mode is handled by theme-aware CSS variables
+// (--color-bg-2, --color-text-1, etc.) which change based on
+// the active theme stylesheet, not OS preference.

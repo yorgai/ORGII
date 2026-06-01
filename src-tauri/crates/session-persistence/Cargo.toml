@@ -1,0 +1,43 @@
+[package]
+name = "session_persistence"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Session-specific CRUD on top of the shared `database::db` connection
+# (sessions.db). Owns ~23 `#[tauri::command]`s that the `app` crate
+# re-registers from `commands/handler_list.inc` via the bare
+# `session_persistence::…` path. Wires concrete impls into
+# `agent_core::foundation::{db_bridge, session_bridge}` via
+# `agent_core_bridge::register()` so agent_core's memory / consolidation /
+# reflection / rollback paths can persist state without a back-edge.
+# Pure leaf — no back-edges into `app`.
+
+[lib]
+name = "session_persistence"
+path = "src/lib.rs"
+
+[dependencies]
+# Workspace crates this depends on
+agent_core = { path = "../agent-core" }
+app_paths = { path = "../app-paths" }
+database = { path = "../database" }
+git = { path = "../git" }
+
+# Tauri runtime (for the 23 `#[tauri::command]`s) + tokio for the
+# `spawn_blocking` calls that gate sqlite access off the async runtime.
+tauri = { workspace = true }
+tokio = { workspace = true }
+
+# SQLite
+rusqlite = { workspace = true }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+
+# Date/time
+chrono = { workspace = true }
+
+# Logging
+tracing = "0.1"

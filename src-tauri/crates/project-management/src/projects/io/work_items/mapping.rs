@@ -1,0 +1,224 @@
+//! Frontmatter ↔ row mapping helpers shared by the CRUD and atomic
+//! write paths.
+//!
+//! `workitems` (hot columns) + `workitem_labels` (m:n) + `workitem_extras`
+//! (JSON blob) together represent one `WorkItemFrontmatter`. This module
+//! owns the conversion in both directions and the small `ConnectionLike`
+//! trait that lets read helpers run against either a bare `Connection`
+//! or an active `Transaction` without duplicate call sites.
+
+use rusqlite::{params, OptionalExtension};
+
+use super::super::helpers::{map_db, to_iso8601};
+use super::extras::ExtrasPayload;
+use crate::projects::types::{WorkItemData, WorkItemFrontmatter};
+
+/// Hot columns selected from `workitems` for a single work item.
+pub(super) struct WorkItemCore {
+    pub work_item_id: String,
+    pub short_id: String,
+    pub title: String,
+    pub body: String,
+    pub status: String,
+    pub priority: String,
+    pub assignee: Option<String>,
+    pub assignee_type: Option<String>,
+    pub milestone: Option<String>,
+    pub parent: Option<String>,
+    pub start_date: Option<String>,
+    pub target_date: Option<String>,
+    pub created_at_ms: i64,
+    pub updated_at_ms: i64,
+    pub deleted_at_ms: Option<i64>,
+}
+
+/// Map a `workitems` row (in the canonical hot-column order) into a
+/// `WorkItemCore`. Callers must select columns in the order used by
+/// `read_all_work_items` / `read_work_item` for this to be valid.
+pub(super) fn row_to_core(row: &rusqlite::Row<'_>) -> rusqlite::Result<WorkItemCore> {
+    Ok(WorkItemCore {
+        work_item_id: row.get(0)?,
+        short_id: row.get(1)?,
+        title: row.get(2)?,
+        body: row.get::<_, Option<String>>(3)?.unwrap_or_default(),
+        status: row.get(4)?,
+        priority: row.get(5)?,
+        assignee: row.get(6)?,
+        assignee_type: row.get(7)?,
+        milestone: row.get(8)?,
+        parent: row.get(9)?,
+        start_date: row.get(10)?,
+        target_date: row.get(11)?,
+        created_at_ms: row.get(12)?,
+        updated_at_ms: row.get(13)?,
+        deleted_at_ms: row.get(14)?,
+    })
+}
+
+/// Combine the hot row, label set, and extras blob into a full
+/// `WorkItemData`.
+pub(super) fn assemble_work_item(
+    project_id: &str,
+    core: WorkItemCore,
+    labels: Vec<String>,
+    extras: ExtrasPayload,
+) -> WorkItemData {
+    let frontmatter = WorkItemFrontmatter {
+        id: core.work_item_id,
+        short_id: core.short_id.clone(),
+        title: core.title,
+        project: Some(project_id.to_string()),
+        status: core.status,
+        priority: core.priority,
+        assignee: core.assignee,
+        assignee_type: core.assignee_type,
+        labels,
+        milestone: core.milestone,
+        parent: core.parent,
+        start_date: core.start_date,
+        target_date: core.target_date,
+        created_by: extras.created_by,
+        created_at: to_iso8601(core.created_at_ms),
+        updated_at: to_iso8601(core.updated_at_ms),
+        deleted_at: core.deleted_at_ms.map(to_iso8601),
+        starred: extras.starred,
+        todos: extras.todos,
+        comments: extras.comments,
+        history: extras.history,
+        delegations: extras.delegations,
+        linked_sessions: extras.linked_sessions,
+        proof_of_work: extras.proof_of_work,
+        orchestrator_config: extras.orchestrator_config,
+        orchestrator_state: extras.orchestrator_state,
+        follow_up_items: extras.follow_up_items,
+        schedule: extras.schedule,
+        routine_source: extras.routine_source,
+    };
+    WorkItemData {
+        frontmatter,
+        body: core.body,
+        filename: core.short_id,
+    }
+}
+
+pub(super) fn read_labels_for<C>(connection: &C, work_item_id: &str) -> Result<Vec<String>, String>
+where
+    C: ConnectionLike,
+{
+    connection.query_string_rows(
+        "SELECT label_id FROM workitem_labels WHERE work_item_id = ?1 ORDER BY label_id",
+        params![work_item_id],
+    )
+}
+
+pub(super) fn read_extras_for<C>(
+    connection: &C,
+    work_item_id: &str,
+) -> Result<ExtrasPayload, String>
+where
+    C: ConnectionLike,
+{
+    let raw = connection.query_row_optional(
+        "SELECT extras_json FROM workitem_extras WHERE work_item_id = ?1",
+        params![work_item_id],
+        |row| row.get::<_, String>(0),
+    )?;
+    // Silent fallback to `ExtrasPayload::default()` on a corrupt row
+    // is a data-loss path: the orchestrator/atomic mutators read this
+    // payload, mutate it, then write it back — overwriting the corrupt
+    // row with a default that has no `field_revisions` / `external_refs`
+    // / `orchestrator_state`. Warn so DB corruption / schema drift is
+    // visible before the next mutator overwrites the recoverable row.
+    let extras = match raw.as_deref() {
+        Some(json) => match serde_json::from_str::<ExtrasPayload>(json) {
+            Ok(v) => v,
+            Err(err) => {
+                tracing::warn!(
+                    work_item_id = %work_item_id,
+                    error = %err,
+                    raw_len = json.len(),
+                    "work_items::read_extras_for: extras_json parse failed; using empty extras (next mutator will OVERWRITE this row)"
+                );
+                ExtrasPayload::default()
+            }
+        },
+        None => ExtrasPayload::default(),
+    };
+    Ok(extras)
+}
+
+/// Minimal abstraction over `Connection` and `Transaction` so read
+/// helpers don't need two implementations. `rusqlite` doesn't ship one,
+/// so we keep scope to the two operations actually needed here.
+pub(super) trait ConnectionLike {
+    fn query_row_optional<T, F>(
+        &self,
+        sql: &str,
+        params: &[&dyn rusqlite::ToSql],
+        mapper: F,
+    ) -> Result<Option<T>, String>
+    where
+        F: FnOnce(&rusqlite::Row<'_>) -> rusqlite::Result<T>;
+
+    fn query_string_rows(
+        &self,
+        sql: &str,
+        params: &[&dyn rusqlite::ToSql],
+    ) -> Result<Vec<String>, String>;
+}
+
+impl ConnectionLike for rusqlite::Connection {
+    fn query_row_optional<T, F>(
+        &self,
+        sql: &str,
+        params: &[&dyn rusqlite::ToSql],
+        mapper: F,
+    ) -> Result<Option<T>, String>
+    where
+        F: FnOnce(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+    {
+        map_db(self.query_row(sql, params, mapper).optional())
+    }
+
+    fn query_string_rows(
+        &self,
+        sql: &str,
+        params: &[&dyn rusqlite::ToSql],
+    ) -> Result<Vec<String>, String> {
+        let mut stmt = map_db(self.prepare(sql))?;
+        let rows = map_db(stmt.query_map(params, |row| row.get::<_, String>(0)))?;
+        let mut out = Vec::new();
+        for entry in rows {
+            out.push(map_db(entry)?);
+        }
+        Ok(out)
+    }
+}
+
+impl ConnectionLike for rusqlite::Transaction<'_> {
+    fn query_row_optional<T, F>(
+        &self,
+        sql: &str,
+        params: &[&dyn rusqlite::ToSql],
+        mapper: F,
+    ) -> Result<Option<T>, String>
+    where
+        F: FnOnce(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+    {
+        map_db(self.query_row(sql, params, mapper).optional())
+    }
+
+    fn query_string_rows(
+        &self,
+        sql: &str,
+        params: &[&dyn rusqlite::ToSql],
+    ) -> Result<Vec<String>, String> {
+        let mut stmt = map_db(self.prepare(sql))?;
+        let rows = map_db(stmt.query_map(params, |row| row.get::<_, String>(0)))?;
+        let mut out = Vec::new();
+        for entry in rows {
+            out.push(map_db(entry)?);
+        }
+        Ok(out)
+    }
+}

@@ -1,0 +1,793 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// Global utility styles
+@import "./styles/utilities";
+
+// CodeMirror tokens (CSS variables for theming)
+@import "./features/CodeMirror/styles/diff-tokens";
+@import "./features/CodeMirror/styles/editor-tokens";
+
+* {
+  margin: 0;
+  padding: 0;
+  /* Fix for Tailwind border utilities: ensure border-style is solid by default
+   * so that border-2, border-4, etc. work without needing border-solid
+   * The CSS reset below sets border: 0 which includes border-style: none,
+   * causing Tailwind's width-only utilities (border-2, border-4) to be invisible */
+  border-style: solid;
+}
+
+html,
+body,
+div,
+span,
+applet,
+object,
+iframe,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+blockquote,
+pre,
+a,
+abbr,
+acronym,
+address,
+big,
+cite,
+code,
+del,
+dfn,
+em,
+img,
+ins,
+kbd,
+q,
+s,
+samp,
+small,
+strike,
+strong,
+sub,
+sup,
+tt,
+var,
+b,
+u,
+i,
+center,
+dl,
+dt,
+dd,
+ol,
+ul,
+li,
+fieldset,
+form,
+label,
+legend,
+table,
+caption,
+tbody,
+tfoot,
+thead,
+tr,
+th,
+td,
+article,
+aside,
+canvas,
+details,
+embed,
+figure,
+figcaption,
+footer,
+header,
+hgroup,
+menu,
+nav,
+output,
+ruby,
+section,
+summary,
+time,
+mark,
+audio,
+video {
+  margin: 0;
+  padding: 0;
+  border-width: 0; /* Changed from border: 0 to preserve border-style: solid from above */
+  font-size: 100%;
+  vertical-align: baseline;
+  outline: none;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  font-family: var(
+    --app-font-family,
+    "PingFang SC",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif
+  );
+}
+
+article,
+aside,
+details,
+figcaption,
+figure,
+footer,
+header,
+hgroup,
+menu,
+nav,
+section {
+  display: block;
+}
+
+ol,
+ul {
+  list-style: none;
+}
+
+blockquote,
+q {
+  quotes: none;
+}
+
+blockquote:before,
+blockquote:after,
+q:before,
+q:after {
+  content: "";
+  content: none;
+}
+
+strong {
+  font-weight: bold;
+}
+
+// Enable text selection in CodeMirror editors
+// Overrides global * { user-select: none } for editable content areas.
+// Without this, double-click word selection breaks in some themes (e.g. VS Code)
+// because WebKit's contenteditable selection handling is disrupted by user-select: none
+// on child elements.
+.cm-editor .cm-content,
+.cm-editor .cm-content *,
+.cm-editor .cm-line {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}
+
+// Code font override - ensure code elements use monospace font
+// This overrides the global font-family reset above
+code,
+pre,
+kbd,
+samp,
+tt,
+.cm-editor,
+.cm-editor *,
+.cm-content,
+.cm-line,
+.cm-scroller,
+.cm-gutters,
+[class*="syntax-highlighter"],
+[class*="syntax-highlighter"] *,
+[class*="code-"],
+[class*="diff-"],
+.modern-diff *,
+.modern-code-viewer * {
+  font-family: var(
+    --code-font-family,
+    "SF Mono",
+    "Menlo",
+    "Monaco",
+    "Consolas",
+    "Liberation Mono",
+    "Courier New",
+    monospace
+  );
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+img {
+  border: 0;
+  max-width: 100%;
+}
+
+// Global scrollbar styles - exclude CodeMirror (.cm-scroller has its own styles)
+*:not(.cm-scroller)::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*:not(.cm-scroller)::-webkit-scrollbar-thumb {
+  background: var(--color-fill-3);
+  border-radius: 3px;
+}
+
+*:not(.cm-scroller)::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fill-4);
+}
+
+*:not(.cm-scroller)::-webkit-scrollbar-corner {
+  @apply bg-bg-1;
+}
+
+// Settings surfaces (SettingsSlot body + SettingsSidebar) hide all
+// scrollbars by design — the panel is dense with section cards and the
+// global 4px scrollbar adds visual noise on every nested overflow area.
+// Scoped via [data-settings-surface] so the rule only applies inside
+// settings; CodeMirror exclusion preserved in case a settings tab
+// embeds an editor surface (currently none do, but harmless).
+[data-settings-surface],
+[data-settings-surface] *:not(.cm-scroller) {
+  scrollbar-width: none; // Firefox
+}
+[data-settings-surface]::-webkit-scrollbar,
+[data-settings-surface] *:not(.cm-scroller)::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none;
+}
+
+// CodeMirror scrollbar - transparent track, only show thumb
+.cm-scroller {
+  scrollbar-width: thin !important;
+  scrollbar-color: transparent transparent !important;
+
+  &::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
+    background: transparent !important;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent !important;
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: transparent !important;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: transparent !important;
+    border-radius: 4px !important;
+  }
+
+  &:hover::-webkit-scrollbar-thumb,
+  &.is-scrolling::-webkit-scrollbar-thumb {
+    background: var(--color-fill-3) !important;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-fill-4) !important;
+  }
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  border-radius: var(--border-radius-window);
+  // Use overflow: clip as a defensive measure against scrollIntoView calls
+  // on hidden components that could scroll the root element
+  overflow: clip;
+  background: transparent;
+}
+
+// KeepAlive wraps each cached route in its own DOM node. The wrapper must
+// fill MainAppShell; otherwise cached pages can shrink to their intrinsic
+// table width and expose the gray parent surface after route clicks.
+.keepalive-cache-div {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+// Hide inactive keepalive cache nodes immediately to prevent
+// previous page "shadow" from showing during route transitions.
+// keepalive-for-react swaps active/inactive classes on its cache divs
+// but doesn't apply display:none — the old page remains visible for
+// one frame between the class swap and DOM removal.
+.keepalive-cache-div.inactive {
+  display: none;
+}
+
+// Remove border radius in fullscreen mode
+html.fullscreen,
+html.fullscreen body,
+html.fullscreen #root {
+  border-radius: 0 !important;
+}
+
+* {
+  -moz-user-select: none; /* Firefox */
+  -webkit-user-select: none; /* WebKit */
+  -ms-user-select: none; /* IE10+ */
+  -khtml-user-select: none; /* Early browsers */
+  -o-user-select: none; /* Opera */
+  user-select: none; /* CSS3 */
+  /* Prevent WebKit tap highlight that can cause stuck :active states */
+  -webkit-tap-highlight-color: transparent;
+  /* Prevent touch callout on long press */
+  -webkit-touch-callout: none;
+}
+
+/*
+ * Re-enable text selection on every native text-input surface.
+ *
+ * The global `* { user-select: none }` above is intentional (we want
+ * chrome / buttons / labels to feel app-like, not web-page-like) but it
+ * also disables the WebKit selectAll behavior on form controls. That
+ * breaks Cmd+A / Ctrl+A inside `<input>`, `<textarea>`, and any
+ * `[contenteditable]` surface app-wide — including the chat composer,
+ * Settings textareas, search boxes, and URL fields.
+ *
+ * Anything that is genuinely a text-entry surface must opt back in.
+ * `.cm-editor` already has its own block higher up; this one covers
+ * the rest.
+ */
+input,
+textarea,
+select,
+[contenteditable=""],
+[contenteditable="true"],
+[contenteditable="plaintext-only"] {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default;
+}
+html {
+  overscroll-behavior-x: none;
+  background: transparent;
+}
+body {
+  overscroll-behavior-x: none;
+  border-radius: var(--border-radius-window);
+  overflow: hidden;
+  background: transparent;
+}
+
+// Ensure popup layers are not clipped by body's overflow: hidden
+
+// Override for header recently closed menu to ensure width is respected
+.header-recently-closed-menu {
+  width: 200px !important;
+  min-width: 200px !important;
+}
+
+.custom-scrollbar {
+  scrollbar-width: 2px !important; // for Firefox, always thin but invisible
+  scrollbar-color: transparent transparent !important; // for Firefox, transparent scrollbar
+
+  &::-webkit-scrollbar {
+    width: 1px !important; // for Chrome, Safari, and Opera, always 8px but invisible
+    background: transparent !important; // initially transparent
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: transparent !important; // initially transparent
+  }
+
+  &:hover {
+    scrollbar-color: #e0e0e0 transparent !important; // for Firefox, visible on hover
+
+    &::-webkit-scrollbar-thumb {
+      background-color: transparent !important; // for Chrome, Safari, and Opera, visible on hover
+    }
+  }
+}
+.allow-select {
+  -moz-user-select: text !important; /* Firefox */
+  -webkit-user-select: text !important; /* WebKit */
+  -ms-user-select: text !important; /* IE10 and later */
+  -khtml-user-select: text !important; /* Early browsers */
+  -o-user-select: text !important; /* Opera */
+  user-select: text !important; /* CSS3 property */
+}
+
+// Deep text-selection override: applies to the element AND all descendants.
+// Use this on content areas (e.g. chat messages) instead of scattering
+// `user-select: text !important` + `* { … }` hacks in every component.
+.allow-select-deep,
+.allow-select-deep * {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}
+
+// Opt-out: event titles/headers (collapsible block headers, etc.) should not be selectable
+.allow-select-deep .select-none,
+.allow-select-deep .select-none * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+.GloballightBg {
+  background-image: url("./assets/bg/bamboo-blue.jpg");
+}
+.GlobalDarkBg {
+  background-image: url('data:image/svg+xml,<svg width="1440" height="960" viewBox="0 0 1440 960" fill="none " xmlns="http://www.w3.org/2000/svg"><g clip-path="url(%23clip0_1705_676)"><rect width="1440" height="960" fill="black"/><g filter="url(%23filter0_f_1705_676)"><path d="M1106.33 18.0475L-11.7564 736.314C-45.9596 801.182 -115.781 933.749 -121.442 945.072C-127.104 956.394 180.489 1013.48 334.993 1040.6C745.431 1012.3 1566.31 950.733 1566.31 930.919C1566.31 906.151 1608.77 18.0475 1601.69 3.89447C1596.03 -7.42796 1269.09 8.61215 1106.33 18.0475Z" fill="%23060286"/></g><g filter="url(%23filter1_f_1705_676)"><ellipse cx="1333.67" cy="847.596" rx="410.127" ry="452.658" fill="%23311432"/></g><g filter="url(%23filter2_f_1705_676)"><ellipse cx="960.876" cy="971.448" rx="410.438" ry="382.132" fill="%23F3F5FC"/></g><g filter="url(%23filter3_f_1705_676)"><ellipse cx="610.631" cy="1023.8" rx="507.342" ry="306.835" fill="%23001f3f"/></g><g style="mix-blend-mode:overlay" filter="url(%23filter4_f_1705_676)"><ellipse cx="247.21" cy="-68.3783" rx="1118.45" ry="517.173" transform="rotate(-17.7477 247.21 -68.3783)" fill="black"/></g></g><defs><filter id="filter0_f_1705_676" x="-546.836" y="-425.316" width="2574.64" height="1891.24" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="212.658" result="effect1_foregroundBlur_1705_676"/></filter><filter id="filter1_f_1705_676" x="631.897" y="103.292" width="1403.55" height="1488.61" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="145.823" result="effect1_foregroundBlur_1705_676"/></filter><filter id="filter2_f_1705_676" x="258.792" y="297.671" width="1404.17" height="1347.56" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="145.823" result="effect1_foregroundBlur_1705_676"/></filter><filter id="filter3_f_1705_676" x="-188.357" y="425.317" width="1597.97" height="1196.96" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="145.823" result="effect1_foregroundBlur_1705_676"/></filter><filter id="filter4_f_1705_676" x="-1121.4" y="-959.119" width="2737.22" height="1781.48" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="145.823" result="effect1_foregroundBlur_1705_676"/></filter><clipPath id="clip0_1705_676"><rect width="1440" height="960" fill="white"/></clipPath></defs></svg>');
+}
+body.drag-over::after {
+  content: "Drop image to upload";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 24px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Show horizontal scrollbar only on hover */
+.scrollbar-x-hover {
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox: hidden by default */
+  padding-bottom: 4px; /* Ensure content is not covered by scrollbar */
+}
+.scrollbar-x-hover::-webkit-scrollbar {
+  height: 2px;
+  background: transparent;
+  display: none;
+}
+.scrollbar-x-hover:hover {
+  scrollbar-width: thin; /* Firefox: show thin scrollbar on hover */
+}
+.scrollbar-x-hover:hover::-webkit-scrollbar {
+  display: block;
+  background: transparent;
+}
+.scrollbar-x-hover::-webkit-scrollbar-thumb {
+  background: var(--color-fill-3);
+  border-radius: 2px;
+}
+
+/* Auto-discover dropdown keyboard highlight.
+ * Applied by `useDropdownAutoKeyboard` (engine-level fallback) to the
+ * row that's currently keyboard-focused inside any open dropdown panel.
+ * Mirrors the :hover fill used by DROPDOWN_CLASSES.itemHover so
+ * keyboard and pointer feel identical. Lives here (global) so it works
+ * for every panel built on useDropdownEngine, even when the consumer
+ * never imports the Dropdown component itself. */
+[data-dropdown-keyboard-highlight="true"] {
+  background: var(--color-fill-2) !important;
+}
+
+/* Dark-mode override for the `shadow-dropdown` Tailwind utility.
+ * The light value lives in `tailwind.config.js` under `boxShadow.dropdown`.
+ * We cannot express this with Tailwind's `dark:` variant because the app
+ * toggles theme with a `.theme-dark` root class, not the media query or
+ * `class` strategy Tailwind expects. */
+.theme-dark .shadow-dropdown {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Visible thin scrollbar for dropdown option lists (Settings > Timezone,
+ * table selectors, etc.). Tailwind has no first-class scrollbar pseudo
+ * utilities, so we expose this as a global helper class. */
+.dropdown-options-scrollbar {
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-fill-3);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-fill-4);
+  }
+}
+
+/* Generic hover shadow effect */
+.hover-shadow {
+  @apply transition-all duration-200;
+}
+
+.hover-shadow:hover {
+  @apply shadow-[0px_4px_10px_0px_rgba(0,0,0,0.10)];
+}
+/* ANSI color classes — values driven by CSS custom properties set in
+   useEditorAppearanceStyles (synced with the terminal theme palette). */
+.ansi-black-fg {
+  color: var(--ansi-black);
+}
+.ansi-red-fg {
+  color: var(--ansi-red);
+}
+.ansi-green-fg {
+  color: var(--ansi-green);
+}
+.ansi-yellow-fg {
+  color: var(--ansi-yellow);
+}
+.ansi-blue-fg {
+  color: var(--ansi-blue);
+}
+.ansi-magenta-fg {
+  color: var(--ansi-magenta);
+}
+.ansi-cyan-fg {
+  color: var(--ansi-cyan);
+}
+.ansi-white-fg {
+  color: var(--ansi-white);
+}
+.ansi-bright-black-fg {
+  color: var(--ansi-bright-black);
+}
+.ansi-bright-red-fg {
+  color: var(--ansi-bright-red);
+}
+.ansi-bright-green-fg {
+  color: var(--ansi-bright-green);
+}
+.ansi-bright-yellow-fg {
+  color: var(--ansi-bright-yellow);
+}
+.ansi-bright-blue-fg {
+  color: var(--ansi-bright-blue);
+}
+.ansi-bright-magenta-fg {
+  color: var(--ansi-bright-magenta);
+}
+.ansi-bright-cyan-fg {
+  color: var(--ansi-bright-cyan);
+}
+.ansi-bright-white-fg {
+  color: var(--ansi-bright-white);
+}
+
+.ansi-black-bg {
+  background-color: var(--ansi-black);
+}
+.ansi-red-bg {
+  background-color: var(--ansi-red);
+}
+.ansi-green-bg {
+  background-color: var(--ansi-green);
+}
+.ansi-yellow-bg {
+  background-color: var(--ansi-yellow);
+}
+.ansi-blue-bg {
+  background-color: var(--ansi-blue);
+}
+.ansi-magenta-bg {
+  background-color: var(--ansi-magenta);
+}
+.ansi-cyan-bg {
+  background-color: var(--ansi-cyan);
+}
+.ansi-white-bg {
+  background-color: var(--ansi-white);
+}
+
+/* ============================================
+ * Adaptive Colors for Custom Backgrounds
+ * Uses Contrast.js to automatically adjust text/icon colors
+ * based on background brightness
+ * ============================================ */
+
+/* Base adaptive text class */
+.adaptive-text {
+  transition: color 0.2s ease;
+}
+
+/* Adaptive text variants */
+.adaptive-text-1 {
+  @extend .adaptive-text;
+  color: var(--color-text-1);
+}
+
+.adaptive-text-2 {
+  @extend .adaptive-text;
+  color: var(--color-text-2);
+}
+
+.adaptive-text-3 {
+  @extend .adaptive-text;
+  color: var(--color-text-3);
+}
+
+/* Adaptive icon class */
+.adaptive-icon {
+  transition:
+    filter 0.2s ease,
+    color 0.2s ease;
+}
+
+/* Sidebar-specific adaptive text */
+.sidebar-adaptive-text {
+  @extend .adaptive-text;
+}
+
+/* Home page adaptive elements */
+.home-greeting-adaptive {
+  transition: color 0.2s ease;
+}
+
+.home-button-adaptive {
+  transition: color 0.2s ease;
+}
+
+.home-tab-toggle-adaptive {
+  transition: color 0.2s ease;
+}
+
+/* Dark mode icon invert - for monochrome black icons */
+.dark-mode-icon-invert {
+  transition: filter 0.2s ease;
+}
+
+[data-theme="dark"] .dark-mode-icon-invert {
+  filter: invert(1) brightness(0.9);
+}
+
+/* Simulator compact mode - hides sidebar and reduces padding for multi-task grid */
+.simulator-compact-mode {
+  /* Hide Messages sidebar in compact mode */
+  .messages-sidebar,
+  .simulator-sidebar {
+    display: none !important;
+  }
+
+  /* Hide IDE file sidebar in compact mode - show only file content */
+  .ide-file-sidebar {
+    display: none !important;
+  }
+
+  /* Hide IDE terminal panel in compact mode */
+  .ide-terminal-panel {
+    display: none !important;
+  }
+
+  /* Make code panel take full width when sidebar is hidden */
+  > div > div > div:last-child {
+    width: 100% !important;
+  }
+
+  /* Reduce padding in content areas */
+  .message-viewer,
+  .simulator-content {
+    padding: 4px !important;
+  }
+
+  /* More compact message bubbles */
+  .message-bubble {
+    padding: 6px 10px !important;
+    margin: 2px 0 !important;
+  }
+
+  /* Reduce font size slightly */
+  .message-text {
+    font-size: 12px !important;
+  }
+
+  /* Make code viewer more compact */
+  .code-viewer-scroll-container {
+    padding: 2px !important;
+  }
+
+  /* Reduce min-height for IDE in compact mode */
+  .ide-main-container {
+    min-height: 150px !important;
+  }
+
+  /* Ensure code panel takes full width when sidebar is hidden */
+  .ide-code-panel {
+    width: 100% !important;
+  }
+}
+
+/* Compact markdown styles for multi-task grid view */
+.compact-markdown {
+  .markdown-container {
+    font-size: 12px !important;
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      margin-top: 0.5em !important;
+      margin-bottom: 0.25em !important;
+      font-size: 13px !important;
+    }
+
+    p {
+      margin-bottom: 0.5em !important;
+      line-height: 1.5 !important;
+    }
+
+    ul,
+    ol {
+      margin-bottom: 0.5em !important;
+      padding-left: 1.25em !important;
+    }
+
+    li {
+      margin-bottom: 0.15em !important;
+    }
+
+    pre,
+    code {
+      font-size: 11px !important;
+    }
+
+    pre {
+      padding: 0.5em !important;
+      margin: 0.5em 0 !important;
+    }
+  }
+}
+
+/* Compact diff styles for multi-task grid view - smaller gutter area */
+.compact-diff {
+  .diff-line {
+    min-height: 20px !important;
+  }
+
+  .diff-line-gutter {
+    width: 18px !important;
+    padding: 0 4px !important;
+    font-size: 10px !important;
+    backdrop-filter: blur(8px);
+  }
+
+  .diff-line-indicator {
+    width: 16px !important;
+    backdrop-filter: blur(8px);
+  }
+
+  .diff-line-content {
+    font-size: 11px !important;
+  }
+
+  /* Ensure context lines have solid background instead of transparent */
+  .diff-line-context {
+    .diff-line-gutter,
+    .diff-line-indicator {
+      background: var(--color-bg-2);
+    }
+  }
+}

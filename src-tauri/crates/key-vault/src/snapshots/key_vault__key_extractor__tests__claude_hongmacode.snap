@@ -1,0 +1,11 @@
+---
+source: src/key_vault/tests/key_extractor_tests.rs
+expression: result
+---
+api_key: sk_34833534254448814f824897a9098e64bec87df0b329e2868320f77f88ec4544
+base_url: "https://hongmacode.com/api"
+key_type: claude_code
+confidence: high
+notes:
+  - Found claude_code key
+  - Found base URL

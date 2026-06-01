@@ -1,0 +1,223 @@
+/**
+ * Panel SCSS Mixins
+ *
+ * Shared styles for bottom panel content components.
+ * Provides consistent BEM patterns and common styles.
+ *
+ * Usage in panel SCSS files:
+ * @use "../shared/panel-mixins" as panel;
+ *
+ * .my-panel {
+ *   @include panel.container;
+ *   
+ *   &__header { @include panel.header; }
+ *   &__content { @include panel.content; }
+ *   &__item { @include panel.item; }
+ *   &__empty { @include panel.empty-state; }
+ * }
+ */
+
+// ============================================
+// Container
+// ============================================
+
+@mixin container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--color-bg-2);
+}
+
+@mixin container--empty {
+  @include container;
+  align-items: center;
+  justify-content: center;
+}
+
+// ============================================
+// Header
+// ============================================
+
+@mixin header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+// ============================================
+// Content Area
+// ============================================
+
+@mixin content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+@mixin content--scrollbar-hidden {
+  @include content;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// ============================================
+// List Items
+// ============================================
+
+@mixin item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: var(--color-fill-1);
+  }
+}
+
+@mixin item--compact {
+  @include item;
+  padding: 4px 12px;
+}
+
+@mixin item-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+}
+
+@mixin item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+@mixin item-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-3);
+}
+
+// ============================================
+// Empty State
+// ============================================
+
+@mixin empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 16px;
+  text-align: center;
+}
+
+@mixin empty-text {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+// ============================================
+// Summary / Badge Row
+// ============================================
+
+@mixin summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@mixin summary-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+@mixin summary-item--error {
+  @include summary-item;
+  color: var(--color-danger-6);
+}
+
+@mixin summary-item--warning {
+  @include summary-item;
+  color: var(--color-warning-6);
+}
+
+@mixin summary-item--success {
+  @include summary-item;
+  color: var(--color-success-6);
+}
+
+// ============================================
+// File Group (collapsible)
+// ============================================
+
+@mixin file-group {
+  border-bottom: 1px solid var(--color-border-1);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+@mixin file-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: var(--color-fill-1);
+  }
+}
+
+@mixin file-group-items {
+  padding-left: 24px;
+}
+
+// ============================================
+// Separator
+// ============================================
+
+@mixin separator {
+  color: var(--color-text-4);
+
+  &::before {
+    content: "•";
+  }
+}
+
+// ============================================
+// Action Button (in header)
+// ============================================
+
+@mixin action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  color: var(--color-text-3);
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+
+  &:hover {
+    background-color: var(--color-fill-2);
+    color: var(--color-text-1);
+  }
+}

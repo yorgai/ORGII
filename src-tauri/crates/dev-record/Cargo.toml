@@ -1,0 +1,50 @@
+[package]
+name = "dev_record"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+description = "Local-only developer activity timeline: heartbeat collector, IDE detector, retroactive backfill, and Tauri queries that surface daily/IDE/file stats from sessions.db."
+publish = false
+
+[lib]
+name = "dev_record"
+path = "src/lib.rs"
+
+[dependencies]
+core_types = { path = "../types" }
+database = { path = "../database" }
+# `commands::dev_record_get_file_hotspots` and `retroactive::backfill`
+# walk the user's git repos via `git::repos::repo_db::list_repos()` and
+# shell out to `git log --numstat` via `git::util::run_git`.
+git = { path = "../git" }
+
+# Tauri command macro surface only — handlers stay in-crate, the parent
+# `app` crate re-registers them via `commands/handler_list.inc` (same
+# pattern as `key_vault`, `git`, `agent_cli`, `inbox`).
+tauri = { workspace = true }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { workspace = true }
+tokio = { workspace = true }
+tracing = "0.1.37"
+similar = "2.6"
+
+# SQLite driver — the workspace pin matches `database`'s `bundled` flag so
+# cargo unifies the dep graph.
+rusqlite = { workspace = true }
+
+# Process scanning for the IDE detector.
+sysinfo = { workspace = true }
+
+# Home directory resolution for IDE history scanners (Cursor, Claude
+# Code, generic CLI agents). The plain `dirs::home_dir()` call site is
+# kept rather than going through `app_paths::home_dir` so this crate has
+# no path dependency on the user-level `~/.orgii` layout — it only needs
+# `~/`.
+dirs = "6.0"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# Frontmost-window detection on macOS uses CoreGraphics' window list and
+# CoreFoundation array/dictionary types.
+core-foundation = "0.10"

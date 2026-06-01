@@ -1,0 +1,56 @@
+[package]
+name = "app_window"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+
+# Centralised native-window helpers: macOS traffic-light positioning,
+# liquid-glass background, Windows rounded-corner DWM tweaks, and the
+# "Open New Window" / "Recreate main window" flows used by the Tauri menu
+# and the in-app "Open in new window" affordance.
+#
+# Lives in its own crate so leaf crates (currently `browser`) can call
+# `app_window::set_traffic_light_position` / `apply_host_desktop_window_chrome`
+# without depending on the rest of `app`. `app::lib.rs` and the macOS app
+# menu still consume the same API directly.
+#
+# No runtime hooks, no async runtime — everything is synchronous Tauri
+# operations against a `tauri::AppHandle` / `WebviewWindow`.
+
+[lib]
+name = "app_window"
+
+[dependencies]
+# Shared serde defaults (`default_true`) so we don't redefine the helper
+# locally — see `Documentation/RustBackend/modularization-plan--0504.md`
+# (latent crate-root path leaks).
+app_utils = { path = "../app-utils" }
+
+serde = { version = "1.0", features = ["derive"] }
+tauri = { workspace = true }
+tracing = "0.1"
+
+# `create_window` parses the supplied URL string into `url::Url` before
+# handing it to Tauri's `WebviewUrl::External`.
+url = "2"
+
+# macOS-specific native-window plumbing
+[target.'cfg(target_os = "macos")'.dependencies]
+tauri-plugin-liquid-glass = "0.1"
+window-vibrancy = "0.6"
+
+# Modern Objective-C bindings. `dispatch2::DispatchQueue::main()` is the
+# typed replacement for `dispatch::Queue::main()` used by `set_window_vibrancy`
+# and `set_traffic_light_position` to hop AppKit work onto the main thread.
+objc2 = { workspace = true }
+objc2-foundation = { workspace = true }
+objc2-app-kit = { workspace = true }
+dispatch2 = { workspace = true }
+
+# `set_window_vibrancy` decodes the optional base64 wallpaper bytes that
+# the frontend passes when toggling vibrancy off (so we can paint a static
+# bitmap behind external content like Stripe Checkout).
+base64 = { workspace = true }
+# Windows-specific DWM rounded-corner attribute (`set_rounded_corners`).
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm"] }

@@ -1,0 +1,39 @@
+/**
+ * Hooks — Public API
+ *
+ * Only exports symbols consumed by components outside the hooks/ directory.
+ * Internal hooks (data, features, reducer) are imported directly by useSpotlight.
+ */
+
+// Context provider (used by GlobalSpotlight root)
+export { SpotlightProvider } from "./core/SpotlightContext";
+
+// Main composition hook (used by GlobalSpotlight root)
+export { useSpotlight } from "./useSpotlight";
+
+// Feature hooks (used by GlobalSpotlight root)
+export { useSpotlightEffects } from "./features/useSpotlightEffects";
+
+// Form hooks (used by palettes)
+export { useAddWorkspaceFlow } from "./forms/useAddWorkspaceFlow";
+export type { AddWorkspaceModalStage } from "./forms/useAddWorkspaceFlow";
+
+// Shared data hooks (used by palettes and main Spotlight)
+export { useSharedRepoList } from "./data/useSharedRepoList";
+export type {
+  UseSharedRepoListOptions,
+  UseSharedRepoListReturn,
+} from "./data/useSharedRepoList";
+
+// Account-footer helper (used by palettes with per-hovered-item footers)
+export { useAccountFooterForHovered } from "./useAccountFooterForHovered";
+export type {
+  AccountFooterCliResolverResult,
+  AccountFooterApiResolverResult,
+  AccountFooterResolverResult,
+  UseAccountFooterForHoveredOptions,
+} from "./useAccountFooterForHovered";
+
+// Path segment hook (used by palettes to resolve i18n path labels/templates)
+export { usePathSegment } from "./usePathSegment";
+export type { UsePathSegmentOptions } from "./usePathSegment";

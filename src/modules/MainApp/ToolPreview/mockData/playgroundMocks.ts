@@ -1,0 +1,244 @@
+/**
+ * Playground demo mocks: queued messages, file changes, and active processes.
+ * Used by the DevTools playground to simulate realistic session states.
+ */
+
+export const MOCK_QUEUED_MESSAGES: import("@src/store/ui/messageQueueAtom").QueuedMessage[] =
+  [
+    {
+      id: "q1",
+      sessionId: "playground",
+      content:
+        "Can you refactor the auth module to use the new session API? Make sure all existing integration tests still pass and update the migration guide with the breaking changes introduced by the new token-based auth flow.",
+      displayContent:
+        "Can you refactor the auth module to use the new session API? Make sure all existing integration tests still pass and update the migration guide with the breaking changes introduced by the new token-based auth flow.",
+      status: "queued",
+      createdAt: new Date(Date.now() - 8000).toISOString(),
+    },
+    {
+      id: "q2",
+      sessionId: "playground",
+      content: "Also update the tests to match the new interface",
+      displayContent: "Also update the tests to match the new interface",
+      status: "queued",
+      createdAt: new Date(Date.now() - 5000).toISOString(),
+    },
+    {
+      id: "q3",
+      sessionId: "playground",
+      content: "Run the linter after you're done",
+      displayContent: "Run the linter after you're done",
+      status: "queued",
+      createdAt: new Date(Date.now() - 2000).toISOString(),
+    },
+    {
+      id: "q4",
+      sessionId: "playground",
+      content:
+        "After that, please review the entire codebase for any remaining references to the deprecated credential store and replace them with the new KeyVault API, including updating environment variable names and removing backward-compatible shims",
+      displayContent:
+        "After that, please review the entire codebase for any remaining references to the deprecated credential store and replace them with the new KeyVault API, including updating environment variable names and removing backward-compatible shims",
+      status: "queued",
+      createdAt: new Date(Date.now() - 1000).toISOString(),
+    },
+    {
+      id: "q5",
+      sessionId: "playground",
+      content: "Add error handling for the edge cases we discussed",
+      displayContent: "Add error handling for the edge cases we discussed",
+      status: "queued",
+      createdAt: new Date(Date.now() - 500).toISOString(),
+    },
+  ];
+
+export const MOCK_FILE_CHANGES: import("@src/engines/ChatPanel/InputArea/components/CompactFileChanges").FileChangesResult =
+  {
+    files: [
+      {
+        path: "src/hooks/useAuth.ts",
+        fileName: "useAuth.ts",
+        status: "M",
+        additions: 12,
+        deletions: 3,
+        lineCount: 85,
+      },
+      {
+        path: "src/components/LoginForm/index.tsx",
+        fileName: "index.tsx",
+        status: "M",
+        additions: 8,
+        deletions: 2,
+        lineCount: 120,
+      },
+      {
+        path: "src/api/profiles.ts",
+        fileName: "profiles.ts",
+        status: "A",
+        additions: 25,
+        deletions: 0,
+        lineCount: 25,
+      },
+      {
+        path: "src/utils/deprecated.ts",
+        fileName: "deprecated.ts",
+        status: "D",
+        additions: 0,
+        deletions: 45,
+        lineCount: 0,
+      },
+      {
+        path: "src/components/Button/__tests__/Button.test.tsx",
+        fileName: "Button.test.tsx",
+        status: "M",
+        additions: 18,
+        deletions: 0,
+        lineCount: 95,
+      },
+      {
+        path: "src/store/session/fileReviewAtom.ts",
+        fileName: "fileReviewAtom.ts",
+        status: "M",
+        additions: 4,
+        deletions: 1,
+        lineCount: 60,
+      },
+      {
+        path: "src/config/inputAreaTokens.ts",
+        fileName: "inputAreaTokens.ts",
+        status: "M",
+        additions: 6,
+        deletions: 2,
+        lineCount: 210,
+      },
+      {
+        path: "src/features/ChatPanel/ChatView.tsx",
+        fileName: "ChatView.tsx",
+        status: "M",
+        additions: 3,
+        deletions: 1,
+        lineCount: 320,
+      },
+      {
+        path: "src/features/ChatPanel/InputArea/index.tsx",
+        fileName: "index.tsx",
+        status: "M",
+        additions: 7,
+        deletions: 5,
+        lineCount: 510,
+      },
+      {
+        path: "src/engines/SessionCore/core/atoms.ts",
+        fileName: "atoms.ts",
+        status: "M",
+        additions: 2,
+        deletions: 0,
+        lineCount: 145,
+      },
+      {
+        path: "src/api/tauri/agent/index.ts",
+        fileName: "index.ts",
+        status: "M",
+        additions: 14,
+        deletions: 8,
+        lineCount: 280,
+      },
+      {
+        path: "src/modules/MainApp/Integrations/DevTools/playground/panels/PlaygroundChatPanel.tsx",
+        fileName: "PlaygroundChatPanel.tsx",
+        status: "M",
+        additions: 9,
+        deletions: 3,
+        lineCount: 180,
+      },
+      {
+        path: "src/i18n/locales/en/common.json",
+        fileName: "common.json",
+        status: "M",
+        additions: 2,
+        deletions: 2,
+        lineCount: 400,
+      },
+      {
+        path: "src/components/FileTypeIcon/index.tsx",
+        fileName: "index.tsx",
+        status: "M",
+        additions: 1,
+        deletions: 1,
+        lineCount: 75,
+      },
+      {
+        path: "src/services/file/FileOperationsService.ts",
+        fileName: "FileOperationsService.ts",
+        status: "M",
+        additions: 10,
+        deletions: 6,
+        lineCount: 190,
+      },
+      {
+        path: "src/store/workstation/tabs/atoms.ts",
+        fileName: "atoms.ts",
+        status: "M",
+        additions: 3,
+        deletions: 0,
+        lineCount: 88,
+      },
+      {
+        path: "src/hooks/fileReview/index.ts",
+        fileName: "index.ts",
+        status: "A",
+        additions: 42,
+        deletions: 0,
+        lineCount: 42,
+      },
+      {
+        path: "src/contexts/git/useGitStatus.ts",
+        fileName: "useGitStatus.ts",
+        status: "M",
+        additions: 5,
+        deletions: 2,
+        lineCount: 110,
+      },
+      {
+        path: "src/util/session/sessionDispatch.ts",
+        fileName: "sessionDispatch.ts",
+        status: "M",
+        additions: 1,
+        deletions: 1,
+        lineCount: 65,
+      },
+      {
+        path: "src/features/ChatPanel/components/LearningPanel.tsx",
+        fileName: "LearningPanel.tsx",
+        status: "M",
+        additions: 11,
+        deletions: 4,
+        lineCount: 230,
+      },
+    ],
+    totalAdditions: 183,
+    totalDeletions: 86,
+    stats: { added: 2, modified: 17, deleted: 1 },
+  };
+
+export const MOCK_ACTIVE_PROCESSES: import("@src/store/session/shellProcessAtom").ShellProcessState[] =
+  [
+    {
+      pid: 48201,
+      command: "npm run dev -- --port 3000",
+      status: "running",
+      startedAt: Date.now() - 120_000,
+    },
+    {
+      pid: 48315,
+      command:
+        "cargo build --release --target aarch64-apple-darwin --features full",
+      status: "running",
+      startedAt: Date.now() - 45_000,
+    },
+    {
+      pid: 48402,
+      command: "vitest run --reporter=verbose",
+      status: "background",
+      startedAt: Date.now() - 10_000,
+    },
+  ];

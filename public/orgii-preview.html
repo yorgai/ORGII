@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ORGII Preview</title>
+    <script>
+      (function () {
+        var styleNonce = "orgii-codemirror-style";
+        var originalCreateElement = document.createElement.bind(document);
+        document.createElement = function (tagName, options) {
+          var element = originalCreateElement(tagName, options);
+          if (String(tagName).toLowerCase() === "style") {
+            element.setAttribute("nonce", styleNonce);
+          }
+          return element;
+        };
+      })();
+    </script>
+    <!-- Load CSS variables (light theme) -->
+    <link rel="stylesheet" href="/orgii_main.css" />
+    <style nonce="orgii-codemirror-style">
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body, #root {
+        height: 100%;
+        width: 100%;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background: #ffffff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
