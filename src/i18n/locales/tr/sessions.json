@@ -78,7 +78,17 @@
     "followLabel": "Geçerli Kanban",
     "view": {
       "kanban": "Kanban",
+      "list": "Liste",
       "diary": "Günlük"
+    },
+    "list": {
+      "updated": "Güncellendi",
+      "timeRange": "Zaman aralığı",
+      "started": "Başlatıldı",
+      "lastUpdated": "Son güncelleme",
+      "agentModel": "Agent · Model",
+      "emptyTitle": "Bu filtrelerle eşleşen oturum yok",
+      "emptyDescription": "Farklı bir durum, Agent türü veya zaman aralığı deneyin."
     },
     "timeFilter": {
       "label": "Gösterilen",

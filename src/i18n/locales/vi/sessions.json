@@ -78,7 +78,17 @@
     "followLabel": "Kanban hiện tại",
     "view": {
       "kanban": "Kanban",
+      "list": "Danh sách",
       "diary": "Nhật ký"
+    },
+    "list": {
+      "updated": "Đã cập nhật",
+      "timeRange": "Khoảng thời gian",
+      "started": "Đã bắt đầu",
+      "lastUpdated": "Cập nhật lần cuối",
+      "agentModel": "Agent · Mô hình",
+      "emptyTitle": "Không có phiên nào khớp với các bộ lọc này",
+      "emptyDescription": "Hãy thử trạng thái, loại Agent hoặc khoảng thời gian khác."
     },
     "timeFilter": {
       "label": "Hiển thị",

@@ -50,6 +50,13 @@ function getAgentLabel(session: Session, categoryTag: string): string {
   return session.agentDisplayName || categoryTag;
 }
 
+function getWorkspaceName(session: Session): string | undefined {
+  const workspacePath = session.worktreePath || session.repoPath;
+  if (!workspacePath) return session.repo_name;
+
+  return workspacePath.split(/[\\/]/).filter(Boolean).pop() || workspacePath;
+}
+
 export function sessionToKanbanTask(
   session: Session,
   visitedSessions: ReadonlySet<string>,
@@ -98,6 +105,7 @@ export function sessionToKanbanTask(
     agentIconId: session.agentIconId,
     cliAgentType: session.cliAgentType,
     modelName: session.model,
+    workspaceName: getWorkspaceName(session),
     created_at: session.created_at,
     updated_at: session.updated_at,
     completed_at: session.completed_at,

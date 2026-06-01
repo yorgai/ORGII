@@ -511,6 +511,7 @@
   "terminology": {
     "agent": "Agent",
     "you": "Vous",
+    "session": "Session",
     "agentSession": "Session Agent",
     "agentSessions": "Sessions Agent",
     "workStation": "Workstation",
