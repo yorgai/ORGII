@@ -1,6 +1,5 @@
 export { default as AgentModelsSection } from "./AgentModelsSection";
 export { default as AgentRuntimeLimitsSection } from "./AgentRuntimeLimitsSection";
-export { default as AppWideSettingNotice } from "./AppWideSettingNotice";
 export { default as ModelChipPicker } from "./ModelChipPicker";
 export { default as ModelPicker } from "./ModelPicker";
 export { default as PersonalitySection } from "./PersonalitySection";

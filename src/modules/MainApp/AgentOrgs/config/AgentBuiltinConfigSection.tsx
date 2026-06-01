@@ -4,28 +4,19 @@
  * Both agents share the same core tabs (General / Models / Subagents / Tools /
  * Skills, MCPs, Plugins / Rules). Security settings live in General.
  * Differences are small:
- *   - OS:  Security hides workspace-only toggle, General shows workspace path,
- *          no workspacePath
- *   - SDE: questionAutoSkipTimeout in General, workspacePath for Skills/Rules
+ *   - OS: Security hides workspace-only toggle and General shows workspace path.
+ *   - SDE: workspacePath is used for Skills/Rules.
  *
  * Tabs can be controlled externally via `activeTab`/`onTabChange` (for lifting
  * into a PanelHeader tab-bar). When omitted the component manages them itself.
  */
-import { useSetAtom } from "jotai";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import NumberInput from "@src/components/NumberInput";
 import type { TabPillItem } from "@src/components/TabPill";
 import type { SubAgentRef } from "@src/modules/MainApp/AgentOrgs/types";
-import {
-  SECTION_CONTROL_STYLE,
-  SectionContainer,
-  SectionRow,
-  SectionTabSwitch,
-} from "@src/modules/shared/layouts/SectionLayout";
+import { SectionTabSwitch } from "@src/modules/shared/layouts/SectionLayout";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { updateSettingAtom, useSettingValue } from "@src/store/settings";
 import {
   BUILTIN_OS_DEF_ID,
   BUILTIN_SDE_DEF_ID,
@@ -39,7 +30,6 @@ import { useOSAgentConfig } from "./osAgent/useOSAgentConfig";
 import AgentRulesSection from "./rules/AgentRulesSection";
 import { useSdeAgentConfig } from "./sdeAgent/useSdeAgentConfig";
 import AgentModelsSection from "./shared/AgentModelsSection";
-import AppWideSettingNotice from "./shared/AppWideSettingNotice";
 import PersonalitySection from "./shared/PersonalitySection";
 import SubAgentsEditor from "./shared/SubAgentsEditor";
 import AgentSkillsetsSection from "./skills/AgentSkillsetsSection";
@@ -71,41 +61,6 @@ interface AgentBuiltinConfigSectionProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
 }
-
-const SdeAutoTimeoutSection: React.FC = () => {
-  const { t } = useTranslation("settings");
-  const questionAutoSkipTimeout = useSettingValue(
-    "agent.sde.questionAutoSkipTimeout"
-  );
-  const updateSetting = useSetAtom(updateSettingAtom);
-
-  return (
-    <SectionContainer title={t("sdeAgent.autoTimeoutTitle")}>
-      <AppWideSettingNotice />
-      <SectionRow
-        label={t("sdeAgent.questionAutoSkipTimeout")}
-        description={t("sdeAgent.questionAutoSkipTimeoutDesc")}
-      >
-        <NumberInput
-          value={questionAutoSkipTimeout}
-          onChange={(val) => {
-            if (val !== undefined)
-              updateSetting({
-                key: "agent.sde.questionAutoSkipTimeout",
-                value: val,
-              });
-          }}
-          min={0}
-          max={300}
-          step={5}
-          suffix={t("common:common.s")}
-          controlsPosition="sides"
-          style={SECTION_CONTROL_STYLE}
-        />
-      </SectionRow>
-    </SectionContainer>
-  );
-};
 
 const AgentBuiltinConfigSection: React.FC<AgentBuiltinConfigSectionProps> = ({
   kind,
@@ -181,9 +136,7 @@ const AgentBuiltinConfigSection: React.FC<AgentBuiltinConfigSectionProps> = ({
         <>
           {kind === "os" ? (
             <ConfigGeneralSection config={config} update={update} />
-          ) : (
-            <SdeAutoTimeoutSection />
-          )}
+          ) : null}
           <PersonalitySection config={config} update={update} />
           <SecuritySection
             config={config}
@@ -222,6 +175,8 @@ const AgentBuiltinConfigSection: React.FC<AgentBuiltinConfigSectionProps> = ({
       {activeTab === "rules" && (
         <AgentRulesSection
           workspacePath={kind === "sde" ? workspacePath : undefined}
+          config={config}
+          update={update}
         />
       )}
     </div>

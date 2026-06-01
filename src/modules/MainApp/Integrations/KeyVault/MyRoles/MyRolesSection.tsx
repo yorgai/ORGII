@@ -3,6 +3,7 @@ import { Circle, HatGlasses, Moon } from "lucide-react";
 import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import NumberInput from "@src/components/NumberInput";
 import Select, { type SelectOption } from "@src/components/Select";
 import TagsInput from "@src/components/TagsInput";
 import Textarea from "@src/components/Textarea";
@@ -64,6 +65,9 @@ const MyRolesSection: React.FC = () => {
   const [presence, setPresence] = useAtom(userPresenceAtom);
   const customRoles = useAtomValue(userCustomRolesAtom);
 
+  const questionAutoSkipTimeout = settings[
+    "agent.sde.questionAutoSkipTimeout"
+  ] as number;
   const presenceGuidanceOnline =
     (settings["general.presenceGuidanceOnline"] as string | undefined) ?? "";
   const presenceGuidanceInvisible =
@@ -129,6 +133,14 @@ const MyRolesSection: React.FC = () => {
   const handlePresenceGuidanceChange = useCallback(
     (key: PresenceGuidanceKey) => (value: string) => {
       updateSetting({ key, value });
+    },
+    [updateSetting]
+  );
+
+  const handleQuestionAutoSkipTimeoutChange = useCallback(
+    (value: number | undefined) => {
+      if (value === undefined) return;
+      updateSetting({ key: "agent.sde.questionAutoSkipTimeout", value });
     },
     [updateSetting]
   );
@@ -249,6 +261,24 @@ const MyRolesSection: React.FC = () => {
             )}
             rows={3}
             placeholder={t("general.presenceGuidancePlaceholder")}
+          />
+        </SectionRow>
+      </SectionContainer>
+
+      <SectionContainer title={t("sdeAgent.autoTimeoutTitle")}>
+        <SectionRow
+          label={t("sdeAgent.questionAutoSkipTimeout")}
+          description={t("sdeAgent.questionAutoSkipTimeoutDesc")}
+        >
+          <NumberInput
+            value={questionAutoSkipTimeout}
+            onChange={handleQuestionAutoSkipTimeoutChange}
+            min={0}
+            max={300}
+            step={5}
+            suffix={t("common:common.s")}
+            controlsPosition="sides"
+            style={SECTION_CONTROL_STYLE}
           />
         </SectionRow>
       </SectionContainer>
