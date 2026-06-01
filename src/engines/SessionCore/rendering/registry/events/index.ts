@@ -269,6 +269,22 @@ export const CONTEXT_CONFIG: Record<string, ContextConfig> = {
     chat: { requiresItemIndex: false, showStatusLine: false },
     simulator: { supportsSplitView: false, supportsFullscreen: false },
   },
+  task_create: {
+    chat: { requiresItemIndex: false, showStatusLine: false },
+    simulator: { supportsSplitView: false, supportsFullscreen: false },
+  },
+  task_update: {
+    chat: { requiresItemIndex: false, showStatusLine: false },
+    simulator: { supportsSplitView: false, supportsFullscreen: false },
+  },
+  task_list: {
+    chat: { requiresItemIndex: false, showStatusLine: false },
+    simulator: { supportsSplitView: false, supportsFullscreen: false },
+  },
+  task_get: {
+    chat: { requiresItemIndex: false, showStatusLine: false },
+    simulator: { supportsSplitView: false, supportsFullscreen: false },
+  },
 
   // Browser
   browser: {

@@ -12,6 +12,7 @@ describe("parseModelVariant", () => {
       model: "gpt-5.5-high-fast",
       baseModel: "gpt-5.5",
       reasoning: MODEL_REASONING_LEVEL.HIGH,
+      thinking: false,
       fast: true,
       rawSuffix: "high",
     });
@@ -19,6 +20,7 @@ describe("parseModelVariant", () => {
       model: "gpt-5.5-extra-high",
       baseModel: "gpt-5.5",
       reasoning: MODEL_REASONING_LEVEL.EXTRA_HIGH,
+      thinking: false,
       fast: false,
       rawSuffix: "extra-high",
     });
@@ -29,6 +31,7 @@ describe("parseModelVariant", () => {
       model: "gpt-5.5-xhigh",
       baseModel: "gpt-5.5",
       reasoning: MODEL_REASONING_LEVEL.EXTRA_HIGH,
+      thinking: false,
       fast: false,
       rawSuffix: "xhigh",
     });
@@ -36,20 +39,23 @@ describe("parseModelVariant", () => {
       model: "gpt-5.5-max",
       baseModel: "gpt-5.5",
       reasoning: MODEL_REASONING_LEVEL.MAX,
+      thinking: false,
       fast: false,
       rawSuffix: "max",
     });
     expect(parseModelVariant("gpt-5.5-thinking-fast")).toEqual({
       model: "gpt-5.5-thinking-fast",
       baseModel: "gpt-5.5",
-      reasoning: MODEL_REASONING_LEVEL.LOW,
+      reasoning: undefined,
+      thinking: true,
       fast: true,
-      rawSuffix: "thinking",
+      rawSuffix: undefined,
     });
     expect(parseModelVariant("gpt-5.5-fast")).toEqual({
       model: "gpt-5.5-fast",
       baseModel: "gpt-5.5",
       reasoning: undefined,
+      thinking: false,
       fast: true,
       rawSuffix: undefined,
     });
@@ -60,6 +66,7 @@ describe("parseModelVariant", () => {
       model: "gpt-5.4-nano-high",
       baseModel: "gpt-5.4-nano",
       reasoning: MODEL_REASONING_LEVEL.HIGH,
+      thinking: false,
       fast: false,
       rawSuffix: "high",
     });
@@ -67,6 +74,7 @@ describe("parseModelVariant", () => {
       model: "gpt-5.4-nano-none",
       baseModel: "gpt-5.4-nano",
       reasoning: MODEL_REASONING_LEVEL.NONE,
+      thinking: false,
       fast: false,
       rawSuffix: "none",
     });
@@ -74,15 +82,17 @@ describe("parseModelVariant", () => {
       model: "gpt-5.4-mini-xhigh-fast",
       baseModel: "gpt-5.4-mini",
       reasoning: MODEL_REASONING_LEVEL.EXTRA_HIGH,
+      thinking: false,
       fast: true,
       rawSuffix: "xhigh",
     });
     expect(parseModelVariant("gpt-5.3-codex-thinking")).toEqual({
       model: "gpt-5.3-codex-thinking",
       baseModel: "gpt-5.3-codex",
-      reasoning: MODEL_REASONING_LEVEL.LOW,
+      reasoning: undefined,
+      thinking: true,
       fast: false,
-      rawSuffix: "thinking",
+      rawSuffix: undefined,
     });
     expect(parseModelVariant("gpt-5.4-nano")).toBeUndefined();
     expect(parseModelVariant("gpt-5.4-codex")).toBeUndefined();
@@ -94,6 +104,7 @@ describe("parseModelVariant", () => {
       model: "gpt-5.1-codex-max-low",
       baseModel: "gpt-5.1-codex-max",
       reasoning: MODEL_REASONING_LEVEL.LOW,
+      thinking: false,
       fast: false,
       rawSuffix: "low",
     });
@@ -101,6 +112,7 @@ describe("parseModelVariant", () => {
       model: "gpt-5.1-codex-max-medium",
       baseModel: "gpt-5.1-codex-max",
       reasoning: MODEL_REASONING_LEVEL.MEDIUM,
+      thinking: false,
       fast: false,
       rawSuffix: "medium",
     });
@@ -108,6 +120,7 @@ describe("parseModelVariant", () => {
       model: "gpt-5.1-codex-max-high",
       baseModel: "gpt-5.1-codex-max",
       reasoning: MODEL_REASONING_LEVEL.HIGH,
+      thinking: false,
       fast: false,
       rawSuffix: "high",
     });
@@ -115,6 +128,7 @@ describe("parseModelVariant", () => {
       model: "gpt-5.1-codex-max-high-fast",
       baseModel: "gpt-5.1-codex-max",
       reasoning: MODEL_REASONING_LEVEL.HIGH,
+      thinking: false,
       fast: true,
       rawSuffix: "high",
     });
@@ -122,6 +136,7 @@ describe("parseModelVariant", () => {
       model: "gpt-5.1-codex-mini-high",
       baseModel: "gpt-5.1-codex-mini",
       reasoning: MODEL_REASONING_LEVEL.HIGH,
+      thinking: false,
       fast: false,
       rawSuffix: "high",
     });
@@ -129,6 +144,7 @@ describe("parseModelVariant", () => {
       model: "gpt-5.2-codex-fast",
       baseModel: "gpt-5.2-codex",
       reasoning: undefined,
+      thinking: false,
       fast: true,
       rawSuffix: undefined,
     });
@@ -139,6 +155,7 @@ describe("parseModelVariant", () => {
       model: "claude-sonnet-4-5-medium-fast",
       baseModel: "claude-sonnet-4-5",
       reasoning: MODEL_REASONING_LEVEL.MEDIUM,
+      thinking: false,
       fast: true,
       rawSuffix: "medium",
     });
@@ -149,30 +166,34 @@ describe("parseModelVariant", () => {
     expect(parseModelVariant("claude-opus-4-7-thinking")).toEqual({
       model: "claude-opus-4-7-thinking",
       baseModel: "claude-opus-4-7",
-      reasoning: MODEL_REASONING_LEVEL.LOW,
+      reasoning: undefined,
+      thinking: true,
       fast: false,
-      rawSuffix: "thinking",
+      rawSuffix: undefined,
     });
     expect(parseModelVariant("claude-opus-4-7-thinking-xhigh")).toEqual({
       model: "claude-opus-4-7-thinking-xhigh",
       baseModel: "claude-opus-4-7",
       reasoning: MODEL_REASONING_LEVEL.EXTRA_HIGH,
+      thinking: true,
       fast: false,
-      rawSuffix: "thinking-xhigh",
+      rawSuffix: "xhigh",
     });
     expect(parseModelVariant("claude-4.6-opus-high-thinking")).toEqual({
       model: "claude-4.6-opus-high-thinking",
       baseModel: "claude-4.6-opus",
       reasoning: MODEL_REASONING_LEVEL.HIGH,
+      thinking: true,
       fast: false,
-      rawSuffix: "high-thinking",
+      rawSuffix: "high",
     });
     expect(parseModelVariant("claude-4.6-opus-max-thinking")).toEqual({
       model: "claude-4.6-opus-max-thinking",
       baseModel: "claude-4.6-opus",
       reasoning: MODEL_REASONING_LEVEL.MAX,
+      thinking: true,
       fast: false,
-      rawSuffix: "max-thinking",
+      rawSuffix: "max",
     });
   });
 
@@ -181,6 +202,7 @@ describe("parseModelVariant", () => {
       model: "o5.5-high",
       baseModel: "o5.5",
       reasoning: MODEL_REASONING_LEVEL.HIGH,
+      thinking: false,
       fast: false,
       rawSuffix: "high",
     });
@@ -188,6 +210,7 @@ describe("parseModelVariant", () => {
       model: "o5.5-low",
       baseModel: "o5.5",
       reasoning: MODEL_REASONING_LEVEL.LOW,
+      thinking: false,
       fast: false,
       rawSuffix: "low",
     });
@@ -195,6 +218,7 @@ describe("parseModelVariant", () => {
       model: "o5.5-minimal",
       baseModel: "o5.5",
       reasoning: undefined,
+      thinking: false,
       fast: false,
       rawSuffix: "minimal",
     });
@@ -202,6 +226,7 @@ describe("parseModelVariant", () => {
       model: "o5.4-high",
       baseModel: "o5.4",
       reasoning: MODEL_REASONING_LEVEL.HIGH,
+      thinking: false,
       fast: false,
       rawSuffix: "high",
     });
@@ -209,6 +234,7 @@ describe("parseModelVariant", () => {
       model: "o5.4-minimal",
       baseModel: "o5.4",
       reasoning: undefined,
+      thinking: false,
       fast: false,
       rawSuffix: "minimal",
     });
@@ -217,6 +243,7 @@ describe("parseModelVariant", () => {
       model: "o5.4-mini",
       baseModel: "o5.4",
       reasoning: undefined,
+      thinking: false,
       fast: false,
       rawSuffix: "mini",
     });
@@ -224,6 +251,7 @@ describe("parseModelVariant", () => {
       model: "o5.4-nano",
       baseModel: "o5.4",
       reasoning: undefined,
+      thinking: false,
       fast: false,
       rawSuffix: "nano",
     });
@@ -235,6 +263,7 @@ describe("parseModelVariant", () => {
       model: "composer-2.5-fast",
       baseModel: "composer-2.5",
       reasoning: undefined,
+      thinking: false,
       fast: true,
       rawSuffix: undefined,
     });
@@ -242,6 +271,7 @@ describe("parseModelVariant", () => {
       model: "composer-2-fast",
       baseModel: "composer-2",
       reasoning: undefined,
+      thinking: false,
       fast: true,
       rawSuffix: undefined,
     });

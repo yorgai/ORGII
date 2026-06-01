@@ -230,7 +230,7 @@ describe("RustKanbanTask Structure", () => {
 
     expect(task.id).toBe("WI-001");
     expect(task.title).toBe("Test task");
-    expect(task.status).toBe("todo");
+    expect(task.status).toBe("planned");
     expect(task.labels).toEqual([]);
   });
 
