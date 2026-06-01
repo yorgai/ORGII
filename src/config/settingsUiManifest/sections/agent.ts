@@ -33,6 +33,6 @@ export const AGENT_SETTINGS_UI_SECTIONS: SettingsSectionDefinition[] = [
     headingTitleKey: "sections.sdeAgentConfig",
     icon: Code,
     customSectionSlotId: SETTINGS_SECTION_SLOT_IDS.AGENT_SDE_CONFIG,
-    coveredKeys: ["agent.sde.questionAutoSkipTimeout"],
+    coveredKeys: [],
   },
 ];
