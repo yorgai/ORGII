@@ -39,7 +39,7 @@ pub fn list_builtin_skills() -> Vec<SkillInfo> {
         .iter()
         .map(|skill| SkillInfo {
             name: skill.name.to_string(),
-            path: format!("builtin://{}", skill.name).into(),
+            path: format!("builtin://{}/SKILL.md", skill.name).into(),
             source: "builtin".to_string(),
             always: false,
             available: true,

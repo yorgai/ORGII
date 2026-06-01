@@ -121,7 +121,7 @@ pub async fn read_file_in_range(
 
 /// Format extracted text (from any source: text file, PDF, notebook) into a `FileReadResult`
 /// with line numbering and offset/limit support.
-fn format_text_result(
+pub(crate) fn format_text_result(
     content: &str,
     file_size: u64,
     modified_millis: u128,

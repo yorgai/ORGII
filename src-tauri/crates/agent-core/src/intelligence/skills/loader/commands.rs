@@ -101,10 +101,6 @@ fn append_embedded_builtin_skills(skills: &mut Vec<SkillInfo>) {
             continue;
         }
         skill.source = EMBEDDED_BUILTIN_SKILL_SOURCE.to_string();
-        skill.path = global_skills_dir()
-            .join("built-in")
-            .join(&skill.name)
-            .join("SKILL.md");
         skills.push(skill);
     }
 }
@@ -427,6 +423,21 @@ mod tests {
         ));
         fs::create_dir_all(&dir).expect("temp dir");
         dir
+    }
+
+    #[test]
+    fn list_skills_with_config_keeps_embedded_builtin_uri() {
+        let skills = list_skills_with_config(None, &[]);
+        let skill = skills
+            .iter()
+            .find(|candidate| candidate.name == "create-orgii-agent")
+            .expect("create-orgii-agent should be listed");
+
+        assert_eq!(skill.source, EMBEDDED_BUILTIN_SKILL_SOURCE);
+        assert_eq!(
+            skill.path.to_string_lossy(),
+            "builtin://create-orgii-agent/SKILL.md"
+        );
     }
 
     #[test]
