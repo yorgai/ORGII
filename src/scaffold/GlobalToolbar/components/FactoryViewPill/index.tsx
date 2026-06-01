@@ -2,9 +2,9 @@
  * FactoryViewPill
  *
  * Header tabs for the Ops Control station.
- * Toggles between Kanban board and daily Diary.
+ * Toggles between Kanban board, list view, and daily Diary.
  *
- * View is stored in the URL search param `?view=kanban|diary`
+ * View is stored in the URL search param `?view=kanban|list|diary`
  * so it survives navigation and can be bookmarked/shared. Defaults to
  * "kanban".
  */
@@ -14,11 +14,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import TabPill, { type TabPillItem } from "@src/components/TabPill";
 
-export type FactoryViewMode = "kanban" | "diary";
+export type FactoryViewMode = "kanban" | "list" | "diary";
 
 export function parseFactoryViewMode(search: string): FactoryViewMode {
   const params = new URLSearchParams(search);
   const view = params.get("view");
+  if (view === "list") return "list";
   if (view === "diary") return "diary";
   return "kanban";
 }
@@ -32,6 +33,7 @@ const FactoryViewPill: React.FC = () => {
   const tabs = useMemo<TabPillItem[]>(
     () => [
       { key: "kanban", label: t("kanban.view.kanban") },
+      { key: "list", label: t("kanban.view.list") },
       { key: "diary", label: t("kanban.view.diary") },
     ],
     [t]

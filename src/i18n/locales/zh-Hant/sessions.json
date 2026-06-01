@@ -78,7 +78,17 @@
     "followLabel": "當前 Kanban",
     "view": {
       "kanban": "看板",
+      "list": "列表",
       "diary": "日誌"
+    },
+    "list": {
+      "updated": "已更新",
+      "timeRange": "時間範圍",
+      "started": "開始時間",
+      "lastUpdated": "最後更新",
+      "agentModel": "Agent · 模型",
+      "emptyTitle": "沒有符合這些篩選條件的會話",
+      "emptyDescription": "嘗試切換狀態、Agent 類型或時間範圍。"
     },
     "timeFilter": {
       "label": "顯示範圍",

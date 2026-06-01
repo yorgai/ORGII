@@ -62,6 +62,8 @@ export interface KanbanTask {
   cliAgentType?: CliAgentType;
   /** Raw LLM model id used by the session. */
   modelName?: string;
+  /** Display label for the workspace root associated with the session. */
+  workspaceName?: string;
   /**
    * Owning Agent Org's display name when the session was launched as
    * part of an Agent Org run (Inbox or any other entry point). Left

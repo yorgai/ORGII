@@ -10,6 +10,7 @@ import type { FactoryViewMode } from "@src/scaffold/GlobalToolbar/components/Fac
 
 import type { DiaryTimelineDisplayMode } from "../../config";
 import DiaryView from "../DiaryView";
+import ListView from "../ListView";
 
 export interface TaskKanbanContentProps {
   viewMode: FactoryViewMode;
@@ -45,6 +46,15 @@ const TaskKanbanContent: React.FC<TaskKanbanContentProps> = ({
           tasks={diaryTasks}
           date={calendarDate}
           displayMode={diaryTimelineDisplayMode}
+          onTaskClick={onTaskClick}
+        />
+      );
+    case "list":
+      return (
+        <ListView
+          tasks={visibleTasks}
+          selectedTaskId={selectedTaskId}
+          detailPanelVisible={detailPanelVisible}
           onTaskClick={onTaskClick}
         />
       );
