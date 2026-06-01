@@ -189,7 +189,8 @@ pub struct ResolvedAgent {
     pub context_window: u64,
     pub temperature: f64,
     pub compaction: CompactionConfig,
-    pub load_workspace_settings: bool,
+    pub load_workspace_resources: bool,
+    pub load_workspace_rules: bool,
     pub skills: SkillsParams,
     pub tools: ResolvedToolSelection,
     pub sub_agents: Vec<SubAgentRef>,
@@ -307,7 +308,14 @@ impl ResolvedAgent {
 
         let compaction = session_model.compaction.clone().unwrap_or_default();
 
-        let load_workspace_settings = merged.load_workspace_settings.unwrap_or(true);
+        let load_workspace_resources = merged
+            .load_workspace_resources
+            .or(merged.load_workspace_settings)
+            .unwrap_or(true);
+        let load_workspace_rules = merged
+            .load_workspace_rules
+            .or(merged.load_workspace_settings)
+            .unwrap_or(true);
         let skills = skills_from_schema(merged.skills_config.as_ref());
         let tools = ResolvedToolSelection::from_schema(&merged.tools, &capabilities);
 
@@ -332,7 +340,8 @@ impl ResolvedAgent {
             context_window,
             temperature,
             compaction,
-            load_workspace_settings,
+            load_workspace_resources,
+            load_workspace_rules,
             skills,
             tools,
             sub_agents,
@@ -477,6 +486,20 @@ mod tests {
         };
         let err = ResolvedAgent::resolve(&def, None, &empty_overrides()).unwrap_err();
         assert!(matches!(err, ResolveError::MissingModel(_)));
+    }
+
+    #[test]
+    fn workspace_resource_and_rule_toggles_resolve_independently() {
+        let mut def =
+            with_pinned_model(get_builtin_agent("builtin:os").expect("os builtin exists"));
+        def.load_workspace_settings = Some(false);
+        def.load_workspace_resources = Some(true);
+        def.load_workspace_rules = None;
+
+        let resolved = ResolvedAgent::resolve(&def, None, &empty_overrides()).expect("resolves");
+
+        assert!(resolved.load_workspace_resources);
+        assert!(!resolved.load_workspace_rules);
     }
 
     #[test]

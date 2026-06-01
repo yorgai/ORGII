@@ -108,6 +108,8 @@ pub fn agent_architect() -> AgentDefinition {
         // resolvable via the skill loader's fallback path, so no
         // `source_dirs` entry is required. The SOUL prompt instructs the
         // agent to read them on demand.
+        load_workspace_resources: None,
+        load_workspace_rules: None,
         load_workspace_settings: None,
         skills_config: None,
         selected_account_id: None,

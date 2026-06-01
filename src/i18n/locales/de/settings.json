@@ -1118,8 +1118,10 @@
     "scopeWorkspace": "Repo-spezifisch"
   },
   "workspaceResources": {
-    "loadWorkspaceSettings": "Workspace-Regeln, Skills und MCPs laden",
-    "loadWorkspaceSettingsDesc": "Wenn aktiviert, lädt dieser Agent repo-spezifische Regeln, Skills und MCP servers. Benutzerressourcen werden auch bei deaktivierter Option geladen"
+    "loadWorkspaceResources": "Arbeitsbereich-Skills, MCPs und Plugins automatisch laden",
+    "loadWorkspaceResourcesDesc": "Wenn aktiviert, lädt dieser Agent Skills, MCP servers und Plugins aus dem aktuellen Arbeitsbereich. Benutzerressourcen werden auch bei deaktivierter Option geladen",
+    "loadWorkspaceRules": "Arbeitsbereich-Regeln automatisch laden",
+    "loadWorkspaceRulesDesc": "Wenn aktiviert, lädt dieser Agent Regeln aus dem aktuellen Arbeitsbereich. Benutzerregeln werden auch bei deaktivierter Option geladen"
   },
   "agentMemory": {
     "learningsEnabled": "Langzeitspeicher",

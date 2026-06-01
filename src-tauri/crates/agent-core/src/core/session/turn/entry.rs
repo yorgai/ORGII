@@ -153,9 +153,12 @@ pub async fn process_message(
     let lsp_manager = extract_lsp_manager(&app_handle);
     let screenshot_store = extract_screenshot_store(&app_handle);
 
-    let hook_executor = Arc::new(crate::intelligence::hooks::HookExecutor::load(
-        &workspace_path,
-    ));
+    let hook_executor = Arc::new(
+        crate::intelligence::hooks::HookExecutor::load_with_workspace_scope(
+            &workspace_path,
+            runtime.resolved.load_workspace_resources,
+        ),
+    );
 
     if let Some(plan_approval_manager) = session.plan_approval_manager.as_ref() {
         plan_approval_manager.set_app_handle(app_handle.clone());

@@ -96,6 +96,8 @@ pub fn wingman_agent() -> AgentDefinition {
         max_tokens: None,
         temperature: Some(0.0),
         sub_agents: None,
+        load_workspace_resources: None,
+        load_workspace_rules: None,
         load_workspace_settings: None,
         skills_config: None,
         selected_account_id: None,

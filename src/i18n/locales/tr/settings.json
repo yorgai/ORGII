@@ -1118,8 +1118,10 @@
     "scopeWorkspace": "Repo-specific"
   },
   "workspaceResources": {
-    "loadWorkspaceSettings": "Workspace rules, skills ve MCP yükle",
-    "loadWorkspaceSettingsDesc": "Açıldığında bu Agent repo-specific rules, skills ve MCP servers yükler. Kapalıyken user-level kaynaklar yine yüklenir"
+    "loadWorkspaceResources": "Çalışma alanı Skills, MCP ve eklentilerini otomatik yükle",
+    "loadWorkspaceResourcesDesc": "Açıldığında bu Agent geçerli çalışma alanından Skills, MCP servers ve eklentileri yükler. Kapalıyken kullanıcı düzeyi kaynaklar yine yüklenir",
+    "loadWorkspaceRules": "Çalışma alanı kurallarını otomatik yükle",
+    "loadWorkspaceRulesDesc": "Açıldığında bu Agent geçerli çalışma alanından kuralları yükler. Kapalıyken kullanıcı düzeyi kurallar yine yüklenir"
   },
   "agentMemory": {
     "learningsEnabled": "Uzun süreli bellek",

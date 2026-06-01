@@ -579,11 +579,7 @@ impl SkillsLoader {
     }
 
     fn parse_inline_list(line: &str) -> Vec<String> {
-        let inner = line
-            .split('[')
-            .nth(1)
-            .unwrap_or("")
-            .trim_end_matches(']');
+        let inner = line.split('[').nth(1).unwrap_or("").trim_end_matches(']');
         inner
             .split(',')
             .map(|item| item.trim().trim_matches('"').trim_matches('\'').to_string())
@@ -889,7 +885,11 @@ mod include_filter_tests {
     #[test]
     fn workspace_toggle_skips_workspace_skills() {
         let ws = temp_workspace("workspace_toggle");
-        write_skill(&ws, "workspace-only", &skill_doc("workspace-only", "workspace skill"));
+        write_skill(
+            &ws,
+            "workspace-only",
+            &skill_doc("workspace-only", "workspace skill"),
+        );
 
         let loader = SkillsLoader::new(&ws).with_load_workspace_settings(false);
 

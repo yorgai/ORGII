@@ -52,6 +52,8 @@ pub fn base_agent() -> AgentDefinition {
         soul_content: None,
         sovereign_prompt: false,
         sub_agents: None,
+        load_workspace_resources: None,
+        load_workspace_rules: None,
         load_workspace_settings: None,
         skills_config: None,
         selected_account_id: None,

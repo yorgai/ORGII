@@ -44,7 +44,8 @@ impl UnifiedMessageProcessor {
             agent_definition_id: self.runtime.agent_definition_id.clone(),
             skills_enabled: self.runtime.resolved.skills.enabled,
             disabled_skills: self.runtime.resolved.skills.disabled.clone(),
-            load_workspace_settings: self.runtime.resolved.load_workspace_settings,
+            load_workspace_resources: self.runtime.resolved.load_workspace_resources,
+            load_workspace_rules: self.runtime.resolved.load_workspace_rules,
             agent_soul: self.runtime.agent_soul.clone(),
             workspace: live_workspace,
             channel: self.channel.clone(),
@@ -146,7 +147,7 @@ impl UnifiedMessageProcessor {
                     &effective_disabled,
                     include_filter,
                     agent_key,
-                    self.runtime.resolved.load_workspace_settings,
+                    self.runtime.resolved.load_workspace_resources,
                 );
                 let listing = {
                     let mut cache = self.session.skill_listing_cache.lock().await;
@@ -157,7 +158,7 @@ impl UnifiedMessageProcessor {
                                 .with_builtin_dir(crate::skills::loader::global_skills_dir())
                                 .with_agent_id(agent_key.to_string())
                                 .with_load_workspace_settings(
-                                    self.runtime.resolved.load_workspace_settings,
+                                    self.runtime.resolved.load_workspace_resources,
                                 );
                             if !self.runtime.resolved.skills.source_dirs.is_empty() {
                                 loader = loader.with_extra_source_dirs(

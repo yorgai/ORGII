@@ -428,6 +428,7 @@ pub async fn test_agent_org_launch_coordinator(
                             &content_result,
                             Some(&handle),
                             Some(sync_workspace_path.as_path()),
+                            true,
                         )
                         .await;
                         sync_response = Some(serde_json::json!({
@@ -446,6 +447,7 @@ pub async fn test_agent_org_launch_coordinator(
                             &content_result,
                             Some(&handle),
                             Some(sync_workspace_path.as_path()),
+                            true,
                         )
                         .await;
                         return Json(serde_json::json!({
@@ -469,6 +471,7 @@ pub async fn test_agent_org_launch_coordinator(
                             &content_result,
                             Some(&handle),
                             Some(sync_workspace_path.as_path()),
+                            true,
                         )
                         .await;
                         return Json(serde_json::json!({

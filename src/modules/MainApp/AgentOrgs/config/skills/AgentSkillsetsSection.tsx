@@ -1,6 +1,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 
+import { DETAIL_PANEL_TOKENS } from "@src/modules/shared/layouts/blocks";
+
 import { type UseAgentConfig } from "../mcp/AgentMcpSection";
 import AgentMcpSection from "../mcp/AgentMcpSection";
 import WorkspaceSettingsToggle from "../shared/WorkspaceSettingsToggle";
@@ -25,9 +27,18 @@ const AgentSkillsetsSection: React.FC<AgentSkillsetsSectionProps> = ({
   return (
     <>
       {headerElement}
-      <div className="scrollbar-overlay min-h-0 flex-1 overflow-auto">
-        <div className="mx-auto flex w-full max-w-[1160px] flex-col gap-4 px-4 pb-10 pt-4">
-          <WorkspaceSettingsToggle config={config} update={update} />
+      <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
+        <div
+          className={`${DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop} flex flex-col gap-4`}
+        >
+          <WorkspaceSettingsToggle
+            config={config}
+            update={update}
+            configKey="loadWorkspaceResources"
+            labelKey="workspaceResources.loadWorkspaceResources"
+            descriptionKey="workspaceResources.loadWorkspaceResourcesDesc"
+            dataTestId="agent-orgs-load-workspace-resources-switch"
+          />
           <section className="flex flex-col gap-3">
             <h3 className="text-sm font-semibold text-text-1">
               {t("externalSkillsets.tabs.skills")}

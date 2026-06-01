@@ -141,6 +141,10 @@ pub(super) fn create_agent(
         sovereign_prompt: false,
         sub_agents,
         tools,
+        load_workspace_resources: params
+            .get("load_workspace_resources")
+            .and_then(|v| v.as_bool()),
+        load_workspace_rules: params.get("load_workspace_rules").and_then(|v| v.as_bool()),
         load_workspace_settings: params
             .get("load_workspace_settings")
             .and_then(|v| v.as_bool()),

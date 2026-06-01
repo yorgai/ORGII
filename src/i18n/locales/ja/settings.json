@@ -1118,8 +1118,10 @@
     "scopeWorkspace": "Repo-specific"
   },
   "workspaceResources": {
-    "loadWorkspaceSettings": "Workspace のルール、skills、MCP を読み込む",
-    "loadWorkspaceSettingsDesc": "有効にすると、この Agent は repo-specific のルール、skills、MCP servers を読み込みます。オフでも user-level リソースは読み込まれます"
+    "loadWorkspaceResources": "ワークスペースの Skills、MCP、プラグインを自動読み込み",
+    "loadWorkspaceResourcesDesc": "有効にすると、この Agent は現在のワークスペースから Skills、MCP servers、プラグインを読み込みます。オフでもユーザーレベルのリソースは読み込まれます",
+    "loadWorkspaceRules": "ワークスペースのルールを自動読み込み",
+    "loadWorkspaceRulesDesc": "有効にすると、この Agent は現在のワークスペースからルールを読み込みます。オフでもユーザーレベルのルールは読み込まれます"
   },
   "agentMemory": {
     "learningsEnabled": "長期メモリ",

@@ -31,7 +31,15 @@ pub struct HookExecutor {
 impl HookExecutor {
     /// Create an executor from a workspace root. Loads `.orgii/hooks.json` eagerly.
     pub fn load(workspace_root: &std::path::Path) -> Self {
-        let config = HooksConfig::load(workspace_root);
+        Self::load_with_workspace_scope(workspace_root, true)
+    }
+
+    pub fn load_with_workspace_scope(
+        workspace_root: &std::path::Path,
+        load_workspace_resources: bool,
+    ) -> Self {
+        let config =
+            HooksConfig::load_with_workspace_scope(workspace_root, load_workspace_resources);
         if !config.is_empty() {
             info!(
                 "[hooks] Loaded {} hook(s) from {}",

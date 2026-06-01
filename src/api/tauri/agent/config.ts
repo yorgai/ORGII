@@ -113,7 +113,10 @@ export function assembleAgentConfigBlob(
     model: def.selectedModelId ?? "",
     maxIterations: sessionModel.maxIterations ?? 500,
     compaction: toRecord(sessionModel.compaction),
-    loadWorkspaceSettings: def.loadWorkspaceSettings ?? true,
+    loadWorkspaceResources:
+      def.loadWorkspaceResources ?? def.loadWorkspaceSettings ?? true,
+    loadWorkspaceRules:
+      def.loadWorkspaceRules ?? def.loadWorkspaceSettings ?? true,
     reliability: toRecord(def.reliability),
     learnings: toRecord(def.learnings),
     subAgents: def.subAgents ?? null,
@@ -233,8 +236,10 @@ export function extractAgentDefPatch(
   if ("maxToolUseConcurrency" in blob)
     patch.maxToolUseConcurrency = blob.maxToolUseConcurrency;
   if ("execTimeout" in blob) patch.execTimeout = blob.execTimeout;
-  if ("loadWorkspaceSettings" in blob)
-    patch.loadWorkspaceSettings = blob.loadWorkspaceSettings;
+  if ("loadWorkspaceResources" in blob)
+    patch.loadWorkspaceResources = blob.loadWorkspaceResources;
+  if ("loadWorkspaceRules" in blob)
+    patch.loadWorkspaceRules = blob.loadWorkspaceRules;
   // `restrictToWorkspace` no longer exists on AgentDefinition; the
   // unified field is `agentPolicy.workspaceOnly`, which is mapped from
   // the blob's `security.workspaceOnly` below.

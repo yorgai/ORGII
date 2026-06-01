@@ -109,6 +109,8 @@ pub fn os_agent() -> AgentDefinition {
             agent_id: super::SDE_AGENT_ID.into(),
             isolation: None,
         }]),
+        load_workspace_resources: None,
+        load_workspace_rules: None,
         load_workspace_settings: None,
         skills_config: None,
         selected_account_id: None,

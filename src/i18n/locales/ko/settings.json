@@ -1118,8 +1118,10 @@
     "scopeWorkspace": "Repo-specific"
   },
   "workspaceResources": {
-    "loadWorkspaceSettings": "Workspace rules, skills 및 MCP 로드",
-    "loadWorkspaceSettingsDesc": "켜면 이 Agent가 repo-specific rules, skills 및 MCP servers를 로드합니다. 꺼져 있어도 user-level 리소스는 계속 로드됩니다"
+    "loadWorkspaceResources": "워크스페이스 Skills, MCP 및 플러그인 자동 로드",
+    "loadWorkspaceResourcesDesc": "켜면 이 Agent가 현재 워크스페이스의 Skills, MCP servers 및 플러그인을 로드합니다. 꺼져 있어도 사용자 수준 리소스는 계속 로드됩니다",
+    "loadWorkspaceRules": "워크스페이스 규칙 자동 로드",
+    "loadWorkspaceRulesDesc": "켜면 이 Agent가 현재 워크스페이스의 규칙을 로드합니다. 꺼져 있어도 사용자 수준 규칙은 계속 로드됩니다"
   },
   "agentMemory": {
     "learningsEnabled": "장기 메모리",

@@ -701,22 +701,20 @@ mod tests {
         let disabled_b = vec!["alpha".to_string(), "beta".to_string()];
         let include_b = vec!["alpha".to_string(), "gamma".to_string()];
 
-        let first =
-            SkillListingCacheKey::new(
-                Path::new("/tmp/project"),
-                &disabled_a,
-                Some(&include_a),
-                "agent-a",
-                true,
-            );
-        let second =
-            SkillListingCacheKey::new(
-                Path::new("/tmp/project"),
-                &disabled_b,
-                Some(&include_b),
-                "agent-a",
-                true,
-            );
+        let first = SkillListingCacheKey::new(
+            Path::new("/tmp/project"),
+            &disabled_a,
+            Some(&include_a),
+            "agent-a",
+            true,
+        );
+        let second = SkillListingCacheKey::new(
+            Path::new("/tmp/project"),
+            &disabled_b,
+            Some(&include_b),
+            "agent-a",
+            true,
+        );
 
         assert_eq!(first, second);
     }
@@ -725,15 +723,15 @@ mod tests {
     fn skill_listing_cache_distinguishes_empty_filter_from_no_filter() {
         let disabled: Vec<String> = Vec::new();
         let empty_include: Vec<String> = Vec::new();
-        let no_filter = SkillListingCacheKey::new(Path::new("/tmp/project"), &disabled, None, "agent-a", true);
-        let empty_filter =
-            SkillListingCacheKey::new(
-                Path::new("/tmp/project"),
-                &disabled,
-                Some(&empty_include),
-                "agent-a",
-                true,
-            );
+        let no_filter =
+            SkillListingCacheKey::new(Path::new("/tmp/project"), &disabled, None, "agent-a", true);
+        let empty_filter = SkillListingCacheKey::new(
+            Path::new("/tmp/project"),
+            &disabled,
+            Some(&empty_include),
+            "agent-a",
+            true,
+        );
 
         assert_ne!(no_filter, empty_filter);
     }

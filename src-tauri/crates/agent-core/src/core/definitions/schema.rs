@@ -469,8 +469,16 @@ pub struct AgentDefinition {
     #[serde(default)]
     pub tools: AgentToolSelection,
 
-    /// Load workspace-scoped rules, skills, and MCP servers for this agent.
+    /// Load workspace-scoped skills, MCP servers, and plugins for this agent.
     /// User/global resources still load when this is false. `None` resolves to true.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub load_workspace_resources: Option<bool>,
+
+    /// Load workspace-scoped rules for this agent. User/global rules still load when this is false.
+    /// `None` resolves to true.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub load_workspace_rules: Option<bool>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub load_workspace_settings: Option<bool>,
 

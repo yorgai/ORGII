@@ -1119,8 +1119,10 @@
     "scopeWorkspace": "Для repo"
   },
   "workspaceResources": {
-    "loadWorkspaceSettings": "Загружать workspace rules, skills и MCP",
-    "loadWorkspaceSettingsDesc": "Когда включено, этот Agent загружает repo-specific rules, skills и MCP servers. User-level ресурсы загружаются даже при выключенной опции"
+    "loadWorkspaceResources": "Автоматически загружать Skills, MCP и плагины рабочей области",
+    "loadWorkspaceResourcesDesc": "Когда включено, этот Agent загружает Skills, MCP servers и плагины из текущей рабочей области. Ресурсы уровня пользователя загружаются даже при выключенной опции",
+    "loadWorkspaceRules": "Автоматически загружать правила рабочей области",
+    "loadWorkspaceRulesDesc": "Когда включено, этот Agent загружает правила из текущей рабочей области. Правила уровня пользователя загружаются даже при выключенной опции"
   },
   "agentMemory": {
     "learningsEnabled": "Долговременная память",

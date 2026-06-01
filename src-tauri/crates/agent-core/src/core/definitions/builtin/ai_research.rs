@@ -69,6 +69,8 @@ pub fn ai_research_agent() -> AgentDefinition {
         max_tokens: None,
         temperature: Some(0.0),
         sub_agents: Some(vec![]),
+        load_workspace_resources: None,
+        load_workspace_rules: None,
         load_workspace_settings: None,
         skills_config: Some(AgentSkillsConfig {
             enabled: Some(true),

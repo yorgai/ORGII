@@ -64,7 +64,7 @@ fn build_effective_skill_listing(
     let loader = crate::skills::loader::SkillsLoader::new(&skills_dir)
         .with_builtin_dir(crate::skills::loader::global_skills_dir())
         .with_agent_id(runtime.resolved.agent_id.clone())
-        .with_load_workspace_settings(runtime.resolved.load_workspace_settings);
+        .with_load_workspace_settings(runtime.resolved.load_workspace_resources);
     loader.build_skill_listing_attachment(effective_disabled, include_filter)
 }
 

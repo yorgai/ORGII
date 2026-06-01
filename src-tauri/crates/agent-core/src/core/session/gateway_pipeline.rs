@@ -180,7 +180,7 @@ pub async fn process_gateway_message(
         .as_ref()
         .map(|r| r.content.clone())
         .map_err(|e| e.clone());
-    crate::lifecycle::finalize_session(&session_key, &response, None, None).await;
+    crate::lifecycle::finalize_session(&session_key, &response, None, None, true).await;
 
     match result {
         Ok(processing_result) => {

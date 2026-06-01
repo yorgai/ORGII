@@ -1118,8 +1118,10 @@
     "scopeWorkspace": "Theo repo"
   },
   "workspaceResources": {
-    "loadWorkspaceSettings": "Tải workspace rules, skills và MCP",
-    "loadWorkspaceSettingsDesc": "Khi bật, Agent này tải rules, skills và MCP servers theo repo. Tài nguyên user-level vẫn được tải khi tắt"
+    "loadWorkspaceResources": "Tự động tải Skills, MCP và plugin của không gian làm việc",
+    "loadWorkspaceResourcesDesc": "Khi bật, Agent này tải Skills, MCP servers và plugin từ không gian làm việc hiện tại. Tài nguyên cấp người dùng vẫn được tải khi tắt",
+    "loadWorkspaceRules": "Tự động tải quy tắc của không gian làm việc",
+    "loadWorkspaceRulesDesc": "Khi bật, Agent này tải quy tắc từ không gian làm việc hiện tại. Quy tắc cấp người dùng vẫn được tải khi tắt"
   },
   "agentMemory": {
     "learningsEnabled": "Bộ nhớ dài hạn",

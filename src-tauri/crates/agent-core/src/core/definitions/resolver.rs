@@ -182,6 +182,10 @@ fn merge_definitions(parent: &AgentDefinition, child: &AgentDefinition) -> Agent
             .sub_agents
             .clone()
             .or_else(|| parent.sub_agents.clone()),
+        load_workspace_resources: child
+            .load_workspace_resources
+            .or(parent.load_workspace_resources),
+        load_workspace_rules: child.load_workspace_rules.or(parent.load_workspace_rules),
         load_workspace_settings: child
             .load_workspace_settings
             .or(parent.load_workspace_settings),

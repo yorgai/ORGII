@@ -162,7 +162,7 @@ pub(crate) async fn send_message_impl(
     )
     .await?;
 
-    let _runtime = crate::init::init_session(state, launch_spec).await?;
+    let runtime = crate::init::init_session(state, launch_spec).await?;
 
     // Wingman resume: reopen the bottom bar. On fresh start the frontend
     // sends `wingman_start` which opens the bar, but after app restart
@@ -189,6 +189,7 @@ pub(crate) async fn send_message_impl(
 
     let cancel_flag = Arc::clone(&session_handle.cancel_flag);
     let session_for_closure = Arc::clone(&session_handle);
+    let load_workspace_resources = runtime.resolved.load_workspace_resources;
 
     if !is_resume && !content.trim().is_empty() {
         let _ = super::org_tasks::resume_paused_run_for_user_message(state, &session_id).await?;
@@ -338,6 +339,7 @@ pub(crate) async fn send_message_impl(
                 &content_result,
                 app_handle.as_ref(),
                 Some(workspace_root.as_path()),
+                load_workspace_resources,
             )
             .await;
 

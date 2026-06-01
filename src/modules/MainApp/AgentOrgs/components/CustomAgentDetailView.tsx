@@ -349,7 +349,11 @@ const CustomAgentDetailView: React.FC<CustomAgentDetailViewProps> = ({
           )}
 
           {activeTab === "rules" && (
-            <AgentRulesSection workspacePath={workspacePath} />
+            <AgentRulesSection
+              workspacePath={workspacePath}
+              config={config}
+              update={update}
+            />
           )}
 
           {extraTab && extraTab.content}

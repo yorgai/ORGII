@@ -106,7 +106,8 @@ pub struct AgentDefinitionPatch {
     pub sovereign_prompt: Option<bool>,
     pub sub_agents: Option<Vec<SubAgentRef>>,
     pub tools: Option<AgentToolSelection>,
-    pub load_workspace_settings: Option<bool>,
+    pub load_workspace_resources: Option<bool>,
+    pub load_workspace_rules: Option<bool>,
     pub skills_config: Option<AgentSkillsConfig>,
     /// Tri-state nullable on the wire:
     /// - absent (`{}`) → leave unchanged
@@ -251,8 +252,11 @@ impl AgentDefinitionPatch {
             }
             target.tools = v;
         }
-        if let Some(v) = self.load_workspace_settings {
-            target.load_workspace_settings = Some(v);
+        if let Some(v) = self.load_workspace_resources {
+            target.load_workspace_resources = Some(v);
+        }
+        if let Some(v) = self.load_workspace_rules {
+            target.load_workspace_rules = Some(v);
         }
         if let Some(v) = self.skills_config {
             target.skills_config = Some(v);
@@ -656,7 +660,7 @@ mod tests {
     #[test]
     fn patch_deserialises_camel_case_field_names() {
         let patch: AgentDefinitionPatch = serde_json::from_str(
-            r#"{"learnings":{"enabled":true,"extractMemoriesEnabled":false,"autoDreamEnabled":false},"soulContent":"hi"}"#,
+            r#"{"learnings":{"enabled":true,"extractMemoriesEnabled":false,"autoDreamEnabled":false},"soulContent":"hi","loadWorkspaceResources":false,"loadWorkspaceRules":true}"#,
         )
         .expect("camelCase decodes");
         assert!(patch.learnings.is_some());
@@ -665,5 +669,7 @@ mod tests {
             Some(Some("hi".to_string())),
             "soulContent string decodes to Some(Some(\"hi\"))"
         );
+        assert_eq!(patch.load_workspace_resources, Some(false));
+        assert_eq!(patch.load_workspace_rules, Some(true));
     }
 }

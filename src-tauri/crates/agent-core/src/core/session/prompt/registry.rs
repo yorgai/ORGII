@@ -664,7 +664,8 @@ mod tests {
             agent_id: "test-agent".to_string(),
             agent_definition_id: Some("test-agent-def".to_string()),
             agent_soul: Some("You are test agent.".to_string()),
-            load_workspace_settings: true,
+            load_workspace_resources: true,
+            load_workspace_rules: true,
             // Empty workspace path means the conventions / rules
             // loaders gracefully return empty content; we just need
             // `workspace.is_some()` to flip the workspace branch on.

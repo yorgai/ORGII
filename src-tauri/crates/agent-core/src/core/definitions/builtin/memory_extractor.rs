@@ -61,6 +61,8 @@ pub fn memory_extractor() -> AgentDefinition {
 
         context_window: None,
         sub_agents: None,
+        load_workspace_resources: None,
+        load_workspace_rules: None,
         load_workspace_settings: None,
         skills_config: None,
         selected_account_id: None,

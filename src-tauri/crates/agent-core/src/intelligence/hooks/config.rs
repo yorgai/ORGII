@@ -106,8 +106,19 @@ impl HooksConfig {
     /// (`<workspace>/.orgii/hooks.json`). For the same event, global hooks
     /// come first, workspace hooks are appended.
     pub fn load(workspace_root: &Path) -> Self {
+        Self::load_with_workspace_scope(workspace_root, true)
+    }
+
+    pub fn load_with_workspace_scope(
+        workspace_root: &Path,
+        load_workspace_resources: bool,
+    ) -> Self {
         let global = Self::load_file(&global_hooks_path());
-        let workspace = Self::load_file(&workspace_hooks_path(workspace_root));
+        let workspace = if load_workspace_resources {
+            Self::load_file(&workspace_hooks_path(workspace_root))
+        } else {
+            Self::default()
+        };
 
         if global.is_empty() {
             return workspace;

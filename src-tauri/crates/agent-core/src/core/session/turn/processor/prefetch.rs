@@ -299,7 +299,7 @@ impl UnifiedMessageProcessor {
             .agent_definition_id
             .clone()
             .unwrap_or_else(|| self.agent_id.clone());
-        let load_workspace_settings = self.runtime.resolved.load_workspace_settings;
+        let load_workspace_settings = self.runtime.resolved.load_workspace_resources;
 
         Some(tokio::spawn(async move {
             let result = crate::skills::prefetch::select_skills(

@@ -1118,8 +1118,10 @@
     "scopeWorkspace": "Repo-specific"
   },
   "workspaceResources": {
-    "loadWorkspaceSettings": "加载 workspace 规则、skills 和 MCP",
-    "loadWorkspaceSettingsDesc": "开启后，此 Agent 会加载 repo-specific 规则、skills 和 MCP servers。关闭时仍会加载 user-level 资源"
+    "loadWorkspaceResources": "自动加载工作区 Skills、MCP 和插件",
+    "loadWorkspaceResourcesDesc": "开启后，此 Agent 会从当前工作区加载 Skills、MCP servers 和插件。关闭时仍会加载用户级资源",
+    "loadWorkspaceRules": "自动加载工作区规则",
+    "loadWorkspaceRulesDesc": "开启后，此 Agent 会从当前工作区加载规则。关闭时仍会加载用户级规则"
   },
   "agentMemory": {
     "learningsEnabled": "长期记忆",

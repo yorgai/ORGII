@@ -10,32 +10,37 @@ import {
 interface WorkspaceSettingsToggleProps {
   config: Record<string, unknown>;
   update: (path: string, value: unknown) => void;
+  configKey: "loadWorkspaceResources" | "loadWorkspaceRules";
+  labelKey: string;
+  descriptionKey: string;
+  dataTestId: string;
 }
 
 const WorkspaceSettingsToggle: React.FC<WorkspaceSettingsToggleProps> = ({
   config,
   update,
+  configKey,
+  labelKey,
+  descriptionKey,
+  dataTestId,
 }) => {
   const { t } = useTranslation("settings");
-  const enabled = config.loadWorkspaceSettings !== false;
+  const enabled = config[configKey] !== false;
 
   const handleChange = useCallback(
     (nextEnabled: boolean) => {
-      update("loadWorkspaceSettings", nextEnabled);
+      update(configKey, nextEnabled);
     },
-    [update]
+    [configKey, update]
   );
 
   return (
     <SectionContainer>
-      <SectionRow
-        label={t("workspaceResources.loadWorkspaceSettings")}
-        description={t("workspaceResources.loadWorkspaceSettingsDesc")}
-      >
+      <SectionRow label={t(labelKey)} description={t(descriptionKey)}>
         <Switch
           checked={enabled}
           onChange={handleChange}
-          dataTestId="agent-orgs-load-workspace-settings-switch"
+          dataTestId={dataTestId}
         />
       </SectionRow>
     </SectionContainer>

@@ -502,7 +502,7 @@ async fn ensure_session_initialized(
         &disabled_set,
         &disabled_mcp_servers,
         &disabled_mcp_tools,
-        resolved.load_workspace_settings,
+        resolved.load_workspace_resources,
         &log_prefix,
     )
     .await?;

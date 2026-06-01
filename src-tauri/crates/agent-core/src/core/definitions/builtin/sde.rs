@@ -108,6 +108,8 @@ pub fn sde_agent() -> AgentDefinition {
         // this list. SDE has no genuine user-facing sub-agent specialists by
         // default, so the list is empty.
         sub_agents: Some(vec![]),
+        load_workspace_resources: None,
+        load_workspace_rules: None,
         load_workspace_settings: None,
         skills_config: None,
         selected_account_id: None,

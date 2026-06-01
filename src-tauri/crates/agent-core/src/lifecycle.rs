@@ -257,6 +257,7 @@ pub async fn finalize_session(
     response: &Result<String, String>,
     app_handle: Option<&tauri::AppHandle>,
     workspace_path: Option<&std::path::Path>,
+    load_workspace_resources: bool,
 ) -> AgentSessionStatus {
     let is_agent_org_member_session = {
         let sid = session_id.to_string();
@@ -352,7 +353,10 @@ pub async fn finalize_session(
 
         // Fire HookEvent::SessionStop — session lifecycle ended.
         if let Some(root) = workspace_path {
-            let executor = crate::intelligence::hooks::HookExecutor::load(root);
+            let executor = crate::intelligence::hooks::HookExecutor::load_with_workspace_scope(
+                root,
+                load_workspace_resources,
+            );
             if executor.has_hooks_for(crate::intelligence::hooks::HookEvent::SessionStop) {
                 let ctx = crate::intelligence::hooks::events::HookContext::for_session(session_id)
                     .with_var("ORGII_SESSION_STATUS", final_status.as_ref());

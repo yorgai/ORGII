@@ -1118,8 +1118,10 @@
     "scopeWorkspace": "Específico do repo"
   },
   "workspaceResources": {
-    "loadWorkspaceSettings": "Carregar regras, skills e MCP do workspace",
-    "loadWorkspaceSettingsDesc": "Quando ativado, este Agent carrega regras, skills e MCP servers específicos do repo. Recursos de user-level ainda são carregados quando desativado"
+    "loadWorkspaceResources": "Carregar automaticamente Skills, MCPs e plugins do espaço de trabalho",
+    "loadWorkspaceResourcesDesc": "Quando ativado, este Agent carrega Skills, MCP servers e plugins do espaço de trabalho atual. Recursos de usuário ainda são carregados quando desativado",
+    "loadWorkspaceRules": "Carregar automaticamente regras do espaço de trabalho",
+    "loadWorkspaceRulesDesc": "Quando ativado, este Agent carrega regras do espaço de trabalho atual. Regras de usuário ainda são carregadas quando desativado"
   },
   "agentMemory": {
     "learningsEnabled": "Memória de longo prazo",

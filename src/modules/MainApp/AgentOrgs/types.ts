@@ -195,8 +195,10 @@ export interface AgentDefinition {
   maxToolUseConcurrency?: number | null;
   /** Tool selection — allowlist + blacklists. See `AgentToolSelection`. */
   tools?: AgentToolSelection;
-  /** Load workspace-scoped rules, skills, and MCP servers. Missing resolves to enabled. */
-  loadWorkspaceSettings?: boolean;
+  /** Load workspace-scoped skills, MCP servers, and plugins. Missing resolves to enabled. */
+  loadWorkspaceResources?: boolean;
+  /** Load workspace-scoped rules. Missing resolves to enabled. */
+  loadWorkspaceRules?: boolean;
   /** Per-agent skills configuration */
   skillsConfig?: AgentSkillsConfig;
   /** Preferred code account for this agent. None = inherit from work item config. */

@@ -18,6 +18,7 @@ import SettingsTable, {
 import Switch from "@src/components/Switch";
 import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
 
+import WorkspaceSettingsToggle from "../shared/WorkspaceSettingsToggle";
 import {
   type PolicyInfo,
   type PolicySource,
@@ -27,11 +28,15 @@ import {
 interface AgentRulesSectionProps {
   workspacePath?: string;
   onCountChange?: (count: number) => void;
+  config?: Record<string, unknown>;
+  update?: (path: string, value: unknown) => void;
 }
 
 const AgentRulesSection: React.FC<AgentRulesSectionProps> = ({
   workspacePath,
   onCountChange,
+  config,
+  update,
 }) => {
   const { t } = useTranslation(["settings", "integrations"]);
   const { goToIntegrations } = useAppNavigation();
@@ -121,7 +126,7 @@ const AgentRulesSection: React.FC<AgentRulesSectionProps> = ({
 
   const isFiltered = searchQuery.trim().length > 0;
 
-  return (
+  const table = (
     <SettingsTable<PolicyInfo>
       loading={loading}
       columns={columns}
@@ -147,6 +152,24 @@ const AgentRulesSection: React.FC<AgentRulesSectionProps> = ({
         dataTestId: "agent-orgs-add-rule-button",
       }}
     />
+  );
+
+  if (!config || !update) {
+    return table;
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <WorkspaceSettingsToggle
+        config={config}
+        update={update}
+        configKey="loadWorkspaceRules"
+        labelKey="workspaceResources.loadWorkspaceRules"
+        descriptionKey="workspaceResources.loadWorkspaceRulesDesc"
+        dataTestId="agent-orgs-load-workspace-rules-switch"
+      />
+      {table}
+    </div>
   );
 };
 

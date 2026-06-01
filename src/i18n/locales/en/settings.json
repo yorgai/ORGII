@@ -1118,8 +1118,10 @@
     "scopeWorkspace": "Repo-specific"
   },
   "workspaceResources": {
-    "loadWorkspaceSettings": "Load workspace rules, skills, and MCPs",
-    "loadWorkspaceSettingsDesc": "When enabled, this agent loads repo-specific rules, skills, and MCP servers. User-level resources still load when this is off"
+    "loadWorkspaceResources": "Auto load workspace skills, MCPs, and plugins",
+    "loadWorkspaceResourcesDesc": "When enabled, this agent loads skills, MCP servers, and plugins from the current workspace. User-level resources still load when this is off",
+    "loadWorkspaceRules": "Auto load workspace rules",
+    "loadWorkspaceRulesDesc": "When enabled, this agent loads rules from the current workspace. User-level rules still load when this is off"
   },
   "agentMemory": {
     "learningsEnabled": "Long-term memory",
