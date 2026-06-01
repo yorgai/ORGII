@@ -4,7 +4,7 @@
  * Setup Sidecar Symlinks
  *
  * Creates machine-specific symlinks for Tauri sidecar binaries.
- * This script runs automatically during npm install (postinstall).
+ * This script runs automatically during pnpm install (postinstall).
  *
  * Purpose:
  * - Tauri requires external binaries (sidecars) to be bundled with the app
@@ -163,7 +163,7 @@ function main() {
     console.error(
       "⚠️  Some symlinks failed to create. Please check the errors above."
     );
-    process.exit(0); // Don't fail npm install, but log the issue
+    process.exit(0); // Don't fail dependency installation, but log the issue
   } else {
     console.log("✅ All sidecar symlinks configured successfully!\n");
   }

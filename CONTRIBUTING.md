@@ -25,7 +25,7 @@ Prerequisites:
 From the repository root:
 
 ```bash
-npm install
+pnpm install
 ```
 
 Copy `.env.example` to `.env` only when you need local configuration. `.env` is gitignored; never commit real secrets.
@@ -33,7 +33,7 @@ Copy `.env.example` to `.env` only when you need local configuration. `.env` is 
 Run the full desktop app:
 
 ```bash
-npm run tauri:dev
+pnpm run tauri:dev
 ```
 
 Tauri starts the webpack dev server through its `beforeDevCommand`; contributors should use the Tauri scripts rather than launching the frontend shell independently.
@@ -45,25 +45,25 @@ Run the checks that match the files you changed before opening a PR.
 Frontend:
 
 ```bash
-npm run lint
-npm run test
-npm run check:circular
+pnpm run lint
+pnpm run test
+pnpm run check:circular
 ```
 
 Rust/Tauri:
 
 ```bash
-npm run cargo:check
-npm run cargo:clippy
-npm run cargo:test
+pnpm run cargo:check
+pnpm run cargo:clippy
+pnpm run cargo:test
 ```
 
 Targeted Rust module tests are available, for example:
 
 ```bash
-npm run cargo:test:agent_core
-npm run cargo:test:event_store
-npm run cargo:test:work_station
+pnpm run cargo:test:agent_core
+pnpm run cargo:test:event_store
+pnpm run cargo:test:work_station
 ```
 
 Core UI end-to-end tests live in `tests/e2e` and use WebDriverIO with `tauri-webdriver-automation`. Run them after UI changes that can affect chat or session behavior:
@@ -71,8 +71,8 @@ Core UI end-to-end tests live in `tests/e2e` and use WebDriverIO with `tauri-web
 ```bash
 cargo install tauri-webdriver-automation --locked
 cd tests/e2e
-npm install
-npm test
+pnpm install
+pnpm test
 ```
 
 See `tests/e2e/README.md` for account setup, isolated service runs, targeted specs, and scenario filters.

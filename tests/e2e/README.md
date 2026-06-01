@@ -29,7 +29,7 @@ E2E_GEMINI_MODEL_CHAIN="gemini-3-flash-preview,gemini-2.5-flash,gemini-2.5-pro,g
 
 ```bash
 cargo install tauri-webdriver-automation --locked
-cd tests/e2e && npm install
+cd tests/e2e && pnpm install
 ```
 
 Open the app normally once and ensure the KeyVault accounts used by the suite exist. The common defaults are:
@@ -56,7 +56,7 @@ The generated repo is rebuilt at runner startup and contains:
 Override only when intentionally testing another sandbox repo:
 
 ```bash
-E2E_REPO_PATH="/path/to/sandbox-git-repo" npm test
+E2E_REPO_PATH="/path/to/sandbox-git-repo" pnpm test
 ```
 
 Explicit `E2E_REPO_PATH` values are rejected unless they point to a non-empty git repo containing both `package.json` and `README.md`.
@@ -65,21 +65,21 @@ Explicit `E2E_REPO_PATH` values are rejected unless they point to a non-empty gi
 
 ```bash
 cd tests/e2e
-npm test
+pnpm test
 ```
 
 Target one core spec:
 
 ```bash
 cd tests/e2e
-npm test -- --spec './specs/core/session-plan-ui.spec.mjs'
+pnpm test -- --spec './specs/core/session-plan-ui.spec.mjs'
 ```
 
 Target a single scenario inside scenario-driven specs:
 
 ```bash
 cd tests/e2e
-E2E_CONTROL_SCENARIOS=plan-update npm test -- --spec './specs/core/session-controls-ui.spec.mjs'
+E2E_CONTROL_SCENARIOS=plan-update pnpm test -- --spec './specs/core/session-controls-ui.spec.mjs'
 ```
 
 ## Running with isolated services
@@ -93,7 +93,7 @@ export E2E_WEBDRIVER_PORT=4454
 export E2E_IDE_SERVER_PORT=13857
 export E2E_FRONTEND_PORT=2008
 cd tests/e2e
-npm test -- --spec './specs/core/session-matrix-ui.spec.mjs'
+pnpm test -- --spec './specs/core/session-matrix-ui.spec.mjs'
 ```
 
 For parallel/reused service experiments, set `E2E_REUSE_SERVICES=1` only after starting the app/WebDriver stack yourself.

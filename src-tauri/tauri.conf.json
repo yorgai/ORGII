@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:1998",
-    "beforeDevCommand": "npm run start:fast",
-    "beforeBuildCommand": "npm run build"
+    "beforeDevCommand": "pnpm run start:fast",
+    "beforeBuildCommand": "pnpm run build"
   },
   "app": {
     "macOSPrivateApi": true,

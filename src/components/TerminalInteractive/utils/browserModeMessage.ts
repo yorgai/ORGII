@@ -19,7 +19,7 @@ export function writeBrowserModeMessage(terminal: Terminal): void {
     "\x1b[36m║\x1b[0m  The terminal requires the Tauri desktop app.           \x1b[36m║\x1b[0m",
     "\x1b[36m║\x1b[0m  Please run the application using:                      \x1b[36m║\x1b[0m",
     "\x1b[36m║\x1b[0m                                                          \x1b[36m║\x1b[0m",
-    "\x1b[36m║\x1b[0m    \x1b[32m$ npm run tauri:dev\x1b[0m                                  \x1b[36m║\x1b[0m",
+    "\x1b[36m║\x1b[0m    \x1b[32m$ pnpm run tauri:dev\x1b[0m                                  \x1b[36m║\x1b[0m",
     "\x1b[36m║\x1b[0m                                                          \x1b[36m║\x1b[0m",
     "\x1b[36m╚══════════════════════════════════════════════════════════╝\x1b[0m",
   ];

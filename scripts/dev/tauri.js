@@ -137,7 +137,7 @@ function shouldSuppressLine(clean) {
   return (
     clean.startsWith("Info Watching ") ||
     clean.startsWith("Running DevCommand (`cargo ") ||
-    clean.startsWith("Running BeforeDevCommand (`npm run start:fast`)") ||
+    clean.startsWith("Running BeforeDevCommand (`pnpm run start:fast`)") ||
     clean.startsWith(
       "Info `tauri` dependency has workspace inheritance enabled"
     ) ||
