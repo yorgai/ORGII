@@ -78,7 +78,17 @@
     "followLabel": "Kanban atual",
     "view": {
       "kanban": "Kanban",
+      "list": "Lista",
       "diary": "Diário"
+    },
+    "list": {
+      "updated": "Atualizado",
+      "timeRange": "Intervalo de tempo",
+      "started": "Iniciado",
+      "lastUpdated": "Última atualização",
+      "agentModel": "Agent · Modelo",
+      "emptyTitle": "Nenhuma sessão corresponde a estes filtros",
+      "emptyDescription": "Tente outro status, tipo de Agent ou intervalo de tempo."
     },
     "timeFilter": {
       "6h": "6h",
