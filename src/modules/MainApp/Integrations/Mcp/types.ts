@@ -25,7 +25,10 @@ export interface McpDetailState {
   resourcesLoading: boolean;
   onReconnect: (name: string) => Promise<void>;
   onEdit: (name: string) => void;
-  onDelete: (name: string, scope: McpServerStatus["scope"]) => void;
+  onDelete: (
+    name: string,
+    scope: McpServerStatus["scope"]
+  ) => Promise<boolean> | boolean;
   onFetchTools: (name: string) => void;
   onFetchResources: (name: string) => void;
   /** Toggle a single server's `disabled` flag. Backend kills the child

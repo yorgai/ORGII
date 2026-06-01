@@ -46,7 +46,7 @@ export function useMcpHandlers(
         okLabel: t("common:actions.delete"),
         cancelLabel: t("common:actions.cancel"),
       });
-      if (!confirmed) return;
+      if (!confirmed) return false;
 
       // Read only the target-scope file so we never mix global and workspace
       // entries into a single write.
@@ -58,6 +58,7 @@ export function useMcpHandlers(
         return { mcpServers: currentRest };
       });
       setExtensionSelectedId(null);
+      return true;
     },
     [mcpServers, setExtensionSelectedId, t]
   );

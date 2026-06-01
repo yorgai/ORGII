@@ -116,24 +116,30 @@ export function useMcpServers(options: UseMcpServersOptions = {}) {
   // cheap and stable across re-renders.
   const lastToolSignatureRef = useRef<string>("");
 
+  const listServers = useCallback(() => {
+    return rpc.mcp.listServers({ workspacePath });
+  }, [workspacePath]);
+
+  const updateToolSignature = useCallback((result: McpServerStatus[]) => {
+    const signature = result
+      .map((s) => `${s.name}:${s.status}:${s.toolCount}:${s.disabled ? 1 : 0}`)
+      .sort()
+      .join("|");
+    if (signature !== lastToolSignatureRef.current) {
+      lastToolSignatureRef.current = signature;
+      clearToolsCache();
+    }
+  }, []);
+
   const refresh = useCallback(async () => {
     const seq = ++refreshSeqRef.current;
     setLoading(true);
     try {
-      const result = await rpc.mcp.listServers({ workspacePath });
+      const result = await listServers();
       if (seq !== refreshSeqRef.current) return;
       setServers(result);
       setError(null);
-      const signature = result
-        .map(
-          (s) => `${s.name}:${s.status}:${s.toolCount}:${s.disabled ? 1 : 0}`
-        )
-        .sort()
-        .join("|");
-      if (signature !== lastToolSignatureRef.current) {
-        lastToolSignatureRef.current = signature;
-        clearToolsCache();
-      }
+      updateToolSignature(result);
     } catch (err) {
       if (seq === refreshSeqRef.current) {
         setError(err instanceof Error ? err.message : String(err));
@@ -143,7 +149,7 @@ export function useMcpServers(options: UseMcpServersOptions = {}) {
         setLoading(false);
       }
     }
-  }, [workspacePath]);
+  }, [listServers, updateToolSignature]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -161,19 +167,9 @@ export function useMcpServers(options: UseMcpServersOptions = {}) {
     const poll = () => {
       pollTimerRef.current = setTimeout(async () => {
         try {
-          const result = await rpc.mcp.listServers({ workspacePath });
+          const result = await listServers();
           setServers(result);
-          const signature = result
-            .map(
-              (s) =>
-                `${s.name}:${s.status}:${s.toolCount}:${s.disabled ? 1 : 0}`
-            )
-            .sort()
-            .join("|");
-          if (signature !== lastToolSignatureRef.current) {
-            lastToolSignatureRef.current = signature;
-            clearToolsCache();
-          }
+          updateToolSignature(result);
         } catch {
           // ignore polling errors
         }
@@ -190,7 +186,7 @@ export function useMcpServers(options: UseMcpServersOptions = {}) {
         pollTimerRef.current = null;
       }
     };
-  }, [enabled, hasConnecting, workspacePath]);
+  }, [enabled, hasConnecting, listServers, updateToolSignature]);
 
   const getConfig = useCallback(
     async (scope?: McpConfigScope) => {
@@ -199,12 +195,64 @@ export function useMcpServers(options: UseMcpServersOptions = {}) {
     [workspacePath]
   );
 
+  const refreshAfterConfigDelete = useCallback(
+    async (deletedServers: Array<{ name: string; scope: McpConfigScope }>) => {
+      if (deletedServers.length === 0) {
+        await refresh();
+        return;
+      }
+
+      const retryDelaysMs = [100, 300, 700];
+      for (const delayMs of retryDelaysMs) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        const result = await listServers();
+        const hasDeletedServer = deletedServers.some((deletedServer) =>
+          result.some(
+            (server) =>
+              server.name === deletedServer.name &&
+              server.scope === deletedServer.scope
+          )
+        );
+        if (!hasDeletedServer) {
+          setServers(result);
+          updateToolSignature(result);
+          return;
+        }
+      }
+    },
+    [listServers, refresh, updateToolSignature]
+  );
+
   const updateConfig = useCallback(
     async (config: McpConfigFile, scope?: McpConfigScope) => {
-      await rpc.mcp.updateServers({ workspacePath, config, scope });
-      await refresh();
+      let previousServers: McpServerStatus[] | null = null;
+      let deletedServers: Array<{ name: string; scope: McpConfigScope }> = [];
+      if (scope) {
+        const nextNames = new Set(Object.keys(config.mcpServers));
+        setServers((current) => {
+          previousServers = current;
+          deletedServers = current
+            .filter(
+              (server) => server.scope === scope && !nextNames.has(server.name)
+            )
+            .map((server) => ({ name: server.name, scope: server.scope }));
+          return current.filter(
+            (server) => server.scope !== scope || nextNames.has(server.name)
+          );
+        });
+      }
+
+      try {
+        await rpc.mcp.updateServers({ workspacePath, config, scope });
+        await refreshAfterConfigDelete(deletedServers);
+      } catch (error) {
+        if (previousServers) {
+          setServers(previousServers);
+        }
+        throw error;
+      }
     },
-    [workspacePath, refresh]
+    [workspacePath, refreshAfterConfigDelete]
   );
 
   const testServer = useCallback(

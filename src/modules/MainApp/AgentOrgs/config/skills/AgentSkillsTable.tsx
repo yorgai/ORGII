@@ -8,9 +8,11 @@
  * shared formatting parts as the Integrations Skills table, while this
  * surface keeps per-agent enablement as its own action.
  */
+import { Plus } from "lucide-react";
 import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import Button from "@src/components/Button";
 import SettingsTable, {
   SETTINGS_TABLE_COL,
   type SettingsTableColumn,
@@ -34,12 +36,6 @@ interface AgentSkillsTableProps {
   loading?: boolean;
   emptyTitle: string;
   emptySubtitle?: string;
-  /**
-   * Renders a "+ Add Skill" footer that deep-links to the
-   * Integrations Skills category. Per-agent context only edits the
-   * enabled flag; lifecycle (create / import / delete) lives in
-   * Integrations. Pass undefined to suppress the footer.
-   */
   onAddSkill?: () => void;
   addSkillLabel?: string;
 }
@@ -87,6 +83,19 @@ const AgentSkillsTable: React.FC<AgentSkillsTableProps> = ({
     },
     [t]
   );
+
+  const addSkillButton =
+    onAddSkill && addSkillLabel ? (
+      <Button
+        variant="secondary"
+        size="default"
+        icon={<Plus size={14} />}
+        onClick={onAddSkill}
+        data-testid="agent-orgs-add-skill-button"
+      >
+        {addSkillLabel}
+      </Button>
+    ) : undefined;
 
   const columns = useMemo<SettingsTableColumn<SkillInfo>[]>(
     () => [
@@ -153,18 +162,10 @@ const AgentSkillsTable: React.FC<AgentSkillsTableProps> = ({
         onSearchChange,
         searchPlaceholder: t("skills.searchPlaceholder"),
         allowSearchClear: true,
+        rightContent: addSkillButton,
       }}
       emptyTitle={emptyTitle}
       emptySubtitle={emptySubtitle}
-      addFooter={
-        onAddSkill && addSkillLabel
-          ? {
-              label: addSkillLabel,
-              onClick: onAddSkill,
-              dataTestId: "agent-orgs-add-skill-button",
-            }
-          : undefined
-      }
     />
   );
 };

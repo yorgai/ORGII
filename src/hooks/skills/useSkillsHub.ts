@@ -43,19 +43,41 @@ export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
 
   const mountedRef = useMounted();
 
+  const listInstalledSkills = useCallback(async () => {
+    return invoke<InstalledSkill[]>("skills_list", {
+      workspacePath: null,
+    });
+  }, []);
+
   const refreshInstalled = useCallback(async () => {
     setInstalledLoading(true);
     try {
-      const result = await invoke<InstalledSkill[]>("skills_list", {
-        workspacePath: null,
-      });
+      const result = await listInstalledSkills();
       setInstalledSkills(result);
     } catch (err) {
       console.error("[SkillsHub] Failed to list installed skills:", err);
     } finally {
       setInstalledLoading(false);
     }
-  }, [setInstalledSkills, setInstalledLoading]);
+  }, [listInstalledSkills, setInstalledSkills, setInstalledLoading]);
+
+  const refreshInstalledAfterDelete = useCallback(
+    async (deletedName: string) => {
+      const retryDelaysMs = [100, 300, 700];
+      for (const delayMs of retryDelaysMs) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        const result = await listInstalledSkills();
+        if (!result.some((skill) => skill.name === deletedName)) {
+          setInstalledSkills(result);
+          return;
+        }
+      }
+      setInstalledSkills((current) =>
+        current.filter((skill) => skill.name !== deletedName)
+      );
+    },
+    [listInstalledSkills, setInstalledSkills]
+  );
 
   useEffect(() => {
     if (!enabled) {
@@ -67,9 +89,7 @@ export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
     const load = async () => {
       setInstalledLoading(true);
       try {
-        const result = await invoke<InstalledSkill[]>("skills_list", {
-          workspacePath: null,
-        });
+        const result = await listInstalledSkills();
         if (!cancelled) setInstalledSkills(result);
       } catch (err) {
         if (!cancelled)
@@ -83,7 +103,7 @@ export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, setInstalledLoading, setInstalledSkills]);
+  }, [enabled, listInstalledSkills, setInstalledLoading, setInstalledSkills]);
 
   const fetchDetail = useCallback(async (slug: string) => {
     setDetailLoading(true);
@@ -138,10 +158,23 @@ export function useSkillsHub({ enabled = true }: UseSkillsHubOptions = {}) {
 
   const uninstall = useCallback(
     async (name: string) => {
-      await invoke("skills_hub_uninstall", { name });
-      await refreshInstalled();
+      let previousSkills: InstalledSkill[] | null = null;
+      setInstalledSkills((current) => {
+        previousSkills = current;
+        return current.filter((skill) => skill.name !== name);
+      });
+
+      try {
+        await invoke("skills_hub_uninstall", { name });
+        await refreshInstalledAfterDelete(name);
+      } catch (error) {
+        if (previousSkills) {
+          setInstalledSkills(previousSkills);
+        }
+        throw error;
+      }
     },
-    [refreshInstalled]
+    [refreshInstalledAfterDelete, setInstalledSkills]
   );
 
   const readSkill = useCallback(async (name: string): Promise<string> => {
