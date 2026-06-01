@@ -13,7 +13,6 @@ import type {
   AgentExecModeEntry,
 } from "@src/config/sessionCreatorConfig";
 import { MenuItemRow } from "@src/scaffold/ContextMenu/ResultItems";
-import { CONTEXT_MENU_ITEM_ROW } from "@src/scaffold/ContextMenu/config";
 import type { SlashItem, SlashItemCategory } from "@src/types/extensions";
 
 import {
@@ -24,21 +23,17 @@ import {
 
 // ── Shared ────────────────────────────────────────────────────────────────────
 
-const activeClass = CONTEXT_MENU_ITEM_ROW.selected;
-const idleClass = CONTEXT_MENU_ITEM_ROW.hoverIdle;
-
-function rowClass(isActive: boolean): string {
-  return `${DROPDOWN_CLASSES.itemCompact} group cursor-pointer ${isActive ? activeClass : idleClass}`;
+function rowClass(isActive: boolean, isSelected = false): string {
+  const bgClass = isActive || isSelected ? "bg-fill-2" : "hover:bg-fill-2";
+  return `${DROPDOWN_CLASSES.itemCompact} group cursor-pointer ${bgClass}`;
 }
 
-function iconClass(isActive: boolean, extra = ""): string {
-  return isActive
-    ? `text-primary-6 ${extra}`
-    : `text-text-2 group-hover:text-primary-6 ${extra}`;
+function iconClass(isSelected: boolean, extra = ""): string {
+  return isSelected ? `text-primary-6 ${extra}` : `text-text-2 ${extra}`;
 }
 
-function labelClass(isActive: boolean): string {
-  return `text-[13px] ${isActive ? "text-primary-6" : "text-text-1 group-hover:text-primary-6"}`;
+function labelClass(isSelected: boolean): string {
+  return `text-[13px] ${isSelected ? "text-primary-6" : "text-text-1"}`;
 }
 
 // ── SectionHeaderRow ─────────────────────────────────────────────────────────
@@ -76,12 +71,8 @@ export const ImageRow: React.FC<ImageRowProps> = React.memo(
           onMouseDown();
         }}
       >
-        <ImageIcon
-          size={14}
-          strokeWidth={1.75}
-          className={iconClass(isActive)}
-        />
-        <span className={labelClass(isActive)}>
+        <ImageIcon size={14} strokeWidth={1.75} className={iconClass(false)} />
+        <span className={labelClass(false)}>
           {t("creator.slashMenu.image", { defaultValue: "Image" })}
         </span>
       </div>
@@ -119,9 +110,9 @@ export const ModeRow: React.FC<ModeRowProps> = React.memo(
           <ModeIcon
             size={14}
             strokeWidth={1.75}
-            className={iconClass(isActive)}
+            className={iconClass(isCurrent)}
           />
-          <span className={labelClass(isActive)}>{t(mode.i18nKey)}</span>
+          <span className={labelClass(isCurrent)}>{t(mode.i18nKey)}</span>
         </div>
         {isCurrent && <DropdownSelectedCheck />}
       </div>
@@ -144,11 +135,10 @@ interface FlyoutTriggerRowProps {
 
 export const FlyoutTriggerRow: React.FC<FlyoutTriggerRowProps> = React.memo(
   ({ category, label, isActive, isOpen, onMouseEnter, onMouseDown }) => {
-    const active = isActive || isOpen;
     return (
       <div
         data-slash-flat
-        className={`${rowClass(active)} justify-between`}
+        className={`${rowClass(isActive, isOpen)} justify-between`}
         onMouseEnter={onMouseEnter}
         onMouseDown={(e) => {
           e.preventDefault();
@@ -159,14 +149,14 @@ export const FlyoutTriggerRow: React.FC<FlyoutTriggerRowProps> = React.memo(
           {React.createElement(categoryIcon(category), {
             size: 14,
             strokeWidth: 1.75,
-            className: iconClass(active),
+            className: iconClass(isOpen),
           })}
-          <span className={labelClass(active)}>{label}</span>
+          <span className={labelClass(isOpen)}>{label}</span>
         </div>
         <ChevronRight
           size={13}
           strokeWidth={1.75}
-          className={active ? "text-primary-6" : "text-text-3"}
+          className={isOpen ? "text-primary-6" : "text-text-3"}
         />
       </div>
     );
@@ -232,12 +222,11 @@ interface ModeFlyoutTriggerRowProps {
 export const ModeFlyoutTriggerRow: React.FC<ModeFlyoutTriggerRowProps> =
   React.memo(
     ({ isActive, isOpen, currentModeName, onMouseEnter, onMouseDown }) => {
-      const active = isActive || isOpen;
       const { t } = useTranslation("sessions");
       return (
         <div
           data-slash-flat
-          className={`${rowClass(active)} justify-between`}
+          className={`${rowClass(isActive, isOpen)} justify-between`}
           onMouseEnter={onMouseEnter}
           onMouseDown={(e) => {
             e.preventDefault();
@@ -248,9 +237,9 @@ export const ModeFlyoutTriggerRow: React.FC<ModeFlyoutTriggerRowProps> =
             {React.createElement(ModeIconComponent, {
               size: 14,
               strokeWidth: 1.75,
-              className: iconClass(active),
+              className: iconClass(isOpen),
             })}
-            <span className={labelClass(active)}>
+            <span className={labelClass(isOpen)}>
               {t("creator.slashMenu.mode", { defaultValue: "Mode" })}
             </span>
           </div>
@@ -259,7 +248,7 @@ export const ModeFlyoutTriggerRow: React.FC<ModeFlyoutTriggerRowProps> =
             <ChevronRight
               size={13}
               strokeWidth={1.75}
-              className={active ? "text-primary-6" : "text-text-3"}
+              className={isOpen ? "text-primary-6" : "text-text-3"}
             />
           </div>
         </div>
@@ -282,12 +271,11 @@ interface ModelsFlyoutTriggerRowProps {
 export const ModelsFlyoutTriggerRow: React.FC<ModelsFlyoutTriggerRowProps> =
   React.memo(
     ({ isActive, isOpen, currentModelName, onMouseEnter, onMouseDown }) => {
-      const active = isActive || isOpen;
       const { t } = useTranslation("sessions");
       return (
         <div
           data-slash-flat
-          className={`${rowClass(active)} justify-between`}
+          className={`${rowClass(isActive, isOpen)} justify-between`}
           onMouseEnter={onMouseEnter}
           onMouseDown={(e) => {
             e.preventDefault();
@@ -298,9 +286,9 @@ export const ModelsFlyoutTriggerRow: React.FC<ModelsFlyoutTriggerRowProps> =
             {React.createElement(ModelsIconComponent, {
               size: 14,
               strokeWidth: 1.75,
-              className: iconClass(active),
+              className: iconClass(isOpen),
             })}
-            <span className={labelClass(active)}>
+            <span className={labelClass(isOpen)}>
               {t("creator.slashMenu.models", { defaultValue: "Models" })}
             </span>
           </div>
@@ -314,7 +302,7 @@ export const ModelsFlyoutTriggerRow: React.FC<ModelsFlyoutTriggerRowProps> =
             <ChevronRight
               size={13}
               strokeWidth={1.75}
-              className={active ? "text-primary-6" : "text-text-3"}
+              className={isOpen ? "text-primary-6" : "text-text-3"}
             />
           </div>
         </div>
