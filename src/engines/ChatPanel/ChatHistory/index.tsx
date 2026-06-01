@@ -81,6 +81,7 @@ import "./index.scss";
 
 const renderNoGroupHeader = () => null;
 const TAIL_TURN_COLLAPSE_IDLE_MS = 60_000;
+const BOTTOM_OVERLAY_FADE_PX = 32;
 
 export interface ScrollNavState {
   showScrollToBottom: boolean;
@@ -800,11 +801,9 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
             <div
               className="pointer-events-none absolute bottom-0 left-0 right-0 z-10"
               style={{
-                height: bottomInset + 40,
-                maskImage:
-                  "linear-gradient(to bottom, transparent 0%, black 50%)",
-                WebkitMaskImage:
-                  "linear-gradient(to bottom, transparent 0%, black 50%)",
+                height: bottomInset,
+                maskImage: `linear-gradient(to bottom, transparent 0, black ${BOTTOM_OVERLAY_FADE_PX}px)`,
+                WebkitMaskImage: `linear-gradient(to bottom, transparent 0, black ${BOTTOM_OVERLAY_FADE_PX}px)`,
               }}
             >
               <div className={`h-full w-full ${surfaceBgClass}`} />

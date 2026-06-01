@@ -41,10 +41,10 @@ export const CHAT_EXPANDABLE_STACK_LIST_BODY_CLASSES = `space-y-0.5 ${CHAT_COMPO
  * Consumers append hover, drag cursors, etc.
  */
 export const COMPOSER_STACK_ROW_BASE =
-  "group flex h-6 items-center gap-1.5 rounded px-1.5 transition-colors";
+  "group flex h-8 items-center gap-1.5 rounded px-1.5 transition-colors";
 
 /** Default hover for non-active stack rows on composer stack surfaces. */
-export const COMPOSER_STACK_ROW_HOVER = "hover:bg-fill-2";
+export const COMPOSER_STACK_ROW_HOVER = "hover:bg-fill-1";
 
 /** Primary text in a stack row — single-line truncated label. */
 export const COMPOSER_STACK_ROW_LABEL =
@@ -73,4 +73,4 @@ export const COMPOSER_STACK_ROW_SECONDARY_INFO =
 
 /** Hover-visible action tray at the end of a stack row. */
 export const COMPOSER_STACK_ROW_ACTIONS =
-  "ml-auto flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100";
+  "invisible ml-auto flex shrink-0 items-center gap-0.5 group-hover:visible";

@@ -94,6 +94,7 @@
     "send": "發送",
     "sendMessageQueued": "發送（排隊）",
     "sendNow": "立即發送",
+    "resend": "重新發送",
     "stop": "停止",
     "find": "查找",
     "filter": "篩選",

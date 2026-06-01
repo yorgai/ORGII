@@ -94,6 +94,7 @@
     "send": "Senden",
     "sendMessageQueued": "Senden (Warteschlange)",
     "sendNow": "Jetzt senden",
+    "resend": "Erneut senden",
     "stop": "Stoppen",
     "find": "Suchen",
     "filter": "Filter",

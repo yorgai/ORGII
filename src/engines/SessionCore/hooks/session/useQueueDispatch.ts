@@ -275,7 +275,7 @@ export function useQueueDispatch(): void {
       (message) => message.sessionId === activeSessionId
     );
 
-    if (!nextMsg) return;
+    if (!nextMsg || editingRef.current) return;
 
     const visibleDelayMs = MIN_QUEUE_VISIBLE_MS - queuedMessageAgeMs(nextMsg);
     if (visibleDelayMs > 0) {
@@ -298,7 +298,7 @@ export function useQueueDispatch(): void {
       lockSessionIdRef.current = null;
     }
 
-    if (dispatchLockRef.current || editingRef.current) return;
+    if (dispatchLockRef.current) return;
     if (sentQueuedMessageIdsRef.current.has(nextMsg.id)) {
       dequeueMessage(nextMsg.id);
       return;
@@ -330,17 +330,6 @@ export function useQueueDispatch(): void {
     if (!wasActive) return;
     tryDispatchNext();
   }, [isSessionActive, tryDispatchNext]);
-
-  // When editing ends while session is idle, resume dispatch
-  const prevEditingRef = useRef(isQueueEditing);
-  useEffect(() => {
-    const wasEditing = prevEditingRef.current;
-    prevEditingRef.current = isQueueEditing;
-
-    if (wasEditing && !isQueueEditing && !isSessionActive) {
-      tryDispatchNext();
-    }
-  }, [isQueueEditing, isSessionActive, tryDispatchNext]);
 
   // Falling edge of isPendingCancel: Rust finished winding down the
   // cancelled turn (sessionHandlers cleared the flag).
@@ -393,6 +382,7 @@ export function useQueueDispatch(): void {
     userCancelRef.current = false;
     queueRef.current = queue;
     editingRef.current = isQueueEditing;
+    if (isQueueEditing) return;
     tryDispatchNext();
     flushTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
     flushTimersRef.current = [

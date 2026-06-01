@@ -106,14 +106,18 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
       />
     );
 
+    const pillCluster = pills ? (
+      <div className="flex min-w-0 shrink-0 items-center">{pills}</div>
+    ) : null;
+
     const toolbarRow = (
       <div className="flex h-9 min-h-9 w-full items-center justify-between px-1 text-text-2">
         <div className={rowClass}>
           {leftPrefix}
           {addButton}
-          {pills}
+          {pillCluster}
         </div>
-        <div className={rowClass}>
+        <div className="flex items-center gap-0.5">
           {showContextInfo && <ContextInfoButton repoPath={repoPath} />}
           {submitButton}
         </div>
@@ -150,7 +154,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
           {editorSlot}
         </div>
       );
-      const pillCluster = (
+      const gridPillCluster = (
         <div
           className="flex min-w-0 shrink-0 items-center"
           style={{ gridArea: "pills" }}
@@ -160,7 +164,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
       );
       const rightCluster = (
         <div
-          className={`flex min-w-0 shrink items-center justify-end ${toolbarItemGap === false ? "gap-0.5" : "gap-1"}`}
+          className="flex min-w-0 shrink items-center justify-end gap-0.5"
           style={{ gridArea: "right" }}
         >
           {showContextInfo && (
@@ -182,6 +186,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
             display: "grid",
             gridTemplateColumns: "auto auto 1fr",
             gridTemplateAreas: '"editor editor editor" "left pills right"',
+            columnGap: 2,
             rowGap: 4,
           };
 
@@ -189,7 +194,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
         <div className="w-full text-text-2" style={gridStyle}>
           {leftCluster}
           {editorWrap}
-          {pillCluster}
+          {gridPillCluster}
           {rightCluster}
         </div>
       );

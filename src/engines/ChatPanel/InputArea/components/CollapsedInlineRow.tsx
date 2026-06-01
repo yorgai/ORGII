@@ -67,13 +67,12 @@ const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
         {hasTrailing && (
           <div className="flex items-center gap-1">
             {showFollowAgent && (
-              <button
-                type="button"
+              <StackPill
+                count={0}
+                active={false}
                 onClick={scrollNav!.onFollowAgent}
-                className="flex h-[28px] shrink-0 cursor-pointer items-center rounded-full border border-border-2 bg-chat-input px-2 text-[13px] font-medium text-text-2 transition-colors duration-150 hover:border-border-3 hover:bg-chat-input hover:text-text-1"
-              >
-                Follow Agent
-              </button>
+                label="Follow Agent"
+              />
             )}
             {showScrollToBottom && (
               <StackPill

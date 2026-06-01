@@ -148,7 +148,7 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
         {variant === "corner" ? (
           <button
             ref={triggerRef}
-            className={`flex h-[28px] shrink-0 items-center gap-1.5 rounded-full border border-transparent text-text-3 transition-all duration-200 hover:border-border-2 hover:bg-fill-2 ${compact ? "w-[28px] justify-center px-0" : "px-2"}`}
+            className={`flex h-[28px] shrink-0 items-center gap-1.5 rounded-full border border-transparent text-text-3 transition-all duration-200 hover:border-transparent hover:bg-fill-2 ${compact ? "w-[28px] justify-center px-0" : "px-2"}`}
             onClick={toggle}
             aria-label={t("contextInfo.ariaLabel")}
             aria-expanded={panelPos !== null}

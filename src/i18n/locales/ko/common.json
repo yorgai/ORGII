@@ -94,6 +94,7 @@
     "send": "보내기",
     "sendMessageQueued": "보내기(대기열)",
     "sendNow": "지금 보내기",
+    "resend": "다시 보내기",
     "stop": "중지",
     "find": "찾기",
     "filter": "필터",

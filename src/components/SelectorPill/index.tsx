@@ -129,16 +129,14 @@ export const SelectorPill = forwardRef<HTMLButtonElement, SelectorPillProps>(
         : "text-text-1";
     const variantClasses =
       variant === "input"
-        ? active
-          ? "border-border-2 bg-chat-input"
-          : "border-transparent bg-chat-input hover:border-border-2 hover:bg-chat-input"
+        ? "border-transparent bg-chat-input hover:border-transparent hover:bg-chat-input"
         : variant === "ghost"
           ? active
             ? "border-transparent bg-fill-2"
             : "border-transparent hover:border-transparent hover:bg-fill-2"
           : active
-            ? "border-border-2 bg-fill-2"
-            : "border-transparent hover:border-border-2 hover:bg-fill-2";
+            ? "border-transparent bg-fill-2"
+            : "border-transparent hover:border-transparent hover:bg-fill-2";
 
     // Controlled tooltip visibility so that opening the dropdown (active=true)
     // immediately hides the tooltip instead of leaving it covering the panel.

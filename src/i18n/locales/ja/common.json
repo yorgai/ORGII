@@ -94,6 +94,7 @@
     "send": "送信",
     "sendMessageQueued": "送信（キュー）",
     "sendNow": "今すぐ送信",
+    "resend": "再送信",
     "stop": "停止",
     "find": "検索",
     "filter": "フィルター",

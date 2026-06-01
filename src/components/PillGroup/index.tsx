@@ -100,7 +100,7 @@ export interface PillGroupProps {
    * Visual variant for hover/active styling.
    *
    * - `default` — at rest segments are transparent + divider visible; on
-   *   hover/active a segment gains a `border-border-2 bg-fill-2` ring.
+   *   hover/active a segment gains a fill without adding a border ring.
    * - `ghost` — same resting behaviour, but on hover/active only the fill
    *   appears (no border ring). Used inside dense factory headers where a
    *   bordered pill would clash with the surrounding chrome.
@@ -227,12 +227,12 @@ const PillGroup: React.FC<PillGroupProps> = memo(
               className={`group/pill flex items-center gap-2 rounded-full border border-solid ${variant === "input" ? "px-2" : "px-3"} transition-[background,border-color,color] duration-150 focus:outline-none ${PILL_SM_HEIGHT_CLASS} ${
                 isPillStyled
                   ? variant === "input"
-                    ? "border-border-2 bg-chat-input"
+                    ? "border-transparent bg-chat-input"
                     : variant === "ghost"
                       ? "border-transparent bg-fill-2"
                       : variant === "solid"
                         ? "border-transparent bg-chat-input"
-                        : "border-border-2 bg-fill-2"
+                        : "border-transparent bg-fill-2"
                   : variant === "input"
                     ? "border-transparent bg-chat-input"
                     : "border-transparent bg-transparent"
