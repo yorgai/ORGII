@@ -94,6 +94,7 @@
     "send": "Enviar",
     "sendMessageQueued": "Enviar (en cola)",
     "sendNow": "Enviar ahora",
+    "resend": "Reenviar",
     "stop": "Detener",
     "find": "Buscar",
     "filter": "Filtrar",

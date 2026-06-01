@@ -13,7 +13,7 @@ import { SquareTerminal, Trash2 } from "lucide-react";
 import React, { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import IconButton from "@src/components/IconButton";
+import Button from "@src/components/Button";
 import {
   CHAT_COMPOSER_STACK_BAR_INNER_PADDING_X_CLASS,
   CHAT_COMPOSER_STACK_BAR_SURFACE_BG_CLASS,
@@ -66,18 +66,20 @@ const ProcessRow: React.FC<ProcessRowProps> = memo(({ process, onStop }) => {
   return (
     <div className={`${COMPOSER_STACK_ROW_BASE} ${COMPOSER_STACK_ROW_HOVER}`}>
       <div className="flex h-[14px] w-[14px] shrink-0 items-center justify-center">
-        <SquareTerminal size={14} className="text-text-4" />
+        <SquareTerminal size={14} className="text-text-2" />
       </div>
       <span className={COMPOSER_STACK_ROW_LABEL}>{process.command}</span>
       <span className={COMPOSER_STACK_ROW_ACTIONS}>
-        <IconButton
-          type="button"
-          variant="danger"
+        <Button
+          htmlType="button"
+          variant="tertiary"
+          size="mini"
+          icon={<Trash2 size={12} />}
+          iconOnly
+          className="enabled:hover:bg-fill-3 enabled:hover:text-danger-6"
           onClick={handleStop}
           title={t("actions.stop")}
-        >
-          <Trash2 size={12} />
-        </IconButton>
+        />
       </span>
     </div>
   );

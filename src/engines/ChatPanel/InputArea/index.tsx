@@ -13,12 +13,14 @@
  * - useContainerDrag: internal file-tree drag interception
  * - useEditorExpansion: compact pill ↔ expanded box layout toggle
  */
+import { RotateCcw, X } from "lucide-react";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import Button from "@src/components/Button";
 import ComposerBar from "@src/components/ComposerBar";
 import ComposerShell from "@src/components/ComposerShell";
-import { INPUT_AREA } from "@src/config/inputAreaTokens";
+import { ChatStatusSegmentedBar } from "@src/engines/ChatPanel/components/ChatStatusBanners";
 import { useInputArea } from "@src/engines/ChatPanel/hooks/useInputArea";
 import type {
   CustomMentionOption,
@@ -61,12 +63,16 @@ interface InputAreaProps {
   initialContent?: string;
   /** Callback when edit is submitted */
   onEditSubmit?: (text: string) => void;
+  /** Callback when edit is submitted and immediately sent */
+  onEditSendNow?: (text: string) => void;
   /** Callback when edit is cancelled */
   onEditCancel?: () => void;
   /** Label shown in the edit-mode header bar (e.g. "Editing queued message") */
   editLabel?: string;
   /** Show Cancel/Save buttons in the edit header (default true). Set false for label-only. */
   editHeaderActions?: boolean;
+  /** Show the built-in edit header inside the composer shell. */
+  showEditHeader?: boolean;
   /** Single-layer history-message edit style; queued edits keep the default action card. */
   quietEditSurface?: boolean;
   /** Read-only images to display in edit mode (from the original message) */
@@ -91,9 +97,11 @@ const InputArea: React.FC<InputAreaProps> = memo(
     isEditMode = false,
     initialContent,
     onEditSubmit,
+    onEditSendNow,
     onEditCancel,
     editLabel,
     editHeaderActions = true,
+    showEditHeader = true,
     quietEditSurface = false,
     editImages,
     surfaceBg = false,
@@ -246,6 +254,11 @@ const InputArea: React.FC<InputAreaProps> = memo(
         onEditCancel,
         tiptapRef,
       });
+    const handleEditSendNow = useCallback(() => {
+      if (!tiptapRef.current || !onEditSendNow) return;
+      const text = tiptapRef.current.getTextWithPills().trim();
+      if (text) onEditSendNow(text);
+    }, [onEditSendNow, tiptapRef]);
 
     // ============================================
     // Container Drag (extracted hook)
@@ -397,19 +410,64 @@ const InputArea: React.FC<InputAreaProps> = memo(
           </>
         }
         submitButton={
-          <InputActions
-            isInputEmpty={isInputEmpty() && !hasImages}
-            isWpGeneWorking={false}
-            isPendingCancel={false}
-            isHosted={isHosted}
-            canStopAgent={canStopAgent}
-            canResume={canResume}
-            isSessionTerminal={false}
-            onSubmit={handleEditSubmit}
-            onInterrupt={interruptSession}
-            onResume={resumeSession}
-            tone={quietEditSurface ? "warning" : "primary"}
-          />
+          onEditSendNow ? (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="tertiary"
+                size="mini"
+                shape="circle"
+                iconOnly
+                htmlType="button"
+                icon={<X size={13} strokeWidth={2} />}
+                aria-label={t("common:actions.cancel")}
+                className="enabled:hover:bg-fill-3 enabled:hover:text-text-1"
+                onClick={onEditCancel}
+              />
+              <Button
+                variant="tertiary"
+                size="mini"
+                shape="round"
+                htmlType="button"
+                className="enabled:hover:bg-fill-3 enabled:hover:text-text-1"
+                onClick={handleEditSubmit}
+              >
+                {t("common:actions.save")}
+              </Button>
+              <Button
+                variant="primary"
+                size="mini"
+                shape="round"
+                htmlType="button"
+                onClick={handleEditSendNow}
+              >
+                {t("common:actions.sendNow")}
+              </Button>
+            </div>
+          ) : quietEditSurface ? (
+            <Button
+              variant="warning"
+              size="mini"
+              shape="round"
+              htmlType="button"
+              icon={<RotateCcw size={13} strokeWidth={2} />}
+              onClick={handleEditSubmit}
+            >
+              {t("common:actions.resend")}
+            </Button>
+          ) : (
+            <InputActions
+              isInputEmpty={isInputEmpty() && !hasImages}
+              isWpGeneWorking={false}
+              isPendingCancel={false}
+              isHosted={isHosted}
+              canStopAgent={canStopAgent}
+              canResume={canResume}
+              isSessionTerminal={false}
+              onSubmit={handleEditSubmit}
+              onInterrupt={interruptSession}
+              onResume={resumeSession}
+            />
+          )
         }
       />
     );
@@ -433,6 +491,23 @@ const InputArea: React.FC<InputAreaProps> = memo(
           {/* Header - only show in normal mode, not edit mode */}
           {!isEditMode && !omitChatHeader && <ChatHeader />}
 
+          {isEditMode && quietEditSurface && showEditHeader && (
+            <ChatStatusSegmentedBar
+              testId="sent-edit-mode-card"
+              segments={[
+                {
+                  key: "label",
+                  className: "flex-1",
+                  content: (
+                    <span className="truncate font-medium">
+                      {editLabel ?? t("input.editingSentMessage")}
+                    </span>
+                  ),
+                },
+              ]}
+            />
+          )}
+
           <ComposerShell
             ref={isEditMode ? editContainerRef : undefined}
             data-chat-drop-target
@@ -442,7 +517,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
                 : isEditMode
                   ? quietEditSurface
                     ? "historyEdit"
-                    : "edit"
+                    : "embedded"
                   : surfaceBg
                     ? "default"
                     : "embedded"
@@ -456,7 +531,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
             }
           >
             {/* Queued-message edit keeps its header/actions; history edit is a standalone input. */}
-            {isEditMode && !quietEditSurface && (
+            {isEditMode && !quietEditSurface && showEditHeader && (
               <EditModeHeader
                 editLabel={editLabel ?? t("input.editingSentMessage")}
                 editHeaderActions={editHeaderActions}
@@ -481,15 +556,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
             ) : null}
 
             {isEditMode ? (
-              quietEditSurface ? (
-                editComposerBar
-              ) : (
-                <div
-                  className={`flex min-w-0 max-w-full flex-col overflow-hidden rounded-md bg-fill-1 px-1.5 py-1 ${INPUT_AREA.shellEditInteractionClasses}`}
-                >
-                  {editComposerBar}
-                </div>
-              )
+              editComposerBar
             ) : (
               <div className="flex min-h-0 w-full flex-col">
                 <ImageAttachmentPreview />
@@ -559,9 +626,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
                       canStopAgent={canStopAgent}
                       canResume={canResume}
                       isSessionTerminal={isSessionTerminal}
-                      onSubmit={() =>
-                        void handleDivSubmit({ forceSendNow: true })
-                      }
+                      onSubmit={() => void handleDivSubmit()}
                       onInterrupt={interruptSession}
                       onResume={resumeSession}
                     />

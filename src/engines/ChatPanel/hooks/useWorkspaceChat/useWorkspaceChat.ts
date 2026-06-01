@@ -89,7 +89,6 @@ interface UseWorkspaceChatOptions {
 
 export interface SubmitOptions {
   forceDispatch?: boolean;
-  forceSendNow?: boolean;
 }
 
 const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
@@ -295,9 +294,6 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
           status: "queued",
           createdAt: new Date().toISOString(),
         });
-        if (options.forceSendNow && isWpGeneWorking) {
-          await interruptSession({ restoreQueueHead: false });
-        }
         return;
       }
 
@@ -348,7 +344,6 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       creatorDefaultMode,
       dispatchMessageBySessionType,
       getSessionId,
-      interruptSession,
       setSessionRuntimeStatus,
       t,
     ]

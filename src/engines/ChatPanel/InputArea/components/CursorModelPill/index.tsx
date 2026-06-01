@@ -75,6 +75,7 @@ const CursorModelPill: React.FC<CursorModelPillProps> = memo(
         error={error}
         refresh={refresh}
         selectModel={selectModel}
+        dropdownPlacement="top"
       />
     );
   }

@@ -27,6 +27,7 @@ import React, {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -88,6 +89,7 @@ import AgentOrgOverviewPanel from "./InputArea/components/AgentOrgOverviewPanel"
 import CollapsedInlineRow from "./InputArea/components/CollapsedInlineRow";
 import CompactFileChanges from "./InputArea/components/CompactFileChanges";
 import CursorIdeFocusPoller from "./InputArea/components/CursorIdeFocusPoller";
+import QueueEditModeCard from "./InputArea/components/QueueEditModeCard";
 import QueuedMessages from "./InputArea/components/QueuedMessages";
 import { useAgentOrgIntervention } from "./InputArea/components/useAgentOrgIntervention";
 import { useAgentOrgMemberSessionJump } from "./InputArea/components/useAgentOrgMemberSessionJump";
@@ -104,7 +106,7 @@ import type {
 import { useSessionActions } from "./hooks/useWorkspaceChat/useSessionActions";
 
 const logger = createLogger("ChatView");
-const CHAT_FLOATING_COMPOSER_BOTTOM_INSET_PX = 168;
+const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
 
 interface GroupChatRoute {
   targetMemberId: string | null;
@@ -239,6 +241,10 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const setActiveSessionId = useSetAtom(activeSessionIdAtom);
     const store = useStore();
     const rootRef = useRef<HTMLDivElement>(null);
+    const floatingComposerRef = useRef<HTMLDivElement>(null);
+    const [floatingComposerInset, setFloatingComposerInset] = useState(
+      CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX
+    );
 
     useEffect(() => {
       if (readOnly) return;
@@ -294,6 +300,27 @@ const ChatView: React.FC<ChatViewProps> = memo(
     // dispatch).
 
     const { showInteractArea } = useChatPanelState();
+
+    useLayoutEffect(() => {
+      if (!showInteractArea) {
+        setFloatingComposerInset(CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX);
+        return;
+      }
+      const element = floatingComposerRef.current;
+      if (!element) return;
+
+      const updateInset = () => {
+        const height = Math.ceil(element.getBoundingClientRect().height);
+        setFloatingComposerInset((previous) =>
+          Math.abs(previous - height) >= 4 ? height : previous
+        );
+      };
+
+      updateInset();
+      const resizeObserver = new ResizeObserver(updateInset);
+      resizeObserver.observe(element);
+      return () => resizeObserver.disconnect();
+    }, [showInteractArea]);
 
     const streamRetryStatus = useAtomValue(streamRetryStatusAtom);
     const streamRetry =
@@ -448,6 +475,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
     );
     const queueEditProps = useQueueEditMode({
       onCommit: handleCommitQueueEdit,
+      onCommitSendNow: handleSendNow,
     });
 
     // The group view is the default Agent Org surface once at least one
@@ -741,11 +769,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
                   onScrollNavChange={handleScrollNavChange}
                   onRegisterSearchOpen={onRegisterSearchOpen}
                   turnPaginationEnabled={turnPaginationEnabled}
-                  bottomInset={
-                    showInteractArea
-                      ? CHAT_FLOATING_COMPOSER_BOTTOM_INSET_PX
-                      : 0
-                  }
+                  bottomInset={showInteractArea ? floatingComposerInset : 0}
                   groupChatViewAvailable={groupChatViewAvailable}
                   groupChatViewActive={groupChatViewActive}
                   onGroupChatViewToggle={handleGroupChatViewToggle}
@@ -754,7 +778,10 @@ const ChatView: React.FC<ChatViewProps> = memo(
             </ChatHistoryOverrideContext.Provider>
           </div>
           {showInteractArea && (
-            <div className="absolute bottom-0 left-0 right-0 z-50 flex w-full flex-shrink-0 flex-col items-center px-2 pb-2 pt-1">
+            <div
+              ref={floatingComposerRef}
+              className="absolute bottom-0 left-0 right-0 z-50 flex w-full flex-shrink-0 flex-col items-center px-2 pb-2 pt-1"
+            >
               <div
                 className={`flex w-full flex-col gap-1.5 ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
               >
@@ -850,6 +877,8 @@ const ChatView: React.FC<ChatViewProps> = memo(
                     scrollNav={scrollNav}
                   />
                 )}
+
+                <QueueEditModeCard />
 
                 {hasModeSwitch && !modeSwitchCollapsed && (
                   <ModeSwitchInputCard

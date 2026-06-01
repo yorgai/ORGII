@@ -12,7 +12,7 @@ import { ArrowUp, Clock, Pencil, Trash2 } from "lucide-react";
 import React, { memo } from "react";
 import { useTranslation } from "react-i18next";
 
-import IconButton from "@src/components/IconButton";
+import Button from "@src/components/Button";
 import {
   COMPOSER_STACK_ROW_ACTIONS,
   COMPOSER_STACK_ROW_BASE,
@@ -72,7 +72,7 @@ const QueuedMessageItem: React.FC<QueuedMessageItemProps> = memo(
         <div className="flex h-[14px] w-[14px] shrink-0 items-center justify-center">
           <Clock
             size={14}
-            className={isEditing ? "text-primary-6" : "text-text-4"}
+            className={isEditing ? "text-primary-6" : "text-text-2"}
           />
         </div>
         <span
@@ -82,29 +82,37 @@ const QueuedMessageItem: React.FC<QueuedMessageItemProps> = memo(
         </span>
         {!isEditing && (
           <span className={COMPOSER_STACK_ROW_ACTIONS}>
-            <IconButton
-              type="button"
+            <Button
+              htmlType="button"
+              variant="tertiary"
+              size="mini"
+              icon={<Pencil size={12} />}
+              iconOnly
+              className="enabled:hover:bg-fill-3 enabled:hover:text-text-1"
               onClick={() => onStartEdit(msg)}
               title={t("common:actions.edit")}
-            >
-              <Pencil size={12} />
-            </IconButton>
-            <IconButton
-              type="button"
-              variant="danger"
+            />
+            <Button
+              htmlType="button"
+              variant="tertiary"
+              size="mini"
+              icon={<Trash2 size={12} />}
+              iconOnly
+              className="enabled:hover:bg-fill-3 enabled:hover:text-danger-6"
               onClick={() => onCancel(msg.id)}
               title={t("common:actions.delete")}
-            >
-              <Trash2 size={12} />
-            </IconButton>
-            <IconButton
-              type="button"
+            />
+            <Button
+              htmlType="button"
+              variant="tertiary"
+              size="mini"
+              icon={<ArrowUp size={12} />}
+              iconOnly
+              className="enabled:hover:bg-fill-3 enabled:hover:text-primary-6"
               onClick={() => onSendNow(msg.id)}
               title={t("common:actions.sendNow")}
               data-testid="queued-message-send-now"
-            >
-              <ArrowUp size={12} />
-            </IconButton>
+            />
           </span>
         )}
       </div>

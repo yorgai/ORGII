@@ -19,6 +19,7 @@ interface UseQueueEditModeOptions {
     content: string,
     imageDataUrls?: string[]
   ) => void;
+  onCommitSendNow?: (messageId: string) => void;
 }
 
 export interface QueueEditInputAreaProps {
@@ -26,29 +27,44 @@ export interface QueueEditInputAreaProps {
   initialContent: string | undefined;
   editImages: string[] | undefined;
   onEditSubmit: (text: string) => void;
+  onEditSendNow?: (text: string) => void;
   onEditCancel: () => void;
   editLabel: string | undefined;
+  showEditHeader: boolean;
 }
 
 export function useQueueEditMode({
   onCommit,
+  onCommitSendNow,
 }: UseQueueEditModeOptions): QueueEditInputAreaProps {
   const { t } = useTranslation("sessions");
   const queueEditTarget = useAtomValue(queueEditTargetAtom);
   const setQueueEditTarget = useSetAtom(queueEditTargetAtom);
 
+  const commitEdit = useCallback(
+    (text: string): string | null => {
+      if (!queueEditTarget) return null;
+      onCommit(queueEditTarget.messageId, text, queueEditTarget.imageDataUrls);
+      return queueEditTarget.messageId;
+    },
+    [queueEditTarget, onCommit]
+  );
+
   const onEditSubmit = useCallback(
     (text: string) => {
-      if (queueEditTarget) {
-        onCommit(
-          queueEditTarget.messageId,
-          text,
-          queueEditTarget.imageDataUrls
-        );
-      }
+      commitEdit(text);
       setQueueEditTarget(null);
     },
-    [queueEditTarget, onCommit, setQueueEditTarget]
+    [commitEdit, setQueueEditTarget]
+  );
+
+  const onEditSendNow = useCallback(
+    (text: string) => {
+      const messageId = commitEdit(text);
+      setQueueEditTarget(null);
+      if (messageId) onCommitSendNow?.(messageId);
+    },
+    [commitEdit, onCommitSendNow, setQueueEditTarget]
   );
 
   const onEditCancel = useCallback(() => {
@@ -60,7 +76,9 @@ export function useQueueEditMode({
     initialContent: queueEditTarget?.content,
     editImages: queueEditTarget?.imageDataUrls,
     onEditSubmit,
+    onEditSendNow,
     onEditCancel,
     editLabel: queueEditTarget ? t("input.editingQueuedMessage") : undefined,
+    showEditHeader: false,
   };
 }

@@ -275,6 +275,7 @@ const ModelPill: React.FC = memo(() => {
             dispatchCategoryOverride={paletteCategoryOverride}
             cliAgentTypeOverride={paletteCliAgentTypeOverride}
             anchorRef={modelSegmentRef}
+            placement="top"
           />
         ) : (
           <UnifiedModelPalette

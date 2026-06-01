@@ -12,7 +12,7 @@
 import React, { memo } from "react";
 
 export interface StackPillProps {
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   count: number;
   active: boolean;
   onClick: () => void;
@@ -50,16 +50,18 @@ const StackPill: React.FC<StackPillProps> = memo(
         "text-[13px] font-medium",
         variant === "primary"
           ? active
-            ? "border-primary-6 bg-chat-input text-primary-6"
-            : "border-primary-5 bg-chat-input text-primary-6 hover:bg-chat-input"
+            ? "border-primary-5 bg-chat-input text-primary-6"
+            : "border-primary-5 bg-chat-input text-primary-6 hover:border-border-3 hover:bg-chat-input"
           : active
-            ? "border-border-3 bg-chat-input text-text-2"
+            ? "border-border-2 bg-chat-input text-text-2"
             : "border-border-2 bg-chat-input text-text-2 hover:border-border-3 hover:bg-chat-input",
       ].join(" ")}
     >
-      <span className="flex h-[16px] w-[16px] shrink-0 items-center justify-center leading-none text-current [&_svg]:block [&_svg]:stroke-current [&_svg]:text-current">
-        {icon}
-      </span>
+      {icon && (
+        <span className="flex h-[16px] w-[16px] shrink-0 items-center justify-center leading-none text-current [&_svg]:block [&_svg]:stroke-current [&_svg]:text-current">
+          {icon}
+        </span>
+      )}
       {!iconOnly &&
         (content ?? (
           <span className="flex items-center leading-none">

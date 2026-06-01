@@ -20,6 +20,7 @@ import ActiveProcesses from "@src/engines/ChatPanel/InputArea/components/ActiveP
 import AgentOrgInterventionPinBar from "@src/engines/ChatPanel/InputArea/components/AgentOrgInterventionPinBar";
 import CollapsedInlineRow from "@src/engines/ChatPanel/InputArea/components/CollapsedInlineRow";
 import CompactFileChanges from "@src/engines/ChatPanel/InputArea/components/CompactFileChanges";
+import QueueEditModeCard from "@src/engines/ChatPanel/InputArea/components/QueueEditModeCard";
 import QueuedMessages from "@src/engines/ChatPanel/InputArea/components/QueuedMessages";
 import { useComposerSections } from "@src/engines/ChatPanel/InputArea/hooks/useComposerSections";
 import { useQueueEditMode } from "@src/engines/ChatPanel/InputArea/hooks/useQueueEditMode";
@@ -102,7 +103,10 @@ export function PlaygroundChatPanel({
     },
     []
   );
-  const queueEditProps = useQueueEditMode({ onCommit: handleCommitDemoEdit });
+  const queueEditProps = useQueueEditMode({
+    onCommit: handleCommitDemoEdit,
+    onCommitSendNow: NOOP_MESSAGE_ACTION,
+  });
 
   const effectiveQueueCount = chatExtras?.showQueuedMessages
     ? demoQueue.length
@@ -336,6 +340,8 @@ export function PlaygroundChatPanel({
               <ChatRetryStatusBar items={retryStatusItems} />
 
               {pausedBottomContent}
+
+              <QueueEditModeCard />
 
               <Suspense fallback={null}>
                 <LazyInputArea {...queueEditProps} />
