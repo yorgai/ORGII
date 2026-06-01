@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -18,6 +18,9 @@ interface FlyoutSubmenuProps {
   panelRight: number;
   onSelect: (item: SlashItem) => void;
   onClose: () => void;
+  /** Controlled highlight index (keyboard-driven from parent). */
+  highlightIndex: number;
+  onHighlightChange: (idx: number) => void;
 }
 
 /**
@@ -31,9 +34,10 @@ const FlyoutSubmenu: React.FC<FlyoutSubmenuProps> = ({
   panelRight,
   onSelect,
   onClose,
+  highlightIndex,
+  onHighlightChange,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
-  const [highlightIndex, setHighlightIndex] = useState(0);
 
   const groups = useMemo(() => {
     const map = new Map<string, SlashItem[]>();
@@ -47,6 +51,13 @@ const FlyoutSubmenu: React.FC<FlyoutSubmenuProps> = ({
   }, [items]);
 
   const groupKeys = useMemo(() => [...groups.keys()], [groups]);
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (!panelRef.current) return;
+    const itemEls = panelRef.current.querySelectorAll("[data-slash-flat]");
+    itemEls[highlightIndex]?.scrollIntoView({ block: "nearest" });
+  }, [highlightIndex]);
 
   // Close on click outside the flyout panel
   useEffect(() => {
@@ -98,42 +109,27 @@ const FlyoutSubmenu: React.FC<FlyoutSubmenuProps> = ({
                     key={`${item.source}-${item.name}`}
                     data-slash-flat
                     className={`${DROPDOWN_CLASSES.itemCompact} group cursor-pointer justify-between ${
-                      idx === highlightIndex
-                        ? "bg-fill-2 text-primary-6"
-                        : "hover:bg-fill-2"
+                      idx === highlightIndex ? "bg-fill-2" : "hover:bg-fill-2"
                     }`}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       onSelect(item);
                     }}
-                    onMouseEnter={() => setHighlightIndex(idx)}
+                    onMouseEnter={() => onHighlightChange(idx)}
                   >
                     <div className="flex min-w-0 items-center gap-2">
                       {React.createElement(Icon, {
                         size: 14,
                         strokeWidth: 1.75,
-                        className:
-                          idx === highlightIndex
-                            ? "shrink-0 text-primary-6"
-                            : "shrink-0 text-text-2 group-hover:text-primary-6",
+                        className: "shrink-0 text-text-2",
                       })}
-                      <span
-                        className={`truncate text-[13px] ${
-                          idx === highlightIndex
-                            ? "text-primary-6"
-                            : "text-text-1 group-hover:text-primary-6"
-                        }`}
-                      >
+                      <span className="truncate text-[13px] text-text-1">
                         {item.name}
                       </span>
                       {desc && (
                         <span
-                          className={`truncate text-[11px] ${
-                            idx === highlightIndex
-                              ? "text-primary-6/70"
-                              : "text-text-3 group-hover:text-primary-6/70"
-                          }`}
+                          className="truncate text-[11px] text-text-3"
                           style={{ maxWidth: 110 }}
                         >
                           {desc}

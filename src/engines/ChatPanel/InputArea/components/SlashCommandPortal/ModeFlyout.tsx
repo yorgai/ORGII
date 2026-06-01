@@ -2,7 +2,7 @@
  * ModeFlyout — right-side panel listing all available AgentExecModes.
  * Opens when the user hovers/clicks the "Mode >" trigger row in the + menu.
  */
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -13,7 +13,6 @@ import {
 } from "@src/components/Dropdown/tokens";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { AGENT_EXEC_MODES } from "@src/config/sessionCreatorConfig";
-import { CONTEXT_MENU_ITEM_ROW } from "@src/scaffold/ContextMenu/config";
 
 interface ModeFlyoutProps {
   anchorTop: number;
@@ -21,6 +20,9 @@ interface ModeFlyoutProps {
   currentMode: AgentExecMode;
   onSelect: (mode: AgentExecMode) => void;
   onClose: () => void;
+  /** Controlled highlight index (keyboard-driven from parent). */
+  highlightIndex: number;
+  onHighlightChange: (idx: number) => void;
 }
 
 const ModeFlyout: React.FC<ModeFlyoutProps> = ({
@@ -29,10 +31,11 @@ const ModeFlyout: React.FC<ModeFlyoutProps> = ({
   currentMode,
   onSelect,
   onClose,
+  highlightIndex,
+  onHighlightChange,
 }) => {
   const { t } = useTranslation("sessions");
   const panelRef = useRef<HTMLDivElement>(null);
-  const [highlightIndex, setHighlightIndex] = useState(0);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -72,11 +75,9 @@ const ModeFlyout: React.FC<ModeFlyoutProps> = ({
             <div
               key={mode.id}
               className={`${DROPDOWN_CLASSES.itemCompact} group cursor-pointer justify-between ${
-                isActive
-                  ? CONTEXT_MENU_ITEM_ROW.selected
-                  : CONTEXT_MENU_ITEM_ROW.hoverIdle
+                isActive ? "bg-fill-2" : "hover:bg-fill-2"
               }`}
-              onMouseEnter={() => setHighlightIndex(idx)}
+              onMouseEnter={() => onHighlightChange(idx)}
               onMouseDown={(e) => {
                 e.preventDefault();
                 onSelect(mode.id);
@@ -86,17 +87,11 @@ const ModeFlyout: React.FC<ModeFlyoutProps> = ({
                 <ModeIcon
                   size={14}
                   strokeWidth={1.75}
-                  className={
-                    isActive
-                      ? "text-primary-6"
-                      : "text-text-2 group-hover:text-primary-6"
-                  }
+                  className={isCurrent ? "text-primary-6" : "text-text-2"}
                 />
                 <span
                   className={`text-[13px] ${
-                    isActive
-                      ? "text-primary-6"
-                      : "text-text-1 group-hover:text-primary-6"
+                    isCurrent ? "text-primary-6" : "text-text-1"
                   }`}
                 >
                   {t(mode.i18nKey)}
