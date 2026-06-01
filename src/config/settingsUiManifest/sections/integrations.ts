@@ -9,6 +9,10 @@ const MY_ROLE_SETTING_KEYS = [
   "general.presenceGuidanceOnline",
   "general.presenceGuidanceInvisible",
   "general.presenceGuidanceAway",
+  "general.profileTechSavvy",
+  "general.profileJobRoles",
+  "general.profileFamiliarTechStacks",
+  "general.profileDescription",
 ] as const satisfies readonly SettingsKey[];
 
 export const INTEGRATIONS_SETTINGS_UI_SECTIONS: SettingsSectionDefinition[] = [

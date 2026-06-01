@@ -3,7 +3,6 @@
  * for file, website, work-item, and project tool calls.
  */
 import { isBrowserTool } from "@src/engines/SessionCore/rendering/registry/toolCategories";
-import { prettifyMemberName } from "@src/util/data/formatters/memberName";
 
 import type {
   AgentMessageCardData,
@@ -354,15 +353,15 @@ export function parseAgentMessageCard(
   const kind = getString(args.kind) ?? getString(resultObject.kind) ?? "plain";
   const requestId =
     getString(args.request_id) ?? getString(resultObject.request_id);
-  const senderMemberId = getString(resultObject.sender_member_id) ?? undefined;
-  const senderRawId = getString(args.sender_member_id) ?? senderMemberId ?? "";
-  const sender = senderRawId
-    ? prettifyMemberName(senderRawId)
-    : "current member";
+  const senderMemberId =
+    getString(resultObject.sender_member_id) ??
+    getString(args.sender_member_id) ??
+    undefined;
+  const sender = senderMemberId ?? "current member";
 
   let recipient = "?";
   if (isBroadcast) recipient = "broadcast";
-  else if (recipientMemberId) recipient = prettifyMemberName(recipientMemberId);
+  else if (recipientMemberId) recipient = recipientMemberId;
 
   let summary = "";
   let fullText = "";

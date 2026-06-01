@@ -13,6 +13,7 @@
  * before any test file imports normalizers or other modules that call the maps.
  */
 import i18next from "i18next";
+import { vi } from "vitest";
 
 import {
   _setBuiltinActionIconsMap,
@@ -30,6 +31,22 @@ import type {
 } from "@src/engines/SessionCore/rendering/registry/types";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
 import enSessions from "@src/i18n/locales/en/sessions.json";
+
+vi.mock("@tauri-apps/api/webviewWindow", () => {
+  const currentWindow = {
+    close: vi.fn(),
+    minimize: vi.fn(),
+    maximize: vi.fn(),
+    unmaximize: vi.fn(),
+    isMaximized: vi.fn(() => Promise.resolve(false)),
+  };
+
+  return {
+    WebviewWindow: {
+      getCurrent: () => currentWindow,
+    },
+  };
+});
 
 // ============================================================================
 // Test Fixtures (mirrors Rust source of truth)
@@ -747,6 +764,82 @@ const CLI_ALIAS_MAP_FIXTURE: Map<string, AliasEntry> = new Map([
   ["ask_user_permissions", msg("ask_user_permissions", "ask_user_permissions")],
   ["approval_response", msg("ask_user_permissions", "ask_user_permissions")],
 ]);
+
+class MemoryStorage implements Storage {
+  private readonly entries = new Map<string, string>();
+
+  get length(): number {
+    return this.entries.size;
+  }
+
+  clear(): void {
+    this.entries.clear();
+  }
+
+  getItem(key: string): string | null {
+    return this.entries.get(key) ?? null;
+  }
+
+  key(index: number): string | null {
+    return Array.from(this.entries.keys())[index] ?? null;
+  }
+
+  removeItem(key: string): void {
+    this.entries.delete(key);
+  }
+
+  setItem(key: string, value: string): void {
+    this.entries.set(key, String(value));
+  }
+}
+
+if (typeof globalThis.localStorage === "undefined") {
+  Object.defineProperty(globalThis, "localStorage", {
+    value: new MemoryStorage(),
+    configurable: true,
+    writable: true,
+  });
+}
+
+if (typeof globalThis.sessionStorage === "undefined") {
+  Object.defineProperty(globalThis, "sessionStorage", {
+    value: new MemoryStorage(),
+    configurable: true,
+    writable: true,
+  });
+}
+
+if (typeof globalThis.addEventListener === "undefined") {
+  Object.defineProperty(globalThis, "addEventListener", {
+    value: vi.fn(),
+    configurable: true,
+    writable: true,
+  });
+}
+
+if (typeof globalThis.removeEventListener === "undefined") {
+  Object.defineProperty(globalThis, "removeEventListener", {
+    value: vi.fn(),
+    configurable: true,
+    writable: true,
+  });
+}
+
+if (typeof globalThis.dispatchEvent === "undefined") {
+  Object.defineProperty(globalThis, "dispatchEvent", {
+    value: vi.fn(() => true),
+    configurable: true,
+    writable: true,
+  });
+}
+
+if (typeof globalThis.window === "undefined") {
+  Object.defineProperty(globalThis, "window", {
+    value: globalThis,
+    configurable: true,
+    writable: true,
+  });
+}
 
 // ============================================================================
 // Inject fixtures immediately at module load (before any tests import modules)
