@@ -1,7 +1,10 @@
 import { useCallback, useEffect } from "react";
 import type React from "react";
 
-import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
+import {
+  AGENT_EXEC_MODES,
+  type AgentExecMode,
+} from "@src/config/sessionCreatorConfig";
 import type { SlashItem } from "@src/types/extensions";
 
 import type { ListEntry, OpenFlyoutState } from "./types";
@@ -22,6 +25,9 @@ interface UseKeyboardOptions {
   keyboardHandlerRef: React.MutableRefObject<
     ((e: KeyboardEvent) => boolean) | null
   >;
+  /** Flyout child-panel highlight index (controlled by parent). */
+  flyoutHighlightIndex: number;
+  setFlyoutHighlightIndex: (idx: number) => void;
 }
 
 /**
@@ -44,6 +50,8 @@ export function useKeyboard({
   onImageUpload,
   onClose,
   keyboardHandlerRef,
+  flyoutHighlightIndex,
+  setFlyoutHighlightIndex,
 }: UseKeyboardOptions): void {
   const selectAtIndex = useCallback(
     (idx: number) => {
@@ -116,6 +124,67 @@ export function useKeyboard({
     (event: KeyboardEvent): boolean => {
       if (!visible) return false;
 
+      // When a flyout is open, delegate navigation + selection to it.
+      if (openFlyout?.kind === "category" && openFlyout.items) {
+        const flyoutItems = openFlyout.items;
+        const flyoutTotal = flyoutItems.length;
+
+        if (event.key === "Escape") {
+          setOpenFlyout(null);
+          return true;
+        }
+        if (event.key === "ArrowDown") {
+          setFlyoutHighlightIndex(
+            flyoutHighlightIndex < flyoutTotal - 1
+              ? flyoutHighlightIndex + 1
+              : 0
+          );
+          return true;
+        }
+        if (event.key === "ArrowUp") {
+          setFlyoutHighlightIndex(
+            flyoutHighlightIndex > 0
+              ? flyoutHighlightIndex - 1
+              : flyoutTotal - 1
+          );
+          return true;
+        }
+        if (event.key === "Enter" || event.key === "Tab") {
+          const item = flyoutItems[flyoutHighlightIndex];
+          if (item) onSelect(item);
+          return true;
+        }
+        return false;
+      }
+
+      if (openFlyout?.kind === "modes") {
+        const modeTotal = AGENT_EXEC_MODES.length;
+
+        if (event.key === "Escape") {
+          setOpenFlyout(null);
+          return true;
+        }
+        if (event.key === "ArrowDown") {
+          setFlyoutHighlightIndex(
+            flyoutHighlightIndex < modeTotal - 1 ? flyoutHighlightIndex + 1 : 0
+          );
+          return true;
+        }
+        if (event.key === "ArrowUp") {
+          setFlyoutHighlightIndex(
+            flyoutHighlightIndex > 0 ? flyoutHighlightIndex - 1 : modeTotal - 1
+          );
+          return true;
+        }
+        if (event.key === "Enter" || event.key === "Tab") {
+          const mode = AGENT_EXEC_MODES[flyoutHighlightIndex];
+          if (mode) onModeSelect(mode.id);
+          return true;
+        }
+        return false;
+      }
+
+      // Models flyout: only Escape closes; it owns its own search keyboard.
       if (openFlyout && event.key === "Escape") {
         setOpenFlyout(null);
         return true;
@@ -148,9 +217,13 @@ export function useKeyboard({
       openFlyout,
       totalFlat,
       highlightIndex,
+      flyoutHighlightIndex,
       selectAtIndex,
       setHighlightIndex,
       setOpenFlyout,
+      setFlyoutHighlightIndex,
+      onSelect,
+      onModeSelect,
       onClose,
     ]
   );

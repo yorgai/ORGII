@@ -81,6 +81,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
 
   const [highlightIndex, setHighlightIndex] = useState(0);
   const [openFlyout, setOpenFlyout] = useState<OpenFlyoutState | null>(null);
+  const [flyoutHighlightIndex, setFlyoutHighlightIndex] = useState(0);
   const [panelRight, setPanelRight] = useState(0);
 
   // Position the portal above the container
@@ -112,6 +113,17 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   if (trackedQuery !== searchQuery) {
     setTrackedQuery(searchQuery);
     if (searchQuery) setOpenFlyout(null);
+  }
+
+  // Reset flyout highlight when the flyout opens or its items change (derived state)
+  const flyoutItemsKey =
+    openFlyout?.kind === "category"
+      ? (openFlyout.items?.map((i) => i.name).join("\0") ?? "")
+      : (openFlyout?.kind ?? "");
+  const [trackedFlyoutKey, setTrackedFlyoutKey] = useState(flyoutItemsKey);
+  if (trackedFlyoutKey !== flyoutItemsKey) {
+    setTrackedFlyoutKey(flyoutItemsKey);
+    setFlyoutHighlightIndex(0);
   }
 
   // Autofocus the search input in header mode
@@ -167,6 +179,8 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
     onImageUpload,
     onClose,
     keyboardHandlerRef,
+    flyoutHighlightIndex,
+    setFlyoutHighlightIndex,
   });
 
   const openCategoryFlyout = useCallback(
@@ -500,6 +514,8 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
             category={openFlyout.category}
             anchorTop={openFlyout.anchorTop}
             panelRight={panelRight}
+            highlightIndex={flyoutHighlightIndex}
+            onHighlightChange={setFlyoutHighlightIndex}
             onSelect={(item) => {
               onSelect(item);
               setOpenFlyout(null);
@@ -514,6 +530,8 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
           anchorTop={openFlyout.anchorTop}
           panelRight={panelRight}
           currentMode={currentMode}
+          highlightIndex={flyoutHighlightIndex}
+          onHighlightChange={setFlyoutHighlightIndex}
           onSelect={(mode) => {
             onModeSelect(mode);
             setOpenFlyout(null);

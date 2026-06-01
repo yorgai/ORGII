@@ -292,17 +292,15 @@ export function useSlashCommand(
       if (!tiptapRef.current) return;
 
       if (item.category === "action") {
-        const isBuiltinAction = item.name === SLASH_ACTIONS.OPEN_BROWSER;
-        if (isBuiltinAction) {
+        if (item.name === SLASH_ACTIONS.OPEN_BROWSER) {
           tiptapRef.current.clear();
           setShowSlashMenu(false);
           setSlashQuery("");
           queryRef.current = "";
-          window.dispatchEvent(
-            new CustomEvent("orgii:slash-action", {
-              detail: { action: item.name },
-            })
-          );
+          // orgii:open-browser is handled by useOpenUrlInBrowser (always
+          // mounted in BrowserProvider). It opens a blank tab and navigates
+          // to the browser route without any BrowserLayout mount dependency.
+          window.dispatchEvent(new CustomEvent("orgii:open-browser"));
           return;
         }
       }
