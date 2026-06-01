@@ -17,6 +17,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Message from "@src/components/Message";
 import { ROUTES } from "@src/config/routes";
 import { useBrowserContext } from "@src/contexts/workstation";
+import { chatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import {
   comparableBrowserUrl,
@@ -29,6 +30,7 @@ export function useOpenUrlInBrowser(): void {
   const location = useLocation();
   const stationMode = useAtomValue(stationModeAtom);
   const setStationMode = useSetAtom(stationModeAtom);
+  const setChatPanelMaximized = useSetAtom(chatPanelMaximizedAtom);
   const { sessions, handleAddSession, handleSessionClick } =
     useBrowserContext();
 
@@ -47,6 +49,11 @@ export function useOpenUrlInBrowser(): void {
     setStationModeRef.current = setStationMode;
   }, [setStationMode]);
 
+  const setChatPanelMaximizedRef = useRef(setChatPanelMaximized);
+  useEffect(() => {
+    setChatPanelMaximizedRef.current = setChatPanelMaximized;
+  }, [setChatPanelMaximized]);
+
   const pathnameRef = useRef(location.pathname);
   useEffect(() => {
     pathnameRef.current = location.pathname;
@@ -63,6 +70,14 @@ export function useOpenUrlInBrowser(): void {
   }, [t]);
 
   useEffect(() => {
+    function handleOpenBrowser(): void {
+      // Restore WorkStation if chat panel is maximized (WorkStation hidden).
+      setChatPanelMaximizedRef.current(false);
+      handleAddSession();
+      setStationModeRef.current("my-station");
+      navigateRef.current(ROUTES.workStation.browser.path);
+    }
+
     function handleEvent(event: Event): void {
       const { url, navigate: shouldNavigate } = (
         event as CustomEvent<{ url: string; navigate?: boolean }>
@@ -115,8 +130,10 @@ export function useOpenUrlInBrowser(): void {
       });
     }
 
+    window.addEventListener("orgii:open-browser", handleOpenBrowser);
     window.addEventListener("open-url-in-browser", handleEvent);
     return () => {
+      window.removeEventListener("orgii:open-browser", handleOpenBrowser);
       window.removeEventListener("open-url-in-browser", handleEvent);
     };
     // handleAddSession and handleSessionClick are stable useCallback refs from
