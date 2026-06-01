@@ -341,27 +341,6 @@ export const SidebarRamMonitorButton: React.FC = React.memo(() => {
       bytes: frontendProcessMemoryMb * 1024 * 1024,
     },
     {
-      key: "tauriWebViewRenderer",
-      label: tSettings("monitor.tauriWebViewRenderer"),
-      value: formatMegabytes(tauriWebViewRendererMemoryMb),
-      bytes: tauriWebViewRendererMemoryMb * 1024 * 1024,
-      indentLevel: 1,
-    },
-    {
-      key: "tauriGpuProcess",
-      label: tSettings("monitor.tauriGpuProcess"),
-      value: formatMegabytes(tauriGpuMemoryMb),
-      bytes: tauriGpuMemoryMb * 1024 * 1024,
-      indentLevel: 1,
-    },
-    {
-      key: "tauriNetworkProcess",
-      label: tSettings("monitor.tauriNetworkProcess"),
-      value: formatMegabytes(tauriNetworkMemoryMb),
-      bytes: tauriNetworkMemoryMb * 1024 * 1024,
-      indentLevel: 1,
-    },
-    {
       key: "otherProcessesGroup",
       label: tSettings("monitor.otherProcessesGroup"),
       value: formatMegabytes(otherProcessMemoryMb),

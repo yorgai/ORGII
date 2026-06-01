@@ -29,9 +29,10 @@ import { APP_SECTIONS } from "@src/modules/MainApp/Settings/config";
 import { settingsReturnRouteAtom } from "@src/store/ui/viewModeAtom";
 
 import SidebarBase from "../SidebarBase";
-import { SidebarList } from "../blocks";
+import { SidebarBottomBar, SidebarList } from "../blocks";
 import NavigationMenu from "../components/NavigationMenu";
 import type { NavigationMenuItem } from "../components/NavigationMenu/config";
+import { SidebarRamMonitorButton } from "../connectors/SidebarRamMonitorButton";
 
 interface SettingsRootSectionConfig {
   id: string;
@@ -111,6 +112,10 @@ const SettingsSidebar: React.FC = () => {
       </div>
 
       <SettingsRootBody />
+      <SidebarBottomBar
+        rightActions={<SidebarRamMonitorButton />}
+        hideSettings
+      />
     </SidebarBase>
   );
 };

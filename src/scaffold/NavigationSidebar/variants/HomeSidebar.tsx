@@ -24,6 +24,7 @@ import { homeTabAtom } from "@src/store/ui/homeTabAtom";
 
 import SidebarBottomBar from "../blocks/SidebarBottomBar";
 import type { NavigationMenuItem } from "../components/NavigationMenu/config";
+import { SidebarRamMonitorButton } from "../connectors/SidebarRamMonitorButton";
 import { routeToMenuItem } from "../utils/menuFromRoutes";
 import DevRecordSidebar from "./DevRecordSidebar";
 import EconomySidebar from "./EconomySidebar";
@@ -215,7 +216,9 @@ const HomeSidebar: React.FC = () => {
       onMenuItemContextMenu={handleMenuItemContextMenu}
       defaultOpenKeys={["workspace"]}
       enableHoverIconAnimation
-      bottomContent={<SidebarBottomBar />}
+      bottomContent={
+        <SidebarBottomBar rightActions={<SidebarRamMonitorButton />} />
+      }
     />
   );
 };
