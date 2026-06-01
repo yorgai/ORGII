@@ -10,7 +10,30 @@ Agents and GUIs support end-to-end testing, which empowers ORGII to self-evolve 
 
 Download the latest ORGII desktop app from the [Releases](https://github.com/YORG-AI/ORGII/releases) page.
 
-If you want to build or contribute to ORGII from source, see [CONTRIBUTING.md](CONTRIBUTING.md). We ask everyone to be respectful and empathetic; see [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+To build or contribute from source:
+
+```bash
+pnpm install
+pnpm run download:sidecars
+pnpm run tauri:dev
+```
+
+Useful scripts:
+
+- `pnpm run tauri:dev` — launch the full desktop app in development mode, including the Tauri shell and frontend dev server.
+- `pnpm run start:fast` — start only the webpack frontend dev server for fast UI iteration.
+- `pnpm run build` — create the production frontend bundle used by desktop builds.
+- `pnpm run tauri:build` — build the packaged desktop app with the default Tauri profile.
+- `pnpm run tauri:build:fast` — build with the faster local development profile for quicker validation.
+- `pnpm run download:sidecars` — download optional native helpers for Browser Use and Computer Use features.
+- `pnpm run lint` / `pnpm run lint:fix` — check or automatically fix frontend lint issues.
+- `pnpm run test` / `pnpm run test:coverage` / `pnpm run test:watch` — run frontend tests, coverage, or watch mode.
+- `pnpm run cargo:check` — validate the Rust backend without producing a full build.
+- `pnpm run cargo:test` — run Rust library tests.
+- `pnpm run cargo:clippy` — run Rust lint checks.
+- `pnpm run check:circular` — detect circular imports in `src/`.
+
+For more contribution details, see [CONTRIBUTING.md](CONTRIBUTING.md). We ask everyone to be respectful and empathetic; see [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## Optional native sidecars
 
@@ -21,7 +44,7 @@ Browser Use and Computer Use features rely on optional native helpers for browse
 
 Computer Use is currently available on macOS only. Browser Use can use `agent-browser` on supported platforms.
 
-If a sidecar is missing, the Rust build creates a small placeholder resource so development builds can continue. The related capability may fall back to `PATH` or remain unavailable until you run `npm run download:sidecars`.
+If a sidecar is missing, the Rust build creates a small placeholder resource so development builds can continue. The related capability may fall back to `PATH` or remain unavailable until you run `pnpm run download:sidecars`.
 
 ## License
 

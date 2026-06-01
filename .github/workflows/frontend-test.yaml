@@ -6,7 +6,7 @@ on:
     paths:
       - "src/**"
       - "package.json"
-      - "package-lock.json"
+      - "pnpm-lock.yaml"
       - "vitest.config.ts"
       - "tsconfig.json"
       - ".github/workflows/frontend-test.yaml"
@@ -15,7 +15,7 @@ on:
     paths:
       - "src/**"
       - "package.json"
-      - "package-lock.json"
+      - "pnpm-lock.yaml"
       - "vitest.config.ts"
       - "tsconfig.json"
       - ".github/workflows/frontend-test.yaml"
@@ -28,23 +28,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run ESLint
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Check circular dependencies
-        run: npm run check:circular
+        run: pnpm run check:circular
 
       - name: Check unused exports (informational)
-        run: npm run check:unused-exports || true
+        run: pnpm run check:unused-exports || true
         continue-on-error: true
 
   unit:
@@ -54,20 +57,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run unit tests
-        run: npm run test
+        run: pnpm run test
 
       - name: Coverage report
-        run: npm run test:coverage
+        run: pnpm run test:coverage
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4

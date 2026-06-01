@@ -460,7 +460,7 @@ module.exports = (env, argv) => {
           patterns: [{ from: "public/**/*.css", to: "[name][ext]" }],
         }),
       // JavaScript obfuscation for release builds — makes reverse engineering significantly harder.
-      // Only enabled when OBFUSCATE=true (via `npm run build:release` or `npm run tauri:build:release`).
+      // Only enabled when OBFUSCATE=true (via `pnpm run build:release` or `pnpm run tauri:build:release`).
       // Excludes vendor chunks (node_modules) since they're public code and obfuscating them
       // bloats bundle size for no security benefit.
       useObfuscation &&
