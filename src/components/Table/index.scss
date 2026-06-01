@@ -176,8 +176,10 @@
 .table-settings {
   .table-container {
     position: relative;
+    z-index: 0;
     overflow: visible;
     border-radius: 0;
+    isolation: isolate;
   }
 
   .table-container::before,
@@ -185,7 +187,7 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    z-index: 21;
+    z-index: 2;
     width: 28px;
     pointer-events: none;
     opacity: 0;
@@ -227,6 +229,8 @@
   }
 
   .table-scroll {
+    position: relative;
+    z-index: 0;
     min-width: 0;
     overflow-x: auto;
     overflow-y: visible;
@@ -255,10 +259,10 @@
     position: sticky;
     top: var(--search-bar-h, 0px);
     /*
-     * Must sit above table body content — including row-level controls
-     * (Switch, Button), expanded inline cards, and any element that
-     * creates a stacking context inside a row. Toolbar above sits at
-     * z-[21] in SettingsTable/index.tsx; keep this strictly lower.
+     * Layering inside the isolated table container:
+     * body pinned cells sit at 1, horizontal affordances at 2,
+     * and table headers at 20. The SettingsTable toolbar above
+     * remains outside this stack at z-[21].
      */
     z-index: 20;
     padding: 8px 0;
@@ -277,6 +281,8 @@
   }
 
   .table-tbody {
+    position: relative;
+    z-index: 0;
     background: transparent;
   }
 
@@ -398,7 +404,6 @@
     .table-row > .table-td:last-child {
       position: sticky;
       right: 0;
-      z-index: 22;
       background: var(--color-surface-container);
 
       &::before {
@@ -428,8 +433,12 @@
       }
     }
 
+    .table-row > .table-td:last-child {
+      z-index: 1;
+    }
+
     .table-thead tr > .table-th:last-child {
-      z-index: 23;
+      z-index: 20;
     }
 
     &.table-hover .table-row:hover > .table-td:last-child,

@@ -30,7 +30,7 @@ const SectionHeading: React.FC<SectionHeadingProps> = memo(
       <div id={id} className={id ? "scroll-mt-4" : undefined}>
         <div className={SECTION_GAP_CLASSES}>
           <h2
-            className={`sticky top-0 z-10 bg-[var(--cm-editor-background,var(--color-bg-2))] pb-1 pt-4 ${SECTION_HEADING_CLASSES}`}
+            className={`sticky top-0 z-30 bg-bg-2 pb-1 pt-4 ${SECTION_HEADING_CLASSES}`}
           >
             {title}
           </h2>

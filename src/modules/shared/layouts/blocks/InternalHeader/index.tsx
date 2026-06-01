@@ -5,7 +5,7 @@
  * Supports title, optional icon, right-side actions, and optional tabs.
  * When tabs are present, they are vertically centered with bottom padding only.
  *
- * Standard: no border, wide padding (px-6), no background.
+ * Standard: no border, wide padding (px-6), solid panel background.
  */
 import type { LucideIcon } from "lucide-react";
 import React, { memo } from "react";
@@ -19,10 +19,10 @@ export const INTERNAL_HEADER_TOKENS = {
   fontSize: 13,
   /** Icon size for title icons */
   iconSize: 14,
-  /** Standard: no border, px-6, no background */
+  /** Standard: no border, px-6, solid panel background */
   standard: {
     borderBottom: false,
-    background: "transparent" as const,
+    background: "default" as const,
   },
 } as const;
 
@@ -64,7 +64,7 @@ export interface InternalHeaderProps {
   /** When true, draws a bottom border under the header block. */
   borderBottom?: boolean;
 
-  /** Background style. Default: "transparent" (none) */
+  /** Background style. Default: "default" (panel surface) */
   background?: "default" | "transparent";
 
   /** Add top padding when no PanelHeader sits above this header. */
@@ -87,7 +87,7 @@ const InternalHeader: React.FC<InternalHeaderProps> = memo(
     contentPadding = false,
     compactPadding = false,
     borderBottom = false,
-    background = "transparent",
+    background = "default",
     noPanelHeader = false,
   }) => {
     const paddingClass = compactPadding
@@ -104,7 +104,7 @@ const InternalHeader: React.FC<InternalHeaderProps> = memo(
 
     return (
       <div
-        className={`flex flex-shrink-0 flex-col ${topPadding} ${paddingClass} ${borderClasses} ${bgClasses} ${className}`}
+        className={`relative z-30 flex flex-shrink-0 flex-col ${topPadding} ${paddingClass} ${borderClasses} ${bgClasses} ${className}`}
       >
         {hasTitleRow && (
           <div className="flex h-12 items-center gap-2">

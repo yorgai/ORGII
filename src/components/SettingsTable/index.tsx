@@ -173,6 +173,8 @@ export interface SettingsTableProps<RowData> {
   addFooter?: SettingsTableAddFooterProps;
   /** Sticky search bar rendered above the table header. Both stick together when scrolling. */
   searchBar?: SearchSortBarProps;
+  /** Extra classes for the sticky search/header wrapper. */
+  searchHeaderClassName?: string;
   /** Ghost-select filter row rendered below the search bar. Each entry becomes a mini ghost Select. */
   selectFilters?: SettingsTableSelectFilter[];
   /** Extra inline content rendered at the end of the {@link selectFilters} row
@@ -405,6 +407,7 @@ export default function SettingsTable<RowData>({
   footer,
   addFooter,
   searchBar,
+  searchHeaderClassName = "",
   selectFilters,
   selectFiltersExtra,
   inlineHeaderToolbar = false,
@@ -525,7 +528,7 @@ export default function SettingsTable<RowData>({
       {hasHeader && (
         <div
           ref={searchRef}
-          className="sticky top-0 z-[21] rounded-t-lg border-b border-border-2 bg-surface-container px-4"
+          className={`sticky top-0 z-[21] rounded-t-lg border-b border-border-2 bg-surface-container px-4 ${searchHeaderClassName}`.trim()}
         >
           {inlineHeaderToolbar ? (
             <SettingsTableToolbar

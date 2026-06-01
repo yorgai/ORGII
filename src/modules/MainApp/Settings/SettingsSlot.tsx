@@ -336,7 +336,7 @@ const SettingsSlot: React.FC<SettingsSlotProps> = ({
             is the maximize toggle — closing is handled by the global
             navigation back-button, not a panel-local X. */}
         <div
-          className={`workspace-header header-tab-group relative flex flex-shrink-0 items-center gap-1.5 px-2 ${
+          className={`workspace-header header-tab-group relative z-30 flex flex-shrink-0 items-center gap-1.5 bg-bg-2 px-2 ${
             isCompactLayout ? "h-11 min-h-11 pt-2" : "h-9 min-h-9"
           }`}
           data-tauri-drag-region

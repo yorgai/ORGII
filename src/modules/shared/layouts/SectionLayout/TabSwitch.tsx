@@ -48,7 +48,7 @@ const SectionTabSwitch: React.FC<SectionTabSwitchProps> = memo(
   }) => {
     return (
       <div
-        className={`sticky top-[47px] z-10 bg-bg-2 pb-1 pl-1 ${className}`.trim()}
+        className={`sticky top-[47px] z-30 bg-bg-2 pb-1 pl-1 ${className}`.trim()}
       >
         <TabPill
           tabs={tabs}
