@@ -90,7 +90,10 @@ export interface CategoryTableContentProps {
   /** Row-level actions for the MCP table. Optional because the embedded
    * Agent-config variant uses a different UI surface. */
   onMcpAdd?: (scope: McpConfigScope) => void;
-  onMcpDelete?: (name: string, scope: McpServerStatus["scope"]) => void;
+  onMcpDelete?: (
+    name: string,
+    scope: McpServerStatus["scope"]
+  ) => Promise<boolean> | boolean;
   onMcpReconnect?: (name: string) => Promise<void> | void;
   onMcpFetchTools?: (name: string) => void;
   onMcpSetDisabled?: (name: string, disabled: boolean) => Promise<void> | void;
@@ -234,6 +237,8 @@ export const CategoryTableContent: React.FC<CategoryTableContentProps> = (
     case "skills":
       return (
         <SkillsTable
+          skills={props.installedSkills}
+          loading={props.skillsLoading}
           selectedRowId={props.selectedRowId}
           onSelect={props.onSelectSkill}
           onCreate={() => onAddAction("create-skill")}

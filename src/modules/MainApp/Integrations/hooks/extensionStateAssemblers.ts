@@ -88,7 +88,10 @@ export interface McpAssemblerInput {
   resources: McpResource[];
   resourcesLoading: boolean;
   onEdit: (name: string) => void;
-  onDelete: (name: string, scope: McpServerStatus["scope"]) => Promise<void>;
+  onDelete: (
+    name: string,
+    scope: McpServerStatus["scope"]
+  ) => Promise<boolean> | boolean;
   onFetchTools: (name: string) => void;
   onFetchResources: (name: string) => void;
 }

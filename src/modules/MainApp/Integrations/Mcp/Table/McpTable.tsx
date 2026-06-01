@@ -52,7 +52,7 @@ interface McpTableProps {
   onDelete?: (
     name: string,
     scope: McpServerStatus["scope"]
-  ) => Promise<void> | void;
+  ) => Promise<boolean> | boolean;
   onReconnect?: (name: string) => Promise<void> | void;
   onFetchTools?: (name: string) => void;
   onSetDisabled?: (name: string, disabled: boolean) => Promise<void> | void;
@@ -267,7 +267,8 @@ export const McpTable: React.FC<McpTableProps> = ({
       if (!onDelete) return;
       setDeletingNames((current) => new Set(current).add(server.name));
       try {
-        await onDelete(server.name, server.scope);
+        const deleted = await onDelete(server.name, server.scope);
+        if (!deleted) return;
         setExpandedKeys((current) =>
           current.filter((key) => key !== server.name)
         );

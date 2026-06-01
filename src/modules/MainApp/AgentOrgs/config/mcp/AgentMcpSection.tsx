@@ -11,6 +11,7 @@
  * update }` shape, and both serialize the disabled arrays at the same
  * top-level path inside the legacy blob.
  */
+import { Plus } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -21,6 +22,7 @@ import React, {
 import { useTranslation } from "react-i18next";
 
 import { rpc } from "@src/api/tauri/rpc";
+import Button from "@src/components/Button";
 import Message from "@src/components/Message";
 import SettingsTable, {
   SETTINGS_TABLE_COL,
@@ -291,9 +293,21 @@ const AgentMcpSection: React.FC<AgentMcpSectionProps> = ({
   const configLoading = loading || !configLoaded;
   const isFiltered = searchQuery.length > 0;
 
-  const handleAddServer = () => {
+  const handleAddServer = useCallback(() => {
     goToIntegrations({ category: "externalSkillsets", skillsetTab: "mcp" });
-  };
+  }, [goToIntegrations]);
+
+  const addServerButton = (
+    <Button
+      variant="secondary"
+      size="default"
+      icon={<Plus size={14} />}
+      onClick={handleAddServer}
+      data-testid="agent-orgs-add-mcp-button"
+    >
+      {t("sdeAgent.mcp.addServer")}
+    </Button>
+  );
 
   return (
     <SettingsTable<McpServerStatus>
@@ -309,16 +323,12 @@ const AgentMcpSection: React.FC<AgentMcpSectionProps> = ({
         onSearchChange: setSearchQuery,
         searchPlaceholder: t("sdeAgent.mcp.searchPlaceholder"),
         allowSearchClear: true,
+        rightContent: addServerButton,
       }}
       expandable={{
         expandedRowRender: renderToolRow,
         expandedRowKeys: expandedKeys,
         onExpandedRowsChange: handleExpandedRowsChange,
-      }}
-      addFooter={{
-        label: t("sdeAgent.mcp.addServer"),
-        onClick: handleAddServer,
-        dataTestId: "agent-orgs-add-mcp-button",
       }}
       emptyTitle={
         isFiltered

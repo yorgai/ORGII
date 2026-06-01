@@ -1,4 +1,3 @@
-import { useAtomValue } from "jotai";
 import { Plus, Trash2 } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,10 +14,6 @@ import {
   DETAIL_PANEL_TOKENS,
   ScrollPreservation,
 } from "@src/modules/shared/layouts/blocks";
-import {
-  installedSkillsAtom,
-  installedSkillsLoadingAtom,
-} from "@src/store/skills/installedSkillsAtom";
 import { SKILL_SOURCE } from "@src/types/extensions";
 import type { HubSkillDetail, InstalledSkill } from "@src/types/extensions";
 import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
@@ -42,6 +37,8 @@ import SkillViewButton from "./SkillViewButton";
 type SourceFilterKey = "all" | "user" | "builtIn" | `workspace:${string}`;
 
 interface SkillsTableProps {
+  skills: InstalledSkill[];
+  loading: boolean;
   selectedRowId?: string | null;
   onSelect: (name: string, mode?: DetailMode) => void;
   onCreate: () => void;
@@ -57,6 +54,8 @@ interface SkillsTableProps {
 }
 
 export const SkillsTable: React.FC<SkillsTableProps> = ({
+  skills,
+  loading,
   selectedRowId,
   onSelect,
   onCreate,
@@ -70,8 +69,6 @@ export const SkillsTable: React.FC<SkillsTableProps> = ({
   onUninstallSkill,
 }) => {
   const { t } = useTranslation("integrations");
-  const skills = useAtomValue(installedSkillsAtom);
-  const loading = useAtomValue(installedSkillsLoadingAtom);
   const [searchQuery, setSearchQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilterKey>("all");
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
