@@ -8,7 +8,8 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::agent_sessions::event_pipeline::types::{
-    ActivityStatus, EventDisplayStatus, EventSource, SessionEvent, SessionEventPatch,
+    ActivityStatus, EventDisplayStatus, EventDisplayVariant, EventSource, SessionEvent,
+    SessionEventPatch,
 };
 
 const MAX_EVENTS: usize = 8000;
@@ -60,6 +61,28 @@ fn transcript_message_key(event: &SessionEvent) -> Option<(EventSource, String)>
         }
         _ => None,
     }
+}
+
+fn normalized_event_text(event: &SessionEvent) -> String {
+    event
+        .display_text
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn is_completed_authoritative_stream_transcript(event: &SessionEvent) -> bool {
+    let is_stream_transcript = matches!(
+        event.display_variant,
+        EventDisplayVariant::Message | EventDisplayVariant::Thinking
+    ) && (event.id.starts_with("stream-msg-")
+        || event.id.starts_with("stream-think-"));
+
+    event.source == EventSource::Assistant
+        && is_stream_transcript
+        && event.display_status == EventDisplayStatus::Completed
+        && event.is_delta != Some(true)
+        && !normalized_event_text(event).is_empty()
 }
 
 fn is_authoritative_transcript_message(event: &SessionEvent) -> bool {
@@ -324,6 +347,10 @@ impl EventStore {
         self.mark_live_partial_if_windowed();
         self.stamp_repo(&mut event);
         if self.replace_matching_stream_placeholder(&mut event) {
+            self.version += 1;
+            return;
+        }
+        if self.replace_duplicate_stream_transcript_in_current_turn(&mut event) {
             self.version += 1;
             return;
         }
@@ -810,6 +837,51 @@ impl EventStore {
             self.version += 1;
         }
         removed
+    }
+
+    fn replace_duplicate_stream_transcript_in_current_turn(
+        &mut self,
+        new_event: &mut SessionEvent,
+    ) -> bool {
+        if !is_completed_authoritative_stream_transcript(new_event) {
+            return false;
+        }
+        let new_text = normalized_event_text(new_event);
+        let current_turn_start = self
+            .events
+            .iter()
+            .rposition(|event| event.source == EventSource::User)
+            .map(|index| index + 1)
+            .unwrap_or(0);
+        let Some(existing_idx) = self.events[current_turn_start..]
+            .iter()
+            .position(|event| {
+                is_completed_authoritative_stream_transcript(event)
+                    && event.display_variant == new_event.display_variant
+                    && normalized_event_text(event) == new_text
+            })
+            .map(|offset| current_turn_start + offset)
+        else {
+            return false;
+        };
+
+        let existing_created_at = self.events[existing_idx].created_at.clone();
+        new_event.created_at = existing_created_at;
+        if let Some(ref old_cid) = self.events[existing_idx].call_id {
+            self.call_id_index.remove(old_cid);
+        }
+        if let Some(ref new_cid) = new_event.call_id {
+            self.call_id_index.insert(new_cid.clone(), existing_idx);
+        }
+        let old_id = self.events[existing_idx].id.clone();
+        let new_id = new_event.id.clone();
+        self.events[existing_idx] = new_event.clone();
+        if old_id != new_id {
+            self.mark_removed(old_id);
+        }
+        self.mark_changed(new_id);
+        self.rebuild_indexes();
+        true
     }
 
     fn replace_matching_stream_placeholder(&mut self, new_event: &mut SessionEvent) -> bool {

@@ -32,6 +32,9 @@ fn empty_frontmatter() -> WorkItemFrontmatter {
         assignee_type: None,
         schedule: None,
         routine_source: None,
+        execution_lock: None,
+        close_out: None,
+        work_products: Vec::new(),
     }
 }
 

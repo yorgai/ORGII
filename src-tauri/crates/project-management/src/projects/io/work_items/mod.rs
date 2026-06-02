@@ -43,6 +43,7 @@ mod atomic;
 mod batch;
 mod crud;
 mod enrichment;
+mod execution_lock;
 mod extras;
 mod history;
 mod mapping;
@@ -64,6 +65,7 @@ pub use enrichment::{
     read_all_work_items_enriched, read_all_work_items_enriched_scoped, read_work_item_enriched,
     read_work_item_enriched_scoped, update_work_item_partial_enriched,
 };
+pub use execution_lock::{acquire_execution_lock, release_execution_lock};
 pub use sync_metadata::{
     apply_remote_merge, find_by_external_ref, read_sync_metadata, FieldRevision, SyncMetadata,
     REVISION_SOURCE_LOCAL,

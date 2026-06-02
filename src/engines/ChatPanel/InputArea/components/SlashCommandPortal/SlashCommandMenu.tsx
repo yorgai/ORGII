@@ -356,13 +356,14 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
                   }}
                   onMouseDown={(e) => {
                     e.preventDefault();
+                    const anchorTop =
+                      e.currentTarget.getBoundingClientRect().top;
                     setOpenFlyout((prev) =>
                       prev?.kind === "modes"
                         ? null
                         : {
                             kind: "modes",
-                            anchorTop:
-                              e.currentTarget.getBoundingClientRect().top,
+                            anchorTop,
                           }
                     );
                   }}
@@ -386,13 +387,14 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
                   }}
                   onMouseDown={(e) => {
                     e.preventDefault();
+                    const anchorTop =
+                      e.currentTarget.getBoundingClientRect().top;
                     setOpenFlyout((prev) =>
                       prev?.kind === "models"
                         ? null
                         : {
                             kind: "models",
-                            anchorTop:
-                              e.currentTarget.getBoundingClientRect().top,
+                            anchorTop,
                           }
                     );
                   }}

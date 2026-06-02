@@ -132,10 +132,11 @@ describe("ORGII Plan follow-up lifecycle behavior", function () {
   before(async () => {
     assertKnownControlScenarios(PLAN_SCENARIO_NAMES);
     await waitForApp();
-    configs = scenarioConfigs(await listAccounts());
+    const allConfigs = scenarioConfigs(await listAccounts());
+    configs = allConfigs.filter((config) => config.category === "rust_agent");
     if (configs.length === 0) {
       throw new Error(
-        `No Plan configs matched E2E_CONTROL_LABELS=${JSON.stringify(CONTROL_LABEL_FILTER)}`
+        `No Rust Plan configs matched E2E_CONTROL_LABELS=${JSON.stringify(CONTROL_LABEL_FILTER)}; ORGII Plan card lifecycle scenarios only apply to Rust AgentExecMode sessions.`
       );
     }
   });

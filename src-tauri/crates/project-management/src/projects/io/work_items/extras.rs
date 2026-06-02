@@ -25,8 +25,9 @@ use serde_json::Value as JsonValue;
 
 use crate::projects::types::{
     CommentEntry, DelegationEntry, FollowUpRef, LinkedSession, OrchestratorConfig,
-    OrchestratorState, ProofOfWork, TodoEntry, WorkItemFrontmatter, WorkItemHistoryEvent,
-    WorkItemRoutineSource, WorkItemSchedule,
+    OrchestratorState, ProofOfWork, TodoEntry, WorkItemCloseOut, WorkItemExecutionLock,
+    WorkItemFrontmatter, WorkItemHistoryEvent, WorkItemRoutineSource, WorkItemSchedule,
+    WorkItemWorkProduct,
 };
 
 /// Per-field watermark stamped by the sync framework. Used by the
@@ -74,6 +75,12 @@ pub(super) struct ExtrasPayload {
     pub schedule: Option<WorkItemSchedule>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub routine_source: Option<WorkItemRoutineSource>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub execution_lock: Option<WorkItemExecutionLock>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub close_out: Option<WorkItemCloseOut>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub work_products: Vec<WorkItemWorkProduct>,
     /// Per-field revision watermarks the sync resolver consults. Keyed
     /// by the local field name (`"title"`, `"status"`, …; the same
     /// strings produced by [`super::super::super::sync::adapter::EntityField::as_local_name`]).
@@ -108,6 +115,9 @@ impl ExtrasPayload {
             follow_up_items: fm.follow_up_items.clone(),
             schedule: fm.schedule.clone(),
             routine_source: fm.routine_source.clone(),
+            execution_lock: fm.execution_lock.clone(),
+            close_out: fm.close_out.clone(),
+            work_products: fm.work_products.clone(),
             // Sync metadata is not surfaced through the frontmatter
             // (not user-visible). The create path starts with empty
             // maps; existing items keep their watermarks via the

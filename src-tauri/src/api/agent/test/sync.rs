@@ -851,6 +851,9 @@ pub async fn test_sync_conflict_seed_work_item(
             follow_up_items: Vec::new(),
             schedule: None,
             routine_source: None,
+            execution_lock: None,
+            close_out: None,
+            work_products: Vec::new(),
         };
         write_work_item(&slug, &short_id, &frontmatter, "")?;
 

@@ -6,6 +6,7 @@ import type {
   OrchestratorConfig,
   OrchestratorPhase,
   OrchestratorState,
+  WorkItemExecutionLock,
 } from "@src/api/http/project";
 import Button from "@src/components/Button";
 import InlineAlert from "@src/components/InlineAlert";
@@ -13,21 +14,25 @@ import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
 interface IdleStateProps {
   orchestratorConfig?: OrchestratorConfig;
+  executionLock?: WorkItemExecutionLock | null;
   onStartAgent?: (instructions?: string) => void;
   isStartingAgent?: boolean;
 }
 
 export const IdleState: React.FC<IdleStateProps> = ({
   orchestratorConfig,
+  executionLock,
   onStartAgent,
   isStartingAgent,
 }) => {
   const { t } = useTranslation("projects");
 
+  const hasActiveExecutionLock = !!executionLock?.activeSessionId;
   const canStart =
     !!orchestratorConfig?.selected_account_id &&
     !!orchestratorConfig?.selected_model_id &&
-    !isStartingAgent;
+    !isStartingAgent &&
+    !hasActiveExecutionLock;
 
   return (
     <Placeholder
@@ -35,13 +40,15 @@ export const IdleState: React.FC<IdleStateProps> = ({
       title={t("workItems.agentWorkflow.noWorkflowRun")}
       placement="sidebar"
       action={
-        onStartAgent && canStart
+        onStartAgent
           ? {
               label: isStartingAgent
                 ? t("workItems.agentWorkflow.running")
                 : t("workItems.agentWorkflow.startAgent"),
-              onClick: onStartAgent,
+              onClick: () => onStartAgent(),
               variant: "primary",
+              disabled: !canStart,
+              dataTestId: "work-item-start-agent-button",
             }
           : undefined
       }
@@ -67,7 +74,10 @@ export const ActivePhaseStatus: React.FC<ActivePhaseStatusProps> = ({
         : t("workItems.agentWorkflow.followUpPhase");
 
   return (
-    <div className="flex items-center justify-between rounded-md bg-fill-1 px-3 py-2">
+    <div
+      className="flex items-center justify-between rounded-md bg-fill-1 px-3 py-2"
+      data-testid="work-item-agent-active-phase"
+    >
       <div className="flex items-center gap-2">
         <Loader2 size={13} className="animate-spin text-primary-6" />
         <span className="text-xs font-medium text-text-1">{phaseLabel}</span>
@@ -84,17 +94,51 @@ export const ActivePhaseStatus: React.FC<ActivePhaseStatusProps> = ({
   );
 };
 
-export const CompletedState: React.FC = () => {
+interface CompletedStateProps {
+  orchestratorConfig?: OrchestratorConfig;
+  executionLock?: WorkItemExecutionLock | null;
+  onStartAgent?: (instructions?: string) => void;
+  isStartingAgent?: boolean;
+}
+
+export const CompletedState: React.FC<CompletedStateProps> = ({
+  orchestratorConfig,
+  executionLock,
+  onStartAgent,
+  isStartingAgent,
+}) => {
   const { t } = useTranslation("projects");
 
+  const hasActiveExecutionLock = !!executionLock?.activeSessionId;
+  const canStart =
+    !!orchestratorConfig?.selected_account_id &&
+    !!orchestratorConfig?.selected_model_id &&
+    !isStartingAgent &&
+    !hasActiveExecutionLock;
+
   return (
-    <div className="flex items-center gap-1.5 rounded-md bg-fill-1 px-3 py-2">
-      <div className="flex h-4 w-4 items-center justify-center rounded-full bg-success-6">
-        <Check size={10} strokeWidth={3} className="text-white" />
+    <div className="flex items-center justify-between gap-2 rounded-md bg-fill-1 px-3 py-2">
+      <div className="flex items-center gap-1.5">
+        <div className="flex h-4 w-4 items-center justify-center rounded-full bg-success-6">
+          <Check size={10} strokeWidth={3} className="text-white" />
+        </div>
+        <span className="text-xs font-medium text-text-1">
+          {t("workItems.agentWorkflow.completed")}
+        </span>
       </div>
-      <span className="text-xs font-medium text-text-1">
-        {t("workItems.agentWorkflow.completed")}
-      </span>
+      {onStartAgent && (
+        <Button
+          variant="primary"
+          size="small"
+          onClick={() => onStartAgent()}
+          disabled={!canStart}
+          data-testid="work-item-start-agent-button"
+        >
+          {isStartingAgent
+            ? t("workItems.agentWorkflow.running")
+            : t("workItems.agentWorkflow.startAgent")}
+        </Button>
+      )}
     </div>
   );
 };
@@ -124,7 +168,7 @@ export const FailedState: React.FC<FailedStateProps> = ({
               <Button
                 variant="primary"
                 size="small"
-                onClick={onRetry}
+                onClick={() => onRetry()}
                 icon={<RotateCcw size={14} />}
               >
                 {t("workItems.agentWorkflow.retry")}
@@ -175,7 +219,7 @@ export const AwaitingUserState: React.FC<AwaitingUserStateProps> = ({
       </p>
       <div className="flex flex-wrap items-center gap-2">
         {onRetry && (
-          <Button variant="primary" size="small" onClick={onRetry}>
+          <Button variant="primary" size="small" onClick={() => onRetry()}>
             {t("workItems.agentWorkflow.fixAndRerun")}
           </Button>
         )}

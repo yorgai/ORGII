@@ -212,6 +212,9 @@ pub(super) fn enrich_work_item(
         follow_up_items: fm.follow_up_items.clone(),
         schedule: fm.schedule.clone(),
         routine_source: fm.routine_source.clone(),
+        execution_lock: fm.execution_lock.clone(),
+        close_out: fm.close_out.clone(),
+        work_products: fm.work_products.clone(),
     }
 }
 
@@ -315,6 +318,9 @@ mod tests {
             follow_up_items: vec![],
             schedule: None,
             routine_source: None,
+            execution_lock: None,
+            close_out: None,
+            work_products: vec![],
         }
     }
 

@@ -190,6 +190,7 @@
     "@typescript-eslint/eslint-plugin": "^6.16.0",
     "@typescript-eslint/parser": "^6.16.0",
     "@vitest/coverage-v8": "^2.1.9",
+    "ajv": "^8.18.0",
     "autoprefixer": "^10.4.16",
     "clean-webpack-plugin": "^4.0.0",
     "concurrently": "^8.2.2",

@@ -25,6 +25,7 @@ module.exports = (env, argv) => {
   // React Fast Refresh. esbuild is faster but can't support Fast Refresh.
   const useFastDev = !isProduction && process.env.FAST_DEV === "true";
   const useObfuscation = isProduction && process.env.OBFUSCATE === "true";
+  const isE2E = process.env.ORGII_E2E === "1";
   const devServerPort = Number.parseInt(
     process.env.WEBPACK_DEV_SERVER_PORT ?? process.env.PORT ?? "1998",
     10
@@ -439,7 +440,7 @@ module.exports = (env, argv) => {
       !isProduction &&
         !useFastDev &&
         new ReactRefreshWebpackPlugin({ overlay: false }),
-      new WebpackBar(),
+      !isE2E && new WebpackBar(),
       new Dotenv(),
       isProduction &&
         new MiniCssExtractPlugin({

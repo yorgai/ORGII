@@ -356,6 +356,9 @@ pub async fn create_work_item(
             follow_up_items: vec![],
             schedule,
             routine_source: None,
+            execution_lock: None,
+            close_out: None,
+            work_products: vec![],
         };
 
         io::write_work_item(&slug, &short_id, &frontmatter, &body)?;

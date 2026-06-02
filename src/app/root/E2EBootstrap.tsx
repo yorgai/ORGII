@@ -158,6 +158,7 @@ export const E2EBootstrap: FC = () => {
       upsertRoutine,
       deleteRoutine,
       fireRoutine,
+      listRoutineFires,
       readWorkItem,
       writeWorkItem,
       deleteWorkItem,
@@ -252,8 +253,12 @@ export const E2EBootstrap: FC = () => {
       mcpSetServerDisabled,
     } = createMcpHelpers();
 
-    const { navigateTo, getLocationPathname, openAgentTab } =
-      createNavigationHelpers(store);
+    const {
+      navigateTo,
+      getLocationPathname,
+      openProjectWorkItemsTab,
+      openAgentTab,
+    } = createNavigationHelpers(store);
 
     const helpers: E2EHelpers = {
       addAccount,
@@ -297,11 +302,13 @@ export const E2EBootstrap: FC = () => {
       upsertRoutine,
       deleteRoutine,
       fireRoutine,
+      listRoutineFires,
       projects: {
         listRoutines,
         upsertRoutine,
         deleteRoutine,
         fireRoutine,
+        listRoutineFires,
       },
       readWorkItem,
       writeWorkItem,
@@ -383,6 +390,7 @@ export const E2EBootstrap: FC = () => {
       mcpSetServerDisabled,
       navigateTo,
       getLocationPathname,
+      openProjectWorkItemsTab,
       openAgentTab,
     };
 

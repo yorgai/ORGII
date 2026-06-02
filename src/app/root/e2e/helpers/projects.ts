@@ -89,6 +89,19 @@ export function createProjectHelpers(store: E2EStore) {
     }
   };
 
+  const listRoutineFires = async (
+    routineId: string
+  ): Promise<Result<{ fires: Json[] }>> => {
+    try {
+      const fires = (await projectApi.listRoutineFires(
+        routineId
+      )) as unknown as Json[];
+      return { ok: true, fires };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   const readWorkItem = async (
     projectSlug: string,
     shortId: string
@@ -220,6 +233,7 @@ export function createProjectHelpers(store: E2EStore) {
     upsertRoutine,
     deleteRoutine,
     fireRoutine,
+    listRoutineFires,
     readWorkItem,
     writeWorkItem,
     deleteWorkItem,

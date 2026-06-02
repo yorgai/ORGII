@@ -36,6 +36,116 @@ export interface WorkItemHistoryEvent {
   summary?: string;
 }
 
+export const WORK_ITEM_ASSIGNEE_TARGET_KIND = {
+  HUMAN: "human",
+  AGENT: "agent",
+  AGENT_ORG: "agent_org",
+} as const;
+
+export type WorkItemAssigneeTargetKind =
+  (typeof WORK_ITEM_ASSIGNEE_TARGET_KIND)[keyof typeof WORK_ITEM_ASSIGNEE_TARGET_KIND];
+
+export interface WorkItemAssigneeTarget {
+  kind: WorkItemAssigneeTargetKind;
+  targetId: string;
+}
+
+export const WORK_ITEM_EXECUTION_LOCK_REASON = {
+  MANUAL_START: "manual_start",
+  ROUTINE_AUTO_START: "routine_auto_start",
+  ASSIGNMENT_WAKEUP: "assignment_wakeup",
+  FOLLOW_UP: "follow_up",
+} as const;
+
+export type WorkItemExecutionLockReason =
+  (typeof WORK_ITEM_EXECUTION_LOCK_REASON)[keyof typeof WORK_ITEM_EXECUTION_LOCK_REASON];
+
+export interface WorkItemExecutionLock {
+  activeSessionId?: string;
+  activeAgentOrgRunId?: string;
+  executionTarget?: WorkItemAssigneeTarget;
+  lockedAt?: string;
+  lockReason?: WorkItemExecutionLockReason;
+}
+
+export const WORK_ITEM_CLOSE_OUT_STATUS = {
+  NONE: "none",
+  DONE: "done",
+  NEEDS_REVIEW: "needs_review",
+  CHANGES_REQUESTED: "changes_requested",
+  BLOCKED: "blocked",
+  FOLLOW_UP_REQUIRED: "follow_up_required",
+} as const;
+
+export type WorkItemCloseOutStatus =
+  (typeof WORK_ITEM_CLOSE_OUT_STATUS)[keyof typeof WORK_ITEM_CLOSE_OUT_STATUS];
+
+export interface WorkItemCloseOut {
+  status: WorkItemCloseOutStatus;
+  sessionId?: string;
+  reviewerTarget?: WorkItemAssigneeTarget;
+  summary?: string;
+  decisionReason?: string;
+  nextOwner?: WorkItemAssigneeTarget;
+  createdAt?: string;
+  resolvedAt?: string;
+}
+
+export const WORK_ITEM_WORK_PRODUCT_TYPE = {
+  BRANCH: "branch",
+  COMMIT: "commit",
+  PULL_REQUEST: "pull_request",
+  FILE_CHANGE: "file_change",
+  VALIDATION: "validation",
+  PREVIEW: "preview",
+  DEPLOYMENT: "deployment",
+  SCREENSHOT: "screenshot",
+  DOCUMENT: "document",
+  RISK_NOTE: "risk_note",
+} as const;
+
+export type WorkItemWorkProductType =
+  (typeof WORK_ITEM_WORK_PRODUCT_TYPE)[keyof typeof WORK_ITEM_WORK_PRODUCT_TYPE];
+
+export const WORK_ITEM_WORK_PRODUCT_STATUS = {
+  UNKNOWN: "unknown",
+  PENDING: "pending",
+  PASSED: "passed",
+  FAILED: "failed",
+  MERGED: "merged",
+  DEPLOYED: "deployed",
+} as const;
+
+export type WorkItemWorkProductStatus =
+  (typeof WORK_ITEM_WORK_PRODUCT_STATUS)[keyof typeof WORK_ITEM_WORK_PRODUCT_STATUS];
+
+export const WORK_ITEM_WORK_PRODUCT_REVIEW_STATE = {
+  NONE: "none",
+  PENDING: "pending",
+  APPROVED: "approved",
+  CHANGES_REQUESTED: "changes_requested",
+} as const;
+
+export type WorkItemWorkProductReviewState =
+  (typeof WORK_ITEM_WORK_PRODUCT_REVIEW_STATE)[keyof typeof WORK_ITEM_WORK_PRODUCT_REVIEW_STATE];
+
+export interface WorkItemWorkProduct {
+  id: string;
+  sessionId?: string;
+  productType: WorkItemWorkProductType;
+  title: string;
+  provider?: string;
+  externalId?: string;
+  url?: string;
+  status?: WorkItemWorkProductStatus;
+  reviewState?: WorkItemWorkProductReviewState;
+  isPrimary: boolean;
+  summary?: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface WorkItemFrontmatter {
   id: string;
   short_id: string;
@@ -65,6 +175,9 @@ export interface WorkItemFrontmatter {
   follow_up_items?: FollowUpRef[];
   schedule?: WorkItemSchedule;
   routine_source?: WorkItemRoutineSource;
+  execution_lock?: WorkItemExecutionLock;
+  close_out?: WorkItemCloseOut;
+  work_products?: WorkItemWorkProduct[];
 }
 
 export interface WorkItemData {
@@ -99,6 +212,9 @@ export interface WorkItemPartialUpdate {
   orchestratorConfig?: OrchestratorConfig;
   orchestratorState?: OrchestratorState;
   schedule?: WorkItemSchedule | null;
+  executionLock?: WorkItemExecutionLock | null;
+  closeOut?: WorkItemCloseOut | null;
+  workProducts?: WorkItemWorkProduct[];
 }
 
 export interface ResolvedPerson {
@@ -162,6 +278,9 @@ export interface EnrichedWorkItem {
   followUpItems: FollowUpRef[];
   schedule?: WorkItemSchedule;
   routineSource?: WorkItemRoutineSource;
+  executionLock?: WorkItemExecutionLock;
+  closeOut?: WorkItemCloseOut;
+  workProducts: WorkItemWorkProduct[];
 }
 
 export type RustKanbanStatus =

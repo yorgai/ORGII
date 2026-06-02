@@ -77,6 +77,7 @@ export interface PlaceholderProps {
     onClick: () => void;
     /** Button variant — defaults to "secondary" */
     variant?: "primary" | "secondary";
+    disabled?: boolean;
     dataTestId?: string;
   };
   /** Shortcut: retry handler for error variant */
@@ -200,6 +201,7 @@ export const Placeholder: React.FC<PlaceholderProps> = memo(
                 size="small"
                 className="mt-3"
                 onClick={resolvedAction.onClick}
+                disabled={resolvedAction.disabled}
                 data-testid={resolvedAction.dataTestId}
               >
                 {resolvedAction.label}
@@ -230,6 +232,7 @@ export const Placeholder: React.FC<PlaceholderProps> = memo(
             size="small"
             className="mt-2"
             onClick={resolvedAction.onClick}
+            disabled={resolvedAction.disabled}
             data-testid={resolvedAction.dataTestId}
           >
             {resolvedAction.label}

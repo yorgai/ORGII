@@ -10,9 +10,12 @@ import type {
   OrchestratorConfig,
   OrchestratorState,
   ProofOfWork,
+  WorkItemCloseOut,
+  WorkItemExecutionLock,
   WorkItemHistoryEvent,
   WorkItemRoutineSource,
   WorkItemSchedule,
+  WorkItemWorkProduct,
 } from "@src/api/http/project/types";
 
 import type { Label, Person } from "./shared";
@@ -140,6 +143,16 @@ export type {
   WorkItemHistoryAction,
   WorkItemHistoryChange,
   WorkItemHistoryEvent,
+  WorkItemAssigneeTarget,
+  WorkItemAssigneeTargetKind,
+  WorkItemExecutionLock,
+  WorkItemExecutionLockReason,
+  WorkItemCloseOut,
+  WorkItemCloseOutStatus,
+  WorkItemWorkProduct,
+  WorkItemWorkProductType,
+  WorkItemWorkProductStatus,
+  WorkItemWorkProductReviewState,
   LastFailure,
   OrchestratorState,
   FollowUpRef,
@@ -186,4 +199,7 @@ export interface WorkItem extends WorkItemBase {
   followUpItems?: FollowUpRef[];
   schedule?: WorkItemSchedule | null;
   routineSource?: WorkItemRoutineSource;
+  executionLock?: WorkItemExecutionLock;
+  closeOut?: WorkItemCloseOut;
+  workProducts?: WorkItemWorkProduct[];
 }

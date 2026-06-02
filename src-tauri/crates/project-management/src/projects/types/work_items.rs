@@ -67,6 +67,147 @@ pub(crate) fn default_priority() -> String {
     "none".to_string()
 }
 
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
+fn is_metadata_empty(metadata: &serde_json::Map<String, JsonValue>) -> bool {
+    metadata.is_empty()
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkItemAssigneeTargetKind {
+    Human,
+    Agent,
+    AgentOrg,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkItemAssigneeTarget {
+    pub kind: WorkItemAssigneeTargetKind,
+    pub target_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkItemExecutionLockReason {
+    ManualStart,
+    RoutineAutoStart,
+    AssignmentWakeup,
+    FollowUp,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkItemExecutionLock {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_session_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_agent_org_run_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub execution_target: Option<WorkItemAssigneeTarget>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locked_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lock_reason: Option<WorkItemExecutionLockReason>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkItemCloseOutStatus {
+    None,
+    Done,
+    NeedsReview,
+    ChangesRequested,
+    Blocked,
+    FollowUpRequired,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkItemCloseOut {
+    pub status: WorkItemCloseOutStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reviewer_target: Option<WorkItemAssigneeTarget>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub decision_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_owner: Option<WorkItemAssigneeTarget>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resolved_at: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkItemWorkProductType {
+    Branch,
+    Commit,
+    PullRequest,
+    FileChange,
+    Validation,
+    Preview,
+    Deployment,
+    Screenshot,
+    Document,
+    RiskNote,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkItemWorkProductStatus {
+    Unknown,
+    Pending,
+    Passed,
+    Failed,
+    Merged,
+    Deployed,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkItemWorkProductReviewState {
+    None,
+    Pending,
+    Approved,
+    ChangesRequested,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkItemWorkProduct {
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    pub product_type: WorkItemWorkProductType,
+    pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub external_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<WorkItemWorkProductStatus>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub review_state: Option<WorkItemWorkProductReviewState>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub is_primary: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    #[serde(default, skip_serializing_if = "is_metadata_empty")]
+    pub metadata: serde_json::Map<String, JsonValue>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 /// YAML frontmatter of a `work-items/{SHORT_ID}.md` file
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkItemFrontmatter {
@@ -132,6 +273,12 @@ pub struct WorkItemFrontmatter {
     pub schedule: Option<WorkItemSchedule>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub routine_source: Option<WorkItemRoutineSource>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub execution_lock: Option<WorkItemExecutionLock>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub close_out: Option<WorkItemCloseOut>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub work_products: Vec<WorkItemWorkProduct>,
 }
 
 /// Combined work item data returned to the frontend
@@ -227,6 +374,20 @@ pub struct WorkItemPartialUpdate {
         skip_serializing_if = "Option::is_none"
     )]
     pub schedule: Option<Option<WorkItemSchedule>>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_update",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub execution_lock: Option<Option<WorkItemExecutionLock>>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_update",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub close_out: Option<Option<WorkItemCloseOut>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub work_products: Option<Vec<WorkItemWorkProduct>>,
 }
 
 // ============================================

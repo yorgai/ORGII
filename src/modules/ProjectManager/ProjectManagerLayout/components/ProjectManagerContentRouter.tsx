@@ -106,7 +106,12 @@ export function ProjectManagerContentRouter({
   });
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+    <div
+      className="flex min-w-0 flex-1 flex-col overflow-hidden"
+      data-testid="project-manager-content-router"
+      data-active-tab-id={activeTab?.id ?? ""}
+      data-active-tab-type={activeTab?.type ?? ""}
+    >
       {nonWorkItemsContent && (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {nonWorkItemsContent}

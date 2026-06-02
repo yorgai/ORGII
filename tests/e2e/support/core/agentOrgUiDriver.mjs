@@ -625,35 +625,71 @@ export async function configureCreatorForDefaultAgentOrg({ account, model }) {
 
 export async function selectRenderedExecMode(mode) {
   const pillSelector = '[data-testid="agent-exec-mode-pill"]';
-  await browser.waitUntil(async () => execJS(js.exists(pillSelector)), {
-    timeout: RENDER_TIMEOUT_MS,
-    timeoutMsg: "Agent exec mode pill never rendered",
-  });
-  const openResult = await execJS(js.click(pillSelector));
-  if (openResult !== "clicked") {
-    throw new Error(`Agent exec mode pill did not open: ${openResult}`);
-  }
-  const optionSelector = `[data-testid="agent-exec-mode-option-${mode}"]`;
-  await browser.waitUntil(async () => execJS(js.exists(optionSelector)), {
-    timeout: RENDER_TIMEOUT_MS,
-    timeoutMsg: `Agent exec mode option ${mode} never rendered`,
-  });
-  const clickResult = await execJS(js.click(optionSelector));
-  if (clickResult !== "clicked") {
-    throw new Error(
-      `Agent exec mode option ${mode} did not click: ${clickResult}`
+  const pillRendered = await execJS(js.exists(pillSelector));
+  if (pillRendered) {
+    const openResult = await execJS(js.click(pillSelector));
+    if (openResult !== "clicked") {
+      throw new Error(`Agent exec mode pill did not open: ${openResult}`);
+    }
+    const optionSelector = `[data-testid="agent-exec-mode-option-${mode}"]`;
+    await browser.waitUntil(async () => execJS(js.exists(optionSelector)), {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `Agent exec mode option ${mode} never rendered`,
+    });
+    const clickResult = await execJS(js.click(optionSelector));
+    if (clickResult !== "clicked") {
+      throw new Error(
+        `Agent exec mode option ${mode} did not click: ${clickResult}`
+      );
+    }
+    await browser.waitUntil(
+      async () => {
+        const text = await execJS(js.text(pillSelector));
+        return String(text).toLowerCase().includes(mode);
+      },
+      {
+        timeout: RENDER_TIMEOUT_MS,
+        timeoutMsg: `Agent exec mode pill did not show ${mode}: ${await execJS(js.text(pillSelector))}`,
+      }
     );
+    return;
   }
+
+  const skillsToolsButtonSelector = '[data-testid="composer-skills-tools-button"]';
   await browser.waitUntil(
-    async () => {
-      const text = await execJS(js.text(pillSelector));
-      return String(text).toLowerCase().includes(mode);
-    },
+    async () => execJS(js.exists(skillsToolsButtonSelector)),
     {
       timeout: RENDER_TIMEOUT_MS,
-      timeoutMsg: `Agent exec mode pill did not show ${mode}: ${await execJS(js.text(pillSelector))}`,
+      timeoutMsg: "Composer skills/tools button never rendered",
     }
   );
+  const openSlashResult = await execJS(js.visibleClick(skillsToolsButtonSelector));
+  if (openSlashResult !== "clicked") {
+    throw new Error(`Composer skills/tools button did not open: ${openSlashResult}`);
+  }
+  const flyoutTriggerSelector = '[data-testid="slash-command-mode-flyout-trigger"]';
+  await browser.waitUntil(async () => execJS(js.exists(flyoutTriggerSelector)), {
+    timeout: RENDER_TIMEOUT_MS,
+    timeoutMsg: "Slash command Mode flyout trigger never rendered",
+  });
+  const openFlyoutResult = await execJS(js.visibleClick(flyoutTriggerSelector));
+  if (openFlyoutResult !== "clicked") {
+    throw new Error(`Slash command Mode flyout did not open: ${openFlyoutResult}`);
+  }
+  const slashModeOptionSelector = `[data-testid="slash-command-mode-option-${mode}"]`;
+  await browser.waitUntil(
+    async () => execJS(js.exists(slashModeOptionSelector)),
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `Slash command mode option ${mode} never rendered`,
+    }
+  );
+  const slashModeClickResult = await execJS(js.visibleClick(slashModeOptionSelector));
+  if (slashModeClickResult !== "clicked") {
+    throw new Error(
+      `Slash command mode option ${mode} did not click: ${slashModeClickResult}`
+    );
+  }
 }
 
 export async function selectRenderedAgentOrg(agentOrgId) {

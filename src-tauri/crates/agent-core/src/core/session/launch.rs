@@ -29,6 +29,7 @@ use crate::session::turn::streaming::{
 };
 use crate::session::IdeContext;
 use crate::state::AgentAppState;
+use project_management::projects::{io as project_io, types as project_types};
 
 const MAX_AUTO_NAME_LEN: usize = 80;
 
@@ -336,6 +337,22 @@ pub(crate) async fn launch_rust_agent_run(
         .ok_or("create_session_impl did not return sessionId")?
         .to_string();
 
+    if let (Some(project_slug_value), Some(work_item_id_value)) =
+        (project_slug.as_deref(), work_item_id.as_deref())
+    {
+        if let Err(err) = acquire_work_item_execution_lock(
+            project_slug_value,
+            work_item_id_value,
+            &session_id,
+            agent_role.as_deref(),
+        )
+        .await
+        {
+            cleanup_session_after_org_run_create_failure(session_id.clone()).await;
+            return Err(err);
+        }
+    }
+
     let agent_org_run_id = match (agent_org_id.as_ref(), coordinator_agent_id.as_ref()) {
         (Some(org_id), Some(coordinator_id)) => {
             let org_snapshot = effective_org_definition
@@ -402,7 +419,7 @@ pub(crate) async fn launch_rust_agent_run(
     };
 
     let created_at = chrono::Utc::now().to_rfc3339();
-    let worktree_path = prepare_rust_agent_workspace_for_launch(
+    let worktree_path = match prepare_rust_agent_workspace_for_launch(
         &session_id,
         &workspace_path,
         branch.as_deref(),
@@ -410,7 +427,19 @@ pub(crate) async fn launch_rust_agent_run(
         existing_worktree_path.as_deref(),
         &additional_directories,
     )
-    .await?;
+    .await
+    {
+        Ok(path) => path,
+        Err(err) => {
+            release_work_item_execution_lock_if_present(
+                project_slug.as_deref(),
+                work_item_id.as_deref(),
+                &session_id,
+            )
+            .await;
+            return Err(err);
+        }
+    };
 
     let has_initial_content = !request.content.trim().is_empty();
     if has_initial_content {
@@ -438,6 +467,8 @@ pub(crate) async fn launch_rust_agent_run(
         let sub_agent_ids_for_send = request.sub_agent_ids.clone();
         let agent_definition_id_for_send = agent_definition_id.clone();
         let agent_org_run_id_for_send = agent_org_run_id.clone();
+        let project_slug_for_send = project_slug.clone();
+        let work_item_id_for_send = work_item_id.clone();
         let app_handle_for_send = state.app_handle.clone();
 
         tokio::spawn(async move {
@@ -472,6 +503,12 @@ pub(crate) async fn launch_rust_agent_run(
                         );
                     }
                 }
+                release_work_item_execution_lock_if_present(
+                    project_slug_for_send.as_deref(),
+                    work_item_id_for_send.as_deref(),
+                    &session_id_for_send,
+                )
+                .await;
                 broadcast_launch_send_error(&session_id_for_send, &message);
                 crate::lifecycle::persist_session_error_event(
                     app_handle_for_send.as_ref(),
@@ -1142,6 +1179,61 @@ async fn mark_session_failed(session_id: String) -> Result<(), String> {
     })
     .await
     .map_err(|err| err.to_string())?
+}
+
+async fn acquire_work_item_execution_lock(
+    project_slug: &str,
+    work_item_id: &str,
+    session_id: &str,
+    agent_role: Option<&str>,
+) -> Result<(), String> {
+    let project_slug = project_slug.to_string();
+    let work_item_id = work_item_id.to_string();
+    let session_id = session_id.to_string();
+    let agent_role = agent_role.map(str::to_string);
+    tokio::task::spawn_blocking(move || {
+        project_io::acquire_execution_lock(
+            &project_slug,
+            &work_item_id,
+            &session_id,
+            agent_role.as_deref(),
+            project_types::WorkItemExecutionLockReason::ManualStart,
+        )
+    })
+    .await
+    .map_err(|err| err.to_string())?
+}
+
+async fn release_work_item_execution_lock_if_present(
+    project_slug: Option<&str>,
+    work_item_id: Option<&str>,
+    session_id: &str,
+) {
+    let (Some(project_slug), Some(work_item_id)) = (project_slug, work_item_id) else {
+        return;
+    };
+    let project_slug = project_slug.to_string();
+    let work_item_id = work_item_id.to_string();
+    let session_id = session_id.to_string();
+    let result = tokio::task::spawn_blocking(move || {
+        project_io::release_execution_lock(&project_slug, &work_item_id, &session_id)
+    })
+    .await;
+    match result {
+        Ok(Ok(())) => {}
+        Ok(Err(err)) => {
+            tracing::warn!(
+                error = %err,
+                "[session_launch] failed to release work item execution lock"
+            );
+        }
+        Err(err) => {
+            tracing::warn!(
+                error = %err,
+                "[session_launch] failed to join work item execution lock release task"
+            );
+        }
+    }
 }
 
 async fn cleanup_session_after_org_run_create_failure(session_id: String) {

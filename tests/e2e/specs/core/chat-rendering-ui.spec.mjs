@@ -685,6 +685,14 @@ describe("Core chat rendering UI", () => {
         );
       }
     }
+    const toolNames = new Set(tools.map((tool) => tool.name));
+    for (const requiredTool of ["control_browser_with_agent_browser"]) {
+      if (!toolNames.has(requiredTool)) {
+        throw new Error(
+          `tool render ledger missing ${requiredTool}: ${tools.map((tool) => tool.name).join(", ")}`
+        );
+      }
+    }
     if (tools.length < 20) {
       throw new Error(
         `tool render ledger unexpectedly small: ${tools.map((tool) => tool.name).join(", ")}`

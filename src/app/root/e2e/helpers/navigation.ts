@@ -1,7 +1,17 @@
 import { buildAgentOrgsPath } from "@src/config/mainAppPaths";
 import { agentOrgsActiveTabAtom } from "@src/modules/MainApp/AgentOrgs/store/agentOrgsActiveTabAtom";
 import { router } from "@src/router";
+import { chatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";
+import { stationModeAtom } from "@src/store/ui/simulatorAtom";
+import { dockFilterAtom } from "@src/store/workstation";
 import type { AgentConfigTabVariant } from "@src/store/workstation/tabs";
+import {
+  PROJECT_DETAIL_SURFACE_VIEW,
+  createProjectWorkItemsTab,
+  openTab,
+  workstationLayoutAtom,
+} from "@src/store/workstation/tabs";
+import { LAYOUT_STORAGE_KEY } from "@src/store/workstation/tabs/storage";
 import { getRustAgentType } from "@src/util/session/sessionDispatch";
 import { openAgentConfigInWorkStation } from "@src/util/ui/openAgentConfigInWorkStation";
 
@@ -19,6 +29,62 @@ export function createNavigationHelpers(store: E2EStore) {
   };
 
   const getLocationPathname = (): string => window.location.pathname;
+
+  const openProjectWorkItemsTab = async (
+    projectId: string,
+    projectName: string,
+    projectSlug?: string
+  ): Promise<
+    | {
+        ok: true;
+        activeTabId: string | null;
+        tabIds: string[];
+        pathname: string;
+      }
+    | Err
+  > => {
+    try {
+      store.set(stationModeAtom, "my-station");
+      store.set(dockFilterAtom, "project");
+      store.set(chatPanelMaximizedAtom, false);
+      const tab = createProjectWorkItemsTab(
+        projectId,
+        projectName,
+        projectSlug,
+        PROJECT_DETAIL_SURFACE_VIEW.WORK_ITEMS
+      );
+      const current = store.get(workstationLayoutAtom);
+      const currentPane = current?.mainPane ?? {
+        tabs: [],
+        activeTabId: null,
+      };
+      const retainedTabs = currentPane.tabs.filter(
+        (tabItem) =>
+          tabItem.type !== "project-workitems" &&
+          tabItem.type !== "project-linear-projects" &&
+          tabItem.type !== "project-linear-work-items"
+      );
+      const nextLayout = {
+        ...current,
+        mainPane: openTab(
+          { tabs: retainedTabs, activeTabId: currentPane.activeTabId },
+          tab
+        ),
+      };
+      localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(nextLayout));
+      store.set(workstationLayoutAtom, nextLayout);
+      void router.navigate("/orgii/workstation/project").catch(() => undefined);
+      const layout = store.get(workstationLayoutAtom);
+      return {
+        ok: true,
+        activeTabId: layout?.mainPane?.activeTabId ?? null,
+        tabIds: layout?.mainPane?.tabs.map((tabItem) => tabItem.id) ?? [],
+        pathname: window.location.pathname,
+      };
+    } catch (err) {
+      return asError(err);
+    }
+  };
 
   const openAgentTab = async (
     agentId: string,
@@ -50,6 +116,7 @@ export function createNavigationHelpers(store: E2EStore) {
   return {
     navigateTo,
     getLocationPathname,
+    openProjectWorkItemsTab,
     openAgentTab,
   };
 }

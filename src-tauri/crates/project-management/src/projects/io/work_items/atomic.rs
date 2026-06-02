@@ -506,6 +506,15 @@ pub fn update_work_item_partial_with_revisions(
             if let Some(schedule) = updates.schedule.as_ref() {
                 fm.schedule = schedule.clone();
             }
+            if let Some(execution_lock) = updates.execution_lock.as_ref() {
+                fm.execution_lock = execution_lock.clone();
+            }
+            if let Some(close_out) = updates.close_out.as_ref() {
+                fm.close_out = close_out.clone();
+            }
+            if let Some(work_products) = updates.work_products.as_ref() {
+                fm.work_products = work_products.clone();
+            }
 
             fm.updated_at = now_iso;
 
@@ -699,6 +708,9 @@ fn build_frontmatter(
         follow_up_items: extras.follow_up_items.clone(),
         schedule: extras.schedule.clone(),
         routine_source: extras.routine_source.clone(),
+        execution_lock: extras.execution_lock.clone(),
+        close_out: extras.close_out.clone(),
+        work_products: extras.work_products.clone(),
     }
 }
 

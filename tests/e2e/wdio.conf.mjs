@@ -631,6 +631,7 @@ function startFrontendServer() {
     cwd: repoRoot,
     env: {
       ...process.env,
+      ORGII_E2E: "1",
       PORT: String(frontendPort),
       WEBPACK_DEV_SERVER_PORT: String(frontendPort),
     },
@@ -686,6 +687,9 @@ export const config = {
   path: "/",
   capabilities: [
     {
+      timeouts: {
+        script: mochaTimeoutMs,
+      },
       "tauri:options": {
         binary: appBinary,
       },
@@ -713,6 +717,7 @@ export const config = {
     startTauriWebDriver();
   },
   before: async function () {
+    await browser.setTimeout({ script: mochaTimeoutMs });
     await browser.waitUntil(
       async () => {
         try {

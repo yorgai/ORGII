@@ -12,7 +12,58 @@ export type RoutineTrigger =
   | { kind: "one_time"; at: string }
   | { kind: "cron"; cron: string };
 
-export type RoutineFireStatus = "pending" | "started" | "failed";
+export const ROUTINE_FIRE_STATUS = {
+  PENDING: "pending",
+  STARTED: "started",
+  SUCCEEDED: "succeeded",
+  FAILED: "failed",
+  SKIPPED: "skipped",
+  COALESCED: "coalesced",
+  QUEUED: "queued",
+} as const;
+
+export type RoutineFireStatus =
+  (typeof ROUTINE_FIRE_STATUS)[keyof typeof ROUTINE_FIRE_STATUS];
+
+export const ROUTINE_OUTPUT_MODE = {
+  DIRECT_SESSION: "direct_session",
+  CREATE_WORK_ITEM: "create_work_item",
+  UPDATE_EXISTING_WORK_ITEM: "update_existing_work_item",
+} as const;
+
+export type RoutineOutputMode =
+  (typeof ROUTINE_OUTPUT_MODE)[keyof typeof ROUTINE_OUTPUT_MODE];
+
+export const ROUTINE_CONCURRENCY_POLICY = {
+  COALESCE_IF_ACTIVE: "coalesce_if_active",
+  SKIP_IF_ACTIVE: "skip_if_active",
+  QUEUE_IF_ACTIVE: "queue_if_active",
+  ALWAYS_CREATE: "always_create",
+} as const;
+
+export type RoutineConcurrencyPolicy =
+  (typeof ROUTINE_CONCURRENCY_POLICY)[keyof typeof ROUTINE_CONCURRENCY_POLICY];
+
+export const ROUTINE_CATCH_UP_POLICY = {
+  SKIP_MISSED: "skip_missed",
+  RUN_ONCE: "run_once",
+  RUN_ALL_LIMITED: "run_all_limited",
+} as const;
+
+export type RoutineCatchUpPolicy =
+  (typeof ROUTINE_CATCH_UP_POLICY)[keyof typeof ROUTINE_CATCH_UP_POLICY];
+
+export interface RoutineOutputPolicy {
+  mode: RoutineOutputMode;
+  concurrencyPolicy: RoutineConcurrencyPolicy;
+  catchUpPolicy: RoutineCatchUpPolicy;
+  maxCatchUpRuns: number;
+  idempotencyScope: string;
+  createWorkItemStatus: string;
+  createWorkItemProjectSlug?: string;
+  createWorkItemTitle?: string;
+  createWorkItemBody?: string;
+}
 export type RoutineRunTarget =
   | { kind: "agent_definition"; agentDefinitionId?: string }
   | { kind: "agent_org"; agentOrgId: string };
@@ -56,6 +107,7 @@ export interface RoutineDefinition {
   enabled: boolean;
   trigger: RoutineTrigger;
   runTemplate: RoutineRunTemplate;
+  outputPolicy: RoutineOutputPolicy;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +119,11 @@ export interface RoutineFire {
   status: RoutineFireStatus;
   sessionId?: string;
   agentOrgRunId?: string;
+  workItemId?: string;
+  coalescedIntoFireId?: string;
+  idempotencyKey?: string;
+  startedAt?: string;
+  completedAt?: string;
   error?: string;
 }
 
@@ -79,6 +136,6 @@ export interface WorkItemRoutineSource {
 
 export interface RoutineFireResult {
   fire: RoutineFire;
-  sessionId: string;
+  sessionId?: string;
   agentOrgRunId?: string;
 }

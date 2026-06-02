@@ -164,6 +164,7 @@ const mockEnrichedWorkItem: EnrichedWorkItem = {
   comments: [],
   linkedSessions: [],
   followUpItems: [],
+  workProducts: [],
   history: [],
 };
 

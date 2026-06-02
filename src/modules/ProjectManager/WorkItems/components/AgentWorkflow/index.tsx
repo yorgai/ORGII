@@ -8,6 +8,7 @@ import type {
   OrchestratorPhase,
   OrchestratorState,
   ProofOfWork,
+  WorkItemExecutionLock,
 } from "@src/api/http/project";
 import Button from "@src/components/Button";
 import { useRefreshSpin } from "@src/hooks/ui";
@@ -32,6 +33,7 @@ interface AgentWorkflowProps {
   orchestratorState?: OrchestratorState;
   orchestratorConfig?: OrchestratorConfig;
   proofOfWork?: ProofOfWork;
+  executionLock?: WorkItemExecutionLock | null;
   linkedSessions?: LinkedSession[];
   onStartAgent?: (instructions?: string) => void;
   isStartingAgent?: boolean;
@@ -51,6 +53,7 @@ const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
   orchestratorState,
   orchestratorConfig,
   proofOfWork,
+  executionLock,
   linkedSessions = [],
   onStartAgent,
   isStartingAgent,
@@ -106,6 +109,7 @@ const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
         {phase === "idle" && (
           <IdleState
             orchestratorConfig={orchestratorConfig}
+            executionLock={executionLock}
             onStartAgent={onStartAgent}
             isStartingAgent={isStartingAgent}
           />
@@ -113,7 +117,14 @@ const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
         {(phase === "sde" || phase === "review" || phase === "follow_up") && (
           <ActivePhaseStatus phase={phase} onCancel={onCancel} />
         )}
-        {showCompletedBadge && <CompletedState />}
+        {showCompletedBadge && (
+          <CompletedState
+            orchestratorConfig={orchestratorConfig}
+            executionLock={executionLock}
+            onStartAgent={onStartAgent}
+            isStartingAgent={isStartingAgent}
+          />
+        )}
         {phase === "failed" && (
           <FailedState
             orchestratorState={orchestratorState}

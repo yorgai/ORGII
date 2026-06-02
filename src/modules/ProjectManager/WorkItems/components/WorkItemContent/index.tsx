@@ -140,32 +140,32 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
           </>
         )}
 
-        {activeTab === "execution" && (
-          <>
-            {workItem.orchestratorState &&
-              workItem.orchestratorState.current_phase !== "idle" && (
-                <div className={DETAIL_PANEL_TOKENS.sectionGap}>
-                  <AgentWorkflow
-                    orchestratorState={workItem.orchestratorState}
-                    orchestratorConfig={workItem.orchestratorConfig}
-                    proofOfWork={workItem.proofOfWork}
-                    linkedSessions={workItem.linkedSessions}
-                    onStartAgent={onStartAgent}
-                    isStartingAgent={isStartingAgent}
-                    onCancel={onCancelAgent}
-                    onRetry={onRetry}
-                    onAcceptAsIs={onAcceptAsIs}
-                    onCreateFollowUp={onCreateFollowUp}
-                    onOpenSession={onOpenSession}
-                    onOpenFileAtLine={onOpenFileAtLine}
-                    onRefresh={onRefreshWorkflow}
-                    activeAgentSessionId={activeAgentSessionId}
-                    activeAgentRole={activeAgentRole}
-                  />
-                </div>
-              )}
-          </>
-        )}
+        {activeTab === "execution" &&
+          (workItem.orchestratorConfig ||
+            workItem.orchestratorState ||
+            workItem.executionLock ||
+            (workItem.linkedSessions?.length ?? 0) > 0) && (
+            <div className={DETAIL_PANEL_TOKENS.sectionGap}>
+              <AgentWorkflow
+                orchestratorState={workItem.orchestratorState}
+                orchestratorConfig={workItem.orchestratorConfig}
+                proofOfWork={workItem.proofOfWork}
+                executionLock={workItem.executionLock}
+                linkedSessions={workItem.linkedSessions}
+                onStartAgent={onStartAgent}
+                isStartingAgent={isStartingAgent}
+                onCancel={onCancelAgent}
+                onRetry={onRetry}
+                onAcceptAsIs={onAcceptAsIs}
+                onCreateFollowUp={onCreateFollowUp}
+                onOpenSession={onOpenSession}
+                onOpenFileAtLine={onOpenFileAtLine}
+                onRefresh={onRefreshWorkflow}
+                activeAgentSessionId={activeAgentSessionId}
+                activeAgentRole={activeAgentRole}
+              />
+            </div>
+          )}
 
         {activeTab === "output" && (
           <OutputTab

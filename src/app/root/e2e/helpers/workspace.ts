@@ -34,6 +34,35 @@ export function createWorkspaceHelpers(store: E2EStore) {
     opts?: EnsureRepoSelectedOptions
   ): Promise<Result<{ repoId: string; path: string }>> => {
     try {
+      const pinRepoPath = (
+        repoPath: string
+      ): { repoId: string; path: string } => {
+        const repoId = `e2e-repo-${btoa(repoPath)
+          .replace(/[^a-zA-Z0-9]/g, "")
+          .slice(0, 24)}`;
+        const repo: Repo = {
+          id: repoId,
+          name:
+            opts?.repoName ??
+            repoPath.split(/[\\/]/).filter(Boolean).pop() ??
+            "E2E Repo",
+          path: repoPath,
+          fs_uri: repoPath,
+          kind: REPO_KIND.GIT,
+        };
+        const existingRepos = store.get(reposAtom);
+        store.set(reposAtom, [
+          repo,
+          ...existingRepos.filter((existingRepo) => existingRepo.id !== repoId),
+        ]);
+        store.set(selectedRepoIdAtom, repoId);
+        return { repoId, path: repoPath };
+      };
+
+      if (opts?.repoPath) {
+        return { ok: true, ...pinRepoPath(opts.repoPath) };
+      }
+
       const deadline = Date.now() + 15_000;
       let repos = store.get(reposAtom);
       while (repos.length === 0 && Date.now() < deadline) {
@@ -50,29 +79,10 @@ export function createWorkspaceHelpers(store: E2EStore) {
         return { ok: true, repoId: selectedRepo.id, path: selectedRepo.path };
       }
 
-      if (!opts?.repoPath) {
-        return {
-          ok: false,
-          error: "ensureRepoSelected: no repo path available",
-        };
-      }
-
-      const repoId = `e2e-repo-${btoa(opts.repoPath)
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .slice(0, 24)}`;
-      const fallbackRepo: Repo = {
-        id: repoId,
-        name:
-          opts.repoName ??
-          opts.repoPath.split(/[\\/]/).filter(Boolean).pop() ??
-          "E2E Repo",
-        path: opts.repoPath,
-        fs_uri: opts.repoPath,
-        kind: REPO_KIND.GIT,
+      return {
+        ok: false,
+        error: "ensureRepoSelected: no repo path available",
       };
-      store.set(reposAtom, [fallbackRepo]);
-      store.set(selectedRepoIdAtom, repoId);
-      return { ok: true, repoId, path: opts.repoPath };
     } catch (err) {
       return asError(err);
     }

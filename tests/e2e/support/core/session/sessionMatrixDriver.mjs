@@ -531,6 +531,7 @@ async function configureCreator({
       cliAgentType,
       agentDefinitionId,
       nativeHarnessType,
+      agentExecMode: "build",
       repoPath: E2E_REPO_PATH,
     }),
     `configureWithExistingKey(${category}:${account.agent_type})`

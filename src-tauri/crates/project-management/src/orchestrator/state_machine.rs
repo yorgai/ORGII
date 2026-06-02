@@ -205,6 +205,7 @@ pub fn cancel(frontmatter: &mut WorkItemFrontmatter) {
             session.completed_at = Some(now.clone());
         }
     }
+    frontmatter.execution_lock = None;
 }
 
 /// Add a linked session record to the work item.
@@ -264,6 +265,15 @@ pub fn complete_linked_session(
         session.completed_at = Some(chrono::Utc::now().to_rfc3339());
         session.cost_usd = cost_usd;
         session.total_tokens = total_tokens;
+    }
+
+    if frontmatter
+        .execution_lock
+        .as_ref()
+        .and_then(|lock| lock.active_session_id.as_deref())
+        == Some(session_id)
+    {
+        frontmatter.execution_lock = None;
     }
 
     // Accumulate into proof_of_work totals

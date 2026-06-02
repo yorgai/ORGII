@@ -94,6 +94,7 @@ const ProjectRow: React.FC<ProjectRowProps> = ({
   return (
     <>
       <div
+        data-testid={`project-row-${project.id}`}
         className={`flex min-h-[40px] items-center gap-1 rounded-lg py-0 pl-2 pr-5 transition-colors ${
           readonly
             ? "cursor-default hover:bg-transparent"

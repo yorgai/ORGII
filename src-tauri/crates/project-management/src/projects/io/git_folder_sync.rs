@@ -656,6 +656,9 @@ mod tests {
             follow_up_items: Vec::new(),
             schedule: None,
             routine_source: None,
+            execution_lock: None,
+            close_out: None,
+            work_products: Vec::new(),
         }
     }
 

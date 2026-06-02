@@ -116,6 +116,15 @@ function uiToPartialUpdate(
   if (data.schedule !== undefined) {
     updates.schedule = data.schedule ?? null;
   }
+  if (data.executionLock !== undefined) {
+    updates.executionLock = data.executionLock ?? null;
+  }
+  if (data.closeOut !== undefined) {
+    updates.closeOut = data.closeOut ?? null;
+  }
+  if (data.workProducts !== undefined) {
+    updates.workProducts = data.workProducts;
+  }
 
   return updates;
 }

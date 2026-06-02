@@ -93,6 +93,9 @@ pub(super) fn assemble_work_item(
         follow_up_items: extras.follow_up_items,
         schedule: extras.schedule,
         routine_source: extras.routine_source,
+        execution_lock: extras.execution_lock,
+        close_out: extras.close_out,
+        work_products: extras.work_products,
     };
     WorkItemData {
         frontmatter,

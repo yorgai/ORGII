@@ -63,6 +63,9 @@ fn work_item_fixture(id: &str, short_id: &str, title: &str) -> WorkItemFrontmatt
         follow_up_items: vec![],
         schedule: None,
         routine_source: None,
+        execution_lock: None,
+        close_out: None,
+        work_products: vec![],
     }
 }
 
@@ -517,10 +520,11 @@ mod phase_4_5 {
 
     fn set_sync_kind(slug: &str, kind: &str) {
         let connection = conn().expect("conn");
+        let sync_connection_id = format!("connection-{slug}");
         connection
             .execute(
-                "UPDATE projects SET sync_kind = ?1 WHERE slug = ?2",
-                rusqlite::params![kind, slug],
+                "UPDATE projects SET sync_kind = ?1, sync_connection_id = ?2 WHERE slug = ?3",
+                rusqlite::params![kind, sync_connection_id, slug],
             )
             .expect("set sync_kind");
     }
