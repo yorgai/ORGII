@@ -131,20 +131,30 @@ const ModelSelectorPill = forwardRef<HTMLButtonElement, ModelSelectorPillProps>(
         displayParts.thinking || Boolean(displayParts.variantInfo);
       if (!hasVariantInfo) return modelLabel;
 
+      const accentClass = active ? "text-primary-6" : "text-text-3";
+
       return (
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span className="min-w-0 truncate">{displayParts.label}</span>
-          <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] text-text-3">
-            {displayParts.thinking && (
-              <Brain size={11} strokeWidth={1.8} className="shrink-0" />
-            )}
-            {displayParts.variantInfo && (
-              <span>{displayParts.variantInfo}</span>
-            )}
+        <span className="inline-flex min-w-0 items-center gap-1.5 leading-none">
+          <span className="min-w-0 truncate leading-none">
+            {displayParts.label}
           </span>
+          {displayParts.variantInfo && (
+            <span
+              className={`inline-flex shrink-0 items-center text-[12px] font-normal leading-none ${accentClass}`}
+            >
+              {displayParts.variantInfo}
+            </span>
+          )}
+          {displayParts.thinking && (
+            <span
+              className={`inline-flex h-[14px] w-[14px] shrink-0 items-center justify-center ${accentClass}`}
+            >
+              <Brain size={14} strokeWidth={1.5} />
+            </span>
+          )}
         </span>
       );
-    }, [displayParts, modelLabel]);
+    }, [displayParts, modelLabel, active]);
 
     return (
       <SelectorPill
