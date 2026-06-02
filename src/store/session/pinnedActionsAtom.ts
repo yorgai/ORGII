@@ -47,6 +47,18 @@ const DEFAULT_PINNED: PinnedAction[] = [
 
 const STORAGE_KEY = "orgii:pinnedActions";
 
+/**
+ * Remove legacy entries that are no longer valid.
+ * Currently removes: `{name: "setup-repo", category: "skill"}` — this was
+ * pinned automatically in old builds but is now superseded by the
+ * `Setup Repo` built-in action pill.
+ */
+function migrate(actions: PinnedAction[]): PinnedAction[] {
+  return actions.filter(
+    (a) => !(a.category === "skill" && a.name === "setup-repo")
+  );
+}
+
 const storage = {
   getItem(key: string, initialValue: PinnedAction[]): PinnedAction[] {
     if (typeof window === "undefined") return initialValue;
@@ -55,7 +67,7 @@ const storage = {
       if (stored == null) return initialValue;
       const parsed = JSON.parse(stored) as unknown;
       if (!Array.isArray(parsed)) return initialValue;
-      return parsed as PinnedAction[];
+      return migrate(parsed as PinnedAction[]);
     } catch {
       return initialValue;
     }
