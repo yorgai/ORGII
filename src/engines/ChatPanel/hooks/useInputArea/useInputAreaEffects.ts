@@ -294,13 +294,15 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
       .filter((file): file is File => Boolean(file));
     const pathImageFiles = imageFiles.filter((file) => !file.browserFile);
 
+    const imagePromises: Promise<void>[] = [];
+
     if (browserImageFiles.length > 0) {
-      void handleImagePaste(browserImageFiles);
+      imagePromises.push(handleImagePaste(browserImageFiles));
     }
 
     if (pathImageFiles.length > 0) {
-      void Promise.all(
-        pathImageFiles.map((file) => handleImagePath(file.path, file.name))
+      imagePromises.push(
+        ...pathImageFiles.map((file) => handleImagePath(file.path, file.name))
       );
     }
 
@@ -328,7 +330,11 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
       insertPills();
     }
 
-    clearDroppedFiles();
+    // Clear the atom only after all async image reads finish so a second drop
+    // batch arriving while the first is still in-flight does not race.
+    void Promise.all(imagePromises).then(() => {
+      if (!cancelled) clearDroppedFiles();
+    });
 
     return () => {
       cancelled = true;

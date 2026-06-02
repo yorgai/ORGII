@@ -155,6 +155,9 @@ export function useSlashCommand(
   // Keep a ref to the latest fetched items so prefetchItems can
   // show cached data instantly while a fresh fetch is in flight.
   const itemsCacheRef = useRef<SlashItem[]>([]);
+  // Flag set to true when the component unmounts so in-flight fetches do not
+  // call setState on an unmounted component.
+  const cancelledRef = useRef(false);
 
   const fetchItems = useCallback(async (): Promise<SlashItem[]> => {
     setSlashLoading(true);
@@ -221,11 +224,15 @@ export function useSlashCommand(
         ...skillItems,
         ...toolItems,
       ];
-      setItems(allItems);
-      itemsCacheRef.current = allItems;
+      if (!cancelledRef.current) {
+        setItems(allItems);
+        itemsCacheRef.current = allItems;
+      }
       return allItems;
     } finally {
-      setSlashLoading(false);
+      if (!cancelledRef.current) {
+        setSlashLoading(false);
+      }
     }
   }, []);
 
@@ -261,12 +268,16 @@ export function useSlashCommand(
 
   // Warm the cache on mount so the first + menu open is instant.
   useEffect(() => {
+    cancelledRef.current = false;
     fetchItems().then((allItems) => {
       // Only seed filteredItems if no query is active yet.
-      if (!queryRef.current) {
+      if (!cancelledRef.current && !queryRef.current) {
         setFilteredItems(allItems);
       }
     });
+    return () => {
+      cancelledRef.current = true;
+    };
     // Intentionally run once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

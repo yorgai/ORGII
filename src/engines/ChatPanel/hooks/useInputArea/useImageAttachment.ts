@@ -11,7 +11,7 @@
  */
 import { readFile } from "@tauri-apps/plugin-fs";
 import { useAtom } from "jotai";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import Message from "@src/components/Message";
 import {
@@ -54,6 +54,13 @@ function mimeFromPath(path: string): string | undefined {
 export function useImageAttachment() {
   const [images, setImages] = useAtom(chatImageAttachmentsAtom);
 
+  // Keep a ref in sync with the current image count so ingestFiles can read
+  // the latest value without being recreated on every images.length change.
+  const imagesLengthRef = useRef(images.length);
+  useEffect(() => {
+    imagesLengthRef.current = images.length;
+  }, [images.length]);
+
   /**
    * Shared tail: run each File through `optimizeImage` and push the results
    * into `chatImageAttachmentsAtom`.  Enforces the per-chat image cap (and
@@ -63,7 +70,7 @@ export function useImageAttachment() {
     async (files: File[]) => {
       if (files.length === 0) return;
 
-      const remaining = MAX_CHAT_IMAGES - images.length;
+      const remaining = MAX_CHAT_IMAGES - imagesLengthRef.current;
       if (remaining <= 0) {
         Message.warning(`Maximum ${MAX_CHAT_IMAGES} images allowed`);
         return;
@@ -105,7 +112,7 @@ export function useImageAttachment() {
         setImages((prev) => [...prev, ...newAttachments]);
       }
     },
-    [images.length, setImages]
+    [setImages]
   );
 
   const handleImagePaste = useCallback(
