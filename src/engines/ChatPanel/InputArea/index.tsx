@@ -241,6 +241,17 @@ const InputArea: React.FC<InputAreaProps> = memo(
       [prefetchSlashItems]
     );
 
+    // Route "/" trigger through the plus-button menu so both entry points
+    // show identical content (Mode, Models, Image, Skills, Actions).
+    const handleSlashCommandViaPlus = useCallback(
+      (query: string) => {
+        setPlusSlashQuery(query);
+        setShowPlusSlashMenu(true);
+        prefetchSlashItems(query);
+      },
+      [prefetchSlashItems]
+    );
+
     // ============================================
     // Edit Mode (extracted hook)
     // ============================================
@@ -320,7 +331,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
         !replyInfo.isReply &&
         !editorMultiline &&
         !showContextMenu &&
-        !showSlashMenu,
+        !showPlusSlashMenu,
       [
         isEditMode,
         hasImages,
@@ -328,7 +339,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
         replyInfo.isReply,
         editorMultiline,
         showContextMenu,
-        showSlashMenu,
+        showPlusSlashMenu,
       ]
     );
 
@@ -372,10 +383,10 @@ const InputArea: React.FC<InputAreaProps> = memo(
             tiptapRef={tiptapRef}
             showContextMenu={showContextMenu}
             contextMenuKeyboardHandlerRef={contextMenuKeyboardHandlerRef}
-            showSlashMenu={showSlashMenu}
+            showSlashMenu={showPlusSlashMenu}
             slashCommandKeyboardHandlerRef={slashCommandKeyboardHandlerRef}
-            onSlashCommand={handleSlashCommand}
-            onSlashCommandClose={handleSlashCommandClose}
+            onSlashCommand={handleSlashCommandViaPlus}
+            onSlashCommandClose={handlePlusSlashClose}
             onContentChange={handleContentChange}
             onAtMention={handleAtMention}
             onAtMentionClose={handleAtMentionClose}
@@ -577,12 +588,12 @@ const InputArea: React.FC<InputAreaProps> = memo(
                       contextMenuKeyboardHandlerRef={
                         contextMenuKeyboardHandlerRef
                       }
-                      showSlashMenu={showSlashMenu}
+                      showSlashMenu={showPlusSlashMenu}
                       slashCommandKeyboardHandlerRef={
                         slashCommandKeyboardHandlerRef
                       }
-                      onSlashCommand={handleSlashCommand}
-                      onSlashCommandClose={handleSlashCommandClose}
+                      onSlashCommand={handleSlashCommandViaPlus}
+                      onSlashCommandClose={handlePlusSlashClose}
                       onContentChange={onEditorContentChange}
                       onAtMention={handleAtMention}
                       onAtMentionClose={handleAtMentionClose}

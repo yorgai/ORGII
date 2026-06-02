@@ -203,6 +203,15 @@
       },
       "commitsTo": "{{repo}} Commits",
       "commitsToMultiple": "{{repos}} Commits"
+    },
+    "list": {
+      "updated": "Updated",
+      "timeRange": "Time Range",
+      "started": "Started",
+      "lastUpdated": "Last Updated",
+      "agentModel": "Agent · Model",
+      "emptyTitle": "No sessions match these filters",
+      "emptyDescription": "Try a different status, Agent type, or time window."
     }
   },
   "changes": {

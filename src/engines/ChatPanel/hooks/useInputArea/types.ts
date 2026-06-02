@@ -39,6 +39,10 @@ export interface UseInputAreaOptions {
   customMentionOptions?: ReadonlyArray<CustomMentionOption>;
 }
 
+export interface SubmitMessageOptions {
+  forceSendNow?: boolean;
+}
+
 // ============================================
 // Sub-hook Return Types
 // ============================================
@@ -200,7 +204,7 @@ export interface UseInputAreaReturn {
   clearCiteCode: () => void;
 
   // Message submission
-  handleDivSubmit: () => Promise<void>;
+  handleDivSubmit: (options?: SubmitMessageOptions) => Promise<void>;
   isWpGeneWorking: boolean;
   /** True while a cancel has been dispatched but Rust hasn't acknowledged yet. */
   isPendingCancel: boolean;

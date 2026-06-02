@@ -203,6 +203,15 @@
         "completed": "Completed session",
         "stillWorking": "Still working"
       }
+    },
+    "list": {
+      "updated": "Updated",
+      "timeRange": "Time Range",
+      "started": "Started",
+      "lastUpdated": "Last Updated",
+      "agentModel": "Agent · Model",
+      "emptyTitle": "No sessions match these filters",
+      "emptyDescription": "Try a different status, agent type, or time window."
     }
   },
   "worktreeCompare": {

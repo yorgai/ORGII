@@ -204,6 +204,15 @@
       },
       "commitsTo": "提交至 {{repo}}",
       "commitsToMultiple": "提交至 {{repos}}"
+    },
+    "list": {
+      "updated": "已更新",
+      "timeRange": "时间范围",
+      "started": "开始时间",
+      "lastUpdated": "最后更新",
+      "agentModel": "Agent · 模型",
+      "emptyTitle": "没有符合这些筛选条件的会话",
+      "emptyDescription": "尝试切换状态、Agent 类型或时间范围。"
     }
   },
   "changes": {

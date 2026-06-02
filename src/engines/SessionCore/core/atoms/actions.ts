@@ -215,9 +215,26 @@ export const loadSessionAtom = atom(
     }
 
     if (mergedEvents.some(isBackendUserMessageEvent)) {
-      mergedEvents = mergedEvents.filter(
-        (event) => !isSyntheticUserInputEvent(event)
-      );
+      // Before dropping the synthetic placeholder, capture its displayText so
+      // that pill-formatted messages (e.g. skill pills → "name [skill:/name]")
+      // survive in the chat history even after the backend user event arrives.
+      // The backend event's displayText is the agent-facing content (/name),
+      // which lacks the rich pill format the user originally sent.
+      const firstSynthetic = mergedEvents.find(isSyntheticUserInputEvent);
+      const syntheticDisplayText = firstSynthetic?.displayText ?? null;
+
+      mergedEvents = mergedEvents
+        .filter((event) => !isSyntheticUserInputEvent(event))
+        .map((event) => {
+          if (
+            syntheticDisplayText &&
+            isBackendUserMessageEvent(event) &&
+            event.displayText !== syntheticDisplayText
+          ) {
+            return { ...event, displayText: syntheticDisplayText };
+          }
+          return event;
+        });
     }
 
     const eventIndex = Object.fromEntries(

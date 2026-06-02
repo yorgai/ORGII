@@ -217,8 +217,8 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   editorPlaceholder: editorPlaceholderOverride,
   headerContent,
   hideLaunchButton = false,
-  showSlashMenu = false,
-  slashQuery = "",
+  showSlashMenu: _showSlashMenu = false,
+  slashQuery: _slashQuery = "",
   slashCommandKeyboardHandlerRef: externalSlashKbRef,
   onSlashCommand,
   onSlashCommandClose,
@@ -265,10 +265,22 @@ const EditorArea: React.FC<EditorAreaProps> = ({
     onPrefetchSlashItems?.("");
   }, [onPrefetchSlashItems]);
 
+  // Route "/" trigger through the plus-button menu so both entry points
+  // show identical content (Mode, Models, Image, Skills, Actions).
+  const handleSlashCommandViaPlus = useCallback(
+    (query: string) => {
+      setPlusSlashQuery(query);
+      setShowPlusSlashMenu(true);
+      onPrefetchSlashItems?.(query);
+    },
+    [onPrefetchSlashItems]
+  );
+
   const handlePlusSlashClose = useCallback(() => {
     setShowPlusSlashMenu(false);
     setPlusSlashQuery("");
-  }, []);
+    onSlashCommandClose?.();
+  }, [onSlashCommandClose]);
 
   const handlePlusSlashQueryChange = useCallback(
     (query: string) => {
@@ -467,12 +479,12 @@ const EditorArea: React.FC<EditorAreaProps> = ({
    */
   const handleKeyDownForSlashDropdown = useCallback(
     (event: KeyboardEvent): boolean => {
-      if (showSlashMenu && slashCommandKeyboardHandlerRef.current) {
+      if (showPlusSlashMenu && slashCommandKeyboardHandlerRef.current) {
         return slashCommandKeyboardHandlerRef.current(event);
       }
       return false;
     },
-    [showSlashMenu, slashCommandKeyboardHandlerRef]
+    [showPlusSlashMenu, slashCommandKeyboardHandlerRef]
   );
 
   // ============================================
@@ -561,8 +573,12 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           minHeight={editorMinHeight ?? (isChatPanel ? 60 : 100)}
           maxHeight={editorMaxHeight ?? (isChatPanel ? 200 : 300)}
           onKeyDownForDropdown={handleKeyDownForDropdown}
-          onSlashCommand={onSlashCommand}
-          onSlashCommandClose={onSlashCommandClose}
+          onSlashCommand={
+            onSlashCommand ? handleSlashCommandViaPlus : undefined
+          }
+          onSlashCommandClose={
+            onSlashCommand ? handlePlusSlashClose : undefined
+          }
           onKeyDownForSlashDropdown={handleKeyDownForSlashDropdown}
           onImagePaste={onImagePaste}
         />
@@ -607,23 +623,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
             document.body
           )}
 
-        {/* Slash Command Menu - rendered via portal */}
-        {onSlashCommand && (
-          <SlashCommandPortal
-            visible={showSlashMenu}
-            containerRef={editorContainerRef}
-            items={filteredSlashItems}
-            loading={slashLoading}
-            currentMode={currentMode}
-            searchQuery={slashQuery}
-            onClose={onSlashCommandClose ?? (() => {})}
-            onSelect={onSlashSelect ?? (() => {})}
-            onModeSelect={onModeSelect ?? (() => {})}
-            keyboardHandlerRef={slashCommandKeyboardHandlerRef}
-          />
-        )}
-
-        {/* Plus-button slash menu (header search mode) */}
+        {/* Slash Command Menu - unified portal for both "/" and "+" triggers */}
         {onSlashCommand && (
           <SlashCommandPortal
             visible={showPlusSlashMenu}

@@ -18,6 +18,7 @@ import { ChatImageThumbnailRow } from "@src/components/ChatImageThumbnail";
 import Markdown from "@src/components/MarkDown";
 import { TerminalOutput } from "@src/components/TerminalDisplay";
 import { PILL_REGEX, PILL_TYPES, type PillType } from "@src/config/pillTokens";
+import UserMessageContent from "@src/engines/ChatPanel/ChatHistory/components/UserMessageContent";
 import ChatItemWrap from "@src/engines/ChatPanel/ChatHistory/renderers/ChatItemWrap";
 import { SESSION_UI_TOKENS } from "@src/engines/ChatPanel/blocks/primitives/config";
 import {
@@ -28,10 +29,6 @@ import {
 import { resolveSenderName } from "./AgentEventBubbles";
 import { TodoView } from "./TodoView";
 import type { MessageEntry } from "./types";
-
-type ContentSegment =
-  | { kind: "text"; text: string }
-  | { kind: "terminal-badge"; displayName: string };
 
 interface TerminalPillData {
   displayName: string;
@@ -56,73 +53,35 @@ function extractCodeBlock(text: string): string | undefined {
   return match?.[1]?.trim() || undefined;
 }
 
-function parseUserBubbleContent(content: string): {
-  segments: ContentSegment[];
-  terminalPills: TerminalPillData[];
-} {
-  const segments: ContentSegment[] = [];
+function parseTerminalPills(content: string): TerminalPillData[] {
   const terminalPills: TerminalPillData[] = [];
   const codeBlockContent = extractCodeBlock(content);
-  let lastIndex = 0;
-  let hasContextPill = false;
 
   for (const match of content.matchAll(PILL_REGEX)) {
-    const matchStart = match.index;
-    if (matchStart === undefined) continue;
-
-    if (matchStart > lastIndex) {
-      segments.push({
-        kind: "text",
-        text: content.slice(lastIndex, matchStart),
-      });
-    }
+    const pillType = match[2] as PillType;
+    if (pillType !== "terminal" || !PILL_TYPES.has(pillType)) continue;
 
     const displayName = match[1].trim();
-    const pillType = match[2] as PillType;
     const rawPath = match[3];
+    let terminalText: string | undefined;
 
-    if (pillType === "terminal" && PILL_TYPES.has(pillType)) {
-      hasContextPill = true;
-      let terminalText: string | undefined;
-      if (rawPath.includes("::")) {
-        const encoded = rawPath.slice(rawPath.indexOf("::") + 2);
-        try {
-          terminalText = decodeURIComponent(atob(encoded));
-        } catch {
-          terminalText = undefined;
-        }
+    if (rawPath.includes("::")) {
+      const encoded = rawPath.slice(rawPath.indexOf("::") + 2);
+      try {
+        terminalText = decodeURIComponent(atob(encoded));
+      } catch {
+        terminalText = undefined;
       }
-      if (!terminalText && codeBlockContent) {
-        terminalText = codeBlockContent;
-      }
-      if (terminalText) {
-        terminalPills.push({ displayName, terminalText });
-      }
-      segments.push({ kind: "terminal-badge", displayName });
-    } else if (PILL_TYPES.has(pillType)) {
-      if (pillType === "session" || pillType === "browser") {
-        hasContextPill = true;
-      }
-      segments.push({ kind: "text", text: displayName });
-    } else {
-      segments.push({ kind: "text", text: match[0] });
     }
-
-    lastIndex = matchStart + match[0].length;
-  }
-
-  if (lastIndex < content.length) {
-    let remaining = content.slice(lastIndex);
-    if (hasContextPill && codeBlockContent) {
-      remaining = remaining.replace(/\n*```\n?[\s\S]*?```\s*$/, "");
+    if (!terminalText && codeBlockContent) {
+      terminalText = codeBlockContent;
     }
-    const trimmed = remaining.trim();
-    if (trimmed) {
-      segments.push({ kind: "text", text: trimmed });
+    if (terminalText) {
+      terminalPills.push({ displayName, terminalText });
     }
   }
 
-  return { segments, terminalPills };
+  return terminalPills;
 }
 
 const TerminalContextCard: React.FC<{ pill: TerminalPillData }> = memo(
@@ -176,52 +135,33 @@ const UserBubbleContent: React.FC<{
   content: string;
   images?: string[];
 }> = memo(({ content, images }) => {
-  const { segments, terminalPills } = useMemo(
-    () => parseUserBubbleContent(content),
+  const terminalPills = useMemo(() => parseTerminalPills(content), [content]);
+
+  // Strip terminal pill tokens before passing to UserMessageContent.
+  // TerminalContextCard renders the expandable card below; if we also pass the
+  // raw terminal token to UserMessageContent it would render a second inline
+  // badge for the same pill.
+  const strippedContent = useMemo(
+    () =>
+      content
+        .replace(PILL_REGEX, (match, _name, pillType: string) =>
+          pillType === "terminal" ? "" : match
+        )
+        .trim(),
     [content]
   );
+
   const hasImages = !!images && images.length > 0;
+  const hasContent = strippedContent !== "";
 
-  if (terminalPills.length === 0) {
-    const flatContent = segments
-      .map((segment) =>
-        segment.kind === "text" ? segment.text : segment.displayName
-      )
-      .join("");
-    const hasText = flatContent.trim() !== "";
-
-    if (!hasText && !hasImages) return null;
-
-    return (
-      <div className="flex flex-col items-start gap-1.5 text-left">
-        {hasImages && <ChatImageThumbnailRow images={images} />}
-        {hasText && (
-          <div className="inline-block rounded-lg bg-primary-1 p-3">
-            <div
-              className={`chat-text ${SESSION_UI_TOKENS.FONT_SIZE_MD} leading-relaxed text-primary-6`}
-            >
-              <ReplayMarkdown content={flatContent} />
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  const textOnly = segments.filter(
-    (segment): segment is ContentSegment & { kind: "text"; text: string } =>
-      segment.kind === "text" && segment.text.trim() !== ""
-  );
-  const textContent = textOnly.map((segment) => segment.text).join("");
+  if (!hasContent && !hasImages && terminalPills.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-1.5 text-left">
+    <div className="flex flex-col items-start gap-1.5 text-left">
       {hasImages && <ChatImageThumbnailRow images={images} />}
-      {textOnly.length > 0 && (
-        <div
-          className={`chat-text inline-block rounded-lg bg-primary-1 px-3 py-2.5 ${SESSION_UI_TOKENS.FONT_SIZE_MD} leading-relaxed text-primary-6`}
-        >
-          <ReplayMarkdown content={textContent} />
+      {hasContent && (
+        <div className="inline-block rounded-lg bg-primary-1 p-3">
+          <UserMessageContent text={strippedContent} />
         </div>
       )}
       {terminalPills.map((pill, index) => (
