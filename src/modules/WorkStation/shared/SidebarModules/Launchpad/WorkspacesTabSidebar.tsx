@@ -14,14 +14,13 @@
  * dashboard or a workspace detail page is active.
  */
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { Code, LayoutDashboard } from "lucide-react";
+import { Check, Code, FolderTree, LayoutDashboard } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { type WorkspaceRecord, listWorkspaces } from "@src/api/tauri/workspace";
 import { TreeRowBase, type TreeRowNode } from "@src/components/TreeRow";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
-import MultiRepoWorkspaceIcon from "@src/modules/WorkStation/Launchpad/components/MultiRepoWorkspaceIcon";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { selectedRepoIdAtom } from "@src/store/repo";
 import type { Repo } from "@src/store/repo/types";
@@ -223,10 +222,7 @@ const WorkspacesTabSidebar: TabSidebarComponent = memo(
             path: ws.workspaceId,
             type: "file",
             icon: (
-              <MultiRepoWorkspaceIcon
-                size={NAV_ICON_SIZE}
-                strokeWidth={NAV_ICON_STROKE}
-              />
+              <FolderTree size={NAV_ICON_SIZE} strokeWidth={NAV_ICON_STROKE} />
             ),
           };
           return (
@@ -277,14 +273,16 @@ const WorkspacesTabSidebar: TabSidebarComponent = memo(
               dataPath={node.path}
             >
               {isActive && (
-                <span className="ml-auto shrink-0 text-[10px] uppercase tracking-wide text-success-6">
-                  {t("launchpad.activeBadge")}
-                </span>
+                <Check
+                  size={NAV_ICON_SIZE}
+                  strokeWidth={NAV_ICON_STROKE}
+                  className="ml-auto shrink-0 text-primary-6"
+                />
               )}
             </TreeRowBase>
           );
         }),
-      [activeRepoId, handleSelectRepo, repos, selectedRepoId, t]
+      [activeRepoId, handleSelectRepo, repos, selectedRepoId]
     );
 
     const emptyWorkspacesContent = useMemo(
@@ -314,7 +312,7 @@ const WorkspacesTabSidebar: TabSidebarComponent = memo(
       if (orderedWorkspaces.length > 0) {
         sections.push({
           key: "multi-repo-workspaces",
-          title: t("launchpad.myMultiRepoWorkspaces"),
+          title: t("common:selectors.repo.sections.workspace"),
           content: (
             <div className="min-h-0 overflow-y-auto py-1">{workspaceRows}</div>
           ),
@@ -325,7 +323,7 @@ const WorkspacesTabSidebar: TabSidebarComponent = memo(
 
       sections.push({
         key: "repos",
-        title: t("launchpad.tabs.myRepos"),
+        title: t("common:selectors.repo.sections.repo"),
         content:
           repos.length > 0 ? (
             <div className="min-h-0 overflow-y-auto py-1">{repoRows}</div>

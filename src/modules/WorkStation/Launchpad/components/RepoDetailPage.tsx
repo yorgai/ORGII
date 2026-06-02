@@ -407,7 +407,7 @@ const RepoDetailPage: React.FC<RepoDetailPageProps> = ({
         <div className={DETAIL_PANEL_TOKENS.contentWidthWithPadding}>
           {/* Info Section */}
           <div className={DETAIL_PANEL_TOKENS.sectionGap}>
-            <div className="rounded-lg bg-fill-2 p-4">
+            <div className="rounded-lg bg-surface-container p-4">
               <h3
                 className="mb-3 truncate text-[14px] font-semibold text-text-1"
                 title={repoName}
@@ -450,7 +450,7 @@ const RepoDetailPage: React.FC<RepoDetailPageProps> = ({
           {configFiles.length > 0 && (
             <CollapsibleSection title={t("launchpad.preview.configFiles")}>
               <div
-                className={`${DETAIL_PANEL_TOKENS.contentStack} rounded-lg bg-fill-2 p-4`}
+                className={`${DETAIL_PANEL_TOKENS.contentStack} rounded-lg bg-surface-container p-4`}
               >
                 {configFiles.map((file) => (
                   <div
