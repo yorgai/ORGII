@@ -40,6 +40,7 @@ interface BuildSectionedRepoItemsArgs {
   addMenuActive: boolean;
   sectionedAddItems: SpotlightItem[];
   workspaceItems: SpotlightItem[];
+  openPathItem: SpotlightItem | null;
   filteredRepos: RepoItem[];
   currentRepoId?: string;
   isMultiRoot: boolean;
@@ -58,6 +59,7 @@ export function buildSectionedRepoItems({
   addMenuActive,
   sectionedAddItems,
   workspaceItems,
+  openPathItem,
   filteredRepos,
   currentRepoId,
   isMultiRoot,
@@ -100,7 +102,10 @@ export function buildSectionedRepoItems({
   const sourceItems = [...leadingRepoItems, ...repoItems];
 
   if (searchQuery.trim()) {
-    return sortRepoItemsSelectedFirst([...workspaceItems, ...sourceItems]);
+    const searchItems = [...workspaceItems, ...sourceItems];
+    return openPathItem
+      ? [openPathItem, ...searchItems]
+      : sortRepoItemsSelectedFirst(searchItems);
   }
 
   const currentItems = [...workspaceItems, ...sourceItems].filter(

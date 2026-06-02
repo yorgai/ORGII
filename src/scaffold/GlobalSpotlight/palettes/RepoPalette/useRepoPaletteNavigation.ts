@@ -1,13 +1,8 @@
-import { stat } from "@tauri-apps/plugin-fs";
 import type React from "react";
 import { useCallback } from "react";
 
 import type { AddWorkspaceModalStage, useAddWorkspaceFlow } from "../../hooks";
-import {
-  expandHomePath,
-  looksLikeWorkspacePath,
-  showInvalidWorkspacePathDialog,
-} from "./pathImport";
+import { importWorkspacePath, looksLikeWorkspacePath } from "./pathImport";
 import type { AddMenuKind, RepoPaletteText } from "./types";
 
 interface UseRepoPaletteNavigationArgs {
@@ -104,36 +99,19 @@ export function useRepoPaletteNavigation({
   const handlePathImportSubmit = useCallback(async () => {
     if (modalStage || addMenuKind) return false;
 
-    const candidatePath = searchQuery.trim();
-    if (!looksLikeWorkspacePath(candidatePath)) return false;
-
-    try {
-      const expandedPath = await expandHomePath(candidatePath);
-      const metadata = await stat(expandedPath);
-      if (!metadata.isDirectory) {
-        await showInvalidWorkspacePathDialog(
-          paletteText.invalidPathTitle,
-          paletteText.invalidPathMessage(candidatePath)
-        );
-        return true;
-      }
-
-      await addWorkspaceFlow.localWorkspaceForm.handleImportWorkspace(
-        expandedPath
-      );
-      return true;
-    } catch {
-      await showInvalidWorkspacePathDialog(
-        paletteText.invalidPathTitle,
-        paletteText.invalidPathMessage(candidatePath)
-      );
-      return true;
-    }
+    return importWorkspacePath({
+      candidatePath: searchQuery,
+      invalidPathTitle: paletteText.invalidPathTitle,
+      invalidPathMessage: paletteText.invalidPathMessage,
+      onImportWorkspace:
+        addWorkspaceFlow.localWorkspaceForm.handleImportWorkspace,
+    });
   }, [
     addMenuKind,
-    addWorkspaceFlow.localWorkspaceForm,
+    addWorkspaceFlow.localWorkspaceForm.handleImportWorkspace,
     modalStage,
-    paletteText,
+    paletteText.invalidPathMessage,
+    paletteText.invalidPathTitle,
     searchQuery,
   ]);
 
