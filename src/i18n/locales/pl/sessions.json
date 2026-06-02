@@ -78,17 +78,8 @@
     "followLabel": "Bieżący Kanban",
     "view": {
       "kanban": "Kanban",
-      "list": "Lista",
-      "diary": "Dziennik"
-    },
-    "list": {
-      "updated": "Zaktualizowano",
-      "timeRange": "Zakres czasu",
-      "started": "Rozpoczęto",
-      "lastUpdated": "Ostatnia aktualizacja",
-      "agentModel": "Agent · Model",
-      "emptyTitle": "Brak sesji pasujących do tych filtrów",
-      "emptyDescription": "Spróbuj wybrać inny status, typ Agent lub zakres czasu."
+      "diary": "Dziennik",
+      "list": "Lista"
     },
     "timeFilter": {
       "6h": "6h",
@@ -203,6 +194,15 @@
       },
       "commitsTo": "Commits do {{repo}}",
       "commitsToMultiple": "Commits do {{repos}}"
+    },
+    "list": {
+      "updated": "Zaktualizowano",
+      "timeRange": "Zakres czasu",
+      "started": "Rozpoczęto",
+      "lastUpdated": "Ostatnia aktualizacja",
+      "agentModel": "Agent · Model",
+      "emptyTitle": "Brak sesji pasujących do tych filtrów",
+      "emptyDescription": "Spróbuj wybrać inny status, typ Agent lub zakres czasu."
     }
   },
   "worktreeCompare": {

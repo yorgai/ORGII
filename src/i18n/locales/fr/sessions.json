@@ -78,17 +78,8 @@
     "followLabel": "Kanban actuel",
     "view": {
       "kanban": "Kanban",
-      "list": "Liste",
-      "diary": "Journal"
-    },
-    "list": {
-      "updated": "Mis à jour",
-      "timeRange": "Plage horaire",
-      "started": "Démarré",
-      "lastUpdated": "Dernière mise à jour",
-      "agentModel": "Agent · Modèle",
-      "emptyTitle": "Aucune session ne correspond à ces filtres",
-      "emptyDescription": "Essayez un autre statut, type d'Agent ou intervalle."
+      "diary": "Journal",
+      "list": "Liste"
     },
     "timeFilter": {
       "label": "Affiché",
@@ -204,6 +195,15 @@
       },
       "commitsTo": "Commits vers {{repo}}",
       "commitsToMultiple": "Commits vers {{repos}}"
+    },
+    "list": {
+      "updated": "Mis à jour",
+      "timeRange": "Plage horaire",
+      "started": "Démarré",
+      "lastUpdated": "Dernière mise à jour",
+      "agentModel": "Agent · Modèle",
+      "emptyTitle": "Aucune session ne correspond à ces filtres",
+      "emptyDescription": "Essayez un autre statut, type d'Agent ou intervalle."
     }
   },
   "changes": {

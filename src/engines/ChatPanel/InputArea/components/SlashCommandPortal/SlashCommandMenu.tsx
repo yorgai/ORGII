@@ -27,7 +27,6 @@ import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
 import { useModelPillLabel } from "@src/hooks/models";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
-import { SpotlightFooter } from "@src/scaffold/GlobalSpotlight/components";
 import {
   type LastModelSelection,
   creatorDefaultModelSelectionAtom,
@@ -278,9 +277,6 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
         transform: "translateY(-100%)",
       }}
     >
-      {/* Keyboard hint footer */}
-      <SpotlightFooter hasActiveAction={false} variant="dropdown" />
-
       {/* Main panel */}
       <div
         ref={listRef}

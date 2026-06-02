@@ -78,17 +78,8 @@
     "followLabel": "Текущий Kanban",
     "view": {
       "kanban": "Kanban",
-      "list": "Список",
-      "diary": "Дневник"
-    },
-    "list": {
-      "updated": "Обновлено",
-      "timeRange": "Диапазон времени",
-      "started": "Начато",
-      "lastUpdated": "Последнее обновление",
-      "agentModel": "Agent · Модель",
-      "emptyTitle": "Нет сессий, соответствующих этим фильтрам",
-      "emptyDescription": "Попробуйте другой статус, тип Agent или период."
+      "diary": "Дневник",
+      "list": "Список"
     },
     "timeFilter": {
       "label": "Показано",
@@ -204,6 +195,15 @@
       },
       "commitsTo": "Commits в {{repo}}",
       "commitsToMultiple": "Commits в {{repos}}"
+    },
+    "list": {
+      "updated": "Обновлено",
+      "timeRange": "Диапазон времени",
+      "started": "Начато",
+      "lastUpdated": "Последнее обновление",
+      "agentModel": "Agent · Модель",
+      "emptyTitle": "Нет сессий, соответствующих этим фильтрам",
+      "emptyDescription": "Попробуйте другой статус, тип Agent или период."
     }
   },
   "changes": {

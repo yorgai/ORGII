@@ -78,17 +78,8 @@
     "followLabel": "現在の Kanban",
     "view": {
       "kanban": "Kanban",
-      "list": "リスト",
-      "diary": "日誌"
-    },
-    "list": {
-      "updated": "更新済み",
-      "timeRange": "時間範囲",
-      "started": "開始時刻",
-      "lastUpdated": "最終更新",
-      "agentModel": "Agent · モデル",
-      "emptyTitle": "これらのフィルターに一致するセッションはありません",
-      "emptyDescription": "別のステータス、Agent タイプ、または時間範囲を試してください。"
+      "diary": "日誌",
+      "list": "リスト"
     },
     "timeFilter": {
       "label": "表示範囲",
@@ -204,6 +195,15 @@
       },
       "commitsTo": "{{repo}} への Commits",
       "commitsToMultiple": "{{repos}} への Commits"
+    },
+    "list": {
+      "updated": "更新済み",
+      "timeRange": "時間範囲",
+      "started": "開始時刻",
+      "lastUpdated": "最終更新",
+      "agentModel": "Agent · モデル",
+      "emptyTitle": "これらのフィルターに一致するセッションはありません",
+      "emptyDescription": "別のステータス、Agent タイプ、または時間範囲を試してください。"
     }
   },
   "changes": {
