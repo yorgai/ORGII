@@ -512,10 +512,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
           {!isEditMode && (
             <div className="relative z-10 flex min-w-0 items-center gap-1 overflow-x-auto px-0.5 pb-1.5 scrollbar-hide">
               {topRowPills}
-              <PinnedActionsBar
-                tiptapRef={tiptapRef}
-                onSubmit={() => void handleDivSubmit()}
-              />
+              <PinnedActionsBar tiptapRef={tiptapRef} sessionId={sessionId} />
             </div>
           )}
 

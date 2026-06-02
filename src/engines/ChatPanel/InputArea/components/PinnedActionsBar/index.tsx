@@ -11,18 +11,25 @@
  * 28px height, rounded-full border, and 13px medium text.
  */
 import { invoke } from "@tauri-apps/api/core";
-import { useAtom } from "jotai";
-import { MoreHorizontal } from "lucide-react";
+import { useAtom, useAtomValue } from "jotai";
+import { Layout, MoreHorizontal } from "lucide-react";
 import React, { memo, useCallback, useRef, useState } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
 import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
 import StackPill from "@src/engines/ChatPanel/InputArea/components/StackPill";
 import { createLogger } from "@src/hooks/logger";
+import { EditorTabService } from "@src/services/workStation";
+import { canvasPreviewAtom } from "@src/store/session/canvasPreviewAtom";
 import {
   type PinnedAction,
   pinnedActionsAtom,
 } from "@src/store/session/pinnedActionsAtom";
+import { workstationLayoutAtom } from "@src/store/workstation/tabs";
+import {
+  createCanvasPreviewTab,
+  getCanvasPreviewTabId,
+} from "@src/store/workstation/tabs/factories/canvasPreview";
 import type { InstalledSkill, SlashItem } from "@src/types/extensions";
 import { SLASH_ACTIONS } from "@src/types/extensions";
 
@@ -105,11 +112,40 @@ ActionPill.displayName = "ActionPill";
 export interface PinnedActionsBarProps {
   /** Ref to the tiptap editor, used to insert content when a pill is clicked. */
   tiptapRef: React.RefObject<TiptapInputRef>;
+  /**
+   * Active session ID — when provided, a Canvas pill appears whenever the
+   * session has a live canvas payload and the canvas tab is not already open.
+   */
+  sessionId?: string | null;
 }
 
 const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
-  ({ tiptapRef }) => {
+  ({ tiptapRef, sessionId }) => {
     const [pinnedActions, setPinnedActions] = useAtom(pinnedActionsAtom);
+
+    // ── Canvas pill ───────────────────────────────────────────────────────────
+
+    const canvasEntry = useAtomValue(canvasPreviewAtom);
+    const workstationLayout = useAtomValue(workstationLayoutAtom);
+
+    const hasCanvasPayload = Boolean(
+      sessionId && canvasEntry?.sessionId === sessionId
+    );
+
+    const isCanvasTabOpen = Boolean(
+      sessionId &&
+      workstationLayout?.mainPane?.tabs.some(
+        (tab) => tab.id === getCanvasPreviewTabId(sessionId)
+      )
+    );
+
+    const showCanvasPill = hasCanvasPayload && !isCanvasTabOpen;
+
+    const handleOpenCanvas = useCallback(() => {
+      if (!sessionId) return;
+      const tab = createCanvasPreviewTab(sessionId);
+      EditorTabService.openTab(tab);
+    }, [sessionId]);
 
     // ── Built-in "Setup Repo" action ──────────────────────────────────────────
 
@@ -279,6 +315,19 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
     return (
       <div className="relative flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-hide">
+        {/* Canvas pill — shown when a live canvas exists and its tab is closed */}
+        {showCanvasPill && (
+          <StackPill
+            icon={<Layout size={12} strokeWidth={1.75} />}
+            count={0}
+            active={false}
+            label="Canvas"
+            title="Open canvas in WorkStation"
+            onClick={handleOpenCanvas}
+            className="select-none"
+          />
+        )}
+
         {pinnedActions.map((action) => (
           <ActionPill
             key={actionKey(action)}
