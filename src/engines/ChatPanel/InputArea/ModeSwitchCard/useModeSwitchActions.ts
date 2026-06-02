@@ -59,7 +59,7 @@ function markResolved(eventId: string, status: ModeSwitchResolution) {
 
 export const MODE_LABELS: Record<string, string> = {
   build: "Build",
-  investigate: "Investigate",
+  investigate: "Ask",
   plan: "Plan",
   debug: "Debug",
   review: "Review",

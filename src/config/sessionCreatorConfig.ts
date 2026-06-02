@@ -7,7 +7,6 @@
  */
 import {
   Infinity,
-  Bug,
   Cloud,
   GitBranchPlus,
   Laptop,
@@ -38,10 +37,12 @@ export const SESSION_CONFIG = {
 // Agent exec mode (Rust `AgentExecMode`)
 // ============================================
 //
-// User-selectable picker shows the four entries in `AGENT_EXEC_MODES`:
-//   build / investigate / plan / debug.
-// `review` is an internal mode driven by background flows and is intentionally
-// hidden from the picker. Legacy `ask` / `explore` values in localStorage are
+// User-selectable picker shows the three entries in `AGENT_EXEC_MODES`:
+//   build / plan / investigate (surfaced as "Ask").
+// `debug`, `review`, and `wingman` remain valid wire values but are hidden
+// from the picker (`debug` was removed from the UI on 2026-06-02; `review`
+// drives background work-item review flows; `wingman` is the passive
+// observer mode). Legacy `ask` / `explore` values in localStorage are
 // migrated to `investigate` at load time (see `creatorDefaultExecModeAtom`).
 
 export type AgentExecMode =
@@ -110,15 +111,8 @@ export const AGENT_EXEC_MODES: AgentExecModeEntry[] = [
     id: "investigate",
     icon: Search,
     i18nKey: "planner.modes.investigate",
-    name: "Investigate",
+    name: "Ask",
     description: "Read-only research — search + read + ask",
-  },
-  {
-    id: "debug",
-    icon: Bug,
-    i18nKey: "planner.modes.debug",
-    name: "Debug",
-    description: "Diagnostics and root-cause analysis",
   },
 ];
 
