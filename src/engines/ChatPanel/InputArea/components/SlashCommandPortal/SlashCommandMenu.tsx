@@ -69,6 +69,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   onSearchQueryChange,
   showActionFlyouts = false,
   onImageUpload,
+  direction = "up",
 }) => {
   const { t } = useTranslation("sessions");
   const isHeaderMode = searchMode === "header";
@@ -266,16 +267,25 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
 
   const panelWidth = Math.min(position.width, MAX_PANEL_WIDTH);
 
+  const portalStyle =
+    direction === "down"
+      ? {
+          top: position.bottom,
+          left: position.left,
+          width: panelWidth,
+        }
+      : {
+          top: position.top,
+          left: position.left,
+          width: panelWidth,
+          transform: "translateY(-100%)",
+        };
+
   return createPortal(
     <div
       ref={portalContainerRef}
       className="fixed z-[99999] flex flex-col gap-2 pb-2"
-      style={{
-        top: position.top,
-        left: position.left,
-        width: panelWidth,
-        transform: "translateY(-100%)",
-      }}
+      style={portalStyle}
     >
       {/* Main panel */}
       <div

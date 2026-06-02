@@ -3,6 +3,7 @@ import type React from "react";
 
 interface PortalPosition {
   top: number;
+  bottom: number;
   left: number;
   width: number;
 }
@@ -23,6 +24,7 @@ export function usePortalPosition(
 ): UsePortalPositionResult {
   const [position, setPosition] = useState<PortalPosition>({
     top: 0,
+    bottom: 0,
     left: 0,
     width: 0,
   });
@@ -31,7 +33,12 @@ export function usePortalPosition(
   const measure = useCallback(() => {
     if (visible && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      setPosition({ top: rect.top, left: rect.left, width: rect.width });
+      setPosition({
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        width: rect.width,
+      });
       setIsPositioned(true);
     } else {
       setIsPositioned(false);
