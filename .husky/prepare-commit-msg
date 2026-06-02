@@ -6,12 +6,12 @@ MSG_FILE="$1"
 STATS_FILE=".git/COMMIT_STATS.json"
 
 if [ -f "$STATS_FILE" ] && [ -f "$MSG_FILE" ]; then
-  if ! grep -q "\[eslint:.*circular:.*\]" "$MSG_FILE" 2>/dev/null; then
+  if ! grep -Eq "(Total eslint:|\[eslint:.*circular:.*\])" "$MSG_FILE" 2>/dev/null; then
     COUNTS=$(node -e '
       const fs = require("fs");
       try {
         const s = JSON.parse(fs.readFileSync(".git/COMMIT_STATS.json", "utf8"));
-        process.stdout.write("[eslint: " + (s.eslint ?? 0) + ", circular: " + (s.circular ?? 0) + "]");
+        process.stdout.write("Total eslint: " + (s.eslint ?? 0) + ", total circular: " + (s.circular ?? 0));
       } catch (_) {}
     ')
     if [ -n "$COUNTS" ]; then

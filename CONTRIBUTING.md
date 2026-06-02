@@ -116,13 +116,37 @@ fix(scope): short imperative summary
 
 Use the type that best matches the change. Common types include `feat`, `fix`, `chore`, `docs`, `style`, `test`, `refactor`, `perf`, `build`, `ci`, and `revert`. The scope should be lowercase kebab-case and should name the affected area, such as `git`, `settings`, `workstation`, `slash-menu`, or `contributing`.
 
+Every commit must include a proper message body unless the change is truly trivial. The body should explain why the change exists, summarize the important behavior or architecture changes, and mention notable verification or migration details. Do not leave commits with only a subject line or only automated hook metadata.
+
 Examples:
 
 ```text
 feat(git): add remote authentication prompt
+
+Add an inline authentication prompt for remote operations so push and
+pull failures can recover without sending users to a terminal. The
+prompt accepts temporary tokens or stores them through the Git helper
+when the user opts in.
+
 fix(settings): preserve Git fetch preference
+
+Keep the fetch preference in the Git integration settings instead of
+resetting it when other network settings are edited. This avoids losing
+the user's chosen sync behavior when unrelated fields change.
+
 chore(contributing): document commit format
+
+Clarify that commits need a scoped Conventional Commit subject and a
+body that explains intent, not just automated hook metadata.
 ```
+
+The commit hook may append repository health metadata in this format:
+
+```text
+Total eslint: 0, total circular: 0
+```
+
+That metadata is not a substitute for a proper commit message body.
 
 Pull request descriptions must include a clear summary and a test plan. If checks were not run, explain why and list any partial verification performed.
 
