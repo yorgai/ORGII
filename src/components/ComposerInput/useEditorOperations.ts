@@ -194,6 +194,7 @@ export function useEditorOperations(): UseEditorOperationsResult {
     (snapshot: ComposerSnapshot) => {
       const host = hostRef.current;
       if (!host) return;
+      if (!snapshot?.parts) return;
       pillHostsRef.current.clear();
       pillAttrsRef.current.clear();
       host.textContent = "";

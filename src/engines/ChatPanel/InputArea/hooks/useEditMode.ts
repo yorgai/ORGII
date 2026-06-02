@@ -10,6 +10,8 @@
  */
 import React, { useCallback, useEffect, useRef } from "react";
 
+import type { ComposerSnapshot } from "@src/components/ComposerInput/types";
+
 import { applyParsedContent } from "../utils/pillContentParser";
 
 // ============================================
@@ -30,7 +32,7 @@ interface UseEditModeOptions {
   /** Ref to the TipTap editor handle */
   tiptapRef: React.RefObject<{
     getEditor: () => unknown | null;
-    setContent: (content: string) => void;
+    setContent: (content: string | ComposerSnapshot) => void;
     getText: () => string;
     getTextWithPills: () => string;
     focus: () => void;

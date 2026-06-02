@@ -1,84 +1,69 @@
+import type {
+  ComposerPillAttrs,
+  ComposerSnapshot,
+} from "@src/components/ComposerInput/types";
 import { PILL_REGEX, type PillType } from "@src/config/pillTokens";
-
-interface TiptapNode {
-  type: string;
-  text?: string;
-  attrs?: Record<string, unknown>;
-}
-
-interface TiptapParagraph {
-  type: "paragraph";
-  content?: TiptapNode[];
-}
-
-export interface TiptapDoc {
-  type: "doc";
-  content: TiptapParagraph[];
-}
-
-export function parseContentToTiptapJson(text: string): TiptapDoc {
-  const lines = text.split("\n");
-  const paragraphs: TiptapParagraph[] = lines.map((line) => {
-    const nodes: TiptapNode[] = [];
-    let lastIndex = 0;
-
-    for (const match of line.matchAll(PILL_REGEX)) {
-      const matchStart = match.index;
-      if (matchStart === undefined) continue;
-
-      if (matchStart > lastIndex) {
-        nodes.push({ type: "text", text: line.slice(lastIndex, matchStart) });
-      }
-
-      const displayName = match[1].trim();
-      const pillType = match[2] as PillType;
-      const path = match[3];
-
-      nodes.push({
-        type: "filePill",
-        attrs: {
-          filePath: path,
-          fileName: displayName,
-          isFolder: pillType === "folder",
-          iconType: pillType,
-          lineStart: null,
-          lineEnd: null,
-        },
-      });
-
-      lastIndex = matchStart + match[0].length;
-    }
-
-    if (lastIndex < line.length) {
-      nodes.push({ type: "text", text: line.slice(lastIndex) });
-    }
-
-    return nodes.length > 0
-      ? { type: "paragraph", content: nodes }
-      : { type: "paragraph" };
-  });
-
-  return { type: "doc", content: paragraphs };
-}
 
 export function hasPillSyntax(text: string): boolean {
   return text.match(PILL_REGEX) !== null;
 }
 
 /**
- * Calls `setContent` on any editor handle that exposes it, automatically
- * parsing pill-serialized text back into TipTap JSON nodes when needed.
- * Using this instead of calling setContent directly avoids duplicating the
- * hasPillSyntax → parseContentToTiptapJson → setContent branch everywhere.
+ * Parses pill-serialized text (e.g. `filename [file:path]`) into a
+ * `ComposerSnapshot` understood by `ComposerInputRef.setContent`. Each
+ * newline becomes a `newline` part so multi-line content round-trips correctly.
+ */
+export function parsePillTextToSnapshot(text: string): ComposerSnapshot {
+  const parts: ComposerSnapshot["parts"] = [];
+  const lines = text.split("\n");
+
+  lines.forEach((line, lineIdx) => {
+    if (lineIdx > 0) parts.push({ kind: "newline" });
+
+    let lastIndex = 0;
+    for (const match of line.matchAll(PILL_REGEX)) {
+      const matchStart = match.index;
+      if (matchStart === undefined) continue;
+
+      if (matchStart > lastIndex) {
+        parts.push({ kind: "text", text: line.slice(lastIndex, matchStart) });
+      }
+
+      const fileName = match[1].trim();
+      const pillType = match[2] as PillType;
+      const filePath = match[3];
+
+      const attrs: ComposerPillAttrs = {
+        filePath,
+        fileName,
+        isFolder: pillType === "folder",
+        iconType: pillType,
+        lineStart: null,
+        lineEnd: null,
+      };
+      parts.push({ kind: "pill", attrs });
+
+      lastIndex = matchStart + match[0].length;
+    }
+
+    if (lastIndex < line.length) {
+      parts.push({ kind: "text", text: line.slice(lastIndex) });
+    }
+  });
+
+  return { parts };
+}
+
+/**
+ * Calls `setContent` on a `ComposerInputRef`, parsing pill-serialized text
+ * back into a `ComposerSnapshot` (with pill parts) when pill syntax is present.
  */
 export function applyParsedContent(
-  editor: { setContent: (content: string) => void },
+  editor: { setContent: (content: string | ComposerSnapshot) => void },
   content: string
 ) {
   if (hasPillSyntax(content)) {
-    // TipTap's setContent also accepts a JSONContent object at runtime even
-    // though the local interface only declares string — cast to satisfy TS.
-    editor.setContent(parseContentToTiptapJson(content) as unknown as string);
+    editor.setContent(parsePillTextToSnapshot(content));
   } else {
     editor.setContent(content);
   }
