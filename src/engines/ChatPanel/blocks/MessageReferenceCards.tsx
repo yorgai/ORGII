@@ -175,7 +175,8 @@ function makeReferenceKey(item: MessageReferenceItem): string {
 
 export function extractMessageReferences(
   content: string,
-  workspacePaths: Array<string | undefined> = []
+  workspacePaths: Array<string | undefined> = [],
+  excludeUrls?: ReadonlySet<string>
 ): MessageReferenceItem[] {
   const searchableContent = stripFencedCodeBlocks(content);
   let pathSearchContent = searchableContent;
@@ -189,6 +190,7 @@ export function extractMessageReferences(
     );
     const url = normalizeUrlCandidate(match[0]);
     if (!url) continue;
+    if (excludeUrls?.has(url)) continue;
     const item: MessageReferenceItem = {
       kind: "web_url",
       value: url,
@@ -380,12 +382,14 @@ interface MessageReferenceCardsProps {
   content: string;
   enabled?: boolean;
   items?: MessageReferenceItem[];
+  excludeUrls?: ReadonlySet<string>;
 }
 
 const MessageReferenceCards: React.FC<MessageReferenceCardsProps> = ({
   content,
   enabled = true,
   items,
+  excludeUrls,
 }) => {
   const currentRepo = useAtomValue(currentRepoAtom);
   const workspaceFolders = useAtomValue(workspaceFoldersAtom);
@@ -401,9 +405,13 @@ const MessageReferenceCards: React.FC<MessageReferenceCardsProps> = ({
     () =>
       items ??
       (enabled
-        ? extractMessageReferences(content, workspaceReferencePaths)
+        ? extractMessageReferences(
+            content,
+            workspaceReferencePaths,
+            excludeUrls
+          )
         : []),
-    [content, enabled, items, workspaceReferencePaths]
+    [content, enabled, excludeUrls, items, workspaceReferencePaths]
   );
 
   if (references.length === 0) return null;

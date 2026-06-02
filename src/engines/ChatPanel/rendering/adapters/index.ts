@@ -8,6 +8,7 @@
  * `CHAT_BLOCKS` in `../chatBlocks.ts` maps each `ChatBlock` variant to
  * exactly one of these adapters.
  */
+export { CanvasInlineAdapter } from "./CanvasInlineAdapter";
 export { DiffAdapter } from "./DiffAdapter";
 export { ExploreAdapter } from "./ExploreAdapter";
 export { FallbackAdapter } from "./FallbackAdapter";
