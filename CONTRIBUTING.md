@@ -104,12 +104,26 @@ In general, keep changes focused, use existing shared components and tokens, pre
 
 Add or update tests when changing behavior. Prefer focused tests that cover the changed module or component. For bug fixes, include a regression test when practical.
 
+## Contributor License Agreement
+
+ORGII requires contributors to sign the repository Contributor License Agreement before a pull request can be merged. The agreement text is in [`CLA.md`](CLA.md).
+
+The repository uses GitHub CLA Assistant to collect signatures and report CLA status on pull requests. When you open your first PR, CLA Assistant will comment with a signing link if your GitHub account has not signed the current agreement.
+
+Choose the signing path that matches your contribution:
+
+- **Individual contributor:** sign as yourself when the contribution is your own work and you are legally allowed to submit it.
+- **Corporate contributor:** sign on behalf of your employer or organization only if you are authorized to bind that entity to the CLA. If you are not authorized, sign only as an individual and submit only work you are permitted to contribute individually.
+
+Maintainers will not merge PRs until the CLA check passes. Corporate signatures may require additional maintainer review if the signing authority is unclear.
+
 ## Pull request checklist
 
 Before requesting review, confirm that:
 
 - The PR has a clear title and description.
 - The change is scoped to one issue, feature, or fix.
+- The CLA Assistant check passes, or you have asked maintainers for help resolving the signature status.
 - Relevant lint, test, and cargo commands pass or are documented as not run.
 - UI changes include screenshots or screen recordings when useful.
 - New UI text has translations for all supported locales.
@@ -124,4 +138,4 @@ Never commit API keys, signing keys, OAuth secrets, personal tokens, private log
 
 ## License
 
-By contributing, you agree that your contributions are licensed under the repository license: AGPL-3.0-or-later. See `LICENSE` for the full license text.
+By contributing, you agree that your contributions are licensed under the repository license: AGPL-3.0-or-later and are submitted under the Contributor License Agreement in `CLA.md`. See `LICENSE` for the full license text.
