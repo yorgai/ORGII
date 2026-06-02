@@ -9,7 +9,7 @@
  * model selection stored in creatorDefaultModelSelectionAtom.
  */
 import { useSetAtom } from "jotai";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
 import type { KeySource } from "@src/api/tauri/session";
@@ -69,6 +69,7 @@ export interface UseRepoSetupReturn {
 
 export function useRepoSetup(): UseRepoSetupReturn {
   const [launching, setLaunching] = useState(false);
+  const launchingRef = useRef(false);
   const [setupSessionId, setSetupSessionId] = useState<string | null>(null);
   const { openSession } = useSessionView();
   const dispatchLoadSession = useSetAtom(loadSessionAtom);
@@ -81,8 +82,11 @@ export function useRepoSetup(): UseRepoSetupReturn {
 
   const launchSetup = useCallback(
     async (context: RepoSetupContext, options?: LaunchOptions) => {
-      if (launching) return;
+      // Use a ref so this guard is always current regardless of when the
+      // callback was captured — prevents stale-closure double-fire.
+      if (launchingRef.current) return;
 
+      launchingRef.current = true;
       setLaunching(true);
       try {
         let prompt = buildSetupPrompt(context, options?.trusted ?? false);
@@ -142,11 +146,11 @@ export function useRepoSetup(): UseRepoSetupReturn {
         logger.error(`Failed to launch setup for ${context.repoName}: ${msg}`);
         throw error;
       } finally {
+        launchingRef.current = false;
         setLaunching(false);
       }
     },
     [
-      launching,
       openSession,
       dispatchLoadSession,
       setPendingSyntheticEvent,

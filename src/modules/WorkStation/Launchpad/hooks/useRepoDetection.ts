@@ -53,7 +53,9 @@ const EXTRA_CONFIG_FILES = [
   ".prettierrc",
 ];
 
-async function detectRepo(repoPath: string): Promise<RepoDetectionResult> {
+export async function detectRepo(
+  repoPath: string
+): Promise<RepoDetectionResult> {
   const { exists } = await import("@tauri-apps/plugin-fs");
 
   let repoType: RepoType = "unknown";

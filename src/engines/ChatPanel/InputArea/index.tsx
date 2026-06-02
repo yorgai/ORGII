@@ -507,7 +507,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
           {!isEditMode && (
             <PinnedActionsBar
               tiptapRef={tiptapRef}
-              repoPath={currentRepoPath || undefined}
+              onSubmit={() => void handleDivSubmit()}
             />
           )}
 
