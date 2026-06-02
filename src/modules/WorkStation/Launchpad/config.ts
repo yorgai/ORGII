@@ -91,5 +91,7 @@ Config: ${configs}${tools.length > 0 ? `\nTools: ${tools.join(", ")}` : ""}
 
 Get this app running — install deps, fill missing env vars, fix whatever blocks startup, and launch it.
 
-When there are multiple approaches (e.g. Tauri vs browser-only, conda vs pip, Docker vs native) or risky/destructive steps, ask me which option to take before proceeding.${securityBlock}`;
+When there are multiple approaches (e.g. Tauri vs browser-only, conda vs pip, Docker vs native) or risky/destructive steps, ask me which option to take before proceeding.
+
+Once the app is running, call setup_repo with action="launch_app" and include the url (e.g. "http://localhost:3000") if it's a web app. This opens the app automatically in WorkStation.${securityBlock}`;
 }

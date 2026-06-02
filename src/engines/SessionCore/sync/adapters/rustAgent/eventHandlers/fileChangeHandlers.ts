@@ -50,6 +50,15 @@ export interface AgentSetupRepoUpdateDetail {
   data: Record<string, unknown>;
 }
 
+export interface AgentSetupRepoLaunchAppDetail {
+  /** The URL to open in the WorkStation browser tab (web apps). */
+  url?: string;
+  /** The shell command used to start the app (informational). */
+  command?: string;
+  /** "web" | "desktop" | "cli" | "unknown" */
+  appType?: string;
+}
+
 export interface AgentHeartbeatDetail {
   sessionId: string;
   /** ISO timestamp the heartbeat was observed by the frontend. */

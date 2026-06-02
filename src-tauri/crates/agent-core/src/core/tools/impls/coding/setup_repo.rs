@@ -7,6 +7,7 @@
 //! - `report_status` — push a status update (ready / params_missing / message)
 //! - `update_env` — push discovered/created env vars to the frontend
 //! - `add_env_vars` — append new env vars that the agent discovered
+//! - `launch_app`   — signal that the app is running and ready to open
 
 use async_trait::async_trait;
 use serde_json::Value;
@@ -40,7 +41,9 @@ impl Tool for RepoSetupTool {
          Actions:\n\
          - \"report_status\": Update the repo's setup status with an optional message.\n\
          - \"update_env\": Push the current set of env vars (overwrites the UI's cached list).\n\
-         - \"add_env_vars\": Append newly discovered env vars to the UI's list."
+         - \"add_env_vars\": Append newly discovered env vars to the UI's list.\n\
+         - \"launch_app\": Signal that the app is running and ready — the UI will open it automatically.\n\
+           Provide `url` (e.g. \"http://localhost:3000\") for web apps, or `command` for non-web apps."
     }
 
     fn category(&self) -> &str {
@@ -54,7 +57,7 @@ impl Tool for RepoSetupTool {
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["report_status", "update_env", "add_env_vars"],
+                    "enum": ["report_status", "update_env", "add_env_vars", "launch_app"],
                     "description": "The action to perform"
                 },
                 "status": {
@@ -65,6 +68,19 @@ impl Tool for RepoSetupTool {
                 "message": {
                     "type": "string",
                     "description": "Human-readable status message shown in the UI"
+                },
+                "url": {
+                    "type": "string",
+                    "description": "The URL to open in the WorkStation browser tab (for launch_app with web apps, e.g. \"http://localhost:3000\")"
+                },
+                "command": {
+                    "type": "string",
+                    "description": "The shell command used to launch the app (for launch_app, informational)"
+                },
+                "app_type": {
+                    "type": "string",
+                    "enum": ["web", "desktop", "cli", "unknown"],
+                    "description": "The type of app being launched (for launch_app action)"
                 },
                 "env_vars": {
                     "type": "array",
@@ -143,8 +159,26 @@ impl Tool for RepoSetupTool {
                     count, action
                 ))
             }
+            "launch_app" => {
+                let url = params.get("url").and_then(|v| v.as_str()).unwrap_or("");
+                let app_type = params
+                    .get("app_type")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+                let command = params
+                    .get("command")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                Ok(format!(
+                    "App launch signaled to WorkStation (type={}, url={}, command={}). \
+                     The UI will open the app automatically.",
+                    app_type,
+                    if url.is_empty() { "<none>" } else { url },
+                    if command.is_empty() { "<none>" } else { command }
+                ))
+            }
             _ => Err(ToolError::InvalidParams(format!(
-                "Unknown action: '{}'. Expected: report_status, update_env, add_env_vars",
+                "Unknown action: '{}'. Expected: report_status, update_env, add_env_vars, launch_app",
                 action
             ))),
         }

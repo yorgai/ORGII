@@ -6,3 +6,4 @@ export * from "./useRepoContainers";
 export * from "./useRepoDetection";
 export * from "./useRepoSetup";
 export * from "./useScriptCrud";
+export * from "./useSetupRepoAutoLaunch";

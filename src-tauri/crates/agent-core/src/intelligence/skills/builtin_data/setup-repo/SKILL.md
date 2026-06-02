@@ -17,14 +17,21 @@ This skill guides the agent through a complete repo setup: detect language/toolc
 
 If `setup_repo` is in your tool list:
 
+1. Install deps, configure `.env`, run setup scripts (see Manual Setup below).
+2. Start the app.
+3. Call `setup_repo` with `action: "launch_app"` so WorkStation opens it automatically:
+
 ```json
 {
   "tool": "setup_repo",
-  "path": "<absolute-or-relative-project-root>"
+  "action": "launch_app",
+  "url": "http://localhost:<port>",
+  "app_type": "web",
+  "command": "<launch command>"
 }
 ```
 
-Report what the tool did (deps installed, `.env` created, scripts run) and surface any errors. Done.
+Report what was done and surface any errors.
 
 ## Manual Setup
 
@@ -125,6 +132,81 @@ After setup, do a quick smoke-check:
 
 Report the result to the user.
 
+### Step 7 — Launch the App
+
+After a successful setup, **start the app and open it in WorkStation automatically**.
+
+#### Detect the launch command
+
+| Project type          | Preferred launch command                                   |
+| --------------------- | ---------------------------------------------------------- |
+| Node (`dev` script)   | `npm run dev` / `pnpm run dev` / `yarn dev`                |
+| Node (`start` script) | `npm start` / `pnpm start`                                 |
+| Node (Next.js)        | `npm run dev` → `http://localhost:3000`                    |
+| Node (Vite)           | `npm run dev` → `http://localhost:5173`                    |
+| Node (CRA)            | `npm start` → `http://localhost:3000`                      |
+| Python Django         | `python manage.py runserver` → `http://localhost:8000`     |
+| Python FastAPI/Flask  | `uvicorn main:app` / `flask run` → `http://localhost:8000` |
+| Rust (`cargo run`)    | `cargo run` (likely CLI/desktop — no URL)                  |
+| Go                    | `go run .` (check for `http.ListenAndServe` to find port)  |
+
+1. Read `package.json` (if present) and look for `dev`, `start`, or `serve` scripts — prefer `dev` over `start`.
+2. For non-Node projects, check for web server patterns in the main entry point.
+3. Determine the default port from config files or common defaults.
+
+#### Start the app
+
+Run the launch command in the background:
+
+```json
+{ "command": "<launch command>", "cwd": "<project_root>", "background": true }
+```
+
+Wait 3–5 seconds for the server to bind, then confirm it's listening:
+
+```json
+{
+  "command": "curl -s -o /dev/null -w '%{http_code}' http://localhost:<port>/",
+  "cwd": "<project_root>"
+}
+```
+
+#### Signal WorkStation to open the app
+
+Once the app is running, call `setup_repo` with `action: "launch_app"`:
+
+**Web app (has a localhost URL):**
+
+```json
+{
+  "tool": "setup_repo",
+  "action": "launch_app",
+  "url": "http://localhost:<port>",
+  "app_type": "web",
+  "command": "<launch command>"
+}
+```
+
+**Non-web app (CLI / desktop / Tauri):**
+
+```json
+{
+  "tool": "setup_repo",
+  "action": "launch_app",
+  "app_type": "desktop",
+  "command": "<launch command>"
+}
+```
+
+The WorkStation UI will open a browser tab to the URL automatically.
+If there is no URL, the user sees the app running in the terminal.
+
+#### Edge cases
+
+- If the app fails to start (port already in use, missing env var, build error) → fix the issue first, then retry.
+- If the project is a library (no runnable entry point) → skip launch and report setup complete.
+- If the port is non-standard, extract it from the launch command output or config file.
+
 ## Tauri Projects
 
 Tauri projects require **both** Node and Rust setup:
@@ -142,3 +224,5 @@ Tauri projects require **both** Node and Rust setup:
 - [ ] All dependency install commands succeeded (or errors surfaced)
 - [ ] Setup scripts run if documented
 - [ ] Smoke-check passed and result reported to user
+- [ ] App launched (background process started)
+- [ ] `setup_repo` called with `action: "launch_app"` so WorkStation opens the app
