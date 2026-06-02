@@ -4,6 +4,24 @@ import type {
 } from "@src/components/ComposerInput/types";
 import { PILL_REGEX, type PillType } from "@src/config/pillTokens";
 
+/**
+ * Separator injected by `pill_resolver.rs` when expanding pill references.
+ * The backend appends this block to the user message before sending to the LLM,
+ * so it gets stored in the DB as part of `display_text`. We must strip it when
+ * loading into the edit editor so the user only sees their original message.
+ */
+const PILL_EXPANSION_SEPARATOR =
+  "\n\n---\n**Referenced content (auto-expanded):**";
+
+/**
+ * Strips the auto-expanded pill content appended by the Rust `pill_resolver`.
+ * Returns the original user message (everything before the separator).
+ */
+export function stripExpandedPillContent(text: string): string {
+  const idx = text.indexOf(PILL_EXPANSION_SEPARATOR);
+  return idx === -1 ? text : text.slice(0, idx);
+}
+
 export function hasPillSyntax(text: string): boolean {
   return text.match(PILL_REGEX) !== null;
 }

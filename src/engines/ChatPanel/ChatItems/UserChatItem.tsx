@@ -21,6 +21,7 @@ import { imageRefToRustPath } from "@src/engines/SessionCore/ingestion/agentMess
 
 import UserMessageContent from "../ChatHistory/components/UserMessageContent";
 import InputArea from "../InputArea";
+import { stripExpandedPillContent } from "../InputArea/utils/pillContentParser";
 
 const USER_MSG_MAX_LINES = 3;
 const USER_MSG_MAX_CHARS = 120;
@@ -135,7 +136,9 @@ const UserChatItem = ({
   const messageContentRef = useRef<HTMLDivElement | null>(null);
 
   const event = chatItem.event;
-  const editedText = event?.displayText ? String(event.displayText) : "";
+  const editedText = event?.displayText
+    ? stripExpandedPillContent(String(event.displayText))
+    : "";
 
   const activityResult = useMemo(() => {
     if (event) {
