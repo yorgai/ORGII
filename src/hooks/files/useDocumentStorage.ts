@@ -291,7 +291,7 @@ export function useDocumentStorage() {
       };
 
       try {
-        const success = await saveDocumentToStorage(doc);
+        const success = await saveDocumentToStorage(updatedDoc);
         if (!success) {
           setError("Failed to save document");
           return false;
@@ -379,8 +379,7 @@ export function useDocumentStorage() {
       const doc = await loadDocument(docId);
       if (!doc) return false;
 
-      doc.title = newTitle;
-      return saveDocument(doc);
+      return saveDocument({ ...doc, title: newTitle });
     },
     [loadDocument, saveDocument]
   );
