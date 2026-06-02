@@ -7,11 +7,13 @@
  *      insert a terminal pill, suppress paste.
  *   3. File reference (`application/x-orgii-file-reference`) → insert a
  *      file-reference pill with line range, suppress paste.
- *   4. Otherwise, sanitize the plain-text payload and insert it manually so
+ *   4. Skill path or frontmatter → insert a skill pill, suppress paste.
+ *   5. Otherwise, sanitize the plain-text payload and insert it manually so
  *      `contenteditable` does not pull in formatted HTML from the source.
  */
 import { storePillText } from "@src/config/pillTokens";
 import { createLogger } from "@src/hooks/logger";
+import type { InstalledSkill } from "@src/types/extensions";
 
 import type { ComposerPillAttrs } from "./types";
 import { TERMINAL_COPY_MAX_AGE, sanitizeText } from "./utils";
@@ -22,6 +24,50 @@ export interface PasteHandlerContext {
   insertPill: (attrs: ComposerPillAttrs) => void;
   insertTextAtCaret: (text: string) => void;
   getOnImagePaste: () => ((files: File[]) => void) | undefined;
+  /** Returns the current installed-skills list for paste-time matching. */
+  getInstalledSkills: () => InstalledSkill[];
+}
+
+/**
+ * Matches skill file paths of the form:
+ *   …/skills/<name>/SKILL.md
+ *   …/skills-cursor/<name>/SKILL.md
+ *
+ * Returns the skill directory name (second-to-last path segment) or null.
+ */
+function extractSkillNameFromPath(text: string): string | null {
+  const trimmed = text.trim();
+  const match = trimmed.match(
+    /[/\\]skills(?:-[^/\\]+)?[/\\]([^/\\]+)[/\\]SKILL\.md$/i
+  );
+  return match ? match[1] : null;
+}
+
+/**
+ * Matches a SKILL.md frontmatter block and extracts the `name` field value.
+ * Handles both full-file pastes and partial frontmatter snippets.
+ */
+function extractSkillNameFromFrontmatter(text: string): string | null {
+  const match = text.match(/^---[\s\S]*?^name:\s*([^\s\r\n]+)/m);
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * Finds an installed skill whose `name` or `path` matches the candidate name.
+ * The path-based match normalises separators and compares the skill directory segment.
+ */
+function resolveSkill(
+  candidateName: string,
+  skills: InstalledSkill[]
+): InstalledSkill | undefined {
+  const lower = candidateName.toLowerCase();
+  return skills.find((s) => {
+    if (s.name.toLowerCase() === lower) return true;
+    const normalised = s.path.replace(/\\/g, "/");
+    const segments = normalised.split("/");
+    const dirName = segments[segments.length - 2];
+    return dirName?.toLowerCase() === lower;
+  });
 }
 
 /**
@@ -102,6 +148,32 @@ export function createPasteHandler(ctx: PasteHandlerContext) {
         return true;
       } catch (parseError) {
         logger.warn("Failed to parse file reference:", parseError);
+      }
+    }
+
+    // Skill path / frontmatter detection
+    if (pastedText) {
+      const skills = ctx.getInstalledSkills();
+      if (skills.length > 0) {
+        const candidateName =
+          extractSkillNameFromPath(pastedText) ??
+          extractSkillNameFromFrontmatter(pastedText);
+        if (candidateName) {
+          const skill = resolveSkill(candidateName, skills);
+          if (skill) {
+            event.preventDefault();
+            ctx.insertPill({
+              filePath: `/${skill.name}`,
+              fileName: skill.name,
+              isFolder: false,
+              iconType: "skill",
+              lineStart: null,
+              lineEnd: null,
+            });
+            logger.info("Pasted text converted to skill pill:", skill.name);
+            return true;
+          }
+        }
       }
     }
 

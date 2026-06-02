@@ -14,6 +14,7 @@
  * `useSlashCommand`, `useDraftManagement`, `inputPreparation`, …) keeps
  * working without any signature changes.
  */
+import { useAtomValue } from "jotai";
 import React, {
   forwardRef,
   useCallback,
@@ -24,6 +25,7 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { installedSkillsAtom } from "@src/store/skills/installedSkillsAtom";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import ComposerPill from "./ComposerPill";
@@ -67,6 +69,10 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
     } = props;
 
     const { isDark } = useCurrentTheme();
+    const installedSkills = useAtomValue(installedSkillsAtom);
+    const installedSkillsRef = useRef(installedSkills);
+    installedSkillsRef.current = installedSkills;
+
     const ops = useEditorOperations();
     const { hostRef, pillEntries } = ops;
 
@@ -193,6 +199,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
           insertPill: ops.insertPill,
           insertTextAtCaret: ops.insertTextAtCaret,
           getOnImagePaste: () => onImagePasteRef.current,
+          getInstalledSkills: () => installedSkillsRef.current,
         }),
       [ops.insertPill, ops.insertTextAtCaret]
     );
