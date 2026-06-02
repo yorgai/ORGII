@@ -254,7 +254,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
     // ── Nothing pinned — still render the "..." button ────────────────────────
 
     return (
-      <div className="flex w-full items-center gap-1.5 overflow-x-auto px-0.5 py-0.5 scrollbar-hide">
+      <div className="relative z-10 flex w-full items-center gap-1.5 overflow-x-auto border-t border-border-1 bg-bg-2 px-0.5 py-0.5 scrollbar-hide">
         {pinnedActions.map((action) => (
           <ActionPill
             key={actionKey(action)}
