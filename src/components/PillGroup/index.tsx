@@ -161,6 +161,7 @@ const PillGroup: React.FC<PillGroupProps> = memo(
     return (
       <div
         className={`inline-flex items-center text-[12px] font-medium ${className ?? ""}`}
+        style={{ transform: "translateZ(0)" }}
         onMouseEnter={handleGroupEnter}
         onMouseLeave={handleGroupLeave}
       >
@@ -224,18 +225,18 @@ const PillGroup: React.FC<PillGroupProps> = memo(
               onMouseLeave={() => handleLeave(index)}
               onFocus={() => handleEnter(index)}
               onBlur={() => handleLeave(index)}
-              className={`group/pill flex items-center gap-2 rounded-full border border-solid ${variant === "input" ? "px-2" : "px-3"} transition-[background,border-color,color] duration-150 focus:outline-none ${PILL_SM_HEIGHT_CLASS} ${
+              className={`group/pill flex items-center gap-2 rounded-full ${variant === "input" ? "px-2" : "px-3"} transition-colors duration-150 focus:outline-none ${PILL_SM_HEIGHT_CLASS} ${
                 isPillStyled
                   ? variant === "input"
-                    ? "border-transparent bg-chat-input"
+                    ? "bg-chat-input"
                     : variant === "ghost"
-                      ? "border-transparent bg-fill-2"
+                      ? "bg-fill-2"
                       : variant === "solid"
-                        ? "border-transparent bg-chat-input"
-                        : "border-transparent bg-fill-2"
+                        ? "bg-chat-input"
+                        : "bg-fill-2"
                   : variant === "input"
-                    ? "border-transparent bg-chat-input"
-                    : "border-transparent bg-transparent"
+                    ? "bg-chat-input"
+                    : "bg-transparent"
               } ${segment.disabled ? "cursor-default opacity-60" : "cursor-pointer"} ${segmentClassName ?? ""}`}
             >
               <span className="relative inline-flex h-[14px] w-[14px] shrink-0 items-center justify-center">

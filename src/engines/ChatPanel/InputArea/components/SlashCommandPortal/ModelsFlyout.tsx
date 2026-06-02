@@ -54,11 +54,7 @@ const DropdownRow: React.FC<DropdownRowProps> = ({ item, onSelect }) => {
   const data = getItemData(item);
 
   if (isHeaderItem(item)) {
-    return (
-      <div className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-text-3">
-        {item.label}
-      </div>
-    );
+    return <div className={DROPDOWN_CLASSES.sectionLabel}>{item.label}</div>;
   }
 
   const labelContent = data.labelContent as React.ReactNode | undefined;

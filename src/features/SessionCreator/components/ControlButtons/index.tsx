@@ -6,20 +6,15 @@
  * - Agent execution mode pill for Rust and CLI sessions
  */
 import { useAtom, useAtomValue } from "jotai";
-import { Grip } from "lucide-react";
-import React, { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import React, { memo, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { PILL_SM_ICON_SIZE } from "@src/components/CompoundPill/config";
-import ModelIcon from "@src/components/ModelIcon";
-import ModelPillTooltipContent from "@src/components/ModelPillTooltipContent";
-import SelectorPill from "@src/components/SelectorPill";
+import ModelSelectorPill from "@src/components/ModelSelectorPill";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import CursorModePillCreator from "@src/engines/ChatPanel/InputArea/components/CursorModePill/CursorModePillCreator";
 import CursorModelPillCreator from "@src/engines/ChatPanel/InputArea/components/CursorModelPill/CursorModelPillCreator";
 import ModePill from "@src/engines/ChatPanel/InputArea/components/ModePill";
 import type { AgentExecMode } from "@src/features/SessionCreator/config";
-import { useModelPillLabel } from "@src/hooks/models";
 import {
   UnifiedModelDropdown,
   UnifiedModelPalette,
@@ -63,27 +58,6 @@ const ControlButtons: React.FC<ControlButtonsProps> = memo(
       return () => cancelAnimationFrame(frameId);
     }, [requestModelOpen, onModelOpenHandled, setSelectorState]);
 
-    const iconSize = PILL_SM_ICON_SIZE;
-
-    const defaultModelLabel = tSessions("creator.model");
-    const {
-      label: modelLabel,
-      title: modelTitle,
-      accountName,
-    } = useModelPillLabel(advancedConfig, defaultModelLabel);
-
-    const modelIconName = useMemo(
-      () => advancedConfig.listingModel || advancedConfig.model || undefined,
-      [advancedConfig.listingModel, advancedConfig.model]
-    );
-    const modelIconAgent = useMemo(
-      () =>
-        advancedConfig.listingModelType ??
-        advancedConfig.selectedSourceModelType,
-      [advancedConfig.listingModelType, advancedConfig.selectedSourceModelType]
-    );
-    const hasModelSelection = Boolean(modelIconName);
-
     const handleOpenModelSelector = useCallback(() => {
       setSelectorState({ isOpen: true });
     }, [setSelectorState]);
@@ -119,39 +93,12 @@ const ControlButtons: React.FC<ControlButtonsProps> = memo(
 
         {!hideModelSourcePill && !isCursorIdeMode && (
           <>
-            <SelectorPill
+            <ModelSelectorPill
               ref={modelSegmentRef}
-              icon={
-                hasModelSelection ? (
-                  <ModelIcon
-                    modelName={modelIconName}
-                    agentType={modelIconAgent}
-                    size={iconSize}
-                  />
-                ) : (
-                  <Grip
-                    size={iconSize}
-                    strokeWidth={1.75}
-                    className="text-warning-6"
-                  />
-                )
-              }
-              label={modelLabel}
-              title={modelTitle}
-              tooltip={
-                <ModelPillTooltipContent
-                  accountName={accountName}
-                  modelLabel={modelTitle}
-                  modelId={modelIconName}
-                  modelType={
-                    modelIconAgent ?? advancedConfig.selectedSourceModelType
-                  }
-                  shortcut={getShortcutKeys("open_model_selector")}
-                />
-              }
-              tooltipFramed
+              selection={advancedConfig}
+              defaultLabel={tSessions("creator.model")}
+              shortcut={getShortcutKeys("open_model_selector")}
               active={isModelOpen}
-              danger={!hasModelSelection}
               className="max-w-[220px] shrink-0"
               onClick={handleOpenModelSelector}
               dataTestId="session-creator-input-model-pill"

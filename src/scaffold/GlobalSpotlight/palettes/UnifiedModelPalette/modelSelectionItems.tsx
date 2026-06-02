@@ -44,57 +44,45 @@ export function buildModelSelectionSpotlightItem({
   modelAliasVersion,
 }: BuildModelSelectionRowParams): SpotlightItem {
   void modelAliasVersion;
-  const aliasDisplayName = getModelAliasDisplayName(entry.modelId);
-  const modelDisplay = aliasDisplayName ?? formatModelNameFull(entry.modelId);
   const sourceName = entry.accountName ?? entry.modelType;
-  const searchableLabel = `${sourceName} ${modelDisplay}`;
+  const recentAccount = entry.accountId
+    ? accounts.find((account) => account.id === entry.accountId)
+    : undefined;
+  const family = groupByModel.get(entry.modelId) ?? [entry.modelId];
+  const concreteModelDisplay =
+    getModelAliasDisplayName(entry.modelId) ??
+    formatModelNameFull(entry.modelId);
+  const groupedModel = groupModels([...family])[0];
+  const modelDisplay =
+    groupedModel && groupedModel.label !== "Other"
+      ? groupedModel.label
+      : concreteModelDisplay;
+  const searchableLabel = `${sourceName} ${modelDisplay} ${concreteModelDisplay} ${entry.modelId}`;
 
-  const selectedTextClassName = isCurrentSelection
-    ? "text-primary-6"
-    : "text-text-1";
-  const selectedMutedTextClassName = isCurrentSelection
-    ? "text-primary-6"
-    : "text-text-2";
-  const selectedDividerClassName = isCurrentSelection
-    ? "text-primary-6"
-    : "text-text-3";
+  const selectedTextClassName = "text-text-1";
+  const selectedMutedTextClassName = "text-text-2";
+  const selectedDividerClassName = "text-text-3";
 
-  const labelContent = aliasDisplayName ? (
+  const labelContent = (
     <>
       <span className={`shrink-0 ${selectedMutedTextClassName}`}>
         {sourceName}
       </span>
       <span className={`mx-0.5 shrink-0 ${selectedDividerClassName}`}>›</span>
-      <ModelIcon modelName={entry.modelId} size={14} />
-      <span className={`shrink-0 font-semibold ${selectedTextClassName}`}>
-        {modelDisplay}
+      <span className="shrink-0 text-text-1">
+        <ModelIcon modelName={entry.modelId} size={14} />
       </span>
       <span
-        className={`ml-1.5 min-w-0 truncate text-[12px] ${selectedMutedTextClassName}`}
+        className={`min-w-0 truncate font-semibold ${selectedTextClassName}`}
       >
-        {entry.modelId}
-      </span>
-    </>
-  ) : (
-    <>
-      <span className={selectedMutedTextClassName}>{sourceName}</span>
-      <span className={`mx-0.5 ${selectedDividerClassName}`}>›</span>
-      <ModelIcon modelName={entry.modelId} size={14} />
-      <span className={`font-semibold ${selectedTextClassName}`}>
         {modelDisplay}
       </span>
     </>
   );
 
-  const AccountListIcon = (iconProps: Record<string, unknown>) => {
-    const size = (iconProps as { size?: number }).size || 16;
-    return <ModelIcon agentType={entry.modelType} size={size} />;
-  };
-
-  const recentAccount = entry.accountId
-    ? accounts.find((account) => account.id === entry.accountId)
-    : undefined;
-  const family = groupByModel.get(entry.modelId) ?? [entry.modelId];
+  const AccountListIcon = () => (
+    <ModelIcon agentType={entry.modelType} size={14} />
+  );
   const accountFamilyIds = recentAccount
     ? family.filter((modelId) => accountHasModel(recentAccount, modelId))
     : [entry.modelId];
@@ -136,7 +124,7 @@ export function buildModelSelectionSpotlightItem({
       groupModelIds: accountFamilyIds,
       labelContent,
       rightContent: trailing,
-      searchAlias: aliasDisplayName ? entry.modelId : undefined,
+      searchAlias: `${concreteModelDisplay} ${entry.modelId}`,
     },
     action: () => onSelect(entry),
   };
@@ -177,12 +165,7 @@ export function buildAllModelItems({
 
       void info;
 
-      const ModelItemIcon = (iconProps: Record<string, unknown>) => (
-        <ModelIcon
-          modelName={modelId}
-          size={(iconProps as { size?: number }).size || 16}
-        />
-      );
+      const ModelItemIcon = () => <ModelIcon modelName={modelId} size={14} />;
 
       const labelContent = aliasDisplayName ? (
         <>
@@ -220,11 +203,8 @@ export function buildAllModelItems({
     }
 
     const representativeModel = sortedVariants[0];
-    const GroupItemIcon = (iconProps: Record<string, unknown>) => (
-      <ModelIcon
-        modelName={representativeModel}
-        size={(iconProps as { size?: number }).size || 16}
-      />
+    const GroupItemIcon = () => (
+      <ModelIcon modelName={representativeModel} size={14} />
     );
 
     const labelContent = (

@@ -206,10 +206,8 @@ const GlobalSpotlightInner: React.FC<
 
       showGitActionDialogSafely(`Branch "${branchName}" deleted`, "info");
       await refreshBranches();
-      setBranchPickerOpen(false);
-      closeModal();
     },
-    [closeModal, currentRepo, refreshBranches, selectedRepoId]
+    [currentRepo, refreshBranches, selectedRepoId]
   );
 
   const handleCheckoutDetached = useCallback(async () => {

@@ -151,11 +151,47 @@ const GitPreferencesSection: React.FC = () => {
             style={SECTION_CONTROL_STYLE}
           />
         </SectionRow>
+      </SectionContainer>
 
-        <SectionRow
-          label={tSettings("editor.git.gitProxyLink")}
-          description={tSettings("editor.git.gitProxyLinkDesc")}
-        />
+      <SectionContainer title={t("git.worktreeTitle")}>
+        <div data-testid="settings-git-worktree-max-count-row">
+          <SectionRow
+            label={tSettings("editor.git.worktreeMaxCount")}
+            description={tSettings("editor.git.worktreeMaxCountDesc")}
+          >
+            <Select
+              value={worktreeMaxCount}
+              size="default"
+              onChange={(value) => setWorktreeMaxCount(Number(value))}
+              options={WORKTREE_MAX_COUNT_OPTIONS}
+              style={SECTION_CONTROL_STYLE}
+            />
+          </SectionRow>
+        </div>
+
+        <div data-testid="settings-git-worktree-cleanup-interval-row">
+          <SectionRow
+            label={tSettings("editor.git.worktreeCleanupInterval")}
+            description={tSettings("editor.git.worktreeCleanupIntervalDesc")}
+          >
+            <Select
+              value={worktreeCleanupIntervalHours}
+              size="default"
+              onChange={(value) =>
+                setWorktreeCleanupIntervalHours(Number(value))
+              }
+              options={WORKTREE_CLEANUP_INTERVAL_OPTIONS.map((interval) => ({
+                label: tSettings(interval.labelKey),
+                value: interval.value,
+              }))}
+              style={SECTION_CONTROL_STYLE}
+            />
+          </SectionRow>
+        </div>
+      </SectionContainer>
+
+      <SectionContainer title={tSettings("editor.git.gitProxyLink")}>
+        <SectionRow description={tSettings("editor.git.gitProxyLinkDesc")} />
 
         <SectionRow label={tSettings("monitor.gitProxyHttp")} indent>
           <Input
@@ -227,43 +263,6 @@ const GitPreferencesSection: React.FC = () => {
             </div>
           </SectionRow>
         )}
-      </SectionContainer>
-
-      <SectionContainer title={t("git.worktreeTitle")}>
-        <div data-testid="settings-git-worktree-max-count-row">
-          <SectionRow
-            label={tSettings("editor.git.worktreeMaxCount")}
-            description={tSettings("editor.git.worktreeMaxCountDesc")}
-          >
-            <Select
-              value={worktreeMaxCount}
-              size="default"
-              onChange={(value) => setWorktreeMaxCount(Number(value))}
-              options={WORKTREE_MAX_COUNT_OPTIONS}
-              style={SECTION_CONTROL_STYLE}
-            />
-          </SectionRow>
-        </div>
-
-        <div data-testid="settings-git-worktree-cleanup-interval-row">
-          <SectionRow
-            label={tSettings("editor.git.worktreeCleanupInterval")}
-            description={tSettings("editor.git.worktreeCleanupIntervalDesc")}
-          >
-            <Select
-              value={worktreeCleanupIntervalHours}
-              size="default"
-              onChange={(value) =>
-                setWorktreeCleanupIntervalHours(Number(value))
-              }
-              options={WORKTREE_CLEANUP_INTERVAL_OPTIONS.map((interval) => ({
-                label: tSettings(interval.labelKey),
-                value: interval.value,
-              }))}
-              style={SECTION_CONTROL_STYLE}
-            />
-          </SectionRow>
-        </div>
       </SectionContainer>
     </>
   );

@@ -87,7 +87,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
         type="button"
         onClick={onOpenSkillsTools}
         className={[
-          "flex items-center justify-center rounded-full border border-solid border-transparent bg-fill-1 text-text-1 transition-all duration-200 hover:bg-fill-2 focus:outline-none",
+          "flex items-center justify-center rounded-full bg-fill-1 text-text-1 transition-colors duration-200 hover:bg-fill-2 focus:outline-none",
           INPUT_AREA_BUTTONS.iconButtonSizeClass,
         ].join(" ")}
         aria-label="Skills & Tools"
@@ -108,7 +108,10 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
     );
 
     const toolbarRow = (
-      <div className="flex h-9 min-h-9 w-full items-center justify-between px-1 text-text-2">
+      <div
+        className="flex h-9 min-h-9 w-full items-center justify-between px-1 text-text-2"
+        style={{ transform: "translateZ(0)" }}
+      >
         <div className={rowClass}>
           {leftPrefix}
           {addButton}

@@ -39,7 +39,11 @@ import {
 } from "@src/store/ui/workspaceFoldersAtom";
 
 import { ICONS } from "../../config";
-import { useSharedRepoList } from "../../hooks";
+import {
+  type WorkspaceSwitchEntry,
+  useSharedRepoList,
+  useWorkspaceSwitch,
+} from "../../hooks";
 import { useWorkspaceForm } from "../../hooks/forms";
 import type { RepoItem, SpotlightItem } from "../../types";
 import { buildOpenPathItem } from "./pathActionItem";
@@ -51,11 +55,13 @@ const MIN_DROPDOWN_WIDTH = 320;
 
 type DropdownRepoItem =
   | { kind: "repo"; repo: RepoItem }
+  | { kind: "workspace"; entry: WorkspaceSwitchEntry }
   | { kind: "openPath"; item: SpotlightItem };
 
 type RepoDropdownSectionKey =
   | "openPath"
   | "current"
+  | "multiRepoWorkspace"
   | "system"
   | "workspace"
   | "repo";
@@ -74,6 +80,11 @@ interface RepoRowProps {
 
 interface OpenPathRowProps {
   item: SpotlightItem;
+  keyboardProps: ReturnType<UseDropdownListNavigationReturn["getItemProps"]>;
+}
+
+interface WorkspaceRowProps {
+  entry: WorkspaceSwitchEntry;
   keyboardProps: ReturnType<UseDropdownListNavigationReturn["getItemProps"]>;
 }
 
@@ -96,7 +107,11 @@ const RepoRow: React.FC<RepoRowProps> = ({
       } w-full justify-start`}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-        <Icon size={16} />
+        {isCurrent ? (
+          <Check size={14} className="text-primary-6" />
+        ) : (
+          <Icon size={16} />
+        )}
       </span>
       <div className="flex min-w-0 flex-1 flex-col items-start">
         <span className="truncate">{repo.name}</span>
@@ -106,9 +121,42 @@ const RepoRow: React.FC<RepoRowProps> = ({
           </span>
         )}
       </div>
-      {isCurrent && (
-        <Check size={14} className="ml-2 shrink-0 text-primary-6" />
-      )}
+    </button>
+  );
+};
+
+const WorkspaceRow: React.FC<WorkspaceRowProps> = ({
+  entry,
+  keyboardProps,
+}) => {
+  const { workspace, isActive, folderNames } = entry;
+  const repoCount = workspace.folders.length;
+  const summary = folderNames.join(", ");
+
+  return (
+    <button
+      type="button"
+      data-testid={`repo-dropdown-workspace-row-${workspace.workspaceId}`}
+      {...keyboardProps}
+      className={`${DROPDOWN_CLASSES.itemCompact} ${
+        isActive ? DROPDOWN_CLASSES.itemSelected : DROPDOWN_CLASSES.itemHover
+      } w-full justify-start`}
+      title={summary}
+    >
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+        {isActive ? (
+          <Check size={14} className="text-primary-6" />
+        ) : (
+          <ICONS.workspace size={16} />
+        )}
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col items-start">
+        <span className="truncate">{workspace.name}</span>
+        {summary && (
+          <span className="truncate text-[11px] text-text-3">{summary}</span>
+        )}
+      </div>
+      <span className="ml-2 shrink-0 text-[11px] text-text-3">{repoCount}</span>
     </button>
   );
 };
@@ -176,7 +224,7 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
     },
   });
 
-  const { filteredRepos, repoLoading } = useSharedRepoList({
+  const { repos, filteredRepos, repoLoading } = useSharedRepoList({
     enabled: isOpen,
     currentRepoId,
     searchQuery,
@@ -184,6 +232,25 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
 
   const isMultiRoot = useAtomValue(isMultiRootWorkspaceAtom);
   const dispatchSetFolders = useSetAtom(setWorkspaceFoldersAtom);
+
+  const { workspaces, activateWorkspace } = useWorkspaceSwitch({
+    repos,
+    onActivate: onClose,
+  });
+
+  // Filter multi-repo workspaces by the same query as repos. Match against
+  // workspace name and member folder names so users can find a workspace by
+  // any of its repos.
+  const filteredWorkspaces = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return workspaces;
+    return workspaces.filter((entry) => {
+      if (entry.workspace.name.toLowerCase().includes(query)) return true;
+      return entry.folderNames.some((name) =>
+        name.toLowerCase().includes(query)
+      );
+    });
+  }, [workspaces, searchQuery]);
   const invalidPathTitle = t("selectors.repo.pathImport.invalidTitle");
   const invalidPathMessage = useCallback(
     (path: string) => t("selectors.repo.pathImport.invalidMessage", { path }),
@@ -194,7 +261,7 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
     () =>
       buildOpenPathItem({
         searchQuery,
-        matchCount: filteredRepos.length,
+        matchCount: filteredRepos.length + filteredWorkspaces.length,
         openLabel: t("actions.openFolder"),
         onOpenPath: (candidatePath) => {
           void importWorkspacePath({
@@ -208,6 +275,7 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
     [
       workspaceForm.handleImportWorkspace,
       filteredRepos.length,
+      filteredWorkspaces.length,
       invalidPathMessage,
       invalidPathTitle,
       searchQuery,
@@ -221,7 +289,7 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
       : filteredRepos;
     const currentItems: DropdownRepoItem[] = [];
     const systemItems: DropdownRepoItem[] = [];
-    const workspaceItems: DropdownRepoItem[] = [];
+    const folderWorkspaceItems: DropdownRepoItem[] = [];
     const repoItems: DropdownRepoItem[] = [];
 
     for (const repo of allRepos) {
@@ -231,9 +299,23 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
       } else if (isSystemPathRepoItem(repo)) {
         systemItems.push(item);
       } else if (repo.kind === REPO_KIND.FOLDER) {
-        workspaceItems.push(item);
+        folderWorkspaceItems.push(item);
       } else {
         repoItems.push(item);
+      }
+    }
+
+    // Active multi-repo workspace is the "current" selection; sits with the
+    // current repo. Inactive workspaces get their own section above repos so
+    // they are easy to spot.
+    const activeWorkspaceItems: DropdownRepoItem[] = [];
+    const inactiveWorkspaceItems: DropdownRepoItem[] = [];
+    for (const entry of filteredWorkspaces) {
+      const item: DropdownRepoItem = { kind: "workspace", entry };
+      if (entry.isActive) {
+        activeWorkspaceItems.push(item);
+      } else {
+        inactiveWorkspaceItems.push(item);
       }
     }
 
@@ -245,11 +327,18 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
         items: [{ kind: "openPath", item: openPathItem }],
       });
     }
-    if (currentItems.length > 0) {
+    if (activeWorkspaceItems.length > 0 || currentItems.length > 0) {
       nextSections.push({
         key: "current",
         label: t("selectors.repo.sections.current"),
-        items: currentItems,
+        items: [...activeWorkspaceItems, ...currentItems],
+      });
+    }
+    if (inactiveWorkspaceItems.length > 0) {
+      nextSections.push({
+        key: "multiRepoWorkspace",
+        label: t("workspaceForm.multiRepoWorkspace", "Multi-Repo Workspace"),
+        items: inactiveWorkspaceItems,
       });
     }
     if (systemItems.length > 0) {
@@ -259,11 +348,11 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
         items: systemItems,
       });
     }
-    if (workspaceItems.length > 0) {
+    if (folderWorkspaceItems.length > 0) {
       nextSections.push({
         key: "workspace",
         label: t("selectors.repo.sections.workspace"),
-        items: workspaceItems,
+        items: folderWorkspaceItems,
       });
     }
     if (repoItems.length > 0) {
@@ -274,7 +363,15 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
       });
     }
     return nextSections;
-  }, [filteredRepos, currentRepoId, leadingRepo, openPathItem, searchQuery, t]);
+  }, [
+    filteredRepos,
+    filteredWorkspaces,
+    currentRepoId,
+    leadingRepo,
+    openPathItem,
+    searchQuery,
+    t,
+  ]);
 
   const dropdownItems = useMemo(
     () => sections.flatMap((section) => section.items),
@@ -288,13 +385,18 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
         return;
       }
 
+      if (item.kind === "workspace") {
+        activateWorkspace(item.entry.workspace);
+        return;
+      }
+
       if (isMultiRoot) {
         dispatchSetFolders([], null);
       }
       onSelect(item.repo.id, item.repo);
       onClose();
     },
-    [isMultiRoot, dispatchSetFolders, onSelect, onClose]
+    [isMultiRoot, dispatchSetFolders, onSelect, onClose, activateWorkspace]
   );
 
   const { isPositioned, panelRef, panelPosition, keyboard } = useDropdownEngine<
@@ -377,13 +479,25 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
               )}
               {section.items.map((item) => {
                 const index = dropdownItems.indexOf(item);
-                return item.kind === "openPath" ? (
-                  <OpenPathRow
-                    key={item.item.id}
-                    item={item.item}
-                    keyboardProps={keyboard.getItemProps(index)}
-                  />
-                ) : (
+                if (item.kind === "openPath") {
+                  return (
+                    <OpenPathRow
+                      key={item.item.id}
+                      item={item.item}
+                      keyboardProps={keyboard.getItemProps(index)}
+                    />
+                  );
+                }
+                if (item.kind === "workspace") {
+                  return (
+                    <WorkspaceRow
+                      key={`workspace-${item.entry.workspace.workspaceId}`}
+                      entry={item.entry}
+                      keyboardProps={keyboard.getItemProps(index)}
+                    />
+                  );
+                }
+                return (
                   <RepoRow
                     key={item.repo.id}
                     repo={item.repo}

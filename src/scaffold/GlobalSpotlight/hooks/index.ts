@@ -24,6 +24,12 @@ export type {
   UseSharedRepoListOptions,
   UseSharedRepoListReturn,
 } from "./data/useSharedRepoList";
+export { useWorkspaceSwitch } from "./data/useWorkspaceSwitch";
+export type {
+  UseWorkspaceSwitchOptions,
+  UseWorkspaceSwitchReturn,
+  WorkspaceSwitchEntry,
+} from "./data/useWorkspaceSwitch";
 
 // Account-footer helper (used by palettes with per-hovered-item footers)
 export { useAccountFooterForHovered } from "./useAccountFooterForHovered";

@@ -37,11 +37,13 @@ export function useBranchItems(
     currentBranchName,
     onSelect,
     onCreateBranch,
-    onDeleteBranch,
     onClose,
     setActiveMode,
     setSelectedStartPoint,
     focusInput,
+    selectedBranchNames,
+    toggleBranchSelection,
+    renderBranchRemoveAction,
   } = options;
 
   const labels = useMemo(
@@ -106,7 +108,6 @@ export function useBranchItems(
 
     // --- Branch list based on mode ---
 
-    // Remove mode: show deletable branches
     if (activeMode === "remove") {
       const deletableBranches = filteredBranches.filter(
         (branch) => !branch.isCurrent
@@ -125,11 +126,14 @@ export function useBranchItems(
             ...branch,
             isSelector: true,
             rightLabel: lastCommit,
-            isDanger: true,
+            rightContent: renderBranchRemoveAction?.(branch),
+            selectionState: {
+              checked: selectedBranchNames.has(branch.name),
+              onToggle: () => toggleBranchSelection(branch.name),
+            },
           },
           action: () => {
-            onDeleteBranch?.(branch.name);
-            onClose();
+            toggleBranchSelection(branch.name);
           },
         });
       });
@@ -254,11 +258,13 @@ export function useBranchItems(
     currentBranchName,
     onSelect,
     onClose,
-    onDeleteBranch,
     onCreateBranch,
     setActiveMode,
     setSelectedStartPoint,
     focusInput,
+    selectedBranchNames,
+    toggleBranchSelection,
+    renderBranchRemoveAction,
     labels,
     t,
   ]);

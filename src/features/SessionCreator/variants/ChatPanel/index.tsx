@@ -973,8 +973,8 @@ const BatchStartSessionCreator: React.FC<SessionCreatorChatPanelProps> = ({
     <div className={`session-creator-chat-panel-wrapper ${className}`}>
       <div
         className={`flex min-h-0 flex-1 flex-col items-center overflow-y-auto scrollbar-hide ${
-          variant === "fullScreen" ? "px-4" : "px-5"
-        } ${centerFullScreenContent ? "pb-24 pt-4" : "pb-24 pt-3"}`}
+          centerFullScreenContent ? "pb-24 pt-4" : "pb-24 pt-3"
+        }`}
       >
         <div className="flex w-full flex-col gap-10">
           {starters.map((starter, index) => (
@@ -1038,7 +1038,7 @@ const BatchStartSessionCreator: React.FC<SessionCreatorChatPanelProps> = ({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center border-t border-border-2 bg-chat-pane/95 px-4 py-3 backdrop-blur">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center border-t border-border-2 bg-chat-pane/95 py-3 backdrop-blur">
         <div className="pointer-events-auto flex w-full max-w-[920px] items-center justify-end gap-3">
           <Button
             htmlType="button"

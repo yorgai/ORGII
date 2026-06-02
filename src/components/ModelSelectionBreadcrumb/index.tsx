@@ -4,6 +4,7 @@
  * Spotlight-style account › model breadcrumb used in model palette rows
  * and model-pill hover tooltips.
  */
+import { Brain } from "lucide-react";
 import React, { memo } from "react";
 
 import type { ModelType } from "@src/api/tauri/rpc/schemas/validation";
@@ -18,33 +19,61 @@ export interface ModelSelectionBreadcrumbProps {
   modelId?: string;
   /** Provider / agent type for the account icon when model id is absent */
   modelType?: ModelType;
+  /** Smaller variant detail shown after the model label. */
+  variantInfo?: string;
+  /** Whether to show the Thinking icon after the model label. */
+  thinking?: boolean;
+  /** Raw wire model value shown as secondary breadcrumb detail. */
+  rawValue?: string;
   className?: string;
 }
 
 export const ModelSelectionBreadcrumb: React.FC<ModelSelectionBreadcrumbProps> =
-  memo(({ accountName, modelLabel, modelId, modelType, className = "" }) => (
-    <span
-      className={`inline-flex min-w-0 max-w-[320px] items-center gap-1.5 text-[13px] ${className}`}
-    >
-      {accountName ? (
-        <>
-          <span className="shrink-0 text-text-2">{accountName}</span>
-          <span className="mx-1 shrink-0 text-text-3">›</span>
-        </>
-      ) : null}
-      {modelId || modelType ? (
-        <ModelIcon
-          modelName={modelId}
-          agentType={modelType}
-          size={14}
-          className="shrink-0"
-        />
-      ) : null}
-      <span className="min-w-0 truncate font-semibold text-text-1">
-        {modelLabel}
+  memo(
+    ({
+      accountName,
+      modelLabel,
+      modelId,
+      modelType,
+      variantInfo,
+      thinking = false,
+      rawValue,
+      className = "",
+    }) => (
+      <span
+        className={`inline-flex min-w-0 max-w-[320px] items-center gap-1.5 text-[13px] ${className}`}
+      >
+        {accountName ? (
+          <>
+            <span className="shrink-0 text-text-2">{accountName}</span>
+            <span className="mx-1 shrink-0 text-text-3">›</span>
+          </>
+        ) : null}
+        {modelId || modelType ? (
+          <ModelIcon
+            modelName={modelId}
+            agentType={modelType}
+            size={14}
+            className="shrink-0"
+          />
+        ) : null}
+        <span className="min-w-0 truncate font-semibold text-text-1">
+          {modelLabel}
+        </span>
+        {(thinking || variantInfo) && (
+          <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-medium text-text-3">
+            {thinking && <Brain size={11} strokeWidth={1.8} />}
+            {variantInfo && <span>{variantInfo}</span>}
+          </span>
+        )}
+        {rawValue && rawValue !== modelLabel ? (
+          <span className="min-w-0 truncate text-[11px] text-text-3">
+            {rawValue}
+          </span>
+        ) : null}
       </span>
-    </span>
-  ));
+    )
+  );
 
 ModelSelectionBreadcrumb.displayName = "ModelSelectionBreadcrumb";
 

@@ -4,11 +4,20 @@
  * Main hook that orchestrates branch palette state and behavior.
  * Uses useSelector for common patterns while adding branch-specific logic.
  */
-import { GitBranchMinus, GitBranchPlus, RefreshCw, Split } from "lucide-react";
+import {
+  Check,
+  GitBranchMinus,
+  GitBranchPlus,
+  RefreshCw,
+  Split,
+  Trash2,
+} from "lucide-react";
 import {
   type Dispatch,
   type KeyboardEvent,
+  type MouseEvent,
   type SetStateAction,
+  createElement,
   useCallback,
   useEffect,
   useMemo,
@@ -58,6 +67,9 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
   const [isCreatingBranch, setIsCreatingBranch] = useState(false);
   const [selectedStartPoint, setSelectedStartPoint] = useState<string | null>(
     null
+  );
+  const [selectedBranchNames, setSelectedBranchNames] = useState<Set<string>>(
+    () => new Set()
   );
 
   // ============ DERIVED STATE ============
@@ -125,6 +137,7 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
       activeMode === "remove"
     ) {
       setSelectedStartPoint(null);
+      setSelectedBranchNames(new Set());
       setActiveMode("checkout");
       setSearchQueryState("");
       return;
@@ -151,6 +164,51 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
     return !data?.isHeader && !data?.disabled;
   }, []);
 
+  const toggleBranchSelection = useCallback((branchName: string) => {
+    setSelectedBranchNames((prev) => {
+      const next = new Set(prev);
+      if (next.has(branchName)) {
+        next.delete(branchName);
+      } else {
+        next.add(branchName);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleDeleteBranch = useCallback(
+    async (branchName: string) => {
+      if (!onDeleteBranch) return;
+      await onDeleteBranch(branchName);
+      setSelectedBranchNames((prev) => {
+        if (!prev.has(branchName)) return prev;
+        const next = new Set(prev);
+        next.delete(branchName);
+        return next;
+      });
+    },
+    [onDeleteBranch]
+  );
+
+  const renderBranchRemoveAction = useCallback(
+    (branch: { name: string }) =>
+      createElement(
+        "button",
+        {
+          type: "button",
+          onClick: (event: MouseEvent<HTMLButtonElement>) => {
+            event.stopPropagation();
+            void handleDeleteBranch(branch.name);
+          },
+          className:
+            "flex items-center justify-center rounded-md p-1 text-text-2 transition-colors hover:bg-fill-3 hover:text-text-1",
+          title: t("actions.delete", "Delete"),
+        },
+        createElement(Trash2, { size: 14 })
+      ),
+    [handleDeleteBranch, t]
+  );
+
   // ============ ITEMS (needs to be before useSelector) ============
   const mainItems = useBranchItems({
     activeMode,
@@ -167,12 +225,51 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
     setActiveMode,
     setSelectedStartPoint,
     focusInput: focusInputBridge,
+    selectedBranchNames,
+    toggleBranchSelection,
+    renderBranchRemoveAction,
   });
 
-  const pinnedActionItems = useMemo((): SpotlightItem[] => {
-    if (activeMode !== "checkout") return [];
+  const selectedBranchCount = selectedBranchNames.size;
 
+  const handleDeleteSelectedBranches = useCallback(async () => {
+    if (!onDeleteBranch || selectedBranchNames.size === 0) return;
+    const branchNames = Array.from(selectedBranchNames);
+    await Promise.all(
+      branchNames.map((branchName) => onDeleteBranch(branchName))
+    );
+    setSelectedBranchNames(new Set());
+  }, [onDeleteBranch, selectedBranchNames]);
+
+  const pinnedActionItems = useMemo((): SpotlightItem[] => {
     const actions: SpotlightItem[] = [];
+
+    if (activeMode === "remove") {
+      if (selectedBranchCount > 0) {
+        actions.push({
+          id: "pinned-branch-delete-selected",
+          label: `${t("actions.delete", "Delete")} (${selectedBranchCount})`,
+          icon: Trash2,
+          type: "action",
+          action: () => {
+            void handleDeleteSelectedBranches();
+          },
+        });
+      }
+      actions.push({
+        id: "pinned-branch-remove-done",
+        label: t("actions.done", "Done"),
+        icon: Check,
+        type: "action",
+        action: () => {
+          setSelectedBranchNames(new Set());
+          setActiveMode("checkout");
+        },
+      });
+      return actions;
+    }
+
+    if (activeMode !== "checkout") return actions;
 
     if (onCreateBranch) {
       actions.push(
@@ -223,15 +320,18 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
     effectiveShowRemoveMode,
     isLoading,
     onCreateBranch,
+    handleDeleteSelectedBranches,
     onDeleteBranch,
     refreshBranches,
+    selectedBranchCount,
     t,
   ]);
 
   const pinnedActionStartIndex = mainItems.length;
   const items = useMemo(
     () =>
-      activeMode === "checkout" && pinnedActionItems.length > 0
+      (activeMode === "checkout" || activeMode === "remove") &&
+      pinnedActionItems.length > 0
         ? [...mainItems, ...pinnedActionItems]
         : mainItems,
     [activeMode, mainItems, pinnedActionItems]
@@ -243,7 +343,12 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
       selectedIndex: number,
       setSelectedIndex: Dispatch<SetStateAction<number>>
     ) => {
-      if (activeMode !== "checkout" || pinnedActionItems.length === 0) return;
+      if (
+        (activeMode !== "checkout" && activeMode !== "remove") ||
+        pinnedActionItems.length === 0
+      ) {
+        return;
+      }
 
       const firstMainItemIndex = mainItems.findIndex(isItemSelectable);
       const firstPinnedItemIndex = pinnedActionStartIndex;
@@ -288,6 +393,7 @@ export function useBranchPalette(options: UseBranchPaletteOptions) {
       setActiveMode("checkout");
       setIsCreatingBranch(false);
       setSelectedStartPoint(null);
+      setSelectedBranchNames(new Set());
     },
     externalSearchQuery: searchQuery,
     externalSetSearchQuery: setSearchQueryState,

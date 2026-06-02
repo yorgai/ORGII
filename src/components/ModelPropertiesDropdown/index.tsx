@@ -19,7 +19,7 @@
  * selection from `value` when it opens, and only calls `onApply` when
  * the user confirms.
  */
-import { Check } from "lucide-react";
+import { Brain, Check } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -39,6 +39,13 @@ import {
   type VariantEditOptions,
   type VariantSelection,
 } from "@src/util/variantEditOptions";
+
+const SIDE_PANEL_GAP = 8;
+const MODEL_PROPERTIES_PANEL_WIDTH = 260;
+const MODEL_PROPERTIES_PANEL_EST_HEIGHT = 316;
+const VIEWPORT_MARGIN = 12;
+const SIDE_PANEL_ANCHOR_CHANGE_EVENT = "dropdown-side-panel-anchor-change";
+const MODEL_PROPERTIES_CLOSE_EVENT = "model-properties-dropdown-close";
 
 // ============ TYPES ============
 
@@ -85,6 +92,12 @@ export interface ModelPropertiesDropdownProps {
    * dropdowns where the trigger sits near the edge.
    */
   centerInContainer?: boolean;
+  /**
+   * Positions the panel at the closest dropdown side-panel anchor.
+   * Used by compact model dropdown rows so variant edits appear where the
+   * secondary account menu appears, not attached to the inline pill.
+   */
+  sidePanelInContainer?: boolean;
 }
 
 // ============ COMPONENT ============
@@ -99,6 +112,7 @@ export const ModelPropertiesDropdown: React.FC<
   onDraftChange,
   disabled = false,
   centerInContainer = false,
+  sidePanelInContainer = false,
 }) => {
   const { t } = useTranslation();
   const engine = useDropdownEngine<HTMLButtonElement>({
@@ -140,22 +154,119 @@ export const ModelPropertiesDropdown: React.FC<
   }, [isOpen]);
 
   useEffect(() => {
-    // While the panel is closed (or centering is off) the stale style is
-    // never read — `panelStyle` only consumes it when `centerInContainer`
-    // is true and `panelReady` already gates on `isOpen`. The effect below
-    // recomputes synchronously on the next open, so there is no need to
-    // clear state here (which would be a banned in-effect setState).
-    if (!centerInContainer || !isOpen) {
+    if (!isOpen) return;
+    const handleCloseRequest = (event: Event) => {
+      const trigger = engine.triggerRef.current;
+      const hoveredElement = (
+        event as CustomEvent<{ hoveredElement?: HTMLElement }>
+      ).detail?.hoveredElement;
+      if (trigger && hoveredElement?.contains(trigger)) return;
+      close();
+    };
+    window.addEventListener(MODEL_PROPERTIES_CLOSE_EVENT, handleCloseRequest);
+    return () => {
+      window.removeEventListener(
+        MODEL_PROPERTIES_CLOSE_EVENT,
+        handleCloseRequest
+      );
+    };
+  }, [close, engine.triggerRef, isOpen]);
+
+  useEffect(() => {
+    // While the panel is closed (or custom positioning is off) the stale
+    // style is never read. The effect recomputes on the next open, so there
+    // is no need to clear state here.
+    if ((!centerInContainer && !sidePanelInContainer) || !isOpen) {
       return;
     }
     const compute = () => {
       const trigger = engine.triggerRef.current;
+      const centeredZ = Math.max(DROPDOWN_PANEL.zIndex, 10000);
+
+      if (sidePanelInContainer) {
+        const container =
+          trigger?.closest<HTMLElement>("[data-dropdown-side-panel-anchor]") ??
+          null;
+        const sideLeft = Number(container?.dataset.dropdownSidePanelLeft);
+        const sideTop = Number(container?.dataset.dropdownSidePanelTop);
+        const sideHeight = Number(container?.dataset.dropdownSidePanelHeight);
+        if (
+          Number.isFinite(sideLeft) &&
+          Number.isFinite(sideTop) &&
+          Number.isFinite(sideHeight)
+        ) {
+          const belowTop = sideTop + sideHeight + SIDE_PANEL_GAP;
+          const aboveTop =
+            sideTop - MODEL_PROPERTIES_PANEL_EST_HEIGHT - SIDE_PANEL_GAP;
+          const fitsBelow =
+            belowTop + MODEL_PROPERTIES_PANEL_EST_HEIGHT <=
+            window.innerHeight - VIEWPORT_MARGIN;
+          const preferredTop = fitsBelow ? belowTop : aboveTop;
+          setCenteredStyle({
+            position: "fixed",
+            top: Math.max(
+              VIEWPORT_MARGIN,
+              Math.min(
+                preferredTop,
+                window.innerHeight -
+                  VIEWPORT_MARGIN -
+                  MODEL_PROPERTIES_PANEL_EST_HEIGHT
+              )
+            ),
+            left: sideLeft,
+            zIndex: centeredZ + 1,
+          });
+          return;
+        }
+        const modelRow = trigger?.closest<HTMLElement>(
+          "[data-dropdown-model-row-anchor]"
+        );
+        const mainPanel = trigger?.closest<HTMLElement>(
+          "[data-dropdown-main-panel-anchor]"
+        );
+        if (modelRow && mainPanel) {
+          const rowRect = modelRow.getBoundingClientRect();
+          const panelRect = mainPanel.getBoundingClientRect();
+          const rightLeft = panelRect.right + SIDE_PANEL_GAP;
+          const leftLeft =
+            panelRect.left - MODEL_PROPERTIES_PANEL_WIDTH - SIDE_PANEL_GAP;
+          const fitsRight =
+            rightLeft + MODEL_PROPERTIES_PANEL_WIDTH <=
+            window.innerWidth - VIEWPORT_MARGIN;
+          const preferredLeft = fitsRight ? rightLeft : leftLeft;
+          setCenteredStyle({
+            position: "fixed",
+            top: Math.max(
+              VIEWPORT_MARGIN,
+              Math.min(
+                rowRect.top,
+                window.innerHeight -
+                  VIEWPORT_MARGIN -
+                  MODEL_PROPERTIES_PANEL_EST_HEIGHT
+              )
+            ),
+            left: Math.max(
+              VIEWPORT_MARGIN,
+              Math.min(
+                preferredLeft,
+                window.innerWidth -
+                  VIEWPORT_MARGIN -
+                  MODEL_PROPERTIES_PANEL_WIDTH
+              )
+            ),
+            zIndex: centeredZ + 1,
+          });
+          return;
+        }
+
+        setCenteredStyle(null);
+      }
+
       const container =
         trigger?.closest<HTMLElement>("[data-spotlight-container]") ?? null;
       const rect = container?.getBoundingClientRect();
       // Lift above the spotlight container (z=9999) so the centered
       // panel sits in front of the spotlight chrome that anchors it.
-      const centeredZ = Math.max(DROPDOWN_PANEL.zIndex, 10000);
       if (rect) {
         setCenteredStyle({
           position: "fixed",
@@ -177,11 +288,13 @@ export const ModelPropertiesDropdown: React.FC<
     compute();
     window.addEventListener("resize", compute);
     window.addEventListener("scroll", compute, true);
+    window.addEventListener(SIDE_PANEL_ANCHOR_CHANGE_EVENT, compute);
     return () => {
       window.removeEventListener("resize", compute);
       window.removeEventListener("scroll", compute, true);
+      window.removeEventListener(SIDE_PANEL_ANCHOR_CHANGE_EVENT, compute);
     };
-  }, [centerInContainer, isOpen, engine.triggerRef]);
+  }, [centerInContainer, sidePanelInContainer, isOpen, engine.triggerRef]);
 
   // Draft selection lives only while the panel is open. Re-seed on every
   // open transition (and whenever the underlying `value` changes while
@@ -300,7 +413,9 @@ export const ModelPropertiesDropdown: React.FC<
   // (`getBoundingClientRect()` + `window.innerHeight`). With
   // `position: absolute` the offsets would resolve against the body,
   // so any page scroll would shift the panel away from the trigger.
-  const positionStyle: React.CSSProperties = centerInContainer
+  const usesCustomPosition =
+    centerInContainer || (sidePanelInContainer && centeredStyle !== null);
+  const positionStyle: React.CSSProperties = usesCustomPosition
     ? (centeredStyle ?? {})
     : {
         position: "fixed",
@@ -318,7 +433,7 @@ export const ModelPropertiesDropdown: React.FC<
   // re-measurement has run, keep the panel invisible — that way
   // users never see the panel flash at the estimate-based position
   // before snapping to the measured one.
-  const hasPosition = centerInContainer
+  const hasPosition = usesCustomPosition
     ? centeredStyle !== null
     : isPositioned && panelMeasured;
   const panelStyle: React.CSSProperties = hasPosition
@@ -332,6 +447,7 @@ export const ModelPropertiesDropdown: React.FC<
       aria-label="Model properties"
       className={`${DROPDOWN_CLASSES.panel} flex w-[260px] flex-col`}
       style={panelStyle}
+      onMouseDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
     >
       {/* Effort / Reasoning section (above Options). Each level is a
@@ -381,6 +497,7 @@ export const ModelPropertiesDropdown: React.FC<
           </div>
           {showThinkingRow && (
             <SwitchRow
+              icon={<Brain size={14} className="text-text-2" />}
               label="Thinking"
               checked={draft.thinking}
               onChange={handleThinkingToggle}
@@ -425,14 +542,23 @@ export const ModelPropertiesDropdown: React.FC<
 // ============ INTERNAL ============
 
 interface SwitchRowProps {
+  icon?: React.ReactNode;
   label: string;
   checked: boolean;
   onChange: (next: boolean) => void;
 }
 
-const SwitchRow: React.FC<SwitchRowProps> = ({ label, checked, onChange }) => (
+const SwitchRow: React.FC<SwitchRowProps> = ({
+  icon,
+  label,
+  checked,
+  onChange,
+}) => (
   <div className={DROPDOWN_CLASSES.menuControlItemCompact}>
-    <span>{label}</span>
+    <span className="flex items-center gap-1.5">
+      {icon}
+      {label}
+    </span>
     <Switch checked={checked} onChange={onChange} size="small" />
   </div>
 );

@@ -24,12 +24,23 @@ import type { SettingDefinition } from "@src/config/settingsSchema/types";
  * The Rust `AgentDefinition` struct has no `question_auto_skip_timeout`
  * field. Storing it in S1 is correct.
  */
+
+const questionAutoSkipTimeoutByPresenceSchema = z.object({
+  online: z.number().int().min(0).max(300),
+  invisible: z.number().int().min(0).max(300),
+  away: z.number().int().min(0).max(300),
+});
+
 export const AGENT_SETTINGS_REGISTRY = {
-  "agent.sde.questionAutoSkipTimeout": {
-    schema: z.number().int().min(0).max(300),
-    default: 0,
+  "agent.sde.questionAutoSkipTimeoutByPresence": {
+    schema: questionAutoSkipTimeoutByPresenceSchema,
+    default: {
+      online: 0,
+      invisible: 0,
+      away: 0,
+    },
     description:
-      "Auto-skip agent questions after N seconds (0 = disabled). Frontend-only UX preference; agent decides how to continue.",
+      "Auto-skip agent questions after N seconds per user status (0 = disabled). Frontend runtime preference; agent decides how to continue.",
     category: "agent",
   },
 } as const satisfies Record<string, SettingDefinition>;

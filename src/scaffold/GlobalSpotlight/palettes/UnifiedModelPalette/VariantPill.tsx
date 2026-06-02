@@ -11,9 +11,8 @@
  * change is persisted via the supplied `onApply` callback (which the
  * caller wires to `saveKey` with `default_variants`).
  */
-import { Pencil } from "lucide-react";
+import { Brain, Pencil } from "lucide-react";
 import React from "react";
-import { useTranslation } from "react-i18next";
 
 import ModelPropertiesDropdown from "@src/components/ModelPropertiesDropdown";
 import {
@@ -44,7 +43,6 @@ export const VariantPill: React.FC<VariantPillProps> = ({
   groupModelIds,
   onApply,
 }) => {
-  const { t } = useTranslation();
   const variant = parseModelVariant(modelId);
 
   const variantOptions = React.useMemo(
@@ -52,34 +50,31 @@ export const VariantPill: React.FC<VariantPillProps> = ({
     [groupModelIds, modelId]
   );
 
-  // Match the 28px / border-2 pill style used by the Models & Keys
-  // ModelVariantInlineCard. The enclosing spotlight row already lifts to
-  // `bg-fill-2` on hover/selection, so the pill jumps one stop higher to
-  // `bg-fill-3` + `border-3` when hovered or its dropdown is open — that
-  // keeps the pill visually separated from the row underneath.
   const pillClasses =
-    "inline-flex h-[28px] shrink-0 items-center gap-1 rounded-full border border-border-2 px-2.5 text-[12px] font-semibold text-text-2";
-
-  // No variants: show a non-editable "Default" pill. Intentionally not
-  // localized — reads as a stable technical label across locales,
-  // consistent with how we treat other developer-facing tokens.
-  const defaultPillClasses = `${pillClasses.replace("text-text-2", "text-text-3")}`;
-  if (!variant) {
-    return <span className={defaultPillClasses}>Default</span>;
-  }
-
-  const parts: string[] = [];
-  if (variant.reasoning) {
-    parts.push(formatReasoningLevel(variant.reasoning));
-  }
-  if (variant.fast) {
-    parts.push(t("selectors.modelSelector.variantFast"));
-  }
-  if (parts.length === 0) {
-    return <span className={defaultPillClasses}>Default</span>;
-  }
+    "relative z-10 inline-flex h-[24px] shrink-0 items-center gap-0.5 rounded-full border border-transparent bg-transparent px-2 text-[11px] font-semibold text-text-2 transition-colors group-hover/model-row:border-border-2 group-hover/model-row:bg-bg-1 group-focus-within/model-row:border-border-2 group-focus-within/model-row:bg-bg-1";
 
   const editable = onApply !== undefined && (groupModelIds?.length ?? 0) > 1;
+  const parts: string[] = [];
+  if (variant?.reasoning) {
+    parts.push(formatReasoningLevel(variant.reasoning));
+  }
+  const showsDefault =
+    !variant || (parts.length === 0 && !variant.thinking && !variant.fast);
+  const showsFastText = Boolean(
+    variant?.fast && parts.length === 0 && !variant.thinking
+  );
+  if (!editable && showsDefault) {
+    return null;
+  }
+  if (
+    !editable &&
+    !variant?.thinking &&
+    parts.length === 0 &&
+    !showsDefault &&
+    !showsFastText
+  ) {
+    return null;
+  }
 
   // Renders the pill contents. The `active` flag is set when the
   // dropdown is open so the JSX can force the same "lifted" text +
@@ -87,6 +82,17 @@ export const VariantPill: React.FC<VariantPillProps> = ({
   // the dropdown-open case).
   const renderBody = (active: boolean) => (
     <>
+      {variant?.thinking && (
+        <Brain
+          className={active ? "text-text-1" : "group-hover:text-text-1"}
+          size={11}
+        />
+      )}
+      {showsFastText && (
+        <span className={active ? "text-text-1" : "group-hover:text-text-1"}>
+          Fast
+        </span>
+      )}
       {parts.map((part, index) => (
         <React.Fragment key={part}>
           {index > 0 && (
@@ -103,12 +109,25 @@ export const VariantPill: React.FC<VariantPillProps> = ({
           </span>
         </React.Fragment>
       ))}
-      <Pencil
-        className={`ml-0.5 ${
-          active ? "text-text-1" : "text-text-3 group-hover:text-text-1"
-        }`}
-        size={11}
-      />
+      {showsDefault && (
+        <span
+          className={
+            active ? "text-text-1" : "text-text-3 group-hover:text-text-1"
+          }
+        >
+          Default
+        </span>
+      )}
+      {editable && (
+        <Pencil
+          className={
+            active
+              ? "ml-1 text-text-1"
+              : "ml-1 text-text-3 group-hover:text-text-1"
+          }
+          size={10}
+        />
+      )}
     </>
   );
 
@@ -121,7 +140,7 @@ export const VariantPill: React.FC<VariantPillProps> = ({
       variantOptions={variantOptions}
       value={modelId}
       onApply={onApply}
-      centerInContainer
+      sidePanelInContainer
       renderTrigger={({ ref, onClick, ariaExpanded }) => {
         const isActive = ariaExpanded;
         return (

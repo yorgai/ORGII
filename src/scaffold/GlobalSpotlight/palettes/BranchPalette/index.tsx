@@ -110,7 +110,7 @@ export const BranchPalette: React.FC<BranchPaletteProps> = ({
 
   const pinnedActionStartIndex = items.length;
   const pinnedActionSection =
-    activeMode === "checkout" ? (
+    activeMode === "checkout" || activeMode === "remove" ? (
       <SpotlightPinnedActionSection
         items={pinnedActionItems}
         startIndex={pinnedActionStartIndex}
@@ -145,7 +145,8 @@ export const BranchPalette: React.FC<BranchPaletteProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       hasActiveAction={
-        activeMode === "checkout" && pinnedActionItems.length > 0
+        (activeMode === "checkout" || activeMode === "remove") &&
+        pinnedActionItems.length > 0
       }
       activeActionChip={SPOTLIGHT_FOOTER_ACTIVE_CHIP.switchSection}
     >

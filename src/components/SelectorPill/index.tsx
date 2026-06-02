@@ -64,6 +64,8 @@ export interface SelectorPillProps {
   icon: React.ReactNode;
   /** Label text */
   label: string;
+  /** Custom label body. Keep label set for sizing, title, and accessibility. */
+  labelContent?: React.ReactNode;
   /** Native title attribute (fallback tooltip) */
   title?: string;
   /** Styled tooltip content shown via the Tooltip component on hover */
@@ -96,6 +98,7 @@ export const SelectorPill = forwardRef<HTMLButtonElement, SelectorPillProps>(
     {
       icon,
       label,
+      labelContent,
       title,
       tooltip,
       tooltipFramed = false,
@@ -129,14 +132,14 @@ export const SelectorPill = forwardRef<HTMLButtonElement, SelectorPillProps>(
         : "text-text-1";
     const variantClasses =
       variant === "input"
-        ? "border-transparent bg-chat-input hover:border-transparent hover:bg-chat-input"
+        ? "bg-chat-input hover:bg-chat-input"
         : variant === "ghost"
           ? active
-            ? "border-transparent bg-fill-2"
-            : "border-transparent hover:border-transparent hover:bg-fill-2"
+            ? "bg-fill-2"
+            : "hover:bg-fill-2"
           : active
-            ? "border-transparent bg-fill-2"
-            : "border-transparent hover:border-transparent hover:bg-fill-2";
+            ? "bg-fill-2"
+            : "hover:bg-fill-2";
 
     // Controlled tooltip visibility so that opening the dropdown (active=true)
     // immediately hides the tooltip instead of leaving it covering the panel.
@@ -166,7 +169,7 @@ export const SelectorPill = forwardRef<HTMLButtonElement, SelectorPillProps>(
         aria-label={ariaLabel}
         data-testid={dataTestId}
         title={tooltip ? undefined : (title ?? label)}
-        className={`group/pill flex items-center rounded-full border border-solid font-medium transition-all duration-200 focus:outline-none ${label ? GAP_CLASSES[size] : ""} ${buttonSizeClass} ${variantClasses} ${className}`}
+        className={`group/pill flex items-center rounded-full font-medium transition-colors duration-200 focus:outline-none ${label ? GAP_CLASSES[size] : ""} ${buttonSizeClass} ${variantClasses} ${className}`}
       >
         <span
           className={`relative inline-flex shrink-0 items-center justify-center ${ICON_CONTAINER_CLASSES[size]}`}
@@ -205,9 +208,9 @@ export const SelectorPill = forwardRef<HTMLButtonElement, SelectorPillProps>(
 
         {label && (
           <span
-            className={`${size === "xl" ? "" : "truncate"} leading-[1.2] ${labelColor}`}
+            className={`${size === "xl" ? "" : "truncate"} min-w-0 leading-[1.2] ${labelColor}`}
           >
-            {label}
+            {labelContent ?? label}
           </span>
         )}
 

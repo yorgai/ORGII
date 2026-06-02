@@ -119,9 +119,17 @@ export const INPUT_AREA_BUTTONS = {
   /** Icon size */
   iconSize: 16,
 
-  /** Circular button base - matches Session Creator ControlButtons */
+  /**
+   * Circular button base - matches Session Creator ControlButtons.
+   *
+   * Borderless on purpose: a hover-toggled `border` (even transparent → token)
+   * pairs poorly with `transition-all`, and icons sitting at sub-pixel
+   * coordinates can re-snap to whole pixels when the border paint flips,
+   * producing a 1px vertical "shake". Hover is a paint-only `bg` swap so the
+   * button stays in the main compositor layer.
+   */
   iconButtonBase:
-    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-solid border-transparent text-text-1 transition-all duration-200 focus:outline-none hover:border-border-2 hover:bg-bg-2",
+    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-text-1 transition-colors duration-200 focus:outline-none hover:bg-bg-2",
 
   // Hover uses a darker/lighter brand shade (paint-only) rather than
   // `opacity-80`. Opacity transitions force Chromium to promote the
@@ -141,10 +149,10 @@ export const INPUT_AREA_BUTTONS = {
   /** Circular button inactive (submit when empty) - dimmed primary, no hover change */
   iconButtonInactive: "border-none bg-primary-6 text-white opacity-50",
 
-  /** Trigger/dropdown open state (border, bg, shadow) */
-  triggerStateOpen: "border-border-2 bg-bg-2",
-  /** Trigger/dropdown closed state (transparent, hover shows) */
-  triggerStateClosed: "border-transparent hover:border-border-2 hover:bg-bg-2",
+  /** Trigger/dropdown open state (paint-only background) */
+  triggerStateOpen: "bg-bg-2",
+  /** Trigger/dropdown closed state (paint-only hover) */
+  triggerStateClosed: "hover:bg-bg-2",
 
   /** Pill/trigger compact size (for model selector, etc.) */
   pillTriggerSize: "h-[28px] px-3 text-[12px]",
