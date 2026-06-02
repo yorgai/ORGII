@@ -47,12 +47,6 @@ export function createNavigationHelpers(store: E2EStore) {
       store.set(stationModeAtom, "my-station");
       store.set(dockFilterAtom, "project");
       store.set(chatPanelMaximizedAtom, false);
-      await router.navigate("/orgii/workstation/project");
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve());
-        });
-      });
       const tab = createProjectWorkItemsTab(
         projectId,
         projectName,
@@ -79,6 +73,7 @@ export function createNavigationHelpers(store: E2EStore) {
       };
       localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(nextLayout));
       store.set(workstationLayoutAtom, nextLayout);
+      void router.navigate("/orgii/workstation/project").catch(() => undefined);
       const layout = store.get(workstationLayoutAtom);
       return {
         ok: true,
