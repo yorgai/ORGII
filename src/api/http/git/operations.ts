@@ -4,7 +4,28 @@
  * Fetch, pull, and push operations.
  */
 import { fetchRustApi, gitRepoUrl } from "./client";
+import type { GitErrorType } from "./streaming";
 import type { GitOperationResponse, GitPullResponse } from "./types";
+
+class GitRemoteOperationError extends Error {
+  readonly errorType: GitErrorType;
+
+  constructor(message: string, errorType: GitErrorType) {
+    super(message);
+    this.name = "GitRemoteOperationError";
+    this.errorType = errorType;
+  }
+}
+
+function throwGitRemoteOperationError(
+  result: { message?: string; error_type?: GitErrorType },
+  fallbackMessage: string
+): never {
+  throw new GitRemoteOperationError(
+    result.message || fallbackMessage,
+    result.error_type ?? "unknown"
+  );
+}
 
 /**
  * Fetch updates from remote
@@ -40,7 +61,7 @@ export const gitFetch = async (params: {
 
   // Check if fetch actually succeeded
   if (result && !result.success) {
-    throw new Error(result.message || "Fetch failed");
+    throwGitRemoteOperationError(result, "Fetch failed");
   }
 
   return result;
@@ -82,7 +103,7 @@ export const gitPull = async (params: {
 
   // Check if pull actually succeeded
   if (result && !result.success) {
-    throw new Error(result.message || "Pull failed");
+    throwGitRemoteOperationError(result, "Pull failed");
   }
 
   return result;
@@ -126,7 +147,7 @@ export const gitPush = async (params: {
 
   // Check if push actually succeeded
   if (result && !result.success) {
-    throw new Error(result.message || "Push failed");
+    throwGitRemoteOperationError(result, "Push failed");
   }
 
   return result;

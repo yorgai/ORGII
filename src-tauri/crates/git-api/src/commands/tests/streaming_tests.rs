@@ -104,6 +104,20 @@ fn authentication_failed_common() {
 }
 
 #[test]
+fn bad_credentials_common() {
+    for op in &["push", "pull", "fetch"] {
+        assert_eq!(
+            detect_error_type_from_output("remote: Invalid username or token.", op),
+            "authentication_failed"
+        );
+        assert_eq!(
+            detect_error_type_from_output("HTTP Basic: Access denied", op),
+            "authentication_failed"
+        );
+    }
+}
+
+#[test]
 fn network_error_common() {
     for op in &["push", "pull", "fetch"] {
         assert_eq!(

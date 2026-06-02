@@ -140,7 +140,7 @@ function buildCredentialBadge(
         {totalCount}
       </span>
       <span
-        className={`inline-block h-2 w-2 shrink-0 rounded-full ${dotColor}`}
+        className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`}
       />
     </div>
   );

@@ -30,6 +30,10 @@ pub fn routes() -> Router {
         .route("/api/git/repo/{repo_id}/push", post(push))
         .route("/api/git/repo/{repo_id}/pull", post(pull))
         .route("/api/git/repo/{repo_id}/fetch", post(fetch))
+        .route(
+            "/api/git/repo/{repo_id}/credentials/fill",
+            post(fill_credentials),
+        )
         // Streaming endpoints
         .route(
             "/api/git/repo/{repo_id}/push/stream",
@@ -283,6 +287,23 @@ pub async fn fetch(
         "status": 0,
         "data": result
     })))
+}
+
+/// Read an existing HTTPS credential from Git's configured credential helper.
+pub async fn fill_credentials(
+    Path(repo_id): Path<String>,
+    Query(query): Query<RemotesQuery>,
+    Json(req): Json<GitCredentialFillRequest>,
+) -> GitApiResult<Json<GitCredentialFillResponse>> {
+    let repo_path = resolve_repo_path(&repo_id, query.path.as_deref())?;
+
+    let result = commands::fill_git_credentials(&repo_path, &req.remote_url)
+        .map_err(GitApiError::from_git_error)?;
+
+    Ok(Json(GitCredentialFillResponse {
+        status: 0,
+        data: result,
+    }))
 }
 
 // ============================================

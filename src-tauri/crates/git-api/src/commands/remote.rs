@@ -12,8 +12,12 @@ use super::utils::run_git;
 use crate::types::*;
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use git::{close_inherited_fds, git_command};
+use std::io::Write;
 use std::path::Path;
-use std::process::Output;
+use std::process::{Output, Stdio};
+use std::time::{Duration, Instant};
+
+const GIT_CREDENTIAL_FILL_TIMEOUT: Duration = Duration::from_millis(1_200);
 
 /// List remotes
 pub fn list_remotes(repo_path: &Path) -> Result<Vec<GitRemoteInfo>, String> {
@@ -97,19 +101,161 @@ pub fn delete_remote(repo_path: &Path, name: &str) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Debug, Clone)]
+struct CredentialTarget {
+    protocol: String,
+    host: String,
+    path: Option<String>,
+}
+
+fn credential_target_from_remote(remote_url: &str) -> Option<CredentialTarget> {
+    let trimmed = remote_url.trim();
+    let without_protocol = trimmed.strip_prefix("https://")?;
+    let (host, path) = without_protocol
+        .split_once('/')
+        .map_or((without_protocol, None), |(host, path)| (host, Some(path)));
+    if host.is_empty() {
+        return None;
+    }
+    Some(CredentialTarget {
+        protocol: "https".to_string(),
+        host: host.to_string(),
+        path: path.map(ToString::to_string),
+    })
+}
+
+fn credential_input_for_target(target: &CredentialTarget) -> String {
+    let mut input = format!("protocol={}\nhost={}\n", target.protocol, target.host);
+    if let Some(path) = &target.path {
+        input.push_str(&format!("path={path}\n"));
+    }
+    input.push('\n');
+    input
+}
+
+fn parse_credential_output(output: &str) -> GitCredentialFillResult {
+    let mut username = None;
+    let mut password = None;
+
+    for line in output.lines() {
+        if let Some(value) = line.strip_prefix("username=") {
+            username = Some(value.to_string());
+        } else if let Some(value) = line.strip_prefix("password=") {
+            password = Some(value.to_string());
+        }
+    }
+
+    GitCredentialFillResult {
+        found: username.as_ref().is_some_and(|value| !value.is_empty())
+            && password.as_ref().is_some_and(|value| !value.is_empty()),
+        username,
+        password,
+    }
+}
+
+pub fn fill_git_credentials(
+    repo_path: &Path,
+    remote_url: &str,
+) -> Result<GitCredentialFillResult, String> {
+    let Some(target) = credential_target_from_remote(remote_url) else {
+        return Ok(GitCredentialFillResult {
+            found: false,
+            username: None,
+            password: None,
+        });
+    };
+
+    let mut command = git_command()?;
+    command
+        .args([
+            "-c",
+            "credential.interactive=false",
+            "-c",
+            "core.askPass=",
+            "credential",
+            "fill",
+        ])
+        .current_dir(repo_path)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "")
+        .env("GCM_INTERACTIVE", "Never")
+        .env("GCM_MODAL_PROMPT", "0")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+    close_inherited_fds(&mut command);
+
+    let mut child = command
+        .spawn()
+        .map_err(|err| format!("Failed to run git credential fill: {err}"))?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(credential_input_for_target(&target).as_bytes())
+            .map_err(|err| format!("Failed to write credential query: {err}"))?;
+    }
+
+    let started_at = Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => {
+                let output = child
+                    .wait_with_output()
+                    .map_err(|err| format!("Failed to read credential fill output: {err}"))?;
+                if !output.status.success() {
+                    return Ok(GitCredentialFillResult {
+                        found: false,
+                        username: None,
+                        password: None,
+                    });
+                }
+                return Ok(parse_credential_output(&String::from_utf8_lossy(
+                    &output.stdout,
+                )));
+            }
+            Ok(None) if started_at.elapsed() >= GIT_CREDENTIAL_FILL_TIMEOUT => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Ok(GitCredentialFillResult {
+                    found: false,
+                    username: None,
+                    password: None,
+                });
+            }
+            Ok(None) => std::thread::sleep(Duration::from_millis(25)),
+            Err(err) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(format!("Failed to poll credential fill: {err}"));
+            }
+        }
+    }
+}
+
 fn approve_git_credentials(repo_path: &Path, username: &str, token: &str) {
-    let credential_input = format!(
-        "protocol=https\nhost=github.com\nusername={username}\npassword={token}\n\n"
-    );
+    let credential_input =
+        format!("protocol=https\nhost=github.com\nusername={username}\npassword={token}\n\n");
 
     let Ok(mut command) = git_command() else {
         return;
     };
 
     command
-        .args(["credential", "approve"])
+        .args([
+            "-c",
+            "credential.interactive=false",
+            "-c",
+            "core.askPass=",
+            "credential",
+            "approve",
+        ])
         .current_dir(repo_path)
         .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "")
+        .env("GCM_INTERACTIVE", "Never")
+        .env("GCM_MODAL_PROMPT", "0")
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null());
@@ -120,7 +266,6 @@ fn approve_git_credentials(repo_path: &Path, username: &str, token: &str) {
     };
 
     if let Some(mut stdin) = child.stdin.take() {
-        use std::io::Write;
         let _ = stdin.write_all(credential_input.as_bytes());
     }
 
@@ -139,9 +284,14 @@ fn run_remote_git(
         let auth_header = format!("Authorization: Basic {basic_value}");
         let mut command = git_command()?;
         command
+            .args(["-c", "credential.interactive=false", "-c", "core.askPass="])
             .args(args)
             .current_dir(repo_path)
             .env("GIT_TERMINAL_PROMPT", "0")
+            .env("GIT_ASKPASS", "")
+            .env("SSH_ASKPASS", "")
+            .env("GCM_INTERACTIVE", "Never")
+            .env("GCM_MODAL_PROMPT", "0")
             .env("GIT_CONFIG_COUNT", "1")
             .env("GIT_CONFIG_KEY_0", "http.https://github.com/.extraHeader")
             .env("GIT_CONFIG_VALUE_0", auth_header)
@@ -160,9 +310,14 @@ fn run_remote_git(
 
     let mut command = git_command()?;
     command
+        .args(["-c", "credential.interactive=false", "-c", "core.askPass="])
         .args(args)
         .current_dir(repo_path)
         .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "")
+        .env("GCM_INTERACTIVE", "Never")
+        .env("GCM_MODAL_PROMPT", "0")
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
@@ -198,9 +353,19 @@ pub(crate) fn detect_push_error_type(message: &str) -> GitErrorType {
     // Authentication failed
     if lower.contains("authentication failed")
         || lower.contains("invalid credentials")
+        || lower.contains("invalid username or password")
+        || lower.contains("invalid username or token")
+        || lower.contains("bad credentials")
+        || lower.contains("http basic: access denied")
         || lower.contains("could not read username")
+        || lower.contains("unable to get password from user")
         || lower.contains("permission denied")
         || lower.contains("fatal: authentication")
+        || lower.contains("repository not found")
+        || lower.contains("saml")
+        || lower.contains("sso")
+        || lower.contains("password authentication was removed")
+        || lower.contains("requested url returned error: 403")
     {
         return GitErrorType::AuthenticationFailed;
     }
@@ -352,7 +517,17 @@ pub(crate) fn detect_pull_error_type(message: &str) -> (GitErrorType, Option<Vec
     // Authentication failed
     if lower.contains("authentication failed")
         || lower.contains("invalid credentials")
+        || lower.contains("invalid username or password")
+        || lower.contains("invalid username or token")
+        || lower.contains("bad credentials")
+        || lower.contains("http basic: access denied")
         || lower.contains("could not read username")
+        || lower.contains("unable to get password from user")
+        || lower.contains("repository not found")
+        || lower.contains("saml")
+        || lower.contains("sso")
+        || lower.contains("password authentication was removed")
+        || lower.contains("requested url returned error: 403")
     {
         return (GitErrorType::AuthenticationFailed, None);
     }
@@ -465,7 +640,17 @@ pub(crate) fn detect_fetch_error_type(message: &str) -> GitErrorType {
     // Authentication failed
     if lower.contains("authentication failed")
         || lower.contains("invalid credentials")
+        || lower.contains("invalid username or password")
+        || lower.contains("invalid username or token")
+        || lower.contains("bad credentials")
+        || lower.contains("http basic: access denied")
         || lower.contains("could not read username")
+        || lower.contains("unable to get password from user")
+        || lower.contains("repository not found")
+        || lower.contains("saml")
+        || lower.contains("sso")
+        || lower.contains("password authentication was removed")
+        || lower.contains("requested url returned error: 403")
     {
         return GitErrorType::AuthenticationFailed;
     }

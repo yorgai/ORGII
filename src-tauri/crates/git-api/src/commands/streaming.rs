@@ -84,8 +84,18 @@ pub(crate) fn detect_error_type_from_output(output: &str, operation: &str) -> &'
     // Common errors across all operations
     if lower.contains("authentication failed")
         || lower.contains("invalid credentials")
+        || lower.contains("invalid username or password")
+        || lower.contains("invalid username or token")
+        || lower.contains("bad credentials")
+        || lower.contains("http basic: access denied")
         || lower.contains("could not read username")
+        || lower.contains("unable to get password from user")
         || lower.contains("permission denied (publickey)")
+        || lower.contains("repository not found")
+        || lower.contains("saml")
+        || lower.contains("sso")
+        || lower.contains("password authentication was removed")
+        || lower.contains("requested url returned error: 403")
     {
         return "authentication_failed";
     }
@@ -344,7 +354,8 @@ pub async fn push_stream(
         Ok(command) => command,
         Err(err) => return git_resolution_error_response(err),
     };
-    cmd.arg("push");
+    cmd.args(["-c", "credential.interactive=false", "-c", "core.askPass="])
+        .arg("push");
 
     if set_upstream {
         cmd.arg("-u");
@@ -360,6 +371,10 @@ pub async fn push_stream(
 
     cmd.current_dir(&repo_path)
         .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "")
+        .env("GCM_INTERACTIVE", "Never")
+        .env("GCM_MODAL_PROMPT", "0")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -382,7 +397,8 @@ pub async fn pull_stream(
         Ok(command) => command,
         Err(err) => return git_resolution_error_response(err),
     };
-    cmd.arg("pull");
+    cmd.args(["-c", "credential.interactive=false", "-c", "core.askPass="])
+        .arg("pull");
 
     let strategy_flag = match query.strategy.as_deref() {
         Some("rebase") => {
@@ -407,6 +423,10 @@ pub async fn pull_stream(
 
     cmd.current_dir(&repo_path)
         .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "")
+        .env("GCM_INTERACTIVE", "Never")
+        .env("GCM_MODAL_PROMPT", "0")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -430,7 +450,9 @@ pub async fn fetch_stream(
         Ok(command) => command,
         Err(err) => return git_resolution_error_response(err),
     };
-    cmd.arg("fetch").arg(&remote);
+    cmd.args(["-c", "credential.interactive=false", "-c", "core.askPass="])
+        .arg("fetch")
+        .arg(&remote);
 
     if prune {
         cmd.arg("--prune");
@@ -438,6 +460,10 @@ pub async fn fetch_stream(
 
     cmd.current_dir(&repo_path)
         .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "")
+        .env("GCM_INTERACTIVE", "Never")
+        .env("GCM_MODAL_PROMPT", "0")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -507,6 +533,10 @@ pub async fn stage_stream(
     }
     cmd.current_dir(&repo_path)
         .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_ASKPASS", "")
+        .env("SSH_ASKPASS", "")
+        .env("GCM_INTERACTIVE", "Never")
+        .env("GCM_MODAL_PROMPT", "0")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());

@@ -398,8 +398,8 @@ export const GIT_PULL_STRATEGIES: {
   value: GitPullStrategy;
   labelKey: string;
 }[] = [
-  { value: "merge", labelKey: "editor.git.strategyMerge" },
   { value: "rebase", labelKey: "editor.git.strategyRebase" },
+  { value: "merge", labelKey: "editor.git.strategyMerge" },
   { value: "ff-only", labelKey: "editor.git.strategyFfOnly" },
 ];
 

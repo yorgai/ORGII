@@ -17,6 +17,7 @@ import {
   CreditCard,
   Database,
   FileText,
+  FolderGit2,
   FolderOpen,
   Globe,
   Hammer,
@@ -95,6 +96,7 @@ export const SEGMENT_REGISTRY: Record<string, SegmentRegistryEntry> = {
     labelKey: "integrations:categories.connections",
     icon: Unplug,
   },
+  git: { labelKey: "integrations:categories.git", icon: FolderGit2 },
   databases: { labelKey: "integrations:categories.databases", icon: Database },
   // Internal category key for the Rules / Memory / Evolution surface,
   // plus its public URL slug (see RULES_MEMORY_EVOLUTION_URL_SEGMENT in

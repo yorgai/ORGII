@@ -20,6 +20,7 @@
     "update": "Mettre à jour",
     "submit": "Soumettre",
     "loadMore": "Charger plus",
+    "load": "Charger",
     "back": "Retour",
     "next": "Suivant",
     "previous": "Précédent",
@@ -991,25 +992,21 @@
     "toOrigin": "vers origin",
     "authDialog": {
       "title": "Authentification GitHub requise",
-      "subtitle": "{{operation}} nécessite l’accès à ce repo distant",
-      "securityNote": "ORGII n’écrira jamais ce token dans votre configuration Git ni dans l’URL distante. Si vous choisissez de le stocker, il sera enregistré via le credential helper de Git.",
-      "persistenceLabel": "Stockage du token",
-      "storeForFutureOperations": "Stocker pour les futures opérations Git",
-      "useOnce": "Utiliser une fois",
+      "or": "Ou",
+      "tryMacKeychain": "Charger depuis le trousseau macOS",
+      "tryCredentialHelper": "Charger depuis Git credential helper",
+      "credentialStatus": {
+        "found": "Trouvé",
+        "notFound": "Introuvable"
+      },
       "usernameLabel": "Nom d’utilisateur GitHub",
       "usernameRequired": "Le nom d’utilisateur est requis",
       "tokenLabel": "Token d’accès personnel",
       "tokenRequired": "Le token est requis",
-      "tokenHelpPrefix": "Pour les remotes GitHub HTTPS, utilisez un token avec accès au repo. Vous pouvez en créer un dans",
-      "tokenSettingsLink": "les paramètres de token GitHub",
-      "remoteLabel": "Remote : {{remote}}",
-      "repoLabel": "Repo : {{repoPath}}",
-      "operations": {
-        "push": "Push",
-        "pull": "Pull",
-        "fetch": "Fetch",
-        "sync": "Sync"
-      }
+      "createTokenButton": "Créer un token",
+      "openGitSettingsButton": "Ouvrir les paramètres Git",
+      "configureInSettings": "Configurer Git dans les paramètres",
+      "configureInSettingsDesc": "Ajoutez l’accès GitHub App, enregistrez un token ou analysez les identifiants locaux dans Paramètres → Intégrations → Git, puis réessayez cette opération Git."
     },
     "actions": {
       "publish": "Publish",
@@ -1081,7 +1078,8 @@
       "chooseKey": "Choisir une clé",
       "noCompatibleAccounts": "Aucune clé compatible",
       "hoverModelHint": "Survolez un modèle pour voir les clés disponibles",
-      "variantFast": "Fast"
+      "variantFast": "Fast",
+      "selectAccount": "Sélectionner un compte"
     },
     "modelProperties": {
       "options": "Options"
@@ -1201,7 +1199,7 @@
         "createFrom": "Créer depuis une branche",
         "checkoutDetached": "Checkout détaché...",
         "deleteBranch": "Supprimer la branche",
-        "refresh": "Actualiser",
+        "refresh": "Actualiser la branche",
         "checkoutDetachedSuccess": "État detached HEAD au commit actuel",
         "checkoutDetachedFailed": "Échec du checkout detached HEAD"
       },

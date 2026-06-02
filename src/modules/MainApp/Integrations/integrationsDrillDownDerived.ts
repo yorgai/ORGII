@@ -78,15 +78,18 @@ export function buildIntegrationsDrillDownItems(
         statusDot: routine.enabled ? "bg-success-6" : "bg-text-4",
       }));
     }
+    case "git":
+      return input.hasGitHubConnections
+        ? [
+            {
+              id: "github",
+              name: "GitHub",
+              statusDot: "bg-success-6",
+            },
+          ]
+        : [];
     case "connections": {
       const items: DrillDownItem[] = [];
-      if (input.hasGitHubConnections) {
-        items.push({
-          id: "git:github",
-          name: "GitHub",
-          statusDot: "bg-success-6",
-        });
-      }
       for (const chType of CHANNEL_TYPES) {
         const instances = input.groupedChannels.get(chType.type);
         if (!instances) continue;
@@ -141,13 +144,9 @@ export function getIntegrationsDrillDownSelectedId(
     }
     case "routines":
       return input.selectedRoutineId ?? null;
+    case "git":
+      return input.selectedGitProvider;
     case "connections": {
-      if (
-        input.selectedIntegrationKind === "git" &&
-        input.selectedGitProvider
-      ) {
-        return `git:${input.selectedGitProvider}`;
-      }
       const ch = input.selectedChannel;
       if (ch) return `${ch.type}:${ch.accountId}`;
       return null;

@@ -94,6 +94,7 @@ const GlobalRepoBranchSelector: React.FC<GlobalRepoBranchSelectorProps> = ({
     handleSparklesClick,
     handleRepoClick,
     handleBranchClick,
+    activeSelector,
   } = useRepoBranchSelector({ repos });
 
   const handleRepoPillClick = useCallback(
@@ -152,7 +153,7 @@ const GlobalRepoBranchSelector: React.FC<GlobalRepoBranchSelectorProps> = ({
             selectedRepoId={selectedRepoId}
             handleRepoClick={handleRepoPillClick}
             compact={compact}
-            formOpen={spotlightOpen}
+            formOpen={spotlightOpen && activeSelector === "repo"}
           />
 
           {/* Chevron + branch: hidden for work folders and workspaces */}
@@ -184,7 +185,7 @@ const GlobalRepoBranchSelector: React.FC<GlobalRepoBranchSelectorProps> = ({
                 loading={branchLoading}
                 checkoutLoading={checkoutLoading}
                 compact={compact}
-                formOpen={spotlightOpen}
+                formOpen={spotlightOpen && activeSelector === "branch"}
               />
             </div>
           )}

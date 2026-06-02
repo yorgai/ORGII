@@ -46,7 +46,7 @@ export interface PillSelectorProps {
   hideLabel?: boolean;
   /** Called when hover state changes */
   onHoverChange?: (hovered: boolean) => void;
-  /** When true, suppress hover/pressed visuals (e.g. while the selector form is open) */
+  /** When true, show the selector as open/selected */
   formOpen?: boolean;
   dataTestId?: string;
 }
@@ -74,7 +74,7 @@ const PillSelector: React.FC<PillSelectorProps> = ({
   dataTestId,
 }) => {
   const { isDark } = useCurrentTheme();
-  const [ref, isHovered] = useSafeHover<HTMLDivElement>({ disabled: formOpen });
+  const [ref, isHovered] = useSafeHover<HTMLDivElement>();
   const [isPressed, setIsPressed] = useState(false);
   useEffect(() => () => setIsPressed(false), []);
 
@@ -104,7 +104,7 @@ const PillSelector: React.FC<PillSelectorProps> = ({
       }
     : {};
 
-  const showOverlay = (isHovered || isPressed) && showHoverState && !formOpen;
+  const showOverlay = (isHovered || isPressed || formOpen) && showHoverState;
 
   return (
     <div
@@ -113,7 +113,6 @@ const PillSelector: React.FC<PillSelectorProps> = ({
       className="relative flex cursor-pointer items-center"
       style={{ height: PILL_SELECTOR_HEIGHT }}
       onPointerDown={() => {
-        if (formOpen) return;
         pointerDownRef.current = true;
         setIsPressed(true);
       }}

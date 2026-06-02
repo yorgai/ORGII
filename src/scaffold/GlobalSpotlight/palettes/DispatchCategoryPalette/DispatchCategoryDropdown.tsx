@@ -9,7 +9,7 @@
  * The active variant is selected by the `general.modelPickerStyle`
  * setting and dispatched from the caller (e.g. SessionCreator).
  */
-import { Search } from "lucide-react";
+import { Check, Search } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -50,26 +50,32 @@ interface DropdownRowProps {
 }
 
 const DropdownRow: React.FC<DropdownRowProps> = ({ item, keyboardProps }) => {
-  const renderedIcon = useMemo(() => {
-    if (!item.icon) return null;
-    if (typeof item.icon === "string") {
-      return <i className={`${item.icon} text-[16px] text-text-2`} />;
-    }
-    return React.createElement(item.icon, { size: 16 });
-  }, [item.icon]);
-
   const data = getItemData(item);
   const rightContent = data.rightContent as React.ReactNode | undefined;
   const isCurrent = data.isCurrentSelection === true;
   const testId = typeof data.testId === "string" ? data.testId : undefined;
+
+  const renderedIcon = useMemo(() => {
+    if (isCurrent) {
+      return <Check size={16} strokeWidth={2.25} className="text-primary-6" />;
+    }
+    if (!item.icon) return null;
+    if (typeof item.icon === "string") {
+      return <i className={`${item.icon} text-[16px] text-text-2`} />;
+    }
+    return React.createElement(item.icon, {
+      size: 16,
+      className: "text-text-2",
+    });
+  }, [item.icon, isCurrent]);
 
   return (
     <button
       type="button"
       data-testid={testId}
       {...keyboardProps}
-      className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start ${
-        isCurrent ? "bg-fill-2" : ""
+      className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-start ${
+        isCurrent ? DROPDOWN_CLASSES.itemSelected : ""
       }`}
     >
       {renderedIcon && (
@@ -78,7 +84,11 @@ const DropdownRow: React.FC<DropdownRowProps> = ({ item, keyboardProps }) => {
         </span>
       )}
       <div className="flex min-w-0 flex-1 flex-col items-start">
-        <span className="truncate text-[13px] text-text-1">{item.label}</span>
+        <span
+          className={`truncate text-[13px] ${isCurrent ? "text-primary-6" : "text-text-1"}`}
+        >
+          {item.label}
+        </span>
         {item.desc && (
           <span className="truncate text-[11px] text-text-3">{item.desc}</span>
         )}

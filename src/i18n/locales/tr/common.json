@@ -20,6 +20,7 @@
     "update": "Güncelle",
     "submit": "Gönder",
     "loadMore": "Daha fazla yükle",
+    "load": "Yükle",
     "back": "Geri",
     "next": "İleri",
     "previous": "Önceki",
@@ -992,25 +993,21 @@
     "toOrigin": "origin'e",
     "authDialog": {
       "title": "GitHub kimlik doğrulaması gerekiyor",
-      "subtitle": "{{operation}} bu remote repo erişimine ihtiyaç duyuyor",
-      "securityNote": "ORGII bu token'ı asla Git config veya remote URL içine yazmaz. Saklamayı seçerseniz Git credential helper üzerinden kaydedilir.",
-      "persistenceLabel": "Token saklama",
-      "storeForFutureOperations": "Gelecekteki Git işlemleri için sakla",
-      "useOnce": "Bir kez kullan",
+      "or": "Veya",
+      "tryMacKeychain": "macOS Keychain'den yükle",
+      "tryCredentialHelper": "Git credential helper'dan yükle",
+      "credentialStatus": {
+        "found": "Bulundu",
+        "notFound": "Bulunamadı"
+      },
       "usernameLabel": "GitHub kullanıcı adı",
       "usernameRequired": "Kullanıcı adı gerekli",
       "tokenLabel": "Personal access token",
       "tokenRequired": "Token gerekli",
-      "tokenHelpPrefix": "GitHub HTTPS remotes için repo erişimi olan bir token kullanın. Bir tane oluşturabileceğiniz yer:",
-      "tokenSettingsLink": "GitHub token settings",
-      "remoteLabel": "Remote: {{remote}}",
-      "repoLabel": "Repo: {{repoPath}}",
-      "operations": {
-        "push": "Push",
-        "pull": "Pull",
-        "fetch": "Fetch",
-        "sync": "Sync"
-      }
+      "createTokenButton": "Token oluştur",
+      "openGitSettingsButton": "Git ayarlarını aç",
+      "configureInSettings": "Git’i ayarlarda yapılandır",
+      "configureInSettingsDesc": "Ayarlar → Entegrasyonlar → Git içinde GitHub App erişimi ekleyin, token kaydedin veya yerel kimlik bilgilerini tarayın; ardından bu Git işlemini yeniden deneyin."
     },
     "actions": {
       "publish": "Publish",
@@ -1082,7 +1079,8 @@
       "chooseKey": "Bir anahtar seçin",
       "noCompatibleAccounts": "Uyumlu anahtar yok",
       "hoverModelHint": "Kullanılabilir anahtarları görmek için bir modelin üzerine gelin",
-      "variantFast": "Fast"
+      "variantFast": "Fast",
+      "selectAccount": "Hesap seç"
     },
     "modelProperties": {
       "options": "Seçenekler"
@@ -1202,7 +1200,7 @@
         "createFrom": "Branch'ten oluştur",
         "checkoutDetached": "Detached checkout...",
         "deleteBranch": "Branch sil",
-        "refresh": "Yenile",
+        "refresh": "Branch yenile",
         "checkoutDetachedSuccess": "Mevcut commit'te detached HEAD durumunda",
         "checkoutDetachedFailed": "detached HEAD checkout başarısız"
       },

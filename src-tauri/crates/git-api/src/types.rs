@@ -304,6 +304,26 @@ pub struct FetchRequest {
 }
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct GitCredentialFillRequest {
+    pub remote_url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct GitCredentialFillResult {
+    pub found: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct GitCredentialFillResponse {
+    pub status: i32,
+    pub data: GitCredentialFillResult,
+}
+
+#[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct CreateBranchRequest {
     pub name: String,
     #[serde(default)]

@@ -10,17 +10,10 @@ import {
   isRegionSanctioned,
 } from "@src/config/providerRegions";
 import { useNetworkMonitor } from "@src/hooks/perf";
-import { currentRepoAtom } from "@src/store/repo/derived";
 import {
   monitorScanningAtom,
   networkRefreshTriggerAtom,
 } from "@src/store/ui/settingsPanelAtoms";
-
-export interface GitProxyInfo {
-  http_proxy: string | null;
-  https_proxy: string | null;
-  source: string | null;
-}
 
 export interface VpnInterface {
   name: string;
@@ -35,7 +28,6 @@ export interface VpnStatus {
 
 export function useNetworkSectionData() {
   const { t } = useTranslation("settings");
-  const currentRepo = useAtomValue(currentRepoAtom);
 
   const {
     connection,
@@ -50,83 +42,6 @@ export function useNetworkSectionData() {
 
   const setScanning = useSetAtom(monitorScanningAtom);
   const networkRefreshTrigger = useAtomValue(networkRefreshTriggerAtom);
-
-  const [proxyInfo, setProxyInfo] = useState<GitProxyInfo | null>(null);
-  const proxyLoadingRef = useRef(false);
-  const [proxyHttpDraft, setProxyHttpDraft] = useState("");
-  const [proxyHttpsDraft, setProxyHttpsDraft] = useState("");
-  const [proxySaving, setProxySaving] = useState(false);
-
-  const syncProxyDrafts = useCallback((info: GitProxyInfo | null) => {
-    setProxyHttpDraft(info?.http_proxy ?? "");
-    setProxyHttpsDraft(info?.https_proxy ?? "");
-  }, []);
-
-  const fetchProxy = useCallback(
-    async (cancelled?: { current: boolean }) => {
-      if (proxyLoadingRef.current) return;
-      proxyLoadingRef.current = true;
-      try {
-        const info = await invoke<GitProxyInfo>("get_git_proxy_config", {
-          repoPath: currentRepo?.path ?? null,
-        });
-        if (!cancelled?.current) setProxyInfo(info);
-        if (!cancelled?.current) syncProxyDrafts(info);
-      } catch {
-        if (!cancelled?.current) setProxyInfo(null);
-      } finally {
-        proxyLoadingRef.current = false;
-      }
-    },
-    [currentRepo?.path, syncProxyDrafts]
-  );
-
-  const handleProxyCancel = useCallback(() => {
-    syncProxyDrafts(proxyInfo);
-  }, [proxyInfo, syncProxyDrafts]);
-
-  const handleProxySave = useCallback(async () => {
-    setProxySaving(true);
-    try {
-      await invoke("set_git_proxy_config", {
-        httpProxy: proxyHttpDraft.trim(),
-        httpsProxy: proxyHttpsDraft.trim(),
-        repoPath: null,
-        global: true,
-      });
-      await fetchProxy();
-      Message.success(t("monitor.gitProxySaved"));
-    } catch (err) {
-      Message.error(
-        err instanceof Error ? err.message : t("monitor.gitProxySaveFailed")
-      );
-    } finally {
-      setProxySaving(false);
-    }
-  }, [proxyHttpDraft, proxyHttpsDraft, fetchProxy, t]);
-
-  const handleProxyClear = useCallback(async () => {
-    setProxySaving(true);
-    try {
-      await invoke("unset_git_proxy_config", {
-        repoPath: null,
-        global: true,
-      });
-      syncProxyDrafts(null);
-      await fetchProxy();
-      Message.success(t("monitor.gitProxyCleared"));
-    } catch (err) {
-      Message.error(
-        err instanceof Error ? err.message : t("monitor.gitProxyClearFailed")
-      );
-    } finally {
-      setProxySaving(false);
-    }
-  }, [fetchProxy, syncProxyDrafts, t]);
-
-  const proxyDirty =
-    proxyHttpDraft.trim() !== (proxyInfo?.http_proxy ?? "").trim() ||
-    proxyHttpsDraft.trim() !== (proxyInfo?.https_proxy ?? "").trim();
 
   const [vpnStatus, setVpnStatus] = useState<VpnStatus | null>(null);
   const vpnLoadingRef = useRef(false);
@@ -157,14 +72,14 @@ export function useNetworkSectionData() {
     setScanning(true);
     try {
       resetStats();
-      await Promise.all([refreshGeo(), fetchVpn(), fetchProxy()]);
+      await Promise.all([refreshGeo(), fetchVpn()]);
       Message.success(
         t("common:refreshToast.successName", { name: t("common:tabs.network") })
       );
     } finally {
       setScanning(false);
     }
-  }, [resetStats, refreshGeo, fetchVpn, fetchProxy, setScanning, t]);
+  }, [resetStats, refreshGeo, fetchVpn, setScanning, t]);
 
   useEffect(() => {
     if (networkRefreshTrigger > 0) {
@@ -176,12 +91,8 @@ export function useNetworkSectionData() {
   useEffect(() => {
     if (mountFetchedRef.current) return;
     mountFetchedRef.current = true;
-    const cancelled = { current: false };
-    void Promise.all([fetchProxy(cancelled), fetchVpn(), fetchGeo()]);
-    return () => {
-      cancelled.current = true;
-    };
-  }, [fetchProxy, fetchVpn, fetchGeo]);
+    void Promise.all([fetchVpn(), fetchGeo()]);
+  }, [fetchVpn, fetchGeo]);
 
   const connectionLabel =
     connection === "online"
@@ -249,16 +160,5 @@ export function useNetworkSectionData() {
     hasAnyRestriction,
     // vpn
     vpnStatus,
-    // proxy
-    proxyInfo,
-    proxyHttpDraft,
-    setProxyHttpDraft,
-    proxyHttpsDraft,
-    setProxyHttpsDraft,
-    proxySaving,
-    proxyDirty,
-    handleProxyCancel,
-    handleProxySave,
-    handleProxyClear,
   };
 }

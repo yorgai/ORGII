@@ -190,28 +190,7 @@ export function useBranchItems(
       return refList;
     }
 
-    // Checkout mode: show categorized branches
-    if (searchQuery) {
-      // Flat list when searching
-      filteredBranches.forEach((branch) => {
-        result.push(createBranchItem(branch));
-      });
-
-      // Sort: action items first, then current branch
-      result.sort((a, b) => {
-        const aData = a.data as Record<string, unknown> | undefined;
-        const bData = b.data as Record<string, unknown> | undefined;
-        if (aData?.isActionItem && !bData?.isActionItem) return -1;
-        if (!aData?.isActionItem && bData?.isActionItem) return 1;
-        if (aData?.isCurrentSelection) return -1;
-        if (bData?.isCurrentSelection) return 1;
-        return 0;
-      });
-
-      return result;
-    }
-
-    // No search: categorize branches with headers
+    // Checkout mode: show categorized branches with headers, including during search.
     const categorized = categorizeBranches(filteredBranches);
 
     if (categorized.recent.length > 0) {

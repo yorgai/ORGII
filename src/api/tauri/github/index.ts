@@ -9,6 +9,8 @@ import { invoke } from "@tauri-apps/api/core";
 
 import { API_BASE_URLS } from "../../http/client/config";
 
+export const LOCAL_GITHUB_TOKEN_USER_ID = "local_git";
+
 // ============================================
 // Helpers
 // ============================================
@@ -79,6 +81,12 @@ export interface LocalGitHubBranch {
 export interface LocalPRResponse {
   number: number;
   url: string;
+}
+
+export interface GitHubGitCredential {
+  username: string;
+  token: string;
+  repo_full_name: string;
 }
 
 export interface ProfileData {
@@ -225,6 +233,19 @@ export async function cloneRepoLocal(
     targetDir,
     branch: branch ?? null,
   });
+}
+
+export async function getGitHubGitCredentialForRemote(
+  userId: string,
+  remoteUrl: string
+): Promise<GitHubGitCredential | null> {
+  return invoke<GitHubGitCredential | null>(
+    "github_git_credential_for_remote",
+    {
+      userId,
+      remoteUrl,
+    }
+  );
 }
 
 /**

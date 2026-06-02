@@ -5,7 +5,7 @@ import { AGENT_BROWSER_SETTING_KEYS } from "@src/config/settingsSchema/registry/
 import type { SettingsSectionDefinition } from "@src/config/settingsUiManifest/types";
 
 const MY_ROLE_SETTING_KEYS = [
-  "agent.sde.questionAutoSkipTimeout",
+  "agent.sde.questionAutoSkipTimeoutByPresence",
   "general.presenceGuidanceOnline",
   "general.presenceGuidanceInvisible",
   "general.presenceGuidanceAway",

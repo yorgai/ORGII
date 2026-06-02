@@ -2,7 +2,7 @@
  * Editor & Workspace Settings Section
  *
  * Two URL-addressable tabs:
- *   - `editor` (default): terminal, git, language servers, external IDE
+ *   - `editor` (default): terminal, language servers, external IDE
  *   - `index`           : code search indexing + embedding model
  *
  * The `index` tab body lives in `IndexingSection` and is lazy-loaded so
@@ -14,7 +14,6 @@ import React, { Suspense, lazy } from "react";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
 import ExternalIdeSection from "./components/ExternalIdeSection";
-import GitSection from "./components/GitSection";
 import LanguageServersSection from "./components/LanguageServersSection";
 import TerminalSection from "./components/TerminalSettingsSection";
 
@@ -49,7 +48,6 @@ const EditorSection: React.FC<EditorSectionProps> = ({ activeTab }) => {
     <>
       <ExternalIdeSection />
       <TerminalSection />
-      <GitSection />
       <LanguageServersSection />
     </>
   );

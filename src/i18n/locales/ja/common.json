@@ -20,6 +20,7 @@
     "update": "更新",
     "submit": "送信",
     "loadMore": "もっと読み込む",
+    "load": "読み込む",
     "back": "戻る",
     "next": "次へ",
     "previous": "前へ",
@@ -992,25 +993,21 @@
     "toOrigin": "origin へ",
     "authDialog": {
       "title": "GitHub 認証が必要です",
-      "subtitle": "{{operation}} にはこの remote repo へのアクセスが必要です",
-      "securityNote": "ORGII はこの token を Git 設定や remote URL に書き込みません。保存を選択した場合は、Git の credential helper 経由で保存されます。",
-      "persistenceLabel": "Token の保存",
-      "storeForFutureOperations": "今後の Git 操作用に保存",
-      "useOnce": "一度だけ使用",
+      "or": "または",
+      "tryMacKeychain": "macOS Keychain から読み込む",
+      "tryCredentialHelper": "Git credential helper から読み込む",
+      "credentialStatus": {
+        "found": "見つかりました",
+        "notFound": "見つかりません"
+      },
       "usernameLabel": "GitHub ユーザー名",
       "usernameRequired": "ユーザー名は必須です",
       "tokenLabel": "Personal access token",
       "tokenRequired": "Token は必須です",
-      "tokenHelpPrefix": "GitHub HTTPS remotes には、repo アクセス権を持つ token を使用してください。作成先：",
-      "tokenSettingsLink": "GitHub token settings",
-      "remoteLabel": "Remote: {{remote}}",
-      "repoLabel": "Repo: {{repoPath}}",
-      "operations": {
-        "push": "Push",
-        "pull": "Pull",
-        "fetch": "Fetch",
-        "sync": "Sync"
-      }
+      "createTokenButton": "Token を作成",
+      "openGitSettingsButton": "Git 設定を開く",
+      "configureInSettings": "設定で Git を構成",
+      "configureInSettingsDesc": "設定 → 連携 → Git で GitHub App アクセスの追加、token の保存、またはローカル認証情報のスキャンを行い、その後この Git 操作を再試行してください。"
     },
     "actions": {
       "publish": "Publish",
@@ -1082,7 +1079,8 @@
       "chooseKey": "キーを選択",
       "noCompatibleAccounts": "互換性のあるキーがありません",
       "hoverModelHint": "モデルにカーソルを合わせると利用可能なキーが表示されます",
-      "variantFast": "Fast"
+      "variantFast": "Fast",
+      "selectAccount": "アカウントを選択"
     },
     "modelProperties": {
       "options": "オプション"
@@ -1202,7 +1200,7 @@
         "createFrom": "Branch から作成",
         "checkoutDetached": "detached をチェックアウト...",
         "deleteBranch": "ブランチを削除",
-        "refresh": "更新",
+        "refresh": "ブランチを更新",
         "checkoutDetachedSuccess": "detached HEAD 状態になりました（現在のコミット）",
         "checkoutDetachedFailed": "detached HEAD へのチェックアウトに失敗しました"
       },

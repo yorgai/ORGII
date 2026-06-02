@@ -4,7 +4,11 @@
  * Remote repository management functions.
  */
 import { fetchRustApi, gitRepoUrl } from "./client";
-import type { GitRemoteInfo, GitRemotesResponse } from "./types";
+import type {
+  GitCredentialFillResponse,
+  GitRemoteInfo,
+  GitRemotesResponse,
+} from "./types";
 
 /**
  * Get all configured remotes
@@ -26,6 +30,24 @@ export const getGitRemotes = async (params: {
     console.error("[GitAPI] Failed to fetch remotes from Rust server:", error);
     return undefined;
   }
+};
+
+export const fillGitCredentials = async (params: {
+  repo_id: string;
+  repo_path?: string;
+  remoteUrl: string;
+}): Promise<GitCredentialFillResponse["data"] | undefined> => {
+  const queryParams = new URLSearchParams();
+  if (params.repo_path) queryParams.append("path", params.repo_path);
+
+  const response = await fetchRustApi<GitCredentialFillResponse["data"]>(
+    `${gitRepoUrl(params.repo_id)}/credentials/fill${queryParams.toString() ? `?${queryParams.toString()}` : ""}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ remote_url: params.remoteUrl }),
+    }
+  );
+  return response.data;
 };
 
 /**

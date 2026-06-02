@@ -5,13 +5,14 @@
  * Spotlight through URL-like route state so toolbar, status bar, and default
  * Spotlight commands all share the same embedded selector layers.
  */
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
   type MouseEvent,
   type RefObject,
   useCallback,
   useMemo,
   useRef,
+  useState,
 } from "react";
 
 import {
@@ -22,6 +23,8 @@ import { spotlightOpenAtom } from "@src/store";
 import { spotlightInitialQueryAtom } from "@src/store/ui/uiAtom";
 
 import type { RepoOption } from "../types";
+
+type ActiveSelector = "repo" | "branch" | null;
 
 export interface UseRepoBranchSelectorOptions {
   repos: RepoOption[];
@@ -39,15 +42,18 @@ export interface UseRepoBranchSelectorReturn {
   handleSparklesClick: () => void;
   handleRepoClick: (event: MouseEvent) => void;
   handleBranchClick: (event: MouseEvent) => void;
+  activeSelector: ActiveSelector;
 }
 
 export function useRepoBranchSelector(
   options: UseRepoBranchSelectorOptions
 ): UseRepoBranchSelectorReturn {
   const { repos } = options;
+  const spotlightOpen = useAtomValue(spotlightOpenAtom);
   const setSpotlightOpen = useSetAtom(spotlightOpenAtom);
   const setSpotlightInitialQuery = useSetAtom(spotlightInitialQueryAtom);
   const toolbarContainerRef = useRef<HTMLDivElement>(null);
+  const [activeSelector, setActiveSelector] = useState<ActiveSelector>(null);
 
   const parseRepoDisplayName = useCallback((repo: RepoOption) => {
     let displayName = repo.name;
@@ -79,6 +85,7 @@ export function useRepoBranchSelector(
   }, [repos, parseRepoDisplayName]);
 
   const handleSparklesClick = useCallback(() => {
+    setActiveSelector(null);
     setSpotlightInitialQuery(null);
     setSpotlightOpen(true);
   }, [setSpotlightInitialQuery, setSpotlightOpen]);
@@ -86,6 +93,7 @@ export function useRepoBranchSelector(
   const handleRepoClick = useCallback(
     (event: MouseEvent) => {
       event.stopPropagation();
+      setActiveSelector("repo");
       setSpotlightInitialQuery(createWorkspaceSpotlightRequest("switch"));
       setSpotlightOpen(true);
     },
@@ -95,6 +103,7 @@ export function useRepoBranchSelector(
   const handleBranchClick = useCallback(
     (event: MouseEvent) => {
       event.stopPropagation();
+      setActiveSelector("branch");
       setSpotlightInitialQuery(createBranchSpotlightRequest());
       setSpotlightOpen(true);
     },
@@ -108,6 +117,7 @@ export function useRepoBranchSelector(
     handleSparklesClick,
     handleRepoClick,
     handleBranchClick,
+    activeSelector: spotlightOpen ? activeSelector : null,
   };
 }
 

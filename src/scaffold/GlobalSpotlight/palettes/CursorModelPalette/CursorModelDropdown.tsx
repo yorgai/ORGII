@@ -70,12 +70,17 @@ const CursorModelDropdownRow: React.FC<CursorModelDropdownRowProps> = ({
       } w-full justify-start`}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-        <ModelIcon modelName={model.name} size={16} />
+        {isCurrent ? (
+          <Check size={16} strokeWidth={2.25} className="text-primary-6" />
+        ) : (
+          <ModelIcon modelName={model.name} size={16} />
+        )}
       </span>
-      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
-      {isCurrent && (
-        <Check size={14} className="ml-2 shrink-0 text-primary-6" />
-      )}
+      <span
+        className={`min-w-0 flex-1 truncate text-left ${isCurrent ? "text-primary-6" : ""}`}
+      >
+        {label}
+      </span>
     </button>
   );
 };

@@ -31,6 +31,7 @@
  * </DropdownItem>
  * ```
  */
+import { Check } from "lucide-react";
 import React, { forwardRef, memo } from "react";
 
 import DropdownSelectedCheck from "./DropdownSelectedCheck";
@@ -65,13 +66,20 @@ export interface DropdownItemProps {
   compact?: boolean;
 
   /**
-   * Whether to show a trailing checkmark when `selected`. Defaults to
-   * `true` because the selected state no longer has a background fill —
-   * the checkmark is now the primary selected indicator. A caller-supplied
-   * `suffix` always takes precedence over the checkmark.
+   * Whether to show a checkmark when `selected`. Defaults to `true` because
+   * the selected state no longer has a background fill — the checkmark is now
+   * the primary selected indicator. A caller-supplied `suffix` always takes
+   * precedence over the trailing checkmark.
    * @default true
    */
   showCheckmark?: boolean;
+
+  /**
+   * Controls where the selected check appears. Defaults to the existing
+   * trailing placement; `icon` replaces the leading icon with a check.
+   * @default "trailing"
+   */
+  selectedCheckPlacement?: "trailing" | "icon";
 
   /**
    * Whether this item is disabled
@@ -120,6 +128,7 @@ const DropdownItemInner = forwardRef<HTMLDivElement, DropdownItemProps>(
       selected = false,
       compact = false,
       showCheckmark = true,
+      selectedCheckPlacement = "trailing",
       disabled = false,
       highlighted = false,
       onClick,
@@ -165,7 +174,15 @@ const DropdownItemInner = forwardRef<HTMLDivElement, DropdownItemProps>(
           <span
             className={`flex-shrink-0 ${selected ? "text-primary-6" : "text-text-2"}`}
           >
-            {icon}
+            {showCheckmark && selected && selectedCheckPlacement === "icon" ? (
+              <Check
+                size={14}
+                strokeWidth={2.25}
+                className="shrink-0 text-primary-6"
+              />
+            ) : (
+              icon
+            )}
           </span>
         )}
 
@@ -175,7 +192,10 @@ const DropdownItemInner = forwardRef<HTMLDivElement, DropdownItemProps>(
         </span>
 
         {/* Suffix or Checkmark */}
-        {(suffix || (showCheckmark && selected)) && (
+        {(suffix ||
+          (showCheckmark &&
+            selected &&
+            selectedCheckPlacement === "trailing")) && (
           <span
             className={`flex-shrink-0 ${selected ? "text-primary-6" : "text-text-3"}`}
           >

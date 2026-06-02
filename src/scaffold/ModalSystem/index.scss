@@ -41,6 +41,17 @@
   }
 }
 
+// Modal Drag Zone - keeps the app chrome draggable while overlay covers it
+.liquid-modal-drag-zone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  cursor: default;
+  -webkit-app-region: drag;
+}
+
 // Modal Container - Centers the modal
 .liquid-modal-container {
   position: relative;

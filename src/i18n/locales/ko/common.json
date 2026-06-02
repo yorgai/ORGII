@@ -20,6 +20,7 @@
     "update": "업데이트",
     "submit": "제출",
     "loadMore": "더 보기",
+    "load": "불러오기",
     "back": "뒤로",
     "next": "다음",
     "previous": "이전",
@@ -992,25 +993,21 @@
     "toOrigin": "origin으로",
     "authDialog": {
       "title": "GitHub authentication required",
-      "subtitle": "{{operation}} needs access to this remote repo",
-      "securityNote": "ORGII will never write this token to your Git config or remote URL. If you choose to store it, it will be saved through Git's credential helper.",
-      "persistenceLabel": "Token storage",
-      "storeForFutureOperations": "Store for future Git operations",
-      "useOnce": "Use once",
+      "or": "또는",
+      "tryMacKeychain": "macOS Keychain에서 불러오기",
+      "tryCredentialHelper": "Git credential helper에서 불러오기",
+      "credentialStatus": {
+        "found": "찾음",
+        "notFound": "찾을 수 없음"
+      },
       "usernameLabel": "GitHub username",
       "usernameRequired": "Username is required",
       "tokenLabel": "Personal access token",
       "tokenRequired": "Token is required",
-      "tokenHelpPrefix": "For GitHub HTTPS remotes, use a token with repository access. You can create one in",
-      "tokenSettingsLink": "GitHub token settings",
-      "remoteLabel": "Remote: {{remote}}",
-      "repoLabel": "Repo: {{repoPath}}",
-      "operations": {
-        "push": "Push",
-        "pull": "Pull",
-        "fetch": "Fetch",
-        "sync": "Sync"
-      }
+      "createTokenButton": "Token 만들기",
+      "openGitSettingsButton": "Git 설정 열기",
+      "configureInSettings": "설정에서 Git 구성",
+      "configureInSettingsDesc": "설정 → 통합 → Git에서 GitHub App 액세스를 추가하거나 token을 저장하거나 로컬 자격 증명을 스캔한 다음 이 Git 작업을 다시 시도하세요."
     },
     "actions": {
       "publish": "Publish",
@@ -1082,7 +1079,8 @@
       "chooseKey": "키 선택",
       "noCompatibleAccounts": "호환되는 키 없음",
       "hoverModelHint": "모델 위에 마우스를 올리면 사용 가능한 키가 표시됩니다",
-      "variantFast": "Fast"
+      "variantFast": "Fast",
+      "selectAccount": "계정 선택"
     },
     "modelProperties": {
       "options": "옵션"
@@ -1202,7 +1200,7 @@
         "createFrom": "Branch에서 생성",
         "checkoutDetached": "detached 체크아웃...",
         "deleteBranch": "브랜치 삭제",
-        "refresh": "새로 고침",
+        "refresh": "브랜치 새로 고침",
         "checkoutDetachedSuccess": "현재 커밋에서 detached HEAD 상태입니다",
         "checkoutDetachedFailed": "detached HEAD 체크아웃 실패"
       },

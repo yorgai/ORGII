@@ -20,6 +20,7 @@
     "update": "更新",
     "submit": "提交",
     "loadMore": "加载更多",
+    "load": "加载",
     "back": "返回",
     "next": "下一步",
     "previous": "上一步",
@@ -992,25 +993,21 @@
     "toOrigin": "到 origin",
     "authDialog": {
       "title": "需要 GitHub 身份验证",
-      "subtitle": "{{operation}} 需要访问此远程 repo",
-      "securityNote": "ORGII 绝不会将此 token 写入你的 Git 配置或远程 URL。如果选择存储，它会通过 Git 的 credential helper 保存。",
-      "persistenceLabel": "Token 存储",
-      "storeForFutureOperations": "为后续 Git 操作存储",
-      "useOnce": "仅使用一次",
+      "or": "或",
+      "tryMacKeychain": "从 macOS Keychain 载入",
+      "tryCredentialHelper": "从 Git credential helper 载入",
+      "credentialStatus": {
+        "found": "找到",
+        "notFound": "未找到"
+      },
       "usernameLabel": "GitHub 用户名",
       "usernameRequired": "需要用户名",
       "tokenLabel": "Personal access token",
       "tokenRequired": "需要 token",
-      "tokenHelpPrefix": "对于 GitHub HTTPS remotes，请使用具有 repo 访问权限的 token。你可以在这里创建：",
-      "tokenSettingsLink": "GitHub token settings",
-      "remoteLabel": "Remote：{{remote}}",
-      "repoLabel": "Repo：{{repoPath}}",
-      "operations": {
-        "push": "Push",
-        "pull": "Pull",
-        "fetch": "Fetch",
-        "sync": "Sync"
-      }
+      "createTokenButton": "创建 Token",
+      "openGitSettingsButton": "打开 Git 设置",
+      "configureInSettings": "在设置中配置 Git",
+      "configureInSettingsDesc": "在 设置 → 集成 → Git 中添加 GitHub App 访问权限、保存 token 或扫描本地凭据，然后重试此 Git 操作。"
     },
     "actions": {
       "publish": "Publish",
@@ -1082,7 +1079,8 @@
       "chooseKey": "选择密钥",
       "noCompatibleAccounts": "无兼容密钥",
       "hoverModelHint": "悬停模型以查看可用密钥",
-      "variantFast": "Fast"
+      "variantFast": "Fast",
+      "selectAccount": "选择账号"
     },
     "modelProperties": {
       "options": "选项"
@@ -1202,7 +1200,7 @@
         "createFrom": "基于分支创建",
         "checkoutDetached": "切换到 detached...",
         "deleteBranch": "删除分支",
-        "refresh": "刷新",
+        "refresh": "刷新分支",
         "checkoutDetachedSuccess": "已切换到 detached HEAD 状态（当前提交）",
         "checkoutDetachedFailed": "切换到 detached HEAD 失败"
       },

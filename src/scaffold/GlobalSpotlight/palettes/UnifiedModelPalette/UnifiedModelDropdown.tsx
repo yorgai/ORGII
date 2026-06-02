@@ -10,10 +10,15 @@
  * active variant is chosen by the `general.modelPickerStyle` setting and
  * dispatched in `ModelPill`.
  */
-import { ChevronLeft, Search } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { Check, ChevronRight, Search } from "lucide-react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
-import { useTranslation } from "react-i18next";
 
 import {
   DROPDOWN_CLASSES,
@@ -28,9 +33,15 @@ import { useFilteredItems } from "@src/hooks/search";
 
 import type { SpotlightItem } from "../../shared";
 import type { UnifiedModelPaletteProps } from "./types";
-import { useUnifiedModelPalette } from "./useUnifiedModelPalette";
+import {
+  MODEL_SECTION,
+  useUnifiedModelPalette,
+} from "./useUnifiedModelPalette";
 
 const DROPDOWN_WIDTH = 320;
+const SUBMENU_WIDTH = 260;
+const SUBMENU_GAP = 8;
+const SUBMENU_VERTICAL_OFFSET = 4;
 const LIST_MAX_HEIGHT = 280;
 const VIEWPORT_MARGIN = 12;
 
@@ -42,21 +53,37 @@ function isHeaderItem(item: SpotlightItem): boolean {
   return getItemData(item).isHeader === true;
 }
 
+type SubmenuSide = "left" | "right";
+
 interface DropdownRowProps {
   item: SpotlightItem;
   keyboardProps?: ReturnType<UseDropdownListNavigationReturn["getItemProps"]>;
+  onRowMouseEnter?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  submenuSide?: SubmenuSide;
 }
 
-const DropdownRow: React.FC<DropdownRowProps> = ({ item, keyboardProps }) => {
+const DropdownRow: React.FC<DropdownRowProps> = ({
+  item,
+  keyboardProps,
+  onRowMouseEnter,
+  submenuSide,
+}) => {
+  const data = getItemData(item);
+  const isCurrent = data.isCurrentSelection === true;
+
   const renderedIcon = useMemo(() => {
+    if (isCurrent) {
+      return <Check size={16} strokeWidth={2.25} className="text-primary-6" />;
+    }
     if (!item.icon) return null;
     if (typeof item.icon === "string") {
       return <i className={`${item.icon} text-[16px] text-text-2`} />;
     }
-    return React.createElement(item.icon, { size: 16 });
-  }, [item.icon]);
-
-  const data = getItemData(item);
+    return React.createElement(item.icon, {
+      size: 16,
+      className: "text-text-2",
+    });
+  }, [item.icon, isCurrent]);
 
   if (isHeaderItem(item)) {
     return (
@@ -70,20 +97,31 @@ const DropdownRow: React.FC<DropdownRowProps> = ({ item, keyboardProps }) => {
   const rightContent = data.rightContent as React.ReactNode | undefined;
   const rightLabel = data.rightLabel as string | undefined;
   const testId = typeof data.testId === "string" ? data.testId : undefined;
+  const handleMouseEnter = (event: React.MouseEvent<HTMLButtonElement>) => {
+    keyboardProps?.onMouseEnter();
+    onRowMouseEnter?.(event);
+  };
 
   return (
     <button
       type="button"
       data-testid={testId}
       {...keyboardProps}
-      className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start`}
+      onMouseEnter={handleMouseEnter}
+      className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-start ${
+        isCurrent ? DROPDOWN_CLASSES.itemSelected : ""
+      }`}
     >
       {renderedIcon && (
         <span className="flex h-5 w-5 shrink-0 items-center justify-center">
           {renderedIcon}
         </span>
       )}
-      <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13px]">
+      <span
+        className={`flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13px] ${
+          isCurrent ? "text-primary-6" : ""
+        }`}
+      >
         {labelContent ?? item.label}
       </span>
       {rightContent
@@ -93,6 +131,9 @@ const DropdownRow: React.FC<DropdownRowProps> = ({ item, keyboardProps }) => {
               {rightLabel}
             </span>
           )}
+      {submenuSide && (
+        <ChevronRight size={14} className="shrink-0 text-text-3" />
+      )}
     </button>
   );
 };
@@ -114,41 +155,26 @@ export const UnifiedModelDropdown: React.FC<UnifiedModelDropdownProps> = ({
   anchorRef,
   placement = "bottom",
 }) => {
-  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const tauriSelectAll = useTauriSelectAllShortcut();
 
-  const {
-    activeColumn,
-    rawItems,
-    sourceItems,
-    handleBack: handleBackInternal,
-    tCommon,
-  } = useUnifiedModelPalette({
-    isOpen,
-    onClose,
-    advancedConfig,
-    onConfigChange,
-    dispatchCategoryOverride,
-    cliAgentTypeOverride,
-  });
+  const { sideMenuRawItems, sourceItems, selectedModelId, tCommon } =
+    useUnifiedModelPalette({
+      isOpen,
+      onClose,
+      advancedConfig,
+      onConfigChange,
+      dispatchCategoryOverride,
+      cliAgentTypeOverride,
+    });
 
-  // The dropdown keeps the classic two-step flow: model list, then the
-  // compatible accounts for the chosen model.
-  const step = activeColumn;
-  const visibleItems = step === "sources" ? sourceItems : rawItems;
-
-  const [searchQuery, setSearchQuery] = React.useState("");
-
-  // Resetting search query is a user-action-driven side effect (back nav),
-  // not effect-synced state — keep it bound to the click handler.
-  const handleBack = useCallback(() => {
-    setSearchQuery("");
-    handleBackInternal();
-  }, [handleBackInternal]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [submenuOpen, setSubmenuOpen] = useState(false);
+  const [submenuSelectedIndex, setSubmenuSelectedIndex] = useState(0);
+  const [submenuAnchorTop, setSubmenuAnchorTop] = useState<number | null>(null);
 
   const { filteredItems } = useFilteredItems({
-    items: visibleItems,
+    items: sideMenuRawItems,
     searchQuery,
     getSearchText: (item: SpotlightItem) => {
       const data = getItemData(item);
@@ -158,20 +184,44 @@ export const UnifiedModelDropdown: React.FC<UnifiedModelDropdownProps> = ({
     },
   });
 
-  // ── Focus search on open / step change ────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
     const frame = requestAnimationFrame(() => {
       setSearchQuery("");
+      setSubmenuOpen(false);
+      setSubmenuSelectedIndex(0);
+      setSubmenuAnchorTop(null);
       inputRef.current?.focus();
     });
     return () => cancelAnimationFrame(frame);
-  }, [isOpen, step]);
+  }, [isOpen]);
 
-  const handleSelect = useCallback((item: SpotlightItem) => {
-    if (isHeaderItem(item)) return;
-    item.action?.();
+  const itemUsesSourceSubmenu = useCallback((item: SpotlightItem) => {
+    return getItemData(item).modelSection === MODEL_SECTION.ALL;
   }, []);
+
+  const openSourcesForItem = useCallback(
+    (item: SpotlightItem, anchorTop?: number) => {
+      if (isHeaderItem(item) || !itemUsesSourceSubmenu(item)) return;
+      item.action?.();
+      setSubmenuOpen(true);
+      setSubmenuSelectedIndex(0);
+      if (anchorTop !== undefined) setSubmenuAnchorTop(anchorTop);
+    },
+    [itemUsesSourceSubmenu]
+  );
+
+  const handleSelect = useCallback(
+    (item: SpotlightItem) => {
+      if (isHeaderItem(item)) return;
+      if (itemUsesSourceSubmenu(item)) {
+        openSourcesForItem(item);
+        return;
+      }
+      item.action?.();
+    },
+    [itemUsesSourceSubmenu, openSourcesForItem]
+  );
 
   const { isPositioned, panelRef, panelPosition, keyboard } = useDropdownEngine<
     HTMLElement,
@@ -193,25 +243,95 @@ export const UnifiedModelDropdown: React.FC<UnifiedModelDropdownProps> = ({
     },
   });
 
+  const effectiveSubmenuOpen =
+    submenuOpen && Boolean(selectedModelId) && sourceItems.length > 0;
+  const effectiveSubmenuSelectedIndex = Math.min(
+    submenuSelectedIndex,
+    Math.max(sourceItems.length - 1, 0)
+  );
+
+  const selectSubmenuSource = useCallback(
+    (index: number) => {
+      const sourceItem = sourceItems[index];
+      if (!sourceItem) return;
+      sourceItem.action?.();
+    },
+    [sourceItems]
+  );
+
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      if (step === "sources") {
-        handleBack();
-      } else {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (effectiveSubmenuOpen) {
+          setSubmenuOpen(false);
+          return;
+        }
         onClose();
+        return;
+      }
+
+      if (effectiveSubmenuOpen) {
+        switch (event.key) {
+          case "ArrowDown":
+            event.preventDefault();
+            setSubmenuSelectedIndex((prev) =>
+              Math.min(prev + 1, Math.max(sourceItems.length - 1, 0))
+            );
+            return;
+          case "ArrowUp":
+            event.preventDefault();
+            setSubmenuSelectedIndex((prev) => Math.max(prev - 1, 0));
+            return;
+          case "ArrowLeft":
+            event.preventDefault();
+            setSubmenuOpen(false);
+            return;
+          case "Enter":
+            event.preventDefault();
+            selectSubmenuSource(effectiveSubmenuSelectedIndex);
+            return;
+          default:
+            return;
+        }
+      }
+
+      if (event.key === "ArrowRight" || event.key === "Tab") {
+        const selectedItem = filteredItems[keyboard.selectedIndex];
+        if (
+          selectedItem &&
+          !isHeaderItem(selectedItem) &&
+          itemUsesSourceSubmenu(selectedItem)
+        ) {
+          event.preventDefault();
+          const selectedElement = panelRef.current?.querySelector<HTMLElement>(
+            `[data-dropdown-item-index="${keyboard.selectedIndex}"]`
+          );
+          openSourcesForItem(
+            selectedItem,
+            selectedElement?.getBoundingClientRect().top
+          );
+        }
       }
     };
     document.addEventListener("keydown", handleKeyDown, true);
     return () => document.removeEventListener("keydown", handleKeyDown, true);
-  }, [isOpen, step, handleBack, onClose]);
+  }, [
+    isOpen,
+    effectiveSubmenuOpen,
+    effectiveSubmenuSelectedIndex,
+    sourceItems.length,
+    filteredItems,
+    keyboard.selectedIndex,
+    openSourcesForItem,
+    itemUsesSourceSubmenu,
+    onClose,
+    panelRef,
+    selectSubmenuSource,
+  ]);
 
-  const placeholder =
-    step === "models"
-      ? tCommon("filters.searchModel")
-      : tCommon("filters.searchModelSource");
+  const placeholder = tCommon("filters.searchModel");
 
   if (!isOpen || !isPositioned) return null;
 
@@ -222,61 +342,134 @@ export const UnifiedModelDropdown: React.FC<UnifiedModelDropdownProps> = ({
       window.innerWidth - VIEWPORT_MARGIN - DROPDOWN_WIDTH
     )
   );
+  const rightSubmenuLeft = left + DROPDOWN_WIDTH + SUBMENU_GAP;
+  const leftSubmenuLeft = left - SUBMENU_GAP - SUBMENU_WIDTH;
+  const canOpenSubmenuRight =
+    rightSubmenuLeft + SUBMENU_WIDTH <= window.innerWidth - VIEWPORT_MARGIN;
+  const canOpenSubmenuLeft = leftSubmenuLeft >= VIEWPORT_MARGIN;
+  const rightAvailableWidth =
+    window.innerWidth - rightSubmenuLeft - VIEWPORT_MARGIN;
+  const leftAvailableWidth = left - SUBMENU_GAP - VIEWPORT_MARGIN;
+  const submenuSide: SubmenuSide =
+    canOpenSubmenuRight ||
+    (!canOpenSubmenuLeft && rightAvailableWidth >= leftAvailableWidth)
+      ? "right"
+      : "left";
+  const submenuLeft = Math.max(
+    VIEWPORT_MARGIN,
+    Math.min(
+      submenuSide === "right" ? rightSubmenuLeft : leftSubmenuLeft,
+      window.innerWidth - VIEWPORT_MARGIN - SUBMENU_WIDTH
+    )
+  );
+  const submenuEstimatedHeight = Math.min(
+    LIST_MAX_HEIGHT + 8,
+    sourceItems.length * 34 + 8
+  );
+  const fallbackSubmenuTop = panelPosition.top ?? VIEWPORT_MARGIN;
+  const preferredSubmenuTop =
+    (submenuAnchorTop ?? fallbackSubmenuTop) - SUBMENU_VERTICAL_OFFSET;
+  const submenuTop = Math.max(
+    VIEWPORT_MARGIN,
+    Math.min(
+      preferredSubmenuTop,
+      window.innerHeight - VIEWPORT_MARGIN - submenuEstimatedHeight
+    )
+  );
 
   return createPortal(
-    <div
-      ref={panelRef}
-      className={`${DROPDOWN_CLASSES.panel} fixed flex flex-col`}
-      style={{
-        top: panelPosition.top,
-        bottom: panelPosition.bottom,
-        left,
-        width: DROPDOWN_WIDTH,
-      }}
-    >
-      <div className={DROPDOWN_CLASSES.searchContainer}>
-        {step === "sources" && (
-          <button
-            type="button"
-            onClick={handleBack}
-            aria-label={t("actions.back")}
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-text-2 hover:bg-fill-2 hover:text-text-1"
-          >
-            <ChevronLeft size={14} />
-          </button>
-        )}
-        <Search size={14} className="shrink-0 text-text-3" />
-        <input
-          ref={inputRef}
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          onKeyDown={tauriSelectAll}
-          placeholder={placeholder}
-          className={DROPDOWN_CLASSES.searchInput}
-        />
+    <>
+      <div
+        ref={panelRef}
+        className={`${DROPDOWN_CLASSES.panel} fixed flex flex-col`}
+        style={{
+          top: panelPosition.top,
+          bottom: panelPosition.bottom,
+          left,
+          width: DROPDOWN_WIDTH,
+        }}
+      >
+        <div className={DROPDOWN_CLASSES.searchContainer}>
+          <Search size={14} className="shrink-0 text-text-3" />
+          <input
+            ref={inputRef}
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            onKeyDown={tauriSelectAll}
+            placeholder={placeholder}
+            className={DROPDOWN_CLASSES.searchInput}
+          />
+        </div>
+
+        <div
+          className="scrollbar-overlay flex flex-col overflow-y-auto p-1"
+          style={{ maxHeight: LIST_MAX_HEIGHT }}
+        >
+          {filteredItems.length === 0 ? (
+            <div className="px-3 py-6 text-center text-[12px] text-text-3">
+              {tCommon("selectors.modelSelector.noResults")}
+            </div>
+          ) : (
+            filteredItems.map((item, index) => {
+              const rowKeyboardProps = isHeaderItem(item)
+                ? undefined
+                : keyboard.getItemProps(index);
+              const rowUsesSubmenu = itemUsesSourceSubmenu(item);
+              return (
+                <DropdownRow
+                  key={item.id}
+                  item={item}
+                  keyboardProps={rowKeyboardProps}
+                  onRowMouseEnter={(event) => {
+                    if (rowUsesSubmenu) {
+                      openSourcesForItem(
+                        item,
+                        event.currentTarget.getBoundingClientRect().top
+                      );
+                    }
+                  }}
+                  submenuSide={rowUsesSubmenu ? submenuSide : undefined}
+                />
+              );
+            })
+          )}
+        </div>
       </div>
 
-      <div
-        className="scrollbar-overlay flex flex-col overflow-y-auto p-1"
-        style={{ maxHeight: LIST_MAX_HEIGHT }}
-      >
-        {filteredItems.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[12px] text-text-3">
-            {tCommon("selectors.modelSelector.noResults")}
+      {effectiveSubmenuOpen && (
+        <div
+          className={`${DROPDOWN_CLASSES.panel} fixed flex flex-col p-1`}
+          style={{
+            top: submenuTop,
+            left: submenuLeft,
+            width: SUBMENU_WIDTH,
+          }}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <div
+            className="scrollbar-overlay flex flex-col overflow-y-auto"
+            style={{ maxHeight: LIST_MAX_HEIGHT }}
+          >
+            {sourceItems.map((item, index) => (
+              <DropdownRow
+                key={item.id}
+                item={item}
+                keyboardProps={{
+                  "data-dropdown-item-index": index,
+                  "data-dropdown-keyboard-highlight":
+                    effectiveSubmenuSelectedIndex === index
+                      ? "true"
+                      : undefined,
+                  "aria-selected": effectiveSubmenuSelectedIndex === index,
+                  onMouseEnter: () => setSubmenuSelectedIndex(index),
+                  onClick: () => selectSubmenuSource(index),
+                }}
+              />
+            ))}
           </div>
-        ) : (
-          filteredItems.map((item, index) => (
-            <DropdownRow
-              key={item.id}
-              item={item}
-              keyboardProps={
-                isHeaderItem(item) ? undefined : keyboard.getItemProps(index)
-              }
-            />
-          ))
-        )}
-      </div>
-    </div>,
+        </div>
+      )}
+    </>,
     document.body
   );
 };

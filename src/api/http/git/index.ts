@@ -55,6 +55,7 @@ import {
 import {
   addGitRemote,
   deleteGitRemote,
+  fillGitCredentials,
   getGitRemotes,
   updateGitRemote,
 } from "./remotes";
@@ -110,6 +111,7 @@ export {
   addGitRemote,
   updateGitRemote,
   deleteGitRemote,
+  fillGitCredentials,
 } from "./remotes";
 
 // Re-export remote operations
@@ -197,6 +199,7 @@ export const gitApi = {
   addGitRemote,
   updateGitRemote,
   deleteGitRemote,
+  fillGitCredentials,
 
   // Remote Operations
   gitFetch,

@@ -2,7 +2,13 @@
  * Remote Operations — push, pull, fetch, publish, sync
  */
 import { gitApi } from "@src/api/http/git";
+import {
+  LOCAL_GITHUB_TOKEN_USER_ID,
+  getGitHubGitCredentialForRemote,
+} from "@src/api/tauri/github";
+import { SERVICE_AUTH_STORAGE_KEYS } from "@src/config/serviceAuth";
 import { showGitErrorAndHandle } from "@src/hooks/git/useGitErrorDialog";
+import { createLogger } from "@src/hooks/logger";
 import { gitPullStrategyAtom } from "@src/store/ui/editorSettingsAtom";
 import {
   type GitAuthenticationDialogResult,
@@ -17,6 +23,8 @@ import {
   getStore,
   parseGitError,
 } from "./types";
+
+const logger = createLogger("GitRemoteOps");
 
 // ============================================
 // Core Operations
@@ -113,29 +121,104 @@ function buildPullCommand(strategy: string): string {
   }
 }
 
+async function getRemoteUrl(remoteName?: string): Promise<string | undefined> {
+  const repo = getRepoContext();
+  if (!repo) return undefined;
+
+  const remotesData = await gitApi.getGitRemotes({
+    repo_id: repo.repoId,
+    repo_path: repo.repoPath,
+  });
+  const targetRemoteName = remoteName ?? "origin";
+  const remote = remotesData?.remotes.find(
+    (candidateRemote) => candidateRemote.name === targetRemoteName
+  );
+  return remote?.push_url ?? remote?.fetch_url ?? remote?.url;
+}
+
+async function readStoredGitCredential(
+  remoteName?: string
+): Promise<GitAuthenticationDialogResult | null> {
+  const repo = getRepoContext();
+  if (!repo) return null;
+
+  const remoteUrl = await getRemoteUrl(remoteName);
+  if (!remoteUrl) return null;
+
+  const credential = await gitApi.fillGitCredentials({
+    repo_id: repo.repoId,
+    repo_path: repo.repoPath,
+    remoteUrl,
+  });
+
+  if (!credential?.found || !credential.username || !credential.password) {
+    return null;
+  }
+
+  return {
+    username: credential.username,
+    token: credential.password,
+    shouldStore: false,
+  };
+}
+
+async function readGitHubConnectionCredential(
+  remoteName?: string
+): Promise<GitAuthenticationDialogResult | null> {
+  const remoteUrl = await getRemoteUrl(remoteName);
+  if (!remoteUrl) return null;
+
+  const candidateUserIds = [
+    localStorage.getItem(SERVICE_AUTH_STORAGE_KEYS.userId),
+    LOCAL_GITHUB_TOKEN_USER_ID,
+  ].filter((userId): userId is string => Boolean(userId));
+
+  for (const userId of candidateUserIds) {
+    try {
+      const credential = await getGitHubGitCredentialForRemote(
+        userId,
+        remoteUrl
+      );
+      if (!credential) continue;
+
+      return {
+        username: credential.username,
+        token: credential.token,
+        shouldStore: false,
+      };
+    } catch (error) {
+      logger.warn("GitHub credential lookup failed:", error);
+    }
+  }
+
+  return null;
+}
+
 async function requestGitAuthToken(
   operation: "push" | "pull" | "fetch" | "sync",
   remote?: string
 ): Promise<GitAuthenticationDialogResult | null> {
   const repo = getRepoContext();
+  const remoteUrl = await getRemoteUrl(remote);
   return showGitAuthenticationDialog({
     operation,
     repoPath: repo?.repoPath,
-    remote,
+    remote: remoteUrl ?? remote,
+    onLoadStoredCredential: () => readStoredGitCredential(remote),
   });
 }
 
-async function retryPushWithAuth(params: {
-  force?: boolean;
-  setUpstream?: boolean;
-  remote?: string;
-  branch?: string;
-}): Promise<GitOperationResult | null> {
+async function attemptPushWithAuth(
+  params: {
+    force?: boolean;
+    setUpstream?: boolean;
+    remote?: string;
+    branch?: string;
+  },
+  auth: GitAuthenticationDialogResult
+): Promise<GitOperationResult> {
   const repo = getRepoContext();
-  if (!repo) return null;
-
-  const auth = await requestGitAuthToken("push", params.remote);
-  if (!auth) return null;
+  if (!repo) return { success: false, errorType: "unknown" };
 
   try {
     await gitApi.gitPush({
@@ -160,16 +243,39 @@ async function retryPushWithAuth(params: {
   }
 }
 
-async function retryPullWithAuth(params: {
+async function retryPushWithAuth(params: {
+  force?: boolean;
+  setUpstream?: boolean;
   remote?: string;
   branch?: string;
-  strategy: string;
 }): Promise<GitOperationResult | null> {
-  const repo = getRepoContext();
-  if (!repo) return null;
+  const githubAuth = await readGitHubConnectionCredential(params.remote);
+  if (githubAuth) {
+    const githubResult = await attemptPushWithAuth(params, githubAuth);
+    if (
+      githubResult.success ||
+      githubResult.errorType !== "authentication_failed"
+    ) {
+      return githubResult;
+    }
+  }
 
-  const auth = await requestGitAuthToken("pull", params.remote);
+  const auth = await requestGitAuthToken("push", params.remote);
   if (!auth) return null;
+
+  return attemptPushWithAuth(params, auth);
+}
+
+async function attemptPullWithAuth(
+  params: {
+    remote?: string;
+    branch?: string;
+    strategy: string;
+  },
+  auth: GitAuthenticationDialogResult
+): Promise<GitOperationResult> {
+  const repo = getRepoContext();
+  if (!repo) return { success: false, errorType: "unknown" };
 
   try {
     await gitApi.gitPull({
@@ -193,15 +299,37 @@ async function retryPullWithAuth(params: {
   }
 }
 
-async function retryFetchWithAuth(params: {
+async function retryPullWithAuth(params: {
   remote?: string;
-  prune?: boolean;
+  branch?: string;
+  strategy: string;
 }): Promise<GitOperationResult | null> {
-  const repo = getRepoContext();
-  if (!repo) return null;
+  const githubAuth = await readGitHubConnectionCredential(params.remote);
+  if (githubAuth) {
+    const githubResult = await attemptPullWithAuth(params, githubAuth);
+    if (
+      githubResult.success ||
+      githubResult.errorType !== "authentication_failed"
+    ) {
+      return githubResult;
+    }
+  }
 
-  const auth = await requestGitAuthToken("fetch", params.remote);
+  const auth = await requestGitAuthToken("pull", params.remote);
   if (!auth) return null;
+
+  return attemptPullWithAuth(params, auth);
+}
+
+async function attemptFetchWithAuth(
+  params: {
+    remote?: string;
+    prune?: boolean;
+  },
+  auth: GitAuthenticationDialogResult
+): Promise<GitOperationResult> {
+  const repo = getRepoContext();
+  if (!repo) return { success: false, errorType: "unknown" };
 
   try {
     await gitApi.gitFetch({
@@ -222,6 +350,27 @@ async function retryFetchWithAuth(params: {
       message: parsed.message,
     };
   }
+}
+
+async function retryFetchWithAuth(params: {
+  remote?: string;
+  prune?: boolean;
+}): Promise<GitOperationResult | null> {
+  const githubAuth = await readGitHubConnectionCredential(params.remote);
+  if (githubAuth) {
+    const githubResult = await attemptFetchWithAuth(params, githubAuth);
+    if (
+      githubResult.success ||
+      githubResult.errorType !== "authentication_failed"
+    ) {
+      return githubResult;
+    }
+  }
+
+  const auth = await requestGitAuthToken("fetch", params.remote);
+  if (!auth) return null;
+
+  return attemptFetchWithAuth(params, auth);
 }
 
 /**

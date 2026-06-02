@@ -20,6 +20,7 @@
     "update": "Обновить",
     "submit": "Отправить",
     "loadMore": "Загрузить ещё",
+    "load": "Загрузить",
     "back": "Назад",
     "next": "Далее",
     "previous": "Назад",
@@ -991,25 +992,21 @@
     "toOrigin": "в origin",
     "authDialog": {
       "title": "Требуется аутентификация GitHub",
-      "subtitle": "{{operation}} требует доступ к этому удалённому repo",
-      "securityNote": "ORGII никогда не запишет этот token в конфигурацию Git или remote URL. Если выбрать сохранение, он будет сохранён через credential helper Git.",
-      "persistenceLabel": "Хранение token",
-      "storeForFutureOperations": "Сохранить для будущих операций Git",
-      "useOnce": "Использовать один раз",
+      "or": "Или",
+      "tryMacKeychain": "Загрузить из macOS Keychain",
+      "tryCredentialHelper": "Загрузить из Git credential helper",
+      "credentialStatus": {
+        "found": "Найдено",
+        "notFound": "Не найдено"
+      },
       "usernameLabel": "Имя пользователя GitHub",
       "usernameRequired": "Имя пользователя обязательно",
       "tokenLabel": "Personal access token",
       "tokenRequired": "Token обязателен",
-      "tokenHelpPrefix": "Для GitHub HTTPS remotes используйте token с доступом к repo. Вы можете создать его в",
-      "tokenSettingsLink": "настройках token GitHub",
-      "remoteLabel": "Remote: {{remote}}",
-      "repoLabel": "Repo: {{repoPath}}",
-      "operations": {
-        "push": "Push",
-        "pull": "Pull",
-        "fetch": "Fetch",
-        "sync": "Sync"
-      }
+      "createTokenButton": "Создать token",
+      "openGitSettingsButton": "Открыть настройки Git",
+      "configureInSettings": "Настройте Git в настройках",
+      "configureInSettingsDesc": "Добавьте доступ GitHub App, сохраните token или просканируйте локальные учетные данные в Настройки → Интеграции → Git, затем повторите эту операцию Git."
     },
     "actions": {
       "publish": "Publish",
@@ -1081,7 +1078,8 @@
       "chooseKey": "Выберите ключ",
       "noCompatibleAccounts": "Нет совместимых ключей",
       "hoverModelHint": "Наведите на модель, чтобы увидеть доступные ключи",
-      "variantFast": "Fast"
+      "variantFast": "Fast",
+      "selectAccount": "Выберите аккаунт"
     },
     "modelProperties": {
       "options": "Параметры"
@@ -1201,7 +1199,7 @@
         "createFrom": "Создать Branch из",
         "checkoutDetached": "Checkout detached...",
         "deleteBranch": "Удалить ветку",
-        "refresh": "Обновить",
+        "refresh": "Обновить ветку",
         "checkoutDetachedSuccess": "В состоянии detached HEAD на текущем коммите",
         "checkoutDetachedFailed": "Ошибка checkout detached HEAD"
       },

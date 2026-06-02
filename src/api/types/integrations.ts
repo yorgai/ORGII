@@ -9,6 +9,7 @@ export const CATEGORY_KEYS = [
   "models",
   "myRoles",
   "connections",
+  "git",
   "tools",
   "computerUse",
   "externalSkillsets",

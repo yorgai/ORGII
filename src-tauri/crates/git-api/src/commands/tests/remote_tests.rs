@@ -72,6 +72,18 @@ fn push_error_permission_denied() {
 }
 
 #[test]
+fn push_error_bad_credentials() {
+    assert_eq!(
+        detect_push_error_type("remote: Invalid username or token."),
+        GitErrorType::AuthenticationFailed,
+    );
+    assert_eq!(
+        detect_push_error_type("HTTP Basic: Access denied"),
+        GitErrorType::AuthenticationFailed,
+    );
+}
+
+#[test]
 fn push_error_network() {
     assert_eq!(
         detect_push_error_type("fatal: unable to access 'https://...': Could not resolve host"),
@@ -140,6 +152,12 @@ fn pull_error_merge_conflicts() {
 fn pull_error_auth() {
     let (err_type, _) =
         detect_pull_error_type("fatal: Authentication failed for 'https://github.com'");
+    assert_eq!(err_type, GitErrorType::AuthenticationFailed);
+}
+
+#[test]
+fn pull_error_bad_credentials() {
+    let (err_type, _) = detect_pull_error_type("remote: Invalid username or token.");
     assert_eq!(err_type, GitErrorType::AuthenticationFailed);
 }
 

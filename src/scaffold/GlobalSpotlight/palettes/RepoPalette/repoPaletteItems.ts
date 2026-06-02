@@ -101,13 +101,6 @@ export function buildSectionedRepoItems({
 
   const sourceItems = [...leadingRepoItems, ...repoItems];
 
-  if (searchQuery.trim()) {
-    const searchItems = [...workspaceItems, ...sourceItems];
-    return openPathItem
-      ? [openPathItem, ...searchItems]
-      : sortRepoItemsSelectedFirst(searchItems);
-  }
-
   const currentItems = [...workspaceItems, ...sourceItems].filter(
     (item) => item.data?.isCurrentSelection
   );
@@ -120,6 +113,10 @@ export function buildSectionedRepoItems({
     (item) => !currentIds.has(item.id)
   );
   const sectionedItems: SpotlightItem[] = [];
+
+  if (searchQuery.trim() && openPathItem) {
+    sectionedItems.push(openPathItem);
+  }
 
   appendSection(
     sectionedItems,

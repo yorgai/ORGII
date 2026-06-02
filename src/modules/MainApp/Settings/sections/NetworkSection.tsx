@@ -1,24 +1,19 @@
 /**
  * Network Monitor Section
  *
- * Displays connection status, request stats, IP/geo info, git proxy config,
+ * Displays connection status, request stats, IP/geo info, VPN status,
  * and LLM provider regions.
  * Each group is shown in its own SectionContainer (separate fill-2 containers, no collapse).
  */
 import {
-  SECTION_ACTION_GAP_CLASSES,
-  SECTION_CONTROL_STYLE,
   SECTION_VALUE_SMALL_SECONDARY_CLASSES,
   SectionContainer,
   SectionRow,
 } from "@/src/modules/shared/layouts/SectionLayout";
-import { Trash2 } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import Button from "@src/components/Button";
 import InlineAlert from "@src/components/InlineAlert";
-import Input from "@src/components/Input";
 import { ProgressBar } from "@src/components/ProgressBar";
 import SettingsTable, {
   SETTINGS_TABLE_CELL,
@@ -48,16 +43,6 @@ const NetworkSection: React.FC = () => {
     restrictedServices,
     hasAnyRestriction,
     vpnStatus,
-    proxyInfo,
-    proxyHttpDraft,
-    setProxyHttpDraft,
-    proxyHttpsDraft,
-    setProxyHttpsDraft,
-    proxySaving,
-    proxyDirty,
-    handleProxyCancel,
-    handleProxySave,
-    handleProxyClear,
   } = useNetworkSectionData();
 
   const vpnInterfaces = vpnStatus?.interfaces ?? [];
@@ -311,80 +296,6 @@ const NetworkSection: React.FC = () => {
           </SectionRow>
         </SectionContainer>
       )}
-
-      {/* Git Proxy */}
-      <SectionContainer>
-        <SectionRow label={t("monitor.gitProxy")} />
-
-        <SectionRow label={t("monitor.gitProxyHttp")} indent>
-          <Input
-            value={proxyHttpDraft}
-            onChange={setProxyHttpDraft}
-            placeholder="http://proxy.example.com:8080"
-            style={SECTION_CONTROL_STYLE}
-            disabled={proxySaving}
-          />
-        </SectionRow>
-
-        <SectionRow label={t("monitor.gitProxyHttps")} indent>
-          <Input
-            value={proxyHttpsDraft}
-            onChange={setProxyHttpsDraft}
-            placeholder="http://proxy.example.com:8080"
-            style={SECTION_CONTROL_STYLE}
-            disabled={proxySaving}
-          />
-        </SectionRow>
-
-        {proxyInfo?.source === "environment" && (
-          <SectionRow showHeader={false} indent className="!min-h-0 !py-0">
-            <p className="text-[11px] text-text-3">
-              {t("monitor.gitProxyEnvNote")}
-            </p>
-          </SectionRow>
-        )}
-
-        {(proxyInfo?.http_proxy || proxyInfo?.https_proxy) && !proxyDirty && (
-          <SectionRow showHeader={false} indent>
-            <Button
-              variant="tertiary"
-              size="small"
-              icon={<Trash2 size={12} className="text-danger-6" />}
-              onClick={handleProxyClear}
-              loading={proxySaving}
-              disabled={proxySaving}
-              className="self-start"
-            >
-              {t("monitor.gitProxyClear")}
-            </Button>
-          </SectionRow>
-        )}
-
-        {proxyDirty && (
-          <SectionRow showHeader={false}>
-            <div className="flex w-full justify-end">
-              <div className={SECTION_ACTION_GAP_CLASSES}>
-                <Button
-                  size="small"
-                  onClick={handleProxyCancel}
-                  disabled={proxySaving}
-                >
-                  {t("common:actions.cancel")}
-                </Button>
-                <Button
-                  variant="primary"
-                  size="small"
-                  loading={proxySaving}
-                  disabled={proxySaving}
-                  onClick={handleProxySave}
-                >
-                  {t("common:actions.save")}
-                </Button>
-              </div>
-            </div>
-          </SectionRow>
-        )}
-      </SectionContainer>
 
       {/* Provider Regions */}
       {providerRegions.length > 0 && (

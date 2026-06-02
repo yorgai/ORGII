@@ -1,5 +1,6 @@
 import React from "react";
 
+import type { GitHubConnection } from "@src/api/http/github/types";
 import type { SyncConnection } from "@src/api/http/integrations";
 import type { RoutineDefinition } from "@src/api/http/project";
 import type { McpConfigScope } from "@src/api/tauri/rpc/schemas/mcp";
@@ -21,6 +22,7 @@ import type {
   DatabaseIntegrationEntry,
   DatabaseProbeResult,
 } from "../Databases/types";
+import { GitTable } from "../Git/Table/GitTable";
 import { AccountsTable } from "../KeyVault/Table/AccountsTable";
 import { McpTable } from "../Mcp/Table/McpTable";
 import { RoutinesTable } from "../Routines/Table/RoutinesTable";
@@ -76,6 +78,8 @@ export interface CategoryTableContentProps {
   dbProbing?: boolean;
 
   hasGitHubConnections: boolean;
+  gitHubConnections: GitHubConnection[];
+  gitHubConnectionsLoading: boolean;
   groupedChannels: Map<string, ChannelInstance[]>;
   projectConnections: SyncConnection[];
   connectionsLoading: boolean;
@@ -201,14 +205,21 @@ export const CategoryTableContent: React.FC<CategoryTableContentProps> = (
     case "connections":
       return (
         <ConnectionsTable
-          hasGitHubConnections={props.hasGitHubConnections}
           groupedChannels={props.groupedChannels}
           projectConnections={props.projectConnections}
           loading={props.connectionsLoading}
           selectedRowId={props.selectedRowId}
-          onSelectGitProvider={props.onSelectGitProvider}
           onSelectChannel={props.onSelectChannel}
           onAdd={() => onAddAction("add-connection")}
+        />
+      );
+    case "git":
+      return (
+        <GitTable
+          connections={props.gitHubConnections}
+          loading={props.gitHubConnectionsLoading}
+          selectedRowId={props.selectedRowId}
+          onSelectProvider={props.onSelectGitProvider}
         />
       );
     case "mcp":

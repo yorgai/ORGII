@@ -41,6 +41,11 @@ interface UseUnifiedModelPaletteItemsParams {
     modelLabel: string,
     groupModelIds: string[]
   ) => void;
+  handleModelPreview?: (
+    modelId: string,
+    modelLabel: string,
+    groupModelIds: string[]
+  ) => void;
   handleSourceSelect: (source: SourceOption) => void;
   handleRecentSelect: (entry: RecentModelEntry) => void;
   saveKey: UnifiedModelPaletteData["saveKey"];
@@ -60,6 +65,7 @@ export function useUnifiedModelPaletteItems({
   selectedModelId,
   selectedGroupModelIds,
   handleModelSelect,
+  handleModelPreview,
   handleSourceSelect,
   handleRecentSelect,
   saveKey,
@@ -231,6 +237,23 @@ export function useUnifiedModelPaletteItems({
     ]
   );
 
+  const sideMenuModelItems = useMemo(
+    (): SpotlightItem[] =>
+      buildAllModelItems({
+        accountLookup,
+        handleModelSelect: handleModelPreview ?? handleModelSelect,
+        modelAliasVersion,
+        resolveGroupLaunchModel,
+      }),
+    [
+      accountLookup,
+      handleModelPreview,
+      handleModelSelect,
+      modelAliasVersion,
+      resolveGroupLaunchModel,
+    ]
+  );
+
   const sourceItems = useMemo(
     (): SpotlightItem[] =>
       buildSourceItems({
@@ -300,8 +323,32 @@ export function useUnifiedModelPaletteItems({
     allHeader,
   ]);
 
+  const sideMenuRawItems = useMemo((): SpotlightItem[] => {
+    const items: SpotlightItem[] = [];
+    if (currentModelItem) {
+      items.push(currentHeader);
+      items.push(currentModelItem);
+    }
+    if (recentItems.length > 0) {
+      items.push(recentHeader);
+      items.push(...recentItems);
+    }
+    items.push(allHeader);
+    items.push(...sideMenuModelItems);
+    return items;
+  }, [
+    currentModelItem,
+    currentHeader,
+    recentItems,
+    sideMenuModelItems,
+    recentHeader,
+    allHeader,
+  ]);
+
   return {
     rawItems,
+    sideMenuRawItems,
+    sideMenuModelItems,
     currentModelItem,
     currentHeader,
     recentItems,

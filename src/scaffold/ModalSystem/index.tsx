@@ -79,6 +79,8 @@ export interface ModalProps {
   size?: "small" | "medium" | "large" | "fullscreen";
   /** z-index for the modal (default: 9999 to ensure it's above all content) */
   zIndex?: number;
+  /** Height of the draggable top app chrome area within the modal overlay. */
+  topDragZoneHeight?: number;
   /** Style object for the modal */
   style?: React.CSSProperties;
 }
@@ -107,6 +109,7 @@ const Modal: React.FC<ModalProps> = ({
   width,
   size,
   zIndex = 9999,
+  topDragZoneHeight = 0,
   style,
 }) => {
   const handleClose = onClose || onCancel;
@@ -287,6 +290,15 @@ const Modal: React.FC<ModalProps> = ({
     >
       {/* Backdrop/Mask */}
       <div className="liquid-modal-mask" />
+
+      {topDragZoneHeight > 0 && (
+        <div
+          data-tauri-drag-region
+          className="liquid-modal-drag-zone"
+          style={{ height: topDragZoneHeight }}
+          aria-hidden
+        />
+      )}
 
       {/* Modal Container */}
       <div className="liquid-modal-container">

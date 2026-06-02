@@ -63,6 +63,7 @@ const SETTINGS_ROOT_INTEGRATION_KEYS: readonly IntegrationsCategorySegment[] = [
   "externalSkillsets",
   "devtools",
   "connections",
+  "git",
   "databases",
 ];
 
@@ -86,7 +87,7 @@ const SETTINGS_ROOT_LIST_SECTIONS: SettingsRootSectionConfig[] = [
   {
     id: "connections",
     labelKey: "coreSidebar.groups.connections",
-    itemIds: ["connections", "databases"],
+    itemIds: ["connections", "git", "databases"],
   },
 ];
 

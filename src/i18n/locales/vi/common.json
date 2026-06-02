@@ -20,6 +20,7 @@
     "update": "Cập nhật",
     "submit": "Gửi",
     "loadMore": "Tải thêm",
+    "load": "Tải",
     "back": "Quay lại",
     "next": "Tiếp theo",
     "previous": "Trước đó",
@@ -992,25 +993,21 @@
     "toOrigin": "đến origin",
     "authDialog": {
       "title": "Cần xác thực GitHub",
-      "subtitle": "{{operation}} cần quyền truy cập remote repo này",
-      "securityNote": "ORGII sẽ không bao giờ ghi token này vào Git config hoặc remote URL. Nếu bạn chọn lưu, token sẽ được lưu qua credential helper của Git.",
-      "persistenceLabel": "Lưu token",
-      "storeForFutureOperations": "Lưu cho các thao tác Git sau này",
-      "useOnce": "Chỉ dùng một lần",
+      "or": "Hoặc",
+      "tryMacKeychain": "Tải từ macOS Keychain",
+      "tryCredentialHelper": "Tải từ Git credential helper",
+      "credentialStatus": {
+        "found": "Đã tìm thấy",
+        "notFound": "Không tìm thấy"
+      },
       "usernameLabel": "Tên người dùng GitHub",
       "usernameRequired": "Cần tên người dùng",
       "tokenLabel": "Personal access token",
       "tokenRequired": "Cần token",
-      "tokenHelpPrefix": "Với GitHub HTTPS remotes, hãy dùng token có quyền truy cập repo. Bạn có thể tạo token trong",
-      "tokenSettingsLink": "GitHub token settings",
-      "remoteLabel": "Remote: {{remote}}",
-      "repoLabel": "Repo: {{repoPath}}",
-      "operations": {
-        "push": "Push",
-        "pull": "Pull",
-        "fetch": "Fetch",
-        "sync": "Sync"
-      }
+      "createTokenButton": "Tạo token",
+      "openGitSettingsButton": "Mở cài đặt Git",
+      "configureInSettings": "Cấu hình Git trong cài đặt",
+      "configureInSettingsDesc": "Thêm quyền truy cập GitHub App, lưu token hoặc quét thông tin xác thực cục bộ trong Cài đặt → Tích hợp → Git, rồi thử lại thao tác Git này."
     },
     "actions": {
       "publish": "Publish",
@@ -1082,7 +1079,8 @@
       "chooseKey": "Chọn một khóa",
       "noCompatibleAccounts": "Không có khóa tương thích",
       "hoverModelHint": "Di chuột qua một mô hình để xem các khóa khả dụng",
-      "variantFast": "Fast"
+      "variantFast": "Fast",
+      "selectAccount": "Chọn tài khoản"
     },
     "modelProperties": {
       "options": "Tùy chọn"
@@ -1202,7 +1200,7 @@
         "createFrom": "Tạo từ Branch",
         "checkoutDetached": "Checkout detached...",
         "deleteBranch": "Xóa nhánh",
-        "refresh": "Làm mới",
+        "refresh": "Làm mới nhánh",
         "checkoutDetachedSuccess": "Đang ở trạng thái detached HEAD tại commit hiện tại",
         "checkoutDetachedFailed": "Checkout detached HEAD thất bại"
       },

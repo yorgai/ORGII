@@ -104,10 +104,8 @@ export const DROPDOWN_ITEM = {
 
   /**
    * Selected background — intentionally transparent. The selected state is
-   * communicated by the trailing checkmark (and primary-6 text) only; the
-   * old `bg-fill-2` highlight was removed to make keyboard hover the only
-   * filled state in dropdowns. Kept on the token for callers that need an
-   * explicit selected-row pill (e.g. Cursor-style settings panels).
+   * communicated by a checkmark and primary-6 text only; keyboard hover is
+   * the only filled state in dropdowns.
    */
   selectedBgClass: "bg-transparent",
 
@@ -256,7 +254,8 @@ export const DROPDOWN_CLASSES = {
   itemSelected: [
     DROPDOWN_ITEM.selectedBgClass,
     DROPDOWN_ITEM.selectedTextClass,
-    "hover:bg-fill-2",
+    "[&_svg]:text-primary-6",
+    "hover:bg-surface-hover",
     "hover:!text-primary-6",
     "font-medium",
   ].join(" "),

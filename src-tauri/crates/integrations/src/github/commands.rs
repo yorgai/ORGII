@@ -55,6 +55,13 @@ pub struct PRResponse {
     pub url: String,
 }
 
+#[derive(Debug, Serialize)]
+pub struct GitHubGitCredential {
+    pub username: String,
+    pub token: String,
+    pub repo_full_name: String,
+}
+
 // ============================================
 // Helpers
 // ============================================
@@ -88,6 +95,34 @@ fn parse_branch(v: &Value) -> Branch {
         sha: v["commit"]["sha"].as_str().unwrap_or("").to_string(),
         protected: v["protected"].as_bool().unwrap_or(false),
     }
+}
+
+fn clean_repo_path(path: &str) -> Option<String> {
+    let clean_path = path.trim_start_matches('/').trim_end_matches(".git");
+    let mut parts = clean_path.split('/');
+    let owner = parts.next()?.trim();
+    let repo = parts.next()?.trim();
+    if owner.is_empty() || repo.is_empty() {
+        return None;
+    }
+    Some(format!("{owner}/{repo}"))
+}
+
+pub(crate) fn github_repo_full_name_from_remote(remote_url: &str) -> Option<String> {
+    let trimmed = remote_url.trim();
+    if let Some(rest) = trimmed.strip_prefix("https://github.com/") {
+        return clean_repo_path(rest);
+    }
+    if let Some(rest) = trimmed.strip_prefix("http://github.com/") {
+        return clean_repo_path(rest);
+    }
+    if let Some(rest) = trimmed.strip_prefix("git@github.com:") {
+        return clean_repo_path(rest);
+    }
+    if let Some(rest) = trimmed.strip_prefix("ssh://git@github.com/") {
+        return clean_repo_path(rest);
+    }
+    None
 }
 
 // ============================================
@@ -302,6 +337,26 @@ pub(crate) fn clean_git_clone_error(token: &str, exit_code: Option<i32>, stderr:
         exit_code,
         stderr_str.trim()
     )
+}
+
+#[command]
+pub async fn github_git_credential_for_remote(
+    user_id: String,
+    remote_url: String,
+) -> Result<Option<GitHubGitCredential>, String> {
+    let Some(repo_full_name) = github_repo_full_name_from_remote(&remote_url) else {
+        return Ok(None);
+    };
+
+    let Some(token) = token_store::get(&user_id)? else {
+        return Ok(None);
+    };
+
+    Ok(Some(GitHubGitCredential {
+        username: "x-access-token".to_string(),
+        token,
+        repo_full_name,
+    }))
 }
 
 /// Clone a GitHub repository by shelling out to the system `git` CLI.

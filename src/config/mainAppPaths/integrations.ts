@@ -9,6 +9,7 @@ export type IntegrationsCategorySegment =
   | "computerUse"
   | "externalSkillsets"
   | "connections"
+  | "git"
   | "databases"
   | "rulesMemoryEvolution"
   | "routines"
@@ -21,6 +22,7 @@ export const INTEGRATIONS_CATEGORIES: readonly IntegrationsCategorySegment[] = [
   "computerUse",
   "externalSkillsets",
   "connections",
+  "git",
   "databases",
   "rulesMemoryEvolution",
   "routines",

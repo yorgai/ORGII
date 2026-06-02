@@ -12,7 +12,6 @@ import SettingsTable, {
   type SettingsTableColumn,
 } from "@src/components/SettingsTable";
 import TabPill from "@src/components/TabPill";
-import { useGitHubConnections } from "@src/hooks/git";
 import {
   DETAIL_PANEL_TOKENS,
   DetailPanelContainer,
@@ -24,7 +23,6 @@ import {
 import {
   InlineCardBody,
   InlineCardColumnStack,
-  InlineCardSectionLabel,
   InlineCardShell,
   InlineCardSplit,
 } from "../../KeyVault/shared/InlineCardPrimitives";
@@ -47,7 +45,7 @@ interface ConnectionRow {
   typeIcon: string;
   statusColor: string;
   statusLabel: string;
-  kind: "git" | "channel" | "project";
+  kind: "channel" | "project";
 }
 
 function getProjectConnectionTypeKey(connection: SyncConnection): string {
@@ -69,73 +67,19 @@ function getProjectConnectionIcon(connection: SyncConnection): string {
 }
 
 interface ConnectionsTableProps {
-  hasGitHubConnections: boolean;
   groupedChannels: Map<string, ChannelInstance[]>;
   projectConnections: SyncConnection[];
   loading: boolean;
   selectedRowId?: string | null;
-  onSelectGitProvider: (id: string | null, mode?: DetailMode) => void;
   onSelectChannel: (compositeId: string | null, mode?: DetailMode) => void;
   onAdd: () => void;
 }
 
-const GitConnectionInlineContent: React.FC<{ selectedProvider: string }> = ({
-  selectedProvider,
-}) => {
-  const { t } = useTranslation("integrations");
-  const github = useGitHubConnections();
-  const connections = github.connections ?? [];
-  const totalRepos = connections.reduce(
-    (sum, conn) => sum + (conn.repos_count ?? 0),
-    0
-  );
-  return (
-    <InlineCardSplit
-      left={
-        <InlineCardColumnStack>
-          <InfoRow label={t("gitPreview.provider")} value={selectedProvider} />
-          <InfoRow
-            label={t("gitPreview.connections")}
-            value={String(connections.length)}
-          />
-          <InfoRow
-            label={t("gitPreview.repositories")}
-            value={String(totalRepos)}
-          />
-        </InlineCardColumnStack>
-      }
-      right={
-        connections.length > 0 ? (
-          <InlineCardColumnStack>
-            <InlineCardSectionLabel>
-              {t("gitPreview.connectionsList", { count: connections.length })}
-            </InlineCardSectionLabel>
-            {connections.map((conn) => (
-              <div key={conn.id} className="flex items-center justify-between">
-                <span className="truncate text-[12px] text-text-1">
-                  {conn.account}
-                </span>
-                <span className="text-[11px] text-text-3">
-                  {conn.repos_count ?? 0} repos
-                </span>
-              </div>
-            ))}
-          </InlineCardColumnStack>
-        ) : (
-          <InlineCardColumnStack>{null}</InlineCardColumnStack>
-        )
-      }
-    />
-  );
-};
-
 export const ConnectionsTable: React.FC<ConnectionsTableProps> = ({
-  hasGitHubConnections,
   groupedChannels,
   projectConnections,
   loading,
   selectedRowId,
-  onSelectGitProvider,
   onSelectChannel,
   onAdd,
 }) => {
@@ -145,18 +89,6 @@ export const ConnectionsTable: React.FC<ConnectionsTableProps> = ({
 
   const rows = useMemo<ConnectionRow[]>(() => {
     const result: ConnectionRow[] = [];
-
-    if (hasGitHubConnections) {
-      result.push({
-        id: "git:github",
-        name: "GitHub",
-        typeName: t("categories.git"),
-        typeIcon: "github",
-        statusColor: "bg-success-6",
-        statusLabel: t("status.connected"),
-        kind: "git",
-      });
-    }
 
     for (const channelType of CHANNEL_TYPES) {
       const instances = groupedChannels.get(channelType.type);
@@ -195,32 +127,18 @@ export const ConnectionsTable: React.FC<ConnectionsTableProps> = ({
         row.name.toLowerCase().includes(query) ||
         row.typeName.toLowerCase().includes(query)
     );
-  }, [
-    hasGitHubConnections,
-    groupedChannels,
-    searchQuery,
-    projectConnections,
-    t,
-  ]);
+  }, [groupedChannels, searchQuery, projectConnections, t]);
 
   const handleRowClick = useCallback(
     (row: ConnectionRow, mode?: DetailMode) => {
       if (row.kind === "project") return;
       if (!mode && selectedRowId === row.id) {
-        if (row.kind === "git") {
-          onSelectGitProvider(null);
-        } else {
-          onSelectChannel(null);
-        }
+        onSelectChannel(null);
         return;
       }
-      if (row.kind === "git") {
-        onSelectGitProvider(row.typeIcon, mode);
-      } else {
-        onSelectChannel(row.id, mode);
-      }
+      onSelectChannel(row.id, mode);
     },
-    [onSelectGitProvider, onSelectChannel, selectedRowId]
+    [onSelectChannel, selectedRowId]
   );
 
   const connectionsTabs = useMemo(
@@ -349,34 +267,28 @@ export const ConnectionsTable: React.FC<ConnectionsTableProps> = ({
                     <div className="w-0 min-w-full overflow-hidden">
                       <InlineCardShell>
                         <InlineCardBody>
-                          {row.kind === "git" ? (
-                            <GitConnectionInlineContent
-                              selectedProvider={row.name}
-                            />
-                          ) : (
-                            <InlineCardSplit
-                              left={
-                                <InlineCardColumnStack>
-                                  <InfoRow
-                                    label={t("tableHeaders.type")}
-                                    value={row.typeName}
+                          <InlineCardSplit
+                            left={
+                              <InlineCardColumnStack>
+                                <InfoRow
+                                  label={t("tableHeaders.type")}
+                                  value={row.typeName}
+                                />
+                                <InfoRow label={t("common:labels.status")}>
+                                  <StatusDot
+                                    size="inline"
+                                    color={row.statusColor}
+                                    label={row.statusLabel}
                                   />
-                                  <InfoRow label={t("common:labels.status")}>
-                                    <StatusDot
-                                      size="inline"
-                                      color={row.statusColor}
-                                      label={row.statusLabel}
-                                    />
-                                  </InfoRow>
-                                </InlineCardColumnStack>
-                              }
-                              right={
-                                <InlineCardColumnStack>
-                                  {null}
-                                </InlineCardColumnStack>
-                              }
-                            />
-                          )}
+                                </InfoRow>
+                              </InlineCardColumnStack>
+                            }
+                            right={
+                              <InlineCardColumnStack>
+                                {null}
+                              </InlineCardColumnStack>
+                            }
+                          />
                         </InlineCardBody>
                       </InlineCardShell>
                     </div>

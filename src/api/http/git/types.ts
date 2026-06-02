@@ -194,6 +194,15 @@ export interface GitRemotesResponse {
   };
 }
 
+export interface GitCredentialFillResponse {
+  status: number;
+  data: {
+    found: boolean;
+    username?: string;
+    password?: string;
+  };
+}
+
 // ============================================================================
 // Suggested Action Types
 // ============================================================================
@@ -227,6 +236,7 @@ export interface GitOperationResponse {
   data: {
     success: boolean;
     message: string;
+    error_type: import("./streaming").GitErrorType;
   };
 }
 
@@ -236,6 +246,7 @@ export interface GitPullResponse {
     success: boolean;
     message: string;
     conflicts: string[] | null;
+    error_type: import("./streaming").GitErrorType;
   };
 }
 

@@ -143,17 +143,7 @@ export const BranchDropdown: React.FC<BranchDropdownProps> = ({
     getSearchText: (branch) => branch.name,
   });
 
-  // When searching: flat list with current pinned on top.
-  // Otherwise: section-by-section (Recent, Worktrees, Other).
   const sections = useMemo(() => {
-    if (searchQuery) {
-      const flat = [...filteredBranches].sort((a, b) => {
-        if (a.name === currentBranchName) return -1;
-        if (b.name === currentBranchName) return 1;
-        return 0;
-      });
-      return [{ key: "search" as const, label: null, items: flat }];
-    }
     const categorized = categorizeBranches(filteredBranches);
     const result: Array<{
       key: "recent" | "worktrees" | "other";
@@ -179,7 +169,7 @@ export const BranchDropdown: React.FC<BranchDropdownProps> = ({
       });
     }
     return result;
-  }, [filteredBranches, searchQuery, currentBranchName, t]);
+  }, [filteredBranches, t]);
 
   const visibleBranches = useMemo(
     () => sections.flatMap((section) => section.items),

@@ -21,6 +21,7 @@
     "update": "Aktualizuj",
     "submit": "Wyślij",
     "loadMore": "Załaduj więcej",
+    "load": "Załaduj",
     "back": "Wstecz",
     "next": "Dalej",
     "previous": "Poprzedni",
@@ -991,25 +992,21 @@
     "toOrigin": "do origin",
     "authDialog": {
       "title": "Wymagane uwierzytelnienie GitHub",
-      "subtitle": "{{operation}} wymaga dostępu do tego remote repo",
-      "securityNote": "ORGII nigdy nie zapisze tego tokenu w konfiguracji Git ani w remote URL. Jeśli wybierzesz zapisanie, zostanie zapisany przez credential helper Git.",
-      "persistenceLabel": "Przechowywanie tokenu",
-      "storeForFutureOperations": "Zapisz dla przyszłych operacji Git",
-      "useOnce": "Użyj raz",
+      "or": "Lub",
+      "tryMacKeychain": "Wczytaj z macOS Keychain",
+      "tryCredentialHelper": "Wczytaj z Git credential helper",
+      "credentialStatus": {
+        "found": "Znaleziono",
+        "notFound": "Nie znaleziono"
+      },
       "usernameLabel": "Nazwa użytkownika GitHub",
       "usernameRequired": "Nazwa użytkownika jest wymagana",
       "tokenLabel": "Personal access token",
       "tokenRequired": "Token jest wymagany",
-      "tokenHelpPrefix": "Dla GitHub HTTPS remotes użyj tokenu z dostępem do repo. Możesz go utworzyć w",
-      "tokenSettingsLink": "GitHub token settings",
-      "remoteLabel": "Remote: {{remote}}",
-      "repoLabel": "Repo: {{repoPath}}",
-      "operations": {
-        "push": "Push",
-        "pull": "Pull",
-        "fetch": "Fetch",
-        "sync": "Sync"
-      }
+      "createTokenButton": "Utwórz token",
+      "openGitSettingsButton": "Otwórz ustawienia Git",
+      "configureInSettings": "Skonfiguruj Git w ustawieniach",
+      "configureInSettingsDesc": "Dodaj dostęp GitHub App, zapisz token lub przeskanuj lokalne dane uwierzytelniające w Ustawienia → Integracje → Git, a następnie spróbuj ponownie wykonać tę operację Git."
     },
     "actions": {
       "publish": "Opublikuj",
@@ -1073,7 +1070,8 @@
       "chooseKey": "Wybierz klucz",
       "noCompatibleAccounts": "Brak zgodnych kluczy",
       "hoverModelHint": "Najedź na model, aby zobaczyć dostępne klucze",
-      "variantFast": "Fast"
+      "variantFast": "Fast",
+      "selectAccount": "Wybierz konto"
     },
     "modelProperties": {
       "options": "Opcje"
@@ -1201,7 +1199,7 @@
         "createFrom": "Utwórz z Branch",
         "checkoutDetached": "Przełącz w tryb detached...",
         "deleteBranch": "Usuń gałąź",
-        "refresh": "Odśwież",
+        "refresh": "Odśwież gałąź",
         "checkoutDetachedSuccess": "Jesteś teraz w stanie detached HEAD na bieżącym commicie",
         "checkoutDetachedFailed": "Nie udało się wykonać checkout detached HEAD"
       },

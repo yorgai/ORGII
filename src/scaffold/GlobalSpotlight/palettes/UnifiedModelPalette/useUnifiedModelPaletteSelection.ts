@@ -110,15 +110,19 @@ export function useUnifiedModelPaletteSelection({
     []
   );
 
+  const handleModelPreview = useCallback(
+    (modelId: string, modelLabel: string, groupModelIds: string[]) => {
+      previewModel(modelId, modelLabel, groupModelIds);
+    },
+    [previewModel]
+  );
+
   const handleModelSelect = useCallback(
     (modelId: string, modelLabel: string, groupModelIds: string[]) => {
-      setSelectedModelId(modelId);
-      setSelectedModelLabel(modelLabel);
-      setSelectedGroupModelIds(groupModelIds);
-      setSelectedSourceIndex(0);
+      previewModel(modelId, modelLabel, groupModelIds);
       setActiveColumn("sources");
     },
-    []
+    [previewModel]
   );
 
   const resolveLaunchModelForSource = useCallback(
@@ -227,6 +231,7 @@ export function useUnifiedModelPaletteSelection({
     setSelectedSourceIndex,
     sourceOptions,
     previewModel,
+    handleModelPreview,
     handleModelSelect,
     handleSourceSelect,
     handleRecentSelect,

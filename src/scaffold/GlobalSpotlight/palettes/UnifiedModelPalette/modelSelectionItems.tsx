@@ -49,22 +49,40 @@ export function buildModelSelectionSpotlightItem({
   const sourceName = entry.accountName ?? entry.modelType;
   const searchableLabel = `${sourceName} ${modelDisplay}`;
 
+  const selectedTextClassName = isCurrentSelection
+    ? "text-primary-6"
+    : "text-text-1";
+  const selectedMutedTextClassName = isCurrentSelection
+    ? "text-primary-6"
+    : "text-text-2";
+  const selectedDividerClassName = isCurrentSelection
+    ? "text-primary-6"
+    : "text-text-3";
+
   const labelContent = aliasDisplayName ? (
     <>
-      <span className="shrink-0 text-text-2">{sourceName}</span>
-      <span className="mx-0.5 shrink-0 text-text-3">›</span>
+      <span className={`shrink-0 ${selectedMutedTextClassName}`}>
+        {sourceName}
+      </span>
+      <span className={`mx-0.5 shrink-0 ${selectedDividerClassName}`}>›</span>
       <ModelIcon modelName={entry.modelId} size={14} />
-      <span className="shrink-0 font-semibold text-text-1">{modelDisplay}</span>
-      <span className="ml-1.5 min-w-0 truncate text-[12px] text-text-2">
+      <span className={`shrink-0 font-semibold ${selectedTextClassName}`}>
+        {modelDisplay}
+      </span>
+      <span
+        className={`ml-1.5 min-w-0 truncate text-[12px] ${selectedMutedTextClassName}`}
+      >
         {entry.modelId}
       </span>
     </>
   ) : (
     <>
-      <span className="text-text-2">{sourceName}</span>
-      <span className="mx-0.5 text-text-3">›</span>
+      <span className={selectedMutedTextClassName}>{sourceName}</span>
+      <span className={`mx-0.5 ${selectedDividerClassName}`}>›</span>
       <ModelIcon modelName={entry.modelId} size={14} />
-      <span className="font-semibold text-text-1">{modelDisplay}</span>
+      <span className={`font-semibold ${selectedTextClassName}`}>
+        {modelDisplay}
+      </span>
     </>
   );
 

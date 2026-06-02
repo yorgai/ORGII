@@ -84,11 +84,7 @@ const InlineExternalAgentsImport: React.FC<InlineExternalAgentsImportProps> = ({
       {expanded && (
         <SectionRow showHeader={false} className="pt-0">
           <div className="flex flex-col gap-3">
-            {importLoading && items.length === 0 ? (
-              <div className="rounded-md bg-fill-2 px-3 py-2 text-[12px] text-text-3">
-                {t("common:status.scanning", { defaultValue: "Scanning…" })}
-              </div>
-            ) : items.length === 0 ? (
+            {importLoading && items.length === 0 ? null : items.length === 0 ? (
               <div className="rounded-md bg-fill-2 px-3 py-2 text-[12px] text-text-3">
                 {t("agentOrgs.externalImport.noAgentResults")}
               </div>

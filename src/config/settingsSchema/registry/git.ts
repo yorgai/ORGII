@@ -17,13 +17,13 @@ export const GIT_SETTINGS_REGISTRY = {
   },
   "git.pullStrategy": {
     schema: z.enum(["merge", "rebase", "ff-only"]),
-    default: "merge" as const,
+    default: "rebase" as const,
     description:
-      'How git pull integrates remote changes: "merge" (default, preserves history), "rebase" (linear history), or "ff-only" (strict, refuses if diverged)',
+      'How git pull integrates remote changes: "rebase" (default, linear history), "merge" (preserves history), or "ff-only" (strict, refuses if diverged)',
     category: "git",
     enumLabels: {
-      merge: "Merge (default)",
-      rebase: "Rebase",
+      rebase: "Rebase (default)",
+      merge: "Merge",
       "ff-only": "Fast-forward only",
     },
   },

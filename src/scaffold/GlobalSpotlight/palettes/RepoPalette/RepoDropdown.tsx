@@ -32,6 +32,7 @@ import {
   useDropdownEngine,
 } from "@src/hooks/dropdown";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
+import { REPO_KIND } from "@src/store/repo";
 import {
   isMultiRootWorkspaceAtom,
   setWorkspaceFoldersAtom,
@@ -51,6 +52,19 @@ const MIN_DROPDOWN_WIDTH = 320;
 type DropdownRepoItem =
   | { kind: "repo"; repo: RepoItem }
   | { kind: "openPath"; item: SpotlightItem };
+
+type RepoDropdownSectionKey =
+  | "openPath"
+  | "current"
+  | "system"
+  | "workspace"
+  | "repo";
+
+interface RepoDropdownSection {
+  key: RepoDropdownSectionKey;
+  label: string | null;
+  items: DropdownRepoItem[];
+}
 
 interface RepoRowProps {
   repo: RepoItem;
@@ -201,25 +215,71 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
     ]
   );
 
-  // Sort selected to top, like the Spotlight variant.
-  const sortedRepos = useMemo(() => {
-    const repos = [...filteredRepos].sort((repoA, repoB) => {
-      if (repoA.id === currentRepoId) return -1;
-      if (repoB.id === currentRepoId) return 1;
-      return 0;
-    });
-    return leadingRepo ? [leadingRepo, ...repos] : repos;
-  }, [filteredRepos, currentRepoId, leadingRepo]);
+  const sections = useMemo<RepoDropdownSection[]>(() => {
+    const allRepos = leadingRepo
+      ? [leadingRepo, ...filteredRepos]
+      : filteredRepos;
+    const currentItems: DropdownRepoItem[] = [];
+    const systemItems: DropdownRepoItem[] = [];
+    const workspaceItems: DropdownRepoItem[] = [];
+    const repoItems: DropdownRepoItem[] = [];
 
-  const dropdownItems = useMemo<DropdownRepoItem[]>(() => {
-    const repoItems = sortedRepos.map((repo) => ({
-      kind: "repo" as const,
-      repo,
-    }));
-    return openPathItem
-      ? [{ kind: "openPath" as const, item: openPathItem }, ...repoItems]
-      : repoItems;
-  }, [openPathItem, sortedRepos]);
+    for (const repo of allRepos) {
+      const item: DropdownRepoItem = { kind: "repo", repo };
+      if (repo.id === currentRepoId) {
+        currentItems.push(item);
+      } else if (isSystemPathRepoItem(repo)) {
+        systemItems.push(item);
+      } else if (repo.kind === REPO_KIND.FOLDER) {
+        workspaceItems.push(item);
+      } else {
+        repoItems.push(item);
+      }
+    }
+
+    const nextSections: RepoDropdownSection[] = [];
+    if (searchQuery.trim() && openPathItem) {
+      nextSections.push({
+        key: "openPath",
+        label: null,
+        items: [{ kind: "openPath", item: openPathItem }],
+      });
+    }
+    if (currentItems.length > 0) {
+      nextSections.push({
+        key: "current",
+        label: t("selectors.repo.sections.current"),
+        items: currentItems,
+      });
+    }
+    if (systemItems.length > 0) {
+      nextSections.push({
+        key: "system",
+        label: t("selectors.repo.sections.systemPaths"),
+        items: systemItems,
+      });
+    }
+    if (workspaceItems.length > 0) {
+      nextSections.push({
+        key: "workspace",
+        label: t("selectors.repo.sections.workspace"),
+        items: workspaceItems,
+      });
+    }
+    if (repoItems.length > 0) {
+      nextSections.push({
+        key: "repo",
+        label: t("selectors.repo.sections.repo"),
+        items: repoItems,
+      });
+    }
+    return nextSections;
+  }, [filteredRepos, currentRepoId, leadingRepo, openPathItem, searchQuery, t]);
+
+  const dropdownItems = useMemo(
+    () => sections.flatMap((section) => section.items),
+    [sections]
+  );
 
   const handleSelect = useCallback(
     (item: DropdownRepoItem) => {
@@ -308,22 +368,32 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
             {t("selectors.modelSelector.noResults")}
           </div>
         ) : (
-          dropdownItems.map((item, index) =>
-            item.kind === "openPath" ? (
-              <OpenPathRow
-                key={item.item.id}
-                item={item.item}
-                keyboardProps={keyboard.getItemProps(index)}
-              />
-            ) : (
-              <RepoRow
-                key={item.repo.id}
-                repo={item.repo}
-                isCurrent={item.repo.id === currentRepoId}
-                keyboardProps={keyboard.getItemProps(index)}
-              />
-            )
-          )
+          sections.map((section) => (
+            <React.Fragment key={section.key}>
+              {section.label && (
+                <div className={DROPDOWN_CLASSES.sectionLabel}>
+                  {section.label}
+                </div>
+              )}
+              {section.items.map((item) => {
+                const index = dropdownItems.indexOf(item);
+                return item.kind === "openPath" ? (
+                  <OpenPathRow
+                    key={item.item.id}
+                    item={item.item}
+                    keyboardProps={keyboard.getItemProps(index)}
+                  />
+                ) : (
+                  <RepoRow
+                    key={item.repo.id}
+                    repo={item.repo}
+                    isCurrent={item.repo.id === currentRepoId}
+                    keyboardProps={keyboard.getItemProps(index)}
+                  />
+                );
+              })}
+            </React.Fragment>
+          ))
         )}
       </div>
     </div>,

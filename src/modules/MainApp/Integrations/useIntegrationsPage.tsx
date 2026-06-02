@@ -101,9 +101,10 @@ export function useIntegrationsPage() {
 
   const { isAuthenticated } = useServiceAuthState();
   const connectionsActive = category === "connections";
+  const gitActive = category === "git";
   const cliAgents = useCliAgents({ enabled: category === "models" });
   const github = useGitHubConnections({
-    autoFetch: isAuthenticated && connectionsActive,
+    autoFetch: isAuthenticated && (connectionsActive || gitActive),
   });
   const { gatewayStatus } = useOSAgentGateway(connectionsActive);
   const channelState = useChannelState({
@@ -290,10 +291,14 @@ export function useIntegrationsPage() {
       case "connections":
         return {
           onRefresh: async () => {
-            refreshGitHubConnections();
             await refreshProjectConnections();
           },
           loading: !channelConfigLoaded || projectConnectionsLoading,
+        };
+      case "git":
+        return {
+          onRefresh: refreshGitHubConnections,
+          loading: github.isLoading,
         };
       case "rulesMemoryEvolution":
         return {
@@ -325,6 +330,7 @@ export function useIntegrationsPage() {
     channelConfigLoaded,
     refreshProjectConnections,
     projectConnectionsLoading,
+    github.isLoading,
     policies.refreshAll,
     policies.policiesLoading,
     routines.refreshRoutines,
@@ -346,6 +352,7 @@ export function useIntegrationsPage() {
       case "myRoles":
         break;
       case "connections":
+      case "git":
         connections.clearConnectionsState();
         break;
       case "databases":
@@ -393,6 +400,8 @@ export function useIntegrationsPage() {
     handleAccountSelect,
     extensions,
     githubHasConnections: github.hasConnections,
+    githubConnections: github.connections,
+    githubConnectionsLoading: github.isLoading,
     channelState,
     connections,
     databasesState,
@@ -418,7 +427,10 @@ export function useIntegrationsPage() {
     hasExtensionSelected: !!extensions.extensionSelectedId,
     hasPolicySelection: !!policies.detailState.selectedMarkdownRule,
     hasRoutineSelection: !!routines.routinesState.selectedRoutine,
-    hasConnectionSelection: !!connections.selectedIntegrationKind,
+    hasConnectionSelection:
+      category === "git"
+        ? !!connections.selectedGitProvider
+        : !!connections.selectedIntegrationKind,
   });
 
   const accountListFiltered = useMemo(() => {

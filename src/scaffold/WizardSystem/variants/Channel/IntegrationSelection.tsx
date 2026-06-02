@@ -31,10 +31,6 @@ import {
   type WizardCategory,
 } from "./channelWizardTypes";
 
-const GIT_TYPE_OPTIONS = [
-  { key: "github", labelKey: "channels.github" },
-] as const;
-
 type TypeOptionGroup = {
   category: WizardCategory;
   label: string;
@@ -134,12 +130,6 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
         disabled: true,
       })
     );
-    const gitOptions = GIT_TYPE_OPTIONS.map((opt) => ({
-      key: opt.key,
-      label: t(opt.labelKey),
-      iconElement: <IntegrationIcon type={opt.key} size={18} />,
-      iconPreserveColor: opt.key === "github",
-    }));
     const serviceOptions = SERVICE_TYPES.map((svc) => ({
       key: svc.type,
       label: t(svc.labelKey),
@@ -165,13 +155,6 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
         options: comingSoonChannelOptions,
         selectOptions: [],
         selectable: false,
-      },
-      {
-        category: "git",
-        label: t("categories.git"),
-        options: gitOptions,
-        selectOptions: toSelectOptions(gitOptions),
-        selectable: true,
       },
       {
         category: "services",

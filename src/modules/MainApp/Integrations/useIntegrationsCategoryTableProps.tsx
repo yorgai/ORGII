@@ -1,5 +1,6 @@
 import { type Dispatch, type SetStateAction, useMemo } from "react";
 
+import type { GitHubConnection } from "@src/api/http/github/types";
 import type { DependencyStatus } from "@src/hooks/dependencies";
 
 import type { useCliAgents } from "./KeyVault/CliClients/hooks/useCliAgents";
@@ -19,6 +20,8 @@ export interface UseIntegrationsCategoryTablePropsParams {
   handleAccountSelect: (id: string | null, mode?: DetailMode) => void;
   extensions: ReturnType<typeof useExtensionsState>;
   githubHasConnections: boolean;
+  githubConnections: GitHubConnection[];
+  githubConnectionsLoading: boolean;
   channelState: ReturnType<typeof useChannelState>;
   connections: ReturnType<typeof useConnectionsState>;
   databasesState: ReturnType<typeof useDatabasesState>;
@@ -45,6 +48,8 @@ export function useIntegrationsCategoryTableProps(
     handleAccountSelect,
     extensions,
     githubHasConnections,
+    githubConnections,
+    githubConnectionsLoading,
     channelState,
     connections,
     databasesState,
@@ -74,6 +79,8 @@ export function useIntegrationsCategoryTableProps(
       onModelsTabChange: extensions.handleModelsTabChange,
       onToggleModel: extensions.handleToggleModel,
       hasGitHubConnections: githubHasConnections,
+      gitHubConnections: githubConnections,
+      gitHubConnectionsLoading: githubConnectionsLoading,
       groupedChannels: channelState.groupedChannels,
       projectConnections: channelState.projectConnections,
       connectionsLoading:
@@ -138,6 +145,8 @@ export function useIntegrationsCategoryTableProps(
       selectedDbClient,
       setSelectedDbClient,
       githubHasConnections,
+      githubConnections,
+      githubConnectionsLoading,
       channelState,
       connections,
       databasesState,

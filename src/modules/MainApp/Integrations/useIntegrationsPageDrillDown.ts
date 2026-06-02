@@ -101,12 +101,11 @@ export function useIntegrationsPageDrillDown(
         case "routines":
           routines.handleSelectRoutine(id, "full");
           break;
+        case "git":
+          connections.handleGitProviderSelect(id, "full");
+          break;
         case "connections": {
-          if (id.startsWith("git:")) {
-            connections.handleGitProviderSelect(id.replace("git:", ""), "full");
-          } else {
-            connections.handleChannelClick(id, "full");
-          }
+          connections.handleChannelClick(id, "full");
           break;
         }
       }

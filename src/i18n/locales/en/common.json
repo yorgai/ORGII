@@ -21,6 +21,7 @@
     "update": "Update",
     "submit": "Submit",
     "loadMore": "Load more",
+    "load": "Load",
     "back": "Back",
     "next": "Next",
     "previous": "Previous",
@@ -991,25 +992,21 @@
     "toOrigin": "to origin",
     "authDialog": {
       "title": "GitHub authentication required",
-      "subtitle": "{{operation}} needs access to this remote repo",
-      "securityNote": "ORGII will never write this token to your Git config or remote URL. If you choose to store it, it will be saved through Git's credential helper.",
-      "persistenceLabel": "Token storage",
-      "storeForFutureOperations": "Store for future Git operations",
-      "useOnce": "Use once",
+      "or": "Or",
+      "tryMacKeychain": "Load from macOS Keychain",
+      "tryCredentialHelper": "Load from Git credential helper",
+      "credentialStatus": {
+        "found": "Found",
+        "notFound": "Not found"
+      },
       "usernameLabel": "GitHub username",
       "usernameRequired": "Username is required",
       "tokenLabel": "Personal access token",
       "tokenRequired": "Token is required",
-      "tokenHelpPrefix": "For GitHub HTTPS remotes, use a token with repository access. You can create one in",
-      "tokenSettingsLink": "GitHub token settings",
-      "remoteLabel": "Remote: {{remote}}",
-      "repoLabel": "Repo: {{repoPath}}",
-      "operations": {
-        "push": "Push",
-        "pull": "Pull",
-        "fetch": "Fetch",
-        "sync": "Sync"
-      }
+      "createTokenButton": "Create Token",
+      "openGitSettingsButton": "Open Git Settings",
+      "configureInSettings": "Configure Git in Settings",
+      "configureInSettingsDesc": "Add GitHub App access, save a token, or scan local credentials in Settings → Integrations → Git, then retry this Git operation."
     },
     "actions": {
       "publish": "Publish",
@@ -1073,7 +1070,8 @@
       "chooseKey": "Choose a key",
       "noCompatibleAccounts": "No compatible keys",
       "hoverModelHint": "Hover a model to see available keys",
-      "variantFast": "Fast"
+      "variantFast": "Fast",
+      "selectAccount": "Select an account"
     },
     "modelProperties": {
       "options": "Options"
@@ -1201,7 +1199,7 @@
         "createFrom": "Create Branch From",
         "checkoutDetached": "Checkout detached...",
         "deleteBranch": "Delete branch",
-        "refresh": "Refresh",
+        "refresh": "Refresh branch",
         "checkoutDetachedSuccess": "Now in detached HEAD state at current commit",
         "checkoutDetachedFailed": "Failed to checkout detached HEAD"
       },

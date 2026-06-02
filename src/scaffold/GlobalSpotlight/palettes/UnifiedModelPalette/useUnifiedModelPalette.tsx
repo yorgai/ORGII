@@ -56,6 +56,7 @@ export function useUnifiedModelPalette({
     setSelectedSourceIndex,
     sourceOptions,
     previewModel,
+    handleModelPreview,
     handleModelSelect,
     handleSourceSelect,
     handleRecentSelect,
@@ -73,6 +74,8 @@ export function useUnifiedModelPalette({
 
   const {
     rawItems,
+    sideMenuRawItems,
+    sideMenuModelItems,
     currentModelItem,
     currentHeader,
     recentItems,
@@ -92,6 +95,7 @@ export function useUnifiedModelPalette({
     selectedModelId,
     selectedGroupModelIds,
     handleModelSelect,
+    handleModelPreview,
     handleSourceSelect,
     handleRecentSelect,
     saveKey,
@@ -106,6 +110,8 @@ export function useUnifiedModelPalette({
     selectedSourceIndex,
     setSelectedSourceIndex,
     rawItems,
+    sideMenuRawItems,
+    sideMenuModelItems,
     currentModelItem,
     currentHeader,
     recentItems,
@@ -114,6 +120,7 @@ export function useUnifiedModelPalette({
     allHeader,
     sourceItems,
     previewModel,
+    handleModelPreview,
     handleBack,
     tCommon,
   };

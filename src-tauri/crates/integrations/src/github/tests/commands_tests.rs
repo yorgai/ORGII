@@ -1,4 +1,7 @@
-use crate::github::commands::{build_clone_argv, clean_git_clone_error, parse_branch, parse_repo};
+use crate::github::commands::{
+    build_clone_argv, clean_git_clone_error, github_repo_full_name_from_remote, parse_branch,
+    parse_repo,
+};
 use serde_json::json;
 use std::path::Path;
 
@@ -87,6 +90,30 @@ fn parse_branch_missing_commit_sha() {
     });
     let branch = parse_branch(&val);
     assert_eq!(branch.sha, "");
+}
+
+#[test]
+fn github_remote_parser_accepts_https_and_ssh_urls() {
+    assert_eq!(
+        github_repo_full_name_from_remote("https://github.com/octocat/Hello-World.git"),
+        Some("octocat/Hello-World".to_string())
+    );
+    assert_eq!(
+        github_repo_full_name_from_remote("git@github.com:octocat/Hello-World.git"),
+        Some("octocat/Hello-World".to_string())
+    );
+    assert_eq!(
+        github_repo_full_name_from_remote("ssh://git@github.com/octocat/Hello-World.git"),
+        Some("octocat/Hello-World".to_string())
+    );
+}
+
+#[test]
+fn github_remote_parser_rejects_non_github_urls() {
+    assert_eq!(
+        github_repo_full_name_from_remote("https://gitlab.com/octocat/Hello-World.git"),
+        None
+    );
 }
 
 // ============================================

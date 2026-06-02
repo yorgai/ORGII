@@ -24,6 +24,7 @@ import { userPresenceAtom } from "@src/store/user/userPresenceAtom";
 import { userCustomRolesAtom } from "@src/store/user/userRolesAtom";
 import {
   AWAY_DURATIONS,
+  type BuiltInPresenceMode,
   USER_PRESENCE_MODE,
   type UserPresenceMode,
   buildCustomRoleMode,
@@ -65,9 +66,9 @@ const MyRolesSection: React.FC = () => {
   const [presence, setPresence] = useAtom(userPresenceAtom);
   const customRoles = useAtomValue(userCustomRolesAtom);
 
-  const questionAutoSkipTimeout = settings[
-    "agent.sde.questionAutoSkipTimeout"
-  ] as number;
+  const questionAutoSkipTimeoutByPresence = settings[
+    "agent.sde.questionAutoSkipTimeoutByPresence"
+  ] as Record<BuiltInPresenceMode, number>;
   const presenceGuidanceOnline =
     (settings["general.presenceGuidanceOnline"] as string | undefined) ?? "";
   const presenceGuidanceInvisible =
@@ -138,11 +139,17 @@ const MyRolesSection: React.FC = () => {
   );
 
   const handleQuestionAutoSkipTimeoutChange = useCallback(
-    (value: number | undefined) => {
+    (mode: BuiltInPresenceMode) => (value: number | undefined) => {
       if (value === undefined) return;
-      updateSetting({ key: "agent.sde.questionAutoSkipTimeout", value });
+      updateSetting({
+        key: "agent.sde.questionAutoSkipTimeoutByPresence",
+        value: {
+          ...questionAutoSkipTimeoutByPresence,
+          [mode]: value,
+        },
+      });
     },
-    [updateSetting]
+    [questionAutoSkipTimeoutByPresence, updateSetting]
   );
 
   const techSavvy = settings[
@@ -226,7 +233,7 @@ const MyRolesSection: React.FC = () => {
         </SectionRow>
       </SectionContainer>
 
-      <SectionContainer>
+      <SectionContainer title={t("general.presenceGuidanceOnline")}>
         <SectionRow
           label={t("general.presenceGuidanceOnline")}
           layout="vertical"
@@ -241,6 +248,28 @@ const MyRolesSection: React.FC = () => {
           />
         </SectionRow>
         <SectionRow
+          label={t("sdeAgent.questionAutoSkipTimeoutByStatus", {
+            status: t("navigation:sidebar.presence.online"),
+          })}
+          description={t("sdeAgent.questionAutoSkipTimeoutByStatusDesc")}
+        >
+          <NumberInput
+            value={questionAutoSkipTimeoutByPresence.online}
+            onChange={handleQuestionAutoSkipTimeoutChange(
+              USER_PRESENCE_MODE.ONLINE
+            )}
+            min={0}
+            max={300}
+            step={5}
+            suffix={t("common:common.s")}
+            controlsPosition="sides"
+            style={SECTION_CONTROL_STYLE}
+          />
+        </SectionRow>
+      </SectionContainer>
+
+      <SectionContainer title={t("general.presenceGuidanceInvisible")}>
+        <SectionRow
           label={t("general.presenceGuidanceInvisible")}
           layout="vertical"
         >
@@ -253,6 +282,28 @@ const MyRolesSection: React.FC = () => {
             placeholder={t("general.presenceGuidancePlaceholder")}
           />
         </SectionRow>
+        <SectionRow
+          label={t("sdeAgent.questionAutoSkipTimeoutByStatus", {
+            status: t("navigation:sidebar.presence.invisible"),
+          })}
+          description={t("sdeAgent.questionAutoSkipTimeoutByStatusDesc")}
+        >
+          <NumberInput
+            value={questionAutoSkipTimeoutByPresence.invisible}
+            onChange={handleQuestionAutoSkipTimeoutChange(
+              USER_PRESENCE_MODE.INVISIBLE
+            )}
+            min={0}
+            max={300}
+            step={5}
+            suffix={t("common:common.s")}
+            controlsPosition="sides"
+            style={SECTION_CONTROL_STYLE}
+          />
+        </SectionRow>
+      </SectionContainer>
+
+      <SectionContainer title={t("general.presenceGuidanceAway")}>
         <SectionRow label={t("general.presenceGuidanceAway")} layout="vertical">
           <Textarea
             value={presenceGuidanceAway}
@@ -263,16 +314,17 @@ const MyRolesSection: React.FC = () => {
             placeholder={t("general.presenceGuidancePlaceholder")}
           />
         </SectionRow>
-      </SectionContainer>
-
-      <SectionContainer title={t("sdeAgent.autoTimeoutTitle")}>
         <SectionRow
-          label={t("sdeAgent.questionAutoSkipTimeout")}
-          description={t("sdeAgent.questionAutoSkipTimeoutDesc")}
+          label={t("sdeAgent.questionAutoSkipTimeoutByStatus", {
+            status: t("navigation:sidebar.presence.away"),
+          })}
+          description={t("sdeAgent.questionAutoSkipTimeoutByStatusDesc")}
         >
           <NumberInput
-            value={questionAutoSkipTimeout}
-            onChange={handleQuestionAutoSkipTimeoutChange}
+            value={questionAutoSkipTimeoutByPresence.away}
+            onChange={handleQuestionAutoSkipTimeoutChange(
+              USER_PRESENCE_MODE.AWAY
+            )}
             min={0}
             max={300}
             step={5}

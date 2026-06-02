@@ -29,6 +29,7 @@ import type {
 } from "./Databases/types";
 import type { DevToolsTab } from "./DevTools/DevToolsCategoryView";
 import { ExternalSkillsetsCategoryView } from "./ExternalSkillsets/ExternalSkillsetsCategoryView";
+import { GitCategoryView } from "./Git/GitCategoryView";
 import { AccountCategoryView } from "./KeyVault/AccountCategoryView";
 import MyRolesSection from "./KeyVault/MyRoles/MyRolesSection";
 import type { useKeyVaultPage } from "./KeyVault/hooks/useKeyVaultPage";
@@ -229,6 +230,20 @@ const IntegrationsDetailPanel: React.FC<IntegrationsDetailPanelProps> = ({
           onBack={onExitFullPage}
           onExpand={onExpand}
           onClosePreview={onClosePreview}
+        />
+      );
+
+    case "git":
+      return (
+        <GitCategoryView
+          connections={tableProps.gitHubConnections}
+          loading={tableProps.gitHubConnectionsLoading}
+          selectedProvider={selectedGitProvider}
+          fullPage={isFullPage}
+          onSelectProvider={tableProps.onSelectGitProvider}
+          onAfterAddOpen={onGitConnected}
+          onBack={onExitFullPage}
+          onExpand={onExpand}
         />
       );
 
