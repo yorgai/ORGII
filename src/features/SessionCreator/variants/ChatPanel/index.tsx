@@ -23,6 +23,7 @@ import Select, { type SelectOption } from "@src/components/Select";
 import { resolveAgentIcon } from "@src/config/agentIcons";
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { isRegionSanctioned } from "@src/config/providerRegions";
+import PinnedActionsBar from "@src/engines/ChatPanel/InputArea/components/PinnedActionsBar";
 import type { ChatPanelRegionNotice } from "@src/engines/ChatPanel/types";
 import { useSessionCreator } from "@src/engines/SessionCore/hooks/session/useSessionCreator";
 import {
@@ -627,6 +628,10 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
 
     const editorArea = (
       <div className={`mx-auto w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}>
+        <PinnedActionsBar
+          tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
+          onSubmit={() => void handleLaunch()}
+        />
         <EditorArea
           variant="chatPanelFullScreen"
           uploadedFiles={uploadedFiles}

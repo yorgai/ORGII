@@ -679,7 +679,6 @@ const EditorArea: React.FC<EditorAreaProps> = ({
                 requestModelOpen={requestModelOpen}
                 onModelOpenHandled={onModelOpenHandled}
                 hideModelSourcePill={hideModelSourcePill}
-                hideModePill
               />
             }
             submitButton={
