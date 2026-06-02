@@ -208,7 +208,7 @@ export const SelectorPill = forwardRef<HTMLButtonElement, SelectorPillProps>(
 
         {label && (
           <span
-            className={`${size === "xl" ? "" : "truncate"} flex min-w-0 items-center leading-none ${labelColor}`}
+            className={`${labelContent || size === "xl" ? "" : "truncate"} flex min-w-0 items-center leading-[16px] ${labelColor}`}
           >
             {labelContent ?? label}
           </span>
