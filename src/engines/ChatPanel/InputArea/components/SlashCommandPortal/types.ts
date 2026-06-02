@@ -41,6 +41,12 @@ export interface SlashCommandPortalProps {
   showActionFlyouts?: boolean;
   /** When provided, renders an Image upload row. */
   onImageUpload?: () => void;
+  /**
+   * Which direction the menu opens relative to the container.
+   * "up" (default) opens above the container — suitable for bottom-anchored inputs.
+   * "down" opens below the container — suitable for top-anchored inputs (e.g. edit mode).
+   */
+  direction?: "up" | "down";
 }
 
 // ── Internal list-entry union ─────────────────────────────────────────────────
