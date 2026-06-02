@@ -213,23 +213,27 @@ img {
   max-width: 100%;
 }
 
-// Global scrollbar styles - exclude CodeMirror (.cm-scroller has its own styles)
-*:not(.cm-scroller)::-webkit-scrollbar {
+// Global scrollbar styles
+*::-webkit-scrollbar {
   width: 4px;
   height: 4px;
 }
 
-*:not(.cm-scroller)::-webkit-scrollbar-thumb {
-  background: var(--color-fill-3);
-  border-radius: 3px;
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-*:not(.cm-scroller)::-webkit-scrollbar-thumb:hover {
+*::-webkit-scrollbar-thumb {
+  background: var(--color-fill-3);
+  border-radius: 2px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
   background: var(--color-fill-4);
 }
 
-*:not(.cm-scroller)::-webkit-scrollbar-corner {
-  @apply bg-bg-1;
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 // Settings surfaces (SettingsSlot body + SettingsSidebar) hide all
@@ -249,33 +253,25 @@ img {
   display: none;
 }
 
-// CodeMirror scrollbar - transparent track, only show thumb
+// Keep CodeMirror on the same visible scrollbar treatment as the rest of the app.
 .cm-scroller {
   scrollbar-width: thin !important;
-  scrollbar-color: transparent transparent !important;
+  scrollbar-color: var(--color-fill-3) transparent !important;
 
   &::-webkit-scrollbar {
-    width: 8px !important;
-    height: 8px !important;
+    width: 4px !important;
+    height: 4px !important;
     background: transparent !important;
   }
 
-  &::-webkit-scrollbar-track {
-    background: transparent !important;
-  }
-
+  &::-webkit-scrollbar-track,
   &::-webkit-scrollbar-corner {
     background: transparent !important;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: transparent !important;
-    border-radius: 4px !important;
-  }
-
-  &:hover::-webkit-scrollbar-thumb,
-  &.is-scrolling::-webkit-scrollbar-thumb {
     background: var(--color-fill-3) !important;
+    border-radius: 2px !important;
   }
 
   &::-webkit-scrollbar-thumb:hover {

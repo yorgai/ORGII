@@ -8,7 +8,6 @@
 // Import shared diff mixins (CSS variables are loaded globally in src/index.scss)
 @import "../styles/diff-mixins";
 
-// Import custom scrollbar styles
 @import "../../../components/CustomScrollbar/index.scss";
 
 .codemirror-diff-wrapper {

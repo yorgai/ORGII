@@ -7,6 +7,8 @@
  * - Single shared scrollbar
  */
 
+@import "../../styles/mixins/scrollbar";
+
 // Code font - matches ModernCodeViewer/CodeMirror style
 $font-mono:
   "SF Mono", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New",
@@ -136,25 +138,7 @@ $font-mono:
   min-height: 0;
   background: var(--color-bg-2);
 
-  &::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: var(--color-bg-3);
-    border-left: 1px solid var(--color-border-2);
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-fill-3);
-    border-radius: 5px;
-    border: 2px solid var(--color-bg-3);
-
-    &:hover {
-      background: var(--color-fill-4);
-    }
-  }
+  @include scrollbar-unified;
 }
 
 .split-diff-rows {

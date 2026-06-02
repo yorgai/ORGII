@@ -1,3 +1,5 @@
+@use "../../styles/mixins/scrollbar";
+
 // ==========================================
 // Table Component Styles
 // ==========================================
@@ -14,23 +16,7 @@
 .table-scroll {
   overflow: auto;
 
-  &::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--fill-3);
-    border-radius: 4px;
-
-    &:hover {
-      background: var(--fill-4);
-    }
-  }
+  @include scrollbar.scrollbar-unified;
 }
 
 .table {

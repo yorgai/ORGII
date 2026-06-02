@@ -24,12 +24,16 @@
   &:hover,
   &[data-scrolling] {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.32) transparent;
+    scrollbar-color: var(--color-fill-3) transparent;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.32) !important;
+    background: var(--color-fill-3) !important;
     border-radius: 2px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-fill-4) !important;
   }
 }
 
@@ -64,7 +68,7 @@
     }
   }
 
-  // CodeMirror scrollbar: show on hover with transparent track
+  // Embedded CodeMirror keeps the same hover-only reveal behavior as chat code blocks.
   .cm-scroller {
     scrollbar-width: none;
 
@@ -74,16 +78,20 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.32) !important;
+      background: var(--color-fill-3) !important;
       border: none !important;
       border-radius: 2px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: var(--color-fill-4) !important;
     }
   }
 
   &:hover .cm-scroller,
   &[data-scrolling] .cm-scroller {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.32) transparent !important;
+    scrollbar-color: var(--color-fill-3) transparent !important;
   }
 
   &:hover .cm-scroller::-webkit-scrollbar,
@@ -95,12 +103,6 @@
   &:hover .cm-scroller::-webkit-scrollbar-track,
   &[data-scrolling] .cm-scroller::-webkit-scrollbar-track {
     background: transparent !important;
-  }
-
-  &:hover .cm-scroller::-webkit-scrollbar-thumb,
-  &[data-scrolling] .cm-scroller::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.32) !important;
-    border: none !important;
   }
 
   // ModernDiff - allow horizontal scroll for long lines

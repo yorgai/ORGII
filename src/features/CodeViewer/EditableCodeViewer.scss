@@ -4,6 +4,8 @@
  * Styles for the editable code viewer with syntax highlighting overlay.
  */
 
+@import "../../styles/mixins/scrollbar";
+
 .editable-code-viewer {
   position: relative;
   width: 100%;
@@ -130,21 +132,5 @@
 
 // Sync textarea scroll with container scroll
 .editable-code-viewer {
-  &::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: var(--color-bg-1);
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-fill-3);
-    border-radius: 4px;
-
-    &:hover {
-      background: var(--color-fill-4);
-    }
-  }
+  @include scrollbar-unified;
 }

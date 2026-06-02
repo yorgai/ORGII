@@ -177,27 +177,6 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 8px;
-
-  // Custom scrollbar
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-fill-3);
-    border-radius: 4px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-
-    &:hover {
-      background: var(--color-fill-4);
-      background-clip: padding-box;
-    }
-  }
 }
 
 .mode-selection-repo-item {

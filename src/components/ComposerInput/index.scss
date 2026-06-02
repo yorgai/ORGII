@@ -25,21 +25,6 @@
   &.light {
     color: #1d2129;
   }
-
-  // Custom scrollbar (matches TiptapInput).
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-fill-3);
-    border-radius: 3px;
-    &:hover {
-      background: var(--color-fill-4);
-    }
-  }
 }
 
 .composer-input-wrapper {

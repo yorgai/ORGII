@@ -218,26 +218,9 @@
 // is registered via tailwind.config.js keyframes/animation.
 
 // Overlay scrollbar: visible, thin, overlays content on the right (no layout shift)
-// Uses pr-2 + inner -mr-2 so content extends under scrollbar
+// Uses pr-2 + inner -mr-2 so content extends under scrollbar.
 .select-options-overlay {
   scrollbar-width: thin;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-fill-3);
-    border-radius: 3px;
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background: var(--color-fill-4);
-  }
 }
 
 .select-loading,
