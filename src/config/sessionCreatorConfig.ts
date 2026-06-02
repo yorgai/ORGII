@@ -100,18 +100,18 @@ export const AGENT_EXEC_MODES: AgentExecModeEntry[] = [
     description: "Full tool access — read, write, execute",
   },
   {
-    id: "investigate",
-    icon: Search,
-    i18nKey: "planner.modes.investigate",
-    name: "Investigate",
-    description: "Read-only research — search + read + ask",
-  },
-  {
     id: "plan",
     icon: ListTodo,
     i18nKey: "planner.modes.plan",
     name: "Plan",
     description: "Draft a plan file for user review — no direct edits",
+  },
+  {
+    id: "investigate",
+    icon: Search,
+    i18nKey: "planner.modes.investigate",
+    name: "Investigate",
+    description: "Read-only research — search + read + ask",
   },
   {
     id: "debug",
