@@ -26,6 +26,7 @@ import {
   HEADER_BUTTON,
   HEADER_ICON_SIZE,
 } from "@src/config/workstation/tokens";
+import PinnedActionsBar from "@src/engines/ChatPanel/InputArea/components/PinnedActionsBar";
 import type { UseSessionCreatorOptions } from "@src/engines/SessionCore/hooks/session/useSessionCreator/useSessionCreator";
 import {
   SYSTEM_HOME_SOURCE_ID,
@@ -309,6 +310,12 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
       />
 
       {preEditorContent}
+
+      {/* Pinned actions */}
+      <PinnedActionsBar
+        tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
+        onSubmit={() => void handleLaunch()}
+      />
 
       {/* Editor */}
       <EditorArea
