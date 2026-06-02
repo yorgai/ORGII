@@ -25,6 +25,7 @@ import { sessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAto
 
 import { buildSetupPrompt } from "../config";
 import type { DetectedConfigFile, RepoType } from "../types";
+import { useSetupRepoAutoLaunch } from "./useSetupRepoAutoLaunch";
 
 const logger = createLogger("useRepoSetup");
 
@@ -58,6 +59,8 @@ export interface LaunchOptions {
 
 export interface UseRepoSetupReturn {
   launching: boolean;
+  /** The session ID of the active setup session (null when idle). */
+  setupSessionId: string | null;
   launchSetup: (
     context: RepoSetupContext,
     options?: LaunchOptions
@@ -66,10 +69,15 @@ export interface UseRepoSetupReturn {
 
 export function useRepoSetup(): UseRepoSetupReturn {
   const [launching, setLaunching] = useState(false);
+  const [setupSessionId, setSetupSessionId] = useState<string | null>(null);
   const { openSession } = useSessionView();
   const dispatchLoadSession = useSetAtom(loadSessionAtom);
   const setPendingSyntheticEvent = useSetAtom(pendingSyntheticEventAtom);
   const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
+
+  // Auto-launch tracking: open WorkStation browser tab when the agent
+  // calls setup_repo with action="launch_app".
+  useSetupRepoAutoLaunch(setupSessionId);
 
   const launchSetup = useCallback(
     async (context: RepoSetupContext, options?: LaunchOptions) => {
@@ -114,6 +122,9 @@ export function useRepoSetup(): UseRepoSetupReturn {
           `Created setup session ${sessionId} for ${context.repoName}`
         );
 
+        // Track session so useSetupRepoAutoLaunch can listen for launch_app events.
+        setSetupSessionId(sessionId);
+
         // Inject a synthetic user event so the ChatHistory panel shows the
         // prompt immediately — identical to the useSessionLaunch pattern.
         // Without this, useSessionSync gets an empty cache hit (session is
@@ -143,5 +154,5 @@ export function useRepoSetup(): UseRepoSetupReturn {
     ]
   );
 
-  return { launching, launchSetup };
+  return { launching, setupSessionId, launchSetup };
 }
