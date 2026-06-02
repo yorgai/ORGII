@@ -42,6 +42,7 @@ import InputActions from "./components/InputActions";
 import InputEditor from "./components/InputEditor";
 import ModePill from "./components/ModePill";
 import ModelPill from "./components/ModelPill";
+import PinnedActionsBar from "./components/PinnedActionsBar";
 import ReplyInfoDisplay from "./components/ReplyInfoDisplay";
 import SlashCommandPortal from "./components/SlashCommandPortal";
 import { useContainerDrag } from "./hooks/useContainerDrag";
@@ -502,6 +503,9 @@ const InputArea: React.FC<InputAreaProps> = memo(
         <div className="relative flex flex-col gap-0.5">
           {/* Header - only show in normal mode, not edit mode */}
           {!isEditMode && !omitChatHeader && <ChatHeader />}
+
+          {/* Pinned actions quick-access bar — only in non-edit chat mode */}
+          {!isEditMode && <PinnedActionsBar tiptapRef={tiptapRef} />}
 
           {isEditMode && quietEditSurface && showEditHeader && (
             <ChatStatusSegmentedBar
