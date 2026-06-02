@@ -123,6 +123,8 @@ pub enum ChatBlock {
     /// entirely (used by signal-only tools whose payload is already surfaced
     /// elsewhere in the UI).
     Hidden,
+    /// CanvasInlineBlock — render_inline_canvas (html / url / a2ui modes)
+    CanvasInline,
     /// ToolCallBlock — default fallback for tools without a specialized view
     #[default]
     Fallback,
@@ -145,6 +147,7 @@ impl ChatBlock {
             Self::SentMessage => "sent_message",
             Self::PlanDoc => "plan_doc",
             Self::Hidden => "hidden",
+            Self::CanvasInline => "canvas_inline",
             Self::Fallback => "fallback",
         }
     }

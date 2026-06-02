@@ -435,14 +435,14 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         icon_id: "layout",
         simulator_app: AppCode,
         app_subtool: OtherTool,
-        chat_block: CbFallback,
+        chat_block: CbCanvasInline,
         label_running: "tools.renderInlineCanvasRunning",
         label_done: "tools.renderInlineCanvasDone",
         label_failed: "tools.renderInlineCanvasFailed",
         actions: &[
-            action_sub!("html", "Render a self-contained HTML/SVG/CSS snippet", OtherTool, labels: "tools.renderInlineCanvasHtmlRunning", "tools.renderInlineCanvasHtmlDone", "tools.renderInlineCanvasHtmlFailed"),
-            action_sub!("url", "Embed an HTTPS URL in a sandboxed iframe", OtherTool, labels: "tools.renderInlineCanvasUrlRunning", "tools.renderInlineCanvasUrlDone", "tools.renderInlineCanvasUrlFailed"),
-            action_sub!("a2ui", "Stream typed UI elements (heading, text, code, image, button, list)", OtherTool, labels: "tools.renderInlineCanvasA2uiRunning", "tools.renderInlineCanvasA2uiDone", "tools.renderInlineCanvasA2uiFailed"),
+            action_sub!("html", "Render a self-contained HTML/SVG/CSS snippet", OtherTool, chat: CbCanvasInline, labels: "tools.renderInlineCanvasHtmlRunning", "tools.renderInlineCanvasHtmlDone", "tools.renderInlineCanvasHtmlFailed"),
+            action_sub!("url", "Embed an HTTPS URL in a sandboxed iframe", OtherTool, chat: CbCanvasInline, labels: "tools.renderInlineCanvasUrlRunning", "tools.renderInlineCanvasUrlDone", "tools.renderInlineCanvasUrlFailed"),
+            action_sub!("a2ui", "Stream typed UI elements (heading, text, code, image, button, list)", OtherTool, chat: CbCanvasInline, labels: "tools.renderInlineCanvasA2uiRunning", "tools.renderInlineCanvasA2uiDone", "tools.renderInlineCanvasA2uiFailed"),
         ],
         ..DEFAULT_TOOL_ENTRY
     },

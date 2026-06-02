@@ -17,9 +17,9 @@ pub(super) use AppSubtool::{
 };
 // ChatBlock aliases — one per actual React block component.
 pub(super) use ChatBlock::{
-    Diff as CbDiff, Explore as CbExplore, Fallback as CbFallback, Glob as CbGlob,
-    OrgTask as CbOrgTask, PlanDoc as CbPlanDoc, ReadFile as CbReadFile, Search as CbSearch,
-    SentMessage as CbSentMessage, Shell as CbShell, Subagent as CbSubagent,
+    CanvasInline as CbCanvasInline, Diff as CbDiff, Explore as CbExplore, Fallback as CbFallback,
+    Glob as CbGlob, OrgTask as CbOrgTask, PlanDoc as CbPlanDoc, ReadFile as CbReadFile,
+    Search as CbSearch, SentMessage as CbSentMessage, Shell as CbShell, Subagent as CbSubagent,
     TitleOnly as CbTitleOnly, Todo as CbTodo, WebSearch as CbWebSearch,
 };
 pub(super) use HumanToolKey::{
