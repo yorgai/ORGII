@@ -198,11 +198,22 @@ pub async fn process_message(
         .as_ref()
         .map(|ctx| (ctx.repo_path.as_deref(), ctx.workspace_folders.as_slice()))
         .unwrap_or((None, &[]));
+
+    let skill_ws = workspace_path.join(".orgii");
+    let skill_loader_fn = |name: &str| -> Option<String> {
+        let loader =
+            crate::intelligence::skills::loader::SkillsLoader::new(&skill_ws).with_builtin_dir(
+                crate::intelligence::skills::loader::global_skills_dir(),
+            );
+        loader.load_skill(name)
+    };
+
     let content = crate::utils::pill_resolver::expand_pill_references(
         &content,
         &workspace_path,
         ide_repo_path,
         workspace_folders,
+        Some(&skill_loader_fn as &dyn Fn(&str) -> Option<String>),
     );
 
     processor

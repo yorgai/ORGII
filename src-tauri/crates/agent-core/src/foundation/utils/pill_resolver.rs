@@ -1,16 +1,17 @@
 //! Resolve pill references embedded in user messages.
 //!
-//! The frontend serializes pill nodes (file, folder, project, repo, branch)
-//! into bracketed references like `[file:path]`, `[folder:path]`, etc.
+//! The frontend serializes pill nodes (file, folder, project, repo, branch,
+//! skill) into bracketed references like `[file:path]`, `[skill:/name]`, etc.
 //! These are opaque to the LLM. This module expands them into readable
 //! context blocks so the agent can actually see the referenced content.
 //!
-//! Reference formats (from `TiptapInput/utils.ts`):
+//! Reference formats (from `ComposerInput/utils.ts`):
 //!   - `[file:/absolute/path]`           → read file content
 //!   - `[file:project-slug/ITEM-ID]`       → resolve as global work item
 //!   - `[folder:/absolute/path]`         → list directory
 //!   - `[project:project-slug]`              → read project metadata
 //!   - `[repo:path]`, `[branch:path]`    → informational (no expansion needed)
+//!   - `[skill:/skill-name]`             → inject SKILL.md content
 //!   - `[type:path::base64]`             → already carries inline content
 
 use regex::Regex;
@@ -18,7 +19,7 @@ use std::path::Path;
 use std::sync::LazyLock;
 
 static PILL_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\[(file|folder|project|repo|branch):([^\]]+)\]").expect("valid regex")
+    Regex::new(r"\[(file|folder|project|repo|branch|skill):([^\]]+)\]").expect("valid regex")
 });
 
 /// Resolved reference with its content.
@@ -32,11 +33,15 @@ struct ResolvedRef {
 /// - `workspace`: the agent workspace root (used as a fallback for relative file paths)
 /// - `ide_repo_path`: the active IDE repo path (if different from workspace)
 /// - `workspace_folders`: all workspace folder roots for multi-root support
+/// - `skill_loader`: optional callback for resolving `[skill:/name]` pills; receives the
+///   bare skill name (without leading `/`) and returns the SKILL.md content. Passed as a
+///   callback to avoid a foundation → intelligence layer dependency.
 pub fn expand_pill_references(
     message: &str,
     workspace: &Path,
     ide_repo_path: Option<&str>,
     workspace_folders: &[String],
+    skill_loader: Option<&dyn Fn(&str) -> Option<String>>,
 ) -> String {
     let mut resolved: Vec<ResolvedRef> = Vec::new();
 
@@ -54,6 +59,7 @@ pub fn expand_pill_references(
             "file" => resolve_file_ref(ref_path, workspace, ide_repo_path, workspace_folders),
             "folder" => resolve_folder_ref(ref_path, workspace),
             "project" => resolve_project_ref(ref_path),
+            "skill" => resolve_skill_ref(ref_path, skill_loader),
             other => {
                 // Unknown pill ref_type. Surface it so a frontend that
                 // starts emitting a new pill kind without backend
@@ -188,6 +194,30 @@ fn resolve_project_ref(slug: &str) -> Option<String> {
     ))
 }
 
+/// Resolve a `[skill:/skill-name]` pill via the provided resolver callback.
+///
+/// The path format from the frontend is `/<skill-name>` (e.g. `/setup-repo`).
+/// The leading `/` is stripped to get the bare skill name. The actual loading
+/// is delegated to `skill_loader` to avoid a downward dependency from the
+/// foundation layer into the intelligence layer.
+fn resolve_skill_ref(
+    path: &str,
+    skill_loader: Option<&dyn Fn(&str) -> Option<String>>,
+) -> Option<String> {
+    let skill_name = path.trim_start_matches('/');
+    if skill_name.is_empty() {
+        return None;
+    }
+    let loader = skill_loader?;
+    let content = loader(skill_name)?;
+    tracing::info!(
+        "[pill_resolver] skill pill resolved: {} ({} chars)",
+        skill_name,
+        content.len()
+    );
+    Some(content)
+}
+
 /// Read a file with a size cap for context injection.
 fn read_file_preview(path: &Path) -> Option<String> {
     if !path.is_file() {
@@ -241,21 +271,21 @@ mod tests {
     #[test]
     fn test_no_pills_unchanged() {
         let msg = "Hello, how are you?";
-        let result = expand_pill_references(msg, Path::new("/tmp"), None, &[]);
+        let result = expand_pill_references(msg, Path::new("/tmp"), None, &[], None);
         assert_eq!(result, msg);
     }
 
     #[test]
     fn test_base64_pills_skipped() {
         let msg = "See this [terminal:term-1::dGVzdA==]";
-        let result = expand_pill_references(msg, Path::new("/tmp"), None, &[]);
+        let result = expand_pill_references(msg, Path::new("/tmp"), None, &[], None);
         assert_eq!(result, msg);
     }
 
     #[test]
     fn test_repo_branch_not_expanded() {
         let msg = "Check [repo:/path/to/repo] on [branch:main]";
-        let result = expand_pill_references(msg, Path::new("/tmp"), None, &[]);
+        let result = expand_pill_references(msg, Path::new("/tmp"), None, &[], None);
         // repo/branch are not expanded (no file content to inject)
         assert_eq!(result, msg);
     }
@@ -267,5 +297,57 @@ mod tests {
         assert_eq!(caps.len(), 1);
         assert_eq!(&caps[0][1], "file");
         assert_eq!(&caps[0][2], "project-1/MAR-0014");
+    }
+
+    #[test]
+    fn test_skill_pill_regex_matches() {
+        let msg = "setup-repo [skill:/setup-repo]";
+        let caps: Vec<_> = PILL_RE.captures_iter(msg).collect();
+        assert_eq!(caps.len(), 1);
+        assert_eq!(&caps[0][1], "skill");
+        assert_eq!(&caps[0][2], "/setup-repo");
+    }
+
+    #[test]
+    fn test_skill_pill_no_loader_unchanged() {
+        // Without a skill_loader, skill pills cannot be resolved → message unchanged.
+        let msg = "setup-repo [skill:/setup-repo]";
+        let result = expand_pill_references(msg, Path::new("/tmp"), None, &[], None);
+        assert_eq!(result, msg);
+    }
+
+    #[test]
+    fn test_skill_pill_with_loader_expands() {
+        let msg = "setup-repo [skill:/setup-repo]";
+        let loader = |name: &str| -> Option<String> {
+            if name == "setup-repo" {
+                Some("# Setup Repo Skill\n\nDo the setup.".to_string())
+            } else {
+                None
+            }
+        };
+        let result = expand_pill_references(
+            msg,
+            Path::new("/tmp"),
+            None,
+            &[],
+            Some(&loader as &dyn Fn(&str) -> Option<String>),
+        );
+        assert!(result.contains("# Setup Repo Skill"), "skill content should be injected");
+        assert!(result.contains("setup-repo [skill:/setup-repo]"), "original message preserved");
+    }
+
+    #[test]
+    fn test_skill_pill_unknown_name_unchanged() {
+        let msg = "nonexistent-skill [skill:/nonexistent-skill]";
+        let loader = |_name: &str| -> Option<String> { None };
+        let result = expand_pill_references(
+            msg,
+            Path::new("/tmp/nonexistent-workspace"),
+            None,
+            &[],
+            Some(&loader as &dyn Fn(&str) -> Option<String>),
+        );
+        assert_eq!(result, msg);
     }
 }
