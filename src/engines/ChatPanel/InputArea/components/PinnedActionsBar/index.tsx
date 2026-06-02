@@ -117,10 +117,16 @@ export interface PinnedActionsBarProps {
    * auto-send the inserted skill pill without the user pressing Enter.
    */
   onSubmit?: () => void;
+  /**
+   * Notifies the parent of a content change caused by an imperative insertion
+   * (e.g. Setup Repo pill). Required so validation state stays in sync when
+   * content is written directly to the DOM without a native input event.
+   */
+  onContentChange?: (text: string) => void;
 }
 
 const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
-  ({ tiptapRef, onSubmit }) => {
+  ({ tiptapRef, onSubmit, onContentChange }) => {
     const [pinnedActions, setPinnedActions] = useAtom(pinnedActionsAtom);
 
     // ── Built-in "Setup Repo" action ──────────────────────────────────────────
@@ -135,10 +141,16 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
         "setup-repo"
       );
       tiptapRef.current.focus();
-      // Yield one frame so React can flush the pill state update before
-      // getTextWithPills() is read inside the submit handler.
+      // Notify the parent of the inserted content so validation state
+      // (editorContent) is up-to-date before the submit fires. The pill
+      // insertion writes directly to the DOM without a native input event,
+      // so onContentChange would not fire otherwise.
+      const insertedText = tiptapRef.current.getTextWithPills();
+      onContentChange?.(insertedText);
+      // Yield one frame so React can flush the content-change state update
+      // before the validation inside the submit handler reads editorContent.
       requestAnimationFrame(() => onSubmit?.());
-    }, [tiptapRef, onSubmit]);
+    }, [tiptapRef, onSubmit, onContentChange]);
 
     // ── Available items (lazy-fetched) ────────────────────────────────────────
 

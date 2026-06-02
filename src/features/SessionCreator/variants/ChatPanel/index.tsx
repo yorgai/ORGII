@@ -631,6 +631,7 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
         <PinnedActionsBar
           tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
           onSubmit={() => void handleLaunch()}
+          onContentChange={handleContentChangeWithTracking}
         />
         <EditorArea
           variant="chatPanelFullScreen"
