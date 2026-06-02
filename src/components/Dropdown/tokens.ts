@@ -43,6 +43,9 @@ export const DROPDOWN_PANEL = {
    */
   paddingBelowHeaderClass: "px-1 pb-1",
 
+  /** Default min width for menu panels. */
+  menuMinWidthClass: "min-w-[140px]",
+
   /** Max height for the panel itself */
   maxHeight: 256,
   maxHeightClass: "max-h-64",
@@ -54,8 +57,8 @@ export const DROPDOWN_PANEL = {
 
   /** Gap between trigger and dropdown (px). Default for useDropdownEngine. */
   triggerGap: 8,
-  /** Compact gap for tight UIs (sidebar tab list, inline menus) */
-  triggerGapCompact: 4,
+  /** Tight gap for sidebar tab lists and inline menus */
+  triggerGapTight: 4,
 
   /** Gap between dropdown items (px). gap-0.5 = 2px. */
   itemsGap: 2,
@@ -78,26 +81,30 @@ export const DROPDOWN_ITEM = {
   borderRadius: 6,
   borderRadiusClass: "rounded-md",
 
-  /**
-   * Horizontal padding. Tightened from px-3 to px-1.5 so dropdown rows
-   * feel "compact" — the row's hover/selected pill hugs the label
-   * instead of bleeding out to the panel edges. Affects every variant
-   * built on this token (`item`, `itemCompact`, sectioned items, etc.).
-   */
+  /** Row height */
+  height: 32,
+  heightClass: "h-8",
+  minHeightClass: "min-h-8",
+
+  /** Horizontal padding */
   paddingX: 6,
   paddingXClass: "px-1.5",
 
-  /** Vertical padding */
-  paddingY: 8,
-  paddingYClass: "py-2",
+  /** Vertical padding is zero because the row height is fixed at 32px. */
+  paddingY: 0,
+  paddingYClass: "py-0",
 
   /** Gap between icon and label */
   gap: 8,
   gapClass: "gap-2",
 
+  /** Icon size */
+  iconSize: 13,
+  iconSizeClass: "h-[13px] w-[13px]",
+
   /** Font size */
-  fontSize: 14,
-  fontSizeClass: "text-sm",
+  fontSize: 13,
+  fontSizeClass: "text-[13px]",
 
   /**
    * Hover background. Hover only changes the surface fill — the selected
@@ -142,11 +149,11 @@ export const DROPDOWN_SEARCH = {
   borderRadiusClass: "rounded-md",
 
   /** Font size */
-  fontSize: 14,
-  fontSizeClass: "text-sm",
+  fontSize: 13,
+  fontSizeClass: "text-[13px]",
 
   /** Icon size */
-  iconSize: 14,
+  iconSize: 13,
 } as const;
 
 // ==============================================
@@ -212,6 +219,16 @@ export const DROPDOWN_CLASSES = {
     "dropdown-options-scrollbar",
   ].join(" "),
 
+  /** Scrollable options container with overlay scrollbar and caller-owned max height. */
+  optionsContainerOverlay: [
+    "scrollbar-overlay",
+    "flex",
+    "flex-col",
+    "overflow-y-auto",
+    DROPDOWN_PANEL.paddingClass,
+    DROPDOWN_PANEL.itemsGapClass,
+  ].join(" "),
+
   /** Scrollable options container (visible scrollbar) when a header sits above. */
   optionsContainerScrollbarBelowHeader: [
     "flex flex-col",
@@ -223,12 +240,14 @@ export const DROPDOWN_CLASSES = {
     "dropdown-options-scrollbar",
   ].join(" "),
 
-  /** Item base classes */
+  /** Standard 32px dropdown row. */
   item: [
     "flex",
     "items-center",
     DROPDOWN_ITEM.gapClass,
     DROPDOWN_ITEM.paddingXClass,
+    DROPDOWN_ITEM.heightClass,
+    DROPDOWN_ITEM.minHeightClass,
     DROPDOWN_ITEM.paddingYClass,
     DROPDOWN_ITEM.borderRadiusClass,
     DROPDOWN_ITEM.fontSizeClass,
@@ -237,22 +256,11 @@ export const DROPDOWN_CLASSES = {
     "text-text-1",
   ].join(" "),
 
-  /** Item compact variant (py-1.5 instead of py-2) - for dense lists like file browsers */
-  itemCompact: [
-    "flex",
-    "items-center",
-    DROPDOWN_ITEM.gapClass,
-    DROPDOWN_ITEM.paddingXClass,
-    "py-1.5",
-    DROPDOWN_ITEM.borderRadiusClass,
-    "text-[13px]",
-    DROPDOWN_ITEM.transitionClass,
-    "cursor-pointer",
-    "text-text-1",
-  ].join(" "),
-
   /** Item hover state */
   itemHover: DROPDOWN_ITEM.hoverBgClass,
+
+  /** Active row background for keyboard/hover-index highlight without selected text styling. */
+  itemActive: "bg-surface-hover",
 
   /** Item selected state */
   itemSelected: [
@@ -266,32 +274,52 @@ export const DROPDOWN_CLASSES = {
   /** Item disabled state */
   itemDisabled: DROPDOWN_ITEM.disabledClass,
 
-  /** Compact menu panel that sizes to its single-line action content. */
-  menuPanelCompact: [
+  /** Widthless menu panel base. Pair with one DROPDOWN_WIDTHS token. */
+  menuPanelBase: [
     DROPDOWN_PANEL.bgClass,
     DROPDOWN_PANEL.borderClass,
     DROPDOWN_PANEL.borderRadiusClass,
     DROPDOWN_PANEL.shadowClass,
     DROPDOWN_PANEL.paddingClass,
     DROPDOWN_PANEL.zIndexClass,
-    "min-w-[140px]",
+  ].join(" "),
+
+  /** Menu panel that sizes to single-line action content. */
+  menuPanel: [
+    DROPDOWN_PANEL.bgClass,
+    DROPDOWN_PANEL.borderClass,
+    DROPDOWN_PANEL.borderRadiusClass,
+    DROPDOWN_PANEL.shadowClass,
+    DROPDOWN_PANEL.paddingClass,
+    DROPDOWN_PANEL.zIndexClass,
+    DROPDOWN_PANEL.menuMinWidthClass,
     "w-max",
   ].join(" "),
 
-  /** Compact menu panel with a full-width header/search row. */
-  menuPanelCompactWithHeader: [
+  /** Widthless menu panel base with a full-width header/search row. Pair with one DROPDOWN_WIDTHS token. */
+  menuPanelWithHeaderBase: [
     DROPDOWN_PANEL.bgClass,
     DROPDOWN_PANEL.borderClass,
     DROPDOWN_PANEL.borderRadiusClass,
     DROPDOWN_PANEL.shadowClass,
     DROPDOWN_PANEL.zIndexClass,
-    "min-w-[140px]",
+    "overflow-hidden",
+  ].join(" "),
+
+  /** Menu panel with a full-width header/search row. */
+  menuPanelWithHeader: [
+    DROPDOWN_PANEL.bgClass,
+    DROPDOWN_PANEL.borderClass,
+    DROPDOWN_PANEL.borderRadiusClass,
+    DROPDOWN_PANEL.shadowClass,
+    DROPDOWN_PANEL.zIndexClass,
+    DROPDOWN_PANEL.menuMinWidthClass,
     "w-max",
     "overflow-hidden",
   ].join(" "),
 
-  /** Full-width compact menu item that keeps labels on one line. */
-  menuActionItemCompact: [
+  /** Full-width 32px menu action item that keeps labels on one line. */
+  menuActionItem: [
     "flex",
     "w-full",
     "items-center",
@@ -300,17 +328,19 @@ export const DROPDOWN_CLASSES = {
     "text-left",
     DROPDOWN_ITEM.gapClass,
     DROPDOWN_ITEM.paddingXClass,
-    "py-1.5",
+    DROPDOWN_ITEM.heightClass,
+    DROPDOWN_ITEM.minHeightClass,
+    DROPDOWN_ITEM.paddingYClass,
     DROPDOWN_ITEM.borderRadiusClass,
-    "text-[13px]",
+    DROPDOWN_ITEM.fontSizeClass,
     DROPDOWN_ITEM.transitionClass,
     "cursor-pointer",
     "text-text-1",
     DROPDOWN_ITEM.hoverBgClass,
   ].join(" "),
 
-  /** Compact menu row for label + right-side control such as Switch. */
-  menuControlItemCompact: [
+  /** 32px menu row for label + right-side control such as Switch. */
+  menuControlItem: [
     "flex",
     "w-full",
     "items-center",
@@ -319,15 +349,17 @@ export const DROPDOWN_CLASSES = {
     "text-left",
     DROPDOWN_ITEM.gapClass,
     DROPDOWN_ITEM.paddingXClass,
-    "py-1.5",
+    DROPDOWN_ITEM.heightClass,
+    DROPDOWN_ITEM.minHeightClass,
+    DROPDOWN_ITEM.paddingYClass,
     DROPDOWN_ITEM.borderRadiusClass,
-    "text-[13px]",
+    DROPDOWN_ITEM.fontSizeClass,
     DROPDOWN_ITEM.transitionClass,
     "text-text-1",
     DROPDOWN_ITEM.hoverBgClass,
   ].join(" "),
 
-  /** Separator between compact menu groups. */
+  /** Separator between menu groups. */
   menuSeparator: ["my-1", "border-t", "border-solid", "border-border-2"].join(
     " "
   ),
@@ -337,20 +369,7 @@ export const DROPDOWN_CLASSES = {
     "flex",
     "shrink-0",
     "items-center",
-    "gap-2",
-    "px-3",
-    "py-2",
-    "border-b",
-    "border-solid",
-    "border-border-2",
-  ].join(" "),
-
-  /** Compact search input container for dense menu palettes. */
-  searchContainerCompact: [
-    "flex",
-    "shrink-0",
-    "items-center",
-    "gap-2",
+    DROPDOWN_ITEM.gapClass,
     "px-3",
     "py-1.5",
     "border-b",
@@ -364,24 +383,20 @@ export const DROPDOWN_CLASSES = {
     "bg-transparent",
     "border-none",
     "outline-none",
-    DROPDOWN_SEARCH.fontSizeClass,
-    "text-text-1",
-    "placeholder:text-text-3",
-  ].join(" "),
-
-  /** Compact search input for dense menu palettes. */
-  searchInputCompact: [
-    "flex-1",
-    "bg-transparent",
-    "border-none",
-    "outline-none",
-    "text-[13px]",
+    DROPDOWN_ITEM.fontSizeClass,
     "text-text-1",
     "placeholder:text-text-3",
   ].join(" "),
 
   /** Column wrapper for dropdown items (flex + items gap). Use when stacking items without optionsContainer. */
   itemsColumn: ["flex flex-col", DROPDOWN_PANEL.itemsGapClass].join(" "),
+
+  /** Padded column wrapper for non-scroll dropdown item stacks. */
+  itemsColumnPadded: [
+    "flex flex-col",
+    DROPDOWN_PANEL.itemsGapClass,
+    DROPDOWN_PANEL.paddingClass,
+  ].join(" "),
 
   /**
    * Column wrapper + padding for items rendered directly under a
@@ -394,16 +409,28 @@ export const DROPDOWN_CLASSES = {
     DROPDOWN_PANEL.paddingBelowHeaderClass,
   ].join(" "),
 
-  /** Compact item column directly under a full-width search/header row. */
-  itemsColumnCompactBelowSearch: [
+  /** Item column directly under a full-width search/header row. */
+  itemsColumnBelowSearch: [
     "flex flex-col",
     DROPDOWN_PANEL.itemsGapClass,
     DROPDOWN_PANEL.paddingClass,
   ].join(" "),
 
-  /** Compact section / group label inside a dropdown (non-interactive). */
+  /** Section / group label inside a dropdown (non-interactive). */
   sectionLabel:
     "px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-text-3",
+
+  /** Bordered dropdown section wrapper for grouped controls above/between lists. */
+  sectionContainer: [
+    "border-b",
+    "border-solid",
+    "border-border-2",
+    DROPDOWN_PANEL.paddingClass,
+  ].join(" "),
+
+  /** Empty/loading message inside a dropdown list. */
+  listMessage:
+    "flex items-center justify-center gap-2 px-3 py-6 text-center text-[13px] text-text-3",
 
   /** Footer container (Select All, actions) — flex, border-t, p-1 */
   footerContainer: [

@@ -102,7 +102,7 @@ const PlaybackSpeedInline: React.FC<PlaybackSpeedInlineProps> = ({
     placement: "top",
     align: "right",
     disabled,
-    gap: DROPDOWN_PANEL.triggerGapCompact,
+    gap: DROPDOWN_PANEL.triggerGapTight,
   });
 
   const panelPositionStyle = useMemo(() => {
@@ -140,7 +140,7 @@ const PlaybackSpeedInline: React.FC<PlaybackSpeedInlineProps> = ({
         createPortal(
           <div
             ref={panelRef}
-            className={`${DROPDOWN_CLASSES.panel} fixed ${DROPDOWN_PANEL.zIndexClass} ${DROPDOWN_PANEL.paddingClass} min-w-[80px]`}
+            className={`${DROPDOWN_CLASSES.menuPanelBase} fixed min-w-[80px]`}
             style={panelPositionStyle}
           >
             <div
@@ -155,7 +155,7 @@ const PlaybackSpeedInline: React.FC<PlaybackSpeedInlineProps> = ({
                     type="button"
                     role="option"
                     aria-selected={selected}
-                    className={`${DROPDOWN_CLASSES.itemCompact} ${
+                    className={`${DROPDOWN_CLASSES.item} ${
                       selected
                         ? DROPDOWN_CLASSES.itemSelected
                         : DROPDOWN_CLASSES.itemHover

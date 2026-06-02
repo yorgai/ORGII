@@ -27,18 +27,10 @@ import { DROPDOWN_CLASSES } from "./tokens";
 
 export interface DropdownHeaderProps {
   children: React.ReactNode;
-  className?: string;
 }
 
-const DropdownHeader: React.FC<DropdownHeaderProps> = ({
-  children,
-  className = "",
-}) => {
-  return (
-    <div className={`${DROPDOWN_CLASSES.searchContainer} ${className}`}>
-      {children}
-    </div>
-  );
+const DropdownHeader: React.FC<DropdownHeaderProps> = ({ children }) => {
+  return <div className={DROPDOWN_CLASSES.searchContainer}>{children}</div>;
 };
 
 export default DropdownHeader;

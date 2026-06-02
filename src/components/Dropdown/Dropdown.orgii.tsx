@@ -12,6 +12,7 @@ import { ChevronDown, MoreHorizontal } from "lucide-react";
 import Button from "../Button";
 import Menu from "../Menu";
 import Dropdown, { type DropdownProps } from "./index";
+import { DROPDOWN_ITEM } from "./tokens";
 
 // ============================================
 // Meta Configuration
@@ -59,7 +60,7 @@ export const Default: OrgiiProject<DropdownProps> = {
       }
     >
       <Button variant="secondary">
-        Click me <ChevronDown size={14} />
+        Click me <ChevronDown size={DROPDOWN_ITEM.iconSize} />
       </Button>
     </Dropdown>
   ),
@@ -78,7 +79,7 @@ export const Primary: OrgiiProject<DropdownProps> = {
       }
     >
       <Button variant="primary">
-        Actions <ChevronDown size={14} />
+        Actions <ChevronDown size={DROPDOWN_ITEM.iconSize} />
       </Button>
     </Dropdown>
   ),
@@ -112,7 +113,11 @@ export const IconButton: OrgiiProject<DropdownProps> = {
         </Menu>
       }
     >
-      <Button variant="tertiary" iconOnly icon={<MoreHorizontal size={16} />} />
+      <Button
+        variant="tertiary"
+        iconOnly
+        icon={<MoreHorizontal size={DROPDOWN_ITEM.iconSize} />}
+      />
     </Dropdown>
   ),
   description: "Icon-only trigger",
@@ -130,7 +135,7 @@ export const UserMenu: OrgiiProject<DropdownProps> = {
       }
     >
       <Button variant="secondary">
-        Account <ChevronDown size={14} />
+        Account <ChevronDown size={DROPDOWN_ITEM.iconSize} />
       </Button>
     </Dropdown>
   ),

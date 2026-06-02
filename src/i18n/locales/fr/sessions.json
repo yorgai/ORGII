@@ -643,7 +643,13 @@
     "voiceErrorPermission": "Permission micro refusée. Activez-la dans les paramètres système.",
     "voiceErrorUnsupported": "L'entrée vocale n'est pas prise en charge dans cette version.",
     "voiceErrorAudio": "Aucun microphone détecté.",
-    "voiceErrorGeneric": "Échec de l'entrée vocale. Veuillez réessayer."
+    "voiceErrorGeneric": "Échec de l'entrée vocale. Veuillez réessayer.",
+    "pinnedActions": {
+      "manage": "Gérer les actions épinglées",
+      "searchPlaceholder": "Rechercher des actions à épingler…",
+      "loading": "Chargement…",
+      "empty": "Aucune action trouvée."
+    }
   },
   "listPanel": {
     "showingOf": "Affichage de {{filtered}} sur {{total}}",

@@ -51,30 +51,10 @@ export interface DropdownSearchProps {
    * @default false
    */
   autoFocus?: boolean;
-
-  /**
-   * Additional class name for container
-   */
-  className?: string;
-
-  /**
-   * Additional class name for input
-   */
-  inputClassName?: string;
 }
 
 const DropdownSearch = forwardRef<HTMLInputElement, DropdownSearchProps>(
-  (
-    {
-      value,
-      onChange,
-      placeholder = "Search...",
-      autoFocus = false,
-      className = "",
-      inputClassName = "",
-    },
-    ref
-  ) => {
+  ({ value, onChange, placeholder = "Search...", autoFocus = false }, ref) => {
     const internalRef = useRef<HTMLInputElement>(null);
     const inputRef = (ref as React.RefObject<HTMLInputElement>) || internalRef;
     const tauriSelectAll = useTauriSelectAllShortcut();
@@ -100,7 +80,7 @@ const DropdownSearch = forwardRef<HTMLInputElement, DropdownSearchProps>(
     };
 
     return (
-      <div className={`${DROPDOWN_CLASSES.searchContainer} ${className}`}>
+      <div className={DROPDOWN_CLASSES.searchContainer}>
         <Search
           size={DROPDOWN_SEARCH.iconSize}
           className="flex-shrink-0 text-text-3"
@@ -113,7 +93,7 @@ const DropdownSearch = forwardRef<HTMLInputElement, DropdownSearchProps>(
           onClick={handleClick}
           onKeyDown={tauriSelectAll}
           placeholder={placeholder}
-          className={`${DROPDOWN_CLASSES.searchInput} ${inputClassName}`}
+          className={DROPDOWN_CLASSES.searchInput}
         />
       </div>
     );

@@ -25,6 +25,7 @@ import {
 } from "@src/config/gitStatus";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
+import { CODE_EDITOR_TOUR_TARGETS } from "@src/scaffold/Tutorials/codeEditorTourConfig";
 import { resolveProjectManagerTabTitle } from "@src/store/workstation/tabs";
 
 import type { WorkStationTab } from "../../types";
@@ -281,6 +282,11 @@ export const SortableTab: React.FC<SortableTabProps> = memo(
         aria-selected={isActive}
         {...(isDraggable ? listeners : {})}
         data-tab-id={tab.id}
+        data-tour-target={
+          tab.type === "source-control"
+            ? CODE_EDITOR_TOUR_TARGETS.sourceControl
+            : undefined
+        }
         data-action="editor.tab.switch"
         data-action-id={tab.id}
         isActive={isActive}

@@ -4,12 +4,15 @@
  * Higher-level panel components: recent files, search results,
  * and second layer panels (files, terminals, sessions, browser).
  */
-import { Globe, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import React, { memo, useEffect, useRef } from "react";
 
 import FolderIcon from "@src/assets/fileTypeIcons/folder-base.svg";
 import DropdownHeader from "@src/components/Dropdown/DropdownHeader";
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import FileTreePreview from "@src/components/FileTreePreview";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 
@@ -19,12 +22,10 @@ import {
   SecondLayerEmptyState,
 } from "./ResultItems";
 import {
-  CONTEXT_MENU_ITEM_ROW,
   ICON_CONFIG,
   SECOND_LAYER_CONFIG,
   STYLE_CONFIG,
   getFileName,
-  truncatePath,
 } from "./config";
 import type { RecentFile, SecondLayerId } from "./config";
 import type { SearchResultItem } from "./types";
@@ -54,17 +55,17 @@ export const RecentFilesSection: React.FC<RecentFilesSectionProps> = memo(
     if (files.length === 0) return null;
 
     return (
-      <div className="border-b border-solid border-border-2 p-1">
+      <div className={DROPDOWN_CLASSES.sectionContainer}>
         <div className={DROPDOWN_CLASSES.sectionLabel}>Recent</div>
         {files.slice(0, STYLE_CONFIG.recentSectionMaxItems).map((file, idx) => {
           const rowActive = activeIndex === baseIndex + idx;
           return (
             <div
               key={file.path}
-              className={`${DROPDOWN_CLASSES.itemCompact} group cursor-pointer ${
+              className={`${DROPDOWN_CLASSES.item} group cursor-pointer ${
                 rowActive
-                  ? CONTEXT_MENU_ITEM_ROW.selected
-                  : CONTEXT_MENU_ITEM_ROW.hoverIdle
+                  ? DROPDOWN_CLASSES.itemActive
+                  : DROPDOWN_CLASSES.itemHover
               }`}
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -76,34 +77,19 @@ export const RecentFilesSection: React.FC<RecentFilesSectionProps> = memo(
             >
               {file.type === "folder" ? (
                 <FolderIcon
-                  width="14"
-                  height="14"
-                  className={`flex-shrink-0 ${rowActive ? "text-primary-6" : "text-text-2 group-hover:text-primary-6"}`}
+                  width={DROPDOWN_ITEM.iconSize}
+                  height={DROPDOWN_ITEM.iconSize}
+                  className="flex-shrink-0 text-text-2"
                 />
               ) : (
                 <FileTypeIcon
                   fileName={file.name}
                   size="small"
-                  className={`flex-shrink-0 ${rowActive ? "text-primary-6" : "text-text-2 group-hover:text-primary-6"}`}
+                  className="flex-shrink-0 text-text-2"
                 />
               )}
-              <span
-                className={`truncate text-[12px] ${
-                  rowActive
-                    ? "text-primary-6"
-                    : "text-text-1 group-hover:text-primary-6"
-                }`}
-              >
+              <span className="truncate text-[13px] text-text-1">
                 {file.name}
-              </span>
-              <span
-                className={`ml-auto truncate text-[10px] ${
-                  rowActive
-                    ? "text-primary-6/75"
-                    : "text-text-3 group-hover:text-primary-6/70"
-                }`}
-              >
-                {truncatePath(file.path, 30)}
               </span>
             </div>
           );
@@ -131,15 +117,12 @@ interface ResultItemRowProps {
 const ResultItemRow: React.FC<ResultItemRowProps> = memo(
   ({ item, index, activeIndex, onSelect, onHover, onHoverEnd, itemRef }) => {
     const displayName = item.name || getFileName(item.path);
-    const secondaryText = item.description || item.path;
     const rowActive = activeIndex === index;
     return (
       <div
         ref={itemRef}
-        className={`${DROPDOWN_CLASSES.itemCompact} group cursor-pointer ${
-          rowActive
-            ? CONTEXT_MENU_ITEM_ROW.selected
-            : CONTEXT_MENU_ITEM_ROW.hoverIdle
+        className={`${DROPDOWN_CLASSES.item} group cursor-pointer ${
+          rowActive ? DROPDOWN_CLASSES.itemActive : DROPDOWN_CLASSES.itemHover
         }`}
         onMouseDown={(e) => {
           e.preventDefault();
@@ -149,35 +132,9 @@ const ResultItemRow: React.FC<ResultItemRowProps> = memo(
         onMouseEnter={() => onHover(index)}
         onMouseLeave={onHoverEnd}
       >
-        <ResultItemIcon
-          item={item}
-          displayName={displayName}
-          active={rowActive}
-        />
-        {item.iconType === "browser" && item.favicon && (
-          <Globe
-            size={16}
-            strokeWidth={1.75}
-            className="hidden flex-shrink-0 text-text-2"
-          />
-        )}
-        <span
-          className={`truncate text-[12px] ${
-            rowActive
-              ? "text-primary-6"
-              : "text-text-1 group-hover:text-primary-6"
-          }`}
-        >
+        <ResultItemIcon item={item} displayName={displayName} />
+        <span className="min-w-0 flex-1 truncate text-[13px] text-text-1">
           {displayName}
-        </span>
-        <span
-          className={`ml-auto max-w-[60%] truncate text-[10px] ${
-            rowActive
-              ? "text-primary-6/75"
-              : "text-text-3 group-hover:text-primary-6/70"
-          }`}
-        >
-          {secondaryText}
         </span>
       </div>
     );
@@ -193,7 +150,6 @@ interface TreePreviewProps {
   item: SearchResultItem;
   repoPath?: string;
   treePosition: "left" | "right";
-  panelWidth?: number;
   position: "absolute" | "inline";
 }
 
@@ -241,7 +197,6 @@ export interface SearchResultsPanelProps {
   onHoverEnd: () => void;
   repoPath?: string;
   treePosition?: "left" | "right";
-  panelWidth?: number;
 }
 
 export const SearchResultsPanel: React.FC<SearchResultsPanelProps> = memo(
@@ -255,11 +210,9 @@ export const SearchResultsPanel: React.FC<SearchResultsPanelProps> = memo(
     onHoverEnd,
     repoPath,
     treePosition = "left",
-    panelWidth,
   }) => {
     const activeItem = results[activeIndex];
-    const showTreePanel =
-      results.length > 0 && activeItem && activeItem.iconType !== "branch";
+    const showTreePanel = results.length > 0 && activeItem;
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     useEffect(() => {
@@ -284,23 +237,23 @@ export const SearchResultsPanel: React.FC<SearchResultsPanelProps> = memo(
 
         <div
           className={`relative ${DROPDOWN_CLASSES.panel}`}
-          style={{ width: panelWidth || STYLE_CONFIG.secondLayerWidth }}
+          style={{ width: STYLE_CONFIG.secondLayerWidth }}
         >
-          <DropdownHeader className="!py-1.5">
+          <DropdownHeader>
             <span className="flex h-5 w-5 shrink-0 items-center justify-center">
               <Search
-                size={16}
+                size={DROPDOWN_ITEM.iconSize}
                 strokeWidth={1.75}
                 className="text-text-3"
                 aria-hidden
               />
             </span>
-            <span className="flex min-h-5 flex-1 items-center truncate text-[12px] font-medium leading-5 text-text-1">
+            <span className="flex min-h-5 flex-1 items-center truncate text-[13px] font-medium leading-5 text-text-1">
               {searchQuery || "Search..."}
             </span>
           </DropdownHeader>
           <div
-            className="overflow-y-auto px-1 py-1 scrollbar-hide"
+            className={DROPDOWN_CLASSES.optionsContainer}
             style={{ maxHeight: STYLE_CONFIG.maxHeight }}
           >
             {results.length === 0 && !loading ? (
@@ -344,7 +297,6 @@ export interface SecondLayerPanelProps {
   onBack: () => void;
   repoPath?: string;
   treePosition?: "left" | "right";
-  panelWidth?: number;
   /** Override the default layer title (used for drill-down breadcrumb) */
   titleOverride?: string;
 }
@@ -361,16 +313,12 @@ export const SecondLayerPanel: React.FC<SecondLayerPanelProps> = memo(
     onBack,
     repoPath,
     treePosition = "left",
-    panelWidth,
     titleOverride,
   }) => {
     const config = SECOND_LAYER_CONFIG[layerId];
     const activeItem = results[activeIndex];
     const showTreePanel =
-      layerId === "files" &&
-      results.length > 0 &&
-      activeItem &&
-      activeItem.iconType !== "branch";
+      layerId === "files" && results.length > 0 && activeItem;
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     useEffect(() => {
@@ -395,29 +343,32 @@ export const SecondLayerPanel: React.FC<SecondLayerPanelProps> = memo(
 
         <div
           className={`relative ${DROPDOWN_CLASSES.panel}`}
-          style={{ width: panelWidth || STYLE_CONFIG.secondLayerWidth }}
+          style={{ width: STYLE_CONFIG.secondLayerWidth }}
         >
           {/* Header with back button */}
-          <DropdownHeader className="!py-1.5">
+          <DropdownHeader>
             <button
               type="button"
               onMouseDown={(e) => {
                 e.preventDefault();
                 onBack();
               }}
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-text-2 transition-colors hover:bg-fill-2 hover:text-text-1"
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-text-2 transition-colors hover:text-text-1 ${DROPDOWN_CLASSES.itemHover}`}
               aria-label="Back"
             >
-              <ICON_CONFIG.arrowBack size={16} strokeWidth={1.75} />
+              <ICON_CONFIG.arrowBack
+                size={DROPDOWN_ITEM.iconSize}
+                strokeWidth={1.75}
+              />
             </button>
-            <span className="flex min-h-5 min-w-0 flex-1 items-center truncate text-[12px] font-medium leading-5 text-text-1">
+            <span className="flex min-h-5 min-w-0 flex-1 items-center truncate text-[13px] font-medium leading-5 text-text-1">
               {titleOverride || config.title}
             </span>
           </DropdownHeader>
 
           {/* Results */}
           <div
-            className="overflow-y-auto px-1 py-1 scrollbar-hide"
+            className={DROPDOWN_CLASSES.optionsContainer}
             style={{ maxHeight: STYLE_CONFIG.maxHeight }}
           >
             {loading ? (

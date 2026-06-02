@@ -101,7 +101,7 @@ const CompactPlusDropdown: React.FC<CompactPlusDropdownProps> = ({
 
   const droplist = (
     <div
-      className={`${DROPDOWN_CLASSES.menuPanelCompact} ${DROPDOWN_WIDTHS.wideMenuClass}`}
+      className={`${DROPDOWN_CLASSES.menuPanelBase} ${DROPDOWN_WIDTHS.wideMenuClass}`}
     >
       {visibleItems.map((item) => {
         if (item.id === "divider") {
@@ -119,7 +119,7 @@ const CompactPlusDropdown: React.FC<CompactPlusDropdownProps> = ({
               setOpen(false);
               item.onClick();
             }}
-            className={`${DROPDOWN_CLASSES.menuActionItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuActionItem} ${
               item.isDanger ? "!text-danger-6" : ""
             }`}
           >

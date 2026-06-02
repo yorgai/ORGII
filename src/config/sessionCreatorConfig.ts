@@ -9,7 +9,7 @@ import {
   Infinity,
   Bug,
   Cloud,
-  GitBranchPlus,
+  GitBranch,
   Laptop,
   ListTodo,
   Search,
@@ -155,7 +155,7 @@ export const RUNNING_LOCATIONS: RunningLocationEntry[] = [
   },
   {
     id: "worktree",
-    icon: GitBranchPlus,
+    icon: GitBranch,
     i18nKey: "planner.runningLocation.worktree",
     name: "New Worktree",
     description: "Run in a new git worktree",

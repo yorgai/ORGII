@@ -71,7 +71,7 @@ const AppSwitcherChipComponent: React.FC<AppSwitcherChipProps> = ({
     panelRef,
     panelPosition,
   } = useDropdownEngine<HTMLDivElement>({
-    gap: DROPDOWN_PANEL.triggerGapCompact,
+    gap: DROPDOWN_PANEL.triggerGapTight,
     placement: "bottom",
     align: "left",
   });

@@ -49,6 +49,7 @@ export interface PillSelectorProps {
   /** When true, show the selector as open/selected */
   formOpen?: boolean;
   dataTestId?: string;
+  dataTourTarget?: string;
 }
 
 /**
@@ -72,6 +73,7 @@ const PillSelector: React.FC<PillSelectorProps> = ({
   onHoverChange,
   formOpen = false,
   dataTestId,
+  dataTourTarget,
 }) => {
   const { isDark } = useCurrentTheme();
   const [ref, isHovered] = useSafeHover<HTMLDivElement>();
@@ -110,6 +112,7 @@ const PillSelector: React.FC<PillSelectorProps> = ({
     <div
       ref={ref}
       data-testid={dataTestId}
+      data-tour-target={dataTourTarget}
       className="relative flex cursor-pointer items-center"
       style={{ height: PILL_SELECTOR_HEIGHT }}
       onPointerDown={() => {

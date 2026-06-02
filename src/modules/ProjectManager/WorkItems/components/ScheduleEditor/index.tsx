@@ -271,7 +271,6 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     size: "small" as const,
     dropdownAlign: "right" as const,
     dropdownWidthMode: "match" as const,
-    dropdownCompact: true,
     variant: "ghost" as const,
     className: "w-full",
     getPopupContainer: getSelectPopupContainer,

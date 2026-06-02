@@ -12,6 +12,7 @@ import DropdownSearch from "@src/components/Dropdown/DropdownSearch";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
@@ -100,7 +101,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({
               onClick={handleClear}
               className="pointer-events-none absolute right-1 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border-none bg-bg-2 text-text-3 opacity-0 transition-[background-color,color,opacity] hover:bg-fill-3 hover:text-text-1 focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover/field:pointer-events-auto group-hover/field:opacity-100"
             >
-              <X size={12} />
+              <X size={DROPDOWN_ITEM.iconSize} />
             </button>
           )}
         </div>
@@ -142,7 +143,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({
             onClick={onClick}
             className={`mr-1 flex h-6 w-5 shrink-0 items-center justify-center rounded-md border-none bg-transparent text-text-3 transition-colors hover:bg-fill-3 hover:text-text-1 ${isActive ? "flex" : "hidden group-hover/field:flex"}`}
           >
-            <EditIcon size={12} />
+            <EditIcon size={DROPDOWN_ITEM.iconSize} />
           </button>
         )}
       </div>
@@ -262,8 +263,6 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         onChange={setSearchQuery}
         placeholder={placeholder}
         autoFocus
-        className="px-2 py-1.5"
-        inputClassName="text-[13px]"
       />
       <div className={DROPDOWN_CLASSES.optionsContainer} style={{ maxHeight }}>
         {children(searchQuery)}
@@ -296,7 +295,7 @@ export const Option: React.FC<OptionProps> = ({
   <button
     type="button"
     className={[
-      DROPDOWN_CLASSES.itemCompact,
+      DROPDOWN_CLASSES.item,
       "hover:bg-fill-2",
       "min-h-7 w-full text-left",
       isSelected && DROPDOWN_CLASSES.itemSelected,

@@ -412,7 +412,6 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({
       radius="lg"
       dropdownWidthMode="auto"
       dropdownAlign="right"
-      dropdownCompact
       className="w-auto"
     />
   );

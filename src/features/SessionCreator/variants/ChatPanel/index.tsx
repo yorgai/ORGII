@@ -579,7 +579,6 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
           onChange={handleWorkItemSelect}
           placeholder={t("creator.selectWorkItem")}
           showSearch
-          dropdownCompact
           dropdownMinWidth={260}
           dropdownWidthMode="match"
           selectorClassName="!h-9 !w-full !rounded-none !border-0 !bg-transparent !pl-0 !pr-6 !text-[13px] font-normal !shadow-none hover:!bg-transparent [&_.select-placeholder]:!text-text-3 [&_.select-suffix]:!hidden"
@@ -628,9 +627,6 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
 
     const editorArea = (
       <div className={`mx-auto w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}>
-        <PinnedActionsBar
-          tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
-        />
         <EditorArea
           variant="chatPanelFullScreen"
           uploadedFiles={uploadedFiles}
@@ -747,6 +743,14 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
               <div className="session-creator-chat-panel-fullscreen-repo-row px-1 pb-2 pt-3">
                 {repoPills}
               </div>
+            </div>
+
+            <div
+              className={`mx-auto w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
+            >
+              <PinnedActionsBar
+                tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
+              />
             </div>
 
             {selectedOrg && isOrgMembersPanelOpen && (

@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import Tooltip from "@src/components/Tooltip";
@@ -58,7 +59,7 @@ export const FollowModeDropdown: React.FC = () => {
   } = useDropdownEngine<HTMLButtonElement>({
     placement: "top",
     align: "right",
-    gap: DROPDOWN_PANEL.triggerGapCompact,
+    gap: DROPDOWN_PANEL.triggerGapTight,
   });
 
   const panelPositionStyle = useMemo(() => {
@@ -120,7 +121,7 @@ export const FollowModeDropdown: React.FC = () => {
         createPortal(
           <div
             ref={panelRef}
-            className={`${DROPDOWN_CLASSES.panel} fixed ${DROPDOWN_PANEL.zIndexClass} ${DROPDOWN_PANEL.paddingClass} min-w-[140px]`}
+            className={`${DROPDOWN_CLASSES.menuPanel} fixed`}
             style={panelPositionStyle}
           >
             <div
@@ -132,13 +133,13 @@ export const FollowModeDropdown: React.FC = () => {
                 role="option"
                 aria-selected={isAllApps}
                 onClick={handleSelectAgent}
-                className={`${DROPDOWN_CLASSES.itemCompact} ${
+                className={`${DROPDOWN_CLASSES.item} ${
                   isAllApps
                     ? DROPDOWN_CLASSES.itemSelected
                     : DROPDOWN_CLASSES.itemHover
                 } w-full justify-between gap-2`}
               >
-                <InfinityIcon size={12} strokeWidth={2} />
+                <InfinityIcon size={DROPDOWN_ITEM.iconSize} strokeWidth={2} />
                 <span className="flex-1 text-left">
                   {t("simulator.replay.trajectoryAgent")}
                 </span>
@@ -150,7 +151,7 @@ export const FollowModeDropdown: React.FC = () => {
                 aria-selected={!isAllApps}
                 disabled={thisAppDisabled}
                 onClick={handleSelectThisApp}
-                className={`${DROPDOWN_CLASSES.itemCompact} ${
+                className={`${DROPDOWN_CLASSES.item} ${
                   !isAllApps
                     ? DROPDOWN_CLASSES.itemSelected
                     : DROPDOWN_CLASSES.itemHover

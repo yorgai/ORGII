@@ -101,6 +101,7 @@ export interface TabBarProps {
    * the selected tab keeps its text label. Widen the strip to show all labels again.
    */
   collapseInactiveTabLabelsOnOverflow?: boolean;
+  dataTourTarget?: string;
 }
 
 // ============================================
@@ -125,6 +126,7 @@ export const TabBar: React.FC<TabBarProps> = memo(
     trailingSlot,
     surfaceClassName = "bg-workstation-bg",
     collapseInactiveTabLabelsOnOverflow = false,
+    dataTourTarget,
   }) => {
     const actionSystem = useActionSystemOptional();
     const dispatch = actionSystem?.dispatch;
@@ -213,6 +215,7 @@ export const TabBar: React.FC<TabBarProps> = memo(
       <div
         ref={containerRef}
         data-pane-id={paneId}
+        data-tour-target={dataTourTarget}
         data-is-dragging={draggingTabId ? "true" : undefined}
         className={`work-station-tab-bar relative flex shrink-0 overflow-hidden ${surfaceClassName}`}
         data-tauri-drag-region

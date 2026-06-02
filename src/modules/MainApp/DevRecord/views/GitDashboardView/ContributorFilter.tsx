@@ -12,6 +12,7 @@ import Button from "@src/components/Button";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
   DROPDOWN_SEARCH,
   DROPDOWN_WIDTHS,
@@ -105,7 +106,7 @@ const ContributorFilter: React.FC<ContributorFilterProps> = memo(
         <Button
           {...COLLAPSIBLE_SECTION_TOKENS.actionButton}
           ref={triggerRef}
-          icon={<ListFilter size={14} />}
+          icon={<ListFilter size={DROPDOWN_ITEM.iconSize} />}
           onClick={toggle}
           title={t("gitDashboard.filterContributors")}
           className={
@@ -143,11 +144,10 @@ const ContributorFilter: React.FC<ContributorFilterProps> = memo(
                 />
               </div>
 
-              {/* Select all */}
-              <div className="border-b border-border-2 p-1">
+              <div className={DROPDOWN_CLASSES.sectionContainer}>
                 <button
                   type="button"
-                  className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-between`}
+                  className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-between`}
                   onClick={handleSelectAll}
                 >
                   <span className="text-text-2">
@@ -161,7 +161,7 @@ const ContributorFilter: React.FC<ContributorFilterProps> = memo(
 
               {/* Contributor list */}
               <div
-                className="overflow-y-auto p-1 scrollbar-hide"
+                className={DROPDOWN_CLASSES.optionsContainer}
                 style={{ maxHeight: MAX_LIST_HEIGHT }}
               >
                 {filtered.map((name) => {
@@ -170,7 +170,7 @@ const ContributorFilter: React.FC<ContributorFilterProps> = memo(
                     <button
                       key={name}
                       type="button"
-                      className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-between`}
+                      className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-between`}
                       onClick={() => handleToggle(name)}
                     >
                       <span className="flex min-w-0 items-center gap-2">
@@ -190,7 +190,7 @@ const ContributorFilter: React.FC<ContributorFilterProps> = memo(
                   );
                 })}
                 {filtered.length === 0 && (
-                  <div className="px-3 py-2 text-[12px] text-text-2">
+                  <div className={DROPDOWN_CLASSES.listMessage}>
                     {t("common:status.noResults")}
                   </div>
                 )}

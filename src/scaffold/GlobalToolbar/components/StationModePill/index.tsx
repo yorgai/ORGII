@@ -13,6 +13,7 @@ import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut
 import Tooltip from "@src/components/Tooltip";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { ROUTES } from "@src/config/routes";
+import { GENERAL_LAYOUT_TOUR_TARGETS } from "@src/scaffold/Tutorials/GeneralLayoutTour";
 import { type StationMode, stationModeAtom } from "@src/store/ui/simulatorAtom";
 
 import SegmentedIconButton from "../SegmentedIconButton";
@@ -105,7 +106,10 @@ const StationModePill: React.FC = () => {
   );
 
   return (
-    <div className="flex items-center gap-px rounded-[100px] border border-border-2 bg-fill-1 p-0.5">
+    <div
+      className="flex items-center gap-px rounded-[100px] border border-border-2 bg-fill-1 p-0.5"
+      data-tour-target={GENERAL_LAYOUT_TOUR_TARGETS.stationModePill}
+    >
       {activeStationMode === "ops-control" && (
         <IconSwitchButton
           label={kanbanSegment}

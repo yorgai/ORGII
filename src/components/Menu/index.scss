@@ -3,7 +3,7 @@
  *
  * Values are aligned with DROPDOWN tokens (src/components/Dropdown/tokens.ts):
  *   Panel: bg-bg-2, border-border-2, border-radius 8px, padding 4px, shadow-dropdown
- *   Item:  padding 8px 12px, gap 8px, font-size 14px, border-radius 6px
+ *   Item:  height 32px, padding 0 6px, gap 8px, font-size 13px, border-radius 6px
  */
 
 .menu {
@@ -30,9 +30,11 @@
     display: flex;
     align-items: center;
     gap: 8px; // DROPDOWN_ITEM.gap
-    padding: 8px 12px; // DROPDOWN_ITEM.paddingY / paddingX
-    font-size: 14px; // DROPDOWN_ITEM.fontSize
-    color: var(--color-text-2);
+    height: 32px; // DROPDOWN_ITEM.height
+    min-height: 32px; // DROPDOWN_ITEM.minHeight
+    padding: 0 6px; // DROPDOWN_ITEM.paddingY / paddingX
+    font-size: 13px; // DROPDOWN_ITEM.fontSize
+    color: var(--color-text-1);
     cursor: pointer;
     transition: all 0.15s ease; // DROPDOWN_ITEM.transitionClass
     border-radius: 6px; // DROPDOWN_ITEM.borderRadius
@@ -40,16 +42,17 @@
     user-select: none;
 
     svg {
-      font-size: 16px;
+      width: 13px;
+      height: 13px;
     }
 
     &:hover:not(.menu-item-disabled) {
-      background: var(--color-fill-2); // DROPDOWN_ITEM.hoverBgClass
+      background: var(--color-surface-hover); // DROPDOWN_ITEM.hoverBgClass
       color: var(--color-text-1);
     }
 
     &.menu-item-selected {
-      background: var(--color-fill-2); // DROPDOWN_ITEM.selectedBgClass
+      background: transparent; // DROPDOWN_ITEM.selectedBgClass
       color: var(--color-primary-6); // DROPDOWN_ITEM.selectedTextClass
       font-weight: 500;
     }
@@ -68,21 +71,24 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 8px 12px;
-      font-size: 14px;
-      color: var(--color-text-2);
+      height: 32px;
+      min-height: 32px;
+      padding: 0 6px;
+      font-size: 13px;
+      color: var(--color-text-1);
       cursor: pointer;
       transition: all 0.15s ease;
       border-radius: 6px;
       user-select: none;
 
       &:hover:not(.menu-submenu-disabled) {
-        background: var(--color-fill-2);
+        background: var(--color-surface-hover);
         color: var(--color-text-1);
       }
 
       .menu-submenu-arrow {
-        font-size: 14px;
+        width: 13px;
+        height: 13px;
         transition: transform 0.2s ease;
       }
     }

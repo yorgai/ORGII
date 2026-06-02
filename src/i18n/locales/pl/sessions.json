@@ -649,7 +649,13 @@
     "voiceErrorPermission": "Brak uprawnień do mikrofonu. Włącz je w ustawieniach systemu.",
     "voiceErrorUnsupported": "Wprowadzanie głosowe nie jest obsługiwane w tej wersji.",
     "voiceErrorAudio": "Nie wykryto mikrofonu.",
-    "voiceErrorGeneric": "Wprowadzanie głosowe nie powiodło się. Spróbuj ponownie."
+    "voiceErrorGeneric": "Wprowadzanie głosowe nie powiodło się. Spróbuj ponownie.",
+    "pinnedActions": {
+      "manage": "Zarządzaj przypiętymi akcjami",
+      "searchPlaceholder": "Szukaj akcji do przypięcia…",
+      "loading": "Wczytywanie…",
+      "empty": "Nie znaleziono akcji."
+    }
   },
   "listPanel": {
     "showingOf": "Wyświetlono {{filtered}} z {{total}}",

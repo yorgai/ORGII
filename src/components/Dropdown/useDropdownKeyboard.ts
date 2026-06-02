@@ -21,6 +21,11 @@ export interface UseDropdownKeyboardReturn {
   keyboardNavigated: boolean;
   handleKeyDown: (event: KeyboardEvent) => void;
   resetHighlight: () => void;
+  clearKeyboardNavigation: () => void;
+  getOptionMouseEnterProps: (index: number) => {
+    "data-dropdown-keyboard-mode"?: "true";
+    onMouseEnter: () => void;
+  };
 }
 
 export function useDropdownKeyboard({
@@ -37,6 +42,23 @@ export function useDropdownKeyboard({
     setHighlightedIndex(0);
     setKeyboardNavigated(false);
   }, []);
+
+  const clearKeyboardNavigation = useCallback(() => {
+    setKeyboardNavigated(false);
+  }, []);
+
+  const getOptionMouseEnterProps = useCallback(
+    (index: number) => ({
+      ...(keyboardNavigated
+        ? { "data-dropdown-keyboard-mode": "true" as const }
+        : {}),
+      onMouseEnter: () => {
+        setHighlightedIndex(index);
+        clearKeyboardNavigation();
+      },
+    }),
+    [keyboardNavigated, clearKeyboardNavigation]
+  );
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -79,5 +101,7 @@ export function useDropdownKeyboard({
     keyboardNavigated,
     handleKeyDown,
     resetHighlight,
+    clearKeyboardNavigation,
+    getOptionMouseEnterProps,
   };
 }

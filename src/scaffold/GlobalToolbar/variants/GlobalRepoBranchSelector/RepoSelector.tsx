@@ -10,6 +10,7 @@ import { useAtomValue } from "jotai";
 import { Code, Folder, FolderTree } from "lucide-react";
 import React, { useMemo } from "react";
 
+import { CODE_EDITOR_TOUR_TARGETS } from "@src/scaffold/Tutorials/codeEditorTourConfig";
 import { REPO_KIND } from "@src/store/repo";
 import { isMultiRootWorkspaceAtom } from "@src/store/ui/workspaceFoldersAtom";
 import { workspaceNameAtom } from "@src/store/workspace/derived";
@@ -68,6 +69,7 @@ const RepoSelector: React.FC<RepoSelectorProps> = ({
       onHoverChange={onHoverChange}
       formOpen={formOpen}
       dataTestId="global-repo-selector-pill"
+      dataTourTarget={CODE_EDITOR_TOUR_TARGETS.repoSelector}
     />
   );
 };

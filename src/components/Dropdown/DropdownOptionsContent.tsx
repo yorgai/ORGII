@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
 
 import DropdownOptionsRenderer from "./DropdownOptionsRenderer";
-import { DROPDOWN_CLASSES } from "./tokens";
+import { DROPDOWN_CLASSES, DROPDOWN_ITEM } from "./tokens";
 import type { DropdownOption, DropdownSelectValue } from "./types";
 
 interface DropdownOptionsContentProps {
@@ -20,6 +20,10 @@ interface DropdownOptionsContentProps {
   highlightedIndex: number;
   keyboardNavigated: boolean;
   onSelect: (option: DropdownOption) => void;
+  getOptionMouseEnterProps?: (index: number) => {
+    "data-dropdown-keyboard-mode"?: "true";
+    onMouseEnter: () => void;
+  };
   loading: boolean;
   emptyContent?: React.ReactNode;
   dropdownRender?: (menu: React.ReactNode) => React.ReactNode;
@@ -37,6 +41,7 @@ const DropdownOptionsContent: React.FC<DropdownOptionsContentProps> = ({
   highlightedIndex,
   keyboardNavigated,
   onSelect,
+  getOptionMouseEnterProps,
   loading,
   emptyContent,
   dropdownRender,
@@ -52,7 +57,10 @@ const DropdownOptionsContent: React.FC<DropdownOptionsContentProps> = ({
     <>
       {showSearch && (
         <div className={DROPDOWN_CLASSES.searchContainer}>
-          <Search size={14} className="shrink-0 text-text-3" />
+          <Search
+            size={DROPDOWN_ITEM.iconSize}
+            className="shrink-0 text-text-3"
+          />
           <input
             ref={searchInputRef}
             type="text"
@@ -77,6 +85,7 @@ const DropdownOptionsContent: React.FC<DropdownOptionsContentProps> = ({
         highlightedIndex={highlightedIndex}
         keyboardNavigated={keyboardNavigated}
         onSelect={onSelect}
+        getOptionMouseEnterProps={getOptionMouseEnterProps}
         loading={loading}
         emptyContent={emptyContent}
         dropdownRender={dropdownRender}

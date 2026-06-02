@@ -7,7 +7,10 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import Dropdown from "@src/components/Dropdown";
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import type { GanttMarker } from "@src/features/GanttChart";
 
 import type { DiaryCommitMarker } from "../../utils/diaryUtils";
@@ -62,7 +65,12 @@ export const DiaryCommitHoverCardContent: React.FC<
       </div>
       <div className="space-y-2">
         <DiaryCommitHoverCardRow
-          icon={<GitCommitHorizontal size={13} strokeWidth={1.75} />}
+          icon={
+            <GitCommitHorizontal
+              size={DROPDOWN_ITEM.iconSize}
+              strokeWidth={1.75}
+            />
+          }
         >
           <div className="truncate text-text-2" title={commit.sha}>
             <span className="text-text-3">{t("gitDashboard.commits")}</span>
@@ -70,7 +78,9 @@ export const DiaryCommitHoverCardContent: React.FC<
             <span>{commit.short_sha}</span>
           </div>
         </DiaryCommitHoverCardRow>
-        <DiaryCommitHoverCardRow icon={<Clock size={13} strokeWidth={1.75} />}>
+        <DiaryCommitHoverCardRow
+          icon={<Clock size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />}
+        >
           <div
             className="truncate text-text-2"
             title={marker.timestamp.toISOString()}
@@ -81,7 +91,7 @@ export const DiaryCommitHoverCardContent: React.FC<
           </div>
         </DiaryCommitHoverCardRow>
         <DiaryCommitHoverCardRow
-          icon={<UserRound size={13} strokeWidth={1.75} />}
+          icon={<UserRound size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />}
         >
           <div className="truncate text-text-2" title={commit.author.email}>
             <span className="text-text-3">{t("gitDashboard.author")}</span>
@@ -90,7 +100,9 @@ export const DiaryCommitHoverCardContent: React.FC<
           </div>
         </DiaryCommitHoverCardRow>
         {marker.task && (
-          <DiaryCommitHoverCardRow icon={<Hash size={13} strokeWidth={1.75} />}>
+          <DiaryCommitHoverCardRow
+            icon={<Hash size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />}
+          >
             <div className="truncate text-text-2" title={marker.task.title}>
               <span className="text-text-3">{t("terminology.session")}</span>
               <span className="mx-1 text-text-4">·</span>
@@ -174,10 +186,10 @@ export const DiaryCommitBucketDropdown: React.FC<
                 >
                   <button
                     type="button"
-                    className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full min-w-0 justify-start text-left`}
+                    className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full min-w-0 justify-start text-left`}
                   >
                     <GitCommitHorizontal
-                      size={13}
+                      size={DROPDOWN_ITEM.iconSize}
                       strokeWidth={1.75}
                       className="shrink-0 text-text-3"
                     />

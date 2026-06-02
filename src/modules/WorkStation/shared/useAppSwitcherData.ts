@@ -31,6 +31,7 @@ import {
   getSimulatorDockTitleCenter,
 } from "@src/engines/Simulator/components/Dock";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
+import { GENERAL_LAYOUT_TOUR_TARGETS } from "@src/scaffold/Tutorials/GeneralLayoutTour";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import {
   simulatorEffectiveDockAppAtom,
@@ -48,6 +49,21 @@ import type { AppSwitcherMenuItem } from "./AppSwitcherDropdownPanel";
 // represents the bare workstation base path where `dockFilterAtom === "all"`
 // surfaces every host's tabs in one bar.
 const ALL_TABS_ID = "all" as const;
+
+function getWorkStationTourTarget(id: string): string | undefined {
+  switch (id) {
+    case ALL_TABS_ID:
+      return GENERAL_LAYOUT_TOUR_TARGETS.dockAllTabs;
+    case "code":
+      return GENERAL_LAYOUT_TOUR_TARGETS.dockCodeEditor;
+    case "browser":
+      return GENERAL_LAYOUT_TOUR_TARGETS.dockBrowser;
+    case "project":
+      return GENERAL_LAYOUT_TOUR_TARGETS.dockProjects;
+    default:
+      return undefined;
+  }
+}
 
 // ============================================
 // My Station (route-driven)
@@ -130,6 +146,7 @@ export function useWorkStationAppSwitcher(
             id: mode.id,
             icon: mode.icon,
             label: t(mode.i18nKey),
+            tourTarget: getWorkStationTourTarget(mode.id),
           })),
     [staticLabel, t]
   );

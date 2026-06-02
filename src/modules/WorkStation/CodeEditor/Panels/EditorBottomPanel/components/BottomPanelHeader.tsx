@@ -195,7 +195,6 @@ const BottomPanelHeader: React.FC<BottomPanelHeaderProps> = memo(
                 size="small"
                 variant="ghost"
                 radius="lg"
-                dropdownCompact
                 dropdownMinWidth={140}
                 dropdownWidthMode="auto"
                 dropdownAlign="right"
@@ -241,7 +240,7 @@ const BottomPanelHeader: React.FC<BottomPanelHeaderProps> = memo(
                   className={`${SPLIT_BUTTON.right} ${isShellPickerOpen ? "bg-fill-3 text-text-1" : ""}`}
                   title={t("tooltips.newTerminal")}
                 >
-                  <ChevronDown size={12} strokeWidth={2} />
+                  <ChevronDown size={DROPDOWN_ITEM.iconSize} strokeWidth={2} />
                 </button>
               )}
             </div>
@@ -266,7 +265,7 @@ const BottomPanelHeader: React.FC<BottomPanelHeaderProps> = memo(
                       .map((profile: ShellProfile) => (
                         <button
                           key={profile.id}
-                          className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+                          className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
                           onClick={() => handlePickProfile(profile)}
                         >
                           <span className="flex-1 truncate">
@@ -292,7 +291,7 @@ const BottomPanelHeader: React.FC<BottomPanelHeaderProps> = memo(
                           .map((profile: ShellProfile) => (
                             <button
                               key={profile.id}
-                              className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+                              className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
                               onClick={() => handlePickProfile(profile)}
                             >
                               <span className="flex-1 truncate">

@@ -647,7 +647,13 @@
     "voiceErrorPermission": "Permissão do microfone negada. Ative nas configurações do sistema.",
     "voiceErrorUnsupported": "A entrada de voz não é suportada nesta versão.",
     "voiceErrorAudio": "Nenhum microfone detectado.",
-    "voiceErrorGeneric": "Falha na entrada de voz. Tente novamente."
+    "voiceErrorGeneric": "Falha na entrada de voz. Tente novamente.",
+    "pinnedActions": {
+      "manage": "Gerenciar ações fixadas",
+      "searchPlaceholder": "Buscar ações para fixar…",
+      "loading": "Carregando…",
+      "empty": "Nenhuma ação encontrada."
+    }
   },
   "listPanel": {
     "showingOf": "Mostrando {{filtered}} de {{total}}",

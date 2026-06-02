@@ -8,6 +8,8 @@ import { GitBranch, Loader2 } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
+import { CODE_EDITOR_TOUR_TARGETS } from "@src/scaffold/Tutorials/codeEditorTourConfig";
+
 import PillSelector from "../../components/PillSelector";
 import type { BranchOption } from "../../types";
 
@@ -74,6 +76,7 @@ const BranchSelector: React.FC<BranchSelectorProps> = ({
       hideLabel={compact}
       onHoverChange={onHoverChange}
       formOpen={formOpen}
+      dataTourTarget={CODE_EDITOR_TOUR_TARGETS.branchSelector}
     />
   );
 };
