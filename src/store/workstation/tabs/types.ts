@@ -67,7 +67,9 @@ export type WorkStationTabType =
   | "kanban-station"
   // Launchpad tabs
   | "launchpad-dashboard"
-  | "launchpad-repo";
+  | "launchpad-repo"
+  // Canvas preview tab — renders agent-generated canvas from canvasPreviewAtom
+  | "canvas-preview";
 
 // ============================================
 // Tab Types

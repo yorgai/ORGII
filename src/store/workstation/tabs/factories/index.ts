@@ -155,3 +155,12 @@ export {
   createLaunchpadRepoTab,
 } from "./launchpad";
 export type { LaunchpadRepoTabData } from "./launchpad";
+
+// Canvas Preview
+export {
+  CANVAS_PREVIEW_TAB_ID_PREFIX,
+  canvasPreviewTabFactory,
+  createCanvasPreviewTab,
+  getCanvasPreviewTabId,
+} from "./canvasPreview";
+export type { CanvasPreviewTabData } from "./canvasPreview";

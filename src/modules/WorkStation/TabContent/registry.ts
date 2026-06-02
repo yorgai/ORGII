@@ -252,6 +252,15 @@ const LaunchpadRepoEntry: RendererEntry = {
 };
 
 // ============================================
+// Canvas Preview renderer
+// ============================================
+
+const CanvasPreviewEntry: RendererEntry = {
+  Component: lazy(() => import("./renderers/canvasPreview")),
+  debugLabel: "canvas-preview",
+};
+
+// ============================================
 // Registry — exhaustive over WorkStationTabType
 // ============================================
 
@@ -313,6 +322,9 @@ export const REGISTRY: TabContentRegistry = {
   // Launchpad
   "launchpad-dashboard": LaunchpadDashboardEntry,
   "launchpad-repo": LaunchpadRepoEntry,
+
+  // Canvas Preview
+  "canvas-preview": CanvasPreviewEntry,
 };
 
 // Exhaustiveness check: any missing WorkStationTabType becomes a TS error.
