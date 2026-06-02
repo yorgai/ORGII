@@ -17,6 +17,7 @@ import type { ChatBlock } from "@src/engines/SessionCore/rendering/registry/type
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
 
 import {
+  CanvasInlineAdapter,
   DiffAdapter,
   ExploreAdapter,
   FallbackAdapter,
@@ -56,6 +57,7 @@ export const CHAT_BLOCKS: Record<ChatBlock, ChatBlockComponent> = {
   sent_message: SentMessageAdapter,
   plan_doc: PlanDocAdapter,
   hidden: HiddenAdapter,
+  canvas_inline: CanvasInlineAdapter,
   fallback: FallbackAdapter,
 };
 

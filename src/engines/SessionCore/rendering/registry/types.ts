@@ -161,6 +161,7 @@ export type ChatBlock =
   | "sent_message"
   | "plan_doc"
   | "hidden"
+  | "canvas_inline"
   | "fallback";
 
 /**
