@@ -375,7 +375,8 @@ const InputArea: React.FC<InputAreaProps> = memo(
       <ComposerBar
         onAddContent={() => setShowContextMenu(true)}
         onUpload={handleUploadClick}
-        dropdownDirection="up"
+        onOpenSkillsTools={handleOpenSkillsTools}
+        dropdownDirection="down"
         toolbarItemGap={false}
         showContextInfo={!isCursorIde}
         editorSlot={
