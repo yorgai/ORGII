@@ -172,24 +172,6 @@
     outline: none;
     box-shadow: none;
   }
-
-  // Scrollbar styling
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-fill-3);
-    border-radius: 3px;
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background: var(--color-fill-4);
-  }
 }
 
 // Override any global textarea styles that might interfere

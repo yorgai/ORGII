@@ -1,3 +1,5 @@
+@use "../../../../styles/mixins/scrollbar";
+
 /**
  * TaskDetailPanel Styles
  */
@@ -23,23 +25,7 @@
   overflow-y: auto;
   overflow-x: hidden;
 
-  /* Custom scrollbar */
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-fill-2);
-    border-radius: 3px;
-
-    &:hover {
-      background: var(--color-fill-3);
-    }
-  }
+  @include scrollbar.scrollbar-unified;
 }
 
 .task-detail-panel__section {

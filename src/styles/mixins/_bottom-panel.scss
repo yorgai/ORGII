@@ -1,3 +1,5 @@
+@use "./scrollbar";
+
 /**
  * Bottom Panel Mixins
  * 
@@ -10,23 +12,7 @@
 // ============================================
 
 @mixin panel-scrollbar {
-  &::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: var(--color-bg-2);
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-fill-2);
-    border-radius: 5px;
-
-    &:hover {
-      background: var(--color-fill-3);
-    }
-  }
+  @include scrollbar.scrollbar-unified;
 }
 
 // ============================================
@@ -34,39 +20,7 @@
 // ============================================
 
 @mixin overlay-scrollbar {
-  // Thin scrollbar for Firefox
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-
-  // Webkit browsers (Chrome, Safari, Edge)
-  &::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: 3px;
-    transition: background 0.2s ease;
-  }
-
-  // Show scrollbar on hover
-  &:hover {
-    scrollbar-color: var(--color-fill-3) transparent;
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--color-fill-3);
-    }
-  }
-
-  // Scrollbar thumb hover state
-  &::-webkit-scrollbar-thumb:hover {
-    background: var(--color-fill-4);
-  }
+  @include scrollbar.scrollbar-unified;
 }
 
 // ============================================
