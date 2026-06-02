@@ -1,0 +1,299 @@
+/**
+ * PinnedActionsBar
+ *
+ * A horizontal row of pill buttons sitting above the chat input area.
+ * Each pill represents a pinned action (skill, tool, or built-in). Clicking
+ * a pill dispatches the action into the composer (inserts a skill pill or
+ * a slash command). A trailing "..." button opens `PinActionsPanel` to
+ * search and manage the pinned set.
+ *
+ * Design: h-[28px] pills, border-border-2 stroke, rounded-full, text-[12px],
+ * accent-highlight on active state — matches StackPill and ModePill idioms.
+ */
+import { invoke } from "@tauri-apps/api/core";
+import { useAtom } from "jotai";
+import { MoreHorizontal } from "lucide-react";
+import React, { memo, useCallback, useRef, useState } from "react";
+
+import { rpc } from "@src/api/tauri/rpc";
+import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import { createLogger } from "@src/hooks/logger";
+import {
+  type PinnedAction,
+  pinnedActionsAtom,
+} from "@src/store/session/pinnedActionsAtom";
+import type { InstalledSkill, SlashItem } from "@src/types/extensions";
+import { SLASH_ACTIONS } from "@src/types/extensions";
+
+import PinActionsPanel, { actionKey } from "./PinActionsPanel";
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+const logger = createLogger("PinnedActionsBar");
+
+function resolveSkillGroup(skill: InstalledSkill): string {
+  const normalized = skill.path.replace(/\\/g, "/");
+  const home = normalized.match(
+    /^([/\\]Users\/[^/]+|\/home\/[^/]+|\/root)/
+  )?.[1];
+  if (home) {
+    if (normalized.startsWith(`${home}/.cursor/skills`)) return "Cursor Skills";
+    if (normalized.startsWith(`${home}/.orgii/skills`)) return "Global Skills";
+  }
+  const workspaceMatch = normalized.match(
+    /^(.*?)\/(?:\.orgii|\.cursor)\/skills\//
+  );
+  if (workspaceMatch) {
+    const segments = workspaceMatch[1].split("/").filter(Boolean);
+    return segments[segments.length - 1] ?? skill.source;
+  }
+  return skill.source;
+}
+
+const BUILTIN_SLASH_ITEMS: SlashItem[] = [
+  {
+    name: SLASH_ACTIONS.OPEN_BROWSER,
+    description: "Open browser automation controls",
+    category: "action",
+    source: "builtin",
+    acceptsArgs: false,
+  },
+];
+
+// ── sub-components ────────────────────────────────────────────────────────────
+
+interface ActionPillProps {
+  action: PinnedAction;
+  onClick: (action: PinnedAction) => void;
+}
+
+const ActionPill: React.FC<ActionPillProps> = memo(({ action, onClick }) => {
+  const [pressed, setPressed] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      onMouseLeave={() => setPressed(false)}
+      onClick={() => onClick(action)}
+      className={[
+        "flex h-[26px] shrink-0 cursor-pointer select-none items-center rounded-full border border-solid px-2.5 leading-none",
+        "text-[12px] font-medium transition-colors duration-150",
+        pressed
+          ? "border-primary-5 bg-fill-2 text-primary-6"
+          : "border-border-2 bg-transparent text-text-2 hover:border-border-3 hover:bg-fill-2 hover:text-text-1",
+      ].join(" ")}
+      title={action.name}
+    >
+      <span className="truncate" style={{ maxWidth: 120 }}>
+        {action.name}
+      </span>
+    </button>
+  );
+});
+
+ActionPill.displayName = "ActionPill";
+
+// ── main component ────────────────────────────────────────────────────────────
+
+export interface PinnedActionsBarProps {
+  /** Ref to the tiptap editor, used to insert content when a pill is clicked. */
+  tiptapRef: React.RefObject<TiptapInputRef>;
+}
+
+const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
+  ({ tiptapRef }) => {
+    const [pinnedActions, setPinnedActions] = useAtom(pinnedActionsAtom);
+
+    // ── Available items (lazy-fetched) ────────────────────────────────────────
+
+    const [availableItems, setAvailableItems] = useState<SlashItem[]>([]);
+    const [loadingItems, setLoadingItems] = useState(false);
+    const itemsCacheRef = useRef<SlashItem[]>([]);
+
+    const fetchItems = useCallback(async () => {
+      if (itemsCacheRef.current.length > 0) {
+        setAvailableItems(itemsCacheRef.current);
+        return;
+      }
+      setLoadingItems(true);
+      try {
+        const [rawSkills, mcpServers] = await Promise.all([
+          invoke<InstalledSkill[]>("skills_list", {
+            workspacePath: null,
+          }).catch((err) => {
+            logger.warn("Failed to list skills:", err);
+            return [] as InstalledSkill[];
+          }),
+          rpc.mcp.listServers({}).catch((err) => {
+            logger.warn("Failed to list MCP servers:", err);
+            return [];
+          }),
+        ]);
+
+        const skillItems: SlashItem[] = rawSkills
+          .filter((s) => s.enabled && s.available)
+          .map((s) => ({
+            name: s.name,
+            skillName: s.name,
+            description:
+              s.description && s.description !== "---" ? s.description : "",
+            category: "skill" as const,
+            source: resolveSkillGroup(s),
+            acceptsArgs: false,
+          }));
+
+        const connectedServers = mcpServers.filter(
+          (srv) => srv.status === "connected" && !srv.disabled
+        );
+        const toolItems: SlashItem[] = (
+          await Promise.all(
+            connectedServers.map((srv) =>
+              rpc.mcp.listServerTools({ serverName: srv.name }).then(
+                (tools) =>
+                  tools.map((t) => ({
+                    name: t.name,
+                    description: t.description,
+                    category: "tool" as const,
+                    source: srv.name,
+                    acceptsArgs: true,
+                    serverName: srv.name,
+                  })),
+                (err) => {
+                  logger.warn(`Failed to list tools for "${srv.name}":`, err);
+                  return [] as SlashItem[];
+                }
+              )
+            )
+          )
+        ).flat();
+
+        const all: SlashItem[] = [
+          ...BUILTIN_SLASH_ITEMS,
+          ...skillItems,
+          ...toolItems,
+        ];
+        itemsCacheRef.current = all;
+        setAvailableItems(all);
+      } finally {
+        setLoadingItems(false);
+      }
+    }, []);
+
+    // ── "..." panel state ─────────────────────────────────────────────────────
+
+    const [panelOpen, setPanelOpen] = useState(false);
+    const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+    const moreButtonRef = useRef<HTMLButtonElement>(null);
+
+    const handleOpenPanel = useCallback(() => {
+      void fetchItems();
+      setAnchorRect(moreButtonRef.current?.getBoundingClientRect() ?? null);
+      setPanelOpen((prev) => !prev);
+    }, [fetchItems]);
+
+    const handleClosePanel = useCallback(() => {
+      setPanelOpen(false);
+    }, []);
+
+    // ── Pin / unpin ───────────────────────────────────────────────────────────
+
+    const handleTogglePin = useCallback(
+      (action: PinnedAction) => {
+        setPinnedActions((prev) => {
+          const key = actionKey(action);
+          const exists = prev.some((a) => actionKey(a) === key);
+          return exists
+            ? prev.filter((a) => actionKey(a) !== key)
+            : [...prev, action];
+        });
+      },
+      [setPinnedActions]
+    );
+
+    // ── Pill click → dispatch ─────────────────────────────────────────────────
+
+    const handlePillClick = useCallback(
+      (action: PinnedAction) => {
+        if (!tiptapRef.current) return;
+
+        if (action.category === "action") {
+          if (action.name === SLASH_ACTIONS.OPEN_BROWSER) {
+            window.dispatchEvent(new CustomEvent("orgii:open-browser"));
+          }
+          return;
+        }
+
+        if (action.category === "skill") {
+          const skillToken = `/${action.skillName ?? action.name}`;
+          tiptapRef.current.clear();
+          tiptapRef.current.insertFilePill(
+            skillToken,
+            false,
+            "skill",
+            action.name
+          );
+          tiptapRef.current.focus();
+          return;
+        }
+
+        if (action.category === "tool" && action.serverName) {
+          const serverSlug = action.serverName.replace(/-/g, "_");
+          tiptapRef.current.setContent(`/mcp__${serverSlug}__${action.name} `);
+          tiptapRef.current.focus();
+          return;
+        }
+
+        tiptapRef.current.setContent(`/${action.name} `);
+        tiptapRef.current.focus();
+      },
+      [tiptapRef]
+    );
+
+    // ── Nothing pinned — still render the "..." button ────────────────────────
+
+    return (
+      <div className="flex w-full items-center gap-1.5 overflow-x-auto px-0.5 py-0.5 scrollbar-hide">
+        {pinnedActions.map((action) => (
+          <ActionPill
+            key={actionKey(action)}
+            action={action}
+            onClick={handlePillClick}
+          />
+        ))}
+
+        {/* "..." manage button */}
+        <button
+          ref={moreButtonRef}
+          type="button"
+          onClick={handleOpenPanel}
+          title="Manage pinned actions"
+          className={[
+            "flex h-[26px] w-[26px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-solid leading-none",
+            "transition-colors duration-150",
+            panelOpen
+              ? "border-primary-5 bg-fill-2 text-primary-6"
+              : "border-border-2 bg-transparent text-text-3 hover:border-border-3 hover:bg-fill-2 hover:text-text-2",
+          ].join(" ")}
+        >
+          <MoreHorizontal size={13} strokeWidth={1.75} />
+        </button>
+
+        <PinActionsPanel
+          visible={panelOpen}
+          anchorRect={anchorRect}
+          availableItems={availableItems}
+          pinnedActions={pinnedActions}
+          onTogglePin={handleTogglePin}
+          onClose={handleClosePanel}
+          loading={loadingItems}
+        />
+      </div>
+    );
+  }
+);
+
+PinnedActionsBar.displayName = "PinnedActionsBar";
+
+export default PinnedActionsBar;
