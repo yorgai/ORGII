@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 
+import { stripExpandedPillContent } from "../../InputArea/utils/pillContentParser";
 import type { ChatGroupMeta, UseChatGroupsReturn } from "../hooks";
 import type { UseChatTurnPaginationReturn } from "../hooks/useChatTurnPagination";
 import {
@@ -55,11 +56,13 @@ const TurnPageList: React.FC<TurnPageListProps> = memo(
       const items: TurnPageItem[] = pages.map((page, pageIndex) => {
         const header = groupHeaders[page.startGroupIndex];
         const meta = groupMeta[page.startGroupIndex];
-        const text = getRoundPreviewText(
+        const rawPreviewText =
           page.cursorIdeSummary?.userPreview ??
-            header?.event?.displayText ??
-            meta?.previewText
-        );
+          (header?.event?.displayText
+            ? stripExpandedPillContent(String(header.event.displayText))
+            : undefined) ??
+          meta?.previewText;
+        const text = getRoundPreviewText(rawPreviewText);
         return {
           pageIndex,
           text:

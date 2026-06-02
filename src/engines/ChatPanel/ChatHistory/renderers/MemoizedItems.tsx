@@ -15,6 +15,7 @@ import { useEventNavigation } from "@src/engines/SessionCore";
 import { selectedExecutionThreadAtom } from "@src/store/ui/sessionPaginationAtom";
 
 import UserChatItem from "../../ChatItems/UserChatItem";
+import { stripExpandedPillContent } from "../../InputArea/utils/pillContentParser";
 import ThreadSelector from "../../ThreadSelector";
 import type { ExecutionThread } from "../../ThreadSelector/types";
 import type { OptimizedChatItem } from "../chatItemPipeline/types";
@@ -100,7 +101,7 @@ export const MemoizedUserChatItem = memo(
 
     const text =
       typeof event.displayText === "string"
-        ? String(event.displayText).trim()
+        ? stripExpandedPillContent(String(event.displayText)).trim()
         : "";
     if (!text) return null;
 
