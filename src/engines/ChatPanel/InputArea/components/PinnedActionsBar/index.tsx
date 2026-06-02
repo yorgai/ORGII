@@ -20,7 +20,10 @@ import type { ComposerInputRef as TiptapInputRef } from "@src/components/Compose
 import Message from "@src/components/Toast";
 import { createLogger } from "@src/hooks/logger";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
-import { useRepoDetection } from "@src/modules/WorkStation/Launchpad/hooks/useRepoDetection";
+import {
+  detectRepo,
+  useRepoDetection,
+} from "@src/modules/WorkStation/Launchpad/hooks/useRepoDetection";
 import { useRepoSetup } from "@src/modules/WorkStation/Launchpad/hooks/useRepoSetup";
 import { reposAtom } from "@src/store/repo";
 import {
@@ -187,15 +190,31 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
         if (launching) return;
         const repoName = targetPath.split("/").filter(Boolean).pop() || "Repo";
         try {
+          // Always detect fresh so we never pass stale hook-snapshot data
+          // (e.g. when targetPath was just selected from the picker and the
+          // useRepoDetection hook hasn't re-run yet).
+          let detectionResult = {
+            repoType,
+            repoTypeLabel,
+            configFiles,
+            hasDocker,
+            hasMakefile,
+          };
+          try {
+            detectionResult = await detectRepo(targetPath);
+          } catch {
+            // Non-critical; fall through to the current hook snapshot
+          }
+
           await launchSetup(
             {
               repoPath: targetPath,
               repoName,
-              repoType,
-              repoTypeLabel,
-              configFiles,
-              hasDocker,
-              hasMakefile,
+              repoType: detectionResult.repoType,
+              repoTypeLabel: detectionResult.repoTypeLabel,
+              configFiles: detectionResult.configFiles,
+              hasDocker: detectionResult.hasDocker,
+              hasMakefile: detectionResult.hasMakefile,
             },
             {
               trusted: false,
@@ -232,13 +251,23 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
           void doLaunchSetup(setupRepoPath);
           return;
         }
-        // No repo associated — show picker
+        // No repo path — show picker or warn if no repos are available
+        if (repos.length === 0) {
+          Message.warning("Open a workspace to use Setup Repo");
+          return;
+        }
         const btn = setupPillRef.current;
-        setPickerAnchor(btn?.getBoundingClientRect() ?? null);
+        const rect = btn?.getBoundingClientRect() ?? null;
+        if (!rect) {
+          // Pill ref not yet attached — fall back to a sensible warning
+          Message.warning("Open a workspace to use Setup Repo");
+          return;
+        }
+        setPickerAnchor(rect);
         setRepoPicker((v) => !v);
         e?.stopPropagation();
       },
-      [launching, setupRepoPath, doLaunchSetup]
+      [launching, setupRepoPath, repos, doLaunchSetup]
     );
 
     // ── Available items (lazy-fetched) ────────────────────────────────────────

@@ -27,7 +27,7 @@ const DOCS_FOLDER = "atlas-documents";
 
 // Generate unique ID
 const generateId = () => {
-  return `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `doc_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 };
 
 // Get Tauri filesystem APIs dynamically

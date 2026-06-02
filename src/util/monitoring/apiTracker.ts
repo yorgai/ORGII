@@ -121,7 +121,7 @@ const pendingCallInfo = new Map<
  * Returns a capture ID that should be passed to the axios config.
  */
 export const captureApiCallStack = (): string => {
-  const captureId = `capture-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const captureId = `capture-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
   if (!trackingEnabled) return captureId;
 

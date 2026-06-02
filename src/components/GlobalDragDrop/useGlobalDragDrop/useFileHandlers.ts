@@ -32,7 +32,7 @@ export function useFileHandlers(): UseFileHandlersReturn {
         fileName || pathParts[pathParts.length - 1] || "Unknown";
 
       const file: DroppedFileInfo = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         name: finalFileName,
         path: filePath,
         type: isFolder ? "folder" : "file",
@@ -47,7 +47,7 @@ export function useFileHandlers(): UseFileHandlersReturn {
   const handleBrowserFileDrop = useCallback(
     (browserFile: File, isFolder?: boolean) => {
       const file: DroppedFileInfo = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         name: browserFile.name || "dropped-file",
         path: browserFile.name || "dropped-file",
         type: isFolder ? "folder" : "file",

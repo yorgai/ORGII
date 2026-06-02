@@ -206,7 +206,7 @@ const Upload: React.FC<UploadProps> = ({
 
   // Generate unique ID
   const generateUid = useCallback(() => {
-    return `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `upload-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }, []);
 
   // Convert File to UploadFile

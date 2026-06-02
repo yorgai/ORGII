@@ -45,16 +45,12 @@ export const getCallbackUrl = (): string => {
 // ============================================
 
 export const SERVICE_AUTH_CONFIG = {
-  // TODO: Replace with your Auth0 credentials
-  domain: "dev-pgd0s1tyuvzlxuu8.us.auth0.com", // e.g., "dev-xxx.us.auth0.com"
+  domain: "dev-pgd0s1tyuvzlxuu8.us.auth0.com",
   clientId: "EG8byVgJ3QcWat00d8MVp0pOzfXfNDJx",
-  // NOTE: This is an Auth0 API identifier, not a brand name. It must match
-  // the "identifier" of the API registered in the Auth0 dashboard exactly
-  // (Auth0 API identifiers are immutable). Do not codemod this value.
+  // Auth0 API identifier — must match the "identifier" registered in the Auth0 dashboard exactly (immutable).
   audience: "yorgai.marketplace",
-  // Updated for Authorization Code Flow with PKCE
-  scope: "openid profile email offline_access", // offline_access enables refresh tokens
-  responseType: "code", // Changed from "token" to "code" for PKCE flow
+  scope: "openid profile email offline_access",
+  responseType: "code",
 } as const;
 
 // ============================================
