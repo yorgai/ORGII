@@ -645,7 +645,13 @@
     "voiceErrorPermission": "Доступ к микрофону запрещён. Включите его в настройках системы.",
     "voiceErrorUnsupported": "Голосовой ввод не поддерживается в этой сборке.",
     "voiceErrorAudio": "Микрофон не обнаружен.",
-    "voiceErrorGeneric": "Сбой голосового ввода. Попробуйте ещё раз."
+    "voiceErrorGeneric": "Сбой голосового ввода. Попробуйте ещё раз.",
+    "pinnedActions": {
+      "manage": "Управление закреплёнными действиями",
+      "searchPlaceholder": "Искать действия для закрепления…",
+      "loading": "Загрузка…",
+      "empty": "Действия не найдены."
+    }
   },
   "listPanel": {
     "showingOf": "Показано {{filtered}} из {{total}}",

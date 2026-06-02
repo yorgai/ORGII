@@ -27,6 +27,7 @@ import { useTranslation } from "react-i18next";
 import Button from "@src/components/Button";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
@@ -149,7 +150,7 @@ const AddActionsButton: React.FC<AddActionsButtonProps> = ({
     panelRef,
     panelPosition,
   } = useDropdownEngine<HTMLButtonElement>({
-    gap: DROPDOWN_PANEL.triggerGapCompact,
+    gap: DROPDOWN_PANEL.triggerGapTight,
     align: "right",
     closeOnEsc: true,
     placement: "bottom",
@@ -199,7 +200,7 @@ const AddActionsButton: React.FC<AddActionsButtonProps> = ({
         createPortal(
           <div
             ref={panelRef}
-            className={`${DROPDOWN_CLASSES.panel} fixed ${DROPDOWN_PANEL.zIndexClass} ${DROPDOWN_WIDTHS.sidebarMenuClass} ${DROPDOWN_PANEL.paddingClass}`}
+            className={`${DROPDOWN_CLASSES.menuPanelBase} fixed ${DROPDOWN_WIDTHS.sidebarMenuClass}`}
             style={{
               top: panelPosition.top,
               bottom: panelPosition.bottom,
@@ -214,11 +215,11 @@ const AddActionsButton: React.FC<AddActionsButtonProps> = ({
             <button
               type="button"
               onClick={handleAddWorkItem}
-              className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+              className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
               role="menuitem"
             >
               <ListChecks
-                size={14}
+                size={DROPDOWN_ITEM.iconSize}
                 strokeWidth={1.75}
                 className="text-text-2"
               />
@@ -229,10 +230,14 @@ const AddActionsButton: React.FC<AddActionsButtonProps> = ({
             <button
               type="button"
               onClick={handleAddProject}
-              className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+              className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
               role="menuitem"
             >
-              <Box size={14} strokeWidth={1.75} className="text-text-2" />
+              <Box
+                size={DROPDOWN_ITEM.iconSize}
+                strokeWidth={1.75}
+                className="text-text-2"
+              />
               <span className="min-w-0 flex-1 truncate">{addProjectLabel}</span>
             </button>
           </div>,
@@ -298,7 +303,7 @@ const WorkItemsPageHeader: React.FC<WorkItemsPageHeaderProps> = ({
           value: tab,
           label: (
             <span className="flex items-center gap-2 whitespace-nowrap">
-              <Icon size={14} strokeWidth={1.75} />
+              <Icon size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
               <span>{label}</span>
             </span>
           ),
@@ -315,14 +320,15 @@ const WorkItemsPageHeader: React.FC<WorkItemsPageHeaderProps> = ({
 
   const getStatusFilterIcon = useCallback((key: string) => {
     if (key === "all") {
-      return <List size={14} strokeWidth={1.75} />;
+      return <List size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />;
     }
 
     const status = FILTER_TO_STATUS[key as keyof typeof FILTER_TO_STATUS];
     const option = status
       ? WORK_ITEM_STATUS_OPTIONS.find((item) => item.value === status)
       : undefined;
-    if (!option?.icon) return <List size={14} strokeWidth={1.75} />;
+    if (!option?.icon)
+      return <List size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />;
 
     return (
       <span style={option.color ? { color: option.color } : undefined}>
@@ -425,7 +431,6 @@ const WorkItemsPageHeader: React.FC<WorkItemsPageHeaderProps> = ({
             radius="lg"
             dropdownWidthMode="auto"
             dropdownAlign="right"
-            dropdownCompact
             className="w-auto"
           />
         )}
@@ -444,7 +449,6 @@ const WorkItemsPageHeader: React.FC<WorkItemsPageHeaderProps> = ({
             dropdownWidthMode="match"
             dropdownMinWidth={172}
             dropdownAlign="right"
-            dropdownCompact
             className="w-auto"
           />
         )}

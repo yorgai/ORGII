@@ -20,7 +20,6 @@ import { useTranslation } from "react-i18next";
 
 import {
   DROPDOWN_CLASSES,
-  DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
 import {
@@ -366,7 +365,7 @@ const FileDropdown: React.FC<FileDropdownProps> = ({
   return createPortal(
     <div
       ref={dropdownRef}
-      className={`${DROPDOWN_CLASSES.panel} fixed ${DROPDOWN_PANEL.zIndexClass} ${DROPDOWN_WIDTHS.fileTreeClass} ${DROPDOWN_PANEL.paddingClass}`}
+      className={`${DROPDOWN_CLASSES.menuPanelBase} fixed ${DROPDOWN_WIDTHS.fileTreeClass}`}
       style={{ top: position.top, left: position.left }}
     >
       {rootLoading && <Placeholder variant="loading" />}

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import Button from "@src/components/Button";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
 import { useDropdownEngine } from "@src/hooks/dropdown";
@@ -92,7 +93,7 @@ const TerminalNewSessionSplitButtonComponent: React.FC<
               <button
                 key={profile.id}
                 type="button"
-                className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+                className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
                 onClick={() => handlePickProfile(profile)}
               >
                 <span className="flex-1 truncate">{profile.name}</span>
@@ -112,7 +113,7 @@ const TerminalNewSessionSplitButtonComponent: React.FC<
                   <button
                     key={profile.id}
                     type="button"
-                    className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+                    className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
                     onClick={() => handlePickProfile(profile)}
                   >
                     <span className="flex-1 truncate">{profile.name}</span>
@@ -146,7 +147,10 @@ const TerminalNewSessionSplitButtonComponent: React.FC<
           }}
           title={terminalTitle}
         >
-          <Plus size={14} strokeWidth={SIDEBAR_ICON_STROKE_WIDTH} />
+          <Plus
+            size={DROPDOWN_ITEM.iconSize}
+            strokeWidth={SIDEBAR_ICON_STROKE_WIDTH}
+          />
         </button>
       );
     }
@@ -164,7 +168,10 @@ const TerminalNewSessionSplitButtonComponent: React.FC<
           }}
           title={terminalTitle}
         >
-          <Plus size={14} strokeWidth={SIDEBAR_ICON_STROKE_WIDTH} />
+          <Plus
+            size={DROPDOWN_ITEM.iconSize}
+            strokeWidth={SIDEBAR_ICON_STROKE_WIDTH}
+          />
         </button>
         <button
           ref={shellPickerTriggerRef}
@@ -176,7 +183,10 @@ const TerminalNewSessionSplitButtonComponent: React.FC<
           }}
           title={terminalTitle}
         >
-          <ChevronDown size={12} strokeWidth={SIDEBAR_ICON_STROKE_WIDTH} />
+          <ChevronDown
+            size={DROPDOWN_ITEM.iconSize}
+            strokeWidth={SIDEBAR_ICON_STROKE_WIDTH}
+          />
         </button>
         {shellPickerMenu}
       </div>
@@ -195,7 +205,7 @@ const TerminalNewSessionSplitButtonComponent: React.FC<
           onNewTerminal();
         }}
         title={terminalTitle}
-        icon={<Plus size={16} strokeWidth={2} />}
+        icon={<Plus size={DROPDOWN_ITEM.iconSize} strokeWidth={2} />}
       />
     );
   }
@@ -213,7 +223,7 @@ const TerminalNewSessionSplitButtonComponent: React.FC<
         onNewTerminal();
       }}
       title={terminalTitle}
-      icon={<Plus size={16} strokeWidth={2} />}
+      icon={<Plus size={DROPDOWN_ITEM.iconSize} strokeWidth={2} />}
       dropdownMenu={shellPickerMenu ?? <div />}
       onDropdownClick={(event) => {
         event.stopPropagation();

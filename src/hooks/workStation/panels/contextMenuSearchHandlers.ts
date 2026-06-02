@@ -5,25 +5,20 @@
  * Extracted from useContextMenu to keep the hook file under 600 lines.
  */
 import { projectApi } from "@src/api/http/project";
-import { searchSemantic } from "@src/api/tauri/search/semantic";
 import { STYLE_CONFIG } from "@src/scaffold/ContextMenu/config";
 import type { SearchResultItem } from "@src/scaffold/ContextMenu/types";
 import type { Session } from "@src/store/session/sessionAtom";
-import { getFaviconUrl } from "@src/store/ui/globalTabsAtom";
-import type { BrowserTab } from "@src/store/ui/globalTabsTypes";
 import {
   isNativeSearchAvailable,
   searchFilesNative,
 } from "@src/util/platform/tauri/fileSearch";
 import { stripPillReferences } from "@src/util/session/stripPillReferences";
-import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 // ── Files ─────────────────────────────────────────────────────────────────────
 
 export async function searchFiles(
   query: string,
-  repoPath: string,
-  getFilteredRepos: (query: string) => Array<{ path: string; name: string }>
+  repoPath: string
 ): Promise<SearchResultItem[]> {
   if (!repoPath || repoPath.trim() === "") return [];
   if (!isNativeSearchAvailable()) return [];
@@ -45,16 +40,7 @@ export async function searchFiles(
     });
   }
 
-  const repoItems: SearchResultItem[] = getFilteredRepos(searchQuery).map(
-    (repo) => ({
-      type: "folder" as const,
-      path: repo.path,
-      name: repo.name,
-      iconType: "repo" as const,
-    })
-  );
-
-  return [...repoItems, ...results.folders, ...results.files];
+  return [...results.folders, ...results.files];
 }
 
 // ── Terminals ────────────────────────────────────────────────────────────────
@@ -76,7 +62,6 @@ export function searchTerminals(
   return filtered.map((terminal) => ({
     path: terminal.id,
     name: terminal.name || "Terminal",
-    description: terminal.isActive ? "Active" : "",
     type: "file" as const,
     iconType: "terminal" as const,
   }));
@@ -103,9 +88,6 @@ export function searchSessions(
   });
 
   return sorted.slice(0, 20).map((session) => {
-    const timeAgo = formatRelativeTime(
-      session.updated_at || session.created_at
-    );
     const goal = stripPillReferences(
       session.name || session.user_input || "Session"
     );
@@ -114,72 +96,8 @@ export function searchSessions(
     return {
       path: session.session_id,
       name: truncatedGoal,
-      description: timeAgo,
       type: "file" as const,
       iconType: "session" as const,
-    };
-  });
-}
-
-// ── Browser tabs ─────────────────────────────────────────────────────────────
-
-export function searchBrowserTabs(
-  query: string,
-  browserTabs: BrowserTab[]
-): SearchResultItem[] {
-  const filtered = query.trim()
-    ? browserTabs.filter(
-        (tab) =>
-          tab.title.toLowerCase().includes(query.toLowerCase()) ||
-          tab.url?.toLowerCase().includes(query.toLowerCase())
-      )
-    : browserTabs;
-
-  const sorted = [...filtered].sort(
-    (left, right) => (right.timestamp || 0) - (left.timestamp || 0)
-  );
-
-  return sorted.map((tab) => ({
-    path: tab.id,
-    name: tab.title || tab.url || "New Tab",
-    description: formatRelativeTime(tab.timestamp),
-    type: "file" as const,
-    iconType: "browser" as const,
-    favicon: tab.favicon || getFaviconUrl(tab.url),
-  }));
-}
-
-// ── Codebase semantic search ─────────────────────────────────────────────────
-
-export interface CodebaseSearchItem extends SearchResultItem {
-  startLine: number;
-  endLine: number;
-  snippet: string;
-}
-
-export async function searchCodebase(
-  query: string,
-  repoPath: string
-): Promise<CodebaseSearchItem[]> {
-  if (!query.trim()) return [];
-  const hits = await searchSemantic(query, repoPath || undefined, 10);
-  return hits.map((hit) => {
-    const fileName = hit.relative_path.split("/").pop() ?? hit.relative_path;
-    const lineRange = `${hit.relative_path}:${hit.start_line}-${hit.end_line}`;
-    const snippetPreview = hit.content
-      .split("\n")
-      .slice(0, 2)
-      .join(" ")
-      .trim()
-      .slice(0, 60);
-    return {
-      type: "file" as const,
-      path: `${hit.repo_path}/${hit.relative_path}`,
-      name: `${fileName} :${hit.start_line}-${hit.end_line}`,
-      description: snippetPreview || lineRange,
-      startLine: hit.start_line,
-      endLine: hit.end_line,
-      snippet: hit.content,
     };
   });
 }
@@ -209,7 +127,6 @@ export async function searchProjects(
         type: "folder" as const,
         path: drilledProject.slug,
         name: drilledProject.name,
-        description: "Select project",
         iconType: "project" as const,
       });
     }
@@ -227,7 +144,6 @@ export async function searchProjects(
             type: "file" as const,
             path: `${drilledProject.slug}/${item.frontmatter.short_id}`,
             name: itemLabel,
-            description: item.frontmatter.status,
             iconType: "workitem" as const,
           });
         }
@@ -273,7 +189,6 @@ export async function searchProjects(
         type: "folder" as const,
         path: project.slug,
         name: displayName,
-        description: project.meta.status || "",
         iconType: "project" as const,
       });
     }

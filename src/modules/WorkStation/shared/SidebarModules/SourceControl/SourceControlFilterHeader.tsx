@@ -23,7 +23,10 @@ import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
 import Dropdown from "@src/components/Dropdown";
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import type { DropdownOption } from "@src/components/Dropdown/types";
 import Select from "@src/components/Select";
 import { useRefreshSpin } from "@src/hooks/ui";
@@ -126,7 +129,7 @@ const SourceControlFilterHeader: React.FC<SourceControlFilterHeaderProps> =
             value: row.id,
             label: (
               <span className="flex items-center gap-2 whitespace-nowrap">
-                <Icon size={13} strokeWidth={1.75} />
+                <Icon size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
                 <span>{triggerLabel}</span>
               </span>
             ),
@@ -140,7 +143,10 @@ const SourceControlFilterHeader: React.FC<SourceControlFilterHeaderProps> =
             value: "history",
             label: (
               <span className="flex items-center gap-2 whitespace-nowrap">
-                <GitBranchIcon size={13} strokeWidth={1.75} />
+                <GitBranchIcon
+                  size={DROPDOWN_ITEM.iconSize}
+                  strokeWidth={1.75}
+                />
                 <span>{t("common:labels.gitHistory")}</span>
               </span>
             ),
@@ -176,18 +182,17 @@ const SourceControlFilterHeader: React.FC<SourceControlFilterHeaderProps> =
             variant="ghost"
             radius="lg"
             dropdownWidthMode="auto"
-            dropdownCompact
             className="w-auto"
           />
 
           {showRefresh && (
             <Dropdown
               droplist={
-                <div className={DROPDOWN_CLASSES.menuPanelCompact}>
+                <div className={DROPDOWN_CLASSES.menuPanel}>
                   <button
                     type="button"
                     onClick={handleRefreshMenuClick}
-                    className={DROPDOWN_CLASSES.menuActionItemCompact}
+                    className={DROPDOWN_CLASSES.menuActionItem}
                   >
                     <RefreshCw
                       size={HEADER_ICON_SIZE.sm}

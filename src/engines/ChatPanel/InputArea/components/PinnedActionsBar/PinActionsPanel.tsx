@@ -9,10 +9,11 @@
 import { Pin, PinOff, Search } from "lucide-react";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   DROPDOWN_CLASSES,
-  DROPDOWN_PANEL,
+  DROPDOWN_ITEM,
 } from "@src/components/Dropdown/tokens";
 import type { PinnedAction } from "@src/store/session/pinnedActionsAtom";
 import type { SlashItem } from "@src/types/extensions";
@@ -96,6 +97,7 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
     loading,
     triggerRef,
   }) => {
+    const { t } = useTranslation("sessions");
     const [query, setQuery] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
     const panelRef = useRef<HTMLDivElement>(null);
@@ -170,31 +172,49 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
 
     if (!visible || !anchorRect) return null;
 
-    // Position: above the anchor, aligned to the right edge of the trigger.
     const PANEL_WIDTH = 240;
     const GAP = 6;
-    const top = anchorRect.top - GAP;
-    const right = window.innerWidth - anchorRect.right;
+    const VIEWPORT_PADDING = 8;
+    const preferredLeft = anchorRect.left;
+    const rightAlignedLeft = anchorRect.right - PANEL_WIDTH;
+    const hasRoomOnRight =
+      preferredLeft + PANEL_WIDTH <= window.innerWidth - VIEWPORT_PADDING;
+    const hasRoomOnLeft = rightAlignedLeft >= VIEWPORT_PADDING;
+    const left = Math.min(
+      Math.max(
+        hasRoomOnRight
+          ? preferredLeft
+          : hasRoomOnLeft
+            ? rightAlignedLeft
+            : preferredLeft,
+        VIEWPORT_PADDING
+      ),
+      window.innerWidth - PANEL_WIDTH - VIEWPORT_PADDING
+    );
+    const bottom = window.innerHeight - (anchorRect.top - GAP);
 
     return createPortal(
       <div
         ref={panelRef}
-        className={`fixed z-[99999] flex flex-col overflow-hidden ${DROPDOWN_CLASSES.panel}`}
+        className={`fixed z-[99999] flex flex-col ${DROPDOWN_CLASSES.menuPanelWithHeader}`}
         style={{
-          bottom: window.innerHeight - top,
-          right,
+          bottom,
+          left,
           width: PANEL_WIDTH,
         }}
       >
         {/* Search header */}
         <div className={DROPDOWN_CLASSES.searchContainer}>
-          <Search size={13} className="shrink-0 text-text-3" />
+          <Search
+            size={DROPDOWN_ITEM.iconSize}
+            className="shrink-0 text-text-3"
+          />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search actions to pin…"
+            placeholder={t("input.pinnedActions.searchPlaceholder")}
             className={DROPDOWN_CLASSES.searchInput}
             autoComplete="off"
             autoCorrect="off"
@@ -205,14 +225,16 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
 
         {/* List */}
         <div
-          className={`max-h-[280px] overflow-y-auto scrollbar-hide ${DROPDOWN_PANEL.paddingClass}`}
+          className={`max-h-[280px] overflow-y-auto scrollbar-hide ${DROPDOWN_CLASSES.itemsColumnBelowSearch}`}
         >
           {loading && filteredItems.length === 0 && (
-            <div className="px-2 py-2 text-[12px] text-text-3">Loading…</div>
+            <div className={DROPDOWN_CLASSES.listMessage}>
+              {t("input.pinnedActions.loading")}
+            </div>
           )}
           {!loading && filteredItems.length === 0 && (
-            <div className="px-2 py-2 text-[12px] text-text-3">
-              No actions found.
+            <div className={DROPDOWN_CLASSES.listMessage}>
+              {t("input.pinnedActions.empty")}
             </div>
           )}
           {filteredItems.map((item) => {
@@ -222,21 +244,16 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
               <button
                 key={key}
                 type="button"
-                className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left hover:bg-fill-2"
+                className={`${DROPDOWN_CLASSES.menuControlItem} min-w-0`}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   handleToggle(item);
                 }}
               >
-                <div className="flex min-w-0 flex-col">
+                <div className="flex min-w-0 items-center">
                   <span className="truncate text-[12px] font-medium text-text-1">
                     {item.name}
                   </span>
-                  {item.source && (
-                    <span className="truncate text-[11px] text-text-3">
-                      {item.source}
-                    </span>
-                  )}
                 </div>
                 <span
                   className={`shrink-0 transition-colors duration-150 ${
@@ -246,9 +263,9 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
                   }`}
                 >
                   {isPinned ? (
-                    <PinOff size={13} strokeWidth={1.75} />
+                    <PinOff size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
                   ) : (
-                    <Pin size={13} strokeWidth={1.75} />
+                    <Pin size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
                   )}
                 </span>
               </button>

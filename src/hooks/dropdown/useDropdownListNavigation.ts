@@ -94,6 +94,7 @@ export interface UseDropdownListNavigationReturn {
   getItemProps: (index: number) => {
     "data-dropdown-item-index": number;
     "data-dropdown-keyboard-highlight"?: "true";
+    "data-dropdown-keyboard-mode"?: "true";
     "aria-selected": boolean;
     onMouseEnter: () => void;
     onClick: () => void;
@@ -106,6 +107,8 @@ export interface UseDropdownListNavigationReturn {
   handleKeyDown: (event: ReactKeyboardEvent) => void;
   /** Whether the most recent highlight change came from keyboard. */
   keyboardNavigated: boolean;
+  /** Switch back to pointer mode while preserving the current selected row. */
+  clearKeyboardNavigation: () => void;
 }
 
 // ============================================
@@ -311,6 +314,10 @@ export function useDropdownListNavigation<TItem>(
     [handleKeyCore]
   );
 
+  const clearKeyboardNavigation = useCallback(() => {
+    setKeyboardNavigated(false);
+  }, []);
+
   const getItemProps = useCallback(
     (index: number) => {
       const isHighlighted = index === selectedIndex;
@@ -323,6 +330,7 @@ export function useDropdownListNavigation<TItem>(
       const props: {
         "data-dropdown-item-index": number;
         "data-dropdown-keyboard-highlight"?: "true";
+        "data-dropdown-keyboard-mode"?: "true";
         "aria-selected": boolean;
         onMouseEnter: () => void;
         onClick: () => void;
@@ -331,7 +339,7 @@ export function useDropdownListNavigation<TItem>(
         "aria-selected": isHighlighted,
         onMouseEnter: () => {
           setSelectedIndex(index);
-          setKeyboardNavigated(false);
+          clearKeyboardNavigation();
         },
         onClick: () => {
           const item = items[index];
@@ -339,12 +347,22 @@ export function useDropdownListNavigation<TItem>(
           onSelect(item, index);
         },
       };
+      if (keyboardNavigated) {
+        props["data-dropdown-keyboard-mode"] = "true";
+      }
       if (isHighlighted && keyboardNavigated) {
         props["data-dropdown-keyboard-highlight"] = "true";
       }
       return props;
     },
-    [items, selectableFn, onSelect, selectedIndex, keyboardNavigated]
+    [
+      items,
+      selectableFn,
+      onSelect,
+      selectedIndex,
+      keyboardNavigated,
+      clearKeyboardNavigation,
+    ]
   );
 
   return {
@@ -353,6 +371,7 @@ export function useDropdownListNavigation<TItem>(
     getItemProps,
     handleKeyDown,
     keyboardNavigated,
+    clearKeyboardNavigation,
   };
 }
 

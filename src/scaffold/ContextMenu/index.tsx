@@ -14,8 +14,8 @@
 import { AtSign } from "lucide-react";
 import React, { memo, useCallback, useMemo, useRef } from "react";
 
+import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
 import { useContextMenu } from "@src/hooks/workStation/panels/useContextMenu";
-import { SpotlightFooter } from "@src/scaffold/GlobalSpotlight/components";
 
 import {
   RecentFilesSection,
@@ -39,7 +39,6 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   className = "",
   keyboardHandlerRef,
   treePosition = "left",
-  panelWidth,
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +50,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   const {
     activeIndex,
     setActiveIndex,
+    keyboardNavigated,
+    setKeyboardNavigated,
     secondLayer,
     setSecondLayer,
     searchResults,
@@ -69,14 +70,14 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     externalSearchQuery: externalSearchQuery || undefined,
   });
 
-  const resetActiveIndex = useCallback(
-    () => setActiveIndex(-1),
-    [setActiveIndex]
-  );
-  const resetSecondLayerIndex = useCallback(
-    () => setSecondLayerActiveIndex(-1),
-    [setSecondLayerActiveIndex]
-  );
+  const resetActiveIndex = useCallback(() => {
+    setKeyboardNavigated(false);
+    setActiveIndex(-1);
+  }, [setActiveIndex, setKeyboardNavigated]);
+  const resetSecondLayerIndex = useCallback(() => {
+    setKeyboardNavigated(false);
+    setSecondLayerActiveIndex(-1);
+  }, [setSecondLayerActiveIndex, setKeyboardNavigated]);
 
   const isInlineSearching =
     externalSearchQuery && externalSearchQuery.length > 0;
@@ -107,22 +108,29 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 
   const handleMainItemHover = useCallback(
     (itemIndex: number) => {
+      setKeyboardNavigated(false);
       setActiveIndex(itemIndex);
     },
-    [setActiveIndex]
+    [setActiveIndex, setKeyboardNavigated]
+  );
+
+  const handleSecondLayerHover = useCallback(
+    (itemIndex: number) => {
+      setKeyboardNavigated(false);
+      setSecondLayerActiveIndex(itemIndex);
+    },
+    [setSecondLayerActiveIndex, setKeyboardNavigated]
   );
 
   if (!visible) return null;
 
   const showInlineSearch = isInlineSearching;
   const showSecondLayerPanel = secondLayer !== null && !isInlineSearching;
-
-  const showSpotlightBackHint = showInlineSearch || showSecondLayerPanel;
-
   return (
     <div
       ref={dropdownRef}
-      className={`context-menu flex flex-col gap-2 ${panelWidth ? "w-full" : ""} ${className}`}
+      className={`context-menu flex flex-col gap-2 ${className}`}
+      data-dropdown-keyboard-mode={keyboardNavigated ? "true" : undefined}
       onKeyDown={handleKeyDown}
       onMouseDown={(e) => {
         e.preventDefault();
@@ -130,24 +138,18 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       }}
       tabIndex={-1}
     >
-      <SpotlightFooter
-        hasActiveAction={showSpotlightBackHint}
-        variant="dropdown"
-      />
-
       {/* Inline search results (when user types after @) */}
       {showInlineSearch && filteredCustomMentionOptions.length > 0 && (
         <div
-          className="overflow-hidden rounded-[8px] border border-solid border-border-2 bg-bg-2 shadow-lg"
-          style={{ width: panelWidth || STYLE_CONFIG.dropdownWidth }}
+          className={DROPDOWN_CLASSES.panel}
+          style={{ width: STYLE_CONFIG.dropdownWidth }}
         >
-          <div className="px-1 py-1">
+          <div className={DROPDOWN_CLASSES.itemsColumnPadded}>
             {filteredCustomMentionOptions.map((option) => (
               <MenuItemRow
                 key={option.id}
                 icon={AtSign}
                 label={option.label}
-                description={option.description}
                 dataTestId="agent-org-mention-option"
                 dataMentionId={option.id}
                 onClick={() => onCustomMentionSelect?.(option)}
@@ -162,13 +164,12 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           searchQuery={externalSearchQuery || ""}
           results={searchResults}
           loading={searchLoading}
-          activeIndex={secondLayerActiveIndex}
+          activeIndex={keyboardNavigated ? secondLayerActiveIndex : -1}
           onSelect={handleSearchResultSelect}
-          onHover={setSecondLayerActiveIndex}
+          onHover={handleSecondLayerHover}
           onHoverEnd={resetSecondLayerIndex}
           repoPath={repoPath}
           treePosition={treePosition}
-          panelWidth={panelWidth}
         />
       )}
 
@@ -178,14 +179,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           layerId={secondLayer}
           results={searchResults}
           loading={searchLoading}
-          activeIndex={secondLayerActiveIndex}
+          activeIndex={keyboardNavigated ? secondLayerActiveIndex : -1}
           onSelect={handleSearchResultSelect}
-          onHover={setSecondLayerActiveIndex}
+          onHover={handleSecondLayerHover}
           onHoverEnd={resetSecondLayerIndex}
           onBack={goBack}
           repoPath={repoPath}
           treePosition={treePosition}
-          panelWidth={panelWidth}
           titleOverride={
             secondLayer === "projects" && drilledProjectName
               ? drilledProjectName
@@ -197,26 +197,25 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       {/* Main menu - shown when user just types @ without any text after */}
       {!showInlineSearch && !showSecondLayerPanel && (
         <div
-          className="overflow-hidden rounded-[8px] border border-solid border-border-2 bg-bg-2 shadow-lg"
-          style={{ width: panelWidth || STYLE_CONFIG.dropdownWidth }}
+          className={DROPDOWN_CLASSES.panel}
+          style={{ width: STYLE_CONFIG.dropdownWidth }}
         >
           <RecentFilesSection
             files={recentFiles}
             onSelect={handleRecentSelect}
-            activeIndex={activeIndex}
+            activeIndex={keyboardNavigated ? activeIndex : -1}
             baseIndex={0}
-            onHover={setActiveIndex}
+            onHover={handleMainItemHover}
             onHoverEnd={resetActiveIndex}
           />
 
           {filteredCustomMentionOptions.length > 0 && (
-            <div className="border-b border-solid border-border-1 px-1 py-1">
+            <div className={DROPDOWN_CLASSES.sectionContainer}>
               {filteredCustomMentionOptions.map((option) => (
                 <MenuItemRow
                   key={option.id}
                   icon={AtSign}
                   label={option.label}
-                  description={option.description}
                   dataTestId="agent-org-mention-option"
                   dataMentionId={option.id}
                   onClick={() => onCustomMentionSelect?.(option)}
@@ -225,7 +224,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             </div>
           )}
 
-          <div className="px-1 py-1">
+          <div className={DROPDOWN_CLASSES.itemsColumnPadded}>
             {MENU_ITEMS.map((item, idx) => {
               const itemIndex = recentCount + idx;
               return (
@@ -234,7 +233,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
                   icon={item.icon}
                   label={item.label}
                   hasArrow={item.hasSecondLayer}
-                  isActive={activeIndex === itemIndex}
+                  isActive={keyboardNavigated && activeIndex === itemIndex}
                   onClick={() => handleMenuItemClick(item)}
                   onMouseEnter={() => handleMainItemHover(itemIndex)}
                   onMouseLeave={() => setActiveIndex(-1)}

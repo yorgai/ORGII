@@ -67,6 +67,7 @@ import { HEADER_ICON_SIZE } from "@src/config/workstation/tokens";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
 import { TabBarTrailingIconButton } from "@src/modules/WorkStation/shared/TabBar/components/TabBarTrailingIconButton";
 import { openEditorSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
+import { CODE_EDITOR_TOUR_TARGETS } from "@src/scaffold/Tutorials/codeEditorTourConfig";
 import {
   STORY_ORG_SCOPE,
   createProjectDashboardTab,
@@ -245,9 +246,9 @@ const TabBarPlusMenuComponent: React.FC<TabBarPlusMenuProps> = ({
 
   const droplist = (
     <div
-      className={`${DROPDOWN_CLASSES.menuPanelCompactWithHeader} ${DROPDOWN_WIDTHS.wideMenuClass}`}
+      className={`${DROPDOWN_CLASSES.menuPanelWithHeaderBase} ${DROPDOWN_WIDTHS.wideMenuClass}`}
     >
-      <div className={DROPDOWN_CLASSES.searchContainerCompact}>
+      <div className={DROPDOWN_CLASSES.searchContainer}>
         <Search
           size={DROPDOWN_SEARCH.iconSize}
           className="flex-shrink-0 text-text-3"
@@ -259,19 +260,19 @@ const TabBarPlusMenuComponent: React.FC<TabBarPlusMenuProps> = ({
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={handleInputKeyDown}
           placeholder={t("workstation.plusMenu.searchPlaceholder")}
-          className={DROPDOWN_CLASSES.searchInputCompact}
+          className={DROPDOWN_CLASSES.searchInput}
           spellCheck={false}
           autoCorrect="off"
           autoCapitalize="off"
         />
       </div>
 
-      <div className={DROPDOWN_CLASSES.itemsColumnCompactBelowSearch}>
+      <div className={DROPDOWN_CLASSES.itemsColumnBelowSearch}>
         {visibleItems.includes("newBrowserTab") && (
           <button
             type="button"
             onClick={handleNewBrowserTab}
-            className={DROPDOWN_CLASSES.menuActionItemCompact}
+            className={DROPDOWN_CLASSES.menuActionItem}
           >
             <MenuItemContent
               icon={<Globe size={HEADER_ICON_SIZE.sm} />}
@@ -284,7 +285,7 @@ const TabBarPlusMenuComponent: React.FC<TabBarPlusMenuProps> = ({
           <button
             type="button"
             onClick={handleNewPrivateBrowserTab}
-            className={DROPDOWN_CLASSES.menuActionItemCompact}
+            className={DROPDOWN_CLASSES.menuActionItem}
           >
             <MenuItemContent
               icon={<ShieldOff size={HEADER_ICON_SIZE.sm} />}
@@ -297,7 +298,7 @@ const TabBarPlusMenuComponent: React.FC<TabBarPlusMenuProps> = ({
           <button
             type="button"
             onClick={handleOpenWorkItems}
-            className={DROPDOWN_CLASSES.menuActionItemCompact}
+            className={DROPDOWN_CLASSES.menuActionItem}
           >
             <MenuItemContent
               icon={<ListTodo size={HEADER_ICON_SIZE.sm} />}
@@ -310,7 +311,7 @@ const TabBarPlusMenuComponent: React.FC<TabBarPlusMenuProps> = ({
           <button
             type="button"
             onClick={handleOpenProjects}
-            className={DROPDOWN_CLASSES.menuActionItemCompact}
+            className={DROPDOWN_CLASSES.menuActionItem}
           >
             <MenuItemContent
               icon={<Box size={HEADER_ICON_SIZE.sm} />}
@@ -341,7 +342,10 @@ const TabBarPlusMenuComponent: React.FC<TabBarPlusMenuProps> = ({
         // palette itself is the user's focus, the trigger hint is noise.
         disabled={menuVisible}
       >
-        <span className="inline-flex">
+        <span
+          className="inline-flex"
+          data-tour-target={CODE_EDITOR_TOUR_TARGETS.plusMenu}
+        >
           <TabBarTrailingIconButton
             title={triggerLabel}
             nativeTitle={false}

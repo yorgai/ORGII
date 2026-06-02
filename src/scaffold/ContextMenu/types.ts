@@ -16,19 +16,8 @@ export interface SearchResultItem {
   path: string;
   /** Optional display name (if different from path) */
   name?: string;
-  /** Optional description/metadata (e.g., "2 min ago") */
-  description?: string;
-  /** Optional icon type for special items (terminal, browser, session, repo, branch) */
-  iconType?:
-    | "terminal"
-    | "browser"
-    | "session"
-    | "repo"
-    | "branch"
-    | "project"
-    | "workitem";
-  /** Optional favicon URL for browser tabs */
-  favicon?: string;
+  /** Optional icon type for special items (terminal, session, project, work item) */
+  iconType?: "terminal" | "session" | "project" | "workitem";
 }
 
 // ============================================
@@ -63,8 +52,6 @@ export interface ContextMenuProps {
   keyboardHandlerRef?: MutableRefObject<((e: KeyboardEvent) => boolean) | null>;
   /** Position of file tree preview panel: "left" or "right" (default: "left") */
   treePosition?: "left" | "right";
-  /** Override panel width (e.g., to match input container width) */
-  panelWidth?: number;
 }
 
 // ============================================

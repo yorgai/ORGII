@@ -148,7 +148,7 @@ const ExternalIdeSection: React.FC = () => {
         <DropdownFooter>
           <button
             type="button"
-            className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-start disabled:cursor-not-allowed disabled:opacity-50`}
+            className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start disabled:cursor-not-allowed disabled:opacity-50`}
             disabled={isDetectingIde}
             onMouseDown={(event) => {
               event.preventDefault();

@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
@@ -92,7 +93,7 @@ export const SourceControlMoreMenu: React.FC<SourceControlMoreMenuProps> = memo(
       panelRef,
       panelPosition,
     } = useDropdownEngine<HTMLButtonElement>({
-      gap: DROPDOWN_PANEL.triggerGapCompact,
+      gap: DROPDOWN_PANEL.triggerGapTight,
       placement: "bottom",
       align: "right",
     });
@@ -156,41 +157,56 @@ export const SourceControlMoreMenu: React.FC<SourceControlMoreMenuProps> = memo(
                 {hasUpstream ? (
                   <>
                     <div
-                      className={`${DROPDOWN_CLASSES.itemCompact} ${PRIMARY_SIDEBAR_HOVER.row}`}
+                      className={`${DROPDOWN_CLASSES.item} ${PRIMARY_SIDEBAR_HOVER.row}`}
                       onClick={() => handleItemClick(onPull)}
                     >
-                      <ArrowDown size={14} className="shrink-0" />
+                      <ArrowDown
+                        size={DROPDOWN_ITEM.iconSize}
+                        className="shrink-0"
+                      />
                       {t(SOURCE_CONTROL_MENU_KEYS.pull)}
                     </div>
                     <div
-                      className={`${DROPDOWN_CLASSES.itemCompact} ${PRIMARY_SIDEBAR_HOVER.row}`}
+                      className={`${DROPDOWN_CLASSES.item} ${PRIMARY_SIDEBAR_HOVER.row}`}
                       onClick={() => handleItemClick(onPush)}
                     >
-                      <ArrowUp size={14} className="shrink-0" />
+                      <ArrowUp
+                        size={DROPDOWN_ITEM.iconSize}
+                        className="shrink-0"
+                      />
                       {t(SOURCE_CONTROL_MENU_KEYS.push)}
                     </div>
                     <div
-                      className={`${DROPDOWN_CLASSES.itemCompact} ${PRIMARY_SIDEBAR_HOVER.row}`}
+                      className={`${DROPDOWN_CLASSES.item} ${PRIMARY_SIDEBAR_HOVER.row}`}
                       onClick={() => handleItemClick(onFetch)}
                     >
-                      <RefreshCw size={14} className="shrink-0" />
+                      <RefreshCw
+                        size={DROPDOWN_ITEM.iconSize}
+                        className="shrink-0"
+                      />
                       {t(SOURCE_CONTROL_MENU_KEYS.fetch)}
                     </div>
                     <div className="my-0.5 border-t border-border-2" />
                     <div
-                      className={`${DROPDOWN_CLASSES.itemCompact} ${PRIMARY_SIDEBAR_HOVER.row}`}
+                      className={`${DROPDOWN_CLASSES.item} ${PRIMARY_SIDEBAR_HOVER.row}`}
                       onClick={() => handleItemClick(onSync)}
                     >
-                      <ArrowUpDown size={14} className="shrink-0" />
+                      <ArrowUpDown
+                        size={DROPDOWN_ITEM.iconSize}
+                        className="shrink-0"
+                      />
                       {t(SOURCE_CONTROL_MENU_KEYS.sync)}
                     </div>
                   </>
                 ) : (
                   <div
-                    className={`${DROPDOWN_CLASSES.itemCompact} ${PRIMARY_SIDEBAR_HOVER.row}`}
+                    className={`${DROPDOWN_CLASSES.item} ${PRIMARY_SIDEBAR_HOVER.row}`}
                     onClick={() => handleItemClick(onPublish ?? onSync)}
                   >
-                    <CloudUpload size={14} className="shrink-0" />
+                    <CloudUpload
+                      size={DROPDOWN_ITEM.iconSize}
+                      className="shrink-0"
+                    />
                     {t("common:actions.publish")}
                   </div>
                 )}

@@ -32,6 +32,7 @@ import { useTranslation } from "react-i18next";
 import DropdownOptionsRenderer from "@src/components/Dropdown/DropdownOptionsRenderer";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import type { DropdownOption } from "@src/components/Dropdown/types";
@@ -67,7 +68,6 @@ const Select = forwardRef<HTMLDivElement, SelectProps>(
       filterOption,
       maxTagCount = SELECT_DEFAULTS.maxTagCount,
       dropdownRender,
-      dropdownCompact,
       className = "",
       selectorClassName = "",
       style,
@@ -165,7 +165,7 @@ const Select = forwardRef<HTMLDivElement, SelectProps>(
         }
       },
       disabled,
-      gap: DROPDOWN_PANEL.triggerGapCompact,
+      gap: DROPDOWN_PANEL.triggerGapTight,
       placement: enginePlacement,
       align: dropdownAlign,
       // Select owns its own keyboard navigation via `useDropdownKeyboard`
@@ -193,6 +193,7 @@ const Select = forwardRef<HTMLDivElement, SelectProps>(
       keyboardNavigated,
       handleKeyDown,
       resetHighlight,
+      getOptionMouseEnterProps,
     } = useDropdownKeyboard({
       options: filteredOptions,
       isOpen: currentPopupVisible,
@@ -239,7 +240,7 @@ const Select = forwardRef<HTMLDivElement, SelectProps>(
               <span key={opt.value} className="select-tag">
                 {opt.label}
                 <X
-                  size={14}
+                  size={DROPDOWN_ITEM.iconSize}
                   onClick={(event) => {
                     event.stopPropagation();
                     handleOptionSelect(opt);
@@ -344,7 +345,7 @@ const Select = forwardRef<HTMLDivElement, SelectProps>(
               )}
               {showClearButton && !loading && (
                 <X
-                  size={14}
+                  size={DROPDOWN_ITEM.iconSize}
                   className="select-clear cursor-pointer"
                   onClick={handleClear}
                 />
@@ -368,7 +369,10 @@ const Select = forwardRef<HTMLDivElement, SelectProps>(
             >
               {showSearch && (
                 <div className={DROPDOWN_CLASSES.searchContainer}>
-                  <Search size={14} className="shrink-0 text-text-3" />
+                  <Search
+                    size={DROPDOWN_ITEM.iconSize}
+                    className="shrink-0 text-text-3"
+                  />
                   <input
                     ref={searchInputRef}
                     type="text"
@@ -391,9 +395,9 @@ const Select = forwardRef<HTMLDivElement, SelectProps>(
                 highlightedIndex={highlightedIndex}
                 keyboardNavigated={keyboardNavigated}
                 onSelect={handleOptionSelect}
+                getOptionMouseEnterProps={getOptionMouseEnterProps}
                 loading={loading}
                 dropdownRender={dropdownRender}
-                compact={dropdownCompact ?? size === "mini"}
               />
             </div>,
             getPopupContainer ? getPopupContainer() : document.body

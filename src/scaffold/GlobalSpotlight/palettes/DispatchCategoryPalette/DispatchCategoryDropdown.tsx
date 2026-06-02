@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import {
@@ -57,7 +58,13 @@ const DropdownRow: React.FC<DropdownRowProps> = ({ item, keyboardProps }) => {
 
   const renderedIcon = useMemo(() => {
     if (isCurrent) {
-      return <Check size={16} strokeWidth={2.25} className="text-primary-6" />;
+      return (
+        <Check
+          size={DROPDOWN_ITEM.iconSize}
+          strokeWidth={2.25}
+          className="text-primary-6"
+        />
+      );
     }
     if (!item.icon) return null;
     if (typeof item.icon === "string") {
@@ -74,7 +81,7 @@ const DropdownRow: React.FC<DropdownRowProps> = ({ item, keyboardProps }) => {
       type="button"
       data-testid={testId}
       {...keyboardProps}
-      className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-start ${
+      className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start ${
         isCurrent ? DROPDOWN_CLASSES.itemSelected : ""
       }`}
     >
@@ -219,7 +226,10 @@ export const DispatchCategoryDropdown: React.FC<
       }}
     >
       <div className={DROPDOWN_CLASSES.searchContainer}>
-        <Search size={14} className="shrink-0 text-text-3" />
+        <Search
+          size={DROPDOWN_ITEM.iconSize}
+          className="shrink-0 text-text-3"
+        />
         <input
           ref={inputRef}
           value={searchQuery}
@@ -231,11 +241,11 @@ export const DispatchCategoryDropdown: React.FC<
       </div>
 
       <div
-        className={`scrollbar-overlay flex flex-col overflow-y-auto ${DROPDOWN_PANEL.paddingClass} ${DROPDOWN_PANEL.itemsGapClass}`}
+        className={DROPDOWN_CLASSES.optionsContainerOverlay}
         style={{ maxHeight: LIST_MAX_HEIGHT }}
       >
         {items.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[12px] text-text-3">
+          <div className={DROPDOWN_CLASSES.listMessage}>
             {tCommon("selectors.modelSelector.noResults")}
           </div>
         ) : (

@@ -22,6 +22,7 @@ import type {
 } from "@src/api/tauri/cursorBridge";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import ModelIcon from "@src/components/ModelIcon";
@@ -65,15 +66,19 @@ const CursorModelDropdownRow: React.FC<CursorModelDropdownRowProps> = ({
       type="button"
       data-testid={`cursor-model-dropdown-row-${model.name}`}
       {...keyboardProps}
-      className={`${DROPDOWN_CLASSES.itemCompact} ${
+      className={`${DROPDOWN_CLASSES.item} ${
         isCurrent ? DROPDOWN_CLASSES.itemSelected : DROPDOWN_CLASSES.itemHover
       } w-full justify-start`}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
         {isCurrent ? (
-          <Check size={16} strokeWidth={2.25} className="text-primary-6" />
+          <Check
+            size={DROPDOWN_ITEM.iconSize}
+            strokeWidth={2.25}
+            className="text-primary-6"
+          />
         ) : (
-          <ModelIcon modelName={model.name} size={16} />
+          <ModelIcon modelName={model.name} size={DROPDOWN_ITEM.iconSize} />
         )}
       </span>
       <span
@@ -210,26 +215,27 @@ export const CursorModelDropdown: React.FC<CursorModelDropdownProps> = ({
         width: DROPDOWN_WIDTH,
       }}
     >
-      <div className={DROPDOWN_CLASSES.searchContainerCompact}>
-        <Search size={14} className="shrink-0 text-text-3" />
+      <div className={DROPDOWN_CLASSES.searchContainer}>
+        <Search
+          size={DROPDOWN_ITEM.iconSize}
+          className="shrink-0 text-text-3"
+        />
         <input
           ref={inputRef}
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           onKeyDown={tauriSelectAll}
           placeholder={placeholder}
-          className={DROPDOWN_CLASSES.searchInputCompact}
+          className={DROPDOWN_CLASSES.searchInput}
         />
       </div>
 
       <div
-        className={`scrollbar-overlay flex flex-col overflow-y-auto ${DROPDOWN_PANEL.paddingClass} ${DROPDOWN_PANEL.itemsGapClass}`}
+        className={DROPDOWN_CLASSES.optionsContainerOverlay}
         style={{ maxHeight: LIST_MAX_HEIGHT }}
       >
         {filteredItems.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[12px] text-text-3">
-            {emptyText}
-          </div>
+          <div className={DROPDOWN_CLASSES.listMessage}>{emptyText}</div>
         ) : (
           filteredItems.map((model, index) => (
             <CursorModelDropdownRow
@@ -247,10 +253,10 @@ export const CursorModelDropdown: React.FC<CursorModelDropdownProps> = ({
           type="button"
           onClick={handleRefresh}
           disabled={loading}
-          className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-start disabled:cursor-not-allowed disabled:opacity-60`}
+          className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start disabled:cursor-not-allowed disabled:opacity-60`}
         >
           <RefreshCw
-            size={14}
+            size={DROPDOWN_ITEM.iconSize}
             className={`shrink-0 text-text-2 ${loading ? "animate-spin" : ""}`}
           />
           <span className="truncate">{t("chat.cursorControl.modelRetry")}</span>

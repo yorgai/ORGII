@@ -50,35 +50,30 @@ export interface SearchModeSelectProps {
  * - value: mode identifier
  * - label: shown in dropdown list (not localized - technical terms)
  * - triggerLabel: shown when selected (in trigger)
- * - secondaryTextKey: description on the right in dropdown (localized)
  */
 export const SEARCH_MODE_OPTIONS = [
   {
     value: "regex" as const,
     label: "Regex",
     triggerLabel: "Regex Search",
-    secondaryTextKey: "searchModes.regexSecondary",
     advancedOnly: false,
   },
   {
     value: "semantic" as const,
     label: "Semantic",
     triggerLabel: "Semantic Search",
-    secondaryTextKey: "searchModes.semanticSecondary",
     advancedOnly: true,
   },
   {
     value: "hybrid" as const,
     label: "Hybrid",
     triggerLabel: "Hybrid Search",
-    secondaryTextKey: "searchModes.hybridSecondary",
     advancedOnly: true,
   },
   {
     value: "tantivy" as const,
     label: "Tantivy",
     triggerLabel: "Tantivy Search",
-    secondaryTextKey: "searchModes.tantivySecondary",
     advancedOnly: true,
   },
 ];
@@ -107,9 +102,8 @@ export const SearchModeSelect: React.FC<SearchModeSelectProps> = memo(
           value: option.value,
           label: option.label,
           triggerLabel: option.triggerLabel,
-          secondaryText: t(option.secondaryTextKey),
         })),
-      [advancedAvailable, t]
+      [advancedAvailable]
     );
     const handleChange = useCallback(
       (newValue: string | number | (string | number)[]) => {

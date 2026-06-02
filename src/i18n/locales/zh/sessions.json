@@ -643,7 +643,13 @@
     "voiceErrorPermission": "麦克风权限被拒绝。请在系统设置中启用。",
     "voiceErrorUnsupported": "当前版本不支持语音输入。",
     "voiceErrorAudio": "未检测到麦克风。",
-    "voiceErrorGeneric": "语音输入失败，请重试。"
+    "voiceErrorGeneric": "语音输入失败，请重试。",
+    "pinnedActions": {
+      "manage": "管理固定操作",
+      "searchPlaceholder": "搜索要固定的操作…",
+      "loading": "正在加载…",
+      "empty": "未找到操作。"
+    }
   },
   "listPanel": {
     "showingOf": "显示 {{filtered}} / {{total}}",

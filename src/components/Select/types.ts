@@ -38,8 +38,6 @@ export interface SelectProps {
   filterOption?: (inputValue: string, option: SelectOption) => boolean;
   maxTagCount?: number;
   dropdownRender?: (menu: ReactNode) => ReactNode;
-  /** Use compact dropdown items without changing the trigger size. */
-  dropdownCompact?: boolean;
   className?: string;
   selectorClassName?: string;
   style?: CSSProperties;

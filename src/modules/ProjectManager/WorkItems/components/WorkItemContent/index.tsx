@@ -119,7 +119,10 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
       <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
         {activeTab === "details" && (
           <>
-            <div className={`${DETAIL_PANEL_TOKENS.sectionGap} min-h-[200px]`}>
+            <div
+              className={`${DETAIL_PANEL_TOKENS.sectionGap} min-h-[200px] cursor-text`}
+              onClick={() => editorRef.current?.focus()}
+            >
               <RichTextEditor
                 ref={editorRef}
                 placeholder={t("workItems.descriptionPlaceholder")}

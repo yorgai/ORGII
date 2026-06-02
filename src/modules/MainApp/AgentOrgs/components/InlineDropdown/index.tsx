@@ -9,14 +9,15 @@
  * Start intake stage with <InlineDropdown value="orgii" options={agents} onChange={...} />
  */
 import cn from "classnames";
-import { ChevronDown, Inbox, Loader2, Search } from "lucide-react";
+import { ChevronDown, Loader2, Search } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 
 import Dropdown from "@src/components/Dropdown";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
-import "@src/components/Select/index.scss";
-import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 
 import type { DropdownOption } from "../../types/workflow";
 
@@ -77,34 +78,32 @@ function InlineDropdown({
     [onChange]
   );
 
-  // Dropdown menu content - using Select component classes
   const droplistContent = (
-    <div className="select-dropdown rounded-lg border border-border-2 bg-bg-2">
-      {/* Search */}
+    <div className={`${DROPDOWN_CLASSES.panel} flex flex-col`}>
       {showSearch && (
-        <div className="select-search">
-          <Search size={14} />
+        <div className={DROPDOWN_CLASSES.searchContainer}>
+          <Search
+            size={DROPDOWN_ITEM.iconSize}
+            className="shrink-0 text-text-3"
+          />
           <input
             type="text"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="Search..."
             onClick={(event) => event.stopPropagation()}
+            className={DROPDOWN_CLASSES.searchInput}
           />
         </div>
       )}
 
-      {/* Options */}
       {loading ? (
-        <div className="select-loading">
-          <Loader2 size={SPINNER_TOKENS.default} className="animate-spin" />
+        <div className={DROPDOWN_CLASSES.listMessage}>
+          <Loader2 size={DROPDOWN_ITEM.iconSize} className="animate-spin" />
           <span>Loading...</span>
         </div>
       ) : filteredOptions.length === 0 ? (
-        <div className="select-empty">
-          <Inbox size={24} className="opacity-40" />
-          <span>{emptyText}</span>
-        </div>
+        <div className={DROPDOWN_CLASSES.listMessage}>{emptyText}</div>
       ) : (
         <div className={DROPDOWN_CLASSES.optionsContainer}>
           {filteredOptions.map((opt) => (
@@ -120,7 +119,7 @@ function InlineDropdown({
             >
               {opt.icon &&
                 React.createElement(opt.icon, {
-                  size: 14,
+                  size: DROPDOWN_ITEM.iconSize,
                   className: "shrink-0",
                 })}
               <span className="flex-1 truncate">{opt.label}</span>
@@ -157,7 +156,7 @@ function InlineDropdown({
       >
         <span>{displayLabel}</span>
         <ChevronDown
-          size={14}
+          size={DROPDOWN_ITEM.iconSize}
           className={cn("transition-transform", isOpen && "rotate-180")}
         />
       </span>

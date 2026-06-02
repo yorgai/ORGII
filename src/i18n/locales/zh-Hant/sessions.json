@@ -643,7 +643,13 @@
     "voiceErrorPermission": "麥克風權限被拒絕。請在系統設定中啟用。",
     "voiceErrorUnsupported": "目前版本不支援語音輸入。",
     "voiceErrorAudio": "未偵測到麥克風。",
-    "voiceErrorGeneric": "語音輸入失敗，請再試一次。"
+    "voiceErrorGeneric": "語音輸入失敗，請再試一次。",
+    "pinnedActions": {
+      "manage": "管理固定操作",
+      "searchPlaceholder": "搜尋要固定的操作…",
+      "loading": "正在載入…",
+      "empty": "找不到操作。"
+    }
   },
   "listPanel": {
     "showingOf": "顯示 {{filtered}} / {{total}}",

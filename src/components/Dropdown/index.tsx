@@ -224,19 +224,24 @@ const Dropdown: React.FC<DropdownProps> = ({
     [mode, value, flatOptions, onSelect, setVisible]
   );
 
-  const { highlightedIndex, keyboardNavigated, handleKeyDown, resetHighlight } =
-    useDropdownKeyboard({
-      options: filteredOptions,
-      isOpen: visible,
-      onSelect: handleOptionSelect,
-      onOpen: () => {
-        if (!disabled) setVisible(true);
-      },
-      onClose: () => {
-        setVisible(false);
-        setSearchValue("");
-      },
-    });
+  const {
+    highlightedIndex,
+    keyboardNavigated,
+    handleKeyDown,
+    resetHighlight,
+    getOptionMouseEnterProps,
+  } = useDropdownKeyboard({
+    options: filteredOptions,
+    isOpen: visible,
+    onSelect: handleOptionSelect,
+    onOpen: () => {
+      if (!disabled) setVisible(true);
+    },
+    onClose: () => {
+      setVisible(false);
+      setSearchValue("");
+    },
+  });
 
   useEffect(() => {
     if (!visible || trigger !== "click") return;
@@ -349,6 +354,7 @@ const Dropdown: React.FC<DropdownProps> = ({
       highlightedIndex={highlightedIndex}
       keyboardNavigated={keyboardNavigated}
       onSelect={handleOptionSelect}
+      getOptionMouseEnterProps={getOptionMouseEnterProps}
       loading={loading}
       emptyContent={emptyContent}
       dropdownRender={dropdownRender}

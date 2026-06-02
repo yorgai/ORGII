@@ -32,6 +32,7 @@ import SettingsSlot from "@src/modules/MainApp/Settings/SettingsSlot";
 import { ActionSystemProvider } from "@src/modules/WorkStation/ActionSystem";
 import GlobalSessionSync from "@src/modules/shared/components/GlobalSessionSync";
 import { GlobalSpotlightPortal } from "@src/modules/shared/components/GlobalSpotlightPortal";
+import { GENERAL_LAYOUT_TOUR_TARGETS } from "@src/scaffold/Tutorials/GeneralLayoutTour";
 import { currentRepoAtom } from "@src/store/repo";
 import {
   type ChatPanelMode,
@@ -270,6 +271,11 @@ const AppLayoutComponent: React.FC<AppLayoutProps> = ({
                       chatPanelMaximized ? undefined : { width: chatWidth }
                     }
                     data-fullmode-chat-wrapper
+                    data-tour-target={
+                      chatPanelMode === "session"
+                        ? GENERAL_LAYOUT_TOUR_TARGETS.chatPanel
+                        : undefined
+                    }
                     data-chat-focus={chatPanelMaximized || undefined}
                     data-chat-slot-mode={chatPanelMode}
                   >
@@ -300,6 +306,11 @@ const AppLayoutComponent: React.FC<AppLayoutProps> = ({
               </div>
               <div
                 style={insetChatStyle}
+                data-tour-target={
+                  chatPanelMode === "session"
+                    ? GENERAL_LAYOUT_TOUR_TARGETS.chatPanel
+                    : undefined
+                }
                 data-chat-focus={chatPanelMaximized || undefined}
                 data-chat-slot-mode={chatPanelMode}
               >

@@ -24,7 +24,7 @@ import { useTranslation } from "react-i18next";
 
 import { DropdownItem, DropdownPanel } from "@src/components/Dropdown/exports";
 import {
-  DROPDOWN_PANEL,
+  DROPDOWN_ITEM,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
 import SelectorPill from "@src/components/SelectorPill";
@@ -159,16 +159,19 @@ const ModePill: React.FC<ModePillProps> = memo(
                 left: panelPosition.left,
               }}
             >
-              <div
-                className={`flex flex-col ${DROPDOWN_PANEL.itemsGapClass} ${DROPDOWN_PANEL.paddingClass}`}
-              >
+              <div className={DROPDOWN_CLASSES.itemsColumnPadded}>
                 {AGENT_EXEC_MODES.map((option) => {
                   const Icon = option.icon;
                   const isSelected = mode === option.id;
                   return (
                     <DropdownItem
                       key={option.id}
-                      icon={<Icon size={15} strokeWidth={1.75} />}
+                      icon={
+                        <Icon
+                          size={DROPDOWN_ITEM.iconSize}
+                          strokeWidth={1.75}
+                        />
+                      }
                       selected={isSelected}
                       compact
                       showCheckmark

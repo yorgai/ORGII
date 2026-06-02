@@ -286,7 +286,7 @@ export const PrimarySidebarLayoutWithSections: React.FC<PrimarySidebarLayoutWith
         panelRef: tabListPanelRef,
         panelPosition: tabListPosition,
       } = useDropdownEngine<HTMLButtonElement>({
-        gap: DROPDOWN_PANEL.triggerGapCompact,
+        gap: DROPDOWN_PANEL.triggerGapTight,
         placement: "bottom",
         align: "right",
       });

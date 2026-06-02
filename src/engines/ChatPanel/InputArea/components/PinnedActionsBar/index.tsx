@@ -14,6 +14,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useAtom, useAtomValue } from "jotai";
 import { Layout, MoreHorizontal } from "lucide-react";
 import React, { memo, useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { rpc } from "@src/api/tauri/rpc";
 import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
@@ -121,6 +122,7 @@ export interface PinnedActionsBarProps {
 
 const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
   ({ tiptapRef, sessionId }) => {
+    const { t } = useTranslation("sessions");
     const [pinnedActions, setPinnedActions] = useAtom(pinnedActionsAtom);
 
     // ── Canvas pill ───────────────────────────────────────────────────────────
@@ -342,8 +344,8 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
           count={0}
           active={panelOpen}
           iconOnly
-          title="Manage pinned actions"
-          ariaLabel="Manage pinned actions"
+          title={t("input.pinnedActions.manage")}
+          ariaLabel={t("input.pinnedActions.manage")}
           onClick={handleOpenPanel}
         />
 

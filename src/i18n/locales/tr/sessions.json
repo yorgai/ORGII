@@ -643,7 +643,13 @@
     "voiceErrorPermission": "Mikrofon izni reddedildi. İşletim sistemi ayarlarından etkinleştirin.",
     "voiceErrorUnsupported": "Sesli giriş bu sürümde desteklenmiyor.",
     "voiceErrorAudio": "Mikrofon algılanmadı.",
-    "voiceErrorGeneric": "Sesli giriş başarısız oldu. Lütfen tekrar deneyin."
+    "voiceErrorGeneric": "Sesli giriş başarısız oldu. Lütfen tekrar deneyin.",
+    "pinnedActions": {
+      "manage": "Sabitlenmiş eylemleri yönet",
+      "searchPlaceholder": "Sabitlenecek eylemleri ara…",
+      "loading": "Yükleniyor…",
+      "empty": "Eylem bulunamadı."
+    }
   },
   "listPanel": {
     "showingOf": "{{total}} içinden {{filtered}} gösteriliyor",
