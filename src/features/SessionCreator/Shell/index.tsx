@@ -314,8 +314,6 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
       {/* Pinned actions */}
       <PinnedActionsBar
         tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
-        onSubmit={() => void handleLaunch()}
-        onContentChange={handleContentChangeWithTracking}
       />
 
       {/* Editor */}

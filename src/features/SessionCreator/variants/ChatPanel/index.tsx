@@ -630,8 +630,6 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
       <div className={`mx-auto w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}>
         <PinnedActionsBar
           tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
-          onSubmit={() => void handleLaunch()}
-          onContentChange={handleContentChangeWithTracking}
         />
         <EditorArea
           variant="chatPanelFullScreen"

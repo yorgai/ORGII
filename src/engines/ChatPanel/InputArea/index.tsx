@@ -504,12 +504,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
           {!isEditMode && !omitChatHeader && <ChatHeader />}
 
           {/* Pinned actions quick-access bar — only in non-edit chat mode */}
-          {!isEditMode && (
-            <PinnedActionsBar
-              tiptapRef={tiptapRef}
-              onSubmit={() => void handleDivSubmit()}
-            />
-          )}
+          {!isEditMode && <PinnedActionsBar tiptapRef={tiptapRef} />}
 
           {isEditMode && quietEditSurface && showEditHeader && (
             <ChatStatusSegmentedBar
