@@ -36,6 +36,8 @@ If you are not authorized to bind your employer or organization, sign only as an
 
 ## Contribution provenance
 
+By submitting a Contribution, you represent that a human contributor actively participated in the design and implementation process, that the Contribution was not authored entirely by artificial intelligence or other non-human intelligence, and that a human contributor reviewed the Contribution before submission.
+
 You should not submit Contributions that include:
 
 - Confidential information or trade secrets.

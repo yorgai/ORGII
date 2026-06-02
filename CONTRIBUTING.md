@@ -12,6 +12,7 @@ Be respectful, constructive, and specific. Assume good intent, but do not tolera
 - For larger changes, open an issue or discussion first so maintainers can confirm the direction.
 - Keep pull requests small and focused. One fix or feature per PR is easiest to review.
 - Do not include secrets, private credentials, proprietary data, generated artifacts, or unrelated formatting changes.
+- If you use AI assistance, make sure a human actively participates in the design and implementation process and reviews the contribution before submission.
 
 ## Development setup
 
