@@ -91,6 +91,30 @@ function normalizeWorkspacePaths(paths: Array<string | undefined>): string[] {
     .sort((left, right) => right.length - left.length);
 }
 
+/**
+ * Returns true when a URL regex match is enclosed in bare parentheses and
+ * is likely being *cited* rather than recommended for the user to open.
+ *
+ * Heuristic: the character before the URL is `(` AND the character after
+ * is `)`, BUT it is NOT a Markdown hyperlink — those have `](` before the
+ * URL (e.g. `[label](https://...)`), which we want to keep as a reference.
+ */
+function isUrlCitedInParentheses(
+  content: string,
+  matchIndex: number,
+  matchLength: number
+): boolean {
+  const before = content[matchIndex - 1];
+  const twoCharsBefore = content.slice(Math.max(0, matchIndex - 2), matchIndex);
+  const after = content[matchIndex + matchLength];
+  // Skip: bare parentheses around URL, but NOT Markdown link syntax ](
+  return (
+    before === "(" &&
+    twoCharsBefore !== "](" &&
+    (after === ")" || after === ")")
+  );
+}
+
 function normalizeUrlCandidate(candidate: string): string | null {
   const normalized = stripTrailingPunctuation(candidate);
   try {
@@ -184,13 +208,38 @@ export function extractMessageReferences(
   const seen = new Set<string>();
 
   for (const match of searchableContent.matchAll(WEB_URL_PATTERN)) {
-    pathSearchContent = pathSearchContent.replace(
-      match[0],
-      " ".repeat(match[0].length)
-    );
+    // Blank out the URL and any non-whitespace characters that directly
+    // precede it in the same token (e.g. the "marketplace/" prefix before
+    // "/users/me" in "marketplace/users/me"), preventing LOCAL_PATH_PATTERN
+    // from matching URL sub-paths as local filesystem paths.
+    const urlStart = match.index ?? 0;
+    let tokenStart = urlStart;
+    while (tokenStart > 0 && !/\s/.test(pathSearchContent[tokenStart - 1]!)) {
+      tokenStart--;
+    }
+    const urlEnd = urlStart + match[0].length;
+    let tokenEnd = urlEnd;
+    while (
+      tokenEnd < pathSearchContent.length &&
+      !/\s/.test(pathSearchContent[tokenEnd]!)
+    ) {
+      tokenEnd++;
+    }
+    pathSearchContent =
+      pathSearchContent.slice(0, tokenStart) +
+      " ".repeat(tokenEnd - tokenStart) +
+      pathSearchContent.slice(tokenEnd);
     const url = normalizeUrlCandidate(match[0]);
     if (!url) continue;
     if (excludeUrls?.has(url)) continue;
+    if (
+      isUrlCitedInParentheses(
+        searchableContent,
+        match.index ?? 0,
+        match[0].length
+      )
+    )
+      continue;
     const item: MessageReferenceItem = {
       kind: "web_url",
       value: url,
