@@ -23,48 +23,13 @@ interface MacFolderIconProps {
   className?: string;
 }
 
-function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const normalized = hex.replace("#", "");
-  if (normalized.length !== 3 && normalized.length !== 6) return null;
-  const full =
-    normalized.length === 3
-      ? normalized
-          .split("")
-          .map((char) => char + char)
-          .join("")
-      : normalized;
-  const num = parseInt(full, 16);
-  if (Number.isNaN(num)) return null;
-  return {
-    r: (num >> 16) & 0xff,
-    g: (num >> 8) & 0xff,
-    b: num & 0xff,
-  };
+function colorMix(color: string, amount: number): string {
+  const target = amount >= 0 ? "white" : "black";
+  return `color-mix(in srgb, ${color} ${Math.round((1 - Math.abs(amount)) * 100)}%, ${target})`;
 }
 
-function rgbToCss(rgb: { r: number; g: number; b: number }, alpha = 1): string {
-  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
-}
-
-function shade(
-  rgb: { r: number; g: number; b: number },
-  amount: number
-): { r: number; g: number; b: number } {
-  // amount: negative = darker, positive = lighter, clamped to [-1, 1].
-  const clamp = (value: number) =>
-    Math.max(0, Math.min(255, Math.round(value)));
-  if (amount >= 0) {
-    return {
-      r: clamp(rgb.r + (255 - rgb.r) * amount),
-      g: clamp(rgb.g + (255 - rgb.g) * amount),
-      b: clamp(rgb.b + (255 - rgb.b) * amount),
-    };
-  }
-  return {
-    r: clamp(rgb.r * (1 + amount)),
-    g: clamp(rgb.g * (1 + amount)),
-    b: clamp(rgb.b * (1 + amount)),
-  };
+function withAlpha(color: string, alpha: number): string {
+  return `color-mix(in srgb, ${color} ${Math.round(alpha * 100)}%, transparent)`;
 }
 
 const MacFolderIcon: React.FC<MacFolderIconProps> = ({
@@ -73,12 +38,11 @@ const MacFolderIcon: React.FC<MacFolderIconProps> = ({
   size = 56,
   className,
 }) => {
-  const rgb = hexToRgb(color) ?? { r: 96, g: 128, b: 192 };
-  const tabColor = rgbToCss(shade(rgb, -0.18));
-  const faceTop = rgbToCss(shade(rgb, 0.12));
-  const faceBottom = rgbToCss(shade(rgb, -0.08));
-  const highlight = rgbToCss(shade(rgb, 0.45), 0.35);
-  const innerShadow = rgbToCss(shade(rgb, -0.35), 0.35);
+  const tabColor = colorMix(color, -0.18);
+  const faceTop = colorMix(color, 0.12);
+  const faceBottom = colorMix(color, -0.08);
+  const highlight = withAlpha(colorMix(color, 0.45), 0.35);
+  const innerShadow = withAlpha(colorMix(color, -0.35), 0.35);
 
   // Deterministic-ish unique gradient ids so multiple icons can coexist
   // without colliding on a single document-wide id.
@@ -102,7 +66,7 @@ const MacFolderIcon: React.FC<MacFolderIconProps> = ({
           <stop offset="100%" stopColor={faceBottom} />
         </linearGradient>
         <linearGradient id={tabGradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={rgbToCss(shade(rgb, -0.05))} />
+          <stop offset="0%" stopColor={colorMix(color, -0.05)} />
           <stop offset="100%" stopColor={tabColor} />
         </linearGradient>
         <linearGradient id={highlightGradId} x1="0" y1="0" x2="0" y2="1">

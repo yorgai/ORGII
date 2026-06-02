@@ -1,9 +1,11 @@
 import { useSetAtom } from "jotai";
-import { Plus } from "lucide-react";
-import React, { memo, useCallback, useMemo } from "react";
+import { Expand, Play, Plus } from "lucide-react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { RUST_AGENT_TYPE } from "@src/api/tauri/agent/types";
 import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
+import Button from "@src/components/Button";
 import ModelIcon from "@src/components/ModelIcon";
 import { resolveAgentIcon } from "@src/config/agentIcons";
 import { useKeyVault } from "@src/hooks/keyVault";
@@ -17,9 +19,10 @@ import {
   SESSION_TARGET_KIND,
   sessionCreatorStateAtom,
 } from "@src/store/session";
+import type { AgentConfigTabVariant } from "@src/store/workstation/tabs";
 import { getRustAgentType } from "@src/util/session/sessionDispatch";
+import { openAgentConfigInWorkStation } from "@src/util/ui/openAgentConfigInWorkStation";
 
-import { getRepoColor } from "../config";
 import { useContainerEngines } from "../hooks/useContainerEngines";
 import { useContainers } from "../hooks/useContainers";
 import {
@@ -102,20 +105,35 @@ interface LaunchpadTileProps {
   label: string;
   title?: string;
   status?: React.ReactNode;
+  selected?: boolean;
   onClick?: () => void;
 }
 
 const LaunchpadTile: React.FC<LaunchpadTileProps> = memo(
-  ({ icon, label, title, status, onClick }) => {
+  ({ icon, label, title, status, selected = false, onClick }) => {
     const content = (
       <>
-        <div className={LAUNCHPAD_TILE_ICON_CLASS}>
+        <div
+          className={
+            selected
+              ? LAUNCHPAD_TILE_ICON_SELECTED_CLASS
+              : LAUNCHPAD_TILE_ICON_CLASS
+          }
+        >
           {icon}
           {status ? (
             <span className="absolute right-2 top-2">{status}</span>
           ) : null}
         </div>
-        <span className={LAUNCHPAD_TILE_LABEL_CLASS}>{label}</span>
+        <span
+          className={
+            selected
+              ? LAUNCHPAD_TILE_LABEL_SELECTED_CLASS
+              : LAUNCHPAD_TILE_LABEL_CLASS
+          }
+        >
+          {label}
+        </span>
       </>
     );
 
@@ -194,7 +212,7 @@ const LaunchpadWorkspaceCard: React.FC<LaunchpadWorkspaceCardProps> = memo(
           }
         >
           <MacFolderIcon
-            color={getRepoColor(label)}
+            color="var(--color-primary-6)"
             label={initial}
             size={44}
             className="shrink-0"
@@ -215,6 +233,55 @@ const LaunchpadWorkspaceCard: React.FC<LaunchpadWorkspaceCardProps> = memo(
 );
 LaunchpadWorkspaceCard.displayName = "LaunchpadWorkspaceCard";
 
+interface LaunchpadAgentAction {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  onLaunch: () => void;
+  onOpenDetails: () => void;
+}
+
+interface LaunchpadAgentActionStripProps {
+  agent: LaunchpadAgentAction;
+}
+
+const LaunchpadAgentActionStrip: React.FC<LaunchpadAgentActionStripProps> =
+  memo(({ agent }) => {
+    const { t } = useTranslation("navigation");
+
+    return (
+      <div className="w-fit max-w-full overflow-hidden rounded-full bg-fill-1 px-2 py-1.5">
+        <div className="flex max-w-full items-center gap-1.5 overflow-x-auto scrollbar-hide">
+          <Button
+            variant="primary"
+            size="small"
+            shape="round"
+            className="shrink-0"
+            icon={<Play size={14} />}
+            onClick={agent.onLaunch}
+          >
+            {t("navigation:launchpad.actions.startSession", {
+              defaultValue: "Start session",
+            })}
+          </Button>
+          <Button
+            variant="secondary"
+            size="small"
+            shape="round"
+            className="shrink-0"
+            icon={<Expand size={14} />}
+            onClick={agent.onOpenDetails}
+          >
+            {t("navigation:launchpad.actions.openDetails", {
+              defaultValue: "Open details",
+            })}
+          </Button>
+        </div>
+      </div>
+    );
+  });
+LaunchpadAgentActionStrip.displayName = "LaunchpadAgentActionStrip";
+
 const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
   ({
     repos,
@@ -227,6 +294,9 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
     const { t } = useTranslation(["navigation", "sessions"]);
     const { goToNewSession, goToIntegrations } = useAppNavigation();
     const setCreatorState = useSetAtom(sessionCreatorStateAtom);
+    const [selectedAgentKey, setSelectedAgentKey] = useState<string | null>(
+      null
+    );
 
     const {
       installedCliAgents,
@@ -252,7 +322,7 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
       refresh: refreshEngines,
     } = useContainerEngines();
 
-    const rankedAgents = useMemo(() => {
+    const rankedAgents = useMemo<LaunchpadAgentAction[]>(() => {
       const cliRows = installedCliAgents
         .slice()
         .sort(
@@ -275,6 +345,14 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
             }));
             goToNewSession();
           },
+          onOpenDetails: () => {
+            openAgentConfigInWorkStation({
+              variant: "cli",
+              entityId: agent.name,
+              displayName: agent.displayName,
+              cliAgentType: agent.name,
+            });
+          },
         }));
 
       const rustBuiltInVariants =
@@ -288,6 +366,14 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
           definition?.name ??
           rustType ??
           t("sessions:controlTower.history.agentFallback");
+        const variant: AgentConfigTabVariant =
+          rustType === RUST_AGENT_TYPE.OS
+            ? "builtin-os"
+            : rustType === RUST_AGENT_TYPE.SDE
+              ? "builtin-sde"
+              : rustType === RUST_AGENT_TYPE.WINGMAN
+                ? "wingman"
+                : "custom";
         return {
           key: rustType,
           label,
@@ -308,6 +394,14 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
               cliAgentType: null,
             }));
             goToNewSession();
+          },
+          onOpenDetails: () => {
+            if (!definition) return;
+            openAgentConfigInWorkStation({
+              variant,
+              entityId: definition.id,
+              displayName: label,
+            });
           },
         };
       });
@@ -335,10 +429,17 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
             }));
             goToNewSession();
           },
+          onOpenDetails: () => {
+            openAgentConfigInWorkStation({
+              variant: "custom",
+              entityId: definition.id,
+              displayName: definition.name,
+            });
+          },
         };
       });
 
-      return [...cliRows, ...rustRows, ...customRows];
+      return [...rustRows, ...customRows, ...cliRows];
     }, [
       installedCliAgents,
       builtInRustAgents,
@@ -356,6 +457,15 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
       [repos, selectedDashboardRepoId]
     );
 
+    const selectedAgent = useMemo(
+      () =>
+        selectedAgentKey
+          ? (rankedAgents.find((agent) => agent.key === selectedAgentKey) ??
+            null)
+          : null,
+      [rankedAgents, selectedAgentKey]
+    );
+
     const handleSelectWorkspace = useCallback(
       (repo: Repo) => {
         if (repo.id === selectedDashboardRepoId) {
@@ -367,6 +477,12 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
       [selectedDashboardRepoId, onSelectDashboardRepo]
     );
 
+    const handleSelectAgent = useCallback((agent: LaunchpadAgentAction) => {
+      setSelectedAgentKey((currentKey) =>
+        currentKey === agent.key ? null : agent.key
+      );
+    }, []);
+
     const handleClearSelection = useCallback(
       () => onSelectDashboardRepo(null),
       [onSelectDashboardRepo]
@@ -376,67 +492,76 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
       <div className="flex h-full min-h-0 w-full flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
           <div className="mx-auto flex w-full max-w-[980px] flex-col gap-8 px-4 py-6">
-            <LaunchpadCollapsibleSection
-              title={t("navigation:launchpad.myWorkspaces")}
-            >
-              {loading ? (
-                <Placeholder variant="loading" />
-              ) : (
-                <LaunchpadHScrollFade>
-                  {repos.map((repo) => (
-                    <LaunchpadWorkspaceCard
-                      key={repo.id}
-                      repo={repo}
-                      selected={repo.id === selectedDashboardRepoId}
-                      onSelect={handleSelectWorkspace}
+            <div className="flex flex-col gap-2">
+              <LaunchpadCollapsibleSection
+                title={t("navigation:launchpad.myWorkspaces")}
+              >
+                {loading ? (
+                  <Placeholder variant="loading" />
+                ) : (
+                  <LaunchpadHScrollFade>
+                    {repos.map((repo) => (
+                      <LaunchpadWorkspaceCard
+                        key={repo.id}
+                        repo={repo}
+                        selected={repo.id === selectedDashboardRepoId}
+                        onSelect={handleSelectWorkspace}
+                      />
+                    ))}
+                    <LaunchpadAddTile
+                      onCreate={onAddWorkspace}
+                      label={t("navigation:launchpad.addWorkspace")}
                     />
-                  ))}
-                  <LaunchpadAddTile
-                    onCreate={onAddWorkspace}
-                    label={t("navigation:launchpad.addWorkspace")}
-                  />
-                </LaunchpadHScrollFade>
-              )}
-            </LaunchpadCollapsibleSection>
+                  </LaunchpadHScrollFade>
+                )}
+              </LaunchpadCollapsibleSection>
 
-            {selectedDashboardRepo ? (
-              <LaunchpadActionStrip
-                repo={selectedDashboardRepo}
-                onOpenDetails={onOpenRepoDetails}
-                onClear={handleClearSelection}
-              />
-            ) : null}
-
-            <LaunchpadCollapsibleSection
-              title={t("sessions:controlTower.myAgents")}
-            >
-              {!catalogReady ? (
-                <Placeholder variant="loading" />
-              ) : rankedAgents.length === 0 ? (
-                <Placeholder
-                  variant="empty"
-                  title={t("sessions:controlTower.noAgentsAvailable")}
+              {selectedDashboardRepo ? (
+                <LaunchpadActionStrip
+                  repo={selectedDashboardRepo}
+                  onOpenDetails={onOpenRepoDetails}
+                  onClear={handleClearSelection}
                 />
-              ) : (
-                <LaunchpadHScrollFade>
-                  {rankedAgents.map((agent) => (
-                    <LaunchpadTile
-                      key={agent.key}
-                      icon={agent.icon}
-                      label={agent.label}
-                      title={t("sessions:controlTower.newAgentSession", {
-                        agent: agent.label,
-                      })}
-                      onClick={agent.onLaunch}
-                    />
-                  ))}
-                  <LaunchpadAddTile
-                    onCreate={goToIntegrations}
-                    label={t("sessions:controlTower.addAgent")}
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <LaunchpadCollapsibleSection
+                title={t("sessions:controlTower.myAgents")}
+              >
+                {!catalogReady ? (
+                  <Placeholder variant="loading" />
+                ) : rankedAgents.length === 0 ? (
+                  <Placeholder
+                    variant="empty"
+                    title={t("sessions:controlTower.noAgentsAvailable")}
                   />
-                </LaunchpadHScrollFade>
-              )}
-            </LaunchpadCollapsibleSection>
+                ) : (
+                  <LaunchpadHScrollFade>
+                    {rankedAgents.map((agent) => (
+                      <LaunchpadTile
+                        key={agent.key}
+                        icon={agent.icon}
+                        label={agent.label}
+                        title={t("sessions:controlTower.newAgentSession", {
+                          agent: agent.label,
+                        })}
+                        selected={agent.key === selectedAgentKey}
+                        onClick={() => handleSelectAgent(agent)}
+                      />
+                    ))}
+                    <LaunchpadAddTile
+                      onCreate={goToIntegrations}
+                      label={t("sessions:controlTower.addAgent")}
+                    />
+                  </LaunchpadHScrollFade>
+                )}
+              </LaunchpadCollapsibleSection>
+
+              {selectedAgent ? (
+                <LaunchpadAgentActionStrip agent={selectedAgent} />
+              ) : null}
+            </div>
 
             <LaunchpadCollapsibleSection
               title={t("sessions:controlTower.myApiKeys")}
