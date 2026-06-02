@@ -7,6 +7,10 @@
 import { useCallback, useRef } from "react";
 
 import { gitCommitStream, gitStageStream } from "@src/api/http/git/streaming";
+import {
+  appendGitCoauthorTrailer,
+  shouldIncludeGitCoauthor,
+} from "@src/services/git/operations/commitAttribution";
 
 import { createGitOperationHandlerWithReject } from "./createGitOperationHandler";
 import { ANSI, formatTimestamp } from "./formatters";
@@ -22,6 +26,7 @@ import type {
 
 interface CommitParams {
   message: string;
+  coauthor?: boolean;
 }
 
 interface StageParams {
@@ -107,7 +112,11 @@ export function useGitStagingOperations(
 
   const commitWithOutput = useCallback(
     (params: CommitParams): Promise<() => void> => {
-      return handleCommit(getContext(), params);
+      return handleCommit(getContext(), {
+        ...params,
+        message: appendGitCoauthorTrailer(params.message),
+        coauthor: shouldIncludeGitCoauthor(),
+      });
     },
     [getContext]
   );

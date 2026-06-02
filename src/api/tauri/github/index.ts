@@ -7,6 +7,8 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 
+import { appendPullRequestAttributionFooter } from "@src/services/git/operations/commitAttribution";
+
 import { API_BASE_URLS } from "../../http/client/config";
 
 export const LOCAL_GITHUB_TOKEN_USER_ID = "local_git";
@@ -213,7 +215,7 @@ export async function createPRLocal(
     title,
     head,
     base,
-    body: body ?? null,
+    body: appendPullRequestAttributionFooter(body),
     draft: draft ?? null,
   });
 }

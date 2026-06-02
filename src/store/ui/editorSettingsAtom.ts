@@ -424,6 +424,26 @@ export const gitAutoFetchIntervalAtom = atom(
   }
 );
 
+export const gitCoauthorAttributionEnabledAtom = atom(
+  (get) => get(settingsAtom)["git.attribution.coauthorEnabled"] as boolean,
+  (_get, set, value: boolean) => {
+    set(updateSettingAtom, {
+      key: "git.attribution.coauthorEnabled",
+      value,
+    });
+  }
+);
+
+export const gitPrAttributionEnabledAtom = atom(
+  (get) => get(settingsAtom)["git.attribution.prEnabled"] as boolean,
+  (_get, set, value: boolean) => {
+    set(updateSettingAtom, {
+      key: "git.attribution.prEnabled",
+      value,
+    });
+  }
+);
+
 /**
  * Maximum concurrent agent worktrees per repo (backed by settings.jsonc).
  * Range: 1–32, default: 8.

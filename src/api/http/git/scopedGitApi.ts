@@ -15,6 +15,11 @@
  * await git.commit("fix: typo");
  * ```
  */
+import {
+  appendGitCoauthorTrailer,
+  shouldIncludeGitCoauthor,
+} from "@src/services/git/operations/commitAttribution";
+
 import { gitCommit } from "./commits";
 import { gitDiscardChanges, gitStageFiles, gitUnstageFiles } from "./staging";
 
@@ -44,6 +49,11 @@ export function createScopedGitApi(
       }),
 
     commit: (message) =>
-      gitCommit({ repo_id: repoId, repo_path: repoPath, message }),
+      gitCommit({
+        repo_id: repoId,
+        repo_path: repoPath,
+        message: appendGitCoauthorTrailer(message),
+        coauthor: shouldIncludeGitCoauthor(),
+      }),
   };
 }

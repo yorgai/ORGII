@@ -111,6 +111,7 @@ pub async fn commit(
         req.description.as_deref(),
         req.stage_all,
         req.files.as_deref(),
+        req.coauthor.unwrap_or(false),
     )
     .map_err(GitApiError::from_git_error)?;
 

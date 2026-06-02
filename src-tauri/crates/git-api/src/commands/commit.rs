@@ -1,6 +1,25 @@
 use super::staging::{stage_all_files, stage_file};
 use super::utils::{get_current_branch, run_git};
 use crate::types::*;
+
+const ORGII_COAUTHOR_TRAILER: &str = "Co-authored-by: ORGII <ORGII-agent@users.noreply.github.com>";
+
+pub(crate) fn append_orgii_coauthor_trailer(message: &str, enabled: bool) -> String {
+    if !enabled
+        || message
+            .lines()
+            .any(|line| line.trim() == ORGII_COAUTHOR_TRAILER)
+    {
+        return message.to_string();
+    }
+
+    let trimmed = message.trim_end();
+    if trimmed.is_empty() {
+        return message.to_string();
+    }
+
+    format!("{}\n\n{}", trimmed, ORGII_COAUTHOR_TRAILER)
+}
 /**
  * Commit Operations
  *
@@ -119,6 +138,7 @@ pub fn create_commit(
     description: Option<&str>,
     stage_all: bool,
     files: Option<&[String]>,
+    coauthor: bool,
 ) -> Result<String, String> {
     // Stage files if needed
     if stage_all {
@@ -129,14 +149,13 @@ pub fn create_commit(
         }
     }
 
-    // Build commit message
-    let full_message = if let Some(desc) = description {
+    let base_message = if let Some(desc) = description {
         format!("{}\n\n{}", message, desc)
     } else {
         message.to_string()
     };
+    let full_message = append_orgii_coauthor_trailer(&base_message, coauthor);
 
-    // Create commit
     let output = run_git(repo_path, &["commit", "-m", &full_message])?;
 
     if !output.status.success() {

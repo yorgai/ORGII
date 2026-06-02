@@ -3,6 +3,8 @@
  *
  * Commit listing and creation functions.
  */
+import { shouldIncludeGitCoauthor } from "@src/services/git/operations/commitAttribution";
+
 import { fetchRustApi, gitRepoUrl } from "./client";
 import type {
   GitCommitResponse,
@@ -92,6 +94,7 @@ export const gitCommit = async (params: {
   description?: string;
   stage_all?: boolean;
   files?: string[];
+  coauthor?: boolean;
 }): Promise<GitCommitResponse["data"]> => {
   const queryParams = new URLSearchParams();
   if (params.repo_path) queryParams.append("path", params.repo_path);
@@ -105,6 +108,7 @@ export const gitCommit = async (params: {
         description: params.description ?? null,
         stage_all: params.stage_all ?? false,
         files: params.files ?? null,
+        coauthor: params.coauthor ?? shouldIncludeGitCoauthor(),
       }),
     }
   );

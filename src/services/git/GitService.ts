@@ -13,6 +13,10 @@
  */
 import { gitApi } from "@src/api/http/git";
 import { createLogger } from "@src/hooks/logger";
+import {
+  appendGitCoauthorTrailer,
+  shouldIncludeGitCoauthor,
+} from "@src/services/git/operations/commitAttribution";
 import { TerminalService } from "@src/services/terminal";
 
 const logger = createLogger("GitService");
@@ -73,8 +77,8 @@ export const GitService = {
    * @param message - Commit message
    */
   async commit(message: string): Promise<void> {
-    // Escape quotes in message
-    const escapedMsg = message.replace(/"/g, '\\"');
+    const commitMessage = appendGitCoauthorTrailer(message);
+    const escapedMsg = commitMessage.replace(/"/g, '\\"');
     await TerminalService.execute(`git commit -m "${escapedMsg}"`);
   },
 
@@ -255,7 +259,8 @@ export const GitService = {
       const result = await gitApi.gitCommit({
         repo_id: repoContext.repoId,
         repo_path: repoContext.repoPath,
-        message,
+        message: appendGitCoauthorTrailer(message),
+        coauthor: shouldIncludeGitCoauthor(),
       });
       return result?.success ?? false;
     } catch (error) {

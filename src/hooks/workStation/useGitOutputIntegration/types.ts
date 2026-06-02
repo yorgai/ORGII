@@ -60,7 +60,10 @@ export interface UseGitOutputIntegrationReturn {
     prune?: boolean;
   }) => Promise<GitOperationResult>;
   /** Commit with output streaming - resolves with cleanup function when complete */
-  commitWithOutput: (params: { message: string }) => Promise<() => void>;
+  commitWithOutput: (params: {
+    message: string;
+    coauthor?: boolean;
+  }) => Promise<() => void>;
   /** Stage with output streaming - resolves with cleanup function when complete */
   stageWithOutput: (params: { files: string[] }) => Promise<() => void>;
   /** Log a file watch event (only if verbose mode enabled) */
