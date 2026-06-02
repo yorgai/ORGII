@@ -223,6 +223,7 @@ const AppShell = () => {
       : false;
   const setChatWidth = useSetAtom(chatWidthAtom);
   const restoreChatWidth = useSetAtom(restoreChatWidthAtom);
+  const setChatPanelMaximized = useSetAtom(chatPanelMaximizedAtom);
   const setStationMode = useSetAtom(stationModeAtom);
   const setSidebarCollapsed = useSetAtom(sidebarCollapsedAtom);
   const setStationChatVisibility = useSetAtom(stationChatVisibilityAtom);
@@ -254,6 +255,7 @@ const AppShell = () => {
     }
 
     setStationMode("my-station");
+    setChatPanelMaximized(false);
     setSidebarCollapsed(false);
     setStationChatVisibility((prev) => ({
       ...prev,
@@ -268,6 +270,7 @@ const AppShell = () => {
     location.pathname,
     navigate,
     restoreChatWidth,
+    setChatPanelMaximized,
     setDockAutoHide,
     setDockFilter,
     setSidebarCollapsed,
@@ -281,6 +284,7 @@ const AppShell = () => {
     }
 
     setStationMode("my-station");
+    setChatPanelMaximized(false);
     setSidebarCollapsed(false);
     setStationChatVisibility((prev) => ({
       ...prev,
@@ -295,6 +299,7 @@ const AppShell = () => {
     location.pathname,
     navigate,
     restoreChatWidth,
+    setChatPanelMaximized,
     setDockAutoHide,
     setDockFilter,
     setSidebarCollapsed,
@@ -370,7 +375,6 @@ const AppShell = () => {
   // surface visible behind the not-yet-full-width Settings slot) for one
   // frame before the post-paint effect maximizes the slot — visible as a
   // flash of WorkStation content on entry.
-  const setChatPanelMaximized = useSetAtom(chatPanelMaximizedAtom);
   const settingsPriorMaximizedRef = useRef<boolean | null>(null);
   // Initialize to `false` so the very first paint into a settings URL
   // (cold start / deep link / reload mid-session) also trips the
