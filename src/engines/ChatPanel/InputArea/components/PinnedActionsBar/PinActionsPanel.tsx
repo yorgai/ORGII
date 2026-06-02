@@ -18,10 +18,36 @@ import type { PinnedAction } from "@src/store/session/pinnedActionsAtom";
 import type { SlashItem } from "@src/types/extensions";
 import { fuzzyMatch, fuzzyScore } from "@src/util/search/fuzzy";
 
+/** Skill name for the setup-repo skill that is superseded by the Setup Repo action pill. */
+const SETUP_REPO_SKILL_NAME = "setup-repo";
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
+/**
+ * Stable identity key for a pinned action or slash item.
+ *
+ * Skills are keyed by `skillName` (the backend token) rather than `source`
+ * (the display group label) because the group label can change across
+ * installs/renames while `skillName` stays constant.  Using `source` in the
+ * key was causing pinned skills to never match their available-item
+ * counterpart whenever the resolved group label differed from the label that
+ * was originally persisted.
+ *
+ * Tools are keyed by server name + tool name (both stable identifiers).
+ * Built-in actions are keyed by category + name.
+ */
 function actionKey(a: PinnedAction | SlashItem): string {
-  return `${a.category}|${a.source}|${a.name}`;
+  if (a.category === "skill") {
+    // skillName is the canonical identifier; fall back to name if absent
+    // (covers legacy stored PinnedActions that pre-date the skillName field).
+    const token = a.skillName ?? a.name;
+    return `skill|${token}`;
+  }
+  if (a.category === "tool") {
+    return `tool|${a.serverName ?? a.source}|${a.name}`;
+  }
+  // "action" and any future categories
+  return `${a.category}|${a.name}`;
 }
 
 function slashItemToAction(item: SlashItem): PinnedAction {
@@ -118,15 +144,22 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
 
     const pinnedKeys = new Set(pinnedActions.map(actionKey));
 
+    // Exclude the `setup-repo` skill because the `Setup Repo` action pill
+    // already covers it.  Showing both creates a confusing duplicate.
+    const displayItems = availableItems.filter(
+      (item) =>
+        !(item.category === "skill" && item.skillName === SETUP_REPO_SKILL_NAME)
+    );
+
     const filteredItems: SlashItem[] = query
-      ? availableItems
+      ? displayItems
           .filter(
             (item) =>
               fuzzyMatch(query, item.name) ||
               fuzzyMatch(query, item.description)
           )
           .sort((a, b) => fuzzyScore(query, b.name) - fuzzyScore(query, a.name))
-      : availableItems;
+      : displayItems;
 
     const handleToggle = useCallback(
       (item: SlashItem) => {
