@@ -218,7 +218,7 @@ const StandardTodoBlock: React.FC<StandardTodoBlockProps> = memo(
                 return (
                   <div
                     key={todo.id || idx}
-                    className={`group flex h-6 cursor-grab items-center gap-1.5 rounded px-1.5 transition-colors hover:bg-fill-2 active:cursor-grabbing ${blocked ? "opacity-50" : ""}`}
+                    className={`group flex h-6 cursor-default items-center gap-1.5 rounded px-1.5 transition-colors hover:bg-fill-2 ${blocked ? "opacity-50" : ""}`}
                   >
                     <div className="flex shrink-0 items-center justify-center self-center">
                       <TodoCheckbox status={todo.status} blocked={blocked} />
