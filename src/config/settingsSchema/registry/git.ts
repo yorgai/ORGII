@@ -3,6 +3,18 @@ import { z } from "zod";
 import type { SettingDefinition } from "@src/config/settingsSchema/types";
 
 export const GIT_SETTINGS_REGISTRY = {
+  "git.executableMode": {
+    schema: z.enum(["auto", "system", "bundled"]),
+    default: "auto" as const,
+    description:
+      "Which Git executable ORGII should use: auto prefers system Git when available and falls back to bundled Git, system requires PATH Git, bundled always uses ORGII's bundled Git",
+    category: "git",
+    enumLabels: {
+      auto: "Auto (system if available)",
+      system: "System Git",
+      bundled: "Bundled Git",
+    },
+  },
   "git.pullStrategy": {
     schema: z.enum(["merge", "rebase", "ff-only"]),
     default: "merge" as const,

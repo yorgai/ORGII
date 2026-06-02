@@ -10,7 +10,10 @@ mod tests;
 
 use super::utils::run_git;
 use crate::types::*;
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
+use git::{close_inherited_fds, git_command};
 use std::path::Path;
+use std::process::Output;
 
 /// List remotes
 pub fn list_remotes(repo_path: &Path) -> Result<Vec<GitRemoteInfo>, String> {
@@ -94,6 +97,81 @@ pub fn delete_remote(repo_path: &Path, name: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn approve_git_credentials(repo_path: &Path, username: &str, token: &str) {
+    let credential_input = format!(
+        "protocol=https\nhost=github.com\nusername={username}\npassword={token}\n\n"
+    );
+
+    let Ok(mut command) = git_command() else {
+        return;
+    };
+
+    command
+        .args(["credential", "approve"])
+        .current_dir(repo_path)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    close_inherited_fds(&mut command);
+
+    let Ok(mut child) = command.spawn() else {
+        return;
+    };
+
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        let _ = stdin.write_all(credential_input.as_bytes());
+    }
+
+    let _ = child.wait();
+}
+
+fn run_remote_git(
+    repo_path: &Path,
+    args: &[&str],
+    auth_username: Option<&str>,
+    auth_token: Option<&str>,
+    store_auth: bool,
+) -> Result<Output, String> {
+    if let (Some(username), Some(token)) = (auth_username, auth_token) {
+        let basic_value = BASE64_STANDARD.encode(format!("{username}:{token}"));
+        let auth_header = format!("Authorization: Basic {basic_value}");
+        let mut command = git_command()?;
+        command
+            .args(args)
+            .current_dir(repo_path)
+            .env("GIT_TERMINAL_PROMPT", "0")
+            .env("GIT_CONFIG_COUNT", "1")
+            .env("GIT_CONFIG_KEY_0", "http.https://github.com/.extraHeader")
+            .env("GIT_CONFIG_VALUE_0", auth_header)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped());
+        close_inherited_fds(&mut command);
+        let output = command
+            .output()
+            .map_err(|err| format!("Failed to run authenticated git {:?}: {err}", args))?;
+        if store_auth && output.status.success() {
+            approve_git_credentials(repo_path, username, token);
+        }
+        return Ok(output);
+    }
+
+    let mut command = git_command()?;
+    command
+        .args(args)
+        .current_dir(repo_path)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+    close_inherited_fds(&mut command);
+    command
+        .output()
+        .map_err(|err| format!("Failed to run git {:?}: {err}", args))
+}
+
 /// Detect error type from push error message
 pub(crate) fn detect_push_error_type(message: &str) -> GitErrorType {
     let lower = message.to_lowercase();
@@ -147,6 +225,9 @@ pub fn push_to_remote(
     branch: Option<&str>,
     set_upstream: bool,
     force: bool,
+    auth_username: Option<&str>,
+    auth_token: Option<&str>,
+    store_auth: bool,
 ) -> Result<GitPushResult, String> {
     let remote_name = remote.unwrap_or("origin");
 
@@ -203,7 +284,7 @@ pub fn push_to_remote(
 
     log::info!("[GitAPI] Executing: git {:?}", args);
 
-    let output = run_git(repo_path, &args)?;
+    let output = run_remote_git(repo_path, &args, auth_username, auth_token, store_auth)?;
 
     let message = if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -294,6 +375,9 @@ pub fn pull_from_remote(
     remote: Option<&str>,
     branch: Option<&str>,
     strategy: Option<&str>,
+    auth_username: Option<&str>,
+    auth_token: Option<&str>,
+    store_auth: bool,
 ) -> Result<GitPullResult, String> {
     let mut args = vec!["pull"];
 
@@ -311,7 +395,7 @@ pub fn pull_from_remote(
         args.push(b);
     }
 
-    let output = run_git(repo_path, &args)?;
+    let output = run_remote_git(repo_path, &args, auth_username, auth_token, store_auth)?;
 
     let message = if output.status.success() {
         String::from_utf8_lossy(&output.stdout).to_string()
@@ -404,6 +488,9 @@ pub fn fetch_from_remote(
     repo_path: &Path,
     remote: Option<&str>,
     prune: bool,
+    auth_username: Option<&str>,
+    auth_token: Option<&str>,
+    store_auth: bool,
 ) -> Result<GitFetchResult, String> {
     let mut args = vec!["fetch"];
 
@@ -417,7 +504,7 @@ pub fn fetch_from_remote(
         args.push("--all");
     }
 
-    let output = run_git(repo_path, &args)?;
+    let output = run_remote_git(repo_path, &args, auth_username, auth_token, store_auth)?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);

@@ -142,6 +142,10 @@ fn operation_name_empty() {
     assert_eq!(operation_name_from_args(&[]), "this operation");
 }
 
+// ============================================
+// Git executable resolution
+// ============================================
+
 #[test]
 fn resolved_git_exec_path_uses_bundled_libexec() {
     let root = std::env::temp_dir().join(format!(
@@ -163,4 +167,67 @@ fn resolved_git_exec_path_uses_bundled_libexec() {
 fn resolved_git_exec_path_requires_existing_libexec() {
     let git_executable = std::path::Path::new("/app/Resources/git/bin/git");
     assert_eq!(resolved_git_exec_path(git_executable), None);
+}
+
+#[test]
+fn auto_mode_prefers_system_git() {
+    let system_git = std::path::PathBuf::from("/usr/local/bin/git");
+    let bundled_git = std::path::PathBuf::from("/app/Resources/git/bin/git");
+
+    let resolved = resolve_git_executable_from_candidates(
+        GitExecutableMode::Auto,
+        Some(system_git.clone()),
+        Some(bundled_git),
+        vec![system_git.clone()],
+        Vec::new(),
+    )
+    .unwrap();
+
+    assert_eq!(resolved.path, system_git);
+    assert!(!resolved.is_bundled);
+}
+
+#[test]
+fn auto_mode_falls_back_to_bundled_git() {
+    let bundled_git = std::path::PathBuf::from("/app/Resources/git/bin/git");
+
+    let resolved = resolve_git_executable_from_candidates(
+        GitExecutableMode::Auto,
+        None,
+        Some(bundled_git.clone()),
+        Vec::new(),
+        vec![bundled_git.clone()],
+    )
+    .unwrap();
+
+    assert_eq!(resolved.path, bundled_git);
+    assert!(resolved.is_bundled);
+}
+
+#[test]
+fn system_mode_requires_system_git() {
+    let err = resolve_git_executable_from_candidates(
+        GitExecutableMode::System,
+        None,
+        Some(std::path::PathBuf::from("/app/Resources/git/bin/git")),
+        vec![std::path::PathBuf::from("/missing/git")],
+        Vec::new(),
+    )
+    .unwrap_err();
+
+    assert!(err.contains("System Git executable not found"));
+}
+
+#[test]
+fn bundled_mode_requires_bundled_git() {
+    let err = resolve_git_executable_from_candidates(
+        GitExecutableMode::Bundled,
+        Some(std::path::PathBuf::from("/usr/local/bin/git")),
+        None,
+        Vec::new(),
+        vec![std::path::PathBuf::from("/missing/bundled/git")],
+    )
+    .unwrap_err();
+
+    assert!(err.contains("Bundled Git executable not found"));
 }

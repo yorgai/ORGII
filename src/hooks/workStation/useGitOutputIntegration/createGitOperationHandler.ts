@@ -166,7 +166,12 @@ export function createGitOperationHandler<TParams>(
 
             // Defer native dialog to next tick — showing NSAlert from within
             // a WebKit event callback can deadlock the main-thread render mutex
-            if (!success && errorType && errorType !== "none") {
+            if (
+              !success &&
+              errorType &&
+              errorType !== "none" &&
+              errorType !== "authentication_failed"
+            ) {
               const captured = outputLines.join("\n");
               setTimeout(() => {
                 showGitErrorAndHandle({

@@ -268,6 +268,12 @@ pub struct PushRequest {
     pub branch: Option<String>,
     pub set_upstream: bool,
     pub force: bool,
+    #[serde(default)]
+    pub auth_username: Option<String>,
+    #[serde(default)]
+    pub auth_token: Option<String>,
+    #[serde(default)]
+    pub store_auth: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
@@ -277,12 +283,24 @@ pub struct PullRequest {
     /// Pull strategy: "merge" (default), "rebase", or "ff-only"
     #[serde(default)]
     pub strategy: Option<String>,
+    #[serde(default)]
+    pub auth_username: Option<String>,
+    #[serde(default)]
+    pub auth_token: Option<String>,
+    #[serde(default)]
+    pub store_auth: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct FetchRequest {
     pub remote: Option<String>,
     pub prune: bool,
+    #[serde(default)]
+    pub auth_username: Option<String>,
+    #[serde(default)]
+    pub auth_token: Option<String>,
+    #[serde(default)]
+    pub store_auth: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]

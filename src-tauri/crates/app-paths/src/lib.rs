@@ -9,7 +9,10 @@
 //! to do filesystem and process work (e.g. `set_sensitive_file_permissions`)
 //! but takes no domain dependencies. Every other crate may depend on it.
 
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -266,16 +269,42 @@ pub fn file_history_dir(session_id: &str) -> PathBuf {
 
 const BUNDLED_GIT_RELATIVE_PATH: &[&str] = &["git", "bin", "git"];
 const DEV_DUGITE_GIT_RELATIVE_PATH: &[&str] = &["node_modules", "dugite", "git", "bin", "git"];
+const SYSTEM_GIT_PROBE_TIMEOUT: Duration = Duration::from_millis(750);
 
 /// Resolve the Git executable shipped with ORGII.
-///
-/// The app intentionally does not fall back to `/usr/bin/git` or `PATH` Git:
-/// fresh macOS installs may expose only the Xcode Command Line Tools shim,
-/// and Homebrew Git is not guaranteed to exist on another machine.
 pub fn bundled_git_executable() -> Option<PathBuf> {
     bundled_git_candidate_paths()
         .into_iter()
         .find(|path| is_executable_file(path))
+}
+
+pub fn system_git_executable() -> Option<PathBuf> {
+    system_git_candidate_paths()
+        .into_iter()
+        .find(|path| git_version_succeeds(path))
+}
+
+pub fn system_git_candidate_paths() -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+
+    #[cfg(target_os = "macos")]
+    {
+        paths.push(PathBuf::from("/opt/homebrew/bin/git"));
+        paths.push(PathBuf::from("/usr/local/bin/git"));
+    }
+
+    if let Ok(path_value) = std::env::var("PATH") {
+        for dir in std::env::split_paths(&path_value) {
+            paths.push(dir.join(git_binary_name()));
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        paths.push(PathBuf::from("/usr/bin/git"));
+    }
+
+    dedupe_paths(paths)
 }
 
 /// Candidate paths for diagnostics and tests, ordered by runtime preference.
@@ -317,6 +346,56 @@ fn join_segments(mut base: PathBuf, segments: &[&str]) -> PathBuf {
         base.push(segment);
     }
     base
+}
+
+fn git_binary_name() -> &'static str {
+    if cfg!(windows) {
+        "git.exe"
+    } else {
+        "git"
+    }
+}
+
+fn dedupe_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut seen = HashSet::new();
+    paths
+        .into_iter()
+        .filter(|path| seen.insert(path.clone()))
+        .collect()
+}
+
+fn git_version_succeeds(path: &Path) -> bool {
+    if !is_executable_file(path) {
+        return false;
+    }
+
+    let Ok(mut child) = Command::new(path)
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    else {
+        return false;
+    };
+
+    let started_at = Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => return status.success(),
+            Ok(None) if started_at.elapsed() >= SYSTEM_GIT_PROBE_TIMEOUT => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return false;
+            }
+            Ok(None) => std::thread::sleep(Duration::from_millis(25)),
+            Err(_) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return false;
+            }
+        }
+    }
 }
 
 fn is_executable_file(path: &Path) -> bool {

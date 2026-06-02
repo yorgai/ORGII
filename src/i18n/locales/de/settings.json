@@ -720,6 +720,11 @@
     "lineHeightDouble": "Doppelt",
     "git": {
       "title": "Git",
+      "executableMode": "Git-Ausführungsdatei",
+      "executableModeDesc": "Wähle, ob Git-Vorgänge System-Git oder das mit ORGII gebündelte Git verwenden",
+      "executableModeAuto": "Auto (System, falls verfügbar)",
+      "executableModeSystem": "System-Git",
+      "executableModeBundled": "Gebündeltes Git",
       "pullStrategy": "Pull-Strategie",
       "pullStrategyDesc": "Wie git pull Änderungen von remote bei der Synchronisierung integriert",
       "pullStrategyHint": "Merge: Erstellt einen merge commit, wenn branches diverged sind. Bewahrt die vollständige history.\n\nRebase: Replays Ihre commits auf remote. Erstellt linear history.\n\nFast-forward only: Erlaubt pull nur, wenn kein merge nötig ist. Lehnt ab, wenn branches diverged sind.",

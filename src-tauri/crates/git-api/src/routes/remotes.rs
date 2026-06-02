@@ -198,6 +198,9 @@ pub async fn push(
         req.branch.as_deref(),
         req.set_upstream,
         req.force,
+        req.auth_username.as_deref(),
+        req.auth_token.as_deref(),
+        req.store_auth,
     )
     .map_err(GitApiError::from_git_error)?;
 
@@ -233,6 +236,9 @@ pub async fn pull(
         req.remote.as_deref(),
         req.branch.as_deref(),
         req.strategy.as_deref(),
+        req.auth_username.as_deref(),
+        req.auth_token.as_deref(),
+        req.store_auth,
     )
     .map_err(GitApiError::from_git_error)?;
 
@@ -263,8 +269,15 @@ pub async fn fetch(
 ) -> GitApiResult<Json<serde_json::Value>> {
     let repo_path = resolve_repo_path(&repo_id, query.path.as_deref())?;
 
-    let result = commands::fetch_from_remote(&repo_path, req.remote.as_deref(), req.prune)
-        .map_err(GitApiError::from_git_error)?;
+    let result = commands::fetch_from_remote(
+        &repo_path,
+        req.remote.as_deref(),
+        req.prune,
+        req.auth_username.as_deref(),
+        req.auth_token.as_deref(),
+        req.store_auth,
+    )
+    .map_err(GitApiError::from_git_error)?;
 
     Ok(Json(serde_json::json!({
         "status": 0,

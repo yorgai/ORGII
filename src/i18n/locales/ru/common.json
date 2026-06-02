@@ -989,6 +989,28 @@
     "thisBranch": "эту ветку",
     "remote": "удалённый",
     "toOrigin": "в origin",
+    "authDialog": {
+      "title": "Требуется аутентификация GitHub",
+      "subtitle": "{{operation}} требует доступ к этому удалённому repo",
+      "securityNote": "ORGII никогда не запишет этот token в конфигурацию Git или remote URL. Если выбрать сохранение, он будет сохранён через credential helper Git.",
+      "persistenceLabel": "Хранение token",
+      "storeForFutureOperations": "Сохранить для будущих операций Git",
+      "useOnce": "Использовать один раз",
+      "usernameLabel": "Имя пользователя GitHub",
+      "usernameRequired": "Имя пользователя обязательно",
+      "tokenLabel": "Personal access token",
+      "tokenRequired": "Token обязателен",
+      "tokenHelpPrefix": "Для GitHub HTTPS remotes используйте token с доступом к repo. Вы можете создать его в",
+      "tokenSettingsLink": "настройках token GitHub",
+      "remoteLabel": "Remote: {{remote}}",
+      "repoLabel": "Repo: {{repoPath}}",
+      "operations": {
+        "push": "Push",
+        "pull": "Pull",
+        "fetch": "Fetch",
+        "sync": "Sync"
+      }
+    },
     "actions": {
       "publish": "Publish",
       "view": "Просмотр",
@@ -1290,7 +1312,7 @@
     "spotlight": {
       "placeholder": "Поиск или введите команду…",
       "placeholders": {
-        "workspace": "Искать Workspace или вставить путь к папке для открытия...",
+        "workspace": "Найти или ввести путь к папке",
         "branch": "Поиск ветки...",
         "source": "Поиск источника...",
         "actions": "Поиск действий..."

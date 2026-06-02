@@ -15,6 +15,9 @@ export const gitFetch = async (params: {
   repo_path?: string;
   remote?: string;
   prune?: boolean;
+  authUsername?: string;
+  authToken?: string;
+  storeAuth?: boolean;
 }): Promise<GitOperationResponse["data"]> => {
   const queryParams = new URLSearchParams();
   if (params.repo_path) queryParams.append("path", params.repo_path);
@@ -26,6 +29,9 @@ export const gitFetch = async (params: {
       body: JSON.stringify({
         remote: params.remote ?? "origin",
         prune: params.prune ?? true,
+        auth_username: params.authUsername ?? null,
+        auth_token: params.authToken ?? null,
+        store_auth: params.storeAuth ?? false,
       }),
     }
   );
@@ -50,6 +56,9 @@ export const gitPull = async (params: {
   remote?: string;
   branch?: string;
   strategy?: string;
+  authUsername?: string;
+  authToken?: string;
+  storeAuth?: boolean;
 }): Promise<GitPullResponse["data"]> => {
   const queryParams = new URLSearchParams();
   if (params.repo_path) queryParams.append("path", params.repo_path);
@@ -62,6 +71,9 @@ export const gitPull = async (params: {
         remote: params.remote ?? "origin",
         branch: params.branch ?? null,
         strategy: params.strategy ?? null,
+        auth_username: params.authUsername ?? null,
+        auth_token: params.authToken ?? null,
+        store_auth: params.storeAuth ?? false,
       }),
     }
   );
@@ -87,6 +99,9 @@ export const gitPush = async (params: {
   branch?: string;
   set_upstream?: boolean;
   force?: boolean;
+  authUsername?: string;
+  authToken?: string;
+  storeAuth?: boolean;
 }): Promise<GitOperationResponse["data"]> => {
   const queryParams = new URLSearchParams();
   if (params.repo_path) queryParams.append("path", params.repo_path);
@@ -100,6 +115,9 @@ export const gitPush = async (params: {
         branch: params.branch ?? null,
         set_upstream: params.set_upstream ?? false,
         force: params.force ?? false,
+        auth_username: params.authUsername ?? null,
+        auth_token: params.authToken ?? null,
+        store_auth: params.storeAuth ?? false,
       }),
     }
   );

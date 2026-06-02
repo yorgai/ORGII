@@ -363,6 +363,30 @@ export const editorSettingsTabAtom = atom<string>("terminal");
 // ============================================
 
 /**
+ * Git executable selection mode.
+ * - auto: Prefer system Git when available, otherwise bundled Git
+ * - system: Require Git from PATH
+ * - bundled: Always use ORGII's bundled Git
+ */
+export type GitExecutableMode = "auto" | "system" | "bundled";
+
+export const GIT_EXECUTABLE_MODES: {
+  value: GitExecutableMode;
+  labelKey: string;
+}[] = [
+  { value: "auto", labelKey: "editor.git.executableModeAuto" },
+  { value: "system", labelKey: "editor.git.executableModeSystem" },
+  { value: "bundled", labelKey: "editor.git.executableModeBundled" },
+];
+
+export const gitExecutableModeAtom = atom(
+  (get) => get(settingsAtom)["git.executableMode"] as GitExecutableMode,
+  (_get, set, value: GitExecutableMode) => {
+    set(updateSettingAtom, { key: "git.executableMode", value });
+  }
+);
+
+/**
  * Git pull strategy
  * - merge: Standard merge (preserves history)
  * - rebase: Rebase local commits on top of remote (linear history)

@@ -989,6 +989,28 @@
     "thisBranch": "esta rama",
     "remote": "remoto",
     "toOrigin": "a origin",
+    "authDialog": {
+      "title": "Se requiere autenticación de GitHub",
+      "subtitle": "{{operation}} necesita acceso a este repo remoto",
+      "securityNote": "ORGII nunca escribirá este token en tu configuración de Git ni en la URL remota. Si eliges guardarlo, se almacenará mediante el credential helper de Git.",
+      "persistenceLabel": "Almacenamiento del token",
+      "storeForFutureOperations": "Guardar para futuras operaciones de Git",
+      "useOnce": "Usar una vez",
+      "usernameLabel": "Usuario de GitHub",
+      "usernameRequired": "El usuario es obligatorio",
+      "tokenLabel": "Token de acceso personal",
+      "tokenRequired": "El token es obligatorio",
+      "tokenHelpPrefix": "Para remotes HTTPS de GitHub, usa un token con acceso al repo. Puedes crear uno en",
+      "tokenSettingsLink": "la configuración de tokens de GitHub",
+      "remoteLabel": "Remote: {{remote}}",
+      "repoLabel": "Repo: {{repoPath}}",
+      "operations": {
+        "push": "Push",
+        "pull": "Pull",
+        "fetch": "Fetch",
+        "sync": "Sync"
+      }
+    },
     "actions": {
       "publish": "Publish",
       "view": "Ver",
@@ -1290,7 +1312,7 @@
     "spotlight": {
       "placeholder": "Buscar o escribir un comando…",
       "placeholders": {
-        "workspace": "Buscar Workspace o pegar una ruta de carpeta para abrir...",
+        "workspace": "Buscar o introducir ruta de carpeta",
         "branch": "Buscar rama...",
         "source": "Buscar origen...",
         "actions": "Buscar acciones..."

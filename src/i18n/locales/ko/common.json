@@ -990,6 +990,28 @@
     "thisBranch": "이 브랜치",
     "remote": "리모트",
     "toOrigin": "origin으로",
+    "authDialog": {
+      "title": "GitHub authentication required",
+      "subtitle": "{{operation}} needs access to this remote repo",
+      "securityNote": "ORGII will never write this token to your Git config or remote URL. If you choose to store it, it will be saved through Git's credential helper.",
+      "persistenceLabel": "Token storage",
+      "storeForFutureOperations": "Store for future Git operations",
+      "useOnce": "Use once",
+      "usernameLabel": "GitHub username",
+      "usernameRequired": "Username is required",
+      "tokenLabel": "Personal access token",
+      "tokenRequired": "Token is required",
+      "tokenHelpPrefix": "For GitHub HTTPS remotes, use a token with repository access. You can create one in",
+      "tokenSettingsLink": "GitHub token settings",
+      "remoteLabel": "Remote: {{remote}}",
+      "repoLabel": "Repo: {{repoPath}}",
+      "operations": {
+        "push": "Push",
+        "pull": "Pull",
+        "fetch": "Fetch",
+        "sync": "Sync"
+      }
+    },
     "actions": {
       "publish": "Publish",
       "view": "보기",
@@ -1291,7 +1313,7 @@
     "spotlight": {
       "placeholder": "검색하거나 명령을 입력하세요…",
       "placeholders": {
-        "workspace": "Workspace 검색 또는 열 폴더 경로 붙여넣기...",
+        "workspace": "검색하거나 폴더 경로 입력",
         "branch": "브랜치 검색...",
         "source": "소스 검색...",
         "actions": "작업 검색..."

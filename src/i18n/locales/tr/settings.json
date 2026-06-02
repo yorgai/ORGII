@@ -720,6 +720,11 @@
     "lineHeightDouble": "Çift",
     "git": {
       "title": "Git",
+      "executableMode": "Git çalıştırılabilir dosyası",
+      "executableModeDesc": "Git işlemlerinin sistem Git’i mi yoksa ORGII ile gelen Git’i mi kullanacağını seçin",
+      "executableModeAuto": "Otomatik (varsa sistem)",
+      "executableModeSystem": "Sistem Git",
+      "executableModeBundled": "Birlikte gelen Git",
       "pullStrategy": "Pull stratejisi",
       "pullStrategyDesc": "Senkronizasyon sırasında git pull'un remote değişiklikleri nasıl entegre edeceği",
       "pullStrategyHint": "Merge: Branches diverged olduğunda merge commit oluşturur. Tam history'yi korur.\n\nRebase: Commit'lerinizi remote üzerine replays. Linear history oluşturur.\n\nFast-forward only: Merge gerekmediğinde pull'a izin verir. Branches diverged ise reddeder.",

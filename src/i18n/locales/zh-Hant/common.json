@@ -990,6 +990,28 @@
     "thisBranch": "此分支",
     "remote": "遠程",
     "toOrigin": "到 origin",
+    "authDialog": {
+      "title": "需要 GitHub 身分驗證",
+      "subtitle": "{{operation}} 需要存取此遠程 repo",
+      "securityNote": "ORGII 絕不會將此 token 寫入你的 Git 設定或遠程 URL。如果選擇儲存，它會透過 Git 的 credential helper 保存。",
+      "persistenceLabel": "Token 儲存",
+      "storeForFutureOperations": "為後續 Git 操作儲存",
+      "useOnce": "僅使用一次",
+      "usernameLabel": "GitHub 使用者名稱",
+      "usernameRequired": "需要使用者名稱",
+      "tokenLabel": "Personal access token",
+      "tokenRequired": "需要 token",
+      "tokenHelpPrefix": "對於 GitHub HTTPS remotes，請使用具有 repo 存取權限的 token。你可以在這裡建立：",
+      "tokenSettingsLink": "GitHub token settings",
+      "remoteLabel": "Remote：{{remote}}",
+      "repoLabel": "Repo：{{repoPath}}",
+      "operations": {
+        "push": "Push",
+        "pull": "Pull",
+        "fetch": "Fetch",
+        "sync": "Sync"
+      }
+    },
     "actions": {
       "publish": "Publish",
       "view": "查看",
@@ -1291,7 +1313,7 @@
     "spotlight": {
       "placeholder": "搜索或輸入命令…",
       "placeholders": {
-        "workspace": "搜尋 Workspace，或貼上要開啟的資料夾路徑...",
+        "workspace": "搜尋或輸入資料夾路徑",
         "branch": "搜索分支...",
         "source": "搜索來源...",
         "actions": "搜索操作..."

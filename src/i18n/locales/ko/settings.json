@@ -720,6 +720,11 @@
     "lineHeightDouble": "2배",
     "git": {
       "title": "Git",
+      "executableMode": "Git 실행 파일",
+      "executableModeDesc": "Git 작업에서 시스템 Git 또는 ORGII 번들 Git 중 무엇을 사용할지 선택합니다",
+      "executableModeAuto": "자동 (사용 가능하면 시스템)",
+      "executableModeSystem": "시스템 Git",
+      "executableModeBundled": "번들 Git",
       "pullStrategy": "Pull 전략",
       "pullStrategyDesc": "동기화 시 git pull이 remote 변경 사항을 통합하는 방법",
       "pullStrategyHint": "Merge：branch가 diverge했을 때 merge commit 생성. 전체 history 보존.\n\nRebase：당신의 commit을 remote 위에 replay. linear history 생성.\n\nFast-forward only：merge가 필요 없을 때만 pull 허용. branch가 diverge하면 거부.",

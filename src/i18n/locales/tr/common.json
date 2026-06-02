@@ -990,6 +990,28 @@
     "thisBranch": "bu dal",
     "remote": "uzak",
     "toOrigin": "origin'e",
+    "authDialog": {
+      "title": "GitHub kimlik doğrulaması gerekiyor",
+      "subtitle": "{{operation}} bu remote repo erişimine ihtiyaç duyuyor",
+      "securityNote": "ORGII bu token'ı asla Git config veya remote URL içine yazmaz. Saklamayı seçerseniz Git credential helper üzerinden kaydedilir.",
+      "persistenceLabel": "Token saklama",
+      "storeForFutureOperations": "Gelecekteki Git işlemleri için sakla",
+      "useOnce": "Bir kez kullan",
+      "usernameLabel": "GitHub kullanıcı adı",
+      "usernameRequired": "Kullanıcı adı gerekli",
+      "tokenLabel": "Personal access token",
+      "tokenRequired": "Token gerekli",
+      "tokenHelpPrefix": "GitHub HTTPS remotes için repo erişimi olan bir token kullanın. Bir tane oluşturabileceğiniz yer:",
+      "tokenSettingsLink": "GitHub token settings",
+      "remoteLabel": "Remote: {{remote}}",
+      "repoLabel": "Repo: {{repoPath}}",
+      "operations": {
+        "push": "Push",
+        "pull": "Pull",
+        "fetch": "Fetch",
+        "sync": "Sync"
+      }
+    },
     "actions": {
       "publish": "Publish",
       "view": "Görüntüle",
@@ -1291,7 +1313,7 @@
     "spotlight": {
       "placeholder": "Ara veya komut yaz…",
       "placeholders": {
-        "workspace": "Workspace ara veya açılacak klasör yolunu yapıştır...",
+        "workspace": "Ara veya klasör yolu gir",
         "branch": "Dal ara...",
         "source": "Kaynak ara...",
         "actions": "Eylem ara..."

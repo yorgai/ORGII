@@ -10,7 +10,10 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
-use app_paths::{bundled_git_candidate_paths, bundled_git_executable};
+use app_paths::{
+    bundled_git_candidate_paths, bundled_git_executable, system_git_candidate_paths,
+    system_git_executable,
+};
 
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
@@ -26,7 +29,21 @@ pub const DEFAULT_RETRIES: u32 = 5;
 const RETRY_BASE_DELAY_MS: u64 = 50;
 
 const GIT_EXEC_PATH_ENV: &str = "GIT_EXEC_PATH";
+const GIT_EXECUTABLE_MODE_SETTING: &str = "git.executableMode";
 const GIT_LIBEXEC_SEGMENTS: &[&str] = &["libexec", "git-core"];
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GitExecutableMode {
+    Auto,
+    System,
+    Bundled,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResolvedGitExecutable {
+    pub path: PathBuf,
+    pub is_bundled: bool,
+}
 
 // ============================================
 // Error Detection
@@ -91,15 +108,166 @@ pub fn operation_name_from_args(args: &[&str]) -> &'static str {
 // Core Git Command Execution
 // ============================================
 
+pub fn read_git_executable_mode() -> GitExecutableMode {
+    let settings_path = app_paths::settings();
+    let Ok(raw) = std::fs::read_to_string(settings_path) else {
+        return GitExecutableMode::Auto;
+    };
+
+    let json = strip_jsonc_comments(&raw);
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(&json) else {
+        return GitExecutableMode::Auto;
+    };
+
+    match value
+        .get(GIT_EXECUTABLE_MODE_SETTING)
+        .and_then(serde_json::Value::as_str)
+    {
+        Some("system") => GitExecutableMode::System,
+        Some("bundled") => GitExecutableMode::Bundled,
+        _ => GitExecutableMode::Auto,
+    }
+}
+
 pub fn resolved_git_executable() -> Result<PathBuf, String> {
-    bundled_git_executable().ok_or_else(|| {
-        let candidates = bundled_git_candidate_paths()
-            .into_iter()
-            .map(|path| path.display().to_string())
-            .collect::<Vec<_>>()
-            .join(", ");
-        format!("Bundled Git executable not found. Checked: {}", candidates)
-    })
+    resolved_git_executable_details().map(|resolved| resolved.path)
+}
+
+pub fn resolved_git_executable_details() -> Result<ResolvedGitExecutable, String> {
+    resolve_git_executable_for_mode(read_git_executable_mode())
+}
+
+pub fn resolve_git_executable_for_mode(
+    mode: GitExecutableMode,
+) -> Result<ResolvedGitExecutable, String> {
+    resolve_git_executable_from_candidates(
+        mode,
+        system_git_executable(),
+        bundled_git_executable(),
+        system_git_candidate_paths(),
+        bundled_git_candidate_paths(),
+    )
+}
+
+pub fn resolve_git_executable_from_candidates(
+    mode: GitExecutableMode,
+    system_git: Option<PathBuf>,
+    bundled_git: Option<PathBuf>,
+    system_candidates: Vec<PathBuf>,
+    bundled_candidates: Vec<PathBuf>,
+) -> Result<ResolvedGitExecutable, String> {
+    match mode {
+        GitExecutableMode::Auto => system_git
+            .map(system_resolved_git_executable)
+            .or_else(|| bundled_git.map(bundled_resolved_git_executable))
+            .ok_or_else(|| {
+                format!(
+                    "Git executable not found. System Git candidates: {}. Bundled Git candidates: {}",
+                    format_candidate_paths(system_candidates),
+                    format_candidate_paths(bundled_candidates)
+                )
+            }),
+        GitExecutableMode::System => system_git.map(system_resolved_git_executable).ok_or_else(|| {
+            format!(
+                "System Git executable not found or not runnable. Checked: {}",
+                format_candidate_paths(system_candidates)
+            )
+        }),
+        GitExecutableMode::Bundled => bundled_git
+            .map(bundled_resolved_git_executable)
+            .ok_or_else(|| bundled_git_not_found_error_from_candidates(bundled_candidates)),
+    }
+}
+
+fn system_resolved_git_executable(path: PathBuf) -> ResolvedGitExecutable {
+    ResolvedGitExecutable {
+        path,
+        is_bundled: false,
+    }
+}
+
+fn bundled_resolved_git_executable(path: PathBuf) -> ResolvedGitExecutable {
+    ResolvedGitExecutable {
+        path,
+        is_bundled: true,
+    }
+}
+
+fn bundled_git_not_found_error_from_candidates(candidates: Vec<PathBuf>) -> String {
+    format!(
+        "Bundled Git executable not found. Checked: {}",
+        format_candidate_paths(candidates)
+    )
+}
+
+fn format_candidate_paths(paths: Vec<PathBuf>) -> String {
+    paths
+        .into_iter()
+        .map(|path| path.display().to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn strip_jsonc_comments(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let chars: Vec<char> = input.chars().collect();
+    let len = chars.len();
+    let mut index = 0;
+    let mut in_string = false;
+    let mut escape_next = false;
+
+    while index < len {
+        if escape_next {
+            result.push(chars[index]);
+            escape_next = false;
+            index += 1;
+            continue;
+        }
+
+        if in_string {
+            if chars[index] == '\\' {
+                escape_next = true;
+                result.push(chars[index]);
+            } else if chars[index] == '"' {
+                in_string = false;
+                result.push(chars[index]);
+            } else {
+                result.push(chars[index]);
+            }
+            index += 1;
+            continue;
+        }
+
+        if chars[index] == '"' {
+            in_string = true;
+            result.push(chars[index]);
+            index += 1;
+            continue;
+        }
+
+        if index + 1 < len && chars[index] == '/' && chars[index + 1] == '/' {
+            while index < len && chars[index] != '\n' {
+                index += 1;
+            }
+            continue;
+        }
+
+        if index + 1 < len && chars[index] == '/' && chars[index + 1] == '*' {
+            index += 2;
+            while index + 1 < len && !(chars[index] == '*' && chars[index + 1] == '/') {
+                index += 1;
+            }
+            if index + 1 < len {
+                index += 2;
+            }
+            continue;
+        }
+
+        result.push(chars[index]);
+        index += 1;
+    }
+
+    result
 }
 
 pub fn resolved_git_exec_path(git_executable: &Path) -> Option<PathBuf> {
@@ -116,21 +284,23 @@ pub fn resolved_git_exec_path(git_executable: &Path) -> Option<PathBuf> {
 }
 
 pub fn git_command() -> Result<Command, String> {
-    let git_executable = resolved_git_executable()?;
-    let git_exec_path = resolved_git_exec_path(&git_executable);
-    let mut command = Command::new(git_executable);
-    if let Some(path) = git_exec_path {
-        command.env(GIT_EXEC_PATH_ENV, path);
+    let git_executable = resolved_git_executable_details()?;
+    let mut command = Command::new(&git_executable.path);
+    if git_executable.is_bundled {
+        if let Some(path) = resolved_git_exec_path(&git_executable.path) {
+            command.env(GIT_EXEC_PATH_ENV, path);
+        }
     }
     Ok(command)
 }
 
 pub fn tokio_git_command() -> Result<tokio::process::Command, String> {
-    let git_executable = resolved_git_executable()?;
-    let git_exec_path = resolved_git_exec_path(&git_executable);
-    let mut command = tokio::process::Command::new(git_executable);
-    if let Some(path) = git_exec_path {
-        command.env(GIT_EXEC_PATH_ENV, path);
+    let git_executable = resolved_git_executable_details()?;
+    let mut command = tokio::process::Command::new(&git_executable.path);
+    if git_executable.is_bundled {
+        if let Some(path) = resolved_git_exec_path(&git_executable.path) {
+            command.env(GIT_EXEC_PATH_ENV, path);
+        }
     }
     Ok(command)
 }

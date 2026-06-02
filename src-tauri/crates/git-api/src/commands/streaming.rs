@@ -359,6 +359,8 @@ pub async fn push_stream(
     }
 
     cmd.current_dir(&repo_path)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -404,6 +406,8 @@ pub async fn pull_stream(
     }
 
     cmd.current_dir(&repo_path)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -433,6 +437,8 @@ pub async fn fetch_stream(
     }
 
     cmd.current_dir(&repo_path)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -500,6 +506,8 @@ pub async fn stage_stream(
         cmd.arg(file);
     }
     cmd.current_dir(&repo_path)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 

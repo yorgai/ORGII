@@ -4,6 +4,7 @@
 import { gitApi } from "@src/api/http/git";
 import { showGitErrorAndHandle } from "@src/hooks/git/useGitErrorDialog";
 import { gitPullStrategyAtom } from "@src/store/ui/editorSettingsAtom";
+import { showGitAuthenticationDialog } from "@src/util/dialogs/gitAuthenticationDialog";
 
 import { TerminalService } from "../../terminal";
 import type { GitOperationResult } from "./types";
@@ -26,15 +27,23 @@ export async function push(
   params: {
     force?: boolean;
     setUpstream?: boolean;
+    remote?: string;
+    branch?: string;
   } = {}
 ): Promise<GitOperationResult> {
   const integration = getOutputIntegration();
 
   if (integration) {
-    return integration.pushWithOutput({
+    const result = await integration.pushWithOutput({
+      remote: params.remote,
+      branch: params.branch,
       force: params.force,
       set_upstream: params.setUpstream,
     });
+    if (!result.success && result.errorType === "authentication_failed") {
+      return (await retryPushWithAuth(params)) ?? result;
+    }
+    return result;
   }
 
   const repo = getRepoContext();
@@ -43,17 +52,23 @@ export async function push(
       await gitApi.gitPush({
         repo_id: repo.repoId,
         repo_path: repo.repoPath,
+        remote: params.remote,
+        branch: params.branch,
         force: params.force,
         set_upstream: params.setUpstream,
       });
       return { success: true, errorType: "none" };
     } catch (error) {
       const parsed = parseGitError(error);
-      return {
+      const result: GitOperationResult = {
         success: false,
         errorType: parsed.type,
         message: parsed.message,
       };
+      if (result.errorType === "authentication_failed") {
+        return (await retryPushWithAuth(params)) ?? result;
+      }
+      return result;
     }
   }
 
@@ -95,6 +110,117 @@ function buildPullCommand(strategy: string): string {
   }
 }
 
+async function requestGitAuthToken(
+  operation: "push" | "pull" | "fetch" | "sync",
+  remote?: string
+): Promise<{ username: string; token: string } | null> {
+  const repo = getRepoContext();
+  return showGitAuthenticationDialog({
+    operation,
+    repoPath: repo?.repoPath,
+    remote,
+  });
+}
+
+async function retryPushWithAuth(params: {
+  force?: boolean;
+  setUpstream?: boolean;
+  remote?: string;
+  branch?: string;
+}): Promise<GitOperationResult | null> {
+  const repo = getRepoContext();
+  if (!repo) return null;
+
+  const auth = await requestGitAuthToken("push", params.remote);
+  if (!auth) return null;
+
+  try {
+    await gitApi.gitPush({
+      repo_id: repo.repoId,
+      repo_path: repo.repoPath,
+      remote: params.remote,
+      branch: params.branch,
+      force: params.force,
+      set_upstream: params.setUpstream,
+      authUsername: auth.username,
+      authToken: auth.token,
+      storeAuth: auth.shouldStore,
+    });
+    return { success: true, errorType: "none" };
+  } catch (error) {
+    const parsed = parseGitError(error);
+    return {
+      success: false,
+      errorType: parsed.type,
+      message: parsed.message,
+    };
+  }
+}
+
+async function retryPullWithAuth(params: {
+  remote?: string;
+  branch?: string;
+  strategy: string;
+}): Promise<GitOperationResult | null> {
+  const repo = getRepoContext();
+  if (!repo) return null;
+
+  const auth = await requestGitAuthToken("pull", params.remote);
+  if (!auth) return null;
+
+  try {
+    await gitApi.gitPull({
+      repo_id: repo.repoId,
+      repo_path: repo.repoPath,
+      remote: params.remote,
+      branch: params.branch,
+      strategy: params.strategy,
+      authUsername: auth.username,
+      authToken: auth.token,
+      storeAuth: auth.shouldStore,
+    });
+    return { success: true, errorType: "none" };
+  } catch (error) {
+    const parsed = parseGitError(error);
+    return {
+      success: false,
+      errorType: parsed.type,
+      message: parsed.message,
+    };
+  }
+}
+
+async function retryFetchWithAuth(params: {
+  remote?: string;
+  prune?: boolean;
+}): Promise<GitOperationResult | null> {
+  const repo = getRepoContext();
+  if (!repo) return null;
+
+  const auth = await requestGitAuthToken("fetch", params.remote);
+  if (!auth) return null;
+
+  try {
+    await gitApi.gitFetch({
+      repo_id: repo.repoId,
+      repo_path: repo.repoPath,
+      remote: params.remote,
+      prune: params.prune,
+      authUsername: auth.username,
+      authToken: auth.token,
+      storeAuth: auth.shouldStore,
+    });
+    return { success: true, errorType: "none" };
+  } catch (error) {
+    const parsed = parseGitError(error);
+    return {
+      success: false,
+      errorType: parsed.type,
+      message: parsed.message,
+    };
+  }
+}
+
 /**
  * Pull from remote
  * Uses streaming output if available, falls back to terminal.
@@ -110,7 +236,11 @@ export async function pull(
   const integration = getOutputIntegration();
 
   if (integration) {
-    return integration.pullWithOutput({ ...params, strategy });
+    const result = await integration.pullWithOutput({ ...params, strategy });
+    if (!result.success && result.errorType === "authentication_failed") {
+      return (await retryPullWithAuth({ ...params, strategy })) ?? result;
+    }
+    return result;
   }
 
   const repo = getRepoContext();
@@ -126,11 +256,15 @@ export async function pull(
       return { success: true, errorType: "none" };
     } catch (error) {
       const parsed = parseGitError(error);
-      return {
+      const result: GitOperationResult = {
         success: false,
         errorType: parsed.type,
         message: parsed.message,
       };
+      if (result.errorType === "authentication_failed") {
+        return (await retryPullWithAuth({ ...params, strategy })) ?? result;
+      }
+      return result;
     }
   }
 
@@ -160,7 +294,11 @@ export async function fetch(
   const integration = getOutputIntegration();
 
   if (integration) {
-    return integration.fetchWithOutput(params);
+    const result = await integration.fetchWithOutput(params);
+    if (!result.success && result.errorType === "authentication_failed") {
+      return (await retryFetchWithAuth(params)) ?? result;
+    }
+    return result;
   }
 
   const repo = getRepoContext();
@@ -175,11 +313,15 @@ export async function fetch(
       return { success: true, errorType: "none" };
     } catch (error) {
       const parsed = parseGitError(error);
-      return {
+      const result: GitOperationResult = {
         success: false,
         errorType: parsed.type,
         message: parsed.message,
       };
+      if (result.errorType === "authentication_failed") {
+        return (await retryFetchWithAuth(params)) ?? result;
+      }
+      return result;
     }
   }
 

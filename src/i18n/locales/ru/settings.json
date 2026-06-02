@@ -720,6 +720,11 @@
     "lineHeightDouble": "Двойной",
     "git": {
       "title": "Git",
+      "executableMode": "Исполняемый файл Git",
+      "executableModeDesc": "Выберите, будут ли операции Git использовать системный Git или встроенный Git ORGII",
+      "executableModeAuto": "Авто (системный, если доступен)",
+      "executableModeSystem": "Системный Git",
+      "executableModeBundled": "Встроенный Git",
       "pullStrategy": "Стратегия pull",
       "pullStrategyDesc": "Как git pull интегрирует изменения с remote при синхронизации",
       "pullStrategyHint": "Merge: Создаёт merge commit при diverge branches. Сохраняет полный history.\n\nRebase: Replays ваши commits поверх remote. Создаёт linear history.\n\nFast-forward only: Разрешает pull только когда merge не нужен. Отказывает если branches diverged.",

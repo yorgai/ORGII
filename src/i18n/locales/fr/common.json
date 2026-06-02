@@ -989,6 +989,28 @@
     "thisBranch": "cette branche",
     "remote": "distant",
     "toOrigin": "vers origin",
+    "authDialog": {
+      "title": "Authentification GitHub requise",
+      "subtitle": "{{operation}} nécessite l’accès à ce repo distant",
+      "securityNote": "ORGII n’écrira jamais ce token dans votre configuration Git ni dans l’URL distante. Si vous choisissez de le stocker, il sera enregistré via le credential helper de Git.",
+      "persistenceLabel": "Stockage du token",
+      "storeForFutureOperations": "Stocker pour les futures opérations Git",
+      "useOnce": "Utiliser une fois",
+      "usernameLabel": "Nom d’utilisateur GitHub",
+      "usernameRequired": "Le nom d’utilisateur est requis",
+      "tokenLabel": "Token d’accès personnel",
+      "tokenRequired": "Le token est requis",
+      "tokenHelpPrefix": "Pour les remotes GitHub HTTPS, utilisez un token avec accès au repo. Vous pouvez en créer un dans",
+      "tokenSettingsLink": "les paramètres de token GitHub",
+      "remoteLabel": "Remote : {{remote}}",
+      "repoLabel": "Repo : {{repoPath}}",
+      "operations": {
+        "push": "Push",
+        "pull": "Pull",
+        "fetch": "Fetch",
+        "sync": "Sync"
+      }
+    },
     "actions": {
       "publish": "Publish",
       "view": "Voir",
@@ -1290,7 +1312,7 @@
     "spotlight": {
       "placeholder": "Rechercher ou saisir une commande…",
       "placeholders": {
-        "workspace": "Rechercher un Workspace ou coller un chemin de dossier à ouvrir...",
+        "workspace": "Rechercher ou saisir un chemin de dossier",
         "branch": "Rechercher une branche...",
         "source": "Rechercher une source...",
         "actions": "Rechercher des actions..."

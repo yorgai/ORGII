@@ -21,10 +21,13 @@ import { buildSettingsPath } from "@src/config/mainAppPaths";
 import { HintWithInfo } from "@src/modules/shared/layouts/blocks";
 import { monitorActiveTabAtom } from "@src/store";
 import {
+  GIT_EXECUTABLE_MODES,
   GIT_PULL_STRATEGIES,
+  type GitExecutableMode,
   type GitPullStrategy,
   gitAutoFetchAtom,
   gitAutoFetchIntervalAtom,
+  gitExecutableModeAtom,
   gitPullStrategyAtom,
   gitWorktreeCleanupIntervalHoursAtom,
   gitWorktreeMaxCountAtom,
@@ -58,6 +61,9 @@ const GitSection: React.FC = () => {
   const { t } = useTranslation("settings");
   const navigate = useNavigate();
   const setMonitorActiveTab = useSetAtom(monitorActiveTabAtom);
+  const [gitExecutableMode, setGitExecutableMode] = useAtom(
+    gitExecutableModeAtom
+  );
   const [pullStrategy, setPullStrategy] = useAtom(gitPullStrategyAtom);
   const [autoFetch, setAutoFetch] = useAtom(gitAutoFetchAtom);
   const [autoFetchInterval, setAutoFetchInterval] = useAtom(
@@ -159,6 +165,26 @@ const GitSection: React.FC = () => {
             />
           </SectionRow>
         </div>
+      </SectionContainer>
+
+      <SectionContainer>
+        <SectionRow
+          label={t("editor.git.executableMode")}
+          description={t("editor.git.executableModeDesc")}
+        >
+          <Select
+            value={gitExecutableMode}
+            size="default"
+            onChange={(value) =>
+              setGitExecutableMode(value as GitExecutableMode)
+            }
+            options={GIT_EXECUTABLE_MODES.map((mode) => ({
+              label: t(mode.labelKey),
+              value: mode.value,
+            }))}
+            style={SECTION_CONTROL_STYLE}
+          />
+        </SectionRow>
       </SectionContainer>
 
       <SectionContainer>

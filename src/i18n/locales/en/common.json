@@ -989,6 +989,28 @@
     "thisBranch": "this branch",
     "remote": "remote",
     "toOrigin": "to origin",
+    "authDialog": {
+      "title": "GitHub authentication required",
+      "subtitle": "{{operation}} needs access to this remote repo",
+      "securityNote": "ORGII will never write this token to your Git config or remote URL. If you choose to store it, it will be saved through Git's credential helper.",
+      "persistenceLabel": "Token storage",
+      "storeForFutureOperations": "Store for future Git operations",
+      "useOnce": "Use once",
+      "usernameLabel": "GitHub username",
+      "usernameRequired": "Username is required",
+      "tokenLabel": "Personal access token",
+      "tokenRequired": "Token is required",
+      "tokenHelpPrefix": "For GitHub HTTPS remotes, use a token with repository access. You can create one in",
+      "tokenSettingsLink": "GitHub token settings",
+      "remoteLabel": "Remote: {{remote}}",
+      "repoLabel": "Repo: {{repoPath}}",
+      "operations": {
+        "push": "Push",
+        "pull": "Pull",
+        "fetch": "Fetch",
+        "sync": "Sync"
+      }
+    },
     "actions": {
       "publish": "Publish",
       "view": "View",
@@ -1290,7 +1312,7 @@
     "spotlight": {
       "placeholder": "Search or type a command...",
       "placeholders": {
-        "workspace": "Search Workspace or paste a folder path to open...",
+        "workspace": "Search or enter folder path",
         "branch": "Search branch...",
         "source": "Search source...",
         "actions": "Search actions..."

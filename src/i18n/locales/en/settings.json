@@ -720,6 +720,11 @@
     "lineHeightDouble": "Double",
     "git": {
       "title": "Git",
+      "executableMode": "Git executable",
+      "executableModeDesc": "Choose whether Git operations use system Git or ORGII bundled Git",
+      "executableModeAuto": "Auto (system if available)",
+      "executableModeSystem": "System Git",
+      "executableModeBundled": "Bundled Git",
       "pullStrategy": "Pull strategy",
       "pullStrategyDesc": "How git pull integrates remote changes when syncing",
       "pullStrategyHint": "Merge: Creates a merge commit when branches have diverged. Preserves full history.\n\nRebase: Replays your commits on top of remote. Creates linear history.\n\nFast-forward only: Only allows pull when no merge is needed. Refuses if branches have diverged.",

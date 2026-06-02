@@ -63,6 +63,8 @@ export interface ModalProps {
   closeIcon?: React.ReactNode;
   /** Additional className for the modal container */
   className?: string;
+  /** Additional className for the modal body */
+  bodyClassName?: string;
   /** Show close button in header */
   closable?: boolean;
   /** Allow clicking outside modal to close */
@@ -97,6 +99,7 @@ const Modal: React.FC<ModalProps> = ({
   cancelButtonProps,
   closeIcon,
   className = "",
+  bodyClassName = "p-3",
   closable = true,
   maskClosable = true,
   escToExit = true,
@@ -321,7 +324,7 @@ const Modal: React.FC<ModalProps> = ({
           )}
 
           {/* Body */}
-          <div className="liquid-modal-body">{children}</div>
+          <div className={`liquid-modal-body ${bodyClassName}`}>{children}</div>
 
           {/* Footer */}
           {renderFooter()}

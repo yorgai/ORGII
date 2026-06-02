@@ -720,6 +720,11 @@
     "lineHeightDouble": "2倍",
     "git": {
       "title": "Git",
+      "executableMode": "Git 実行ファイル",
+      "executableModeDesc": "Git 操作でシステム Git または ORGII 同梱 Git のどちらを使うかを選択します",
+      "executableModeAuto": "自動（利用可能ならシステム）",
+      "executableModeSystem": "システム Git",
+      "executableModeBundled": "同梱 Git",
       "pullStrategy": "Pull 戦略",
       "pullStrategyDesc": "同期時に git pull が remote の変更をどう統合するか",
       "pullStrategyHint": "Merge：branch が diverge した場合に merge commit を作成。完全な history を保持。\n\nRebase：あなたの commit を remote の上に replay。linear history を作成。\n\nFast-forward only：merge が不要な場合のみ pull を許可。branch が diverge している場合は拒否。",

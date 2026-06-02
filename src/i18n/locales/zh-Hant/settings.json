@@ -720,6 +720,11 @@
     "lineHeightDouble": "雙倍",
     "git": {
       "title": "Git",
+      "executableMode": "Git 可執行檔",
+      "executableModeDesc": "選擇 Git 操作使用系統 Git 或 ORGII 內建 Git",
+      "executableModeAuto": "自動（系統 Git 可用時優先）",
+      "executableModeSystem": "系統 Git",
+      "executableModeBundled": "內建 Git",
       "pullStrategy": "Pull 策略",
       "pullStrategyDesc": "同步時 git pull 如何整合 remote 更改",
       "pullStrategyHint": "Merge：branch 有 diverge 時創建 merge commit，保留完整 history。\n\nRebase：將你的 commit replay 到 remote 之上，創建 linear history。\n\nFast-forward only：僅在不需要 merge 時允許 pull，若 branch 已 diverge 則拒絕。",

@@ -990,6 +990,28 @@
     "thisBranch": "このブランチ",
     "remote": "リモート",
     "toOrigin": "origin へ",
+    "authDialog": {
+      "title": "GitHub 認証が必要です",
+      "subtitle": "{{operation}} にはこの remote repo へのアクセスが必要です",
+      "securityNote": "ORGII はこの token を Git 設定や remote URL に書き込みません。保存を選択した場合は、Git の credential helper 経由で保存されます。",
+      "persistenceLabel": "Token の保存",
+      "storeForFutureOperations": "今後の Git 操作用に保存",
+      "useOnce": "一度だけ使用",
+      "usernameLabel": "GitHub ユーザー名",
+      "usernameRequired": "ユーザー名は必須です",
+      "tokenLabel": "Personal access token",
+      "tokenRequired": "Token は必須です",
+      "tokenHelpPrefix": "GitHub HTTPS remotes には、repo アクセス権を持つ token を使用してください。作成先：",
+      "tokenSettingsLink": "GitHub token settings",
+      "remoteLabel": "Remote: {{remote}}",
+      "repoLabel": "Repo: {{repoPath}}",
+      "operations": {
+        "push": "Push",
+        "pull": "Pull",
+        "fetch": "Fetch",
+        "sync": "Sync"
+      }
+    },
     "actions": {
       "publish": "Publish",
       "view": "表示",
@@ -1291,7 +1313,7 @@
     "spotlight": {
       "placeholder": "検索するかコマンドを入力…",
       "placeholders": {
-        "workspace": "Workspace を検索、または開くフォルダパスを貼り付け...",
+        "workspace": "検索またはフォルダパスを入力",
         "branch": "ブランチを検索...",
         "source": "ソースを検索...",
         "actions": "アクションを検索..."

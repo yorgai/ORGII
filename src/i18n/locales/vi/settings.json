@@ -720,6 +720,11 @@
     "lineHeightDouble": "Gấp đôi",
     "git": {
       "title": "Git",
+      "executableMode": "Tệp thực thi Git",
+      "executableModeDesc": "Chọn thao tác Git dùng Git hệ thống hay Git đi kèm ORGII",
+      "executableModeAuto": "Tự động (dùng hệ thống nếu có)",
+      "executableModeSystem": "Git hệ thống",
+      "executableModeBundled": "Git đi kèm",
       "pullStrategy": "Chiến lược pull",
       "pullStrategyDesc": "Cách git pull tích hợp thay đổi từ remote khi đồng bộ",
       "pullStrategyHint": "Merge: Tạo merge commit khi branches đã diverged. Giữ nguyên history đầy đủ.\n\nRebase: Replays commit của bạn lên remote. Tạo linear history.\n\nFast-forward only: Chỉ cho phép pull khi không cần merge. Từ chối nếu branches đã diverged.",
