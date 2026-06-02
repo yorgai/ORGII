@@ -82,7 +82,7 @@ const ActionPill: React.FC<ActionPillProps> = memo(({ action, onClick }) => {
         "text-[12px] font-medium transition-colors duration-150",
         pressed
           ? "border-primary-5 bg-fill-2 text-primary-6"
-          : "border-border-2 bg-transparent text-text-2 hover:border-border-3 hover:bg-fill-2 hover:text-text-1",
+          : "border-border-2 bg-bg-2 text-text-2 hover:border-border-3 hover:bg-fill-2 hover:text-text-1",
       ].join(" ")}
       title={action.name}
     >
@@ -254,7 +254,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
     // ── Nothing pinned — still render the "..." button ────────────────────────
 
     return (
-      <div className="relative z-10 flex w-full items-center gap-1.5 overflow-x-auto border-t border-border-1 bg-bg-2 px-0.5 py-0.5 scrollbar-hide">
+      <div className="relative z-10 flex w-full items-center gap-1.5 overflow-x-auto px-0.5 py-0.5 scrollbar-hide">
         {pinnedActions.map((action) => (
           <ActionPill
             key={actionKey(action)}
@@ -274,7 +274,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
             "transition-colors duration-150",
             panelOpen
               ? "border-primary-5 bg-fill-2 text-primary-6"
-              : "border-border-2 bg-transparent text-text-3 hover:border-border-3 hover:bg-fill-2 hover:text-text-2",
+              : "border-border-2 bg-bg-2 text-text-3 hover:border-border-3 hover:bg-fill-2 hover:text-text-2",
           ].join(" ")}
         >
           <MoreHorizontal size={13} strokeWidth={1.75} />
