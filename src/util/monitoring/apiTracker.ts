@@ -90,13 +90,6 @@ function trackFocus() {
   recentInteraction = { type: "focus", timestamp: Date.now() };
 }
 
-if (typeof window !== "undefined") {
-  document.addEventListener("click", trackClick, true);
-  document.addEventListener("mouseover", trackHover, true);
-  document.addEventListener("keydown", trackKeyboard, true);
-  document.addEventListener("focus", trackFocus, true);
-}
-
 /** Remove all interaction tracking listeners (call on app teardown) */
 export function cleanupInteractionTracking() {
   document.removeEventListener("click", trackClick, true);
@@ -142,8 +135,9 @@ export const captureApiCallStack = (): string => {
 // Initialize axios interceptors
 let interceptorsInitialized = false;
 
-export const initializeApiTracking = () => {
-  if (interceptorsInitialized || typeof window === "undefined") return;
+export const initializeApiTracking = (): (() => void) | undefined => {
+  if (interceptorsInitialized || typeof window === "undefined")
+    return undefined;
 
   // Request interceptor
   const requestInterceptor = axios.interceptors.request.use(
@@ -289,13 +283,26 @@ export const initializeApiTracking = () => {
   };
 };
 
+// Holds the cleanup returned by initializeApiTracking so interceptors can be
+// ejected when tracking is disabled (previously the return value was discarded).
+let cleanupInterceptors: (() => void) | undefined;
+
 export const enableApiTracking = () => {
   trackingEnabled = true;
-  initializeApiTracking();
+  cleanupInterceptors = initializeApiTracking();
+  if (typeof window !== "undefined") {
+    document.addEventListener("click", trackClick, true);
+    document.addEventListener("mouseover", trackHover, true);
+    document.addEventListener("keydown", trackKeyboard, true);
+    document.addEventListener("focus", trackFocus, true);
+  }
 };
 
 export const disableApiTracking = () => {
   trackingEnabled = false;
+  cleanupInterceptors?.();
+  cleanupInterceptors = undefined;
+  cleanupInteractionTracking();
   // Drop in-flight timing/capture state since the result-side counterparts
   // early-return while disabled and would otherwise leak entries forever.
   // apiCalls is intentionally preserved so the recent-log UX still works.
