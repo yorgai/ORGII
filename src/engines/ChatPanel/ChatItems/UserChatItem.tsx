@@ -152,8 +152,11 @@ const UserChatItem = ({
       | { content?: string }
       | undefined;
     const content = message?.content;
-    if (typeof content === "string" && content.length > editedText.length) {
-      return content;
+    if (typeof content === "string") {
+      const strippedContent = stripExpandedPillContent(content);
+      if (strippedContent.length > editedText.length) {
+        return strippedContent;
+      }
     }
     return editedText;
   }, [activityResult, editedText]);
