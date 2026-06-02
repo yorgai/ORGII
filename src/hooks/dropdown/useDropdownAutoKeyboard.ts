@@ -68,6 +68,7 @@ const ROW_SELECTOR = [
 ].join(", ");
 
 const HIGHLIGHT_ATTR = "data-dropdown-keyboard-highlight";
+const KEYBOARD_MODE_ATTR = "data-dropdown-keyboard-mode";
 
 // ============================================
 // Helpers
@@ -106,9 +107,19 @@ function clearHighlight(panel: HTMLElement | null): void {
   });
 }
 
+function setKeyboardMode(panel: HTMLElement | null, enabled: boolean): void {
+  if (!panel) return;
+  if (enabled) {
+    panel.setAttribute(KEYBOARD_MODE_ATTR, "true");
+  } else {
+    panel.removeAttribute(KEYBOARD_MODE_ATTR);
+  }
+}
+
 function applyHighlight(row: HTMLElement | null, panel: HTMLElement | null) {
   clearHighlight(panel);
   if (!row) return;
+  setKeyboardMode(panel, true);
   row.setAttribute(HIGHLIGHT_ATTR, "true");
   row.scrollIntoView({ block: "nearest" });
 }
@@ -139,6 +150,7 @@ export function useDropdownAutoKeyboard({
     const panel = panelRef.current;
     return () => {
       clearHighlight(panel);
+      setKeyboardMode(panel, false);
       indexRef.current = -1;
     };
   }, [isOpen, enabled, panelRef]);
@@ -154,6 +166,7 @@ export function useDropdownAutoKeyboard({
       if (indexRef.current === -1) return;
       indexRef.current = -1;
       clearHighlight(panel);
+      setKeyboardMode(panel, false);
     };
 
     panel.addEventListener("mousemove", handleMouseMove);
@@ -168,6 +181,7 @@ export function useDropdownAutoKeyboard({
       const rows = queryRows(panel);
       if (rows.length === 0) {
         indexRef.current = -1;
+        setKeyboardMode(panel, false);
         return;
       }
       const current = indexRef.current;

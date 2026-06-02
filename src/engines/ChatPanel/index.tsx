@@ -23,6 +23,7 @@ import {
 import Button from "@src/components/Button";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
 import InlineAlert from "@src/components/InlineAlert";
@@ -82,6 +83,9 @@ import type { ChatPanelProps, ChatPanelRegionNotice } from "./types";
 // ============================================
 // ChatPanel
 // ============================================
+
+const CHAT_PANEL_HEADER_ICON_SIZE = 14;
+const CHAT_PANEL_HEADER_PROMINENT_ICON_SIZE = 16;
 
 const CHAT_PANEL_CREATE_TARGET = {
   AGENT_SESSION: "agentSession",
@@ -359,10 +363,15 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     // visible, so only surface it in the chat header when that sidebar is off.
     const showNewSessionButton =
       !!currentSessionId && sidebarCollapsed && !sessionSidebarVisible;
-    const isBatchStartTarget =
-      createTarget === CHAT_PANEL_CREATE_TARGET.BATCH_START;
     const isBenchmarkTarget =
       createTarget === CHAT_PANEL_CREATE_TARGET.BENCHMARK;
+    const isWorkItemTarget =
+      createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM;
+    const showCreatorPresenceInHeader =
+      !currentSessionId && !isBenchmarkTarget && !isWorkItemTarget;
+    const showPresenceInHeader = currentSessionId
+      ? sidebarCollapsed
+      : showCreatorPresenceInHeader;
     const chatFocusLabel = isChatFocus
       ? t("chat.restoreSplitView")
       : t("chat.maximizeChatPanel");
@@ -433,11 +442,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         className="flex h-9 flex-shrink-0 items-center gap-px"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
-        {sidebarCollapsed &&
-          !isBenchmarkTarget &&
-          (currentSessionId || isBatchStartTarget) && (
-            <PresenceMenuButton dropdownPosition="bottom-end" />
-          )}
+        {showPresenceInHeader && (
+          <PresenceMenuButton dropdownPosition="bottom-end" />
+        )}
         {currentSessionId && (
           <Tooltip
             content={
@@ -455,7 +462,12 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 iconOnly
                 onClick={handleCollapseAll}
                 aria-label={t("chat.collapseAll")}
-                icon={<ListChevronsDownUp size={16} strokeWidth={2} />}
+                icon={
+                  <ListChevronsDownUp
+                    size={CHAT_PANEL_HEADER_ICON_SIZE}
+                    strokeWidth={2}
+                  />
+                }
               />
             </span>
           </Tooltip>
@@ -482,7 +494,12 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 iconOnly
                 onClick={handleChatFocusToggle}
                 aria-label={shrinkToWorkstationLabel}
-                icon={<Minimize2 size={14} strokeWidth={2} />}
+                icon={
+                  <Minimize2
+                    size={CHAT_PANEL_HEADER_ICON_SIZE}
+                    strokeWidth={2}
+                  />
+                }
               />
             </span>
           </Tooltip>
@@ -504,9 +521,15 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 aria-label={chatFocusLabel}
                 icon={
                   isChatFocus ? (
-                    <GalleryThumbnails size={14} strokeWidth={2} />
+                    <GalleryThumbnails
+                      size={CHAT_PANEL_HEADER_ICON_SIZE}
+                      strokeWidth={2}
+                    />
                   ) : (
-                    <Maximize2 size={14} strokeWidth={2} />
+                    <Maximize2
+                      size={CHAT_PANEL_HEADER_ICON_SIZE}
+                      strokeWidth={2}
+                    />
                   )
                 }
               />
@@ -532,7 +555,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 size="small"
                 iconOnly
                 className={
-                  isHeaderActionsOpen ? "!bg-fill-2 !text-primary-6" : ""
+                  isHeaderActionsOpen ? "!bg-fill-1 !text-primary-6" : ""
                 }
                 onClick={(event) => {
                   event.stopPropagation();
@@ -540,7 +563,12 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 }}
                 aria-label={t("common:actions.more")}
                 aria-expanded={isHeaderActionsOpen}
-                icon={<MoreHorizontal size={16} strokeWidth={2} />}
+                icon={
+                  <MoreHorizontal
+                    size={CHAT_PANEL_HEADER_ICON_SIZE}
+                    strokeWidth={2}
+                  />
+                }
               />
             </span>
           </Tooltip>
@@ -564,12 +592,17 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 size="small"
                 iconOnly
                 className={
-                  isLayoutSettingsOpen ? "!bg-fill-2 !text-primary-6" : ""
+                  isLayoutSettingsOpen ? "!bg-fill-1 !text-primary-6" : ""
                 }
                 onClick={handleToggleLayoutSettings}
                 aria-label={t("common:layoutSettings.pageSettings")}
                 aria-expanded={isLayoutSettingsOpen}
-                icon={<Settings2 size={16} strokeWidth={2} />}
+                icon={
+                  <Settings2
+                    size={CHAT_PANEL_HEADER_PROMINENT_ICON_SIZE}
+                    strokeWidth={2}
+                  />
+                }
               />
             </span>
           </Tooltip>
@@ -594,7 +627,12 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 iconOnly
                 onClick={handleNewSession}
                 aria-label={t("chat.newSession")}
-                icon={<Plus size={18} strokeWidth={2} />}
+                icon={
+                  <Plus
+                    size={CHAT_PANEL_HEADER_PROMINENT_ICON_SIZE}
+                    strokeWidth={2}
+                  />
+                }
               />
             </span>
           </Tooltip>
@@ -604,7 +642,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           createPortal(
             <div
               ref={headerActionsDropdownRef}
-              className={`${DROPDOWN_CLASSES.panel} ${DROPDOWN_WIDTHS.sidebarMenuClass} p-1`}
+              className={`${DROPDOWN_CLASSES.menuPanelBase} ${DROPDOWN_WIDTHS.sidebarMenuClass}`}
               style={{
                 position: "fixed",
                 top: headerActionsPosition.top,
@@ -614,30 +652,30 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             >
               <button
                 type="button"
-                className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+                className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
                 onClick={handleOpenSearch}
               >
-                <Search size={13} strokeWidth={1.75} />
+                <Search size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
                 <span className="flex-1 truncate">{t("chat.findInChat")}</span>
               </button>
               <button
                 type="button"
-                className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left disabled:cursor-not-allowed disabled:opacity-50`}
+                className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left disabled:cursor-not-allowed disabled:opacity-50`}
                 onClick={handleReloadFromMenu}
                 disabled={!currentSessionId}
               >
-                <RefreshCw size={13} strokeWidth={1.75} />
+                <RefreshCw size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
                 <span className="flex-1 truncate">
                   {t("common:actions.reload")}
                 </span>
               </button>
               <button
                 type="button"
-                className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left disabled:cursor-not-allowed disabled:opacity-50`}
+                className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left disabled:cursor-not-allowed disabled:opacity-50`}
                 onClick={handleCopyEventJson}
                 disabled={events.length === 0}
               >
-                <Clipboard size={13} strokeWidth={1.75} />
+                <Clipboard size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
                 <span className="flex-1 truncate">
                   {copyEventJsonLabel === "copied"
                     ? t("chat.copyEventJsonCopied")
@@ -648,18 +686,21 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               </button>
               <button
                 type="button"
-                className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left disabled:cursor-not-allowed disabled:opacity-50`}
+                className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left disabled:cursor-not-allowed disabled:opacity-50`}
                 onClick={handleOpenExportSessionJson}
                 disabled={!activeSession}
               >
-                <FolderOutput size={13} strokeWidth={1.75} />
+                <FolderOutput
+                  size={DROPDOWN_ITEM.iconSize}
+                  strokeWidth={1.75}
+                />
                 <span className="flex-1 truncate">
                   {t("chat.importExport.exportAction")}
                 </span>
               </button>
               <div className="my-1 border-t border-solid border-border-2" />
               <div
-                className={`${DROPDOWN_CLASSES.itemCompact} w-full justify-between text-left`}
+                className={`${DROPDOWN_CLASSES.item} w-full justify-between text-left`}
               >
                 <span className="flex-1 truncate">
                   {t("common:pagination.title")}
@@ -711,7 +752,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               size="small"
               variant="ghost"
               radius="pill"
-              dropdownCompact
               dropdownMinWidth={168}
               dropdownWidthMode="auto"
               className="w-auto"
@@ -956,6 +996,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             className={creatorClassName}
             variant={creatorVariant}
             centerFullScreenContent
+            hidePresenceButton
             onRegionNoticeChange={handleRegionNoticeChange}
             solveWorkItemMode={
               createTarget === CHAT_PANEL_CREATE_TARGET.SOLVE_WORK_ITEM

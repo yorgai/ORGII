@@ -8,15 +8,11 @@ import {
   ArrowLeft,
   ArrowRight,
   Clock,
-  Code,
-  DatabaseZap,
   File,
   Folder,
-  GitBranch,
-  Globe,
+  History,
   ListChecks,
   Loader2,
-  MessageSquare,
   Search,
   Terminal,
 } from "lucide-react";
@@ -34,21 +30,11 @@ export type MenuItemId =
   | "terminal"
   | "sessions"
   | "session"
-  | "browser"
-  | "repo"
-  | "branch"
   | "projects"
   | "project"
-  | "workitem"
-  | "codebase";
+  | "workitem";
 
-export type SecondLayerId =
-  | "files"
-  | "terminals"
-  | "sessions"
-  | "browser"
-  | "projects"
-  | "codebase";
+export type SecondLayerId = "files" | "terminals" | "sessions" | "projects";
 
 export interface MenuItem {
   id: MenuItemId;
@@ -56,7 +42,6 @@ export interface MenuItem {
   icon: LucideIcon;
   hasSecondLayer: boolean;
   shortcut?: string;
-  description?: string;
 }
 
 export interface RecentFile {
@@ -74,12 +59,8 @@ export const ICON_CONFIG = {
   files: File,
   folders: Folder,
   terminals: Terminal,
-  sessions: MessageSquare,
-  browser: Globe,
-  repo: Code,
-  branch: GitBranch,
+  sessions: History,
   projects: ListChecks,
-  codebase: DatabaseZap,
   arrow: ArrowRight,
   arrowBack: ArrowLeft,
   search: Search,
@@ -102,24 +83,16 @@ export const SECOND_LAYER_CONFIG: Record<SecondLayerId, SecondLayerConfig> = {
     icon: ICON_CONFIG.files,
   },
   terminals: {
-    title: "Terminal",
+    title: "Terminals",
     icon: ICON_CONFIG.terminals,
   },
   sessions: {
     title: "Sessions",
     icon: ICON_CONFIG.sessions,
   },
-  browser: {
-    title: "Browser",
-    icon: ICON_CONFIG.browser,
-  },
   projects: {
     title: "Work Items",
     icon: ICON_CONFIG.projects,
-  },
-  codebase: {
-    title: "Codebase Search",
-    icon: ICON_CONFIG.codebase,
   },
 };
 
@@ -133,42 +106,24 @@ export const MENU_ITEMS: MenuItem[] = [
     label: "Files & Folders",
     icon: ICON_CONFIG.files,
     hasSecondLayer: true,
-    description: "Search for files and folders",
   },
   {
     id: "terminals",
-    label: "Terminal",
+    label: "Terminals",
     icon: ICON_CONFIG.terminals,
     hasSecondLayer: true,
-    description: "Select terminal",
   },
   {
     id: "sessions",
     label: "Sessions",
     icon: ICON_CONFIG.sessions,
     hasSecondLayer: true,
-    description: "Reference a session",
-  },
-  {
-    id: "browser",
-    label: "Browser",
-    icon: ICON_CONFIG.browser,
-    hasSecondLayer: true,
-    description: "Reference a browser tab",
   },
   {
     id: "projects",
     label: "Work Items",
     icon: ICON_CONFIG.projects,
     hasSecondLayer: true,
-    description: "Reference a project or work item",
-  },
-  {
-    id: "codebase",
-    label: "Codebase",
-    icon: ICON_CONFIG.codebase,
-    hasSecondLayer: true,
-    description: "Semantic search across codebase",
   },
 ];
 
@@ -192,20 +147,13 @@ export const KEYBOARD_CONFIG = {
 
 export const STYLE_CONFIG = {
   dropdownWidth: "280px",
-  secondLayerWidth: "320px",
+  secondLayerWidth: "280px",
   /** Scrollable list cap — keep menus from dominating the viewport */
   maxHeight: "260px",
   itemHeight: "32px",
   recentSectionMaxItems: 3,
   searchResultsMaxItems: 20,
 } as const;
-
-/** List row highlight — fill-2 background with primary labels. */
-export const CONTEXT_MENU_ITEM_ROW = {
-  selected: "bg-fill-2 font-medium text-primary-6",
-  hoverIdle: "hover:bg-fill-2 hover:text-primary-6",
-} as const;
-
 // ============================================
 // Utility Functions
 // ============================================

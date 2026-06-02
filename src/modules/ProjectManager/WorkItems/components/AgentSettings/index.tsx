@@ -6,7 +6,10 @@ import { useNavigate } from "react-router-dom";
 
 import type { OrchestratorConfig } from "@src/api/http/project";
 import DropdownFooter from "@src/components/Dropdown/DropdownFooter";
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import InlineAlert from "@src/components/InlineAlert";
 import NumberInput from "@src/components/NumberInput";
 import Select from "@src/components/Select";
@@ -57,7 +60,6 @@ const AgentSettings: React.FC<AgentSettingsProps> = ({
       readyAccounts.map((account) => ({
         value: account.id,
         label: account.name,
-        secondaryText: account.modelType,
       })),
     [readyAccounts]
   );
@@ -175,14 +177,17 @@ const AgentSettings: React.FC<AgentSettingsProps> = ({
         <DropdownFooter>
           <button
             type="button"
-            className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-between`}
+            className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-between`}
             onMouseDown={(event) => {
               event.preventDefault();
               handleOpenIntegrations();
             }}
           >
             <span>{t("workItems.agentSettings.manageAccounts")}</span>
-            <SquareArrowOutUpRight size={12} className="text-text-3" />
+            <SquareArrowOutUpRight
+              size={DROPDOWN_ITEM.iconSize}
+              className="text-text-3"
+            />
           </button>
         </DropdownFooter>
       </div>
@@ -270,7 +275,7 @@ const AgentSettings: React.FC<AgentSettingsProps> = ({
                 onClick={() => handleRemoveSubAgent(agentId)}
                 disabled={isWorkflowActive}
               >
-                <X size={13} />
+                <X size={DROPDOWN_ITEM.iconSize} />
               </button>
             </div>
           ))}
@@ -286,7 +291,9 @@ const AgentSettings: React.FC<AgentSettingsProps> = ({
                 size="default"
                 style={{ width: "100%" }}
                 disabled={isWorkflowActive}
-                prefix={<Plus size={14} className="text-text-3" />}
+                prefix={
+                  <Plus size={DROPDOWN_ITEM.iconSize} className="text-text-3" />
+                }
               />
             </div>
           )}

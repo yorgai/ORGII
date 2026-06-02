@@ -17,6 +17,7 @@ interface UseKeyboardOptions {
   openFlyout: OpenFlyoutState | null;
   listRef: React.RefObject<HTMLDivElement | null>;
   setHighlightIndex: (idx: number) => void;
+  setKeyboardNavigated: (navigated: boolean) => void;
   setOpenFlyout: (state: OpenFlyoutState | null) => void;
   onSelect: (item: SlashItem) => void;
   onModeSelect: (mode: AgentExecMode) => void;
@@ -44,6 +45,7 @@ export function useKeyboard({
   openFlyout,
   listRef,
   setHighlightIndex,
+  setKeyboardNavigated,
   setOpenFlyout,
   onSelect,
   onModeSelect,
@@ -134,6 +136,7 @@ export function useKeyboard({
           return true;
         }
         if (event.key === "ArrowDown") {
+          setKeyboardNavigated(true);
           setFlyoutHighlightIndex(
             flyoutHighlightIndex < flyoutTotal - 1
               ? flyoutHighlightIndex + 1
@@ -142,6 +145,7 @@ export function useKeyboard({
           return true;
         }
         if (event.key === "ArrowUp") {
+          setKeyboardNavigated(true);
           setFlyoutHighlightIndex(
             flyoutHighlightIndex > 0
               ? flyoutHighlightIndex - 1
@@ -165,12 +169,14 @@ export function useKeyboard({
           return true;
         }
         if (event.key === "ArrowDown") {
+          setKeyboardNavigated(true);
           setFlyoutHighlightIndex(
             flyoutHighlightIndex < modeTotal - 1 ? flyoutHighlightIndex + 1 : 0
           );
           return true;
         }
         if (event.key === "ArrowUp") {
+          setKeyboardNavigated(true);
           setFlyoutHighlightIndex(
             flyoutHighlightIndex > 0 ? flyoutHighlightIndex - 1 : modeTotal - 1
           );
@@ -192,11 +198,13 @@ export function useKeyboard({
 
       switch (event.key) {
         case "ArrowDown":
+          setKeyboardNavigated(true);
           setHighlightIndex(
             highlightIndex < totalFlat - 1 ? highlightIndex + 1 : 0
           );
           return true;
         case "ArrowUp":
+          setKeyboardNavigated(true);
           setHighlightIndex(
             highlightIndex > 0 ? highlightIndex - 1 : totalFlat - 1
           );
@@ -220,6 +228,7 @@ export function useKeyboard({
       flyoutHighlightIndex,
       selectAtIndex,
       setHighlightIndex,
+      setKeyboardNavigated,
       setOpenFlyout,
       setFlyoutHighlightIndex,
       onSelect,

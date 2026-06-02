@@ -311,11 +311,6 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
 
       {preEditorContent}
 
-      {/* Pinned actions */}
-      <PinnedActionsBar
-        tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
-      />
-
       {/* Editor */}
       <EditorArea
         variant="chatPanel"
@@ -372,6 +367,10 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
         filteredSlashItems={filteredSlashItems}
         slashLoading={slashLoading}
         onPrefetchSlashItems={prefetchSlashItems}
+      />
+
+      <PinnedActionsBar
+        tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
       />
 
       {/* Agent Selector Modal */}

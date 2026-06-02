@@ -7,6 +7,7 @@ import Button from "@src/components/Button";
 import { HEADER_ICON_SIZE } from "@src/config/workstation/tokens";
 import { useRepoGitInitialization } from "@src/hooks/git";
 import { WorkstationHeaderSectionSeparator } from "@src/modules/WorkStation/shared";
+import { CODE_EDITOR_TOUR_TARGETS } from "@src/scaffold/Tutorials/codeEditorTourConfig";
 import { currentRepoAtom } from "@src/store/repo";
 import { workStationPrimarySidebarCollapsedPersistAtom } from "@src/store/ui/workStationAtom";
 import { activeStatusBarAppAtom } from "@src/store/ui/workStationLayout/statusBarAtoms";
@@ -48,7 +49,10 @@ const SourceControlHeaderActionsComponent: React.FC = () => {
 
   return (
     <>
-      <div className="flex shrink-0 items-center gap-px">
+      <div
+        className="flex shrink-0 items-center gap-px"
+        data-tour-target={CODE_EDITOR_TOUR_TARGETS.gitHistory}
+      >
         <Button
           htmlType="button"
           variant="tertiary"

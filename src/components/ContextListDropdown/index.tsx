@@ -19,8 +19,10 @@ import {
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
-import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 
 // Context item details type
 export interface ContextItemDetails {
@@ -137,7 +139,7 @@ const ContextListDropdown: React.FC<ContextListDropdownProps> = ({
   const renderContextItem = (item: ContextItem) => (
     <div
       key={item.id}
-      className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover}`}
+      className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover}`}
       onClick={() => onSelect(item)}
     >
       <div className="flex flex-1 items-center gap-3">
@@ -164,7 +166,7 @@ const ContextListDropdown: React.FC<ContextListDropdownProps> = ({
 
       {item.edited_at && (
         <div className="flex flex-shrink-0 items-center gap-1 text-[11px] text-text-3">
-          <Clock size={14} />
+          <Clock size={DROPDOWN_ITEM.iconSize} />
           <span>{formatTime(item.edited_at)}</span>
         </div>
       )}
@@ -176,23 +178,22 @@ const ContextListDropdown: React.FC<ContextListDropdownProps> = ({
       className={`${DROPDOWN_CLASSES.panel} relative max-h-[312px] min-w-[300px] overflow-y-auto p-1 scrollbar-hide`}
     >
       {loading ? (
-        <div className="my-[4px] mb-[2px] flex items-center text-[12px] text-text-1">
-          <Loader2
-            className="ml-[6px] mr-1 animate-spin"
-            size={SPINNER_TOKENS.default}
-          />
+        <div className={DROPDOWN_CLASSES.listMessage}>
+          <Loader2 size={DROPDOWN_ITEM.iconSize} className="animate-spin" />
           {t("status.loading")}
         </div>
       ) : error ? (
-        <div className="my-[4px] mb-[2px] flex items-center text-[12px] text-text-1">
-          <AlertCircle className="ml-[6px] mr-1" size={14} />
+        <div className={DROPDOWN_CLASSES.listMessage}>
+          <AlertCircle size={DROPDOWN_ITEM.iconSize} />
           {error}
         </div>
       ) : contextItems.length > 0 ? (
-        <div className="space-y-1">{contextItems.map(renderContextItem)}</div>
+        <div className={DROPDOWN_CLASSES.itemsColumn}>
+          {contextItems.map(renderContextItem)}
+        </div>
       ) : (
-        <div className="my-[4px] mb-[2px] flex items-center text-[12px] text-text-1">
-          <AlertCircle className="ml-[6px] mr-1" size={14} />
+        <div className={DROPDOWN_CLASSES.listMessage}>
+          <AlertCircle size={DROPDOWN_ITEM.iconSize} />
           {t("contextList.noContextItemsFound")}
         </div>
       )}

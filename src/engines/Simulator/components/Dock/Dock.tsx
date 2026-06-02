@@ -7,6 +7,8 @@
 import type { LucideIcon } from "lucide-react";
 import React, { memo } from "react";
 
+import { GENERAL_LAYOUT_TOUR_TARGETS } from "@src/scaffold/Tutorials/GeneralLayoutTour";
+
 import {
   DOCK_LUCIDE_ICON_PROPS,
   DockIconColumn,
@@ -36,6 +38,24 @@ interface DockProps {
   onAppClick?: (appId: string) => void;
 }
 
+function getTourTarget(appId: string): string | undefined {
+  switch (appId) {
+    case "all":
+      return GENERAL_LAYOUT_TOUR_TARGETS.dockAllTabs;
+    case "code":
+    case "CODE_EDITOR":
+      return GENERAL_LAYOUT_TOUR_TARGETS.dockCodeEditor;
+    case "browser":
+    case "BROWSER":
+      return GENERAL_LAYOUT_TOUR_TARGETS.dockBrowser;
+    case "project":
+    case "STORY_MANAGER":
+      return GENERAL_LAYOUT_TOUR_TARGETS.dockProjects;
+    default:
+      return undefined;
+  }
+}
+
 // ============================================
 // Component
 // ============================================
@@ -55,6 +75,7 @@ export const Dock: React.FC<DockProps> = memo(
                     className={dockIconHitAreaClassName({ active: isActive })}
                     onClick={() => onAppClick?.(app.id)}
                     title={app.name}
+                    data-tour-target={getTourTarget(app.id)}
                   >
                     {React.createElement(app.icon, DOCK_LUCIDE_ICON_PROPS)}
                   </div>

@@ -11,10 +11,9 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import Checkbox from "@src/components/Checkbox";
-import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
 
 import DropdownSelectedCheck from "./DropdownSelectedCheck";
-import { DROPDOWN_CLASSES, DROPDOWN_PANEL } from "./tokens";
+import { DROPDOWN_CLASSES, DROPDOWN_ITEM } from "./tokens";
 import type { DropdownOption, DropdownSelectValue } from "./types";
 
 export interface DropdownOptionsRendererProps {
@@ -24,11 +23,13 @@ export interface DropdownOptionsRendererProps {
   highlightedIndex: number;
   keyboardNavigated: boolean;
   onSelect: (option: DropdownOption) => void;
+  getOptionMouseEnterProps?: (index: number) => {
+    "data-dropdown-keyboard-mode"?: "true";
+    onMouseEnter: () => void;
+  };
   loading?: boolean;
   emptyContent?: React.ReactNode;
   dropdownRender?: (menu: React.ReactNode) => React.ReactNode;
-  /** Use the compact item style (`py-1.5 text-[13px]`) — pairs with mini Select. */
-  compact?: boolean;
 }
 
 const DropdownOptionsRenderer: React.FC<DropdownOptionsRendererProps> = ({
@@ -38,10 +39,10 @@ const DropdownOptionsRenderer: React.FC<DropdownOptionsRendererProps> = ({
   highlightedIndex,
   keyboardNavigated,
   onSelect,
+  getOptionMouseEnterProps,
   loading = false,
   emptyContent,
   dropdownRender,
-  compact = false,
 }) => {
   const { t } = useTranslation();
   const isMultiple = mode === "multiple";
@@ -50,38 +51,38 @@ const DropdownOptionsRenderer: React.FC<DropdownOptionsRendererProps> = ({
 
   if (loading) {
     content = (
-      <div className="select-loading">
-        <Loader2 size={SPINNER_TOKENS.default} className="animate-spin" />
+      <div className={DROPDOWN_CLASSES.listMessage}>
+        <Loader2 size={DROPDOWN_ITEM.iconSize} className="animate-spin" />
         <span>{t("actions.loading")}</span>
       </div>
     );
   } else if (options.length === 0) {
     content = emptyContent ?? (
-      <div className="select-empty">
+      <div className={DROPDOWN_CLASSES.listMessage}>
         <span>{t("placeholders.noOptions")}</span>
       </div>
     );
   } else {
     content = (
       <div
-        className={`select-options-overlay flex min-h-0 flex-1 ${DROPDOWN_PANEL.optionsMaxHeightClass} flex-col ${DROPDOWN_PANEL.itemsGapClass} overflow-y-auto ${DROPDOWN_PANEL.paddingClass}`}
+        className={`select-options-overlay ${DROPDOWN_CLASSES.optionsContainerScrollbar}`}
       >
-        <div className={`flex flex-col ${DROPDOWN_PANEL.itemsGapClass}`}>
+        <div className={DROPDOWN_CLASSES.itemsColumn}>
           {options.map((option, index) => {
             const isSelected = isMultiple
               ? Array.isArray(value) && value.includes(option.value)
               : value === option.value;
             const isHighlighted =
               keyboardNavigated && index === highlightedIndex;
+            const optionMouseEnterProps = getOptionMouseEnterProps?.(index);
 
             return (
               <div
                 key={option.value}
                 data-testid={option.dataTestId}
+                {...optionMouseEnterProps}
                 className={[
-                  compact
-                    ? DROPDOWN_CLASSES.itemCompact
-                    : DROPDOWN_CLASSES.item,
+                  DROPDOWN_CLASSES.item,
                   DROPDOWN_CLASSES.itemHover,
                   "w-full justify-between",
                   isSelected && DROPDOWN_CLASSES.itemSelected,
@@ -95,7 +96,9 @@ const DropdownOptionsRenderer: React.FC<DropdownOptionsRendererProps> = ({
                 {isMultiple && (
                   <Checkbox checked={isSelected} className="size-4 shrink-0" />
                 )}
-                <span className="flex min-w-0 flex-1 items-center justify-between gap-2 overflow-hidden">
+                <span
+                  className={`flex min-w-0 flex-1 items-center justify-between ${DROPDOWN_ITEM.gapClass} overflow-hidden`}
+                >
                   <span
                     className={
                       isSelected
@@ -105,11 +108,6 @@ const DropdownOptionsRenderer: React.FC<DropdownOptionsRendererProps> = ({
                   >
                     {option.label}
                   </span>
-                  {option.secondaryText && (
-                    <span className="shrink-0 text-[11px] text-text-2">
-                      {option.secondaryText}
-                    </span>
-                  )}
                   {!isMultiple && isSelected && <DropdownSelectedCheck />}
                 </span>
               </div>

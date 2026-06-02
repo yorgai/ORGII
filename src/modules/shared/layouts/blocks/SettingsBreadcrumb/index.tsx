@@ -28,6 +28,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
   DROPDOWN_SEARCH,
   DROPDOWN_WIDTHS,
@@ -137,7 +138,7 @@ function isSettingsSelectorItemActive(
 
 const Separator: React.FC = () => (
   <ChevronRight
-    size={12}
+    size={DROPDOWN_ITEM.iconSize}
     strokeWidth={1.75}
     className="flex-shrink-0 text-fill-4"
   />
@@ -229,7 +230,7 @@ const SettingsBreadcrumb: React.FC<SettingsBreadcrumbProps> = ({
       setSelectorOpen(open);
       if (open) setSearchQuery("");
     },
-    gap: DROPDOWN_PANEL.triggerGapCompact,
+    gap: DROPDOWN_PANEL.triggerGapTight,
     placement: "bottom",
     align: "left",
     listNavigation: {
@@ -279,7 +280,7 @@ const SettingsBreadcrumb: React.FC<SettingsBreadcrumbProps> = ({
               minWidth: Math.max(panelPosition.width, 240),
             }}
           >
-            <div className={DROPDOWN_CLASSES.searchContainerCompact}>
+            <div className={DROPDOWN_CLASSES.searchContainer}>
               <Search
                 size={DROPDOWN_SEARCH.iconSize}
                 className="shrink-0 text-text-3"
@@ -304,17 +305,17 @@ const SettingsBreadcrumb: React.FC<SettingsBreadcrumbProps> = ({
                   }
                 }}
                 placeholder={tSettings("searchPlaceholder")}
-                className={DROPDOWN_CLASSES.searchInputCompact}
+                className={DROPDOWN_CLASSES.searchInput}
                 spellCheck={false}
                 autoCorrect="off"
                 autoCapitalize="off"
               />
             </div>
             <div
-              className={`scrollbar-overlay flex max-h-[360px] flex-col overflow-y-auto ${DROPDOWN_PANEL.paddingClass} ${DROPDOWN_PANEL.itemsGapClass}`}
+              className={`${DROPDOWN_CLASSES.optionsContainerOverlay} max-h-[360px]`}
             >
               {filteredGroups.length === 0 ? (
-                <div className="px-3 py-6 text-center text-[12px] text-text-3">
+                <div className={DROPDOWN_CLASSES.listMessage}>
                   {tCommon("status.noResults")}
                 </div>
               ) : (
@@ -337,7 +338,7 @@ const SettingsBreadcrumb: React.FC<SettingsBreadcrumbProps> = ({
                           type="button"
                           {...keyboard.getItemProps(itemIndex)}
                           data-settings-breadcrumb-row="true"
-                          className={`${DROPDOWN_CLASSES.itemCompact} w-full justify-start text-left ${
+                          className={`${DROPDOWN_CLASSES.item} w-full justify-start text-left ${
                             isActive
                               ? DROPDOWN_CLASSES.itemSelected
                               : DROPDOWN_CLASSES.itemHover
@@ -345,7 +346,7 @@ const SettingsBreadcrumb: React.FC<SettingsBreadcrumbProps> = ({
                         >
                           {Icon && (
                             <Icon
-                              size={14}
+                              size={DROPDOWN_ITEM.iconSize}
                               className={`shrink-0 ${
                                 isActive ? "text-primary-6" : "text-text-2"
                               }`}
@@ -356,7 +357,7 @@ const SettingsBreadcrumb: React.FC<SettingsBreadcrumbProps> = ({
                           </span>
                           {isActive && (
                             <Check
-                              size={14}
+                              size={DROPDOWN_ITEM.iconSize}
                               className="shrink-0 text-primary-6"
                             />
                           )}

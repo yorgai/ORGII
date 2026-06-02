@@ -11,6 +11,7 @@ import { createPortal } from "react-dom";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import type { DropdownEnginePosition } from "@src/hooks/dropdown/useDropdownEngine";
@@ -35,6 +36,7 @@ export interface AppSwitcherMenuItem {
    * status). Rendered before the selected-check.
    */
   trailingLabel?: string;
+  tourTarget?: string;
 }
 
 export interface AppSwitcherDropdownPanelProps {
@@ -75,7 +77,8 @@ const AppSwitcherDropdownPanelComponent: React.FC<
               type="button"
               disabled={isDisabled}
               aria-disabled={isDisabled || undefined}
-              className={`${DROPDOWN_CLASSES.itemCompact} ${
+              data-tour-target={item.tourTarget}
+              className={`${DROPDOWN_CLASSES.item} ${
                 isActive
                   ? DROPDOWN_CLASSES.itemSelected
                   : DROPDOWN_CLASSES.itemHover
@@ -89,7 +92,11 @@ const AppSwitcherDropdownPanelComponent: React.FC<
               }}
             >
               {ItemIcon && (
-                <ItemIcon size={14} strokeWidth={1.75} className="shrink-0" />
+                <ItemIcon
+                  size={DROPDOWN_ITEM.iconSize}
+                  strokeWidth={1.75}
+                  className="shrink-0"
+                />
               )}
               <span className="flex-1 whitespace-nowrap">{item.label}</span>
               {item.trailingLabel && (

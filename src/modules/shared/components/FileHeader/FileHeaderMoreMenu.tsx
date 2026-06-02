@@ -163,13 +163,13 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
     <Dropdown
       droplist={
         <div
-          className={`${DROPDOWN_CLASSES.menuPanelCompact} ${DROPDOWN_WIDTHS.wideMenuClass}`}
+          className={`${DROPDOWN_CLASSES.menuPanelBase} ${DROPDOWN_WIDTHS.wideMenuClass}`}
         >
           <button
             type="button"
             onClick={onSaveClick}
             disabled={saveDisabled}
-            className={`${DROPDOWN_CLASSES.menuActionItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuActionItem} ${
               saveDisabled ? DROPDOWN_CLASSES.itemDisabled : ""
             }`}
           >
@@ -184,7 +184,7 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
             type="button"
             onClick={onDiscardClick}
             disabled={discardDisabled}
-            className={`${DROPDOWN_CLASSES.menuActionItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuActionItem} ${
               discardDisabled ? DROPDOWN_CLASSES.itemDisabled : ""
             }`}
           >
@@ -200,7 +200,7 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
             type="button"
             onClick={onSearchClick}
             disabled={searchDisabled}
-            className={`${DROPDOWN_CLASSES.menuActionItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuActionItem} ${
               searchDisabled ? DROPDOWN_CLASSES.itemDisabled : ""
             }`}
           >
@@ -215,7 +215,7 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
             type="button"
             onClick={onGoToLineClick}
             disabled={goToLineDisabled}
-            className={`${DROPDOWN_CLASSES.menuActionItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuActionItem} ${
               goToLineDisabled ? DROPDOWN_CLASSES.itemDisabled : ""
             }`}
           >
@@ -230,7 +230,7 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
             type="button"
             onClick={onCopyRelativePathClick}
             disabled={copyRelativePathDisabled}
-            className={`${DROPDOWN_CLASSES.menuActionItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuActionItem} ${
               copyRelativePathDisabled ? DROPDOWN_CLASSES.itemDisabled : ""
             }`}
           >
@@ -244,7 +244,7 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
             type="button"
             onClick={onReloadClick}
             disabled={reloadDisabled}
-            className={`${DROPDOWN_CLASSES.menuActionItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuActionItem} ${
               reloadDisabled ? DROPDOWN_CLASSES.itemDisabled : ""
             }`}
           >
@@ -262,7 +262,7 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
           <div className={DROPDOWN_CLASSES.menuSeparator} />
 
           <div
-            className={`${DROPDOWN_CLASSES.menuControlItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuControlItem} ${
               showLineNumbersToggle ? "" : DROPDOWN_CLASSES.itemDisabled
             }`}
           >
@@ -278,7 +278,7 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
           </div>
 
           <div
-            className={`${DROPDOWN_CLASSES.menuControlItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuControlItem} ${
               showWordWrapToggle ? "" : DROPDOWN_CLASSES.itemDisabled
             }`}
           >
@@ -294,7 +294,7 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
           </div>
 
           <div
-            className={`${DROPDOWN_CLASSES.menuControlItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuControlItem} ${
               showMinimapToggle ? "" : DROPDOWN_CLASSES.itemDisabled
             }`}
           >
@@ -310,7 +310,7 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
           </div>
 
           <div
-            className={`${DROPDOWN_CLASSES.menuControlItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuControlItem} ${
               showHighlightActiveLineToggle ? "" : DROPDOWN_CLASSES.itemDisabled
             }`}
           >
@@ -326,7 +326,7 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
           </div>
 
           <div
-            className={`${DROPDOWN_CLASSES.menuControlItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuControlItem} ${
               showGitBlameToggle ? "" : DROPDOWN_CLASSES.itemDisabled
             }`}
           >
@@ -345,7 +345,7 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
             type="button"
             onClick={onMoreSettingsClick}
             disabled={!showMoreSettingsAction}
-            className={`${DROPDOWN_CLASSES.menuActionItemCompact} ${
+            className={`${DROPDOWN_CLASSES.menuActionItem} ${
               showMoreSettingsAction ? "" : DROPDOWN_CLASSES.itemDisabled
             }`}
           >

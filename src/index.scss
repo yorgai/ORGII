@@ -470,12 +470,16 @@ body.drag-over::after {
 }
 
 /* Auto-discover dropdown keyboard highlight.
- * Applied by `useDropdownAutoKeyboard` (engine-level fallback) to the
- * row that's currently keyboard-focused inside any open dropdown panel.
- * Mirrors the :hover fill used by DROPDOWN_CLASSES.itemHover so
- * keyboard and pointer feel identical. Lives here (global) so it works
- * for every panel built on useDropdownEngine, even when the consumer
- * never imports the Dropdown component itself. */
+ * Applied by dropdown keyboard utilities to the row that's currently
+ * keyboard-focused inside any open dropdown panel. Mirrors the :hover fill
+ * used by DROPDOWN_CLASSES.itemHover so keyboard and pointer feel identical.
+ * When keyboard mode is active, suppress pointer hover fills so the stale
+ * mouse position cannot show a second highlighted row. */
+[data-dropdown-keyboard-mode="true"] [class*="hover:bg-"]:hover,
+[data-dropdown-keyboard-mode="true"][class*="hover:bg-"]:hover {
+  background: transparent !important;
+}
+
 [data-dropdown-keyboard-highlight="true"] {
   background: var(--color-fill-2) !important;
 }

@@ -11,6 +11,7 @@ import {
   TabBar,
   WorkStationTabBarLeading,
 } from "@src/modules/WorkStation/shared";
+import { CODE_EDITOR_TOUR_TARGETS } from "@src/scaffold/Tutorials/codeEditorTourConfig";
 import { currentRepoAtom } from "@src/store/repo";
 
 import { useLayoutSettingsToggle } from "./useLayoutSettingsToggle";
@@ -74,6 +75,7 @@ const WorkstationTabBar: React.FC<WorkstationTabBarProps> = memo(
           leadingSlot={<WorkStationTabBarLeading />}
           trailingSlot={trailingSlot}
           surfaceClassName=""
+          dataTourTarget={CODE_EDITOR_TOUR_TARGETS.tabBar}
         />
         <LayoutSettingsDropdown
           isOpen={layoutSettings.isLayoutSettingsOpen}

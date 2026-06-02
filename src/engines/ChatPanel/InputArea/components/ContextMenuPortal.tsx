@@ -4,7 +4,11 @@
  * Renders the @ mention context menu via a React portal
  * to avoid clipping by parent overflow containers.
  */
-import type { MenuItemId, RecentFile } from "@/src/scaffold/ContextMenu/config";
+import {
+  type MenuItemId,
+  type RecentFile,
+  STYLE_CONFIG,
+} from "@/src/scaffold/ContextMenu/config";
 import { ContextMenu } from "@/src/scaffold/ContextMenu/exports";
 import type { ContextMenuCustomMentionOption } from "@/src/scaffold/ContextMenu/types";
 import React, { useEffect, useState } from "react";
@@ -43,7 +47,6 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
     left: 0,
-    width: 0,
   });
   // Guard: only render after the position has been measured so the portal
   // never briefly appears at (0,0) / translateY(-100%) above the viewport.
@@ -56,7 +59,6 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
       setDropdownPosition({
         top: containerRect.top,
         left: containerRect.left,
-        width: containerRect.width,
       });
       setIsPositioned(true);
     } else {
@@ -77,7 +79,6 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
         setDropdownPosition({
           top: rect.top,
           left: rect.left,
-          width: rect.width,
         });
       }
     };
@@ -109,7 +110,7 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
       style={{
         top: dropdownPosition.top,
         left: dropdownPosition.left,
-        width: dropdownPosition.width,
+        width: STYLE_CONFIG.dropdownWidth,
         transform: "translateY(-100%)",
       }}
     >
@@ -124,9 +125,6 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
         repoPath={repoPath}
         keyboardHandlerRef={keyboardHandlerRef}
         treePosition={treePosition}
-        panelWidth={
-          dropdownPosition.width > 0 ? dropdownPosition.width : undefined
-        }
       />
     </div>,
     document.body

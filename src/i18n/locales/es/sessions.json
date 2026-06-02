@@ -642,7 +642,13 @@
     "voiceErrorPermission": "Permiso de micrófono denegado. Actívalo en la configuración del sistema.",
     "voiceErrorUnsupported": "La entrada de voz no es compatible con esta versión.",
     "voiceErrorAudio": "No se detectó ningún micrófono.",
-    "voiceErrorGeneric": "La entrada de voz falló. Inténtalo de nuevo."
+    "voiceErrorGeneric": "La entrada de voz falló. Inténtalo de nuevo.",
+    "pinnedActions": {
+      "manage": "Gestionar acciones fijadas",
+      "searchPlaceholder": "Buscar acciones para fijar…",
+      "loading": "Cargando…",
+      "empty": "No se encontraron acciones."
+    }
   },
   "listPanel": {
     "showingOf": "Mostrando {{filtered}} de {{total}}",

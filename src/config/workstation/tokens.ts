@@ -227,10 +227,10 @@ export const HEADER_CLASSES = {
    * Sidebar section header (collapsible section title row).
    * Used by: CollapsibleSection, PanelSectionHeader
    *
-   * Height: 40px, space-between layout, shrink-proof, transparent surface.
+   * Height: 32px, space-between layout, shrink-proof, transparent surface.
    */
   sectionHeader:
-    "flex h-10 min-w-0 flex-shrink-0 items-center justify-between overflow-hidden bg-transparent pl-3 pr-2",
+    "flex h-8 min-w-0 flex-shrink-0 items-center justify-between overflow-hidden bg-transparent pl-3 pr-2",
 } as const;
 
 /**

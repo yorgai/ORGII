@@ -30,6 +30,7 @@ import Dropdown, { type DropdownPosition } from "@src/components/Dropdown";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
@@ -277,7 +278,7 @@ export const PresenceMenuButton: React.FC<PresenceMenuButtonProps> = ({
 
   const droplist = (
     <div
-      className={`${DROPDOWN_CLASSES.menuPanelCompact} ${DROPDOWN_WIDTHS.sidebarMenuClass}`}
+      className={`${DROPDOWN_CLASSES.menuPanelBase} ${DROPDOWN_WIDTHS.sidebarMenuClass}`}
     >
       {PRESENCE_MENU_ORDER.map((option) => {
         const OptionIcon = PRESENCE_ICON[option];
@@ -288,10 +289,15 @@ export const PresenceMenuButton: React.FC<PresenceMenuButtonProps> = ({
             key={option}
             type="button"
             onClick={() => handleSelectMode(option)}
-            className={DROPDOWN_CLASSES.menuActionItemCompact}
+            className={DROPDOWN_CLASSES.menuActionItem}
           >
             <PresenceItemContent
-              icon={<OptionIcon size={14} className={optionColor} />}
+              icon={
+                <OptionIcon
+                  size={DROPDOWN_ITEM.iconSize}
+                  className={optionColor}
+                />
+              }
               label={t(`sidebar.presence.${option}`)}
               selected={isSelected}
             />
@@ -311,11 +317,14 @@ export const PresenceMenuButton: React.FC<PresenceMenuButtonProps> = ({
                 key={role.id}
                 type="button"
                 onClick={() => handleSelectMode(roleMode)}
-                className={DROPDOWN_CLASSES.menuActionItemCompact}
+                className={DROPDOWN_CLASSES.menuActionItem}
               >
                 <PresenceItemContent
                   icon={
-                    <RoleIcon size={14} className={CUSTOM_ROLE_COLOR_CLASS} />
+                    <RoleIcon
+                      size={DROPDOWN_ITEM.iconSize}
+                      className={CUSTOM_ROLE_COLOR_CLASS}
+                    />
                   }
                   label={role.label}
                   selected={isSelected}
@@ -339,7 +348,7 @@ export const PresenceMenuButton: React.FC<PresenceMenuButtonProps> = ({
                 key={entry.id}
                 type="button"
                 onClick={() => handleSelectAwayDuration(entry.id)}
-                className={DROPDOWN_CLASSES.menuActionItemCompact}
+                className={DROPDOWN_CLASSES.menuActionItem}
               >
                 <PresenceItemContent
                   label={t(entry.labelKey)}
@@ -397,7 +406,11 @@ const SidebarBottomBar: React.FC<SidebarBottomBarProps> = React.memo(
                   className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
                   onClick={goToSettings}
                 >
-                  <Settings size={16} strokeWidth={2} className="text-text-2" />
+                  <Settings
+                    size={DROPDOWN_ITEM.iconSize}
+                    strokeWidth={2}
+                    className="text-text-2"
+                  />
                 </LiquidGlassHoverItem>
               </div>
             </Tooltip>

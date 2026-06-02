@@ -15,7 +15,7 @@
  *
  * // With icon and selected state
  * <DropdownItem
- *   icon={<Settings size={14} />}
+ *   icon={<Settings size={DROPDOWN_ITEM.iconSize} />}
  *   selected={currentValue === "settings"}
  *   onClick={() => handleSelect("settings")}
  * >
@@ -24,7 +24,7 @@
  *
  * // With suffix (e.g., checkmark, shortcut)
  * <DropdownItem
- *   suffix={<Check size={14} />}
+ *   suffix={<Check size={DROPDOWN_ITEM.iconSize} />}
  *   selected
  * >
  *   Selected Option
@@ -35,7 +35,7 @@ import { Check } from "lucide-react";
 import React, { forwardRef, memo } from "react";
 
 import DropdownSelectedCheck from "./DropdownSelectedCheck";
-import { DROPDOWN_CLASSES } from "./tokens";
+import { DROPDOWN_CLASSES, DROPDOWN_ITEM } from "./tokens";
 
 export interface DropdownItemProps {
   /**
@@ -58,12 +58,6 @@ export interface DropdownItemProps {
    * @default false
    */
   selected?: boolean;
-
-  /**
-   * Use dense dropdown row spacing.
-   * @default false
-   */
-  compact?: boolean;
 
   /**
    * Whether to show a checkmark when `selected`. Defaults to `true` because
@@ -126,7 +120,6 @@ const DropdownItemInner = forwardRef<HTMLDivElement, DropdownItemProps>(
       icon,
       suffix,
       selected = false,
-      compact = false,
       showCheckmark = true,
       selectedCheckPlacement = "trailing",
       disabled = false,
@@ -145,7 +138,7 @@ const DropdownItemInner = forwardRef<HTMLDivElement, DropdownItemProps>(
     };
 
     const itemClasses = [
-      compact ? DROPDOWN_CLASSES.itemCompact : DROPDOWN_CLASSES.item,
+      DROPDOWN_CLASSES.item,
       !disabled && DROPDOWN_CLASSES.itemHover,
       // Only keyboard `highlighted` gets a filled background. The `selected`
       // state is shown by the checkmark + primary-6 text only (no bg fill).
@@ -176,7 +169,7 @@ const DropdownItemInner = forwardRef<HTMLDivElement, DropdownItemProps>(
           >
             {showCheckmark && selected && selectedCheckPlacement === "icon" ? (
               <Check
-                size={14}
+                size={DROPDOWN_ITEM.iconSize}
                 strokeWidth={2.25}
                 className="shrink-0 text-primary-6"
               />

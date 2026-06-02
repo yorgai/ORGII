@@ -22,7 +22,10 @@ import { useTranslation } from "react-i18next";
 
 import type { AgentOrgRunMemberView } from "@src/api/tauri/agent";
 import Button from "@src/components/Button";
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
 import Tooltip from "@src/components/Tooltip";
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
@@ -205,7 +208,9 @@ const TurnPaginationControls: React.FC<TurnPaginationControlsProps> = memo(
                 }}
                 aria-label={t("sessions:planner.agentOrgOverview.title")}
                 title={t("sessions:planner.agentOrgOverview.title")}
-                icon={<Network size={14} strokeWidth={1.75} />}
+                icon={
+                  <Network size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
+                }
               />
               {agentName && <WorkstationHeaderSectionSeparator />}
             </>
@@ -235,7 +240,7 @@ const TurnPaginationControls: React.FC<TurnPaginationControlsProps> = memo(
                 <span className="truncate">{currentAgentNameLabel}</span>
                 {canSwitchAgentOrgMember && (
                   <ChevronDown
-                    size={12}
+                    size={DROPDOWN_ITEM.iconSize}
                     className={`${SELECT_CHEVRON_CLASS} ${
                       isMemberSwitcherOpen ? "rotate-180" : ""
                     }`}
@@ -261,7 +266,7 @@ const TurnPaginationControls: React.FC<TurnPaginationControlsProps> = memo(
                             type="button"
                             role="menuitem"
                             data-testid="agent-org-group-chat-toggle"
-                            className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} ${
+                            className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} ${
                               groupChatViewActive
                                 ? DROPDOWN_CLASSES.itemSelected
                                 : ""
@@ -324,7 +329,7 @@ const TurnPaginationControls: React.FC<TurnPaginationControlsProps> = memo(
                             data-testid={`agent-org-member-switcher-option-${member.memberId}`}
                             disabled={isDisabled}
                             aria-disabled={isDisabled || undefined}
-                            className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} ${
+                            className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} ${
                               isCurrent ? DROPDOWN_CLASSES.itemSelected : ""
                             } ${isDisabled ? "cursor-not-allowed opacity-50" : ""}`}
                             onClick={() => {
@@ -374,12 +379,12 @@ const TurnPaginationControls: React.FC<TurnPaginationControlsProps> = memo(
                   <span className="truncate">{currentTurnPageLabel}</span>
                   {!turnPaginationReady ? (
                     <Loader2
-                      size={12}
+                      size={DROPDOWN_ITEM.iconSize}
                       className="shrink-0 animate-spin text-text-3"
                     />
                   ) : (
                     <ChevronDown
-                      size={12}
+                      size={DROPDOWN_ITEM.iconSize}
                       className={`${SELECT_CHEVRON_CLASS} ${
                         turnPageListOpen ? "rotate-180" : ""
                       }`}
@@ -428,9 +433,15 @@ const TurnPaginationControls: React.FC<TurnPaginationControlsProps> = memo(
                         aria-label={t("common:actions.sort")}
                         icon={
                           turnPageSortAscending ? (
-                            <ClockArrowDown size={16} strokeWidth={1.75} />
+                            <ClockArrowDown
+                              size={DROPDOWN_ITEM.iconSize}
+                              strokeWidth={1.75}
+                            />
                           ) : (
-                            <ClockArrowUp size={16} strokeWidth={1.75} />
+                            <ClockArrowUp
+                              size={DROPDOWN_ITEM.iconSize}
+                              strokeWidth={1.75}
+                            />
                           )
                         }
                       />
@@ -454,7 +465,9 @@ const TurnPaginationControls: React.FC<TurnPaginationControlsProps> = memo(
                         iconOnly
                         onClick={() => setTurnPageListOpen(false)}
                         aria-label={t("common:actions.close")}
-                        icon={<X size={16} strokeWidth={1.75} />}
+                        icon={
+                          <X size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
+                        }
                       />
                     </span>
                   </Tooltip>
@@ -481,7 +494,12 @@ const TurnPaginationControls: React.FC<TurnPaginationControlsProps> = memo(
                         onClick={onPreviousTurnPage}
                         disabled={!turnPaginationReady || currentPageIndex <= 0}
                         aria-label={t("common:actions.previous")}
-                        icon={<ChevronLeft size={16} strokeWidth={1.75} />}
+                        icon={
+                          <ChevronLeft
+                            size={DROPDOWN_ITEM.iconSize}
+                            strokeWidth={1.75}
+                          />
+                        }
                       />
                     </span>
                   </Tooltip>
@@ -508,7 +526,12 @@ const TurnPaginationControls: React.FC<TurnPaginationControlsProps> = memo(
                           currentPageIndex >= pageCount - 1
                         }
                         aria-label={t("common:actions.next")}
-                        icon={<ChevronRight size={16} strokeWidth={1.75} />}
+                        icon={
+                          <ChevronRight
+                            size={DROPDOWN_ITEM.iconSize}
+                            strokeWidth={1.75}
+                          />
+                        }
                       />
                     </span>
                   </Tooltip>

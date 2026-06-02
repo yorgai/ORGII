@@ -32,6 +32,7 @@ import LaunchpadDashboard from "@src/modules/WorkStation/Launchpad/components/La
 import { launchpadSelectedRepoIdAtom } from "@src/modules/WorkStation/Launchpad/store/launchpadSelectedRepoAtom";
 import BreadcrumbFileHeader from "@src/modules/shared/components/FileHeader/BreadcrumbFileHeader";
 import { openWorkspaceSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
+import { CODE_EDITOR_TOUR_TARGETS } from "@src/scaffold/Tutorials/codeEditorTourConfig";
 import type { Repo } from "@src/store/repo/types";
 import {
   createLaunchpadRepoTab,
@@ -89,14 +90,19 @@ const LaunchpadDashboardTabRenderer: React.FC<UnifiedTabContentProps> = memo(
     });
 
     return (
-      <LaunchpadDashboard
-        repos={repos}
-        loading={repoLoading}
-        selectedDashboardRepoId={selectedDashboardRepoId}
-        onSelectDashboardRepo={setSelectedDashboardRepoId}
-        onOpenRepoDetails={handleOpenRepoDetails}
-        onAddWorkspace={handleAddWorkspace}
-      />
+      <div
+        className="h-full min-h-0 w-full"
+        data-tour-target={CODE_EDITOR_TOUR_TARGETS.dashboard}
+      >
+        <LaunchpadDashboard
+          repos={repos}
+          loading={repoLoading}
+          selectedDashboardRepoId={selectedDashboardRepoId}
+          onSelectDashboardRepo={setSelectedDashboardRepoId}
+          onOpenRepoDetails={handleOpenRepoDetails}
+          onAddWorkspace={handleAddWorkspace}
+        />
+      </div>
     );
   }
 );

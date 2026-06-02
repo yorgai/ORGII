@@ -188,8 +188,6 @@ export function PropertyDropdownField<T extends string>({
           onChange={setSearchQuery}
           placeholder={searchPlaceholder}
           autoFocus
-          className="px-2 py-1.5"
-          inputClassName="text-[13px]"
         />
       )}
       <div className={DROPDOWN_CLASSES.optionsContainer}>{optionsContent}</div>

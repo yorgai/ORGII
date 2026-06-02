@@ -22,6 +22,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import {
@@ -56,15 +57,15 @@ const BranchRow: React.FC<BranchRowProps> = ({
       type="button"
       data-testid={`branch-dropdown-row-${branch.name}`}
       {...keyboardProps}
-      className={`${DROPDOWN_CLASSES.itemCompact} ${
+      className={`${DROPDOWN_CLASSES.item} ${
         isCurrent ? DROPDOWN_CLASSES.itemSelected : DROPDOWN_CLASSES.itemHover
       } w-full justify-start`}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
         {isCurrent ? (
-          <Check size={14} className="text-primary-6" />
+          <Check size={DROPDOWN_ITEM.iconSize} className="text-primary-6" />
         ) : (
-          <GitBranch size={14} className="text-text-2" />
+          <GitBranch size={DROPDOWN_ITEM.iconSize} className="text-text-2" />
         )}
       </span>
       <span className="truncate">{branch.name}</span>
@@ -225,28 +226,31 @@ export const BranchDropdown: React.FC<BranchDropdownProps> = ({
         width,
       }}
     >
-      <div className={DROPDOWN_CLASSES.searchContainerCompact}>
-        <Search size={14} className="shrink-0 text-text-3" />
+      <div className={DROPDOWN_CLASSES.searchContainer}>
+        <Search
+          size={DROPDOWN_ITEM.iconSize}
+          className="shrink-0 text-text-3"
+        />
         <input
           ref={inputRef}
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           onKeyDown={tauriSelectAll}
           placeholder={t("selectors.spotlight.placeholders.branch")}
-          className={DROPDOWN_CLASSES.searchInputCompact}
+          className={DROPDOWN_CLASSES.searchInput}
         />
       </div>
 
       <div
-        className={`scrollbar-overlay flex flex-col overflow-y-auto ${DROPDOWN_PANEL.paddingClass} ${DROPDOWN_PANEL.itemsGapClass}`}
+        className={DROPDOWN_CLASSES.optionsContainerOverlay}
         style={{ maxHeight: LIST_MAX_HEIGHT }}
       >
         {isLoading && filteredBranches.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[12px] text-text-3">
+          <div className={DROPDOWN_CLASSES.listMessage}>
             {t("status.loading")}
           </div>
         ) : filteredBranches.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[12px] text-text-3">
+          <div className={DROPDOWN_CLASSES.listMessage}>
             {t("selectors.modelSelector.noResults")}
           </div>
         ) : (

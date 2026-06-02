@@ -119,7 +119,7 @@ const TurnPageList: React.FC<TurnPageListProps> = memo(
                   >
                     <button
                       type="button"
-                      className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left ${
+                      className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left ${
                         isCurrent
                           ? DROPDOWN_CLASSES.itemSelected
                           : "text-text-2"

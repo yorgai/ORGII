@@ -29,20 +29,16 @@ import {
   useState,
 } from "react";
 
-import { useRepoSuggestions } from "@src/engines/ChatPanel/hooks/useInputArea/useRepoSuggestions";
 import {
   DEBOUNCE_DELAYS,
   useDebouncedCallback,
 } from "@src/hooks/perf/useDebouncedCallback";
 import { currentRepoAtom } from "@src/store/repo/derived";
 import { sessionsAtom } from "@src/store/session/sessionAtom";
-import { globalTabsAtom } from "@src/store/ui/globalTabsAtom";
 import { terminalSessionsAtom } from "@src/store/workstation/codeEditor/terminal";
 
 import {
   type DrilledProject,
-  searchBrowserTabs,
-  searchCodebase,
   searchFiles,
   searchProjects,
   searchSessions,
@@ -63,8 +59,6 @@ export function useContextMenu(
   options: UseContextMenuOptions = {}
 ): UseContextMenuReturn {
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  const { getFilteredRepos } = useRepoSuggestions();
-
   // Store callbacks in refs to avoid stale closures
   const onSelectRef = useRef(opts.onSelect);
   const onCloseRef = useRef(opts.onClose);
@@ -79,9 +73,6 @@ export function useContextMenu(
 
   // Get terminal sessions from editor state (same terminals as Workstation panel)
   const editorTerminalSessions = useAtomValue(terminalSessionsAtom);
-  // Get browser tabs from global state
-  const globalTabs = useAtomValue(globalTabsAtom);
-  const browserTabs = globalTabs.browser;
   // Get all sessions for @sessions search
   const allSessions = useAtomValue(sessionsAtom);
 
@@ -92,6 +83,7 @@ export function useContextMenu(
 
   // State — internal (used when user clicks menu items, NOT for inline @query)
   const [activeIndex, setActiveIndex] = useState(0);
+  const [keyboardNavigated, setKeyboardNavigated] = useState(false);
   const [internalSecondLayer, setInternalSecondLayer] =
     useState<SecondLayerId | null>(null);
   const [internalSearchQuery, setInternalSearchQuery] = useState("");
@@ -135,25 +127,17 @@ export function useContextMenu(
       try {
         let results: SearchResultItem[];
         if (type === "files") {
-          results = await searchFiles(
-            query,
-            opts.repoPath ?? "",
-            getFilteredRepos
-          );
+          results = await searchFiles(query, opts.repoPath ?? "");
         } else if (type === "terminals") {
           results = searchTerminals(query, editorTerminalSessions);
         } else if (type === "sessions") {
           results = searchSessions(query, allSessions);
-        } else if (type === "browser") {
-          results = searchBrowserTabs(query, browserTabs);
         } else if (type === "projects") {
           results = await searchProjects(
             query,
             effectiveRepoPath,
             drilledProjectRef.current
           );
-        } else if (type === "codebase") {
-          results = await searchCodebase(query, effectiveRepoPath);
         } else {
           results = [];
         }
@@ -169,10 +153,8 @@ export function useContextMenu(
       opts.repoPath,
       effectiveRepoPath,
       editorTerminalSessions,
-      browserTabs,
       allSessions,
       updateSearchResults,
-      getFilteredRepos,
     ]
   );
 
@@ -188,7 +170,7 @@ export function useContextMenu(
 
   // Handle search query changes with debounce.
   // NOTE: `performSearch` is intentionally NOT in the deps — it changes
-  // whenever editorTerminalSessions/browserTabs change, which
+  // whenever editorTerminalSessions change, which
   // would trigger spurious re-searches.  The ref-based callback inside
   // useDebouncedCallback keeps the function fresh.
   useEffect(() => {
@@ -246,6 +228,7 @@ export function useContextMenu(
   // Reset state
   const reset = useCallback(() => {
     setActiveIndex(0);
+    setKeyboardNavigated(false);
     setSecondLayer(null);
     setSearchQuery("");
     updateSearchResults([]);
@@ -278,6 +261,7 @@ export function useContextMenu(
             e.preventDefault();
             e.stopPropagation();
             if (searchResults.length > 0) {
+              setKeyboardNavigated(true);
               setSecondLayerActiveIndex((prev) =>
                 prev > 0 ? prev - 1 : searchResults.length - 1
               );
@@ -288,6 +272,7 @@ export function useContextMenu(
             e.preventDefault();
             e.stopPropagation();
             if (searchResults.length > 0) {
+              setKeyboardNavigated(true);
               setSecondLayerActiveIndex((prev) =>
                 prev < searchResults.length - 1 ? prev + 1 : 0
               );
@@ -299,18 +284,12 @@ export function useContextMenu(
             e.stopPropagation();
             if (searchResults.length > 0) {
               const selected = searchResults[secondLayerActiveIndex];
-              // Use iconType for repo/branch, otherwise secondLayer (files/folder/codebase)
+              // Use iconType for project/work items, otherwise secondLayer.
               let selectType: MenuItemId = secondLayer;
-              if (selected.iconType === "repo") {
-                selectType = "repo";
-              } else if (selected.iconType === "branch") {
-                selectType = "branch";
-              } else if (selected.iconType === "project") {
+              if (selected.iconType === "project") {
                 selectType = "project";
               } else if (selected.iconType === "workitem") {
                 selectType = "workitem";
-              } else if (secondLayer === "codebase") {
-                selectType = "codebase";
               } else if (
                 secondLayer === "files" &&
                 selected.type === "folder"
@@ -332,6 +311,7 @@ export function useContextMenu(
             e.preventDefault();
             e.stopPropagation();
             if (searchResults.length > 0) {
+              setKeyboardNavigated(true);
               setSecondLayerActiveIndex((prev) =>
                 prev < searchResults.length - 1 ? prev + 1 : 0
               );
@@ -347,12 +327,14 @@ export function useContextMenu(
         case KEYBOARD_CONFIG.up:
           e.preventDefault();
           e.stopPropagation();
+          setKeyboardNavigated(true);
           setActiveIndex((prev) => (prev > 0 ? prev - 1 : menuItemsCount - 1));
           return true;
 
         case KEYBOARD_CONFIG.down:
           e.preventDefault();
           e.stopPropagation();
+          setKeyboardNavigated(true);
           setActiveIndex((prev) => (prev < menuItemsCount - 1 ? prev + 1 : 0));
           return true;
 
@@ -373,6 +355,7 @@ export function useContextMenu(
           e.preventDefault();
           e.stopPropagation();
           // Tab cycles through items
+          setKeyboardNavigated(true);
           setActiveIndex((prev) => (prev < menuItemsCount - 1 ? prev + 1 : 0));
           return true;
       }
@@ -394,6 +377,8 @@ export function useContextMenu(
   return {
     activeIndex,
     setActiveIndex,
+    keyboardNavigated,
+    setKeyboardNavigated,
     secondLayer,
     setSecondLayer,
     searchQuery,

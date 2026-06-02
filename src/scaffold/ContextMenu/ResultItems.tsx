@@ -4,26 +4,19 @@
  * Reusable item-level components for rendering menu items,
  * search result icons, and empty/loading states.
  */
-import {
-  FolderKanban,
-  Globe,
-  ListChecks,
-  MessageSquare,
-  Terminal,
-} from "lucide-react";
+import { FolderKanban, History, ListChecks, Terminal } from "lucide-react";
 import React, { memo } from "react";
 import { useTranslation } from "react-i18next";
 
 import FolderIcon from "@src/assets/fileTypeIcons/folder-base.svg";
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
-import {
-  CONTEXT_MENU_ITEM_ROW,
-  ICON_CONFIG,
-  type SecondLayerId,
-} from "./config";
+import { ICON_CONFIG, type SecondLayerId } from "./config";
 import type { SearchResultItem } from "./types";
 
 // ============================================
@@ -38,12 +31,7 @@ export const SecondLayerEmptyState: React.FC<{ layerId: SecondLayerId }> = memo(
       files: t("placeholders.typeToSearchFiles"),
       terminals: t("placeholders.noTerminalsAvailable"),
       sessions: t("placeholders.noSessionsFound"),
-      browser: t("placeholders.noBrowserTabsOpen"),
       projects: t("placeholders.noProjectsFound", "No projects found"),
-      codebase: t(
-        "placeholders.typeToSearchCodebase",
-        "Type to search codebase…"
-      ),
     };
     return (
       <Placeholder
@@ -89,105 +77,59 @@ SearchLoadingOrEmpty.displayName = "SearchLoadingOrEmpty";
 // Icon Rendering
 // ============================================
 
-const iconAccent = (active: boolean) =>
-  active
-    ? "flex-shrink-0 text-primary-6"
-    : "flex-shrink-0 text-text-2 group-hover:text-primary-6";
+const iconAccent = "flex-shrink-0 text-text-2";
 
 /** Render appropriate icon based on item type */
 export const ResultItemIcon: React.FC<{
   item: SearchResultItem;
   displayName: string;
-  /** Keyboard/hover row highlight */
-  active?: boolean;
-}> = memo(({ item, displayName, active = false }) => {
-  if (item.iconType === "repo") {
-    return (
-      <ICON_CONFIG.repo
-        size={16}
-        strokeWidth={1.75}
-        className={iconAccent(active)}
-      />
-    );
-  }
-
-  if (item.iconType === "branch") {
-    return (
-      <ICON_CONFIG.branch
-        size={16}
-        strokeWidth={1.75}
-        className={iconAccent(active)}
-      />
-    );
-  }
-
+}> = memo(({ item, displayName }) => {
   if (item.iconType === "terminal") {
     return (
-      <Terminal size={16} strokeWidth={1.75} className={iconAccent(active)} />
+      <Terminal
+        size={DROPDOWN_ITEM.iconSize}
+        strokeWidth={1.75}
+        className={iconAccent}
+      />
     );
   }
 
   if (item.iconType === "session") {
     return (
-      <MessageSquare
-        size={16}
+      <History
+        size={DROPDOWN_ITEM.iconSize}
         strokeWidth={1.75}
-        className={iconAccent(active)}
+        className={iconAccent}
       />
-    );
-  }
-
-  if (item.iconType === "browser") {
-    if (item.favicon) {
-      return (
-        <img
-          src={item.favicon}
-          alt=""
-          className="h-4 w-4 flex-shrink-0 rounded-sm"
-          onError={(e) => {
-            e.currentTarget.style.display = "none";
-            e.currentTarget.nextElementSibling?.classList.remove("hidden");
-          }}
-        />
-      );
-    }
-    return (
-      <Globe size={16} strokeWidth={1.75} className={iconAccent(active)} />
     );
   }
 
   if (item.iconType === "project") {
     return (
       <FolderKanban
-        size={16}
+        size={DROPDOWN_ITEM.iconSize}
         strokeWidth={1.75}
-        className={iconAccent(active)}
+        className={iconAccent}
       />
     );
   }
 
   if (item.iconType === "workitem") {
     return (
-      <ListChecks size={16} strokeWidth={1.75} className={iconAccent(active)} />
-    );
-  }
-
-  if (item.type === "folder") {
-    return (
-      <FolderIcon
-        width="16"
-        height="16"
-        className={`flex-shrink-0 ${active ? "text-primary-6" : "text-text-2 group-hover:text-primary-6"}`}
+      <ListChecks
+        size={DROPDOWN_ITEM.iconSize}
+        strokeWidth={1.75}
+        className={iconAccent}
       />
     );
   }
 
+  if (item.type === "folder") {
+    return <FolderIcon width="16" height="16" className={iconAccent} />;
+  }
+
   return (
-    <FileTypeIcon
-      fileName={displayName}
-      size="medium"
-      className={`flex-shrink-0 ${active ? "text-primary-6" : "text-text-2 group-hover:text-primary-6"}`}
-    />
+    <FileTypeIcon fileName={displayName} size="medium" className={iconAccent} />
   );
 });
 ResultItemIcon.displayName = "ResultItemIcon";
@@ -199,7 +141,6 @@ ResultItemIcon.displayName = "ResultItemIcon";
 export interface MenuItemRowProps {
   icon: React.ComponentType<Record<string, unknown>>;
   label: string;
-  description?: string;
   hasArrow?: boolean;
   isActive?: boolean;
   dataTestId?: string;
@@ -213,7 +154,6 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = memo(
   ({
     icon,
     label,
-    description,
     hasArrow = false,
     isActive = false,
     dataTestId,
@@ -225,10 +165,8 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = memo(
     <div
       data-testid={dataTestId}
       data-mention-id={dataMentionId}
-      className={`${DROPDOWN_CLASSES.itemCompact} group cursor-pointer justify-between ${
-        isActive
-          ? CONTEXT_MENU_ITEM_ROW.selected
-          : CONTEXT_MENU_ITEM_ROW.hoverIdle
+      className={`${DROPDOWN_CLASSES.item} group cursor-pointer justify-between ${
+        isActive ? DROPDOWN_CLASSES.itemActive : DROPDOWN_CLASSES.itemHover
       }`}
       onMouseDown={(e) => {
         e.preventDefault();
@@ -240,41 +178,16 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = memo(
     >
       <div className="flex items-center gap-2">
         {React.createElement(icon, {
-          size: 14,
-          className: isActive
-            ? "text-primary-6"
-            : "text-text-2 group-hover:text-primary-6",
+          size: DROPDOWN_ITEM.iconSize,
+          className: "text-text-2",
           strokeWidth: 1.75,
         })}
-        <span
-          className={`text-[13px] ${
-            isActive
-              ? "text-primary-6"
-              : "text-text-1 group-hover:text-primary-6"
-          }`}
-        >
-          {label}
-        </span>
-        {description && (
-          <span
-            className={`text-[11px] ${
-              isActive
-                ? "text-primary-6/80"
-                : "text-text-3 group-hover:text-primary-6/80"
-            }`}
-          >
-            {description}
-          </span>
-        )}
+        <span className="text-[13px] text-text-1">{label}</span>
       </div>
       {hasArrow && (
         <ICON_CONFIG.arrow
-          size={14}
-          className={
-            isActive
-              ? "text-primary-6"
-              : "text-text-3 group-hover:text-primary-6"
-          }
+          size={DROPDOWN_ITEM.iconSize}
+          className="text-text-3"
           strokeWidth={1.75}
         />
       )}

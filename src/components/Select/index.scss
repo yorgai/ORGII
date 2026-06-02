@@ -222,15 +222,3 @@
 .select-options-overlay {
   scrollbar-width: thin;
 }
-
-.select-loading,
-.select-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 24px;
-  color: var(--color-text-3);
-  font-size: 14px;
-}
