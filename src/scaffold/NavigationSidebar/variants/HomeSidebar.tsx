@@ -10,7 +10,12 @@
 import { MenuItem, Menu as TauriMenu } from "@tauri-apps/api/menu";
 import i18next from "i18next";
 import { useAtom, useSetAtom } from "jotai";
-import { House, SquareMousePointer } from "lucide-react";
+import {
+  ArrowUpRight,
+  FolderGit2,
+  House,
+  SquareMousePointer,
+} from "lucide-react";
 import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -21,6 +26,7 @@ import { useRouteLabel } from "@src/hooks/i18n";
 import { SIDEBAR_MEMORY_KIND, useSidebarMemoryEntry } from "@src/hooks/perf";
 import { devRecordActiveViewAtom } from "@src/store/ui/devRecordToolbarAtom";
 import { homeTabAtom } from "@src/store/ui/homeTabAtom";
+import { openExternalLink } from "@src/util/platform/ipcRenderer";
 
 import SidebarBottomBar from "../blocks/SidebarBottomBar";
 import type { NavigationMenuItem } from "../components/NavigationMenu/config";
@@ -45,6 +51,9 @@ const MARKET_ROOT_PATH = ROUTES.app.market.tokenMarket.path.slice(
   0,
   ROUTES.app.market.tokenMarket.path.lastIndexOf("/")
 );
+
+const ORGII_GITHUB_URL = "https://github.com/yorg-ai/orgii";
+const GITHUB_MENU_ITEM_KEY = "external-github";
 
 // ============================================
 // Component
@@ -107,6 +116,14 @@ const HomeSidebar: React.FC = () => {
         iconName: HOME_SIDEBAR_ICON_NAME.economy,
         label: t("sidebar.groups.economy"),
       }),
+      {
+        id: GITHUB_MENU_ITEM_KEY,
+        key: GITHUB_MENU_ITEM_KEY,
+        label: t("sidebar.groups.openSource"),
+        icon: FolderGit2,
+        iconName: "folder-git-2",
+        trailingElement: <ArrowUpRight size={13} strokeWidth={2} />,
+      },
     ],
     [t, getTranslatedRouteLabel]
   );
@@ -155,7 +172,12 @@ const HomeSidebar: React.FC = () => {
   );
 
   const handleMenuItemClick = useCallback(
-    (_key: string, item: NavigationMenuItem) => {
+    (key: string, item: NavigationMenuItem) => {
+      if (key === GITHUB_MENU_ITEM_KEY) {
+        void openExternalLink(ORGII_GITHUB_URL);
+        return;
+      }
+
       if (item.routePath) {
         navigate(item.routePath, { replace: false });
       }
@@ -164,16 +186,21 @@ const HomeSidebar: React.FC = () => {
   );
 
   const handleMenuItemContextMenu = useCallback(
-    async (e: React.MouseEvent, _key: string, item: NavigationMenuItem) => {
+    async (e: React.MouseEvent, key: string, item: NavigationMenuItem) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!item.routePath) return;
+      if (!item.routePath && key !== GITHUB_MENU_ITEM_KEY) return;
 
       const t = i18next.t.bind(i18next);
 
       const openItem = await MenuItem.new({
         text: t("actions.open"),
         action: () => {
+          if (key === GITHUB_MENU_ITEM_KEY) {
+            void openExternalLink(ORGII_GITHUB_URL);
+            return;
+          }
+
           if (!item.routePath) return;
           navigate(item.routePath, { replace: false });
         },

@@ -121,7 +121,8 @@
       "agent": "Coding Agent",
       "cli": "CLI Agent",
       "hostedKey": "Hosted Key",
-      "cloud": "Cloud"
+      "cloud": "Cloud",
+      "openSource": "오픈소스"
     },
     "actions": {
       "addNew": "새로 추가",

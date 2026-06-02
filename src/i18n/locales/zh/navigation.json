@@ -121,7 +121,8 @@
       "agent": "Coding Agent",
       "cli": "CLI Agent",
       "hostedKey": "托管密钥",
-      "cloud": "Cloud"
+      "cloud": "Cloud",
+      "openSource": "开源仓库"
     },
     "actions": {
       "addNew": "新建",
