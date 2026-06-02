@@ -4,7 +4,10 @@
 import { gitApi } from "@src/api/http/git";
 import { showGitErrorAndHandle } from "@src/hooks/git/useGitErrorDialog";
 import { gitPullStrategyAtom } from "@src/store/ui/editorSettingsAtom";
-import { showGitAuthenticationDialog } from "@src/util/dialogs/gitAuthenticationDialog";
+import {
+  type GitAuthenticationDialogResult,
+  showGitAuthenticationDialog,
+} from "@src/util/dialogs/gitAuthenticationDialog";
 
 import { TerminalService } from "../../terminal";
 import type { GitOperationResult } from "./types";
@@ -113,7 +116,7 @@ function buildPullCommand(strategy: string): string {
 async function requestGitAuthToken(
   operation: "push" | "pull" | "fetch" | "sync",
   remote?: string
-): Promise<{ username: string; token: string } | null> {
+): Promise<GitAuthenticationDialogResult | null> {
   const repo = getRepoContext();
   return showGitAuthenticationDialog({
     operation,
