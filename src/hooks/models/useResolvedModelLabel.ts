@@ -10,10 +10,11 @@
 import { useMemo } from "react";
 
 import {
+  type ModelPillDisplayParts,
   resolveModelDisplayLabel,
   resolveModelFullLabel,
   resolveModelPillAccountName,
-  resolveModelPillLabel,
+  resolveModelPillDisplayParts,
 } from "@src/util/formatModelName";
 
 import { useModelAliasRegistryVersion } from "./modelAliasRegistry";
@@ -34,12 +35,16 @@ interface ProviderWithModels {
 }
 
 interface ResolvedModelLabel {
-  /** Compact label for the pill body (alias > listing display > formatted id). */
+  /** Label for the pill body (alias > listing display > formatted id). */
   label: string;
   /** Full label for hover tooltips (alias > listing display > formatted id with date). */
   title: string;
   /** Key vault account or hosted listing name for breadcrumb tooltips. */
   accountName?: string;
+}
+
+interface ResolvedModelPillLabel extends ResolvedModelLabel {
+  displayParts: ModelPillDisplayParts;
 }
 
 export function useResolvedModelLabel(
@@ -66,15 +71,17 @@ export function useResolvedModelLabel(
 export function useModelPillLabel(
   selection: ModelSelectionInput | null | undefined,
   fallback: string = "Model"
-): ResolvedModelLabel {
+): ResolvedModelPillLabel {
   const aliasVersion = useModelAliasRegistryVersion();
 
   return useMemo(() => {
     const sel = selection ?? {};
+    const displayParts = resolveModelPillDisplayParts(sel, fallback);
     return {
-      label: resolveModelPillLabel(sel, fallback),
+      label: displayParts.label,
       title: resolveModelFullLabel(sel, fallback),
       accountName: resolveModelPillAccountName(sel),
+      displayParts,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection, fallback, aliasVersion]);

@@ -1,7 +1,7 @@
 /**
  * Model Grouping Utility
  *
- * Groups model names by family prefix (e.g., "Claude 4.6", "GPT 5.3")
+ * Groups model names by family prefix (e.g., "Opus 4.6", "GPT 5.3")
  * and sorts groups by version descending (largest first).
  *
  * Also provides era classification:
@@ -39,8 +39,8 @@ const CURRENT_THRESHOLDS: Record<string, number> = {
   claude: 406, // Claude 4.6+
   gpt: 540, // GPT 5.4+
   gemini: 200, // Gemini 2+
-  sonnet: 400, // Sonnet 4+
-  opus: 400, // Opus 4+
+  sonnet: 406, // Sonnet 4.6+
+  opus: 406, // Opus 4.6+
   composer: 150, // Composer 1.5+
   o: 540, // O-series: o5.4+ current; o5 / o4 / o3 / o1 older
 };
@@ -122,7 +122,7 @@ function parseClaude(rest: string): ParsedGroup {
     const modelName = parts.find((p) => CLAUDE_MODEL_NAMES.has(p));
     if (!modelName) return `Claude ${version}`;
     const modelLabel = modelName.charAt(0).toUpperCase() + modelName.slice(1);
-    return `Claude ${modelLabel} ${version}`;
+    return `${modelLabel} ${version}`;
   }
 
   for (const part of parts) {

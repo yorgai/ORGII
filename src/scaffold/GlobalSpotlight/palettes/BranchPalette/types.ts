@@ -1,6 +1,8 @@
 /**
  * BranchPalette Types
  */
+import type React from "react";
+
 import type { BasePaletteProps } from "../../shared";
 import type { BranchItem, SpotlightItem } from "../../types";
 
@@ -20,7 +22,7 @@ export interface BranchPaletteProps extends BasePaletteProps {
   /** Callback to create a new branch */
   onCreateBranch?: (branchName: string, startPoint?: string) => void;
   /** Callback to delete a branch */
-  onDeleteBranch?: (branchName: string) => void;
+  onDeleteBranch?: (branchName: string) => void | Promise<void>;
   /** Callback to checkout detached HEAD (current commit) */
   onCheckoutDetached?: () => void;
 
@@ -52,7 +54,7 @@ export interface UseBranchPaletteOptions {
   currentBranchName?: string;
   onSelect: (branchName: string, branch: BranchItem) => void;
   onCreateBranch?: (branchName: string, startPoint?: string) => void;
-  onDeleteBranch?: (branchName: string) => void;
+  onDeleteBranch?: (branchName: string) => void | Promise<void>;
   onCheckoutDetached?: () => void;
   onClose: () => void;
   onGoBackToParent?: () => void;
@@ -84,11 +86,14 @@ export interface UseBranchItemsOptions {
   effectiveShowRemoveMode: boolean;
   onSelect: (branchName: string, branch: BranchItem) => void;
   onCreateBranch?: (branchName: string, startPoint?: string) => void;
-  onDeleteBranch?: (branchName: string) => void;
+  onDeleteBranch?: (branchName: string) => void | Promise<void>;
   onCheckoutDetached?: () => void;
   onClose: () => void;
   setActiveMode: (mode: BranchPaletteMode) => void;
   setSelectedStartPoint: (point: string | null) => void;
   focusInput: () => void;
+  selectedBranchNames: Set<string>;
+  toggleBranchSelection: (branchName: string) => void;
+  renderBranchRemoveAction?: (branch: BranchItem) => React.ReactNode;
   pinnedActionItems?: SpotlightItem[];
 }

@@ -18,7 +18,6 @@
  *    default atom only. Used by the SessionCreator preview.
  */
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { Grip } from "lucide-react";
 import React, { memo, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -28,15 +27,11 @@ import {
   KEY_SOURCE,
   isHostedKey,
 } from "@src/api/tauri/session";
-import { getIconSize } from "@src/components/CompoundPill/config";
 import { Message } from "@src/components/Message";
-import ModelIcon from "@src/components/ModelIcon";
-import ModelPillTooltipContent from "@src/components/ModelPillTooltipContent";
-import SelectorPill from "@src/components/SelectorPill";
+import ModelSelectorPill from "@src/components/ModelSelectorPill";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import type { AdvancedConfig } from "@src/config/sessionCreatorConfig";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
-import { useModelPillLabel } from "@src/hooks/models";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
 import { useSessionModelField } from "@src/hooks/session/useSessionPatch";
 import {
@@ -59,7 +54,6 @@ import { getDispatchCategory } from "@src/util/session/sessionDispatch";
 
 const ModelPill: React.FC = memo(() => {
   const { t } = useTranslation();
-  const iconSize = getIconSize();
   const modelPickerStyle = useAtomValue(modelPickerStyleAtom);
   const modelSegmentRef = useRef<HTMLButtonElement>(null);
   const [selectorState, setSelectorState] = useAtom(modelSelectorAtom);
@@ -202,22 +196,6 @@ const ModelPill: React.FC = memo(() => {
     [setCreatorDefaultModel, isInSession, session, setSessionModel, t]
   );
 
-  const {
-    label: modelLabel,
-    title: modelTitle,
-    accountName,
-  } = useModelPillLabel(lastModel);
-
-  const modelIconName = useMemo(() => {
-    return lastModel?.listingModel || lastModel?.model || undefined;
-  }, [lastModel]);
-
-  const modelIconAgent = useMemo(() => {
-    return lastModel?.listingModelType || undefined;
-  }, [lastModel]);
-
-  const hasModelSelection = Boolean(modelIconName);
-
   const handleOpenModelSelector = useCallback(() => {
     setSelectorState({ isOpen: true });
   }, [setSelectorState]);
@@ -227,33 +205,12 @@ const ModelPill: React.FC = memo(() => {
   }, [setSelectorState]);
 
   const modelPill = (
-    <SelectorPill
+    <ModelSelectorPill
       ref={modelSegmentRef}
-      icon={
-        hasModelSelection ? (
-          <ModelIcon
-            modelName={modelIconName}
-            agentType={modelIconAgent}
-            size={iconSize}
-          />
-        ) : (
-          <Grip size={iconSize} strokeWidth={1.75} className="text-warning-6" />
-        )
-      }
-      label={modelLabel}
-      title={modelTitle}
-      tooltip={
-        <ModelPillTooltipContent
-          accountName={accountName}
-          modelLabel={modelTitle}
-          modelId={modelIconName}
-          modelType={modelIconAgent ?? lastModel?.selectedSourceModelType}
-          shortcut={getShortcutKeys("open_model_selector")}
-        />
-      }
-      tooltipFramed
+      selection={lastModel}
+      defaultLabel={t("sessions:creator.selectModel")}
+      shortcut={getShortcutKeys("open_model_selector")}
       active={isModelOpen}
-      danger={!hasModelSelection}
       className="h-[28px] max-w-[220px] shrink-0 text-[13px]"
       onClick={handleOpenModelSelector}
       dataTestId="chat-model-pill-model"

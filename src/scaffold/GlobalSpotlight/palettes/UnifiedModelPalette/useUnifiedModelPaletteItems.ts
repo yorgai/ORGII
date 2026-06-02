@@ -5,6 +5,7 @@ import { ORGII_ORCHESTRATOR } from "@src/assets/providers";
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import type { KeyVaultAccount } from "@src/hooks/keyVault/types";
 import { isPairCompatible } from "@src/hooks/models/modelPairCompatibility";
+import { accountHasModel } from "@src/hooks/models/useModelAccountLookup";
 import type { RecentModelEntry } from "@src/store/session/recentModelEntriesAtom";
 import { resolveDefaultVariant } from "@src/util/defaultModelVariant";
 import { resolveModelVariantFields } from "@src/util/modelVariants";
@@ -127,26 +128,54 @@ export function useUnifiedModelPaletteItems({
     );
     if (fromRecents) return fromRecents;
 
-    const account = advancedConfig.selectedAccountId
+    const selectedAccount = advancedConfig.selectedAccountId
       ? accounts.find((entry) => entry.id === advancedConfig.selectedAccountId)
       : undefined;
+    const activeModelFamily = groupByModel.get(activeModelId) ?? [
+      activeModelId,
+    ];
+    const inferredAccount =
+      selectedAccount ??
+      accounts.find((account) => {
+        const selectedModelType =
+          advancedConfig.selectedSourceModelType ??
+          advancedConfig.listingModelType;
+        if (selectedModelType && account.modelType !== selectedModelType) {
+          return false;
+        }
+        if (
+          advancedConfig.selectedSourceLabel &&
+          account.name !== advancedConfig.selectedSourceLabel
+        ) {
+          return false;
+        }
+        return activeModelFamily.some((modelId) =>
+          accountHasModel(account, modelId)
+        );
+      });
 
     return {
       modelId: activeModelId,
       sourceType: advancedConfig.keySource ?? KEY_SOURCE.OWN,
-      accountId: advancedConfig.selectedAccountId,
-      accountName: advancedConfig.selectedSourceLabel ?? account?.name,
+      accountId: inferredAccount?.id ?? advancedConfig.selectedAccountId,
+      accountName: advancedConfig.selectedSourceLabel ?? inferredAccount?.name,
       modelType:
         advancedConfig.selectedSourceModelType ??
         advancedConfig.listingModelType ??
-        account?.modelType ??
+        inferredAccount?.modelType ??
         ORGII_ORCHESTRATOR,
       cliAgentType: advancedConfig.cliAgentType,
     };
-  }, [activeModelId, advancedConfig, compatibleRecentEntries, accounts]);
+  }, [
+    activeModelId,
+    advancedConfig,
+    compatibleRecentEntries,
+    accounts,
+    groupByModel,
+  ]);
 
   const recentItems = useMemo((): SpotlightItem[] => {
-    return recentEntriesExcludingCurrent.map((entry) =>
+    return recentEntriesExcludingCurrent.slice(0, 3).map((entry) =>
       buildModelSelectionSpotlightItem({
         entry,
         section: MODEL_SECTION.RECENT,

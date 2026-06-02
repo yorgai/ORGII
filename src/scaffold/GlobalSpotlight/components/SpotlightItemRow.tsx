@@ -8,6 +8,7 @@ import { Check, CornerDownRight, Diff, Info, Lock } from "lucide-react";
 import React, { memo, useCallback, useMemo } from "react";
 
 import Checkbox from "@src/components/Checkbox";
+import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
 import { KeyboardShortcut } from "@src/components/KeyboardShortcut";
 import Tooltip from "@src/components/Tooltip";
 
@@ -218,12 +219,10 @@ export const SpotlightItemRow = memo<SpotlightItemRowProps>(
         <div
           data-spotlight-item-index={index}
           data-is-header="true"
-          className="pointer-events-none mx-2 flex items-center px-3 py-2"
+          className="pointer-events-none mx-2 flex items-center"
           style={{ height: ITEM_HEIGHT }}
         >
-          <span className="text-[12px] font-semibold uppercase tracking-wide text-text-3">
-            {item.label}
-          </span>
+          <span className={DROPDOWN_CLASSES.sectionLabel}>{item.label}</span>
         </div>
       );
     }

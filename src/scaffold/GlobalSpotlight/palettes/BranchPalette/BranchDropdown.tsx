@@ -61,18 +61,13 @@ const BranchRow: React.FC<BranchRowProps> = ({
       } w-full justify-start`}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-        <GitBranch size={14} className="text-text-2" />
+        {isCurrent ? (
+          <Check size={14} className="text-primary-6" />
+        ) : (
+          <GitBranch size={14} className="text-text-2" />
+        )}
       </span>
       <span className="truncate">{branch.name}</span>
-      {branch.isRemote && (
-        <span className="ml-auto shrink-0 text-[10px] text-text-3">remote</span>
-      )}
-      {isCurrent && (
-        <Check
-          size={14}
-          className={`${branch.isRemote ? "ml-2" : "ml-auto"} shrink-0 text-primary-6`}
-        />
-      )}
     </button>
   );
 };

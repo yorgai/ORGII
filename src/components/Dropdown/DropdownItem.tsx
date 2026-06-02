@@ -242,7 +242,7 @@ export const DropdownItemGroup: React.FC<DropdownItemGroupProps> = ({
 }) => {
   return (
     <div className={className}>
-      <div className="px-3 py-1.5 text-xs font-medium text-text-3">{label}</div>
+      <div className={DROPDOWN_CLASSES.sectionLabel}>{label}</div>
       {children}
     </div>
   );

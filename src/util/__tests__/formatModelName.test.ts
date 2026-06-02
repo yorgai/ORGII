@@ -9,13 +9,11 @@ import {
 
 describe("formatModelName", () => {
   it("formats claude opus with date stripped", () => {
-    expect(formatModelName("claude-opus-4.5-20251219")).toBe("Claude Opus 4.5");
+    expect(formatModelName("claude-opus-4.5-20251219")).toBe("Opus 4.5");
   });
 
   it("merges digit segments for claude 3.5 sonnet", () => {
-    expect(formatModelName("claude-3-5-sonnet-20241022")).toBe(
-      "Claude 3.5 Sonnet"
-    );
+    expect(formatModelName("claude-3-5-sonnet-20241022")).toBe("Sonnet 3.5");
   });
 
   it("formats gpt-4-turbo with date stripped", () => {
@@ -57,7 +55,7 @@ describe("formatModelNameFull", () => {
 
   it("preserves compact date for claude opus", () => {
     expect(formatModelNameFull("claude-opus-4.5-20251219")).toBe(
-      "Claude Opus 4.5 20251219"
+      "Opus 4.5 20251219"
     );
   });
 
@@ -73,7 +71,7 @@ describe("compactModelLabel", () => {
   });
 
   it("strips Claude prefix from sonnet label", () => {
-    expect(compactModelLabel("Claude 3.5 Sonnet")).toBe("3.5 Sonnet");
+    expect(compactModelLabel("Claude 3.5 Sonnet")).toBe("Sonnet 3.5");
   });
 
   it("leaves GPT labels unchanged", () => {
@@ -187,15 +185,15 @@ describe("resolveModelDisplayLabel", () => {
 });
 
 describe("resolveModelFullLabel", () => {
-  it("preserves listingModelDisplay without stripping Claude", () => {
+  it("compacts listingModelDisplay", () => {
     expect(
       resolveModelFullLabel({ listingModelDisplay: "Claude Opus 4.5" })
-    ).toBe("Claude Opus 4.5");
+    ).toBe("Opus 4.5");
   });
 
-  it("preserves listingName", () => {
+  it("compacts listingName", () => {
     expect(resolveModelFullLabel({ listingName: "Claude 3.5 Sonnet" })).toBe(
-      "Claude 3.5 Sonnet"
+      "Sonnet 3.5"
     );
   });
 

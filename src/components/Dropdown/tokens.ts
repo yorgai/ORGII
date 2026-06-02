@@ -99,7 +99,11 @@ export const DROPDOWN_ITEM = {
   fontSize: 14,
   fontSizeClass: "text-sm",
 
-  /** Hover background */
+  /**
+   * Hover background. Hover only changes the surface fill — the selected
+   * state owns the `primary-6` text color + checkmark, and mixing the two
+   * (blue text on every hovered row) makes every row look selected.
+   */
   hoverBgClass: "hover:bg-surface-hover",
 
   /**
@@ -254,7 +258,6 @@ export const DROPDOWN_CLASSES = {
   itemSelected: [
     DROPDOWN_ITEM.selectedBgClass,
     DROPDOWN_ITEM.selectedTextClass,
-    "[&_svg]:text-primary-6",
     "hover:bg-surface-hover",
     "hover:!text-primary-6",
     "font-medium",
@@ -398,8 +401,9 @@ export const DROPDOWN_CLASSES = {
     DROPDOWN_PANEL.paddingClass,
   ].join(" "),
 
-  /** Section / group label inside a dropdown (non-interactive). */
-  sectionLabel: "py-2 pl-2.5 pr-2 text-[12px] font-medium text-text-3",
+  /** Compact section / group label inside a dropdown (non-interactive). */
+  sectionLabel:
+    "px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-text-3",
 
   /** Footer container (Select All, actions) — flex, border-t, p-1 */
   footerContainer: [

@@ -55,9 +55,7 @@ export const RecentFilesSection: React.FC<RecentFilesSectionProps> = memo(
 
     return (
       <div className="border-b border-solid border-border-2 p-1">
-        <div className="px-3 py-1.5 text-[11px] font-medium text-text-3">
-          Recent
-        </div>
+        <div className={DROPDOWN_CLASSES.sectionLabel}>Recent</div>
         {files.slice(0, STYLE_CONFIG.recentSectionMaxItems).map((file, idx) => {
           const rowActive = activeIndex === baseIndex + idx;
           return (

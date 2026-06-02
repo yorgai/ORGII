@@ -8,8 +8,8 @@
  * - Title-casing with special uppercase for GPT / O-series
  *
  * Examples:
- *   claude-opus-4.5-20251219   → Claude Opus 4.5
- *   claude-3-5-sonnet-20241022 → Claude 3.5 Sonnet
+ *   claude-opus-4.5-20251219   → Opus 4.5
+ *   claude-3-5-sonnet-20241022 → Sonnet 3.5
  *   gpt-4-turbo-2024-04-09     → GPT 4 Turbo
  *   gpt-5.3-codex              → GPT 5.3 Codex
  *   o3-mini-2025-01-31          → O3 Mini
@@ -17,13 +17,54 @@
  */
 import { getModelAliasDisplayName } from "@src/hooks/models/modelAliasRegistry";
 
+import { groupModels } from "./modelGrouping";
+import { formatReasoningLevel, parseModelVariant } from "./modelVariants";
+
 const UPPERCASE_TOKENS = new Set(["gpt", "o1", "o3", "o4"]);
 const TRAILING_JUNK_RE = /(?:-\d{8,}|-\d{4}-\d{2}-\d{2}|-latest)$/;
+const CLAUDE_MODEL_NAMES = new Set(["opus", "sonnet", "haiku"]);
+
+function formatClaudeModelName(cleanedModel: string): string | undefined {
+  if (!cleanedModel.toLowerCase().startsWith("claude")) return undefined;
+
+  const parts = cleanedModel
+    .toLowerCase()
+    .replace(/^claude-?/, "")
+    .split("-")
+    .filter(Boolean);
+  const modelName = parts.find((part) => CLAUDE_MODEL_NAMES.has(part));
+  const modelLabel = modelName
+    ? modelName.charAt(0).toUpperCase() + modelName.slice(1)
+    : undefined;
+
+  const decimalVersion = parts.find((part) => /^\d+\.\d+$/.test(part));
+  if (decimalVersion) {
+    return modelLabel
+      ? `${modelLabel} ${decimalVersion}`
+      : `Claude ${decimalVersion}`;
+  }
+
+  const integerParts = parts.filter((part) => /^\d+$/.test(part));
+  if (integerParts.length >= 2) {
+    const version = `${integerParts[0]}.${integerParts[1]}`;
+    return modelLabel ? `${modelLabel} ${version}` : `Claude ${version}`;
+  }
+  if (integerParts.length === 1) {
+    return modelLabel
+      ? `${modelLabel} ${integerParts[0]}`
+      : `Claude ${integerParts[0]}`;
+  }
+
+  return modelLabel ?? "Claude";
+}
 
 export function formatModelName(model: string): string {
   if (!model || model === "default") return model;
 
   const cleaned = model.replace(TRAILING_JUNK_RE, "");
+  const claudeName = formatClaudeModelName(cleaned);
+  if (claudeName) return claudeName;
+
   const parts = cleaned.split("-");
 
   const filtered: string[] = [];
@@ -43,13 +84,15 @@ export function formatModelName(model: string): string {
     }
   }
 
-  return merged
+  const formatted = merged
     .map((part) => {
       if (/^\d/.test(part)) return part;
       if (UPPERCASE_TOKENS.has(part.toLowerCase())) return part.toUpperCase();
       return part.charAt(0).toUpperCase() + part.slice(1);
     })
     .join(" ");
+
+  return compactModelLabel(formatted);
 }
 
 /**
@@ -57,7 +100,7 @@ export function formatModelName(model: string): string {
  *
  * Examples:
  *   gpt-5.2-2025-12-11   → GPT 5.2 2025-12-11
- *   claude-opus-4.5-20251219 → Claude Opus 4.5 (20251219)
+ *   claude-opus-4.5-20251219 → Opus 4.5 20251219
  *   o3-mini-2025-01-31   → O3 Mini 2025-01-31
  *   gemini-2.0-flash     → Gemini 2.0 Flash
  */
@@ -82,14 +125,33 @@ export function formatModelNameFull(model: string): string {
  *
  * Examples:
  *   Claude Opus 4.5   → Opus 4.5
- *   Claude 3.5 Sonnet  → 3.5 Sonnet
+ *   Claude 3.5 Sonnet  → Sonnet 3.5
  *   GPT 4 Turbo        → GPT 4 Turbo  (unchanged)
  *   Gemini 2.0 Flash   → Gemini 2.0 Flash  (unchanged)
  */
+const CLAUDE_LABEL_RE =
+  /^Claude\s+(?:(Opus|Sonnet|Haiku)\s+(.+)|(.+)\s+(Opus|Sonnet|Haiku))$/i;
 const STRIP_PREFIX_RE = /^Claude\s+/i;
 
+function normalizeClaudeFamilyLabel(label: string): string | undefined {
+  const match = label.match(CLAUDE_LABEL_RE);
+  if (!match) return undefined;
+
+  const leadingFamily = match[1];
+  const leadingVersion = match[2];
+  const trailingVersion = match[3];
+  const trailingFamily = match[4];
+  const family = leadingFamily ?? trailingFamily;
+  const version = leadingVersion ?? trailingVersion;
+  if (!family || !version) return undefined;
+
+  return `${family.charAt(0).toUpperCase()}${family.slice(1).toLowerCase()} ${version}`;
+}
+
 export function compactModelLabel(label: string): string {
-  return label.replace(STRIP_PREFIX_RE, "");
+  return (
+    normalizeClaudeFamilyLabel(label) ?? label.replace(STRIP_PREFIX_RE, "")
+  );
 }
 
 // ─── Version-aware sorting ───────────────────────────────────────────────────
@@ -135,6 +197,13 @@ interface ModelSelection {
   listingModelDisplay?: string;
   listingName?: string;
   selectedSourceLabel?: string;
+}
+
+export interface ModelPillDisplayParts {
+  label: string;
+  rawValue?: string;
+  variantInfo?: string;
+  thinking: boolean;
 }
 
 interface ProviderWithModels {
@@ -192,23 +261,52 @@ export function resolveModelDisplayLabel(
   return compactModelLabel(formatModelNameFull(selection.model));
 }
 
+function resolveModelGroupLabel(modelId: string): string {
+  const variant = parseModelVariant(modelId);
+  const displayModelId = variant?.baseModel ?? modelId;
+  const alias = getModelAliasDisplayName(displayModelId);
+  if (alias) return alias;
+
+  const groupedModel = groupModels([displayModelId])[0];
+  if (groupedModel && groupedModel.label !== "Other") return groupedModel.label;
+
+  return formatModelNameFull(displayModelId);
+}
+
+export function resolveModelPillDisplayParts(
+  selection: ModelSelection,
+  fallback: string = "Model"
+): ModelPillDisplayParts {
+  const modelId = selection.model || selection.listingModel;
+  if (!modelId) {
+    return { label: fallback, thinking: false };
+  }
+
+  const variant = parseModelVariant(modelId);
+  const variantParts: string[] = [];
+  if (variant?.reasoning)
+    variantParts.push(formatReasoningLevel(variant.reasoning));
+  if (variant?.fast) variantParts.push("Fast");
+
+  return {
+    label: resolveModelGroupLabel(modelId),
+    rawValue: modelId,
+    variantInfo: variantParts.length > 0 ? variantParts.join(" · ") : undefined,
+    thinking: Boolean(variant?.thinking),
+  };
+}
+
 /**
- * Compact label for toolbar model pills — always derived from the model id
- * (alias → formatted id). Skips listing display names / provider labels so
- * the pill shows only the model name (e.g. "GPT 5.5"), not tier or source
- * metadata.
+ * Label for toolbar model pills — always derived from the model id
+ * (alias → grouped/formatted id), matching the model dropdown rows. Skips listing
+ * display names / provider labels so the pill shows only the model name,
+ * not tier or source metadata.
  */
 export function resolveModelPillLabel(
   selection: ModelSelection,
   fallback: string = "Model"
 ): string {
-  const modelId = selection.model || selection.listingModel;
-  if (!modelId) return fallback;
-
-  const alias = getModelAliasDisplayName(modelId);
-  if (alias) return alias;
-
-  return compactModelLabel(formatModelNameFull(modelId));
+  return resolveModelPillDisplayParts(selection, fallback).label;
 }
 
 /** Account / source label for model-pill breadcrumb tooltips. */
@@ -229,10 +327,10 @@ export function resolveModelFullLabel(
   fallback: string = "Model"
 ): string {
   if (selection.listingModelDisplay) {
-    return selection.listingModelDisplay;
+    return compactModelLabel(selection.listingModelDisplay);
   }
   if (selection.listingName) {
-    return selection.listingName;
+    return compactModelLabel(selection.listingName);
   }
   if (selection.listingModel) {
     const alias = getModelAliasDisplayName(selection.listingModel);

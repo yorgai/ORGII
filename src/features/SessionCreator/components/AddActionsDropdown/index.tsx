@@ -77,9 +77,7 @@ const AddActionsDropdown: React.FC<AddActionsDropdownProps> = ({
     [onAddContent, onUpload, close]
   );
 
-  const triggerStateClass = isOpen
-    ? "border-transparent bg-fill-2"
-    : "border-transparent bg-fill-1 hover:bg-fill-2";
+  const triggerStateClass = isOpen ? "bg-fill-2" : "bg-fill-1 hover:bg-fill-2";
 
   const triggerButton = (
     <button

@@ -76,10 +76,9 @@ export function buildSourceItems({
   const accountById = new Map(accounts.map((account) => [account.id, account]));
 
   return sourceOptions.map((source) => {
-    const SourceIcon = (iconProps: Record<string, unknown>) => {
-      const size = (iconProps as { size?: number }).size || 16;
-      return <ModelIcon agentType={source.modelType} size={size} />;
-    };
+    const SourceIcon = () => (
+      <ModelIcon agentType={source.modelType} size={14} />
+    );
 
     const sourceAccount = source.accountId
       ? accountById.get(source.accountId)

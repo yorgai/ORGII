@@ -11,11 +11,17 @@
  * Submission logic shared via useQuestionSubmission.
  * Selection state shared via useOptionSelection.
  */
+import { useAtomValue } from "jotai";
 import React, { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useSettingValue } from "@src/hooks/settings/useSettings";
 import { useAutoTimeout } from "@src/hooks/ui";
+import { userPresenceAtom } from "@src/store/user/userPresenceAtom";
+import {
+  USER_PRESENCE_MODE,
+  isBuiltInPresenceMode,
+} from "@src/types/userPresence";
 import { isCliSession } from "@src/util/session/sessionDispatch";
 
 import { QuestionCardShell } from "./QuestionCardShell";
@@ -132,9 +138,15 @@ const AskQuestionCard: React.FC<AskQuestionCardProps> = ({
   // Auto-skip countdown
   // ============================================
 
-  const questionAutoSkipTimeout = useSettingValue(
-    "agent.sde.questionAutoSkipTimeout"
+  const questionAutoSkipTimeoutByPresence = useSettingValue(
+    "agent.sde.questionAutoSkipTimeoutByPresence"
   );
+  const userPresence = useAtomValue(userPresenceAtom);
+  const activePresenceMode = isBuiltInPresenceMode(userPresence.mode)
+    ? userPresence.mode
+    : USER_PRESENCE_MODE.ONLINE;
+  const questionAutoSkipTimeout =
+    questionAutoSkipTimeoutByPresence[activePresenceMode];
   const isCliCodingSession = currentBatch
     ? isCliSession(currentBatch.sessionId)
     : false;

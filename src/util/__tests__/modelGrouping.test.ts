@@ -7,31 +7,31 @@ import {
 } from "../modelGrouping";
 
 describe("groupModels", () => {
-  it("groups Claude models by version (claude-3-5-sonnet-20241022 → Claude Sonnet 3.5)", () => {
+  it("groups Claude models by version (claude-3-5-sonnet-20241022 → Sonnet 3.5)", () => {
     const groups = groupModels(["claude-3-5-sonnet-20241022"]);
     expect(groups).toHaveLength(1);
     expect(groups[0]).toMatchObject({
-      label: "Claude Sonnet 3.5",
+      label: "Sonnet 3.5",
       sortVersion: 305,
       models: ["claude-3-5-sonnet-20241022"],
     });
   });
 
-  it("groups Claude models with decimal version (claude-4.5-sonnet → Claude Sonnet 4.5)", () => {
+  it("groups Claude models with decimal version (claude-4.5-sonnet → Sonnet 4.5)", () => {
     const groups = groupModels(["claude-4.5-sonnet"]);
     expect(groups).toHaveLength(1);
     expect(groups[0]).toMatchObject({
-      label: "Claude Sonnet 4.5",
+      label: "Sonnet 4.5",
       sortVersion: 405,
       models: ["claude-4.5-sonnet"],
     });
   });
 
-  it("groups Claude models with reversed name-version format (claude-opus-4-7 → Claude Opus 4.7)", () => {
+  it("groups Claude models with reversed name-version format (claude-opus-4-7 → Opus 4.7)", () => {
     const groups = groupModels(["claude-opus-4-7"]);
     expect(groups).toHaveLength(1);
     expect(groups[0]).toMatchObject({
-      label: "Claude Opus 4.7",
+      label: "Opus 4.7",
       sortVersion: 407,
       models: ["claude-opus-4-7"],
     });
@@ -75,7 +75,7 @@ describe("groupModels", () => {
     ]);
     expect(groups.map((group) => group.label)).toEqual([
       "GPT 5.3",
-      "Claude Sonnet 4.1",
+      "Sonnet 4.1",
       "GPT 4",
     ]);
   });
@@ -105,7 +105,7 @@ describe("getDefaultEnabledModels", () => {
 describe("isLegacyGroup", () => {
   it("treats Claude 4.5 (405) as legacy (< 406)", () => {
     const group: ModelGroup = {
-      label: "Claude Sonnet 4.5",
+      label: "Sonnet 4.5",
       sortVersion: 405,
       models: [],
     };
@@ -114,7 +114,7 @@ describe("isLegacyGroup", () => {
 
   it("treats Claude 3.5 (305) as legacy (< 406)", () => {
     const group: ModelGroup = {
-      label: "Claude Sonnet 3.5",
+      label: "Sonnet 3.5",
       sortVersion: 305,
       models: [],
     };
@@ -123,7 +123,7 @@ describe("isLegacyGroup", () => {
 
   it("treats Claude 4.6 (406) as current", () => {
     const group: ModelGroup = {
-      label: "Claude Sonnet 4.6",
+      label: "Sonnet 4.6",
       sortVersion: 406,
       models: [],
     };

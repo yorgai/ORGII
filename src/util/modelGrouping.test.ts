@@ -172,7 +172,7 @@ describe("sortModelGroups", () => {
     expect(sorted[0].label).toBe("GPT 5.2");
     expect(sorted.slice(1).map((group) => group.label)).toEqual([
       "GPT 5.4",
-      "Claude Opus 4.6",
+      "Opus 4.6",
     ]);
   });
 
@@ -184,9 +184,9 @@ describe("sortModelGroups", () => {
     );
 
     expect(sorted.map((group) => group.label)).toEqual([
-      "Claude Opus 4.6",
       "GPT 5.2",
       "GPT 5.4",
+      "Opus 4.6",
     ]);
   });
 });
