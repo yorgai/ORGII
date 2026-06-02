@@ -89,8 +89,8 @@ export function useWorkItemOrchestrator(
   const agentMode: AgentExecMode | undefined = normalizeExecMode(rawMode);
 
   const resolveSessionRepoPath = useCallback(
-    () => worktreePath ?? projectRepoPath ?? "",
-    [worktreePath, projectRepoPath]
+    () => projectRepoPath ?? worktreePath ?? "",
+    [projectRepoPath, worktreePath]
   );
 
   const validateOrchestratorParams = useCallback((): boolean => {
@@ -118,6 +118,12 @@ export function useWorkItemOrchestrator(
         if (!accountId) {
           Message.error(t("workItems.agentSettings.noCodeAccountError"));
         }
+        return;
+      }
+
+      if (displayWorkItem.executionLock?.activeSessionId) {
+        Message.warning(t("workItems.agentWorkflow.running"));
+        onRefreshWorkItem?.();
         return;
       }
 
@@ -169,6 +175,7 @@ export function useWorkItemOrchestrator(
       handleSave,
       validateOrchestratorParams,
       accountId,
+      displayWorkItem.executionLock?.activeSessionId,
       projectRepoPath,
       projectSlug,
       shortId,

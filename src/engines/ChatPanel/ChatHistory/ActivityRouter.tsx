@@ -7,6 +7,7 @@
  */
 import React, { Suspense, memo, useMemo } from "react";
 
+import { AgentMessageBlock } from "@src/engines/ChatPanel/blocks";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import {
   chatRequiresItemIndex,
@@ -69,15 +70,25 @@ function arePropsEqual(
   if (prevProps.itemIndex !== nextProps.itemIndex) return false;
   if (prevProps.status !== nextProps.status) return false;
   if (prevProps.isStreaming !== nextProps.isStreaming) return false;
-  if (prevProps.event.id !== nextProps.event.id) return false;
-  if (prevProps.event.displayStatus !== nextProps.event.displayStatus)
-    return false;
-  if (!isResultEqual(prevProps.event.result, nextProps.event.result)) {
+
+  const prevEvent = prevProps.event;
+  const nextEvent = nextProps.event;
+
+  if (prevEvent.id !== nextEvent.id) return false;
+  if (prevEvent.actionType !== nextEvent.actionType) return false;
+  if (prevEvent.functionName !== nextEvent.functionName) return false;
+  if (prevEvent.uiCanonical !== nextEvent.uiCanonical) return false;
+  if (prevEvent.activityStatus !== nextEvent.activityStatus) return false;
+  if (prevEvent.displayStatus !== nextEvent.displayStatus) return false;
+  if (prevEvent.displayText !== nextEvent.displayText) return false;
+  if (prevEvent.displayVariant !== nextEvent.displayVariant) return false;
+
+  if (!isResultEqual(prevEvent.result, nextEvent.result)) {
     return false;
   }
 
-  const prevArgs = prevProps.event.args;
-  const nextArgs = nextProps.event.args;
+  const prevArgs = prevEvent.args;
+  const nextArgs = nextEvent.args;
   if (prevArgs?.streamContent !== nextArgs?.streamContent) return false;
   if (prevArgs?.title !== nextArgs?.title) return false;
   if (prevArgs?.streamOutput !== nextArgs?.streamOutput) return false;
@@ -95,6 +106,14 @@ function arePropsEqual(
 const ActivityLoadingFallback: React.FC = () => (
   <div className="h-8 animate-pulse rounded bg-fill-2" />
 );
+
+function getAssistantMessageContent(event: SessionEvent): string | null {
+  const text =
+    extractTextFromContent(event.result?.observation) ||
+    extractTextFromContent(event.result?.content) ||
+    extractTextFromContent(event.displayText);
+  return text?.trim() ? text : null;
+}
 
 // ============================================
 // Error Boundary
@@ -201,6 +220,25 @@ const ActivityChatItem: React.FC<ActivityChatItemProps> = memo(
       }
 
       const eventType = getRegistryEventType(event);
+
+      if (eventType === "agent_message") {
+        const assistantContent = getAssistantMessageContent(event);
+        if (assistantContent) {
+          return (
+            <AgentMessageBlock>
+              <AgentChatItemDefault
+                itemIndex={itemIndex}
+                expand={true}
+                finish={!isStreaming}
+                streamHtml={isStreaming}
+              >
+                {assistantContent}
+              </AgentChatItemDefault>
+            </AgentMessageBlock>
+          );
+        }
+      }
+
       const EventComponent = getChatLazyComponent(eventType);
 
       if (EventComponent) {
@@ -214,7 +252,7 @@ const ActivityChatItem: React.FC<ActivityChatItemProps> = memo(
         return (
           <ActivityErrorBoundary eventType={eventType}>
             <Suspense fallback={<ActivityLoadingFallback />}>
-              <EventComponent event={event} {...extras} />
+              <EventComponent event={event} variant="chat" {...extras} />
             </Suspense>
           </ActivityErrorBoundary>
         );

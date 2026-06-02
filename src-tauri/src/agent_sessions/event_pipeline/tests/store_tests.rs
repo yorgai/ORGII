@@ -720,6 +720,124 @@ fn test_authoritative_stream_upsert_removes_placeholder_when_final_already_exist
 }
 
 #[test]
+fn test_authoritative_thinking_upsert_replaces_duplicate_in_current_turn() {
+    let mut store = EventStore::new();
+    let mut user = make_event("user-1", "user_message");
+    user.source = EventSource::User;
+    user.display_variant = EventDisplayVariant::Message;
+    user.display_text = "first prompt".to_string();
+
+    let mut first = make_event("stream-think-session-1", "llm_thinking");
+    first.display_variant = EventDisplayVariant::Thinking;
+    first.display_text = "same thought".to_string();
+    first.created_at = "2026-05-22T07:18:20.100Z".to_string();
+
+    store.set(vec![user, first]);
+
+    let mut duplicate = make_event("stream-think-session-2", "llm_thinking");
+    duplicate.display_variant = EventDisplayVariant::Thinking;
+    duplicate.display_text = "same   thought".to_string();
+    duplicate.created_at = "2026-05-22T07:18:30.000Z".to_string();
+
+    store.upsert(duplicate);
+
+    assert!(store.get_by_id("stream-think-session-1").is_none());
+    assert!(store.get_by_id("stream-think-session-2").is_some());
+    assert_eq!(store.event_count(), 2);
+    assert_eq!(store.events()[1].id, "stream-think-session-2");
+    assert_eq!(store.events()[1].created_at, "2026-05-22T07:18:20.100Z");
+}
+
+#[test]
+fn test_authoritative_thinking_upsert_preserves_same_text_across_turns() {
+    let mut store = EventStore::new();
+    let mut user_one = make_event("user-1", "user_message");
+    user_one.source = EventSource::User;
+    user_one.display_variant = EventDisplayVariant::Message;
+    user_one.display_text = "first prompt".to_string();
+
+    let mut first = make_event("stream-think-session-1", "llm_thinking");
+    first.display_variant = EventDisplayVariant::Thinking;
+    first.display_text = "same thought".to_string();
+
+    let mut user_two = make_event("user-2", "user_message");
+    user_two.source = EventSource::User;
+    user_two.display_variant = EventDisplayVariant::Message;
+    user_two.display_text = "second prompt".to_string();
+
+    store.set(vec![user_one, first, user_two]);
+
+    let mut repeated_next_turn = make_event("stream-think-session-2", "llm_thinking");
+    repeated_next_turn.display_variant = EventDisplayVariant::Thinking;
+    repeated_next_turn.display_text = "same thought".to_string();
+
+    store.upsert(repeated_next_turn);
+
+    assert!(store.get_by_id("stream-think-session-1").is_some());
+    assert!(store.get_by_id("stream-think-session-2").is_some());
+    assert_eq!(store.event_count(), 4);
+}
+
+#[test]
+fn test_authoritative_message_upsert_replaces_duplicate_in_current_turn() {
+    let mut store = EventStore::new();
+    let mut user = make_event("user-1", "user_message");
+    user.source = EventSource::User;
+    user.display_variant = EventDisplayVariant::Message;
+    user.display_text = "first prompt".to_string();
+
+    let mut first = make_event("stream-msg-session-1", "message");
+    first.display_variant = EventDisplayVariant::Message;
+    first.display_text = "same assistant note".to_string();
+    first.created_at = "2026-05-22T07:18:20.100Z".to_string();
+
+    store.set(vec![user, first]);
+
+    let mut duplicate = make_event("stream-msg-session-2", "message");
+    duplicate.display_variant = EventDisplayVariant::Message;
+    duplicate.display_text = "same assistant note".to_string();
+    duplicate.created_at = "2026-05-22T07:18:30.000Z".to_string();
+
+    store.upsert(duplicate);
+
+    assert!(store.get_by_id("stream-msg-session-1").is_none());
+    assert!(store.get_by_id("stream-msg-session-2").is_some());
+    assert_eq!(store.event_count(), 2);
+    assert_eq!(store.events()[1].id, "stream-msg-session-2");
+    assert_eq!(store.events()[1].created_at, "2026-05-22T07:18:20.100Z");
+}
+
+#[test]
+fn test_authoritative_message_upsert_preserves_same_text_across_turns() {
+    let mut store = EventStore::new();
+    let mut user_one = make_event("user-1", "user_message");
+    user_one.source = EventSource::User;
+    user_one.display_variant = EventDisplayVariant::Message;
+    user_one.display_text = "first prompt".to_string();
+
+    let mut first = make_event("stream-msg-session-1", "message");
+    first.display_variant = EventDisplayVariant::Message;
+    first.display_text = "same assistant note".to_string();
+
+    let mut user_two = make_event("user-2", "user_message");
+    user_two.source = EventSource::User;
+    user_two.display_variant = EventDisplayVariant::Message;
+    user_two.display_text = "second prompt".to_string();
+
+    store.set(vec![user_one, first, user_two]);
+
+    let mut repeated_next_turn = make_event("stream-msg-session-2", "message");
+    repeated_next_turn.display_variant = EventDisplayVariant::Message;
+    repeated_next_turn.display_text = "same assistant note".to_string();
+
+    store.upsert(repeated_next_turn);
+
+    assert!(store.get_by_id("stream-msg-session-1").is_some());
+    assert!(store.get_by_id("stream-msg-session-2").is_some());
+    assert_eq!(store.event_count(), 4);
+}
+
+#[test]
 fn test_update_spawning_tool_args() {
     let mut store = EventStore::new();
     store.set(vec![

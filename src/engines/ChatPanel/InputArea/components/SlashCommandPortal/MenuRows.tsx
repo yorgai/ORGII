@@ -226,6 +226,7 @@ export const ModeFlyoutTriggerRow: React.FC<ModeFlyoutTriggerRowProps> =
       return (
         <div
           data-slash-flat
+          data-testid="slash-command-mode-flyout-trigger"
           className={`${rowClass(isActive, isOpen)} justify-between`}
           onMouseEnter={onMouseEnter}
           onMouseDown={(e) => {

@@ -43,6 +43,9 @@ pub struct OrchestratorConfig {
     /// ID of the agent organization assigned to this work item
     #[serde(skip_serializing_if = "Option::is_none")]
     pub org_id: Option<String>,
+    /// Execution mode passed to the launched agent session.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_mode: Option<String>,
     /// Custom agent definition to use as the main executor (None = default SDE).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent_definition_id: Option<String>,
@@ -73,6 +76,7 @@ impl Default for OrchestratorConfig {
             selected_model_id: None,
             sub_agent_ids: Vec::new(),
             org_id: None,
+            agent_mode: None,
             agent_definition_id: None,
             worktree_path: None,
         }

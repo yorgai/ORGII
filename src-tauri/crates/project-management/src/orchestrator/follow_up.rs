@@ -54,6 +54,9 @@ pub fn create_follow_up(
         follow_up_items: vec![],
         schedule: None,
         routine_source: parent.routine_source.clone(),
+        execution_lock: None,
+        close_out: None,
+        work_products: vec![],
     };
 
     let body = format!(

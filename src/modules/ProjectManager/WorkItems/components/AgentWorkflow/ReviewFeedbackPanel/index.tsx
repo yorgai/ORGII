@@ -163,7 +163,7 @@ const ReviewFeedbackPanel: React.FC<ReviewFeedbackPanelProps> = ({
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {onRetry && (
-              <Button variant="primary" size="small" onClick={onRetry}>
+              <Button variant="primary" size="small" onClick={() => onRetry()}>
                 {t("workItems.agentWorkflow.fixAndRerun")}
               </Button>
             )}

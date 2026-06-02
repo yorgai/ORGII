@@ -1124,6 +1124,9 @@ async fn debug_work_item_runtime_launch_impl(
                 follow_up_items: Vec::new(),
                 schedule: None,
                 routine_source: None,
+                execution_lock: None,
+                close_out: None,
+                work_products: Vec::new(),
             };
             write_work_item(
                 &project_slug,

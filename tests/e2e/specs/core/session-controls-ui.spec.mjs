@@ -117,6 +117,11 @@ const CONTROL_SCENARIO_NAMES = [
 
 const RUST_AGENT_EXEC_MODE_SCENARIOS = new Set([
   "fresh-stop",
+  "plan-build-direct",
+  "plan-update",
+  "plan-edit-resend",
+  "plan-stop",
+  "plan-write-denied",
   "investigate-write-denied",
   "investigate-force-send",
 ]);

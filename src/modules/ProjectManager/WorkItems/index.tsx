@@ -259,7 +259,8 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
     setHasWorkItemPendingChanges(false);
   }, [handlers]);
 
-  const resolvedRepoPath = currentRepo?.path ?? null;
+  const linkedRepoPath = sourceProject?.linkedRepos?.[0]?.id;
+  const resolvedRepoPath = linkedRepoPath ?? currentRepo?.path ?? null;
   const resolvedProjectSlug = projectData.project?.slug ?? null;
   const selectedShortId = data.selectedWorkItem
     ? (data.getShortId(data.selectedWorkItem.session_id) ?? null)

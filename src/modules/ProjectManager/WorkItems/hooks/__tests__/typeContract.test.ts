@@ -55,6 +55,7 @@ function createMockEnrichedWorkItem(
     comments: [],
     linkedSessions: [],
     followUpItems: [],
+    workProducts: [],
     history: [],
     ...overrides,
   };

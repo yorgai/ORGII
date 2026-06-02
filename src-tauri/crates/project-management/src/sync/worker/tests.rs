@@ -538,6 +538,9 @@ fn wi_fm(short_id: &str, title: &str, status: &str) -> WorkItemFrontmatter {
         follow_up_items: vec![],
         schedule: None,
         routine_source: None,
+        execution_lock: None,
+        close_out: None,
+        work_products: vec![],
     }
 }
 

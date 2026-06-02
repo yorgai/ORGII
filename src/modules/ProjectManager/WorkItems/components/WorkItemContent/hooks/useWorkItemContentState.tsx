@@ -120,6 +120,7 @@ export function useWorkItemContentState(
       CONTENT_TAB_KEYS.map((key) => ({
         key,
         label: t(`common:labels.${key}`),
+        dataTestId: `work-item-tab-${key}`,
         badge:
           key === "execution" && isAgentRunning ? (
             <span className="ml-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary-6" />

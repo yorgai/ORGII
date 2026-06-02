@@ -74,6 +74,7 @@ const ModeFlyout: React.FC<ModeFlyoutProps> = ({
           return (
             <div
               key={mode.id}
+              data-testid={`slash-command-mode-option-${mode.id}`}
               className={`${DROPDOWN_CLASSES.itemCompact} group cursor-pointer justify-between ${
                 isActive ? "bg-fill-2" : "hover:bg-fill-2"
               }`}

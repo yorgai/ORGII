@@ -205,11 +205,13 @@ export interface E2EHelpers {
   upsertRoutine: (routine: Json) => Promise<Result<{ routine: Json }>>;
   deleteRoutine: (routineId: string) => Promise<Result<{ removed: boolean }>>;
   fireRoutine: (routineId: string) => Promise<Result<{ result: Json }>>;
+  listRoutineFires: (routineId: string) => Promise<Result<{ fires: Json[] }>>;
   projects: {
     listRoutines: () => Promise<Result<{ routines: Json[] }>>;
     upsertRoutine: (routine: Json) => Promise<Result<{ routine: Json }>>;
     deleteRoutine: (routineId: string) => Promise<Result<{ removed: boolean }>>;
     fireRoutine: (routineId: string) => Promise<Result<{ result: Json }>>;
+    listRoutineFires: (routineId: string) => Promise<Result<{ fires: Json[] }>>;
   };
   readWorkItem: (
     projectSlug: string,
@@ -597,6 +599,11 @@ export interface E2EHelpers {
     workspacePath?: string | null
   ) => Promise<{ ok: true } | Err>;
   navigateTo: (path: string) => Promise<{ ok: true } | Err>;
+  openProjectWorkItemsTab: (
+    projectId: string,
+    projectName: string,
+    projectSlug?: string
+  ) => Promise<{ ok: true } | Err>;
   openAgentTab: (agentId: string, tab: string) => Promise<{ ok: true } | Err>;
   getLocationPathname: () => string;
 }

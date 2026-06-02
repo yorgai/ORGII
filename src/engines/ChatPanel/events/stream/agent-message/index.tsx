@@ -221,18 +221,23 @@ export const AgentMessageEvent: React.FC<AgentMessageEventProps> = (props) => {
     : null;
 
   const rawContent = useMemo(() => {
-    if (!normalizedProps) return undefined;
     if (props.isStreaming && directStreamContent) return directStreamContent;
     return (
       props.streamingContent ||
-      extractText(normalizedProps.result?.observation) ||
-      extractText(normalizedProps.result?.content) ||
-      extractText(normalizedProps.args?.task_description) ||
+      extractText(normalizedProps?.result?.observation) ||
+      extractText(normalizedProps?.result?.content) ||
+      extractText(props.event?.result?.observation) ||
+      extractText(props.event?.result?.content) ||
+      extractText(props.event?.displayText) ||
+      extractText(normalizedProps?.args?.task_description) ||
       undefined
     );
   }, [
     normalizedProps,
     props.streamingContent,
+    props.event?.result?.observation,
+    props.event?.result?.content,
+    props.event?.displayText,
     props.isStreaming,
     directStreamContent,
   ]);
@@ -243,9 +248,11 @@ export const AgentMessageEvent: React.FC<AgentMessageEventProps> = (props) => {
     [rawContent]
   );
 
-  if (!normalizedProps) return null;
+  const variant = normalizedProps?.variant ?? props.variant;
 
-  if (normalizedProps.variant === "chat") {
+  if (!normalizedProps && variant !== "chat") return null;
+
+  if (variant === "chat") {
     if (hasUnloadedTurnPayload(props)) return null;
 
     return (

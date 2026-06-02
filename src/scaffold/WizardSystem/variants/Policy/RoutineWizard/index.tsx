@@ -2,10 +2,13 @@ import { FolderGit2, Grip, Network } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type {
-  RoutineDefinition,
-  RoutineRunTarget,
-  RoutineWorkspaceTarget,
+import {
+  ROUTINE_CATCH_UP_POLICY,
+  ROUTINE_CONCURRENCY_POLICY,
+  ROUTINE_OUTPUT_MODE,
+  type RoutineDefinition,
+  type RoutineRunTarget,
+  type RoutineWorkspaceTarget,
 } from "@src/api/http/project";
 import { rpc } from "@src/api/tauri/rpc";
 import type { DispatchCategory } from "@src/api/tauri/session";
@@ -436,6 +439,14 @@ const RoutineWizard: React.FC<RoutineWizardProps> = ({
         workspace,
         mode: draft.mode.trim() || undefined,
         name: draft.name.trim(),
+      },
+      outputPolicy: routine?.outputPolicy ?? {
+        mode: ROUTINE_OUTPUT_MODE.DIRECT_SESSION,
+        concurrencyPolicy: ROUTINE_CONCURRENCY_POLICY.COALESCE_IF_ACTIVE,
+        catchUpPolicy: ROUTINE_CATCH_UP_POLICY.RUN_ONCE,
+        maxCatchUpRuns: 1,
+        idempotencyScope: "routine_fire",
+        createWorkItemStatus: "planned",
       },
       createdAt: routine?.createdAt ?? now,
       updatedAt: now,

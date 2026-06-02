@@ -36,6 +36,9 @@ fn make_frontmatter(title: &str, todos: Vec<TodoEntry>) -> WorkItemFrontmatter {
         follow_up_items: vec![],
         schedule: None,
         routine_source: None,
+        execution_lock: None,
+        close_out: None,
+        work_products: vec![],
     }
 }
 

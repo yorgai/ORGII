@@ -1,4 +1,4 @@
-/* global describe, before, it, process */
+/* global describe, before, beforeEach, afterEach, it, process */
 import {
   API_AGENT_TYPE,
   BUILTIN_SDE_AGENT_ID,
@@ -72,10 +72,42 @@ import {
 } from "../../support/core/agentOrgUiDriver.mjs";
 
 
+async function pauseDefaultAgentOrgRuns(label) {
+  const listResult = unwrap(
+    await invokeE2E("agentOrgRunList", 50),
+    `agentOrgRunList(${label})`
+  );
+  const activeRuns = (listResult.runs ?? []).filter(
+    (run) =>
+      run?.orgId === DEFAULT_AGENT_ORG_ID &&
+      run?.rootSessionId &&
+      run?.status !== "completed" &&
+      run?.status !== "failed" &&
+      run?.status !== "cancelled" &&
+      run?.status !== "paused"
+  );
+  for (const run of activeRuns) {
+    unwrap(
+      await invokeE2E("agentOrgPauseRun", run.rootSessionId),
+      `agentOrgPauseRun(${label}:${run.rootSessionId})`
+    );
+  }
+}
+
 describe("Agent Org group chat and plan rendered UI", () => {
   before(async () => {
     assertE2ERepoFixture();
     await waitForApp();
+  });
+
+  beforeEach(async () => {
+    await pauseDefaultAgentOrgRuns("beforeEach");
+    await invokeE2E("resetToNewSession");
+  });
+
+  afterEach(async () => {
+    await pauseDefaultAgentOrgRuns("afterEach");
+    await invokeE2E("resetToNewSession");
   });
 
   it("launches default Agent Org in Plan mode through rendered UI", async () => {

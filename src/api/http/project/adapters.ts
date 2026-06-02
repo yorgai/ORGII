@@ -172,9 +172,10 @@ export function projectDataToUI(
     members,
     teams: [],
     labels,
-    linkedRepos: meta.linked_repos.map((repoName) => ({
-      id: repoName,
-      name: repoName,
+    linkedRepos: meta.linked_repos.map((repoPath) => ({
+      id: repoPath,
+      name: repoPath.split(/[\\/]/).filter(Boolean).pop() ?? repoPath,
+      path: repoPath,
     })),
     startDate: meta.start_date,
     targetDate: meta.target_date,
@@ -258,6 +259,9 @@ export function workItemDataToUI(
     linkedSessions: frontmatter.linked_sessions,
     schedule: frontmatter.schedule,
     routineSource: frontmatter.routine_source,
+    executionLock: frontmatter.execution_lock,
+    closeOut: frontmatter.close_out,
+    workProducts: frontmatter.work_products,
   };
 }
 
@@ -328,6 +332,9 @@ export function uiWorkItemToFrontmatter(
         ? (workItem.schedule ?? undefined)
         : (existingFrontmatter?.schedule ?? undefined),
     routine_source: existingFrontmatter?.routine_source,
+    execution_lock: existingFrontmatter?.execution_lock,
+    close_out: existingFrontmatter?.close_out,
+    work_products: existingFrontmatter?.work_products ?? [],
   };
 }
 
@@ -390,5 +397,8 @@ export function enrichedWorkItemToUI(item: EnrichedWorkItem): UIWorkItem {
     linkedSessions: item.linkedSessions,
     schedule: item.schedule,
     routineSource: item.routineSource,
+    executionLock: item.executionLock,
+    closeOut: item.closeOut,
+    workProducts: item.workProducts,
   };
 }

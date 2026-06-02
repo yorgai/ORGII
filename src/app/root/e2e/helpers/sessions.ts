@@ -27,9 +27,12 @@ import {
   pendingPlanApprovalsAtom,
   upsertPendingPlanApproval,
 } from "@src/store/session/planApprovalAtom";
+import { upsertSession } from "@src/store/session/sessionAtom/mutations";
+import type { Session } from "@src/store/session/sessionAtom/types";
 import {
   activeSessionIdAtom,
   jumpToSessionAtom,
+  openSessionAtom,
   workstationActiveSessionIdAtom,
 } from "@src/store/session/viewAtom";
 import {
@@ -49,6 +52,72 @@ import type { E2EStore, Json, Result } from "../types";
 import { createInspectChatStateHelper } from "./sessionHelpers/inspectChatState";
 import { createSessionSeederHelpers } from "./sessionHelpers/seeders";
 import { waitForSessionSurface } from "./sessionHelpers/waitForSessionSurface";
+
+function toStoreSession(record: {
+  sessionId: string;
+  status?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  userInput?: string | null;
+  name?: string | null;
+  category?: string | null;
+  model?: string | null;
+  keySource?: string | null;
+  accountId?: string | null;
+  workspacePath?: string | null;
+  worktreePath?: string | null;
+  worktreeBranch?: string | null;
+  baseBranch?: string | null;
+  mergeStatus?: string | null;
+  workItemId?: string | null;
+  agentRole?: string | null;
+  parentSessionId?: string | null;
+  orgMemberId?: string | null;
+  agentDefinitionId?: string | null;
+  agentDisplayName?: string | null;
+  agentExecMode?: string | null;
+}): Session {
+  return {
+    session_id: record.sessionId,
+    status: record.status ?? "idle",
+    created_at: record.createdAt ?? "",
+    updated_at: record.updatedAt ?? "",
+    user_input: record.userInput ?? undefined,
+    name: record.name ?? undefined,
+    category: record.category === "cli_agent" ? "cli_agent" : "rust_agent",
+    model: record.model ?? undefined,
+    keySource: record.keySource === "hosted_key" ? "hosted_key" : "own_key",
+    accountId: record.accountId ?? undefined,
+    repoPath: record.workspacePath ?? undefined,
+    worktreePath: record.worktreePath ?? undefined,
+    worktreeBranch: record.worktreeBranch ?? undefined,
+    baseBranch: record.baseBranch ?? undefined,
+    mergeStatus:
+      record.mergeStatus === "pending" ||
+      record.mergeStatus === "merged" ||
+      record.mergeStatus === "conflict" ||
+      record.mergeStatus === "skipped" ||
+      record.mergeStatus === "failed"
+        ? record.mergeStatus
+        : undefined,
+    workItemId: record.workItemId ?? undefined,
+    agentRole:
+      record.agentRole === "coding" ||
+      record.agentRole === "sde" ||
+      record.agentRole === "review" ||
+      record.agentRole === "orchestrator" ||
+      record.agentRole === "custom" ||
+      record.agentRole === "sub_agent"
+        ? record.agentRole
+        : undefined,
+    parentSessionId: record.parentSessionId ?? undefined,
+    orgMemberId: record.orgMemberId ?? undefined,
+    agentDefinitionId: record.agentDefinitionId ?? undefined,
+    agentDisplayName: record.agentDisplayName ?? undefined,
+    agentExecMode: record.agentExecMode ?? undefined,
+    is_active: true,
+  };
+}
 
 export function createSessionHelpers(store: E2EStore) {
   const promptDumpHelper = async (sessionId: string) => {
@@ -240,9 +309,24 @@ export function createSessionHelpers(store: E2EStore) {
       if (!sessionId) {
         return { ok: false, error: "openSession: `sessionId` is required" };
       }
+      const directSession = await rpc.agentSession.getSession({ sessionId });
+      if (directSession) {
+        upsertSession(toStoreSession(directSession));
+      }
+      const sessionName =
+        typeof directSession?.name === "string"
+          ? directSession.name
+          : undefined;
+      const repoPath =
+        typeof directSession?.workspacePath === "string"
+          ? directSession.workspacePath
+          : undefined;
+
       store.set(stationModeAtom, "my-station");
       store.set(chatPanelMaximizedAtom, true);
       store.set(chatWidthAtom, 560);
+      store.set(openSessionAtom, { sessionId, sessionName, repoPath });
+      store.set(sessionIdAtom, sessionId);
       store.set(sessionRuntimeStatusAtom, "idle");
       await eventStoreProxy.switchSession(sessionId);
       const initialWindow = await loadInitialTurnWindow(sessionId);
@@ -275,7 +359,7 @@ export function createSessionHelpers(store: E2EStore) {
 
   const getSessionAggregateRow = async (
     sessionId: string
-  ): Promise<Result<{ session: Json | null }>> => {
+  ): Promise<Result<{ session: Json | null; diagnostics?: Json }>> => {
     try {
       if (!sessionId) {
         return {
@@ -283,10 +367,34 @@ export function createSessionHelpers(store: E2EStore) {
           error: "getSessionAggregateRow: `sessionId` is required",
         };
       }
-      const listed = await rpc.sessionAggregate.list({});
-      const session =
+      const directSession = await rpc.agentSession.getSession({ sessionId });
+      if (directSession) {
+        return {
+          ok: true,
+          session: {
+            ...directSession,
+            category: "rust_agent",
+          } as unknown as Json,
+          diagnostics: { source: "direct" } as unknown as Json,
+        };
+      }
+
+      const listed = await rpc.sessionAggregate.list({
+        filter: { limit: 5_000 },
+      });
+      const aggregateSession =
         listed.sessions.find((row) => row.sessionId === sessionId) ?? null;
-      return { ok: true, session: session as unknown as Json | null };
+      return {
+        ok: true,
+        session: aggregateSession as unknown as Json | null,
+        diagnostics: {
+          source: aggregateSession ? "aggregate" : "missing",
+          aggregateCount: listed.sessions.length,
+          aggregateSampleIds: listed.sessions
+            .slice(0, 10)
+            .map((row) => row.sessionId),
+        } as unknown as Json,
+      };
     } catch (err) {
       return asError(err);
     }

@@ -477,6 +477,9 @@ fn build_inbound_create_frontmatter(
         follow_up_items: vec![],
         schedule: None,
         routine_source: None,
+        execution_lock: None,
+        close_out: None,
+        work_products: vec![],
     };
 
     let body = pick_string("body").unwrap_or_default();

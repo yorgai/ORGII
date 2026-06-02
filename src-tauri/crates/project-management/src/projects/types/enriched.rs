@@ -8,7 +8,9 @@ use super::orchestrator::{
 };
 use super::project::{CommentEntry, TodoEntry};
 use super::routines::WorkItemRoutineSource;
-use super::work_items::WorkItemHistoryEvent;
+use super::work_items::{
+    WorkItemCloseOut, WorkItemExecutionLock, WorkItemHistoryEvent, WorkItemWorkProduct,
+};
 
 // ============================================
 // Enriched Work Item (pre-resolved labels/members)
@@ -103,4 +105,9 @@ pub struct EnrichedWorkItem {
     pub schedule: Option<WorkItemSchedule>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub routine_source: Option<WorkItemRoutineSource>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub execution_lock: Option<WorkItemExecutionLock>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub close_out: Option<WorkItemCloseOut>,
+    pub work_products: Vec<WorkItemWorkProduct>,
 }

@@ -59,6 +59,9 @@ fn work_item_fixture(id: &str, short_id: &str, title: &str) -> WorkItemFrontmatt
         follow_up_items: vec![],
         schedule: None,
         routine_source: None,
+        execution_lock: None,
+        close_out: None,
+        work_products: vec![],
     }
 }
 
@@ -256,7 +259,7 @@ fn read_all_orders_by_updated_at_desc() {
 }
 
 #[test]
-fn delete_removes_row_and_extras_via_cascade() {
+fn delete_marks_row_deleted_and_preserves_durable_extras() {
     let _sandbox = test_env::sandbox();
     seed_project("demo", "p1");
 
@@ -266,10 +269,10 @@ fn delete_removes_row_and_extras_via_cascade() {
 
     delete_work_item("demo", "AAA-0001").expect("delete");
 
-    let err = read_work_item("demo", "AAA-0001").unwrap_err();
-    assert!(err.contains("AAA-0001"));
+    let deleted = read_work_item("demo", "AAA-0001").expect("read deleted");
+    assert!(deleted.frontmatter.deleted_at.is_some());
+    assert!(deleted.frontmatter.starred);
 
-    // Direct probe: extras row should have cascaded out.
     let connection = conn().expect("conn");
     let extras_count: i64 = connection
         .query_row(
@@ -278,7 +281,7 @@ fn delete_removes_row_and_extras_via_cascade() {
             |row| row.get(0),
         )
         .unwrap();
-    assert_eq!(extras_count, 0, "FK cascade should drop extras");
+    assert_eq!(extras_count, 1, "soft-delete should preserve durable extras");
 }
 
 #[test]

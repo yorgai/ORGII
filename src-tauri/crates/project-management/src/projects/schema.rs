@@ -394,6 +394,7 @@ fn init_local_tables(conn: &Connection) -> SqliteResult<()> {
             enabled                  INTEGER NOT NULL DEFAULT 1,
             trigger_json             TEXT NOT NULL,
             run_template_json        TEXT NOT NULL,
+            output_policy_json       TEXT NOT NULL DEFAULT '{}',
             created_at               INTEGER NOT NULL,
             updated_at               INTEGER NOT NULL
         );
@@ -409,105 +410,86 @@ fn init_local_tables(conn: &Connection) -> SqliteResult<()> {
             status              TEXT NOT NULL,
             session_id          TEXT,
             agent_org_run_id    TEXT,
+            work_item_id        TEXT,
+            coalesced_into_fire_id TEXT,
+            idempotency_key     TEXT,
+            started_at          INTEGER,
+            completed_at        INTEGER,
             error               TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_routine_fires_routine_id
             ON routine_fires(routine_id, fired_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_routine_fires_session
+            ON routine_fires(session_id);
         "#,
     )?;
     ensure_workitems_deleted_at_column(conn)?;
-    ensure_routine_direct_run_columns(conn)?;
-    compact_routine_definition_columns(conn)?;
+    ensure_routine_definitions_durable_columns(conn)?;
+    ensure_routine_fires_durable_columns(conn)?;
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_workitems_deleted_at ON workitems(deleted_at)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_routine_fires_work_item ON routine_fires(work_item_id)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_routine_fires_idempotency ON routine_fires(idempotency_key) WHERE idempotency_key IS NOT NULL",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_routine_fires_status ON routine_fires(routine_id, status, fired_at DESC)",
         [],
     )?;
     Ok(())
 }
 
 fn ensure_workitems_deleted_at_column(conn: &Connection) -> SqliteResult<()> {
-    let mut statement = conn.prepare("PRAGMA table_info(workitems)")?;
+    ensure_column(conn, "workitems", "deleted_at", "INTEGER")
+}
+
+fn ensure_routine_definitions_durable_columns(conn: &Connection) -> SqliteResult<()> {
+    ensure_column(
+        conn,
+        "routine_definitions",
+        "output_policy_json",
+        "TEXT NOT NULL DEFAULT '{}'",
+    )
+}
+
+fn ensure_routine_fires_durable_columns(conn: &Connection) -> SqliteResult<()> {
+    for (column, definition) in [
+        ("work_item_id", "TEXT"),
+        ("coalesced_into_fire_id", "TEXT"),
+        ("idempotency_key", "TEXT"),
+        ("started_at", "INTEGER"),
+        ("completed_at", "INTEGER"),
+        ("error", "TEXT"),
+    ] {
+        ensure_column(conn, "routine_fires", column, definition)?;
+    }
+    Ok(())
+}
+
+fn ensure_column(
+    conn: &Connection,
+    table_name: &str,
+    column_name: &str,
+    column_definition: &str,
+) -> SqliteResult<()> {
+    let mut statement = conn.prepare(&format!("PRAGMA table_info({table_name})"))?;
     let columns = statement.query_map([], |row| row.get::<_, String>(1))?;
     for column in columns {
-        if column? == "deleted_at" {
+        if column? == column_name {
             return Ok(());
         }
     }
-    conn.execute("ALTER TABLE workitems ADD COLUMN deleted_at INTEGER", [])?;
-    Ok(())
-}
-
-fn ensure_routine_direct_run_columns(conn: &Connection) -> SqliteResult<()> {
-    let routine_definition_columns = table_columns(conn, "routine_definitions")?;
-    if !routine_definition_columns
-        .iter()
-        .any(|column| column == "run_template_json")
-    {
-        conn.execute(
-            "ALTER TABLE routine_definitions ADD COLUMN run_template_json TEXT NOT NULL DEFAULT '{}'",
-            [],
-        )?;
-    }
-
-    let routine_fire_columns = table_columns(conn, "routine_fires")?;
-    if !routine_fire_columns
-        .iter()
-        .any(|column| column == "session_id")
-    {
-        conn.execute("ALTER TABLE routine_fires ADD COLUMN session_id TEXT", [])?;
-    }
-    if !routine_fire_columns
-        .iter()
-        .any(|column| column == "agent_org_run_id")
-    {
-        conn.execute(
-            "ALTER TABLE routine_fires ADD COLUMN agent_org_run_id TEXT",
-            [],
-        )?;
-    }
     conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_routine_fires_session ON routine_fires(session_id)",
+        &format!("ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"),
         [],
     )?;
     Ok(())
-}
-
-fn compact_routine_definition_columns(conn: &Connection) -> SqliteResult<()> {
-    let routine_definition_columns = table_columns(conn, "routine_definitions")?;
-    if routine_definition_columns
-        .iter()
-        .any(|column| column == "execution_policy_json")
-    {
-        conn.execute(
-            "ALTER TABLE routine_definitions DROP COLUMN execution_policy_json",
-            [],
-        )?;
-    }
-    if routine_definition_columns
-        .iter()
-        .any(|column| column == "safety_policy_json")
-    {
-        conn.execute(
-            "ALTER TABLE routine_definitions DROP COLUMN safety_policy_json",
-            [],
-        )?;
-    }
-    if routine_definition_columns
-        .iter()
-        .any(|column| column == "work_item_template_json")
-    {
-        conn.execute(
-            "ALTER TABLE routine_definitions DROP COLUMN work_item_template_json",
-            [],
-        )?;
-    }
-    Ok(())
-}
-
-fn table_columns(conn: &Connection, table: &str) -> SqliteResult<Vec<String>> {
-    let mut statement = conn.prepare(&format!("PRAGMA table_info({table})"))?;
-    let columns = statement.query_map([], |row| row.get::<_, String>(1))?;
-    columns.collect()
 }
 
 /// DDL for the sync outbox.
@@ -601,75 +583,81 @@ mod tests {
     }
 
     #[test]
-    fn init_migrates_legacy_routine_direct_run_shape() {
+    fn init_migrates_legacy_routine_columns_before_index_creation() {
         let conn = open_in_memory();
         conn.execute_batch(
             r#"
             CREATE TABLE routine_definitions (
-                id                       TEXT PRIMARY KEY,
-                name                     TEXT NOT NULL,
-                description              TEXT NOT NULL DEFAULT '',
-                enabled                  INTEGER NOT NULL DEFAULT 1,
-                trigger_json             TEXT NOT NULL,
-                work_item_template_json  TEXT NOT NULL,
-                execution_policy_json    TEXT NOT NULL,
-                safety_policy_json       TEXT NOT NULL,
-                created_at               INTEGER NOT NULL,
-                updated_at               INTEGER NOT NULL
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                enabled INTEGER NOT NULL DEFAULT 1,
+                trigger_json TEXT NOT NULL,
+                run_template_json TEXT NOT NULL,
+                output_policy_json TEXT NOT NULL DEFAULT '{}',
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
             );
             CREATE TABLE routine_fires (
-                id          TEXT PRIMARY KEY,
-                routine_id  TEXT NOT NULL REFERENCES routine_definitions(id) ON DELETE CASCADE,
-                fired_at    INTEGER NOT NULL,
-                status      TEXT NOT NULL,
-                error       TEXT
+                id TEXT PRIMARY KEY,
+                routine_id TEXT NOT NULL REFERENCES routine_definitions(id) ON DELETE CASCADE,
+                fired_at INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                session_id TEXT,
+                agent_org_run_id TEXT
             );
             "#,
         )
-        .expect("create legacy routine shape");
+        .expect("legacy routine schema");
 
-        init_project_tables(&conn).expect("migrate legacy routine shape");
+        init_project_tables(&conn).expect("init upgrades routine_fires");
 
-        let routine_columns = table_columns(&conn, "routine_definitions").expect("routine columns");
+        let definition_cols: Vec<String> = conn
+            .prepare("PRAGMA table_info(routine_definitions)")
+            .unwrap()
+            .query_map([], |row| row.get::<_, String>(1))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
         assert!(
-            routine_columns
+            definition_cols
                 .iter()
-                .any(|column| column == "run_template_json"),
-            "routine direct-run column missing after migration: {:?}",
-            routine_columns
+                .any(|column| column == "output_policy_json"),
+            "missing routine_definitions output_policy_json; got: {:?}",
+            definition_cols
         );
-        for removed_column in [
-            "work_item_template_json",
-            "execution_policy_json",
-            "safety_policy_json",
+
+        let fire_cols: Vec<String> = conn
+            .prepare("PRAGMA table_info(routine_fires)")
+            .unwrap()
+            .query_map([], |row| row.get::<_, String>(1))
+            .unwrap()
+            .map(Result::unwrap)
+            .collect();
+        for expected in [
+            "work_item_id",
+            "coalesced_into_fire_id",
+            "idempotency_key",
+            "started_at",
+            "completed_at",
+            "error",
         ] {
             assert!(
-                !routine_columns
-                    .iter()
-                    .any(|column| column == removed_column),
-                "legacy routine column {} survived migration: {:?}",
-                removed_column,
-                routine_columns
+                fire_cols.iter().any(|column| column == expected),
+                "missing routine_fires column {}; got: {:?}",
+                expected,
+                fire_cols
             );
         }
 
-        let fire_columns = table_columns(&conn, "routine_fires").expect("fire columns");
-        for expected_column in ["session_id", "agent_org_run_id"] {
-            assert!(
-                fire_columns.iter().any(|column| column == expected_column),
-                "routine_fires column {} missing after migration: {:?}",
-                expected_column,
-                fire_columns
-            );
-        }
         let index_count: i64 = conn
             .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_routine_fires_session'",
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_routine_fires_idempotency'",
                 [],
                 |row| row.get(0),
             )
-            .expect("query routine_fires session index");
-        assert_eq!(index_count, 1, "routine_fires session index should exist");
+            .expect("index query");
+        assert_eq!(index_count, 1);
     }
 
     #[test]

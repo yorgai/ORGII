@@ -91,6 +91,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
           INPUT_AREA_BUTTONS.iconButtonSizeClass,
         ].join(" ")}
         aria-label="Skills & Tools"
+        data-testid="composer-skills-tools-button"
       >
         <Plus
           size={INPUT_AREA_BUTTONS.iconSize}

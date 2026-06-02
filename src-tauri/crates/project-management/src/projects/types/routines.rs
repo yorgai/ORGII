@@ -14,7 +14,73 @@ pub enum RoutineTrigger {
 pub enum RoutineFireStatus {
     Pending,
     Started,
+    Succeeded,
     Failed,
+    Skipped,
+    Coalesced,
+    Queued,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RoutineOutputMode {
+    DirectSession,
+    CreateWorkItem,
+    UpdateExistingWorkItem,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RoutineConcurrencyPolicy {
+    CoalesceIfActive,
+    SkipIfActive,
+    QueueIfActive,
+    AlwaysCreate,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RoutineCatchUpPolicy {
+    SkipMissed,
+    RunOnce,
+    RunAllLimited,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RoutineOutputPolicy {
+    pub mode: RoutineOutputMode,
+    pub concurrency_policy: RoutineConcurrencyPolicy,
+    pub catch_up_policy: RoutineCatchUpPolicy,
+    pub max_catch_up_runs: u32,
+    pub idempotency_scope: String,
+    pub create_work_item_status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub create_work_item_project_slug: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub create_work_item_title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub create_work_item_body: Option<String>,
+}
+
+impl Default for RoutineOutputPolicy {
+    fn default() -> Self {
+        Self {
+            mode: RoutineOutputMode::DirectSession,
+            concurrency_policy: RoutineConcurrencyPolicy::CoalesceIfActive,
+            catch_up_policy: RoutineCatchUpPolicy::RunOnce,
+            max_catch_up_runs: 1,
+            idempotency_scope: "routine_fire".to_string(),
+            create_work_item_status: "planned".to_string(),
+            create_work_item_project_slug: None,
+            create_work_item_title: None,
+            create_work_item_body: None,
+        }
+    }
+}
+
+fn default_output_policy() -> RoutineOutputPolicy {
+    RoutineOutputPolicy::default()
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -78,6 +144,8 @@ pub struct RoutineDefinition {
     pub enabled: bool,
     pub trigger: RoutineTrigger,
     pub run_template: RoutineRunTemplate,
+    #[serde(default = "default_output_policy")]
+    pub output_policy: RoutineOutputPolicy,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -91,6 +159,11 @@ pub struct RoutineFire {
     pub status: RoutineFireStatus,
     pub session_id: Option<String>,
     pub agent_org_run_id: Option<String>,
+    pub work_item_id: Option<String>,
+    pub coalesced_into_fire_id: Option<String>,
+    pub idempotency_key: Option<String>,
+    pub started_at: Option<String>,
+    pub completed_at: Option<String>,
     pub error: Option<String>,
 }
 
@@ -107,6 +180,6 @@ pub struct WorkItemRoutineSource {
 #[serde(rename_all = "camelCase")]
 pub struct RoutineFireResult {
     pub fire: RoutineFire,
-    pub session_id: String,
+    pub session_id: Option<String>,
     pub agent_org_run_id: Option<String>,
 }

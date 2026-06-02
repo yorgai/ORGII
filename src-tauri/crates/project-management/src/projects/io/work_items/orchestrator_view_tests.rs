@@ -78,6 +78,9 @@ fn work_item_fixture(id: &str, short_id: &str, title: &str) -> WorkItemFrontmatt
         follow_up_items: vec![],
         schedule: None,
         routine_source: None,
+        execution_lock: None,
+        close_out: None,
+        work_products: vec![],
     }
 }
 

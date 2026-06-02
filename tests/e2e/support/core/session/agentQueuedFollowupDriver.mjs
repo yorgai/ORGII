@@ -187,6 +187,22 @@ const js = {
     element.click();
     return "clicked";
   `,
+  visibleClick: (selector) => `
+    const elements = Array.from(document.querySelectorAll(${JSON.stringify(selector)}));
+    const isVisible = (element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    };
+    const element = elements.find((candidate) => isVisible(candidate));
+    if (!element) return "missing";
+    if (element.disabled) return "disabled";
+    element.scrollIntoView({ block: "center", inline: "center" });
+    element.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window, button: 0 }));
+    element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, view: window, button: 0 }));
+    element.click();
+    return "clicked";
+  `,
   clickWhenState: (selector, expectedState) => `
     const element = document.querySelector(${JSON.stringify(selector)});
     if (!element) return "missing";
@@ -1307,15 +1323,41 @@ function rustAgentConfigs(configs) {
   return configs.filter((config) => config.category === RUST_AGENT_CATEGORY);
 }
 
+async function readCurrentModeFromMenu(label) {
+  const skillsToolsButtonSelector = '[data-testid="composer-skills-tools-button"]';
+  const flyoutTriggerSelector = '[data-testid="slash-command-mode-flyout-trigger"]';
+  let triggerText = await execJS(`
+    const node = document.querySelector('[data-testid="slash-command-mode-flyout-trigger"]');
+    return node ? (node.textContent || '').trim() : null;
+  `);
+  if (!triggerText) {
+    const opened = await execJS(js.visibleClick(skillsToolsButtonSelector));
+    if (opened !== "clicked") {
+      return { ok: false, reason: `skills/tools open failed: ${opened}` };
+    }
+    await browser.waitUntil(async () => execJS(js.exists(flyoutTriggerSelector)), {
+      timeout: 5_000,
+      timeoutMsg: `${label} slash command Mode flyout trigger never rendered`,
+    });
+    triggerText = await execJS(`
+      const node = document.querySelector('[data-testid="slash-command-mode-flyout-trigger"]');
+      return node ? (node.textContent || '').trim() : null;
+    `);
+  }
+  return { ok: true, triggerText };
+}
+
 async function waitForModePill(label, expectedText) {
   await browser.waitUntil(
     async () => {
       const text = await execJS(js.modePillText);
-      return typeof text === "string" && text.includes(expectedText);
+      if (typeof text === "string" && text.includes(expectedText)) return true;
+      const menuMode = await readCurrentModeFromMenu(label);
+      return menuMode.ok && String(menuMode.triggerText ?? "").includes(expectedText);
     },
     {
       timeout: 15_000,
-      timeoutMsg: `${label} mode pill never showed ${expectedText}; actual=${JSON.stringify(await execJS(js.modePillText))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+      timeoutMsg: `${label} mode selector never showed ${expectedText}; actual=${JSON.stringify(await execJS(js.modePillText))} menu=${JSON.stringify(await readCurrentModeFromMenu(label).catch((error) => ({ ok: false, reason: String(error?.message ?? error) })))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
     }
   );
 }
