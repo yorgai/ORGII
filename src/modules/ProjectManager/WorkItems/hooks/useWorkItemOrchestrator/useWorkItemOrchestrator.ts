@@ -1,5 +1,5 @@
 import { useAtomValue } from "jotai";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Message from "@src/components/Message";
@@ -16,12 +16,15 @@ import {
   ORCHESTRATOR_COMMAND,
   TERMINAL_PHASES,
   formatOrchestratorError,
+  toAgentRole,
 } from "../../constants";
 import type { AgentRole, OrchestratorPhase } from "../../constants";
 import { useAutoReview } from "./useAutoReview";
 import { useStaleSessionDetection } from "./useStaleSessionDetection";
 
 const logger = createLogger("useWorkItemOrchestrator");
+const RUNNING_LINKED_SESSION_STATUS = "running" as const;
+const COMPLETED_WORK_ITEM_STATUS = "completed" as const;
 
 const VALID_EXEC_MODES = new Set<string>([
   "build",
@@ -121,7 +124,13 @@ export function useWorkItemOrchestrator(
         return;
       }
 
-      if (displayWorkItem.executionLock?.activeSessionId) {
+      const displayWorkItemCompleted =
+        displayWorkItem.workItemStatus === COMPLETED_WORK_ITEM_STATUS ||
+        displayWorkItem.status === COMPLETED_WORK_ITEM_STATUS;
+      if (
+        !displayWorkItemCompleted &&
+        displayWorkItem.executionLock?.activeSessionId
+      ) {
         Message.warning(t("workItems.agentWorkflow.running"));
         onRefreshWorkItem?.();
         return;
@@ -162,6 +171,16 @@ export function useWorkItemOrchestrator(
       } catch (error) {
         setActiveAgentSessionId(null);
         setActiveAgentRole(null);
+        try {
+          await invokeTauri(ORCHESTRATOR_COMMAND.Cancel, {
+            projectSlug,
+            workItemId: shortId,
+          });
+        } catch (cancelError) {
+          logger.warn(
+            `Failed to roll back ${orchestratorCommand} for ${shortId}: ${formatOrchestratorError(cancelError)}`
+          );
+        }
         const msg = formatOrchestratorError(error);
         logger.error(`Failed ${orchestratorCommand} for ${shortId}: ${msg}`);
         Message.error(msg);
@@ -176,6 +195,8 @@ export function useWorkItemOrchestrator(
       validateOrchestratorParams,
       accountId,
       displayWorkItem.executionLock?.activeSessionId,
+      displayWorkItem.status,
+      displayWorkItem.workItemStatus,
       projectRepoPath,
       projectSlug,
       shortId,
@@ -282,6 +303,42 @@ export function useWorkItemOrchestrator(
     t,
   ]);
 
+  const runningLinkedSession = useMemo(
+    () =>
+      workItem.linkedSessions?.find(
+        (session) => session.status === RUNNING_LINKED_SESSION_STATUS
+      ) ?? null,
+    [workItem.linkedSessions]
+  );
+  const isCompletedWorkItem =
+    workItem.workItemStatus === COMPLETED_WORK_ITEM_STATUS ||
+    workItem.status === COMPLETED_WORK_ITEM_STATUS;
+  const hasTerminalOnlyLinkedSessions =
+    (workItem.linkedSessions?.length ?? 0) > 0 && !runningLinkedSession;
+  const activeExecutionLockSessionId =
+    isCompletedWorkItem || hasTerminalOnlyLinkedSessions
+      ? null
+      : (workItem.executionLock?.activeSessionId ?? null);
+  const persistedActiveSessionId =
+    activeExecutionLockSessionId ?? runningLinkedSession?.session_id ?? null;
+  const canUseLocalActiveSession =
+    !isCompletedWorkItem && !hasTerminalOnlyLinkedSessions;
+  const effectiveActiveAgentSessionId =
+    persistedActiveSessionId ??
+    (canUseLocalActiveSession ? activeAgentSessionId : null);
+  const effectiveActiveAgentRole = effectiveActiveAgentSessionId
+    ? (toAgentRole(runningLinkedSession?.agent_role) ??
+      activeAgentRole ??
+      AGENT_ROLE.Sde)
+    : null;
+
+  useEffect(() => {
+    if (!canUseLocalActiveSession && activeAgentSessionId) {
+      setActiveAgentSessionId(null);
+      setActiveAgentRole(null);
+    }
+  }, [activeAgentSessionId, canUseLocalActiveSession]);
+
   const prevPhaseRef = useRef<OrchestratorPhase>(
     (workItem.orchestratorState?.current_phase as OrchestratorPhase) ?? "idle"
   );
@@ -291,12 +348,20 @@ export function useWorkItemOrchestrator(
       "idle";
     if (prevPhaseRef.current !== phase) {
       prevPhaseRef.current = phase;
-      if (TERMINAL_PHASES.has(phase) && activeAgentSessionId) {
+      if (
+        TERMINAL_PHASES.has(phase) &&
+        activeAgentSessionId &&
+        !persistedActiveSessionId
+      ) {
         setActiveAgentSessionId(null);
         setActiveAgentRole(null);
       }
     }
-  }, [workItem.orchestratorState?.current_phase, activeAgentSessionId]);
+  }, [
+    workItem.orchestratorState?.current_phase,
+    activeAgentSessionId,
+    persistedActiveSessionId,
+  ]);
 
   useAutoReview({
     workItem,
@@ -325,8 +390,8 @@ export function useWorkItemOrchestrator(
 
   return {
     isStartingAgent,
-    activeAgentSessionId,
-    activeAgentRole,
+    activeAgentSessionId: effectiveActiveAgentSessionId,
+    activeAgentRole: effectiveActiveAgentRole,
     handleStartAgent,
     handleRetry,
     handleCancelAgent,

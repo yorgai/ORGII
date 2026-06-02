@@ -10,6 +10,7 @@ import { useWorkItemImageInsert } from "@src/hooks/project";
 import { PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS } from "@src/modules/ProjectManager/shared/placeholderTokens";
 import { DetailPanelContainer } from "@src/modules/shared/layouts/blocks";
 import InternalHeader from "@src/modules/shared/layouts/blocks/InternalHeader";
+import type { WorkItemStatus } from "@src/types/core/workItem";
 
 import AgentWorkflow from "../AgentWorkflow";
 import TodoChecklist from "../TodoChecklist";
@@ -153,6 +154,9 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
                 orchestratorState={workItem.orchestratorState}
                 orchestratorConfig={workItem.orchestratorConfig}
                 proofOfWork={workItem.proofOfWork}
+                workItemStatus={
+                  workItem.workItemStatus ?? (workItem.status as WorkItemStatus)
+                }
                 executionLock={workItem.executionLock}
                 linkedSessions={workItem.linkedSessions}
                 onStartAgent={onStartAgent}

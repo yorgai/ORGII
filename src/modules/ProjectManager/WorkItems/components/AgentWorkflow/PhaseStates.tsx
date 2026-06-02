@@ -12,6 +12,8 @@ import Button from "@src/components/Button";
 import InlineAlert from "@src/components/InlineAlert";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
+import { ORCHESTRATOR_PHASE } from "../../constants";
+
 interface IdleStateProps {
   orchestratorConfig?: OrchestratorConfig;
   executionLock?: WorkItemExecutionLock | null;
@@ -67,9 +69,9 @@ export const ActivePhaseStatus: React.FC<ActivePhaseStatusProps> = ({
 }) => {
   const { t } = useTranslation("projects");
   const phaseLabel =
-    phase === "sde"
+    phase === ORCHESTRATOR_PHASE.Sde || phase === ORCHESTRATOR_PHASE.Coding
       ? t("workItems.agentWorkflow.sdePhase")
-      : phase === "review"
+      : phase === ORCHESTRATOR_PHASE.Review
         ? t("workItems.agentWorkflow.reviewPhase")
         : t("workItems.agentWorkflow.followUpPhase");
 
