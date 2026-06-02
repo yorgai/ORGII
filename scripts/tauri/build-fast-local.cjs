@@ -14,6 +14,9 @@ const configOverride = JSON.stringify({
   },
   bundle: {
     createUpdaterArtifacts: false,
+    macOS: {
+      signingIdentity: null,
+    },
   },
 });
 
