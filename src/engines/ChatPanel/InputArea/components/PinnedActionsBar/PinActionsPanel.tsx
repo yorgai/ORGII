@@ -51,6 +51,12 @@ interface PinActionsPanelProps {
   onClose: () => void;
   /** Whether items are still loading. */
   loading: boolean;
+  /**
+   * Ref to the button that toggles this panel. When provided, clicks on the
+   * trigger button are excluded from the click-outside handler so the parent's
+   * own toggle logic fires without the panel immediately re-opening.
+   */
+  triggerRef?: React.RefObject<HTMLElement>;
 }
 
 const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
@@ -62,6 +68,7 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
     onTogglePin,
     onClose,
     loading,
+    triggerRef,
   }) => {
     const [query, setQuery] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
@@ -78,16 +85,18 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
     }, [visible]);
 
     // Click-outside closes the panel.
+    // Clicks on the trigger button are excluded so the parent's toggle logic
+    // can run without the panel immediately re-opening (double-toggle).
     useEffect(() => {
       if (!visible) return;
       const handler = (e: MouseEvent) => {
-        if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-          onClose();
-        }
+        if (panelRef.current?.contains(e.target as Node)) return;
+        if (triggerRef?.current?.contains(e.target as Node)) return;
+        onClose();
       };
       document.addEventListener("mousedown", handler);
       return () => document.removeEventListener("mousedown", handler);
-    }, [visible, onClose]);
+    }, [visible, onClose, triggerRef]);
 
     // Escape closes the panel only when focus is inside it, to avoid
     // stealing Escape from the slash command menu or composer.
