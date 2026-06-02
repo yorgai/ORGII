@@ -1,10 +1,30 @@
 import { homeDir } from "@tauri-apps/api/path";
 import { message as showTauriMessage } from "@tauri-apps/plugin-dialog";
+import { stat } from "@tauri-apps/plugin-fs";
 
 const ABSOLUTE_PATH_PATTERN = /^(?:~\/|\/|[A-Za-z]:[\\/])/;
 
+interface ImportWorkspacePathArgs {
+  candidatePath: string;
+  invalidPathTitle: string;
+  invalidPathMessage: (path: string) => string;
+  onImportWorkspace: (path: string) => Promise<unknown>;
+}
+
 export function looksLikeWorkspacePath(value: string): boolean {
   return ABSOLUTE_PATH_PATTERN.test(value.trim());
+}
+
+export function getWorkspacePathCandidate(value: string): string | null {
+  const candidatePath = value.trim();
+  return looksLikeWorkspacePath(candidatePath) ? candidatePath : null;
+}
+
+export function getWorkspacePathDisplayName(path: string): string {
+  const normalizedPath = path.trim().replace(/[\\/]+$/, "");
+  if (!normalizedPath) return path.trim();
+  const segments = normalizedPath.split(/[\\/]+/).filter(Boolean);
+  return segments.at(-1) ?? normalizedPath;
 }
 
 export async function expandHomePath(path: string): Promise<string> {
@@ -24,4 +44,35 @@ export async function showInvalidWorkspacePathDialog(
     kind: "error",
     buttons: { ok: "OK" },
   });
+}
+
+export async function importWorkspacePath({
+  candidatePath,
+  invalidPathTitle,
+  invalidPathMessage,
+  onImportWorkspace,
+}: ImportWorkspacePathArgs): Promise<boolean> {
+  const workspacePath = getWorkspacePathCandidate(candidatePath);
+  if (!workspacePath) return false;
+
+  try {
+    const expandedPath = await expandHomePath(workspacePath);
+    const metadata = await stat(expandedPath);
+    if (!metadata.isDirectory) {
+      await showInvalidWorkspacePathDialog(
+        invalidPathTitle,
+        invalidPathMessage(workspacePath)
+      );
+      return true;
+    }
+
+    await onImportWorkspace(expandedPath);
+    return true;
+  } catch {
+    await showInvalidWorkspacePathDialog(
+      invalidPathTitle,
+      invalidPathMessage(workspacePath)
+    );
+    return true;
+  }
 }

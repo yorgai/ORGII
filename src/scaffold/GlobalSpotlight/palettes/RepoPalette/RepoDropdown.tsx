@@ -21,6 +21,7 @@ import React, {
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import { repoApi } from "@src/api/tauri/repo";
 import {
   DROPDOWN_CLASSES,
   DROPDOWN_PANEL,
@@ -38,15 +39,27 @@ import {
 
 import { ICONS } from "../../config";
 import { useSharedRepoList } from "../../hooks";
-import type { RepoItem } from "../../types";
+import { useWorkspaceForm } from "../../hooks/forms";
+import type { RepoItem, SpotlightItem } from "../../types";
+import { buildOpenPathItem } from "./pathActionItem";
+import { importWorkspacePath } from "./pathImport";
 
 const LIST_MAX_HEIGHT = 360;
 const VIEWPORT_MARGIN = 12;
 const MIN_DROPDOWN_WIDTH = 320;
 
+type DropdownRepoItem =
+  | { kind: "repo"; repo: RepoItem }
+  | { kind: "openPath"; item: SpotlightItem };
+
 interface RepoRowProps {
   repo: RepoItem;
   isCurrent: boolean;
+  keyboardProps: ReturnType<UseDropdownListNavigationReturn["getItemProps"]>;
+}
+
+interface OpenPathRowProps {
+  item: SpotlightItem;
   keyboardProps: ReturnType<UseDropdownListNavigationReturn["getItemProps"]>;
 }
 
@@ -55,7 +68,10 @@ const RepoRow: React.FC<RepoRowProps> = ({
   isCurrent,
   keyboardProps,
 }) => {
-  const Icon = isSystemPathRepoItem(repo) ? ICONS.home : ICONS.repo;
+  const isSystemPath = isSystemPathRepoItem(repo);
+  const Icon = isSystemPath ? ICONS.home : ICONS.repo;
+  const shouldShowDescription = Boolean(repo.description && !isSystemPath);
+
   return (
     <button
       type="button"
@@ -70,7 +86,7 @@ const RepoRow: React.FC<RepoRowProps> = ({
       </span>
       <div className="flex min-w-0 flex-1 flex-col items-start">
         <span className="truncate">{repo.name}</span>
-        {repo.description && (
+        {shouldShowDescription && (
           <span className="truncate text-[11px] text-text-3">
             {repo.description}
           </span>
@@ -79,6 +95,29 @@ const RepoRow: React.FC<RepoRowProps> = ({
       {isCurrent && (
         <Check size={14} className="ml-2 shrink-0 text-primary-6" />
       )}
+    </button>
+  );
+};
+
+const OpenPathRow: React.FC<OpenPathRowProps> = ({ item, keyboardProps }) => {
+  const Icon = typeof item.icon === "string" ? ICONS.folder : item.icon;
+
+  return (
+    <button
+      type="button"
+      data-testid="repo-dropdown-open-path-row"
+      {...keyboardProps}
+      className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-start`}
+    >
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+        {Icon && <Icon size={16} />}
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col items-start">
+        <span className="truncate">{item.label}</span>
+        {item.desc && (
+          <span className="truncate text-[11px] text-text-3">{item.desc}</span>
+        )}
+      </div>
     </button>
   );
 };
@@ -108,6 +147,21 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
 
   const [searchQuery, setSearchQuery] = useState("");
 
+  const workspaceForm = useWorkspaceForm({
+    onSuccess: async (workspaceId?: string) => {
+      if (!workspaceId) return;
+      const result = await repoApi.getRepoById(workspaceId);
+      const repo = result.data;
+      onSelect(repo.repo_id, {
+        id: repo.repo_id,
+        name: repo.name,
+        fs_uri: repo.path,
+        kind: repo.kind,
+      });
+      onClose();
+    },
+  });
+
   const { filteredRepos, repoLoading } = useSharedRepoList({
     enabled: isOpen,
     currentRepoId,
@@ -116,6 +170,36 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
 
   const isMultiRoot = useAtomValue(isMultiRootWorkspaceAtom);
   const dispatchSetFolders = useSetAtom(setWorkspaceFoldersAtom);
+  const invalidPathTitle = t("selectors.repo.pathImport.invalidTitle");
+  const invalidPathMessage = useCallback(
+    (path: string) => t("selectors.repo.pathImport.invalidMessage", { path }),
+    [t]
+  );
+
+  const openPathItem = useMemo(
+    () =>
+      buildOpenPathItem({
+        searchQuery,
+        matchCount: filteredRepos.length,
+        openLabel: t("actions.openFolder"),
+        onOpenPath: (candidatePath) => {
+          void importWorkspacePath({
+            candidatePath,
+            invalidPathTitle,
+            invalidPathMessage,
+            onImportWorkspace: workspaceForm.handleImportWorkspace,
+          });
+        },
+      }),
+    [
+      workspaceForm.handleImportWorkspace,
+      filteredRepos.length,
+      invalidPathMessage,
+      invalidPathTitle,
+      searchQuery,
+      t,
+    ]
+  );
 
   // Sort selected to top, like the Spotlight variant.
   const sortedRepos = useMemo(() => {
@@ -127,12 +211,27 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
     return leadingRepo ? [leadingRepo, ...repos] : repos;
   }, [filteredRepos, currentRepoId, leadingRepo]);
 
+  const dropdownItems = useMemo<DropdownRepoItem[]>(() => {
+    const repoItems = sortedRepos.map((repo) => ({
+      kind: "repo" as const,
+      repo,
+    }));
+    return openPathItem
+      ? [{ kind: "openPath" as const, item: openPathItem }, ...repoItems]
+      : repoItems;
+  }, [openPathItem, sortedRepos]);
+
   const handleSelect = useCallback(
-    (repo: RepoItem) => {
+    (item: DropdownRepoItem) => {
+      if (item.kind === "openPath") {
+        item.item.action?.();
+        return;
+      }
+
       if (isMultiRoot) {
         dispatchSetFolders([], null);
       }
-      onSelect(repo.id, repo);
+      onSelect(item.repo.id, item.repo);
       onClose();
     },
     [isMultiRoot, dispatchSetFolders, onSelect, onClose]
@@ -140,7 +239,7 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
 
   const { isPositioned, panelRef, panelPosition, keyboard } = useDropdownEngine<
     HTMLElement,
-    RepoItem
+    DropdownRepoItem
   >({
     open: isOpen,
     onOpenChange: (open) => {
@@ -150,7 +249,7 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
     placement: "bottom",
     gap: DROPDOWN_PANEL.triggerGap,
     listNavigation: {
-      items: sortedRepos,
+      items: dropdownItems,
       onSelect: handleSelect,
       initialSelectedIndex: -1,
     },
@@ -200,23 +299,31 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
         className={`scrollbar-overlay flex flex-col overflow-y-auto ${DROPDOWN_PANEL.paddingClass} ${DROPDOWN_PANEL.itemsGapClass}`}
         style={{ maxHeight: LIST_MAX_HEIGHT }}
       >
-        {repoLoading && sortedRepos.length === 0 ? (
+        {repoLoading && dropdownItems.length === 0 ? (
           <div className="px-3 py-6 text-center text-[12px] text-text-3">
             {t("status.loading")}
           </div>
-        ) : sortedRepos.length === 0 ? (
+        ) : dropdownItems.length === 0 ? (
           <div className="px-3 py-6 text-center text-[12px] text-text-3">
             {t("selectors.modelSelector.noResults")}
           </div>
         ) : (
-          sortedRepos.map((repo, index) => (
-            <RepoRow
-              key={repo.id}
-              repo={repo}
-              isCurrent={repo.id === currentRepoId}
-              keyboardProps={keyboard.getItemProps(index)}
-            />
-          ))
+          dropdownItems.map((item, index) =>
+            item.kind === "openPath" ? (
+              <OpenPathRow
+                key={item.item.id}
+                item={item.item}
+                keyboardProps={keyboard.getItemProps(index)}
+              />
+            ) : (
+              <RepoRow
+                key={item.repo.id}
+                repo={item.repo}
+                isCurrent={item.repo.id === currentRepoId}
+                keyboardProps={keyboard.getItemProps(index)}
+              />
+            )
+          )
         )}
       </div>
     </div>,

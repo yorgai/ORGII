@@ -39,6 +39,8 @@ import type { RepoItem, SpotlightItem } from "../../types";
 import { AddWorkspaceModalShell } from "../AddWorkspaceModalShell";
 import { REPO_PALETTE_CONFIG } from "../config";
 import { useSelectorKernel } from "../core";
+import { buildOpenPathItem } from "./pathActionItem";
+import { importWorkspacePath } from "./pathImport";
 import { buildPinnedRepoActions } from "./pinnedActions";
 import {
   buildSectionedAddItems,
@@ -330,6 +332,33 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
     [refreshReposForce, t]
   );
 
+  const openPathItem = useMemo(
+    () =>
+      buildOpenPathItem({
+        searchQuery,
+        matchCount: filteredRepos.length + workspaceItems.length,
+        openLabel: paletteText.openFolderLabel,
+        onOpenPath: (candidatePath) => {
+          void importWorkspacePath({
+            candidatePath,
+            invalidPathTitle: paletteText.invalidPathTitle,
+            invalidPathMessage: paletteText.invalidPathMessage,
+            onImportWorkspace:
+              addWorkspaceFlow.localWorkspaceForm.handleImportWorkspace,
+          });
+        },
+      }),
+    [
+      addWorkspaceFlow.localWorkspaceForm.handleImportWorkspace,
+      filteredRepos.length,
+      paletteText.invalidPathMessage,
+      paletteText.invalidPathTitle,
+      paletteText.openFolderLabel,
+      searchQuery,
+      workspaceItems.length,
+    ]
+  );
+
   const pinnedActionItems = useMemo(
     (): SpotlightItem[] =>
       buildPinnedRepoActions({
@@ -378,6 +407,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
         addMenuActive: !!addMenuKind,
         sectionedAddItems,
         workspaceItems,
+        openPathItem,
         filteredRepos,
         currentRepoId,
         isMultiRoot,
@@ -406,6 +436,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
       isManageMode,
       isMultiRoot,
       leadingRepo,
+      openPathItem,
       paletteText,
       renderRepoTrashAction,
       searchQuery,
