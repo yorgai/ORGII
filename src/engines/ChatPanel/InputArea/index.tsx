@@ -161,7 +161,6 @@ const InputArea: React.FC<InputAreaProps> = memo(
 
       // Slash command
       showSlashMenu,
-      handleSlashCommand,
       handleSlashCommandClose,
       handleSlashSelect,
       handleModeSelect,
@@ -505,7 +504,12 @@ const InputArea: React.FC<InputAreaProps> = memo(
           {!isEditMode && !omitChatHeader && <ChatHeader />}
 
           {/* Pinned actions quick-access bar — only in non-edit chat mode */}
-          {!isEditMode && <PinnedActionsBar tiptapRef={tiptapRef} />}
+          {!isEditMode && (
+            <PinnedActionsBar
+              tiptapRef={tiptapRef}
+              repoPath={currentRepoPath || undefined}
+            />
+          )}
 
           {isEditMode && quietEditSurface && showEditHeader && (
             <ChatStatusSegmentedBar
