@@ -105,6 +105,31 @@ In general, keep changes focused, use existing shared components and tokens, pre
 
 Add or update tests when changing behavior. Prefer focused tests that cover the changed module or component. For bug fixes, include a regression test when practical.
 
+## Commit and pull request format
+
+Commit messages and pull request titles must use scoped Conventional Commits:
+
+```text
+feat(scope): short imperative summary
+fix(scope): short imperative summary
+```
+
+Use the type that best matches the change. Common types include `feat`, `fix`, `chore`, `docs`, `style`, `test`, `refactor`, `perf`, `build`, `ci`, and `revert`. The scope should be lowercase kebab-case and should name the affected area, such as `git`, `settings`, `workstation`, `slash-menu`, or `contributing`.
+
+Examples:
+
+```text
+feat(git): add remote authentication prompt
+fix(settings): preserve Git fetch preference
+chore(contributing): document commit format
+```
+
+Pull request descriptions must include a clear summary and a test plan. If checks were not run, explain why and list any partial verification performed.
+
+Do not skip pre-commit, pre-push, lint-staged, or other repository hooks. Do not use `--no-verify`, `HUSKY=0`, or equivalent bypasses unless a maintainer explicitly asks you to do so for an emergency recovery task. If a hook fails, fix the underlying issue and rerun the command normally.
+
+If you use a coding agent, the agent must read and follow this section before creating commits or pull requests. Agent-generated commits and PRs must use the same format, run the same checks, and must not bypass hooks.
+
 ## Contributor License Agreement
 
 ORGII requires contributors to sign the repository Contributor License Agreement before a pull request can be merged. The agreement text is in [`CLA.md`](CLA.md).
