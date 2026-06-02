@@ -112,13 +112,9 @@ const BrowserEventBridge: React.FC = () => {
 };
 
 const AppShell = () => {
-  // Router location for conditional rendering
   const location = useLocation();
-
-  // Auth state - hide tab bar when not authenticated (e.g., login page)
   const { isAuthenticated } = useServiceAuthState();
 
-  // Background customization config
   const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
   const activeColorPairId = useAtomValue(activeColorPairIdAtom);
   const currentBackgroundImage = useBackgroundImage();
@@ -136,15 +132,11 @@ const AppShell = () => {
     prewarmColorPair(pair.light, pair.dark);
   }, [activeColorPairId]);
 
-  // View mode from route (sync) - prevents flash during transitions
   const viewMode = useRouteViewMode();
 
-  // WorkStation is always mounted for persistence
-  // Visibility is controlled via CSS, not mounting/unmounting
-
   // === App-Level Action Registration ===
-  // Registers navigation, theme, sidebar, tabs, spotlight actions globally.
-  // These are available to the OS agent and any component via zodActionRegistry.
+  // Registers navigation, theme, sidebar, tabs, spotlight actions globally
+  // via zodActionRegistry — available to the OS agent and all components.
   useEffect(() => {
     const cleanup = registerAppActions();
     return cleanup;
@@ -184,7 +176,6 @@ const AppShell = () => {
     };
   }, [navigate]);
 
-  // === Centralized Event Handlers (Custom Hooks) ===
   useWorkspaceEvents();
   useUrlPreviewEvents();
 
@@ -206,9 +197,6 @@ const AppShell = () => {
   // `projectSyncApi.status` from the settings panel + status bar.
   useSyncStatusBridge();
 
-  // NOTE: Cmd+S (spotlight) and Cmd+I (chat) are now handled by useGlobalShortcuts
-
-  // Check if current route supports docked chat panel
   const stationMode = useAtomValue(stationModeAtom);
   const chatPanelMaximized = useAtomValue(chatPanelMaximizedAtom);
   const stationChatVisibility = useAtomValue(stationChatVisibilityAtom);
@@ -305,52 +293,33 @@ const AppShell = () => {
     }
   }, [chatPanelMaximized, isSettingsRoute, setChatPanelMaximized]);
 
-  // Global layout method (inset/full) — drives WorkStation chat layout too
   const globalLayoutMethod = useAtomValue(globalLayoutMethodAtom);
 
-  // `/orgii/app/settings/*` resolves to `viewMode === "workStation"`
-  // (see `routeViewModeConfig`) so this captures the settings surface
-  // too — no extra OR clause needed.
+  // `/orgii/app/settings/*` resolves to `viewMode === "workStation"` (see routeViewModeConfig),
+  // so this captures the settings surface too — no extra OR clause needed.
   const isWorkStationViewActive = viewMode === "workStation";
-  // Settings-in-slot doesn't run a real chat session, so we don't bridge
-  // the WorkStation pipeline atom into the docked chat there.
+  // Skip bridging when Settings-in-slot is active — it doesn't run a real chat session.
   const shouldBridgeWorkStationPipeline =
     isWorkStationViewActive &&
     stationMode !== "ops-control" &&
     !isSettingsRoute;
 
-  // Auto-maximize the docked chat panel when the viewport is too narrow
-  // to share a row between the WorkStation tools and the chat. Restores
-  // the previous mode when the viewport grows back.
   useNarrowChatFocus({ enabled: isWorkStationViewActive });
-
-  // Keeps the pipeline atom in sync with WorkStation's remembered
-  // selection whenever the primary WorkStation chat surface is visible.
-  // Kanban owns secondary chat previews, so it must not reassert the
-  // remembered docked-chat session into the transient pipeline.
   useWorkStationPipelineBridge(shouldBridgeWorkStationPipeline);
 
-  // Persistent views: mount once on first visit, keep mounted forever.
   const shouldRenderWorkStation = useStickyMount(isWorkStationViewActive);
-
-  // Should show Outlet? (only for non-persistent views). On settings routes
-  // we hide the Outlet because the Settings UI is rendered inside the slot —
-  // the route still resolves so deeplinks/refresh work, but its mounted
-  // <Settings /> page sits behind the WorkStation surface invisibly.
+  // Settings-in-slot owns the slot while its route is active; the Outlet stays
+  // mounted but hidden so deeplinks / refresh still work.
   const shouldShowOutlet = !isWorkStationViewActive;
 
-  // Chat layout mirrors the global layout method when WorkStation is
-  // active, otherwise falls back to overlay. The `GlobalLayoutMethod`
-  // and `ChatLayout` unions match exactly ("inset" | "full" | "compact")
-  // so the value passes through directly.
+  // GlobalLayoutMethod and ChatLayout unions match exactly, so the value passes through.
   const chatLayout: ChatLayout = isWorkStationViewActive
     ? globalLayoutMethod
     : "inset";
 
   const workStationChatPosition = useAtomValue(workStationChatPositionAtom);
   const sessionChatPosition = useAtomValue(sessionChatPositionAtom);
-  // Settings always sits on the left side of the WorkStation; the
-  // position atoms only describe ChatPanel placement, not Settings.
+  // Settings always sits on the left; position atoms describe ChatPanel placement only.
   const chatPosition = isSettingsRoute
     ? "left"
     : stationMode === "agent-station"
@@ -361,26 +330,18 @@ const AppShell = () => {
       ? sidebarWidth || DEFAULT_SIDEBAR_WIDTH
       : 0;
 
-  // The chat slot is maximized when the user explicitly maximizes it
-  // (chat-panel header button, toolbar toggle, narrow-viewport auto-flip)
-  // OR when Settings-in-slot is active — entering Settings auto-flips to
-  // maximized via the effect above, so the WorkStation surface is hidden
-  // by default and the user can still un-maximize to reveal it. Ops
-  // Control still suppresses the overlay unless Settings is the slot
-  // occupant.
+  // Ops Control suppresses overlay unless Settings-in-slot is active.
   const effectiveChatFocus =
     chatPanelMaximized &&
     isWorkStationViewActive &&
     (stationMode !== "ops-control" || isSettingsRoute);
 
-  // Persistent providers at top level so state survives navigation
   return (
     <TerminalProvider>
       <BrowserProvider>
         <BrowserEventBridge />
         <SharedBrowserApp />
         <div className="relative flex h-full">
-          {/* Background layer */}
           <BackgroundLayer
             image={
               backgroundConfig.backgroundColor ? null : currentBackgroundImage
@@ -429,7 +390,6 @@ const AppShell = () => {
                 </div>
               )}
 
-              {/* Other routes (mainApp, session lifecycle) - via Outlet */}
               <div
                 className="h-full w-full min-w-0"
                 style={{

@@ -149,7 +149,7 @@ export async function invokeTauri<T = unknown>(
   let requestId = "";
 
   if (tracking && tracker) {
-    requestId = `tauri-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    requestId = `tauri-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     tracker.trackTauriInvoke(cmd, args, requestId);
   }
 

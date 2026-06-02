@@ -74,60 +74,21 @@ export function useSessionCreatorChatPanelHandlers({
   >(null);
 
   const handleShareScreenClick = useCallback(async () => {
-    console.warn("[wingman-share-test] clicked");
     try {
-      console.warn("[wingman-share-test] listing monitors");
       const monitors = await wingmanListMonitors();
-      console.warn("[wingman-share-test] monitors listed", {
-        count: monitors.length,
-        monitors,
-      });
       if (monitors.length <= 1) {
-        const monitorIndex = monitors[0]?.index;
-        console.warn("[wingman-share-test] opening desktop-control test", {
-          monitorIndex,
-        });
-        await wingmanOpenWindow(undefined, monitorIndex, true);
-        console.warn("[wingman-share-test] desktop-control test RPC completed");
+        await wingmanOpenWindow(undefined, monitors[0]?.index, true);
         return;
       }
-      console.warn("[wingman-share-test] opening monitor picker");
       setScreenPickerMonitors(monitors);
-    } catch (err) {
-      console.warn(
-        "[wingman-share-test] monitor list failed, opening fallback",
-        err
-      );
-      wingmanOpenWindow(undefined, undefined, true)
-        .then(() => {
-          console.warn(
-            "[wingman-share-test] fallback desktop-control test RPC completed"
-          );
-        })
-        .catch((error) => {
-          console.warn(
-            "[wingman-share-test] fallback desktop-control test RPC failed",
-            error
-          );
-        });
+    } catch {
+      wingmanOpenWindow(undefined, undefined, true).catch(() => {});
     }
   }, []);
 
   const handleScreenPicked = useCallback((monitorIndex: number) => {
-    console.warn("[wingman-share-test] monitor picked", { monitorIndex });
     setScreenPickerMonitors(null);
-    wingmanOpenWindow(undefined, monitorIndex, true)
-      .then(() => {
-        console.warn(
-          "[wingman-share-test] picked monitor desktop-control test RPC completed"
-        );
-      })
-      .catch((error) => {
-        console.warn(
-          "[wingman-share-test] picked monitor desktop-control test RPC failed",
-          error
-        );
-      });
+    wingmanOpenWindow(undefined, monitorIndex, true).catch(() => {});
   }, []);
 
   // ── Repo / branch selection ───────────────────────────────────────────────

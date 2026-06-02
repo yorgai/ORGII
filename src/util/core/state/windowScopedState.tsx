@@ -34,7 +34,7 @@ import { ROUTE_PATHS } from "@src/config/routePaths";
  * Format: window-{timestamp}-{random}
  */
 export function generateWindowId(): string {
-  return `window-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `window-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
