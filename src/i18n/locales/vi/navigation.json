@@ -121,7 +121,8 @@
       "agent": "Coding Agent",
       "cli": "CLI Agent",
       "hostedKey": "Hosted Key",
-      "cloud": "Cloud"
+      "cloud": "Cloud",
+      "openSource": "Mã nguồn mở"
     },
     "actions": {
       "addNew": "Thêm mới",

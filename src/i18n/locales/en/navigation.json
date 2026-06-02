@@ -149,7 +149,8 @@
       "agent": "Coding Agent",
       "cli": "CLI Agent",
       "hostedKey": "Hosted Key",
-      "cloud": "Cloud"
+      "cloud": "Cloud",
+      "openSource": "Open Source"
     },
     "actions": {
       "addNew": "Add New",

@@ -121,7 +121,8 @@
       "agent": "Coding Agent",
       "cli": "CLI Agent",
       "hostedKey": "Chave Hospedada",
-      "cloud": "Nuvem"
+      "cloud": "Nuvem",
+      "openSource": "Código aberto"
     },
     "actions": {
       "addNew": "Adicionar",
