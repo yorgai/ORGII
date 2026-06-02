@@ -7,8 +7,8 @@
  * a slash command). A trailing "..." button opens `PinActionsPanel` to
  * search and manage the pinned set.
  *
- * Design: h-[28px] pills, border-border-2 stroke, rounded-full, text-[12px],
- * accent-highlight on active state — matches StackPill and ModePill idioms.
+ * Design: reuses StackPill so pinned actions match composer section pills:
+ * 28px height, rounded-full border, and 13px medium text.
  */
 import { invoke } from "@tauri-apps/api/core";
 import { useAtom } from "jotai";
@@ -17,6 +17,7 @@ import React, { memo, useCallback, useRef, useState } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
 import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import StackPill from "@src/engines/ChatPanel/InputArea/components/StackPill";
 import { createLogger } from "@src/hooks/logger";
 import {
   type PinnedAction,
@@ -71,7 +72,7 @@ const BUILTIN_SLASH_ITEMS: SlashItem[] = [
 
 interface ActionPillProps {
   action: PinnedAction;
-  onClick: (action: PinnedAction, e: React.MouseEvent) => void;
+  onClick: (action: PinnedAction, e?: React.MouseEvent) => void;
   /** Forward a ref onto the underlying button. */
   buttonRef?: React.Ref<HTMLButtonElement>;
 }
@@ -81,26 +82,18 @@ const ActionPill: React.FC<ActionPillProps> = memo(
     const [pressed, setPressed] = useState(false);
 
     return (
-      <button
+      <StackPill
         ref={buttonRef}
-        type="button"
+        count={0}
+        active={pressed}
+        title={action.name}
+        onClick={() => onClick(action)}
+        label={action.name}
+        className="max-w-[180px] select-none [&>span:last-child]:min-w-0 [&>span:last-child]:truncate"
         onMouseDown={() => setPressed(true)}
         onMouseUp={() => setPressed(false)}
         onMouseLeave={() => setPressed(false)}
-        onClick={(e) => onClick(action, e)}
-        className={[
-          "flex h-[26px] shrink-0 select-none items-center gap-1 rounded-full border border-solid px-2.5 leading-none",
-          "text-[12px] font-medium transition-colors duration-150",
-          pressed
-            ? "cursor-pointer border-primary-5 bg-fill-2 text-primary-6"
-            : "cursor-pointer border-border-2 bg-bg-2 text-text-2 hover:border-border-3 hover:bg-fill-2 hover:text-text-1",
-        ].join(" ")}
-        title={action.name}
-      >
-        <span className="truncate" style={{ maxWidth: 120 }}>
-          {action.name}
-        </span>
-      </button>
+      />
     );
   }
 );
@@ -285,7 +278,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
     // ── Nothing pinned — still render the "..." button ────────────────────────
 
     return (
-      <div className="relative z-10 flex w-full items-center gap-1.5 overflow-x-auto px-0.5 py-0.5 scrollbar-hide">
+      <div className="relative flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-hide">
         {pinnedActions.map((action) => (
           <ActionPill
             key={actionKey(action)}
@@ -294,22 +287,16 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
           />
         ))}
 
-        {/* "..." manage button */}
-        <button
+        <StackPill
           ref={moreButtonRef}
-          type="button"
-          onClick={handleOpenPanel}
+          icon={<MoreHorizontal size={13} strokeWidth={1.75} />}
+          count={0}
+          active={panelOpen}
+          iconOnly
           title="Manage pinned actions"
-          className={[
-            "flex h-[26px] w-[26px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-solid leading-none",
-            "transition-colors duration-150",
-            panelOpen
-              ? "border-primary-5 bg-fill-2 text-primary-6"
-              : "border-border-2 bg-bg-2 text-text-3 hover:border-border-3 hover:bg-fill-2 hover:text-text-2",
-          ].join(" ")}
-        >
-          <MoreHorizontal size={13} strokeWidth={1.75} />
-        </button>
+          ariaLabel="Manage pinned actions"
+          onClick={handleOpenPanel}
+        />
 
         <PinActionsPanel
           visible={panelOpen}

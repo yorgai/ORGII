@@ -86,6 +86,10 @@ interface InputAreaProps {
   sessionId?: string;
   onSubmitOverride?: (input: SubmitOverrideInput) => Promise<boolean>;
   customMentionOptions?: ReadonlyArray<CustomMentionOption>;
+  /** Pinned status/action pills shown above status banners and composer. */
+  topRowPills?: React.ReactNode;
+  /** Status banners that should sit below the top pill row and above composer. */
+  statusBanners?: React.ReactNode;
 }
 
 // ============================================
@@ -110,6 +114,8 @@ const InputArea: React.FC<InputAreaProps> = memo(
     sessionId: propSessionId,
     onSubmitOverride,
     customMentionOptions,
+    topRowPills,
+    statusBanners,
   }) => {
     const { t } = useTranslation("sessions");
 
@@ -503,8 +509,17 @@ const InputArea: React.FC<InputAreaProps> = memo(
           {/* Header - only show in normal mode, not edit mode */}
           {!isEditMode && !omitChatHeader && <ChatHeader />}
 
-          {/* Pinned actions quick-access bar — only in non-edit chat mode */}
-          {!isEditMode && <PinnedActionsBar tiptapRef={tiptapRef} />}
+          {!isEditMode && (
+            <div className="relative z-10 flex min-w-0 items-center gap-1 overflow-x-auto px-0.5 pb-1.5 scrollbar-hide">
+              {topRowPills}
+              <PinnedActionsBar
+                tiptapRef={tiptapRef}
+                onSubmit={() => void handleDivSubmit()}
+              />
+            </div>
+          )}
+
+          {!isEditMode && statusBanners}
 
           {isEditMode && quietEditSurface && showEditHeader && (
             <ChatStatusSegmentedBar

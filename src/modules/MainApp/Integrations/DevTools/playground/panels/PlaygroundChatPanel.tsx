@@ -321,30 +321,34 @@ export function PlaygroundChatPanel({
                 />
               )}
 
-              {/* Pill row */}
-              {hasAny && <CollapsedInlineRow sections={inlineSections} />}
-
-              {showModeSwitchPreview && !modeSwitchCollapsed && (
-                <ModeSwitchCardBody
-                  targetMode={modeSwitchTargetMode}
-                  reason={modeSwitchReason}
-                  onSwitch={() => {}}
-                  onSkip={() => {}}
-                  collapsed={false}
-                  onCollapse={collapseModeSwitch}
-                />
-              )}
-
-              {interventionBottomContent}
-
-              <ChatRetryStatusBar items={retryStatusItems} />
-
-              {pausedBottomContent}
-
               <QueueEditModeCard />
 
               <Suspense fallback={null}>
-                <LazyInputArea {...queueEditProps} />
+                <LazyInputArea
+                  topRowPills={
+                    hasAny ? (
+                      <CollapsedInlineRow sections={inlineSections} />
+                    ) : null
+                  }
+                  statusBanners={
+                    <>
+                      {showModeSwitchPreview && !modeSwitchCollapsed && (
+                        <ModeSwitchCardBody
+                          targetMode={modeSwitchTargetMode}
+                          reason={modeSwitchReason}
+                          onSwitch={() => {}}
+                          onSkip={() => {}}
+                          collapsed={false}
+                          onCollapse={collapseModeSwitch}
+                        />
+                      )}
+                      {interventionBottomContent}
+                      <ChatRetryStatusBar items={retryStatusItems} />
+                      {pausedBottomContent}
+                    </>
+                  }
+                  {...queueEditProps}
+                />
               </Suspense>
             </div>
           </div>

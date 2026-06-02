@@ -868,45 +868,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
                   />
                 )}
 
-                {/* Pill row — always visible when any section has data or scroll nav is active */}
-                {(hasAny ||
-                  scrollNav?.showScrollToBottom ||
-                  scrollNav?.showFollowAgent) && (
-                  <CollapsedInlineRow
-                    sections={inlineSections}
-                    scrollNav={scrollNav}
-                  />
-                )}
-
                 <QueueEditModeCard />
-
-                {hasModeSwitch && !modeSwitchCollapsed && (
-                  <ModeSwitchInputCard
-                    key={`mode-switch-status-${sessionId}`}
-                    collapsed={false}
-                    onCollapse={collapseModeSwitch}
-                  />
-                )}
-
-                {hasAgentOrgIntervention && (
-                  <AgentOrgInterventionPinBar
-                    intervention={agentOrgIntervention}
-                    memberName={currentAgentOrgMember?.name}
-                    error={agentOrgInterventionError}
-                    returning={agentOrgInterventionReturning}
-                    onReturnToWork={returnAgentOrgMemberToWork}
-                  />
-                )}
-
-                {streamRetry && (
-                  <ChatRetryBanner
-                    kind={toChatRetryKind(streamRetry.kind)}
-                    attempt={streamRetry.attempt}
-                    maxAttempts={streamRetry.maxAttempts}
-                  />
-                )}
-
-                {groupChatPausedBottomContent}
 
                 {canvasPayload && (
                   <CanvasInlineCard
@@ -940,6 +902,44 @@ const ChatView: React.FC<ChatViewProps> = memo(
                   sessionId={inputAreaSessionId}
                   onSubmitOverride={handleGroupChatSubmitOverride}
                   customMentionOptions={groupChatMentionOptions}
+                  topRowPills={
+                    hasAny ||
+                    scrollNav?.showScrollToBottom ||
+                    scrollNav?.showFollowAgent ? (
+                      <CollapsedInlineRow
+                        sections={inlineSections}
+                        scrollNav={scrollNav}
+                      />
+                    ) : null
+                  }
+                  statusBanners={
+                    <>
+                      {hasModeSwitch && !modeSwitchCollapsed && (
+                        <ModeSwitchInputCard
+                          key={`mode-switch-status-${sessionId}`}
+                          collapsed={false}
+                          onCollapse={collapseModeSwitch}
+                        />
+                      )}
+                      {hasAgentOrgIntervention && (
+                        <AgentOrgInterventionPinBar
+                          intervention={agentOrgIntervention}
+                          memberName={currentAgentOrgMember?.name}
+                          error={agentOrgInterventionError}
+                          returning={agentOrgInterventionReturning}
+                          onReturnToWork={returnAgentOrgMemberToWork}
+                        />
+                      )}
+                      {streamRetry && (
+                        <ChatRetryBanner
+                          kind={toChatRetryKind(streamRetry.kind)}
+                          attempt={streamRetry.attempt}
+                          maxAttempts={streamRetry.maxAttempts}
+                        />
+                      )}
+                      {groupChatPausedBottomContent}
+                    </>
+                  }
                   {...queueEditProps}
                 />
                 {/* Cursor IDE sessions need their own poll loop to

@@ -9,7 +9,7 @@
  * label: icon + text label (used for primary-card pills).
  * iconOnly: icon only (used for action pills at row trailing end).
  */
-import React, { memo } from "react";
+import React, { forwardRef, memo } from "react";
 
 export interface StackPillProps {
   icon?: React.ReactNode;
@@ -24,51 +24,80 @@ export interface StackPillProps {
   content?: React.ReactNode;
   /** Stable selector for rendered UI E2E coverage. */
   testId?: string;
+  /** Native title for plain hover hints. */
+  title?: string;
+  /** Accessible label when the visual content is icon-only or abbreviated. */
+  ariaLabel?: string;
+  /** Extra classes for caller-specific sizing constraints. */
+  className?: string;
+  onMouseDown?: React.MouseEventHandler<HTMLButtonElement>;
+  onMouseUp?: React.MouseEventHandler<HTMLButtonElement>;
+  onMouseLeave?: React.MouseEventHandler<HTMLButtonElement>;
   /** "primary" uses primary-6 colors instead of the default text-2 palette. */
   variant?: "default" | "primary";
 }
 
-const StackPill: React.FC<StackPillProps> = memo(
-  ({
-    icon,
-    count,
-    active,
-    onClick,
-    label,
-    iconOnly = false,
-    content,
-    testId,
-    variant = "default",
-  }) => (
-    <button
-      type="button"
-      data-testid={testId}
-      onClick={onClick}
-      className={[
-        "flex h-[28px] shrink-0 cursor-pointer items-center gap-1.5 rounded-full border leading-none transition-colors duration-150",
-        iconOnly ? "w-[28px] justify-center px-0" : "px-2",
-        "text-[13px] font-medium",
-        variant === "primary"
-          ? active
-            ? "border-primary-5 bg-chat-input text-primary-6"
-            : "border-primary-5 bg-chat-input text-primary-6 hover:border-border-3 hover:bg-chat-input"
-          : active
-            ? "border-border-2 bg-chat-input text-text-2"
-            : "border-border-2 bg-chat-input text-text-2 hover:border-border-3 hover:bg-chat-input",
-      ].join(" ")}
-    >
-      {icon && (
-        <span className="flex h-[16px] w-[16px] shrink-0 items-center justify-center leading-none text-current [&_svg]:block [&_svg]:stroke-current [&_svg]:text-current">
-          {icon}
-        </span>
-      )}
-      {!iconOnly &&
-        (content ?? (
-          <span className="flex items-center leading-none">
-            {label ?? count}
+const StackPill = memo(
+  forwardRef<HTMLButtonElement, StackPillProps>(
+    (
+      {
+        icon,
+        count,
+        active,
+        onClick,
+        label,
+        iconOnly = false,
+        content,
+        testId,
+        title,
+        ariaLabel,
+        className,
+        onMouseDown,
+        onMouseUp,
+        onMouseLeave,
+        variant = "default",
+      },
+      ref
+    ) => (
+      <button
+        ref={ref}
+        type="button"
+        data-testid={testId}
+        title={title}
+        aria-label={ariaLabel}
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseLeave}
+        className={[
+          "flex h-[28px] shrink-0 cursor-pointer items-center gap-1.5 rounded-full border leading-none transition-colors duration-150",
+          iconOnly ? "w-[28px] justify-center px-0" : "px-2",
+          "text-[13px] font-medium",
+          variant === "primary"
+            ? active
+              ? "border-primary-5 bg-chat-input text-primary-6"
+              : "border-primary-5 bg-chat-input text-primary-6 hover:border-border-3 hover:bg-chat-input"
+            : active
+              ? "border-border-2 bg-chat-input text-text-2"
+              : "border-border-2 bg-chat-input text-text-2 hover:border-border-3 hover:bg-chat-input",
+          className,
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {icon && (
+          <span className="flex h-[16px] w-[16px] shrink-0 items-center justify-center leading-none text-current [&_svg]:block [&_svg]:stroke-current [&_svg]:text-current">
+            {icon}
           </span>
-        ))}
-    </button>
+        )}
+        {!iconOnly &&
+          (content ?? (
+            <span className="flex items-center leading-none">
+              {label ?? count}
+            </span>
+          ))}
+      </button>
+    )
   )
 );
 
