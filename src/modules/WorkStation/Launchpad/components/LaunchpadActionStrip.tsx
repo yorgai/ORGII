@@ -2,10 +2,11 @@
  * LaunchpadActionStrip
  *
  * Sticky action bar rendered at the bottom of the Launchpad dashboard
- * pane while a workspace card is selected. Provides the five primary
- * verbs we want a user to be able to run against a workspace without
- * having to drill into the repo detail tab first:
+ * pane while a workspace card is selected. Provides the primary verbs
+ * we want a user to be able to run against a workspace without having to
+ * drill into the repo detail tab first:
  *
+ *   - Setup (auto-detects repo + creates agent session with setup prompt)
  *   - Switch to this repo (sets the global selection + jumps to Editor)
  *   - Start session (sets global selection + opens Agent Station)
  *   - Open details (opens the existing launchpad-repo tab)
@@ -23,6 +24,7 @@ import {
   Expand,
   FolderSearch,
   Play,
+  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
@@ -34,11 +36,15 @@ import Button from "@src/components/Button";
 import Message from "@src/components/Toast";
 import { ROUTES } from "@src/config/routes";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
+import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
 import { selectedRepoIdAtom } from "@src/store/repo";
 import type { Repo } from "@src/store/repo/types";
 import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
 import { getFileManagerRevealLabelKey } from "@src/util/platform/fileManagerLabels";
 import { isTauriDesktop } from "@src/util/platform/tauri";
+
+import { useRepoDetection } from "../hooks/useRepoDetection";
+import { useRepoSetup } from "../hooks/useRepoSetup";
 
 interface LaunchpadActionStripProps {
   repo: Repo;
@@ -67,8 +73,60 @@ const LaunchpadActionStrip: React.FC<LaunchpadActionStripProps> = ({
   const setSelectedRepoId = useSetAtom(selectedRepoIdAtom);
   const { forceRefreshRepos } = useRepoSelection({ autoLoad: false });
 
+  const { launching, launchSetup } = useRepoSetup();
+  const lastModel = useValidatedLastPair();
+
   const repoPath = repo.fs_uri ? stripFileUri(repo.fs_uri) : (repo.path ?? "");
   const repoLabel = repo.name || repoPath.split("/").pop() || "Repo";
+
+  const { repoType, repoTypeLabel, configFiles, hasDocker, hasMakefile } =
+    useRepoDetection(repoPath || undefined);
+
+  const handleSetupRepo = useCallback(async () => {
+    if (!repoPath || launching) return;
+    try {
+      await launchSetup(
+        {
+          repoPath,
+          repoName: repoLabel,
+          repoType,
+          repoTypeLabel,
+          configFiles,
+          hasDocker,
+          hasMakefile,
+        },
+        {
+          trusted: false,
+          keySource: lastModel?.keySource,
+          model: lastModel?.model,
+          accountId: lastModel?.selectedAccountId,
+          cliAgentType: lastModel?.cliAgentType,
+          listingModel: lastModel?.listingModel,
+          listingModelType: lastModel?.listingModelType,
+          tier: lastModel?.tier,
+        }
+      );
+    } catch (error) {
+      console.error("Error launching repo setup:", error);
+      Message.error(
+        t("navigation:launchpad.actions.setupFailed", {
+          defaultValue: "Failed to start repo setup",
+        })
+      );
+    }
+  }, [
+    repoPath,
+    repoLabel,
+    repoType,
+    repoTypeLabel,
+    configFiles,
+    hasDocker,
+    hasMakefile,
+    launching,
+    launchSetup,
+    lastModel,
+    t,
+  ]);
 
   const handleSwitch = useCallback(() => {
     setSelectedRepoId(repo.id);
@@ -149,6 +207,20 @@ const LaunchpadActionStrip: React.FC<LaunchpadActionStripProps> = ({
   return (
     <div className="w-fit max-w-full overflow-hidden rounded-full bg-fill-1 px-2 py-1.5">
       <div className="flex max-w-full items-center gap-1.5 overflow-x-auto scrollbar-hide">
+        <Button
+          variant="primary"
+          size="small"
+          shape="round"
+          className="shrink-0"
+          icon={<Sparkles size={14} />}
+          disabled={!repoPath || launching}
+          loading={launching}
+          onClick={handleSetupRepo}
+        >
+          {t("navigation:launchpad.actions.setupRepo", {
+            defaultValue: "Setup",
+          })}
+        </Button>
         <Button
           variant="secondary"
           size="small"
