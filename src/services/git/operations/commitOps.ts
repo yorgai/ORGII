@@ -6,6 +6,10 @@ import { showGitErrorAndHandle } from "@src/hooks/git/useGitErrorDialog";
 
 import { TerminalService } from "../../terminal";
 import {
+  appendGitCoauthorTrailer,
+  shouldIncludeGitCoauthor,
+} from "./commitAttribution";
+import {
   type GitOperationResult,
   getOutputIntegration,
   getRepoContext,
@@ -204,10 +208,11 @@ export async function resolveConflict(
  */
 export async function commit(message: string): Promise<GitOperationResult> {
   const integration = getOutputIntegration();
+  const commitMessage = appendGitCoauthorTrailer(message);
 
   if (integration) {
     try {
-      await integration.commitWithOutput({ message });
+      await integration.commitWithOutput({ message: commitMessage });
       return { success: true, errorType: "none" };
     } catch (error) {
       const parsed = parseGitError(error);
@@ -225,7 +230,8 @@ export async function commit(message: string): Promise<GitOperationResult> {
       await gitApi.gitCommit({
         repo_id: repo.repoId,
         repo_path: repo.repoPath,
-        message,
+        message: commitMessage,
+        coauthor: shouldIncludeGitCoauthor(),
       });
       return { success: true, errorType: "none" };
     } catch (error) {
@@ -238,7 +244,7 @@ export async function commit(message: string): Promise<GitOperationResult> {
     }
   }
 
-  const escapedMsg = message.replace(/"/g, '\\"');
+  const escapedMsg = commitMessage.replace(/"/g, '\\"');
   try {
     await TerminalService.execute(`git commit -m "${escapedMsg}"`);
     return { success: true, errorType: "none" };

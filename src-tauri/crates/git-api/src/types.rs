@@ -255,6 +255,8 @@ pub struct CommitRequest {
     pub description: Option<String>,
     pub stage_all: bool,
     pub files: Option<Vec<String>>,
+    #[serde(default)]
+    pub coauthor: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]

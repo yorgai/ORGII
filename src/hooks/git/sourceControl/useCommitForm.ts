@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 
 import { getGitRemotes } from "@src/api/http/git/remotes";
 import { useGitOperations } from "@src/hooks/git/useGitOperations";
+import { appendGitCoauthorTrailer } from "@src/services/git/operations/commitAttribution";
 import { gitOutputIntegrationAtom } from "@src/store/workstation/codeEditor/outputIntegration";
 import type { GitFile } from "@src/types/git/types";
 import { showGitActionDialogSafely } from "@src/util/dialogs/gitActionDialog";
@@ -106,9 +107,8 @@ export function useCommitForm(
     }
   }, [repoPath]);
 
-  // Helper function to append "Powered by ORGII" footer to commit message
   const formatCommitMessage = useCallback((message: string): string => {
-    return `${message}\n\nPowered by ORGII.`;
+    return appendGitCoauthorTrailer(message);
   }, []);
 
   // Commit changes

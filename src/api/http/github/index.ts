@@ -1,6 +1,8 @@
 /**
  * GitHub integration HTTP helpers (hosted service `/github/*` routes).
  */
+import { appendPullRequestAttributionFooter } from "@src/services/git/operations/commitAttribution";
+
 import {
   deleteHostedServiceApi as deleteApi,
   getHostedServiceApi as getApi,
@@ -85,10 +87,10 @@ export async function listRepoBranches(
 export async function createPullRequest(
   data: CreatePullRequestRequest
 ): Promise<PullRequestResponse> {
-  const response = await postApi<PullRequestResponse>(
-    "/github/pull-requests",
-    data
-  );
+  const response = await postApi<PullRequestResponse>("/github/pull-requests", {
+    ...data,
+    body: appendPullRequestAttributionFooter(data.body),
+  });
   if (!response) {
     throw new Error("Failed to create pull request");
   }

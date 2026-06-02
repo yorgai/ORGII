@@ -39,6 +39,19 @@ export const GIT_SETTINGS_REGISTRY = {
     description: "Interval in seconds between automatic fetches (30-3600)",
     category: "git",
   },
+  "git.attribution.coauthorEnabled": {
+    schema: z.boolean(),
+    default: true,
+    description:
+      "Add an ORGII coauthor trailer to Git commits created from ORGII",
+    category: "git",
+  },
+  "git.attribution.prEnabled": {
+    schema: z.boolean(),
+    default: true,
+    description: "Add ORGII attribution to pull requests created from ORGII",
+    category: "git",
+  },
   "git.worktree.maxCount": {
     schema: z.number().int().min(1).max(32),
     default: 8,

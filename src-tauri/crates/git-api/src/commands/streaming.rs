@@ -26,6 +26,8 @@ use tokio::process::Command;
 
 use git::tokio_git_command;
 
+use super::commit::append_orgii_coauthor_trailer;
+
 type GitEventStream = Pin<Box<dyn Stream<Item = Result<Event, std::convert::Infallible>> + Send>>;
 
 // ============================================
@@ -154,6 +156,8 @@ pub struct FetchStreamQuery {
 pub struct CommitStreamQuery {
     pub path: String,
     pub message: String,
+    #[serde(default)]
+    pub coauthor: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -480,7 +484,7 @@ pub async fn commit_stream(
     Query(query): Query<CommitStreamQuery>,
 ) -> Response {
     let repo_path = PathBuf::from(&query.path);
-    let message = query.message;
+    let message = append_orgii_coauthor_trailer(&query.message, query.coauthor.unwrap_or(false));
 
     let mut cmd = match tokio_git_command() {
         Ok(command) => command,

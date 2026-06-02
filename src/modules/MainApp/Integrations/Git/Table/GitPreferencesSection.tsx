@@ -15,13 +15,19 @@ import {
 } from "@src/modules/shared/layouts/SectionLayout";
 import { HintWithInfo } from "@src/modules/shared/layouts/blocks";
 import {
+  ORGII_COAUTHOR_EMAIL,
+  ORGII_COAUTHOR_NAME,
+} from "@src/services/git/operations/commitAttribution";
+import {
   GIT_EXECUTABLE_MODES,
   GIT_PULL_STRATEGIES,
   type GitExecutableMode,
   type GitPullStrategy,
   gitAutoFetchAtom,
   gitAutoFetchIntervalAtom,
+  gitCoauthorAttributionEnabledAtom,
   gitExecutableModeAtom,
+  gitPrAttributionEnabledAtom,
   gitPullStrategyAtom,
   gitWorktreeCleanupIntervalHoursAtom,
   gitWorktreeMaxCountAtom,
@@ -64,6 +70,12 @@ const GitPreferencesSection: React.FC = () => {
   const [autoFetch, setAutoFetch] = useAtom(gitAutoFetchAtom);
   const [autoFetchInterval, setAutoFetchInterval] = useAtom(
     gitAutoFetchIntervalAtom
+  );
+  const [coauthorAttributionEnabled, setCoauthorAttributionEnabled] = useAtom(
+    gitCoauthorAttributionEnabledAtom
+  );
+  const [prAttributionEnabled, setPrAttributionEnabled] = useAtom(
+    gitPrAttributionEnabledAtom
   );
   const [worktreeMaxCount, setWorktreeMaxCount] = useAtom(
     gitWorktreeMaxCountAtom
@@ -191,9 +203,7 @@ const GitPreferencesSection: React.FC = () => {
       </SectionContainer>
 
       <SectionContainer title={tSettings("editor.git.gitProxyLink")}>
-        <SectionRow description={tSettings("editor.git.gitProxyLinkDesc")} />
-
-        <SectionRow label={tSettings("monitor.gitProxyHttp")} indent>
+        <SectionRow label={tSettings("monitor.gitProxyHttp")}>
           <Input
             value={proxyHttpDraft}
             onChange={setProxyHttpDraft}
@@ -204,7 +214,7 @@ const GitPreferencesSection: React.FC = () => {
           />
         </SectionRow>
 
-        <SectionRow label={tSettings("monitor.gitProxyHttps")} indent>
+        <SectionRow label={tSettings("monitor.gitProxyHttps")}>
           <Input
             value={proxyHttpsDraft}
             onChange={setProxyHttpsDraft}
@@ -216,7 +226,7 @@ const GitPreferencesSection: React.FC = () => {
         </SectionRow>
 
         {proxyInfo?.source === "environment" && (
-          <SectionRow showHeader={false} indent className="!min-h-0 !py-0">
+          <SectionRow showHeader={false} className="!min-h-0 !py-0">
             <p className="text-[11px] text-text-3">
               {tSettings("monitor.gitProxyEnvNote")}
             </p>
@@ -224,7 +234,7 @@ const GitPreferencesSection: React.FC = () => {
         )}
 
         {(proxyInfo?.http_proxy || proxyInfo?.https_proxy) && !proxyDirty && (
-          <SectionRow showHeader={false} indent>
+          <SectionRow showHeader={false}>
             <Button
               variant="tertiary"
               size="default"
@@ -240,7 +250,7 @@ const GitPreferencesSection: React.FC = () => {
         )}
 
         {proxyDirty && (
-          <SectionRow showHeader={false} indent>
+          <SectionRow showHeader={false}>
             <div className="flex w-full justify-end">
               <div className={SECTION_ACTION_GAP_CLASSES}>
                 <Button
@@ -263,6 +273,34 @@ const GitPreferencesSection: React.FC = () => {
             </div>
           </SectionRow>
         )}
+      </SectionContainer>
+
+      <SectionContainer title={t("git.attributionTitle")}>
+        <SectionRow
+          label={t("git.commitAttribution")}
+          description={t("git.commitAttributionDesc", {
+            name: ORGII_COAUTHOR_NAME,
+            email: ORGII_COAUTHOR_EMAIL,
+          })}
+        >
+          <Switch
+            checked={coauthorAttributionEnabled}
+            onChange={setCoauthorAttributionEnabled}
+          />
+        </SectionRow>
+
+        <SectionRow
+          label={t("git.prAttribution")}
+          description={t("git.prAttributionDesc", {
+            name: ORGII_COAUTHOR_NAME,
+            email: ORGII_COAUTHOR_EMAIL,
+          })}
+        >
+          <Switch
+            checked={prAttributionEnabled}
+            onChange={setPrAttributionEnabled}
+          />
+        </SectionRow>
       </SectionContainer>
     </>
   );

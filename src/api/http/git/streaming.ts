@@ -5,6 +5,7 @@
  * Provides real-time output from git commands via Server-Sent Events.
  */
 import { createSSEStream } from "@src/api/realtime/sseStream";
+import { shouldIncludeGitCoauthor } from "@src/services/git/operations/commitAttribution";
 
 import { gitRepoUrl } from "./client";
 
@@ -203,12 +204,14 @@ export async function gitCommitStream(
     repo_id: string;
     repo_path: string;
     message: string;
+    coauthor?: boolean;
   },
   callbacks: GitStreamCallbacks
 ): Promise<() => void> {
   const queryParams = new URLSearchParams({
     path: params.repo_path,
     message: params.message,
+    coauthor: String(params.coauthor ?? shouldIncludeGitCoauthor()),
   });
 
   const url = `${gitRepoUrl(params.repo_id)}/commit/stream?${queryParams.toString()}`;
