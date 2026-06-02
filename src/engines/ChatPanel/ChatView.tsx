@@ -32,20 +32,9 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useTranslation } from "react-i18next";
 
-import {
-  AGENT_ORG_RUN_STATUS,
-  type AgentOrgInboxRow,
-  resumeAgentOrgRun,
-  sendAgentOrgGroupChatMessage,
-} from "@src/api/tauri/agent";
-import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
-import {
-  ChatRetryBanner,
-  GroupChatPausedBanner,
-  toChatRetryKind,
-} from "@src/engines/ChatPanel/components/ChatStatusBanners";
+import { GroupChatPausedBanner } from "@src/engines/ChatPanel/components/ChatStatusBanners";
+import { useAgentOrgGroupChatController } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatController";
 import { useChatPanelState } from "@src/engines/ChatPanel/hooks/useChatPanelState";
 import { chatEventsAtom } from "@src/engines/SessionCore/derived/chatEvents";
 import { derivePlanApprovalViewState } from "@src/engines/SessionCore/derived/planDisplayEvents";
@@ -59,7 +48,6 @@ import {
   streamRetryStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 import { pendingPlanApprovalsAtom } from "@src/store/session/planApprovalAtom";
-import { groupChatViewSessionIdAtom } from "@src/store/ui/chatPanelAtom";
 import {
   dequeueMessageAtom,
   editMessageAtom,
@@ -71,134 +59,23 @@ import {
 } from "@src/store/ui/messageQueueAtom";
 import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
+import ChatFloatingComposer from "./ChatFloatingComposer";
 import ChatHistory, { type ScrollNavState } from "./ChatHistory";
 import { GroupChatProvider } from "./ChatHistory/GroupChatView/GroupChatContext";
-import {
-  AgentEventsTap,
-  useGroupChatMergedEvents,
-} from "./ChatHistory/GroupChatView/useGroupChatMergedEvents";
+import { AgentEventsTap } from "./ChatHistory/GroupChatView/useGroupChatMergedEvents";
 import { ChatHistoryOverrideContext } from "./ChatHistoryOverrideContext";
 import { ChatSessionContext } from "./ChatSessionContext";
-import InputArea from "./InputArea";
-import AskQuestionCard from "./InputArea/AskQuestionCard";
-import { ModeSwitchInputCard } from "./InputArea/ModeSwitchCard";
-import PermissionCard from "./InputArea/PermissionCard";
-import ActiveProcesses from "./InputArea/components/ActiveProcesses";
-import AgentOrgInterventionPinBar from "./InputArea/components/AgentOrgInterventionPinBar";
 import AgentOrgOverviewPanel from "./InputArea/components/AgentOrgOverviewPanel";
-import CollapsedInlineRow from "./InputArea/components/CollapsedInlineRow";
-import CompactFileChanges from "./InputArea/components/CompactFileChanges";
-import CursorIdeFocusPoller from "./InputArea/components/CursorIdeFocusPoller";
-import QueueEditModeCard from "./InputArea/components/QueueEditModeCard";
-import QueuedMessages from "./InputArea/components/QueuedMessages";
 import { useAgentOrgIntervention } from "./InputArea/components/useAgentOrgIntervention";
 import { useAgentOrgMemberSessionJump } from "./InputArea/components/useAgentOrgMemberSessionJump";
 import { useAgentOrgRunView } from "./InputArea/components/useAgentOrgRunView";
 import { useComposerSections } from "./InputArea/hooks/useComposerSections";
 import { useQueueEditMode } from "./InputArea/hooks/useQueueEditMode";
-import CanvasInlineCard from "./blocks/CanvasInlineCard";
 import { useCanvasPreviewForSession } from "./blocks/CanvasInlineCard/useCanvasPreviewForSession";
-import CreatePlanCard from "./blocks/CreatePlanCard";
-import type {
-  CustomMentionOption,
-  SubmitOverrideInput,
-} from "./hooks/useInputArea/types";
 import { useSessionActions } from "./hooks/useWorkspaceChat/useSessionActions";
 
 const logger = createLogger("ChatView");
 const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
-
-interface GroupChatRoute {
-  targetMemberId: string | null;
-  body: string;
-  displayText: string;
-}
-
-interface GroupChatPendingMessage {
-  rowId: number;
-  targetMemberId: string;
-  targetMemberName: string;
-  createdAt: string;
-  displayText: string;
-}
-
-function normalizeMentionToken(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "");
-}
-
-function isInboxRowRead(row: AgentOrgInboxRow | undefined): boolean {
-  return Boolean(row?.readAt && row.readAt.trim());
-}
-
-function timestampMs(value: string | null | undefined): number | null {
-  if (!value) return null;
-  const ms = new Date(value).getTime();
-  return Number.isFinite(ms) ? ms : null;
-}
-
-function parseGroupChatRoute(
-  rawText: string,
-  members: ReadonlyArray<{
-    memberId: string;
-    name: string;
-    isCoordinator: boolean;
-  }>
-): GroupChatRoute {
-  const trimmed = rawText.trim();
-  if (!trimmed.startsWith("@")) {
-    return { targetMemberId: null, body: trimmed, displayText: trimmed };
-  }
-
-  const mentionText = trimmed.slice(1).trimStart();
-  const mentionLower = mentionText.toLowerCase();
-  const routeCandidates = members
-    .flatMap((member) => {
-      const labels = [member.name, member.memberId];
-      if (member.isCoordinator) {
-        labels.push("Coordinator");
-      }
-      return labels.map((label) => ({ label: label.trim(), member }));
-    })
-    .filter((candidate) => candidate.label.length > 0)
-    .sort((left, right) => right.label.length - left.label.length);
-
-  for (const candidate of routeCandidates) {
-    const labelLower = candidate.label.toLowerCase();
-    if (
-      mentionLower === labelLower ||
-      mentionLower.startsWith(`${labelLower} `) ||
-      mentionLower.startsWith(`${labelLower}\n`)
-    ) {
-      return {
-        targetMemberId: candidate.member.isCoordinator
-          ? null
-          : candidate.member.memberId,
-        body: mentionText.slice(candidate.label.length).trim(),
-        displayText: trimmed,
-      };
-    }
-  }
-
-  const tokenMatch = mentionText.match(/^([^\s]+)\s*(.*)$/s);
-  const token = normalizeMentionToken(tokenMatch?.[1] ?? "");
-  const member = members.find((candidate) => {
-    const candidateNames = [candidate.memberId, candidate.name].map(
-      normalizeMentionToken
-    );
-    return candidateNames.includes(token);
-  });
-  if (!member) {
-    throw new Error(`Unknown Agent Org mention: @${tokenMatch?.[1] ?? ""}`);
-  }
-  return {
-    targetMemberId: member.isCoordinator ? null : member.memberId,
-    body: tokenMatch?.[2].trim() ?? "",
-    displayText: trimmed,
-  };
-}
 
 export interface ChatViewProps {
   /** Session ID to display. Sync bridges and events load for this session. */
@@ -237,7 +114,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
     readOnly = false,
     secondary = false,
   }) => {
-    const { t } = useTranslation("sessions");
     const setActiveSessionId = useSetAtom(activeSessionIdAtom);
     const store = useStore();
     const rootRef = useRef<HTMLDivElement>(null);
@@ -303,8 +179,10 @@ const ChatView: React.FC<ChatViewProps> = memo(
 
     useLayoutEffect(() => {
       if (!showInteractArea) {
-        setFloatingComposerInset(CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX);
-        return;
+        const animationFrameId = window.requestAnimationFrame(() => {
+          setFloatingComposerInset(CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX);
+        });
+        return () => window.cancelAnimationFrame(animationFrameId);
       }
       const element = floatingComposerRef.current;
       if (!element) return;
@@ -344,18 +222,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
       : undefined;
 
     const [scrollNav, setScrollNav] = useState<ScrollNavState | null>(null);
-    const [groupChatPendingMessage, setGroupChatPendingMessage] =
-      useState<GroupChatPendingMessage | null>(null);
-    const [groupChatDisplayOverrides, setGroupChatDisplayOverrides] = useState<
-      ReadonlyMap<number, string>
-    >(() => new Map());
-    const [isResumingGroupChat, setIsResumingGroupChat] = useState(false);
-    const groupChatDefaultAppliedRef = useRef<Set<string>>(new Set());
-
-    useEffect(() => {
-      setGroupChatPendingMessage(null);
-      setGroupChatDisplayOverrides(new Map());
-    }, [sessionId]);
     const handleScrollNavChange = useCallback((state: ScrollNavState) => {
       setScrollNav(state);
     }, []);
@@ -394,20 +260,30 @@ const ChatView: React.FC<ChatViewProps> = memo(
         ) ?? null
       );
     }, [agentOrgRunView, pipelineSessionId]);
-    const agentOrgInteractionSessionId =
-      currentAgentOrgMember?.sessionRuntime?.sessionId ?? sessionId;
+    const {
+      agentOrgInteractionSessionId,
+      queueSessionId,
+      groupChatViewActive,
+      groupChatViewAvailable,
+      groupChatMergedEvents,
+      groupChatAgents,
+      handleGroupChatTapEvents,
+      groupChatMentionOptions,
+      groupChatRunPaused,
+      groupChatPendingMessage,
+      isResumingGroupChat,
+      handleResumeGroupChatRun,
+      handleGroupChatViewToggle,
+      handleGroupChatSubmitOverride,
+    } = useAgentOrgGroupChatController({
+      sessionId,
+      agentOrgRunView,
+      currentAgentOrgMember,
+      refreshAgentOrgRunView,
+    });
+
     const handleAgentOrgMemberSessionJump =
       useAgentOrgMemberSessionJump(sessionId);
-    // Group chat view: per-session opt-in toggle. The atom holds the
-    // coordinator session id for which group view is active, or null.
-    // We compare against `sessionId` (not `agentOrgInteractionSessionId`)
-    // so flipping the member pipeline does not turn the group view off.
-    const groupChatViewSessionId = useAtomValue(groupChatViewSessionIdAtom);
-    const setGroupChatViewSessionId = useSetAtom(groupChatViewSessionIdAtom);
-    const groupChatViewActive = groupChatViewSessionId === sessionId;
-    const queueSessionId = groupChatViewActive
-      ? sessionId
-      : agentOrgInteractionSessionId;
 
     // Message queue — keep this aligned with InputArea.sessionId so queued
     // follow-ups written by the composer are visible on the same surface.
@@ -477,130 +353,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
       onCommit: handleCommitQueueEdit,
       onCommitSendNow: handleSendNow,
     });
-
-    // The group view is the default Agent Org surface once at least one
-    // non-coordinator member has a runtime session. It should not depend on
-    // task counts: users can group-chat before tasks exist, after tasks finish,
-    // or when only inbox traffic exists.
-    const groupChatViewAvailable = useMemo(() => {
-      const members = agentOrgRunView?.members ?? [];
-      if (members.length < 2) return false;
-      return members.some(
-        (member) => !member.isCoordinator && member.sessionRuntime?.sessionId
-      );
-    }, [agentOrgRunView]);
-    const handleGroupChatViewToggle = useCallback(
-      (active: boolean) => {
-        if (sessionId) {
-          groupChatDefaultAppliedRef.current.add(sessionId);
-        }
-        if (!active) {
-          setGroupChatPendingMessage(null);
-          setGroupChatDisplayOverrides(new Map());
-        } else {
-          setActiveSessionId(sessionId);
-        }
-        setGroupChatViewSessionId(active ? sessionId : null);
-      },
-      [sessionId, setActiveSessionId, setGroupChatViewSessionId]
-    );
-    useEffect(() => {
-      if (!sessionId || !groupChatViewAvailable) return;
-      if (groupChatDefaultAppliedRef.current.has(sessionId)) return;
-      groupChatDefaultAppliedRef.current.add(sessionId);
-      setGroupChatViewSessionId(sessionId);
-    }, [groupChatViewAvailable, sessionId, setGroupChatViewSessionId]);
-
-    // Reset when the toggle's prerequisites disappear (e.g. all
-    // members deactivate) so the chat panel does not get stuck on a
-    // stale group view.
-    useEffect(() => {
-      if (groupChatViewActive && !groupChatViewAvailable) {
-        setGroupChatViewSessionId(null);
-      }
-    }, [
-      groupChatViewActive,
-      groupChatViewAvailable,
-      setGroupChatViewSessionId,
-    ]);
-    const {
-      mergedEvents: groupChatMergedEvents,
-      agents: groupChatAgents,
-      handleTapEvents: handleGroupChatTapEvents,
-    } = useGroupChatMergedEvents(
-      groupChatViewActive ? sessionId : null,
-      agentOrgRunView?.members ?? [],
-      agentOrgRunView?.inbox ?? [],
-      groupChatDisplayOverrides
-    );
-    const groupChatMentionOptions = useMemo<ReadonlyArray<CustomMentionOption>>(
-      () =>
-        groupChatViewActive
-          ? (agentOrgRunView?.members ?? []).map((member) => ({
-              id: member.memberId,
-              label: member.name,
-              description: member.isCoordinator ? "Coordinator" : member.role,
-            }))
-          : [],
-      [agentOrgRunView?.members, groupChatViewActive]
-    );
-    const groupChatRunPaused =
-      groupChatViewActive &&
-      agentOrgRunView?.runStatus === AGENT_ORG_RUN_STATUS.PAUSED;
-    useEffect(() => {
-      if (!groupChatPendingMessage || !agentOrgRunView) return;
-      const pendingRow = agentOrgRunView.inbox.find(
-        (row) => row.id === groupChatPendingMessage.rowId
-      );
-      if (isInboxRowRead(pendingRow)) {
-        setGroupChatPendingMessage(null);
-        return;
-      }
-
-      const targetMember = agentOrgRunView.members.find(
-        (member) => member.memberId === groupChatPendingMessage.targetMemberId
-      );
-      const targetSessionId = targetMember?.isCoordinator
-        ? sessionId
-        : targetMember?.sessionRuntime?.sessionId;
-      const pendingCreatedAtMs = timestampMs(groupChatPendingMessage.createdAt);
-      const targetHasStartedAfterMessage = groupChatMergedEvents.some(
-        (event) => {
-          if (!targetSessionId || event.sessionId !== targetSessionId)
-            return false;
-          const eventMs = timestampMs(event.createdAt);
-          return (
-            eventMs !== null &&
-            pendingCreatedAtMs !== null &&
-            eventMs >= pendingCreatedAtMs &&
-            (event.source === "assistant" ||
-              event.args?.agentOrgInboxTranscript === true ||
-              event.result?.agentOrgInboxTranscript === true)
-          );
-        }
-      );
-      if (targetHasStartedAfterMessage) {
-        setGroupChatPendingMessage(null);
-      }
-    }, [
-      agentOrgRunView,
-      groupChatMergedEvents,
-      groupChatPendingMessage,
-      sessionId,
-    ]);
-
-    const handleResumeGroupChatRun = useCallback(async () => {
-      if (!sessionId || isResumingGroupChat) return;
-      setIsResumingGroupChat(true);
-      try {
-        await resumeAgentOrgRun(sessionId);
-        await refreshAgentOrgRunView();
-      } catch (err: unknown) {
-        logger.error("Failed to resume Agent Org run from group chat:", err);
-      } finally {
-        setIsResumingGroupChat(false);
-      }
-    }, [isResumingGroupChat, refreshAgentOrgRunView, sessionId]);
 
     const groupChatPausedBottomContent = groupChatRunPaused ? (
       <GroupChatPausedBanner
@@ -676,49 +428,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
       : agentOrgInteractionSessionId;
     const inputAreaSessionId = queueSessionId;
 
-    const handleGroupChatSubmitOverride = useCallback(
-      async (input: SubmitOverrideInput): Promise<boolean> => {
-        if (!agentOrgRunView) return false;
-        const content = input.agentContent ?? input.displayText;
-        if (!groupChatViewActive && !content.trim().startsWith("@")) {
-          return false;
-        }
-        let route: GroupChatRoute;
-        try {
-          route = parseGroupChatRoute(content, agentOrgRunView.members);
-        } catch (err) {
-          if (!groupChatViewActive) return false;
-          throw err;
-        }
-        if (input.imageDataUrls && input.imageDataUrls.length > 0) {
-          throw new Error("Group chat does not support image attachments yet");
-        }
-        if (!route.body.trim()) {
-          throw new Error("Agent Org group chat message content is required");
-        }
-        const response = await sendAgentOrgGroupChatMessage(
-          sessionId,
-          route.targetMemberId,
-          route.body
-        );
-        setGroupChatDisplayOverrides((prev) => {
-          const next = new Map(prev);
-          next.set(response.inboxRow.id, route.displayText);
-          return next;
-        });
-        setGroupChatPendingMessage({
-          rowId: response.inboxRow.id,
-          targetMemberId: response.targetMemberId,
-          targetMemberName: response.targetMemberName,
-          createdAt: response.inboxRow.createdAt,
-          displayText: route.displayText,
-        });
-        await refreshAgentOrgRunView();
-        return true;
-      },
-      [agentOrgRunView, groupChatViewActive, refreshAgentOrgRunView, sessionId]
-    );
-
     return (
       <ChatSessionContext.Provider value={chatHistorySessionId}>
         <div
@@ -778,181 +487,61 @@ const ChatView: React.FC<ChatViewProps> = memo(
             </ChatHistoryOverrideContext.Provider>
           </div>
           {showInteractArea && (
-            <div
-              ref={floatingComposerRef}
-              className="absolute bottom-0 left-0 right-0 z-50 flex w-full flex-shrink-0 flex-col items-center px-2 pb-2 pt-1"
-            >
-              <div
-                className={`flex w-full flex-col gap-1.5 ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
-              >
-                {currentPlanApproval && shouldShowCurrentPlanSurface && (
-                  <CreatePlanCard
-                    key={`current-plan-${currentPlanApproval.planRevisionId ?? currentPlanApproval.toolCallId ?? currentPlanApproval.planPath}`}
-                    content={currentPlanApproval.planContent}
-                    title={currentPlanApproval.planTitle}
-                    isStreaming={false}
-                    toolCallId={currentPlanApproval.toolCallId}
-                    planId={currentPlanApproval.planId}
-                    planRevisionId={currentPlanApproval.planRevisionId}
-                    sessionId={sessionId}
-                    surface="current"
-                    surfaceState={currentPlanSurfaceState}
-                    collapsed={planCollapsed}
-                    onCollapse={collapsePlan}
-                  />
-                )}
-
-                {/* Primary cards — collapsed state controlled by pill row.
-                    Keys are namespaced per card so each remounts on session
-                    switch (clearing local state) without colliding with its
-                    siblings under the same parent. */}
-                <AskQuestionCard
-                  key={`ask-${sessionId}`}
-                  collapsed={questionCollapsed}
-                  onCollapse={collapseQuestion}
-                  onHasDataChange={setHasQuestion}
-                />
-                <PermissionCard
-                  key={`permission-${sessionId}`}
-                  sessionId={sessionId}
-                  collapsed={permissionCollapsed}
-                  onCollapse={collapsePermission}
-                  onHasDataChange={setHasPermission}
-                />
-                <ModeSwitchInputCard
-                  key={`mode-switch-tracker-${sessionId}`}
-                  collapsed
-                  onHasDataChange={setHasModeSwitch}
-                />
-
-                {/* Expanded section card — shown above pill row */}
-                {queueExpanded && (
-                  <QueuedMessages
-                    messages={sessionMessageQueue}
-                    onCancel={cancelQueuedMessage}
-                    onSendNow={handleSendNow}
-                    onReorder={handleReorderSessionQueue}
-                    onToggle={toggleQueue}
-                  />
-                )}
-                {processExpanded && (
-                  <ActiveProcesses
-                    key={`process-expanded-${sessionId}`}
-                    onToggle={toggleProcess}
-                    onVisibleCountChange={setProcessVisibleCount}
-                  />
-                )}
-                {filesExpanded && (
-                  <CompactFileChanges
-                    key={`files-expanded-${sessionId}`}
-                    onToggle={toggleFiles}
-                    onVisibleStatsChange={setFileChangeStats}
-                  />
-                )}
-
-                {/* Always-mounted hidden instances for count tracking */}
-                {!processExpanded && (
-                  <ActiveProcesses
-                    key={`process-hidden-${sessionId}`}
-                    onToggle={toggleProcess}
-                    onVisibleCountChange={setProcessVisibleCount}
-                    hidden
-                  />
-                )}
-                {!filesExpanded && (
-                  <CompactFileChanges
-                    key={`files-hidden-${sessionId}`}
-                    onToggle={toggleFiles}
-                    onVisibleStatsChange={setFileChangeStats}
-                    hidden
-                  />
-                )}
-
-                <QueueEditModeCard />
-
-                {canvasPayload && (
-                  <CanvasInlineCard
-                    mode={canvasPayload.mode}
-                    title={canvasPayload.title}
-                    content={canvasPayload.content}
-                    url={canvasPayload.url}
-                    isStreaming={canvasPayload.streaming ?? false}
-                    onClose={dismissCanvas}
-                  />
-                )}
-
-                {groupChatPendingMessage && groupChatViewActive && (
-                  <div
-                    data-testid="agent-org-group-chat-pending"
-                    data-target-name={groupChatPendingMessage.targetMemberName}
-                    className="bg-background-2 mx-auto flex items-center gap-2 rounded-full border border-solid border-border-2 px-3 py-1 text-[12px] text-text-2 shadow-sm"
-                  >
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-6" />
-                    <span>
-                      {t("groupChat.userMessagePending", {
-                        member: groupChatPendingMessage.targetMemberName,
-                        defaultValue: "{{member}} is picking up your message",
-                      })}
-                    </span>
-                  </div>
-                )}
-
-                <InputArea
-                  omitChatHeader
-                  sessionId={inputAreaSessionId}
-                  onSubmitOverride={handleGroupChatSubmitOverride}
-                  customMentionOptions={groupChatMentionOptions}
-                  topRowPills={
-                    hasAny ||
-                    scrollNav?.showScrollToBottom ||
-                    scrollNav?.showFollowAgent ? (
-                      <CollapsedInlineRow
-                        sections={inlineSections}
-                        scrollNav={scrollNav}
-                      />
-                    ) : null
-                  }
-                  statusBanners={
-                    <>
-                      {hasModeSwitch && !modeSwitchCollapsed && (
-                        <ModeSwitchInputCard
-                          key={`mode-switch-status-${sessionId}`}
-                          collapsed={false}
-                          onCollapse={collapseModeSwitch}
-                        />
-                      )}
-                      {hasAgentOrgIntervention && (
-                        <AgentOrgInterventionPinBar
-                          intervention={agentOrgIntervention}
-                          memberName={currentAgentOrgMember?.name}
-                          error={agentOrgInterventionError}
-                          returning={agentOrgInterventionReturning}
-                          onReturnToWork={returnAgentOrgMemberToWork}
-                        />
-                      )}
-                      {streamRetry && (
-                        <ChatRetryBanner
-                          kind={toChatRetryKind(streamRetry.kind)}
-                          attempt={streamRetry.attempt}
-                          maxAttempts={streamRetry.maxAttempts}
-                        />
-                      )}
-                      {groupChatPausedBottomContent}
-                    </>
-                  }
-                  {...queueEditProps}
-                />
-                {/* Cursor IDE sessions need their own poll loop to
-                    pick up new bubbles streamed by the live probe.
-                    The hook is mounted here (focused chat panel)
-                    rather than inside InputArea so it doesn't fire
-                    for embedded chat surfaces (kanban detail panel,
-                    project-manager tab) that aren't the active view. */}
-                {isCursorIdeSession(sessionId) && (
-                  <CursorIdeFocusPoller sessionId={sessionId} />
-                )}
-              </div>
-            </div>
+            <ChatFloatingComposer
+              composerRef={floatingComposerRef}
+              sessionId={sessionId}
+              inputAreaSessionId={inputAreaSessionId}
+              currentPlanApproval={currentPlanApproval}
+              shouldShowCurrentPlanSurface={shouldShowCurrentPlanSurface}
+              currentPlanSurfaceState={currentPlanSurfaceState}
+              planCollapsed={planCollapsed}
+              onPlanCollapse={collapsePlan}
+              questionCollapsed={questionCollapsed}
+              permissionCollapsed={permissionCollapsed}
+              modeSwitchCollapsed={modeSwitchCollapsed}
+              onQuestionCollapse={collapseQuestion}
+              onPermissionCollapse={collapsePermission}
+              onModeSwitchCollapse={collapseModeSwitch}
+              onQuestionDataChange={setHasQuestion}
+              onPermissionDataChange={setHasPermission}
+              onModeSwitchDataChange={setHasModeSwitch}
+              queueExpanded={queueExpanded}
+              processExpanded={processExpanded}
+              filesExpanded={filesExpanded}
+              queuedMessages={sessionMessageQueue}
+              onCancelQueuedMessage={cancelQueuedMessage}
+              onSendQueuedMessageNow={handleSendNow}
+              onReorderQueuedMessages={handleReorderSessionQueue}
+              onToggleQueue={toggleQueue}
+              onToggleProcess={toggleProcess}
+              onToggleFiles={toggleFiles}
+              onProcessVisibleCountChange={setProcessVisibleCount}
+              onFileChangeStatsChange={setFileChangeStats}
+              canvasPayload={canvasPayload}
+              onDismissCanvas={dismissCanvas}
+              groupChatPendingMessage={groupChatPendingMessage}
+              groupChatViewActive={groupChatViewActive}
+              hasAnyInlineSection={hasAny}
+              scrollNav={scrollNav}
+              inlineSections={inlineSections}
+              hasModeSwitch={hasModeSwitch}
+              agentOrgIntervention={
+                hasAgentOrgIntervention
+                  ? {
+                      intervention: agentOrgIntervention,
+                      memberName: currentAgentOrgMember?.name,
+                      error: agentOrgInterventionError,
+                      returning: agentOrgInterventionReturning,
+                      onReturnToWork: returnAgentOrgMemberToWork,
+                    }
+                  : null
+              }
+              streamRetry={streamRetry}
+              groupChatPausedBottomContent={groupChatPausedBottomContent}
+              onSubmitOverride={handleGroupChatSubmitOverride}
+              customMentionOptions={groupChatMentionOptions}
+              queueEditProps={queueEditProps}
+            />
           )}
         </div>
       </ChatSessionContext.Provider>
