@@ -5,12 +5,16 @@ import type { KeyVaultAccount } from "@src/hooks/keyVault/types";
 import { getModelAliasDisplayName } from "@src/hooks/models/modelAliasRegistry";
 import { accountHasModel } from "@src/hooks/models/useModelAccountLookup";
 import type { RecentModelEntry } from "@src/store/session/recentModelEntriesAtom";
+import { resolveDefaultVariant } from "@src/util/defaultModelVariant";
 import {
   compareModelsByVersion,
   formatModelNameFull,
 } from "@src/util/formatModelName";
 import { groupModels } from "@src/util/modelGrouping";
-import { parseModelVariant } from "@src/util/modelVariants";
+import {
+  parseModelVariant,
+  resolveModelVariantFields,
+} from "@src/util/modelVariants";
 
 import type { SpotlightItem } from "../../types";
 import { VariantPill } from "./VariantPill";
@@ -88,7 +92,24 @@ export function buildModelSelectionSpotlightItem({
     : [entry.modelId];
 
   const variant = parseModelVariant(entry.modelId);
-  const previewBaseModel = variant?.baseModel;
+  const previewBaseModel =
+    variant?.baseModel ?? resolveModelVariantFields(entry.modelId).base_model;
+  const persistedVariant =
+    recentAccount && previewBaseModel
+      ? (recentAccount.defaultVariants ?? []).find(
+          (defaultVariant) =>
+            defaultVariant.base_model === previewBaseModel &&
+            accountFamilyIds.includes(defaultVariant.model)
+        )?.model
+      : undefined;
+  const effectiveVariantModel =
+    previewBaseModel && accountFamilyIds.length > 0
+      ? (resolveDefaultVariant(
+          previewBaseModel,
+          accountFamilyIds.map((modelId) => resolveModelVariantFields(modelId)),
+          persistedVariant
+        ) ?? entry.modelId)
+      : entry.modelId;
   const handleApply =
     recentAccount && previewBaseModel
       ? (nextModelId: string) =>
@@ -103,7 +124,7 @@ export function buildModelSelectionSpotlightItem({
   const trailing: React.ReactNode =
     variant && accountHasMultipleVariants ? (
       <VariantPill
-        modelId={entry.modelId}
+        modelId={effectiveVariantModel}
         groupModelIds={accountFamilyIds}
         onApply={handleApply}
       />

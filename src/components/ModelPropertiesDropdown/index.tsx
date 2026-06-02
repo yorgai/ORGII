@@ -19,7 +19,7 @@
  * selection from `value` when it opens, and only calls `onApply` when
  * the user confirms.
  */
-import { Brain, Check } from "lucide-react";
+import { Brain, Check, Zap } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -505,6 +505,7 @@ export const ModelPropertiesDropdown: React.FC<
           )}
           {showFastRow && (
             <SwitchRow
+              icon={<Zap size={14} className="text-text-2" />}
               label="Fast"
               checked={draft.fast}
               onChange={handleFastToggle}

@@ -194,6 +194,40 @@ export function useLocalKeys(
    */
   const saveKeyFn = useCallback(
     async (request: SaveKeyRequest): Promise<KeyInfo | null> => {
+      const previousKeys = sharedAllKeys;
+      let appliedOptimisticUpdate = false;
+
+      if (request.id) {
+        updateSharedAllKeys((prev) => {
+          const idx = prev.findIndex((key) => key.id === request.id);
+          if (idx < 0) return prev;
+
+          const next = [...prev];
+          next[idx] = {
+            ...next[idx],
+            name: request.name ?? next[idx].name,
+            description: request.description ?? next[idx].description,
+            base_url: request.base_url ?? next[idx].base_url,
+            available_models:
+              request.available_models ?? next[idx].available_models,
+            enabled_models: request.enabled_models ?? next[idx].enabled_models,
+            model_aliases: request.model_aliases ?? next[idx].model_aliases,
+            model_variants: request.model_variants ?? next[idx].model_variants,
+            default_variants:
+              request.default_variants ?? next[idx].default_variants,
+            quota_info: request.quota_info ?? next[idx].quota_info,
+            has_local_key: request.has_local_key ?? next[idx].has_local_key,
+            is_listed: request.is_listed ?? next[idx].is_listed,
+            auth_method: request.auth_method ?? next[idx].auth_method,
+            listing_id: request.listing_id ?? next[idx].listing_id,
+            enabled: request.enabled ?? next[idx].enabled,
+          };
+          appliedOptimisticUpdate = true;
+          replaceModelAliasesFromKeys(next);
+          return next;
+        });
+      }
+
       try {
         const saved = await saveKeyRpc(request);
         updateSharedAllKeys((prev) => {
@@ -209,6 +243,10 @@ export function useLocalKeys(
         });
         return saved;
       } catch {
+        if (appliedOptimisticUpdate) {
+          publishAllKeys(previousKeys);
+          replaceModelAliasesFromKeys(previousKeys);
+        }
         return null;
       }
     },

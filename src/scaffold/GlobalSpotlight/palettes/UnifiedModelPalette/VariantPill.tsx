@@ -51,28 +51,21 @@ export const VariantPill: React.FC<VariantPillProps> = ({
   );
 
   const pillClasses =
-    "relative z-10 inline-flex h-[24px] shrink-0 items-center gap-0.5 rounded-full border border-transparent bg-transparent px-2 text-[11px] font-semibold text-text-2 transition-colors group-hover/model-row:border-border-2 group-hover/model-row:bg-bg-1 group-focus-within/model-row:border-border-2 group-focus-within/model-row:bg-bg-1";
+    "relative z-10 inline-flex h-[24px] shrink-0 items-center gap-0.5 rounded-full border border-transparent bg-transparent px-2 text-[11px] font-semibold text-text-2 transition-colors group-hover/model-row:border-border-3 group-hover/model-row:bg-bg-1 group-focus-within/model-row:border-border-3 group-focus-within/model-row:bg-bg-1";
 
   const editable = onApply !== undefined && (groupModelIds?.length ?? 0) > 1;
   const parts: string[] = [];
   if (variant?.reasoning) {
     parts.push(formatReasoningLevel(variant.reasoning));
   }
-  const showsDefault =
-    !variant || (parts.length === 0 && !variant.thinking && !variant.fast);
-  const showsFastText = Boolean(
-    variant?.fast && parts.length === 0 && !variant.thinking
-  );
+  if (variant?.fast) {
+    parts.push("Fast");
+  }
+  const showsDefault = !variant || (parts.length === 0 && !variant.thinking);
   if (!editable && showsDefault) {
     return null;
   }
-  if (
-    !editable &&
-    !variant?.thinking &&
-    parts.length === 0 &&
-    !showsDefault &&
-    !showsFastText
-  ) {
+  if (!editable && !variant?.thinking && parts.length === 0 && !showsDefault) {
     return null;
   }
 
@@ -83,14 +76,12 @@ export const VariantPill: React.FC<VariantPillProps> = ({
   const renderBody = (active: boolean) => (
     <>
       {variant?.thinking && (
-        <Brain
-          className={active ? "text-text-1" : "group-hover:text-text-1"}
-          size={11}
-        />
-      )}
-      {showsFastText && (
-        <span className={active ? "text-text-1" : "group-hover:text-text-1"}>
-          Fast
+        <span
+          className={`mr-1 inline-flex items-center justify-center self-center ${
+            active ? "text-text-1" : "group-hover:text-text-1"
+          }`}
+        >
+          <Brain size={12} strokeWidth={1.75} />
         </span>
       )}
       {parts.map((part, index) => (

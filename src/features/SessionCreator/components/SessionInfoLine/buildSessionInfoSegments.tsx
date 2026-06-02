@@ -119,6 +119,7 @@ export function buildSessionInfoSegments({
       id: "branch",
       icon: <GitBranch size={14} strokeWidth={1.75} className="text-text-1" />,
       label: branchLoading ? t("status.loading") : branchName || "main",
+      maxLabelWidth: 180,
       active: isBranchSelectorOpen,
       tooltip: disabled ? undefined : (
         <KeyboardShortcutTooltipContent
