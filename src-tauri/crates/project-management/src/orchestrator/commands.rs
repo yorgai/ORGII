@@ -7,7 +7,7 @@ use crate::projects::events::DATA_CHANGED_EVENT;
 use crate::projects::io as projects_io;
 use crate::projects::io::repo_resolver;
 use crate::projects::types::{
-    AgentRole, LinkedSession, LinkedSessionType, OrchestratorPhase, PrStatus,
+    AgentRole, LinkedSession, LinkedSessionStatus, LinkedSessionType, OrchestratorPhase, PrStatus,
 };
 
 use super::branch_health;
@@ -50,13 +50,25 @@ pub async fn orchestrator_start(
                     .map(|s| &s.current_phase)
                     .unwrap_or(&OrchestratorPhase::Idle);
 
-                if !matches!(current_phase, OrchestratorPhase::Idle) {
+                if !matches!(
+                    current_phase,
+                    OrchestratorPhase::Idle | OrchestratorPhase::Completed
+                ) {
                     return Err(format!(
-                        "Cannot start: orchestrator is in phase '{:?}', expected idle",
+                        "Cannot start: orchestrator is in phase '{:?}', expected idle or completed",
                         current_phase
                     ));
                 }
 
+                let now = chrono::Utc::now().to_rfc3339();
+                for linked_session in &mut frontmatter.linked_sessions {
+                    if linked_session.status == LinkedSessionStatus::Running {
+                        linked_session.status = LinkedSessionStatus::Completed;
+                        linked_session.completed_at = Some(now.clone());
+                    }
+                }
+
+                frontmatter.execution_lock = None;
                 state_machine::snapshot_config(frontmatter);
                 state_machine::add_linked_session(
                     frontmatter,

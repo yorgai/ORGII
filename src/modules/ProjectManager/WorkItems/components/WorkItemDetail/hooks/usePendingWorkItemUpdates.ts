@@ -9,6 +9,21 @@ import type { WorkItemDetailActions, WorkItemUpdateHandler } from "../types";
 
 const logger = createLogger("WorkItemDetail");
 
+function sanitizePendingUpdates(
+  updates: Partial<WorkItemExtended>
+): Partial<WorkItemExtended> {
+  const {
+    status: _status,
+    workItemStatus: _workItemStatus,
+    executionLock: _executionLock,
+    linkedSessions: _linkedSessions,
+    orchestratorState: _orchestratorState,
+    proofOfWork: _proofOfWork,
+    ...safeUpdates
+  } = updates;
+  return safeUpdates;
+}
+
 interface PendingSnapshot {
   workItemId: string;
   updates: Partial<WorkItemExtended>;
@@ -52,7 +67,7 @@ export function usePendingWorkItemUpdates({
   const pendingUpdates = useMemo(
     () =>
       pendingState.workItemId === workItem.session_id
-        ? pendingState.updates
+        ? sanitizePendingUpdates(pendingState.updates)
         : {},
     [pendingState, workItem.session_id]
   );
@@ -69,12 +84,13 @@ export function usePendingWorkItemUpdates({
 
   const handleLocalUpdate = useCallback(
     (updates: Partial<WorkItemExtended>) => {
+      const safeUpdates = sanitizePendingUpdates(updates);
       setPendingState((prev) => ({
         workItemId: workItem.session_id,
-        updates: {
+        updates: sanitizePendingUpdates({
           ...(prev.workItemId === workItem.session_id ? prev.updates : {}),
-          ...updates,
-        },
+          ...safeUpdates,
+        }),
       }));
     },
     [workItem.session_id, setPendingState]
