@@ -151,29 +151,32 @@ export function createPasteHandler(ctx: PasteHandlerContext) {
       }
     }
 
-    // Skill path / frontmatter detection
+    // Skill path / frontmatter detection.
+    // Try to resolve against the installed-skills list first (to get the
+    // canonical name). If the atom hasn't loaded yet — or the pasted path
+    // belongs to a skill that isn't listed — fall back to the extracted name
+    // directly so the pill is still inserted instead of raw text.
     if (pastedText) {
-      const skills = ctx.getInstalledSkills();
-      if (skills.length > 0) {
-        const candidateName =
-          extractSkillNameFromPath(pastedText) ??
-          extractSkillNameFromFrontmatter(pastedText);
-        if (candidateName) {
-          const skill = resolveSkill(candidateName, skills);
-          if (skill) {
-            event.preventDefault();
-            ctx.insertPill({
-              filePath: `/${skill.name}`,
-              fileName: skill.name,
-              isFolder: false,
-              iconType: "skill",
-              lineStart: null,
-              lineEnd: null,
-            });
-            logger.info("Pasted text converted to skill pill:", skill.name);
-            return true;
-          }
-        }
+      const candidateName =
+        extractSkillNameFromPath(pastedText) ??
+        extractSkillNameFromFrontmatter(pastedText);
+      if (candidateName) {
+        const skills = ctx.getInstalledSkills();
+        const skill =
+          skills.length > 0 ? resolveSkill(candidateName, skills) : undefined;
+        const skillName = skill?.name ?? candidateName;
+        event.preventDefault();
+        ctx.insertPill({
+          filePath: `/${skillName}`,
+          fileName: skillName,
+          isFolder: false,
+          iconType: "skill",
+          lineStart: null,
+          lineEnd: null,
+        });
+        ctx.insertTextAtCaret(" ");
+        logger.info("Pasted text converted to skill pill:", skillName);
+        return true;
       }
     }
 
