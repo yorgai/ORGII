@@ -11,21 +11,13 @@
  * accent-highlight on active state — matches StackPill and ModePill idioms.
  */
 import { invoke } from "@tauri-apps/api/core";
-import { useAtom, useAtomValue } from "jotai";
-import { Loader2, MoreHorizontal } from "lucide-react";
-import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import { useAtom } from "jotai";
+import { MoreHorizontal } from "lucide-react";
+import React, { memo, useCallback, useRef, useState } from "react";
 
 import { rpc } from "@src/api/tauri/rpc";
 import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
-import Message from "@src/components/Toast";
 import { createLogger } from "@src/hooks/logger";
-import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
-import {
-  detectRepo,
-  useRepoDetection,
-} from "@src/modules/WorkStation/Launchpad/hooks/useRepoDetection";
-import { useRepoSetup } from "@src/modules/WorkStation/Launchpad/hooks/useRepoSetup";
-import { reposAtom } from "@src/store/repo";
 import {
   type PinnedAction,
   pinnedActionsAtom,
@@ -80,21 +72,18 @@ const BUILTIN_SLASH_ITEMS: SlashItem[] = [
 interface ActionPillProps {
   action: PinnedAction;
   onClick: (action: PinnedAction, e: React.MouseEvent) => void;
-  /** Shows a spinner and blocks clicks (e.g. while a setup session launches). */
-  busy?: boolean;
-  /** Forward a ref onto the underlying button (e.g. for the Setup Repo picker). */
+  /** Forward a ref onto the underlying button. */
   buttonRef?: React.Ref<HTMLButtonElement>;
 }
 
 const ActionPill: React.FC<ActionPillProps> = memo(
-  ({ action, onClick, busy = false, buttonRef }) => {
+  ({ action, onClick, buttonRef }) => {
     const [pressed, setPressed] = useState(false);
 
     return (
       <button
         ref={buttonRef}
         type="button"
-        disabled={busy}
         onMouseDown={() => setPressed(true)}
         onMouseUp={() => setPressed(false)}
         onMouseLeave={() => setPressed(false)}
@@ -102,15 +91,12 @@ const ActionPill: React.FC<ActionPillProps> = memo(
         className={[
           "flex h-[26px] shrink-0 select-none items-center gap-1 rounded-full border border-solid px-2.5 leading-none",
           "text-[12px] font-medium transition-colors duration-150",
-          busy
-            ? "cursor-default border-border-2 bg-bg-2 text-text-3"
-            : pressed
-              ? "cursor-pointer border-primary-5 bg-fill-2 text-primary-6"
-              : "cursor-pointer border-border-2 bg-bg-2 text-text-2 hover:border-border-3 hover:bg-fill-2 hover:text-text-1",
+          pressed
+            ? "cursor-pointer border-primary-5 bg-fill-2 text-primary-6"
+            : "cursor-pointer border-border-2 bg-bg-2 text-text-2 hover:border-border-3 hover:bg-fill-2 hover:text-text-1",
         ].join(" ")}
         title={action.name}
       >
-        {busy && <Loader2 size={12} className="shrink-0 animate-spin" />}
         <span className="truncate" style={{ maxWidth: 120 }}>
           {action.name}
         </span>
@@ -127,148 +113,32 @@ export interface PinnedActionsBarProps {
   /** Ref to the tiptap editor, used to insert content when a pill is clicked. */
   tiptapRef: React.RefObject<TiptapInputRef>;
   /**
-   * Repo path of the active session / workspace. Used to drive the built-in
-   * "Setup Repo" action so a click launches a one-click setup session against
-   * the current repo (mirrors LaunchpadActionStrip's Setup button).
+   * Submits the current composer content — used by the Setup Repo action to
+   * auto-send the inserted skill pill without the user pressing Enter.
    */
-  repoPath?: string;
+  onSubmit?: () => void;
 }
 
 const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
-  ({ tiptapRef, repoPath }) => {
+  ({ tiptapRef, onSubmit }) => {
     const [pinnedActions, setPinnedActions] = useAtom(pinnedActionsAtom);
 
-    // ── Built-in "Setup Repo" action wiring ───────────────────────────────────
-    const { launching, launchSetup } = useRepoSetup();
-    const lastModel = useValidatedLastPair();
-    const repos = useAtomValue(reposAtom);
+    // ── Built-in "Setup Repo" action ──────────────────────────────────────────
 
-    // Repo picker state — shown when Setup Repo is clicked without a repoPath
-    const [repoPicker, setRepoPicker] = useState(false);
-    const [pickerAnchor, setPickerAnchor] = useState<DOMRect | null>(null);
-    const setupPillRef = useRef<HTMLButtonElement>(null);
-    const pickerRef = useRef<HTMLDivElement>(null);
-
-    // Close picker on outside click or Escape.
-    useEffect(() => {
-      if (!repoPicker) return;
-      const handleMouseDown = (e: MouseEvent) => {
-        const target = e.target as Node;
-        if (
-          !setupPillRef.current?.contains(target) &&
-          !pickerRef.current?.contains(target)
-        ) {
-          setRepoPicker(false);
-        }
-      };
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape") {
-          e.stopPropagation();
-          setRepoPicker(false);
-        }
-      };
-      document.addEventListener("mousedown", handleMouseDown);
-      document.addEventListener("keydown", handleKeyDown, true);
-      return () => {
-        document.removeEventListener("mousedown", handleMouseDown);
-        document.removeEventListener("keydown", handleKeyDown, true);
-      };
-    }, [repoPicker]);
-
-    const [setupRepoPath, setSetupRepoPath] = useState<string | undefined>(
-      repoPath
-    );
-    useEffect(() => {
-      setSetupRepoPath(repoPath);
-    }, [repoPath]);
-
-    const { repoType, repoTypeLabel, configFiles, hasDocker, hasMakefile } =
-      useRepoDetection(setupRepoPath || undefined);
-
-    const doLaunchSetup = useCallback(
-      async (targetPath: string) => {
-        if (launching) return;
-        const repoName = targetPath.split("/").filter(Boolean).pop() || "Repo";
-        try {
-          // Always detect fresh so we never pass stale hook-snapshot data
-          // (e.g. when targetPath was just selected from the picker and the
-          // useRepoDetection hook hasn't re-run yet).
-          let detectionResult = {
-            repoType,
-            repoTypeLabel,
-            configFiles,
-            hasDocker,
-            hasMakefile,
-          };
-          try {
-            detectionResult = await detectRepo(targetPath);
-          } catch {
-            // Non-critical; fall through to the current hook snapshot
-          }
-
-          await launchSetup(
-            {
-              repoPath: targetPath,
-              repoName,
-              repoType: detectionResult.repoType,
-              repoTypeLabel: detectionResult.repoTypeLabel,
-              configFiles: detectionResult.configFiles,
-              hasDocker: detectionResult.hasDocker,
-              hasMakefile: detectionResult.hasMakefile,
-            },
-            {
-              trusted: false,
-              keySource: lastModel?.keySource,
-              model: lastModel?.model,
-              accountId: lastModel?.selectedAccountId,
-              cliAgentType: lastModel?.cliAgentType,
-              listingModel: lastModel?.listingModel,
-              listingModelType: lastModel?.listingModelType,
-              tier: lastModel?.tier,
-            }
-          );
-        } catch (error) {
-          logger.error("Failed to launch repo setup:", error);
-          Message.error("Failed to start repo setup");
-        }
-      },
-      [
-        launching,
-        repoType,
-        repoTypeLabel,
-        configFiles,
-        hasDocker,
-        hasMakefile,
-        launchSetup,
-        lastModel,
-      ]
-    );
-
-    const handleSetupRepo = useCallback(
-      (e?: React.MouseEvent) => {
-        if (launching) return;
-        if (setupRepoPath) {
-          void doLaunchSetup(setupRepoPath);
-          return;
-        }
-        // No repo path — show picker or warn if no repos are available
-        if (repos.length === 0) {
-          Message.warning("Open a workspace to use Setup Repo");
-          return;
-        }
-        const btn = setupPillRef.current;
-        const rect = btn?.getBoundingClientRect() ?? null;
-        if (!rect) {
-          // Pill ref not yet attached — fall back to a sensible warning
-          Message.warning("Open a workspace to use Setup Repo");
-          return;
-        }
-        setPickerAnchor(rect);
-        setRepoPicker((v) => !v);
-        e?.stopPropagation();
-      },
-      [launching, setupRepoPath, repos, doLaunchSetup]
-    );
+    const handleSetupRepo = useCallback(() => {
+      if (!tiptapRef.current) return;
+      tiptapRef.current.clear();
+      tiptapRef.current.insertFilePill(
+        "/setup-repo",
+        false,
+        "skill",
+        "setup-repo"
+      );
+      tiptapRef.current.focus();
+      // Yield one frame so React can flush the pill state update before
+      // getTextWithPills() is read inside the submit handler.
+      requestAnimationFrame(() => onSubmit?.());
+    }, [tiptapRef, onSubmit]);
 
     // ── Available items (lazy-fetched) ────────────────────────────────────────
 
@@ -379,11 +249,11 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
     // ── Pill click → dispatch ─────────────────────────────────────────────────
 
     const handlePillClick = useCallback(
-      (action: PinnedAction, e?: React.MouseEvent) => {
+      (action: PinnedAction, _e?: React.MouseEvent) => {
         // Built-in actions execute real work and don't require the editor.
         if (action.category === "action") {
           if (action.name === SLASH_ACTIONS.SETUP_REPO) {
-            handleSetupRepo(e);
+            handleSetupRepo();
             return;
           }
           if (action.name === SLASH_ACTIONS.OPEN_BROWSER) {
@@ -424,20 +294,13 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
     return (
       <div className="relative z-10 flex w-full items-center gap-1.5 overflow-x-auto px-0.5 py-0.5 scrollbar-hide">
-        {pinnedActions.map((action) => {
-          const isSetupRepo =
-            action.category === "action" &&
-            action.name === SLASH_ACTIONS.SETUP_REPO;
-          return (
-            <ActionPill
-              key={actionKey(action)}
-              action={action}
-              onClick={handlePillClick}
-              busy={isSetupRepo && launching}
-              buttonRef={isSetupRepo ? setupPillRef : undefined}
-            />
-          );
-        })}
+        {pinnedActions.map((action) => (
+          <ActionPill
+            key={actionKey(action)}
+            action={action}
+            onClick={handlePillClick}
+          />
+        ))}
 
         {/* "..." manage button */}
         <button
@@ -464,57 +327,8 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
           onTogglePin={handleTogglePin}
           onClose={handleClosePanel}
           loading={loadingItems}
+          triggerRef={moreButtonRef}
         />
-
-        {/* Repo picker — shown when Setup Repo clicked without an active repo */}
-        {repoPicker && pickerAnchor && (
-          <div
-            ref={pickerRef}
-            className="fixed z-[9999] min-w-[220px] overflow-hidden rounded-xl border border-border-2 bg-bg-2 py-1 shadow-lg"
-            style={{
-              bottom: window.innerHeight - pickerAnchor.top + 6,
-              left: pickerAnchor.left,
-            }}
-          >
-            <div className="px-3 py-1.5 text-[11px] font-medium text-text-3">
-              Select a repo to set up
-            </div>
-            {repos.length === 0 ? (
-              <div className="px-3 py-2 text-[12px] text-text-3">
-                No repos found. Open a workspace first.
-              </div>
-            ) : (
-              repos.slice(0, 8).map((repo) => {
-                const targetPath = repo.path ?? "";
-                return (
-                  <button
-                    key={repo.id}
-                    type="button"
-                    disabled={!targetPath}
-                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-[12px] text-text-1 hover:bg-fill-2 disabled:cursor-default disabled:opacity-40"
-                    onClick={() => {
-                      if (!targetPath) return;
-                      setRepoPicker(false);
-                      setSetupRepoPath(targetPath);
-                      void doLaunchSetup(targetPath);
-                    }}
-                  >
-                    <span className="truncate font-medium">{repo.name}</span>
-                    {targetPath && (
-                      <span className="ml-auto shrink-0 truncate text-[11px] text-text-3">
-                        {targetPath
-                          .replace(/\/$/, "")
-                          .split("/")
-                          .slice(-3, -1)
-                          .join("/")}
-                      </span>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        )}
       </div>
     );
   }
