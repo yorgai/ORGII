@@ -27,10 +27,9 @@ export interface PinnedAction {
 
 const DEFAULT_PINNED: PinnedAction[] = [
   {
-    name: "setup-repo",
-    skillName: "setup-repo",
-    category: "skill",
-    source: "Global Skills",
+    name: "Setup Repo",
+    category: "action",
+    source: "builtin",
   },
   {
     name: "manage-skills",

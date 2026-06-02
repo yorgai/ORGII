@@ -5,8 +5,10 @@ import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
 import { type PlaygroundChatExtras, PlaygroundChatPanel } from "../panels";
 import { InputBoxPreview } from "../previews/InputBoxPreview";
+import { PinnedActionsBarPreview } from "../previews/PinnedActionsBarPreview";
 import { SimulatorPreview } from "../previews/SimulatorPreview";
 import type { PlaygroundVariant } from "../types";
+import { CHAT_PREVIEW_TYPE } from "./chatPreviewTypes";
 
 interface SingleEventPreviewContentProps {
   isMultiSelect: boolean;
@@ -36,6 +38,13 @@ export function SingleEventPreviewContent({
   const { t } = useTranslation("integrations");
 
   if (inputOnly) {
+    // Pinned-actions-only preview — render the bar in isolation
+    if (
+      selectedTypesMulti.length === 1 &&
+      selectedTypesMulti[0] === CHAT_PREVIEW_TYPE.PINNED_ACTIONS
+    ) {
+      return <PinnedActionsBarPreview />;
+    }
     return (
       <PlaygroundChatPanel events={[]} chatExtras={chatExtras} inputOnly />
     );

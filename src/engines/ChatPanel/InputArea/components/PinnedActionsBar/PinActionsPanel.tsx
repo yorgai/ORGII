@@ -89,14 +89,22 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
       return () => document.removeEventListener("mousedown", handler);
     }, [visible, onClose]);
 
-    // Escape closes the panel.
+    // Escape closes the panel only when focus is inside it, to avoid
+    // stealing Escape from the slash command menu or composer.
     useEffect(() => {
       if (!visible) return;
       const handler = (e: KeyboardEvent) => {
-        if (e.key === "Escape") onClose();
+        if (e.key !== "Escape") return;
+        if (
+          panelRef.current &&
+          panelRef.current.contains(document.activeElement)
+        ) {
+          e.stopPropagation();
+          onClose();
+        }
       };
-      document.addEventListener("keydown", handler);
-      return () => document.removeEventListener("keydown", handler);
+      document.addEventListener("keydown", handler, true);
+      return () => document.removeEventListener("keydown", handler, true);
     }, [visible, onClose]);
 
     const pinnedKeys = new Set(pinnedActions.map(actionKey));

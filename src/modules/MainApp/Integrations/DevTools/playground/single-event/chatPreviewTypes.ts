@@ -7,12 +7,14 @@ export const CHAT_PREVIEW_TYPE = {
   RATE_LIMITED: "chat_rate_limited",
   INTERVENTION: "chat_intervention",
   PAUSED: "chat_paused",
+  PINNED_ACTIONS: "chat_pinned_actions",
 } as const;
 
 export type ChatPreviewType =
   (typeof CHAT_PREVIEW_TYPE)[keyof typeof CHAT_PREVIEW_TYPE];
 
 export const CHAT_PREVIEW_TYPES = [
+  CHAT_PREVIEW_TYPE.PINNED_ACTIONS,
   CHAT_PREVIEW_TYPE.PAUSED,
   CHAT_PREVIEW_TYPE.RECONNECTING,
   CHAT_PREVIEW_TYPE.RATE_LIMITED,
@@ -49,6 +51,8 @@ export function getChatPreviewTypeLabel(eventType: string): string | null {
       return "Chat · Mode switch";
     case CHAT_PREVIEW_TYPE.PAUSED:
       return "Chat · Resume work";
+    case CHAT_PREVIEW_TYPE.PINNED_ACTIONS:
+      return "Chat · Pinned actions bar";
     default:
       return null;
   }
