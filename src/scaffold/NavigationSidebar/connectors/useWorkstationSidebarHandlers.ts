@@ -16,7 +16,11 @@ import {
   removeSession,
   upsertSession,
 } from "@src/store/session";
-import { chatPanelSelectedWorkItemAtom } from "@src/store/ui/chatPanelAtom";
+import {
+  CHAT_PANEL_CONTENT_MODE,
+  chatPanelContentModeAtom,
+  chatPanelSelectedWorkItemAtom,
+} from "@src/store/ui/chatPanelAtom";
 import { invokeTauri } from "@src/util/platform/tauri/init";
 import { isCliSession } from "@src/util/session/sessionDispatch";
 import { getSessionListDisplayName } from "@src/util/session/sessionSidebarRow";
@@ -67,6 +71,7 @@ export function useWorkstationSidebarHandlers({
   setGroupVisibleCounts,
   tCommon,
 }: UseWorkstationSidebarHandlersParams): UseWorkstationSidebarHandlersResult {
+  const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
   const setChatPanelSelectedWorkItem = useSetAtom(
     chatPanelSelectedWorkItemAtom
   );
@@ -167,6 +172,7 @@ export function useWorkstationSidebarHandlers({
         sessionRouteLabel
       );
 
+      setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
       setChatPanelSelectedWorkItem(null);
       promoteActiveSessionCreatorDraft();
       openSession(item.id, sessionName, originalSession.repoPath);
@@ -181,6 +187,7 @@ export function useWorkstationSidebarHandlers({
       promoteActiveSessionCreatorDraft,
       selectedMenuItemId,
       sessionRouteLabel,
+      setChatPanelContentMode,
       setChatPanelSelectedWorkItem,
       setGroupVisibleCounts,
     ]
