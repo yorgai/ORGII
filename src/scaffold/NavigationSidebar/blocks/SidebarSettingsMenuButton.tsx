@@ -78,6 +78,7 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
   const { t: tSettings, i18n } = useTranslation("settings");
   const { goToSettings } = useAppNavigation();
   const ramPanelRef = useRef<HTMLDivElement | null>(null);
+  const preserveRamPanelOnMenuCloseRef = useRef(false);
   const setLanguagePreference = useSetAtom(languageAtom);
   const [activeSubmenu, setActiveSubmenu] = useState<SettingsSubmenu | null>(
     null
@@ -94,6 +95,10 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
     if (open) return;
     setActiveSubmenu(null);
     setSubmenuPosition(null);
+    if (preserveRamPanelOnMenuCloseRef.current) {
+      preserveRamPanelOnMenuCloseRef.current = false;
+      return;
+    }
     setRamPanelOpen(false);
   }, []);
   const {
@@ -193,6 +198,7 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
   const handleViewRam = useCallback(() => {
     setActiveSubmenu(null);
     setSubmenuPosition(null);
+    preserveRamPanelOnMenuCloseRef.current = true;
     setRamPanelPosition({
       top: panelPosition.top,
       bottom: panelPosition.bottom,

@@ -8,6 +8,8 @@
     "noResults": "Projectが見つかりません",
     "dashboardTitle": "Projects",
     "groupBy": {
+      "org": "Org別",
+      "project": "プロジェクト別",
       "status": "ステータス別",
       "priority": "優先度別",
       "targetDate": "目標日別"

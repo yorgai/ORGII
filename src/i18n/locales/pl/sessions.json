@@ -1666,7 +1666,6 @@
     "createTarget": {
       "agentSession": "Sesja Agent",
       "createAgent": "Utwórz Agent / Skill",
-      "solveWorkItem": "Rozwiąż Work Item",
       "workItem": "Utwórz Work Item",
       "batchStartBeta": "Uruchomienie batch (Beta)",
       "benchmark": "Benchmark (Beta)"
@@ -1817,8 +1816,6 @@
       "cancel": "Anuluj"
     },
     "viewDiff": "Wyświetl różnice",
-    "selectWorkItem": "Wybierz Work Item",
-    "addInstructionsPlaceholder": "Dodaj instrukcje",
     "batchStarterPlaceholder": "Opisz ten session starter",
     "addBatchStarter": "Dodaj starter",
     "removeBatchStarter": "Usuń starter",

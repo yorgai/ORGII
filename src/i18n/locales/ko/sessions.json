@@ -1644,7 +1644,6 @@
     "createTarget": {
       "agentSession": "Agent 세션",
       "createAgent": "Agent / Skill 만들기",
-      "solveWorkItem": "Work Item 해결",
       "workItem": "Work Item 만들기",
       "batchStartBeta": "Batch start (Beta)",
       "benchmark": "Benchmark (Beta)"
@@ -1795,8 +1794,6 @@
       "worktree": "Worktree",
       "lockedHint": "이 세션에서 Worktree가 잠겨 있습니다"
     },
-    "selectWorkItem": "Work Item 선택",
-    "addInstructionsPlaceholder": "지침 추가",
     "batchStarterPlaceholder": "이 session starter 설명",
     "addBatchStarter": "Starter 추가",
     "removeBatchStarter": "Starter 제거",

@@ -8,6 +8,8 @@
     "noResults": "Project를 찾을 수 없습니다",
     "dashboardTitle": "Projects",
     "groupBy": {
+      "org": "Org별",
+      "project": "프로젝트별",
       "status": "상태별",
       "priority": "우선순위별",
       "targetDate": "목표 날짜별"

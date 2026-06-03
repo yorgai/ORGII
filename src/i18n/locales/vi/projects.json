@@ -8,6 +8,8 @@
     "noResults": "Không tìm thấy Project",
     "dashboardTitle": "Projects",
     "groupBy": {
+      "org": "Theo Org",
+      "project": "Theo dự án",
       "status": "Theo trạng thái",
       "priority": "Theo độ ưu tiên",
       "targetDate": "Theo ngày mục tiêu"

@@ -222,6 +222,25 @@ modelPickerStyleAtom.debugLabel = "modelPickerStyleAtom";
  */
 export type ChatPanelMode = "session" | "settings";
 
+export const CHAT_PANEL_CREATE_TARGET = {
+  AGENT_SESSION: "agentSession",
+  CREATE_AGENT: "createAgent",
+  WORK_ITEM: "workItem",
+  BATCH_START: "batchStart",
+  BENCHMARK: "benchmark",
+} as const;
+
+export type ChatPanelCreateTarget =
+  (typeof CHAT_PANEL_CREATE_TARGET)[keyof typeof CHAT_PANEL_CREATE_TARGET];
+
+export const DEFAULT_CHAT_PANEL_CREATE_TARGET: ChatPanelCreateTarget =
+  CHAT_PANEL_CREATE_TARGET.AGENT_SESSION;
+
+export const chatPanelCreateTargetAtom = atom<ChatPanelCreateTarget>(
+  DEFAULT_CHAT_PANEL_CREATE_TARGET
+);
+chatPanelCreateTargetAtom.debugLabel = "chatPanelCreateTargetAtom";
+
 /**
  * Whether the chat-panel slot covers the entire main content area.
  * Maximizing is purely a slot-side affordance; the underlying station

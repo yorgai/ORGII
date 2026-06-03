@@ -161,7 +161,6 @@ const PillGroup: React.FC<PillGroupProps> = memo(
     return (
       <div
         className={`inline-flex items-center text-[12px] font-medium ${className ?? ""}`}
-        style={{ transform: "translateZ(0)" }}
         onMouseEnter={handleGroupEnter}
         onMouseLeave={handleGroupLeave}
       >
