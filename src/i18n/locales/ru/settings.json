@@ -146,6 +146,7 @@
     "themeOptions": {
       "githubLight": "ORGII Светлая",
       "githubDark": "ORGII Тёмная",
+      "orgiiHighContrast": "ORGII Высокая контрастность",
       "vscodeLight": "VS Code Светлая",
       "vscodeDark": "VS Code Тёмная",
       "monokaiLight": "Monokai Светлая",

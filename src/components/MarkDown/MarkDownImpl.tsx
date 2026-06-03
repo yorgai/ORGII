@@ -22,6 +22,7 @@ import {
 } from "react-syntax-highlighter/dist/esm/styles/prism";
 import remarkGfm from "remark-gfm";
 
+import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { getLanguageFromPath } from "@src/config/languageMap";
 import CanvasInlineCard from "@src/engines/ChatPanel/blocks/CanvasInlineCard";
 import ChatCodeBlock from "@src/engines/ChatPanel/blocks/CodeBlock";
@@ -220,12 +221,7 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
   // Memoize dark mode calculation
   const isDarkMode = useMemo(() => {
     if (darkMode !== undefined) return darkMode;
-    switch (themes) {
-      case "/orgii_dark.css":
-        return true;
-      default:
-        return false;
-    }
+    return isThemeCssPathDark(themes);
   }, [themes, darkMode]);
 
   // Types for ReactMarkdown custom components

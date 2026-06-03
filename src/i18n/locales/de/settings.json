@@ -146,6 +146,7 @@
     "themeOptions": {
       "githubLight": "ORGII Hell",
       "githubDark": "ORGII Dunkel",
+      "orgiiHighContrast": "ORGII Hoher Kontrast",
       "vscodeLight": "VS Code Hell",
       "vscodeDark": "VS Code Dunkel",
       "monokaiLight": "Monokai Hell",

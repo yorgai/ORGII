@@ -1,0 +1,460 @@
+import { useSetAtom } from "jotai";
+import {
+  ChevronRight,
+  Contrast,
+  Gauge,
+  Languages,
+  Settings,
+} from "lucide-react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
+
+import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+  DROPDOWN_PANEL,
+  DROPDOWN_WIDTHS,
+} from "@src/components/Dropdown/tokens";
+import {
+  KEYBOARD_SHORTCUT_VARIANT,
+  KeyboardShortcut,
+} from "@src/components/KeyboardShortcut";
+import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
+import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
+import { useDropdownEngine } from "@src/hooks/dropdown";
+import { useAppNavigation } from "@src/hooks/navigation";
+import {
+  LANGUAGE_NAMES,
+  SUPPORTED_LANGUAGES,
+  type SupportedLanguage,
+} from "@src/i18n";
+import { useAppearanceState } from "@src/modules/MainApp/Settings/sections/useAppearanceState";
+import { languageAtom } from "@src/store/ui/languageAtom";
+
+import HoverAnimatedIcon, {
+  triggerIconAnimation,
+} from "../components/HoverAnimatedIcon";
+import { SidebarRamMonitorPanel } from "../connectors/SidebarRamMonitorButton";
+
+const SUBMENU_WIDTH_PX = 220;
+const SUBMENU_GAP_PX = DROPDOWN_PANEL.submenuGap;
+const MENU_ICON_CLASS_NAME = "shrink-0 text-text-2";
+const MENU_ARROW_CLASS_NAME = "text-text-3";
+
+type SettingsSubmenu = "appearance" | "language";
+
+interface SubmenuPosition {
+  left: number;
+  bottom: number;
+}
+
+function getSubmenuPosition(
+  trigger: HTMLElement,
+  parentPanel: HTMLElement | null
+): SubmenuPosition {
+  const rect = trigger.getBoundingClientRect();
+  const parentRect = parentPanel?.getBoundingClientRect();
+  const rightSideLeft = rect.right + SUBMENU_GAP_PX;
+  const left =
+    rightSideLeft + SUBMENU_WIDTH_PX > window.innerWidth
+      ? rect.left - SUBMENU_WIDTH_PX - SUBMENU_GAP_PX
+      : rightSideLeft;
+  return {
+    left,
+    bottom: parentRect ? window.innerHeight - parentRect.bottom : 8,
+  };
+}
+
+const SidebarSettingsMenuButton: React.FC = React.memo(() => {
+  const { t } = useTranslation("navigation");
+  const { t: tSettings, i18n } = useTranslation("settings");
+  const { goToSettings } = useAppNavigation();
+  const ramPanelRef = useRef<HTMLDivElement | null>(null);
+  const setLanguagePreference = useSetAtom(languageAtom);
+  const [activeSubmenu, setActiveSubmenu] = useState<SettingsSubmenu | null>(
+    null
+  );
+  const [submenuPosition, setSubmenuPosition] =
+    useState<SubmenuPosition | null>(null);
+  const [ramPanelOpen, setRamPanelOpen] = useState(false);
+  const [ramPanelPosition, setRamPanelPosition] = useState<{
+    top?: number;
+    bottom?: number;
+    left?: number;
+  } | null>(null);
+  const handleSettingsMenuOpenChange = useCallback((open: boolean) => {
+    if (open) return;
+    setActiveSubmenu(null);
+    setSubmenuPosition(null);
+    setRamPanelOpen(false);
+  }, []);
+  const {
+    isOpen,
+    isPositioned,
+    toggle,
+    close,
+    triggerRef,
+    panelRef,
+    panelPosition,
+  } = useDropdownEngine<HTMLDivElement>({
+    placement: "top",
+    align: "right",
+    gap: DROPDOWN_PANEL.triggerGap,
+    onOpenChange: handleSettingsMenuOpenChange,
+  });
+  const {
+    appearanceMode,
+    globalThemeId,
+    themeOptions,
+    handleAppearanceModeChange,
+    handleThemeChange,
+  } = useAppearanceState();
+
+  const openSettingsShortcut = getShortcutKeys("open_settings");
+  const settingsButtonClassName = isOpen ? "text-primary-6" : "text-text-2";
+
+  const languageOptions = useMemo(
+    () =>
+      SUPPORTED_LANGUAGES.map((language) => {
+        const translatedName = tSettings(`general.languageNames.${language}`);
+        const nativeName = LANGUAGE_NAMES[language];
+        const label =
+          translatedName === nativeName
+            ? nativeName
+            : `${translatedName} · ${nativeName}`;
+
+        return {
+          value: language,
+          label,
+        };
+      }),
+    [tSettings]
+  );
+
+  const currentLanguage = i18n.language as SupportedLanguage;
+
+  useEffect(() => {
+    if (!ramPanelOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (ramPanelRef.current?.contains(target)) return;
+      setRamPanelOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setRamPanelOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [ramPanelOpen]);
+
+  const closeAll = useCallback(() => {
+    setActiveSubmenu(null);
+    setSubmenuPosition(null);
+    setRamPanelOpen(false);
+    close();
+  }, [close]);
+
+  const handleToggle = useCallback(() => {
+    if (isOpen) {
+      closeAll();
+      return;
+    }
+    toggle();
+  }, [closeAll, isOpen, toggle]);
+
+  const openSubmenu = useCallback(
+    (submenu: SettingsSubmenu, target: HTMLElement) => {
+      setActiveSubmenu(submenu);
+      setSubmenuPosition(getSubmenuPosition(target, panelRef.current));
+    },
+    [panelRef]
+  );
+
+  const handleOpenSettings = useCallback(() => {
+    closeAll();
+    goToSettings();
+  }, [closeAll, goToSettings]);
+
+  const handleViewRam = useCallback(() => {
+    setActiveSubmenu(null);
+    setSubmenuPosition(null);
+    setRamPanelPosition({
+      top: panelPosition.top,
+      bottom: panelPosition.bottom,
+      left: panelPosition.left,
+    });
+    setRamPanelOpen(true);
+    close();
+  }, [close, panelPosition.bottom, panelPosition.left, panelPosition.top]);
+
+  const handleSelectAppearanceMode = useCallback(
+    async (mode: "light" | "dark") => {
+      await handleAppearanceModeChange(mode);
+      closeAll();
+    },
+    [closeAll, handleAppearanceModeChange]
+  );
+
+  const handleSelectTheme = useCallback(
+    async (themeId: string) => {
+      await handleThemeChange(themeId);
+      closeAll();
+    },
+    [closeAll, handleThemeChange]
+  );
+
+  const handleSelectLanguage = useCallback(
+    (language: SupportedLanguage) => {
+      void i18n.changeLanguage(language);
+      setLanguagePreference(language);
+      closeAll();
+    },
+    [closeAll, i18n, setLanguagePreference]
+  );
+
+  const handleSubmenuMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      event.stopPropagation();
+    },
+    []
+  );
+
+  const renderSubmenu = () => {
+    if (!activeSubmenu || !submenuPosition) return null;
+
+    if (activeSubmenu === "appearance") {
+      return createPortal(
+        <div
+          className={`${DROPDOWN_CLASSES.menuPanelWithHeaderBase} ${DROPDOWN_WIDTHS.panelWidthClass} fixed`}
+          style={{ left: submenuPosition.left, bottom: submenuPosition.bottom }}
+          onMouseDown={handleSubmenuMouseDown}
+        >
+          <div className={DROPDOWN_CLASSES.sectionLabel}>
+            {tSettings("general.appearanceMode")}
+          </div>
+          <div className={DROPDOWN_CLASSES.itemsColumnBelowHeader}>
+            {(["light", "dark"] as const).map((mode) => {
+              const selected = appearanceMode === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`${DROPDOWN_CLASSES.menuActionItem} ${selected ? DROPDOWN_CLASSES.itemSelected : ""} justify-between`}
+                  onClick={() => void handleSelectAppearanceMode(mode)}
+                  aria-selected={selected}
+                >
+                  <span>{tSettings(`general.${mode}`)}</span>
+                  {selected && <DropdownSelectedCheck />}
+                </button>
+              );
+            })}
+          </div>
+          <div className={DROPDOWN_CLASSES.menuSeparator} />
+          <div className={DROPDOWN_CLASSES.sectionLabel}>
+            {tSettings("general.themePreset")}
+          </div>
+          <div className="scrollbar-overlay max-h-[220px] overflow-y-auto">
+            <div className={DROPDOWN_CLASSES.itemsColumnBelowHeader}>
+              {themeOptions.map((theme) => {
+                const selected = globalThemeId === theme.value;
+                return (
+                  <button
+                    key={theme.value}
+                    type="button"
+                    className={`${DROPDOWN_CLASSES.menuActionItem} ${selected ? DROPDOWN_CLASSES.itemSelected : ""} justify-between`}
+                    onClick={() => void handleSelectTheme(String(theme.value))}
+                    aria-selected={selected}
+                  >
+                    <span>{theme.label}</span>
+                    {selected && <DropdownSelectedCheck />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>,
+        document.body
+      );
+    }
+
+    return createPortal(
+      <div
+        className={`${DROPDOWN_CLASSES.menuPanelWithHeaderBase} ${DROPDOWN_WIDTHS.panelWidthClass} fixed`}
+        style={{ left: submenuPosition.left, bottom: submenuPosition.bottom }}
+        onMouseDown={handleSubmenuMouseDown}
+      >
+        <div className={DROPDOWN_CLASSES.sectionLabel}>
+          {t("sidebar.settingsMenu.language")}
+        </div>
+        <div className="scrollbar-overlay max-h-[320px] overflow-y-auto">
+          <div className={DROPDOWN_CLASSES.itemsColumnBelowHeader}>
+            {languageOptions.map((language) => {
+              const selected = currentLanguage === language.value;
+              return (
+                <button
+                  key={language.value}
+                  type="button"
+                  className={`${DROPDOWN_CLASSES.menuActionItem} ${selected ? DROPDOWN_CLASSES.itemSelected : ""} justify-between`}
+                  onClick={() => handleSelectLanguage(language.value)}
+                  aria-selected={selected}
+                >
+                  <span>{language.label}</span>
+                  {selected && <DropdownSelectedCheck />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
+  return (
+    <>
+      <div ref={triggerRef} title={t("sidebar.bottomBar.settings")}>
+        <LiquidGlassHoverItem
+          className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
+          onClick={handleToggle}
+          onMouseEnter={(event) => triggerIconAnimation(event.currentTarget)}
+        >
+          <HoverAnimatedIcon
+            icon={Settings}
+            iconName="settings"
+            size={16}
+            strokeWidth={2}
+            className={settingsButtonClassName}
+          />
+        </LiquidGlassHoverItem>
+      </div>
+
+      {isOpen &&
+        isPositioned &&
+        createPortal(
+          <div
+            ref={panelRef}
+            className={`${DROPDOWN_CLASSES.menuPanelBase} ${DROPDOWN_WIDTHS.sidebarMenuClass} fixed`}
+            style={{
+              top: panelPosition.top,
+              bottom: panelPosition.bottom,
+              left: panelPosition.left,
+            }}
+          >
+            <div className={DROPDOWN_CLASSES.itemsColumn}>
+              <button
+                type="button"
+                className={`${DROPDOWN_CLASSES.menuActionItem} ${activeSubmenu === "appearance" ? DROPDOWN_CLASSES.itemActive : ""} justify-between`}
+                onMouseEnter={(event) =>
+                  openSubmenu("appearance", event.currentTarget)
+                }
+                onFocus={(event) =>
+                  openSubmenu("appearance", event.currentTarget)
+                }
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <Contrast
+                    size={DROPDOWN_ITEM.iconSize}
+                    className={MENU_ICON_CLASS_NAME}
+                  />
+                  <span className="truncate">
+                    {t("sidebar.settingsMenu.appearance")}
+                  </span>
+                </span>
+                <ChevronRight
+                  size={DROPDOWN_ITEM.iconSize}
+                  className={MENU_ARROW_CLASS_NAME}
+                />
+              </button>
+              <button
+                type="button"
+                className={`${DROPDOWN_CLASSES.menuActionItem} ${activeSubmenu === "language" ? DROPDOWN_CLASSES.itemActive : ""} justify-between`}
+                onMouseEnter={(event) =>
+                  openSubmenu("language", event.currentTarget)
+                }
+                onFocus={(event) =>
+                  openSubmenu("language", event.currentTarget)
+                }
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <Languages
+                    size={DROPDOWN_ITEM.iconSize}
+                    className={MENU_ICON_CLASS_NAME}
+                  />
+                  <span className="truncate">
+                    {t("sidebar.settingsMenu.language")}
+                  </span>
+                </span>
+                <ChevronRight
+                  size={DROPDOWN_ITEM.iconSize}
+                  className={MENU_ARROW_CLASS_NAME}
+                />
+              </button>
+              <button
+                type="button"
+                className={`${DROPDOWN_CLASSES.menuActionItem} gap-2`}
+                onMouseEnter={() => setActiveSubmenu(null)}
+                onFocus={() => setActiveSubmenu(null)}
+                onClick={handleViewRam}
+              >
+                <Gauge
+                  size={DROPDOWN_ITEM.iconSize}
+                  className={MENU_ICON_CLASS_NAME}
+                />
+                <span>{t("sidebar.settingsMenu.viewRam")}</span>
+              </button>
+              <div className={DROPDOWN_CLASSES.menuSeparator} />
+              <button
+                type="button"
+                className={`${DROPDOWN_CLASSES.menuActionItem} justify-between`}
+                onMouseEnter={() => setActiveSubmenu(null)}
+                onFocus={() => setActiveSubmenu(null)}
+                onClick={handleOpenSettings}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <Settings
+                    size={DROPDOWN_ITEM.iconSize}
+                    className={MENU_ICON_CLASS_NAME}
+                  />
+                  <span className="truncate">
+                    {t("sidebar.settingsMenu.openSettings")}
+                  </span>
+                </span>
+                <KeyboardShortcut
+                  shortcut={openSettingsShortcut}
+                  variant={KEYBOARD_SHORTCUT_VARIANT.dropdown}
+                />
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
+      {renderSubmenu()}
+      {ramPanelPosition && (
+        <SidebarRamMonitorPanel
+          isOpen={ramPanelOpen}
+          panelRef={ramPanelRef}
+          panelPosition={ramPanelPosition}
+        />
+      )}
+    </>
+  );
+});
+
+SidebarSettingsMenuButton.displayName = "SidebarSettingsMenuButton";
+
+export default SidebarSettingsMenuButton;
