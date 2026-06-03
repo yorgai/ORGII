@@ -1,5 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import {
+  repoPathAtom,
+  repositoryIdAtom,
+  repositoryNameAtom,
+} from "@src/engines/SessionCore/workspace/atoms/sessionAtoms";
 import { reposAtom, selectedRepoIdAtom } from "@src/store/repo/atoms";
 import { REPO_KIND, type Repo } from "@src/store/repo/types";
 import {
@@ -50,12 +55,28 @@ export function createWorkspaceHelpers(store: E2EStore) {
           fs_uri: repoPath,
           kind: REPO_KIND.GIT,
         };
+        const folder = {
+          id: repoId,
+          name: repo.name,
+          path: repoPath,
+          uri: `file://${repoPath}`,
+          isPrimary: true,
+          repoId,
+          kind: REPO_KIND.GIT,
+        };
         const existingRepos = store.get(reposAtom);
         store.set(reposAtom, [
           repo,
           ...existingRepos.filter((existingRepo) => existingRepo.id !== repoId),
         ]);
         store.set(selectedRepoIdAtom, repoId);
+        store.set(workspaceFoldersAtom, [folder]);
+        store.set(activeWorkspaceIdAtom, repoId);
+        store.set(activeWorkspaceNameAtom, repo.name);
+        store.set(activeFolderIdAtom, repoId);
+        store.set(repositoryIdAtom, repoId);
+        store.set(repositoryNameAtom, repo.name);
+        store.set(repoPathAtom, repoPath);
         return { repoId, path: repoPath };
       };
 
