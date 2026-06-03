@@ -10,16 +10,14 @@
  * Design: reuses StackPill so pinned actions match composer section pills:
  * 28px height, rounded-full border, and 13px medium text.
  */
-import { invoke } from "@tauri-apps/api/core";
 import { useAtom, useAtomValue } from "jotai";
 import { Layout, MoreHorizontal } from "lucide-react";
 import React, { memo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { rpc } from "@src/api/tauri/rpc";
 import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
 import StackPill from "@src/engines/ChatPanel/InputArea/components/StackPill";
-import { createLogger } from "@src/hooks/logger";
+import { useSlashItemsCache } from "@src/engines/ChatPanel/hooks/useInputArea/useSlashItemsCache";
 import { EditorTabService } from "@src/services/workStation";
 import { canvasPreviewAtom } from "@src/store/session/canvasPreviewAtom";
 import {
@@ -31,33 +29,11 @@ import {
   createCanvasPreviewTab,
   getCanvasPreviewTabId,
 } from "@src/store/workstation/tabs/factories/canvasPreview";
-import type { InstalledSkill, SlashItem } from "@src/types/extensions";
+import type { SlashItem } from "@src/types/extensions";
 import { SLASH_ACTIONS } from "@src/types/extensions";
 
+import { buildMcpToolCommand } from "../SlashCommandPortal/slashItemUtils";
 import PinActionsPanel, { actionKey } from "./PinActionsPanel";
-
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-const logger = createLogger("PinnedActionsBar");
-
-function resolveSkillGroup(skill: InstalledSkill): string {
-  const normalized = skill.path.replace(/\\/g, "/");
-  const home = normalized.match(
-    /^([/\\]Users\/[^/]+|\/home\/[^/]+|\/root)/
-  )?.[1];
-  if (home) {
-    if (normalized.startsWith(`${home}/.cursor/skills`)) return "Cursor Skills";
-    if (normalized.startsWith(`${home}/.orgii/skills`)) return "Global Skills";
-  }
-  const workspaceMatch = normalized.match(
-    /^(.*?)\/(?:\.orgii|\.cursor)\/skills\//
-  );
-  if (workspaceMatch) {
-    const segments = workspaceMatch[1].split("/").filter(Boolean);
-    return segments[segments.length - 1] ?? skill.source;
-  }
-  return skill.source;
-}
 
 const BUILTIN_SLASH_ITEMS: SlashItem[] = [
   {
@@ -163,80 +139,13 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
       tiptapRef.current.focus();
     }, [tiptapRef]);
 
-    // ── Available items (lazy-fetched) ────────────────────────────────────────
+    // ── Available items (shared cache) ────────────────────────────────────────
 
-    const [availableItems, setAvailableItems] = useState<SlashItem[]>([]);
-    const [loadingItems, setLoadingItems] = useState(false);
-    const itemsCacheRef = useRef<SlashItem[]>([]);
-
-    const fetchItems = useCallback(async () => {
-      if (itemsCacheRef.current.length > 0) {
-        setAvailableItems(itemsCacheRef.current);
-        return;
-      }
-      setLoadingItems(true);
-      try {
-        const [rawSkills, mcpServers] = await Promise.all([
-          invoke<InstalledSkill[]>("skills_list", {
-            workspacePath: null,
-          }).catch((err) => {
-            logger.warn("Failed to list skills:", err);
-            return [] as InstalledSkill[];
-          }),
-          rpc.mcp.listServers({}).catch((err) => {
-            logger.warn("Failed to list MCP servers:", err);
-            return [];
-          }),
-        ]);
-
-        const skillItems: SlashItem[] = rawSkills
-          .filter((s) => s.enabled && s.available)
-          .map((s) => ({
-            name: s.name,
-            skillName: s.name,
-            description:
-              s.description && s.description !== "---" ? s.description : "",
-            category: "skill" as const,
-            source: resolveSkillGroup(s),
-            acceptsArgs: false,
-          }));
-
-        const connectedServers = mcpServers.filter(
-          (srv) => srv.status === "connected" && !srv.disabled
-        );
-        const toolItems: SlashItem[] = (
-          await Promise.all(
-            connectedServers.map((srv) =>
-              rpc.mcp.listServerTools({ serverName: srv.name }).then(
-                (tools) =>
-                  tools.map((t) => ({
-                    name: t.name,
-                    description: t.description,
-                    category: "tool" as const,
-                    source: srv.name,
-                    acceptsArgs: true,
-                    serverName: srv.name,
-                  })),
-                (err) => {
-                  logger.warn(`Failed to list tools for "${srv.name}":`, err);
-                  return [] as SlashItem[];
-                }
-              )
-            )
-          )
-        ).flat();
-
-        const all: SlashItem[] = [
-          ...BUILTIN_SLASH_ITEMS,
-          ...skillItems,
-          ...toolItems,
-        ];
-        itemsCacheRef.current = all;
-        setAvailableItems(all);
-      } finally {
-        setLoadingItems(false);
-      }
-    }, []);
+    const {
+      filteredItems: availableItems,
+      loading: loadingItems,
+      fetchFresh,
+    } = useSlashItemsCache({ builtinItems: BUILTIN_SLASH_ITEMS });
 
     // ── "..." panel state ─────────────────────────────────────────────────────
 
@@ -245,10 +154,10 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
     const moreButtonRef = useRef<HTMLButtonElement>(null);
 
     const handleOpenPanel = useCallback(() => {
-      void fetchItems();
+      void fetchFresh();
       setAnchorRect(moreButtonRef.current?.getBoundingClientRect() ?? null);
       setPanelOpen((prev) => !prev);
-    }, [fetchItems]);
+    }, [fetchFresh]);
 
     const handleClosePanel = useCallback(() => {
       setPanelOpen(false);
@@ -273,7 +182,6 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
     const handlePillClick = useCallback(
       (action: PinnedAction, _e?: React.MouseEvent) => {
-        // Built-in actions execute real work and don't require the editor.
         if (action.category === "action") {
           if (action.name === SLASH_ACTIONS.SETUP_REPO) {
             handleSetupRepo();
@@ -289,8 +197,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
         if (action.category === "skill") {
           const skillToken = `/${action.skillName ?? action.name}`;
-          tiptapRef.current.clear();
-          tiptapRef.current.insertFilePill(
+          tiptapRef.current.prependFilePill(
             skillToken,
             false,
             "skill",
@@ -301,8 +208,9 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
         }
 
         if (action.category === "tool" && action.serverName) {
-          const serverSlug = action.serverName.replace(/-/g, "_");
-          tiptapRef.current.setContent(`/mcp__${serverSlug}__${action.name} `);
+          tiptapRef.current.setContent(
+            buildMcpToolCommand(action.serverName, action.name)
+          );
           tiptapRef.current.focus();
           return;
         }
@@ -313,11 +221,8 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
       [tiptapRef, handleSetupRepo]
     );
 
-    // ── Nothing pinned — still render the "..." button ────────────────────────
-
     return (
       <div className="relative flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-hide">
-        {/* Canvas pill — shown when a live canvas exists and its tab is closed */}
         {showCanvasPill && (
           <StackPill
             icon={<Layout size={12} strokeWidth={1.75} />}

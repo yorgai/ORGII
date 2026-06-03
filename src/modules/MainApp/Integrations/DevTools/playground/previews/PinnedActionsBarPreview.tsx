@@ -32,6 +32,7 @@ function PinnedActionsBarPreviewInner() {
     isEmpty: NOOP_BOOL,
     insertMentionText: NOOP,
     insertFilePill: NOOP,
+    prependFilePill: NOOP,
     insertFileReference: NOOP,
     removeFilePill: NOOP,
     getFilePills: NOOP_ARR,

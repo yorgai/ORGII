@@ -134,6 +134,17 @@ export interface ComposerInputRef {
     iconType?: PillIconType,
     displayName?: string
   ) => void;
+  /**
+   * Insert a pill at the very beginning of the editor, preserving any
+   * existing content that follows it. A trailing space is added after the
+   * pill so the user's prior text starts right after it.
+   */
+  prependFilePill: (
+    filePath: string,
+    isFolder?: boolean,
+    iconType?: PillIconType,
+    displayName?: string
+  ) => void;
   /** Insert a file-reference pill with an attached line range */
   insertFileReference: (options: {
     filePath: string;

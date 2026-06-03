@@ -9,10 +9,11 @@
  * composer is stamped with the right mode after creation.
  */
 import { useAtom } from "jotai";
-import React, { memo, useEffect } from "react";
+import React, { memo } from "react";
 
 import { cursorCreatorModeOverrideAtom } from "@src/store/session/cursorModeOverrideAtom";
 
+import { usePillOverrideSync } from "../usePillOverrideSync";
 import CursorModePillView from "./CursorModePillView";
 import { useCursorModes } from "./useCursorModes";
 
@@ -23,15 +24,7 @@ const CursorModePillCreator: React.FC = memo(() => {
   const cursorModes = useCursorModes(null);
   const [, setOverride] = useAtom(cursorCreatorModeOverrideAtom);
 
-  useEffect(() => {
-    setOverride(cursorModes.pickedMode);
-  }, [cursorModes.pickedMode, setOverride]);
-
-  useEffect(() => {
-    return () => {
-      setOverride(null);
-    };
-  }, [setOverride]);
+  usePillOverrideSync(cursorModes.pickedMode, setOverride);
 
   const { effectiveMode, modes, modeSource, loading, refresh, selectMode } =
     cursorModes;

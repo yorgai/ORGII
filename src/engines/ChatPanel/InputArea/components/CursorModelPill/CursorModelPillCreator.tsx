@@ -13,10 +13,11 @@
  * user opens the dropdown and explicitly picks one.
  */
 import { useAtom } from "jotai";
-import React, { memo, useEffect } from "react";
+import React, { memo } from "react";
 
 import { cursorCreatorModelOverrideAtom } from "@src/store/session/cursorModelOverrideAtom";
 
+import { usePillOverrideSync } from "../usePillOverrideSync";
 import CursorModelPillView from "./CursorModelPillView";
 import { useCursorModels } from "./useCursorModels";
 
@@ -34,19 +35,9 @@ const CursorModelPillCreator: React.FC<CursorModelPillCreatorProps> = memo(
 
     // Mirror the draft pick into the launch-scope atom so
     // `useSessionLaunch.handleLaunch` can read it once and pass it as
-    // `modelName` to `cursor_bridge_new_composer`.
-    useEffect(() => {
-      setOverride(cursorModels.pickedModel);
-    }, [cursorModels.pickedModel, setOverride]);
-
-    // Clear on unmount so a back-button / panel-close leaves the next
-    // creator visit neutral (otherwise yesterday's pick would silently
-    // re-apply when the user starts a fresh Cursor IDE chat tomorrow).
-    useEffect(() => {
-      return () => {
-        setOverride(null);
-      };
-    }, [setOverride]);
+    // `modelName` to `cursor_bridge_new_composer`. Cleared on unmount
+    // so a back-button / panel-close leaves the next creator visit neutral.
+    usePillOverrideSync(cursorModels.pickedModel, setOverride);
 
     const {
       effectiveModel,

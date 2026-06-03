@@ -24,11 +24,12 @@
  * it as the `model` override to `SessionService.sendMessage`.
  */
 import { useAtom } from "jotai";
-import React, { memo, useEffect } from "react";
+import React, { memo } from "react";
 
 import { cursorModelOverrideAtomFamily } from "@src/store/session/cursorModelOverrideAtom";
 import { composerIdFromSessionId } from "@src/util/session/sessionDispatch";
 
+import { usePillOverrideSync } from "../usePillOverrideSync";
 import CursorModelPillView from "./CursorModelPillView";
 import { useCursorModels } from "./useCursorModels";
 
@@ -47,14 +48,7 @@ const CursorModelPill: React.FC<CursorModelPillProps> = memo(
     // having to reach back into this component. Cleared on unmount so
     // stale picks from a closed pill don't bleed into the next session.
     const [, setOverride] = useAtom(cursorModelOverrideAtomFamily(sessionId));
-    useEffect(() => {
-      setOverride(cursorModels.pickedModel);
-    }, [cursorModels.pickedModel, setOverride]);
-    useEffect(() => {
-      return () => {
-        setOverride(null);
-      };
-    }, [setOverride]);
+    usePillOverrideSync(cursorModels.pickedModel, setOverride);
 
     const {
       effectiveModel,

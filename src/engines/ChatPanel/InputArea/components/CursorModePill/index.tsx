@@ -12,11 +12,12 @@
  * composer-targeted right before the prompt lands.
  */
 import { useAtom } from "jotai";
-import React, { memo, useEffect } from "react";
+import React, { memo } from "react";
 
 import { cursorModeOverrideAtomFamily } from "@src/store/session/cursorModeOverrideAtom";
 import { composerIdFromSessionId } from "@src/util/session/sessionDispatch";
 
+import { usePillOverrideSync } from "../usePillOverrideSync";
 import CursorModePillView from "./CursorModePillView";
 import { useCursorModes } from "./useCursorModes";
 
@@ -30,14 +31,7 @@ const CursorModePill: React.FC<CursorModePillProps> = memo(({ sessionId }) => {
   const cursorModes = useCursorModes(composerId);
 
   const [, setOverride] = useAtom(cursorModeOverrideAtomFamily(sessionId));
-  useEffect(() => {
-    setOverride(cursorModes.pickedMode);
-  }, [cursorModes.pickedMode, setOverride]);
-  useEffect(() => {
-    return () => {
-      setOverride(null);
-    };
-  }, [setOverride]);
+  usePillOverrideSync(cursorModes.pickedMode, setOverride);
 
   const { effectiveMode, modes, modeSource, loading, refresh, selectMode } =
     cursorModes;

@@ -6,14 +6,34 @@
  * Ranges shorter than one minute render as a single HH:MM timestamp.
  */
 import type { CursorIdeTurnSummary } from "@src/api/tauri/cursorIde";
+import { PILL_TYPE_LIST } from "@src/config/pillTokens";
 
 import type { ChatGroupMeta } from "../hooks/useChatGroups";
 
 const ROUND_PREVIEW_MAX_LENGTH = 96;
 const MIN_TIME_RANGE_MS = 60_000;
 
+/**
+ * Strip the bracket portion of pill serialization syntax (`[type:path]`)
+ * from text, keeping the display name prefix intact. Produces clean plain
+ * text suitable for one-line round preview labels where pill icons cannot
+ * be rendered.
+ *
+ * Only removes the `\s*[type:path]` fragment (not the preceding displayName)
+ * so word spacing between adjacent pills is preserved.
+ */
+const PILL_BRACKET_RE = new RegExp(
+  `\\s*\\[(${PILL_TYPE_LIST.join("|")}):([^\\]]+)\\]`,
+  "g"
+);
+
+function stripPillSyntax(text: string): string {
+  return text.replace(PILL_BRACKET_RE, "");
+}
+
 export function getRoundPreviewText(displayText: string | undefined): string {
-  const normalizedText = (displayText ?? "").replace(/\s+/g, " ").trim();
+  const stripped = stripPillSyntax(displayText ?? "");
+  const normalizedText = stripped.replace(/\s+/g, " ").trim();
   if (normalizedText.length <= ROUND_PREVIEW_MAX_LENGTH) return normalizedText;
   return `${normalizedText.slice(0, ROUND_PREVIEW_MAX_LENGTH - 1)}…`;
 }
