@@ -129,11 +129,19 @@
     "actions": {
       "addNew": "新建",
       "collapseAll": "全部摺疊",
-      "markAllRead": "全部標為已讀"
+      "markAllRead": "全部標為已讀",
+      "openHome": "開啟首頁",
+      "openWorkstation": "開啟工作站"
     },
     "bottomBar": {
       "settings": "設定",
       "clockLabel": "目前時間"
+    },
+    "settingsMenu": {
+      "appearance": "外觀",
+      "language": "語言",
+      "viewRam": "查看 RAM",
+      "openSettings": "開啟設定"
     },
     "empty": {
       "noItems": "暫無內容",

@@ -1,7 +1,7 @@
 /**
  * HomeSidebar
  *
- * Home navigation sidebar with Home/Workstation tabs.
+ * Home navigation sidebar with an Open Workstation header action.
  * Swaps to second-level sidebars when on focused app pages.
  *
  * Tab Behavior: Uses "reuse" mode - clicking sidebar items updates the
@@ -9,29 +9,29 @@
  */
 import { MenuItem, Menu as TauriMenu } from "@tauri-apps/api/menu";
 import i18next from "i18next";
-import { useAtom, useSetAtom } from "jotai";
+import { useAtom } from "jotai";
 import {
   ArrowUpRight,
   ChartNoAxesGantt,
   FolderGit2,
-  House,
   SquareMousePointer,
 } from "lucide-react";
 import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
+import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
+import Tooltip from "@src/components/Tooltip";
 import { getSegmentIcon } from "@src/config/mainAppPaths";
 import { ROUTES } from "@src/config/routes";
 import { useRouteLabel } from "@src/hooks/i18n";
 import { SIDEBAR_MEMORY_KIND, useSidebarMemoryEntry } from "@src/hooks/perf";
 import { devRecordActiveViewAtom } from "@src/store/ui/devRecordToolbarAtom";
-import { homeTabAtom } from "@src/store/ui/homeTabAtom";
 import { openExternalLink } from "@src/util/platform/ipcRenderer";
 
-import SidebarBottomBar from "../blocks/SidebarBottomBar";
+import { SidebarBottomBar, SidebarHeaderNavButton } from "../blocks";
 import type { NavigationMenuItem } from "../components/NavigationMenu/config";
-import { SidebarRamMonitorButton } from "../connectors/SidebarRamMonitorButton";
 import { routeToMenuItem } from "../utils/menuFromRoutes";
 import DevRecordSidebar from "./DevRecordSidebar";
 import EconomySidebar from "./EconomySidebar";
@@ -43,10 +43,11 @@ import SettingsSidebar from "./SettingsSidebar";
 // ============================================
 
 const HOME_SIDEBAR_ICON_NAME = {
-  homeTab: "house",
-  workstationTab: "square-mouse-pointer",
   economy: "badge-cent",
 } as const;
+
+const HOME_SIDEBAR_TABS = [];
+const noopSidebarTabChange = () => undefined;
 
 const MARKET_ROOT_PATH = ROUTES.app.market.tokenMarket.path.slice(
   0,
@@ -65,7 +66,6 @@ const HomeSidebar: React.FC = () => {
   const { getTranslatedRouteLabel } = useRouteLabel();
   const navigate = useNavigate();
   const location = useLocation();
-  const setActiveMenuTab = useSetAtom(homeTabAtom);
   const [activeDevRecordView, setActiveDevRecordView] = useAtom(
     devRecordActiveViewAtom
   );
@@ -77,25 +77,6 @@ const HomeSidebar: React.FC = () => {
   // SettingsSidebar owns the nested settings levels.
   const isOnSettings = location.pathname.startsWith(ROUTES.app.settings.path);
   const isOnEconomy = location.pathname.startsWith(MARKET_ROOT_PATH);
-
-  // Tabs with translated labels
-  const tabs = useMemo(
-    () => [
-      {
-        key: "build",
-        label: t("sidebar.tabs.build"),
-        icon: House,
-        iconName: HOME_SIDEBAR_ICON_NAME.homeTab,
-      },
-      {
-        key: "workstation",
-        label: t("sidebar.tabs.workstation"),
-        icon: SquareMousePointer,
-        iconName: HOME_SIDEBAR_ICON_NAME.workstationTab,
-      },
-    ],
-    [t]
-  );
 
   // Build menu items — labels from route config via useRouteLabel (same as PageBreadcrumb)
   const buildMenuItems = useMemo(
@@ -160,22 +141,53 @@ const HomeSidebar: React.FC = () => {
     kind: SIDEBAR_MEMORY_KIND.START_PAGE,
     label: "Start page",
     items: buildMenuItems.length,
-    tabs: tabs.length,
-    source: { buildMenuItems, selectedKey, tabs },
+    source: { buildMenuItems, selectedKey },
     enabled: !isOnDevRecord && !isOnSettings && !isOnEconomy,
   });
 
-  const handleMenuTabChange = useCallback(
-    (key: string) => {
-      const nextTab = key as "build" | "workstation";
-      setActiveMenuTab(nextTab);
-      if (nextTab === "build") {
-        navigate(ROUTES.app.home.start.path, { replace: false });
-        return;
-      }
-      navigate(ROUTES.workStation.base.path, { replace: false });
-    },
-    [navigate, setActiveMenuTab]
+  const handleOpenWorkstation = useCallback(() => {
+    navigate(ROUTES.workStation.base.path, { replace: false });
+  }, [navigate]);
+
+  const openWorkstationHeader = useMemo(
+    () => (
+      <SidebarHeaderNavButton
+        icon={SquareMousePointer}
+        label={t("sidebar.tabs.workstation")}
+        onClick={handleOpenWorkstation}
+        bold={false}
+      />
+    ),
+    [handleOpenWorkstation, t]
+  );
+
+  const workstationHeaderAction = useMemo(
+    () => (
+      <Tooltip
+        content={
+          <KeyboardShortcutTooltipContent
+            label={t("sidebar.actions.openWorkstation")}
+          />
+        }
+        position="bottom"
+        mouseEnterDelay={200}
+        framedPanel
+      >
+        <div className="inline-flex">
+          <LiquidGlassHoverItem
+            className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
+            onClick={handleOpenWorkstation}
+          >
+            <SquareMousePointer
+              size={16}
+              strokeWidth={2}
+              className="text-text-2"
+            />
+          </LiquidGlassHoverItem>
+        </div>
+      </Tooltip>
+    ),
+    [handleOpenWorkstation, t]
   );
 
   const handleMenuItemClick = useCallback(
@@ -241,18 +253,18 @@ const HomeSidebar: React.FC = () => {
 
   return (
     <NavigationSidebar
-      items={tabs}
+      items={HOME_SIDEBAR_TABS}
       activeKey="build"
-      onChange={handleMenuTabChange}
+      onChange={noopSidebarTabChange}
       menuItems={buildMenuItems}
       selectedKey={selectedKey}
+      topContent={openWorkstationHeader}
       onMenuItemClick={handleMenuItemClick}
       onMenuItemContextMenu={handleMenuItemContextMenu}
+      headerActions={workstationHeaderAction}
       defaultOpenKeys={["workspace"]}
       enableHoverIconAnimation
-      bottomContent={
-        <SidebarBottomBar rightActions={<SidebarRamMonitorButton />} />
-      }
+      bottomContent={<SidebarBottomBar />}
     />
   );
 };

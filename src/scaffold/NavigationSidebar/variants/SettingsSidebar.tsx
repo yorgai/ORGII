@@ -12,7 +12,6 @@ import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
 import {
   type CoreSettingsItemSegment,
   type IntegrationsCategorySegment,
@@ -29,7 +28,11 @@ import { APP_SECTIONS } from "@src/modules/MainApp/Settings/config";
 import { settingsReturnRouteAtom } from "@src/store/ui/viewModeAtom";
 
 import SidebarBase from "../SidebarBase";
-import { SidebarBottomBar, SidebarList } from "../blocks";
+import {
+  SidebarBottomBar,
+  SidebarHeaderNavButton,
+  SidebarList,
+} from "../blocks";
 import NavigationMenu from "../components/NavigationMenu";
 import type { NavigationMenuItem } from "../components/NavigationMenu/config";
 import { SidebarRamMonitorButton } from "../connectors/SidebarRamMonitorButton";
@@ -100,19 +103,20 @@ const SettingsSidebar: React.FC = () => {
     navigate(settingsReturnRoute || ROUTES.app.home.start.path);
   }, [navigate, settingsReturnRoute]);
 
+  const settingsReturnItem = useMemo(
+    () => (
+      <SidebarHeaderNavButton
+        icon={ChevronLeft}
+        label={t("labels.settings")}
+        onClick={handleBack}
+      />
+    ),
+    [handleBack, t]
+  );
+
   return (
     <SidebarBase>
-      <div className="flex h-9 flex-shrink-0 items-end px-3">
-        <LiquidGlassHoverItem
-          className="flex h-7 items-center gap-2 rounded-lg px-2 font-bold text-text-1"
-          onClick={handleBack}
-        >
-          <ChevronLeft size={14} strokeWidth={2} />
-          <span className="text-[13px]">{t("labels.settings")}</span>
-        </LiquidGlassHoverItem>
-      </div>
-
-      <SettingsRootBody />
+      <SettingsRootBody topContent={settingsReturnItem} />
       <SidebarBottomBar
         rightActions={<SidebarRamMonitorButton />}
         hideSettings
@@ -123,7 +127,11 @@ const SettingsSidebar: React.FC = () => {
 
 export default SettingsSidebar;
 
-const SettingsRootBody: React.FC = () => {
+interface SettingsRootBodyProps {
+  topContent?: React.ReactNode;
+}
+
+const SettingsRootBody: React.FC<SettingsRootBodyProps> = ({ topContent }) => {
   const { t } = useTranslation("settings");
   const navigate = useNavigate();
   const location = useLocation();
@@ -222,7 +230,8 @@ const SettingsRootBody: React.FC = () => {
 
   return (
     <SidebarList>
-      <div>
+      <div className="flex flex-col gap-px">
+        {topContent}
         <NavigationMenu
           items={appSectionItems}
           selectedKeys={selectedKeys}

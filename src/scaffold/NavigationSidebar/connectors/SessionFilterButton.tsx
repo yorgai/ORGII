@@ -122,7 +122,7 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
               iconName="list-filter"
               size={16}
               strokeWidth={2}
-              className={isOpen ? "text-text-1" : "text-text-2"}
+              className={isOpen ? "text-primary-6" : "text-text-2"}
             />
           </LiquidGlassHoverItem>
         </div>

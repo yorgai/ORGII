@@ -1,11 +1,12 @@
 import { RenameModal } from "@/src/scaffold/ModalSystem/variants";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { Box, Search, SquareMousePointer } from "lucide-react";
+import { Box, House, Search, SquareMousePointer } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
+import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
 import SessionHoverCard from "@src/components/SessionHoverCard";
 import Tooltip from "@src/components/Tooltip";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
@@ -34,7 +35,6 @@ import { SidebarBottomBar } from "../blocks";
 import NavigationSidebar from "../variants/NavigationSidebar";
 import { SessionFilterButton } from "./SessionFilterButton";
 import { SessionImportExportModal } from "./SessionImportExportModal";
-import { SidebarRamMonitorButton } from "./SidebarRamMonitorButton";
 import {
   CURSOR_IDE_REFRESH_INTERVAL_MS,
   NEW_SESSION_MENU_ITEM_ID,
@@ -99,21 +99,22 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const deleteSessionCreatorDraft = useSetAtom(deleteSessionCreatorDraftAtom);
   const setSpotlightOpen = useSetAtom(spotlightOpenAtom);
   const { openSession } = useSessionView();
-  const { goToStartPage, goToNewSession, navigateTo } = useAppNavigation();
+  const { goToStartPage, goToProjects, goToNewSession, navigateTo } =
+    useAppNavigation();
 
   const tabs = useMemo(
     () => [
       {
-        key: "home",
-        label: t("sidebar.tabs.build"),
-        icon: Box,
-        iconName: "box",
-      },
-      {
         key: "workstation",
-        label: t("sidebar.tabs.workstation"),
+        label: t("routes.session"),
         icon: SquareMousePointer,
         iconName: "square-mouse-pointer",
+      },
+      {
+        key: "projects",
+        label: t("labels.projects"),
+        icon: Box,
+        iconName: "box",
       },
     ],
     [t]
@@ -121,13 +122,13 @@ export const WorkstationSidebarConnector: React.FC = () => {
 
   const handleTabChange = useCallback(
     (key: string) => {
-      if (key === "home") {
-        goToStartPage();
+      if (key === "projects") {
+        goToProjects();
         return;
       }
       goToNewSession();
     },
-    [goToStartPage, goToNewSession]
+    [goToProjects, goToNewSession]
   );
 
   useEffect(() => {
@@ -175,6 +176,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
 
   const untitledSession = t("sidebar.defaults.untitledSession");
   const newSessionLabel = t("labels.newSession");
+  const homeLabel = t("sidebar.tabs.build");
 
   const { menuItems, sessionMap, isLoadMoreId, getLoadMoreGroupId } =
     useSessionMenuItems({
@@ -272,6 +274,40 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const handleOpenSpotlight = useCallback(() => {
     setSpotlightOpen(true);
   }, [setSpotlightOpen]);
+
+  const homeHeaderAction = useMemo(
+    () => (
+      <Tooltip
+        content={
+          <KeyboardShortcutTooltipContent
+            label={t("sidebar.actions.openHome")}
+          />
+        }
+        position="bottom"
+        mouseEnterDelay={200}
+        framedPanel
+      >
+        <div className="inline-flex">
+          <LiquidGlassHoverItem
+            className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
+            onClick={goToStartPage}
+            role="button"
+            tabIndex={0}
+            aria-label={homeLabel}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                goToStartPage();
+              }
+            }}
+          >
+            <House size={16} strokeWidth={2} className="text-text-2" />
+          </LiquidGlassHoverItem>
+        </div>
+      </Tooltip>
+    ),
+    [goToStartPage, homeLabel, t]
+  );
 
   const renderMenuItemWrapper = useCallback(
     (item: NavigationMenuItem, node: React.ReactElement) => {
@@ -388,24 +424,23 @@ export const WorkstationSidebarConnector: React.FC = () => {
             searchLabel={tCommon("actions.search")}
           />
         }
+        beforeAddNewActions={homeHeaderAction}
         verticalGapClassName="gap-px"
+        listTopPadding
         enableHoverIconAnimation
         bottomContent={
           <SidebarBottomBar
             rightActions={
-              <>
-                <SidebarRamMonitorButton />
-                <SessionFilterButton
-                  groupByMode={groupByMode}
-                  onSelect={setGroupByMode}
-                  onCollapseAll={handleCollapseAll}
-                  onMarkAllRead={handleMarkAllRead}
-                  onRefreshSessions={handleRefreshSessions}
-                  onExportSessionJson={handleOpenExportSessionJson}
-                  onImportSessionJson={handleOpenImportSessionJson}
-                  canExportSessionJson={Boolean(activeSession)}
-                />
-              </>
+              <SessionFilterButton
+                groupByMode={groupByMode}
+                onSelect={setGroupByMode}
+                onCollapseAll={handleCollapseAll}
+                onMarkAllRead={handleMarkAllRead}
+                onRefreshSessions={handleRefreshSessions}
+                onExportSessionJson={handleOpenExportSessionJson}
+                onImportSessionJson={handleOpenImportSessionJson}
+                canExportSessionJson={Boolean(activeSession)}
+              />
             }
           />
         }

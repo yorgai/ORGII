@@ -129,11 +129,19 @@
     "actions": {
       "addNew": "Neu hinzufügen",
       "collapseAll": "Alle einklappen",
-      "markAllRead": "Alle als gelesen markieren"
+      "markAllRead": "Alle als gelesen markieren",
+      "openHome": "Home öffnen",
+      "openWorkstation": "Workstation öffnen"
     },
     "bottomBar": {
       "settings": "Einstellungen",
       "clockLabel": "Aktuelle Uhrzeit"
+    },
+    "settingsMenu": {
+      "appearance": "Darstellung",
+      "language": "Sprache",
+      "viewRam": "RAM anzeigen",
+      "openSettings": "Einstellungen öffnen"
     },
     "empty": {
       "noItems": "Keine Elemente",
