@@ -129,7 +129,6 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
     const handleSetupRepo = useCallback(() => {
       if (!tiptapRef.current) return;
-      tiptapRef.current.clear();
       tiptapRef.current.insertFilePill(
         "/setup-repo",
         false,
@@ -208,15 +207,21 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
         }
 
         if (action.category === "tool" && action.serverName) {
-          tiptapRef.current.setContent(
-            buildMcpToolCommand(action.serverName, action.name)
-          );
-          tiptapRef.current.focus();
+          tiptapRef.current
+            .getEditor()
+            ?.chain()
+            .focus()
+            .insertContent(buildMcpToolCommand(action.serverName, action.name))
+            .run();
           return;
         }
 
-        tiptapRef.current.setContent(`/${action.name} `);
-        tiptapRef.current.focus();
+        tiptapRef.current
+          .getEditor()
+          ?.chain()
+          .focus()
+          .insertContent(`/${action.name} `)
+          .run();
       },
       [tiptapRef, handleSetupRepo]
     );
