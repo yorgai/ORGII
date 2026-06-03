@@ -158,6 +158,8 @@ export interface E2EHelpers {
     agentId: string,
     patch: Json
   ) => Promise<{ ok: true } | Err>;
+  addAgentDef: (definition: Json) => Promise<Result<{ agentId: string }>>;
+  updateAgentDef: (definition: Json) => Promise<{ ok: true } | Err>;
   resetAgentDefBuiltin: (agentId: string) => Promise<Result<{ def: Json }>>;
   removeAgentDef: (agentId: string) => Promise<Result<{ removed: boolean }>>;
   listAgentDefs: () => Promise<Result<{ defs: Json[] }>>;

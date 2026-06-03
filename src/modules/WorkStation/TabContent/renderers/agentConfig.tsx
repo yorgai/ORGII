@@ -17,7 +17,14 @@
  * mounted.
  */
 import { useAtomValue } from "jotai";
-import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { rpc } from "@src/api/tauri/rpc";
@@ -51,6 +58,7 @@ interface AgentConfigInnerProps {
 const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
   const { t } = useTranslation("integrations");
   const { variant, entityId, cliAgentType } = data;
+  const refreshAttemptedForEntityRef = useRef<string | null>(null);
   const headerContent = useMemo(
     () => (
       <div className="flex min-w-0 items-center px-1">
@@ -68,8 +76,26 @@ const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
   });
 
   // ── Agent definitions (built-ins + custom) ──
-  const { agents: customAgents, removeAgent } = useAgentDefinitions();
+  const {
+    agents: customAgents,
+    refresh: refreshAgentDefinitions,
+    removeAgent,
+  } = useAgentDefinitions();
   const builtInAgents = useAtomValue(builtInAgentsAtom);
+
+  useEffect(() => {
+    if (variant !== "custom" && variant !== "wingman") return;
+    const hasAgent =
+      customAgents.some((agent) => agent.id === entityId) ||
+      builtInAgents.some((agent) => agent.id === entityId);
+    if (hasAgent) {
+      refreshAttemptedForEntityRef.current = null;
+      return;
+    }
+    if (refreshAttemptedForEntityRef.current === entityId) return;
+    refreshAttemptedForEntityRef.current = entityId;
+    void refreshAgentDefinitions({ forceFresh: true });
+  }, [builtInAgents, customAgents, entityId, refreshAgentDefinitions, variant]);
 
   // ── Key Vault accounts (CLI compatibility table needs these) ──
   const { accounts } = useKeyVault({ autoLoad: variant === "cli" });
@@ -308,7 +334,14 @@ const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
 const AgentConfigTabRenderer: React.FC<UnifiedTabContentProps> = memo(
   ({ tab }) => {
     const data = tab.data as unknown as AgentConfigTabData;
-    return <AgentConfigInner data={data} />;
+    return (
+      <div
+        className="h-full min-h-0"
+        data-testid={`agent-config-tab-${data.variant}-${data.entityId}`}
+      >
+        <AgentConfigInner data={data} />
+      </div>
+    );
   }
 );
 

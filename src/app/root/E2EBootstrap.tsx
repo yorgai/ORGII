@@ -98,6 +98,8 @@ export const E2EBootstrap: FC = () => {
     const {
       getAgentDef,
       updateAgentDefPatch,
+      addAgentDef,
+      updateAgentDef,
       resetAgentDefBuiltin,
       removeAgentDef,
       listAgentDefs,
@@ -277,6 +279,8 @@ export const E2EBootstrap: FC = () => {
       setAgentOrgMemberDraftConfig,
       getAgentDef,
       updateAgentDefPatch,
+      addAgentDef,
+      updateAgentDef,
       resetAgentDefBuiltin,
       removeAgentDef,
       listAgentDefs,

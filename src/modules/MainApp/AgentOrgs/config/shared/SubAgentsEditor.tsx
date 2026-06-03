@@ -335,6 +335,7 @@ const SubAgentsEditor: React.FC<SubAgentsEditorProps> = ({
             step={1}
             onChange={handleMaxToolUseConcurrencyChange}
             style={SECTION_CONTROL_STYLE}
+            dataTestId="agent-orgs-subagents-max-tool-use-concurrency-input"
           />
         </SectionRow>
       </SectionContainer>

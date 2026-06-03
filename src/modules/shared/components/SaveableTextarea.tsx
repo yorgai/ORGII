@@ -22,6 +22,8 @@ export interface SaveableTextareaProps {
   autoSize?: { minRows?: number; maxRows?: number };
   /** Whether the component is in a loading state (hides content) */
   loading?: boolean;
+  dataTestId?: string;
+  saveButtonDataTestId?: string;
 }
 
 const SaveableTextarea: React.FC<SaveableTextareaProps> = ({
@@ -30,6 +32,8 @@ const SaveableTextarea: React.FC<SaveableTextareaProps> = ({
   placeholder,
   autoSize = { minRows: 3, maxRows: 10 },
   loading = false,
+  dataTestId,
+  saveButtonDataTestId,
 }) => {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(value);
@@ -82,6 +86,7 @@ const SaveableTextarea: React.FC<SaveableTextareaProps> = ({
         onChange={(val: string) => setDraft(val)}
         placeholder={placeholder}
         autoSize={autoSize}
+        data-testid={dataTestId}
       />
       <div className="flex items-center gap-2">
         {hasChanges && (
@@ -94,6 +99,7 @@ const SaveableTextarea: React.FC<SaveableTextareaProps> = ({
           variant="primary"
           onClick={handleSave}
           disabled={!hasChanges || saving}
+          data-testid={saveButtonDataTestId}
         >
           {saving ? t("status.saving") : t("actions.save")}
         </Button>

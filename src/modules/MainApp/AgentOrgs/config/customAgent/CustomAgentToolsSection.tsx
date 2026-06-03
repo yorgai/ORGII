@@ -280,7 +280,11 @@ const CustomAgentToolsSection: React.FC<CustomAgentToolsSectionProps> = ({
 
     return (
       <div className="flex justify-center">
-        <Switch checked={checked} onChange={onChange} />
+        <Switch
+          checked={checked}
+          onChange={onChange}
+          dataTestId={`agent-orgs-tool-switch-${row.name}`}
+        />
       </div>
     );
   };
@@ -372,6 +376,7 @@ const CustomAgentToolsSection: React.FC<CustomAgentToolsSectionProps> = ({
               columns={columns}
               rows={filteredTools}
               getRowKey={(row) => row.name}
+              rowDataTestId={(row) => `agent-orgs-tool-row-${row.name}`}
               headerHeight="tall"
               pageSize={50}
               className="table-expanded-no-hover"

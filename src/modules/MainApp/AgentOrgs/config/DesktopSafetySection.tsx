@@ -100,6 +100,7 @@ const DesktopSafetySection: React.FC = () => {
               <Switch
                 checked={config[gate.key]}
                 disabled={!loaded}
+                dataTestId={`agent-orgs-desktop-safety-${gate.key}-switch`}
                 onChange={(v) => toggle(gate.key, v)}
               />
             </div>

@@ -178,6 +178,8 @@ const SecuritySection: React.FC<SecuritySectionProps> = ({
             placeholder={t(
               "sharedAgentConfig.security.blockListCommandsPlaceholder"
             )}
+            dataTestId="agent-orgs-security-block-list-textarea"
+            saveButtonDataTestId="agent-orgs-security-block-list-save-button"
           />
         </SectionRow>
         <SectionRow
@@ -191,6 +193,8 @@ const SecuritySection: React.FC<SecuritySectionProps> = ({
             placeholder={t(
               "sharedAgentConfig.security.alwaysAskCommandsPlaceholder"
             )}
+            dataTestId="agent-orgs-security-always-ask-textarea"
+            saveButtonDataTestId="agent-orgs-security-always-ask-save-button"
           />
         </SectionRow>
       </SectionContainer>

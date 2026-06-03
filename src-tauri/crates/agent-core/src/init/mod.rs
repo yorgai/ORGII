@@ -32,6 +32,7 @@ use tracing::info;
 use core_types::providers::NativeHarnessType;
 
 use crate::core::definitions::resolved::{ResolveError, ResolvedAgent};
+use crate::core::definitions::resolver;
 use crate::core::definitions::store::AgentDefinitionsStore;
 use crate::core::definitions::AgentDefinition;
 use crate::core::session::overrides::SessionOverrides;
@@ -133,6 +134,13 @@ struct UnifiedInitRequest<'a> {
 /// `model_override` takes precedence over any `selected_model_id` baked
 /// into the definition and its template chain. This matches the pre-65'
 /// behaviour where callers could pin a model at session launch.
+fn is_model_override_strict(
+    effective_selected_model_id: Option<&str>,
+    model_override: &str,
+) -> bool {
+    effective_selected_model_id != Some(model_override)
+}
+
 fn resolve_for_session(
     state: &AgentAppState,
     definition: &AgentDefinition,
@@ -149,20 +157,30 @@ fn resolve_for_session(
 > {
     let integrations = state.integrations.snapshot();
     let overrides = SessionOverrides::new(Some(workspace), None, None);
+    let store = AgentDefinitionsStore::new();
 
     // Clone so we can pin `selected_model_id` without disturbing the
     // registered in-memory definition (which might be shared across
     // sessions and must stay immutable during a live app run).
     //
-    // When the caller supplies a `model_override` (a session-launch
-    // knob: model picker, market-key listing, etc.), we treat that as
-    // "use exactly this model" and drop the agent definition's
-    // reliability fallbacks so the override is honoured strictly.
+    // When the caller supplies a `model_override` that differs from the
+    // agent definition's effective selected model (including any inherited
+    // template value), treat that as "use exactly this model" and drop
+    // definition reliability fallbacks so the override is honoured strictly.
+    // Session launch currently requires a `model` value even when it mirrors
+    // the definition's own selected model; that mirror value must not erase
+    // the Settings-authored fallback chain.
+    let effective_definition =
+        resolver::resolve_definition(definition, Some(&store)).map_err(|err| err.to_string())?;
     let mut pinned = definition.clone();
     if let Some(m) = model_override.filter(|s| !s.is_empty()) {
+        let is_true_override =
+            is_model_override_strict(effective_definition.selected_model_id.as_deref(), m);
         pinned.selected_model_id = Some(m.to_string());
-        if let Some(reliability) = pinned.reliability.as_mut() {
-            reliability.fallback_models.clear();
+        if is_true_override {
+            if let Some(reliability) = pinned.reliability.as_mut() {
+                reliability.fallback_models.clear();
+            }
         }
     }
 
@@ -172,7 +190,6 @@ fn resolve_for_session(
     // diverge. See `audit-skills-llm.spec.mjs` for the regression guard.
     let skills_config = pinned.skills_config.clone();
 
-    let store = AgentDefinitionsStore::new();
     let resolved = ResolvedAgent::resolve(&pinned, Some(&store), &overrides)
         .map_err(|err| match err {
             ResolveError::MissingModel(id) => format!(
@@ -606,6 +623,27 @@ async fn ensure_session_initialized(
     runtime_assemble::log_init_complete(session_id, &model, &workspace_root);
 
     Ok(runtime)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_model_override_strict;
+
+    #[test]
+    fn inherited_effective_model_matching_launch_model_is_not_strict_override() {
+        assert!(!is_model_override_strict(
+            Some("anthropic/claude-sonnet-4"),
+            "anthropic/claude-sonnet-4"
+        ));
+    }
+
+    #[test]
+    fn launch_model_different_from_effective_model_is_strict_override() {
+        assert!(is_model_override_strict(
+            Some("anthropic/claude-sonnet-4"),
+            "openai/gpt-4.1"
+        ));
+    }
 }
 
 /// Register an `AgentSession` object in the in-memory state and rehydrate
