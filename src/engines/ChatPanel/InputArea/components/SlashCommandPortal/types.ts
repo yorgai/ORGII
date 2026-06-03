@@ -41,6 +41,8 @@ export interface SlashCommandPortalProps {
   showActionFlyouts?: boolean;
   /** When provided, renders an Image upload row. */
   onImageUpload?: () => void;
+  /** When false, hides mode rows in inline search results for non-session editors. */
+  showModeRows?: boolean;
   /**
    * Which direction the menu opens relative to the container.
    * "up" (default) opens above the container — suitable for bottom-anchored inputs.
@@ -66,6 +68,7 @@ export interface SlashEntry {
 export interface SectionHeader {
   kind: "header";
   label: string;
+  translationKey?: string;
 }
 
 /** Trigger row that opens a flyout submenu (for SlashItem categories). */
@@ -74,18 +77,6 @@ export interface FlyoutEntry {
   category: SlashItemCategory;
   label: string;
   items: SlashItem[];
-  flatIndex: number;
-}
-
-/** Trigger row for the Mode flyout (lists all exec modes). */
-export interface ModeFlyoutEntry {
-  kind: "mode-flyout";
-  flatIndex: number;
-}
-
-/** Trigger row for the Models flyout (opens model picker). */
-export interface ModelsFlyoutEntry {
-  kind: "models-flyout";
   flatIndex: number;
 }
 
@@ -105,14 +96,12 @@ export type ListEntry =
   | SlashEntry
   | SectionHeader
   | FlyoutEntry
-  | ModeFlyoutEntry
-  | ModelsFlyoutEntry
   | ImageEntry
   | DividerEntry;
 
 // ── Open-flyout state ─────────────────────────────────────────────────────────
 
-export type FlyoutKind = "category" | "modes" | "models";
+export type FlyoutKind = "category";
 
 export interface OpenFlyoutState {
   kind: FlyoutKind;

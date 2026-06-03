@@ -1666,8 +1666,10 @@
     "slashSearchPlaceholder": "コマンドを検索…",
     "slashMenu": {
       "image": "画像",
+      "uploadImage": "画像をアップロード",
       "mode": "モード",
-      "models": "モデル"
+      "models": "モデル",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",

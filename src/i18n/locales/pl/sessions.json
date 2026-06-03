@@ -1687,8 +1687,10 @@
     "slashSearchPlaceholder": "Szukaj komend…",
     "slashMenu": {
       "image": "Obraz",
+      "uploadImage": "Prześlij obraz",
       "mode": "Tryb",
-      "models": "Modele"
+      "models": "Modele",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",

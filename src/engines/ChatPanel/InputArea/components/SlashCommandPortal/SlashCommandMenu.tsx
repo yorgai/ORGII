@@ -2,10 +2,8 @@
  * SlashCommandMenu — the main dropdown panel.
  *
  * Composes useEntries, usePortalPosition, useKeyboard, FlyoutSubmenu,
- * ModeFlyout, ModelsFlyout, and the individual MenuRow components into the
- * full slash command experience.
+ * and the individual MenuRow components into the full slash command experience.
  */
-import { useSetAtom } from "jotai";
 import { Search } from "lucide-react";
 import React, {
   useCallback,
@@ -23,30 +21,17 @@ import {
   DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
-import { AGENT_EXEC_MODES } from "@src/config/sessionCreatorConfig";
-import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
-import { useModelPillLabel } from "@src/hooks/models";
-import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
-import {
-  type LastModelSelection,
-  creatorDefaultModelSelectionAtom,
-  extractModelPair,
-} from "@src/store/session/creatorDefaultModelAtom";
 
 import FlyoutSubmenu from "./FlyoutSubmenu";
 import {
   DividerRow,
   FlyoutTriggerRow,
   ImageRow,
-  ModeFlyoutTriggerRow,
   ModeRow,
-  ModelsFlyoutTriggerRow,
   SectionHeaderRow,
   SlashItemRow,
 } from "./MenuRows";
-import ModeFlyout from "./ModeFlyout";
-import ModelsFlyout from "./ModelsFlyout";
 import type { OpenFlyoutState, SlashCommandPortalProps } from "./types";
 import { useEntries } from "./useEntries";
 import { useKeyboard } from "./useKeyboard";
@@ -69,6 +54,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   onSearchQueryChange,
   showActionFlyouts = false,
   onImageUpload,
+  showModeRows = true,
   direction = "up",
 }) => {
   const { t } = useTranslation("sessions");
@@ -80,7 +66,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   const tauriSelectAll = useTauriSelectAllShortcut();
 
   const [highlightIndex, setHighlightIndex] = useState(0);
-  const [keyboardNavigated, setKeyboardNavigated] = useState(false);
+  const [keyboardNavigated, setKeyboardNavigated] = useState(!isHeaderMode);
   const [openFlyout, setOpenFlyout] = useState<OpenFlyoutState | null>(null);
   const [flyoutHighlightIndex, setFlyoutHighlightIndex] = useState(0);
   const [panelRight, setPanelRight] = useState(0);
@@ -94,7 +80,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
     searchQuery,
     showActionFlyouts,
     hasImageUpload: Boolean(onImageUpload),
-    loading,
+    showModeRows,
   });
 
   // Reset highlight to 0 when the list shape changes (derived state)
@@ -107,7 +93,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   if (trackedIdentity !== listIdentity) {
     setTrackedIdentity(listIdentity);
     setHighlightIndex(0);
-    setKeyboardNavigated(false);
+    setKeyboardNavigated(!isHeaderMode);
   }
 
   // Close flyout when a search query is active (derived state)
@@ -128,18 +114,13 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
     setFlyoutHighlightIndex(0);
   }
 
-  // Autofocus the search input in header mode whenever the menu becomes visible.
-  // Using `visible` (not just `isHeaderMode`) ensures re-focus on every open,
-  // because the menu renders to null when closed (isPositioned=false) without
-  // unmounting, so the effect won't re-fire on the second open if only
-  // `isHeaderMode` is in the dep array (it never changes in header mode).
   useEffect(() => {
-    if (isHeaderMode && visible) {
-      requestAnimationFrame(() => {
-        searchInputRef.current?.focus();
-      });
-    }
-  }, [isHeaderMode, visible]);
+    if (!isHeaderMode || !visible || !isPositioned) return;
+    const frame = requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isHeaderMode, visible, isPositioned]);
 
   // Scroll highlighted item into view
   useEffect(() => {
@@ -211,69 +192,6 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
       );
     },
     []
-  );
-
-  // Model state (self-sourced from atoms, same as ModelPill)
-  const creatorDefaultLastModel = useValidatedLastPair();
-  const setCreatorDefaultModel = useSetAtom(creatorDefaultModelSelectionAtom);
-
-  const advancedConfig: AdvancedConfig = useMemo(() => {
-    if (!creatorDefaultLastModel) return {};
-    if (creatorDefaultLastModel.keySource === "hosted_key") {
-      return {
-        keySource: "hosted_key",
-        cliAgentType: creatorDefaultLastModel.cliAgentType,
-        tier: creatorDefaultLastModel.tier,
-        listingModel: creatorDefaultLastModel.listingModel,
-        listingModelDisplay: creatorDefaultLastModel.listingModelDisplay,
-        listingModelType: creatorDefaultLastModel.listingModelType,
-        listingName: creatorDefaultLastModel.listingName,
-        selectedSourceLabel: creatorDefaultLastModel.selectedSourceLabel,
-        selectedSourceModelType:
-          creatorDefaultLastModel.selectedSourceModelType,
-      };
-    }
-    return {
-      keySource: "own_key",
-      provider: creatorDefaultLastModel.provider,
-      model: creatorDefaultLastModel.model,
-      selectedAccountId: creatorDefaultLastModel.selectedAccountId,
-      selectedSourceLabel: creatorDefaultLastModel.selectedSourceLabel,
-      selectedSourceModelType: creatorDefaultLastModel.selectedSourceModelType,
-    };
-  }, [creatorDefaultLastModel]);
-
-  const handleConfigChange = useCallback(
-    (config: AdvancedConfig) => {
-      setCreatorDefaultModel(extractModelPair(config));
-    },
-    [setCreatorDefaultModel]
-  );
-
-  const modelLabelSelection: LastModelSelection | null = useMemo(
-    () =>
-      creatorDefaultLastModel
-        ? {
-            ...creatorDefaultLastModel,
-            model: advancedConfig.model,
-            listingModel: advancedConfig.listingModel,
-            listingModelDisplay: advancedConfig.listingModelDisplay,
-            selectedSourceLabel: advancedConfig.selectedSourceLabel,
-            provider: advancedConfig.provider,
-          }
-        : null,
-    [creatorDefaultLastModel, advancedConfig]
-  );
-  const { label: currentModelLabel } = useModelPillLabel(
-    modelLabelSelection,
-    "Model"
-  );
-
-  // Current mode display name
-  const currentModeName = useMemo(
-    () =>
-      AGENT_EXEC_MODES.find((m) => m.id === currentMode)?.name ?? currentMode,
-    [currentMode]
   );
 
   if (!isPositioned) return null;
@@ -360,75 +278,11 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
               return (
                 <SectionHeaderRow
                   key={`header-${entry.label}`}
-                  label={entry.label}
-                />
-              );
-            }
-
-            if (entry.kind === "mode-flyout") {
-              return (
-                <ModeFlyoutTriggerRow
-                  key="mode-flyout"
-                  isActive={
-                    keyboardNavigated && entry.flatIndex === highlightIndex
+                  label={
+                    entry.translationKey
+                      ? t(entry.translationKey, { defaultValue: entry.label })
+                      : entry.label
                   }
-                  isOpen={openFlyout?.kind === "modes"}
-                  currentModeName={currentModeName}
-                  onMouseEnter={(e) => {
-                    setKeyboardNavigated(false);
-                    setHighlightIndex(entry.flatIndex);
-                    setOpenFlyout({
-                      kind: "modes",
-                      anchorTop: e.currentTarget.getBoundingClientRect().top,
-                    });
-                  }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    const anchorTop =
-                      e.currentTarget.getBoundingClientRect().top;
-                    setOpenFlyout((prev) =>
-                      prev?.kind === "modes"
-                        ? null
-                        : {
-                            kind: "modes",
-                            anchorTop,
-                          }
-                    );
-                  }}
-                />
-              );
-            }
-
-            if (entry.kind === "models-flyout") {
-              return (
-                <ModelsFlyoutTriggerRow
-                  key="models-flyout"
-                  isActive={
-                    keyboardNavigated && entry.flatIndex === highlightIndex
-                  }
-                  isOpen={openFlyout?.kind === "models"}
-                  currentModelName={currentModelLabel}
-                  onMouseEnter={(e) => {
-                    setKeyboardNavigated(false);
-                    setHighlightIndex(entry.flatIndex);
-                    setOpenFlyout({
-                      kind: "models",
-                      anchorTop: e.currentTarget.getBoundingClientRect().top,
-                    });
-                  }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    const anchorTop =
-                      e.currentTarget.getBoundingClientRect().top;
-                    setOpenFlyout((prev) =>
-                      prev?.kind === "models"
-                        ? null
-                        : {
-                            kind: "models",
-                            anchorTop,
-                          }
-                    );
-                  }}
                 />
               );
             }
@@ -534,7 +388,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
               {t("status.loading", { ns: "common" })}
             </div>
           )}
-          {!loading && items.length === 0 && !showActionFlyouts && (
+          {!loading && entries.length === 0 && (
             <div className="px-3 py-2 text-sm text-text-3">
               {t("placeholders.noItems", { ns: "common" })}
             </div>
@@ -562,40 +416,6 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
             onClose={() => setOpenFlyout(null)}
           />
         )}
-
-      {/* Mode flyout */}
-      {openFlyout?.kind === "modes" && (
-        <ModeFlyout
-          anchorTop={openFlyout.anchorTop}
-          panelRight={panelRight}
-          currentMode={currentMode}
-          highlightIndex={flyoutHighlightIndex}
-          keyboardNavigated={keyboardNavigated}
-          onHighlightChange={setFlyoutHighlightIndex}
-          onPointerNavigate={() => setKeyboardNavigated(false)}
-          onSelect={(mode) => {
-            onModeSelect(mode);
-            setOpenFlyout(null);
-            onClose();
-          }}
-          onClose={() => setOpenFlyout(null)}
-        />
-      )}
-
-      {/* Models flyout */}
-      {openFlyout?.kind === "models" && (
-        <ModelsFlyout
-          anchorTop={openFlyout.anchorTop}
-          panelRight={panelRight}
-          advancedConfig={advancedConfig}
-          onConfigChange={(config) => {
-            handleConfigChange(config);
-            setOpenFlyout(null);
-            onClose();
-          }}
-          onClose={() => setOpenFlyout(null)}
-        />
-      )}
     </div>,
     document.body
   );
