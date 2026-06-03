@@ -34,6 +34,7 @@ interface ShortcutRegistrationOptions {
   handleOpenLocationSelector: () => void;
   handleOpenAgentSessionSearch: () => void;
   handleOpenSettings: () => void;
+  handleToggleSidebar: () => void;
   handleOpenWorkStationFilePalette: () => void;
   handleOpenWorkStationSymbolPalette: () => void;
   handleToggleAPICallPanel: () => void;
@@ -78,6 +79,7 @@ export function useShortcutRegistration(options: ShortcutRegistrationOptions) {
     handleOpenLocationSelector,
     handleOpenAgentSessionSearch,
     handleOpenSettings,
+    handleToggleSidebar,
     handleOpenWorkStationFilePalette,
     handleOpenWorkStationSymbolPalette,
     handleToggleAPICallPanel,
@@ -106,6 +108,7 @@ export function useShortcutRegistration(options: ShortcutRegistrationOptions) {
     handleOpenWorkStationSymbolPalette,
     handleOpenAgentSessionSearch,
     handleOpenSettings,
+    handleToggleSidebar,
     handleToggleWorkstationSidebar,
     handleOpenCodeEditorFileFolder,
     handleOpenCodeEditorSourceControl,
@@ -136,6 +139,7 @@ export function useShortcutRegistration(options: ShortcutRegistrationOptions) {
         handleGoToCreateSession("Cmd+L")
       ),
       shortcutRegistry.on("open_settings", handleOpenSettings),
+      shortcutRegistry.on("toggle_sidebar", handleToggleSidebar),
       shortcutRegistry.on("toggle_spotlight", handleToggleSpotlight),
       shortcutRegistry.on("open_model_selector", handleOpenModelSelector),
       shortcutRegistry.on(
@@ -183,6 +187,7 @@ export function useShortcutRegistration(options: ShortcutRegistrationOptions) {
     handleOpenLocationSelector,
     handleOpenAgentSessionSearch,
     handleOpenSettings,
+    handleToggleSidebar,
     handleNextTab,
     handlePreviousTab,
     handleToggleAPICallPanel,
