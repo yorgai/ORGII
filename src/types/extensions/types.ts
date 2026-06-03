@@ -135,6 +135,5 @@ export interface SlashItem {
 /** Built-in slash action names. */
 export const SLASH_ACTIONS = {
   SUMMARIZE: "Summarize",
-  OPEN_BROWSER: "Open Browser",
   SETUP_REPO: "Setup Repo",
 } as const;

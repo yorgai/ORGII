@@ -14,19 +14,11 @@ import { buildMcpToolCommand } from "@src/engines/ChatPanel/InputArea/components
 import { useSessionId } from "@src/engines/SessionCore/hooks/session/useSessionId";
 import { useSessionExecModeField } from "@src/hooks/session/useSessionPatch";
 import { creatorDefaultExecModeAtom } from "@src/store/session/creatorDefaultExecModeAtom";
-import { SLASH_ACTIONS, type SlashItem } from "@src/types/extensions";
+import type { SlashItem } from "@src/types/extensions";
 
 import { useSlashItemsCache } from "./useSlashItemsCache";
 
-const BUILTIN_SLASH_ITEMS: SlashItem[] = [
-  {
-    name: SLASH_ACTIONS.OPEN_BROWSER,
-    description: "Open browser automation controls",
-    category: "action",
-    source: "builtin",
-    acceptsArgs: false,
-  },
-];
+const BUILTIN_SLASH_ITEMS: SlashItem[] = [];
 
 interface UseSlashCommandOptions {
   tiptapRef: RefObject<TiptapInputRef>;
@@ -133,17 +125,6 @@ export function useSlashCommand(
   const handleSlashSelect = useCallback(
     (item: SlashItem) => {
       if (!tiptapRef.current) return;
-
-      if (item.category === "action") {
-        if (item.name === SLASH_ACTIONS.OPEN_BROWSER) {
-          tiptapRef.current.clear();
-          setShowSlashMenu(false);
-          setSlashQuery("");
-          queryRef.current = "";
-          window.dispatchEvent(new CustomEvent("orgii:open-browser"));
-          return;
-        }
-      }
 
       if (item.category === "skill") {
         // filePath is stored as "/<skillName>" so serializePillNode produces

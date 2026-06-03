@@ -43,13 +43,6 @@ const BUILTIN_SLASH_ITEMS: SlashItem[] = [
     source: "builtin",
     acceptsArgs: false,
   },
-  {
-    name: SLASH_ACTIONS.OPEN_BROWSER,
-    description: "Open browser automation controls",
-    category: "action",
-    source: "builtin",
-    acceptsArgs: false,
-  },
 ];
 
 // ── sub-components ────────────────────────────────────────────────────────────
@@ -185,9 +178,6 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
           if (action.name === SLASH_ACTIONS.SETUP_REPO) {
             handleSetupRepo();
             return;
-          }
-          if (action.name === SLASH_ACTIONS.OPEN_BROWSER) {
-            window.dispatchEvent(new CustomEvent("orgii:open-browser"));
           }
           return;
         }

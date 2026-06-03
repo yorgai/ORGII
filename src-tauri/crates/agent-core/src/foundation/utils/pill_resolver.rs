@@ -14,6 +14,7 @@
 //!   - `[skill:/skill-name]`             → inject SKILL.md content
 //!   - `[type:path::base64]`             → already carries inline content
 
+use crate::foundation::tool_infra::file::{extract_pdf_text, is_pdf_file};
 use regex::Regex;
 use std::path::Path;
 use std::sync::LazyLock;
@@ -218,21 +219,59 @@ fn resolve_skill_ref(
     Some(content)
 }
 
+/// Size cap for file content in pill context injection (256 KB — matches ReadFileTool).
+const MAX_PILL_FILE_SIZE_BYTES: u64 = 256 * 1024;
+
 /// Read a file with a size cap for context injection.
+///
+/// PDF files are handled specially: their binary content is run through the
+/// same text-extraction path used by `ReadFileTool` so that attaching a PDF
+/// pill produces the document's text rather than `*(Binary or unreadable file)*`.
 fn read_file_preview(path: &Path) -> Option<String> {
     if !path.is_file() {
         return None;
     }
 
-    // Skip binary/large files
-    if let Ok(meta) = path.metadata() {
-        if meta.len() > 100_000 {
-            return Some(format!(
-                "### File: {}\n*(File too large: {} bytes — showing path only)*",
-                path.display(),
-                meta.len(),
-            ));
+    let file_size = path.metadata().ok().map(|m| m.len()).unwrap_or(0);
+
+    // PDF: read bytes and extract text layer regardless of file size guard.
+    if is_pdf_file(path, &[]) {
+        let bytes = std::fs::read(path).ok()?;
+        // Confirm magic bytes before attempting extraction.
+        if is_pdf_file(path, &bytes) {
+            return match extract_pdf_text(&bytes) {
+                Ok(text) if !text.trim().is_empty() => Some(format!(
+                    "### File: {}\n```\n{}\n```",
+                    path.display(),
+                    truncate_content(&text, 4000),
+                )),
+                Ok(_) => Some(format!(
+                    "### File: {}\n*(Scanned PDF with no extractable text layer)*",
+                    path.display(),
+                )),
+                Err(err) => {
+                    tracing::warn!(
+                        "[pill_resolver] PDF extraction failed for {:?}: {}",
+                        path,
+                        err
+                    );
+                    Some(format!(
+                        "### File: {}\n*(PDF text extraction failed: {})*",
+                        path.display(),
+                        err,
+                    ))
+                }
+            };
         }
+    }
+
+    // Reject oversized non-PDF files before attempting a UTF-8 read.
+    if file_size > MAX_PILL_FILE_SIZE_BYTES {
+        return Some(format!(
+            "### File: {}\n*(File too large: {} bytes — showing path only)*",
+            path.display(),
+            file_size,
+        ));
     }
 
     match std::fs::read_to_string(path) {
@@ -254,6 +293,11 @@ fn read_file_preview(path: &Path) -> Option<String> {
 
 /// Truncate content to a maximum byte length, snapping to a char boundary.
 fn truncate_content(s: &str, max_bytes: usize) -> &str {
+    truncate_content_pub(s, max_bytes)
+}
+
+/// Public-within-crate alias so `__tests__` can exercise the truncation logic directly.
+pub(crate) fn truncate_content_pub(s: &str, max_bytes: usize) -> &str {
     if s.len() <= max_bytes {
         return s;
     }
@@ -263,6 +307,10 @@ fn truncate_content(s: &str, max_bytes: usize) -> &str {
     }
     &s[..end]
 }
+
+#[cfg(test)]
+#[path = "__tests__/pill_resolver_pdf_tests.rs"]
+mod pdf_tests;
 
 #[cfg(test)]
 mod tests {

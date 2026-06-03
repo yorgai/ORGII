@@ -289,7 +289,7 @@ export const TabBar: React.FC<TabBarProps> = memo(
                             <SortableTab
                               tab={tab}
                               isActive={tab.id === activeTabId}
-                              isDraggable={!!onTabReorder && !tab.pinned}
+                              isDraggable={!tab.pinned}
                               onTabClick={handleTabClick}
                               onCloseClick={handleCloseClick}
                               onContextMenu={handleContextMenu}

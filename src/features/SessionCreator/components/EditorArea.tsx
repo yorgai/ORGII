@@ -32,6 +32,7 @@ import type { ChatImageAttachment } from "@src/store/ui/chatImageAtom";
 import type { SlashItem } from "@src/types/extensions";
 
 import { SESSION_CONFIG } from "../config";
+import { useTabDragDrop } from "../hooks/useTabDragDrop";
 import type { AdvancedConfig, UploadedFile } from "../types";
 import ControlButtons from "./ControlButtons";
 import ImageThumbnailRow from "./ImageThumbnailRow";
@@ -349,6 +350,8 @@ const EditorArea: React.FC<EditorAreaProps> = ({
 
   const voiceFeatureEnabled = useAtomValue(voiceInputEnabledAtom);
 
+  const isDragOver = useTabDragDrop(editorContainerRef, tiptapRef);
+
   const handleVoiceCommit = useCallback(
     (transcript: string) => {
       const trimmed = transcript.trim();
@@ -503,7 +506,16 @@ const EditorArea: React.FC<EditorAreaProps> = ({
         ref={editorContainerRef}
         variant={isChatPanel ? "embedded" : "default"}
         data-chat-drop-target
-        className={`wp_text_area ${usesKanbanShell ? "border-none shadow-none" : ""} ${shellClassName ?? ""}`}
+        className={[
+          "wp_text_area",
+          usesKanbanShell ? "border-none shadow-none" : "",
+          isDragOver
+            ? "!border-primary-6 !bg-[color-mix(in_srgb,var(--color-primary-6)_5%,var(--color-chat-input))] !shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-primary-6)_20%,transparent)]"
+            : "",
+          shellClassName ?? "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         style={{
           height: isCompact ? "auto" : `${SESSION_CONFIG.EDITOR_HEIGHT}px`,
           ...(isKanban && {

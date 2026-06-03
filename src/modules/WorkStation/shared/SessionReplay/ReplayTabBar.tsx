@@ -25,11 +25,6 @@ import React, { Fragment, memo, useEffect, useRef } from "react";
 
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
-import {
-  COLLAPSED_SIDEBAR_CHROME_OFFSET,
-  useShouldOffsetWorkStationTopBar,
-} from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
-import { CollapsedSidebarButton } from "@src/scaffold/NavigationSidebar/CollapsedSidebarButton";
 
 import { NoDragRegion } from "../NoDragRegion";
 import { WorkStationTabPillSurface } from "../TabBar/components";
@@ -176,7 +171,6 @@ const ReplayTabBarComponent: React.FC<ReplayTabBarProps> = ({
   trailingSlot,
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const shouldOffsetLeftChrome = useShouldOffsetWorkStationTopBar();
 
   useEffect(() => {
     if (!activeEventId) return;
@@ -219,14 +213,10 @@ const ReplayTabBarComponent: React.FC<ReplayTabBarProps> = ({
         style={
           {
             height: `${TAB_BAR_HEIGHT}px`,
-            paddingLeft: shouldOffsetLeftChrome
-              ? COLLAPSED_SIDEBAR_CHROME_OFFSET
-              : undefined,
             WebkitAppRegion: "drag",
           } as React.CSSProperties
         }
       >
-        {shouldOffsetLeftChrome ? <CollapsedSidebarButton /> : null}
         {leadingSlot && (
           <NoDragRegion className="relative flex h-full shrink-0 items-center">
             {leadingSlot}

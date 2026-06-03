@@ -62,6 +62,9 @@ export function useTabDrag({
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
 
   const lastPointerPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const pointerMoveHandlerRef = useRef<((e: PointerEvent) => void) | null>(
+    null
+  );
 
   const draggingTab = useMemo(
     () =>
@@ -75,6 +78,18 @@ export function useTabDrag({
     (event: DragStartEvent) => {
       const tabId = event.active.id as string;
       setDraggingTabId(tabId);
+
+      if (pointerMoveHandlerRef.current) {
+        window.removeEventListener(
+          "pointermove",
+          pointerMoveHandlerRef.current
+        );
+      }
+      const trackPointer = (e: PointerEvent) => {
+        lastPointerPositionRef.current = { x: e.clientX, y: e.clientY };
+      };
+      pointerMoveHandlerRef.current = trackPointer;
+      window.addEventListener("pointermove", trackPointer, { passive: true });
 
       const foundTab = tabs.find((tab) => tab.id === tabId);
 
@@ -248,7 +263,6 @@ export function useTabDrag({
     const handlePointerMove = (event: PointerEvent) => {
       lastX = event.clientX;
       lastY = event.clientY;
-      lastPointerPositionRef.current = { x: lastX, y: lastY };
 
       if (rafId === null) {
         rafId = requestAnimationFrame(updateIndicator);
@@ -272,6 +286,13 @@ export function useTabDrag({
     // Position tracking handled by pointermove listener above
   }, []);
 
+  const removePointerTracker = useCallback(() => {
+    if (pointerMoveHandlerRef.current) {
+      window.removeEventListener("pointermove", pointerMoveHandlerRef.current);
+      pointerMoveHandlerRef.current = null;
+    }
+  }, []);
+
   const clearTabDragGlobals = useCallback(() => {
     window.__internalWorkstationTabDrag = false;
     window.__internalWorkstationTabDragData = undefined;
@@ -292,6 +313,11 @@ export function useTabDrag({
 
       setDraggingTabId(null);
       clearTabDragGlobals();
+      removePointerTracker();
+
+      const pointerX = lastPointerPositionRef.current?.x;
+      const pointerY = lastPointerPositionRef.current?.y;
+      lastPointerPositionRef.current = null;
 
       document.dispatchEvent(
         new CustomEvent("tab-drag-end", {
@@ -300,13 +326,11 @@ export function useTabDrag({
             filePath,
             name: foundTab?.title,
             type: foundTab?.type === "directory" ? "directory" : "file",
-            pointerX: lastPointerPositionRef.current?.x,
-            pointerY: lastPointerPositionRef.current?.y,
+            pointerX,
+            pointerY,
           },
         })
       );
-
-      lastPointerPositionRef.current = null;
 
       if (over && active.id !== over.id && onTabReorder) {
         const oldIndex = tabs.findIndex((tab) => tab.id === active.id);
@@ -317,14 +341,15 @@ export function useTabDrag({
         }
       }
     },
-    [tabs, onTabReorder, clearTabDragGlobals]
+    [tabs, onTabReorder, clearTabDragGlobals, removePointerTracker]
   );
 
   const handleDragCancel = useCallback(() => {
     setDraggingTabId(null);
     clearTabDragGlobals();
+    removePointerTracker();
     lastPointerPositionRef.current = null;
-  }, [clearTabDragGlobals]);
+  }, [clearTabDragGlobals, removePointerTracker]);
 
   return {
     draggingTabId,

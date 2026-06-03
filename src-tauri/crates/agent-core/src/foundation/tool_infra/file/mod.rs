@@ -43,3 +43,6 @@ pub use read::{read_file_in_range, read_file_in_range_with_extras, stat_file_wit
 // reaches into format-detection helpers.
 #[cfg(test)]
 pub(crate) use formats::{detect_image_mime, is_notebook, is_pdf, parse_notebook};
+
+// Re-exported for `pill_resolver` to share the same PDF extraction path.
+pub(crate) use formats::{extract_pdf_text, is_pdf as is_pdf_file};

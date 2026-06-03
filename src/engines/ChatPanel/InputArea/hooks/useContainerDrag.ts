@@ -11,6 +11,7 @@ import type { ComposerInputRef as TiptapInputRef } from "@src/components/Compose
 import Message from "@src/components/Message";
 
 import { reorderActiveRef } from "../components/QueuedMessages";
+import { useTabDragHover } from "./useTabDragHover";
 
 interface UseContainerDragOptions {
   handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
@@ -24,6 +25,7 @@ interface UseContainerDragReturn {
   handleContainerDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   handleContainerDragLeave: (e: React.DragEvent<HTMLDivElement>) => void;
   handleContainerDrop: (e: React.DragEvent<HTMLDivElement>) => void;
+  isDragOver: boolean;
 }
 
 export function useContainerDrag({
@@ -33,6 +35,7 @@ export function useContainerDrag({
   tiptapRef,
   containerRef,
 }: UseContainerDragOptions): UseContainerDragReturn {
+  const isDragOver = useTabDragHover(containerRef);
   // tab-drag-end listener — dnd-kit fires onDragEnd before the browser drop
   // event, so globals are already cleared by the time onDrop runs. Instead,
   // we listen for the custom event dispatched by useTabDrag and check whether
@@ -52,9 +55,13 @@ export function useContainerDrag({
       const { filePath, name, type, pointerX, pointerY } = event.detail;
       if (!filePath || pointerX == null || pointerY == null) return;
 
-      const dropTarget = containerRef.current?.querySelector<HTMLElement>(
+      const dropTarget = containerRef.current?.matches(
         "[data-chat-drop-target]"
-      );
+      )
+        ? containerRef.current
+        : containerRef.current?.querySelector<HTMLElement>(
+            "[data-chat-drop-target]"
+          );
       if (!dropTarget) return;
 
       const rect = dropTarget.getBoundingClientRect();
@@ -173,5 +180,6 @@ export function useContainerDrag({
     handleContainerDragOver,
     handleContainerDragLeave,
     handleContainerDrop,
+    isDragOver,
   };
 }

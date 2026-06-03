@@ -286,6 +286,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
       handleContainerDragOver,
       handleContainerDragLeave,
       handleContainerDrop,
+      isDragOver,
     } = useContainerDrag({
       handleDragOver,
       handleDragLeave,
@@ -561,11 +562,13 @@ const InputArea: React.FC<InputAreaProps> = memo(
                     : "embedded"
             }
             className={
-              !isEditMode
-                ? "composer-breathing"
-                : quietEditSurface
-                  ? "!border-warning-6 !shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-warning-6)_15%,transparent)]"
-                  : undefined
+              isDragOver
+                ? "!border-primary-6 !bg-[color-mix(in_srgb,var(--color-primary-6)_5%,var(--color-chat-input))] !shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-primary-6)_20%,transparent)]"
+                : !isEditMode
+                  ? "composer-breathing"
+                  : quietEditSurface
+                    ? "!border-warning-6 !shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-warning-6)_15%,transparent)]"
+                    : undefined
             }
           >
             {/* Queued-message edit keeps its header/actions; history edit is a standalone input. */}
