@@ -389,6 +389,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
           />
         }
         verticalGapClassName="gap-px"
+        enableHoverIconAnimation
         bottomContent={
           <SidebarBottomBar
             rightActions={
