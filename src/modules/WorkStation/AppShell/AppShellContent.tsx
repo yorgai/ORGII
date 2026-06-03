@@ -2,6 +2,7 @@ import React, { Suspense } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import { CODE_EDITOR_TOUR_TARGETS } from "@src/scaffold/Tutorials/codeEditorTourConfig";
 
 import ProjectManagerCore from "../../ProjectManager/ProjectManagerCore";
 import CodeEditor from "../CodeEditor";
@@ -166,6 +167,7 @@ export function AppShellContent({
         {(isCodeMode || hasVisitedCode || opsControlPeekHost === "code") && (
           <div
             className="relative h-full w-full"
+            data-tour-target={CODE_EDITOR_TOUR_TARGETS.editorSurface}
             style={{ display: codeContentVisible ? "block" : "none" }}
           >
             {renderCodeEditor()}

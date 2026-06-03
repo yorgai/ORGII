@@ -19,15 +19,18 @@ import { registerAppActions } from "@/src/ActionSystem/registerAppActions";
 import { useAtomValue, useSetAtom } from "jotai";
 import React, {
   Suspense,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { getColorPairById } from "@src/config/appearance/backgroundColorPairs";
 import { useRouteViewMode } from "@src/config/routeViewModeConfig";
+import { ROUTES } from "@src/config/routes";
 import { BrowserProvider, TerminalProvider } from "@src/contexts/workstation";
 import { useServiceAuthState } from "@src/hooks/auth";
 import { useProjectDataChangedListener } from "@src/hooks/project";
@@ -43,6 +46,15 @@ import {
   preloadMainAppRoutes,
   preloadWingmanWindows,
 } from "@src/router/lazy/preload";
+import {
+  CODE_EDITOR_TOUR_EVENT,
+  CodeEditorTour,
+  GENERAL_LAYOUT_TOUR_EVENT,
+  GENERAL_LAYOUT_TOUR_TARGETS,
+  GeneralLayoutTour,
+  TUTORIALS_OPEN_EVENT,
+  TutorialsModal,
+} from "@src/scaffold/Tutorials";
 import {
   activeColorPairIdAtom,
   resolvedBackgroundConfigAtom,
@@ -65,7 +77,9 @@ import { globalLayoutMethodAtom } from "@src/store/ui/uiAtom";
 import {
   sessionChatPositionAtom,
   workStationChatPositionAtom,
+  workStationDockAutoHidePersistAtom,
 } from "@src/store/ui/workStationAtom";
+import { dockFilterAtom } from "@src/store/workstation";
 import { prewarmColorPair } from "@src/util/ui/theme/glassMaterial";
 
 import { BackgroundLayer } from "./shared/components";
@@ -209,6 +223,17 @@ const AppShell = () => {
       : false;
   const setChatWidth = useSetAtom(chatWidthAtom);
   const restoreChatWidth = useSetAtom(restoreChatWidthAtom);
+  const setChatPanelMaximized = useSetAtom(chatPanelMaximizedAtom);
+  const setStationMode = useSetAtom(stationModeAtom);
+  const setSidebarCollapsed = useSetAtom(sidebarCollapsedAtom);
+  const setStationChatVisibility = useSetAtom(stationChatVisibilityAtom);
+  const setDockAutoHide = useSetAtom(workStationDockAutoHidePersistAtom);
+  const setDockFilter = useSetAtom(dockFilterAtom);
+  const [tutorialsModalOpen, setTutorialsModalOpen] = useState(false);
+  const [generalLayoutTourOpen, setGeneralLayoutTourOpen] = useState(false);
+  const [generalLayoutTourRunId, setGeneralLayoutTourRunId] = useState(0);
+  const [codeEditorTourOpen, setCodeEditorTourOpen] = useState(false);
+  const [codeEditorTourRunId, setCodeEditorTourRunId] = useState(0);
 
   // Settings-in-slot is fully URL-derived: any `/orgii/app/settings/*`
   // path swaps the chat-panel slot to render the Settings dispatcher
@@ -219,6 +244,92 @@ const AppShell = () => {
   // single source of truth.
   const isSettingsRoute = location.pathname.startsWith("/orgii/app/settings");
   const chatPanelMode: ChatPanelMode = isSettingsRoute ? "settings" : "session";
+
+  const handleOpenTutorials = useCallback(() => {
+    setTutorialsModalOpen(true);
+  }, []);
+
+  const handleStartGeneralLayoutTour = useCallback(() => {
+    if (!location.pathname.startsWith(ROUTES.workStation.base.path)) {
+      navigate(ROUTES.workStation.base.path);
+    }
+
+    setStationMode("my-station");
+    setChatPanelMaximized(false);
+    setSidebarCollapsed(false);
+    setStationChatVisibility((prev) => ({
+      ...prev,
+      "my-station": true,
+    }));
+    restoreChatWidth();
+    setDockAutoHide(false);
+    setDockFilter("all");
+    setGeneralLayoutTourRunId((value) => value + 1);
+    window.setTimeout(() => setGeneralLayoutTourOpen(true), 220);
+  }, [
+    location.pathname,
+    navigate,
+    restoreChatWidth,
+    setChatPanelMaximized,
+    setDockAutoHide,
+    setDockFilter,
+    setSidebarCollapsed,
+    setStationChatVisibility,
+    setStationMode,
+  ]);
+
+  const handleStartCodeEditorTour = useCallback(() => {
+    if (!location.pathname.startsWith(ROUTES.workStation.code.path)) {
+      navigate(ROUTES.workStation.code.path);
+    }
+
+    setStationMode("my-station");
+    setChatPanelMaximized(false);
+    setSidebarCollapsed(false);
+    setStationChatVisibility((prev) => ({
+      ...prev,
+      "my-station": true,
+    }));
+    restoreChatWidth();
+    setDockAutoHide(false);
+    setDockFilter("code");
+    setCodeEditorTourRunId((value) => value + 1);
+    window.setTimeout(() => setCodeEditorTourOpen(true), 240);
+  }, [
+    location.pathname,
+    navigate,
+    restoreChatWidth,
+    setChatPanelMaximized,
+    setDockAutoHide,
+    setDockFilter,
+    setSidebarCollapsed,
+    setStationChatVisibility,
+    setStationMode,
+  ]);
+
+  useEffect(() => {
+    window.addEventListener(TUTORIALS_OPEN_EVENT, handleOpenTutorials);
+    window.addEventListener(
+      GENERAL_LAYOUT_TOUR_EVENT,
+      handleStartGeneralLayoutTour
+    );
+    window.addEventListener(CODE_EDITOR_TOUR_EVENT, handleStartCodeEditorTour);
+    return () => {
+      window.removeEventListener(TUTORIALS_OPEN_EVENT, handleOpenTutorials);
+      window.removeEventListener(
+        GENERAL_LAYOUT_TOUR_EVENT,
+        handleStartGeneralLayoutTour
+      );
+      window.removeEventListener(
+        CODE_EDITOR_TOUR_EVENT,
+        handleStartCodeEditorTour
+      );
+    };
+  }, [
+    handleOpenTutorials,
+    handleStartCodeEditorTour,
+    handleStartGeneralLayoutTour,
+  ]);
 
   const showChatPanel = useMemo(() => {
     const path = location.pathname;
@@ -264,7 +375,6 @@ const AppShell = () => {
   // surface visible behind the not-yet-full-width Settings slot) for one
   // frame before the post-paint effect maximizes the slot — visible as a
   // flash of WorkStation content on entry.
-  const setChatPanelMaximized = useSetAtom(chatPanelMaximizedAtom);
   const settingsPriorMaximizedRef = useRef<boolean | null>(null);
   // Initialize to `false` so the very first paint into a settings URL
   // (cold start / deep link / reload mid-session) also trips the
@@ -376,6 +486,11 @@ const AppShell = () => {
                         : VIEW_CONTAINER_CLASSES.insetWithBg
                   }
                   style={getViewToggleStyle(isWorkStationViewActive)}
+                  data-tour-target={
+                    isWorkStationViewActive
+                      ? GENERAL_LAYOUT_TOUR_TARGETS.workstation
+                      : undefined
+                  }
                 >
                   <Suspense fallback={<Placeholder variant="loading" />}>
                     <WorkStationPage
@@ -401,6 +516,20 @@ const AppShell = () => {
               </div>
             </div>
           </AppLayout>
+          <TutorialsModal
+            open={tutorialsModalOpen}
+            onClose={() => setTutorialsModalOpen(false)}
+          />
+          <GeneralLayoutTour
+            key={generalLayoutTourRunId}
+            open={generalLayoutTourOpen}
+            onClose={() => setGeneralLayoutTourOpen(false)}
+          />
+          <CodeEditorTour
+            key={codeEditorTourRunId}
+            open={codeEditorTourOpen}
+            onClose={() => setCodeEditorTourOpen(false)}
+          />
         </div>
       </BrowserProvider>
     </TerminalProvider>

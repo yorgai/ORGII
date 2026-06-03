@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import { AGENT_EXEC_MODES } from "@src/config/sessionCreatorConfig";
@@ -51,8 +52,7 @@ import { useEntries } from "./useEntries";
 import { useKeyboard } from "./useKeyboard";
 import { usePortalPosition } from "./usePortalPosition";
 
-/** Cap on the main panel width so flyouts have room on the right. */
-const MAX_PANEL_WIDTH = 260;
+const PANEL_WIDTH = 280;
 
 const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   visible,
@@ -80,6 +80,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   const tauriSelectAll = useTauriSelectAllShortcut();
 
   const [highlightIndex, setHighlightIndex] = useState(0);
+  const [keyboardNavigated, setKeyboardNavigated] = useState(false);
   const [openFlyout, setOpenFlyout] = useState<OpenFlyoutState | null>(null);
   const [flyoutHighlightIndex, setFlyoutHighlightIndex] = useState(0);
   const [panelRight, setPanelRight] = useState(0);
@@ -106,6 +107,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   if (trackedIdentity !== listIdentity) {
     setTrackedIdentity(listIdentity);
     setHighlightIndex(0);
+    setKeyboardNavigated(false);
   }
 
   // Close flyout when a search query is active (derived state)
@@ -152,10 +154,12 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   // Click outside → close (but not when clicking inside a flyout portal)
   useEffect(() => {
     if (!visible || !isPositioned) return;
-    const handler = (e: MouseEvent) => {
+    const handler = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
       if (
         portalContainerRef.current &&
-        !portalContainerRef.current.contains(e.target as Node)
+        !portalContainerRef.current.contains(target)
       ) {
         onClose();
       }
@@ -173,6 +177,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
     openFlyout,
     listRef,
     setHighlightIndex,
+    setKeyboardNavigated,
     setOpenFlyout,
     onSelect,
     onModeSelect,
@@ -265,19 +270,17 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
 
   if (!isPositioned) return null;
 
-  const panelWidth = Math.min(position.width, MAX_PANEL_WIDTH);
-
   const portalStyle =
     direction === "down"
       ? {
           top: position.bottom,
           left: position.left,
-          width: panelWidth,
+          width: PANEL_WIDTH,
         }
       : {
           top: position.top,
           left: position.left,
-          width: panelWidth,
+          width: PANEL_WIDTH,
           transform: "translateY(-100%)",
         };
 
@@ -291,6 +294,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
       <div
         ref={listRef}
         data-testid="slash-command-menu"
+        data-dropdown-keyboard-mode={keyboardNavigated ? "true" : undefined}
         className={DROPDOWN_CLASSES.panel}
         onMouseDown={(e) => {
           if (
@@ -307,7 +311,10 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
             className={DROPDOWN_CLASSES.searchContainer}
             data-testid="slash-command-search"
           >
-            <Search size={14} className="shrink-0 text-text-3" />
+            <Search
+              size={DROPDOWN_ITEM.iconSize}
+              className="shrink-0 text-text-3"
+            />
             <input
               ref={searchInputRef}
               data-slash-search-input="true"
@@ -354,10 +361,13 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
               return (
                 <ModeFlyoutTriggerRow
                   key="mode-flyout"
-                  isActive={entry.flatIndex === highlightIndex}
+                  isActive={
+                    keyboardNavigated && entry.flatIndex === highlightIndex
+                  }
                   isOpen={openFlyout?.kind === "modes"}
                   currentModeName={currentModeName}
                   onMouseEnter={(e) => {
+                    setKeyboardNavigated(false);
                     setHighlightIndex(entry.flatIndex);
                     setOpenFlyout({
                       kind: "modes",
@@ -385,10 +395,13 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
               return (
                 <ModelsFlyoutTriggerRow
                   key="models-flyout"
-                  isActive={entry.flatIndex === highlightIndex}
+                  isActive={
+                    keyboardNavigated && entry.flatIndex === highlightIndex
+                  }
                   isOpen={openFlyout?.kind === "models"}
                   currentModelName={currentModelLabel}
                   onMouseEnter={(e) => {
+                    setKeyboardNavigated(false);
                     setHighlightIndex(entry.flatIndex);
                     setOpenFlyout({
                       kind: "models",
@@ -416,8 +429,11 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
               return (
                 <ImageRow
                   key="image-upload"
-                  isActive={entry.flatIndex === highlightIndex}
+                  isActive={
+                    keyboardNavigated && entry.flatIndex === highlightIndex
+                  }
                   onMouseEnter={() => {
+                    setKeyboardNavigated(false);
                     setHighlightIndex(entry.flatIndex);
                     setOpenFlyout(null);
                   }}
@@ -434,9 +450,12 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
                 <ModeRow
                   key={`mode-${entry.mode.id}`}
                   mode={entry.mode}
-                  isActive={entry.flatIndex === highlightIndex}
+                  isActive={
+                    keyboardNavigated && entry.flatIndex === highlightIndex
+                  }
                   isCurrent={entry.mode.id === currentMode}
                   onMouseEnter={() => {
+                    setKeyboardNavigated(false);
                     setHighlightIndex(entry.flatIndex);
                     setOpenFlyout(null);
                   }}
@@ -452,12 +471,13 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
                   key={`flyout-${category}`}
                   category={category}
                   label={label}
-                  isActive={flatIndex === highlightIndex}
+                  isActive={keyboardNavigated && flatIndex === highlightIndex}
                   isOpen={
                     openFlyout?.kind === "category" &&
                     openFlyout.category === category
                   }
                   onMouseEnter={(e) => {
+                    setKeyboardNavigated(false);
                     setHighlightIndex(flatIndex);
                     setOpenFlyout({
                       kind: "category",
@@ -490,8 +510,9 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
               <SlashItemRow
                 key={`${item.category}-${item.source}-${item.name}`}
                 item={item}
-                isActive={flatIndex === highlightIndex}
+                isActive={keyboardNavigated && flatIndex === highlightIndex}
                 onMouseEnter={() => {
+                  setKeyboardNavigated(false);
                   setHighlightIndex(flatIndex);
                   setOpenFlyout(null);
                 }}
@@ -523,7 +544,9 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
             anchorTop={openFlyout.anchorTop}
             panelRight={panelRight}
             highlightIndex={flyoutHighlightIndex}
+            keyboardNavigated={keyboardNavigated}
             onHighlightChange={setFlyoutHighlightIndex}
+            onPointerNavigate={() => setKeyboardNavigated(false)}
             onSelect={(item) => {
               onSelect(item);
               setOpenFlyout(null);
@@ -539,7 +562,9 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
           panelRight={panelRight}
           currentMode={currentMode}
           highlightIndex={flyoutHighlightIndex}
+          keyboardNavigated={keyboardNavigated}
           onHighlightChange={setFlyoutHighlightIndex}
+          onPointerNavigate={() => setKeyboardNavigated(false)}
           onSelect={(mode) => {
             onModeSelect(mode);
             setOpenFlyout(null);

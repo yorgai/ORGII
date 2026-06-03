@@ -27,9 +27,12 @@ function useUndoKeyboard(
       const mod = event.metaKey || event.ctrlKey;
       if (!mod || event.key.toLowerCase() !== "z") return;
 
-      const tag = (event.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      if ((event.target as HTMLElement)?.isContentEditable) return;
+      const target = event.target;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") return;
+        if (target.isContentEditable) return;
+      }
 
       event.preventDefault();
       if (event.shiftKey) {

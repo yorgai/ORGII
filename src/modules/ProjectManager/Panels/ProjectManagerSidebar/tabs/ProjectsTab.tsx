@@ -72,7 +72,7 @@ const OrgActionsDropdown: React.FC<OrgActionsDropdownProps> = ({
     panelRef,
     panelPosition,
   } = useDropdownEngine<HTMLButtonElement>({
-    gap: DROPDOWN_PANEL.triggerGapCompact,
+    gap: DROPDOWN_PANEL.triggerGapTight,
     align: "right",
     closeOnEsc: true,
     placement: "bottom",
@@ -112,7 +112,7 @@ const OrgActionsDropdown: React.FC<OrgActionsDropdownProps> = ({
         createPortal(
           <div
             ref={panelRef}
-            className={`${DROPDOWN_CLASSES.panel} fixed ${DROPDOWN_PANEL.zIndexClass} ${DROPDOWN_WIDTHS.sidebarMenuClass} ${DROPDOWN_PANEL.paddingClass}`}
+            className={`${DROPDOWN_CLASSES.menuPanelBase} fixed ${DROPDOWN_WIDTHS.sidebarMenuClass}`}
             style={{
               top: panelPosition.top,
               bottom: panelPosition.bottom,
@@ -130,7 +130,7 @@ const OrgActionsDropdown: React.FC<OrgActionsDropdownProps> = ({
             <button
               type="button"
               onClick={handleAddOrg}
-              className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+              className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
               role="menuitem"
             >
               <Plus
@@ -143,7 +143,7 @@ const OrgActionsDropdown: React.FC<OrgActionsDropdownProps> = ({
             <button
               type="button"
               onClick={handleImportOrgs}
-              className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+              className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
               role="menuitem"
             >
               <Import
@@ -177,7 +177,7 @@ const CreateActionsDropdown: React.FC<CreateActionsDropdownProps> = ({
     panelRef,
     panelPosition,
   } = useDropdownEngine<HTMLButtonElement>({
-    gap: DROPDOWN_PANEL.triggerGapCompact,
+    gap: DROPDOWN_PANEL.triggerGapTight,
     align: "right",
     closeOnEsc: true,
     placement: "bottom",
@@ -217,7 +217,7 @@ const CreateActionsDropdown: React.FC<CreateActionsDropdownProps> = ({
         createPortal(
           <div
             ref={panelRef}
-            className={`${DROPDOWN_CLASSES.panel} fixed ${DROPDOWN_PANEL.zIndexClass} ${DROPDOWN_WIDTHS.sidebarMenuClass} ${DROPDOWN_PANEL.paddingClass}`}
+            className={`${DROPDOWN_CLASSES.menuPanelBase} fixed ${DROPDOWN_WIDTHS.sidebarMenuClass}`}
             style={{
               top: panelPosition.top,
               bottom: panelPosition.bottom,
@@ -235,7 +235,7 @@ const CreateActionsDropdown: React.FC<CreateActionsDropdownProps> = ({
             <button
               type="button"
               onClick={handleCreateWorkItem}
-              className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+              className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
               role="menuitem"
             >
               <ListChecks
@@ -250,7 +250,7 @@ const CreateActionsDropdown: React.FC<CreateActionsDropdownProps> = ({
             <button
               type="button"
               onClick={handleCreateProject}
-              className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+              className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
               role="menuitem"
             >
               <Box

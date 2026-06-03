@@ -27,6 +27,7 @@ import { useTranslation } from "react-i18next";
 import Button from "@src/components/Button";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/exports";
 import Switch from "@src/components/Switch";
@@ -455,7 +456,7 @@ export const ModelPropertiesDropdown: React.FC<
           row's `disabled` state is no longer driven by the Thinking
           switch — Thinking is now a parallel orthogonal toggle below. */}
       {variantOptions.availableLevels.length > 0 && (
-        <div className="border-b border-border-2 p-1">
+        <div className={DROPDOWN_CLASSES.sectionContainer}>
           <div className={DROPDOWN_CLASSES.sectionLabel}>Effort</div>
           {variantOptions.availableLevels.map((level) => {
             const isSelected = draft.level === level;
@@ -465,7 +466,7 @@ export const ModelPropertiesDropdown: React.FC<
                 type="button"
                 onClick={() => handleLevelSelect(level)}
                 className={[
-                  DROPDOWN_CLASSES.itemCompact,
+                  DROPDOWN_CLASSES.item,
                   DROPDOWN_CLASSES.itemHover,
                   "w-full justify-between text-left",
                   isSelected && DROPDOWN_CLASSES.itemSelected,
@@ -477,7 +478,10 @@ export const ModelPropertiesDropdown: React.FC<
                   {formatReasoningLevel(level)}
                 </span>
                 {isSelected && (
-                  <Check size={14} className="shrink-0 text-primary-6" />
+                  <Check
+                    size={DROPDOWN_ITEM.iconSize}
+                    className="shrink-0 text-primary-6"
+                  />
                 )}
               </button>
             );
@@ -491,13 +495,15 @@ export const ModelPropertiesDropdown: React.FC<
           disabled) when the family or current selection doesn't
           expose that dimension. */}
       {(showThinkingRow || showFastRow) && (
-        <div className="border-b border-border-2 p-1">
+        <div className={DROPDOWN_CLASSES.sectionContainer}>
           <div className={DROPDOWN_CLASSES.sectionLabel}>
             {t("selectors.modelProperties.options")}
           </div>
           {showThinkingRow && (
             <SwitchRow
-              icon={<Brain size={14} className="text-text-2" />}
+              icon={
+                <Brain size={DROPDOWN_ITEM.iconSize} className="text-text-2" />
+              }
               label="Thinking"
               checked={draft.thinking}
               onChange={handleThinkingToggle}
@@ -505,7 +511,9 @@ export const ModelPropertiesDropdown: React.FC<
           )}
           {showFastRow && (
             <SwitchRow
-              icon={<Zap size={14} className="text-text-2" />}
+              icon={
+                <Zap size={DROPDOWN_ITEM.iconSize} className="text-text-2" />
+              }
               label="Fast"
               checked={draft.fast}
               onChange={handleFastToggle}
@@ -555,7 +563,7 @@ const SwitchRow: React.FC<SwitchRowProps> = ({
   checked,
   onChange,
 }) => (
-  <div className={DROPDOWN_CLASSES.menuControlItemCompact}>
+  <div className={DROPDOWN_CLASSES.menuControlItem}>
     <span className="flex items-center gap-1.5">
       {icon}
       {label}

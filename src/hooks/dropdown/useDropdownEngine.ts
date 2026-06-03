@@ -310,7 +310,8 @@ export function useDropdownEngine<
     if (!isOpen || !closeOnClickOutside) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
+      const target = event.target;
+      if (!(target instanceof Node)) return;
       const currentTrigger = latestTriggerRef.current.current;
       const outsideTrigger = currentTrigger && !currentTrigger.contains(target);
       const outsidePanel =

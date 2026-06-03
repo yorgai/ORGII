@@ -9,7 +9,6 @@ export interface DropdownOption {
   value: string | number;
   disabled?: boolean;
   extra?: unknown;
-  secondaryText?: ReactNode;
   /** Label shown in the Select trigger when selected (falls back to label) */
   triggerLabel?: ReactNode;
   /** Stable selector for rendered UI tests. */

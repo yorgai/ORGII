@@ -13,7 +13,10 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import type {
   RunningLocation,
   RunningLocationEntry,
@@ -118,7 +121,7 @@ const LocationOption: React.FC<LocationOptionProps> = ({
       type="button"
       {...interactionProps}
       disabled={disabled}
-      className={`${DROPDOWN_CLASSES.itemCompact} ${
+      className={`${DROPDOWN_CLASSES.item} ${
         disabled
           ? "cursor-not-allowed opacity-40"
           : isSelected
@@ -127,7 +130,7 @@ const LocationOption: React.FC<LocationOptionProps> = ({
       } w-full justify-between`}
     >
       <div className="flex items-center gap-2">
-        <Icon size={15} strokeWidth={1.75} />
+        <Icon size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
         <span>{label}</span>
       </div>
       {isSelected && <DropdownSelectedCheck />}

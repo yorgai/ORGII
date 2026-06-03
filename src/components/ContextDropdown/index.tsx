@@ -9,6 +9,7 @@ import React, { useEffect, useRef, useState } from "react";
 
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
@@ -27,10 +28,9 @@ const ContextDropdown: React.FC<ContextDropdownProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         onClose();
       }
     };
@@ -54,11 +54,11 @@ const ContextDropdown: React.FC<ContextDropdownProps> = ({
           onMouseLeave={() => setHoveredItem(null)}
         >
           <div className="flex items-center gap-3">
-            <ImagePlus size={14} className="text-text-2" />
+            <ImagePlus size={DROPDOWN_ITEM.iconSize} className="text-text-2" />
             <span>Upload Image</span>
           </div>
           {hoveredItem === "image" && (
-            <ArrowRight size={14} className="text-text-2" />
+            <ArrowRight size={DROPDOWN_ITEM.iconSize} className="text-text-2" />
           )}
         </div>
         <div
@@ -68,11 +68,11 @@ const ContextDropdown: React.FC<ContextDropdownProps> = ({
           onMouseLeave={() => setHoveredItem(null)}
         >
           <div className="flex items-center gap-3">
-            <Upload size={14} className="text-text-2" />
+            <Upload size={DROPDOWN_ITEM.iconSize} className="text-text-2" />
             <span>Quick upload</span>
           </div>
           {hoveredItem === "upload" && (
-            <ArrowRight size={14} className="text-text-2" />
+            <ArrowRight size={DROPDOWN_ITEM.iconSize} className="text-text-2" />
           )}
         </div>
         <div
@@ -82,11 +82,11 @@ const ContextDropdown: React.FC<ContextDropdownProps> = ({
           onMouseLeave={() => setHoveredItem(null)}
         >
           <div className="flex items-center gap-3">
-            <Archive size={14} className="text-text-2" />
+            <Archive size={DROPDOWN_ITEM.iconSize} className="text-text-2" />
             <span>Use Context Manager</span>
           </div>
           {hoveredItem === "manager" && (
-            <ArrowRight size={14} className="text-text-2" />
+            <ArrowRight size={DROPDOWN_ITEM.iconSize} className="text-text-2" />
           )}
         </div>
       </div>

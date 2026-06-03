@@ -1,5 +1,5 @@
 import { RefreshCw } from "lucide-react";
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type {
@@ -14,8 +14,15 @@ import Button from "@src/components/Button";
 import { useRefreshSpin } from "@src/hooks/ui";
 import { SECTION_CONTAINER_CLASSES } from "@src/modules/shared/layouts/SectionLayout/tokens";
 import { CollapsibleSection } from "@src/modules/shared/layouts/blocks";
+import type { WorkItemStatus } from "@src/types/core/workItem";
 
-import type { AgentRole } from "../../constants";
+import {
+  ACTIVE_PHASES,
+  AGENT_ROLE,
+  type AgentRole,
+  ORCHESTRATOR_PHASE,
+  toAgentRole,
+} from "../../constants";
 import {
   ActivePhaseStatus,
   AwaitingUserState,
@@ -29,10 +36,15 @@ import ReviewFeedbackPanel from "./ReviewFeedbackPanel";
 import SessionRunHistory from "./SessionRunHistory";
 import { useSessionRunsGrouping } from "./hooks/useSessionRunsGrouping";
 
+const ACTIVE_WORK_ITEM_STATUS: WorkItemStatus = "in_progress";
+const COMPLETED_WORK_ITEM_STATUS: WorkItemStatus = "completed";
+const RUNNING_LINKED_SESSION_STATUS = "running" as const;
+
 interface AgentWorkflowProps {
   orchestratorState?: OrchestratorState;
   orchestratorConfig?: OrchestratorConfig;
   proofOfWork?: ProofOfWork;
+  workItemStatus?: WorkItemStatus;
   executionLock?: WorkItemExecutionLock | null;
   linkedSessions?: LinkedSession[];
   onStartAgent?: (instructions?: string) => void;
@@ -53,6 +65,7 @@ const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
   orchestratorState,
   orchestratorConfig,
   proofOfWork,
+  workItemStatus,
   executionLock,
   linkedSessions = [],
   onStartAgent,
@@ -69,14 +82,78 @@ const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
   activeAgentRole,
 }) => {
   const { t } = useTranslation("projects");
-  const phase: OrchestratorPhase = orchestratorState?.current_phase ?? "idle";
+  const persistedPhase: OrchestratorPhase =
+    orchestratorState?.current_phase ?? ORCHESTRATOR_PHASE.Idle;
+  const { cycleCount, sessionRuns, subAgentsByParent, hasRuns } =
+    useSessionRunsGrouping({ linkedSessions, activeAgentSessionId });
+  const [terminalSessionIds, setTerminalSessionIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const handleSessionComplete = useCallback(
+    (sessionId: string) => {
+      setTerminalSessionIds((current) => {
+        if (current.has(sessionId)) return current;
+        const next = new Set(current);
+        next.add(sessionId);
+        return next;
+      });
+      onRefresh?.();
+    },
+    [onRefresh]
+  );
+  const isCompletedWorkItem = workItemStatus === COMPLETED_WORK_ITEM_STATUS;
+  const runningLinkedSession = linkedSessions.find(
+    (session) =>
+      session.status === RUNNING_LINKED_SESSION_STATUS &&
+      !terminalSessionIds.has(session.session_id)
+  );
+  const hasTerminalOnlyLinkedSessions =
+    linkedSessions.length > 0 && !runningLinkedSession;
+  const activeExecutionLockSessionId =
+    isCompletedWorkItem || hasTerminalOnlyLinkedSessions
+      ? null
+      : (executionLock?.activeSessionId ?? null);
+  const persistedActiveSessionId =
+    activeExecutionLockSessionId ?? runningLinkedSession?.session_id ?? null;
+  const canUseLocalActiveSession =
+    workItemStatus === ACTIVE_WORK_ITEM_STATUS &&
+    Boolean(activeAgentSessionId) &&
+    !hasTerminalOnlyLinkedSessions;
+  const displayActiveSessionId =
+    persistedActiveSessionId ??
+    (canUseLocalActiveSession ? activeAgentSessionId : null);
+  const effectiveActiveSession = linkedSessions.find(
+    (session) => session.session_id === displayActiveSessionId
+  );
+  const effectiveActiveAgentRole =
+    toAgentRole(runningLinkedSession?.agent_role) ??
+    activeAgentRole ??
+    toAgentRole(effectiveActiveSession?.agent_role) ??
+    null;
+  const hasActiveAgentSession = Boolean(
+    persistedActiveSessionId || canUseLocalActiveSession
+  );
+  const phase: OrchestratorPhase = (() => {
+    if (hasActiveAgentSession && !ACTIVE_PHASES.has(persistedPhase)) {
+      if (effectiveActiveAgentRole === AGENT_ROLE.Review) {
+        return ORCHESTRATOR_PHASE.Review;
+      }
+      if (effectiveActiveAgentRole === AGENT_ROLE.FollowUp) {
+        return ORCHESTRATOR_PHASE.FollowUp;
+      }
+      return ORCHESTRATOR_PHASE.Sde;
+    }
+
+    if (!hasActiveAgentSession && ACTIVE_PHASES.has(persistedPhase)) {
+      return hasRuns ? ORCHESTRATOR_PHASE.Completed : ORCHESTRATOR_PHASE.Idle;
+    }
+
+    return persistedPhase;
+  })();
   const { spinClass, handleClick: handleRefreshClick } = useRefreshSpin(
     onRefresh ?? (() => {}),
     false
   );
-
-  const { cycleCount, sessionRuns, subAgentsByParent, hasRuns } =
-    useSessionRunsGrouping({ linkedSessions, activeAgentSessionId });
 
   const titleAction =
     phase !== "idle" && onRefresh ? (
@@ -101,7 +178,10 @@ const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
       defaultOpen={true}
       actions={titleAction}
     >
-      <div className={`${SECTION_CONTAINER_CLASSES} space-y-2 p-3`}>
+      <div
+        className={`${SECTION_CONTAINER_CLASSES} space-y-2 p-3`}
+        data-testid="work-item-agent-workflow"
+      >
         {phase !== "idle" && (
           <PipelineStepper currentPhase={phase} cycleCount={cycleCount} />
         )}
@@ -114,13 +194,13 @@ const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
             isStartingAgent={isStartingAgent}
           />
         )}
-        {(phase === "sde" || phase === "review" || phase === "follow_up") && (
+        {ACTIVE_PHASES.has(phase) && (
           <ActivePhaseStatus phase={phase} onCancel={onCancel} />
         )}
         {showCompletedBadge && (
           <CompletedState
             orchestratorConfig={orchestratorConfig}
-            executionLock={executionLock}
+            executionLock={isCompletedWorkItem ? null : executionLock}
             onStartAgent={onStartAgent}
             isStartingAgent={isStartingAgent}
           />
@@ -162,18 +242,17 @@ const AgentWorkflow: React.FC<AgentWorkflowProps> = ({
           <InterruptedState onResume={onResume} onCancel={onCancel} />
         )}
 
-        {(hasRuns || activeAgentSessionId) && (
+        {(hasRuns || displayActiveSessionId) && (
           <SessionRunHistory
             sessionRuns={sessionRuns}
             subAgentsByParent={subAgentsByParent}
-            activeAgentSessionId={activeAgentSessionId}
-            activeAgentRole={activeAgentRole}
+            activeAgentSessionId={displayActiveSessionId}
+            activeAgentRole={effectiveActiveAgentRole}
             phase={phase}
-            showOnlyActive={
-              phase === "sde" || phase === "review" || phase === "follow_up"
-            }
+            showOnlyActive={ACTIVE_PHASES.has(phase)}
             onOpenSession={onOpenSession}
             onRefresh={onRefresh}
+            onSessionComplete={handleSessionComplete}
           />
         )}
       </div>

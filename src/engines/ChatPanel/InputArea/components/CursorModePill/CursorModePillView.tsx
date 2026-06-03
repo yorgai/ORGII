@@ -29,7 +29,7 @@ import {
   DropdownPanel,
 } from "@src/components/Dropdown/exports";
 import {
-  DROPDOWN_PANEL,
+  DROPDOWN_ITEM,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
 import PillGroup, { type PillGroupSegment } from "@src/components/PillGroup";
@@ -162,16 +162,16 @@ const CursorModePillView: React.FC<CursorModePillViewProps> = ({
               left: panelPosition.left,
             }}
           >
-            <div
-              className={`flex flex-col ${DROPDOWN_PANEL.itemsGapClass} ${DROPDOWN_PANEL.paddingClass}`}
-            >
+            <div className={DROPDOWN_CLASSES.itemsColumnPadded}>
               {modes.map((option) => {
                 const Icon = getModeIcon(option.id);
                 const isSelected = effectiveMode === option.id;
                 return (
                   <DropdownItem
                     key={option.id}
-                    icon={<Icon size={15} strokeWidth={1.75} />}
+                    icon={
+                      <Icon size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
+                    }
                     selected={isSelected}
                     compact
                     showCheckmark

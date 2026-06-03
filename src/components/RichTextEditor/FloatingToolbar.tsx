@@ -47,10 +47,9 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        toolbarRef.current &&
-        !toolbarRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (toolbarRef.current && !toolbarRef.current.contains(target)) {
         setShowHeadingDropdown(false);
         setShowListDropdown(false);
         setShowLinkInput(false);

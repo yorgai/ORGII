@@ -20,7 +20,9 @@ interface FlyoutSubmenuProps {
   onClose: () => void;
   /** Controlled highlight index (keyboard-driven from parent). */
   highlightIndex: number;
+  keyboardNavigated: boolean;
   onHighlightChange: (idx: number) => void;
+  onPointerNavigate: () => void;
 }
 
 /**
@@ -35,7 +37,9 @@ const FlyoutSubmenu: React.FC<FlyoutSubmenuProps> = ({
   onSelect,
   onClose,
   highlightIndex,
+  keyboardNavigated,
   onHighlightChange,
+  onPointerNavigate,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -61,8 +65,10 @@ const FlyoutSubmenu: React.FC<FlyoutSubmenuProps> = ({
 
   // Close on click outside the flyout panel
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+    const handler = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (panelRef.current && !panelRef.current.contains(target)) {
         onClose();
       }
     };
@@ -74,6 +80,7 @@ const FlyoutSubmenu: React.FC<FlyoutSubmenuProps> = ({
     <div
       ref={panelRef}
       className={`${DROPDOWN_CLASSES.panel} flex flex-col overflow-hidden`}
+      data-dropdown-keyboard-mode={keyboardNavigated ? "true" : undefined}
       style={{
         position: "fixed",
         top: anchorTop,
@@ -108,15 +115,20 @@ const FlyoutSubmenu: React.FC<FlyoutSubmenuProps> = ({
                   <div
                     key={`${item.source}-${item.name}`}
                     data-slash-flat
-                    className={`${DROPDOWN_CLASSES.itemCompact} group cursor-pointer justify-between ${
-                      idx === highlightIndex ? "bg-fill-2" : "hover:bg-fill-2"
+                    className={`${DROPDOWN_CLASSES.item} group cursor-pointer justify-between ${
+                      keyboardNavigated && idx === highlightIndex
+                        ? "bg-fill-2"
+                        : "hover:bg-fill-2"
                     }`}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       onSelect(item);
                     }}
-                    onMouseEnter={() => onHighlightChange(idx)}
+                    onMouseEnter={() => {
+                      onPointerNavigate();
+                      onHighlightChange(idx);
+                    }}
                   >
                     <div className="flex min-w-0 items-center gap-2">
                       {React.createElement(Icon, {

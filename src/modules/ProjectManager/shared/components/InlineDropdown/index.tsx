@@ -68,7 +68,7 @@ function InlineDropdown<T extends string>({
     panelRef,
     panelPosition,
   } = useDropdownEngine<HTMLButtonElement>({
-    gap: DROPDOWN_PANEL.triggerGapCompact,
+    gap: DROPDOWN_PANEL.triggerGapTight,
     closeOnEsc: true,
     placement: "bottom",
   });
@@ -152,7 +152,7 @@ function InlineDropdown<T extends string>({
                   key={option.value}
                   type="button"
                   className={[
-                    DROPDOWN_CLASSES.itemCompact,
+                    DROPDOWN_CLASSES.item,
                     "w-full text-left",
                     option.value === value
                       ? DROPDOWN_CLASSES.itemSelected

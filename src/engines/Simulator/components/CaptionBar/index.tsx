@@ -75,7 +75,8 @@ const CaptionBar: React.FC<CaptionBarProps> = memo(
       const handleClick = (event: MouseEvent) => {
         const rootNode = rootRef.current;
         const panelNode = panelRef.current;
-        const target = event.target as Node;
+        const target = event.target;
+        if (!(target instanceof Node)) return;
         if (rootNode?.contains(target) || panelNode?.contains(target)) return;
         setPinnedOpen(false);
         setHoverOpen(false);

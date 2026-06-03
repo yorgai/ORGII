@@ -330,7 +330,6 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
       size="small"
       radius="pill"
       showSearch
-      dropdownCompact
       dropdownWidthMode="min-match"
       dropdownMinWidth={220}
       // CreateProjectView renders inside the Project create Modal (z-index

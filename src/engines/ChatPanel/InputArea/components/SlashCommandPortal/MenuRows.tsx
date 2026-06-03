@@ -7,7 +7,10 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import type {
   AgentExecMode,
   AgentExecModeEntry,
@@ -25,7 +28,7 @@ import {
 
 function rowClass(isActive: boolean, isSelected = false): string {
   const bgClass = isActive || isSelected ? "bg-fill-2" : "hover:bg-fill-2";
-  return `${DROPDOWN_CLASSES.itemCompact} group cursor-pointer ${bgClass}`;
+  return `${DROPDOWN_CLASSES.item} group cursor-pointer ${bgClass}`;
 }
 
 function iconClass(isSelected: boolean, extra = ""): string {
@@ -71,7 +74,11 @@ export const ImageRow: React.FC<ImageRowProps> = React.memo(
           onMouseDown();
         }}
       >
-        <ImageIcon size={14} strokeWidth={1.75} className={iconClass(false)} />
+        <ImageIcon
+          size={DROPDOWN_ITEM.iconSize}
+          strokeWidth={1.75}
+          className={iconClass(false)}
+        />
         <span className={labelClass(false)}>
           {t("creator.slashMenu.image", { defaultValue: "Image" })}
         </span>
@@ -108,7 +115,7 @@ export const ModeRow: React.FC<ModeRowProps> = React.memo(
       >
         <div className="flex items-center gap-2">
           <ModeIcon
-            size={14}
+            size={DROPDOWN_ITEM.iconSize}
             strokeWidth={1.75}
             className={iconClass(isCurrent)}
           />
@@ -154,7 +161,7 @@ export const FlyoutTriggerRow: React.FC<FlyoutTriggerRowProps> = React.memo(
           <span className={labelClass(isOpen)}>{label}</span>
         </div>
         <ChevronRight
-          size={13}
+          size={DROPDOWN_ITEM.iconSize}
           strokeWidth={1.75}
           className={isOpen ? "text-primary-6" : "text-text-3"}
         />
@@ -247,7 +254,7 @@ export const ModeFlyoutTriggerRow: React.FC<ModeFlyoutTriggerRowProps> =
           <div className="flex items-center gap-1.5">
             <span className="text-[12px] text-text-3">{currentModeName}</span>
             <ChevronRight
-              size={13}
+              size={DROPDOWN_ITEM.iconSize}
               strokeWidth={1.75}
               className={isOpen ? "text-primary-6" : "text-text-3"}
             />
@@ -301,7 +308,7 @@ export const ModelsFlyoutTriggerRow: React.FC<ModelsFlyoutTriggerRowProps> =
               {currentModelName}
             </span>
             <ChevronRight
-              size={13}
+              size={DROPDOWN_ITEM.iconSize}
               strokeWidth={1.75}
               className={isOpen ? "text-primary-6" : "text-text-3"}
             />

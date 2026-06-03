@@ -68,12 +68,14 @@ export function useContextPanel(): UseContextPanelReturn {
 
   useEffect(() => {
     if (!panelPos) return;
-    function handleDown(evt: MouseEvent) {
+    function handleDown(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
       if (
         panelRef.current &&
-        !panelRef.current.contains(evt.target as Node) &&
+        !panelRef.current.contains(target) &&
         triggerRef.current &&
-        !triggerRef.current.contains(evt.target as Node)
+        !triggerRef.current.contains(target)
       ) {
         setPanelPos(null);
       }

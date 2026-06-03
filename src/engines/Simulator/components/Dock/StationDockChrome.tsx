@@ -21,6 +21,7 @@ import {
   SIMULATOR_POINTER_HOVER_CLOSE_DELAY_MS,
   SIMULATOR_POINTER_HOVER_OPEN_DEBOUNCE_MS,
 } from "@src/engines/Simulator/constants/simulatorPointerHover";
+import { GENERAL_LAYOUT_TOUR_TARGETS } from "@src/scaffold/Tutorials/GeneralLayoutTour";
 import { classNames } from "@src/util/ui/classNames";
 
 export interface StationDockChromeProps {
@@ -152,6 +153,7 @@ export const StationDockChrome: React.FC<StationDockChromeProps> = memo(
           onMouseEnter={handlePointerEnter}
           onMouseLeave={handlePointerLeave}
           onFocusCapture={handleFocusCapture}
+          data-tour-target={GENERAL_LAYOUT_TOUR_TARGETS.dock}
           onBlurCapture={handleBlurCapture}
         >
           <div className={dockBodyClass}>{children}</div>

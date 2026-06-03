@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { HEADER_CLASSES } from "@src/config/workstation/tokens";
@@ -73,6 +79,14 @@ const WorkItemDetail: React.FC<WorkItemDetailProps> = ({
   const [infoPanelWidth, setInfoPanelWidth] = useState(
     WORK_ITEM_INFO_PANEL_DEFAULT_WIDTH
   );
+  const lastAutoRefreshWorkItemIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (lastAutoRefreshWorkItemIdRef.current === workItem.session_id) return;
+    lastAutoRefreshWorkItemIdRef.current = workItem.session_id;
+    onRefreshWorkItem?.();
+  }, [onRefreshWorkItem, workItem.session_id]);
+
   const [contextMenuPosition, setContextMenuPosition] = useState<{
     x: number;
     y: number;

@@ -13,7 +13,10 @@ import { useTranslation } from "react-i18next";
 
 import DatePicker from "@src/components/DatePicker";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import type { TabPillItem } from "@src/components/TabPill";
 import TabPill from "@src/components/TabPill";
 
@@ -224,7 +227,7 @@ const DateRangePill: React.FC<DateRangePillProps> = ({
     items.push({
       key: "__more__",
       label: moreLabel,
-      icon: !moreLabel ? <Ellipsis size={14} /> : undefined,
+      icon: !moreLabel ? <Ellipsis size={DROPDOWN_ITEM.iconSize} /> : undefined,
       dropdown: dropdownContent,
     });
 

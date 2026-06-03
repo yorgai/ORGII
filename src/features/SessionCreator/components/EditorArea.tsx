@@ -6,7 +6,10 @@
  *
  * Uses TiptapInput for proper cursor/selection handling around file pills.
  */
-import type { MenuItemId } from "@/src/scaffold/ContextMenu/config";
+import {
+  type MenuItemId,
+  STYLE_CONFIG,
+} from "@/src/scaffold/ContextMenu/config";
 import { ContextMenu } from "@/src/scaffold/ContextMenu/exports";
 import { useAtomValue } from "jotai";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -592,11 +595,10 @@ const EditorArea: React.FC<EditorAreaProps> = ({
               style={{
                 top: dropdownPosition.top,
                 left: dropdownPosition.left,
-                // chatPanel variant: dropdown opens above input, width matches container
-                ...(isChatPanel && dropdownPosition.width > 0
+                ...(isChatPanel
                   ? {
                       transform: "translateY(-100%)",
-                      width: dropdownPosition.width,
+                      width: STYLE_CONFIG.dropdownWidth,
                     }
                   : {}),
               }}
@@ -613,11 +615,6 @@ const EditorArea: React.FC<EditorAreaProps> = ({
                 repoPath={repoPath}
                 keyboardHandlerRef={contextMenuFunctionRef}
                 treePosition={mentionTreePosition}
-                panelWidth={
-                  dropdownPosition.width > 0
-                    ? dropdownPosition.width
-                    : undefined
-                }
               />
             </div>,
             document.body

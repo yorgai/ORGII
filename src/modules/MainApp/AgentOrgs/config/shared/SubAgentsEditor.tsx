@@ -39,7 +39,10 @@ import React, { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 import Button from "@src/components/Button";
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import NumberInput from "@src/components/NumberInput";
 import Switch from "@src/components/Switch";
 import { useDropdownEngine } from "@src/hooks/dropdown";
@@ -114,7 +117,7 @@ const AddSubAgentButton: React.FC<AddSubAgentButtonProps> = ({
       <Button
         ref={triggerRef}
         size="default"
-        icon={<Plus size={14} />}
+        icon={<Plus size={DROPDOWN_ITEM.iconSize} />}
         onClick={toggle}
       >
         {t("agentOrgs.agentWizard.addSubAgent")}
@@ -133,18 +136,18 @@ const AddSubAgentButton: React.FC<AddSubAgentButtonProps> = ({
               width: Math.max(panelPosition.width, 220),
             }}
           >
-            <div className="border-b border-border-2 px-2 py-1.5">
+            <div className={DROPDOWN_CLASSES.searchContainer}>
               <input
                 autoFocus
                 value={search}
                 onChange={(evt) => setSearch(evt.target.value)}
-                className="w-full bg-transparent text-[13px] text-text-1 outline-none placeholder:text-text-3"
+                className={DROPDOWN_CLASSES.searchInput}
                 placeholder={t("common:actions.search")}
               />
             </div>
             <div className={`${DROPDOWN_CLASSES.optionsContainer} max-h-52`}>
               {filtered.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-text-3">
+                <div className={DROPDOWN_CLASSES.listMessage}>
                   {t("common:placeholders.noMatchingResults")}
                 </div>
               ) : (
@@ -347,7 +350,7 @@ const SubAgentsEditor: React.FC<SubAgentsEditorProps> = ({
           <div key={ref.agentId} data-testid="subagent-row">
             <SectionRow label={resolveAgentName(ref.agentId)}>
               <Button
-                icon={<X size={14} />}
+                icon={<X size={DROPDOWN_ITEM.iconSize} />}
                 iconOnly
                 appearance="ghost"
                 variant="danger"

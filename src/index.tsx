@@ -55,17 +55,15 @@ window.onunhandledrejection = (event) => {
 window.addEventListener(
   "error",
   (event: Event) => {
-    const target = event.target as HTMLElement | null;
-    if (!target || !target.tagName) return;
-    if (target.tagName === "SCRIPT") {
-      const src = (target as HTMLScriptElement).src || "";
+    const target = event.target;
+    if (target instanceof HTMLScriptElement) {
+      const src = target.src || "";
       if (src.includes("chunk") || src.includes("vendor")) {
         window.location.reload();
       }
     }
-    if (target.tagName === "LINK") {
-      const link = target as HTMLLinkElement;
-      if (link.rel === "stylesheet" && link.href?.includes("chunk")) {
+    if (target instanceof HTMLLinkElement) {
+      if (target.rel === "stylesheet" && target.href?.includes("chunk")) {
         window.location.reload();
       }
     }

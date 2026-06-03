@@ -74,7 +74,7 @@ export function calculateDropdownPosition({
 }: CalculateDropdownPositionParams): DropdownCoordinates {
   const triggerRect = triggerElement.getBoundingClientRect();
   const containerRect = containerElement.getBoundingClientRect();
-  const gap = DROPDOWN_PANEL.triggerGapCompact;
+  const gap = DROPDOWN_PANEL.triggerGapTight;
 
   let top = 0;
   let left = 0;

@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   DROPDOWN_CLASSES,
-  DROPDOWN_PANEL,
+  DROPDOWN_ITEM,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
 import { INPUT_AREA_BUTTONS } from "@src/config/inputAreaTokens";
@@ -109,7 +109,7 @@ const AddActionsDropdown: React.FC<AddActionsDropdownProps> = ({
         createPortal(
           <div
             ref={panelRef}
-            className={`${DROPDOWN_CLASSES.panel} fixed ${DROPDOWN_PANEL.zIndexClass} ${DROPDOWN_WIDTHS.menuClass} ${DROPDOWN_PANEL.paddingClass}`}
+            className={`${DROPDOWN_CLASSES.menuPanelBase} fixed ${DROPDOWN_WIDTHS.menuClass}`}
             style={{
               ...(panelPosition.top !== undefined
                 ? { top: panelPosition.top }
@@ -120,10 +120,14 @@ const AddActionsDropdown: React.FC<AddActionsDropdownProps> = ({
           >
             <button
               onClick={() => handleSelect("add-content")}
-              className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
+              className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
               role="menuitem"
             >
-              <AtSign size={14} strokeWidth={1.75} className="text-text-2" />
+              <AtSign
+                size={DROPDOWN_ITEM.iconSize}
+                strokeWidth={1.75}
+                className="text-text-2"
+              />
               <span className="text-[13px] font-medium text-text-1">
                 {t("creator.addContext")}
               </span>
@@ -134,14 +138,18 @@ const AddActionsDropdown: React.FC<AddActionsDropdownProps> = ({
                 uploadDisabled ? undefined : () => handleSelect("upload")
               }
               disabled={uploadDisabled}
-              className={`${DROPDOWN_CLASSES.itemCompact} w-full text-left ${
+              className={`${DROPDOWN_CLASSES.item} w-full text-left ${
                 uploadDisabled
                   ? "cursor-not-allowed bg-fill-2 opacity-50"
                   : DROPDOWN_CLASSES.itemHover
               }`}
               role="menuitem"
             >
-              <Paperclip size={14} strokeWidth={1.75} className="text-text-2" />
+              <Paperclip
+                size={DROPDOWN_ITEM.iconSize}
+                strokeWidth={1.75}
+                className="text-text-2"
+              />
               <span className="text-[13px] font-medium text-text-1">
                 {t("common:actions.upload")}
               </span>

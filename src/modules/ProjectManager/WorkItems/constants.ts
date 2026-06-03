@@ -42,6 +42,18 @@ export const AGENT_ROLE = {
 
 export type AgentRole = (typeof AGENT_ROLE)[keyof typeof AGENT_ROLE];
 
+export function toAgentRole(role: string | null | undefined): AgentRole | null {
+  if (
+    role === AGENT_ROLE.Coding ||
+    role === AGENT_ROLE.Sde ||
+    role === AGENT_ROLE.Review ||
+    role === AGENT_ROLE.FollowUp
+  ) {
+    return role;
+  }
+  return null;
+}
+
 export const SESSION_STATUS = {
   Running: "running",
   Completed: "completed",

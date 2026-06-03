@@ -139,7 +139,6 @@ export const DbPreviewView: React.FC<DbPreviewViewProps> = memo(
         variant="ghost"
         radius="lg"
         showSearch
-        dropdownCompact
         dropdownMinWidth={220}
         dropdownWidthMode="match"
         placeholder={t("placeholders.selectTable")}

@@ -9,9 +9,9 @@ import {
   ArrowRight,
   Check,
   FileCode,
+  History,
   type LucideIcon,
   MessageCircleQuestion,
-  MessageSquare,
   Plus,
   TextQuote,
 } from "lucide-react";
@@ -32,14 +32,12 @@ export interface DropdownMenuItem {
   label: string;
   icon: LucideIcon;
   hasSecondLayer?: boolean;
-  description?: string;
 }
 
 export interface SessionItem {
   sessionId: string;
   name: string;
   isNew?: boolean;
-  updatedAt?: string;
 }
 
 // ============================================
@@ -51,7 +49,7 @@ export const ICON_CONFIG = {
   addContext: Plus,
   addFile: FileCode,
   addLines: TextQuote,
-  session: MessageSquare,
+  session: History,
   newSession: Plus,
   arrow: ArrowRight,
   arrowBack: ArrowLeft,
@@ -69,7 +67,6 @@ export const MENU_ITEMS: DropdownMenuItem[] = [
     label: "Add to Chat",
     icon: ICON_CONFIG.addContext,
     hasSecondLayer: false,
-    description: "Insert selected text into the chat composer",
   },
 ];
 
@@ -80,14 +77,12 @@ export const EDITOR_MENU_ITEMS: DropdownMenuItem[] = [
     label: "Add this file to agent",
     icon: ICON_CONFIG.addFile,
     hasSecondLayer: false,
-    description: "Add entire file to agent",
   },
   {
     id: "add-lines",
     label: "Add line {from} ~ {to} to agent",
     icon: ICON_CONFIG.addLines,
     hasSecondLayer: false,
-    description: "Add selected lines to agent",
   },
 ];
 
@@ -96,8 +91,8 @@ export const EDITOR_MENU_ITEMS: DropdownMenuItem[] = [
 // ============================================
 
 export const STYLE_CONFIG = {
-  dropdownWidth: "220px",
-  secondLayerWidth: "240px",
+  dropdownWidth: "280px",
+  secondLayerWidth: "280px",
   maxHeight: "240px",
   itemHeight: "36px",
   zIndex: 99999,

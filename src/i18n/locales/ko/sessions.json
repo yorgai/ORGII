@@ -642,7 +642,13 @@
     "voiceErrorPermission": "마이크 권한이 거부되었습니다. OS 설정에서 활성화하세요.",
     "voiceErrorUnsupported": "이 빌드에서는 음성 입력이 지원되지 않습니다.",
     "voiceErrorAudio": "마이크가 감지되지 않았습니다.",
-    "voiceErrorGeneric": "음성 입력 실패. 다시 시도해 주세요."
+    "voiceErrorGeneric": "음성 입력 실패. 다시 시도해 주세요.",
+    "pinnedActions": {
+      "manage": "고정된 작업 관리",
+      "searchPlaceholder": "고정할 작업 검색…",
+      "loading": "로딩 중…",
+      "empty": "작업을 찾을 수 없습니다."
+    }
   },
   "listPanel": {
     "showingOf": "{{total}}개 중 {{filtered}}개 표시",

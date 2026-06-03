@@ -16,7 +16,10 @@ import React, {
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
-import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
 import { useFilteredItems } from "@src/hooks/search";
@@ -153,8 +156,10 @@ const ModelsFlyout: React.FC<ModelsFlyoutProps> = ({
 
   // Click outside → close
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+    const handler = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (panelRef.current && !panelRef.current.contains(target)) {
         onClose();
       }
     };
@@ -220,10 +225,13 @@ const ModelsFlyout: React.FC<ModelsFlyoutProps> = ({
             aria-label={t("actions.back")}
             className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-text-2 hover:bg-fill-2 hover:text-text-1"
           >
-            <ChevronLeft size={14} />
+            <ChevronLeft size={DROPDOWN_ITEM.iconSize} />
           </button>
         )}
-        <Search size={14} className="shrink-0 text-text-3" />
+        <Search
+          size={DROPDOWN_ITEM.iconSize}
+          className="shrink-0 text-text-3"
+        />
         <input
           ref={inputRef}
           value={searchQuery}
@@ -235,11 +243,11 @@ const ModelsFlyout: React.FC<ModelsFlyoutProps> = ({
       </div>
 
       <div
-        className="scrollbar-overlay flex flex-col overflow-y-auto p-1"
+        className={DROPDOWN_CLASSES.optionsContainerOverlay}
         style={{ maxHeight: LIST_MAX_HEIGHT }}
       >
         {filteredItems.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[12px] text-text-3">
+          <div className={DROPDOWN_CLASSES.listMessage}>
             {tCommon("selectors.modelSelector.noResults")}
           </div>
         ) : (

@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
@@ -113,7 +114,7 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
             onClick={toggle}
           >
             <ListFilter
-              size={16}
+              size={DROPDOWN_ITEM.iconSize}
               strokeWidth={2}
               className={isOpen ? "text-text-1" : "text-text-2"}
             />
@@ -139,8 +140,8 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                 {GROUP_BY_MODES.map((mode: GroupByMode) => {
                   const active = mode === groupByMode;
                   const itemClasses = active
-                    ? `${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemSelected}`
-                    : `${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover}`;
+                    ? `${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemSelected}`
+                    : `${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover}`;
                   return (
                     <button
                       key={mode}
@@ -161,11 +162,11 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                     {onRefreshSessions && (
                       <button
                         type="button"
-                        className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-start gap-2 text-left`}
+                        className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start gap-2 text-left`}
                         onClick={handleRefreshSessions}
                       >
                         <RefreshCw
-                          size={14}
+                          size={DROPDOWN_ITEM.iconSize}
                           strokeWidth={2}
                           className="shrink-0 text-text-2"
                         />
@@ -175,12 +176,12 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                     {onExportSessionJson && (
                       <button
                         type="button"
-                        className={`${DROPDOWN_CLASSES.itemCompact} ${canExportSessionJson ? DROPDOWN_CLASSES.itemHover : "cursor-not-allowed opacity-50"} w-full justify-start gap-2 text-left`}
+                        className={`${DROPDOWN_CLASSES.item} ${canExportSessionJson ? DROPDOWN_CLASSES.itemHover : "cursor-not-allowed opacity-50"} w-full justify-start gap-2 text-left`}
                         onClick={handleExportSessionJson}
                         disabled={!canExportSessionJson}
                       >
                         <FolderOutput
-                          size={14}
+                          size={DROPDOWN_ITEM.iconSize}
                           strokeWidth={2}
                           className="shrink-0 text-text-2"
                         />
@@ -192,11 +193,11 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                     {onImportSessionJson && (
                       <button
                         type="button"
-                        className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-start gap-2 text-left`}
+                        className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start gap-2 text-left`}
                         onClick={handleImportSessionJson}
                       >
                         <FolderInput
-                          size={14}
+                          size={DROPDOWN_ITEM.iconSize}
                           strokeWidth={2}
                           className="shrink-0 text-text-2"
                         />
@@ -208,11 +209,11 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                     {onCollapseAll && (
                       <button
                         type="button"
-                        className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-start gap-2 text-left`}
+                        className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start gap-2 text-left`}
                         onClick={handleCollapseAll}
                       >
                         <ListChevronsDownUp
-                          size={16}
+                          size={DROPDOWN_ITEM.iconSize}
                           strokeWidth={2}
                           className="shrink-0 text-text-2"
                         />
@@ -222,11 +223,11 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                     {onMarkAllRead && (
                       <button
                         type="button"
-                        className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-start gap-2 text-left`}
+                        className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start gap-2 text-left`}
                         onClick={handleMarkAllRead}
                       >
                         <CheckCheck
-                          size={14}
+                          size={DROPDOWN_ITEM.iconSize}
                           strokeWidth={2}
                           className="shrink-0 text-text-2"
                         />

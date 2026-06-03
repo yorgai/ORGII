@@ -22,7 +22,7 @@
  * />
  */
 import { useAtomValue } from "jotai";
-import { MessageSquare, Plus } from "lucide-react";
+import { History, Plus } from "lucide-react";
 import React, {
   memo,
   useCallback,
@@ -36,11 +36,11 @@ import { useTranslation } from "react-i18next";
 
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import { Session, recentSessionsAtom } from "@src/store/session";
 import { stripPillReferences } from "@src/util/session/stripPillReferences";
-import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import {
   DropdownAction,
@@ -78,8 +78,8 @@ const MenuItemRow: React.FC<MenuItemRowProps> = memo(
     onMouseLeave,
   }) => (
     <div
-      className={`${DROPDOWN_CLASSES.itemCompact} justify-between ${
-        isActive ? "bg-fill-2" : DROPDOWN_CLASSES.itemHover
+      className={`${DROPDOWN_CLASSES.item} justify-between ${
+        isActive ? DROPDOWN_CLASSES.itemActive : DROPDOWN_CLASSES.itemHover
       }`}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
@@ -92,7 +92,7 @@ const MenuItemRow: React.FC<MenuItemRowProps> = memo(
       </div>
       {hasArrow && (
         <ICON_CONFIG.arrow
-          size={14}
+          size={DROPDOWN_ITEM.iconSize}
           className="text-text-3"
           strokeWidth={1.75}
         />
@@ -131,14 +131,16 @@ const SessionSelectorPanel: React.FC<SessionSelectorPanelProps> = memo(
         className={DROPDOWN_CLASSES.panel}
         style={{ width: STYLE_CONFIG.secondLayerWidth }}
       >
-        {/* Header with back button */}
-        <div className="flex items-center gap-2 border-b border-solid border-border-2 px-2 py-2">
+        <div className={DROPDOWN_CLASSES.searchContainer}>
           <button
             onMouseDown={(event) => event.preventDefault()}
             onClick={onBack}
             className="flex h-[24px] w-[24px] items-center justify-center rounded-[4px] text-text-2 hover:bg-fill-1"
           >
-            <ICON_CONFIG.arrowBack size={16} strokeWidth={1.75} />
+            <ICON_CONFIG.arrowBack
+              size={DROPDOWN_ITEM.iconSize}
+              strokeWidth={1.75}
+            />
           </button>
           <span className="text-[13px] font-medium text-text-1">
             Select Session
@@ -147,7 +149,7 @@ const SessionSelectorPanel: React.FC<SessionSelectorPanelProps> = memo(
 
         {/* Session list */}
         <div
-          className="overflow-y-auto px-1 py-1 scrollbar-hide"
+          className={DROPDOWN_CLASSES.optionsContainer}
           style={{ maxHeight: STYLE_CONFIG.maxHeight }}
         >
           {/* New Session option - always first */}
@@ -155,24 +157,24 @@ const SessionSelectorPanel: React.FC<SessionSelectorPanelProps> = memo(
             ref={(element) => {
               itemRefs.current[0] = element;
             }}
-            className={`${DROPDOWN_CLASSES.itemCompact} ${
-              activeIndex === 0 ? "bg-fill-2" : DROPDOWN_CLASSES.itemHover
+            className={`${DROPDOWN_CLASSES.item} ${
+              activeIndex === 0
+                ? DROPDOWN_CLASSES.itemActive
+                : DROPDOWN_CLASSES.itemHover
             }`}
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => onSelect(null)}
             onMouseEnter={() => onHover(0)}
             onMouseLeave={onHoverEnd}
           >
-            <div className="flex h-5 w-5 items-center justify-center rounded-md bg-primary-6/10">
-              <Plus size={14} className="text-primary-6" />
-            </div>
-            <span className="text-[13px] font-medium text-primary-6">
-              New Session
-            </span>
+            <Plus size={DROPDOWN_ITEM.iconSize} className="text-text-2" />
+            <span className="text-[13px] text-text-1">New Session</span>
           </div>
 
           {/* Divider */}
-          {sessions.length > 0 && <div className="my-1 h-px bg-border-2" />}
+          {sessions.length > 0 && (
+            <div className={DROPDOWN_CLASSES.menuSeparator} />
+          )}
 
           {/* Existing sessions */}
           {sessions.map((session, index) => {
@@ -183,9 +185,9 @@ const SessionSelectorPanel: React.FC<SessionSelectorPanelProps> = memo(
                 ref={(element) => {
                   itemRefs.current[itemIndex] = element;
                 }}
-                className={`${DROPDOWN_CLASSES.itemCompact} ${
+                className={`${DROPDOWN_CLASSES.item} ${
                   activeIndex === itemIndex
-                    ? "bg-fill-2"
+                    ? DROPDOWN_CLASSES.itemActive
                     : DROPDOWN_CLASSES.itemHover
                 }`}
                 onMouseDown={(event) => event.preventDefault()}
@@ -193,27 +195,20 @@ const SessionSelectorPanel: React.FC<SessionSelectorPanelProps> = memo(
                 onMouseEnter={() => onHover(itemIndex)}
                 onMouseLeave={onHoverEnd}
               >
-                <MessageSquare
-                  size={16}
+                <History
+                  size={DROPDOWN_ITEM.iconSize}
                   className="flex-shrink-0 text-text-2"
                 />
-                <div className="flex flex-1 flex-col overflow-hidden">
-                  <span className="truncate text-[12px] text-text-1">
-                    {session.name}
-                  </span>
-                  {session.updatedAt && (
-                    <span className="text-[10px] text-text-3">
-                      {formatRelativeTime(session.updatedAt)}
-                    </span>
-                  )}
-                </div>
+                <span className="min-w-0 flex-1 truncate text-[13px] text-text-1">
+                  {session.name}
+                </span>
               </div>
             );
           })}
 
           {/* Empty state */}
           {sessions.length === 0 && (
-            <div className="px-3 py-2 text-center text-[12px] text-text-3">
+            <div className={DROPDOWN_CLASSES.listMessage}>
               No recent sessions
             </div>
           )}
@@ -235,7 +230,6 @@ function mapSessionToItem(session: Session): SessionItem {
     name: stripPillReferences(
       session.name || session.user_input?.slice(0, 50) || "Untitled Session"
     ),
-    updatedAt: session.updated_at || session.created_at,
   };
 }
 
@@ -260,15 +254,19 @@ const TextSelectionDropdown: React.FC<TextSelectionDropdownProps> = ({
 
   // State
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [keyboardNavigated, setKeyboardNavigated] = useState(false);
   const [showSessionSelector, setShowSessionSelector] = useState(false);
   const [sessionActiveIndex, setSessionActiveIndex] = useState(0);
   const [safePosition, setSafePosition] = useState(position);
 
-  const resetActiveIndex = useCallback(() => setActiveIndex(-1), []);
-  const resetSessionActiveIndex = useCallback(
-    () => setSessionActiveIndex(-1),
-    []
-  );
+  const resetActiveIndex = useCallback(() => {
+    setKeyboardNavigated(false);
+    setActiveIndex(-1);
+  }, []);
+  const resetSessionActiveIndex = useCallback(() => {
+    setKeyboardNavigated(false);
+    setSessionActiveIndex(-1);
+  }, []);
 
   // Get recent sessions from store
   const recentSessions = useAtomValue(recentSessionsAtom);
@@ -367,11 +365,13 @@ const TextSelectionDropdown: React.FC<TextSelectionDropdownProps> = ({
 
         if (key === KEYBOARD_CONFIG.up) {
           event.preventDefault();
+          setKeyboardNavigated(true);
           setSessionActiveIndex(
             (previous) => (previous - 1 + totalItems) % totalItems
           );
         } else if (key === KEYBOARD_CONFIG.down) {
           event.preventDefault();
+          setKeyboardNavigated(true);
           setSessionActiveIndex((previous) => (previous + 1) % totalItems);
         } else if (key === KEYBOARD_CONFIG.enter) {
           event.preventDefault();
@@ -392,6 +392,7 @@ const TextSelectionDropdown: React.FC<TextSelectionDropdownProps> = ({
         // Main menu navigation
         if (key === KEYBOARD_CONFIG.up) {
           event.preventDefault();
+          setKeyboardNavigated(true);
           setActiveIndex((previous) => {
             // If no item is active, start from last item
             if (previous < 0) return menuItems.length - 1;
@@ -399,6 +400,7 @@ const TextSelectionDropdown: React.FC<TextSelectionDropdownProps> = ({
           });
         } else if (key === KEYBOARD_CONFIG.down) {
           event.preventDefault();
+          setKeyboardNavigated(true);
           setActiveIndex((previous) => {
             // If no item is active, start from first item
             if (previous < 0) return 0;
@@ -444,6 +446,7 @@ const TextSelectionDropdown: React.FC<TextSelectionDropdownProps> = ({
       // Schedule state updates in next tick to avoid setState-in-effect warning
       Promise.resolve().then(() => {
         setActiveIndex(-1);
+        setKeyboardNavigated(false);
         setShowSessionSelector(false);
         setSessionActiveIndex(0);
       });
@@ -453,10 +456,9 @@ const TextSelectionDropdown: React.FC<TextSelectionDropdownProps> = ({
   // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         onClose();
       }
     };
@@ -476,6 +478,7 @@ const TextSelectionDropdown: React.FC<TextSelectionDropdownProps> = ({
     <div
       ref={dropdownRef}
       className={`text-selection-dropdown fixed ${className}`}
+      data-dropdown-keyboard-mode={keyboardNavigated ? "true" : undefined}
       style={{
         left: safePosition.x,
         top: safePosition.y,
@@ -488,9 +491,12 @@ const TextSelectionDropdown: React.FC<TextSelectionDropdownProps> = ({
       {showSessionSelector ? (
         <SessionSelectorPanel
           sessions={sessionItems}
-          activeIndex={sessionActiveIndex}
+          activeIndex={keyboardNavigated ? sessionActiveIndex : -1}
           onSelect={handleSessionSelect}
-          onHover={setSessionActiveIndex}
+          onHover={(index) => {
+            setKeyboardNavigated(false);
+            setSessionActiveIndex(index);
+          }}
           onHoverEnd={resetSessionActiveIndex}
           onBack={handleBack}
         />
@@ -532,16 +538,19 @@ const TextSelectionDropdown: React.FC<TextSelectionDropdownProps> = ({
                   key={item.id}
                   icon={
                     <IconComponent
-                      size={16}
+                      size={DROPDOWN_ITEM.iconSize}
                       className="text-text-2"
                       strokeWidth={1.75}
                     />
                   }
                   label={label}
                   hasArrow={item.hasSecondLayer}
-                  isActive={activeIndex === index}
+                  isActive={keyboardNavigated && activeIndex === index}
                   onClick={() => handleMenuClick(item.id)}
-                  onMouseEnter={() => setActiveIndex(index)}
+                  onMouseEnter={() => {
+                    setKeyboardNavigated(false);
+                    setActiveIndex(index);
+                  }}
                   onMouseLeave={resetActiveIndex}
                 />
               );

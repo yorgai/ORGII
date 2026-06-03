@@ -68,12 +68,13 @@ export const ToolbarDropdown: React.FC<ToolbarDropdownProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
       if (
         isOpen &&
         containerRef.current &&
-        !containerRef.current.contains(event.target as Node) &&
-        (!triggerRef?.current ||
-          !triggerRef.current.contains(event.target as Node))
+        !containerRef.current.contains(target) &&
+        (!triggerRef?.current || !triggerRef.current.contains(target))
       ) {
         onClose();
       }

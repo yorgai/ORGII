@@ -23,6 +23,7 @@ import { createPortal } from "react-dom";
 import HoverSafeSubmenuBridge from "@src/components/Dropdown/HoverSafeSubmenuBridge";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import {
@@ -78,7 +79,13 @@ const DropdownRow: React.FC<DropdownRowProps> = ({
 
   const renderedIcon = useMemo(() => {
     if (isCurrent) {
-      return <Check size={16} strokeWidth={2.25} className="text-primary-6" />;
+      return (
+        <Check
+          size={DROPDOWN_ITEM.iconSize}
+          strokeWidth={2.25}
+          className="text-primary-6"
+        />
+      );
     }
     if (!item.icon) return null;
     if (typeof item.icon === "string") {
@@ -118,7 +125,7 @@ const DropdownRow: React.FC<DropdownRowProps> = ({
       data-testid={testId}
       {...keyboardProps}
       onMouseEnter={handleMouseEnter}
-      className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} group/model-row w-full justify-start [&_button]:!font-normal [&_span]:!font-normal`}
+      className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} group/model-row w-full justify-start [&_button]:!font-normal [&_span]:!font-normal`}
     >
       {renderedIcon && (
         <span className="flex h-5 w-5 shrink-0 items-center justify-center text-text-1">
@@ -140,7 +147,10 @@ const DropdownRow: React.FC<DropdownRowProps> = ({
         )
       )}
       {submenuSide && (
-        <ChevronRight size={14} className="shrink-0 text-text-3" />
+        <ChevronRight
+          size={DROPDOWN_ITEM.iconSize}
+          className="shrink-0 text-text-3"
+        />
       )}
     </button>
   );
@@ -481,7 +491,10 @@ export const UnifiedModelDropdown: React.FC<UnifiedModelDropdownProps> = ({
         }}
       >
         <div className={DROPDOWN_CLASSES.searchContainer}>
-          <Search size={14} className="shrink-0 text-text-3" />
+          <Search
+            size={DROPDOWN_ITEM.iconSize}
+            className="shrink-0 text-text-3"
+          />
           <input
             ref={inputRef}
             value={searchQuery}
@@ -493,11 +506,11 @@ export const UnifiedModelDropdown: React.FC<UnifiedModelDropdownProps> = ({
         </div>
 
         <div
-          className="scrollbar-overlay flex flex-col overflow-y-auto p-1"
+          className={DROPDOWN_CLASSES.optionsContainerOverlay}
           style={{ maxHeight: LIST_MAX_HEIGHT }}
         >
           {filteredItems.length === 0 ? (
-            <div className="px-3 py-6 text-center text-[12px] text-text-3">
+            <div className={DROPDOWN_CLASSES.listMessage}>
               {tCommon("selectors.modelSelector.noResults")}
             </div>
           ) : (
@@ -552,7 +565,7 @@ export const UnifiedModelDropdown: React.FC<UnifiedModelDropdownProps> = ({
           data-dropdown-side-panel-left={submenuLeft}
           data-dropdown-side-panel-top={submenuTop}
           data-dropdown-side-panel-height={submenuEstimatedHeight}
-          className={`${DROPDOWN_CLASSES.panel} fixed flex flex-col p-1`}
+          className={`${DROPDOWN_CLASSES.panel} fixed flex flex-col ${DROPDOWN_PANEL.paddingClass}`}
           style={{
             top: submenuTop,
             left: submenuLeft,

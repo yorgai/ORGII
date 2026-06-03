@@ -274,8 +274,9 @@ const TabPill: React.FC<TabPillProps> = ({
           data-testid={tab.dataTestId}
           onClick={() => handleTabClickWithDropdown(tab)}
           disabled={tab.disabled}
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           className={cn(
-            "group relative flex cursor-pointer select-none flex-col items-center justify-center",
+            "group relative z-10 flex cursor-pointer select-none flex-col items-center justify-center",
             !fillWidth && "shrink-0",
             size === "mini"
               ? "h-full text-[12px]"
@@ -314,6 +315,7 @@ const TabPill: React.FC<TabPillProps> = ({
         onMouseEnter={() => setHoveredTabKey(tab.key)}
         onMouseLeave={() => setHoveredTabKey(null)}
         disabled={tab.disabled}
+        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
         className={cn(
           "relative z-[2] flex cursor-pointer select-none items-center justify-center",
           "whitespace-nowrap",
@@ -417,7 +419,7 @@ const TabPill: React.FC<TabPillProps> = ({
     <div
       ref={containerRef}
       className={cn(
-        "relative items-stretch",
+        "relative z-10 items-stretch",
         usePillWrapGrid
           ? "grid w-full min-w-0 grid-cols-[repeat(auto-fit,minmax(5rem,1fr))] gap-1"
           : fillWidth

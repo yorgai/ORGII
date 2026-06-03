@@ -262,7 +262,6 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       size="small"
       radius="pill"
       showSearch
-      dropdownCompact
       dropdownWidthMode="min-match"
       dropdownMinWidth={220}
       // CreateWorkItemView renders inside the WorkItem create Modal

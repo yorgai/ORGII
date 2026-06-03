@@ -126,7 +126,8 @@ const WorkItemProperties: React.FC<WorkItemPropertiesProps> = ({
     if (openPicker === null) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
       if (target.closest("[data-field-row]")) return;
       if (target.closest("[data-property-dropdown]")) return;
       closePicker();

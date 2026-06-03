@@ -10,6 +10,7 @@ import { useWorkItemImageInsert } from "@src/hooks/project";
 import { PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS } from "@src/modules/ProjectManager/shared/placeholderTokens";
 import { DetailPanelContainer } from "@src/modules/shared/layouts/blocks";
 import InternalHeader from "@src/modules/shared/layouts/blocks/InternalHeader";
+import type { WorkItemStatus } from "@src/types/core/workItem";
 
 import AgentWorkflow from "../AgentWorkflow";
 import TodoChecklist from "../TodoChecklist";
@@ -119,7 +120,10 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
       <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
         {activeTab === "details" && (
           <>
-            <div className={`${DETAIL_PANEL_TOKENS.sectionGap} min-h-[200px]`}>
+            <div
+              className={`${DETAIL_PANEL_TOKENS.sectionGap} min-h-[200px] cursor-text`}
+              onClick={() => editorRef.current?.focus()}
+            >
               <RichTextEditor
                 ref={editorRef}
                 placeholder={t("workItems.descriptionPlaceholder")}
@@ -150,6 +154,9 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
                 orchestratorState={workItem.orchestratorState}
                 orchestratorConfig={workItem.orchestratorConfig}
                 proofOfWork={workItem.proofOfWork}
+                workItemStatus={
+                  workItem.workItemStatus ?? (workItem.status as WorkItemStatus)
+                }
                 executionLock={workItem.executionLock}
                 linkedSessions={workItem.linkedSessions}
                 onStartAgent={onStartAgent}

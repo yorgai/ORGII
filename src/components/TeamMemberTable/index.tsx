@@ -12,6 +12,7 @@ import Button from "@src/components/Button";
 import DragTable, { type DragTableColumn } from "@src/components/DragTable";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DropdownFooter,
 } from "@src/components/Dropdown/exports";
 import Input from "@src/components/Input";
@@ -112,14 +113,14 @@ const AgentSelect: React.FC<AgentSelectProps> = ({
           <DropdownFooter>
             <button
               type="button"
-              className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-start`}
+              className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start`}
               onMouseDown={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
                 onAddAgent();
               }}
             >
-              <Plus size={14} strokeWidth={1.75} />
+              <Plus size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
               <span>{t("common:actions.add")} Agent</span>
             </button>
           </DropdownFooter>
@@ -327,7 +328,9 @@ const TeamMemberTable: React.FC<TeamMemberTableProps> = ({
         <Button
           variant="secondary"
           size="default"
-          icon={<Trash2 size={14} className="text-danger-6" />}
+          icon={
+            <Trash2 size={DROPDOWN_ITEM.iconSize} className="text-danger-6" />
+          }
           iconOnly
           data-testid={buildDataTestId(row, "remove-button")}
           onClick={() => removeMember(row.id)}

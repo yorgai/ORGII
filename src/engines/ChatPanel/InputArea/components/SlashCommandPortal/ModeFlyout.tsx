@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
@@ -22,7 +23,9 @@ interface ModeFlyoutProps {
   onClose: () => void;
   /** Controlled highlight index (keyboard-driven from parent). */
   highlightIndex: number;
+  keyboardNavigated: boolean;
   onHighlightChange: (idx: number) => void;
+  onPointerNavigate: () => void;
 }
 
 const ModeFlyout: React.FC<ModeFlyoutProps> = ({
@@ -32,14 +35,18 @@ const ModeFlyout: React.FC<ModeFlyoutProps> = ({
   onSelect,
   onClose,
   highlightIndex,
+  keyboardNavigated,
   onHighlightChange,
+  onPointerNavigate,
 }) => {
   const { t } = useTranslation("sessions");
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+    const handler = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (panelRef.current && !panelRef.current.contains(target)) {
         onClose();
       }
     };
@@ -51,6 +58,7 @@ const ModeFlyout: React.FC<ModeFlyoutProps> = ({
     <div
       ref={panelRef}
       className={`${DROPDOWN_CLASSES.panel} flex flex-col overflow-hidden`}
+      data-dropdown-keyboard-mode={keyboardNavigated ? "true" : undefined}
       style={{
         position: "fixed",
         top: anchorTop,
@@ -69,16 +77,19 @@ const ModeFlyout: React.FC<ModeFlyoutProps> = ({
       >
         {AGENT_EXEC_MODES.map((mode, idx) => {
           const ModeIcon = mode.icon;
-          const isActive = idx === highlightIndex;
+          const isActive = keyboardNavigated && idx === highlightIndex;
           const isCurrent = mode.id === currentMode;
           return (
             <div
               key={mode.id}
               data-testid={`slash-command-mode-option-${mode.id}`}
-              className={`${DROPDOWN_CLASSES.itemCompact} group cursor-pointer justify-between ${
+              className={`${DROPDOWN_CLASSES.item} group cursor-pointer justify-between ${
                 isActive ? "bg-fill-2" : "hover:bg-fill-2"
               }`}
-              onMouseEnter={() => onHighlightChange(idx)}
+              onMouseEnter={() => {
+                onPointerNavigate();
+                onHighlightChange(idx);
+              }}
               onMouseDown={(e) => {
                 e.preventDefault();
                 onSelect(mode.id);
@@ -86,7 +97,7 @@ const ModeFlyout: React.FC<ModeFlyoutProps> = ({
             >
               <div className="flex items-center gap-2">
                 <ModeIcon
-                  size={14}
+                  size={DROPDOWN_ITEM.iconSize}
                   strokeWidth={1.75}
                   className={isCurrent ? "text-primary-6" : "text-text-2"}
                 />

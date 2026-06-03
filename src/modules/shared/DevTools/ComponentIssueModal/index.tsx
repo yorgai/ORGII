@@ -139,10 +139,11 @@ const ModalComponentIssue: React.FC<ComponentIssueModalExtendedProps> = ({
         navigateMatch(event.shiftKey ? "prev" : "next");
         return;
       }
+      const target = event.target;
       const fromSearch =
-        event.target === searchInputRef.current ||
-        (searchInputRef.current &&
-          searchInputRef.current.contains(event.target as Node));
+        target === searchInputRef.current ||
+        (target instanceof Node &&
+          searchInputRef.current?.contains(target) === true);
       if (event.key === "ArrowUp" && !event.shiftKey && fromSearch) {
         event.preventDefault();
         const prev = getPreviousElement(getLastHoveredElement());

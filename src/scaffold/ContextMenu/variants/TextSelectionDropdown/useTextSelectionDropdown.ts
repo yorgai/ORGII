@@ -132,8 +132,8 @@ export function useTextSelectionDropdown(
     // Handle click outside to close dropdown
     const handleClickOutside = (event: MouseEvent) => {
       if (visible) {
-        // Check if click is outside dropdown
-        const target = event.target as HTMLElement;
+        const target = event.target;
+        if (!(target instanceof Node)) return;
         const dropdown = document.querySelector(".text-selection-dropdown");
         if (dropdown && !dropdown.contains(target)) {
           hideDropdown();

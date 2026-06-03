@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { repoApi } from "@src/api/tauri/repo";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import { isSystemPathRepoItem } from "@src/features/SessionCreator/utils/systemPathSource";
@@ -102,15 +103,15 @@ const RepoRow: React.FC<RepoRowProps> = ({
       type="button"
       data-testid={`repo-dropdown-row-${repo.id}`}
       {...keyboardProps}
-      className={`${DROPDOWN_CLASSES.itemCompact} ${
+      className={`${DROPDOWN_CLASSES.item} ${
         isCurrent ? DROPDOWN_CLASSES.itemSelected : DROPDOWN_CLASSES.itemHover
       } w-full justify-start`}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
         {isCurrent ? (
-          <Check size={14} className="text-primary-6" />
+          <Check size={DROPDOWN_ITEM.iconSize} className="text-primary-6" />
         ) : (
-          <Icon size={16} />
+          <Icon size={DROPDOWN_ITEM.iconSize} />
         )}
       </span>
       <div className="flex min-w-0 flex-1 flex-col items-start">
@@ -129,34 +130,27 @@ const WorkspaceRow: React.FC<WorkspaceRowProps> = ({
   entry,
   keyboardProps,
 }) => {
-  const { workspace, isActive, folderNames } = entry;
-  const repoCount = workspace.folders.length;
-  const summary = folderNames.join(", ");
+  const { workspace, isActive } = entry;
 
   return (
     <button
       type="button"
       data-testid={`repo-dropdown-workspace-row-${workspace.workspaceId}`}
       {...keyboardProps}
-      className={`${DROPDOWN_CLASSES.itemCompact} ${
+      className={`${DROPDOWN_CLASSES.item} ${
         isActive ? DROPDOWN_CLASSES.itemSelected : DROPDOWN_CLASSES.itemHover
       } w-full justify-start`}
-      title={summary}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
         {isActive ? (
-          <Check size={14} className="text-primary-6" />
+          <Check size={DROPDOWN_ITEM.iconSize} className="text-primary-6" />
         ) : (
-          <ICONS.workspace size={16} />
+          <ICONS.workspace size={DROPDOWN_ITEM.iconSize} />
         )}
       </span>
-      <div className="flex min-w-0 flex-1 flex-col items-start">
-        <span className="truncate">{workspace.name}</span>
-        {summary && (
-          <span className="truncate text-[11px] text-text-3">{summary}</span>
-        )}
-      </div>
-      <span className="ml-2 shrink-0 text-[11px] text-text-3">{repoCount}</span>
+      <span className="min-w-0 flex-1 truncate text-left">
+        {workspace.name}
+      </span>
     </button>
   );
 };
@@ -169,10 +163,10 @@ const OpenPathRow: React.FC<OpenPathRowProps> = ({ item, keyboardProps }) => {
       type="button"
       data-testid="repo-dropdown-open-path-row"
       {...keyboardProps}
-      className={`${DROPDOWN_CLASSES.itemCompact} ${DROPDOWN_CLASSES.itemHover} w-full justify-start`}
+      className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start`}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-        {Icon && <Icon size={16} />}
+        {Icon && <Icon size={DROPDOWN_ITEM.iconSize} />}
       </span>
       <div className="flex min-w-0 flex-1 flex-col items-start">
         <span className="truncate">{item.label}</span>
@@ -445,28 +439,31 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
         width,
       }}
     >
-      <div className={DROPDOWN_CLASSES.searchContainerCompact}>
-        <Search size={14} className="shrink-0 text-text-3" />
+      <div className={DROPDOWN_CLASSES.searchContainer}>
+        <Search
+          size={DROPDOWN_ITEM.iconSize}
+          className="shrink-0 text-text-3"
+        />
         <input
           ref={inputRef}
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           onKeyDown={tauriSelectAll}
           placeholder={t("selectors.spotlight.placeholders.workspace")}
-          className={DROPDOWN_CLASSES.searchInputCompact}
+          className={DROPDOWN_CLASSES.searchInput}
         />
       </div>
 
       <div
-        className={`scrollbar-overlay flex flex-col overflow-y-auto ${DROPDOWN_PANEL.paddingClass} ${DROPDOWN_PANEL.itemsGapClass}`}
+        className={DROPDOWN_CLASSES.optionsContainerOverlay}
         style={{ maxHeight: LIST_MAX_HEIGHT }}
       >
         {repoLoading && dropdownItems.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[12px] text-text-3">
+          <div className={DROPDOWN_CLASSES.listMessage}>
             {t("status.loading")}
           </div>
         ) : dropdownItems.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[12px] text-text-3">
+          <div className={DROPDOWN_CLASSES.listMessage}>
             {t("selectors.modelSelector.noResults")}
           </div>
         ) : (

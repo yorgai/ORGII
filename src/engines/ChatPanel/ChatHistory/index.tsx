@@ -12,7 +12,6 @@ import { useAtomValue } from "jotai";
 import { Loader2 } from "lucide-react";
 import React, {
   useCallback,
-  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -242,9 +241,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   const turnCollapseOverrides = useAtomValue(turnCollapseOverrideAtom);
 
   // --- Optimization ---
-  const deferredChatHistory = useDeferredValue(chatHistory);
   const { optimizedChatHistory, sessionInfo } =
-    useChatHistoryOptimization(deferredChatHistory);
+    useChatHistoryOptimization(chatHistory);
 
   const groupChat = useGroupChatContext();
   const isTurnHeaderItem = useMemo(() => {
@@ -432,7 +430,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   const virtuosoDataKey = `${activeId ?? "no-session"}:${turnPaginationEnabled ? `page-${currentPageIndex}` : "all"}`;
 
   // --- Empty-state grace period ---
-  const optimizedLen = deferredChatHistory.length;
+  const optimizedLen = chatHistory.length;
   const { shouldShowEmpty, emptyConfirmed, isRolledBack, isPendingCancelRef } =
     useChatEmptyState({ sessionLoadStatus, optimizedLen });
 

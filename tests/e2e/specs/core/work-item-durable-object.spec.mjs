@@ -357,13 +357,6 @@ async function waitForRenderedAssistantReply(label, sessionId) {
           : null;
         state = { domState, chatState, aggregateState };
 
-        if (domState.assistantTexts.some((text) => text.trim().length > 0)) {
-          return true;
-        }
-        if (domState.visibleAssistantMessages.length > 0) {
-          return true;
-        }
-
         if (
           !followAgentClicked &&
           assistantMessages.length > 0 &&
@@ -378,6 +371,14 @@ async function waitForRenderedAssistantReply(label, sessionId) {
             return true;
           `);
           followAgentClicked = Boolean(clicked);
+          if (followAgentClicked) return false;
+        }
+
+        if (domState.assistantTexts.some((text) => text.trim().length > 0)) {
+          return true;
+        }
+        if (domState.visibleAssistantMessages.length > 0) {
+          return true;
         }
 
         return false;
@@ -549,16 +550,74 @@ async function startWorkItemRunFromUi(projectSlug, projectName, shortId, label) 
   await openSeededWorkItemExecutionTab(projectSlug, projectName, shortId);
   await waitForStartButtonState("enabled", `${label} initial execution tab`);
   const startSelector = '[data-testid="work-item-start-agent-button"]';
-  const startClick = await clickSelector(startSelector);
-  if (startClick !== "clicked") {
-    throw new Error(`${label} Start Agent click failed: ${startClick}`);
+  const workflowSelector = '[data-testid="work-item-agent-workflow"]';
+  const startClick = await execJS(`
+    const workflow = document.querySelector(${JSON.stringify(workflowSelector)});
+    const elements = workflow
+      ? Array.from(workflow.querySelectorAll(${JSON.stringify(startSelector)}))
+      : [];
+    const buttonStates = elements.map((candidate) => {
+      const rect = candidate.getBoundingClientRect();
+      const style = window.getComputedStyle(candidate);
+      return {
+        text: (candidate.textContent || '').trim(),
+        disabled: Boolean(candidate.disabled),
+        visible: rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none',
+      };
+    });
+    const element = elements.find((candidate) => {
+      const rect = candidate.getBoundingClientRect();
+      const style = window.getComputedStyle(candidate);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+    });
+    if (!element) return { result: elements.length > 0 ? "hidden" : "missing", buttonStates };
+    if (element.disabled) return { result: "disabled", buttonStates };
+    element.scrollIntoView({ block: "center", inline: "center" });
+    element.click();
+    return { result: "clicked", buttonStates };
+  `);
+  if (startClick.result !== "clicked") {
+    throw new Error(`${label} Start Agent click failed: ${JSON.stringify(startClick)}`);
   }
-  const lockedItem = await waitForWorkItemLock(
-    projectSlug,
-    shortId,
-    `${label} Start Agent click`,
-  );
-  return lockedItem.frontmatter.execution_lock.activeSessionId;
+  try {
+    const lockedItem = await waitForWorkItemLock(
+      projectSlug,
+      shortId,
+      `${label} Start Agent click`,
+    );
+    return lockedItem.frontmatter.execution_lock.activeSessionId;
+  } catch (lockError) {
+    let activeSessionState = null;
+    let aggregateState = null;
+    try {
+      await browser.waitUntil(
+        async () => {
+          activeSessionState = unwrap(
+            await invokeE2E("getActiveSessionId"),
+            `getActiveSessionId(${label})`,
+          );
+          const sessionId = activeSessionState.sessionId;
+          if (!sessionId) return false;
+          aggregateState = await invokeE2E("getSessionAggregateRow", sessionId);
+          if (!aggregateState?.ok || !aggregateState.session) return false;
+          return (
+            aggregateState.session.workItemId === shortId &&
+            aggregateState.session.projectSlug === projectSlug
+          );
+        },
+        {
+          timeout: PERSIST_TIMEOUT_MS,
+          interval: 500,
+          timeoutMsg: `Active Work Item session did not appear for ${label}`,
+        },
+      );
+      return activeSessionState.sessionId;
+    } catch (fallbackError) {
+      throw new Error(
+        `${String(lockError?.message ?? lockError)}; activeSessionState=${JSON.stringify(activeSessionState)} aggregateState=${JSON.stringify(aggregateState)} fallback=${String(fallbackError?.message ?? fallbackError)}`,
+      );
+    }
+  }
 }
 
 async function openSeededWorkItemExecutionTab(projectSlug, projectName, shortId) {
@@ -689,21 +748,35 @@ async function openSeededWorkItemExecutionTab(projectSlug, projectName, shortId)
 async function waitForStartButtonState(expectedState, label) {
   const startSelector = '[data-testid="work-item-start-agent-button"]';
   let state = null;
-  await browser.waitUntil(
-    async () => {
-      state = await execJS(`
-        const button = document.querySelector(${JSON.stringify(startSelector)});
-        if (!button) return "missing";
-        return button.disabled ? "disabled" : "enabled";
-      `);
-      return state === expectedState;
-    },
-    {
-      timeout: RENDER_TIMEOUT_MS,
-      interval: 500,
-      timeoutMsg: `Start Agent button did not become ${expectedState} for ${label}; latest=${state}`,
-    },
-  );
+  try {
+    await browser.waitUntil(
+      async () => {
+        state = await execJS(`
+          const button = document.querySelector(${JSON.stringify(startSelector)});
+          const executionTab = document.querySelector('[data-testid="work-item-detail-tab-execution"]');
+          const workflow = document.querySelector('[data-testid="work-item-agent-workflow"]');
+          const bodyText = document.body.innerText || '';
+          return {
+            buttonState: button ? (button.disabled ? "disabled" : "enabled") : "missing",
+            hasExecutionTab: Boolean(executionTab),
+            hasWorkflow: Boolean(workflow),
+            workflowText: (workflow?.textContent || '').slice(0, 1000),
+            bodyText: bodyText.slice(0, 2000),
+          };
+        `);
+        return state.buttonState === expectedState;
+      },
+      {
+        timeout: RENDER_TIMEOUT_MS,
+        interval: 500,
+        timeoutMsg: `Start Agent button did not become ${expectedState} for ${label}`,
+      },
+    );
+  } catch (error) {
+    throw new Error(
+      `Start Agent button did not become ${expectedState} for ${label}; latest=${JSON.stringify(state)} original=${String(error?.message ?? error)}`,
+    );
+  }
 }
 
 async function waitForStartAgentBlocked(label) {

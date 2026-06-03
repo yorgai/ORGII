@@ -91,7 +91,7 @@ export function useGlobalKeydownShortcuts(
       const modifierKey = isMac ? event.metaKey : event.ctrlKey;
 
       if (event.key === "Backspace") {
-        const target = event.target as HTMLElement;
+        const target = event.target;
         if (!isEditableElementExtended(target)) {
           event.preventDefault();
           event.stopPropagation();
@@ -106,7 +106,7 @@ export function useGlobalKeydownShortcuts(
         !event.altKey &&
         inspectModeRef.current
       ) {
-        const target = event.target as HTMLElement;
+        const target = event.target;
         if (!isEditableElement(target)) {
           event.preventDefault();
           event.stopPropagation();
@@ -127,7 +127,7 @@ export function useGlobalKeydownShortcuts(
         !event.shiftKey &&
         inspectModeRef.current
       ) {
-        const target = event.target as HTMLElement;
+        const target = event.target;
         if (!isEditableElement(target)) {
           event.preventDefault();
           event.stopPropagation();
@@ -212,7 +212,7 @@ export function useGlobalKeydownShortcuts(
         !event.shiftKey &&
         !event.altKey
       ) {
-        const target = event.target as HTMLElement;
+        const target = event.target;
         if (isEditableElementExtended(target)) return;
 
         if (event.code === "KeyB") {
@@ -262,10 +262,11 @@ export function useGlobalKeydownShortcuts(
       switch (event.key.toLowerCase()) {
         case "a": {
           if (event.shiftKey || event.altKey) return;
-          const target = event.target as HTMLElement;
+          const target = event.target;
           const terminalEl = document.querySelector(".terminal-core");
           const isTerminalTarget =
-            terminalEl?.contains(target) || terminalEl === target;
+            target instanceof Node &&
+            (terminalEl?.contains(target) || terminalEl === target);
           if (isEditableElementExtended(target) && !isTerminalTarget) return;
           event.preventDefault();
           event.stopPropagation();

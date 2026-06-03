@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, History } from "lucide-react";
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { LinkedSession, OrchestratorPhase } from "@src/api/http/project";
@@ -21,6 +21,7 @@ interface SessionRunHistoryProps {
   showOnlyActive?: boolean;
   onOpenSession?: (sessionId: string) => void;
   onRefresh?: () => void;
+  onSessionComplete?: (sessionId: string) => void;
 }
 
 const SessionRunHistory: React.FC<SessionRunHistoryProps> = ({
@@ -32,6 +33,7 @@ const SessionRunHistory: React.FC<SessionRunHistoryProps> = ({
   showOnlyActive = false,
   onOpenSession,
   onRefresh,
+  onSessionComplete,
 }) => {
   const { t } = useTranslation("projects");
   const filesCacheRef = useRef<SessionFilesCache>(new Map());
@@ -43,6 +45,14 @@ const SessionRunHistory: React.FC<SessionRunHistoryProps> = ({
     phase === "follow_up" ||
     phase === "completed";
   const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  const handleSessionComplete = useCallback(
+    (sessionId: string) => {
+      onSessionComplete?.(sessionId);
+      onRefresh?.();
+    },
+    [onRefresh, onSessionComplete]
+  );
 
   const visibleRuns = showOnlyActive
     ? sessionRuns.filter((run) => run.isActive)
@@ -89,7 +99,9 @@ const SessionRunHistory: React.FC<SessionRunHistoryProps> = ({
                 status="running"
                 isActive={true}
                 onOpenSession={onOpenSession}
-                onSessionComplete={onRefresh}
+                onSessionComplete={() =>
+                  handleSessionComplete(activeAgentSessionId)
+                }
                 onSubAgentChange={onRefresh}
                 filesCache={filesCacheRef}
               />
@@ -106,7 +118,11 @@ const SessionRunHistory: React.FC<SessionRunHistoryProps> = ({
                 status={run.status}
                 isActive={run.isActive}
                 onOpenSession={onOpenSession}
-                onSessionComplete={run.isActive ? onRefresh : undefined}
+                onSessionComplete={
+                  run.isActive
+                    ? () => handleSessionComplete(run.effectiveId)
+                    : undefined
+                }
                 onSubAgentChange={run.isActive ? onRefresh : undefined}
                 subAgentSessions={subAgentsByParent.get(run.effectiveId)}
                 filesCache={filesCacheRef}

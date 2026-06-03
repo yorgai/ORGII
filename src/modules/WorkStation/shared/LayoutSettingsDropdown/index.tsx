@@ -6,6 +6,7 @@
  */
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { HelpCircle } from "lucide-react";
 import React, {
   memo,
   useCallback,
@@ -17,7 +18,9 @@ import React, {
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import Button from "@src/components/Button";
 import { getMaterialConfig } from "@src/components/LiquidGlass/config";
+import { TUTORIALS_OPEN_EVENT } from "@src/scaffold/Tutorials/tutorialRegistry";
 import {
   POPUP_ANIMATION,
   POPUP_SHADOW,
@@ -160,11 +163,12 @@ const LayoutSettingsDropdown: React.FC<LayoutSettingsDropdownProps> = memo(
       if (!isOpen) return;
 
       const handleClickOutside = (event: MouseEvent) => {
+        const target = event.target;
+        if (!(target instanceof Node)) return;
         if (
           containerRef.current &&
-          !containerRef.current.contains(event.target as Node) &&
-          (!triggerRef?.current ||
-            !triggerRef.current.contains(event.target as Node))
+          !containerRef.current.contains(target) &&
+          (!triggerRef?.current || !triggerRef.current.contains(target))
         ) {
           onClose();
         }
@@ -233,6 +237,11 @@ const LayoutSettingsDropdown: React.FC<LayoutSettingsDropdownProps> = memo(
       },
       [setInternalLayoutMode]
     );
+
+    const handleOpenTutorials = useCallback(() => {
+      window.dispatchEvent(new CustomEvent(TUTORIALS_OPEN_EVENT));
+      onClose();
+    }, [onClose]);
 
     // Glass style (matching EllipsisDropdown)
     const containerMaterial = useMemo(
@@ -361,6 +370,21 @@ const LayoutSettingsDropdown: React.FC<LayoutSettingsDropdownProps> = memo(
                   ]}
                   onChange={setModelPickerStyle}
                 />
+              </div>
+
+              <div className="mx-3 border-t border-border-2" />
+
+              <div className="px-3 py-2.5">
+                <Button
+                  size="small"
+                  variant="secondary"
+                  appearance="outline"
+                  long
+                  icon={<HelpCircle size={14} />}
+                  onClick={handleOpenTutorials}
+                >
+                  Tutorials
+                </Button>
               </div>
             </motion.div>
           </>

@@ -643,7 +643,13 @@
     "voiceErrorPermission": "Quyền truy cập micrô bị từ chối. Bật trong cài đặt hệ thống.",
     "voiceErrorUnsupported": "Bản dựng này không hỗ trợ nhập bằng giọng nói.",
     "voiceErrorAudio": "Không phát hiện micrô.",
-    "voiceErrorGeneric": "Nhập bằng giọng nói thất bại. Vui lòng thử lại."
+    "voiceErrorGeneric": "Nhập bằng giọng nói thất bại. Vui lòng thử lại.",
+    "pinnedActions": {
+      "manage": "Quản lý hành động đã ghim",
+      "searchPlaceholder": "Tìm hành động để ghim…",
+      "loading": "Đang tải…",
+      "empty": "Không tìm thấy hành động."
+    }
   },
   "listPanel": {
     "showingOf": "Hiển thị {{filtered}} / {{total}}",

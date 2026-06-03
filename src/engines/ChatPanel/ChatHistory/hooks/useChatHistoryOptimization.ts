@@ -229,10 +229,19 @@ export function useChatHistoryOptimization(
   // chatEvents directly for the scrolling cursor, while the heavy pipeline
   // catches up after the burst.
   const deferredChatEvents = useDeferredValue(chatEvents);
+  const optimizationEvents = useMemo(() => {
+    const latestLastEventId = chatEvents[chatEvents.length - 1]?.id;
+    const deferredLastEventId =
+      deferredChatEvents[deferredChatEvents.length - 1]?.id;
+    const deferredIsStale =
+      deferredChatEvents.length < chatEvents.length ||
+      latestLastEventId !== deferredLastEventId;
+    return deferredIsStale ? chatEvents : deferredChatEvents;
+  }, [chatEvents, deferredChatEvents]);
 
   // Extract session info from session_start events
   const sessionInfo = useMemo<SessionInfo | null>(() => {
-    const sessionStartEvent = deferredChatEvents.find(
+    const sessionStartEvent = optimizationEvents.find(
       (event) => event.actionType === "session_start"
     );
 
@@ -250,7 +259,7 @@ export function useChatHistoryOptimization(
         "",
       startedAt: sessionStartEvent.createdAt,
     };
-  }, [deferredChatEvents]);
+  }, [optimizationEvents]);
 
   // Step 1: Detect execution rounds and collect thread metadata.
   const executionRounds = useMemo<ExecutionRoundInfo[]>(() => {
@@ -258,8 +267,8 @@ export function useChatHistoryOptimization(
     let currentRound: ExecutionRoundInfo | null = null;
     let inThreadSection = false;
 
-    for (let index = 0; index < deferredChatEvents.length; index++) {
-      const event = deferredChatEvents[index];
+    for (let index = 0; index < optimizationEvents.length; index++) {
+      const event = optimizationEvents[index];
       const threadId = event.threadId;
       const actionType = event.actionType;
       const createdAt = event.createdAt;
@@ -308,34 +317,46 @@ export function useChatHistoryOptimization(
     }
 
     return rounds;
-  }, [deferredChatEvents]);
+  }, [optimizationEvents]);
+
+  const effectiveSelectedThreadId = useMemo(() => {
+    if (!selectedThreadId) return null;
+    return optimizationEvents.some(
+      (event) => event.threadId === selectedThreadId
+    )
+      ? selectedThreadId
+      : null;
+  }, [optimizationEvents, selectedThreadId]);
 
   // Phase 2: Base pipeline (thread-INDEPENDENT)
   const basePipelineItems = useMemo(() => {
-    const optimized = processChatItems(deferredChatEvents, {
+    const optimized = processChatItems(optimizationEvents, {
       consolidatePartialObservations: true,
       shouldSkipEvent: skipDiffEvents ? isDiffEventForFilter : undefined,
     });
     return optimized.items;
-  }, [deferredChatEvents, skipDiffEvents]);
+  }, [optimizationEvents, skipDiffEvents]);
 
   // Phase 3: Thread filter + selector insertion (thread-DEPENDENT)
   const optimizedChatHistory = useMemo(() => {
-    const threadFiltered = filterByThread(basePipelineItems, selectedThreadId);
+    const threadFiltered = filterByThread(
+      basePipelineItems,
+      effectiveSelectedThreadId
+    );
 
     const withSelectors = insertThreadSelectors(
       threadFiltered,
-      deferredChatEvents,
+      optimizationEvents,
       executionRounds,
-      selectedThreadId
+      effectiveSelectedThreadId
     );
 
     return withSelectors;
   }, [
     basePipelineItems,
-    deferredChatEvents,
+    effectiveSelectedThreadId,
     executionRounds,
-    selectedThreadId,
+    optimizationEvents,
   ]);
 
   return {

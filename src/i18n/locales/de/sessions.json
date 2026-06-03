@@ -643,7 +643,13 @@
     "voiceErrorPermission": "Mikrofonzugriff verweigert. Aktivieren Sie ihn in den Systemeinstellungen.",
     "voiceErrorUnsupported": "Spracheingabe wird in dieser Version nicht unterstützt.",
     "voiceErrorAudio": "Kein Mikrofon erkannt.",
-    "voiceErrorGeneric": "Spracheingabe fehlgeschlagen. Bitte erneut versuchen."
+    "voiceErrorGeneric": "Spracheingabe fehlgeschlagen. Bitte erneut versuchen.",
+    "pinnedActions": {
+      "manage": "Angeheftete Aktionen verwalten",
+      "searchPlaceholder": "Nach Aktionen zum Anheften suchen…",
+      "loading": "Wird geladen…",
+      "empty": "Keine Aktionen gefunden."
+    }
   },
   "listPanel": {
     "showingOf": "{{filtered}} von {{total}} angezeigt",
