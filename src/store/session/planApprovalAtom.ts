@@ -1,5 +1,5 @@
 /**
- * Plan Approval Atom (Cursor-style non-blocking flow)
+ * Plan Approval Atom (non-blocking flow)
  *
  * Session-scoped pending-plan state consumed by `CreatePlanCard`. The
  * backend-authored plan revision id is matched against the card revision

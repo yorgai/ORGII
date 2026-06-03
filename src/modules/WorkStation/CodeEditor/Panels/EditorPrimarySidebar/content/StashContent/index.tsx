@@ -7,7 +7,7 @@
  * - Pop All button in header
  *
  * Only renders when there are stashes.
- * Follows VS Code style similar to SourceControlChanges.
+ * Follows the same layout pattern as SourceControlChanges.
  */
 import {
   ArchiveRestore,

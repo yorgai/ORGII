@@ -82,7 +82,7 @@ export function useHintMode({
 
       return {
         id: hint.id,
-        // Include prefix right after label for VS Code style (e.g., "Show and Run Commands  >")
+        // Include prefix right after label (e.g., "Show and Run Commands  >")
         label: hint.prefix ? `${label}  ${hint.prefix}` : label,
         icon: ModeIcon,
         type: "hint" as const,

@@ -1,7 +1,7 @@
 /**
  * SearchEditorDocument Component
  *
- * A CodeMirror-based editor for displaying search results in VS Code style.
+ * A CodeMirror-based editor for displaying search results.
  * All results are serialized into a single document with:
  * - Match highlighting via decorations
  * - File path click navigation (clicking file paths navigates to file)

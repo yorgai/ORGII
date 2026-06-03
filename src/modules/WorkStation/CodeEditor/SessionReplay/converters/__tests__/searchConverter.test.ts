@@ -302,7 +302,7 @@ describe("convertToExploreOperation", () => {
     expect(op?.totalMatches).toBe(0);
   });
 
-  it("parses Cursor-style search content arrays", () => {
+  it("parses array-shaped search content", () => {
     const event = minimalSessionEvent({
       functionName: "code_search",
       args: { pattern: "api" },
@@ -327,7 +327,7 @@ describe("convertToExploreOperation", () => {
     });
   });
 
-  it("parses Cursor-style glob content arrays", () => {
+  it("parses array-shaped glob content", () => {
     const event = minimalSessionEvent({
       functionName: "glob_file_search",
       args: { glob_pattern: "**/*.ts" },
@@ -342,7 +342,7 @@ describe("convertToExploreOperation", () => {
     expect(op?.files).toEqual(["src/api.ts", "src/main.ts"]);
   });
 
-  it("parses Cursor-style LSP text content arrays", () => {
+  it("parses array-shaped LSP text content", () => {
     const event = minimalSessionEvent({
       functionName: "query_lsp",
       args: { file_path: "src/api.ts" },
