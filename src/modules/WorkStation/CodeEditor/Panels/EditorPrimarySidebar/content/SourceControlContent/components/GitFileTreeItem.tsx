@@ -2,7 +2,7 @@
  * Git File Tree Item Component
  *
  * Displays git files in a tree structure grouped by directory.
- * VS Code style: folders with status dots, files with status letters.
+ * Folders use status dots; files use status letters.
  * Shows stage/unstage action on hover.
  *
  * Uses shared TreeRow components for base rendering.

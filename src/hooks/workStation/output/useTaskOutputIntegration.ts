@@ -82,7 +82,7 @@ export function useTaskOutputIntegration(
     return channel.id;
   }, [outputState]);
 
-  // Helper: Format timestamp - local time with VS Code style (text-3 color, italic)
+  // Helper: Format timestamp - local time with subdued italic styling
   const formatTimestamp = React.useCallback(() => {
     const now = new Date();
     // Format as YYYY-MM-DD HH:MM:SS.mmm

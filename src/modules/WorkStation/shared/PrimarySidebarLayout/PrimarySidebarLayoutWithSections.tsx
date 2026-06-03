@@ -276,7 +276,7 @@ export const PrimarySidebarLayoutWithSections: React.FC<PrimarySidebarLayoutWith
         [activeTab, tabs, mountedTabs]
       );
 
-      // Tab list dropdown (Cursor-style expandable view list)
+      // Tab list dropdown (expandable view list)
       const {
         isOpen: tabListOpen,
         isPositioned: tabListPositioned,
