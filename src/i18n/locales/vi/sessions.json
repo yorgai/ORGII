@@ -1666,8 +1666,10 @@
     "slashSearchPlaceholder": "Tìm lệnh…",
     "slashMenu": {
       "image": "Hình ảnh",
+      "uploadImage": "Tải hình ảnh lên",
       "mode": "Chế độ",
-      "models": "Mô hình"
+      "models": "Mô hình",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",

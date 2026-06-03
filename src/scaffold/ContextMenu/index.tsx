@@ -12,7 +12,7 @@
  * - File type specific icons
  */
 import { AtSign } from "lucide-react";
-import React, { memo, useCallback, useMemo, useRef } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
 import { useContextMenu } from "@src/hooks/workStation/panels/useContextMenu";
@@ -34,17 +34,37 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   customMentionOptions = [],
   onCustomMentionSelect,
   searchQuery: externalSearchQuery,
+  inlineSearchOnEmpty = false,
   recentFiles = [],
   repoPath,
   className = "",
   keyboardHandlerRef,
   treePosition = "left",
+  keyboardOpened = false,
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const recentCount = Math.min(
     recentFiles.length,
     STYLE_CONFIG.recentSectionMaxItems
+  );
+
+  const filteredCustomMentionOptions = useMemo(() => {
+    const query = (externalSearchQuery ?? "").trim().toLowerCase();
+    if (!query) return customMentionOptions;
+    return customMentionOptions.filter((option) => {
+      const label = option.label.toLowerCase();
+      const description = option.description?.toLowerCase() ?? "";
+      return label.includes(query) || description.includes(query);
+    });
+  }, [customMentionOptions, externalSearchQuery]);
+
+  const handleCustomMentionIndexSelect = useCallback(
+    (optionIndex: number) => {
+      const option = filteredCustomMentionOptions[optionIndex];
+      if (option) onCustomMentionSelect?.(option);
+    },
+    [filteredCustomMentionOptions, onCustomMentionSelect]
   );
 
   const {
@@ -67,7 +87,12 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     repoPath,
     onSelect,
     onClose,
-    externalSearchQuery: externalSearchQuery || undefined,
+    externalSearchQuery,
+    inlineSearchOnEmpty,
+    recentCount,
+    customMentionCount: filteredCustomMentionOptions.length,
+    onCustomMentionIndexSelect: handleCustomMentionIndexSelect,
+    keyboardOpened,
   });
 
   const resetActiveIndex = useCallback(() => {
@@ -79,18 +104,23 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     setSecondLayerActiveIndex(-1);
   }, [setSecondLayerActiveIndex, setKeyboardNavigated]);
 
-  const isInlineSearching =
-    externalSearchQuery && externalSearchQuery.length > 0;
+  useEffect(() => {
+    if (!visible || !keyboardOpened) return;
+    setKeyboardNavigated(true);
+    setActiveIndex(0);
+    setSecondLayerActiveIndex(0);
+  }, [
+    visible,
+    keyboardOpened,
+    externalSearchQuery,
+    setActiveIndex,
+    setKeyboardNavigated,
+    setSecondLayerActiveIndex,
+  ]);
 
-  const filteredCustomMentionOptions = useMemo(() => {
-    const query = (externalSearchQuery ?? "").trim().toLowerCase();
-    if (!query) return customMentionOptions;
-    return customMentionOptions.filter((option) => {
-      const label = option.label.toLowerCase();
-      const description = option.description?.toLowerCase() ?? "";
-      return label.includes(query) || description.includes(query);
-    });
-  }, [customMentionOptions, externalSearchQuery]);
+  const isInlineSearching =
+    externalSearchQuery !== undefined &&
+    (inlineSearchOnEmpty || externalSearchQuery.length > 0);
 
   const { handleMenuItemClick, handleRecentSelect, handleSearchResultSelect } =
     useMenuEffects({
@@ -145,14 +175,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           style={{ width: STYLE_CONFIG.dropdownWidth }}
         >
           <div className={DROPDOWN_CLASSES.itemsColumnPadded}>
-            {filteredCustomMentionOptions.map((option) => (
+            {filteredCustomMentionOptions.map((option, optionIndex) => (
               <MenuItemRow
                 key={option.id}
                 icon={AtSign}
                 label={option.label}
+                isActive={keyboardNavigated && activeIndex === optionIndex}
                 dataTestId="agent-org-mention-option"
                 dataMentionId={option.id}
                 onClick={() => onCustomMentionSelect?.(option)}
+                onMouseEnter={() => handleMainItemHover(optionIndex)}
+                onMouseLeave={resetActiveIndex}
               />
             ))}
           </div>
@@ -211,22 +244,29 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 
           {filteredCustomMentionOptions.length > 0 && (
             <div className={DROPDOWN_CLASSES.sectionContainer}>
-              {filteredCustomMentionOptions.map((option) => (
-                <MenuItemRow
-                  key={option.id}
-                  icon={AtSign}
-                  label={option.label}
-                  dataTestId="agent-org-mention-option"
-                  dataMentionId={option.id}
-                  onClick={() => onCustomMentionSelect?.(option)}
-                />
-              ))}
+              {filteredCustomMentionOptions.map((option, optionIndex) => {
+                const itemIndex = recentCount + optionIndex;
+                return (
+                  <MenuItemRow
+                    key={option.id}
+                    icon={AtSign}
+                    label={option.label}
+                    isActive={keyboardNavigated && activeIndex === itemIndex}
+                    dataTestId="agent-org-mention-option"
+                    dataMentionId={option.id}
+                    onClick={() => onCustomMentionSelect?.(option)}
+                    onMouseEnter={() => handleMainItemHover(itemIndex)}
+                    onMouseLeave={resetActiveIndex}
+                  />
+                );
+              })}
             </div>
           )}
 
           <div className={DROPDOWN_CLASSES.itemsColumnPadded}>
             {MENU_ITEMS.map((item, idx) => {
-              const itemIndex = recentCount + idx;
+              const itemIndex =
+                recentCount + filteredCustomMentionOptions.length + idx;
               return (
                 <MenuItemRow
                   key={item.id}

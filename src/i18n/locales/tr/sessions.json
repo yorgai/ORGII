@@ -1666,8 +1666,10 @@
     "slashSearchPlaceholder": "Komut ara…",
     "slashMenu": {
       "image": "Görsel",
+      "uploadImage": "Görsel yükle",
       "mode": "Mod",
-      "models": "Modeller"
+      "models": "Modeller",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",

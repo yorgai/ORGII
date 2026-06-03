@@ -202,6 +202,11 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
   const tauriSelectAll = useTauriSelectAllShortcut();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (!isOpen && searchQuery) setSearchQuery("");
+  }
 
   const workspaceForm = useWorkspaceForm({
     onSuccess: async (workspaceId?: string) => {
@@ -412,13 +417,12 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
   });
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isPositioned) return;
     const frame = requestAnimationFrame(() => {
-      setSearchQuery("");
       inputRef.current?.focus();
     });
     return () => cancelAnimationFrame(frame);
-  }, [isOpen]);
+  }, [isOpen, isPositioned]);
 
   if (!isOpen || !isPositioned) return null;
 

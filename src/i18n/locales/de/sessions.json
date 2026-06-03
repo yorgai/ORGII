@@ -1666,8 +1666,10 @@
     "slashSearchPlaceholder": "Befehle suchen…",
     "slashMenu": {
       "image": "Bild",
+      "uploadImage": "Bild hochladen",
       "mode": "Modus",
-      "models": "Modelle"
+      "models": "Modelle",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",

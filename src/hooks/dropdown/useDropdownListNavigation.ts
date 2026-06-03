@@ -68,6 +68,11 @@ export interface UseDropdownListNavigationOptions<TItem> {
    */
   initialSelectedIndex?: number;
   /**
+   * When true and the initial row is highlighted visually, first ArrowDown
+   * still lands on that row instead of advancing to the second row.
+   */
+  firstArrowDownSelectsInitial?: boolean;
+  /**
    * Panel ref. When provided, the hook scrolls the matching
    * `[data-dropdown-item-index="N"]` into view as the highlight moves.
    */
@@ -168,6 +173,7 @@ export function useDropdownListNavigation<TItem>(
     onSelect,
     isItemSelectable,
     initialSelectedIndex,
+    firstArrowDownSelectsInitial = false,
     panelRef,
     disableGlobalListener = false,
   } = options;
@@ -185,6 +191,12 @@ export function useDropdownListNavigation<TItem>(
 
   const [selectedIndex, setSelectedIndex] = useState<number>(computeInitial);
   const [keyboardNavigated, setKeyboardNavigated] = useState(false);
+  const keyboardNavigatedRef = useRef(false);
+  const firstArrowDownSelectsInitialRef = useRef(firstArrowDownSelectsInitial);
+
+  useEffect(() => {
+    firstArrowDownSelectsInitialRef.current = firstArrowDownSelectsInitial;
+  }, [firstArrowDownSelectsInitial]);
 
   // Reset highlight on the rising edge of `isOpen`. React's recommended
   // pattern for "adjusting state when a prop changes" is to compare against
@@ -200,6 +212,10 @@ export function useDropdownListNavigation<TItem>(
       setKeyboardNavigated(false);
     }
   }
+
+  useEffect(() => {
+    keyboardNavigatedRef.current = keyboardNavigated;
+  }, [keyboardNavigated]);
 
   // Stable refs for the global listener so it doesn't reattach.
   const stateRef = useRef({ items, selectedIndex });
@@ -237,9 +253,17 @@ export function useDropdownListNavigation<TItem>(
         case "ArrowDown": {
           event.preventDefault();
           event.stopPropagation();
-          const next = findSelectable(refItems, refIndex, 1, refSelectable);
+          const next =
+            firstArrowDownSelectsInitialRef.current &&
+            !keyboardNavigatedRef.current &&
+            refIndex >= 0
+              ? refIndex
+              : findSelectable(refItems, refIndex, 1, refSelectable);
           if (next !== refIndex) {
             setSelectedIndex(next);
+          }
+          if (next >= 0) {
+            keyboardNavigatedRef.current = true;
             setKeyboardNavigated(true);
           }
           return true;
@@ -250,6 +274,7 @@ export function useDropdownListNavigation<TItem>(
           const next = findSelectable(refItems, refIndex, -1, refSelectable);
           if (next !== refIndex) {
             setSelectedIndex(next);
+            keyboardNavigatedRef.current = true;
             setKeyboardNavigated(true);
           }
           return true;
@@ -260,6 +285,7 @@ export function useDropdownListNavigation<TItem>(
           const next = findSelectable(refItems, -1, 1, refSelectable);
           if (next !== refIndex && next >= 0) {
             setSelectedIndex(next);
+            keyboardNavigatedRef.current = true;
             setKeyboardNavigated(true);
           }
           return true;
@@ -270,6 +296,7 @@ export function useDropdownListNavigation<TItem>(
           const next = findSelectable(refItems, -1, -1, refSelectable);
           if (next !== refIndex && next >= 0) {
             setSelectedIndex(next);
+            keyboardNavigatedRef.current = true;
             setKeyboardNavigated(true);
           }
           return true;
@@ -315,6 +342,7 @@ export function useDropdownListNavigation<TItem>(
   );
 
   const clearKeyboardNavigation = useCallback(() => {
+    keyboardNavigatedRef.current = false;
     setKeyboardNavigated(false);
   }, []);
 

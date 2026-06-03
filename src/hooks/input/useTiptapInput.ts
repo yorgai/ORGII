@@ -1,9 +1,9 @@
 /**
  * useTiptapInput Hook
  *
- * Provides state and handlers for TiptapInput component integration.
- * This is a simpler alternative to useContextInput that leverages
- * Tiptap's built-in selection and cursor management.
+ * Provides state and handlers for ComposerInput integration.
+ * This is a simpler alternative to useContextInput that uses the browser's
+ * contenteditable selection and cursor management.
  *
  * @example
  * const { tiptapRef, handleAtSelect, ... } = useTiptapInput({
@@ -112,7 +112,7 @@ export interface UseTiptapInputOptions {
 }
 
 export interface UseTiptapInputReturn {
-  /** Ref to attach to TiptapInput */
+  /** Ref to attach to ComposerInput */
   tiptapRef: RefObject<TiptapInputRef>;
   /** @ dropdown container ref */
   atDropdownRef: RefObject<HTMLDivElement>;
@@ -136,7 +136,7 @@ export interface UseTiptapInputReturn {
   contextItems: ContextItem[];
   /** Dark mode flag */
   isDark: boolean;
-  /** Handle @ mention trigger from TiptapInput */
+  /** Handle @ mention trigger from ComposerInput */
   handleAtMention: (query: string, position: { x: number; y: number }) => void;
   /** Handle @ mention close */
   handleAtMentionClose: () => void;
@@ -144,6 +144,8 @@ export interface UseTiptapInputReturn {
   handleAtSelect: (type: string, value?: string, displayName?: string) => void;
   /** Handle manual @ button click */
   handleAtMentionClick: () => void;
+  /** Whether the @ menu was opened by typing @ in the editor. */
+  contextMenuKeyboardOpened: boolean;
   /** Get plain text content */
   getTextContent: () => string;
   /** Get all file pills */
@@ -197,6 +199,8 @@ export function useTiptapInput(
 
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [atSearchQuery, setAtSearchQuery] = useState("");
+  const [contextMenuKeyboardOpened, setContextMenuKeyboardOpened] =
+    useState(false);
   const [contextItems, setContextItems] = useState<ContextItem[]>([]);
   const [_dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
 
@@ -238,10 +242,11 @@ export function useTiptapInput(
   // ============================================
 
   /**
-   * Handle @ mention trigger from TiptapInput
+   * Handle @ mention trigger from ComposerInput
    */
   const handleAtMention = useCallback(
     (query: string, position: { x: number; y: number }) => {
+      setContextMenuKeyboardOpened(true);
       setAtSearchQuery(query);
       setDropdownPosition(position);
       setShowContextMenu(true);
@@ -253,6 +258,7 @@ export function useTiptapInput(
    * Handle @ mention close
    */
   const handleAtMentionClose = useCallback(() => {
+    setContextMenuKeyboardOpened(false);
     setShowContextMenu(false);
     setAtSearchQuery("");
   }, []);
@@ -421,6 +427,7 @@ export function useTiptapInput(
    * Handle manual @ button click
    */
   const handleAtMentionClick = useCallback(() => {
+    setContextMenuKeyboardOpened(false);
     if (!tiptapRef.current) return;
 
     const editor = tiptapRef.current.getEditor();
@@ -486,6 +493,7 @@ export function useTiptapInput(
     handleAtMentionClose,
     handleAtSelect,
     handleAtMentionClick,
+    contextMenuKeyboardOpened,
     getTextContent,
     getFilePills,
     clearInput,

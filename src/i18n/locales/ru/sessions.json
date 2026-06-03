@@ -1672,8 +1672,10 @@
     "slashSearchPlaceholder": "Поиск команд…",
     "slashMenu": {
       "image": "Изображение",
+      "uploadImage": "Загрузить изображение",
       "mode": "Режим",
-      "models": "Модели"
+      "models": "Модели",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",

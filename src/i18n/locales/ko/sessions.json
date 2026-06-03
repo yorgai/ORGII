@@ -1665,8 +1665,10 @@
     "slashSearchPlaceholder": "명령 검색…",
     "slashMenu": {
       "image": "이미지",
+      "uploadImage": "이미지 업로드",
       "mode": "모드",
-      "models": "모델"
+      "models": "모델",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",

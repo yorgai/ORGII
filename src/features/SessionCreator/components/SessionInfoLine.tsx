@@ -239,12 +239,12 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
 
   const handleRepoTriggerClick = useCallback(() => {
     if (disabled) return;
-    setIsRepoSelectorOpen(true);
+    setIsRepoSelectorOpen((isOpen) => !isOpen);
   }, [disabled]);
 
   const handleBranchTriggerClick = useCallback(() => {
     if (disabled) return;
-    setIsBranchSelectorOpen(true);
+    setIsBranchSelectorOpen((isOpen) => !isOpen);
   }, [disabled]);
 
   const handleRepoSelected = useCallback(

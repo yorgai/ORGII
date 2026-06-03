@@ -14,11 +14,11 @@ import type { ListEntry } from "./types";
 interface UseEntriesOptions {
   items: SlashItem[];
   searchQuery: string;
-  /** Show Mode / Models flyout triggers + Image row (true = + button menu). */
+  /** Use the sectioned command layout: Upload Image, Mode, Skills. */
   showActionFlyouts: boolean;
   hasImageUpload: boolean;
-  /** When true and items is still empty, render placeholder flyout triggers. */
-  loading?: boolean;
+  /** When false, hides mode rows in inline search results. */
+  showModeRows?: boolean;
 }
 
 interface UseEntriesResult {
@@ -30,13 +30,9 @@ interface UseEntriesResult {
  * Builds the unified flat-list entries for the slash command menu.
  *
  * Layout when showActionFlyouts=true and not searching:
- *   Mode flyout trigger
- *   Divider
- *   Image row (if hasImageUpload)
- *   Models flyout trigger
- *   Skills flyout trigger (if any skills)
- *   MCP Servers flyout trigger (if any tools)
- *   Actions flat list (if any action items)
+ *   Upload Image section (if image upload is available)
+ *   Mode section (direct mode rows)
+ *   Skills section (direct skill rows)
  *
  * Layout when showActionFlyouts=false (inline / typing mode):
  *   Slash item categories only (flat or flyout per category)
@@ -48,62 +44,65 @@ export function useEntries({
   searchQuery,
   showActionFlyouts,
   hasImageUpload,
-  loading = false,
+  showModeRows = true,
 }: UseEntriesOptions): UseEntriesResult {
   return useMemo(() => {
     const result: ListEntry[] = [];
     let idx = 0;
     const isSearching = Boolean(searchQuery);
 
-    if (showActionFlyouts && !isSearching) {
-      // Mode flyout trigger
-      result.push({ kind: "mode-flyout", flatIndex: idx++ });
+    if (showActionFlyouts) {
+      const query = searchQuery.trim();
+      const imageMatches =
+        !query ||
+        fuzzyMatch(query, "Upload Image") ||
+        fuzzyMatch(query, "Image");
+      const matchedModes = showModeRows
+        ? AGENT_EXEC_MODES.filter(
+            (mode) =>
+              !query ||
+              fuzzyMatch(query, mode.name) ||
+              fuzzyMatch(query, mode.id)
+          )
+        : [];
+      const matchedSkillItems = items.filter(
+        (entry) =>
+          entry.category === "skill" &&
+          (!query ||
+            fuzzyMatch(query, entry.name) ||
+            fuzzyMatch(query, entry.description ?? ""))
+      );
 
-      // Divider between mode/image/models and skills/tools
-      result.push({ kind: "divider" });
-
-      // Image upload row
-      if (hasImageUpload) {
+      if (hasImageUpload && imageMatches) {
+        result.push({
+          kind: "header",
+          label: "Upload Image",
+          translationKey: "creator.slashMenu.uploadImage",
+        });
         result.push({ kind: "image", flatIndex: idx++ });
       }
 
-      // Models flyout trigger
-      result.push({ kind: "models-flyout", flatIndex: idx++ });
+      if (matchedModes.length > 0) {
+        if (result.length > 0) result.push({ kind: "divider" });
+        result.push({
+          kind: "header",
+          label: "Mode",
+          translationKey: "creator.slashMenu.mode",
+        });
+        for (const mode of matchedModes) {
+          result.push({ kind: "mode", mode, flatIndex: idx++ });
+        }
+      }
 
-      // Slash item categories as flyout triggers (no search)
-      const hasSkillOrTool = items.some(
-        (i) => i.category === "skill" || i.category === "tool"
-      );
-
-      for (const category of CATEGORY_ORDER) {
-        const catItems = items.filter((item) => item.category === category);
-
-        if (FLYOUT_CATEGORIES.has(category)) {
-          if (catItems.length > 0) {
-            result.push({
-              kind: "flyout",
-              category,
-              label: CATEGORY_LABELS[category],
-              items: catItems,
-              flatIndex: idx++,
-            });
-          } else if (loading && !hasSkillOrTool) {
-            // While the first fetch is in-flight, render a disabled placeholder
-            // so the layout doesn't jump once data arrives.
-            result.push({
-              kind: "flyout",
-              category,
-              label: CATEGORY_LABELS[category],
-              items: [],
-              flatIndex: idx++,
-            });
-          }
-        } else {
-          if (catItems.length === 0) continue;
-          result.push({ kind: "header", label: CATEGORY_LABELS[category] });
-          for (const item of catItems) {
-            result.push({ kind: "item", item, flatIndex: idx++ });
-          }
+      if (matchedSkillItems.length > 0) {
+        if (result.length > 0) result.push({ kind: "divider" });
+        result.push({
+          kind: "header",
+          label: CATEGORY_LABELS.skill,
+          translationKey: "creator.slashMenu.skills",
+        });
+        for (const item of matchedSkillItems) {
+          result.push({ kind: "item", item, flatIndex: idx++ });
         }
       }
 
@@ -113,12 +112,16 @@ export function useEntries({
     // ── Inline / search path ─────────────────────────────────────────────────
 
     // Mode rows when showActionFlyouts=false and searching (filter by query)
-    if (!showActionFlyouts && isSearching) {
+    if (showModeRows && !showActionFlyouts && isSearching) {
       const matchedModes = AGENT_EXEC_MODES.filter(
         (m) => fuzzyMatch(searchQuery, m.name) || fuzzyMatch(searchQuery, m.id)
       );
       if (matchedModes.length > 0) {
-        result.push({ kind: "header", label: "Mode" });
+        result.push({
+          kind: "header",
+          label: "Mode",
+          translationKey: "creator.slashMenu.mode",
+        });
         for (const mode of matchedModes) {
           result.push({ kind: "mode", mode, flatIndex: idx++ });
         }
@@ -147,5 +150,5 @@ export function useEntries({
     }
 
     return { entries: result, totalFlat: idx };
-  }, [items, searchQuery, showActionFlyouts, hasImageUpload, loading]);
+  }, [items, searchQuery, showActionFlyouts, hasImageUpload, showModeRows]);
 }

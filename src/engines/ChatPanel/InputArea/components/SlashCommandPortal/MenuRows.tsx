@@ -18,11 +18,7 @@ import type {
 import { MenuItemRow } from "@src/scaffold/ContextMenu/ResultItems";
 import type { SlashItem, SlashItemCategory } from "@src/types/extensions";
 
-import {
-  ModeIcon as ModeIconComponent,
-  ModelsIcon as ModelsIconComponent,
-  categoryIcon,
-} from "./constants";
+import { categoryIcon } from "./constants";
 
 // ── Shared ────────────────────────────────────────────────────────────────────
 
@@ -215,111 +211,6 @@ export const DividerRow: React.FC = () => (
 );
 
 DividerRow.displayName = "DividerRow";
-
-// ── ModeFlyoutTriggerRow ──────────────────────────────────────────────────────
-
-interface ModeFlyoutTriggerRowProps {
-  isActive: boolean;
-  isOpen: boolean;
-  currentModeName: string;
-  onMouseEnter: (event: React.MouseEvent<HTMLDivElement>) => void;
-  onMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void;
-}
-
-export const ModeFlyoutTriggerRow: React.FC<ModeFlyoutTriggerRowProps> =
-  React.memo(
-    ({ isActive, isOpen, currentModeName, onMouseEnter, onMouseDown }) => {
-      const { t } = useTranslation("sessions");
-      return (
-        <div
-          data-slash-flat
-          data-testid="slash-command-mode-flyout-trigger"
-          className={`${rowClass(isActive, isOpen)} justify-between`}
-          onMouseEnter={onMouseEnter}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            onMouseDown(e);
-          }}
-        >
-          <div className="flex items-center gap-2">
-            {React.createElement(ModeIconComponent, {
-              size: 14,
-              strokeWidth: 1.75,
-              className: iconClass(isOpen),
-            })}
-            <span className={labelClass(isOpen)}>
-              {t("creator.slashMenu.mode", { defaultValue: "Mode" })}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[12px] text-text-3">{currentModeName}</span>
-            <ChevronRight
-              size={DROPDOWN_ITEM.iconSize}
-              strokeWidth={1.75}
-              className={isOpen ? "text-primary-6" : "text-text-3"}
-            />
-          </div>
-        </div>
-      );
-    }
-  );
-
-ModeFlyoutTriggerRow.displayName = "ModeFlyoutTriggerRow";
-
-// ── ModelsFlyoutTriggerRow ────────────────────────────────────────────────────
-
-interface ModelsFlyoutTriggerRowProps {
-  isActive: boolean;
-  isOpen: boolean;
-  currentModelName: string;
-  onMouseEnter: (event: React.MouseEvent<HTMLDivElement>) => void;
-  onMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void;
-}
-
-export const ModelsFlyoutTriggerRow: React.FC<ModelsFlyoutTriggerRowProps> =
-  React.memo(
-    ({ isActive, isOpen, currentModelName, onMouseEnter, onMouseDown }) => {
-      const { t } = useTranslation("sessions");
-      return (
-        <div
-          data-slash-flat
-          className={`${rowClass(isActive, isOpen)} justify-between`}
-          onMouseEnter={onMouseEnter}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            onMouseDown(e);
-          }}
-        >
-          <div className="flex items-center gap-2">
-            {React.createElement(ModelsIconComponent, {
-              size: 14,
-              strokeWidth: 1.75,
-              className: iconClass(isOpen),
-            })}
-            <span className={labelClass(isOpen)}>
-              {t("creator.slashMenu.models", { defaultValue: "Models" })}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span
-              className="shrink-0 truncate text-[12px] text-text-3"
-              style={{ maxWidth: 100 }}
-            >
-              {currentModelName}
-            </span>
-            <ChevronRight
-              size={DROPDOWN_ITEM.iconSize}
-              strokeWidth={1.75}
-              className={isOpen ? "text-primary-6" : "text-text-3"}
-            />
-          </div>
-        </div>
-      );
-    }
-  );
-
-ModelsFlyoutTriggerRow.displayName = "ModelsFlyoutTriggerRow";
-
 // ── Re-export AgentExecMode for callers that need it ──────────────────────────
 
 export type { AgentExecMode };
