@@ -147,7 +147,6 @@ function shouldSuppressLine(clean) {
     clean === "> node scripts/dev/webpack-server.js" ||
     clean === "webpack compiled successfully" ||
     /^webpack compiled successfully in \d+ ms$/.test(clean) ||
-    /^\[webpackbar\] [ℹ✔] /.test(clean) ||
     clean.includes("[builtin-overrides] Loaded ") ||
     clean.includes("Started watching repository:") ||
     clean.includes("Successfully started watching repo:") ||

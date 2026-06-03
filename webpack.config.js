@@ -2,7 +2,6 @@ const webpack = require("webpack");
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const ReactRefreshWebpackPlugin = require("@pmmmwh/react-refresh-webpack-plugin");
-const WebpackBar = require("webpackbar");
 const Dotenv = require("dotenv-webpack");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
@@ -440,7 +439,6 @@ module.exports = (env, argv) => {
       !isProduction &&
         !useFastDev &&
         new ReactRefreshWebpackPlugin({ overlay: false }),
-      !isE2E && new WebpackBar(),
       new Dotenv(),
       isProduction &&
         new MiniCssExtractPlugin({
