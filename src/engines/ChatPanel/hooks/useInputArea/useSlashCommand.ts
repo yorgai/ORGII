@@ -150,13 +150,13 @@ export function useSlashCommand(
         // `name [skill:/<skillName>]` and useSubmitMessage expands it to
         // `/<skillName>` for the Rust backend's skill expansion.
         const skillToken = `/${item.skillName ?? item.name}`;
-        // When the user typed real content before opening the menu, preserve
-        // it by prepending the pill. When the editor only contains the "/"
-        // query trigger (or is empty), replace the whole content.
+        // When the editor only contains the "/" query trigger (or is empty),
+        // clear first then insert. Otherwise append the pill after existing
+        // content so the user's prior text is preserved.
         const hasUserContent =
           !tiptapRef.current.isEmpty() && queryRef.current.length === 0;
         if (hasUserContent) {
-          tiptapRef.current.prependFilePill(
+          tiptapRef.current.appendFilePill(
             skillToken,
             false,
             "skill",
