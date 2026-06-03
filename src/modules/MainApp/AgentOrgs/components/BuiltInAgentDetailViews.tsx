@@ -66,7 +66,10 @@ export const BuiltInAgentDetailView: React.FC<BuiltInAgentDetailViewProps> = ({
 
   if (isFullHeight && activeTab === "tools") {
     return (
-      <DetailPanelContainer testId={detailTestId}>
+      <DetailPanelContainer
+        testId={detailTestId}
+        rootProps={{ "data-active-tab": activeTab }}
+      >
         <CustomAgentToolsSection
           agentId={agentId}
           headerElement={headerElement}
@@ -77,7 +80,11 @@ export const BuiltInAgentDetailView: React.FC<BuiltInAgentDetailViewProps> = ({
 
   if (isFullHeight && activeTab === "skillsets") {
     return (
-      <div className="flex h-full flex-col" data-testid={detailTestId}>
+      <div
+        className="flex h-full flex-col"
+        data-active-tab={activeTab}
+        data-testid={detailTestId}
+      >
         <AgentSkillsetsSection
           headerElement={headerElement}
           agentId={agentId}
@@ -89,7 +96,10 @@ export const BuiltInAgentDetailView: React.FC<BuiltInAgentDetailViewProps> = ({
   }
 
   return (
-    <DetailPanelContainer testId={detailTestId}>
+    <DetailPanelContainer
+      testId={detailTestId}
+      rootProps={{ "data-active-tab": activeTab }}
+    >
       {headerElement}
       <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
         <div className={DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop}>

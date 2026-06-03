@@ -342,6 +342,7 @@ export default function MyAccountsTableSection({
       size="default"
       icon={<Plus size={14} />}
       onClick={onAdd}
+      data-testid="key-vault-add-account-button"
     >
       {t("keyVault.addAccount")}
     </Button>

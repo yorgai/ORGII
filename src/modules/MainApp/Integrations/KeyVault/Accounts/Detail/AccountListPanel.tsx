@@ -113,6 +113,7 @@ const AccountListPanel: React.FC<AccountListPanelProps> = ({
           icon={<Plus size={16} />}
           long
           onClick={onAddAccount}
+          data-testid="key-vault-add-account-button"
         >
           {t("keyVault.addAccount")}
         </Button>

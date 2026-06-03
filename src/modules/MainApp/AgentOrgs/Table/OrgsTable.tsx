@@ -56,6 +56,7 @@ const OrgsTable: React.FC<OrgsTableProps> = ({
       variant: "org",
       entityId: row.id,
       displayName: row.name,
+      entitySnapshot: row,
     });
   }, []);
 
@@ -109,6 +110,7 @@ const OrgsTable: React.FC<OrgsTableProps> = ({
             <Button
               variant="secondary"
               size="small"
+              data-testid={`agent-orgs-org-view-button-${row.id}`}
               onClick={() => handleView(row)}
             >
               {t("common:actions.view", { defaultValue: "View" })}
@@ -119,6 +121,7 @@ const OrgsTable: React.FC<OrgsTableProps> = ({
               size="small"
               icon={<Trash2 size={14} />}
               iconOnly
+              data-testid={`agent-orgs-org-delete-row-button-${row.id}`}
               onClick={() => void onDeleteOrg(row.id)}
               aria-label={t("common:actions.delete", {
                 defaultValue: "Delete",
@@ -141,6 +144,7 @@ const OrgsTable: React.FC<OrgsTableProps> = ({
       iconOnly
       aria-label={addOrgLabel}
       title={addOrgLabel}
+      data-testid="agent-orgs-add-org-button"
       onClick={onAddOrg}
     />
   );

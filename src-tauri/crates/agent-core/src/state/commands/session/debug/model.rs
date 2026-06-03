@@ -30,6 +30,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::model_context::compaction::CompactionConfig;
 use crate::state::AgentAppState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -58,6 +59,9 @@ pub struct SessionModelSnapshot {
     /// Effective fallback chain `ReliableProvider` iterates over,
     /// sourced from `reliability.fallback_models`.
     pub fallback_models: Vec<String>,
+    /// Effective context compaction settings resolved from the agent
+    /// definition + inheritance chain at session launch.
+    pub compaction: CompactionConfig,
 }
 
 #[tauri::command]
@@ -87,5 +91,6 @@ pub async fn debug_session_model_snapshot(
         resolved_selected_model_id: runtime.resolved.selected_model_id.clone(),
         resolved_selected_account_id: runtime.resolved.selected_account_id.clone(),
         fallback_models: runtime.resolved.reliability.fallback_models.clone(),
+        compaction: runtime.resolved.compaction.clone(),
     })
 }

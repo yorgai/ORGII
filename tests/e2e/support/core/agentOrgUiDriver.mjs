@@ -164,19 +164,33 @@ export const js = {
     return element ? (element.textContent || "") : "";
   `,
   click: (selector) => `
-    const element = document.querySelector(${JSON.stringify(selector)});
+    const candidates = Array.from(document.querySelectorAll(${JSON.stringify(selector)}));
+    const visible = candidates.filter((candidate) => {
+      const rect = candidate.getBoundingClientRect();
+      const style = window.getComputedStyle(candidate);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+    });
+    const element = visible[visible.length - 1] ?? candidates[candidates.length - 1] ?? null;
     if (!element) return "missing";
     if (element.disabled) return "disabled";
     element.click();
     return "clicked";
   `,
   inputValue: (selector, value) => `
-    const element = document.querySelector(${JSON.stringify(selector)});
+    const candidates = Array.from(document.querySelectorAll(${JSON.stringify(selector)}));
+    const visible = candidates.filter((candidate) => {
+      const rect = candidate.getBoundingClientRect();
+      const style = window.getComputedStyle(candidate);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+    });
+    const element = visible[visible.length - 1] ?? candidates[candidates.length - 1] ?? null;
     if (!element) return "missing";
     if (!(element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) return "not-input";
     element.focus();
     const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), "value")?.set;
+    const previousValue = element.value;
     setter?.call(element, ${JSON.stringify(value)});
+    element._valueTracker?.setValue?.(previousValue);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
     return element.value === ${JSON.stringify(value)} ? "typed" : element.value;
@@ -485,11 +499,18 @@ export async function createRenderedStrictTwoMemberAgentOrg({
   if (!leadName) leadName = `E2E ${tag} Lead ${RUN_ID}`;
   if (!childName) childName = `E2E ${tag} Child ${RUN_ID}`;
   unwrap(
-    await invokeE2E("navigateTo", "/orgii/app/settings/agents"),
+    await invokeE2E("navigateTo", "/orgii/app/settings/agent-orgs/agents"),
     "navigateTo Agent Org settings"
   );
+  await browser.waitUntil(
+    async () => !(await execJS(js.exists('[data-testid="agent-orgs-org-wizard-root"]'))),
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: "previous Agent Org wizard did not unmount",
+    }
+  );
   unwrap(
-    await invokeE2E("navigateTo", "/orgii/app/settings/agents?wizard=org-add"),
+    await invokeE2E("navigateTo", "/orgii/app/settings/agent-orgs/agents?wizard=org-add"),
     "navigateTo Agent Org add wizard"
   );
   await browser.waitUntil(
@@ -597,6 +618,45 @@ export async function createRenderedStrictTwoMemberAgentOrg({
     );
   }
 
+  let saveState = null;
+  try {
+    await browser.waitUntil(
+      async () => {
+        saveState = await execJS(`
+        const isVisible = (element) => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+        };
+        const visibleLast = (selector) => Array.from(document.querySelectorAll(selector)).filter(isVisible).at(-1) ?? null;
+        const valueOf = (selector) => visibleLast(selector)?.value ?? null;
+        const textOf = (selector) => visibleLast(selector)?.textContent?.trim() ?? null;
+        const button = visibleLast('[data-testid="agent-orgs-org-wizard-save-button"]');
+        return {
+          enabled: !!button && !button.disabled,
+          orgName: valueOf('[data-testid="agent-orgs-org-name-input"]'),
+          coordinatorText: textOf('[data-testid="agent-orgs-org-coordinator-select"]'),
+          memberInputs: Array.from(document.querySelectorAll('[data-testid^="agent-orgs-member-"][data-testid$="-name-input"], [data-testid^="agent-orgs-member-"][data-testid$="-role-input"], [data-testid^="agent-orgs-member-"][data-testid$="-agent-select"]')).filter(isVisible).map((element) => ({
+              testId: element.getAttribute('data-testid'),
+              value: element.value ?? null,
+              text: element.textContent?.trim() ?? null,
+            })),
+          };
+        `);
+        return saveState?.enabled === true;
+      },
+      {
+        timeout: RENDER_TIMEOUT_MS,
+        interval: 100,
+        timeoutMsg: "Agent Org save button never became enabled",
+      }
+    );
+  } catch (error) {
+    throw new Error(
+      `Agent Org save button never became enabled: ${JSON.stringify(saveState)}`,
+      { cause: error }
+    );
+  }
   const saveResult = await execJS(
     js.click('[data-testid="agent-orgs-org-wizard-save-button"]')
   );
