@@ -10,6 +10,7 @@ import {
   settingsAtom,
   updateSettingAtom,
 } from "@src/store/settings/settingsAtom";
+import type { WorkItem } from "@src/types/core/workItem";
 import { createZodJsonStorage } from "@src/util/core/storage/zodStorage";
 
 // ============================================
@@ -240,6 +241,18 @@ export const chatPanelCreateTargetAtom = atom<ChatPanelCreateTarget>(
   DEFAULT_CHAT_PANEL_CREATE_TARGET
 );
 chatPanelCreateTargetAtom.debugLabel = "chatPanelCreateTargetAtom";
+
+export interface ChatPanelSelectedWorkItem {
+  workItem: WorkItem;
+  projectId: string;
+  projectName: string;
+  projectSlug: string;
+  shortId: string;
+}
+
+export const chatPanelSelectedWorkItemAtom =
+  atom<ChatPanelSelectedWorkItem | null>(null);
+chatPanelSelectedWorkItemAtom.debugLabel = "chatPanelSelectedWorkItemAtom";
 
 /**
  * Whether the chat-panel slot covers the entire main content area.

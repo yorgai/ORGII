@@ -19,8 +19,8 @@ export interface HoverCardState {
    * by instance — not by sessionId.
    */
   activeInstanceId: number | null;
-  /** Session whose card is currently shown, or `null` when nothing is visible. */
-  activeSessionId: string | null;
+  /** Identifier whose card is currently shown, or `null` when nothing is visible. */
+  activeCardId: string | null;
   /** Anchor rect for the active trigger — drives the portal positioning. */
   triggerRect: DOMRect | null;
   /** Position style for the active trigger. */
@@ -31,7 +31,7 @@ export interface HoverCardState {
 
 const initialState: HoverCardState = {
   activeInstanceId: null,
-  activeSessionId: null,
+  activeCardId: null,
   triggerRect: null,
   position: DEFAULT_POSITION,
   revision: 0,
@@ -78,14 +78,14 @@ export function cancelPendingClose(): void {
 
 export function openCard(
   instanceId: number,
-  sessionId: string,
+  cardId: string,
   triggerRect: DOMRect,
   position: HoverCardPosition
 ): void {
   cancelPendingClose();
   state = {
     activeInstanceId: instanceId,
-    activeSessionId: sessionId,
+    activeCardId: cardId,
     triggerRect,
     position,
     revision: state.revision + 1,
@@ -101,7 +101,7 @@ export function scheduleClose(instanceId: number, delayMs: number): void {
     if (state.activeInstanceId !== instanceId) return;
     state = {
       activeInstanceId: null,
-      activeSessionId: null,
+      activeCardId: null,
       triggerRect: null,
       position: DEFAULT_POSITION,
       revision: state.revision + 1,

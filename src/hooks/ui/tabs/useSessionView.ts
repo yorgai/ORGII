@@ -17,6 +17,7 @@ import {
   updateSessionMetadataAtom,
   workstationActiveSessionIdAtom,
 } from "@src/store/session";
+import { chatPanelSelectedWorkItemAtom } from "@src/store/ui/chatPanelAtom";
 
 // ============================================
 // Types
@@ -59,6 +60,9 @@ export function useSessionView(): UseSessionViewReturn {
   const hasActiveSession = useAtomValue(hasActiveSessionAtom);
 
   const jumpToSession = useSetAtom(jumpToSessionAtom);
+  const setChatPanelSelectedWorkItem = useSetAtom(
+    chatPanelSelectedWorkItemAtom
+  );
   const closeSessionAction = useSetAtom(closeSessionAtom);
   const updateMetadataAction = useSetAtom(updateSessionMetadataAtom);
 
@@ -66,10 +70,11 @@ export function useSessionView(): UseSessionViewReturn {
     (sessionId: string, sessionName?: string, repoPath?: string): void => {
       // Single atom write — `jumpToSessionAtom` accepts the rich
       // payload form so we don't double-flush sessionViewAtom.
+      setChatPanelSelectedWorkItem(null);
       jumpToSession({ sessionId, sessionName, repoPath });
       navigate(ROUTES.workStation.base.path);
     },
-    [jumpToSession, navigate]
+    [jumpToSession, navigate, setChatPanelSelectedWorkItem]
   );
 
   const closeSession = useCallback((): void => {

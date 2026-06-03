@@ -69,6 +69,7 @@ import {
   type ChatPanelCreateTarget,
   chatPanelCreateTargetAtom,
   chatPanelMaximizedAtom,
+  chatPanelSelectedWorkItemAtom,
   chatTurnPaginationEnabledAtom,
   chatWidthAtom,
   toggleChatPanelMaximizedAtom,
@@ -79,6 +80,7 @@ import { createBenchmarkTab } from "@src/store/workstation/tabs";
 
 import { useReloadSession } from "./ChatHistory/hooks/useReloadSession";
 import ChatView from "./ChatView";
+import WorkItemPanelView from "./WorkItemPanelView";
 import { useChatPanelResize } from "./hooks/useChatPanelResize";
 import { usePanelTitle } from "./hooks/usePanelTitle";
 import type { ChatPanelProps, ChatPanelRegionNotice } from "./types";
@@ -127,6 +129,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const handleReloadSession = useReloadSession(currentSessionId ?? null);
     const { openTab: openWorkStationTab } = useWorkStationTabs();
     const [createTarget, setCreateTarget] = useAtom(chatPanelCreateTargetAtom);
+    const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
     const {
       error: benchmarkError,
       isLoadingTasks: isLoadingBenchmarkTasks,
@@ -245,6 +248,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const setWorkstationActiveSessionId = useSetAtom(
       workstationActiveSessionIdAtom
     );
+    const setSelectedWorkItem = useSetAtom(chatPanelSelectedWorkItemAtom);
     const dispatchClearSession = useSetAtom(clearSessionAtom);
     const setCreatorState = useSetAtom(sessionCreatorStateAtom);
     const allAgentDefs = useAtomValue(allAgentDefsAtom);
@@ -281,12 +285,14 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     );
 
     const handleNewSession = useCallback(() => {
+      setSelectedWorkItem(null);
       dispatchClearSession();
       setWorkstationActiveSessionId(null);
       setActiveSessionId(null);
     }, [
       dispatchClearSession,
       setActiveSessionId,
+      setSelectedWorkItem,
       setWorkstationActiveSessionId,
     ]);
 
@@ -339,8 +345,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
     const sessionSidebarVisible = sessionSidebarWidth > 0;
     const showHeader =
-      active && (!!currentSessionId || viewMode === "workStation");
-    const showHeaderSessionLabel = !!currentSessionId;
+      active &&
+      (!!currentSessionId || !!selectedWorkItem || viewMode === "workStation");
+    const headerTitle = panelTitle;
     // The "+" (new session) button is redundant when the session sidebar is
     // visible, so only surface it in the chat header when that sidebar is off.
     const showNewSessionButton =
@@ -350,7 +357,10 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const isWorkItemTarget =
       createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM;
     const showCreatorPresenceInHeader =
-      !currentSessionId && !isBenchmarkTarget && !isWorkItemTarget;
+      !currentSessionId &&
+      !selectedWorkItem &&
+      !isBenchmarkTarget &&
+      !isWorkItemTarget;
     const showPresenceInHeader = currentSessionId
       ? sidebarCollapsed
       : showCreatorPresenceInHeader;
@@ -374,7 +384,10 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       />
     );
     const showEmptyChatFocusRestoreButton =
-      !currentSessionId && isChatFocus && showChatFocusToggle;
+      !currentSessionId &&
+      !selectedWorkItem &&
+      isChatFocus &&
+      showChatFocusToggle;
 
     const handleCreateTargetChange = useCallback(
       (value: string | number | (string | number)[]) => {
@@ -722,7 +735,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             <CollapsedSidebarButton />
           </div>
         ) : null}
-        {!currentSessionId && (
+        {!currentSessionId && !selectedWorkItem && (
           <div
             className="flex h-9 w-auto flex-shrink-0 items-center"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
@@ -742,7 +755,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             />
           </div>
         )}
-        {showHeaderSessionLabel ? (
+        {currentSessionId ? (
           <>
             <div
               className="flex h-9 min-w-0 shrink items-center"
@@ -751,7 +764,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               <SessionHoverCard sessionId={currentSessionId}>
                 <span className="flex h-7 min-w-0 max-w-full cursor-default items-center gap-1.5 rounded-lg px-1.5 text-[13px] font-medium text-text-1 transition-colors hover:bg-surface-hover">
                   <span className="min-w-0 -translate-y-px truncate">
-                    {panelTitle}
+                    {headerTitle}
                   </span>
                 </span>
               </SessionHoverCard>
@@ -993,7 +1006,11 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const chatColumn = (
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {!active ? null : !currentSessionId ? (
-          emptyChatContent
+          selectedWorkItem ? (
+            <WorkItemPanelView selectedWorkItem={selectedWorkItem} />
+          ) : (
+            emptyChatContent
+          )
         ) : (
           <ChatView
             sessionId={currentSessionId}

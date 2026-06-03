@@ -57,10 +57,6 @@ const TabPill: React.FC<TabPillProps> = ({
     skip: !region || variant !== "sidebar",
   });
   const regionTintRGB = regionMaterial?.tintRGB;
-  const ultraThinHover = isDark
-    ? "rgba(255, 255, 255, 0.05)"
-    : "rgba(255, 255, 255, 0.08)";
-
   const containerRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLSpanElement>(null);
   const hasSlider = variant === "pill" && !wrap && !isMulti;
@@ -240,7 +236,6 @@ const TabPill: React.FC<TabPillProps> = ({
                     : tab.key === activeTab
                 }
                 onClick={() => handleTabClickWithDropdown(tab)}
-                ultraThinHover={ultraThinHover}
                 iconOnly={iconOnly}
                 regionTintRGB={regionTintRGB}
                 isDark={isDark}

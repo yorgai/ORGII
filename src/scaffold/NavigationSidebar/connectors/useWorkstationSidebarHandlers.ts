@@ -1,5 +1,6 @@
 import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { useSetAtom } from "jotai";
 import { type Dispatch, type SetStateAction, useCallback } from "react";
 
 import { deleteSession } from "@src/api/tauri/agent";
@@ -15,6 +16,7 @@ import {
   removeSession,
   upsertSession,
 } from "@src/store/session";
+import { chatPanelSelectedWorkItemAtom } from "@src/store/ui/chatPanelAtom";
 import { invokeTauri } from "@src/util/platform/tauri/init";
 import { isCliSession } from "@src/util/session/sessionDispatch";
 import { getSessionListDisplayName } from "@src/util/session/sessionSidebarRow";
@@ -65,6 +67,10 @@ export function useWorkstationSidebarHandlers({
   setGroupVisibleCounts,
   tCommon,
 }: UseWorkstationSidebarHandlersParams): UseWorkstationSidebarHandlersResult {
+  const setChatPanelSelectedWorkItem = useSetAtom(
+    chatPanelSelectedWorkItemAtom
+  );
+
   const handleDeleteSession = useCallback(
     async (sessionId: string) => {
       try {
@@ -161,6 +167,7 @@ export function useWorkstationSidebarHandlers({
         sessionRouteLabel
       );
 
+      setChatPanelSelectedWorkItem(null);
       promoteActiveSessionCreatorDraft();
       openSession(item.id, sessionName, originalSession.repoPath);
     },
@@ -174,6 +181,7 @@ export function useWorkstationSidebarHandlers({
       promoteActiveSessionCreatorDraft,
       selectedMenuItemId,
       sessionRouteLabel,
+      setChatPanelSelectedWorkItem,
       setGroupVisibleCounts,
     ]
   );

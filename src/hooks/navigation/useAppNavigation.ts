@@ -52,6 +52,7 @@ import {
   startNewSessionCreatorDraftAtom,
   workstationActiveSessionIdAtom,
 } from "@src/store/session";
+import { chatPanelSelectedWorkItemAtom } from "@src/store/ui/chatPanelAtom";
 
 // ============================================
 // Types
@@ -141,6 +142,9 @@ export function useAppNavigation(): UseAppNavigationReturn {
   const setActiveSessionId = useSetAtom(activeSessionIdAtom);
   const setWorkstationActiveSessionId = useSetAtom(
     workstationActiveSessionIdAtom
+  );
+  const setChatPanelSelectedWorkItem = useSetAtom(
+    chatPanelSelectedWorkItemAtom
   );
   const startNewSessionCreatorDraft = useSetAtom(
     startNewSessionCreatorDraftAtom
@@ -292,6 +296,7 @@ export function useAppNavigation(): UseAppNavigationReturn {
   const goToNewSession = useCallback(
     (options?: GoToNewSessionOptions) => {
       dispatchClearSession();
+      setChatPanelSelectedWorkItem(null);
       // Starting a session changes chat identity, not the WorkStation layout.
       setActiveSessionId(null);
       setWorkstationActiveSessionId(null);
@@ -322,6 +327,7 @@ export function useAppNavigation(): UseAppNavigationReturn {
     [
       dispatchClearSession,
       setActiveSessionId,
+      setChatPanelSelectedWorkItem,
       setWorkstationActiveSessionId,
       promoteActiveSessionCreatorDraft,
       selectSessionCreatorDraft,
