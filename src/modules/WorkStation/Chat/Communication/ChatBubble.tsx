@@ -3,8 +3,17 @@
  *
  * Renders user and agent chat message events inside the Communication simulator.
  */
-import { Bot, ChevronDown, ChevronRight, Terminal, User } from "lucide-react";
-import React, { memo, useCallback, useMemo, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { useAtomValue } from "jotai";
+import {
+  Bot,
+  ChevronDown,
+  ChevronRight,
+  Terminal,
+  Toolbox,
+  User,
+} from "lucide-react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { AgentOrgRunMemberView } from "@src/api/tauri/agent";
@@ -21,6 +30,8 @@ import { PILL_REGEX, PILL_TYPES, type PillType } from "@src/config/pillTokens";
 import UserMessageContent from "@src/engines/ChatPanel/ChatHistory/components/UserMessageContent";
 import ChatItemWrap from "@src/engines/ChatPanel/ChatHistory/renderers/ChatItemWrap";
 import { SESSION_UI_TOKENS } from "@src/engines/ChatPanel/blocks/primitives/config";
+import { installedSkillsAtom } from "@src/store/skills/installedSkillsAtom";
+import type { InstalledSkill } from "@src/types/extensions";
 import {
   formatSmartDateTime,
   toIntlLocaleTag,
@@ -35,7 +46,16 @@ interface TerminalPillData {
   terminalText: string;
 }
 
+interface SkillPillData {
+  displayName: string;
+  /** Raw path token from the pill, e.g. "/create-skill" or "skill://create-skill" */
+  rawPath: string;
+  /** Resolved skill name (directory slug), derived from rawPath */
+  skillName: string;
+}
+
 const TERMINAL_PREVIEW_MAX_HEIGHT = 160;
+const SKILL_PREVIEW_MAX_HEIGHT = 160;
 const AVATAR_ICON_SIZE = 14;
 
 const ReplayMarkdown: React.FC<{ content: string }> = memo(({ content }) => (
@@ -82,6 +102,47 @@ function parseTerminalPills(content: string): TerminalPillData[] {
   }
 
   return terminalPills;
+}
+
+function parseSkillPills(content: string): SkillPillData[] {
+  const skillPills: SkillPillData[] = [];
+
+  for (const match of content.matchAll(PILL_REGEX)) {
+    const pillType = match[2] as PillType;
+    if (pillType !== "skill" || !PILL_TYPES.has(pillType)) continue;
+
+    const displayName = match[1].trim();
+    const rawPath = match[3];
+    // rawPath is like "/create-skill" or "skill://create-skill"
+    const skillName = rawPath
+      .replace(/^skill:\/\//, "")
+      .replace(/^\//, "")
+      .trim();
+    if (skillName) {
+      skillPills.push({ displayName, rawPath, skillName });
+    }
+  }
+
+  return skillPills;
+}
+
+/**
+ * Resolve a skill's actual file path from the installed skills list.
+ * Falls back to constructing a likely path when not found.
+ */
+function resolveSkillFilePath(
+  skillName: string,
+  installedSkills: InstalledSkill[]
+): string | undefined {
+  const lower = skillName.toLowerCase();
+  const found = installedSkills.find((s) => {
+    if (s.name.toLowerCase() === lower) return true;
+    const normalized = s.path.replace(/\\/g, "/");
+    const segments = normalized.split("/");
+    const dirName = segments[segments.length - 2];
+    return dirName?.toLowerCase() === lower;
+  });
+  return found?.path;
 }
 
 const TerminalContextCard: React.FC<{ pill: TerminalPillData }> = memo(
@@ -131,21 +192,128 @@ const TerminalContextCard: React.FC<{ pill: TerminalPillData }> = memo(
 );
 TerminalContextCard.displayName = "TerminalContextCard";
 
+const SkillContextCard: React.FC<{
+  pill: SkillPillData;
+  installedSkills: InstalledSkill[];
+}> = memo(({ pill, installedSkills }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+  /** undefined = not yet fetched / loading, null = error/empty, string = content */
+  const [content, setContent] = useState<string | undefined | null>(undefined);
+  const fetchedRef = React.useRef(false);
+
+  const filePath = useMemo(
+    () => resolveSkillFilePath(pill.skillName, installedSkills),
+    [pill.skillName, installedSkills]
+  );
+
+  useEffect(() => {
+    if (!isExpanded || fetchedRef.current) return;
+    fetchedRef.current = true;
+    invoke<string>("skills_read", { workspacePath: null, name: pill.skillName })
+      .then((text) => {
+        setContent(text || null);
+      })
+      .catch(() => {
+        setContent(null);
+      });
+  }, [isExpanded, pill.skillName]);
+
+  const toggle = useCallback((event: React.MouseEvent) => {
+    event.stopPropagation();
+    setIsExpanded((prev) => !prev);
+  }, []);
+
+  const handleCardClick = useCallback(() => {
+    const path = filePath;
+    if (!path) return;
+    document.dispatchEvent(
+      new CustomEvent("file-pill-click", {
+        detail: {
+          filePath: path,
+          fileName: pill.displayName,
+          isFolder: false,
+        },
+      })
+    );
+  }, [filePath, pill.displayName]);
+
+  return (
+    <div className="overflow-hidden rounded-lg bg-fill-2 text-left">
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left"
+      >
+        <Toolbox size={13} className="shrink-0 text-primary-6" />
+        <span className="flex-1 truncate text-[12px] font-medium text-text-1">
+          {pill.displayName}
+        </span>
+        {isExpanded ? (
+          <ChevronDown size={11} className="shrink-0 text-text-3" />
+        ) : (
+          <ChevronRight size={11} className="shrink-0 text-text-3" />
+        )}
+      </button>
+      {isExpanded && (
+        <div
+          role={filePath ? "button" : undefined}
+          tabIndex={filePath ? 0 : undefined}
+          onClick={filePath ? handleCardClick : undefined}
+          onKeyDown={
+            filePath
+              ? (e) => {
+                  if (e.key === "Enter" || e.key === " ") handleCardClick();
+                }
+              : undefined
+          }
+          className={`relative rounded-b-lg bg-bg-3 px-3 py-2 ${filePath ? "cursor-pointer" : ""}`}
+          style={{
+            maxHeight: SKILL_PREVIEW_MAX_HEIGHT,
+            overflowY: "auto",
+            boxShadow:
+              "inset 0 6px 8px -6px rgba(0,0,0,0.4), inset 0 -6px 8px -6px rgba(0,0,0,0.4)",
+          }}
+        >
+          {content === undefined && (
+            <span className="text-[11px] text-text-3">Loading…</span>
+          )}
+          {content !== undefined && content !== null && (
+            <div className="pointer-events-none text-[11px] leading-relaxed scrollbar-hide">
+              <Markdown
+                textContent={content}
+                useChatCodeBlock={false}
+                enableFileNavigation={false}
+                skipPreprocess={false}
+              />
+            </div>
+          )}
+          {content === null && (
+            <span className="text-[11px] text-text-3">
+              No content available
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+SkillContextCard.displayName = "SkillContextCard";
+
 const UserBubbleContent: React.FC<{
   content: string;
   images?: string[];
 }> = memo(({ content, images }) => {
   const terminalPills = useMemo(() => parseTerminalPills(content), [content]);
+  const skillPills = useMemo(() => parseSkillPills(content), [content]);
+  const installedSkills = useAtomValue(installedSkillsAtom);
 
-  // Strip terminal pill tokens before passing to UserMessageContent.
-  // TerminalContextCard renders the expandable card below; if we also pass the
-  // raw terminal token to UserMessageContent it would render a second inline
-  // badge for the same pill.
+  // Strip terminal and skill pill tokens before passing to UserMessageContent.
+  // Their cards render below; keeping the tokens would produce duplicate inline badges.
   const strippedContent = useMemo(
     () =>
       content
         .replace(PILL_REGEX, (match, _name, pillType: string) =>
-          pillType === "terminal" ? "" : match
+          pillType === "terminal" || pillType === "skill" ? "" : match
         )
         .trim(),
     [content]
@@ -154,7 +322,13 @@ const UserBubbleContent: React.FC<{
   const hasImages = !!images && images.length > 0;
   const hasContent = strippedContent !== "";
 
-  if (!hasContent && !hasImages && terminalPills.length === 0) return null;
+  if (
+    !hasContent &&
+    !hasImages &&
+    terminalPills.length === 0 &&
+    skillPills.length === 0
+  )
+    return null;
 
   return (
     <div className="flex flex-col items-start gap-1.5 text-left">
@@ -166,6 +340,13 @@ const UserBubbleContent: React.FC<{
       )}
       {terminalPills.map((pill, index) => (
         <TerminalContextCard key={`${pill.displayName}-${index}`} pill={pill} />
+      ))}
+      {skillPills.map((pill, index) => (
+        <SkillContextCard
+          key={`${pill.skillName}-${index}`}
+          pill={pill}
+          installedSkills={installedSkills}
+        />
       ))}
     </div>
   );
