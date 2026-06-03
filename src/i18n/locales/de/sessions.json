@@ -680,6 +680,9 @@
     "newChat": "Neuer Chat",
     "defaultTitle": "Chat",
     "hideChatPanel": "Chat-Panel ausblenden",
+    "replay": {
+      "follow": "Folgen"
+    },
     "readOnlyBannerCursorIde": "Schreibgeschützter Cursor-IDE-Verlauf. Öffne Cursor, um diesen Chat fortzusetzen.",
     "cursorControl": {
       "enableButton": "Senden aktivieren",

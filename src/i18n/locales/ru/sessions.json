@@ -682,6 +682,9 @@
     "newChat": "Новый чат",
     "defaultTitle": "Чат",
     "hideChatPanel": "Скрыть панель чата",
+    "replay": {
+      "follow": "Следовать"
+    },
     "readOnlyBannerCursorIde": "История Cursor IDE доступна только для чтения. Откройте Cursor, чтобы продолжить чат.",
     "cursorControl": {
       "enableButton": "Включить отправку",

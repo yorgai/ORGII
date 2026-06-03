@@ -680,6 +680,9 @@
     "newChat": "新建 Session",
     "defaultTitle": "Session",
     "hideChatPanel": "隐藏聊天面板",
+    "replay": {
+      "follow": "跟随"
+    },
     "readOnlyBannerCursorIde": "只读的 Cursor IDE 历史记录。请在 Cursor 中继续此会话。",
     "cursorControl": {
       "enableButton": "启用发送",

@@ -15,6 +15,8 @@ import { ArrowDown, ArrowUp, CheckCheck, Crosshair } from "lucide-react";
 import React from "react";
 
 import Button from "@src/components/Button";
+import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
+import Tooltip from "@src/components/Tooltip";
 import { INPUT_AREA_BUTTONS } from "@src/config/inputAreaTokens";
 
 const ICON_BUTTON_CLASS = `flex ${INPUT_AREA_BUTTONS.iconButtonSizeClass} cursor-pointer items-center justify-center rounded-full border border-solid border-border-2 bg-bg-1 transition-all hover:bg-fill-2`;
@@ -32,6 +34,8 @@ interface FloatingScrollNavProps {
   };
   followAgent?: {
     label: string;
+    tooltipLabel?: string;
+    shortcut?: string;
     onClick: () => void;
   };
 }
@@ -77,16 +81,30 @@ const FloatingScrollNav: React.FC<FloatingScrollNavProps> = ({
         </Button>
       )}
       {followAgent && (
-        <Button
-          variant="secondary"
-          shape="round"
-          size="small"
-          icon={<Crosshair size={13} strokeWidth={2} />}
-          onClick={followAgent.onClick}
-          aria-label={followAgent.label}
+        <Tooltip
+          content={
+            <KeyboardShortcutTooltipContent
+              label={followAgent.tooltipLabel ?? followAgent.label}
+              shortcut={followAgent.shortcut || undefined}
+            />
+          }
+          position="top"
+          mouseEnterDelay={250}
+          framedPanel
         >
-          {followAgent.label}
-        </Button>
+          <span className="inline-flex">
+            <Button
+              variant="secondary"
+              shape="round"
+              size="small"
+              icon={<Crosshair size={13} strokeWidth={2} />}
+              onClick={followAgent.onClick}
+              aria-label={followAgent.tooltipLabel ?? followAgent.label}
+            >
+              {followAgent.label}
+            </Button>
+          </span>
+        </Tooltip>
       )}
       {showScrollToBottom && (
         <button
