@@ -333,8 +333,14 @@ mod tests {
             &[],
             Some(&loader as &dyn Fn(&str) -> Option<String>),
         );
-        assert!(result.contains("# Setup Repo Skill"), "skill content should be injected");
-        assert!(result.contains("setup-repo [skill:/setup-repo]"), "original message preserved");
+        assert!(
+            result.contains("# Setup Repo Skill"),
+            "skill content should be injected"
+        );
+        assert!(
+            result.contains("setup-repo [skill:/setup-repo]"),
+            "original message preserved"
+        );
     }
 
     #[test]

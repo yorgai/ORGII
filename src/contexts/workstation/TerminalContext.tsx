@@ -26,6 +26,7 @@ import {
   defaultTerminalLabelBaseFromSettings,
   generateUniqueLabelFromBase,
 } from "@src/util/ui/terminal/naming";
+import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 
 interface TerminalSession {
   id: string;
@@ -118,9 +119,10 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({
               const { invoke } = await import("@tauri-apps/api/core");
               // Kill all PTY sessions in parallel
               const cleanupPromises = currentSessions.map(async (session) => {
-                const ptySessionId = `spotlight-pty-${session.id}`;
                 try {
-                  await invoke("close_pty", { sessionId: ptySessionId });
+                  await invoke("close_pty", {
+                    sessionId: toBackendPtySessionId(session.id),
+                  });
                 } catch {
                   // Ignore errors - PTY might already be closed
                 }
@@ -186,8 +188,9 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({
           const { isTauriDesktop } = await import("@src/util/platform/tauri");
           if (isTauriDesktop()) {
             const { invoke } = await import("@tauri-apps/api/core");
-            const ptySessionId = `spotlight-pty-${sessionId}`;
-            await invoke("close_pty", { sessionId: ptySessionId });
+            await invoke("close_pty", {
+              sessionId: toBackendPtySessionId(sessionId),
+            });
           }
         } catch (err) {
           console.error(`[TerminalContext] Failed to kill PTY:`, err);

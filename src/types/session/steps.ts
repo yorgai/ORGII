@@ -397,12 +397,29 @@ export interface GitBranchesResponse {
   };
 }
 
-// Git commit types - re-exported from canonical source
-export type {
-  GitCommitPerson,
-  GitCommitInfo,
-  GitCommitsResponse,
-} from "@src/api/http/git/types";
+export interface GitCommitPerson {
+  name: string;
+  email: string;
+  date: string;
+}
+
+export interface GitCommitInfo {
+  sha: string;
+  short_sha: string;
+  summary: string;
+  body: string;
+  author: GitCommitPerson;
+  committer: GitCommitPerson;
+  parent_shas: string[];
+}
+
+export interface GitCommitsResponse {
+  status: number;
+  data: {
+    commits: GitCommitInfo[];
+    total_count: number | null;
+  };
+}
 
 // Remote information
 export interface GitRemoteInfo {

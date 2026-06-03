@@ -2,8 +2,7 @@
  * Feature-Gated Handlers
  *
  * Handlers gated by session feature flags.
- * terminal_created, ide_action, todos_updated,
- * permission:request, question_request
+ * ide_action, todos_updated, permission:request, question_request
  */
 import { rpc } from "@src/api/tauri/rpc";
 import {
@@ -50,21 +49,8 @@ function coerceAgentExecMode(raw: string | undefined): AgentExecMode {
 }
 
 // ============================================================================
-// Terminal / IDE action handlers
+// IDE action handlers
 // ============================================================================
-
-export function handleTerminalCreated(event: AgentWSEvent): void {
-  if (event.ptySessionId) {
-    window.dispatchEvent(
-      new CustomEvent("agent-terminal-created", {
-        detail: {
-          ptySessionId: event.ptySessionId,
-          label: "Agent Terminal",
-        },
-      })
-    );
-  }
-}
 
 export function handleIdeAction(event: AgentWSEvent): void {
   if (event.correlationId && event.action) {

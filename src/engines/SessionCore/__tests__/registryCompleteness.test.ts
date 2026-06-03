@@ -31,6 +31,7 @@ const RUST_TOOL_NAMES = {
     "list_dir",
     "run_shell",
     "await_output",
+    "inspect_terminals",
     "code_search",
     "edit_file",
     "delete_file",

@@ -15,6 +15,9 @@ pub const CLI_SESSION_PREFIX: &str = "cliagent-";
 /// Wingman (single-tab assistant) sessions.
 pub const WINGMAN_SESSION_PREFIX: &str = "wingman-";
 
+/// Terminal Agent (chat-driven visible PTY operator) sessions.
+pub const TERMINAL_SESSION_PREFIX: &str = "terminalagent-";
+
 /// Subagent (delegate-mode) session ID prefix.
 ///
 /// Used by the unified `agent` tool when launching a child agent. The full

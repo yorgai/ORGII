@@ -82,6 +82,32 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         ..DEFAULT_TOOL_ENTRY
     },
     ToolEntry {
+        name: tool_names::INSPECT_TERMINALS,
+        description: "Inspect and control live terminal sessions.",
+        description_detail: "Lists ORGII-managed PTY sessions with metadata, reads bounded redacted output snapshots, writes input into a selected PTY, and closes selected PTYs. Output returned to agents is read from the redacted snapshot buffer, not the raw terminal byte stream.",
+        category: tool_categories::CODING,
+        icon_id: "terminal-square",
+        simulator_app: AppCode,
+        app_subtool: Shell,
+        chat_block: CbFallback,
+        human_tool_key: Some(Terminal),
+        label_running: "tools.inspectTerminalsRunning",
+        label_done: "tools.inspectTerminalsDone",
+        label_failed: "tools.inspectTerminalsFailed",
+        action_icons: &[
+            ("read_output", "scroll-text"),
+            ("write_input", "keyboard"),
+            ("close", "x"),
+        ],
+        actions: &[
+            action_sub!("list", "List live ORGII-managed terminal sessions", Shell, chat: CbFallback, labels: "tools.inspectTerminalsListRunning", "tools.inspectTerminalsListDone", "tools.inspectTerminalsListFailed"),
+            action_sub!("read_output", "Read a bounded redacted output snapshot from a terminal session", Shell, chat: CbFallback, labels: "tools.inspectTerminalsReadOutputRunning", "tools.inspectTerminalsReadOutputDone", "tools.inspectTerminalsReadOutputFailed"),
+            action_sub!("write_input", "Write input text or control characters into a terminal session", Shell, chat: CbFallback, labels: "tools.inspectTerminalsWriteInputRunning", "tools.inspectTerminalsWriteInputDone", "tools.inspectTerminalsWriteInputFailed"),
+            action_sub!("close", "Close a terminal session", Shell, chat: CbFallback, labels: "tools.inspectTerminalsCloseRunning", "tools.inspectTerminalsCloseDone", "tools.inspectTerminalsCloseFailed"),
+        ],
+        ..DEFAULT_TOOL_ENTRY
+    },
+    ToolEntry {
         name: tool_names::AWAIT_OUTPUT,
         description: "Monitor background jobs (shell processes and subagents).",
         description_detail: "Multi-command tool for monitoring backgrounded processes and subagents. Supports blocking wait_for with regex matching, non-blocking monitor snapshots, and session-scoped job listing.",

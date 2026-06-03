@@ -4,7 +4,6 @@
  * Full-featured code editor with file tree, git integration, terminal,
  * diagnostics, and more. Extracted from AppContainer for clean separation.
  */
-import { useTerminalEventBridge } from "@/src/engines/TerminalCore/hooks/useTerminalEventBridge";
 import { useTerminalState } from "@/src/engines/TerminalCore/hooks/useTerminalState";
 import { useCodeEditorHandlers } from "@/src/hooks/workStation/editor/useCodeEditorHandlers";
 import { useGitDiffState } from "@/src/hooks/workStation/git/useGitDiffState";
@@ -93,8 +92,6 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
     const panels = useWorkStationPanels();
     const diagnosticsState = useDiagnostics();
     const outputState = useOutputChannels({ defaultMaxChars: 100000 });
-
-    useTerminalEventBridge();
 
     // === Terminal state (unified via Jotai atoms) ===
     const terminalState = useTerminalState();

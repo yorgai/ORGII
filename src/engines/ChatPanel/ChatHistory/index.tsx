@@ -86,6 +86,7 @@ export interface ScrollNavState {
   showScrollToBottom: boolean;
   onScrollToBottom: () => void;
   showFollowAgent: boolean;
+  followAgentLabel: string;
   onFollowAgent: () => void;
 }
 
@@ -230,7 +231,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   // (static rendering path, ≤12 items).
   const staticScrollerRef = useRef<HTMLDivElement>(null);
 
-  const { showFollowAgent, handleFollowAgent } = useFollowAgent();
+  const { showFollowAgent, followAgentLabel, handleFollowAgent } =
+    useFollowAgent();
 
   const { hasPinnedContent: hasPinnedContentRaw } = usePinnedContent();
   // Subagent panes opt out of in-history pinned bars; they surface the same
@@ -571,12 +573,14 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       showScrollToBottom,
       onScrollToBottom: scrollToBottom,
       showFollowAgent,
+      followAgentLabel,
       onFollowAgent: handleFollowAgent,
     });
   }, [
     showScrollToBottom,
     scrollToBottom,
     showFollowAgent,
+    followAgentLabel,
     handleFollowAgent,
     onScrollNavChange,
   ]);

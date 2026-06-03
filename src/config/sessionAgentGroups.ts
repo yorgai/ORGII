@@ -28,6 +28,7 @@ export function getSessionGroupKey(sessionId: string): SessionGroupKey {
 export const SESSION_GROUP_ORDER: readonly SessionGroupKey[] = [
   RUST_AGENT_TYPE.OS,
   RUST_AGENT_TYPE.SDE,
+  RUST_AGENT_TYPE.TERMINAL,
   RUST_AGENT_TYPE.WINGMAN,
   "cli",
   "cursor_ide",
@@ -37,6 +38,7 @@ export const SESSION_GROUP_ORDER: readonly SessionGroupKey[] = [
 export const SESSION_GROUP_LABELS: Record<SessionGroupKey, string> = {
   [RUST_AGENT_TYPE.OS]: "OS Agent",
   [RUST_AGENT_TYPE.SDE]: "SDE Agent",
+  [RUST_AGENT_TYPE.TERMINAL]: "Terminal Agent",
   [RUST_AGENT_TYPE.WINGMAN]: "Wingman Agent",
   [RUST_AGENT_TYPE.CUSTOM]: "Custom Agent",
   cli: "CLI Agent",

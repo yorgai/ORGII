@@ -7,6 +7,7 @@
  */
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useRouteViewMode } from "@src/config/routeViewModeConfig";
 import { replayModeAtom } from "@src/engines/SessionCore";
@@ -14,10 +15,12 @@ import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 
 export interface UseFollowAgentReturn {
   showFollowAgent: boolean;
+  followAgentLabel: string;
   handleFollowAgent: () => void;
 }
 
 export function useFollowAgent(): UseFollowAgentReturn {
+  const { t } = useTranslation("sessions");
   const viewMode = useRouteViewMode();
   const stationMode = useAtomValue(stationModeAtom);
   const setStationMode = useSetAtom(stationModeAtom);
@@ -31,5 +34,9 @@ export function useFollowAgent(): UseFollowAgentReturn {
     setReplayMode("follow");
   }, [setStationMode, setReplayMode]);
 
-  return { showFollowAgent, handleFollowAgent };
+  return {
+    showFollowAgent,
+    followAgentLabel: t("chat.replay.followAgent"),
+    handleFollowAgent,
+  };
 }

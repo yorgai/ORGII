@@ -124,8 +124,6 @@ export interface AgentWSEvent {
   files?: string[];
   workspacePath?: string;
   todos?: unknown[];
-  /** OS Agent: PTY session ID (agent:terminal_created) */
-  ptySessionId?: string;
   /** OS Agent: IDE action correlation (agent:ide_action) */
   correlationId?: string;
   action?: string;

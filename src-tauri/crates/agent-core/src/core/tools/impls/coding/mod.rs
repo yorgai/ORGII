@@ -25,6 +25,7 @@ pub mod code_search;
 pub mod edit_file;
 pub mod exec;
 pub mod files;
+pub mod inspect_terminals;
 pub mod manage_file_history;
 pub mod manage_lsp;
 pub mod manage_todo;

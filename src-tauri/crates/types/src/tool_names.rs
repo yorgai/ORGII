@@ -14,6 +14,7 @@ pub const READ_FILE: &str = "read_file";
 pub const LIST_DIR: &str = "list_dir";
 pub const RUN_SHELL: &str = "run_shell";
 pub const AWAIT_OUTPUT: &str = "await_output";
+pub const INSPECT_TERMINALS: &str = "inspect_terminals";
 pub const CODE_SEARCH: &str = "code_search";
 pub const EDIT_FILE: &str = "edit_file";
 pub const DELETE_FILE: &str = "delete_file";

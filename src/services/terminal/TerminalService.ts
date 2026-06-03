@@ -28,6 +28,7 @@ import {
 } from "@src/store/workstation/codeEditor/terminal";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 import { invokeTauri, isTauriReady } from "@src/util/platform/tauri/init";
+import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 
 // ============================================
 // Subprocess Execution Result
@@ -62,7 +63,7 @@ async function writeToPty(command: string, sessionId: string): Promise<void> {
     throw new Error("Tauri not ready");
   }
 
-  const ptySessionId = `spotlight-pty-${sessionId}`;
+  const ptySessionId = toBackendPtySessionId(sessionId);
 
   // Write command
   await invokeTauri("write_pty", {
@@ -182,7 +183,7 @@ export const TerminalService = {
     const activeId = store.get(activeTerminalIdAtom);
     if (!activeId) return;
 
-    const ptySessionId = `spotlight-pty-${activeId}`;
+    const ptySessionId = toBackendPtySessionId(activeId);
 
     try {
       // Send Ctrl+C (ASCII code 3)

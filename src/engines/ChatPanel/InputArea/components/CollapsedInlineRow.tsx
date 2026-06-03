@@ -71,7 +71,7 @@ const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
                 count={0}
                 active={false}
                 onClick={scrollNav!.onFollowAgent}
-                label="Follow Agent"
+                label={scrollNav!.followAgentLabel}
               />
             )}
             {showScrollToBottom && (

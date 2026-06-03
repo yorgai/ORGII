@@ -18,6 +18,7 @@ export const TOOL_NAMES = {
   DELETE_FILE: "delete_file",
   RUN_SHELL: "run_shell",
   AWAIT_OUTPUT: "await_output",
+  INSPECT_TERMINALS: "inspect_terminals",
 
   // ── Web ─────────────────────────────────────────────────────────────
   WEB_SEARCH: "web_search",
