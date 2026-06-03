@@ -41,6 +41,36 @@ export function createConfigHelpers() {
     }
   };
 
+  const addAgentDef = async (
+    definition: Json
+  ): Promise<Result<{ agentId: string }>> => {
+    try {
+      if (!definition || typeof definition !== "object") {
+        return { ok: false, error: "addAgentDef: `definition` is required" };
+      }
+      const agentId = (await rpc.agentDef.add({
+        agentJson: JSON.stringify(definition),
+      })) as string;
+      return { ok: true, agentId };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  const updateAgentDef = async (
+    definition: Json
+  ): Promise<{ ok: true } | Err> => {
+    try {
+      if (!definition || typeof definition !== "object") {
+        return { ok: false, error: "updateAgentDef: `definition` is required" };
+      }
+      await rpc.agentDef.update({ agentJson: JSON.stringify(definition) });
+      return { ok: true };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   const resetAgentDefBuiltin = async (
     agentId: string
   ): Promise<Result<{ def: Json }>> => {
@@ -74,7 +104,7 @@ export function createConfigHelpers() {
 
   const listAgentDefs = async (): Promise<Result<{ defs: Json[] }>> => {
     try {
-      const defs = (await invoke("agent_definitions_list_all")) as Json[];
+      const defs = (await rpc.agentDef.listAll()) as Json[];
       return { ok: true, defs };
     } catch (err) {
       return asError(err);
@@ -221,6 +251,8 @@ export function createConfigHelpers() {
   return {
     getAgentDef,
     updateAgentDefPatch,
+    addAgentDef,
+    updateAgentDef,
     resetAgentDefBuiltin,
     removeAgentDef,
     listAgentDefs,

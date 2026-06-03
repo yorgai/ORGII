@@ -210,6 +210,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
               update("compaction.enabled", checked);
               if (!checked) setCompactionAdvancedOpen(false);
             }}
+            dataTestId="agent-orgs-model-compaction-enabled-switch"
           />
         </SectionRow>
         <SectionRow
@@ -228,6 +229,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
             }}
             style={SECTION_CONTROL_STYLE}
             disabled={!compactionEnabled}
+            dataTestId="agent-orgs-model-compaction-trigger-ratio-input"
           />
         </SectionRow>
         <SectionRow
@@ -382,6 +384,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
                 update("reliability.maxRetries", 0);
               }
             }}
+            dataTestId="agent-orgs-model-reliability-enabled-switch"
           />
         </SectionRow>
         {reliabilityEnabled && (
@@ -401,6 +404,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
                   if (val !== undefined) update("reliability.maxRetries", val);
                 }}
                 style={SECTION_CONTROL_STYLE}
+                dataTestId="agent-orgs-model-reliability-max-retries-input"
               />
             </SectionRow>
             <SectionRow
@@ -420,6 +424,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
                     update("reliability.baseBackoffMs", val);
                 }}
                 style={SECTION_CONTROL_STYLE}
+                dataTestId="agent-orgs-model-reliability-base-backoff-input"
               />
             </SectionRow>
           </>

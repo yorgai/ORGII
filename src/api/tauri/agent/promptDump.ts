@@ -48,6 +48,8 @@ export interface PromptDumpResult {
   sovereign: boolean;
   isChannelSession: boolean;
   isWorkspaceSession: boolean;
+  loadWorkspaceResources: boolean;
+  loadWorkspaceRules: boolean;
   prompt: string;
   promptLen: number;
   sections: PromptDumpSection[];

@@ -113,6 +113,7 @@ const AgentRulesSection: React.FC<AgentRulesSectionProps> = ({
           <div className="flex justify-center">
             <Switch
               checked={row.enabled}
+              dataTestId={`agent-orgs-rule-switch-${row.source}-${row.name}`}
               onChange={(enabled: boolean) =>
                 toggleRule(row.name, enabled, row.source)
               }

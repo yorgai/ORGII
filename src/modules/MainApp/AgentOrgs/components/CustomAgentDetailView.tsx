@@ -64,6 +64,10 @@ export interface CustomAgentExtraTab {
   content: React.ReactNode;
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 interface CustomAgentDetailViewProps {
   agent: AgentDefinition;
   onAgentDelete: (agentId: string) => void;
@@ -94,7 +98,25 @@ const CustomAgentDetailView: React.FC<CustomAgentDetailViewProps> = ({
 
   const persist = useCallback(
     async (patch: Record<string, unknown>) => {
-      await rpc.agentDef.updatePatch({ agentId: agent.id, patch });
+      let nextPatch = patch;
+      if (isPlainRecord(patch.tools)) {
+        const latest = (await rpc.agentDef.get({
+          agentId: agent.id,
+        })) as unknown;
+        const latestTools = isPlainRecord(
+          (latest as AgentDefinition | null)?.tools
+        )
+          ? ((latest as AgentDefinition).tools as Record<string, unknown>)
+          : {};
+        nextPatch = {
+          ...patch,
+          tools: {
+            ...latestTools,
+            ...patch.tools,
+          },
+        };
+      }
+      await rpc.agentDef.updatePatch({ agentId: agent.id, patch: nextPatch });
       await refresh({ forceFresh: true });
     },
     [agent.id, refresh]

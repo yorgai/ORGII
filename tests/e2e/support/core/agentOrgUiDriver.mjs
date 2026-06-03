@@ -627,6 +627,10 @@ export async function selectRenderedExecMode(mode) {
   const pillSelector = '[data-testid="agent-exec-mode-pill"]';
   const pillRendered = await execJS(js.exists(pillSelector));
   if (pillRendered) {
+    const currentText = await execJS(js.text(pillSelector));
+    if (String(currentText).toLowerCase().includes(mode)) {
+      return;
+    }
     const openResult = await execJS(js.click(pillSelector));
     if (openResult !== "clicked") {
       throw new Error(`Agent exec mode pill did not open: ${openResult}`);
@@ -655,7 +659,8 @@ export async function selectRenderedExecMode(mode) {
     return;
   }
 
-  const skillsToolsButtonSelector = '[data-testid="composer-skills-tools-button"]';
+  const skillsToolsButtonSelector =
+    '[data-testid="composer-skills-tools-button"]';
   await browser.waitUntil(
     async () => execJS(js.exists(skillsToolsButtonSelector)),
     {
@@ -663,18 +668,28 @@ export async function selectRenderedExecMode(mode) {
       timeoutMsg: "Composer skills/tools button never rendered",
     }
   );
-  const openSlashResult = await execJS(js.visibleClick(skillsToolsButtonSelector));
+  const openSlashResult = await execJS(
+    js.visibleClick(skillsToolsButtonSelector)
+  );
   if (openSlashResult !== "clicked") {
-    throw new Error(`Composer skills/tools button did not open: ${openSlashResult}`);
+    throw new Error(
+      `Composer skills/tools button did not open: ${openSlashResult}`
+    );
   }
-  const flyoutTriggerSelector = '[data-testid="slash-command-mode-flyout-trigger"]';
-  await browser.waitUntil(async () => execJS(js.exists(flyoutTriggerSelector)), {
-    timeout: RENDER_TIMEOUT_MS,
-    timeoutMsg: "Slash command Mode flyout trigger never rendered",
-  });
+  const flyoutTriggerSelector =
+    '[data-testid="slash-command-mode-flyout-trigger"]';
+  await browser.waitUntil(
+    async () => execJS(js.exists(flyoutTriggerSelector)),
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: "Slash command Mode flyout trigger never rendered",
+    }
+  );
   const openFlyoutResult = await execJS(js.visibleClick(flyoutTriggerSelector));
   if (openFlyoutResult !== "clicked") {
-    throw new Error(`Slash command Mode flyout did not open: ${openFlyoutResult}`);
+    throw new Error(
+      `Slash command Mode flyout did not open: ${openFlyoutResult}`
+    );
   }
   const slashModeOptionSelector = `[data-testid="slash-command-mode-option-${mode}"]`;
   await browser.waitUntil(
@@ -684,7 +699,9 @@ export async function selectRenderedExecMode(mode) {
       timeoutMsg: `Slash command mode option ${mode} never rendered`,
     }
   );
-  const slashModeClickResult = await execJS(js.visibleClick(slashModeOptionSelector));
+  const slashModeClickResult = await execJS(
+    js.visibleClick(slashModeOptionSelector)
+  );
   if (slashModeClickResult !== "clicked") {
     throw new Error(
       `Slash command mode option ${mode} did not click: ${slashModeClickResult}`
@@ -818,7 +835,10 @@ export async function openRenderedGroupChatView() {
   await waitForRenderedGroupChatActive("manual open");
 }
 
-export async function assertRenderedGroupChatToggleIsIdempotent(sessionId, label) {
+export async function assertRenderedGroupChatToggleIsIdempotent(
+  sessionId,
+  label
+) {
   const triggerSelector = '[data-testid="agent-org-member-switcher-trigger"]';
   const toggleSelector = '[data-testid="agent-org-group-chat-toggle"]';
   const triggerClick = await execJS(js.visibleClick(triggerSelector));
@@ -1105,7 +1125,11 @@ async function waitForAgentOrgMentionMenuOption(memberName, label) {
   );
 }
 
-export async function sendRenderedGroupChatMentionPrompt(memberName, message, label) {
+export async function sendRenderedGroupChatMentionPrompt(
+  memberName,
+  message,
+  label
+) {
   const inputSelector = '[data-testid="chat-input"] [contenteditable="true"]';
   const messageInsertion = ` ${message}`;
   await browser.waitUntil(async () => execJS(js.exists(inputSelector)), {
@@ -1425,7 +1449,11 @@ function coordinatorRuntimeStatus(view) {
   return coordinator?.sessionRuntime?.status ?? null;
 }
 
-export async function waitForCoordinatorRuntimeStatus(sessionId, predicate, label) {
+export async function waitForCoordinatorRuntimeStatus(
+  sessionId,
+  predicate,
+  label
+) {
   let latestView = null;
   await waitForAgentOrgRunView(
     sessionId,
@@ -1622,7 +1650,11 @@ export async function waitForSessionAggregateRow(sessionId, predicate, label) {
   return latestSession;
 }
 
-export async function waitForActiveSessionExecMode(sessionId, expectedMode, label) {
+export async function waitForActiveSessionExecMode(
+  sessionId,
+  expectedMode,
+  label
+) {
   let state = null;
   await browser.waitUntil(
     async () => {
@@ -1653,7 +1685,11 @@ export function parseInboxPayload(row, label) {
   }
 }
 
-export async function waitForSessionOrgRuntimeSnapshot(sessionId, predicate, label) {
+export async function waitForSessionOrgRuntimeSnapshot(
+  sessionId,
+  predicate,
+  label
+) {
   let latest = null;
   try {
     await browser.waitUntil(
@@ -1856,7 +1892,11 @@ export async function openAgentOrgOverviewPanel(label) {
   );
 }
 
-export async function ensureMemberHasSwitchableInbox(sessionId, memberId, label) {
+export async function ensureMemberHasSwitchableInbox(
+  sessionId,
+  memberId,
+  label
+) {
   await sendCoordinatorOrgMessage(
     sessionId,
     {
