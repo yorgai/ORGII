@@ -616,3 +616,7 @@ mod tests {
         assert!(!resolved.animate);
     }
 }
+
+#[cfg(test)]
+#[path = "tests_extended.rs"]
+mod tests_extended;
