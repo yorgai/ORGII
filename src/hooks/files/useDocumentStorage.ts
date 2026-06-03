@@ -1,4 +1,3 @@
-import { JSONContent } from "@tiptap/react";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -6,6 +5,14 @@ import {
   useDebouncedCallback,
 } from "@src/hooks/perf/useDebouncedCallback";
 import { isTauriDesktop } from "@src/util/platform/tauri";
+
+export type JSONContent =
+  | string
+  | number
+  | boolean
+  | null
+  | JSONContent[]
+  | { [key: string]: JSONContent };
 
 // Document metadata interface
 export interface DocumentMeta {

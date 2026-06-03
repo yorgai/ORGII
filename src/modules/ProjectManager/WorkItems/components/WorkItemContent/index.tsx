@@ -1,9 +1,9 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
+import ComposerInput from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import Input from "@src/components/Input";
-import RichTextEditor from "@src/components/RichTextEditor";
-import type { RichTextEditorRef } from "@src/components/RichTextEditor";
 import TabPill from "@src/components/TabPill";
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { useWorkItemImageInsert } from "@src/hooks/project";
@@ -18,6 +18,10 @@ import HistoryTab from "./HistoryTab";
 import OutputTab from "./OutputTab";
 import { useWorkItemContentState } from "./hooks/useWorkItemContentState";
 import type { ContentTab, WorkItemContentProps } from "./types";
+
+interface WorkItemDescriptionImageInsertRef {
+  insertImage: (src: string, alt?: string) => void;
+}
 
 const WorkItemContent: React.FC<WorkItemContentProps> = ({
   workItem,
@@ -45,11 +49,30 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
   onCreatePr,
 }) => {
   const { t } = useTranslation("projects");
-  const editorRef = useRef<RichTextEditorRef>(null);
+  const editorRef = useRef<ComposerInputRef>(null);
+  const imageInsertRef = useRef<WorkItemDescriptionImageInsertRef | null>(null);
+
+  useEffect(() => {
+    imageInsertRef.current = {
+      insertImage: (src: string, alt?: string) => {
+        const label = alt?.trim() || "image";
+        editorRef.current
+          ?.getEditor()
+          ?.chain()
+          .focus()
+          .insertContent(`\n![${label}](${src})\n`)
+          .run();
+      },
+    };
+
+    return () => {
+      imageInsertRef.current = null;
+    };
+  }, []);
 
   const { handleImageInsert } = useWorkItemImageInsert({
     projectSlug: projectSlug ?? null,
-    editorRef,
+    editorRef: imageInsertRef,
   });
 
   const {
@@ -81,7 +104,6 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
     onStartAgent,
     onOpenSession,
     activeAgentSessionId,
-    editorRef,
   });
 
   return (
@@ -120,20 +142,19 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
       <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
         {activeTab === "details" && (
           <>
-            <div
-              className={`${DETAIL_PANEL_TOKENS.sectionGap} min-h-[200px] cursor-text`}
-              onClick={() => editorRef.current?.focus()}
-            >
-              <RichTextEditor
+            <div className={`${DETAIL_PANEL_TOKENS.sectionGap} min-h-[200px]`}>
+              <ComposerInput
+                key={workItem.session_id}
                 ref={editorRef}
                 placeholder={t("workItems.descriptionPlaceholder")}
                 initialContent={resolvedDescription ?? rawDescription}
                 onContentChange={handleDescriptionChange}
-                onImageInsert={onUpdateWorkItem ? handleImageInsert : undefined}
+                onImagePaste={onUpdateWorkItem ? handleImageInsert : undefined}
                 minHeight={200}
+                maxHeight={600}
                 editable={!!onUpdateWorkItem}
-                className="text-[13px]"
-                toolbarClassName="work-item-toolbar"
+                requireCmdEnter
+                className="noDrag border-b border-border-2 py-2 text-[13px] [&_.composer-input-content]:px-0 [&_.composer-input-content]:pb-0 [&_.composer-input-content]:text-[13px] [&_.composer-input-content]:leading-[1.6]"
               />
             </div>
             <TodoChecklist

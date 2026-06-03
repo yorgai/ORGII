@@ -10,7 +10,7 @@
  *
  * Split layout:
  *   - Header: title + close button
- *   - Left: ProjectContentEditor (title, summary, RichTextEditor description)
+ *   - Left: ProjectContentEditor (title, summary, markdown description)
  *   - Right: PropertiesPanel
  *   - Footer: Cancel / Create project
  */
