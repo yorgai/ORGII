@@ -15,6 +15,7 @@ import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut
 import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
 import SessionHoverCard from "@src/components/SessionHoverCard";
 import Tooltip from "@src/components/Tooltip";
+import WorkItemHoverCard from "@src/components/WorkItemHoverCard";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { ROUTES } from "@src/config/routes";
 import {
@@ -42,6 +43,7 @@ import {
 import {
   CHAT_PANEL_CREATE_TARGET,
   chatPanelCreateTargetAtom,
+  chatPanelSelectedWorkItemAtom,
 } from "@src/store/ui/chatPanelAtom";
 import { spotlightOpenAtom } from "@src/store/ui/uiAtom";
 
@@ -133,7 +135,12 @@ export const WorkstationSidebarConnector: React.FC = () => {
   );
   const deleteSessionCreatorDraft = useSetAtom(deleteSessionCreatorDraftAtom);
   const setSpotlightOpen = useSetAtom(spotlightOpenAtom);
+  const chatPanelCreateTarget = useAtomValue(chatPanelCreateTargetAtom);
+  const chatPanelSelectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
   const setChatPanelCreateTarget = useSetAtom(chatPanelCreateTargetAtom);
+  const setChatPanelSelectedWorkItem = useSetAtom(
+    chatPanelSelectedWorkItemAtom
+  );
   const { openSession } = useSessionView();
   const { goToStartPage, goToNewSession, navigateTo } = useAppNavigation();
   const [activeSidebarKey, setActiveSidebarKey] =
@@ -237,7 +244,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     loading: projectsWorkItemsLoading,
     getLoadMoreGroupId: getProjectsLoadMoreGroupId,
     loadLinearOrgWorkItems: loadProjectsLinearOrgWorkItems,
-    openWorkItem: openProjectsWorkItem,
+    toChatPanelWorkItem: toChatPanelWorkItem,
     openLinearWorkItem: openProjectsLinearWorkItem,
   } = useProjectsWorkItemMenuItems({
     enabled: activeSidebarKey === "projects",
@@ -329,14 +336,22 @@ export const WorkstationSidebarConnector: React.FC = () => {
     location.pathname,
     ROUTES.workStation.kanban.path
   );
-  const sessionSelectedMenuItemId = getSelectedMenuItemId({
-    selectedPinnedMenuItemId,
-    activeSessionId,
-    selectedDraftMenuItemId,
-  });
+  const sessionSelectedMenuItemId =
+    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM
+      ? ""
+      : getSelectedMenuItemId({
+          selectedPinnedMenuItemId,
+          activeSessionId,
+          selectedDraftMenuItemId,
+        });
+  const resolvedProjectsSelectedMenuItemId =
+    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM ||
+    chatPanelSelectedWorkItem
+      ? projectsSelectedMenuItemId
+      : "";
   const selectedMenuItemId =
     activeSidebarKey === "projects"
-      ? projectsSelectedMenuItemId
+      ? resolvedProjectsSelectedMenuItemId
       : sessionSelectedMenuItemId;
   const resolvedCollapsedSectionIds =
     activeSidebarKey === "projects"
@@ -349,10 +364,11 @@ export const WorkstationSidebarConnector: React.FC = () => {
 
   const handleGoToNewSession = useCallback(
     (options?: GoToNewSessionOptions) => {
+      setChatPanelSelectedWorkItem(null);
       setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
       goToNewSession(options);
     },
-    [goToNewSession, setChatPanelCreateTarget]
+    [goToNewSession, setChatPanelCreateTarget, setChatPanelSelectedWorkItem]
   );
 
   const {
@@ -390,6 +406,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     (_key: string, item: NavigationMenuItem) => {
       if (item.id === PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID) {
         setProjectsSelectedMenuItemId(PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID);
+        setChatPanelSelectedWorkItem(null);
         setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
         goToNewSession({ preserveActiveDraft: true });
         return;
@@ -398,6 +415,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
       const createWorkItemOrgId = getProjectsWorkItemCreateOrgId(item.id);
       if (createWorkItemOrgId) {
         setProjectsSelectedMenuItemId(item.id);
+        setChatPanelSelectedWorkItem(null);
         setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
         goToNewSession({ preserveActiveDraft: true });
         return;
@@ -426,6 +444,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
         const linearWorkItem = projectsLinearWorkItemMap.get(linearWorkItemId);
         if (!linearWorkItem) return;
         setProjectsSelectedMenuItemId(item.id);
+        setChatPanelSelectedWorkItem(null);
         openProjectsLinearWorkItem(linearWorkItem);
         return;
       }
@@ -435,17 +454,20 @@ export const WorkstationSidebarConnector: React.FC = () => {
       const workItem = projectsWorkItemMap.get(workItemId);
       if (!workItem) return;
       setProjectsSelectedMenuItemId(item.id);
-      openProjectsWorkItem(workItem);
+      setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
+      goToNewSession({ preserveActiveDraft: true });
+      setChatPanelSelectedWorkItem(toChatPanelWorkItem(workItem));
     },
     [
       getProjectsLoadMoreGroupId,
       goToNewSession,
       loadProjectsLinearOrgWorkItems,
       openProjectsLinearWorkItem,
-      openProjectsWorkItem,
       projectsLinearWorkItemMap,
       projectsWorkItemMap,
       setChatPanelCreateTarget,
+      setChatPanelSelectedWorkItem,
+      toChatPanelWorkItem,
     ]
   );
 
@@ -487,7 +509,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     [goToStartPage, homeLabel, t]
   );
 
-  const renderMenuItemWrapper = useCallback(
+  const renderSessionMenuItemWrapper = useCallback(
     (item: NavigationMenuItem, node: React.ReactElement) => {
       if (item.id === NEW_SESSION_MENU_ITEM_ID) {
         return (
@@ -523,6 +545,42 @@ export const WorkstationSidebarConnector: React.FC = () => {
     [newSessionLabel, sessionMap]
   );
 
+  const renderProjectsMenuItemWrapper = useCallback(
+    (item: NavigationMenuItem, node: React.ReactElement) => {
+      const workItemId = getProjectsWorkItemId(item.id);
+      if (workItemId) {
+        return (
+          <WorkItemHoverCard
+            key={item.key}
+            workItem={projectsWorkItemMap.get(workItemId)}
+            position="right-start"
+            mouseEnterDelay={1000}
+            mouseLeaveDelay={100}
+          >
+            {node}
+          </WorkItemHoverCard>
+        );
+      }
+
+      const linearWorkItemId = getProjectsLinearWorkItemId(item.id);
+      if (linearWorkItemId) {
+        return (
+          <WorkItemHoverCard
+            key={item.key}
+            workItem={projectsLinearWorkItemMap.get(linearWorkItemId)}
+            position="right-start"
+            mouseEnterDelay={1000}
+            mouseLeaveDelay={100}
+          >
+            {node}
+          </WorkItemHoverCard>
+        );
+      }
+
+      return node;
+    },
+    [projectsLinearWorkItemMap, projectsWorkItemMap]
+  );
   const resolvedMenuItemClick =
     activeSidebarKey === "projects"
       ? handleProjectsMenuItemClick
@@ -530,7 +588,9 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const resolvedMenuItemContextMenu =
     activeSidebarKey === "projects" ? undefined : handleMenuItemContextMenu;
   const resolvedRenderMenuItemWrapper =
-    activeSidebarKey === "projects" ? undefined : renderMenuItemWrapper;
+    activeSidebarKey === "projects"
+      ? renderProjectsMenuItemWrapper
+      : renderSessionMenuItemWrapper;
 
   const allSectionIds = useMemo(
     () => getAllSectionIds(sidebarMenuItems),
@@ -611,6 +671,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
         return;
       }
       setProjectsGroupByMode(mode as ProjectsGroupByMode);
+      setProjectsSelectedMenuItemId("");
       setProjectsGroupVisibleCounts(new Map());
       setProjectsCollapsedSectionIds(new Set());
       defaultedProjectsLinearSectionIdsRef.current.clear();

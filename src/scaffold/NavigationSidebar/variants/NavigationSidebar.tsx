@@ -260,7 +260,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
         )}
 
         {pinnedMenuItems.length > 0 && (
-          <div className="px-3 pt-3">
+          <div className="px-3 pt-1">
             <NavigationMenu
               items={pinnedMenuItems}
               selectedKeys={selectedKeys}

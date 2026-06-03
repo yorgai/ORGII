@@ -1,7 +1,5 @@
 import React from "react";
 
-import { useSafeHover } from "@src/hooks/ui/useSafeHover";
-
 import { cn } from "./cn";
 import { BoldStableLabel } from "./tabContent";
 import type { TabPillItem } from "./types";
@@ -10,23 +8,10 @@ export const SidebarTabButton: React.FC<{
   tab: TabPillItem;
   isActive: boolean;
   onClick: () => void;
-  ultraThinHover: string;
   iconOnly?: boolean;
   regionTintRGB?: { r: number; g: number; b: number } | null;
   isDark: boolean;
-}> = ({
-  tab,
-  isActive,
-  onClick,
-  ultraThinHover,
-  iconOnly,
-  regionTintRGB,
-  isDark,
-}) => {
-  const [ref, isHovered] = useSafeHover<HTMLButtonElement>({
-    disabled: tab.disabled,
-  });
-
+}> = ({ tab, isActive, onClick, iconOnly, regionTintRGB, isDark }) => {
   const activeFill = isDark
     ? "rgba(60, 60, 60, 0.45)"
     : "rgba(255, 255, 255, 0.42)";
@@ -38,13 +23,12 @@ export const SidebarTabButton: React.FC<{
         transition: "all 0.15s ease",
       }
     : {
-        backgroundColor: isHovered ? ultraThinHover : "transparent",
-        transition: "background-color 0.15s ease",
+        backgroundColor: "transparent",
+        transition: "color 0.15s ease",
       };
 
   return (
     <button
-      ref={ref}
       onClick={onClick}
       disabled={tab.disabled}
       data-action="panel.setLeftTab"

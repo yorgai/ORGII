@@ -8,7 +8,7 @@ import {
   type SyncConnection,
   syncConnectionsApi,
 } from "@src/api/http/integrations";
-import { projectApi } from "@src/api/http/project";
+import { enrichedWorkItemToUI, projectApi } from "@src/api/http/project";
 import type { EnrichedWorkItem, ProjectOrg } from "@src/api/http/project";
 import { createLogger } from "@src/hooks/logger";
 import { useProjectDataChanged } from "@src/hooks/project";
@@ -20,9 +20,9 @@ import {
 } from "@src/modules/ProjectManager/config/manage";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import { SESSION_SIDEBAR_PAGE_SIZE } from "@src/store/session";
+import type { ChatPanelSelectedWorkItem } from "@src/store/ui/chatPanelAtom";
 import {
   createProjectLinearWorkItemsTab,
-  createWorkItemDetailTab,
   openTab,
   workstationLayoutAtom,
 } from "@src/store/workstation/tabs";
@@ -114,7 +114,7 @@ interface UseProjectsWorkItemMenuItemsResult {
   loading: boolean;
   getLoadMoreGroupId: (id: string) => string | null;
   loadLinearOrgWorkItems: (orgId: string) => void;
-  openWorkItem: (workItem: SidebarWorkItem) => void;
+  toChatPanelWorkItem: (workItem: SidebarWorkItem) => ChatPanelSelectedWorkItem;
   openLinearWorkItem: (workItem: SidebarLinearWorkItem) => void;
 }
 
@@ -502,7 +502,7 @@ export function useProjectsWorkItemMenuItems({
           workItem.source === "local"
             ? workItem.title || t("projects:workItems.untitledWorkItem")
             : workItem.title || t("projects:workItems.untitledWorkItem"),
-        iconElement: statusIconElement(workItem.status),
+        iconElement: statusIconElement(toWorkItemStatus(workItem.status)),
         dataTestId: `sidebar-work-item-${workItem.id}`,
       };
     },
@@ -692,10 +692,9 @@ export function useProjectsWorkItemMenuItems({
       items.push(
         separator(
           groupId,
-          t(
-            `projects:workItems.priorityLabels.${priority}`,
-            priorityConfig?.label
-          )
+          t(`projects:workItems.priorityLabels.${priority}`, {
+            defaultValue: priorityConfig?.label ?? priority,
+          })
         )
       );
       appendGroupItems(items, groupId, groupItems);
@@ -723,21 +722,15 @@ export function useProjectsWorkItemMenuItems({
     groupByMode,
   ]);
 
-  const openWorkItem = useCallback(
-    (workItem: SidebarWorkItem) => {
-      const tab = createWorkItemDetailTab(
-        workItem.projectId,
-        workItem.projectName,
-        workItem.id,
-        workItem.title || t("projects:workItems.untitledWorkItem"),
-        workItem.projectSlug
-      );
-      setLayout((layout) => ({
-        ...layout,
-        mainPane: openTab(layout.mainPane, tab),
-      }));
-    },
-    [setLayout, t]
+  const toChatPanelWorkItem = useCallback(
+    (workItem: SidebarWorkItem): ChatPanelSelectedWorkItem => ({
+      workItem: enrichedWorkItemToUI(workItem),
+      projectId: workItem.projectId,
+      projectName: workItem.projectName,
+      projectSlug: workItem.projectSlug,
+      shortId: workItem.shortId,
+    }),
+    []
   );
 
   const openLinearWorkItem = useCallback(
@@ -764,7 +757,7 @@ export function useProjectsWorkItemMenuItems({
     loading,
     getLoadMoreGroupId: isProjectsWorkItemLoadMoreId,
     loadLinearOrgWorkItems: loadLinearOrgWorkItemsById,
-    openWorkItem,
+    toChatPanelWorkItem,
     openLinearWorkItem,
   };
 }
