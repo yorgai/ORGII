@@ -281,7 +281,10 @@ fn delete_marks_row_deleted_and_preserves_durable_extras() {
             |row| row.get(0),
         )
         .unwrap();
-    assert_eq!(extras_count, 1, "soft-delete should preserve durable extras");
+    assert_eq!(
+        extras_count, 1,
+        "soft-delete should preserve durable extras"
+    );
 }
 
 #[test]
