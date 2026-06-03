@@ -2,10 +2,14 @@
  * Lead, Members, Teams, Labels, and Linked Repos field rows.
  * Extracted to keep ProjectPropertyFields under the UI line limit.
  */
-import { Code2, Plane, Settings, Tag, User, Users } from "lucide-react";
+import { Code2, Plane, Tag, User, Users } from "lucide-react";
 import React from "react";
 
 import Avatar from "@src/components/Avatar";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import {
   FieldRow,
   type FieldRowVariant,
@@ -76,7 +80,7 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
           icon={
             project.lead ? (
               <Avatar
-                size={16}
+                size={DROPDOWN_ITEM.iconSize}
                 src={project.lead.avatar}
                 style={{
                   backgroundColor: project.lead.color || "var(--color-fill-3)",
@@ -87,7 +91,7 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
                 {project.lead.name.charAt(0).toUpperCase()}
               </Avatar>
             ) : (
-              <User size={14} />
+              <User size={DROPDOWN_ITEM.iconSize} />
             )
           }
           label={t("properties.lead")}
@@ -115,7 +119,7 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
                 <>
                   {!searchQuery && (
                     <Option
-                      icon={<User size={14} />}
+                      icon={<User size={DROPDOWN_ITEM.iconSize} />}
                       label={t("properties.noLead")}
                       onClick={() => handleLeadChange(undefined)}
                     />
@@ -128,7 +132,7 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
                       onClick={() => handleLeadChange(person)}
                     >
                       <Avatar
-                        size={16}
+                        size={DROPDOWN_ITEM.iconSize}
                         src={person.avatar}
                         style={{
                           backgroundColor:
@@ -160,7 +164,7 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
         }
       >
         <FieldRow
-          icon={<Users size={14} />}
+          icon={<Users size={DROPDOWN_ITEM.iconSize} />}
           label={t("properties.members")}
           value={
             project.members && project.members.length > 0
@@ -199,7 +203,7 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
                     onClick={() => handleMemberToggle(person)}
                   >
                     <Avatar
-                      size={16}
+                      size={DROPDOWN_ITEM.iconSize}
                       src={person.avatar}
                       style={{
                         backgroundColor: person.color || "var(--color-fill-3)",
@@ -229,7 +233,7 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
         }
       >
         <FieldRow
-          icon={<Plane size={14} />}
+          icon={<Plane size={DROPDOWN_ITEM.iconSize} />}
           label={t("properties.teams")}
           value={
             project.teams && project.teams.length > 0
@@ -255,11 +259,8 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
                 : availableTeams;
               if (filtered.length === 0) {
                 return (
-                  <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
-                    <Settings size={20} className="text-text-3" />
-                    <p className="text-[12px] text-text-3">
-                      {t("properties.noTeamsHint")}
-                    </p>
+                  <div className={DROPDOWN_CLASSES.listMessage}>
+                    {t("properties.noTeamsHint")}
                   </div>
                 );
               }
@@ -274,7 +275,10 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
                     isSelected={isSelected}
                     onClick={() => handleTeamToggle(team)}
                   >
-                    <Plane size={14} style={{ color: team.color }} />
+                    <Plane
+                      size={DROPDOWN_ITEM.iconSize}
+                      style={{ color: team.color }}
+                    />
                     <span className="flex-1 truncate">{team.name}</span>
                   </Option>
                 );
@@ -295,7 +299,7 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
         }
       >
         <FieldRow
-          icon={<Tag size={14} />}
+          icon={<Tag size={DROPDOWN_ITEM.iconSize} />}
           label={t("properties.labels")}
           value={
             project.labels && project.labels.length > 0
@@ -355,7 +359,7 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
           }
         >
           <FieldRow
-            icon={<Code2 size={14} />}
+            icon={<Code2 size={DROPDOWN_ITEM.iconSize} />}
             label={t("properties.repos")}
             value={linkedRepoLabel}
             isSelected={linkedRepoCount > 0}
@@ -380,11 +384,8 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
                   : availableRepos;
                 if (filtered.length === 0) {
                   return (
-                    <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
-                      <Code2 size={20} className="text-text-3" />
-                      <p className="text-[12px] text-text-3">
-                        {t("properties.noReposHint")}
-                      </p>
+                    <div className={DROPDOWN_CLASSES.listMessage}>
+                      {t("properties.noReposHint")}
                     </div>
                   );
                 }
@@ -399,7 +400,10 @@ const PeopleTeamsLabelsFields: React.FC<PeopleTeamsLabelsFieldsProps> = ({
                       isSelected={isSelected}
                       onClick={() => handleLinkedRepoToggle(repo)}
                     >
-                      <Code2 size={14} className="text-text-3" />
+                      <Code2
+                        size={DROPDOWN_ITEM.iconSize}
+                        className="text-text-3"
+                      />
                       <span className="flex-1 truncate">{repo.name}</span>
                     </Option>
                   );

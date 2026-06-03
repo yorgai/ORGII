@@ -1,6 +1,10 @@
 import React from "react";
 
 import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
+import {
   PropertyDropdownField,
   type PropertyDropdownOption,
   type PropertyDropdownTriggerVariant,
@@ -73,18 +77,22 @@ export function RowPropertyDropdown<T extends string>({
                 <button
                   key={option.value}
                   type="button"
-                  className={`flex min-h-7 w-full cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-left text-[13px] text-text-1 transition-colors duration-150 hover:bg-fill-2 ${
-                    option.value === value
-                      ? "bg-fill-2 font-medium !text-primary-6 hover:!text-primary-6"
-                      : ""
+                  className={`w-full justify-between text-left ${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} ${
+                    option.value === value ? DROPDOWN_CLASSES.itemSelected : ""
                   }`}
                   onClick={() => {
                     void onChange(option.value);
                     close();
                   }}
                 >
-                  {renderOptionIcon(option)}
-                  <span className="flex-1 truncate">{option.label}</span>
+                  <span
+                    className={`shrink-0 ${DROPDOWN_ITEM.iconSizeClass} [&_svg]:h-[13px] [&_svg]:w-[13px]`}
+                  >
+                    {renderOptionIcon(option)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {option.label}
+                  </span>
                 </button>
               ));
             }

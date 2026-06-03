@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
@@ -164,7 +165,7 @@ function InlineDropdown<T extends string>({
                 >
                   {option.icon && (
                     <span
-                      className="flex w-4 shrink-0 items-center justify-center"
+                      className={`${DROPDOWN_ITEM.iconSizeClass} shrink-0 [&_svg]:h-[13px] [&_svg]:w-[13px]`}
                       style={option.color ? { color: option.color } : undefined}
                     >
                       {option.icon}

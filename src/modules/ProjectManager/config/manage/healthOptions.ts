@@ -6,6 +6,7 @@
 import { AlertTriangle, CheckCircle2, Clock, XCircle } from "lucide-react";
 import React from "react";
 
+import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import type { ProjectHealth } from "@src/types/core/project";
 
 import { HEALTH_COLORS } from "./colors";
@@ -25,25 +26,25 @@ export const HEALTH_OPTIONS: HealthOption[] = [
   {
     value: "on_track",
     label: "On Track",
-    icon: React.createElement(CheckCircle2, { size: 14 }),
+    icon: React.createElement(CheckCircle2, { size: DROPDOWN_ITEM.iconSize }),
     color: HEALTH_COLORS.on_track,
   },
   {
     value: "at_risk",
     label: "At Risk",
-    icon: React.createElement(AlertTriangle, { size: 14 }),
+    icon: React.createElement(AlertTriangle, { size: DROPDOWN_ITEM.iconSize }),
     color: HEALTH_COLORS.at_risk,
   },
   {
     value: "off_track",
     label: "Off Track",
-    icon: React.createElement(XCircle, { size: 14 }),
+    icon: React.createElement(XCircle, { size: DROPDOWN_ITEM.iconSize }),
     color: HEALTH_COLORS.off_track,
   },
   {
     value: "no_updates",
     label: "No updates",
-    icon: React.createElement(Clock, { size: 14 }),
+    icon: React.createElement(Clock, { size: DROPDOWN_ITEM.iconSize }),
     color: HEALTH_COLORS.no_updates,
   },
 ];

@@ -6,6 +6,7 @@
 import { AlertCircle, Minus } from "lucide-react";
 import React from "react";
 
+import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import type { ProjectPriority } from "@src/types/core/project";
 import type { DropdownOption } from "@src/types/core/shared";
 import type { WorkItemPriority } from "@src/types/core/workItem";
@@ -25,7 +26,7 @@ const PRIORITY_BAR_HEIGHTS: Record<PriorityBarsIconProps["level"], number[]> = {
 
 const PriorityBarsIcon: React.FC<PriorityBarsIconProps> = ({
   level,
-  size = 14,
+  size = DROPDOWN_ITEM.iconSize,
 }) => {
   const heights = PRIORITY_BAR_HEIGHTS[level];
   return React.createElement(
@@ -62,31 +63,40 @@ export const WORK_ITEM_PRIORITY_OPTIONS: DropdownOption<WorkItemPriority>[] = [
   {
     value: "none",
     label: "No priority",
-    icon: React.createElement(Minus, { size: 14 }),
+    icon: React.createElement(Minus, { size: DROPDOWN_ITEM.iconSize }),
     color: PRIORITY_COLORS.none,
   },
   {
     value: "urgent",
     label: "Urgent",
-    icon: React.createElement(AlertCircle, { size: 14 }),
+    icon: React.createElement(AlertCircle, { size: DROPDOWN_ITEM.iconSize }),
     color: PRIORITY_COLORS.urgent,
   },
   {
     value: "high",
     label: "High",
-    icon: React.createElement(PriorityBarsIcon, { level: "high", size: 14 }),
+    icon: React.createElement(PriorityBarsIcon, {
+      level: "high",
+      size: DROPDOWN_ITEM.iconSize,
+    }),
     color: PRIORITY_COLORS.high,
   },
   {
     value: "medium",
     label: "Medium",
-    icon: React.createElement(PriorityBarsIcon, { level: "medium", size: 14 }),
+    icon: React.createElement(PriorityBarsIcon, {
+      level: "medium",
+      size: DROPDOWN_ITEM.iconSize,
+    }),
     color: PRIORITY_COLORS.medium,
   },
   {
     value: "low",
     label: "Low",
-    icon: React.createElement(PriorityBarsIcon, { level: "low", size: 14 }),
+    icon: React.createElement(PriorityBarsIcon, {
+      level: "low",
+      size: DROPDOWN_ITEM.iconSize,
+    }),
     color: PRIORITY_COLORS.low,
   },
 ];
@@ -106,31 +116,40 @@ export const STORY_PRIORITY_OPTIONS: ProjectPriorityOption[] = [
   {
     value: "urgent",
     label: "Urgent",
-    icon: React.createElement(AlertCircle, { size: 14 }),
+    icon: React.createElement(AlertCircle, { size: DROPDOWN_ITEM.iconSize }),
     color: PRIORITY_COLORS.urgent,
   },
   {
     value: "high",
     label: "High",
-    icon: React.createElement(PriorityBarsIcon, { level: "high", size: 14 }),
+    icon: React.createElement(PriorityBarsIcon, {
+      level: "high",
+      size: DROPDOWN_ITEM.iconSize,
+    }),
     color: PRIORITY_COLORS.high,
   },
   {
     value: "medium",
     label: "Medium",
-    icon: React.createElement(PriorityBarsIcon, { level: "medium", size: 14 }),
+    icon: React.createElement(PriorityBarsIcon, {
+      level: "medium",
+      size: DROPDOWN_ITEM.iconSize,
+    }),
     color: PRIORITY_COLORS.medium,
   },
   {
     value: "low",
     label: "Low",
-    icon: React.createElement(PriorityBarsIcon, { level: "low", size: 14 }),
+    icon: React.createElement(PriorityBarsIcon, {
+      level: "low",
+      size: DROPDOWN_ITEM.iconSize,
+    }),
     color: PRIORITY_COLORS.low,
   },
   {
     value: "none",
     label: "No priority",
-    icon: React.createElement(Minus, { size: 14 }),
+    icon: React.createElement(Minus, { size: DROPDOWN_ITEM.iconSize }),
     color: PRIORITY_COLORS.none,
   },
 ];

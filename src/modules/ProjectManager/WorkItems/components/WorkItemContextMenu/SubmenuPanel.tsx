@@ -2,6 +2,11 @@ import { ChevronRight } from "lucide-react";
 import React from "react";
 
 import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+  DROPDOWN_WIDTHS,
+} from "@src/components/Dropdown/tokens";
+import {
   KEYBOARD_SHORTCUT_VARIANT,
   KeyboardShortcut,
 } from "@src/components/KeyboardShortcut";
@@ -33,7 +38,7 @@ export const SubmenuPanel: React.FC<SubmenuPanelProps> = ({
   return (
     <div
       ref={panelRef}
-      className="work-item-context-menu work-item-context-menu--submenu"
+      className={`work-item-context-menu work-item-context-menu--submenu ${DROPDOWN_CLASSES.menuPanelBase} ${DROPDOWN_WIDTHS.sidebarMenuClass}`}
       style={{ left: position.x, top: position.y }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -52,16 +57,16 @@ export const SubmenuPanel: React.FC<SubmenuPanelProps> = ({
           <button
             key={item.id}
             type="button"
-            className={`work-item-context-menu__item ${
-              item.disabled ? "work-item-context-menu__item--disabled" : ""
-            } ${isActive ? "work-item-context-menu__item--active" : ""}`}
+            className={`work-item-context-menu__item ${DROPDOWN_CLASSES.item} w-full justify-between border-none bg-transparent text-left ${DROPDOWN_CLASSES.itemHover} ${
+              item.disabled ? DROPDOWN_CLASSES.itemDisabled : ""
+            } ${isActive ? DROPDOWN_CLASSES.itemActive : ""}`}
             onClick={(event) => onItemClick(item, event)}
             onMouseEnter={(event) => onItemMouseEnter(item, event)}
             disabled={item.disabled}
           >
             {item.icon && (
               <span
-                className="work-item-context-menu__icon"
+                className={`work-item-context-menu__icon ${DROPDOWN_ITEM.iconSizeClass} [&_svg]:h-[13px] [&_svg]:w-[13px]`}
                 style={item.iconColor ? { color: item.iconColor } : undefined}
               >
                 {item.icon}
@@ -75,7 +80,7 @@ export const SubmenuPanel: React.FC<SubmenuPanelProps> = ({
             )}
             {hasNested ? (
               <ChevronRight
-                size={14}
+                size={DROPDOWN_ITEM.iconSize}
                 className="work-item-context-menu__arrow"
               />
             ) : showNumericShortcuts ? (

@@ -10,6 +10,7 @@ import { Calendar, Circle, MoreHorizontal } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 
 import Button from "@src/components/Button";
+import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import {
   FieldRow,
   type FieldRowVariant,
@@ -292,7 +293,7 @@ const ProjectPropertyFields: React.FC<ProjectPropertyFieldsProps> = ({
             }
           >
             <FieldRow
-              icon={<Calendar size={14} />}
+              icon={<Calendar size={DROPDOWN_ITEM.iconSize} />}
               label={t("properties.startDate")}
               value={formatDate(project.startDate)}
               isSelected={!!project.startDate}
@@ -321,7 +322,7 @@ const ProjectPropertyFields: React.FC<ProjectPropertyFieldsProps> = ({
             }
           >
             <FieldRow
-              icon={<Calendar size={14} />}
+              icon={<Calendar size={DROPDOWN_ITEM.iconSize} />}
               label={t("properties.targetDate")}
               value={formatDate(project.targetDate)}
               isSelected={!!project.targetDate}
@@ -355,8 +356,10 @@ const ProjectPropertyFields: React.FC<ProjectPropertyFieldsProps> = ({
                   {t("properties.completion")}
                 </span>
                 <div className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1.5">
-                  <span className="flex h-4 w-4 shrink-0 items-center justify-center text-primary-6">
-                    <Circle size={14} />
+                  <span
+                    className={`${DROPDOWN_ITEM.iconSizeClass} shrink-0 text-primary-6`}
+                  >
+                    <Circle size={DROPDOWN_ITEM.iconSize} />
                   </span>
                   <span className="flex-1 truncate text-xs text-text-1">
                     {project.completionPercentage}%
@@ -373,7 +376,7 @@ const ProjectPropertyFields: React.FC<ProjectPropertyFieldsProps> = ({
             size="small"
             shape="round"
             iconOnly
-            icon={<MoreHorizontal size={14} />}
+            icon={<MoreHorizontal size={DROPDOWN_ITEM.iconSize} />}
             onClick={handleMoreClick}
             title={t("common:actions.more")}
             htmlType="button"
