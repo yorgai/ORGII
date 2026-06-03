@@ -3,6 +3,7 @@ import { useAtomValue } from "jotai";
 import React, { useEffect, useMemo, useState } from "react";
 
 import Markdown from "@src/components/MarkDown";
+import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { themesAtom } from "@src/store";
 import { chatAppearanceAtom } from "@src/store/config/configAtom";
 
@@ -171,7 +172,7 @@ const AgentChatItemDefault: React.FC<AgentChatItemProps> = ({
                   (curCheckStatus === title ? (
                     <div
                       className={`chat-text-sm mr-3 mt-3 flex h-6 w-[6rem] items-center justify-center rounded-[1.75rem] border border-solid border-primary-5 bg-primary-1 ${
-                        (themes as string) === "dark"
+                        isThemeCssPathDark(themes)
                           ? "text-text-1"
                           : "text-primary-5"
                       } `}

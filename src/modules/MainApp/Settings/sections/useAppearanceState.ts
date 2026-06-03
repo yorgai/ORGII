@@ -23,6 +23,7 @@ import {
   uiScaleAtom,
 } from "@src/store";
 import { preloadThemeCss, swapThemeCss } from "@src/util/ui/theme/swapThemeCss";
+import { showThemeTransitionCover } from "@src/util/ui/theme/themeTransitionCover";
 
 const getApproxFontSize = (scale: number): string => {
   const baseFontSize = 14;
@@ -73,19 +74,24 @@ export function useAppearanceState() {
   );
 
   const handleThemeChange = useCallback(
-    (themeIdValue: string) => {
+    async (themeIdValue: string) => {
       const themeId = normalizeGlobalThemeId(themeIdValue);
       const selectedTheme = getGlobalTheme(themeId);
-      setGlobalThemeId(themeId);
-      setPrimaryColorPreset(selectedTheme.defaultPrimaryColor);
-      localStorage.setItem("theme", themeId);
-      swapThemeCss(selectedTheme.baseCssPath);
+      const cover = showThemeTransitionCover();
+      try {
+        await swapThemeCss(selectedTheme.baseCssPath);
+        setGlobalThemeId(themeId);
+        setPrimaryColorPreset(selectedTheme.defaultPrimaryColor);
+        localStorage.setItem("theme", themeId);
+      } finally {
+        await cover.hide();
+      }
     },
     [setGlobalThemeId, setPrimaryColorPreset]
   );
 
   const handleAppearanceModeChange = useCallback(
-    (value: string | number | (string | number)[]) => {
+    async (value: string | number | (string | number)[]) => {
       const selectedMode = String(value) === "dark" ? "dark" : "light";
       const currentThemeId = normalizeGlobalThemeId(globalThemeId);
 
@@ -104,7 +110,7 @@ export function useAppearanceState() {
 
       const matchedVariant = getVariantThemeId(currentThemeId, selectedMode);
       if (matchedVariant) {
-        handleThemeChange(matchedVariant);
+        await handleThemeChange(matchedVariant);
         return;
       }
 
@@ -112,7 +118,7 @@ export function useAppearanceState() {
         selectedMode === "dark"
           ? GLOBAL_THEME_GROUPS.dark[0]
           : GLOBAL_THEME_GROUPS.light[0];
-      handleThemeChange(fallbackThemeId);
+      await handleThemeChange(fallbackThemeId);
     },
     [globalThemeId, handleThemeChange]
   );

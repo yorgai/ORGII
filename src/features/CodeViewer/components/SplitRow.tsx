@@ -1,7 +1,7 @@
 /**
  * SplitRow Component
  *
- * Displays a single row in the split diff view (GitHub Desktop style)
+ * Displays a single row in the split diff view
  * Shows old content on left, new content on right, with line numbers in center
  */
 import { useAtomValue } from "jotai";
@@ -13,6 +13,7 @@ import {
   oneLight,
 } from "react-syntax-highlighter/dist/esm/styles/prism";
 
+import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { themesAtom } from "@src/store/ui/uiAtom";
 
 import type { AlignedLine } from "../types";
@@ -104,7 +105,7 @@ export const SplitRow = React.memo<SplitRowProps>(
     onToggleRange,
   }) => {
     const themes = useAtomValue(themesAtom);
-    const isDark = themes.includes("dark");
+    const isDark = isThemeCssPathDark(themes);
 
     const oldType = line.oldLine?.type || "empty";
     const newType = line.newLine?.type || "empty";

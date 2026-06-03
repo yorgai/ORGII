@@ -146,6 +146,7 @@
     "themeOptions": {
       "githubLight": "ORGII ライト",
       "githubDark": "ORGII ダーク",
+      "orgiiHighContrast": "ORGII ハイコントラスト",
       "vscodeLight": "VS Code ライト",
       "vscodeDark": "VS Code ダーク",
       "monokaiLight": "Monokai ライト",
