@@ -1,16 +1,17 @@
 /* global describe, before, it, process */
 import {
+  AGENT_ORG_COORDINATOR_MEMBER_ID,
+  AGENT_ORG_TASK_STATUS,
   API_AGENT_TYPE,
   BUILTIN_SDE_AGENT_ID,
-  E2E_REPO_PATH,
   DEFAULT_AGENT_ORG_ID,
   DEFAULT_AGENT_ORG_MEMBER_IDS,
+  E2E_REPO_PATH,
   RUN_ID,
   SHARED_CLI_AGENT_ID,
   SHARED_CLI_AGENT_TYPE,
-  AGENT_ORG_COORDINATOR_MEMBER_ID,
-  AGENT_ORG_TASK_STATUS,
   assertCrashRecoveryBannerAbsent,
+  assertE2ERepoFixture,
   assertLongTaskRenderedCollapsed,
   assertNoCurrentPlanBuildSurface,
   assertNoFalseFinality,
@@ -40,15 +41,17 @@ import {
   selectRenderedAgentOrg,
   selectRenderedDefaultAgentOrg,
   selectRenderedExecMode,
+  selectRenderedOrgMemberAgentDefinition,
   sendCoordinatorOrgMessage,
   sendFromRenderedCreator,
-  sendRenderedGroupChatMentionPrompt,
   sendRenderedChatPrompt,
+  sendRenderedGroupChatMentionPrompt,
   unwrap,
   waitForActiveSessionExecMode,
   waitForAgentOrgByName,
   waitForAgentOrgRunView,
   waitForAgentOrgRunViewByOrg,
+  waitForApp,
   waitForCoordinatorRuntimeStatus,
   waitForGroupChatPausedBanner,
   waitForGroupChatPendingTarget,
@@ -66,10 +69,7 @@ import {
   waitForRenderedReleasedTask,
   waitForSessionAggregateRow,
   waitForSessionOrgRuntimeSnapshot,
-  waitForApp,
-  assertE2ERepoFixture,
 } from "../../support/core/agentOrgUiDriver.mjs";
-
 
 describe("Agent Org settings and topology rendered UI", () => {
   before(async () => {
@@ -314,6 +314,126 @@ describe("Agent Org settings and topology rendered UI", () => {
       throw new Error(
         `Persisted override account mismatch: ${JSON.stringify(persistedChild)}`
       );
+    }
+  });
+
+  it("applies a member AgentDefinition override through the rendered Session Creator members panel", async () => {
+    const account = await getApiAccount();
+    const model = selectPreferredModel(account);
+    const orgName = `E2E Rendered Member Agent Override Org ${RUN_ID}`;
+    const leadName = `E2E Rendered Override Lead ${RUN_ID}`;
+    const childName = `E2E Rendered Override Child ${RUN_ID}`;
+    const overrideAgentId = `e2e-member-agent-override-${RUN_ID}`;
+    const overrideAgentName = `E2E Member Override Agent ${RUN_ID}`;
+    await removeAgentOrgsByName(orgName);
+
+    const definition = {
+      id: overrideAgentId,
+      name: overrideAgentName,
+      description:
+        "Temporary custom Agent for rendered Agent Org member override coverage.",
+      builtIn: false,
+      tier: "primary",
+      inheritsFrom: BUILTIN_SDE_AGENT_ID,
+      capabilities: { coding: { modeSwitch: true } },
+      delegationConfig: { delegatable: true, contextBuilders: [] },
+      sessionModel: {
+        mode: "singleton",
+        processingLock: true,
+        maxIterations: 3,
+      },
+      agentPolicy: {
+        autonomy: "full",
+        workspaceOnly: true,
+        blockedCommands: [],
+        riskRules: { medium: [], high: [] },
+      },
+      tools: { userAllowedTools: [], excludedTools: [] },
+      skillsConfig: { enabled: true, include: [], exclude: [], sourceDirs: [] },
+    };
+
+    try {
+      const existingDefs = unwrap(
+        await invokeE2E("listAgentDefs"),
+        "listAgentDefs before rendered member override"
+      ).defs;
+      if (existingDefs.some((candidate) => candidate?.id === overrideAgentId)) {
+        await invokeE2E("removeAgentDef", overrideAgentId);
+      }
+      unwrap(
+        await invokeE2E("addAgentDef", definition),
+        "add rendered member override AgentDefinition"
+      );
+      unwrap(
+        await invokeE2E("refreshAgentDefs"),
+        "refresh rendered member override AgentDefinition"
+      );
+
+      const org = await createRenderedStrictTwoMemberAgentOrg({
+        orgName,
+        leadName,
+        childName,
+      });
+      const lead = (org.children ?? []).find(
+        (member) => member.name === leadName
+      );
+      const child = lead?.children?.find((member) => member.name === childName);
+      if (!child?.id) {
+        throw new Error(
+          `Rendered member override could not resolve child: ${JSON.stringify(org)}`
+        );
+      }
+
+      await configureCreatorForAgentOrg({ account, model, agentOrgId: org.id });
+      await selectRenderedAgentOrg(org.id);
+      await selectRenderedOrgMemberAgentDefinition({
+        memberId: child.id,
+        agentDefinitionId: overrideAgentId,
+        expectedText: overrideAgentName,
+        label: "rendered member AgentDefinition override",
+      });
+
+      const sessionId = await sendFromRenderedCreator(
+        `E2E rendered member AgentDefinition override ${RUN_ID}. Reply briefly.`
+      );
+      if (!sessionId) {
+        throw new Error(
+          "Rendered member AgentDefinition override did not create a session id"
+        );
+      }
+
+      const runState = await waitForAgentOrgRunViewByOrg(
+        org.id,
+        (view) => {
+          const overriddenMember = (view?.members ?? []).find(
+            (member) => member.memberId === child.id
+          );
+          return (
+            overriddenMember?.agentId === overrideAgentId &&
+            Boolean(overriddenMember?.sessionRuntime?.sessionId)
+          );
+        },
+        "rendered member AgentDefinition override materialized"
+      );
+      const overriddenRuntime = (runState?.view?.members ?? []).find(
+        (member) => member.memberId === child.id
+      )?.sessionRuntime;
+      if (!overriddenRuntime?.sessionId) {
+        throw new Error(
+          `Rendered member override did not materialize runtime session: ${JSON.stringify(runState)}`
+        );
+      }
+      await waitForSessionAggregateRow(
+        overriddenRuntime.sessionId,
+        (session) =>
+          session.agentDefinitionId === overrideAgentId &&
+          session.model === model &&
+          session.accountId === account.id,
+        "rendered member AgentDefinition override child session metadata"
+      );
+    } finally {
+      await invokeE2E("removeAgentDef", overrideAgentId);
+      await removeAgentOrgsByName(orgName);
     }
   });
 
