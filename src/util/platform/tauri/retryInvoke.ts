@@ -65,8 +65,8 @@ export async function retryInvokeTauri<T = unknown>(
   eventStoreProxy.append([errorEvent]);
 
   // Keep the originating user prompt visible on final failure so the user
-  // can see what failed and click "Resume" (mirrors Claude Code's Resume
-  // UX). The Rust backend filters orphan `tool_use` entries on the next
+  // can see what failed and click "Resume". The Rust backend filters orphan
+  // `tool_use` entries on the next
   // send with `isResume: true`, so no duplicate bubbles are produced.
 
   throw lastError;

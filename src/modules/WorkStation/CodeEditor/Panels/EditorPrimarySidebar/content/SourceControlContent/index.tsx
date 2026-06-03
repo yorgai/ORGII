@@ -1,7 +1,7 @@
 /**
  * SourceControlContent Component
  *
- * VS Code style Source Control panel with virtualized file tree.
+ * Source Control panel with virtualized file tree.
  *
  * Features:
  * - Commit message input at top

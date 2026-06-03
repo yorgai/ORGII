@@ -111,7 +111,7 @@ export function buildGitFileTree(files: GitFile[]): GitFileTreeNode[] {
 }
 
 /**
- * Compress single-child directory chains (VS Code style)
+ * Compress single-child directory chains
  * e.g., src > page > Orgii becomes "src / page / Orgii" as single node
  */
 function compressDirectoryChains(nodes: GitFileTreeNode[]): GitFileTreeNode[] {
@@ -129,7 +129,7 @@ function compressDirectoryChains(nodes: GitFileTreeNode[]): GitFileTreeNode[] {
       compressedChildren[0].type === "directory"
     ) {
       const singleChild = compressedChildren[0];
-      // Merge names with " / " separator (VS Code style)
+      // Merge names with " / " separator
       node = {
         ...node,
         name: `${node.name} / ${singleChild.name}`,
@@ -156,7 +156,7 @@ function compressDirectoryChains(nodes: GitFileTreeNode[]): GitFileTreeNode[] {
 }
 
 /**
- * Builds a hierarchical tree with path compression (VS Code style)
+ * Builds a hierarchical tree with path compression
  * - Proper nested directories
  * - Single-child directory chains compressed into one node
  * - Folder status aggregation

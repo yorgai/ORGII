@@ -75,7 +75,7 @@ export interface SourceControlContentProps {
    */
   sectionFilter?: "uncommitted" | "staged" | "unstaged";
 
-  // Merge conflict props (VS Code style)
+  // Merge conflict props
   /** Files with unresolved merge conflicts */
   conflictFiles?: GitFile[];
   /** Whether there are any unresolved merge conflicts */

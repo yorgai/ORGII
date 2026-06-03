@@ -2,7 +2,7 @@
  * File Search Service
  *
  * Provides file and folder search functionality using native Tauri search.
- * The native search uses Rust with fuzzy matching (similar to Cursor/Continue).
+ * The native search uses Rust with fuzzy matching for file and folder paths.
  */
 import { debounceAsync } from "@src/util/core/debounce";
 import {

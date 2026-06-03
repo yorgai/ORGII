@@ -79,7 +79,7 @@ export interface SourceControlState {
   /** Whether publish operation is in progress */
   publishLoading: boolean;
 
-  // Merge conflicts (VS Code style)
+  // Merge conflicts
   /** Files with merge conflicts (status === "conflict") */
   conflictFiles: GitFile[];
   /** Whether there are any unresolved merge conflicts */
