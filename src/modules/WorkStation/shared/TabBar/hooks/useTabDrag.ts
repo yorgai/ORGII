@@ -295,7 +295,14 @@ export function useTabDrag({
 
       document.dispatchEvent(
         new CustomEvent("tab-drag-end", {
-          detail: { tabId, filePath },
+          detail: {
+            tabId,
+            filePath,
+            name: foundTab?.title,
+            type: foundTab?.type === "directory" ? "directory" : "file",
+            pointerX: lastPointerPositionRef.current?.x,
+            pointerY: lastPointerPositionRef.current?.y,
+          },
         })
       );
 

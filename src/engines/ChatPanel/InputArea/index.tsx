@@ -146,6 +146,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
       atDropdownRef,
       contextMenuKeyboardHandlerRef,
       slashCommandKeyboardHandlerRef,
+      plusSlashCommandKeyboardHandlerRef,
 
       // Input state
       setIsInputFocused,
@@ -290,6 +291,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
       handleDragLeave,
       handleDrop,
       tiptapRef,
+      containerRef,
     });
 
     // ============================================
@@ -395,8 +397,12 @@ const InputArea: React.FC<InputAreaProps> = memo(
             tiptapRef={tiptapRef}
             showContextMenu={showContextMenu}
             contextMenuKeyboardHandlerRef={contextMenuKeyboardHandlerRef}
-            showSlashMenu={showPlusSlashMenu}
+            showSlashMenu={showSlashMenu}
             slashCommandKeyboardHandlerRef={slashCommandKeyboardHandlerRef}
+            showPlusSlashMenu={showPlusSlashMenu}
+            plusSlashCommandKeyboardHandlerRef={
+              plusSlashCommandKeyboardHandlerRef
+            }
             onSlashCommand={handleSlashCommandViaPlus}
             onSlashCommandClose={handlePlusSlashClose}
             onContentChange={handleContentChange}
@@ -609,9 +615,13 @@ const InputArea: React.FC<InputAreaProps> = memo(
                       contextMenuKeyboardHandlerRef={
                         contextMenuKeyboardHandlerRef
                       }
-                      showSlashMenu={showPlusSlashMenu}
+                      showSlashMenu={showSlashMenu}
                       slashCommandKeyboardHandlerRef={
                         slashCommandKeyboardHandlerRef
+                      }
+                      showPlusSlashMenu={showPlusSlashMenu}
+                      plusSlashCommandKeyboardHandlerRef={
+                        plusSlashCommandKeyboardHandlerRef
                       }
                       onSlashCommand={handleSlashCommandViaPlus}
                       onSlashCommandClose={handlePlusSlashClose}
@@ -721,7 +731,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
             handleModeSelect(mode);
             handlePlusSlashClose();
           }}
-          keyboardHandlerRef={slashCommandKeyboardHandlerRef}
+          keyboardHandlerRef={plusSlashCommandKeyboardHandlerRef}
           searchMode="header"
           showActionFlyouts
           onSearchQueryChange={handlePlusSlashQueryChange}

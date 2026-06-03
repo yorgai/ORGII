@@ -57,6 +57,9 @@ export interface InputAreaRefs {
   slashCommandKeyboardHandlerRef: MutableRefObject<
     ((event: globalThis.KeyboardEvent) => boolean) | null
   >;
+  plusSlashCommandKeyboardHandlerRef: MutableRefObject<
+    ((event: globalThis.KeyboardEvent) => boolean) | null
+  >;
   hasContentRef: MutableRefObject<boolean>;
   setHasContent: (value: boolean) => void;
 }
@@ -144,6 +147,9 @@ export interface UseInputAreaReturn {
     ((event: ReactKeyboardEvent) => boolean) | null
   >;
   slashCommandKeyboardHandlerRef: MutableRefObject<
+    ((event: globalThis.KeyboardEvent) => boolean) | null
+  >;
+  plusSlashCommandKeyboardHandlerRef: MutableRefObject<
     ((event: globalThis.KeyboardEvent) => boolean) | null
   >;
 

@@ -86,6 +86,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
       <button
         type="button"
         onClick={onOpenSkillsTools}
+        onMouseDown={(e) => e.preventDefault()}
         className={[
           "flex items-center justify-center rounded-full bg-fill-1 text-text-1 transition-colors duration-200 hover:bg-fill-2 focus:outline-none",
           INPUT_AREA_BUTTONS.iconButtonSizeClass,

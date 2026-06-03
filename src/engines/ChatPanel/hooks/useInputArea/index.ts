@@ -438,6 +438,7 @@ export function useInputArea(
     atDropdownRef: refs.atDropdownRef,
     contextMenuKeyboardHandlerRef: refs.contextMenuKeyboardHandlerRef,
     slashCommandKeyboardHandlerRef: refs.slashCommandKeyboardHandlerRef,
+    plusSlashCommandKeyboardHandlerRef: refs.plusSlashCommandKeyboardHandlerRef,
     hasContentRef: refs.hasContentRef,
 
     // Input state

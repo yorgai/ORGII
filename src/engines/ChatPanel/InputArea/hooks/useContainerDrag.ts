@@ -5,7 +5,7 @@
  * Intercepts internal file-tree drags and WorkStation tab drags early
  * so they don't bubble to GlobalDragDrop.
  */
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 
 import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
 import Message from "@src/components/Message";
@@ -17,6 +17,7 @@ interface UseContainerDragOptions {
   handleDragLeave: (e: React.DragEvent<HTMLDivElement>) => void;
   handleDrop: (e: React.DragEvent<HTMLDivElement>) => void;
   tiptapRef: React.RefObject<TiptapInputRef>;
+  containerRef: React.RefObject<HTMLDivElement>;
 }
 
 interface UseContainerDragReturn {
@@ -30,7 +31,57 @@ export function useContainerDrag({
   handleDragLeave,
   handleDrop,
   tiptapRef,
+  containerRef,
 }: UseContainerDragOptions): UseContainerDragReturn {
+  // tab-drag-end listener — dnd-kit fires onDragEnd before the browser drop
+  // event, so globals are already cleared by the time onDrop runs. Instead,
+  // we listen for the custom event dispatched by useTabDrag and check whether
+  // the pointer release landed inside our drop target using the pointer
+  // coordinates forwarded in the event detail.
+  useEffect(() => {
+    const handleTabDragEnd = (e: Event) => {
+      const event = e as CustomEvent<{
+        tabId: string;
+        filePath?: string;
+        name?: string;
+        type?: string;
+        pointerX?: number;
+        pointerY?: number;
+      }>;
+
+      const { filePath, name, type, pointerX, pointerY } = event.detail;
+      if (!filePath || pointerX == null || pointerY == null) return;
+
+      const dropTarget = containerRef.current?.querySelector<HTMLElement>(
+        "[data-chat-drop-target]"
+      );
+      if (!dropTarget) return;
+
+      const rect = dropTarget.getBoundingClientRect();
+      const isOverTarget =
+        pointerX >= rect.left &&
+        pointerX <= rect.right &&
+        pointerY >= rect.top &&
+        pointerY <= rect.bottom;
+
+      if (!isOverTarget || !tiptapRef.current) return;
+
+      const isFolder = type === "directory";
+      tiptapRef.current.insertFilePill(
+        filePath,
+        isFolder,
+        isFolder ? "folder" : "file",
+        name ?? filePath.split("/").pop() ?? filePath
+      );
+      Message.success(`Added ${name ?? filePath} as context`);
+    };
+
+    document.addEventListener("tab-drag-end", handleTabDragEnd);
+    return () => {
+      document.removeEventListener("tab-drag-end", handleTabDragEnd);
+    };
+  }, [containerRef, tiptapRef]);
+
   // Handle drag events at container level to catch internal file drags early
   const handleContainerDragOver = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {

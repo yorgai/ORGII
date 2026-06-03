@@ -43,10 +43,16 @@ export interface InputEditorProps {
   placeholder?: string;
   /** Callback when images are pasted from clipboard */
   onImagePaste?: (files: File[]) => void;
-  /** Whether slash command menu is visible */
+  /** Whether inline "/" slash command menu is visible */
   showSlashMenu?: boolean;
-  /** Slash command keyboard handler ref */
+  /** Keyboard handler ref for the inline "/" slash command menu */
   slashCommandKeyboardHandlerRef?: React.MutableRefObject<
+    ((e: KeyboardEvent) => boolean) | null
+  >;
+  /** Whether "+" button slash command menu is visible */
+  showPlusSlashMenu?: boolean;
+  /** Keyboard handler ref for the "+" button slash command menu */
+  plusSlashCommandKeyboardHandlerRef?: React.MutableRefObject<
     ((e: KeyboardEvent) => boolean) | null
   >;
   /** Slash command handler */
@@ -79,6 +85,8 @@ const InputEditor: React.FC<InputEditorProps> = memo(
     onImagePaste,
     showSlashMenu,
     slashCommandKeyboardHandlerRef,
+    showPlusSlashMenu,
+    plusSlashCommandKeyboardHandlerRef,
     onSlashCommand,
     onSlashCommandClose,
     compact = false,
@@ -112,16 +120,25 @@ const InputEditor: React.FC<InputEditorProps> = memo(
     );
 
     /**
-     * Delegate keyboard events to the slash command dropdown when visible
+     * Delegate keyboard events to whichever slash command dropdown is open.
+     * The "+" menu takes priority; falls back to the inline "/" menu.
      */
     const handleKeyDownForSlashDropdown = useCallback(
       (event: KeyboardEvent): boolean => {
+        if (showPlusSlashMenu && plusSlashCommandKeyboardHandlerRef?.current) {
+          return plusSlashCommandKeyboardHandlerRef.current(event);
+        }
         if (showSlashMenu && slashCommandKeyboardHandlerRef?.current) {
           return slashCommandKeyboardHandlerRef.current(event);
         }
         return false;
       },
-      [showSlashMenu, slashCommandKeyboardHandlerRef]
+      [
+        showPlusSlashMenu,
+        plusSlashCommandKeyboardHandlerRef,
+        showSlashMenu,
+        slashCommandKeyboardHandlerRef,
+      ]
     );
 
     // ============================================

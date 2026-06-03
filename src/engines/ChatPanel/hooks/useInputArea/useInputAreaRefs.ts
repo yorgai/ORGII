@@ -24,6 +24,9 @@ export function useInputAreaRefs(): InputAreaRefs {
   const slashCommandKeyboardHandlerRef = useRef<
     ((event: globalThis.KeyboardEvent) => boolean) | null
   >(null);
+  const plusSlashCommandKeyboardHandlerRef = useRef<
+    ((event: globalThis.KeyboardEvent) => boolean) | null
+  >(null);
 
   // Setter function to update hasContentRef (avoids React Compiler immutability issues)
   const setHasContent = useCallback((value: boolean) => {
@@ -36,6 +39,7 @@ export function useInputAreaRefs(): InputAreaRefs {
     atDropdownRef,
     contextMenuKeyboardHandlerRef,
     slashCommandKeyboardHandlerRef,
+    plusSlashCommandKeyboardHandlerRef,
     hasContentRef,
     setHasContent,
   };
