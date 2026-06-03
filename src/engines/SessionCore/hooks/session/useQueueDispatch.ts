@@ -176,9 +176,15 @@ export function useQueueDispatch(): void {
       void (async () => {
         try {
           await addUserMessage(displayContent, sessionId, imageDataUrls);
+          // Pass displayContent as displayText when it differs from content
+          // (i.e. skill pills were expanded) so the persisted event stores
+          // the pill format and re-editing shows the pill, not the YAML.
+          const displayTextForDispatch =
+            content !== displayContent ? displayContent : undefined;
           await SessionService.sendMessage({
             sessionId,
             content,
+            displayText: displayTextForDispatch,
             model,
             accountId,
             mode: agentExecMode,

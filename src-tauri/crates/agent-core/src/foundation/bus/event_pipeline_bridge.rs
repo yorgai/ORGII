@@ -101,11 +101,18 @@ impl PersistedUserMessageSource {
 
 /// Persist and push a durable user-message event corresponding to an already
 /// saved `agent_messages` row.
+///
+/// `display_text` is the pill-format string from the frontend composer (e.g.
+/// `"create-skill [skill:/create-skill]"`). When `Some`, it is stored as the
+/// event's `display_text` field instead of the raw agent content so that
+/// re-editing a historical message re-populates the pill rather than the
+/// expanded YAML. When `None` the adapter falls back to `content`.
 pub type PersistUserMessageEventFn = fn(
     handle: &AppHandle,
     session_id: &str,
     message_id: &str,
     content: &str,
+    display_text: Option<&str>,
     images: Option<&[String]>,
     source: PersistedUserMessageSource,
 );
@@ -346,11 +353,20 @@ pub fn persist_user_message_event(
     session_id: &str,
     message_id: &str,
     content: &str,
+    display_text: Option<&str>,
     images: Option<&[String]>,
     source: PersistedUserMessageSource,
 ) {
     if let Some(f) = PERSIST_USER_MESSAGE_EVENT.get() {
-        f(handle, session_id, message_id, content, images, source);
+        f(
+            handle,
+            session_id,
+            message_id,
+            content,
+            display_text,
+            images,
+            source,
+        );
     } else {
         tracing::warn!(
             "[event-pipeline-bridge] persist_user_message_event called before register for {}",

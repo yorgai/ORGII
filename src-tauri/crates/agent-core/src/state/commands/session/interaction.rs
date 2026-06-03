@@ -339,6 +339,7 @@ pub async fn agent_plan_approval_response(
         &state,
         session_id.clone(),
         synthetic_content,
+        None,
         overrides,
         Some(build_turn_mode.as_str().to_string()),
         None,

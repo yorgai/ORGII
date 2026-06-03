@@ -110,6 +110,7 @@ pub async fn process_gateway_message(
 
     let input = super::turn::TurnInput {
         content: msg.content.clone(),
+        display_text: None,
         agent_mode: None,
         images: if msg.media.is_empty() {
             None

@@ -962,6 +962,7 @@ async fn send_initial_turn(
             state,
             session_id.to_string(),
             content,
+            None,
             crate::state::commands::session::identity::IdentityOverrides {
                 model,
                 account_id,
@@ -996,6 +997,7 @@ async fn send_initial_turn(
         state,
         session_id.to_string(),
         content,
+        None,
         crate::state::commands::session::identity::IdentityOverrides {
             model: Some(model),
             account_id,

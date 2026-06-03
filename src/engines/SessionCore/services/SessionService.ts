@@ -278,6 +278,7 @@ export const SessionService = {
     const {
       sessionId,
       content,
+      displayText,
       model,
       accountId,
       mode,
@@ -305,6 +306,7 @@ export const SessionService = {
       await adapter.sendMessage({
         sessionId,
         content,
+        displayText,
         model: model || undefined,
         accountId: accountId || undefined,
         mode: mode || undefined,

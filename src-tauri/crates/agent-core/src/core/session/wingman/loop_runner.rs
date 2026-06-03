@@ -155,6 +155,7 @@ impl WingmanLoop {
 
                 let input = crate::session::TurnInput {
                     content: content.clone(),
+                    display_text: None,
                     agent_mode: Some(AgentExecMode::Wingman),
                     images,
                     ide_context: None,

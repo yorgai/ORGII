@@ -14,7 +14,6 @@ import Message from "@src/components/Message";
 
 import type { DragDropBehavior, DroppedFolder } from "../types";
 import {
-  type GlobalDragWindow,
   createPreventDefaults,
   extractFilePath,
   extractFilePathAsync,
@@ -174,8 +173,7 @@ export function useBrowserDragDrop(options: UseBrowserDragDropOptions): void {
 
       // Internal file tree drag (via global variable — Tauri WebView often
       // strips custom MIME types at the window capture level).
-      const globalWindow = window as unknown as GlobalDragWindow;
-      const internalFileData = globalWindow.__internalFileTreeDragData;
+      const internalFileData = window.__internalFileTreeDragData;
 
       if (internalFileData) {
         log("drop:internal-file-tree", {
@@ -184,7 +182,7 @@ export function useBrowserDragDrop(options: UseBrowserDragDropOptions): void {
         });
         e.preventDefault();
         e.stopPropagation();
-        globalWindow.__internalFileTreeDragData = undefined;
+        window.__internalFileTreeDragData = undefined;
 
         if (insideChatDropTarget) {
           let parsed: Record<string, unknown> | undefined;

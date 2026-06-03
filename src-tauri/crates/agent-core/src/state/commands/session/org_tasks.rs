@@ -423,6 +423,7 @@ pub async fn agent_org_send_user_message_to_member_impl(
         state,
         member_session_id.clone(),
         content,
+        None,
         IdentityOverrides::default(),
         None,
         None,

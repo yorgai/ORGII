@@ -33,12 +33,9 @@ import { createPortal } from "react-dom";
 
 import FileTreePreview from "@src/components/FileTreePreview";
 import FileTypeIcon from "@src/components/FileTypeIcon";
-import {
-  EDITOR_FILE_PILL_BASE_STYLE,
-  EDITOR_FILE_PILL_ICON_STYLE,
-  PILL_SIZE,
-} from "@src/config/pillTokens";
+import { PILL_SIZE } from "@src/config/pillTokens";
 
+import BasePill from "./BasePill";
 import type { ComposerPillAttrs, PillIconType } from "./types";
 
 const PREVIEW_SHOW_DELAY = 300;
@@ -265,13 +262,12 @@ const ComposerPill: React.FC<ComposerPillProps> = ({ attrs, onDelete }) => {
 
   return (
     <>
-      <span
-        ref={pillRef}
+      <BasePill
+        variant="editor"
+        iconNode={iconNode}
+        pillRef={pillRef}
         className="composer-pill"
-        contentEditable={false}
-        suppressContentEditableWarning
         style={{
-          ...EDITOR_FILE_PILL_BASE_STYLE,
           userSelect: "none",
           WebkitUserSelect: "none",
           cursor: "pointer",
@@ -282,14 +278,13 @@ const ComposerPill: React.FC<ComposerPillProps> = ({ attrs, onDelete }) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <span style={EDITOR_FILE_PILL_ICON_STYLE}>{iconNode}</span>
         <span>{fileName}</span>
         {lineRangeDisplay && (
           <span style={{ color: "var(--color-text-3)", fontSize: "12px" }}>
             {lineRangeDisplay}
           </span>
         )}
-      </span>
+      </BasePill>
 
       {showPreview &&
         shouldShowTreePreview &&

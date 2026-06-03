@@ -314,10 +314,17 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       try {
         await addUserMessage(finalInput, imageDataUrls);
         userEventAppended = true;
+        // Pass finalInput as displayText so the pill format is preserved in
+        // the persisted event. Only needed when the agent content differs
+        // (i.e. skill pills were expanded).
+        const displayTextForDispatch =
+          contentForAgent !== finalInput ? finalInput : undefined;
         await dispatchMessageBySessionType(
           sessionId,
           contentForAgent,
-          imageDataUrls
+          imageDataUrls,
+          undefined,
+          displayTextForDispatch
         );
       } catch (error) {
         console.error("Error sending message:", error);

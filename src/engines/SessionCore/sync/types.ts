@@ -120,6 +120,13 @@ export interface SessionEventHandler {
 export interface AdapterSendInput {
   sessionId: string;
   content: string;
+  /**
+   * Pill-format display text from the frontend composer (e.g.
+   * `"create-skill [skill:/create-skill]"`). When set, the backend stores
+   * this as the event's display_text so that re-editing a historical message
+   * re-populates the pill rather than the expanded YAML / skill content.
+   */
+  displayText?: string;
   /** Optional model override (mid-session model swap). */
   model?: string;
   /** Optional own-key account id. */

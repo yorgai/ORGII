@@ -78,6 +78,11 @@ pub struct TurnInput {
     /// User message content (raw — skill/pill expansion happens inside
     /// `process_message`).
     pub content: String,
+    /// Pill-format display text from the frontend composer (e.g.
+    /// `"create-skill [skill:/create-skill]"`). When present this is
+    /// stored as `display_text` on the persisted event so that editing
+    /// a historical message re-populates the pill, not the expanded YAML.
+    pub display_text: Option<String>,
     /// Agent mode (Build/Plan/Explore/Debug/Ask/Review).
     pub agent_mode: Option<AgentExecMode>,
     /// Attached images (base64 data URLs).
@@ -424,6 +429,7 @@ impl UnifiedMessageProcessor {
                         session_id,
                         &message_id,
                         content,
+                        context.display_text.as_deref(),
                         context.images.as_deref(),
                         crate::bus::event_pipeline_bridge::PersistedUserMessageSource::User,
                     );
@@ -568,6 +574,7 @@ impl UnifiedMessageProcessor {
                                 session_id,
                                 &message_id,
                                 transcript_content,
+                                None,
                                 None,
                                 crate::bus::event_pipeline_bridge::PersistedUserMessageSource::AgentOrgInboxTranscript,
                             );

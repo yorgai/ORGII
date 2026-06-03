@@ -72,6 +72,13 @@ export interface SessionSendMessageParams {
   sessionId: string;
   /** Message content */
   content: string;
+  /**
+   * Pill-format display text from the frontend composer (e.g.
+   * `"create-skill [skill:/create-skill]"`). When set, the backend stores
+   * this as the event's display_text so that re-editing a historical message
+   * re-populates the pill rather than the expanded YAML / skill content.
+   */
+  displayText?: string;
   /** Optional model override for OS Agent sessions (mid-session switching) */
   model?: string;
   /** Optional account ID for OS Agent sessions */
