@@ -47,10 +47,12 @@ const ACCESS_MODE_OPTIONS = [
   {
     labelKey: "sharedAgentConfig.security.accessModeReadOnly",
     value: "readonly",
+    dataTestId: "agent-orgs-security-access-mode-option-readonly",
   },
   {
     labelKey: "sharedAgentConfig.security.accessModeReadWrite",
     value: "full",
+    dataTestId: "agent-orgs-security-access-mode-option-full",
   },
 ];
 
@@ -142,9 +144,11 @@ const SecuritySection: React.FC<SecuritySectionProps> = ({
             options={ACCESS_MODE_OPTIONS.map((opt) => ({
               label: t(opt.labelKey),
               value: opt.value,
+              dataTestId: opt.dataTestId,
             }))}
             size="default"
             style={SECTION_CONTROL_STYLE}
+            dataTestId="agent-orgs-security-access-mode-select"
             disabled={!accessModeEditable}
           />
         </SectionRow>

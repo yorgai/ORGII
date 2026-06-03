@@ -363,6 +363,9 @@ export interface AgentConfigTabData {
   entityId: string;
   /** Display name shown in the tab title and breadcrumbs. */
   displayName: string;
+  /** Serialized snapshot for variants whose detail can be opened before the
+   * backing list refresh has reached the WorkStation renderer. */
+  entitySnapshot?: unknown;
   /**
    * For `cli` variant only: the underlying CLI agent type (e.g. "cursor_cli",
    * "claude_code"). Needed by the renderer to fetch the live `AvailableCliAgent`

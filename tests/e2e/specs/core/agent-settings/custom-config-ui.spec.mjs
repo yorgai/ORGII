@@ -5,7 +5,7 @@ import {
   invokeE2E,
   unwrap,
   waitForApp,
-} from "../../support/core/agentOrgUiDriver.mjs";
+} from "../../../support/core/agentOrgUiDriver.mjs";
 
 const ROUTE = "/orgii/app/settings/agent-orgs/agents";
 const WORKSTATION_ROUTE = "/orgii/workstation/code";
@@ -22,6 +22,8 @@ const CANONICAL_AGENT_TABS = [
   "skillsets",
   "rules",
 ];
+
+let currentAgentConfigRootSelector = null;
 
 async function waitForScript(
   predicateScript,
@@ -42,12 +44,15 @@ async function pointerClick(selector, label) {
       point = await browser.executeScript(
         `
           const selector = arguments[0];
-          const candidates = [...document.querySelectorAll(selector)].filter((element) => {
+          const rootSelector = arguments[1];
+          const roots = rootSelector ? [...document.querySelectorAll(rootSelector)] : [document];
+          const root = roots[roots.length - 1] ?? document;
+          const candidates = [...root.querySelectorAll(selector)].filter((element) => {
             const rect = element.getBoundingClientRect();
             const style = window.getComputedStyle(element);
             return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
           });
-          const element = candidates[0] ?? null;
+          const element = candidates[candidates.length - 1] ?? null;
           if (!element) {
             return { found: false, selector, bodyText: document.body.innerText.slice(0, 2000) };
           }
@@ -74,7 +79,7 @@ async function pointerClick(selector, label) {
             text: (element.textContent || "").trim().replace(/\\s+/g, " ").slice(0, 180),
           };
         `,
-        [selector]
+        [selector, currentAgentConfigRootSelector]
       );
       return point?.found === true && point?.hitMatches === true;
     },
@@ -100,7 +105,53 @@ function agentConfigVariantFor(agentId) {
   return "custom";
 }
 
+async function restoreWorkstationIfFocused(rootSelector, label) {
+  const restoreTarget = `e2e-restore-workstation-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const state = await browser.executeScript(
+    `
+      const rootSelector = arguments[0];
+      const restoreTarget = arguments[1];
+      const root = document.querySelector(rootSelector);
+      const rect = root?.getBoundingClientRect?.() ?? null;
+      if (rect && rect.width > 0 && rect.height > 0) return { needed: false };
+      document.querySelectorAll('[data-e2e-restore-workstation-target]').forEach((element) => {
+        element.removeAttribute('data-e2e-restore-workstation-target');
+      });
+      const candidates = Array.from(document.querySelectorAll('button[aria-label]')).filter((button) => {
+        const label = button.getAttribute('aria-label') || '';
+        const buttonRect = button.getBoundingClientRect();
+        const style = window.getComputedStyle(button);
+        return /Workstation|工作站/.test(label) && buttonRect.width > 0 && buttonRect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+      });
+      const button = candidates[0] ?? null;
+      if (!button) return { needed: true, foundButton: false, rootRect: rect ? { width: rect.width, height: rect.height } : null };
+      button.setAttribute('data-e2e-restore-workstation-target', restoreTarget);
+      return { needed: true, foundButton: true, label: button.getAttribute('aria-label') };
+    `,
+    [rootSelector, restoreTarget]
+  );
+  if (state?.needed !== true) return;
+  if (state?.foundButton !== true) {
+    throw new Error(`${label} needed Workstation restore but no visible restore button was found: ${JSON.stringify(state)}`);
+  }
+  const previousRoot = currentAgentConfigRootSelector;
+  currentAgentConfigRootSelector = null;
+  await pointerClick(`[data-e2e-restore-workstation-target="${restoreTarget}"]`, `${label} restore Workstation button`);
+  currentAgentConfigRootSelector = previousRoot;
+  await waitForScript(
+    `
+      const root = document.querySelector(arguments[0]);
+      const rect = root?.getBoundingClientRect?.();
+      return !!rect && rect.width > 0 && rect.height > 0;
+    `,
+    `${label} Workstation did not become visible after restore`,
+    WAIT_TIMEOUT_MS,
+    [rootSelector]
+  );
+}
+
 async function openAgentDetail(agentId, label) {
+  currentAgentConfigRootSelector = null;
   unwrap(await invokeE2E("navigateTo", ROUTE), `navigate to ${label}`);
   await waitForScript(
     `return !!document.querySelector('[data-testid="agent-orgs-agent-row-${agentId}"]');`,
@@ -110,10 +161,13 @@ async function openAgentDetail(agentId, label) {
     `[data-testid="agent-orgs-agent-row-${agentId}"]`,
     `${label} row`
   );
-  unwrap(await invokeE2E("openAgentTab", agentId, "general"), `open ${label} agent tab`);
-  unwrap(await invokeE2E("navigateTo", WORKSTATION_ROUTE), `navigate to ${label} workstation config`);
-
+  unwrap(
+    await invokeE2E("openAgentTab", agentId, "general"),
+    `open ${label} agent tab`
+  );
   const variant = agentConfigVariantFor(agentId);
+  currentAgentConfigRootSelector = `[data-testid="agent-config-tab-${variant}-${agentId}"]`;
+  await restoreWorkstationIfFocused(currentAgentConfigRootSelector, label);
   await waitForScript(
     `
       const element = document.querySelector(arguments[0]);
@@ -130,64 +184,153 @@ async function openAgentDetail(agentId, label) {
 async function assertTabActive(tabKey) {
   await waitForScript(
     `
-      const selector = arguments[0];
-      const elements = [...document.querySelectorAll(selector)].filter((element) => {
+      const tabKey = arguments[0];
+      const rootSelector = arguments[1];
+      const roots = rootSelector ? [...document.querySelectorAll(rootSelector)] : [document];
+      const root = roots[roots.length - 1] ?? document;
+      const isVisible = (element) => {
         const rect = element.getBoundingClientRect();
         const style = window.getComputedStyle(element);
         return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+      };
+      const detailRoots = [...root.querySelectorAll('[data-active-tab]')].filter(isVisible);
+      const detailRoot = detailRoots[detailRoots.length - 1] ?? null;
+      if (detailRoot?.getAttribute("data-active-tab") === tabKey) return true;
+      const elements = [...root.querySelectorAll('[data-testid^="agent-orgs-detail-tab-"]')].filter((element) => {
+        return isVisible(element) && (element.getAttribute("data-tab-key") === tabKey || element.getAttribute("data-testid") === "agent-orgs-detail-tab-" + tabKey);
       });
-      return elements.some((element) => element.className.includes("font-semibold"));
+      const element = elements[elements.length - 1] ?? null;
+      return element?.getAttribute("data-active") === "true";
     `,
     `${tabKey} tab did not become active`,
     WAIT_TIMEOUT_MS,
-    [`[data-testid="agent-orgs-detail-tab-${tabKey}"]`]
+    [tabKey, currentAgentConfigRootSelector]
   );
 }
 
 async function clickAgentTab(tabKey) {
-  await pointerClick(
-    `[data-testid="agent-orgs-detail-tab-${tabKey}"]`,
-    `${tabKey} tab`
+  let clickState = null;
+  await browser.waitUntil(
+    async () => {
+      clickState = await browser.executeScript(
+        `
+          const tabKey = arguments[0];
+          const rootSelector = arguments[1];
+          const roots = rootSelector ? [...document.querySelectorAll(rootSelector)] : [document];
+          const root = roots[roots.length - 1] ?? document;
+          const isVisible = (element) => {
+            const rect = element.getBoundingClientRect();
+            const style = window.getComputedStyle(element);
+            return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+          };
+          const candidates = [...root.querySelectorAll('[data-testid^="agent-orgs-detail-tab-"]')].filter((element) => {
+            return isVisible(element) && (element.getAttribute("data-tab-key") === tabKey || element.getAttribute("data-testid") === "agent-orgs-detail-tab-" + tabKey);
+          });
+          const element = candidates[candidates.length - 1] ?? null;
+          if (!element) {
+            return {
+              ok: false,
+              reason: "missing",
+              rootSelector,
+              activeTabs: [...root.querySelectorAll('[data-testid^="agent-orgs-detail-tab-"]')].map((tab) => ({
+                testId: tab.getAttribute('data-testid'),
+                active: tab.getAttribute('data-active'),
+                text: tab.textContent?.trim() ?? '',
+              })),
+            };
+          }
+          element.scrollIntoView({ block: "center", inline: "center" });
+          element.click();
+          return { ok: true, activeBefore: element.getAttribute('data-active'), text: element.textContent?.trim() ?? '' };
+        `,
+        [tabKey, currentAgentConfigRootSelector]
+      );
+      return clickState?.ok === true;
+    },
+    {
+      timeout: WAIT_TIMEOUT_MS,
+      interval: 250,
+      timeoutMsg: `${tabKey} tab did not render in current detail surface: ${JSON.stringify(clickState)}`,
+    }
   );
   await assertTabActive(tabKey);
 }
 
+async function openAgentTabForControls(agentId, tabKey, label) {
+  unwrap(await invokeE2E("openAgentTab", agentId, tabKey), `open ${label} ${tabKey} tab`);
+  const variant = agentConfigVariantFor(agentId);
+  currentAgentConfigRootSelector = `[data-testid="agent-config-tab-${variant}-${agentId}"]`;
+  await restoreWorkstationIfFocused(currentAgentConfigRootSelector, `${label} ${tabKey}`);
+  await assertTabActive(tabKey);
+}
+
 async function clickSwitchAndWait(selector, label) {
+  const readVisibleSwitchStateScript = `
+    const selector = arguments[0];
+    const rootSelector = arguments[1];
+    const roots = rootSelector ? [...document.querySelectorAll(rootSelector)] : [document];
+    const root = roots[roots.length - 1] ?? document;
+    const candidates = [...root.querySelectorAll(selector)].filter((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      const state = element.getAttribute("aria-checked");
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        (state === "true" || state === "false") &&
+        !element.disabled
+      );
+    });
+    const element = candidates[candidates.length - 1] ?? null;
+    return element?.getAttribute("aria-checked") ?? null;
+  `;
   await browser.waitUntil(
-    async () =>
-      browser.executeScript(
-        `
-          const element = document.querySelector(arguments[0]);
-          if (!element) return false;
-          const state = element.getAttribute("aria-checked");
-          return (state === "true" || state === "false") && !element.disabled;
-        `,
-        [selector]
-      ),
+    async () => {
+      const state = await browser.executeScript(readVisibleSwitchStateScript, [selector, currentAgentConfigRootSelector]);
+      return state === "true" || state === "false";
+    },
     {
       timeout: WAIT_TIMEOUT_MS,
       interval: 250,
       timeoutMsg: `${label} did not become an enabled switch`,
     }
   );
-  const before = await browser.executeScript(
-    `return document.querySelector(arguments[0])?.getAttribute("aria-checked") ?? null;`,
-    [selector]
-  );
+  const before = await browser.executeScript(readVisibleSwitchStateScript, [selector, currentAgentConfigRootSelector]);
   if (before !== "true" && before !== "false") {
     throw new Error(`${label} did not expose switch state: ${before}`);
   }
-  await pointerClick(selector, label);
-  await browser.waitUntil(
-    async () => {
-      const current = await browser.executeScript(
-        `return document.querySelector(arguments[0])?.getAttribute("aria-checked") ?? null;`,
-        [selector]
-      );
-      return current !== before && (current === "true" || current === "false");
-    },
-    { timeout: 10_000, interval: 200, timeoutMsg: `${label} did not toggle` }
+  const clickState = await browser.executeScript(
+    `
+      const selector = arguments[0];
+      const rootSelector = arguments[1];
+      const roots = rootSelector ? [...document.querySelectorAll(rootSelector)] : [document];
+      const root = roots[roots.length - 1] ?? document;
+      const candidates = [...root.querySelectorAll(selector)].filter((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        const state = element.getAttribute("aria-checked");
+        return (
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          (state === "true" || state === "false") &&
+          !element.disabled
+        );
+      });
+      const element = candidates[candidates.length - 1] ?? null;
+      if (!element) return { ok: false, reason: "missing", selector, rootSelector };
+      element.scrollIntoView({ block: "center", inline: "center" });
+      element.click();
+      return { ok: true, before: arguments[2], afterImmediate: element.getAttribute("aria-checked") };
+    `,
+    [selector, currentAgentConfigRootSelector, before]
   );
+  if (clickState?.ok !== true) {
+    throw new Error(`${label} switch click failed: ${JSON.stringify(clickState)}`);
+  }
   return before === "true" ? false : true;
 }
 
@@ -279,10 +422,13 @@ async function setTextInput(selector, value, label) {
     `
       const selector = arguments[0];
       const targetId = arguments[1];
+      const rootSelector = arguments[2];
+      const roots = rootSelector ? [...document.querySelectorAll(rootSelector)] : [document];
+      const root = roots[roots.length - 1] ?? document;
       document.querySelectorAll("[data-e2e-input-target]").forEach((element) => {
         element.removeAttribute("data-e2e-input-target");
       });
-      const element = [...document.querySelectorAll(selector)].find((candidate) => {
+      const candidates = [...root.querySelectorAll(selector)].filter((candidate) => {
         const rect = candidate.getBoundingClientRect();
         const style = window.getComputedStyle(candidate);
         return (
@@ -295,13 +441,14 @@ async function setTextInput(selector, value, label) {
           !candidate.readOnly
         );
       });
+      const element = candidates[candidates.length - 1] ?? null;
       if (!element) return false;
       element.setAttribute("data-e2e-input-target", targetId);
       return true;
     `,
     `${label} missing or disabled`,
     WAIT_TIMEOUT_MS,
-    [selector, targetId]
+    [selector, targetId, currentAgentConfigRootSelector]
   );
 
   await browser.executeScript(
@@ -358,6 +505,53 @@ async function setNumberInput(selector, value, label) {
   await setTextInput(selector, String(value), label);
 }
 
+async function setMarkdownEditor(selector, value, label) {
+  await waitForScript(
+    `
+      const rootSelector = arguments[1];
+      const roots = rootSelector ? [...document.querySelectorAll(rootSelector)] : [document];
+      const surface = roots[roots.length - 1] ?? document;
+      const root = surface.querySelector(arguments[0]);
+      const editor = root?.querySelector(".cm-content[contenteditable='true']");
+      if (!root || !editor) return false;
+      const rect = editor.getBoundingClientRect();
+      const style = window.getComputedStyle(editor);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+    `,
+    `${label} markdown editor did not become editable`,
+    WAIT_TIMEOUT_MS,
+    [selector, currentAgentConfigRootSelector]
+  );
+
+  const result = await browser.executeScript(
+    `
+      const rootSelector = arguments[2];
+      const roots = rootSelector ? [...document.querySelectorAll(rootSelector)] : [document];
+      const surface = roots[roots.length - 1] ?? document;
+      const root = surface.querySelector(arguments[0]);
+      const value = arguments[1];
+      const editor = root?.querySelector(".cm-content[contenteditable='true']");
+      if (!editor) return { ok: false, reason: "editor-missing" };
+      editor.focus();
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.execCommand("delete", false);
+      const inserted = document.execCommand("insertText", false, value);
+      editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: value }));
+      return { ok: inserted, text: editor.textContent || "" };
+    `,
+    [selector, String(value), currentAgentConfigRootSelector]
+  );
+  if (!result?.ok || !String(result.text ?? "").includes(String(value))) {
+    throw new Error(
+      `${label} markdown editor did not accept text: ${JSON.stringify(result)}`
+    );
+  }
+}
+
 async function waitForAgentDefField(agentId, predicate, label) {
   let lastDefinition = null;
   let lastNonNullDefinition = null;
@@ -382,7 +576,9 @@ async function waitForAgentDefField(agentId, predicate, label) {
 
 function expectDefinitionField(definition, predicate, label) {
   if (!predicate(definition)) {
-    throw new Error(`${label} mismatch in definition: ${JSON.stringify(definition)}`);
+    throw new Error(
+      `${label} mismatch in definition: ${JSON.stringify(definition)}`
+    );
   }
 }
 
@@ -439,7 +635,7 @@ describe("Settings Agent configuration UI", () => {
       "get SDE Agent definition before switch test"
     ).def;
 
-    await clickAgentTab("skillsets");
+    await openAgentTabForControls(BUILTIN_SDE_AGENT_ID, "skillsets", "SDE Agent");
     const loadWorkspaceResources = await clickSwitchAndWait(
       '[data-testid="agent-orgs-load-workspace-resources-switch"]',
       "load workspace resources switch"
@@ -460,7 +656,7 @@ describe("Settings Agent configuration UI", () => {
       }
     );
 
-    await clickAgentTab("rules");
+    await openAgentTabForControls(BUILTIN_SDE_AGENT_ID, "rules", "SDE Agent");
     const loadWorkspaceRules = await clickSwitchAndWait(
       '[data-testid="agent-orgs-load-workspace-rules-switch"]',
       "load workspace rules switch"
@@ -501,7 +697,7 @@ describe("Settings Agent configuration UI", () => {
         `return !!document.querySelector('[data-testid="agent-orgs-custom-detail"]');`,
         "Wingman detail panel did not open"
       );
-      await clickAgentTab("safety");
+      await openAgentTabForControls(BUILTIN_WINGMAN_AGENT_ID, "safety", "Wingman Agent");
 
       const hideBeforeAction = await clickSwitchAndWait(
         '[data-testid="agent-orgs-desktop-safety-hideBeforeAction-switch"]',
@@ -526,7 +722,8 @@ describe("Settings Agent configuration UI", () => {
         {
           timeout: 15_000,
           interval: 500,
-          timeoutMsg: "Desktop Safety switches did not persist to desktop config",
+          timeoutMsg:
+            "Desktop Safety switches did not persist to desktop config",
         }
       );
     } finally {
@@ -615,7 +812,7 @@ process.stdin.on("data", (chunk) => {
       send({ jsonrpc: "2.0", id: request.id, result: {} });
     }
   }
-});`
+});`,
                 ],
                 disabled: false,
                 timeout: 5,
@@ -659,7 +856,7 @@ process.stdin.on("data", (chunk) => {
         `,
         "custom Agent detail panel did not open"
       );
-      await clickAgentTab("general");
+      await openAgentTabForControls(agentId, "general", "E2E rendered UI settings custom Agent");
 
       await setTextInput(
         '[data-testid="agent-orgs-custom-name-input"]',
@@ -670,6 +867,35 @@ process.stdin.on("data", (chunk) => {
         '[data-testid="agent-orgs-custom-description-input"]',
         `Edited rendered description ${RUNTIME_CONFIG_MARKER}`,
         "custom Agent description"
+      );
+      const editedSoulContent = `Edited rendered soul ${RUNTIME_CONFIG_MARKER}`;
+      await pointerClick(
+        '[data-testid="agent-orgs-personality-edit-button"]',
+        "personality edit button"
+      );
+      await setMarkdownEditor(
+        '[data-testid="agent-orgs-personality-editor"]',
+        editedSoulContent,
+        "personality soul editor"
+      );
+      await waitForScript(
+        `
+          const root = document.querySelector(arguments[0]);
+          const button = root?.querySelector('[data-testid="agent-orgs-personality-save-button"]');
+          return !!button && button.disabled === false;
+        `,
+        "personality save button did not become enabled after editor change",
+        WAIT_TIMEOUT_MS,
+        [currentAgentConfigRootSelector]
+      );
+      await pointerClick(
+        '[data-testid="agent-orgs-personality-save-button"]',
+        "personality save button"
+      );
+      await waitForAgentDefField(
+        agentId,
+        (definition) => definition?.soulContent === editedSoulContent,
+        "rendered UI settings agent soulContent after personality save"
       );
       await setNumberInput(
         '[data-testid="agent-orgs-runtime-max-iterations-input"]',
@@ -706,7 +932,7 @@ process.stdin.on("data", (chunk) => {
         "security always-ask save button"
       );
 
-      await clickAgentTab("models");
+      await openAgentTabForControls(agentId, "models", "E2E rendered UI settings custom Agent");
       await setNumberInput(
         '[data-testid="agent-orgs-model-context-window-input"]',
         64_000,
@@ -722,10 +948,70 @@ process.stdin.on("data", (chunk) => {
         0.3,
         "temperature"
       );
+      await clickSwitchAndWait(
+        '[data-testid="agent-orgs-model-compaction-enabled-switch"]',
+        "compaction enabled switch off"
+      );
+      await waitForAgentDefField(
+        agentId,
+        (definition) => definition?.sessionModel?.compaction?.enabled === false,
+        "rendered UI settings agent compaction disabled"
+      );
+      await clickSwitchAndWait(
+        '[data-testid="agent-orgs-model-compaction-enabled-switch"]',
+        "compaction enabled switch on"
+      );
+      await clickSwitchAndWait(
+        '[data-testid="agent-orgs-model-compaction-advanced-switch"]',
+        "compaction advanced switch"
+      );
       await setNumberInput(
         '[data-testid="agent-orgs-model-compaction-trigger-ratio-input"]',
         0.65,
         "compaction trigger ratio"
+      );
+      await setNumberInput(
+        '[data-testid="agent-orgs-model-compaction-keep-ratio-input"]',
+        0.35,
+        "compaction keep ratio"
+      );
+      await setNumberInput(
+        '[data-testid="agent-orgs-model-compaction-summary-max-tokens-input"]',
+        2048,
+        "compaction summary max tokens"
+      );
+      await setNumberInput(
+        '[data-testid="agent-orgs-model-compaction-min-messages-input"]',
+        11,
+        "compaction min messages"
+      );
+      await setNumberInput(
+        '[data-testid="agent-orgs-model-compaction-floor-tokens-input"]',
+        12_000,
+        "compaction floor tokens"
+      );
+      await setNumberInput(
+        '[data-testid="agent-orgs-model-compaction-reserved-summary-tokens-input"]',
+        18_000,
+        "compaction reserved summary tokens"
+      );
+      await setNumberInput(
+        '[data-testid="agent-orgs-model-compaction-buffer-tokens-input"]',
+        9_000,
+        "compaction buffer tokens"
+      );
+      await clickSwitchAndWait(
+        '[data-testid="agent-orgs-model-reliability-enabled-switch"]',
+        "reliability enabled switch off"
+      );
+      await waitForAgentDefField(
+        agentId,
+        (definition) => definition?.reliability?.maxRetries === 0,
+        "rendered UI settings agent reliability disabled"
+      );
+      await clickSwitchAndWait(
+        '[data-testid="agent-orgs-model-reliability-enabled-switch"]',
+        "reliability enabled switch on"
       );
       await setNumberInput(
         '[data-testid="agent-orgs-model-reliability-max-retries-input"]',
@@ -738,14 +1024,14 @@ process.stdin.on("data", (chunk) => {
         "reliability base backoff"
       );
 
-      await clickAgentTab("subagents");
+      await openAgentTabForControls(agentId, "subagents", "E2E rendered UI settings custom Agent");
       await setNumberInput(
         '[data-testid="agent-orgs-subagents-max-tool-use-concurrency-input"]',
         6,
         "max tool-use concurrency"
       );
 
-      await clickAgentTab("tools");
+      await openAgentTabForControls(agentId, "tools", "E2E rendered UI settings custom Agent");
       const toggledToolName = await browser.waitUntil(
         async () =>
           browser.executeScript(
@@ -768,7 +1054,7 @@ process.stdin.on("data", (chunk) => {
         `tool switch ${toggledToolName}`
       );
 
-      await clickAgentTab("skillsets");
+      await openAgentTabForControls(agentId, "skillsets", "E2E rendered UI settings custom Agent");
       const toggledSkillName = await browser.waitUntil(
         async () =>
           browser.executeScript(
@@ -834,7 +1120,7 @@ process.stdin.on("data", (chunk) => {
         "rendered UI settings agent disabled MCP server after MCP server switch"
       );
 
-      await clickAgentTab("rules");
+      await openAgentTabForControls(agentId, "rules", "E2E rendered UI settings custom Agent");
       await clickSwitchAndWait(
         `[data-testid="agent-orgs-rule-switch-personal-${ruleName}"]`,
         `rule switch ${ruleName}`
@@ -883,6 +1169,11 @@ process.stdin.on("data", (chunk) => {
       );
       expectDefinitionField(
         stored,
+        (definition) => definition.soulContent === editedSoulContent,
+        "custom Agent personality soul content"
+      );
+      expectDefinitionField(
+        stored,
         (definition) => definition.sessionModel?.maxIterations === 7,
         "max iterations"
       );
@@ -899,13 +1190,17 @@ process.stdin.on("data", (chunk) => {
       expectDefinitionField(
         stored,
         (definition) =>
-          (definition.agentPolicy?.riskRules?.high ?? []).includes(blockListCommand),
+          (definition.agentPolicy?.riskRules?.high ?? []).includes(
+            blockListCommand
+          ),
         "security block-list command"
       );
       expectDefinitionField(
         stored,
         (definition) =>
-          (definition.agentPolicy?.riskRules?.medium ?? []).includes(alwaysAskCommand),
+          (definition.agentPolicy?.riskRules?.medium ?? []).includes(
+            alwaysAskCommand
+          ),
         "security always-ask command"
       );
       expectDefinitionField(
@@ -925,8 +1220,43 @@ process.stdin.on("data", (chunk) => {
       );
       expectDefinitionField(
         stored,
-        (definition) => definition.sessionModel?.compaction?.triggerRatio === 0.65,
+        (definition) =>
+          definition.sessionModel?.compaction?.triggerRatio === 0.65,
         "compaction trigger ratio"
+      );
+      expectDefinitionField(
+        stored,
+        (definition) => definition.sessionModel?.compaction?.keepRatio === 0.35,
+        "compaction keep ratio"
+      );
+      expectDefinitionField(
+        stored,
+        (definition) =>
+          definition.sessionModel?.compaction?.summaryMaxTokens === 2048,
+        "compaction summary max tokens"
+      );
+      expectDefinitionField(
+        stored,
+        (definition) => definition.sessionModel?.compaction?.minMessages === 11,
+        "compaction min messages"
+      );
+      expectDefinitionField(
+        stored,
+        (definition) =>
+          definition.sessionModel?.compaction?.floorTokens === 12_000,
+        "compaction floor tokens"
+      );
+      expectDefinitionField(
+        stored,
+        (definition) =>
+          definition.sessionModel?.compaction?.reservedSummaryTokens === 18_000,
+        "compaction reserved summary tokens"
+      );
+      expectDefinitionField(
+        stored,
+        (definition) =>
+          definition.sessionModel?.compaction?.bufferTokens === 9_000,
+        "compaction buffer tokens"
       );
       expectDefinitionField(
         stored,
@@ -1014,11 +1344,19 @@ process.stdin.on("data", (chunk) => {
     const toolNames = allTools
       .map((tool) => tool.name ?? tool.id)
       .filter((name) => typeof name === "string" && name.length > 0);
-    const restrictedTool = toolNames.includes("Read") ? "Read" : toolNames[0];
-    const excludedTool = toolNames.includes("Exec") ? "Exec" : toolNames[1];
-    if (!restrictedTool || !excludedTool) {
+    const pickTool = (preferred, used = new Set()) =>
+      preferred.find((name) => toolNames.includes(name) && !used.has(name)) ??
+      toolNames.find((name) => !used.has(name));
+    const usedTools = new Set();
+    const restrictedTool = pickTool(["read_file", "Read"], usedTools);
+    if (restrictedTool) usedTools.add(restrictedTool);
+    const userAllowedTool = pickTool(["list_dir", "List"], usedTools);
+    if (userAllowedTool) usedTools.add(userAllowedTool);
+    const excludedTool = pickTool(["edit_file", "Exec", "run_terminal_cmd"], usedTools);
+    if (excludedTool) usedTools.add(excludedTool);
+    if (!restrictedTool || !userAllowedTool || !excludedTool) {
       throw new Error(
-        `Need at least two registered tools for tools runtime E2E: ${JSON.stringify(allTools)}`
+        `Need at least three registered tools for tools runtime E2E: ${JSON.stringify(allTools)}`
       );
     }
 
@@ -1069,6 +1407,16 @@ process.stdin.on("data", (chunk) => {
         mode: "singleton",
         processingLock: true,
         maxIterations: 3,
+        compaction: {
+          enabled: true,
+          triggerRatio: 0.55,
+          keepRatio: 0.33,
+          summaryMaxTokens: 1536,
+          minMessages: 9,
+          floorTokens: 10_000,
+          reservedSummaryTokens: 17_000,
+          bufferTokens: 8_000,
+        },
       },
       contextWindow: 12_345,
       maxTokens: 2_345,
@@ -1078,7 +1426,7 @@ process.stdin.on("data", (chunk) => {
       subAgents: [{ agentId: childAgentId, isolation: "worktree" }],
       tools: {
         systemRestrictToTools: [restrictedTool],
-        userAllowedTools: [excludedTool],
+        userAllowedTools: [userAllowedTool],
         excludedTools: [excludedTool],
         disabledMcpServers: ["e2e-disabled-server"],
         disabledMcpTools: ["e2e-disabled-tool"],
@@ -1205,6 +1553,21 @@ process.stdin.on("data", (chunk) => {
         fallbackModel,
         "fallbackModels"
       );
+      const runtimeCompaction = modelSnapshot.compaction ?? {};
+      if (
+        runtimeCompaction.enabled !== true ||
+        runtimeCompaction.triggerRatio !== 0.55 ||
+        runtimeCompaction.keepRatio !== 0.33 ||
+        runtimeCompaction.summaryMaxTokens !== 1536 ||
+        runtimeCompaction.minMessages !== 9 ||
+        runtimeCompaction.floorTokens !== 10_000 ||
+        runtimeCompaction.reservedSummaryTokens !== 17_000 ||
+        runtimeCompaction.bufferTokens !== 8_000
+      ) {
+        throw new Error(
+          `Compaction config did not reach runtime: ${JSON.stringify(modelSnapshot)}`
+        );
+      }
 
       const subagents = unwrap(
         await invokeSnapshot(
@@ -1241,7 +1604,7 @@ process.stdin.on("data", (chunk) => {
       );
       assertIncludes(
         tools.definitionUserAllowedTools,
-        excludedTool,
+        userAllowedTool,
         "definition user allowed tools"
       );
       assertIncludes(
@@ -1253,6 +1616,11 @@ process.stdin.on("data", (chunk) => {
         tools.resolvedRestrictTo,
         restrictedTool,
         "resolved restrict tools"
+      );
+      assertIncludes(
+        tools.resolvedRestrictTo,
+        userAllowedTool,
+        "resolved user-allowed tools"
       );
       assertIncludes(
         tools.resolvedDisabledMcpServers,
@@ -1268,6 +1636,11 @@ process.stdin.on("data", (chunk) => {
         tools.promptToolNames,
         restrictedTool,
         "policy-filtered prompt tools"
+      );
+      assertIncludes(
+        tools.promptToolNames,
+        userAllowedTool,
+        "policy-filtered user-allowed prompt tools"
       );
       assertNotIncludes(
         tools.promptToolNames,

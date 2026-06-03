@@ -49,6 +49,7 @@ const WORKTREE_MAX_COUNT_OPTIONS = [1, 2, 4, 6, 8, 12, 16, 24, 32].map(
   (count) => ({
     value: count,
     label: String(count),
+    dataTestId: `settings-git-worktree-max-count-option-${count}`,
   })
 );
 
@@ -56,6 +57,7 @@ const WORKTREE_CLEANUP_INTERVAL_OPTIONS = [1, 3, 6, 12, 24, 48, 72, 168].map(
   (hours) => ({
     value: hours,
     labelKey: `editor.git.worktreeCleanupInterval${hours}h`,
+    dataTestId: `settings-git-worktree-cleanup-interval-option-${hours}`,
   })
 );
 
@@ -177,6 +179,7 @@ const GitPreferencesSection: React.FC = () => {
               onChange={(value) => setWorktreeMaxCount(Number(value))}
               options={WORKTREE_MAX_COUNT_OPTIONS}
               style={SECTION_CONTROL_STYLE}
+              dataTestId="settings-git-worktree-max-count-select"
             />
           </SectionRow>
         </div>
@@ -195,8 +198,10 @@ const GitPreferencesSection: React.FC = () => {
               options={WORKTREE_CLEANUP_INTERVAL_OPTIONS.map((interval) => ({
                 label: tSettings(interval.labelKey),
                 value: interval.value,
+                dataTestId: interval.dataTestId,
               }))}
               style={SECTION_CONTROL_STYLE}
+              dataTestId="settings-git-worktree-cleanup-interval-select"
             />
           </SectionRow>
         </div>

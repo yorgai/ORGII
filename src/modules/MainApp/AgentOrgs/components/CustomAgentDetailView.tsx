@@ -256,7 +256,10 @@ const CustomAgentDetailView: React.FC<CustomAgentDetailViewProps> = ({
 
   if (!loaded) {
     return (
-      <DetailPanelContainer testId="agent-orgs-custom-detail">
+      <DetailPanelContainer
+        testId="agent-orgs-custom-detail"
+        rootProps={{ "data-active-tab": activeTab }}
+      >
         {headerElement}
         <Placeholder variant="loading" />
       </DetailPanelContainer>
@@ -268,7 +271,10 @@ const CustomAgentDetailView: React.FC<CustomAgentDetailViewProps> = ({
   if (isFullHeight) {
     if (activeTab === "tools") {
       return (
-        <DetailPanelContainer testId="agent-orgs-custom-detail">
+        <DetailPanelContainer
+          testId="agent-orgs-custom-detail"
+          rootProps={{ "data-active-tab": activeTab }}
+        >
           <CustomAgentToolsSection
             agentId={agent.id}
             headerElement={headerElement}
@@ -280,6 +286,7 @@ const CustomAgentDetailView: React.FC<CustomAgentDetailViewProps> = ({
       return (
         <div
           className="flex h-full flex-col"
+          data-active-tab={activeTab}
           data-testid="agent-orgs-custom-detail"
         >
           <AgentSkillsetsSection
@@ -294,7 +301,10 @@ const CustomAgentDetailView: React.FC<CustomAgentDetailViewProps> = ({
   }
 
   return (
-    <DetailPanelContainer testId="agent-orgs-custom-detail">
+    <DetailPanelContainer
+      testId="agent-orgs-custom-detail"
+      rootProps={{ "data-active-tab": activeTab }}
+    >
       {headerElement}
       <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
         <div className={DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop}>

@@ -96,6 +96,7 @@ const PersonalitySection: React.FC<PersonalitySectionProps> = ({
               onClick={handleEdit}
               aria-label={t("common:actions.edit")}
               title={t("common:actions.edit")}
+              data-testid="agent-orgs-personality-edit-button"
             />
           )}
           <Button
@@ -108,7 +109,11 @@ const PersonalitySection: React.FC<PersonalitySectionProps> = ({
           />
           {activeTab === "edit" && (
             <>
-              <Button size="small" onClick={handleCancel}>
+              <Button
+                size="small"
+                onClick={handleCancel}
+                data-testid="agent-orgs-personality-cancel-button"
+              >
                 {t("common:actions.cancel")}
               </Button>
               <Button
@@ -116,6 +121,7 @@ const PersonalitySection: React.FC<PersonalitySectionProps> = ({
                 variant="primary"
                 onClick={handleSave}
                 disabled={!isDirty}
+                data-testid="agent-orgs-personality-save-button"
               >
                 {t("common:actions.save")}
               </Button>

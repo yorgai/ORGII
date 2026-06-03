@@ -244,6 +244,7 @@ const AgentsTable: React.FC<AgentsTableProps> = ({
       iconOnly
       aria-label={addAgentLabel}
       title={addAgentLabel}
+      data-testid="agent-orgs-add-agent-button"
       onClick={onAddAgent}
     />
   );

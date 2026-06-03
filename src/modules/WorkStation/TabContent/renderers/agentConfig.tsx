@@ -128,6 +128,7 @@ const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
   }, [variant, fetchCliAgents]);
 
   // ── Orgs (only fetched when this tab hosts an org) ──
+  const entitySnapshot = data.entitySnapshot as OrgMember | undefined;
   const [orgs, setOrgs] = useState<OrgMember[]>([]);
 
   const loadOrgs = useCallback(async () => {
@@ -168,7 +169,9 @@ const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
 
   const handleOrgSave = useCallback(
     async (org: OrgMember) => {
-      const isUpdate = orgs.some((existing) => existing.id === org.id);
+      const isUpdate =
+        orgs.some((existing) => existing.id === org.id) ||
+        entitySnapshot?.id === org.id;
       const orgJson = JSON.stringify(org);
       try {
         if (isUpdate) {
@@ -194,7 +197,7 @@ const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
         );
       }
     },
-    [orgs, loadOrgs, t]
+    [orgs, entitySnapshot?.id, loadOrgs, t]
   );
 
   const handleOrgDelete = useCallback(
@@ -299,7 +302,9 @@ const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
   }
 
   if (variant === "org") {
-    const org = orgs.find((o) => o.id === entityId);
+    const org =
+      orgs.find((o) => o.id === entityId) ??
+      (entitySnapshot?.id === entityId ? entitySnapshot : undefined);
     if (!org) {
       return (
         <Placeholder

@@ -607,6 +607,10 @@ export interface E2EHelpers {
     projectSlug?: string
   ) => Promise<{ ok: true } | Err>;
   openAgentTab: (agentId: string, tab: string) => Promise<{ ok: true } | Err>;
+  openOrgTab: (
+    orgId: string,
+    displayName?: string
+  ) => Promise<{ ok: true } | Err>;
   getLocationPathname: () => string;
 }
 
