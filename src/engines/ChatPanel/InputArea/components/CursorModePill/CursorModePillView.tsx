@@ -29,6 +29,7 @@ import {
   DropdownPanel,
 } from "@src/components/Dropdown/exports";
 import {
+  DROPDOWN_CLASSES,
   DROPDOWN_ITEM,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
@@ -173,7 +174,6 @@ const CursorModePillView: React.FC<CursorModePillViewProps> = ({
                       <Icon size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
                     }
                     selected={isSelected}
-                    compact
                     showCheckmark
                     onClick={() => handleSelect(option.id)}
                   >

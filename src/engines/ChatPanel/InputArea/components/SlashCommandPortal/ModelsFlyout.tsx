@@ -2,7 +2,7 @@
  * ModelsFlyout — right-side model picker flyout.
  *
  * Renders the same content as UnifiedModelDropdown but positioned like
- * FlyoutSubmenu: fixed at (anchorTop, panelRight + 4), not below an anchor
+ * FlyoutSubmenu: fixed beside the main panel, not below an anchor
  * element. Directly embeds useUnifiedModelPalette so we control the position.
  */
 import { ChevronLeft, Search } from "lucide-react";
@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import {
   DROPDOWN_CLASSES,
   DROPDOWN_ITEM,
+  DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
@@ -201,7 +202,7 @@ const ModelsFlyout: React.FC<ModelsFlyoutProps> = ({
 
   // Clamp left so the panel doesn't overflow the right edge of the viewport
   const left = Math.min(
-    panelRight + 4,
+    panelRight + DROPDOWN_PANEL.submenuGap,
     window.innerWidth - DROPDOWN_WIDTH - VIEWPORT_MARGIN
   );
 
