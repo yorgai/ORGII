@@ -20,6 +20,9 @@ import {
 import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
 import { useDropdownEngine } from "@src/hooks/dropdown";
 
+import HoverAnimatedIcon, {
+  triggerIconAnimation,
+} from "../components/HoverAnimatedIcon";
 import { GROUP_BY_MODES, type GroupByMode } from "./types";
 
 interface SessionFilterButtonProps {
@@ -112,9 +115,12 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
           <LiquidGlassHoverItem
             className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
             onClick={toggle}
+            onMouseEnter={(event) => triggerIconAnimation(event.currentTarget)}
           >
-            <ListFilter
-              size={DROPDOWN_ITEM.iconSize}
+            <HoverAnimatedIcon
+              icon={ListFilter}
+              iconName="list-filter"
+              size={16}
               strokeWidth={2}
               className={isOpen ? "text-text-1" : "text-text-2"}
             />

@@ -20,6 +20,10 @@ import {
   useRuntimeRamStats,
 } from "@src/hooks/perf";
 
+import HoverAnimatedIcon, {
+  triggerIconAnimation,
+} from "../components/HoverAnimatedIcon";
+
 const logger = createLogger("SidebarRamMonitor");
 
 const METRICS_POLL_INTERVAL_MS = 5000;
@@ -428,8 +432,15 @@ export const SidebarRamMonitorButton: React.FC = React.memo(() => {
         <LiquidGlassHoverItem
           className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
           onClick={toggle}
+          onMouseEnter={(event) => triggerIconAnimation(event.currentTarget)}
         >
-          <Gauge size={16} strokeWidth={2} className={buttonActiveClassName} />
+          <HoverAnimatedIcon
+            icon={Gauge}
+            iconName="gauge"
+            size={16}
+            strokeWidth={2}
+            className={buttonActiveClassName}
+          />
         </LiquidGlassHoverItem>
       </div>
 
