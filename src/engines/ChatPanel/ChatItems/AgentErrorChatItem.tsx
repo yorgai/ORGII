@@ -10,7 +10,7 @@
  * Subscribing here creates a nested Jotai listener chain that overflows the
  * call stack when the session snapshot changes (e.g. on tab switch).
  *
- * Resume flow (mirrors Claude Code's "Resume" UX):
+ * Resume flow:
  *   1. The user message that produced this error is kept visible (it is the
  *      same prompt the user wants the agent to attempt again).
  *   2. The Resume button calls `dispatcher.sendMessage` with empty content

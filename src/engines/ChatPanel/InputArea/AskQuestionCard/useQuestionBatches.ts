@@ -25,8 +25,8 @@
  *   3. Any other global-status bleed-over.
  * Each of these made the hook dismiss a still-live interactive card.
  *
- * Removing the polling mirrors Claude Code's `AskUserQuestionTool.call()`
- * semantics (wiring-checklist Rule 11): the only lifecycle primitive is the
+ * Removing the polling preserves the intended ask-user lifecycle: the only
+ * lifecycle primitive is the
  * Promise / finalize event, not a client-side cache reconciliation.
  */
 import { useAtomValue } from "jotai";

@@ -262,8 +262,8 @@ fn build_agent_tool(
     // (vs explicitly passing an empty allowlist, which would forbid every
     // sub-agent and is currently not expressible).
     //
-    // Claude Code parity: Agent Org members are flat roster participants,
-    // not entries in the `agent` Delegate/Shadow worker launch pool. Coordinator/member
+    // Agent Org members are flat roster participants, not entries in the
+    // `agent` Delegate/Shadow worker launch pool. Coordinator/member
     // collaboration uses `org_send_message` + shared task tools. The
     // `agent` tool remains a private delegation surface for ordinary
     // non-roster helpers.

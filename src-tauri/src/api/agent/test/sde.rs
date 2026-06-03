@@ -815,8 +815,8 @@ pub async fn test_sde_mode_switch_respond(
 // Dev-only: SDE plan-approval test endpoints
 // ============================================
 //
-// The production flow is Cursor-style non-blocking: `create_plan`
-// broadcasts `agent:plan_ready_for_approval` and returns immediately
+// The production flow is non-blocking: `create_plan` broadcasts
+// `agent:plan_ready_for_approval` and returns immediately
 // (the turn hard-terminates after the tool returns), the frontend
 // renders a plan card with an inline Build button, and the
 // `agent_plan_approval_response` Tauri command consumes the pending
@@ -1165,8 +1165,8 @@ pub async fn test_sde_plan_approval_respond(
         }),
     );
 
-    // Cursor-style: kick off a fresh Build-mode turn with a synthetic
-    // user-visible instruction to start implementing the approved plan.
+    // Kick off a fresh Build-mode turn with a synthetic user-visible
+    // instruction to start implementing the approved plan.
     // The real tauri command (`agent_plan_approval_response`) delegates to
     // `send_message_impl`, which routes through the session scheduler. The
     // HTTP test endpoint here is a debug harness that skips the scheduler

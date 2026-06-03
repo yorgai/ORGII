@@ -390,7 +390,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         required_capability: CapCoding,
         ..DEFAULT_TOOL_ENTRY
     },
-    // ── Plan mode — Cursor-style non-blocking plan approval ──
+    // ── Plan mode — non-blocking plan approval ──
     ToolEntry {
         name: tool_names::CREATE_PLAN,
         description: "Write the session plan document and submit it for review.",

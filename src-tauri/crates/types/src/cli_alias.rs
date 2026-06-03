@@ -636,8 +636,8 @@ static CLI_ALIAS_MAP: LazyLock<HashMap<&'static str, AliasEntry>> = LazyLock::ne
     );
     m.insert("agent_response", AliasEntry::agent_message("assistant"));
     m.insert("AGENT", AliasEntry::agent_message("assistant"));
-    // NOTE: bare "Agent" intentionally routes to Subagent (tool-call semantics,
-    // matching Claude's Agent tool) — see the subagent block below.
+    // NOTE: bare "Agent" intentionally routes to Subagent tool-call semantics;
+    // see the subagent block below.
 
     // Thinking → Thinking UI
     m.insert("thinking", AliasEntry::thinking("thinking"));

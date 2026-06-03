@@ -12,6 +12,7 @@ import i18next from "i18next";
 import { useAtom, useSetAtom } from "jotai";
 import {
   ArrowUpRight,
+  ChartNoAxesGantt,
   FolderGit2,
   House,
   SquareMousePointer,
@@ -124,6 +125,11 @@ const HomeSidebar: React.FC = () => {
         iconName: "folder-git-2",
         trailingElement: <ArrowUpRight size={13} strokeWidth={2} />,
       },
+      routeToMenuItem(ROUTES.app.home.changelog, {
+        label: t("routes.changelog"),
+        icon: ChartNoAxesGantt,
+        iconName: "chart-no-axes-gantt",
+      }),
     ],
     [t, getTranslatedRouteLabel]
   );
@@ -140,6 +146,7 @@ const HomeSidebar: React.FC = () => {
       ROUTES.app.journey.record.path,
       ROUTES.app.ideas.area.path,
       ROUTES.app.home.inbox.path,
+      ROUTES.app.home.changelog.path,
     ];
     for (const path of allPaths) {
       if (pathname.startsWith(path)) {

@@ -79,7 +79,8 @@
     "serviceMarket": "Service-Markt",
     "signingIn": "Anmeldung läuft...",
     "launchpad": "Launchpad",
-    "ideaArea": "Ideen-Bereich"
+    "ideaArea": "Ideen-Bereich",
+    "changelog": "Changelog"
   },
   "appGrid": {
     "customizeGrid": "Raster anpassen",
@@ -122,7 +123,8 @@
       "cli": "CLI Agent",
       "hostedKey": "Hosted Key",
       "cloud": "Cloud",
-      "openSource": "Open Source"
+      "openSource": "Open Source",
+      "timeline": "Timeline"
     },
     "actions": {
       "addNew": "Neu hinzufügen",
@@ -330,5 +332,14 @@
       "workItems": "Arbeitsaufgaben",
       "projects": "Projekte"
     }
+  },
+  "changelog": {
+    "title": "Changelog",
+    "subtitle": "Produktupdates",
+    "commitCount": "{{count}} Commits",
+    "commitCount_one": "{{count}} Commit",
+    "details": "Details",
+    "frontend": "Frontend",
+    "backend": "Backend"
   }
 }

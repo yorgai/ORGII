@@ -45,7 +45,7 @@ export interface UseChatScrollPinReturn {
  * 1. Re-pin last item when footer spacer converges or history grows.
  *    Always scrolls to end on session switch.
  * 2. Pin the latest user-message group to the viewport top when a new
- *    group is added (Cursor-style UX). Re-fires as the temporary footer
+ *    group is added. Re-fires as the temporary footer
  *    reserve grows so the first scroll lands at the correct offset.
  * 3. Breaks pin intent on user-initiated scroll. Distinguishes programmatic
  *    scrolls (ignored) from user scrolls (releases pin) via a time window.

@@ -49,9 +49,9 @@ function cssPathSelector(path: string): string {
   return path.replace(/"/g, '\\"');
 }
 
-export function swapThemeCss(newCssPath: string): void {
+export function swapThemeCss(newCssPath: string): Promise<void> {
   const head = document.querySelector("head");
-  if (!head) return;
+  if (!head) return Promise.resolve();
 
   const existingLink = head.querySelector<HTMLLinkElement>(
     `link[${THEME_LINK_ATTR}]`
@@ -64,56 +64,71 @@ export function swapThemeCss(newCssPath: string): void {
 
     if (legacyLinks.length > 0) {
       legacyLinks[0].setAttribute(THEME_LINK_ATTR, "");
-      swapFromExisting(head, legacyLinks[0], newCssPath);
+      const swapPromise = swapFromExisting(head, legacyLinks[0], newCssPath);
       legacyLinks.slice(1).forEach((link) => link.remove());
-      return;
+      return swapPromise;
     }
 
-    insertFreshLink(head, newCssPath);
-    return;
+    return insertFreshLink(head, newCssPath);
   }
 
-  if (existingLink.href.endsWith(newCssPath)) return;
+  if (existingLink.href.endsWith(newCssPath)) return Promise.resolve();
 
-  swapFromExisting(head, existingLink, newCssPath);
+  return swapFromExisting(head, existingLink, newCssPath);
 }
 
 function swapFromExisting(
   head: HTMLHeadElement,
   oldLink: HTMLLinkElement,
   newCssPath: string
-): void {
-  const newLink = document.createElement("link");
-  newLink.rel = "stylesheet";
-  newLink.type = "text/css";
-  newLink.href = newCssPath;
-  newLink.setAttribute(THEME_LINK_ATTR, "");
+): Promise<void> {
+  return new Promise((resolve) => {
+    const newLink = document.createElement("link");
+    newLink.rel = "stylesheet";
+    newLink.type = "text/css";
+    newLink.href = newCssPath;
+    newLink.setAttribute(THEME_LINK_ATTR, "");
 
-  let settled = false;
-  const settle = () => {
-    if (settled) return;
-    settled = true;
-    oldLink.remove();
-  };
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      oldLink.remove();
+      resolve();
+    };
 
-  newLink.onload = settle;
-  newLink.onerror = settle;
-  const timeoutId = setTimeout(settle, SWAP_TIMEOUT_MS);
+    const timeoutId = setTimeout(settle, SWAP_TIMEOUT_MS);
+    newLink.onload = settle;
+    newLink.onerror = settle;
 
-  const origOnload = newLink.onload;
-  newLink.onload = (event) => {
-    clearTimeout(timeoutId);
-    if (origOnload) (origOnload as (ev: Event) => void)(event);
-  };
-
-  head.insertBefore(newLink, oldLink.nextSibling);
+    head.insertBefore(newLink, oldLink.nextSibling);
+  });
 }
 
-function insertFreshLink(head: HTMLHeadElement, cssPath: string): void {
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.type = "text/css";
-  link.href = cssPath;
-  link.setAttribute(THEME_LINK_ATTR, "");
-  head.insertBefore(link, head.firstChild);
+function insertFreshLink(
+  head: HTMLHeadElement,
+  cssPath: string
+): Promise<void> {
+  return new Promise((resolve) => {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.type = "text/css";
+    link.href = cssPath;
+    link.setAttribute(THEME_LINK_ATTR, "");
+
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      resolve();
+    };
+
+    const timeoutId = setTimeout(settle, SWAP_TIMEOUT_MS);
+    link.onload = settle;
+    link.onerror = settle;
+
+    head.insertBefore(link, head.firstChild);
+  });
 }

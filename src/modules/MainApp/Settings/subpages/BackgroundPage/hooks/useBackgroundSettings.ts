@@ -31,6 +31,7 @@ import { getStorageInfo } from "@src/util/core/storage/backgroundImage";
 import { setLiquidGlassThickness } from "@src/util/platform/ipcRenderer";
 import { prewarmColorPair } from "@src/util/ui/theme/glassMaterial";
 import { preloadThemeCss, swapThemeCss } from "@src/util/ui/theme/swapThemeCss";
+import { showThemeTransitionCover } from "@src/util/ui/theme/themeTransitionCover";
 
 import {
   MAX_CUSTOM_BACKGROUND_COLORS,
@@ -399,15 +400,20 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
   );
 
   const applyThemeChange = useCallback(
-    (themeIdValue: string) => {
+    async (themeIdValue: string) => {
       const themeId = normalizeGlobalThemeId(themeIdValue);
       const selectedTheme = getGlobalTheme(themeId);
-      setGlobalThemeId(themeId);
-      setPrimaryColorPreset(
-        selectedTheme.defaultPrimaryColor as PrimaryColorPreset
-      );
-      localStorage.setItem("theme", themeId);
-      swapThemeCss(selectedTheme.baseCssPath);
+      const cover = showThemeTransitionCover();
+      try {
+        await swapThemeCss(selectedTheme.baseCssPath);
+        setGlobalThemeId(themeId);
+        setPrimaryColorPreset(
+          selectedTheme.defaultPrimaryColor as PrimaryColorPreset
+        );
+        localStorage.setItem("theme", themeId);
+      } finally {
+        await cover.hide();
+      }
     },
     [setGlobalThemeId, setPrimaryColorPreset]
   );
@@ -415,7 +421,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
   const handleThemePresetChange = useCallback(
     (value: string | number | (string | number)[]) => {
       const themeValue = Array.isArray(value) ? value[0] : value;
-      applyThemeChange(String(themeValue));
+      void applyThemeChange(String(themeValue));
     },
     [applyThemeChange]
   );

@@ -79,7 +79,8 @@
     "serviceMarket": "Service 市场",
     "signingIn": "正在登录...",
     "appLauncher": "应用启动器",
-    "ideaArea": "想法广场"
+    "ideaArea": "想法广场",
+    "changelog": "更新日志"
   },
   "appGrid": {
     "customizeGrid": "自定义网格",
@@ -122,7 +123,8 @@
       "cli": "CLI Agent",
       "hostedKey": "托管密钥",
       "cloud": "Cloud",
-      "openSource": "开源仓库"
+      "openSource": "开源仓库",
+      "timeline": "时间线"
     },
     "actions": {
       "addNew": "新建",
@@ -421,5 +423,14 @@
       "workItems": "工作项",
       "projects": "项目"
     }
+  },
+  "changelog": {
+    "title": "更新日志",
+    "subtitle": "产品更新",
+    "commitCount": "{{count}} 次提交",
+    "commitCount_one": "{{count}} 次提交",
+    "details": "详情",
+    "frontend": "Frontend",
+    "backend": "Backend"
   }
 }

@@ -1,7 +1,7 @@
 /**
  * Chat history bottom spacer (Virtuoso Footer slot).
  *
- * Cursor-style behavior with two modes:
+ * Footer spacer behavior with two modes:
  *  1. Normal bottom/open state: add only enough slack so the last message sits
  *     above the composer instead of exposing a full-viewport void.
  *  2. Active pin-to-top state: temporarily reserve enough room that the latest

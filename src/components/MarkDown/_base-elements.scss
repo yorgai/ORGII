@@ -33,7 +33,7 @@
   display: none !important;
 }
 
-// Cursor-style links
+// Links
 .chat-markdown-body a {
   background-color: transparent;
   color: var(--color-primary-6);
@@ -52,7 +52,7 @@
   text-decoration: underline dotted;
 }
 
-// Cursor-style strong text
+// Strong text
 .chat-markdown-body b,
 .chat-markdown-body strong {
   font-weight: 600;
@@ -109,7 +109,7 @@
   margin: 1em 40px;
 }
 
-// Cursor-style horizontal rule
+// Horizontal rule
 .chat-markdown-body hr {
   box-sizing: content-box;
   overflow: hidden;

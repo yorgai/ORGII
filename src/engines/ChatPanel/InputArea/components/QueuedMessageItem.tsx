@@ -4,7 +4,7 @@
  * A single sortable row inside QueuedMessages.
  * Uses dnd-kit's useSortable for drag-and-drop reordering.
  *
- * Edit triggers the main input box (Cursor-style) — no inline editing here.
+ * Edit triggers the main input box — no inline editing here.
  */
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";

@@ -33,6 +33,7 @@ import {
   useState,
 } from "react";
 
+import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import {
   customShellPathAtom,
   resolvedTerminalFontFamilyAtom,
@@ -124,7 +125,7 @@ export const TerminalView = forwardRef<TerminalViewHandle, TerminalViewProps>(
     const shellType = useAtomValue(shellTypeAtom);
     const customShellPath = useAtomValue(customShellPathAtom);
     const appTheme = useAtomValue(themesAtom);
-    const isDarkTheme = appTheme === "/orgii_dark.css";
+    const isDarkTheme = isThemeCssPathDark(appTheme);
 
     if (initialThemeRef.current === null) {
       initialThemeRef.current = terminalTheme;

@@ -77,6 +77,7 @@ export function filterByTheme<
  * Get theme display name from theme path
  */
 export function getThemeDisplayName(themePath: string): string {
+  if (themePath.includes("orgii_high_contrast")) return "High Contrast";
   if (themePath.includes("orgii_dark")) return "Dark";
   return "Light";
 }

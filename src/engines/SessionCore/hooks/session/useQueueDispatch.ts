@@ -11,8 +11,8 @@
  * Uses the dispatch registry so all session types (rust_agent, cli_agent)
  * are handled uniformly.
  *
- * NOTE on cancel-restore: the Cursor-style "pop head / restore last user
- * message to input" happens SYNCHRONOUSLY inside `useSessionActions.interruptSession`
+ * NOTE on cancel-restore: the "pop head / restore last user message to input"
+ * flow happens SYNCHRONOUSLY inside `useSessionActions.interruptSession`
  * at click time. This hook is only responsible for auto-flushing the queue
  * once the session truly goes idle (either natural completion or a
  * non-user-initiated cancel). The `userCancelRef` guard below stops us from
@@ -271,7 +271,7 @@ export function useQueueDispatch(): void {
     // Hold off if the most recent cancel was user-initiated. The user's
     // Scenario A/C restore has already consumed the head (or the last user
     // message) synchronously in useSessionActions; auto-flushing here would
-    // re-dispatch the tail and break the "Cursor-style" pause semantics.
+    // re-dispatch the tail and break the expected pause semantics.
     // The flag is cleared when the user sends again, so after they revise
     // and send, the queue flushes normally.
     if (userCancelRef.current) return;

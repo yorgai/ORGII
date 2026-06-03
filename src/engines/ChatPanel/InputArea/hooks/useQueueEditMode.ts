@@ -1,7 +1,7 @@
 /**
  * useQueueEditMode
  *
- * Shared hook for Cursor-style queue message editing in the main input box.
+ * Shared hook for queue message editing in the main input box.
  * Reads/writes queueEditTargetAtom and returns props ready to spread onto InputArea.
  *
  * @param onCommit — called with (messageId, newContent, imageDataUrls) when the user submits.

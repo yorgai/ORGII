@@ -91,7 +91,7 @@ export function willEventRenderContent(event: SessionEvent): boolean {
   const normalized = event.uiCanonical || normalizeFunctionName(functionName);
 
   // Plan cards have two renderable shapes:
-  // - running raw create_plan tool-call args for Cursor-style streaming draft UI
+  // - running raw create_plan tool-call args for streaming draft UI
   // - explicit backend-authored plan_approval lifecycle events for history
   if (isRehydratedPlanApprovalEvent(event)) return false;
   if (isPlanApprovalEvent(event)) return true;

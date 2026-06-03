@@ -120,7 +120,7 @@ export function useCommitForm(
     // Filter files that are already in the git staging area
     const stagedFiles = files.filter((file) => file.staged);
 
-    // Smart Commit (VS Code style):
+    // Smart Commit:
     // If no staged files, stage all changed files and commit them
     const filesToCommit = stagedFiles.length > 0 ? stagedFiles : files;
 
@@ -221,7 +221,7 @@ export function useCommitForm(
     // Filter files that are already in the git staging area
     const stagedFiles = files.filter((file) => file.staged);
 
-    // Smart Commit (VS Code style):
+    // Smart Commit:
     // If no staged files, stage all changed files and commit them
     const filesToCommit = stagedFiles.length > 0 ? stagedFiles : files;
 
@@ -435,7 +435,7 @@ export function useCommitForm(
     // Filter files that are already in the git staging area
     const stagedFiles = files.filter((file) => file.staged);
 
-    // Smart Commit (VS Code style):
+    // Smart Commit:
     // If no staged files, stage all changed files and commit them
     const filesToCommit = stagedFiles.length > 0 ? stagedFiles : files;
 
@@ -552,7 +552,7 @@ export function useCommitForm(
     // Filter files that are already in the git staging area
     const stagedFiles = files.filter((file) => file.staged);
 
-    // Smart Commit (VS Code style):
+    // Smart Commit:
     // If no staged files, stage all changed files and commit them
     const filesToAmend = stagedFiles.length > 0 ? stagedFiles : files;
 

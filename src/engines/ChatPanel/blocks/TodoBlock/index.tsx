@@ -30,14 +30,14 @@ export interface TodoItem {
   /**
    * Optional present-continuous label. When a todo is `in_progress` the UI
    * prefers this form (e.g. "Running tests") over `content` ("Run tests")
-   * so the row reads like a live spinner label — mirrors Claude Code V2.
+   * so the row reads like a live spinner label.
    */
   activeForm?: string;
   status: string;
   /**
    * Indices of tasks that must complete before this task can start.
    * When non-empty, the task is rendered dimmed with a "▸ blocked by #N"
-   * badge — mirrors Claude Code TaskListV2 behaviour.
+   * badge to show dependency ordering.
    */
   blockedBy?: number[];
 }

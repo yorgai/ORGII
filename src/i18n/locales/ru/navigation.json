@@ -79,7 +79,8 @@
     "serviceMarket": "Service маркет",
     "signingIn": "Выполняется вход...",
     "launchpad": "Launchpad",
-    "ideaArea": "Пространство идей"
+    "ideaArea": "Пространство идей",
+    "changelog": "Журнал изменений"
   },
   "appGrid": {
     "customizeGrid": "Настроить сетку",
@@ -122,7 +123,8 @@
       "cli": "CLI Agent",
       "hostedKey": "Hosted Key",
       "cloud": "Cloud",
-      "openSource": "Открытый код"
+      "openSource": "Открытый код",
+      "timeline": "Таймлайн"
     },
     "actions": {
       "addNew": "Добавить новое",
@@ -330,5 +332,14 @@
       "workItems": "Рабочие задачи",
       "projects": "Проекты"
     }
+  },
+  "changelog": {
+    "title": "Журнал изменений",
+    "subtitle": "Обновления продукта",
+    "commitCount": "{{count}} коммитов",
+    "commitCount_one": "{{count}} коммит",
+    "details": "Подробности",
+    "frontend": "Frontend",
+    "backend": "Backend"
   }
 }

@@ -43,7 +43,7 @@ import type { SessionEvent } from "../types";
  * Provides a direct rendering path that bypasses the EventStore snapshot
  * pipeline (16ms TS throttle → IPC → 33ms Rust batch → serialization → IPC
  * back → React). Components that read this atom see each token immediately
- * as it arrives from the LLM, giving Cursor-like smooth streaming UX.
+ * as it arrives from the LLM, giving smooth streaming UX.
  *
  * Shape: Map<sessionId, content> so multiple sessions can stream concurrently
  * (e.g. Control Tower with multiple agent sessions visible side by side).

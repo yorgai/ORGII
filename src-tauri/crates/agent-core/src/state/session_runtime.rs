@@ -258,8 +258,8 @@ impl AgentSession {
         // `submitted_for_review: false` and the file is just written to
         // disk). Single capability switch.
         //
-        // Under the Cursor-style non-blocking flow the manager does not own
-        // a cancel_flag — `cancel_active_turn()` clears any pending snapshot
+        // Under the non-blocking flow the manager does not own a cancel_flag —
+        // `cancel_active_turn()` clears any pending snapshot
         // directly via `clear_silently()`.
         let plan_approval_manager = if has_mode_switch {
             Some(Arc::new(PlanApprovalManager::new()))

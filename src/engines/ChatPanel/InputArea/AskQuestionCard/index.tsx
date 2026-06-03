@@ -1,7 +1,7 @@
 /**
  * AskQuestionCard Component
  *
- * Cursor-style question card above InputArea: all questions in one scrollable column,
+ * Question card above InputArea: all questions in one scrollable column,
  * no per-question pagination. Optional batch navigation when multiple pending chunks.
  *
  * Features:

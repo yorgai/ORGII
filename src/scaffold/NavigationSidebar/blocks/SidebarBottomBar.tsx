@@ -55,6 +55,9 @@ import {
   parseCustomRoleId,
 } from "@src/types/userPresence";
 
+import HoverAnimatedIcon, {
+  triggerIconAnimation,
+} from "../components/HoverAnimatedIcon";
 import { resolveCustomRoleIcon } from "./customRoleIcons";
 
 interface SidebarBottomBarProps {
@@ -405,9 +408,14 @@ const SidebarBottomBar: React.FC<SidebarBottomBarProps> = React.memo(
                 <LiquidGlassHoverItem
                   className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
                   onClick={goToSettings}
+                  onMouseEnter={(event) =>
+                    triggerIconAnimation(event.currentTarget)
+                  }
                 >
-                  <Settings
-                    size={DROPDOWN_ITEM.iconSize}
+                  <HoverAnimatedIcon
+                    icon={Settings}
+                    iconName="settings"
+                    size={16}
                     strokeWidth={2}
                     className="text-text-2"
                   />

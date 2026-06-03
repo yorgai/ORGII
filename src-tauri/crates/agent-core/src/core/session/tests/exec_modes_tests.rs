@@ -308,8 +308,8 @@ fn build_suffix_includes_post_plan_continuation_guidance() {
     );
 }
 
-// Plan mode's submit-step text must reflect the non-blocking Cursor-style
-// flow: no explicit reject, user iteration is just a chat reply.
+// Plan mode's submit-step text must reflect the non-blocking flow: no explicit
+// reject, user iteration is just a chat reply.
 #[test]
 fn plan_suffix_describes_nonblocking_submit_flow() {
     let suffix = AgentExecMode::Plan.system_prompt_suffix();

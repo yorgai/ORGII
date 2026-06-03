@@ -680,6 +680,9 @@
     "newChat": "新規チャット",
     "defaultTitle": "チャット",
     "hideChatPanel": "チャットパネルを非表示",
+    "replay": {
+      "follow": "フォロー"
+    },
     "readOnlyBannerCursorIde": "Cursor IDE の履歴は読み取り専用です。続きは Cursor で開いてください。",
     "cursorControl": {
       "enableButton": "送信を有効にする",

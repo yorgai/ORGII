@@ -302,7 +302,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
     }, [setShowContextMenu, setAtSearchQuery]);
 
     // ============================================
-    // Cursor-style compact capsule
+    // Compact composer capsule
     // ============================================
     //
     // The pill row (single line + toolbar cluster on the right) stays until the

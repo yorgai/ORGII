@@ -18,6 +18,7 @@ import "@xterm/xterm/css/xterm.css";
 import { useAtomValue } from "jotai";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
+import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { eventsAtom } from "@src/engines/SessionCore/core/atoms";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { isShellTool } from "@src/engines/SessionCore/sync/adapters/shared";
@@ -140,7 +141,7 @@ const TerminalReadOnly: React.FC<TerminalReadOnlyProps> = ({
   const terminalLetterSpacing = useAtomValue(terminalLetterSpacingAtom);
   const codeFontFamily = useAtomValue(resolvedCodeFontFamilyAtom);
   const appTheme = useAtomValue(themesAtom);
-  const isDarkTheme = appTheme === "/orgii_dark.css";
+  const isDarkTheme = isThemeCssPathDark(appTheme);
 
   // Keep agentSessionId in a ref so event listeners don't go stale
   const agentSessionIdRef = useRef(agentSessionId);

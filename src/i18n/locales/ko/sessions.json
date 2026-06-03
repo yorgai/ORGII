@@ -679,6 +679,9 @@
     "newChat": "새 채팅",
     "defaultTitle": "채팅",
     "hideChatPanel": "채팅 패널 숨기기",
+    "replay": {
+      "follow": "팔로우"
+    },
     "readOnlyBannerCursorIde": "읽기 전용 Cursor IDE 기록입니다. 이 대화를 계속하려면 Cursor에서 여세요.",
     "cursorControl": {
       "enableButton": "전송 활성화",

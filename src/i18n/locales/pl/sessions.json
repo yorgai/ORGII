@@ -687,6 +687,9 @@
     "newChat": "Nowy czat",
     "defaultTitle": "Czat",
     "hideChatPanel": "Ukryj panel czatu",
+    "replay": {
+      "follow": "Śledź"
+    },
     "readOnlyBannerCursorIde": "Historia Cursor IDE tylko do odczytu. Otwórz Cursor, aby kontynuować ten czat.",
     "cursorControl": {
       "enableButton": "Włącz wysyłanie",

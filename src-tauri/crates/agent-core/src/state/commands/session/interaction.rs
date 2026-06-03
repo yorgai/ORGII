@@ -167,7 +167,7 @@ pub async fn agent_get_pending_plan_approval(
     })))
 }
 
-/// Build button response from the plan card (Cursor-style flow).
+/// Build button response from the plan card.
 ///
 /// `choice` is `"approve"` (plain), `"approve_with_edits"` (edited plan
 /// content supplied), or `"reject"` (skip the pending plan without starting
@@ -182,8 +182,8 @@ pub async fn agent_get_pending_plan_approval(
 ///   4. Clears `plan_slot_cache` so a future `create_plan` starts fresh.
 ///   5. Kicks off a **new Build-mode turn** with a synthetic user-visible
 ///      message instructing the LLM to start implementing the approved plan.
-///      This is the Cursor-style UX: clicking Build immediately produces a
-///      new turn that writes the todo list and begins executing. There is
+///      Clicking Build immediately produces a new turn that writes the todo
+///      list and begins executing. There is
 ///      no hidden deferred `tool_result` injection — every state change is
 ///      visible in the transcript as a real user/assistant exchange.
 ///

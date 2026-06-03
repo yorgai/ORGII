@@ -1,7 +1,7 @@
 /**
  * ModelPropertiesDropdown
  *
- * Cursor-style edit popover for picking a specific model variant from a
+ * Edit popover for picking a specific model variant from a
  * model family's available variant ids. Sections:
  *
  *  - **Options** (top): `Thinking` switch + `Fast` switch. `Fast` is

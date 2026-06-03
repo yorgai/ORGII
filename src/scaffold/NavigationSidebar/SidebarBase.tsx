@@ -24,9 +24,11 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { PanelLeft, Plus, X } from "lucide-react";
 import React, { useCallback, useMemo } from "react";
 
+import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
 import LiquidGlass from "@src/components/LiquidGlass";
 import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
 import Tooltip from "@src/components/Tooltip";
+import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import {
   HOST_DESKTOP,
   resolveHostDesktop,
@@ -68,6 +70,7 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
     addIcon: AddIcon = Plus,
     addLabel,
     addTooltipContent,
+    beforeAddNewActions,
     headerActions,
   }) => {
     const {
@@ -81,6 +84,7 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
     } = useSidebarState();
 
     const isMacOS = isTauriDesktop();
+    const hideSidebarShortcut = getShortcutKeys("toggle_sidebar");
     const isFullscreen = useAtomValue(windowFullscreenAtom);
     const isCompactLayout = useIsCompactLayout();
 
@@ -225,6 +229,12 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
             } as React.CSSProperties
           }
         >
+          {beforeAddNewActions ? (
+            <div style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+              {beforeAddNewActions}
+            </div>
+          ) : null}
+
           {/* Top action button */}
           {onAddNew && (
             <div
@@ -273,12 +283,12 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
           ) : null}
 
           {/* Collapse/Expand buttons */}
-          {isMacOS && showCollapseButton ? (
-            <div
-              className="flex shrink-0 items-center gap-1"
-              style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-            >
-              {isHoverSidebarOpen ? (
+          <div
+            className="flex shrink-0 items-center gap-1"
+            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          >
+            {isMacOS && showCollapseButton ? (
+              isHoverSidebarOpen ? (
                 <>
                   {/* Expand sidebar permanently button */}
                   <LiquidGlassHoverItem
@@ -306,22 +316,36 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
                   </LiquidGlassHoverItem>
                 </>
               ) : (
-                <LiquidGlassHoverItem
-                  className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
-                  onClick={handleCollapse}
+                <Tooltip
+                  content={
+                    <KeyboardShortcutTooltipContent
+                      label={i18next.t("common:tooltips.hideSidebar")}
+                      shortcut={hideSidebarShortcut}
+                    />
+                  }
+                  position="bottom"
+                  mouseEnterDelay={200}
+                  framedPanel
                 >
-                  <PanelLeft
-                    size={16}
-                    strokeWidth={2}
-                    className="text-text-2"
-                    style={iconThemeStyle}
-                  />
-                </LiquidGlassHoverItem>
-              )}
-            </div>
-          ) : (
-            <div className="h-[28px] w-[28px]" />
-          )}
+                  <div className="inline-flex">
+                    <LiquidGlassHoverItem
+                      className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
+                      onClick={handleCollapse}
+                    >
+                      <PanelLeft
+                        size={16}
+                        strokeWidth={2}
+                        className="text-text-2"
+                        style={iconThemeStyle}
+                      />
+                    </LiquidGlassHoverItem>
+                  </div>
+                </Tooltip>
+              )
+            ) : (
+              <div className="h-[28px] w-[28px]" />
+            )}
+          </div>
         </div>
       );
     };
