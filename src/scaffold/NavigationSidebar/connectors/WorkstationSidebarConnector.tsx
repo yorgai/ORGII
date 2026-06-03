@@ -41,7 +41,9 @@ import {
   workstationActiveSessionIdAtom,
 } from "@src/store/session";
 import {
+  CHAT_PANEL_CONTENT_MODE,
   CHAT_PANEL_CREATE_TARGET,
+  chatPanelContentModeAtom,
   chatPanelCreateTargetAtom,
   chatPanelSelectedWorkItemAtom,
 } from "@src/store/ui/chatPanelAtom";
@@ -137,6 +139,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const setSpotlightOpen = useSetAtom(spotlightOpenAtom);
   const chatPanelCreateTarget = useAtomValue(chatPanelCreateTargetAtom);
   const chatPanelSelectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
+  const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
   const setChatPanelCreateTarget = useSetAtom(chatPanelCreateTargetAtom);
   const setChatPanelSelectedWorkItem = useSetAtom(
     chatPanelSelectedWorkItemAtom
@@ -408,7 +411,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
         setProjectsSelectedMenuItemId(PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID);
         setChatPanelSelectedWorkItem(null);
         setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
-        goToNewSession({ preserveActiveDraft: true });
+        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
         return;
       }
 
@@ -417,7 +420,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
         setProjectsSelectedMenuItemId(item.id);
         setChatPanelSelectedWorkItem(null);
         setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
-        goToNewSession({ preserveActiveDraft: true });
+        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
         return;
       }
 
@@ -455,16 +458,16 @@ export const WorkstationSidebarConnector: React.FC = () => {
       if (!workItem) return;
       setProjectsSelectedMenuItemId(item.id);
       setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-      goToNewSession({ preserveActiveDraft: true });
       setChatPanelSelectedWorkItem(toChatPanelWorkItem(workItem));
+      setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
     },
     [
       getProjectsLoadMoreGroupId,
-      goToNewSession,
       loadProjectsLinearOrgWorkItems,
       openProjectsLinearWorkItem,
       projectsLinearWorkItemMap,
       projectsWorkItemMap,
+      setChatPanelContentMode,
       setChatPanelCreateTarget,
       setChatPanelSelectedWorkItem,
       toChatPanelWorkItem,

@@ -65,8 +65,10 @@ import {
   workstationActiveSessionIdAtom,
 } from "@src/store/session";
 import {
+  CHAT_PANEL_CONTENT_MODE,
   CHAT_PANEL_CREATE_TARGET,
   type ChatPanelCreateTarget,
+  chatPanelContentModeAtom,
   chatPanelCreateTargetAtom,
   chatPanelMaximizedAtom,
   chatPanelSelectedWorkItemAtom,
@@ -128,6 +130,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     );
     const handleReloadSession = useReloadSession(currentSessionId ?? null);
     const { openTab: openWorkStationTab } = useWorkStationTabs();
+    const [contentMode, setContentMode] = useAtom(chatPanelContentModeAtom);
     const [createTarget, setCreateTarget] = useAtom(chatPanelCreateTargetAtom);
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
     const {
@@ -285,6 +288,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     );
 
     const handleNewSession = useCallback(() => {
+      setContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
       setSelectedWorkItem(null);
       dispatchClearSession();
       setWorkstationActiveSessionId(null);
@@ -292,6 +296,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     }, [
       dispatchClearSession,
       setActiveSessionId,
+      setContentMode,
       setSelectedWorkItem,
       setWorkstationActiveSessionId,
     ]);
@@ -344,24 +349,27 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
     const sessionSidebarVisible = sessionSidebarWidth > 0;
+    const showSessionContent =
+      contentMode === CHAT_PANEL_CONTENT_MODE.SESSION && !!currentSessionId;
+    const showNonSessionContent = !showSessionContent;
     const showHeader =
       active &&
-      (!!currentSessionId || !!selectedWorkItem || viewMode === "workStation");
+      (showSessionContent || !!selectedWorkItem || viewMode === "workStation");
     const headerTitle = panelTitle;
     // The "+" (new session) button is redundant when the session sidebar is
     // visible, so only surface it in the chat header when that sidebar is off.
     const showNewSessionButton =
-      !!currentSessionId && sidebarCollapsed && !sessionSidebarVisible;
+      showSessionContent && sidebarCollapsed && !sessionSidebarVisible;
     const isBenchmarkTarget =
       createTarget === CHAT_PANEL_CREATE_TARGET.BENCHMARK;
     const isWorkItemTarget =
       createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM;
     const showCreatorPresenceInHeader =
-      !currentSessionId &&
+      !showSessionContent &&
       !selectedWorkItem &&
       !isBenchmarkTarget &&
       !isWorkItemTarget;
-    const showPresenceInHeader = currentSessionId
+    const showPresenceInHeader = showSessionContent
       ? sidebarCollapsed
       : showCreatorPresenceInHeader;
     const chatFocusLabel = isChatFocus
@@ -384,7 +392,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       />
     );
     const showEmptyChatFocusRestoreButton =
-      !currentSessionId &&
+      !showSessionContent &&
       !selectedWorkItem &&
       isChatFocus &&
       showChatFocusToggle;
@@ -440,7 +448,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         {showPresenceInHeader && (
           <PresenceMenuButton dropdownPosition="bottom-end" />
         )}
-        {currentSessionId && (
+        {showSessionContent && (
           <Tooltip
             content={
               <KeyboardShortcutTooltipContent label={t("chat.collapseAll")} />
@@ -531,7 +539,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             </span>
           </Tooltip>
         )}
-        {currentSessionId && (
+        {showSessionContent && (
           <Tooltip
             content={
               <KeyboardShortcutTooltipContent
@@ -657,7 +665,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 type="button"
                 className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left disabled:cursor-not-allowed disabled:opacity-50`}
                 onClick={handleReloadFromMenu}
-                disabled={!currentSessionId}
+                disabled={!showSessionContent}
               >
                 <RefreshCw size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
                 <span className="flex-1 truncate">
@@ -735,7 +743,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             <CollapsedSidebarButton />
           </div>
         ) : null}
-        {!currentSessionId && !selectedWorkItem && (
+        {showNonSessionContent && !selectedWorkItem && (
           <div
             className="flex h-9 w-auto flex-shrink-0 items-center"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
@@ -755,7 +763,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             />
           </div>
         )}
-        {currentSessionId ? (
+        {showSessionContent ? (
           <>
             <div
               className="flex h-9 min-w-0 shrink items-center"
@@ -1005,18 +1013,16 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const chatColumn = (
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        {!active ? null : !currentSessionId ? (
-          selectedWorkItem ? (
-            <WorkItemPanelView selectedWorkItem={selectedWorkItem} />
-          ) : (
-            emptyChatContent
-          )
-        ) : (
+        {!active ? null : showSessionContent ? (
           <ChatView
             sessionId={currentSessionId}
             onRegisterSearchOpen={handleRegisterSearchOpen}
             turnPaginationEnabled={paginationEnabled}
           />
+        ) : selectedWorkItem ? (
+          <WorkItemPanelView selectedWorkItem={selectedWorkItem} />
+        ) : (
+          emptyChatContent
         )}
         {showEmptyChatFocusRestoreButton && (
           <div className="pointer-events-none absolute inset-x-0 bottom-8 z-10 flex justify-center px-4">

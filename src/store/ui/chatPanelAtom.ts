@@ -242,6 +242,19 @@ export const chatPanelCreateTargetAtom = atom<ChatPanelCreateTarget>(
 );
 chatPanelCreateTargetAtom.debugLabel = "chatPanelCreateTargetAtom";
 
+export const CHAT_PANEL_CONTENT_MODE = {
+  SESSION: "session",
+  NON_SESSION: "nonSession",
+} as const;
+
+export type ChatPanelContentMode =
+  (typeof CHAT_PANEL_CONTENT_MODE)[keyof typeof CHAT_PANEL_CONTENT_MODE];
+
+export const chatPanelContentModeAtom = atom<ChatPanelContentMode>(
+  CHAT_PANEL_CONTENT_MODE.SESSION
+);
+chatPanelContentModeAtom.debugLabel = "chatPanelContentModeAtom";
+
 export interface ChatPanelSelectedWorkItem {
   workItem: WorkItem;
   projectId: string;
