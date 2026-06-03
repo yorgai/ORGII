@@ -148,17 +148,22 @@ const UserChatItem = ({
   }, [event]);
 
   const fullContent = useMemo(() => {
+    // When display_text is present on the event it is the pill-format string
+    // that the user originally typed (e.g. "create-rule [skill:/create-rule]").
+    // Prefer it unconditionally — falling back to message.content would show the
+    // expanded YAML/raw text instead of the pill badge.
+    if (editedText) return editedText;
+
+    // Legacy path: no display_text stored (old messages). Use message.content
+    // stripped of any auto-expanded pill block.
     const message = activityResult?.result?.message as
       | { content?: string }
       | undefined;
     const content = message?.content;
     if (typeof content === "string") {
-      const strippedContent = stripExpandedPillContent(content);
-      if (strippedContent.length > editedText.length) {
-        return strippedContent;
-      }
+      return stripExpandedPillContent(content);
     }
-    return editedText;
+    return "";
   }, [activityResult, editedText]);
 
   const isAgentOrgInboxTranscript = Boolean(

@@ -251,7 +251,7 @@ const InlinePill: React.FC<{ segment: PillSegment }> = memo(({ segment }) => {
 
   return (
     <BasePill
-      variant="display"
+      variant="editor"
       iconNode={
         <PillIcon
           pillType={segment.pillType}
@@ -270,7 +270,7 @@ const InlinePill: React.FC<{ segment: PillSegment }> = memo(({ segment }) => {
       onClick={isClickable ? handleClick : undefined}
       onMouseDown={handleMouseDown}
     >
-      <span className="text-text-1">{segment.displayName}</span>
+      <span>{segment.displayName}</span>
     </BasePill>
   );
 });
