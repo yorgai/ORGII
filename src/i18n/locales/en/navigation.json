@@ -107,7 +107,8 @@
     "serviceMarket": "Service Market",
     "signingIn": "Signing in...",
     "launchpad": "Launchpad",
-    "ideaArea": "Idea Area"
+    "ideaArea": "Idea Area",
+    "changelog": "Changelog"
   },
   "appGrid": {
     "customizeGrid": "Customize Grid",
@@ -150,7 +151,8 @@
       "cli": "CLI Agent",
       "hostedKey": "Hosted Key",
       "cloud": "Cloud",
-      "openSource": "Open Source"
+      "openSource": "Open Source",
+      "timeline": "Timeline"
     },
     "actions": {
       "addNew": "Add New",
@@ -330,5 +332,14 @@
       "removeFailed": "Failed to remove workspace"
     },
     "addWorkspace": "Add workspace"
+  },
+  "changelog": {
+    "title": "Changelog",
+    "subtitle": "Product updates",
+    "commitCount": "{{count}} commits",
+    "commitCount_one": "{{count}} commit",
+    "details": "Details",
+    "frontend": "Frontend",
+    "backend": "Backend"
   }
 }

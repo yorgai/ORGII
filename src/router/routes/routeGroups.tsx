@@ -13,6 +13,7 @@ import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import {
   AgentStudioPage,
   AuthCallback,
+  ChangelogPage,
   ConsumerWallet,
   DelegationHistoryPage,
   DevRecordPage,
@@ -208,6 +209,7 @@ export const mainAppRouteGroup: RouteObject = {
       element: <Navigate to={ROUTES.workStation.code.path} replace />,
     },
     { path: "inbox", element: lazy(<InboxPage />) },
+    { path: "changelog", element: lazy(<ChangelogPage />) },
     { path: "journey/record", element: <DevRecordPage /> },
     { path: "ideas", element: <IdeaAreaPage /> },
   ],

@@ -79,7 +79,8 @@
     "serviceMarket": "Service 市場",
     "signingIn": "正在登錄...",
     "appLauncher": "應用啓動器",
-    "ideaArea": "想法廣場"
+    "ideaArea": "想法廣場",
+    "changelog": "更新日誌"
   },
   "appGrid": {
     "customizeGrid": "自定義網格",
@@ -122,7 +123,8 @@
       "cli": "CLI Agent",
       "hostedKey": "託管密鑰",
       "cloud": "Cloud",
-      "openSource": "開源倉庫"
+      "openSource": "開源倉庫",
+      "timeline": "時間線"
     },
     "actions": {
       "addNew": "新建",
@@ -421,5 +423,14 @@
       "workItems": "工作項目",
       "projects": "專案"
     }
+  },
+  "changelog": {
+    "title": "更新日誌",
+    "subtitle": "產品更新",
+    "commitCount": "{{count}} 次提交",
+    "commitCount_one": "{{count}} 次提交",
+    "details": "詳情",
+    "frontend": "Frontend",
+    "backend": "Backend"
   }
 }

@@ -79,7 +79,8 @@
     "serviceMarket": "Service 마켓",
     "signingIn": "로그인 중...",
     "launchpad": "Launchpad",
-    "ideaArea": "아이디어 공간"
+    "ideaArea": "아이디어 공간",
+    "changelog": "Changelog"
   },
   "appGrid": {
     "customizeGrid": "그리드 사용자 지정",
@@ -122,7 +123,8 @@
       "cli": "CLI Agent",
       "hostedKey": "Hosted Key",
       "cloud": "Cloud",
-      "openSource": "오픈소스"
+      "openSource": "오픈소스",
+      "timeline": "Timeline"
     },
     "actions": {
       "addNew": "새로 추가",
@@ -330,5 +332,14 @@
       "workItems": "작업 항목",
       "projects": "프로젝트"
     }
+  },
+  "changelog": {
+    "title": "Changelog",
+    "subtitle": "제품 업데이트",
+    "commitCount": "{{count}} commits",
+    "commitCount_one": "{{count}} commit",
+    "details": "세부 정보",
+    "frontend": "Frontend",
+    "backend": "Backend"
   }
 }

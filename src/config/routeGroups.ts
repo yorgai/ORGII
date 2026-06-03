@@ -110,6 +110,14 @@ export const APP_HOME_ROUTES = {
     "inbox",
     "Unified inbox for notifications, promotions, and updates"
   ),
+  changelog: route(
+    "/orgii/app/changelog",
+    "Changelog",
+    "mainApp",
+    "app",
+    "chart-no-axes-gantt",
+    "Monthly and daily summaries of product changes"
+  ),
   // `agentOrgs` route points at the Agent Orgs settings namespace while
   // remaining on `APP_HOME_ROUTES` for existing route consumers.
   // viewMode MUST be `workStation` to match the rest of `/settings/*`.

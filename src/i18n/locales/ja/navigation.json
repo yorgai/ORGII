@@ -79,7 +79,8 @@
     "serviceMarket": "Service マーケット",
     "signingIn": "サインイン中...",
     "launchpad": "Launchpad",
-    "ideaArea": "アイデアエリア"
+    "ideaArea": "アイデアエリア",
+    "changelog": "Changelog"
   },
   "appGrid": {
     "customizeGrid": "グリッドのカスタマイズ",
@@ -122,7 +123,8 @@
       "cli": "CLI Agent",
       "hostedKey": "Hosted Key",
       "cloud": "Cloud",
-      "openSource": "オープンソース"
+      "openSource": "オープンソース",
+      "timeline": "タイムライン"
     },
     "actions": {
       "addNew": "新規追加",
@@ -330,5 +332,14 @@
       "workItems": "作業項目",
       "projects": "プロジェクト"
     }
+  },
+  "changelog": {
+    "title": "Changelog",
+    "subtitle": "製品アップデート",
+    "commitCount": "{{count}} 件のコミット",
+    "commitCount_one": "{{count}} 件のコミット",
+    "details": "詳細",
+    "frontend": "Frontend",
+    "backend": "Backend"
   }
 }
