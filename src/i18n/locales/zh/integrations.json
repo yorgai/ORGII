@@ -215,6 +215,31 @@
     "customBaseUrlRiskTitle": "自定义 URL 警告",
     "customBaseUrlRiskWarning": "使用自定义 Base URL 可能将您的 API 密钥和数据暴露给第三方服务器。仅在使用可信代理、自建部署或已知安全端点时使用。",
     "addBaseUrl": "添加自定义 Base URL（选填）",
+    "localModel": {
+      "title": "本地模型 Cookbook",
+      "description": "选择本地运行时预设，确认 OpenAI 兼容端点，添加一个或多个模型 ID，然后保存此账户以在 Chat 中使用本地模型。",
+      "runtimeLabel": "运行时预设",
+      "runtimeDesc": "选择正在运行的本地服务。预设会自动填入端点和初始模型 ID。",
+      "baseUrlDesc": "OpenAI 兼容的本地端点。请先启动运行时，然后验证或保存。",
+      "apiKeyDesc": "大多数本地运行时接受任意非空值。除非服务器强制要求密钥，否则保留占位值即可。",
+      "quickModelsLabel": "Cookbook 模型",
+      "quickModelsDesc": "用该运行时常用的模型 ID 初始化模型表。你可以在下方编辑或添加更多模型。",
+      "quickModelsPlaceholder": "选择建议模型",
+      "addSuggestedModel": "添加建议项",
+      "validateDesc": "如果端点正在运行，可进行探测；也可以手动添加模型后直接保存。",
+      "presets": {
+        "ollama": "Ollama",
+        "ollamaDesc": "默认本地服务端口 11434",
+        "lmStudio": "LM Studio",
+        "lmStudioDesc": "端口 1234 上的 OpenAI 兼容服务",
+        "vllm": "vLLM",
+        "vllmDesc": "端口 8000 上的自托管推理服务",
+        "llamaCpp": "llama.cpp",
+        "llamaCppDesc": "端口 8080 上的 GGUF 服务端点",
+        "custom": "自定义",
+        "customDesc": "任意 OpenAI 兼容的本地端点"
+      }
+    },
     "validate": "验证",
     "validateDesc": "在继续之前验证密钥",
     "validated": "已验证",
@@ -758,7 +783,8 @@
     "comingSoon": "即将推出",
     "installedClis": "CLI 客户端",
     "myRoles": "我的角色",
-    "modelWiki": "模型百科"
+    "modelWiki": "模型百科",
+    "localModels": "On prem"
   },
   "modelWiki": {
     "description": "{{count}} 个公开模型的参考目录，包含 Context 大小、输出上限与能力。",
@@ -2389,5 +2415,45 @@
     "branch": "Branch",
     "model": "Model",
     "modelPlaceholder": "可选的模型覆盖"
+  },
+  "localModels": {
+    "title": "On prem",
+    "description": "检测这台设备，并用轻量硬件匹配评分为 Ollama / llama.cpp 友好的本地模型排序。",
+    "detect": "检测",
+    "detectFailed": "硬件检测失败",
+    "emptyTitle": "检测这台设备",
+    "emptyDescription": "运行检测以查看 CPU、内存、GPU 和本地模型推荐。",
+    "noRecommendations": "暂无推荐",
+    "noMatchingRecommendations": "没有匹配的推荐",
+    "searchPlaceholder": "搜索本地模型...",
+    "columnHardware": "硬件",
+    "columnDetails": "详情",
+    "columnValue": "值",
+    "columnModel": "模型",
+    "columnFit": "适配度",
+    "columnRunMode": "运行模式",
+    "columnMemory": "内存",
+    "columnSpeed": "速度",
+    "columnContext": "上下文",
+    "columnInstall": "安装提示",
+    "tokensPerSecond": "{{count}} tok/s",
+    "hardware": {
+      "system": "系统",
+      "cpu": "CPU",
+      "memory": "内存",
+      "gpu": "GPU / 后端"
+    },
+    "fit": {
+      "excellent": "极佳",
+      "good": "良好",
+      "tight": "偏紧",
+      "too_tight": "过紧"
+    },
+    "runMode": {
+      "gpu": "GPU",
+      "cpu_offload": "CPU 卸载",
+      "cpu_only": "仅 CPU",
+      "no_fit": "不推荐"
+    }
   }
 }

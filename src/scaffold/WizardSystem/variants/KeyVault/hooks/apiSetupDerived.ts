@@ -2,6 +2,7 @@ import {
   CLI_AGENT,
   NATIVE_HARNESS_TYPE,
 } from "@src/api/tauri/rpc/schemas/validation";
+import { LOCAL_MODEL_PROVIDER } from "@src/api/types/keys";
 import {
   getClaudeCodeOAuthModels,
   getCodexOAuthModels,
@@ -64,6 +65,13 @@ export function getApiSetupProceedState({
           envVar.value.trim() !== ""
       ));
   const isOAuthConfigured = data.auth_method === "oauth" && data.validated;
+  const hasLocalModelEndpoint =
+    data.agent_type === LOCAL_MODEL_PROVIDER &&
+    Boolean(data.extracted_base_url?.trim()) &&
+    hasApiKeyInput &&
+    ((data.enabled_models?.length ?? 0) > 0 ||
+      (data.custom_models?.length ?? 0) > 0 ||
+      (data.available_models?.length ?? 0) > 0);
   const canProceed = isClaudeCode
     ? hasClaudeCodeOAuthToken
     : isCodex || isGemini
@@ -74,7 +82,8 @@ export function getApiSetupProceedState({
         ? tokenDetected && data.validated
         : isCursor
           ? hasSessionToken
-          : isOAuthConfigured ||
+          : hasLocalModelEndpoint ||
+            isOAuthConfigured ||
             (keyValidated && hasApiKeyInput) ||
             (data.validated && hasApiKeyInput);
 

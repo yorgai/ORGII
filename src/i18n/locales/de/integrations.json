@@ -215,6 +215,31 @@
     "customBaseUrlRiskTitle": "Warnung: Benutzerdefinierte URL",
     "customBaseUrlRiskWarning": "Eine benutzerdefinierte Base-URL kann Ihren API-Schlüssel und Ihre Daten Drittanbieter-Servern aussetzen. Verwenden Sie dies nur für vertrauenswürdige Proxys, selbst gehostete Bereitstellungen oder bekannte sichere Endpunkte.",
     "addBaseUrl": "Benutzerdefinierte Base URL hinzufügen (Optional)",
+    "localModel": {
+      "title": "Lokales Modell-Cookbook",
+      "description": "Wählen Sie ein lokales Runtime-Preset, bestätigen Sie den OpenAI-kompatiblen Endpoint, fügen Sie ein oder mehrere Modell-IDs hinzu und speichern Sie dieses Konto, um lokale Modelle in Chat zu verwenden.",
+      "runtimeLabel": "Runtime-Preset",
+      "runtimeDesc": "Wählen Sie den lokalen Server aus, der läuft. Presets füllen Endpoint und Startmodelle aus.",
+      "baseUrlDesc": "OpenAI-kompatibler lokaler Endpoint. Starten Sie die Runtime, bevor Sie validieren oder speichern.",
+      "apiKeyDesc": "Die meisten lokalen Runtimes akzeptieren jeden nicht leeren Wert. Behalten Sie den Platzhalter, sofern Ihr Server keinen Schlüssel erzwingt.",
+      "quickModelsLabel": "Cookbook-Modelle",
+      "quickModelsDesc": "Füllt die Modelltabelle mit für diese Runtime üblichen IDs. Sie können unten weitere Modelle bearbeiten oder hinzufügen.",
+      "quickModelsPlaceholder": "Vorgeschlagenes Modell wählen",
+      "addSuggestedModel": "Vorschlag hinzufügen",
+      "validateDesc": "Prüfen Sie den Endpoint, wenn er läuft, oder speichern Sie nach dem manuellen Hinzufügen von Modellen.",
+      "presets": {
+        "ollama": "Ollama",
+        "ollamaDesc": "Standardmäßiger lokaler Server auf Port 11434",
+        "lmStudio": "LM Studio",
+        "lmStudioDesc": "OpenAI-kompatibler Server auf Port 1234",
+        "vllm": "vLLM",
+        "vllmDesc": "Selbst gehosteter Inferenzserver auf Port 8000",
+        "llamaCpp": "llama.cpp",
+        "llamaCppDesc": "GGUF-Serving-Endpoint auf Port 8080",
+        "custom": "Benutzerdefiniert",
+        "customDesc": "Beliebiger OpenAI-kompatibler lokaler Endpoint"
+      }
+    },
     "validate": "Validieren",
     "validateDesc": "Anmeldedaten vor dem Fortfahren überprüfen",
     "validated": "Validiert",
@@ -758,7 +783,8 @@
     "comingSoon": "Demnächst",
     "installedClis": "CLI-Clients",
     "myRoles": "Meine Rollen",
-    "modelWiki": "Modell-Wiki"
+    "modelWiki": "Modell-Wiki",
+    "localModels": "On prem"
   },
   "modelWiki": {
     "description": "Referenzkatalog von {{count}} öffentlichen Modellen mit Context-Größe, Ausgabelimits und Fähigkeiten.",
@@ -2389,5 +2415,45 @@
     "searchPlaceholder": "Plugins suchen...",
     "skillCountLabel": "Skills",
     "mcpConfigured": "MCP konfiguriert"
+  },
+  "localModels": {
+    "title": "On prem",
+    "description": "Erkennt dieses Gerät und bewertet Ollama- / llama.cpp-freundliche lokale Modelle mit einem leichten Hardware-Fit-Score.",
+    "detect": "Erkennen",
+    "detectFailed": "Hardwareerkennung fehlgeschlagen",
+    "emptyTitle": "Dieses Gerät erkennen",
+    "emptyDescription": "Führe die Erkennung aus, um CPU, Speicher, GPU und Empfehlungen für lokale Modelle zu sehen.",
+    "noRecommendations": "Noch keine Empfehlungen",
+    "noMatchingRecommendations": "Keine passenden Empfehlungen",
+    "searchPlaceholder": "Lokale Modelle suchen...",
+    "columnHardware": "Hardware",
+    "columnDetails": "Details",
+    "columnValue": "Wert",
+    "columnModel": "Modell",
+    "columnFit": "Eignung",
+    "columnRunMode": "Ausführungsmodus",
+    "columnMemory": "Speicher",
+    "columnSpeed": "Geschwindigkeit",
+    "columnContext": "Kontext",
+    "columnInstall": "Installationshinweis",
+    "tokensPerSecond": "{{count}} tok/s",
+    "hardware": {
+      "system": "System",
+      "cpu": "CPU",
+      "memory": "Speicher",
+      "gpu": "GPU / Backend"
+    },
+    "fit": {
+      "excellent": "Ausgezeichnet",
+      "good": "Gut",
+      "tight": "Knapp",
+      "too_tight": "Zu knapp"
+    },
+    "runMode": {
+      "gpu": "GPU",
+      "cpu_offload": "CPU-Offload",
+      "cpu_only": "Nur CPU",
+      "no_fit": "Nicht empfohlen"
+    }
   }
 }

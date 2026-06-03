@@ -215,6 +215,31 @@
     "customBaseUrlRiskTitle": "Cảnh báo URL tùy chỉnh",
     "customBaseUrlRiskWarning": "Sử dụng Base URL tùy chỉnh có thể khiến khóa API và dữ liệu của bạn bị lộ cho máy chủ bên thứ ba. Chỉ sử dụng cho proxy đáng tin cậy, triển khai tự lưu trữ hoặc điểm cuối bảo mật đã biết.",
     "addBaseUrl": "Thêm Base URL tùy chỉnh (Tùy chọn)",
+    "localModel": {
+      "title": "Cookbook mô hình cục bộ",
+      "description": "Chọn preset runtime cục bộ, xác nhận endpoint tương thích OpenAI, thêm một hoặc nhiều ID mô hình rồi lưu tài khoản này để dùng mô hình cục bộ trong Chat.",
+      "runtimeLabel": "Preset runtime",
+      "runtimeDesc": "Chọn máy chủ cục bộ đang chạy. Preset sẽ điền endpoint và ID mô hình khởi đầu.",
+      "baseUrlDesc": "Endpoint cục bộ tương thích OpenAI. Hãy khởi động runtime trước khi xác thực hoặc lưu.",
+      "apiKeyDesc": "Hầu hết runtime cục bộ chấp nhận mọi giá trị không rỗng. Giữ placeholder trừ khi máy chủ yêu cầu key.",
+      "quickModelsLabel": "Mô hình Cookbook",
+      "quickModelsDesc": "Khởi tạo bảng bằng các ID phổ biến cho runtime này. Bạn có thể chỉnh sửa hoặc thêm mô hình bên dưới.",
+      "quickModelsPlaceholder": "Chọn mô hình gợi ý",
+      "addSuggestedModel": "Thêm gợi ý",
+      "validateDesc": "Probe endpoint nếu đang chạy, hoặc lưu sau khi thêm mô hình thủ công.",
+      "presets": {
+        "ollama": "Ollama",
+        "ollamaDesc": "Máy chủ cục bộ mặc định trên cổng 11434",
+        "lmStudio": "LM Studio",
+        "lmStudioDesc": "Máy chủ tương thích OpenAI trên cổng 1234",
+        "vllm": "vLLM",
+        "vllmDesc": "Máy chủ suy luận tự host trên cổng 8000",
+        "llamaCpp": "llama.cpp",
+        "llamaCppDesc": "Endpoint phục vụ GGUF trên cổng 8080",
+        "custom": "Tùy chỉnh",
+        "customDesc": "Bất kỳ endpoint cục bộ nào tương thích OpenAI"
+      }
+    },
     "validate": "Xác thực",
     "validateDesc": "Xác thực thông tin đăng nhập trước khi tiếp tục",
     "validated": "Đã xác thực",
@@ -758,7 +783,8 @@
     "comingSoon": "Sắp ra mắt",
     "installedClis": "CLI Clients",
     "myRoles": "Vai trò của tôi",
-    "modelWiki": "Wiki mô hình"
+    "modelWiki": "Wiki mô hình",
+    "localModels": "On prem"
   },
   "modelWiki": {
     "description": "Danh mục tham khảo gồm {{count}} mô hình công khai với kích thước Context, giới hạn đầu ra và khả năng.",
@@ -2389,5 +2415,45 @@
     "searchPlaceholder": "Tìm kiếm plugin...",
     "skillCountLabel": "Skills",
     "mcpConfigured": "MCP đã cấu hình"
+  },
+  "localModels": {
+    "title": "On prem",
+    "description": "Phát hiện thiết bị này và xếp hạng các mô hình cục bộ thân thiện với Ollama / llama.cpp bằng điểm phù hợp phần cứng nhẹ.",
+    "detect": "Phát hiện",
+    "detectFailed": "Phát hiện phần cứng thất bại",
+    "emptyTitle": "Phát hiện thiết bị này",
+    "emptyDescription": "Chạy phát hiện để xem CPU, bộ nhớ, GPU và đề xuất mô hình cục bộ.",
+    "noRecommendations": "Chưa có đề xuất",
+    "noMatchingRecommendations": "Không có đề xuất phù hợp",
+    "searchPlaceholder": "Tìm mô hình cục bộ...",
+    "columnHardware": "Phần cứng",
+    "columnDetails": "Chi tiết",
+    "columnValue": "Giá trị",
+    "columnModel": "Mô hình",
+    "columnFit": "Độ phù hợp",
+    "columnRunMode": "Chế độ chạy",
+    "columnMemory": "Bộ nhớ",
+    "columnSpeed": "Tốc độ",
+    "columnContext": "Ngữ cảnh",
+    "columnInstall": "Gợi ý cài đặt",
+    "tokensPerSecond": "{{count}} tok/s",
+    "hardware": {
+      "system": "Hệ thống",
+      "cpu": "CPU",
+      "memory": "Bộ nhớ",
+      "gpu": "GPU / Backend"
+    },
+    "fit": {
+      "excellent": "Xuất sắc",
+      "good": "Tốt",
+      "tight": "Sát giới hạn",
+      "too_tight": "Quá sát"
+    },
+    "runMode": {
+      "gpu": "GPU",
+      "cpu_offload": "CPU offload",
+      "cpu_only": "Chỉ CPU",
+      "no_fit": "Không khuyến nghị"
+    }
   }
 }

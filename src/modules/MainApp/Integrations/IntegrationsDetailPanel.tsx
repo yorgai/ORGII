@@ -133,7 +133,6 @@ const IntegrationsDetailPanel: React.FC<IntegrationsDetailPanelProps> = ({
           onClosePreview={onClosePreview}
         />
       );
-
     case "myRoles":
       return (
         <DetailPanelContainer>

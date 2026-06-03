@@ -33,6 +33,8 @@ export interface UseIntegrationsCategoryTablePropsParams {
   routines: ReturnType<typeof useRoutinesState>;
   cliAgents: ReturnType<typeof useCliAgents>;
   handleAddAction: (action: AddAction) => void;
+  modelsActiveTab?: string;
+  handleModelsTabChange: (tab: string) => void;
 }
 
 export interface UseIntegrationsCategoryTablePropsResult {
@@ -61,6 +63,8 @@ export function useIntegrationsCategoryTableProps(
     routines,
     cliAgents,
     handleAddAction,
+    modelsActiveTab,
+    handleModelsTabChange,
   } = params;
 
   // eslint-disable-next-line react-hooks/preserve-manual-memoization
@@ -75,8 +79,8 @@ export function useIntegrationsCategoryTableProps(
       onDisconnectAccount: accountsHook.handleDisconnect,
       onRevalidateAccount: accountsHook.handleRefreshAccount,
       refreshingAccountId: accountsHook.refreshingAccountId,
-      modelsActiveTab: extensions.modelsActiveTab,
-      onModelsTabChange: extensions.handleModelsTabChange,
+      modelsActiveTab: modelsActiveTab ?? extensions.modelsActiveTab,
+      onModelsTabChange: handleModelsTabChange,
       onToggleModel: extensions.handleToggleModel,
       hasGitHubConnections: githubHasConnections,
       gitHubConnections: githubConnections,
@@ -154,6 +158,8 @@ export function useIntegrationsCategoryTableProps(
       routines,
       cliAgents,
       handleAddAction,
+      modelsActiveTab,
+      handleModelsTabChange,
     ]
   );
 

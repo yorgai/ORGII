@@ -1,5 +1,6 @@
 import { type MutableRefObject, useEffect } from "react";
 
+import { LOCAL_MODEL_PROVIDER } from "@src/api/types/keys";
 import { useKeyValidation } from "@src/hooks/keyVault/useKeyValidation";
 import {
   getClaudeCodeOAuthDefaultEnabledModels,
@@ -43,11 +44,19 @@ export function useApiSetupValidation({
     baseUrl: data.extracted_base_url,
     inputMode: inputMode,
     onValidationSuccess: ({ models, envVars, extractedConfig: config }) => {
-      const effectiveModels = getEffectiveValidationModels(
-        models,
-        data.agent_type,
-        agentModelsRef.current
-      );
+      const effectiveModels = (() => {
+        const validationModels = getEffectiveValidationModels(
+          models,
+          data.agent_type,
+          agentModelsRef.current
+        );
+        if (data.agent_type !== LOCAL_MODEL_PROVIDER) return validationModels;
+        const mergedModels = [...validationModels];
+        for (const model of data.custom_models ?? []) {
+          if (!mergedModels.includes(model)) mergedModels.push(model);
+        }
+        return mergedModels;
+      })();
       const codexDefaultEnabledModels =
         getCodexOAuthDefaultEnabledModels().filter((modelId) =>
           effectiveModels.includes(modelId)
@@ -61,7 +70,10 @@ export function useApiSetupValidation({
               ? codexDefaultEnabledModels
               : effectiveModels.slice(0, 1)
             : getDefaultEnabledModels(effectiveModels),
-        model_aliases: [],
+        model_aliases:
+          data.agent_type === LOCAL_MODEL_PROVIDER ? data.model_aliases : [],
+        custom_models:
+          data.agent_type === LOCAL_MODEL_PROVIDER ? data.custom_models : [],
         env_vars: envVars,
         validated: true,
         quota_info: config?.quotaInfo as WizardData["quota_info"],

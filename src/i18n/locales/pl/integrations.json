@@ -213,6 +213,31 @@
     "customBaseUrlRiskTitle": "Ostrzeżenie o niestandardowym URL",
     "customBaseUrlRiskWarning": "Użycie niestandardowego base URL może ujawnić Twój klucz API i dane serwerom stron trzecich. Używaj tego tylko dla zaufanych proxy, własnych wdrożeń lub znanych bezpiecznych punktów końcowych.",
     "addBaseUrl": "Dodaj niestandardowy base URL (opcjonalnie)",
+    "localModel": {
+      "title": "Cookbook modeli lokalnych",
+      "description": "Wybierz preset lokalnego runtime, potwierdź endpoint zgodny z OpenAI, dodaj jeden lub więcej ID modeli i zapisz to konto, aby używać modeli lokalnych w Chat.",
+      "runtimeLabel": "Preset runtime",
+      "runtimeDesc": "Wybierz lokalny serwer, który działa. Presety uzupełniają endpoint i początkowe ID modeli.",
+      "baseUrlDesc": "Lokalny endpoint zgodny z OpenAI. Najpierw uruchom runtime, potem zweryfikuj lub zapisz.",
+      "apiKeyDesc": "Większość lokalnych runtime przyjmuje dowolną niepustą wartość. Zostaw placeholder, chyba że serwer wymaga klucza.",
+      "quickModelsLabel": "Modele Cookbook",
+      "quickModelsDesc": "Wypełnij tabelę ID typowymi dla tego runtime. Niżej możesz edytować lub dodać więcej modeli.",
+      "quickModelsPlaceholder": "Wybierz sugerowany model",
+      "addSuggestedModel": "Dodaj sugerowany",
+      "validateDesc": "Sprawdź endpoint, jeśli działa, albo zapisz po ręcznym dodaniu modeli.",
+      "presets": {
+        "ollama": "Ollama",
+        "ollamaDesc": "Domyślny lokalny serwer na porcie 11434",
+        "lmStudio": "LM Studio",
+        "lmStudioDesc": "Serwer zgodny z OpenAI na porcie 1234",
+        "vllm": "vLLM",
+        "vllmDesc": "Self-hosted serwer inferencji na porcie 8000",
+        "llamaCpp": "llama.cpp",
+        "llamaCppDesc": "Endpoint GGUF na porcie 8080",
+        "custom": "Niestandardowy",
+        "customDesc": "Dowolny lokalny endpoint zgodny z OpenAI"
+      }
+    },
     "validate": "Waliduj",
     "validateDesc": "Waliduj klucze przed kontynuowaniem",
     "validated": "Zwalidowano",
@@ -755,7 +780,8 @@
     "comingSoon": "Wkrótce",
     "installedClis": "Klienci CLI",
     "myRoles": "Moje role",
-    "modelWiki": "Wiki modeli"
+    "modelWiki": "Wiki modeli",
+    "localModels": "On prem"
   },
   "modelWiki": {
     "description": "Katalog referencyjny {{count}} publicznych modeli z rozmiarem Context, limitami wyjścia i możliwościami.",
@@ -2386,5 +2412,45 @@
     "searchPlaceholder": "Szukaj wtyczek...",
     "skillCountLabel": "Skills",
     "mcpConfigured": "MCP skonfigurowane"
+  },
+  "localModels": {
+    "title": "On prem",
+    "description": "Wykrywa to urządzenie i szereguje lokalne modele przyjazne Ollama / llama.cpp za pomocą lekkiej oceny dopasowania sprzętu.",
+    "detect": "Wykryj",
+    "detectFailed": "Wykrywanie sprzętu nie powiodło się",
+    "emptyTitle": "Wykryj to urządzenie",
+    "emptyDescription": "Uruchom wykrywanie, aby zobaczyć CPU, pamięć, GPU i rekomendacje lokalnych modeli.",
+    "noRecommendations": "Brak rekomendacji",
+    "noMatchingRecommendations": "Brak pasujących rekomendacji",
+    "searchPlaceholder": "Szukaj modeli lokalnych...",
+    "columnHardware": "Sprzęt",
+    "columnDetails": "Szczegóły",
+    "columnValue": "Wartość",
+    "columnModel": "Model",
+    "columnFit": "Dopasowanie",
+    "columnRunMode": "Tryb uruchomienia",
+    "columnMemory": "Pamięć",
+    "columnSpeed": "Szybkość",
+    "columnContext": "Kontekst",
+    "columnInstall": "Wskazówka instalacji",
+    "tokensPerSecond": "{{count}} tok/s",
+    "hardware": {
+      "system": "System",
+      "cpu": "CPU",
+      "memory": "Pamięć",
+      "gpu": "GPU / Backend"
+    },
+    "fit": {
+      "excellent": "Doskonałe",
+      "good": "Dobre",
+      "tight": "Ciasno",
+      "too_tight": "Zbyt ciasno"
+    },
+    "runMode": {
+      "gpu": "GPU",
+      "cpu_offload": "CPU offload",
+      "cpu_only": "Tylko CPU",
+      "no_fit": "Niezalecane"
+    }
   }
 }

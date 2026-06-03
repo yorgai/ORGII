@@ -212,6 +212,31 @@
     "customBaseUrlRiskTitle": "사용자 지정 URL 경고",
     "customBaseUrlRiskWarning": "사용자 지정 Base URL을 사용하면 API 키와 데이터가 제3자 서버에 노출될 수 있습니다. 신뢰할 수 있는 프록시, 자체 호스팅 배포 또는 알려진 안전한 엔드포인트에만 사용하세요.",
     "addBaseUrl": "사용자 정의 Base URL 추가 (선택)",
+    "localModel": {
+      "title": "로컬 모델 Cookbook",
+      "description": "로컬 런타임 preset을 선택하고 OpenAI 호환 endpoint를 확인한 뒤 하나 이상의 model ID를 추가하고 저장하면 Chat에서 로컬 모델을 사용할 수 있습니다.",
+      "runtimeLabel": "런타임 preset",
+      "runtimeDesc": "실행 중인 로컬 서버를 선택합니다. Preset은 endpoint와 시작 model ID를 채웁니다.",
+      "baseUrlDesc": "OpenAI 호환 로컬 endpoint입니다. 먼저 런타임을 시작한 뒤 검증하거나 저장하세요.",
+      "apiKeyDesc": "대부분의 로컬 런타임은 비어 있지 않은 값을 허용합니다. 서버가 키를 요구하지 않으면 placeholder를 유지하세요.",
+      "quickModelsLabel": "Cookbook 모델",
+      "quickModelsDesc": "이 런타임에서 자주 쓰는 model ID로 모델 테이블을 채웁니다. 아래에서 수정하거나 더 추가할 수 있습니다.",
+      "quickModelsPlaceholder": "추천 모델 선택",
+      "addSuggestedModel": "추천 항목 추가",
+      "validateDesc": "endpoint가 실행 중이면 probe하거나, 모델을 수동으로 추가한 뒤 저장하세요.",
+      "presets": {
+        "ollama": "Ollama",
+        "ollamaDesc": "포트 11434의 기본 로컬 서버",
+        "lmStudio": "LM Studio",
+        "lmStudioDesc": "포트 1234의 OpenAI 호환 서버",
+        "vllm": "vLLM",
+        "vllmDesc": "포트 8000의 자체 호스팅 추론 서버",
+        "llamaCpp": "llama.cpp",
+        "llamaCppDesc": "포트 8080의 GGUF serving endpoint",
+        "custom": "사용자 지정",
+        "customDesc": "임의의 OpenAI 호환 로컬 endpoint"
+      }
+    },
     "validate": "검증",
     "validateDesc": "진행하기 전에 자격 증명을 검증하세요",
     "validated": "검증됨",
@@ -755,7 +780,8 @@
     "comingSoon": "곧 출시",
     "installedClis": "CLI 클라이언트",
     "myRoles": "내 역할",
-    "modelWiki": "모델 위키"
+    "modelWiki": "모델 위키",
+    "localModels": "On prem"
   },
   "modelWiki": {
     "description": "{{count}}개 공개 모델의 참조 카탈로그. Context 크기, 출력 제한, 기능 포함.",
@@ -2386,5 +2412,45 @@
     "searchPlaceholder": "플러그인 검색...",
     "skillCountLabel": "Skills",
     "mcpConfigured": "MCP 구성됨"
+  },
+  "localModels": {
+    "title": "On prem",
+    "description": "이 장치를 감지하고 가벼운 하드웨어 적합도 점수로 Ollama / llama.cpp 친화적인 로컬 모델의 순위를 매깁니다.",
+    "detect": "감지",
+    "detectFailed": "하드웨어 감지 실패",
+    "emptyTitle": "이 장치 감지",
+    "emptyDescription": "감지를 실행하여 CPU, 메모리, GPU 및 로컬 모델 추천을 확인하세요.",
+    "noRecommendations": "아직 추천이 없습니다",
+    "noMatchingRecommendations": "일치하는 추천이 없습니다",
+    "searchPlaceholder": "로컬 모델 검색...",
+    "columnHardware": "하드웨어",
+    "columnDetails": "세부 정보",
+    "columnValue": "값",
+    "columnModel": "모델",
+    "columnFit": "적합도",
+    "columnRunMode": "실행 모드",
+    "columnMemory": "메모리",
+    "columnSpeed": "속도",
+    "columnContext": "컨텍스트",
+    "columnInstall": "설치 힌트",
+    "tokensPerSecond": "{{count}} tok/s",
+    "hardware": {
+      "system": "시스템",
+      "cpu": "CPU",
+      "memory": "메모리",
+      "gpu": "GPU / Backend"
+    },
+    "fit": {
+      "excellent": "매우 좋음",
+      "good": "좋음",
+      "tight": "빠듯함",
+      "too_tight": "너무 빠듯함"
+    },
+    "runMode": {
+      "gpu": "GPU",
+      "cpu_offload": "CPU 오프로드",
+      "cpu_only": "CPU 전용",
+      "no_fit": "권장하지 않음"
+    }
   }
 }

@@ -45,6 +45,7 @@ const PRIMARY_PROVIDER_KEYS = new Set([
   "anthropic_api",
   "gemini_api",
   "openrouter_api",
+  "vllm_api",
   "deepseek_api",
   "groq_api",
   "moonshot_api",

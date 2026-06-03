@@ -553,7 +553,7 @@ pub fn get_system_info() -> SystemInfo {
     }
 }
 
-fn format_chip_type(arch: &str) -> String {
+pub(crate) fn format_chip_type(arch: &str) -> String {
     match arch {
         "aarch64" | "arm64" => {
             if cfg!(target_os = "macos") {
@@ -569,7 +569,7 @@ fn format_chip_type(arch: &str) -> String {
 }
 
 #[cfg(target_os = "macos")]
-fn get_os_name_version() -> (String, String) {
+pub(crate) fn get_os_name_version() -> (String, String) {
     let version = std::process::Command::new("sw_vers")
         .arg("-productVersion")
         .output()
@@ -582,7 +582,7 @@ fn get_os_name_version() -> (String, String) {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn get_os_name_version() -> (String, String) {
+pub(crate) fn get_os_name_version() -> (String, String) {
     let os_name = System::name().unwrap_or_else(|| "Unknown".into());
     let os_version = System::os_version().unwrap_or_else(|| "Unknown".into());
     (os_name, os_version)
