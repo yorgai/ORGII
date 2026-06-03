@@ -1,0 +1,50 @@
+{
+  "year": 2026,
+  "month": "2026-06",
+  "range": {
+    "start": "2026-06-01",
+    "end": "2026-06-03"
+  },
+  "days": [
+    {
+      "date": "2026-06-01",
+      "commitCount": 62,
+      "summary": "A high-volume day focused on stabilizing Agent Org workflows, expanding the slash menu and plus-button command experience, refining integrations and settings surfaces, and strengthening E2E coverage. Backend agent-core work added Agent Architect and AI Researcher skill sources, workspace resource loading controls, external import scope handling, and event store refactors, while frontend changes improved skill pills, MCP/skills integrations, source control, workspace setup, CodeMirror behavior, table interactions, loading states, and localized UI copy.",
+      "frontendChangeBullets": [
+        "Expanded the plus-button command menu with dedicated Mode and Models flyouts, making common session setup choices easier to discover without leaving the composer.",
+        "Improved skill pills across Agent Org and chat surfaces so selected skills are more visible, safer to expand, and clearer during active workflow setup.",
+        "Refined MCP and skills integration screens with more stable setup flows, clearer loading behavior, and stronger feedback when integration data is unavailable.",
+        "Polished source control and workspace setup interactions so users get smoother file, repository, and project-context handling inside ORGII.",
+        "Improved CodeMirror behavior, table interactions, loading states, and localized interface copy for a more consistent product experience across settings and workflow screens."
+      ],
+      "backendChangeBullets": [
+        "Added workspace resource loading controls so agents can more deliberately manage which project resources are available as runtime context.",
+        "Added Agent Architect and AI Researcher skill sources in agent-core, expanding the set of structured capabilities available to agent workflows.",
+        "Improved external import scope handling so imported rules, skills, and agent definitions can be applied more predictably to the intended workspace context.",
+        "Refactored event store internals to improve reliability around persisted agent activity and runtime event handling.",
+        "Expanded E2E coverage around Agent Org workflows, slash menu behavior, integrations, and settings surfaces to catch regressions in both UI and runtime paths."
+      ],
+      "modelsUsed": ["GPT 5.5", "Opus 4.6"]
+    },
+    {
+      "date": "2026-06-02",
+      "commitCount": 76,
+      "summary": "ORGII work added the Canvas inline rendering path, canvas preview WorkStation tabs, Git attribution controls, richer pinned action and model pill behavior, queue editing, Ops Control list view, Git remote fixes, and broader chat/input stability work. The day also refined slash menu flyout navigation, Open Browser wiring into WorkStation, hover-state fixes, and E2E coverage for slash mode and plan lifecycle behavior.",
+      "frontendChangeBullets": [
+        "Added Canvas support across chat and WorkStation, including inline canvas blocks in conversations and a dedicated canvas preview tab for richer visual artifacts.",
+        "Improved pinned actions and model pill behavior in the chat composer so active actions, selected models, and refresh states are easier to understand.",
+        "Added queue editing support to chat input workflows, giving users more control over pending messages and follow-up work before execution.",
+        "Introduced an Ops Control list view so operational tasks can be browsed and managed in a denser, more scannable format.",
+        "Improved slash menu flyout navigation, Open Browser wiring into WorkStation, hover states, and input-area stability for smoother keyboard and pointer workflows."
+      ],
+      "backendChangeBullets": [
+        "Added the Canvas inline rendering path so canvas artifacts can flow from agent output into chat and WorkStation runtime surfaces.",
+        "Improved Git attribution controls and remote-helper behavior, strengthening repository operations used by source control and WorkStation flows.",
+        "Expanded E2E coverage for slash mode behavior, plan lifecycle handling, and canvas-related interactions to protect complex session flows.",
+        "Improved queue and pinned-action handling behind the chat input so pending work can be represented more safely in session state.",
+        "Refined operational task data handling for Ops Control so runtime task lists can support the new list-view experience."
+      ],
+      "modelsUsed": ["GPT 5.5", "Opus 4.6"]
+    }
+  ]
+}
