@@ -63,13 +63,17 @@ export const BuiltInAgentDetailView: React.FC<BuiltInAgentDetailViewProps> = ({
     ),
     [tabs, activeTab, setActiveTab]
   );
+  const rootProps = useMemo(
+    () =>
+      ({
+        "data-active-tab": activeTab,
+      }) as React.HTMLAttributes<HTMLDivElement>,
+    [activeTab]
+  );
 
   if (isFullHeight && activeTab === "tools") {
     return (
-      <DetailPanelContainer
-        testId={detailTestId}
-        rootProps={{ "data-active-tab": activeTab }}
-      >
+      <DetailPanelContainer testId={detailTestId} rootProps={rootProps}>
         <CustomAgentToolsSection
           agentId={agentId}
           headerElement={headerElement}
@@ -96,10 +100,7 @@ export const BuiltInAgentDetailView: React.FC<BuiltInAgentDetailViewProps> = ({
   }
 
   return (
-    <DetailPanelContainer
-      testId={detailTestId}
-      rootProps={{ "data-active-tab": activeTab }}
-    >
+    <DetailPanelContainer testId={detailTestId} rootProps={rootProps}>
       {headerElement}
       <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
         <div className={DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop}>

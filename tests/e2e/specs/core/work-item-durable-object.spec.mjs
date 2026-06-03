@@ -1129,7 +1129,7 @@ describe("Work Item durable object runtime invariants", function () {
     }
   });
 
-  it("marks invalid Routine create_work_item fires failed without creating sessions or Work Items", async function () {
+  it("creates a standalone Work Item when Routine create_work_item has no Project", async function () {
     if (!shouldRunScenario(ROUTINE_CREATE_WORK_ITEM_FAILURE_SCENARIO)) {
       this.skip();
       return;
@@ -1137,7 +1137,7 @@ describe("Work Item durable object runtime invariants", function () {
 
     const accounts = unwrap(
       await invokeE2E("listAccounts"),
-      "listAccounts(routine work item failure)",
+      "listAccounts(routine standalone work item)",
     ).accounts;
     const account = selectRustAgentAccount(accounts);
     if (!account) {
@@ -1152,48 +1152,59 @@ describe("Work Item durable object runtime invariants", function () {
 
     const repo = unwrap(
       await invokeE2E("ensureRepoSelected", { repoPath: E2E_REPO_PATH }),
-      "ensureRepoSelected(routine work item failure)",
+      "ensureRepoSelected(routine standalone work item)",
     );
-    const missingProjectSlug = `e2e-missing-routine-project-${RUN_ID}`;
+    const title = `E2E routine standalone Work Item ${RUN_ID}`;
+    const body = "This fire should create a Work Item without project association.";
     const routine = routineWorkItemDefinition({
       account,
       workspacePath: repo.path,
-      projectSlug: missingProjectSlug,
-      suffix: "failure",
-      title: `E2E routine invalid Work Item ${RUN_ID}`,
-      body: "This fire should fail before creating a Work Item.",
+      projectSlug: undefined,
+      suffix: "standalone",
+      title,
+      body,
     });
+    delete routine.outputPolicy.createWorkItemProjectSlug;
     const savedRoutine = unwrap(
       await invokeE2E("upsertRoutine", routine),
-      "upsertRoutine(routine create_work_item failure)",
+      "upsertRoutine(routine standalone create_work_item)",
     ).routine;
 
-    const failed = await invokeE2E("fireRoutine", savedRoutine.id);
-    if (failed.ok === true) {
+    const result = unwrap(
+      await invokeE2E("fireRoutine", savedRoutine.id),
+      "fireRoutine(routine standalone create_work_item)",
+    ).result;
+    const latestFire = await latestRoutineFire(savedRoutine.id, "standalone create_work_item fire");
+    if (latestFire?.status !== ROUTINE_FIRE_STATUS.COMPLETED) {
       throw new Error(
-        `Invalid create_work_item fire unexpectedly succeeded: ${JSON.stringify(failed)}`,
+        `Standalone create_work_item fire was not durably completed: ${JSON.stringify(latestFire)}`,
       );
     }
-    if (!String(failed.error ?? "").includes(missingProjectSlug)) {
+    const shortId = result.fire?.workItemId ?? latestFire.workItemId;
+    if (!shortId) {
       throw new Error(
-        `Invalid create_work_item fire error did not mention missing project slug: ${JSON.stringify(failed)}`,
+        `Standalone create_work_item fire did not link a Work Item: result=${JSON.stringify(result)} latest=${JSON.stringify(latestFire)}`,
       );
     }
 
-    const latestFire = await latestRoutineFire(savedRoutine.id, "invalid create_work_item fire");
-    if (latestFire?.status !== ROUTINE_FIRE_STATUS.FAILED) {
+    const item = unwrap(
+      await invokeE2E("readStandaloneWorkItem", shortId),
+      `readStandaloneWorkItem(${shortId})`,
+    ).item;
+    const frontmatter = item.frontmatter ?? {};
+    if (frontmatter.project !== undefined && frontmatter.project !== null) {
       throw new Error(
-        `Invalid create_work_item fire was not durably marked failed: ${JSON.stringify(latestFire)}`,
+        `Routine-created standalone Work Item unexpectedly has a project: ${JSON.stringify(frontmatter)}`,
       );
     }
-    if (latestFire.sessionId || latestFire.agentOrgRunId || latestFire.workItemId) {
+    if (frontmatter.title !== title || item.body !== body) {
       throw new Error(
-        `Failed create_work_item fire unexpectedly linked runtime output: ${JSON.stringify(latestFire)}`,
+        `Routine-created standalone Work Item did not preserve content: ${JSON.stringify(item)}`,
       );
     }
-    if (!String(latestFire.error ?? "").includes(missingProjectSlug)) {
+    if (frontmatter.routine_source?.routineFireId !== latestFire.id) {
       throw new Error(
-        `Failed create_work_item fire did not persist useful error text: ${JSON.stringify(latestFire)}`,
+        `Routine-created standalone Work Item did not point back to its fire: fire=${JSON.stringify(latestFire)} routine_source=${JSON.stringify(frontmatter.routine_source)}`,
       );
     }
   });

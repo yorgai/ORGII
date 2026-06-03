@@ -122,11 +122,12 @@ async fn create_work_item_from_routine(
             .create_work_item_project_slug
             .as_deref()
             .filter(|value| !value.trim().is_empty())
-            .ok_or_else(|| {
-                "Routine create_work_item output requires createWorkItemProjectSlug".to_string()
-            })?
-            .to_string();
-        let short_id = io::allocate_short_id(&project_slug)?;
+            .map(str::to_string);
+        let short_id = if let Some(project_slug) = project_slug.as_deref() {
+            io::allocate_short_id(project_slug)?
+        } else {
+            io::allocate_standalone_short_id(None)?
+        };
         let now = chrono::Utc::now().to_rfc3339();
         let title = routine
             .output_policy
@@ -187,7 +188,11 @@ async fn create_work_item_from_routine(
             work_products: Vec::new(),
         };
 
-        io::write_work_item(&project_slug, &short_id, &frontmatter, &body)?;
+        if let Some(project_slug) = project_slug.as_deref() {
+            io::write_work_item(project_slug, &short_id, &frontmatter, &body)?;
+        } else {
+            io::write_standalone_work_item(None, &short_id, &frontmatter, &body)?;
+        }
         let fire = io::mark_routine_fire_work_item_created(&pending_fire.id, &short_id)?;
         Ok(types::RoutineFireResult {
             fire,

@@ -37,14 +37,15 @@ pub use routines::{
 };
 pub use work_items::orchestrator_view;
 pub use work_items::{
-    acquire_execution_lock, allocate_short_id, apply_remote_merge, batch_delete_work_items,
-    batch_update_work_items, delete_work_item, find_by_external_ref, move_work_item,
-    purge_expired_deleted_work_items, read_all_work_items, read_all_work_items_enriched,
-    read_all_work_items_enriched_scoped, read_all_work_items_scoped, read_sync_metadata,
-    read_work_item, read_work_item_enriched, read_work_item_enriched_scoped, read_work_item_scoped,
+    acquire_execution_lock, allocate_short_id, allocate_standalone_short_id, apply_remote_merge,
+    batch_delete_work_items, batch_update_work_items, delete_work_item, find_by_external_ref,
+    move_work_item, purge_expired_deleted_work_items, read_all_work_items,
+    read_all_work_items_enriched, read_all_work_items_enriched_scoped, read_all_work_items_scoped,
+    read_standalone_work_item, read_standalone_work_items, read_sync_metadata, read_work_item,
+    read_work_item_enriched, read_work_item_enriched_scoped, read_work_item_scoped,
     read_work_items_view_data, read_work_items_view_data_scoped, release_execution_lock,
     restore_work_item, update_work_item_atomic, update_work_item_atomic_with_revisions,
     update_work_item_partial, update_work_item_partial_enriched,
-    update_work_item_partial_with_revisions, write_work_item, FieldRevision, SyncMetadata,
-    REVISION_SOURCE_LOCAL,
+    update_work_item_partial_with_revisions, write_standalone_work_item, write_work_item,
+    FieldRevision, SyncMetadata, REVISION_SOURCE_LOCAL,
 };

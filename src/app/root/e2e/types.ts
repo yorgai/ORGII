@@ -225,6 +225,13 @@ export interface E2EHelpers {
     frontmatter: Json,
     body: string
   ) => Promise<{ ok: true } | Err>;
+  allocateStandaloneWorkItemId: () => Promise<Result<{ shortId: string }>>;
+  readStandaloneWorkItem: (shortId: string) => Promise<Result<{ item: Json }>>;
+  writeStandaloneWorkItem: (
+    shortId: string,
+    frontmatter: Json,
+    body: string
+  ) => Promise<{ ok: true } | Err>;
   deleteWorkItem: (
     projectSlug: string,
     shortId: string

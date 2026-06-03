@@ -25,17 +25,20 @@ import {
 import { useSafeHover } from "@src/hooks/ui/useSafeHover";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
-export interface LiquidGlassHoverItemProps {
+export interface LiquidGlassHoverItemProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "onClick" | "onMouseDown" | "onMouseEnter" | "onMouseLeave"
+> {
   /** Content to render */
   children: React.ReactNode;
   /** Click handler */
-  onClick?: (e: React.MouseEvent) => void;
+  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   /** Mouse down handler (e.g. prevent focus ring on section toggle) */
-  onMouseDown?: (e: React.MouseEvent) => void;
+  onMouseDown?: (e: React.MouseEvent<HTMLDivElement>) => void;
   /** Mouse enter handler */
-  onMouseEnter?: (e: React.MouseEvent) => void;
+  onMouseEnter?: (e: React.MouseEvent<HTMLDivElement>) => void;
   /** Mouse leave handler */
-  onMouseLeave?: (e: React.MouseEvent) => void;
+  onMouseLeave?: (e: React.MouseEvent<HTMLDivElement>) => void;
   /** Additional CSS classes */
   className?: string;
   /** Custom inline styles */
@@ -58,6 +61,7 @@ const LiquidGlassHoverItem: React.FC<LiquidGlassHoverItemProps> = ({
   hoverEnabled = true,
   disabled = false,
   dataTestId,
+  ...rest
 }) => {
   const [ref, isHovered] = useSafeHover<HTMLDivElement>({
     disabled: disabled || !hoverEnabled,
@@ -65,22 +69,23 @@ const LiquidGlassHoverItem: React.FC<LiquidGlassHoverItemProps> = ({
   const { isDark } = useCurrentTheme();
   const hoverIntensity = useHoverIntensity();
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (disabled) return;
     onClick?.(e);
   };
 
-  const handleMouseEnter = (e: React.MouseEvent) => {
+  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
     onMouseEnter?.(e);
   };
 
-  const handleMouseLeave = (e: React.MouseEvent) => {
+  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
     onMouseLeave?.(e);
   };
 
   return (
     <div
       ref={ref}
+      {...rest}
       data-testid={dataTestId}
       className={`transition-colors ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"} ${className}`}
       onClick={handleClick}

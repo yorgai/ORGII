@@ -301,6 +301,27 @@ export async function readWorkItem(
   });
 }
 
+export async function readStandaloneWorkItems(
+  options?: ProjectScopeOptions
+): Promise<WorkItemData[]> {
+  const scopeSegment = scopeCacheSegment(options);
+  return cachedRead(`standalone:workitems:${scopeSegment}`, () =>
+    invoke("work_item_read_standalone_items", {
+      ...scopeInvokePayload(options),
+    })
+  );
+}
+
+export async function readStandaloneWorkItem(
+  shortId: string,
+  options?: ProjectScopeOptions
+): Promise<WorkItemData> {
+  return invoke<WorkItemData>("work_item_read_standalone_item", {
+    shortId,
+    ...scopeInvokePayload(options),
+  });
+}
+
 export async function writeWorkItem(
   projectSlug: string,
   shortId: string,
@@ -314,6 +335,22 @@ export async function writeWorkItem(
     body,
   });
   invalidateCache(projectSlug);
+  return result;
+}
+
+export async function writeStandaloneWorkItem(
+  shortId: string,
+  frontmatter: WorkItemFrontmatter,
+  body: string,
+  options?: ProjectScopeOptions
+): Promise<void> {
+  const result = await invoke<void>("work_item_write_standalone_item", {
+    shortId,
+    frontmatter,
+    body,
+    ...scopeInvokePayload(options),
+  });
+  invalidateCache("standalone");
   return result;
 }
 
@@ -392,6 +429,14 @@ export async function moveWorkItem(
 
 export async function allocateWorkItemId(projectSlug: string): Promise<string> {
   return invoke("project_allocate_work_item_id", { projectSlug });
+}
+
+export async function allocateStandaloneWorkItemId(
+  options?: ProjectScopeOptions
+): Promise<string> {
+  return invoke("work_item_allocate_standalone_id", {
+    ...scopeInvokePayload(options),
+  });
 }
 
 // ============================================

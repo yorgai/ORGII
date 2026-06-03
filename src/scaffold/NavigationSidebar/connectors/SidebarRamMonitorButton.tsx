@@ -438,7 +438,7 @@ export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
       {isOpen &&
         createPortal(
           <div
-            ref={panelRef}
+            ref={panelRef as React.RefObject<HTMLDivElement>}
             className={`${DROPDOWN_CLASSES.panelAnimated} fixed max-h-[600px] w-[340px] overflow-hidden rounded-xl`}
             style={{
               top: panelPosition.top,

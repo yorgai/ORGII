@@ -98,6 +98,27 @@ pub async fn project_read_work_item(
     .map_err(|err| format!("Task join error: {}", err))?
 }
 
+#[tauri::command]
+pub async fn work_item_read_standalone_items(
+    org_id: Option<String>,
+) -> Result<Vec<WorkItemData>, String> {
+    tokio::task::spawn_blocking(move || io::read_standalone_work_items(org_id.as_deref()))
+        .await
+        .map_err(|err| format!("Task join error: {}", err))?
+}
+
+#[tauri::command]
+pub async fn work_item_read_standalone_item(
+    org_id: Option<String>,
+    short_id: String,
+) -> Result<WorkItemData, String> {
+    tokio::task::spawn_blocking(move || {
+        io::read_standalone_work_item(org_id.as_deref(), &short_id)
+    })
+    .await
+    .map_err(|err| format!("Task join error: {}", err))?
+}
+
 // ---------------------------------------------------------------------
 // Writes
 // ---------------------------------------------------------------------
@@ -118,6 +139,20 @@ pub async fn project_write_work_item(
 ) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
         io::write_work_item(&project_slug, &short_id, &frontmatter, &body)
+    })
+    .await
+    .map_err(|err| format!("Task join error: {}", err))?
+}
+
+#[tauri::command]
+pub async fn work_item_write_standalone_item(
+    org_id: Option<String>,
+    short_id: String,
+    frontmatter: WorkItemFrontmatter,
+    body: String,
+) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        io::write_standalone_work_item(org_id.as_deref(), &short_id, &frontmatter, &body)
     })
     .await
     .map_err(|err| format!("Task join error: {}", err))?
@@ -196,6 +231,13 @@ pub async fn project_move_work_item(
 #[tauri::command]
 pub async fn project_allocate_work_item_id(project_slug: String) -> Result<String, String> {
     tokio::task::spawn_blocking(move || io::allocate_short_id(&project_slug))
+        .await
+        .map_err(|err| format!("Task join error: {}", err))?
+}
+
+#[tauri::command]
+pub async fn work_item_allocate_standalone_id(org_id: Option<String>) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || io::allocate_standalone_short_id(org_id.as_deref()))
         .await
         .map_err(|err| format!("Task join error: {}", err))?
 }

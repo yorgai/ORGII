@@ -15,6 +15,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { projectApi, workItemDataToUI } from "@src/api/http/project";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { currentRepoAtom } from "@src/store/repo";
 import type { WorkItem as WorkItemExtended } from "@src/types/core/workItem";
@@ -23,8 +24,8 @@ import { useWorkItems } from "../../hooks/useWorkItems";
 import WorkItemDetail, { type WorkItemDetailActions } from "../WorkItemDetail";
 
 interface WorkItemDetailPageProps {
-  projectId: string;
-  projectName: string;
+  projectId?: string;
+  projectName?: string;
   projectSlug?: string;
   workItemId: string;
   onClose: () => void;
@@ -38,7 +39,7 @@ interface WorkItemDetailPageProps {
   onWorkItemNameUpdated?: (workItemName: string) => void;
 }
 
-const WorkItemDetailPage: React.FC<WorkItemDetailPageProps> = ({
+const ProjectScopedWorkItemDetailPage: React.FC<WorkItemDetailPageProps> = ({
   projectId,
   projectName,
   projectSlug: tabProjectSlug,
@@ -52,7 +53,7 @@ const WorkItemDetailPage: React.FC<WorkItemDetailPageProps> = ({
   const { t } = useTranslation("projects");
   const currentRepo = useAtomValue(currentRepoAtom);
   const { data, projectData, handlers } = useWorkItems({
-    projectId,
+    projectId: projectId ?? "",
     cachedProjectSlug: tabProjectSlug,
   });
 
@@ -166,12 +167,131 @@ const WorkItemDetailPage: React.FC<WorkItemDetailPageProps> = ({
       initialPendingUpdates={
         pendingUpdates as Partial<WorkItemExtended> | undefined
       }
-      breadcrumbProjectName={projectName}
+      breadcrumbProjectName={projectName ?? undefined}
       propertiesOpen={propertiesOpen}
       onToggleProperties={() => setPropertiesOpen((prev) => !prev)}
       publishHeaderToWorkstation={publishHeaderToWorkstation}
     />
   );
+};
+
+const StandaloneWorkItemDetailPage: React.FC<WorkItemDetailPageProps> = ({
+  workItemId,
+  onClose,
+  onOpenChatSession,
+  pendingUpdates,
+  publishHeaderToWorkstation = false,
+  onWorkItemNameUpdated,
+}) => {
+  const { t } = useTranslation("projects");
+  const currentRepo = useAtomValue(currentRepoAtom);
+  const [workItem, setWorkItem] = useState<WorkItemExtended | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [propertiesOpen, setPropertiesOpen] = useState(true);
+  const workItemActionsRef = useRef<WorkItemDetailActions | null>(null);
+
+  const loadWorkItem = useCallback(async () => {
+    setLoading(true);
+    try {
+      const item = await projectApi.readStandaloneWorkItem(workItemId);
+      setWorkItem(
+        workItemDataToUI(item, {
+          labelMap: new Map(),
+          memberMap: new Map(),
+          projectNameMap: new Map(),
+        })
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [workItemId]);
+
+  useEffect(() => {
+    void loadWorkItem();
+  }, [loadWorkItem]);
+
+  const handleRegisterActions = useCallback(
+    (actions: WorkItemDetailActions) => {
+      workItemActionsRef.current = actions;
+    },
+    []
+  );
+
+  const handleUpdateWorkItem = useCallback(
+    async (updates: Partial<WorkItemExtended>) => {
+      if (!workItem) return;
+      if (updates.name !== undefined) {
+        onWorkItemNameUpdated?.(updates.name);
+      }
+      const current = await projectApi.readStandaloneWorkItem(workItemId);
+      const frontmatter = { ...current.frontmatter };
+      if (updates.name !== undefined) frontmatter.title = updates.name;
+      if (updates.workItemStatus !== undefined) {
+        frontmatter.status = updates.workItemStatus;
+      }
+      if (updates.priority !== undefined) {
+        frontmatter.priority = updates.priority;
+      }
+      if ("endDate" in updates) {
+        frontmatter.target_date = updates.endDate ?? undefined;
+      }
+      await projectApi.writeStandaloneWorkItem(
+        workItemId,
+        frontmatter,
+        updates.spec ?? current.body
+      );
+      await loadWorkItem();
+    },
+    [loadWorkItem, onWorkItemNameUpdated, workItem, workItemId]
+  );
+
+  if (!workItem) {
+    return (
+      <Placeholder
+        variant={loading ? "loading" : "empty"}
+        placement="detail-panel"
+        title={loading ? undefined : t("workItems.noWorkItems")}
+        fillParentHeight
+      />
+    );
+  }
+
+  return (
+    <WorkItemDetail
+      workItem={workItem}
+      onClose={onClose}
+      onNavigate={() => undefined}
+      hasPrev={false}
+      hasNext={false}
+      onUpdateWorkItem={handleUpdateWorkItem}
+      onDeleteWorkItem={onClose}
+      availableMembers={[]}
+      availableProjects={[]}
+      availableMilestones={[]}
+      availableLabels={[]}
+      showTime={true}
+      onRegisterActions={handleRegisterActions}
+      repoPath={currentRepo?.path ?? null}
+      projectSlug={null}
+      shortId={workItemId}
+      onRefreshWorkItem={loadWorkItem}
+      onOpenSession={onOpenChatSession}
+      initialPendingUpdates={
+        pendingUpdates as Partial<WorkItemExtended> | undefined
+      }
+      breadcrumbProjectName={undefined}
+      propertiesOpen={propertiesOpen}
+      onToggleProperties={() => setPropertiesOpen((prev) => !prev)}
+      publishHeaderToWorkstation={publishHeaderToWorkstation}
+    />
+  );
+};
+
+const WorkItemDetailPage: React.FC<WorkItemDetailPageProps> = (props) => {
+  if (!props.projectSlug) {
+    return <StandaloneWorkItemDetailPage {...props} />;
+  }
+  return <ProjectScopedWorkItemDetailPage {...props} />;
 };
 
 export default WorkItemDetailPage;

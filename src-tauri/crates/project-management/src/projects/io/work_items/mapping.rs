@@ -16,6 +16,7 @@ use crate::projects::types::{WorkItemData, WorkItemFrontmatter};
 /// Hot columns selected from `workitems` for a single work item.
 pub(super) struct WorkItemCore {
     pub work_item_id: String,
+    pub project_id: Option<String>,
     pub short_id: String,
     pub title: String,
     pub body: String,
@@ -38,27 +39,27 @@ pub(super) struct WorkItemCore {
 pub(super) fn row_to_core(row: &rusqlite::Row<'_>) -> rusqlite::Result<WorkItemCore> {
     Ok(WorkItemCore {
         work_item_id: row.get(0)?,
-        short_id: row.get(1)?,
-        title: row.get(2)?,
-        body: row.get::<_, Option<String>>(3)?.unwrap_or_default(),
-        status: row.get(4)?,
-        priority: row.get(5)?,
-        assignee: row.get(6)?,
-        assignee_type: row.get(7)?,
-        milestone: row.get(8)?,
-        parent: row.get(9)?,
-        start_date: row.get(10)?,
-        target_date: row.get(11)?,
-        created_at_ms: row.get(12)?,
-        updated_at_ms: row.get(13)?,
-        deleted_at_ms: row.get(14)?,
+        project_id: row.get(1)?,
+        short_id: row.get(2)?,
+        title: row.get(3)?,
+        body: row.get::<_, Option<String>>(4)?.unwrap_or_default(),
+        status: row.get(5)?,
+        priority: row.get(6)?,
+        assignee: row.get(7)?,
+        assignee_type: row.get(8)?,
+        milestone: row.get(9)?,
+        parent: row.get(10)?,
+        start_date: row.get(11)?,
+        target_date: row.get(12)?,
+        created_at_ms: row.get(13)?,
+        updated_at_ms: row.get(14)?,
+        deleted_at_ms: row.get(15)?,
     })
 }
 
 /// Combine the hot row, label set, and extras blob into a full
 /// `WorkItemData`.
 pub(super) fn assemble_work_item(
-    project_id: &str,
     core: WorkItemCore,
     labels: Vec<String>,
     extras: ExtrasPayload,
@@ -67,7 +68,7 @@ pub(super) fn assemble_work_item(
         id: core.work_item_id,
         short_id: core.short_id.clone(),
         title: core.title,
-        project: Some(project_id.to_string()),
+        project: core.project_id,
         status: core.status,
         priority: core.priority,
         assignee: core.assignee,

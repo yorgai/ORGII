@@ -223,12 +223,10 @@ const WorkItemCreatorChatPanel: React.FC<WorkItemCreatorChatPanelProps> = memo(
     const handleCreate = useCallback(async () => {
       const title = draft.name.trim();
       if (!title || saving) return;
-      if (!draft.projectId) {
-        Message.error(t("projects:properties.noProjectSelected"));
-        return;
-      }
-      const projectSlug = loadedProjectSlugById[draft.projectId];
-      if (!projectSlug) {
+      const projectSlug = draft.projectId
+        ? loadedProjectSlugById[draft.projectId]
+        : undefined;
+      if (draft.projectId && !projectSlug) {
         Message.error(t("projects:properties.noProjectSelected"));
         return;
       }
@@ -239,7 +237,9 @@ const WorkItemCreatorChatPanel: React.FC<WorkItemCreatorChatPanelProps> = memo(
         const rawDescription =
           editorRef.current?.getHTML()?.trim() ?? draft.description;
         const descriptionText = unresolveImagePathsForStorage(rawDescription);
-        const shortId = await projectApi.allocateWorkItemId(projectSlug);
+        const shortId = projectSlug
+          ? await projectApi.allocateWorkItemId(projectSlug)
+          : await projectApi.allocateStandaloneWorkItemId();
         const frontmatter: WorkItemFrontmatter = {
           id: shortId,
           short_id: shortId,
@@ -262,12 +262,20 @@ const WorkItemCreatorChatPanel: React.FC<WorkItemCreatorChatPanelProps> = memo(
           schedule: draft.schedule ?? undefined,
         };
 
-        await projectApi.writeWorkItem(
-          projectSlug,
-          shortId,
-          frontmatter,
-          descriptionText
-        );
+        if (projectSlug) {
+          await projectApi.writeWorkItem(
+            projectSlug,
+            shortId,
+            frontmatter,
+            descriptionText
+          );
+        } else {
+          await projectApi.writeStandaloneWorkItem(
+            shortId,
+            frontmatter,
+            descriptionText
+          );
+        }
         await emit("orgii-data-changed");
         clearDraft();
         editorRef.current?.clear();
@@ -349,9 +357,7 @@ const WorkItemCreatorChatPanel: React.FC<WorkItemCreatorChatPanelProps> = memo(
                       shape="circle"
                       iconOnly
                       loading={saving}
-                      disabled={
-                        !draft.name.trim() || saving || !draft.projectId
-                      }
+                      disabled={!draft.name.trim() || saving}
                       onClick={handleCreate}
                       aria-label={t("projects:workItems.createWorkItem")}
                       icon={<ListTodo size={15} strokeWidth={2} />}

@@ -136,6 +136,47 @@ export function createProjectHelpers(store: E2EStore) {
     }
   };
 
+  const allocateStandaloneWorkItemId = async (): Promise<
+    Result<{ shortId: string }>
+  > => {
+    try {
+      const shortId = await projectApi.allocateStandaloneWorkItemId();
+      return { ok: true, shortId };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  const readStandaloneWorkItem = async (
+    shortId: string
+  ): Promise<Result<{ item: Json }>> => {
+    try {
+      const item = (await projectApi.readStandaloneWorkItem(
+        shortId
+      )) as unknown as Json;
+      return { ok: true, item };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  const writeStandaloneWorkItem = async (
+    shortId: string,
+    frontmatter: Json,
+    body: string
+  ): Promise<{ ok: true } | Err> => {
+    try {
+      await projectApi.writeStandaloneWorkItem(
+        shortId,
+        frontmatter as unknown as WorkItemFrontmatter,
+        body
+      );
+      return { ok: true };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   const deleteWorkItem = async (
     projectSlug: string,
     shortId: string
@@ -236,6 +277,9 @@ export function createProjectHelpers(store: E2EStore) {
     listRoutineFires,
     readWorkItem,
     writeWorkItem,
+    allocateStandaloneWorkItemId,
+    readStandaloneWorkItem,
+    writeStandaloneWorkItem,
     deleteWorkItem,
     readWorkItemsEnriched,
     testWorkItemScheduleLookup,
