@@ -13,6 +13,9 @@
 import { ArrowDown } from "lucide-react";
 import React, { memo } from "react";
 
+import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
+import Tooltip from "@src/components/Tooltip";
+
 import type { ScrollNavState } from "../../ChatHistory";
 import StackPill from "./StackPill";
 
@@ -67,12 +70,27 @@ const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
         {hasTrailing && (
           <div className="flex items-center gap-1">
             {showFollowAgent && (
-              <StackPill
-                count={0}
-                active={false}
-                onClick={scrollNav!.onFollowAgent}
-                label={scrollNav!.followAgentLabel}
-              />
+              <Tooltip
+                content={
+                  <KeyboardShortcutTooltipContent
+                    label={scrollNav!.followAgentTooltipLabel}
+                    shortcut={scrollNav!.followAgentShortcut || undefined}
+                  />
+                }
+                position="top"
+                mouseEnterDelay={250}
+                framedPanel
+              >
+                <span className="inline-flex">
+                  <StackPill
+                    count={0}
+                    active={false}
+                    onClick={scrollNav!.onFollowAgent}
+                    label={scrollNav!.followAgentLabel}
+                    ariaLabel={scrollNav!.followAgentTooltipLabel}
+                  />
+                </span>
+              </Tooltip>
             )}
             {showScrollToBottom && (
               <StackPill
