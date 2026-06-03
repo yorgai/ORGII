@@ -211,7 +211,7 @@ const CloneGitHubForm: React.FC<CloneGitHubFormProps> = ({
                 className="h-[32px] w-[32px] shrink-0 rounded-lg border border-border-2 bg-bg-2 text-text-1 hover:bg-bg-3"
               />
             </div>
-            {/* Destination preview - GitHub Desktop style */}
+            {/* Destination preview */}
             {localPath && selectedRepo && (
               <div className="mt-2 text-[12px] text-text-2">
                 {t("cloneForm.repoWillBeClonedTo")}{" "}

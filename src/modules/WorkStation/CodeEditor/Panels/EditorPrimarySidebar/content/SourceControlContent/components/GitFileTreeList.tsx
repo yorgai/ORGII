@@ -1,7 +1,7 @@
 /**
  * GitFileTreeList Component
  *
- * A reusable file tree list component that renders GitFile[] as a VS Code style tree.
+ * A reusable file tree list component that renders GitFile[] as a source-control tree.
  * Handles tree building, flattening, and directory expand/collapse state internally.
  *
  * Use this component when you need to display a list of git files in tree format.

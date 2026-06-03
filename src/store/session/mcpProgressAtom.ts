@@ -24,9 +24,8 @@
  *  - Buckets are cleared when the tool_call completes, which happens
  *    when `clearMcpProgressForCallAtom` is written from
  *    `handleToolResult` (tool finished) or on session eviction via
- *    `clearSessionMcpProgressAtom`. This mirrors Claude Code's
- *    `onProgress` + completion flow where the inline progress bar
- *    disappears as soon as the final tool_result lands.
+ *    `clearSessionMcpProgressAtom`. This follows the progress lifecycle where
+ *    the inline progress bar disappears as soon as the final tool_result lands.
  */
 import { atom } from "jotai";
 

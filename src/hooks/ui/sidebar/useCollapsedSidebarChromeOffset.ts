@@ -6,6 +6,7 @@ import {
 } from "@src/store/ui/chatPanelAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
+import { workStationPrimarySidebarCollapsedAtom } from "@src/store/ui/workStationAtom";
 import {
   type ChatPanelPosition,
   sessionChatPositionAtom,
@@ -19,19 +20,21 @@ export function useShouldOffsetWorkStationTopBar(): boolean {
   const stationMode = useAtomValue(stationModeAtom);
   const chatPanelMaximized = useAtomValue(chatPanelMaximizedAtom);
   const chatWidth = useAtomValue(chatWidthAtom);
+  const workStationPrimarySidebarCollapsed = useAtomValue(
+    workStationPrimarySidebarCollapsedAtom
+  );
   const workStationChatPosition = useAtomValue(workStationChatPositionAtom);
   const sessionChatPosition = useAtomValue(sessionChatPositionAtom);
+
+  if (stationMode === "ops-control") {
+    return workStationPrimarySidebarCollapsed;
+  }
 
   const activeChatPosition =
     stationMode === "agent-station"
       ? sessionChatPosition
       : workStationChatPosition;
-  // Kanban station never renders the chat panel, so the persisted
-  // `chatWidth > 0` from previous sessions must not block the chrome offset.
-  const chatOccupiesLeftEdge =
-    stationMode !== "ops-control" &&
-    chatWidth > 0 &&
-    activeChatPosition === "left";
+  const chatOccupiesLeftEdge = chatWidth > 0 && activeChatPosition === "left";
 
   return sidebarCollapsed && !chatPanelMaximized && !chatOccupiesLeftEdge;
 }
@@ -41,8 +44,11 @@ export function useShouldOffsetChatPanelHeader(options: {
   useExternalWidth: boolean;
 }): boolean {
   const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
-  return (
-    sidebarCollapsed &&
-    (options.position === "left" || options.useExternalWidth)
-  );
+  const stationMode = useAtomValue(stationModeAtom);
+
+  if (!sidebarCollapsed) return false;
+  if (options.useExternalWidth) return true;
+  if (stationMode === "agent-station") return options.position === "left";
+
+  return options.position === "left";
 }

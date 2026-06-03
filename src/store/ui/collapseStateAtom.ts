@@ -56,7 +56,7 @@ export const triggerCollapseAllAtom = atom(
 );
 
 // ============================================
-// Per-turn collapse state (Cursor-style "Worked for xxx")
+// Per-turn collapse state ("Worked for xxx" summary)
 // ============================================
 
 /**

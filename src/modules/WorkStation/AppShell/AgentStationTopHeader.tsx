@@ -30,8 +30,12 @@ import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import CaptionBar from "@src/engines/Simulator/components/CaptionBar";
 import { useCurrentTurnLastAgentMessage } from "@src/engines/Simulator/hooks/useCurrentTurnLastAgentMessage";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
-import { useShouldOffsetWorkStationTopBar } from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
+import {
+  COLLAPSED_SIDEBAR_CHROME_OFFSET,
+  useShouldOffsetWorkStationTopBar,
+} from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
+import { CollapsedSidebarButton } from "@src/scaffold/NavigationSidebar/CollapsedSidebarButton";
 import { WorkStationViewService } from "@src/services/workStation/WorkStationViewService";
 import {
   activeStationChatVisibleAtom,
@@ -147,10 +151,22 @@ const AgentStationTopHeader: React.FC = memo(() => {
   return (
     <>
       <div
-        className={`relative flex shrink-0 items-center ${isCompactLayout ? "h-11 min-h-11 pt-2" : "h-9 min-h-9"} ${shouldOffsetLeftChrome ? "pl-[80px]" : ""}`}
+        className={`relative flex shrink-0 items-center ${isCompactLayout ? "h-11 min-h-11 pt-2" : "h-9 min-h-9"}`}
         data-tauri-drag-region
-        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+        style={
+          {
+            paddingLeft: shouldOffsetLeftChrome
+              ? COLLAPSED_SIDEBAR_CHROME_OFFSET
+              : undefined,
+            WebkitAppRegion: "drag",
+          } as React.CSSProperties
+        }
       >
+        {shouldOffsetLeftChrome ? (
+          <NoDragRegion className="flex h-full items-center">
+            <CollapsedSidebarButton />
+          </NoDragRegion>
+        ) : null}
         <NoDragRegion
           ref={modeChipAreaRef}
           className="flex h-full min-w-0 items-center gap-1 px-2"

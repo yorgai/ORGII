@@ -5,7 +5,7 @@
  * Provides Cursor/Continue-like file search experience.
  *
  * Features:
- * - Fuzzy matching similar to Cursor/Continue
+ * - Fuzzy matching for filename and path search
  * - Fast directory traversal with .gitignore support
  * - Path-aware scoring (filename matches ranked higher)
  * - Cached file index for repeated searches

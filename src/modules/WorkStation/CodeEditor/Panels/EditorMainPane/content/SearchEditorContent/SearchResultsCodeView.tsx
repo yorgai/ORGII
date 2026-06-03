@@ -1,7 +1,7 @@
 /**
  * SearchResultsCodeView Component
  *
- * Renders search results using lightweight DOM elements (VS Code style).
+ * Renders search results using lightweight DOM elements.
  * Each match is rendered as simple text spans with syntax highlighting via CSS.
  *
  * This approach is much more performant than using CodeMirror for each result,
@@ -85,7 +85,7 @@ function parseMatchText(match: SearchMatch): {
 }
 
 // ============================================
-// Match Line Component (VS Code style)
+// Match Line Component
 // ============================================
 
 interface MatchLineProps {

@@ -1,8 +1,8 @@
 /**
  * LspInstallPrompt Component
  *
- * Cursor-style bottom-right notification that appears when an LSP server
- * is not installed. Matches Cursor's notification design:
+ * Bottom-right notification that appears when an LSP server is not installed.
+ * Notification layout:
  * - Info icon + message
  * - Source label at bottom-left
  * - Action buttons at bottom-right (text buttons + primary button)

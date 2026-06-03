@@ -44,7 +44,7 @@ export function useFileWatchOutputIntegration(
   const outputStateRef = useRef(outputState);
   outputStateRef.current = outputState;
 
-  // Format timestamp - local time with VS Code style (text-3 color, italic)
+  // Format timestamp - local time with subdued italic styling
   const formatTimestamp = useCallback(() => {
     const now = new Date();
     // Format as YYYY-MM-DD HH:MM:SS.mmm
