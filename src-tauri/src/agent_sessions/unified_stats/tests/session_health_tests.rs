@@ -82,7 +82,10 @@ fn waiting_for_user_is_always_in_progress_not_stale() {
     let session = make_session("wfu-1", "waiting_for_user");
     let health = check_session_health(&session);
 
-    assert!(health.is_in_progress, "waiting_for_user must be in-progress");
+    assert!(
+        health.is_in_progress,
+        "waiting_for_user must be in-progress"
+    );
     assert!(!health.is_stale, "waiting_for_user must never be stale");
     assert!(health.stale_reason.is_none());
 }
@@ -129,8 +132,14 @@ fn running_without_pid_stale_is_detected() {
     session.updated_at = ts_ago(10 * 60);
     let health = check_session_health(&session);
 
-    assert!(!health.is_in_progress, "stale running session must not be in-progress");
-    assert!(health.is_stale, "stale running session must be detected as stale");
+    assert!(
+        !health.is_in_progress,
+        "stale running session must not be in-progress"
+    );
+    assert!(
+        health.is_stale,
+        "stale running session must be detected as stale"
+    );
     assert_eq!(
         health.stale_reason.as_deref(),
         Some("running_no_pid_timeout"),
@@ -169,8 +178,14 @@ fn pending_without_pid_stale_is_detected() {
     session.updated_at = ts_ago(5 * 60);
     let health = check_session_health(&session);
 
-    assert!(!health.is_in_progress, "stale pending session must not be in-progress");
-    assert!(health.is_stale, "stale pending session must be detected as stale");
+    assert!(
+        !health.is_in_progress,
+        "stale pending session must not be in-progress"
+    );
+    assert!(
+        health.is_stale,
+        "stale pending session must be detected as stale"
+    );
     assert_eq!(
         health.stale_reason.as_deref(),
         Some("pending_timeout"),
@@ -215,7 +230,10 @@ fn compute_age_ms_returns_positive_for_past_timestamp() {
     let ms = age.unwrap();
     assert!(ms > 0, "age should be positive for past timestamps");
     // Loose bounds: 1s–5min
-    assert!(ms >= 1_000 && ms <= 300_000, "age {ms}ms is outside expected range");
+    assert!(
+        ms >= 1_000 && ms <= 300_000,
+        "age {ms}ms is outside expected range"
+    );
 }
 
 #[test]

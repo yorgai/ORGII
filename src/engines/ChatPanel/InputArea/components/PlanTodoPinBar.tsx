@@ -64,6 +64,10 @@ const TodoStatusIcon: React.FC<{ status: string; blocked?: boolean }> = ({
 
 const TERMINAL_STATUSES = new Set(["completed", "cancelled"]);
 
+function todoRowKey(todoId: string, index: number): string {
+  return `plan-todo:${todoId || "missing"}:${index}`;
+}
+
 const PlanTodoPinBar: React.FC = memo(() => {
   const { t } = useTranslation("sessions");
   const todos = useAtomValue(todosAtom);
@@ -119,7 +123,7 @@ const PlanTodoPinBar: React.FC = memo(() => {
               });
             return (
               <div
-                key={todo.id || idx}
+                key={todoRowKey(todo.id, idx)}
                 className={`${COMPOSER_STACK_ROW_BASE} ${blocked ? "opacity-50" : ""}`}
               >
                 <TodoStatusIcon status={todo.status} blocked={blocked} />

@@ -144,8 +144,7 @@ fn text_search_pill_stripped_display_label() {
     // user_input with pill refs — display_label is stripped
     let mut session = make_session("8", "running", SessionCategory::Cli, "New Session");
     session.user_input = Some("Fix @src/auth.ts and @components/Login.tsx bug".to_string());
-    session.display_label =
-        generate_display_label("New Session", session.user_input.as_deref());
+    session.display_label = generate_display_label("New Session", session.user_input.as_deref());
 
     // Display label should have "Fix" and "bug" but NOT the @-references
     if let Some(label) = &session.display_label {

@@ -39,6 +39,10 @@ function isManageTodoEvent(event: SessionEvent): boolean {
   return false;
 }
 
+function todoRowKey(todoId: string, index: number): string {
+  return `subagent-todo:${todoId || "missing"}:${index}`;
+}
+
 function extractTodosFromEvent(event: SessionEvent): TodoItem[] {
   const normalized = normalizeActivity(
     event as unknown as Record<string, unknown>
@@ -182,7 +186,7 @@ const SubagentTodoPinBar: React.FC<SubagentTodoPinBarProps> = memo(
                 });
               return (
                 <div
-                  key={todo.id || idx}
+                  key={todoRowKey(todo.id, idx)}
                   className={`${COMPOSER_STACK_ROW_BASE} ${COMPOSER_STACK_ROW_HOVER} ${blocked ? "opacity-50" : ""}`}
                 >
                   <TodoStatusIcon status={todo.status} blocked={blocked} />

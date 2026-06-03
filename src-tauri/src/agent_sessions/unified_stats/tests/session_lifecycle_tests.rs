@@ -115,8 +115,22 @@ fn display_matches_parse_roundtrip() {
 
 #[test]
 fn active_status_helper_matches_session_status_active_variants() {
-    let active = ["idle", "pending", "running", "waiting_for_user", "waiting_for_funds", "paused"];
-    let inactive = ["completed", "failed", "cancelled", "abandoned", "timeout", "archived"];
+    let active = [
+        "idle",
+        "pending",
+        "running",
+        "waiting_for_user",
+        "waiting_for_funds",
+        "paused",
+    ];
+    let inactive = [
+        "completed",
+        "failed",
+        "cancelled",
+        "abandoned",
+        "timeout",
+        "archived",
+    ];
 
     for s in active {
         assert!(

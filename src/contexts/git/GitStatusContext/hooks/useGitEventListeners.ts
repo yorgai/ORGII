@@ -3,7 +3,7 @@
  *
  * Handles:
  * - repo:status_updated events from Rust file watcher
- * - repo:changed events for file changes
+ * - file:changed events for file changes
  * - repo:git_operation events for operation notifications
  */
 import { useEffect, useRef } from "react";
@@ -203,8 +203,8 @@ export function useGitEventListeners({
         });
         cleanupFns.push(unsubscribeStatus);
 
-        // Listen to repo:changed for file changes
-        const unsubscribeChanged = ws.on("repo:changed", (_data) => {
+        // Listen to file:changed for file changes
+        const unsubscribeChanged = ws.on("file:changed", (_data) => {
           // Status will arrive via repo:status_updated event from debouncer
         });
         cleanupFns.push(unsubscribeChanged);

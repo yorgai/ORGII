@@ -18,6 +18,10 @@
   width: 100%;
   border-radius: 8px;
 
+  &.project-content-composer {
+    border-radius: 0;
+  }
+
   &.dark {
     color: rgba(255, 255, 255, 0.9);
   }

@@ -98,7 +98,7 @@ const InternalHeader: React.FC<InternalHeaderProps> = memo(
           ? ""
           : "px-6";
     const borderClasses = borderBottom ? "border-b border-border-2" : "";
-    const bgClasses = background === "transparent" ? "" : "bg-bg-2";
+    const bgClasses = background === "transparent" ? "" : "";
     const topPadding = noPanelHeader ? "pt-4" : "";
     const hasTitleRow = !!(title || iconElement || Icon);
 

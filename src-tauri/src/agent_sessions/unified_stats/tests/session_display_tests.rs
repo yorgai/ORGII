@@ -114,7 +114,10 @@ fn strip_pill_references_removes_at_word() {
 
 #[test]
 fn strip_pill_references_handles_path_refs() {
-    assert_eq!(strip_pill_references("Update @src/components/Button.tsx"), "Update");
+    assert_eq!(
+        strip_pill_references("Update @src/components/Button.tsx"),
+        "Update"
+    );
 }
 
 #[test]

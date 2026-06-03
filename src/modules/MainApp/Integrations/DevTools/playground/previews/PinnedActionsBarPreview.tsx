@@ -39,6 +39,7 @@ function PinnedActionsBarPreviewInner() {
     getFilePills: NOOP_ARR,
     getEditor: NOOP_NULL,
     triggerAtMention: NOOP,
+    triggerSlashContext: NOOP,
   });
 
   return (
