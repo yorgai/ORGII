@@ -253,6 +253,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
             checked={compactionAdvancedOpen}
             disabled={!compactionEnabled}
             onChange={setCompactionAdvancedOpen}
+            dataTestId="agent-orgs-model-compaction-advanced-switch"
           />
         </SectionRow>
         {compactionAdvancedOpen && compactionEnabled && (
@@ -272,6 +273,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
                   if (val !== undefined) update("compaction.keepRatio", val);
                 }}
                 style={SECTION_CONTROL_STYLE}
+                dataTestId="agent-orgs-model-compaction-keep-ratio-input"
               />
             </SectionRow>
             <SectionRow
@@ -291,6 +293,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
                     update("compaction.summaryMaxTokens", val);
                 }}
                 style={SECTION_CONTROL_STYLE}
+                dataTestId="agent-orgs-model-compaction-summary-max-tokens-input"
               />
             </SectionRow>
             <SectionRow
@@ -308,6 +311,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
                   if (val !== undefined) update("compaction.minMessages", val);
                 }}
                 style={SECTION_CONTROL_STYLE}
+                dataTestId="agent-orgs-model-compaction-min-messages-input"
               />
             </SectionRow>
             <SectionRow
@@ -324,6 +328,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
                   if (val !== undefined) update("compaction.floorTokens", val);
                 }}
                 style={SECTION_CONTROL_STYLE}
+                dataTestId="agent-orgs-model-compaction-floor-tokens-input"
               />
             </SectionRow>
             <SectionRow
@@ -343,6 +348,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
                     update("compaction.reservedSummaryTokens", val);
                 }}
                 style={SECTION_CONTROL_STYLE}
+                dataTestId="agent-orgs-model-compaction-reserved-summary-tokens-input"
               />
             </SectionRow>
             <SectionRow
@@ -359,6 +365,7 @@ const AgentModelsSection: React.FC<AgentModelsSectionProps> = ({
                   if (val !== undefined) update("compaction.bufferTokens", val);
                 }}
                 style={SECTION_CONTROL_STYLE}
+                dataTestId="agent-orgs-model-compaction-buffer-tokens-input"
               />
             </SectionRow>
           </>

@@ -270,6 +270,7 @@ const TabPill: React.FC<TabPillProps> = ({
         <button
           key={tab.key}
           ref={hasDropdown ? dropdownTriggerRef : undefined}
+          data-active={isActive ? "true" : "false"}
           data-tab-key={tab.key}
           data-testid={tab.dataTestId}
           onClick={() => handleTabClickWithDropdown(tab)}
@@ -308,6 +309,7 @@ const TabPill: React.FC<TabPillProps> = ({
       <button
         key={tab.key}
         ref={hasDropdown ? dropdownTriggerRef : undefined}
+        data-active={isActive ? "true" : "false"}
         data-seg=""
         data-tab-key={tab.key}
         data-testid={tab.dataTestId}

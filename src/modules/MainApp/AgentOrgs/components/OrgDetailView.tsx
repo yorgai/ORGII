@@ -7,7 +7,13 @@
  * Cancel reverts to the persisted value; Save invokes `onOrgSave`.
  */
 import { useAtomValue } from "jotai";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import TabPill from "@src/components/TabPill";
@@ -83,8 +89,12 @@ const OrgDetailView: React.FC<OrgDetailViewProps> = ({
   const [saving, setSaving] = useState(false);
   const [membersTab, setMembersTab] = useState<"edit" | "preview">("edit");
 
+  const activeOrgIdRef = useRef(selectedOrg.id);
+
   // When the user picks a different org row, reset the local edit buffer.
   useEffect(() => {
+    if (activeOrgIdRef.current === selectedOrg.id) return;
+    activeOrgIdRef.current = selectedOrg.id;
     setOrgName(selectedOrg.name);
     setOrgDescription(selectedOrg.description ?? "");
     setCoordinatorAgentId(selectedOrg.agentId);
@@ -194,7 +204,13 @@ const OrgDetailView: React.FC<OrgDetailViewProps> = ({
   }, [onOrgDelete, selectedOrg.id]);
 
   return (
-    <DetailPanelContainer testId="agent-orgs-org-detail">
+    <DetailPanelContainer
+      testId="agent-orgs-org-detail"
+      rootProps={{
+        "data-dirty": isDirty ? "true" : "false",
+        "data-valid": isValid ? "true" : "false",
+      }}
+    >
       <InternalHeader
         noPanelHeader
         contentPadding

@@ -118,6 +118,7 @@ const AddSubAgentButton: React.FC<AddSubAgentButtonProps> = ({
         ref={triggerRef}
         size="default"
         icon={<Plus size={DROPDOWN_ITEM.iconSize} />}
+        data-testid="agent-orgs-subagents-add-button"
         onClick={toggle}
       >
         {t("agentOrgs.agentWizard.addSubAgent")}
@@ -155,6 +156,7 @@ const AddSubAgentButton: React.FC<AddSubAgentButtonProps> = ({
                   <button
                     key={opt.value}
                     type="button"
+                    data-testid={`agent-orgs-subagents-add-option-${opt.value}`}
                     className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left`}
                     onClick={() => handleSelect(opt.value)}
                   >
@@ -348,7 +350,11 @@ const SubAgentsEditor: React.FC<SubAgentsEditorProps> = ({
         )}
 
         {subAgents.map((ref) => (
-          <div key={ref.agentId} data-testid="subagent-row">
+          <div
+            key={ref.agentId}
+            data-testid="subagent-row"
+            data-subagent-id={ref.agentId}
+          >
             <SectionRow label={resolveAgentName(ref.agentId)}>
               <Button
                 icon={<X size={DROPDOWN_ITEM.iconSize} />}
@@ -356,6 +362,7 @@ const SubAgentsEditor: React.FC<SubAgentsEditorProps> = ({
                 appearance="ghost"
                 variant="danger"
                 size="small"
+                data-testid={`agent-orgs-subagents-remove-${ref.agentId}`}
                 onClick={() => handleRemove(ref.agentId)}
               />
             </SectionRow>
@@ -371,6 +378,7 @@ const SubAgentsEditor: React.FC<SubAgentsEditorProps> = ({
               >
                 <Switch
                   checked={ref.isolation === SUB_AGENT_ISOLATION.WORKTREE}
+                  dataTestId={`agent-orgs-subagents-isolation-${ref.agentId}`}
                   onChange={(checked) =>
                     handleWorktreeIsolationChange(ref.agentId, checked)
                   }
