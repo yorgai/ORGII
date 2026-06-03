@@ -1,15 +1,7 @@
-import {
-  type RefObject,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { OrchestratorConfig } from "@src/api/http/project";
-import type { RichTextEditorRef } from "@src/components/RichTextEditor";
 import type { TabPillItem } from "@src/components/TabPill";
 import { createLogger } from "@src/hooks/logger";
 import {
@@ -38,7 +30,6 @@ interface UseWorkItemContentStateOptions {
   onStartAgent?: (instructions?: string) => void;
   onOpenSession?: (sessionId: string) => void;
   activeAgentSessionId?: string | null;
-  editorRef: RefObject<RichTextEditorRef | null>;
 }
 
 export function useWorkItemContentState(
@@ -55,7 +46,6 @@ export function useWorkItemContentState(
     onStartAgent,
     onOpenSession,
     activeAgentSessionId,
-    editorRef,
   } = options;
 
   const { t } = useTranslation("projects");
@@ -173,9 +163,8 @@ export function useWorkItemContentState(
   );
 
   const handleDescriptionChange = useCallback(
-    (_html: string, _text: string) => {
-      const markdown = editorRef.current?.getMarkdown()?.trim() ?? _text;
-      const storable = unresolveImagePathsForStorage(markdown);
+    (text: string) => {
+      const storable = unresolveImagePathsForStorage(text.trim());
       const current =
         workItem.spec || workItem.session_metadata?.file_change_summary || "";
       if (storable === current) return;
@@ -185,7 +174,6 @@ export function useWorkItemContentState(
       onUpdateWorkItem,
       workItem.spec,
       workItem.session_metadata?.file_change_summary,
-      editorRef,
     ]
   );
 

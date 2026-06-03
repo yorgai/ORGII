@@ -141,6 +141,7 @@ ResultItemIcon.displayName = "ResultItemIcon";
 export interface MenuItemRowProps {
   icon: React.ComponentType<Record<string, unknown>>;
   label: string;
+  description?: string;
   hasArrow?: boolean;
   isActive?: boolean;
   dataTestId?: string;
@@ -154,6 +155,7 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = memo(
   ({
     icon,
     label,
+    description,
     hasArrow = false,
     isActive = false,
     dataTestId,
@@ -182,7 +184,12 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = memo(
           className: "text-text-2",
           strokeWidth: 1.75,
         })}
-        <span className="text-[13px] text-text-1">{label}</span>
+        <span className="min-w-0 text-[13px] text-text-1">{label}</span>
+        {description && (
+          <span className="truncate text-[12px] text-text-3">
+            {description}
+          </span>
+        )}
       </div>
       {hasArrow && (
         <ICON_CONFIG.arrow

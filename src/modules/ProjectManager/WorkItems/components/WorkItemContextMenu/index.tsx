@@ -11,6 +11,7 @@ import { createPortal } from "react-dom";
 import {
   DROPDOWN_CLASSES,
   DROPDOWN_ITEM,
+  DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
 import {
@@ -83,7 +84,7 @@ const WorkItemContextMenu: React.FC<WorkItemContextMenuProps> = ({
     if (rect.right > viewportWidth) {
       const menuRect = menuRef.current?.getBoundingClientRect();
       if (menuRect) {
-        submenu.style.left = `${menuRect.left - rect.width - 4}px`;
+        submenu.style.left = `${menuRect.left - rect.width - DROPDOWN_PANEL.submenuGap}px`;
       }
     }
 
@@ -103,7 +104,7 @@ const WorkItemContextMenu: React.FC<WorkItemContextMenuProps> = ({
     if (rect.right > viewportWidth) {
       const submenuRect = submenuRef.current?.getBoundingClientRect();
       if (submenuRect) {
-        nestedSubmenu.style.left = `${submenuRect.left - rect.width - 4}px`;
+        nestedSubmenu.style.left = `${submenuRect.left - rect.width - DROPDOWN_PANEL.submenuGap}px`;
       }
     }
 
@@ -192,7 +193,7 @@ const WorkItemContextMenu: React.FC<WorkItemContextMenuProps> = ({
           setOpenSubmenu({
             itemId: matchingItem.id,
             position: {
-              x: (menuRect?.right ?? rect.right) + 4,
+              x: (menuRect?.right ?? rect.right) + DROPDOWN_PANEL.submenuGap,
               y: rect.top,
             },
           });
@@ -251,7 +252,7 @@ const WorkItemContextMenu: React.FC<WorkItemContextMenuProps> = ({
         setOpenSubmenu({
           itemId: item.id,
           position: {
-            x: (menuRect?.right ?? rect.right) + 4,
+            x: (menuRect?.right ?? rect.right) + DROPDOWN_PANEL.submenuGap,
             y: rect.top,
           },
         });
@@ -278,7 +279,7 @@ const WorkItemContextMenu: React.FC<WorkItemContextMenuProps> = ({
         setOpenNestedSubmenu({
           itemId: item.id,
           position: {
-            x: (submenuRect?.right ?? rect.right) + 4,
+            x: (submenuRect?.right ?? rect.right) + DROPDOWN_PANEL.submenuGap,
             y: rect.top,
           },
         });
