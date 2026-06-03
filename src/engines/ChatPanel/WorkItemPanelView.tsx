@@ -8,7 +8,11 @@ import {
   projectApi,
 } from "@src/api/http/project";
 import { createLogger } from "@src/hooks/logger";
-import { WorkItemContent } from "@src/modules/ProjectManager/WorkItems/components";
+import {
+  WorkItemContent,
+  WorkItemProperties,
+} from "@src/modules/ProjectManager/WorkItems/components";
+import { WORK_ITEM_PROPERTY_ESSENTIAL_FIELDS } from "@src/modules/ProjectManager/WorkItems/components/WorkItemProperties";
 import {
   type ChatPanelSelectedWorkItem,
   chatPanelSelectedWorkItemAtom,
@@ -126,6 +130,16 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
     selectedWorkItem.shortId || selectedWorkItem.workItem.session_id
   }`;
 
+  const inlineProperties = (
+    <WorkItemProperties
+      workItem={selectedWorkItem.workItem}
+      onUpdate={handleUpdateWorkItem}
+      fieldVariant="pill"
+      visibleFields={WORK_ITEM_PROPERTY_ESSENTIAL_FIELDS}
+      showMoreMenu
+    />
+  );
+
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
       <WorkItemContent
@@ -135,7 +149,9 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
         onUpdateWorkItemImmediate={handleUpdateWorkItem}
         projectSlug={selectedWorkItem.projectSlug}
         shortId={selectedWorkItem.shortId}
+        headerProperties={inlineProperties}
         hideTitleHeader
+        showHeaderPropertiesWhenTitleHidden
       />
     </div>
   );

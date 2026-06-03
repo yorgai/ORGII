@@ -27,6 +27,7 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
   teamMembers = [],
   headerProperties,
   hideTitleHeader = false,
+  showHeaderPropertiesWhenTitleHidden = false,
   repoPath,
   projectSlug,
   shortId,
@@ -106,6 +107,12 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
         </div>
       )}
 
+      {hideTitleHeader &&
+        showHeaderPropertiesWhenTitleHidden &&
+        headerProperties && (
+          <div className="shrink-0 px-3 pt-3">{headerProperties}</div>
+        )}
+
       <InternalHeader
         compactPadding
         className={hideTitleHeader ? "pt-3" : "pt-4"}
@@ -138,7 +145,7 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
                 descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
                 editable={!!onUpdateWorkItem}
                 descriptionMaxHeight={600}
-                descriptionClassName="border-b border-border-2"
+                descriptionClassName="no-bottom-border"
                 repoPath={repoPath}
                 className="w-full"
               />
