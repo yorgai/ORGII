@@ -680,6 +680,9 @@
     "newChat": "Chat mới",
     "defaultTitle": "Chat",
     "hideChatPanel": "Ẩn bảng trò chuyện",
+    "replay": {
+      "follow": "Theo dõi"
+    },
     "readOnlyBannerCursorIde": "Lịch sử Cursor IDE chỉ đọc. Mở Cursor để tiếp tục cuộc trò chuyện này.",
     "cursorControl": {
       "enableButton": "Bật gửi",

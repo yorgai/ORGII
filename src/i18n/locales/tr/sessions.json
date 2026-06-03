@@ -680,6 +680,9 @@
     "newChat": "Yeni Sohbet",
     "defaultTitle": "Sohbet",
     "hideChatPanel": "Sohbet panelini gizle",
+    "replay": {
+      "follow": "Takip et"
+    },
     "readOnlyBannerCursorIde": "Salt okunur Cursor IDE geçmişi. Bu sohbete devam etmek için Cursor'u açın.",
     "cursorControl": {
       "enableButton": "Göndermeyi etkinleştir",

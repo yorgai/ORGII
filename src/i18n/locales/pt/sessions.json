@@ -685,6 +685,9 @@
     "newChat": "Novo chat",
     "defaultTitle": "Chat",
     "hideChatPanel": "Ocultar painel de chat",
+    "replay": {
+      "follow": "Acompanhar"
+    },
     "readOnlyBannerCursorIde": "Histórico do Cursor IDE somente leitura. Abra o Cursor para continuar este chat.",
     "cursorControl": {
       "enableButton": "Habilitar envio",
