@@ -438,3 +438,7 @@ mod tests {
         assert_eq!(json, "\"readonly\"");
     }
 }
+
+#[cfg(test)]
+#[path = "dto_extended_tests.rs"]
+mod dto_extended_tests_ext;
