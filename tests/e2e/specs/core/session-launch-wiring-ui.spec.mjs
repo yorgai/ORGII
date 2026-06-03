@@ -7,6 +7,8 @@ import {
   getApiAccount,
   invokeE2E,
   selectPreferredModel,
+  selectRenderedDefaultAgentOrg,
+  selectRenderedExecMode,
   sendFromRenderedCreator,
   unwrap,
   waitForAgentOrgRunViewByOrg,
@@ -139,6 +141,34 @@ async function removeAgentDefIfExists(agentId) {
   if (defs.some((definition) => definition?.id === agentId)) {
     await invokeE2E("removeAgentDef", agentId);
   }
+}
+
+async function prepareRenderedCreator({
+  account,
+  model,
+  agentDefinitionId,
+  agentOrgId,
+}) {
+  unwrap(
+    await invokeE2E("configureWithExistingKey", {
+      accountName: account.name ?? account.id,
+      model,
+      agentType: account.agent_type,
+      category: "rust_agent",
+      agentDefinitionId,
+      agentOrgId,
+      repoPath: E2E_REPO_PATH,
+    }),
+    "configure rendered Session Creator account"
+  );
+  unwrap(
+    await invokeE2E("navigateTo", "/orgii/workstation/code"),
+    "navigate to workstation before rendered Session Creator reset"
+  );
+  unwrap(
+    await invokeE2E("resetToNewSession"),
+    "resetToNewSession before rendered Session Creator action"
+  );
 }
 
 async function selectRenderedAgentDefinition(agentId) {
@@ -328,25 +358,11 @@ describe("Session launch wiring rendered UI invariants", function () {
         await invokeE2E("refreshAgentDefs"),
         "refresh rendered selector AgentDefinition"
       );
-      unwrap(
-        await invokeE2E("configureWithExistingKey", {
-          accountName: account.name ?? account.id,
-          model,
-          agentType: account.agent_type,
-          category: "rust_agent",
-          agentDefinitionId: BUILTIN_SDE_AGENT_ID,
-          repoPath: E2E_REPO_PATH,
-        }),
-        "configure rendered selector launch account"
-      );
-      unwrap(
-        await invokeE2E("navigateTo", "/orgii/workstation/code"),
-        "navigate to workstation before rendered selector selection"
-      );
-      unwrap(
-        await invokeE2E("resetToNewSession"),
-        "resetToNewSession before rendered selector selection"
-      );
+      await prepareRenderedCreator({
+        account,
+        model,
+        agentDefinitionId: BUILTIN_SDE_AGENT_ID,
+      });
       await selectRenderedAgentDefinition(agentId);
       const sessionId = await sendFromRenderedCreator(
         `E2E rendered custom Agent selector launch ${RUN_ID}. Reply briefly.`
@@ -371,6 +387,89 @@ describe("Session launch wiring rendered UI invariants", function () {
       await waitForRenderedSession(sessionId, "custom-agent-rendered-selector");
     } finally {
       await invokeE2E("removeAgentDef", agentId);
+    }
+  });
+
+  it("launches through the rendered execution mode selector", async function () {
+    if (!shouldRunScenario("rendered-mode-selector")) {
+      this.skip();
+      return;
+    }
+
+    await prepareRenderedCreator({
+      account,
+      model,
+      agentDefinitionId: BUILTIN_SDE_AGENT_ID,
+    });
+    await selectRenderedExecMode("investigate");
+    const sessionId = await sendFromRenderedCreator(
+      `E2E rendered execution mode selector launch ${RUN_ID}. Reply briefly.`
+    );
+    if (!sessionId) {
+      throw new Error(
+        "Rendered execution mode selector did not create a session id"
+      );
+    }
+    await waitForSessionAggregateRow(
+      sessionId,
+      (session) =>
+        session.model === model &&
+        session.accountId === account.id &&
+        session.agentDefinitionId === BUILTIN_SDE_AGENT_ID &&
+        session.agentExecMode === "investigate",
+      "rendered execution mode selector launch metadata"
+    );
+    unwrap(
+      await invokeE2E("openSession", sessionId),
+      "open rendered mode selector session"
+    );
+    await waitForRenderedSession(sessionId, "rendered-mode-selector");
+  });
+
+  it("launches a default Agent Org through the rendered Session Creator selector", async function () {
+    if (!shouldRunScenario("agent-org-rendered-selector")) {
+      this.skip();
+      return;
+    }
+
+    await prepareRenderedCreator({
+      account,
+      model,
+      agentDefinitionId: BUILTIN_SDE_AGENT_ID,
+    });
+    await selectRenderedDefaultAgentOrg();
+    await selectRenderedExecMode("plan");
+    const sessionId = await sendFromRenderedCreator(
+      `E2E rendered Agent Org selector launch ${RUN_ID}. Reply briefly.`
+    );
+    if (!sessionId) {
+      throw new Error(
+        "Rendered Agent Org selector launch did not create a session id"
+      );
+    }
+
+    const runState = await waitForAgentOrgRunViewByOrg(
+      DEFAULT_AGENT_ORG_ID,
+      (view, run) =>
+        run?.rootSessionId === sessionId &&
+        run?.orgId === DEFAULT_AGENT_ORG_ID &&
+        Boolean(view?.context?.runId) &&
+        view?.context?.runId === run?.runId &&
+        (view?.members ?? []).length > 0,
+      "rendered default Agent Org selector runtime view"
+    );
+    unwrap(
+      await invokeE2E("openSession", sessionId),
+      "open rendered Agent Org selector root session"
+    );
+    const renderedState = await waitForRenderedSession(
+      sessionId,
+      "agent-org-rendered-selector"
+    );
+    if (renderedState.chatState.activeSession?.agentExecMode !== "plan") {
+      throw new Error(
+        `Rendered Agent Org selector did not persist plan mode: ${JSON.stringify({ runState, renderedState })}`
+      );
     }
   });
 

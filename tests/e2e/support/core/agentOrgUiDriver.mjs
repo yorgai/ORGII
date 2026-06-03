@@ -503,14 +503,18 @@ export async function createRenderedStrictTwoMemberAgentOrg({
     "navigateTo Agent Org settings"
   );
   await browser.waitUntil(
-    async () => !(await execJS(js.exists('[data-testid="agent-orgs-org-wizard-root"]'))),
+    async () =>
+      !(await execJS(js.exists('[data-testid="agent-orgs-org-wizard-root"]'))),
     {
       timeout: RENDER_TIMEOUT_MS,
       timeoutMsg: "previous Agent Org wizard did not unmount",
     }
   );
   unwrap(
-    await invokeE2E("navigateTo", "/orgii/app/settings/agent-orgs/agents?wizard=org-add"),
+    await invokeE2E(
+      "navigateTo",
+      "/orgii/app/settings/agent-orgs/agents?wizard=org-add"
+    ),
     "navigateTo Agent Org add wizard"
   );
   await browser.waitUntil(
@@ -687,19 +691,39 @@ export async function selectRenderedExecMode(mode) {
   const pillSelector = '[data-testid="agent-exec-mode-pill"]';
   const pillRendered = await execJS(js.exists(pillSelector));
   if (pillRendered) {
+    const expectedLabels =
+      mode === "investigate" ? ["investigate", "ask"] : [mode];
     const currentText = await execJS(js.text(pillSelector));
-    if (String(currentText).toLowerCase().includes(mode)) {
+    if (
+      expectedLabels.some((label) =>
+        String(currentText).toLowerCase().includes(label)
+      )
+    ) {
       return;
     }
-    const openResult = await execJS(js.click(pillSelector));
+    const openResult = await execJS(js.visibleClick(pillSelector));
     if (openResult !== "clicked") {
       throw new Error(`Agent exec mode pill did not open: ${openResult}`);
     }
     const optionSelector = `[data-testid="agent-exec-mode-option-${mode}"]`;
-    await browser.waitUntil(async () => execJS(js.exists(optionSelector)), {
-      timeout: RENDER_TIMEOUT_MS,
-      timeoutMsg: `Agent exec mode option ${mode} never rendered`,
-    });
+    let renderedOptions = [];
+    await browser.waitUntil(
+      async () => {
+        renderedOptions = await execJS(`
+          return Array.from(document.querySelectorAll('[data-testid^="agent-exec-mode-option-"]')).map((element) => ({
+            testId: element.getAttribute('data-testid'),
+            text: element.textContent || '',
+          }));
+        `);
+        return renderedOptions.some(
+          (option) => option.testId === `agent-exec-mode-option-${mode}`
+        );
+      },
+      {
+        timeout: RENDER_TIMEOUT_MS,
+        timeoutMsg: `Agent exec mode option ${mode} never rendered: ${JSON.stringify(renderedOptions)}`,
+      }
+    );
     const clickResult = await execJS(js.click(optionSelector));
     if (clickResult !== "clicked") {
       throw new Error(
@@ -709,7 +733,9 @@ export async function selectRenderedExecMode(mode) {
     await browser.waitUntil(
       async () => {
         const text = await execJS(js.text(pillSelector));
-        return String(text).toLowerCase().includes(mode);
+        return expectedLabels.some((label) =>
+          String(text).toLowerCase().includes(label)
+        );
       },
       {
         timeout: RENDER_TIMEOUT_MS,
