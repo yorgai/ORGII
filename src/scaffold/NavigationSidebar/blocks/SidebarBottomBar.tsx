@@ -9,20 +9,14 @@
  * can adapt to whether the human is at the keyboard.
  *
  * Right side hosts compact action buttons — by default a Settings gear
- * that navigates to the app settings route (`/orgii/app/settings`).
+ * that opens quick settings actions and links to the app settings route.
  * `AppShell` detects that route and renders Settings inside the
  * chat-panel slot with the WorkStation kept visible underneath, so the
  * URL stays deeplinkable while the layout matches the slot affordance.
  * Extra actions can be supplied by the caller (e.g. session group-by).
  */
 import { useAtom, useAtomValue } from "jotai";
-import {
-  Circle,
-  HatGlasses,
-  type LucideIcon,
-  Moon,
-  Settings,
-} from "lucide-react";
+import { Circle, HatGlasses, type LucideIcon, Moon } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -33,12 +27,7 @@ import {
   DROPDOWN_ITEM,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
-import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
-import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
 import PillGroup, { type PillGroupSegment } from "@src/components/PillGroup";
-import Tooltip from "@src/components/Tooltip";
-import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
-import { useAppNavigation } from "@src/hooks/navigation";
 import {
   userPresenceAtom,
   userPresenceModeAtom,
@@ -55,9 +44,7 @@ import {
   parseCustomRoleId,
 } from "@src/types/userPresence";
 
-import HoverAnimatedIcon, {
-  triggerIconAnimation,
-} from "../components/HoverAnimatedIcon";
+import SidebarSettingsMenuButton from "./SidebarSettingsMenuButton";
 import { resolveCustomRoleIcon } from "./customRoleIcons";
 
 interface SidebarBottomBarProps {
@@ -382,9 +369,6 @@ export const PresenceMenuButton: React.FC<PresenceMenuButtonProps> = ({
 
 const SidebarBottomBar: React.FC<SidebarBottomBarProps> = React.memo(
   ({ rightActions, hideSettings = false }) => {
-    const { t } = useTranslation("navigation");
-    const { goToSettings } = useAppNavigation();
-
     return (
       <div className="flex h-[52px] flex-shrink-0 items-center justify-between gap-2 px-3">
         <div className="flex min-w-0 items-center gap-1">
@@ -392,37 +376,7 @@ const SidebarBottomBar: React.FC<SidebarBottomBarProps> = React.memo(
         </div>
         <div className="flex items-center gap-1">
           {rightActions}
-          {!hideSettings && (
-            <Tooltip
-              content={
-                <KeyboardShortcutTooltipContent
-                  label={t("sidebar.bottomBar.settings")}
-                  shortcut={getShortcutKeys("open_settings")}
-                />
-              }
-              position="top-end"
-              mouseEnterDelay={200}
-              framedPanel
-            >
-              <div className="inline-flex">
-                <LiquidGlassHoverItem
-                  className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
-                  onClick={goToSettings}
-                  onMouseEnter={(event) =>
-                    triggerIconAnimation(event.currentTarget)
-                  }
-                >
-                  <HoverAnimatedIcon
-                    icon={Settings}
-                    iconName="settings"
-                    size={16}
-                    strokeWidth={2}
-                    className="text-text-2"
-                  />
-                </LiquidGlassHoverItem>
-              </div>
-            </Tooltip>
-          )}
+          {!hideSettings && <SidebarSettingsMenuButton />}
         </div>
       </div>
     );

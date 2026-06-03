@@ -62,7 +62,7 @@ const ModeFlyout: React.FC<ModeFlyoutProps> = ({
       style={{
         position: "fixed",
         top: anchorTop,
-        left: panelRight + 4,
+        left: panelRight + DROPDOWN_PANEL.submenuGap,
         minWidth: 180,
         maxWidth: 240,
         zIndex: 99999,

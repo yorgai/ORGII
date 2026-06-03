@@ -12,3 +12,4 @@ export { default as SidebarEmptyState } from "./SidebarEmptyState";
 export { default as SidebarList } from "./SidebarList";
 export { default as SidebarSection } from "./SidebarSection";
 export { default as SidebarBottomBar } from "./SidebarBottomBar";
+export { default as SidebarHeaderNavButton } from "./SidebarHeaderNavButton";

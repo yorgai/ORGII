@@ -84,7 +84,7 @@ const FlyoutSubmenu: React.FC<FlyoutSubmenuProps> = ({
       style={{
         position: "fixed",
         top: anchorTop,
-        left: panelRight + 4,
+        left: panelRight + DROPDOWN_PANEL.submenuGap,
         minWidth: 200,
         maxWidth: 280,
         zIndex: 99999,

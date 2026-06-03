@@ -160,6 +160,8 @@ export interface SidebarBaseProps {
   addLabel?: string;
   /** Optional rich tooltip content for the add button. */
   addTooltipContent?: ReactNode;
+  /** Extra controls rendered before the add button. */
+  beforeAddNewActions?: ReactNode;
   /** Extra controls to the right of the add button (e.g. session group-by filter) */
   headerActions?: ReactNode;
 }
@@ -270,6 +272,8 @@ export interface SidebarListProps {
   theme?: SidebarTheme;
   /** Additional class names */
   className?: string;
+  /** Preserve top padding for sidebars that still need vertical offset. */
+  topPadding?: boolean;
 }
 
 /** SidebarSection props */

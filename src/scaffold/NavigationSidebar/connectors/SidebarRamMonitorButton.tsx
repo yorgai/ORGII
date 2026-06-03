@@ -192,7 +192,22 @@ const MemoryStatRow: React.FC<MemoryStatRowProps> = ({
   );
 };
 
-export const SidebarRamMonitorButton: React.FC = React.memo(() => {
+interface SidebarRamMonitorPanelProps {
+  isOpen: boolean;
+  panelRef: React.RefObject<HTMLDivElement | null>;
+  panelPosition: {
+    top?: number;
+    bottom?: number;
+    left?: number;
+    right?: number;
+  };
+}
+
+export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
+  isOpen,
+  panelRef,
+  panelPosition,
+}) => {
   const { t: tSettings } = useTranslation("settings");
   const { t: tCommon } = useTranslation("common");
   const { t } = useTranslation();
@@ -205,12 +220,6 @@ export const SidebarRamMonitorButton: React.FC = React.memo(() => {
     isSamplingFps,
     refresh: refreshRuntimeStats,
   } = useRuntimeRamStats(false);
-  const { isOpen, isPositioned, toggle, triggerRef, panelRef, panelPosition } =
-    useDropdownEngine<HTMLDivElement>({
-      placement: "top",
-      align: "right",
-      gap: DROPDOWN_PANEL.triggerGap,
-    });
 
   const fetchMetrics = useCallback(async () => {
     if (document.visibilityState !== "visible") return;
@@ -423,29 +432,10 @@ export const SidebarRamMonitorButton: React.FC = React.memo(() => {
   const visibleRamBreakdownRows = ramBreakdownRows.filter(
     (row) => row.bytes > 0
   );
-  const buttonActiveClassName = isOpen ? "text-text-1" : "text-text-2";
-  const triggerTitle = tSettings("monitor.performanceMonitor");
 
   return (
     <>
-      <div ref={triggerRef} title={triggerTitle}>
-        <LiquidGlassHoverItem
-          className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
-          onClick={toggle}
-          onMouseEnter={(event) => triggerIconAnimation(event.currentTarget)}
-        >
-          <HoverAnimatedIcon
-            icon={Gauge}
-            iconName="gauge"
-            size={16}
-            strokeWidth={2}
-            className={buttonActiveClassName}
-          />
-        </LiquidGlassHoverItem>
-      </div>
-
       {isOpen &&
-        isPositioned &&
         createPortal(
           <div
             ref={panelRef}
@@ -564,6 +554,45 @@ export const SidebarRamMonitorButton: React.FC = React.memo(() => {
           </div>,
           document.body
         )}
+    </>
+  );
+};
+
+export const SidebarRamMonitorButton: React.FC = React.memo(() => {
+  const { t: tSettings } = useTranslation("settings");
+  const { isOpen, isPositioned, toggle, triggerRef, panelRef, panelPosition } =
+    useDropdownEngine<HTMLDivElement>({
+      placement: "top",
+      align: "right",
+      gap: DROPDOWN_PANEL.triggerGap,
+    });
+  const buttonActiveClassName = isOpen ? "text-text-1" : "text-text-2";
+  const triggerTitle = tSettings("monitor.performanceMonitor");
+
+  return (
+    <>
+      <div ref={triggerRef} title={triggerTitle}>
+        <LiquidGlassHoverItem
+          className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
+          onClick={toggle}
+          onMouseEnter={(event) => triggerIconAnimation(event.currentTarget)}
+        >
+          <HoverAnimatedIcon
+            icon={Gauge}
+            iconName="gauge"
+            size={16}
+            strokeWidth={2}
+            className={buttonActiveClassName}
+          />
+        </LiquidGlassHoverItem>
+      </div>
+      {isPositioned && (
+        <SidebarRamMonitorPanel
+          isOpen={isOpen}
+          panelRef={panelRef}
+          panelPosition={panelPosition}
+        />
+      )}
     </>
   );
 });

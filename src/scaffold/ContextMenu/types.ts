@@ -78,6 +78,10 @@ export interface UseContextMenuReturn {
   activeIndex: number;
   /** Set active menu item index */
   setActiveIndex: (index: number) => void;
+  /** Whether the latest highlight change came from keyboard navigation */
+  keyboardNavigated: boolean;
+  /** Set keyboard navigation state */
+  setKeyboardNavigated: (navigated: boolean) => void;
   /** Current second layer (null if not open) */
   secondLayer: SecondLayerId | null;
   /** Set second layer */

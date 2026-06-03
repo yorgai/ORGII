@@ -49,8 +49,14 @@ export interface NavigationSidebarProps {
   addLabel?: string;
   /** Optional rich tooltip content for the add-new button */
   addTooltipContent?: React.ReactNode;
+  /** Extra controls rendered before add-new (passed to SidebarBase) */
+  beforeAddNewActions?: React.ReactNode;
   /** Extra controls next to add-new (passed to SidebarBase) */
   headerActions?: React.ReactNode;
+  /** Optional content rendered between the tab switcher and menu list. */
+  topContent?: React.ReactNode;
+  /** Preserve top padding for the scrollable menu list. */
+  listTopPadding?: boolean;
   /** Show loading placeholder instead of menu items */
   isLoading?: boolean;
   /** Enable collapse/expand on section headers (separator-based groups) */
@@ -91,7 +97,10 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
     addIcon,
     addLabel,
     addTooltipContent,
+    beforeAddNewActions,
     headerActions,
+    topContent,
+    listTopPadding = false,
     isLoading = false,
     collapsibleSections = false,
     collapsedSectionIds,
@@ -225,9 +234,10 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
         addIcon={addIcon}
         addLabel={addLabel}
         addTooltipContent={addTooltipContent}
+        beforeAddNewActions={beforeAddNewActions}
         headerActions={headerActions}
       >
-        {/* Tab Header - h-9 container with h-7 content aligned to bottom */}
+        {/* Tab Header */}
         {items.length > 0 && (
           <div
             className="flex h-9 items-end px-3"
@@ -266,13 +276,24 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
         )}
 
         {/* Section Container */}
-        <SidebarList isLoading={isLoading}>
-          {sections.map((section) => {
+        <SidebarList isLoading={isLoading} topPadding={listTopPadding}>
+          {sections.map((section, sectionIndex) => {
             const isSectionCollapsed =
               collapsibleSections && collapsedSections.has(section.id);
 
+            const shouldMergeTopContent =
+              sectionIndex === 0 && topContent && !section.title;
+
             return (
-              <div key={section.id}>
+              <div
+                key={section.id}
+                className={
+                  shouldMergeTopContent
+                    ? `flex flex-col ${verticalGapClassName}`
+                    : undefined
+                }
+              >
+                {shouldMergeTopContent && topContent}
                 {section.title &&
                   (collapsibleSections ? (
                     <div

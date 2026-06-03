@@ -42,7 +42,7 @@ import {
 
 const DROPDOWN_WIDTH = 380;
 const SUBMENU_WIDTH = 260;
-const SUBMENU_GAP = 8;
+const SUBMENU_GAP = DROPDOWN_PANEL.submenuGap;
 const SUBMENU_VERTICAL_OFFSET = 4;
 const LIST_MAX_HEIGHT = 280;
 const VIEWPORT_MARGIN = 12;

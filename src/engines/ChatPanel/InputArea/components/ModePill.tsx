@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 
 import { DropdownItem, DropdownPanel } from "@src/components/Dropdown/exports";
 import {
+  DROPDOWN_CLASSES,
   DROPDOWN_ITEM,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
@@ -173,7 +174,6 @@ const ModePill: React.FC<ModePillProps> = memo(
                         />
                       }
                       selected={isSelected}
-                      compact
                       showCheckmark
                       dataTestId={`agent-exec-mode-option-${option.id}`}
                       onClick={() => handleSelect(option.id)}

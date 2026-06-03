@@ -157,11 +157,19 @@
     "actions": {
       "addNew": "Add New",
       "collapseAll": "Collapse All",
-      "markAllRead": "Mark All Read"
+      "markAllRead": "Mark All Read",
+      "openHome": "Open Home",
+      "openWorkstation": "Open Workstation"
     },
     "bottomBar": {
       "settings": "Settings",
       "clockLabel": "Current time"
+    },
+    "settingsMenu": {
+      "appearance": "Appearance",
+      "language": "Language",
+      "viewRam": "View RAM",
+      "openSettings": "Open Settings"
     },
     "empty": {
       "noItems": "No items",

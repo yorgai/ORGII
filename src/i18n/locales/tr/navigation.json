@@ -129,11 +129,19 @@
     "actions": {
       "addNew": "Yeni Ekle",
       "collapseAll": "Tümünü daralt",
-      "markAllRead": "Tümünü okundu olarak işaretle"
+      "markAllRead": "Tümünü okundu olarak işaretle",
+      "openHome": "Home’u aç",
+      "openWorkstation": "Workstation’ı aç"
     },
     "bottomBar": {
       "settings": "Ayarlar",
       "clockLabel": "Şu anki saat"
+    },
+    "settingsMenu": {
+      "appearance": "Görünüm",
+      "language": "Dil",
+      "viewRam": "RAM’i görüntüle",
+      "openSettings": "Ayarları aç"
     },
     "empty": {
       "noItems": "Öğe yok",

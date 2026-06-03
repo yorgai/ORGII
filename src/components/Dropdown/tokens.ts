@@ -57,6 +57,8 @@ export const DROPDOWN_PANEL = {
 
   /** Gap between trigger and dropdown (px). Default for useDropdownEngine. */
   triggerGap: 8,
+  /** Gap between primary dropdown and second-level submenu/flyout panels. */
+  submenuGap: 8,
   /** Tight gap for sidebar tab lists and inline menus */
   triggerGapTight: 4,
 

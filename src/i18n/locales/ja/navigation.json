@@ -129,11 +129,19 @@
     "actions": {
       "addNew": "新規追加",
       "collapseAll": "すべて折りたたむ",
-      "markAllRead": "すべて既読にする"
+      "markAllRead": "すべて既読にする",
+      "openHome": "ホームを開く",
+      "openWorkstation": "Workstation を開く"
     },
     "bottomBar": {
       "settings": "設定",
       "clockLabel": "現在時刻"
+    },
+    "settingsMenu": {
+      "appearance": "外観",
+      "language": "言語",
+      "viewRam": "RAM を表示",
+      "openSettings": "設定を開く"
     },
     "empty": {
       "noItems": "アイテムがありません",

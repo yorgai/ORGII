@@ -5,16 +5,14 @@
  * navigating into a specific page (e.g. Dev Record, Settings).
  *
  * Renders inside the same SidebarBase glass/resize shell as HomeSidebar:
- * - h-9 header row (items-end) with a ← back button
+ * - Back affordance as the first regular list row
  * - Scrollable list of icon + label items with active highlight
  */
 import { ChevronLeft, type LucideIcon } from "lucide-react";
 import React, { useCallback, useMemo } from "react";
 
-import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
-
 import SidebarBase from "../SidebarBase";
-import { SidebarList } from "../blocks";
+import { SidebarHeaderNavButton, SidebarList } from "../blocks";
 import NavigationMenu from "../components/NavigationMenu";
 import type { NavigationMenuItem } from "../components/NavigationMenu/config";
 
@@ -72,23 +70,20 @@ const PageLevelSidebar: React.FC<PageLevelSidebarProps> = ({
 
   return (
     <SidebarBase>
-      {/* Back header — h-9 aligned to bottom, mirrors TabPill row height */}
-      <div className="flex h-9 flex-shrink-0 items-end px-3">
-        <LiquidGlassHoverItem
-          className="flex h-7 items-center gap-1.5 rounded-full pl-2 pr-3 font-bold text-text-1"
-          onClick={onBack}
-        >
-          <ChevronLeft size={14} strokeWidth={2} />
-          <span className="text-[13px]">{backLabel}</span>
-        </LiquidGlassHoverItem>
-      </div>
-
       <SidebarList>
-        <NavigationMenu
-          items={menuItems}
-          selectedKeys={selectedKeys}
-          onMenuItemClick={handleMenuItemClick}
-        />
+        <div className="flex flex-col gap-px">
+          <SidebarHeaderNavButton
+            icon={ChevronLeft}
+            label={backLabel}
+            onClick={onBack}
+          />
+          <NavigationMenu
+            items={menuItems}
+            selectedKeys={selectedKeys}
+            onMenuItemClick={handleMenuItemClick}
+            verticalGapClassName="gap-px"
+          />
+        </div>
       </SidebarList>
     </SidebarBase>
   );

@@ -129,11 +129,19 @@
     "actions": {
       "addNew": "Добавить новое",
       "collapseAll": "Свернуть все",
-      "markAllRead": "Отметить все как прочитанные"
+      "markAllRead": "Отметить все как прочитанные",
+      "openHome": "Открыть Home",
+      "openWorkstation": "Открыть Workstation"
     },
     "bottomBar": {
       "settings": "Настройки",
       "clockLabel": "Текущее время"
+    },
+    "settingsMenu": {
+      "appearance": "Внешний вид",
+      "language": "Язык",
+      "viewRam": "Показать RAM",
+      "openSettings": "Открыть настройки"
     },
     "empty": {
       "noItems": "Нет элементов",

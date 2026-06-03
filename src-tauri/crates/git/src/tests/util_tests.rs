@@ -148,10 +148,7 @@ fn operation_name_empty() {
 
 #[test]
 fn resolved_git_exec_path_uses_bundled_libexec() {
-    let root = std::env::temp_dir().join(format!(
-        "orgii-git-util-test-{}",
-        std::process::id()
-    ));
+    let root = std::env::temp_dir().join(format!("orgii-git-util-test-{}", std::process::id()));
     let git_bin = root.join("git").join("bin");
     let git_core = root.join("git").join("libexec").join("git-core");
     std::fs::create_dir_all(&git_bin).unwrap();

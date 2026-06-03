@@ -129,11 +129,19 @@
     "actions": {
       "addNew": "Thêm mới",
       "collapseAll": "Thu gọn tất cả",
-      "markAllRead": "Đánh dấu tất cả đã đọc"
+      "markAllRead": "Đánh dấu tất cả đã đọc",
+      "openHome": "Mở Home",
+      "openWorkstation": "Mở Workstation"
     },
     "bottomBar": {
       "settings": "Cài đặt",
       "clockLabel": "Thời gian hiện tại"
+    },
+    "settingsMenu": {
+      "appearance": "Giao diện",
+      "language": "Ngôn ngữ",
+      "viewRam": "Xem RAM",
+      "openSettings": "Mở cài đặt"
     },
     "empty": {
       "noItems": "Không có mục nào",

@@ -129,11 +129,19 @@
     "actions": {
       "addNew": "새로 추가",
       "collapseAll": "모두 접기",
-      "markAllRead": "모두 읽음으로 표시"
+      "markAllRead": "모두 읽음으로 표시",
+      "openHome": "홈 열기",
+      "openWorkstation": "Workstation 열기"
     },
     "bottomBar": {
       "settings": "설정",
       "clockLabel": "현재 시각"
+    },
+    "settingsMenu": {
+      "appearance": "모양",
+      "language": "언어",
+      "viewRam": "RAM 보기",
+      "openSettings": "설정 열기"
     },
     "empty": {
       "noItems": "항목 없음",
