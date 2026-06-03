@@ -65,8 +65,10 @@ const FlyoutSubmenu: React.FC<FlyoutSubmenuProps> = ({
 
   // Close on click outside the flyout panel
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+    const handler = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (panelRef.current && !panelRef.current.contains(target)) {
         onClose();
       }
     };

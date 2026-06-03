@@ -109,7 +109,8 @@ const WorkItemContextMenu: React.FC<WorkItemContextMenuProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
+      const target = event.target;
+      if (!(target instanceof Node)) return;
       const clickedInsideMenu = menuRef.current?.contains(target);
       const clickedInsideSubmenu = submenuRef.current?.contains(target);
       const clickedInsideNestedSubmenu =

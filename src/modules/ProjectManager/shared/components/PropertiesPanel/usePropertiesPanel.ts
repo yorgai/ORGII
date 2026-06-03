@@ -55,7 +55,8 @@ export function usePropertiesPanel({
     if (openPicker === null) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
       if (target.closest("[data-field-row]")) return;
       // Match any open property dropdown in the document — containerRef is
       // optional and may be unset (CreateProjectView), and portal dropdowns

@@ -226,7 +226,8 @@ const FileDropdown: React.FC<FileDropdownProps> = ({
   useEffect(() => {
     if (!visible) return;
     const handler = (event: MouseEvent) => {
-      const target = event.target as Node;
+      const target = event.target;
+      if (!(target instanceof Node)) return;
       if (
         triggerRef?.current &&
         !triggerRef.current.contains(target) &&

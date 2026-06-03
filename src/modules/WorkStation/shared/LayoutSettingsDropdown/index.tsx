@@ -163,11 +163,12 @@ const LayoutSettingsDropdown: React.FC<LayoutSettingsDropdownProps> = memo(
       if (!isOpen) return;
 
       const handleClickOutside = (event: MouseEvent) => {
+        const target = event.target;
+        if (!(target instanceof Node)) return;
         if (
           containerRef.current &&
-          !containerRef.current.contains(event.target as Node) &&
-          (!triggerRef?.current ||
-            !triggerRef.current.contains(event.target as Node))
+          !containerRef.current.contains(target) &&
+          (!triggerRef?.current || !triggerRef.current.contains(target))
         ) {
           onClose();
         }

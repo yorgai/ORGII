@@ -157,11 +157,12 @@ export function useCodeEditorEvents(options: CodeEditorEventsOptions): void {
       }
 
       if (isModKey && event.key === "b") {
-        const target = event.target as HTMLElement;
+        const target = event.target;
         if (
-          target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.isContentEditable
+          target instanceof HTMLElement &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable)
         ) {
           return;
         }

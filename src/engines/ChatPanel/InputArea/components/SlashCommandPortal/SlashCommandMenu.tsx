@@ -154,10 +154,12 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   // Click outside → close (but not when clicking inside a flyout portal)
   useEffect(() => {
     if (!visible || !isPositioned) return;
-    const handler = (e: MouseEvent) => {
+    const handler = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
       if (
         portalContainerRef.current &&
-        !portalContainerRef.current.contains(e.target as Node)
+        !portalContainerRef.current.contains(target)
       ) {
         onClose();
       }

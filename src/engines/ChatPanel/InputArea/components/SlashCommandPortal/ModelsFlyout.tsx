@@ -156,8 +156,10 @@ const ModelsFlyout: React.FC<ModelsFlyoutProps> = ({
 
   // Click outside → close
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+    const handler = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (panelRef.current && !panelRef.current.contains(target)) {
         onClose();
       }
     };

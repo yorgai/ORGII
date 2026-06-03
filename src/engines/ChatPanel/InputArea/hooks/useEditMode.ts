@@ -140,7 +140,8 @@ export function useEditMode({
     if (!isEditMode || !onEditCancel) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
+      const target = event.target;
+      if (!(target instanceof Node)) return;
 
       // Ignore clicks inside any open spotlight / selector portal
       const spotlightContainer = document.querySelector(

@@ -129,10 +129,9 @@ const SessionTaskPanel: React.FC<SessionTaskPanelProps> = ({
   useEffect(() => {
     if (!strategyOpen) return;
     const handleOutside = (event: MouseEvent) => {
-      if (
-        strategyRef.current &&
-        !strategyRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (strategyRef.current && !strategyRef.current.contains(target)) {
         setStrategyOpen(false);
       }
     };

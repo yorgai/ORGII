@@ -142,7 +142,8 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
   // the shell edge and the ContextMenu panel do not spuriously close the menu.
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
+      const target = event.target;
+      if (!(target instanceof Node)) return;
       if (atDropdownRef.current?.contains(target)) return;
 
       const portalShell = document.querySelector("[data-context-menu-portal]");

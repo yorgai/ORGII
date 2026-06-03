@@ -117,9 +117,11 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
     // can run without the panel immediately re-opening (double-toggle).
     useEffect(() => {
       if (!visible) return;
-      const handler = (e: MouseEvent) => {
-        if (panelRef.current?.contains(e.target as Node)) return;
-        if (triggerRef?.current?.contains(e.target as Node)) return;
+      const handler = (event: MouseEvent) => {
+        const target = event.target;
+        if (!(target instanceof Node)) return;
+        if (panelRef.current?.contains(target)) return;
+        if (triggerRef?.current?.contains(target)) return;
         onClose();
       };
       document.addEventListener("mousedown", handler);

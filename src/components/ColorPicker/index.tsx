@@ -86,10 +86,9 @@ const ColorPicker: React.FC<ColorPickerProps> = memo(
       if (!open) return;
 
       const handleClickOutside = (event: MouseEvent) => {
-        if (
-          wrapperRef.current &&
-          !wrapperRef.current.contains(event.target as Node)
-        ) {
+        const target = event.target;
+        if (!(target instanceof Node)) return;
+        if (wrapperRef.current && !wrapperRef.current.contains(target)) {
           setOpen(false);
         }
       };

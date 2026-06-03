@@ -125,7 +125,9 @@ export const DockContextMenu: React.FC<DockContextMenuProps> = ({
     if (!visible) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (menuRef.current && !menuRef.current.contains(target)) {
         onClose?.();
       }
     };

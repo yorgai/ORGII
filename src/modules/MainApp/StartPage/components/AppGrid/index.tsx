@@ -223,7 +223,8 @@ const AppGrid: React.FC<AppGridProps> = ({ className }) => {
   useEffect(() => {
     if (!editMode) return;
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
       if (target.closest('[data-toolbar-section="right-actions"]')) return;
       if (target.closest(".toolbar-dropdown-item")) return;
       if (
