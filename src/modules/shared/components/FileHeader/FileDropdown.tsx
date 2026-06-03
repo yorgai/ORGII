@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
 import {
@@ -125,6 +126,8 @@ function getRelativePath(absolutePath: string, repoPath?: string): string {
 // ============================================
 
 const MAX_VISIBLE_ROWS = 14;
+const FILE_TREE_DROPDOWN_WIDTH = 280;
+const VIEWPORT_MARGIN = 8;
 
 interface LoadedEntries {
   key: string;
@@ -157,7 +160,28 @@ const FileDropdown: React.FC<FileDropdownProps> = ({
   const updatePosition = useCallback(() => {
     if (!triggerRef?.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    setPosition({ top: rect.bottom + 5, left: rect.left });
+    const preferredLeft = rect.right + DROPDOWN_PANEL.triggerGapTight;
+    const fallbackLeft = rect.left;
+    const left = Math.max(
+      VIEWPORT_MARGIN,
+      Math.min(
+        preferredLeft + FILE_TREE_DROPDOWN_WIDTH <=
+          window.innerWidth - VIEWPORT_MARGIN
+          ? preferredLeft
+          : fallbackLeft,
+        window.innerWidth - FILE_TREE_DROPDOWN_WIDTH - VIEWPORT_MARGIN
+      )
+    );
+    const top = Math.max(
+      VIEWPORT_MARGIN,
+      Math.min(
+        rect.top,
+        window.innerHeight -
+          Math.min(MAX_VISIBLE_ROWS * TREE_ROW_HEIGHT, window.innerHeight) -
+          VIEWPORT_MARGIN
+      )
+    );
+    setPosition({ top, left });
     setIsPositioned(true);
   }, [triggerRef]);
 
@@ -405,6 +429,7 @@ const FileDropdown: React.FC<FileDropdownProps> = ({
                     gitStatus={getGitStatus(row.entry)}
                     onClick={() => handleToggle(row.entry.path)}
                     className="bg-bg-2"
+                    showIndentGuides
                   >
                     <GitStatusBadge
                       status={getGitStatus(row.entry)}
@@ -446,6 +471,7 @@ const FileDropdown: React.FC<FileDropdownProps> = ({
                   isSelected={isCurrent}
                   gitStatus={gitStatus}
                   onClick={() => handleRowClick(row.entry)}
+                  showIndentGuides
                 >
                   <GitStatusBadge status={gitStatus} isDirectory={isDir} />
                 </TreeRowBase>
