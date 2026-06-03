@@ -1,7 +1,7 @@
 /**
  * SessionHeader Component
  *
- * Displays session info at the top of the chat, similar to Cursor's style.
+ * Displays session info at the top of the chat.
  * Shows: Session started indicator, model name, and truncated session ID.
  */
 import { Play } from "lucide-react";

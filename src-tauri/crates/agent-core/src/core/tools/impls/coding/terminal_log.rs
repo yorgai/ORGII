@@ -1,4 +1,4 @@
-//! Terminal log file writer — Cursor-style file-backed logs for background processes.
+//! Terminal log file writer — file-backed logs for background processes.
 //!
 //! Each subprocess run gets a log file under `{app_data}/agent-terminal-logs/{workspace_slug}/`.
 //! The file has a YAML header with metadata (pid, cwd, command, started_at, etc.) followed

@@ -75,7 +75,7 @@ pub struct RelevantMemory {
 // Memory Selection
 // ============================================
 
-/// Select memories via a Claude Code-style relevance side-query.
+/// Select memories via a relevance side-query.
 ///
 /// The selector sees the user's current query plus the memory manifest and
 /// returns filenames to inject. If the side-query fails, we fall back to the

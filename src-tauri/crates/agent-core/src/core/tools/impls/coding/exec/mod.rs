@@ -8,8 +8,8 @@
 //! sudo, SSH, and other interactive use cases. The user can see the
 //! terminal and take over at any time.
 //!
-//! Background processes are logged to files under `{app_data}/agent-terminal-logs/`
-//! (Cursor-style). The agent can follow up using `await_output` subcommands
+//! Background processes are logged to files under `{app_data}/agent-terminal-logs/`.
+//! The agent can follow up using `await_output` subcommands
 //! (wait/status/tail/list) to monitor progress, or `run_shell(kill_handle=...)`
 //! to terminate.
 

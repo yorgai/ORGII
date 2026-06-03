@@ -51,7 +51,7 @@ pub fn register(registry: &mut ToolRegistry, deps: &ToolDeps, disabled: &HashSet
             .map(|bridge| ActionRouter::new(Arc::clone(bridge), deps.execution_mode))
     };
 
-    // Resolve terminal logs root directory (Cursor-style file-backed logs).
+    // Resolve terminal logs root directory for file-backed process logs.
     // Priority: app_data_dir > workspace/.orgii/terminals/
     let terminal_logs_root = deps.app_handle.as_ref().and_then(|handle| {
         handle

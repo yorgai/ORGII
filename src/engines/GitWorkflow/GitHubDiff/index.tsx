@@ -1,8 +1,7 @@
 /**
  * GitHubDiff Component
  *
- * A professional diff viewer inspired by GitHub Desktop
- * @see https://github.com/desktop/desktop/tree/development/app/src/ui/diff
+ * A professional diff viewer for unified and split file changes.
  *
  * Features:
  * - Unified and Split view modes

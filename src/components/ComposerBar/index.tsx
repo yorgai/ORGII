@@ -4,8 +4,8 @@
  * Used by both ChatPanel InputArea and SessionCreator EditorArea
  * to ensure identical layout: [+ button | pills] ---- [context | submit]
  *
- * Chat panel can pass `editorSlot` + `inlineLayout` for a Cursor-style single
- * row: [ + ] [ editor … ] [ pills ] [ submit ].
+ * Chat panel can pass `editorSlot` + `inlineLayout` for a compact single row:
+ * [ + ] [ editor … ] [ pills ] [ submit ].
  */
 import { Plus } from "lucide-react";
 import React, { memo } from "react";
@@ -52,7 +52,7 @@ export interface ComposerBarProps {
    */
   editorSlot?: React.ReactNode;
   /**
-   * When false, omits ContextInfoButton (e.g. Cursor-like compact row).
+   * When false, omits ContextInfoButton for compact rows.
    * @default true
    */
   showContextInfo?: boolean;
@@ -125,7 +125,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
     );
 
     // When an editorSlot is provided we keep ONE stable DOM layout for both
-    // the Cursor-style inline pill and the full stacked composer. Switching
+    // the inline pill row and the full stacked composer. Switching
     // layouts is pure CSS (grid template areas) so the Tiptap editor is never
     // unmounted when `inlineLayout` flips — preserving focus, selection, and
     // document state across the transition.

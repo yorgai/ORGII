@@ -1,5 +1,5 @@
 /**
- * TurnCollapsePinBar — Cursor-style "Agent worked for xxx" collapse control.
+ * TurnCollapsePinBar — "Agent worked for xxx" collapse control.
  *
  * Rendered inside the sticky group header (`GroupHeaderRenderer`),
  * positioned *below* the pinned user message + `ChatPinnedBars` block,

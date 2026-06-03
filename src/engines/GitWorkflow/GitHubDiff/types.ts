@@ -1,8 +1,7 @@
 /**
  * GitHubDiff Types
  *
- * Type definitions inspired by GitHub Desktop's diff architecture
- * @see https://github.com/desktop/desktop/tree/development/app/src/ui/diff
+ * Type definitions for the diff viewer architecture.
  */
 
 // ============================================

@@ -1,7 +1,7 @@
 /**
  * CompactFileChanges
  *
- * Inline collapsible file changes section above InputArea (Cursor-style).
+ * Inline collapsible file changes section above InputArea.
  * Shows changed files with diff stats from session events.
  * Includes batch Undo All / Keep All / Review actions when snapshots are available.
  * Per-file reject/accept on hover.

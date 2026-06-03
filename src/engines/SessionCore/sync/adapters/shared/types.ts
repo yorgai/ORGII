@@ -131,7 +131,7 @@ export interface AgentWSEvent {
   agentType?: RustAgentType;
 
   // ============================================
-  // Plan Approval (Cursor-style non-blocking flow)
+  // Plan Approval (non-blocking flow)
   //
   //   agent:plan_ready_for_approval  → create_plan finished writing the file
   //                                    and marked the snapshot ready; the

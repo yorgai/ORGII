@@ -137,7 +137,7 @@ export function handlePermissionRequest(
 }
 
 // ============================================================================
-// Plan approval (Cursor-style non-blocking flow)
+// Plan approval (non-blocking flow)
 //
 //   agent:plan_ready_for_approval   → upsert pendingPlanApprovalsAtom.current
 //   agent:exit_plan_mode            → clear current + flip creatorDefaultExecModeAtom

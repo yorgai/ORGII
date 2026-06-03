@@ -91,8 +91,8 @@ export function handleError(
   // so any future independent error in this session gets a fresh block.
   _retryBlockId.delete(sessionId);
 
-  // Keep the user message visible (mirrors Claude Code's Resume UX). The
-  // user's prompt stays on screen so they can see what failed and hit
+  // Keep the user message visible. The user's prompt stays on screen so
+  // they can see what failed and hit
   // "Resume" to retry without re-entering their message.
 
   // Persist error immediately so it survives session switches

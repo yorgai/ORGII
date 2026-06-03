@@ -4,7 +4,7 @@
  * Renders queued messages that attach to the top of InputArea (like CompactFileChanges).
  * Supports drag-and-drop reordering via dnd-kit (vertical sortable list).
  *
- * Edit triggers the main input box (Cursor-style) via queueEditTargetAtom.
+ * Edit triggers the main input box via queueEditTargetAtom.
  *
  * Exports `reorderActiveRef` — a module-level flag so the parent file drop zone
  * can check synchronously whether a queue reorder drag is in progress and skip

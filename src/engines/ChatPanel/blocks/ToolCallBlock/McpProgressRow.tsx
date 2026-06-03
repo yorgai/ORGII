@@ -13,7 +13,7 @@
  * The row unmounts itself when `mcpProgressMapAtom` no longer has an
  * entry for the `(sessionId, toolCallId)` pair — that is driven by
  * `handleToolResult` clearing the entry the moment the final tool_result
- * event lands (mirrors Claude Code's onProgress + completion lifecycle).
+ * event lands.
  */
 import { useAtomValue } from "jotai";
 import React from "react";

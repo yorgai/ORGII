@@ -6,7 +6,7 @@
  * Two states:
  * - Pending: Interactive question with options (rarely shown here since
  *   AskQuestionCard above the input handles active questions)
- * - Answered: Cursor-style "Answers" card showing question + selected answer
+ * - Answered: "Answers" card showing question + selected answer
  *
  * @example
  * <AskQuestionEvent event={event} />

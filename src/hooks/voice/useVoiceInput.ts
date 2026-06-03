@@ -1,7 +1,7 @@
 /**
  * useVoiceInput — push-to-talk dictation hook backed by the Web Speech API.
  *
- * Cursor-style voice input: user clicks the mic (or hits ⌃M) to start, sees a
+ * Voice input: user clicks the mic (or hits ⌃M) to start, sees a
  * waveform UI while speaking, then stops to accept (transcription is committed
  * to the caller) or cancels to discard. The hook is composer-agnostic — it
  * yields plain transcript strings; wiring into a contenteditable / Tiptap host

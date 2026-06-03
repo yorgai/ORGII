@@ -33,7 +33,7 @@ function StickyHeadersContainerInner<TNode extends TreeNodeBase>({
       className={`absolute left-0 right-0 top-0 z-10 overflow-hidden ${stickyBgClass}`}
       style={{ height: hasStickyNodes ? stickyHeight : 0 }}
     >
-      {/* Shadow at bottom of sticky container (VS Code style) */}
+      {/* Shadow at bottom of sticky container */}
       {showShadow && hasStickyNodes && (
         <div
           className="pointer-events-none absolute left-0 right-0"

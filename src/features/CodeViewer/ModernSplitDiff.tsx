@@ -4,7 +4,7 @@
  * A beautiful side-by-side diff viewer with synchronized scrolling
  * Features:
  * - Clean, minimal split view design
- * - Line numbers in the middle (GitHub Desktop style)
+ * - Line numbers in the middle
  * - Optional cherry-picking support for selecting lines
  * - Single shared scrollbar for both panes
  * - Syntax highlighting

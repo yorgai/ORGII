@@ -365,7 +365,7 @@
       );
     }
 
-    // Dirty diff gutter - VS Code style change indicators
+    // Dirty diff gutter - change indicators
     // Uses shared tokens from _diff-tokens.scss
     // Note: Marker colors are set via inline styles in config.ts for reliability
     .cm-editor .cm-gutters .cm-gutter.cm-dirty-diff-gutter {

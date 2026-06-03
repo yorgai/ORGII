@@ -53,7 +53,7 @@ export interface InputEditorProps {
   onSlashCommand?: (query: string) => void;
   /** Slash command close handler */
   onSlashCommandClose?: () => void;
-  /** Single-line height for Cursor-style compact composer row */
+  /** Single-line height for compact composer row */
   compact?: boolean;
 }
 

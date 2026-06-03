@@ -5,7 +5,7 @@
 //!
 //! Features:
 //! - Fast directory traversal with .gitignore support
-//! - Fuzzy matching similar to Cursor/Continue
+//! - Fuzzy matching for filename and path search
 //! - Path-aware scoring (filename matches rank higher)
 //! - Configurable exclusions
 //! - Cached file index for repeated searches

@@ -184,8 +184,8 @@ impl ModeSwitchManager {
 
     /// Auto-skip a pending request after the user-visible timeout elapses.
     ///
-    /// Mode switching follows Cursor-style semantics: if the user does not
-    /// respond, continue in the current mode instead of surfacing a tool error
+    /// Mode switching follows timeout-as-continue semantics: if the user does
+    /// not respond, continue in the current mode instead of surfacing a tool error
     /// or leaving the UI card awaiting forever.
     pub async fn auto_skip_after_timeout(&self) {
         let Some(entry) = self.pending.lock().await.take() else {

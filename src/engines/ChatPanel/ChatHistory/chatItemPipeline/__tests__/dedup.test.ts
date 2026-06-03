@@ -129,7 +129,7 @@ describe("buildDedupMaps", () => {
     expect(runningChunksToSkip.has(running.id)).toBe(true);
   });
 
-  it("skips Cursor-style completed tool-call rows when a matching result row exists", () => {
+  it("skips completed tool-call rows when a matching result row exists", () => {
     const callId = "tool_123";
     const toolCall = makeSessionEvent({
       id: `tool-call-${callId}`,

@@ -29,15 +29,18 @@ descriptor avoids maintaining hand-written `.proto` files that drift from
 Cursor's schema. When Cursor changes the schema, re-run the extraction above
 against an updated `agent_pb.ts`.
 
-## Usage (coming in PR2)
+## Usage
+
+The `agent-core` crate consumes this descriptor at build time:
 
 ```rust
-// src-tauri/build.rs
-prost_build::Config::new()
-    .file_descriptor_set_path("proto/cursor_agent_v1.descriptor.pb")
-    .compile_protos(&[], &[])?;
+// src-tauri/crates/agent-core/build.rs
+let descriptor_bytes = fs::read(&descriptor_path)?;
+let file_descriptor_set = FileDescriptorSet::decode(&*descriptor_bytes)?;
+prost_build::Config::new().compile_fds(file_descriptor_set)?;
 ```
 
-The generated Rust types will be used by `CursorNativeClient` (see
-`docs/ideas/cursor-native-provider.md`) to drive the
-`/agent.v1.AgentService/Run` server-streaming RPC.
+`src-tauri/crates/agent-core/src/core/providers/cursor_native/proto.rs` includes
+the generated `agent.v1.rs` file from `OUT_DIR`, and the Cursor native provider
+uses those `pb::*` types to encode requests, decode streaming responses, and
+handle native tool-call messages for `/agent.v1.AgentService/Run`.
