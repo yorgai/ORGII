@@ -79,7 +79,8 @@
     "serviceMarket": "Service Pazarı",
     "signingIn": "Giriş yapılıyor...",
     "launchpad": "Launchpad",
-    "ideaArea": "Fikir Alanı"
+    "ideaArea": "Fikir Alanı",
+    "changelog": "Changelog"
   },
   "appGrid": {
     "customizeGrid": "Izgarayı Özelleştir",
@@ -122,7 +123,8 @@
       "cli": "CLI Agent",
       "hostedKey": "Hosted Key",
       "cloud": "Cloud",
-      "openSource": "Açık Kaynak"
+      "openSource": "Açık Kaynak",
+      "timeline": "Timeline"
     },
     "actions": {
       "addNew": "Yeni Ekle",
@@ -330,5 +332,14 @@
       "workItems": "İş öğeleri",
       "projects": "Projeler"
     }
+  },
+  "changelog": {
+    "title": "Changelog",
+    "subtitle": "Ürün güncellemeleri",
+    "commitCount": "{{count}} commit",
+    "commitCount_one": "{{count}} commit",
+    "details": "Ayrıntılar",
+    "frontend": "Frontend",
+    "backend": "Backend"
   }
 }

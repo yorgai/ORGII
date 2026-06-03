@@ -32,6 +32,7 @@ const APP_ROUTE_LOADERS: Record<string, RouteLoader | RouteLoader[]> = {
   "start-page": () => import("@src/modules/MainApp/StartPage"),
   settings: [loadSettingsSlot, loadAgentOrgs, loadMyRole],
   inbox: () => import("@src/modules/MainApp/Inbox"),
+  changelog: () => import("@src/modules/MainApp/Changelog"),
   "journey/record": () => import("@src/modules/MainApp/DevRecord"),
   "market/tokens": loadMarketPlaceholder,
   "market/services": loadMarketPlaceholder,

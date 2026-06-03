@@ -23,6 +23,13 @@ export const InboxPage = React.lazy(
     )
 );
 
+export const ChangelogPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "changelog", webpackPrefetch: true */ "@src/modules/MainApp/Changelog"
+    )
+);
+
 export const Settings = React.lazy(
   () =>
     import(

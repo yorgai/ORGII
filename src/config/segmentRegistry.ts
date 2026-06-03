@@ -12,6 +12,7 @@ import {
   BadgeCent,
   Braces,
   CalendarArrowUp,
+  ChartNoAxesGantt,
   ClipboardList,
   Code,
   CreditCard,
@@ -160,6 +161,10 @@ export const SEGMENT_REGISTRY: Record<string, SegmentRegistryEntry> = {
     icon: ClipboardList,
   },
   inbox: { labelKey: "navigation:labels.inbox", icon: Inbox },
+  changelog: {
+    labelKey: "navigation:routes.changelog",
+    icon: ChartNoAxesGantt,
+  },
   "start-page": { labelKey: "navigation:routes.startPage", icon: Home },
   "select-repo": {
     labelKey: "navigation:routes.selectProject",

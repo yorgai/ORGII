@@ -79,7 +79,8 @@
     "serviceMarket": "Thị trường Service",
     "signingIn": "Đang đăng nhập...",
     "launchpad": "Launchpad",
-    "ideaArea": "Khu vực ý tưởng"
+    "ideaArea": "Khu vực ý tưởng",
+    "changelog": "Changelog"
   },
   "appGrid": {
     "customizeGrid": "Tùy chỉnh lưới",
@@ -122,7 +123,8 @@
       "cli": "CLI Agent",
       "hostedKey": "Hosted Key",
       "cloud": "Cloud",
-      "openSource": "Mã nguồn mở"
+      "openSource": "Mã nguồn mở",
+      "timeline": "Timeline"
     },
     "actions": {
       "addNew": "Thêm mới",
@@ -330,5 +332,14 @@
       "workItems": "Mục công việc",
       "projects": "Dự án"
     }
+  },
+  "changelog": {
+    "title": "Changelog",
+    "subtitle": "Cập nhật sản phẩm",
+    "commitCount": "{{count}} commit",
+    "commitCount_one": "{{count}} commit",
+    "details": "Chi tiết",
+    "frontend": "Frontend",
+    "backend": "Backend"
   }
 }
