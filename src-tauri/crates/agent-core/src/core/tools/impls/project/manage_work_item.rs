@@ -1,7 +1,7 @@
-//! Work item tool: manage work items (tasks/issues) via the global project store.
+//! Work item tool: manage project-scoped and standalone work items.
 //!
-//! Thin wrapper over `tool_infra::project` — the shared implementation
-//! used by both this agent tool and Tauri work-item commands.
+//! Thin wrapper over `tool_infra::project` and `project_management::projects::io` —
+//! shared implementations used by agent tools and Tauri work-item commands.
 
 use async_trait::async_trait;
 use serde_json::Value;
@@ -9,25 +9,50 @@ use serde_json::Value;
 use crate::tool_infra::OrchestratorConfigOverrides;
 use crate::tools::names as tool_names;
 use crate::tools::traits::{optional_bool, optional_string, required_string, Tool, ToolError};
-use core_types::workflow::WorkItemSchedule;
+use core_types::workflow::{
+    AgentRole, LinkedSession, LinkedSessionStatus, LinkedSessionType, WorkItemSchedule,
+};
+use project_management::projects::{
+    io,
+    types::{OrchestratorConfig, TodoEntry, WorkItemData, WorkItemFrontmatter},
+};
+
+async fn run_blocking<F, T>(label: &str, func: F) -> Result<T, String>
+where
+    F: FnOnce() -> Result<T, String> + Send + 'static,
+    T: Send + 'static,
+{
+    let label = label.to_string();
+    tokio::task::spawn_blocking(func)
+        .await
+        .map_err(|err| format!("{label} task failed: {err}"))?
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum WorkItemScope {
+    Project(String),
+    Standalone,
+}
 
 /// Work item (task/issue) management tool.
-#[derive(Default)]
-pub struct WorkItemTool;
+pub struct WorkItemTool {
+    session_id: String,
+}
 
 impl WorkItemTool {
-    pub fn new() -> Self {
-        Self
+    pub fn new(session_id: String) -> Self {
+        Self { session_id }
     }
 
-    /// Resolve the `project_slug` parameter to a canonical slug.
-    /// Accepts slug, display name, or project ID.
-    fn resolve_project_slug(params: &Value) -> Result<String, ToolError> {
-        let raw = required_string(params, "project_slug")?;
-        crate::tool_infra::resolve_slug(&raw).map_err(ToolError::ExecutionFailed)
+    fn resolve_scope(params: &Value) -> Result<WorkItemScope, ToolError> {
+        match optional_string(params, "project_slug") {
+            Some(raw) if !raw.trim().is_empty() => crate::tool_infra::resolve_slug(&raw)
+                .map(WorkItemScope::Project)
+                .map_err(ToolError::ExecutionFailed),
+            _ => Ok(WorkItemScope::Standalone),
+        }
     }
 
-    /// Extract an optional array of strings from params.
     fn optional_string_array(params: &Value, key: &str) -> Option<Vec<String>> {
         params.get(key).and_then(|val| {
             val.as_array().map(|arr| {
@@ -38,9 +63,6 @@ impl WorkItemTool {
         })
     }
 
-    /// Extract an optional array of todos: `[{"content": "...", "status": "..."}]`
-    ///
-    /// Each todo is returned as `(content, status)`. Status defaults to "pending".
     fn optional_todos(params: &Value) -> Option<Vec<(String, String)>> {
         params.get("todos").and_then(|val| {
             val.as_array().map(|arr| {
@@ -59,7 +81,6 @@ impl WorkItemTool {
         })
     }
 
-    /// Parse an optional `schedule` object from params into `WorkItemSchedule`.
     fn parse_schedule(params: &Value) -> Option<WorkItemSchedule> {
         let obj = params.get("schedule")?;
         if obj.is_null() {
@@ -76,7 +97,6 @@ impl WorkItemTool {
         })
     }
 
-    /// Build orchestrator config overrides from params if any agent-related fields are set.
     fn orchestrator_overrides_from_params(params: &Value) -> Option<OrchestratorConfigOverrides> {
         let account = optional_string(params, "selected_account_id");
         let model = optional_string(params, "selected_model_id");
@@ -108,6 +128,420 @@ impl WorkItemTool {
             None
         }
     }
+
+    fn todos_to_entries(todos: Vec<(String, String)>, existing: &[TodoEntry]) -> Vec<TodoEntry> {
+        todos
+            .into_iter()
+            .enumerate()
+            .map(|(idx, (content, status))| TodoEntry {
+                id: existing
+                    .get(idx)
+                    .map(|todo| todo.id.clone())
+                    .unwrap_or_else(|| format!("todo-{}", idx + 1)),
+                content,
+                status,
+            })
+            .collect()
+    }
+
+    fn config_from_overrides(overrides: OrchestratorConfigOverrides) -> OrchestratorConfig {
+        let mut config = OrchestratorConfig::default();
+        if let Some(id) = overrides.selected_account_id.filter(|s| !s.is_empty()) {
+            config.selected_account_id = Some(id);
+        }
+        if let Some(id) = overrides.selected_model_id.filter(|s| !s.is_empty()) {
+            config.selected_model_id = Some(id);
+        }
+        if !overrides.sub_agent_ids.is_empty() {
+            config.sub_agent_ids = overrides.sub_agent_ids;
+        }
+        config.org_id = overrides.org_id;
+        config.agent_definition_id = overrides.agent_definition_id;
+        config.worktree_path = overrides.worktree_path;
+        config.review_config = overrides.review_config;
+        config
+    }
+
+    fn apply_updates(
+        fm: &mut WorkItemFrontmatter,
+        body: &mut String,
+        params: &Value,
+    ) -> Result<(), ToolError> {
+        if let Some(title) = optional_string(params, "title") {
+            fm.title = title;
+        }
+        if let Some(description) = optional_string(params, "description") {
+            *body = description;
+        }
+        if let Some(project) = optional_string(params, "project") {
+            fm.project = if project.is_empty() { None } else { Some(project) };
+        }
+        if let Some(status) = optional_string(params, "status") {
+            fm.status = status;
+        }
+        if let Some(priority) = optional_string(params, "priority") {
+            fm.priority = priority;
+        }
+        if let Some(assignee) = optional_string(params, "assignee") {
+            fm.assignee = if assignee.is_empty() { None } else { Some(assignee) };
+        }
+        if let Some(labels) = Self::optional_string_array(params, "labels") {
+            fm.labels = labels;
+        }
+        if let Some(milestone) = optional_string(params, "milestone") {
+            fm.milestone = if milestone.is_empty() {
+                None
+            } else {
+                Some(milestone)
+            };
+        }
+        if let Some(parent) = optional_string(params, "parent") {
+            fm.parent = if parent.is_empty() { None } else { Some(parent) };
+        }
+        if let Some(start_date) = optional_string(params, "start_date") {
+            fm.start_date = if start_date.is_empty() {
+                None
+            } else {
+                Some(start_date)
+            };
+        }
+        if let Some(target_date) = optional_string(params, "target_date") {
+            fm.target_date = if target_date.is_empty() {
+                None
+            } else {
+                Some(target_date)
+            };
+        }
+        if let Some(starred) = optional_bool(params, "starred") {
+            fm.starred = starred;
+        }
+        if let Some(todos) = Self::optional_todos(params) {
+            fm.todos = Self::todos_to_entries(todos, &fm.todos);
+        }
+        if let Some(overrides) = Self::orchestrator_overrides_from_params(params) {
+            fm.orchestrator_config = Some(Self::config_from_overrides(overrides));
+        }
+        if let Some(schedule) = Self::parse_schedule(params) {
+            fm.schedule = Some(schedule);
+        }
+        fm.updated_at = chrono::Utc::now().to_rfc3339();
+        Ok(())
+    }
+
+    fn parse_linked_session_status(raw: Option<String>) -> Result<LinkedSessionStatus, ToolError> {
+        match raw.as_deref().unwrap_or("running") {
+            "running" => Ok(LinkedSessionStatus::Running),
+            "completed" => Ok(LinkedSessionStatus::Completed),
+            "failed" => Ok(LinkedSessionStatus::Failed),
+            "cancelled" => Ok(LinkedSessionStatus::Cancelled),
+            other => Err(ToolError::InvalidParams(format!(
+                "Unknown linked session status '{other}'"
+            ))),
+        }
+    }
+
+    fn parse_agent_role(raw: Option<String>) -> Result<AgentRole, ToolError> {
+        match raw.as_deref().unwrap_or("custom") {
+            "coding" | "sde" => Ok(AgentRole::Coding),
+            "review" => Ok(AgentRole::Review),
+            "orchestrator" => Ok(AgentRole::Orchestrator),
+            "custom" => Ok(AgentRole::Custom),
+            "sub_agent" => Ok(AgentRole::SubAgent),
+            other => Err(ToolError::InvalidParams(format!(
+                "Unknown linked session agent_role '{other}'"
+            ))),
+        }
+    }
+
+    fn link_session_to_frontmatter(
+        &self,
+        fm: &mut WorkItemFrontmatter,
+        params: &Value,
+    ) -> Result<String, ToolError> {
+        let session_id = optional_string(params, "session_id").unwrap_or_else(|| self.session_id.clone());
+        let status = Self::parse_linked_session_status(optional_string(params, "session_status"))?;
+        let agent_role = Self::parse_agent_role(optional_string(params, "agent_role"))?;
+        let now = chrono::Utc::now().to_rfc3339();
+
+        if let Some(existing) = fm
+            .linked_sessions
+            .iter_mut()
+            .find(|linked| linked.session_id == session_id)
+        {
+            existing.status = status;
+            existing.agent_role = agent_role;
+            if existing.completed_at.is_none()
+                && matches!(
+                    existing.status,
+                    LinkedSessionStatus::Completed
+                        | LinkedSessionStatus::Failed
+                        | LinkedSessionStatus::Cancelled
+                )
+            {
+                existing.completed_at = Some(now.clone());
+            }
+        } else {
+            fm.linked_sessions.push(LinkedSession {
+                session_id: session_id.clone(),
+                session_type: LinkedSessionType::Native,
+                agent_role,
+                started_at: now.clone(),
+                completed_at: None,
+                status,
+                cost_usd: 0.0,
+                total_tokens: 0,
+                parent_session_id: None,
+                sub_agent_name: None,
+                sub_agent_instance: None,
+                result_preview: None,
+            });
+        }
+        fm.updated_at = now;
+        Ok(session_id)
+    }
+
+    fn unlink_session_from_frontmatter(
+        &self,
+        fm: &mut WorkItemFrontmatter,
+        params: &Value,
+    ) -> String {
+        let session_id = optional_string(params, "session_id").unwrap_or_else(|| self.session_id.clone());
+        fm.linked_sessions
+            .retain(|linked| linked.session_id != session_id);
+        fm.updated_at = chrono::Utc::now().to_rfc3339();
+        session_id
+    }
+
+    fn format_item(item: &WorkItemData) -> String {
+        let fm = &item.frontmatter;
+        let mut output = format!(
+            "Work Item: {} [{}]\nStatus: {}\nPriority: {}\nStarred: {}\nCreated: {}\nUpdated: {}\n",
+            fm.title, fm.short_id, fm.status, fm.priority, fm.starred, fm.created_at, fm.updated_at,
+        );
+        if let Some(ref project) = fm.project {
+            output.push_str(&format!("Project: {}\n", project));
+        }
+        if let Some(ref assignee) = fm.assignee {
+            output.push_str(&format!("Assignee: {}\n", assignee));
+        }
+        if !fm.labels.is_empty() {
+            output.push_str(&format!("Labels: {}\n", fm.labels.join(", ")));
+        }
+        if !item.body.is_empty() {
+            output.push_str(&format!("\nDescription:\n{}\n", item.body));
+        }
+        if !fm.linked_sessions.is_empty() {
+            output.push_str(&format!(
+                "\nLinked Sessions ({}):\n",
+                fm.linked_sessions.len()
+            ));
+            for linked in &fm.linked_sessions {
+                output.push_str(&format!(
+                    "  - {} (role: {:?}, status: {:?})\n",
+                    linked.session_id, linked.agent_role, linked.status
+                ));
+            }
+        }
+        output
+    }
+
+    async fn list_standalone_work_items() -> Result<String, ToolError> {
+        run_blocking("list_standalone_work_items", move || {
+            let items = io::read_standalone_work_items(None)?;
+            if items.is_empty() {
+                return Ok("No standalone work items found.".to_string());
+            }
+            let mut output = format!("Found {} standalone work item(s):\n", items.len());
+            for item in &items {
+                let fm = &item.frontmatter;
+                output.push_str(&format!(
+                    "\n- **{}** [{}]\n  Status: {} | Priority: {}\n",
+                    fm.title, fm.short_id, fm.status, fm.priority,
+                ));
+            }
+            Ok(output)
+        })
+        .await
+        .map_err(ToolError::ExecutionFailed)
+    }
+
+    async fn read_standalone_work_item(short_id: String) -> Result<String, ToolError> {
+        run_blocking("read_standalone_work_item", move || {
+            let item = io::read_standalone_work_item(None, &short_id)?;
+            Ok(Self::format_item(&item))
+        })
+        .await
+        .map_err(ToolError::ExecutionFailed)
+    }
+
+    async fn create_standalone_work_item(params: Value) -> Result<String, ToolError> {
+        let title = required_string(&params, "title")?;
+        let body = optional_string(&params, "description").unwrap_or_default();
+        let project = optional_string(&params, "project");
+        let status = optional_string(&params, "status").unwrap_or_else(|| "backlog".to_string());
+        let priority = optional_string(&params, "priority").unwrap_or_else(|| "none".to_string());
+        let assignee = optional_string(&params, "assignee");
+        let labels = Self::optional_string_array(&params, "labels").unwrap_or_default();
+        let milestone = optional_string(&params, "milestone");
+        let parent = optional_string(&params, "parent");
+        let start_date = optional_string(&params, "start_date");
+        let target_date = optional_string(&params, "target_date");
+        let starred = optional_bool(&params, "starred").unwrap_or(false);
+        let todos = Self::optional_todos(&params).unwrap_or_default();
+        let orchestrator_config = Self::orchestrator_overrides_from_params(&params)
+            .map(Self::config_from_overrides);
+        let schedule = Self::parse_schedule(&params);
+
+        run_blocking("create_standalone_work_item", move || {
+            let short_id = io::allocate_standalone_short_id(None)?;
+            let now = chrono::Utc::now().to_rfc3339();
+            let frontmatter = WorkItemFrontmatter {
+                id: short_id.clone(),
+                short_id: short_id.clone(),
+                title: title.clone(),
+                project,
+                status,
+                priority,
+                assignee,
+                assignee_type: None,
+                labels,
+                milestone,
+                parent,
+                start_date,
+                target_date,
+                created_by: Some("agent".to_string()),
+                created_at: now.clone(),
+                updated_at: now,
+                deleted_at: None,
+                starred,
+                todos: Self::todos_to_entries(todos, &[]),
+                comments: vec![],
+                history: vec![],
+                delegations: vec![],
+                linked_sessions: vec![],
+                proof_of_work: None,
+                orchestrator_config,
+                orchestrator_state: None,
+                follow_up_items: vec![],
+                schedule,
+                routine_source: None,
+                execution_lock: None,
+                close_out: None,
+                work_products: vec![],
+            };
+            io::write_standalone_work_item(None, &short_id, &frontmatter, &body)?;
+            Ok(format!("Created standalone work item '{}' [{}]", title, short_id))
+        })
+        .await
+        .map_err(ToolError::ExecutionFailed)
+    }
+
+    async fn update_standalone_work_item(short_id: String, params: Value) -> Result<String, ToolError> {
+        run_blocking("update_standalone_work_item", move || {
+            let mut item = io::read_standalone_work_item(None, &short_id)?;
+            Self::apply_updates(&mut item.frontmatter, &mut item.body, &params)
+                .map_err(|err| err.to_string())?;
+            io::write_standalone_work_item(None, &short_id, &item.frontmatter, &item.body)?;
+            Ok(format!(
+                "Updated standalone work item '{}' [{}]",
+                item.frontmatter.title, short_id
+            ))
+        })
+        .await
+        .map_err(ToolError::ExecutionFailed)
+    }
+
+    async fn delete_standalone_work_item(short_id: String) -> Result<String, ToolError> {
+        run_blocking("delete_standalone_work_item", move || {
+            let mut item = io::read_standalone_work_item(None, &short_id)?;
+            let now = chrono::Utc::now().to_rfc3339();
+            item.frontmatter.deleted_at = Some(now.clone());
+            item.frontmatter.updated_at = now;
+            io::write_standalone_work_item(None, &short_id, &item.frontmatter, &item.body)?;
+            Ok(format!("Deleted standalone work item [{}]", short_id))
+        })
+        .await
+        .map_err(ToolError::ExecutionFailed)
+    }
+
+    async fn link_session(&self, scope: WorkItemScope, short_id: String, params: Value) -> Result<String, ToolError> {
+        match scope {
+            WorkItemScope::Project(project_slug) => {
+                let session_id = self.session_id.clone();
+                run_blocking("link_project_work_item_session", move || {
+                    let mut linked_session_id = String::new();
+                    io::update_work_item_atomic(&project_slug, &short_id, |fm, _body| {
+                        let tool = WorkItemTool::new(session_id.clone());
+                        linked_session_id = tool
+                            .link_session_to_frontmatter(fm, &params)
+                            .map_err(|err| err.to_string())?;
+                        Ok(())
+                    })?;
+                    Ok(format!(
+                        "Linked session {} to work item [{}]",
+                        linked_session_id, short_id
+                    ))
+                })
+                .await
+                .map_err(ToolError::ExecutionFailed)
+            }
+            WorkItemScope::Standalone => {
+                let session_id = self.session_id.clone();
+                run_blocking("link_standalone_work_item_session", move || {
+                    let mut item = io::read_standalone_work_item(None, &short_id)?;
+                    let tool = WorkItemTool::new(session_id);
+                    let linked_session_id =
+                        tool.link_session_to_frontmatter(&mut item.frontmatter, &params)
+                            .map_err(|err| err.to_string())?;
+                    io::write_standalone_work_item(None, &short_id, &item.frontmatter, &item.body)?;
+                    Ok(format!(
+                        "Linked session {} to standalone work item [{}]",
+                        linked_session_id, short_id
+                    ))
+                })
+                .await
+                .map_err(ToolError::ExecutionFailed)
+            }
+        }
+    }
+
+    async fn unlink_session(&self, scope: WorkItemScope, short_id: String, params: Value) -> Result<String, ToolError> {
+        match scope {
+            WorkItemScope::Project(project_slug) => {
+                let session_id = self.session_id.clone();
+                run_blocking("unlink_project_work_item_session", move || {
+                    let mut unlinked_session_id = String::new();
+                    io::update_work_item_atomic(&project_slug, &short_id, |fm, _body| {
+                        let tool = WorkItemTool::new(session_id.clone());
+                        unlinked_session_id = tool.unlink_session_from_frontmatter(fm, &params);
+                        Ok(())
+                    })?;
+                    Ok(format!(
+                        "Unlinked session {} from work item [{}]",
+                        unlinked_session_id, short_id
+                    ))
+                })
+                .await
+                .map_err(ToolError::ExecutionFailed)
+            }
+            WorkItemScope::Standalone => {
+                let session_id = self.session_id.clone();
+                run_blocking("unlink_standalone_work_item_session", move || {
+                    let mut item = io::read_standalone_work_item(None, &short_id)?;
+                    let tool = WorkItemTool::new(session_id);
+                    let unlinked_session_id =
+                        tool.unlink_session_from_frontmatter(&mut item.frontmatter, &params);
+                    io::write_standalone_work_item(None, &short_id, &item.frontmatter, &item.body)?;
+                    Ok(format!(
+                        "Unlinked session {} from standalone work item [{}]",
+                        unlinked_session_id, short_id
+                    ))
+                })
+                .await
+                .map_err(ToolError::ExecutionFailed)
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -121,16 +555,14 @@ impl Tool for WorkItemTool {
     }
 
     fn description(&self) -> &str {
-        "Manage work items (tasks, issues, bugs) in the global project store. \
-         Work items belong to projects and can have priorities, labels, milestones, \
-         todos, dates, and assignees. Supports: list, read, create, update, delete."
+        "Manage standalone or project-scoped work items, including linking the current chat session."
     }
 
     fn llm_description(&self) -> Option<String> {
         Some(
-            "Manage work items (tasks, issues, bugs) in the global project store. \
-             Supports: list, read, create, update, delete, add_delegation. \
-             Work items have priorities, labels, milestones, todos, and dates."
+            "Manage work items (tasks, issues, bugs). Omit project_slug for standalone work items. \
+             Supports: list, read, create, update, delete, add_delegation, link_session, unlink_session. \
+             Use link_session to attach the current chat/session to an existing work item; create may be used first."
                 .to_string(),
         )
     }
@@ -142,283 +574,230 @@ impl Tool for WorkItemTool {
                 "action": {
                     "type": "string",
                     "description": "The operation to perform.",
-                    "enum": ["list", "read", "create", "update", "delete", "add_delegation"]
+                    "enum": ["list", "read", "create", "update", "delete", "add_delegation", "link_session", "unlink_session"]
                 },
                 "project_slug": {
                     "type": "string",
-                    "description": "Project identifier — accepts slug, display name, or project ID (e.g. 'auth-system', 'Auth System', or 'proj-auth-system'). Required for all actions."
+                    "description": "Optional project identifier. Omit for standalone Work Items that are not bound to a Project."
                 },
                 "short_id": {
                     "type": "string",
-                    "description": "Work item short ID, e.g. 'PROJ-001' (for read, update, delete). Use 'list' first to discover IDs."
+                    "description": "Work item short ID, e.g. 'ORG-0001' or project-prefixed ID (for read, update, delete, link_session, unlink_session). Use list first to discover IDs."
                 },
-                "title": {
+                "session_id": {
                     "type": "string",
-                    "description": "Work item title (required for create, optional for update)"
+                    "description": "Session ID to link/unlink. Defaults to the current chat/session."
                 },
-                "description": {
+                "session_status": {
                     "type": "string",
-                    "description": "Work item body/description (markdown)"
+                    "enum": ["running", "completed", "failed", "cancelled"],
+                    "description": "Status for link_session. Defaults to running."
                 },
-                "project": {
+                "agent_role": {
                     "type": "string",
-                    "description": "Project reference stored in frontmatter (optional metadata)."
+                    "enum": ["coding", "review", "orchestrator", "custom", "sub_agent"],
+                    "description": "Role for the linked session. Defaults to custom for chat-panel links."
                 },
-                "status": {
-                    "type": "string",
-                    "description": "Work item status",
-                    "enum": ["backlog", "planned", "in_progress", "in_review", "completed", "cancelled"]
-                },
-                "priority": {
-                    "type": "string",
-                    "description": "Work item priority",
-                    "enum": ["urgent", "high", "medium", "low", "none"]
-                },
-                "assignee": {
-                    "type": "string",
-                    "description": "Member ID to assign this work item to. Pass empty string to unassign."
-                },
-                "labels": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "Label IDs (e.g. ['lbl-bug', 'lbl-feature'])"
-                },
-                "milestone": {
-                    "type": "string",
-                    "description": "Milestone ID to associate with. Pass empty string to clear."
-                },
-                "parent": {
-                    "type": "string",
-                    "description": "Parent work item short ID (for sub-issues). Pass empty string to clear."
-                },
-                "start_date": {
-                    "type": "string",
-                    "description": "Start date (ISO 8601, e.g. '2026-02-15'). Pass empty string to clear."
-                },
-                "target_date": {
-                    "type": "string",
-                    "description": "Target/due date (ISO 8601). Pass empty string to clear."
-                },
-                "starred": {
-                    "type": "boolean",
-                    "description": "Star/bookmark this work item"
-                },
+                "title": { "type": "string", "description": "Work item title (required for create, optional for update)" },
+                "description": { "type": "string", "description": "Work item body/description (markdown)" },
+                "project": { "type": "string", "description": "Project reference stored in frontmatter metadata." },
+                "status": { "type": "string", "enum": ["backlog", "planned", "in_progress", "in_review", "completed", "cancelled"] },
+                "priority": { "type": "string", "enum": ["urgent", "high", "medium", "low", "none"] },
+                "assignee": { "type": "string", "description": "Member ID to assign this work item to. Pass empty string to unassign." },
+                "labels": { "type": "array", "items": { "type": "string" } },
+                "milestone": { "type": "string", "description": "Milestone ID. Pass empty string to clear." },
+                "parent": { "type": "string", "description": "Parent work item short ID. Pass empty string to clear." },
+                "start_date": { "type": "string", "description": "Start date (ISO 8601). Pass empty string to clear." },
+                "target_date": { "type": "string", "description": "Target/due date (ISO 8601). Pass empty string to clear." },
+                "starred": { "type": "boolean" },
                 "todos": {
                     "type": "array",
                     "items": {
                         "type": "object",
                         "properties": {
-                            "content": { "type": "string", "description": "Todo text" },
-                            "status": {
-                                "type": "string",
-                                "description": "Todo status",
-                                "enum": ["pending", "in_progress", "completed"]
-                            }
+                            "content": { "type": "string" },
+                            "status": { "type": "string", "enum": ["pending", "in_progress", "completed"] }
                         },
                         "required": ["content"]
-                    },
-                    "description": "Todo checklist items. Replaces all existing todos when provided."
+                    }
                 },
-                "selected_account_id": {
-                    "type": "string",
-                    "description": "Code account ID for Agent Workflow (from Integrations). Assigns which account runs SDE/Review."
-                },
-                "selected_model_id": {
-                    "type": "string",
-                    "description": "Model ID for Agent Workflow. Use with selected_account_id."
-                },
-                "sub_agent_ids": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "IDs of custom agents from Agent Orgs to use as sub-agents during execution."
-                },
-                "org_id": {
-                    "type": "string",
-                    "description": "ID of the agent organization to assign. All org members are resolved as sub-agents."
-                },
+                "selected_account_id": { "type": "string" },
+                "selected_model_id": { "type": "string" },
+                "sub_agent_ids": { "type": "array", "items": { "type": "string" } },
+                "org_id": { "type": "string" },
+                "agent_definition_id": { "type": "string" },
                 "delegation": {
                     "type": "object",
                     "properties": {
-                        "task_id": { "type": "string", "description": "Delegation task ID" },
-                        "agent_app_id": { "type": "string", "description": "Agent app ID" },
-                        "agent_app_name": { "type": "string", "description": "Agent app display name" },
-                        "skill_id": { "type": "string", "description": "Skill ID that was invoked" },
+                        "task_id": { "type": "string" },
+                        "agent_app_id": { "type": "string" },
+                        "agent_app_name": { "type": "string" },
+                        "skill_id": { "type": "string" },
                         "status": { "type": "string", "enum": ["pending", "in_progress", "completed", "failed", "cancelled"] },
-                        "cost_usd": { "type": "number", "description": "Cost in USD" }
-                    },
-                    "description": "Delegation entry to add (for add_delegation action)"
+                        "cost_usd": { "type": "number" }
+                    }
                 },
                 "schedule": {
                     "type": "object",
                     "properties": {
-                        "at": { "type": "string", "description": "ISO 8601 timestamp for one-time trigger (e.g. '2026-04-01T09:00:00Z')" },
-                        "cron": { "type": "string", "description": "Cron expression for recurring trigger (e.g. '0 9 * * 1' = every Monday 9am)" },
-                        "enabled": { "type": "boolean", "description": "Whether the schedule is active (default true)" }
-                    },
-                    "description": "Schedule for automatic work item triggering. Use 'at' for one-shot or 'cron' for recurring."
+                        "at": { "type": "string" },
+                        "cron": { "type": "string" },
+                        "enabled": { "type": "boolean" }
+                    }
                 }
             },
-            "required": ["action", "project_slug"]
+            "required": ["action"]
         })
     }
 
     async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
         let action = required_string(&params, "action")?;
-        let project_slug = Self::resolve_project_slug(&params)?;
+        let scope = Self::resolve_scope(&params)?;
 
         match action.as_str() {
-            "list" => {
-                crate::tool_infra::list_work_items(&project_slug)
+            "list" => match scope {
+                WorkItemScope::Project(project_slug) => crate::tool_infra::list_work_items(&project_slug)
                     .await
-                    .map_err(ToolError::ExecutionFailed)
-            }
-
+                    .map_err(ToolError::ExecutionFailed),
+                WorkItemScope::Standalone => Self::list_standalone_work_items().await,
+            },
             "read" => {
                 let short_id = required_string(&params, "short_id")?;
-                crate::tool_infra::read_work_item(&project_slug, &short_id)
+                match scope {
+                    WorkItemScope::Project(project_slug) => {
+                        crate::tool_infra::read_work_item(&project_slug, &short_id)
+                            .await
+                            .map_err(ToolError::ExecutionFailed)
+                    }
+                    WorkItemScope::Standalone => Self::read_standalone_work_item(short_id).await,
+                }
+            }
+            "create" => match scope {
+                WorkItemScope::Project(project_slug) => {
+                    let title = required_string(&params, "title")?;
+                    crate::tool_infra::create_work_item(
+                        &project_slug,
+                        &title,
+                        optional_string(&params, "description").unwrap_or_default().as_str(),
+                        optional_string(&params, "project").as_deref(),
+                        optional_string(&params, "status").as_deref(),
+                        optional_string(&params, "priority").as_deref(),
+                        optional_string(&params, "assignee").as_deref(),
+                        None,
+                        Self::optional_string_array(&params, "labels"),
+                        optional_string(&params, "milestone").as_deref(),
+                        optional_string(&params, "parent").as_deref(),
+                        optional_string(&params, "start_date").as_deref(),
+                        optional_string(&params, "target_date").as_deref(),
+                        optional_bool(&params, "starred"),
+                        Self::optional_todos(&params),
+                        Self::orchestrator_overrides_from_params(&params),
+                        Self::parse_schedule(&params),
+                    )
                     .await
                     .map_err(ToolError::ExecutionFailed)
-            }
-
-            "create" => {
-                let title = required_string(&params, "title")?;
-                let description = optional_string(&params, "description").unwrap_or_default();
-                let project = optional_string(&params, "project");
-                let status = optional_string(&params, "status");
-                let priority = optional_string(&params, "priority");
-                let assignee = optional_string(&params, "assignee");
-                let labels = Self::optional_string_array(&params, "labels");
-                let milestone = optional_string(&params, "milestone");
-                let parent = optional_string(&params, "parent");
-                let start_date = optional_string(&params, "start_date");
-                let target_date = optional_string(&params, "target_date");
-                let starred = optional_bool(&params, "starred");
-                let todos = Self::optional_todos(&params);
-
-                crate::tool_infra::create_work_item(
-                    &project_slug,
-                    &title,
-                    &description,
-                    project.as_deref(),
-                    status.as_deref(),
-                    priority.as_deref(),
-                    assignee.as_deref(),
-                    None,
-                    labels,
-                    milestone.as_deref(),
-                    parent.as_deref(),
-                    start_date.as_deref(),
-                    target_date.as_deref(),
-                    starred,
-                    todos,
-                    Self::orchestrator_overrides_from_params(&params),
-                    Self::parse_schedule(&params),
-                )
-                .await
-                .map_err(ToolError::ExecutionFailed)
-            }
-
+                }
+                WorkItemScope::Standalone => Self::create_standalone_work_item(params).await,
+            },
             "update" => {
                 let short_id = required_string(&params, "short_id")?;
-                let title = optional_string(&params, "title");
-                let description = optional_string(&params, "description");
-                let project = optional_string(&params, "project");
-                let status = optional_string(&params, "status");
-                let priority = optional_string(&params, "priority");
-                let assignee = optional_string(&params, "assignee");
-                let labels = Self::optional_string_array(&params, "labels");
-                let milestone = optional_string(&params, "milestone");
-                let parent = optional_string(&params, "parent");
-                let start_date = optional_string(&params, "start_date");
-                let target_date = optional_string(&params, "target_date");
-                let starred = optional_bool(&params, "starred");
-                let todos = Self::optional_todos(&params);
-
-                crate::tool_infra::update_work_item(
-                    &project_slug,
-                    &short_id,
-                    title.as_deref(),
-                    description.as_deref(),
-                    project.as_deref(),
-                    status.as_deref(),
-                    priority.as_deref(),
-                    assignee.as_deref(),
-                    None,
-                    labels,
-                    milestone.as_deref(),
-                    parent.as_deref(),
-                    start_date.as_deref(),
-                    target_date.as_deref(),
-                    starred,
-                    todos,
-                    Self::orchestrator_overrides_from_params(&params),
-                    Self::parse_schedule(&params),
-                )
-                .await
-                .map_err(ToolError::ExecutionFailed)
+                match scope {
+                    WorkItemScope::Project(project_slug) => {
+                        crate::tool_infra::update_work_item(
+                            &project_slug,
+                            &short_id,
+                            optional_string(&params, "title").as_deref(),
+                            optional_string(&params, "description").as_deref(),
+                            optional_string(&params, "project").as_deref(),
+                            optional_string(&params, "status").as_deref(),
+                            optional_string(&params, "priority").as_deref(),
+                            optional_string(&params, "assignee").as_deref(),
+                            None,
+                            Self::optional_string_array(&params, "labels"),
+                            optional_string(&params, "milestone").as_deref(),
+                            optional_string(&params, "parent").as_deref(),
+                            optional_string(&params, "start_date").as_deref(),
+                            optional_string(&params, "target_date").as_deref(),
+                            optional_bool(&params, "starred"),
+                            Self::optional_todos(&params),
+                            Self::orchestrator_overrides_from_params(&params),
+                            Self::parse_schedule(&params),
+                        )
+                        .await
+                        .map_err(ToolError::ExecutionFailed)
+                    }
+                    WorkItemScope::Standalone => Self::update_standalone_work_item(short_id, params).await,
+                }
             }
-
             "delete" => {
                 let short_id = required_string(&params, "short_id")?;
-                crate::tool_infra::delete_work_item(&project_slug, &short_id)
-                    .await
-                    .map_err(ToolError::ExecutionFailed)
+                match scope {
+                    WorkItemScope::Project(project_slug) => {
+                        crate::tool_infra::delete_work_item(&project_slug, &short_id)
+                            .await
+                            .map_err(ToolError::ExecutionFailed)
+                    }
+                    WorkItemScope::Standalone => Self::delete_standalone_work_item(short_id).await,
+                }
             }
-
+            "link_session" => {
+                let short_id = required_string(&params, "short_id")?;
+                self.link_session(scope, short_id, params).await
+            }
+            "unlink_session" => {
+                let short_id = required_string(&params, "short_id")?;
+                self.unlink_session(scope, short_id, params).await
+            }
             "add_delegation" => {
+                let WorkItemScope::Project(project_slug) = scope else {
+                    return Err(ToolError::InvalidParams(
+                        "add_delegation currently requires project_slug because delegation history is project-scoped"
+                            .to_string(),
+                    ));
+                };
                 let short_id = required_string(&params, "short_id")?;
                 let delegation_params = params.get("delegation").ok_or_else(|| {
                     ToolError::InvalidParams("delegation object is required for add_delegation".to_string())
                 })?;
-
-                let task_id = delegation_params["task_id"]
-                    .as_str()
-                    .ok_or_else(|| ToolError::InvalidParams("delegation.task_id is required".to_string()))?;
-                let agent_app_id = delegation_params["agent_app_id"]
-                    .as_str()
-                    .ok_or_else(|| ToolError::InvalidParams("delegation.agent_app_id is required".to_string()))?;
+                let task_id = delegation_params["task_id"].as_str().ok_or_else(|| {
+                    ToolError::InvalidParams("delegation.task_id is required".to_string())
+                })?;
+                let agent_app_id = delegation_params["agent_app_id"].as_str().ok_or_else(|| {
+                    ToolError::InvalidParams("delegation.agent_app_id is required".to_string())
+                })?;
                 let agent_app_name = delegation_params["agent_app_name"]
                     .as_str()
                     .unwrap_or("Unknown Agent");
-                let skill_id = delegation_params["skill_id"]
-                    .as_str()
-                    .ok_or_else(|| ToolError::InvalidParams("delegation.skill_id is required".to_string()))?;
-                let status = delegation_params["status"]
-                    .as_str()
-                    .unwrap_or("pending");
-                let cost_usd = delegation_params["cost_usd"]
-                    .as_f64()
-                    .unwrap_or(0.0);
+                let skill_id = delegation_params["skill_id"].as_str().ok_or_else(|| {
+                    ToolError::InvalidParams("delegation.skill_id is required".to_string())
+                })?;
+                let status = delegation_params["status"].as_str().unwrap_or("pending");
+                let cost_usd = delegation_params["cost_usd"].as_f64().unwrap_or(0.0);
 
-                project_management::projects::io::update_work_item_atomic(
-                    &project_slug,
-                    &short_id,
-                    |frontmatter, _body| {
-                        let entry = project_management::projects::types::DelegationEntry {
-                            task_id: task_id.to_string(),
-                            agent_app_id: agent_app_id.to_string(),
-                            agent_app_name: agent_app_name.to_string(),
-                            skill_id: skill_id.to_string(),
-                            status: status.to_string(),
-                            cost_usd,
-                            created_at: chrono::Utc::now().to_rfc3339(),
-                            completed_at: None,
-                        };
-
-                        frontmatter.delegations.push(entry);
-                        frontmatter.updated_at = chrono::Utc::now().to_rfc3339();
-                        Ok(())
-                    },
-                ).map_err(ToolError::ExecutionFailed)?;
+                io::update_work_item_atomic(&project_slug, &short_id, |frontmatter, _body| {
+                    let entry = project_management::projects::types::DelegationEntry {
+                        task_id: task_id.to_string(),
+                        agent_app_id: agent_app_id.to_string(),
+                        agent_app_name: agent_app_name.to_string(),
+                        skill_id: skill_id.to_string(),
+                        status: status.to_string(),
+                        cost_usd,
+                        created_at: chrono::Utc::now().to_rfc3339(),
+                        completed_at: None,
+                    };
+                    frontmatter.delegations.push(entry);
+                    frontmatter.updated_at = chrono::Utc::now().to_rfc3339();
+                    Ok(())
+                })
+                .map_err(ToolError::ExecutionFailed)?;
 
                 Ok(format!(
                     "Delegation added to work item {}: task_id={}, agent={} ({}), skill={}, status={}",
                     short_id, task_id, agent_app_name, agent_app_id, skill_id, status
                 ))
             }
-
             _ => Err(ToolError::InvalidParams(format!(
-                "Unknown work_item action: '{}'. Valid actions: list, read, create, update, delete, add_delegation",
+                "Unknown work_item action: '{}'. Valid actions: list, read, create, update, delete, add_delegation, link_session, unlink_session",
                 action
             ))),
         }

@@ -444,7 +444,7 @@ mod tests {
                 at: "2026-05-30T00:00:00Z".to_string(),
             },
             run_template: RoutineRunTemplate {
-                prompt: "Investigate the fixture".to_string(),
+                prompt: "Ask about the fixture".to_string(),
                 target: RoutineRunTarget::AgentDefinition {
                     agent_definition_id: Some("builtin:sde".to_string()),
                 },
@@ -458,7 +458,7 @@ mod tests {
                     workspace_path: "/tmp/orgii-routine-test".to_string(),
                     additional_directories: vec![],
                 },
-                mode: Some("investigate".to_string()),
+                mode: Some("ask".to_string()),
                 name: Some("Routine fixture session".to_string()),
             },
             output_policy: policy,

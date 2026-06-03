@@ -31,7 +31,7 @@ export {
 } from "./agentQueuedPlanScenarios.mjs";
 export {
   runIntermediateStreamingScenario,
-  runInvestigateForceSendScenario,
-  runInvestigateWriteDeniedScenario,
-} from "./agentQueuedInvestigateScenarios.mjs";
+  runAskForceSendScenario,
+  runAskWriteDeniedScenario,
+} from "./agentQueuedAskScenarios.mjs";
 export { runRewindScenario } from "./agentQueuedRewindScenarios.mjs";

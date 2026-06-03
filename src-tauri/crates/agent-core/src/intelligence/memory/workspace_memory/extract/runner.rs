@@ -175,7 +175,7 @@ Available tools: {read}, {search}, {list_dir}, read-only {shell} (ls/find/cat/st
 
 You have a limited turn budget. {edit} requires a prior {read} of the same file, so the efficient strategy is: turn 1 — issue all {read} calls in parallel for every file you might update; turn 2 — issue all {edit} calls in parallel. Do not interleave reads and writes across multiple turns.
 
-You MUST only use content from the last ~{count} messages to update your persistent memories. Do not waste any turns attempting to investigate or verify that content further — no grepping source files, no reading code to confirm a pattern exists, no git commands.{manifest}
+You MUST only use content from the last ~{count} messages to update your persistent memories. Do not waste any turns attempting to research or verify that content further — no grepping source files, no reading code to confirm a pattern exists, no git commands.{manifest}
 
 If the user explicitly asks you to remember something, save it immediately as whichever type fits best. If they ask you to forget something, find and remove the relevant entry.
 

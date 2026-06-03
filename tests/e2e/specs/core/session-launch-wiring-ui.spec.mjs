@@ -1,4 +1,8 @@
-/* global browser, describe, before, it */
+/* global browser, describe, before, it, process */
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
 import {
   BUILTIN_SDE_AGENT_ID,
   DEFAULT_AGENT_ORG_ID,
@@ -15,8 +19,14 @@ import {
   waitForApp,
   waitForSessionAggregateRow,
 } from "../../support/core/agentOrgUiDriver.mjs";
+import {
+  ASK_FORBIDDEN_PROMPT_TOOL_NAMES,
+  PLAN_FORBIDDEN_PROMPT_TOOL_NAMES,
+  fetchToolInventory,
+} from "../../support/core/session/toolCoverage.mjs";
 
 const RUN_ID = Date.now();
+const BUILTIN_OS_AGENT_ID = "builtin:os";
 const RENDER_TIMEOUT_MS = 30_000;
 const SCENARIO_FILTER = (process.env.E2E_LAUNCH_WIRING_SCENARIOS ?? "")
   .split(",")
@@ -25,6 +35,12 @@ const SCENARIO_FILTER = (process.env.E2E_LAUNCH_WIRING_SCENARIOS ?? "")
 
 function shouldRunScenario(name) {
   return SCENARIO_FILTER.length === 0 || SCENARIO_FILTER.includes(name);
+}
+
+function createTempWorkspaceDir(label) {
+  return fs.mkdtempSync(
+    path.join(os.tmpdir(), `orgii-e2e-${label}-${RUN_ID}-`)
+  );
 }
 
 async function execJS(script) {
@@ -133,6 +149,74 @@ async function launchAndAssert({
   return { sessionId, result };
 }
 
+async function assertModeToolInventory(mode, sessionId) {
+  const inventory = await fetchToolInventory(sessionId);
+  const promptTools = new Set(inventory.promptVisibleNames);
+  const missing = [];
+  const unexpected = [];
+
+  const expectPresent = (name) => {
+    if (!promptTools.has(name)) missing.push(name);
+  };
+  const expectAbsent = (name) => {
+    if (promptTools.has(name)) unexpected.push(name);
+  };
+
+  if (mode === "build") {
+    for (const name of ["read_file", "run_shell", "edit_file", "manage_todo"]) {
+      expectPresent(name);
+    }
+    expectAbsent("create_plan");
+  } else if (mode === "plan") {
+    expectPresent("read_file");
+    expectPresent("create_plan");
+    expectAbsent("manage_todo");
+    for (const name of PLAN_FORBIDDEN_PROMPT_TOOL_NAMES) expectAbsent(name);
+  } else if (mode === "ask") {
+    expectPresent("read_file");
+    for (const name of ASK_FORBIDDEN_PROMPT_TOOL_NAMES) expectAbsent(name);
+  }
+
+  if (missing.length > 0 || unexpected.length > 0) {
+    throw new Error(
+      `Mode ${mode} tool inventory mismatch for ${sessionId}: missing=${JSON.stringify(missing)} unexpected=${JSON.stringify(unexpected)} inventory=${JSON.stringify(inventory)}`
+    );
+  }
+}
+
+async function assertPersistedSessionWorkspace(sessionId, expected) {
+  const workspaceResult = unwrap(
+    await invokeE2E("readSessionWorkspaceFromDb", sessionId),
+    `readSessionWorkspaceFromDb(${sessionId})`
+  ).result;
+  const workspace = workspaceResult?.workspace ?? null;
+  if (expected.workspaceRoot == null) {
+    const hasPersistedRoot = Boolean(workspace?.workspaceRoot);
+    const hasPersistedWorkingDir = Boolean(workspace?.workingDir);
+    const hasAdditionalDirectories =
+      (workspace?.additionalDirectories ?? []).length > 0;
+    if (hasPersistedRoot || hasPersistedWorkingDir || hasAdditionalDirectories) {
+      throw new Error(
+        `Expected no persisted workspace for ${sessionId}, got ${JSON.stringify(workspaceResult)}`
+      );
+    }
+    return;
+  }
+
+  const additional = (workspace?.additionalDirectories ?? [])
+    .map((entry) => entry.path)
+    .sort();
+  const expectedAdditional = [...(expected.additionalDirectories ?? [])].sort();
+  if (
+    workspace?.workspaceRoot !== expected.workspaceRoot ||
+    JSON.stringify(additional) !== JSON.stringify(expectedAdditional)
+  ) {
+    throw new Error(
+      `Persisted workspace mismatch for ${sessionId}: expected=${JSON.stringify(expected)} actual=${JSON.stringify(workspaceResult)}`
+    );
+  }
+}
+
 async function removeAgentDefIfExists(agentId) {
   const defs = unwrap(
     await invokeE2E("listAgentDefs"),
@@ -169,6 +253,56 @@ async function prepareRenderedCreator({
     await invokeE2E("resetToNewSession"),
     "resetToNewSession before rendered Session Creator action"
   );
+}
+
+async function typeRenderedCreatorPrompt(prompt, label) {
+  const state = await execJS(`
+    const shell = document.querySelector('[data-testid="session-creator-chat-panel"]') ?? document;
+    const editor = shell.querySelector('[contenteditable="true"]');
+    if (!editor) return { ok: false, reason: "missing-editor" };
+    editor.focus();
+    editor.textContent = ${JSON.stringify(prompt)};
+    editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: ${JSON.stringify(prompt)} }));
+    editor.dispatchEvent(new Event('change', { bubbles: true }));
+    const button = shell.querySelector('[data-testid="chat-send-button"]');
+    return {
+      ok: true,
+      editorText: editor.textContent || '',
+      buttonState: button?.getAttribute('data-state') ?? null,
+      buttonDisabled: button ? Boolean(button.disabled) : null,
+    };
+  `);
+  if (state?.ok !== true || !String(state.editorText ?? "").includes(prompt)) {
+    throw new Error(
+      `${label} prompt was not typed into rendered creator: ${JSON.stringify(state)}`
+    );
+  }
+  return state;
+}
+
+async function assertRenderedCreatorSendDisabled(label) {
+  let state = null;
+  await browser.waitUntil(
+    async () => {
+      state = await execJS(`
+        const shell = document.querySelector('[data-testid="session-creator-chat-panel"]') ?? document;
+        const button = shell.querySelector('[data-testid="chat-send-button"]');
+        return {
+          buttonPresent: Boolean(button),
+          state: button?.getAttribute('data-state') ?? null,
+          disabled: button ? Boolean(button.disabled) : null,
+          bodyText: (document.body.innerText || '').slice(0, 1200),
+        };
+      `);
+      return state?.buttonPresent === true && state?.disabled === true;
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      interval: 250,
+      timeoutMsg: `${label} send button was not disabled: ${JSON.stringify(state)}`,
+    }
+  );
+  return state;
 }
 
 async function selectRenderedAgentDefinition(agentId) {
@@ -250,8 +384,8 @@ describe("Session launch wiring rendered UI invariants", function () {
       return;
     }
 
-    for (const mode of ["build", "plan", "investigate"]) {
-      await launchAndAssert({
+    for (const mode of ["build", "plan", "ask"]) {
+      const { sessionId } = await launchAndAssert({
         label: `builtin-sde-${mode}`,
         account,
         model,
@@ -259,6 +393,158 @@ describe("Session launch wiring rendered UI invariants", function () {
         agentDefinitionId: BUILTIN_SDE_AGENT_ID,
         expectedAgentDefinitionId: BUILTIN_SDE_AGENT_ID,
       });
+      await assertModeToolInventory(mode, sessionId);
+    }
+  });
+
+  it("launches OS Agent Ask mode safely with zero repos selected", async function () {
+    if (!shouldRunScenario("zero-repo-os-ask")) {
+      this.skip();
+      return;
+    }
+
+    try {
+      unwrap(await invokeE2E("clearWorkspaceRepos"), "clear workspace repos");
+      const result = unwrap(
+        await invokeE2E("launchSession", {
+          category: "rust_agent",
+          content: `E2E zero repo OS Ask launch ${RUN_ID}. Reply briefly.`,
+          keySource: "own_key",
+          accountId: account.id,
+          model,
+          agentDefinitionId: BUILTIN_OS_AGENT_ID,
+          mode: "ask",
+          background: false,
+        }),
+        "launchSession(zero-repo-os-ask)"
+      ).result;
+      const sessionId = result?.sessionId ?? result?.session_id;
+      if (!sessionId) {
+        throw new Error(
+          `Zero repo OS Ask launch did not create a session: ${JSON.stringify(result)}`
+        );
+      }
+
+      await waitForSessionAggregateRow(
+        sessionId,
+        (session) =>
+          session.model === model &&
+          session.accountId === account.id &&
+          session.agentDefinitionId === BUILTIN_OS_AGENT_ID &&
+          session.agentExecMode === "ask" &&
+          (session.workspacePath == null || session.workspacePath === ""),
+        "zero repo OS Ask launch metadata"
+      );
+      await assertModeToolInventory("ask", sessionId);
+      await assertPersistedSessionWorkspace(sessionId, { workspaceRoot: null });
+    } finally {
+      await invokeE2E("ensureRepoSelected", { repoPath: E2E_REPO_PATH });
+    }
+  });
+
+  it("blocks SDE Agent launch from rendered creator when zero repos are selected", async function () {
+    if (!shouldRunScenario("zero-repo-sde-guard")) {
+      this.skip();
+      return;
+    }
+
+    try {
+      await prepareRenderedCreator({
+        account,
+        model,
+        agentDefinitionId: BUILTIN_SDE_AGENT_ID,
+      });
+      unwrap(await invokeE2E("clearWorkspaceRepos"), "clear workspace repos");
+      await selectRenderedAgentDefinition(BUILTIN_SDE_AGENT_ID);
+      await selectRenderedExecMode("ask");
+
+      const selection = unwrap(
+        await invokeE2E("inspectCreatorSelection"),
+        "inspectCreatorSelection(zero-repo-sde-guard)"
+      ).creator;
+      if (selection.source != null) {
+        throw new Error(
+          `SDE zero-repo guard expected no creator source, got ${JSON.stringify(selection)}`
+        );
+      }
+
+      await typeRenderedCreatorPrompt(
+        `E2E SDE zero repo guard ${RUN_ID}. This should not launch.`,
+        "zero repo SDE guard"
+      );
+      await assertRenderedCreatorSendDisabled("zero repo SDE guard");
+    } finally {
+      await invokeE2E("ensureRepoSelected", { repoPath: E2E_REPO_PATH });
+    }
+  });
+
+  it("passes multi-root workspace folders as additional session directories", async function () {
+    if (!shouldRunScenario("multi-root-workspace")) {
+      this.skip();
+      return;
+    }
+
+    const primaryPath = createTempWorkspaceDir("multi-primary");
+    const secondaryPath = createTempWorkspaceDir("multi-secondary");
+    const tertiaryPath = createTempWorkspaceDir("multi-tertiary");
+    try {
+      const seeded = unwrap(
+        await invokeE2E("seedMultiRootWorkspace", {
+          workspaceId: `e2e-multi-root-${RUN_ID}`,
+          workspaceName: `E2E Multi Root ${RUN_ID}`,
+          folders: [
+            {
+              id: "primary",
+              name: "primary",
+              path: primaryPath,
+              isPrimary: true,
+            },
+            { id: "secondary", name: "secondary", path: secondaryPath },
+            { id: "tertiary", name: "tertiary", path: tertiaryPath },
+          ],
+        }),
+        "seed multi-root workspace"
+      );
+
+      const result = unwrap(
+        await invokeE2E("launchSession", {
+          category: "rust_agent",
+          content: `E2E multi-root launch ${RUN_ID}. Reply briefly.`,
+          keySource: "own_key",
+          accountId: account.id,
+          model,
+          agentDefinitionId: BUILTIN_SDE_AGENT_ID,
+          mode: "ask",
+          background: false,
+        }),
+        "launchSession(multi-root-workspace)"
+      ).result;
+      const sessionId = result?.sessionId ?? result?.session_id;
+      if (!sessionId) {
+        throw new Error(
+          `Multi-root launch did not create a session: ${JSON.stringify(result)}`
+        );
+      }
+
+      await waitForSessionAggregateRow(
+        sessionId,
+        (session) =>
+          session.model === model &&
+          session.accountId === account.id &&
+          session.agentDefinitionId === BUILTIN_SDE_AGENT_ID &&
+          session.agentExecMode === "ask" &&
+          session.workspacePath === seeded.primaryPath,
+        "multi-root launch metadata"
+      );
+      await assertPersistedSessionWorkspace(sessionId, {
+        workspaceRoot: seeded.primaryPath,
+        additionalDirectories: seeded.additionalDirectories,
+      });
+    } finally {
+      await invokeE2E("ensureRepoSelected", { repoPath: E2E_REPO_PATH });
+      fs.rmSync(primaryPath, { recursive: true, force: true });
+      fs.rmSync(secondaryPath, { recursive: true, force: true });
+      fs.rmSync(tertiaryPath, { recursive: true, force: true });
     }
   });
 
@@ -401,7 +687,7 @@ describe("Session launch wiring rendered UI invariants", function () {
       model,
       agentDefinitionId: BUILTIN_SDE_AGENT_ID,
     });
-    await selectRenderedExecMode("investigate");
+    await selectRenderedExecMode("ask");
     const sessionId = await sendFromRenderedCreator(
       `E2E rendered execution mode selector launch ${RUN_ID}. Reply briefly.`
     );
@@ -416,7 +702,7 @@ describe("Session launch wiring rendered UI invariants", function () {
         session.model === model &&
         session.accountId === account.id &&
         session.agentDefinitionId === BUILTIN_SDE_AGENT_ID &&
-        session.agentExecMode === "investigate",
+        session.agentExecMode === "ask",
       "rendered execution mode selector launch metadata"
     );
     unwrap(

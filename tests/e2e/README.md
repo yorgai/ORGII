@@ -9,7 +9,7 @@ The E2E folder intentionally contains only the final core UI regression suite. K
 These are the specs to run after UI changes that can affect chat/session behavior:
 
 - `specs/core/session-matrix-ui.spec.mjs` — rendered launch/reply/tool-card matrix for Cursor CLI/native, Claude Code CLI/Rust, Codex CLI/Rust, Gemini CLI/native, and API Rust agent.
-- `specs/core/session-controls-ui.spec.mjs` — stop, force-send, queued follow-up, rewind, streaming feedback, Plan/Investigate control smoke.
+- `specs/core/session-controls-ui.spec.mjs` — stop, force-send, queued follow-up, rewind, streaming feedback, Plan/Ask control smoke.
 - `specs/core/session-plan-ui.spec.mjs` — canonical Plan lifecycle UI coverage: mode switch, pending side chat, skip, reload, update, build latest, rewind.
 - `specs/core/session-account-switch.spec.mjs` — provider account switch matrix across CLI and Rust-native paths.
 - `specs/core/session-memory-ui.spec.mjs` — rendered/session-visible smoke for session memory, agent memory, extract memory, and auto dream flags.

@@ -222,8 +222,8 @@ mod tests {
     fn pre_plan_mode_overwrite_on_reenter() {
         let cache = PrePlanModeCache::new();
         cache.set("s1", AgentExecMode::Build);
-        cache.set("s1", AgentExecMode::Investigate);
-        assert_eq!(cache.get("s1"), Some(AgentExecMode::Investigate));
+        cache.set("s1", AgentExecMode::Ask);
+        assert_eq!(cache.get("s1"), Some(AgentExecMode::Ask));
     }
 
     #[test]

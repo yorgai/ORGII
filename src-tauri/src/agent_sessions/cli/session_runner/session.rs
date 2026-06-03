@@ -60,9 +60,9 @@ fn cli_exec_mode_bridge(mode: Option<&str>) -> Option<&'static str> {
             "Do not create a new approval plan unless the user explicitly asks to switch back to Plan mode.\n",
             "</orgii_cli_exec_mode_bridge>"
         )),
-        AgentExecMode::Investigate => Some(concat!(
+        AgentExecMode::Ask => Some(concat!(
             "<orgii_cli_exec_mode_bridge>\n",
-            "You are running inside ORGII INVESTIGATE mode. Research and answer without editing files, applying patches, deleting files, or running write commands.\n",
+            "You are running inside ORGII ASK mode. Research and answer without editing files, applying patches, deleting files, or running write commands.\n",
             "</orgii_cli_exec_mode_bridge>"
         )),
         AgentExecMode::Debug => Some(concat!(

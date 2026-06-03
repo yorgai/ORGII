@@ -215,7 +215,7 @@ pub fn ensure_tables_with(conn: &Connection) -> SqliteResult<()> {
         "ALTER TABLE agent_sessions ADD COLUMN last_turn_cancelled INTEGER NOT NULL DEFAULT 0",
     );
 
-    // Per-session execution mode (build / investigate / plan / debug / review /
+    // Per-session execution mode (build / ask / plan / debug / review /
     // wingman). NULL means the user has never explicitly chosen one for this
     // session — frontend falls back to the global `creatorDefaultExecModeAtom`
     // until the first explicit patch. CLI sessions never write here (they have

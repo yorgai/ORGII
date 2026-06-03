@@ -216,7 +216,7 @@ const BRANCHING_FLOW_SCRIPT: LiveFlowScript = {
 
 const SUBAGENT_FLOW_SCRIPT: LiveFlowScript = {
   intro:
-    "I'll launch a subagent to investigate this. Let me delegate the research task.",
+    "I'll launch a subagent to research this. Let me delegate the research task.",
   steps: [
     {
       type: "activity",
@@ -226,11 +226,11 @@ const SUBAGENT_FLOW_SCRIPT: LiveFlowScript = {
       status: "running",
       args: {
         agent_id: "builtin:explore",
-        description: "Investigate {{message}}",
+        description: "Research {{message}}",
         subagent_type: "explore",
         action: "assign",
         prompt:
-          "Investigate {{message}} across the frontend event pipeline. Report the key files involved and the dominant data-flow shape (Rust → IPC → frontend store).",
+          "Research {{message}} across the frontend event pipeline. Report the key files involved and the dominant data-flow shape (Rust → IPC → frontend store).",
       },
       result: {},
     },
@@ -242,12 +242,12 @@ const SUBAGENT_FLOW_SCRIPT: LiveFlowScript = {
       status: "running",
       args: {
         agent_id: "builtin:explore",
-        description: "Investigate {{message}}",
+        description: "Research {{message}}",
         subagent_type: "explore",
         action: "delegate",
         subagentSessionId: "mock-subagent-explore-001",
         prompt:
-          "Investigate {{message}} across the frontend event pipeline. Report the key files involved and the dominant data-flow shape (Rust → IPC → frontend store).",
+          "Research {{message}} across the frontend event pipeline. Report the key files involved and the dominant data-flow shape (Rust → IPC → frontend store).",
       },
       result: {},
     },
@@ -259,12 +259,12 @@ const SUBAGENT_FLOW_SCRIPT: LiveFlowScript = {
       status: "running",
       args: {
         agent_id: "builtin:explore",
-        description: "Investigate {{message}}",
+        description: "Research {{message}}",
         subagent_type: "explore",
         action: "delegate",
         subagentSessionId: "mock-subagent-explore-001",
         prompt:
-          "Investigate {{message}} across the frontend event pipeline. Report the key files involved and the dominant data-flow shape (Rust → IPC → frontend store).",
+          "Research {{message}} across the frontend event pipeline. Report the key files involved and the dominant data-flow shape (Rust → IPC → frontend store).",
         toolCallCount: 4,
       },
       result: {},
@@ -277,12 +277,12 @@ const SUBAGENT_FLOW_SCRIPT: LiveFlowScript = {
       status: "completed",
       args: {
         agent_id: "builtin:explore",
-        description: "Investigate {{message}}",
+        description: "Research {{message}}",
         subagent_type: "explore",
         action: "delegate",
         subagentSessionId: "mock-subagent-explore-001",
         prompt:
-          "Investigate {{message}} across the frontend event pipeline. Report the key files involved and the dominant data-flow shape (Rust → IPC → frontend store).",
+          "Research {{message}} across the frontend event pipeline. Report the key files involved and the dominant data-flow shape (Rust → IPC → frontend store).",
         elapsedMs: 4600,
         toolCallCount: 6,
       },

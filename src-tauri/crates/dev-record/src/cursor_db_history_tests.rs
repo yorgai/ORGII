@@ -585,7 +585,7 @@ fn task_v2_routes_to_subagent_canonical_with_replayable_session_id() {
     let conn = empty_test_db();
     let bubble = make_tool_bubble(
         "task_v2",
-        r#"{"description":"Investigate slow startup","prompt":"Read main.rs and report cold-start hot paths."}"#,
+        r#"{"description":"Research slow startup","prompt":"Read main.rs and report cold-start hot paths."}"#,
         r#"{"agentId":"c6f60eb9-575a-4478-aef7-037ee6c9f620"}"#,
     );
     let chunk = assistant_tool_bubble_to_chunk(&conn, TEST_SESSION_ID, &bubble).expect("chunk");
@@ -595,7 +595,7 @@ fn task_v2_routes_to_subagent_canonical_with_replayable_session_id() {
 
     // SubagentAdapter fallback reads `args.description` / `args.prompt` directly —
     // Cursor already names them correctly, so no translation needed.
-    assert_eq!(chunk.args["description"], "Investigate slow startup");
+    assert_eq!(chunk.args["description"], "Research slow startup");
     assert_eq!(
         chunk.args["prompt"],
         "Read main.rs and report cold-start hot paths."

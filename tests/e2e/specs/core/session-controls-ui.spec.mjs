@@ -17,8 +17,8 @@ import {
   runForceSendScenario,
   runFreshStopRollbackScenario,
   runIntermediateStreamingScenario,
-  runInvestigateForceSendScenario,
-  runInvestigateWriteDeniedScenario,
+  runAskForceSendScenario,
+  runAskWriteDeniedScenario,
   runPlanBuildDirectScenario,
   runPlanEditResendScenario,
   runPlanStopScenario,
@@ -111,8 +111,8 @@ const CONTROL_SCENARIO_NAMES = [
   "plan-stop",
   "plan-write-denied",
   "intermediate-streaming",
-  "investigate-write-denied",
-  "investigate-force-send",
+  "ask-write-denied",
+  "ask-force-send",
 ];
 
 const RUST_AGENT_EXEC_MODE_SCENARIOS = new Set([
@@ -122,8 +122,8 @@ const RUST_AGENT_EXEC_MODE_SCENARIOS = new Set([
   "plan-edit-resend",
   "plan-stop",
   "plan-write-denied",
-  "investigate-write-denied",
-  "investigate-force-send",
+  "ask-write-denied",
+  "ask-force-send",
 ]);
 describe("ORGII force-send queued follow-up behavior", function () {
   let configs;
@@ -245,18 +245,18 @@ describe("ORGII force-send queued follow-up behavior", function () {
     );
   });
 
-  it("keeps Investigate mode read-only even when the user asks for file edits across Rust AgentExecMode sessions", async function () {
+  it("keeps Ask mode read-only even when the user asks for file edits across Rust AgentExecMode sessions", async function () {
     await runScenario(
-      "investigate-write-denied",
-      runInvestigateWriteDeniedScenario,
+      "ask-write-denied",
+      runAskWriteDeniedScenario,
       this
     );
   });
 
-  it("force-sends read-only follow-ups in Investigate mode without plan or rewind UI across Rust AgentExecMode sessions", async function () {
+  it("force-sends read-only follow-ups in Ask mode without plan or rewind UI across Rust AgentExecMode sessions", async function () {
     await runScenario(
-      "investigate-force-send",
-      runInvestigateForceSendScenario,
+      "ask-force-send",
+      runAskForceSendScenario,
       this
     );
   });

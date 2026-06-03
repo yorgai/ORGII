@@ -339,7 +339,7 @@ pub fn update_model_and_account(
     Ok(affected > 0)
 }
 
-/// Update the per-session execution mode (`build` / `investigate` /
+/// Update the per-session execution mode (`build` / `ask` /
 /// `plan` / `debug` / `review` / `wingman`).
 ///
 /// Only mutated through this function — never through the upsert path

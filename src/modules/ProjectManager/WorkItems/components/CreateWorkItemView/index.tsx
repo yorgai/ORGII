@@ -14,10 +14,21 @@
  */
 import { emit } from "@tauri-apps/api/event";
 import { X } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
-import { type WorkItemFrontmatter, projectApi } from "@src/api/http/project";
+import {
+  type WorkItemData,
+  type WorkItemFrontmatter,
+  enrichedWorkItemToUI,
+  projectApi,
+} from "@src/api/http/project";
 import Button from "@src/components/Button";
 import Message from "@src/components/Message";
 import Select from "@src/components/Select";
@@ -56,6 +67,23 @@ import WorkItemProperties from "../WorkItemProperties";
 // Types
 // ============================================
 
+export interface CreatedWorkItemResult {
+  keepOpen?: boolean;
+  shortId: string;
+  projectSlug?: string;
+  item?: WorkItemData;
+  workItem?: WorkItemExtended;
+}
+
+interface LinkableWorkItem {
+  shortId: string;
+  projectSlug?: string;
+  title: string;
+  description: string;
+  item?: WorkItemData;
+  workItem?: WorkItemExtended;
+}
+
 export interface CreateWorkItemViewProps {
   /** Project ID for the new work item when launched from a Project */
   projectId?: string;
@@ -72,7 +100,9 @@ export interface CreateWorkItemViewProps {
   /** Mark this tab as having unsaved changes */
   onSetUnsaved: (hasUnsaved: boolean) => void;
   /** Called after work item is successfully created */
-  onWorkItemCreated: (options?: { keepOpen?: boolean }) => void;
+  onWorkItemCreated: (result?: CreatedWorkItemResult) => void;
+  /** Called when an existing work item should be opened from this surface. */
+  onLinkWorkItem?: (result: CreatedWorkItemResult) => void;
   /** Available options for pickers */
   availableProjects?: WorkItemProject[];
   availableMilestones?: WorkItemMilestone[];
@@ -99,6 +129,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   onCancel,
   onSetUnsaved,
   onWorkItemCreated,
+  onLinkWorkItem,
   availableProjects = [],
   availableMilestones = [],
   availableLabels = [],
@@ -109,6 +140,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   const { t } = useTranslation("projects");
   const [saving, setSaving] = useState(false);
   const [createMore, setCreateMore] = useState(false);
+  const [aiGenerateMode, setAiGenerateMode] = useState(false);
   const [editorResetKey, setEditorResetKey] = useState(0);
   const { agents: customAgents } = useAgentDefinitions();
   const { orgs: availableOrgs } = useAgentOrgs();
@@ -120,9 +152,12 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
     Record<string, string>
   >({});
   const [loadedLabels, setLoadedLabels] = useState<WorkItemLabel[]>([]);
+  const [linkableWorkItems, setLinkableWorkItems] = useState<
+    LinkableWorkItem[]
+  >([]);
+  const [linkingShortId, setLinkingShortId] = useState<string | null>(null);
 
-  const defaultProjectId =
-    projectId ?? availableProjects[0]?.id ?? loadedProjects[0]?.id;
+  const defaultProjectId = projectId ?? availableProjects[0]?.id;
   const { draft, updateDraft, setDraft, resetDraft, clearDraft } =
     useWorkItemCreatorDraft({
       seedProjectId: projectId,
@@ -175,6 +210,49 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   }, [availableProjects.length]);
 
   useEffect(() => {
+    if (!onLinkWorkItem) return;
+    let cancelled = false;
+
+    const loadLinkableWorkItems = async () => {
+      try {
+        const [projectsData, standaloneItems] = await Promise.all([
+          projectApi.readProjects(),
+          projectApi.readStandaloneWorkItems(),
+        ]);
+        const projectItems = await Promise.all(
+          projectsData.map(async (project) => {
+            const items = await projectApi.readWorkItemsEnriched(project.slug);
+            return items.map<LinkableWorkItem>((item) => ({
+              shortId: item.shortId,
+              projectSlug: project.slug,
+              title: item.title,
+              description: project.meta.name,
+              workItem: enrichedWorkItemToUI(item),
+            }));
+          })
+        );
+        if (cancelled) return;
+        setLinkableWorkItems([
+          ...projectItems.flat(),
+          ...standaloneItems.map<LinkableWorkItem>((item) => ({
+            shortId: item.frontmatter.short_id || item.frontmatter.id,
+            title: item.frontmatter.title,
+            description: "Standalone Work Item",
+            item,
+          })),
+        ]);
+      } catch (err) {
+        logger.warn("Failed to load existing work items for linking", err);
+      }
+    };
+
+    loadLinkableWorkItems();
+    return () => {
+      cancelled = true;
+    };
+  }, [onLinkWorkItem]);
+
+  useEffect(() => {
     if (availableMembers.length > 0 || !selectedProjectSlug) return;
     let cancelled = false;
 
@@ -220,6 +298,53 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
     availableProjects.length > 0 ? availableProjects : loadedProjects;
   const resolvedLabels =
     availableLabels.length > 0 ? availableLabels : loadedLabels;
+
+  const sortedLinkableWorkItems = useMemo(
+    () =>
+      [...linkableWorkItems]
+        .filter((item) => item.title.trim().length > 0)
+        .sort((left, right) => left.title.localeCompare(right.title))
+        .slice(0, 8),
+    [linkableWorkItems]
+  );
+
+  const handleLinkExistingWorkItem = useCallback(
+    async (item: LinkableWorkItem) => {
+      if (!onLinkWorkItem || linkingShortId) return;
+      setLinkingShortId(item.shortId);
+      try {
+        if (item.projectSlug) {
+          const latestItems = await projectApi.readWorkItemsEnriched(
+            item.projectSlug
+          );
+          const latestItem = latestItems.find(
+            (candidate) => candidate.shortId === item.shortId
+          );
+          if (!latestItem) {
+            throw new Error(`Work Item not found: ${item.shortId}`);
+          }
+          onLinkWorkItem({
+            shortId: item.shortId,
+            projectSlug: item.projectSlug,
+            workItem: enrichedWorkItemToUI(latestItem),
+          });
+          return;
+        }
+
+        const latestItem = await projectApi.readStandaloneWorkItem(
+          item.shortId
+        );
+        onLinkWorkItem({
+          shortId: item.shortId,
+          item: latestItem,
+        });
+      } catch (error) {
+        logger.error("Failed to link existing Work Item", error);
+        setLinkingShortId(null);
+      }
+    },
+    [linkingShortId, onLinkWorkItem]
+  );
 
   // Undo/redo for property changes (keyboard shortcut auto-restores)
   const undoStack = useUndoStackWithRestore<WorkItemDraft>({
@@ -353,13 +478,25 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
         );
       }
 
+      const createdItem: WorkItemData = {
+        frontmatter,
+        body: descriptionText,
+        filename: `${shortId}.md`,
+      };
+      const result: CreatedWorkItemResult = {
+        keepOpen: createMore,
+        shortId,
+        projectSlug: selectedProjectSlug,
+        item: createdItem,
+      };
+
       await emit("orgii-data-changed");
       if (createMore) {
         resetDraftForCreateMore();
-        onWorkItemCreated({ keepOpen: true });
+        onWorkItemCreated(result);
       } else {
         clearDraft();
-        onWorkItemCreated();
+        onWorkItemCreated(result);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -371,13 +508,11 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   }, [
     createMore,
     draft,
-    loadedProjectSlugById,
+    selectedProjectSlug,
     onWorkItemCreated,
     clearDraft,
     resetDraftForCreateMore,
     saving,
-    projectId,
-    projectSlug,
   ]);
 
   useKeyboardSave(handleCreate, !saving && !!draft.name.trim());
@@ -410,6 +545,65 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       }
       leftContent={
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
+          <div className="border-b border-solid border-border-1 px-4 py-2">
+            <div
+              className="flex items-center justify-between gap-3 rounded-xl bg-bg-2 px-3 py-2"
+              data-testid="create-work-item-mode-panel"
+            >
+              <div className="min-w-0">
+                <div className="text-[12px] font-medium text-text-1">
+                  {aiGenerateMode ? "AI generate" : "Manual create"}
+                </div>
+                <div className="mt-0.5 truncate text-[11px] text-text-3">
+                  {aiGenerateMode
+                    ? "Describe the work and let an agent break it into work items."
+                    : "Fill in the title, description, and properties directly."}
+                </div>
+              </div>
+              <label className="flex shrink-0 items-center gap-2 text-[12px] text-text-2">
+                <span>AI</span>
+                <Switch
+                  size="small"
+                  checked={aiGenerateMode}
+                  onChange={(checked) => setAiGenerateMode(checked)}
+                  dataTestId="create-work-item-ai-generate-switch"
+                />
+              </label>
+            </div>
+          </div>
+          {onLinkWorkItem && sortedLinkableWorkItems.length > 0 && (
+            <div
+              className="border-b border-solid border-border-1 px-4 py-2"
+              data-testid="create-work-item-link-existing-panel"
+            >
+              <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-text-3">
+                Link existing Work Item
+              </div>
+              <div className="flex flex-col gap-1">
+                {sortedLinkableWorkItems.map((item) => (
+                  <Button
+                    key={`${item.projectSlug ?? "standalone"}:${item.shortId}`}
+                    variant="tertiary"
+                    appearance="ghost"
+                    size="small"
+                    className="justify-start rounded-lg px-2 text-left"
+                    disabled={linkingShortId === item.shortId}
+                    data-testid={`create-work-item-link-existing-${item.shortId}`}
+                    onClick={() => handleLinkExistingWorkItem(item)}
+                  >
+                    <span className="flex min-w-0 flex-col items-start">
+                      <span className="max-w-full truncate text-[12px] font-medium text-text-1">
+                        {item.title}
+                      </span>
+                      <span className="max-w-full truncate text-[11px] text-text-3">
+                        {item.description || item.shortId}
+                      </span>
+                    </span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="min-h-0 flex-1 px-4 pt-4">
             <ProjectContentEditor
               key={editorResetKey}
@@ -418,13 +612,23 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
               onTitleChange={handleTitleChange}
               initialDescription={draft.description || ""}
               onDescriptionChange={handleDescriptionChange}
-              descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
+              titlePlaceholder={
+                aiGenerateMode
+                  ? "What should we build or break down?"
+                  : t("workItems.titlePlaceholder")
+              }
+              descriptionPlaceholder={
+                aiGenerateMode
+                  ? "Describe requirements, repo/project scope, desired granularity, dependencies, and whether the generated work items should auto-execute."
+                  : t("workItems.descriptionPlaceholder")
+              }
               onImageInsert={handleImageInsert}
               descriptionClassName="no-bottom-border"
               descriptionMaxHeight="100%"
               repoPath={repoPath}
               className="flex h-full min-h-0 flex-col"
               autoFocusTitle
+              dataTestId="create-work-item-editor"
             />
           </div>
           <div className="shrink-0 px-3 py-2 [&_[data-property-dropdown]]:!bottom-full [&_[data-property-dropdown]]:!top-auto [&_[data-property-dropdown]]:!mb-1 [&_[data-property-dropdown]]:!mt-0">
@@ -449,16 +653,24 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
               size="small"
               checked={createMore}
               onChange={(checked) => setCreateMore(checked)}
+              dataTestId="create-work-item-auto-execute-switch"
             />
-            <span>{t("projects.createMore")}</span>
+            <span>
+              {aiGenerateMode ? "Auto execute" : t("projects.createMore")}
+            </span>
           </label>
           <Button
             variant="primary"
             size="small"
             onClick={handleCreate}
             disabled={!draft.name.trim() || saving}
+            data-testid="create-work-item-submit"
           >
-            {saving ? t("common:status.saving") : t("workItems.createWorkItem")}
+            {saving
+              ? t("common:status.saving")
+              : aiGenerateMode
+                ? "Generate Work Items"
+                : t("workItems.createWorkItem")}
           </Button>
         </>
       }

@@ -3,6 +3,7 @@ import { useSetAtom } from "jotai";
 import React, { useCallback } from "react";
 
 import {
+  type WorkItemFrontmatter,
   type WorkItemPartialUpdate,
   enrichedWorkItemToUI,
   projectApi,
@@ -14,7 +15,13 @@ import {
 } from "@src/modules/ProjectManager/WorkItems/components";
 import { WORK_ITEM_PROPERTY_ESSENTIAL_FIELDS } from "@src/modules/ProjectManager/WorkItems/components/WorkItemProperties";
 import {
+  activeSessionIdAtom,
+  workstationActiveSessionIdAtom,
+} from "@src/store/session";
+import {
+  CHAT_PANEL_CONTENT_MODE,
   type ChatPanelSelectedWorkItem,
+  chatPanelContentModeAtom,
   chatPanelSelectedWorkItemAtom,
 } from "@src/store/ui/chatPanelAtom";
 import type { WorkItem } from "@src/types/core/workItem";
@@ -24,6 +31,57 @@ const logger = createLogger("WorkItemPanelView");
 interface WorkItemPanelViewProps {
   selectedWorkItem: ChatPanelSelectedWorkItem;
   onUpdateWorkItem?: (updates: Partial<WorkItem>) => void;
+}
+
+function toStandaloneFrontmatter(
+  workItem: WorkItem,
+  shortId: string
+): WorkItemFrontmatter {
+  const now = new Date().toISOString();
+  return {
+    id: shortId,
+    short_id: shortId,
+    title: workItem.name,
+    project: workItem.project?.id,
+    status: workItem.workItemStatus ?? workItem.status ?? "backlog",
+    priority: workItem.priority ?? "none",
+    assignee: workItem.assignee?.id,
+    assignee_type: workItem.assigneeType,
+    labels: workItem.labels?.map((label) => label.id) ?? [],
+    milestone: workItem.milestone?.id,
+    start_date: workItem.startDate,
+    target_date: workItem.endDate ?? workItem.target_date ?? undefined,
+    created_at: workItem.created_time || now,
+    updated_at: now,
+    starred: workItem.star ?? false,
+    todos:
+      workItem.todos?.map((todo) => ({
+        id: todo.id,
+        content: todo.content,
+        status: todo.status,
+      })) ?? [],
+    comments: workItem.comments,
+    linked_sessions: workItem.linkedSessions,
+    proof_of_work: workItem.proofOfWork,
+    orchestrator_config: workItem.orchestratorConfig,
+    orchestrator_state: workItem.orchestratorState,
+    schedule: workItem.schedule ?? undefined,
+    routine_source: workItem.routineSource,
+    execution_lock: workItem.executionLock,
+    close_out: workItem.closeOut,
+    work_products: workItem.workProducts,
+  };
+}
+
+function applyWorkItemPatch(
+  workItem: WorkItem,
+  updates: Partial<WorkItem>
+): WorkItem {
+  return {
+    ...workItem,
+    ...updates,
+    updated_time: new Date().toISOString(),
+  };
 }
 
 function toWorkItemPartialUpdate(
@@ -95,6 +153,11 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
   onUpdateWorkItem,
 }) => {
   const setSelectedWorkItem = useSetAtom(chatPanelSelectedWorkItemAtom);
+  const setContentMode = useSetAtom(chatPanelContentModeAtom);
+  const setActiveSessionId = useSetAtom(activeSessionIdAtom);
+  const setWorkstationActiveSessionId = useSetAtom(
+    workstationActiveSessionIdAtom
+  );
 
   const handleUpdateWorkItem = useCallback(
     async (updates: Partial<WorkItem>) => {
@@ -107,23 +170,52 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
         const payload = toWorkItemPartialUpdate(updates);
         if (Object.keys(payload).length === 0) return;
 
-        const updatedWorkItem = enrichedWorkItemToUI(
-          await projectApi.updateWorkItemPartial(
-            selectedWorkItem.projectSlug,
+        if (selectedWorkItem.projectSlug) {
+          const updatedWorkItem = enrichedWorkItemToUI(
+            await projectApi.updateWorkItemPartial(
+              selectedWorkItem.projectSlug,
+              selectedWorkItem.shortId,
+              payload
+            )
+          );
+          setSelectedWorkItem({
+            ...selectedWorkItem,
+            workItem: updatedWorkItem,
+          });
+        } else {
+          const updatedWorkItem = applyWorkItemPatch(
+            selectedWorkItem.workItem,
+            updates
+          );
+          await projectApi.writeStandaloneWorkItem(
             selectedWorkItem.shortId,
-            payload
-          )
-        );
-        setSelectedWorkItem({
-          ...selectedWorkItem,
-          workItem: updatedWorkItem,
-        });
+            toStandaloneFrontmatter(updatedWorkItem, selectedWorkItem.shortId),
+            updatedWorkItem.spec ?? ""
+          );
+          setSelectedWorkItem({
+            ...selectedWorkItem,
+            workItem: updatedWorkItem,
+          });
+        }
         await emit("orgii-data-changed");
       } catch (error) {
         logger.error("Failed to update chat panel work item", error);
       }
     },
     [onUpdateWorkItem, selectedWorkItem, setSelectedWorkItem]
+  );
+
+  const handleOpenSession = useCallback(
+    (sessionId: string) => {
+      setContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
+      setActiveSessionId(sessionId);
+      setWorkstationActiveSessionId(sessionId);
+    },
+    [setActiveSessionId, setContentMode, setWorkstationActiveSessionId]
+  );
+
+  const activeLinkedSession = selectedWorkItem.workItem.linkedSessions?.find(
+    (session) => session.status === "running"
   );
 
   const workItemContentKey = `${selectedWorkItem.projectSlug}:${
@@ -141,7 +233,10 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
   );
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+    <div
+      className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
+      data-testid="chat-panel-work-item-detail"
+    >
       <WorkItemContent
         key={workItemContentKey}
         workItem={selectedWorkItem.workItem}
@@ -150,6 +245,8 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
         projectSlug={selectedWorkItem.projectSlug}
         shortId={selectedWorkItem.shortId}
         headerProperties={inlineProperties}
+        onOpenSession={handleOpenSession}
+        activeAgentSessionId={activeLinkedSession?.session_id ?? null}
         hideTitleHeader
         showHeaderPropertiesWhenTitleHidden
       />

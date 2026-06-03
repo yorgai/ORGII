@@ -38,16 +38,16 @@ export const SESSION_CONFIG = {
 // ============================================
 //
 // User-selectable picker shows the three entries in `AGENT_EXEC_MODES`:
-//   build / plan / investigate (surfaced as "Ask").
+//   build / plan / ask.
 // `debug`, `review`, and `wingman` remain valid wire values but are hidden
 // from the picker (`debug` was removed from the UI on 2026-06-02; `review`
 // drives background work-item review flows; `wingman` is the passive
-// observer mode). Legacy `ask` / `explore` values in localStorage are
-// migrated to `investigate` at load time (see `creatorDefaultExecModeAtom`).
+// observer mode). Legacy `explore` values in localStorage are migrated to
+// `ask` at load time (see `creatorDefaultExecModeAtom`).
 
 export type AgentExecMode =
   | "build"
-  | "investigate"
+  | "ask"
   | "plan"
   | "debug"
   | "review"
@@ -60,8 +60,8 @@ export const DEFAULT_AGENT_EXEC_MODE: AgentExecMode = "build";
  *
  * Use this — NOT `AGENT_EXEC_MODES.map(m => m.id)` — when validating an
  * incoming exec mode from Rust (WS events, session records, persisted
- * settings). `AGENT_EXEC_MODES` is the *picker* list (build/investigate/
- * plan/debug only). The full union also includes `review` (internal flows)
+ * settings). `AGENT_EXEC_MODES` is the *picker* list (build/ask/plan only).
+ * The full union also includes `review` (internal flows)
  * and `wingman` (passive-observer mode). Validating against the picker
  * list silently coerced wingman/review sessions to `"build"`, which
  * re-enabled write tools on a read-only / passive session — the exact
@@ -70,18 +70,22 @@ export const DEFAULT_AGENT_EXEC_MODE: AgentExecMode = "build";
 export const ALL_AGENT_EXEC_MODES: ReadonlySet<AgentExecMode> =
   new Set<AgentExecMode>([
     "build",
-    "investigate",
+    "ask",
     "plan",
     "debug",
     "review",
     "wingman",
   ]);
 
-export function isAgentExecMode(value: unknown): value is AgentExecMode {
-  return (
-    typeof value === "string" &&
+export function normalizeAgentExecMode(value: unknown): AgentExecMode | null {
+  return typeof value === "string" &&
     (ALL_AGENT_EXEC_MODES as ReadonlySet<string>).has(value)
-  );
+    ? (value as AgentExecMode)
+    : null;
+}
+
+export function isAgentExecMode(value: unknown): value is AgentExecMode {
+  return normalizeAgentExecMode(value) === value;
 }
 
 export interface AgentExecModeEntry {
@@ -108,9 +112,9 @@ export const AGENT_EXEC_MODES: AgentExecModeEntry[] = [
     description: "Draft a plan file for user review — no direct edits",
   },
   {
-    id: "investigate",
+    id: "ask",
     icon: Search,
-    i18nKey: "planner.modes.investigate",
+    i18nKey: "planner.modes.ask",
     name: "Ask",
     description: "Read-only research — search + read + ask",
   },

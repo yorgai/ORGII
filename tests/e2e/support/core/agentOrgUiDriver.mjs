@@ -691,8 +691,7 @@ export async function selectRenderedExecMode(mode) {
   const pillSelector = '[data-testid="agent-exec-mode-pill"]';
   const pillRendered = await execJS(js.exists(pillSelector));
   if (pillRendered) {
-    const expectedLabels =
-      mode === "investigate" ? ["investigate", "ask"] : [mode];
+    const expectedLabels = mode === "ask" ? ["ask"] : [mode];
     const currentText = await execJS(js.text(pillSelector));
     if (
       expectedLabels.some((label) =>

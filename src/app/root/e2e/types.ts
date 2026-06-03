@@ -189,6 +189,7 @@ export interface E2EHelpers {
       additionalDirectories: string[];
     }>
   >;
+  clearWorkspaceRepos: () => Promise<Result<{ cleared: true }>>;
   readSessionWorkspaceFromDb: (
     sessionId: string
   ) => Promise<Result<{ result: Json }>>;

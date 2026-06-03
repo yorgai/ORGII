@@ -161,6 +161,7 @@ function createWorkItemRow(orgId: string, label: string): NavigationMenuItem {
     icon: SquarePen,
     iconName: "square-pen",
     visualTone: "secondary",
+    dataTestId: `projects-work-item-create-${orgId}`,
   };
 }
 

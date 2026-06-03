@@ -32,7 +32,7 @@ use database::db::get_connection;
 pub fn is_supported_agent_org_remote_mode(mode: AgentExecMode) -> bool {
     matches!(
         mode,
-        AgentExecMode::Build | AgentExecMode::Investigate | AgentExecMode::Plan
+        AgentExecMode::Build | AgentExecMode::Ask | AgentExecMode::Plan
     )
 }
 
@@ -145,7 +145,7 @@ pub enum AgentMessage {
     /// the next turn mode. `accepted = false` keeps the member in plan
     /// mode so it can revise and re-submit. When omitted, `next_mode`
     /// defaults to `Build` for approvals and `Plan` for rejections.
-    /// Only `Build`, `Investigate`, and `Plan` are accepted for Agent
+    /// Only `Build`, `Ask`, and `Plan` are accepted for Agent
     /// Org remote mode control while Review/Debug/Wingman remain outside
     /// the coordinator scheduling contract.
     PlanApprovalResponse {
@@ -404,7 +404,7 @@ impl AgentMessage {
                 }
                 if let Some(mode) = next_mode {
                     if !is_supported_agent_org_remote_mode(*mode) {
-                        return Err("PlanApprovalResponse.next_mode must be one of: build, investigate, plan".into());
+                        return Err("PlanApprovalResponse.next_mode must be one of: build, ask, plan".into());
                     }
                 }
             }
@@ -490,7 +490,7 @@ impl AgentMessage {
                 }
                 if !is_supported_agent_org_remote_mode(*mode) {
                     return Err(
-                        "ExecModeSetRequest.mode must be one of: build, investigate, plan".into(),
+                        "ExecModeSetRequest.mode must be one of: build, ask, plan".into(),
                     );
                 }
                 if let Some(r) = reason {
@@ -1333,13 +1333,13 @@ mod tests {
     fn exec_mode_set_request_round_trips_through_serde() {
         let msg = AgentMessage::ExecModeSetRequest {
             request_id: RequestId("req-mode-rt".into()),
-            mode: AgentExecMode::Investigate,
+            mode: AgentExecMode::Ask,
             reason: None,
         };
         let json = serde_json::to_string(&msg).unwrap();
         let parsed: AgentMessage = serde_json::from_str(&json).unwrap();
         assert_eq!(msg, parsed);
         assert!(json.contains("\"kind\":\"exec_mode_set_request\""));
-        assert!(json.contains("\"mode\":\"investigate\""));
+        assert!(json.contains("\"mode\":\"ask\""));
     }
 }

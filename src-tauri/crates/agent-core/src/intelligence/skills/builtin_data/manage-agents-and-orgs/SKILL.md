@@ -68,8 +68,8 @@ Use this before any update to capture the current state.
 {
   "action": "create",
   "name": "Research Assistant",
-  "description": "Deep research agent for technical topics. Use for investigating libraries, comparing tools, or summarizing documentation.",
-  "soul_content": "You are a technical research assistant. Investigate, compare, and summarize technical topics clearly. Cite sources. Structure responses with headers and bullet points.",
+  "description": "Deep research agent for technical topics. Use for researching libraries, comparing tools, or summarizing documentation.",
+  "soul_content": "You are a technical research assistant. Research, compare, and summarize technical topics clearly. Cite sources. Structure responses with headers and bullet points.",
   "temperature": 0.4,
   "max_tokens": 8000,
   "context_window": 128000

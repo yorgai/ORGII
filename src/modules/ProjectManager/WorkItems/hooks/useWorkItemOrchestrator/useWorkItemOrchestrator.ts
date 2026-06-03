@@ -28,7 +28,7 @@ const COMPLETED_WORK_ITEM_STATUS = "completed" as const;
 
 const VALID_EXEC_MODES = new Set<string>([
   "build",
-  "investigate",
+  "ask",
   "plan",
   "debug",
   "review",
@@ -36,7 +36,7 @@ const VALID_EXEC_MODES = new Set<string>([
 
 function normalizeExecMode(raw: string | undefined): AgentExecMode | undefined {
   if (!raw) return undefined;
-  if (raw === "ask" || raw === "explore") return "investigate";
+  if (raw === "explore") return "ask";
   if (VALID_EXEC_MODES.has(raw)) return raw as AgentExecMode;
   return undefined;
 }

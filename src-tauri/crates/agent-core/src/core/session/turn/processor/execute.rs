@@ -267,7 +267,7 @@ mod tests {
     // Tests for effective_max_iterations() — the min(session_cap, mode_cap) logic.
     // We exercise the logic directly since we cannot construct UnifiedMessageProcessor
     // in unit tests without a full runtime. The mode cap values are:
-    //   Plan / Investigate / Review => 30
+    //   Plan / Ask / Review => 30
     //   Build / Debug / Wingman / None => no mode cap
     #[test]
     fn effective_max_iterations_plan_caps_at_30() {
@@ -276,7 +276,7 @@ mod tests {
         let session_cap = turn_max_iterations_from_session_model(500);
         let mode_cap: Option<u32> = match Some(AgentExecMode::Plan) {
             Some(AgentExecMode::Plan) => Some(30),
-            Some(AgentExecMode::Investigate) => Some(30),
+            Some(AgentExecMode::Ask) => Some(30),
             Some(AgentExecMode::Review) => Some(30),
             _ => None,
         };
@@ -290,11 +290,11 @@ mod tests {
     #[test]
     fn effective_max_iterations_session_model_wins_if_lower() {
         use crate::session::AgentExecMode;
-        // session model has 10; Investigate mode cap is 30 → effective is 10
+        // session model has 10; Ask mode cap is 30 → effective is 10
         let session_cap = turn_max_iterations_from_session_model(10);
-        let mode_cap: Option<u32> = match Some(AgentExecMode::Investigate) {
+        let mode_cap: Option<u32> = match Some(AgentExecMode::Ask) {
             Some(AgentExecMode::Plan) => Some(30),
-            Some(AgentExecMode::Investigate) => Some(30),
+            Some(AgentExecMode::Ask) => Some(30),
             Some(AgentExecMode::Review) => Some(30),
             _ => None,
         };
@@ -312,7 +312,7 @@ mod tests {
         let session_cap = turn_max_iterations_from_session_model(500);
         let mode_cap: Option<u32> = match Some(AgentExecMode::Build) {
             Some(AgentExecMode::Plan) => Some(30),
-            Some(AgentExecMode::Investigate) => Some(30),
+            Some(AgentExecMode::Ask) => Some(30),
             Some(AgentExecMode::Review) => Some(30),
             _ => None,
         };

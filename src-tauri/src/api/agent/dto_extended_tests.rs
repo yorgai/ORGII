@@ -5,8 +5,8 @@
 mod dto_extended_tests {
     // Use full paths since this module is included at the root level of dto.rs
     use crate::api::agent::dto::{
-        AgentLearningsView, AgentRuntimeView, AutonomyLevelView, CompactionView,
-        EmbeddingView, ExecutionModeView, IntegrationsView, SkillsView, ToolSelectionView,
+        AgentLearningsView, AgentRuntimeView, AutonomyLevelView, CompactionView, EmbeddingView,
+        ExecutionModeView, IntegrationsView, SkillsView, ToolSelectionView,
     };
     use agent_core::core::definitions::builtin::{get_builtin_agent, OS_AGENT_ID, SDE_AGENT_ID};
     use agent_core::core::definitions::resolved::ResolvedAgent;

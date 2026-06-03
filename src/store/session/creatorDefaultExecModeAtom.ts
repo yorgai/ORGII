@@ -11,25 +11,23 @@
  * components (ChatPanel `ModePill`, status bars) must read
  * `session.agentExecMode` directly and must NOT fall back to this atom.
  *
- * Legacy values `"ask"` and `"explore"` (picker entries removed in the
- * 2026-04-13 mode revamp) are migrated to `"investigate"` on first read so
- * users who had one of those selected do not see an orphaned pill.
+ * Legacy value `"explore"` is migrated to `"ask"` on first read so users do
+ * not see an orphaned pill.
  *
  * Storage key kept as `orgii:agentExecMode` for backwards-compat with existing
  * user installs.
  */
 import { atomWithStorage } from "jotai/utils";
 
-import { isAgentExecMode } from "@src/config/sessionCreatorConfig";
+import { normalizeAgentExecMode } from "@src/config/sessionCreatorConfig";
 import type { AgentExecMode } from "@src/features/SessionCreator/config";
 
 const STORAGE_KEY = "orgii:agentExecMode";
 
 function migrateLegacyMode(raw: unknown): AgentExecMode {
   if (typeof raw !== "string") return "build";
-  if (raw === "ask" || raw === "explore") return "investigate";
-  if (isAgentExecMode(raw)) return raw;
-  return "build";
+  if (raw === "explore") return "ask";
+  return normalizeAgentExecMode(raw) ?? "build";
 }
 
 const storage = {

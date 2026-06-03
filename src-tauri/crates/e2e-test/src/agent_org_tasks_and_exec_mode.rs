@@ -1631,7 +1631,7 @@ pub async fn member_cannot_send_exec_mode_set_request(cfg: &Config) -> bool {
 }
 
 /// Validation pin. Coordinator must supply a supported remote `mode`
-/// string (`build`/`investigate`/`plan`). Unknown values and globally
+/// string (`build`/`ask`/`plan`). Unknown values and globally
 /// known-but-currently-unsupported values such as `debug` are rejected
 /// with `invalid_params`. Without this pin the LLM could stage a typo
 /// or an unavailable workflow that silently derails the member.

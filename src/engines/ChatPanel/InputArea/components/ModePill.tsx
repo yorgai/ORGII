@@ -32,6 +32,7 @@ import SelectorPill from "@src/components/SelectorPill";
 import {
   AGENT_EXEC_MODES,
   type AgentExecMode,
+  normalizeAgentExecMode,
 } from "@src/config/sessionCreatorConfig";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import { useDropdownEngine } from "@src/hooks/dropdown";
@@ -74,7 +75,7 @@ const ModePill: React.FC<ModePillProps> = memo(
     const mode: AgentExecMode = isControlled
       ? (value as AgentExecMode)
       : isInSessionMode
-        ? ((sessionMode as AgentExecMode | undefined) ?? creatorDefault)
+        ? (normalizeAgentExecMode(sessionMode) ?? creatorDefault)
         : creatorDefault;
 
     const currentOption =

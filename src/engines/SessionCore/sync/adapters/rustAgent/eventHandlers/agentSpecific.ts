@@ -8,7 +8,7 @@ import { rpc } from "@src/api/tauri/rpc";
 import {
   type AgentExecMode,
   DEFAULT_AGENT_EXEC_MODE,
-  isAgentExecMode,
+  normalizeAgentExecMode,
 } from "@src/config/sessionCreatorConfig";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
@@ -45,7 +45,7 @@ import type { EventHandlerContext } from "./types";
 // but Rust legitimately emits both — silently coercing them to `"build"`
 // would re-enable write tools on a passive/review session.
 function coerceAgentExecMode(raw: string | undefined): AgentExecMode {
-  return isAgentExecMode(raw) ? raw : DEFAULT_AGENT_EXEC_MODE;
+  return normalizeAgentExecMode(raw) ?? DEFAULT_AGENT_EXEC_MODE;
 }
 
 // ============================================================================

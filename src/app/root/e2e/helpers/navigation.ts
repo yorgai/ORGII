@@ -55,23 +55,9 @@ export function createNavigationHelpers(store: E2EStore) {
       store.set(chatPanelMaximizedAtom, false);
       const tab = createProjectWorkItemsIndexTab();
       const current = store.get(workstationLayoutAtom);
-      const currentPane = current?.mainPane ?? {
-        tabs: [],
-        activeTabId: null,
-      };
-      const retainedTabs = currentPane.tabs.filter(
-        (tabItem) =>
-          tabItem.type !== "project-work-items" &&
-          tabItem.type !== "project-workitems" &&
-          tabItem.type !== "project-linear-projects" &&
-          tabItem.type !== "project-linear-work-items"
-      );
       const nextLayout = {
         ...current,
-        mainPane: openTab(
-          { tabs: retainedTabs, activeTabId: currentPane.activeTabId },
-          tab
-        ),
+        mainPane: openTab({ tabs: [], activeTabId: null }, tab),
       };
       localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(nextLayout));
       store.set(workstationLayoutAtom, nextLayout);
@@ -112,22 +98,9 @@ export function createNavigationHelpers(store: E2EStore) {
         PROJECT_DETAIL_SURFACE_VIEW.WORK_ITEMS
       );
       const current = store.get(workstationLayoutAtom);
-      const currentPane = current?.mainPane ?? {
-        tabs: [],
-        activeTabId: null,
-      };
-      const retainedTabs = currentPane.tabs.filter(
-        (tabItem) =>
-          tabItem.type !== "project-workitems" &&
-          tabItem.type !== "project-linear-projects" &&
-          tabItem.type !== "project-linear-work-items"
-      );
       const nextLayout = {
         ...current,
-        mainPane: openTab(
-          { tabs: retainedTabs, activeTabId: currentPane.activeTabId },
-          tab
-        ),
+        mainPane: openTab({ tabs: [], activeTabId: null }, tab),
       };
       localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(nextLayout));
       store.set(workstationLayoutAtom, nextLayout);

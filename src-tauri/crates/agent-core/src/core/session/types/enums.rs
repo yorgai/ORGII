@@ -145,17 +145,17 @@ impl From<crate::persistence::db_helpers::AgentSessionStatus> for SessionStatus 
 ///
 /// This is the canonical mode enum used across the entire session layer.
 ///
-/// User-facing picker surfaces five variants: `Build`, `Investigate`, `Plan`, `Debug`,
-/// `Wingman`. `Review` is retained as an internal mode for work-item review pipelines
-/// (hidden from the picker).
+/// User-facing picker surfaces three variants: `Build`, `Ask`, and `Plan`.
+/// `Debug`, `Review`, and `Wingman` remain valid internal modes hidden from
+/// the picker.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AgentExecMode {
     /// Default coding mode — full tool access.
     #[default]
     Build,
-    /// Investigation mode — read-only research (merged successor of Ask + Explore).
-    Investigate,
+    /// Ask mode — read-only research / Q&A.
+    Ask,
     /// Planning mode — read-only, produces a persisted plan file gated by user approval.
     Plan,
     /// Debug mode — focused on diagnostics and root-cause analysis.
@@ -172,7 +172,7 @@ impl AgentExecMode {
     pub fn as_str(&self) -> &'static str {
         match self {
             AgentExecMode::Build => "build",
-            AgentExecMode::Investigate => "investigate",
+            AgentExecMode::Ask => "ask",
             AgentExecMode::Plan => "plan",
             AgentExecMode::Debug => "debug",
             AgentExecMode::Review => "review",
@@ -185,13 +185,13 @@ impl AgentExecMode {
     ///
     /// Returns `None` for unknown variants. The previous catch-all that
     /// silently mapped any unrecognised mode to `Build` is a safety
-    /// reversal: `Plan` / `Investigate` / `Review` are read-only modes,
-    /// and a typo in the wire payload would silently re-enable write
-    /// tools. Callers must reject unknown modes instead.
+    /// reversal: `Plan` / `Ask` / `Review` are read-only modes, and a typo
+    /// in the wire payload would silently re-enable write tools. Callers
+    /// must reject unknown modes instead.
     pub fn parse(mode: &str) -> Option<Self> {
         match mode.to_lowercase().as_str() {
             "build" => Some(AgentExecMode::Build),
-            "investigate" => Some(AgentExecMode::Investigate),
+            "ask" => Some(AgentExecMode::Ask),
             "plan" => Some(AgentExecMode::Plan),
             "debug" => Some(AgentExecMode::Debug),
             "review" => Some(AgentExecMode::Review),

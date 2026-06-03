@@ -50,6 +50,7 @@ export interface ProjectContentEditorProps {
   descriptionClassName?: string;
   descriptionMaxHeight?: number | string;
   repoPath?: string | null;
+  dataTestId?: string;
 }
 
 const ProjectContentEditor = forwardRef<
@@ -79,6 +80,7 @@ const ProjectContentEditor = forwardRef<
       descriptionClassName = "",
       descriptionMaxHeight,
       repoPath,
+      dataTestId,
     },
     ref
   ) => {
@@ -182,7 +184,10 @@ const ProjectContentEditor = forwardRef<
       (onSummaryChange !== undefined || (summary && summary.length > 0));
 
     return (
-      <div className={`w-full min-w-0 ${className}`.trim()}>
+      <div
+        className={`w-full min-w-0 ${className}`.trim()}
+        data-testid={dataTestId}
+      >
         {titleVisible && (
           <div className="flex w-full min-w-0 items-start gap-3">
             <Input

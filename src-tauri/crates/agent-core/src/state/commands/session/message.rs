@@ -403,7 +403,7 @@ fn restore_mode_before_plan_entry(
 ///   * `None` or empty string → `AgentExecMode::Build` (historical wire default).
 ///   * `Some("plan" | "build" | …)` → parsed via `AgentExecMode::parse`.
 ///   * `Some(<unknown>)` → `Err(...)` so a typo cannot silently downgrade a
-///     read-only mode (`Plan` / `Investigate` / `Review`) into `Build` (full
+///     read-only mode (`Plan` / `Ask` / `Review`) into `Build` (full
 ///     write access).
 ///
 /// **Pinned invariant for `send_message_impl_for_wake`**: that helper

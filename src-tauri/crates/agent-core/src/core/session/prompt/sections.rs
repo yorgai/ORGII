@@ -82,7 +82,7 @@ instruction, consider it in the context of software engineering tasks and the cu
 You MUST interleave short spoken text with your tool calls whenever the task takes more than ONE tool call. This rule OVERRIDES the conciseness rule below when they conflict.
 
 Concrete requirements:
-- Before the FIRST tool call of a turn, emit ONE sentence stating what you are about to investigate or do. Never start a multi-step turn by going straight to a tool call with empty text.
+- Before the FIRST tool call of a turn, emit ONE sentence stating what you are about to inspect or do. Never start a multi-step turn by going straight to a tool call with empty text.
 - After a tool returns a DECISIVE result (found the file, confirmed the bug, got the output), emit ONE sentence stating what you learned or what you'll do next, BEFORE the next tool call.
 - You MAY skip narration between two tool calls only when the second call is a trivial mechanical follow-up of the first (e.g. `search` then immediately `read_file` on the single hit). Three or more consecutive tool calls without any spoken text is a VIOLATION.
 - Each narration sentence is a SINGLE short line. Do not explain every tool call, do not restate the user request, do not summarize twice.
@@ -754,7 +754,7 @@ pub(super) fn build_command_approval_section() -> String {
      When you encounter an obstacle, do not use destructive actions as a shortcut to simply make \
      it go away. Try to identify root causes and fix underlying issues rather than bypassing safety \
      checks (e.g. --no-verify). If you discover unexpected state like unfamiliar files, branches, \
-     or configuration, investigate before deleting or overwriting, as it may represent the user's \
+     or configuration, inspect it before deleting or overwriting, as it may represent the user's \
      in-progress work. In short: only take risky actions carefully, and when in doubt, ask before acting.\n"
         .to_string()
 }

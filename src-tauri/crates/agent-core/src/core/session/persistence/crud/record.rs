@@ -102,7 +102,7 @@ pub struct UnifiedSessionRecord {
     pub key_source: KeySource,
 
     /// Per-session execution mode picked by the user via the in-session
-    /// `ModePill` (build / investigate / plan / debug / review / wingman).
+    /// `ModePill` (build / ask / plan / debug / review / wingman).
     ///
     /// `None` means the user has never patched this session — the frontend
     /// falls back to the global `creatorDefaultExecModeAtom` until the
