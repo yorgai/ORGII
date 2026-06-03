@@ -61,8 +61,8 @@ function uiToPartialUpdate(
   if (data.priority !== undefined) {
     updates.priority = data.priority;
   }
-  if (data.project?.id) {
-    updates.project = data.project.id;
+  if ("project" in data) {
+    updates.project = data.project?.id ?? null;
   }
   // WorkItem uses `star`, not `starred`
   if (data.star !== undefined) {

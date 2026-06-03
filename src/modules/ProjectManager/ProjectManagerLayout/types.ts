@@ -36,8 +36,8 @@ export type CreateWorkItemHandler = (
 ) => void;
 
 export type ExpandWorkItemToTabHandler = (
-  projectId: string,
-  projectName: string,
+  projectId: string | undefined,
+  projectName: string | undefined,
   projectSlug: string | undefined,
   workItemId: string,
   workItemName: string,

@@ -253,12 +253,19 @@ const CustomAgentDetailView: React.FC<CustomAgentDetailViewProps> = ({
     ),
     [tabs, activeTab, setActiveTab, actions]
   );
+  const rootProps = useMemo(
+    () =>
+      ({
+        "data-active-tab": activeTab,
+      }) as React.HTMLAttributes<HTMLDivElement>,
+    [activeTab]
+  );
 
   if (!loaded) {
     return (
       <DetailPanelContainer
         testId="agent-orgs-custom-detail"
-        rootProps={{ "data-active-tab": activeTab }}
+        rootProps={rootProps}
       >
         {headerElement}
         <Placeholder variant="loading" />
@@ -273,7 +280,7 @@ const CustomAgentDetailView: React.FC<CustomAgentDetailViewProps> = ({
       return (
         <DetailPanelContainer
           testId="agent-orgs-custom-detail"
-          rootProps={{ "data-active-tab": activeTab }}
+          rootProps={rootProps}
         >
           <CustomAgentToolsSection
             agentId={agent.id}
@@ -303,7 +310,7 @@ const CustomAgentDetailView: React.FC<CustomAgentDetailViewProps> = ({
   return (
     <DetailPanelContainer
       testId="agent-orgs-custom-detail"
-      rootProps={{ "data-active-tab": activeTab }}
+      rootProps={rootProps}
     >
       {headerElement}
       <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>

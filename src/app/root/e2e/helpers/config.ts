@@ -104,7 +104,7 @@ export function createConfigHelpers() {
 
   const listAgentDefs = async (): Promise<Result<{ defs: Json[] }>> => {
     try {
-      const defs = (await rpc.agentDef.listAll()) as Json[];
+      const defs = (await rpc.agentDef.listAll()) as unknown as Json[];
       return { ok: true, defs };
     } catch (err) {
       return asError(err);

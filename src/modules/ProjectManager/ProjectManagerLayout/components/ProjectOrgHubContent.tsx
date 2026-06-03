@@ -33,8 +33,8 @@ export interface ProjectOrgHubContentProps {
   onCreateProject: () => void;
   onCreateWorkItem: () => void;
   onExpandWorkItemToTab: (
-    projectId: string,
-    projectName: string,
+    projectId: string | undefined,
+    projectName: string | undefined,
     projectSlug: string | undefined,
     workItemId: string,
     workItemName: string,

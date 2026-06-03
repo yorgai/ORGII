@@ -440,8 +440,8 @@ export function createProjectWorkItemsTab(
 // ============================================
 
 export interface WorkItemDetailTabData {
-  projectId: string;
-  projectName: string;
+  projectId?: string;
+  projectName?: string;
   projectSlug?: string;
   workItemId: string;
   workItemName: string;
@@ -480,8 +480,8 @@ export function getWorkItemDetailTabChrome(workItemName?: string) {
 }
 
 export function createWorkItemDetailTab(
-  projectId: string,
-  projectName: string,
+  projectId: string | undefined,
+  projectName: string | undefined,
   workItemId: string,
   workItemName: string,
   projectSlug?: string,

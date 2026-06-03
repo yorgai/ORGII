@@ -248,8 +248,8 @@ export interface NewProjectTabData {
  * Data stored in a single work item detail tab (expanded from inline panel)
  */
 export interface WorkItemDetailTabData {
-  projectId: string;
-  projectName: string;
+  projectId?: string;
+  projectName?: string;
   projectSlug?: string;
   dataPath?: string;
   workItemId: string;

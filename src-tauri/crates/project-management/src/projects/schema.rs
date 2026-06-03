@@ -260,7 +260,7 @@ fn init_local_tables(conn: &Connection) -> SqliteResult<()> {
         CREATE TABLE IF NOT EXISTS workitems (
             id                TEXT PRIMARY KEY,
             org_id            TEXT NOT NULL DEFAULT 'personal-org' REFERENCES project_orgs(id) ON DELETE RESTRICT,
-            project_id          TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            project_id          TEXT REFERENCES projects(id) ON DELETE SET NULL,
             short_id          TEXT NOT NULL,
             title             TEXT NOT NULL,
             body              TEXT NOT NULL DEFAULT '',
@@ -281,9 +281,15 @@ fn init_local_tables(conn: &Connection) -> SqliteResult<()> {
             deleted_at         INTEGER,
             local_version     INTEGER NOT NULL DEFAULT 0
         );
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_workitems_short_id
-            ON workitems(project_id, short_id);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_workitems_project_short_id
+            ON workitems(project_id, short_id)
+            WHERE project_id IS NOT NULL;
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_workitems_standalone_short_id
+            ON workitems(org_id, short_id)
+            WHERE project_id IS NULL;
         CREATE INDEX IF NOT EXISTS idx_workitems_org ON workitems(org_id);
+        CREATE INDEX IF NOT EXISTS idx_workitems_org_status
+            ON workitems(org_id, status);
         CREATE INDEX IF NOT EXISTS idx_workitems_project_status
             ON workitems(project_id, status);
         CREATE INDEX IF NOT EXISTS idx_workitems_assigned_human ON workitems(assigned_human_id);

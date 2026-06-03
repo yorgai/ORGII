@@ -206,10 +206,12 @@ const OrgDetailView: React.FC<OrgDetailViewProps> = ({
   return (
     <DetailPanelContainer
       testId="agent-orgs-org-detail"
-      rootProps={{
-        "data-dirty": isDirty ? "true" : "false",
-        "data-valid": isValid ? "true" : "false",
-      }}
+      rootProps={
+        {
+          "data-dirty": isDirty ? "true" : "false",
+          "data-valid": isValid ? "true" : "false",
+        } as React.HTMLAttributes<HTMLDivElement>
+      }
     >
       <InternalHeader
         noPanelHeader

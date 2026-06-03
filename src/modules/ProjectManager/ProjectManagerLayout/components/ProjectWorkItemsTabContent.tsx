@@ -12,6 +12,7 @@ import {
   type WorkItemPartialUpdate,
   enrichedWorkItemToUI,
   projectApi,
+  workItemDataToUI,
 } from "@src/api/http/project";
 import TabPill from "@src/components/TabPill";
 import type { TabPillItem } from "@src/components/TabPill";
@@ -48,8 +49,8 @@ interface ProjectWorkItemsTabContentProps {
   orgId?: string;
   allowExternalSources?: boolean;
   onOpenWorkItem: (
-    projectId: string,
-    projectName: string,
+    projectId: string | undefined,
+    projectName: string | undefined,
     projectSlug: string | undefined,
     workItemId: string,
     workItemName: string
@@ -67,7 +68,7 @@ interface AggregatedWorkItemProject {
 }
 
 interface AggregatedWorkItem {
-  project: AggregatedWorkItemProject;
+  project?: AggregatedWorkItemProject;
   item: WorkspaceWorkItem;
 }
 
@@ -124,27 +125,29 @@ export const ProjectWorkItemsTabContent: React.FC<
       setError(null);
       try {
         const projects = await projectApi.readProjects({ orgId });
-        const [localEntryGroups, linearWorkItems] = await Promise.all([
-          Promise.all(
-            projects.map(async (project) => {
-              const projectWorkItems = await projectApi.readWorkItemsEnriched(
-                project.slug,
-                { orgId }
-              );
-              return projectWorkItems.map((workItem) => ({
-                project,
-                item: {
-                  ...enrichedWorkItemToUI(workItem),
-                  project: {
-                    id: project.meta.id,
-                    name: project.meta.name,
+        const [localEntryGroups, standaloneWorkItems, linearWorkItems] =
+          await Promise.all([
+            Promise.all(
+              projects.map(async (project) => {
+                const projectWorkItems = await projectApi.readWorkItemsEnriched(
+                  project.slug,
+                  { orgId }
+                );
+                return projectWorkItems.map((workItem) => ({
+                  project,
+                  item: {
+                    ...enrichedWorkItemToUI(workItem),
+                    project: {
+                      id: project.meta.id,
+                      name: project.meta.name,
+                    },
                   },
-                },
-              }));
-            })
-          ),
-          includeExternalSources ? loadWorkspaceLinearWorkItems() : [],
-        ]);
+                }));
+              })
+            ),
+            projectApi.readStandaloneWorkItems({ orgId }),
+            includeExternalSources ? loadWorkspaceLinearWorkItems() : [],
+          ]);
         if (cancelled?.()) return;
         setProjectOptions(
           projects.map((project) => ({
@@ -153,6 +156,13 @@ export const ProjectWorkItemsTabContent: React.FC<
             slug: project.slug,
           }))
         );
+        const standaloneEntries = standaloneWorkItems.map((workItem) => ({
+          item: workItemDataToUI(workItem, {
+            labelMap: new Map(),
+            memberMap: new Map(),
+            projectNameMap: new Map(),
+          }),
+        }));
         const linearEntries = linearWorkItems.map((workItem) => ({
           project: {
             meta: {
@@ -163,7 +173,11 @@ export const ProjectWorkItemsTabContent: React.FC<
           },
           item: workItem,
         }));
-        setWorkItemsByProject([...localEntryGroups.flat(), ...linearEntries]);
+        setWorkItemsByProject([
+          ...localEntryGroups.flat(),
+          ...standaloneEntries,
+          ...linearEntries,
+        ]);
         loadedRef.current = true;
         setLoaded(true);
       } catch (err) {
@@ -255,9 +269,9 @@ export const ProjectWorkItemsTabContent: React.FC<
         return;
       }
       onOpenWorkItem(
-        workItem.project.meta.id,
-        workItem.project.meta.name,
-        workItem.project.slug,
+        workItem.project?.meta.id,
+        workItem.project?.meta.name,
+        workItem.project?.slug,
         workItem.item.session_id,
         workItem.item.name || t("workItems.untitledWorkItem")
       );
@@ -268,7 +282,7 @@ export const ProjectWorkItemsTabContent: React.FC<
   const handleUpdateWorkItem = useCallback(
     async (workItemId: string, updates: Partial<WorkItemExtended>) => {
       const entry = workItemById.get(workItemId);
-      if (!entry?.project.slug) return;
+      if (!entry?.project?.slug) return;
       if (entry.item.workspaceSource?.source === WORKSPACE_SOURCE.LINEAR)
         return;
 
@@ -387,6 +401,7 @@ export const ProjectWorkItemsTabContent: React.FC<
     try {
       const entriesByProjectSlug = new Map<string, string[]>();
       for (const entry of selectedLocalEntries) {
+        if (!entry.project?.slug) continue;
         const currentShortIds =
           entriesByProjectSlug.get(entry.project.slug) ?? [];
         currentShortIds.push(entry.item.session_id);

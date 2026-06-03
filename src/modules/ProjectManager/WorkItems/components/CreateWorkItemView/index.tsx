@@ -303,12 +303,9 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
         editorRef.current?.getMarkdown()?.trim() ?? draft.description;
       const descriptionText = unresolveImagePathsForStorage(rawMarkdown);
 
-      if (!selectedProjectSlug || !draft.projectId) {
-        Message.error(t("properties.noProjectSelected"));
-        return;
-      }
-
-      const shortId = await projectApi.allocateWorkItemId(selectedProjectSlug);
+      const shortId = selectedProjectSlug
+        ? await projectApi.allocateWorkItemId(selectedProjectSlug)
+        : await projectApi.allocateStandaloneWorkItemId();
       const frontmatter: WorkItemFrontmatter = {
         id: shortId,
         short_id: shortId,
@@ -331,12 +328,20 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
         schedule: draft.schedule ?? undefined,
       };
 
-      await projectApi.writeWorkItem(
-        selectedProjectSlug,
-        shortId,
-        frontmatter,
-        descriptionText
-      );
+      if (selectedProjectSlug) {
+        await projectApi.writeWorkItem(
+          selectedProjectSlug,
+          shortId,
+          frontmatter,
+          descriptionText
+        );
+      } else {
+        await projectApi.writeStandaloneWorkItem(
+          shortId,
+          frontmatter,
+          descriptionText
+        );
+      }
 
       await emit("orgii-data-changed");
       if (createMore) {
@@ -363,7 +368,6 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
     saving,
     projectId,
     projectSlug,
-    t,
   ]);
 
   useKeyboardSave(handleCreate, !saving && !!draft.name.trim());

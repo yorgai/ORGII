@@ -32,6 +32,7 @@ import { openExternalLink } from "@src/util/platform/ipcRenderer";
 
 import { SidebarBottomBar, SidebarHeaderNavButton } from "../blocks";
 import type { NavigationMenuItem } from "../components/NavigationMenu/config";
+import type { SidebarTab } from "../types";
 import { routeToMenuItem } from "../utils/menuFromRoutes";
 import DevRecordSidebar from "./DevRecordSidebar";
 import EconomySidebar from "./EconomySidebar";
@@ -46,7 +47,7 @@ const HOME_SIDEBAR_ICON_NAME = {
   economy: "badge-cent",
 } as const;
 
-const HOME_SIDEBAR_TABS = [];
+const HOME_SIDEBAR_TABS: SidebarTab[] = [];
 const noopSidebarTabChange = () => undefined;
 
 const MARKET_ROOT_PATH = ROUTES.app.market.tokenMarket.path.slice(

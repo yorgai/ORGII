@@ -225,10 +225,23 @@ export interface E2EHelpers {
     frontmatter: Json,
     body: string
   ) => Promise<{ ok: true } | Err>;
+  allocateStandaloneWorkItemId: () => Promise<Result<{ shortId: string }>>;
+  readStandaloneWorkItems: () => Promise<Result<{ items: Json[] }>>;
+  readStandaloneWorkItem: (shortId: string) => Promise<Result<{ item: Json }>>;
+  writeStandaloneWorkItem: (
+    shortId: string,
+    frontmatter: Json,
+    body: string
+  ) => Promise<{ ok: true } | Err>;
   deleteWorkItem: (
     projectSlug: string,
     shortId: string
   ) => Promise<{ ok: true } | Err>;
+  updateWorkItemPartial: (
+    projectSlug: string,
+    shortId: string,
+    updates: Json
+  ) => Promise<Result<{ item: Json }>>;
   readWorkItemsEnriched: (
     projectSlug: string
   ) => Promise<Result<{ items: Json[] }>>;
@@ -601,6 +614,7 @@ export interface E2EHelpers {
     workspacePath?: string | null
   ) => Promise<{ ok: true } | Err>;
   navigateTo: (path: string) => Promise<{ ok: true } | Err>;
+  openWorkspaceWorkItemsTab: () => Promise<{ ok: true } | Err>;
   openProjectWorkItemsTab: (
     projectId: string,
     projectName: string,

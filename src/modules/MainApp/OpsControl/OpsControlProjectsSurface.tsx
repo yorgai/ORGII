@@ -355,6 +355,7 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
                 _workItemId,
                 _workItemName
               ) => {
+                if (!projectId || !projectName) return;
                 handleSelectProject(projectId, projectName, projectSlug);
               }}
               onOpenLinearProjects={handleOpenLinearProjects}
@@ -405,6 +406,7 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
                 onOpenLinearProject={handleOpenLinearProjects}
                 allowExternalSources={activeOrgScope === STORY_ORG_SCOPE.ALL}
                 onOpenWorkItem={(projectId, projectName, projectSlug) => {
+                  if (!projectId || !projectName) return;
                   handleSelectProject(projectId, projectName, projectSlug);
                 }}
               />

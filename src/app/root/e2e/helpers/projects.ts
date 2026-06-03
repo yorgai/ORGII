@@ -4,6 +4,7 @@ import {
   type ProjectMeta,
   type RoutineDefinition,
   type WorkItemFrontmatter,
+  type WorkItemPartialUpdate,
   projectApi,
 } from "@src/api/http/project";
 import {
@@ -136,6 +137,59 @@ export function createProjectHelpers(store: E2EStore) {
     }
   };
 
+  const allocateStandaloneWorkItemId = async (): Promise<
+    Result<{ shortId: string }>
+  > => {
+    try {
+      const shortId = await projectApi.allocateStandaloneWorkItemId();
+      return { ok: true, shortId };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  const readStandaloneWorkItems = async (): Promise<
+    Result<{ items: Json[] }>
+  > => {
+    try {
+      const items =
+        (await projectApi.readStandaloneWorkItems()) as unknown as Json[];
+      return { ok: true, items };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  const readStandaloneWorkItem = async (
+    shortId: string
+  ): Promise<Result<{ item: Json }>> => {
+    try {
+      const item = (await projectApi.readStandaloneWorkItem(
+        shortId
+      )) as unknown as Json;
+      return { ok: true, item };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  const writeStandaloneWorkItem = async (
+    shortId: string,
+    frontmatter: Json,
+    body: string
+  ): Promise<{ ok: true } | Err> => {
+    try {
+      await projectApi.writeStandaloneWorkItem(
+        shortId,
+        frontmatter as unknown as WorkItemFrontmatter,
+        body
+      );
+      return { ok: true };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   const deleteWorkItem = async (
     projectSlug: string,
     shortId: string
@@ -143,6 +197,23 @@ export function createProjectHelpers(store: E2EStore) {
     try {
       await projectApi.deleteWorkItem(projectSlug, shortId);
       return { ok: true };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  const updateWorkItemPartial = async (
+    projectSlug: string,
+    shortId: string,
+    updates: Json
+  ): Promise<Result<{ item: Json }>> => {
+    try {
+      const item = (await projectApi.updateWorkItemPartial(
+        projectSlug,
+        shortId,
+        updates as unknown as WorkItemPartialUpdate
+      )) as unknown as Json;
+      return { ok: true, item };
     } catch (err) {
       return asError(err);
     }
@@ -236,7 +307,12 @@ export function createProjectHelpers(store: E2EStore) {
     listRoutineFires,
     readWorkItem,
     writeWorkItem,
+    allocateStandaloneWorkItemId,
+    readStandaloneWorkItems,
+    readStandaloneWorkItem,
+    writeStandaloneWorkItem,
     deleteWorkItem,
+    updateWorkItemPartial,
     readWorkItemsEnriched,
     testWorkItemScheduleLookup,
     runWorkItemSchedulerOnce,

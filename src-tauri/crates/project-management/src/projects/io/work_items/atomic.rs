@@ -143,7 +143,7 @@ where
         tx.query_row(
             "SELECT id, short_id, title, body, status, priority, assignee, assignee_type,
                     milestone, parent, start_date, target_date, created_at, updated_at,
-                    deleted_at, local_version
+                    deleted_at, local_version, org_id
              FROM workitems
              WHERE project_id = ?1 AND short_id = ?2",
             params![&project_id, short_id],
@@ -165,6 +165,7 @@ where
                     updated_at_ms: row.get::<_, i64>(13)?,
                     deleted_at_ms: row.get::<_, Option<i64>>(14)?,
                     local_version: row.get::<_, i64>(15)?,
+                    org_id: row.get::<_, String>(16)?,
                 })
             },
         )
@@ -206,7 +207,7 @@ where
         None => ExtrasPayload::default(),
     };
 
-    let mut frontmatter = build_frontmatter(&project_id, &core, labels, &extras);
+    let mut frontmatter = build_frontmatter(Some(project_id.clone()), &core, labels, &extras);
     let mut body = core.body.clone();
 
     // Snapshot every sync-tracked field's pre-mutation value so we can
@@ -229,37 +230,49 @@ where
     } else {
         from_iso8601(&frontmatter.created_at)
     };
-    let next_project_id = frontmatter
-        .project
-        .clone()
-        .unwrap_or_else(|| project_id.clone());
-    let next_org_id: String = map_db(
-        tx.query_row(
-            "SELECT org_id FROM projects WHERE id = ?1",
-            params![&next_project_id],
-            |row| row.get(0),
-        )
-        .optional(),
-    )?
-    .ok_or_else(|| format!("Project '{}' not found", next_project_id))?;
-    if next_project_id != project_id {
-        let exists_at_dest: bool = map_db(
+    let next_project_id = frontmatter.project.clone();
+    let next_org_id: String = if let Some(next_project_id) = next_project_id.as_ref() {
+        map_db(
             tx.query_row(
-                "SELECT 1 FROM workitems WHERE project_id = ?1 AND short_id = ?2 AND id <> ?3",
-                params![&next_project_id, &core.short_id, &core.work_item_id],
-                |_| Ok(true),
+                "SELECT org_id FROM projects WHERE id = ?1",
+                params![next_project_id],
+                |row| row.get(0),
             )
             .optional(),
         )?
-        .unwrap_or(false);
+        .ok_or_else(|| format!("Project '{}' not found", next_project_id))?
+    } else {
+        core.org_id.clone()
+    };
+    if next_project_id.as_deref() != Some(project_id.as_str()) {
+        let exists_at_dest: bool = if let Some(next_project_id) = next_project_id.as_ref() {
+            map_db(
+                tx.query_row(
+                    "SELECT 1 FROM workitems WHERE project_id = ?1 AND short_id = ?2 AND id <> ?3",
+                    params![next_project_id, &core.short_id, &core.work_item_id],
+                    |_| Ok(true),
+                )
+                .optional(),
+            )?
+            .unwrap_or(false)
+        } else {
+            map_db(
+                tx.query_row(
+                    "SELECT 1 FROM workitems WHERE org_id = ?1 AND project_id IS NULL AND short_id = ?2 AND id <> ?3",
+                    params![&next_org_id, &core.short_id, &core.work_item_id],
+                    |_| Ok(true),
+                )
+                .optional(),
+            )?
+            .unwrap_or(false)
+        };
         if exists_at_dest {
             return Err(format!(
-                "Work item '{}' already exists in project '{}'",
-                core.short_id, next_project_id
+                "Work item '{}' already exists in destination scope",
+                core.short_id
             ));
         }
     }
-    frontmatter.project = Some(next_project_id.clone());
 
     map_db(tx.execute(
         "UPDATE workitems SET
@@ -445,7 +458,7 @@ pub fn update_work_item_partial_with_revisions(
     override_revisions: HashMap<String, FieldRevision>,
     updates: &WorkItemPartialUpdate,
 ) -> Result<(WorkItemData, Vec<&'static str>), String> {
-    let (_, changed_fields) = update_work_item_atomic_with_revisions(
+    let (data, changed_fields) = update_work_item_atomic_with_revisions(
         project_slug,
         short_id,
         override_revisions,
@@ -464,8 +477,8 @@ pub fn update_work_item_partial_with_revisions(
             if let Some(priority) = updates.priority.as_ref() {
                 fm.priority = priority.clone();
             }
-            if let Some(project) = updates.project.as_ref().and_then(|value| value.as_ref()) {
-                fm.project = Some(project.clone());
+            if let Some(project) = updates.project.as_ref() {
+                fm.project = project.clone();
             }
             if let Some(starred) = updates.starred {
                 fm.starred = starred;
@@ -525,30 +538,7 @@ pub fn update_work_item_partial_with_revisions(
             })
         },
     )?;
-    let read_slug = read_slug_after_partial_update(project_slug, updates)?;
-    let data = super::crud::read_work_item(&read_slug, short_id)?;
     Ok((data, changed_fields))
-}
-
-fn read_slug_after_partial_update(
-    fallback_project_slug: &str,
-    updates: &WorkItemPartialUpdate,
-) -> Result<String, String> {
-    let Some(project_id) = updates.project.as_ref().and_then(|value| value.as_ref()) else {
-        return Ok(fallback_project_slug.to_string());
-    };
-
-    let connection = conn()?;
-    map_db(
-        connection
-            .query_row(
-                "SELECT slug FROM projects WHERE id = ?1",
-                params![project_id],
-                |row| row.get::<_, String>(0),
-            )
-            .optional(),
-    )?
-    .ok_or_else(|| format!("Project '{}' not found", project_id))
 }
 
 // ---------------------------------------------------------------------
@@ -654,6 +644,7 @@ struct AtomicCore {
     updated_at_ms: i64,
     deleted_at_ms: Option<i64>,
     local_version: i64,
+    org_id: String,
 }
 
 fn read_labels_in_tx(
@@ -673,7 +664,7 @@ fn read_labels_in_tx(
 
 #[allow(clippy::too_many_arguments)]
 fn build_frontmatter(
-    project_id: &str,
+    project_id: Option<String>,
     core: &AtomicCore,
     labels: Vec<String>,
     extras: &ExtrasPayload,
@@ -682,7 +673,7 @@ fn build_frontmatter(
         id: core.work_item_id.clone(),
         short_id: core.short_id.clone(),
         title: core.title.clone(),
-        project: Some(project_id.to_string()),
+        project: project_id,
         status: core.status.clone(),
         priority: core.priority.clone(),
         assignee: core.assignee.clone(),

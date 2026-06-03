@@ -35,7 +35,7 @@ pub fn read_all_work_items_scoped(
     let project_id = resolve_project_id_scoped(&connection, project_slug, org_id)?;
 
     let mut stmt = map_db(connection.prepare(
-        "SELECT id, short_id, title, body, status, priority, assignee, assignee_type,
+        "SELECT id, project_id, short_id, title, body, status, priority, assignee, assignee_type,
                 milestone, parent, start_date, target_date, created_at, updated_at, deleted_at
          FROM workitems
          WHERE project_id = ?1
@@ -48,7 +48,7 @@ pub fn read_all_work_items_scoped(
         let core = map_db(entry)?;
         let labels = read_labels_for(&connection, &core.work_item_id)?;
         let extras = read_extras_for(&connection, &core.work_item_id)?;
-        out.push(assemble_work_item(&project_id, core, labels, extras));
+        out.push(assemble_work_item(core, labels, extras));
     }
     Ok(out)
 }
@@ -69,7 +69,7 @@ pub fn read_work_item_scoped(
     let core = map_db(
         connection
             .query_row(
-                "SELECT id, short_id, title, body, status, priority, assignee, assignee_type,
+                "SELECT id, project_id, short_id, title, body, status, priority, assignee, assignee_type,
                         milestone, parent, start_date, target_date, created_at, updated_at, deleted_at
                  FROM workitems
                  WHERE project_id = ?1 AND short_id = ?2",
@@ -82,7 +82,54 @@ pub fn read_work_item_scoped(
 
     let labels = read_labels_for(&connection, &core.work_item_id)?;
     let extras = read_extras_for(&connection, &core.work_item_id)?;
-    Ok(assemble_work_item(&project_id, core, labels, extras))
+    Ok(assemble_work_item(core, labels, extras))
+}
+
+pub fn read_standalone_work_items(org_id: Option<&str>) -> Result<Vec<WorkItemData>, String> {
+    let connection = conn()?;
+    let org_id = org_id.unwrap_or("personal-org");
+    let mut stmt = map_db(connection.prepare(
+        "SELECT id, project_id, short_id, title, body, status, priority, assignee, assignee_type,
+                milestone, parent, start_date, target_date, created_at, updated_at, deleted_at
+         FROM workitems
+         WHERE org_id = ?1 AND project_id IS NULL
+         ORDER BY COALESCE(deleted_at, updated_at) DESC, created_at DESC",
+    ))?;
+    let rows = map_db(stmt.query_map(params![org_id], row_to_core))?;
+
+    let mut out = Vec::new();
+    for entry in rows {
+        let core = map_db(entry)?;
+        let labels = read_labels_for(&connection, &core.work_item_id)?;
+        let extras = read_extras_for(&connection, &core.work_item_id)?;
+        out.push(assemble_work_item(core, labels, extras));
+    }
+    Ok(out)
+}
+
+pub fn read_standalone_work_item(
+    org_id: Option<&str>,
+    short_id: &str,
+) -> Result<WorkItemData, String> {
+    let connection = conn()?;
+    let org_id = org_id.unwrap_or("personal-org");
+    let core = map_db(
+        connection
+            .query_row(
+                "SELECT id, project_id, short_id, title, body, status, priority, assignee, assignee_type,
+                        milestone, parent, start_date, target_date, created_at, updated_at, deleted_at
+                 FROM workitems
+                 WHERE org_id = ?1 AND project_id IS NULL AND short_id = ?2",
+                params![org_id, short_id],
+                row_to_core,
+            )
+            .optional(),
+    )?
+    .ok_or_else(|| format!("Standalone work item '{}' not found", short_id))?;
+
+    let labels = read_labels_for(&connection, &core.work_item_id)?;
+    let extras = read_extras_for(&connection, &core.work_item_id)?;
+    Ok(assemble_work_item(core, labels, extras))
 }
 
 /// Create or update a work item.
@@ -97,16 +144,50 @@ pub fn write_work_item(
     frontmatter: &WorkItemFrontmatter,
     body: &str,
 ) -> Result<(), String> {
-    let mut connection = conn()?;
+    let connection = conn()?;
     let project_id = resolve_project_id(&connection, project_slug)?;
     let org_id: String = map_db(connection.query_row(
         "SELECT org_id FROM projects WHERE id = ?1",
         params![&project_id],
         |row| row.get(0),
     ))?;
+    drop(connection);
 
+    write_work_item_with_scope(
+        Some(project_id),
+        &org_id,
+        short_id,
+        frontmatter,
+        body,
+    )
+}
+
+pub fn write_standalone_work_item(
+    org_id: Option<&str>,
+    short_id: &str,
+    frontmatter: &WorkItemFrontmatter,
+    body: &str,
+) -> Result<(), String> {
+    write_work_item_with_scope(
+        None,
+        org_id.unwrap_or("personal-org"),
+        short_id,
+        frontmatter,
+        body,
+    )
+}
+
+fn write_work_item_with_scope(
+    project_id: Option<String>,
+    org_id: &str,
+    short_id: &str,
+    frontmatter: &WorkItemFrontmatter,
+    body: &str,
+) -> Result<(), String> {
+    let mut connection = conn()?;
     let now = now_ms();
     let mut next_frontmatter = frontmatter.clone();
+    next_frontmatter.project = project_id.clone();
     let created_at = if next_frontmatter.created_at.is_empty() {
         now
     } else {
@@ -147,7 +228,7 @@ pub fn write_work_item(
          )
          ON CONFLICT(id) DO UPDATE SET
             org_id       = excluded.org_id,
-            project_id     = excluded.project_id,
+            project_id   = excluded.project_id,
             short_id     = excluded.short_id,
             title        = excluded.title,
             body         = excluded.body,
@@ -163,7 +244,7 @@ pub fn write_work_item(
             deleted_at   = excluded.deleted_at",
         params![
             &next_frontmatter.id,
-            &org_id,
+            org_id,
             &project_id,
             short_id,
             &next_frontmatter.title,
@@ -303,6 +384,21 @@ pub fn allocate_short_id(project_slug: &str) -> Result<String, String> {
     Ok(short_id)
 }
 
+pub fn allocate_standalone_short_id(org_id: Option<&str>) -> Result<String, String> {
+    let mut connection = conn()?;
+    let tx =
+        map_db(connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate))?;
+    let org_id = org_id.unwrap_or("personal-org");
+    let prefix = "WI";
+    let mut next_id = 1_i64;
+    if let Some(max_existing) = max_existing_standalone_work_item_number(&tx, org_id, prefix)? {
+        next_id = (max_existing as i64).saturating_add(1);
+    }
+    let short_id = format!("{}-{:04}", prefix, next_id);
+    map_db(tx.commit())?;
+    Ok(short_id)
+}
+
 /// Move a work item from one project to another. The `short_id` does
 /// NOT change; only the owning project UUID changes.
 pub fn move_work_item(short_id: &str, from_project: &str, to_project: &str) -> Result<(), String> {
@@ -396,8 +492,6 @@ where
     C: ConnectionLike,
 {
     if prefix.chars().count() != WORK_ITEM_PREFIX_LENGTH {
-        // Any deviation from the canonical 3-char prefix means we can't
-        // safely strip it from `short_id`; fall back to "no max known".
         return Ok(None);
     }
 
@@ -407,6 +501,27 @@ where
         params![project_id, pattern],
     )?;
 
+    max_numeric_suffix(rows, prefix)
+}
+
+fn max_existing_standalone_work_item_number<C>(
+    connection: &C,
+    org_id: &str,
+    prefix: &str,
+) -> Result<Option<u32>, String>
+where
+    C: ConnectionLike,
+{
+    let pattern = format!("{}-%", prefix);
+    let rows = connection.query_string_rows(
+        "SELECT short_id FROM workitems WHERE org_id = ?1 AND project_id IS NULL AND short_id LIKE ?2",
+        params![org_id, pattern],
+    )?;
+
+    max_numeric_suffix(rows, prefix)
+}
+
+fn max_numeric_suffix(rows: Vec<String>, prefix: &str) -> Result<Option<u32>, String> {
     let prefix_with_dash = format!("{}-", prefix);
     let max = rows
         .into_iter()
