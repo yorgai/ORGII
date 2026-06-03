@@ -32,7 +32,11 @@ export interface UseAgentWizardReturn {
   temperature: number;
   setTemperature: (v: number) => void;
   isCustomContextWindow: boolean;
-  contextWindowOptions: Array<{ label: string; value: string }>;
+  contextWindowOptions: Array<{
+    label: string;
+    value: string;
+    dataTestId?: string;
+  }>;
 
   // Compaction
   compactionEnabled: boolean;
@@ -138,10 +142,12 @@ export function useAgentWizard(
       {
         label: tSettings("sharedAgentConfig.contextWindowAuto"),
         value: "auto",
+        dataTestId: "agent-orgs-agent-wizard-context-window-option-auto",
       },
       {
         label: tSettings("sharedAgentConfig.contextWindowCustom"),
         value: "custom",
+        dataTestId: "agent-orgs-agent-wizard-context-window-option-custom",
       },
     ],
     [tSettings]

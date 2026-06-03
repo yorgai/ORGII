@@ -260,6 +260,7 @@ export const E2EBootstrap: FC = () => {
       getLocationPathname,
       openProjectWorkItemsTab,
       openAgentTab,
+      openOrgTab,
     } = createNavigationHelpers(store);
 
     const helpers: E2EHelpers = {
@@ -396,6 +397,7 @@ export const E2EBootstrap: FC = () => {
       getLocationPathname,
       openProjectWorkItemsTab,
       openAgentTab,
+      openOrgTab,
     };
 
     registerE2EHelpers(helpers);

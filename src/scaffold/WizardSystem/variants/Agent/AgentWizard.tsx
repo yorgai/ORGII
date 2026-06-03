@@ -185,6 +185,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                       placeholder={t(
                         "agentOrgs.agentWizard.descriptionPlaceholder"
                       )}
+                      data-testid="agent-orgs-agent-wizard-description-input"
                       autoSize={{ minRows: 3, maxRows: 6 }}
                     />
                   </SectionRow>
@@ -214,6 +215,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                         w.setContextWindow(val === "auto" ? 0 : 128000)
                       }
                       style={SECTION_CONTROL_STYLE}
+                      dataTestId="agent-orgs-agent-wizard-context-window-select"
                     />
                   </SectionRow>
                   {w.isCustomContextWindow && (
@@ -225,6 +227,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                         step={1000}
                         controlsPosition="sides"
                         style={SECTION_CONTROL_STYLE}
+                        dataTestId="agent-orgs-agent-wizard-context-window-input"
                       />
                     </SectionRow>
                   )}
@@ -240,6 +243,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                       step={256}
                       controlsPosition="sides"
                       style={SECTION_CONTROL_STYLE}
+                      dataTestId="agent-orgs-agent-wizard-max-tokens-input"
                     />
                   </SectionRow>
                   <SectionRow
@@ -254,6 +258,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                       step={0.1}
                       controlsPosition="sides"
                       style={SECTION_CONTROL_STYLE}
+                      dataTestId="agent-orgs-agent-wizard-temperature-input"
                     />
                   </SectionRow>
                 </SectionContainer>
@@ -266,6 +271,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                   >
                     <Switch
                       checked={w.compactionEnabled}
+                      dataTestId="agent-orgs-agent-wizard-compaction-enabled-switch"
                       onChange={w.setCompactionEnabled}
                     />
                   </SectionRow>
@@ -290,6 +296,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                           step={0.05}
                           controlsPosition="sides"
                           style={SECTION_CONTROL_STYLE}
+                          dataTestId="agent-orgs-agent-wizard-compaction-trigger-ratio-input"
                         />
                       </SectionRow>
                       <SectionRow
@@ -309,6 +316,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                           step={0.05}
                           controlsPosition="sides"
                           style={SECTION_CONTROL_STYLE}
+                          dataTestId="agent-orgs-agent-wizard-compaction-keep-ratio-input"
                         />
                       </SectionRow>
                       <SectionRow
@@ -325,6 +333,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                             "sharedAgentConfig.compactionModelPlaceholder"
                           )}
                           style={SECTION_CONTROL_STYLE}
+                          data-testid="agent-orgs-agent-wizard-compaction-model-input"
                         />
                       </SectionRow>
                       <SectionRow
@@ -345,6 +354,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                           step={256}
                           controlsPosition="sides"
                           style={SECTION_CONTROL_STYLE}
+                          dataTestId="agent-orgs-agent-wizard-compaction-summary-max-tokens-input"
                         />
                       </SectionRow>
                       <SectionRow
@@ -366,6 +376,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                           step={1}
                           controlsPosition="sides"
                           style={SECTION_CONTROL_STYLE}
+                          dataTestId="agent-orgs-agent-wizard-compaction-min-messages-input"
                         />
                       </SectionRow>
                       <SectionRow
@@ -386,6 +397,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                           step={1000}
                           controlsPosition="sides"
                           style={SECTION_CONTROL_STYLE}
+                          dataTestId="agent-orgs-agent-wizard-compaction-floor-tokens-input"
                         />
                       </SectionRow>
                       <SectionRow
@@ -406,6 +418,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                           step={1000}
                           controlsPosition="sides"
                           style={SECTION_CONTROL_STYLE}
+                          dataTestId="agent-orgs-agent-wizard-compaction-reserved-summary-tokens-input"
                         />
                       </SectionRow>
                       <SectionRow
@@ -426,6 +439,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                           step={1000}
                           controlsPosition="sides"
                           style={SECTION_CONTROL_STYLE}
+                          dataTestId="agent-orgs-agent-wizard-compaction-buffer-tokens-input"
                         />
                       </SectionRow>
                     </>
@@ -455,7 +469,11 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                       "sharedAgentConfig.capabilities.codingDesc"
                     )}
                   >
-                    <Switch checked={w.capCoding} onChange={w.setCapCoding} />
+                    <Switch
+                      checked={w.capCoding}
+                      dataTestId="agent-orgs-agent-wizard-capability-coding-switch"
+                      onChange={w.setCapCoding}
+                    />
                   </SectionRow>
                   {w.capCoding && (
                     <SectionRow
@@ -469,6 +487,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                     >
                       <Switch
                         checked={w.capCodingModeSwitch}
+                        dataTestId="agent-orgs-agent-wizard-capability-coding-mode-switch"
                         onChange={w.setCapCodingModeSwitch}
                       />
                     </SectionRow>
@@ -479,7 +498,11 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                       "sharedAgentConfig.capabilities.desktopDesc"
                     )}
                   >
-                    <Switch checked={w.capDesktop} onChange={w.setCapDesktop} />
+                    <Switch
+                      checked={w.capDesktop}
+                      dataTestId="agent-orgs-agent-wizard-capability-desktop-switch"
+                      onChange={w.setCapDesktop}
+                    />
                   </SectionRow>
                   <SectionRow
                     label={tSettings(
@@ -491,6 +514,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                   >
                     <Switch
                       checked={w.capBrowserExternal}
+                      dataTestId="agent-orgs-agent-wizard-capability-browser-external-switch"
                       onChange={w.setCapBrowserExternal}
                     />
                   </SectionRow>
@@ -504,6 +528,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                   >
                     <Switch
                       checked={w.capBrowserInternal}
+                      dataTestId="agent-orgs-agent-wizard-capability-browser-internal-switch"
                       onChange={w.setCapBrowserInternal}
                     />
                   </SectionRow>
@@ -513,7 +538,11 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                       "sharedAgentConfig.capabilities.gatewayDesc"
                     )}
                   >
-                    <Switch checked={w.capGateway} onChange={w.setCapGateway} />
+                    <Switch
+                      checked={w.capGateway}
+                      dataTestId="agent-orgs-agent-wizard-capability-gateway-switch"
+                      onChange={w.setCapGateway}
+                    />
                   </SectionRow>
                   <SectionRow
                     label={tSettings("sharedAgentConfig.capabilities.data")}
@@ -521,7 +550,11 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                       "sharedAgentConfig.capabilities.dataDesc"
                     )}
                   >
-                    <Switch checked={w.capData} onChange={w.setCapData} />
+                    <Switch
+                      checked={w.capData}
+                      dataTestId="agent-orgs-agent-wizard-capability-data-switch"
+                      onChange={w.setCapData}
+                    />
                   </SectionRow>
                   <SectionRow
                     label={tSettings(
@@ -533,6 +566,7 @@ const AgentWizard: FC<AgentWizardProps> = ({ onSave, onCancel }) => {
                   >
                     <Switch
                       checked={w.capManagement}
+                      dataTestId="agent-orgs-agent-wizard-capability-management-switch"
                       onChange={w.setCapManagement}
                     />
                   </SectionRow>

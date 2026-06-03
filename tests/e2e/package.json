@@ -6,7 +6,8 @@
   "description": "E2E WebDriver POC for ORGII Tauri app (via tauri-webdriver-automation).",
   "scripts": {
     "wd": "tauri-wd --port 4444",
-    "test": "wdio run ./wdio.conf.mjs"
+    "test": "wdio run ./wdio.conf.mjs",
+    "test:agent-settings": "node ./scripts/run-agent-settings-sequential.mjs"
   },
   "devDependencies": {
     "@wdio/cli": "^9.2.0",
