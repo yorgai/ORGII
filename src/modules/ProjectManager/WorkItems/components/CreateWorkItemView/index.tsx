@@ -2,8 +2,7 @@
  * CreateWorkItemView Component
  *
  * Work item creation form reused by Project Manager modals.
- * Draft state is shared with the chat-panel work item creator via
- * `useWorkItemCreatorDraft` (single jotai entry).
+ * Draft state is managed by `useWorkItemCreatorDraft`.
  *
  * Handles its own centralized project-store write logic.
  *

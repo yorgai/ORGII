@@ -42,7 +42,6 @@ export interface ChatPanelProps {
     footerSlot?: ReactNode;
     onRegionNoticeChange?: (notice: ChatPanelRegionNotice | null) => void;
     hidePresenceButton?: boolean;
-    solveWorkItemMode?: boolean;
     batchStartMode?: boolean;
   }>;
 }

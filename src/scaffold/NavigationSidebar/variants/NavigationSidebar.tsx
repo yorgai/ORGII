@@ -240,7 +240,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
         {/* Tab Header */}
         {items.length > 0 && (
           <div
-            className="flex h-9 items-end px-3"
+            className="flex h-9 items-center px-3"
             data-tauri-drag-region
             style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
           >

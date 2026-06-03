@@ -8,6 +8,8 @@
     "noResults": "No se encontraron Projects",
     "dashboardTitle": "Projects",
     "groupBy": {
+      "org": "Por Org",
+      "project": "Por proyecto",
       "status": "Por estado",
       "priority": "Por prioridad",
       "targetDate": "Por fecha objetivo"

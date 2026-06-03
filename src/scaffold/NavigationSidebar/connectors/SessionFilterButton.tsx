@@ -23,11 +23,13 @@ import { useDropdownEngine } from "@src/hooks/dropdown";
 import HoverAnimatedIcon, {
   triggerIconAnimation,
 } from "../components/HoverAnimatedIcon";
-import { GROUP_BY_MODES, type GroupByMode } from "./types";
+import { GROUP_BY_MODES } from "./types";
 
 interface SessionFilterButtonProps {
-  groupByMode: GroupByMode;
-  onSelect: (mode: GroupByMode) => void;
+  groupByMode: string;
+  groupByModes?: readonly string[];
+  getGroupByLabel?: (mode: string) => string;
+  onSelect: (mode: string) => void;
   /** Collapse every section in the sidebar. */
   onCollapseAll?: () => void;
   /** Mark all currently-loaded sessions as visited. */
@@ -44,6 +46,8 @@ interface SessionFilterButtonProps {
 export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
   ({
     groupByMode,
+    groupByModes = GROUP_BY_MODES,
+    getGroupByLabel,
     onSelect,
     onCollapseAll,
     onMarkAllRead,
@@ -69,7 +73,7 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
     });
 
     const handleSelect = useCallback(
-      (mode: GroupByMode) => {
+      (mode: string) => {
         onSelect(mode);
         close();
       },
@@ -143,7 +147,7 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                 {t("sidebar.groupBy.title")}
               </div>
               <div className={DROPDOWN_CLASSES.itemsColumnBelowHeader}>
-                {GROUP_BY_MODES.map((mode: GroupByMode) => {
+                {groupByModes.map((mode) => {
                   const active = mode === groupByMode;
                   const itemClasses = active
                     ? `${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemSelected}`
@@ -155,7 +159,10 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                       className={`${itemClasses} w-full justify-between text-left`}
                       onClick={() => handleSelect(mode)}
                     >
-                      <span>{t(`sidebar.groupBy.${mode}`)}</span>
+                      <span>
+                        {getGroupByLabel?.(mode) ??
+                          t(`sidebar.groupBy.${mode}`)}
+                      </span>
                       {active && <DropdownSelectedCheck />}
                     </button>
                   );

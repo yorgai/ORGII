@@ -8,6 +8,8 @@
     "noResults": "Projects не найдены",
     "dashboardTitle": "Projects",
     "groupBy": {
+      "org": "По Org",
+      "project": "По проекту",
       "status": "По статусу",
       "priority": "По приоритету",
       "targetDate": "По целевой дате"

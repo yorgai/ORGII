@@ -8,6 +8,8 @@
     "noResults": "未找到项目",
     "dashboardTitle": "项目",
     "groupBy": {
+      "org": "按组织",
+      "project": "按项目",
       "status": "按状态",
       "priority": "按优先级",
       "targetDate": "按目标日期"

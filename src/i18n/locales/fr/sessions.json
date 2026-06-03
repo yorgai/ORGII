@@ -1645,7 +1645,6 @@
     "createTarget": {
       "agentSession": "Session Agent",
       "createAgent": "Créer un Agent / Skill",
-      "solveWorkItem": "Résoudre un Work Item",
       "workItem": "Créer un Work Item",
       "batchStartBeta": "Démarrage groupé (Beta)",
       "benchmark": "Benchmark (Beta)"
@@ -1796,8 +1795,6 @@
       "worktree": "Worktree",
       "lockedHint": "Le Worktree est verrouillé pour cette session"
     },
-    "selectWorkItem": "Sélectionner un Work Item",
-    "addInstructionsPlaceholder": "Ajouter des instructions",
     "batchStarterPlaceholder": "Décrire ce session starter",
     "addBatchStarter": "Ajouter un starter",
     "removeBatchStarter": "Supprimer le starter",

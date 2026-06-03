@@ -1645,7 +1645,6 @@
     "createTarget": {
       "agentSession": "Agent 会话",
       "createAgent": "创建 Agent / Skill",
-      "solveWorkItem": "解决 Work Item",
       "workItem": "创建 Work Item",
       "batchStartBeta": "批量启动 (Beta)",
       "benchmark": "Benchmark (Beta)"
@@ -1796,8 +1795,6 @@
       "cancel": "取消"
     },
     "viewDiff": "查看 Diff",
-    "selectWorkItem": "选择 Work Item",
-    "addInstructionsPlaceholder": "添加说明",
     "batchStarterPlaceholder": "描述这个 session starter",
     "addBatchStarter": "添加 starter",
     "removeBatchStarter": "移除 starter",

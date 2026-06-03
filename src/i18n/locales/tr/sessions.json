@@ -1645,7 +1645,6 @@
     "createTarget": {
       "agentSession": "Agent oturumu",
       "createAgent": "Agent / Skill oluştur",
-      "solveWorkItem": "Work Item çöz",
       "workItem": "Work Item oluştur",
       "batchStartBeta": "Toplu başlat (Beta)",
       "benchmark": "Benchmark (Beta)"
@@ -1796,8 +1795,6 @@
       "worktree": "Worktree",
       "lockedHint": "Bu oturum için Worktree kilitli"
     },
-    "selectWorkItem": "Work Item seç",
-    "addInstructionsPlaceholder": "Talimat ekle",
     "batchStarterPlaceholder": "Bu session starter'ı açıklayın",
     "addBatchStarter": "Starter ekle",
     "removeBatchStarter": "Starter kaldır",

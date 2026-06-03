@@ -1651,7 +1651,6 @@
     "createTarget": {
       "agentSession": "Сессия Agent",
       "createAgent": "Создать Agent / Skill",
-      "solveWorkItem": "Решить Work Item",
       "workItem": "Создать Work Item",
       "batchStartBeta": "Пакетный запуск (Beta)",
       "benchmark": "Benchmark (Beta)"
@@ -1802,8 +1801,6 @@
       "worktree": "Worktree",
       "lockedHint": "Worktree заблокирован для этой сессии"
     },
-    "selectWorkItem": "Выбрать Work Item",
-    "addInstructionsPlaceholder": "Добавьте инструкции",
     "batchStarterPlaceholder": "Опишите этот session starter",
     "addBatchStarter": "Добавить starter",
     "removeBatchStarter": "Удалить starter",

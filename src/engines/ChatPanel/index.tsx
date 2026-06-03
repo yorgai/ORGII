@@ -65,6 +65,9 @@ import {
   workstationActiveSessionIdAtom,
 } from "@src/store/session";
 import {
+  CHAT_PANEL_CREATE_TARGET,
+  type ChatPanelCreateTarget,
+  chatPanelCreateTargetAtom,
   chatPanelMaximizedAtom,
   chatTurnPaginationEnabledAtom,
   chatWidthAtom,
@@ -87,26 +90,11 @@ import type { ChatPanelProps, ChatPanelRegionNotice } from "./types";
 const CHAT_PANEL_HEADER_ICON_SIZE = 14;
 const CHAT_PANEL_HEADER_PROMINENT_ICON_SIZE = 16;
 
-const CHAT_PANEL_CREATE_TARGET = {
-  AGENT_SESSION: "agentSession",
-  CREATE_AGENT: "createAgent",
-  BATCH_START: "batchStart",
-  BENCHMARK: "benchmark",
-  SOLVE_WORK_ITEM: "solveWorkItem",
-  WORK_ITEM: "workItem",
-} as const;
-
 // Builtin Agent Architect — designs and maintains agents, agent orgs, and
 // skills. Picking the "Create agent / skill" entry in the creator-target
 // dropdown is a shortcut that opens a fresh Agent session with this agent
 // pre-selected.
 const AGENT_ARCHITECT_DEF_ID = "builtin:agent-architect";
-
-type ChatPanelCreateTarget =
-  (typeof CHAT_PANEL_CREATE_TARGET)[keyof typeof CHAT_PANEL_CREATE_TARGET];
-
-const DEFAULT_CREATE_TARGET: ChatPanelCreateTarget =
-  CHAT_PANEL_CREATE_TARGET.AGENT_SESSION;
 
 const ChatPanel: React.FC<ChatPanelProps> = memo(
   ({
@@ -138,9 +126,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     );
     const handleReloadSession = useReloadSession(currentSessionId ?? null);
     const { openTab: openWorkStationTab } = useWorkStationTabs();
-    const [createTarget, setCreateTarget] = useState<ChatPanelCreateTarget>(
-      DEFAULT_CREATE_TARGET
-    );
+    const [createTarget, setCreateTarget] = useAtom(chatPanelCreateTargetAtom);
     const {
       error: benchmarkError,
       isLoadingTasks: isLoadingBenchmarkTasks,
@@ -170,10 +156,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         {
           value: CHAT_PANEL_CREATE_TARGET.CREATE_AGENT,
           label: t("creator.createTarget.createAgent"),
-        },
-        {
-          value: CHAT_PANEL_CREATE_TARGET.SOLVE_WORK_ITEM,
-          label: t("creator.createTarget.solveWorkItem"),
         },
         {
           value: CHAT_PANEL_CREATE_TARGET.WORK_ITEM,
@@ -427,7 +409,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           handleNewSession();
         }
       },
-      [allAgentDefs, handleNewSession, setCreatorState]
+      [allAgentDefs, handleNewSession, setCreateTarget, setCreatorState]
     );
 
     const handleOpenBenchmarkTab = useCallback(() => {
@@ -998,9 +980,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             centerFullScreenContent
             hidePresenceButton
             onRegionNoticeChange={handleRegionNoticeChange}
-            solveWorkItemMode={
-              createTarget === CHAT_PANEL_CREATE_TARGET.SOLVE_WORK_ITEM
-            }
             batchStartMode={
               createTarget === CHAT_PANEL_CREATE_TARGET.BATCH_START
             }
