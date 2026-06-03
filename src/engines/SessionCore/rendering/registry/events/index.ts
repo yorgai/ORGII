@@ -78,6 +78,7 @@ export const COMPONENT_LOADERS: ComponentLoaderMap = {
   list_dir: chatBlockLoader,
   run_shell: chatBlockLoader,
   await_output: chatBlockLoader,
+  inspect_terminals: chatBlockLoader,
   code_search: chatBlockLoader,
   web_search: chatBlockLoader,
   glob_file_search: chatBlockLoader,
@@ -211,6 +212,10 @@ export const CONTEXT_CONFIG: Record<string, ContextConfig> = {
 
   // Await output (background task monitor)
   await_output: {
+    chat: { requiresItemIndex: false, showStatusLine: true },
+    simulator: { supportsSplitView: false, supportsFullscreen: false },
+  },
+  inspect_terminals: {
     chat: { requiresItemIndex: false, showStatusLine: true },
     simulator: { supportsSplitView: false, supportsFullscreen: false },
   },

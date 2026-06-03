@@ -88,6 +88,7 @@ const BASELINE_CHAT_BLOCKS = new Map<string, ChatBlock>([
   ["run_shell", "shell"],
   ["run_command_line", "shell"],
   ["await_output", "title_only"],
+  ["inspect_terminals", "explore"],
   ["code_search", "search"],
   ["glob_file_search", "glob"],
   ["web_search", "web_search"],

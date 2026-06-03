@@ -1,5 +1,9 @@
 import { BookDashed, BookOpen, Diamond } from "lucide-react";
 
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import { PropertyDropdownField } from "@src/components/PropertyField/PropertyDropdownField";
 import {
   FieldRow,
@@ -54,7 +58,11 @@ export function PlanningSection({
           value={workItem.project?.id ?? "__none__"}
           label={workItem.project?.name ?? t("workItems.properties.noProject")}
           icon={
-            workItem.project ? <BookOpen size={14} /> : <BookDashed size={14} />
+            workItem.project ? (
+              <BookOpen size={DROPDOWN_ITEM.iconSize} />
+            ) : (
+              <BookDashed size={DROPDOWN_ITEM.iconSize} />
+            )
           }
           iconColor={workItem.project?.color}
           options={[]}
@@ -81,21 +89,21 @@ export function PlanningSection({
               <>
                 {!searchQuery && (
                   <Option
-                    icon={<BookDashed size={14} />}
+                    icon={<BookDashed size={DROPDOWN_ITEM.iconSize} />}
                     label={t("workItems.properties.noProject")}
                     isSelected={!workItem.project}
                     onClick={() => select(null)}
                   />
                 )}
                 {filtered.length === 0 && searchQuery && (
-                  <div className="px-3 py-2 text-[12px] text-text-3">
+                  <div className={DROPDOWN_CLASSES.listMessage}>
                     {t("common:common.noResults")}
                   </div>
                 )}
                 {filtered.map((projectItem) => (
                   <Option
                     key={projectItem.id}
-                    icon={<BookOpen size={14} />}
+                    icon={<BookOpen size={DROPDOWN_ITEM.iconSize} />}
                     iconColor={projectItem.color}
                     label={projectItem.name}
                     isSelected={workItem.project?.id === projectItem.id}
@@ -117,7 +125,7 @@ export function PlanningSection({
           }
         >
           <FieldRow
-            icon={<Diamond size={14} />}
+            icon={<Diamond size={DROPDOWN_ITEM.iconSize} />}
             value={
               workItem.milestone?.name || t("workItems.properties.noMilestone")
             }
@@ -153,7 +161,7 @@ export function PlanningSection({
                     {filtered.map((milestone) => (
                       <Option
                         key={milestone.id}
-                        icon={<Diamond size={14} />}
+                        icon={<Diamond size={DROPDOWN_ITEM.iconSize} />}
                         label={milestone.name}
                         isSelected={workItem.milestone?.id === milestone.id}
                         onClick={() =>

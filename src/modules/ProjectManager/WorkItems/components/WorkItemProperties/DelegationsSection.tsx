@@ -1,5 +1,6 @@
 import { Bot } from "lucide-react";
 
+import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import {
   FieldRow,
   type FieldRowVariant,
@@ -30,7 +31,7 @@ export function DelegationsSection({
       }
     >
       <FieldRow
-        icon={<Bot size={14} />}
+        icon={<Bot size={DROPDOWN_ITEM.iconSize} />}
         value={`${workItem.delegations.length} ${t("workItems.properties.delegations")}`}
         isSelected
         showChevron={false}

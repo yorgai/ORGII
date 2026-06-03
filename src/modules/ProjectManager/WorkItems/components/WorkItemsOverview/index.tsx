@@ -4,7 +4,6 @@
  * Overview tab content for the Work Items page.
  * Displays project editor (title + description), stats, and recent activity.
  */
-import type { JSONContent } from "@tiptap/react";
 import { CheckCircle2, Clock, Layers, TrendingUp } from "lucide-react";
 import React, {
   useCallback,
@@ -17,8 +16,6 @@ import { useTranslation } from "react-i18next";
 
 import Avatar from "@src/components/Avatar";
 import Input from "@src/components/Input";
-import RichTextEditor from "@src/components/RichTextEditor";
-import type { RichTextEditorRef } from "@src/components/RichTextEditor";
 import SettingsTable, {
   SETTINGS_TABLE_CELL,
   SETTINGS_TABLE_COL,
@@ -35,6 +32,7 @@ import {
   ProjectPropertyFields,
 } from "@src/modules/ProjectManager/shared";
 import { PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS } from "@src/modules/ProjectManager/shared/placeholderTokens";
+import MarkdownEditor from "@src/modules/shared/components/MarkdownEditor";
 import {
   CollapsibleSection,
   DETAIL_PANEL_TOKENS,
@@ -70,8 +68,8 @@ export interface WorkItemsOverviewProps {
   projectName: string;
   /** Project summary (one-liner) */
   projectSummary?: string;
-  /** Project description (string or tiptap JSON) */
-  projectDescription?: string | JSONContent;
+  /** Project description markdown */
+  projectDescription?: string;
   /** Project team members from settings */
   availableMembers?: Person[];
   availableTeams?: Team[];
@@ -121,7 +119,6 @@ const WorkItemsOverview: React.FC<WorkItemsOverviewProps> = ({
   const { t } = useTranslation("projects");
   const [activeTab, setActiveTab] = useState<OverviewTab>("description");
   const [localProjectName, setLocalProjectName] = useState(projectName);
-  const editorRef = useRef<RichTextEditorRef>(null);
   const propertiesRef = useRef<HTMLElement>(null);
 
   const tabItems: TabPillItem[] = useMemo(
@@ -143,8 +140,8 @@ const WorkItemsOverview: React.FC<WorkItemsOverviewProps> = ({
   };
 
   const handleDescriptionChange = useCallback(
-    (_html: string, _text: string) => {
-      onProjectDescriptionChange?.(_html, _text);
+    (markdown: string) => {
+      onProjectDescriptionChange?.(markdown, markdown);
     },
     [onProjectDescriptionChange]
   );
@@ -364,19 +361,15 @@ const WorkItemsOverview: React.FC<WorkItemsOverviewProps> = ({
           <>
             {/* Description */}
             <div className={DETAIL_PANEL_TOKENS.sectionGap}>
-              <RichTextEditor
-                ref={editorRef}
+              <MarkdownEditor
+                value={projectDescription ?? ""}
+                onChange={handleDescriptionChange}
                 placeholder={t("workItems.overview.descriptionPlaceholder")}
-                initialContent={
-                  typeof projectDescription === "string"
-                    ? (projectDescription ?? "")
-                    : ""
-                }
-                onContentChange={handleDescriptionChange}
                 minHeight={80}
-                editable={!!onProjectDescriptionChange}
-                className="no-bottom-border text-[13px]"
-                toolbarClassName="work-item-toolbar"
+                readOnly={!onProjectDescriptionChange}
+                showTokenCount={false}
+                hideHeader
+                className="no-bottom-border project-markdown-editor text-[13px]"
               />
             </div>
           </>

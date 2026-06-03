@@ -1,52 +1,12 @@
 .work-item-context-menu {
   position: fixed;
-  z-index: 9999;
-  min-width: 280px;
-  padding: 4px;
-  background: var(--color-bg-2);
-  border: 1px solid var(--color-border-2);
-  border-radius: 8px;
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.12),
-    0 2px 4px rgba(0, 0, 0, 0.08);
   transition: opacity 0.1s ease;
-}
-
-.work-item-context-menu--submenu {
-  min-width: 180px;
-}
-
-.work-item-context-menu__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 12px;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  color: var(--color-text-1);
-  font-size: 13px;
-  text-align: left;
-  transition: background 0.15s ease;
-
-  &:hover:not(&--disabled),
-  &--active:not(&--disabled) {
-    background: var(--color-fill-2);
-  }
-
-  &--disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
 }
 
 .work-item-context-menu__icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
   flex-shrink: 0;
   color: var(--color-text-2);
 }
@@ -64,7 +24,7 @@
   margin-left: auto;
   overflow: hidden;
   color: var(--color-text-3);
-  font-size: 12px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

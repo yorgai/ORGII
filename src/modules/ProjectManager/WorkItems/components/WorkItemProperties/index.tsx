@@ -9,6 +9,7 @@ import React, {
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
+import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import { DEFAULT_LABELS } from "@src/modules/ProjectManager/config/manage";
 import type { ContextMenuItem } from "@src/types/core/shared";
 import type {
@@ -309,9 +310,9 @@ const WorkItemProperties: React.FC<WorkItemPropertiesProps> = ({
               size="small"
               onClick={handleMoreClick}
               aria-label={t("workItems.contextMenu.moreProperties")}
-              className="!h-7 !rounded-full !border !border-solid !border-border-2 !bg-bg-2 !px-2 !text-text-2 !shadow-none hover:!bg-fill-2"
+              className="!h-7 !rounded-full !border !border-solid !border-border-2 !bg-bg-2 !px-2 !text-text-2 !shadow-none hover:!bg-surface-hover"
             >
-              <MoreHorizontal size={14} />
+              <MoreHorizontal size={DROPDOWN_ITEM.iconSize} />
             </Button>
           )}
         </div>

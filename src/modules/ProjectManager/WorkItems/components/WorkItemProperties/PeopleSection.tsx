@@ -1,5 +1,6 @@
 import { ScanEye } from "lucide-react";
 
+import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import {
   FieldRow,
   type FieldRowVariant,
@@ -76,7 +77,7 @@ export function PeopleSection({
           }
         >
           <FieldRow
-            icon={<ScanEye size={14} />}
+            icon={<ScanEye size={DROPDOWN_ITEM.iconSize} />}
             value={handlers.getReviewerDisplay()}
             isSelected={!!handlers.currentReviewer}
             isActive={openPicker === "reviewer"}

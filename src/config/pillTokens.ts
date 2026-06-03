@@ -3,9 +3,9 @@
  *
  * Shared styling constants and type definitions for inline context pills.
  * Used by:
- * - FilePillNodeView (editable Tiptap pills — uses {@link EDITOR_FILE_PILL_BASE_STYLE})
+ * - ComposerInput (editable composer pills)
  * - InlinePill in UserMessageContent (read-only display pills)
- * - TiptapInput (pill serialization)
+ * - pill serialization utilities
  * - normalizers.ts (pill content stripping)
  * - contextPillContent.ts (pill text storage)
  */
@@ -165,8 +165,8 @@ export const PILL_BASE_STYLE: CSSProperties = {
 } as const;
 
 /**
- * Editable composer (Tiptap / RichTextEditor): flat refs with primary-6 text/icon,
- * no filled pill background. Chat history read-only pills keep {@link PILL_BASE_STYLE}.
+ * Editable composer: flat refs with primary-6 text/icon, no filled pill background.
+ * Chat history read-only pills keep {@link PILL_BASE_STYLE}.
  */
 export const EDITOR_FILE_PILL_BASE_STYLE: CSSProperties = {
   display: "inline",

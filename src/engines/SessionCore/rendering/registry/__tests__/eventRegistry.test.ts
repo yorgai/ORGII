@@ -26,6 +26,7 @@ describe("COMPONENT_LOADERS", () => {
     "list_dir",
     "run_shell",
     "await_output",
+    "inspect_terminals",
     "code_search",
     "web_search",
     "glob_file_search",

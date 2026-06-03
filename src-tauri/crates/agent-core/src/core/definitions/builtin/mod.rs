@@ -32,6 +32,7 @@ mod memory_extractor;
 mod os;
 mod sde;
 mod subagents;
+mod terminal;
 mod wingman;
 
 pub use agent_architect::*;
@@ -42,6 +43,7 @@ pub use memory_extractor::*;
 pub use os::*;
 pub use sde::*;
 pub use subagents::*;
+pub use terminal::*;
 pub use wingman::*;
 
 use super::schema::AgentDefinition;
@@ -104,6 +106,7 @@ pub fn get_builtin_agents() -> Vec<AgentDefinition> {
         base_agent(),
         os_agent(),
         sde_agent(),
+        terminal_agent(),
         ai_research_agent(),
         agent_architect(),
         wingman_agent(),
@@ -128,7 +131,7 @@ mod tests {
     #[test]
     fn test_builtin_agents_count() {
         let agents = get_builtin_agents();
-        assert_eq!(agents.len(), 10); // base, os, sde, ai-research, agent-architect, wingman + 2 subagents + 2 memory subagents
+        assert_eq!(agents.len(), 11); // base, os, sde, terminal, ai-research, agent-architect, wingman + 2 subagents + 2 memory subagents
     }
 
     #[test]
@@ -136,6 +139,7 @@ mod tests {
         assert!(is_builtin_agent(BASE_AGENT_ID));
         assert!(is_builtin_agent(OS_AGENT_ID));
         assert!(is_builtin_agent(SDE_AGENT_ID));
+        assert!(is_builtin_agent(TERMINAL_AGENT_ID));
         assert!(is_builtin_agent(AI_RESEARCH_AGENT_ID));
         assert!(is_builtin_agent(AGENT_ARCHITECT_ID));
         assert!(is_builtin_agent(WINGMAN_AGENT_ID));

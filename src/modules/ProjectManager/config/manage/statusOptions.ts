@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import React from "react";
 
+import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import type { ProjectStatus } from "@src/types/core/project";
 import type { DropdownOption } from "@src/types/core/shared";
 import type { WorkItemStatus } from "@src/types/core/workItem";
@@ -27,43 +28,43 @@ export const WORK_ITEM_STATUS_OPTIONS: DropdownOption<WorkItemStatus>[] = [
   {
     value: "backlog",
     label: "Backlog",
-    icon: React.createElement(CircleDashed, { size: 14 }),
+    icon: React.createElement(CircleDashed, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.backlog,
   },
   {
     value: "planned",
     label: "Todo",
-    icon: React.createElement(Circle, { size: 14 }),
+    icon: React.createElement(Circle, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.planned,
   },
   {
     value: "in_progress",
     label: "In Progress",
-    icon: React.createElement(Clock, { size: 14 }),
+    icon: React.createElement(Clock, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.in_progress,
   },
   {
     value: "in_review",
     label: "In Review",
-    icon: React.createElement(Layers, { size: 14 }),
+    icon: React.createElement(Layers, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.in_review,
   },
   {
     value: "completed",
     label: "Done",
-    icon: React.createElement(CheckCircle2, { size: 14 }),
+    icon: React.createElement(CheckCircle2, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.completed,
   },
   {
     value: "cancelled",
     label: "Cancelled",
-    icon: React.createElement(XCircle, { size: 14 }),
+    icon: React.createElement(XCircle, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.cancelled,
   },
   {
     value: "duplicate",
     label: "Duplicate",
-    icon: React.createElement(XCircle, { size: 14 }),
+    icon: React.createElement(XCircle, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.duplicate,
   },
 ];
@@ -84,35 +85,35 @@ export const STORY_STATUS_OPTIONS: ProjectStatusOption[] = [
   {
     value: "backlog",
     label: "Backlog",
-    icon: React.createElement(CircleDashed, { size: 14 }),
+    icon: React.createElement(CircleDashed, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.backlog,
     bgColor: STATUS_BG_COLORS.backlog,
   },
   {
     value: "planned",
     label: "Planned",
-    icon: React.createElement(Circle, { size: 14 }),
+    icon: React.createElement(Circle, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.planned,
     bgColor: STATUS_BG_COLORS.planned,
   },
   {
     value: "in_progress",
     label: "In Progress",
-    icon: React.createElement(Clock, { size: 14 }),
+    icon: React.createElement(Clock, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.in_progress,
     bgColor: STATUS_BG_COLORS.in_progress,
   },
   {
     value: "completed",
     label: "Completed",
-    icon: React.createElement(CheckCircle2, { size: 14 }),
+    icon: React.createElement(CheckCircle2, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.completed,
     bgColor: STATUS_BG_COLORS.completed,
   },
   {
     value: "canceled",
     label: "Canceled",
-    icon: React.createElement(XCircle, { size: 14 }),
+    icon: React.createElement(XCircle, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.canceled,
     bgColor: STATUS_BG_COLORS.canceled,
   },

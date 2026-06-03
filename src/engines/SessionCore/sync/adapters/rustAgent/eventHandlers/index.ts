@@ -23,7 +23,6 @@ import {
   handlePlanApprovalArchived,
   handlePlanReadyForApproval,
   handleQuestionRequest,
-  handleTerminalCreated,
   handleTodosUpdated,
 } from "./agentSpecific";
 import {
@@ -189,9 +188,6 @@ export async function dispatchAgentEvent(
       break;
     case "agent:turn_summary":
       handleTurnSummary(event, sessionId);
-      break;
-    case "agent:terminal_created":
-      if (ctx.features.hasCodingSessionBridge) handleTerminalCreated(event);
       break;
     case "agent:ide_action":
       handleIdeAction(event);

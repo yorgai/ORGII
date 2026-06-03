@@ -29,6 +29,7 @@ import {
   loadBrowserPillContent,
   loadSessionPillContent,
 } from "@src/util/contextPillContent";
+import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 // ============================================
@@ -303,7 +304,7 @@ export function useTiptapInput(
       if (iconType === "terminal") {
         // Ask all mounted TerminalView instances to snapshot their buffer to cache
         window.dispatchEvent(new Event("terminal-snapshot-request"));
-        const ptySessionId = `spotlight-pty-${value}`;
+        const ptySessionId = toBackendPtySessionId(value);
         const buffer = getTerminalBuffer(ptySessionId);
         if (buffer) {
           const lineCount = buffer.split("\n").length;

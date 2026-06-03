@@ -145,21 +145,21 @@ export const resolvedCodeFontFamilyAtom = atom<string>((get) => {
  * Resolved CSS font-family string for the terminal.
  *
  * When the user has chosen a specific font preset it respects their choice
- * (same as the editor).  When they are on "System Default" the terminal uses
- * Menlo-first — matching Cursor's macOS terminal default — because Menlo
- * renders heavier and more legible in xterm's WebGL renderer than SF Mono.
+ * (same as the editor). When they are on "System Default", the terminal uses
+ * Hack first and falls back to the platform monospace stack when Hack is not
+ * installed.
  */
 export const resolvedTerminalFontFamilyAtom = atom<string>((get) => {
   const preset = get(codeFontFamilyAtom);
   if (preset === "custom") {
     const customFont = get(customCodeFontFamilyAtom).trim();
     if (customFont) {
-      return `"${customFont}", "Menlo", "Monaco", "Courier New", monospace`;
+      return `"${customFont}", "Hack", "Menlo", "Monaco", "Courier New", monospace`;
     }
-    return 'Menlo, Monaco, "Courier New", monospace';
+    return '"Hack", Menlo, Monaco, "Courier New", monospace';
   }
   if (preset === "system") {
-    return 'Menlo, Monaco, "Courier New", monospace';
+    return '"Hack", Menlo, Monaco, "Courier New", monospace';
   }
   return CODE_FONT_FAMILY_CSS[preset];
 });

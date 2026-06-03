@@ -14,12 +14,14 @@ import {
   terminalSessionsAtom,
 } from "@src/store/workstation/codeEditor/terminal";
 import { invokeTauri } from "@src/util/platform/tauri/init";
+import {
+  isAgentPtySessionId,
+  toBackendPtySessionId,
+} from "@src/util/ui/terminal/ptySessionId";
 
 function shellEscapePath(path: string): string {
   return `'${path.replace(/'/g, "'\\''")}'`;
 }
-
-const PTY_ID_PREFIX = "spotlight-pty-";
 
 export function useTerminalRepoSync(): void {
   const currentRepo = useAtomValue(currentRepoAtom);
@@ -47,10 +49,10 @@ export function useTerminalRepoSync(): void {
     const cdCmd = `cd ${shellEscapePath(repoPath)}\n`;
 
     for (const session of sessions) {
-      if (session.readOnly) continue;
+      if (session.readOnly || isAgentPtySessionId(session.id)) continue;
       if (!initialized.has(session.id)) continue;
 
-      const ptyId = `${PTY_ID_PREFIX}${session.id}`;
+      const ptyId = toBackendPtySessionId(session.id);
       invokeTauri("write_pty", { sessionId: ptyId, data: cdCmd }).catch(
         (err) => {
           // eslint-disable-next-line no-console

@@ -1,5 +1,6 @@
 import { Tag } from "lucide-react";
 
+import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import {
   FieldRow,
   type FieldRowVariant,
@@ -45,7 +46,7 @@ export function LabelsSection({
       }
     >
       <FieldRow
-        icon={<Tag size={14} />}
+        icon={<Tag size={DROPDOWN_ITEM.iconSize} />}
         value={
           workItem.labels && workItem.labels.length > 0
             ? workItem.labels.map((label) => label.name).join(", ")

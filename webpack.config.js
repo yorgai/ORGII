@@ -229,6 +229,13 @@ module.exports = (env, argv) => {
           },
         },
         {
+          test: /\.(woff2?|ttf|otf)$/i,
+          type: "asset/resource",
+          generator: {
+            filename: "fonts/[name].[contenthash:8][ext]",
+          },
+        },
+        {
           // SVGs with ?url query - return URL instead of React component (for <img src>)
           test: /\.svg$/,
           resourceQuery: /url/,
@@ -298,8 +305,8 @@ module.exports = (env, argv) => {
         ),
         "@codemirror/state": path.dirname(require.resolve("@codemirror/state")),
         "@codemirror/view": path.dirname(require.resolve("@codemirror/view")),
-        // Fix lowlight version conflict: react-syntax-highlighter needs v1 (lib/core.js),
-        // while tiptap uses v3 (no lib/core.js). Find v1 in pnpm store dynamically.
+        // react-syntax-highlighter expects the v1 lowlight lib/core.js entry.
+        // Resolve that nested dependency explicitly from the pnpm store when needed.
         "lowlight/lib/core": (() => {
           const fs = require("fs");
           const pnpmDir = path.resolve(__dirname, "node_modules/.pnpm");
@@ -319,15 +326,6 @@ module.exports = (env, argv) => {
             "node_modules/react-syntax-highlighter/node_modules/lowlight/lib/core.js"
           );
         })(),
-        // Force ESM versions for TipTap packages to fix CJS/ESM interop issues
-        "@tiptap/extension-code-block": path.resolve(
-          __dirname,
-          "node_modules/@tiptap/extension-code-block/dist/index.js"
-        ),
-        "@tiptap/extension-code-block-lowlight": path.resolve(
-          __dirname,
-          "node_modules/@tiptap/extension-code-block-lowlight/dist/index.js"
-        ),
       },
       fallback: {
         process: require.resolve("process/browser"),

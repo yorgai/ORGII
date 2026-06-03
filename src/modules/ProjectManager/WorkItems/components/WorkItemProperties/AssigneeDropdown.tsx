@@ -3,6 +3,10 @@ import React from "react";
 
 import Avatar from "@src/components/Avatar";
 import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
+import {
   type FieldRowVariant,
   Option,
   SearchableDropdown,
@@ -59,13 +63,13 @@ export const AssigneeDropdown: React.FC<AssigneeDropdownProps> = ({
       return (
         <>
           <Option
-            icon={<User size={14} />}
+            icon={<User size={DROPDOWN_ITEM.iconSize} />}
             label={t("workItems.properties.noAssignee")}
             isSelected={!workItem.assignee}
             onClick={() => onAssigneeChange(null)}
           />
           {filteredMembers.length > 0 && (
-            <div className="px-3 pb-0.5 pt-2 text-[10px] font-medium uppercase tracking-wider text-text-4">
+            <div className={DROPDOWN_CLASSES.sectionLabel}>
               {t("workItems.properties.membersGroup")}
             </div>
           )}
@@ -77,7 +81,7 @@ export const AssigneeDropdown: React.FC<AssigneeDropdownProps> = ({
               onClick={() => onAssigneeChange(person)}
             >
               <Avatar
-                size={16}
+                size={DROPDOWN_ITEM.iconSize}
                 src={person.avatar}
                 style={{
                   backgroundColor: person.color || "var(--color-fill-3)",
@@ -91,7 +95,7 @@ export const AssigneeDropdown: React.FC<AssigneeDropdownProps> = ({
             </Option>
           ))}
           {filteredAgents.length > 0 && (
-            <div className="px-3 pb-0.5 pt-2 text-[10px] font-medium uppercase tracking-wider text-text-4">
+            <div className={DROPDOWN_CLASSES.sectionLabel}>
               {t("workItems.properties.agentsGroup")}
             </div>
           )}
@@ -111,7 +115,10 @@ export const AssigneeDropdown: React.FC<AssigneeDropdownProps> = ({
                 }
               >
                 <div className="relative shrink-0">
-                  <AtSign size={14} className="text-primary-6" />
+                  <AtSign
+                    size={DROPDOWN_ITEM.iconSize}
+                    className="text-primary-6"
+                  />
                   {isRunning && (
                     <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-green-500 ring-1 ring-bg-1">
                       <span className="absolute inset-0 animate-ping rounded-full bg-green-400 opacity-75" />
@@ -123,7 +130,7 @@ export const AssigneeDropdown: React.FC<AssigneeDropdownProps> = ({
             );
           })}
           {filteredOrgs.length > 0 && (
-            <div className="px-3 pb-0.5 pt-2 text-[10px] font-medium uppercase tracking-wider text-text-4">
+            <div className={DROPDOWN_CLASSES.sectionLabel}>
               {t("workItems.properties.orgsGroup")}
             </div>
           )}
@@ -141,7 +148,10 @@ export const AssigneeDropdown: React.FC<AssigneeDropdownProps> = ({
                   onAssigneeChange({ id: org.id, name: org.name }, "org")
                 }
               >
-                <Network size={14} className="text-primary-6" />
+                <Network
+                  size={DROPDOWN_ITEM.iconSize}
+                  className="text-primary-6"
+                />
                 <span className="flex-1 truncate">{org.name}</span>
                 {memberCount > 0 && (
                   <span className="rounded bg-fill-3 px-1 py-0.5 text-[10px] text-text-3">
@@ -155,7 +165,7 @@ export const AssigneeDropdown: React.FC<AssigneeDropdownProps> = ({
             allAgentList.length === 0 &&
             filteredOrgs.length === 0 &&
             !searchQuery && (
-              <div className="px-3 py-2 text-[12px] text-text-3">
+              <div className={DROPDOWN_CLASSES.listMessage}>
                 {t("workItems.properties.noMembersHint")}
               </div>
             )}

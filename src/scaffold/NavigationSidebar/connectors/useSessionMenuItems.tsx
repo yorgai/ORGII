@@ -3,6 +3,7 @@ import { GitFork, Loader2, MoreHorizontal } from "lucide-react";
 import React, { type ReactNode, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { RUST_AGENT_TYPE } from "@src/api/tauri/agent/types";
 import {
   SESSION_GROUP_LABELS,
   SESSION_GROUP_ORDER,
@@ -18,7 +19,10 @@ import {
 import { isTerminalStatus } from "@src/types/session/session";
 import { formatCompactTimeAgo } from "@src/util/data/formatters/date";
 import { formatBranchLabel } from "@src/util/git/branchLabel";
-import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
+import {
+  getRustAgentType,
+  isCursorIdeSession,
+} from "@src/util/session/sessionDispatch";
 import { isSessionInProgress } from "@src/util/session/sessionInProgress";
 import {
   getSessionListDisplayName,
@@ -175,6 +179,13 @@ function worktreeSubtitle(branch: string | undefined): ReactNode {
   );
 }
 
+function shouldShowWorktreeSubtitle(session: Session): boolean {
+  return (
+    Boolean(session.worktreePath) &&
+    getRustAgentType(session.session_id) !== RUST_AGENT_TYPE.TERMINAL
+  );
+}
+
 // ============================================
 // Hook
 // ============================================
@@ -233,7 +244,7 @@ export function useSessionMenuItems({
         key: session.session_id,
         label: displayName,
         dataTestId: `sidebar-session-item-${session.session_id}`,
-        subtitle: session.worktreePath
+        subtitle: shouldShowWorktreeSubtitle(session)
           ? worktreeSubtitle(session.worktreeBranch)
           : undefined,
         icon: inProgress

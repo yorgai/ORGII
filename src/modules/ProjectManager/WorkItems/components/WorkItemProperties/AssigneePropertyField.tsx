@@ -1,6 +1,10 @@
 import { AtSign, Network, User } from "lucide-react";
 
 import Avatar from "@src/components/Avatar";
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import { PropertyDropdownField } from "@src/components/PropertyField/PropertyDropdownField";
 import {
   type FieldRowVariant,
@@ -32,16 +36,16 @@ interface AssigneePropertyFieldProps {
 }
 
 function renderAssigneeIcon(workItem: WorkItemExtended) {
-  if (!workItem.assignee) return <User size={14} />;
+  if (!workItem.assignee) return <User size={DROPDOWN_ITEM.iconSize} />;
   if (workItem.assigneeType === "agent") {
-    return <AtSign size={14} className="text-primary-6" />;
+    return <AtSign size={DROPDOWN_ITEM.iconSize} className="text-primary-6" />;
   }
   if (workItem.assigneeType === "org") {
-    return <Network size={14} className="text-primary-6" />;
+    return <Network size={DROPDOWN_ITEM.iconSize} className="text-primary-6" />;
   }
   return (
     <Avatar
-      size={16}
+      size={DROPDOWN_ITEM.iconSize}
       src={workItem.assignee.avatar}
       style={{
         backgroundColor: workItem.assignee.color || "var(--color-fill-3)",
@@ -115,13 +119,13 @@ export function AssigneePropertyField({
         return (
           <>
             <Option
-              icon={<User size={14} />}
+              icon={<User size={DROPDOWN_ITEM.iconSize} />}
               label={t("workItems.properties.noAssignee")}
               isSelected={!workItem.assignee}
               onClick={() => select(null)}
             />
             {filteredMembers.length > 0 && (
-              <div className="px-3 pb-0.5 pt-2 text-[10px] font-medium uppercase tracking-wider text-text-4">
+              <div className={DROPDOWN_CLASSES.sectionLabel}>
                 {t("workItems.properties.membersGroup")}
               </div>
             )}
@@ -133,7 +137,7 @@ export function AssigneePropertyField({
                 onClick={() => select(person)}
               >
                 <Avatar
-                  size={16}
+                  size={DROPDOWN_ITEM.iconSize}
                   src={person.avatar}
                   style={{
                     backgroundColor: person.color || "var(--color-fill-3)",
@@ -147,7 +151,7 @@ export function AssigneePropertyField({
               </Option>
             ))}
             {filteredAgents.length > 0 && (
-              <div className="px-3 pb-0.5 pt-2 text-[10px] font-medium uppercase tracking-wider text-text-4">
+              <div className={DROPDOWN_CLASSES.sectionLabel}>
                 {t("workItems.properties.agentsGroup")}
               </div>
             )}
@@ -163,12 +167,15 @@ export function AssigneePropertyField({
                   select({ id: agent.id, name: agent.name }, "agent")
                 }
               >
-                <AtSign size={14} className="text-primary-6" />
+                <AtSign
+                  size={DROPDOWN_ITEM.iconSize}
+                  className="text-primary-6"
+                />
                 <span className="flex-1 truncate">{agent.name}</span>
               </Option>
             ))}
             {filteredOrgs.length > 0 && (
-              <div className="px-3 pb-0.5 pt-2 text-[10px] font-medium uppercase tracking-wider text-text-4">
+              <div className={DROPDOWN_CLASSES.sectionLabel}>
                 {t("workItems.properties.orgsGroup")}
               </div>
             )}
@@ -182,7 +189,10 @@ export function AssigneePropertyField({
                 label={org.name}
                 onClick={() => select({ id: org.id, name: org.name }, "org")}
               >
-                <Network size={14} className="text-primary-6" />
+                <Network
+                  size={DROPDOWN_ITEM.iconSize}
+                  className="text-primary-6"
+                />
                 <span className="flex-1 truncate">{org.name}</span>
               </Option>
             ))}

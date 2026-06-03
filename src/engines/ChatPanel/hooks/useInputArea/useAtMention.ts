@@ -14,6 +14,7 @@ import {
   loadSessionPillContent,
   loadWorkItemPillContent,
 } from "@src/util/contextPillContent";
+import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 
 import type { AtMentionHandlers, CustomMentionOption } from "./types";
 
@@ -111,7 +112,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
           // Unify with paste flow: use terminal:// path + store buffer content
           // Ask all mounted TerminalView instances to snapshot their buffer to cache
           window.dispatchEvent(new Event("terminal-snapshot-request"));
-          const ptySessionId = `spotlight-pty-${value}`;
+          const ptySessionId = toBackendPtySessionId(value);
           const buffer = getTerminalBuffer(ptySessionId);
           if (buffer) {
             const lineCount = buffer.split("\n").length;

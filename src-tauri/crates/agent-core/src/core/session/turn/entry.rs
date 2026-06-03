@@ -201,10 +201,8 @@ pub async fn process_message(
 
     let skill_ws = workspace_path.join(".orgii");
     let skill_loader_fn = |name: &str| -> Option<String> {
-        let loader =
-            crate::intelligence::skills::loader::SkillsLoader::new(&skill_ws).with_builtin_dir(
-                crate::intelligence::skills::loader::global_skills_dir(),
-            );
+        let loader = crate::intelligence::skills::loader::SkillsLoader::new(&skill_ws)
+            .with_builtin_dir(crate::intelligence::skills::loader::global_skills_dir());
         loader.load_skill(name)
     };
 

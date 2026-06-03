@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import React from "react";
 
+import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import {
   ENTITY_COLORS,
   MILESTONE_COLORS,
@@ -64,7 +65,10 @@ export const MILESTONE_OPTIONS: DropdownOption<string>[] = [
   {
     value: "none",
     label: MILESTONE_OPTIONS_KEY,
-    icon: React.createElement(Diamond, { size: 14, opacity: 0.5 }),
+    icon: React.createElement(Diamond, {
+      size: DROPDOWN_ITEM.iconSize,
+      opacity: 0.5,
+    }),
     color: MILESTONE_COLORS.active,
   },
 ];
@@ -93,49 +97,49 @@ export const PROPERTY_FIELDS: PropertyFieldConfig[] = [
   {
     key: "workItemStatus",
     label: "workItems.propertyFields.status",
-    icon: React.createElement(Circle, { size: 14 }),
+    icon: React.createElement(Circle, { size: DROPDOWN_ITEM.iconSize }),
     type: "status",
     editable: true,
   },
   {
     key: "priority",
     label: "workItems.propertyFields.priority",
-    icon: React.createElement(SignalHigh, { size: 14 }),
+    icon: React.createElement(SignalHigh, { size: DROPDOWN_ITEM.iconSize }),
     type: "priority",
     editable: true,
   },
   {
     key: "assignee",
     label: "workItems.propertyFields.assignee",
-    icon: React.createElement(User, { size: 14 }),
+    icon: React.createElement(User, { size: DROPDOWN_ITEM.iconSize }),
     type: "person",
     editable: true,
   },
   {
     key: "labels",
     label: "workItems.propertyFields.labels",
-    icon: React.createElement(Tag, { size: 14 }),
+    icon: React.createElement(Tag, { size: DROPDOWN_ITEM.iconSize }),
     type: "label",
     editable: true,
   },
   {
     key: "project",
     label: "workItems.propertyFields.project",
-    icon: React.createElement(BookOpen, { size: 14 }),
+    icon: React.createElement(BookOpen, { size: DROPDOWN_ITEM.iconSize }),
     type: "project",
     editable: true,
   },
   {
     key: "milestone",
     label: "workItems.propertyFields.milestone",
-    icon: React.createElement(Diamond, { size: 14 }),
+    icon: React.createElement(Diamond, { size: DROPDOWN_ITEM.iconSize }),
     type: "milestone",
     editable: true,
   },
   {
     key: "endDate",
     label: "workItems.propertyFields.dueDate",
-    icon: React.createElement(Calendar, { size: 14 }),
+    icon: React.createElement(Calendar, { size: DROPDOWN_ITEM.iconSize }),
     type: "date",
     editable: true,
   },
@@ -177,7 +181,7 @@ export function createProjectOption(
   return {
     value: project.id,
     label: project.name,
-    icon: React.createElement(BookOpen, { size: 14 }),
+    icon: React.createElement(BookOpen, { size: DROPDOWN_ITEM.iconSize }),
     color: project.color || ENTITY_COLORS.blue,
   };
 }
@@ -188,7 +192,7 @@ export function createMilestoneOption(
   return {
     value: milestone.id,
     label: milestone.name,
-    icon: React.createElement(Diamond, { size: 14 }),
+    icon: React.createElement(Diamond, { size: DROPDOWN_ITEM.iconSize }),
     color: MILESTONE_COLORS.active,
   };
 }
@@ -235,13 +239,13 @@ function createAssigneeSubmenu(
     {
       id: "assignee-none",
       label: tr("workItems.properties.noAssignee", "No assignee"),
-      icon: React.createElement(User, { size: 14 }),
+      icon: React.createElement(User, { size: DROPDOWN_ITEM.iconSize }),
       action: () => onAction("assignee", "none"),
     },
     ...availableMembers.map((member) => ({
       id: `assignee-${member.id}`,
       label: member.name,
-      icon: React.createElement(User, { size: 14 }),
+      icon: React.createElement(User, { size: DROPDOWN_ITEM.iconSize }),
       secondary: workItem?.assignee?.id === member.id ? "✓" : undefined,
       action: () => onAction("assignee", member.id),
     })),
@@ -258,13 +262,13 @@ function createLeadSubmenu(
     {
       id: "lead-none",
       label: tr("workItems.properties.noAssignee", "No assignee"),
-      icon: React.createElement(User, { size: 14 }),
+      icon: React.createElement(User, { size: DROPDOWN_ITEM.iconSize }),
       action: () => onAction("lead", "none"),
     },
     ...availableMembers.map((member) => ({
       id: `lead-${member.id}`,
       label: member.name,
-      icon: React.createElement(User, { size: 14 }),
+      icon: React.createElement(User, { size: DROPDOWN_ITEM.iconSize }),
       secondary: workItem?.lead?.some((person) => person.id === member.id)
         ? "✓"
         : undefined,
@@ -291,7 +295,7 @@ function createMembersSubmenu(
   return availableMembers.map((member) => ({
     id: `member-${member.id}`,
     label: member.name,
-    icon: React.createElement(User, { size: 14 }),
+    icon: React.createElement(User, { size: DROPDOWN_ITEM.iconSize }),
     secondary: workItem?.members?.some((person) => person.id === member.id)
       ? "✓"
       : undefined,
@@ -317,7 +321,7 @@ function createLabelsSubmenu(
   return availableLabels.map((label) => ({
     id: `label-${label.id}`,
     label: label.name,
-    icon: React.createElement(Tag, { size: 14 }),
+    icon: React.createElement(Tag, { size: DROPDOWN_ITEM.iconSize }),
     iconColor: label.color,
     secondary: workItem?.labels?.some((item) => item.id === label.id)
       ? "✓"
@@ -335,7 +339,7 @@ function createProjectSubmenu(
     ...availableProjects.map((project) => ({
       id: `project-${project.id}`,
       label: project.name,
-      icon: React.createElement(BookOpen, { size: 14 }),
+      icon: React.createElement(BookOpen, { size: DROPDOWN_ITEM.iconSize }),
       iconColor: project.color,
       secondary: workItem?.project?.id === project.id ? "✓" : undefined,
       action: () => onAction("project", project.id),
@@ -353,13 +357,13 @@ function createMilestoneSubmenu(
     {
       id: "milestone-none",
       label: tr("workItems.properties.noMilestone", "No milestone"),
-      icon: React.createElement(Diamond, { size: 14 }),
+      icon: React.createElement(Diamond, { size: DROPDOWN_ITEM.iconSize }),
       action: () => onAction("milestone", "none"),
     },
     ...availableMilestones.map((milestone) => ({
       id: `milestone-${milestone.id}`,
       label: milestone.name,
-      icon: React.createElement(Diamond, { size: 14 }),
+      icon: React.createElement(Diamond, { size: DROPDOWN_ITEM.iconSize }),
       secondary: workItem?.milestone?.id === milestone.id ? "✓" : undefined,
       action: () => onAction("milestone", milestone.id),
     })),
@@ -397,7 +401,7 @@ export const getContextMenuItems = (
     {
       id: "status",
       label: tr("workItems.contextMenu.status", "Status"),
-      icon: React.createElement(CircleDot, { size: 14 }),
+      icon: React.createElement(CircleDot, { size: DROPDOWN_ITEM.iconSize }),
       secondary: getTranslatedOptionLabel(
         statusValue,
         WORK_ITEM_STATUS_OPTIONS,
@@ -417,7 +421,7 @@ export const getContextMenuItems = (
     {
       id: "priority",
       label: tr("workItems.contextMenu.priority", "Priority"),
-      icon: React.createElement(Flag, { size: 14 }),
+      icon: React.createElement(Flag, { size: DROPDOWN_ITEM.iconSize }),
       secondary: getTranslatedOptionLabel(
         priorityValue,
         WORK_ITEM_PRIORITY_OPTIONS,
@@ -437,7 +441,7 @@ export const getContextMenuItems = (
     {
       id: "assignee",
       label: tr("workItems.contextMenu.assignee", "Assignee"),
-      icon: React.createElement(User, { size: 14 }),
+      icon: React.createElement(User, { size: DROPDOWN_ITEM.iconSize }),
       secondary:
         workItem?.assignee?.name ??
         tr("workItems.properties.noAssignee", "No assignee"),
@@ -447,7 +451,7 @@ export const getContextMenuItems = (
     {
       id: "due-date",
       label: tr("workItems.contextMenu.setDueDate", "Set due date"),
-      icon: React.createElement(Calendar, { size: 14 }),
+      icon: React.createElement(Calendar, { size: DROPDOWN_ITEM.iconSize }),
       secondary: formatMenuDate(
         workItem?.endDate,
         tr("workItems.properties.noDueDate", "No due date")
@@ -458,7 +462,7 @@ export const getContextMenuItems = (
     {
       id: "labels",
       label: tr("workItems.contextMenu.labels", "Labels"),
-      icon: React.createElement(Tag, { size: 14 }),
+      icon: React.createElement(Tag, { size: DROPDOWN_ITEM.iconSize }),
       secondary: labelsValue,
       keybinding: "l",
       submenu: createLabelsSubmenu(workItem, availableLabels, tr, onAction),
@@ -466,7 +470,7 @@ export const getContextMenuItems = (
     {
       id: "project",
       label: tr("workItems.contextMenu.project", "Project"),
-      icon: React.createElement(BookOpen, { size: 14 }),
+      icon: React.createElement(BookOpen, { size: DROPDOWN_ITEM.iconSize }),
       secondary:
         workItem?.project?.name ??
         tr("workItems.untitledProject", "Untitled Project"),
@@ -476,19 +480,21 @@ export const getContextMenuItems = (
     {
       id: "more-properties",
       label: tr("workItems.contextMenu.moreProperties", "More properties"),
-      icon: React.createElement(MoreHorizontal, { size: 14 }),
+      icon: React.createElement(MoreHorizontal, {
+        size: DROPDOWN_ITEM.iconSize,
+      }),
       submenu: [
         {
           id: "lead",
           label: tr("workItems.contextMenu.lead", "Lead"),
-          icon: React.createElement(User, { size: 14 }),
+          icon: React.createElement(User, { size: DROPDOWN_ITEM.iconSize }),
           secondary: leadValue,
           submenu: createLeadSubmenu(workItem, availableMembers, tr, onAction),
         },
         {
           id: "members",
           label: tr("workItems.contextMenu.members", "Members"),
-          icon: React.createElement(Users, { size: 14 }),
+          icon: React.createElement(Users, { size: DROPDOWN_ITEM.iconSize }),
           secondary: membersValue,
           submenu: createMembersSubmenu(
             workItem,
@@ -500,7 +506,7 @@ export const getContextMenuItems = (
         {
           id: "milestone",
           label: tr("workItems.contextMenu.milestone", "Milestone"),
-          icon: React.createElement(Diamond, { size: 14 }),
+          icon: React.createElement(Diamond, { size: DROPDOWN_ITEM.iconSize }),
           secondary:
             workItem?.milestone?.name ??
             tr("workItems.properties.noMilestone", "No milestone"),
@@ -518,7 +524,7 @@ export const getContextMenuItems = (
     {
       id: "rename",
       label: tr("workItems.contextMenu.rename", "Rename..."),
-      icon: React.createElement(Pencil, { size: 14 }),
+      icon: React.createElement(Pencil, { size: DROPDOWN_ITEM.iconSize }),
       shortcutId: "workitem_rename",
       action: () => onAction("rename"),
     },
@@ -526,7 +532,7 @@ export const getContextMenuItems = (
     {
       id: "delete",
       label: tr("common:actions.delete", "Delete"),
-      icon: React.createElement(Trash2, { size: 14 }),
+      icon: React.createElement(Trash2, { size: DROPDOWN_ITEM.iconSize }),
       shortcutId: "workitem_delete",
       action: () => onAction("delete"),
     },

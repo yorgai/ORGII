@@ -5,6 +5,7 @@
 import { Circle, Flag } from "lucide-react";
 import React from "react";
 
+import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import {
   FieldRow,
   type FieldRowVariant,
@@ -63,7 +64,7 @@ const StatusHealthPriorityFields: React.FC<StatusHealthPriorityFieldsProps> = ({
         }
       >
         <FieldRow
-          icon={<Circle size={14} />}
+          icon={<Circle size={DROPDOWN_ITEM.iconSize} />}
           iconColor={currentStatus?.color}
           label={t("properties.status")}
           value={
@@ -91,7 +92,7 @@ const StatusHealthPriorityFields: React.FC<StatusHealthPriorityFieldsProps> = ({
               return filtered.map((option) => (
                 <Option
                   key={option.value}
-                  icon={<Circle size={14} />}
+                  icon={<Circle size={DROPDOWN_ITEM.iconSize} />}
                   iconColor={option.color}
                   label={t(option.labelKey)}
                   isSelected={project.status === option.value}
@@ -114,7 +115,7 @@ const StatusHealthPriorityFields: React.FC<StatusHealthPriorityFieldsProps> = ({
         }
       >
         <FieldRow
-          icon={<Circle size={14} />}
+          icon={<Circle size={DROPDOWN_ITEM.iconSize} />}
           iconColor={currentHealth?.color}
           label={t("properties.health")}
           value={
@@ -144,7 +145,7 @@ const StatusHealthPriorityFields: React.FC<StatusHealthPriorityFieldsProps> = ({
               return filtered.map((option) => (
                 <Option
                   key={option.value}
-                  icon={<Circle size={14} />}
+                  icon={<Circle size={DROPDOWN_ITEM.iconSize} />}
                   iconColor={option.color}
                   label={t(option.labelKey)}
                   isSelected={project.health === option.value}
@@ -167,7 +168,7 @@ const StatusHealthPriorityFields: React.FC<StatusHealthPriorityFieldsProps> = ({
         }
       >
         <FieldRow
-          icon={<Flag size={14} />}
+          icon={<Flag size={DROPDOWN_ITEM.iconSize} />}
           iconColor={currentPriority?.color}
           label={t("properties.priority")}
           value={

@@ -55,7 +55,11 @@ const CONVERSATION_UI_CANONICALS = new Set([
  */
 export function getCategoryForUiCanonical(uiCanonical: string): EventCategory {
   if (FILE_UI_CANONICALS.has(uiCanonical)) return "file";
-  if (uiCanonical === "run_shell" || uiCanonical === "await_output")
+  if (
+    uiCanonical === "run_shell" ||
+    uiCanonical === "await_output" ||
+    uiCanonical === "inspect_terminals"
+  )
     return "terminal";
   if (SEARCH_UI_CANONICALS.has(uiCanonical)) return "explore";
   if (CONVERSATION_UI_CANONICALS.has(uiCanonical)) return "conversation";

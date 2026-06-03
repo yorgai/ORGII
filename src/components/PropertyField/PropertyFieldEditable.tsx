@@ -296,8 +296,8 @@ export const Option: React.FC<OptionProps> = ({
     type="button"
     className={[
       DROPDOWN_CLASSES.item,
-      "hover:bg-fill-2",
-      "min-h-7 w-full text-left",
+      DROPDOWN_CLASSES.itemHover,
+      "w-full justify-between text-left",
       isSelected && DROPDOWN_CLASSES.itemSelected,
     ]
       .filter(Boolean)
@@ -313,7 +313,7 @@ export const Option: React.FC<OptionProps> = ({
       <>
         {icon && (
           <span
-            className="flex h-4 w-4 shrink-0 items-center justify-center"
+            className={`flex shrink-0 items-center justify-center ${DROPDOWN_ITEM.iconSizeClass} [&_svg]:h-[13px] [&_svg]:w-[13px]`}
             style={iconColor ? { color: iconColor } : undefined}
           >
             {icon}
