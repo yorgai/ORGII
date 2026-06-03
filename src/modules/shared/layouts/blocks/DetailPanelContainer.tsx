@@ -24,7 +24,7 @@ export interface DetailPanelContainerProps {
 const DetailPanelContainer: React.FC<DetailPanelContainerProps> = memo(
   ({ children, className = "", testId }) => (
     <div
-      className={`flex h-full flex-col overflow-hidden @container ${className}`}
+      className={`flex h-full min-w-0 flex-col overflow-hidden @container ${className}`}
       data-testid={testId}
     >
       <NarrowPlaceholder className="flex-1 @[300px]:hidden" />

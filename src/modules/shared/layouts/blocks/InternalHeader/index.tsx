@@ -104,7 +104,13 @@ const InternalHeader: React.FC<InternalHeaderProps> = memo(
 
     return (
       <div
-        className={`relative z-30 flex flex-shrink-0 flex-col ${topPadding} ${paddingClass} ${borderClasses} ${bgClasses} ${className}`}
+        className={`relative z-50 flex flex-shrink-0 flex-col ${topPadding} ${paddingClass} ${borderClasses} ${bgClasses} ${className}`}
+        style={
+          {
+            WebkitAppRegion: "no-drag",
+            pointerEvents: "auto",
+          } as React.CSSProperties
+        }
       >
         {hasTitleRow && (
           <div className="flex h-12 items-center gap-2">
@@ -134,7 +140,7 @@ const InternalHeader: React.FC<InternalHeaderProps> = memo(
           </div>
         )}
         {tabs && (
-          <div className="flex items-center pb-3">
+          <div className="relative z-10 flex items-center pb-3">
             {tabs}
             {!hasTitleRow && actions && (
               <>
