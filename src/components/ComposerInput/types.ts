@@ -145,6 +145,17 @@ export interface ComposerInputRef {
     iconType?: PillIconType,
     displayName?: string
   ) => void;
+  /**
+   * Append a pill at the very end of the editor, after any existing content.
+   * A leading space is added before the pill when the editor is non-empty so
+   * it reads as a separate token from the user's prior text.
+   */
+  appendFilePill: (
+    filePath: string,
+    isFolder?: boolean,
+    iconType?: PillIconType,
+    displayName?: string
+  ) => void;
   /** Insert a file-reference pill with an attached line range */
   insertFileReference: (options: {
     filePath: string;

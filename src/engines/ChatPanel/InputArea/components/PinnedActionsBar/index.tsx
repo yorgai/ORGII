@@ -129,7 +129,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
     const handleSetupRepo = useCallback(() => {
       if (!tiptapRef.current) return;
-      tiptapRef.current.insertFilePill(
+      tiptapRef.current.appendFilePill(
         "/setup-repo",
         false,
         "skill",
@@ -196,7 +196,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
         if (action.category === "skill") {
           const skillToken = `/${action.skillName ?? action.name}`;
-          tiptapRef.current.prependFilePill(
+          tiptapRef.current.appendFilePill(
             skillToken,
             false,
             "skill",

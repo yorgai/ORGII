@@ -165,6 +165,35 @@ export function buildImperativeApi(
         ],
       });
     },
+    appendFilePill: (
+      filePath: string,
+      isFolder = false,
+      iconType?: PillIconType,
+      displayName?: string
+    ) => {
+      const fileName = displayName || filePath.split("/").pop() || filePath;
+      const pillAttrs: ComposerPillAttrs = {
+        filePath,
+        fileName,
+        isFolder,
+        iconType: (iconType ?? null) as PillIconType | null,
+        lineStart: null,
+        lineEnd: null,
+      };
+      // Capture the existing content, then rebuild with the new pill
+      // at the end. When there is existing content a space separator is
+      // inserted before the pill so it reads as a distinct token.
+      const existing = ctx.captureSnapshot();
+      const hasContent = existing.parts.length > 0;
+      ctx.restoreSnapshot({
+        parts: [
+          ...existing.parts,
+          ...(hasContent ? [{ kind: "text" as const, text: " " }] : []),
+          { kind: "pill", attrs: pillAttrs },
+          { kind: "text", text: " " },
+        ],
+      });
+    },
     insertFileReference: (options) => {
       const fileName =
         options.fileName ||
