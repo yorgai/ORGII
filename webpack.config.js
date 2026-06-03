@@ -229,6 +229,13 @@ module.exports = (env, argv) => {
           },
         },
         {
+          test: /\.(woff2?|ttf|otf)$/i,
+          type: "asset/resource",
+          generator: {
+            filename: "fonts/[name].[contenthash:8][ext]",
+          },
+        },
+        {
           // SVGs with ?url query - return URL instead of React component (for <img src>)
           test: /\.svg$/,
           resourceQuery: /url/,
