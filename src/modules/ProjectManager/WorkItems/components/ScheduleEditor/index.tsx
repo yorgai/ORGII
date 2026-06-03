@@ -9,6 +9,7 @@ import {
 import React, { useCallback, useMemo, useRef, useState } from "react";
 
 import type { WorkItemSchedule } from "@src/api/http/project";
+import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import Select, { type SelectOption } from "@src/components/Select";
 import TimePicker from "@src/components/TimePicker";
 
@@ -115,7 +116,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         value,
         label: (
           <span className="inline-flex items-center gap-2">
-            <Icon size={14} className="shrink-0" />
+            <Icon size={DROPDOWN_ITEM.iconSize} className="shrink-0" />
             <span className="truncate">{t(labelKey)}</span>
           </span>
         ),
@@ -316,7 +317,10 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
                 className="flex h-8 w-full items-center gap-2 rounded-lg border border-border-2 bg-bg-2 px-2 text-left text-[12px] text-text-1 outline-none transition-colors hover:bg-fill-2 focus:border-primary-6"
                 onClick={() => setOneShotDateOpen((open) => !open)}
               >
-                <CalendarDays size={14} className="shrink-0 text-text-3" />
+                <CalendarDays
+                  size={DROPDOWN_ITEM.iconSize}
+                  className="shrink-0 text-text-3"
+                />
                 <span className="min-w-0 flex-1 truncate">
                   {formatOneShotDate(
                     oneShotDate,

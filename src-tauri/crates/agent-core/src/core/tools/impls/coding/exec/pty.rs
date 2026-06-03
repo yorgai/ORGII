@@ -1,8 +1,7 @@
 //! PTY execution path: persistent terminal for interactive commands.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::async_runtime::Mutex as AsyncMutex;
@@ -13,18 +12,14 @@ use tracing::info;
 use crate::tools::traits::ToolError;
 use ::terminal::pty_commands::pty::PtySession;
 
-/// PTY session ID for the OS agent's persistent terminal.
-pub const AGENT_PTY_SESSION_ID: &str = "agent-pty-main";
-
-/// Broadcast channel capacity for PTY output capture.
-const OUTPUT_CHANNEL_CAPACITY: usize = 8192;
+/// Prefix for agent-owned persistent terminal PTY IDs.
+pub const AGENT_PTY_SESSION_PREFIX: &str = "agent-pty-";
 
 /// PTY resources (optional — only needed when interactive mode is used).
 pub struct PtyResources {
     pub sessions: Arc<AsyncMutex<HashMap<String, PtySession>>>,
     pub app_handle: AppHandle,
-    pub output_tx: broadcast::Sender<String>,
-    pub initialized: Arc<AtomicBool>,
+    pub initialized_sessions: Arc<parking_lot::Mutex<HashSet<String>>>,
 }
 
 impl PtyResources {
@@ -32,54 +27,69 @@ impl PtyResources {
         sessions: Arc<AsyncMutex<HashMap<String, PtySession>>>,
         app_handle: AppHandle,
     ) -> Self {
-        let (output_tx, _) = broadcast::channel(OUTPUT_CHANNEL_CAPACITY);
         Self {
             sessions,
             app_handle,
-            output_tx,
-            initialized: Arc::new(AtomicBool::new(false)),
+            initialized_sessions: Arc::new(parking_lot::Mutex::new(HashSet::new())),
         }
     }
 }
 
+pub fn pty_session_id_for_agent(session_key: &str) -> String {
+    format!("{AGENT_PTY_SESSION_PREFIX}{session_key}")
+}
+
 /// Initialize the PTY session (lazy, on first interactive command).
-pub async fn ensure_pty_initialized(pty: &PtyResources, working_dir: &Path) -> Result<(), String> {
-    if pty.initialized.load(Ordering::Relaxed) {
-        let sessions = pty.sessions.lock().await;
-        if sessions.contains_key(AGENT_PTY_SESSION_ID) {
-            return Ok(());
+pub async fn ensure_pty_initialized(
+    pty: &PtyResources,
+    pty_session_id: &str,
+    agent_session_id: &str,
+    working_dir: &Path,
+) -> Result<broadcast::Sender<String>, String> {
+    {
+        let mut sessions = pty.sessions.lock().await;
+        if let Some(session) = sessions.get(pty_session_id) {
+            pty.initialized_sessions
+                .lock()
+                .insert(pty_session_id.to_string());
+            if let Some(output_tap) = session.output_tap.clone() {
+                return Ok(output_tap);
+            }
         }
-        drop(sessions);
-        pty.initialized.store(false, Ordering::Relaxed);
+
+        sessions.remove(pty_session_id);
     }
 
-    info!(
-        "[ExecTool] Initializing PTY session: {}",
-        AGENT_PTY_SESSION_ID
-    );
+    {
+        let mut initialized = pty.initialized_sessions.lock();
+        initialized.remove(pty_session_id);
+    }
 
-    crate::tool_infra::terminal::create_agent_session(
-        AGENT_PTY_SESSION_ID.to_string(),
+    info!("[ExecTool] Initializing PTY session: {}", pty_session_id);
+
+    let output_tap = crate::tool_infra::terminal::create_agent_session(
+        pty_session_id.to_string(),
         Some(working_dir.to_string_lossy().to_string()),
         pty.app_handle.clone(),
         pty.sessions.clone(),
-        pty.output_tx.clone(),
     )
     .await?;
 
-    pty.initialized.store(true, Ordering::Relaxed);
+    pty.initialized_sessions
+        .lock()
+        .insert(pty_session_id.to_string());
 
     crate::bus::broadcast_event(
         "agent:terminal_created",
         serde_json::json!({
-            "sessionId": AGENT_PTY_SESSION_ID,
-            "ptySessionId": AGENT_PTY_SESSION_ID,
+            "sessionId": agent_session_id,
+            "ptySessionId": pty_session_id,
         }),
     );
 
     tokio::time::sleep(Duration::from_millis(500)).await;
 
-    Ok(())
+    Ok(output_tap)
 }
 
 /// Execute a command in the persistent PTY session.
@@ -93,19 +103,21 @@ pub async fn execute_via_pty(
     timeout_secs: u64,
     wait_secs: Option<u64>,
     working_dir: &Path,
+    agent_session_id: &str,
 ) -> Result<String, ToolError> {
-    ensure_pty_initialized(pty, working_dir)
+    let pty_session_id = pty_session_id_for_agent(agent_session_id);
+    let output_tap = ensure_pty_initialized(pty, &pty_session_id, agent_session_id, working_dir)
         .await
         .map_err(|err| ToolError::ExecutionFailed(format!("PTY init failed: {}", err)))?;
 
     if wait_secs.is_none() {
-        let mut output_rx = pty.output_tx.subscribe();
+        let mut output_rx = output_tap.subscribe();
         let timeout = Duration::from_secs(timeout_secs);
 
         match crate::tool_infra::terminal::exec_in_pty(
             command,
             work_dir,
-            AGENT_PTY_SESSION_ID,
+            &pty_session_id,
             pty.sessions.clone(),
             &mut output_rx,
             timeout,
@@ -131,20 +143,21 @@ pub async fn execute_via_pty(
     } else {
         let effective_wait = wait_secs.unwrap_or(timeout_secs);
 
-        let mut partial_rx = pty.output_tx.subscribe();
+        let mut partial_rx = output_tap.subscribe();
 
-        let output_tx_clone = pty.output_tx.clone();
+        let output_tap_clone = output_tap.clone();
         let sessions = pty.sessions.clone();
+        let pty_session_id_for_task = pty_session_id.clone();
         let cmd = command.to_string();
         let wd = work_dir.cloned();
         let full_timeout = Duration::from_secs(timeout_secs);
 
         let exec_handle = tokio::spawn(async move {
-            let mut rx = output_tx_clone.subscribe();
+            let mut rx = output_tap_clone.subscribe();
             crate::tool_infra::terminal::exec_in_pty(
                 &cmd,
                 wd.as_ref(),
-                AGENT_PTY_SESSION_ID,
+                &pty_session_id_for_task,
                 sessions,
                 &mut rx,
                 full_timeout,

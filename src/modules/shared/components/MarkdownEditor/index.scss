@@ -40,6 +40,7 @@
 }
 
 .markdown-editor-content {
+  position: relative;
   height: 100%;
   min-width: 0;
   max-width: 100%;
@@ -52,6 +53,17 @@
       background-color: var(--color-bg-2) !important;
     }
   }
+}
+
+.markdown-editor-placeholder {
+  position: absolute;
+  top: 8px;
+  left: 6px;
+  z-index: 1;
+  color: var(--color-text-3);
+  font-size: 13px;
+  line-height: 1.6;
+  pointer-events: none;
 }
 
 .markdown-editor-preview {

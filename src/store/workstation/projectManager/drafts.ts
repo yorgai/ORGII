@@ -55,7 +55,7 @@ export interface ProjectDraft {
   name: string;
   summary: string;
   orgId: string;
-  /** Rich-text description (HTML string from RichTextEditor) */
+  /** Markdown description */
   description: string;
   status: string;
   priority: string;

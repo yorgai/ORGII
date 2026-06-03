@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import DropdownSearch from "@src/components/Dropdown/DropdownSearch";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
 import {
@@ -80,7 +81,7 @@ function renderOptions(params: {
   return (
     <>
       <Option
-        icon={<CalendarX size={14} />}
+        icon={<CalendarX size={DROPDOWN_ITEM.iconSize} />}
         label={params.emptyLabel ?? params.t("properties.clearDate")}
         isSelected={!params.value}
         onClick={() => params.onChange(null)}
@@ -88,7 +89,7 @@ function renderOptions(params: {
       {suggestions.map((suggestion) => (
         <Option
           key={suggestion.id}
-          icon={<CalendarDays size={14} />}
+          icon={<CalendarDays size={DROPDOWN_ITEM.iconSize} />}
           label={`${formatSuggestionLabel(suggestion, params.t)} · ${formatSuggestionDate(suggestion.date)}`}
           isSelected={
             params.value

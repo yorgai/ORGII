@@ -13,13 +13,14 @@ pub use exec::exec_in_pty;
 #[cfg(test)]
 pub(crate) use exec::{extract_done_marker, strip_command_echo, ExecPhase};
 
+use chrono::Utc;
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use std::{
     collections::HashMap,
     io::{BufRead, BufReader, Write},
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     time::Duration,
 };
@@ -31,6 +32,7 @@ use tracing::warn;
 use crate::pty_commands::pty::PtySession;
 use crate::pty_commands::shell_integration;
 use crate::pty_commands::shells::ShellKind;
+use crate::redaction::append_redacted_bounded;
 
 // ============================================
 // Constants
@@ -38,10 +40,12 @@ use crate::pty_commands::shells::ShellKind;
 
 /// Maximum output size before truncation (10KB).
 const MAX_OUTPUT_CHARS: usize = 10_000;
+const MAX_REDACTED_SNAPSHOT_CHARS: usize = 80_000;
 
 /// Default PTY dimensions for agent sessions (no visible terminal yet).
 const DEFAULT_AGENT_ROWS: u16 = 40;
 const DEFAULT_AGENT_COLS: u16 = 120;
+const AGENT_OUTPUT_TAP_CAPACITY: usize = 8192;
 
 /// When unacknowledged bytes exceed this, pause the reader loop.
 const HIGH_WATERMARK: usize = 100_000;
@@ -218,6 +222,8 @@ pub async fn create_session(params: CreateSessionParams) -> Result<(), String> {
         .map_err(|err| format!("Failed to take PTY writer: {}", err))?;
 
     let unacked_bytes = Arc::new(AtomicUsize::new(0));
+    let last_output_at = Arc::new(Mutex::new(None));
+    let redacted_output = Arc::new(Mutex::new(String::new()));
 
     let session = PtySession {
         pty_pair: Arc::new(AsyncMutex::new(pty_pair)),
@@ -230,6 +236,9 @@ pub async fn create_session(params: CreateSessionParams) -> Result<(), String> {
         name,
         output_tap: output_tap.clone(),
         unacked_bytes: unacked_bytes.clone(),
+        created_at: Utc::now(),
+        last_output_at: last_output_at.clone(),
+        redacted_output: redacted_output.clone(),
     };
 
     // Clone the reader Arc before storing the session
@@ -302,6 +311,17 @@ pub async fn create_session(params: CreateSessionParams) -> Result<(), String> {
 
                         // Track unacknowledged output for backpressure
                         unacked_bytes.fetch_add(data_len, Ordering::Relaxed);
+                        *last_output_at
+                            .lock()
+                            .expect("last_output_at mutex poisoned") = Some(Utc::now());
+                        let data_text = String::from_utf8_lossy(&data_bytes);
+                        append_redacted_bounded(
+                            &mut redacted_output
+                                .lock()
+                                .expect("redacted_output mutex poisoned"),
+                            &data_text,
+                            MAX_REDACTED_SNAPSHOT_CHARS,
+                        );
 
                         // Emit Tauri event for frontend display
                         if let Err(err) = app_clone.emit(
@@ -318,8 +338,7 @@ pub async fn create_session(params: CreateSessionParams) -> Result<(), String> {
                         // A `SendError` here just means no receivers are currently subscribed,
                         // which is a valid state for a broadcast tap, so we intentionally drop it.
                         if let Some(ref tap) = output_tap {
-                            let data_str = String::from_utf8_lossy(&data_bytes).to_string();
-                            if tap.send(data_str).is_err() {
+                            if tap.send(data_text.to_string()).is_err() {
                                 tracing::trace!("[terminal] output_tap has no subscribers");
                             }
                         }
@@ -403,8 +422,8 @@ pub async fn create_agent_session(
     cwd: Option<String>,
     app_handle: AppHandle,
     sessions: Arc<AsyncMutex<HashMap<String, PtySession>>>,
-    output_tap: broadcast::Sender<String>,
-) -> Result<(), String> {
+) -> Result<broadcast::Sender<String>, String> {
+    let (output_tap, _) = broadcast::channel(AGENT_OUTPUT_TAP_CAPACITY);
     create_session(CreateSessionParams {
         session_id,
         rows: DEFAULT_AGENT_ROWS,
@@ -417,9 +436,10 @@ pub async fn create_agent_session(
         name: None,
         app_handle,
         sessions,
-        output_tap: Some(output_tap),
+        output_tap: Some(output_tap.clone()),
     })
-    .await
+    .await?;
+    Ok(output_tap)
 }
 
 // ============================================

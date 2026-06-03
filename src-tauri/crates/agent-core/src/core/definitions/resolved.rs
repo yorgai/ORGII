@@ -32,6 +32,7 @@ use super::store::AgentDefinitionsStore;
 use crate::core::config::ReliabilityConfig;
 use crate::core::session::overrides::SessionOverrides;
 use crate::integrations::config::ExecutionMode;
+use crate::tools::names as tool_names;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -71,6 +72,8 @@ pub struct ResolvedToolSelection {
     pub disabled_mcp_tools: Vec<String>,
 }
 
+const GLOBAL_BASELINE_TOOLS: &[&str] = &[tool_names::INSPECT_TERMINALS];
+
 impl ResolvedToolSelection {
     /// Merge the three tool-selection axes
     /// (`system_restrict_to_tools` + `user_allowed_tools` + `excluded_tools`)
@@ -84,8 +87,8 @@ impl ResolvedToolSelection {
     ///   accidental duplicate entries in `excluded_tools` when the capability
     ///   boundary allows that tool.
     /// - When `system_restrict_to_tools` is `Some(sys)`, the resolved
-    ///   `restrict_to` is the union of `sys` and capability-allowed
-    ///   `user_allowed_tools`.
+    ///   `restrict_to` is the union of `sys`, global baseline tools, and
+    ///   capability-allowed `user_allowed_tools`.
     /// - `excluded` is the union of the stored `excluded_tools` and the
     ///   capability-derived default-OFF set
     ///   (`default_excluded_tools_for_capabilities`). User additions may
@@ -110,6 +113,7 @@ impl ResolvedToolSelection {
                 let mut merged: Vec<String> = sys
                     .iter()
                     .map(String::as_str)
+                    .chain(GLOBAL_BASELINE_TOOLS.iter().copied())
                     .chain(user_allowed.iter().copied())
                     .map(str::to_string)
                     .collect();
@@ -540,6 +544,34 @@ mod tests {
                 .contains(&crate::tools::names::MANAGE_PROJECT.to_string()),
             "capability-blocked tools must not enter strict allow-lists either"
         );
+    }
+
+    #[test]
+    fn inspect_terminals_is_global_baseline_for_strict_agent_allowlists() {
+        let def = with_pinned_model(get_builtin_agent("builtin:wingman").expect("wingman exists"));
+        let resolved = ResolvedAgent::resolve(&def, None, &empty_overrides()).expect("resolves");
+
+        assert!(
+            resolved
+                .tools
+                .restrict_to
+                .contains(&tool_names::INSPECT_TERMINALS.to_string()),
+            "strict allow-list agents must still be able to inspect user terminals"
+        );
+    }
+
+    #[test]
+    fn explicit_exclusion_can_still_disable_inspect_terminals() {
+        let mut def =
+            with_pinned_model(get_builtin_agent("builtin:wingman").expect("wingman exists"));
+        def.tools.excluded_tools = vec![tool_names::INSPECT_TERMINALS.to_string()];
+        let resolved = ResolvedAgent::resolve(&def, None, &empty_overrides()).expect("resolves");
+        let disabled = crate::tools::derive_disabled_tools(
+            &resolved.tools.restrict_to,
+            &resolved.tools.excluded,
+        );
+
+        assert!(disabled.contains(tool_names::INSPECT_TERMINALS));
     }
 
     /// The agent definition's own model always wins over defaults.

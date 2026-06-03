@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import type { ProjectOrg } from "@src/api/http/project";
 import {
   DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
   DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
@@ -35,7 +36,7 @@ import OrgSidebarTreeContent, {
 } from "../content/OrgSidebarTreeContent";
 import type { LinearProjectSelection } from "../content/WorkspaceTreeContent";
 
-const ACTION_ICON_SIZE = 14;
+const ACTION_ICON_SIZE = DROPDOWN_ITEM.iconSize;
 const ACTION_ICON_STROKE = 1.75;
 const TAB_ICON_SIZE = 16;
 

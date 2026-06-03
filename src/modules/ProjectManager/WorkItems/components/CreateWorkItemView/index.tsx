@@ -9,7 +9,7 @@
  *
  * Split layout:
  *   - Header: title + close button
- *   - Left: Title input + RichTextEditor for description
+ *   - Left: Title input + MarkdownEditor for description
  *   - Right: WorkItemProperties (status, priority, assignee, project, etc.)
  *   - Footer: Cancel / Create work item
  */
@@ -22,8 +22,6 @@ import { type WorkItemFrontmatter, projectApi } from "@src/api/http/project";
 import Button from "@src/components/Button";
 import Input from "@src/components/Input";
 import Message from "@src/components/Message";
-import RichTextEditor from "@src/components/RichTextEditor";
-import type { RichTextEditorRef } from "@src/components/RichTextEditor";
 import Select from "@src/components/Select";
 import type { SelectOption } from "@src/components/Select";
 import Switch from "@src/components/Switch";
@@ -41,6 +39,8 @@ import { useAgentOrgs } from "@src/modules/MainApp/AgentOrgs/hooks/useAgentOrgs"
 import { DetailSplitLayout } from "@src/modules/ProjectManager/shared";
 import { PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS } from "@src/modules/ProjectManager/shared/placeholderTokens";
 import { unresolveImagePathsForStorage } from "@src/modules/ProjectManager/shared/utils/workItemImagePaths";
+import MarkdownEditor from "@src/modules/shared/components/MarkdownEditor";
+import type { MarkdownEditorRef } from "@src/modules/shared/components/MarkdownEditor";
 import { PANEL_HEADER_TOKENS } from "@src/modules/shared/layouts/blocks";
 import type { WorkItemDraft } from "@src/store/workstation/projectManager";
 import type { Person } from "@src/types/core/shared";
@@ -114,7 +114,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       onSetUnsaved,
     });
 
-  const editorRef = useRef<RichTextEditorRef>(null);
+  const editorRef = useRef<MarkdownEditorRef>(null);
 
   const { handleImageInsert } = useWorkItemImageInsert({
     projectSlug: projectSlug ?? "",
@@ -414,18 +414,18 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
               className="min-h-0 flex-1 cursor-text"
               onClick={() => editorRef.current?.focus()}
             >
-              <RichTextEditor
+              <MarkdownEditor
                 key={editorResetKey}
                 ref={editorRef}
+                value={draft.description || ""}
+                onChange={handleDescriptionChange}
                 placeholder={t("workItems.descriptionPlaceholder")}
-                initialContent={draft.description || ""}
-                onContentChange={(html) => handleDescriptionChange(html)}
                 onImageInsert={handleImageInsert}
                 minHeight={200}
                 maxHeight="100%"
-                editable
-                className="no-bottom-border text-[13px]"
-                toolbarClassName="work-item-toolbar"
+                showTokenCount={false}
+                hideHeader
+                className="no-bottom-border project-markdown-editor text-[13px]"
               />
             </div>
           </div>

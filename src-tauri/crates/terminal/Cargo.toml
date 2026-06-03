@@ -17,6 +17,8 @@ portable-pty = "0.9"
 tokio = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+chrono = { workspace = true }
+regex = "1.9.5"
 tracing = "0.1.37"
 dirs = "6.0"
 sysinfo = { workspace = true }

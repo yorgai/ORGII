@@ -320,10 +320,11 @@ impl Tool for ExecTool {
 
         let command = required_string(&params, "command")?;
         let custom_dir = optional_string(&params, "working_dir");
-        let interactive = params
+        let requested_interactive = params
             .get("interactive")
             .and_then(|val| val.as_bool())
             .unwrap_or(false);
+        let interactive = requested_interactive;
         let wait_secs = params.get("wait").and_then(|val| val.as_u64());
         let mode = match params.get("mode").and_then(|v| v.as_str()) {
             None | Some("blocking") => subprocess::ExecMode::Blocking,
@@ -452,6 +453,11 @@ impl Tool for ExecTool {
                 ));
             }
             if let Some(ref pty_res) = self.pty {
+                let Some(session_key) = self.session_key.lock().await.clone() else {
+                    return Err(ToolError::ExecutionFailed(
+                        "PTY execution requires an agent session key.".to_string(),
+                    ));
+                };
                 return pty::execute_via_pty(
                     pty_res,
                     &command,
@@ -459,6 +465,7 @@ impl Tool for ExecTool {
                     self.timeout_secs,
                     wait_secs,
                     &current_workspace_dir,
+                    &session_key,
                 )
                 .await;
             }

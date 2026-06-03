@@ -27,6 +27,10 @@ import {
   generateUniqueLabelFromBase,
   resolveTerminalDisplayName,
 } from "@src/util/ui/terminal/naming";
+import {
+  isAgentPtySessionId,
+  toBackendPtySessionId,
+} from "@src/util/ui/terminal/ptySessionId";
 
 // ============================================
 // Storage Keys
@@ -45,8 +49,9 @@ async function killPty(sessionId: string): Promise<void> {
   if (!isTauriReady()) return;
 
   try {
-    const ptySessionId = `spotlight-pty-${sessionId}`;
-    await invokeTauri("close_pty", { sessionId: ptySessionId });
+    await invokeTauri("close_pty", {
+      sessionId: toBackendPtySessionId(sessionId),
+    });
   } catch (error) {
     console.error(`[TerminalStore] Failed to kill PTY:`, error);
   }
@@ -74,7 +79,20 @@ function loadPersistedState(): {
         parsed.initializedSessionIds &&
         Array.isArray(parsed.initializedSessionIds)
       ) {
-        return parsed;
+        const sessions = parsed.sessions.filter(
+          (session: TerminalSession) => !isAgentPtySessionId(session.id)
+        );
+        if (sessions.length === 0) return null;
+        const activeSessionId = isAgentPtySessionId(parsed.activeSessionId)
+          ? sessions[0].id
+          : parsed.activeSessionId;
+        return {
+          sessions,
+          activeSessionId,
+          initializedSessionIds: parsed.initializedSessionIds.filter(
+            (sessionId: string) => !isAgentPtySessionId(sessionId)
+          ),
+        };
       }
     }
   } catch {
@@ -318,57 +336,10 @@ export const markTerminalInitializedAtom = atom(
 );
 markTerminalInitializedAtom.debugLabel = "markTerminalInitializedAtom";
 
-/** Create an agent terminal session (if it doesn't already exist).
- *
- * Called when the OS agent creates a PTY session and broadcasts
- * `agent:terminal_created`. Adds a new terminal tab with the agent's
- * PTY session ID, making the agent's terminal visible and takeover-able.
- */
-export const createAgentTerminalSessionAtom = atom(
-  null,
-  (get, set, params: { ptySessionId: string; label?: string }) => {
-    const sessions = get(terminalSessionsAtom);
-
-    // Don't create duplicate agent terminal tabs
-    if (sessions.some((session) => session.id === params.ptySessionId)) {
-      // Already exists — just switch to it
-      set(setActiveTerminalAtom, params.ptySessionId);
-      return params.ptySessionId;
-    }
-
-    const newSession: TerminalSession = {
-      id: params.ptySessionId,
-      name: params.label || "Agent Terminal",
-      isActive: true,
-    };
-
-    // Update sessions (mark others inactive)
-    set(terminalSessionsAtom, [
-      ...sessions.map((session) => ({ ...session, isActive: false })),
-      newSession,
-    ]);
-    set(activeTerminalIdAtom, params.ptySessionId);
-
-    // Mark as initialized (PTY is already running)
-    set(
-      initializedTerminalIdsAtom,
-      (prev) => new Set([...prev, params.ptySessionId])
-    );
-
-    // Persist
-    set(terminalPersistAtom);
-
-    return params.ptySessionId;
-  }
-);
-createAgentTerminalSessionAtom.debugLabel = "createAgentTerminalSessionAtom";
-
 /** Create (or switch to) a read-only agent session terminal tab.
  *
- * Always present while an OS agent session is active.
  * Uses a deterministic ID (`agent-session-{agentSessionId}`) to prevent
- * duplicates. Unlike `createAgentTerminalSessionAtom`, this tab is read-only
- * (no PTY input) and receives streamed subprocess output.
+ * duplicates. This tab is read-only and renders normal agent session events.
  */
 export const createAgentSessionTerminalAtom = atom(
   null,

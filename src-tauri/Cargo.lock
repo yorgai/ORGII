@@ -8838,9 +8838,11 @@ dependencies = [
 name = "terminal"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "dirs",
  "libc",
  "portable-pty",
+ "regex",
  "serde",
  "serde_json",
  "sysinfo",

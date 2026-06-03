@@ -11,7 +11,6 @@ import {
   activeTerminalIdAtom,
   closeTerminalSessionAtom,
   createAgentSessionTerminalAtom,
-  createAgentTerminalSessionAtom,
   editorActiveTerminalSessionAtom,
   editorAddTerminalSessionAtom,
   initializedTerminalIdsAtom,
@@ -250,54 +249,6 @@ describe("terminal atoms", () => {
 
       store.set(editorAddTerminalSessionAtom, undefined);
       expect(store.get(terminalSessionCountAtom)).toBe(3);
-    });
-  });
-
-  describe("createAgentTerminalSessionAtom", () => {
-    it("creates agent terminal with PTY session ID", () => {
-      const ptySessionId = "osagent-pty-main";
-
-      store.set(createAgentTerminalSessionAtom, {
-        ptySessionId,
-        label: "Agent Terminal",
-      });
-
-      const sessions = store.get(terminalSessionsAtom);
-      const agentSession = sessions.find((s) => s.id === ptySessionId);
-
-      expect(agentSession).toBeDefined();
-      expect(agentSession?.name).toBe("Agent Terminal");
-      expect(agentSession?.isActive).toBe(true);
-    });
-
-    it("does not create duplicate if session already exists", () => {
-      const ptySessionId = "osagent-pty-main";
-
-      // Create first time
-      store.set(createAgentTerminalSessionAtom, { ptySessionId });
-
-      const countBefore = store.get(terminalSessionCountAtom);
-
-      // Try to create again
-      store.set(createAgentTerminalSessionAtom, { ptySessionId });
-
-      const countAfter = store.get(terminalSessionCountAtom);
-      expect(countAfter).toBe(countBefore);
-    });
-
-    it("switches to existing agent session if it exists", () => {
-      const ptySessionId = "osagent-pty-main";
-
-      // Create agent session
-      store.set(createAgentTerminalSessionAtom, { ptySessionId });
-
-      // Switch to regular session
-      store.set(setActiveTerminalAtom, "initial-1");
-
-      // Create agent session again (should just switch)
-      store.set(createAgentTerminalSessionAtom, { ptySessionId });
-
-      expect(store.get(activeTerminalIdAtom)).toBe(ptySessionId);
     });
   });
 

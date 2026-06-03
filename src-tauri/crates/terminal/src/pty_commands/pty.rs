@@ -38,6 +38,7 @@
 //! - **macOS/Linux**: Uses `zsh` as default shell with `-il` flags (interactive login)
 //! - **Windows**: Uses `powershell.exe` as default shell
 
+use chrono::{DateTime, Utc};
 use portable_pty::{PtyPair, PtySize};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -45,7 +46,7 @@ use std::{
     io::{BufReader, Read, Write},
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc,
+        Arc, Mutex,
     },
 };
 use tauri::{async_runtime::Mutex as AsyncMutex, AppHandle, State};
@@ -129,6 +130,12 @@ pub struct PtySession {
     /// Bytes emitted to the frontend but not yet acknowledged.
     /// Used for backpressure: reader pauses when this exceeds HIGH_WATERMARK.
     pub unacked_bytes: Arc<AtomicUsize>,
+    /// UTC timestamp when the PTY session was created.
+    pub created_at: DateTime<Utc>,
+    /// UTC timestamp of the latest PTY output chunk observed by the reader task.
+    pub last_output_at: Arc<Mutex<Option<DateTime<Utc>>>>,
+    /// Bounded redacted text snapshot of recent PTY output for agent inspection.
+    pub redacted_output: Arc<Mutex<String>>,
 }
 
 /// Global state container for all PTY sessions.
@@ -282,6 +289,36 @@ pub struct PtyInfo {
     pub shell_kind: ShellKind,
     pub cwd: Option<String>,
     pub name: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub last_output_at: Option<DateTime<Utc>>,
+    pub has_output_tap: bool,
+    pub unacked_bytes: usize,
+    pub redacted_output_chars: usize,
+}
+
+fn pty_info_from_session(session_id: &str, session: &PtySession) -> PtyInfo {
+    PtyInfo {
+        session_id: session_id.to_string(),
+        pid: session.pid,
+        shell: session.shell.clone(),
+        shell_kind: session.shell_kind.clone(),
+        cwd: session.cwd.clone(),
+        name: session.name.clone(),
+        created_at: session.created_at,
+        last_output_at: session
+            .last_output_at
+            .lock()
+            .expect("last_output_at mutex poisoned")
+            .clone(),
+        has_output_tap: session.output_tap.is_some(),
+        unacked_bytes: session.unacked_bytes.load(Ordering::Relaxed),
+        redacted_output_chars: session
+            .redacted_output
+            .lock()
+            .expect("redacted_output mutex poisoned")
+            .chars()
+            .count(),
+    }
 }
 
 /// List all live PTY sessions (lightweight summary for frontend reconciliation).
@@ -292,14 +329,7 @@ pub async fn list_pty_sessions(state: State<'_, PtyState>) -> Result<Vec<PtyInfo
     let sessions = state.inner().sessions.lock().await;
     Ok(sessions
         .iter()
-        .map(|(id, session)| PtyInfo {
-            session_id: id.clone(),
-            pid: session.pid,
-            shell: session.shell.clone(),
-            shell_kind: session.shell_kind.clone(),
-            cwd: session.cwd.clone(),
-            name: session.name.clone(),
-        })
+        .map(|(id, session)| pty_info_from_session(id, session))
         .collect())
 }
 
@@ -314,14 +344,7 @@ pub async fn get_pty_info(
         .get(&session_id)
         .ok_or_else(|| format!("Session {} not found", session_id))?;
 
-    Ok(PtyInfo {
-        session_id: session_id.clone(),
-        pid: session.pid,
-        shell: session.shell.clone(),
-        shell_kind: session.shell_kind.clone(),
-        cwd: session.cwd.clone(),
-        name: session.name.clone(),
-    })
+    Ok(pty_info_from_session(&session_id, session))
 }
 
 // ============================================

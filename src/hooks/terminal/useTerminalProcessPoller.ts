@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef } from "react";
 
 import type { TerminalSession } from "@src/engines/TerminalCore/types";
 import { invokeTauri, isTauriReady } from "@src/util/platform/tauri/init";
+import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -49,7 +50,7 @@ export function useTerminalProcessPoller({
       return;
     }
 
-    const ptySessionId = `spotlight-pty-${sessionId}`;
+    const ptySessionId = toBackendPtySessionId(sessionId);
 
     try {
       const info = await invokeTauri<ForegroundProcessInfo>(

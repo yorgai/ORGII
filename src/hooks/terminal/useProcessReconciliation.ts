@@ -28,6 +28,7 @@ import {
 } from "@src/store/workstation/codeEditor/terminal";
 import type { ShellKind } from "@src/types/terminal";
 import { invokeTauri } from "@src/util/platform/tauri/init";
+import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 
 interface RunningShellJob {
   session_id: string;
@@ -44,8 +45,6 @@ interface PtySessionInfo {
   cwd: string | null;
   name: string | null;
 }
-
-const PTY_ID_PREFIX = "spotlight-pty-";
 
 export function useProcessReconciliation(): void {
   const shellProcessMap = useAtomValue(shellProcessMapAtom);
@@ -114,7 +113,7 @@ export function useProcessReconciliation(): void {
         for (const session of terminalSessionsRef.current) {
           if (session.readOnly) continue;
 
-          const ptyId = `${PTY_ID_PREFIX}${session.id}`;
+          const ptyId = toBackendPtySessionId(session.id);
           if (!livePtyIds.has(ptyId)) {
             dispatchCloseSessionRef.current(session.id);
           } else {

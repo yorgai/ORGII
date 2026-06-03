@@ -61,6 +61,7 @@ const BUILTIN_SIMULATOR_APP_FIXTURE: Map<string, AppType> = new Map([
   ["list_dir", AppType.CODE_EDITOR],
   ["run_shell", AppType.CODE_EDITOR],
   ["await_output", AppType.CODE_EDITOR],
+  ["inspect_terminals", AppType.CODE_EDITOR],
   ["code_search", AppType.CODE_EDITOR],
   ["manage_workspace", AppType.CODE_EDITOR],
   ["edit_file", AppType.CODE_EDITOR],
@@ -120,6 +121,7 @@ const BUILTIN_SUBTOOL_FIXTURE: Map<string, AppSubtool> = new Map([
   ["list_dir", "explore"],
   ["run_shell", "shell"],
   ["await_output", "shell"],
+  ["inspect_terminals", "shell"],
   ["code_search", "explore"],
   ["manage_workspace", "explore"],
   ["edit_file", "file_write"],
@@ -350,6 +352,7 @@ const BUILTIN_LABELS_FIXTURE: Map<string, LabelKeySet> = new Map([
   ["list_dir", labelKeys("listDir")],
   ["run_shell", labelKeys("runShell")],
   ["await_output", labelKeys("awaitOutput")],
+  ["inspect_terminals", labelKeys("inspectTerminals")],
   ["code_search", labelKeys("searchGrep")],
   ["manage_workspace", labelKeys("manageWorkspaceList")],
   ["edit_file", labelKeys("editFile")],
@@ -378,6 +381,23 @@ const BUILTIN_ACTIONS_FIXTURE: Map<string, ToolActionInfo[]> = new Map([
     [
       actionInfo("read_image", labelKeys("readImage"), "file_read"),
       actionInfo("read_pdf", labelKeys("readPdf"), "file_read"),
+    ],
+  ],
+  [
+    "inspect_terminals",
+    [
+      actionInfo("list", labelKeys("inspectTerminalsList"), "shell"),
+      actionInfo(
+        "read_output",
+        labelKeys("inspectTerminalsReadOutput"),
+        "shell"
+      ),
+      actionInfo(
+        "write_input",
+        labelKeys("inspectTerminalsWriteInput"),
+        "shell"
+      ),
+      actionInfo("close", labelKeys("inspectTerminalsClose"), "shell"),
     ],
   ],
   [
@@ -418,6 +438,7 @@ const BUILTIN_ICON_ID_FIXTURE: Map<string, string> = new Map([
   ["list_dir", "folder-open"],
   ["run_shell", "terminal"],
   ["await_output", "timer"],
+  ["inspect_terminals", "terminal-square"],
   ["code_search", "search"],
   ["manage_workspace", "folder-git-2"],
   ["edit_file", "file-pen-line"],
@@ -460,6 +481,14 @@ const BUILTIN_ICON_ID_FIXTURE: Map<string, string> = new Map([
  * `getBuiltinToolActionIconId()` to resolve per-action header icons.
  */
 const BUILTIN_ACTION_ICONS_FIXTURE: Map<string, Map<string, string>> = new Map([
+  [
+    "inspect_terminals",
+    new Map([
+      ["read_output", "scroll-text"],
+      ["write_input", "keyboard"],
+      ["close", "x"],
+    ]),
+  ],
   [
     "manage_agent_def",
     new Map([

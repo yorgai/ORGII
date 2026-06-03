@@ -11,6 +11,7 @@ use crate::tools::impls::coding::{
     edit_file::EditTool,
     exec::{await_tool::AwaitTool, ExecTool},
     files::{DeleteFileTool, ListDirTool, ReadFileTool},
+    inspect_terminals::InspectTerminalsTool,
     manage_file_history::ManageFileHistoryTool,
     manage_lsp::ManageLspTool,
     manage_todo::{TodoSessionContext, TodoTool},
@@ -125,6 +126,15 @@ pub fn register(registry: &mut ToolRegistry, deps: &ToolDeps, disabled: &HashSet
 
     // ── Await output (monitors backgrounded processes) ──
     register_if_enabled(registry, Box::new(AwaitTool::new()), disabled);
+
+    // ── Terminal inspection ──
+    if let Some(ref pty_sessions) = deps.pty_sessions {
+        register_if_enabled(
+            registry,
+            Box::new(InspectTerminalsTool::new(pty_sessions.clone())),
+            disabled,
+        );
+    }
 
     // ── Search ──
     let mut search =

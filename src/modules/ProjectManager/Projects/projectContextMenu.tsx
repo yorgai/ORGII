@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { createElement } from "react";
 
+import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import {
   getHealthConfig,
   getProjectPriorityConfig,
@@ -156,7 +157,7 @@ function createRepoSubmenu(
   return availableRepos.map((repo) => ({
     id: `repo-${repo.id}`,
     label: getRepoDisplayName(repo),
-    icon: createElement(Code2, { size: 14 }),
+    icon: createElement(Code2, { size: DROPDOWN_ITEM.iconSize }),
     secondary: selectedRepoIds.has(repo.id) ? "✓" : undefined,
     action: onAction ? () => onAction(repo.id) : undefined,
     disabled: !onAction,
@@ -190,7 +191,7 @@ export function getProjectPropertyContextMenuItems({
     primaryItems.push({
       id: "status",
       label: t("properties.status"),
-      icon: createElement(CircleDot, { size: 14 }),
+      icon: createElement(CircleDot, { size: DROPDOWN_ITEM.iconSize }),
       secondary: currentStatus
         ? t(currentStatus.labelKey)
         : t("properties.noStatus"),
@@ -198,7 +199,7 @@ export function getProjectPropertyContextMenuItems({
       submenu: STATUS_OPTIONS.map((option) => ({
         id: `status-${option.value}`,
         label: t(option.labelKey),
-        icon: createElement(Circle, { size: 14 }),
+        icon: createElement(Circle, { size: DROPDOWN_ITEM.iconSize }),
         iconColor: option.color,
         action: onPropertyAction
           ? () => onPropertyAction("status", option.value)
@@ -215,7 +216,7 @@ export function getProjectPropertyContextMenuItems({
     primaryItems.push({
       id: "priority",
       label: t("properties.priority"),
-      icon: createElement(Flag, { size: 14 }),
+      icon: createElement(Flag, { size: DROPDOWN_ITEM.iconSize }),
       secondary: currentPriority
         ? t(currentPriority.labelKey)
         : t("properties.noPriority"),
@@ -240,7 +241,7 @@ export function getProjectPropertyContextMenuItems({
     primaryItems.push({
       id: "lead",
       label: t("properties.lead"),
-      icon: createElement(User, { size: 14 }),
+      icon: createElement(User, { size: DROPDOWN_ITEM.iconSize }),
       secondary: project.lead?.name ?? t("properties.noLead"),
       keybinding: "l",
       submenu: [
@@ -269,7 +270,7 @@ export function getProjectPropertyContextMenuItems({
     primaryItems.push({
       id: "targetDate",
       label: t("properties.targetDate"),
-      icon: createElement(Calendar, { size: 14 }),
+      icon: createElement(Calendar, { size: DROPDOWN_ITEM.iconSize }),
       secondary: formatMenuDate(project.targetDate, t("properties.addDate")),
       action: onPropertyAction
         ? () => onPropertyAction("targetDate")
@@ -286,7 +287,7 @@ export function getProjectPropertyContextMenuItems({
     moreItems.push({
       id: "health",
       label: t("properties.health"),
-      icon: createElement(HeartPulse, { size: 14 }),
+      icon: createElement(HeartPulse, { size: DROPDOWN_ITEM.iconSize }),
       secondary: currentHealth
         ? t(currentHealth.labelKey)
         : t("properties.noUpdates"),
@@ -309,7 +310,7 @@ export function getProjectPropertyContextMenuItems({
     moreItems.push({
       id: "members",
       label: t("properties.members"),
-      icon: createElement(Users, { size: 14 }),
+      icon: createElement(Users, { size: DROPDOWN_ITEM.iconSize }),
       secondary: project.members?.length
         ? t("properties.memberCount", { count: project.members.length })
         : t("properties.addMembers"),
@@ -327,7 +328,7 @@ export function getProjectPropertyContextMenuItems({
     moreItems.push({
       id: "teams",
       label: t("properties.teams"),
-      icon: createElement(Users, { size: 14 }),
+      icon: createElement(Users, { size: DROPDOWN_ITEM.iconSize }),
       secondary: project.teams?.length
         ? project.teams.map((team) => team.name).join(", ")
         : t("properties.addTeams"),
@@ -345,7 +346,7 @@ export function getProjectPropertyContextMenuItems({
     moreItems.push({
       id: "labels",
       label: t("properties.labels"),
-      icon: createElement(Tag, { size: 14 }),
+      icon: createElement(Tag, { size: DROPDOWN_ITEM.iconSize }),
       secondary: project.labels?.length
         ? project.labels.map((label) => label.name).join(", ")
         : t("properties.addLabels"),
@@ -363,7 +364,7 @@ export function getProjectPropertyContextMenuItems({
     moreItems.push({
       id: "linkedRepos",
       label: t("properties.repos"),
-      icon: createElement(Code2, { size: 14 }),
+      icon: createElement(Code2, { size: DROPDOWN_ITEM.iconSize }),
       secondary: project.linkedRepos?.length
         ? project.linkedRepos.map(getRepoDisplayName).join(", ")
         : t("properties.addRepos"),
@@ -381,7 +382,7 @@ export function getProjectPropertyContextMenuItems({
     moreItems.push({
       id: "startDate",
       label: t("properties.startDate"),
-      icon: createElement(Calendar, { size: 14 }),
+      icon: createElement(Calendar, { size: DROPDOWN_ITEM.iconSize }),
       secondary: formatMenuDate(project.startDate, t("properties.addDate")),
       action: onPropertyAction
         ? () => onPropertyAction("startDate")
@@ -397,7 +398,7 @@ export function getProjectPropertyContextMenuItems({
     {
       id: "more-properties",
       label: t("workItems.contextMenu.moreProperties"),
-      icon: createElement(MoreHorizontal, { size: 14 }),
+      icon: createElement(MoreHorizontal, { size: DROPDOWN_ITEM.iconSize }),
       submenu: moreItems,
     },
   ];
@@ -419,7 +420,7 @@ export function getProjectContextMenuItems(options: ProjectContextMenuOptions) {
     {
       id: "open",
       label: t("common:actions.open"),
-      icon: createElement(ExternalLink, { size: 14 }),
+      icon: createElement(ExternalLink, { size: DROPDOWN_ITEM.iconSize }),
       secondary:
         project.completionPercentage === undefined
           ? undefined
@@ -430,7 +431,7 @@ export function getProjectContextMenuItems(options: ProjectContextMenuOptions) {
     {
       id: "copy",
       label: t("common:actions.copy"),
-      icon: createElement(Copy, { size: 14 }),
+      icon: createElement(Copy, { size: DROPDOWN_ITEM.iconSize }),
       secondary: project.name,
       action: onCopy,
       disabled: !onCopy,
@@ -441,7 +442,7 @@ export function getProjectContextMenuItems(options: ProjectContextMenuOptions) {
     {
       id: "delete",
       label: t("common:actions.delete"),
-      icon: createElement(Trash2, { size: 14 }),
+      icon: createElement(Trash2, { size: DROPDOWN_ITEM.iconSize }),
       shortcutId: "workitem_delete",
       action: onDelete,
       disabled: !onDelete,

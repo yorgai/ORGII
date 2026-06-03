@@ -1,5 +1,9 @@
 import { BookDashed, BookOpen } from "lucide-react";
 
+import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
 import { PropertyDropdownField } from "@src/components/PropertyField/PropertyDropdownField";
 import { Option } from "@src/components/PropertyField/PropertyFieldEditable";
 import type { WorkItemProject } from "@src/types/core/workItem";
@@ -27,7 +31,13 @@ export function ProjectCell({
     <PropertyDropdownField
       value={project?.id ?? "__none__"}
       label={label}
-      icon={project ? <BookOpen size={14} /> : <BookDashed size={14} />}
+      icon={
+        project ? (
+          <BookOpen size={DROPDOWN_ITEM.iconSize} />
+        ) : (
+          <BookDashed size={DROPDOWN_ITEM.iconSize} />
+        )
+      }
       iconColor={project?.color}
       options={[]}
       placement="portal"
@@ -55,20 +65,20 @@ export function ProjectCell({
             {!searchQuery && (
               <Option
                 label={t("workItems.properties.noProject")}
-                icon={<BookDashed size={14} />}
+                icon={<BookDashed size={DROPDOWN_ITEM.iconSize} />}
                 isSelected={!project}
                 onClick={() => select(null)}
               />
             )}
             {filtered.length === 0 && searchQuery && (
-              <div className="px-3 py-2 text-[12px] text-text-3">
+              <div className={DROPDOWN_CLASSES.listMessage}>
                 {t("common:common.noResults")}
               </div>
             )}
             {filtered.map((projectItem) => (
               <Option
                 key={projectItem.id}
-                icon={<BookOpen size={14} />}
+                icon={<BookOpen size={DROPDOWN_ITEM.iconSize} />}
                 iconColor={projectItem.color}
                 label={projectItem.name}
                 isSelected={project?.id === projectItem.id}

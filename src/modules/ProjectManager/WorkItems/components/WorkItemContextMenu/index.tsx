@@ -9,6 +9,11 @@ import React, {
 import { createPortal } from "react-dom";
 
 import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+  DROPDOWN_WIDTHS,
+} from "@src/components/Dropdown/tokens";
+import {
   KEYBOARD_SHORTCUT_VARIANT,
   KeyboardShortcut,
 } from "@src/components/KeyboardShortcut";
@@ -310,7 +315,7 @@ const WorkItemContextMenu: React.FC<WorkItemContextMenuProps> = ({
       {/* Main Menu */}
       <div
         ref={menuRef}
-        className="work-item-context-menu"
+        className={`work-item-context-menu ${DROPDOWN_CLASSES.menuPanelBase} ${DROPDOWN_WIDTHS.fileTreeClass}`}
         style={{
           left: position.x,
           top: position.y,
@@ -336,15 +341,17 @@ const WorkItemContextMenu: React.FC<WorkItemContextMenuProps> = ({
               key={item.id}
               type="button"
               data-context-menu-item-id={item.id}
-              className={`work-item-context-menu__item ${
-                item.disabled ? "work-item-context-menu__item--disabled" : ""
-              } ${isSubmenuOpen ? "work-item-context-menu__item--active" : ""}`}
+              className={`work-item-context-menu__item ${DROPDOWN_CLASSES.item} w-full justify-between border-none bg-transparent text-left ${DROPDOWN_CLASSES.itemHover} ${
+                item.disabled ? DROPDOWN_CLASSES.itemDisabled : ""
+              } ${isSubmenuOpen ? DROPDOWN_CLASSES.itemActive : ""}`}
               onClick={(event) => handleItemClick(item, event)}
               onMouseEnter={(event) => handleItemMouseEnter(item, event)}
               disabled={item.disabled}
             >
               {item.icon && (
-                <span className="work-item-context-menu__icon">
+                <span
+                  className={`work-item-context-menu__icon ${DROPDOWN_ITEM.iconSizeClass} [&_svg]:h-[13px] [&_svg]:w-[13px]`}
+                >
                   {item.icon}
                 </span>
               )}
@@ -365,7 +372,7 @@ const WorkItemContextMenu: React.FC<WorkItemContextMenuProps> = ({
               )}
               {hasSubmenu && (
                 <ChevronRight
-                  size={14}
+                  size={DROPDOWN_ITEM.iconSize}
                   className="work-item-context-menu__arrow"
                 />
               )}

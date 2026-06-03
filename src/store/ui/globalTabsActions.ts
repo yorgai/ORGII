@@ -7,6 +7,7 @@ import { invoke as invokeTauri } from "@tauri-apps/api/core";
 import { atom } from "jotai";
 
 import { isTauriDesktop } from "@src/util/platform/tauri";
+import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 
 import { globalTabsAtom } from "./globalTabsAtom";
 import type {
@@ -132,7 +133,7 @@ export const removeTerminalSessionAtom = atom(
   null,
   (get, set, sessionId: string) => {
     if (isTauriDesktop()) {
-      const ptySessionId = `spotlight-pty-${sessionId}`;
+      const ptySessionId = toBackendPtySessionId(sessionId);
       invokeTauri("close_pty", { sessionId: ptySessionId })
         .then(() => {})
         .catch((err) => {

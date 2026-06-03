@@ -4,6 +4,10 @@ import React from "react";
 import type { ReviewerRefType } from "@src/api/http/project";
 import Avatar from "@src/components/Avatar";
 import {
+  DROPDOWN_CLASSES,
+  DROPDOWN_ITEM,
+} from "@src/components/Dropdown/tokens";
+import {
   type FieldRowVariant,
   Option,
   SearchableDropdown,
@@ -56,21 +60,21 @@ export const ReviewerDropdown: React.FC<ReviewerDropdownProps> = ({
       return (
         <>
           <Option
-            icon={<ScanEye size={14} />}
+            icon={<ScanEye size={DROPDOWN_ITEM.iconSize} />}
             label={t("workItems.properties.noReviewer")}
             isSelected={!currentReviewer}
             onClick={() => onReviewerChange(null)}
           />
           {!searchQuery && (
             <Option
-              icon={<User size={14} />}
+              icon={<User size={DROPDOWN_ITEM.iconSize} />}
               label={t("workItems.agentSettings.reviewerSelfReview")}
               isSelected={currentReviewer?.type === "self_review"}
               onClick={() => onReviewerChange("self_review")}
             />
           )}
           {filteredAgents.length > 0 && (
-            <div className="px-3 pb-0.5 pt-2 text-[10px] font-medium uppercase tracking-wider text-text-4">
+            <div className={DROPDOWN_CLASSES.sectionLabel}>
               {t("workItems.properties.agentsGroup")}
             </div>
           )}
@@ -85,13 +89,16 @@ export const ReviewerDropdown: React.FC<ReviewerDropdownProps> = ({
                 label={agent.name}
                 onClick={() => onReviewerChange("agent", agent.id)}
               >
-                <AtSign size={14} className="text-primary-6" />
+                <AtSign
+                  size={DROPDOWN_ITEM.iconSize}
+                  className="text-primary-6"
+                />
                 <span className="flex-1 truncate">{agent.name}</span>
               </Option>
             );
           })}
           {filteredMembers.length > 0 && (
-            <div className="px-3 pb-0.5 pt-2 text-[10px] font-medium uppercase tracking-wider text-text-4">
+            <div className={DROPDOWN_CLASSES.sectionLabel}>
               {t("workItems.properties.membersGroup")}
             </div>
           )}
@@ -107,7 +114,7 @@ export const ReviewerDropdown: React.FC<ReviewerDropdownProps> = ({
                 onClick={() => onReviewerChange("human", person.id)}
               >
                 <Avatar
-                  size={16}
+                  size={DROPDOWN_ITEM.iconSize}
                   src={person.avatar}
                   style={{
                     backgroundColor: person.color || "var(--color-fill-3)",

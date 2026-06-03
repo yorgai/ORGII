@@ -39,7 +39,6 @@ import { useChatPanelState } from "@src/engines/ChatPanel/hooks/useChatPanelStat
 import { chatEventsAtom } from "@src/engines/SessionCore/derived/chatEvents";
 import { derivePlanApprovalViewState } from "@src/engines/SessionCore/derived/planDisplayEvents";
 import { useFileReviewSync } from "@src/hooks/fileReview";
-import { createLogger } from "@src/hooks/logger";
 import { useSessionWorkspaceSync } from "@src/hooks/session/useSessionWorkspaceSync";
 import { activeSessionIdAtom } from "@src/store/session";
 import {
@@ -74,7 +73,6 @@ import { useQueueEditMode } from "./InputArea/hooks/useQueueEditMode";
 import { useCanvasPreviewForSession } from "./blocks/CanvasInlineCard/useCanvasPreviewForSession";
 import { useSessionActions } from "./hooks/useWorkspaceChat/useSessionActions";
 
-const logger = createLogger("ChatView");
 const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
 
 export interface ChatViewProps {
