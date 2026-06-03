@@ -98,13 +98,17 @@ export function createKeyDownHandler(ctx: KeyDownHandlerContext) {
     }
 
     const onSlashKeys = ctx.getOnKeyDownForSlashDropdown();
-    if (ctx.getSlashCommand().active && onSlashKeys) {
-      if (DROPDOWN_NAV_KEYS.includes(event.key)) {
-        const handled = onSlashKeys(event);
-        if (handled) {
-          event.preventDefault();
-          return;
-        }
+    // Delegate to the slash-command dropdown handler when:
+    //   a) the inline "/" menu is active (slashCommandRef.active), OR
+    //   b) the handler itself accepts the key (covers the "+" button header menu
+    //      where slashCommandRef.active is always false because no "/" was typed).
+    // This avoids a double-guard where slashCommandRef.active is false but the
+    // dropdown is visibly open (opened via button, not via typed "/").
+    if (onSlashKeys && DROPDOWN_NAV_KEYS.includes(event.key)) {
+      const handled = onSlashKeys(event);
+      if (handled) {
+        event.preventDefault();
+        return;
       }
     }
 
