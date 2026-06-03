@@ -16,6 +16,7 @@ import type { AgentConfigTabVariant } from "@src/store/workstation/tabs";
 import {
   PROJECT_DETAIL_SURFACE_VIEW,
   createAgentConfigTab,
+  createProjectWorkItemsIndexTab,
   createProjectWorkItemsTab,
   openTab,
   workstationLayoutAtom,
@@ -38,6 +39,54 @@ export function createNavigationHelpers(store: E2EStore) {
   };
 
   const getLocationPathname = (): string => window.location.pathname;
+
+  const openWorkspaceWorkItemsTab = async (): Promise<
+    | {
+        ok: true;
+        activeTabId: string | null;
+        tabIds: string[];
+        pathname: string;
+      }
+    | Err
+  > => {
+    try {
+      store.set(stationModeAtom, "my-station");
+      store.set(dockFilterAtom, "project");
+      store.set(chatPanelMaximizedAtom, false);
+      const tab = createProjectWorkItemsIndexTab();
+      const current = store.get(workstationLayoutAtom);
+      const currentPane = current?.mainPane ?? {
+        tabs: [],
+        activeTabId: null,
+      };
+      const retainedTabs = currentPane.tabs.filter(
+        (tabItem) =>
+          tabItem.type !== "project-work-items" &&
+          tabItem.type !== "project-workitems" &&
+          tabItem.type !== "project-linear-projects" &&
+          tabItem.type !== "project-linear-work-items"
+      );
+      const nextLayout = {
+        ...current,
+        mainPane: openTab(
+          { tabs: retainedTabs, activeTabId: currentPane.activeTabId },
+          tab
+        ),
+      };
+      localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(nextLayout));
+      store.set(workstationLayoutAtom, nextLayout);
+      void router.navigate("/orgii/workstation/project").catch(() => undefined);
+      const layout = store.get(workstationLayoutAtom);
+      return {
+        ok: true,
+        activeTabId: layout?.mainPane?.activeTabId ?? null,
+        tabIds: layout?.mainPane?.tabs.map((tabItem) => tabItem.id) ?? [],
+        pathname: window.location.pathname,
+      };
+    } catch (err) {
+      return asError(err);
+    }
+  };
 
   const openProjectWorkItemsTab = async (
     projectId: string,
@@ -184,6 +233,7 @@ export function createNavigationHelpers(store: E2EStore) {
   return {
     navigateTo,
     getLocationPathname,
+    openWorkspaceWorkItemsTab,
     openProjectWorkItemsTab,
     openAgentTab,
     openOrgTab,

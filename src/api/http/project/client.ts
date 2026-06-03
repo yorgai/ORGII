@@ -334,7 +334,7 @@ export async function writeWorkItem(
     frontmatter,
     body,
   });
-  invalidateCache(projectSlug);
+  invalidateCache();
   return result;
 }
 
@@ -350,7 +350,7 @@ export async function writeStandaloneWorkItem(
     body,
     ...scopeInvokePayload(options),
   });
-  invalidateCache("standalone");
+  invalidateCache();
   return result;
 }
 
@@ -408,7 +408,7 @@ export async function updateWorkItemPartial(
       updates,
     }
   );
-  invalidateCache(projectSlug);
+  invalidateCache();
   return result;
 }
 

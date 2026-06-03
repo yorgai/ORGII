@@ -4,6 +4,7 @@ import {
   type ProjectMeta,
   type RoutineDefinition,
   type WorkItemFrontmatter,
+  type WorkItemPartialUpdate,
   projectApi,
 } from "@src/api/http/project";
 import {
@@ -147,6 +148,18 @@ export function createProjectHelpers(store: E2EStore) {
     }
   };
 
+  const readStandaloneWorkItems = async (): Promise<
+    Result<{ items: Json[] }>
+  > => {
+    try {
+      const items =
+        (await projectApi.readStandaloneWorkItems()) as unknown as Json[];
+      return { ok: true, items };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   const readStandaloneWorkItem = async (
     shortId: string
   ): Promise<Result<{ item: Json }>> => {
@@ -184,6 +197,23 @@ export function createProjectHelpers(store: E2EStore) {
     try {
       await projectApi.deleteWorkItem(projectSlug, shortId);
       return { ok: true };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  const updateWorkItemPartial = async (
+    projectSlug: string,
+    shortId: string,
+    updates: Json
+  ): Promise<Result<{ item: Json }>> => {
+    try {
+      const item = (await projectApi.updateWorkItemPartial(
+        projectSlug,
+        shortId,
+        updates as unknown as WorkItemPartialUpdate
+      )) as unknown as Json;
+      return { ok: true, item };
     } catch (err) {
       return asError(err);
     }
@@ -278,9 +308,11 @@ export function createProjectHelpers(store: E2EStore) {
     readWorkItem,
     writeWorkItem,
     allocateStandaloneWorkItemId,
+    readStandaloneWorkItems,
     readStandaloneWorkItem,
     writeStandaloneWorkItem,
     deleteWorkItem,
+    updateWorkItemPartial,
     readWorkItemsEnriched,
     testWorkItemScheduleLookup,
     runWorkItemSchedulerOnce,

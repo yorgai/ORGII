@@ -28,6 +28,10 @@ const ROUTINE_CREATE_WORK_ITEM_CONTRACT_SCENARIO =
   "routine-create-work-item-contract";
 const ROUTINE_CREATE_WORK_ITEM_FAILURE_SCENARIO =
   "routine-create-work-item-failure";
+const STANDALONE_WORK_ITEM_CONTRACT_SCENARIO =
+  "standalone-work-item-contract";
+const RENDERED_STANDALONE_WORK_ITEM_UI_SCENARIO =
+  "rendered-standalone-work-item-ui";
 const WORK_ITEM_UI_LLM_SCENARIO = "work-item-ui-llm-execution";
 const WORK_ITEM_RERUN_UI_LLM_SCENARIO = "work-item-rerun-ui-llm-execution";
 const ROUTINE_CREATE_WORK_ITEM_UI_LLM_SCENARIO =
@@ -35,6 +39,7 @@ const ROUTINE_CREATE_WORK_ITEM_UI_LLM_SCENARIO =
 const ROUTINE_FIRE_STATUS = {
   STARTED: "started",
   SUCCEEDED: "succeeded",
+  COMPLETED: "completed",
   FAILED: "failed",
   COALESCED: "coalesced",
   SKIPPED: "skipped",
@@ -261,6 +266,24 @@ function createWorkItemFrontmatter({ shortId, title, account }) {
       agent_definition_id: "builtin:sde",
       agent_mode: "investigate",
     },
+  };
+}
+
+function createBasicWorkItemFrontmatter({ shortId, title, project }) {
+  const now = new Date().toISOString();
+  return {
+    id: shortId,
+    short_id: shortId,
+    title,
+    project,
+    status: "planned",
+    priority: "none",
+    labels: [],
+    created_by: "e2e",
+    created_at: now,
+    updated_at: now,
+    starred: false,
+    todos: [],
   };
 }
 
@@ -881,6 +904,8 @@ describe("Work Item durable object runtime invariants", function () {
       !shouldRunScenario(ROUTINE_CONCURRENCY_SCENARIO) &&
       !shouldRunScenario(ROUTINE_CREATE_WORK_ITEM_CONTRACT_SCENARIO) &&
       !shouldRunScenario(ROUTINE_CREATE_WORK_ITEM_FAILURE_SCENARIO) &&
+      !shouldRunScenario(STANDALONE_WORK_ITEM_CONTRACT_SCENARIO) &&
+      !shouldRunScenario(RENDERED_STANDALONE_WORK_ITEM_UI_SCENARIO) &&
       !shouldRunScenario(WORK_ITEM_UI_LLM_SCENARIO) &&
       !shouldRunScenario(WORK_ITEM_RERUN_UI_LLM_SCENARIO) &&
       !shouldRunScenario(ROUTINE_CREATE_WORK_ITEM_UI_LLM_SCENARIO)
@@ -893,7 +918,7 @@ describe("Work Item durable object runtime invariants", function () {
     await browser.waitUntil(
       async () =>
         execJS(
-          `return !!(window.__e2e && window.__e2e.listAccounts && window.__e2e.ensureRepoSelected && window.__e2e.upsertRoutine && window.__e2e.fireRoutine && window.__e2e.listRoutineFires && window.__e2e.writeProject && window.__e2e.writeWorkItem && window.__e2e.readWorkItem && window.__e2e.readWorkItemsEnriched && window.__e2e.openProjectWorkItemsTab && window.__e2e.openSession && window.__e2e.getSessionAggregateRow && window.__e2e.resetToNewSession && window.__e2e.agentOrgSimulateAppRestart);`,
+          `return !!(window.__e2e && window.__e2e.listAccounts && window.__e2e.ensureRepoSelected && window.__e2e.upsertRoutine && window.__e2e.fireRoutine && window.__e2e.listRoutineFires && window.__e2e.writeProject && window.__e2e.writeWorkItem && window.__e2e.readWorkItem && window.__e2e.allocateStandaloneWorkItemId && window.__e2e.writeStandaloneWorkItem && window.__e2e.readStandaloneWorkItem && window.__e2e.readStandaloneWorkItems && window.__e2e.updateWorkItemPartial && window.__e2e.readWorkItemsEnriched && window.__e2e.openWorkspaceWorkItemsTab && window.__e2e.openProjectWorkItemsTab && window.__e2e.openSession && window.__e2e.getSessionAggregateRow && window.__e2e.resetToNewSession && window.__e2e.agentOrgSimulateAppRestart);`,
         ),
       {
         timeout: MOUNT_TIMEOUT_MS,
@@ -1126,6 +1151,298 @@ describe("Work Item durable object runtime invariants", function () {
           `Created Work Item did not inherit executable config: ${JSON.stringify(frontmatter.orchestrator_config)}`,
         );
       }
+    }
+  });
+
+  it("persists standalone Work Items across list, restart, attach, and detach flows", async function () {
+    if (!shouldRunScenario(STANDALONE_WORK_ITEM_CONTRACT_SCENARIO)) {
+      this.skip();
+      return;
+    }
+
+    const repo = unwrap(
+      await invokeE2E("ensureRepoSelected", { repoPath: E2E_REPO_PATH }),
+      "ensureRepoSelected(standalone work item contract)",
+    );
+    const projectSlug = `e2e-standalone-contract-${RUN_ID}`;
+    const projectName = `E2E Standalone Contract ${RUN_ID}`;
+    const title = `E2E standalone contract Work Item ${RUN_ID}`;
+    const detachedTitle = `${title} detached`;
+    const body = "Standalone Work Item contract body that must survive scope changes.";
+    const updatedBody = `${body}\nUpdated while attached to a Project.`;
+
+    await invokeE2E("deleteProject", projectSlug);
+    unwrap(
+      await invokeE2E(
+        "writeProject",
+        projectSlug,
+        createProjectMeta(projectSlug, projectName, repo.path),
+        "E2E project for standalone Work Item attach/detach coverage.",
+        true,
+      ),
+      "writeProject(standalone work item contract)",
+    );
+
+    const shortId = unwrap(
+      await invokeE2E("allocateStandaloneWorkItemId"),
+      "allocateStandaloneWorkItemId(standalone contract)",
+    ).shortId;
+    const frontmatter = createBasicWorkItemFrontmatter({ shortId, title });
+    unwrap(
+      await invokeE2E("writeStandaloneWorkItem", shortId, frontmatter, body),
+      "writeStandaloneWorkItem(standalone contract)",
+    );
+
+    const standaloneItem = unwrap(
+      await invokeE2E("readStandaloneWorkItem", shortId),
+      `readStandaloneWorkItem(${shortId}) initial`,
+    ).item;
+    if (standaloneItem.frontmatter?.project !== undefined && standaloneItem.frontmatter?.project !== null) {
+      throw new Error(
+        `Standalone Work Item unexpectedly persisted a project: ${JSON.stringify(standaloneItem)}`,
+      );
+    }
+    if (standaloneItem.frontmatter?.title !== title || standaloneItem.body !== body) {
+      throw new Error(
+        `Standalone Work Item did not preserve initial content: ${JSON.stringify(standaloneItem)}`,
+      );
+    }
+
+    const standaloneList = unwrap(
+      await invokeE2E("readStandaloneWorkItems"),
+      "readStandaloneWorkItems(standalone contract initial list)",
+    ).items;
+    if (!standaloneList.some((item) => item.frontmatter?.short_id === shortId)) {
+      throw new Error(
+        `Standalone list did not include ${shortId}: ${JSON.stringify(standaloneList)}`,
+      );
+    }
+    const projectedListBeforeAttach = unwrap(
+      await invokeE2E("readWorkItemsEnriched", projectSlug),
+      "readWorkItemsEnriched(standalone contract before attach)",
+    ).items;
+    if (projectedListBeforeAttach.some((item) => item.shortId === shortId || item.short_id === shortId)) {
+      throw new Error(
+        `Project list was polluted by standalone Work Item before attach: ${JSON.stringify(projectedListBeforeAttach)}`,
+      );
+    }
+
+    unwrap(
+      await invokeE2E("agentOrgSimulateAppRestart"),
+      "simulate app restart for standalone Work Item contract",
+    );
+    const postRestartStandalone = unwrap(
+      await invokeE2E("readStandaloneWorkItem", shortId),
+      `readStandaloneWorkItem(${shortId}) after restart`,
+    ).item;
+    if (postRestartStandalone.frontmatter?.title !== title || postRestartStandalone.body !== body) {
+      throw new Error(
+        `Standalone Work Item did not survive simulated restart: ${JSON.stringify(postRestartStandalone)}`,
+      );
+    }
+
+    unwrap(
+      await invokeE2E("writeWorkItem", projectSlug, shortId, {
+        ...postRestartStandalone.frontmatter,
+        project: projectSlug,
+        updated_at: new Date().toISOString(),
+      }, postRestartStandalone.body),
+      "writeWorkItem attach standalone contract item",
+    );
+    const attachedItem = unwrap(
+      await invokeE2E("readWorkItem", projectSlug, shortId),
+      `readWorkItem(${shortId}) after attach`,
+    ).item;
+    if (attachedItem.frontmatter?.project !== projectSlug) {
+      throw new Error(
+        `Attached Work Item did not persist project slug: ${JSON.stringify(attachedItem)}`,
+      );
+    }
+    const standaloneReadAfterAttach = await invokeE2E("readStandaloneWorkItem", shortId);
+    if (standaloneReadAfterAttach?.ok) {
+      throw new Error(
+        `Attached Work Item remained readable as standalone: ${JSON.stringify(standaloneReadAfterAttach)}`,
+      );
+    }
+
+    const attachedUpdate = unwrap(
+      await invokeE2E("updateWorkItemPartial", projectSlug, shortId, {
+        title: detachedTitle,
+        body: updatedBody,
+        project: null,
+      }),
+      "updateWorkItemPartial detach standalone contract item",
+    ).item;
+    if (attachedUpdate.project !== undefined && attachedUpdate.project !== null) {
+      throw new Error(
+        `Detached enriched Work Item still reported a project: ${JSON.stringify(attachedUpdate)}`,
+      );
+    }
+
+    const detachedItem = unwrap(
+      await invokeE2E("readStandaloneWorkItem", shortId),
+      `readStandaloneWorkItem(${shortId}) after detach`,
+    ).item;
+    if (detachedItem.frontmatter?.project !== undefined && detachedItem.frontmatter?.project !== null) {
+      throw new Error(
+        `Detached Work Item still has project in frontmatter: ${JSON.stringify(detachedItem)}`,
+      );
+    }
+    if (detachedItem.frontmatter?.title !== detachedTitle || detachedItem.body !== updatedBody) {
+      throw new Error(
+        `Detached Work Item did not preserve partial update fields: ${JSON.stringify(detachedItem)}`,
+      );
+    }
+    const projectListAfterDetach = unwrap(
+      await invokeE2E("readWorkItemsEnriched", projectSlug),
+      "readWorkItemsEnriched(standalone contract after detach)",
+    ).items;
+    if (projectListAfterDetach.some((item) => item.shortId === shortId || item.short_id === shortId)) {
+      throw new Error(
+        `Project list still included detached Work Item: ${JSON.stringify(projectListAfterDetach)}`,
+      );
+    }
+  });
+
+  it("renders standalone Work Items in the aggregate UI and opens their detail view", async function () {
+    if (!shouldRunScenario(RENDERED_STANDALONE_WORK_ITEM_UI_SCENARIO)) {
+      this.skip();
+      return;
+    }
+
+    const repo = unwrap(
+      await invokeE2E("ensureRepoSelected", { repoPath: E2E_REPO_PATH }),
+      "ensureRepoSelected(rendered standalone work item ui)",
+    );
+    const projectSlug = `e2e-rendered-standalone-${RUN_ID}`;
+    const projectName = `E2E Rendered Standalone ${RUN_ID}`;
+    const title = `E2E rendered standalone Work Item ${RUN_ID}`;
+    const body = "Rendered standalone Work Item body shown in the detail view.";
+
+    await invokeE2E("deleteProject", projectSlug);
+    unwrap(
+      await invokeE2E(
+        "writeProject",
+        projectSlug,
+        createProjectMeta(projectSlug, projectName, repo.path),
+        "E2E project used only to open the aggregate Work Items surface.",
+        true,
+      ),
+      "writeProject(rendered standalone work item ui)",
+    );
+
+    const shortId = unwrap(
+      await invokeE2E("allocateStandaloneWorkItemId"),
+      "allocateStandaloneWorkItemId(rendered standalone ui)",
+    ).shortId;
+    unwrap(
+      await invokeE2E(
+        "writeStandaloneWorkItem",
+        shortId,
+        createBasicWorkItemFrontmatter({ shortId, title }),
+        body,
+      ),
+      "writeStandaloneWorkItem(rendered standalone ui)",
+    );
+
+    const openState = unwrap(
+      await invokeE2E("openWorkspaceWorkItemsTab"),
+      "openWorkspaceWorkItemsTab(rendered standalone ui)",
+    );
+    const rowSelector = `[data-testid="work-item-row-${shortId}"]`;
+    const targetProjectTabId = openState.activeTabId;
+    const projectTabSelector = `[data-tab-id="${targetProjectTabId}"]`;
+    let listState = null;
+    try {
+      await browser.waitUntil(
+        async () => {
+          if (targetProjectTabId) {
+            await clickSelector(projectTabSelector);
+          }
+          listState = await execJS(`
+            const row = document.querySelector(${JSON.stringify(rowSelector)});
+            const rect = row?.getBoundingClientRect();
+            const style = row ? window.getComputedStyle(row) : null;
+            const bodyText = document.body.innerText || '';
+            const router = document.querySelector('[data-testid="project-manager-content-router"]');
+            const allWorkItemRows = Array.from(document.querySelectorAll('[data-testid^="work-item-row-"]')).map((candidate) => ({
+              testId: candidate.getAttribute('data-testid'),
+              text: (candidate.textContent || '').slice(0, 220),
+              rect: (() => {
+                const rowRect = candidate.getBoundingClientRect();
+                return { width: rowRect.width, height: rowRect.height };
+              })(),
+            }));
+            return {
+              hasRow: Boolean(row),
+              rowVisible: Boolean(row && rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none'),
+              rowText: row?.textContent || '',
+              bodyHasTitle: bodyText.includes(${JSON.stringify(title)}),
+              activeTabId: router?.getAttribute('data-active-tab-id') || null,
+              activeTabType: router?.getAttribute('data-active-tab-type') || null,
+              route: window.location.pathname,
+              allWorkItemRows,
+              bodyText: bodyText.slice(0, 1800),
+            };
+          `);
+          return listState.rowVisible && listState.rowText.includes(title);
+        },
+        {
+          timeout: MOUNT_TIMEOUT_MS,
+          interval: 500,
+          timeoutMsg: "Standalone Work Item row did not render in aggregate UI",
+        },
+      );
+    } catch (error) {
+      throw new Error(
+        `Standalone Work Item row did not render in aggregate UI: latest=${JSON.stringify(listState)} original=${String(error?.message ?? error)}`,
+      );
+    }
+
+    let detailState = null;
+    try {
+      await browser.waitUntil(
+        async () => {
+        const rowClick = await clickSelector(rowSelector);
+        detailState = await execJS(`
+          const bodyText = document.body.innerText || '';
+          const detailsTab = document.querySelector('[data-testid="work-item-tab-details"]');
+          const executionTab = document.querySelector('[data-testid="work-item-tab-execution"]');
+          const router = document.querySelector('[data-testid="project-manager-content-router"]');
+          const activeTabId = router?.getAttribute('data-active-tab-id') || null;
+          const activeTabType = router?.getAttribute('data-active-tab-type') || null;
+          const hasPlaceholder = bodyText.includes('Host-coupled') || bodyText.includes('Phase 2 will lift');
+          return {
+            rowClick: ${JSON.stringify(rowClick)},
+            activeTabId,
+            activeTabType,
+            hasTitle: bodyText.includes(${JSON.stringify(title)}),
+            hasBody: bodyText.includes(${JSON.stringify(body)}),
+            hasDetailsTab: Boolean(detailsTab),
+            hasExecutionTab: Boolean(executionTab),
+            hasPlaceholder,
+            bodyText: bodyText.slice(0, 1800),
+          };
+        `);
+        return (
+          detailState.activeTabType === "workItem-detail" &&
+          detailState.hasTitle &&
+          detailState.hasBody &&
+          detailState.hasDetailsTab &&
+          detailState.hasExecutionTab &&
+          !detailState.hasPlaceholder
+        );
+        },
+        {
+          timeout: MOUNT_TIMEOUT_MS,
+          interval: 500,
+          timeoutMsg: "Standalone Work Item detail did not open from aggregate UI",
+        },
+      );
+    } catch (error) {
+      throw new Error(
+        `Standalone Work Item detail did not open from aggregate UI: latest=${JSON.stringify(detailState)} original=${String(error?.message ?? error)}`,
+      );
     }
   });
 
