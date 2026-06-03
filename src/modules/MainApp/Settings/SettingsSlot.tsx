@@ -317,14 +317,17 @@ const SettingsSlot: React.FC<SettingsSlotProps> = ({
       <div
         ref={panelRef}
         className="relative flex h-full min-w-0 max-w-full flex-1 flex-col overflow-hidden bg-bg-2"
-        style={{
-          // Match ChatPanel: inset/comfort mode rounds the slot; full/
-          // compact mode hosts the slot edge-to-edge and the wrapper
-          // owns the radius.
-          borderRadius: embedded ? 0 : "var(--radius-page)",
-          contain: isDragging ? "strict" : undefined,
-          willChange: isDragging ? "width" : undefined,
-        }}
+        style={
+          {
+            // Match ChatPanel: inset/comfort mode rounds the slot; full/
+            // compact mode hosts the slot edge-to-edge and the wrapper
+            // owns the radius.
+            borderRadius: embedded ? 0 : "var(--radius-page)",
+            contain: isDragging ? "strict" : undefined,
+            willChange: isDragging ? "width" : undefined,
+            WebkitAppRegion: "no-drag",
+          } as React.CSSProperties
+        }
       >
         {/* Header chrome — mirrors ChatPanel's `headerSection`: same
             height tokens, same pt-2 nudge in compact (modern) layout to
@@ -410,7 +413,12 @@ const SettingsSlot: React.FC<SettingsSlotProps> = ({
           </div>
         </div>
 
-        <Body />
+        <div
+          className="flex min-h-0 flex-1 flex-col"
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        >
+          <Body />
+        </div>
       </div>
     </div>
   );
