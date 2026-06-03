@@ -167,6 +167,7 @@ pub async fn test_send_message(Json(request): Json<TestMessageRequest>) -> Json<
     // assert against an OS turn that never saw any rules.
     let input = agent_core::session::TurnInput {
         content: request.content.clone(),
+        display_text: None,
         agent_mode: None,
         images: None,
         ide_context: None,

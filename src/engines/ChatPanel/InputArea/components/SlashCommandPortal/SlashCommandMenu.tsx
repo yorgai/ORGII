@@ -128,10 +128,18 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
     setFlyoutHighlightIndex(0);
   }
 
-  // Autofocus the search input in header mode
+  // Autofocus the search input in header mode whenever the menu becomes visible.
+  // Using `visible` (not just `isHeaderMode`) ensures re-focus on every open,
+  // because the menu renders to null when closed (isPositioned=false) without
+  // unmounting, so the effect won't re-fire on the second open if only
+  // `isHeaderMode` is in the dep array (it never changes in header mode).
   useEffect(() => {
-    if (isHeaderMode) searchInputRef.current?.focus();
-  }, [isHeaderMode]);
+    if (isHeaderMode && visible) {
+      requestAnimationFrame(() => {
+        searchInputRef.current?.focus();
+      });
+    }
+  }, [isHeaderMode, visible]);
 
   // Scroll highlighted item into view
   useEffect(() => {
