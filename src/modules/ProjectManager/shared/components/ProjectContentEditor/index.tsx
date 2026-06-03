@@ -1,80 +1,44 @@
-/**
- * ProjectContentEditor Component
- *
- * Shared title + summary + rich text description editor for projects.
- * Used in both:
- *   - CreateProjectView (create mode)
- *   - WorkItemsOverview (edit mode)
- *
- * Uses RichTextEditor (full-featured tiptap with floating toolbar)
- * for the description field.
- */
-import type { JSONContent } from "@tiptap/react";
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import Input from "@src/components/Input";
-import RichTextEditor from "@src/components/RichTextEditor";
-import type { RichTextEditorRef } from "@src/components/RichTextEditor";
 import { PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS } from "@src/modules/ProjectManager/shared/placeholderTokens";
-
-// ============================================
-// Types
-// ============================================
+import MarkdownEditor from "@src/modules/shared/components/MarkdownEditor";
+import type { MarkdownEditorRef } from "@src/modules/shared/components/MarkdownEditor";
 
 export interface ProjectContentEditorRef {
-  /** Get the plain text of the description */
   getDescriptionText: () => string;
-  /** Get the HTML of the description */
   getDescriptionHTML: () => string;
-  /** Get the JSON of the description */
-  getDescriptionJSON: () => JSONContent | undefined;
-  /** Get the markdown of the description */
+  getDescriptionJSON: () => undefined;
   getMarkdown: () => string;
-  /** Insert an image node at the cursor */
   insertImage: (src: string, alt?: string) => void;
-  /** Focus the title input */
   focusTitle: () => void;
-  /** Focus the description editor */
   focusDescription: () => void;
 }
 
 export interface ProjectContentEditorProps {
-  /** Project title */
   title: string;
-  /** Title change handler */
   onTitleChange: (title: string) => void;
-  /** Project summary (one-liner below title) */
   summary?: string;
-  /** Summary change handler */
   onSummaryChange?: (summary: string) => void;
-  /** Initial description content (string or JSON) */
-  initialDescription?: string | JSONContent;
-  /** Description change handler (called on every edit) */
-  onDescriptionChange?: (html: string, text: string) => void;
-  /** Callback when images are pasted/dropped into the editor */
+  initialDescription?: string;
+  onDescriptionChange?: (markdown: string, text: string) => void;
   onImageInsert?: (files: File[]) => void;
-  /** Title placeholder */
   titlePlaceholder?: string;
-  /** Summary placeholder */
   summaryPlaceholder?: string;
-  /** Description placeholder */
   descriptionPlaceholder?: string;
-  /** Whether title should auto-focus */
   autoFocusTitle?: boolean;
-  /** Whether all fields are editable */
   editable?: boolean;
-  /** Additional className for the container */
   className?: string;
-  /** Additional className for the description editor */
   descriptionClassName?: string;
-  /** Max height for the description editor scroll area */
   descriptionMaxHeight?: number | string;
 }
-
-// ============================================
-// Component
-// ============================================
 
 const ProjectContentEditor = forwardRef<
   ProjectContentEditorRef,
@@ -86,7 +50,7 @@ const ProjectContentEditor = forwardRef<
       onTitleChange,
       summary,
       onSummaryChange,
-      initialDescription,
+      initialDescription = "",
       onDescriptionChange,
       onImageInsert,
       titlePlaceholder: titlePlaceholderProp,
@@ -108,57 +72,37 @@ const ProjectContentEditor = forwardRef<
     const descriptionPlaceholder =
       descriptionPlaceholderProp ?? t("projects.editor.descriptionPlaceholder");
     const titleRef = useRef<HTMLInputElement>(null);
-    const editorRef = useRef<RichTextEditorRef>(null);
+    const editorRef = useRef<MarkdownEditorRef>(null);
+    const [descriptionValue, setDescriptionValue] =
+      useState(initialDescription);
+
+    useEffect(() => {
+      setDescriptionValue(initialDescription);
+    }, [initialDescription]);
 
     useImperativeHandle(ref, () => ({
-      getDescriptionText: () => editorRef.current?.getText() ?? "",
-      getDescriptionHTML: () => editorRef.current?.getHTML() ?? "",
-      getDescriptionJSON: () => editorRef.current?.getJSON(),
-      getMarkdown: () => editorRef.current?.getMarkdown() ?? "",
+      getDescriptionText: () =>
+        editorRef.current?.getText() ?? descriptionValue,
+      getDescriptionHTML: () =>
+        editorRef.current?.getHTML() ?? descriptionValue,
+      getDescriptionJSON: () => undefined,
+      getMarkdown: () => editorRef.current?.getMarkdown() ?? descriptionValue,
       insertImage: (src: string, alt?: string) =>
         editorRef.current?.insertImage(src, alt),
       focusTitle: () => titleRef.current?.focus(),
       focusDescription: () => editorRef.current?.focus(),
     }));
 
-    const handleDescriptionChange = (
-      html: string,
-      text: string,
-      _json: JSONContent
-    ) => {
-      onDescriptionChange?.(html, text);
+    const handleDescriptionChange = (markdown: string) => {
+      setDescriptionValue(markdown);
+      onDescriptionChange?.(markdown, markdown);
     };
 
-    // Sync editor content only on mount or when explicitly reset (e.g. cancel).
-    // We track the previous value to avoid resetting while the user is typing.
-    const prevDescRef = useRef(initialDescription);
-    useEffect(() => {
-      if (editorRef.current && initialDescription !== undefined) {
-        // Only reset if the value changed externally (not from user typing)
-        // Detect external reset: value changed but editor content doesn't match
-        const currentText = editorRef.current.getText();
-        const incomingText =
-          typeof initialDescription === "string"
-            ? initialDescription.replace(/<[^>]*>/g, "")
-            : "";
-        // If the editor already has this content (user just typed it), skip
-        if (
-          prevDescRef.current !== initialDescription &&
-          currentText !== incomingText
-        ) {
-          editorRef.current.setContent(initialDescription);
-        }
-        prevDescRef.current = initialDescription;
-      }
-    }, [initialDescription]);
-
-    // Show summary if handler is provided OR if summary has a value
     const showSummary =
       onSummaryChange !== undefined || (summary && summary.length > 0);
 
     return (
       <div className={className}>
-        {/* Title */}
         <Input
           ref={titleRef}
           type="text"
@@ -174,7 +118,6 @@ const ProjectContentEditor = forwardRef<
           inputClassName={`text-[22px] font-semibold text-text-1 ${PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS}`}
         />
 
-        {/* Summary */}
         {showSummary && (
           <Input
             type="text"
@@ -190,24 +133,24 @@ const ProjectContentEditor = forwardRef<
           />
         )}
 
-        {/* Divider */}
         <div className="mb-4 border-t border-border-2" />
 
-        {/* Description - RichTextEditor */}
         <div
           className={`${descriptionMaxHeight ? "min-h-0 flex-1" : "min-h-[200px]"} cursor-text`}
           onClick={() => editorRef.current?.focus()}
         >
-          <RichTextEditor
+          <MarkdownEditor
             ref={editorRef}
+            value={descriptionValue}
+            onChange={handleDescriptionChange}
             placeholder={descriptionPlaceholder}
-            initialContent={initialDescription ?? ""}
-            onContentChange={handleDescriptionChange}
             onImageInsert={onImageInsert}
             minHeight={200}
             maxHeight={descriptionMaxHeight}
-            editable={editable}
-            className={`text-[13px] ${descriptionClassName}`.trim()}
+            readOnly={!editable}
+            showTokenCount={false}
+            hideHeader
+            className={`project-markdown-editor text-[13px] ${descriptionClassName}`.trim()}
           />
         </div>
       </div>

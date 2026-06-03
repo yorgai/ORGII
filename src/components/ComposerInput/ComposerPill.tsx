@@ -6,8 +6,8 @@
  * so the browser treats the entire pill as a single insertion point — caret
  * navigation, selection, and Backspace/Delete operate on the whole node.
  *
- * Mirrors the visual + hover-preview behavior of the previous
- * `FilePillNodeView` (Tiptap) without the ProseMirror dependency.
+ * Mirrors the inline context-pill visual + hover-preview behavior without
+ * relying on a rich text editor framework.
  */
 import {
   AtSign,
@@ -45,7 +45,7 @@ const PREVIEW_SHOW_DELAY = 300;
 const PREVIEW_HIDE_DELAY = 150;
 const ICON_PROPS = { size: PILL_SIZE.iconSize, strokeWidth: 1.75 } as const;
 
-/** Copied verbatim from FilePillNodeView so behavior stays identical. */
+/** Heuristic for resolving plain file/folder references into folder icons. */
 function isLikelyFolder(path: string, name: string): boolean {
   if (!path && !name) return false;
   if (path?.endsWith("/")) return true;
