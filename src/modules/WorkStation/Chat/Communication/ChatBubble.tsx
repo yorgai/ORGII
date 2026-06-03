@@ -29,6 +29,7 @@ import { TerminalOutput } from "@src/components/TerminalDisplay";
 import { PILL_REGEX, PILL_TYPES, type PillType } from "@src/config/pillTokens";
 import UserMessageContent from "@src/engines/ChatPanel/ChatHistory/components/UserMessageContent";
 import ChatItemWrap from "@src/engines/ChatPanel/ChatHistory/renderers/ChatItemWrap";
+import { stripExpandedPillContent } from "@src/engines/ChatPanel/InputArea/utils/pillContentParser";
 import { SESSION_UI_TOKENS } from "@src/engines/ChatPanel/blocks/primitives/config";
 import { installedSkillsAtom } from "@src/store/skills/installedSkillsAtom";
 import type { InstalledSkill } from "@src/types/extensions";
@@ -309,9 +310,12 @@ const UserBubbleContent: React.FC<{
 
   // Strip terminal and skill pill tokens before passing to UserMessageContent.
   // Their cards render below; keeping the tokens would produce duplicate inline badges.
+  // Also strip the auto-expanded pill content block appended by the Rust pill_resolver
+  // (everything after "\n\n---\n**Referenced content (auto-expanded):**") so the raw
+  // SKILL.md / file content doesn't leak into the inline text bubble.
   const strippedContent = useMemo(
     () =>
-      content
+      stripExpandedPillContent(content)
         .replace(PILL_REGEX, (match, _name, pillType: string) =>
           pillType === "terminal" || pillType === "skill" ? "" : match
         )
