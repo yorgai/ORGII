@@ -43,6 +43,7 @@ interface LinearProjectsPageProps {
   teamId?: string;
   teamName?: string;
   workStationTabId?: string;
+  repoPath?: string | null;
   workstationHeaderHost?: WorkstationTabHeaderHost;
   isActive?: boolean;
   onCreateProject?: () => void;
@@ -70,6 +71,7 @@ const LinearProjectsPage: React.FC<LinearProjectsPageProps> = ({
   teamId,
   teamName,
   workStationTabId,
+  repoPath,
   workstationHeaderHost = "project",
   isActive = true,
   breadcrumbSegments,
@@ -338,6 +340,7 @@ const LinearProjectsPage: React.FC<LinearProjectsPageProps> = ({
       project={project}
       workItems={workItems}
       saving={savingProject}
+      repoPath={repoPath}
       onUpdateProject={handleUpdateProject}
     />
   ) : null;

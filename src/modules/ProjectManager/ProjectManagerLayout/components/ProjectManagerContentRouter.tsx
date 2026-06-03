@@ -136,6 +136,7 @@ export function ProjectManagerContentRouter({
                   projectId={tab.data.projectId as string}
                   projectName={tab.data.projectName as string}
                   cachedProjectSlug={tab.data.projectSlug as string | undefined}
+                  repoPath={repoPath}
                   projectView={projectView}
                   onProjectViewChange={(
                     nextProjectView: ProjectDetailSurfaceView
@@ -201,6 +202,7 @@ export function ProjectManagerContentRouter({
                   tab={tab}
                   isActive={isActiveTab}
                   t={t}
+                  repoPath={repoPath}
                   onCreateProject={onCreateProject}
                   onCreateWorkItem={onCreateWorkItem}
                   onUpdateTabData={onUpdateTabData}
@@ -221,6 +223,7 @@ interface LinearProjectsTabPaneProps {
   tab: WorkStationTab;
   isActive: boolean;
   t: (key: string) => string;
+  repoPath: string;
   onCreateProject: ProjectManagerContentRouterProps["onCreateProject"];
   onCreateWorkItem: ProjectManagerContentRouterProps["onCreateWorkItem"];
   onUpdateTabData: ProjectManagerContentRouterProps["onUpdateTabData"];
@@ -232,6 +235,7 @@ const LinearProjectsTabPane: React.FC<LinearProjectsTabPaneProps> = memo(
     tab,
     isActive,
     t,
+    repoPath,
     onCreateProject,
     onCreateWorkItem,
     onUpdateTabData,
@@ -307,6 +311,7 @@ const LinearProjectsTabPane: React.FC<LinearProjectsTabPaneProps> = memo(
         breadcrumbSegments={breadcrumbSegments}
         linearSurfaceControls={linearSurfaceControls}
         workStationTabId={tab.id}
+        repoPath={repoPath}
         onCreateProject={onCreateProject}
         onCreateWorkItem={onCreateWorkItem}
         onOpenLinearProject={handleOpenLinearProject}

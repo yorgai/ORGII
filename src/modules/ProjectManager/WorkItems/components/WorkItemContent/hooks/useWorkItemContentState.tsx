@@ -163,8 +163,8 @@ export function useWorkItemContentState(
   );
 
   const handleDescriptionChange = useCallback(
-    (text: string) => {
-      const storable = unresolveImagePathsForStorage(text.trim());
+    (markdown: string) => {
+      const storable = unresolveImagePathsForStorage(markdown.trim());
       const current =
         workItem.spec || workItem.session_metadata?.file_change_summary || "";
       if (storable === current) return;

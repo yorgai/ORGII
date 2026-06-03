@@ -79,7 +79,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({
           <button
             type="button"
             onClick={onClick}
-            className="flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-none bg-transparent py-0 pl-3 pr-2 text-inherit outline-none"
+            className="flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-none bg-transparent px-3 py-0 text-inherit outline-none"
           >
             <span
               className="flex h-4 w-4 shrink-0 items-center justify-center text-text-3"
@@ -120,7 +120,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({
       >
         <button
           type="button"
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 border-none bg-transparent py-1.5 pl-1.5 pr-1.5 text-left outline-none"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 border-none bg-transparent px-1.5 py-1.5 text-left outline-none"
           onClick={onClick}
         >
           <span

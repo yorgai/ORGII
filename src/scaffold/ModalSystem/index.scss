@@ -160,7 +160,6 @@
 // Modal Body - Clean and Simple
 .liquid-modal-body {
   flex: 1;
-  padding: 0;
   overflow-y: auto;
   overflow-x: hidden;
   color: var(--color-text-1);
@@ -309,10 +308,6 @@
   .liquid-modal-title {
     font-size: 16px;
     line-height: 24px;
-  }
-
-  .liquid-modal-body {
-    padding: 20px;
   }
 
   .liquid-modal-footer {

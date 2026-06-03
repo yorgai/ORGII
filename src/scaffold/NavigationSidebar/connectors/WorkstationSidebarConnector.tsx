@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
 import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
@@ -43,11 +43,17 @@ import {
 import {
   CHAT_PANEL_CONTENT_MODE,
   CHAT_PANEL_CREATE_TARGET,
+  activeStationChatVisibleAtom,
   chatPanelContentModeAtom,
   chatPanelCreateTargetAtom,
   chatPanelSelectedWorkItemAtom,
 } from "@src/store/ui/chatPanelAtom";
+import { type StationMode, stationModeAtom } from "@src/store/ui/simulatorAtom";
 import { spotlightOpenAtom } from "@src/store/ui/uiAtom";
+import {
+  opsControlFocusedTabAtom,
+  opsControlPeekHostAtom,
+} from "@src/store/workstation";
 
 import { SidebarBottomBar } from "../blocks";
 import NavigationSidebar from "../variants/NavigationSidebar";
@@ -125,6 +131,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     [tCommonRaw]
   );
   const location = useLocation();
+  const navigate = useNavigate();
   const sessions = useAtomValue(sessionsAtom);
   const sessionsLoading = useAtomValue(sessionLoadingAtom);
   const visitedSessions = useAtomValue(visitedSessionsAtom);
@@ -137,13 +144,19 @@ export const WorkstationSidebarConnector: React.FC = () => {
   );
   const deleteSessionCreatorDraft = useSetAtom(deleteSessionCreatorDraftAtom);
   const setSpotlightOpen = useSetAtom(spotlightOpenAtom);
+  const chatPanelContentMode = useAtomValue(chatPanelContentModeAtom);
   const chatPanelCreateTarget = useAtomValue(chatPanelCreateTargetAtom);
   const chatPanelSelectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
+  const getStationChatVisible = useAtomValue(activeStationChatVisibleAtom);
   const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
   const setChatPanelCreateTarget = useSetAtom(chatPanelCreateTargetAtom);
   const setChatPanelSelectedWorkItem = useSetAtom(
     chatPanelSelectedWorkItemAtom
   );
+  const setStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
+  const setStationMode = useSetAtom(stationModeAtom);
+  const setOpsControlPeekHost = useSetAtom(opsControlPeekHostAtom);
+  const setOpsControlFocusedTab = useSetAtom(opsControlFocusedTabAtom);
   const { openSession } = useSessionView();
   const { goToStartPage, goToNewSession, navigateTo } = useAppNavigation();
   const [activeSidebarKey, setActiveSidebarKey] =
@@ -339,8 +352,12 @@ export const WorkstationSidebarConnector: React.FC = () => {
     location.pathname,
     ROUTES.workStation.kanban.path
   );
+  const isChatPanelProjectsContentSelected =
+    chatPanelContentMode === CHAT_PANEL_CONTENT_MODE.NON_SESSION ||
+    Boolean(chatPanelSelectedWorkItem);
   const sessionSelectedMenuItemId =
-    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM
+    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM ||
+    isChatPanelProjectsContentSelected
       ? ""
       : getSelectedMenuItemId({
           selectedPinnedMenuItemId,
@@ -364,6 +381,27 @@ export const WorkstationSidebarConnector: React.FC = () => {
     activeSidebarKey === "projects"
       ? setProjectsCollapsedSectionIds
       : setCollapsedSectionIds;
+
+  const resetOpsControlStateForProjectsContent = useCallback(() => {
+    const stationMode: StationMode = "my-station";
+    setStationMode(stationMode);
+    setStationChatVisible(stationMode, true);
+    setOpsControlPeekHost(null);
+    setOpsControlFocusedTab(null);
+  }, [
+    setOpsControlFocusedTab,
+    setOpsControlPeekHost,
+    setStationChatVisible,
+    setStationMode,
+  ]);
+
+  const activateMyStationRouteForProjectsContent = useCallback(() => {
+    const targetRoute = ROUTES.workStation.code.path;
+    resetOpsControlStateForProjectsContent();
+    if (location.pathname !== targetRoute) {
+      navigate(targetRoute);
+    }
+  }, [location.pathname, navigate, resetOpsControlStateForProjectsContent]);
 
   const handleGoToNewSession = useCallback(
     (options?: GoToNewSessionOptions) => {
@@ -408,6 +446,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const handleProjectsMenuItemClick = useCallback(
     (_key: string, item: NavigationMenuItem) => {
       if (item.id === PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID) {
+        resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId(PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID);
         setChatPanelSelectedWorkItem(null);
         setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
@@ -417,6 +456,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
 
       const createWorkItemOrgId = getProjectsWorkItemCreateOrgId(item.id);
       if (createWorkItemOrgId) {
+        resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId(item.id);
         setChatPanelSelectedWorkItem(null);
         setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
@@ -456,17 +496,22 @@ export const WorkstationSidebarConnector: React.FC = () => {
       if (!workItemId) return;
       const workItem = projectsWorkItemMap.get(workItemId);
       if (!workItem) return;
+      const chatPanelWorkItem = toChatPanelWorkItem(workItem);
+      activateMyStationRouteForProjectsContent();
       setProjectsSelectedMenuItemId(item.id);
       setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-      setChatPanelSelectedWorkItem(toChatPanelWorkItem(workItem));
+      setChatPanelSelectedWorkItem(chatPanelWorkItem);
       setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
     },
     [
+      activateMyStationRouteForProjectsContent,
       getProjectsLoadMoreGroupId,
+      location.pathname,
       loadProjectsLinearOrgWorkItems,
       openProjectsLinearWorkItem,
       projectsLinearWorkItemMap,
       projectsWorkItemMap,
+      resetOpsControlStateForProjectsContent,
       setChatPanelContentMode,
       setChatPanelCreateTarget,
       setChatPanelSelectedWorkItem,

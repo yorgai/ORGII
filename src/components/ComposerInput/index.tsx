@@ -1,18 +1,17 @@
 /**
  * ComposerInput
  *
- * Drop-in replacement for `TiptapInput` that drops the ProseMirror/Tiptap
- * dependency. The editor surface is a single `contenteditable` host; pills
+ * Drop-in replacement for the legacy ProseMirror input.
+ * The editor surface is a single `contenteditable` host; pills
  * are mounted as `contenteditable="false"` spans with React Portals
  * rendering the `ComposerPill` UI inside each span. Selection, IME, and
  * caret behavior are delegated to the browser; the heavy logic lives in
  * `useEditorOperations`, `keyboard.ts`, `pasteHandlers.ts`, and
  * `imperativeApi.ts`.
  *
- * The component exposes the same `ComposerInputRef` contract as the old
- * `TiptapInputRef`, so every existing consumer (`useTiptapInput`,
- * `useSlashCommand`, `useDraftManagement`, `inputPreparation`, …) keeps
- * working without any signature changes.
+ * The component exposes the shared `ComposerInputRef` contract, so every
+ * existing consumer (`useTiptapInput`, `useSlashCommand`, `useDraftManagement`,
+ * `inputPreparation`, …) keeps working without any signature changes.
  */
 import { useAtomValue } from "jotai";
 import React, {
@@ -66,6 +65,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
       onKeyDownForSlashDropdown,
       onImagePaste,
       onBeforeNewline,
+      slashTriggerMode = "command",
     } = props;
 
     const { isDark } = useCurrentTheme();
@@ -181,11 +181,25 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
         }
 
         if (slashCommandRef.current.active) {
-          if (!text.startsWith("/")) {
+          const range = rangeInsideHost(host);
+          const caretOffset = caretTextOffset(host, range);
+          if (caretOffset < slashCommandRef.current.startOffset) {
             slashCommandRef.current = { active: false, startOffset: 0 };
             onSlashCommandCloseRef.current?.();
           } else {
-            onSlashCommandRef.current?.(text.slice(1));
+            const query = text
+              .slice(slashCommandRef.current.startOffset, caretOffset)
+              .replace(/\u200B/g, "");
+            if (/\s/.test(query)) {
+              slashCommandRef.current = { active: false, startOffset: 0 };
+              onSlashCommandCloseRef.current?.();
+            } else {
+              const rect = range.getBoundingClientRect();
+              onSlashCommandRef.current?.(query, {
+                x: rect.left,
+                y: rect.bottom,
+              });
+            }
           }
         }
       },
@@ -242,8 +256,9 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
           },
           insertNewline: insertNewlineAndNotify,
           requireCmdEnter,
+          slashTriggerMode,
         }),
-      [hostRef, insertNewlineAndNotify, requireCmdEnter]
+      [hostRef, insertNewlineAndNotify, requireCmdEnter, slashTriggerMode]
     );
 
     // ===== Native event wiring =====
@@ -376,6 +391,46 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
               x: rect.left,
               y: rect.bottom,
             });
+          },
+          triggerSlashContext: () => {
+            const host = hostRef.current;
+            if (!host) return;
+            host.focus();
+            const range = rangeInsideHost(host);
+            const caretOffset = caretTextOffset(host, range);
+            slashCommandRef.current = {
+              active: true,
+              startOffset: caretOffset,
+              hasTriggerChar: false,
+            };
+            const rect = range.getBoundingClientRect();
+            onSlashCommandRef.current?.("", {
+              x: rect.left,
+              y: rect.bottom,
+            });
+          },
+          getSlashCommandState: () => ({
+            active: slashCommandRef.current.active,
+            hasTriggerChar: slashCommandRef.current.hasTriggerChar,
+          }),
+          closeSlashCommand: () => {
+            slashCommandRef.current = { active: false, startOffset: 0 };
+            onSlashCommandCloseRef.current?.();
+          },
+          consumeSlashCommandQuery: () => {
+            const host = hostRef.current;
+            if (!host) return;
+            const slashCommand = slashCommandRef.current;
+            if (!slashCommand.active) return;
+            const range = rangeInsideHost(host);
+            const caretOffset = caretTextOffset(host, range);
+            const deleteCount =
+              caretOffset -
+              slashCommand.startOffset +
+              (slashCommand.hasTriggerChar ? 1 : 0);
+            for (let index = 0; index < deleteCount; index += 1) {
+              document.execCommand("delete", false);
+            }
           },
           getAtMentionState: () => ({
             active: atMentionRef.current.active,

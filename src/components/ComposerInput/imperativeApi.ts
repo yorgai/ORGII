@@ -1,10 +1,10 @@
 /**
  * Imperative-handle factory for ComposerInput.
  *
- * Exposes the exact `TiptapInputRef` surface used across the codebase. The
- * façade returned by `getEditor()` covers the chainable insert-content
- * pattern (`useTiptapInput.handleAtMentionClick` and `useSlashCommand` both
- * use `editor.chain().focus().insertContent("...").run()`).
+ * Exposes the shared composer ref surface used across the codebase. The
+ * façade returned by `getEditor()` covers the chainable insert-content pattern
+ * (`useTiptapInput.handleAtMentionClick` and `useSlashCommand` both use
+ * `editor.chain().focus().insertContent("...").run()`).
  */
 import {
   type ComposerEditorChain,
@@ -33,12 +33,19 @@ export interface ImperativeApiContext {
   removePillByPath: (filePath: string) => void;
   isHostEmpty: () => boolean;
   triggerAtMention: () => void;
+  triggerSlashContext: () => void;
   /** Pulls the currently-active mention state (used by insertFilePill) */
   getAtMentionState: () => { active: boolean; hasAtChar?: boolean };
+  /** Pulls the currently-active slash context state (used by insertFilePill) */
+  getSlashCommandState: () => { active: boolean; hasTriggerChar?: boolean };
   /** Clears any active mention state (used after inserting via dropdown) */
   closeAtMention: () => void;
+  /** Clears any active slash context state (used after inserting via dropdown) */
+  closeSlashCommand: () => void;
   /** Delete the trigger character + query that opened the mention popover. */
   consumeMentionQuery: () => void;
+  /** Delete the slash trigger character + query that opened the context popover. */
+  consumeSlashCommandQuery: () => void;
 }
 
 export function buildImperativeApi(
@@ -85,7 +92,7 @@ export function buildImperativeApi(
     },
     getHTML: () => {
       const host = ctx.host();
-      return host?.innerHTML ?? "";
+      return host ? extractPlainText(host) : "";
     },
     getSnapshot: () => ctx.captureSnapshot(),
     setContent: (content) => {
@@ -120,8 +127,11 @@ export function buildImperativeApi(
     ) => {
       const fileName = displayName || filePath.split("/").pop() || filePath;
       const mention = ctx.getAtMentionState();
+      const slashCommand = ctx.getSlashCommandState();
       if (mention.active) {
         ctx.consumeMentionQuery();
+      } else if (slashCommand.active) {
+        ctx.consumeSlashCommandQuery();
       }
       ctx.insertPill({
         filePath,
@@ -136,6 +146,8 @@ export function buildImperativeApi(
       ctx.insertTextAtCaret(" ");
       if (mention.active) {
         ctx.closeAtMention();
+      } else if (slashCommand.active) {
+        ctx.closeSlashCommand();
       }
     },
     prependFilePill: (
@@ -200,8 +212,11 @@ export function buildImperativeApi(
         options.filePath.split("/").pop() ||
         options.filePath;
       const mention = ctx.getAtMentionState();
+      const slashCommand = ctx.getSlashCommandState();
       if (mention.active) {
         ctx.consumeMentionQuery();
+      } else if (slashCommand.active) {
+        ctx.consumeSlashCommandQuery();
       }
       ctx.insertPill({
         filePath: options.filePath,
@@ -214,6 +229,8 @@ export function buildImperativeApi(
       ctx.insertTextAtCaret(" ");
       if (mention.active) {
         ctx.closeAtMention();
+      } else if (slashCommand.active) {
+        ctx.closeSlashCommand();
       }
     },
     removeFilePill: (filePath: string) => {
@@ -226,6 +243,9 @@ export function buildImperativeApi(
     getEditor: () => buildFacade(),
     triggerAtMention: () => {
       ctx.triggerAtMention();
+    },
+    triggerSlashContext: () => {
+      ctx.triggerSlashContext();
     },
   };
 }

@@ -10,7 +10,7 @@
  *
  * Split layout:
  *   - Header: title + close button
- *   - Left: ProjectContentEditor (title, summary, markdown description)
+ *   - Left: ProjectContentEditor (title, summary, detail description)
  *   - Right: PropertiesPanel
  *   - Footer: Cancel / Create project
  */
@@ -375,6 +375,7 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
               onDescriptionChange={handleDescriptionChange}
               descriptionClassName="no-bottom-border"
               descriptionMaxHeight="100%"
+              repoPath={repoPath}
               className="flex h-full min-h-0 flex-col"
               autoFocusTitle
             />

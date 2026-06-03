@@ -1,3 +1,4 @@
+import { emit } from "@tauri-apps/api/event";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   Clipboard,
@@ -16,6 +17,7 @@ import React, { memo, useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import { enrichedWorkItemToUI, projectApi } from "@src/api/http/project";
 import {
   BENCHMARK_EVALUATION_MODE,
   type BenchmarkEvaluationMode,
@@ -36,12 +38,14 @@ import Switch from "@src/components/Switch";
 import Tooltip from "@src/components/Tooltip";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { useRouteViewMode } from "@src/config/routeViewModeConfig";
-import { MAX_WIDTH as CHAT_MAX_WIDTH } from "@src/engines/ChatPanel/config";
+import {
+  MAX_WIDTH as CHAT_MAX_WIDTH,
+  MIN_WIDTH as CHAT_MIN_WIDTH,
+} from "@src/engines/ChatPanel/config";
 import {
   clearSessionAtom,
   eventsAtom,
 } from "@src/engines/SessionCore/core/atoms";
-import { WorkItemCreatorChatPanel } from "@src/features/WorkItemCreator";
 import { useBenchmarkRun } from "@src/hooks/benchmark/useBenchmarkRun";
 import { useBenchmarkTasks } from "@src/hooks/benchmark/useBenchmarkTasks";
 import { useDropdownEngine } from "@src/hooks/dropdown";
@@ -51,12 +55,14 @@ import {
 } from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
 import { useWorkStationTabs } from "@src/hooks/workStation/tabs";
 import { allAgentDefsAtom } from "@src/modules/MainApp/AgentOrgs/store/builtInAgentsAtom";
+import CreateWorkItemView from "@src/modules/ProjectManager/WorkItems/components/CreateWorkItemView";
 import { LayoutSettingsDropdown } from "@src/modules/WorkStation/shared";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
 import { CollapsedSidebarButton } from "@src/scaffold/NavigationSidebar/CollapsedSidebarButton";
 import { PresenceMenuButton } from "@src/scaffold/NavigationSidebar/blocks/SidebarBottomBar";
 import { SessionImportExportModal } from "@src/scaffold/NavigationSidebar/connectors/SessionImportExportModal";
 import { VerticalResizeHandle } from "@src/scaffold/Resize";
+import { currentRepoAtom } from "@src/store/repo";
 import {
   SESSION_TARGET_KIND,
   activeSessionIdAtom,
@@ -93,7 +99,6 @@ import type { ChatPanelProps, ChatPanelRegionNotice } from "./types";
 
 const CHAT_PANEL_HEADER_ICON_SIZE = 14;
 const CHAT_PANEL_HEADER_PROMINENT_ICON_SIZE = 16;
-
 // Builtin Agent Architect — designs and maintains agents, agent orgs, and
 // skills. Picking the "Create agent / skill" entry in the creator-target
 // dropdown is a shortcut that opens a fresh Agent session with this agent
@@ -133,6 +138,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const [contentMode, setContentMode] = useAtom(chatPanelContentModeAtom);
     const [createTarget, setCreateTarget] = useAtom(chatPanelCreateTargetAtom);
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
+    const currentRepo = useAtomValue(currentRepoAtom);
+    const currentRepoPath = currentRepo?.path ?? currentRepo?.fs_uri ?? null;
+    const currentRepoName = currentRepo?.name;
     const {
       error: benchmarkError,
       isLoadingTasks: isLoadingBenchmarkTasks,
@@ -349,13 +357,22 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
     const sessionSidebarVisible = sessionSidebarWidth > 0;
+    const showWorkItemContent = !!selectedWorkItem;
+    const showExplicitNonSessionContent =
+      contentMode === CHAT_PANEL_CONTENT_MODE.NON_SESSION;
     const showSessionContent =
-      contentMode === CHAT_PANEL_CONTENT_MODE.SESSION && !!currentSessionId;
-    const showNonSessionContent = !showSessionContent;
-    const showHeader =
+      !showWorkItemContent &&
       active &&
-      (showSessionContent || !!selectedWorkItem || viewMode === "workStation");
-    const headerTitle = panelTitle;
+      contentMode === CHAT_PANEL_CONTENT_MODE.SESSION &&
+      !!currentSessionId;
+    const showNonSessionContent = !showWorkItemContent && !showSessionContent;
+    const showPanelContent =
+      active || showWorkItemContent || showExplicitNonSessionContent;
+    const showHeader =
+      showWorkItemContent ||
+      showExplicitNonSessionContent ||
+      (active && (showSessionContent || viewMode === "workStation"));
+    const headerTitle = selectedWorkItem?.workItem.name || panelTitle;
     // The "+" (new session) button is redundant when the session sidebar is
     // visible, so only surface it in the chat header when that sidebar is off.
     const showNewSessionButton =
@@ -439,6 +456,70 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         toggleChatFocus();
       }
     }, [isChatFocus, openWorkStationTab, toggleChatFocus]);
+
+    const handleCancelWorkItemCreate = useCallback(() => {
+      setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
+      handleNewSession();
+    }, [handleNewSession, setCreateTarget]);
+
+    const handleWorkItemTitleChange = useCallback(
+      (title: string) => {
+        if (!selectedWorkItem || title === selectedWorkItem.workItem.name) {
+          return;
+        }
+
+        const previousSelectedWorkItem = selectedWorkItem;
+        setSelectedWorkItem({
+          ...selectedWorkItem,
+          workItem: {
+            ...selectedWorkItem.workItem,
+            name: title,
+          },
+        });
+
+        projectApi
+          .updateWorkItemPartial(
+            selectedWorkItem.projectSlug,
+            selectedWorkItem.shortId,
+            {
+              title,
+            }
+          )
+          .then((updatedWorkItem) => {
+            setSelectedWorkItem((currentSelectedWorkItem) => {
+              if (
+                !currentSelectedWorkItem ||
+                currentSelectedWorkItem.projectSlug !==
+                  selectedWorkItem.projectSlug ||
+                currentSelectedWorkItem.shortId !== selectedWorkItem.shortId
+              ) {
+                return currentSelectedWorkItem;
+              }
+
+              return {
+                ...currentSelectedWorkItem,
+                workItem: enrichedWorkItemToUI(updatedWorkItem),
+              };
+            });
+            return emit("orgii-data-changed");
+          })
+          .catch(() => {
+            setSelectedWorkItem((currentSelectedWorkItem) => {
+              if (
+                !currentSelectedWorkItem ||
+                currentSelectedWorkItem.projectSlug !==
+                  previousSelectedWorkItem.projectSlug ||
+                currentSelectedWorkItem.shortId !==
+                  previousSelectedWorkItem.shortId
+              ) {
+                return currentSelectedWorkItem;
+              }
+              return previousSelectedWorkItem;
+            });
+          });
+      },
+      [selectedWorkItem, setSelectedWorkItem]
+    );
 
     const headerToolbar = (
       <div
@@ -763,19 +844,33 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             />
           </div>
         )}
-        {showSessionContent ? (
+        {showSessionContent || selectedWorkItem ? (
           <>
             <div
               className="flex h-9 min-w-0 shrink items-center"
               style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
             >
-              <SessionHoverCard sessionId={currentSessionId}>
-                <span className="flex h-7 min-w-0 max-w-full cursor-default items-center gap-1.5 rounded-lg px-1.5 text-[13px] font-medium text-text-1 transition-colors hover:bg-surface-hover">
-                  <span className="min-w-0 -translate-y-px truncate">
-                    {headerTitle}
+              {showSessionContent ? (
+                <SessionHoverCard sessionId={currentSessionId}>
+                  <span className="flex h-7 min-w-0 max-w-full cursor-default items-center gap-1.5 rounded-lg px-1.5 text-[13px] font-medium text-text-1 transition-colors hover:bg-surface-hover">
+                    <span className="min-w-0 -translate-y-px truncate">
+                      {headerTitle}
+                    </span>
                   </span>
-                </span>
-              </SessionHoverCard>
+                </SessionHoverCard>
+              ) : (
+                <Input
+                  type="text"
+                  value={headerTitle}
+                  onChange={handleWorkItemTitleChange}
+                  readOnly={!selectedWorkItem}
+                  borderless
+                  bgless
+                  size="small"
+                  className="h-7 min-w-0 max-w-full cursor-default rounded-lg transition-colors hover:bg-surface-hover [&_.input-inner]:!px-1.5"
+                  inputClassName="-translate-y-px truncate text-[13px] font-medium text-text-1"
+                />
+              )}
             </div>
             <div
               className="min-w-0 flex-1"
@@ -799,10 +894,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const useFullScreenCreator =
       isChatFocus || useExternalWidth || chatWidth >= CHAT_MAX_WIDTH;
     const creatorVariant = useFullScreenCreator ? "fullScreen" : "default";
-    const creatorClassName =
-      creatorVariant === "fullScreen"
-        ? "min-h-0 flex-1"
-        : "min-h-0 flex-1 py-2";
+    const creatorClassName = "min-h-0 flex-1";
     const benchmarkEvaluationModeOptions = useMemo<SelectOption[]>(
       () => [
         {
@@ -865,11 +957,16 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const emptyChatContent = (() => {
       if (createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
         return (
-          <WorkItemCreatorChatPanel
-            className={creatorClassName}
-            variant={creatorVariant}
-            centerFullScreenContent
-          />
+          <div className={`flex overflow-hidden ${creatorClassName}`}>
+            <CreateWorkItemView
+              repoPath={currentRepoPath}
+              scopeBreadcrumbLabel={currentRepoName}
+              onCancel={handleCancelWorkItemCreate}
+              onSetUnsaved={() => undefined}
+              onWorkItemCreated={() => undefined}
+              showCloseAction={false}
+            />
+          </div>
         );
       }
 
@@ -1013,14 +1110,14 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const chatColumn = (
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        {!active ? null : showSessionContent ? (
+        {!showPanelContent ? null : showWorkItemContent ? (
+          <WorkItemPanelView selectedWorkItem={selectedWorkItem} />
+        ) : showSessionContent ? (
           <ChatView
             sessionId={currentSessionId}
             onRegisterSearchOpen={handleRegisterSearchOpen}
             turnPaginationEnabled={paginationEnabled}
           />
-        ) : selectedWorkItem ? (
-          <WorkItemPanelView selectedWorkItem={selectedWorkItem} />
         ) : (
           emptyChatContent
         )}
@@ -1057,11 +1154,13 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         ref={panelRef}
         data-chat-panel
         data-testid="chat-panel"
-        className={`relative flex h-full min-w-0 max-w-full flex-col overflow-hidden bg-chat-pane text-sm ${
-          useExternalWidth ? "flex-1" : "flex-shrink-0"
+        className={`relative flex h-full max-w-full flex-col overflow-hidden bg-chat-pane text-sm ${
+          useExternalWidth ? "min-w-0 flex-1" : "flex-shrink-0"
         } ${borderClasses}`}
         style={{
           ...(useExternalWidth ? { width: "100%" } : { width: chatWidth }),
+          minWidth:
+            !useExternalWidth && chatWidth > 0 ? CHAT_MIN_WIDTH : undefined,
           borderRadius: embedded ? 0 : "var(--radius-page)",
           contain: isDragging ? "strict" : undefined,
           willChange: isDragging ? "width" : undefined,

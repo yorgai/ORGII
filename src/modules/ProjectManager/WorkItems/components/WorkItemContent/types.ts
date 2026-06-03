@@ -24,6 +24,7 @@ export interface WorkItemContentProps {
   currentUser?: Person;
   teamMembers?: Person[];
   headerProperties?: ReactNode;
+  hideTitleHeader?: boolean;
   repoPath?: string | null;
   projectSlug?: string | null;
   shortId?: string | null;

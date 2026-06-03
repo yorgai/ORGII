@@ -157,7 +157,7 @@ const DetailSplitLayout: React.FC<DetailSplitLayoutProps> = ({
   });
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full w-full min-w-0 flex-col overflow-hidden">
       {!publishHeaderToWorkstation && (
         <div
           className={
