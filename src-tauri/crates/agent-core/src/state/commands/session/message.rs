@@ -30,6 +30,7 @@ pub async fn send_message_impl_for_wake(
         state,
         session_id,
         String::new(),
+        None,
         IdentityOverrides::default(),
         None,
         None,
@@ -68,6 +69,7 @@ pub async fn send_message_impl_for_mobile_remote(
         state,
         session_id,
         content,
+        None,
         IdentityOverrides::default(),
         None,
         None,
@@ -100,6 +102,7 @@ pub async fn send_message_impl_for_test(
         state,
         session_id,
         content,
+        None,
         IdentityOverrides {
             model,
             account_id,
@@ -122,6 +125,7 @@ pub(crate) async fn send_message_impl(
     state: &AgentAppState,
     session_id: String,
     content: String,
+    display_text: Option<String>,
     overrides: IdentityOverrides,
     mode: Option<String>,
     images: Option<Vec<String>>,
@@ -257,6 +261,7 @@ pub(crate) async fn send_message_impl(
     // ── 5. Build the processing closure ──────────────────────────────────
     let sid_for_closure = session_id.clone();
     let content_for_closure = content.clone();
+    let display_text_for_closure = display_text;
     let workspace_root_for_closure = effective_workspace_root.clone();
     // If the coordinator queued an `ExecModeSetRequest` override on
     // this member, consume it now (before defaulting to the
@@ -290,6 +295,7 @@ pub(crate) async fn send_message_impl(
     let execute: crate::session::scheduler::ExecuteFn = Box::new(move || {
         let sid = sid_for_closure;
         let content = content_for_closure;
+        let display_text = display_text_for_closure;
         let workspace_root = workspace_root_for_closure;
         let session = session_for_closure;
 
@@ -298,6 +304,7 @@ pub(crate) async fn send_message_impl(
 
             let input = crate::session::TurnInput {
                 content: content.clone(),
+                display_text,
                 agent_mode: Some(agent_mode),
                 images,
                 ide_context,

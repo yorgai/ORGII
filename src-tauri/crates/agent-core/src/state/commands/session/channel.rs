@@ -118,6 +118,7 @@ pub async fn channel_process_message(
 
     let input = crate::session::TurnInput {
         content: content.clone(),
+        display_text: None,
         agent_mode: None,
         images,
         ide_context,

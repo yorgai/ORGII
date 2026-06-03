@@ -145,6 +145,7 @@ fn persist_user_message_event_adapter(
     session_id: &str,
     message_id: &str,
     content: &str,
+    display_text: Option<&str>,
     images: Option<&[String]>,
     source: bridge::PersistedUserMessageSource,
 ) {
@@ -174,6 +175,14 @@ fn persist_user_message_event_adapter(
         serde_json::json!({})
     };
 
+    // Use the pill-format display_text when provided so that editing a
+    // historical message re-populates the pill rather than the expanded YAML.
+    // Fall back to content when display_text is absent (backward compat).
+    let effective_display_text = display_text
+        .filter(|s| !s.is_empty())
+        .unwrap_or(content)
+        .to_string();
+
     let mut event = SessionEvent {
         id: format!("user-message-{message_id}"),
         chunk_id: Some(format!("user-message-{message_id}")),
@@ -185,7 +194,7 @@ fn persist_user_message_event_adapter(
         args,
         result,
         source: EventSource::User,
-        display_text: content.to_string(),
+        display_text: effective_display_text,
         display_status: EventDisplayStatus::Completed,
         display_variant: EventDisplayVariant::Message,
         activity_status: ActivityStatus::Agent,

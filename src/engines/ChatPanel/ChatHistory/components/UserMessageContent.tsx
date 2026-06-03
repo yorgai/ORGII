@@ -15,15 +15,14 @@ import {
   MessageSquare,
   SquareMousePointer,
   Terminal,
-  Zap,
+  Toolbox,
 } from "lucide-react";
 import React, { memo, useCallback, useMemo } from "react";
 
 import { ChatImageThumbnailRow } from "@src/components/ChatImageThumbnail";
+import BasePill from "@src/components/ComposerInput/BasePill";
 import FileTypeIcon from "@src/components/FileTypeIcon";
 import {
-  PILL_BASE_STYLE,
-  PILL_ICON_STYLE,
   PILL_LINE_HEIGHT,
   PILL_REGEX,
   PILL_SIZE,
@@ -175,7 +174,7 @@ const PillIcon: React.FC<{ pillType: PillType; displayName: string }> = memo(
       case "workitem":
         return <ListChecks {...ICON_PROPS} className="text-text-2" />;
       case "skill":
-        return <Zap {...ICON_PROPS} className="text-text-2" />;
+        return <Toolbox {...ICON_PROPS} className="text-text-2" />;
       default:
         return <FileTypeIcon fileName={displayName} size="small" />;
     }
@@ -251,11 +250,17 @@ const InlinePill: React.FC<{ segment: PillSegment }> = memo(({ segment }) => {
   );
 
   return (
-    <span
+    <BasePill
+      variant="display"
+      iconNode={
+        <PillIcon
+          pillType={segment.pillType}
+          displayName={segment.displayName}
+        />
+      }
       role={isClickable ? "button" : undefined}
       tabIndex={isClickable ? 0 : undefined}
       style={{
-        ...PILL_BASE_STYLE,
         cursor: isClickable ? "pointer" : "default",
         position: "relative",
         zIndex: 1,
@@ -265,14 +270,8 @@ const InlinePill: React.FC<{ segment: PillSegment }> = memo(({ segment }) => {
       onClick={isClickable ? handleClick : undefined}
       onMouseDown={handleMouseDown}
     >
-      <span style={PILL_ICON_STYLE}>
-        <PillIcon
-          pillType={segment.pillType}
-          displayName={segment.displayName}
-        />
-      </span>
       <span className="text-text-1">{segment.displayName}</span>
-    </span>
+    </BasePill>
   );
 });
 InlinePill.displayName = "InlinePill";

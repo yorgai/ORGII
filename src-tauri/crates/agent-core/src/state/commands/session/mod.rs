@@ -173,6 +173,7 @@ pub async fn agent_send_message(
     state: tauri::State<'_, AgentAppState>,
     session_id: String,
     content: String,
+    #[allow(non_snake_case)] displayText: Option<String>,
     model: Option<String>,
     account_id: Option<String>,
     workspace_path: Option<String>,
@@ -186,6 +187,7 @@ pub async fn agent_send_message(
         &state,
         session_id,
         content,
+        displayText,
         identity::IdentityOverrides {
             model,
             account_id,

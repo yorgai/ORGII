@@ -24,6 +24,11 @@ pub struct ProcessingContext {
     /// is sending a fresh prompt, so we must not inject a synthetic
     /// continuation user message that would duplicate theirs.
     pub is_resume: bool,
+    /// Pill-format display text from the frontend composer (e.g.
+    /// `"create-skill [skill:/create-skill]"`). When present, stored as
+    /// the event's `display_text` so editing a historical message
+    /// re-populates the pill rather than the expanded YAML content.
+    pub display_text: Option<String>,
 }
 
 /// User presence mode — QQ-style availability signal the user sets in the

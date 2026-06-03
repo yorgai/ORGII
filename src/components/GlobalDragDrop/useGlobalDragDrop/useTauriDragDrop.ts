@@ -25,7 +25,6 @@ import { useEffect } from "react";
 
 import type { DragDropBehavior, DroppedFolder } from "../types";
 import {
-  type GlobalDragWindow,
   hasVisibleChatDropTarget,
   isDropInsideChatDropTarget,
   isRepositoryDropPage,
@@ -124,11 +123,8 @@ export function useTauriDragDrop(options: UseTauriDragDropOptions): void {
           // Clear the global flags that signal an internal file-tree drag
           // initiated via `startDrag()`.  We're handling the drop here; the
           // browser-level listener must not also fire against the same paths.
-          const globalWindow = window as unknown as GlobalDragWindow;
-          globalWindow.__internalFileTreeDragData = undefined;
-          (
-            window as unknown as { __internalFileTreeDrag?: boolean }
-          ).__internalFileTreeDrag = false;
+          window.__internalFileTreeDragData = undefined;
+          window.__internalFileTreeDrag = false;
 
           // Repository drop (Start page folder → "add as repo" modal).
           // Only fires outside the chat panel and when the payload is a

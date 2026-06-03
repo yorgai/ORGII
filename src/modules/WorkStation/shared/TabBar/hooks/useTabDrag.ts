@@ -77,10 +77,22 @@ export function useTabDrag({
       setDraggingTabId(tabId);
 
       const foundTab = tabs.find((tab) => tab.id === tabId);
+
       const filePath =
-        foundTab?.type === "file"
-          ? (foundTab.data.filePath as string)
-          : undefined;
+        foundTab?.type === "file" || foundTab?.type === "git-diff"
+          ? (foundTab.data.filePath as string | undefined)
+          : foundTab?.type === "directory"
+            ? (foundTab.data.directoryPath as string | undefined)
+            : undefined;
+
+      if (filePath && foundTab) {
+        window.__internalWorkstationTabDrag = true;
+        window.__internalWorkstationTabDragData = JSON.stringify({
+          path: filePath,
+          name: foundTab.title,
+          type: foundTab.type === "directory" ? "directory" : "file",
+        });
+      }
 
       document.dispatchEvent(
         new CustomEvent("tab-drag-start", {
@@ -260,6 +272,11 @@ export function useTabDrag({
     // Position tracking handled by pointermove listener above
   }, []);
 
+  const clearTabDragGlobals = useCallback(() => {
+    window.__internalWorkstationTabDrag = false;
+    window.__internalWorkstationTabDragData = undefined;
+  }, []);
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
@@ -267,11 +284,14 @@ export function useTabDrag({
 
       const foundTab = tabs.find((tab) => tab.id === tabId);
       const filePath =
-        foundTab?.type === "file"
-          ? (foundTab.data.filePath as string)
-          : undefined;
+        foundTab?.type === "file" || foundTab?.type === "git-diff"
+          ? (foundTab.data.filePath as string | undefined)
+          : foundTab?.type === "directory"
+            ? (foundTab.data.directoryPath as string | undefined)
+            : undefined;
 
       setDraggingTabId(null);
+      clearTabDragGlobals();
 
       document.dispatchEvent(
         new CustomEvent("tab-drag-end", {
@@ -290,13 +310,14 @@ export function useTabDrag({
         }
       }
     },
-    [tabs, onTabReorder]
+    [tabs, onTabReorder, clearTabDragGlobals]
   );
 
   const handleDragCancel = useCallback(() => {
     setDraggingTabId(null);
+    clearTabDragGlobals();
     lastPointerPositionRef.current = null;
-  }, []);
+  }, [clearTabDragGlobals]);
 
   return {
     draggingTabId,

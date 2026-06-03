@@ -26,3 +26,6 @@ pub mod stats;
 pub mod status;
 pub mod types;
 pub mod usage;
+
+#[cfg(test)]
+mod tests;

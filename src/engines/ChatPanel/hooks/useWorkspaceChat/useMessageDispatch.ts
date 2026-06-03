@@ -64,7 +64,8 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
       sessionId: string,
       content: string,
       imageDataUrls?: string[],
-      modelSelectionOverride?: LastModelSelection
+      modelSelectionOverride?: LastModelSelection,
+      displayText?: string
     ): Promise<void> => {
       // Read directly from the store at call time to avoid stale-closure
       // race: if the user changes the mode pill and immediately sends a
@@ -101,6 +102,7 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
         await SessionService.sendMessage({
           sessionId,
           content,
+          displayText,
           model,
           accountId,
           mode: agentExecMode,

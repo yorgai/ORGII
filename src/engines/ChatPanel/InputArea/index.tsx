@@ -285,7 +285,12 @@ const InputArea: React.FC<InputAreaProps> = memo(
       handleContainerDragOver,
       handleContainerDragLeave,
       handleContainerDrop,
-    } = useContainerDrag({ handleDragOver, handleDragLeave, handleDrop });
+    } = useContainerDrag({
+      handleDragOver,
+      handleDragLeave,
+      handleDrop,
+      tiptapRef,
+    });
 
     // ============================================
     // Context Menu close handler

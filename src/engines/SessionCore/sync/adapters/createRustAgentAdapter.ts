@@ -513,6 +513,7 @@ export function createRustAgentAdapter(
       const {
         sessionId,
         content,
+        displayText,
         model,
         accountId,
         mode,
@@ -534,6 +535,7 @@ export function createRustAgentAdapter(
         {
           sessionId,
           content,
+          ...(displayText && displayText !== content ? { displayText } : {}),
           ...(model ? { model } : {}),
           ...(accountId ? { accountId } : {}),
           ...(mode ? { mode } : {}),

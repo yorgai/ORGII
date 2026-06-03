@@ -189,6 +189,7 @@ pub async fn process_message(
     let processing_context = ProcessingContext {
         images: input.images,
         is_resume: input.is_resume,
+        display_text: input.display_text,
     };
 
     let content = expand_skill_slash_command(&input.content, Some(workspace_path.as_path()));
