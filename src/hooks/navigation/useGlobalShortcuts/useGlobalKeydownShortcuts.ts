@@ -46,6 +46,7 @@ interface UseGlobalKeydownShortcutsOptions {
   handleOpenWorkStationSymbolPalette: () => void;
   handleOpenAgentSessionSearch: () => void;
   handleOpenSettings: () => void;
+  handleToggleSidebar: () => void;
   handleToggleWorkstationSidebar: () => void;
   handleOpenCodeEditorFileFolder: () => void;
   handleOpenCodeEditorSourceControl: () => void;
@@ -72,6 +73,7 @@ export function useGlobalKeydownShortcuts(
     handleOpenWorkStationSymbolPalette,
     handleOpenAgentSessionSearch,
     handleOpenSettings,
+    handleToggleSidebar,
     handleToggleWorkstationSidebar,
     handleOpenCodeEditorFileFolder,
     handleOpenCodeEditorSourceControl,
@@ -186,6 +188,16 @@ export function useGlobalKeydownShortcuts(
             event.preventDefault();
             event.stopPropagation();
             handleToggleWorkStationChatFocus();
+            return;
+          }
+          if (event.code === "KeyU") {
+            event.preventDefault();
+            event.stopPropagation();
+            if (workStationShortcutSurface) {
+              handleToggleWorkstationSidebar();
+            } else {
+              shortcutRegistry.dispatch("toggle_sidebar");
+            }
             return;
           }
           if (workStationShortcutSurface && event.code === "KeyM") {
@@ -452,6 +464,7 @@ export function useGlobalKeydownShortcuts(
     handleOpenWorkStationSymbolPalette,
     handleOpenAgentSessionSearch,
     handleOpenSettings,
+    handleToggleSidebar,
     handleToggleWorkstationSidebar,
     handleOpenCodeEditorFileFolder,
     handleOpenCodeEditorSourceControl,
