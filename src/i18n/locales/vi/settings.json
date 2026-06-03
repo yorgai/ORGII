@@ -146,6 +146,7 @@
     "themeOptions": {
       "githubLight": "ORGII Sáng",
       "githubDark": "ORGII Tối",
+      "orgiiHighContrast": "ORGII Tương phản cao",
       "vscodeLight": "VS Code Sáng",
       "vscodeDark": "VS Code Tối",
       "monokaiLight": "Monokai Sáng",

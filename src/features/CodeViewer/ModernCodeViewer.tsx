@@ -19,6 +19,7 @@ import {
 } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Components, Virtuoso } from "react-virtuoso";
 
+import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { getLanguageFromPath } from "@src/config/languageMap";
 import { themesAtom } from "@src/store/ui/uiAtom";
 import { getLanguageFromFilePath } from "@src/util/editor/extension";
@@ -196,7 +197,7 @@ export const ModernCodeViewer: React.FC<ModernCodeViewerProps> = ({
   className = "",
 }) => {
   const themes = useAtomValue(themesAtom);
-  const isDark = themes.includes("dark");
+  const isDark = isThemeCssPathDark(themes);
 
   // Detect language
   const detectedLanguage = useMemo(() => {

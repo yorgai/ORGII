@@ -1,14 +1,7 @@
 export const GLOBAL_THEME_IDS = [
   "github-light",
   "github-dark",
-  "vscode-light",
-  "vscode-dark",
-  "monokai-light",
-  "monokai-dark",
-  "solarized-light",
-  "solarized-dark",
-  "abyss",
-  "tomorrowNightBlue",
+  "orgii-high-contrast",
 ] as const;
 
 export type GlobalThemeId = (typeof GLOBAL_THEME_IDS)[number];
@@ -34,7 +27,10 @@ export type ThemePrimaryColorPreset =
   | "rose"
   | "mono";
 
-export type ThemeCssPath = "/orgii_main.css" | "/orgii_dark.css";
+export type ThemeCssPath =
+  | "/orgii_main.css"
+  | "/orgii_dark.css"
+  | "/orgii_high_contrast.css";
 
 export interface GlobalThemeDefinition {
   id: GlobalThemeId;
@@ -45,7 +41,7 @@ export interface GlobalThemeDefinition {
   defaultPrimaryColor: ThemePrimaryColorPreset;
 }
 
-const GITHUB_LIGHT_THEME: GlobalThemeDefinition = {
+const ORGII_LIGHT_THEME: GlobalThemeDefinition = {
   id: "github-light",
   i18nKey: "general.themeOptions.githubLight",
   baseCssPath: "/orgii_main.css",
@@ -54,7 +50,7 @@ const GITHUB_LIGHT_THEME: GlobalThemeDefinition = {
   defaultPrimaryColor: "blue",
 };
 
-const GITHUB_DARK_THEME: GlobalThemeDefinition = {
+const ORGII_DARK_THEME: GlobalThemeDefinition = {
   id: "github-dark",
   i18nKey: "general.themeOptions.githubDark",
   baseCssPath: "/orgii_dark.css",
@@ -63,89 +59,19 @@ const GITHUB_DARK_THEME: GlobalThemeDefinition = {
   defaultPrimaryColor: "blue",
 };
 
-const VSCODE_LIGHT_THEME: GlobalThemeDefinition = {
-  id: "vscode-light",
-  i18nKey: "general.themeOptions.vscodeLight",
-  baseCssPath: "/orgii_main.css",
-  isDark: false,
-  editorTheme: "vscode",
+const ORGII_HIGH_CONTRAST_THEME: GlobalThemeDefinition = {
+  id: "orgii-high-contrast",
+  i18nKey: "general.themeOptions.orgiiHighContrast",
+  baseCssPath: "/orgii_high_contrast.css",
+  isDark: true,
+  editorTheme: "github",
   defaultPrimaryColor: "blue",
-};
-
-const VSCODE_DARK_THEME: GlobalThemeDefinition = {
-  id: "vscode-dark",
-  i18nKey: "general.themeOptions.vscodeDark",
-  baseCssPath: "/orgii_dark.css",
-  isDark: true,
-  editorTheme: "vscode",
-  defaultPrimaryColor: "blue",
-};
-
-const MONOKAI_LIGHT_THEME: GlobalThemeDefinition = {
-  id: "monokai-light",
-  i18nKey: "general.themeOptions.monokaiLight",
-  baseCssPath: "/orgii_main.css",
-  isDark: false,
-  editorTheme: "monokai",
-  defaultPrimaryColor: "orange",
-};
-
-const MONOKAI_DARK_THEME: GlobalThemeDefinition = {
-  id: "monokai-dark",
-  i18nKey: "general.themeOptions.monokaiDark",
-  baseCssPath: "/orgii_dark.css",
-  isDark: true,
-  editorTheme: "monokai",
-  defaultPrimaryColor: "orange",
-};
-
-const SOLARIZED_LIGHT_THEME: GlobalThemeDefinition = {
-  id: "solarized-light",
-  i18nKey: "general.themeOptions.solarizedLight",
-  baseCssPath: "/orgii_main.css",
-  isDark: false,
-  editorTheme: "solarized",
-  defaultPrimaryColor: "green",
-};
-
-const SOLARIZED_DARK_THEME: GlobalThemeDefinition = {
-  id: "solarized-dark",
-  i18nKey: "general.themeOptions.solarizedDark",
-  baseCssPath: "/orgii_dark.css",
-  isDark: true,
-  editorTheme: "solarized",
-  defaultPrimaryColor: "green",
-};
-
-const ABYSS_THEME: GlobalThemeDefinition = {
-  id: "abyss",
-  i18nKey: "general.themeOptions.abyss",
-  baseCssPath: "/orgii_dark.css",
-  isDark: true,
-  editorTheme: "abyss",
-  defaultPrimaryColor: "violet",
-};
-
-const TOMORROW_NIGHT_BLUE_THEME: GlobalThemeDefinition = {
-  id: "tomorrowNightBlue",
-  i18nKey: "general.themeOptions.tomorrowNightBlue",
-  baseCssPath: "/orgii_dark.css",
-  isDark: true,
-  editorTheme: "tomorrowNightBlue",
-  defaultPrimaryColor: "violet",
 };
 
 export const GLOBAL_THEMES: Record<GlobalThemeId, GlobalThemeDefinition> = {
-  "github-light": GITHUB_LIGHT_THEME,
-  "github-dark": GITHUB_DARK_THEME,
-  "vscode-light": VSCODE_LIGHT_THEME,
-  "vscode-dark": VSCODE_DARK_THEME,
-  "monokai-light": MONOKAI_LIGHT_THEME,
-  "monokai-dark": MONOKAI_DARK_THEME,
-  "solarized-light": SOLARIZED_LIGHT_THEME,
-  "solarized-dark": SOLARIZED_DARK_THEME,
-  abyss: ABYSS_THEME,
-  tomorrowNightBlue: TOMORROW_NIGHT_BLUE_THEME,
+  "github-light": ORGII_LIGHT_THEME,
+  "github-dark": ORGII_DARK_THEME,
+  "orgii-high-contrast": ORGII_HIGH_CONTRAST_THEME,
 };
 
 export const LEGACY_THEME_ALIASES = {
@@ -153,6 +79,7 @@ export const LEGACY_THEME_ALIASES = {
   dark: "github-dark",
   "/orgii_main.css": "github-light",
   "/orgii_dark.css": "github-dark",
+  "/orgii_high_contrast.css": "orgii-high-contrast",
 } as const;
 
 export const DEFAULT_GLOBAL_THEME_ID: GlobalThemeId = "github-light";
@@ -176,6 +103,12 @@ export function getGlobalTheme(
   themeId: string | null | undefined
 ): GlobalThemeDefinition {
   return GLOBAL_THEMES[normalizeGlobalThemeId(themeId)];
+}
+
+export function isThemeCssPathDark(
+  themePath: string | null | undefined
+): boolean {
+  return getGlobalTheme(themePath).isDark;
 }
 
 export const GLOBAL_THEME_GROUPS = {

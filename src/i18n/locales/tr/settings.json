@@ -146,6 +146,7 @@
     "themeOptions": {
       "githubLight": "ORGII Açık",
       "githubDark": "ORGII Koyu",
+      "orgiiHighContrast": "ORGII Yüksek Kontrast",
       "vscodeLight": "VS Code Açık",
       "vscodeDark": "VS Code Koyu",
       "monokaiLight": "Monokai Açık",

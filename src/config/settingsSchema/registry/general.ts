@@ -52,17 +52,14 @@ export const GENERAL_SETTINGS_REGISTRY = {
     },
   },
   "general.theme": {
-    schema: z.enum([...GLOBAL_THEME_IDS, "light", "dark"]),
+    schema: z.enum(GLOBAL_THEME_IDS),
     default: "github-light",
     description: "Global UI theme preset",
     category: "general",
     enumLabels: {
       "github-light": "ORGII Light",
       "github-dark": "ORGII Dark",
-      "vscode-light": "Classic Light",
-      "vscode-dark": "Classic Dark",
-      light: "Legacy Light (ORGII Light)",
-      dark: "Legacy Dark (ORGII Dark)",
+      "orgii-high-contrast": "ORGII High Contrast",
     },
   },
   "general.primaryColor": {

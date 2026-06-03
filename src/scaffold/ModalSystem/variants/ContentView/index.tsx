@@ -10,6 +10,7 @@ import {
 
 import Breadcrumb from "@src/components/Breadcrumb";
 import Markdown from "@src/components/MarkDown";
+import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { themesAtom } from "@src/store";
 import { getLanguageFromFilePath } from "@src/util/editor/extension";
 
@@ -37,7 +38,7 @@ const ContentViewModal: React.FC<ContentViewModalProps> = ({
   useCodeRenderer = false,
 }) => {
   const themes = useAtomValue(themesAtom);
-  const isDarkTheme = () => themes.includes("dark");
+  const isDarkTheme = () => isThemeCssPathDark(themes);
 
   // Get file language type
   const language = filePath ? getLanguageFromFilePath(filePath) : "typescript";

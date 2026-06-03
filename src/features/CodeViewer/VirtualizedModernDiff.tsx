@@ -14,6 +14,7 @@ import { Check } from "lucide-react";
 import React, { useCallback, useRef } from "react";
 import { Components, Virtuoso, VirtuosoHandle } from "react-virtuoso";
 
+import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { themesAtom } from "@src/store/ui/uiAtom";
 
@@ -73,7 +74,7 @@ const VirtualizedModernDiffComponent: React.FC<ModernDiffProps> = ({
   newStartLine = 1,
 }) => {
   const themes = useAtomValue(themesAtom);
-  const isDark = themes.includes("dark");
+  const isDark = isThemeCssPathDark(themes);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
 
   // Diff computation, language detection, expansion, and flattening

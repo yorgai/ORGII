@@ -1,0 +1,74 @@
+/**
+ * Design Tokens CSS - High Contrast Theme
+ *
+ * Contains CSS variables for colors, spacing, and theming (high contrast variant).
+ */
+body {
+  --color-bg-1: #050505;
+  --color-bg-2: #0a0a0a;
+  --color-bg-3: #171717;
+  --color-bg-4: #222222;
+  --color-neutral-1: #ffffff;
+  --color-neutral-6: #b8c0cc;
+  --color-text-1: #ffffff;
+  --color-text-2: #e5e7eb;
+  --color-text-3: #c7ced9;
+  --color-text-4: #9ca3af;
+  --color-text-white: #ffffff;
+  --color-border-1: #4b5563;
+  --color-border-2: #6b7280;
+  --color-border-3: #9ca3af;
+  --color-fill-1: #111111;
+  --color-fill-2: #1c1c1c;
+  --color-fill-3: #2b2b2b;
+  --color-fill-4: #3f3f46;
+
+  /* Shared surfaces */
+  --color-surface-hover: #242424;
+  --color-surface-selected: #1d3f66;
+  --color-surface-selected-hover: #24527f;
+
+  /* Workstation */
+  --color-workstation-bg: #050505;
+  --color-pane-raised: var(--color-bg-2);
+  --color-pane-input: var(--color-chat-input);
+  --color-button-hover: var(--color-fill-3);
+
+  /* Main App */
+  --color-surface-container: #080808;
+
+  /* Chat Panel */
+  --color-chat-pane: var(--color-workstation-bg);
+  --color-chat-container: #0d0d0d;
+  --color-chat-input: #171717;
+  --color-event-block: #0a0a0a;
+  --color-event-block-fade: var(--color-event-block);
+  --color-diff-add: #063d16;
+  --color-diff-delete: #5f1015;
+  --color-diff-collapse: #064f8f;
+  --color-primary-1: #082f49;
+  --color-primary-2: #075985;
+  --color-primary-3: #0369a1;
+  --color-primary-4: #0284c7;
+  --color-primary-5: #0ea5e9;
+  --color-primary-6: #38bdf8;
+  --color-primary-7: #7dd3fc;
+  --color-danger-1: #5f1111;
+  --color-danger-2: #7f1d1d;
+  --color-danger-3: #991b1b;
+  --color-danger-4: #dc2626;
+  --color-danger-5: #ef4444;
+  --color-danger-6: #f87171;
+  --color-success-1: #064e1f;
+  --color-success-2: #166534;
+  --color-success-3: #15803d;
+  --color-success-4: #16a34a;
+  --color-success-5: #22c55e;
+  --color-success-6: #86efac;
+  --color-warning-1: #5f3b00;
+  --color-warning-2: #854d0e;
+  --color-warning-3: #a16207;
+  --color-warning-4: #ca8a04;
+  --color-warning-5: #facc15;
+  --color-warning-6: #fde047;
+}
