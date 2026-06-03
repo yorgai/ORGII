@@ -156,25 +156,25 @@ const PillIcon: React.FC<{ pillType: PillType; displayName: string }> = memo(
   ({ pillType, displayName }) => {
     switch (pillType) {
       case "repo":
-        return <Code {...ICON_PROPS} className="text-text-2" />;
+        return <Code {...ICON_PROPS} />;
       case "folder":
-        return <Folder {...ICON_PROPS} className="text-text-2" />;
+        return <Folder {...ICON_PROPS} />;
       case "branch":
-        return <GitBranch {...ICON_PROPS} className="text-text-2" />;
+        return <GitBranch {...ICON_PROPS} />;
       case "terminal":
-        return <Terminal {...ICON_PROPS} className="text-text-2" />;
+        return <Terminal {...ICON_PROPS} />;
       case "session":
-        return <MessageSquare {...ICON_PROPS} className="text-text-2" />;
+        return <MessageSquare {...ICON_PROPS} />;
       case "browser":
-        return <Globe {...ICON_PROPS} className="text-text-2" />;
+        return <Globe {...ICON_PROPS} />;
       case "dom-element":
-        return <SquareMousePointer {...ICON_PROPS} className="text-text-2" />;
+        return <SquareMousePointer {...ICON_PROPS} />;
       case "project":
-        return <FolderKanban {...ICON_PROPS} className="text-text-2" />;
+        return <FolderKanban {...ICON_PROPS} />;
       case "workitem":
-        return <ListChecks {...ICON_PROPS} className="text-text-2" />;
+        return <ListChecks {...ICON_PROPS} />;
       case "skill":
-        return <Toolbox {...ICON_PROPS} className="text-text-2" />;
+        return <Toolbox {...ICON_PROPS} />;
       default:
         return <FileTypeIcon fileName={displayName} size="small" />;
     }
