@@ -95,10 +95,10 @@ async function markModeSwitchEventResolved(
  * another suggest_mode_switch call and create an infinite loop.
  */
 const MODE_SWITCH_COMMAND_PATTERNS = [
-  /switch\s*(to\s*)?(plan|build|debug|investigate|review)\s*mode?/i,
-  /enter\s*(plan|build|debug|investigate|review)\s*mode?/i,
-  /go\s+to\s*(plan|build|debug|investigate|review)\s*mode?/i,
-  /use\s*(plan|build|debug|investigate|review)\s*mode?/i,
+  /switch\s*(to\s*)?(plan|build|debug|investigate|ask|review)\s*mode?/i,
+  /enter\s*(plan|build|debug|investigate|ask|review)\s*mode?/i,
+  /go\s+to\s*(plan|build|debug|investigate|ask|review)\s*mode?/i,
+  /use\s*(plan|build|debug|investigate|ask|review)\s*mode?/i,
   /切换.*mode/i,
   /切.*plan/i,
   /进入.*mode/i,
@@ -109,9 +109,17 @@ function isModeSwitchCommand(text: string): boolean {
   return MODE_SWITCH_COMMAND_PATTERNS.some((re) => re.test(text));
 }
 
-function getLastUserText(): string {
-  const store = getInstrumentedStore();
-  const events = store.get(eventsAtom);
+function getLastUserText(sessionId: string): string {
+  // Prefer the per-session snapshot cache so we always read the correct
+  // session's events even when the global eventsAtom hasn't settled yet
+  // (e.g. during a rapid session switch).
+  const snap = eventStoreProxy.getLatestSessionSnapshot(sessionId);
+  const events =
+    snap && "events" in snap
+      ? snap.events
+      : // Fallback: read from the global atom — only safe when sessionId
+        // matches the currently active session, but better than returning ""
+        getInstrumentedStore().get(eventsAtom);
   for (let idx = events.length - 1; idx >= 0; idx--) {
     if (events[idx].source === "user" && events[idx].displayText) {
       return events[idx].displayText;
@@ -136,7 +144,7 @@ async function switchCursorIdeMode(
   store.set(cursorModeOverrideAtomFamily(sessionId), targetMode);
   await cursorBridgeSetMode({ agentId: composerId, modeId: targetMode });
 
-  const lastUserText = getLastUserText();
+  const lastUserText = getLastUserText(sessionId);
   // Bug-fix: same guard as switchAgentMode — skip resend when the user's
   // last message was itself a mode-switch command to avoid an infinite loop.
   if (!lastUserText || isModeSwitchCommand(lastUserText)) return;
@@ -176,7 +184,7 @@ async function switchAgentMode(
 
   await respondModeSwitch(sessionId, "switch", targetMode);
 
-  const lastUserText = getLastUserText();
+  const lastUserText = getLastUserText(sessionId);
   // Do not resend if there is no prior user message, or if the last user
   // message was itself a mode-switch command. Resending a request to switch
   // into Plan mode would trigger another suggest_mode_switch call and
