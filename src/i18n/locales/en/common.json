@@ -586,6 +586,7 @@
     "resizeToDefaultHeight": "Resize to default height ({{height}}px)",
     "minimizeHeight": "Minimize height ({{height}}px)",
     "closePanel": "Close panel",
+    "showSidebar": "Show Sidebar",
     "hideSidebar": "Hide Sidebar",
     "resetToDefault": "Reset to default",
     "resetAll": "Reset all",

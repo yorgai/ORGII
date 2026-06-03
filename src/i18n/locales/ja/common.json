@@ -586,6 +586,7 @@
     "resizeToDefaultHeight": "デフォルトの高さにリサイズ ({{height}}px)",
     "minimizeHeight": "高さを最小化 ({{height}}px)",
     "closePanel": "パネルを閉じる",
+    "showSidebar": "サイドバーを表示",
     "hideSidebar": "サイドバーを非表示",
     "resetToDefault": "デフォルトにリセット",
     "resetAll": "すべてリセット",

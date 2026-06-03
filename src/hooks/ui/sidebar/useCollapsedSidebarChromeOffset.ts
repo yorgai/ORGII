@@ -6,7 +6,6 @@ import {
 } from "@src/store/ui/chatPanelAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
-import { workStationPrimarySidebarCollapsedAtom } from "@src/store/ui/workStationAtom";
 import {
   type ChatPanelPosition,
   sessionChatPositionAtom,
@@ -20,15 +19,10 @@ export function useShouldOffsetWorkStationTopBar(): boolean {
   const stationMode = useAtomValue(stationModeAtom);
   const chatPanelMaximized = useAtomValue(chatPanelMaximizedAtom);
   const chatWidth = useAtomValue(chatWidthAtom);
-  const workStationPrimarySidebarCollapsed = useAtomValue(
-    workStationPrimarySidebarCollapsedAtom
-  );
   const workStationChatPosition = useAtomValue(workStationChatPositionAtom);
   const sessionChatPosition = useAtomValue(sessionChatPositionAtom);
 
-  if (stationMode === "ops-control") {
-    return workStationPrimarySidebarCollapsed;
-  }
+  if (stationMode === "ops-control") return sidebarCollapsed;
 
   const activeChatPosition =
     stationMode === "agent-station"

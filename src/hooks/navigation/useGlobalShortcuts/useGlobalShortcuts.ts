@@ -27,6 +27,7 @@ import { useZoomShortcuts } from "./useZoomShortcuts";
  * - Command+8 (Meta+8): Toggle inspect element mode
  * - Command+9 (Meta+9): Capture hovered component issue payload
  * - Command+5 (Meta+5): Toggle API calls panel
+ * - Command+B / Ctrl+B: Toggle Workstation sidebar
  * - Command+E / Ctrl+E: Open Workstation Code Editor source control tab
  * - Command+J / Ctrl+J: Open Workstation Code Editor terminal tab
  * - Command+Option+B / Ctrl+Alt+B: Focus Chat Panel or show Workstation

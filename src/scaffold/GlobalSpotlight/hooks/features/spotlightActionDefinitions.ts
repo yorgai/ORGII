@@ -324,7 +324,7 @@ export function buildViewActions(
         "primary sidebar",
         "view",
       ],
-      shortcut: getShortcutKeys("toggle_sidebar"),
+      shortcut: getShortcutKeys("toggle_workstation_sidebar"),
       actionId: ACTION_ID.WORKSTATION_TOGGLE_SIDEBAR,
       payload: {},
       fallback: "toggle-workstation-sidebar",

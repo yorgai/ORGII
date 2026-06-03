@@ -586,6 +586,7 @@
     "resizeToDefaultHeight": "調整爲默認高度 ({{height}}px)",
     "minimizeHeight": "最小化高度 ({{height}}px)",
     "closePanel": "關閉面板",
+    "showSidebar": "顯示側邊欄",
     "hideSidebar": "隱藏側邊欄",
     "resetToDefault": "重置爲默認值",
     "resetAll": "全部重置",

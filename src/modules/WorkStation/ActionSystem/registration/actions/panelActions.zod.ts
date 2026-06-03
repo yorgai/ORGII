@@ -69,7 +69,7 @@ export const panelTogglePrimary = defineZodAction(
     category: "panel",
     description: "Toggle the Workstation sidebar visibility",
     params: z.object({}),
-    shortcut: getShortcutKeys("toggle_sidebar"),
+    shortcut: getShortcutKeys("toggle_workstation_sidebar"),
     examples: [
       "toggle work station sidebar",
       "hide work station sidebar",

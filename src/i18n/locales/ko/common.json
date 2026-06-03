@@ -586,6 +586,7 @@
     "resizeToDefaultHeight": "기본 높이로 조정 ({{height}}px)",
     "minimizeHeight": "높이 최소화 ({{height}}px)",
     "closePanel": "패널 닫기",
+    "showSidebar": "사이드바 표시",
     "hideSidebar": "사이드바 숨기기",
     "resetToDefault": "기본값으로 초기화",
     "resetAll": "모두 초기화",

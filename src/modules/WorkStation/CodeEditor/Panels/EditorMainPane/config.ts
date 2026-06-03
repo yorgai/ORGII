@@ -130,7 +130,7 @@ export function createEditorQuickActions(
       label: sidebarCollapsed
         ? t("commands.showPrimarySidebar")
         : t("commands.hidePrimarySidebar"),
-      shortcut: getShortcutKeys("toggle_sidebar"),
+      shortcut: getShortcutKeys("toggle_workstation_sidebar"),
       onAction: () => dispatch("panel.togglePrimary", {}, "user"),
     },
     {

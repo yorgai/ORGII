@@ -586,6 +586,7 @@
     "resizeToDefaultHeight": "Ajustar al alto predeterminado ({{height}}px)",
     "minimizeHeight": "Minimizar alto ({{height}}px)",
     "closePanel": "Cerrar panel",
+    "showSidebar": "Mostrar barra lateral",
     "hideSidebar": "Ocultar barra lateral",
     "resetToDefault": "Restablecer a predeterminado",
     "resetAll": "Restablecer todo",

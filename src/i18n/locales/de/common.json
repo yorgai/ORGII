@@ -586,6 +586,7 @@
     "resizeToDefaultHeight": "Auf Standardhöhe ändern ({{height}}px)",
     "minimizeHeight": "Höhe minimieren ({{height}}px)",
     "closePanel": "Panel schließen",
+    "showSidebar": "Seitenleiste anzeigen",
     "hideSidebar": "Seitenleiste ausblenden",
     "resetToDefault": "Auf Standard zurücksetzen",
     "resetAll": "Alles zurücksetzen",

@@ -163,9 +163,17 @@ export const EDITOR_SHORTCUTS: ShortcutEntry[] = [
   },
   {
     id: "toggle_sidebar",
-    command: "Toggle sidebar",
+    command: "Toggle app sidebar",
     macKeys: "⌥⌘U",
     winKeys: "Ctrl+Alt+U",
+    scope: "editor",
+    category: "panels",
+  },
+  {
+    id: "toggle_workstation_sidebar",
+    command: "Toggle Workstation sidebar",
+    macKeys: "⌘B",
+    winKeys: "Ctrl+B",
     scope: "editor",
     category: "panels",
   },

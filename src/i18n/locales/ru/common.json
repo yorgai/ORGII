@@ -586,6 +586,7 @@
     "resizeToDefaultHeight": "Изменить до высоты по умолчанию ({{height}}px)",
     "minimizeHeight": "Минимальная высота ({{height}}px)",
     "closePanel": "Закрыть панель",
+    "showSidebar": "Показать боковую панель",
     "hideSidebar": "Скрыть боковую панель",
     "resetToDefault": "Сбросить до значений по умолчанию",
     "resetAll": "Сбросить всё",

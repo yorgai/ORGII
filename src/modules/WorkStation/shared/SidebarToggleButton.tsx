@@ -75,7 +75,7 @@ const SidebarToggleButtonComponent: React.FC<SidebarToggleButtonProps> = ({
   const label = collapsed
     ? t("simulator.titleBar.showSidebar")
     : t("simulator.titleBar.hideSidebar");
-  const shortcut = getShortcutKeys("toggle_sidebar");
+  const shortcut = getShortcutKeys("toggle_workstation_sidebar");
   const tooltipContent = (
     <KeyboardShortcutTooltipContent label={label} shortcut={shortcut} />
   );
