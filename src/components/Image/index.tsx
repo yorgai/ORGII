@@ -23,7 +23,7 @@
  * <Image
  *   src="/path/to/image.jpg"
  *   alt="Description"
- *   loader={<Spinner />}
+ *   loader={<div>Loading image…</div>}
  *   error={<div>Failed to load</div>}
  * />
  *
