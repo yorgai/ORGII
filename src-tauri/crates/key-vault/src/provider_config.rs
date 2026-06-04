@@ -95,6 +95,12 @@ pub fn get_provider_config(model_type: &str) -> ProviderConfig {
             supports_base_url: true,
             default_base_url: Some("https://api.groq.com/openai/v1".to_string()),
         },
+        "xai_api" => ProviderConfig {
+            api_key_env_var: "XAI_API_KEY".to_string(),
+            base_url_env_var: None,
+            supports_base_url: true,
+            default_base_url: Some("https://api.x.ai/v1".to_string()),
+        },
         "zhipu_api" => ProviderConfig {
             api_key_env_var: "ZHIPU_API_KEY".to_string(),
             base_url_env_var: None,
@@ -185,6 +191,7 @@ pub fn get_all_provider_configs() -> Vec<(String, ProviderConfig)> {
         "deepseek_api",
         "gemini_api",
         "groq_api",
+        "xai_api",
         "zhipu_api",
         "dashscope_api",
         "moonshot_api",

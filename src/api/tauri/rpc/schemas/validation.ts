@@ -41,6 +41,7 @@ export const ApiProviderTypeSchema = z.union([
   z.literal("deepseek_api"),
   z.literal("gemini_api"),
   z.literal("groq_api"),
+  z.literal("xai_api"),
   z.literal("zhipu_api"),
   z.literal("dashscope_api"),
   z.literal("moonshot_api"),

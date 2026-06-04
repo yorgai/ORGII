@@ -1,8 +1,10 @@
+import { useAtomValue } from "jotai";
 import React, { Suspense } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { CODE_EDITOR_TOUR_TARGETS } from "@src/scaffold/Tutorials/codeEditorTourConfig";
+import { activeWorkStationTabAtom } from "@src/store/workstation/tabs";
 
 import ProjectManagerCore from "../../ProjectManager/ProjectManagerCore";
 import CodeEditor from "../CodeEditor";
@@ -83,9 +85,14 @@ export function AppShellContent({
   handleSelectRepo,
 }: AppShellContentProps) {
   const { t } = useTranslation();
+  const activeTab = useAtomValue(activeWorkStationTabAtom);
+  const activeTabCanRenderWithoutRepo =
+    activeTab?.type === "agent-config" ||
+    activeTab?.type === "chat-session" ||
+    activeTab?.type === "subagent-detail";
 
   const renderCodeEditor = () => {
-    if (!repoPath) {
+    if (!repoPath && !activeTabCanRenderWithoutRepo) {
       return (
         <Placeholder
           variant="empty"
@@ -102,7 +109,11 @@ export function AppShellContent({
       );
     }
 
-    if (pathExists === false && lastSeenPath) {
+    if (
+      pathExists === false &&
+      lastSeenPath &&
+      !activeTabCanRenderWithoutRepo
+    ) {
       return (
         <Placeholder
           variant="error"

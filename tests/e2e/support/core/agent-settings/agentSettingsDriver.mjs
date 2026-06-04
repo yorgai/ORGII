@@ -1,5 +1,6 @@
 import {
   assertE2ERepoFixture,
+  E2E_REPO_PATH,
   invokeE2E,
   unwrap,
   waitForApp,
@@ -32,6 +33,10 @@ export async function bootAgentSettingsE2E() {
       return true;
     `,
     []
+  );
+  unwrap(
+    await invokeE2E("ensureRepoSelected", { repoPath: E2E_REPO_PATH }),
+    "pin agent settings E2E repo"
   );
 }
 
@@ -459,15 +464,55 @@ export async function openAgentRow(agentId, label, tab = "general") {
     `[data-testid="agent-orgs-agent-row-${agentId}"]`,
     `${label} row`
   );
-  unwrap(await invokeE2E("openAgentTab", agentId, tab), `open ${label} agent tab`);
+  const openResult = unwrap(
+    await invokeE2E("openAgentTab", agentId, tab),
+    `open ${label} agent tab`
+  );
+  await pointerClick('[data-testid="station-mode-my-station"]', `${label} My Station switch`, {
+    rootSelector: null,
+    jsClick: true,
+  });
+  const focusedResult = unwrap(
+    await invokeE2E("openAgentTab", agentId, tab),
+    `refocus ${label} agent tab after station switch`
+  );
   const variant = agentConfigVariantFor(agentId);
   currentAgentConfigRootSelector = `[data-testid="agent-config-tab-${variant}-${agentId}"]`;
-  await waitForScript(
-    `return !!document.querySelector(arguments[0]);`,
-    `${label} agent config tab root did not mount`,
-    WAIT_TIMEOUT_MS,
-    [currentAgentConfigRootSelector]
-  );
+  try {
+    await waitForScript(
+      `return !!document.querySelector(arguments[0]);`,
+      `${label} agent config tab root did not mount`,
+      WAIT_TIMEOUT_MS,
+      [currentAgentConfigRootSelector]
+    );
+  } catch (error) {
+    const workstationSurface = await invokeE2E("inspectWorkstationSurface");
+    const diagnostic = await browser.executeScript(
+      `
+        const selector = arguments[0];
+        const testIds = Array.from(document.querySelectorAll('[data-testid]'))
+          .map((element) => element.getAttribute('data-testid'))
+          .filter(Boolean)
+          .slice(0, 120);
+        return {
+          selector,
+          location: window.location.pathname,
+          chatMaximized: localStorage.getItem('orgii:chatPanelMaximized'),
+          stationVisibility: localStorage.getItem('stationChatVisibility'),
+          layoutStorageV1: localStorage.getItem('orgii:workstation:tabs:v1'),
+          layoutStorageV2: localStorage.getItem('workstation:layout-v2'),
+          matchingCount: document.querySelectorAll(selector).length,
+          testIds,
+          bodyText: document.body?.textContent?.trim().replace(/\\s+/g, ' ').slice(0, 1000) ?? null,
+        };
+      `,
+      [currentAgentConfigRootSelector]
+    );
+    throw new Error(
+      `${label} agent config tab root did not mount: ${JSON.stringify({ openResult, focusedResult, workstationSurface, diagnostic })}`,
+      { cause: error }
+    );
+  }
   await restoreWorkstationIfFocused(currentAgentConfigRootSelector, label);
   await waitForScript(
     `

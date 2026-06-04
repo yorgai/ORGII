@@ -37,7 +37,7 @@ async function waitForScript(
   );
 }
 
-async function pointerClick(selector, label) {
+async function pointerClick(selector, label, options = {}) {
   let point = null;
   await browser.waitUntil(
     async () => {
@@ -79,9 +79,9 @@ async function pointerClick(selector, label) {
             text: (element.textContent || "").trim().replace(/\\s+/g, " ").slice(0, 180),
           };
         `,
-        [selector, currentAgentConfigRootSelector]
+        [selector, options.rootSelector ?? currentAgentConfigRootSelector]
       );
-      return point?.found === true && point?.hitMatches === true;
+      return point?.found === true && (options.jsClick === true || point?.hitMatches === true);
     },
     {
       timeout: WAIT_TIMEOUT_MS,
@@ -89,6 +89,30 @@ async function pointerClick(selector, label) {
       timeoutMsg: `${label} not clickable: ${JSON.stringify(point, null, 2)}`,
     }
   );
+  if (options.jsClick === true) {
+    const clickState = await browser.executeScript(
+      `
+        const selector = arguments[0];
+        const rootSelector = arguments[1];
+        const roots = rootSelector ? [...document.querySelectorAll(rootSelector)] : [document];
+        const root = roots[roots.length - 1] ?? document;
+        const candidates = [...root.querySelectorAll(selector)].filter((element) => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+        });
+        const element = candidates[candidates.length - 1] ?? null;
+        if (!element) return { ok: false, reason: "missing" };
+        element.click();
+        return { ok: true, text: element.textContent?.trim() ?? "" };
+      `,
+      [selector, options.rootSelector ?? currentAgentConfigRootSelector]
+    );
+    if (clickState?.ok !== true) {
+      throw new Error(`${label} js click failed: ${JSON.stringify(clickState)}`);
+    }
+    return point;
+  }
   await browser
     .action("pointer")
     .move({ x: point.x, y: point.y })
@@ -161,12 +185,52 @@ async function openAgentDetail(agentId, label) {
     `[data-testid="agent-orgs-agent-row-${agentId}"]`,
     `${label} row`
   );
-  unwrap(
+  const openResult = unwrap(
     await invokeE2E("openAgentTab", agentId, "general"),
     `open ${label} agent tab`
   );
+  const previousRoot = currentAgentConfigRootSelector;
+  currentAgentConfigRootSelector = null;
+  await pointerClick('[data-testid="station-mode-my-station"]', `${label} My Station switch`, {
+    jsClick: true,
+  });
+  currentAgentConfigRootSelector = previousRoot;
+  const focusedResult = unwrap(
+    await invokeE2E("openAgentTab", agentId, "general"),
+    `refocus ${label} agent tab after station switch`
+  );
   const variant = agentConfigVariantFor(agentId);
   currentAgentConfigRootSelector = `[data-testid="agent-config-tab-${variant}-${agentId}"]`;
+  try {
+    await waitForScript(
+      `return !!document.querySelector(arguments[0]);`,
+      `${label} agent-config tab root did not mount`,
+      WAIT_TIMEOUT_MS,
+      [currentAgentConfigRootSelector]
+    );
+  } catch (error) {
+    const workstationSurface = await invokeE2E("inspectWorkstationSurface");
+    const diagnostic = await browser.executeScript(
+      `
+        const selector = arguments[0];
+        const testIds = Array.from(document.querySelectorAll('[data-testid]'))
+          .map((element) => element.getAttribute('data-testid'))
+          .filter(Boolean)
+          .slice(0, 140);
+        return {
+          selector,
+          matchingCount: document.querySelectorAll(selector).length,
+          testIds,
+          bodyText: document.body?.textContent?.trim().replace(/\\s+/g, ' ').slice(0, 1200) ?? null,
+        };
+      `,
+      [currentAgentConfigRootSelector]
+    );
+    throw new Error(
+      `${label} agent-config tab root did not mount: ${JSON.stringify({ openResult, focusedResult, workstationSurface, diagnostic })}`,
+      { cause: error }
+    );
+  }
   await restoreWorkstationIfFocused(currentAgentConfigRootSelector, label);
   await waitForScript(
     `
@@ -177,7 +241,7 @@ async function openAgentDetail(agentId, label) {
     `,
     `${label} agent-config tab did not become visible`,
     WAIT_TIMEOUT_MS,
-    [`[data-testid="agent-config-tab-${variant}-${agentId}"]`]
+    [currentAgentConfigRootSelector]
   );
 }
 
@@ -600,6 +664,10 @@ describe("Settings Agent configuration UI", () => {
         return true;
       `,
       []
+    );
+    unwrap(
+      await invokeE2E("ensureRepoSelected", { repoPath: E2E_REPO_PATH }),
+      "pin custom config E2E repo"
     );
     await cleanupStaleE2EAgentDefs();
   });

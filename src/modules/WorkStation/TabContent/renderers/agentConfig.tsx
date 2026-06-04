@@ -40,6 +40,7 @@ import WingmanDetailView from "@src/modules/MainApp/AgentOrgs/components/Wingman
 import { useAgentDefinitions } from "@src/modules/MainApp/AgentOrgs/hooks/useAgentDefinitions";
 import { builtInAgentsAtom } from "@src/modules/MainApp/AgentOrgs/store/builtInAgentsAtom";
 import type {
+  AgentDefinition,
   AvailableCliAgent,
   OrgMember,
 } from "@src/modules/MainApp/AgentOrgs/types";
@@ -261,9 +262,11 @@ const AgentConfigInner: React.FC<AgentConfigInnerProps> = ({ data }) => {
   }
 
   if (variant === "custom") {
+    const agentSnapshot = data.entitySnapshot as AgentDefinition | undefined;
     const agent =
       customAgents.find((customAgent) => customAgent.id === entityId) ??
-      builtInAgents.find((builtInAgent) => builtInAgent.id === entityId);
+      builtInAgents.find((builtInAgent) => builtInAgent.id === entityId) ??
+      (agentSnapshot?.id === entityId ? agentSnapshot : undefined);
     if (!agent) {
       return (
         <Placeholder

@@ -242,6 +242,17 @@ pub(super) fn api_provider_registry() -> Vec<ApiProviderEntry> {
             supports_rust_agents: true,
         },
         ApiProviderEntry {
+            name: "xai_api",
+            display_name: "xAI Grok",
+            description: "xAI's Grok models via API",
+            brand_color: "#111111",
+            docs_url: "https://docs.x.ai/docs",
+            icon_provider: "grok",
+            paired_cli_agent: None,
+            popular: false,
+            supports_rust_agents: true,
+        },
+        ApiProviderEntry {
             name: "zhipu_api",
             display_name: "Zhipu AI",
             description: "Zhipu's GLM models via API",
