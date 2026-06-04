@@ -41,7 +41,6 @@ const COMPONENT_SUFFIXES = [
   "Toggle",
   "Slider",
   "Progress",
-  "Spinner",
   "Loading",
   "Badge",
   "Tag",

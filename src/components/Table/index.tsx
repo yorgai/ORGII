@@ -48,7 +48,6 @@ import React, {
   useState,
 } from "react";
 
-import Spinner from "@src/components/Spinner";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import { PaginationFooter } from "./PaginationFooter";
@@ -399,73 +398,71 @@ function TableComponent<T = unknown>(
 
   return (
     <div ref={mergedRef} className={wrapperClasses} style={style}>
-      <Spinner loading={loading}>
-        <div className="table-container">
-          {showFixedSettingsHeader && (
-            <div className="table-fixed-header" ref={headerScrollRef}>
-              <table className="table">
-                <TableHeader
-                  headerGroups={tableHeaderGroups}
-                  hasExpandable={!!expandable}
-                  columnWidths={settingsHeaderColumnWidths}
-                />
-              </table>
-            </div>
-          )}
-          <div
-            className="table-scroll"
-            style={scrollStyle}
-            ref={bodyScrollRef}
-            onScroll={showFixedSettingsHeader ? handleBodyScroll : undefined}
-          >
-            <table className="table" ref={bodyTableRef}>
-              {showHeader && !showFixedSettingsHeader && (
-                <TableHeader
-                  headerGroups={tableHeaderGroups}
-                  hasExpandable={!!expandable}
-                />
-              )}
-              <TableBody
-                rows={tableRows}
-                columns={columns}
-                hasRowSelection={!!rowSelection}
-                expandable={expandable}
-                expandedRows={expandedRows}
-                toggleRowExpand={toggleRowExpand}
-                resolveRowKey={resolveRowKey}
-                settings={settings}
-                rowClassName={rowClassName}
-                rowDataTestId={rowDataTestId}
-                onRowClick={onRowClick}
-                noDataElement={noDataElement}
+      <div className="table-container">
+        {showFixedSettingsHeader && (
+          <div className="table-fixed-header" ref={headerScrollRef}>
+            <table className="table">
+              <TableHeader
+                headerGroups={tableHeaderGroups}
+                hasExpandable={!!expandable}
+                columnWidths={settingsHeaderColumnWidths}
               />
             </table>
           </div>
-        </div>
-
-        {pagination !== false && (
-          <div
-            className={
-              renderPagination
-                ? "flex h-12 w-full items-center border-t border-border-1 px-4"
-                : "table-pagination-wrapper"
-            }
-          >
-            <PaginationFooter
-              pagination={pagination || {}}
-              pageIndex={paginationState.pageIndex}
-              pageSize={paginationState.pageSize}
-              total={pagination?.total ?? data.length}
-              pageCount={table.getPageCount()}
-              canPreviousPage={table.getCanPreviousPage()}
-              canNextPage={table.getCanNextPage()}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
-              renderPagination={renderPagination}
-            />
-          </div>
         )}
-      </Spinner>
+        <div
+          className="table-scroll"
+          style={scrollStyle}
+          ref={bodyScrollRef}
+          onScroll={showFixedSettingsHeader ? handleBodyScroll : undefined}
+        >
+          <table className="table" ref={bodyTableRef}>
+            {showHeader && !showFixedSettingsHeader && (
+              <TableHeader
+                headerGroups={tableHeaderGroups}
+                hasExpandable={!!expandable}
+              />
+            )}
+            <TableBody
+              rows={tableRows}
+              columns={columns}
+              hasRowSelection={!!rowSelection}
+              expandable={expandable}
+              expandedRows={expandedRows}
+              toggleRowExpand={toggleRowExpand}
+              resolveRowKey={resolveRowKey}
+              settings={settings}
+              rowClassName={rowClassName}
+              rowDataTestId={rowDataTestId}
+              onRowClick={onRowClick}
+              noDataElement={noDataElement}
+            />
+          </table>
+        </div>
+      </div>
+
+      {pagination !== false && (
+        <div
+          className={
+            renderPagination
+              ? "flex h-12 w-full items-center border-t border-border-1 px-4"
+              : "table-pagination-wrapper"
+          }
+        >
+          <PaginationFooter
+            pagination={pagination || {}}
+            pageIndex={paginationState.pageIndex}
+            pageSize={paginationState.pageSize}
+            total={pagination?.total ?? data.length}
+            pageCount={table.getPageCount()}
+            canPreviousPage={table.getCanPreviousPage()}
+            canNextPage={table.getCanNextPage()}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            renderPagination={renderPagination}
+          />
+        </div>
+      )}
     </div>
   );
 }
