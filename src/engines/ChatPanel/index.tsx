@@ -611,27 +611,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             alertClassName="!border-border-2 !bg-chat-container !text-text-1 shadow-lg"
           />
         )}
-        {isWorkItemTarget && !showSessionContent && !selectedWorkItem && (
-          <>
-            <label className="flex h-7 items-center gap-2 px-1 text-[12px] font-medium text-text-2">
-              <span>{t("projects:workItems.createModes.useAi")}</span>
-              <Switch
-                size="small"
-                checked={workItemCreateAiEnabled}
-                onChange={setWorkItemCreateAiEnabled}
-                ariaLabel={t("projects:workItems.createModes.useAi")}
-                dataTestId="chat-panel-create-work-item-ai-switch"
-              />
-            </label>
-            {!workItemCreateAiEnabled ? (
-              <div
-                className="pointer-events-none mx-2 h-4 w-px shrink-0 bg-border-2"
-                role="separator"
-                aria-hidden
-              />
-            ) : null}
-          </>
-        )}
         {showSessionContent && (
           <Tooltip
             content={
@@ -841,6 +820,25 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               selectorClassName="!h-7 max-w-[180px] !gap-1.5 !rounded-lg !border-0 !bg-transparent !px-1.5 !text-[13px] font-medium !text-text-1 hover:!bg-surface-hover [&_.select-suffix]:!ml-0 [&_.select-value]:-translate-y-px"
               dataTestId="chat-panel-create-target-select"
             />
+            {isWorkItemTarget && (
+              <>
+                <div
+                  className="mx-2 h-4 w-px shrink-0 bg-border-2"
+                  role="separator"
+                  aria-hidden
+                />
+                <label className="flex h-7 items-center gap-2 px-1 text-[12px] font-medium text-text-2">
+                  <span>{t("projects:workItems.createModes.useAi")}</span>
+                  <Switch
+                    size="small"
+                    checked={workItemCreateAiEnabled}
+                    onChange={setWorkItemCreateAiEnabled}
+                    ariaLabel={t("projects:workItems.createModes.useAi")}
+                    dataTestId="chat-panel-create-work-item-ai-switch"
+                  />
+                </label>
+              </>
+            )}
             {showCreatorPresenceInHeader && (
               <>
                 <div
