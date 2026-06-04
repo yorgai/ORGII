@@ -48,23 +48,72 @@ const EXPECTED_API_CONFIGS = {
     env: "GEMINI_API_KEY",
     baseUrl: "https://generativelanguage.googleapis.com/v1beta",
   },
+  deepseek_api: {
+    env: "DEEPSEEK_API_KEY",
+    baseUrl: "https://api.deepseek.com",
+  },
   groq_api: {
     env: "GROQ_API_KEY",
     baseUrl: "https://api.groq.com/openai/v1",
   },
   xai_api: { env: "XAI_API_KEY", baseUrl: "https://api.x.ai/v1" },
+  zhipu_api: {
+    env: "ZHIPU_API_KEY",
+    baseUrl: "https://open.bigmodel.cn/api/paas/v4",
+  },
+  dashscope_api: {
+    env: "DASHSCOPE_API_KEY",
+    baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  },
+  moonshot_api: {
+    env: "MOONSHOT_API_KEY",
+    baseUrl: "https://api.moonshot.cn/v1",
+  },
   openrouter_api: {
     env: "OPENROUTER_API_KEY",
     baseUrl: "https://openrouter.ai/api/v1",
   },
+  aihubmix_api: { env: "AIHUBMIX_API_KEY", baseUrl: "https://aihubmix.com/v1" },
+  minimax_api: {
+    env: "MINIMAX_API_KEY",
+    baseUrl: "https://api.minimax.chat/v1",
+  },
   vllm_api: { env: "VLLM_API_KEY", baseUrl: "http://localhost:8000/v1" },
+  orgii_orchestrator: {
+    env: "ORGII_API_KEY",
+    baseUrl: "https://api.orgii.ai/v1",
+  },
 };
+
+const API_PROVIDERS_REQUIRING_CUSTOM_BASE_URL = new Set([
+  "azure_openai_api",
+  "azure_anthropic_api",
+]);
+
+const AUTO_DETECT_DISPATCH_CLI_AGENTS = [
+  "cursor_cli",
+  "claude_code",
+  "codex",
+  "gemini_cli",
+  "copilot",
+  "kiro",
+];
+
+const AUTO_DETECT_NOOP_AGENT_TYPES = [
+  "kimi_cli",
+  "opencode",
+  ...EXPECTED_API_PROVIDERS,
+];
 
 async function execJS(script) {
   return browser.executeScript(script, []);
 }
 
-async function waitForScript(predicateScript, label, timeout = WAIT_TIMEOUT_MS) {
+async function waitForScript(
+  predicateScript,
+  label,
+  timeout = WAIT_TIMEOUT_MS
+) {
   await browser.waitUntil(async () => execJS(predicateScript), {
     timeout,
     interval: 250,
@@ -121,21 +170,43 @@ describe("Provider/model matrix registry and auto-detect UI", () => {
 
     for (const name of EXPECTED_CLI_AGENTS) {
       expect(agentNames.has(name)).toBe(true);
+      expect(matrix.providerConfigs[name]).toBeTruthy();
     }
     for (const name of EXPECTED_API_PROVIDERS) {
       expect(providerNames.has(name)).toBe(true);
       expect(matrix.providerConfigs[name]).toBeTruthy();
     }
 
+    for (const provider of matrix.apiProviders) {
+      const config = matrix.providerConfigs[provider.name];
+      expect(config).toBeTruthy();
+      expect(typeof provider.supportsRustAgents).toBe("boolean");
+      expect(config.api_key_env_var).toBe(provider.apiKeyEnvVar);
+      expect(config.supports_base_url).toBe(provider.supportsBaseUrl);
+      expect(config.default_base_url ?? undefined).toBe(
+        provider.defaultBaseUrl ?? undefined
+      );
+    }
+
     for (const [name, expected] of Object.entries(EXPECTED_API_CONFIGS)) {
       const provider = matrix.apiProviders.find((row) => row.name === name);
       const config = matrix.providerConfigs[name];
       expect(provider).toBeTruthy();
-      expect(provider.supportsRustAgents).toBe(true);
+      expect(typeof provider.supportsRustAgents).toBe("boolean");
       expect(provider.apiKeyEnvVar).toBe(expected.env);
       expect(config.api_key_env_var).toBe(expected.env);
       expect(config.supports_base_url).toBe(true);
       expect(config.default_base_url).toBe(expected.baseUrl);
+    }
+
+    for (const name of API_PROVIDERS_REQUIRING_CUSTOM_BASE_URL) {
+      const provider = matrix.apiProviders.find((row) => row.name === name);
+      const config = matrix.providerConfigs[name];
+      expect(provider).toBeTruthy();
+      expect(provider.supportsBaseUrl).toBe(true);
+      expect(config.supports_base_url).toBe(true);
+      expect(provider.defaultBaseUrl ?? null).toBe(null);
+      expect(config.default_base_url ?? null).toBe(null);
     }
 
     const xai = matrix.apiProviders.find((row) => row.name === "xai_api");
@@ -144,11 +215,15 @@ describe("Provider/model matrix registry and auto-detect UI", () => {
 
     const geminiCli = matrix.agents.find((row) => row.name === "gemini_cli");
     const cursorCli = matrix.agents.find((row) => row.name === "cursor_cli");
+    const kimiCli = matrix.agents.find((row) => row.name === "kimi_cli");
+    const openCode = matrix.agents.find((row) => row.name === "opencode");
     expect(geminiCli.supportsRustAgents).toBe(true);
     expect(cursorCli.supportsRustAgents).toBe(false);
+    expect(kimiCli.envConfig.apiKeyEnvVar).toBe("MOONSHOT_API_KEY");
+    expect(openCode.envConfig.apiKeyEnvVar).toBe("OPENCODE_API_KEY");
   });
 
-  it("renders major provider cards including Groq, xAI/Grok, Gemini, Cursor, and OpenRouter", async () => {
+  it("renders every registered provider brand in the Add Account grid", async () => {
     unwrap(await invokeE2E("navigateTo", ROUTE), "navigate to Models & Keys");
     await waitForScript(
       `return location.pathname === ${JSON.stringify(ROUTE)};`,
@@ -172,15 +247,30 @@ describe("Provider/model matrix registry and auto-detect UI", () => {
       "Key Vault wizard did not open"
     );
 
-    const selectors = [
-      'selection-grid-option-cursor_cli',
-      'selection-grid-option-openai',
-      'selection-grid-option-gemini',
-      'selection-grid-option-groq_api',
-      'selection-grid-option-xai_api',
-      'selection-grid-option-openrouter_api',
+    const expectedProviderGridKeys = [
+      "cursor_cli",
+      "openai",
+      "anthropic",
+      "gemini",
+      "kiro",
+      "copilot",
+      "opencode",
+      "deepseek_api",
+      "groq_api",
+      "xai_api",
+      "zhipu_api",
+      "dashscope_api",
+      "moonshot",
+      "openrouter_api",
+      "aihubmix_api",
+      "minimax_api",
+      "vllm_api",
+      "azure_openai_api",
+      "azure_anthropic_api",
+      "orgii_orchestrator",
     ];
-    for (const testId of selectors) {
+    for (const key of expectedProviderGridKeys) {
+      const testId = `selection-grid-option-${key}`;
       await waitForScript(
         `return !!document.querySelector('[data-testid="${testId}"]');`,
         `${testId} did not render in provider grid`
@@ -190,15 +280,34 @@ describe("Provider/model matrix registry and auto-detect UI", () => {
     const gridText = await execJS(
       `return (document.querySelector('[data-testid="key-vault-wizard"]')?.textContent || "").replace(/\\s+/g, " ");`
     );
-    expect(gridText).toContain("Cursor");
-    expect(gridText).toContain("Gemini");
-    expect(gridText).toContain("Groq");
-    expect(gridText).toContain("Grok");
-    expect(gridText).toContain("OpenRouter");
+    for (const label of [
+      "Cursor",
+      "OpenAI",
+      "Anthropic",
+      "Gemini",
+      "Kiro",
+      "Copilot",
+      "OpenCode",
+      "DeepSeek",
+      "Groq",
+      "Grok",
+      "Zhipu",
+      "DashScope",
+      "Moonshot",
+      "OpenRouter",
+      "AiHubMix",
+      "MiniMax",
+      "vLLM",
+      "Azure OpenAI",
+      "Azure Anthropic",
+      "ORGII Token Market",
+    ]) {
+      expect(gridText).toContain(label);
+    }
   });
 
-  it("routes auto-detect dispatch for CLI agents and explicitly no-ops API providers", async () => {
-    for (const agentType of ["cursor_cli", "gemini_cli", "codex", "kiro"]) {
+  it("routes auto-detect dispatch for supported CLI agents and explicitly no-ops the rest", async () => {
+    for (const agentType of AUTO_DETECT_DISPATCH_CLI_AGENTS) {
       const result = unwrap(
         await invokeE2E("autoDetectKeyForE2E", agentType),
         `autoDetectKeyForE2E(${agentType})`
@@ -209,7 +318,7 @@ describe("Provider/model matrix registry and auto-detect UI", () => {
       expect(typeof result.message).toBe("string");
     }
 
-    for (const agentType of ["openai_api", "gemini_api", "groq_api", "xai_api"]) {
+    for (const agentType of AUTO_DETECT_NOOP_AGENT_TYPES) {
       const result = unwrap(
         await invokeE2E("autoDetectKeyForE2E", agentType),
         `autoDetectKeyForE2E(${agentType})`
