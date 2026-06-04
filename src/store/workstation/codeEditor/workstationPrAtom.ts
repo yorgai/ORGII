@@ -12,13 +12,18 @@ export interface WorkstationPrSnapshot {
   prUrl?: string;
   /** PR is currently being created */
   isCreating: boolean;
-  /** Trigger PR creation — injected by the hook */
-  onCreatePr: (() => void) | null;
 }
 
 export const workstationPrAtom = atom<WorkstationPrSnapshot>({
   readyToCreate: false,
   prUrl: undefined,
   isCreating: false,
-  onCreatePr: null,
 });
+
+/**
+ * Stable ref-backed callback for triggering PR creation from PinnedActionsBar.
+ * Stored as a ref container to avoid stale closure issues with atom-stored functions.
+ */
+export const workstationPrCallbackAtom = atom<{
+  createPr: (() => Promise<{ url?: string; error?: string }>) | null;
+}>({ createPr: null });

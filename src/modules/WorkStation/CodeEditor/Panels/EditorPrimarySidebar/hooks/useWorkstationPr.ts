@@ -15,7 +15,10 @@ import {
   parseGithubRepoFullName,
 } from "@src/services/git/operations/createPullRequest";
 import { gitAutoCreatePrAtom } from "@src/store/ui/editorSettingsAtom";
-import { workstationPrAtom } from "@src/store/workstation/codeEditor/workstationPrAtom";
+import {
+  workstationPrAtom,
+  workstationPrCallbackAtom,
+} from "@src/store/workstation/codeEditor/workstationPrAtom";
 
 import {
   formatWorkstationPrTitle,
@@ -57,6 +60,7 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
   const { t } = useTranslation();
   const autoCreatePr = useAtomValue(gitAutoCreatePrAtom);
   const setWorkstationPrAtom = useSetAtom(workstationPrAtom);
+  const setWorkstationPrCallbackAtom = useSetAtom(workstationPrCallbackAtom);
   const branchKey = branchName ?? "";
 
   const [remotePrByBranch, setRemotePrByBranch] = useState<
@@ -261,13 +265,12 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
   }, [readyToCreate]);
 
   useEffect(() => {
-    setWorkstationPrAtom({
-      readyToCreate,
-      prUrl,
-      isCreating,
-      onCreatePr: handleCreatePr,
-    });
-  }, [readyToCreate, prUrl, isCreating, handleCreatePr, setWorkstationPrAtom]);
+    setWorkstationPrAtom({ readyToCreate, prUrl, isCreating });
+  }, [readyToCreate, prUrl, isCreating, setWorkstationPrAtom]);
+
+  useEffect(() => {
+    setWorkstationPrCallbackAtom({ createPr: handleCreatePr });
+  }, [handleCreatePr, setWorkstationPrCallbackAtom]);
 
   useEffect(() => {
     return () => {
@@ -275,10 +278,10 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
         readyToCreate: false,
         prUrl: undefined,
         isCreating: false,
-        onCreatePr: null,
       });
+      setWorkstationPrCallbackAtom({ createPr: null });
     };
-  }, [setWorkstationPrAtom]);
+  }, [setWorkstationPrAtom, setWorkstationPrCallbackAtom]);
 
   return {
     prUrl,

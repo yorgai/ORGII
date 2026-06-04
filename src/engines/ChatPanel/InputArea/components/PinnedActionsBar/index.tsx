@@ -25,7 +25,10 @@ import {
   type PinnedAction,
   pinnedActionsAtom,
 } from "@src/store/session/pinnedActionsAtom";
-import { workstationPrAtom } from "@src/store/workstation/codeEditor/workstationPrAtom";
+import {
+  workstationPrAtom,
+  workstationPrCallbackAtom,
+} from "@src/store/workstation/codeEditor/workstationPrAtom";
 import { workstationLayoutAtom } from "@src/store/workstation/tabs";
 import {
   createCanvasPreviewTab,
@@ -98,18 +101,16 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
     // ── PR pill ───────────────────────────────────────────────────────────────
 
-    const {
-      readyToCreate: prReadyToCreate,
-      isCreating: prIsCreating,
-      onCreatePr,
-    } = useAtomValue(workstationPrAtom);
+    const { readyToCreate: prReadyToCreate, isCreating: prIsCreating } =
+      useAtomValue(workstationPrAtom);
+    const { createPr } = useAtomValue(workstationPrCallbackAtom);
 
     const handleOpenPr = useCallback(() => {
-      if (!onCreatePr || prIsCreating) return;
-      void onCreatePr();
-    }, [onCreatePr, prIsCreating]);
+      if (!createPr || prIsCreating) return;
+      void createPr();
+    }, [createPr, prIsCreating]);
 
-    const showPrPill = prReadyToCreate && Boolean(onCreatePr);
+    const showPrPill = prReadyToCreate && Boolean(createPr);
 
     // ── Canvas pill ───────────────────────────────────────────────────────────
 
@@ -240,13 +241,16 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
     return (
       <div className="relative flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-hide">
         {showPrPill && (
-          <UserActionButton
-            leftIcon={<GitPullRequest size={12} strokeWidth={1.75} />}
-            title={
+          <StackPill
+            icon={<GitPullRequest size={12} strokeWidth={1.75} />}
+            count={0}
+            active={prIsCreating}
+            label={
               prIsCreating
                 ? t("input.pr.creating", { defaultValue: "Creating PR…" })
                 : t("input.pr.open", { defaultValue: "Open PR" })
             }
+            title={t("input.pr.open", { defaultValue: "Open PR" })}
             onClick={handleOpenPr}
           />
         )}
