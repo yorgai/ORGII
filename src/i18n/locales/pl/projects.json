@@ -517,6 +517,13 @@
       "cannotParseRepoName": "Nie można sparsować nazwy Repo z: {{url}}",
       "defaultPrTitle": "[{{shortId}}] Zmiany zadania"
     },
+    "sessions": {
+      "linkedSessions": "Połączone Sessions",
+      "newSession": "Nowa Session",
+      "starting": "Uruchamianie...",
+      "emptyOverview": "Brak Sessions",
+      "emptyOverviewHint": "Uruchom Agent Session, aby śledzić tutaj wykonanie."
+    },
     "outputTab": {
       "prSection": "Pull Request",
       "prNotAvailable": "Jeszcze niedostępny",

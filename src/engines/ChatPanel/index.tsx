@@ -483,7 +483,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     }, [isChatFocus, openWorkStationTab, toggleChatFocus]);
 
     const handleCancelWorkItemCreate = useCallback(() => {
-      setWorkItemCreatePropertiesOpen(false);
       setWorkItemCreateAiEnabled(true);
       setWorkItemCreateDraft(null);
       setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);

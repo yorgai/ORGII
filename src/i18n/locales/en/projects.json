@@ -516,6 +516,13 @@
       "cannotParseRepoName": "Cannot parse repo name from: {{url}}",
       "defaultPrTitle": "[{{shortId}}] Work item changes"
     },
+    "sessions": {
+      "linkedSessions": "Linked Sessions",
+      "newSession": "New Session",
+      "starting": "Starting...",
+      "emptyOverview": "No sessions yet",
+      "emptyOverviewHint": "Start an Agent session to track execution here."
+    },
     "outputTab": {
       "prSection": "Pull Request",
       "prNotAvailable": "Not available yet",

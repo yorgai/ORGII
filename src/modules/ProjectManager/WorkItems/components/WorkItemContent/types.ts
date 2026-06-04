@@ -9,13 +9,8 @@ import type { WorkItem as WorkItemExtended } from "@src/types/core/workItem";
 
 import type { AgentRole } from "../../constants";
 
-export const CONTENT_TAB_KEYS = [
-  "details",
-  "history",
-  "execution",
-  "output",
-] as const;
-export type ContentTab = (typeof CONTENT_TAB_KEYS)[number];
+export const SESSION_TAB_KEYS = ["session", "output", "history"] as const;
+export type SessionTab = (typeof SESSION_TAB_KEYS)[number];
 
 export interface WorkItemContentProps {
   workItem: WorkItemExtended;

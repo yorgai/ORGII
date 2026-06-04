@@ -517,6 +517,13 @@
       "cannotParseRepoName": "リポジトリ名を解析できません: {{url}}",
       "defaultPrTitle": "[{{shortId}}] Work item 変更"
     },
+    "sessions": {
+      "linkedSessions": "リンク済み Sessions",
+      "newSession": "新しい Session",
+      "starting": "開始中...",
+      "emptyOverview": "Sessions はまだありません",
+      "emptyOverviewHint": "Agent Session を開始すると、ここで実行を追跡できます。"
+    },
     "outputTab": {
       "prSection": "Pull Request",
       "prNotAvailable": "まだ利用できません",
