@@ -19,7 +19,6 @@ import {
   opsControlHomeTabAtom,
 } from "@src/store/workstation";
 
-import OpsControlPrimarySidebar from "./OpsControlPrimarySidebar";
 import OpsControlProjectsSurface from "./OpsControlProjectsSurface";
 import OpsControlTaskCreator from "./OpsControlTaskCreator";
 import "./index.scss";
@@ -30,6 +29,12 @@ const getFolderName = (path: string): string => {
   const segments = cleanPath.split("/").filter(Boolean);
   return segments[segments.length - 1] || "";
 };
+
+const collapsedKanbanSidebarConfig = buildPrimarySidebarConfig({
+  content: null,
+  collapsed: true,
+  size: 0,
+});
 
 const OpsControlPage: React.FC = () => {
   const {
@@ -45,23 +50,6 @@ const OpsControlPage: React.FC = () => {
     if (currentRepo?.name) return currentRepo.name;
     return getFolderName(repoPath) || "Project Manager";
   }, [currentRepo?.name, repoPath]);
-
-  const primarySidebarConfig = useMemo(
-    () =>
-      buildPrimarySidebarConfig({
-        content: <OpsControlPrimarySidebar />,
-        collapsed: primarySidebarCollapsed,
-        size: primarySidebarWidth,
-        onSizeChange: setPrimarySidebarWidth,
-        onClose: closePrimarySidebar,
-      }),
-    [
-      closePrimarySidebar,
-      primarySidebarCollapsed,
-      primarySidebarWidth,
-      setPrimarySidebarWidth,
-    ]
-  );
 
   if (activeHomeTab === OPS_CONTROL_HOME_TAB.STORIES) {
     return (
@@ -87,7 +75,7 @@ const OpsControlPage: React.FC = () => {
 
   return (
     <WorkStationShell
-      primarySidebarConfig={primarySidebarConfig}
+      primarySidebarConfig={collapsedKanbanSidebarConfig}
       content={mainContent}
       statusBar={null}
       appClassName="ops-control-workstation"

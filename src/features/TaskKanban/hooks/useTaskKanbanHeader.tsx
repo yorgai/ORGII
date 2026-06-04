@@ -10,6 +10,7 @@ import DiaryDateControls from "../components/DiaryDateControls";
 import FactoryViewPill, {
   type FactoryViewMode,
 } from "../components/FactoryViewPill";
+import KanbanHeaderFilters from "../components/KanbanHeaderFilters";
 import KanbanHeaderTrailingControls from "../components/KanbanHeaderTrailingControls";
 import {
   DIARY_TIMELINE_DISPLAY_MODE,
@@ -121,11 +122,18 @@ export function useTaskKanbanHeader({
       return {
         leading: <FactoryViewPill />,
         trailing: diaryControls,
+        sidebarToggleDisabled: true,
       };
     }
     return {
-      content: <FactoryViewPill />,
-      trailing: headerTrailing,
+      leading: <FactoryViewPill />,
+      trailing: (
+        <div className="flex min-w-0 items-center gap-1 overflow-visible">
+          <KanbanHeaderFilters />
+          {headerTrailing}
+        </div>
+      ),
+      sidebarToggleDisabled: true,
     };
   }, [diaryControls, headerTrailing, viewMode]);
 
