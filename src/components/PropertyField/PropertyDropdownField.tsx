@@ -71,28 +71,30 @@ export function PropertyDropdownField<T extends string>({
 }: PropertyDropdownFieldProps<T>) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const controlledOpen = active ?? internalOpen;
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (onActiveChange) onActiveChange(nextOpen);
+      else setInternalOpen(nextOpen);
+      if (!nextOpen) setSearchQuery("");
+    },
+    [onActiveChange]
+  );
   const {
+    isOpen,
     isPositioned,
     triggerRef,
     panelRef: dropdownRef,
     panelPosition: dropdownPosition,
-    updatePosition,
+    setIsOpen: setOpen,
   } = useDropdownEngine<HTMLDivElement>({
+    open: controlledOpen,
+    onOpenChange: handleOpenChange,
     gap: 4,
     align: "right",
     placement: "bottom",
   });
 
-  const isOpen = active ?? internalOpen;
-  const setOpen = useCallback(
-    (nextOpen: boolean) => {
-      if (nextOpen && placement === "portal") updatePosition();
-      if (onActiveChange) onActiveChange(nextOpen);
-      else setInternalOpen(nextOpen);
-      if (!nextOpen) setSearchQuery("");
-    },
-    [onActiveChange, placement, updatePosition]
-  );
   const close = useCallback(() => setOpen(false), [setOpen]);
 
   const filtered =
@@ -101,6 +103,8 @@ export function PropertyDropdownField<T extends string>({
           option.label.toLowerCase().includes(searchQuery.toLowerCase())
         )
       : options;
+
+  const toggleOpen = useCallback(() => setOpen(!isOpen), [isOpen, setOpen]);
 
   const handleSelect = useCallback(
     (nextValue: T) => {
@@ -140,7 +144,7 @@ export function PropertyDropdownField<T extends string>({
         } ${readonly ? "cursor-default" : "cursor-pointer"}`}
         style={iconColor ? { color: iconColor } : undefined}
         onClick={() => {
-          if (!readonly) setOpen(!isOpen);
+          if (!readonly) toggleOpen();
         }}
       >
         <span className="flex h-4 w-4 items-center justify-center">{icon}</span>
@@ -158,7 +162,7 @@ export function PropertyDropdownField<T extends string>({
         borderless={borderless}
         onClear={readonly ? undefined : onClear}
         onClick={() => {
-          if (!readonly) setOpen(!isOpen);
+          if (!readonly) toggleOpen();
         }}
       />
     );
@@ -214,6 +218,7 @@ export function PropertyDropdownField<T extends string>({
 
       {!readonly && isOpen && placement === "inline" && (
         <div
+          ref={dropdownRef}
           data-property-dropdown
           className={`absolute ${fieldVariant === "pill" ? "left-0" : "left-2 right-2"} top-full mt-1 flex flex-col ${fieldVariant === "pill" ? DROPDOWN_WIDTHS.wideMenuClass : ""} ${DROPDOWN_CLASSES.panelAnimated}`}
         >

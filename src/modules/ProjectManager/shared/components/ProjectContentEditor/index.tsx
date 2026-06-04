@@ -244,9 +244,7 @@ const ProjectContentEditor = forwardRef<
       [editorRef, handleSlashCommandClose, handleSlashSelect]
     );
 
-    const showSummary =
-      titleVisible &&
-      (onSummaryChange !== undefined || (summary && summary.length > 0));
+    const showSummary = onSummaryChange !== undefined || Boolean(summary);
 
     return (
       <div

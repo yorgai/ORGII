@@ -10,6 +10,7 @@ interface WorkItemContentStackProps {
   className?: string;
   scrollable?: boolean;
   descriptionFlexible?: boolean;
+  metaClassName?: string;
   titleClassName?: string;
   descriptionClassName?: string;
   todosClassName?: string;
@@ -32,6 +33,7 @@ export default function WorkItemContentStack({
   className = "",
   scrollable = false,
   descriptionFlexible = false,
+  metaClassName = "px-4 pb-2 pt-1",
   titleClassName = "px-4 py-2",
   descriptionClassName = "px-4 py-4",
   todosClassName = "px-4 pb-4",
@@ -50,8 +52,13 @@ export default function WorkItemContentStack({
     <div
       className={`flex min-h-0 flex-1 flex-col ${scrollClassName} ${className}`.trim()}
     >
+      {titleContent ? (
+        <div className={`shrink-0 ${titleClassName}`.trim()}>
+          {titleContent}
+        </div>
+      ) : null}
       {hasMetaContent ? (
-        <div className="shrink-0 px-4 pb-2 pt-1">
+        <div className={`shrink-0 ${metaClassName}`.trim()}>
           {pathContent ? <div>{pathContent}</div> : null}
           {propertiesContent ? (
             <div className={pathContent ? "mt-3" : ""}>{propertiesContent}</div>
@@ -59,11 +66,6 @@ export default function WorkItemContentStack({
         </div>
       ) : null}
       {hasTopSeparator ? INSET_SEPARATOR : null}
-      {titleContent ? (
-        <div className={`shrink-0 ${titleClassName}`.trim()}>
-          {titleContent}
-        </div>
-      ) : null}
       {descriptionContent ? (
         <div
           className={`${descriptionLayoutClassName} ${descriptionClassName}`.trim()}
