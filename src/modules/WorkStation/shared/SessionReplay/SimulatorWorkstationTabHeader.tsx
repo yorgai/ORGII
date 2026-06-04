@@ -27,10 +27,6 @@
 import { useAtomValue } from "jotai";
 import React, { memo } from "react";
 
-import {
-  COLLAPSED_SIDEBAR_CHROME_OFFSET,
-  useShouldOffsetWorkStationTopBar,
-} from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
 import { workstationTabHeaderAtomByHost } from "@src/store/workstation";
 
 import { NoDragRegion } from "../NoDragRegion";
@@ -47,7 +43,6 @@ const SimulatorWorkstationTabHeaderComponent: React.FC<
   SimulatorWorkstationTabHeaderProps
 > = ({ showSidebarToggle = true, sidebarToggleDisabled = false }) => {
   const headerSlots = useAtomValue(workstationTabHeaderAtomByHost.simulator);
-  const shouldOffsetLeftChrome = useShouldOffsetWorkStationTopBar();
   // Border lives on this row (not on `ReplayTabBar` above) so the chrome
   // shape mirrors My Station: tab bar transparent, header strip carries
   // the single separator line under the whole tabbar+header block.
@@ -55,14 +50,7 @@ const SimulatorWorkstationTabHeaderComponent: React.FC<
     <div
       className="flex h-10 shrink-0 items-center gap-2 border-b border-border-2 pl-1.5 pr-2"
       data-tauri-drag-region
-      style={
-        {
-          paddingLeft: shouldOffsetLeftChrome
-            ? COLLAPSED_SIDEBAR_CHROME_OFFSET
-            : undefined,
-          WebkitAppRegion: "drag",
-        } as React.CSSProperties
-      }
+      style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
       <NoDragRegion className="flex w-7 shrink-0 items-center justify-center">
         {showSidebarToggle ? (

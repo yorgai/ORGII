@@ -217,8 +217,8 @@ export function getEventCardClass(
 // Chat Item Spacing Tokens
 // ============================================
 
-/** Gap between chat items (Tailwind class) — 4px each side = 8px total gap between items */
-export const CHAT_ITEM_GAP = "py-2";
+/** Gap between chat items (Tailwind class) — 2px each side = 4px total gap between items */
+export const CHAT_ITEM_GAP = "py-1";
 
 /** Horizontal padding for chat items (Tailwind class) */
 export const CHAT_ITEM_PADDING_X = "px-2";
