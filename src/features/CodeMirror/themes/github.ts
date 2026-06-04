@@ -2,24 +2,16 @@
  * GitHub Theme for CodeMirror 6
  *
  * Integrated with token system for user customization.
- * Syntax colors are defined as CSS variables in _editor-tokens.scss
- * and read at runtime for dynamic theming.
+ * Syntax colors are defined as CSS variables in the active public theme CSS
+ * and referenced directly so theme swaps update the editor without JS copies.
  *
  * Original source: https://github.com/uiwjs/react-codemirror/tree/master/themes/github
  */
 import { tags as t } from "@lezer/highlight";
 import { type CreateThemeOptions, createTheme } from "@uiw/codemirror-themes";
 
-// ============================================
-// Helper to read CSS variables
-// ============================================
-
-function getCSSVar(name: string, fallback: string): string {
-  if (typeof document === "undefined") return fallback;
-  const value = getComputedStyle(document.documentElement)
-    .getPropertyValue(name)
-    .trim();
-  return value || fallback;
+function cssVar(name: string, fallback: string): string {
+  return `var(${name}, ${fallback})`;
 }
 
 // ============================================
@@ -57,74 +49,48 @@ export const defaultSettingsGithubDark = {
 export function createGithubTheme(
   isDark: boolean
 ): ReturnType<typeof createTheme> {
-  // Read current CSS variable values
   const settings = {
-    background: getCSSVar(
-      "--cm-editor-background",
-      isDark ? "#0d1117" : "#fff"
-    ),
-    foreground: getCSSVar(
+    background: cssVar("--cm-editor-background", isDark ? "#0d1117" : "#fff"),
+    foreground: cssVar(
       "--cm-editor-foreground",
       isDark ? "#c9d1d9" : "#24292e"
     ),
-    selection: getCSSVar(
+    selection: cssVar("--cm-editor-selection", isDark ? "#003d73" : "#BBDFFF"),
+    selectionMatch: cssVar(
       "--cm-editor-selection",
       isDark ? "#003d73" : "#BBDFFF"
     ),
-    selectionMatch: getCSSVar(
-      "--cm-editor-selection",
-      isDark ? "#003d73" : "#BBDFFF"
-    ),
-    gutterBackground: getCSSVar(
+    gutterBackground: cssVar(
       "--cm-editor-gutter-bg",
       isDark ? "#0d1117" : "#fff"
     ),
-    gutterForeground: getCSSVar(
+    gutterForeground: cssVar(
       "--cm-editor-gutter-fg",
       isDark ? "#8b949e" : "#6e7781"
     ),
-    lineHighlight: getCSSVar(
+    lineHighlight: cssVar(
       "--cm-editor-line-highlight",
       isDark ? "#36334280" : "transparent"
     ),
   };
 
-  // Read syntax colors from CSS variables
-  const keyword = getCSSVar(
-    "--cm-syntax-keyword",
-    isDark ? "#ff7b72" : "#d73a49"
-  );
-  const string = getCSSVar(
-    "--cm-syntax-string",
-    isDark ? "#a5d6ff" : "#032f62"
-  );
-  const comment = getCSSVar(
-    "--cm-syntax-comment",
-    isDark ? "#8b949e" : "#6a737d"
-  );
-  const func = getCSSVar(
-    "--cm-syntax-function",
-    isDark ? "#d2a8ff" : "#6f42c1"
-  );
-  const variable = getCSSVar(
+  const keyword = cssVar("--cm-syntax-keyword", isDark ? "#ff7b72" : "#d73a49");
+  const string = cssVar("--cm-syntax-string", isDark ? "#a5d6ff" : "#032f62");
+  const comment = cssVar("--cm-syntax-comment", isDark ? "#8b949e" : "#6a737d");
+  const func = cssVar("--cm-syntax-function", isDark ? "#d2a8ff" : "#6f42c1");
+  const variable = cssVar(
     "--cm-syntax-variable",
     isDark ? "#79c0ff" : "#005cc5"
   );
-  const tag = getCSSVar("--cm-syntax-tag", isDark ? "#7ee787" : "#116329");
-  const constant = getCSSVar(
+  const tag = cssVar("--cm-syntax-tag", isDark ? "#7ee787" : "#116329");
+  const constant = cssVar(
     "--cm-syntax-constant",
     isDark ? "#ffab70" : "#e36209"
   );
-  const link = getCSSVar("--cm-syntax-link", isDark ? "#a5d6ff" : "#032f62");
-  const invalid = getCSSVar(
-    "--cm-syntax-invalid",
-    isDark ? "#f97583" : "#cb2431"
-  );
-  const deleted = getCSSVar(
-    "--cm-syntax-deleted",
-    isDark ? "#ffdcd7" : "#b31d28"
-  );
-  const deletedBg = getCSSVar("--cm-syntax-deleted-bg", "#ffeef0");
+  const link = cssVar("--cm-syntax-link", isDark ? "#a5d6ff" : "#032f62");
+  const invalid = cssVar("--cm-syntax-invalid", isDark ? "#f97583" : "#cb2431");
+  const deleted = cssVar("--cm-syntax-deleted", isDark ? "#ffdcd7" : "#b31d28");
+  const deletedBg = cssVar("--cm-syntax-deleted-bg", "#ffeef0");
 
   const styles = [
     { tag: [t.standard(t.tagName), t.tagName], color: tag },

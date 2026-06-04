@@ -8,6 +8,8 @@
  */
 import { atom } from "jotai";
 
+import { WORK_ITEM_STATUS } from "@src/types/core/workItem";
+
 // ============================================
 // Constants
 // ============================================
@@ -118,7 +120,7 @@ export function createDefaultWorkItemDraft(projectId?: string): WorkItemDraft {
   return {
     name: "",
     description: "",
-    status: "backlog",
+    status: WORK_ITEM_STATUS.PLANNED,
     priority: "none",
     assigneeId: undefined,
     projectId,

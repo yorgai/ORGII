@@ -1,11 +1,11 @@
 /**
  * Settings Toolbar Atom
  *
- * Pub-sub channel used by Settings pages to register toolbar actions
- * (refresh button, loading state) into the GlobalToolbar.
+ * Pub-sub channel used by Settings pages to register header actions
+ * (refresh button, loading state).
  *
- * Lives in src/store/ui/ so that the scaffold layer (GlobalToolbar) can
- * read it without reaching into a module's private store path.
+ * Lives in src/store/ui/ so shared header surfaces can read it without
+ * reaching into a module's private store path.
  */
 import { atom } from "jotai";
 

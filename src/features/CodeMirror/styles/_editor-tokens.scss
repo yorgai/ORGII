@@ -59,67 +59,6 @@
 }
 
 // ============================================
-// Syntax Highlighting Tokens
-// ============================================
-
-:root {
-  // Editor chrome
-  --cm-editor-background: #fff;
-  --cm-editor-foreground: #24292e;
-  --cm-editor-selection: #bbdfff;
-  --cm-editor-gutter-bg: var(--cm-editor-background);
-  --cm-editor-gutter-fg: #6e7781;
-  --cm-editor-line-highlight: transparent;
-
-  // Syntax colors - Light theme (GitHub-inspired)
-  --cm-syntax-keyword: #d73a49;
-  --cm-syntax-string: #032f62;
-  --cm-syntax-comment: #6a737d;
-  --cm-syntax-function: #6f42c1;
-  --cm-syntax-variable: #005cc5;
-  --cm-syntax-number: #005cc5;
-  --cm-syntax-operator: #005cc5;
-  --cm-syntax-tag: #116329;
-  --cm-syntax-attribute: #005cc5;
-  --cm-syntax-property: #6f42c1;
-  --cm-syntax-type: #d73a49;
-  --cm-syntax-constant: #e36209;
-  --cm-syntax-link: #032f62;
-  --cm-syntax-invalid: #cb2431;
-  --cm-syntax-deleted: #b31d28;
-  --cm-syntax-deleted-bg: #ffeef0;
-}
-
-:root[data-theme="dark"],
-.dark {
-  // Editor chrome - Dark theme
-  --cm-editor-background: #0d1117;
-  --cm-editor-foreground: #c9d1d9;
-  --cm-editor-selection: #003d73;
-  --cm-editor-gutter-bg: var(--cm-editor-background);
-  --cm-editor-gutter-fg: #8b949e;
-  --cm-editor-line-highlight: #36334280;
-
-  // Syntax colors - Dark theme (GitHub-inspired)
-  --cm-syntax-keyword: #ff7b72;
-  --cm-syntax-string: #a5d6ff;
-  --cm-syntax-comment: #8b949e;
-  --cm-syntax-function: #d2a8ff;
-  --cm-syntax-variable: #79c0ff;
-  --cm-syntax-number: #79c0ff;
-  --cm-syntax-operator: #79c0ff;
-  --cm-syntax-tag: #7ee787;
-  --cm-syntax-attribute: #79c0ff;
-  --cm-syntax-property: #d2a8ff;
-  --cm-syntax-type: #ff7b72;
-  --cm-syntax-constant: #ffab70;
-  --cm-syntax-link: #a5d6ff;
-  --cm-syntax-invalid: #f97583;
-  --cm-syntax-deleted: #ffdcd7;
-  --cm-syntax-deleted-bg: #ffeef0;
-}
-
-// ============================================
 // SCSS Variables for Lint Squiggles
 // (Used in SVG data URIs which can't use CSS vars)
 // ============================================

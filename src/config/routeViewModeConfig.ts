@@ -66,9 +66,8 @@ export const ROUTE_VIEW_MODE_PATTERNS: RoutePatternConfig[] = [
       "Workstation view mode routes (Code Editor, Database, Browser, Chat, Project Manager)",
   },
   {
-    // Settings shares the WorkStation chrome so the GlobalToolbar bows
-    // out and the WorkStation surface stays visible behind the slot —
-    // see APP_SETTINGS_ROUTE for the canonical entry.
+    // Settings shares WorkStation chrome so the WorkStation surface stays
+    // visible behind the slot — see APP_SETTINGS_ROUTE for the canonical entry.
     pattern: "/orgii/app/settings",
     match: "prefix",
     viewMode: "workStation",

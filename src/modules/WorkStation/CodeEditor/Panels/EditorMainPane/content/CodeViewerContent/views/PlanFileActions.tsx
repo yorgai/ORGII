@@ -75,10 +75,10 @@ export const PlanFileActions: React.FC<PlanFileActionsProps> = memo(
           ? creatorDefaultSelection.selectedAccountId
           : undefined;
       // The session row's persisted repo path is the source of truth for
-      // `workspace_root`. The global toolbar atom is only a fallback for
-      // legacy rows that pre-date the per-session column — using it first
-      // would let two open sessions on different repos collide whenever the
-      // toolbar is focused on the "wrong" repo at dispatch time.
+      // `workspace_root`. The global repo selection atom is only a fallback
+      // for older rows without the per-session column — using it first would
+      // let two open sessions on different repos collide whenever global
+      // selection is focused on the "wrong" repo at dispatch time.
       const activeRepoPath =
         session?.repoPath ??
         currentRepo?.path ??

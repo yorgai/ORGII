@@ -5,10 +5,11 @@ import TabPill from "@src/components/TabPill";
 import type { TabPillItem } from "@src/components/TabPill";
 import { usePublishWorkstationTabHeader } from "@src/hooks/workStation";
 import { WorkstationHeaderSectionSeparator } from "@src/modules/WorkStation/shared";
-import FactoryViewPill from "@src/scaffold/GlobalToolbar/components/FactoryViewPill";
-import type { FactoryViewMode } from "@src/scaffold/GlobalToolbar/components/FactoryViewPill";
 
 import DiaryDateControls from "../components/DiaryDateControls";
+import FactoryViewPill, {
+  type FactoryViewMode,
+} from "../components/FactoryViewPill";
 import KanbanHeaderTrailingControls from "../components/KanbanHeaderTrailingControls";
 import {
   DIARY_TIMELINE_DISPLAY_MODE,

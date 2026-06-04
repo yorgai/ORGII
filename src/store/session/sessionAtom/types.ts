@@ -55,8 +55,8 @@ export interface Session {
    * The session's persisted workspace root, captured at create time from
    * `SessionLaunchParams.workspacePath`. This is the **session-scoped**
    * workspace root the dispatcher must prefer when sending a message;
-   * the global toolbar atom is only a legacy fallback. Mirrors the
-   * `repo_path` column on `agent_sessions` / `code_sessions`.
+   * the global repo selection atom is only a fallback for older rows. Mirrors
+   * the `repo_path` column on `agent_sessions` / `code_sessions`.
    */
   repoPath?: string;
   /** Worktree path for isolated parallel sessions */

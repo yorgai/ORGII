@@ -524,8 +524,8 @@ export function createRustAgentAdapter(
         sessionRepoPath,
       } = input;
       // The session row's persisted repo is the source of truth for
-      // workspace_root. Using the global toolbar atom would collide when
-      // two sessions on different repos are open simultaneously.
+      // workspace_root. Using the global repo selection atom would collide
+      // when two sessions on different repos are open simultaneously.
       const activePath = sessionRepoPath ?? undefined;
       if (!isResume && content.trim()) {
         await enterAgentOrgSessionIntervention(sessionId);

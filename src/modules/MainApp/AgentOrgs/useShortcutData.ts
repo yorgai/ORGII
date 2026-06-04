@@ -65,7 +65,7 @@ export function useShortcutData(): UseShortcutDataReturn {
     repos: centralRepos,
     repoLoading: loadingRepos,
     loadRepos,
-  } = useRepoSelection({ autoLoad: false }); // autoLoad: false - repos already loaded by GlobalToolbar
+  } = useRepoSelection({ autoLoad: false });
 
   // Check if a repo ID is valid
   const isRepoValid = useCallback(

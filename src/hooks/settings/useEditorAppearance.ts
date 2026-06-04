@@ -10,9 +10,8 @@
  * - --cm-font-size: Font size in pixels
  * - --cm-line-height: Line height multiplier
  * - --cm-tab-size: Tab width (CSS tab-size property)
- * - --cm-editor-background / --cm-editor-gutter-bg: match the resolved CodeMirror theme
- *   canvas (same defaults as getCodeMirrorTheme). _editor-tokens only flips these under
- *   data-theme=dark or .dark, which the app does not use.
+ * Theme color variables such as --cm-editor-background come from the active
+ * public app theme CSS file, not from runtime editor-theme settings.
  */
 import { useAtomValue } from "jotai";
 import { useEffect } from "react";
@@ -22,7 +21,6 @@ import {
   DEFAULT_PRIMARY_COLOR_PRESET,
   PRIMARY_COLOR_PALETTES,
 } from "@src/config/appearance/primaryColors";
-import { getEditorChromeSurface } from "@src/features/CodeMirror/config/editorChromeSurface";
 import {
   type EditorLineNumbers,
   editorFontSizeAtom,
@@ -35,7 +33,6 @@ import {
   editorTabSizeAtom,
   editorWordWrapAtom,
   resolvedCodeFontFamilyAtom,
-  resolvedEditorThemeAtom,
 } from "@src/store/ui/editorSettingsAtom";
 import { isDarkThemeAtom, primaryColorPresetAtom } from "@src/store/ui/uiAtom";
 import {
@@ -100,7 +97,6 @@ export function useEditorAppearanceStyles(): void {
   const fontFamily = useAtomValue(resolvedCodeFontFamilyAtom);
   const primaryColorPreset = useAtomValue(primaryColorPresetAtom);
   const isDark = useAtomValue(isDarkThemeAtom);
-  const resolvedEditorTheme = useAtomValue(resolvedEditorThemeAtom);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -125,19 +121,6 @@ export function useEditorAppearanceStyles(): void {
       root.style.removeProperty("--cm-tab-size");
     };
   }, [fontSize, lineHeight, tabSize, fontFamily]);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    const chrome = getEditorChromeSurface(isDark, resolvedEditorTheme);
-    root.style.setProperty("--cm-editor-background", chrome.background);
-    root.style.setProperty("--cm-editor-gutter-bg", chrome.gutterBackground);
-
-    return () => {
-      root.style.removeProperty("--cm-editor-background");
-      root.style.removeProperty("--cm-editor-gutter-bg");
-    };
-  }, [isDark, resolvedEditorTheme]);
-
   useEffect(() => {
     const body = document.body;
     const vars = getAnsiColorCssVars(isDark ? "dark" : "light");

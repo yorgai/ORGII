@@ -36,6 +36,7 @@ export const BackgroundSettings: React.FC<BackgroundSettingsProps> = ({
     // State
     config,
     appearanceMode,
+    appearanceModeOptions,
     globalThemeId,
     themeOptions,
     isDarkTheme,
@@ -88,10 +89,7 @@ export const BackgroundSettings: React.FC<BackgroundSettingsProps> = ({
             <Select
               value={appearanceMode}
               onChange={handleAppearanceModeChange}
-              options={[
-                { label: t("general.light"), value: "light" },
-                { label: t("general.dark"), value: "dark" },
-              ]}
+              options={appearanceModeOptions}
               size="default"
               style={SECTION_CONTROL_STYLE}
             />
@@ -136,7 +134,6 @@ export const BackgroundSettings: React.FC<BackgroundSettingsProps> = ({
           <>
             <ColorSection
               config={config}
-              isDarkTheme={isDarkTheme}
               translationNamespace={translationNamespace}
               onColorSelect={handleColorSelect}
               onSelectCustomHex={handleSelectCustomPaletteHex}

@@ -181,11 +181,11 @@ export function useInputArea(
 
   // Session-scoped repo path. When a session is active prefer its persisted
   // `repo_path` (the value that drove `workspace_root` at session start) over
-  // the global toolbar atom. This keeps every input-area consumer — composer
-  // bar, ContextInfoButton's `policies_list` lookup, file-prewarm effect —
-  // aligned with the *session*'s repo, even when the toolbar has since
-  // navigated to a different project. Falls back to the toolbar value for
-  // creator mode and legacy session rows that never persisted a repo.
+  // the global repo selection atom. This keeps every input-area consumer —
+  // composer bar, ContextInfoButton's `policies_list` lookup, file-prewarm
+  // effect — aligned with the *session*'s repo, even when the global selection
+  // has since navigated to a different project. Falls back to the global
+  // selection value for creator mode and older session rows without repo_path.
   const activeSession = useAtomValue(sessionByIdAtom(activeSessionId ?? ""));
   const currentRepoPath = activeSessionId
     ? (activeSession?.repoPath ?? workspaceRepoPath)

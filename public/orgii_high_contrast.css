@@ -3,6 +3,53 @@
  *
  * Contains CSS variables for colors, spacing, and theming (high contrast variant).
  */
+:root {
+  /* Background color slots */
+  --bg-1: #050505;
+  --bg-2: #1f1f1f;
+  --bg-3: #263746;
+  --bg-4: #10172f;
+  --bg-5: #0b3568;
+  --bg-6: #003b73;
+  --bg-7: #1b1f5a;
+  --bg-8: #005466;
+  --bg-9: #0e462f;
+  --bg-10: #174328;
+  --bg-11: #2e421f;
+  --bg-12: #4a1f4a;
+  --bg-13: #4a1640;
+  --bg-14: #5f1538;
+  --bg-15: #650b12;
+  --bg-16: #4c240c;
+  --bg-17: #4a3300;
+  --bg-18: #3b2d0f;
+  --bg-19: #392315;
+
+  /* Code editor */
+  --cm-editor-background: #050505;
+  --cm-editor-foreground: #ffffff;
+  --cm-editor-selection: #1d4f7a;
+  --cm-editor-gutter-bg: #050505;
+  --cm-editor-gutter-fg: #c7ced9;
+  --cm-editor-line-highlight: #1c1c1c;
+  --cm-syntax-keyword: #ff9aa2;
+  --cm-syntax-string: #93ddff;
+  --cm-syntax-comment: #c7ced9;
+  --cm-syntax-function: #e9c6ff;
+  --cm-syntax-variable: #7dd3fc;
+  --cm-syntax-number: #7dd3fc;
+  --cm-syntax-operator: #7dd3fc;
+  --cm-syntax-tag: #86efac;
+  --cm-syntax-attribute: #7dd3fc;
+  --cm-syntax-property: #e9c6ff;
+  --cm-syntax-type: #ff9aa2;
+  --cm-syntax-constant: #fbbf24;
+  --cm-syntax-link: #93ddff;
+  --cm-syntax-invalid: #fca5a5;
+  --cm-syntax-deleted: #fecaca;
+  --cm-syntax-deleted-bg: #5f1015;
+}
+
 body {
   --color-bg-1: #050505;
   --color-bg-2: #0a0a0a;
@@ -71,4 +118,49 @@ body {
   --color-warning-4: #ca8a04;
   --color-warning-5: #facc15;
   --color-warning-6: #fde047;
+
+  /* Background color slots */
+  --bg-1: #050505;
+  --bg-2: #1f1f1f;
+  --bg-3: #263746;
+  --bg-4: #10172f;
+  --bg-5: #0b3568;
+  --bg-6: #003b73;
+  --bg-7: #1b1f5a;
+  --bg-8: #005466;
+  --bg-9: #0e462f;
+  --bg-10: #174328;
+  --bg-11: #2e421f;
+  --bg-12: #4a1f4a;
+  --bg-13: #4a1640;
+  --bg-14: #5f1538;
+  --bg-15: #650b12;
+  --bg-16: #4c240c;
+  --bg-17: #4a3300;
+  --bg-18: #3b2d0f;
+  --bg-19: #392315;
+
+  /* Code editor */
+  --cm-editor-background: #050505;
+  --cm-editor-foreground: #ffffff;
+  --cm-editor-selection: #1d4f7a;
+  --cm-editor-gutter-bg: #050505;
+  --cm-editor-gutter-fg: #c7ced9;
+  --cm-editor-line-highlight: #1c1c1c;
+  --cm-syntax-keyword: #ff9aa2;
+  --cm-syntax-string: #93ddff;
+  --cm-syntax-comment: #c7ced9;
+  --cm-syntax-function: #e9c6ff;
+  --cm-syntax-variable: #7dd3fc;
+  --cm-syntax-number: #7dd3fc;
+  --cm-syntax-operator: #7dd3fc;
+  --cm-syntax-tag: #86efac;
+  --cm-syntax-attribute: #7dd3fc;
+  --cm-syntax-property: #e9c6ff;
+  --cm-syntax-type: #ff9aa2;
+  --cm-syntax-constant: #fbbf24;
+  --cm-syntax-link: #93ddff;
+  --cm-syntax-invalid: #fca5a5;
+  --cm-syntax-deleted: #fecaca;
+  --cm-syntax-deleted-bg: #5f1015;
 }

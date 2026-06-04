@@ -1,9 +1,7 @@
 /**
  * Right-side action cluster for the SettingsSlot header.
  *
- * Reads from {@link useRouteToolbarConfig} — the same source the
- * GlobalToolbar previously used on settings routes — and renders, in
- * order:
+ * Reads from {@link useRouteToolbarConfig} and renders, in order:
  *
  *   1. `extraButtons` (typically refresh + bottom-panel-toggle on app
  *      settings sub-pages, integrations refresh on integration category
@@ -34,9 +32,12 @@ import {
 import Tooltip from "@src/components/Tooltip";
 import { HEADER_ICON_SIZE } from "@src/config/workstation/tokens";
 import { TabBarTrailingIconButton } from "@src/modules/WorkStation/shared/TabBar/components/TabBarTrailingIconButton";
-import type { ToolbarDropdownItem } from "@src/scaffold/GlobalToolbar/components/ToolbarDropdown/types";
-import { useRouteToolbarConfig } from "@src/scaffold/GlobalToolbar/hooks";
-import type { RouteToolbarButton } from "@src/store/ui/routeToolbarAtom";
+import type {
+  RouteToolbarButton,
+  ToolbarDropdownItem,
+} from "@src/store/ui/routeToolbarAtom";
+
+import { useRouteToolbarConfig } from "../hooks/useRouteToolbarConfig";
 
 interface HeaderIconButtonProps {
   item: RouteToolbarButton;

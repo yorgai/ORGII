@@ -6,10 +6,10 @@ import type {
   KanbanTask,
   TaskStatus,
 } from "@src/features/KanbanBoard";
-import type { FactoryViewMode } from "@src/scaffold/GlobalToolbar/components/FactoryViewPill";
 
 import type { DiaryTimelineDisplayMode } from "../../config";
 import DiaryView from "../DiaryView";
+import type { FactoryViewMode } from "../FactoryViewPill";
 import ListView from "../ListView";
 
 export interface TaskKanbanContentProps {

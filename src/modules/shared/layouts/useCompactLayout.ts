@@ -13,9 +13,9 @@
  *
  * - `useIsCompactChromeSurface` — true iff the layout is compact AND
  *   we're not on a route that owns its own wallpaper hero (start
- *   page, repo picker, login, walkthrough). Used by the global toolbar, tab
- *   bar, and `LiquidGlassToolbar` — they sit on top of the wallpaper
- *   region and need to step out of the way on those routes.
+ *   page, repo picker, login, walkthrough). Used by shared chrome that sits
+ *   on top of the wallpaper region and needs to step out of the way on those
+ *   routes.
  */
 import { useAtomValue } from "jotai";
 import { useLocation } from "react-router-dom";

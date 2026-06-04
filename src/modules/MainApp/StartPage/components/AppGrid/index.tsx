@@ -17,7 +17,7 @@
  * Single icon rendering lives in AppGridIcon.tsx.
  */
 import { motion } from "framer-motion";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import React, { useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -28,6 +28,7 @@ import {
   useActionSystemOptional,
 } from "@src/modules/WorkStation/ActionSystem";
 import { appGridConfigAtom } from "@src/store/ui/appGridAtom";
+import { resolvedBackgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
 import { classNames } from "@src/util/ui/classNames";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
@@ -155,6 +156,10 @@ const AppGrid: React.FC<AppGridProps> = ({ className }) => {
   } = useAppGridDrag();
 
   const [gridConfig, setGridConfig] = useAtom(appGridConfigAtom);
+  const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
+  const shouldUseAdaptiveColors = Boolean(
+    backgroundConfig.adaptiveColors && backgroundConfig.selectedImageId
+  );
 
   const sortedApps = useMemo(() => {
     const appMap = new Map(APP_GRID_ITEMS.map((app) => [app.id, app]));
@@ -241,9 +246,14 @@ const AppGrid: React.FC<AppGridProps> = ({ className }) => {
   const itemWidth = gridConfig.horizontalGap + HONEYCOMB_CONFIG.iconSize;
   const maxRowCount = Math.max(...HONEYCOMB_CONFIG.rowPattern);
   const gridWidth = maxRowCount * itemWidth;
-  const iconColor = contentLuminance.isLight
-    ? "rgba(0, 0, 0, 0.8)"
-    : "rgba(255, 255, 255, 0.9)";
+  const iconColor = shouldUseAdaptiveColors
+    ? contentLuminance.isLight
+      ? "rgba(0, 0, 0, 0.8)"
+      : "rgba(255, 255, 255, 0.9)"
+    : "var(--color-text-1)";
+  const labelColor = shouldUseAdaptiveColors
+    ? contentLuminance.textColor
+    : "var(--color-text-1)";
 
   let globalIndex = 0;
 
@@ -277,7 +287,7 @@ const AppGrid: React.FC<AppGridProps> = ({ className }) => {
                   itemWidth={itemWidth}
                   iconSize={HONEYCOMB_CONFIG.iconSize}
                   iconColor={iconColor}
-                  labelColor={contentLuminance.textColor}
+                  labelColor={labelColor}
                   isDark={isDark}
                   glassMaterial={glassMaterial}
                   editMode={editMode}

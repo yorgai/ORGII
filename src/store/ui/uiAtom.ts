@@ -270,15 +270,6 @@ isOnlineAtom.debugLabel = "isOnlineAtom";
 // Global Layout Method (inset / full / compact)
 // ============================================
 
-/** Hide the MainApp tab bar when only one tab is open */
-export const autoHideTabBarAtom = atom(
-  (get) => get(settingsAtom)["general.autoHideTabBar"] as boolean,
-  (_get, set, value: boolean) => {
-    set(updateSettingAtom, { key: "general.autoHideTabBar", value });
-  }
-);
-autoHideTabBarAtom.debugLabel = "autoHideTabBarAtom";
-
 /**
  * Single source of truth for layout density across all surfaces
  * (MainApp, Workstation, Simulator).

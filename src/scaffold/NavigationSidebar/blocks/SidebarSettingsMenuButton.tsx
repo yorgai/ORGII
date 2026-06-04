@@ -29,6 +29,7 @@ import {
   KeyboardShortcut,
 } from "@src/components/KeyboardShortcut";
 import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
+import type { AppearanceMode } from "@src/config/appearance/globalThemes";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { useDropdownEngine } from "@src/hooks/dropdown";
 import { useAppNavigation } from "@src/hooks/navigation";
@@ -80,7 +81,9 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
   const { t: tSettings, i18n } = useTranslation("settings");
   const { goToSettings } = useAppNavigation();
   const ramPanelRef = useRef<HTMLDivElement | null>(null);
+  const submenuPanelRef = useRef<HTMLDivElement | null>(null);
   const preserveRamPanelOnMenuCloseRef = useRef(false);
+  const dropdownInsideRefs = useMemo(() => [submenuPanelRef], []);
   const setLanguagePreference = useSetAtom(languageAtom);
   const [activeSubmenu, setActiveSubmenu] = useState<SettingsSubmenu | null>(
     null
@@ -116,9 +119,11 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
     align: "right",
     gap: DROPDOWN_PANEL.triggerGap,
     onOpenChange: handleSettingsMenuOpenChange,
+    additionalInsideRefs: dropdownInsideRefs,
   });
   const {
     appearanceMode,
+    appearanceModeOptions,
     globalThemeId,
     themeOptions,
     handleAppearanceModeChange,
@@ -216,7 +221,7 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
   }, [closeAll]);
 
   const handleSelectAppearanceMode = useCallback(
-    async (mode: "light" | "dark") => {
+    async (mode: AppearanceMode) => {
       await handleAppearanceModeChange(mode);
       closeAll();
     },
@@ -232,12 +237,19 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
   );
 
   const handleSelectLanguage = useCallback(
-    (language: SupportedLanguage) => {
-      void i18n.changeLanguage(language);
+    async (language: SupportedLanguage) => {
       setLanguagePreference(language);
+      await i18n.changeLanguage(language);
       closeAll();
     },
     [closeAll, i18n, setLanguagePreference]
+  );
+
+  const handleSubmenuPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.stopPropagation();
+    },
+    []
   );
 
   const handleSubmenuMouseDown = useCallback(
@@ -253,25 +265,27 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
     if (activeSubmenu === "appearance") {
       return createPortal(
         <div
+          ref={submenuPanelRef}
           className={`${DROPDOWN_CLASSES.menuPanelWithHeaderBase} ${DROPDOWN_WIDTHS.panelWidthClass} fixed`}
           style={{ left: submenuPosition.left, bottom: submenuPosition.bottom }}
+          onPointerDown={handleSubmenuPointerDown}
           onMouseDown={handleSubmenuMouseDown}
         >
           <div className={DROPDOWN_CLASSES.sectionLabel}>
             {tSettings("general.appearanceMode")}
           </div>
           <div className={DROPDOWN_CLASSES.itemsColumnBelowHeader}>
-            {(["light", "dark"] as const).map((mode) => {
-              const selected = appearanceMode === mode;
+            {appearanceModeOptions.map((option) => {
+              const selected = appearanceMode === option.value;
               return (
                 <button
-                  key={mode}
+                  key={option.value}
                   type="button"
                   className={`${DROPDOWN_CLASSES.menuActionItem} ${selected ? DROPDOWN_CLASSES.itemSelected : ""} justify-between`}
-                  onClick={() => void handleSelectAppearanceMode(mode)}
+                  onClick={() => void handleSelectAppearanceMode(option.value)}
                   aria-selected={selected}
                 >
-                  <span>{tSettings(`general.${mode}`)}</span>
+                  <span>{option.label}</span>
                   {selected && <DropdownSelectedCheck />}
                 </button>
               );
@@ -307,8 +321,10 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
 
     return createPortal(
       <div
+        ref={submenuPanelRef}
         className={`${DROPDOWN_CLASSES.menuPanelWithHeaderBase} ${DROPDOWN_WIDTHS.panelWidthClass} fixed`}
         style={{ left: submenuPosition.left, bottom: submenuPosition.bottom }}
+        onPointerDown={handleSubmenuPointerDown}
         onMouseDown={handleSubmenuMouseDown}
       >
         <div className={DROPDOWN_CLASSES.sectionLabel}>
@@ -323,7 +339,12 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
                   key={language.value}
                   type="button"
                   className={`${DROPDOWN_CLASSES.menuActionItem} ${selected ? DROPDOWN_CLASSES.itemSelected : ""} justify-between`}
-                  onClick={() => handleSelectLanguage(language.value)}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void handleSelectLanguage(language.value);
+                  }}
+                  onClick={() => void handleSelectLanguage(language.value)}
                   aria-selected={selected}
                 >
                   <span>{language.label}</span>

@@ -80,6 +80,8 @@ export interface UseDropdownEngineOptions<
   closeOnEsc?: boolean;
   /** Close when clicking outside trigger and panel */
   closeOnClickOutside?: boolean;
+  /** Additional portal roots that should be treated as part of this dropdown. */
+  additionalInsideRefs?: ReadonlyArray<RefObject<HTMLElement | null>>;
   /**
    * Built-in keyboard list navigation. Pass `items` + `onSelect` to
    * enable Arrow/Home/End/Enter/Escape on the dropdown rows. The
@@ -142,6 +144,7 @@ export function useDropdownEngine<
     align = "left",
     closeOnEsc = true,
     closeOnClickOutside = true,
+    additionalInsideRefs,
     listNavigation,
     autoKeyboardNavigation = true,
   } = options;
@@ -309,27 +312,31 @@ export function useDropdownEngine<
   useEffect(() => {
     if (!isOpen || !closeOnClickOutside) return;
 
-    const handleClickOutside = (event: MouseEvent) => {
+    const handlePointerDownOutside = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
       const currentTrigger = latestTriggerRef.current.current;
       const outsideTrigger = currentTrigger && !currentTrigger.contains(target);
       const outsidePanel =
         panelRef.current && !panelRef.current.contains(target);
+      const outsideAdditionalInsideRefs =
+        additionalInsideRefs?.every(
+          (insideRef) => !insideRef.current?.contains(target)
+        ) ?? true;
 
-      if (outsideTrigger && outsidePanel) {
+      if (outsideTrigger && outsidePanel && outsideAdditionalInsideRefs) {
         setIsOpen(false);
       }
     };
 
     const timeoutId = window.setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("pointerdown", handlePointerDownOutside);
     }, 0);
     return () => {
       window.clearTimeout(timeoutId);
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("pointerdown", handlePointerDownOutside);
     };
-  }, [isOpen, closeOnClickOutside, setIsOpen]);
+  }, [isOpen, closeOnClickOutside, additionalInsideRefs, setIsOpen]);
 
   // ESC key
   useEffect(() => {

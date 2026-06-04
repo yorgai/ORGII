@@ -110,12 +110,6 @@ export const GENERAL_SETTINGS_REGISTRY = {
       helveticaNeue: "Helvetica Neue style",
     },
   },
-  "general.autoHideTabBar": {
-    schema: z.boolean(),
-    default: true,
-    description: "Hide the MainApp global tab bar when only one tab is open",
-    category: "general",
-  },
   "general.globalLayoutMethod": {
     schema: z.enum(["inset", "full", "compact"]),
     default: "compact" as const,

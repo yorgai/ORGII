@@ -10,11 +10,14 @@ import { useNavigate } from "react-router-dom";
 
 import Message from "@src/components/Message";
 import {
+  APPEARANCE_MODE_OPTIONS,
+  type AppearanceMode,
   GLOBAL_THEMES,
-  GLOBAL_THEME_GROUPS,
-  type GlobalThemeId,
+  getAppearanceModeForTheme,
+  getDefaultThemeForAppearanceMode,
   getGlobalTheme,
-  isGlobalThemeId,
+  getThemeOptionsForAppearanceMode,
+  normalizeAppearanceMode,
   normalizeGlobalThemeId,
 } from "@src/config/appearance/globalThemes";
 import type { PrimaryColorPreset } from "@src/config/appearance/primaryColors";
@@ -29,7 +32,7 @@ import {
 import type { BackgroundConfig } from "@src/store/ui/backgroundConfigAtom";
 import { getStorageInfo } from "@src/util/core/storage/backgroundImage";
 import { setLiquidGlassThickness } from "@src/util/platform/ipcRenderer";
-import { prewarmColorPair } from "@src/util/ui/theme/glassMaterial";
+import { prewarmColor } from "@src/util/ui/theme/glassMaterial";
 import { preloadThemeCss, swapThemeCss } from "@src/util/ui/theme/swapThemeCss";
 import { showThemeTransitionCover } from "@src/util/ui/theme/themeTransitionCover";
 
@@ -48,7 +51,8 @@ export interface UseBackgroundSettingsReturn {
   config: BackgroundConfig;
   globalThemeId: string;
   isDarkTheme: boolean;
-  appearanceMode: "light" | "dark";
+  appearanceMode: AppearanceMode;
+  appearanceModeOptions: { label: string; value: AppearanceMode }[];
   themeOptions: { labelKey: string; value: string }[];
   isOptimizing: boolean;
   images: Map<string, string>;
@@ -92,20 +96,26 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
   const { images, saveImage, removeImage, migrateImages } =
     useBackgroundImageStorage();
 
-  // Determine if dark theme is active
   const isDarkTheme = getGlobalTheme(globalThemeId).isDark;
-  const appearanceMode = isDarkTheme ? "dark" : "light";
+  const appearanceMode = getAppearanceModeForTheme(globalThemeId);
 
-  const themeOptions = useMemo(() => {
-    const ids =
-      appearanceMode === "dark"
-        ? GLOBAL_THEME_GROUPS.dark
-        : GLOBAL_THEME_GROUPS.light;
-    return ids.map((themeId) => ({
-      labelKey: GLOBAL_THEMES[themeId].i18nKey,
-      value: themeId,
-    }));
-  }, [appearanceMode]);
+  const appearanceModeOptions = useMemo(
+    () =>
+      APPEARANCE_MODE_OPTIONS.map((mode) => ({
+        label: t(`general.${mode}`),
+        value: mode,
+      })),
+    [t]
+  );
+
+  const themeOptions = useMemo(
+    () =>
+      getThemeOptionsForAppearanceMode(appearanceMode).map((themeId) => ({
+        labelKey: GLOBAL_THEMES[themeId].i18nKey,
+        value: themeId,
+      })),
+    [appearanceMode]
+  );
 
   // Load storage info
   useEffect(() => {
@@ -204,21 +214,12 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
     preloadThemeCss(uniquePaths);
   }, []);
 
-  // Prewarm the glass-material cache for both sides of the active color
-  // pair so flipping the appearance mode is instantaneous (no async sampling
-  // or per-component microtask hop). The color path is fully synchronous,
-  // so this finishes within a single tick.
-  //
-  // Note: we deliberately do NOT mirror the resolved hex back into
-  // `config.backgroundColor` here — `resolvedBackgroundConfigAtom` already
-  // derives that reactively for every renderer, and writing it back would
-  // cause an extra `localStorage` round-trip on every theme flip.
   useEffect(() => {
     if (!config.backgroundColorId) return;
     const pair = getColorPairById(config.backgroundColorId);
     if (!pair) return;
-    prewarmColorPair(pair.light, pair.dark);
-  }, [config.backgroundColorId]);
+    prewarmColor(resolveColorPair(pair));
+  }, [config.backgroundColorId, globalThemeId]);
 
   // Undo/redo for config changes (Ctrl+Z / Cmd+Z)
   const undoStack = useUndoStackWithRestore<BackgroundConfig>({
@@ -271,12 +272,12 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
         ...config,
         imageUrl: "",
         selectedImageId: undefined,
-        backgroundColor: resolveColorPair(pair, isDarkTheme),
+        backgroundColor: resolveColorPair(pair),
         backgroundColorId: pair.id,
         liquidGlass: undefined,
       });
     },
-    [config, isDarkTheme, setConfigWithUndo]
+    [config, setConfigWithUndo]
   );
 
   const handleAnimationSelect = useCallback(
@@ -379,7 +380,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
             ...nextConfig,
             imageUrl: "",
             selectedImageId: undefined,
-            backgroundColor: resolveColorPair(firstPair, isDarkTheme),
+            backgroundColor: resolveColorPair(firstPair),
             backgroundColorId: firstPair.id,
             liquidGlass: undefined,
           };
@@ -388,7 +389,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
 
       setConfigWithUndo(nextConfig);
     },
-    [config, isDarkTheme, setConfigWithUndo]
+    [config, setConfigWithUndo]
   );
 
   const handleBlurChange = useCallback(
@@ -428,35 +429,11 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
 
   const handleAppearanceModeChange = useCallback(
     (value: string | number | (string | number)[]) => {
-      const selectedMode =
-        String(Array.isArray(value) ? value[0] : value) === "dark"
-          ? "dark"
-          : "light";
-      const currentThemeId = normalizeGlobalThemeId(globalThemeId);
-      const getVariantThemeId = (
-        id: GlobalThemeId,
-        mode: "light" | "dark"
-      ): GlobalThemeId | null => {
-        if (id.endsWith("-light") || id.endsWith("-dark")) {
-          const variantId = id.replace(/-(light|dark)$/, `-${mode}`);
-          if (isGlobalThemeId(variantId)) {
-            return variantId;
-          }
-        }
-        return null;
-      };
-      const matchedVariant = getVariantThemeId(currentThemeId, selectedMode);
-      if (matchedVariant) {
-        applyThemeChange(matchedVariant);
-        return;
-      }
-      const fallbackThemeId =
-        selectedMode === "dark"
-          ? GLOBAL_THEME_GROUPS.dark[0]
-          : GLOBAL_THEME_GROUPS.light[0];
-      applyThemeChange(fallbackThemeId);
+      const rawMode = String(Array.isArray(value) ? value[0] : value);
+      const selectedMode = normalizeAppearanceMode(rawMode);
+      applyThemeChange(getDefaultThemeForAppearanceMode(selectedMode));
     },
-    [applyThemeChange, globalThemeId]
+    [applyThemeChange]
   );
 
   const handleMatrixCharSetChange = useCallback(
@@ -475,6 +452,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
     globalThemeId,
     isDarkTheme,
     appearanceMode,
+    appearanceModeOptions,
     themeOptions,
     isOptimizing,
     images,

@@ -6,6 +6,53 @@
  * Note: These variables are actively used throughout the codebase via Tailwind config
  * and direct CSS variable references. Migration to custom tokens can be done incrementally.
  */
+:root {
+  /* Background color slots */
+  --bg-1: #0b0b0f;
+  --bg-2: #2d2d2d;
+  --bg-3: #3d4f5f;
+  --bg-4: #1a1a2e;
+  --bg-5: #1e3a5f;
+  --bg-6: #0f3460;
+  --bg-7: #22264b;
+  --bg-8: #0f4c5c;
+  --bg-9: #1a3c34;
+  --bg-10: #1f3a2e;
+  --bg-11: #2e382a;
+  --bg-12: #3d1f3d;
+  --bg-13: #3a1b33;
+  --bg-14: #4a1c2e;
+  --bg-15: #4a1518;
+  --bg-16: #3a2418;
+  --bg-17: #3a2a12;
+  --bg-18: #2c2618;
+  --bg-19: #2a1f18;
+
+  /* Code editor */
+  --cm-editor-background: #0d1117;
+  --cm-editor-foreground: #c9d1d9;
+  --cm-editor-selection: #003d73;
+  --cm-editor-gutter-bg: var(--cm-editor-background);
+  --cm-editor-gutter-fg: #8b949e;
+  --cm-editor-line-highlight: #36334280;
+  --cm-syntax-keyword: #ff7b72;
+  --cm-syntax-string: #a5d6ff;
+  --cm-syntax-comment: #8b949e;
+  --cm-syntax-function: #d2a8ff;
+  --cm-syntax-variable: #79c0ff;
+  --cm-syntax-number: #79c0ff;
+  --cm-syntax-operator: #79c0ff;
+  --cm-syntax-tag: #7ee787;
+  --cm-syntax-attribute: #79c0ff;
+  --cm-syntax-property: #d2a8ff;
+  --cm-syntax-type: #ff7b72;
+  --cm-syntax-constant: #ffab70;
+  --cm-syntax-link: #a5d6ff;
+  --cm-syntax-invalid: #f97583;
+  --cm-syntax-deleted: #ffdcd7;
+  --cm-syntax-deleted-bg: #ffeef0;
+}
+
 body {
   --color-bg-1: #0f0f0f;
   --color-bg-2: #141414;
@@ -77,4 +124,49 @@ body {
   --color-warning-4: #ffb65d;
   --color-warning-5: #ff9a2e;
   --color-warning-6: #ff7d00;
+
+  /* Background color slots */
+  --bg-1: #0b0b0f;
+  --bg-2: #2d2d2d;
+  --bg-3: #3d4f5f;
+  --bg-4: #1a1a2e;
+  --bg-5: #1e3a5f;
+  --bg-6: #0f3460;
+  --bg-7: #22264b;
+  --bg-8: #0f4c5c;
+  --bg-9: #1a3c34;
+  --bg-10: #1f3a2e;
+  --bg-11: #2e382a;
+  --bg-12: #3d1f3d;
+  --bg-13: #3a1b33;
+  --bg-14: #4a1c2e;
+  --bg-15: #4a1518;
+  --bg-16: #3a2418;
+  --bg-17: #3a2a12;
+  --bg-18: #2c2618;
+  --bg-19: #2a1f18;
+
+  /* Code editor */
+  --cm-editor-background: #0d1117;
+  --cm-editor-foreground: #c9d1d9;
+  --cm-editor-selection: #003d73;
+  --cm-editor-gutter-bg: var(--cm-editor-background);
+  --cm-editor-gutter-fg: #8b949e;
+  --cm-editor-line-highlight: #36334280;
+  --cm-syntax-keyword: #ff7b72;
+  --cm-syntax-string: #a5d6ff;
+  --cm-syntax-comment: #8b949e;
+  --cm-syntax-function: #d2a8ff;
+  --cm-syntax-variable: #79c0ff;
+  --cm-syntax-number: #79c0ff;
+  --cm-syntax-operator: #79c0ff;
+  --cm-syntax-tag: #7ee787;
+  --cm-syntax-attribute: #79c0ff;
+  --cm-syntax-property: #d2a8ff;
+  --cm-syntax-type: #ff7b72;
+  --cm-syntax-constant: #ffab70;
+  --cm-syntax-link: #a5d6ff;
+  --cm-syntax-invalid: #f97583;
+  --cm-syntax-deleted: #ffdcd7;
+  --cm-syntax-deleted-bg: #ffeef0;
 }

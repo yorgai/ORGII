@@ -1,6 +1,6 @@
 import { memo } from "react";
 
-import StationModePill from "@src/scaffold/GlobalToolbar/components/StationModePill";
+import StationModePill from "./StationModePill";
 
 export const StationModeChip = memo(StationModePill);
 StationModeChip.displayName = "StationModeChip";

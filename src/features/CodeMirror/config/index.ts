@@ -17,11 +17,6 @@ export {
   createCodeMirrorTheme,
 } from "./themeConfig";
 
-export {
-  getEditorChromeSurface,
-  type EditorChromeSurface,
-} from "./editorChromeSurface";
-
 // Editor extensions (indent guides, fold gutter)
 export {
   editorHistoryKeymapExtension,
