@@ -13,11 +13,11 @@
 import { ArrowDown } from "lucide-react";
 import React, { memo } from "react";
 
+import Button from "@src/components/Button";
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
 import Tooltip from "@src/components/Tooltip";
 
 import type { ScrollNavState } from "../../ChatHistory";
-import StackPill from "./StackPill";
 
 export interface InlineSection {
   key: string;
@@ -42,6 +42,19 @@ export interface CollapsedInlineRowProps {
   scrollNav?: ScrollNavState | null;
 }
 
+function renderSectionContent(section: InlineSection) {
+  if (section.iconOnly) return null;
+  if (section.content) return section.content;
+  return section.label ?? section.count;
+}
+
+function getButtonClassName(section: InlineSection) {
+  const activeClassName = section.active ? "!bg-fill-1 !text-primary-6" : "";
+  const primaryClassName =
+    section.variant === "primary" ? "!border-primary-5 !text-primary-6" : "";
+  return `${activeClassName} ${primaryClassName}`.trim();
+}
+
 const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
   ({ sections, scrollNav }) => {
     const showScrollToBottom = scrollNav?.showScrollToBottom ?? false;
@@ -53,18 +66,20 @@ const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
     return (
       <div className="flex items-center gap-1 px-0.5">
         {sections.map((section) => (
-          <StackPill
+          <Button
             key={section.key}
+            variant="secondary"
+            appearance="outline"
+            size="small"
+            shape="round"
             icon={section.icon}
-            count={section.count}
-            active={section.active}
-            onClick={section.onExpand}
-            label={section.label}
-            variant={section.variant}
             iconOnly={section.iconOnly}
-            content={section.content}
-            testId={section.testId}
-          />
+            onClick={section.onExpand}
+            data-testid={section.testId}
+            className={getButtonClassName(section)}
+          >
+            {renderSectionContent(section)}
+          </Button>
         ))}
 
         {hasTrailing && (
@@ -82,23 +97,28 @@ const CollapsedInlineRow: React.FC<CollapsedInlineRowProps> = memo(
                 framedPanel
               >
                 <span className="inline-flex">
-                  <StackPill
-                    count={0}
-                    active={false}
+                  <Button
+                    variant="secondary"
+                    appearance="outline"
+                    size="small"
+                    shape="round"
                     onClick={scrollNav!.onFollowAgent}
-                    label={scrollNav!.followAgentLabel}
-                    ariaLabel={scrollNav!.followAgentTooltipLabel}
-                  />
+                    aria-label={scrollNav!.followAgentTooltipLabel}
+                  >
+                    {scrollNav!.followAgentLabel}
+                  </Button>
                 </span>
               </Tooltip>
             )}
             {showScrollToBottom && (
-              <StackPill
-                icon={<ArrowDown size={13} />}
-                count={0}
-                active={false}
-                onClick={scrollNav!.onScrollToBottom}
+              <Button
+                variant="secondary"
+                appearance="outline"
+                size="small"
+                shape="round"
+                icon={<ArrowDown size={14} />}
                 iconOnly
+                onClick={scrollNav!.onScrollToBottom}
               />
             )}
           </div>

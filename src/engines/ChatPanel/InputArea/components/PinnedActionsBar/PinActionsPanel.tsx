@@ -14,7 +14,9 @@ import { useTranslation } from "react-i18next";
 import {
   DROPDOWN_CLASSES,
   DROPDOWN_ITEM,
+  DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
+import { useDropdownEngine } from "@src/hooks/dropdown";
 import type { PinnedAction } from "@src/store/session/pinnedActionsAtom";
 import type { SlashItem } from "@src/types/extensions";
 import { fuzzyMatch, fuzzyScore } from "@src/util/search/fuzzy";
@@ -66,8 +68,6 @@ function slashItemToAction(item: SlashItem): PinnedAction {
 interface PinActionsPanelProps {
   /** Whether the panel is visible. */
   visible: boolean;
-  /** Bounding rect of the trigger button — used to position the panel. */
-  anchorRect: DOMRect | null;
   /** All available slash items to choose from. */
   availableItems: SlashItem[];
   /** Currently pinned actions. */
@@ -89,7 +89,6 @@ interface PinActionsPanelProps {
 const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
   ({
     visible,
-    anchorRect,
     availableItems,
     pinnedActions,
     onTogglePin,
@@ -100,7 +99,6 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
     const { t } = useTranslation("sessions");
     const [query, setQuery] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
-    const panelRef = useRef<HTMLDivElement>(null);
 
     // Reset query and autofocus whenever panel opens.
     useEffect(() => {
@@ -111,40 +109,6 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
         });
       }
     }, [visible]);
-
-    // Click-outside closes the panel.
-    // Clicks on the trigger button are excluded so the parent's toggle logic
-    // can run without the panel immediately re-opening (double-toggle).
-    useEffect(() => {
-      if (!visible) return;
-      const handler = (event: MouseEvent) => {
-        const target = event.target;
-        if (!(target instanceof Node)) return;
-        if (panelRef.current?.contains(target)) return;
-        if (triggerRef?.current?.contains(target)) return;
-        onClose();
-      };
-      document.addEventListener("mousedown", handler);
-      return () => document.removeEventListener("mousedown", handler);
-    }, [visible, onClose, triggerRef]);
-
-    // Escape closes the panel only when focus is inside it, to avoid
-    // stealing Escape from the slash command menu or composer.
-    useEffect(() => {
-      if (!visible) return;
-      const handler = (e: KeyboardEvent) => {
-        if (e.key !== "Escape") return;
-        if (
-          panelRef.current &&
-          panelRef.current.contains(document.activeElement)
-        ) {
-          e.stopPropagation();
-          onClose();
-        }
-      };
-      document.addEventListener("keydown", handler, true);
-      return () => document.removeEventListener("keydown", handler, true);
-    }, [visible, onClose]);
 
     const pinnedKeys = new Set(pinnedActions.map(actionKey));
 
@@ -172,35 +136,43 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
       [onTogglePin]
     );
 
-    if (!visible || !anchorRect) return null;
+    const { isPositioned, panelRef, panelPosition, keyboard } =
+      useDropdownEngine<HTMLButtonElement, SlashItem>({
+        open: visible,
+        onOpenChange: (open) => {
+          if (!open) onClose();
+        },
+        anchorRef: triggerRef,
+        placement: "top",
+        align: "right",
+        gap: DROPDOWN_PANEL.triggerGapTight,
+        listNavigation: {
+          items: filteredItems,
+          onSelect: handleToggle,
+          initialSelectedIndex: -1,
+        },
+      });
+
+    if (!visible || !isPositioned) return null;
 
     const PANEL_WIDTH = 240;
-    const GAP = 6;
     const VIEWPORT_PADDING = 8;
-    const preferredLeft = anchorRect.left;
-    const rightAlignedLeft = anchorRect.right - PANEL_WIDTH;
-    const hasRoomOnRight =
-      preferredLeft + PANEL_WIDTH <= window.innerWidth - VIEWPORT_PADDING;
-    const hasRoomOnLeft = rightAlignedLeft >= VIEWPORT_PADDING;
-    const left = Math.min(
-      Math.max(
-        hasRoomOnRight
-          ? preferredLeft
-          : hasRoomOnLeft
-            ? rightAlignedLeft
-            : preferredLeft,
-        VIEWPORT_PADDING
-      ),
-      window.innerWidth - PANEL_WIDTH - VIEWPORT_PADDING
+    const alignedLeft =
+      panelPosition.right !== undefined
+        ? window.innerWidth - panelPosition.right - PANEL_WIDTH
+        : panelPosition.left;
+    const left = Math.max(
+      VIEWPORT_PADDING,
+      Math.min(alignedLeft, window.innerWidth - PANEL_WIDTH - VIEWPORT_PADDING)
     );
-    const bottom = window.innerHeight - (anchorRect.top - GAP);
 
     return createPortal(
       <div
         ref={panelRef}
         className={`fixed z-[99999] flex flex-col ${DROPDOWN_CLASSES.menuPanelWithHeader}`}
         style={{
-          bottom,
+          top: panelPosition.top,
+          bottom: panelPosition.bottom,
           left,
           width: PANEL_WIDTH,
         }}
@@ -247,10 +219,7 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
                 key={key}
                 type="button"
                 className={`${DROPDOWN_CLASSES.menuControlItem} min-w-0`}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  handleToggle(item);
-                }}
+                {...keyboard.getItemProps(filteredItems.indexOf(item))}
               >
                 <div className="flex min-w-0 items-center">
                   <span className="truncate text-[12px] font-medium text-text-1">
