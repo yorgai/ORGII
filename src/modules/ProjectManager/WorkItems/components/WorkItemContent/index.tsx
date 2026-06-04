@@ -3,16 +3,14 @@ import React, { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import TabPill from "@src/components/TabPill";
-import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { useWorkItemImageInsert } from "@src/hooks/project";
 import {
   ProjectContentEditor,
   type ProjectContentEditorRef,
 } from "@src/modules/ProjectManager/shared";
 import { DetailPanelContainer } from "@src/modules/shared/layouts/blocks";
-import type { LinkedSession, WorkItemStatus } from "@src/types/core/workItem";
+import type { LinkedSession } from "@src/types/core/workItem";
 
-import AgentWorkflow from "../AgentWorkflow";
 import TodoChecklist from "../TodoChecklist";
 import WorkItemContentStack from "../WorkItemContentStack";
 import HistoryTab from "./HistoryTab";
@@ -23,15 +21,11 @@ import type { SessionTab, WorkItemContentProps } from "./types";
 interface LinkedSessionsListProps {
   sessions: LinkedSession[];
   onOpenSession?: (sessionId: string) => void;
-  onStartAgent?: (instructions?: string) => void;
-  isStartingAgent?: boolean;
 }
 
 const LinkedSessionsList: React.FC<LinkedSessionsListProps> = ({
   sessions,
   onOpenSession,
-  onStartAgent,
-  isStartingAgent,
 }) => {
   const { t } = useTranslation("projects");
 
@@ -41,18 +35,6 @@ const LinkedSessionsList: React.FC<LinkedSessionsListProps> = ({
         <h4 className="m-0 text-[12px] font-semibold text-text-2">
           {t("workItems.sessions.linkedSessions")}
         </h4>
-        {onStartAgent && (
-          <button
-            type="button"
-            className="rounded-md border border-solid border-border-2 bg-bg-1 px-2 py-1 text-[11px] font-medium text-text-2 transition-colors hover:border-border-3 hover:bg-surface-hover hover:text-text-1 disabled:cursor-not-allowed disabled:opacity-50"
-            onClick={() => onStartAgent()}
-            disabled={isStartingAgent}
-          >
-            {isStartingAgent
-              ? t("workItems.sessions.starting")
-              : t("workItems.sessions.newSession")}
-          </button>
-        )}
       </div>
       {sessions.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border-2 bg-fill-1 px-3 py-4">
@@ -75,7 +57,10 @@ const LinkedSessionsList: React.FC<LinkedSessionsListProps> = ({
             >
               <span className="min-w-0">
                 <span className="block truncate text-[12px] font-medium text-text-1">
-                  {session.agent_role || session.session_id}
+                  {session.result_preview ||
+                    session.sub_agent_name ||
+                    session.agent_role ||
+                    session.session_id}
                 </span>
                 <span className="mt-0.5 block truncate text-[11px] text-text-3">
                   {session.status} · {session.session_type}
@@ -105,7 +90,6 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
   projectSlug,
   shortId,
   onStartAgent,
-  isStartingAgent,
   onCancelAgent,
   onRetry,
   onAcceptAsIs,
@@ -114,9 +98,7 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
   onOpenFileDiff,
   onOpenFileAtLine,
   onReviewAllFiles,
-  onRefreshWorkflow,
   activeAgentSessionId,
-  activeAgentRole,
   onCreatePr,
 }) => {
   const { t } = useTranslation("projects");
@@ -200,42 +182,10 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
       </div>
 
       {activeSessionTab === "session" && (
-        <>
-          {(workItem.orchestratorConfig ||
-            workItem.orchestratorState ||
-            workItem.executionLock ||
-            (workItem.linkedSessions?.length ?? 0) > 0) && (
-            <div className={DETAIL_PANEL_TOKENS.sectionGap}>
-              <AgentWorkflow
-                orchestratorState={workItem.orchestratorState}
-                orchestratorConfig={workItem.orchestratorConfig}
-                proofOfWork={workItem.proofOfWork}
-                workItemStatus={
-                  workItem.workItemStatus ?? (workItem.status as WorkItemStatus)
-                }
-                executionLock={workItem.executionLock}
-                linkedSessions={workItem.linkedSessions}
-                onStartAgent={onStartAgent}
-                isStartingAgent={isStartingAgent}
-                onCancel={onCancelAgent}
-                onRetry={onRetry}
-                onAcceptAsIs={onAcceptAsIs}
-                onCreateFollowUp={onCreateFollowUp}
-                onOpenSession={onOpenSession}
-                onOpenFileAtLine={onOpenFileAtLine}
-                onRefresh={onRefreshWorkflow}
-                activeAgentSessionId={activeAgentSessionId}
-                activeAgentRole={activeAgentRole}
-              />
-            </div>
-          )}
-          <LinkedSessionsList
-            sessions={workItem.linkedSessions ?? []}
-            onOpenSession={onOpenSession}
-            onStartAgent={onStartAgent}
-            isStartingAgent={isStartingAgent}
-          />
-        </>
+        <LinkedSessionsList
+          sessions={workItem.linkedSessions ?? []}
+          onOpenSession={onOpenSession}
+        />
       )}
 
       {activeSessionTab === "output" && (

@@ -4,6 +4,7 @@ import {
   Clipboard,
   FolderOutput,
   GalleryThumbnails,
+  Link2,
   ListChevronsDownUp,
   MoreHorizontal,
   PanelRight,
@@ -16,6 +17,9 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import {
+  type LinkedSession,
+  type WorkItemData,
+  type WorkItemFrontmatter,
   enrichedWorkItemToUI,
   projectApi,
   workItemDataToUI,
@@ -33,6 +37,7 @@ import {
 import InlineAlert from "@src/components/InlineAlert";
 import Input from "@src/components/Input";
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
+import Message from "@src/components/Message";
 import RegionNoticeButton from "@src/components/RegionNoticeButton";
 import Select, { type SelectOption } from "@src/components/Select";
 import SessionHoverCard from "@src/components/SessionHoverCard";
@@ -49,6 +54,8 @@ import {
   clearSessionAtom,
   eventsAtom,
 } from "@src/engines/SessionCore/core/atoms";
+import type { SessionLaunchSuccessInfo } from "@src/engines/SessionCore/hooks/session/useSessionCreator/useSessionLaunch/types";
+import { SESSION_CREATOR_LAUNCH_MODE } from "@src/features/SessionCreator/types";
 import { useBenchmarkRun } from "@src/hooks/benchmark/useBenchmarkRun";
 import { useBenchmarkTasks } from "@src/hooks/benchmark/useBenchmarkTasks";
 import { useDropdownEngine } from "@src/hooks/dropdown";
@@ -92,9 +99,11 @@ import { triggerCollapseAllAtom } from "@src/store/ui/collapseStateAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
 import type { WorkItemDraft } from "@src/store/workstation/projectManager";
 import { createBenchmarkTab } from "@src/store/workstation/tabs";
+import { getDispatchCategory } from "@src/util/session/sessionDispatch";
 
 import { useReloadSession } from "./ChatHistory/hooks/useReloadSession";
 import ChatView from "./ChatView";
+import LinkSessionToWorkItemModal from "./LinkSessionToWorkItemModal";
 import WorkItemPanelView from "./WorkItemPanelView";
 import { useChatPanelResize } from "./hooks/useChatPanelResize";
 import { usePanelTitle } from "./hooks/usePanelTitle";
@@ -111,6 +120,26 @@ const CHAT_PANEL_HEADER_PROMINENT_ICON_SIZE = 16;
 // dropdown is a shortcut that opens a fresh Agent session with this agent
 // pre-selected.
 const AGENT_ARCHITECT_DEF_ID = "builtin:agent-architect";
+const AI_WORK_ITEM_DEFAULT_TITLE = "AI Work Item Draft";
+
+interface AiWorkItemLaunchMetadata {
+  shortId: string;
+  projectSlug: string;
+  projectId: string;
+  projectName: string;
+  item: WorkItemData;
+}
+
+function isAiWorkItemLaunchMetadata(
+  metadata: unknown
+): metadata is AiWorkItemLaunchMetadata {
+  return (
+    !!metadata &&
+    typeof metadata === "object" &&
+    "shortId" in metadata &&
+    "item" in metadata
+  );
+}
 
 const ChatPanel: React.FC<ChatPanelProps> = memo(
   ({
@@ -256,6 +285,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       chatTurnPaginationEnabledAtom
     );
     const [isExportModalOpen, setExportModalOpen] = useState(false);
+    const [isLinkWorkItemModalOpen, setLinkWorkItemModalOpen] = useState(false);
+    const [workItemCreateAiEnabled, setWorkItemCreateAiEnabled] =
+      useState(true);
 
     const triggerCollapseAll = useSetAtom(triggerCollapseAllAtom);
     const setActiveSessionId = useSetAtom(activeSessionIdAtom);
@@ -264,6 +296,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     );
     const setSelectedWorkItem = useSetAtom(chatPanelSelectedWorkItemAtom);
     const dispatchClearSession = useSetAtom(clearSessionAtom);
+    const creatorState = useAtomValue(sessionCreatorStateAtom);
     const setCreatorState = useSetAtom(sessionCreatorStateAtom);
     const allAgentDefs = useAtomValue(allAgentDefsAtom);
 
@@ -338,6 +371,23 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const handleCloseExportSessionJson = useCallback(() => {
       setExportModalOpen(false);
+    }, []);
+
+    const handleOpenLinkWorkItem = useCallback(() => {
+      if (!currentSessionId) {
+        Message.warning("Open a session before linking a Work Item.");
+        return;
+      }
+      setLinkWorkItemModalOpen(true);
+      closeHeaderActionsMenu();
+    }, [closeHeaderActionsMenu, currentSessionId]);
+
+    const handleCloseLinkWorkItem = useCallback(() => {
+      setLinkWorkItemModalOpen(false);
+    }, []);
+
+    const handleSessionLinkedToWorkItem = useCallback(() => {
+      void emit("orgii-data-changed", new Date().toISOString());
     }, []);
 
     // ── Render ───────────────────────────────────────────────────────
@@ -508,6 +558,253 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       ]
     );
 
+    const resolveAiWorkItemAssignee = useCallback(
+      (draft: WorkItemDraft) => {
+        if (draft.assigneeType === "agent" && draft.assigneeId) {
+          const agentName =
+            allAgentDefs.find((agent) => agent.id === draft.assigneeId)?.name ??
+            draft.assigneeId;
+          return {
+            assigneeId: draft.assigneeId,
+            assigneeType: "agent",
+            assigneeName: agentName,
+            agentDefinitionId: draft.assigneeId,
+          };
+        }
+
+        if (draft.assigneeType === "org" && draft.assigneeId) {
+          return {
+            assigneeId: draft.assigneeId,
+            assigneeType: "org",
+            assigneeName: creatorState.agentName ?? draft.assigneeId,
+            agentDefinitionId: draft.orchestratorConfig?.agent_definition_id,
+          };
+        }
+
+        if (
+          creatorState.targetKind === SESSION_TARGET_KIND.AGENT_ORG &&
+          creatorState.selectedAgentOrgId
+        ) {
+          return {
+            assigneeId: creatorState.selectedAgentOrgId,
+            assigneeType: "org",
+            assigneeName:
+              creatorState.agentName ?? creatorState.selectedAgentOrgId,
+            agentDefinitionId:
+              creatorState.selectedAgentDefinitionId ?? undefined,
+          };
+        }
+
+        if (creatorState.selectedAgentDefinitionId) {
+          const agent = allAgentDefs.find(
+            (definition) =>
+              definition.id === creatorState.selectedAgentDefinitionId
+          );
+          return {
+            assigneeId: creatorState.selectedAgentDefinitionId,
+            assigneeType: "agent",
+            assigneeName:
+              agent?.name ??
+              creatorState.agentName ??
+              creatorState.selectedAgentDefinitionId,
+            agentDefinitionId: creatorState.selectedAgentDefinitionId,
+          };
+        }
+
+        return null;
+      },
+      [
+        allAgentDefs,
+        creatorState.agentName,
+        creatorState.selectedAgentDefinitionId,
+        creatorState.selectedAgentOrgId,
+        creatorState.targetKind,
+      ]
+    );
+
+    const resolveAiWorkItemContext = useCallback(async () => {
+      const draft = workItemCreateDraft;
+      if (!draft) return null;
+
+      const assignee = resolveAiWorkItemAssignee(draft);
+      if (!assignee) {
+        Message.error("Choose an agent assignee before creating with AI.");
+        return null;
+      }
+
+      const projects = await projectApi.readProjects();
+      const selectedProject = draft.projectId
+        ? projects.find((project) => project.meta.id === draft.projectId)
+        : projects[0];
+      const selectedProjectSlug = selectedProject?.slug ?? "";
+      const selectedProjectId =
+        selectedProject?.meta.id ?? draft.projectId ?? "";
+      const selectedProjectName = selectedProject?.meta.name ?? "";
+      const now = new Date().toISOString();
+      const shortId = selectedProjectSlug
+        ? await projectApi.allocateWorkItemId(selectedProjectSlug)
+        : await projectApi.allocateStandaloneWorkItemId();
+      const title = draft.name.trim() || AI_WORK_ITEM_DEFAULT_TITLE;
+      const description = draft.description.trim();
+      const frontmatter: WorkItemFrontmatter = {
+        id: shortId,
+        short_id: shortId,
+        title,
+        project: selectedProjectId || undefined,
+        status: draft.status || "planned",
+        priority: draft.priority || "none",
+        assignee: assignee.assigneeId,
+        assignee_type: assignee.assigneeType,
+        labels: draft.labelIds,
+        milestone: draft.milestoneId,
+        start_date: draft.startDate,
+        target_date: draft.targetDate,
+        created_at: now,
+        updated_at: now,
+        starred: false,
+        todos: [],
+        orchestrator_config: {
+          ...(draft.orchestratorConfig ?? {
+            review_enabled: false,
+            follow_up_enabled: false,
+            auto_retry_on_failure: false,
+            max_retry_count: 0,
+            auto_create_pr: false,
+          }),
+          agent_definition_id: assignee.agentDefinitionId,
+          org_id:
+            assignee.assigneeType === "org" ? assignee.assigneeId : undefined,
+        },
+        schedule: draft.schedule ?? undefined,
+      };
+
+      if (selectedProjectSlug) {
+        await projectApi.writeWorkItem(
+          selectedProjectSlug,
+          shortId,
+          frontmatter,
+          description
+        );
+      } else {
+        await projectApi.writeStandaloneWorkItem(
+          shortId,
+          frontmatter,
+          description
+        );
+      }
+
+      const item: WorkItemData = {
+        frontmatter,
+        body: description,
+        filename: `${shortId}.md`,
+      };
+
+      return {
+        workItemId: shortId,
+        projectSlug: selectedProjectSlug || undefined,
+        agentRole: "custom",
+        metadata: {
+          shortId,
+          projectSlug: selectedProjectSlug,
+          projectId: selectedProjectId,
+          projectName: selectedProjectName,
+          item,
+        },
+      };
+    }, [resolveAiWorkItemAssignee, workItemCreateDraft]);
+
+    const handleAiWorkItemSessionStart = useCallback(
+      async (info: SessionLaunchSuccessInfo) => {
+        const metadata = info.workItemContext?.metadata;
+        if (!isAiWorkItemLaunchMetadata(metadata)) return;
+
+        const startedAt = new Date().toISOString();
+        const linkedSession: LinkedSession = {
+          session_id: info.sessionId,
+          session_type:
+            getDispatchCategory(info.sessionId) === "cli_agent"
+              ? "cli"
+              : "native",
+          agent_role: "custom",
+          started_at: startedAt,
+          status: "running",
+          cost_usd: 0,
+          total_tokens: 0,
+          result_preview: "Plan",
+        };
+        const updatedItem: WorkItemData = {
+          ...metadata.item,
+          frontmatter: {
+            ...metadata.item.frontmatter,
+            linked_sessions: [linkedSession],
+            updated_at: startedAt,
+          },
+        };
+
+        if (metadata.projectSlug) {
+          await projectApi.updateWorkItemPartial(
+            metadata.projectSlug,
+            metadata.shortId,
+            { linkedSessions: [linkedSession] }
+          );
+        } else {
+          await projectApi.writeStandaloneWorkItem(
+            metadata.shortId,
+            updatedItem.frontmatter,
+            updatedItem.body
+          );
+        }
+
+        const workItem = workItemDataToUI(updatedItem, {
+          labelMap: new Map(),
+          memberMap: new Map(),
+        });
+        setSelectedWorkItem({
+          shortId: metadata.shortId,
+          projectSlug: metadata.projectSlug,
+          projectId: metadata.projectId,
+          projectName: metadata.projectName,
+          workItem,
+        });
+        setWorkItemCreateAiEnabled(true);
+        setWorkItemCreateDraft(null);
+        setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
+        setContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        dispatchClearSession();
+        setWorkstationActiveSessionId(null);
+        setActiveSessionId(null);
+        await emit("orgii-data-changed");
+      },
+      [
+        dispatchClearSession,
+        setActiveSessionId,
+        setContentMode,
+        setCreateTarget,
+        setSelectedWorkItem,
+        setWorkstationActiveSessionId,
+      ]
+    );
+
+    const defaultAiWorkItemAssignee = useMemo(() => {
+      const fallbackDraft: WorkItemDraft = {
+        name: "",
+        description: "",
+        status: "planned",
+        priority: "none",
+        labelIds: [],
+      };
+      const resolved = resolveAiWorkItemAssignee(
+        workItemCreateDraft ?? fallbackDraft
+      );
+      if (!resolved) return null;
+      return {
+        id: resolved.assigneeId,
+        name: resolved.assigneeName,
+        type: resolved.assigneeType as "agent" | "org",
+        agentDefinitionId: resolved.agentDefinitionId,
+      };
+    }, [resolveAiWorkItemAssignee, workItemCreateDraft]);
+
     const handleWorkItemTitleChange = useCallback(
       (title: string) => {
         if (!selectedWorkItem || title === selectedWorkItem.workItem.name) {
@@ -633,6 +930,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 }}
                 aria-label={t("common:actions.more")}
                 aria-expanded={isHeaderActionsOpen}
+                data-testid="chat-panel-header-more-button"
                 icon={
                   <MoreHorizontal
                     size={CHAT_PANEL_HEADER_ICON_SIZE}
@@ -744,6 +1042,16 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                       ? t("chat.copyEventJsonFailed")
                       : t("chat.copyEventJson")}
                 </span>
+              </button>
+              <button
+                type="button"
+                className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full text-left disabled:cursor-not-allowed disabled:opacity-50`}
+                onClick={handleOpenLinkWorkItem}
+                disabled={!currentSessionId}
+                data-testid="session-link-work-item-button"
+              >
+                <Link2 size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
+                <span className="flex-1 truncate">Link to Work Item…</span>
               </button>
               <button
                 type="button"
@@ -941,98 +1249,85 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       void refreshBenchmarkPreflight();
     }, [refreshBenchmarkPreflight]);
 
-    const workItemSessionCreatorPrompt = useMemo(() => {
-      const title = workItemCreateDraft?.name.trim();
-      const description = workItemCreateDraft?.description.trim();
-      const projectName = workItemCreateDraft?.projectId
-        ? workItemCreateDraft.projectId
-        : undefined;
-      return [
-        t(
-          "projects:workItems.createModes.sessionCreatorPrompt.promptNameQuestion"
-        ),
-        title
-          ? t(
-              "projects:workItems.createModes.sessionCreatorPrompt.promptDraftTitle",
-              {
-                title,
-              }
-            )
-          : null,
-        t(
-          "projects:workItems.createModes.sessionCreatorPrompt.promptInstruction"
-        ),
-        projectName
-          ? t(
-              "projects:workItems.createModes.sessionCreatorPrompt.promptProject",
-              {
-                project: projectName,
-              }
-            )
-          : null,
-        description
-          ? t(
-              "projects:workItems.createModes.sessionCreatorPrompt.promptDraftDetails",
-              {
-                details: description,
-              }
-            )
-          : null,
-      ]
-        .filter((line): line is string => Boolean(line))
-        .join("\n\n");
-    }, [t, workItemCreateDraft]);
-
     const emptyChatContent = (() => {
       if (createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
-        if (!SessionCreatorSlot) return null;
+        const sessionCreatorContent =
+          workItemCreateAiEnabled && SessionCreatorSlot ? (
+            <SessionCreatorSlot
+              className="min-h-0 flex-1"
+              variant={creatorVariant}
+              centerFullScreenContent
+              hidePresenceButton
+              launchMode={SESSION_CREATOR_LAUNCH_MODE.START_BACKGROUND}
+              onRegionNoticeChange={handleRegionNoticeChange}
+              onSessionStart={handleAiWorkItemSessionStart}
+              resolveWorkItemContext={resolveAiWorkItemContext}
+            />
+          ) : undefined;
 
-        const sessionCreatorContent = (
-          <SessionCreatorSlot
-            className="min-h-0 flex-1"
-            variant={creatorVariant}
-            centerFullScreenContent
-            hidePresenceButton
-            onRegionNoticeChange={handleRegionNoticeChange}
-            initialContent={workItemSessionCreatorPrompt}
-          />
-        );
-
-        return (
-          <div className={`flex flex-col overflow-hidden ${creatorClassName}`}>
-            <div className="h-[42%] min-h-[300px] shrink-0 overflow-hidden">
-              <CreateWorkItemView
-                repoPath={currentRepoPath}
-                onCancel={handleCancelWorkItemCreate}
-                onSetUnsaved={() => undefined}
-                onWorkItemCreated={handleChatPanelWorkItemCreated}
-                onDraftChange={setWorkItemCreateDraft}
-                showCloseAction={false}
-                propertiesOpen={false}
-                showPropertiesAction={false}
-                aiGenerateMode
-                showAiModePanel={false}
-                showFooter={false}
-              />
-            </div>
-            <div className="shrink-0 px-4 pb-4">
-              <div className="border-t border-border-2" aria-hidden />
-              <div className="mt-4 flex items-center justify-start">
-                <TabPill
-                  tabs={[
-                    { key: "agent", label: t("common:terminology.agent") },
-                  ]}
-                  activeTab="agent"
-                  onChange={() => undefined}
-                  variant="simple"
-                  fillWidth={false}
-                  size="large"
+        if (sessionCreatorContent) {
+          return (
+            <div
+              className={`flex flex-col overflow-hidden ${creatorClassName}`}
+            >
+              <div className="h-[42%] min-h-[300px] shrink-0 overflow-hidden">
+                <CreateWorkItemView
+                  repoPath={currentRepoPath}
+                  onCancel={handleCancelWorkItemCreate}
+                  onSetUnsaved={() => undefined}
+                  onWorkItemCreated={handleChatPanelWorkItemCreated}
+                  onDraftChange={setWorkItemCreateDraft}
+                  showCloseAction={false}
+                  propertiesOpen={false}
+                  showPropertiesAction
+                  aiGenerateMode={workItemCreateAiEnabled}
+                  onAiGenerateModeChange={setWorkItemCreateAiEnabled}
+                  showAiModePanel={false}
+                  defaultAiAssignee={defaultAiWorkItemAssignee}
+                  showFooter
+                  showSubmitAction={false}
                 />
               </div>
+              <div className="shrink-0 px-4 pb-4">
+                <div className="border-t border-border-2" aria-hidden />
+                <div className="mt-4 flex items-center justify-start">
+                  <TabPill
+                    tabs={[
+                      { key: "agent", label: t("common:terminology.agent") },
+                    ]}
+                    activeTab="agent"
+                    onChange={() => undefined}
+                    variant="simple"
+                    fillWidth={false}
+                    size="large"
+                  />
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {sessionCreatorContent}
+              </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-hidden">
-              {sessionCreatorContent}
-            </div>
+          );
+        }
+
+        return (
+          <div className={`flex overflow-hidden ${creatorClassName}`}>
+            <CreateWorkItemView
+              repoPath={currentRepoPath}
+              onCancel={handleCancelWorkItemCreate}
+              onSetUnsaved={() => undefined}
+              onWorkItemCreated={handleChatPanelWorkItemCreated}
+              onDraftChange={setWorkItemCreateDraft}
+              showCloseAction={false}
+              propertiesOpen={false}
+              showPropertiesAction
+              aiGenerateMode={workItemCreateAiEnabled}
+              onAiGenerateModeChange={setWorkItemCreateAiEnabled}
+              showAiModePanel={false}
+              defaultAiAssignee={defaultAiWorkItemAssignee}
+              showFooter
+              showSubmitAction
+            />
           </div>
         );
       }
@@ -1246,6 +1541,12 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           {dragHandle}
           {mainPanel}
         </div>
+        <LinkSessionToWorkItemModal
+          open={isLinkWorkItemModalOpen}
+          sessionId={currentSessionId ?? null}
+          onClose={handleCloseLinkWorkItem}
+          onLinked={handleSessionLinkedToWorkItem}
+        />
         <SessionImportExportModal
           visible={isExportModalOpen}
           mode="export"

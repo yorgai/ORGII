@@ -54,6 +54,10 @@ export const agentSession = {
   saveSession: defineProcedure("agent_save_session")
     .input(schemas.agentSession.SaveSessionInput)
     .build(),
+  linkSessionToWorkItem: defineProcedure("agent_link_session_to_work_item")
+    .input(schemas.agentSession.LinkSessionToWorkItemInput)
+    .output(schemas.agentSession.SessionMetaSchema)
+    .build(),
   respondQuestion: defineProcedure("agent_question_response")
     .input(schemas.agentSession.QuestionResponseInput)
     .build(),

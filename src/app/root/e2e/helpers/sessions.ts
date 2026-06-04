@@ -76,6 +76,7 @@ function toStoreSession(record: {
   baseBranch?: string | null;
   mergeStatus?: string | null;
   workItemId?: string | null;
+  projectSlug?: string | null;
   agentRole?: string | null;
   parentSessionId?: string | null;
   orgMemberId?: string | null;
@@ -243,7 +244,11 @@ export function createSessionHelpers(store: E2EStore) {
     params: Json
   ): Promise<Result<{ result: Json }>> => {
     try {
-      const launchParams = { ...params };
+      const launchParams: Json = {
+        category: "rust_agent",
+        content: params.prompt ?? params.content ?? "",
+        ...params,
+      };
       if (typeof launchParams.workspacePath !== "string") {
         const repos = store.get(reposAtom);
         const selectedRepoId = store.get(selectedRepoIdAtom);

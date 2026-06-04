@@ -54,6 +54,7 @@ export const SessionMetaSchema = z
     model: z.string().nullable().optional(),
     accountId: z.string().nullable().optional(),
     workItemId: z.string().nullable().optional(),
+    projectSlug: z.string().nullable().optional(),
     agentDefinitionId: z.string().nullable().optional(),
     userInput: z.string().nullable().optional(),
     totalTokens: z.number().optional(),
@@ -93,6 +94,13 @@ export const UpdateSessionStatusInput = z.object({
 
 export const SaveSessionInput = z.object({
   session: SessionMetaSchema,
+});
+
+export const LinkSessionToWorkItemInput = z.object({
+  sessionId: z.string(),
+  projectSlug: z.string(),
+  workItemId: z.string(),
+  agentRole: z.string().optional(),
 });
 
 export const QuestionResponseInput = z.object({

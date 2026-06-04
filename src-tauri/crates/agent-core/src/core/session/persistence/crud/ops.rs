@@ -258,6 +258,26 @@ pub fn update_status(session_id: &str, status: SessionStatus) -> SqliteResult<bo
     Ok(updated > 0)
 }
 
+/// Link an existing session record to a Work Item. This is metadata, not
+/// conversation activity, so it intentionally leaves `updated_at` untouched.
+pub fn update_work_item_link(
+    session_id: &str,
+    project_slug: &str,
+    work_item_id: &str,
+    agent_role: Option<&str>,
+) -> SqliteResult<bool> {
+    let conn = get_connection()?;
+    let updated = conn.execute(
+        "UPDATE agent_sessions
+         SET work_item_id = ?2,
+             project_slug = ?3,
+             agent_role = COALESCE(?4, agent_role)
+         WHERE session_id = ?1",
+        params![session_id, work_item_id, project_slug, agent_role],
+    )?;
+    Ok(updated > 0)
+}
+
 /// Set the canonical Agent Org roster member id for a session.
 pub fn update_org_member_id(session_id: &str, org_member_id: &str) -> SqliteResult<bool> {
     let conn = get_connection()?;

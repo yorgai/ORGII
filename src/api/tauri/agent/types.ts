@@ -146,6 +146,7 @@ export interface SessionMeta {
   model?: string;
   accountId?: string;
   workItemId?: string;
+  projectSlug?: string;
   agentDefinitionId?: string;
   userInput?: string | null;
   totalTokens?: number;

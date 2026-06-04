@@ -44,6 +44,10 @@ import { useDraftManagement } from "./useDraftManagement";
 import { useFileUpload } from "./useFileUpload";
 import { useMarketDeeplink } from "./useMarketDeeplink";
 import { useSessionLaunch } from "./useSessionLaunch";
+import type {
+  SessionLaunchSuccessInfo,
+  SessionLaunchWorkItemContext,
+} from "./useSessionLaunch/types";
 import { useSessionValidation } from "./useSessionValidation";
 
 export interface UseSessionCreatorOptions {
@@ -64,6 +68,9 @@ export interface UseSessionCreatorOptions {
    * command name) is skipped — the variant has fully handled the action.
    */
   onSlashSelectIntercept?: (item: SlashItem) => boolean;
+  workItemContext?: SessionLaunchWorkItemContext;
+  resolveWorkItemContext?: () => Promise<SessionLaunchWorkItemContext | null>;
+  onLaunchSuccess?: (info: SessionLaunchSuccessInfo) => void;
 }
 
 export function useSessionCreator(
@@ -76,6 +83,9 @@ export function useSessionCreator(
     persistDraft = true,
     extraSlashItems,
     onSlashSelectIntercept,
+    workItemContext,
+    resolveWorkItemContext,
+    onLaunchSuccess,
   } = options;
   // ============================================
   // Refs
@@ -339,10 +349,14 @@ export function useSessionCreator(
     agents,
   });
 
-  const handleLaunchSuccess = useCallback(() => {
-    // Pair-based storage: the last pair remains valid after launch.
-    // No fields to reset — the user will pick a new pair when needed.
-  }, []);
+  const handleLaunchSuccess = useCallback(
+    (info: SessionLaunchSuccessInfo) => {
+      // Pair-based storage: the last pair remains valid after launch.
+      // No fields to reset — the user will pick a new pair when needed.
+      onLaunchSuccess?.(info);
+    },
+    [onLaunchSuccess]
+  );
 
   // Session Launch
   const {
@@ -365,6 +379,8 @@ export function useSessionCreator(
     tiptapRef,
     onLaunchSuccess: handleLaunchSuccess,
     launchMode,
+    workItemContext,
+    resolveWorkItemContext,
     imageDataUrls,
     clearImages,
   });

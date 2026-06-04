@@ -25,6 +25,10 @@ import { isRegionSanctioned } from "@src/config/providerRegions";
 import PinnedActionsBar from "@src/engines/ChatPanel/InputArea/components/PinnedActionsBar";
 import type { ChatPanelRegionNotice } from "@src/engines/ChatPanel/types";
 import { useSessionCreator } from "@src/engines/SessionCore/hooks/session/useSessionCreator";
+import type {
+  SessionLaunchSuccessInfo,
+  SessionLaunchWorkItemContext,
+} from "@src/engines/SessionCore/hooks/session/useSessionCreator/useSessionLaunch/types";
 import {
   SESSION_CREATOR_LAUNCH_MODE,
   type SessionCreatorLaunchMode,
@@ -81,8 +85,10 @@ export interface SessionCreatorChatPanelProps {
   footerSlot?: React.ReactNode;
   initialContent?: string;
   onRegionNoticeChange?: (notice: ChatPanelRegionNotice | null) => void;
-  onSessionStart?: () => void;
+  onSessionStart?: (info: SessionLaunchSuccessInfo) => void;
   variant?: SessionCreatorChatPanelVariant;
+  workItemContext?: SessionLaunchWorkItemContext;
+  resolveWorkItemContext?: () => Promise<SessionLaunchWorkItemContext | null>;
 }
 
 interface SessionCreatorChatPanelSingleProps extends SessionCreatorChatPanelProps {
@@ -135,6 +141,8 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
       launchMode,
       autoFocus = true,
       variant = "default",
+      workItemContext,
+      resolveWorkItemContext,
     },
     ref
   ) => {
@@ -198,6 +206,9 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
       launchMode,
       persistDraft: !initialContent,
       skipDraftLoading: Boolean(initialContent),
+      workItemContext,
+      resolveWorkItemContext,
+      onLaunchSuccess: onSessionStart,
     });
 
     const setCreatorState = useSetAtom(sessionCreatorStateAtom);
@@ -310,12 +321,8 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
     // ── Launch ────────────────────────────────────────────────────────────────
 
     const handleLaunch = useCallback(async () => {
-      const launched = await originalHandleLaunch();
-      if (launched) {
-        onSessionStart?.();
-      }
-      return launched;
-    }, [originalHandleLaunch, onSessionStart]);
+      return originalHandleLaunch();
+    }, [originalHandleLaunch]);
 
     useEffect(() => {
       if (!selectedRepoId) return;
