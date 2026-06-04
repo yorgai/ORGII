@@ -47,7 +47,10 @@ import {
   usePublishWorkstationTabHeader,
   useWorkStationTabShortcutBridge,
 } from "@src/hooks/workStation";
-import { NoTabsPlaceholder } from "@src/modules/WorkStation/shared";
+import {
+  NoTabsPlaceholder,
+  TabBarBottomPanelToggle,
+} from "@src/modules/WorkStation/shared";
 import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
 import { repoSelectorOpenAtom } from "@src/store/ui/overlayAtom";
 import {
@@ -385,64 +388,67 @@ const EditorContent: React.FC<EditorContentProps> = memo(
             </div>
           )}
 
-          {historySelection && (
-            <Button
-              htmlType="button"
-              variant="tertiary"
-              size="small"
-              iconOnly
-              className="ml-auto flex-shrink-0"
-              onClick={() =>
-                handleOpenSourceControlHistoryInNewTab(historySelection)
-              }
-              title={t("common:actions.openInNewTab")}
-              icon={<ArrowUpRight size={HEADER_ICON_SIZE.sm} />}
-            />
-          )}
-
-          {showReviewNavigation && (
-            <div className="ml-auto flex h-7 flex-shrink-0 items-center gap-px">
+          <span className="ml-auto flex h-7 flex-shrink-0 items-center gap-px">
+            {historySelection && (
               <Button
                 htmlType="button"
                 variant="tertiary"
                 size="small"
                 iconOnly
-                onClick={handleReviewPrevFile}
-                title={t("common:actions.reviewPreviousFile")}
-                aria-label={t("common:actions.reviewPreviousFile")}
-                className="shrink-0"
-                icon={
-                  <ArrowLeft size={HEADER_ICON_SIZE.sm} strokeWidth={1.75} />
+                className="flex-shrink-0"
+                onClick={() =>
+                  handleOpenSourceControlHistoryInNewTab(historySelection)
                 }
+                title={t("common:actions.openInNewTab")}
+                icon={<ArrowUpRight size={HEADER_ICON_SIZE.sm} />}
               />
+            )}
+
+            {showReviewNavigation && (
+              <>
+                <Button
+                  htmlType="button"
+                  variant="tertiary"
+                  size="small"
+                  iconOnly
+                  onClick={handleReviewPrevFile}
+                  title={t("common:actions.reviewPreviousFile")}
+                  aria-label={t("common:actions.reviewPreviousFile")}
+                  className="shrink-0"
+                  icon={
+                    <ArrowLeft size={HEADER_ICON_SIZE.sm} strokeWidth={1.75} />
+                  }
+                />
+                <Button
+                  htmlType="button"
+                  variant="tertiary"
+                  size="small"
+                  iconOnly
+                  onClick={handleReviewNextFile}
+                  title={t("common:actions.reviewNextFile")}
+                  aria-label={t("common:actions.reviewNextFile")}
+                  className="shrink-0"
+                  icon={
+                    <ArrowRight size={HEADER_ICON_SIZE.sm} strokeWidth={1.75} />
+                  }
+                />
+              </>
+            )}
+
+            {showCollapseAll && (
               <Button
                 htmlType="button"
                 variant="tertiary"
                 size="small"
                 iconOnly
-                onClick={handleReviewNextFile}
-                title={t("common:actions.reviewNextFile")}
-                aria-label={t("common:actions.reviewNextFile")}
-                className="shrink-0"
-                icon={
-                  <ArrowRight size={HEADER_ICON_SIZE.sm} strokeWidth={1.75} />
-                }
+                className="flex-shrink-0"
+                onClick={handleSourceControlCollapseAll}
+                title={t("actions.collapseAll")}
+                icon={<ListChevronsDownUp size={HEADER_ICON_SIZE.md} />}
               />
-            </div>
-          )}
-
-          {showCollapseAll && (
-            <Button
-              htmlType="button"
-              variant="tertiary"
-              size="small"
-              iconOnly
-              className="ml-auto flex-shrink-0"
-              onClick={handleSourceControlCollapseAll}
-              title={t("actions.collapseAll")}
-              icon={<ListChevronsDownUp size={HEADER_ICON_SIZE.md} />}
-            />
-          )}
+            )}
+            <TabBarBottomPanelToggle />
+          </span>
         </div>
       );
     }, [

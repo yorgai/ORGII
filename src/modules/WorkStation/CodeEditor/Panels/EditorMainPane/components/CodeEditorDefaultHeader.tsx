@@ -1,7 +1,10 @@
 import { useAtom, useAtomValue } from "jotai";
 import React, { useCallback } from "react";
 
-import { FileHeader } from "@src/modules/WorkStation/shared";
+import {
+  FileHeader,
+  TabBarBottomPanelToggle,
+} from "@src/modules/WorkStation/shared";
 import {
   editorHighlightActiveLineAtom,
   editorLineNumbersAtom,
@@ -57,6 +60,7 @@ export const CodeEditorDefaultHeader: React.FC<
       onMinimapChange={setShowMinimap}
       highlightActiveLineEnabled={highlightActiveLine}
       onHighlightActiveLineChange={setHighlightActiveLine}
+      beforeMoreMenuSlot={<TabBarBottomPanelToggle />}
       onMoreSettings={onOpenSettings}
     />
   );

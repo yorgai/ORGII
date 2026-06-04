@@ -28,10 +28,7 @@ import {
   TabBarPlusMenu,
   type TabBarPlusMenuItem,
 } from "@src/modules/WorkStation/AppShell/TabBarPlusMenu";
-import {
-  TabBarBottomPanelToggle,
-  TabBarTrailingIconButton,
-} from "@src/modules/WorkStation/shared";
+import { TabBarTrailingIconButton } from "@src/modules/WorkStation/shared";
 import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
 import { WorkStationViewService } from "@src/services/workStation/WorkStationViewService";
 import {
@@ -223,7 +220,6 @@ export function useWorkstationTrailingSlot({
       return (
         <>
           {plusMenuControl}
-          <TabBarBottomPanelToggle />
           {shrinkWorkstationControl}
           {chatPanelControl}
           {maximizeChatControl}

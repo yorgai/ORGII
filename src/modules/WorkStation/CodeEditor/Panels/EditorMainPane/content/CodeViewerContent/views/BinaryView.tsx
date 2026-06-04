@@ -9,7 +9,10 @@
 import React, { Suspense, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { FileHeader } from "@src/modules/WorkStation/shared";
+import {
+  FileHeader,
+  TabBarBottomPanelToggle,
+} from "@src/modules/WorkStation/shared";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
 import {
@@ -80,6 +83,7 @@ export const BinaryView: React.FC<BinaryViewProps> = ({
     onReload,
     loading: false,
     hasUnsavedChanges: hasPreviewUnsavedChanges,
+    beforeMoreMenuSlot: <TabBarBottomPanelToggle />,
     isMarkdownFile: false,
     isPreviewMode: true,
     onTogglePreview: undefined,
