@@ -124,6 +124,12 @@ export interface MarkdownProps {
   /** Enable clicking on inline code to open files in editor */
   enableFileNavigation?: boolean;
   /**
+   * Render content in stable chunks while text is actively streaming. Completed
+   * paragraph blocks are memoized, so only the current tail is reparsed on token
+   * updates instead of the full message.
+   */
+  streaming?: boolean;
+  /**
    * Skip the heavyweight preprocessTextContent pass (code auto-detection regexes).
    * Set to true when content is already well-formatted markdown (e.g., agent output
    * that arrives after streaming completes — the text was already sanitized on the
@@ -156,6 +162,48 @@ const CODE_WRAPPER_STYLE: React.CSSProperties = {
   borderRadius: "8px",
   margin: "8px 0",
 };
+
+const STREAMING_BLOCK_GAP_CLASS = "mt-3";
+
+function splitIntoStableMarkdownBlocks(content: string): string[] {
+  if (!content) return [""];
+
+  const blocks: string[] = [];
+  let blockStart = 0;
+  let inFence = false;
+  let index = 0;
+
+  while (index < content.length) {
+    if (
+      content[index] === "`" &&
+      index + 2 < content.length &&
+      content[index + 1] === "`" &&
+      content[index + 2] === "`"
+    ) {
+      inFence = !inFence;
+      index += 3;
+      continue;
+    }
+
+    if (
+      !inFence &&
+      content[index] === "\n" &&
+      index + 1 < content.length &&
+      content[index + 1] === "\n"
+    ) {
+      const block = content.slice(blockStart, index + 2);
+      if (block.trim()) blocks.push(block);
+      blockStart = index + 2;
+      index = blockStart;
+      continue;
+    }
+
+    index += 1;
+  }
+
+  blocks.push(content.slice(blockStart));
+  return blocks;
+}
 
 // Just use the theme styles directly
 const COMBINED_STYLE_DARK = THEME_STYLES.dark;
@@ -195,6 +243,53 @@ const CodeBlock = memo<CodeBlockProps>(
 CodeBlock.displayName = "CodeBlock";
 
 // ============================================
+// Markdown render primitives
+// ============================================
+
+interface MarkdownRendererProps {
+  content: string;
+  components: Components;
+  plugins: ReadonlyArray<typeof remarkGfm>;
+}
+
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
+  content,
+  components,
+  plugins,
+}) => (
+  <ReactMarkdown
+    className="chat-markdown-body"
+    remarkPlugins={plugins}
+    components={components}
+  >
+    {content}
+  </ReactMarkdown>
+);
+MarkdownRenderer.displayName = "MarkdownRenderer";
+
+interface StreamingMarkdownBlockProps extends MarkdownRendererProps {
+  blockIndex: number;
+}
+
+const StreamingMarkdownBlock = memo<StreamingMarkdownBlockProps>(
+  ({ content, components, plugins, blockIndex }) => (
+    <div className={blockIndex > 0 ? STREAMING_BLOCK_GAP_CLASS : undefined}>
+      <MarkdownRenderer
+        content={content}
+        components={components}
+        plugins={plugins}
+      />
+    </div>
+  ),
+  (prev, next) =>
+    prev.content === next.content &&
+    prev.components === next.components &&
+    prev.plugins === next.plugins &&
+    prev.blockIndex === next.blockIndex
+);
+StreamingMarkdownBlock.displayName = "StreamingMarkdownBlock";
+
+// ============================================
 // Main Component
 // ============================================
 
@@ -205,6 +300,7 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
   useChatCodeBlock = false,
   codeBlockContainerWidth,
   enableFileNavigation = false,
+  streaming = false,
   skipPreprocess = false,
 }) => {
   const themes = useAtomValue(themesAtom);
@@ -350,11 +446,6 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
           const text = String(children);
           const codeType = detectCodeType(text);
 
-          // Debug: log detection results
-          if (codeType) {
-            // Code type detected - proceeding with appropriate rendering
-          }
-
           if (codeType === "file") {
             return (
               <code
@@ -464,14 +555,33 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
     [textContent, skipPreprocess]
   );
 
+  const streamingBlocks = useMemo(
+    () => (streaming ? splitIntoStableMarkdownBlocks(processedContent) : null),
+    [processedContent, streaming]
+  );
+
+  if (streaming && streamingBlocks) {
+    return (
+      <div className="chat-markdown-streaming-blocks">
+        {streamingBlocks.map((block, blockIndex) => (
+          <StreamingMarkdownBlock
+            key={blockIndex}
+            blockIndex={blockIndex}
+            content={block}
+            components={markdownComponents}
+            plugins={plugins}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <ReactMarkdown
-      className="chat-markdown-body"
-      remarkPlugins={plugins}
+    <MarkdownRenderer
+      content={processedContent}
       components={markdownComponents}
-    >
-      {processedContent}
-    </ReactMarkdown>
+      plugins={plugins}
+    />
   );
 };
 
@@ -490,6 +600,7 @@ const arePropsEqual = (prev: MarkdownProps, next: MarkdownProps): boolean => {
   if (prev.codeBlockContainerWidth !== next.codeBlockContainerWidth)
     return false;
   if (prev.enableFileNavigation !== next.enableFileNavigation) return false;
+  if (prev.streaming !== next.streaming) return false;
   if (prev.skipPreprocess !== next.skipPreprocess) return false;
   return true;
 };
