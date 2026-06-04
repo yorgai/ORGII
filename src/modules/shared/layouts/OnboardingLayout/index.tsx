@@ -64,8 +64,8 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   const containerClasses = isFullscreen
     ? "fixed top-0 left-0 w-full h-screen z-[9999] overflow-hidden bg-bg-2 p-0"
     : isLarge
-      ? "w-full h-full flex items-center justify-center p-3 overflow-auto"
-      : "w-full h-full flex items-center justify-center p-6 overflow-auto";
+      ? "relative w-full h-full flex items-center justify-center p-3 overflow-auto"
+      : "relative w-full h-full flex items-center justify-center p-6 overflow-auto";
 
   // Card classes (split vs single-column). Single-column uses the same outer
   // max width/height tokens as split so login keeps the previous card footprint.
@@ -108,6 +108,14 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
           : undefined
       }
     >
+      {!isFullscreen && (
+        <div
+          data-tauri-drag-region
+          className="pointer-events-auto absolute inset-0 z-0"
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+          aria-hidden
+        />
+      )}
       {/* Drag region for Tauri window - only for fullscreen variant */}
       {isFullscreen && (
         <div
@@ -122,7 +130,10 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
       )}
 
       {/* Card Container */}
-      <div className={cardClasses}>
+      <div
+        className={`relative z-10 ${cardClasses}`}
+        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+      >
         {showRightPanel ? (
           <>
             <div className={leftClasses}>{leftContent}</div>

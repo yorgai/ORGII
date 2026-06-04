@@ -3,6 +3,13 @@
  * Xcode-style welcome window
  */
 
+.mode-selection-window-backdrop-drag-region {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  cursor: default;
+}
+
 .mode-selection-window-page-container {
   background: var(--color-bg-2);
   border-radius: 12px;
@@ -12,6 +19,7 @@
   border: 0.5px solid var(--color-border-2);
   overflow: hidden;
   position: relative;
+  z-index: 1;
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
 }
