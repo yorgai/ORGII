@@ -1,9 +1,13 @@
-import { ExternalLink, GitPullRequest, Loader2 } from "lucide-react";
+import {
+  ExternalLink,
+  GitPullRequest,
+  Loader2,
+  TriangleAlert,
+} from "lucide-react";
 import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
-import InlineAlert from "@src/components/InlineAlert";
 
 const PR_STATUS_COLORS: Record<string, string> = {
   open: "bg-success-1 text-success-6",
@@ -110,23 +114,41 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
   }
 
   if (displayError) {
+    const isAuthError =
+      displayError.toLowerCase().includes("sign in") ||
+      displayError.toLowerCase().includes("authenticated");
     return (
       <div className="flex-shrink-0 border-b border-border-2 px-3 py-2">
-        <InlineAlert
-          type="danger"
-          title={t("git.pr.createError")}
-          action={{
-            label: t("actions.retry"),
-            onClick: handleCreate,
-          }}
-        >
-          <p className="text-[13px]">{displayError}</p>
-          {branchName && (
-            <code className="mt-1 block text-[11px] text-text-3">
-              {branchName}
-            </code>
-          )}
-        </InlineAlert>
+        <div className="rounded-lg bg-fill-2 px-3 py-2.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 flex-1 items-start gap-1.5">
+              <TriangleAlert
+                size={13}
+                className="mt-0.5 shrink-0 text-warning-6"
+              />
+              <div className="min-w-0">
+                <p className="text-[13px] text-text-2">{displayError}</p>
+                {branchName && (
+                  <code className="mt-0.5 block text-[11px] text-text-3">
+                    {branchName}
+                  </code>
+                )}
+              </div>
+            </div>
+            <Button
+              variant="tertiary"
+              size="mini"
+              shape="round"
+              onClick={isAuthError ? undefined : handleCreate}
+              href={isAuthError ? "/settings/integrations/git" : undefined}
+              className="shrink-0"
+            >
+              {isAuthError
+                ? t("actions.settings", { defaultValue: "Settings" })
+                : t("actions.retry")}
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
