@@ -9,12 +9,6 @@ export interface ProjectManagerLayoutProps {
   repoName: string;
 }
 
-export interface CreateWorkItemModalState {
-  projectId?: string;
-  projectName?: string;
-  projectSlug?: string;
-}
-
 export type ActiveRepoView =
   | "projects"
   | "work-items"

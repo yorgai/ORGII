@@ -63,6 +63,7 @@ import {
   type WorkItemProject,
 } from "@src/types/core/workItem";
 
+import WorkItemContentStack from "../WorkItemContentStack";
 import WorkItemProperties from "../WorkItemProperties";
 import type { WorkItemPropertyFieldKey } from "../WorkItemProperties/types";
 
@@ -96,7 +97,6 @@ const CREATE_WORK_ITEM_VISIBLE_FIELDS: WorkItemPropertyFieldKey[] = [
 ];
 
 const CREATE_WORK_ITEM_INLINE_FIELDS: WorkItemPropertyFieldKey[] = [
-  "project",
   "status",
   "priority",
 ];
@@ -147,8 +147,6 @@ export interface CreateWorkItemViewProps {
   onAiGenerateModeChange?: (enabled: boolean) => void;
   /** Render the local agent mode card. */
   showAiModePanel?: boolean;
-  /** Optional content rendered below the shared title/description editor. */
-  contentSlot?: React.ReactNode;
   /** Render the create footer. */
   showFooter?: boolean;
 }
@@ -181,7 +179,6 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   aiGenerateMode: controlledAiGenerateMode,
   onAiGenerateModeChange,
   showAiModePanel = true,
-  contentSlot,
   showFooter = true,
 }) => {
   const { t } = useTranslation("projects");
@@ -607,17 +604,38 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   const workItemTitlePlaceholder = t("workItems.titlePlaceholder");
   const optionalWorkItemTitlePlaceholder = `${workItemTitlePlaceholder} (${t("common:optional")})`;
 
-  const sharedWorkItemEditor = contentSlot ? (
-    <div className="shrink-0 px-4 pt-4" data-testid="create-work-item-editor">
-      <ProjectContentTitleInput
-        title={draft.name}
-        onTitleChange={handleTitleChange}
-        titlePlaceholder={optionalWorkItemTitlePlaceholder}
-        autoFocusTitle
+  const inlinePropertyPills = !resolvedPropertiesOpen ? (
+    <div data-testid="create-work-item-property-pills">
+      <WorkItemProperties
+        workItem={stubWorkItem}
+        onUpdate={handlePropertyUpdate}
+        availableProjects={resolvedProjects}
+        availableMilestones={availableMilestones}
+        availableLabels={resolvedLabels}
+        availableMembers={resolvedMembers}
+        availableAgents={customAgents}
+        availableOrgs={availableOrgs}
+        visibleFields={CREATE_WORK_ITEM_INLINE_FIELDS}
+        fieldVariant="pill"
+        showMoreMenu
       />
-      <div className="mb-4 mt-2 w-full border-t border-border-2" />
     </div>
-  ) : (
+  ) : undefined;
+
+  const titleSection = (
+    <ProjectContentTitleInput
+      title={draft.name}
+      onTitleChange={handleTitleChange}
+      titlePlaceholder={
+        resolvedAiGenerateMode
+          ? optionalWorkItemTitlePlaceholder
+          : workItemTitlePlaceholder
+      }
+      autoFocusTitle
+    />
+  );
+
+  const descriptionSection = (
     <ProjectContentEditor
       key={editorResetKey}
       ref={editorRef}
@@ -625,14 +643,14 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       onTitleChange={handleTitleChange}
       initialDescription={draft.description || ""}
       onDescriptionChange={handleDescriptionChange}
-      titlePlaceholder={workItemTitlePlaceholder}
+      titleVisible={false}
+      separatorVisible={false}
       descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
       onImageInsert={handleImageInsert}
       descriptionClassName="no-bottom-border"
       descriptionMaxHeight="100%"
       repoPath={repoPath}
       className="flex min-h-0 flex-1 flex-col"
-      autoFocusTitle
       dataTestId="create-work-item-editor"
     />
   );
@@ -640,8 +658,8 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   return (
     <DetailSplitLayout
       title={t("workItems.newWorkItem")}
-      breadcrumb={[workItemPillBreadcrumb]}
       borderlessHeader
+      hideHeader
       publishHeaderToWorkstation={publishHeaderToWorkstation}
       headerActions={
         <>
@@ -712,34 +730,13 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
               </div>
             </div>
           ) : null}
-          <div
-            className={`flex min-h-0 flex-1 flex-col ${contentSlot ? "px-0 pt-0" : "px-4 pt-4"}`}
-          >
-            {sharedWorkItemEditor}
-            {contentSlot ? (
-              <div className="min-h-0 flex-1">{contentSlot}</div>
-            ) : null}
-            {!resolvedPropertiesOpen && (
-              <div
-                className={`${contentSlot ? "px-4" : ""} shrink-0 pb-3 pt-2`}
-                data-testid="create-work-item-property-pills"
-              >
-                <WorkItemProperties
-                  workItem={stubWorkItem}
-                  onUpdate={handlePropertyUpdate}
-                  availableProjects={resolvedProjects}
-                  availableMilestones={availableMilestones}
-                  availableLabels={resolvedLabels}
-                  availableMembers={resolvedMembers}
-                  availableAgents={customAgents}
-                  availableOrgs={availableOrgs}
-                  visibleFields={CREATE_WORK_ITEM_INLINE_FIELDS}
-                  fieldVariant="pill"
-                  showMoreMenu
-                />
-              </div>
-            )}
-          </div>
+          <WorkItemContentStack
+            titleContent={titleSection}
+            pathContent={workItemPillBreadcrumb}
+            propertiesContent={inlinePropertyPills}
+            descriptionContent={descriptionSection}
+            descriptionClassName="min-h-0 flex-1 px-4"
+          />
         </div>
       }
       rightContent={

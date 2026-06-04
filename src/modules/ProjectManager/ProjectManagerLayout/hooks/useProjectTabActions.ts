@@ -3,7 +3,7 @@
  *
  * Centralizes all tab-related action callbacks for ProjectManagerLayout:
  * - Opening projects / project / settings / workItem tabs
- * - Opening project / workItem creation modals
+ * - Opening project creation modal and chat-panel work item creator
  * - Expanding a work item into its own detail tab
  * - Sidebar toggle
  * - Draft cleanup when create surfaces close
@@ -14,6 +14,15 @@ import { useTranslation } from "react-i18next";
 
 import type { ProjectOrg } from "@src/api/http/project";
 import type { QuickAction } from "@src/modules/WorkStation/shared";
+import {
+  CHAT_PANEL_CONTENT_MODE,
+  CHAT_PANEL_CREATE_TARGET,
+  activeStationChatVisibleAtom,
+  chatPanelContentModeAtom,
+  chatPanelCreateTargetAtom,
+  chatPanelSelectedWorkItemAtom,
+} from "@src/store/ui/chatPanelAtom";
+import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import { workStationPrimarySidebarCollapsedPersistAtom } from "@src/store/ui/workStationAtom";
 import {
   WORK_ITEM_CREATOR_DRAFT_ID,
@@ -50,15 +59,8 @@ interface UseProjectTabActionsOptions {
   openTab: (tab: WorkStationTab) => void;
   closeTab: (tabId: string) => void;
   primarySidebarCollapsed: boolean;
-  primarySidebarAvailable: boolean;
   activeProjectCreateDraftId: string | null;
-  activeWorkItemCreateDraftId: string | null;
   onCreateProject: () => void;
-  onCreateWorkItem: (
-    projectId?: string,
-    projectName?: string,
-    projectSlug?: string
-  ) => void;
 }
 
 export function useProjectTabActions({
@@ -67,11 +69,8 @@ export function useProjectTabActions({
   openTab,
   closeTab: _closeTab,
   primarySidebarCollapsed,
-  primarySidebarAvailable,
   activeProjectCreateDraftId,
-  activeWorkItemCreateDraftId,
   onCreateProject,
-  onCreateWorkItem,
 }: UseProjectTabActionsOptions) {
   const { t } = useTranslation();
 
@@ -89,9 +88,6 @@ export function useProjectTabActions({
 
     const liveWorkItemDraftIds = new Set(tabs.map((tab) => tab.id));
     liveWorkItemDraftIds.add(WORK_ITEM_CREATOR_DRAFT_ID);
-    if (activeWorkItemCreateDraftId) {
-      liveWorkItemDraftIds.add(activeWorkItemCreateDraftId);
-    }
 
     for (const draftTabId of projectDrafts.keys()) {
       if (!liveProjectDraftIds.has(draftTabId)) {
@@ -107,13 +103,19 @@ export function useProjectTabActions({
   }, [
     tabs,
     activeProjectCreateDraftId,
-    activeWorkItemCreateDraftId,
     projectDrafts,
     workItemDrafts,
     removeProjectDraft,
     removeWorkItemDraft,
   ]);
 
+  const stationMode = useAtomValue(stationModeAtom);
+  const setStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
+  const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
+  const setChatPanelCreateTarget = useSetAtom(chatPanelCreateTargetAtom);
+  const setChatPanelSelectedWorkItem = useSetAtom(
+    chatPanelSelectedWorkItemAtom
+  );
   const setLayout = useSetAtom(workstationLayoutAtom);
 
   /**
@@ -221,10 +223,19 @@ export function useProjectTabActions({
   }, [onCreateProject]);
 
   const handleCreateWorkItem = useCallback(
-    (projectId?: string, projectName?: string, projectSlug?: string) => {
-      onCreateWorkItem(projectId, projectName, projectSlug);
+    (_projectId?: string, _projectName?: string, _projectSlug?: string) => {
+      setChatPanelSelectedWorkItem(null);
+      setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
+      setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+      setStationChatVisible(stationMode, true);
     },
-    [onCreateWorkItem]
+    [
+      setChatPanelContentMode,
+      setChatPanelCreateTarget,
+      setChatPanelSelectedWorkItem,
+      setStationChatVisible,
+      stationMode,
+    ]
   );
 
   const handleOpenProjects = useCallback(() => {
@@ -385,22 +396,20 @@ export function useProjectTabActions({
     workStationPrimarySidebarCollapsedPersistAtom
   );
   const handleToggleSidebar = useCallback(() => {
-    if (!primarySidebarAvailable) return;
     setLeftCollapsed("toggle");
-  }, [primarySidebarAvailable, setLeftCollapsed]);
+  }, [setLeftCollapsed]);
 
   // --- Quick actions for placeholder ---
 
   const handleCreateWorkItemNoProject = useCallback(() => {
-    onCreateWorkItem();
-  }, [onCreateWorkItem]);
+    handleCreateWorkItem();
+  }, [handleCreateWorkItem]);
 
   const projectQuickActions: QuickAction[] = useMemo(
     () =>
       createProjectQuickActions({
         t,
         sidebarCollapsed: primarySidebarCollapsed,
-        sidebarAvailable: primarySidebarAvailable,
         onToggleSidebar: handleToggleSidebar,
         onOpenProjects: handleOpenProjects,
         onOpenWorkItems: handleOpenWorkItems,
@@ -410,7 +419,6 @@ export function useProjectTabActions({
     [
       t,
       primarySidebarCollapsed,
-      primarySidebarAvailable,
       handleToggleSidebar,
       handleOpenProjects,
       handleOpenWorkItems,

@@ -15,7 +15,6 @@ import type { QuickAction } from "@src/modules/WorkStation/shared";
 export interface ProjectQuickActionsOptions {
   t: TFunction;
   sidebarCollapsed: boolean;
-  sidebarAvailable: boolean;
   onToggleSidebar: () => void;
   onOpenProjects: () => void;
   onOpenWorkItems: () => void;
@@ -37,7 +36,6 @@ export function createProjectQuickActions(
   const {
     t,
     sidebarCollapsed,
-    sidebarAvailable,
     onToggleSidebar,
     onOpenProjects,
     onOpenWorkItems,
@@ -73,7 +71,6 @@ export function createProjectQuickActions(
         : t("commands.hidePrimarySidebar"),
       shortcut: getShortcutKeys("project_toggle_sidebar"),
       onAction: onToggleSidebar,
-      disabled: !sidebarAvailable,
     },
   ];
 }

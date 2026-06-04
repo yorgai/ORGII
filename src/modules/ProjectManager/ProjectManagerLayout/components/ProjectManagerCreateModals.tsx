@@ -4,25 +4,20 @@ import type { ProjectOrg } from "@src/api/http/project";
 import Modal from "@src/scaffold/ModalSystem";
 
 import { STORY_CREATE_MODAL_DRAFT_ID } from "../hooks/useProjectManagerCreateModals";
-import type { CreateWorkItemModalState } from "../types";
 import { STORY_MANAGER_SUSPENSE_LOADING_FALLBACK } from "./ProjectManagerContentRouter";
 import ProjectOrgCreateModal from "./ProjectOrgCreateModal";
 
 // Keep the loader thunks as named constants so we can both feed them to
 // `React.lazy` and fire them eagerly from a `useEffect` below. Without the
-// eager prefetch, the first click on "New Project" / "New Work Item"
-// triggers a cold webpack chunk download (Tiptap + WorkItemProperties +
-// shared editor) which surfaces as a long Suspense spinner. The chunk is
+// eager prefetch, the first click on "New Project" triggers a cold
+// webpack chunk download which surfaces as a long Suspense spinner. The chunk is
 // cached on subsequent opens, hence the "first time slow, second time
 // instant" behavior. The prefetch warms the cache while the user is still
 // browsing the project list.
 const loadCreateProjectView = () =>
   import("../../Projects/components/CreateProjectView");
-const loadCreateWorkItemView = () =>
-  import("../../WorkItems/components/CreateWorkItemView");
 
 const CreateProjectView = React.lazy(loadCreateProjectView);
-const CreateWorkItemView = React.lazy(loadCreateWorkItemView);
 
 /**
  * Schedule a lazy-chunk preload during browser idle time. Falls back to a
@@ -68,12 +63,10 @@ interface ProjectManagerCreateModalsProps {
   repoName: string;
   projectCreateModalOpen: boolean;
   orgCreateModalOpen: boolean;
-  workItemCreateModal: CreateWorkItemModalState | null;
   scopeBreadcrumbLabel?: string;
   projectCreateOrgId: string;
   onCloseProjectCreateModal: () => void;
   onCloseOrgCreateModal: () => void;
-  onCloseWorkItemCreateModal: () => void;
   onProjectCreated: (options?: { keepOpen?: boolean }) => void;
   onOrgCreated: (org: ProjectOrg) => void;
 }
@@ -83,21 +76,17 @@ export function ProjectManagerCreateModals({
   repoName,
   projectCreateModalOpen,
   orgCreateModalOpen,
-  workItemCreateModal,
   scopeBreadcrumbLabel,
   projectCreateOrgId,
   onCloseProjectCreateModal,
   onCloseOrgCreateModal,
-  onCloseWorkItemCreateModal,
   onProjectCreated,
   onOrgCreated,
 }: ProjectManagerCreateModalsProps) {
   useEffect(() => {
     const cancelProject = schedulePrefetch(loadCreateProjectView);
-    const cancelWorkItem = schedulePrefetch(loadCreateWorkItemView);
     return () => {
       cancelProject();
-      cancelWorkItem();
     };
   }, []);
 
@@ -137,37 +126,6 @@ export function ProjectManagerCreateModals({
         onClose={onCloseOrgCreateModal}
         onOrgCreated={onOrgCreated}
       />
-
-      <Modal
-        visible={!!workItemCreateModal}
-        onClose={onCloseWorkItemCreateModal}
-        footer={null}
-        closable={false}
-        maskClosable={false}
-        radius={12}
-        style={CREATE_MODAL_STYLE}
-        className={CREATE_MODAL_CLASS}
-        bodyClassName={CREATE_MODAL_BODY_CLASS}
-      >
-        {workItemCreateModal && (
-          <Suspense fallback={STORY_MANAGER_SUSPENSE_LOADING_FALLBACK}>
-            <div className={CREATE_MODAL_VIEW_CLASS}>
-              <CreateWorkItemView
-                projectId={workItemCreateModal.projectId}
-                projectSlug={workItemCreateModal.projectSlug}
-                projectName={workItemCreateModal.projectName}
-                repoPath={repoPath}
-                scopeBreadcrumbLabel={scopeBreadcrumbLabel}
-                onCancel={onCloseWorkItemCreateModal}
-                onSetUnsaved={() => undefined}
-                onWorkItemCreated={(options) => {
-                  if (!options?.keepOpen) onCloseWorkItemCreateModal();
-                }}
-              />
-            </div>
-          </Suspense>
-        )}
-      </Modal>
     </>
   );
 }

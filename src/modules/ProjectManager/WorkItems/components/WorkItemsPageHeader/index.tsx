@@ -509,7 +509,6 @@ const WorkItemsPageHeader: React.FC<WorkItemsPageHeaderProps> = ({
     host: workstationHeaderHost,
     content: {
       content: publishedHeaderContent,
-      sidebarToggleDisabled: true,
     },
     enabled: publishToWorkstationHeader,
   });

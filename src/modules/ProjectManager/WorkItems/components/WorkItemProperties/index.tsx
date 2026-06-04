@@ -55,6 +55,11 @@ export const WORK_ITEM_PROPERTY_ESSENTIAL_FIELDS: WorkItemPropertyFieldKey[] = [
   "priority",
 ];
 
+export const WORK_ITEM_PROPERTY_INLINE_FIELDS: WorkItemPropertyFieldKey[] = [
+  "status",
+  "priority",
+];
+
 const DEFAULT_VISIBLE_FIELDS: WorkItemPropertyFieldKey[] = [
   "project",
   "status",

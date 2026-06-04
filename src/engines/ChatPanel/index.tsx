@@ -37,6 +37,7 @@ import RegionNoticeButton from "@src/components/RegionNoticeButton";
 import Select, { type SelectOption } from "@src/components/Select";
 import SessionHoverCard from "@src/components/SessionHoverCard";
 import Switch from "@src/components/Switch";
+import TabPill from "@src/components/TabPill";
 import Tooltip from "@src/components/Tooltip";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { useRouteViewMode } from "@src/config/routeViewModeConfig";
@@ -143,8 +144,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const { openTab: openWorkStationTab } = useWorkStationTabs();
     const [contentMode, setContentMode] = useAtom(chatPanelContentModeAtom);
     const [createTarget, setCreateTarget] = useAtom(chatPanelCreateTargetAtom);
-    const [workItemCreateAiEnabled, setWorkItemCreateAiEnabled] =
-      useState(true);
     const [workItemCreateDraft, setWorkItemCreateDraft] =
       useState<WorkItemDraft | null>(null);
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
@@ -442,13 +441,11 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           }));
           handleNewSession();
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-          setWorkItemCreateAiEnabled(true);
           setWorkItemCreateDraft(null);
           return;
         }
 
         if (nextTarget !== CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
-          setWorkItemCreateAiEnabled(true);
           setWorkItemCreateDraft(null);
         }
         setCreateTarget(nextTarget);
@@ -467,7 +464,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     }, [isChatFocus, openWorkStationTab, toggleChatFocus]);
 
     const handleCancelWorkItemCreate = useCallback(() => {
-      setWorkItemCreateAiEnabled(true);
       setWorkItemCreateDraft(null);
       setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
       handleNewSession();
@@ -494,7 +490,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           workItem,
         });
         if (!result.keepOpen) {
-          setWorkItemCreateAiEnabled(true);
           setWorkItemCreateDraft(null);
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
           setContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
@@ -820,25 +815,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               selectorClassName="!h-7 max-w-[180px] !gap-1.5 !rounded-lg !border-0 !bg-transparent !px-1.5 !text-[13px] font-medium !text-text-1 hover:!bg-surface-hover [&_.select-suffix]:!ml-0 [&_.select-value]:-translate-y-px"
               dataTestId="chat-panel-create-target-select"
             />
-            {isWorkItemTarget && (
-              <>
-                <div
-                  className="mx-2 h-4 w-px shrink-0 bg-border-2"
-                  role="separator"
-                  aria-hidden
-                />
-                <label className="flex h-7 items-center gap-2 px-1 text-[12px] font-medium text-text-2">
-                  <span>{t("projects:workItems.createModes.useAi")}</span>
-                  <Switch
-                    size="small"
-                    checked={workItemCreateAiEnabled}
-                    onChange={setWorkItemCreateAiEnabled}
-                    ariaLabel={t("projects:workItems.createModes.useAi")}
-                    dataTestId="chat-panel-create-work-item-ai-switch"
-                  />
-                </label>
-              </>
-            )}
             {showCreatorPresenceInHeader && (
               <>
                 <div
@@ -1009,35 +985,54 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const emptyChatContent = (() => {
       if (createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
-        const sessionCreatorContent =
-          workItemCreateAiEnabled && SessionCreatorSlot ? (
-            <SessionCreatorSlot
-              className="min-h-0 flex-1"
-              variant={creatorVariant}
-              centerFullScreenContent
-              hidePresenceButton
-              onRegionNoticeChange={handleRegionNoticeChange}
-              initialContent={workItemSessionCreatorPrompt}
-            />
-          ) : undefined;
+        if (!SessionCreatorSlot) return null;
+
+        const sessionCreatorContent = (
+          <SessionCreatorSlot
+            className="min-h-0 flex-1"
+            variant={creatorVariant}
+            centerFullScreenContent
+            hidePresenceButton
+            onRegionNoticeChange={handleRegionNoticeChange}
+            initialContent={workItemSessionCreatorPrompt}
+          />
+        );
 
         return (
-          <div className={`flex overflow-hidden ${creatorClassName}`}>
-            <CreateWorkItemView
-              repoPath={currentRepoPath}
-              onCancel={handleCancelWorkItemCreate}
-              onSetUnsaved={() => undefined}
-              onWorkItemCreated={handleChatPanelWorkItemCreated}
-              onDraftChange={setWorkItemCreateDraft}
-              showCloseAction={false}
-              propertiesOpen={false}
-              showPropertiesAction={false}
-              aiGenerateMode={workItemCreateAiEnabled}
-              onAiGenerateModeChange={setWorkItemCreateAiEnabled}
-              showAiModePanel={false}
-              contentSlot={sessionCreatorContent}
-              showFooter={!sessionCreatorContent}
-            />
+          <div className={`flex flex-col overflow-hidden ${creatorClassName}`}>
+            <div className="h-[42%] min-h-[300px] shrink-0 overflow-hidden">
+              <CreateWorkItemView
+                repoPath={currentRepoPath}
+                onCancel={handleCancelWorkItemCreate}
+                onSetUnsaved={() => undefined}
+                onWorkItemCreated={handleChatPanelWorkItemCreated}
+                onDraftChange={setWorkItemCreateDraft}
+                showCloseAction={false}
+                propertiesOpen={false}
+                showPropertiesAction={false}
+                aiGenerateMode
+                showAiModePanel={false}
+                showFooter={false}
+              />
+            </div>
+            <div className="shrink-0 px-4 pb-4">
+              <div className="border-t border-border-2" aria-hidden />
+              <div className="mt-4 flex items-center justify-start">
+                <TabPill
+                  tabs={[
+                    { key: "agent", label: t("common:terminology.agent") },
+                  ]}
+                  activeTab="agent"
+                  onChange={() => undefined}
+                  variant="simple"
+                  fillWidth={false}
+                  size="large"
+                />
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {sessionCreatorContent}
+            </div>
           </div>
         );
       }

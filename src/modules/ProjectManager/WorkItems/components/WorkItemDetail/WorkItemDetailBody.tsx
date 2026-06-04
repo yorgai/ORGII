@@ -17,9 +17,7 @@ import type {
 
 import type { AgentRole } from "../../constants";
 import WorkItemContent from "../WorkItemContent";
-import WorkItemProperties, {
-  WORK_ITEM_PROPERTY_ESSENTIAL_FIELDS,
-} from "../WorkItemProperties";
+import WorkItemProperties from "../WorkItemProperties";
 import type { WorkItemExternalStatusConfig } from "../WorkItemProperties/types";
 
 const WORK_ITEM_INFO_PANEL_MIN_WIDTH = 200;
@@ -115,24 +113,6 @@ export function WorkItemDetailBody({
     />
   );
 
-  const inlineProperties = (
-    <WorkItemProperties
-      workItem={displayWorkItem}
-      onUpdate={onUpdateWorkItem}
-      availableProjects={availableProjects}
-      availableMilestones={availableMilestones}
-      availableLabels={availableLabels}
-      availableMembers={availableMembers}
-      externalStatusConfig={externalStatusConfig}
-      availableAgents={availableAgents}
-      availableOrgs={availableOrgs}
-      showTime={showTime}
-      fieldVariant="pill"
-      visibleFields={WORK_ITEM_PROPERTY_ESSENTIAL_FIELDS}
-      showMoreMenu
-    />
-  );
-
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden">
       <div className="min-w-0 flex-1 overflow-hidden">
@@ -143,7 +123,6 @@ export function WorkItemDetailBody({
               onUpdateWorkItem={onUpdateWorkItem}
               onUpdateWorkItemImmediate={onUpdateWorkItemImmediate}
               teamMembers={availableMembers}
-              headerProperties={propertiesOpen ? undefined : inlineProperties}
               repoPath={repoPath}
               projectSlug={projectSlug}
               shortId={shortId}

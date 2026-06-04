@@ -14,6 +14,7 @@ import type { LinkedSession, WorkItemStatus } from "@src/types/core/workItem";
 
 import AgentWorkflow from "../AgentWorkflow";
 import TodoChecklist from "../TodoChecklist";
+import WorkItemContentStack from "../WorkItemContentStack";
 import HistoryTab from "./HistoryTab";
 import OutputTab from "./OutputTab";
 import { useWorkItemContentState } from "./hooks/useWorkItemContentState";
@@ -98,9 +99,8 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
   onUpdateWorkItemImmediate,
   currentUser: currentUserProp,
   teamMembers = [],
+  headerPath,
   headerProperties,
-  hideTitleHeader = false,
-  showHeaderPropertiesWhenTitleHidden = false,
   repoPath,
   projectSlug,
   shortId,
@@ -158,147 +158,128 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
     activeAgentSessionId,
   });
 
-  return (
-    <DetailPanelContainer className="relative">
-      {!hideTitleHeader && (
-        <div className="shrink-0 px-3 pt-4">
-          <ProjectContentEditor
-            ref={editorRef}
-            title={workItem.name || ""}
-            onTitleChange={handleTitleChange}
-            initialDescription={resolvedDescription ?? rawDescription}
-            onDescriptionChange={handleDescriptionChange}
-            onImageInsert={onUpdateWorkItem ? handleImageInsert : undefined}
-            titlePlaceholder={t("workItems.titlePlaceholder")}
-            descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
-            editable={!!onUpdateWorkItem}
-            metaContent={headerProperties}
-            descriptionVisible={false}
-            repoPath={repoPath}
-            className="flex flex-col"
-          />
-        </div>
-      )}
+  const descriptionSection = (
+    <ProjectContentEditor
+      key={workItem.session_id}
+      ref={editorRef}
+      title={workItem.name || ""}
+      onTitleChange={handleTitleChange}
+      initialDescription={resolvedDescription ?? rawDescription}
+      onDescriptionChange={handleDescriptionChange}
+      onImageInsert={onUpdateWorkItem ? handleImageInsert : undefined}
+      titleVisible={false}
+      separatorVisible={false}
+      descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
+      editable={!!onUpdateWorkItem}
+      descriptionMaxHeight={600}
+      descriptionClassName="no-bottom-border"
+      repoPath={repoPath}
+      className="w-full"
+    />
+  );
 
-      {hideTitleHeader &&
-        showHeaderPropertiesWhenTitleHidden &&
-        headerProperties && (
-          <div className="shrink-0 px-3 pb-3 pt-1">{headerProperties}</div>
-        )}
+  const todosSection = (
+    <TodoChecklist
+      todos={workItem.todos ?? []}
+      onChange={handleTodosChange}
+      disabled={!onUpdateWorkItem}
+    />
+  );
 
-      <div
-        className={`${DETAIL_PANEL_TOKENS.scrollContentNoTop.replace("scrollbar-overlay", "scrollbar-hide")}`}
-      >
-        <div className={`${DETAIL_PANEL_TOKENS.sectionGap} min-h-[200px]`}>
-          <ProjectContentEditor
-            key={workItem.session_id}
-            ref={editorRef}
-            title={workItem.name || ""}
-            onTitleChange={handleTitleChange}
-            initialDescription={resolvedDescription ?? rawDescription}
-            onDescriptionChange={handleDescriptionChange}
-            onImageInsert={onUpdateWorkItem ? handleImageInsert : undefined}
-            titleVisible={false}
-            separatorVisible={false}
-            descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
-            editable={!!onUpdateWorkItem}
-            descriptionMaxHeight={600}
-            descriptionClassName="no-bottom-border"
-            repoPath={repoPath}
-            className="w-full"
-          />
-        </div>
-        <TodoChecklist
-          todos={workItem.todos ?? []}
-          onChange={handleTodosChange}
-          disabled={!onUpdateWorkItem}
+  const lowerSection = (
+    <section data-testid="work-item-lower-tabs-section">
+      <div className="mb-4 flex items-center justify-start">
+        <TabPill
+          tabs={sessionTabItems}
+          activeTab={activeSessionTab}
+          onChange={(key) => setActiveSessionTab(key as SessionTab)}
+          variant="simple"
+          fillWidth={false}
+          size="large"
         />
-        <section
-          className="mt-6 border-t border-solid border-border-1 pt-5"
-          data-testid="work-item-lower-tabs-section"
-        >
-          <div className="mb-4 flex items-center justify-start">
-            <TabPill
-              tabs={sessionTabItems}
-              activeTab={activeSessionTab}
-              onChange={(key) => setActiveSessionTab(key as SessionTab)}
-              variant="simple"
-              fillWidth={false}
-              size="large"
-            />
-          </div>
+      </div>
 
-          {activeSessionTab === "session" && (
-            <>
-              {(workItem.orchestratorConfig ||
-                workItem.orchestratorState ||
-                workItem.executionLock ||
-                (workItem.linkedSessions?.length ?? 0) > 0) && (
-                <div className={DETAIL_PANEL_TOKENS.sectionGap}>
-                  <AgentWorkflow
-                    orchestratorState={workItem.orchestratorState}
-                    orchestratorConfig={workItem.orchestratorConfig}
-                    proofOfWork={workItem.proofOfWork}
-                    workItemStatus={
-                      workItem.workItemStatus ??
-                      (workItem.status as WorkItemStatus)
-                    }
-                    executionLock={workItem.executionLock}
-                    linkedSessions={workItem.linkedSessions}
-                    onStartAgent={onStartAgent}
-                    isStartingAgent={isStartingAgent}
-                    onCancel={onCancelAgent}
-                    onRetry={onRetry}
-                    onAcceptAsIs={onAcceptAsIs}
-                    onCreateFollowUp={onCreateFollowUp}
-                    onOpenSession={onOpenSession}
-                    onOpenFileAtLine={onOpenFileAtLine}
-                    onRefresh={onRefreshWorkflow}
-                    activeAgentSessionId={activeAgentSessionId}
-                    activeAgentRole={activeAgentRole}
-                  />
-                </div>
-              )}
-              <LinkedSessionsList
-                sessions={workItem.linkedSessions ?? []}
-                onOpenSession={onOpenSession}
+      {activeSessionTab === "session" && (
+        <>
+          {(workItem.orchestratorConfig ||
+            workItem.orchestratorState ||
+            workItem.executionLock ||
+            (workItem.linkedSessions?.length ?? 0) > 0) && (
+            <div className={DETAIL_PANEL_TOKENS.sectionGap}>
+              <AgentWorkflow
+                orchestratorState={workItem.orchestratorState}
+                orchestratorConfig={workItem.orchestratorConfig}
+                proofOfWork={workItem.proofOfWork}
+                workItemStatus={
+                  workItem.workItemStatus ?? (workItem.status as WorkItemStatus)
+                }
+                executionLock={workItem.executionLock}
+                linkedSessions={workItem.linkedSessions}
                 onStartAgent={onStartAgent}
                 isStartingAgent={isStartingAgent}
+                onCancel={onCancelAgent}
+                onRetry={onRetry}
+                onAcceptAsIs={onAcceptAsIs}
+                onCreateFollowUp={onCreateFollowUp}
+                onOpenSession={onOpenSession}
+                onOpenFileAtLine={onOpenFileAtLine}
+                onRefresh={onRefreshWorkflow}
+                activeAgentSessionId={activeAgentSessionId}
+                activeAgentRole={activeAgentRole}
               />
-            </>
+            </div>
           )}
+          <LinkedSessionsList
+            sessions={workItem.linkedSessions ?? []}
+            onOpenSession={onOpenSession}
+            onStartAgent={onStartAgent}
+            isStartingAgent={isStartingAgent}
+          />
+        </>
+      )}
 
-          {activeSessionTab === "output" && (
-            <OutputTab
-              workItem={workItem}
-              repoPath={repoPath}
-              onOpenFileDiff={onOpenFileDiff}
-              onOpenFileAtLine={onOpenFileAtLine}
-              onReviewAllFiles={onReviewAllFiles}
-              onOpenSession={onOpenSession}
-              onRetry={onRetry}
-              onAcceptAsIs={onAcceptAsIs}
-              onCreateFollowUp={onCreateFollowUp}
-              onCancel={onCancelAgent}
-              onCreatePr={onCreatePr}
-            />
-          )}
+      {activeSessionTab === "output" && (
+        <OutputTab
+          workItem={workItem}
+          repoPath={repoPath}
+          onOpenFileDiff={onOpenFileDiff}
+          onOpenFileAtLine={onOpenFileAtLine}
+          onReviewAllFiles={onReviewAllFiles}
+          onOpenSession={onOpenSession}
+          onRetry={onRetry}
+          onAcceptAsIs={onAcceptAsIs}
+          onCreateFollowUp={onCreateFollowUp}
+          onCancel={onCancelAgent}
+          onCreatePr={onCreatePr}
+        />
+      )}
 
-          {activeSessionTab === "history" && (
-            <HistoryTab
-              timelineEntries={timelineEntries}
-              currentUser={currentUser}
-              isSubscribed={isSubscribed}
-              onToggleSubscribe={() => setIsSubscribed(!isSubscribed)}
-              commentText={commentText}
-              onCommentTextChange={setCommentText}
-              onCommentSubmit={handleCommentSubmit}
-              isSubmittingComment={isSubmittingComment}
-              formatRelativeTime={formatRelativeTime}
-            />
-          )}
-        </section>
-      </div>
+      {activeSessionTab === "history" && (
+        <HistoryTab
+          timelineEntries={timelineEntries}
+          currentUser={currentUser}
+          isSubscribed={isSubscribed}
+          onToggleSubscribe={() => setIsSubscribed(!isSubscribed)}
+          commentText={commentText}
+          onCommentTextChange={setCommentText}
+          onCommentSubmit={handleCommentSubmit}
+          isSubmittingComment={isSubmittingComment}
+          formatRelativeTime={formatRelativeTime}
+        />
+      )}
+    </section>
+  );
+
+  return (
+    <DetailPanelContainer className="relative">
+      <WorkItemContentStack
+        pathContent={headerPath}
+        propertiesContent={headerProperties}
+        descriptionContent={descriptionSection}
+        todosContent={todosSection}
+        lowerContent={lowerSection}
+        scrollable
+      />
     </DetailPanelContainer>
   );
 };

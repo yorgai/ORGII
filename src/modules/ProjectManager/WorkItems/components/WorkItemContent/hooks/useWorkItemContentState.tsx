@@ -112,7 +112,7 @@ export function useWorkItemContentState(
         key,
         label:
           key === "session"
-            ? t("common:terminology.session")
+            ? t("common:terminology.agent")
             : t(`common:labels.${key}`),
         dataTestId: `work-item-sessions-tab-${key}`,
         badge:

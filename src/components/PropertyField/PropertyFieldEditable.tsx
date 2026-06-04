@@ -8,6 +8,7 @@
 import { ChevronDown, Pencil } from "lucide-react";
 import React, { useCallback, useState } from "react";
 
+import Button from "@src/components/Button";
 import DropdownSearch from "@src/components/Dropdown/DropdownSearch";
 import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
 import {
@@ -63,29 +64,30 @@ export const FieldRow: React.FC<FieldRowProps> = ({
   if (variant === "pill") {
     return (
       <div className="flex min-h-7 shrink-0 items-center overflow-visible">
-        <div
-          data-field-row
-          className={`group/field relative inline-flex h-7 max-w-[220px] select-none items-center overflow-hidden whitespace-nowrap rounded-full border border-solid ${pillBorderClass} bg-bg-2 text-[13px] font-medium leading-[18px] text-text-1 outline-none transition-[border-color,box-shadow,background-color,color,opacity] duration-150 focus-within:border-primary-6 focus-within:shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-primary-6)_15%,transparent)] hover:border-border-3 hover:bg-fill-2 ${isActive ? "!border-primary-6 !bg-fill-2 !text-primary-6" : ""}`}
-        >
-          <button
-            type="button"
-            onClick={onClick}
-            className="flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-none bg-transparent px-3 py-0 text-inherit outline-none"
-          >
+        <Button
+          htmlType="button"
+          variant="secondary"
+          size="small"
+          shape="round"
+          icon={
             <span
               className="flex h-4 w-4 shrink-0 items-center justify-center text-text-3"
               style={iconColor ? { color: iconColor } : undefined}
             >
               {icon}
             </span>
-            <span
-              className={`min-w-0 truncate leading-[18px] ${valueClassName}`}
-            >
-              {value}
-            </span>
-            {suffix}
-          </button>
-        </div>
+          }
+          onClick={onClick}
+          className={`max-w-[220px] ${pillBorderClass} ${
+            isActive ? "!border-primary-6 !bg-fill-2 !text-primary-6" : ""
+          }`}
+          data-field-row
+        >
+          <span className={`min-w-0 truncate leading-[18px] ${valueClassName}`}>
+            {value}
+          </span>
+          {suffix}
+        </Button>
       </div>
     );
   }

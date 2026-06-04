@@ -43,7 +43,7 @@ const WORK_ITEM_INFO_PANEL_DEFAULT_WIDTH = 240;
 
 const WorkItemDetail: React.FC<WorkItemDetailProps> = ({
   workItem,
-  onClose,
+  onClose: _onClose,
   onNavigate,
   hasPrev,
   hasNext,
@@ -288,7 +288,7 @@ const WorkItemDetail: React.FC<WorkItemDetailProps> = ({
         propertiesOpen={propertiesOpen}
         hasPrev={hasPrev}
         hasNext={hasNext}
-        onClose={onClose}
+        onClose={_onClose}
         onNavigate={onNavigate}
         onDeleteWorkItem={onDeleteWorkItem}
         onExpandToTab={onExpandToTab}
@@ -304,7 +304,7 @@ const WorkItemDetail: React.FC<WorkItemDetailProps> = ({
       propertiesOpen,
       hasPrev,
       hasNext,
-      onClose,
+      _onClose,
       onNavigate,
       onDeleteWorkItem,
       onExpandToTab,
@@ -317,7 +317,6 @@ const WorkItemDetail: React.FC<WorkItemDetailProps> = ({
     host: workstationHeaderHost,
     content: {
       content: headerContent,
-      sidebarToggleDisabled: true,
     },
     enabled: publishHeaderToWorkstation,
   });

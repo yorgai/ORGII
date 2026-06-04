@@ -19,6 +19,7 @@ import {
 } from "@src/hooks/workStation";
 import { WorkStationShell } from "@src/modules/WorkStation/shared";
 import { projectListRefreshAtom } from "@src/store/project/projectAtom";
+import { projectStatusBarCallbacksAtom } from "@src/store/ui/workStationAtom";
 import {
   STORY_ORG_SCOPE,
   getProjectWorkItemsTabChrome,
@@ -48,6 +49,7 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
       primarySidebarWidth,
       setPrimarySidebarWidth,
       setPrimarySidebarCollapsed,
+      togglePrimarySidebar,
     } = usePrimarySidebarState();
 
     const {
@@ -107,6 +109,28 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
       projectOrgGitFolderSyncEnabled: activeProjectOrgGitFolderSyncEnabled,
     });
 
+    const setProjectStatusBarCallbacks = useSetAtom(
+      projectStatusBarCallbacksAtom
+    );
+    useEffect(() => {
+      setProjectStatusBarCallbacks((prev) => ({
+        ...prev,
+        primaryPanelCollapsed: primarySidebarCollapsed,
+        onTogglePrimaryPanel: togglePrimarySidebar,
+      }));
+      return () => {
+        setProjectStatusBarCallbacks((prev) => ({
+          ...prev,
+          primaryPanelCollapsed: undefined,
+          onTogglePrimaryPanel: undefined,
+        }));
+      };
+    }, [
+      primarySidebarCollapsed,
+      setProjectStatusBarCallbacks,
+      togglePrimarySidebar,
+    ]);
+
     const bumpProjectListRefresh = useSetAtom(projectListRefreshAtom);
     const handleProjectListRefreshRequested = useCallback(() => {
       bumpProjectListRefresh((prev) => prev + 1);
@@ -115,23 +139,15 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
     const {
       projectCreateModalOpen,
       orgCreateModalOpen,
-      workItemCreateModal,
       activeProjectCreateDraftId,
-      activeWorkItemCreateDraftId,
       openProjectCreateModal,
       closeProjectCreateModal,
       openOrgCreateModal,
       closeOrgCreateModal,
-      openWorkItemCreateModal,
-      closeWorkItemCreateModal,
     } = useProjectManagerCreateModals();
 
     const [embeddedWorkItemDetailTabs, setEmbeddedWorkItemDetailTabs] =
       useState<Record<string, boolean>>({});
-    const primarySidebarAvailable = !(
-      activeTab?.type === "workItem-detail" ||
-      (activeTab ? embeddedWorkItemDetailTabs[activeTab.id] : false)
-    );
 
     const {
       handleSelectProject,
@@ -153,11 +169,8 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
       openTab,
       closeTab,
       primarySidebarCollapsed,
-      primarySidebarAvailable,
       activeProjectCreateDraftId,
-      activeWorkItemCreateDraftId,
       onCreateProject: openProjectCreateModal,
-      onCreateWorkItem: openWorkItemCreateModal,
     });
 
     const handleEmbeddedWorkItemDetailStateChange = useCallback(
@@ -357,10 +370,8 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
           projectCreateOrgId={projectCreateOrgId}
           projectCreateModalOpen={projectCreateModalOpen}
           orgCreateModalOpen={orgCreateModalOpen}
-          workItemCreateModal={workItemCreateModal}
           onCloseProjectCreateModal={closeProjectCreateModal}
           onCloseOrgCreateModal={closeOrgCreateModal}
-          onCloseWorkItemCreateModal={closeWorkItemCreateModal}
           onProjectCreated={handleProjectCreated}
           onOrgCreated={handleOrgCreated}
         />

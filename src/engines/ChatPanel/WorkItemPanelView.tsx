@@ -1,6 +1,8 @@
 import { emit } from "@tauri-apps/api/event";
 import { useSetAtom } from "jotai";
+import { BookOpen, Building2, ChevronRight } from "lucide-react";
 import React, { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   type WorkItemFrontmatter,
@@ -8,12 +10,13 @@ import {
   enrichedWorkItemToUI,
   projectApi,
 } from "@src/api/http/project";
+import { PropertyDropdownField } from "@src/components/PropertyField/PropertyDropdownField";
 import { createLogger } from "@src/hooks/logger";
 import {
   WorkItemContent,
   WorkItemProperties,
 } from "@src/modules/ProjectManager/WorkItems/components";
-import { WORK_ITEM_PROPERTY_ESSENTIAL_FIELDS } from "@src/modules/ProjectManager/WorkItems/components/WorkItemProperties";
+import { WORK_ITEM_PROPERTY_INLINE_FIELDS } from "@src/modules/ProjectManager/WorkItems/components/WorkItemProperties";
 import {
   activeSessionIdAtom,
   workstationActiveSessionIdAtom,
@@ -27,6 +30,7 @@ import {
 import type { WorkItem } from "@src/types/core/workItem";
 
 const logger = createLogger("WorkItemPanelView");
+const WORK_ITEM_BREADCRUMB_ICON_SIZE = 13;
 
 interface WorkItemPanelViewProps {
   selectedWorkItem: ChatPanelSelectedWorkItem;
@@ -152,6 +156,7 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
   selectedWorkItem,
   onUpdateWorkItem,
 }) => {
+  const { t } = useTranslation("projects");
   const setSelectedWorkItem = useSetAtom(chatPanelSelectedWorkItemAtom);
   const setContentMode = useSetAtom(chatPanelContentModeAtom);
   const setActiveSessionId = useSetAtom(activeSessionIdAtom);
@@ -222,12 +227,60 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
     selectedWorkItem.shortId || selectedWorkItem.workItem.session_id
   }`;
 
+  const projectPathLabel =
+    selectedWorkItem.projectName ||
+    selectedWorkItem.workItem.project?.name ||
+    t("projects.dashboardTitle");
+  const orgPathLabel = t("orgs.personalOrg");
+  const headerPath = (
+    <div
+      className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+      data-testid="chat-panel-work-item-pill-breadcrumb"
+    >
+      <PropertyDropdownField
+        value="org"
+        label={orgPathLabel}
+        icon={<Building2 size={WORK_ITEM_BREADCRUMB_ICON_SIZE} />}
+        placement="portal"
+        fieldVariant="pill"
+        triggerVariant="pill"
+        readonly
+        searchable={false}
+        selected
+        maxWidthClassName="max-w-[220px] shrink-0"
+      />
+      <ChevronRight
+        size={14}
+        strokeWidth={1.75}
+        className="shrink-0 text-fill-4"
+        aria-hidden
+      />
+      <PropertyDropdownField
+        value={
+          selectedWorkItem.projectId ||
+          selectedWorkItem.projectSlug ||
+          "project"
+        }
+        label={projectPathLabel}
+        icon={<BookOpen size={WORK_ITEM_BREADCRUMB_ICON_SIZE} />}
+        iconColor={selectedWorkItem.workItem.project?.color}
+        placement="portal"
+        fieldVariant="pill"
+        triggerVariant="pill"
+        readonly
+        searchable={false}
+        selected
+        maxWidthClassName="max-w-[220px] shrink-0"
+      />
+    </div>
+  );
+
   const inlineProperties = (
     <WorkItemProperties
       workItem={selectedWorkItem.workItem}
       onUpdate={handleUpdateWorkItem}
       fieldVariant="pill"
-      visibleFields={WORK_ITEM_PROPERTY_ESSENTIAL_FIELDS}
+      visibleFields={WORK_ITEM_PROPERTY_INLINE_FIELDS}
       showMoreMenu
     />
   );
@@ -244,11 +297,10 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
         onUpdateWorkItemImmediate={handleUpdateWorkItem}
         projectSlug={selectedWorkItem.projectSlug}
         shortId={selectedWorkItem.shortId}
+        headerPath={headerPath}
         headerProperties={inlineProperties}
         onOpenSession={handleOpenSession}
         activeAgentSessionId={activeLinkedSession?.session_id ?? null}
-        hideTitleHeader
-        showHeaderPropertiesWhenTitleHidden
       />
     </div>
   );

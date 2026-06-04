@@ -37,6 +37,8 @@ export interface DetailSplitLayoutProps {
   breadcrumb?: React.ReactNode[];
   /** Remove the default bottom border from the local header row. */
   borderlessHeader?: boolean;
+  /** Hide the local header row entirely. */
+  hideHeader?: boolean;
   /** Optional navigation callback (renders prev/next arrows) */
   onNavigate?: (direction: "prev" | "next") => void;
   /** Whether previous navigation is available */
@@ -77,6 +79,7 @@ const DetailSplitLayout: React.FC<DetailSplitLayoutProps> = ({
   title,
   breadcrumb,
   borderlessHeader = false,
+  hideHeader = false,
   onNavigate,
   hasPrev = false,
   hasNext = false,
@@ -198,7 +201,7 @@ const DetailSplitLayout: React.FC<DetailSplitLayoutProps> = ({
 
   return (
     <div className="flex h-full w-full min-w-0 flex-col overflow-hidden">
-      {!publishHeaderToWorkstation && (
+      {!publishHeaderToWorkstation && !hideHeader && (
         <div
           className={
             borderlessHeader

@@ -18,9 +18,8 @@ export interface WorkItemContentProps {
   onUpdateWorkItemImmediate?: (updates: Partial<WorkItemExtended>) => void;
   currentUser?: Person;
   teamMembers?: Person[];
+  headerPath?: ReactNode;
   headerProperties?: ReactNode;
-  hideTitleHeader?: boolean;
-  showHeaderPropertiesWhenTitleHidden?: boolean;
   repoPath?: string | null;
   projectSlug?: string | null;
   shortId?: string | null;
