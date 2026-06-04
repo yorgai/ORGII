@@ -1,6 +1,6 @@
 import Button from "@/src/components/Button";
 import { useAtomValue } from "jotai";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import Markdown from "@src/components/MarkDown";
 import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
@@ -23,83 +23,6 @@ interface AgentChatItemProps {
   /** Current check status (for showing result indicator) */
   curCheckStatus?: string;
 }
-// ── Incremental Block Rendering ──
-//
-// During streaming, re-parsing the full markdown on every token is O(n) and
-// becomes visibly laggy for long messages (react-markdown + Prism highlighting).
-//
-// Split content into completed blocks (paragraph boundaries outside code fences)
-// and a streaming tail. Completed blocks are wrapped in React.memo — their
-// content never changes so they skip re-renders entirely. Only the short tail
-// re-renders on each token, keeping cost O(tail_length) ≈ O(1).
-
-function splitIntoStableBlocks(content: string): string[] {
-  if (!content) return [""];
-
-  const blocks: string[] = [];
-  let blockStart = 0;
-  let inFence = false;
-  let i = 0;
-
-  while (i < content.length) {
-    if (
-      content[i] === "`" &&
-      i + 2 < content.length &&
-      content[i + 1] === "`" &&
-      content[i + 2] === "`"
-    ) {
-      inFence = !inFence;
-      i += 3;
-      continue;
-    }
-
-    if (
-      !inFence &&
-      content[i] === "\n" &&
-      i + 1 < content.length &&
-      content[i + 1] === "\n"
-    ) {
-      const block = content.slice(blockStart, i + 2);
-      if (block.trim()) {
-        blocks.push(block);
-      }
-      blockStart = i + 2;
-      i = blockStart;
-      continue;
-    }
-
-    i++;
-  }
-
-  blocks.push(content.slice(blockStart));
-  return blocks;
-}
-
-interface MemoBlockProps {
-  content: string;
-  useChatCodeBlock?: boolean;
-  codeBlockContainerWidth?: number;
-}
-
-const MemoizedMarkdownBlock = React.memo<MemoBlockProps>(
-  function MemoizedMarkdownBlock({
-    content,
-    useChatCodeBlock,
-    codeBlockContainerWidth,
-  }) {
-    return (
-      <Markdown
-        textContent={content}
-        useChatCodeBlock={useChatCodeBlock}
-        codeBlockContainerWidth={codeBlockContainerWidth}
-        enableFileNavigation={false}
-        skipPreprocess={true}
-      />
-    );
-  },
-  (prev, next) => prev.content === next.content
-);
-
 const AgentChatItemDefault: React.FC<AgentChatItemProps> = ({
   children,
   expand,
@@ -117,11 +40,6 @@ const AgentChatItemDefault: React.FC<AgentChatItemProps> = ({
   const shouldUseDecryptEffect =
     !isStreaming && chatAppearance.decryptEffectEnabled;
 
-  const streamBlocks = useMemo(
-    () => (isStreaming && children ? splitIntoStableBlocks(children) : null),
-    [isStreaming, children]
-  );
-
   useEffect(() => {
     setIsShow(expand);
   }, [expand]);
@@ -137,18 +55,15 @@ const AgentChatItemDefault: React.FC<AgentChatItemProps> = ({
             >
               <div className="resultBgc allow-select w-full overflow-visible break-words font-normal">
                 {isStreaming ? (
-                  children?.length > 0 && streamBlocks ? (
-                    <div className="relative">
-                      {streamBlocks.map((block, i) => (
-                        <div key={i} className={i > 0 ? "mt-3" : undefined}>
-                          <MemoizedMarkdownBlock
-                            content={block}
-                            useChatCodeBlock={true}
-                            codeBlockContainerWidth={codeBlockContainerWidth}
-                          />
-                        </div>
-                      ))}
-                    </div>
+                  children?.length > 0 ? (
+                    <Markdown
+                      textContent={children}
+                      useChatCodeBlock={true}
+                      codeBlockContainerWidth={codeBlockContainerWidth}
+                      enableFileNavigation={false}
+                      streaming
+                      skipPreprocess={true}
+                    />
                   ) : (
                     <span className="text-text-3"> </span>
                   )
@@ -164,7 +79,7 @@ const AgentChatItemDefault: React.FC<AgentChatItemProps> = ({
                     useChatCodeBlock={true}
                     codeBlockContainerWidth={codeBlockContainerWidth}
                     enableFileNavigation={true}
-                    skipPreprocess={false}
+                    skipPreprocess={true}
                   />
                 )}
 

@@ -12,6 +12,65 @@
  */
 import React from "react";
 
+type InlineCodeType = "file" | "directory" | "identifier" | null;
+
+const FILE_CONTENT_PATTERN =
+  /((Here's the content of|Content of|Read\.?\s*Highlights? from|Read)\s+`([^`]+)`\s*:)\s*\n*([^]*?)(?=\n\n[A-Z]|$)/gi;
+
+const LANGUAGE_BY_EXTENSION: Record<string, string> = {
+  js: "javascript",
+  ts: "typescript",
+  tsx: "tsx",
+  jsx: "jsx",
+  py: "python",
+  rb: "ruby",
+  go: "go",
+  rs: "rust",
+  java: "java",
+  cpp: "cpp",
+  c: "c",
+  cs: "csharp",
+  php: "php",
+  sh: "bash",
+  bash: "bash",
+  zsh: "bash",
+  yml: "yaml",
+  yaml: "yaml",
+  json: "json",
+  md: "markdown",
+  css: "css",
+  scss: "scss",
+  html: "html",
+  xml: "xml",
+  sql: "sql",
+};
+
+const CODE_PATTERNS = [
+  /^'use strict'/m,
+  /^"use strict"/m,
+  /^module\.exports/m,
+  /^const\s+\w+\s*=/m,
+  /^let\s+\w+\s*=/m,
+  /^var\s+\w+\s*=/m,
+  /^function\s+\w+\s*\(/m,
+  /^class\s+\w+/m,
+  /^import\s+.*from/m,
+  /^export\s+(default\s+)?/m,
+  /^#!\//m,
+];
+
+const ASCII_DIAGRAM_HINT_PATTERN = /[│├─└┌┐┘┤┬┴┼┃╔╗╚╝╠╣╦╩╬━|+=\\]/;
+const MAX_INLINE_CODE_CACHE_SIZE = 300;
+const inlineCodeTypeCache = new Map<string, InlineCodeType>();
+
+function setInlineCodeTypeCache(key: string, value: InlineCodeType): void {
+  if (inlineCodeTypeCache.size >= MAX_INLINE_CODE_CACHE_SIZE) {
+    const firstKey = inlineCodeTypeCache.keys().next().value;
+    if (firstKey !== undefined) inlineCodeTypeCache.delete(firstKey);
+  }
+  inlineCodeTypeCache.set(key, value);
+}
+
 // ── openUrlInBrowserApp ───────────────────────────────────────────────────────
 
 export interface OpenUrlInBrowserOptions {
@@ -46,6 +105,56 @@ export function isLocalhostUrl(url: string): boolean {
 
 // ── preprocessTextContent ─────────────────────────────────────────────────────
 
+function mayContainFileContentPattern(text: string): boolean {
+  if (!text.includes("`") || !text.includes(":")) return false;
+
+  const lowerText = text.toLowerCase();
+  return (
+    lowerText.includes("here's the content of") ||
+    lowerText.includes("content of") ||
+    lowerText.includes("read")
+  );
+}
+
+function mayContainUnformattedCode(text: string): boolean {
+  if (text.includes("```")) return false;
+
+  return (
+    text.startsWith("'use strict'") ||
+    text.startsWith('"use strict"') ||
+    text.startsWith("module.exports") ||
+    text.startsWith("const ") ||
+    text.startsWith("let ") ||
+    text.startsWith("var ") ||
+    text.startsWith("function ") ||
+    text.startsWith("class ") ||
+    text.startsWith("import ") ||
+    text.startsWith("export ") ||
+    text.startsWith("#!/") ||
+    text.includes("\n'use strict'") ||
+    text.includes('\n"use strict"') ||
+    text.includes("\nmodule.exports") ||
+    text.includes("\nconst ") ||
+    text.includes("\nlet ") ||
+    text.includes("\nvar ") ||
+    text.includes("\nfunction ") ||
+    text.includes("\nclass ") ||
+    text.includes("\nimport ") ||
+    text.includes("\nexport ") ||
+    text.includes("\n#!/")
+  );
+}
+
+function mayContainAsciiDiagram(text: string): boolean {
+  const firstNewline = text.indexOf("\n");
+  if (firstNewline < 0) return false;
+
+  const secondNewline = text.indexOf("\n", firstNewline + 1);
+  if (secondNewline < 0) return false;
+
+  return ASCII_DIAGRAM_HINT_PATTERN.test(text);
+}
+
 /**
  * Detects and formats unformatted code in text content.
  * Handles cases where the backend sends raw code without markdown formatting.
@@ -53,66 +162,36 @@ export function isLocalhostUrl(url: string): boolean {
 export function preprocessTextContent(text: string): string {
   if (!text) return text;
 
-  // Pattern 1: File content pattern
-  const fileContentPattern =
-    /((Here's the content of|Content of|Read\.?\s*Highlights? from|Read)\s+`([^`]+)`\s*:)\s*\n*([^]*?)(?=\n\n[A-Z]|$)/gi;
+  const shouldCheckFileContent = mayContainFileContentPattern(text);
+  const shouldCheckUnformattedCode = mayContainUnformattedCode(text);
+  const shouldCheckAsciiDiagram = mayContainAsciiDiagram(text);
 
-  text = text.replace(
-    fileContentPattern,
-    (match, prefix, _verb, filePath, codeContent) => {
-      if (codeContent.trim().startsWith("```")) return match;
+  if (
+    !shouldCheckFileContent &&
+    !shouldCheckUnformattedCode &&
+    !shouldCheckAsciiDiagram
+  ) {
+    return text;
+  }
 
-      const ext = filePath.split(".").pop()?.toLowerCase() || "";
-      const langMap: Record<string, string> = {
-        js: "javascript",
-        ts: "typescript",
-        tsx: "tsx",
-        jsx: "jsx",
-        py: "python",
-        rb: "ruby",
-        go: "go",
-        rs: "rust",
-        java: "java",
-        cpp: "cpp",
-        c: "c",
-        cs: "csharp",
-        php: "php",
-        sh: "bash",
-        bash: "bash",
-        zsh: "bash",
-        yml: "yaml",
-        yaml: "yaml",
-        json: "json",
-        md: "markdown",
-        css: "css",
-        scss: "scss",
-        html: "html",
-        xml: "xml",
-        sql: "sql",
-      };
-      const lang = langMap[ext] || "text";
-      const cleanCode = codeContent.trim();
-      if (!cleanCode) return prefix;
-      return `${prefix}\n\n\`\`\`${lang}\n${cleanCode}\n\`\`\``;
-    }
-  );
+  if (shouldCheckFileContent) {
+    text = text.replace(
+      FILE_CONTENT_PATTERN,
+      (match, prefix, _verb, filePath, codeContent) => {
+        if (codeContent.trim().startsWith("```")) return match;
 
-  // Pattern 2: Detect inline code that looks like it should be a code block
-  const codePatterns = [
-    /^'use strict'/m,
-    /^"use strict"/m,
-    /^module\.exports/m,
-    /^const\s+\w+\s*=/m,
-    /^let\s+\w+\s*=/m,
-    /^var\s+\w+\s*=/m,
-    /^function\s+\w+\s*\(/m,
-    /^class\s+\w+/m,
-    /^import\s+.*from/m,
-    /^export\s+(default\s+)?/m,
-    /^#!\//m,
-  ];
+        const ext = filePath.split(".").pop()?.toLowerCase() || "";
+        const lang = LANGUAGE_BY_EXTENSION[ext] || "text";
+        const cleanCode = codeContent.trim();
+        if (!cleanCode) return prefix;
+        return `${prefix}\n\n\`\`\`${lang}\n${cleanCode}\n\`\`\``;
+      }
+    );
+  }
 
-  const hasUnformattedCode = codePatterns.some((pattern) => pattern.test(text));
+  const hasUnformattedCode =
+    shouldCheckUnformattedCode &&
+    CODE_PATTERNS.some((pattern) => pattern.test(text));
 
   if (hasUnformattedCode && !text.includes("```")) {
     const lines = text.split("\n");
@@ -123,7 +202,7 @@ export function preprocessTextContent(text: string): string {
     for (let index = 0; index < lines.length; index++) {
       const line = lines[index];
       const isCodeLine =
-        codePatterns.some((pattern) => pattern.test(line)) ||
+        CODE_PATTERNS.some((pattern) => pattern.test(line)) ||
         (inCodeBlock &&
           (line.startsWith("  ") ||
             line.startsWith("\t") ||
@@ -161,11 +240,9 @@ export function preprocessTextContent(text: string): string {
     text = resultLines.join("\n");
   }
 
-  // Pattern 3: ASCII box-drawing / diagram blocks (lines of │, ├, ─, └, ┌, ┐, ┘, ┤, ┬, ┴, ┼, or pipe-table-like rows)
-  // When 3+ consecutive lines start with a box-drawing character or look like
-  // ASCII art (no code fence wrapping them), wrap them in a plain text code block
-  // so ReactMarkdown doesn't shred each `|` into its own paragraph.
-  text = wrapAsciiDiagrams(text);
+  if (shouldCheckAsciiDiagram) {
+    text = wrapAsciiDiagrams(text);
+  }
 
   return text;
 }
@@ -251,38 +328,46 @@ function wrapAsciiDiagrams(text: string): string {
  * Check if a string looks like a file path or code identifier.
  * Returns the detected type: 'file', 'directory', 'identifier', or null.
  */
-export function detectCodeType(
-  text: string
-): "file" | "directory" | "identifier" | null {
+export function detectCodeType(text: string): InlineCodeType {
   if (!text || text.length > 200) return null;
   const trimmed = text.trim();
 
+  if (inlineCodeTypeCache.has(trimmed)) {
+    return inlineCodeTypeCache.get(trimmed) ?? null;
+  }
+
+  let result: InlineCodeType = null;
+
   if (
-    trimmed.includes("\n") ||
-    trimmed.includes("  ") ||
-    /[=<>!&|]/.test(trimmed)
+    !trimmed.includes("\n") &&
+    !trimmed.includes("  ") &&
+    !/[=<>!&|]/.test(trimmed)
   ) {
-    return null;
+    const hasPathSignal = trimmed.includes("/") || trimmed.endsWith("/");
+    const hasIdentifierSignal =
+      trimmed.length > 2 && /^[A-Z][a-zA-Z0-9]*$/.test(trimmed);
+
+    if (hasPathSignal && /^[\w./-]+\/$/.test(trimmed)) {
+      result = "directory";
+    } else if (
+      hasPathSignal &&
+      (/^\.{0,2}\//.test(trimmed) ||
+        (/\//.test(trimmed) && /\.\w+$/.test(trimmed)))
+    ) {
+      result = "file";
+    } else if (
+      hasPathSignal &&
+      /^[\w.-]+\/[\w./-]+$/.test(trimmed) &&
+      !/\.\w+$/.test(trimmed)
+    ) {
+      result = "directory";
+    } else if (hasIdentifierSignal) {
+      result = "identifier";
+    }
   }
-  if (/^[\w./-]+\/$/.test(trimmed)) return "directory";
-  if (
-    /^\.{0,2}\//.test(trimmed) ||
-    (/\//.test(trimmed) && /\.\w+$/.test(trimmed))
-  ) {
-    return "file";
-  }
-  if (/^[\w.-]+\/[\w./-]+$/.test(trimmed) && !/\.\w+$/.test(trimmed)) {
-    return "directory";
-  }
-  if (
-    (/^[A-Z][a-zA-Z0-9]*$/.test(trimmed) ||
-      /^[a-z][a-zA-Z0-9]*$/.test(trimmed)) &&
-    /^[A-Z]/.test(trimmed) &&
-    trimmed.length > 2
-  ) {
-    return "identifier";
-  }
-  return null;
+
+  setInlineCodeTypeCache(trimmed, result);
+  return result;
 }
 
 // ── openFileInEditor ──────────────────────────────────────────────────────────

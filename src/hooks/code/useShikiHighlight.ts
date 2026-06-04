@@ -15,7 +15,10 @@ import { useAtomValue } from "jotai";
 import { useEffect, useState } from "react";
 import { createJavaScriptRegexEngine, getSingletonHighlighter } from "shiki";
 
+import { createLogger } from "@src/hooks/logger";
 import { isDarkThemeAtom } from "@src/store/ui/uiAtom";
+
+const logger = createLogger("ShikiHighlight");
 
 // Resolve the highlighter once with the JS regex engine (no WASM) so webpack
 // production builds don't fail on `import('shiki/wasm')` dynamic imports that
@@ -30,34 +33,75 @@ const highlighterPromise = getSingletonHighlighter({
 // Shared Cache
 // ============================================
 
-/**
- * Global cache for highlighted code
- * Key format: `${lang}:${theme}:${code}`
- */
-const highlightCache = new Map<string, string>();
-
-// Cache size limit to prevent memory issues
 const MAX_CACHE_SIZE = 500;
+const MAX_CACHE_BYTES = 2 * 1024 * 1024;
+const MAX_CACHEABLE_CODE_BYTES = 64 * 1024;
+const HASH_SEED = 0x811c9dc5;
+const HASH_MULTIPLIER = 0x01000193;
 
-/**
- * Generate cache key from parameters
- */
-function getCacheKey(code: string, lang: string, theme: string): string {
-  return `${lang}:${theme}:${code}`;
+const textEncoder = new TextEncoder();
+const highlightCache = new Map<string, { html: string; bytes: number }>();
+let highlightCacheBytes = 0;
+
+function getByteLength(value: string): number {
+  return textEncoder.encode(value).byteLength;
 }
 
-/**
- * Add to cache with size management
- */
-function addToCache(key: string, value: string): void {
-  // Evict oldest entries if cache is full
-  if (highlightCache.size >= MAX_CACHE_SIZE) {
-    const firstKey = highlightCache.keys().next().value;
-    if (firstKey) {
-      highlightCache.delete(firstKey);
-    }
+function getStableHash(value: string): string {
+  let hash = HASH_SEED;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, HASH_MULTIPLIER);
   }
-  highlightCache.set(key, value);
+  return (hash >>> 0).toString(36);
+}
+
+function getCacheKey(code: string, lang: string, theme: string): string {
+  return `${lang}:${theme}:${code.length}:${getStableHash(code)}`;
+}
+
+function getCacheEligibility(code: string): {
+  cacheable: boolean;
+  bytes: number;
+} {
+  const bytes = getByteLength(code);
+  return { cacheable: bytes <= MAX_CACHEABLE_CODE_BYTES, bytes };
+}
+
+function evictOldestCacheEntry(): void {
+  const firstKey = highlightCache.keys().next().value;
+  if (!firstKey) return;
+
+  const entry = highlightCache.get(firstKey);
+  if (entry) {
+    highlightCacheBytes -= entry.bytes;
+  }
+  highlightCache.delete(firstKey);
+}
+
+function getCachedHighlight(key: string): string | undefined {
+  return highlightCache.get(key)?.html;
+}
+
+function addToCache(key: string, html: string, codeBytes: number): void {
+  const htmlBytes = getByteLength(html);
+  const entryBytes = codeBytes + htmlBytes + getByteLength(key);
+  if (entryBytes > MAX_CACHE_BYTES) return;
+
+  const existing = highlightCache.get(key);
+  if (existing) {
+    highlightCacheBytes -= existing.bytes;
+  }
+
+  while (
+    highlightCache.size >= MAX_CACHE_SIZE ||
+    highlightCacheBytes + entryBytes > MAX_CACHE_BYTES
+  ) {
+    evictOldestCacheEntry();
+  }
+
+  highlightCache.set(key, { html, bytes: entryBytes });
+  highlightCacheBytes += entryBytes;
 }
 
 // ============================================
@@ -110,18 +154,26 @@ export function useShikiHighlight(
     null
   );
 
-  const cacheKey = !code || !enabled ? "" : getCacheKey(code, lang, theme);
+  const cacheEligibility = getCacheEligibility(code);
+  const cacheKey =
+    !code || !enabled || !cacheEligibility.cacheable
+      ? ""
+      : getCacheKey(code, lang, theme);
+  const resultKey =
+    !code || !enabled
+      ? ""
+      : `${lang}:${theme}:${code.length}:${getStableHash(code)}`;
 
   useEffect(() => {
-    if (!cacheKey) return;
+    if (!code || !enabled) return;
 
-    const cached = highlightCache.get(cacheKey);
+    const cached = cacheKey ? getCachedHighlight(cacheKey) : undefined;
     if (cached) {
       queueMicrotask(() =>
         setResult((prev) =>
-          prev?.key === cacheKey && prev.html === cached
+          prev?.key === resultKey && prev.html === cached
             ? prev
-            : { key: cacheKey, html: cached }
+            : { key: resultKey, html: cached }
         )
       );
       return;
@@ -137,23 +189,25 @@ export function useShikiHighlight(
       })
       .then((html) => {
         if (!cancelled) {
-          addToCache(cacheKey, html);
-          setResult({ key: cacheKey, html });
+          if (cacheKey) {
+            addToCache(cacheKey, html, cacheEligibility.bytes);
+          }
+          setResult({ key: resultKey, html });
         }
       })
-      .catch((err) => {
-        console.warn("[useShikiHighlight] Error:", err);
+      .catch((err: unknown) => {
+        logger.warn("highlight failed:", err);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, code, lang, theme]);
+  }, [cacheEligibility.bytes, cacheKey, code, enabled, lang, resultKey, theme]);
 
   if (!code || !enabled) return "";
   // Only return HTML when the key matches; otherwise fall back to plain text
   // so stale dark-theme colors are never painted on a light background.
-  return result?.key === cacheKey ? result.html : "";
+  return result?.key === resultKey ? result.html : "";
 }
 
 // ============================================
@@ -166,6 +220,7 @@ export function useShikiHighlight(
  */
 export function clearHighlightCache(): void {
   highlightCache.clear();
+  highlightCacheBytes = 0;
 }
 
 /**
@@ -188,6 +243,9 @@ export async function preWarmCache(
   for (const snippet of snippets) {
     const lang = snippet.lang || "shellscript";
     const resolvedTheme = snippet.theme || defaultTheme;
+    const cacheEligibility = getCacheEligibility(snippet.code);
+    if (!cacheEligibility.cacheable) continue;
+
     const cacheKey = getCacheKey(snippet.code, lang, resolvedTheme);
 
     if (!highlightCache.has(cacheKey)) {
@@ -198,7 +256,7 @@ export async function preWarmCache(
           lang,
           theme: resolvedTheme,
         });
-        addToCache(cacheKey, result);
+        addToCache(cacheKey, result, cacheEligibility.bytes);
       } catch {
         // Ignore errors during pre-warming
       }
