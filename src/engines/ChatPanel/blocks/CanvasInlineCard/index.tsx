@@ -18,6 +18,7 @@ import {
   Layout,
   Maximize2,
   Minimize2,
+  Monitor,
   RefreshCw,
   Sparkles,
   X,
@@ -34,6 +35,7 @@ import { useTranslation } from "react-i18next";
 import { CanvasErrorBoundary } from "./CanvasErrorBoundary";
 import { buildA2UIDocument, buildHtmlDocument } from "./canvasBuilder";
 import type { CanvasInlineCardProps } from "./types";
+import { useJumpToSimulatorCanvas } from "./useJumpToSimulatorCanvas";
 
 // ─── height steps ─────────────────────────────────────────────────────────────
 
@@ -64,6 +66,7 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
   isStreaming = false,
   onClose: externalOnClose,
   onSummarize,
+  sessionId,
 }) => {
   const { t } = useTranslation("sessions");
 
@@ -155,6 +158,15 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
     }
   }, [mode, url, srcDoc]);
 
+  const simulatorPayload = useMemo(
+    () => ({ mode, content, url, title, streaming: isStreaming }),
+    [mode, content, url, title, isStreaming]
+  );
+  const handleJumpToSimulator = useJumpToSimulatorCanvas(
+    sessionId,
+    simulatorPayload
+  );
+
   if (isClosed) return null;
 
   const cardTitle =
@@ -201,6 +213,16 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
               title={t("canvasCard.reload")}
             >
               <RefreshCw size={12} />
+            </button>
+          )}
+          {handleJumpToSimulator && (
+            <button
+              type="button"
+              onClick={handleJumpToSimulator}
+              className="rounded p-1 text-text-4 transition-colors hover:bg-fill-3 hover:text-primary-6"
+              title={t("canvasCard.viewInSimulator", "View in Simulator")}
+            >
+              <Monitor size={12} />
             </button>
           )}
           <button

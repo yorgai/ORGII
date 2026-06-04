@@ -40,6 +40,12 @@ export interface CanvasInlineCardProps {
    * to the agent. When absent the button is not rendered.
    */
   onSummarize?: () => void;
+  /**
+   * Session ID for the canvas preview. When provided together with the
+   * card's content, the toolbar shows a "View in Simulator" button that
+   * jumps the Simulator panel to the CANVAS app.
+   */
+  sessionId?: string;
 }
 
 /** A single A2UI JSONL element. */
