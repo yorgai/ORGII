@@ -13,27 +13,18 @@
  *   - Footer: Cancel / Create work item
  */
 import { emit } from "@tauri-apps/api/event";
-import { X } from "lucide-react";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Info, X } from "lucide-react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
   type ProjectOrg,
   type WorkItemData,
   type WorkItemFrontmatter,
-  enrichedWorkItemToUI,
   projectApi,
 } from "@src/api/http/project";
 import Button from "@src/components/Button";
 import Message from "@src/components/Message";
-import Select from "@src/components/Select";
-import type { SelectOption } from "@src/components/Select";
 import Switch from "@src/components/Switch";
 import { useKeyboardSave } from "@src/hooks/keyboard";
 import { createLogger } from "@src/hooks/logger";
@@ -78,15 +69,6 @@ export interface CreatedWorkItemResult {
   workItem?: WorkItemExtended;
 }
 
-interface LinkableWorkItem {
-  shortId: string;
-  projectSlug?: string;
-  title: string;
-  description: string;
-  item?: WorkItemData;
-  workItem?: WorkItemExtended;
-}
-
 interface CreateWorkItemProjectOption extends WorkItemProject {
   slug?: string;
   orgId?: string;
@@ -121,8 +103,6 @@ export interface CreateWorkItemViewProps {
   onSetUnsaved: (hasUnsaved: boolean) => void;
   /** Called after work item is successfully created */
   onWorkItemCreated: (result?: CreatedWorkItemResult) => void;
-  /** Enables selecting an existing Work Item as the parent for the new item. */
-  onLinkWorkItem?: (result: CreatedWorkItemResult) => void;
   /** Available options for pickers */
   availableProjects?: WorkItemProject[];
   availableMilestones?: WorkItemMilestone[];
@@ -132,6 +112,12 @@ export interface CreateWorkItemViewProps {
   publishHeaderToWorkstation?: boolean;
   /** Render the close action in the local header. */
   showCloseAction?: boolean;
+  /** Whether the right properties panel is visible. Defaults to false for creation. */
+  propertiesOpen?: boolean;
+  /** Callback to toggle the right properties panel. */
+  onToggleProperties?: () => void;
+  /** Render the local properties info action in this view's header. */
+  showPropertiesAction?: boolean;
 }
 
 // ============================================
@@ -149,18 +135,21 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   onCancel,
   onSetUnsaved,
   onWorkItemCreated,
-  onLinkWorkItem,
   availableProjects = [],
   availableMilestones = [],
   availableLabels = [],
   availableMembers = [],
   publishHeaderToWorkstation = false,
   showCloseAction = true,
+  propertiesOpen,
+  onToggleProperties,
+  showPropertiesAction = true,
 }) => {
   const { t } = useTranslation("projects");
   const [saving, setSaving] = useState(false);
   const [createMore, setCreateMore] = useState(false);
   const [aiGenerateMode, setAiGenerateMode] = useState(false);
+  const [localPropertiesOpen, setLocalPropertiesOpen] = useState(false);
   const [editorResetKey, setEditorResetKey] = useState(0);
   const { agents: customAgents } = useAgentDefinitions();
   const { orgs: availableOrgs } = useAgentOrgs();
@@ -175,12 +164,6 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
     Record<string, string>
   >({});
   const [loadedLabels, setLoadedLabels] = useState<WorkItemLabel[]>([]);
-  const [linkableWorkItems, setLinkableWorkItems] = useState<
-    LinkableWorkItem[]
-  >([]);
-  const [linkedWorkItemKey, setLinkedWorkItemKey] = useState<string | null>(
-    null
-  );
 
   const defaultProjectId =
     projectId ?? availableProjects[0]?.id ?? loadedProjects[0]?.id;
@@ -242,49 +225,6 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   }, [availableProjects.length]);
 
   useEffect(() => {
-    if (!onLinkWorkItem) return;
-    let cancelled = false;
-
-    const loadLinkableWorkItems = async () => {
-      try {
-        const [projectsData, standaloneItems] = await Promise.all([
-          projectApi.readProjects(),
-          projectApi.readStandaloneWorkItems(),
-        ]);
-        const projectItems = await Promise.all(
-          projectsData.map(async (project) => {
-            const items = await projectApi.readWorkItemsEnriched(project.slug);
-            return items.map<LinkableWorkItem>((item) => ({
-              shortId: item.shortId,
-              projectSlug: project.slug,
-              title: item.title,
-              description: project.meta.name,
-              workItem: enrichedWorkItemToUI(item),
-            }));
-          })
-        );
-        if (cancelled) return;
-        setLinkableWorkItems([
-          ...projectItems.flat(),
-          ...standaloneItems.map<LinkableWorkItem>((item) => ({
-            shortId: item.frontmatter.short_id || item.frontmatter.id,
-            title: item.frontmatter.title,
-            description: "Standalone Work Item",
-            item,
-          })),
-        ]);
-      } catch (err) {
-        logger.warn("Failed to load existing work items for linking", err);
-      }
-    };
-
-    loadLinkableWorkItems();
-    return () => {
-      cancelled = true;
-    };
-  }, [onLinkWorkItem]);
-
-  useEffect(() => {
     if (availableMembers.length > 0 || !selectedProjectSlug) return;
     let cancelled = false;
 
@@ -330,63 +270,6 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
     availableProjects.length > 0 ? availableProjects : loadedProjects;
   const resolvedLabels =
     availableLabels.length > 0 ? availableLabels : loadedLabels;
-
-  const sortedLinkableWorkItems = useMemo(
-    () =>
-      [...linkableWorkItems]
-        .filter((item) => item.title.trim().length > 0)
-        .sort((left, right) => left.title.localeCompare(right.title))
-        .slice(0, 8),
-    [linkableWorkItems]
-  );
-
-  const getLinkableWorkItemKey = useCallback(
-    (item: LinkableWorkItem) =>
-      `${item.projectSlug ?? "standalone"}:${item.shortId}`,
-    []
-  );
-
-  const linkableWorkItemByKey = useMemo(
-    () =>
-      new Map(
-        sortedLinkableWorkItems.map((item) => [
-          getLinkableWorkItemKey(item),
-          item,
-        ])
-      ),
-    [getLinkableWorkItemKey, sortedLinkableWorkItems]
-  );
-
-  const linkableWorkItemOptions = useMemo<SelectOption[]>(
-    () =>
-      sortedLinkableWorkItems.map((item) => ({
-        value: getLinkableWorkItemKey(item),
-        label: (
-          <span className="flex min-w-0 flex-col items-start">
-            <span className="max-w-full truncate text-[12px] font-medium text-text-1">
-              {item.title}
-            </span>
-            <span className="max-w-full truncate text-[11px] text-text-3">
-              {item.description || item.shortId}
-            </span>
-          </span>
-        ),
-        triggerLabel: item.title,
-        dataTestId: `create-work-item-link-existing-${item.shortId}`,
-      })),
-    [getLinkableWorkItemKey, sortedLinkableWorkItems]
-  );
-
-  const handleLinkExistingWorkItemChange = useCallback(
-    (value: string | number | (string | number)[]) => {
-      if (Array.isArray(value)) return;
-      const key = String(value);
-      if (!linkableWorkItemByKey.has(key)) return;
-      setLinkedWorkItemKey(key);
-    },
-    [linkableWorkItemByKey]
-  );
-
   // Undo/redo for property changes (keyboard shortcut auto-restores)
   const undoStack = useUndoStackWithRestore<WorkItemDraft>({
     keyboardShortcut: true,
@@ -428,6 +311,15 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
 
   // Build a stub WorkItemExtended for WorkItemProperties from the draft
   const stubWorkItem = workItemDraftToStubWorkItem(draft, selectedProjectName);
+  const resolvedPropertiesOpen = propertiesOpen ?? localPropertiesOpen;
+
+  const handleToggleProperties = useCallback(() => {
+    if (onToggleProperties) {
+      onToggleProperties();
+      return;
+    }
+    setLocalPropertiesOpen((current) => !current);
+  }, [onToggleProperties]);
 
   const handlePropertyUpdate = useCallback(
     (updates: Partial<WorkItemExtended>) => {
@@ -454,9 +346,6 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       const shortId = selectedProjectSlug
         ? await projectApi.allocateWorkItemId(selectedProjectSlug)
         : await projectApi.allocateStandaloneWorkItemId();
-      const linkedWorkItem = linkedWorkItemKey
-        ? linkableWorkItemByKey.get(linkedWorkItemKey)
-        : undefined;
       const frontmatter: WorkItemFrontmatter = {
         id: shortId,
         short_id: shortId,
@@ -468,7 +357,6 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
         assignee_type: draft.assigneeType,
         labels: draft.labelIds,
         milestone: draft.milestoneId,
-        parent: linkedWorkItem?.shortId,
         start_date: draft.startDate,
         target_date: draft.targetDate,
         created_by: undefined,
@@ -525,8 +413,6 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   }, [
     createMore,
     draft,
-    linkedWorkItemKey,
-    linkableWorkItemByKey,
     selectedProjectSlug,
     onWorkItemCreated,
     clearDraft,
@@ -547,20 +433,51 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       borderlessHeader
       publishHeaderToWorkstation={publishHeaderToWorkstation}
       headerActions={
-        showCloseAction ? (
-          <Button
-            {...PANEL_HEADER_TOKENS.actionButton}
-            icon={
-              <X
-                size={PANEL_HEADER_TOKENS.buttonIconSize}
-                strokeWidth={PANEL_HEADER_TOKENS.iconStrokeWidth}
-              />
-            }
-            onClick={onCancel}
-            title={t("common:actions.close")}
-            htmlType="button"
-          />
-        ) : null
+        <>
+          {showPropertiesAction ? (
+            <Button
+              {...PANEL_HEADER_TOKENS.actionButton}
+              className={
+                resolvedPropertiesOpen
+                  ? "!bg-surface-selected !text-primary-6 hover:!bg-fill-2"
+                  : PANEL_HEADER_TOKENS.actionButton.className
+              }
+              icon={
+                <Info
+                  size={PANEL_HEADER_TOKENS.buttonIconSize}
+                  strokeWidth={PANEL_HEADER_TOKENS.iconStrokeWidth}
+                />
+              }
+              onClick={handleToggleProperties}
+              title={
+                resolvedPropertiesOpen
+                  ? t("workItems.hideProperties")
+                  : t("workItems.showProperties")
+              }
+              aria-label={
+                resolvedPropertiesOpen
+                  ? t("workItems.hideProperties")
+                  : t("workItems.showProperties")
+              }
+              aria-pressed={resolvedPropertiesOpen}
+              htmlType="button"
+            />
+          ) : null}
+          {showCloseAction ? (
+            <Button
+              {...PANEL_HEADER_TOKENS.actionButton}
+              icon={
+                <X
+                  size={PANEL_HEADER_TOKENS.buttonIconSize}
+                  strokeWidth={PANEL_HEADER_TOKENS.iconStrokeWidth}
+                />
+              }
+              onClick={onCancel}
+              title={t("common:actions.close")}
+              htmlType="button"
+            />
+          ) : null}
+        </>
       }
       leftContent={
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -607,26 +524,23 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
               autoFocusTitle
               dataTestId="create-work-item-editor"
             />
-            {onLinkWorkItem && linkableWorkItemOptions.length > 0 && (
+            {!resolvedPropertiesOpen && (
               <div
                 className="shrink-0 pb-3 pt-2"
-                data-testid="create-work-item-link-existing-panel"
+                data-testid="create-work-item-property-pills"
               >
-                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wide text-text-3">
-                  {t("workItems.linkExisting.label")}
-                </label>
-                <Select
-                  value={linkedWorkItemKey ?? undefined}
-                  options={linkableWorkItemOptions}
-                  onChange={handleLinkExistingWorkItemChange}
-                  placeholder={t("workItems.linkExisting.placeholder")}
-                  size="small"
-                  radius="lg"
-                  showSearch
-                  dropdownWidthMode="match"
-                  panelZIndex={10000}
-                  dataTestId="create-work-item-link-existing-select"
-                  selectorClassName="!bg-surface-container"
+                <WorkItemProperties
+                  workItem={stubWorkItem}
+                  onUpdate={handlePropertyUpdate}
+                  availableProjects={resolvedProjects}
+                  availableMilestones={availableMilestones}
+                  availableLabels={resolvedLabels}
+                  availableMembers={resolvedMembers}
+                  availableAgents={customAgents}
+                  availableOrgs={availableOrgs}
+                  visibleFields={CREATE_WORK_ITEM_VISIBLE_FIELDS}
+                  fieldVariant="pill"
+                  showMoreMenu
                 />
               </div>
             )}
@@ -634,17 +548,19 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
         </div>
       }
       rightContent={
-        <WorkItemProperties
-          workItem={stubWorkItem}
-          onUpdate={handlePropertyUpdate}
-          availableProjects={resolvedProjects}
-          availableMilestones={availableMilestones}
-          availableLabels={resolvedLabels}
-          availableMembers={resolvedMembers}
-          availableAgents={customAgents}
-          availableOrgs={availableOrgs}
-          visibleFields={CREATE_WORK_ITEM_VISIBLE_FIELDS}
-        />
+        resolvedPropertiesOpen ? (
+          <WorkItemProperties
+            workItem={stubWorkItem}
+            onUpdate={handlePropertyUpdate}
+            availableProjects={resolvedProjects}
+            availableMilestones={availableMilestones}
+            availableLabels={resolvedLabels}
+            availableMembers={resolvedMembers}
+            availableAgents={customAgents}
+            availableOrgs={availableOrgs}
+            visibleFields={CREATE_WORK_ITEM_VISIBLE_FIELDS}
+          />
+        ) : undefined
       }
       footer={
         <>

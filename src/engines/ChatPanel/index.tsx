@@ -4,6 +4,7 @@ import {
   Clipboard,
   FolderOutput,
   GalleryThumbnails,
+  Info,
   ListChevronsDownUp,
   Maximize2,
   Minimize2,
@@ -120,7 +121,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     position = "right",
     sessionCreatorSlot: SessionCreatorSlot,
   }) => {
-    const { t } = useTranslation(["sessions", "common"]);
+    const { t } = useTranslation(["sessions", "common", "projects"]);
     const isLeftPosition = position === "left";
     const shouldOffsetHeaderForCollapsedSidebar =
       useShouldOffsetChatPanelHeader({
@@ -143,6 +144,8 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const { openTab: openWorkStationTab } = useWorkStationTabs();
     const [contentMode, setContentMode] = useAtom(chatPanelContentModeAtom);
     const [createTarget, setCreateTarget] = useAtom(chatPanelCreateTargetAtom);
+    const [workItemCreatePropertiesOpen, setWorkItemCreatePropertiesOpen] =
+      useState(false);
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
     const currentRepo = useAtomValue(currentRepoAtom);
     const currentRepoPath = currentRepo?.path ?? currentRepo?.fs_uri ?? null;
@@ -402,6 +405,11 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const showPresenceInHeader = showSessionContent
       ? sidebarCollapsed
       : showCreatorPresenceInHeader;
+
+    const handleToggleWorkItemCreateProperties = useCallback(() => {
+      setWorkItemCreatePropertiesOpen((current) => !current);
+    }, []);
+
     const chatFocusLabel = isChatFocus
       ? t("chat.restoreSplitView")
       : t("chat.maximizeChatPanel");
@@ -452,9 +460,13 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           }));
           handleNewSession();
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
+          setWorkItemCreatePropertiesOpen(false);
           return;
         }
 
+        if (nextTarget !== CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
+          setWorkItemCreatePropertiesOpen(false);
+        }
         setCreateTarget(nextTarget);
         if (nextTarget === CHAT_PANEL_CREATE_TARGET.AGENT_SESSION) {
           handleNewSession();
@@ -471,6 +483,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     }, [isChatFocus, openWorkStationTab, toggleChatFocus]);
 
     const handleCancelWorkItemCreate = useCallback(() => {
+      setWorkItemCreatePropertiesOpen(false);
       setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
       handleNewSession();
     }, [handleNewSession, setCreateTarget]);
@@ -496,6 +509,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           workItem,
         });
         if (!result.keepOpen) {
+          setWorkItemCreatePropertiesOpen(false);
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
           setContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
           dispatchClearSession();
@@ -634,6 +648,41 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                     size={CHAT_PANEL_HEADER_ICON_SIZE}
                     strokeWidth={2}
                   />
+                }
+              />
+            </span>
+          </Tooltip>
+        )}
+        {isWorkItemTarget && !showSessionContent && !selectedWorkItem && (
+          <Tooltip
+            content={
+              workItemCreatePropertiesOpen
+                ? t("projects:workItems.hideProperties")
+                : t("projects:workItems.showProperties")
+            }
+            position="bottom-end"
+            mouseEnterDelay={200}
+          >
+            <span className="inline-flex">
+              <Button
+                htmlType="button"
+                variant="tertiary"
+                size="small"
+                iconOnly
+                className={
+                  workItemCreatePropertiesOpen
+                    ? "!bg-surface-selected !text-primary-6"
+                    : ""
+                }
+                onClick={handleToggleWorkItemCreateProperties}
+                aria-label={
+                  workItemCreatePropertiesOpen
+                    ? t("projects:workItems.hideProperties")
+                    : t("projects:workItems.showProperties")
+                }
+                aria-pressed={workItemCreatePropertiesOpen}
+                icon={
+                  <Info size={CHAT_PANEL_HEADER_ICON_SIZE} strokeWidth={2} />
                 }
               />
             </span>
@@ -1019,8 +1068,10 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               onCancel={handleCancelWorkItemCreate}
               onSetUnsaved={() => undefined}
               onWorkItemCreated={handleChatPanelWorkItemCreated}
-              onLinkWorkItem={handleChatPanelWorkItemCreated}
               showCloseAction={false}
+              propertiesOpen={workItemCreatePropertiesOpen}
+              onToggleProperties={handleToggleWorkItemCreateProperties}
+              showPropertiesAction={false}
             />
           </div>
         );

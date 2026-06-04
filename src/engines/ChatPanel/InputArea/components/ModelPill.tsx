@@ -30,8 +30,8 @@ import {
 import { Message } from "@src/components/Message";
 import ModelSelectorPill from "@src/components/ModelSelectorPill";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
-import type { AdvancedConfig } from "@src/config/sessionCreatorConfig";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
+import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
 import { useSessionModelField } from "@src/hooks/session/useSessionPatch";
 import {

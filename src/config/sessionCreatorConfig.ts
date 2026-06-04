@@ -141,8 +141,6 @@ export interface RunningLocationEntry {
   disabled?: boolean;
 }
 
-export type { AdvancedConfig } from "@src/features/SessionCreator/types";
-
 export const RUNNING_LOCATIONS: RunningLocationEntry[] = [
   {
     id: "local",

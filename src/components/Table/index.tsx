@@ -64,7 +64,7 @@ function TableComponent<T = unknown>(
     columns,
     data = [],
     rowKey: _rowKey = "id",
-    loading = false,
+    loading: _loading = false,
     showHeader = true,
     pagination,
     onChange,
