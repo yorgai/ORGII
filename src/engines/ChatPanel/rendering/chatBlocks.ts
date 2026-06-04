@@ -27,6 +27,7 @@ import {
   ReadFileAdapter,
   SearchAdapter,
   SentMessageAdapter,
+  SetupRepoAdapter,
   ShellAdapter,
   SubagentAdapter,
   TitleOnlyAdapter,
@@ -58,6 +59,7 @@ export const CHAT_BLOCKS: Record<ChatBlock, ChatBlockComponent> = {
   plan_doc: PlanDocAdapter,
   hidden: HiddenAdapter,
   canvas_inline: CanvasInlineAdapter,
+  setup_repo: SetupRepoAdapter,
   fallback: FallbackAdapter,
 };
 

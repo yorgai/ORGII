@@ -93,6 +93,7 @@ export const COMPONENT_LOADERS: ComponentLoaderMap = {
   browser: chatBlockLoader,
   internal_browser: chatBlockLoader,
   worktree: chatBlockLoader,
+  setup_repo: chatBlockLoader,
   tool_call: chatBlockLoader,
 
   // ── Stream events ──
@@ -322,6 +323,12 @@ export const CONTEXT_CONFIG: Record<string, ContextConfig> = {
   // Worktree
   worktree: {
     chat: { requiresItemIndex: false, showStatusLine: true },
+    simulator: { supportsSplitView: false, supportsFullscreen: false },
+  },
+
+  // Setup repo
+  setup_repo: {
+    chat: { requiresItemIndex: false, showStatusLine: false },
     simulator: { supportsSplitView: false, supportsFullscreen: false },
   },
 

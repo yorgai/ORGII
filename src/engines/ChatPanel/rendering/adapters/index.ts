@@ -21,6 +21,7 @@ export {
 export { PlanDocAdapter } from "./PlanDocAdapter";
 export { ReadFileAdapter } from "./ReadFileAdapter";
 export { SearchAdapter } from "./SearchAdapter";
+export { SetupRepoAdapter } from "./SetupRepoAdapter";
 export { OrgSendMessageBlock, SentMessageAdapter } from "./SentMessageAdapter";
 export { ShellAdapter } from "./ShellAdapter";
 export { SubagentAdapter } from "./SubagentAdapter";

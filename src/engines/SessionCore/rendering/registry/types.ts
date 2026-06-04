@@ -162,6 +162,7 @@ export type ChatBlock =
   | "plan_doc"
   | "hidden"
   | "canvas_inline"
+  | "setup_repo"
   | "fallback";
 
 /**
