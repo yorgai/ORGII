@@ -17,13 +17,6 @@ export type { ReplaceInputProps } from "./ReplaceInput";
 export { SearchFilters } from "./SearchFilters";
 export type { SearchFiltersProps } from "./SearchFilters";
 
-// Search mode selector
-export { SearchModeSelector, SearchModeToggle } from "./SearchModeSelector";
-export type {
-  SearchModeSelectorProps,
-  SearchModeToggleProps,
-} from "./SearchModeSelector";
-
 // Search mode select dropdown (shared between sidebar and editor tab)
 export { SearchModeSelect, SEARCH_MODE_OPTIONS } from "./SearchModeSelect";
 export type { SearchModeSelectProps, SearchMode } from "./SearchModeSelect";
