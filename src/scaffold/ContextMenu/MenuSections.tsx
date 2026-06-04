@@ -316,6 +316,8 @@ export interface SecondLayerPanelProps {
   treePosition?: "left" | "right";
   /** Override the default layer title (used for drill-down breadcrumb) */
   titleOverride?: string;
+  /** Recent files to show at the top when layerId === "files" */
+  recentFiles?: RecentFile[];
 }
 
 export const SecondLayerPanel: React.FC<SecondLayerPanelProps> = memo(
@@ -331,7 +333,9 @@ export const SecondLayerPanel: React.FC<SecondLayerPanelProps> = memo(
     repoPath,
     treePosition = "left",
     titleOverride,
+    recentFiles = [],
   }) => {
+    const [recentExpanded, setRecentExpanded] = useState(false);
     const config = SECOND_LAYER_CONFIG[layerId];
     const activeItem = results[activeIndex];
     const showTreePanel =
@@ -388,9 +392,65 @@ export const SecondLayerPanel: React.FC<SecondLayerPanelProps> = memo(
             className={DROPDOWN_CLASSES.optionsContainer}
             style={{ maxHeight: STYLE_CONFIG.maxHeight }}
           >
+            {/* Recent files section — only shown in the files second layer */}
+            {layerId === "files" && recentFiles.length > 0 && (
+              <div className={DROPDOWN_CLASSES.sectionContainer}>
+                <div className={DROPDOWN_CLASSES.sectionLabel}>Recent</div>
+                {(recentExpanded
+                  ? recentFiles
+                  : recentFiles.slice(0, STYLE_CONFIG.recentSectionMaxItems)
+                ).map((file) => (
+                  <div
+                    key={file.path}
+                    className={`${DROPDOWN_CLASSES.item} group cursor-pointer ${DROPDOWN_CLASSES.itemHover}`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onSelect(file.path);
+                    }}
+                  >
+                    {file.type === "folder" ? (
+                      <FolderIcon
+                        width={DROPDOWN_ITEM.iconSize}
+                        height={DROPDOWN_ITEM.iconSize}
+                        className="flex-shrink-0 text-text-2"
+                      />
+                    ) : (
+                      <FileTypeIcon
+                        fileName={file.name}
+                        size="small"
+                        className="flex-shrink-0 text-text-2"
+                      />
+                    )}
+                    <span className="min-w-0 flex-1 truncate text-[13px] text-text-1">
+                      {file.name}
+                    </span>
+                  </div>
+                ))}
+                {!recentExpanded &&
+                  recentFiles.length > STYLE_CONFIG.recentSectionMaxItems && (
+                    <div
+                      className={`${DROPDOWN_CLASSES.item} cursor-pointer text-text-3 hover:text-text-2`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setRecentExpanded(true);
+                      }}
+                    >
+                      <span className="text-[13px]">
+                        Show{" "}
+                        {recentFiles.length -
+                          STYLE_CONFIG.recentSectionMaxItems}{" "}
+                        more
+                      </span>
+                    </div>
+                  )}
+              </div>
+            )}
+
             {loading ? (
               <SearchLoadingOrEmpty searchQuery="" loading />
-            ) : results.length === 0 ? (
+            ) : results.length === 0 && recentFiles.length === 0 ? (
               <SecondLayerEmptyState layerId={layerId} />
             ) : (
               results.map((item, idx) => (

@@ -219,6 +219,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           onBack={goBack}
           repoPath={repoPath}
           treePosition={treePosition}
+          recentFiles={secondLayer === "files" ? recentFiles : undefined}
           titleOverride={
             secondLayer === "projects" && drilledProjectName
               ? drilledProjectName
