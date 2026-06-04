@@ -1649,6 +1649,7 @@
     "createTarget": {
       "agentSession": "Phiên Agent",
       "createAgent": "Tạo Agent / Skill",
+      "project": "Tạo dự án",
       "workItem": "Tạo Work Item",
       "batchStartBeta": "Khởi động hàng loạt (Beta)",
       "benchmark": "Benchmark (Beta)"

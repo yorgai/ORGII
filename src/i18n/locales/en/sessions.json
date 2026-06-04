@@ -1669,6 +1669,7 @@
     "createTarget": {
       "agentSession": "Agent session",
       "createAgent": "Create agent / skill",
+      "project": "Create project",
       "workItem": "Create work item",
       "batchStartBeta": "Batch start (Beta)",
       "benchmark": "Benchmark (Beta)"

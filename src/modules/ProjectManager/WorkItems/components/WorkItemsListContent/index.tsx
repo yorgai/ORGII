@@ -1,3 +1,4 @@
+import { Box, SquarePen } from "lucide-react";
 import type React from "react";
 import { type FC, type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -37,6 +38,7 @@ interface WorkItemsListContentProps {
   onDeleteWorkItem?: (workItemId: string) => void;
   onRestoreWorkItem?: (workItemId: string) => void;
   readonly?: boolean;
+  onAddProject?: () => void;
   onAddListItem?: (status: WorkItemStatus) => void | Promise<void>;
   emptyListPlaceholder?: ReactNode;
   noResultsPlaceholder?: ReactNode;
@@ -71,6 +73,7 @@ const WorkItemsListContent: FC<WorkItemsListContentProps> = ({
   onDeleteWorkItem,
   onRestoreWorkItem,
   readonly = false,
+  onAddProject,
   onAddListItem,
   emptyListPlaceholder,
   noResultsPlaceholder,
@@ -90,9 +93,41 @@ const WorkItemsListContent: FC<WorkItemsListContentProps> = ({
     [checkedWorkItemIds, hasControlledCheckboxes]
   );
 
+  const topCreateActions = (onAddProject || onAddListItem) && (
+    <div className="flex flex-col gap-1 px-3 pb-2 pt-3">
+      {onAddProject ? (
+        <button
+          type="button"
+          onClick={onAddProject}
+          className="flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] font-semibold text-primary-6 transition-colors hover:bg-surface-hover"
+        >
+          <Box size={16} strokeWidth={1.75} className="shrink-0" />
+          <span className="min-w-0 flex-1 truncate">
+            {t("projects.createProject")}
+          </span>
+        </button>
+      ) : null}
+      {onAddListItem ? (
+        <button
+          type="button"
+          onClick={() => {
+            void onAddListItem(WORK_ITEMS_DEFAULT_STATUS);
+          }}
+          className="flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] font-semibold text-primary-6 transition-colors hover:bg-surface-hover"
+        >
+          <SquarePen size={16} strokeWidth={1.75} className="shrink-0" />
+          <span className="min-w-0 flex-1 truncate">
+            {t("workItems.createWorkItem")}
+          </span>
+        </button>
+      ) : null}
+    </div>
+  );
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
+        {topCreateActions}
         {filteredWorkItems.length === 0 ? (
           workItems.length === 0 ? (
             (emptyListPlaceholder ?? (

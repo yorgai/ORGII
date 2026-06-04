@@ -1649,6 +1649,7 @@
     "createTarget": {
       "agentSession": "Agent セッション",
       "createAgent": "Agent / Skill を作成",
+      "project": "プロジェクトを作成",
       "workItem": "Work Item を作成",
       "batchStartBeta": "Batch start (Beta)",
       "benchmark": "Benchmark (Beta)"

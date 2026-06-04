@@ -3,7 +3,7 @@
  *
  * Centralizes all tab-related action callbacks for ProjectManagerLayout:
  * - Opening projects / project / settings / workItem tabs
- * - Opening project creation modal and chat-panel work item creator
+ * - Opening chat-panel project and work item creators
  * - Expanding a work item into its own detail tab
  * - Sidebar toggle
  * - Draft cleanup when create surfaces close
@@ -19,12 +19,14 @@ import {
   CHAT_PANEL_CREATE_TARGET,
   activeStationChatVisibleAtom,
   chatPanelContentModeAtom,
+  chatPanelCreateProjectContextAtom,
   chatPanelCreateTargetAtom,
   chatPanelSelectedWorkItemAtom,
 } from "@src/store/ui/chatPanelAtom";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import { workStationPrimarySidebarCollapsedPersistAtom } from "@src/store/ui/workStationAtom";
 import {
+  PROJECT_CREATOR_DRAFT_ID,
   WORK_ITEM_CREATOR_DRAFT_ID,
   projectDraftsAtom,
   removeProjectDraftAtom,
@@ -59,8 +61,6 @@ interface UseProjectTabActionsOptions {
   openTab: (tab: WorkStationTab) => void;
   closeTab: (tabId: string) => void;
   primarySidebarCollapsed: boolean;
-  activeProjectCreateDraftId: string | null;
-  onCreateProject: () => void;
 }
 
 export function useProjectTabActions({
@@ -69,8 +69,6 @@ export function useProjectTabActions({
   openTab,
   closeTab: _closeTab,
   primarySidebarCollapsed,
-  activeProjectCreateDraftId,
-  onCreateProject,
 }: UseProjectTabActionsOptions) {
   const { t } = useTranslation();
 
@@ -82,9 +80,7 @@ export function useProjectTabActions({
 
   useEffect(() => {
     const liveProjectDraftIds = new Set(tabs.map((tab) => tab.id));
-    if (activeProjectCreateDraftId) {
-      liveProjectDraftIds.add(activeProjectCreateDraftId);
-    }
+    liveProjectDraftIds.add(PROJECT_CREATOR_DRAFT_ID);
 
     const liveWorkItemDraftIds = new Set(tabs.map((tab) => tab.id));
     liveWorkItemDraftIds.add(WORK_ITEM_CREATOR_DRAFT_ID);
@@ -102,7 +98,6 @@ export function useProjectTabActions({
     }
   }, [
     tabs,
-    activeProjectCreateDraftId,
     projectDrafts,
     workItemDrafts,
     removeProjectDraft,
@@ -112,6 +107,9 @@ export function useProjectTabActions({
   const stationMode = useAtomValue(stationModeAtom);
   const setStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
   const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
+  const setChatPanelCreateProjectContext = useSetAtom(
+    chatPanelCreateProjectContextAtom
+  );
   const setChatPanelCreateTarget = useSetAtom(chatPanelCreateTargetAtom);
   const setChatPanelSelectedWorkItem = useSetAtom(
     chatPanelSelectedWorkItemAtom
@@ -219,8 +217,25 @@ export function useProjectTabActions({
   );
 
   const handleCreateProject = useCallback(() => {
-    onCreateProject();
-  }, [onCreateProject]);
+    setChatPanelSelectedWorkItem(null);
+    setChatPanelCreateProjectContext({
+      orgId: activeProjectOrg?.orgId ?? STORY_PERSONAL_ORG_FILTER_ID,
+      scopeBreadcrumbLabel:
+        activeProjectOrg?.orgName ?? t("projects:orgs.personalOrg"),
+    });
+    setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.PROJECT);
+    setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+    setStationChatVisible(stationMode, true);
+  }, [
+    activeProjectOrg,
+    setChatPanelContentMode,
+    setChatPanelCreateProjectContext,
+    setChatPanelCreateTarget,
+    setChatPanelSelectedWorkItem,
+    setStationChatVisible,
+    stationMode,
+    t,
+  ]);
 
   const handleCreateWorkItem = useCallback(
     (_projectId?: string, _projectName?: string, _projectSlug?: string) => {

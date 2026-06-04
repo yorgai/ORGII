@@ -226,6 +226,7 @@ export type ChatPanelMode = "session" | "settings";
 export const CHAT_PANEL_CREATE_TARGET = {
   AGENT_SESSION: "agentSession",
   CREATE_AGENT: "createAgent",
+  PROJECT: "project",
   WORK_ITEM: "workItem",
   BATCH_START: "batchStart",
   BENCHMARK: "benchmark",
@@ -266,6 +267,16 @@ export interface ChatPanelSelectedWorkItem {
 export const chatPanelSelectedWorkItemAtom =
   atom<ChatPanelSelectedWorkItem | null>(null);
 chatPanelSelectedWorkItemAtom.debugLabel = "chatPanelSelectedWorkItemAtom";
+
+export interface ChatPanelCreateProjectContext {
+  orgId: string;
+  scopeBreadcrumbLabel?: string;
+}
+
+export const chatPanelCreateProjectContextAtom =
+  atom<ChatPanelCreateProjectContext | null>(null);
+chatPanelCreateProjectContextAtom.debugLabel =
+  "chatPanelCreateProjectContextAtom";
 
 /**
  * Whether the chat-panel slot covers the entire main content area.

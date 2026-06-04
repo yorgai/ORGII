@@ -12,6 +12,7 @@ import type { SessionCreatorDraft } from "@src/store/session";
 export const CURSOR_IDE_REFRESH_INTERVAL_MS = 60_000;
 
 export const NEW_SESSION_MENU_ITEM_ID = "new-session";
+export const PROJECTS_NEW_PROJECT_MENU_ITEM_ID = "projects-new-project";
 export const PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID = "projects-new-work-item";
 export const QUICKSTART_KANBAN_MENU_ITEM_ID = "quickstart-kanban";
 export const SESSION_CREATOR_DRAFT_MENU_PREFIX = "session-creator-draft:";

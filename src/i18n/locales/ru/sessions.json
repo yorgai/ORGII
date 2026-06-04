@@ -1655,6 +1655,7 @@
     "createTarget": {
       "agentSession": "Сессия Agent",
       "createAgent": "Создать Agent / Skill",
+      "project": "Создать проект",
       "workItem": "Создать Work Item",
       "batchStartBeta": "Пакетный запуск (Beta)",
       "benchmark": "Benchmark (Beta)"

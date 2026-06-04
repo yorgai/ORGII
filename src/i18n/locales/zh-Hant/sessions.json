@@ -1649,6 +1649,7 @@
     "createTarget": {
       "agentSession": "Agent 會話",
       "createAgent": "建立 Agent / Skill",
+      "project": "建立專案",
       "workItem": "建立 Work Item",
       "batchStartBeta": "批量啟動 (Beta)",
       "benchmark": "Benchmark (Beta)"

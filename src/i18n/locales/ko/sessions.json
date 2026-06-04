@@ -1649,6 +1649,7 @@
     "createTarget": {
       "agentSession": "Agent 세션",
       "createAgent": "Agent / Skill 만들기",
+      "project": "프로젝트 만들기",
       "workItem": "Work Item 만들기",
       "batchStartBeta": "Batch start (Beta)",
       "benchmark": "Benchmark (Beta)"

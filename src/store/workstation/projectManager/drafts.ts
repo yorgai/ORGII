@@ -16,8 +16,13 @@ import { WORK_ITEM_STATUS } from "@src/types/core/workItem";
 
 const MAX_DRAFTS = 20;
 
+/** Shared draft key for chat-panel project creator. */
+export const PROJECT_CREATOR_DRAFT_ID = "project-creator";
+
 /** Shared draft key for chat-panel and modal work item creators. */
 export const WORK_ITEM_CREATOR_DRAFT_ID = "work-item-creator";
+
+const PINNED_PROJECT_DRAFT_IDS = new Set<string>([PROJECT_CREATOR_DRAFT_ID]);
 
 const PINNED_WORK_ITEM_DRAFT_IDS = new Set<string>([
   WORK_ITEM_CREATOR_DRAFT_ID,
@@ -36,7 +41,11 @@ function writeDraftMapEntry<K, V>(
   while (next.size > MAX_DRAFTS) {
     let evicted = false;
     for (const candidateKey of next.keys()) {
-      if (PINNED_WORK_ITEM_DRAFT_IDS.has(String(candidateKey))) {
+      const draftKey = String(candidateKey);
+      if (
+        PINNED_PROJECT_DRAFT_IDS.has(draftKey) ||
+        PINNED_WORK_ITEM_DRAFT_IDS.has(draftKey)
+      ) {
         continue;
       }
       next.delete(candidateKey);

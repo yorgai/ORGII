@@ -1,5 +1,5 @@
 import { useSetAtom } from "jotai";
-import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
+import React, { memo, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -136,15 +136,8 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
       bumpProjectListRefresh((prev) => prev + 1);
     }, [bumpProjectListRefresh]);
 
-    const {
-      projectCreateModalOpen,
-      orgCreateModalOpen,
-      activeProjectCreateDraftId,
-      openProjectCreateModal,
-      closeProjectCreateModal,
-      openOrgCreateModal,
-      closeOrgCreateModal,
-    } = useProjectManagerCreateModals();
+    const { orgCreateModalOpen, openOrgCreateModal, closeOrgCreateModal } =
+      useProjectManagerCreateModals();
 
     const [embeddedWorkItemDetailTabs, setEmbeddedWorkItemDetailTabs] =
       useState<Record<string, boolean>>({});
@@ -169,8 +162,6 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
       openTab,
       closeTab,
       primarySidebarCollapsed,
-      activeProjectCreateDraftId,
-      onCreateProject: openProjectCreateModal,
     });
 
     const handleEmbeddedWorkItemDetailStateChange = useCallback(
@@ -250,64 +241,6 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
       onOpenRepoSettings: handleOpenRepoSettings,
     });
 
-    const projectCreateOrgId = useMemo(() => {
-      if (!activeTab) return "personal-org";
-      if (
-        activeTab.type === "project-org" ||
-        activeTab.type === "project-org-settings" ||
-        activeTab.type === "project-dashboard" ||
-        activeTab.type === "project-work-items"
-      ) {
-        const orgId = activeTab.data.orgId;
-        if (typeof orgId === "string" && orgId) return orgId;
-      }
-      return "personal-org";
-    }, [activeTab]);
-
-    const createScopeBreadcrumbLabel = useMemo(() => {
-      if (!activeTab) return t("projects:workspace.title");
-
-      if (
-        activeTab.type === "project-linear-projects" ||
-        activeTab.type === "project-linear-work-items"
-      ) {
-        const teamName = activeTab.data.teamName;
-        const projectName = activeTab.data.projectName;
-        if (typeof projectName === "string" && projectName) return projectName;
-        if (typeof teamName === "string" && teamName) return teamName;
-        return t("projects:orgs.linearOrg");
-      }
-
-      if (activeTab.type === "project-workitems") {
-        return t("projects:orgs.personalOrg");
-      }
-
-      if (
-        activeTab.type === "project-org" ||
-        activeTab.type === "project-org-settings"
-      ) {
-        const orgName = activeTab.data.orgName;
-        return typeof orgName === "string" && orgName
-          ? orgName
-          : t("projects:orgs.personalOrg");
-      }
-
-      if (
-        activeTab.type === "project-dashboard" ||
-        activeTab.type === "project-work-items"
-      ) {
-        const orgScope = activeTab.data.orgScope;
-        if (orgScope === STORY_ORG_SCOPE.PERSONAL_ORG) {
-          const orgName = activeTab.data.orgName;
-          return typeof orgName === "string" && orgName
-            ? orgName
-            : t("projects:orgs.personalOrg");
-        }
-      }
-
-      return t("projects:workspace.title");
-    }, [activeTab, t]);
-
     const mainContent = (
       <ProjectManagerContentRouter
         repoPath={repoPath}
@@ -333,14 +266,6 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
       />
     );
 
-    const handleProjectCreated = useCallback(
-      (options?: { keepOpen?: boolean }) => {
-        if (!options?.keepOpen) closeProjectCreateModal();
-        handleProjectListRefreshRequested();
-      },
-      [closeProjectCreateModal, handleProjectListRefreshRequested]
-    );
-
     const handleOrgCreated = useCallback(
       (org: ProjectOrg) => {
         closeOrgCreateModal();
@@ -364,15 +289,8 @@ export const ProjectManagerLayout: React.FC<ProjectManagerLayoutProps> = memo(
           appClassName="project-manager"
         />
         <ProjectManagerCreateModals
-          repoPath={repoPath}
-          repoName={repoName}
-          scopeBreadcrumbLabel={createScopeBreadcrumbLabel}
-          projectCreateOrgId={projectCreateOrgId}
-          projectCreateModalOpen={projectCreateModalOpen}
           orgCreateModalOpen={orgCreateModalOpen}
-          onCloseProjectCreateModal={closeProjectCreateModal}
           onCloseOrgCreateModal={closeOrgCreateModal}
-          onProjectCreated={handleProjectCreated}
           onOrgCreated={handleOrgCreated}
         />
       </>

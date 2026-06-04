@@ -65,6 +65,7 @@ import {
 } from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
 import { useWorkStationTabs } from "@src/hooks/workStation/tabs";
 import { allAgentDefsAtom } from "@src/modules/MainApp/AgentOrgs/store/builtInAgentsAtom";
+import CreateProjectView from "@src/modules/ProjectManager/Projects/components/CreateProjectView";
 import CreateWorkItemView, {
   type CreatedWorkItemResult,
 } from "@src/modules/ProjectManager/WorkItems/components/CreateWorkItemView";
@@ -75,6 +76,7 @@ import { CollapsedSidebarButton } from "@src/scaffold/NavigationSidebar/Collapse
 import { PresenceMenuButton } from "@src/scaffold/NavigationSidebar/blocks/SidebarBottomBar";
 import { SessionImportExportModal } from "@src/scaffold/NavigationSidebar/connectors/SessionImportExportModal";
 import { VerticalResizeHandle } from "@src/scaffold/Resize";
+import { projectListRefreshAtom } from "@src/store/project/projectAtom";
 import { currentRepoAtom } from "@src/store/repo";
 import {
   SESSION_TARGET_KIND,
@@ -88,6 +90,7 @@ import {
   CHAT_PANEL_CREATE_TARGET,
   type ChatPanelCreateTarget,
   chatPanelContentModeAtom,
+  chatPanelCreateProjectContextAtom,
   chatPanelCreateTargetAtom,
   chatPanelMaximizedAtom,
   chatPanelSelectedWorkItemAtom,
@@ -97,8 +100,14 @@ import {
 } from "@src/store/ui/chatPanelAtom";
 import { triggerCollapseAllAtom } from "@src/store/ui/collapseStateAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
-import type { WorkItemDraft } from "@src/store/workstation/projectManager";
-import { createBenchmarkTab } from "@src/store/workstation/tabs";
+import {
+  PROJECT_CREATOR_DRAFT_ID,
+  type WorkItemDraft,
+} from "@src/store/workstation/projectManager";
+import {
+  STORY_PERSONAL_ORG_FILTER_ID,
+  createBenchmarkTab,
+} from "@src/store/workstation/tabs";
 import { getDispatchCategory } from "@src/util/session/sessionDispatch";
 
 import { useReloadSession } from "./ChatHistory/hooks/useReloadSession";
@@ -179,8 +188,12 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       Boolean(SessionCreatorSlot)
     );
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
+    const createProjectContext = useAtomValue(
+      chatPanelCreateProjectContextAtom
+    );
     const currentRepo = useAtomValue(currentRepoAtom);
     const currentRepoPath = currentRepo?.path ?? currentRepo?.fs_uri ?? null;
+    const currentRepoName = currentRepo?.name ?? undefined;
     const {
       error: benchmarkError,
       isLoadingTasks: isLoadingBenchmarkTasks,
@@ -212,6 +225,11 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           value: CHAT_PANEL_CREATE_TARGET.CREATE_AGENT,
           label: t("creator.createTarget.createAgent"),
           dataTestId: "chat-panel-create-target-create-agent-option",
+        },
+        {
+          value: CHAT_PANEL_CREATE_TARGET.PROJECT,
+          label: t("creator.createTarget.project"),
+          dataTestId: "chat-panel-create-target-project-option",
         },
         {
           value: CHAT_PANEL_CREATE_TARGET.WORK_ITEM,
@@ -299,6 +317,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const dispatchClearSession = useSetAtom(clearSessionAtom);
     const creatorState = useAtomValue(sessionCreatorStateAtom);
     const setCreatorState = useSetAtom(sessionCreatorStateAtom);
+    const bumpProjectListRefresh = useSetAtom(projectListRefreshAtom);
     const allAgentDefs = useAtomValue(allAgentDefsAtom);
 
     const handleCollapseAll = useCallback(() => {
@@ -437,12 +456,14 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       showSessionContent && sidebarCollapsed && !sessionSidebarVisible;
     const isBenchmarkTarget =
       createTarget === CHAT_PANEL_CREATE_TARGET.BENCHMARK;
+    const isProjectTarget = createTarget === CHAT_PANEL_CREATE_TARGET.PROJECT;
     const isWorkItemTarget =
       createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM;
     const showCreatorPresenceInHeader =
       !showSessionContent &&
       !selectedWorkItem &&
       !isBenchmarkTarget &&
+      !isProjectTarget &&
       !isWorkItemTarget;
     const showWorkItemAgentSwitchInHeader =
       showNonSessionContent &&
@@ -526,6 +547,16 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         toggleChatFocus();
       }
     }, [isChatFocus, openWorkStationTab, toggleChatFocus]);
+
+    const handleChatPanelProjectCreated = useCallback(
+      (options?: { keepOpen?: boolean }) => {
+        bumpProjectListRefresh((prev) => prev + 1);
+        if (options?.keepOpen) return;
+        setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
+        handleNewSession();
+      },
+      [bumpProjectListRefresh, handleNewSession, setCreateTarget]
+    );
 
     const handleCancelWorkItemCreate = useCallback(() => {
       setWorkItemCreateDraft(null);
@@ -1296,6 +1327,27 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     }, [refreshBenchmarkPreflight]);
 
     const emptyChatContent = (() => {
+      if (createTarget === CHAT_PANEL_CREATE_TARGET.PROJECT) {
+        return (
+          <div className={`flex flex-col overflow-hidden ${creatorClassName}`}>
+            <CreateProjectView
+              tabId={PROJECT_CREATOR_DRAFT_ID}
+              repoPath={currentRepoPath ?? undefined}
+              repoName={currentRepoName}
+              scopeBreadcrumbLabel={
+                createProjectContext?.scopeBreadcrumbLabel ??
+                t("projects:orgs.personalOrg")
+              }
+              orgId={
+                createProjectContext?.orgId ?? STORY_PERSONAL_ORG_FILTER_ID
+              }
+              onSetUnsaved={() => undefined}
+              onProjectCreated={handleChatPanelProjectCreated}
+            />
+          </div>
+        );
+      }
+
       if (createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
         const sessionCreatorContent =
           showWorkItemAgentCreator && SessionCreatorSlot ? (

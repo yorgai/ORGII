@@ -1,4 +1,4 @@
-import { Plus, Radar, SquarePen, X } from "lucide-react";
+import { Box, Plus, Radar, SquarePen, X } from "lucide-react";
 import React from "react";
 
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
@@ -8,6 +8,7 @@ import { resolveSessionRowIcon } from "@src/util/session/sessionSidebarRow";
 
 import {
   NEW_SESSION_MENU_ITEM_ID,
+  PROJECTS_NEW_PROJECT_MENU_ITEM_ID,
   PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID,
   QUICKSTART_KANBAN_MENU_ITEM_ID,
   getDraftMenuItemId,
@@ -21,7 +22,8 @@ interface BuildPinnedMenuItemsParams {
 }
 
 interface BuildProjectsPinnedMenuItemsParams {
-  newWorkItemLabel: string;
+  createProjectLabel: string;
+  createWorkItemLabel: string;
 }
 
 export function buildPinnedMenuItems({
@@ -49,15 +51,23 @@ export function buildPinnedMenuItems({
 }
 
 export function buildProjectsPinnedMenuItems({
-  newWorkItemLabel,
+  createProjectLabel,
+  createWorkItemLabel,
 }: BuildProjectsPinnedMenuItemsParams): NavigationMenuItem[] {
   return [
     {
       id: PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID,
       key: PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID,
-      label: newWorkItemLabel,
+      label: createWorkItemLabel,
       icon: SquarePen,
       iconName: "square-pen",
+    },
+    {
+      id: PROJECTS_NEW_PROJECT_MENU_ITEM_ID,
+      key: PROJECTS_NEW_PROJECT_MENU_ITEM_ID,
+      label: createProjectLabel,
+      icon: Box,
+      iconName: "box",
     },
   ];
 }

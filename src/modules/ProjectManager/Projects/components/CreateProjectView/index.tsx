@@ -1,7 +1,7 @@
 /**
  * CreateProjectView Component
  *
- * Project creation form reused by Project Manager modals and embedded create flows.
+ * Project creation form reused by Project Manager Chat Panel and embedded create flows.
  * Draft state is cached in a jotai atom keyed by tabId, so callers can preserve
  * unsaved form data while the create surface remains mounted.
  *
@@ -9,14 +9,13 @@
  * to pass persistence callbacks.
  *
  * Split layout:
- *   - Header: title + close button
- *   - Left: ProjectContentEditor (title, summary, detail description)
+ *   - Header: title
+ *   - Left: project metadata pills + ProjectContentEditor
  *   - Right: PropertiesPanel
- *   - Footer: Cancel / Create project
+ *   - Footer: Create with Agent stub / Create project
  */
 import { emit } from "@tauri-apps/api/event";
 import { useAtomValue, useSetAtom } from "jotai";
-import { X } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -33,6 +32,7 @@ import Select from "@src/components/Select";
 import type { SelectOption } from "@src/components/Select";
 import { useKeyboardSave } from "@src/hooks/keyboard";
 import { useUndoStackWithRestore } from "@src/hooks/ui";
+import WorkItemContentStack from "@src/modules/ProjectManager/WorkItems/components/WorkItemContentStack";
 import {
   DetailSplitLayout,
   type LinkedRepoOption,
@@ -42,7 +42,6 @@ import {
   type ProjectData,
   ProjectPropertyFields,
 } from "@src/modules/ProjectManager/shared";
-import { PANEL_HEADER_TOKENS } from "@src/modules/shared/layouts/blocks";
 import { reposAtom } from "@src/store/repo";
 import {
   type ProjectDraft,
@@ -73,8 +72,6 @@ export interface CreateProjectViewProps {
   scopeBreadcrumbLabel?: string;
   /** Native ORGII org that owns the created project. */
   orgId: string;
-  /** Cancel / discard the draft and close the tab */
-  onCancel: () => void;
   /** Mark this tab as having unsaved changes */
   onSetUnsaved: (hasUnsaved: boolean) => void;
   /** Called after project is successfully created */
@@ -93,7 +90,6 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
   repoName,
   scopeBreadcrumbLabel,
   orgId,
-  onCancel,
   onSetUnsaved,
   onProjectCreated,
   publishHeaderToWorkstation = false,
@@ -332,39 +328,35 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
       showSearch
       dropdownWidthMode="min-match"
       dropdownMinWidth={220}
-      // CreateProjectView renders inside the Project create Modal (z-index
-      // 9999). Without bumping the panel z-index the dropdown gets hidden
-      // behind the modal mask and looks like "the dropdown does nothing".
       panelZIndex={10000}
       className="w-auto max-w-[220px] [&_.select-selector]:!h-7 [&_.select-selector]:!rounded-full [&_.select-selector]:!bg-bg-2 [&_.select-selector]:!px-3 [&_.select-selector]:!text-[13px] [&_.select-selector]:!font-medium [&_.select-selector]:!shadow-none"
     />
   );
 
-  const breadcrumb = [orgBreadcrumbPill, t("projects.newProject")];
+  const propertyPills = (
+    <div ref={propertiesRef}>
+      <ProjectPropertyFields
+        project={projectData}
+        onUpdate={handleProjectUpdate}
+        availableRepos={availableRepos}
+        containerRef={propertiesRef}
+        fieldVariant="pill"
+        visibleFields={PROJECT_PROPERTY_CONCISE_FIELDS}
+        showMoreMenu
+      />
+    </div>
+  );
 
   return (
     <DetailSplitLayout
       title={t("projects.newProject")}
-      breadcrumb={breadcrumb}
-      borderlessHeader
+      hideHeader
       publishHeaderToWorkstation={publishHeaderToWorkstation}
-      headerActions={
-        <Button
-          {...PANEL_HEADER_TOKENS.actionButton}
-          icon={
-            <X
-              size={PANEL_HEADER_TOKENS.buttonIconSize}
-              strokeWidth={PANEL_HEADER_TOKENS.iconStrokeWidth}
-            />
-          }
-          onClick={onCancel}
-          title={t("common:actions.close")}
-          htmlType="button"
-        />
-      }
       leftContent={
-        <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 px-4 pt-4">
+        <WorkItemContentStack
+          pathContent={orgBreadcrumbPill}
+          propertiesContent={propertyPills}
+          descriptionContent={
             <ProjectContentEditor
               ref={editorRef}
               title={draft.name}
@@ -379,32 +371,26 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
               className="flex h-full min-h-0 flex-col"
               autoFocusTitle
             />
-          </div>
-          <div
-            ref={propertiesRef}
-            className="shrink-0 px-3 py-2 [&_[data-property-dropdown]]:!bottom-full [&_[data-property-dropdown]]:!top-auto [&_[data-property-dropdown]]:!mb-1 [&_[data-property-dropdown]]:!mt-0"
-          >
-            <ProjectPropertyFields
-              project={projectData}
-              onUpdate={handleProjectUpdate}
-              availableRepos={availableRepos}
-              containerRef={propertiesRef}
-              fieldVariant="pill"
-              visibleFields={PROJECT_PROPERTY_CONCISE_FIELDS}
-              showMoreMenu
-            />
-          </div>
-        </div>
+          }
+          descriptionFlexible
+          descriptionClassName="min-h-0 overflow-hidden px-4"
+          scrollable
+        />
       }
       footer={
-        <Button
-          variant="primary"
-          size="small"
-          onClick={handleCreate}
-          disabled={!draft.name.trim() || saving}
-        >
-          {saving ? t("common:status.saving") : t("projects.createProject")}
-        </Button>
+        <>
+          <Button variant="secondary" size="small" disabled>
+            {t("workItems.createModes.generateWithAgent")}
+          </Button>
+          <Button
+            variant="primary"
+            size="small"
+            onClick={handleCreate}
+            disabled={!draft.name.trim() || saving}
+          >
+            {saving ? t("common:status.saving") : t("projects.createProject")}
+          </Button>
+        </>
       }
     />
   );

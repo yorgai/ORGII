@@ -327,6 +327,12 @@ export function useProjectsTabConfig({
   const projectsActions = useMemo<SectionHeaderAction[]>(
     () => [
       {
+        key: "create-project",
+        icon: <Box size={ACTION_ICON_SIZE} strokeWidth={ACTION_ICON_STROKE} />,
+        tooltip: t("projects:projects.createProject"),
+        onClick: onCreateProject,
+      },
+      {
         key: "create-work-item",
         icon: (
           <SquarePen size={ACTION_ICON_SIZE} strokeWidth={ACTION_ICON_STROKE} />
