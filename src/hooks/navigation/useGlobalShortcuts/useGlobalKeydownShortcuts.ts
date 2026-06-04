@@ -193,11 +193,7 @@ export function useGlobalKeydownShortcuts(
           if (event.code === "KeyU") {
             event.preventDefault();
             event.stopPropagation();
-            if (workStationShortcutSurface) {
-              handleToggleWorkstationSidebar();
-            } else {
-              shortcutRegistry.dispatch("toggle_sidebar");
-            }
+            shortcutRegistry.dispatch("toggle_sidebar");
             return;
           }
           if (workStationShortcutSurface && event.code === "KeyM") {

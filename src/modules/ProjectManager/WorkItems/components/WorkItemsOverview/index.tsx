@@ -15,7 +15,6 @@ import React, {
 import { useTranslation } from "react-i18next";
 
 import Avatar from "@src/components/Avatar";
-import Input from "@src/components/Input";
 import SettingsTable, {
   SETTINGS_TABLE_CELL,
   SETTINGS_TABLE_COL,
@@ -28,11 +27,10 @@ import { getWorkItemStatusConfig } from "@src/modules/ProjectManager/config/mana
 import {
   type LinkedRepoOption,
   PROJECT_PROPERTY_CONCISE_FIELDS,
+  ProjectContentEditor,
   type ProjectData,
   ProjectPropertyFields,
 } from "@src/modules/ProjectManager/shared";
-import { PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS } from "@src/modules/ProjectManager/shared/placeholderTokens";
-import MarkdownEditor from "@src/modules/shared/components/MarkdownEditor";
 import {
   CollapsibleSection,
   DETAIL_PANEL_TOKENS,
@@ -88,6 +86,8 @@ export interface WorkItemsOverviewProps {
   onProjectSummaryChange?: (summary: string) => void;
   /** Project description change handler */
   onProjectDescriptionChange?: (html: string, text: string) => void;
+  /** Workspace path used by editor context menus. */
+  repoPath?: string | null;
   /** Optional actions rendered beside the title. */
   headerActions?: React.ReactNode;
   /** Additional className */
@@ -113,6 +113,7 @@ const WorkItemsOverview: React.FC<WorkItemsOverviewProps> = ({
   onProjectNameChange,
   onProjectSummaryChange,
   onProjectDescriptionChange,
+  repoPath,
   headerActions,
   className = "",
 }) => {
@@ -140,8 +141,8 @@ const WorkItemsOverview: React.FC<WorkItemsOverviewProps> = ({
   };
 
   const handleDescriptionChange = useCallback(
-    (markdown: string) => {
-      onProjectDescriptionChange?.(markdown, markdown);
+    (markdown: string, text: string) => {
+      onProjectDescriptionChange?.(markdown, text);
     },
     [onProjectDescriptionChange]
   );
@@ -283,60 +284,42 @@ const WorkItemsOverview: React.FC<WorkItemsOverviewProps> = ({
       className={className || undefined}
       testId="work-items-overview"
     >
-      {/* Title — pinned above scroll area */}
       <div className="shrink-0 px-3 pt-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <Input
-            type="text"
-            value={localProjectName}
-            onChange={handleProjectNameChange}
-            placeholder={t("workItems.overview.projectNamePlaceholder")}
-            borderless
-            bgless
-            autoHeight
-            className="min-w-0 flex-1"
-            inputClassName={`text-[22px] font-semibold text-text-1 ${PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS}`}
-          />
-          {headerActions && (
-            <div className="flex shrink-0 items-center gap-1 pt-0.5">
-              {headerActions}
-            </div>
+        <ProjectContentEditor
+          title={localProjectName}
+          onTitleChange={handleProjectNameChange}
+          summary={projectSummary}
+          onSummaryChange={onProjectSummaryChange}
+          initialDescription={projectDescription ?? ""}
+          onDescriptionChange={handleDescriptionChange}
+          titlePlaceholder={t("workItems.overview.projectNamePlaceholder")}
+          descriptionPlaceholder={t(
+            "workItems.overview.descriptionPlaceholder"
           )}
-        </div>
-
-        {(onProjectSummaryChange || projectSummary) && (
-          <div className="mt-2">
-            <Input
-              type="text"
-              value={projectSummary ?? ""}
-              onChange={(nextSummary) => onProjectSummaryChange?.(nextSummary)}
-              placeholder={t("projects.editor.summaryPlaceholder")}
-              readOnly={!onProjectSummaryChange}
-              borderless
-              bgless
-              autoHeight
-              inputClassName={`text-[13px] text-text-2 ${PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS}`}
-            />
-          </div>
-        )}
-
-        {projectProperties && (
-          <div className="mt-3 [&_[data-property-dropdown]]:!top-full [&_[data-property-dropdown]]:!mt-1">
-            <ProjectPropertyFields
-              project={projectProperties}
-              onUpdate={onProjectPropertiesChange}
-              availableMembers={availableMembers}
-              availableTeams={availableTeams}
-              availableLabels={availableLabels}
-              availableRepos={availableRepos}
-              containerRef={propertiesRef}
-              fieldVariant="pill"
-              visibleFields={PROJECT_PROPERTY_CONCISE_FIELDS}
-              showMoreMenu
-            />
-          </div>
-        )}
-        <div className="mt-4 border-b border-border-2" />
+          editable={!!onProjectNameChange}
+          repoPath={repoPath}
+          titleActions={headerActions}
+          metaContent={
+            projectProperties ? (
+              <div className="[&_[data-property-dropdown]]:!top-full [&_[data-property-dropdown]]:!mt-1">
+                <ProjectPropertyFields
+                  project={projectProperties}
+                  onUpdate={onProjectPropertiesChange}
+                  availableMembers={availableMembers}
+                  availableTeams={availableTeams}
+                  availableLabels={availableLabels}
+                  availableRepos={availableRepos}
+                  containerRef={propertiesRef}
+                  fieldVariant="pill"
+                  visibleFields={PROJECT_PROPERTY_CONCISE_FIELDS}
+                  showMoreMenu
+                />
+              </div>
+            ) : undefined
+          }
+          descriptionVisible={false}
+          className="flex flex-col"
+        />
       </div>
 
       {/* Tab header */}
@@ -358,21 +341,23 @@ const WorkItemsOverview: React.FC<WorkItemsOverviewProps> = ({
       {/* Tab content — scrollable */}
       <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
         {activeTab === "description" && (
-          <>
-            {/* Description */}
-            <div className={DETAIL_PANEL_TOKENS.sectionGap}>
-              <MarkdownEditor
-                value={projectDescription ?? ""}
-                onChange={handleDescriptionChange}
-                placeholder={t("workItems.overview.descriptionPlaceholder")}
-                minHeight={80}
-                readOnly={!onProjectDescriptionChange}
-                showTokenCount={false}
-                hideHeader
-                className="no-bottom-border project-markdown-editor text-[13px]"
-              />
-            </div>
-          </>
+          <div className={DETAIL_PANEL_TOKENS.sectionGap}>
+            <ProjectContentEditor
+              title={localProjectName}
+              onTitleChange={handleProjectNameChange}
+              initialDescription={projectDescription ?? ""}
+              onDescriptionChange={handleDescriptionChange}
+              titlePlaceholder={t("workItems.overview.projectNamePlaceholder")}
+              descriptionPlaceholder={t(
+                "workItems.overview.descriptionPlaceholder"
+              )}
+              editable={!!onProjectDescriptionChange}
+              titleVisible={false}
+              separatorVisible={false}
+              descriptionClassName="no-bottom-border"
+              repoPath={repoPath}
+            />
+          </div>
         )}
 
         {activeTab === "stats" && (

@@ -1,3 +1,4 @@
+/* global browser */
 import fs from "node:fs";
 import path from "node:path";
 
@@ -31,44 +32,42 @@ import {
 } from "./agentQueuedWorkspaceHelpers.mjs";
 import { WRITE_EFFECT_TOOL_NAMES } from "./toolCoverage.mjs";
 
-async function runInvestigateForceSendScenario(config) {
-  const marker = `INVESTIGATE_FORCE_${config.label.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
+async function runAskForceSendScenario(config) {
+  const marker = `ASK_FORCE_${config.label.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
   const firstPrompt = [
-    `Investigate this repository for ${config.label}.`,
+    `Ask this repository for ${config.label}.`,
     "Give an explanation with 20 short numbered points.",
   ].join(" ");
-  const followupPrompt = `Follow-up for the investigation: acknowledge ${marker} and continue from the previous findings.`;
+  const followupPrompt = `Follow-up for the research: acknowledge ${marker} and continue from the previous findings.`;
 
-  await configureScenario(config, { agentExecMode: "investigate" });
-  await waitForModePill(`${config.label}-investigate`, "Investigate");
+  await configureScenario(config, { agentExecMode: "ask" });
+  await waitForModePill(`${config.label}-ask`, "Ask");
   const inputSelector = await waitForChatInput();
   await typeAndClickSend(inputSelector, firstPrompt);
   await waitForChatLaunched(firstPrompt);
-  await waitForWorkingTurn(`${config.label}-investigate-force`);
+  await waitForWorkingTurn(`${config.label}-ask-force`);
   const chatInputSelector = await waitForChatInput();
   await typeAndClickSend(chatInputSelector, followupPrompt);
   await waitForQueuedFollowup(marker);
   await clickSendNowForQueuedMarker(marker);
   await browser.waitUntil(
     async () => {
-      const state = await inspectChatState(`${config.label}-investigate-queue`);
+      const state = await inspectChatState(`${config.label}-ask-queue`);
       return state.queuedMessages.length === 0;
     },
     {
       timeout: QUEUE_TIMEOUT_MS,
-      timeoutMsg: `${config.label} Investigate Force Send did not flush queue; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))}`,
+      timeoutMsg: `${config.label} Ask Force Send did not flush queue; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))}`,
     }
   );
-  await waitForIdleSendButton(`${config.label}-investigate-force`);
-  await assertNoDuplicateThinkingPlaceholders(
-    `${config.label}-investigate-force`
-  );
+  await waitForIdleSendButton(`${config.label}-ask-force`);
+  await assertNoDuplicateThinkingPlaceholders(`${config.label}-ask-force`);
 
-  const state = await inspectChatState(`${config.label}-investigate-final`);
+  const state = await inspectChatState(`${config.label}-ask-final`);
   const ui = await execJS(js.planUi);
   if (state.pendingPlan || ui.cardCount > 0 || state.pendingReviewCount > 0) {
     throw new Error(
-      `${config.label} Investigate produced plan or writable review state; state=${JSON.stringify(summarizeChatState(state))} ui=${JSON.stringify(ui)}`
+      `${config.label} Ask produced plan or writable review state; state=${JSON.stringify(summarizeChatState(state))} ui=${JSON.stringify(ui)}`
     );
   }
 }
@@ -98,25 +97,19 @@ async function assertNoWriteEffects(label, filePath) {
   }
 }
 
-async function runInvestigateWriteDeniedScenario(config) {
-  const repoPath = createTempRepo(`${config.label}-investigate-write-denied`);
-  const markerFile = `orgii-investigate-denied-${Date.now()}.md`;
-  const markerText = `ORGII_INVESTIGATE_DENIED_${Date.now()}`;
+async function runAskWriteDeniedScenario(config) {
+  const repoPath = createTempRepo(`${config.label}-ask-write-denied`);
+  const markerFile = `orgii-ask-denied-${Date.now()}.md`;
+  const markerText = `ORGII_ASK_DENIED_${Date.now()}`;
   const prompt = rewindPromptForConfig(config, markerFile, markerText);
   const filePath = path.join(repoPath, markerFile);
 
-  await configureScenario(config, { repoPath, agentExecMode: "investigate" });
-  await waitForModePill(
-    `${config.label}-investigate-write-denied`,
-    "Investigate"
-  );
+  await configureScenario(config, { repoPath, agentExecMode: "ask" });
+  await waitForModePill(`${config.label}-ask-write-denied`, "Ask");
   const inputSelector = await waitForChatInput();
   await typeAndClickSend(inputSelector, prompt);
   await waitForChatLaunched(prompt);
-  await assertNoWriteEffects(
-    `${config.label}-investigate-write-denied`,
-    filePath
-  );
+  await assertNoWriteEffects(`${config.label}-ask-write-denied`, filePath);
 }
 
 async function removeTempRepoWithRetry(repoPath) {
@@ -160,6 +153,6 @@ async function runIntermediateStreamingScenario(config) {
 
 export {
   runIntermediateStreamingScenario,
-  runInvestigateForceSendScenario,
-  runInvestigateWriteDeniedScenario,
+  runAskForceSendScenario,
+  runAskWriteDeniedScenario,
 };

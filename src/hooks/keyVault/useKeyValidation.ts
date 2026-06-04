@@ -21,10 +21,11 @@ import {
   NATIVE_HARNESS_TYPE,
 } from "@src/api/tauri/rpc/schemas/validation";
 import type { EnvVar, QuotaSnapshot } from "@src/api/types/keyVault";
-import type {
-  ModelType,
-  QuotaInfo,
-  ValidateKeyResponse,
+import {
+  LOCAL_MODEL_PROVIDER,
+  type ModelType,
+  type QuotaInfo,
+  type ValidateKeyResponse,
 } from "@src/api/types/keys";
 import { createLogger } from "@src/hooks/logger";
 import { getMyKeyFallbackNativeModels } from "@src/hooks/models/nativeHarnessAccountModels";
@@ -196,7 +197,13 @@ export function useKeyValidation(
         typeof overrideTestModel === "string" ? overrideTestModel : undefined;
 
       if (!rawKeyInput) {
-        setValidationError(VALIDATE_KEY_FIRST_MESSAGE);
+        if (agentType === LOCAL_MODEL_PROVIDER && baseUrl) {
+          setValidationError(
+            "Please enter a local API key placeholder for this endpoint."
+          );
+        } else {
+          setValidationError(VALIDATE_KEY_FIRST_MESSAGE);
+        }
         return;
       }
 

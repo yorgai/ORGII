@@ -1645,7 +1645,6 @@
     "createTarget": {
       "agentSession": "Agent 會話",
       "createAgent": "建立 Agent / Skill",
-      "solveWorkItem": "解決 Work Item",
       "workItem": "建立 Work Item",
       "batchStartBeta": "批量啟動 (Beta)",
       "benchmark": "Benchmark (Beta)"
@@ -1667,8 +1666,10 @@
     "slashSearchPlaceholder": "搜尋指令…",
     "slashMenu": {
       "image": "圖片",
+      "uploadImage": "上傳圖片",
       "mode": "模式",
-      "models": "模型"
+      "models": "模型",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",
@@ -1796,8 +1797,6 @@
       "cancel": "取消"
     },
     "viewDiff": "查看 Diff",
-    "selectWorkItem": "選擇 Work Item",
-    "addInstructionsPlaceholder": "新增說明",
     "batchStarterPlaceholder": "描述這個 session starter",
     "addBatchStarter": "新增 starter",
     "removeBatchStarter": "移除 starter",
@@ -1869,7 +1868,7 @@
     },
     "modes": {
       "build": "Build",
-      "investigate": "Investigate",
+      "ask": "Ask",
       "plan": "Plan",
       "debug": "Debug",
       "review": "Review",

@@ -8,6 +8,8 @@
     "noResults": "Project bulunamadı",
     "dashboardTitle": "Projects",
     "groupBy": {
+      "org": "Org'a göre",
+      "project": "Projeye göre",
       "status": "Duruma göre",
       "priority": "Önceliğe göre",
       "targetDate": "Hedef tarihe göre"

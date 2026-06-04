@@ -212,6 +212,31 @@
     "customBaseUrlRiskTitle": "Özel URL Uyarısı",
     "customBaseUrlRiskWarning": "Özel Base URL kullanmak API anahtarınızı ve verilerinizi üçüncü taraf sunuculara açabilir. Yalnızca güvenilir proxy'ler, kendi barındırdığınız dağıtımlar veya bilinen güvenli uç noktalar için kullanın.",
     "addBaseUrl": "Özel Base URL ekle (İsteğe bağlı)",
+    "localModel": {
+      "title": "Yerel model Cookbook",
+      "description": "Yerel runtime presetini seçin, OpenAI uyumlu endpoint'i onaylayın, bir veya daha fazla model ID ekleyin ve yerel modelleri Chat içinde kullanmak için bu hesabı kaydedin.",
+      "runtimeLabel": "Runtime preseti",
+      "runtimeDesc": "Çalıştırdığınız yerel sunucuyu seçin. Presetler endpoint'i ve başlangıç model ID'lerini doldurur.",
+      "baseUrlDesc": "OpenAI uyumlu yerel endpoint. Önce runtime'ı başlatın, sonra doğrulayın veya kaydedin.",
+      "apiKeyDesc": "Çoğu yerel runtime boş olmayan herhangi bir değeri kabul eder. Sunucunuz anahtar zorunlu kılmıyorsa placeholder'ı bırakın.",
+      "quickModelsLabel": "Cookbook modelleri",
+      "quickModelsDesc": "Tabloyu bu runtime için yaygın model ID'leriyle doldurun. Aşağıda düzenleyebilir veya daha fazlasını ekleyebilirsiniz.",
+      "quickModelsPlaceholder": "Önerilen model seç",
+      "addSuggestedModel": "Önerileni ekle",
+      "validateDesc": "Endpoint çalışıyorsa test edin veya modelleri elle ekledikten sonra kaydedin.",
+      "presets": {
+        "ollama": "Ollama",
+        "ollamaDesc": "11434 portundaki varsayılan yerel sunucu",
+        "lmStudio": "LM Studio",
+        "lmStudioDesc": "1234 portundaki OpenAI uyumlu sunucu",
+        "vllm": "vLLM",
+        "vllmDesc": "8000 portundaki self-hosted çıkarım sunucusu",
+        "llamaCpp": "llama.cpp",
+        "llamaCppDesc": "8080 portundaki GGUF serving endpoint",
+        "custom": "Özel",
+        "customDesc": "Herhangi bir OpenAI uyumlu yerel endpoint"
+      }
+    },
     "validate": "Doğrula",
     "validateDesc": "Devam etmeden önce kimlik bilgilerini doğrulayın",
     "validated": "Doğrulandı",
@@ -755,7 +780,8 @@
     "comingSoon": "Yakında",
     "installedClis": "CLI İstemcileri",
     "myRoles": "Rollerim",
-    "modelWiki": "Model Wiki"
+    "modelWiki": "Model Wiki",
+    "localModels": "On prem"
   },
   "modelWiki": {
     "description": "Context boyutu, çıktı limitleri ve yetenekleriyle {{count}} herkese açık modelin referans kataloğu.",
@@ -2386,5 +2412,45 @@
     "searchPlaceholder": "Eklenti ara...",
     "skillCountLabel": "Skills",
     "mcpConfigured": "MCP yapılandırıldı"
+  },
+  "localModels": {
+    "title": "On prem",
+    "description": "Bu cihazı algılar ve hafif bir donanım uyum puanıyla Ollama / llama.cpp dostu yerel modelleri sıralar.",
+    "detect": "Algıla",
+    "detectFailed": "Donanım algılama başarısız",
+    "emptyTitle": "Bu cihazı algıla",
+    "emptyDescription": "CPU, bellek, GPU ve yerel model önerilerini görmek için algılamayı çalıştırın.",
+    "noRecommendations": "Henüz öneri yok",
+    "noMatchingRecommendations": "Eşleşen öneri yok",
+    "searchPlaceholder": "Yerel modelleri ara...",
+    "columnHardware": "Donanım",
+    "columnDetails": "Ayrıntılar",
+    "columnValue": "Değer",
+    "columnModel": "Model",
+    "columnFit": "Uyum",
+    "columnRunMode": "Çalıştırma modu",
+    "columnMemory": "Bellek",
+    "columnSpeed": "Hız",
+    "columnContext": "Bağlam",
+    "columnInstall": "Kurulum ipucu",
+    "tokensPerSecond": "{{count}} tok/s",
+    "hardware": {
+      "system": "Sistem",
+      "cpu": "CPU",
+      "memory": "Bellek",
+      "gpu": "GPU / Backend"
+    },
+    "fit": {
+      "excellent": "Mükemmel",
+      "good": "İyi",
+      "tight": "Sıkı",
+      "too_tight": "Çok sıkı"
+    },
+    "runMode": {
+      "gpu": "GPU",
+      "cpu_offload": "CPU offload",
+      "cpu_only": "Yalnızca CPU",
+      "no_fit": "Önerilmez"
+    }
   }
 }

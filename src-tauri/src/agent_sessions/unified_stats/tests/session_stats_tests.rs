@@ -23,7 +23,12 @@ use core_types::key_source::KeySource;
 // Helpers
 // ============================================================================
 
-fn make_session(id: &str, status: &str, tokens: i64, category: SessionCategory) -> SessionAggregateRecord {
+fn make_session(
+    id: &str,
+    status: &str,
+    tokens: i64,
+    category: SessionCategory,
+) -> SessionAggregateRecord {
     let name = format!("Session {id}");
     SessionAggregateRecord {
         session_id: id.to_string(),
@@ -96,7 +101,12 @@ fn single_running_session() {
 
 #[test]
 fn single_completed_session() {
-    let sessions = vec![make_session("s1", "completed", 2000, SessionCategory::Agent)];
+    let sessions = vec![make_session(
+        "s1",
+        "completed",
+        2000,
+        SessionCategory::Agent,
+    )];
     let stats = compute_aggregate_stats(&sessions);
 
     assert_eq!(stats.ongoing_count, 0);
@@ -177,8 +187,14 @@ fn mixed_status_sessions_bucketed_correctly() {
 
     assert_eq!(stats.ongoing_count, 3, "3 active sessions");
     assert_eq!(stats.completed_count, 2, "2 completed sessions");
-    assert_eq!(stats.failed_count, 3, "3 failed/cancelled/abandoned sessions");
-    assert_eq!(stats.total_tokens, 100 + 50 + 200 + 500 + 300 + 100 + 0 + 10);
+    assert_eq!(
+        stats.failed_count, 3,
+        "3 failed/cancelled/abandoned sessions"
+    );
+    assert_eq!(
+        stats.total_tokens,
+        100 + 50 + 200 + 500 + 300 + 100 + 0 + 10
+    );
 }
 
 // ============================================================================
@@ -213,7 +229,12 @@ fn zero_token_sessions_do_not_affect_cost() {
 
 #[test]
 fn cost_is_non_negative() {
-    let sessions = vec![make_session("c1", "completed", 50_000, SessionCategory::Cli)];
+    let sessions = vec![make_session(
+        "c1",
+        "completed",
+        50_000,
+        SessionCategory::Cli,
+    )];
     let stats = compute_aggregate_stats(&sessions);
     assert!(stats.total_cost_usd >= 0.0, "cost must be non-negative");
 }
@@ -221,7 +242,12 @@ fn cost_is_non_negative() {
 #[test]
 fn cost_is_proportional_to_tokens() {
     let sessions_small = vec![make_session("s1", "completed", 1_000, SessionCategory::Cli)];
-    let sessions_large = vec![make_session("s2", "completed", 10_000, SessionCategory::Cli)];
+    let sessions_large = vec![make_session(
+        "s2",
+        "completed",
+        10_000,
+        SessionCategory::Cli,
+    )];
 
     let small_cost = compute_aggregate_stats(&sessions_small).total_cost_usd;
     let large_cost = compute_aggregate_stats(&sessions_large).total_cost_usd;

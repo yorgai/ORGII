@@ -1,16 +1,17 @@
-import React, { useEffect, useRef } from "react";
+import { ExternalLink } from "lucide-react";
+import React, { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import ComposerInput from "@src/components/ComposerInput";
-import type { ComposerInputRef } from "@src/components/ComposerInput";
-import Input from "@src/components/Input";
 import TabPill from "@src/components/TabPill";
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { useWorkItemImageInsert } from "@src/hooks/project";
-import { PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS } from "@src/modules/ProjectManager/shared/placeholderTokens";
+import {
+  ProjectContentEditor,
+  type ProjectContentEditorRef,
+} from "@src/modules/ProjectManager/shared";
 import { DetailPanelContainer } from "@src/modules/shared/layouts/blocks";
 import InternalHeader from "@src/modules/shared/layouts/blocks/InternalHeader";
-import type { WorkItemStatus } from "@src/types/core/workItem";
+import type { LinkedSession, WorkItemStatus } from "@src/types/core/workItem";
 
 import AgentWorkflow from "../AgentWorkflow";
 import TodoChecklist from "../TodoChecklist";
@@ -19,9 +20,68 @@ import OutputTab from "./OutputTab";
 import { useWorkItemContentState } from "./hooks/useWorkItemContentState";
 import type { ContentTab, WorkItemContentProps } from "./types";
 
-interface WorkItemDescriptionImageInsertRef {
-  insertImage: (src: string, alt?: string) => void;
+interface LinkedSessionsListProps {
+  sessions: LinkedSession[];
+  onOpenSession?: (sessionId: string) => void;
+  onStartAgent?: (instructions?: string) => void;
+  isStartingAgent?: boolean;
 }
+
+const LinkedSessionsList: React.FC<LinkedSessionsListProps> = ({
+  sessions,
+  onOpenSession,
+  onStartAgent,
+  isStartingAgent,
+}) => {
+  if (sessions.length === 0) return null;
+
+  return (
+    <section
+      className="mt-6 border-t border-solid border-border-1 pt-4"
+      data-testid="work-item-linked-sessions"
+    >
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h3 className="m-0 text-[13px] font-semibold text-text-1">
+          Linked Sessions
+        </h3>
+        {onStartAgent && (
+          <button
+            type="button"
+            className="rounded-md border border-solid border-border-2 bg-bg-1 px-2 py-1 text-[11px] font-medium text-text-2 transition-colors hover:border-border-3 hover:bg-surface-hover hover:text-text-1 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => onStartAgent()}
+            disabled={isStartingAgent}
+          >
+            {isStartingAgent ? "Starting..." : "New Session"}
+          </button>
+        )}
+      </div>
+      <div className="flex flex-col gap-2">
+        {sessions.map((session) => (
+          <button
+            key={`${session.session_id}-${session.session_type}`}
+            type="button"
+            data-testid={`work-item-linked-session-${session.session_id}`}
+            className="group flex w-full items-center justify-between gap-3 rounded-lg border border-solid border-border-1 bg-bg-1 px-3 py-2 text-left transition-colors hover:border-border-2 hover:bg-surface-hover"
+            onClick={() => onOpenSession?.(session.session_id)}
+          >
+            <span className="min-w-0">
+              <span className="block truncate text-[12px] font-medium text-text-1">
+                {session.agent_role || session.session_id}
+              </span>
+              <span className="mt-0.5 block truncate text-[11px] text-text-3">
+                {session.status} · {session.session_type}
+              </span>
+            </span>
+            <ExternalLink
+              size={13}
+              className="shrink-0 text-text-3 group-hover:text-text-1"
+            />
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+};
 
 const WorkItemContent: React.FC<WorkItemContentProps> = ({
   workItem,
@@ -30,6 +90,8 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
   currentUser: currentUserProp,
   teamMembers = [],
   headerProperties,
+  hideTitleHeader = false,
+  showHeaderPropertiesWhenTitleHidden = false,
   repoPath,
   projectSlug,
   shortId,
@@ -49,30 +111,11 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
   onCreatePr,
 }) => {
   const { t } = useTranslation("projects");
-  const editorRef = useRef<ComposerInputRef>(null);
-  const imageInsertRef = useRef<WorkItemDescriptionImageInsertRef | null>(null);
-
-  useEffect(() => {
-    imageInsertRef.current = {
-      insertImage: (src: string, alt?: string) => {
-        const label = alt?.trim() || "image";
-        editorRef.current
-          ?.getEditor()
-          ?.chain()
-          .focus()
-          .insertContent(`\n![${label}](${src})\n`)
-          .run();
-      },
-    };
-
-    return () => {
-      imageInsertRef.current = null;
-    };
-  }, []);
+  const editorRef = useRef<ProjectContentEditorRef>(null);
 
   const { handleImageInsert } = useWorkItemImageInsert({
     projectSlug: projectSlug ?? null,
-    editorRef: imageInsertRef,
+    editorRef,
   });
 
   const {
@@ -108,25 +151,36 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
 
   return (
     <DetailPanelContainer className="relative">
-      <div className="shrink-0 px-3 pt-4">
-        <Input
-          type="text"
-          value={workItem.name || ""}
-          onChange={handleTitleChange}
-          placeholder={t("workItems.titlePlaceholder")}
-          readOnly={!onUpdateWorkItem}
-          borderless
-          bgless
-          autoHeight
-          inputClassName={`text-[22px] font-semibold text-text-1 ${PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS}`}
-        />
-        {headerProperties && <div className="mt-3">{headerProperties}</div>}
-        <div className="mt-4 border-b border-border-2" />
-      </div>
+      {!hideTitleHeader && (
+        <div className="shrink-0 px-3 pt-4">
+          <ProjectContentEditor
+            ref={editorRef}
+            title={workItem.name || ""}
+            onTitleChange={handleTitleChange}
+            initialDescription={resolvedDescription ?? rawDescription}
+            onDescriptionChange={handleDescriptionChange}
+            onImageInsert={onUpdateWorkItem ? handleImageInsert : undefined}
+            titlePlaceholder={t("workItems.titlePlaceholder")}
+            descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
+            editable={!!onUpdateWorkItem}
+            metaContent={headerProperties}
+            descriptionVisible={false}
+            repoPath={repoPath}
+            className="flex flex-col"
+          />
+        </div>
+      )}
+
+      {hideTitleHeader &&
+        showHeaderPropertiesWhenTitleHidden &&
+        headerProperties && (
+          <div className="shrink-0 px-3 pt-3">{headerProperties}</div>
+        )}
 
       <InternalHeader
         compactPadding
-        className="pt-4"
+        data-testid="work-item-content-tabs"
+        className={hideTitleHeader ? "pt-3" : "pt-4"}
         tabs={
           <TabPill
             tabs={tabItems}
@@ -143,24 +197,34 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
         {activeTab === "details" && (
           <>
             <div className={`${DETAIL_PANEL_TOKENS.sectionGap} min-h-[200px]`}>
-              <ComposerInput
+              <ProjectContentEditor
                 key={workItem.session_id}
                 ref={editorRef}
-                placeholder={t("workItems.descriptionPlaceholder")}
-                initialContent={resolvedDescription ?? rawDescription}
-                onContentChange={handleDescriptionChange}
-                onImagePaste={onUpdateWorkItem ? handleImageInsert : undefined}
-                minHeight={200}
-                maxHeight={600}
+                title={workItem.name || ""}
+                onTitleChange={handleTitleChange}
+                initialDescription={resolvedDescription ?? rawDescription}
+                onDescriptionChange={handleDescriptionChange}
+                onImageInsert={onUpdateWorkItem ? handleImageInsert : undefined}
+                titleVisible={false}
+                separatorVisible={false}
+                descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
                 editable={!!onUpdateWorkItem}
-                requireCmdEnter
-                className="noDrag border-b border-border-2 py-2 text-[13px] [&_.composer-input-content]:px-0 [&_.composer-input-content]:pb-0 [&_.composer-input-content]:text-[13px] [&_.composer-input-content]:leading-[1.6]"
+                descriptionMaxHeight={600}
+                descriptionClassName="no-bottom-border"
+                repoPath={repoPath}
+                className="w-full"
               />
             </div>
             <TodoChecklist
               todos={workItem.todos ?? []}
               onChange={handleTodosChange}
               disabled={!onUpdateWorkItem}
+            />
+            <LinkedSessionsList
+              sessions={workItem.linkedSessions ?? []}
+              onOpenSession={onOpenSession}
+              onStartAgent={onStartAgent}
+              isStartingAgent={isStartingAgent}
             />
           </>
         )}

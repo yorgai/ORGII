@@ -7,7 +7,7 @@
     "economy": "이코노미",
     "sourceControl": "소스 제어",
     "startSession": "Session 시작",
-    "newSession": "새 Session",
+    "newSession": "새 채팅",
     "quickstart": "빠른 시작",
     "drafts": "초안",
     "browser": "브라우저",
@@ -53,7 +53,7 @@
     "emptySubtitle": "이벤트가 발생하면 여기에 표시됩니다"
   },
   "routes": {
-    "session": "Session",
+    "session": "채팅",
     "startSession": "Session 시작",
     "sessions": "Session 목록",
     "kanban": "Ops Control",
@@ -141,6 +141,7 @@
       "appearance": "모양",
       "language": "언어",
       "viewRam": "RAM 보기",
+      "tutorials": "튜토리얼",
       "openSettings": "설정 열기"
     },
     "empty": {

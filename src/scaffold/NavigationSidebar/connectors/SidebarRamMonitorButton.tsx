@@ -566,7 +566,7 @@ export const SidebarRamMonitorButton: React.FC = React.memo(() => {
       align: "right",
       gap: DROPDOWN_PANEL.triggerGap,
     });
-  const buttonActiveClassName = isOpen ? "text-text-1" : "text-text-2";
+  const buttonActiveClassName = isOpen ? "text-primary-6" : "text-text-2";
   const triggerTitle = tSettings("monitor.performanceMonitor");
 
   return (

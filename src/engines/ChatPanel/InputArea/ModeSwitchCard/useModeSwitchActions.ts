@@ -59,7 +59,7 @@ function markResolved(eventId: string, status: ModeSwitchResolution) {
 
 export const MODE_LABELS: Record<string, string> = {
   build: "Build",
-  investigate: "Ask",
+  ask: "Ask",
   plan: "Plan",
   debug: "Debug",
   review: "Review",
@@ -95,10 +95,10 @@ async function markModeSwitchEventResolved(
  * another suggest_mode_switch call and create an infinite loop.
  */
 const MODE_SWITCH_COMMAND_PATTERNS = [
-  /switch\s*(to\s*)?(plan|build|debug|investigate|ask|review)\s*mode?/i,
-  /enter\s*(plan|build|debug|investigate|ask|review)\s*mode?/i,
-  /go\s+to\s*(plan|build|debug|investigate|ask|review)\s*mode?/i,
-  /use\s*(plan|build|debug|investigate|ask|review)\s*mode?/i,
+  /switch\s*(to\s*)?(plan|build|debug|ask|review)\s*mode?/i,
+  /enter\s*(plan|build|debug|ask|review)\s*mode?/i,
+  /go\s+to\s*(plan|build|debug|ask|review)\s*mode?/i,
+  /use\s*(plan|build|debug|ask|review)\s*mode?/i,
   /切换.*mode/i,
   /切.*plan/i,
   /进入.*mode/i,

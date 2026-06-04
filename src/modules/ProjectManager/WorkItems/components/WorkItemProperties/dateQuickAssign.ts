@@ -67,6 +67,10 @@ function addMonths(date: Date, months: number): Date {
   return nextDate;
 }
 
+function getLocalDateKey(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
 function getNextWeekday(today: Date, targetWeekday: number): Date {
   const currentWeekday = today.getDay();
   const daysUntilTarget = (targetWeekday - currentWeekday + 7) % 7 || 7;
@@ -214,7 +218,7 @@ export function buildDateQuickAssignSuggestions(
 
   if (trimmedInput) return [];
 
-  return [
+  const defaultSuggestions: DateQuickAssignSuggestion[] = [
     { id: "today", input: "today", date: today },
     { id: "tomorrow", input: "tomorrow", date: addDays(today, 1) },
     {
@@ -224,4 +228,12 @@ export function buildDateQuickAssignSuggestions(
     },
     { id: "next-week", input: "next week", date: addDays(today, 7) },
   ];
+  const seenLocalDates = new Set<string>();
+
+  return defaultSuggestions.filter((suggestion) => {
+    const localDateKey = getLocalDateKey(suggestion.date);
+    if (seenLocalDates.has(localDateKey)) return false;
+    seenLocalDates.add(localDateKey);
+    return true;
+  });
 }

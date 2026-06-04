@@ -1645,7 +1645,6 @@
     "createTarget": {
       "agentSession": "Agent oturumu",
       "createAgent": "Agent / Skill oluştur",
-      "solveWorkItem": "Work Item çöz",
       "workItem": "Work Item oluştur",
       "batchStartBeta": "Toplu başlat (Beta)",
       "benchmark": "Benchmark (Beta)"
@@ -1667,8 +1666,10 @@
     "slashSearchPlaceholder": "Komut ara…",
     "slashMenu": {
       "image": "Görsel",
+      "uploadImage": "Görsel yükle",
       "mode": "Mod",
-      "models": "Modeller"
+      "models": "Modeller",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",
@@ -1796,8 +1797,6 @@
       "worktree": "Worktree",
       "lockedHint": "Bu oturum için Worktree kilitli"
     },
-    "selectWorkItem": "Work Item seç",
-    "addInstructionsPlaceholder": "Talimat ekle",
     "batchStarterPlaceholder": "Bu session starter'ı açıklayın",
     "addBatchStarter": "Starter ekle",
     "removeBatchStarter": "Starter kaldır",
@@ -1869,7 +1868,7 @@
     },
     "modes": {
       "build": "Build",
-      "investigate": "Investigate",
+      "ask": "Ask",
       "plan": "Plan",
       "debug": "Debug",
       "review": "Review",

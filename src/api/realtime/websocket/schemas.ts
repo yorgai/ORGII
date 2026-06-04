@@ -316,13 +316,16 @@ export const WSMessageSchema = z.discriminatedUnion("type", [
   WSFilesChangedMessageSchema,
 ]);
 
+export const CODE_EDITOR_WEB_SOCKET_EVENT_TYPES = [
+  "repo:status_updated",
+  "file:changed",
+  "repo:git_operation",
+  "repo:watcher_health",
+  "lsp:diagnostics",
+] as const;
+
 export const CodeEditorWebSocketMessageSchema = z.object({
-  type: z.enum([
-    "repo:status_updated",
-    "file:changed",
-    "repo:watcher_health",
-    "lsp:diagnostics",
-  ]),
+  type: z.enum(CODE_EDITOR_WEB_SOCKET_EVENT_TYPES),
   repo_id: z.string().optional(),
   language: z.string().optional(),
   data: z.unknown().optional(),
@@ -345,4 +348,25 @@ export function parseCodeEditorWebSocketMessage(
   raw: string
 ): ParsedCodeEditorWebSocketMessage {
   return CodeEditorWebSocketMessageSchema.parse(JSON.parse(raw));
+}
+
+export function maybeParseCodeEditorWebSocketMessage(
+  raw: string
+): ParsedCodeEditorWebSocketMessage | null {
+  const parsed = JSON.parse(raw) as unknown;
+  if (typeof parsed !== "object" || parsed === null || !("type" in parsed)) {
+    return null;
+  }
+
+  const type = (parsed as { type: unknown }).type;
+  if (
+    typeof type !== "string" ||
+    !CODE_EDITOR_WEB_SOCKET_EVENT_TYPES.includes(
+      type as (typeof CODE_EDITOR_WEB_SOCKET_EVENT_TYPES)[number]
+    )
+  ) {
+    return null;
+  }
+
+  return CodeEditorWebSocketMessageSchema.parse(parsed);
 }

@@ -69,6 +69,8 @@ export interface InternalHeaderProps {
 
   /** Add top padding when no PanelHeader sits above this header. */
   noPanelHeader?: boolean;
+
+  dataTestId?: string;
 }
 
 // ============================================
@@ -89,6 +91,7 @@ const InternalHeader: React.FC<InternalHeaderProps> = memo(
     borderBottom = false,
     background = "default",
     noPanelHeader = false,
+    dataTestId,
   }) => {
     const paddingClass = compactPadding
       ? "px-3"
@@ -98,13 +101,14 @@ const InternalHeader: React.FC<InternalHeaderProps> = memo(
           ? ""
           : "px-6";
     const borderClasses = borderBottom ? "border-b border-border-2" : "";
-    const bgClasses = background === "transparent" ? "" : "bg-bg-2";
+    const bgClasses = background === "transparent" ? "" : "";
     const topPadding = noPanelHeader ? "pt-4" : "";
     const hasTitleRow = !!(title || iconElement || Icon);
 
     return (
       <div
         className={`relative z-50 flex flex-shrink-0 flex-col ${topPadding} ${paddingClass} ${borderClasses} ${bgClasses} ${className}`}
+        data-testid={dataTestId}
         style={
           {
             WebkitAppRegion: "no-drag",

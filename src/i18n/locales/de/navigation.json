@@ -7,7 +7,7 @@
     "economy": "Wirtschaft",
     "sourceControl": "Source control",
     "startSession": "Session starten",
-    "newSession": "Neue Session",
+    "newSession": "Neuer Chat",
     "quickstart": "Schnellstart",
     "drafts": "Entwürfe",
     "browser": "Browser",
@@ -53,7 +53,7 @@
     "viewJson": "JSON"
   },
   "routes": {
-    "session": "Session",
+    "session": "Chat",
     "startSession": "Session starten",
     "sessions": "Session",
     "kanban": "Ops Control",
@@ -141,6 +141,7 @@
       "appearance": "Darstellung",
       "language": "Sprache",
       "viewRam": "RAM anzeigen",
+      "tutorials": "Tutorials",
       "openSettings": "Einstellungen öffnen"
     },
     "empty": {

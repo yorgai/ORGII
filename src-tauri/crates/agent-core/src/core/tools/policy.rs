@@ -13,7 +13,7 @@
 //! Layers are added at runtime by:
 //!
 //! - the session init path (subagent default deny),
-//! - `AgentExecMode` overlays (plan / investigate via `with_extra_layer`),
+//! - `AgentExecMode` overlays (plan / ask via `with_extra_layer`),
 //! - subagent orchestration (allow lists for spawned children).
 
 use serde::{Deserialize, Serialize};

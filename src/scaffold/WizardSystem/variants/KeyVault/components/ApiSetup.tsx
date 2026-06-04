@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { testModelAvailability } from "@src/api/services/keyValidation";
 import type { QuotaSnapshot } from "@src/api/types/keyVault";
+import { LOCAL_MODEL_PROVIDER } from "@src/api/types/keys";
 import { formatAgentType } from "@src/assets/providers";
 import InlineAlert from "@src/components/InlineAlert";
 import Input from "@src/components/Input";
@@ -160,12 +161,15 @@ const ApiSetup: React.FC<ApiSetupProps> = ({
     !hook.isCopilot &&
     !hook.isOAuthAgent;
 
+  const isLocalModelProvider = data.agent_type === LOCAL_MODEL_PROVIDER;
+
   const showModelSections =
     !hook.browserOpen &&
     !!data.agent_type &&
     (hook.keyValidated ||
       (hook.isCursor && data.validated) ||
-      (hook.isOAuthAgent && data.validated));
+      (hook.isOAuthAgent && data.validated) ||
+      isLocalModelProvider);
 
   const showRegionWarning =
     !!data.agent_type && regionCheck.status === "unsupported";

@@ -7,7 +7,7 @@
     "economy": "Kinh tế",
     "sourceControl": "Source control",
     "startSession": "Bắt đầu Session",
-    "newSession": "Session mới",
+    "newSession": "Cuộc trò chuyện mới",
     "quickstart": "Bắt đầu nhanh",
     "drafts": "Bản nháp",
     "browser": "Trình duyệt",
@@ -53,7 +53,7 @@
     "emptySubtitle": "Sự kiện sẽ hiển thị tại đây khi xảy ra"
   },
   "routes": {
-    "session": "Session",
+    "session": "Trò chuyện",
     "startSession": "Bắt đầu Session",
     "sessions": "Các Session",
     "kanban": "Ops Control",
@@ -141,6 +141,7 @@
       "appearance": "Giao diện",
       "language": "Ngôn ngữ",
       "viewRam": "Xem RAM",
+      "tutorials": "Hướng dẫn",
       "openSettings": "Mở cài đặt"
     },
     "empty": {

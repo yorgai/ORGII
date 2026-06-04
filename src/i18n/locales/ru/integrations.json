@@ -215,6 +215,31 @@
     "customBaseUrlRiskTitle": "Предупреждение о пользовательском URL",
     "customBaseUrlRiskWarning": "Использование пользовательского Base URL может раскрыть ваш API-ключ и данные сторонним серверам. Используйте только для доверенных прокси, собственных развёртываний или известных безопасных эндпоинтов.",
     "addBaseUrl": "Добавить пользовательский Base URL (необязательно)",
+    "localModel": {
+      "title": "Cookbook локальных моделей",
+      "description": "Выберите пресет локального runtime, подтвердите OpenAI-совместимый endpoint, добавьте один или несколько ID моделей и сохраните этот аккаунт, чтобы использовать локальные модели в Chat.",
+      "runtimeLabel": "Пресет runtime",
+      "runtimeDesc": "Выберите локальный сервер, который запущен. Пресеты заполняют endpoint и стартовые ID моделей.",
+      "baseUrlDesc": "OpenAI-совместимый локальный endpoint. Сначала запустите runtime, затем выполните проверку или сохранение.",
+      "apiKeyDesc": "Большинство локальных runtime принимают любое непустое значение. Оставьте placeholder, если сервер не требует ключ.",
+      "quickModelsLabel": "Cookbook модели",
+      "quickModelsDesc": "Заполните таблицу ID моделей, типичными для этого runtime. Ниже можно изменить или добавить модели.",
+      "quickModelsPlaceholder": "Выберите предложенную модель",
+      "addSuggestedModel": "Добавить предложенную",
+      "validateDesc": "Проверьте endpoint, если он запущен, или сохраните после ручного добавления моделей.",
+      "presets": {
+        "ollama": "Ollama",
+        "ollamaDesc": "Локальный сервер по умолчанию на порту 11434",
+        "lmStudio": "LM Studio",
+        "lmStudioDesc": "OpenAI-совместимый сервер на порту 1234",
+        "vllm": "vLLM",
+        "vllmDesc": "Самостоятельно размещенный inference-сервер на порту 8000",
+        "llamaCpp": "llama.cpp",
+        "llamaCppDesc": "GGUF endpoint на порту 8080",
+        "custom": "Пользовательский",
+        "customDesc": "Любой OpenAI-совместимый локальный endpoint"
+      }
+    },
     "validate": "Проверить",
     "validateDesc": "Проверьте учетные данные перед продолжением",
     "validated": "Проверено",
@@ -758,7 +783,8 @@
     "comingSoon": "Скоро",
     "installedClis": "CLI-клиенты",
     "myRoles": "Мои роли",
-    "modelWiki": "Вики моделей"
+    "modelWiki": "Вики моделей",
+    "localModels": "On prem"
   },
   "modelWiki": {
     "description": "Справочный каталог из {{count}} публичных моделей с размером Context, лимитами вывода и возможностями.",
@@ -2389,5 +2415,45 @@
     "searchPlaceholder": "Поиск плагинов...",
     "skillCountLabel": "Skills",
     "mcpConfigured": "MCP настроен"
+  },
+  "localModels": {
+    "title": "On prem",
+    "description": "Определяет устройство и ранжирует локальные модели для Ollama / llama.cpp с помощью лёгкой оценки соответствия железу.",
+    "detect": "Определить",
+    "detectFailed": "Не удалось определить оборудование",
+    "emptyTitle": "Определить это устройство",
+    "emptyDescription": "Запустите определение, чтобы увидеть CPU, память, GPU и рекомендации локальных моделей.",
+    "noRecommendations": "Рекомендаций пока нет",
+    "noMatchingRecommendations": "Подходящих рекомендаций нет",
+    "searchPlaceholder": "Искать локальные модели...",
+    "columnHardware": "Оборудование",
+    "columnDetails": "Сведения",
+    "columnValue": "Значение",
+    "columnModel": "Модель",
+    "columnFit": "Совместимость",
+    "columnRunMode": "Режим запуска",
+    "columnMemory": "Память",
+    "columnSpeed": "Скорость",
+    "columnContext": "Контекст",
+    "columnInstall": "Подсказка установки",
+    "tokensPerSecond": "{{count}} tok/s",
+    "hardware": {
+      "system": "Система",
+      "cpu": "CPU",
+      "memory": "Память",
+      "gpu": "GPU / Backend"
+    },
+    "fit": {
+      "excellent": "Отлично",
+      "good": "Хорошо",
+      "tight": "Впритык",
+      "too_tight": "Слишком тесно"
+    },
+    "runMode": {
+      "gpu": "GPU",
+      "cpu_offload": "Выгрузка на CPU",
+      "cpu_only": "Только CPU",
+      "no_fit": "Не рекомендуется"
+    }
   }
 }

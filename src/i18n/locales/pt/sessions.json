@@ -1664,7 +1664,6 @@
     "createTarget": {
       "agentSession": "Sessão de Agent",
       "createAgent": "Criar Agent / Skill",
-      "solveWorkItem": "Resolver Work Item",
       "workItem": "Criar Work Item",
       "batchStartBeta": "Início em lote (Beta)",
       "benchmark": "Benchmark (Beta)"
@@ -1686,8 +1685,10 @@
     "slashSearchPlaceholder": "Pesquisar comandos…",
     "slashMenu": {
       "image": "Imagem",
+      "uploadImage": "Enviar imagem",
       "mode": "Modo",
-      "models": "Modelos"
+      "models": "Modelos",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",
@@ -1815,8 +1816,6 @@
       "cancel": "Cancelar"
     },
     "viewDiff": "Ver diff",
-    "selectWorkItem": "Selecionar Work Item",
-    "addInstructionsPlaceholder": "Adicionar instruções",
     "batchStarterPlaceholder": "Descrever este session starter",
     "addBatchStarter": "Adicionar starter",
     "removeBatchStarter": "Remover starter",
@@ -1888,7 +1887,7 @@
     },
     "modes": {
       "build": "Construir",
-      "investigate": "Investigar",
+      "ask": "Ask",
       "plan": "Planejar",
       "debug": "Depurar",
       "review": "Revisar",

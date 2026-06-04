@@ -254,21 +254,21 @@ fn with_extra_layer_applies_plan_mode_deny_delta() {
 }
 
 #[test]
-fn with_extra_layer_applies_investigate_mode_deny_delta() {
+fn with_extra_layer_applies_ask_mode_deny_delta() {
     use crate::session::AgentExecMode;
 
     let base = ResolvedToolPolicy::build(false);
-    let layer = AgentExecMode::Investigate
+    let layer = AgentExecMode::Ask
         .policy_layer()
-        .expect("investigate mode must contribute a policy layer");
-    let explored = base.with_extra_layer(layer);
+        .expect("ask mode must contribute a policy layer");
+    let asked = base.with_extra_layer(layer);
 
-    assert_eq!(explored.verdict("read_file"), ToolVerdict::Allow);
-    assert_eq!(explored.verdict("code_search"), ToolVerdict::Allow);
-    assert_eq!(explored.verdict("ask_user_questions"), ToolVerdict::Allow);
-    assert_eq!(explored.verdict("edit_file"), ToolVerdict::Deny);
-    assert_eq!(explored.verdict("run_shell"), ToolVerdict::Deny);
-    assert_eq!(explored.verdict("create_plan"), ToolVerdict::Deny);
+    assert_eq!(asked.verdict("read_file"), ToolVerdict::Allow);
+    assert_eq!(asked.verdict("code_search"), ToolVerdict::Allow);
+    assert_eq!(asked.verdict("ask_user_questions"), ToolVerdict::Allow);
+    assert_eq!(asked.verdict("edit_file"), ToolVerdict::Deny);
+    assert_eq!(asked.verdict("run_shell"), ToolVerdict::Deny);
+    assert_eq!(asked.verdict("create_plan"), ToolVerdict::Deny);
 }
 
 #[test]

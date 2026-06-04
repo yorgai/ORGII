@@ -491,7 +491,7 @@ pub async fn extract_memories_main_agent_wrote(cfg: &Config) -> bool {
     // doesn't exist" and "file exists but read failed" — allowing
     // the mutual-exclusion test to falsely conclude the main
     // agent didn't write when in fact we just couldn't read it.
-    // Surface the read failure so the runner can investigate.
+    // Surface the read failure so the runner can inspect the root cause.
     let initial_content = if target.exists() {
         match std::fs::read_to_string(&target) {
             Ok(s) => s,

@@ -10,6 +10,7 @@ import {
   settingsAtom,
   updateSettingAtom,
 } from "@src/store/settings/settingsAtom";
+import type { WorkItem } from "@src/types/core/workItem";
 import { createZodJsonStorage } from "@src/util/core/storage/zodStorage";
 
 // ============================================
@@ -221,6 +222,50 @@ modelPickerStyleAtom.debugLabel = "modelPickerStyleAtom";
  * shell → layout prop hand-off.
  */
 export type ChatPanelMode = "session" | "settings";
+
+export const CHAT_PANEL_CREATE_TARGET = {
+  AGENT_SESSION: "agentSession",
+  CREATE_AGENT: "createAgent",
+  WORK_ITEM: "workItem",
+  BATCH_START: "batchStart",
+  BENCHMARK: "benchmark",
+} as const;
+
+export type ChatPanelCreateTarget =
+  (typeof CHAT_PANEL_CREATE_TARGET)[keyof typeof CHAT_PANEL_CREATE_TARGET];
+
+export const DEFAULT_CHAT_PANEL_CREATE_TARGET: ChatPanelCreateTarget =
+  CHAT_PANEL_CREATE_TARGET.AGENT_SESSION;
+
+export const chatPanelCreateTargetAtom = atom<ChatPanelCreateTarget>(
+  DEFAULT_CHAT_PANEL_CREATE_TARGET
+);
+chatPanelCreateTargetAtom.debugLabel = "chatPanelCreateTargetAtom";
+
+export const CHAT_PANEL_CONTENT_MODE = {
+  SESSION: "session",
+  NON_SESSION: "nonSession",
+} as const;
+
+export type ChatPanelContentMode =
+  (typeof CHAT_PANEL_CONTENT_MODE)[keyof typeof CHAT_PANEL_CONTENT_MODE];
+
+export const chatPanelContentModeAtom = atom<ChatPanelContentMode>(
+  CHAT_PANEL_CONTENT_MODE.SESSION
+);
+chatPanelContentModeAtom.debugLabel = "chatPanelContentModeAtom";
+
+export interface ChatPanelSelectedWorkItem {
+  workItem: WorkItem;
+  projectId: string;
+  projectName: string;
+  projectSlug: string;
+  shortId: string;
+}
+
+export const chatPanelSelectedWorkItemAtom =
+  atom<ChatPanelSelectedWorkItem | null>(null);
+chatPanelSelectedWorkItemAtom.debugLabel = "chatPanelSelectedWorkItemAtom";
 
 /**
  * Whether the chat-panel slot covers the entire main content area.

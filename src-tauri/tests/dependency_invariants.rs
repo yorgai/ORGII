@@ -11,7 +11,7 @@
 //!
 //! If one of these tests fails, do NOT add an exception — the failure
 //! is telling you that something pulled the banned crate back in.
-//! Investigate with:
+//! Inspect with:
 //!
 //! ```sh
 //! cargo tree -p app -i <banned-crate> --target all
@@ -171,7 +171,7 @@ fn no_banned_crates_in_lockfile() {
     assert!(
         violations.is_empty(),
         "Cargo.lock contains crates that were deliberately retired:\n{}\n\n\
-         Investigate the regression with:\n\
+         Inspect the regression with:\n\
          \n  cargo tree -p app -i <crate> --target all --edges=features\n\
          \n\
          Then either remove the new dep that pulled it in, or — if the new\n\

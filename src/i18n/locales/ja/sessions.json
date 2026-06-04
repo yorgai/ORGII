@@ -1645,7 +1645,6 @@
     "createTarget": {
       "agentSession": "Agent セッション",
       "createAgent": "Agent / Skill を作成",
-      "solveWorkItem": "Work Item を解決",
       "workItem": "Work Item を作成",
       "batchStartBeta": "Batch start (Beta)",
       "benchmark": "Benchmark (Beta)"
@@ -1667,8 +1666,10 @@
     "slashSearchPlaceholder": "コマンドを検索…",
     "slashMenu": {
       "image": "画像",
+      "uploadImage": "画像をアップロード",
       "mode": "モード",
-      "models": "モデル"
+      "models": "モデル",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",
@@ -1796,8 +1797,6 @@
       "worktree": "Worktree",
       "lockedHint": "このセッションでは Worktree がロックされています"
     },
-    "selectWorkItem": "Work Item を選択",
-    "addInstructionsPlaceholder": "指示を追加",
     "batchStarterPlaceholder": "この session starter を説明",
     "addBatchStarter": "Starter を追加",
     "removeBatchStarter": "Starter を削除",
@@ -1869,7 +1868,7 @@
     },
     "modes": {
       "build": "Build",
-      "investigate": "Investigate",
+      "ask": "Ask",
       "plan": "Plan",
       "debug": "Debug",
       "review": "Review",

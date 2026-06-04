@@ -1,9 +1,9 @@
 /**
  * ComposerInput Types
  *
- * Shared types for the lightweight composer input that replaces TiptapInput
- * across SessionCreator and ChatPanel. The wire-level shape mirrors the
- * previous TiptapInputRef contract so the surrounding hooks
+ * Shared types for the lightweight composer input used across SessionCreator
+ * and ChatPanel. The wire-level shape mirrors the previous editor ref contract
+ * so the surrounding hooks
  * (`useTiptapInput`, `useAddToAgentInsertion`, `useDraftManagement`,
  * `useSlashCommand`, `inputPreparation`, `useInputFormatter`, etc.) keep
  * working without ProseMirror.
@@ -62,9 +62,9 @@ export interface ComposerInputProps {
   autoFocus?: boolean;
   /** Extra class on the root */
   className?: string;
-  /** Min/max heights (px) — applied as inline style */
-  minHeight?: number;
-  maxHeight?: number;
+  /** Min/max heights (px or CSS size) — applied as inline style */
+  minHeight?: number | string;
+  maxHeight?: number | string;
   /**
    * Root overflow-y. The compact chat row should use `visible` so WebKit
    * still paints the caret after a pill ↔ stacked layout swap.
@@ -74,12 +74,20 @@ export interface ComposerInputProps {
   editable?: boolean;
   /** Keyboard handler that the @-dropdown can claim for navigation */
   onKeyDownForDropdown?: (event: KeyboardEvent) => boolean;
-  /** Called when the user types `/` at position 0 in an empty editor */
-  onSlashCommand?: (query: string) => void;
-  /** Called when the slash-command session closes */
+  /** Called when the user types `/` for a command/context trigger */
+  onSlashCommand?: (
+    query: string,
+    cursorPosition?: { x: number; y: number }
+  ) => void;
+  /** Called when the slash trigger session closes */
   onSlashCommandClose?: () => void;
-  /** Keyboard handler for the slash-command dropdown */
+  /** Keyboard handler for the slash-trigger dropdown */
   onKeyDownForSlashDropdown?: (event: KeyboardEvent) => boolean;
+  /**
+   * Slash behavior: command mode opens only for `/` as the whole input;
+   * context mode opens wherever `/` is typed and behaves like @ mentions.
+   */
+  slashTriggerMode?: "command" | "context";
   /** Called for clipboard image attachments */
   onImagePaste?: (files: File[]) => void;
   /**
@@ -110,7 +118,7 @@ export interface ComposerInputRef {
   getTextWithPills: () => string;
   /** Map of terminal/session/browser pill paths → stored pill text */
   getTerminalPillTexts: () => Record<string, string>;
-  /** Lightweight HTML snapshot (useful for debugging) */
+  /** Plain-text snapshot retained for callers that still use the HTML-era name */
   getHTML: () => string;
   /** Structured snapshot of the editor (text + pills) for restore-on-error */
   getSnapshot: () => ComposerSnapshot;
@@ -173,21 +181,21 @@ export interface ComposerInputRef {
     lineEnd?: number;
   }>;
   /**
-   * Compatibility shim for the previous Tiptap API. Some hooks call
-   * `tiptapRef.current.getEditor()?.chain().focus().insertContent("@").run()`
-   * — we provide a small façade that supports `chain().focus().insertContent`
-   * (the only methods those callers reach for) so the migration is
-   * non-breaking. Returns `null` if the editor is not mounted.
+   * Small façade that supports `chain().focus().insertContent(...)` for
+   * existing callers that need imperative insertion. Returns `null` if the
+   * editor is not mounted.
    */
   getEditor: () => ComposerEditorFacade | null;
   /** Open the @ mention menu without a typed `@` character */
   triggerAtMention: () => void;
+  /** Open the slash context menu without a typed `/` character */
+  triggerSlashContext: () => void;
 }
 
 /**
  * Chainable façade returned by `getEditor()`. Only the surface that existing
- * callers (`useTiptapInput.handleAtMentionClick`, `useSlashCommand`) actually
- * use is implemented — there is no general ProseMirror command surface.
+ * callers (`useTiptapInput.handleAtMentionClick`, `useSlashCommand`) use is
+ * implemented — there is no general editor command surface.
  */
 export interface ComposerEditorFacade {
   chain: () => ComposerEditorChain;

@@ -42,6 +42,8 @@ export interface ContextMenuProps {
   onCustomMentionSelect?: (option: ContextMenuCustomMentionOption) => void;
   /** Current search query (for filtering) */
   searchQuery?: string;
+  /** When true, an empty external search opens file results instead of the main menu. */
+  inlineSearchOnEmpty?: boolean;
   /** Recent files to show at top */
   recentFiles?: RecentFile[];
   /** Workspace root path for native file search */
@@ -52,6 +54,8 @@ export interface ContextMenuProps {
   keyboardHandlerRef?: MutableRefObject<((e: KeyboardEvent) => boolean) | null>;
   /** Position of file tree preview panel: "left" or "right" (default: "left") */
   treePosition?: "left" | "right";
+  /** Highlight the first selectable item immediately when opened from keyboard typing. */
+  keyboardOpened?: boolean;
 }
 
 // ============================================
@@ -67,10 +71,20 @@ export interface UseContextMenuOptions {
   onClose?: () => void;
   /**
    * External search query from the parent input (text typed after `@`).
-   * When provided, the hook derives secondLayer="files" and uses this as
+   * When provided, the hook can derive secondLayer="files" and uses this as
    * the search query — avoiding two extra setState calls per keystroke.
    */
   externalSearchQuery?: string;
+  /** Treat an empty external search query as inline file search. */
+  inlineSearchOnEmpty?: boolean;
+  /** Number of recent file rows rendered before custom mentions and built-in menu rows. */
+  recentCount?: number;
+  /** Number of custom mention rows rendered before the built-in menu rows. */
+  customMentionCount?: number;
+  /** Select a custom mention row by index. */
+  onCustomMentionIndexSelect?: (index: number) => void;
+  /** Whether the menu was opened from keyboard typing. */
+  keyboardOpened?: boolean;
 }
 
 export interface UseContextMenuReturn {

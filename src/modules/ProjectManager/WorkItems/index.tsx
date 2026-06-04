@@ -62,6 +62,8 @@ export interface WorkItemsPageProps {
   pageTitle?: string;
   /** Cached project slug from tab data — enables parallel work item loading */
   cachedProjectSlug?: string;
+  /** Workspace path used by editor context menus. */
+  repoPath?: string | null;
   /** Surface to show for the project detail tab. */
   projectView?: ProjectDetailSurfaceView;
   /** Persist project detail surface changes to the owning tab. */
@@ -122,6 +124,7 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
   projectName: tabProjectName,
   pageTitle,
   cachedProjectSlug,
+  repoPath,
   projectView = PROJECT_DETAIL_SURFACE_VIEW.WORK_ITEMS,
   onProjectViewChange,
   onProjectSlugResolved,
@@ -492,6 +495,7 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
           projectSummary={displayProject.summary}
           projectDescription={resolvedProjectDescription}
           projectProperties={displayProject}
+          repoPath={repoPath}
           availableMembers={projectData.availableMembers}
           availableTeams={projectData.availableTeams}
           projectLabels={projectData.availableLabels}

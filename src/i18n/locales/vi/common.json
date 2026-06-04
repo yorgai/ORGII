@@ -586,6 +586,7 @@
     "resizeToDefaultHeight": "Đặt về chiều cao mặc định ({{height}}px)",
     "minimizeHeight": "Thu nhỏ chiều cao ({{height}}px)",
     "closePanel": "Đóng bảng",
+    "showSidebar": "Hiện thanh bên",
     "hideSidebar": "Ẩn thanh bên",
     "resetToDefault": "Đặt lại về mặc định",
     "resetAll": "Đặt lại tất cả",

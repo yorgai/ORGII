@@ -4,7 +4,7 @@
  * Provides git status for the currently selected repo.
  *
  * This is the ONLY component that should:
- * - Listen to repo:status_updated and repo:changed events from Rust
+ * - Listen to repo:status_updated and file:changed events from Rust
  * - Register repos with the file watcher via invoke("watch_repos")
  * - Update gitStatusAtom and gitSuggestedActionAtom
  *

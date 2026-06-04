@@ -16,7 +16,6 @@ import {
   StationTabBarLeading,
   TabBar,
   TabBarTrailingIconButton,
-  WorkStationSidebarToggleButton,
 } from "@src/modules/WorkStation/shared";
 import {
   CODE_EDITOR_MAIN_TERMINAL_SESSION_ID,
@@ -180,14 +179,7 @@ export const KanbanStationTabBar: React.FC = memo(() => {
     ]
   );
 
-  const leadingSlot = useMemo(
-    () => (
-      <StationTabBarLeading
-        trailing={<WorkStationSidebarToggleButton iconSize={14} />}
-      />
-    ),
-    []
-  );
+  const leadingSlot = useMemo(() => <StationTabBarLeading />, []);
 
   const trailingSlot = useMemo(
     () => (

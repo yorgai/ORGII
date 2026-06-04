@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getPendingPlanApproval } from "@src/api/tauri/agent";
 import { promptDump } from "@src/api/tauri/agent/promptDump";
 import { rpc } from "@src/api/tauri/rpc";
+import { normalizeAgentExecMode } from "@src/config/sessionCreatorConfig";
 import {
   clearSessionAtom,
   loadSessionAtom,
@@ -36,7 +37,12 @@ import {
   workstationActiveSessionIdAtom,
 } from "@src/store/session/viewAtom";
 import {
+  CHAT_PANEL_CONTENT_MODE,
+  DEFAULT_CHAT_PANEL_CREATE_TARGET,
+  chatPanelContentModeAtom,
+  chatPanelCreateTargetAtom,
   chatPanelMaximizedAtom,
+  chatPanelSelectedWorkItemAtom,
   chatWidthAtom,
 } from "@src/store/ui/chatPanelAtom";
 import {
@@ -114,7 +120,7 @@ function toStoreSession(record: {
     orgMemberId: record.orgMemberId ?? undefined,
     agentDefinitionId: record.agentDefinitionId ?? undefined,
     agentDisplayName: record.agentDisplayName ?? undefined,
-    agentExecMode: record.agentExecMode ?? undefined,
+    agentExecMode: normalizeAgentExecMode(record.agentExecMode) ?? undefined,
     is_active: true,
   };
 }
@@ -190,6 +196,9 @@ export function createSessionHelpers(store: E2EStore) {
       store.set(activeSessionIdAtom, null);
       store.set(workstationActiveSessionIdAtom, null);
       store.set(stationModeAtom, "my-station");
+      store.set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.SESSION);
+      store.set(chatPanelCreateTargetAtom, DEFAULT_CHAT_PANEL_CREATE_TARGET);
+      store.set(chatPanelSelectedWorkItemAtom, null);
       store.set(chatPanelMaximizedAtom, true);
       store.set(chatWidthAtom, 560);
       store.set(sessionIdAtom, null);
@@ -323,6 +332,9 @@ export function createSessionHelpers(store: E2EStore) {
           : undefined;
 
       store.set(stationModeAtom, "my-station");
+      store.set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.SESSION);
+      store.set(chatPanelCreateTargetAtom, DEFAULT_CHAT_PANEL_CREATE_TARGET);
+      store.set(chatPanelSelectedWorkItemAtom, null);
       store.set(chatPanelMaximizedAtom, true);
       store.set(chatWidthAtom, 560);
       store.set(openSessionAtom, { sessionId, sessionName, repoPath });

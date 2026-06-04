@@ -9,8 +9,7 @@ function formatAgentExecModeSection(mode: AgentExecMode): string {
   const guidance: Record<AgentExecMode, string> = {
     build:
       "Deliver a full implementation: code, tests, and commits as needed to satisfy the work item.",
-    investigate:
-      "Research the codebase and answer the user's questions; summarize findings with specific file paths, line numbers, and code snippets. Do not edit files or run destructive commands unless the user explicitly asks for implementation.",
+    ask: "Research the codebase and answer the user's questions; summarize findings with specific file paths, line numbers, and code snippets. Do not edit files or run destructive commands unless the user explicitly asks for implementation.",
     plan: "Draft a concrete implementation plan (context, step-by-step changes, key files, risks) and write it to the plan file via `create_plan`. Do not edit any other files.",
     debug:
       "Focus on diagnosis, root cause, and minimal targeted fixes; verify with tests and narrow regressions.",
@@ -105,16 +104,16 @@ export function buildSdeTaskPrompt(
 ): string {
   const parts: string[] = [];
   const isPlan = mode === "plan";
-  const isInvestigate = mode === "investigate";
+  const isAsk = mode === "ask";
   const isReview = mode === "review";
   const isDebug = mode === "debug";
-  const readOnlyMode = isPlan || isInvestigate || isReview;
+  const readOnlyMode = isPlan || isAsk || isReview;
 
   if (isPlan) {
     parts.push(
       `Create a detailed implementation plan for the following work item: ${shortId}`
     );
-  } else if (isInvestigate) {
+  } else if (isAsk) {
     parts.push(
       `Research the codebase and answer questions about the following work item: ${shortId}`
     );
@@ -159,11 +158,11 @@ export function buildSdeTaskPrompt(
   if (isPlan) {
     parts.push(`
 ## Instructions
-- Thoroughly investigate the codebase to understand the relevant architecture
+- Thoroughly research the codebase to understand the relevant architecture
 - Produce a structured plan covering: context, step-by-step changes, key files, and risks
 - Write the plan to the plan file with \`create_plan\`; once it finishes writing, the plan is automatically submitted for the user to review
 - Do NOT edit any other files`);
-  } else if (isInvestigate) {
+  } else if (isAsk) {
     parts.push(`
 ## Instructions
 - Search the codebase to find all relevant files, patterns, and dependencies

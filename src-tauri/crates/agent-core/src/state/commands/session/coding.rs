@@ -322,8 +322,8 @@ pub async fn agent_list_modes() -> Result<serde_json::Value, String> {
             "description": "Default mode - full tool access for implementation"
         },
         {
-            "id": AgentExecMode::Investigate.as_str(),
-            "name": "Investigate",
+            "id": AgentExecMode::Ask.as_str(),
+            "name": "Ask",
             "description": "Read-only research and Q&A - explore the codebase, answer questions"
         },
         {

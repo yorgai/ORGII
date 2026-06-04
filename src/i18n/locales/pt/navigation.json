@@ -7,7 +7,7 @@
     "economy": "Economia",
     "sourceControl": "Source control",
     "startSession": "Iniciar Sessão",
-    "newSession": "Nova Sessão",
+    "newSession": "Novo chat",
     "quickstart": "Início rápido",
     "drafts": "Rascunhos",
     "browser": "Navegador",
@@ -53,7 +53,7 @@
     "emptySubtitle": "Os eventos aparecerão aqui conforme ocorrerem"
   },
   "routes": {
-    "session": "Sessão",
+    "session": "Chat",
     "startSession": "Iniciar sessão",
     "sessions": "Sessões",
     "kanban": "Ops Control",
@@ -141,6 +141,7 @@
       "appearance": "Aparência",
       "language": "Idioma",
       "viewRam": "Ver RAM",
+      "tutorials": "Tutoriais",
       "openSettings": "Abrir configurações"
     },
     "empty": {

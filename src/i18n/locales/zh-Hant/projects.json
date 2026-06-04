@@ -8,6 +8,8 @@
     "noResults": "未找到專案",
     "dashboardTitle": "專案",
     "groupBy": {
+      "org": "按組織",
+      "project": "按專案",
       "status": "按狀態",
       "priority": "按優先級",
       "targetDate": "按目標日期"

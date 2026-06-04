@@ -4,44 +4,28 @@ import React, { memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
+import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
+import Tooltip from "@src/components/Tooltip";
+import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
-import { stationModeAtom } from "@src/store/ui/simulatorAtom";
-import {
-  workStationPrimarySidebarCollapsedAtom,
-  workStationPrimarySidebarCollapsedPersistAtom,
-} from "@src/store/ui/workStationAtom";
 
 const COLLAPSED_SIDEBAR_BUTTON_LEFT = 88;
 
 const CollapsedSidebarButtonComponent: React.FC = () => {
   const { t } = useTranslation("sessions");
   const isCompactLayout = useIsCompactLayout();
-  const stationMode = useAtomValue(stationModeAtom);
-  const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
-  const primarySidebarCollapsed = useAtomValue(
-    workStationPrimarySidebarCollapsedAtom
-  );
+  const collapsed = useAtomValue(sidebarCollapsedAtom);
   const setSidebarCollapsed = useSetAtom(sidebarCollapsedAtom);
-  const setPrimarySidebarCollapsed = useSetAtom(
-    workStationPrimarySidebarCollapsedPersistAtom
+  const label = t("common:tooltips.showSidebar");
+  const shortcut = getShortcutKeys("toggle_sidebar");
+  const tooltipContent = (
+    <KeyboardShortcutTooltipContent label={label} shortcut={shortcut} />
   );
-  const controlsOpsControlSidebar = stationMode === "ops-control";
-  const collapsed = controlsOpsControlSidebar
-    ? primarySidebarCollapsed
-    : sidebarCollapsed;
 
   const handleClick = useCallback(() => {
-    if (controlsOpsControlSidebar) {
-      setPrimarySidebarCollapsed("toggle");
-      return;
-    }
     setSidebarCollapsed(false);
-  }, [
-    controlsOpsControlSidebar,
-    setPrimarySidebarCollapsed,
-    setSidebarCollapsed,
-  ]);
+  }, [setSidebarCollapsed]);
 
   if (!collapsed) return null;
 
@@ -57,16 +41,25 @@ const CollapsedSidebarButtonComponent: React.FC = () => {
         } as React.CSSProperties & { WebkitAppRegion: string }
       }
     >
-      <Button
-        htmlType="button"
-        variant="tertiary"
-        size="small"
-        iconOnly
-        onClick={handleClick}
-        title={t("simulator.titleBar.showSidebar")}
-        aria-label={t("simulator.titleBar.showSidebar")}
-        icon={<PanelLeft size={16} strokeWidth={2} />}
-      />
+      <Tooltip
+        content={tooltipContent}
+        position="bottom"
+        mouseEnterDelay={200}
+        framedPanel
+      >
+        <span className="inline-flex">
+          <Button
+            htmlType="button"
+            variant="tertiary"
+            size="small"
+            iconOnly
+            onClick={handleClick}
+            title={label}
+            aria-label={label}
+            icon={<PanelLeft size={16} strokeWidth={2} />}
+          />
+        </span>
+      </Tooltip>
     </div>
   );
 };

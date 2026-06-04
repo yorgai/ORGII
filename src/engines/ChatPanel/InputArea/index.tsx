@@ -168,6 +168,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
 
       // Slash command
       showSlashMenu,
+      handleSlashCommand,
       handleSlashCommandClose,
       handleSlashSelect,
       handleModeSelect,
@@ -227,6 +228,8 @@ const InputArea: React.FC<InputAreaProps> = memo(
     // Separate from the inline "/" slash menu so the two modes don't collide.
     const [showPlusSlashMenu, setShowPlusSlashMenu] = useState(false);
     const [plusSlashQuery, setPlusSlashQuery] = useState("");
+    const [contextMenuKeyboardOpened, setContextMenuKeyboardOpened] =
+      useState(false);
 
     const handleOpenSkillsTools = useCallback(() => {
       setPlusSlashQuery("");
@@ -234,6 +237,11 @@ const InputArea: React.FC<InputAreaProps> = memo(
       // Pre-fetch items without opening the inline "/" menu.
       prefetchSlashItems("");
     }, [prefetchSlashItems]);
+
+    const handleOpenContextMenu = useCallback(() => {
+      setContextMenuKeyboardOpened(false);
+      setShowContextMenu(true);
+    }, [setShowContextMenu]);
 
     const handlePlusSlashClose = useCallback(() => {
       setShowPlusSlashMenu(false);
@@ -243,17 +251,6 @@ const InputArea: React.FC<InputAreaProps> = memo(
     const handlePlusSlashQueryChange = useCallback(
       (query: string) => {
         setPlusSlashQuery(query);
-        prefetchSlashItems(query);
-      },
-      [prefetchSlashItems]
-    );
-
-    // Route "/" trigger through the plus-button menu so both entry points
-    // show identical content (Mode, Models, Image, Skills, Actions).
-    const handleSlashCommandViaPlus = useCallback(
-      (query: string) => {
-        setPlusSlashQuery(query);
-        setShowPlusSlashMenu(true);
         prefetchSlashItems(query);
       },
       [prefetchSlashItems]
@@ -300,9 +297,18 @@ const InputArea: React.FC<InputAreaProps> = memo(
     // ============================================
 
     const handleContextMenuClose = useCallback(() => {
+      setContextMenuKeyboardOpened(false);
       setShowContextMenu(false);
       setAtSearchQuery("");
     }, [setShowContextMenu, setAtSearchQuery]);
+
+    const handleKeyboardAtMention = useCallback(
+      (query: string, position: { x: number; y: number }) => {
+        setContextMenuKeyboardOpened(true);
+        handleAtMention(query, position);
+      },
+      [handleAtMention]
+    );
 
     // ============================================
     // Compact composer capsule
@@ -345,6 +351,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
         !replyInfo.isReply &&
         !editorMultiline &&
         !showContextMenu &&
+        !showSlashMenu &&
         !showPlusSlashMenu,
       [
         isEditMode,
@@ -353,6 +360,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
         replyInfo.isReply,
         editorMultiline,
         showContextMenu,
+        showSlashMenu,
         showPlusSlashMenu,
       ]
     );
@@ -387,7 +395,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
 
     const editComposerBar = (
       <ComposerBar
-        onAddContent={() => setShowContextMenu(true)}
+        onAddContent={handleOpenContextMenu}
         onUpload={handleUploadClick}
         onOpenSkillsTools={handleOpenSkillsTools}
         dropdownDirection="down"
@@ -404,10 +412,10 @@ const InputArea: React.FC<InputAreaProps> = memo(
             plusSlashCommandKeyboardHandlerRef={
               plusSlashCommandKeyboardHandlerRef
             }
-            onSlashCommand={handleSlashCommandViaPlus}
-            onSlashCommandClose={handlePlusSlashClose}
+            onSlashCommand={handleSlashCommand}
+            onSlashCommandClose={handleSlashCommandClose}
             onContentChange={handleContentChange}
-            onAtMention={handleAtMention}
+            onAtMention={handleKeyboardAtMention}
             onAtMentionClose={handleAtMentionClose}
             onSubmit={handleEditSubmit}
             onFocus={() => setIsInputFocused(true)}
@@ -602,7 +610,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
               <div className="flex min-h-0 w-full flex-col">
                 <ImageAttachmentPreview />
                 <ComposerBar
-                  onAddContent={() => setShowContextMenu(true)}
+                  onAddContent={handleOpenContextMenu}
                   onUpload={handleUploadClick}
                   onOpenSkillsTools={handleOpenSkillsTools}
                   dropdownDirection="up"
@@ -626,10 +634,10 @@ const InputArea: React.FC<InputAreaProps> = memo(
                       plusSlashCommandKeyboardHandlerRef={
                         plusSlashCommandKeyboardHandlerRef
                       }
-                      onSlashCommand={handleSlashCommandViaPlus}
-                      onSlashCommandClose={handlePlusSlashClose}
+                      onSlashCommand={handleSlashCommand}
+                      onSlashCommandClose={handleSlashCommandClose}
                       onContentChange={onEditorContentChange}
-                      onAtMention={handleAtMention}
+                      onAtMention={handleKeyboardAtMention}
                       onAtMentionClose={handleAtMentionClose}
                       onSubmit={() => void handleDivSubmit()}
                       onFocus={() => setIsInputFocused(true)}
@@ -698,6 +706,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
           customMentionOptions={activeCustomMentionOptions}
           onCustomMentionSelect={handleCustomMentionSelect}
           searchQuery={atSearchQuery}
+          keyboardOpened={contextMenuKeyboardOpened}
           recentFiles={recentFiles}
           repoPath={currentRepoPath || undefined}
           keyboardHandlerRef={contextMenuKeyboardHandlerRef}
@@ -715,6 +724,8 @@ const InputArea: React.FC<InputAreaProps> = memo(
           onSelect={handleSlashSelect}
           onModeSelect={handleModeSelect}
           keyboardHandlerRef={slashCommandKeyboardHandlerRef}
+          showActionFlyouts
+          onImageUpload={handleUploadClick}
         />
 
         {/* Slash Command Menu - "+" button trigger (header search mode) */}

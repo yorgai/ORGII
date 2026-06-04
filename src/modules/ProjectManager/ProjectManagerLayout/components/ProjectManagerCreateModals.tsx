@@ -59,8 +59,9 @@ const CREATE_MODAL_STYLE: React.CSSProperties = {
   height: "min(600px, calc(100vh - 96px))",
 };
 
-const CREATE_MODAL_CLASS =
-  "!bg-bg-2 [&_.liquid-modal-body]:flex [&_.liquid-modal-body]:min-h-0 [&_.liquid-modal-body]:flex-col";
+const CREATE_MODAL_CLASS = "!bg-bg-2";
+const CREATE_MODAL_BODY_CLASS = "flex min-h-0 flex-col overflow-hidden p-0";
+const CREATE_MODAL_VIEW_CLASS = "flex min-h-0 flex-1 overflow-hidden";
 
 interface ProjectManagerCreateModalsProps {
   repoPath: string;
@@ -111,19 +112,22 @@ export function ProjectManagerCreateModals({
         radius={12}
         style={CREATE_MODAL_STYLE}
         className={CREATE_MODAL_CLASS}
+        bodyClassName={CREATE_MODAL_BODY_CLASS}
       >
         {projectCreateModalOpen && (
           <Suspense fallback={STORY_MANAGER_SUSPENSE_LOADING_FALLBACK}>
-            <CreateProjectView
-              tabId={STORY_CREATE_MODAL_DRAFT_ID}
-              repoPath={repoPath}
-              repoName={repoName}
-              scopeBreadcrumbLabel={scopeBreadcrumbLabel}
-              orgId={projectCreateOrgId}
-              onCancel={onCloseProjectCreateModal}
-              onSetUnsaved={() => undefined}
-              onProjectCreated={onProjectCreated}
-            />
+            <div className={CREATE_MODAL_VIEW_CLASS}>
+              <CreateProjectView
+                tabId={STORY_CREATE_MODAL_DRAFT_ID}
+                repoPath={repoPath}
+                repoName={repoName}
+                scopeBreadcrumbLabel={scopeBreadcrumbLabel}
+                orgId={projectCreateOrgId}
+                onCancel={onCloseProjectCreateModal}
+                onSetUnsaved={() => undefined}
+                onProjectCreated={onProjectCreated}
+              />
+            </div>
           </Suspense>
         )}
       </Modal>
@@ -143,20 +147,24 @@ export function ProjectManagerCreateModals({
         radius={12}
         style={CREATE_MODAL_STYLE}
         className={CREATE_MODAL_CLASS}
+        bodyClassName={CREATE_MODAL_BODY_CLASS}
       >
         {workItemCreateModal && (
           <Suspense fallback={STORY_MANAGER_SUSPENSE_LOADING_FALLBACK}>
-            <CreateWorkItemView
-              projectId={workItemCreateModal.projectId}
-              projectSlug={workItemCreateModal.projectSlug}
-              projectName={workItemCreateModal.projectName}
-              scopeBreadcrumbLabel={scopeBreadcrumbLabel}
-              onCancel={onCloseWorkItemCreateModal}
-              onSetUnsaved={() => undefined}
-              onWorkItemCreated={(options) => {
-                if (!options?.keepOpen) onCloseWorkItemCreateModal();
-              }}
-            />
+            <div className={CREATE_MODAL_VIEW_CLASS}>
+              <CreateWorkItemView
+                projectId={workItemCreateModal.projectId}
+                projectSlug={workItemCreateModal.projectSlug}
+                projectName={workItemCreateModal.projectName}
+                repoPath={repoPath}
+                scopeBreadcrumbLabel={scopeBreadcrumbLabel}
+                onCancel={onCloseWorkItemCreateModal}
+                onSetUnsaved={() => undefined}
+                onWorkItemCreated={(options) => {
+                  if (!options?.keepOpen) onCloseWorkItemCreateModal();
+                }}
+              />
+            </div>
           </Suspense>
         )}
       </Modal>

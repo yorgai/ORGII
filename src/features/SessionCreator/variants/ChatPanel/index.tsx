@@ -19,7 +19,6 @@ import type { ComposerInputRef as TiptapInputRef } from "@src/components/Compose
 import Message from "@src/components/Message";
 import ModelIcon from "@src/components/ModelIcon";
 import PillGroup, { type PillGroupSegment } from "@src/components/PillGroup";
-import Select, { type SelectOption } from "@src/components/Select";
 import { resolveAgentIcon } from "@src/config/agentIcons";
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { isRegionSanctioned } from "@src/config/providerRegions";
@@ -82,7 +81,6 @@ export interface SessionCreatorChatPanelProps {
   footerSlot?: React.ReactNode;
   onRegionNoticeChange?: (notice: ChatPanelRegionNotice | null) => void;
   onSessionStart?: () => void;
-  solveWorkItemMode?: boolean;
   variant?: SessionCreatorChatPanelVariant;
 }
 
@@ -129,7 +127,6 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
       onDraftSnapshotChange,
       onRegionNoticeChange,
       onSessionStart,
-      solveWorkItemMode = false,
       batchStarterMode = false,
       hideLaunchButton = false,
       hidePresenceButton = false,
@@ -504,18 +501,6 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
     }, [onRegionNoticeChange, regionNotice]);
 
     const isFullScreenVariant = variant === "fullScreen";
-    const workItemOptions = useMemo<SelectOption[]>(() => [], []);
-    const [selectedWorkItemIds, setSelectedWorkItemIds] = useState<
-      (string | number)[]
-    >([]);
-
-    const handleWorkItemSelect = useCallback(
-      (value: string | number | (string | number)[]) => {
-        setSelectedWorkItemIds(Array.isArray(value) ? value : [value]);
-      },
-      []
-    );
-
     const draftSnapshot = useMemo<BatchStarterDraftSnapshot>(
       () => ({
         advancedConfig,
@@ -569,26 +554,6 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
       ],
       [isOrgMembersPanelOpen, selectedAgentOrgId, t]
     );
-
-    const solveWorkItemSelector = solveWorkItemMode ? (
-      <div className="relative border-b border-border-2 px-3">
-        <Select
-          value={selectedWorkItemIds}
-          mode="multiple"
-          options={workItemOptions}
-          onChange={handleWorkItemSelect}
-          placeholder={t("creator.selectWorkItem")}
-          showSearch
-          dropdownMinWidth={260}
-          dropdownWidthMode="match"
-          selectorClassName="!h-9 !w-full !rounded-none !border-0 !bg-transparent !pl-0 !pr-6 !text-[13px] font-normal !shadow-none hover:!bg-transparent [&_.select-placeholder]:!text-text-3 [&_.select-suffix]:!hidden"
-          className="w-full"
-        />
-        <span className="pointer-events-none absolute right-3 top-0 flex h-9 items-center text-[18px] font-normal leading-none text-text-3">
-          +
-        </span>
-      </div>
-    ) : null;
 
     const displayedRepoId =
       isOSMode && !sessionRepoId ? SYSTEM_HOME_SOURCE_ID : sessionRepoId;
@@ -662,18 +627,11 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
           launchDisabled={!canLaunch}
           requestModelOpen={requestModelOpen}
           onModelOpenHandled={() => setRequestModelOpen(false)}
-          shellClassName={`session-creator-chat-panel-fullscreen-input-shell ${
-            solveWorkItemMode ? "!pt-0" : ""
-          }`}
+          shellClassName="session-creator-chat-panel-fullscreen-input-shell"
           initialContent={initialRestoreText || undefined}
           autoFocus={autoFocus}
-          headerContent={solveWorkItemSelector}
           editorPlaceholder={
-            solveWorkItemMode
-              ? t("creator.addInstructionsPlaceholder")
-              : batchStarterMode
-                ? t("creator.batchStarterPlaceholder")
-                : undefined
+            batchStarterMode ? t("creator.batchStarterPlaceholder") : undefined
           }
           showSlashMenu={showSlashMenu}
           slashQuery={slashQuery}

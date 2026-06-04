@@ -503,14 +503,18 @@ export async function createRenderedStrictTwoMemberAgentOrg({
     "navigateTo Agent Org settings"
   );
   await browser.waitUntil(
-    async () => !(await execJS(js.exists('[data-testid="agent-orgs-org-wizard-root"]'))),
+    async () =>
+      !(await execJS(js.exists('[data-testid="agent-orgs-org-wizard-root"]'))),
     {
       timeout: RENDER_TIMEOUT_MS,
       timeoutMsg: "previous Agent Org wizard did not unmount",
     }
   );
   unwrap(
-    await invokeE2E("navigateTo", "/orgii/app/settings/agent-orgs/agents?wizard=org-add"),
+    await invokeE2E(
+      "navigateTo",
+      "/orgii/app/settings/agent-orgs/agents?wizard=org-add"
+    ),
     "navigateTo Agent Org add wizard"
   );
   await browser.waitUntil(
@@ -687,19 +691,38 @@ export async function selectRenderedExecMode(mode) {
   const pillSelector = '[data-testid="agent-exec-mode-pill"]';
   const pillRendered = await execJS(js.exists(pillSelector));
   if (pillRendered) {
+    const expectedLabels = mode === "ask" ? ["ask"] : [mode];
     const currentText = await execJS(js.text(pillSelector));
-    if (String(currentText).toLowerCase().includes(mode)) {
+    if (
+      expectedLabels.some((label) =>
+        String(currentText).toLowerCase().includes(label)
+      )
+    ) {
       return;
     }
-    const openResult = await execJS(js.click(pillSelector));
+    const openResult = await execJS(js.visibleClick(pillSelector));
     if (openResult !== "clicked") {
       throw new Error(`Agent exec mode pill did not open: ${openResult}`);
     }
     const optionSelector = `[data-testid="agent-exec-mode-option-${mode}"]`;
-    await browser.waitUntil(async () => execJS(js.exists(optionSelector)), {
-      timeout: RENDER_TIMEOUT_MS,
-      timeoutMsg: `Agent exec mode option ${mode} never rendered`,
-    });
+    let renderedOptions = [];
+    await browser.waitUntil(
+      async () => {
+        renderedOptions = await execJS(`
+          return Array.from(document.querySelectorAll('[data-testid^="agent-exec-mode-option-"]')).map((element) => ({
+            testId: element.getAttribute('data-testid'),
+            text: element.textContent || '',
+          }));
+        `);
+        return renderedOptions.some(
+          (option) => option.testId === `agent-exec-mode-option-${mode}`
+        );
+      },
+      {
+        timeout: RENDER_TIMEOUT_MS,
+        timeoutMsg: `Agent exec mode option ${mode} never rendered: ${JSON.stringify(renderedOptions)}`,
+      }
+    );
     const clickResult = await execJS(js.click(optionSelector));
     if (clickResult !== "clicked") {
       throw new Error(
@@ -709,7 +732,9 @@ export async function selectRenderedExecMode(mode) {
     await browser.waitUntil(
       async () => {
         const text = await execJS(js.text(pillSelector));
-        return String(text).toLowerCase().includes(mode);
+        return expectedLabels.some((label) =>
+          String(text).toLowerCase().includes(label)
+        );
       },
       {
         timeout: RENDER_TIMEOUT_MS,
@@ -809,6 +834,99 @@ export async function selectRenderedAgentOrg(agentOrgId) {
 
 export async function selectRenderedDefaultAgentOrg() {
   await selectRenderedAgentOrg(DEFAULT_AGENT_ORG_ID);
+}
+
+export async function selectRenderedOrgMemberAgentDefinition({
+  memberId,
+  agentDefinitionId,
+  expectedText,
+  label,
+}) {
+  const panelSelector = '[data-testid="session-creator-org-members-panel"]';
+  const toggleSelector = '[data-testid="session-creator-org-members-toggle"]';
+  if (!(await execJS(js.exists(panelSelector)))) {
+    const toggleClick = await execJS(js.visibleClick(toggleSelector));
+    if (toggleClick !== "clicked") {
+      throw new Error(
+        `Org members toggle did not click for ${label}: ${toggleClick}`
+      );
+    }
+  }
+  await browser.waitUntil(async () => execJS(js.exists(panelSelector)), {
+    timeout: RENDER_TIMEOUT_MS,
+    timeoutMsg: `Org members panel never rendered for ${label}`,
+  });
+
+  const memberState = await execJS(`
+    const row = Array.from(document.querySelectorAll('[data-testid="session-creator-org-member-row"]')).find(
+      (candidate) => candidate.getAttribute('data-member-id') === ${JSON.stringify(memberId)}
+    );
+    if (!row) {
+      return {
+        found: false,
+        rows: Array.from(document.querySelectorAll('[data-testid="session-creator-org-member-row"]')).map((candidate) => ({
+          memberId: candidate.getAttribute('data-member-id'),
+          text: candidate.textContent || '',
+        })),
+      };
+    }
+    const pill = row.querySelector('[data-testid="session-creator-org-member-agent-pill"]');
+    if (!pill) return { found: true, clicked: false, reason: 'missing-agent-pill' };
+    pill.scrollIntoView({ block: 'center', inline: 'center' });
+    pill.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+    pill.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }));
+    pill.click();
+    return { found: true, clicked: true, text: row.textContent || '' };
+  `);
+  if (!memberState?.clicked) {
+    throw new Error(
+      `Org member agent pill did not click for ${label}: ${JSON.stringify(memberState)}`
+    );
+  }
+
+  const optionSelector = `[data-testid="session-creator-agent-option-def-${agentDefinitionId}"]`;
+  let renderedOptions = [];
+  await browser.waitUntil(
+    async () => {
+      renderedOptions = await execJS(`
+        return Array.from(document.querySelectorAll('[data-testid^="session-creator-agent-option-"]')).map((element) => ({
+          testId: element.getAttribute('data-testid'),
+          text: element.textContent || '',
+        }));
+      `);
+      return renderedOptions.some(
+        (option) =>
+          option.testId ===
+          `session-creator-agent-option-def-${agentDefinitionId}`
+      );
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `Org member AgentDefinition option ${agentDefinitionId} never rendered for ${label}: ${JSON.stringify(renderedOptions)}`,
+    }
+  );
+  const optionClick = await execJS(js.visibleClick(optionSelector));
+  if (optionClick !== "clicked") {
+    throw new Error(
+      `Org member AgentDefinition option did not click for ${label}: ${optionClick}`
+    );
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const rowText = await execJS(`
+        const row = Array.from(document.querySelectorAll('[data-testid="session-creator-org-member-row"]')).find(
+          (candidate) => candidate.getAttribute('data-member-id') === ${JSON.stringify(memberId)}
+        );
+        return row ? (row.textContent || '') : '';
+      `);
+      return String(rowText).includes(expectedText ?? agentDefinitionId);
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `Org member row did not reflect AgentDefinition override for ${label}`,
+    }
+  );
 }
 
 export async function sendRenderedChatPrompt(prompt) {

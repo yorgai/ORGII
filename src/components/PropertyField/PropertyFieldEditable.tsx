@@ -5,7 +5,7 @@
  * Extracted from WorkItem/Project PropertiesPanel pattern
  * Uses DROPDOWN_CLASSES and DropdownSearch for consistency with settings.
  */
-import { ChevronDown, Pencil, X } from "lucide-react";
+import { ChevronDown, Pencil } from "lucide-react";
 import React, { useCallback, useState } from "react";
 
 import DropdownSearch from "@src/components/Dropdown/DropdownSearch";
@@ -55,19 +55,10 @@ export const FieldRow: React.FC<FieldRowProps> = ({
   suffix,
   variant = "row",
   borderless = false,
-  clearLabel = "Clear",
-  onClear,
   onClick,
 }) => {
   const EditIcon = usePencil ? Pencil : ChevronDown;
-  const showClear = Boolean(isSelected && onClear);
   const pillBorderClass = borderless ? "border-transparent" : "border-border-2";
-
-  const handleClear = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    onClear?.();
-  };
 
   if (variant === "pill") {
     return (
@@ -79,7 +70,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({
           <button
             type="button"
             onClick={onClick}
-            className="flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-none bg-transparent py-0 pl-3 pr-2 text-inherit outline-none"
+            className="flex min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 border-none bg-transparent px-3 py-0 text-inherit outline-none"
           >
             <span
               className="flex h-4 w-4 shrink-0 items-center justify-center text-text-3"
@@ -94,16 +85,6 @@ export const FieldRow: React.FC<FieldRowProps> = ({
             </span>
             {suffix}
           </button>
-          {showClear && (
-            <button
-              type="button"
-              aria-label={clearLabel}
-              onClick={handleClear}
-              className="pointer-events-none absolute right-1 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border-none bg-bg-2 text-text-3 opacity-0 transition-[background-color,color,opacity] hover:bg-fill-3 hover:text-text-1 focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover/field:pointer-events-auto group-hover/field:opacity-100"
-            >
-              <X size={DROPDOWN_ITEM.iconSize} />
-            </button>
-          )}
         </div>
       </div>
     );
@@ -120,7 +101,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({
       >
         <button
           type="button"
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 border-none bg-transparent py-1.5 pl-1.5 pr-1.5 text-left outline-none"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 border-none bg-transparent px-1.5 py-1.5 text-left outline-none"
           onClick={onClick}
         >
           <span
@@ -141,7 +122,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({
             type="button"
             aria-label="Open"
             onClick={onClick}
-            className={`mr-1 flex h-6 w-5 shrink-0 items-center justify-center rounded-md border-none bg-transparent text-text-3 transition-colors hover:bg-fill-3 hover:text-text-1 ${isActive ? "flex" : "hidden group-hover/field:flex"}`}
+            className={`mr-1 flex h-6 w-5 shrink-0 items-center justify-center rounded-md border-none bg-transparent text-text-3 ${isActive ? "flex" : "hidden group-hover/field:flex"}`}
           >
             <EditIcon size={DROPDOWN_ITEM.iconSize} />
           </button>

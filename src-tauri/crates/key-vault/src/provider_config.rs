@@ -63,6 +63,18 @@ pub fn get_provider_config(model_type: &str) -> ProviderConfig {
             supports_base_url: false,
             default_base_url: None,
         },
+        "kimi_cli" => ProviderConfig {
+            api_key_env_var: "MOONSHOT_API_KEY".to_string(),
+            base_url_env_var: Some("MOONSHOT_BASE_URL".to_string()),
+            supports_base_url: true,
+            default_base_url: Some("https://api.moonshot.cn/v1".to_string()),
+        },
+        "opencode" => ProviderConfig {
+            api_key_env_var: "OPENCODE_API_KEY".to_string(),
+            base_url_env_var: None,
+            supports_base_url: false,
+            default_base_url: None,
+        },
 
         // === Direct API Key Providers ===
         "anthropic_api" => ProviderConfig {
@@ -94,6 +106,12 @@ pub fn get_provider_config(model_type: &str) -> ProviderConfig {
             base_url_env_var: None,
             supports_base_url: true,
             default_base_url: Some("https://api.groq.com/openai/v1".to_string()),
+        },
+        "xai_api" => ProviderConfig {
+            api_key_env_var: "XAI_API_KEY".to_string(),
+            base_url_env_var: None,
+            supports_base_url: true,
+            default_base_url: Some("https://api.x.ai/v1".to_string()),
         },
         "zhipu_api" => ProviderConfig {
             api_key_env_var: "ZHIPU_API_KEY".to_string(),
@@ -179,12 +197,15 @@ pub fn get_all_provider_configs() -> Vec<(String, ProviderConfig)> {
         "gemini_cli",
         "copilot",
         "kiro",
+        "kimi_cli",
+        "opencode",
         // API providers
         "anthropic_api",
         "openai_api",
         "deepseek_api",
         "gemini_api",
         "groq_api",
+        "xai_api",
         "zhipu_api",
         "dashscope_api",
         "moonshot_api",
@@ -244,5 +265,47 @@ mod tests {
         assert!(configs.iter().any(|(k, _)| k == "openai_api"));
         assert!(configs.iter().any(|(k, _)| k == "anthropic_api"));
         assert!(configs.iter().any(|(k, _)| k == "cursor_cli"));
+    }
+
+    #[test]
+    fn all_registered_cli_agents_have_provider_configs() {
+        let configs = get_all_provider_configs();
+        for agent in [
+            "cursor_cli",
+            "claude_code",
+            "codex",
+            "gemini_cli",
+            "copilot",
+            "kiro",
+            "kimi_cli",
+            "opencode",
+        ] {
+            let config = configs
+                .iter()
+                .find(|(model_type, _)| model_type == agent)
+                .map(|(_, config)| config)
+                .unwrap_or_else(|| panic!("missing provider config for {agent}"));
+            assert_ne!(
+                config.api_key_env_var, "API_KEY",
+                "{agent} used generic fallback"
+            );
+        }
+    }
+
+    #[test]
+    fn kimi_and_opencode_cli_configs_match_setup_registry() {
+        let kimi = get_provider_config("kimi_cli");
+        assert_eq!(kimi.api_key_env_var, "MOONSHOT_API_KEY");
+        assert_eq!(kimi.base_url_env_var, Some("MOONSHOT_BASE_URL".to_string()));
+        assert!(kimi.supports_base_url);
+        assert_eq!(
+            kimi.default_base_url,
+            Some("https://api.moonshot.cn/v1".to_string())
+        );
+
+        let opencode = get_provider_config("opencode");
+        assert_eq!(opencode.api_key_env_var, "OPENCODE_API_KEY");
+        assert!(!opencode.supports_base_url);
+        assert!(opencode.default_base_url.is_none());
     }
 }

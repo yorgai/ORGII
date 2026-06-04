@@ -25,7 +25,7 @@ impl AgentExecMode {
         tool_names::SETUP_REPO,
     ];
 
-    /// Shared deny list for all read-only modes (Investigate, Debug, Review).
+    /// Shared deny list for all read-only modes (Ask, Debug, Review).
     ///
     /// Contains WRITE_DENY tools plus the orchestration tools that would let
     /// the LLM escape into write or planning activities. Each read-only mode
@@ -71,7 +71,7 @@ impl AgentExecMode {
                 deny.push(tool_names::MANAGE_TODO.to_string());
                 Some(ToolPolicyLayer { allow: None, deny })
             }
-            Self::Investigate => Some(ToolPolicyLayer {
+            Self::Ask => Some(ToolPolicyLayer {
                 allow: None,
                 deny: Self::read_only_deny_base(),
             }),
@@ -129,9 +129,9 @@ impl AgentExecMode {
                 "genuinely complex enough to need checklist tracking; otherwise proceed with the coding tools. ",
                 "Do not create another plan document.\n",
             ),
-            Self::Investigate => concat!(
-                "\n\n## Mode: Investigate\n",
-                "You are in INVESTIGATE mode — a read-only research / Q&A agent. Use this mode to explore ",
+            Self::Ask => concat!(
+                "\n\n## Mode: Ask\n",
+                "You are in ASK mode — a read-only research / Q&A agent. Use this mode to explore ",
                 "the codebase, answer factual questions, and gather context.\n\n",
                 "### Constraints\n",
                 "- You CANNOT edit, write, or create files.\n",
@@ -143,13 +143,13 @@ impl AgentExecMode {
                 "- Summarize concisely with actionable context — do NOT speculate beyond evidence.\n",
                 "- If the task clearly requires implementation, say so in plain text; do not try to edit.\n\n",
                 "### Mode switching\n",
-                "You cannot switch modes from within Investigate mode. ",
+                "You cannot switch modes from within Ask mode. ",
                 "If the user wants to switch to a different mode (Build, Plan, Debug, etc.), ",
                 "tell them to use the mode selector in the UI. Do NOT attempt to call any switch tool.\n",
             ),
             Self::Plan => concat!(
                 "\n\n## Mode: Plan\n",
-                "You are in PLAN mode. Your job is to INVESTIGATE, DESIGN, and produce a written plan ",
+                "You are in PLAN mode. Your job is to RESEARCH, DESIGN, and produce a written plan ",
                 "that the user can review and approve. You do NOT implement in this mode.\n\n",
                 "### Hard Constraints\n",
                 "- You CANNOT edit source files, apply patches, run shell commands, or delete anything.\n",
@@ -158,7 +158,7 @@ impl AgentExecMode {
                 "- You CAN read files, search code, query the LSP, and browse the web to research.\n\n",
                 "### Mode switching\n",
                 "You cannot switch modes from within Plan mode. ",
-                "If the user wants to switch to a different mode (Build, Investigate, Debug, etc.), ",
+                "If the user wants to switch to a different mode (Build, Ask, Debug, etc.), ",
                 "tell them to use the mode selector in the UI or click the **Build** button on an approved plan. ",
                 "Do NOT attempt to call any switch tool.\n\n",
                 "### Workflow — follow this exactly\n",
@@ -218,7 +218,7 @@ impl AgentExecMode {
                 "- Produce a clear root-cause summary and recommended fix; do NOT apply the fix yourself.\n\n",
                 "### Mode switching\n",
                 "You cannot switch modes from within Debug mode. ",
-                "If the user wants to switch to a different mode (Build, Plan, Investigate, etc.), ",
+                "If the user wants to switch to a different mode (Build, Plan, Ask, etc.), ",
                 "tell them to use the mode selector in the UI. Do NOT attempt to call any switch tool.\n",
             ),
             Self::Wingman => concat!(

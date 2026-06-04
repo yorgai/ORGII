@@ -81,3 +81,42 @@ export interface SystemMemoryMetrics {
   swap_total_mb: number;
   swap_used_mb: number;
 }
+
+export const GPU_DETECTION_STATUS = {
+  DETECTED: "detected",
+  NOT_AVAILABLE: "not_available",
+  PROBE_FAILED: "probe_failed",
+  UNSUPPORTED: "unsupported",
+} as const;
+
+export type GpuDetectionStatus =
+  (typeof GPU_DETECTION_STATUS)[keyof typeof GPU_DETECTION_STATUS];
+
+export const GPU_PROBE_SOURCE = {
+  NONE: "none",
+  NVIDIA_SMI: "nvidia-smi",
+  SYSTEM_PROFILER: "system_profiler",
+} as const;
+
+export type GpuProbeSource =
+  (typeof GPU_PROBE_SOURCE)[keyof typeof GPU_PROBE_SOURCE];
+
+/** Hardware summary used for local model recommendations */
+export interface LocalModelHardwareSummary {
+  os_name: string;
+  os_version: string;
+  chip_type: string;
+  cpu_name: string;
+  cpu_cores: number;
+  total_ram_gb: number;
+  available_ram_gb: number;
+  backend: string;
+  has_gpu: boolean;
+  gpu_name: string | null;
+  gpu_vram_gb: number | null;
+  gpu_count: number;
+  unified_memory: boolean;
+  gpu_detection_status: GpuDetectionStatus;
+  gpu_probe_source: GpuProbeSource;
+  gpu_detection_message: string | null;
+}

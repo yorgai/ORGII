@@ -1651,7 +1651,6 @@
     "createTarget": {
       "agentSession": "Сессия Agent",
       "createAgent": "Создать Agent / Skill",
-      "solveWorkItem": "Решить Work Item",
       "workItem": "Создать Work Item",
       "batchStartBeta": "Пакетный запуск (Beta)",
       "benchmark": "Benchmark (Beta)"
@@ -1673,8 +1672,10 @@
     "slashSearchPlaceholder": "Поиск команд…",
     "slashMenu": {
       "image": "Изображение",
+      "uploadImage": "Загрузить изображение",
       "mode": "Режим",
-      "models": "Модели"
+      "models": "Модели",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",
@@ -1802,8 +1803,6 @@
       "worktree": "Worktree",
       "lockedHint": "Worktree заблокирован для этой сессии"
     },
-    "selectWorkItem": "Выбрать Work Item",
-    "addInstructionsPlaceholder": "Добавьте инструкции",
     "batchStarterPlaceholder": "Опишите этот session starter",
     "addBatchStarter": "Добавить starter",
     "removeBatchStarter": "Удалить starter",
@@ -1875,7 +1874,7 @@
     },
     "modes": {
       "build": "Build",
-      "investigate": "Investigate",
+      "ask": "Ask",
       "plan": "Plan",
       "debug": "Debug",
       "review": "Review",

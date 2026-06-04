@@ -592,7 +592,7 @@ mod tests {
             org_member_id: Some("member-worker".to_string()),
             parent_session_id: Some("root-session".to_string()),
             agent_exec_mode: Some(
-                crate::session::AgentExecMode::Investigate
+                crate::session::AgentExecMode::Ask
                     .as_str()
                     .to_string(),
             ),
@@ -700,7 +700,7 @@ mod tests {
         assert_eq!(call.reason, MemberIdleReason::Failed);
         assert_eq!(
             call.current_mode,
-            Some(crate::session::AgentExecMode::Investigate)
+            Some(crate::session::AgentExecMode::Ask)
         );
         assert_eq!(
             call.failure_reason.as_deref(),

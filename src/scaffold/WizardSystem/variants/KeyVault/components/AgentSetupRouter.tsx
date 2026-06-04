@@ -10,6 +10,7 @@ import {
   getClaudeCodeOAuthModels as fetchClaudeCodeOAuthModels,
   getCodexOAuthModels as fetchCodexOAuthModels,
 } from "@src/api/services/keyValidation";
+import { LOCAL_MODEL_PROVIDER } from "@src/api/types/keys";
 import {
   getClaudeCodeOAuthDefaultEnabledModels,
   getClaudeCodeOAuthModels,
@@ -25,6 +26,7 @@ import { CursorSetup } from "./setup/CursorSetup";
 import { GeminiSetup } from "./setup/GeminiSetup";
 import { GenericSetup } from "./setup/GenericSetup";
 import { KiroSetup } from "./setup/KiroSetup";
+import { LocalModelSetup } from "./setup/LocalModelSetup";
 import type { AgentSetupProps } from "./setup/types";
 import type {
   ClaudeCodeSessionValues,
@@ -81,6 +83,10 @@ export const AgentSetupRouter: React.FC<AgentSetupRouterProps> = ({
   ...sharedProps
 }) => {
   const { onChange } = sharedProps;
+
+  if (sharedProps.data.agent_type === LOCAL_MODEL_PROVIDER) {
+    return <LocalModelSetup {...sharedProps} />;
+  }
 
   switch (agentCategory) {
     case "api_key_provider":

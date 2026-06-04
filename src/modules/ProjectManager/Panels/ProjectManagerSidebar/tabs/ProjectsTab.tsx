@@ -9,6 +9,7 @@ import {
   Plus,
   RefreshCw,
   Settings,
+  SquarePen,
 } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -325,6 +326,14 @@ export function useProjectsTabConfig({
 
   const projectsActions = useMemo<SectionHeaderAction[]>(
     () => [
+      {
+        key: "create-work-item",
+        icon: (
+          <SquarePen size={ACTION_ICON_SIZE} strokeWidth={ACTION_ICON_STROKE} />
+        ),
+        tooltip: t("projects:workItems.createWorkItem"),
+        onClick: onCreateWorkItem,
+      },
       {
         key: "create",
         customRender: (

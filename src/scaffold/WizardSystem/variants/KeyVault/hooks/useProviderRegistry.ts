@@ -30,6 +30,7 @@ import { agentRegistryAtom } from "@src/store/session/agentRegistryAtom";
  * - OpenRouter (openrouter_api) — gateway supporting many models
  * - DeepSeek (deepseek_api) — popular alternative
  * - Groq (groq_api) — fast inference
+ * - xAI Grok (xai_api) — Grok API
  */
 const PRIMARY_PROVIDER_KEYS = new Set([
   // CLI agents
@@ -45,8 +46,10 @@ const PRIMARY_PROVIDER_KEYS = new Set([
   "anthropic_api",
   "gemini_api",
   "openrouter_api",
+  "vllm_api",
   "deepseek_api",
   "groq_api",
+  "xai_api",
   "moonshot_api",
   "minimax_api",
 ]);

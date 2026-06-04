@@ -5,7 +5,7 @@ use crate::session::AgentExecMode;
 // `parse` returns `Option<Self>` so callers must explicitly handle
 // unknown variants. The previous catch-all → `Build` fallback was a
 // safety reversal: a typo'd wire payload would silently downgrade
-// `Plan` / `Investigate` / `Review` (read-only) into `Build` (full
+// `Plan` / `Ask` / `Review` (read-only) into `Build` (full
 // write access). See `state/commands/session/message.rs` for the
 // production caller path.
 
@@ -13,8 +13,8 @@ use crate::session::AgentExecMode;
 fn parse_known_modes() {
     assert_eq!(AgentExecMode::parse("plan"), Some(AgentExecMode::Plan));
     assert_eq!(
-        AgentExecMode::parse("investigate"),
-        Some(AgentExecMode::Investigate)
+        AgentExecMode::parse("ask"),
+        Some(AgentExecMode::Ask)
     );
     assert_eq!(AgentExecMode::parse("review"), Some(AgentExecMode::Review));
     assert_eq!(AgentExecMode::parse("debug"), Some(AgentExecMode::Debug));
@@ -34,12 +34,11 @@ fn parse_is_case_insensitive() {
 #[test]
 fn parse_unknown_returns_none() {
     // Realistic typos that previously slipped through the catch-all and
-    // were silently re-routed to `Build`, defeating Plan/Investigate
+    // were silently re-routed to `Build`, defeating Plan/Ask
     // read-only safety.
     assert_eq!(AgentExecMode::parse(""), None);
     assert_eq!(AgentExecMode::parse("plann"), None);
     assert_eq!(AgentExecMode::parse("explore"), None); // retired alias
-    assert_eq!(AgentExecMode::parse("ask"), None); // retired alias
 }
 
 // -- as_str --
@@ -48,7 +47,7 @@ fn parse_unknown_returns_none() {
 fn as_str_round_trips() {
     for mode in &[
         AgentExecMode::Build,
-        AgentExecMode::Investigate,
+        AgentExecMode::Ask,
         AgentExecMode::Plan,
         AgentExecMode::Debug,
         AgentExecMode::Review,
@@ -106,28 +105,28 @@ fn plan_mode_uses_deny_delta() {
 }
 
 #[test]
-fn investigate_mode_uses_deny_delta() {
-    let policy = AgentExecMode::Investigate.policy_layer().unwrap();
+fn ask_mode_uses_deny_delta() {
+    let policy = AgentExecMode::Ask.policy_layer().unwrap();
     assert!(
         policy.allow.is_none(),
-        "Investigate must use deny-delta (allow=None)"
+        "Ask must use deny-delta (allow=None)"
     );
     let deny = &policy.deny;
     assert!(
         deny.contains(&"edit_file".to_string()),
-        "Investigate must deny edit_file"
+        "Ask must deny edit_file"
     );
     assert!(
         deny.contains(&"create_plan".to_string()),
-        "Investigate must deny create_plan (Plan-only)"
+        "Ask must deny create_plan (Plan-only)"
     );
     assert!(
         !deny.contains(&"read_file".to_string()),
-        "Investigate must not deny read-only tools"
+        "Ask must not deny read-only tools"
     );
     assert!(
         !deny.contains(&"ask_user_questions".to_string()),
-        "Investigate must allow ask_user_questions"
+        "Ask must allow ask_user_questions"
     );
 }
 
@@ -179,7 +178,7 @@ fn wingman_mode_has_no_policy_layer() {
 fn system_prompt_suffix_nonempty() {
     for mode in &[
         AgentExecMode::Build,
-        AgentExecMode::Investigate,
+        AgentExecMode::Ask,
         AgentExecMode::Plan,
         AgentExecMode::Debug,
         AgentExecMode::Review,
@@ -333,7 +332,7 @@ fn plan_suffix_describes_nonblocking_submit_flow() {
 fn display_matches_as_str() {
     assert_eq!(format!("{}", AgentExecMode::Build), "build");
     assert_eq!(format!("{}", AgentExecMode::Plan), "plan");
-    assert_eq!(format!("{}", AgentExecMode::Investigate), "investigate");
+    assert_eq!(format!("{}", AgentExecMode::Ask), "ask");
 }
 
 #[test]
@@ -353,18 +352,19 @@ fn serde_round_trip() {
 }
 
 #[test]
-fn investigate_serde_round_trip() {
-    let mode = AgentExecMode::Investigate;
+fn ask_serde_round_trip() {
+    let mode = AgentExecMode::Ask;
     let json = serde_json::to_string(&mode).unwrap();
-    assert_eq!(json, "\"investigate\"");
+    assert_eq!(json, "\"ask\"");
     let parsed: AgentExecMode = serde_json::from_str(&json).unwrap();
     assert_eq!(parsed, mode);
 }
+
 
 // -- TurnConfig.max_iterations semantics --
 //
 // `UnifiedProcessor::effective_max_iterations()` takes the lower of the
 // session-model cap and the exec-mode cap. Tests for that helper live in
 // execute.rs (processor tests). The constants used there are:
-//   Plan / Investigate / Review => 30
+//   Plan / Ask / Review => 30
 //   Build / Debug / Wingman     => no mode cap (session model governs alone)

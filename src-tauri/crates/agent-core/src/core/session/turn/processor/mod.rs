@@ -250,7 +250,7 @@ impl UnifiedMessageProcessor {
         );
         let mode_cap: Option<u32> = match self.agent_mode {
             Some(AgentExecMode::Plan) => Some(30),
-            Some(AgentExecMode::Investigate) => Some(30),
+            Some(AgentExecMode::Ask) => Some(30),
             Some(AgentExecMode::Review) => Some(30),
             _ => None,
         };

@@ -139,7 +139,7 @@ pub async fn run_validate_key(
         }
 
         // OpenAI-compatible API providers (use OpenAI validator with provider's base URL)
-        "deepseek_api" | "groq_api" | "zhipu_api" | "dashscope_api"
+        "deepseek_api" | "groq_api" | "xai_api" | "zhipu_api" | "dashscope_api"
         | "moonshot_api" | "minimax_api" | "openrouter_api" | "aihubmix_api"
         | "vllm_api" | "orgii_orchestrator" | "orgii" => {
             let validator = OpenAIValidator::new();
@@ -150,7 +150,7 @@ pub async fn run_validate_key(
         }
 
         _ => Err(format!(
-            "Unknown agent type: {}. Supported: copilot, cursor_cli, openai, anthropic, google, gemini_cli, codex, claude_code, kiro, openai_api, anthropic_api, gemini_api, deepseek_api, groq_api, zhipu_api, dashscope_api, moonshot_api, minimax_api, openrouter_api, aihubmix_api, vllm_api, azure_openai_api, azure_anthropic_api",
+            "Unknown agent type: {}. Supported: copilot, cursor_cli, openai, anthropic, google, gemini_cli, codex, claude_code, kiro, openai_api, anthropic_api, gemini_api, deepseek_api, groq_api, xai_api, zhipu_api, dashscope_api, moonshot_api, minimax_api, openrouter_api, aihubmix_api, vllm_api, azure_openai_api, azure_anthropic_api",
             agent_type
         )),
     }
@@ -280,9 +280,9 @@ pub fn validate_token_format(agent_type: String, token: String) -> Result<(bool,
         }
 
         // OpenAI-compatible providers: just verify non-empty and reasonable length
-        "deepseek_api" | "groq_api" | "zhipu_api" | "dashscope_api" | "moonshot_api"
-        | "minimax_api" | "openrouter_api" | "aihubmix_api" | "vllm_api" | "orgii_orchestrator"
-        | "orgii" => {
+        "deepseek_api" | "groq_api" | "xai_api" | "zhipu_api" | "dashscope_api"
+        | "moonshot_api" | "minimax_api" | "openrouter_api" | "aihubmix_api" | "vllm_api"
+        | "orgii_orchestrator" | "orgii" => {
             if token.is_empty() {
                 Ok((false, "API key is required".to_string()))
             } else if token.len() < 8 {
@@ -328,6 +328,7 @@ pub async fn fetch_key_quota(
         | "gemini_api"
         | "deepseek_api"
         | "groq_api"
+        | "xai_api"
         | "zhipu_api"
         | "dashscope_api"
         | "moonshot_api"
@@ -508,6 +509,10 @@ mod tests {
             default_base_url_for_provider("groq_api"),
             Some("https://api.groq.com/openai".to_string())
         );
+        assert_eq!(
+            default_base_url_for_provider("xai_api"),
+            Some("https://api.x.ai".to_string())
+        );
     }
 
     #[test]
@@ -624,6 +629,7 @@ mod tests {
         for agent in [
             "deepseek_api",
             "groq_api",
+            "xai_api",
             "zhipu_api",
             "dashscope_api",
             "moonshot_api",
@@ -645,6 +651,7 @@ mod tests {
         for agent in [
             "deepseek_api",
             "groq_api",
+            "xai_api",
             "zhipu_api",
             "dashscope_api",
             "moonshot_api",
@@ -664,7 +671,13 @@ mod tests {
 
     #[test]
     fn validate_token_format_openai_compat_cluster_accepts_long_enough() {
-        for agent in ["deepseek_api", "groq_api", "orgii_orchestrator", "orgii"] {
+        for agent in [
+            "deepseek_api",
+            "groq_api",
+            "xai_api",
+            "orgii_orchestrator",
+            "orgii",
+        ] {
             // 8+ chars passes the length-only check.
             let (valid, msg) = ok_format(agent, "abcd1234efgh");
             assert!(valid, "{agent} rejected long-enough token (msg: {msg})");

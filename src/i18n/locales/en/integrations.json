@@ -213,6 +213,31 @@
     "customBaseUrlRiskTitle": "Custom URL Warning",
     "customBaseUrlRiskWarning": "Using a custom base URL may expose your API key and data to third-party servers. Only use this for trusted proxies, self-hosted deployments, or known secure endpoints.",
     "addBaseUrl": "Add custom base URL (Optional)",
+    "localModel": {
+      "title": "Local model cookbook",
+      "description": "Pick a local runtime preset, confirm its OpenAI-compatible endpoint, add one or more model IDs, then save this account to use local models in Chat.",
+      "runtimeLabel": "Runtime preset",
+      "runtimeDesc": "Choose the local server you are running. Presets fill the endpoint and starter model IDs for you.",
+      "baseUrlDesc": "OpenAI-compatible local endpoint. Start your runtime first, then validate or save.",
+      "apiKeyDesc": "Most local runtimes accept any non-empty value. Keep the placeholder unless your server enforces a key.",
+      "quickModelsLabel": "Cookbook models",
+      "quickModelsDesc": "Seed the model table with IDs commonly used by this runtime. You can edit or add more models below.",
+      "quickModelsPlaceholder": "Choose a suggested model",
+      "addSuggestedModel": "Add suggested",
+      "validateDesc": "Probe the endpoint if it is running, or save after adding models manually.",
+      "presets": {
+        "ollama": "Ollama",
+        "ollamaDesc": "Default local server on port 11434",
+        "lmStudio": "LM Studio",
+        "lmStudioDesc": "OpenAI-compatible server on port 1234",
+        "vllm": "vLLM",
+        "vllmDesc": "Self-hosted inference server on port 8000",
+        "llamaCpp": "llama.cpp",
+        "llamaCppDesc": "GGUF serving endpoint on port 8080",
+        "custom": "Custom",
+        "customDesc": "Any OpenAI-compatible local endpoint"
+      }
+    },
     "validate": "Validate",
     "validateDesc": "Validate keys before proceeding",
     "validated": "Validated",
@@ -755,7 +780,8 @@
     "comingSoon": "Coming soon",
     "installedClis": "CLI Clients",
     "myRoles": "My roles",
-    "modelWiki": "Model Wiki"
+    "modelWiki": "Model Wiki",
+    "localModels": "On prem"
   },
   "modelWiki": {
     "description": "Reference catalog of {{count}} public models with context size, output limits, and capabilities.",
@@ -2386,5 +2412,45 @@
     "branch": "Branch",
     "model": "Model",
     "modelPlaceholder": "Optional model override"
+  },
+  "localModels": {
+    "title": "On prem",
+    "description": "Detect this device and rank Ollama / llama.cpp friendly local models using a lightweight hardware-fit score.",
+    "detect": "Detect",
+    "detectFailed": "Hardware detection failed",
+    "emptyTitle": "Detect this device",
+    "emptyDescription": "Run detection to see CPU, memory, GPU, and local model recommendations.",
+    "noRecommendations": "No recommendations yet",
+    "noMatchingRecommendations": "No matching recommendations",
+    "searchPlaceholder": "Search local models...",
+    "columnHardware": "Hardware",
+    "columnDetails": "Details",
+    "columnValue": "Value",
+    "columnModel": "Model",
+    "columnFit": "Fit",
+    "columnRunMode": "Run mode",
+    "columnMemory": "Memory",
+    "columnSpeed": "Speed",
+    "columnContext": "Context",
+    "columnInstall": "Install hint",
+    "tokensPerSecond": "{{count}} tok/s",
+    "hardware": {
+      "system": "System",
+      "cpu": "CPU",
+      "memory": "Memory",
+      "gpu": "GPU / Backend"
+    },
+    "fit": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "tight": "Tight",
+      "too_tight": "Too tight"
+    },
+    "runMode": {
+      "gpu": "GPU",
+      "cpu_offload": "CPU offload",
+      "cpu_only": "CPU only",
+      "no_fit": "Not recommended"
+    }
   }
 }

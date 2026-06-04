@@ -249,16 +249,16 @@
     {
       "date": "2026-04-13",
       "commitCount": 62,
-      "summary": "Plan mode and interactive agent execution were heavily reworked: real Plan/Investigate modes, Build approval flow, plan streaming, robust question matching, partial tool-call finalization, and provider ordered-content parsing were added. Await output, shell background events, planning indicators, and interactive tool routing received UI and runtime polish.",
+      "summary": "Plan mode and interactive agent execution were heavily reworked: real Plan/Ask modes, Build approval flow, plan streaming, robust question matching, partial tool-call finalization, and provider ordered-content parsing were added. Await output, shell background events, planning indicators, and interactive tool routing received UI and runtime polish.",
       "frontendChangeBullets": [
-        "Overhauled Plan mode with visible Investigate and Plan flows that better match user intent.",
+        "Overhauled Plan mode with visible Ask and Plan flows that better match user intent.",
         "Added streaming plan cards so planning progress appears incrementally instead of only at completion.",
         "Added Build approval handling so users can explicitly approve moving from planning into execution.",
         "Improved planning indicators and interactive tool routing in chat.",
         "Fixed partial tool-call finalization so interrupted streams are less likely to leave the UI blocked."
       ],
       "backendChangeBullets": [
-        "Added real Plan and Investigate runtime modes with clearer execution semantics.",
+        "Added real Plan and Ask runtime modes with clearer execution semantics.",
         "Added automatic Build turns after approval so approved plans can continue into implementation flow.",
         "Improved robust question matching for interactive agent execution.",
         "Added provider ordered-content parsing for more faithful assistant response handling.",

@@ -8,6 +8,8 @@
     "noResults": "Nie znaleziono historii",
     "dashboardTitle": "Projects",
     "groupBy": {
+      "org": "Według Org",
+      "project": "Według projektu",
       "status": "Według statusu",
       "priority": "Według priorytetu",
       "targetDate": "Według daty docelowej"

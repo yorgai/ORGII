@@ -7,7 +7,7 @@
     "economy": "經濟",
     "sourceControl": "原始碼控制",
     "startSession": "開始 Session",
-    "newSession": "新建 Session",
+    "newSession": "新增聊天",
     "quickstart": "快速開始",
     "drafts": "草稿",
     "browser": "瀏覽器",
@@ -53,7 +53,7 @@
     "emptySubtitle": "事件將在此顯示"
   },
   "routes": {
-    "session": "Session",
+    "session": "聊天",
     "startSession": "開始 Session",
     "sessions": "Session 列表",
     "kanban": "Ops Control",
@@ -141,6 +141,7 @@
       "appearance": "外觀",
       "language": "語言",
       "viewRam": "查看 RAM",
+      "tutorials": "教學",
       "openSettings": "開啟設定"
     },
     "empty": {

@@ -360,6 +360,7 @@ export function useDropdownEngine<
     onSelect: listNavigation?.onSelect ?? noopSelect,
     isItemSelectable: listNavigation?.isItemSelectable,
     initialSelectedIndex: listNavigation?.initialSelectedIndex,
+    firstArrowDownSelectsInitial: listNavigation?.firstArrowDownSelectsInitial,
     panelRef,
     disableGlobalListener: hasExplicitListNavigation
       ? listNavigation?.disableGlobalListener

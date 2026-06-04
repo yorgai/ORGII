@@ -586,6 +586,7 @@
     "resizeToDefaultHeight": "Varsayılan yüksekliğe ayarla ({{height}}px)",
     "minimizeHeight": "Yüksekliği küçült ({{height}}px)",
     "closePanel": "Paneli kapat",
+    "showSidebar": "Kenar çubuğunu göster",
     "hideSidebar": "Kenar çubuğunu gizle",
     "resetToDefault": "Varsayılana sıfırla",
     "resetAll": "Tümünü sıfırla",

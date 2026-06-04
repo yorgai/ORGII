@@ -521,12 +521,12 @@ const AppShell = () => {
             onClose={() => setTutorialsModalOpen(false)}
           />
           <GeneralLayoutTour
-            key={generalLayoutTourRunId}
+            key={`general-layout-tour-${generalLayoutTourRunId}`}
             open={generalLayoutTourOpen}
             onClose={() => setGeneralLayoutTourOpen(false)}
           />
           <CodeEditorTour
-            key={codeEditorTourRunId}
+            key={`code-editor-tour-${codeEditorTourRunId}`}
             open={codeEditorTourOpen}
             onClose={() => setCodeEditorTourOpen(false)}
           />

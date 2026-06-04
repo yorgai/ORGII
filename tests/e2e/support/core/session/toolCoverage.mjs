@@ -28,7 +28,7 @@ export const PLAN_FORBIDDEN_PROMPT_TOOL_NAMES = Object.freeze([
   "db_run",
 ]);
 
-export const INVESTIGATE_FORBIDDEN_PROMPT_TOOL_NAMES = Object.freeze([
+export const ASK_FORBIDDEN_PROMPT_TOOL_NAMES = Object.freeze([
   ...PLAN_FORBIDDEN_PROMPT_TOOL_NAMES,
   "create_plan",
 ]);

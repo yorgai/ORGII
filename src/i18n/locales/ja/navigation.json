@@ -7,7 +7,7 @@
     "economy": "エコノミー",
     "sourceControl": "ソース管理",
     "startSession": "Sessionを開始",
-    "newSession": "新規Session",
+    "newSession": "新規チャット",
     "quickstart": "クイックスタート",
     "drafts": "下書き",
     "browser": "ブラウザ",
@@ -53,7 +53,7 @@
     "viewJson": "JSON"
   },
   "routes": {
-    "session": "Session",
+    "session": "チャット",
     "startSession": "Sessionを開始",
     "sessions": "Session一覧",
     "kanban": "Ops Control",
@@ -141,6 +141,7 @@
       "appearance": "外観",
       "language": "言語",
       "viewRam": "RAM を表示",
+      "tutorials": "チュートリアル",
       "openSettings": "設定を開く"
     },
     "empty": {

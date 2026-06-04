@@ -377,8 +377,13 @@ export function useSessionCreator(
 
   const canLaunch = useMemo(() => {
     if (isContentEmpty) return false;
-    if (dispatchCategory === "rust_agent" && !effectiveSource?.repoId)
+    if (
+      dispatchCategory === "rust_agent" &&
+      !isOSMode &&
+      !effectiveSource?.repoId
+    ) {
       return false;
+    }
 
     if (isHostedKey(advancedConfig.keySource)) {
       return !!advancedConfig.cliAgentType;
@@ -389,7 +394,13 @@ export function useSessionCreator(
       !!advancedConfig.model ||
       !!advancedConfig.cliAgentType;
     return hasModelOrAccount;
-  }, [isContentEmpty, advancedConfig, dispatchCategory, effectiveSource]);
+  }, [
+    isContentEmpty,
+    advancedConfig,
+    dispatchCategory,
+    effectiveSource,
+    isOSMode,
+  ]);
 
   // ============================================
   // Return

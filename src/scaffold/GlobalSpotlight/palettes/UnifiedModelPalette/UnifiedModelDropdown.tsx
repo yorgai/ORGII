@@ -274,7 +274,6 @@ export const UnifiedModelDropdown: React.FC<UnifiedModelDropdownProps> = ({
       setSubmenuSelectedIndex(0);
       setSubmenuAnchorTop(null);
       setPrimaryPanelMetrics(null);
-      inputRef.current?.focus();
     });
     return () => cancelAnimationFrame(frame);
   }, [isOpen]);
@@ -326,6 +325,14 @@ export const UnifiedModelDropdown: React.FC<UnifiedModelDropdownProps> = ({
       initialSelectedIndex: -1,
     },
   });
+
+  useEffect(() => {
+    if (!isOpen || !isPositioned) return;
+    const frame = requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen, isPositioned]);
 
   const effectiveSubmenuOpen =
     submenuOpen && Boolean(selectedModelId) && sourceItems.length > 0;

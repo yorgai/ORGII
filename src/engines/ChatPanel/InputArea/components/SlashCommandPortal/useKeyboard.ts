@@ -1,10 +1,7 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type React from "react";
 
-import {
-  AGENT_EXEC_MODES,
-  type AgentExecMode,
-} from "@src/config/sessionCreatorConfig";
+import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import type { SlashItem } from "@src/types/extensions";
 
 import type { ListEntry, OpenFlyoutState } from "./types";
@@ -55,6 +52,17 @@ export function useKeyboard({
   flyoutHighlightIndex,
   setFlyoutHighlightIndex,
 }: UseKeyboardOptions): void {
+  const hasMovedMainHighlightRef = useRef(false);
+  const hasMovedFlyoutHighlightRef = useRef(false);
+
+  useEffect(() => {
+    hasMovedMainHighlightRef.current = false;
+  }, [visible, totalFlat]);
+
+  useEffect(() => {
+    hasMovedFlyoutHighlightRef.current = false;
+  }, [openFlyout]);
+
   const selectAtIndex = useCallback(
     (idx: number) => {
       for (const entry of entries) {
@@ -81,30 +89,6 @@ export function useKeyboard({
               category: entry.category,
               anchorTop: el.getBoundingClientRect().top,
               items: entry.items,
-            });
-          }
-          return;
-        }
-        if (entry.kind === "mode-flyout" && entry.flatIndex === idx) {
-          const itemEls =
-            listRef.current?.querySelectorAll("[data-slash-flat]");
-          const el = itemEls?.[idx] as HTMLElement | undefined;
-          if (el) {
-            setOpenFlyout({
-              kind: "modes",
-              anchorTop: el.getBoundingClientRect().top,
-            });
-          }
-          return;
-        }
-        if (entry.kind === "models-flyout" && entry.flatIndex === idx) {
-          const itemEls =
-            listRef.current?.querySelectorAll("[data-slash-flat]");
-          const el = itemEls?.[idx] as HTMLElement | undefined;
-          if (el) {
-            setOpenFlyout({
-              kind: "models",
-              anchorTop: el.getBoundingClientRect().top,
             });
           }
           return;
@@ -137,15 +121,19 @@ export function useKeyboard({
         }
         if (event.key === "ArrowDown") {
           setKeyboardNavigated(true);
-          setFlyoutHighlightIndex(
-            flyoutHighlightIndex < flyoutTotal - 1
-              ? flyoutHighlightIndex + 1
-              : 0
-          );
+          if (hasMovedFlyoutHighlightRef.current) {
+            setFlyoutHighlightIndex(
+              flyoutHighlightIndex < flyoutTotal - 1
+                ? flyoutHighlightIndex + 1
+                : 0
+            );
+          }
+          hasMovedFlyoutHighlightRef.current = true;
           return true;
         }
         if (event.key === "ArrowUp") {
           setKeyboardNavigated(true);
+          hasMovedFlyoutHighlightRef.current = true;
           setFlyoutHighlightIndex(
             flyoutHighlightIndex > 0
               ? flyoutHighlightIndex - 1
@@ -160,37 +148,6 @@ export function useKeyboard({
         }
         return false;
       }
-
-      if (openFlyout?.kind === "modes") {
-        const modeTotal = AGENT_EXEC_MODES.length;
-
-        if (event.key === "Escape") {
-          setOpenFlyout(null);
-          return true;
-        }
-        if (event.key === "ArrowDown") {
-          setKeyboardNavigated(true);
-          setFlyoutHighlightIndex(
-            flyoutHighlightIndex < modeTotal - 1 ? flyoutHighlightIndex + 1 : 0
-          );
-          return true;
-        }
-        if (event.key === "ArrowUp") {
-          setKeyboardNavigated(true);
-          setFlyoutHighlightIndex(
-            flyoutHighlightIndex > 0 ? flyoutHighlightIndex - 1 : modeTotal - 1
-          );
-          return true;
-        }
-        if (event.key === "Enter" || event.key === "Tab") {
-          const mode = AGENT_EXEC_MODES[flyoutHighlightIndex];
-          if (mode) onModeSelect(mode.id);
-          return true;
-        }
-        return false;
-      }
-
-      // Models flyout: only Escape closes; it owns its own search keyboard.
       if (openFlyout && event.key === "Escape") {
         setOpenFlyout(null);
         return true;
@@ -199,12 +156,16 @@ export function useKeyboard({
       switch (event.key) {
         case "ArrowDown":
           setKeyboardNavigated(true);
-          setHighlightIndex(
-            highlightIndex < totalFlat - 1 ? highlightIndex + 1 : 0
-          );
+          if (hasMovedMainHighlightRef.current) {
+            setHighlightIndex(
+              highlightIndex < totalFlat - 1 ? highlightIndex + 1 : 0
+            );
+          }
+          hasMovedMainHighlightRef.current = true;
           return true;
         case "ArrowUp":
           setKeyboardNavigated(true);
+          hasMovedMainHighlightRef.current = true;
           setHighlightIndex(
             highlightIndex > 0 ? highlightIndex - 1 : totalFlat - 1
           );
@@ -232,7 +193,6 @@ export function useKeyboard({
       setOpenFlyout,
       setFlyoutHighlightIndex,
       onSelect,
-      onModeSelect,
       onClose,
     ]
   );

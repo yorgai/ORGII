@@ -215,6 +215,31 @@
     "customBaseUrlRiskTitle": "Avertissement URL personnalisée",
     "customBaseUrlRiskWarning": "L'utilisation d'une URL de base personnalisée peut exposer votre clé API et vos données à des serveurs tiers. Utilisez uniquement pour des proxies de confiance, des déploiements auto-hébergés ou des points de terminaison sécurisés connus.",
     "addBaseUrl": "Base URL personnalisée",
+    "localModel": {
+      "title": "Cookbook de modèles locaux",
+      "description": "Choisissez un preset d'environnement local, confirmez son endpoint compatible OpenAI, ajoutez un ou plusieurs ID de modèle, puis enregistrez ce compte pour utiliser des modèles locaux dans Chat.",
+      "runtimeLabel": "Preset d'environnement",
+      "runtimeDesc": "Choisissez le serveur local en cours d'exécution. Les presets remplissent l'endpoint et les modèles de départ.",
+      "baseUrlDesc": "Endpoint local compatible OpenAI. Démarrez l'environnement avant de valider ou d'enregistrer.",
+      "apiKeyDesc": "La plupart des environnements locaux acceptent toute valeur non vide. Gardez la valeur proposée sauf si votre serveur exige une clé.",
+      "quickModelsLabel": "Modèles Cookbook",
+      "quickModelsDesc": "Préremplit la table avec des ID courants pour cet environnement. Vous pouvez modifier ou ajouter des modèles ci-dessous.",
+      "quickModelsPlaceholder": "Choisir un modèle suggéré",
+      "addSuggestedModel": "Ajouter la suggestion",
+      "validateDesc": "Sondez l'endpoint s'il est lancé, ou enregistrez après avoir ajouté les modèles manuellement.",
+      "presets": {
+        "ollama": "Ollama",
+        "ollamaDesc": "Serveur local par défaut sur le port 11434",
+        "lmStudio": "LM Studio",
+        "lmStudioDesc": "Serveur compatible OpenAI sur le port 1234",
+        "vllm": "vLLM",
+        "vllmDesc": "Serveur d'inférence auto-hébergé sur le port 8000",
+        "llamaCpp": "llama.cpp",
+        "llamaCppDesc": "Endpoint GGUF sur le port 8080",
+        "custom": "Personnalisé",
+        "customDesc": "Tout endpoint local compatible OpenAI"
+      }
+    },
     "validate": "Valider",
     "validateDesc": "Valider les identifiants avant de continuer",
     "validated": "Validé",
@@ -758,7 +783,8 @@
     "comingSoon": "Bientôt",
     "installedClis": "Clients CLI",
     "myRoles": "Mes rôles",
-    "modelWiki": "Wiki des modèles"
+    "modelWiki": "Wiki des modèles",
+    "localModels": "On prem"
   },
   "modelWiki": {
     "description": "Catalogue de référence de {{count}} modèles publics avec taille de contexte, limites de sortie et capacités.",
@@ -2389,5 +2415,45 @@
     "searchPlaceholder": "Rechercher des plugins...",
     "skillCountLabel": "Skills",
     "mcpConfigured": "MCP configuré"
+  },
+  "localModels": {
+    "title": "On prem",
+    "description": "Détecte cet appareil et classe les modèles locaux compatibles Ollama / llama.cpp avec un score léger d’adéquation matérielle.",
+    "detect": "Détecter",
+    "detectFailed": "La détection matérielle a échoué",
+    "emptyTitle": "Détecter cet appareil",
+    "emptyDescription": "Lancez la détection pour voir le CPU, la mémoire, le GPU et les recommandations de modèles locaux.",
+    "noRecommendations": "Aucune recommandation pour le moment",
+    "noMatchingRecommendations": "Aucune recommandation correspondante",
+    "searchPlaceholder": "Rechercher des modèles locaux...",
+    "columnHardware": "Matériel",
+    "columnDetails": "Détails",
+    "columnValue": "Valeur",
+    "columnModel": "Modèle",
+    "columnFit": "Compatibilité",
+    "columnRunMode": "Mode d’exécution",
+    "columnMemory": "Mémoire",
+    "columnSpeed": "Vitesse",
+    "columnContext": "Contexte",
+    "columnInstall": "Indice d’installation",
+    "tokensPerSecond": "{{count}} tok/s",
+    "hardware": {
+      "system": "Système",
+      "cpu": "CPU",
+      "memory": "Mémoire",
+      "gpu": "GPU / Backend"
+    },
+    "fit": {
+      "excellent": "Excellent",
+      "good": "Bon",
+      "tight": "Serré",
+      "too_tight": "Trop serré"
+    },
+    "runMode": {
+      "gpu": "GPU",
+      "cpu_offload": "Déchargement CPU",
+      "cpu_only": "CPU uniquement",
+      "no_fit": "Non recommandé"
+    }
   }
 }

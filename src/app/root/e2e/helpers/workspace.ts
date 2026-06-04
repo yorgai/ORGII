@@ -1,7 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 
+import {
+  repoPathAtom,
+  repositoryIdAtom,
+  repositoryNameAtom,
+} from "@src/engines/SessionCore/workspace/atoms/sessionAtoms";
 import { reposAtom, selectedRepoIdAtom } from "@src/store/repo/atoms";
 import { REPO_KIND, type Repo } from "@src/store/repo/types";
+import { sessionCreatorStateAtom } from "@src/store/session/creatorStateAtom";
 import {
   activeFolderIdAtom,
   activeWorkspaceIdAtom,
@@ -50,12 +56,28 @@ export function createWorkspaceHelpers(store: E2EStore) {
           fs_uri: repoPath,
           kind: REPO_KIND.GIT,
         };
+        const folder = {
+          id: repoId,
+          name: repo.name,
+          path: repoPath,
+          uri: `file://${repoPath}`,
+          isPrimary: true,
+          repoId,
+          kind: REPO_KIND.GIT,
+        };
         const existingRepos = store.get(reposAtom);
         store.set(reposAtom, [
           repo,
           ...existingRepos.filter((existingRepo) => existingRepo.id !== repoId),
         ]);
         store.set(selectedRepoIdAtom, repoId);
+        store.set(workspaceFoldersAtom, [folder]);
+        store.set(activeWorkspaceIdAtom, repoId);
+        store.set(activeWorkspaceNameAtom, repo.name);
+        store.set(activeFolderIdAtom, repoId);
+        store.set(repositoryIdAtom, repoId);
+        store.set(repositoryNameAtom, repo.name);
+        store.set(repoPathAtom, repoPath);
         return { repoId, path: repoPath };
       };
 
@@ -139,6 +161,9 @@ export function createWorkspaceHelpers(store: E2EStore) {
       store.set(activeFolderIdAtom, primary.id);
       store.set(reposAtom, repos);
       store.set(selectedRepoIdAtom, primary.repoId);
+      store.set(repositoryIdAtom, primary.repoId);
+      store.set(repositoryNameAtom, primary.name);
+      store.set(repoPathAtom, primary.path);
       return {
         ok: true,
         workspaceId,
@@ -147,6 +172,27 @@ export function createWorkspaceHelpers(store: E2EStore) {
           .filter((folder) => folder.path !== primary.path)
           .map((folder) => folder.path),
       };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  const clearWorkspaceRepos = async (): Promise<Result<{ cleared: true }>> => {
+    try {
+      store.set(reposAtom, []);
+      store.set(selectedRepoIdAtom, "");
+      store.set(workspaceFoldersAtom, []);
+      store.set(activeWorkspaceIdAtom, null);
+      store.set(activeWorkspaceNameAtom, null);
+      store.set(activeFolderIdAtom, null);
+      store.set(repositoryIdAtom, "");
+      store.set(repositoryNameAtom, "");
+      store.set(repoPathAtom, "");
+      store.set(sessionCreatorStateAtom, {
+        ...store.get(sessionCreatorStateAtom),
+        source: null,
+      });
+      return { ok: true, cleared: true };
     } catch (err) {
       return asError(err);
     }
@@ -176,6 +222,7 @@ export function createWorkspaceHelpers(store: E2EStore) {
     getSelectedRepoPath,
     ensureRepoSelected,
     seedMultiRootWorkspace,
+    clearWorkspaceRepos,
     readSessionWorkspaceFromDb,
   };
 }

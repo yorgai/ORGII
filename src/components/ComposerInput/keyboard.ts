@@ -1,8 +1,8 @@
 /**
  * Keyboard handling for ComposerInput.
  *
- * Ports the responsibilities of `TiptapInput/editorHandlers/keyDownHandler.ts`
- * onto a plain `keydown` listener attached to a contenteditable host:
+ * Handles keyboard behavior on a plain `keydown` listener attached to a
+ * contenteditable host:
  *
  *  - IME composition guard (skipped via `event.isComposing`)
  *  - @ mention dropdown navigation delegation
@@ -33,6 +33,7 @@ export interface MentionState {
    * `triggerAtMention()`.
    */
   hasAtChar?: boolean;
+  hasTriggerChar?: boolean;
 }
 
 export interface KeyDownHandlerContext {
@@ -52,7 +53,9 @@ export interface KeyDownHandlerContext {
     | ((query: string, pos: { x: number; y: number }) => void)
     | undefined;
   getOnAtMentionClose: () => (() => void) | undefined;
-  getOnSlashCommand: () => ((query: string) => void) | undefined;
+  getOnSlashCommand: () =>
+    | ((query: string, pos?: { x: number; y: number }) => void)
+    | undefined;
   getOnSlashCommandClose: () => (() => void) | undefined;
   getOnSubmit: () => ((text: string) => void) | undefined;
   getOnBeforeNewline: () => (() => void) | undefined;
@@ -62,6 +65,7 @@ export interface KeyDownHandlerContext {
   insertNewline: () => void;
   /** Whether bare Enter inserts a newline (false) or submits (true). */
   requireCmdEnter: boolean;
+  slashTriggerMode: "command" | "context";
 }
 
 /**
@@ -130,7 +134,7 @@ export function createKeyDownHandler(ctx: KeyDownHandlerContext) {
 
     if (event.key === "@") {
       // Let the character land in the editor, then mark the mention as
-      // active. Mirrors the Tiptap implementation.
+      // active.
       setTimeout(() => {
         const liveHost = ctx.host();
         if (!liveHost) return;
@@ -149,12 +153,16 @@ export function createKeyDownHandler(ctx: KeyDownHandlerContext) {
       setTimeout(() => {
         const liveHost = ctx.host();
         if (!liveHost) return;
-        if (ctx.getText() === "/") {
-          const range = rangeInsideHost(liveHost);
-          const offset = caretTextOffset(liveHost, range);
-          ctx.setSlashCommand({ active: true, startOffset: offset });
-          ctx.getOnSlashCommand()?.("");
-        }
+        const text = ctx.getText();
+        if (ctx.slashTriggerMode === "command" && text !== "/") return;
+        const range = rangeInsideHost(liveHost);
+        const offset = caretTextOffset(liveHost, range);
+        ctx.setSlashCommand({
+          active: true,
+          startOffset: offset,
+          hasTriggerChar: true,
+        });
+        ctx.getOnSlashCommand()?.("", caretCoords(liveHost));
       }, 0);
     }
 

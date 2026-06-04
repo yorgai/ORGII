@@ -102,6 +102,11 @@ export const BranchDropdown: React.FC<BranchDropdownProps> = ({
   const tauriSelectAll = useTauriSelectAllShortcut();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (!isOpen && searchQuery) setSearchQuery("");
+  }
 
   const isGitHubRepo = Boolean(githubConnectionId && githubRepoFullName);
 
@@ -199,13 +204,12 @@ export const BranchDropdown: React.FC<BranchDropdownProps> = ({
   });
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isPositioned) return;
     const frame = requestAnimationFrame(() => {
-      setSearchQuery("");
       inputRef.current?.focus();
     });
     return () => cancelAnimationFrame(frame);
-  }, [isOpen]);
+  }, [isOpen, isPositioned]);
 
   if (!isOpen || !isPositioned) return null;
 

@@ -296,6 +296,7 @@ impl KeyService {
             | ModelType::DeepseekApi
             | ModelType::GeminiApi
             | ModelType::GroqApi
+            | ModelType::XaiApi
             | ModelType::ZhipuApi
             | ModelType::DashscopeApi
             | ModelType::MoonshotApi
@@ -320,6 +321,7 @@ impl KeyService {
                     ModelType::DeepseekApi => "DEEPSEEK_API_KEY",
                     ModelType::GeminiApi => "GEMINI_API_KEY",
                     ModelType::GroqApi => "GROQ_API_KEY",
+                    ModelType::XaiApi => "XAI_API_KEY",
                     ModelType::ZhipuApi => "ZHIPU_API_KEY",
                     ModelType::DashscopeApi => "DASHSCOPE_API_KEY",
                     ModelType::MoonshotApi => "MOONSHOT_API_KEY",
@@ -428,6 +430,7 @@ impl KeyService {
             | ModelType::DeepseekApi
             | ModelType::GeminiApi
             | ModelType::GroqApi
+            | ModelType::XaiApi
             | ModelType::ZhipuApi
             | ModelType::DashscopeApi
             | ModelType::MoonshotApi
@@ -451,6 +454,7 @@ impl KeyService {
                     ModelType::DeepseekApi => "DEEPSEEK_API_KEY",
                     ModelType::GeminiApi => "GEMINI_API_KEY",
                     ModelType::GroqApi => "GROQ_API_KEY",
+                    ModelType::XaiApi => "XAI_API_KEY",
                     ModelType::ZhipuApi => "ZHIPU_API_KEY",
                     ModelType::DashscopeApi => "DASHSCOPE_API_KEY",
                     ModelType::MoonshotApi => "MOONSHOT_API_KEY",

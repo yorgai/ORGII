@@ -1238,14 +1238,14 @@ mod tests {
             member_id: "alice".into(),
             member_name: "Alice".into(),
             reason: MemberIdleReason::Failed,
-            current_mode: Some(crate::session::AgentExecMode::Investigate),
+            current_mode: Some(crate::session::AgentExecMode::Ask),
             summary: None,
             failure_reason: Some("provider 5xx".into()),
         };
         assert_eq!(
             render_payload(&msg),
             "<member_idle member_id=\"alice\" member_name=\"Alice\" \
-             reason=\"failed\" current_mode=\"investigate\" failure_reason=\"provider 5xx\"/>"
+             reason=\"failed\" current_mode=\"ask\" failure_reason=\"provider 5xx\"/>"
         );
     }
 

@@ -1,4 +1,4 @@
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
 import { getViewModeForRoute } from "@src/config/routeViewModeConfig";
@@ -21,7 +21,6 @@ import {
   repoSelectorOpenAtom,
 } from "@src/store/ui/overlayAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
-import { viewModeAtom } from "@src/store/ui/viewModeAtom";
 import { closeActiveWorkStationTabAtom } from "@src/store/workstation/tabRegistry";
 
 /**
@@ -35,7 +34,6 @@ export function useTabShortcuts() {
   const setBranchSelectorOpen = useSetAtom(branchSelectorOpenAtom);
   const setLocationSelectorOpen = useSetAtom(locationSelectorOpenAtom);
   const [sidebarCollapsed, setSidebarCollapsed] = useAtom(sidebarCollapsedAtom);
-  const viewMode = useAtomValue(viewModeAtom);
   const closeActiveWorkStationTab = useSetAtom(closeActiveWorkStationTabAtom);
   const actionSystem = useActionSystemOptional();
 
@@ -49,11 +47,6 @@ export function useTabShortcuts() {
   useEffect(() => {
     spotlightOpenRef.current = spotlightOpen;
   }, [spotlightOpen]);
-
-  const viewModeRef = useRef(viewMode);
-  useEffect(() => {
-    viewModeRef.current = viewMode;
-  }, [viewMode]);
 
   const handleCreateNewSession = useCallback(() => {
     if (actionSystem?.isValidAction(ACTION_ID.AGENT_STATION_CREATE_SESSION)) {
@@ -132,10 +125,8 @@ export function useTabShortcuts() {
     setSpotlightOpen(true);
   }, [setSpotlightInitialQuery, setSpotlightOpen]);
 
-  // Handle Cmd+B - Toggle navigation sidebar
+  // Handle Option+Command+U / Ctrl+Alt+U - Toggle app/session sidebar
   const handleToggleSidebar = useCallback(() => {
-    const currentViewMode = viewModeRef.current;
-    if (currentViewMode !== "mainApp") return;
     const newValue = !sidebarCollapsedRef.current;
     setSidebarCollapsed(newValue);
   }, [setSidebarCollapsed]);
@@ -228,15 +219,15 @@ export function useTabShortcuts() {
 
   // ⌥⌘B / Alt+Ctrl+B — focus Chat Panel or restore the Workstation.
   const handleToggleWorkStationChatFocus = useCallback(() => {
-    const vm = viewModeRef.current;
-    if (vm !== "workStation") return;
+    const currentViewMode = getViewModeForRoute(window.location.pathname);
+    if (currentViewMode !== "workStation") return;
 
     dispatchWorkStationAction(ACTION_ID.WORKSTATION_TOGGLE_CHAT_FOCUS);
   }, [dispatchWorkStationAction]);
 
   const handleToggleStationMode = useCallback(() => {
-    const vm = viewModeRef.current;
-    if (vm !== "workStation") return;
+    const currentViewMode = getViewModeForRoute(window.location.pathname);
+    if (currentViewMode !== "workStation") return;
 
     void WorkStationViewService.toggleStationMode();
   }, []);

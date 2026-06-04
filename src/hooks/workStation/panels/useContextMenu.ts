@@ -90,25 +90,43 @@ export function useContextMenu(
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [secondLayerActiveIndex, setSecondLayerActiveIndex] = useState(0);
+  const hasMovedMainHighlightRef = useRef(false);
+  const hasMovedSecondLayerHighlightRef = useRef(false);
 
   // Derive effective values — when externalSearchQuery is provided, override
   // without any setState.  This eliminates the 2-setState cascade that was
   // previously done via a useEffect in ContextMenu/index.tsx.
   const hasExternalQuery =
-    !!opts.externalSearchQuery && opts.externalSearchQuery.length > 0;
+    opts.externalSearchQuery !== undefined &&
+    (opts.inlineSearchOnEmpty || opts.externalSearchQuery.length > 0);
   const secondLayer: SecondLayerId | null = hasExternalQuery
     ? "files"
     : internalSecondLayer;
-  const searchQuery: string = hasExternalQuery
-    ? opts.externalSearchQuery!
-    : internalSearchQuery;
+  const searchQuery: string =
+    opts.externalSearchQuery !== undefined
+      ? opts.externalSearchQuery
+      : internalSearchQuery;
 
   // Expose setters that write to the internal state
   const setSecondLayer = setInternalSecondLayer;
   const setSearchQuery = setInternalSearchQuery;
 
+  const recentCount = opts.recentCount ?? 0;
+  const customMentionCount = opts.customMentionCount ?? 0;
+  const onCustomMentionIndexSelect = opts.onCustomMentionIndexSelect;
+  const customMentionStartIndex = recentCount;
+  const menuStartIndex = recentCount + customMentionCount;
+
   // Get total menu items count
-  const menuItemsCount = MENU_ITEMS.length;
+  const menuItemsCount = menuStartIndex + MENU_ITEMS.length;
+
+  useEffect(() => {
+    hasMovedMainHighlightRef.current = false;
+  }, [opts.keyboardOpened, menuItemsCount, opts.externalSearchQuery]);
+
+  useEffect(() => {
+    hasMovedSecondLayerHighlightRef.current = false;
+  }, [secondLayer, searchResults.length, opts.externalSearchQuery]);
 
   // Helper: set search results AND reset active index in one batch
   // (React 18 batches these into a single render)
@@ -262,6 +280,7 @@ export function useContextMenu(
             e.stopPropagation();
             if (searchResults.length > 0) {
               setKeyboardNavigated(true);
+              hasMovedSecondLayerHighlightRef.current = true;
               setSecondLayerActiveIndex((prev) =>
                 prev > 0 ? prev - 1 : searchResults.length - 1
               );
@@ -273,9 +292,14 @@ export function useContextMenu(
             e.stopPropagation();
             if (searchResults.length > 0) {
               setKeyboardNavigated(true);
-              setSecondLayerActiveIndex((prev) =>
-                prev < searchResults.length - 1 ? prev + 1 : 0
-              );
+              if (hasMovedSecondLayerHighlightRef.current) {
+                setSecondLayerActiveIndex((prev) =>
+                  prev < searchResults.length - 1 ? prev + 1 : 0
+                );
+              } else {
+                setSecondLayerActiveIndex((prev) => (prev >= 0 ? prev : 0));
+              }
+              hasMovedSecondLayerHighlightRef.current = true;
             }
             return true;
 
@@ -312,6 +336,7 @@ export function useContextMenu(
             e.stopPropagation();
             if (searchResults.length > 0) {
               setKeyboardNavigated(true);
+              hasMovedSecondLayerHighlightRef.current = true;
               setSecondLayerActiveIndex((prev) =>
                 prev < searchResults.length - 1 ? prev + 1 : 0
               );
@@ -328,6 +353,7 @@ export function useContextMenu(
           e.preventDefault();
           e.stopPropagation();
           setKeyboardNavigated(true);
+          hasMovedMainHighlightRef.current = true;
           setActiveIndex((prev) => (prev > 0 ? prev - 1 : menuItemsCount - 1));
           return true;
 
@@ -335,14 +361,30 @@ export function useContextMenu(
           e.preventDefault();
           e.stopPropagation();
           setKeyboardNavigated(true);
-          setActiveIndex((prev) => (prev < menuItemsCount - 1 ? prev + 1 : 0));
+          if (hasMovedMainHighlightRef.current) {
+            setActiveIndex((prev) =>
+              prev < menuItemsCount - 1 ? prev + 1 : 0
+            );
+          } else {
+            setActiveIndex((prev) => (prev >= 0 ? prev : 0));
+          }
+          hasMovedMainHighlightRef.current = true;
           return true;
 
         case KEYBOARD_CONFIG.right:
         case KEYBOARD_CONFIG.enter: {
           e.preventDefault();
           e.stopPropagation();
-          const item = MENU_ITEMS[activeIndex];
+          if (
+            activeIndex >= customMentionStartIndex &&
+            activeIndex < menuStartIndex
+          ) {
+            onCustomMentionIndexSelect?.(activeIndex - customMentionStartIndex);
+            return true;
+          }
+          const menuIndex = activeIndex - menuStartIndex;
+          const item = MENU_ITEMS[menuIndex];
+          if (!item) return true;
           if (item.hasSecondLayer) {
             setSecondLayer(item.id as SecondLayerId);
           } else {
@@ -356,6 +398,7 @@ export function useContextMenu(
           e.stopPropagation();
           // Tab cycles through items
           setKeyboardNavigated(true);
+          hasMovedMainHighlightRef.current = true;
           setActiveIndex((prev) => (prev < menuItemsCount - 1 ? prev + 1 : 0));
           return true;
       }
@@ -368,9 +411,12 @@ export function useContextMenu(
       secondLayerActiveIndex,
       activeIndex,
       menuItemsCount,
+      customMentionStartIndex,
+      menuStartIndex,
       handleSelect,
       goBack,
       setSecondLayer,
+      onCustomMentionIndexSelect,
     ]
   );
 

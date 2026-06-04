@@ -25,6 +25,7 @@ interface LinearProjectInfoPageProps {
   project: LinearProjectSummary;
   workItems: WorkItem[];
   saving: boolean;
+  repoPath?: string | null;
   onUpdateProject: (updates: LinearProjectUpdateRequest) => Promise<void>;
 }
 
@@ -51,6 +52,7 @@ const LinearProjectInfoPage: React.FC<LinearProjectInfoPageProps> = ({
   project,
   workItems,
   saving,
+  repoPath,
   onUpdateProject,
 }) => {
   const { t } = useTranslation(["projects", "common"]);
@@ -227,6 +229,7 @@ const LinearProjectInfoPage: React.FC<LinearProjectInfoPageProps> = ({
         projectName={project.name}
         projectDescription={project.description}
         precomputedStats={overviewStats}
+        repoPath={repoPath}
         onProjectNameChange={handleProjectNameChange}
         onProjectDescriptionChange={handleProjectDescriptionChange}
         className="min-w-0 flex-1"

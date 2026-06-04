@@ -27,6 +27,7 @@ pub mod provider_id {
     pub const DEEPSEEK: &str = "deepseek";
     pub const GEMINI: &str = "gemini";
     pub const GROQ: &str = "groq";
+    pub const XAI: &str = "xai";
     pub const ZHIPU: &str = "zhipu";
     pub const DASHSCOPE: &str = "dashscope";
     pub const MINIMAX: &str = "minimax";
@@ -130,6 +131,16 @@ pub static PROVIDERS: &[ProviderSpec] = &[
         default_api_base: Some("https://api.groq.com/openai/v1"),
         is_local: false,
         env_key: Some("GROQ_API_KEY"),
+    },
+    ProviderSpec {
+        name: provider_id::XAI,
+        display_name: "xAI Grok",
+        keywords: &["grok"],
+        litellm_prefix: None,
+        skip_prefixes: &["xai/", "grok/"],
+        default_api_base: Some("https://api.x.ai/v1"),
+        is_local: false,
+        env_key: Some("XAI_API_KEY"),
     },
     ProviderSpec {
         name: provider_id::ZHIPU,

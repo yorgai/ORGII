@@ -85,12 +85,12 @@ fn parse_agent_org_remote_mode(
 ) -> Result<crate::session::AgentExecMode, String> {
     let mode = crate::session::AgentExecMode::parse(mode_str).ok_or_else(|| {
         format!(
-            "field '{field_name}' got unknown mode '{mode_str}' — valid modes are: build, investigate, plan"
+            "field '{field_name}' got unknown mode '{mode_str}' — valid modes are: build, ask, plan"
         )
     })?;
     if !is_supported_agent_org_remote_mode(mode) {
         return Err(format!(
-            "field '{field_name}' got unsupported mode '{}' — Agent Org remote mode control currently supports only: build, investigate, plan",
+            "field '{field_name}' got unsupported mode '{}' — Agent Org remote mode control currently supports only: build, ask, plan",
             mode.as_str()
         ));
     }
@@ -176,7 +176,7 @@ pub struct OrgSendMessageParams {
     pub next_mode: Option<String>,
 
     /// Target `AgentExecMode` for `exec_mode_set_request`. Agent Org
-    /// remote control currently supports only `build | investigate | plan`.
+    /// remote control currently supports only `build | ask | plan`.
     #[serde(default)]
     pub mode: Option<String>,
 }
@@ -521,7 +521,7 @@ impl OrgSendMessageTool {
                     .filter(|s| !s.is_empty())
                     .ok_or_else(|| {
                         "kind 'exec_mode_set_request' requires non-empty 'mode' \
-                         (one of: build, investigate, plan)"
+                         (one of: build, ask, plan)"
                             .to_string()
                     })?;
                 let mode = parse_agent_org_remote_mode(mode_str, "mode")?;

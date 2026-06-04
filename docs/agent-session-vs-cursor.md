@@ -57,7 +57,7 @@ SessionStatus: Pending | Idle | Running | WaitingForUser | WaitingForFunds |
 **会话模式**（`AgentExecMode`）：
 
 - `Build`（默认，完整工具集）
-- `Investigate`（只读研究）
+- `Ask`（只读问答/研究）
 - `Plan`（只读，产出持久化 plan 文件，需用户批准）
 - `Debug`（诊断分析）
 - `Review`（内部，代码审查）
@@ -194,7 +194,7 @@ ORGII 的 `DialogTurn` + `TurnStats` 覆盖了 Cursor 全部已知字段，且 R
 
 - 按工具类别/风险等级分类
 - `ResolvedToolPolicy`：控制哪些工具可用
-- 模式感知：`Plan/Investigate` 模式禁用写工具
+- 模式感知：`Plan/Ask` 模式禁用写工具
 
 **文件编辑**（`edit_file/strategies.rs`）：
 

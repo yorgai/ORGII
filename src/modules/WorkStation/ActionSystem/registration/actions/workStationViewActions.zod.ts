@@ -69,7 +69,7 @@ export const workstationToggleSidebar = defineZodAction(
     description:
       "Toggle the Workstation sidebar between collapsed and expanded",
     params: z.object({}),
-    shortcut: getShortcutKeys("toggle_sidebar"),
+    shortcut: getShortcutKeys("toggle_workstation_sidebar"),
     tags: ["workstation", "work-station-sidebar", "tool-sidebar", "view"],
     examples: [
       "toggle work station sidebar",

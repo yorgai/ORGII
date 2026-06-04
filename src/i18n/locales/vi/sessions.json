@@ -1645,7 +1645,6 @@
     "createTarget": {
       "agentSession": "Phiên Agent",
       "createAgent": "Tạo Agent / Skill",
-      "solveWorkItem": "Giải quyết Work Item",
       "workItem": "Tạo Work Item",
       "batchStartBeta": "Khởi động hàng loạt (Beta)",
       "benchmark": "Benchmark (Beta)"
@@ -1667,8 +1666,10 @@
     "slashSearchPlaceholder": "Tìm lệnh…",
     "slashMenu": {
       "image": "Hình ảnh",
+      "uploadImage": "Tải hình ảnh lên",
       "mode": "Chế độ",
-      "models": "Mô hình"
+      "models": "Mô hình",
+      "skills": "Skills"
     },
     "osAgent": "OS Agent",
     "agent": "SDE Agent",
@@ -1796,8 +1797,6 @@
       "worktree": "Worktree",
       "lockedHint": "Worktree đã được khóa cho phiên này"
     },
-    "selectWorkItem": "Chọn Work Item",
-    "addInstructionsPlaceholder": "Thêm hướng dẫn",
     "batchStarterPlaceholder": "Mô tả session starter này",
     "addBatchStarter": "Thêm starter",
     "removeBatchStarter": "Xóa starter",
@@ -1869,7 +1868,7 @@
     },
     "modes": {
       "build": "Build",
-      "investigate": "Investigate",
+      "ask": "Ask",
       "plan": "Plan",
       "debug": "Debug",
       "review": "Review",

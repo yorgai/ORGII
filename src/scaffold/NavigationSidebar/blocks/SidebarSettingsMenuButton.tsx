@@ -3,6 +3,7 @@ import {
   ChevronRight,
   Contrast,
   Gauge,
+  HelpCircle,
   Languages,
   Settings,
 } from "lucide-react";
@@ -37,6 +38,7 @@ import {
   type SupportedLanguage,
 } from "@src/i18n";
 import { useAppearanceState } from "@src/modules/MainApp/Settings/sections/useAppearanceState";
+import { TUTORIALS_OPEN_EVENT } from "@src/scaffold/Tutorials/tutorialRegistry";
 import { languageAtom } from "@src/store/ui/languageAtom";
 
 import HoverAnimatedIcon, {
@@ -78,6 +80,7 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
   const { t: tSettings, i18n } = useTranslation("settings");
   const { goToSettings } = useAppNavigation();
   const ramPanelRef = useRef<HTMLDivElement | null>(null);
+  const preserveRamPanelOnMenuCloseRef = useRef(false);
   const setLanguagePreference = useSetAtom(languageAtom);
   const [activeSubmenu, setActiveSubmenu] = useState<SettingsSubmenu | null>(
     null
@@ -94,6 +97,10 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
     if (open) return;
     setActiveSubmenu(null);
     setSubmenuPosition(null);
+    if (preserveRamPanelOnMenuCloseRef.current) {
+      preserveRamPanelOnMenuCloseRef.current = false;
+      return;
+    }
     setRamPanelOpen(false);
   }, []);
   const {
@@ -193,6 +200,7 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
   const handleViewRam = useCallback(() => {
     setActiveSubmenu(null);
     setSubmenuPosition(null);
+    preserveRamPanelOnMenuCloseRef.current = true;
     setRamPanelPosition({
       top: panelPosition.top,
       bottom: panelPosition.bottom,
@@ -201,6 +209,11 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
     setRamPanelOpen(true);
     close();
   }, [close, panelPosition.bottom, panelPosition.left, panelPosition.top]);
+
+  const handleOpenTutorials = useCallback(() => {
+    window.dispatchEvent(new CustomEvent(TUTORIALS_OPEN_EVENT));
+    closeAll();
+  }, [closeAll]);
 
   const handleSelectAppearanceMode = useCallback(
     async (mode: "light" | "dark") => {
@@ -416,6 +429,19 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
                   className={MENU_ICON_CLASS_NAME}
                 />
                 <span>{t("sidebar.settingsMenu.viewRam")}</span>
+              </button>
+              <button
+                type="button"
+                className={`${DROPDOWN_CLASSES.menuActionItem} gap-2`}
+                onMouseEnter={() => setActiveSubmenu(null)}
+                onFocus={() => setActiveSubmenu(null)}
+                onClick={handleOpenTutorials}
+              >
+                <HelpCircle
+                  size={DROPDOWN_ITEM.iconSize}
+                  className={MENU_ICON_CLASS_NAME}
+                />
+                <span>{t("sidebar.settingsMenu.tutorials")}</span>
               </button>
               <div className={DROPDOWN_CLASSES.menuSeparator} />
               <button

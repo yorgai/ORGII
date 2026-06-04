@@ -86,10 +86,6 @@ export function useIntegrationsPage() {
     [navigate]
   );
 
-  // Reserved: future devToolsTab selection should publish to URL via
-  // `setSearchParams` so selections are shareable. Currently the tab is
-  // local state that resets on category change.
-  void setSearchParams;
   const [detailMode, setDetailMode] = useState<DetailMode>("preview");
   const [devToolsTab, setDevToolsTab] = useState<DevToolsTab | undefined>(
     initialDevToolsTab
@@ -394,6 +390,22 @@ export function useIntegrationsPage() {
     [databasesState]
   );
 
+  const handleModelsTabChange = useCallback(
+    (tab: string) => {
+      extensions.handleModelsTabChange(tab);
+      setSearchParams((currentParams) => {
+        const nextParams = new URLSearchParams(currentParams);
+        if ((VALID_MODELS_TABS as readonly string[]).includes(tab)) {
+          nextParams.set("modelsTab", tab);
+        } else {
+          nextParams.delete("modelsTab");
+        }
+        return nextParams;
+      });
+    },
+    [extensions, setSearchParams]
+  );
+
   const { tableProps } = useIntegrationsCategoryTableProps({
     category,
     accountsHook,
@@ -413,6 +425,8 @@ export function useIntegrationsPage() {
     routines,
     cliAgents,
     handleAddAction,
+    modelsActiveTab: initialModelsTab,
+    handleModelsTabChange,
   });
 
   const { t: tIntegrations } = useTranslation("integrations");

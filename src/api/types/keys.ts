@@ -17,6 +17,9 @@ export {
   NATIVE_HARNESS_TYPE,
 } from "@src/api/tauri/rpc/schemas/validation";
 
+export const LOCAL_MODEL_PROVIDER =
+  "vllm_api" as const satisfies import("@src/api/tauri/rpc/schemas/validation").ApiProviderType;
+
 export type {
   CliAgentType,
   ApiProviderType,

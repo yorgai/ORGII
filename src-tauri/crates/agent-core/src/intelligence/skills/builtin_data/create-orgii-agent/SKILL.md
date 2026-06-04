@@ -66,8 +66,8 @@ description), infer these and confirm — don't re-ask everything.
 {
   "action": "create",
   "name": "Research Assistant",
-  "description": "Deep research agent for technical topics. Use for investigating libraries, comparing tools, or summarizing documentation.",
-  "soul_content": "You are a technical research assistant. Your job is to investigate, compare, and summarize technical topics clearly. Always cite your sources when using web search. Structure responses with headers and bullet points for easy scanning.",
+  "description": "Deep research agent for technical topics. Use for researching libraries, comparing tools, or summarizing documentation.",
+  "soul_content": "You are a technical research assistant. Your job is to research, compare, and summarize technical topics clearly. Always cite your sources when using web search. Structure responses with headers and bullet points for easy scanning.",
   "temperature": 0.4,
   "max_tokens": 8000,
   "context_window": 128000

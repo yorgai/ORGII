@@ -4,27 +4,18 @@
  * Connects to the unified Rust HTTP server (port 13847) WebSocket for real-time
  * code-editor events:
  * - File watcher updates (repo:status_updated, file:changed)
+ * - Git operation updates (repo:git_operation)
  * - LSP diagnostics (lsp:diagnostics)
  * - Git status changes
  *
  * This replaces the unreliable Tauri event system for push notifications.
  */
-import { parseCodeEditorWebSocketMessage } from "./websocket/schemas";
+import {
+  type ParsedCodeEditorWebSocketMessage,
+  maybeParseCodeEditorWebSocketMessage,
+} from "./websocket/schemas";
 
-export interface CodeEditorWebSocketMessage {
-  type:
-    | "repo:status_updated"
-    | "file:changed"
-    | "repo:watcher_health"
-    | "lsp:diagnostics";
-  repo_id?: string;
-  language?: string;
-  data?: unknown;
-  payload?: unknown;
-  status?: unknown;
-  files?: unknown[];
-  timestamp: number;
-}
+export type CodeEditorWebSocketMessage = ParsedCodeEditorWebSocketMessage;
 
 type EventHandler<T = CodeEditorWebSocketMessage> = (data: T) => void;
 
@@ -64,7 +55,8 @@ export class CodeEditorWebSocketClient {
 
         this.ws.onmessage = (event) => {
           try {
-            const data = parseCodeEditorWebSocketMessage(event.data);
+            const data = maybeParseCodeEditorWebSocketMessage(event.data);
+            if (data === null) return;
             this.handleMessage(data);
           } catch (err) {
             console.error("[CodeEditorWS] Failed to parse message:", err);

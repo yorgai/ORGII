@@ -216,6 +216,31 @@
     "customBaseUrlRiskTitle": "Aviso de URL personalizada",
     "customBaseUrlRiskWarning": "Usar uma base URL personalizada pode expor sua chave de API e dados a servidores de terceiros. Use apenas para proxies confiáveis, deployments auto-hospedados ou endpoints reconhecidamente seguros.",
     "addBaseUrl": "Adicionar base URL personalizada (Opcional)",
+    "localModel": {
+      "title": "Cookbook de modelos locais",
+      "description": "Escolha um preset de runtime local, confirme o endpoint compatível com OpenAI, adicione um ou mais IDs de modelo e salve esta conta para usar modelos locais no Chat.",
+      "runtimeLabel": "Preset de runtime",
+      "runtimeDesc": "Escolha o servidor local em execução. Presets preenchem o endpoint e os modelos iniciais.",
+      "baseUrlDesc": "Endpoint local compatível com OpenAI. Inicie o runtime antes de validar ou salvar.",
+      "apiKeyDesc": "A maioria dos runtimes locais aceita qualquer valor não vazio. Mantenha o placeholder, a menos que seu servidor exija uma chave.",
+      "quickModelsLabel": "Modelos Cookbook",
+      "quickModelsDesc": "Preencha a tabela com IDs comuns para este runtime. Você pode editar ou adicionar mais modelos abaixo.",
+      "quickModelsPlaceholder": "Escolha um modelo sugerido",
+      "addSuggestedModel": "Adicionar sugerido",
+      "validateDesc": "Teste o endpoint se estiver em execução, ou salve após adicionar modelos manualmente.",
+      "presets": {
+        "ollama": "Ollama",
+        "ollamaDesc": "Servidor local padrão na porta 11434",
+        "lmStudio": "LM Studio",
+        "lmStudioDesc": "Servidor compatível com OpenAI na porta 1234",
+        "vllm": "vLLM",
+        "vllmDesc": "Servidor de inferência auto-hospedado na porta 8000",
+        "llamaCpp": "llama.cpp",
+        "llamaCppDesc": "Endpoint GGUF na porta 8080",
+        "custom": "Personalizado",
+        "customDesc": "Qualquer endpoint local compatível com OpenAI"
+      }
+    },
     "validate": "Validar",
     "validateDesc": "Valide as chaves antes de prosseguir",
     "validated": "Validado",
@@ -758,7 +783,8 @@
     "comingSoon": "Em breve",
     "installedClis": "Clientes CLI",
     "myRoles": "Minhas funções",
-    "modelWiki": "Wiki de modelos"
+    "modelWiki": "Wiki de modelos",
+    "localModels": "On prem"
   },
   "modelWiki": {
     "description": "Catálogo de referência de {{count}} modelos públicos com tamanho de contexto, limites de saída e capacidades.",
@@ -2389,5 +2415,45 @@
     "searchPlaceholder": "Pesquisar plugins...",
     "skillCountLabel": "Skills",
     "mcpConfigured": "MCP configurado"
+  },
+  "localModels": {
+    "title": "On prem",
+    "description": "Detecta este dispositivo e classifica modelos locais compatíveis com Ollama / llama.cpp usando uma pontuação leve de ajuste ao hardware.",
+    "detect": "Detectar",
+    "detectFailed": "Falha na detecção de hardware",
+    "emptyTitle": "Detectar este dispositivo",
+    "emptyDescription": "Execute a detecção para ver CPU, memória, GPU e recomendações de modelos locais.",
+    "noRecommendations": "Ainda sem recomendações",
+    "noMatchingRecommendations": "Nenhuma recomendação correspondente",
+    "searchPlaceholder": "Pesquisar modelos locais...",
+    "columnHardware": "Hardware",
+    "columnDetails": "Detalhes",
+    "columnValue": "Valor",
+    "columnModel": "Modelo",
+    "columnFit": "Ajuste",
+    "columnRunMode": "Modo de execução",
+    "columnMemory": "Memória",
+    "columnSpeed": "Velocidade",
+    "columnContext": "Contexto",
+    "columnInstall": "Dica de instalação",
+    "tokensPerSecond": "{{count}} tok/s",
+    "hardware": {
+      "system": "Sistema",
+      "cpu": "CPU",
+      "memory": "Memória",
+      "gpu": "GPU / Backend"
+    },
+    "fit": {
+      "excellent": "Excelente",
+      "good": "Bom",
+      "tight": "Apertado",
+      "too_tight": "Apertado demais"
+    },
+    "runMode": {
+      "gpu": "GPU",
+      "cpu_offload": "Offload para CPU",
+      "cpu_only": "Somente CPU",
+      "no_fit": "Não recomendado"
+    }
   }
 }

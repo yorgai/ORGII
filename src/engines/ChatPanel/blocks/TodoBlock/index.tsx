@@ -138,6 +138,10 @@ function hasOpenBlockers(todo: TodoItem, allTodos: TodoItem[]): boolean {
   });
 }
 
+function todoRowKey(todoId: string, index: number): string {
+  return `chat-todo:${todoId || "missing"}:${index}`;
+}
+
 interface StandardTodoBlockProps {
   todos: TodoItem[];
   defaultCollapsed: boolean;
@@ -217,7 +221,7 @@ const StandardTodoBlock: React.FC<StandardTodoBlockProps> = memo(
                 const blocked = hasOpenBlockers(todo, todos);
                 return (
                   <div
-                    key={todo.id || idx}
+                    key={todoRowKey(todo.id, idx)}
                     className={`group flex h-6 cursor-default items-center gap-1.5 rounded px-1.5 transition-colors hover:bg-fill-2 ${blocked ? "opacity-50" : ""}`}
                   >
                     <div className="flex shrink-0 items-center justify-center self-center">

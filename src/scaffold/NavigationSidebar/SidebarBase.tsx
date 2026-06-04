@@ -35,6 +35,7 @@ import {
 } from "@src/config/windowChromeRadius";
 import { useSidebarState } from "@src/hooks/ui/sidebar/useSidebarState";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
+import { VerticalResizeHandle } from "@src/scaffold/Resize";
 import { hoverSidebarOpenAtom } from "@src/store/ui/hoverSidebarAtom";
 import {
   DEFAULT_SIDEBAR_WIDTH,
@@ -49,6 +50,9 @@ import type { SidebarBaseProps } from "./types";
 
 const PLATFORM_SIDEBAR_RADIUS =
   resolveHostDesktop() === HOST_DESKTOP.MACOS ? SIDEBAR_STYLE.borderRadius : 8;
+
+const IDLE_SIDEBAR_RESIZE_HANDLE_CLASS_NAME =
+  "h-full [&>div:first-child]:origin-right [&>div:first-child]:scale-x-50 [&>div:first-child]:transition-transform hover:[&>div:first-child]:scale-x-100";
 
 // ============================================
 // SidebarBase Component
@@ -352,15 +356,17 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
 
     const renderResizeHandle = () => (
       <div
-        className="absolute right-0 top-0 z-50 -mr-[3px] h-full w-[7px] cursor-col-resize"
+        className="absolute right-0 top-0 z-50 h-full"
         style={{ pointerEvents: "auto" }}
-        onMouseDown={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleMouseDown(e);
-        }}
-        onContextMenu={handleResizeContextMenu}
-      />
+      >
+        <VerticalResizeHandle
+          className={IDLE_SIDEBAR_RESIZE_HANDLE_CLASS_NAME}
+          isResizing={isDragging}
+          onMouseDown={handleMouseDown}
+          onContextMenu={handleResizeContextMenu}
+          variant="border"
+        />
+      </div>
     );
 
     // Content

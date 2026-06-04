@@ -116,6 +116,16 @@ export interface E2EHelpers {
     opts: CloneCursorNativeAccountWithoutApiKeyOptions
   ) => Promise<Result<{ account: KeyInfo }>>;
   listAccounts: () => Promise<Result<{ accounts: KeyInfo[] }>>;
+  inspectProviderMatrix: () => Promise<
+    Result<{
+      agents: unknown[];
+      apiProviders: unknown[];
+      providerConfigs: Record<string, unknown>;
+    }>
+  >;
+  autoDetectKeyForE2E: (
+    agentType: ModelType
+  ) => Promise<Result<{ result: unknown }>>;
   removeAccount: (id: string) => Promise<{ ok: true } | Err>;
   createCliPatchSession: (opts: {
     cliAgentType: CliAgentType;
@@ -189,6 +199,7 @@ export interface E2EHelpers {
       additionalDirectories: string[];
     }>
   >;
+  clearWorkspaceRepos: () => Promise<Result<{ cleared: true }>>;
   readSessionWorkspaceFromDb: (
     sessionId: string
   ) => Promise<Result<{ result: Json }>>;
@@ -620,11 +631,38 @@ export interface E2EHelpers {
     projectName: string,
     projectSlug?: string
   ) => Promise<{ ok: true } | Err>;
-  openAgentTab: (agentId: string, tab: string) => Promise<{ ok: true } | Err>;
+  openAgentTab: (
+    agentId: string,
+    tab: string
+  ) => Promise<
+    | {
+        ok: true;
+        activeTabId: string | null;
+        tabIds: string[];
+        stationMode: string;
+        pathname: string;
+      }
+    | Err
+  >;
   openOrgTab: (
     orgId: string,
     displayName?: string
   ) => Promise<{ ok: true } | Err>;
+  inspectWorkstationSurface: () => Promise<
+    Result<{
+      pathname: string;
+      stationMode: string;
+      dockFilter: string;
+      activeHost: string;
+      activeTabId: string | null;
+      activeTabType: string | null;
+      activeTabCategory: string | null;
+      selectedRepoId: string;
+      selectedRepoPath: string | null;
+      codeEditorPresent: boolean;
+      agentConfigRootCount: number;
+    }>
+  >;
   getLocationPathname: () => string;
 }
 

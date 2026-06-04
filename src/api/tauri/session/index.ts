@@ -10,6 +10,7 @@ import type {
   SessionFilter,
   SessionListResponse,
 } from "@src/api/tauri/rpc/schemas/sessionAggregate";
+import { normalizeAgentExecMode } from "@src/config/sessionCreatorConfig";
 import type { Session } from "@src/store/session/sessionAtom/types";
 
 import type { KeySource } from "./dispatchTypes";
@@ -99,7 +100,7 @@ export function toFrontendSession(record: SessionAggregateRecord): Session {
     agentDefinitionId: record.agentDefinitionId,
     agentIconId: record.agentIconId,
     agentDisplayName: record.agentDisplayName,
-    agentExecMode: record.agentExecMode,
+    agentExecMode: normalizeAgentExecMode(record.agentExecMode) ?? undefined,
     draftText: record.draftText,
     replyTargetEventId: record.replyTargetEventId,
     tags: record.tags,

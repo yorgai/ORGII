@@ -221,8 +221,8 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   editorPlaceholder: editorPlaceholderOverride,
   headerContent,
   hideLaunchButton = false,
-  showSlashMenu: _showSlashMenu = false,
-  slashQuery: _slashQuery = "",
+  showSlashMenu = false,
+  slashQuery = "",
   slashCommandKeyboardHandlerRef: externalSlashKbRef,
   onSlashCommand,
   onSlashCommandClose,
@@ -262,6 +262,8 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   // Plus-button slash menu (header search mode)
   const [showPlusSlashMenu, setShowPlusSlashMenu] = useState(false);
   const [plusSlashQuery, setPlusSlashQuery] = useState("");
+  const [contextMenuKeyboardOpened, setContextMenuKeyboardOpened] =
+    useState(false);
 
   const handleOpenSkillsTools = useCallback(() => {
     setPlusSlashQuery("");
@@ -269,22 +271,10 @@ const EditorArea: React.FC<EditorAreaProps> = ({
     onPrefetchSlashItems?.("");
   }, [onPrefetchSlashItems]);
 
-  // Route "/" trigger through the plus-button menu so both entry points
-  // show identical content (Mode, Models, Image, Skills, Actions).
-  const handleSlashCommandViaPlus = useCallback(
-    (query: string) => {
-      setPlusSlashQuery(query);
-      setShowPlusSlashMenu(true);
-      onPrefetchSlashItems?.(query);
-    },
-    [onPrefetchSlashItems]
-  );
-
   const handlePlusSlashClose = useCallback(() => {
     setShowPlusSlashMenu(false);
     setPlusSlashQuery("");
-    onSlashCommandClose?.();
-  }, [onSlashCommandClose]);
+  }, []);
 
   const handlePlusSlashQueryChange = useCallback(
     (query: string) => {
@@ -293,6 +283,11 @@ const EditorArea: React.FC<EditorAreaProps> = ({
     },
     [onPrefetchSlashItems]
   );
+
+  const handleManualAtMentionClick = useCallback(() => {
+    setContextMenuKeyboardOpened(false);
+    onAtMentionClick();
+  }, [onAtMentionClick]);
 
   // ============================================
   // Portal State for Dropdown
@@ -418,6 +413,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   // Update dropdown position only when @ is first typed (not on subsequent characters)
   const handleAtMentionWithPosition = useCallback(
     (query: string, position: { x: number; y: number }) => {
+      setContextMenuKeyboardOpened(true);
       // Only set position on initial @ trigger (when query is empty)
       if (!hasSetPositionRef.current) {
         if (isChatPanel && editorContainerRef.current) {
@@ -485,12 +481,15 @@ const EditorArea: React.FC<EditorAreaProps> = ({
    */
   const handleKeyDownForSlashDropdown = useCallback(
     (event: KeyboardEvent): boolean => {
-      if (showPlusSlashMenu && slashCommandKeyboardHandlerRef.current) {
+      if (
+        (showSlashMenu || showPlusSlashMenu) &&
+        slashCommandKeyboardHandlerRef.current
+      ) {
         return slashCommandKeyboardHandlerRef.current(event);
       }
       return false;
     },
-    [showPlusSlashMenu, slashCommandKeyboardHandlerRef]
+    [showSlashMenu, showPlusSlashMenu, slashCommandKeyboardHandlerRef]
   );
 
   // ============================================
@@ -588,12 +587,8 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           minHeight={editorMinHeight ?? (isChatPanel ? 60 : 100)}
           maxHeight={editorMaxHeight ?? (isChatPanel ? 200 : 300)}
           onKeyDownForDropdown={handleKeyDownForDropdown}
-          onSlashCommand={
-            onSlashCommand ? handleSlashCommandViaPlus : undefined
-          }
-          onSlashCommandClose={
-            onSlashCommand ? handlePlusSlashClose : undefined
-          }
+          onSlashCommand={onSlashCommand}
+          onSlashCommandClose={onSlashCommandClose}
           onKeyDownForSlashDropdown={handleKeyDownForSlashDropdown}
           onImagePaste={onImagePaste}
         />
@@ -618,11 +613,13 @@ const EditorArea: React.FC<EditorAreaProps> = ({
               <ContextMenu
                 visible={showContextMenu}
                 onClose={() => {
+                  setContextMenuKeyboardOpened(false);
                   setShowContextMenu(false);
                   setAtSearchQuery("");
                 }}
                 onSelect={onAtSelect}
                 searchQuery={atSearchQuery}
+                keyboardOpened={contextMenuKeyboardOpened}
                 recentFiles={[]}
                 repoPath={repoPath}
                 keyboardHandlerRef={contextMenuFunctionRef}
@@ -632,7 +629,26 @@ const EditorArea: React.FC<EditorAreaProps> = ({
             document.body
           )}
 
-        {/* Slash Command Menu - unified portal for both "/" and "+" triggers */}
+        {/* Slash Command Menu - inline "/" trigger */}
+        {onSlashCommand && (
+          <SlashCommandPortal
+            visible={showSlashMenu}
+            containerRef={editorContainerRef}
+            items={filteredSlashItems}
+            loading={slashLoading}
+            currentMode={currentMode}
+            searchQuery={slashQuery}
+            onClose={onSlashCommandClose ?? handlePlusSlashClose}
+            onSelect={(item) => onSlashSelect?.(item)}
+            onModeSelect={(mode) => onModeSelect?.(mode)}
+            keyboardHandlerRef={slashCommandKeyboardHandlerRef}
+            direction={isChatPanel ? "up" : "down"}
+            showActionFlyouts
+            onImageUpload={onUploadClick}
+          />
+        )}
+
+        {/* Slash Command Menu - "+" button trigger (header search mode) */}
         {onSlashCommand && (
           <SlashCommandPortal
             visible={showPlusSlashMenu}
@@ -667,11 +683,11 @@ const EditorArea: React.FC<EditorAreaProps> = ({
             elapsedSeconds={voice.elapsedSeconds}
             onCancel={voice.cancel}
             onAccept={voice.stop}
-            onAddContent={onAtMentionClick}
+            onAddContent={handleManualAtMentionClick}
           />
         ) : (
           <ComposerBar
-            onAddContent={onAtMentionClick}
+            onAddContent={handleManualAtMentionClick}
             onUpload={onUploadClick}
             onOpenSkillsTools={
               onSlashCommand ? handleOpenSkillsTools : undefined
