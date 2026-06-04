@@ -43,7 +43,6 @@ interface DropdownPosition {
   top: number;
   left: number;
   placement: DropdownPlacement;
-  maxHeight: number;
 }
 
 const ESTIMATED_DROPDOWN_HEIGHT = 260;
@@ -83,7 +82,6 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
     top: 0,
     left: 0,
     placement: "down",
-    maxHeight: ESTIMATED_DROPDOWN_HEIGHT,
   });
   const [isPositioned, setIsPositioned] = useState(false);
 
@@ -108,18 +106,14 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
     const opensDown =
       placementStrategy === "auto" &&
       (dropdownHeight <= spaceBelow || spaceBelow >= spaceAbove);
-    const availableHeight = opensDown ? spaceBelow : spaceAbove;
-    const maxHeight = Math.max(120, Math.floor(availableHeight));
-    const effectiveHeight = Math.min(dropdownHeight, maxHeight);
     const unclampedTop = opensDown
       ? anchorY + gap
-      : anchorY - effectiveHeight - gap;
+      : anchorY - dropdownHeight - gap;
 
     setDropdownPosition({
-      top: clampToViewport(unclampedTop, effectiveHeight, window.innerHeight),
+      top: clampToViewport(unclampedTop, dropdownHeight, window.innerHeight),
       left: clampToViewport(anchorX, dropdownWidth, window.innerWidth),
       placement: opensDown ? "down" : "up",
-      maxHeight,
     });
     setIsPositioned(true);
   }, [anchorPosition, containerRef, placementStrategy, visible]);
@@ -185,8 +179,6 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
         top: dropdownPosition.top,
         left: dropdownPosition.left,
         width: STYLE_CONFIG.dropdownWidth,
-        maxHeight: dropdownPosition.maxHeight,
-        overflowY: "auto",
       }}
     >
       <ContextMenu
