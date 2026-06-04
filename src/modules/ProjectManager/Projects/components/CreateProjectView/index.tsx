@@ -350,7 +350,7 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
       dropdownWidthMode="min-match"
       dropdownMinWidth={220}
       panelZIndex={10000}
-      className="w-auto max-w-[220px] [&_.select-selector]:!h-7 [&_.select-selector]:!rounded-full [&_.select-selector]:!bg-bg-2 [&_.select-selector]:!px-3 [&_.select-selector]:!text-[13px] [&_.select-selector]:!font-medium [&_.select-selector]:!shadow-none"
+      className="w-auto max-w-[220px] [&_.select-selector]:!h-7 [&_.select-selector]:!rounded-full [&_.select-selector]:!bg-bg-2 [&_.select-selector]:!px-3 [&_.select-selector]:!text-[13px] [&_.select-selector]:!font-medium [&_.select-selector]:!shadow-none [&_.select-suffix]:!hidden"
     />
   );
 
