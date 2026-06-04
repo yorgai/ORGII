@@ -36,6 +36,16 @@ export type WorkItemStatus =
   | "cancelled"
   | "duplicate";
 
+export const WORK_ITEM_STATUS = {
+  BACKLOG: "backlog",
+  PLANNED: "planned",
+  IN_PROGRESS: "in_progress",
+  IN_REVIEW: "in_review",
+  COMPLETED: "completed",
+  CANCELLED: "cancelled",
+  DUPLICATE: "duplicate",
+} as const;
+
 /**
  * Work item priority
  */

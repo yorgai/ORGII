@@ -90,6 +90,7 @@ import {
 } from "@src/store/ui/chatPanelAtom";
 import { triggerCollapseAllAtom } from "@src/store/ui/collapseStateAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
+import type { WorkItemDraft } from "@src/store/workstation/projectManager";
 import { createBenchmarkTab } from "@src/store/workstation/tabs";
 
 import { useReloadSession } from "./ChatHistory/hooks/useReloadSession";
@@ -120,7 +121,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     position = "right",
     sessionCreatorSlot: SessionCreatorSlot,
   }) => {
-    const { t } = useTranslation(["sessions", "common"]);
+    const { t } = useTranslation(["sessions", "common", "projects"]);
     const isLeftPosition = position === "left";
     const shouldOffsetHeaderForCollapsedSidebar =
       useShouldOffsetChatPanelHeader({
@@ -143,10 +144,13 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const { openTab: openWorkStationTab } = useWorkStationTabs();
     const [contentMode, setContentMode] = useAtom(chatPanelContentModeAtom);
     const [createTarget, setCreateTarget] = useAtom(chatPanelCreateTargetAtom);
+    const [workItemCreateAiEnabled, setWorkItemCreateAiEnabled] =
+      useState(true);
+    const [workItemCreateDraft, setWorkItemCreateDraft] =
+      useState<WorkItemDraft | null>(null);
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
     const currentRepo = useAtomValue(currentRepoAtom);
     const currentRepoPath = currentRepo?.path ?? currentRepo?.fs_uri ?? null;
-    const currentRepoName = currentRepo?.name;
     const {
       error: benchmarkError,
       isLoadingTasks: isLoadingBenchmarkTasks,
@@ -205,8 +209,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     /**
      * Maximize/dock toggle: in WorkStation the chat panel can grow to fill the
      * entire content area. The button shows in WorkStation regardless of
-     * session or station-mode state — when maximized, the un-maximize
-     * affordance is also mirrored on the global toolbar.
+     * session or station-mode state.
      */
     const showChatFocusToggle = viewMode === "workStation";
 
@@ -404,6 +407,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const showPresenceInHeader = showSessionContent
       ? sidebarCollapsed
       : showCreatorPresenceInHeader;
+
     const chatFocusLabel = isChatFocus
       ? t("chat.restoreSplitView")
       : t("chat.maximizeChatPanel");
@@ -454,9 +458,15 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           }));
           handleNewSession();
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
+          setWorkItemCreateAiEnabled(true);
+          setWorkItemCreateDraft(null);
           return;
         }
 
+        if (nextTarget !== CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
+          setWorkItemCreateAiEnabled(true);
+          setWorkItemCreateDraft(null);
+        }
         setCreateTarget(nextTarget);
         if (nextTarget === CHAT_PANEL_CREATE_TARGET.AGENT_SESSION) {
           handleNewSession();
@@ -473,6 +483,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     }, [isChatFocus, openWorkStationTab, toggleChatFocus]);
 
     const handleCancelWorkItemCreate = useCallback(() => {
+      setWorkItemCreatePropertiesOpen(false);
+      setWorkItemCreateAiEnabled(true);
+      setWorkItemCreateDraft(null);
       setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
       handleNewSession();
     }, [handleNewSession, setCreateTarget]);
@@ -498,6 +511,8 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           workItem,
         });
         if (!result.keepOpen) {
+          setWorkItemCreateAiEnabled(true);
+          setWorkItemCreateDraft(null);
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
           setContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
           dispatchClearSession();
@@ -640,6 +655,27 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               />
             </span>
           </Tooltip>
+        )}
+        {isWorkItemTarget && !showSessionContent && !selectedWorkItem && (
+          <>
+            <label className="flex h-7 items-center gap-2 px-1 text-[12px] font-medium text-text-2">
+              <span>{t("projects:workItems.createModes.useAi")}</span>
+              <Switch
+                size="small"
+                checked={workItemCreateAiEnabled}
+                onChange={setWorkItemCreateAiEnabled}
+                ariaLabel={t("projects:workItems.createModes.useAi")}
+                dataTestId="chat-panel-create-work-item-ai-switch"
+              />
+            </label>
+            {!workItemCreateAiEnabled ? (
+              <div
+                className="pointer-events-none mx-2 h-4 w-px shrink-0 bg-border-2"
+                role="separator"
+                aria-hidden
+              />
+            ) : null}
+          </>
         )}
         {showChatFocusToggle && (
           <Tooltip
@@ -1012,18 +1048,78 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       void refreshBenchmarkPreflight();
     }, [refreshBenchmarkPreflight]);
 
+    const workItemSessionCreatorPrompt = useMemo(() => {
+      const title = workItemCreateDraft?.name.trim();
+      const description = workItemCreateDraft?.description.trim();
+      const projectName = workItemCreateDraft?.projectId
+        ? workItemCreateDraft.projectId
+        : undefined;
+      return [
+        t(
+          "projects:workItems.createModes.sessionCreatorPrompt.promptNameQuestion"
+        ),
+        title
+          ? t(
+              "projects:workItems.createModes.sessionCreatorPrompt.promptDraftTitle",
+              {
+                title,
+              }
+            )
+          : null,
+        t(
+          "projects:workItems.createModes.sessionCreatorPrompt.promptInstruction"
+        ),
+        projectName
+          ? t(
+              "projects:workItems.createModes.sessionCreatorPrompt.promptProject",
+              {
+                project: projectName,
+              }
+            )
+          : null,
+        description
+          ? t(
+              "projects:workItems.createModes.sessionCreatorPrompt.promptDraftDetails",
+              {
+                details: description,
+              }
+            )
+          : null,
+      ]
+        .filter((line): line is string => Boolean(line))
+        .join("\n\n");
+    }, [t, workItemCreateDraft]);
+
     const emptyChatContent = (() => {
       if (createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
+        const sessionCreatorContent =
+          workItemCreateAiEnabled && SessionCreatorSlot ? (
+            <SessionCreatorSlot
+              className="min-h-0 flex-1"
+              variant={creatorVariant}
+              centerFullScreenContent
+              hidePresenceButton
+              onRegionNoticeChange={handleRegionNoticeChange}
+              initialContent={workItemSessionCreatorPrompt}
+            />
+          ) : undefined;
+
         return (
           <div className={`flex overflow-hidden ${creatorClassName}`}>
             <CreateWorkItemView
               repoPath={currentRepoPath}
-              scopeBreadcrumbLabel={currentRepoName}
               onCancel={handleCancelWorkItemCreate}
               onSetUnsaved={() => undefined}
               onWorkItemCreated={handleChatPanelWorkItemCreated}
-              onLinkWorkItem={handleChatPanelWorkItemCreated}
+              onDraftChange={setWorkItemCreateDraft}
               showCloseAction={false}
+              propertiesOpen={false}
+              showPropertiesAction={false}
+              aiGenerateMode={workItemCreateAiEnabled}
+              onAiGenerateModeChange={setWorkItemCreateAiEnabled}
+              showAiModePanel={false}
+              contentSlot={sessionCreatorContent}
+              showFooter={!sessionCreatorContent}
             />
           </div>
         );

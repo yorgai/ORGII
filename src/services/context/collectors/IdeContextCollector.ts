@@ -52,15 +52,14 @@ const MAX_LINTER_ERRORS = 20;
 
 export interface CollectIdeContextOptions {
   /**
-   * The session's persisted repo path. When supplied, the collector
-   * verifies the global toolbar repo points at the same path before
-   * returning data; otherwise it returns `undefined` to avoid leaking
-   * a different repo's editor / git / LSP state into this session's
-   * agent payload.
+   * The session's persisted repo path. When supplied, the collector verifies
+   * the global repo selection points at the same path before returning data;
+   * otherwise it returns `undefined` to avoid leaking a different repo's
+   * editor / git / LSP state into this session's agent payload.
    *
    * Pass `null` only when the call has no associated session (e.g. the
-   * session creator is launching a brand-new session and the toolbar
-   * repo IS the chosen repo by definition). Omitting the argument is
+   * session creator is launching a brand-new session and the global repo
+   * selection IS the chosen repo by definition). Omitting the argument is
    * equivalent to `null` and is preserved for callers that genuinely
    * have no session affinity.
    */

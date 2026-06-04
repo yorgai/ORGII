@@ -177,6 +177,22 @@
     "newWorkItem": "新 Work Item",
     "newWorkItemName": "新 Work Item",
     "createWorkItem": "創建 Work Item",
+    "createModes": {
+      "generateWithAi": "使用 AI 建立",
+      "useAi": "使用 Agent",
+      "manualCreation": "手動創建",
+      "sessionCreatorPrompt": {
+        "promptNameQuestion": "首先詢問使用者是否想指定一個具體的 Work Item 名稱。",
+        "promptInstruction": "為此專案建立 Work Items。",
+        "promptProject": "專案：{{project}}",
+        "promptDraftTitle": "指定的 Work Item 名稱：{{title}}",
+        "promptDraftDetails": "草稿詳細資料：\n{{details}}"
+      }
+    },
+    "linkExisting": {
+      "label": "連結現有 Work Item",
+      "placeholder": "選擇要連結的 Work Item"
+    },
     "titlePlaceholder": "Work Item 標題",
     "descriptionPlaceholder": "描述 Work Item...",
     "deleteWorkItem": "刪除工作項",

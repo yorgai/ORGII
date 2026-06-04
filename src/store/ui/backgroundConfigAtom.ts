@@ -14,14 +14,15 @@
  */
 import { atom } from "jotai";
 
-import { getColorPairById } from "@src/config/appearance/backgroundColorPairs";
+import {
+  getColorPairById,
+  resolveColorPair,
+} from "@src/config/appearance/backgroundColorPairs";
 import {
   CUSTOM_COLOR_STORAGE_KEY,
   DEFAULT_BUNDLED_BACKGROUND_IMAGE,
   mergeStoredCustomColors,
 } from "@src/config/appearance/backgroundConfig";
-
-import { isDarkThemeAtom } from "./uiAtom";
 
 // ============================================
 // Types
@@ -64,8 +65,7 @@ const BACKGROUND_CONFIG_KEY = "orgii_background_config";
 const VALID_LIQUID_GLASS_LEVELS = new Set(["regular", "medium", "thick"]);
 
 const DEFAULT_BACKGROUND_PAIR_ID = "graphite";
-const DEFAULT_BACKGROUND_PAIR =
-  getColorPairById(DEFAULT_BACKGROUND_PAIR_ID) ?? null;
+const DEFAULT_BACKGROUND_PAIR = getColorPairById(DEFAULT_BACKGROUND_PAIR_ID);
 
 const DEFAULT_BACKGROUND_CONFIG: BackgroundConfig = {
   imageUrl: DEFAULT_BUNDLED_BACKGROUND_IMAGE,
@@ -74,7 +74,9 @@ const DEFAULT_BACKGROUND_CONFIG: BackgroundConfig = {
   customColors: [],
   adaptiveColors: true,
   backgroundColorId: DEFAULT_BACKGROUND_PAIR_ID,
-  backgroundColor: DEFAULT_BACKGROUND_PAIR?.dark ?? "#2D2D2D",
+  backgroundColor: DEFAULT_BACKGROUND_PAIR
+    ? resolveColorPair(DEFAULT_BACKGROUND_PAIR)
+    : undefined,
 };
 
 function getStoredBackgroundConfig(): BackgroundConfig {
@@ -139,22 +141,19 @@ export const backgroundConfigPersistAtom = atom(
 
 /**
  * Resolved background config: when a paired preset is active, swaps the
- * `backgroundColor` to match the current light/dark mode. Falls through to the
- * raw config for custom colors and image backgrounds.
- *
- * Read this atom (not `backgroundConfigAtom`) anywhere a final hex color is
- * required for rendering; the settings editor still writes to the raw atom.
+ * `backgroundColor` to the active public-theme CSS variable for that semantic
+ * slot. Falls through to the raw config for custom colors and image
+ * backgrounds.
  */
 export const resolvedBackgroundConfigAtom = atom<BackgroundConfig>((get) => {
   const config = get(backgroundConfigAtom);
   const pairId = config.backgroundColorId;
   if (!pairId) return config;
-  const isDark = get(isDarkThemeAtom);
   const pair = getColorPairById(pairId);
   if (!pair) return config;
   return {
     ...config,
-    backgroundColor: isDark ? pair.dark : pair.light,
+    backgroundColor: resolveColorPair(pair),
   };
 });
 resolvedBackgroundConfigAtom.debugLabel = "resolvedBackgroundConfigAtom";

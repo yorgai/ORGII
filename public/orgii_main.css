@@ -6,6 +6,53 @@
  * Note: These variables are actively used throughout the codebase via Tailwind config
  * and direct CSS variable references. Migration to custom tokens can be done incrementally.
  */
+:root {
+  /* Background color slots */
+  --bg-1: #f7f4ee;
+  --bg-2: #e8e8e8;
+  --bg-3: #d4dbe2;
+  --bg-4: #e2e4ee;
+  --bg-5: #c8d8e8;
+  --bg-6: #dce8f4;
+  --bg-7: #ddd7ee;
+  --bg-8: #cce2df;
+  --bg-9: #d4e4dc;
+  --bg-10: #c8dcc9;
+  --bg-11: #d8dfcb;
+  --bg-12: #dbc8dc;
+  --bg-13: #e0cfdc;
+  --bg-14: #e5cfcc;
+  --bg-15: #ebd0cf;
+  --bg-16: #e8c9a8;
+  --bg-17: #efd8b5;
+  --bg-18: #e2ded3;
+  --bg-19: #e0d5c7;
+
+  /* Code editor */
+  --cm-editor-background: #ffffff;
+  --cm-editor-foreground: #24292e;
+  --cm-editor-selection: #bbdfff;
+  --cm-editor-gutter-bg: var(--cm-editor-background);
+  --cm-editor-gutter-fg: #6e7781;
+  --cm-editor-line-highlight: transparent;
+  --cm-syntax-keyword: #d73a49;
+  --cm-syntax-string: #032f62;
+  --cm-syntax-comment: #6a737d;
+  --cm-syntax-function: #6f42c1;
+  --cm-syntax-variable: #005cc5;
+  --cm-syntax-number: #005cc5;
+  --cm-syntax-operator: #005cc5;
+  --cm-syntax-tag: #116329;
+  --cm-syntax-attribute: #005cc5;
+  --cm-syntax-property: #6f42c1;
+  --cm-syntax-type: #d73a49;
+  --cm-syntax-constant: #e36209;
+  --cm-syntax-link: #032f62;
+  --cm-syntax-invalid: #cb2431;
+  --cm-syntax-deleted: #b31d28;
+  --cm-syntax-deleted-bg: #ffeef0;
+}
+
 body {
   --color-bg-1: #f4f4f4;
   --color-bg-2: #ffffff;

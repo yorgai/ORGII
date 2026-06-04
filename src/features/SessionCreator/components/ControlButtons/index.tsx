@@ -10,7 +10,6 @@ import React, { memo, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import ModelSelectorPill from "@src/components/ModelSelectorPill";
-import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import CursorModePillCreator from "@src/engines/ChatPanel/InputArea/components/CursorModePill/CursorModePillCreator";
 import CursorModelPillCreator from "@src/engines/ChatPanel/InputArea/components/CursorModelPill/CursorModelPillCreator";
 import ModePill from "@src/engines/ChatPanel/InputArea/components/ModePill";
@@ -97,7 +96,6 @@ const ControlButtons: React.FC<ControlButtonsProps> = memo(
               ref={modelSegmentRef}
               selection={advancedConfig}
               defaultLabel={tSessions("creator.model")}
-              shortcut={getShortcutKeys("open_model_selector")}
               active={isModelOpen}
               className="max-w-[220px] shrink-0"
               onClick={handleOpenModelSelector}

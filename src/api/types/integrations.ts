@@ -1,8 +1,8 @@
 /**
  * Integrations domain types shared outside the Integrations module.
  *
- * Lives here so that the scaffold layer (GlobalToolbar) and other shared layers
- * can import these without reaching into a module-internal path.
+ * Lives here so shared layers can import these without reaching into a
+ * module-internal path.
  */
 
 export const CATEGORY_KEYS = [

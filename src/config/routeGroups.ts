@@ -159,8 +159,8 @@ export const AUTH_ROUTES = {
 // ============================================================================
 
 // Settings shares the WorkStation view-mode so the route renders with the
-// WorkStation chrome (no GlobalToolbar, WorkStation surface available to
-// the right of the slot). The slot itself swaps in `SettingsSlot` whenever
+// WorkStation chrome and surface available to the right of the slot. The
+// slot itself swaps in `SettingsSlot` whenever
 // the URL starts with `/orgii/app/settings/*` (see `AppShell`); the route
 // entries in `routeGroups.tsx` exist purely so the URL is deeplinkable.
 export const APP_SETTINGS_ROUTE = route(

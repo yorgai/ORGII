@@ -177,6 +177,22 @@
     "newWorkItem": "Novo Item de Trabalho",
     "newWorkItemName": "Novo Item de Trabalho",
     "createWorkItem": "Criar item de trabalho",
+    "createModes": {
+      "generateWithAi": "Criar com IA",
+      "useAi": "Usar Agent",
+      "manualCreation": "Criação manual",
+      "sessionCreatorPrompt": {
+        "promptNameQuestion": "Primeiro, pergunte ao usuário se ele quer especificar um nome de Work Item específico.",
+        "promptInstruction": "Crie Work Items para este projeto.",
+        "promptProject": "Projeto: {{project}}",
+        "promptDraftTitle": "Nome de Work Item solicitado: {{title}}",
+        "promptDraftDetails": "Detalhes do rascunho:\n{{details}}"
+      }
+    },
+    "linkExisting": {
+      "label": "Vincular Work Item existente",
+      "placeholder": "Selecione um Work Item para vincular"
+    },
     "titlePlaceholder": "Título do item de trabalho",
     "descriptionPlaceholder": "Descreva o item de trabalho...",
     "deleteWorkItem": "Excluir item de trabalho",

@@ -115,7 +115,7 @@ const ActivitySimulator: React.FC = memo(() => {
     manualLayout,
   });
 
-  // Sync effective dock app to atom for toolbar AppModeSwitch
+  // Sync effective dock app to atom for app mode controls.
   useEffect(() => {
     setEffectiveDockApp(dockActiveApp);
   }, [dockActiveApp, setEffectiveDockApp]);

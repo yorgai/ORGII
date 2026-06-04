@@ -124,7 +124,6 @@ export function useEditorExtensions(
     return gitBlameExtension(blameDataRef);
   }, [enableGitBlame, blameDataRef]);
 
-  // Memoize theme extension separately — only depends on isDark
   const themeExtension = useMemo(() => createCodeMirrorTheme(isDark), [isDark]);
 
   // Create dirty diff extension when originalValue is provided or changes

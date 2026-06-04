@@ -176,6 +176,22 @@
     "newWorkItem": "New Work Item",
     "newWorkItemName": "New Work Item",
     "createWorkItem": "Create work item",
+    "createModes": {
+      "generateWithAi": "Create with AI",
+      "useAi": "Use Agent",
+      "manualCreation": "Manual Creation",
+      "sessionCreatorPrompt": {
+        "promptNameQuestion": "First, ask the user whether they want to specify a specific Work Item name.",
+        "promptInstruction": "Create work items for this project.",
+        "promptProject": "Project: {{project}}",
+        "promptDraftTitle": "Requested Work Item name: {{title}}",
+        "promptDraftDetails": "Draft details:\n{{details}}"
+      }
+    },
+    "linkExisting": {
+      "label": "Link existing Work Item",
+      "placeholder": "Select a Work Item to link"
+    },
     "titlePlaceholder": "Work item title",
     "descriptionPlaceholder": "Describe the work item...",
     "deleteWorkItem": "Delete work item",

@@ -23,7 +23,6 @@ const SWATCH_SELECTED =
 
 interface ColorSectionProps {
   config: BackgroundConfig;
-  isDarkTheme: boolean;
   translationNamespace: string;
   onColorSelect: (pairId: string) => void;
   onSelectCustomHex: (hex: string) => void;
@@ -33,7 +32,6 @@ interface ColorSectionProps {
 
 export const ColorSection: React.FC<ColorSectionProps> = ({
   config,
-  isDarkTheme,
   translationNamespace,
   onColorSelect,
   onSelectCustomHex,
@@ -64,7 +62,6 @@ export const ColorSection: React.FC<ColorSectionProps> = ({
       <div className="flex flex-wrap gap-2">
         {PRESET_COLORS.map((pair) => {
           const isSelected = config.backgroundColorId === pair.id;
-          const swatch = isDarkTheme ? pair.dark : pair.light;
 
           return (
             <button
@@ -72,7 +69,7 @@ export const ColorSection: React.FC<ColorSectionProps> = ({
               type="button"
               title={pair.description}
               className={`${SWATCH_BASE} ${isSelected ? SWATCH_SELECTED : SWATCH_IDLE}`}
-              style={{ background: swatch }}
+              style={{ backgroundColor: `var(${pair.cssVar})` }}
               onClick={() => onColorSelect(pair.id)}
             />
           );

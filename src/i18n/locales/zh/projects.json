@@ -177,6 +177,22 @@
     "newWorkItem": "新 Work Item",
     "newWorkItemName": "新 Work Item",
     "createWorkItem": "创建 Work Item",
+    "createModes": {
+      "generateWithAi": "使用 AI 创建",
+      "useAi": "使用 Agent",
+      "manualCreation": "手动创建",
+      "sessionCreatorPrompt": {
+        "promptNameQuestion": "首先询问用户是否想指定一个具体的 Work Item 名称。",
+        "promptInstruction": "为此项目创建 Work Items。",
+        "promptProject": "项目：{{project}}",
+        "promptDraftTitle": "指定的 Work Item 名称：{{title}}",
+        "promptDraftDetails": "草稿详情：\n{{details}}"
+      }
+    },
+    "linkExisting": {
+      "label": "关联现有 Work Item",
+      "placeholder": "选择要关联的 Work Item"
+    },
     "titlePlaceholder": "Work Item 标题",
     "descriptionPlaceholder": "描述 Work Item...",
     "deleteWorkItem": "删除工作项",

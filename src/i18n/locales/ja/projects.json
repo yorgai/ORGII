@@ -177,6 +177,22 @@
     "newWorkItem": "新しい Work Item",
     "newWorkItemName": "新規 Work Item",
     "createWorkItem": "Work Item を作成",
+    "createModes": {
+      "generateWithAi": "AI で作成",
+      "useAi": "Agent を使用",
+      "manualCreation": "手動作成",
+      "sessionCreatorPrompt": {
+        "promptNameQuestion": "まず、特定の Work Item 名を指定したいかどうかをユーザーに確認してください。",
+        "promptInstruction": "このプロジェクトの Work Items を作成してください。",
+        "promptProject": "プロジェクト: {{project}}",
+        "promptDraftTitle": "指定された Work Item 名: {{title}}",
+        "promptDraftDetails": "下書き詳細:\n{{details}}"
+      }
+    },
+    "linkExisting": {
+      "label": "既存の Work Item をリンク",
+      "placeholder": "リンクする Work Item を選択"
+    },
     "titlePlaceholder": "Work Item タイトル",
     "descriptionPlaceholder": "Work Item を説明...",
     "deleteWorkItem": "作業項目を削除",

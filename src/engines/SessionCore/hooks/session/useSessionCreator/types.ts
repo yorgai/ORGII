@@ -45,7 +45,7 @@ export interface UseSessionCreatorReturn {
   ) => void;
 
   // Computed value — the session-scoped draft (sessionSourceAtom) overlaid
-  // on the global toolbar. `null` ≡ no repo available anywhere.
+  // on the global repo selection. `null` ≡ no repo available anywhere.
   effectiveSource: SessionSource | null;
   repos: Repo[];
 

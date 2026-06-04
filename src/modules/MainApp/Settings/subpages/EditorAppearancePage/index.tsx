@@ -2,7 +2,7 @@
  * Editor Appearance Subpage
  *
  * Dedicated subpage for code editor appearance settings:
- *  - Theme & Typography (syntax theme, font family, font size, line height, tab size)
+ *  - Typography (font family, font size, line height, tab size)
  *  - Editor Features (line numbers, word wrap, minimap, indent guides, highlight active line)
  *
  * Uses SubpageLayout with anchor navigation (one anchor per group).
@@ -36,7 +36,6 @@ import {
   type EditorLineHeight,
   type EditorLineNumbers,
   type EditorTabSize,
-  type EditorTheme,
   codeFontFamilyAtom,
   customCodeFontFamilyAtom,
   editorAutoSaveAtom,
@@ -47,7 +46,6 @@ import {
   editorShowMinimapAtom,
   editorShowTreeIndentGuidesAtom,
   editorTabSizeAtom,
-  editorThemeAtom,
   editorWordWrapAtom,
 } from "@src/store/ui/editorSettingsAtom";
 import { terminalFontSizeAtom } from "@src/store/ui/uiAtom";
@@ -64,7 +62,6 @@ export const TypographySection: React.FC<{ showTitle?: boolean }> = ({
   const { t } = useTranslation("settings");
   const { t: tCommon } = useTranslation("common");
 
-  const [editorTheme, setEditorTheme] = useAtom(editorThemeAtom);
   const [codeFontFamily, setCodeFontFamily] = useAtom(codeFontFamilyAtom);
   const [customFontFamily, setCustomFontFamily] = useAtom(
     customCodeFontFamilyAtom
@@ -72,22 +69,6 @@ export const TypographySection: React.FC<{ showTitle?: boolean }> = ({
   const [fontSize, setFontSize] = useAtom(editorFontSizeAtom);
   const [tabSize, setTabSize] = useAtom(editorTabSizeAtom);
   const [lineHeight, setLineHeight] = useAtom(editorLineHeightAtom);
-  const editorThemeOptions = useMemo(
-    () => [
-      { value: "system", label: t("editor.syntaxThemeOptions.system") },
-      { value: "github", label: t("editor.syntaxThemeOptions.github") },
-      { value: "vscode", label: t("editor.syntaxThemeOptions.vscode") },
-      { value: "monokai", label: t("editor.syntaxThemeOptions.monokai") },
-      { value: "solarized", label: t("editor.syntaxThemeOptions.solarized") },
-      { value: "abyss", label: t("editor.syntaxThemeOptions.abyss") },
-      {
-        value: "tomorrowNightBlue",
-        label: t("editor.syntaxThemeOptions.tomorrowNightBlue"),
-      },
-    ],
-    [t]
-  );
-
   // Local state for custom font name with debounce
   const [localCustomFont, setLocalCustomFont] = useState(customFontFamily);
   const customFontDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -116,14 +97,6 @@ export const TypographySection: React.FC<{ showTitle?: boolean }> = ({
     };
   }, [localCustomFont, customFontFamily, setCustomFontFamily]);
 
-  const handleThemeChange = useCallback(
-    (value: string | number | (string | number)[]) => {
-      const themeValue = typeof value === "string" ? value : String(value);
-      setEditorTheme(themeValue as EditorTheme);
-    },
-    [setEditorTheme]
-  );
-
   const handleFontFamilyChange = useCallback(
     (value: string | number | (string | number)[]) => {
       const fontValue = typeof value === "string" ? value : String(value);
@@ -136,16 +109,6 @@ export const TypographySection: React.FC<{ showTitle?: boolean }> = ({
     <SectionContainer
       title={showTitle ? t("editor.themeTypography") : undefined}
     >
-      <SectionRow label={t("editor.syntaxTheme")}>
-        <Select
-          value={editorTheme}
-          onChange={handleThemeChange}
-          options={editorThemeOptions}
-          showSearch
-          style={SECTION_CONTROL_STYLE}
-        />
-      </SectionRow>
-
       <SectionRow label={t("editor.fontFamily")}>
         <Select
           value={codeFontFamily}

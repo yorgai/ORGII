@@ -177,6 +177,22 @@
     "newWorkItem": "Nouveau Work Item",
     "newWorkItemName": "Nouveau Work Item",
     "createWorkItem": "Créer un Work Item",
+    "createModes": {
+      "generateWithAi": "Créer avec l’IA",
+      "useAi": "Utiliser l’Agent",
+      "manualCreation": "Création manuelle",
+      "sessionCreatorPrompt": {
+        "promptNameQuestion": "Commence par demander à l’utilisateur s’il souhaite spécifier un nom de Work Item précis.",
+        "promptInstruction": "Crée des Work Items pour ce projet.",
+        "promptProject": "Projet : {{project}}",
+        "promptDraftTitle": "Nom de Work Item demandé : {{title}}",
+        "promptDraftDetails": "Détails du brouillon :\n{{details}}"
+      }
+    },
+    "linkExisting": {
+      "label": "Lier un Work Item existant",
+      "placeholder": "Sélectionner un Work Item à lier"
+    },
     "titlePlaceholder": "Titre du Work Item",
     "descriptionPlaceholder": "Décrire le Work Item...",
     "deleteWorkItem": "Supprimer l'élément",

@@ -19,7 +19,6 @@ import {
   ViewUpdate,
 } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
-import { useAtomValue } from "jotai";
 import React, { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -34,7 +33,6 @@ import {
   getCodeMirrorTheme,
 } from "@src/features/CodeMirror/config";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { resolvedEditorThemeAtom } from "@src/store/ui/editorSettingsAtom";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import type { FilePathRange, MatchRange } from "./serialization";
@@ -298,7 +296,6 @@ export const SearchEditorDocument: React.FC<SearchEditorDocumentProps> = memo(
   }) => {
     const { t } = useTranslation();
     const { isDark } = useCurrentTheme();
-    const editorThemeName = useAtomValue(resolvedEditorThemeAtom);
     const filePathClickRef = useRef(onFilePathClick);
 
     // Keep ref updated
@@ -307,7 +304,7 @@ export const SearchEditorDocument: React.FC<SearchEditorDocumentProps> = memo(
     }, [onFilePathClick]);
 
     // Theme — passed via `theme` prop (same pattern as CodeMirrorEditor)
-    const theme = getCodeMirrorTheme(isDark, editorThemeName);
+    const theme = getCodeMirrorTheme(isDark);
 
     // Build extensions (color theme goes through `theme` prop; font/spacing via extension)
     const extensions = useMemo(() => {

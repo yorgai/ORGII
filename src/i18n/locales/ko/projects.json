@@ -177,6 +177,22 @@
     "newWorkItem": "새 Work Item",
     "newWorkItemName": "새 Work Item",
     "createWorkItem": "Work Item 생성",
+    "createModes": {
+      "generateWithAi": "AI로 만들기",
+      "useAi": "Agent 사용",
+      "manualCreation": "수동 생성",
+      "sessionCreatorPrompt": {
+        "promptNameQuestion": "먼저 사용자에게 특정 Work Item 이름을 지정할지 물어보세요.",
+        "promptInstruction": "이 프로젝트의 Work Items를 생성하세요.",
+        "promptProject": "프로젝트: {{project}}",
+        "promptDraftTitle": "요청된 Work Item 이름: {{title}}",
+        "promptDraftDetails": "초안 세부 정보:\n{{details}}"
+      }
+    },
+    "linkExisting": {
+      "label": "기존 Work Item 연결",
+      "placeholder": "연결할 Work Item 선택"
+    },
     "titlePlaceholder": "Work Item 제목",
     "descriptionPlaceholder": "Work Item 설명...",
     "deleteWorkItem": "작업 항목 삭제",

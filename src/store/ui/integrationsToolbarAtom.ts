@@ -1,11 +1,11 @@
 /**
  * Integrations Toolbar Atoms
  *
- * Pub-sub channels used by the Integrations module to register toolbar
- * actions (refresh button, add-signal) into the GlobalToolbar.
+ * Pub-sub channels used by the Integrations module to register header
+ * actions (refresh button, add-signal).
  *
- * Lives in src/store/ui/ so that the scaffold layer (GlobalToolbar) can
- * read these without reaching into a module's private store path.
+ * Lives in src/store/ui/ so shared header surfaces can read these without
+ * reaching into a module's private store path.
  */
 import { atom } from "jotai";
 
@@ -26,7 +26,7 @@ integrationsToolbarAtom.debugLabel = "integrations/toolbar";
 // ─── Add-action signal ───────────────────────────────────────────────────────
 
 /**
- * Pub-sub channel used by GlobalToolbar to dispatch add-actions ("+" button)
+ * Pub-sub channel used by route-local header actions to dispatch add-actions
  * into useIntegrationsPage. The monotonic `seq` counter ensures that identical
  * repeated actions still produce distinct atom values (avoids effect dedup).
  */

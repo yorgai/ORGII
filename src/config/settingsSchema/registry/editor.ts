@@ -101,27 +101,4 @@ export const EDITOR_SETTINGS_REGISTRY = {
       "Show inline git blame annotation on the current cursor line (author, time, commit summary)",
     category: "editor",
   },
-  "editor.theme": {
-    schema: z.enum([
-      "system",
-      "github",
-      "vscode",
-      "monokai",
-      "solarized",
-      "abyss",
-      "tomorrowNightBlue",
-    ]),
-    default: "system" as const,
-    description: "Syntax highlighting theme for the code editor",
-    category: "editor",
-    enumLabels: {
-      system: "Follow system",
-      github: "GitHub",
-      vscode: "VS Code",
-      monokai: "Monokai",
-      solarized: "Solarized",
-      abyss: "Abyss",
-      tomorrowNightBlue: "Tomorrow Night Blue",
-    },
-  },
 } as const satisfies Record<string, SettingDefinition>;

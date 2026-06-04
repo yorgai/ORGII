@@ -1,19 +1,28 @@
 /**
  * Route Toolbar Types
  *
- * Defines per-route toolbar configuration used by the route toolbar
- * registry and GlobalToolbar. No atoms — the registry is a pure
+ * Defines per-route toolbar configuration used by route-local header actions.
+ * No atoms — the registry is a pure
  * synchronous lookup; runtime context comes from dedicated atoms
  * (e.g. integrationsCategoryAtom).
  */
-import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
-
-import type { ToolbarDropdownItem } from "@src/scaffold/GlobalToolbar/components/ToolbarDropdown/types";
+import type { LucideIcon, LucideProps } from "lucide-react";
+import type { ComponentType, ReactNode } from "react";
 
 // ============================================
 // Types
 // ============================================
+
+export type ToolbarDropdownIcon = LucideIcon | ComponentType<LucideProps>;
+
+export interface ToolbarDropdownItem {
+  id: string;
+  label: string;
+  icon: ToolbarDropdownIcon;
+  onClick: () => void;
+  isDanger?: boolean;
+  show?: boolean;
+}
 
 export interface RouteToolbarButton {
   /** Unique identifier for the button */

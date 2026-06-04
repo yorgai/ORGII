@@ -1,22 +1,17 @@
 /**
- * Background Color Pairs
+ * Background Color Slots
  *
- * Curated set of paired background colors. Each pair has a stable `id` and a
- * pair of hex values: `light` for light appearance mode, `dark` for dark
- * appearance mode. When the user switches modes, the active background color
- * swaps to the partner value of the same pair so the semantic name (e.g.
- * "Classic", "Ocean") stays consistent across themes.
- *
- * Source of truth for both the Background settings UI (preset grid + diagonal
- * split tile) and the resolved-color atom in the UI store.
+ * Preset background colors are semantic slots. The actual color value for each
+ * slot lives in the active public theme CSS file (`--bg-1` ... `--bg-N`) so
+ * switching Light / Dark / High Contrast preserves the chosen slot while the
+ * rendered color adapts to that theme.
  */
 
 export interface ColorPair {
   id: string;
   label: string;
   description: string;
-  light: string;
-  dark: string;
+  cssVar: `--bg-${number}`;
 }
 
 export const BACKGROUND_COLOR_PAIRS: ColorPair[] = [
@@ -24,134 +19,115 @@ export const BACKGROUND_COLOR_PAIRS: ColorPair[] = [
     id: "classic",
     label: "Classic",
     description: "Warm paper & ink",
-    light: "#F7F4EE",
-    dark: "#0B0B0F",
+    cssVar: "--bg-1",
   },
   {
     id: "graphite",
     label: "Graphite",
     description: "Neutral grays",
-    light: "#E8E8E8",
-    dark: "#2D2D2D",
+    cssVar: "--bg-2",
   },
   {
     id: "slate",
     label: "Slate",
     description: "Cool blue gray",
-    light: "#D4DBE2",
-    dark: "#3D4F5F",
+    cssVar: "--bg-3",
   },
   {
     id: "midnight",
     label: "Midnight",
     description: "Deep navy",
-    light: "#E2E4EE",
-    dark: "#1A1A2E",
+    cssVar: "--bg-4",
   },
   {
     id: "ocean",
     label: "Ocean",
     description: "Deep blue",
-    light: "#C8D8E8",
-    dark: "#1E3A5F",
+    cssVar: "--bg-5",
   },
   {
     id: "sky",
     label: "Sky",
     description: "Open sky",
-    light: "#DCE8F4",
-    dark: "#0F3460",
+    cssVar: "--bg-6",
   },
   {
     id: "indigo",
     label: "Indigo",
     description: "Twilight indigo",
-    light: "#DDD7EE",
-    dark: "#22264B",
+    cssVar: "--bg-7",
   },
   {
     id: "teal",
     label: "Teal",
     description: "Deep teal",
-    light: "#CCE2DF",
-    dark: "#0F4C5C",
+    cssVar: "--bg-8",
   },
   {
     id: "forest",
     label: "Forest",
     description: "Pine green",
-    light: "#D4E4DC",
-    dark: "#1A3C34",
+    cssVar: "--bg-9",
   },
   {
     id: "mint",
     label: "Mint",
     description: "Fresh mint",
-    light: "#C8DCC9",
-    dark: "#1F3A2E",
+    cssVar: "--bg-10",
   },
   {
     id: "sage",
     label: "Sage",
     description: "Muted sage",
-    light: "#D8DFCB",
-    dark: "#2E382A",
+    cssVar: "--bg-11",
   },
   {
     id: "lavender",
     label: "Lavender",
     description: "Soft purple",
-    light: "#DBC8DC",
-    dark: "#3D1F3D",
+    cssVar: "--bg-12",
   },
   {
     id: "plum",
     label: "Plum",
     description: "Rich plum",
-    light: "#E0CFDC",
-    dark: "#3A1B33",
+    cssVar: "--bg-13",
   },
   {
     id: "rose",
     label: "Rose",
     description: "Warm rose",
-    light: "#E5CFCC",
-    dark: "#4A1C2E",
+    cssVar: "--bg-14",
   },
   {
     id: "crimson",
     label: "Crimson",
     description: "Deep crimson",
-    light: "#EBD0CF",
-    dark: "#4A1518",
+    cssVar: "--bg-15",
   },
   {
     id: "peach",
     label: "Peach",
     description: "Soft peach",
-    light: "#E8C9A8",
-    dark: "#3A2418",
+    cssVar: "--bg-16",
   },
   {
     id: "amber",
     label: "Amber",
     description: "Warm amber",
-    light: "#EFD8B5",
-    dark: "#3A2A12",
+    cssVar: "--bg-17",
   },
   {
     id: "sand",
     label: "Sand",
     description: "Warm paper",
-    light: "#E2DED3",
-    dark: "#2C2618",
+    cssVar: "--bg-18",
   },
   {
     id: "coffee",
     label: "Coffee",
     description: "Roasted coffee",
-    light: "#E0D5C7",
-    dark: "#2A1F18",
+    cssVar: "--bg-19",
   },
 ];
 
@@ -160,9 +136,6 @@ export function getColorPairById(id: string | undefined): ColorPair | null {
   return BACKGROUND_COLOR_PAIRS.find((pair) => pair.id === id) ?? null;
 }
 
-export function resolveColorPair(
-  pair: ColorPair,
-  isDarkTheme: boolean
-): string {
-  return isDarkTheme ? pair.dark : pair.light;
+export function resolveColorPair(pair: ColorPair): string {
+  return `var(${pair.cssVar})`;
 }

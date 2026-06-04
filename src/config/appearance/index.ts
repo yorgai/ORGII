@@ -1,8 +1,6 @@
 export {
   GLOBAL_THEME_IDS,
-  BASE_EDITOR_THEME_IDS,
   type GlobalThemeId,
-  type BaseEditorThemeId,
   type ThemePrimaryColorPreset,
   type ThemeCssPath,
   type GlobalThemeDefinition,

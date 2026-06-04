@@ -25,13 +25,11 @@ import {
   lineNumbers,
 } from "@codemirror/view";
 import { EditorView } from "codemirror";
-import { useAtomValue } from "jotai";
 import React, { useEffect, useRef, useState } from "react";
 
 import { CustomScrollbar } from "@src/components/CustomScrollbar";
 import type { GitFileStatus } from "@src/config/gitStatus";
 import { useEditorAppearanceSettings } from "@src/hooks/settings";
-import { resolvedEditorThemeAtom } from "@src/store/ui/editorSettingsAtom";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import {
@@ -182,7 +180,6 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
   className = "",
 }) => {
   const { isDark } = useCurrentTheme();
-  const editorThemeName = useAtomValue(resolvedEditorThemeAtom);
   const appearanceSettings = useEditorAppearanceSettings();
   const isFullDeletion =
     changeType === "deleted" || (oldValue.length > 0 && newValue.length === 0);
@@ -224,7 +221,7 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
   const buildBaseExtensions = (): Extension[] => {
     const exts: Extension[] = [codeMirrorCspNonceExtension];
 
-    exts.push(getCodeMirrorTheme(isDark, editorThemeName));
+    exts.push(getCodeMirrorTheme(isDark));
 
     if (appearanceSettings.lineNumbers === "on") {
       exts.push(lineNumbers());
@@ -378,7 +375,6 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
     collapseUnchanged,
     autoHeight,
     isDark,
-    editorThemeName,
     filePath,
     language,
     appearanceSettings.lineNumbers,
@@ -473,7 +469,6 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
     collapseUnchanged,
     autoHeight,
     isDark,
-    editorThemeName,
     filePath,
     language,
     appearanceSettings.lineNumbers,

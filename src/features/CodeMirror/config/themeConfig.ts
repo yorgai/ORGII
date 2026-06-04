@@ -7,21 +7,7 @@
 import { Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 
-import type { EditorTheme } from "@src/store/ui/editorSettingsAtom";
-
-import {
-  abyss,
-  createGithubTheme,
-  githubDark,
-  githubLight,
-  monokaiDark,
-  monokaiLight,
-  solarizedDark,
-  solarizedLight,
-  tomorrowNightBlue,
-  vscodeDark,
-  vscodeLight,
-} from "../themes";
+import { createGithubTheme } from "../themes";
 
 // ============================================
 // Font Configuration
@@ -38,37 +24,10 @@ export const CODE_LINE_HEIGHT = "var(--cm-line-height)";
 // ============================================
 
 /**
- * Get a CodeMirror theme based on theme name and dark/light mode.
- *
- * @param isDark - Whether to use dark theme variant
- * @param themeName - Theme name: "github", "vscode", or "monokai"
- * @param dynamic - If true, reads CSS variables for GitHub theme (default: false)
+ * Get the app-theme-backed CodeMirror theme.
  */
-export function getCodeMirrorTheme(
-  isDark: boolean,
-  themeName: EditorTheme = "github",
-  dynamic = false
-) {
-  switch (themeName) {
-    case "vscode":
-      return isDark ? vscodeDark : vscodeLight;
-    case "monokai":
-      return isDark ? monokaiDark : monokaiLight;
-    case "solarized":
-      return isDark ? solarizedDark : solarizedLight;
-    case "abyss":
-      // Abyss is dark-only, use GitHub light for light mode
-      return isDark ? abyss : githubLight;
-    case "tomorrowNightBlue":
-      // Tomorrow Night Blue is dark-only, use GitHub light for light mode
-      return isDark ? tomorrowNightBlue : githubLight;
-    case "github":
-    default:
-      if (dynamic) {
-        return createGithubTheme(isDark);
-      }
-      return isDark ? githubDark : githubLight;
-  }
+export function getCodeMirrorTheme(isDark: boolean) {
+  return createGithubTheme(isDark);
 }
 
 // ============================================

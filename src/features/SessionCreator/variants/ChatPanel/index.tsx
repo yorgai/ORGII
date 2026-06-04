@@ -79,6 +79,7 @@ export interface SessionCreatorChatPanelProps {
   centerFullScreenContent?: boolean;
   className?: string;
   footerSlot?: React.ReactNode;
+  initialContent?: string;
   onRegionNoticeChange?: (notice: ChatPanelRegionNotice | null) => void;
   onSessionStart?: () => void;
   variant?: SessionCreatorChatPanelVariant;
@@ -124,6 +125,7 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
       centerFullScreenContent = false,
       className = "",
       footerSlot,
+      initialContent,
       onDraftSnapshotChange,
       onRegionNoticeChange,
       onSessionStart,
@@ -191,7 +193,12 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
       currentMode,
       filteredSlashItems,
       slashLoading,
-    } = useSessionCreator({ launchMode });
+    } = useSessionCreator({
+      initialContent,
+      launchMode,
+      persistDraft: !initialContent,
+      skipDraftLoading: Boolean(initialContent),
+    });
 
     const setCreatorState = useSetAtom(sessionCreatorStateAtom);
     const dispatchCategory = useAtomValue(dispatchCategoryAtom);
@@ -628,7 +635,7 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
           requestModelOpen={requestModelOpen}
           onModelOpenHandled={() => setRequestModelOpen(false)}
           shellClassName="session-creator-chat-panel-fullscreen-input-shell"
-          initialContent={initialRestoreText || undefined}
+          initialContent={initialRestoreText || initialContent || undefined}
           autoFocus={autoFocus}
           editorPlaceholder={
             batchStarterMode ? t("creator.batchStarterPlaceholder") : undefined

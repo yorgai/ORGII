@@ -47,7 +47,10 @@ import { useSessionLaunch } from "./useSessionLaunch";
 import { useSessionValidation } from "./useSessionValidation";
 
 export interface UseSessionCreatorOptions {
+  initialContent?: string;
   launchMode?: SessionCreatorLaunchMode;
+  skipDraftLoading?: boolean;
+  persistDraft?: boolean;
   /**
    * Synthetic slash items appended to the `/` menu in addition to the
    * backend-discovered items. Variants use this to surface variant-only
@@ -66,7 +69,14 @@ export interface UseSessionCreatorOptions {
 export function useSessionCreator(
   options: UseSessionCreatorOptions = {}
 ): UseSessionCreatorReturn {
-  const { launchMode, extraSlashItems, onSlashSelectIntercept } = options;
+  const {
+    initialContent,
+    launchMode,
+    skipDraftLoading = false,
+    persistDraft = true,
+    extraSlashItems,
+    onSlashSelectIntercept,
+  } = options;
   // ============================================
   // Refs
   // ============================================
@@ -158,9 +168,9 @@ export function useSessionCreator(
   // ============================================
 
   // `sessionSourceAtom` holds the SessionCreator's *divergence* from the
-  // global toolbar. `null` ≡ no divergence → mirror the toolbar. The only
-  // bridge back to the global atom is the explicit "also switch workspace?"
-  // confirmation in SessionInfoLine (which calls `selectRepo`).
+  // global repo selection. `null` ≡ no divergence → mirror that selection.
+  // The only bridge back to the global atom is the explicit "also switch
+  // workspace?" confirmation in SessionInfoLine (which calls `selectRepo`).
   const {
     selectedRepoId: globalRepoId,
     currentBranch: globalBranch,
@@ -174,9 +184,9 @@ export function useSessionCreator(
   const isMultiRoot = useAtomValue(isMultiRootWorkspaceAtom);
   const primaryFolder = useAtomValue(primaryFolderAtom);
 
-  // When the global toolbar repo changes (e.g. user picks a different repo
-  // from the toolbar pill), clear any session-specific divergence so the
-  // creator follows the new selection. We only clear when the stored draft
+  // When the global repo selection changes, clear any session-specific
+  // divergence so the creator follows the new selection. We only clear when
+  // the stored draft
   // points to a *different* repo — if it matches (e.g. handleRepoChange
   // just synced them), we keep the draft so the branch is preserved.
   const prevGlobalRepoIdRef = useRef(globalRepoId);
@@ -190,7 +200,7 @@ export function useSessionCreator(
   }, [globalRepoId, sessionSource, setSessionSource]);
 
   // `effectiveSource` is what launch + display both consume. When no
-  // divergence is stored, synthesize it live from the toolbar selection so
+  // divergence is stored, synthesize it live from the global repo selection so
   // the creator follows the workspace without needing a seed write.
   const effectiveSource = useMemo<SessionSource | null>(() => {
     if (sessionSource) return sessionSource;
@@ -257,7 +267,7 @@ export function useSessionCreator(
   // Local State
   // ============================================
 
-  const [editorContent, setEditorContent] = useState("");
+  const [editorContent, setEditorContent] = useState(initialContent ?? "");
   const [sessionName, setSessionName] = useState("");
 
   // ============================================
@@ -315,11 +325,12 @@ export function useSessionCreator(
     setEditorContent,
     setUploadedFiles,
     tiptapRef,
-    skipDraftLoading: hasListingParams,
+    skipDraftLoading: skipDraftLoading || hasListingParams,
+    persistDraft,
   });
 
   // Session Validation — validates the session-scoped draft, not the global
-  // toolbar. The user may pick a different repo than the active workspace.
+  // repo selection. The user may pick a different repo than the active workspace.
   const { validateSessionConfig } = useSessionValidation({
     effectiveRepoId: effectiveSource?.repoId ?? "",
     editorContent,
@@ -424,7 +435,7 @@ export function useSessionCreator(
     advancedConfig,
     setAdvancedConfig,
 
-    // Computed — draft overlaid on the global toolbar (see effectiveSource).
+    // Computed — draft overlaid on the global repo selection (see effectiveSource).
     effectiveSource,
     repos,
 

@@ -91,7 +91,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({
   }
 
   return (
-    <div className="flex min-h-[36px] w-full min-w-0 items-center gap-1 px-2 py-1">
+    <div className="flex min-h-8 w-full min-w-0 items-center gap-1 px-2 py-0.5">
       {label && (
         <span className="w-[72px] shrink-0 text-xs text-text-2">{label}</span>
       )}

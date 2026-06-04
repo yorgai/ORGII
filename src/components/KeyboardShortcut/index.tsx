@@ -8,7 +8,7 @@ import {
   Delete,
   Option,
 } from "lucide-react";
-import { memo } from "react";
+import { type ReactNode, memo } from "react";
 
 export const KEYBOARD_SHORTCUT_VARIANT = {
   default: "default",
@@ -27,12 +27,12 @@ export interface KeyboardShortcutProps {
 }
 
 export interface KeyboardShortcutTooltipRow {
-  label: string;
+  label: ReactNode;
   shortcut: string;
 }
 
 export interface KeyboardShortcutTooltipContentProps {
-  label?: string;
+  label?: ReactNode;
   shortcut?: string;
   rows?: KeyboardShortcutTooltipRow[];
   className?: string;

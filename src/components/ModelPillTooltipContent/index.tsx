@@ -7,10 +7,7 @@
 import React, { memo } from "react";
 
 import type { ModelType } from "@src/api/tauri/rpc/schemas/validation";
-import {
-  KEYBOARD_SHORTCUT_VARIANT,
-  KeyboardShortcut,
-} from "@src/components/KeyboardShortcut";
+import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
 import ModelSelectionBreadcrumb from "@src/components/ModelSelectionBreadcrumb";
 
 export interface ModelPillTooltipContentProps {
@@ -36,21 +33,20 @@ export const ModelPillTooltipContent: React.FC<ModelPillTooltipContentProps> =
       rawValue,
       shortcut,
     }) => (
-      <div className="flex items-center gap-3 whitespace-nowrap">
-        <ModelSelectionBreadcrumb
-          accountName={accountName}
-          modelLabel={modelLabel}
-          modelId={modelId}
-          modelType={modelType}
-          variantInfo={variantInfo}
-          thinking={thinking}
-          rawValue={rawValue}
-        />
-        <KeyboardShortcut
-          shortcut={shortcut}
-          variant={KEYBOARD_SHORTCUT_VARIANT.dropdown}
-        />
-      </div>
+      <KeyboardShortcutTooltipContent
+        label={
+          <ModelSelectionBreadcrumb
+            accountName={accountName}
+            modelLabel={modelLabel}
+            modelId={modelId}
+            modelType={modelType}
+            variantInfo={variantInfo}
+            thinking={thinking}
+            rawValue={rawValue}
+          />
+        }
+        shortcut={shortcut}
+      />
     )
   );
 

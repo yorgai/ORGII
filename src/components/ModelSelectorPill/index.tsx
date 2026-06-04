@@ -13,6 +13,7 @@ import { PILL_SM_ICON_SIZE } from "@src/components/CompoundPill/config";
 import ModelIcon from "@src/components/ModelIcon";
 import ModelPillTooltipContent from "@src/components/ModelPillTooltipContent";
 import SelectorPill from "@src/components/SelectorPill";
+import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { useModelPillLabel } from "@src/hooks/models";
 import {
   accountHasModel,
@@ -25,7 +26,6 @@ import { resolveModelVariantFields } from "@src/util/modelVariants";
 export interface ModelSelectorPillProps {
   selection: LastModelSelection | null | undefined;
   defaultLabel: string;
-  shortcut: string;
   active: boolean;
   onClick: () => void;
   className?: string;
@@ -90,7 +90,6 @@ const ModelSelectorPill = forwardRef<HTMLButtonElement, ModelSelectorPillProps>(
     {
       selection,
       defaultLabel,
-      shortcut,
       active,
       onClick,
       className,
@@ -187,7 +186,7 @@ const ModelSelectorPill = forwardRef<HTMLButtonElement, ModelSelectorPillProps>(
               displayParts.rawValue ? undefined : displayParts.variantInfo
             }
             thinking={displayParts.rawValue ? false : displayParts.thinking}
-            shortcut={shortcut}
+            shortcut={getShortcutKeys("open_model_selector")}
           />
         }
         tooltipFramed

@@ -28,6 +28,15 @@ export interface ProjectContentEditorRef {
   focusDescription: () => void;
 }
 
+export interface ProjectContentTitleInputProps {
+  title: string;
+  onTitleChange: (title: string) => void;
+  titlePlaceholder?: string;
+  autoFocusTitle?: boolean;
+  editable?: boolean;
+  titleActions?: ReactNode;
+}
+
 export interface ProjectContentEditorProps {
   title: string;
   onTitleChange: (title: string) => void;
@@ -52,6 +61,47 @@ export interface ProjectContentEditorProps {
   repoPath?: string | null;
   dataTestId?: string;
 }
+
+export const ProjectContentTitleInput = forwardRef<
+  HTMLInputElement,
+  ProjectContentTitleInputProps
+>(
+  (
+    {
+      title,
+      onTitleChange,
+      titlePlaceholder,
+      autoFocusTitle = false,
+      editable = true,
+      titleActions,
+    },
+    ref
+  ) => (
+    <div className="flex w-full min-w-0 items-start gap-3">
+      <Input
+        ref={ref}
+        type="text"
+        value={title}
+        onChange={onTitleChange}
+        placeholder={titlePlaceholder}
+        autoFocus={autoFocusTitle}
+        readOnly={!editable}
+        borderless
+        bgless
+        autoHeight
+        className="mb-1 min-w-0 flex-1"
+        inputClassName={`text-[22px] font-semibold text-text-2 ${PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS}`}
+      />
+      {titleActions && (
+        <div className="flex shrink-0 items-center gap-1 pt-0.5">
+          {titleActions}
+        </div>
+      )}
+    </div>
+  )
+);
+
+ProjectContentTitleInput.displayName = "ProjectContentTitleInput";
 
 const ProjectContentEditor = forwardRef<
   ProjectContentEditorRef,
@@ -189,27 +239,15 @@ const ProjectContentEditor = forwardRef<
         data-testid={dataTestId}
       >
         {titleVisible && (
-          <div className="flex w-full min-w-0 items-start gap-3">
-            <Input
-              ref={titleRef}
-              type="text"
-              value={title}
-              onChange={onTitleChange}
-              placeholder={titlePlaceholder}
-              autoFocus={autoFocusTitle}
-              readOnly={!editable}
-              borderless
-              bgless
-              autoHeight
-              className="mb-1 min-w-0 flex-1"
-              inputClassName={`text-[22px] font-semibold text-text-1 ${PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS}`}
-            />
-            {titleActions && (
-              <div className="flex shrink-0 items-center gap-1 pt-0.5">
-                {titleActions}
-              </div>
-            )}
-          </div>
+          <ProjectContentTitleInput
+            ref={titleRef}
+            title={title}
+            onTitleChange={onTitleChange}
+            titlePlaceholder={titlePlaceholder}
+            autoFocusTitle={autoFocusTitle}
+            editable={editable}
+            titleActions={titleActions}
+          />
         )}
 
         {showSummary && (

@@ -7,11 +7,11 @@
  * `general.globalLayoutMethod` — `"inset"`, `"full"`, or `"compact"`.
  *
  * 1. "inset" - Padded layout with full rounded corners
- *    - px-2 pb-2 with no top padding because MainApp has no global tab bar chrome.
+ *    - p-2 around the content panel
  *    - Always has rounded-page on all corners
  *
  * 2. "full" - Edge-to-edge layout that adapts to sidebar state
- *    - When sidebar visible: px-2 pb-2 with full rounded-page
+ *    - When sidebar visible: p-2 with full rounded-page
  *    - When sidebar hidden: no padding and edge-to-edge content
  *
  * 3. "compact" - Cursor Agent-style chrome
@@ -105,13 +105,16 @@ const MainAppShell: React.FC = () => {
     !sidebarIsForcedVisible;
   // Compact: edge-to-edge, no padding ever, flat surface.
   // Full edge mode fills the window when the sidebar is collapsed.
-  // Otherwise, content keeps horizontal and bottom padding with no tab-bar top gap.
+  // Otherwise, content keeps even padding on every side.
   const outerClassName = isCompact
-    ? "flex h-full w-full flex-col overflow-hidden"
+    ? "relative flex h-full w-full flex-col overflow-hidden"
     : isEdgeMode
-      ? "flex h-full w-full flex-col overflow-hidden"
-      : "flex h-full w-full flex-col overflow-hidden px-2 pb-2";
+      ? "relative flex h-full w-full flex-col overflow-hidden"
+      : "relative flex h-full w-full flex-col overflow-hidden p-2";
 
+  const shellDragStyle = !isCompact
+    ? ({ WebkitAppRegion: "drag" } as React.CSSProperties)
+    : undefined;
   const innerStyle =
     !isCompact && isEdgeMode
       ? {
@@ -121,6 +124,10 @@ const MainAppShell: React.FC = () => {
           borderTopLeftRadius: 0,
         }
       : undefined;
+  const innerPanelStyle = {
+    ...innerStyle,
+    WebkitAppRegion: "no-drag",
+  } as React.CSSProperties;
 
   // relative is needed for pages that use absolute positioning
   const innerClassName = `relative min-h-0 flex-1 overflow-hidden ${
@@ -128,8 +135,24 @@ const MainAppShell: React.FC = () => {
   }`;
 
   return (
-    <div className={outerClassName}>
-      <div className={innerClassName} style={innerStyle} ref={containerRef}>
+    <div
+      className={outerClassName}
+      data-tauri-drag-region={!isCompact || undefined}
+      style={shellDragStyle}
+    >
+      {!isCompact && (
+        <div
+          className="absolute inset-x-0 top-0 z-50 h-2"
+          data-tauri-drag-region
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+          aria-hidden
+        />
+      )}
+      <div
+        className={innerClassName}
+        style={innerPanelStyle}
+        ref={containerRef}
+      >
         <Suspense fallback={null}>
           <KeepAliveRouteOutlet
             max={12}
@@ -155,16 +178,30 @@ export default MainAppShell;
 export const ShellFallback: React.FC = () => {
   const globalLayoutMethod = useAtomValue(globalLayoutMethodAtom);
   const isCompact = globalLayoutMethod === "compact";
+  const shellDragStyle = !isCompact
+    ? ({ WebkitAppRegion: "drag" } as React.CSSProperties)
+    : undefined;
   return (
     <div
-      className={`flex h-full w-full flex-col overflow-hidden ${
-        isCompact ? "" : "px-2 pb-2"
+      className={`relative flex h-full w-full flex-col overflow-hidden ${
+        isCompact ? "" : "p-2"
       }`}
+      data-tauri-drag-region={!isCompact || undefined}
+      style={shellDragStyle}
     >
+      {!isCompact && (
+        <div
+          className="absolute inset-x-0 top-0 z-50 h-2"
+          data-tauri-drag-region
+          style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+          aria-hidden
+        />
+      )}
       <div
         className={`min-h-0 flex-1 overflow-hidden ${
           isCompact ? PAGE_PANEL_BG.flat : PAGE_PANEL_BG.rounded
         }`}
+        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       />
     </div>
   );

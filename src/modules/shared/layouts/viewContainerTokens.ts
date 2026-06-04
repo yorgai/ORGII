@@ -9,14 +9,12 @@ import type { CSSProperties } from "react";
 import { ROUTES } from "@src/config/routes";
 
 /**
- * Routes that intentionally bleed the wallpaper through chrome (toolbar,
- * tab bar, liquid-glass pills) even when the user has picked the compact
- * global layout. Each of these owns a hero canvas / illustration / centered
- * card on the background layer that the flat `bg-bg-2` toolbar strip would
- * visually bisect.
+ * Routes that intentionally bleed the wallpaper through chrome even when the
+ * user has picked the compact global layout. Each of these owns a hero canvas,
+ * illustration, or centered card on the background layer.
  *
- * Centralized so the toolbar, tab bar, and `LiquidGlassToolbar` agree on
- * the exception list — adding a new wallpaper route is a one-line change.
+ * Centralized so shared chrome agrees on the exception list — adding a new
+ * wallpaper route is a one-line change.
  */
 const WALLPAPER_ROUTE_PREFIXES: readonly string[] = [
   ROUTES.app.home.start.path,

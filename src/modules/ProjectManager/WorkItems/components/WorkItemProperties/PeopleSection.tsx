@@ -73,7 +73,7 @@ export function PeopleSection({
           className={
             fieldVariant === "pill"
               ? "relative flex min-h-7 min-w-0 max-w-[220px] items-center"
-              : "relative flex min-h-[36px] w-full items-center"
+              : "relative flex min-h-8 w-full items-center"
           }
         >
           <FieldRow

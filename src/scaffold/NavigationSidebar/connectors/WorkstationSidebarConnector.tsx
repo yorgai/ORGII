@@ -147,7 +147,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const chatPanelContentMode = useAtomValue(chatPanelContentModeAtom);
   const chatPanelCreateTarget = useAtomValue(chatPanelCreateTargetAtom);
   const chatPanelSelectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
-  const getStationChatVisible = useAtomValue(activeStationChatVisibleAtom);
   const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
   const setChatPanelCreateTarget = useSetAtom(chatPanelCreateTargetAtom);
   const setChatPanelSelectedWorkItem = useSetAtom(
@@ -506,7 +505,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
     [
       activateMyStationRouteForProjectsContent,
       getProjectsLoadMoreGroupId,
-      location.pathname,
       loadProjectsLinearOrgWorkItems,
       openProjectsLinearWorkItem,
       projectsLinearWorkItemMap,

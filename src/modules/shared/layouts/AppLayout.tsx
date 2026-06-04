@@ -2,7 +2,7 @@
  * AppLayout Component
  *
  * Consolidated shared layout for all Orgii pages.
- * Handles sidebar, toolbar, content, and optional chat panel.
+ * Handles sidebar, content, and optional chat panel.
  *
  * Chat panel rendering uses a single code path for both layout methods:
  * - "inset":   ChatPanel uses position:absolute + padding offset (rounded corners)
@@ -12,12 +12,10 @@
  *              regardless of sidebar state (Cursor Agent-style chrome)
  *
  * Performance Architecture:
- * - Toolbar: STABLE layer (contains WebGL components)
  * - Sidebar: DYNAMIC (changes per route via prop)
  * - Content: DYNAMIC (via children)
  * - ChatPanel: ALWAYS mounted (hidden via CSS when inactive to preserve state)
  */
-import GlobalToolbar from "@/src/scaffold/GlobalToolbar";
 import { HoverSidebar } from "@/src/scaffold/NavigationSidebar";
 import { useAtomValue } from "jotai";
 import React, { memo, useMemo } from "react";
@@ -332,29 +330,8 @@ const AppLayoutComponent: React.FC<AppLayoutProps> = ({
         <HoverSidebar.Container>{floatingSidebar}</HoverSidebar.Container>
       )}
 
-      {/* 
-        Main column: Toolbar + Content
-        IMPORTANT: GlobalToolbar is OUTSIDE MainContentArea because:
-        - MainContentArea has `contain: layout` which creates a new containing block
-        - TrafficLights in GlobalToolbar use `fixed` positioning relative to viewport
-        - If inside containment, fixed positioning becomes relative to container
-      */}
       <div className="flex h-full min-w-0 flex-1 flex-col">
         <ActionSystemProvider repoPath={repoPath}>
-          <GlobalToolbar />
-
-          {/* Compact-layout WorkStation gets a 1px hairline between the
-              toolbar chrome and the content. `chatLayout === "compact"`
-              already implies WorkStation (see `modules/index.tsx` — non-WS
-              callers leave the prop on its "inset" default), so this stays
-              scoped to the WorkStation surface without re-checking the route. */}
-          {isCompact && (
-            <div
-              aria-hidden
-              className="h-px w-full flex-shrink-0 border-t border-border-2"
-            />
-          )}
-
           <MainContentArea className="relative flex-1">
             {contentArea}
           </MainContentArea>

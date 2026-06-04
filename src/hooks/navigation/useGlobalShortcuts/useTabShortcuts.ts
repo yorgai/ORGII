@@ -85,8 +85,7 @@ export function useTabShortcuts() {
     setModelSelector({ isOpen: true });
   }, [setModelSelector]);
 
-  // Handle Command+. — open the global workspace (repo) selector palette,
-  // mirroring the GlobalToolbar repo-pill click.
+  // Handle Command+. — open the global workspace (repo) selector palette.
   const handleOpenWorkspaceSelector = useCallback(() => {
     setRepoSelectorOpen(true);
   }, [setRepoSelectorOpen]);
