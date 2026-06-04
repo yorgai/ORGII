@@ -198,10 +198,6 @@
   "background": {
     "title": "背景",
     "colors": "カラー",
-    "liquidGlass": "Liquid Glass",
-    "liquidGlass_regular": "薄め",
-    "liquidGlass_medium": "普通",
-    "liquidGlass_thick": "厚め",
     "preset": "プリセット",
     "custom": "カスタム",
     "pickCustomColor": "カスタムカラーを選択",

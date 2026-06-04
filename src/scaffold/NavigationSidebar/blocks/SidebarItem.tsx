@@ -8,10 +8,6 @@ import { Pin, PinOff, X } from "lucide-react";
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { LIQUID_GLASS_HOVER } from "@src/components/LiquidGlass/hoverConfig";
-import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
-import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
-
 import type { SidebarItemProps } from "../types";
 import { renderSidebarIcon } from "../utils/renderIcon";
 
@@ -31,7 +27,6 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   theme,
   className = "",
 }) => {
-  const { isDark } = useCurrentTheme();
   const { t } = useTranslation();
 
   const handleClick = () => {
@@ -67,26 +62,18 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
         : "font-medium text-text-1"
       : "text-text-1";
 
-  // Active state classes - text color only, bg handled via inline style
   const activeTextClasses = isActive
     ? isPrivateTab
-      ? "text-warning-6"
-      : "text-text-1"
-    : "text-text-1";
-
-  // Use same glass hover background for selected state (matches hover)
-  const activeBackground = isActive
-    ? isDark
-      ? LIQUID_GLASS_HOVER.dark
-      : LIQUID_GLASS_HOVER.light
-    : undefined;
+      ? "bg-bg-2 text-warning-6"
+      : "bg-bg-2 text-text-1"
+    : theme
+      ? "text-text-1"
+      : "text-text-1 hover:bg-fill-2";
 
   return (
-    <LiquidGlassHoverItem
-      className={`group flex h-[36px] items-center justify-between rounded-lg px-2 ${activeTextClasses} ${className}`}
-      hoverEnabled={!isActive && !theme}
+    <div
+      className={`group flex h-[36px] cursor-pointer items-center justify-between rounded-lg px-2 transition-colors duration-150 ${activeTextClasses} ${className}`}
       onClick={handleClick}
-      style={activeBackground ? { background: activeBackground } : undefined}
     >
       <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden">
         {/* Icon or Favicon */}
@@ -183,7 +170,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
           )}
         </div>
       </div>
-    </LiquidGlassHoverItem>
+    </div>
   );
 };
 

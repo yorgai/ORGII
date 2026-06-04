@@ -15,9 +15,12 @@ import {
   closeOtherTabs as closeOtherTabsMutation,
   closeSavedTabs as closeSavedTabsMutation,
   closeTab as closeTabMutation,
+  mainPaneActiveTabIdAtom,
+  mainPaneTabsAtom,
   openTab as openTabMutation,
   reorderTabs as reorderTabsMutation,
   switchTab as switchTabMutation,
+  updateTabData as updateTabDataMutation,
   workstationLayoutAtom,
 } from "@src/store/workstation/tabs";
 
@@ -67,11 +70,9 @@ const EMPTY_PANE_STATE: PanelState = { tabs: [], activeTabId: null };
 // ============================================
 
 export function useWorkStationTabs(): UseWorkStationTabsReturn {
-  const layout = useAtomValue(workstationLayoutAtom);
+  const tabs = useAtomValue(mainPaneTabsAtom);
+  const activeTabId = useAtomValue(mainPaneActiveTabIdAtom);
   const setLayout = useSetAtom(workstationLayoutAtom);
-
-  const paneState: PanelState = layout?.mainPane ?? EMPTY_PANE_STATE;
-  const { tabs, activeTabId } = paneState;
 
   const activeTab = useMemo(
     () => tabs.find((tab) => tab.id === activeTabId) ?? null,
@@ -80,10 +81,15 @@ export function useWorkStationTabs(): UseWorkStationTabsReturn {
 
   const updatePane = useCallback(
     (updater: (state: PanelState) => PanelState) => {
-      setLayout((prev: WorkStationLayoutState) => ({
-        ...prev,
-        mainPane: updater(prev?.mainPane ?? EMPTY_PANE_STATE),
-      }));
+      setLayout((prev: WorkStationLayoutState) => {
+        const currentPane = prev?.mainPane ?? EMPTY_PANE_STATE;
+        const nextPane = updater(currentPane);
+        if (nextPane === currentPane) return prev;
+        return {
+          ...prev,
+          mainPane: nextPane,
+        };
+      });
     },
     [setLayout]
   );
@@ -121,18 +127,17 @@ export function useWorkStationTabs(): UseWorkStationTabsReturn {
   );
 
   const closeAllTabs = useCallback(
-    () => updatePane(() => ({ tabs: [], activeTabId: null })),
+    () =>
+      updatePane((state) => {
+        if (state.tabs.length === 0 && state.activeTabId === null) return state;
+        return { tabs: [], activeTabId: null };
+      }),
     [updatePane]
   );
 
   const updateTabData = useCallback(
     (tabId: string, data: Partial<Record<string, unknown>>) => {
-      updatePane((state) => ({
-        ...state,
-        tabs: state.tabs.map((tab: WorkStationTab) =>
-          tab.id === tabId ? { ...tab, data: { ...tab.data, ...data } } : tab
-        ),
-      }));
+      updatePane((state) => updateTabDataMutation(state, tabId, data));
     },
     [updatePane]
   );
@@ -142,13 +147,17 @@ export function useWorkStationTabs(): UseWorkStationTabsReturn {
       updatePane((state) => {
         const target = state.tabs.find((tab) => tab.id === tabId);
         if (!target) return state;
-        if (target.title === meta.title && target.icon === meta.icon) {
+        const nextTitle = meta.title ?? target.title;
+        const nextIcon = meta.icon ?? target.icon;
+        if (target.title === nextTitle && target.icon === nextIcon) {
           return state;
         }
         return {
           ...state,
           tabs: state.tabs.map((tab: WorkStationTab) =>
-            tab.id === tabId ? { ...tab, ...meta } : tab
+            tab.id === tabId
+              ? { ...tab, title: nextTitle, icon: nextIcon }
+              : tab
           ),
         };
       });
@@ -158,12 +167,18 @@ export function useWorkStationTabs(): UseWorkStationTabsReturn {
 
   const setTabUnsaved = useCallback(
     (tabId: string, hasUnsavedChanges: boolean) => {
-      updatePane((state) => ({
-        ...state,
-        tabs: state.tabs.map((tab: WorkStationTab) =>
-          tab.id === tabId ? { ...tab, hasUnsavedChanges } : tab
-        ),
-      }));
+      updatePane((state) => {
+        const target = state.tabs.find((tab) => tab.id === tabId);
+        if (!target || target.hasUnsavedChanges === hasUnsavedChanges) {
+          return state;
+        }
+        return {
+          ...state,
+          tabs: state.tabs.map((tab: WorkStationTab) =>
+            tab.id === tabId ? { ...tab, hasUnsavedChanges } : tab
+          ),
+        };
+      });
     },
     [updatePane]
   );

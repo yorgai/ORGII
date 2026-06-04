@@ -175,6 +175,7 @@ export const ContentView: React.FC<ContentViewProps> = ({
             <Markdown
               textContent={skillParsed ? skillParsed.body : localContent}
               useChatCodeBlock
+              skipPreprocess
             />
           </div>
         ) : isPreviewMode && isHtml ? (

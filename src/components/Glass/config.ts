@@ -1,5 +1,5 @@
 // ============================================
-// LiquidGlass Material Configuration
+// Glass Material Configuration
 // Based on Apple's macOS material design system
 // ============================================
 

@@ -22,7 +22,7 @@ use objc2::msg_send;
 #[cfg(target_os = "macos")]
 use objc2::runtime::{AnyClass, AnyObject};
 
-use super::{create_window, CreateWindowOptions};
+use super::{CreateWindowOptions, create_window};
 
 /// Set the native zoom factor for the main WebView and inline child WebViews.
 #[tauri::command]
@@ -69,7 +69,7 @@ pub async fn create_app_window(app: AppHandle, options: CreateWindowOptions) -> 
 /// - **Hot path** — window already exists: `show()` + optional reposition +
 ///   `set_focus()` (when `options.focus` is true). O(1), no webview spin-up.
 /// - **Cold path** — window does not exist: behaves exactly like
-///   `create_app_window`. On macOS applies Liquid Glass + traffic lights.
+///   `create_app_window`. On macOS applies Glass + traffic lights.
 #[tauri::command]
 pub async fn show_or_create_app_window(
     app: AppHandle,
@@ -145,7 +145,7 @@ pub async fn set_window_vibrancy(
         use base64::Engine as _;
 
         if enabled {
-            // Restore Liquid Glass (NSGlassEffectView on macOS 26+, NSVisualEffectView fallback)
+            // Restore Glass (NSGlassEffectView on macOS 26+, NSVisualEffectView fallback)
             let config = LiquidGlassConfig {
                 corner_radius: 26.0,
                 variant: GlassMaterialVariant::Sidebar,
@@ -205,7 +205,7 @@ pub async fn set_window_vibrancy(
     Ok(())
 }
 
-/// Update the Liquid Glass tint to reflect the chosen thickness level.
+/// Update the Glass tint to reflect the chosen thickness level.
 ///
 /// - `"regular"` → subtle 9% white tint (most transparent)
 /// - `"medium"`  → 19% white tint
@@ -213,7 +213,7 @@ pub async fn set_window_vibrancy(
 ///
 /// Safe no-op on non-macOS platforms.
 #[tauri::command]
-pub async fn set_liquid_glass_thickness(app: AppHandle, level: String) -> Result<(), String> {
+pub async fn set_glass_thickness(app: AppHandle, level: String) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
         let window = app
@@ -236,7 +236,7 @@ pub async fn set_liquid_glass_thickness(app: AppHandle, level: String) -> Result
             .set_effect(&window, config)
             .map_err(|e| e.to_string())?;
 
-        tracing::info!("[LiquidGlass] thickness set to '{}'", level);
+        tracing::info!("[Glass] thickness set to '{}'", level);
     }
     #[cfg(not(target_os = "macos"))]
     let _ = level;

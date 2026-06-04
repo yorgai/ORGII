@@ -14,6 +14,7 @@ import { useEffect, useMemo } from "react";
 
 import {
   type WorkStationTab,
+  mainPaneTabsAtom,
   workstationLayoutAtom,
 } from "@src/store/workstation/tabs";
 
@@ -35,7 +36,7 @@ export function usePinnedTabs({
   pinnedTabs,
   initialActiveTabId,
 }: UsePinnedTabsOptions) {
-  const layout = useAtomValue(workstationLayoutAtom);
+  const tabs = useAtomValue(mainPaneTabsAtom);
   const setLayout = useSetAtom(workstationLayoutAtom);
 
   const pinnedKey = useMemo(
@@ -44,14 +45,13 @@ export function usePinnedTabs({
   );
 
   useEffect(() => {
-    if (!enabled || !layout?.mainPane || pinnedTabs.length === 0) return;
+    if (!enabled || pinnedTabs.length === 0) return;
 
     const pinnedIdSet = new Set(pinnedTabs.map((tab) => tab.id));
-    const pane = layout.mainPane;
 
     const existingPinnedById = new Map<string, WorkStationTab>();
     const nonPinned: WorkStationTab[] = [];
-    for (const tab of pane.tabs) {
+    for (const tab of tabs) {
       if (pinnedIdSet.has(tab.id)) {
         existingPinnedById.set(tab.id, tab);
       } else {
@@ -74,9 +74,7 @@ export function usePinnedTabs({
       return { ...existing, ...latest, id: existing.id };
     });
 
-    const currentPinnedSlice = pane.tabs.filter((tab) =>
-      pinnedIdSet.has(tab.id)
-    );
+    const currentPinnedSlice = tabs.filter((tab) => pinnedIdSet.has(tab.id));
     const orderChanged =
       currentPinnedSlice.length !== desiredPinned.length ||
       currentPinnedSlice.some(
@@ -99,5 +97,5 @@ export function usePinnedTabs({
           null,
       },
     }));
-  }, [enabled, layout, pinnedTabs, pinnedKey, initialActiveTabId, setLayout]);
+  }, [enabled, initialActiveTabId, pinnedKey, pinnedTabs, setLayout, tabs]);
 }

@@ -198,10 +198,6 @@
   "background": {
     "title": "Hintergrund",
     "colors": "Farben",
-    "liquidGlass": "Liquid Glass",
-    "liquidGlass_regular": "Dünn",
-    "liquidGlass_medium": "Mittel",
-    "liquidGlass_thick": "Dick",
     "preset": "Voreinstellung",
     "custom": "Benutzerdefiniert",
     "pickCustomColor": "Benutzerdefinierte Farbe auswählen",

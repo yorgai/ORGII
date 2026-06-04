@@ -44,7 +44,7 @@ import {
 } from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
 import { CollapsedSidebarButton } from "@src/scaffold/NavigationSidebar/CollapsedSidebarButton";
-import { gitFileStatusMapAtom } from "@src/store/git";
+import { type GitFileInfo, gitFileStatusMapAtom } from "@src/store/git";
 import { tabScrollRevealAtom } from "@src/store/workstation/tabs";
 
 import { NoDragRegion } from "../NoDragRegion";
@@ -112,6 +112,74 @@ export interface TabBarProps {
   collapseInactiveTabLabelsOnOverflow?: boolean;
   dataTourTarget?: string;
 }
+
+type SortableTabListProps = {
+  tabs: WorkStationTab[];
+  tabIds: string[];
+  activeTabId: string | null;
+  tabGitInfoMap: Map<string, GitFileInfo>;
+  hideInactiveTabLabels: boolean;
+  onTabClick: (tabId: string) => void;
+  onCloseClick: (event: React.MouseEvent, tabId: string) => void;
+  onContextMenu: (event: React.MouseEvent, tab: WorkStationTab) => void;
+};
+
+const SortableTabList: React.FC<SortableTabListProps> = memo(
+  ({
+    tabs,
+    tabIds,
+    activeTabId,
+    tabGitInfoMap,
+    hideInactiveTabLabels,
+    onTabClick,
+    onCloseClick,
+    onContextMenu,
+  }) => (
+    <div className="flex min-w-max shrink-0 items-center" role="tablist">
+      <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
+        <span
+          className={`${TAB_PAIR_SEPARATOR_SLOT_CLASS} bg-transparent`}
+          aria-hidden
+        />
+        {tabs.map((tab, i) => {
+          const next = tabs[i + 1];
+          const separatorVisible =
+            !!next && tab.id !== activeTabId && next.id !== activeTabId;
+
+          return (
+            <Fragment key={tab.id}>
+              <NoDragRegion>
+                <SortableTab
+                  tab={tab}
+                  isActive={tab.id === activeTabId}
+                  isDraggable={!tab.pinned}
+                  onTabClick={onTabClick}
+                  onCloseClick={onCloseClick}
+                  onContextMenu={onContextMenu}
+                  gitInfo={tabGitInfoMap.get(tab.id)}
+                  hideLabel={
+                    tab.pinned ||
+                    (hideInactiveTabLabels && tab.id !== activeTabId)
+                  }
+                />
+              </NoDragRegion>
+              {next && (
+                <span
+                  className={`${TAB_PAIR_SEPARATOR_SLOT_CLASS} ${
+                    separatorVisible ? "bg-border-2" : "bg-transparent"
+                  }`}
+                  aria-hidden
+                />
+              )}
+            </Fragment>
+          );
+        })}
+      </SortableContext>
+    </div>
+  )
+);
+
+SortableTabList.displayName = "SortableTabList";
 
 // ============================================
 // Main Component
@@ -213,6 +281,7 @@ export const TabBar: React.FC<TabBarProps> = memo(
 
     const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
     const noopTabAction = useCallback((_tabId: string) => {}, []);
+    const noopAction = useCallback(() => {}, []);
 
     const hasTabStrip = (tabs && tabs.length > 0) || Boolean(tabRowPrefix);
     const hasTabs = tabs && tabs.length > 0;
@@ -279,58 +348,18 @@ export const TabBar: React.FC<TabBarProps> = memo(
                 onDragEnd={handleDragEnd}
                 onDragCancel={handleDragCancel}
               >
-                <div
-                  className="flex min-w-max shrink-0 items-center"
-                  role="tablist"
-                >
-                  <SortableContext
-                    items={tabIds}
-                    strategy={horizontalListSortingStrategy}
-                  >
-                    <span
-                      className={`${TAB_PAIR_SEPARATOR_SLOT_CLASS} bg-transparent`}
-                      aria-hidden
-                    />
-                    {tabs.map((tab, i) => {
-                      const next = tabs[i + 1];
-                      const separatorVisible =
-                        !!next &&
-                        tab.id !== activeTabId &&
-                        next.id !== activeTabId;
-                      return (
-                        <Fragment key={tab.id}>
-                          <NoDragRegion>
-                            <SortableTab
-                              tab={tab}
-                              isActive={tab.id === activeTabId}
-                              isDraggable={!tab.pinned}
-                              onTabClick={handleTabClick}
-                              onCloseClick={handleCloseClick}
-                              onContextMenu={handleContextMenu}
-                              gitInfo={tabGitInfoMap.get(tab.id)}
-                              hideLabel={
-                                tab.pinned ||
-                                (collapseInactiveTabLabelsOnOverflow &&
-                                  hideInactiveTabLabels &&
-                                  tab.id !== activeTabId)
-                              }
-                            />
-                          </NoDragRegion>
-                          {next && (
-                            <span
-                              className={`${TAB_PAIR_SEPARATOR_SLOT_CLASS} ${
-                                separatorVisible
-                                  ? "bg-border-2"
-                                  : "bg-transparent"
-                              }`}
-                              aria-hidden
-                            />
-                          )}
-                        </Fragment>
-                      );
-                    })}
-                  </SortableContext>
-                </div>
+                <SortableTabList
+                  tabs={tabs}
+                  tabIds={tabIds}
+                  activeTabId={activeTabId}
+                  tabGitInfoMap={tabGitInfoMap}
+                  hideInactiveTabLabels={
+                    collapseInactiveTabLabelsOnOverflow && hideInactiveTabLabels
+                  }
+                  onTabClick={handleTabClick}
+                  onCloseClick={handleCloseClick}
+                  onContextMenu={handleContextMenu}
+                />
 
                 {createPortal(
                   <DragOverlay dropAnimation={null}>
@@ -380,7 +409,7 @@ export const TabBar: React.FC<TabBarProps> = memo(
             onClose={handleCloseContextMenu}
             onCloseTab={onTabClose}
             onCloseOtherTabs={onCloseOtherTabs ?? noopTabAction}
-            onCloseSavedTabs={onCloseSavedTabs ?? noopTabAction}
+            onCloseSavedTabs={onCloseSavedTabs ?? noopAction}
             dispatch={dispatch}
           />
         )}

@@ -41,7 +41,7 @@ export const ColorSection: React.FC<ColorSectionProps> = ({
   const { t } = useTranslation(translationNamespace);
 
   const activeCustomHex =
-    !config.liquidGlass &&
+    !config.glass &&
     !config.backgroundColorId &&
     typeof config.backgroundColor === "string"
       ? normalizeHexColor(config.backgroundColor)

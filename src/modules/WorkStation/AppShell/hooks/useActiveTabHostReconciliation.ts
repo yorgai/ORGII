@@ -26,7 +26,12 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect } from "react";
 
-import { dockFilterAtom, workstationLayoutAtom } from "@src/store/workstation";
+import {
+  dockFilterAtom,
+  mainPaneActiveTabIdAtom,
+  mainPaneTabsAtom,
+  workstationLayoutAtom,
+} from "@src/store/workstation";
 import {
   type LegacyPeekHost,
   tabToLegacyHost,
@@ -47,26 +52,22 @@ export function useActiveTabHostReconciliation(
   effectiveHost: LegacyPeekHost | null
 ): void {
   const dockFilter = useAtomValue(dockFilterAtom);
-  const layout = useAtomValue(workstationLayoutAtom);
+  const tabs = useAtomValue(mainPaneTabsAtom);
+  const activeTabId = useAtomValue(mainPaneActiveTabIdAtom);
   const setLayout = useSetAtom(workstationLayoutAtom);
 
   useEffect(() => {
-    if (!effectiveHost || dockFilter === "all") return;
-    const pane = layout?.mainPane;
-    if (!pane || pane.tabs.length === 0) return;
+    if (!effectiveHost || dockFilter === "all" || tabs.length === 0) return;
 
-    const activeTab =
-      pane.tabs.find((tab) => tab.id === pane.activeTabId) ?? null;
+    const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
     const activeHost = activeTab ? tabToLegacyHost(activeTab) : null;
     if (activeHost === effectiveHost) return;
 
     const preferredType = PREFERRED_BLANK_TAB_TYPE_BY_HOST[effectiveHost];
     const target =
-      (preferredType
-        ? pane.tabs.find((tab) => tab.type === preferredType)
-        : null) ??
-      pane.tabs.find((tab) => tabToLegacyHost(tab) === effectiveHost);
-    if (!target || target.id === pane.activeTabId) return;
+      (preferredType ? tabs.find((tab) => tab.type === preferredType) : null) ??
+      tabs.find((tab) => tabToLegacyHost(tab) === effectiveHost);
+    if (!target || target.id === activeTabId) return;
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLayout((prev) => {
@@ -77,5 +78,5 @@ export function useActiveTabHostReconciliation(
         mainPane: { ...prev.mainPane, activeTabId: target.id },
       };
     });
-  }, [dockFilter, effectiveHost, layout, setLayout]);
+  }, [activeTabId, dockFilter, effectiveHost, setLayout, tabs]);
 }

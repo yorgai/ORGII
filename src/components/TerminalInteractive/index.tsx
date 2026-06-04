@@ -11,7 +11,7 @@
  * deps, which causes useTerminalXtermMount to destroy and recreate the
  * terminal on every parent re-render — producing the xterm renderer crash
  * ("this._renderer.value.dimensions") and cascading WebGL context exhaustion
- * that breaks the LiquidGlass toolbar.
+ * that breaks the glass toolbar.
  *
  * History: reverted extraction in 2eb32a6c7 (Mar 2026) after it broke
  * terminal rendering and glass styles within hours.

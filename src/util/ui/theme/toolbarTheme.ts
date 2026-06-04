@@ -16,7 +16,7 @@
  * This is NOT about individual text colors - it's about switching the entire
  * theme context for that region.
  */
-import { getMaterialConfig } from "@src/components/LiquidGlass/config";
+import { getMaterialConfig } from "@src/components/Glass/config";
 
 import type { GlassMaterial } from "./glassMaterial/types";
 import { getRelativeLuminance } from "./luminance";

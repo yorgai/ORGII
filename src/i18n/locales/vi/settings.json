@@ -198,10 +198,6 @@
   "background": {
     "title": "Hình nền",
     "colors": "Màu sắc",
-    "liquidGlass": "Liquid Glass",
-    "liquidGlass_regular": "Mỏng",
-    "liquidGlass_medium": "Vừa",
-    "liquidGlass_thick": "Dày",
     "preset": "Cài sẵn",
     "custom": "Tùy chỉnh",
     "pickCustomColor": "Chọn màu tùy chỉnh",

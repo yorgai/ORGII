@@ -1,7 +1,7 @@
 /**
  * SpotlightShellChrome
  *
- * Low-level chrome for SpotlightShell: LiquidGlass panel + optional portal +
+ * Low-level chrome for SpotlightShell: Glass panel + optional portal +
  * backdrop + sidebar-aware centering + footer slot beneath the panel.
  *
  * This is a direct merge of the previous SelectorContainer + SpotlightPortal
@@ -18,8 +18,8 @@ import React, {
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 
-import LiquidGlass from "@src/components/LiquidGlass";
-import type { MaterialThickness } from "@src/components/LiquidGlass/config";
+import Glass from "@src/components/Glass";
+import type { MaterialThickness } from "@src/components/Glass/config";
 import { hasSidebar } from "@src/config/sidebarRegistry";
 import { useOverlayLayer } from "@src/store/ui/overlayLayerAtom";
 import {
@@ -131,7 +131,7 @@ export const SpotlightShellChrome: React.FC<SpotlightShellChromeProps> = ({
 
   const panel = (
     <div ref={inputHostRef}>
-      <LiquidGlass
+      <Glass
         material={material}
         className={SPOTLIGHT_GLASS_PANEL_CLASS}
         style={{
@@ -143,7 +143,7 @@ export const SpotlightShellChrome: React.FC<SpotlightShellChromeProps> = ({
         onClick={handlePanelClick}
       >
         {children}
-      </LiquidGlass>
+      </Glass>
     </div>
   );
 

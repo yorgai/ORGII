@@ -254,7 +254,7 @@ const PolicyGroupTable: React.FC<PolicyGroupTableProps> = ({
                     return (
                       <div className="scrollbar-overlay scrollbar-gutter-stable max-h-[400px] min-w-0 overflow-x-auto overflow-y-auto rounded-lg bg-bg-2 p-4">
                         {content.trim() ? (
-                          <Markdown textContent={content} />
+                          <Markdown textContent={content} skipPreprocess />
                         ) : (
                           <span className="text-[13px] text-text-3">
                             {t("agentOrgs.noMarkdownContent")}

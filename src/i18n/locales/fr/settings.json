@@ -198,10 +198,6 @@
   "background": {
     "title": "Arrière-plan",
     "colors": "Couleurs",
-    "liquidGlass": "Liquid Glass",
-    "liquidGlass_regular": "Légère",
-    "liquidGlass_medium": "Moyenne",
-    "liquidGlass_thick": "Épaisse",
     "preset": "Prédéfini",
     "custom": "Personnalisé",
     "pickCustomColor": "Choisir une couleur personnalisée",

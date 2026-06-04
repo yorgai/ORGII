@@ -33,8 +33,11 @@ export { FILE_TAB_TYPES, TOOL_TAB_TYPES } from "./types";
 export {
   workstationLayoutAtom,
   mainPaneStateAtom,
+  mainPaneTabsAtom,
+  mainPaneActiveTabIdAtom,
   activeWorkStationTabAtom,
   activeWorkStationFilePathAtom,
+  openEditorFilePathsAtom,
   tabScrollRevealAtom,
   requestTabScrollRevealAtom,
 } from "./atoms";

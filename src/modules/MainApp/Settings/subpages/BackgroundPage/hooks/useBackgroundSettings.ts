@@ -31,7 +31,7 @@ import {
 } from "@src/store";
 import type { BackgroundConfig } from "@src/store/ui/backgroundConfigAtom";
 import { getStorageInfo } from "@src/util/core/storage/backgroundImage";
-import { setLiquidGlassThickness } from "@src/util/platform/ipcRenderer";
+import { setGlassThickness } from "@src/util/platform/ipcRenderer";
 import { prewarmColor } from "@src/util/ui/theme/glassMaterial";
 import { preloadThemeCss, swapThemeCss } from "@src/util/ui/theme/swapThemeCss";
 import { showThemeTransitionCover } from "@src/util/ui/theme/themeTransitionCover";
@@ -195,12 +195,12 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
   }, [config, migrateImages, setConfig]);
 
   // Sync the Rust tint to whatever level the stored config has.
-  // setLiquidGlassThickness is idempotent, so re-firing on changes is fine.
+  // setGlassThickness is idempotent, so re-firing on changes is fine.
   useEffect(() => {
-    if (config.liquidGlass) {
-      setLiquidGlassThickness(config.liquidGlass);
+    if (config.glass) {
+      setGlassThickness(config.glass);
     }
-  }, [config.liquidGlass]);
+  }, [config.glass]);
 
   // Warm the browser's stylesheet cache for every theme variant the moment
   // the user lands on the background page. The actual swap on click then
@@ -258,7 +258,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
         selectedImageId: imageId,
         backgroundColor: undefined,
         backgroundColorId: undefined,
-        liquidGlass: undefined,
+        glass: undefined,
       });
     },
     [config, setConfigWithUndo]
@@ -274,7 +274,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
         selectedImageId: undefined,
         backgroundColor: resolveColorPair(pair),
         backgroundColorId: pair.id,
-        liquidGlass: undefined,
+        glass: undefined,
       });
     },
     [config, setConfigWithUndo]
@@ -287,7 +287,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
       setConfigWithUndo({
         ...config,
         animation: newAnimation,
-        liquidGlass: undefined,
+        glass: undefined,
       });
     },
     [config, setConfigWithUndo]
@@ -311,7 +311,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
         selectedImageId: undefined,
         backgroundColor: normalized,
         backgroundColorId: undefined,
-        liquidGlass: undefined,
+        glass: undefined,
       });
     },
     [config, setConfigWithUndo]
@@ -344,7 +344,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
         selectedImageId: undefined,
         backgroundColor: normalized,
         backgroundColorId: undefined,
-        liquidGlass: undefined,
+        glass: undefined,
       });
     },
     [config, setConfigWithUndo, t]
@@ -360,9 +360,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
         (entry) => normalizeHexColor(entry) !== normalizedRemove
       );
       const activeHex =
-        config.backgroundColor &&
-        !config.backgroundColorId &&
-        !config.liquidGlass
+        config.backgroundColor && !config.backgroundColorId && !config.glass
           ? normalizeHexColor(config.backgroundColor)
           : null;
       const removingActive =
@@ -382,7 +380,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
             selectedImageId: undefined,
             backgroundColor: resolveColorPair(firstPair),
             backgroundColorId: firstPair.id,
-            liquidGlass: undefined,
+            glass: undefined,
           };
         }
       }

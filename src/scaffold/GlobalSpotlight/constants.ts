@@ -7,7 +7,7 @@
  */
 
 /**
- * Shared LiquidGlass shell panel classes. Shadow comes from
+ * Shared Glass shell panel classes. Shadow comes from
  * SPOTLIGHT_STYLES (.spotlight-shadow).
  */
 export const SPOTLIGHT_GLASS_PANEL_CLASS =

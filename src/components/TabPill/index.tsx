@@ -9,9 +9,6 @@ import React, {
 import { createPortal } from "react-dom";
 
 import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
-import LiquidGlass from "@src/components/LiquidGlass";
-import { useGlassMaterial } from "@src/hooks/theme/useGlassMaterial";
-import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import { SidebarTabButton } from "./SidebarTabButton";
 import { cn } from "./cn";
@@ -31,14 +28,12 @@ const TabPill: React.FC<TabPillProps> = ({
   color = "default",
   className = "",
   iconOnly = false,
-  region,
   fillWidth = true,
   wrap = false,
   size = "default",
   colorScheme = "default",
   onDropdownRef,
 }) => {
-  const { isDark } = useCurrentTheme();
   const isMulti = activeTabs !== undefined;
   const activeTabsSet = isMulti ? new Set(activeTabs) : null;
 
@@ -52,11 +47,6 @@ const TabPill: React.FC<TabPillProps> = ({
   const activeTab =
     controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
 
-  const { material: regionMaterial } = useGlassMaterial(region || "sidebar", {
-    thickness: "thin",
-    skip: !region || variant !== "sidebar",
-  });
-  const regionTintRGB = regionMaterial?.tintRGB;
   const containerRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLSpanElement>(null);
   const hasSlider = variant === "pill" && !wrap && !isMulti;
@@ -216,15 +206,7 @@ const TabPill: React.FC<TabPillProps> = ({
   if (variant === "sidebar") {
     return (
       <div className={cn("flex w-full items-center", className)}>
-        <LiquidGlass
-          material="ultrathin"
-          region={region}
-          noBackdrop={!!region}
-          radius={100}
-          noShadow={false}
-          enableRim={false}
-          className="flex flex-1 items-center gap-0.5"
-        >
+        <div className="flex flex-1 items-center gap-0.5 rounded-full bg-fill-1 p-0.5">
           <div className="flex flex-1 items-stretch gap-1">
             {normalizedTabs.map((tab) => (
               <SidebarTabButton
@@ -237,12 +219,10 @@ const TabPill: React.FC<TabPillProps> = ({
                 }
                 onClick={() => handleTabClickWithDropdown(tab)}
                 iconOnly={iconOnly}
-                regionTintRGB={regionTintRGB}
-                isDark={isDark}
               />
             ))}
           </div>
-        </LiquidGlass>
+        </div>
       </div>
     );
   }

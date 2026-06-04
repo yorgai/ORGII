@@ -12,7 +12,6 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
-import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
 import SessionHoverCard from "@src/components/SessionHoverCard";
 import Tooltip from "@src/components/Tooltip";
 import WorkItemHoverCard from "@src/components/WorkItemHoverCard";
@@ -534,21 +533,14 @@ export const WorkstationSidebarConnector: React.FC = () => {
         framedPanel
       >
         <div className="inline-flex">
-          <LiquidGlassHoverItem
-            className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
+          <button
+            type="button"
+            className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
             onClick={goToStartPage}
-            role="button"
-            tabIndex={0}
             aria-label={homeLabel}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                goToStartPage();
-              }
-            }}
           >
             <House size={16} strokeWidth={2} className="text-text-2" />
-          </LiquidGlassHoverItem>
+          </button>
         </div>
       </Tooltip>
     ),

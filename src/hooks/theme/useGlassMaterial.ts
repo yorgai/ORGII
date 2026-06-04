@@ -15,14 +15,14 @@
  * const { material, isReady } = useGlassMaterial("tabbar");
  *
  * return (
- *   <LiquidGlass
+ *   <Glass
  *     material="thin"
  *     enableRim={isReady}
  *     rimColor={material?.tintRGB}
  *     rimBrightnessOffsets={material?.rimOffsets}
  *   >
  *     {tabs}
- *   </LiquidGlass>
+ *   </Glass>
  * );
  * ```
  */
@@ -31,7 +31,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useMountedCleanup } from "@src/hooks/lifecycle/useMounted";
 // Direct leaf import to avoid pulling @src/store's barrel — which transitively
-// reaches LiquidGlass → useGlassMaterial and creates a circular dependency.
+// reaches Glass → useGlassMaterial and creates a circular dependency.
 import { resolvedBackgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
 import {
   GlassMaterial,
@@ -47,7 +47,7 @@ import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 import { useBackgroundImage } from "./useBackgroundImage";
 
 // Neutral color field used when no background image or color is available
-// (e.g. Liquid Glass mode — native OS provides the background, not a URL).
+// (e.g. Glass mode — native OS provides the background, not a URL).
 // luminance=0.5 → mid-point, no legibility guard activation, neutral tint.
 const NEUTRAL_COLOR_FIELD: WallpaperColorField = {
   dominantHue: 0,
@@ -97,13 +97,13 @@ export interface UseGlassMaterialReturn {
  *   const { material, isReady } = useGlassMaterial("tabbar");
  *
  *   return (
- *     <LiquidGlass
+ *     <Glass
  *       enableRim={isReady}
  *       rimColor={material?.tintRGB}
  *       rimBrightnessOffsets={material?.rimOffsets}
  *     >
  *       <TabList />
- *     </LiquidGlass>
+ *     </Glass>
  *   );
  * }
  * ```
@@ -146,7 +146,7 @@ export function useGlassMaterial(
       return;
     }
 
-    // No background source (Liquid Glass mode or unset): synthesize a neutral
+    // No background source (Glass mode or unset): synthesize a neutral
     // material from the current appearance so glass components have a stable
     // tint/rim instead of silently returning null.
     if (!backgroundImageUrl && !backgroundColor) {

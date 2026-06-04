@@ -40,11 +40,23 @@ export const mainPaneStateAtom = atom((get) => {
 mainPaneStateAtom.debugLabel = "mainPaneStateAtom";
 
 /**
+ * Narrow reads for tab-list consumers that do not need the full persisted layout.
+ */
+export const mainPaneTabsAtom = atom((get) => get(mainPaneStateAtom).tabs);
+mainPaneTabsAtom.debugLabel = "mainPaneTabsAtom";
+
+export const mainPaneActiveTabIdAtom = atom(
+  (get) => get(mainPaneStateAtom).activeTabId
+);
+mainPaneActiveTabIdAtom.debugLabel = "mainPaneActiveTabIdAtom";
+
+/**
  * Active tab in the main pane (derived).
  */
 export const activeWorkStationTabAtom = atom((get) => {
-  const state = get(mainPaneStateAtom);
-  return state.tabs.find((tab) => tab.id === state.activeTabId) ?? null;
+  const tabs = get(mainPaneTabsAtom);
+  const activeTabId = get(mainPaneActiveTabIdAtom);
+  return tabs.find((tab) => tab.id === activeTabId) ?? null;
 });
 activeWorkStationTabAtom.debugLabel = "activeWorkStationTabAtom";
 
@@ -92,3 +104,35 @@ export const activeWorkStationFilePathAtom = atom((get) => {
   return null;
 });
 activeWorkStationFilePathAtom.debugLabel = "activeWorkStationFilePathAtom";
+
+export const openEditorFilePathsAtom = (() => {
+  let prevTabs: PanelState["tabs"] = [];
+  let prevPaths: string[] = [];
+
+  return atom<string[]>((get) => {
+    const tabs = get(mainPaneTabsAtom);
+    if (tabs === prevTabs) return prevPaths;
+
+    const filePaths = new Set<string>();
+    for (const tab of tabs) {
+      if (tab.type === "file" || tab.type === "git-diff") {
+        const filePath = tab.data.filePath as string | undefined;
+        if (filePath) filePaths.add(filePath);
+      }
+    }
+
+    const nextPaths = Array.from(filePaths).sort();
+    if (
+      nextPaths.length === prevPaths.length &&
+      nextPaths.every((path, index) => path === prevPaths[index])
+    ) {
+      prevTabs = tabs;
+      return prevPaths;
+    }
+
+    prevTabs = tabs;
+    prevPaths = nextPaths;
+    return prevPaths;
+  });
+})();
+openEditorFilePathsAtom.debugLabel = "openEditorFilePathsAtom";

@@ -2,7 +2,7 @@
  * SpotlightFooter Component
  *
  * Keyboard shortcut hints for selectors.
- * - `spotlight` (default): below the main LiquidGlass panel — pill, specular, spotlight shadow.
+ * - `spotlight` (default): below the main Glass panel — pill, specular, spotlight shadow.
  * - `dropdown`: same hints with `DROPDOWN_CLASSES.panel` (e.g. @-mention menu).
  */
 import { ArrowDown, ArrowUp } from "lucide-react";
@@ -10,11 +10,11 @@ import React, { useContext } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import Glass from "@src/components/Glass";
 import {
   KEYBOARD_SHORTCUT_VARIANT,
   KeyboardShortcut,
 } from "@src/components/KeyboardShortcut";
-import LiquidGlass from "@src/components/LiquidGlass";
 
 import { SpotlightFooterMaterialContext } from "./spotlightFooterMaterialContext";
 
@@ -42,7 +42,7 @@ export interface SpotlightFooterProps {
   /** Whether there's an active path (items selected) */
   hasActiveAction: boolean;
   /**
-   * `spotlight` — LiquidGlass pill + spotlight shadow (default, GlobalSpotlight shell).
+   * `spotlight` — Glass pill + spotlight shadow (default, GlobalSpotlight shell).
    * `dropdown` — `DROPDOWN_CLASSES.panel` (border-border-2, bg-bg-2, shadow-dropdown).
    */
   variant?: "spotlight" | "dropdown";
@@ -129,14 +129,14 @@ export const SpotlightFooter: React.FC<SpotlightFooterProps> = ({
   }
 
   return (
-    <LiquidGlass
+    <Glass
       material={material}
       radius={999}
       enableSpecular={true}
       className="spotlight-shadow mx-auto w-fit max-w-full overflow-hidden"
     >
       {inner}
-    </LiquidGlass>
+    </Glass>
   );
 };
 

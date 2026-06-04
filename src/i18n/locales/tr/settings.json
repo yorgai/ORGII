@@ -198,10 +198,6 @@
   "background": {
     "title": "Arka Plan",
     "colors": "Renkler",
-    "liquidGlass": "Liquid Glass",
-    "liquidGlass_regular": "İnce",
-    "liquidGlass_medium": "Orta",
-    "liquidGlass_thick": "Kalın",
     "preset": "Hazır Ayar",
     "custom": "Özel",
     "pickCustomColor": "Özel bir renk seçin",

@@ -15,19 +15,38 @@ import type { PanelState, WorkStationTab } from "./types";
 // Tab Mutations
 // ============================================
 
+function hasDataChanges(
+  currentData: Record<string, unknown>,
+  nextData: Partial<Record<string, unknown>>
+): boolean {
+  for (const [key, value] of Object.entries(nextData)) {
+    if (!Object.is(currentData[key], value)) return true;
+  }
+  return false;
+}
+
 function mergeReopenedTab(
   existingTab: WorkStationTab,
   incomingTab: WorkStationTab
 ): WorkStationTab {
+  const nextUnsaved =
+    existingTab.hasUnsavedChanges || incomingTab.hasUnsavedChanges || undefined;
+
+  if (
+    existingTab.title === incomingTab.title &&
+    existingTab.icon === incomingTab.icon &&
+    existingTab.hasUnsavedChanges === nextUnsaved &&
+    !hasDataChanges(existingTab.data, incomingTab.data)
+  ) {
+    return existingTab;
+  }
+
   return {
     ...existingTab,
     title: incomingTab.title,
     icon: incomingTab.icon,
     data: { ...existingTab.data, ...incomingTab.data },
-    hasUnsavedChanges:
-      existingTab.hasUnsavedChanges ||
-      incomingTab.hasUnsavedChanges ||
-      undefined,
+    hasUnsavedChanges: nextUnsaved,
   };
 }
 
@@ -40,8 +59,13 @@ export function openTab(state: PanelState, tab: WorkStationTab): PanelState {
   const existingIndex = tabs.findIndex((tabItem) => tabItem.id === tab.id);
 
   if (existingIndex !== -1) {
+    const mergedTab = mergeReopenedTab(tabs[existingIndex], tab);
+    if (mergedTab === tabs[existingIndex] && state?.activeTabId === tab.id) {
+      return state;
+    }
+
     const updatedTabs = [...tabs];
-    updatedTabs[existingIndex] = mergeReopenedTab(tabs[existingIndex], tab);
+    updatedTabs[existingIndex] = mergedTab;
     return {
       tabs: updatedTabs,
       activeTabId: tab.id,
@@ -102,6 +126,7 @@ export function switchTab(state: PanelState, tabId: string): PanelState {
   // Only switch if tab exists
   const exists = tabs.find((tabItem) => tabItem.id === tabId);
   if (!exists) return state ?? { tabs: [], activeTabId: null };
+  if (state?.activeTabId === tabId) return state;
 
   return {
     tabs,
@@ -120,6 +145,15 @@ export function reorderTabs(
   // Safety check for uninitialized state
   const tabs = state?.tabs ?? [];
   if (tabs.length === 0) return state ?? { tabs: [], activeTabId: null };
+  if (startIndex === endIndex) return state;
+  if (
+    startIndex < 0 ||
+    endIndex < 0 ||
+    startIndex >= tabs.length ||
+    endIndex >= tabs.length
+  ) {
+    return state;
+  }
 
   const newTabs = [...tabs];
   const [movedTab] = newTabs.splice(startIndex, 1);
@@ -142,12 +176,21 @@ export function updateTabData(
 ): PanelState {
   // Safety check for uninitialized state
   const tabs = state?.tabs ?? [];
-  const currentActiveTabId = state?.activeTabId ?? null;
+  const targetIndex = tabs.findIndex((tab) => tab.id === tabId);
+  if (targetIndex === -1) return state ?? { tabs: [], activeTabId: null };
+
+  const targetTab = tabs[targetIndex];
+  if (!hasDataChanges(targetTab.data, data)) return state;
+
+  const updatedTabs = [...tabs];
+  updatedTabs[targetIndex] = {
+    ...targetTab,
+    data: { ...targetTab.data, ...data },
+  };
+
   return {
-    tabs: tabs.map((tab) =>
-      tab.id === tabId ? { ...tab, data: { ...tab.data, ...data } } : tab
-    ),
-    activeTabId: currentActiveTabId,
+    tabs: updatedTabs,
+    activeTabId: state?.activeTabId ?? null,
   };
 }
 

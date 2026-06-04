@@ -10,7 +10,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
-import LiquidGlass from "@src/components/LiquidGlass";
+import Glass from "@src/components/Glass";
 
 // Tier styling config
 const TIER_STYLES: Record<
@@ -77,7 +77,7 @@ const BonusModal: React.FC<BonusModalProps> = ({
       style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
       onClick={onDecline}
     >
-      <LiquidGlass
+      <Glass
         material="thick"
         radius={20}
         className="relative mx-4 w-full max-w-[380px] overflow-hidden p-0"
@@ -205,7 +205,7 @@ const BonusModal: React.FC<BonusModalProps> = ({
             {t("common:actions.cancel")}
           </button>
         </div>
-      </LiquidGlass>
+      </Glass>
     </div>
   );
 

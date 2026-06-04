@@ -198,10 +198,6 @@
   "background": {
     "title": "배경",
     "colors": "색상",
-    "liquidGlass": "Liquid Glass",
-    "liquidGlass_regular": "얇게",
-    "liquidGlass_medium": "보통",
-    "liquidGlass_thick": "두껍게",
     "preset": "프리셋",
     "custom": "사용자 지정",
     "pickCustomColor": "사용자 지정 색상 선택",

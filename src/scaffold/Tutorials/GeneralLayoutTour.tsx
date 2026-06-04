@@ -12,7 +12,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 import Button from "@src/components/Button";
-import { getMaterialConfig } from "@src/components/LiquidGlass/config";
+import { getMaterialConfig } from "@src/components/Glass/config";
 import {
   POPUP_ANIMATION,
   POPUP_SHADOW,

@@ -113,7 +113,7 @@ export const AppGridIcon: React.FC<AppGridIconProps> = ({
           touchAction: editMode ? "none" : "auto",
         }}
       >
-        {/* Liquid Glass Circular Icon Container */}
+        {/* Glass Circular Icon Container */}
         <div
           className="vision-app-icon relative flex items-center justify-center"
           style={{

@@ -67,7 +67,7 @@ export function useRegionLuminance(): UseRegionLuminanceReturn {
   const [sampleTick, setSampleTick] = useState(0);
 
   const regions = useMemo(() => {
-    if (backgroundConfig.liquidGlass != null) {
+    if (backgroundConfig.glass != null) {
       return createUniformLuminanceMap(isDark ? 0.3 : 0.7);
     }
     if (!shouldUseAdaptiveColors) {
@@ -76,7 +76,7 @@ export function useRegionLuminance(): UseRegionLuminanceReturn {
     void sampleTick;
     return resolveRegionsSync(undefined, adaptiveImageUrl);
   }, [
-    backgroundConfig.liquidGlass,
+    backgroundConfig.glass,
     isDark,
     shouldUseAdaptiveColors,
     adaptiveImageUrl,

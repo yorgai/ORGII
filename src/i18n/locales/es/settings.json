@@ -198,10 +198,6 @@
   "background": {
     "title": "Fondo",
     "colors": "Colores",
-    "liquidGlass": "Liquid Glass",
-    "liquidGlass_regular": "Regular",
-    "liquidGlass_medium": "Media",
-    "liquidGlass_thick": "Gruesa",
     "preset": "Predefinido",
     "custom": "Personalizado",
     "pickCustomColor": "Elegir un color personalizado",

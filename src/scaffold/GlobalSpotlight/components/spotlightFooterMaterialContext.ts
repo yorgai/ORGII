@@ -1,6 +1,6 @@
 import { createContext } from "react";
 
-import type { MaterialThickness } from "@src/components/LiquidGlass/config";
+import type { MaterialThickness } from "@src/components/Glass/config";
 
 /** Default when no provider (e.g. tests). */
 export const SpotlightFooterMaterialContext =

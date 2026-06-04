@@ -3,7 +3,7 @@
  *
  * Context menu that appears when hovering on dock items.
  * Provides options for "Switch to" and "Split view" actions.
- * Uses LiquidGlass for modern glass aesthetic.
+ * Uses Glass for modern glass aesthetic.
  */
 // ============================================
 // Menu Item Configuration
@@ -12,7 +12,7 @@ import type { LucideIcon } from "lucide-react";
 import React, { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import LiquidGlass from "@src/components/LiquidGlass";
+import Glass from "@src/components/Glass";
 
 import { AppType } from "../../types/appTypes";
 import { WINDOW_ICONS } from "../../types/windowTypes";
@@ -170,7 +170,7 @@ export const DockContextMenu: React.FC<DockContextMenuProps> = ({
   const isSameAsActive = targetApp.id === activeAppType;
 
   return (
-    <LiquidGlass
+    <Glass
       material="thin"
       ref={setMenuRef}
       radius={12}
@@ -216,7 +216,7 @@ export const DockContextMenu: React.FC<DockContextMenuProps> = ({
           );
         })}
       </div>
-    </LiquidGlass>
+    </Glass>
   );
 };
 

@@ -1,7 +1,7 @@
 /**
  * Dock Component
  *
- * Pure macOS-style dock bar — LiquidGlass pill with app icons.
+ * Pure macOS-style dock bar — Glass pill with app icons.
  * Used by both My Station and Agent Station with different app lists.
  */
 import type { LucideIcon } from "lucide-react";

@@ -4,7 +4,7 @@
  * Pure-content body for a palette: search bar + top slot + hint slot +
  * item list + after-list slot.
  *
- * NO chrome. NO LiquidGlass, NO portal, NO footer. The enclosing
+ * NO chrome. NO Glass, NO portal, NO footer. The enclosing
  * SpotlightShell owns all of those. Palettes render <SpotlightShell>
  * <PaletteBody ... /></SpotlightShell>.
  */

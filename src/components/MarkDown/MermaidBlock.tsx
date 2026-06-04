@@ -25,23 +25,81 @@ import {
 // ============================================
 
 const MAX_CACHE = 50;
-const svgCache = new Map<string, string>();
+const MAX_CACHE_BYTES = 2 * 1024 * 1024;
+const MAX_CACHEABLE_DIAGRAM_BYTES = 64 * 1024;
+const HASH_SEED = 0x811c9dc5;
+const HASH_MULTIPLIER = 0x01000193;
+
+const textEncoder = new TextEncoder();
+const svgCache = new Map<string, { svg: string; bytes: number }>();
+let svgCacheBytes = 0;
+
+function getByteLength(value: string): number {
+  return textEncoder.encode(value).byteLength;
+}
+
+function getStableHash(value: string): string {
+  let hash = HASH_SEED;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, HASH_MULTIPLIER);
+  }
+  return (hash >>> 0).toString(36);
+}
 
 function cacheKey(code: string, dark: boolean): string {
-  return `${dark ? "d" : "l"}:${code}`;
+  return `${dark ? "d" : "l"}:${code.length}:${getStableHash(code)}`;
+}
+
+function getCacheEligibility(code: string): {
+  cacheable: boolean;
+  bytes: number;
+} {
+  const bytes = getByteLength(code);
+  return { cacheable: bytes <= MAX_CACHEABLE_DIAGRAM_BYTES, bytes };
+}
+
+function evictOldestCacheEntry(): void {
+  const firstKey = svgCache.keys().next().value;
+  if (!firstKey) return;
+
+  const entry = svgCache.get(firstKey);
+  if (entry) {
+    svgCacheBytes -= entry.bytes;
+  }
+  svgCache.delete(firstKey);
 }
 
 function getCachedSvg(code: string, dark: boolean): string | undefined {
-  return svgCache.get(cacheKey(code, dark));
+  const eligibility = getCacheEligibility(code);
+  if (!eligibility.cacheable) return undefined;
+
+  return svgCache.get(cacheKey(code, dark))?.svg;
 }
 
 function setCachedSvg(code: string, dark: boolean, svg: string): void {
+  const eligibility = getCacheEligibility(code);
+  if (!eligibility.cacheable) return;
+
   const key = cacheKey(code, dark);
-  if (svgCache.size >= MAX_CACHE) {
-    const firstKey = svgCache.keys().next().value;
-    if (firstKey) svgCache.delete(firstKey);
+  const entryBytes =
+    eligibility.bytes + getByteLength(svg) + getByteLength(key);
+  if (entryBytes > MAX_CACHE_BYTES) return;
+
+  const existing = svgCache.get(key);
+  if (existing) {
+    svgCacheBytes -= existing.bytes;
   }
-  svgCache.set(key, svg);
+
+  while (
+    svgCache.size >= MAX_CACHE ||
+    svgCacheBytes + entryBytes > MAX_CACHE_BYTES
+  ) {
+    evictOldestCacheEntry();
+  }
+
+  svgCache.set(key, { svg, bytes: entryBytes });
+  svgCacheBytes += entryBytes;
 }
 
 // ============================================

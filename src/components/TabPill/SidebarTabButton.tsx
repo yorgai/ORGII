@@ -9,24 +9,7 @@ export const SidebarTabButton: React.FC<{
   isActive: boolean;
   onClick: () => void;
   iconOnly?: boolean;
-  regionTintRGB?: { r: number; g: number; b: number } | null;
-  isDark: boolean;
-}> = ({ tab, isActive, onClick, iconOnly, regionTintRGB, isDark }) => {
-  const activeFill = isDark
-    ? "rgba(60, 60, 60, 0.45)"
-    : "rgba(255, 255, 255, 0.42)";
-
-  const tabStyles: React.CSSProperties = isActive
-    ? {
-        backgroundColor: activeFill,
-        boxShadow: "none",
-        transition: "all 0.15s ease",
-      }
-    : {
-        backgroundColor: "transparent",
-        transition: "color 0.15s ease",
-      };
-
+}> = ({ tab, isActive, onClick, iconOnly }) => {
   return (
     <button
       onClick={onClick}
@@ -38,22 +21,14 @@ export const SidebarTabButton: React.FC<{
         "group relative flex flex-1 cursor-pointer select-none items-center justify-center",
         "overflow-hidden rounded-[100px] border-none",
         "h-[28px] px-[10px]",
-        isActive ? "text-text-1" : "text-text-2",
+        isActive
+          ? "bg-bg-2 text-text-1"
+          : "bg-transparent text-text-2 hover:bg-fill-2 hover:text-text-1",
         tab.disabled && "cursor-not-allowed opacity-50",
         "transition-colors duration-150"
       )}
-      style={tabStyles}
       title={iconOnly ? tab.label : undefined}
     >
-      {isActive && regionTintRGB && (
-        <div
-          className="pointer-events-none absolute inset-0 rounded-[100px]"
-          style={{
-            background: `rgba(${regionTintRGB.r}, ${regionTintRGB.g}, ${regionTintRGB.b}, 0.02)`,
-            mixBlendMode: "color",
-          }}
-        />
-      )}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 px-[10px]">
         {iconOnly && tab.icon && (
           <div

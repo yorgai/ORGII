@@ -66,7 +66,7 @@ export const PlanDocPanel: React.FC<PlanDocPanelProps> = memo(
           ) : isPreviewMode ? (
             <div className="scrollbar-overlay h-full overflow-auto p-4">
               {hasContent ? (
-                <Markdown textContent={content} />
+                <Markdown textContent={content} skipPreprocess />
               ) : (
                 <div className="rounded-lg border border-dashed border-border-2 bg-fill-1 p-4 text-[13px] text-text-3">
                   {t("planDoc.emptyPlan")}

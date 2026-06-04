@@ -114,11 +114,11 @@ async function getBackgroundImageBase64(): Promise<string | null> {
   }
 }
 
-export const setLiquidGlassThickness = async (
+export const setGlassThickness = async (
   level: "regular" | "medium" | "thick"
 ): Promise<void> => {
   try {
-    await invoke("set_liquid_glass_thickness", { level });
+    await invoke("set_glass_thickness", { level });
   } catch {
     // Not available or failed — continue silently
   }

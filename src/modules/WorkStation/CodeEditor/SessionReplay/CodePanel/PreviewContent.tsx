@@ -24,7 +24,7 @@ export const PreviewContent: React.FC<{
     case "markdown":
       return (
         <div className="scrollbar-overlay h-full overflow-auto p-4">
-          <Markdown textContent={content} />
+          <Markdown textContent={content} skipPreprocess />
         </div>
       );
     case "json":

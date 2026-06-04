@@ -456,7 +456,7 @@ const AppShell = () => {
             blurAmount={backgroundConfig.blurAmount ?? 0}
             backgroundColor={backgroundConfig.backgroundColor}
             animation={backgroundConfig.animation}
-            liquidGlass={backgroundConfig.liquidGlass}
+            glass={backgroundConfig.glass}
           />
 
           {/* Main layout with sidebar, toolbar, content, and chat panel */}

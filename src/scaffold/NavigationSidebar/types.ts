@@ -144,8 +144,8 @@ export interface SidebarBaseProps {
   includeTrafficLightSpace?: boolean;
   /** Show collapse button */
   showCollapseButton?: boolean;
-  /** Wrap in LiquidGlass */
-  wrapInLiquidGlass?: boolean;
+  /** Wrap in the transparent sidebar glass surface */
+  wrapInGlass?: boolean;
   /** Force sidebar to be visible even when collapsed (used for hover sidebar) */
   forceVisible?: boolean;
   /** Custom theme */

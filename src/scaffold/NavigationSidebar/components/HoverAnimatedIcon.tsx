@@ -24,7 +24,7 @@ const ICON_STRATEGY: Record<string, AnimationStrategy> = {
   gauge: "stagger-bars",
   plus: "stroke-draw",
   radar: "stagger-bars",
-  "square-mouse-pointer": "bounce-settle",
+  "square-mouse-pointer": "stroke-draw",
   "folder-git-2": "stroke-draw",
   "badge-cent": "stroke-draw",
   house: "stroke-draw",

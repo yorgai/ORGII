@@ -198,10 +198,6 @@
   "background": {
     "title": "Фон",
     "colors": "Цвета",
-    "liquidGlass": "Liquid Glass",
-    "liquidGlass_regular": "Тонкое",
-    "liquidGlass_medium": "Среднее",
-    "liquidGlass_thick": "Толстое",
     "preset": "Предустановки",
     "custom": "Пользовательский",
     "pickCustomColor": "Выбрать свой цвет",

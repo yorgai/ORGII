@@ -4,7 +4,7 @@
  * Resolves glass material properties from wallpaper color fields.
  * Includes legibility guard, tint resolution, and specular highlights.
  */
-import { getMaterialConfig } from "@src/components/LiquidGlass/config";
+import { getMaterialConfig } from "@src/components/Glass/config";
 
 import type {
   AppearanceMode,

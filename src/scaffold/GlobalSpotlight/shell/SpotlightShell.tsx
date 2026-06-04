@@ -2,7 +2,7 @@
  * SpotlightShell Component
  *
  * The ONE and ONLY visual chrome for the spotlight family. Owns:
- *  - LiquidGlass panel (material, radius, specular, shadow)
+ *  - Glass panel (material, radius, specular, shadow)
  *  - Portal + backdrop + sidebar-aware centering
  *  - Keyboard-hint footer below the panel
  *  - Focus refocus on background click

@@ -11,7 +11,7 @@
 /**
  * Frame radius options
  * - 12: Default simulator radius (rounded-xl)
- * - 20: WorkStation page radius (matches LiquidGlass wrapper)
+ * - 20: WorkStation page radius (matches Glass wrapper)
  */
 export type FrameRadius = 0 | 12 | 20;
 

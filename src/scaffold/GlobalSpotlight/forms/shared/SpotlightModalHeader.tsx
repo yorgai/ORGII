@@ -7,7 +7,7 @@ import { type LucideIcon, X } from "lucide-react";
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getMaterialConfig } from "@src/components/LiquidGlass/config";
+import { getMaterialConfig } from "@src/components/Glass/config";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 interface SpotlightModalHeaderProps {

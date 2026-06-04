@@ -7,7 +7,7 @@ import type { GlassMaterial, GlassRegion, ResolverConfig } from "./types";
 /**
  * Glass Material Resolver
  *
- * Implements Apple's NSVisualEffectMaterial approach for Liquid Glass.
+ * Implements Apple's NSVisualEffectMaterial approach for glass.
  *
  * Key concepts:
  * 1. Each UI REGION samples from its own area (not per-component)
@@ -46,8 +46,8 @@ export { resolveMaterial } from "./materialResolver";
  *   thickness: "thin",
  * }, "tabbar");
  *
- * // Use in LiquidGlass:
- * <LiquidGlass
+ * // Use in Glass:
+ * <Glass
  *   enableRim={true}
  *   rimColor={material.tintRGB}
  *   rimBrightnessOffsets={material.rimOffsets}

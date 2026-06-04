@@ -9,7 +9,6 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
-import { HoverIntensityContext } from "@src/components/LiquidGlass/hoverConfig";
 import { hoverSidebarOpenAtom } from "@src/store/ui/hoverSidebarAtom";
 import { useOverlayLayer } from "@src/store/ui/overlayLayerAtom";
 import {
@@ -147,19 +146,17 @@ export const HoverSidebarContainer: React.FC<HoverSidebarContainerProps> = ({
   }
 
   return (
-    <HoverIntensityContext.Provider value="strong">
-      <div
-        ref={containerRef}
-        className="animate-in slide-in-from-left fixed left-0 top-0 z-[9998] h-full shadow-2xl duration-150"
-        style={{
-          width: `${HOVER_SIDEBAR_WIDTH}px`,
-        }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        {children}
-      </div>
-    </HoverIntensityContext.Provider>
+    <div
+      ref={containerRef}
+      className="animate-in slide-in-from-left fixed left-0 top-0 z-[9998] h-full shadow-2xl duration-150"
+      style={{
+        width: `${HOVER_SIDEBAR_WIDTH}px`,
+      }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {children}
+    </div>
   );
 };
 

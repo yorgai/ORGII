@@ -2,7 +2,7 @@
  * AppGrid Component
  *
  * Launchpad with staggered honeycomb layout.
- * Uses neutral liquid glass styling with one accent for Start Session.
+ * Uses neutral glass styling with one accent for Start Session.
  *
  * Features:
  * - Staggered honeycomb grid (4-5-4 pattern)
@@ -21,7 +21,7 @@ import { useAtom, useAtomValue } from "jotai";
 import React, { useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { getMaterialConfig } from "@src/components/LiquidGlass/config";
+import { getMaterialConfig } from "@src/components/Glass/config";
 import { useRegionLuminance } from "@src/hooks/theme/useRegionLuminance";
 import {
   ACTION_ID,

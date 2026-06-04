@@ -20,7 +20,7 @@ import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 // Prefixes for settings that should be synced across windows
 // Any localStorage key starting with these prefixes will trigger a sync
 const SYNC_PREFIXES = [
-  "orgii_", // App settings (background, liquid glass, notifications, etc.)
+  "orgii_", // App settings (background, glass, notifications, etc.)
   "orgii:", // Editor settings (theme, terminal commands, etc.)
   "theme", // App theme (special case - no prefix)
   "test_settings", // Test runner settings

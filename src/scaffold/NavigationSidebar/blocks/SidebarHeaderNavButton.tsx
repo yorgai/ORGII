@@ -1,8 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import React from "react";
 
-import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
-
 interface SidebarHeaderNavButtonProps {
   icon: LucideIcon;
   label: string;
@@ -21,8 +19,8 @@ const SidebarHeaderNavButton: React.FC<SidebarHeaderNavButtonProps> = ({
   bold = true,
 }) => {
   return (
-    <LiquidGlassHoverItem
-      className={`group flex min-h-[36px] w-full items-center justify-between overflow-hidden rounded-lg px-2 text-text-1 ${className}`}
+    <div
+      className={`group flex min-h-[36px] w-full cursor-pointer items-center justify-between overflow-hidden rounded-lg px-2 text-text-1 transition-colors duration-150 hover:bg-fill-2 ${className}`}
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -42,7 +40,7 @@ const SidebarHeaderNavButton: React.FC<SidebarHeaderNavButtonProps> = ({
           {label}
         </span>
       </span>
-    </LiquidGlassHoverItem>
+    </div>
   );
 };
 

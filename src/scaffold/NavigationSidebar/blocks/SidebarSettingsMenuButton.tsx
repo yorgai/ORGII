@@ -28,7 +28,6 @@ import {
   KEYBOARD_SHORTCUT_VARIANT,
   KeyboardShortcut,
 } from "@src/components/KeyboardShortcut";
-import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
 import type { AppearanceMode } from "@src/config/appearance/globalThemes";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { useDropdownEngine } from "@src/hooks/dropdown";
@@ -362,8 +361,11 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
   return (
     <>
       <div ref={triggerRef} title={t("sidebar.bottomBar.settings")}>
-        <LiquidGlassHoverItem
-          className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
+        <button
+          type="button"
+          className={`flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none p-0 transition-colors duration-150 ${
+            isOpen ? "bg-bg-2" : "bg-transparent hover:bg-fill-2"
+          }`}
           onClick={handleToggle}
           onMouseEnter={(event) => triggerIconAnimation(event.currentTarget)}
         >
@@ -374,7 +376,7 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
             strokeWidth={2}
             className={settingsButtonClassName}
           />
-        </LiquidGlassHoverItem>
+        </button>
       </div>
 
       {isOpen &&

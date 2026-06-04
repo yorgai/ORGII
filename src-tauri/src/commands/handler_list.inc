@@ -10,7 +10,7 @@ app_window::show_or_create_app_window,
 app_window::close_app_window,
 app_window::focus_app_window,
 app_window::set_window_vibrancy,
-app_window::set_liquid_glass_thickness,
+app_window::set_glass_thickness,
 app_window::set_main_webview_zoom,
 // Integration commands - External IDE
 integrations::external_ide::open_in_external_ide,

@@ -21,7 +21,6 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
-import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
 import Tooltip from "@src/components/Tooltip";
 import { getSegmentIcon } from "@src/config/mainAppPaths";
 import { ROUTES } from "@src/config/routes";
@@ -30,7 +29,7 @@ import { SIDEBAR_MEMORY_KIND, useSidebarMemoryEntry } from "@src/hooks/perf";
 import { devRecordActiveViewAtom } from "@src/store/ui/devRecordToolbarAtom";
 import { openExternalLink } from "@src/util/platform/ipcRenderer";
 
-import { SidebarBottomBar, SidebarHeaderNavButton } from "../blocks";
+import { SidebarBottomBar } from "../blocks";
 import type { NavigationMenuItem } from "../components/NavigationMenu/config";
 import type { SidebarTab } from "../types";
 import { routeToMenuItem } from "../utils/menuFromRoutes";
@@ -82,6 +81,14 @@ const HomeSidebar: React.FC = () => {
   // Build menu items — labels from route config via useRouteLabel (same as PageBreadcrumb)
   const buildMenuItems = useMemo(
     (): NavigationMenuItem[] => [
+      {
+        id: ROUTES.workStation.base.path,
+        key: ROUTES.workStation.base.path,
+        label: t("sidebar.tabs.workstation"),
+        icon: SquareMousePointer,
+        iconName: "square-mouse-pointer",
+        routePath: ROUTES.workStation.base.path,
+      },
       routeToMenuItem(ROUTES.app.home.start, {
         label: getTranslatedRouteLabel(ROUTES.app.home.start),
       }),
@@ -150,18 +157,6 @@ const HomeSidebar: React.FC = () => {
     navigate(ROUTES.workStation.base.path, { replace: false });
   }, [navigate]);
 
-  const openWorkstationHeader = useMemo(
-    () => (
-      <SidebarHeaderNavButton
-        icon={SquareMousePointer}
-        label={t("sidebar.tabs.workstation")}
-        onClick={handleOpenWorkstation}
-        bold={false}
-      />
-    ),
-    [handleOpenWorkstation, t]
-  );
-
   const workstationHeaderAction = useMemo(
     () => (
       <Tooltip
@@ -175,8 +170,9 @@ const HomeSidebar: React.FC = () => {
         framedPanel
       >
         <div className="inline-flex">
-          <LiquidGlassHoverItem
-            className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
+          <button
+            type="button"
+            className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
             onClick={handleOpenWorkstation}
           >
             <SquareMousePointer
@@ -184,7 +180,7 @@ const HomeSidebar: React.FC = () => {
               strokeWidth={2}
               className="text-text-2"
             />
-          </LiquidGlassHoverItem>
+          </button>
         </div>
       </Tooltip>
     ),
@@ -259,7 +255,6 @@ const HomeSidebar: React.FC = () => {
       onChange={noopSidebarTabChange}
       menuItems={buildMenuItems}
       selectedKey={selectedKey}
-      topContent={openWorkstationHeader}
       onMenuItemClick={handleMenuItemClick}
       onMenuItemContextMenu={handleMenuItemContextMenu}
       headerActions={workstationHeaderAction}

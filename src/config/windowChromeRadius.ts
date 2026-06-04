@@ -1,7 +1,7 @@
 /**
  * Host-desktop window and page corner radii.
  *
- * macOS values match NSWindow glass rounding (see src-tauri LiquidGlassConfig corner_radius 26.0).
+ * macOS values match NSWindow glass rounding (see src-tauri glass config corner_radius 26.0).
  * Windows uses smaller radii to align with DWM / Win11 window chrome.
  *
  * Keep magic numbers in sync with the preflight script in public/index.html.

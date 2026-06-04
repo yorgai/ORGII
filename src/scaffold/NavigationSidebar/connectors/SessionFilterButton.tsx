@@ -17,7 +17,6 @@ import {
   DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
-import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
 import { useDropdownEngine } from "@src/hooks/dropdown";
 
 import HoverAnimatedIcon, {
@@ -116,8 +115,11 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
     return (
       <>
         <div ref={triggerRef} title={t("sidebar.groupBy.title")}>
-          <LiquidGlassHoverItem
-            className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
+          <button
+            type="button"
+            className={`flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none p-0 transition-colors duration-150 ${
+              isOpen ? "bg-bg-2" : "bg-transparent hover:bg-fill-2"
+            }`}
             onClick={toggle}
             onMouseEnter={(event) => triggerIconAnimation(event.currentTarget)}
           >
@@ -128,7 +130,7 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
               strokeWidth={2}
               className={isOpen ? "text-primary-6" : "text-text-2"}
             />
-          </LiquidGlassHoverItem>
+          </button>
         </div>
 
         {isOpen &&

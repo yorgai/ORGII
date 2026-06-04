@@ -2,12 +2,12 @@
  * SpotlightFooterAction Component
  *
  * Small clickable pill rendered alongside the keyboard-shortcuts footer.
- * Uses the same LiquidGlass material as SpotlightFooter for visual consistency.
+ * Uses the same Glass material as SpotlightFooter for visual consistency.
  */
 import { ArrowUpRight } from "lucide-react";
 import React, { useContext } from "react";
 
-import LiquidGlass from "@src/components/LiquidGlass";
+import Glass from "@src/components/Glass";
 
 import { SpotlightFooterMaterialContext } from "./spotlightFooterMaterialContext";
 
@@ -23,7 +23,7 @@ export const SpotlightFooterAction: React.FC<SpotlightFooterActionProps> = ({
   const material = useContext(SpotlightFooterMaterialContext);
 
   return (
-    <LiquidGlass
+    <Glass
       material={material}
       radius={999}
       enableSpecular={true}
@@ -37,6 +37,6 @@ export const SpotlightFooterAction: React.FC<SpotlightFooterActionProps> = ({
         <span>{label}</span>
         <ArrowUpRight size={10} strokeWidth={2.5} />
       </button>
-    </LiquidGlass>
+    </Glass>
   );
 };

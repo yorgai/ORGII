@@ -47,7 +47,7 @@ export const SIDEBAR_PADDING = {
 } as const;
 
 // ============================================
-// LiquidGlass Configuration
+// Glass Configuration
 // ============================================
 
 export const SIDEBAR_GLASS_CONFIG = {

@@ -1,5 +1,5 @@
 /**
- * LiquidGlass Component
+ * Glass Component
  *
  * Implements Apple's macOS material design system with backdrop blur and glass effects.
  * Based on NSVisualEffectView material variations (ultrathin, thin, medium).
@@ -31,7 +31,7 @@ import {
 // Types
 // ============================================
 
-export interface LiquidGlassProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface GlassProps extends React.HTMLAttributes<HTMLDivElement> {
   children?: React.ReactNode;
   /** Material thickness variation (ultrathin, thin, medium, thick) - follows Apple's design system */
   material?: MaterialThickness;
@@ -90,7 +90,7 @@ export interface LiquidGlassProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const DEFAULT_RIM_OFFSETS = { base: 70, highlight: 100, glow: 60 } as const;
 
-export const LiquidGlass = forwardRef<HTMLDivElement, LiquidGlassProps>(
+export const Glass = forwardRef<HTMLDivElement, GlassProps>(
   (incomingProps, ref) => {
     const {
       children,
@@ -572,9 +572,9 @@ export const LiquidGlass = forwardRef<HTMLDivElement, LiquidGlassProps>(
   }
 );
 
-LiquidGlass.displayName = "LiquidGlass";
+Glass.displayName = "Glass";
 
-export default LiquidGlass;
+export default Glass;
 
 // Re-export config utilities for convenience
 export {

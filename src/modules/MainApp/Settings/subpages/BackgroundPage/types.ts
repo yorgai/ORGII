@@ -19,7 +19,7 @@ export interface AnimationPreset {
   themeMode: ThemeMode;
 }
 
-export type LiquidGlassLevel = "regular" | "medium" | "thick";
+export type GlassLevel = "regular" | "medium" | "thick";
 
 export interface BackgroundConfig {
   backgroundColor?: string;
@@ -34,11 +34,11 @@ export interface BackgroundConfig {
   blurAmount?: number;
   matrixCharSet?: "binary" | "latin" | "symbols" | "katakana";
   /**
-   * When set, the background renders as a Liquid Glass overlay at the
+   * When set, the background renders as a Glass overlay at the
    * given thickness instead of using `imageUrl` / `backgroundColor`.
    * Mutually exclusive with the image / solid-color paths.
    */
-  liquidGlass?: LiquidGlassLevel;
+  glass?: GlassLevel;
   /**
    * When true, toolbar text and pill colors adapt to the brightness of the
    * background behind them. Defaults to true when undefined.

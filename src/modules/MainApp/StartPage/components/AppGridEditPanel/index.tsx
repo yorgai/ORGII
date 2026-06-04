@@ -11,7 +11,7 @@ import { RotateCcw } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { getMaterialConfig } from "@src/components/LiquidGlass/config";
+import { getMaterialConfig } from "@src/components/Glass/config";
 import Slider from "@src/components/Slider";
 import {
   DEFAULT_APP_GRID_CONFIG,

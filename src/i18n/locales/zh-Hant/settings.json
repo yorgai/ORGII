@@ -198,10 +198,6 @@
   "background": {
     "title": "背景",
     "colors": "顏色",
-    "liquidGlass": "Liquid Glass",
-    "liquidGlass_regular": "輕薄",
-    "liquidGlass_medium": "適中",
-    "liquidGlass_thick": "厚重",
     "preset": "預設",
     "custom": "自定義",
     "pickCustomColor": "選擇自定義顏色",

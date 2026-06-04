@@ -198,10 +198,6 @@
   "background": {
     "title": "Tło",
     "colors": "Kolory",
-    "liquidGlass": "Płynne szkło",
-    "liquidGlass_regular": "Standardowe",
-    "liquidGlass_medium": "Średnie",
-    "liquidGlass_thick": "Grube",
     "preset": "Predefiniowane",
     "custom": "Własne",
     "pickCustomColor": "Wybierz własny kolor",

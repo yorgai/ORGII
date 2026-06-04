@@ -8,8 +8,6 @@ import { ChevronsDownUp, ChevronsUpDown, Plus } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
-
 import type { SidebarGroupProps, SidebarItemData } from "../types";
 import { renderSidebarIcon } from "../utils/renderIcon";
 import SidebarItem from "./SidebarItem";
@@ -81,11 +79,12 @@ function SidebarGroupInner<T extends SidebarItemData = SidebarItemData>({
     <div className={`sidebar-group mb-1 ${className}`}>
       {/* Group Header - styled like NavigationMenu submenu header */}
       {group.title && group.collapsible !== false && (
-        <LiquidGlassHoverItem
-          className={`group mx-2 flex h-[36px] items-center justify-between rounded-lg px-2 ${
-            hasSelectedChild ? "text-primary-6" : "text-text-1"
+        <div
+          className={`group mx-2 flex h-[36px] cursor-pointer items-center justify-between rounded-lg px-2 transition-colors duration-150 ${
+            hasSelectedChild
+              ? "bg-bg-2 text-primary-6"
+              : "text-text-1 hover:bg-fill-2"
           }`}
-          hoverEnabled={!hasSelectedChild}
           onClick={handleToggle}
         >
           <div className="flex items-center gap-3">
@@ -113,7 +112,7 @@ function SidebarGroupInner<T extends SidebarItemData = SidebarItemData>({
                   e.stopPropagation();
                   group.onAddNew?.();
                 }}
-                className="flex h-5 w-5 items-center justify-center rounded text-text-3 opacity-0 transition-all hover:bg-fill-3 hover:text-primary-6 group-hover:opacity-100"
+                className="flex h-5 w-5 items-center justify-center rounded text-text-3 opacity-0 transition-all hover:bg-fill-2 hover:text-primary-6 group-hover:opacity-100"
                 title={group.addButtonLabel || t("sidebar.actions.addNew")}
               >
                 <Plus size={12} strokeWidth={2} />
@@ -134,7 +133,7 @@ function SidebarGroupInner<T extends SidebarItemData = SidebarItemData>({
               />
             )}
           </div>
-        </LiquidGlassHoverItem>
+        </div>
       )}
 
       {/* Non-collapsible header */}

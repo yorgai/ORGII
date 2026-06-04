@@ -2,7 +2,7 @@
  * SidebarBase
  *
  * The foundational wrapper for all sidebar components.
- * Handles: LiquidGlass, resize, collapse, traffic lights spacing.
+ * Handles: transparent sidebar surface, resize, collapse, traffic lights spacing.
  *
  * @example
  * ```tsx
@@ -24,9 +24,8 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { PanelLeft, Plus, X } from "lucide-react";
 import React, { useCallback, useMemo } from "react";
 
+import Glass from "@src/components/Glass";
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
-import LiquidGlass from "@src/components/LiquidGlass";
-import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
 import Tooltip from "@src/components/Tooltip";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import {
@@ -66,7 +65,7 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
     innerClassName = "",
     includeTrafficLightSpace = true,
     showCollapseButton = true,
-    wrapInLiquidGlass = true,
+    wrapInGlass = true,
     forceVisible: forceVisibleProp = false,
     theme,
     onCollapse,
@@ -267,14 +266,14 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
                   role="button"
                   tabIndex={0}
                 >
-                  <LiquidGlassHoverItem className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]">
+                  <div className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] transition-colors duration-150 hover:bg-fill-2">
                     <AddIcon
                       size={16}
                       strokeWidth={2}
                       className="text-text-2"
                       style={iconThemeStyle}
                     />
-                  </LiquidGlassHoverItem>
+                  </div>
                 </div>
               </Tooltip>
             </div>
@@ -295,8 +294,9 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
               isHoverSidebarOpen ? (
                 <>
                   {/* Expand sidebar permanently button */}
-                  <LiquidGlassHoverItem
-                    className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
+                  <button
+                    type="button"
+                    className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
                     onClick={handleExpand}
                   >
                     <PanelLeft
@@ -305,10 +305,11 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
                       className="text-text-2"
                       style={iconThemeStyle}
                     />
-                  </LiquidGlassHoverItem>
+                  </button>
                   {/* Close floating sidebar button */}
-                  <LiquidGlassHoverItem
-                    className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
+                  <button
+                    type="button"
+                    className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
                     onClick={handleCollapse}
                   >
                     <X
@@ -317,7 +318,7 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
                       className="text-text-2"
                       style={iconThemeStyle}
                     />
-                  </LiquidGlassHoverItem>
+                  </button>
                 </>
               ) : (
                 <Tooltip
@@ -332,8 +333,9 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
                   framedPanel
                 >
                   <div className="inline-flex">
-                    <LiquidGlassHoverItem
-                      className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px]"
+                    <button
+                      type="button"
+                      className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
                       onClick={handleCollapse}
                     >
                       <PanelLeft
@@ -342,7 +344,7 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
                         className="text-text-2"
                         style={iconThemeStyle}
                       />
-                    </LiquidGlassHoverItem>
+                    </button>
                   </div>
                 </Tooltip>
               )
@@ -370,14 +372,13 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
     );
 
     // Content
-    // Compact layout: the LiquidGlass surface itself reaches the top window
-    // edge (no outer `pt-2`), so we move the 8px top breathing room *inside*
-    // the glass via a spacer div. This keeps the header / icons at the same
-    // vertical position as inset/full while letting the glass cover the full
-    // height of the sidebar column.
+    // Compact layout: the sidebar surface itself reaches the top window edge
+    // (no outer `pt-2`), so we move the 8px top breathing room inside via a
+    // spacer div. This keeps the header / icons at the same vertical position
+    // as inset/full while letting the surface cover the full sidebar column.
     const content = (
       <>
-        {isCompactLayout && wrapInLiquidGlass && (
+        {isCompactLayout && wrapInGlass && (
           <div
             className="h-2 flex-shrink-0"
             data-tauri-drag-region
@@ -397,29 +398,29 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
     // radius, so the floating drop shadow has nothing to "cast" against
     // and just smudges the boundary with the content panel. Drop it.
     const sidebarBoxShadow = isCompactLayout ? "none" : SIDEBAR_STYLE.boxShadow;
-    const glassStyle = themeStyles
+    const surfaceStyle = themeStyles
       ? { ...themeStyles, boxShadow: sidebarBoxShadow }
       : { boxShadow: sidebarBoxShadow };
 
     // Wrapped content
     // Compact layout: sidebar is flush with the top/left/bottom window edge —
     // no outer padding, no border radius. The 8px header inset lives inside
-    // `content` (see spacer above) so the glass surface itself reaches the
-    // window edge. Otherwise: pb-2 pl-2 pt-2 wrapper + glass radius.
-    const wrappedContent = wrapInLiquidGlass ? (
+    // `content` (see spacer above) so the transparent surface itself reaches
+    // the window edge. Otherwise: pb-2 pl-2 pt-2 wrapper + glass radius.
+    const wrappedContent = wrapInGlass ? (
       <div
         className={`sidebar-base flex h-full w-full flex-col ${
           isCompactLayout ? "" : "pb-2 pl-2 pt-2"
         } ${innerClassName}`}
       >
-        <LiquidGlass
+        <Glass
           {...SIDEBAR_GLASS_CONFIG}
           radius={isCompactLayout ? 0 : PLATFORM_SIDEBAR_RADIUS}
           className="flex flex-1 flex-col overflow-hidden"
-          style={glassStyle}
+          style={surfaceStyle}
         >
           {content}
-        </LiquidGlass>
+        </Glass>
       </div>
     ) : (
       <div

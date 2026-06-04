@@ -25,7 +25,7 @@ interface BackgroundLayerProps {
   blurAmount: number;
   backgroundColor?: string;
   animation?: string;
-  liquidGlass?: "regular" | "medium" | "thick";
+  glass?: "regular" | "medium" | "thick";
 }
 
 export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
@@ -33,7 +33,7 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
   blurAmount,
   backgroundColor,
   animation,
-  liquidGlass,
+  glass,
 }) => {
   const [displayedImage, setDisplayedImage] = useState<string | null>(() => {
     if (!image) return null;
@@ -80,8 +80,8 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
   // Get animation component if animation is selected
   const AnimationComponent = animation ? AnimationComponents[animation] : null;
 
-  // Liquid Glass mode: render a 30% bg-2 tint behind the native glass effect
-  if (liquidGlass != null) {
+  // Glass mode: render a 30% bg-2 tint behind the native glass effect
+  if (glass != null) {
     return (
       <div
         data-background-layer="true"

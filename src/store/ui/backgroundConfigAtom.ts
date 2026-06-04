@@ -5,7 +5,7 @@
  *   - Image (bundled presets + user uploads)
  *   - Solid color (preset pairs + custom hex)
  *   - Animation type
- *   - Liquid Glass thickness
+ *   - Glass thickness
  *   - Adaptive colors
  *
  * Persisted to localStorage under `orgii_background_config`.
@@ -52,8 +52,8 @@ export interface BackgroundConfig {
   backgroundColorId?: string;
   animation?: string;
   matrixCharSet?: "binary" | "latin" | "symbols" | "katakana";
-  /** Liquid Glass thickness level. Undefined = off. */
-  liquidGlass?: "regular" | "medium" | "thick";
+  /** Glass thickness level. Undefined = off. */
+  glass?: "regular" | "medium" | "thick";
 }
 
 // ============================================
@@ -62,7 +62,7 @@ export interface BackgroundConfig {
 
 const BACKGROUND_CONFIG_KEY = "orgii_background_config";
 
-const VALID_LIQUID_GLASS_LEVELS = new Set(["regular", "medium", "thick"]);
+const VALID_GLASS_LEVELS = new Set(["regular", "medium", "thick"]);
 
 const DEFAULT_BACKGROUND_PAIR_ID = "graphite";
 const DEFAULT_BACKGROUND_PAIR = getColorPairById(DEFAULT_BACKGROUND_PAIR_ID);
@@ -84,9 +84,8 @@ function getStoredBackgroundConfig(): BackgroundConfig {
     const stored = localStorage.getItem(BACKGROUND_CONFIG_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as Record<string, unknown>;
-      if (!VALID_LIQUID_GLASS_LEVELS.has(parsed.liquidGlass as string)) {
-        parsed.liquidGlass =
-          parsed.liquidGlass === true ? "regular" : undefined;
+      if (!VALID_GLASS_LEVELS.has(parsed.glass as string)) {
+        parsed.glass = undefined;
       }
       const merged = {
         ...DEFAULT_BACKGROUND_CONFIG,

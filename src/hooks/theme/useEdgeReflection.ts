@@ -1,7 +1,7 @@
 /**
  * useEdgeReflection Hook
  *
- * Description: Implements Canvas 2D-based edge reflection for liquid glass effect
+ * Description: Implements Canvas 2D-based edge reflection for glass effect
  *
  * Features:
  * - Samples background colors from edge regions

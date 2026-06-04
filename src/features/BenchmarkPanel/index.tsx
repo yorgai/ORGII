@@ -93,7 +93,11 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
           isPreviewMode ? (
             <div className="scrollbar-overlay h-full overflow-y-auto p-5">
               <div className="allow-select-deep max-w-[920px] select-text text-[13px] leading-6 text-text-2">
-                <Markdown textContent={markdownContent} useChatCodeBlock />
+                <Markdown
+                  textContent={markdownContent}
+                  useChatCodeBlock
+                  skipPreprocess
+                />
               </div>
             </div>
           ) : (

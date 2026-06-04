@@ -57,7 +57,7 @@ const MemoryContentViewer = ({
       )}
       <div className="group/detail relative">
         <div className="policy-markdown-scroll max-h-[360px] w-full min-w-0 max-w-full select-text overflow-auto">
-          <Markdown textContent={detail.content || "(empty)"} />
+          <Markdown textContent={detail.content || "(empty)"} skipPreprocess />
         </div>
         <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover/detail:opacity-100">
           <Button

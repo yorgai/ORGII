@@ -15,7 +15,7 @@ import { useAtomValue } from "jotai";
 import { useEffect, useState } from "react";
 
 // Direct leaf import to avoid pulling @src/store's barrel — which transitively
-// reaches LiquidGlass → useBackgroundImage and creates a circular dependency.
+// reaches Glass → useBackgroundImage and creates a circular dependency.
 import { backgroundImageAtom } from "@src/store/ui/backgroundConfigAtom";
 import {
   addToBackgroundCache,

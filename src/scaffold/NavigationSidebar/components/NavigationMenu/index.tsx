@@ -8,14 +8,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  LIQUID_GLASS_HOVER,
-  LIQUID_GLASS_HOVER_VARIANTS,
-  useHoverIntensity,
-} from "@src/components/LiquidGlass/hoverConfig";
-import LiquidGlassHoverItem from "@src/components/LiquidGlassHoverItem";
 import { preloadRouteByPath } from "@src/router/lazy/preload";
-import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import HoverAnimatedIcon, { triggerIconAnimation } from "../HoverAnimatedIcon";
 import type { NavigationMenuItem } from "./config";
@@ -60,16 +53,8 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
     verticalGapClassName = "gap-1",
   }) => {
     const { t } = useTranslation();
-    const { isDark } = useCurrentTheme();
-    const hoverIntensity = useHoverIntensity();
 
-    const rowHoverBackground = isDark
-      ? LIQUID_GLASS_HOVER_VARIANTS[hoverIntensity].dark
-      : LIQUID_GLASS_HOVER_VARIANTS[hoverIntensity].light;
-
-    const selectedBackground = isDark
-      ? LIQUID_GLASS_HOVER.dark
-      : LIQUID_GLASS_HOVER.light;
+    const rowHoverBackground = "var(--color-fill-2)";
 
     const itemsKey = useMemo(
       () => items.map((item) => item.key).join(","),
@@ -219,12 +204,11 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
                   : undefined
               }
             >
-              <LiquidGlassHoverItem
-                dataTestId={item.dataTestId}
-                className={`group flex min-h-[36px] items-center justify-between rounded-lg ${
+              <div
+                data-testid={item.dataTestId}
+                className={`group flex min-h-[36px] cursor-pointer items-center justify-between rounded-lg transition-colors duration-150 ${
                   isChild ? "pl-5 pr-2" : "px-2"
-                } ${submenuSelected ? "text-primary-6" : "text-text-1"}`}
-                hoverEnabled={!submenuSelected}
+                } ${submenuSelected ? "bg-bg-2 text-primary-6" : "text-text-1 hover:bg-fill-2"}`}
                 onClick={() => {
                   if (!item.disabled) onMenuItemClick(item.key, item);
                 }}
@@ -273,7 +257,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
                       title={
                         isOpen ? t("actions.collapse") : t("actions.expand")
                       }
-                      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-text-3 transition-colors duration-150 hover:bg-fill-3 hover:text-text-1 focus:outline-none"
+                      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-text-3 transition-colors duration-150 hover:bg-fill-2 hover:text-text-1 focus:outline-none"
                       data-testid={`${item.key}-session-tree-toggle`}
                       onClick={(event) => {
                         event.preventDefault();
@@ -291,7 +275,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
                     </button>
                   </span>
                 )}
-              </LiquidGlassHoverItem>
+              </div>
 
               {isOpen && !collapsed && item.children && (
                 <div className="mt-1 space-y-1">
@@ -327,9 +311,9 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
                 : undefined
             }
           >
-            <LiquidGlassHoverItem
-              dataTestId={item.dataTestId}
-              className={`group flex min-h-[36px] items-center justify-between overflow-hidden rounded-lg ${
+            <div
+              data-testid={item.dataTestId}
+              className={`group flex min-h-[36px] items-center justify-between overflow-hidden rounded-lg transition-colors duration-150 ${
                 isChild ? "pl-5 pr-2" : "px-2"
               } ${item.subtitle ? "py-1.5" : ""} ${
                 item.disabled
@@ -337,20 +321,16 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
                     ? "cursor-default text-text-2 opacity-60"
                     : "cursor-default text-text-3 opacity-60"
                   : isSelected
-                    ? "text-primary-6"
+                    ? "bg-bg-2 text-primary-6"
                     : isSecondaryTone
-                      ? "text-text-2"
-                      : "text-text-1"
+                      ? "cursor-pointer text-text-2 hover:bg-fill-2 hover:text-text-1"
+                      : "cursor-pointer text-text-1 hover:bg-fill-2"
               }`}
-              hoverEnabled={!isSelected && !item.disabled}
               onClick={() => {
                 if (!item.disabled) onMenuItemClick(item.key, item);
               }}
               onMouseEnter={(e: React.MouseEvent) =>
                 handleRowMouseEnter(e, item.routePath)
-              }
-              style={
-                isSelected ? { background: selectedBackground } : undefined
               }
             >
               <div
@@ -414,7 +394,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
                         type="button"
                         aria-label={item.rowActionLabel ?? t("actions.more")}
                         title={item.rowActionLabel ?? t("actions.more")}
-                        className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-text-3 transition-colors duration-150 hover:bg-fill-3 hover:text-text-1 focus:outline-none"
+                        className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-text-3 transition-colors duration-150 hover:bg-fill-2 hover:text-text-1 focus:outline-none"
                         onClick={(e) => handleRowActionClick(e, item)}
                       >
                         {React.createElement(
@@ -456,7 +436,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
                   </span>
                 )
               )}
-            </LiquidGlassHoverItem>
+            </div>
           </div>
         );
 
@@ -469,7 +449,6 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
         openSubmenus,
         isSubmenuSelected,
         collapsed,
-        selectedBackground,
         rowHoverBackground,
         renderMenuItemWrapper,
         renderIcon,

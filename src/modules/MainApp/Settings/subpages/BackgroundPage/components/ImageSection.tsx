@@ -57,7 +57,7 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
   const { t } = useTranslation(translationNamespace);
   const hasStoragePath = storagePath.trim().length > 0;
   const blurAmount = config.blurAmount ?? 0;
-  const isLiquidGlass = config.liquidGlass != null;
+  const isGlass = config.glass != null;
 
   const customImageEntries = (config.customImages ?? [])
     .filter(
@@ -76,7 +76,7 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
           {PRESET_IMAGES.map((img, index) => {
             const isPresetSelected =
               !config.backgroundColor &&
-              !config.liquidGlass &&
+              !config.glass &&
               (config.imageUrl === img.value ||
                 (!config.imageUrl && !config.selectedImageId && index === 0));
 
@@ -167,7 +167,7 @@ export const ImageSection: React.FC<ImageSectionProps> = ({
         </div>
       </SectionRow>
 
-      {!isLiquidGlass && !config.backgroundColor && (
+      {!isGlass && !config.backgroundColor && (
         <SectionRow label={t("background.blur")}>
           <div
             className="flex items-center gap-2"
