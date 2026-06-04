@@ -179,7 +179,15 @@
     "createWorkItem": "Tạo Work Item",
     "createModes": {
       "generateWithAi": "Tạo bằng AI",
-      "manualCreation": "Tạo thủ công"
+      "useAi": "Dùng Agent",
+      "manualCreation": "Tạo thủ công",
+      "sessionCreatorPrompt": {
+        "promptNameQuestion": "Trước tiên, hãy hỏi người dùng có muốn chỉ định một tên Work Item cụ thể không.",
+        "promptInstruction": "Tạo các Work Items cho dự án này.",
+        "promptProject": "Dự án: {{project}}",
+        "promptDraftTitle": "Tên Work Item được yêu cầu: {{title}}",
+        "promptDraftDetails": "Chi tiết bản nháp:\n{{details}}"
+      }
     },
     "linkExisting": {
       "label": "Liên kết Work Item hiện có",

@@ -13,7 +13,7 @@
  *   - CreateWorkItemView (create)
  */
 import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
@@ -21,8 +21,10 @@ import {
   HEADER_CLASSES,
   HEADER_ICON_SIZE,
 } from "@src/config/workstation/tokens";
+import { useResizeHandle } from "@src/hooks/ui/useResizeHandle";
 import { usePublishWorkstationTabHeader } from "@src/hooks/workStation";
 import { PANEL_FOOTER_TOKENS } from "@src/modules/shared/layouts/blocks";
+import { VerticalResizeHandle } from "@src/scaffold/Resize";
 
 // ============================================
 // Types
@@ -49,6 +51,14 @@ export interface DetailSplitLayoutProps {
   leftContent: React.ReactNode;
   /** Right panel content (properties sidebar) */
   rightContent?: React.ReactNode;
+  /** Enable horizontal resizing for the right panel. */
+  resizableRightPanel?: boolean;
+  /** Initial right panel width when resizing is enabled. */
+  defaultRightPanelWidth?: number;
+  /** Minimum right panel width when resizing is enabled. */
+  minRightPanelWidth?: number;
+  /** Maximum right panel width when resizing is enabled. */
+  maxRightPanelWidth?: number;
   /** Optional footer (e.g. Cancel / Create buttons) */
   footer?: React.ReactNode;
   /** Publish header content into the global WorkstationTabHeader instead of rendering an inline row. */
@@ -58,6 +68,10 @@ export interface DetailSplitLayoutProps {
 // ============================================
 // Component
 // ============================================
+
+const DETAIL_SPLIT_DEFAULT_RIGHT_PANEL_WIDTH = 280;
+const DETAIL_SPLIT_MIN_RIGHT_PANEL_WIDTH = 250;
+const DETAIL_SPLIT_MAX_RIGHT_PANEL_WIDTH = 420;
 
 const DetailSplitLayout: React.FC<DetailSplitLayoutProps> = ({
   title,
@@ -70,10 +84,28 @@ const DetailSplitLayout: React.FC<DetailSplitLayoutProps> = ({
   topContent,
   leftContent,
   rightContent,
+  resizableRightPanel = false,
+  defaultRightPanelWidth = DETAIL_SPLIT_DEFAULT_RIGHT_PANEL_WIDTH,
+  minRightPanelWidth = DETAIL_SPLIT_MIN_RIGHT_PANEL_WIDTH,
+  maxRightPanelWidth = DETAIL_SPLIT_MAX_RIGHT_PANEL_WIDTH,
   footer,
   publishHeaderToWorkstation = false,
 }) => {
   const { t } = useTranslation();
+  const [rightPanelWidth, setRightPanelWidth] = useState(
+    defaultRightPanelWidth
+  );
+  const handleRightPanelWidthChange = useCallback(
+    (nextWidth: number) => setRightPanelWidth(nextWidth),
+    []
+  );
+  const { handleMouseDown: handleRightPanelResize, isResizing } =
+    useResizeHandle(rightPanelWidth, handleRightPanelWidthChange, {
+      direction: "horizontal",
+      minSize: minRightPanelWidth,
+      maxSize: maxRightPanelWidth,
+      isReversed: true,
+    });
 
   const headerContent = (
     <>
@@ -179,13 +211,27 @@ const DetailSplitLayout: React.FC<DetailSplitLayoutProps> = ({
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div
-          className={`min-w-0 flex-1 overflow-hidden ${rightContent ? "border-r border-border-2" : ""}`}
+          className={`min-w-0 flex-1 overflow-hidden ${rightContent && !resizableRightPanel ? "border-r border-border-2" : ""}`}
         >
           {leftContent}
         </div>
 
+        {rightContent && resizableRightPanel && (
+          <VerticalResizeHandle
+            onMouseDown={handleRightPanelResize}
+            isResizing={isResizing}
+          />
+        )}
+
         {rightContent && (
-          <div className="w-[280px] min-w-[250px] max-w-[300px] shrink-0">
+          <div
+            className={
+              resizableRightPanel
+                ? "min-w-0 shrink-0 overflow-hidden"
+                : "w-[280px] min-w-[250px] max-w-[300px] shrink-0"
+            }
+            style={resizableRightPanel ? { width: rightPanelWidth } : undefined}
+          >
             {rightContent}
           </div>
         )}

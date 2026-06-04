@@ -8,10 +8,14 @@ export type { ClaimIdentityModalProps } from "./ClaimIdentityModal";
 export { default as DetailSplitLayout } from "./DetailSplitLayout";
 export type { DetailSplitLayoutProps } from "./DetailSplitLayout";
 export { default as InlineDropdown } from "./InlineDropdown";
-export { default as ProjectContentEditor } from "./ProjectContentEditor";
+export {
+  default as ProjectContentEditor,
+  ProjectContentTitleInput,
+} from "./ProjectContentEditor";
 export type {
   ProjectContentEditorRef,
   ProjectContentEditorProps,
+  ProjectContentTitleInputProps,
 } from "./ProjectContentEditor";
 export { default as PropertiesPanel } from "./PropertiesPanel";
 export { default as PropertiesRailFrame } from "./PropertiesPanel/PropertiesRailFrame";

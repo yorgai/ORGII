@@ -91,6 +91,7 @@ import {
 } from "@src/store/ui/chatPanelAtom";
 import { triggerCollapseAllAtom } from "@src/store/ui/collapseStateAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
+import type { WorkItemDraft } from "@src/store/workstation/projectManager";
 import { createBenchmarkTab } from "@src/store/workstation/tabs";
 
 import { useReloadSession } from "./ChatHistory/hooks/useReloadSession";
@@ -106,6 +107,10 @@ import type { ChatPanelProps, ChatPanelRegionNotice } from "./types";
 
 const CHAT_PANEL_HEADER_ICON_SIZE = 14;
 const CHAT_PANEL_HEADER_PROMINENT_ICON_SIZE = 16;
+const CHAT_PANEL_WORK_ITEM_HEADER_ACTION_CLASS =
+  "!h-7 !w-7 !min-w-7 !rounded-full";
+const CHAT_PANEL_WORK_ITEM_HEADER_ACTION_ACTIVE_CLASS =
+  "!h-7 !w-7 !min-w-7 !rounded-full !bg-surface-selected !text-primary-6";
 // Builtin Agent Architect — designs and maintains agents, agent orgs, and
 // skills. Picking the "Create agent / skill" entry in the creator-target
 // dropdown is a shortcut that opens a fresh Agent session with this agent
@@ -146,6 +151,10 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const [createTarget, setCreateTarget] = useAtom(chatPanelCreateTargetAtom);
     const [workItemCreatePropertiesOpen, setWorkItemCreatePropertiesOpen] =
       useState(false);
+    const [workItemCreateAiEnabled, setWorkItemCreateAiEnabled] =
+      useState(true);
+    const [workItemCreateDraft, setWorkItemCreateDraft] =
+      useState<WorkItemDraft | null>(null);
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
     const currentRepo = useAtomValue(currentRepoAtom);
     const currentRepoPath = currentRepo?.path ?? currentRepo?.fs_uri ?? null;
@@ -461,11 +470,15 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           handleNewSession();
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
           setWorkItemCreatePropertiesOpen(false);
+          setWorkItemCreateAiEnabled(true);
+          setWorkItemCreateDraft(null);
           return;
         }
 
         if (nextTarget !== CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
           setWorkItemCreatePropertiesOpen(false);
+          setWorkItemCreateAiEnabled(true);
+          setWorkItemCreateDraft(null);
         }
         setCreateTarget(nextTarget);
         if (nextTarget === CHAT_PANEL_CREATE_TARGET.AGENT_SESSION) {
@@ -484,6 +497,8 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const handleCancelWorkItemCreate = useCallback(() => {
       setWorkItemCreatePropertiesOpen(false);
+      setWorkItemCreateAiEnabled(true);
+      setWorkItemCreateDraft(null);
       setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
       handleNewSession();
     }, [handleNewSession, setCreateTarget]);
@@ -510,6 +525,8 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         });
         if (!result.keepOpen) {
           setWorkItemCreatePropertiesOpen(false);
+          setWorkItemCreateAiEnabled(true);
+          setWorkItemCreateDraft(null);
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
           setContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
           dispatchClearSession();
@@ -654,6 +671,27 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           </Tooltip>
         )}
         {isWorkItemTarget && !showSessionContent && !selectedWorkItem && (
+          <>
+            <label className="flex h-7 items-center gap-2 px-1 text-[12px] font-medium text-text-2">
+              <span>{t("projects:workItems.createModes.useAi")}</span>
+              <Switch
+                size="small"
+                checked={workItemCreateAiEnabled}
+                onChange={setWorkItemCreateAiEnabled}
+                ariaLabel={t("projects:workItems.createModes.useAi")}
+                dataTestId="chat-panel-create-work-item-ai-switch"
+              />
+            </label>
+            {!workItemCreateAiEnabled ? (
+              <div
+                className="pointer-events-none mx-2 h-4 w-px shrink-0 bg-border-2"
+                role="separator"
+                aria-hidden
+              />
+            ) : null}
+          </>
+        )}
+        {isWorkItemTarget && !showSessionContent && !selectedWorkItem && (
           <Tooltip
             content={
               workItemCreatePropertiesOpen
@@ -671,8 +709,8 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 iconOnly
                 className={
                   workItemCreatePropertiesOpen
-                    ? "!bg-surface-selected !text-primary-6"
-                    : ""
+                    ? CHAT_PANEL_WORK_ITEM_HEADER_ACTION_ACTIVE_CLASS
+                    : CHAT_PANEL_WORK_ITEM_HEADER_ACTION_CLASS
                 }
                 onClick={handleToggleWorkItemCreateProperties}
                 aria-label={
@@ -1059,8 +1097,62 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       void refreshBenchmarkPreflight();
     }, [refreshBenchmarkPreflight]);
 
+    const workItemSessionCreatorPrompt = useMemo(() => {
+      const title = workItemCreateDraft?.name.trim();
+      const description = workItemCreateDraft?.description.trim();
+      const projectName = workItemCreateDraft?.projectId
+        ? workItemCreateDraft.projectId
+        : undefined;
+      return [
+        t(
+          "projects:workItems.createModes.sessionCreatorPrompt.promptNameQuestion"
+        ),
+        title
+          ? t(
+              "projects:workItems.createModes.sessionCreatorPrompt.promptDraftTitle",
+              {
+                title,
+              }
+            )
+          : null,
+        t(
+          "projects:workItems.createModes.sessionCreatorPrompt.promptInstruction"
+        ),
+        projectName
+          ? t(
+              "projects:workItems.createModes.sessionCreatorPrompt.promptProject",
+              {
+                project: projectName,
+              }
+            )
+          : null,
+        description
+          ? t(
+              "projects:workItems.createModes.sessionCreatorPrompt.promptDraftDetails",
+              {
+                details: description,
+              }
+            )
+          : null,
+      ]
+        .filter((line): line is string => Boolean(line))
+        .join("\n\n");
+    }, [t, workItemCreateDraft]);
+
     const emptyChatContent = (() => {
       if (createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
+        const sessionCreatorContent =
+          workItemCreateAiEnabled && SessionCreatorSlot ? (
+            <SessionCreatorSlot
+              className="min-h-0 flex-1"
+              variant={creatorVariant}
+              centerFullScreenContent
+              hidePresenceButton
+              onRegionNoticeChange={handleRegionNoticeChange}
+              initialContent={workItemSessionCreatorPrompt}
+            />
+          ) : undefined;
+
         return (
           <div className={`flex overflow-hidden ${creatorClassName}`}>
             <CreateWorkItemView
@@ -1068,10 +1160,16 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               onCancel={handleCancelWorkItemCreate}
               onSetUnsaved={() => undefined}
               onWorkItemCreated={handleChatPanelWorkItemCreated}
+              onDraftChange={setWorkItemCreateDraft}
               showCloseAction={false}
               propertiesOpen={workItemCreatePropertiesOpen}
               onToggleProperties={handleToggleWorkItemCreateProperties}
               showPropertiesAction={false}
+              aiGenerateMode={workItemCreateAiEnabled}
+              onAiGenerateModeChange={setWorkItemCreateAiEnabled}
+              showAiModePanel={false}
+              contentSlot={sessionCreatorContent}
+              showFooter={!sessionCreatorContent}
             />
           </div>
         );

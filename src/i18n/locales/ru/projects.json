@@ -179,7 +179,15 @@
     "createWorkItem": "Создать Work Item",
     "createModes": {
       "generateWithAi": "Создать с AI",
-      "manualCreation": "Ручное создание"
+      "useAi": "Использовать Agent",
+      "manualCreation": "Ручное создание",
+      "sessionCreatorPrompt": {
+        "promptNameQuestion": "Сначала спроси пользователя, хочет ли он указать конкретное имя Work Item.",
+        "promptInstruction": "Создай Work Items для этого проекта.",
+        "promptProject": "Проект: {{project}}",
+        "promptDraftTitle": "Запрошенное имя Work Item: {{title}}",
+        "promptDraftDetails": "Детали черновика:\n{{details}}"
+      }
     },
     "linkExisting": {
       "label": "Связать существующий Work Item",

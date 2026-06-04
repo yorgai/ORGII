@@ -47,7 +47,10 @@ import { useSessionLaunch } from "./useSessionLaunch";
 import { useSessionValidation } from "./useSessionValidation";
 
 export interface UseSessionCreatorOptions {
+  initialContent?: string;
   launchMode?: SessionCreatorLaunchMode;
+  skipDraftLoading?: boolean;
+  persistDraft?: boolean;
   /**
    * Synthetic slash items appended to the `/` menu in addition to the
    * backend-discovered items. Variants use this to surface variant-only
@@ -66,7 +69,14 @@ export interface UseSessionCreatorOptions {
 export function useSessionCreator(
   options: UseSessionCreatorOptions = {}
 ): UseSessionCreatorReturn {
-  const { launchMode, extraSlashItems, onSlashSelectIntercept } = options;
+  const {
+    initialContent,
+    launchMode,
+    skipDraftLoading = false,
+    persistDraft = true,
+    extraSlashItems,
+    onSlashSelectIntercept,
+  } = options;
   // ============================================
   // Refs
   // ============================================
@@ -257,7 +267,7 @@ export function useSessionCreator(
   // Local State
   // ============================================
 
-  const [editorContent, setEditorContent] = useState("");
+  const [editorContent, setEditorContent] = useState(initialContent ?? "");
   const [sessionName, setSessionName] = useState("");
 
   // ============================================
@@ -315,7 +325,8 @@ export function useSessionCreator(
     setEditorContent,
     setUploadedFiles,
     tiptapRef,
-    skipDraftLoading: hasListingParams,
+    skipDraftLoading: skipDraftLoading || hasListingParams,
+    persistDraft,
   });
 
   // Session Validation — validates the session-scoped draft, not the global

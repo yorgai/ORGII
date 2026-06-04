@@ -179,7 +179,15 @@
     "createWorkItem": "Crear Work Item",
     "createModes": {
       "generateWithAi": "Crear con IA",
-      "manualCreation": "Creación manual"
+      "useAi": "Usar Agent",
+      "manualCreation": "Creación manual",
+      "sessionCreatorPrompt": {
+        "promptNameQuestion": "Primero, pregunta al usuario si quiere especificar un nombre concreto para el Work Item.",
+        "promptInstruction": "Crea Work Items para este proyecto.",
+        "promptProject": "Proyecto: {{project}}",
+        "promptDraftTitle": "Nombre de Work Item solicitado: {{title}}",
+        "promptDraftDetails": "Detalles del borrador:\n{{details}}"
+      }
     },
     "linkExisting": {
       "label": "Vincular Work Item existente",

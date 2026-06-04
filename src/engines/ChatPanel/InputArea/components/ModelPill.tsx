@@ -29,7 +29,6 @@ import {
 } from "@src/api/tauri/session";
 import { Message } from "@src/components/Message";
 import ModelSelectorPill from "@src/components/ModelSelectorPill";
-import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
@@ -209,7 +208,6 @@ const ModelPill: React.FC = memo(() => {
       ref={modelSegmentRef}
       selection={lastModel}
       defaultLabel={t("sessions:creator.selectModel")}
-      shortcut={getShortcutKeys("open_model_selector")}
       active={isModelOpen}
       className="h-[28px] max-w-[220px] shrink-0 text-[13px]"
       onClick={handleOpenModelSelector}

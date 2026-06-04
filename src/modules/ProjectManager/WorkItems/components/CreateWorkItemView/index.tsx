@@ -14,7 +14,13 @@
  */
 import { emit } from "@tauri-apps/api/event";
 import { Info, X } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -25,6 +31,7 @@ import {
 } from "@src/api/http/project";
 import Button from "@src/components/Button";
 import Message from "@src/components/Message";
+import Select, { type SelectOption } from "@src/components/Select";
 import Switch from "@src/components/Switch";
 import { useKeyboardSave } from "@src/hooks/keyboard";
 import { createLogger } from "@src/hooks/logger";
@@ -41,6 +48,7 @@ import {
   DetailSplitLayout,
   ProjectContentEditor,
   type ProjectContentEditorRef,
+  ProjectContentTitleInput,
 } from "@src/modules/ProjectManager/shared";
 import { unresolveImagePathsForStorage } from "@src/modules/ProjectManager/shared/utils/workItemImagePaths";
 import { PANEL_HEADER_TOKENS } from "@src/modules/shared/layouts/blocks";
@@ -75,16 +83,29 @@ interface CreateWorkItemProjectOption extends WorkItemProject {
 }
 
 const CREATE_WORK_ITEM_VISIBLE_FIELDS: WorkItemPropertyFieldKey[] = [
+  "project",
   "status",
   "priority",
   "assignee",
   "reviewer",
-  "project",
   "milestone",
   "startDate",
   "date",
   "labels",
 ];
+
+const CREATE_WORK_ITEM_INLINE_FIELDS: WorkItemPropertyFieldKey[] = [
+  "project",
+  "status",
+  "priority",
+];
+
+const CREATE_WORK_ITEM_HEADER_ACTION_CLASS =
+  "hover:!bg-fill-2 !h-7 !w-7 !min-w-7";
+const CREATE_WORK_ITEM_HEADER_ACTION_ACTIVE_CLASS =
+  "!h-7 !w-7 !min-w-7 !bg-surface-selected !text-primary-6 hover:!bg-fill-2";
+const CREATE_WORK_ITEM_BREADCRUMB_SELECT_CLASS =
+  "w-auto max-w-[220px] [&_.select-selector]:!h-7 [&_.select-selector]:!rounded-full [&_.select-selector]:!border-0 [&_.select-selector]:!bg-transparent [&_.select-selector]:!px-1.5 [&_.select-selector]:!text-[12px] [&_.select-selector]:!shadow-none hover:[&_.select-selector]:!bg-surface-hover";
 
 export interface CreateWorkItemViewProps {
   /** Project ID for the new work item when launched from a Project */
@@ -103,6 +124,8 @@ export interface CreateWorkItemViewProps {
   onSetUnsaved: (hasUnsaved: boolean) => void;
   /** Called after work item is successfully created */
   onWorkItemCreated: (result?: CreatedWorkItemResult) => void;
+  /** Called when the local draft changes. */
+  onDraftChange?: (draft: WorkItemDraft) => void;
   /** Available options for pickers */
   availableProjects?: WorkItemProject[];
   availableMilestones?: WorkItemMilestone[];
@@ -118,6 +141,16 @@ export interface CreateWorkItemViewProps {
   onToggleProperties?: () => void;
   /** Render the local properties info action in this view's header. */
   showPropertiesAction?: boolean;
+  /** Controlled agent creation mode. */
+  aiGenerateMode?: boolean;
+  /** Controlled agent creation mode change handler. */
+  onAiGenerateModeChange?: (enabled: boolean) => void;
+  /** Render the local agent mode card. */
+  showAiModePanel?: boolean;
+  /** Optional content rendered below the shared title/description editor. */
+  contentSlot?: React.ReactNode;
+  /** Render the create footer. */
+  showFooter?: boolean;
 }
 
 // ============================================
@@ -135,6 +168,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   onCancel,
   onSetUnsaved,
   onWorkItemCreated,
+  onDraftChange,
   availableProjects = [],
   availableMilestones = [],
   availableLabels = [],
@@ -144,11 +178,16 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   propertiesOpen,
   onToggleProperties,
   showPropertiesAction = true,
+  aiGenerateMode: controlledAiGenerateMode,
+  onAiGenerateModeChange,
+  showAiModePanel = true,
+  contentSlot,
+  showFooter = true,
 }) => {
   const { t } = useTranslation("projects");
   const [saving, setSaving] = useState(false);
   const [createMore, setCreateMore] = useState(false);
-  const [aiGenerateMode, setAiGenerateMode] = useState(false);
+  const [localAiGenerateMode, setLocalAiGenerateMode] = useState(true);
   const [localPropertiesOpen, setLocalPropertiesOpen] = useState(false);
   const [editorResetKey, setEditorResetKey] = useState(0);
   const { agents: customAgents } = useAgentDefinitions();
@@ -182,6 +221,10 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
         : undefined;
 
   const editorRef = useRef<ProjectContentEditorRef>(null);
+
+  useEffect(() => {
+    onDraftChange?.(draft);
+  }, [draft, onDraftChange]);
 
   const { handleImageInsert } = useWorkItemImageInsert({
     projectSlug: selectedProjectSlug ?? "",
@@ -301,17 +344,120 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
     (project) => project.id === draft.projectId
   );
   const selectedProjectName = selectedProject?.name ?? projectName ?? "";
+  const selectedProjectOrgId = selectedProject?.orgId;
   const selectedProjectOrgLabel =
-    projectOrgs.find((org) => org.id === selectedProject?.orgId)?.name ??
+    projectOrgs.find((org) => org.id === selectedProjectOrgId)?.name ??
     scopeBreadcrumbLabel ??
     t("orgs.personalOrg");
 
   const projectBreadcrumbLabel =
     selectedProjectName || t("projects.dashboardTitle");
 
+  const projectOptions = useMemo<SelectOption[]>(
+    () =>
+      resolvedProjects.map((project) => ({
+        value: project.id,
+        label: project.name,
+        triggerLabel: project.name,
+      })),
+    [resolvedProjects]
+  );
+
+  const orgOptions = useMemo<SelectOption[]>(() => {
+    const orgIdsWithProjects = new Set(
+      resolvedProjects
+        .map((project) => project.orgId)
+        .filter((orgId): orgId is string => Boolean(orgId))
+    );
+    return projectOrgs
+      .filter((org) => orgIdsWithProjects.has(org.id))
+      .map((org) => ({
+        value: org.id,
+        label: org.name,
+        triggerLabel: org.name,
+      }));
+  }, [projectOrgs, resolvedProjects]);
+
+  const handleProjectBreadcrumbChange = useCallback(
+    (value: string | number | (string | number)[]) => {
+      if (Array.isArray(value)) return;
+      updateDraftWithUndo({ projectId: String(value) });
+    },
+    [updateDraftWithUndo]
+  );
+
+  const handleOrgBreadcrumbChange = useCallback(
+    (value: string | number | (string | number)[]) => {
+      if (Array.isArray(value)) return;
+      const nextOrgId = String(value);
+      const nextProject = resolvedProjects.find(
+        (project) => project.orgId === nextOrgId
+      );
+      if (nextProject) {
+        updateDraftWithUndo({ projectId: nextProject.id });
+      }
+    },
+    [resolvedProjects, updateDraftWithUndo]
+  );
+
+  const orgBreadcrumbSegment =
+    orgOptions.length > 0 ? (
+      <Select
+        value={selectedProjectOrgId}
+        options={orgOptions}
+        onChange={handleOrgBreadcrumbChange}
+        placeholder={selectedProjectOrgLabel}
+        size="small"
+        variant="ghost"
+        radius="pill"
+        showSearch
+        dropdownWidthMode="min-match"
+        dropdownMinWidth={220}
+        panelZIndex={10000}
+        className={CREATE_WORK_ITEM_BREADCRUMB_SELECT_CLASS}
+        dataTestId="create-work-item-org-breadcrumb-select"
+      />
+    ) : (
+      selectedProjectOrgLabel
+    );
+
+  const projectBreadcrumbSegment =
+    projectOptions.length > 0 ? (
+      <Select
+        value={draft.projectId}
+        options={projectOptions}
+        onChange={handleProjectBreadcrumbChange}
+        placeholder={projectBreadcrumbLabel}
+        size="small"
+        variant="ghost"
+        radius="pill"
+        showSearch
+        dropdownWidthMode="min-match"
+        dropdownMinWidth={220}
+        panelZIndex={10000}
+        className={CREATE_WORK_ITEM_BREADCRUMB_SELECT_CLASS}
+        dataTestId="create-work-item-project-breadcrumb-select"
+      />
+    ) : (
+      projectBreadcrumbLabel
+    );
+
   // Build a stub WorkItemExtended for WorkItemProperties from the draft
   const stubWorkItem = workItemDraftToStubWorkItem(draft, selectedProjectName);
   const resolvedPropertiesOpen = propertiesOpen ?? localPropertiesOpen;
+  const resolvedAiGenerateMode =
+    controlledAiGenerateMode ?? localAiGenerateMode;
+
+  const handleAiGenerateModeChange = useCallback(
+    (enabled: boolean) => {
+      if (onAiGenerateModeChange) {
+        onAiGenerateModeChange(enabled);
+        return;
+      }
+      setLocalAiGenerateMode(enabled);
+    },
+    [onAiGenerateModeChange]
+  );
 
   const handleToggleProperties = useCallback(() => {
     if (onToggleProperties) {
@@ -422,12 +568,45 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
 
   useKeyboardSave(handleCreate, !saving && !!draft.name.trim());
 
+  const workItemTitlePlaceholder = t("workItems.titlePlaceholder");
+  const optionalWorkItemTitlePlaceholder = `${workItemTitlePlaceholder} (${t("common:optional")})`;
+
+  const sharedWorkItemEditor = contentSlot ? (
+    <div className="shrink-0 px-4 pt-4" data-testid="create-work-item-editor">
+      <ProjectContentTitleInput
+        title={draft.name}
+        onTitleChange={handleTitleChange}
+        titlePlaceholder={optionalWorkItemTitlePlaceholder}
+        autoFocusTitle
+      />
+      <div className="mb-4 mt-2 w-full border-t border-border-2" />
+    </div>
+  ) : (
+    <ProjectContentEditor
+      key={editorResetKey}
+      ref={editorRef}
+      title={draft.name}
+      onTitleChange={handleTitleChange}
+      initialDescription={draft.description || ""}
+      onDescriptionChange={handleDescriptionChange}
+      titlePlaceholder={workItemTitlePlaceholder}
+      descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
+      onImageInsert={handleImageInsert}
+      descriptionClassName="no-bottom-border"
+      descriptionMaxHeight="100%"
+      repoPath={repoPath}
+      className="flex min-h-0 flex-1 flex-col"
+      autoFocusTitle
+      dataTestId="create-work-item-editor"
+    />
+  );
+
   return (
     <DetailSplitLayout
       title={t("workItems.newWorkItem")}
       breadcrumb={[
-        selectedProjectOrgLabel,
-        projectBreadcrumbLabel,
+        orgBreadcrumbSegment,
+        projectBreadcrumbSegment,
         t("workItems.newWorkItem"),
       ]}
       borderlessHeader
@@ -439,8 +618,8 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
               {...PANEL_HEADER_TOKENS.actionButton}
               className={
                 resolvedPropertiesOpen
-                  ? "!bg-surface-selected !text-primary-6 hover:!bg-fill-2"
-                  : PANEL_HEADER_TOKENS.actionButton.className
+                  ? CREATE_WORK_ITEM_HEADER_ACTION_ACTIVE_CLASS
+                  : CREATE_WORK_ITEM_HEADER_ACTION_CLASS
               }
               icon={
                 <Info
@@ -466,6 +645,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
           {showCloseAction ? (
             <Button
               {...PANEL_HEADER_TOKENS.actionButton}
+              className={CREATE_WORK_ITEM_HEADER_ACTION_CLASS}
               icon={
                 <X
                   size={PANEL_HEADER_TOKENS.buttonIconSize}
@@ -481,52 +661,35 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       }
       leftContent={
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          <div className="border-b border-solid border-border-1 px-4 py-2">
-            <div
-              className="flex items-center justify-between gap-3 rounded-xl bg-surface-container px-3 py-2"
-              data-testid="create-work-item-mode-panel"
-            >
-              <span className="text-[12px] font-medium text-text-1">
-                {t("workItems.createModes.generateWithAi")}
-              </span>
-              <Switch
-                size="small"
-                checked={aiGenerateMode}
-                onChange={setAiGenerateMode}
-                ariaLabel={t("workItems.createModes.generateWithAi")}
-                dataTestId="create-work-item-mode-ai-switch"
-              />
+          {showAiModePanel ? (
+            <div className="border-b border-solid border-border-1 px-4 py-2">
+              <div
+                className="flex items-center justify-between gap-3 rounded-xl bg-surface-container px-3 py-2"
+                data-testid="create-work-item-mode-panel"
+              >
+                <span className="text-[12px] font-medium text-text-1">
+                  {t("workItems.createModes.useAi")}
+                </span>
+                <Switch
+                  size="small"
+                  checked={resolvedAiGenerateMode}
+                  onChange={handleAiGenerateModeChange}
+                  ariaLabel={t("workItems.createModes.useAi")}
+                  dataTestId="create-work-item-mode-ai-switch"
+                />
+              </div>
             </div>
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col px-4 pt-4">
-            <ProjectContentEditor
-              key={editorResetKey}
-              ref={editorRef}
-              title={draft.name}
-              onTitleChange={handleTitleChange}
-              initialDescription={draft.description || ""}
-              onDescriptionChange={handleDescriptionChange}
-              titlePlaceholder={
-                aiGenerateMode
-                  ? "What should we build or break down?"
-                  : t("workItems.titlePlaceholder")
-              }
-              descriptionPlaceholder={
-                aiGenerateMode
-                  ? "Describe requirements, repo/project scope, desired granularity, dependencies, and whether the generated work items should auto-execute."
-                  : t("workItems.descriptionPlaceholder")
-              }
-              onImageInsert={handleImageInsert}
-              descriptionClassName="no-bottom-border"
-              descriptionMaxHeight="100%"
-              repoPath={repoPath}
-              className="flex min-h-0 flex-1 flex-col"
-              autoFocusTitle
-              dataTestId="create-work-item-editor"
-            />
+          ) : null}
+          <div
+            className={`flex min-h-0 flex-1 flex-col ${contentSlot ? "px-0 pt-0" : "px-4 pt-4"}`}
+          >
+            {sharedWorkItemEditor}
+            {contentSlot ? (
+              <div className="min-h-0 flex-1">{contentSlot}</div>
+            ) : null}
             {!resolvedPropertiesOpen && (
               <div
-                className="shrink-0 pb-3 pt-2"
+                className={`${contentSlot ? "px-4" : ""} shrink-0 pb-3 pt-2`}
                 data-testid="create-work-item-property-pills"
               >
                 <WorkItemProperties
@@ -538,7 +701,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
                   availableMembers={resolvedMembers}
                   availableAgents={customAgents}
                   availableOrgs={availableOrgs}
-                  visibleFields={CREATE_WORK_ITEM_VISIBLE_FIELDS}
+                  visibleFields={CREATE_WORK_ITEM_INLINE_FIELDS}
                   fieldVariant="pill"
                   showMoreMenu
                 />
@@ -562,33 +725,38 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
           />
         ) : undefined
       }
+      resizableRightPanel={resolvedPropertiesOpen}
       footer={
-        <>
-          <label className="mr-2 flex items-center gap-2 text-[12px] text-text-2">
-            <Switch
+        showFooter ? (
+          <>
+            <label className="mr-2 flex items-center gap-2 text-[12px] text-text-2">
+              <Switch
+                size="small"
+                checked={createMore}
+                onChange={(checked) => setCreateMore(checked)}
+                dataTestId="create-work-item-auto-execute-switch"
+              />
+              <span>
+                {resolvedAiGenerateMode
+                  ? "Auto execute"
+                  : t("projects.createMore")}
+              </span>
+            </label>
+            <Button
+              variant="primary"
               size="small"
-              checked={createMore}
-              onChange={(checked) => setCreateMore(checked)}
-              dataTestId="create-work-item-auto-execute-switch"
-            />
-            <span>
-              {aiGenerateMode ? "Auto execute" : t("projects.createMore")}
-            </span>
-          </label>
-          <Button
-            variant="primary"
-            size="small"
-            onClick={handleCreate}
-            disabled={!draft.name.trim() || saving}
-            data-testid="create-work-item-submit"
-          >
-            {saving
-              ? t("common:status.saving")
-              : aiGenerateMode
-                ? "Generate Work Items"
-                : t("workItems.createWorkItem")}
-          </Button>
-        </>
+              onClick={handleCreate}
+              disabled={!draft.name.trim() || saving}
+              data-testid="create-work-item-submit"
+            >
+              {saving
+                ? t("common:status.saving")
+                : resolvedAiGenerateMode
+                  ? "Generate Work Items"
+                  : t("workItems.createWorkItem")}
+            </Button>
+          </>
+        ) : undefined
       }
     />
   );

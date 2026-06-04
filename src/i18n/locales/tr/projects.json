@@ -179,7 +179,15 @@
     "createWorkItem": "Work Item Oluştur",
     "createModes": {
       "generateWithAi": "AI ile oluştur",
-      "manualCreation": "Manuel oluşturma"
+      "useAi": "Agent kullan",
+      "manualCreation": "Manuel oluşturma",
+      "sessionCreatorPrompt": {
+        "promptNameQuestion": "Önce kullanıcıya belirli bir Work Item adı belirtmek isteyip istemediğini sor.",
+        "promptInstruction": "Bu proje için Work Items oluştur.",
+        "promptProject": "Proje: {{project}}",
+        "promptDraftTitle": "İstenen Work Item adı: {{title}}",
+        "promptDraftDetails": "Taslak ayrıntıları:\n{{details}}"
+      }
     },
     "linkExisting": {
       "label": "Mevcut Work Item'ı bağla",

@@ -43,5 +43,6 @@ export interface ChatPanelProps {
     onRegionNoticeChange?: (notice: ChatPanelRegionNotice | null) => void;
     hidePresenceButton?: boolean;
     batchStartMode?: boolean;
+    initialContent?: string;
   }>;
 }

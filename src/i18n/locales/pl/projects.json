@@ -179,7 +179,15 @@
     "createWorkItem": "Utwórz zadanie",
     "createModes": {
       "generateWithAi": "Utwórz z AI",
-      "manualCreation": "Tworzenie ręczne"
+      "useAi": "Użyj Agent",
+      "manualCreation": "Tworzenie ręczne",
+      "sessionCreatorPrompt": {
+        "promptNameQuestion": "Najpierw zapytaj użytkownika, czy chce podać konkretną nazwę Work Item.",
+        "promptInstruction": "Utwórz Work Items dla tego projektu.",
+        "promptProject": "Projekt: {{project}}",
+        "promptDraftTitle": "Żądana nazwa Work Item: {{title}}",
+        "promptDraftDetails": "Szczegóły szkicu:\n{{details}}"
+      }
     },
     "linkExisting": {
       "label": "Połącz istniejący Work Item",

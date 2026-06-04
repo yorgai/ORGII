@@ -43,7 +43,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ title, children }) => (
     <div className="flex h-10 items-center px-4">
       <span className="text-[13px] font-medium text-text-1">{title}</span>
     </div>
-    <div className="flex w-full flex-col pb-2 [&>*]:w-full">{children}</div>
+    <div className="flex w-full flex-col gap-0.5 pb-2 [&>*]:w-full">
+      {children}
+    </div>
   </section>
 );
 
@@ -56,19 +58,16 @@ export const WORK_ITEM_PROPERTY_ESSENTIAL_FIELDS: WorkItemPropertyFieldKey[] = [
 ];
 
 const DEFAULT_VISIBLE_FIELDS: WorkItemPropertyFieldKey[] = [
+  "project",
   "status",
   "priority",
   "assignee",
   "reviewer",
-  "project",
   "milestone",
   "startDate",
   "date",
   "labels",
 ];
-
-const PROJECT_ONLY_FIELDS = new Set<WorkItemPropertyFieldKey>(["project"]);
-const MILESTONE_ONLY_FIELDS = new Set<WorkItemPropertyFieldKey>(["milestone"]);
 
 const CONTEXT_MENU_FIELD_IDS: Partial<
   Record<WorkItemPropertyFieldKey, string>
@@ -250,6 +249,17 @@ const WorkItemProperties: React.FC<WorkItemPropertiesProps> = ({
     return (
       <section ref={containerRef} className="overflow-visible">
         <div className="flex flex-wrap items-center gap-2">
+          <PlanningSection
+            workItem={workItem}
+            openPicker={openPicker}
+            togglePicker={togglePicker}
+            availableProjects={availableProjects}
+            availableMilestones={availableMilestones}
+            handlers={handlers}
+            t={t}
+            fieldVariant={fieldVariant}
+            visibleFields={visibleFieldSet}
+          />
           <StatusPrioritySection
             workItem={workItem}
             openPicker={openPicker}
@@ -278,17 +288,6 @@ const WorkItemProperties: React.FC<WorkItemPropertiesProps> = ({
             togglePicker={togglePicker}
             handlers={handlers}
             showTime={showTime}
-            t={t}
-            fieldVariant={fieldVariant}
-            visibleFields={visibleFieldSet}
-          />
-          <PlanningSection
-            workItem={workItem}
-            openPicker={openPicker}
-            togglePicker={togglePicker}
-            availableProjects={availableProjects}
-            availableMilestones={availableMilestones}
-            handlers={handlers}
             t={t}
             fieldVariant={fieldVariant}
             visibleFields={visibleFieldSet}
@@ -334,29 +333,7 @@ const WorkItemProperties: React.FC<WorkItemPropertiesProps> = ({
     >
       <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
         <div className="flex flex-col gap-2 pb-2">
-          {visibleFieldSet.has("project") && (
-            <PropertyCard title={t("workItems.contextMenu.project")}>
-              <PlanningSection
-                workItem={workItem}
-                openPicker={openPicker}
-                togglePicker={togglePicker}
-                availableProjects={availableProjects}
-                availableMilestones={availableMilestones}
-                handlers={handlers}
-                t={t}
-                visibleFields={PROJECT_ONLY_FIELDS}
-              />
-            </PropertyCard>
-          )}
           <PropertyCard title={t("workItems.properties.propertiesSection")}>
-            <StatusPrioritySection
-              workItem={workItem}
-              openPicker={openPicker}
-              togglePicker={togglePicker}
-              handlers={handlers}
-              externalStatusConfig={externalStatusConfig}
-              t={t}
-            />
             <PlanningSection
               workItem={workItem}
               openPicker={openPicker}
@@ -365,7 +342,15 @@ const WorkItemProperties: React.FC<WorkItemPropertiesProps> = ({
               availableMilestones={availableMilestones}
               handlers={handlers}
               t={t}
-              visibleFields={MILESTONE_ONLY_FIELDS}
+              visibleFields={visibleFieldSet}
+            />
+            <StatusPrioritySection
+              workItem={workItem}
+              openPicker={openPicker}
+              togglePicker={togglePicker}
+              handlers={handlers}
+              externalStatusConfig={externalStatusConfig}
+              t={t}
             />
             <DatesScheduleSection
               workItem={workItem}

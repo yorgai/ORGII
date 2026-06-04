@@ -31,6 +31,8 @@ export interface UseDraftManagementOptions {
   tiptapRef: RefObject<TiptapInputRef>;
   /** Skip draft loading if market listing is being loaded from URL */
   skipDraftLoading?: boolean;
+  /** Persist editor content into the shared pre-launch draft store. */
+  persistDraft?: boolean;
 }
 
 export function useDraftManagement(options: UseDraftManagementOptions) {
@@ -45,6 +47,7 @@ export function useDraftManagement(options: UseDraftManagementOptions) {
     setUploadedFiles,
     tiptapRef,
     skipDraftLoading = false,
+    persistDraft = true,
   } = options;
 
   const [draft, setDraft] = useAtom(sessionCreatorDraftAtom);
@@ -155,7 +158,7 @@ export function useDraftManagement(options: UseDraftManagementOptions) {
   ]);
 
   useEffect(() => {
-    if (!draftLoadedRef.current) return;
+    if (!draftLoadedRef.current || !persistDraft) return;
 
     const timer = setTimeout(() => {
       const currentDraft: SessionCreatorDraft = saveDraft({
@@ -187,6 +190,7 @@ export function useDraftManagement(options: UseDraftManagementOptions) {
     agentIconId,
     cliAgentType,
     editorContent,
+    persistDraft,
     sessionName,
     setDraft,
   ]);
