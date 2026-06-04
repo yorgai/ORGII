@@ -27,8 +27,6 @@ import CursorIdeFocusPoller from "./InputArea/components/CursorIdeFocusPoller";
 import QueueEditModeCard from "./InputArea/components/QueueEditModeCard";
 import QueuedMessages from "./InputArea/components/QueuedMessages";
 import type { QueueEditInputAreaProps } from "./InputArea/hooks/useQueueEditMode";
-import CanvasInlineCard from "./blocks/CanvasInlineCard";
-import type { CanvasInlinePayload } from "./blocks/CanvasInlineCard/useCanvasInlineStream";
 import CreatePlanCard from "./blocks/CreatePlanCard";
 import type {
   CustomMentionOption,
@@ -83,8 +81,6 @@ interface ChatFloatingComposerProps {
   onToggleFiles: () => void;
   onProcessVisibleCountChange: (count: number) => void;
   onFileChangeStatsChange: (stats: FileChangeVisibleStats) => void;
-  canvasPayload: CanvasInlinePayload | null;
-  onDismissCanvas: () => void;
   groupChatPendingMessage: GroupChatPendingMessageView | null;
   groupChatViewActive: boolean;
   hasAnyInlineSection: boolean;
@@ -130,8 +126,6 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
     onToggleFiles,
     onProcessVisibleCountChange,
     onFileChangeStatsChange,
-    canvasPayload,
-    onDismissCanvas,
     groupChatPendingMessage,
     groupChatViewActive,
     hasAnyInlineSection,
@@ -237,17 +231,6 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
           )}
 
           <QueueEditModeCard />
-
-          {canvasPayload && (
-            <CanvasInlineCard
-              mode={canvasPayload.mode}
-              title={canvasPayload.title}
-              content={canvasPayload.content}
-              url={canvasPayload.url}
-              isStreaming={canvasPayload.streaming ?? false}
-              onClose={onDismissCanvas}
-            />
-          )}
 
           {groupChatPendingMessage && groupChatViewActive && (
             <div

@@ -1321,6 +1321,8 @@
     "commitAttributionDesc": "Add ORGII as a Co-authored-by trailer to Commit messages created from ORGII",
     "prAttribution": "Pull Request Attribution",
     "prAttributionDesc": "Add an ORGII attribution footer to Pull Request descriptions created from ORGII",
+    "autoCreatePr": "Auto-create pull requests",
+    "autoCreatePrDesc": "Automatically create a pull request in Workstation Source Control when a feature branch is fully pushed and clean",
     "coauthor": "Co-authored-by",
     "coauthorDesc": "Add {{name}} <{{email}}> to Git commits made from ORGII",
     "noTokenYet": "Need a token?",

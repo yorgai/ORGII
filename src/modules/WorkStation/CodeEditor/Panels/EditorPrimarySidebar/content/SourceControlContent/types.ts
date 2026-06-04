@@ -144,6 +144,16 @@ export interface SourceControlContentProps {
   /** Whether publish operation is in progress */
   publishLoading?: boolean;
 
+  // Pull request props
+  prUrl?: string;
+  prStatus?: string;
+  prCreating?: boolean;
+  prErrorMessage?: string | null;
+  prReadyToCreate?: boolean;
+  prEligible?: boolean;
+  autoCreatePr?: boolean;
+  onCreatePr?: () => Promise<{ url?: string; error?: string }>;
+
   /** Tailwind bg class for sticky section/folder headers. Defaults to bg-workstation-bg. */
   stickyBgClass?: string;
 }
