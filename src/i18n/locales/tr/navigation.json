@@ -140,6 +140,7 @@
     "settingsMenu": {
       "appearance": "Görünüm",
       "language": "Dil",
+      "workstation": "İş istasyonu",
       "viewRam": "RAM’i görüntüle",
       "tutorials": "Eğitimler",
       "openSettings": "Ayarları aç"

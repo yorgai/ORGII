@@ -91,12 +91,14 @@
       "emptyDescription": "Попробуйте другой статус, тип Agent или период."
     },
     "timeFilter": {
-      "label": "Показано",
-      "6h": "6h",
+      "label": "Диапазон",
       "12h": "12h",
       "24h": "24h",
       "3d": "3d",
       "7d": "7d"
+    },
+    "filters": {
+      "allAgents": "Все agents"
     },
     "autoArchive": {
       "label": "Автоархив",
@@ -711,6 +713,8 @@
     "showSimulator": "Показать симулятор",
     "fullScreenChat": "Фокус на панели чата (скрыть Workstation)",
     "maximizeChatPanel": "Развернуть панель чата",
+    "showWorkstation": "Показать Workstation",
+    "hideWorkstation": "Скрыть Workstation",
     "restoreSplitView": "Показать Workstation",
     "shrinkToWorkstation": "Свернуть панель чата (показать Workstation)",
     "collapseAll": "Свернуть все",

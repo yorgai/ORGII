@@ -140,6 +140,7 @@
     "settingsMenu": {
       "appearance": "Внешний вид",
       "language": "Язык",
+      "workstation": "Рабочая станция",
       "viewRam": "Показать RAM",
       "tutorials": "Обучение",
       "openSettings": "Открыть настройки"

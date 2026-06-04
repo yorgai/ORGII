@@ -91,12 +91,14 @@
       "emptyDescription": "Hãy thử trạng thái, loại Agent hoặc khoảng thời gian khác."
     },
     "timeFilter": {
-      "label": "Hiển thị",
-      "6h": "6h",
+      "label": "Phạm vi",
       "12h": "12h",
       "24h": "24h",
       "3d": "3d",
       "7d": "7d"
+    },
+    "filters": {
+      "allAgents": "Tất cả Agent"
     },
     "autoArchive": {
       "label": "Tự lưu trữ",
@@ -709,6 +711,8 @@
     "showSimulator": "Hiện trình mô phỏng",
     "fullScreenChat": "Tập trung bảng chat (ẩn Workstation)",
     "maximizeChatPanel": "Phóng to bảng chat",
+    "showWorkstation": "Hiện Workstation",
+    "hideWorkstation": "Ẩn Workstation",
     "restoreSplitView": "Hiện Workstation",
     "shrinkToWorkstation": "Thu nhỏ bảng chat (hiện Workstation)",
     "collapseAll": "Thu gọn tất cả",

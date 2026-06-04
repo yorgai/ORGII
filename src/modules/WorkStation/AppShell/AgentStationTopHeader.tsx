@@ -6,20 +6,13 @@
  * caption toggle, and layout settings dropdown.
  */
 import { useAtom, useAtomValue } from "jotai";
-import {
-  Captions,
-  Maximize2,
-  MessageCircle,
-  Minimize2,
-  Settings2,
-} from "lucide-react";
+import { Captions, Maximize2, MessageCircle, Minimize2 } from "lucide-react";
 import React, {
   memo,
   startTransition,
   useCallback,
   useEffect,
   useRef,
-  useState,
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
@@ -47,7 +40,6 @@ import {
 } from "@src/store/ui/simulatorAtom";
 
 import {
-  LayoutSettingsDropdown,
   NoDragRegion,
   SimulatorAgentChip,
   StationModeChip,
@@ -58,10 +50,8 @@ const AgentStationTopHeader: React.FC = memo(() => {
   const { t } = useTranslation("sessions");
   const isCompactLayout = useIsCompactLayout();
   const shouldOffsetLeftChrome = useShouldOffsetWorkStationTopBar();
-  const layoutSettingsTriggerRef = useRef<HTMLSpanElement>(null);
   const modeChipAreaRef = useRef<HTMLDivElement>(null);
   const trailingControlsRef = useRef<HTMLDivElement>(null);
-  const [isLayoutSettingsOpen, setLayoutSettingsOpen] = useState(false);
   const getStationChatVisible = useAtomValue(activeStationChatVisibleAtom);
   const chatWidth = useAtomValue(chatWidthAtom);
   const isChatPanelVisible =
@@ -138,14 +128,6 @@ const AgentStationTopHeader: React.FC = memo(() => {
     startTransition(() => {
       void WorkStationViewService.showWorkStation();
     });
-  }, []);
-
-  const handleToggleLayoutSettings = useCallback(() => {
-    setLayoutSettingsOpen((prev) => !prev);
-  }, []);
-
-  const handleCloseLayoutSettings = useCallback(() => {
-    setLayoutSettingsOpen(false);
   }, []);
 
   return (
@@ -248,23 +230,8 @@ const AgentStationTopHeader: React.FC = memo(() => {
               </span>
             </Tooltip>
           )}
-          <span ref={layoutSettingsTriggerRef}>
-            <TabBarTrailingIconButton
-              title={t("common:layoutSettings.pageSettings")}
-              active={isLayoutSettingsOpen}
-              aria-pressed={isLayoutSettingsOpen}
-              onClick={handleToggleLayoutSettings}
-            >
-              <Settings2 size={16} strokeWidth={2} />
-            </TabBarTrailingIconButton>
-          </span>
         </NoDragRegion>
       </div>
-      <LayoutSettingsDropdown
-        isOpen={isLayoutSettingsOpen}
-        onClose={handleCloseLayoutSettings}
-        triggerRef={layoutSettingsTriggerRef}
-      />
     </>
   );
 });

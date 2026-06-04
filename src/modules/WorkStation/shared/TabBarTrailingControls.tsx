@@ -9,10 +9,9 @@
  * active app (Code Editor → bottom panel, Browser → DevTools).
  */
 import { useAtomValue } from "jotai";
-import { PencilRuler } from "lucide-react";
+import { PanelBottom, PencilRuler } from "lucide-react";
 import React, { memo } from "react";
 
-import { PanelBottomIcon } from "@src/components/PanelIcons";
 import {
   workStationDevToolsCollapsedAtom,
   workStationEditorSecondaryCollapsedAtom,
@@ -35,7 +34,7 @@ export const TabBarBottomPanelToggle: React.FC = memo(() => {
       title="Show bottom panel"
       onClick={() => callbacks.onToggleBottomPanel?.()}
     >
-      <PanelBottomIcon size={HEADER_ICON_SIZE.md} strokeWidth={1.75} />
+      <PanelBottom size={HEADER_ICON_SIZE.md} strokeWidth={1.75} />
     </TabBarTrailingIconButton>
   );
 });

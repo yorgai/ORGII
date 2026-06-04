@@ -5,7 +5,6 @@
  */
 
 // Layout shell
-export { default as LayoutSettingsDropdown } from "./LayoutSettingsDropdown";
 export { WorkStationShell } from "./WorkStationShell";
 export type { WorkStationShellProps } from "./WorkStationShell";
 export { WorkstationTabHeaderSlotsView } from "./WorkstationTabHeaderSlotsView";
@@ -42,6 +41,22 @@ export type {
   DiffFileSectionData,
   DiffFileSectionProps,
 } from "./DiffFileSection";
+export { default as DiffSectionList } from "./DiffSectionList";
+export type {
+  DiffSectionListItem,
+  DiffSectionListProps,
+} from "./DiffSectionList";
+export { default as DiffFileNavigationList } from "./DiffFileNavigationList";
+export type {
+  DiffFileNavigationItem,
+  DiffFileNavigationListProps,
+} from "./DiffFileNavigationList";
+export {
+  buildConsolidatedSessionReplayDiffSectionItems,
+  buildSessionReplayDiffSectionItems,
+  type SessionReplayDiffEntryLike,
+  type SessionReplayDiffSectionItem,
+} from "./DiffSectionList/sessionReplaySections";
 
 // Count badges (for diagnostic counts: errors, warnings, etc.)
 export { CountBadge } from "./CountBadge";
