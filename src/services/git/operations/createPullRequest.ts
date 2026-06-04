@@ -1,10 +1,7 @@
 import { fetchRustApi, gitRepoUrl } from "@src/api/http/git/client";
 import { gitPush } from "@src/api/http/git/operations";
 import { getGitRemotes } from "@src/api/http/git/remotes";
-import {
-  LOCAL_GITHUB_TOKEN_USER_ID,
-  createPRLocal,
-} from "@src/api/tauri/github";
+import { createPRLocal } from "@src/api/tauri/github";
 import {
   SERVICE_AUTH_STORAGE_KEYS,
   getHostedToken,
@@ -15,12 +12,8 @@ const logger = createLogger("createPullRequest");
 
 /**
  * Resolve the (userId, hostedToken) pair to use for GitHub API calls.
- *
- * Priority:
- *  1. ORGII hosted session — userId + token from localStorage (full OAuth flow)
- *  2. Local GitHub token  — stored via gh CLI / local detect under LOCAL_GITHUB_TOKEN_USER_ID
- *     In this case we pass an empty hosted token; the Rust client will look up the
- *     token from ~/.orgii/github_tokens.json directly instead of calling the refresh endpoint.
+ * Requires an active ORGII hosted session (full OAuth flow).
+ * Returns null if not authenticated — caller should surface a connect prompt.
  */
 function resolveGitHubAuth(): { userId: string; token: string } | null {
   const hostedToken = getHostedToken();
@@ -28,8 +21,7 @@ function resolveGitHubAuth(): { userId: string; token: string } | null {
   if (hostedToken && hostedUserId) {
     return { userId: hostedUserId, token: hostedToken };
   }
-  // Fallback: local GitHub token stored under LOCAL_GITHUB_TOKEN_USER_ID
-  return { userId: LOCAL_GITHUB_TOKEN_USER_ID, token: "" };
+  return null;
 }
 
 export function parseGithubRepoFullName(remoteUrl: string): string | null {
