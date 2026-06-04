@@ -85,6 +85,12 @@ export interface LocalPRResponse {
   url: string;
 }
 
+export interface LocalFindPRResponse {
+  number: number;
+  url: string;
+  state: string;
+}
+
 export interface GitHubGitCredential {
   username: string;
   token: string;
@@ -218,6 +224,25 @@ export async function createPRLocal(
     body: appendPullRequestAttributionFooter(body),
     draft: draft ?? null,
   });
+}
+
+/**
+ * Find an open pull request for a head branch.
+ */
+export async function findPullRequestLocal(
+  userId: string,
+  token: string,
+  repoFullName: string,
+  headBranch: string
+): Promise<LocalFindPRResponse | null> {
+  return invokeWithAuth<LocalFindPRResponse | null>(
+    "github_find_pull_request",
+    {
+      ...baseParams(userId, token),
+      repoFullName,
+      headBranch,
+    }
+  );
 }
 
 /**

@@ -17,6 +17,7 @@ import type { CanvasInlinePayload } from "@src/engines/ChatPanel/blocks/CanvasIn
 export interface CanvasPreviewEntry {
   sessionId: string;
   payload: CanvasInlinePayload;
+  cardDismissed?: boolean;
 }
 
 export const canvasPreviewAtom = atom<CanvasPreviewEntry | null>(null);

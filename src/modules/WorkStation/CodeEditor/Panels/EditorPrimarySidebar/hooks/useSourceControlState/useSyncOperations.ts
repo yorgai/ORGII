@@ -7,13 +7,14 @@
  * Uses dispatch() for all git operations to ensure AI/human unification.
  */
 import { useActionSystemOptional } from "@/src/modules/WorkStation/ActionSystem";
-import { useCallback, useRef, useState } from "react";
+import { type MutableRefObject, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getGitRemotes } from "@src/api/http/git/remotes";
 import {
   LARGE_PUSH_THRESHOLD,
   LargePushConfirmDialog,
+  ProtectedBranchDialog,
   PushRejectedDialog,
 } from "@src/components/GitDialogs";
 import {
@@ -39,6 +40,10 @@ export interface UseSyncOperationsOptions {
   stashPush: (message?: string, includeUntracked?: boolean) => Promise<boolean>;
   fetchGitStatus: () => Promise<void>;
   refreshStashes: () => Promise<void>;
+  /** Ref to PR creation handler (used when push hits a protected branch) */
+  onCreatePrRef?: MutableRefObject<
+    (() => Promise<{ url?: string; error?: string }>) | null
+  >;
 }
 
 export interface UseSyncOperationsResult {
@@ -84,6 +89,7 @@ export function useSyncOperations(
     stashPush,
     fetchGitStatus,
     refreshStashes,
+    onCreatePrRef,
   } = options;
 
   const { t } = useTranslation();
@@ -153,6 +159,16 @@ export function useSyncOperations(
     },
     [gitPush, gitPublish]
   );
+
+  const handleProtectedBranch = useCallback(async () => {
+    const result = await ProtectedBranchDialog.open({
+      branchName: currentBranch || "main",
+      remoteName: "origin",
+    });
+    if (result === "create_pr") {
+      await onCreatePrRef?.current?.();
+    }
+  }, [currentBranch, onCreatePrRef]);
 
   // Handle publish (push with --set-upstream for new branches)
   const handlePublish = useCallback(async () => {
@@ -271,9 +287,7 @@ export function useSyncOperations(
               await doPush(true);
             }
           } else if (pushResult.errorType === "protected_branch") {
-            console.warn(
-              "Cannot push to protected branch. Please create a pull request."
-            );
+            await handleProtectedBranch();
           } else if (pushResult.errorType === "authentication_failed") {
             console.error(
               "Authentication failed. Please check your credentials."
@@ -310,6 +324,7 @@ export function useSyncOperations(
     currentBranch,
     stashPush,
     dispatch,
+    handleProtectedBranch,
   ]);
 
   // Handle standalone pull (with error dialog handling)
@@ -437,9 +452,7 @@ export function useSyncOperations(
             await doPush(true);
           }
         } else if (pushResult.errorType === "protected_branch") {
-          console.warn(
-            "Cannot push to protected branch. Please create a pull request."
-          );
+          await handleProtectedBranch();
         } else if (pushResult.errorType === "authentication_failed") {
           console.error(
             "Authentication failed. Please check your credentials."
@@ -474,6 +487,7 @@ export function useSyncOperations(
     doPull,
     gitFetch,
     currentBranch,
+    handleProtectedBranch,
   ]);
 
   // Handle standalone fetch

@@ -209,6 +209,7 @@ export const SourceControlTabContent = forwardRef<
         onCommitMessageChange={sourceControlState.state.onCommitMessageChange}
         onCommit={sourceControlState.state.onCommit}
         onCommitAndPush={sourceControlState.state.onCommitAndPush}
+        onCommitAndPublish={sourceControlState.state.onCommitAndPublish}
         onCommitAndSync={sourceControlState.state.onCommitAndSync}
         onAmend={sourceControlState.state.onAmend}
         commitLoading={sourceControlState.state.commitLoading}
@@ -254,6 +255,14 @@ export const SourceControlTabContent = forwardRef<
         hasUpstream={sourceControlState.state.hasUpstream}
         onPublish={sourceControlState.state.onPublish}
         publishLoading={sourceControlState.state.publishLoading}
+        prUrl={sourceControlState.state.prUrl}
+        prStatus={sourceControlState.state.prStatus}
+        prCreating={sourceControlState.state.prCreating}
+        prErrorMessage={sourceControlState.state.prErrorMessage}
+        prReadyToCreate={sourceControlState.state.prReadyToCreate}
+        prEligible={sourceControlState.state.prEligible}
+        autoCreatePr={sourceControlState.state.autoCreatePr}
+        onCreatePr={sourceControlState.state.onCreatePr}
         onRefresh={refresh}
       />
     );
@@ -348,6 +357,7 @@ export const MainRepoSectionContent = forwardRef<
         onCommitMessageChange={sourceControlState.state.onCommitMessageChange}
         onCommit={sourceControlState.state.onCommit}
         onCommitAndPush={sourceControlState.state.onCommitAndPush}
+        onCommitAndPublish={sourceControlState.state.onCommitAndPublish}
         onCommitAndSync={sourceControlState.state.onCommitAndSync}
         onAmend={sourceControlState.state.onAmend}
         commitLoading={sourceControlState.state.commitLoading}
@@ -393,6 +403,14 @@ export const MainRepoSectionContent = forwardRef<
         hasUpstream={sourceControlState.state.hasUpstream}
         onPublish={sourceControlState.state.onPublish}
         publishLoading={sourceControlState.state.publishLoading}
+        prUrl={sourceControlState.state.prUrl}
+        prStatus={sourceControlState.state.prStatus}
+        prCreating={sourceControlState.state.prCreating}
+        prErrorMessage={sourceControlState.state.prErrorMessage}
+        prReadyToCreate={sourceControlState.state.prReadyToCreate}
+        prEligible={sourceControlState.state.prEligible}
+        autoCreatePr={sourceControlState.state.autoCreatePr}
+        onCreatePr={sourceControlState.state.onCreatePr}
         onRefresh={refresh}
       />
     );

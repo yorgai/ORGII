@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
 import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import UserActionButton from "@src/engines/ChatPanel/InputArea/components/UserActionButton";
 import { useSlashItemsCache } from "@src/engines/ChatPanel/hooks/useInputArea/useSlashItemsCache";
 import { EditorTabService } from "@src/services/workStation";
 import { canvasPreviewAtom } from "@src/store/session/canvasPreviewAtom";
@@ -90,11 +91,13 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
     // ── Canvas pill ───────────────────────────────────────────────────────────
 
-    const canvasEntry = useAtomValue(canvasPreviewAtom);
+    const [canvasEntry, setCanvasEntry] = useAtom(canvasPreviewAtom);
     const workstationLayout = useAtomValue(workstationLayoutAtom);
 
-    const hasCanvasPayload = Boolean(
-      sessionId && canvasEntry?.sessionId === sessionId
+    const showCanvasPill = Boolean(
+      sessionId &&
+      canvasEntry?.sessionId === sessionId &&
+      canvasEntry.cardDismissed
     );
 
     const isCanvasTabOpen = Boolean(
@@ -104,13 +107,15 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
       )
     );
 
-    const showCanvasPill = hasCanvasPayload && !isCanvasTabOpen;
-
     const handleOpenCanvas = useCallback(() => {
       if (!sessionId) return;
       const tab = createCanvasPreviewTab(sessionId);
       EditorTabService.openTab(tab);
     }, [sessionId]);
+
+    const handleClearCanvas = useCallback(() => {
+      setCanvasEntry(null);
+    }, [setCanvasEntry]);
 
     // ── Built-in "Setup Repo" action ──────────────────────────────────────────
 
@@ -210,18 +215,13 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
     return (
       <div className="relative flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-hide">
-        {showCanvasPill && (
-          <Button
-            variant="secondary"
-            size="small"
-            shape="round"
-            icon={<Layout size={14} strokeWidth={1.75} />}
-            title="Open canvas in WorkStation"
+        {showCanvasPill && !isCanvasTabOpen && (
+          <UserActionButton
+            leftIcon={<Layout size={12} strokeWidth={1.75} />}
+            title="Canvas"
             onClick={handleOpenCanvas}
-            className="select-none"
-          >
-            Canvas
-          </Button>
+            onClose={handleClearCanvas}
+          />
         )}
 
         {pinnedActions.map((action) => (

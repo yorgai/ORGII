@@ -439,6 +439,13 @@ export const gitPrAttributionEnabledAtom = atom(
   }
 );
 
+export const gitAutoCreatePrAtom = atom(
+  (get) => get(settingsAtom)["git.autoCreatePr"] as boolean,
+  (_get, set, value: boolean) => {
+    set(updateSettingAtom, { key: "git.autoCreatePr", value });
+  }
+);
+
 /**
  * Maximum concurrent agent worktrees per repo (backed by settings.jsonc).
  * Range: 1–32, default: 8.

@@ -52,6 +52,13 @@ export const GIT_SETTINGS_REGISTRY = {
     description: "Add ORGII attribution to pull requests created from ORGII",
     category: "git",
   },
+  "git.autoCreatePr": {
+    schema: z.boolean(),
+    default: false,
+    description:
+      "Automatically create a pull request in Workstation Source Control when a feature branch is fully pushed and clean",
+    category: "git",
+  },
   "git.worktree.maxCount": {
     schema: z.number().int().min(1).max(32),
     default: 8,

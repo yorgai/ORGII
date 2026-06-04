@@ -20,6 +20,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import TabPill from "@src/components/TabPill";
 import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
 import {
   buildA2UIDocument,
@@ -283,31 +284,14 @@ const CanvasTabHeader: React.FC<CanvasTabHeaderProps> = ({
       )}
 
       <div className="ml-auto flex items-center gap-1">
-        <div className="flex items-center gap-1 rounded-md bg-fill-1 p-0.5">
-          <button
-            type="button"
-            onClick={() => onSetTab("canvas")}
-            className={
-              tab === "canvas"
-                ? "rounded bg-fill-3 px-2 py-0.5 text-xs font-medium text-text-1 shadow-sm"
-                : "rounded px-2 py-0.5 text-xs text-text-3 hover:text-text-2"
-            }
-          >
-            Canvas
-          </button>
-          <button
-            type="button"
-            onClick={() => onSetTab("source")}
-            className={
-              tab === "source"
-                ? "rounded bg-fill-3 px-2 py-0.5 text-xs font-medium text-text-1 shadow-sm"
-                : "rounded px-2 py-0.5 text-xs text-text-3 hover:text-text-2"
-            }
-          >
-            Source
-          </button>
-        </div>
-
+        <TabPill
+          variant="pill"
+          size="mini"
+          fillWidth={false}
+          tabs={["canvas", "source"]}
+          activeTab={tab}
+          onChange={(key) => onSetTab(key as ViewTab)}
+        />
         {tab === "canvas" && !isStreaming && (
           <button
             type="button"

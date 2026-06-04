@@ -8,3 +8,11 @@ export * as commitOps from "./commitOps";
 export * as branchOps from "./branchOps";
 export * as mergeOps from "./mergeOps";
 export * as remoteOps from "./remoteOps";
+export {
+  createPullRequest,
+  parseGithubRepoFullName,
+} from "./createPullRequest";
+export type {
+  CreatePullRequestParams,
+  CreatePullRequestResult,
+} from "./createPullRequest";

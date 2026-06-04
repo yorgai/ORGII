@@ -24,6 +24,7 @@ import { gitReviewNavigationAtom } from "@src/store/workstation/codeEditor/gitRe
 import { gitOutputIntegrationAtom } from "@src/store/workstation/codeEditor/outputIntegration";
 
 import { useStashState } from "../useStashState";
+import { useWorkstationPr } from "../useWorkstationPr";
 import type {
   SourceControlState,
   UseSourceControlStateOptions,
@@ -223,6 +224,10 @@ export function useSourceControlState(
   // Detect if branch has upstream (remote tracking branch)
   const hasUpstream = !!gitStatus?.current_upstream_branch;
 
+  const onCreatePrRef = useRef<
+    (() => Promise<{ url?: string; error?: string }>) | null
+  >(null);
+
   // Hook 7: Sync operations
   const {
     ahead,
@@ -249,7 +254,33 @@ export function useSourceControlState(
     stashPush,
     fetchGitStatus,
     refreshStashes,
+    onCreatePrRef,
   });
+
+  const uncommittedCount = gitFiles.length;
+
+  const {
+    prUrl,
+    prStatus,
+    isCreating: prCreating,
+    errorMessage: prErrorMessage,
+    eligible: prEligible,
+    readyToCreate: prReadyToCreate,
+    autoCreatePr,
+    handleCreatePr,
+  } = useWorkstationPr({
+    repoPath,
+    repoId: selectedRepoId || repoId,
+    branchName: currentBranch,
+    hasUpstream,
+    ahead,
+    uncommittedCount,
+    commitMessage,
+  });
+
+  useEffect(() => {
+    onCreatePrRef.current = handleCreatePr;
+  }, [handleCreatePr]);
 
   // Reset optimistic offset when gitStatus updates.
   // Must be an effect — running a setter in the render body causes the
@@ -412,6 +443,14 @@ export function useSourceControlState(
       onStashPop: stashPop,
       onStashDrop: stashDrop,
       hasChangesToStash,
+      prUrl,
+      prStatus,
+      prCreating,
+      prErrorMessage,
+      prReadyToCreate,
+      prEligible,
+      autoCreatePr,
+      onCreatePr: handleCreatePr,
     }),
     [
       gitFiles,
@@ -468,6 +507,14 @@ export function useSourceControlState(
       stashPop,
       stashDrop,
       hasChangesToStash,
+      prUrl,
+      prStatus,
+      prCreating,
+      prErrorMessage,
+      prReadyToCreate,
+      prEligible,
+      autoCreatePr,
+      handleCreatePr,
     ]
   );
 
