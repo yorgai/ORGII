@@ -665,7 +665,7 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
         <div
           className={`flex min-h-0 items-center justify-center ${
             batchStarterMode ? "" : "flex-1"
-          } ${isFullScreenVariant ? "px-4" : "px-5"} ${
+          } px-4 ${
             batchStarterMode
               ? ""
               : isFullScreenVariant
