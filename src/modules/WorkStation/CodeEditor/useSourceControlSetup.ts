@@ -63,6 +63,12 @@ export function useSourceControlSetup({
   );
 
   const { filesByPath: gitFilesByPath } = gitDiffState.state;
+  const clearGitDiffFiles = gitDiffState.clearFiles;
+
+  useEffect(() => {
+    clearGitDiffFiles();
+    setSourceControlFocusTarget(null);
+  }, [clearGitDiffFiles, repoId, repoPath, setSourceControlFocusTarget]);
 
   const sourceControlFileCounts = useMemo<
     Pick<SourceControlFilterCounts, "uncommitted" | "unstaged" | "staged">
