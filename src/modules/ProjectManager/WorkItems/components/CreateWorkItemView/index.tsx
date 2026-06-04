@@ -152,6 +152,8 @@ export interface CreateWorkItemViewProps {
   showFooter?: boolean;
   /** Render the primary create/submit action in the footer. */
   showSubmitAction?: boolean;
+  /** Render Chat Panel footer actions instead of the default create footer. */
+  chatPanelFooter?: boolean;
   /** Default assignee applied for AI-created work items when the draft has none. */
   defaultAiAssignee?: {
     id: string;
@@ -191,6 +193,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   showAiModePanel = true,
   showFooter = true,
   showSubmitAction = true,
+  chatPanelFooter = false,
   defaultAiAssignee = null,
 }) => {
   const { t } = useTranslation("projects");
@@ -660,6 +663,8 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
 
   const workItemTitlePlaceholder = t("workItems.titlePlaceholder");
   const optionalWorkItemTitlePlaceholder = `${workItemTitlePlaceholder} (${t("common:optional")})`;
+  const isChatPanelAiMode = chatPanelFooter && resolvedAiGenerateMode;
+  const showManualInputs = !isChatPanelAiMode;
 
   const inlinePropertyPills = !resolvedPropertiesOpen ? (
     <div data-testid="create-work-item-property-pills">
@@ -791,8 +796,11 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
             titleContent={titleSection}
             pathContent={workItemPillBreadcrumb}
             propertiesContent={inlinePropertyPills}
-            descriptionContent={descriptionSection}
-            descriptionClassName="min-h-0 flex-1 px-4"
+            descriptionContent={
+              showManualInputs ? descriptionSection : undefined
+            }
+            descriptionFlexible={showManualInputs}
+            descriptionClassName="min-h-0 overflow-hidden px-4"
           />
         </div>
       }
@@ -813,23 +821,12 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       }
       resizableRightPanel={resolvedPropertiesOpen}
       footer={
-        showFooter ? (
-          <>
-            <label className="mr-2 flex items-center gap-2 text-[12px] text-text-2">
-              <Switch
-                size="small"
-                checked={createMore && !autoExecuteBlocked}
-                onChange={handleAutoExecuteChange}
-                disabled={autoExecuteBlocked}
-                dataTestId="create-work-item-auto-execute-switch"
-              />
-              <span>
-                {resolvedAiGenerateMode
-                  ? "Auto execute"
-                  : t("projects.createMore")}
-              </span>
-            </label>
-            {showSubmitAction ? (
+        showFooter && showManualInputs ? (
+          chatPanelFooter ? (
+            <>
+              <Button variant="secondary" size="small" onClick={onCancel}>
+                {t("common:actions.cancel")}
+              </Button>
               <Button
                 variant="primary"
                 size="small"
@@ -837,14 +834,42 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
                 disabled={!draft.name.trim() || saving}
                 data-testid="create-work-item-submit"
               >
-                {saving
-                  ? t("common:status.saving")
-                  : resolvedAiGenerateMode
-                    ? "Generate Work Items"
-                    : t("workItems.createWorkItem")}
+                {saving ? t("common:status.saving") : t("common:actions.save")}
               </Button>
-            ) : null}
-          </>
+            </>
+          ) : (
+            <>
+              <label className="mr-2 flex items-center gap-2 text-[12px] text-text-2">
+                <Switch
+                  size="small"
+                  checked={createMore && !autoExecuteBlocked}
+                  onChange={handleAutoExecuteChange}
+                  disabled={autoExecuteBlocked}
+                  dataTestId="create-work-item-auto-execute-switch"
+                />
+                <span>
+                  {resolvedAiGenerateMode
+                    ? "Auto execute"
+                    : t("projects.createMore")}
+                </span>
+              </label>
+              {showSubmitAction ? (
+                <Button
+                  variant="primary"
+                  size="small"
+                  onClick={handleCreate}
+                  disabled={!draft.name.trim() || saving}
+                  data-testid="create-work-item-submit"
+                >
+                  {saving
+                    ? t("common:status.saving")
+                    : resolvedAiGenerateMode
+                      ? "Generate Work Items"
+                      : t("workItems.createWorkItem")}
+                </Button>
+              ) : null}
+            </>
+          )
         ) : undefined
       }
     />

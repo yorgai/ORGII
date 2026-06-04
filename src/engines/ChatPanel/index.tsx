@@ -175,6 +175,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const [createTarget, setCreateTarget] = useAtom(chatPanelCreateTargetAtom);
     const [workItemCreateDraft, setWorkItemCreateDraft] =
       useState<WorkItemDraft | null>(null);
+    const [showWorkItemAgentCreator, setShowWorkItemAgentCreator] = useState(
+      Boolean(SessionCreatorSlot)
+    );
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
     const currentRepo = useAtomValue(currentRepoAtom);
     const currentRepoPath = currentRepo?.path ?? currentRepo?.fs_uri ?? null;
@@ -286,8 +289,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     );
     const [isExportModalOpen, setExportModalOpen] = useState(false);
     const [isLinkWorkItemModalOpen, setLinkWorkItemModalOpen] = useState(false);
-    const [workItemCreateAiEnabled, setWorkItemCreateAiEnabled] =
-      useState(true);
 
     const triggerCollapseAll = useSetAtom(triggerCollapseAllAtom);
     const setActiveSessionId = useSetAtom(activeSessionIdAtom);
@@ -443,6 +444,11 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       !selectedWorkItem &&
       !isBenchmarkTarget &&
       !isWorkItemTarget;
+    const showWorkItemAgentSwitchInHeader =
+      showNonSessionContent &&
+      !selectedWorkItem &&
+      isWorkItemTarget &&
+      Boolean(SessionCreatorSlot);
     const chatFocusLabel = isChatFocus
       ? t("chat.showWorkstation")
       : t("chat.hideWorkstation");
@@ -492,18 +498,26 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           handleNewSession();
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
           setWorkItemCreateDraft(null);
+          setShowWorkItemAgentCreator(Boolean(SessionCreatorSlot));
           return;
         }
 
         if (nextTarget !== CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
           setWorkItemCreateDraft(null);
+          setShowWorkItemAgentCreator(Boolean(SessionCreatorSlot));
         }
         setCreateTarget(nextTarget);
         if (nextTarget === CHAT_PANEL_CREATE_TARGET.AGENT_SESSION) {
           handleNewSession();
         }
       },
-      [allAgentDefs, handleNewSession, setCreateTarget, setCreatorState]
+      [
+        SessionCreatorSlot,
+        allAgentDefs,
+        handleNewSession,
+        setCreateTarget,
+        setCreatorState,
+      ]
     );
 
     const handleOpenBenchmarkTab = useCallback(() => {
@@ -515,9 +529,17 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const handleCancelWorkItemCreate = useCallback(() => {
       setWorkItemCreateDraft(null);
+      setShowWorkItemAgentCreator(Boolean(SessionCreatorSlot));
       setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
       handleNewSession();
-    }, [handleNewSession, setCreateTarget]);
+    }, [SessionCreatorSlot, handleNewSession, setCreateTarget]);
+
+    const handleWorkItemAgentCreatorToggle = useCallback(
+      (enabled: boolean) => {
+        setShowWorkItemAgentCreator(Boolean(SessionCreatorSlot) && enabled);
+      },
+      [SessionCreatorSlot]
+    );
 
     const handleChatPanelWorkItemCreated = useCallback(
       (result?: CreatedWorkItemResult) => {
@@ -541,6 +563,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         });
         if (!result.keepOpen) {
           setWorkItemCreateDraft(null);
+          setShowWorkItemAgentCreator(Boolean(SessionCreatorSlot));
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
           setContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
           dispatchClearSession();
@@ -549,6 +572,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         }
       },
       [
+        SessionCreatorSlot,
         dispatchClearSession,
         setActiveSessionId,
         setContentMode,
@@ -766,7 +790,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           projectName: metadata.projectName,
           workItem,
         });
-        setWorkItemCreateAiEnabled(true);
+        setShowWorkItemAgentCreator(Boolean(SessionCreatorSlot));
         setWorkItemCreateDraft(null);
         setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
         setContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
@@ -776,6 +800,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         await emit("orgii-data-changed");
       },
       [
+        SessionCreatorSlot,
         dispatchClearSession,
         setActiveSessionId,
         setContentMode,
@@ -1133,6 +1158,27 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 <PresenceMenuButton dropdownPosition="bottom-end" />
               </>
             )}
+            {showWorkItemAgentSwitchInHeader && (
+              <>
+                <div
+                  className="mx-2 h-4 w-px shrink-0 bg-border-2"
+                  role="separator"
+                  aria-hidden
+                />
+                <label className="flex h-7 shrink-0 items-center gap-2 rounded-lg px-1.5 text-[12px] font-medium text-text-1 transition-colors hover:bg-surface-hover">
+                  <span className="-translate-y-px">
+                    {t("projects:workItems.createModes.useAi")}
+                  </span>
+                  <Switch
+                    size="small"
+                    checked={showWorkItemAgentCreator}
+                    onChange={handleWorkItemAgentCreatorToggle}
+                    ariaLabel={t("projects:workItems.createModes.useAi")}
+                    dataTestId="chat-panel-work-item-agent-switch"
+                  />
+                </label>
+              </>
+            )}
           </div>
         )}
         {showSessionContent || selectedWorkItem ? (
@@ -1252,7 +1298,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const emptyChatContent = (() => {
       if (createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
         const sessionCreatorContent =
-          workItemCreateAiEnabled && SessionCreatorSlot ? (
+          showWorkItemAgentCreator && SessionCreatorSlot ? (
             <SessionCreatorSlot
               className="min-h-0 flex-1"
               variant={creatorVariant}
@@ -1263,7 +1309,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               onSessionStart={handleAiWorkItemSessionStart}
               resolveWorkItemContext={resolveAiWorkItemContext}
             />
-          ) : undefined;
+          ) : null;
 
         if (sessionCreatorContent) {
           return (
@@ -1279,13 +1325,13 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                   onDraftChange={setWorkItemCreateDraft}
                   showCloseAction={false}
                   propertiesOpen={false}
-                  showPropertiesAction
-                  aiGenerateMode={workItemCreateAiEnabled}
-                  onAiGenerateModeChange={setWorkItemCreateAiEnabled}
+                  showPropertiesAction={false}
+                  aiGenerateMode={showWorkItemAgentCreator}
+                  onAiGenerateModeChange={handleWorkItemAgentCreatorToggle}
                   showAiModePanel={false}
-                  defaultAiAssignee={defaultAiWorkItemAssignee}
                   showFooter
-                  showSubmitAction={false}
+                  chatPanelFooter
+                  defaultAiAssignee={defaultAiWorkItemAssignee}
                 />
               </div>
               <div className="shrink-0 px-4 pb-4">
@@ -1320,13 +1366,13 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               onDraftChange={setWorkItemCreateDraft}
               showCloseAction={false}
               propertiesOpen={false}
-              showPropertiesAction
-              aiGenerateMode={workItemCreateAiEnabled}
-              onAiGenerateModeChange={setWorkItemCreateAiEnabled}
+              showPropertiesAction={false}
+              aiGenerateMode={showWorkItemAgentCreator}
+              onAiGenerateModeChange={handleWorkItemAgentCreatorToggle}
               showAiModePanel={false}
-              defaultAiAssignee={defaultAiWorkItemAssignee}
               showFooter
-              showSubmitAction
+              chatPanelFooter
+              defaultAiAssignee={defaultAiWorkItemAssignee}
             />
           </div>
         );

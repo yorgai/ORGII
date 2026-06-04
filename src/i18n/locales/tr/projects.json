@@ -179,6 +179,7 @@
     "createWorkItem": "Work Item Oluştur",
     "createModes": {
       "generateWithAi": "AI ile oluştur",
+      "generateWithAgent": "Agent ile oluştur",
       "useAi": "Agent kullan",
       "manualCreation": "Manuel oluşturma",
       "sessionCreatorPrompt": {

@@ -178,6 +178,7 @@
     "createWorkItem": "Create work item",
     "createModes": {
       "generateWithAi": "Create with AI",
+      "generateWithAgent": "Generate with Agent",
       "useAi": "Use Agent",
       "manualCreation": "Manual Creation",
       "sessionCreatorPrompt": {

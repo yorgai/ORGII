@@ -179,6 +179,7 @@
     "createWorkItem": "Tạo Work Item",
     "createModes": {
       "generateWithAi": "Tạo bằng AI",
+      "generateWithAgent": "Tạo bằng Agent",
       "useAi": "Dùng Agent",
       "manualCreation": "Tạo thủ công",
       "sessionCreatorPrompt": {

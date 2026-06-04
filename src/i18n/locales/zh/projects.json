@@ -179,6 +179,7 @@
     "createWorkItem": "创建 Work Item",
     "createModes": {
       "generateWithAi": "使用 AI 创建",
+      "generateWithAgent": "使用 Agent 生成",
       "useAi": "使用 Agent",
       "manualCreation": "手动创建",
       "sessionCreatorPrompt": {

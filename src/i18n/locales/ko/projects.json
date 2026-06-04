@@ -179,6 +179,7 @@
     "createWorkItem": "Work Item 생성",
     "createModes": {
       "generateWithAi": "AI로 만들기",
+      "generateWithAgent": "Agent로 생성",
       "useAi": "Agent 사용",
       "manualCreation": "수동 생성",
       "sessionCreatorPrompt": {

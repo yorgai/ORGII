@@ -179,6 +179,7 @@
     "createWorkItem": "Crear Work Item",
     "createModes": {
       "generateWithAi": "Crear con IA",
+      "generateWithAgent": "Generar con Agent",
       "useAi": "Usar Agent",
       "manualCreation": "Creación manual",
       "sessionCreatorPrompt": {

@@ -4,11 +4,12 @@ interface WorkItemContentStackProps {
   titleContent?: ReactNode;
   pathContent?: ReactNode;
   propertiesContent?: ReactNode;
-  descriptionContent: ReactNode;
+  descriptionContent?: ReactNode;
   todosContent?: ReactNode;
   lowerContent?: ReactNode;
   className?: string;
   scrollable?: boolean;
+  descriptionFlexible?: boolean;
   titleClassName?: string;
   descriptionClassName?: string;
   todosClassName?: string;
@@ -30,6 +31,7 @@ export default function WorkItemContentStack({
   lowerContent,
   className = "",
   scrollable = false,
+  descriptionFlexible = false,
   titleClassName = "px-4 py-2",
   descriptionClassName = "px-4 py-4",
   todosClassName = "px-4 pb-4",
@@ -40,13 +42,16 @@ export default function WorkItemContentStack({
     : "overflow-hidden";
   const hasMetaContent = Boolean(pathContent || propertiesContent);
   const hasTopSeparator = Boolean(titleContent || hasMetaContent);
+  const descriptionLayoutClassName = descriptionFlexible
+    ? "min-h-0 flex-1"
+    : "shrink-0";
 
   return (
     <div
       className={`flex min-h-0 flex-1 flex-col ${scrollClassName} ${className}`.trim()}
     >
       {hasMetaContent ? (
-        <div className="shrink-0 px-4 py-2">
+        <div className="shrink-0 px-4 pb-2 pt-1">
           {pathContent ? <div>{pathContent}</div> : null}
           {propertiesContent ? (
             <div className={pathContent ? "mt-3" : ""}>{propertiesContent}</div>
@@ -59,9 +64,13 @@ export default function WorkItemContentStack({
           {titleContent}
         </div>
       ) : null}
-      <div className={`shrink-0 ${descriptionClassName}`.trim()}>
-        {descriptionContent}
-      </div>
+      {descriptionContent ? (
+        <div
+          className={`${descriptionLayoutClassName} ${descriptionClassName}`.trim()}
+        >
+          {descriptionContent}
+        </div>
+      ) : null}
       {todosContent ? (
         <div className={`shrink-0 ${todosClassName}`.trim()}>
           {todosContent}

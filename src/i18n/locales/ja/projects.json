@@ -179,6 +179,7 @@
     "createWorkItem": "Work Item を作成",
     "createModes": {
       "generateWithAi": "AI で作成",
+      "generateWithAgent": "Agent で生成",
       "useAi": "Agent を使用",
       "manualCreation": "手動作成",
       "sessionCreatorPrompt": {

@@ -1,5 +1,6 @@
 import {
   type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
   forwardRef,
   useCallback,
@@ -209,6 +210,20 @@ const ProjectContentEditor = forwardRef<
       onDescriptionChange?.(markdown, text);
     };
 
+    const handleDescriptionContainerClick = useCallback(
+      (event: ReactMouseEvent<HTMLDivElement>) => {
+        const target = event.target;
+        if (
+          target instanceof HTMLElement &&
+          target.closest(".composer-input")
+        ) {
+          return;
+        }
+        editorRef.current?.focus();
+      },
+      [editorRef]
+    );
+
     const handleProjectSlashSelect = useCallback(
       (item: SlashItem) => {
         if (item.category === "skill") {
@@ -275,11 +290,15 @@ const ProjectContentEditor = forwardRef<
           <div
             ref={editorContainerRef}
             className={`${descriptionMaxHeight ? "min-h-0 flex-1" : "min-h-[200px]"} w-full min-w-0 cursor-text`}
-            onClick={() => editorRef.current?.focus()}
+            onClick={handleDescriptionContainerClick}
           >
             <ComposerInputSurface
               ref={editorRef}
-              wrapperClassName="relative w-full min-w-0"
+              wrapperClassName={
+                descriptionMaxHeight
+                  ? "relative h-full min-h-0 w-full min-w-0"
+                  : "relative w-full min-w-0"
+              }
               placeholder={descriptionPlaceholder}
               initialContent={initialDescription}
               onContentChange={handleDescriptionChange}
