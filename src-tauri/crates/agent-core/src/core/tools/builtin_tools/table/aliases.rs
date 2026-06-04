@@ -19,8 +19,9 @@ pub(super) use AppSubtool::{
 pub(super) use ChatBlock::{
     CanvasInline as CbCanvasInline, Diff as CbDiff, Explore as CbExplore, Fallback as CbFallback,
     Glob as CbGlob, OrgTask as CbOrgTask, PlanDoc as CbPlanDoc, ReadFile as CbReadFile,
-    Search as CbSearch, SentMessage as CbSentMessage, Shell as CbShell, Subagent as CbSubagent,
-    TitleOnly as CbTitleOnly, Todo as CbTodo, WebSearch as CbWebSearch,
+    Search as CbSearch, SentMessage as CbSentMessage, SetupRepo as CbSetupRepo,
+    Shell as CbShell, Subagent as CbSubagent, TitleOnly as CbTitleOnly, Todo as CbTodo,
+    WebSearch as CbWebSearch,
 };
 pub(super) use HumanToolKey::{
     Browser as HtBrowser,
@@ -31,8 +32,9 @@ pub(super) use HumanToolKey::{
     // cowork / voice GUI tool is re-enabled.
 };
 pub(super) use SimulatorApp::{
-    BackgroundTasks as AppBackgroundTasks, Browser as AppBrowser, Channels as AppChannels,
-    CodeEditor as AppCode, DbManager as AppDb, ProjectManager as AppProject,
+    BackgroundTasks as AppBackgroundTasks, Browser as AppBrowser, Canvas as AppCanvas,
+    Channels as AppChannels, CodeEditor as AppCode, DbManager as AppDb,
+    ProjectManager as AppProject,
 };
 // RequiredCapability aliases — one per action group.
 // `Core` is the DEFAULT_TOOL_ENTRY default so it's never spelled out explicitly.

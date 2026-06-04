@@ -39,6 +39,7 @@ pub enum SimulatorApp {
     DbManager,
     ProjectManager,
     BackgroundTasks,
+    Canvas,
 }
 
 /// Workstation panel key for tool → UI correlation.

@@ -125,6 +125,8 @@ pub enum ChatBlock {
     Hidden,
     /// CanvasInlineBlock — render_inline_canvas (html / url / a2ui modes)
     CanvasInline,
+    /// SetupRepoBlock — setup_repo (report_status, update_env, add_env_vars, launch_app)
+    SetupRepo,
     /// ToolCallBlock — default fallback for tools without a specialized view
     #[default]
     Fallback,
@@ -148,6 +150,7 @@ impl ChatBlock {
             Self::PlanDoc => "plan_doc",
             Self::Hidden => "hidden",
             Self::CanvasInline => "canvas_inline",
+            Self::SetupRepo => "setup_repo",
             Self::Fallback => "fallback",
         }
     }
