@@ -1,9 +1,10 @@
 /**
- * SecondaryPanelHeader
+ * PanelTabBar
  *
- * Shared header chrome for the secondary panel slot (Browser DevTools,
- * Code Editor bottom panel, etc.) used by `WorkStationShell`'s
- * `secondaryPanelConfig`.
+ * Shared tab-header chrome for any panel that needs position-aware tabs.
+ * Currently driving the Workstation "secondary panel" slot (Browser
+ * DevTools, Code Editor bottom panel), but designed so any panel — primary
+ * or secondary, modal or dock — can reuse the same tab + slot contract.
  *
  * Behaviour by position (matches the `SecondaryPanelPosition` toggle):
  * - `bottom` → renders pill-style tabs (`TabPill` variant=pill). All
@@ -25,7 +26,9 @@ import { TabBar } from "@src/modules/WorkStation/shared/TabBar";
 import type { SecondaryPanelPosition } from "@src/store/ui/workStationAtom";
 import type { WorkStationTab } from "@src/store/workstation/tabs";
 
-export interface SecondaryPanelHeaderTab {
+export { PanelPositionToggle } from "./PositionToggle";
+
+export interface PanelTabBarTab {
   key: string;
   label: string;
   /** Optional lucide icon name; only consumed by the TabBar (right) chrome. */
@@ -34,9 +37,9 @@ export interface SecondaryPanelHeaderTab {
   badge?: ReactNode;
 }
 
-export interface SecondaryPanelHeaderProps {
+export interface PanelTabBarProps {
   position: SecondaryPanelPosition;
-  tabs: SecondaryPanelHeaderTab[];
+  tabs: PanelTabBarTab[];
   activeTabKey: string;
   onTabChange: (key: string) => void;
 
@@ -57,7 +60,7 @@ export interface SecondaryPanelHeaderProps {
   className?: string;
 }
 
-const SecondaryPanelHeader: React.FC<SecondaryPanelHeaderProps> = memo(
+const PanelTabBar: React.FC<PanelTabBarProps> = memo(
   ({
     position,
     tabs,
@@ -190,6 +193,6 @@ const SecondaryPanelHeader: React.FC<SecondaryPanelHeaderProps> = memo(
   }
 );
 
-SecondaryPanelHeader.displayName = "SecondaryPanelHeader";
+PanelTabBar.displayName = "PanelTabBar";
 
-export default SecondaryPanelHeader;
+export default PanelTabBar;
