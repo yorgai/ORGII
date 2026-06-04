@@ -225,13 +225,30 @@ export function useFileOperations(
     if (!confirmed) return;
 
     try {
-      // Use dispatch - goes through GitOperationsService
-      await dispatch("git.discardAll", {}, "user");
+      const untrackedFiles = unstagedFiles.filter(
+        (file) => file.status === "added" && !file.staged
+      );
+      const trackedFiles = unstagedFiles.filter(
+        (file) => !(file.status === "added" && !file.staged)
+      );
+
+      await Promise.all(
+        untrackedFiles.map((file) => {
+          const absolutePath = file.path.startsWith("/")
+            ? file.path
+            : `${repoPath}/${file.path}`;
+          return remove(absolutePath);
+        })
+      );
+
+      if (trackedFiles.length > 0) {
+        await dispatch("git.discardAll", {}, "user");
+      }
       await fetchGitStatus();
     } catch (error) {
       console.error("Failed to discard all changes:", error);
     }
-  }, [gitFiles, fetchGitStatus, dispatch, t]);
+  }, [gitFiles, repoPath, fetchGitStatus, dispatch, t]);
 
   // Handle open all changes view — drives the unified Source Control tab
   // into All Changes mode for unstaged files.

@@ -20,20 +20,17 @@ import { useTranslation } from "react-i18next";
 
 import TabPill from "@src/components/TabPill";
 import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
-import {
-  extractEditData,
-  parseUnifiedDiffToOldNew,
-} from "@src/engines/SessionCore/rendering/props/propsDataExtractors";
-import { normalizeEventProps } from "@src/engines/SessionCore/rendering/props/propsNormalizer";
 import type { SimulatorAppProps } from "@src/engines/Simulator/apps/core/types";
 import { usePublishWorkstationTabHeader } from "@src/hooks/workStation";
 import {
-  DiffFileSection,
-  type DiffFileSectionData,
+  DiffFileNavigationList,
+  DiffSectionList,
   NoTabsPlaceholder,
   SimulatorReplayChrome,
   WorkStationShell,
+  buildConsolidatedSessionReplayDiffSectionItems,
   buildPrimarySidebarConfig,
+  buildSessionReplayDiffSectionItems,
   useSimulatorAwaitingAgentCaption,
   useSimulatorPlaceholderActions,
 } from "@src/modules/WorkStation/shared";
@@ -50,78 +47,10 @@ import {
   simulatorPrimarySidebarWidthPersistAtom,
 } from "@src/store/ui/simulatorAtom";
 
-import DiffSidebarList from "./DiffSidebarList";
-import type { DiffEntry, DiffFilter } from "./types";
+import type { DiffFilter } from "./types";
 import { useDiff } from "./useDiff";
 
 type DiffPillMode = "focus" | "all-changes";
-
-interface DiffSectionItem {
-  key: string;
-  file: DiffFileSectionData;
-}
-
-function getDiffStatus(
-  entry: DiffEntry,
-  isDeleted: boolean | undefined,
-  oldContent: string | undefined,
-  newContent: string | undefined
-): DiffFileSectionData["status"] {
-  const action =
-    typeof entry.event.args?.action === "string" ? entry.event.args.action : "";
-  const functionName = entry.event.functionName || "";
-  if (
-    isDeleted ||
-    action.includes("delete") ||
-    functionName.includes("delete")
-  ) {
-    return "deleted";
-  }
-  if (action.includes("create") || (!oldContent && Boolean(newContent))) {
-    return "added";
-  }
-  return "modified";
-}
-
-function buildDiffSectionItems(entry: DiffEntry): DiffSectionItem[] {
-  const universal = normalizeEventProps({ event: entry.event }, "tool_call");
-  if (!universal) return [];
-
-  const editData = extractEditData(universal);
-  const segments =
-    editData.applyPatchSegments && editData.applyPatchSegments.length > 0
-      ? editData.applyPatchSegments
-      : [editData];
-
-  return segments.map((segment, index) => {
-    const parsed =
-      segment.diff &&
-      (segment.oldContent === undefined || segment.newContent === undefined)
-        ? parseUnifiedDiffToOldNew(segment.diff)
-        : undefined;
-    const isDeleted = segment.isDeleted;
-    const oldContent = isDeleted
-      ? (segment.oldContent ?? parsed?.oldValue ?? segment.content ?? "")
-      : (segment.oldContent ?? parsed?.oldValue ?? "");
-    const newContent = isDeleted
-      ? ""
-      : (segment.newContent ?? parsed?.newValue ?? segment.content ?? "");
-    const path = segment.filePath || entry.filePath || entry.fileName;
-
-    return {
-      key: `${entry.entryId}:${index}:${path}`,
-      file: {
-        path,
-        status: getDiffStatus(entry, isDeleted, oldContent, newContent),
-        staged: false,
-        additions: segment.linesAdded,
-        deletions: segment.linesRemoved,
-        oldContent,
-        newContent,
-      },
-    };
-  });
-}
 
 const TAB_IDS: Record<DiffFilter, string> = {
   all: "diff-filter:all",
@@ -142,6 +71,8 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   const { t: tCommon } = useTranslation("common");
   const [filter, setFilter] = useState<DiffFilter>("all");
   const [pillMode, setPillMode] = useState<DiffPillMode>("all-changes");
+  const [focusedDiffPath, setFocusedDiffPath] = useState<string | null>(null);
+  const [focusedDiffNonce, setFocusedDiffNonce] = useState(0);
   const {
     filteredEntries,
     counts,
@@ -246,6 +177,24 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     enabled: counts.all > 0,
   });
 
+  const handleSidebarItemSelect = useCallback(
+    (
+      item: ReturnType<
+        typeof buildConsolidatedSessionReplayDiffSectionItems
+      >[number]
+    ) => {
+      if (pillMode === "all-changes") {
+        setFocusedDiffPath(item.file.path);
+        setFocusedDiffNonce((prev) => prev + 1);
+        return;
+      }
+
+      const targetEntryId = item.entryIds[item.entryIds.length - 1];
+      if (targetEntryId) selectEntry(targetEntryId);
+    },
+    [pillMode, selectEntry]
+  );
+
   const sidebarTab = useMemo<PrimarySidebarTab>(
     () => ({
       key: "diff-sidebar",
@@ -255,10 +204,12 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
           key: "diff-list",
           title: t("simulator.replay.diffApp.tabLabel"),
           content: (
-            <DiffSidebarList
-              entries={filteredEntries}
+            <DiffFileNavigationList
+              items={buildConsolidatedSessionReplayDiffSectionItems(
+                filteredEntries
+              )}
               selectedEntryId={selectedEntryId ?? displayEntry?.entryId ?? null}
-              onSelectEntry={selectEntry}
+              onSelectItem={handleSidebarItemSelect}
             />
           ),
           defaultFlexGrow: 1,
@@ -267,7 +218,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
         },
       ],
     }),
-    [filteredEntries, selectedEntryId, displayEntry, selectEntry, t]
+    [filteredEntries, selectedEntryId, displayEntry, handleSidebarItemSelect, t]
   );
 
   const noopTabChange = useCallback(() => {
@@ -301,12 +252,16 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     ]
   );
 
-  const renderDiffSections = useCallback((entry: DiffEntry) => {
-    const sections = buildDiffSectionItems(entry);
-    return sections.map((section) => (
-      <DiffFileSection key={section.key} file={section.file} />
-    ));
-  }, []);
+  const consolidatedSections = useMemo(
+    () => buildConsolidatedSessionReplayDiffSectionItems(filteredEntries),
+    [filteredEntries]
+  );
+
+  const focusedSections = useMemo(
+    () =>
+      displayEntry ? buildSessionReplayDiffSectionItems(displayEntry) : [],
+    [displayEntry]
+  );
 
   const detailContent = useMemo(() => {
     if (pillMode === "all-changes") {
@@ -324,11 +279,15 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
         );
       }
       return (
-        <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 overflow-auto">
-            {filteredEntries.flatMap(renderDiffSections)}
-          </div>
-        </div>
+        <DiffSectionList
+          sections={consolidatedSections}
+          emptyTitle={t(
+            "simulator.replay.diffApp.emptyForFilter",
+            "No diffs match this filter yet."
+          )}
+          focusedPath={focusedDiffPath}
+          focusedNonce={focusedDiffNonce}
+        />
       );
     }
 
@@ -346,13 +305,26 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
       );
     }
     return (
-      <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="min-h-0 flex-1 overflow-auto">
-          {renderDiffSections(displayEntry)}
-        </div>
-      </div>
+      <DiffSectionList
+        sections={focusedSections}
+        emptyTitle={t(
+          "simulator.replay.diffApp.emptyDetail",
+          "Select a change to view the diff."
+        )}
+        collapseThreshold={Number.POSITIVE_INFINITY}
+        showBottomBorder={false}
+      />
     );
-  }, [pillMode, filteredEntries, displayEntry, renderDiffSections, t]);
+  }, [
+    pillMode,
+    filteredEntries,
+    consolidatedSections,
+    displayEntry,
+    focusedSections,
+    focusedDiffPath,
+    focusedDiffNonce,
+    t,
+  ]);
 
   if (counts.all === 0) {
     return (

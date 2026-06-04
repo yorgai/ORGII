@@ -10,11 +10,10 @@ import { useAtomValue } from "jotai";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import { DiffSectionList } from "@src/modules/WorkStation/shared";
 import { sourceControlFocusTargetAtom } from "@src/store/workstation/codeEditor";
 import type { GitFile } from "@src/types/git/types";
 
-import AllChangesFileSection from "./allChanges/AllChangesFileSection";
 import { useAllChangesFiles } from "./allChanges/useAllChangesFiles";
 
 export interface AllChangesViewProps {
@@ -34,7 +33,7 @@ export interface AllChangesViewProps {
   collapseAllSignal?: number;
 }
 
-const AUTO_COLLAPSE_THRESHOLD = 0;
+const AUTO_COLLAPSE_THRESHOLD = 10;
 
 const AllChangesView: React.FC<AllChangesViewProps> = ({
   files,
@@ -71,8 +70,6 @@ const AllChangesView: React.FC<AllChangesViewProps> = ({
     queueMicrotask(() => setCollapseTrigger((prev) => prev + 1));
   }, [collapseAllSignal]);
 
-  const shouldAutoCollapse = files.length > AUTO_COLLAPSE_THRESHOLD;
-
   const focusedFile = sortedFiles.find((file) => {
     if (!focusTarget) return false;
     const absolutePath = file.path.startsWith("/")
@@ -106,53 +103,22 @@ const AllChangesView: React.FC<AllChangesViewProps> = ({
     [loadContentForFile]
   );
 
-  if (loading && files.length === 0) {
-    return (
-      <Placeholder
-        variant="loading"
-        placement="detail-panel"
-        fillParentHeight
-      />
-    );
-  }
-
-  if (files.length === 0) {
-    return (
-      <Placeholder
-        variant="empty"
-        placement="detail-panel"
-        title={
-          staged
-            ? t("placeholders.noStagedChanges")
-            : t("placeholders.noChanges")
-        }
-        fillParentHeight
-      />
-    );
-  }
-
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-auto">
-        {sortedFiles.map((file) => {
-          const isFocusedFile = focusedFile?.path === file.path;
-          return (
-            <AllChangesFileSection
-              key={`${file.id}-${collapseTrigger}-${isFocusedFile ? (focusTarget?.nonce ?? 0) : 0}`}
-              file={file}
-              defaultExpanded={
-                isFocusedFile ||
-                (collapseTrigger > 0 ? false : !shouldAutoCollapse)
-              }
-              repoPath={repoPath}
-              sectionRef={getSectionRef(file.path)}
-              onFileSelect={onFileSelect}
-              onRequestContent={handleRequestContent}
-            />
-          );
-        })}
-      </div>
-    </div>
+    <DiffSectionList
+      sections={sortedFiles.map((file) => ({ key: file.id, file }))}
+      loading={loading}
+      emptyTitle={
+        staged ? t("placeholders.noStagedChanges") : t("placeholders.noChanges")
+      }
+      repoPath={repoPath}
+      collapseThreshold={AUTO_COLLAPSE_THRESHOLD}
+      collapseSignal={collapseTrigger}
+      getSectionRef={getSectionRef}
+      focusedPath={focusedFile?.path ?? null}
+      focusedNonce={focusTarget?.nonce ?? 0}
+      onFileSelect={onFileSelect}
+      onRequestContent={handleRequestContent}
+    />
   );
 };
 

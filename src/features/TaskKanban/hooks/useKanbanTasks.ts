@@ -9,7 +9,7 @@
  * carried on `task.isUnread`, used here to sort unread cards to the top
  * of the Done column.
  *
- * Supports time-based filtering: 1h/6h/12h/24h/3d filters out sessions older
+ * Supports time-based filtering: 12h/24h/3d/7d filters out sessions older
  * than the selected window.
  */
 import { useAtomValue, useSetAtom } from "jotai";
