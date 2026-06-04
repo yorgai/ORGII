@@ -249,9 +249,8 @@ const SessionCreatorOrgMembersPanel: React.FC<SessionCreatorOrgMembersPanelProps
         [agentPickerMemberId, handleCloseAgentPicker, updateMemberOverride]
       );
 
-      const applyForFuture = Boolean(
-        advancedConfig.applyAgentOrgMemberOverridesForFuture
-      );
+      const applyForFuture =
+        advancedConfig.applyAgentOrgMemberOverridesForFuture !== false;
       const handleApplyForFutureChange = useCallback(
         (checked: boolean) => {
           onAdvancedConfigChange({
@@ -403,14 +402,15 @@ const SessionCreatorOrgMembersPanel: React.FC<SessionCreatorOrgMembersPanelProps
             isOpen={isAgentPickerOpen}
             onClose={handleCloseAgentPicker}
             hideOrgs
-            titleLabel={
+            titleLabel={agentPickerMember?.name}
+            titleIcon={Users}
+            placeholderLabel={
               agentPickerMember
                 ? t("creator.orgMembers.selectBaseAgentForRole", {
                     role: agentPickerMember.name,
                   })
                 : undefined
             }
-            titleIcon={Users}
             currentAgentDefinitionId={
               agentPickerMember?.agentId.startsWith(CLI_AGENT_PREFIX)
                 ? undefined

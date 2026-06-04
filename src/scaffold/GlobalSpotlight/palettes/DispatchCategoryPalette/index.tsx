@@ -97,6 +97,8 @@ export interface DispatchCategoryPaletteProps extends BasePaletteProps {
   titleLabel?: string;
   /** Icon paired with `titleLabel`. Defaults to no icon when omitted. */
   titleIcon?: React.ComponentType<Record<string, unknown>>;
+  /** Optional placeholder override for contextual picker copy. */
+  placeholderLabel?: string;
 }
 
 // ============ HELPERS ============
@@ -161,6 +163,7 @@ export const DispatchCategoryPalette: React.FC<
   hideOrgs = false,
   titleLabel,
   titleIcon,
+  placeholderLabel,
 }) => {
   const { t } = useTranslation("sessions");
   const { t: tCommon } = useTranslation("common");
@@ -586,7 +589,7 @@ export const DispatchCategoryPalette: React.FC<
       <PaletteBody
         kernel={kernel}
         items={items}
-        placeholder={tCommon("filters.searchAgentOrOrg")}
+        placeholder={placeholderLabel ?? tCommon("filters.searchAgentOrOrg")}
         path={path}
         containerHeight={containerHeight}
         afterListSlot={afterListSlot}

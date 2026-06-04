@@ -178,7 +178,7 @@ export function buildSessionLaunchPayload(
       ? { agentOrgMemberOverrides: advancedConfig.agentOrgMemberOverrides }
       : {}),
     ...(selectedAgentOrgId &&
-    advancedConfig.applyAgentOrgMemberOverridesForFuture
+    advancedConfig.applyAgentOrgMemberOverridesForFuture !== false
       ? { applyAgentOrgMemberOverridesForFuture: true }
       : {}),
     ...(dispatchCategory === DISPATCH_CATEGORY.RUST_AGENT ||

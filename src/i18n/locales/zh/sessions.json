@@ -1691,7 +1691,7 @@
       "empty": "此组织暂无成员",
       "selectAgent": "选择 Agent",
       "applyForFutureLabel": "应用于以后的使用",
-      "selectBaseAgentForRole": "为「{{role}}」选择基础 Agent"
+      "selectBaseAgentForRole": "为 {{role}} 选择基座 Agent"
     },
     "externalIdes": "外部 Agent",
     "cursorIde": {

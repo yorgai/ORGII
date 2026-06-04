@@ -33,4 +33,6 @@ export interface DispatchCategoryPaletteProps extends BasePaletteProps {
   titleLabel?: string;
   /** Icon paired with `titleLabel`. Defaults to no icon when omitted. */
   titleIcon?: React.ComponentType<Record<string, unknown>>;
+  /** Optional placeholder override for contextual picker copy. */
+  placeholderLabel?: string;
 }
