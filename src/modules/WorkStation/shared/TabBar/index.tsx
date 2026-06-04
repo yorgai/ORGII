@@ -27,7 +27,14 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { useAtomValue } from "jotai";
-import React, { Fragment, memo, useCallback, useRef, useState } from "react";
+import React, {
+  Fragment,
+  memo,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 
 import FileTypeIcon from "@src/components/FileTypeIcon";
@@ -205,15 +212,18 @@ export const TabBar: React.FC<TabBarProps> = memo(
     );
 
     const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
+    const noopTabAction = useCallback((_tabId: string) => {}, []);
 
     const hasTabStrip = (tabs && tabs.length > 0) || Boolean(tabRowPrefix);
     const hasTabs = tabs && tabs.length > 0;
+    const tabIds = useMemo(
+      () => (hasTabs ? tabs.map((tab) => tab.id) : []),
+      [hasTabs, tabs]
+    );
 
     if (!hasTabStrip && !leadingSlot && !trailingSlot) {
       return null;
     }
-
-    const tabIds = hasTabs ? tabs.map((tab) => tab.id) : [];
 
     return (
       <div
@@ -369,8 +379,8 @@ export const TabBar: React.FC<TabBarProps> = memo(
             repoPath={repoPath}
             onClose={handleCloseContextMenu}
             onCloseTab={onTabClose}
-            onCloseOtherTabs={onCloseOtherTabs ?? (() => {})}
-            onCloseSavedTabs={onCloseSavedTabs ?? (() => {})}
+            onCloseOtherTabs={onCloseOtherTabs ?? noopTabAction}
+            onCloseSavedTabs={onCloseSavedTabs ?? noopTabAction}
             dispatch={dispatch}
           />
         )}
