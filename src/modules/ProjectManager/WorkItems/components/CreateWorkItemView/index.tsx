@@ -30,6 +30,7 @@ import {
   projectApi,
 } from "@src/api/http/project";
 import Button from "@src/components/Button";
+import Input from "@src/components/Input";
 import Message from "@src/components/Message";
 import { PropertyDropdownField } from "@src/components/PropertyField/PropertyDropdownField";
 import type { PropertyDropdownOption } from "@src/components/PropertyField/PropertyDropdownField";
@@ -49,8 +50,8 @@ import {
   DetailSplitLayout,
   ProjectContentEditor,
   type ProjectContentEditorRef,
-  ProjectContentTitleInput,
 } from "@src/modules/ProjectManager/shared";
+import { PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS } from "@src/modules/ProjectManager/shared/placeholderTokens";
 import { unresolveImagePathsForStorage } from "@src/modules/ProjectManager/shared/utils/workItemImagePaths";
 import { PANEL_HEADER_TOKENS } from "@src/modules/shared/layouts/blocks";
 import type { WorkItemDraft } from "@src/store/workstation/projectManager";
@@ -439,7 +440,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       <PropertyDropdownField
         value={selectedProjectOrgId ?? orgOptions[0]?.value ?? ""}
         label={selectedProjectOrgLabel}
-        icon={<Building2 size={CREATE_WORK_ITEM_BREADCRUMB_ICON_SIZE} />}
+        icon={null}
         options={orgOptions}
         onChange={handleOrgBreadcrumbChange}
         placement="portal"
@@ -454,7 +455,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       <PropertyDropdownField
         value="org"
         label={selectedProjectOrgLabel}
-        icon={<Building2 size={CREATE_WORK_ITEM_BREADCRUMB_ICON_SIZE} />}
+        icon={null}
         placement="portal"
         fieldVariant="pill"
         triggerVariant="pill"
@@ -470,8 +471,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       <PropertyDropdownField
         value={draft.projectId ?? projectOptions[0]?.value ?? ""}
         label={projectBreadcrumbLabel}
-        icon={<BookOpen size={CREATE_WORK_ITEM_BREADCRUMB_ICON_SIZE} />}
-        iconColor={selectedProject?.color}
+        icon={null}
         options={projectOptions}
         onChange={handleProjectBreadcrumbChange}
         placement="portal"
@@ -486,8 +486,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       <PropertyDropdownField
         value="project"
         label={projectBreadcrumbLabel}
-        icon={<BookOpen size={CREATE_WORK_ITEM_BREADCRUMB_ICON_SIZE} />}
-        iconColor={selectedProject?.color}
+        icon={null}
         placement="portal"
         fieldVariant="pill"
         triggerVariant="pill"
@@ -685,15 +684,22 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   ) : undefined;
 
   const titleSection = (
-    <ProjectContentTitleInput
-      title={draft.name}
-      onTitleChange={handleTitleChange}
-      titlePlaceholder={
+    <Input
+      type="text"
+      value={draft.name}
+      onChange={handleTitleChange}
+      placeholder={
         resolvedAiGenerateMode
           ? optionalWorkItemTitlePlaceholder
           : workItemTitlePlaceholder
       }
-      autoFocusTitle
+      autoFocus
+      borderless
+      bgless
+      size="small"
+      className="h-7 min-w-0 max-w-full flex-1 cursor-default rounded-lg transition-colors hover:bg-surface-hover [&_.input-inner]:!px-1.5"
+      inputClassName={`-translate-y-px truncate text-[13px] font-medium text-text-1 ${PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS}`}
+      data-testid="create-work-item-title-input"
     />
   );
 
@@ -800,6 +806,8 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
               showManualInputs ? descriptionSection : undefined
             }
             descriptionFlexible={showManualInputs}
+            metaClassName="px-4 py-2"
+            titleClassName="flex h-10 items-center border-b border-border-2 px-2 py-0"
             descriptionClassName="min-h-0 overflow-hidden px-4"
           />
         </div>
@@ -824,8 +832,12 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
         showFooter && showManualInputs ? (
           chatPanelFooter ? (
             <>
-              <Button variant="secondary" size="small" onClick={onCancel}>
-                {t("common:actions.cancel")}
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={resetDraftForCreateMore}
+              >
+                {t("common:actions.reset")}
               </Button>
               <Button
                 variant="primary"

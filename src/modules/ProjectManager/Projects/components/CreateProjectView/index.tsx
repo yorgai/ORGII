@@ -27,10 +27,12 @@ import { useTranslation } from "react-i18next";
 
 import { type ProjectOrg, projectApi } from "@src/api/http/project";
 import Button from "@src/components/Button";
+import Input from "@src/components/Input";
 import Message from "@src/components/Message";
 import Select from "@src/components/Select";
 import type { SelectOption } from "@src/components/Select";
 import { useKeyboardSave } from "@src/hooks/keyboard";
+import { createLogger } from "@src/hooks/logger";
 import { useUndoStackWithRestore } from "@src/hooks/ui";
 import WorkItemContentStack from "@src/modules/ProjectManager/WorkItems/components/WorkItemContentStack";
 import {
@@ -42,6 +44,7 @@ import {
   type ProjectData,
   ProjectPropertyFields,
 } from "@src/modules/ProjectManager/shared";
+import { PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS } from "@src/modules/ProjectManager/shared/placeholderTokens";
 import { reposAtom } from "@src/store/repo";
 import {
   type ProjectDraft,
@@ -76,6 +79,10 @@ export interface CreateProjectViewProps {
   onSetUnsaved: (hasUnsaved: boolean) => void;
   /** Called after project is successfully created */
   onProjectCreated: (options?: { keepOpen?: boolean }) => void;
+  /** Hide manual description/footer while an agent creator is shown. */
+  aiGenerateMode?: boolean;
+  /** Render the create footer. */
+  showFooter?: boolean;
   /** Publish page header into the global WorkstationTabHeader. */
   publishHeaderToWorkstation?: boolean;
 }
@@ -83,6 +90,8 @@ export interface CreateProjectViewProps {
 // ============================================
 // Component
 // ============================================
+
+const logger = createLogger("CreateProjectView");
 
 const CreateProjectView: React.FC<CreateProjectViewProps> = ({
   tabId,
@@ -92,11 +101,14 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
   orgId,
   onSetUnsaved,
   onProjectCreated,
+  aiGenerateMode = false,
+  showFooter = true,
   publishHeaderToWorkstation = false,
 }) => {
   const { t } = useTranslation("projects");
   const [saving, setSaving] = useState(false);
   const [availableOrgs, setAvailableOrgs] = useState<ProjectOrg[]>([]);
+  const [editorResetKey, setEditorResetKey] = useState(0);
 
   // Read draft from atom (survives tab switches)
   const draftsMap = useAtomValue(projectDraftsAtom);
@@ -285,12 +297,21 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
       onProjectCreated();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[CreateProjectView] Failed to create project:", err);
+      logger.error("Failed to create project", err);
       Message.error(msg);
     } finally {
       setSaving(false);
     }
   }, [draft, onProjectCreated, removeDraft, saving, tabId]);
+
+  const handleReset = useCallback(() => {
+    const nextDraft = createDefaultProjectDraft();
+    nextDraft.orgId = orgId;
+    if (repoPath) nextDraft.linkedRepoPaths = [repoPath];
+    setDraft({ tabId, draft: nextDraft });
+    onSetUnsaved(false);
+    setEditorResetKey((value) => value + 1);
+  }, [onSetUnsaved, orgId, repoPath, setDraft, tabId]);
 
   useKeyboardSave(handleCreate, !saving && !!draft.name.trim());
 
@@ -347,6 +368,22 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
     </div>
   );
 
+  const titleSection = (
+    <Input
+      type="text"
+      value={draft.name}
+      onChange={handleTitleChange}
+      placeholder={t("projects.editor.titlePlaceholder")}
+      autoFocus
+      borderless
+      bgless
+      size="small"
+      className="h-7 min-w-0 max-w-full flex-1 cursor-default rounded-lg transition-colors hover:bg-surface-hover [&_.input-inner]:!px-1.5"
+      inputClassName={`-translate-y-px truncate text-[13px] font-medium text-text-1 ${PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS}`}
+      data-testid="create-project-title-input"
+    />
+  );
+
   return (
     <DetailSplitLayout
       title={t("projects.newProject")}
@@ -354,43 +391,52 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
       publishHeaderToWorkstation={publishHeaderToWorkstation}
       leftContent={
         <WorkItemContentStack
+          titleContent={titleSection}
           pathContent={orgBreadcrumbPill}
           propertiesContent={propertyPills}
           descriptionContent={
-            <ProjectContentEditor
-              ref={editorRef}
-              title={draft.name}
-              onTitleChange={handleTitleChange}
-              summary={draft.summary}
-              onSummaryChange={handleSummaryChange}
-              initialDescription={draft.description || undefined}
-              onDescriptionChange={handleDescriptionChange}
-              descriptionClassName="no-bottom-border"
-              descriptionMaxHeight="100%"
-              repoPath={repoPath}
-              className="flex h-full min-h-0 flex-col"
-              autoFocusTitle
-            />
+            aiGenerateMode ? undefined : (
+              <ProjectContentEditor
+                key={editorResetKey}
+                ref={editorRef}
+                title={draft.name}
+                onTitleChange={handleTitleChange}
+                summary={draft.summary}
+                onSummaryChange={handleSummaryChange}
+                initialDescription={draft.description || undefined}
+                onDescriptionChange={handleDescriptionChange}
+                titleVisible={false}
+                separatorVisible={false}
+                descriptionClassName="no-bottom-border"
+                descriptionMaxHeight="100%"
+                repoPath={repoPath}
+                className="flex h-full min-h-0 flex-col"
+              />
+            )
           }
-          descriptionFlexible
-          descriptionClassName="min-h-0 overflow-hidden px-4"
+          descriptionFlexible={!aiGenerateMode}
+          metaClassName="px-4 py-2"
+          titleClassName="flex h-10 items-center border-b border-border-2 px-2 py-0"
+          descriptionClassName="min-h-0 overflow-hidden px-4 pt-2"
           scrollable
         />
       }
       footer={
-        <>
-          <Button variant="secondary" size="small" disabled>
-            {t("workItems.createModes.generateWithAgent")}
-          </Button>
-          <Button
-            variant="primary"
-            size="small"
-            onClick={handleCreate}
-            disabled={!draft.name.trim() || saving}
-          >
-            {saving ? t("common:status.saving") : t("projects.createProject")}
-          </Button>
-        </>
+        showFooter && !aiGenerateMode ? (
+          <>
+            <Button variant="secondary" size="small" onClick={handleReset}>
+              {t("common:actions.reset")}
+            </Button>
+            <Button
+              variant="primary"
+              size="small"
+              onClick={handleCreate}
+              disabled={!draft.name.trim() || saving}
+            >
+              {saving ? t("common:status.saving") : t("projects.createProject")}
+            </Button>
+          </>
+        ) : undefined
       }
     />
   );

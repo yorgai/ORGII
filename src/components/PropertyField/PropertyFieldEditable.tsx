@@ -60,6 +60,14 @@ export const FieldRow: React.FC<FieldRowProps> = ({
 }) => {
   const EditIcon = usePencil ? Pencil : ChevronDown;
   const pillBorderClass = borderless ? "border-transparent" : "border-border-2";
+  const iconContent = icon ? (
+    <span
+      className="flex h-4 w-4 shrink-0 items-center justify-center text-text-3"
+      style={iconColor ? { color: iconColor } : undefined}
+    >
+      {icon}
+    </span>
+  ) : undefined;
 
   if (variant === "pill") {
     return (
@@ -69,14 +77,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({
           variant="secondary"
           size="small"
           shape="round"
-          icon={
-            <span
-              className="flex h-4 w-4 shrink-0 items-center justify-center text-text-3"
-              style={iconColor ? { color: iconColor } : undefined}
-            >
-              {icon}
-            </span>
-          }
+          icon={iconContent}
           onClick={onClick}
           className={`max-w-[220px] ${pillBorderClass} ${
             isActive ? "!border-primary-6 !bg-fill-2 !text-primary-6" : ""
@@ -106,12 +107,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 border-none bg-transparent px-1.5 py-1.5 text-left outline-none"
           onClick={onClick}
         >
-          <span
-            className="flex h-4 w-4 shrink-0 items-center justify-center text-text-3"
-            style={iconColor ? { color: iconColor } : undefined}
-          >
-            {icon}
-          </span>
+          {iconContent}
           <span
             className={`flex-1 truncate text-xs text-text-1 ${isSelected ? "font-semibold" : ""} ${valueClassName}`}
           >

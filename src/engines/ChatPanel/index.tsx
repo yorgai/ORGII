@@ -42,7 +42,6 @@ import RegionNoticeButton from "@src/components/RegionNoticeButton";
 import Select, { type SelectOption } from "@src/components/Select";
 import SessionHoverCard from "@src/components/SessionHoverCard";
 import Switch from "@src/components/Switch";
-import TabPill from "@src/components/TabPill";
 import Tooltip from "@src/components/Tooltip";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { useRouteViewMode } from "@src/config/routeViewModeConfig";
@@ -185,6 +184,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const [workItemCreateDraft, setWorkItemCreateDraft] =
       useState<WorkItemDraft | null>(null);
     const [showWorkItemAgentCreator, setShowWorkItemAgentCreator] = useState(
+      Boolean(SessionCreatorSlot)
+    );
+    const [showProjectAgentCreator, setShowProjectAgentCreator] = useState(
       Boolean(SessionCreatorSlot)
     );
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
@@ -470,6 +472,11 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       !selectedWorkItem &&
       isWorkItemTarget &&
       Boolean(SessionCreatorSlot);
+    const showProjectAgentSwitchInHeader =
+      showNonSessionContent &&
+      !selectedWorkItem &&
+      isProjectTarget &&
+      Boolean(SessionCreatorSlot);
     const chatFocusLabel = isChatFocus
       ? t("chat.showWorkstation")
       : t("chat.hideWorkstation");
@@ -520,12 +527,16 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
           setWorkItemCreateDraft(null);
           setShowWorkItemAgentCreator(Boolean(SessionCreatorSlot));
+          setShowProjectAgentCreator(Boolean(SessionCreatorSlot));
           return;
         }
 
         if (nextTarget !== CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
           setWorkItemCreateDraft(null);
           setShowWorkItemAgentCreator(Boolean(SessionCreatorSlot));
+        }
+        if (nextTarget !== CHAT_PANEL_CREATE_TARGET.PROJECT) {
+          setShowProjectAgentCreator(Boolean(SessionCreatorSlot));
         }
         setCreateTarget(nextTarget);
         if (nextTarget === CHAT_PANEL_CREATE_TARGET.AGENT_SESSION) {
@@ -568,6 +579,13 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const handleWorkItemAgentCreatorToggle = useCallback(
       (enabled: boolean) => {
         setShowWorkItemAgentCreator(Boolean(SessionCreatorSlot) && enabled);
+      },
+      [SessionCreatorSlot]
+    );
+
+    const handleProjectAgentCreatorToggle = useCallback(
+      (enabled: boolean) => {
+        setShowProjectAgentCreator(Boolean(SessionCreatorSlot) && enabled);
       },
       [SessionCreatorSlot]
     );
@@ -1189,7 +1207,8 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 <PresenceMenuButton dropdownPosition="bottom-end" />
               </>
             )}
-            {showWorkItemAgentSwitchInHeader && (
+            {(showWorkItemAgentSwitchInHeader ||
+              showProjectAgentSwitchInHeader) && (
               <>
                 <div
                   className="mx-2 h-4 w-px shrink-0 bg-border-2"
@@ -1202,10 +1221,22 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                   </span>
                   <Switch
                     size="small"
-                    checked={showWorkItemAgentCreator}
-                    onChange={handleWorkItemAgentCreatorToggle}
+                    checked={
+                      isProjectTarget
+                        ? showProjectAgentCreator
+                        : showWorkItemAgentCreator
+                    }
+                    onChange={
+                      isProjectTarget
+                        ? handleProjectAgentCreatorToggle
+                        : handleWorkItemAgentCreatorToggle
+                    }
                     ariaLabel={t("projects:workItems.createModes.useAi")}
-                    dataTestId="chat-panel-work-item-agent-switch"
+                    dataTestId={
+                      isProjectTarget
+                        ? "chat-panel-project-agent-switch"
+                        : "chat-panel-work-item-agent-switch"
+                    }
                   />
                 </label>
               </>
@@ -1328,22 +1359,42 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const emptyChatContent = (() => {
       if (createTarget === CHAT_PANEL_CREATE_TARGET.PROJECT) {
+        const sessionCreatorContent =
+          showProjectAgentCreator && SessionCreatorSlot ? (
+            <SessionCreatorSlot
+              className="min-h-0 flex-1"
+              variant={creatorVariant}
+              centerFullScreenContent
+              hidePresenceButton
+              launchMode={SESSION_CREATOR_LAUNCH_MODE.START_BACKGROUND}
+              onRegionNoticeChange={handleRegionNoticeChange}
+            />
+          ) : null;
+
         return (
           <div className={`flex flex-col overflow-hidden ${creatorClassName}`}>
-            <CreateProjectView
-              tabId={PROJECT_CREATOR_DRAFT_ID}
-              repoPath={currentRepoPath ?? undefined}
-              repoName={currentRepoName}
-              scopeBreadcrumbLabel={
-                createProjectContext?.scopeBreadcrumbLabel ??
-                t("projects:orgs.personalOrg")
-              }
-              orgId={
-                createProjectContext?.orgId ?? STORY_PERSONAL_ORG_FILTER_ID
-              }
-              onSetUnsaved={() => undefined}
-              onProjectCreated={handleChatPanelProjectCreated}
-            />
+            <div className="shrink-0 overflow-hidden">
+              <CreateProjectView
+                tabId={PROJECT_CREATOR_DRAFT_ID}
+                repoPath={currentRepoPath ?? undefined}
+                repoName={currentRepoName}
+                scopeBreadcrumbLabel={
+                  createProjectContext?.scopeBreadcrumbLabel ??
+                  t("projects:orgs.personalOrg")
+                }
+                orgId={
+                  createProjectContext?.orgId ?? STORY_PERSONAL_ORG_FILTER_ID
+                }
+                onSetUnsaved={() => undefined}
+                onProjectCreated={handleChatPanelProjectCreated}
+                aiGenerateMode={showProjectAgentCreator}
+              />
+            </div>
+            {sessionCreatorContent ? (
+              <div className="min-h-0 flex-1 overflow-hidden pt-6">
+                {sessionCreatorContent}
+              </div>
+            ) : null}
           </div>
         );
       }
@@ -1368,7 +1419,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             <div
               className={`flex flex-col overflow-hidden ${creatorClassName}`}
             >
-              <div className="h-[42%] min-h-[300px] shrink-0 overflow-hidden">
+              <div className="shrink-0 overflow-hidden">
                 <CreateWorkItemView
                   repoPath={currentRepoPath}
                   onCancel={handleCancelWorkItemCreate}
@@ -1386,22 +1437,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                   defaultAiAssignee={defaultAiWorkItemAssignee}
                 />
               </div>
-              <div className="shrink-0 px-4 pb-4">
-                <div className="border-t border-border-2" aria-hidden />
-                <div className="mt-4 flex items-center justify-start">
-                  <TabPill
-                    tabs={[
-                      { key: "agent", label: t("common:terminology.agent") },
-                    ]}
-                    activeTab="agent"
-                    onChange={() => undefined}
-                    variant="simple"
-                    fillWidth={false}
-                    size="large"
-                  />
-                </div>
-              </div>
-              <div className="min-h-0 flex-1 overflow-hidden">
+              <div className="min-h-0 flex-1 overflow-hidden pt-6">
                 {sessionCreatorContent}
               </div>
             </div>

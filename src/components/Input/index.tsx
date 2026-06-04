@@ -214,6 +214,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       .join(" ");
 
     const inputClasses = ["input", inputClassName].filter(Boolean).join(" ");
+    const inputInnerClassName =
+      borderless && bgless ? "input-inner" : "input-inner rounded-lg bg-bg-2";
 
     const handleChange = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -293,7 +295,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
 
     const inputWrapper = (
       <div className={wrapperClasses} style={wrapperStyle}>
-        <div className="input-inner rounded-lg bg-bg-2">
+        <div className={inputInnerClassName}>
           {prefix && <span className="input-prefix">{prefix}</span>}
 
           <input
