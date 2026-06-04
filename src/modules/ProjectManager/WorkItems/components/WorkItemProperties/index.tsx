@@ -50,11 +50,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ title, children }) => (
 );
 
 export const WORK_ITEM_PROPERTY_ESSENTIAL_FIELDS: WorkItemPropertyFieldKey[] = [
+  "project",
   "status",
   "priority",
-  "assignee",
-  "date",
-  "project",
 ];
 
 const DEFAULT_VISIBLE_FIELDS: WorkItemPropertyFieldKey[] = [
@@ -307,12 +305,13 @@ const WorkItemProperties: React.FC<WorkItemPropertiesProps> = ({
             <Button
               variant="secondary"
               size="small"
+              shape="circle"
+              iconOnly
+              icon={<MoreHorizontal size={DROPDOWN_ITEM.iconSize} />}
               onClick={handleMoreClick}
               aria-label={t("workItems.contextMenu.moreProperties")}
-              className="!h-7 !rounded-full !border !border-solid !border-border-2 !bg-bg-2 !px-2 !text-text-2 !shadow-none hover:!bg-surface-hover"
-            >
-              <MoreHorizontal size={DROPDOWN_ITEM.iconSize} />
-            </Button>
+              className="!h-7 !w-7 !min-w-7 !rounded-full !border !border-solid !border-border-2 !bg-bg-2 !p-0 !text-text-2 !shadow-none hover:!bg-surface-hover"
+            />
           )}
         </div>
         {moreMenuPosition && (

@@ -517,6 +517,13 @@
       "cannotParseRepoName": "No se puede analizar el nombre del repositorio de: {{url}}",
       "defaultPrTitle": "[{{shortId}}] Cambios del work item"
     },
+    "sessions": {
+      "linkedSessions": "Sessions vinculadas",
+      "newSession": "Nueva sesión",
+      "starting": "Iniciando...",
+      "emptyOverview": "Aún no hay sessions",
+      "emptyOverviewHint": "Inicia una sesión de Agent para seguir la ejecución aquí."
+    },
     "outputTab": {
       "prSection": "Pull Request",
       "prNotAvailable": "No disponible aún",

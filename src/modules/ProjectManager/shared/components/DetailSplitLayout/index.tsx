@@ -133,7 +133,15 @@ const DetailSplitLayout: React.FC<DetailSplitLayoutProps> = ({
                     {segment}
                   </span>
                 ) : (
-                  <div className="min-w-0 shrink-0">{segment}</div>
+                  <div
+                    className={
+                      breadcrumb.length === 1 && isLeaf
+                        ? "min-w-0 flex-1"
+                        : "min-w-0 shrink-0"
+                    }
+                  >
+                    {segment}
+                  </div>
                 )}
               </React.Fragment>
             );

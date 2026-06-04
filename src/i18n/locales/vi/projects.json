@@ -517,6 +517,13 @@
       "cannotParseRepoName": "Không thể phân tích tên kho từ: {{url}}",
       "defaultPrTitle": "[{{shortId}}] Thay đổi work item"
     },
+    "sessions": {
+      "linkedSessions": "Sessions đã liên kết",
+      "newSession": "Session mới",
+      "starting": "Đang bắt đầu...",
+      "emptyOverview": "Chưa có Sessions",
+      "emptyOverviewHint": "Bắt đầu một Agent Session để theo dõi quá trình thực thi tại đây."
+    },
     "outputTab": {
       "prSection": "Pull Request",
       "prNotAvailable": "Chưa có sẵn",

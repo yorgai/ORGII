@@ -517,6 +517,13 @@
       "cannotParseRepoName": "无法解析仓库名：{{url}}",
       "defaultPrTitle": "[{{shortId}}] Work item 变更"
     },
+    "sessions": {
+      "linkedSessions": "已关联 Sessions",
+      "newSession": "新建 Session",
+      "starting": "正在启动...",
+      "emptyOverview": "暂无 Sessions",
+      "emptyOverviewHint": "启动 Agent Session 后，可在此跟踪执行。"
+    },
     "outputTab": {
       "prSection": "Pull Request",
       "prNotAvailable": "暂不可用",
