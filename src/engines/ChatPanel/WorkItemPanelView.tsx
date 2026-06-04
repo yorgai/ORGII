@@ -1,6 +1,6 @@
 import { emit } from "@tauri-apps/api/event";
 import { useSetAtom } from "jotai";
-import { BookOpen, Building2, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -30,8 +30,6 @@ import {
 import type { WorkItem } from "@src/types/core/workItem";
 
 const logger = createLogger("WorkItemPanelView");
-const WORK_ITEM_BREADCRUMB_ICON_SIZE = 13;
-
 interface WorkItemPanelViewProps {
   selectedWorkItem: ChatPanelSelectedWorkItem;
   onUpdateWorkItem?: (updates: Partial<WorkItem>) => void;
@@ -240,7 +238,7 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
       <PropertyDropdownField
         value="org"
         label={orgPathLabel}
-        icon={<Building2 size={WORK_ITEM_BREADCRUMB_ICON_SIZE} />}
+        icon={null}
         placement="portal"
         fieldVariant="pill"
         triggerVariant="pill"
@@ -262,8 +260,7 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
           "project"
         }
         label={projectPathLabel}
-        icon={<BookOpen size={WORK_ITEM_BREADCRUMB_ICON_SIZE} />}
-        iconColor={selectedWorkItem.workItem.project?.color}
+        icon={null}
         placement="portal"
         fieldVariant="pill"
         triggerVariant="pill"

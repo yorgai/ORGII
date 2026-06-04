@@ -180,7 +180,6 @@
     "createModes": {
       "generateWithAi": "使用 AI 建立",
       "generateWithAgent": "使用 Agent 生成",
-      "useAi": "使用 Agent",
       "manualCreation": "手動創建",
       "sessionCreatorPrompt": {
         "promptNameQuestion": "首先詢問使用者是否想指定一個具體的 Work Item 名稱。",

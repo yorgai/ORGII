@@ -180,7 +180,6 @@
     "createModes": {
       "generateWithAi": "AI로 만들기",
       "generateWithAgent": "Agent로 생성",
-      "useAi": "Agent 사용",
       "manualCreation": "수동 생성",
       "sessionCreatorPrompt": {
         "promptNameQuestion": "먼저 사용자에게 특정 Work Item 이름을 지정할지 물어보세요.",

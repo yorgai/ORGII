@@ -57,12 +57,21 @@ export default function WorkItemContentStack({
           {titleContent}
         </div>
       ) : null}
+      {titleContent && hasMetaContent ? INSET_SEPARATOR : null}
       {hasMetaContent ? (
         <div className={`shrink-0 ${metaClassName}`.trim()}>
-          {pathContent ? <div>{pathContent}</div> : null}
-          {propertiesContent ? (
-            <div className={pathContent ? "mt-3" : ""}>{propertiesContent}</div>
-          ) : null}
+          <div className="flex min-w-0 max-w-full items-center overflow-x-auto overflow-y-visible scrollbar-hide">
+            {pathContent ? <div className="shrink-0">{pathContent}</div> : null}
+            {pathContent && propertiesContent ? (
+              <div
+                className="mx-2 h-4 shrink-0 border-l border-border-2"
+                aria-hidden
+              />
+            ) : null}
+            {propertiesContent ? (
+              <div className="shrink-0">{propertiesContent}</div>
+            ) : null}
+          </div>
         </div>
       ) : null}
       {hasTopSeparator ? INSET_SEPARATOR : null}

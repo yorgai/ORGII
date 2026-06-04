@@ -499,7 +499,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
 
   const workItemPillBreadcrumb = (
     <div
-      className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+      className="flex min-w-0 flex-nowrap items-center gap-1.5"
       data-testid="create-work-item-pill-breadcrumb"
     >
       {orgBreadcrumbSegment}
@@ -786,19 +786,20 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
                 data-testid="create-work-item-mode-panel"
               >
                 <span className="text-[12px] font-medium text-text-1">
-                  {t("workItems.createModes.useAi")}
+                  Agent
                 </span>
                 <Switch
                   size="small"
                   checked={resolvedAiGenerateMode}
                   onChange={handleAiGenerateModeChange}
-                  ariaLabel={t("workItems.createModes.useAi")}
+                  ariaLabel="Agent"
                   dataTestId="create-work-item-mode-ai-switch"
                 />
               </div>
             </div>
           ) : null}
           <WorkItemContentStack
+            className="mx-auto h-full w-full max-w-[900px]"
             titleContent={titleSection}
             pathContent={workItemPillBreadcrumb}
             propertiesContent={inlinePropertyPills}
@@ -807,7 +808,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
             }
             descriptionFlexible={showManualInputs}
             metaClassName="px-4 py-2"
-            titleClassName="flex h-10 items-center border-b border-border-2 px-2 py-0"
+            titleClassName="flex h-10 items-center px-2 py-0"
             descriptionClassName="min-h-0 overflow-hidden px-4"
           />
         </div>

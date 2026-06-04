@@ -5,8 +5,15 @@
  * Contains: station mode chip, optional caption bar, chat panel toggle,
  * caption toggle, and layout settings dropdown.
  */
-import { useAtom, useAtomValue } from "jotai";
-import { Captions, Maximize2, MessageCircle, Minimize2 } from "lucide-react";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import {
+  Captions,
+  Maximize2,
+  MessageCircle,
+  Minimize2,
+  PanelRight,
+  X,
+} from "lucide-react";
 import React, {
   memo,
   startTransition,
@@ -27,17 +34,20 @@ import {
   COLLAPSED_SIDEBAR_CHROME_OFFSET,
   useShouldOffsetWorkStationTopBar,
 } from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
+import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
 import { CollapsedSidebarButton } from "@src/scaffold/NavigationSidebar/CollapsedSidebarButton";
 import { WorkStationViewService } from "@src/services/workStation/WorkStationViewService";
 import {
   activeStationChatVisibleAtom,
   chatWidthAtom,
+  toggleChatPanelMaximizedAtom,
 } from "@src/store/ui/chatPanelAtom";
 import {
   simulatorCaptionBarEnabledAtom,
   simulatorEffectiveDockAppAtom,
 } from "@src/store/ui/simulatorAtom";
+import { sessionChatPositionAtom } from "@src/store/ui/workStationAtom";
 
 import {
   NoDragRegion,
@@ -54,6 +64,8 @@ const AgentStationTopHeader: React.FC = memo(() => {
   const trailingControlsRef = useRef<HTMLDivElement>(null);
   const getStationChatVisible = useAtomValue(activeStationChatVisibleAtom);
   const chatWidth = useAtomValue(chatWidthAtom);
+  const sessionChatPosition = useAtomValue(sessionChatPositionAtom);
+  const toggleChatPanelMaximized = useSetAtom(toggleChatPanelMaximizedAtom);
   const isChatPanelVisible =
     getStationChatVisible("agent-station") && chatWidth > 0;
   const location = useLocation();
@@ -77,6 +89,13 @@ const AgentStationTopHeader: React.FC = memo(() => {
     ? t("chat.maximizeWorkStation")
     : t("chat.restoreChatPanel");
   const chatPanelShortcut = getShortcutKeys("maximize_work_station");
+  const hideWorkstationLabel = t("chat.hideWorkstation");
+  const hideWorkstationTooltip = (
+    <KeyboardShortcutTooltipContent
+      label={hideWorkstationLabel}
+      shortcut={getShortcutKeys("maximize_chat")}
+    />
+  );
 
   const chatPanelTooltip = (
     <KeyboardShortcutTooltipContent
@@ -129,6 +148,10 @@ const AgentStationTopHeader: React.FC = memo(() => {
       void WorkStationViewService.showWorkStation();
     });
   }, []);
+
+  const handleToggleChatPanelMaximized = useCallback(() => {
+    toggleChatPanelMaximized();
+  }, [toggleChatPanelMaximized]);
 
   return (
     <>
@@ -225,6 +248,28 @@ const AgentStationTopHeader: React.FC = memo(() => {
                     <Maximize2 size={14} strokeWidth={2} />
                   ) : (
                     <MessageCircle size={14} strokeWidth={2} />
+                  )}
+                </TabBarTrailingIconButton>
+              </span>
+            </Tooltip>
+          )}
+          {!isSettingsRoute && isChatPanelVisible && (
+            <Tooltip
+              content={hideWorkstationTooltip}
+              position="bottom-end"
+              mouseEnterDelay={200}
+              framedPanel
+            >
+              <span className="inline-flex">
+                <TabBarTrailingIconButton
+                  title={hideWorkstationLabel}
+                  nativeTitle={false}
+                  onClick={handleToggleChatPanelMaximized}
+                >
+                  {sessionChatPosition === "left" ? (
+                    <PanelRight size={HEADER_ICON_SIZE.md} strokeWidth={2} />
+                  ) : (
+                    <X size={HEADER_ICON_SIZE.md} strokeWidth={1.75} />
                   )}
                 </TabBarTrailingIconButton>
               </span>

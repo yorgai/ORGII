@@ -66,7 +66,7 @@ export function PlanningSection({
           }
           iconColor={workItem.project?.color}
           options={[]}
-          placement="inline"
+          placement={fieldVariant === "pill" ? "portal" : "inline"}
           fieldVariant={fieldVariant}
           triggerVariant={fieldVariant}
           searchable

@@ -391,6 +391,7 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
       publishHeaderToWorkstation={publishHeaderToWorkstation}
       leftContent={
         <WorkItemContentStack
+          className="mx-auto h-full w-full max-w-[900px]"
           titleContent={titleSection}
           pathContent={orgBreadcrumbPill}
           propertiesContent={propertyPills}
@@ -416,7 +417,7 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
           }
           descriptionFlexible={!aiGenerateMode}
           metaClassName="px-4 py-2"
-          titleClassName="flex h-10 items-center border-b border-border-2 px-2 py-0"
+          titleClassName="flex h-10 items-center px-2 py-0"
           descriptionClassName="min-h-0 overflow-hidden px-4 pt-2"
           scrollable
         />

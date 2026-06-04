@@ -6,7 +6,8 @@
  * Uses DROPDOWN_CLASSES and DropdownSearch for consistency with settings.
  */
 import { ChevronDown, Pencil } from "lucide-react";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import Button from "@src/components/Button";
 import DropdownSearch from "@src/components/Dropdown/DropdownSearch";
@@ -219,7 +220,14 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   align = "left",
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [portalPosition, setPortalPosition] = useState<{
+    top: number;
+    left?: number;
+    right?: number;
+  } | null>(null);
+  const anchorRef = useRef<HTMLDivElement | null>(null);
   const { dropdownRef, resolvedAlign } = useResolvedDropdownAlign(align);
+  const shouldPortal = widthMode === "menu";
 
   const positionClass =
     widthMode === "menu"
@@ -231,12 +239,40 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         : "left-2 right-2";
   const widthClass = widthMode === "menu" ? DROPDOWN_WIDTHS.wideMenuClass : "";
 
-  return (
-    <div
-      ref={dropdownRef}
-      data-property-dropdown
-      className={`absolute ${positionClass} top-full mt-1 flex flex-col ${widthClass} ${DROPDOWN_CLASSES.panelAnimated} ${className}`}
-    >
+  useLayoutEffect(() => {
+    if (!shouldPortal) return;
+
+    const updatePosition = () => {
+      const anchorElement = anchorRef.current;
+      if (!anchorElement) return;
+
+      const rect = anchorElement.getBoundingClientRect();
+      const menuWidth = 200;
+      const viewportPadding = 8;
+      const shouldAlignRight =
+        resolvedAlign === "right" ||
+        rect.left + menuWidth > window.innerWidth - viewportPadding;
+
+      setPortalPosition({
+        top: rect.top,
+        left: shouldAlignRight ? undefined : rect.left,
+        right: shouldAlignRight
+          ? Math.max(viewportPadding, window.innerWidth - rect.right)
+          : undefined,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [resolvedAlign, shouldPortal]);
+
+  const dropdownContent = (
+    <>
       <DropdownSearch
         value={searchQuery}
         onChange={setSearchQuery}
@@ -246,6 +282,43 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
       <div className={DROPDOWN_CLASSES.optionsContainer} style={{ maxHeight }}>
         {children(searchQuery)}
       </div>
+    </>
+  );
+
+  if (shouldPortal) {
+    return (
+      <>
+        <div
+          ref={anchorRef}
+          className={`absolute ${positionClass} top-full mt-1 h-0 w-0`}
+        />
+        {portalPosition &&
+          createPortal(
+            <div
+              ref={dropdownRef}
+              data-property-dropdown
+              className={`fixed flex flex-col ${widthClass} ${DROPDOWN_CLASSES.panelAnimated} ${className}`}
+              style={{
+                top: portalPosition.top,
+                left: portalPosition.left,
+                right: portalPosition.right,
+              }}
+            >
+              {dropdownContent}
+            </div>,
+            document.body
+          )}
+      </>
+    );
+  }
+
+  return (
+    <div
+      ref={dropdownRef}
+      data-property-dropdown
+      className={`absolute ${positionClass} top-full mt-1 flex flex-col ${widthClass} ${DROPDOWN_CLASSES.panelAnimated} ${className}`}
+    >
+      {dropdownContent}
     </div>
   );
 };

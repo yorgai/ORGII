@@ -251,7 +251,7 @@ const WorkItemProperties: React.FC<WorkItemPropertiesProps> = ({
   if (fieldVariant === "pill") {
     return (
       <section ref={containerRef} className="overflow-visible">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-nowrap items-center gap-2">
           <PlanningSection
             workItem={workItem}
             openPicker={openPicker}

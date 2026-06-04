@@ -244,7 +244,7 @@ const ProjectPropertyFields: React.FC<ProjectPropertyFieldsProps> = ({
       <div
         className={
           fieldVariant === "pill"
-            ? "flex flex-wrap items-center gap-2"
+            ? "flex flex-nowrap items-center gap-2"
             : "flex flex-col px-2"
         }
       >

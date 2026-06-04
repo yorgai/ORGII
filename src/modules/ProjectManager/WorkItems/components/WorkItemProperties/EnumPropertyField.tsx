@@ -60,7 +60,7 @@ export function EnumPropertyField<T extends string>({
       iconColor={currentOption?.color}
       options={dropdownOptions}
       onChange={onChange}
-      placement="inline"
+      placement={fieldVariant === "pill" ? "portal" : "inline"}
       fieldVariant={fieldVariant}
       triggerVariant={fieldVariant}
       readonly={disabled}

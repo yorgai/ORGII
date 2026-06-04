@@ -156,7 +156,7 @@ export function useWorkstationTrailingSlot({
               onClick={handleToggleChatPanelMaximized}
             >
               {workStationChatPosition === "left" ? (
-                <PanelRight size={HEADER_ICON_SIZE.md} strokeWidth={1.75} />
+                <PanelRight size={HEADER_ICON_SIZE.md} strokeWidth={2} />
               ) : (
                 <X size={HEADER_ICON_SIZE.md} strokeWidth={1.75} />
               )}

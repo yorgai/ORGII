@@ -180,7 +180,6 @@
     "createModes": {
       "generateWithAi": "AI ile oluştur",
       "generateWithAgent": "Agent ile oluştur",
-      "useAi": "Agent kullan",
       "manualCreation": "Manuel oluşturma",
       "sessionCreatorPrompt": {
         "promptNameQuestion": "Önce kullanıcıya belirli bir Work Item adı belirtmek isteyip istemediğini sor.",

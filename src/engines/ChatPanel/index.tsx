@@ -6,8 +6,8 @@ import {
   GalleryThumbnails,
   Link2,
   ListChevronsDownUp,
+  Maximize2,
   MoreHorizontal,
-  PanelRight,
   Plus,
   RefreshCw,
   Search,
@@ -479,7 +479,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       Boolean(SessionCreatorSlot);
     const chatFocusLabel = isChatFocus
       ? t("chat.showWorkstation")
-      : t("chat.hideWorkstation");
+      : t("chat.maximizeChatPanel");
     const chatFocusShortcut = getShortcutKeys("maximize_chat");
     const chatFocusTooltip = (
       <KeyboardShortcutTooltipContent
@@ -1015,26 +1015,28 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             </span>
           </Tooltip>
         )}
-        {isChatFocus && showChatFocusToggle && (
+        {showChatFocusToggle && (
           <Tooltip
-            content={shrinkToWorkstationTooltip}
+            content={
+              isChatFocus ? shrinkToWorkstationTooltip : chatFocusTooltip
+            }
             position="bottom-end"
             mouseEnterDelay={200}
             framedPanel
           >
             <span className="inline-flex">
               <TabBarTrailingIconButton
-                title={shrinkToWorkstationLabel}
+                title={isChatFocus ? shrinkToWorkstationLabel : chatFocusLabel}
                 nativeTitle={false}
                 onClick={handleChatFocusToggle}
               >
-                {isLeftPosition ? (
-                  <PanelRight size={HEADER_ICON_SIZE.md} strokeWidth={1.75} />
-                ) : (
+                {isChatFocus ? (
                   <GalleryThumbnails
                     size={HEADER_ICON_SIZE.md}
                     strokeWidth={1.75}
                   />
+                ) : (
+                  <Maximize2 size={HEADER_ICON_SIZE.md} strokeWidth={1.75} />
                 )}
               </TabBarTrailingIconButton>
             </span>
@@ -1194,7 +1196,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               dropdownMinWidth={168}
               dropdownWidthMode="auto"
               className="w-auto"
-              selectorClassName="!h-7 max-w-[180px] !gap-1.5 !rounded-lg !border-0 !bg-transparent !px-1.5 !text-[13px] font-medium !text-text-1 hover:!bg-surface-hover [&_.select-suffix]:!ml-0 [&_.select-value]:-translate-y-px"
+              selectorClassName="!h-7 max-w-[180px] !gap-1.5 !rounded-lg !border-0 !bg-transparent !px-1.5 !text-[13px] font-medium !text-text-1 hover:!bg-surface-hover [&_.select-suffix]:!ml-0 [&_.select-value]:-translate-y-[0.5px]"
               dataTestId="chat-panel-create-target-select"
             />
             {showCreatorPresenceInHeader && (
@@ -1215,10 +1217,8 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                   role="separator"
                   aria-hidden
                 />
-                <label className="flex h-7 shrink-0 items-center gap-2 rounded-lg px-1.5 text-[12px] font-medium text-text-1 transition-colors hover:bg-surface-hover">
-                  <span className="-translate-y-px">
-                    {t("projects:workItems.createModes.useAi")}
-                  </span>
+                <label className="flex h-7 shrink-0 items-center !gap-1.5 rounded-lg !border-0 !bg-transparent !px-1.5 text-[13px] font-medium !text-text-1 transition-colors hover:!bg-surface-hover">
+                  <span className="-translate-y-[0.5px]">Agent</span>
                   <Switch
                     size="small"
                     checked={
@@ -1231,7 +1231,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                         ? handleProjectAgentCreatorToggle
                         : handleWorkItemAgentCreatorToggle
                     }
-                    ariaLabel={t("projects:workItems.createModes.useAi")}
+                    ariaLabel="Agent"
                     dataTestId={
                       isProjectTarget
                         ? "chat-panel-project-agent-switch"

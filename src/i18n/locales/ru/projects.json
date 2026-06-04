@@ -180,7 +180,6 @@
     "createModes": {
       "generateWithAi": "Создать с AI",
       "generateWithAgent": "Создать с Agent",
-      "useAi": "Использовать Agent",
       "manualCreation": "Ручное создание",
       "sessionCreatorPrompt": {
         "promptNameQuestion": "Сначала спроси пользователя, хочет ли он указать конкретное имя Work Item.",
