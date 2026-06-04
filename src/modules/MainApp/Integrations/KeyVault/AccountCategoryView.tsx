@@ -31,7 +31,6 @@ export const AccountCategoryView: React.FC<{
         onCancel={accounts.handleFormCancel}
         loading={accounts.formLoading}
         existingAccountNames={accounts.accounts.map((account) => account.name)}
-        primaryProvidersOnly
       />
     );
   }

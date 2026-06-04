@@ -280,9 +280,9 @@ pub fn validate_token_format(agent_type: String, token: String) -> Result<(bool,
         }
 
         // OpenAI-compatible providers: just verify non-empty and reasonable length
-        "deepseek_api" | "groq_api" | "xai_api" | "zhipu_api" | "dashscope_api" | "moonshot_api"
-        | "minimax_api" | "openrouter_api" | "aihubmix_api" | "vllm_api" | "orgii_orchestrator"
-        | "orgii" => {
+        "deepseek_api" | "groq_api" | "xai_api" | "zhipu_api" | "dashscope_api"
+        | "moonshot_api" | "minimax_api" | "openrouter_api" | "aihubmix_api" | "vllm_api"
+        | "orgii_orchestrator" | "orgii" => {
             if token.is_empty() {
                 Ok((false, "API key is required".to_string()))
             } else if token.len() < 8 {
