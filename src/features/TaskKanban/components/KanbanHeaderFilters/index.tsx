@@ -33,6 +33,11 @@ interface KanbanFilterItem<TFilter extends string> {
   labelKey?: string;
 }
 
+const ALL_AGENT_TYPE_FILTER_ITEM: KanbanFilterItem<KanbanAgentTypeFilter> = {
+  key: KANBAN_AGENT_TYPE_FILTER.ALL,
+  labelKey: "common:actions.all",
+};
+
 const RUST_AGENT_FILTER_ITEMS: Record<
   | typeof KANBAN_AGENT_TYPE_FILTER.OS_AGENT
   | typeof KANBAN_AGENT_TYPE_FILTER.SDE_AGENT,
@@ -130,7 +135,9 @@ const KanbanHeaderFilters: React.FC = memo(() => {
       }
     }
 
-    const items: KanbanFilterItem<KanbanAgentTypeFilter>[] = [];
+    const items: KanbanFilterItem<KanbanAgentTypeFilter>[] = [
+      ALL_AGENT_TYPE_FILTER_ITEM,
+    ];
     for (const filter of [
       KANBAN_AGENT_TYPE_FILTER.OS_AGENT,
       KANBAN_AGENT_TYPE_FILTER.SDE_AGENT,
