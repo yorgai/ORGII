@@ -73,6 +73,15 @@ export const CanvasInlineAdapter: React.FC<UniversalEventProps> = (props) => {
 
   const { mode, content, url, title } = extractCanvasArgs(props.args);
 
+  // A canvas is considered "streaming" (show waiting indicator) when the
+  // agent call is still running AND there is no displayable content yet.
+  // showActiveEventPainting is a time-gated heuristic; we extend it here
+  // so that any running canvas without content shows "Waiting…" instead of
+  // the blank "No content" fallback.
+  const hasContent =
+    (mode === "url" && Boolean(url)) ||
+    ((mode === "html" || mode === "a2ui") && Boolean(content));
+
   if (isFailed) {
     const errorText =
       typeof props.result?.error === "string"
@@ -98,7 +107,9 @@ export const CanvasInlineAdapter: React.FC<UniversalEventProps> = (props) => {
         content={content}
         url={url}
         title={title}
-        isStreaming={isRunning && props.showActiveEventPainting === true}
+        isStreaming={
+          isRunning && (props.showActiveEventPainting === true || !hasContent)
+        }
         sessionId={props.sessionId}
         onClose={handleClose}
       />

@@ -2315,6 +2315,12 @@
     "close": "Close",
     "summarize": "Summarize with Agent",
     "waiting": "Waiting for content…",
-    "empty": "No content"
+    "empty": "No content",
+    "viewInSimulator": "View in Simulator"
+  },
+  "canvasApp": {
+    "empty": "No canvas rendered yet",
+    "sidebarTitle": "Canvases",
+    "noCanvases": "No canvases yet"
   }
 }

@@ -32,6 +32,8 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import IconButton from "@src/components/IconButton";
+
 import { CanvasErrorBoundary } from "./CanvasErrorBoundary";
 import { buildA2UIDocument, buildHtmlDocument } from "./canvasBuilder";
 import type { CanvasInlineCardProps } from "./types";
@@ -91,9 +93,12 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
 
   // Full document for html/a2ui modes — used both as srcDoc initial load
   // and as fallback when postMessage incremental push is unavailable.
+  // Guard with content truthiness: empty string produces a blank dark iframe,
+  // which should fall through to the "Waiting / No content" fallback instead.
   const srcDoc = useMemo(() => {
-    if (mode === "html") return buildHtmlDocument(content ?? "");
-    if (mode === "a2ui") return buildA2UIDocument(a2uiLines);
+    if (mode === "html" && content) return buildHtmlDocument(content);
+    if (mode === "a2ui" && a2uiLines.length > 0)
+      return buildA2UIDocument(a2uiLines);
     return undefined;
   }, [mode, content, a2uiLines]);
 
@@ -178,7 +183,7 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
         : t("canvasCard.titleHtml"));
 
   return (
-    <div className="my-2 overflow-hidden rounded-lg border border-border-1 bg-bg-2">
+    <div className="group/canvas my-2 overflow-hidden rounded-lg border border-border-1 bg-bg-2">
       {/* ── Toolbar ── */}
       <div className="flex items-center justify-between border-b border-border-1 bg-fill-2 px-3 py-1.5">
         <div className="flex min-w-0 items-center gap-2">
@@ -194,63 +199,57 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-0.5">
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover/canvas:opacity-100">
           {!isStreaming && onSummarize && (
-            <button
-              type="button"
+            <IconButton
               onClick={onSummarize}
-              className="rounded p-1 text-text-4 transition-colors hover:bg-fill-3 hover:text-primary-6"
+              className="text-text-4 hover:bg-fill-3 hover:text-primary-6"
               title={t("canvasCard.summarize")}
             >
               <Sparkles size={12} />
-            </button>
+            </IconButton>
           )}
           {!isStreaming && (
-            <button
-              type="button"
+            <IconButton
               onClick={handleReload}
-              className="rounded p-1 text-text-4 transition-colors hover:bg-fill-3 hover:text-text-2"
+              className="text-text-4 hover:bg-fill-3 hover:text-text-2"
               title={t("canvasCard.reload")}
             >
               <RefreshCw size={12} />
-            </button>
+            </IconButton>
           )}
           {handleJumpToSimulator && (
-            <button
-              type="button"
+            <IconButton
               onClick={handleJumpToSimulator}
-              className="rounded p-1 text-text-4 transition-colors hover:bg-fill-3 hover:text-primary-6"
+              className="text-text-4 hover:bg-fill-3 hover:text-primary-6"
               title={t("canvasCard.viewInSimulator", "View in Simulator")}
             >
               <Monitor size={12} />
-            </button>
+            </IconButton>
           )}
-          <button
-            type="button"
+          <IconButton
             onClick={handleOpenExternal}
-            className="rounded p-1 text-text-4 transition-colors hover:bg-fill-3 hover:text-text-2"
+            className="text-text-4 hover:bg-fill-3 hover:text-text-2"
             title={t("canvasCard.openExternal")}
           >
             <ExternalLink size={12} />
-          </button>
-          <button
-            type="button"
+          </IconButton>
+          <IconButton
             onClick={handleToggleSize}
-            className="rounded p-1 text-text-4 transition-colors hover:bg-fill-3 hover:text-text-2"
+            className="text-text-4 hover:bg-fill-3 hover:text-text-2"
             title={
               isMaxHeight ? t("canvasCard.shrink") : t("canvasCard.expand")
             }
           >
             {isMaxHeight ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-          </button>
-          <button
-            type="button"
+          </IconButton>
+          <IconButton
             onClick={handleClose}
-            className="rounded p-1 text-text-4 transition-colors hover:bg-fill-3 hover:text-text-2"
+            className="text-text-4 hover:bg-fill-3 hover:text-text-2"
             title={t("canvasCard.close")}
           >
             <X size={12} />
-          </button>
+          </IconButton>
         </div>
       </div>
 

@@ -10,7 +10,7 @@
  * canvasPreviewAtom is used only for "jump from chat" auto-selection.
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import { Layout } from "lucide-react";
+import { Layout, RefreshCw } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -20,6 +20,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import IconButton from "@src/components/IconButton";
 import TabPill from "@src/components/TabPill";
 import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
 import {
@@ -141,12 +142,14 @@ const CanvasSidebar: React.FC<CanvasSidebarProps> = ({
   <div className="flex h-full flex-col overflow-hidden">
     <div className="shrink-0 px-3 pb-1.5 pt-3">
       <span className="text-[10px] font-semibold uppercase tracking-wider text-text-4">
-        Canvases
+        {t("canvasApp.sidebarTitle", "Canvases")}
       </span>
     </div>
     <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-2">
       {appEvents.length === 0 ? (
-        <p className="px-2 py-2 text-xs text-text-4">No canvases yet</p>
+        <p className="px-2 py-2 text-xs text-text-4">
+          {t("canvasApp.noCanvases", "No canvases yet")}
+        </p>
       ) : (
         appEvents.map((ev) => (
           <SidebarItem
@@ -183,10 +186,14 @@ const CanvasIframe: React.FC<CanvasIframeProps> = ({
     return payload.content.split("\n").filter(Boolean);
   }, [payload.mode, payload.content]);
 
+  // Guard with content truthiness: buildHtmlDocument("") produces a blank
+  // dark-background iframe that looks empty — fall through to the status
+  // message instead when there is no real content yet.
   const srcDoc = useMemo(() => {
-    if (payload.mode === "html")
-      return buildHtmlDocument(payload.content ?? "");
-    if (payload.mode === "a2ui") return buildA2UIDocument(a2uiLines);
+    if (payload.mode === "html" && payload.content)
+      return buildHtmlDocument(payload.content);
+    if (payload.mode === "a2ui" && a2uiLines.length > 0)
+      return buildA2UIDocument(a2uiLines);
     return undefined;
   }, [payload.mode, payload.content, a2uiLines]);
 
@@ -293,14 +300,13 @@ const CanvasTabHeader: React.FC<CanvasTabHeaderProps> = ({
           onChange={(key) => onSetTab(key as ViewTab)}
         />
         {tab === "canvas" && !isStreaming && (
-          <button
-            type="button"
+          <IconButton
             onClick={onReload}
-            className="rounded p-1 text-xs text-text-4 transition-colors hover:bg-fill-3 hover:text-text-2"
+            className="text-text-4 hover:bg-fill-3 hover:text-text-2"
             title={t("canvasCard.reload", "Reload")}
           >
-            ↺
-          </button>
+            <RefreshCw size={12} />
+          </IconButton>
         )}
       </div>
     </NoDragRegion>
