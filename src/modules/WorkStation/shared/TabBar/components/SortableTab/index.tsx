@@ -4,13 +4,11 @@
  * Individual sortable tab item with drag support, git status display,
  * and close button with unsaved indicator.
  */
-import { gitFileStatusMapAtom } from "@/src/store/git";
 import { useSortable } from "@dnd-kit/sortable";
-import { useAtomValue } from "jotai";
 import * as LucideIcons from "lucide-react";
 import { Lock, MoveHorizontal } from "lucide-react";
 // named imports kept separate from namespace import intentionally
-import React, { memo, useMemo, useState } from "react";
+import React, { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { FaviconIcon } from "@src/components/FaviconIcon";
@@ -26,6 +24,7 @@ import {
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
 import { CODE_EDITOR_TOUR_TARGETS } from "@src/scaffold/Tutorials/codeEditorTourConfig";
+import type { GitFileInfo } from "@src/store/git";
 import { resolveProjectManagerTabTitle } from "@src/store/workstation/tabs";
 
 import type { WorkStationTab } from "../../types";
@@ -44,6 +43,7 @@ export interface SortableTabProps {
   onTabClick: (tabId: string) => void;
   onCloseClick: (event: React.MouseEvent, tabId: string) => void;
   onContextMenu: (event: React.MouseEvent, tab: WorkStationTab) => void;
+  gitInfo?: GitFileInfo | null;
   /** Icon only (e.g. narrow tab strip); title still in native tooltip via getTabTitle(). */
   hideLabel?: boolean;
 }
@@ -71,6 +71,7 @@ export const SortableTab: React.FC<SortableTabProps> = memo(
     onTabClick,
     onCloseClick,
     onContextMenu,
+    gitInfo = null,
     hideLabel = false,
   }) => {
     const { t } = useTranslation();
@@ -83,28 +84,6 @@ export const SortableTab: React.FC<SortableTabProps> = memo(
       transition,
       isDragging,
     } = useSortable({ id: tab.id, disabled: !isDraggable });
-
-    // Git status lookup for file tabs
-    const gitStatusMap = useAtomValue(gitFileStatusMapAtom);
-    const gitInfo = useMemo(() => {
-      // Only show git status for file tabs (not git-diff tabs which have their own status)
-      if (tab.type !== "file") return null;
-
-      const filePath = tab.data?.filePath as string | undefined;
-      if (!filePath) return null;
-
-      // Try to find the file in the git status map
-      // The map uses relative paths, so we need to match by suffix
-      for (const [relativePath, info] of gitStatusMap) {
-        if (
-          filePath.endsWith(relativePath) ||
-          filePath.endsWith(`/${relativePath}`)
-        ) {
-          return info;
-        }
-      }
-      return null;
-    }, [tab.type, tab.data.filePath, gitStatusMap]);
 
     // Always allow free movement for both tab reordering and drag-to-split
     const style: React.CSSProperties = {

@@ -37,6 +37,7 @@ import {
 } from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
 import { CollapsedSidebarButton } from "@src/scaffold/NavigationSidebar/CollapsedSidebarButton";
+import { gitFileStatusMapAtom } from "@src/store/git";
 import { tabScrollRevealAtom } from "@src/store/workstation/tabs";
 
 import { NoDragRegion } from "../NoDragRegion";
@@ -54,6 +55,7 @@ import {
 import {
   useAutoScrollToActive,
   useTabDrag,
+  useTabGitInfoMap,
   useTabLabelCollapse,
 } from "./hooks";
 import type { WorkStationTab } from "./types";
@@ -134,6 +136,8 @@ export const TabBar: React.FC<TabBarProps> = memo(
     const isCompactLayout = useIsCompactLayout();
 
     const scrollReveal = useAtomValue(tabScrollRevealAtom);
+    const gitStatusMap = useAtomValue(gitFileStatusMapAtom);
+    const tabGitInfoMap = useTabGitInfoMap(tabs, repoPath, gitStatusMap);
 
     const tabsContainerRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -293,6 +297,7 @@ export const TabBar: React.FC<TabBarProps> = memo(
                               onTabClick={handleTabClick}
                               onCloseClick={handleCloseClick}
                               onContextMenu={handleContextMenu}
+                              gitInfo={tabGitInfoMap.get(tab.id)}
                               hideLabel={
                                 tab.pinned ||
                                 (collapseInactiveTabLabelsOnOverflow &&
