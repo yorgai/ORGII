@@ -1,9 +1,3 @@
-/**
- * useCanvasPreviewForSession — reads the canvas payload for a given session
- * from `canvasPreviewAtom` (set by openInSimulatorCanvas when the agent fires
- * render_inline_canvas). Returns the payload when the stored session matches,
- * otherwise null.
- */
 import { useAtom } from "jotai";
 import { useCallback } from "react";
 
@@ -16,13 +10,21 @@ export function useCanvasPreviewForSession(
 ): {
   payload: CanvasInlinePayload | null;
   dismiss: () => void;
+  clearCanvas: () => void;
 } {
   const [entry, setEntry] = useAtom(canvasPreviewAtom);
-  const payload = entry && entry.sessionId === sessionId ? entry.payload : null;
+  const payload =
+    entry && entry.sessionId === sessionId && !entry.cardDismissed
+      ? entry.payload
+      : null;
 
   const dismiss = useCallback(() => {
+    setEntry((prev) => (prev ? { ...prev, cardDismissed: true } : null));
+  }, [setEntry]);
+
+  const clearCanvas = useCallback(() => {
     setEntry(null);
   }, [setEntry]);
 
-  return { payload, dismiss };
+  return { payload, dismiss, clearCanvas };
 }

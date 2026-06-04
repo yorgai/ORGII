@@ -70,7 +70,6 @@ import { useAgentOrgMemberSessionJump } from "./InputArea/components/useAgentOrg
 import { useAgentOrgRunView } from "./InputArea/components/useAgentOrgRunView";
 import { useComposerSections } from "./InputArea/hooks/useComposerSections";
 import { useQueueEditMode } from "./InputArea/hooks/useQueueEditMode";
-import { useCanvasPreviewForSession } from "./blocks/CanvasInlineCard/useCanvasPreviewForSession";
 import { useSessionActions } from "./hooks/useWorkspaceChat/useSessionActions";
 
 const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
@@ -224,8 +223,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
       setScrollNav(state);
     }, []);
 
-    const { payload: canvasPayload, dismiss: dismissCanvas } =
-      useCanvasPreviewForSession(sessionId);
     const {
       view: agentOrgRunView,
       error: agentOrgRunViewError,
@@ -515,8 +512,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
               onToggleFiles={toggleFiles}
               onProcessVisibleCountChange={setProcessVisibleCount}
               onFileChangeStatsChange={setFileChangeStats}
-              canvasPayload={canvasPayload}
-              onDismissCanvas={dismissCanvas}
               groupChatPendingMessage={groupChatPendingMessage}
               groupChatViewActive={groupChatViewActive}
               hasAnyInlineSection={hasAny}
