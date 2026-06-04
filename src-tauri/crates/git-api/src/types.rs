@@ -373,10 +373,27 @@ pub struct WorktreeEntry {
     pub is_main: bool,
 }
 
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct RemoveWorktreeRequest {
+    pub worktree_path: String,
+    #[serde(default = "default_force_remove_worktree")]
+    pub force: bool,
+}
+
+fn default_force_remove_worktree() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct WorktreeListResponse {
     pub status: i32,
     pub data: Vec<WorktreeEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct WorktreeRemoveResponse {
+    pub status: i32,
+    pub data: WorktreeEntry,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]

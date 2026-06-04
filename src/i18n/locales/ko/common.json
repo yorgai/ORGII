@@ -1723,6 +1723,12 @@
     "push": "Push",
     "fetch": "Fetch",
     "sync": "Sync",
+    "worktreeActions": "Worktree 작업",
+    "removeWorktree": "Worktree 제거",
+    "removeWorktreeTitle": "Worktree {{name}}을(를) 제거할까요?",
+    "removeWorktreeMessage": "디스크에서 Worktree checkout을 제거합니다. branch와 commits는 유지됩니다.",
+    "removeWorktreeSuccess": "Worktree 제거됨",
+    "removeWorktreeFailed": "Worktree 제거 실패",
     "pill": {
       "focus": "포커스",
       "allChanges": "모든 변경 사항"

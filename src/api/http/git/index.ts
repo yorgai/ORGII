@@ -86,7 +86,7 @@ export { clearStatusCache } from "./client";
 export { getGitStatus, getGitSuggestedAction } from "./status";
 
 // Re-export worktree functions
-export { getGitWorktrees } from "./worktrees";
+export { getGitWorktrees, removeGitWorktree } from "./worktrees";
 
 // Re-export branch functions
 export {

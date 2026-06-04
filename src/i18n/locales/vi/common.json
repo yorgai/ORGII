@@ -1723,6 +1723,12 @@
     "push": "Push",
     "fetch": "Fetch",
     "sync": "Sync",
+    "worktreeActions": "Thao tác Worktree",
+    "removeWorktree": "Xóa Worktree",
+    "removeWorktreeTitle": "Xóa Worktree {{name}}?",
+    "removeWorktreeMessage": "Thao tác này xóa Worktree checkout khỏi ổ đĩa. Branch và commits được giữ lại.",
+    "removeWorktreeSuccess": "Đã xóa Worktree",
+    "removeWorktreeFailed": "Không thể xóa Worktree",
     "pill": {
       "focus": "Tiêu điểm",
       "allChanges": "Tất cả thay đổi"
