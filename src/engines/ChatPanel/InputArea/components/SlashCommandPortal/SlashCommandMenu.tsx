@@ -38,6 +38,7 @@ import { useKeyboard } from "./useKeyboard";
 import { usePortalPosition } from "./usePortalPosition";
 
 const PANEL_WIDTH = 280;
+const MAX_PANEL_HEIGHT = 360;
 const VIEWPORT_MARGIN = 8;
 
 type PortalPlacement = "up" | "down";
@@ -109,7 +110,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   const [panelRight, setPanelRight] = useState(0);
   const [portalPlacement, setPortalPlacement] =
     useState<PortalPlacement>(direction);
-  const [portalMaxHeight, setPortalMaxHeight] = useState(320);
+  const [portalMaxHeight, setPortalMaxHeight] = useState(MAX_PANEL_HEIGHT);
 
   // Position the portal above the container
   const { position, isPositioned } = usePortalPosition(visible, containerRef);
@@ -196,7 +197,9 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
         : position.top - gap - VIEWPORT_MARGIN;
 
     setPortalPlacement(placement);
-    setPortalMaxHeight(Math.max(120, Math.floor(availableHeight)));
+    setPortalMaxHeight(
+      Math.min(MAX_PANEL_HEIGHT, Math.max(120, Math.floor(availableHeight)))
+    );
   }, [direction, isPositioned, placementStrategy, position, visible]);
 
   useLayoutEffect(() => {

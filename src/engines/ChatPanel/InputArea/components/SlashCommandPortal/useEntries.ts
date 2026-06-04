@@ -14,7 +14,7 @@ import type { ListEntry } from "./types";
 interface UseEntriesOptions {
   items: SlashItem[];
   searchQuery: string;
-  /** Use the sectioned command layout: Upload Image, Mode, Skills. */
+  /** Use the action command layout: Image, Mode, Skills. */
   showActionFlyouts: boolean;
   hasImageUpload: boolean;
   /** When false, hides mode rows in inline search results. */
@@ -30,7 +30,7 @@ interface UseEntriesResult {
  * Builds the unified flat-list entries for the slash command menu.
  *
  * Layout when showActionFlyouts=true and not searching:
- *   Upload Image section (if image upload is available)
+ *   Image row (if image upload is available)
  *   Mode section (direct mode rows)
  *   Skills section (direct skill rows)
  *
@@ -74,11 +74,6 @@ export function useEntries({
       );
 
       if (hasImageUpload && imageMatches) {
-        result.push({
-          kind: "header",
-          label: "Upload Image",
-          translationKey: "creator.slashMenu.uploadImage",
-        });
         result.push({ kind: "image", flatIndex: idx++ });
       }
 
