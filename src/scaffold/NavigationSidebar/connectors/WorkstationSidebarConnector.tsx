@@ -776,9 +776,8 @@ export const WorkstationSidebarConnector: React.FC = () => {
           />
         }
         beforeAddNewActions={homeHeaderAction}
-        verticalGapClassName="gap-px"
+        verticalGapClassName="gap-0.5"
         listTopPadding
-        enableHoverIconAnimation
         bottomContent={
           <SidebarBottomBar rightActions={sidebarBottomRightActions} />
         }

@@ -54,8 +54,6 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
   }) => {
     const { t } = useTranslation();
 
-    const rowHoverBackground = "var(--color-fill-2)";
-
     const itemsKey = useMemo(
       () => items.map((item) => item.key).join(","),
       [items]
@@ -326,8 +324,13 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
                       ? "cursor-pointer text-text-2 hover:bg-fill-2 hover:text-text-1"
                       : "cursor-pointer text-text-1 hover:bg-fill-2"
               }`}
-              onClick={() => {
-                if (!item.disabled) onMenuItemClick(item.key, item);
+              onClick={(event: React.MouseEvent) => {
+                if (item.disabled) return;
+                if (isSelected && onMenuItemContextMenu) {
+                  onMenuItemContextMenu(event, item.key, item);
+                  return;
+                }
+                onMenuItemClick(item.key, item);
               }}
               onMouseEnter={(e: React.MouseEvent) =>
                 handleRowMouseEnter(e, item.routePath)
@@ -376,13 +379,6 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
                       {item.trailingElement}
                     </span>
                   )}
-                  <span
-                    className="pointer-events-none absolute inset-y-0 right-0 z-[2] w-16 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-                    style={{
-                      background: `linear-gradient(to left, ${rowHoverBackground} 0%, ${rowHoverBackground} 42%, rgba(255,255,255,0) 100%)`,
-                    }}
-                    aria-hidden
-                  />
                   <span className="pointer-events-none absolute right-1.5 top-1/2 z-10 inline-flex -translate-y-1/2 items-center gap-1.5 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
                     {item.shortcut && (
                       <span className="max-w-[4rem] truncate text-[11px] text-text-2">
@@ -415,7 +411,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
                   item.showDrillDownIndicator) && (
                   <span className="ml-1 inline-flex flex-shrink-0 items-center gap-1.5 leading-none">
                     {item.shortcut && (
-                      <span className="max-w-[4.5rem] truncate text-[11px] text-text-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                      <span className="max-w-0 overflow-hidden whitespace-nowrap text-[11px] text-text-3 opacity-0 transition-[max-width,opacity] duration-150 group-hover:max-w-[4.5rem] group-hover:opacity-100">
                         {item.shortcut}
                       </span>
                     )}
@@ -449,7 +445,6 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
         openSubmenus,
         isSubmenuSelected,
         collapsed,
-        rowHoverBackground,
         renderMenuItemWrapper,
         renderIcon,
         handleRowMouseEnter,
