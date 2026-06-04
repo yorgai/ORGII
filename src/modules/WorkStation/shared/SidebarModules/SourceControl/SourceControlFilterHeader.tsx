@@ -8,25 +8,13 @@
  *
  * Repo-agnostic: all state is owned by the caller (`useSourceControlSidebarModule`).
  */
-import {
-  Archive,
-  Check,
-  CircleDot,
-  Ellipsis,
-  FileDiff,
-  GitBranch as GitBranchIcon,
-  type LucideIcon,
-  RefreshCw,
-} from "lucide-react";
+import { Ellipsis, RefreshCw } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
 import Dropdown from "@src/components/Dropdown";
-import {
-  DROPDOWN_CLASSES,
-  DROPDOWN_ITEM,
-} from "@src/components/Dropdown/tokens";
+import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
 import type { DropdownOption } from "@src/components/Dropdown/types";
 import Select from "@src/components/Select";
 import { useRefreshSpin } from "@src/hooks/ui";
@@ -49,25 +37,21 @@ export interface SourceControlFilterCounts {
 interface FilterRowEntry {
   id: SourceControlFilterMode;
   labelKey: string;
-  icon: LucideIcon;
 }
 
 const FILE_FILTER_ROWS: FilterRowEntry[] = [
   {
     id: "uncommitted",
     labelKey: "controlTower.git.filterUncommitted",
-    icon: FileDiff,
   },
   {
     id: "unstaged",
     labelKey: "controlTower.git.filterUnstaged",
-    icon: CircleDot,
   },
-  { id: "staged", labelKey: "controlTower.git.filterStaged", icon: Check },
+  { id: "staged", labelKey: "controlTower.git.filterStaged" },
   {
     id: "stashed",
     labelKey: "controlTower.git.filterStashed",
-    icon: Archive,
   },
 ];
 
@@ -120,19 +104,13 @@ const SourceControlFilterHeader: React.FC<SourceControlFilterHeaderProps> =
 
       const options = useMemo<DropdownOption[]>(() => {
         const fileOptions = FILE_FILTER_ROWS.map((row) => {
-          const Icon = row.icon;
           const label = t(row.labelKey);
           const count = getModeCount(row.id);
           const triggerLabel =
             typeof count === "number" ? getCountLabel(count, label) : label;
           return {
             value: row.id,
-            label: (
-              <span className="flex items-center gap-2 whitespace-nowrap">
-                <Icon size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
-                <span>{triggerLabel}</span>
-              </span>
-            ),
+            label: <span className="whitespace-nowrap">{triggerLabel}</span>,
             triggerLabel,
           };
         });
@@ -142,12 +120,8 @@ const SourceControlFilterHeader: React.FC<SourceControlFilterHeaderProps> =
           {
             value: "history",
             label: (
-              <span className="flex items-center gap-2 whitespace-nowrap">
-                <GitBranchIcon
-                  size={DROPDOWN_ITEM.iconSize}
-                  strokeWidth={1.75}
-                />
-                <span>{t("common:labels.gitHistory")}</span>
+              <span className="whitespace-nowrap">
+                {t("common:labels.gitHistory")}
               </span>
             ),
             triggerLabel: t("common:labels.gitHistory"),
