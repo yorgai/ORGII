@@ -5,7 +5,7 @@
  * and second layer panels (files, terminals, sessions, browser).
  */
 import { Search } from "lucide-react";
-import React, { memo, useEffect, useRef } from "react";
+import React, { memo, useEffect, useRef, useState } from "react";
 
 import FolderIcon from "@src/assets/fileTypeIcons/folder-base.svg";
 import DropdownHeader from "@src/components/Dropdown/DropdownHeader";
@@ -52,12 +52,17 @@ interface RecentFilesSectionProps {
 
 export const RecentFilesSection: React.FC<RecentFilesSectionProps> = memo(
   ({ files, onSelect, activeIndex, baseIndex, onHover, onHoverEnd }) => {
+    const [expanded, setExpanded] = useState(false);
     if (files.length === 0) return null;
+
+    const maxVisible = STYLE_CONFIG.recentSectionMaxItems;
+    const visibleFiles = expanded ? files : files.slice(0, maxVisible);
+    const hiddenCount = files.length - maxVisible;
 
     return (
       <div className={DROPDOWN_CLASSES.sectionContainer}>
         <div className={DROPDOWN_CLASSES.sectionLabel}>Recent</div>
-        {files.slice(0, STYLE_CONFIG.recentSectionMaxItems).map((file, idx) => {
+        {visibleFiles.map((file, idx) => {
           const rowActive = activeIndex === baseIndex + idx;
           return (
             <div
@@ -94,6 +99,18 @@ export const RecentFilesSection: React.FC<RecentFilesSectionProps> = memo(
             </div>
           );
         })}
+        {!expanded && hiddenCount > 0 && (
+          <div
+            className={`${DROPDOWN_CLASSES.item} cursor-pointer text-text-3 hover:text-text-2`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setExpanded(true);
+            }}
+          >
+            <span className="text-[13px]">Show {hiddenCount} more</span>
+          </div>
+        )}
       </div>
     );
   }
