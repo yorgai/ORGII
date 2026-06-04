@@ -93,6 +93,7 @@ export function useGitEventListeners({
             repo_id: string;
             status: {
               branch?: string;
+              current_upstream_branch?: string | null;
               last_commit_hash?: string;
               ahead?: number;
               behind?: number;
@@ -156,7 +157,9 @@ export function useGitEventListeners({
                 current_branch:
                   status.branch || prevStatus?.current_branch || "",
                 current_upstream_branch:
-                  prevStatus?.current_upstream_branch ?? null,
+                  status.current_upstream_branch ??
+                  prevStatus?.current_upstream_branch ??
+                  null,
                 current_tip: status.last_commit_hash || "",
                 branch_ahead_behind: {
                   ahead: status.ahead || 0,

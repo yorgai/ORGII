@@ -74,6 +74,7 @@ fn run_git_status_sync(repo_path: &Path) -> Result<GitStatus, String> {
 
     // Parse header lines for branch info
     let mut branch = String::from("main");
+    let mut current_upstream_branch: Option<String> = None;
     let mut commit_hash = String::new();
     let mut ahead: u32 = 0;
     let mut behind: u32 = 0;
@@ -99,6 +100,10 @@ fn run_git_status_sync(repo_path: &Path) -> Result<GitStatus, String> {
             if commit_hash == "(initial)" {
                 commit_hash = String::new();
             }
+        } else if line.starts_with("# branch.upstream ") {
+            current_upstream_branch = line
+                .strip_prefix("# branch.upstream ")
+                .map(|value| value.to_string());
         } else if line.starts_with("# branch.ab ") {
             // # branch.ab +<ahead> -<behind>
             let ab = line.strip_prefix("# branch.ab ").unwrap_or("+0 -0");
@@ -264,6 +269,7 @@ fn run_git_status_sync(repo_path: &Path) -> Result<GitStatus, String> {
 
     Ok(GitStatus {
         branch,
+        current_upstream_branch,
         ahead,
         behind,
         staged,

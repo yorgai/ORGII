@@ -26,6 +26,18 @@ import { computeSuggestedAction } from "@src/util/git/computeSuggestedAction";
 import { MAX_CONCURRENT_GIT_OPERATIONS } from "../constants";
 import type { GitStatusRefs, StartupState } from "../types";
 
+export function shouldStartGitStatusFetch({
+  fetchInProgress,
+  activeFetchRepoId,
+  selectedRepoId,
+}: {
+  fetchInProgress: boolean;
+  activeFetchRepoId: string | null;
+  selectedRepoId: string;
+}): boolean {
+  return !fetchInProgress || activeFetchRepoId !== selectedRepoId;
+}
+
 interface UseGitStatusFetchOptions {
   selectedRepoId: string | null;
   getRepoPath: () => string | undefined;
@@ -84,6 +96,7 @@ export function useGitStatusFetch({
 
   // Per-instance concurrency counter (replaces the old module-level let).
   const activeGitOperationsRef = useRef(0);
+  const activeFetchRepoIdRef = useRef<string | null>(null);
 
   // Stable ref for executeGitOperation callback
   const startupStateRefStable =
@@ -150,11 +163,21 @@ export function useGitStatusFetch({
         return;
       }
 
-      // LOCAL LOCK: Prevent concurrent calls within this instance
-      if (fetchInProgressRef.current) {
+      // Prevent duplicate fetches for the same repo, but allow a newer repo
+      // selection to supersede an older in-flight request. Rapid repo switching
+      // must not leave the final repo unloaded just because the previous
+      // request has not settled yet.
+      if (
+        !shouldStartGitStatusFetch({
+          fetchInProgress: fetchInProgressRef.current,
+          activeFetchRepoId: activeFetchRepoIdRef.current,
+          selectedRepoId,
+        })
+      ) {
         return;
       }
       fetchInProgressRef.current = true;
+      activeFetchRepoIdRef.current = selectedRepoId;
 
       // RACE CONDITION FIX: Abort any in-flight request
       if (abortControllerRef.current) {
@@ -222,7 +245,10 @@ export function useGitStatusFetch({
         if (intendedRepoIdRef.current === fetchRepoId) {
           setLoading(false);
         }
-        fetchInProgressRef.current = false;
+        if (activeFetchRepoIdRef.current === fetchRepoId) {
+          fetchInProgressRef.current = false;
+          activeFetchRepoIdRef.current = null;
+        }
       }
     },
     [

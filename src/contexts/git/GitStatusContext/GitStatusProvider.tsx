@@ -249,6 +249,8 @@ export const GitStatusProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
+    intendedRepoIdRef.current = selectedRepoId;
+
     // Clear old status immediately
     setGitStatus(null);
     setGitSuggestedAction(null);
@@ -267,7 +269,7 @@ export const GitStatusProvider: React.FC<{ children: React.ReactNode }> = ({
     // without making fetchStatus/executeGitOperation part of the trigger deps.
     pendingFetchTimeoutRef.current = setTimeout(() => {
       pendingFetchTimeoutRef.current = null;
-      executeGitOperationRef.current(fetchStatusRef.current, "normal");
+      executeGitOperationRef.current(fetchStatusRef.current, "critical");
     }, REPO_SWITCH_DEBOUNCE_MS);
   }, [
     selectedRepoId,

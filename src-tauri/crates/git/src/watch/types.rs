@@ -92,6 +92,7 @@ impl RepoState {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GitStatus {
     pub branch: String,
+    pub current_upstream_branch: Option<String>,
     pub ahead: u32,
     pub behind: u32,
     pub staged: u32,
@@ -138,6 +139,7 @@ impl Default for GitStatus {
     fn default() -> Self {
         Self {
             branch: String::from("main"),
+            current_upstream_branch: None,
             ahead: 0,
             behind: 0,
             staged: 0,

@@ -129,6 +129,7 @@ impl EventEmitter {
             "repo_id": repo_id,
             "status": {
                 "branch": status.branch,
+                "current_upstream_branch": status.current_upstream_branch,
                 "ahead": status.ahead,
                 "behind": status.behind,
                 "staged": status.staged,
