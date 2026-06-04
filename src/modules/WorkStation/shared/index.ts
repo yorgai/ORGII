@@ -24,12 +24,9 @@ export type {
   SecondaryPanelPosition,
 } from "./WorkStationShell/config";
 
-// Shared secondary-panel chrome (header + position toggle)
-export { PanelPositionToggle, SecondaryPanelHeader } from "./SecondaryPanel";
-export type {
-  SecondaryPanelHeaderProps,
-  SecondaryPanelHeaderTab,
-} from "./SecondaryPanel";
+// Shared panel tab-bar chrome (position-aware tab header + position toggle)
+export { default as PanelTabBar, PanelPositionToggle } from "./PanelTabBar";
+export type { PanelTabBarProps, PanelTabBarTab } from "./PanelTabBar";
 
 // Icon button
 export { IconButton } from "./IconButton";

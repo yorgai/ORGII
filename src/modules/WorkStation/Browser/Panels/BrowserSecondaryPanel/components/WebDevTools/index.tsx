@@ -32,9 +32,9 @@ import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
 import { useRatioResize } from "@src/hooks/ui";
 import {
   PanelPositionToggle,
-  SecondaryPanelHeader,
+  PanelTabBar,
 } from "@src/modules/WorkStation/shared";
-import type { SecondaryPanelHeaderTab } from "@src/modules/WorkStation/shared";
+import type { PanelTabBarTab } from "@src/modules/WorkStation/shared";
 import {
   HorizontalResizeHandle,
   VerticalResizeHandle,
@@ -87,7 +87,7 @@ const WebDevTools: React.FC<WebDevToolsProps> = memo(
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<DevToolsTab>("elements");
 
-    const devtoolsHeaderTabs = useMemo<SecondaryPanelHeaderTab[]>(
+    const devtoolsHeaderTabs = useMemo<PanelTabBarTab[]>(
       () => [
         {
           key: "elements",
@@ -185,7 +185,7 @@ const WebDevTools: React.FC<WebDevToolsProps> = memo(
 
     return (
       <div className="station-sidebar-scroll-area group/devtools relative flex h-full w-full min-w-0 flex-col bg-workstation-bg">
-        <SecondaryPanelHeader
+        <PanelTabBar
           paneId="devtools-panel"
           position={position}
           tabs={devtoolsHeaderTabs}

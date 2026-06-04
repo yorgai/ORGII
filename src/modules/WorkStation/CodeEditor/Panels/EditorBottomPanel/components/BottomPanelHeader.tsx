@@ -3,7 +3,7 @@
  *
  * Header with tabs and tab-specific controls for the bottom panel.
  *
- * Uses the shared `SecondaryPanelHeader` which selects the chrome flavour
+ * Uses the shared `PanelTabBar` which selects the chrome flavour
  * from `position`:
  * - `bottom` → pill tabs + inline tab actions (the existing layout).
  * - `right`  → TabBar chrome with tab actions dropped to a second row.
@@ -21,9 +21,9 @@ import Select from "@src/components/Select";
 import type { SelectOption } from "@src/components/Select";
 import {
   PanelPositionToggle,
-  SecondaryPanelHeader,
+  PanelTabBar,
 } from "@src/modules/WorkStation/shared";
-import type { SecondaryPanelHeaderTab } from "@src/modules/WorkStation/shared";
+import type { PanelTabBarTab } from "@src/modules/WorkStation/shared";
 import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
 import {
   BOTTOM_PANEL_TABS,
@@ -129,8 +129,8 @@ const BottomPanelHeader: React.FC<BottomPanelHeaderProps> = memo(
 
     const resolvedPosition: SecondaryPanelPosition = position ?? "bottom";
 
-    // Build tab descriptors for SecondaryPanelHeader.
-    const headerTabs = useMemo<SecondaryPanelHeaderTab[]>(
+    // Build tab descriptors for PanelTabBar.
+    const headerTabs = useMemo<PanelTabBarTab[]>(
       () =>
         BOTTOM_PANEL_TAB_ORDER.map((key) => ({
           key,
@@ -181,7 +181,7 @@ const BottomPanelHeader: React.FC<BottomPanelHeaderProps> = memo(
 
     // ------------------------------------------------------------------
     // Tab-specific action buttons. Visible inline (bottom chrome) or on
-    // a second row (right chrome) — SecondaryPanelHeader handles layout.
+    // a second row (right chrome) — PanelTabBar handles layout.
     // ------------------------------------------------------------------
     const tabActions = (
       <>
@@ -390,7 +390,7 @@ const BottomPanelHeader: React.FC<BottomPanelHeaderProps> = memo(
     );
 
     return (
-      <SecondaryPanelHeader
+      <PanelTabBar
         paneId="editor-bottom-panel"
         position={resolvedPosition}
         tabs={headerTabs}
