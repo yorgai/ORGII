@@ -4,7 +4,10 @@ import { useTranslation } from "react-i18next";
 
 import { fetchRustApi, gitRepoUrl } from "@src/api/http/git/client";
 import { getGitRemotes } from "@src/api/http/git/remotes";
-import { findPullRequestLocal } from "@src/api/tauri/github";
+import {
+  LOCAL_GITHUB_TOKEN_USER_ID,
+  findPullRequestLocal,
+} from "@src/api/tauri/github";
 import {
   SERVICE_AUTH_STORAGE_KEYS,
   getHostedToken,
@@ -122,9 +125,13 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
     let cancelled = false;
 
     void (async () => {
-      const token = getHostedToken();
-      const userId = localStorage.getItem(SERVICE_AUTH_STORAGE_KEYS.userId);
-      if (!token || !userId) return;
+      const hostedToken = getHostedToken();
+      const hostedUserId = localStorage.getItem(
+        SERVICE_AUTH_STORAGE_KEYS.userId
+      );
+      const userId =
+        hostedToken && hostedUserId ? hostedUserId : LOCAL_GITHUB_TOKEN_USER_ID;
+      const token = hostedToken ?? "";
 
       try {
         const remotesData = await getGitRemotes({
