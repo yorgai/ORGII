@@ -331,12 +331,30 @@ export function usePerRepoSourceControl(
     if (!confirmed) return;
 
     try {
-      await gitRef.current.discard(unstaged.map((f) => f.path));
+      const untracked = unstaged.filter(
+        (file) => file.status === "added" && !file.staged
+      );
+      const tracked = unstaged.filter(
+        (file) => !(file.status === "added" && !file.staged)
+      );
+
+      await Promise.all(
+        untracked.map((file) => {
+          const absolutePath = file.path.startsWith("/")
+            ? file.path
+            : `${repoPath}/${file.path}`;
+          return remove(absolutePath);
+        })
+      );
+
+      if (tracked.length > 0) {
+        await gitRef.current.discard(tracked.map((file) => file.path));
+      }
       await fetchStatus();
     } catch (err) {
       console.error("[usePerRepoSourceControl] discardAll failed:", err);
     }
-  }, [fetchStatus]);
+  }, [repoPath, fetchStatus]);
 
   const handleCommit = useCallback(async () => {
     if (!commitMessage.trim()) return;

@@ -4,8 +4,6 @@ import { useTranslation } from "react-i18next";
 
 import Select from "@src/components/Select";
 import type { SelectOption } from "@src/components/Select";
-import TabPill from "@src/components/TabPill";
-import type { TabPillItem } from "@src/components/TabPill";
 
 import {
   KANBAN_AUTO_ARCHIVE_TTLS,
@@ -35,12 +33,16 @@ const KanbanHeaderTrailingControls: React.FC<
 }) => {
   const { t } = useTranslation("sessions");
 
-  const timePillTabs: TabPillItem[] = useMemo(
+  const timeFilterOptions = useMemo<SelectOption[]>(
     () =>
-      KANBAN_TIME_FILTERS.map((filter) => ({
-        key: filter.key,
-        label: t(filter.labelKey),
-      })),
+      KANBAN_TIME_FILTERS.map((filter) => {
+        const label = t(filter.labelKey);
+        return {
+          label,
+          value: filter.key,
+          triggerLabel: `${t("kanban.timeFilter.label")}: ${label}`,
+        };
+      }),
     [t]
   );
 
@@ -83,13 +85,16 @@ const KanbanHeaderTrailingControls: React.FC<
         dropdownWidthMode="min-match"
         className="w-auto text-[12px]"
       />
-      <TabPill
-        tabs={timePillTabs}
-        activeTab={timeFilter}
-        onChange={(key) => onTimeFilterChange(key as KanbanTimeFilter)}
-        variant="pill"
-        fillWidth={false}
+      <Select
+        value={timeFilter}
+        options={timeFilterOptions}
+        onChange={(value) => onTimeFilterChange(value as KanbanTimeFilter)}
         size="small"
+        radius="lg"
+        variant="ghost"
+        dropdownAlign="right"
+        dropdownWidthMode="min-match"
+        className="w-auto text-[12px]"
       />
     </div>
   );

@@ -47,7 +47,6 @@ const KNOWN_KANBAN_SIDEBAR_FILTERS = new Set<KanbanSidebarFilter>([
 ]);
 
 const KNOWN_TIME_FILTERS = new Set<KanbanTimeFilter>([
-  "6h",
   "12h",
   "24h",
   "3d",

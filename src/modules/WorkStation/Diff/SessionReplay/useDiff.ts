@@ -12,6 +12,7 @@ import { useCallback, useMemo } from "react";
 import { simulatorEventsAtom } from "@src/engines/SessionCore/derived/simulatorEvents";
 import type { SimulatorAppConfig } from "@src/engines/Simulator/apps/core/types";
 import { useSimulatorAppState } from "@src/engines/Simulator/apps/core/useSimulatorAppState";
+import { buildConsolidatedSessionReplayDiffSectionItems } from "@src/modules/WorkStation/shared";
 
 import { DIFF_APP_CONFIG } from "./config";
 import type { DiffEntry, DiffFilter, SimulatorDiffState } from "./types";
@@ -38,7 +39,7 @@ export interface UseDiffReturn {
   displayEntry: DiffEntry | null;
   /** Sidebar-selected entry id, or null when the cursor is in charge. */
   selectedEntryId: string | null;
-  /** Jump the replay cursor to (and select) an entry. */
+  /** Select an entry inside the Diff app without moving the replay cursor. */
   selectEntry: (entryId: string) => void;
 }
 
@@ -49,7 +50,7 @@ function applyFilter(entries: DiffEntry[], filter: DiffFilter): DiffEntry[] {
 }
 
 export function useDiff({ filter }: UseDiffOptions): UseDiffReturn {
-  const { state, selectedItemId, setSelectedItemId, jumpToEvent } =
+  const { state, selectedItemId, setSelectedItemId } =
     useSimulatorAppState<SimulatorDiffState>({
       // The factory config is component-less; the registry layer is the only
       // surface that supplies a component, so it's safe to widen here.
@@ -61,13 +62,14 @@ export function useDiff({ filter }: UseDiffOptions): UseDiffReturn {
   const entries = useMemo(() => state.entries ?? [], [state.entries]);
 
   const counts = useMemo<DiffCounts>(() => {
-    let code = 0;
-    let other = 0;
-    for (const entry of entries) {
-      if (entry.isCode) code++;
-      else other++;
-    }
-    return { all: entries.length, code, other };
+    const codeEntries = entries.filter((entry) => entry.isCode);
+    const otherEntries = entries.filter((entry) => !entry.isCode);
+    return {
+      all: buildConsolidatedSessionReplayDiffSectionItems(entries).length,
+      code: buildConsolidatedSessionReplayDiffSectionItems(codeEntries).length,
+      other:
+        buildConsolidatedSessionReplayDiffSectionItems(otherEntries).length,
+    };
   }, [entries]);
 
   const filteredEntries = useMemo(() => {
@@ -94,9 +96,8 @@ export function useDiff({ filter }: UseDiffOptions): UseDiffReturn {
   const selectEntry = useCallback(
     (entryId: string) => {
       setSelectedItemId(entryId);
-      jumpToEvent(entryId);
     },
-    [setSelectedItemId, jumpToEvent]
+    [setSelectedItemId]
   );
 
   return {
