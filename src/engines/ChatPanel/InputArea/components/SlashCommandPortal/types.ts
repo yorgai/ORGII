@@ -49,6 +49,8 @@ export interface SlashCommandPortalProps {
    * "down" opens below the container — suitable for top-anchored inputs (e.g. edit mode).
    */
   direction?: "up" | "down";
+  /** Defaults to "fixed" so bottom chat inputs keep opening upward. */
+  placementStrategy?: "fixed" | "auto";
 }
 
 // ── Internal list-entry union ─────────────────────────────────────────────────

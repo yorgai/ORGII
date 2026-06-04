@@ -36,21 +36,73 @@ export function placeCaretAfter(node: Node): void {
  * return a synthetic range positioned at the end of `host` so callers can
  * safely insert content even when the editor was never focused.
  */
-export function rangeInsideHost(host: HTMLElement): Range {
-  const selection = window.getSelection();
-  if (selection && selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0);
-    if (
-      host.contains(range.startContainer) &&
-      host.contains(range.endContainer)
-    ) {
-      return range.cloneRange();
-    }
-  }
+function fallbackEndRange(host: HTMLElement): Range {
   const fallback = document.createRange();
   fallback.selectNodeContents(host);
   fallback.collapse(false);
   return fallback;
+}
+
+function selectionRangeInsideHost(host: HTMLElement): Range | null {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+
+  const range = selection.getRangeAt(0);
+  if (
+    host.contains(range.startContainer) &&
+    host.contains(range.endContainer)
+  ) {
+    return range.cloneRange();
+  }
+
+  return null;
+}
+
+export function rangeInsideHost(host: HTMLElement): Range {
+  return selectionRangeInsideHost(host) ?? fallbackEndRange(host);
+}
+
+function focusedRangeInsideHost(host: HTMLElement): Range {
+  const activeElement = document.activeElement;
+  const editorHasFocus = activeElement === host || host.contains(activeElement);
+  if (!editorHasFocus) return fallbackEndRange(host);
+  return selectionRangeInsideHost(host) ?? fallbackEndRange(host);
+}
+
+function getCaretRangeFromPoint(x: number, y: number): Range | null {
+  if (document.caretRangeFromPoint) {
+    return document.caretRangeFromPoint(x, y);
+  }
+
+  if (document.caretPositionFromPoint) {
+    const position = document.caretPositionFromPoint(x, y);
+    if (!position) return null;
+    const range = document.createRange();
+    range.setStart(position.offsetNode, position.offset);
+    range.collapse(true);
+    return range;
+  }
+
+  return null;
+}
+
+export function placeCaretAtPoint(
+  host: HTMLElement,
+  x: number,
+  y: number
+): boolean {
+  const range = getCaretRangeFromPoint(x, y);
+  if (!range) return false;
+
+  if (!host.contains(range.startContainer)) return false;
+
+  const selection = window.getSelection();
+  if (!selection) return false;
+
+  host.focus();
+  selection.removeAllRanges();
+  selection.addRange(range);
+  return true;
 }
 
 /**
@@ -59,8 +111,8 @@ export function rangeInsideHost(host: HTMLElement): Range {
  * inserted node so the next typed character lands after the pill.
  */
 export function insertNodeAtCaret(host: HTMLElement, node: Node): void {
+  const range = focusedRangeInsideHost(host);
   host.focus();
-  const range = rangeInsideHost(host);
   range.deleteContents();
   range.insertNode(node);
   placeCaretAfter(node);

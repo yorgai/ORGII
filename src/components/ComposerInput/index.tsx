@@ -32,7 +32,12 @@ import { buildImperativeApi } from "./imperativeApi";
 import "./index.scss";
 import { type MentionState, createKeyDownHandler } from "./keyboard";
 import { createPasteHandler } from "./pasteHandlers";
-import { caretTextOffset, placeCaretAtEnd, rangeInsideHost } from "./selection";
+import {
+  caretTextOffset,
+  placeCaretAtEnd,
+  placeCaretAtPoint,
+  rangeInsideHost,
+} from "./selection";
 import type { ComposerInputProps, ComposerInputRef } from "./types";
 import { useEditorOperations } from "./useEditorOperations";
 import { PILL_DATA_ATTR, extractPlainText, sanitizeText } from "./utils";
@@ -368,6 +373,10 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
             onContentChangeRef.current?.("");
           },
           focusHost: ops.focusHost,
+          placeCaretAtPoint: (x, y) => {
+            const host = hostRef.current;
+            return host ? placeCaretAtPoint(host, x, y) : false;
+          },
           removePillByPath: (filePath) => {
             ops.removePillByPath(filePath);
             updateEmptyState();

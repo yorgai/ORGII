@@ -8,7 +8,7 @@
 import React, { useCallback } from "react";
 
 import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
-import { insertTabAsPill } from "@src/shared/dnd/dropTargetUtils";
+import { insertPillFromTabPayload } from "@src/shared/dnd/dropTargetUtils";
 import { useTabDragEndToPill } from "@src/shared/dnd/useTabDragEndToPill";
 
 import { reorderActiveRef } from "../components/QueuedMessages";
@@ -95,20 +95,20 @@ export function useContainerDrag({
         window.__internalWorkstationTabDrag = false;
         window.__internalWorkstationTabDragData = undefined;
 
-        let data: { path: string; name: string; type: string };
+        let data: Parameters<typeof insertPillFromTabPayload>[1];
         try {
-          data = JSON.parse(rawData) as {
-            path: string;
-            name: string;
-            type: string;
-          };
+          data = JSON.parse(rawData) as Parameters<
+            typeof insertPillFromTabPayload
+          >[1];
         } catch {
           return;
         }
 
-        if (!data.path) return;
-
-        insertTabAsPill(tiptapRef, data.path, data.name, data.type);
+        insertPillFromTabPayload(tiptapRef, {
+          ...data,
+          pointerX: e.clientX,
+          pointerY: e.clientY,
+        });
         return;
       }
 

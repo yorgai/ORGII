@@ -38,6 +38,42 @@ import { useKeyboard } from "./useKeyboard";
 import { usePortalPosition } from "./usePortalPosition";
 
 const PANEL_WIDTH = 280;
+const VIEWPORT_MARGIN = 8;
+
+type PortalPlacement = "up" | "down";
+
+function clampToViewport(
+  value: number,
+  size: number,
+  viewportSize: number
+): number {
+  const maxValue = Math.max(
+    VIEWPORT_MARGIN,
+    viewportSize - size - VIEWPORT_MARGIN
+  );
+  return Math.min(Math.max(VIEWPORT_MARGIN, value), maxValue);
+}
+
+function choosePortalPlacement(
+  preferredDirection: PortalPlacement,
+  position: { top: number; bottom: number },
+  dropdownHeight: number
+): PortalPlacement {
+  const gap = DROPDOWN_PANEL.triggerGap;
+  const spaceAbove = position.top - gap - VIEWPORT_MARGIN;
+  const spaceBelow =
+    window.innerHeight - position.bottom - gap - VIEWPORT_MARGIN;
+
+  if (preferredDirection === "down") {
+    return dropdownHeight <= spaceBelow || spaceBelow >= spaceAbove
+      ? "down"
+      : "up";
+  }
+
+  return dropdownHeight <= spaceAbove || spaceAbove >= spaceBelow
+    ? "up"
+    : "down";
+}
 
 const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   visible,
@@ -56,6 +92,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   onImageUpload,
   showModeRows = true,
   direction = "up",
+  placementStrategy = "fixed",
 }) => {
   const { t } = useTranslation("sessions");
   const isHeaderMode = searchMode === "header";
@@ -70,6 +107,9 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   const [openFlyout, setOpenFlyout] = useState<OpenFlyoutState | null>(null);
   const [flyoutHighlightIndex, setFlyoutHighlightIndex] = useState(0);
   const [panelRight, setPanelRight] = useState(0);
+  const [portalPlacement, setPortalPlacement] =
+    useState<PortalPlacement>(direction);
+  const [portalMaxHeight, setPortalMaxHeight] = useState(320);
 
   // Position the portal above the container
   const { position, isPositioned } = usePortalPosition(visible, containerRef);
@@ -140,6 +180,52 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
     return () => ro.disconnect();
   }, [position, isPositioned]);
 
+  const updatePortalPlacement = useCallback(() => {
+    if (!visible || !isPositioned) return;
+
+    const el = portalContainerRef.current;
+    const measuredHeight = el?.getBoundingClientRect().height ?? 320;
+    const placement =
+      placementStrategy === "auto"
+        ? choosePortalPlacement(direction, position, measuredHeight)
+        : direction;
+    const gap = DROPDOWN_PANEL.triggerGap;
+    const availableHeight =
+      placement === "down"
+        ? window.innerHeight - position.bottom - gap - VIEWPORT_MARGIN
+        : position.top - gap - VIEWPORT_MARGIN;
+
+    setPortalPlacement(placement);
+    setPortalMaxHeight(Math.max(120, Math.floor(availableHeight)));
+  }, [direction, isPositioned, placementStrategy, position, visible]);
+
+  useLayoutEffect(() => {
+    const animationFrameId = window.requestAnimationFrame(
+      updatePortalPlacement
+    );
+    return () => window.cancelAnimationFrame(animationFrameId);
+  }, [entries, openFlyout, searchQuery, updatePortalPlacement]);
+
+  useEffect(() => {
+    if (!visible || !isPositioned) return;
+
+    window.addEventListener("resize", updatePortalPlacement);
+    window.addEventListener("scroll", updatePortalPlacement, true);
+
+    const el = portalContainerRef.current;
+    let resizeObserver: ResizeObserver | null = null;
+    if (el) {
+      resizeObserver = new ResizeObserver(updatePortalPlacement);
+      resizeObserver.observe(el);
+    }
+
+    return () => {
+      window.removeEventListener("resize", updatePortalPlacement);
+      window.removeEventListener("scroll", updatePortalPlacement, true);
+      resizeObserver?.disconnect();
+    };
+  }, [isPositioned, updatePortalPlacement, visible]);
+
   // Click outside → close (but not when clicking inside a flyout portal)
   useEffect(() => {
     if (!visible || !isPositioned) return;
@@ -196,16 +282,21 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
 
   if (!isPositioned) return null;
 
+  const portalLeft = clampToViewport(
+    position.left,
+    PANEL_WIDTH,
+    window.innerWidth
+  );
   const portalStyle =
-    direction === "down"
+    portalPlacement === "down"
       ? {
-          top: position.bottom,
-          left: position.left,
+          top: position.bottom + DROPDOWN_PANEL.triggerGap,
+          left: portalLeft,
           width: PANEL_WIDTH,
         }
       : {
-          top: position.top,
-          left: position.left,
+          top: position.top - DROPDOWN_PANEL.triggerGap,
+          left: portalLeft,
           width: PANEL_WIDTH,
           transform: "translateY(-100%)",
         };
@@ -267,7 +358,8 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
         )}
 
         <div
-          className={`max-h-[320px] overflow-y-auto ${DROPDOWN_PANEL.paddingClass} scrollbar-hide`}
+          className={`overflow-y-auto ${DROPDOWN_PANEL.paddingClass} scrollbar-hide`}
+          style={{ maxHeight: portalMaxHeight }}
         >
           {entries.map((entry, mapIdx) => {
             if (entry.kind === "divider") {

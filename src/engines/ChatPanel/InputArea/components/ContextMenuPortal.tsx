@@ -33,6 +33,8 @@ interface ContextMenuPortalProps {
   keyboardHandlerRef: React.MutableRefObject<
     ((e: React.KeyboardEvent) => boolean) | null
   >;
+  /** Defaults to "fixed-up" so bottom chat inputs keep opening upward. */
+  placementStrategy?: "fixed-up" | "auto";
 }
 
 type DropdownPlacement = "down" | "up";
@@ -41,6 +43,7 @@ interface DropdownPosition {
   top: number;
   left: number;
   placement: DropdownPlacement;
+  maxHeight: number;
 }
 
 const ESTIMATED_DROPDOWN_HEIGHT = 260;
@@ -72,6 +75,7 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
   recentFiles,
   repoPath,
   keyboardHandlerRef,
+  placementStrategy = "fixed-up",
 }) => {
   const treePosition = useMentionTreePosition();
   const portalRef = useRef<HTMLDivElement>(null);
@@ -79,6 +83,7 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
     top: 0,
     left: 0,
     placement: "down",
+    maxHeight: ESTIMATED_DROPDOWN_HEIGHT,
   });
   const [isPositioned, setIsPositioned] = useState(false);
 
@@ -100,18 +105,24 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
     const gap = DROPDOWN_PANEL.triggerGap;
     const spaceBelow = window.innerHeight - anchorY - gap - VIEWPORT_MARGIN;
     const spaceAbove = anchorY - gap - VIEWPORT_MARGIN;
-    const opensDown = dropdownHeight <= spaceBelow || spaceBelow >= spaceAbove;
+    const opensDown =
+      placementStrategy === "auto" &&
+      (dropdownHeight <= spaceBelow || spaceBelow >= spaceAbove);
+    const availableHeight = opensDown ? spaceBelow : spaceAbove;
+    const maxHeight = Math.max(120, Math.floor(availableHeight));
+    const effectiveHeight = Math.min(dropdownHeight, maxHeight);
     const unclampedTop = opensDown
       ? anchorY + gap
-      : anchorY - dropdownHeight - gap;
+      : anchorY - effectiveHeight - gap;
 
     setDropdownPosition({
-      top: clampToViewport(unclampedTop, dropdownHeight, window.innerHeight),
+      top: clampToViewport(unclampedTop, effectiveHeight, window.innerHeight),
       left: clampToViewport(anchorX, dropdownWidth, window.innerWidth),
       placement: opensDown ? "down" : "up",
+      maxHeight,
     });
     setIsPositioned(true);
-  }, [anchorPosition, containerRef, visible]);
+  }, [anchorPosition, containerRef, placementStrategy, visible]);
 
   useEffect(() => {
     if (visible) return;
@@ -174,6 +185,8 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
         top: dropdownPosition.top,
         left: dropdownPosition.left,
         width: STYLE_CONFIG.dropdownWidth,
+        maxHeight: dropdownPosition.maxHeight,
+        overflowY: "auto",
       }}
     >
       <ContextMenu

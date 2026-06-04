@@ -754,6 +754,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
             handleUploadClick();
           }}
           direction={isEditMode ? "down" : "up"}
+          placementStrategy={isEditMode ? "auto" : "fixed"}
         />
 
         {/* Quick Upload Modal */}

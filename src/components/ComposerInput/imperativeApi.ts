@@ -30,6 +30,7 @@ export interface ImperativeApiContext {
   captureSnapshot: () => ComposerSnapshot;
   clearHost: () => void;
   focusHost: () => void;
+  placeCaretAtPoint: (x: number, y: number) => boolean;
   removePillByPath: (filePath: string) => void;
   isHostEmpty: () => boolean;
   triggerAtMention: () => void;
@@ -108,6 +109,7 @@ export function buildImperativeApi(
     focus: () => {
       ctx.focusHost();
     },
+    placeCaretAtPoint: (x, y) => ctx.placeCaretAtPoint(x, y),
     isEmpty: () => ctx.isHostEmpty(),
     insertMentionText: (text: string) => {
       const mention = ctx.getAtMentionState();

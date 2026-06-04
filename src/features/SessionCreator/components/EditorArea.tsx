@@ -6,14 +6,9 @@
  *
  * Uses TiptapInput for proper cursor/selection handling around file pills.
  */
-import {
-  type MenuItemId,
-  STYLE_CONFIG,
-} from "@/src/scaffold/ContextMenu/config";
-import { ContextMenu } from "@/src/scaffold/ContextMenu/exports";
+import { type MenuItemId } from "@/src/scaffold/ContextMenu/config";
 import { useAtomValue } from "jotai";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import ComposerBar from "@src/components/ComposerBar";
@@ -23,9 +18,9 @@ import Message from "@src/components/Message";
 import { VoiceInputButton, VoiceRecordingBar } from "@src/components/Voice";
 import { INPUT_AREA } from "@src/config/inputAreaTokens";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
+import ContextMenuPortal from "@src/engines/ChatPanel/InputArea/components/ContextMenuPortal";
 import SlashCommandPortal from "@src/engines/ChatPanel/InputArea/components/SlashCommandPortal";
 import { type VoiceInputError, useVoiceInput } from "@src/hooks/voice";
-import { useMentionTreePosition } from "@src/hooks/workStation/panels/useMentionTreePosition";
 import { voiceInputEnabledAtom } from "@src/store/platform/voiceInputAtom";
 import type { RepoKind } from "@src/store/repo/types";
 import type { ChatImageAttachment } from "@src/store/ui/chatImageAtom";
@@ -250,8 +245,6 @@ const EditorArea: React.FC<EditorAreaProps> = ({
     (currentMode === "wingman"
       ? tSessions("creator.wingmanPlaceholder")
       : tSessions("creator.placeholderDefault"));
-  const mentionTreePosition = useMentionTreePosition();
-
   // Internal keyboard handler ref for slash menu (used if external not provided)
   const internalSlashKbRef = useRef<((e: KeyboardEvent) => boolean) | null>(
     null
@@ -264,6 +257,10 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   const [plusSlashQuery, setPlusSlashQuery] = useState("");
   const [contextMenuKeyboardOpened, setContextMenuKeyboardOpened] =
     useState(false);
+  const [contextMenuAnchorPosition, setContextMenuAnchorPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   const handleOpenSkillsTools = useCallback(() => {
     setPlusSlashQuery("");
@@ -275,6 +272,13 @@ const EditorArea: React.FC<EditorAreaProps> = ({
     setShowPlusSlashMenu(false);
     setPlusSlashQuery("");
   }, []);
+
+  const handleContextMenuClose = useCallback(() => {
+    setContextMenuKeyboardOpened(false);
+    setContextMenuAnchorPosition(null);
+    setShowContextMenu(false);
+    setAtSearchQuery("");
+  }, [setAtSearchQuery, setShowContextMenu]);
 
   const handlePlusSlashQueryChange = useCallback(
     (query: string) => {
@@ -289,49 +293,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
     onAtMentionClick();
   }, [onAtMentionClick]);
 
-  // ============================================
-  // Portal State for Dropdown
-  // ============================================
-
-  const [dropdownPosition, setDropdownPosition] = useState({
-    top: 0,
-    left: 0,
-    width: 0,
-  });
-  const [isPositionReady, setIsPositionReady] = useState(false);
-  const hasSetPositionRef = React.useRef(false);
   const editorContainerRef = React.useRef<HTMLDivElement>(null);
-
-  // ============================================
-  // Event Handlers
-  // ============================================
-
-  // Reset position tracking when dropdown closes
-  React.useEffect(() => {
-    if (!showContextMenu) {
-      hasSetPositionRef.current = false;
-      setIsPositionReady(false);
-    }
-  }, [showContextMenu]);
-
-  // Recalculate dropdown position on window resize (e.g., fullscreen toggle)
-  React.useEffect(() => {
-    if (!showContextMenu || !isChatPanel) return;
-
-    const handleResize = () => {
-      const rect = editorContainerRef.current?.getBoundingClientRect();
-      if (rect) {
-        setDropdownPosition({
-          top: rect.top - 8,
-          left: rect.left,
-          width: rect.width,
-        });
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [showContextMenu, isChatPanel]);
 
   // ============================================
   // Voice input (push-to-talk dictation)
@@ -410,32 +372,13 @@ const EditorArea: React.FC<EditorAreaProps> = ({
     return () => node.removeEventListener("keydown", handler);
   }, [voice, voiceFeatureEnabled]);
 
-  // Update dropdown position only when @ is first typed (not on subsequent characters)
   const handleAtMentionWithPosition = useCallback(
     (query: string, position: { x: number; y: number }) => {
       setContextMenuKeyboardOpened(true);
-      // Only set position on initial @ trigger (when query is empty)
-      if (!hasSetPositionRef.current) {
-        if (isChatPanel && editorContainerRef.current) {
-          const rect = editorContainerRef.current.getBoundingClientRect();
-          setDropdownPosition({
-            top: rect.top - 8,
-            left: rect.left,
-            width: rect.width,
-          });
-        } else {
-          setDropdownPosition({
-            top: position.y + 12,
-            left: position.x - 20,
-            width: 0,
-          });
-        }
-        hasSetPositionRef.current = true;
-        setIsPositionReady(true);
-      }
+      setContextMenuAnchorPosition(position);
       onAtMention?.(query, position);
     },
-    [onAtMention, isChatPanel]
+    [onAtMention]
   );
 
   // ============================================
@@ -594,40 +537,19 @@ const EditorArea: React.FC<EditorAreaProps> = ({
         />
 
         {/* Context Menu for @ mentions - rendered via portal to avoid clipping */}
-        {showContextMenu &&
-          isPositionReady &&
-          createPortal(
-            <div
-              className="fixed z-[99999]"
-              style={{
-                top: dropdownPosition.top,
-                left: dropdownPosition.left,
-                ...(isChatPanel
-                  ? {
-                      transform: "translateY(-100%)",
-                      width: STYLE_CONFIG.dropdownWidth,
-                    }
-                  : {}),
-              }}
-            >
-              <ContextMenu
-                visible={showContextMenu}
-                onClose={() => {
-                  setContextMenuKeyboardOpened(false);
-                  setShowContextMenu(false);
-                  setAtSearchQuery("");
-                }}
-                onSelect={onAtSelect}
-                searchQuery={atSearchQuery}
-                keyboardOpened={contextMenuKeyboardOpened}
-                recentFiles={[]}
-                repoPath={repoPath}
-                keyboardHandlerRef={contextMenuFunctionRef}
-                treePosition={mentionTreePosition}
-              />
-            </div>,
-            document.body
-          )}
+        <ContextMenuPortal
+          visible={showContextMenu}
+          containerRef={editorContainerRef}
+          anchorPosition={contextMenuAnchorPosition}
+          onClose={handleContextMenuClose}
+          onSelect={onAtSelect}
+          searchQuery={atSearchQuery}
+          keyboardOpened={contextMenuKeyboardOpened}
+          recentFiles={[]}
+          repoPath={repoPath}
+          keyboardHandlerRef={contextMenuFunctionRef}
+          placementStrategy="auto"
+        />
 
         {/* Slash Command Menu - inline "/" trigger */}
         {onSlashCommand && (
@@ -643,6 +565,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
             onModeSelect={(mode) => onModeSelect?.(mode)}
             keyboardHandlerRef={slashCommandKeyboardHandlerRef}
             direction={isChatPanel ? "up" : "down"}
+            placementStrategy={isChatPanel ? "fixed" : "auto"}
             showActionFlyouts
             onImageUpload={onUploadClick}
           />
@@ -668,6 +591,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
             }}
             keyboardHandlerRef={slashCommandKeyboardHandlerRef}
             searchMode="header"
+            placementStrategy={isChatPanel ? "fixed" : "auto"}
             showActionFlyouts
             onSearchQueryChange={handlePlusSlashQueryChange}
             onImageUpload={() => {

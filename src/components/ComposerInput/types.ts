@@ -131,6 +131,8 @@ export interface ComposerInputRef {
   clear: () => void;
   /** Focus the editor (caret at end) */
   focus: () => void;
+  /** Move the caret to a viewport coordinate inside the editor */
+  placeCaretAtPoint: (x: number, y: number) => boolean;
   /** True if the editor has no text and no pills */
   isEmpty: () => boolean;
   /** Insert plain mention text, replacing the active @ query if present. */

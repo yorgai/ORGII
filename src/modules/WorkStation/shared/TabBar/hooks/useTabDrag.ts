@@ -14,7 +14,7 @@ import type {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { TAB_BAR_HEIGHT } from "../config";
-import type { TabDragEventDetail } from "../tabDragTypes";
+import type { TabDragEventDetail, TabDragPillPayload } from "../tabDragTypes";
 import type { WorkStationTab } from "../types";
 
 /**
@@ -55,17 +55,86 @@ export interface UseTabDragReturn {
 // Helpers
 // ============================================
 
-function getTabFilePath(tab: WorkStationTab): {
-  filePath: string | undefined;
-  type: "directory" | "file";
-} {
-  const filePath =
-    tab.type === "file" || tab.type === "git-diff"
-      ? (tab.data.filePath as string | undefined)
-      : tab.type === "directory"
-        ? (tab.data.directoryPath as string | undefined)
-        : undefined;
-  return { filePath, type: tab.type === "directory" ? "directory" : "file" };
+function readStringField(
+  data: Record<string, unknown>,
+  fieldName: string
+): string | undefined {
+  const value = data[fieldName];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function getTabPillPayload(tab: WorkStationTab): TabDragPillPayload | null {
+  if (tab.type === "file" || tab.type === "git-diff") {
+    const filePath = readStringField(tab.data, "filePath");
+    if (!filePath) return null;
+    return {
+      path: filePath,
+      name: tab.title,
+      iconType: "file",
+      tabType: tab.type,
+    };
+  }
+
+  if (tab.type === "directory") {
+    const directoryPath = readStringField(tab.data, "directoryPath");
+    if (!directoryPath) return null;
+    return {
+      path: directoryPath,
+      name: tab.title,
+      iconType: "folder",
+      isFolder: true,
+      tabType: tab.type,
+    };
+  }
+
+  if (tab.type === "project-workitems") {
+    const projectSlug = readStringField(tab.data, "projectSlug");
+    const projectId = readStringField(tab.data, "projectId");
+    const projectPath = projectSlug ?? projectId;
+    if (!projectPath) return null;
+    return {
+      path: projectPath,
+      name: readStringField(tab.data, "projectName") ?? tab.title,
+      iconType: "project",
+      tabType: tab.type,
+    };
+  }
+
+  if (tab.type === "project-dashboard") {
+    return {
+      path: readStringField(tab.data, "orgId") ?? "workspace",
+      name: tab.title,
+      iconType: "project",
+      tabType: tab.type,
+    };
+  }
+
+  if (tab.type === "project-work-items") {
+    const orgScope = readStringField(tab.data, "orgScope");
+    const orgId = readStringField(tab.data, "orgId");
+    return {
+      path: orgId ? `org/${orgId}` : (orgScope ?? "workspace"),
+      name: tab.title,
+      iconType: "project",
+      tabType: tab.type,
+    };
+  }
+
+  if (tab.type === "workItem-detail") {
+    const workItemId = readStringField(tab.data, "workItemId");
+    const projectSlug = readStringField(tab.data, "projectSlug");
+    const workItemPath =
+      projectSlug && workItemId ? `${projectSlug}/${workItemId}` : workItemId;
+    if (!workItemPath) return null;
+    return {
+      path: workItemPath,
+      name: readStringField(tab.data, "workItemName") ?? tab.title,
+      iconType: "workitem",
+      tabType: tab.type,
+    };
+  }
+
+  return null;
 }
 
 // ============================================
@@ -110,22 +179,20 @@ export function useTabDrag({
       window.addEventListener("pointermove", trackPointer, { passive: true });
 
       const foundTab = tabs.find((tab) => tab.id === tabId);
-      const { filePath } = foundTab
-        ? getTabFilePath(foundTab)
-        : { filePath: undefined };
+      const pill = foundTab ? getTabPillPayload(foundTab) : null;
+      const filePath =
+        pill?.iconType === "file" || pill?.iconType === "folder"
+          ? pill.path
+          : undefined;
 
-      if (filePath && foundTab) {
+      if (pill) {
         window.__internalWorkstationTabDrag = true;
-        window.__internalWorkstationTabDragData = JSON.stringify({
-          path: filePath,
-          name: foundTab.title,
-          type: foundTab.type === "directory" ? "directory" : "file",
-        });
+        window.__internalWorkstationTabDragData = JSON.stringify(pill);
       }
 
       document.dispatchEvent(
-        new CustomEvent("tab-drag-start", {
-          detail: { tabId, filePath },
+        new CustomEvent<TabDragEventDetail>("tab-drag-start", {
+          detail: { tabId, filePath, pill: pill ?? undefined },
         })
       );
     },
@@ -318,9 +385,12 @@ export function useTabDrag({
       const tabId = active.id as string;
 
       const foundTab = tabs.find((tab) => tab.id === tabId);
-      const { filePath, type } = foundTab
-        ? getTabFilePath(foundTab)
-        : { filePath: undefined, type: "file" as const };
+      const pill = foundTab ? getTabPillPayload(foundTab) : null;
+      const filePath =
+        pill?.iconType === "file" || pill?.iconType === "folder"
+          ? pill.path
+          : undefined;
+      const type = pill?.isFolder ? "directory" : "file";
 
       setDraggingTabId(null);
       clearTabDragGlobals();
@@ -335,8 +405,9 @@ export function useTabDrag({
           detail: {
             tabId,
             filePath,
-            name: foundTab?.title,
+            name: pill?.name ?? foundTab?.title,
             type,
+            pill: pill ?? undefined,
             pointerX,
             pointerY,
           },
