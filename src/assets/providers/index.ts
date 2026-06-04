@@ -68,6 +68,7 @@ export const API_KEY_PROVIDER_LIST: ApiProviderType[] = [
   "deepseek_api", // DeepSeek
   "gemini_api", // Google Gemini
   "groq_api", // Groq
+  "xai_api", // xAI Grok
   "minimax_api", // MiniMax
   "moonshot_api", // Kimi Moonshot
   "openai_api", // OpenAI

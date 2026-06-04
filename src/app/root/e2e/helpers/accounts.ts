@@ -228,6 +228,36 @@ export async function listAccounts(): Promise<Result<{ accounts: KeyInfo[] }>> {
   }
 }
 
+export async function inspectProviderMatrix(): Promise<
+  Result<{
+    agents: unknown[];
+    apiProviders: unknown[];
+    providerConfigs: Record<string, unknown>;
+  }>
+> {
+  try {
+    const [agents, apiProviders, providerConfigs] = await Promise.all([
+      rpc.validation.getAvailableAgents(),
+      rpc.validation.getAvailableApiProviders(),
+      rpc.validation.getAllProviderConfigs(),
+    ]);
+    return { ok: true, agents, apiProviders, providerConfigs };
+  } catch (err) {
+    return asError(err);
+  }
+}
+
+export async function autoDetectKeyForE2E(
+  agentType: ModelType
+): Promise<Result<{ result: unknown }>> {
+  try {
+    const result = await rpc.validation.autoDetectKey({ agentType });
+    return { ok: true, result };
+  } catch (err) {
+    return asError(err);
+  }
+}
+
 export async function removeAccount(id: string): Promise<{ ok: true } | Err> {
   try {
     await rpc.validation.deleteKeyById({ keyId: id });

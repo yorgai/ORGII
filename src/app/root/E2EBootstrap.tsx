@@ -54,7 +54,9 @@ import {
   addClaudeCodeAccount,
   addCodexAccount,
   addCursorNativeAccount,
+  autoDetectKeyForE2E,
   cloneCursorNativeAccountWithoutApiKey,
+  inspectProviderMatrix,
   listAccounts,
   removeAccount,
 } from "./e2e/helpers/accounts";
@@ -268,6 +270,7 @@ export const E2EBootstrap: FC = () => {
       openProjectWorkItemsTab,
       openAgentTab,
       openOrgTab,
+      inspectWorkstationSurface,
     } = createNavigationHelpers(store);
 
     const helpers: E2EHelpers = {
@@ -277,6 +280,8 @@ export const E2EBootstrap: FC = () => {
       addCodexAccount,
       cloneCursorNativeAccountWithoutApiKey,
       listAccounts,
+      inspectProviderMatrix,
+      autoDetectKeyForE2E,
       removeAccount,
       createCliPatchSession,
       patchSessionModel,
@@ -412,6 +417,7 @@ export const E2EBootstrap: FC = () => {
       openProjectWorkItemsTab,
       openAgentTab,
       openOrgTab,
+      inspectWorkstationSurface,
     };
 
     registerE2EHelpers(helpers);

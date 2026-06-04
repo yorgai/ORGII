@@ -230,6 +230,7 @@ const MODEL_TYPE_TO_ICON: Record<ModelType, IconProvider> = {
   deepseek_api: "deepseek",
   gemini_api: "gemini",
   groq_api: "groq",
+  xai_api: "grok",
   zhipu_api: "zhipu",
   dashscope_api: "qwen",
   minimax_api: "minimax",
