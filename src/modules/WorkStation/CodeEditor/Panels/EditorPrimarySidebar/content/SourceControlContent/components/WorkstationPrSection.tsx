@@ -46,7 +46,7 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
     if (!onCreatePr) return;
     setLocalError(null);
     const result = await onCreatePr();
-    if (result.error) {
+    if (result.error && result.error !== "not_authenticated") {
       setLocalError(result.error);
     }
   }, [onCreatePr]);
@@ -114,9 +114,6 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
   }
 
   if (displayError) {
-    const isAuthError =
-      displayError.toLowerCase().includes("sign in") ||
-      displayError.toLowerCase().includes("authenticated");
     return (
       <div className="flex-shrink-0 border-b border-border-2 px-3 py-2">
         <div className="rounded-lg bg-fill-2 px-3 py-2.5">
@@ -139,13 +136,10 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
               variant="tertiary"
               size="mini"
               shape="round"
-              onClick={isAuthError ? undefined : handleCreate}
-              href={isAuthError ? "/settings/integrations/git" : undefined}
+              onClick={handleCreate}
               className="shrink-0"
             >
-              {isAuthError
-                ? t("actions.settings", { defaultValue: "Settings" })
-                : t("actions.retry")}
+              {t("actions.retry")}
             </Button>
           </div>
         </div>

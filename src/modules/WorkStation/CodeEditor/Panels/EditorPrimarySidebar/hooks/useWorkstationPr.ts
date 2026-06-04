@@ -1,10 +1,13 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { fetchRustApi, gitRepoUrl } from "@src/api/http/git/client";
 import { getGitRemotes } from "@src/api/http/git/remotes";
 import { findPullRequestLocal } from "@src/api/tauri/github";
+import { Message } from "@src/components/Message";
+import { buildIntegrationsPath } from "@src/config/mainAppPaths/integrations";
 import {
   SERVICE_AUTH_STORAGE_KEYS,
   getHostedToken,
@@ -58,6 +61,7 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
   } = options;
 
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const autoCreatePr = useAtomValue(gitAutoCreatePrAtom);
   const setWorkstationPrAtom = useSetAtom(workstationPrAtom);
   const setWorkstationPrCallbackAtom = useSetAtom(workstationPrCallbackAtom);
@@ -206,14 +210,25 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
     });
 
     if (result.error) {
+      if (result.error === "not_authenticated") {
+        setCreatingByBranch((current) => ({ ...current, [branchName]: false }));
+        navigate(buildIntegrationsPath({ category: "git" }));
+        Message.info({
+          id: "github-auth-required",
+          title: t("git.pr.authRequired.title"),
+          content: t("git.pr.authRequired.description"),
+          duration: 8000,
+          closable: true,
+        });
+        return { error: result.error };
+      }
+
       const message =
-        result.error === "not_authenticated"
-          ? t("git.pr.notAuthenticated")
-          : result.error === "no_origin_remote"
-            ? t("git.pr.noOriginRemote")
-            : result.error === "cannot_parse_repo_name"
-              ? t("git.pr.cannotParseRepoName")
-              : result.error;
+        result.error === "no_origin_remote"
+          ? t("git.pr.noOriginRemote")
+          : result.error === "cannot_parse_repo_name"
+            ? t("git.pr.cannotParseRepoName")
+            : result.error;
       setErrorByBranch((current) => ({ ...current, [branchName]: message }));
       setCreatingByBranch((current) => ({ ...current, [branchName]: false }));
       return { error: message };
@@ -232,7 +247,7 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
 
     setCreatingByBranch((current) => ({ ...current, [branchName]: false }));
     return { url: result.url };
-  }, [branchName, repoPath, commitMessage, repoId, t]);
+  }, [branchName, repoPath, commitMessage, repoId, t, navigate]);
 
   const readyToCreate = eligible && !prUrl;
 

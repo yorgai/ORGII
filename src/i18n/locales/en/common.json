@@ -1028,6 +1028,10 @@
       "noBranch": "No branch selected",
       "noRepoPath": "No repository path available",
       "notAuthenticated": "Sign in to create pull requests",
+      "authRequired": {
+        "title": "Connect GitHub",
+        "description": "Go to Settings → Integrations → Git to connect your GitHub account."
+      },
       "noOriginRemote": "No origin remote configured",
       "cannotParseRepoName": "Could not parse repository name from origin remote",
       "status": {
