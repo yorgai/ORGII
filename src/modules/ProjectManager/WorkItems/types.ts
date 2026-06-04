@@ -3,7 +3,10 @@
  */
 import type { MemberEntry } from "@src/api/http/project";
 import type { Person } from "@src/types/core/shared";
-import type { WorkItemStatus } from "@src/types/core/workItem";
+import {
+  WORK_ITEM_STATUS,
+  type WorkItemStatus,
+} from "@src/types/core/workItem";
 
 // ============================================
 // Activity Types
@@ -70,15 +73,16 @@ export const FILTER_TO_STATUS: Record<StatusFilterType, WorkItemStatus | null> =
     duplicate: "duplicate",
   };
 
-export const WORK_ITEMS_DEFAULT_STATUS: WorkItemStatus = "backlog";
+export const WORK_ITEMS_DEFAULT_STATUS: WorkItemStatus =
+  WORK_ITEM_STATUS.PLANNED;
 
 export const STATUS_FILTER_KEYS: StatusFilterType[] = [
   "all",
-  "backlog",
   "todo",
   "inProgress",
   "inReview",
   "done",
+  "backlog",
   "cancelled",
   "duplicate",
 ];

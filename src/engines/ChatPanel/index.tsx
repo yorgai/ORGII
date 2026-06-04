@@ -146,7 +146,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
     const currentRepo = useAtomValue(currentRepoAtom);
     const currentRepoPath = currentRepo?.path ?? currentRepo?.fs_uri ?? null;
-    const currentRepoName = currentRepo?.name;
     const {
       error: benchmarkError,
       isLoadingTasks: isLoadingBenchmarkTasks,
@@ -205,8 +204,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     /**
      * Maximize/dock toggle: in WorkStation the chat panel can grow to fill the
      * entire content area. The button shows in WorkStation regardless of
-     * session or station-mode state — when maximized, the un-maximize
-     * affordance is also mirrored on the global toolbar.
+     * session or station-mode state.
      */
     const showChatFocusToggle = viewMode === "workStation";
 
@@ -1018,7 +1016,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           <div className={`flex overflow-hidden ${creatorClassName}`}>
             <CreateWorkItemView
               repoPath={currentRepoPath}
-              scopeBreadcrumbLabel={currentRepoName}
               onCancel={handleCancelWorkItemCreate}
               onSetUnsaved={() => undefined}
               onWorkItemCreated={handleChatPanelWorkItemCreated}

@@ -1,8 +1,8 @@
 /**
  * Appearance Settings Section
  *
- * Theme, font family, font size, line height, tab size,
- * and editor feature toggles (line numbers, word wrap, minimap, etc.)
+ * Font family, font size, line height, tab size, and editor feature toggles
+ * (line numbers, word wrap, minimap, etc.)
  */
 import {
   SECTION_CONTROL_STYLE,
@@ -30,7 +30,6 @@ import {
   type EditorLineHeight,
   type EditorLineNumbers,
   type EditorTabSize,
-  type EditorTheme,
   codeFontFamilyAtom,
   customCodeFontFamilyAtom,
   editorAutoSaveAtom,
@@ -41,7 +40,6 @@ import {
   editorShowIndentGuidesAtom,
   editorShowMinimapAtom,
   editorTabSizeAtom,
-  editorThemeAtom,
   editorWordWrapAtom,
 } from "@src/store/ui/editorSettingsAtom";
 import { terminalFontSizeAtom } from "@src/store/ui/uiAtom";
@@ -52,8 +50,6 @@ const AppearanceSection: React.FC = () => {
   const { t } = useTranslation("settings");
   const { t: tCommon } = useTranslation("common");
 
-  // Theme & font atoms
-  const [editorTheme, setEditorTheme] = useAtom(editorThemeAtom);
   const [codeFontFamily, setCodeFontFamily] = useAtom(codeFontFamilyAtom);
   const [customFontFamily, setCustomFontFamily] = useAtom(
     customCodeFontFamilyAtom
@@ -104,14 +100,6 @@ const AppearanceSection: React.FC = () => {
   }, [localCustomFont, customFontFamily, setCustomFontFamily]);
 
   // Handlers
-  const handleThemeChange = useCallback(
-    (value: string | number | (string | number)[]) => {
-      const themeValue = typeof value === "string" ? value : String(value);
-      setEditorTheme(themeValue as EditorTheme);
-    },
-    [setEditorTheme]
-  );
-
   const handleFontFamilyChange = useCallback(
     (value: string | number | (string | number)[]) => {
       const fontValue = typeof value === "string" ? value : String(value);
@@ -137,36 +125,9 @@ const AppearanceSection: React.FC = () => {
     ],
     [t]
   );
-  const editorThemeOptions = useMemo(
-    () => [
-      { value: "system", label: t("editor.syntaxThemeOptions.system") },
-      { value: "github", label: t("editor.syntaxThemeOptions.github") },
-      { value: "vscode", label: t("editor.syntaxThemeOptions.vscode") },
-      { value: "monokai", label: t("editor.syntaxThemeOptions.monokai") },
-      { value: "solarized", label: t("editor.syntaxThemeOptions.solarized") },
-      { value: "abyss", label: t("editor.syntaxThemeOptions.abyss") },
-      {
-        value: "tomorrowNightBlue",
-        label: t("editor.syntaxThemeOptions.tomorrowNightBlue"),
-      },
-    ],
-    [t]
-  );
-
   return (
     <>
-      {/* Theme & Typography */}
       <SectionContainer title={t("editor.appearance")}>
-        <SectionRow label={t("editor.syntaxTheme")}>
-          <Select
-            value={editorTheme}
-            onChange={handleThemeChange}
-            options={editorThemeOptions}
-            showSearch
-            style={SECTION_CONTROL_STYLE}
-          />
-        </SectionRow>
-
         <SectionRow label={t("editor.fontFamily")}>
           <Select
             value={codeFontFamily}

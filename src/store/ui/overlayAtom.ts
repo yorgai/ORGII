@@ -43,8 +43,7 @@ export const addWorkspaceInitialStageAtom =
   atom<AddWorkspaceInitialStage>(null);
 addWorkspaceInitialStageAtom.debugLabel = "addWorkspaceInitialStageAtom";
 
-// Track when the repo selector is open (lifted from GlobalToolbar local state
-// so other modules like useRouteToolbarConfig can trigger it)
+// Track when the repo selector is open so modules like useRouteToolbarConfig can trigger it.
 export const repoSelectorOpenAtom = atom<boolean>(false);
 repoSelectorOpenAtom.debugLabel = "repoSelectorOpenAtom";
 

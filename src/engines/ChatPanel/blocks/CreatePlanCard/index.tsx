@@ -220,9 +220,9 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
             : creatorDefaultSelection;
           const { model, accountId } = resolveModelForMessage(sessionSelection);
           // Plan approval uses the plan's own session row for repo path —
-          // the global toolbar atom is only a fallback for legacy rows. The
-          // session row's persisted repo is what `workspace_root` was set
-          // to at create time; reading the toolbar would let two open
+          // the global repo selection atom is only a fallback for older rows.
+          // The session row's persisted repo is what `workspace_root` was set
+          // to at create time; reading global selection would let two open
           // sessions on different repos collide whenever the user approves
           // a plan from the older one.
           const workspacePath =

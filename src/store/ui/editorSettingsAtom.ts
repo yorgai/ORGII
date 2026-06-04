@@ -8,11 +8,6 @@
 import { atom } from "jotai";
 
 import {
-  type BaseEditorThemeId,
-  getGlobalTheme,
-  normalizeGlobalThemeId,
-} from "@src/config/appearance/globalThemes";
-import {
   settingsAtom,
   updateSettingAtom,
 } from "@src/store/settings/settingsAtom";
@@ -464,51 +459,3 @@ export const gitWorktreeCleanupIntervalHoursAtom = atom(
     });
   }
 );
-
-// ============================================
-// Editor Theme Settings
-// ============================================
-
-/**
- * Available editor themes
- */
-export type EditorTheme =
-  | "system"
-  | "github"
-  | "vscode"
-  | "monokai"
-  | "solarized"
-  | "abyss"
-  | "tomorrowNightBlue";
-
-export const EDITOR_THEMES: { value: EditorTheme; label: string }[] = [
-  { value: "system", label: "Follow system" },
-  { value: "github", label: "GitHub" },
-  { value: "vscode", label: "VS Code" },
-  { value: "monokai", label: "Monokai" },
-  { value: "solarized", label: "Solarized" },
-  { value: "abyss", label: "Abyss" },
-  { value: "tomorrowNightBlue", label: "Tomorrow Night Blue" },
-];
-
-/**
- * Selected editor theme (persisted to localStorage)
- */
-export const editorThemeAtom = atom(
-  (get) => get(settingsAtom)["editor.theme"] as EditorTheme,
-  (_get, set, value: EditorTheme) => {
-    set(updateSettingAtom, { key: "editor.theme", value });
-  }
-);
-
-export const resolvedEditorThemeAtom = atom<BaseEditorThemeId>((get) => {
-  const selectedTheme = get(editorThemeAtom);
-  if (selectedTheme !== "system") {
-    return selectedTheme;
-  }
-
-  const globalThemeRaw = get(settingsAtom)["general.theme"];
-  const globalTheme = getGlobalTheme(normalizeGlobalThemeId(globalThemeRaw));
-  return globalTheme.editorTheme;
-});
-resolvedEditorThemeAtom.debugLabel = "resolvedEditorThemeAtom";

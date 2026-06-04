@@ -5,7 +5,7 @@
  * Wraps BrowserLayout with ActionSystemProvider.
  *
  * Architecture:
- * - Shown when user switches to "browser" mode via AppModeSwitch
+ * - Shown when user switches to "browser" mode.
  * - BrowserLayout handles all panel orchestration
  * - Supports two modes: Browser (webview) and Designer (.orgii canvas)
  */

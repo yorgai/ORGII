@@ -22,7 +22,6 @@ import {
   OPS_CONTROL_SESSION_PREVIEW_SURFACE_CLASS,
 } from "@src/config/opsControlCardTokens";
 import type { KanbanTask, TaskStatus } from "@src/features/KanbanBoard";
-import { parseFactoryViewMode } from "@src/scaffold/GlobalToolbar/components/FactoryViewPill";
 import { agentKanbanCreatorVisibleAtom } from "@src/store/ui/agentKanbanCreatorAtom";
 import { kanbanReplayModeAtom } from "@src/store/ui/kanbanReplayAtom";
 import {
@@ -36,6 +35,7 @@ import {
 } from "@src/store/ui/kanbanViewStateAtom";
 import { openWorktreeCompareWindow } from "@src/util/ui/window/windowManager";
 
+import { parseFactoryViewMode } from "./components/FactoryViewPill";
 import TaskKanbanReplayBar from "./components/KanbanReplayBar";
 import KanbanReplayStatusPill from "./components/KanbanReplayStatusPill";
 import TaskDetailPanel from "./components/TaskDetailPanel";

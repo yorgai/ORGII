@@ -1,5 +1,5 @@
 import { clearCache, clearCacheForImage, getCached, setCached } from "./cache";
-import { colorFieldFromCssColor } from "./colorAnalysis";
+import { colorFieldFromCssColor, resolveCssColorValue } from "./colorAnalysis";
 import { resolveMaterial } from "./materialResolver";
 import { sampleRegion } from "./regionSampling";
 import type { GlassMaterial, GlassRegion, ResolverConfig } from "./types";
@@ -60,7 +60,10 @@ export async function resolveGlassMaterial(
 ): Promise<GlassMaterial> {
   // If backgroundColor is provided, use it directly without sampling
   if (config.backgroundColor) {
-    const cacheKey = `color:${config.backgroundColor}-${region}`;
+    const resolvedBackgroundColor = resolveCssColorValue(
+      config.backgroundColor
+    );
+    const cacheKey = `color:${resolvedBackgroundColor}-${region}`;
     const materialKey = `${config.appearance}-${config.thickness}`;
 
     const cached = getCached(cacheKey);
@@ -77,7 +80,7 @@ export async function resolveGlassMaterial(
       return material;
     }
 
-    const colorField = colorFieldFromCssColor(config.backgroundColor);
+    const colorField = colorFieldFromCssColor(resolvedBackgroundColor);
     const material = resolveMaterial(
       colorField,
       config.appearance,
@@ -134,7 +137,10 @@ export function resolveGlassMaterialSync(
   region: GlassRegion = "global"
 ): GlassMaterial | null {
   if (config.backgroundColor) {
-    const cacheKey = `color:${config.backgroundColor}-${region}`;
+    const resolvedBackgroundColor = resolveCssColorValue(
+      config.backgroundColor
+    );
+    const cacheKey = `color:${resolvedBackgroundColor}-${region}`;
     const materialKey = `${config.appearance}-${config.thickness}`;
 
     const cached = getCached(cacheKey);
@@ -151,7 +157,7 @@ export function resolveGlassMaterialSync(
       return material;
     }
 
-    const colorField = colorFieldFromCssColor(config.backgroundColor);
+    const colorField = colorFieldFromCssColor(resolvedBackgroundColor);
     const material = resolveMaterial(
       colorField,
       config.appearance,
@@ -242,13 +248,6 @@ const ALL_REGIONS: GlassRegion[] = [
   "global",
 ];
 
-const ALL_THICKNESSES: ResolverConfig["thickness"][] = [
-  "ultrathin",
-  "thin",
-  "medium",
-  "thick",
-];
-
 /**
  * Prewarm a single (color, region, appearance, thickness) cache entry.
  *
@@ -262,7 +261,8 @@ function prewarmColorEntry(
   appearance: "light" | "dark",
   thickness: ResolverConfig["thickness"]
 ): void {
-  const cacheKey = `color:${color}-${region}`;
+  const resolvedColor = resolveCssColorValue(color);
+  const cacheKey = `color:${resolvedColor}-${region}`;
   const materialKey = `${appearance}-${thickness}`;
 
   const cached = getCached(cacheKey);
@@ -274,7 +274,7 @@ function prewarmColorEntry(
     return;
   }
 
-  const colorField = colorFieldFromCssColor(color);
+  const colorField = colorFieldFromCssColor(resolvedColor);
   const material = resolveMaterial(colorField, appearance, thickness);
   setCached(cacheKey, {
     colorField,
@@ -283,47 +283,10 @@ function prewarmColorEntry(
   });
 }
 
-/**
- * Synchronously prewarm both light and dark variants of a color pair across
- * every region (and `thin` thickness, which is what every glass surface
- * currently uses).
- *
- * Call this on app mount and whenever a color preset is selected so that
- * the next theme flip has zero async work — every `useGlassMaterial`
- * consumer hits the synchronous cache path.
- */
-export function prewarmColorPair(lightColor: string, darkColor: string): void {
-  for (const region of ALL_REGIONS) {
-    prewarmColorEntry(lightColor, region, "light", "thin");
-    prewarmColorEntry(darkColor, region, "dark", "thin");
-  }
-}
-
-/**
- * Like `prewarmColorPair` but warms a single color across both appearance
- * modes. Useful when only the active hex is known (no pair association).
- */
-export function prewarmColorAcrossAppearances(color: string): void {
+export function prewarmColor(color: string): void {
   for (const region of ALL_REGIONS) {
     prewarmColorEntry(color, region, "light", "thin");
     prewarmColorEntry(color, region, "dark", "thin");
-  }
-}
-
-/**
- * Warm every region × appearance × thickness for a given color. Heavier
- * than the default thin-only warmup; only call if a non-thin material is
- * known to be in use.
- */
-export function prewarmColorAllThicknesses(
-  lightColor: string,
-  darkColor: string
-): void {
-  for (const region of ALL_REGIONS) {
-    for (const thickness of ALL_THICKNESSES) {
-      prewarmColorEntry(lightColor, region, "light", thickness);
-      prewarmColorEntry(darkColor, region, "dark", thickness);
-    }
   }
 }
 
@@ -333,7 +296,5 @@ export default {
   preloadAllRegions,
   clearMaterialCache,
   clearMaterialCacheForImage,
-  prewarmColorPair,
-  prewarmColorAcrossAppearances,
-  prewarmColorAllThicknesses,
+  prewarmColor,
 };

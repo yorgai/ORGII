@@ -93,8 +93,8 @@ export function useSessionCreatorChatPanelHandlers({
 
   // ── Repo / branch selection ───────────────────────────────────────────────
 
-  // "Switch workspace too?" confirmation path: flip the global toolbar to
-  // the picked repo AND keep the session draft aligned with it.
+  // "Switch workspace too?" confirmation path: update the global repo
+  // selection to the picked repo and keep the session draft aligned with it.
   const handleRepoChange = useCallback(
     (repoId: string, options?: { repoKind?: RepoKind }) => {
       selectRepo(repoId);
@@ -121,7 +121,7 @@ export function useSessionCreatorChatPanelHandlers({
     ]
   );
 
-  // Session-only repo pick; the global toolbar is untouched.
+  // Session-only repo pick; the global repo selection is untouched.
   const handleRepoSelectForSession = useCallback(
     (selectedRepoId: string, repo: RepoItem) => {
       const systemPathId = getSystemPathIdFromRepoItem(repo);

@@ -5,18 +5,19 @@ import { useTranslation } from "react-i18next";
 import Message from "@src/components/Message";
 import { APPLICATION_UI_FONT_IDS } from "@src/config/appearance/applicationUiFonts";
 import {
+  APPEARANCE_MODE_OPTIONS,
   GLOBAL_THEMES,
-  GLOBAL_THEME_GROUPS,
-  type GlobalThemeId,
+  getAppearanceModeForTheme,
+  getDefaultThemeForAppearanceMode,
   getGlobalTheme,
-  isGlobalThemeId,
+  getThemeOptionsForAppearanceMode,
+  normalizeAppearanceMode,
   normalizeGlobalThemeId,
 } from "@src/config/appearance/globalThemes";
 import { PRIMARY_COLOR_PRESETS } from "@src/config/appearance/primaryColors";
 import {
   UI_SCALE_CONFIG,
   applicationUiFontAtom,
-  autoHideTabBarAtom,
   globalLayoutMethodAtom,
   globalThemeIdAtom,
   primaryColorPresetAtom,
@@ -51,7 +52,6 @@ export function useAppearanceState() {
   const [applicationUiFont, setApplicationUiFont] = useAtom(
     applicationUiFontAtom
   );
-  const [autoHideTabBar, setAutoHideTabBar] = useAtom(autoHideTabBarAtom);
   const [globalLayoutMethod, setGlobalLayoutMethod] = useAtom(
     globalLayoutMethodAtom
   );
@@ -69,7 +69,7 @@ export function useAppearanceState() {
   }, []);
 
   const appearanceMode = useMemo(
-    () => (GLOBAL_THEMES[globalThemeId].isDark ? "dark" : "light"),
+    () => getAppearanceModeForTheme(globalThemeId),
     [globalThemeId]
   );
 
@@ -92,35 +92,11 @@ export function useAppearanceState() {
 
   const handleAppearanceModeChange = useCallback(
     async (value: string | number | (string | number)[]) => {
-      const selectedMode = String(value) === "dark" ? "dark" : "light";
-      const currentThemeId = normalizeGlobalThemeId(globalThemeId);
-
-      const getVariantThemeId = (
-        id: GlobalThemeId,
-        mode: "light" | "dark"
-      ): GlobalThemeId | null => {
-        if (id.endsWith("-light") || id.endsWith("-dark")) {
-          const variantId = id.replace(/-(light|dark)$/, `-${mode}`);
-          if (isGlobalThemeId(variantId)) {
-            return variantId;
-          }
-        }
-        return null;
-      };
-
-      const matchedVariant = getVariantThemeId(currentThemeId, selectedMode);
-      if (matchedVariant) {
-        await handleThemeChange(matchedVariant);
-        return;
-      }
-
-      const fallbackThemeId =
-        selectedMode === "dark"
-          ? GLOBAL_THEME_GROUPS.dark[0]
-          : GLOBAL_THEME_GROUPS.light[0];
-      await handleThemeChange(fallbackThemeId);
+      const rawMode = String(Array.isArray(value) ? value[0] : value);
+      const selectedMode = normalizeAppearanceMode(rawMode);
+      await handleThemeChange(getDefaultThemeForAppearanceMode(selectedMode));
     },
-    [globalThemeId, handleThemeChange]
+    [handleThemeChange]
   );
 
   const handleUIScaleChange = useCallback(
@@ -135,6 +111,15 @@ export function useAppearanceState() {
       });
     },
     [setUIScale]
+  );
+
+  const appearanceModeOptions = useMemo(
+    () =>
+      APPEARANCE_MODE_OPTIONS.map((mode) => ({
+        label: t(`general.${mode}`),
+        value: mode,
+      })),
+    [t]
   );
 
   const primaryColorOptions = useMemo(
@@ -155,16 +140,14 @@ export function useAppearanceState() {
     [t]
   );
 
-  const themeOptions = useMemo(() => {
-    const options =
-      appearanceMode === "dark"
-        ? GLOBAL_THEME_GROUPS.dark
-        : GLOBAL_THEME_GROUPS.light;
-    return options.map((themeId) => ({
-      label: t(GLOBAL_THEMES[themeId].i18nKey),
-      value: themeId,
-    }));
-  }, [appearanceMode, t]);
+  const themeOptions = useMemo(
+    () =>
+      getThemeOptionsForAppearanceMode(appearanceMode).map((themeId) => ({
+        label: t(GLOBAL_THEMES[themeId].i18nKey),
+        value: themeId,
+      })),
+    [appearanceMode, t]
+  );
 
   return {
     globalThemeId,
@@ -173,11 +156,10 @@ export function useAppearanceState() {
     uiScale,
     applicationUiFont,
     setApplicationUiFont,
-    autoHideTabBar,
-    setAutoHideTabBar,
     globalLayoutMethod,
     setGlobalLayoutMethod,
     appearanceMode,
+    appearanceModeOptions,
     themeOptions,
     primaryColorOptions,
     applicationUiFontOptions,

@@ -12,13 +12,11 @@
 import { SQLite, sql } from "@codemirror/lang-sql";
 import { EditorView, keymap } from "@codemirror/view";
 import CodeMirror from "@uiw/react-codemirror";
-import { useAtomValue } from "jotai";
 import { AlignLeft, History, Play } from "lucide-react";
 import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 import { format as formatSql } from "sql-formatter";
 
 import type { TableInfo } from "@src/engines/DatabaseCore";
-import { resolvedEditorThemeAtom } from "@src/store/ui/editorSettingsAtom";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import {
@@ -63,7 +61,6 @@ export const SqlQueryEditor: React.FC<SqlQueryEditorProps> = memo(
     onHistorySelect,
   }) => {
     const { isDark } = useCurrentTheme();
-    const editorThemeName = useAtomValue(resolvedEditorThemeAtom);
     const [value, setValue] = useState(defaultValue);
     const [showHistory, setShowHistory] = useState(false);
     const historyRef = useRef<HTMLDivElement>(null);
@@ -141,8 +138,7 @@ export const SqlQueryEditor: React.FC<SqlQueryEditorProps> = memo(
       return exts;
     }, [isDark, schema, handleExecute]);
 
-    // Use centralized theme with user preference
-    const theme = getCodeMirrorTheme(isDark, editorThemeName);
+    const theme = getCodeMirrorTheme(isDark);
 
     return (
       <div className="sql-query-editor">

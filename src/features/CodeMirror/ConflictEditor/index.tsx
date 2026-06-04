@@ -27,7 +27,6 @@ import {
   highlightActiveLineGutter,
   lineNumbers,
 } from "@codemirror/view";
-import { useAtomValue } from "jotai";
 import React, {
   useCallback,
   useEffect,
@@ -41,7 +40,6 @@ import {
   type ScrollbarMarker,
 } from "@src/components/CustomScrollbar";
 import { useEditorAppearanceSettings } from "@src/hooks/settings";
-import { resolvedEditorThemeAtom } from "@src/store/ui/editorSettingsAtom";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import {
@@ -283,7 +281,6 @@ export const CodeMirrorConflictEditor: React.FC<
   onFocusConflictChange: _onFocusConflictChange,
 }) => {
   const { isDark } = useCurrentTheme();
-  const editorThemeName = useAtomValue(resolvedEditorThemeAtom);
   const appearanceSettings = useEditorAppearanceSettings();
   const containerRef = useRef<HTMLDivElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -385,7 +382,7 @@ export const CodeMirrorConflictEditor: React.FC<
     const extensions: Extension[] = [codeMirrorCspNonceExtension];
 
     // Theme (use centralized helper with user preference)
-    extensions.push(getCodeMirrorTheme(isDark, editorThemeName));
+    extensions.push(getCodeMirrorTheme(isDark));
 
     // Line numbers based on appearance settings
     if (appearanceSettings.lineNumbers === "on") {
@@ -491,7 +488,6 @@ export const CodeMirrorConflictEditor: React.FC<
   }, [
     content,
     isDark,
-    editorThemeName,
     filePath,
     language,
     readOnly,

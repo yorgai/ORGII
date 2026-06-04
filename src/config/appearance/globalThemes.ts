@@ -6,16 +6,15 @@ export const GLOBAL_THEME_IDS = [
 
 export type GlobalThemeId = (typeof GLOBAL_THEME_IDS)[number];
 
-export const BASE_EDITOR_THEME_IDS = [
-  "github",
-  "vscode",
-  "monokai",
-  "solarized",
-  "abyss",
-  "tomorrowNightBlue",
-] as const;
+export const APPEARANCE_MODE = {
+  LIGHT: "light",
+  DARK: "dark",
+  HIGH_CONTRAST: "highContrast",
+} as const;
 
-export type BaseEditorThemeId = (typeof BASE_EDITOR_THEME_IDS)[number];
+export type AppearanceMode =
+  (typeof APPEARANCE_MODE)[keyof typeof APPEARANCE_MODE];
+
 export type ThemePrimaryColorPreset =
   | "blue"
   | "violet"
@@ -37,7 +36,6 @@ export interface GlobalThemeDefinition {
   i18nKey: string;
   baseCssPath: ThemeCssPath;
   isDark: boolean;
-  editorTheme: BaseEditorThemeId;
   defaultPrimaryColor: ThemePrimaryColorPreset;
 }
 
@@ -46,7 +44,6 @@ const ORGII_LIGHT_THEME: GlobalThemeDefinition = {
   i18nKey: "general.themeOptions.githubLight",
   baseCssPath: "/orgii_main.css",
   isDark: false,
-  editorTheme: "github",
   defaultPrimaryColor: "blue",
 };
 
@@ -55,7 +52,6 @@ const ORGII_DARK_THEME: GlobalThemeDefinition = {
   i18nKey: "general.themeOptions.githubDark",
   baseCssPath: "/orgii_dark.css",
   isDark: true,
-  editorTheme: "github",
   defaultPrimaryColor: "blue",
 };
 
@@ -64,7 +60,6 @@ const ORGII_HIGH_CONTRAST_THEME: GlobalThemeDefinition = {
   i18nKey: "general.themeOptions.orgiiHighContrast",
   baseCssPath: "/orgii_high_contrast.css",
   isDark: true,
-  editorTheme: "github",
   defaultPrimaryColor: "blue",
 };
 
@@ -111,7 +106,46 @@ export function isThemeCssPathDark(
   return getGlobalTheme(themePath).isDark;
 }
 
-export const GLOBAL_THEME_GROUPS = {
-  light: GLOBAL_THEME_IDS.filter((id) => !GLOBAL_THEMES[id].isDark),
-  dark: GLOBAL_THEME_IDS.filter((id) => GLOBAL_THEMES[id].isDark),
-} as const;
+export const GLOBAL_THEME_GROUPS: Record<AppearanceMode, GlobalThemeId[]> = {
+  [APPEARANCE_MODE.LIGHT]: ["github-light"],
+  [APPEARANCE_MODE.DARK]: ["github-dark"],
+  [APPEARANCE_MODE.HIGH_CONTRAST]: ["orgii-high-contrast"],
+};
+
+export function getAppearanceModeForTheme(
+  themeId: string | null | undefined
+): AppearanceMode {
+  const normalizedThemeId = normalizeGlobalThemeId(themeId);
+  if (normalizedThemeId === "orgii-high-contrast") {
+    return APPEARANCE_MODE.HIGH_CONTRAST;
+  }
+  return GLOBAL_THEMES[normalizedThemeId].isDark
+    ? APPEARANCE_MODE.DARK
+    : APPEARANCE_MODE.LIGHT;
+}
+
+export function normalizeAppearanceMode(value: string): AppearanceMode {
+  if (value === APPEARANCE_MODE.DARK) return APPEARANCE_MODE.DARK;
+  if (value === APPEARANCE_MODE.HIGH_CONTRAST) {
+    return APPEARANCE_MODE.HIGH_CONTRAST;
+  }
+  return APPEARANCE_MODE.LIGHT;
+}
+
+export function getDefaultThemeForAppearanceMode(
+  mode: AppearanceMode
+): GlobalThemeId {
+  return GLOBAL_THEME_GROUPS[mode][0];
+}
+
+export function getThemeOptionsForAppearanceMode(
+  mode: AppearanceMode
+): GlobalThemeId[] {
+  return GLOBAL_THEME_GROUPS[mode];
+}
+
+export const APPEARANCE_MODE_OPTIONS = [
+  APPEARANCE_MODE.LIGHT,
+  APPEARANCE_MODE.DARK,
+  APPEARANCE_MODE.HIGH_CONTRAST,
+] as const;

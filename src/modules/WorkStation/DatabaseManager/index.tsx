@@ -5,7 +5,7 @@
  * Wraps DatabaseLayout with ActionSystemProvider.
  *
  * Architecture:
- * - Shown when user switches to "data" mode via AppModeSwitch
+ * - Shown when user switches to "data" mode.
  * - DatabaseLayout handles all panel orchestration
  */
 import { ActionSystemProvider } from "@/src/modules/WorkStation/ActionSystem";

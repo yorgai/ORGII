@@ -38,8 +38,7 @@ const ModeSelectionWindow: React.FC = () => {
   const { handleEmptyRepo, handleLocalRepo, handleOpenCloneModal } =
     useRepoDropdownActions();
 
-  // Get list of repositories
-  // autoLoad: false - repos already loaded by GlobalToolbar
+  // Get list of repositories lazily; this window should not eagerly scan repos.
   const {
     repos,
     repoLoading,

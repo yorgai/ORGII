@@ -18,7 +18,6 @@
  * - Callback refs are updated without triggering extension rebuilds
  */
 import CodeMirror from "@uiw/react-codemirror";
-import { useAtomValue } from "jotai";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { CustomScrollbar } from "@src/components/CustomScrollbar";
@@ -28,7 +27,6 @@ import {
   updateCodeMirrorMemoryEntry,
 } from "@src/hooks/perf/runtimeMemoryStats";
 import { useEditorAppearanceSettings } from "@src/hooks/settings";
-import { resolvedEditorThemeAtom } from "@src/store/ui/editorSettingsAtom";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import { BASIC_SETUP_CONFIG, getCodeMirrorTheme } from "../config";
@@ -257,8 +255,7 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   // ============================================
   // THEME
   // ============================================
-  const editorThemeName = useAtomValue(resolvedEditorThemeAtom);
-  const theme = getCodeMirrorTheme(isDark, editorThemeName);
+  const theme = getCodeMirrorTheme(isDark);
 
   // The minimap extension renders into a sibling host outside CodeMirror's DOM.
   // Remount the editor when the host is added/removed so the view plugin and

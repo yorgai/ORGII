@@ -1,7 +1,7 @@
 /**
  * BrowserUrlInput Component
  *
- * A liquid glass-styled URL input field for the browser toolbar.
+ * A token-styled URL input field for the browser toolbar.
  * Displays URL in center when not focused, expands to full input when focused.
  *
  * Features:
@@ -14,10 +14,6 @@
 import { Globe, Loader2 } from "lucide-react";
 import React, { useCallback, useLayoutEffect, useRef, useState } from "react";
 
-import { LIQUID_GLASS_HOVER } from "@src/components/LiquidGlass/hoverConfig";
-import { LiquidGlassToolbar } from "@src/components/LiquidGlassToolbar";
-import { useSafeHoverCallbacks } from "@src/hooks/ui/useSafeHover";
-import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 import { normalizeBrowserInput } from "@src/util/url/browserUrl";
 
 interface BrowserUrlInputProps {
@@ -37,10 +33,8 @@ const BrowserUrlInput: React.FC<BrowserUrlInputProps> = ({
   onNavigate,
   className = "",
 }) => {
-  const { isDark } = useCurrentTheme();
   const [inputValue, setInputValue] = useState(url);
   const [isFocused, setIsFocused] = useState(false);
-  const { isHovered, onMouseEnter, onMouseLeave } = useSafeHoverCallbacks();
   const [prevUrl, setPrevUrl] = useState(url);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -100,39 +94,14 @@ const BrowserUrlInput: React.FC<BrowserUrlInputProps> = ({
 
   return (
     <div className={`relative flex h-[36px] flex-1 items-center ${className}`}>
-      <LiquidGlassToolbar
-        height={36}
-        radius={100}
-        padding="0"
-        gap={0}
-        intensity="default"
-        className="relative w-full cursor-text"
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
+      <div
+        className="relative h-[36px] w-full cursor-text rounded-full border border-border-2 bg-bg-2 shadow-sm transition-colors hover:bg-fill-1"
         onClick={() => {
           if (!isFocused) {
             inputRef.current?.focus();
           }
         }}
       >
-        {/* Liquid Glass Hover Overlay */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              isHovered && !isFocused
-                ? isDark
-                  ? LIQUID_GLASS_HOVER.dark
-                  : LIQUID_GLASS_HOVER.light
-                : "transparent",
-            transition: "background 0.15s ease",
-            pointerEvents: "none",
-            borderRadius: "inherit",
-          }}
-        />
-
-        {/* Centered display when not focused */}
         {!isFocused && (
           <div className="absolute inset-0 z-20 flex items-center justify-center gap-2 px-3">
             {isLoading ? (
@@ -152,7 +121,6 @@ const BrowserUrlInput: React.FC<BrowserUrlInputProps> = ({
           </div>
         )}
 
-        {/* Icon on left when focused */}
         {isFocused && (
           <div className="absolute left-2 z-10 flex items-center">
             {isLoading ? (
@@ -166,7 +134,6 @@ const BrowserUrlInput: React.FC<BrowserUrlInputProps> = ({
           </div>
         )}
 
-        {/* Native input - always rendered but hidden when not focused */}
         <input
           ref={inputRef}
           type="text"
@@ -185,7 +152,7 @@ const BrowserUrlInput: React.FC<BrowserUrlInputProps> = ({
             fontSize: "13px",
           }}
         />
-      </LiquidGlassToolbar>
+      </div>
     </div>
   );
 };

@@ -6,7 +6,7 @@ import type { ViewModeType } from "@src/config/viewModeTypes";
 export type { ViewModeType };
 
 // ============================================
-// View Mode Atoms - For ViewModeSwitch (App/Session/Workstation view toggle)
+// View Mode Atoms - App/Session/Workstation view toggle state.
 // ============================================
 // These use regular atoms (not persisted) because view mode should reset on page refresh
 // But they're global to survive component remounts during navigation

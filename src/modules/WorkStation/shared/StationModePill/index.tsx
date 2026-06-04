@@ -10,13 +10,12 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
+import SegmentedIconButton from "@src/components/SegmentedIconButton";
 import Tooltip from "@src/components/Tooltip";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { ROUTES } from "@src/config/routes";
 import { GENERAL_LAYOUT_TOUR_TARGETS } from "@src/scaffold/Tutorials/GeneralLayoutTour";
 import { type StationMode, stationModeAtom } from "@src/store/ui/simulatorAtom";
-
-import SegmentedIconButton from "../SegmentedIconButton";
 
 const STATION_MODE_SHORTCUT_ID = "toggle_station_mode";
 

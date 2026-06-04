@@ -9,7 +9,7 @@ import { devRecordToolbarRegistryAtom } from "@src/store/ui/devRecordToolbarAtom
 
 /**
  * Registers toolbar actions (refresh, filter toggle) for a DevRecord
- * sub-view into the shared registry atom, so GlobalToolbar can use them.
+ * sub-view into the shared registry atom, so route-local headers can use them.
  */
 export function useRegisterRefresh(
   viewKey: DevRecordView,

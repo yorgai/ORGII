@@ -46,16 +46,30 @@ export function rgbToHsl(
   return { h: hue * 360, s: saturation, l: lightness };
 }
 
+export function resolveCssColorValue(color: string): string {
+  const variableMatch = color.trim().match(/^var\((--[^),\s]+)(?:,[^)]+)?\)$/);
+  if (!variableMatch || typeof document === "undefined") {
+    return color;
+  }
+
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(variableMatch[1])
+    .trim();
+  return value || color;
+}
+
 /**
  * Parse a CSS color string to RGB values
- * Supports hex colors (#RGB, #RRGGBB) and rgb/rgba
+ * Supports hex colors (#RGB, #RRGGBB), rgb/rgba, and simple CSS variables.
  */
 export function parseCssColor(
   color: string
 ): { r: number; g: number; b: number } | null {
+  const resolvedColor = resolveCssColorValue(color).trim();
+
   // Handle hex colors
-  if (color.startsWith("#")) {
-    let hex = color.slice(1);
+  if (resolvedColor.startsWith("#")) {
+    let hex = resolvedColor.slice(1);
     if (hex.length === 3) {
       hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
     }
@@ -70,7 +84,7 @@ export function parseCssColor(
   }
 
   // Handle rgb/rgba
-  const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  const rgbMatch = resolvedColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
   if (rgbMatch) {
     return {
       r: parseInt(rgbMatch[1]),

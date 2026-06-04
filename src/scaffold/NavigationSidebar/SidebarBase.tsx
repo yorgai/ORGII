@@ -364,7 +364,7 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
           isResizing={isDragging}
           onMouseDown={handleMouseDown}
           onContextMenu={handleResizeContextMenu}
-          variant="border"
+          variant={isCompactLayout ? "border" : "transparent"}
         />
       </div>
     );

@@ -40,7 +40,7 @@ import {
   type EmbeddedWorkItemDetailState,
   useWorkItemsTabBarState,
 } from "./hooks/useWorkItemsTabBarState";
-import type { WorkItemsViewTab } from "./types";
+import { WORK_ITEMS_DEFAULT_STATUS, type WorkItemsViewTab } from "./types";
 
 const WorkItemsSettings = React.lazy(
   () => import("./components/WorkItemsSettings")
@@ -458,7 +458,7 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
                       projectName,
                       resolvedProjectSlug ?? projectId
                     )
-                : () => handlers.handleAddListItem("backlog")
+                : () => handlers.handleAddListItem(WORK_ITEMS_DEFAULT_STATUS)
               : undefined
           }
           onRefresh={isWorkItemsSurface ? data.refresh : undefined}

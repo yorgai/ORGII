@@ -58,7 +58,10 @@ export interface UseRegionLuminanceReturn {
 export function useRegionLuminance(): UseRegionLuminanceReturn {
   const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
   const currentImageUrl = useBackgroundImage();
-  const solidBackgroundColor = backgroundConfig.backgroundColor;
+  const shouldUseAdaptiveColors = Boolean(
+    backgroundConfig.adaptiveColors && backgroundConfig.selectedImageId
+  );
+  const adaptiveImageUrl = shouldUseAdaptiveColors ? currentImageUrl : "";
   const { isDark } = useCurrentTheme();
 
   const [sampleTick, setSampleTick] = useState(0);
@@ -67,22 +70,25 @@ export function useRegionLuminance(): UseRegionLuminanceReturn {
     if (backgroundConfig.liquidGlass != null) {
       return createUniformLuminanceMap(isDark ? 0.3 : 0.7);
     }
+    if (!shouldUseAdaptiveColors) {
+      return createUniformLuminanceMap(isDark ? 0.3 : 0.7);
+    }
     void sampleTick;
-    return resolveRegionsSync(solidBackgroundColor, currentImageUrl);
+    return resolveRegionsSync(undefined, adaptiveImageUrl);
   }, [
     backgroundConfig.liquidGlass,
     isDark,
-    solidBackgroundColor,
-    currentImageUrl,
+    shouldUseAdaptiveColors,
+    adaptiveImageUrl,
     sampleTick,
   ]);
 
   useEffect(() => {
-    if (solidBackgroundColor || !currentImageUrl) return;
-    if (luminanceCache.has(currentImageUrl)) return;
+    if (!shouldUseAdaptiveColors || !adaptiveImageUrl) return;
+    if (luminanceCache.has(adaptiveImageUrl)) return;
 
     let cancelled = false;
-    getOrStartSampling(currentImageUrl)
+    getOrStartSampling(adaptiveImageUrl)
       .then(() => {
         if (!cancelled) setSampleTick((tick) => tick + 1);
       })
@@ -95,7 +101,7 @@ export function useRegionLuminance(): UseRegionLuminanceReturn {
     return () => {
       cancelled = true;
     };
-  }, [currentImageUrl, solidBackgroundColor]);
+  }, [adaptiveImageUrl, shouldUseAdaptiveColors]);
 
   const getRegion = (region: LuminanceRegion): RegionLuminanceData =>
     regions[region] || DEFAULT_LUMINANCE;

@@ -1,13 +1,10 @@
 /**
  * useRouteToolbarConfig Hook
  *
- * Derives per-route toolbar configuration synchronously from:
+ * Derives per-route header action configuration synchronously from:
  * - Current pathname (via useLocation)
  * - Integrations category atom (for per-tab + button behavior)
  * - Integrations add action atom (callback to dispatch add actions)
- *
- * Replaces the old routeToolbarAtom + useSetRouteToolbar approach which
- * had race conditions with KeepAliveRouteOutlet.
  */
 import { useAtomValue, useSetAtom } from "jotai";
 import {
@@ -65,23 +62,8 @@ function toIntegrationCategory(
   return "models";
 }
 
-// ============================================
-// Route prefix constants (derived from ROUTES — single source of truth)
-// ============================================
-
-// Settings is the unified surface; app settings and Agent Orgs live under
-// /orgii/app/settings. The Settings tab flat-merges classic
-// app-settings sections and integration categories under one /settings/<id>
-// URL — toolbar dispatch picks app vs. integration semantics off the parsed item.
 const SETTINGS_PREFIX = ROUTES.app.settings.path;
 const DEV_RECORD_PREFIX = ROUTES.app.journey.record.path;
-// Market routes (Token Market, Wallet, etc.) all render the OSS placeholder
-// `OpenSourceMarketUnavailablePage` and have no per-route toolbar
-// contributions in the open-source build.
-
-// ============================================
-// Hook
-// ============================================
 
 export function useRouteToolbarConfig(): RouteToolbarConfig | null {
   const { pathname } = useLocation();
@@ -90,7 +72,6 @@ export function useRouteToolbarConfig(): RouteToolbarConfig | null {
 
   const noop = useMemo(() => () => {}, []);
 
-  // Settings context
   const settingsToolbar = useAtomValue(settingsToolbarAtom);
   const { spinClass: settingsSpinClass, handleClick: settingsRefreshClick } =
     useRefreshSpin(
@@ -98,7 +79,6 @@ export function useRouteToolbarConfig(): RouteToolbarConfig | null {
       settingsToolbar.loading ?? false
     );
 
-  // Start page controls
   const appGridEditMode = useAtomValue(appGridEditModeAtom);
   const setAppGridEditMode = useSetAtom(appGridEditModeAtom);
   const setRepoSelectorOpen = useSetAtom(repoSelectorOpenAtom);
@@ -123,10 +103,6 @@ export function useRouteToolbarConfig(): RouteToolbarConfig | null {
     navigate(buildWizardPath(agentsPath, WIZARD_IDS.ORG_ADD));
   }, [navigate]);
 
-  // Integrations context (hosted inside the Settings tab when the
-  // `<id>` happens to be an integration category). Derived directly
-  // from the URL so the toolbar reflects route state without any
-  // Jotai plumbing.
   const coreSettingsItem = useMemo(
     () => parseCoreSettingsItem(pathname),
     [pathname]
@@ -142,7 +118,6 @@ export function useRouteToolbarConfig(): RouteToolbarConfig | null {
     integrationsToolbar.loading ?? false
   );
 
-  // Dev Record context
   const devRecordActiveView = useAtomValue(devRecordActiveViewAtom);
   const devRecordRegistry = useAtomValue(devRecordToolbarRegistryAtom);
   const activeToolbarEntry = devRecordRegistry[devRecordActiveView];
@@ -153,10 +128,6 @@ export function useRouteToolbarConfig(): RouteToolbarConfig | null {
     );
 
   return useMemo(() => {
-    // Settings routes dispatch by namespace:
-    //   /settings/agent-orgs/*     → AgentOrgs plus-menu
-    //   /settings/integrations/*   → Integrations toolbar
-    //   /settings/app/* or root    → app-settings toolbar
     if (pathname.startsWith(SETTINGS_PREFIX)) {
       const topTab = parseSettingsTopTab(pathname);
 
@@ -179,9 +150,7 @@ export function useRouteToolbarConfig(): RouteToolbarConfig | null {
         };
       }
 
-      // Settings tab — flat-merged app + integrations.
       if (coreSettingsItem.category) {
-        // Integrations-category sub-page: plus-menu + refresh button.
         const dispatch = (action: AddAction) => dispatchAddAction(action);
 
         const plusConfig = getPlusConfigForCategory(
@@ -211,7 +180,6 @@ export function useRouteToolbarConfig(): RouteToolbarConfig | null {
         };
       }
 
-      // app-section sub-page or bare /settings landing.
       const extraButtons = [];
 
       if (settingsToolbar.onRefresh) {
@@ -230,7 +198,6 @@ export function useRouteToolbarConfig(): RouteToolbarConfig | null {
       };
     }
 
-    // Dev Record routes
     if (pathname.startsWith(DEV_RECORD_PREFIX)) {
       const extraButtons = [];
 
@@ -260,7 +227,6 @@ export function useRouteToolbarConfig(): RouteToolbarConfig | null {
       };
     }
 
-    // Start page: ellipsis controls grid editing; + adds workspaces.
     if (pathname.startsWith(ROUTE_PATHS.startPage)) {
       return {
         ellipsisItems: [

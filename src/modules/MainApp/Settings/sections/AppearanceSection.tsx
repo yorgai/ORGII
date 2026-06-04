@@ -77,6 +77,7 @@ const AppearanceSection: React.FC<AppearanceSectionProps> = ({
     globalLayoutMethod,
     setGlobalLayoutMethod,
     appearanceMode,
+    appearanceModeOptions,
     themeOptions,
     primaryColorOptions,
     applicationUiFontOptions,
@@ -94,10 +95,7 @@ const AppearanceSection: React.FC<AppearanceSectionProps> = ({
               <Select
                 value={appearanceMode}
                 onChange={handleAppearanceModeChange}
-                options={[
-                  { label: t("general.light"), value: "light" },
-                  { label: t("general.dark"), value: "dark" },
-                ]}
+                options={appearanceModeOptions}
                 showSearch
                 size="default"
                 style={SECTION_CONTROL_STYLE}

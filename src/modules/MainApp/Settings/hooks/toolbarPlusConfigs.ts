@@ -3,7 +3,6 @@
  *
  * Pure helper functions that build per-category plus-button dropdown items
  * and route-specific toolbar configurations for useRouteToolbarConfig.
- * Extracted to keep the hook file under 600 lines.
  */
 import {
   Blocks,
@@ -21,13 +20,12 @@ import type {
   IntegrationCategory,
 } from "@src/api/types/integrations";
 import { McpLogoIcon } from "@src/assets/channelIcons/McpLogoIcon";
-import type { RouteToolbarConfig } from "@src/store/ui/routeToolbarAtom";
-
-import type { ToolbarDropdownItem } from "../components/ToolbarDropdown/types";
+import type {
+  RouteToolbarConfig,
+  ToolbarDropdownItem,
+} from "@src/store/ui/routeToolbarAtom";
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
-
-// ── Per-category plus config router ─────────────────────────────────────────
 
 export function getPlusConfigForCategory(
   category: IntegrationCategory,
@@ -53,8 +51,6 @@ export function getPlusConfigForCategory(
       return {};
   }
 }
-
-// ── Per-category item builders ───────────────────────────────────────────────
 
 function buildModelsDropdownItems(
   dispatch: (action: AddAction) => void,

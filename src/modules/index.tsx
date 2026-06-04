@@ -10,8 +10,7 @@
  * - MainApp: Rendered via Outlet (route-based)
  * - This ensures WorkStation state survives view mode switches
  *
- * WebGL Performance:
- * - GlobalToolbar (with WebGL Liquid Glass): STABLE layer - never re-renders
+ * Performance:
  * - SidebarSelector: DYNAMIC layer - changes per route
  * - ChatPanel: STABLE layer - stays mounted across view switches
  */
@@ -28,7 +27,10 @@ import React, {
 } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
-import { getColorPairById } from "@src/config/appearance/backgroundColorPairs";
+import {
+  getColorPairById,
+  resolveColorPair,
+} from "@src/config/appearance/backgroundColorPairs";
 import { useRouteViewMode } from "@src/config/routeViewModeConfig";
 import { ROUTES } from "@src/config/routes";
 import { BrowserProvider, TerminalProvider } from "@src/contexts/workstation";
@@ -57,6 +59,7 @@ import {
 } from "@src/scaffold/Tutorials";
 import {
   activeColorPairIdAtom,
+  globalThemeIdAtom,
   resolvedBackgroundConfigAtom,
 } from "@src/store";
 import { useSyncStatusBridge } from "@src/store/sync";
@@ -80,7 +83,7 @@ import {
   workStationDockAutoHidePersistAtom,
 } from "@src/store/ui/workStationAtom";
 import { dockFilterAtom } from "@src/store/workstation";
-import { prewarmColorPair } from "@src/util/ui/theme/glassMaterial";
+import { prewarmColor } from "@src/util/ui/theme/glassMaterial";
 
 import { BackgroundLayer } from "./shared/components";
 import { FloatingSidebar } from "./shared/components/FloatingSidebar";
@@ -110,9 +113,8 @@ const WorkStationPage = React.lazy(() => import("./WorkStation"));
  * - MainApp/other routes: Rendered via Outlet (route-based)
  *
  * Performance Architecture:
- * 1. GlobalToolbar: STABLE
- * 2. SidebarSelector: DYNAMIC (changes per route, memoized)
- * 3. WorkStation: PERSISTENT (mounted once, visibility toggled)
+ * 1. SidebarSelector: DYNAMIC (changes per route, memoized)
+ * 2. WorkStation: PERSISTENT (mounted once, visibility toggled)
  *
  * This ensures:
  * - WorkStation stays mounted across route switches
@@ -131,20 +133,15 @@ const AppShell = () => {
 
   const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
   const activeColorPairId = useAtomValue(activeColorPairIdAtom);
+  const globalThemeId = useAtomValue(globalThemeIdAtom);
   const currentBackgroundImage = useBackgroundImage();
 
-  // === Prewarm glass-material cache for both sides of the active color pair ===
-  // The first theme flip is otherwise slow because every glass surface (toolbar,
-  // sidebar, tabbar, content, …) independently misses the sync cache for the
-  // newly-active appearance and falls into the async resolver. The color path
-  // is fully synchronous, so warming both `light` and `dark` upfront makes
-  // every subsequent flip hit the sync cache instantly.
   useEffect(() => {
     if (!activeColorPairId) return;
     const pair = getColorPairById(activeColorPairId);
     if (!pair) return;
-    prewarmColorPair(pair.light, pair.dark);
-  }, [activeColorPairId]);
+    prewarmColor(resolveColorPair(pair));
+  }, [activeColorPairId, globalThemeId]);
 
   const viewMode = useRouteViewMode();
 

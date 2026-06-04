@@ -16,7 +16,10 @@ import React from "react";
 import { DROPDOWN_ITEM } from "@src/components/Dropdown/tokens";
 import type { ProjectStatus } from "@src/types/core/project";
 import type { DropdownOption } from "@src/types/core/shared";
-import type { WorkItemStatus } from "@src/types/core/workItem";
+import {
+  WORK_ITEM_STATUS,
+  type WorkItemStatus,
+} from "@src/types/core/workItem";
 
 import { STATUS_BG_COLORS, STATUS_COLORS } from "./colors";
 
@@ -26,43 +29,43 @@ import { STATUS_BG_COLORS, STATUS_COLORS } from "./colors";
 
 export const WORK_ITEM_STATUS_OPTIONS: DropdownOption<WorkItemStatus>[] = [
   {
-    value: "backlog",
-    label: "Backlog",
-    icon: React.createElement(CircleDashed, { size: DROPDOWN_ITEM.iconSize }),
-    color: STATUS_COLORS.backlog,
-  },
-  {
-    value: "planned",
+    value: WORK_ITEM_STATUS.PLANNED,
     label: "Todo",
     icon: React.createElement(Circle, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.planned,
   },
   {
-    value: "in_progress",
+    value: WORK_ITEM_STATUS.IN_PROGRESS,
     label: "In Progress",
     icon: React.createElement(Clock, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.in_progress,
   },
   {
-    value: "in_review",
+    value: WORK_ITEM_STATUS.IN_REVIEW,
     label: "In Review",
     icon: React.createElement(Layers, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.in_review,
   },
   {
-    value: "completed",
+    value: WORK_ITEM_STATUS.COMPLETED,
     label: "Done",
     icon: React.createElement(CheckCircle2, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.completed,
   },
   {
-    value: "cancelled",
+    value: WORK_ITEM_STATUS.BACKLOG,
+    label: "Backlog",
+    icon: React.createElement(CircleDashed, { size: DROPDOWN_ITEM.iconSize }),
+    color: STATUS_COLORS.backlog,
+  },
+  {
+    value: WORK_ITEM_STATUS.CANCELLED,
     label: "Cancelled",
     icon: React.createElement(XCircle, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.cancelled,
   },
   {
-    value: "duplicate",
+    value: WORK_ITEM_STATUS.DUPLICATE,
     label: "Duplicate",
     icon: React.createElement(XCircle, { size: DROPDOWN_ITEM.iconSize }),
     color: STATUS_COLORS.duplicate,

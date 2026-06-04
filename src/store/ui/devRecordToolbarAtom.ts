@@ -2,11 +2,11 @@
  * DevRecord Toolbar Atoms
  *
  * Registry pattern: each DevRecord sub-view registers its refresh/filter
- * callbacks keyed by view name. The active view selector lets GlobalToolbar
- * display only the current view's toolbar actions.
+ * callbacks keyed by view name. The active view selector lets shared header
+ * surfaces display only the current view's actions.
  *
- * Lives in src/store/ui/ so that the scaffold layer (GlobalToolbar,
- * NavigationSidebar) can read these without reaching into a module's
+ * Lives in src/store/ui/ so NavigationSidebar and shared headers can read
+ * these without reaching into a module's
  * private store path.
  */
 import { atom } from "jotai";
