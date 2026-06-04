@@ -1019,6 +1019,24 @@
       "createPR": "Create PR",
       "stash": "Stash"
     },
+    "pr": {
+      "title": "Pull Request",
+      "creating": "Creating pull request…",
+      "createError": "Failed to create pull request",
+      "readyHint": "Branch is pushed and ready for a pull request",
+      "neutralHint": "Push your branch to create a pull request",
+      "noBranch": "No branch selected",
+      "noRepoPath": "No repository path available",
+      "notAuthenticated": "Sign in to create pull requests",
+      "noOriginRemote": "No origin remote configured",
+      "cannotParseRepoName": "Could not parse repository name from origin remote",
+      "status": {
+        "open": "Open",
+        "merged": "Merged",
+        "closed": "Closed",
+        "draft": "Draft"
+      }
+    },
     "messages": {
       "pushSuccess": "Successfully pushed changes to remote",
       "pushFailed": "Push failed: {{error}}",
