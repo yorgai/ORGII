@@ -177,6 +177,14 @@
     "newWorkItem": "Yeni Work Item",
     "newWorkItemName": "Yeni Work Item",
     "createWorkItem": "Work Item Oluştur",
+    "createModes": {
+      "generateWithAi": "AI ile oluştur",
+      "manualCreation": "Manuel oluşturma"
+    },
+    "linkExisting": {
+      "label": "Mevcut Work Item'ı bağla",
+      "placeholder": "Bağlanacak Work Item'ı seç"
+    },
     "titlePlaceholder": "Work Item başlığı",
     "descriptionPlaceholder": "Work Item tanımlayın...",
     "deleteWorkItem": "İş öğesini sil",

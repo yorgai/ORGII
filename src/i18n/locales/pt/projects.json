@@ -177,6 +177,14 @@
     "newWorkItem": "Novo Item de Trabalho",
     "newWorkItemName": "Novo Item de Trabalho",
     "createWorkItem": "Criar item de trabalho",
+    "createModes": {
+      "generateWithAi": "Criar com IA",
+      "manualCreation": "Criação manual"
+    },
+    "linkExisting": {
+      "label": "Vincular Work Item existente",
+      "placeholder": "Selecione um Work Item para vincular"
+    },
     "titlePlaceholder": "Título do item de trabalho",
     "descriptionPlaceholder": "Descreva o item de trabalho...",
     "deleteWorkItem": "Excluir item de trabalho",

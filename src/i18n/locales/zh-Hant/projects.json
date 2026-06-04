@@ -177,6 +177,14 @@
     "newWorkItem": "新 Work Item",
     "newWorkItemName": "新 Work Item",
     "createWorkItem": "創建 Work Item",
+    "createModes": {
+      "generateWithAi": "使用 AI 建立",
+      "manualCreation": "手動創建"
+    },
+    "linkExisting": {
+      "label": "連結現有 Work Item",
+      "placeholder": "選擇要連結的 Work Item"
+    },
     "titlePlaceholder": "Work Item 標題",
     "descriptionPlaceholder": "描述 Work Item...",
     "deleteWorkItem": "刪除工作項",

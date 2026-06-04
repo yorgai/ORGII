@@ -177,6 +177,14 @@
     "newWorkItem": "새 Work Item",
     "newWorkItemName": "새 Work Item",
     "createWorkItem": "Work Item 생성",
+    "createModes": {
+      "generateWithAi": "AI로 만들기",
+      "manualCreation": "수동 생성"
+    },
+    "linkExisting": {
+      "label": "기존 Work Item 연결",
+      "placeholder": "연결할 Work Item 선택"
+    },
     "titlePlaceholder": "Work Item 제목",
     "descriptionPlaceholder": "Work Item 설명...",
     "deleteWorkItem": "작업 항목 삭제",

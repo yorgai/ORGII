@@ -177,6 +177,14 @@
     "newWorkItem": "Nowe zadanie",
     "newWorkItemName": "Nowe zadanie",
     "createWorkItem": "Utwórz zadanie",
+    "createModes": {
+      "generateWithAi": "Utwórz z AI",
+      "manualCreation": "Tworzenie ręczne"
+    },
+    "linkExisting": {
+      "label": "Połącz istniejący Work Item",
+      "placeholder": "Wybierz Work Item do połączenia"
+    },
     "titlePlaceholder": "Tytuł zadania",
     "descriptionPlaceholder": "Opisz zadanie...",
     "deleteWorkItem": "Usuń zadanie",
