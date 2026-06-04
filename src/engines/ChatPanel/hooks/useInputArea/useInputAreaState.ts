@@ -4,7 +4,10 @@
  * Manages local state for the InputArea component
  */
 import type { RecentFile } from "@/src/scaffold/ContextMenu/config";
-import { useState } from "react";
+import { useAtomValue } from "jotai";
+import { useMemo, useState } from "react";
+
+import { mainPaneStateAtom } from "@src/store/workstation/tabs/atoms";
 
 import type { InputAreaState } from "./types";
 
@@ -14,7 +17,19 @@ export function useInputAreaState(): InputAreaState {
   // @ Mention state
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [atSearchQuery, setAtSearchQuery] = useState("");
-  const [recentFiles] = useState<RecentFile[]>([]);
+
+  const mainPaneState = useAtomValue(mainPaneStateAtom);
+  const recentFiles = useMemo<RecentFile[]>(() => {
+    return mainPaneState.tabs
+      .filter(
+        (tab) => tab.type === "file" && typeof tab.data.filePath === "string"
+      )
+      .map((tab) => ({
+        path: tab.data.filePath as string,
+        name: tab.title,
+        type: "file" as const,
+      }));
+  }, [mainPaneState.tabs]);
 
   // Slash command state
   const [showSlashMenu, setShowSlashMenu] = useState(false);
