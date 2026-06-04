@@ -139,6 +139,15 @@ export async function saveSession(session: SessionMeta): Promise<void> {
   return rpc.agentSession.saveSession({ session });
 }
 
+export async function linkSessionToWorkItem(input: {
+  sessionId: string;
+  projectSlug: string;
+  workItemId: string;
+  agentRole?: string;
+}): Promise<SessionMeta> {
+  return rpc.agentSession.linkSessionToWorkItem(input);
+}
+
 export async function respondQuestion(
   sessionId: string,
   requestId: string,

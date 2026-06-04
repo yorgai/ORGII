@@ -27,7 +27,7 @@ pub use ops::{
     get_session, list_sessions, mark_stale_running_sessions_abandoned, update_account_id,
     update_agent_exec_mode, update_draft_text, update_model, update_model_and_account,
     update_org_member_id, update_pinned, update_reply_target_event_id, update_status, update_tags,
-    upsert_session,
+    update_work_item_link, upsert_session,
 };
 pub use record::{session_type, UnifiedSessionRecord};
 pub use workspace::{

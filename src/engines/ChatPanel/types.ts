@@ -1,5 +1,11 @@
 import type { ComponentType, ReactNode } from "react";
 
+import type {
+  SessionLaunchSuccessInfo,
+  SessionLaunchWorkItemContext,
+} from "@src/engines/SessionCore/hooks/session/useSessionCreator/useSessionLaunch/types";
+import type { SessionCreatorLaunchMode } from "@src/features/SessionCreator/types";
+
 export interface ChatPanelRegionNotice {
   key: string;
   title: string;
@@ -44,5 +50,9 @@ export interface ChatPanelProps {
     hidePresenceButton?: boolean;
     batchStartMode?: boolean;
     initialContent?: string;
+    launchMode?: SessionCreatorLaunchMode;
+    onSessionStart?: (info: SessionLaunchSuccessInfo) => void;
+    resolveWorkItemContext?: () => Promise<SessionLaunchWorkItemContext | null>;
+    workItemContext?: SessionLaunchWorkItemContext;
   }>;
 }

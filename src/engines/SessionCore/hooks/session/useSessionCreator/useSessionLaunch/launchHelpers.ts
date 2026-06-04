@@ -8,6 +8,8 @@ import { ROUTES } from "@src/config/routes";
 import type { StationMode } from "@src/store/ui/simulatorAtom";
 import type { ViewModeType } from "@src/store/ui/viewModeAtom";
 
+import type { SessionLaunchSuccessInfo } from "./types";
+
 export { createSyntheticUserEvent } from "@src/engines/SessionCore/sync/adapters/shared";
 
 // ============================================
@@ -39,7 +41,7 @@ export interface SessionNavigationParams {
   clearDraft: (draft: null) => void;
   setStationMode: (mode: StationMode) => void;
   forceNavigate?: boolean;
-  onLaunchSuccess?: () => void;
+  onLaunchSuccess?: (info: SessionLaunchSuccessInfo) => void;
 }
 
 export function handleSessionNavigation(params: SessionNavigationParams): void {
@@ -83,5 +85,5 @@ export function handleSessionNavigation(params: SessionNavigationParams): void {
     requestAnimationFrame(() => setIsSwitching(false));
   }
 
-  onLaunchSuccess?.();
+  onLaunchSuccess?.({ sessionId });
 }

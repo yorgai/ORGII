@@ -63,6 +63,7 @@ import {
   type WorkItemProject,
 } from "@src/types/core/workItem";
 
+import { DEFAULT_ORCHESTRATOR_CONFIG } from "../../constants";
 import WorkItemContentStack from "../WorkItemContentStack";
 import WorkItemProperties from "../WorkItemProperties";
 import type { WorkItemPropertyFieldKey } from "../WorkItemProperties/types";
@@ -149,6 +150,15 @@ export interface CreateWorkItemViewProps {
   showAiModePanel?: boolean;
   /** Render the create footer. */
   showFooter?: boolean;
+  /** Render the primary create/submit action in the footer. */
+  showSubmitAction?: boolean;
+  /** Default assignee applied for AI-created work items when the draft has none. */
+  defaultAiAssignee?: {
+    id: string;
+    name: string;
+    type: "agent" | "org";
+    agentDefinitionId?: string;
+  } | null;
 }
 
 // ============================================
@@ -180,6 +190,8 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   onAiGenerateModeChange,
   showAiModePanel = true,
   showFooter = true,
+  showSubmitAction = true,
+  defaultAiAssignee = null,
 }) => {
   const { t } = useTranslation("projects");
   const [saving, setSaving] = useState(false);
@@ -222,6 +234,30 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   useEffect(() => {
     onDraftChange?.(draft);
   }, [draft, onDraftChange]);
+
+  useEffect(() => {
+    const aiModeEnabled = controlledAiGenerateMode ?? localAiGenerateMode;
+    if (!aiModeEnabled || !defaultAiAssignee || draft.assigneeId) return;
+
+    updateDraft({
+      assigneeId: defaultAiAssignee.id,
+      assigneeType: defaultAiAssignee.type,
+      orchestratorConfig: {
+        ...DEFAULT_ORCHESTRATOR_CONFIG,
+        ...(draft.orchestratorConfig ?? {}),
+        agent_definition_id: defaultAiAssignee.agentDefinitionId,
+        org_id:
+          defaultAiAssignee.type === "org" ? defaultAiAssignee.id : undefined,
+      },
+    });
+  }, [
+    controlledAiGenerateMode,
+    defaultAiAssignee,
+    draft.assigneeId,
+    draft.orchestratorConfig,
+    localAiGenerateMode,
+    updateDraft,
+  ]);
 
   const { handleImageInsert } = useWorkItemImageInsert({
     projectSlug: selectedProjectSlug ?? "",
@@ -480,6 +516,16 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   const resolvedPropertiesOpen = propertiesOpen ?? localPropertiesOpen;
   const resolvedAiGenerateMode =
     controlledAiGenerateMode ?? localAiGenerateMode;
+  const canAutoExecuteWithAssignee =
+    draft.assigneeType === "agent" || draft.assigneeType === "org";
+  const autoExecuteBlocked =
+    resolvedAiGenerateMode && !canAutoExecuteWithAssignee;
+
+  useEffect(() => {
+    if (autoExecuteBlocked && createMore) {
+      setCreateMore(false);
+    }
+  }, [autoExecuteBlocked, createMore]);
 
   const handleAiGenerateModeChange = useCallback(
     (enabled: boolean) => {
@@ -490,6 +536,17 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       setLocalAiGenerateMode(enabled);
     },
     [onAiGenerateModeChange]
+  );
+
+  const handleAutoExecuteChange = useCallback(
+    (checked: boolean) => {
+      if (checked && autoExecuteBlocked) {
+        Message.warning("Auto execute requires an agent assignee.");
+        return;
+      }
+      setCreateMore(checked);
+    },
+    [autoExecuteBlocked]
   );
 
   const handleToggleProperties = useCallback(() => {
@@ -761,8 +818,9 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
             <label className="mr-2 flex items-center gap-2 text-[12px] text-text-2">
               <Switch
                 size="small"
-                checked={createMore}
-                onChange={(checked) => setCreateMore(checked)}
+                checked={createMore && !autoExecuteBlocked}
+                onChange={handleAutoExecuteChange}
+                disabled={autoExecuteBlocked}
                 dataTestId="create-work-item-auto-execute-switch"
               />
               <span>
@@ -771,19 +829,21 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
                   : t("projects.createMore")}
               </span>
             </label>
-            <Button
-              variant="primary"
-              size="small"
-              onClick={handleCreate}
-              disabled={!draft.name.trim() || saving}
-              data-testid="create-work-item-submit"
-            >
-              {saving
-                ? t("common:status.saving")
-                : resolvedAiGenerateMode
-                  ? "Generate Work Items"
-                  : t("workItems.createWorkItem")}
-            </Button>
+            {showSubmitAction ? (
+              <Button
+                variant="primary"
+                size="small"
+                onClick={handleCreate}
+                disabled={!draft.name.trim() || saving}
+                data-testid="create-work-item-submit"
+              >
+                {saving
+                  ? t("common:status.saving")
+                  : resolvedAiGenerateMode
+                    ? "Generate Work Items"
+                    : t("workItems.createWorkItem")}
+              </Button>
+            ) : null}
           </>
         ) : undefined
       }

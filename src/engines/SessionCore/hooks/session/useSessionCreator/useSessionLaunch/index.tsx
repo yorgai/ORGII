@@ -88,6 +88,8 @@ export function useSessionLaunch(
     tiptapRef,
     onLaunchSuccess,
     launchMode = SESSION_CREATOR_LAUNCH_MODE.START_FOREGROUND,
+    workItemContext,
+    resolveWorkItemContext,
     imageDataUrls,
     clearImages,
   } = options;
@@ -180,7 +182,8 @@ export function useSessionLaunch(
     async (
       agentInput: string,
       userInput: string,
-      isBackgroundLaunch: boolean
+      isBackgroundLaunch: boolean,
+      launchWorkItemContext?: typeof workItemContext
     ) => {
       const result = await openCursorComposerWithRetry(
         buildCursorComposerParams({
@@ -215,7 +218,10 @@ export function useSessionLaunch(
 
       if (isBackgroundLaunch) {
         clearDraft(null);
-        onLaunchSuccess?.();
+        onLaunchSuccess?.({
+          sessionId: session.session_id,
+          workItemContext: launchWorkItemContext,
+        });
       } else {
         navigateToLaunchedSession(session.session_id, false);
       }
@@ -268,7 +274,17 @@ export function useSessionLaunch(
     if (dispatchCategory === DISPATCH_CATEGORY.CURSOR_IDE) {
       setIsLoading(true);
       try {
-        await executeCursorIdeLaunch(agentInput, userInput, isBackgroundLaunch);
+        const resolvedWorkItemContext = resolveWorkItemContext
+          ? await resolveWorkItemContext()
+          : workItemContext;
+        if (resolveWorkItemContext && !resolvedWorkItemContext) return false;
+
+        await executeCursorIdeLaunch(
+          agentInput,
+          userInput,
+          isBackgroundLaunch,
+          resolvedWorkItemContext ?? undefined
+        );
         return true;
       } catch (error) {
         console.error("Error creating Cursor IDE session:", error);
@@ -304,6 +320,11 @@ export function useSessionLaunch(
 
       if (!resolvedKeys) return false;
 
+      const resolvedWorkItemContext = resolveWorkItemContext
+        ? await resolveWorkItemContext()
+        : workItemContext;
+      if (resolveWorkItemContext && !resolvedWorkItemContext) return false;
+
       const ideContext = collectIdeContext({
         expectedRepoPath: effectiveSource?.repoPath || null,
       });
@@ -327,7 +348,16 @@ export function useSessionLaunch(
           workspaceFolders,
         });
 
-      const result = await sessionLaunch(launchParams);
+      const result = await sessionLaunch({
+        ...launchParams,
+        ...(resolvedWorkItemContext
+          ? {
+              workItemId: resolvedWorkItemContext.workItemId,
+              agentRole: resolvedWorkItemContext.agentRole,
+              projectSlug: resolvedWorkItemContext.projectSlug,
+            }
+          : {}),
+      });
 
       if (imageDataUrls && imageDataUrls.length > 0) {
         clearImages?.();
@@ -359,7 +389,10 @@ export function useSessionLaunch(
 
       if (isBackgroundLaunch) {
         clearDraft(null);
-        onLaunchSuccess?.();
+        onLaunchSuccess?.({
+          sessionId: result.sessionId,
+          workItemContext: resolvedWorkItemContext ?? undefined,
+        });
       } else {
         setSessionRuntimeStatus("running");
         if (
@@ -422,6 +455,8 @@ export function useSessionLaunch(
     setLastUserMessage,
     setPendingSyntheticEvent,
     onLaunchSuccess,
+    workItemContext,
+    resolveWorkItemContext,
     setSessionRuntimeStatus,
     navigateToLaunchedSession,
     setSessionSource,

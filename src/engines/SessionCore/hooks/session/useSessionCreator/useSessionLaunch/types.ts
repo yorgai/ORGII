@@ -12,6 +12,18 @@ import type { SessionSource } from "@src/store/session/creatorStateAtom";
 
 import type { SessionValidationResult } from "../useSessionValidation";
 
+export interface SessionLaunchWorkItemContext {
+  workItemId: string;
+  projectSlug?: string;
+  agentRole?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SessionLaunchSuccessInfo {
+  sessionId: string;
+  workItemContext?: SessionLaunchWorkItemContext;
+}
+
 export interface UseSessionLaunchOptions {
   /**
    * Repo/branch the new session will run against.
@@ -27,8 +39,10 @@ export interface UseSessionLaunchOptions {
   isContentEmpty: boolean;
   validateSessionConfig: () => SessionValidationResult;
   tiptapRef: RefObject<TiptapInputRef>;
-  onLaunchSuccess?: () => void;
+  onLaunchSuccess?: (info: SessionLaunchSuccessInfo) => void;
   launchMode?: SessionCreatorLaunchMode;
+  workItemContext?: SessionLaunchWorkItemContext;
+  resolveWorkItemContext?: () => Promise<SessionLaunchWorkItemContext | null>;
   /** Base64 data URLs from pasted images */
   imageDataUrls?: string[];
   /** Clear images after launch */
