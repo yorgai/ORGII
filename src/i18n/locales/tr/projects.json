@@ -517,6 +517,13 @@
       "cannotParseRepoName": "Depo adı çözümlenemiyor: {{url}}",
       "defaultPrTitle": "[{{shortId}}] Work item değişiklikleri"
     },
+    "sessions": {
+      "linkedSessions": "Bağlı Sessions",
+      "newSession": "Yeni Session",
+      "starting": "Başlatılıyor...",
+      "emptyOverview": "Henüz Sessions yok",
+      "emptyOverviewHint": "Yürütmeyi burada izlemek için bir Agent Session başlatın."
+    },
     "outputTab": {
       "prSection": "Pull Request",
       "prNotAvailable": "Henüz mevcut değil",

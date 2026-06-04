@@ -10,7 +10,6 @@ import {
   type ProjectContentEditorRef,
 } from "@src/modules/ProjectManager/shared";
 import { DetailPanelContainer } from "@src/modules/shared/layouts/blocks";
-import InternalHeader from "@src/modules/shared/layouts/blocks/InternalHeader";
 import type { LinkedSession, WorkItemStatus } from "@src/types/core/workItem";
 
 import AgentWorkflow from "../AgentWorkflow";
@@ -18,7 +17,7 @@ import TodoChecklist from "../TodoChecklist";
 import HistoryTab from "./HistoryTab";
 import OutputTab from "./OutputTab";
 import { useWorkItemContentState } from "./hooks/useWorkItemContentState";
-import type { ContentTab, WorkItemContentProps } from "./types";
+import type { SessionTab, WorkItemContentProps } from "./types";
 
 interface LinkedSessionsListProps {
   sessions: LinkedSession[];
@@ -33,17 +32,14 @@ const LinkedSessionsList: React.FC<LinkedSessionsListProps> = ({
   onStartAgent,
   isStartingAgent,
 }) => {
-  if (sessions.length === 0) return null;
+  const { t } = useTranslation("projects");
 
   return (
-    <section
-      className="mt-6 border-t border-solid border-border-1 pt-4"
-      data-testid="work-item-linked-sessions"
-    >
+    <div data-testid="work-item-linked-sessions">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h3 className="m-0 text-[13px] font-semibold text-text-1">
-          Linked Sessions
-        </h3>
+        <h4 className="m-0 text-[12px] font-semibold text-text-2">
+          {t("workItems.sessions.linkedSessions")}
+        </h4>
         {onStartAgent && (
           <button
             type="button"
@@ -51,35 +47,48 @@ const LinkedSessionsList: React.FC<LinkedSessionsListProps> = ({
             onClick={() => onStartAgent()}
             disabled={isStartingAgent}
           >
-            {isStartingAgent ? "Starting..." : "New Session"}
+            {isStartingAgent
+              ? t("workItems.sessions.starting")
+              : t("workItems.sessions.newSession")}
           </button>
         )}
       </div>
-      <div className="flex flex-col gap-2">
-        {sessions.map((session) => (
-          <button
-            key={`${session.session_id}-${session.session_type}`}
-            type="button"
-            data-testid={`work-item-linked-session-${session.session_id}`}
-            className="group flex w-full items-center justify-between gap-3 rounded-lg border border-solid border-border-1 bg-bg-1 px-3 py-2 text-left transition-colors hover:border-border-2 hover:bg-surface-hover"
-            onClick={() => onOpenSession?.(session.session_id)}
-          >
-            <span className="min-w-0">
-              <span className="block truncate text-[12px] font-medium text-text-1">
-                {session.agent_role || session.session_id}
+      {sessions.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border-2 bg-fill-1 px-3 py-4">
+          <p className="m-0 text-[12px] font-medium text-text-2">
+            {t("workItems.sessions.emptyOverview")}
+          </p>
+          <p className="m-0 mt-1 text-[11px] text-text-4">
+            {t("workItems.sessions.emptyOverviewHint")}
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {sessions.map((session) => (
+            <button
+              key={`${session.session_id}-${session.session_type}`}
+              type="button"
+              data-testid={`work-item-linked-session-${session.session_id}`}
+              className="group flex w-full items-center justify-between gap-3 rounded-lg border border-solid border-border-1 bg-bg-1 px-3 py-2 text-left transition-colors hover:border-border-2 hover:bg-surface-hover"
+              onClick={() => onOpenSession?.(session.session_id)}
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-[12px] font-medium text-text-1">
+                  {session.agent_role || session.session_id}
+                </span>
+                <span className="mt-0.5 block truncate text-[11px] text-text-3">
+                  {session.status} · {session.session_type}
+                </span>
               </span>
-              <span className="mt-0.5 block truncate text-[11px] text-text-3">
-                {session.status} · {session.session_type}
-              </span>
-            </span>
-            <ExternalLink
-              size={13}
-              className="shrink-0 text-text-3 group-hover:text-text-1"
-            />
-          </button>
-        ))}
-      </div>
-    </section>
+              <ExternalLink
+                size={13}
+                className="shrink-0 text-text-3 group-hover:text-text-1"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -120,14 +129,14 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
 
   const {
     currentUser,
-    activeTab,
-    setActiveTab,
+    activeSessionTab,
+    setActiveSessionTab,
     commentText,
     setCommentText,
     isSubscribed,
     setIsSubscribed,
     isSubmittingComment,
-    tabItems,
+    sessionTabItems,
     resolvedDescription,
     rawDescription,
     timelineEntries,
@@ -174,120 +183,121 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
       {hideTitleHeader &&
         showHeaderPropertiesWhenTitleHidden &&
         headerProperties && (
-          <div className="shrink-0 px-3 pt-3">{headerProperties}</div>
+          <div className="shrink-0 px-3 pb-3 pt-1">{headerProperties}</div>
         )}
 
-      <InternalHeader
-        compactPadding
-        data-testid="work-item-content-tabs"
-        className={hideTitleHeader ? "pt-3" : "pt-4"}
-        tabs={
-          <TabPill
-            tabs={tabItems}
-            activeTab={activeTab}
-            onChange={(key) => setActiveTab(key as ContentTab)}
-            variant="simple"
-            fillWidth={false}
-            size="large"
+      <div
+        className={`${DETAIL_PANEL_TOKENS.scrollContentNoTop.replace("scrollbar-overlay", "scrollbar-hide")}`}
+      >
+        <div className={`${DETAIL_PANEL_TOKENS.sectionGap} min-h-[200px]`}>
+          <ProjectContentEditor
+            key={workItem.session_id}
+            ref={editorRef}
+            title={workItem.name || ""}
+            onTitleChange={handleTitleChange}
+            initialDescription={resolvedDescription ?? rawDescription}
+            onDescriptionChange={handleDescriptionChange}
+            onImageInsert={onUpdateWorkItem ? handleImageInsert : undefined}
+            titleVisible={false}
+            separatorVisible={false}
+            descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
+            editable={!!onUpdateWorkItem}
+            descriptionMaxHeight={600}
+            descriptionClassName="no-bottom-border"
+            repoPath={repoPath}
+            className="w-full"
           />
-        }
-      />
-
-      <div className={DETAIL_PANEL_TOKENS.scrollContentNoTop}>
-        {activeTab === "details" && (
-          <>
-            <div className={`${DETAIL_PANEL_TOKENS.sectionGap} min-h-[200px]`}>
-              <ProjectContentEditor
-                key={workItem.session_id}
-                ref={editorRef}
-                title={workItem.name || ""}
-                onTitleChange={handleTitleChange}
-                initialDescription={resolvedDescription ?? rawDescription}
-                onDescriptionChange={handleDescriptionChange}
-                onImageInsert={onUpdateWorkItem ? handleImageInsert : undefined}
-                titleVisible={false}
-                separatorVisible={false}
-                descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
-                editable={!!onUpdateWorkItem}
-                descriptionMaxHeight={600}
-                descriptionClassName="no-bottom-border"
-                repoPath={repoPath}
-                className="w-full"
-              />
-            </div>
-            <TodoChecklist
-              todos={workItem.todos ?? []}
-              onChange={handleTodosChange}
-              disabled={!onUpdateWorkItem}
+        </div>
+        <TodoChecklist
+          todos={workItem.todos ?? []}
+          onChange={handleTodosChange}
+          disabled={!onUpdateWorkItem}
+        />
+        <section
+          className="mt-6 border-t border-solid border-border-1 pt-5"
+          data-testid="work-item-lower-tabs-section"
+        >
+          <div className="mb-4 flex items-center justify-start">
+            <TabPill
+              tabs={sessionTabItems}
+              activeTab={activeSessionTab}
+              onChange={(key) => setActiveSessionTab(key as SessionTab)}
+              variant="simple"
+              fillWidth={false}
+              size="large"
             />
-            <LinkedSessionsList
-              sessions={workItem.linkedSessions ?? []}
-              onOpenSession={onOpenSession}
-              onStartAgent={onStartAgent}
-              isStartingAgent={isStartingAgent}
-            />
-          </>
-        )}
+          </div>
 
-        {activeTab === "execution" &&
-          (workItem.orchestratorConfig ||
-            workItem.orchestratorState ||
-            workItem.executionLock ||
-            (workItem.linkedSessions?.length ?? 0) > 0) && (
-            <div className={DETAIL_PANEL_TOKENS.sectionGap}>
-              <AgentWorkflow
-                orchestratorState={workItem.orchestratorState}
-                orchestratorConfig={workItem.orchestratorConfig}
-                proofOfWork={workItem.proofOfWork}
-                workItemStatus={
-                  workItem.workItemStatus ?? (workItem.status as WorkItemStatus)
-                }
-                executionLock={workItem.executionLock}
-                linkedSessions={workItem.linkedSessions}
+          {activeSessionTab === "session" && (
+            <>
+              {(workItem.orchestratorConfig ||
+                workItem.orchestratorState ||
+                workItem.executionLock ||
+                (workItem.linkedSessions?.length ?? 0) > 0) && (
+                <div className={DETAIL_PANEL_TOKENS.sectionGap}>
+                  <AgentWorkflow
+                    orchestratorState={workItem.orchestratorState}
+                    orchestratorConfig={workItem.orchestratorConfig}
+                    proofOfWork={workItem.proofOfWork}
+                    workItemStatus={
+                      workItem.workItemStatus ??
+                      (workItem.status as WorkItemStatus)
+                    }
+                    executionLock={workItem.executionLock}
+                    linkedSessions={workItem.linkedSessions}
+                    onStartAgent={onStartAgent}
+                    isStartingAgent={isStartingAgent}
+                    onCancel={onCancelAgent}
+                    onRetry={onRetry}
+                    onAcceptAsIs={onAcceptAsIs}
+                    onCreateFollowUp={onCreateFollowUp}
+                    onOpenSession={onOpenSession}
+                    onOpenFileAtLine={onOpenFileAtLine}
+                    onRefresh={onRefreshWorkflow}
+                    activeAgentSessionId={activeAgentSessionId}
+                    activeAgentRole={activeAgentRole}
+                  />
+                </div>
+              )}
+              <LinkedSessionsList
+                sessions={workItem.linkedSessions ?? []}
+                onOpenSession={onOpenSession}
                 onStartAgent={onStartAgent}
                 isStartingAgent={isStartingAgent}
-                onCancel={onCancelAgent}
-                onRetry={onRetry}
-                onAcceptAsIs={onAcceptAsIs}
-                onCreateFollowUp={onCreateFollowUp}
-                onOpenSession={onOpenSession}
-                onOpenFileAtLine={onOpenFileAtLine}
-                onRefresh={onRefreshWorkflow}
-                activeAgentSessionId={activeAgentSessionId}
-                activeAgentRole={activeAgentRole}
               />
-            </div>
+            </>
           )}
 
-        {activeTab === "output" && (
-          <OutputTab
-            workItem={workItem}
-            repoPath={repoPath}
-            onOpenFileDiff={onOpenFileDiff}
-            onOpenFileAtLine={onOpenFileAtLine}
-            onReviewAllFiles={onReviewAllFiles}
-            onOpenSession={onOpenSession}
-            onRetry={onRetry}
-            onAcceptAsIs={onAcceptAsIs}
-            onCreateFollowUp={onCreateFollowUp}
-            onCancel={onCancelAgent}
-            onCreatePr={onCreatePr}
-          />
-        )}
+          {activeSessionTab === "output" && (
+            <OutputTab
+              workItem={workItem}
+              repoPath={repoPath}
+              onOpenFileDiff={onOpenFileDiff}
+              onOpenFileAtLine={onOpenFileAtLine}
+              onReviewAllFiles={onReviewAllFiles}
+              onOpenSession={onOpenSession}
+              onRetry={onRetry}
+              onAcceptAsIs={onAcceptAsIs}
+              onCreateFollowUp={onCreateFollowUp}
+              onCancel={onCancelAgent}
+              onCreatePr={onCreatePr}
+            />
+          )}
 
-        {activeTab === "history" && (
-          <HistoryTab
-            timelineEntries={timelineEntries}
-            currentUser={currentUser}
-            isSubscribed={isSubscribed}
-            onToggleSubscribe={() => setIsSubscribed(!isSubscribed)}
-            commentText={commentText}
-            onCommentTextChange={setCommentText}
-            onCommentSubmit={handleCommentSubmit}
-            isSubmittingComment={isSubmittingComment}
-            formatRelativeTime={formatRelativeTime}
-          />
-        )}
+          {activeSessionTab === "history" && (
+            <HistoryTab
+              timelineEntries={timelineEntries}
+              currentUser={currentUser}
+              isSubscribed={isSubscribed}
+              onToggleSubscribe={() => setIsSubscribed(!isSubscribed)}
+              commentText={commentText}
+              onCommentTextChange={setCommentText}
+              onCommentSubmit={handleCommentSubmit}
+              isSubmittingComment={isSubmittingComment}
+              formatRelativeTime={formatRelativeTime}
+            />
+          )}
+        </section>
       </div>
     </DetailPanelContainer>
   );

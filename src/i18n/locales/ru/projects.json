@@ -517,6 +517,13 @@
       "cannotParseRepoName": "Не удалось извлечь имя репозитория из: {{url}}",
       "defaultPrTitle": "[{{shortId}}] Изменения work item"
     },
+    "sessions": {
+      "linkedSessions": "Связанные Sessions",
+      "newSession": "Новая Session",
+      "starting": "Запуск...",
+      "emptyOverview": "Sessions пока нет",
+      "emptyOverviewHint": "Запустите Agent Session, чтобы отслеживать выполнение здесь."
+    },
     "outputTab": {
       "prSection": "Pull Request",
       "prNotAvailable": "Пока недоступно",

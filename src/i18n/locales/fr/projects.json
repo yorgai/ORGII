@@ -517,6 +517,13 @@
       "cannotParseRepoName": "Impossible d'analyser le nom du dépôt depuis : {{url}}",
       "defaultPrTitle": "[{{shortId}}] Modifications du work item"
     },
+    "sessions": {
+      "linkedSessions": "Sessions liées",
+      "newSession": "Nouvelle session",
+      "starting": "Démarrage...",
+      "emptyOverview": "Aucune session pour le moment",
+      "emptyOverviewHint": "Démarrez une session Agent pour suivre l'exécution ici."
+    },
     "outputTab": {
       "prSection": "Pull Request",
       "prNotAvailable": "Pas encore disponible",

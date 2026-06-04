@@ -14,7 +14,7 @@ import type {
   WorkItem as WorkItemExtended,
 } from "@src/types/core/workItem";
 
-import { CONTENT_TAB_KEYS, type ContentTab } from "../types";
+import { SESSION_TAB_KEYS, type SessionTab } from "../types";
 import { useWorkItemTimeline } from "../useWorkItemTimeline";
 
 const logger = createLogger("useWorkItemContentState");
@@ -56,7 +56,8 @@ export function useWorkItemContentState(
     color: "#52c41a",
   };
 
-  const [activeTab, setActiveTab] = useState<ContentTab>("details");
+  const [activeSessionTab, setActiveSessionTab] =
+    useState<SessionTab>("session");
   const [commentText, setCommentText] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(true);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
@@ -105,14 +106,17 @@ export function useWorkItemContentState(
     prevSessionIdRef.current = activeAgentSessionId;
   }, [activeAgentSessionId]);
 
-  const tabItems: TabPillItem[] = useMemo(
+  const sessionTabItems: TabPillItem[] = useMemo(
     () =>
-      CONTENT_TAB_KEYS.map((key) => ({
+      SESSION_TAB_KEYS.map((key) => ({
         key,
-        label: t(`common:labels.${key}`),
-        dataTestId: `work-item-tab-${key}`,
+        label:
+          key === "session"
+            ? t("common:terminology.session")
+            : t(`common:labels.${key}`),
+        dataTestId: `work-item-sessions-tab-${key}`,
         badge:
-          key === "execution" && isAgentRunning ? (
+          key === "session" && isAgentRunning ? (
             <span className="ml-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary-6" />
           ) : undefined,
       })),
@@ -231,8 +235,8 @@ export function useWorkItemContentState(
 
   return {
     currentUser,
-    activeTab,
-    setActiveTab,
+    activeSessionTab,
+    setActiveSessionTab,
     commentText,
     setCommentText,
     isSubscribed,
@@ -244,7 +248,7 @@ export function useWorkItemContentState(
     launcherShouldCollapse,
     handleToggleLauncher,
     handleStartAgentAndOpenChat,
-    tabItems,
+    sessionTabItems,
     resolvedDescription,
     rawDescription,
     timelineEntries,
