@@ -91,11 +91,14 @@
       "emptyDescription": "Try a different status, Agent type, or time window."
     },
     "timeFilter": {
-      "6h": "6h",
+      "label": "범위",
       "12h": "12h",
       "24h": "24h",
       "3d": "3d",
       "7d": "7d"
+    },
+    "filters": {
+      "allAgents": "모든 Agent"
     },
     "autoArchive": {
       "label": "자동 보관",
@@ -708,6 +711,8 @@
     "showSimulator": "시뮬레이터 표시",
     "fullScreenChat": "Chat 패널 포커스 (Workstation 숨기기)",
     "maximizeChatPanel": "Chat 패널 최대화",
+    "showWorkstation": "Workstation 표시",
+    "hideWorkstation": "Workstation 숨기기",
     "restoreSplitView": "Workstation 표시",
     "shrinkToWorkstation": "Chat 패널 축소 (Workstation 표시)",
     "collapseAll": "모두 접기",

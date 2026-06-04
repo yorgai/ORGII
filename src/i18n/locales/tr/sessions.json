@@ -91,12 +91,14 @@
       "emptyDescription": "Farklı bir durum, Agent türü veya zaman aralığı deneyin."
     },
     "timeFilter": {
-      "label": "Gösterilen",
-      "6h": "6h",
+      "label": "Aralık",
       "12h": "12h",
       "24h": "24h",
       "3d": "3d",
       "7d": "7d"
+    },
+    "filters": {
+      "allAgents": "Tüm Agent'lar"
     },
     "autoArchive": {
       "label": "Oto arşivle",
@@ -709,6 +711,8 @@
     "showSimulator": "Simülatörü göster",
     "fullScreenChat": "Chat paneline odaklan (Workstation'i gizle)",
     "maximizeChatPanel": "Chat panelini büyüt",
+    "showWorkstation": "Workstation'i göster",
+    "hideWorkstation": "Workstation'i gizle",
     "restoreSplitView": "Workstation'i göster",
     "shrinkToWorkstation": "Chat panelini küçült (Workstation'i göster)",
     "collapseAll": "Tümünü daralt",

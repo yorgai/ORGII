@@ -5,6 +5,8 @@ import {
   Gauge,
   HelpCircle,
   Languages,
+  Laptop,
+  PanelLeft,
   Settings,
 } from "lucide-react";
 import React, {
@@ -45,13 +47,18 @@ import HoverAnimatedIcon, {
   triggerIconAnimation,
 } from "../components/HoverAnimatedIcon";
 import { SidebarRamMonitorPanel } from "../connectors/SidebarRamMonitorButton";
+import { SidebarWorkstationSettingsSubmenu } from "./SidebarWorkstationSettingsSubmenu";
 
 const SUBMENU_WIDTH_PX = 220;
 const SUBMENU_GAP_PX = DROPDOWN_PANEL.submenuGap;
 const MENU_ICON_CLASS_NAME = "shrink-0 text-text-2";
 const MENU_ARROW_CLASS_NAME = "text-text-3";
 
-type SettingsSubmenu = "appearance" | "language";
+type SettingsSubmenu =
+  | "appearance"
+  | "language"
+  | "chatPanelLocation"
+  | "workstation";
 
 interface SubmenuPosition {
   left: number;
@@ -261,6 +268,22 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
   const renderSubmenu = () => {
     if (!activeSubmenu || !submenuPosition) return null;
 
+    if (
+      activeSubmenu === "chatPanelLocation" ||
+      activeSubmenu === "workstation"
+    ) {
+      return createPortal(
+        <SidebarWorkstationSettingsSubmenu
+          panelRef={submenuPanelRef}
+          position={submenuPosition}
+          mode={activeSubmenu}
+          onPointerDown={handleSubmenuPointerDown}
+          onMouseDown={handleSubmenuMouseDown}
+        />,
+        document.body
+      );
+    }
+
     if (activeSubmenu === "appearance") {
       return createPortal(
         <div
@@ -270,10 +293,12 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
           onPointerDown={handleSubmenuPointerDown}
           onMouseDown={handleSubmenuMouseDown}
         >
-          <div className={DROPDOWN_CLASSES.sectionLabel}>
-            {tSettings("general.appearanceMode")}
-          </div>
-          <div className={DROPDOWN_CLASSES.itemsColumnBelowHeader}>
+          <div
+            className={`${DROPDOWN_CLASSES.itemsColumnPadded} scrollbar-overlay max-h-[320px] overflow-y-auto`}
+          >
+            <div className={DROPDOWN_CLASSES.sectionLabel}>
+              {tSettings("general.appearanceMode")}
+            </div>
             {appearanceModeOptions.map((option) => {
               const selected = appearanceMode === option.value;
               return (
@@ -289,29 +314,25 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
                 </button>
               );
             })}
-          </div>
-          <div className={DROPDOWN_CLASSES.menuSeparator} />
-          <div className={DROPDOWN_CLASSES.sectionLabel}>
-            {tSettings("general.themePreset")}
-          </div>
-          <div className="scrollbar-overlay max-h-[220px] overflow-y-auto">
-            <div className={DROPDOWN_CLASSES.itemsColumnBelowHeader}>
-              {themeOptions.map((theme) => {
-                const selected = globalThemeId === theme.value;
-                return (
-                  <button
-                    key={theme.value}
-                    type="button"
-                    className={`${DROPDOWN_CLASSES.menuActionItem} ${selected ? DROPDOWN_CLASSES.itemSelected : ""} justify-between`}
-                    onClick={() => void handleSelectTheme(String(theme.value))}
-                    aria-selected={selected}
-                  >
-                    <span>{theme.label}</span>
-                    {selected && <DropdownSelectedCheck />}
-                  </button>
-                );
-              })}
+            <div className={DROPDOWN_CLASSES.menuSeparator} />
+            <div className={DROPDOWN_CLASSES.sectionLabel}>
+              {tSettings("general.themePreset")}
             </div>
+            {themeOptions.map((theme) => {
+              const selected = globalThemeId === theme.value;
+              return (
+                <button
+                  key={theme.value}
+                  type="button"
+                  className={`${DROPDOWN_CLASSES.menuActionItem} ${selected ? DROPDOWN_CLASSES.itemSelected : ""} justify-between`}
+                  onClick={() => void handleSelectTheme(String(theme.value))}
+                  aria-selected={selected}
+                >
+                  <span>{theme.label}</span>
+                  {selected && <DropdownSelectedCheck />}
+                </button>
+              );
+            })}
           </div>
         </div>,
         document.body
@@ -326,11 +347,8 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
         onPointerDown={handleSubmenuPointerDown}
         onMouseDown={handleSubmenuMouseDown}
       >
-        <div className={DROPDOWN_CLASSES.sectionLabel}>
-          {t("sidebar.settingsMenu.language")}
-        </div>
         <div className="scrollbar-overlay max-h-[320px] overflow-y-auto">
-          <div className={DROPDOWN_CLASSES.itemsColumnBelowHeader}>
+          <div className={DROPDOWN_CLASSES.itemsColumnPadded}>
             {languageOptions.map((language) => {
               const selected = currentLanguage === language.value;
               return (
@@ -394,6 +412,33 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
             <div className={DROPDOWN_CLASSES.itemsColumn}>
               <button
                 type="button"
+                className={`${DROPDOWN_CLASSES.menuActionItem} gap-2`}
+                onMouseEnter={() => setActiveSubmenu(null)}
+                onFocus={() => setActiveSubmenu(null)}
+                onClick={handleViewRam}
+              >
+                <Gauge
+                  size={DROPDOWN_ITEM.iconSize}
+                  className={MENU_ICON_CLASS_NAME}
+                />
+                <span>{t("sidebar.settingsMenu.viewRam")}</span>
+              </button>
+              <button
+                type="button"
+                className={`${DROPDOWN_CLASSES.menuActionItem} gap-2`}
+                onMouseEnter={() => setActiveSubmenu(null)}
+                onFocus={() => setActiveSubmenu(null)}
+                onClick={handleOpenTutorials}
+              >
+                <HelpCircle
+                  size={DROPDOWN_ITEM.iconSize}
+                  className={MENU_ICON_CLASS_NAME}
+                />
+                <span>{t("sidebar.settingsMenu.tutorials")}</span>
+              </button>
+              <div className={DROPDOWN_CLASSES.menuSeparator} />
+              <button
+                type="button"
                 className={`${DROPDOWN_CLASSES.menuActionItem} ${activeSubmenu === "appearance" ? DROPDOWN_CLASSES.itemActive : ""} justify-between`}
                 onMouseEnter={(event) =>
                   openSubmenu("appearance", event.currentTarget)
@@ -442,29 +487,51 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
               </button>
               <button
                 type="button"
-                className={`${DROPDOWN_CLASSES.menuActionItem} gap-2`}
-                onMouseEnter={() => setActiveSubmenu(null)}
-                onFocus={() => setActiveSubmenu(null)}
-                onClick={handleViewRam}
+                className={`${DROPDOWN_CLASSES.menuActionItem} ${activeSubmenu === "chatPanelLocation" ? DROPDOWN_CLASSES.itemActive : ""} justify-between`}
+                onMouseEnter={(event) =>
+                  openSubmenu("chatPanelLocation", event.currentTarget)
+                }
+                onFocus={(event) =>
+                  openSubmenu("chatPanelLocation", event.currentTarget)
+                }
               >
-                <Gauge
+                <span className="flex min-w-0 items-center gap-2">
+                  <PanelLeft
+                    size={DROPDOWN_ITEM.iconSize}
+                    className={MENU_ICON_CLASS_NAME}
+                  />
+                  <span className="truncate">
+                    {t("common:layoutSettings.chatPanelLocation")}
+                  </span>
+                </span>
+                <ChevronRight
                   size={DROPDOWN_ITEM.iconSize}
-                  className={MENU_ICON_CLASS_NAME}
+                  className={MENU_ARROW_CLASS_NAME}
                 />
-                <span>{t("sidebar.settingsMenu.viewRam")}</span>
               </button>
               <button
                 type="button"
-                className={`${DROPDOWN_CLASSES.menuActionItem} gap-2`}
-                onMouseEnter={() => setActiveSubmenu(null)}
-                onFocus={() => setActiveSubmenu(null)}
-                onClick={handleOpenTutorials}
+                className={`${DROPDOWN_CLASSES.menuActionItem} ${activeSubmenu === "workstation" ? DROPDOWN_CLASSES.itemActive : ""} justify-between`}
+                onMouseEnter={(event) =>
+                  openSubmenu("workstation", event.currentTarget)
+                }
+                onFocus={(event) =>
+                  openSubmenu("workstation", event.currentTarget)
+                }
               >
-                <HelpCircle
+                <span className="flex min-w-0 items-center gap-2">
+                  <Laptop
+                    size={DROPDOWN_ITEM.iconSize}
+                    className={MENU_ICON_CLASS_NAME}
+                  />
+                  <span className="truncate">
+                    {t("sidebar.settingsMenu.workstation")}
+                  </span>
+                </span>
+                <ChevronRight
                   size={DROPDOWN_ITEM.iconSize}
-                  className={MENU_ICON_CLASS_NAME}
+                  className={MENU_ARROW_CLASS_NAME}
                 />
-                <span>{t("sidebar.settingsMenu.tutorials")}</span>
               </button>
               <div className={DROPDOWN_CLASSES.menuSeparator} />
               <button

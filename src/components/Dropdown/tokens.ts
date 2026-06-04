@@ -420,7 +420,7 @@ export const DROPDOWN_CLASSES = {
 
   /** Section / group label inside a dropdown (non-interactive). */
   sectionLabel:
-    "px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-text-3",
+    "px-1.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-text-3",
 
   /** Bordered dropdown section wrapper for grouped controls above/between lists. */
   sectionContainer: [

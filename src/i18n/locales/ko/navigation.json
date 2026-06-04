@@ -140,6 +140,7 @@
     "settingsMenu": {
       "appearance": "모양",
       "language": "언어",
+      "workstation": "Workstation",
       "viewRam": "RAM 보기",
       "tutorials": "튜토리얼",
       "openSettings": "설정 열기"
