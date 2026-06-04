@@ -13,7 +13,7 @@
  *   - Footer: Cancel / Create work item
  */
 import { emit } from "@tauri-apps/api/event";
-import { Info, X } from "lucide-react";
+import { BookOpen, Building2, ChevronRight, Info, X } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -31,7 +31,8 @@ import {
 } from "@src/api/http/project";
 import Button from "@src/components/Button";
 import Message from "@src/components/Message";
-import Select, { type SelectOption } from "@src/components/Select";
+import { PropertyDropdownField } from "@src/components/PropertyField/PropertyDropdownField";
+import type { PropertyDropdownOption } from "@src/components/PropertyField/PropertyDropdownField";
 import Switch from "@src/components/Switch";
 import { useKeyboardSave } from "@src/hooks/keyboard";
 import { createLogger } from "@src/hooks/logger";
@@ -104,8 +105,7 @@ const CREATE_WORK_ITEM_HEADER_ACTION_CLASS =
   "hover:!bg-fill-2 !h-7 !w-7 !min-w-7";
 const CREATE_WORK_ITEM_HEADER_ACTION_ACTIVE_CLASS =
   "!h-7 !w-7 !min-w-7 !bg-surface-selected !text-primary-6 hover:!bg-fill-2";
-const CREATE_WORK_ITEM_BREADCRUMB_SELECT_CLASS =
-  "w-auto max-w-[220px] [&_.select-selector]:!h-7 [&_.select-selector]:!rounded-full [&_.select-selector]:!border-0 [&_.select-selector]:!bg-transparent [&_.select-selector]:!px-1.5 [&_.select-selector]:!text-[12px] [&_.select-selector]:!shadow-none hover:[&_.select-selector]:!bg-surface-hover";
+const CREATE_WORK_ITEM_BREADCRUMB_ICON_SIZE = 13;
 
 export interface CreateWorkItemViewProps {
   /** Project ID for the new work item when launched from a Project */
@@ -353,17 +353,18 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   const projectBreadcrumbLabel =
     selectedProjectName || t("projects.dashboardTitle");
 
-  const projectOptions = useMemo<SelectOption[]>(
+  const projectOptions = useMemo<PropertyDropdownOption<string>[]>(
     () =>
       resolvedProjects.map((project) => ({
         value: project.id,
         label: project.name,
-        triggerLabel: project.name,
+        icon: <BookOpen size={CREATE_WORK_ITEM_BREADCRUMB_ICON_SIZE} />,
+        iconColor: project.color,
       })),
     [resolvedProjects]
   );
 
-  const orgOptions = useMemo<SelectOption[]>(() => {
+  const orgOptions = useMemo<PropertyDropdownOption<string>[]>(() => {
     const orgIdsWithProjects = new Set(
       resolvedProjects
         .map((project) => project.orgId)
@@ -374,22 +375,19 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
       .map((org) => ({
         value: org.id,
         label: org.name,
-        triggerLabel: org.name,
+        icon: <Building2 size={CREATE_WORK_ITEM_BREADCRUMB_ICON_SIZE} />,
       }));
   }, [projectOrgs, resolvedProjects]);
 
   const handleProjectBreadcrumbChange = useCallback(
-    (value: string | number | (string | number)[]) => {
-      if (Array.isArray(value)) return;
-      updateDraftWithUndo({ projectId: String(value) });
+    (value: string) => {
+      updateDraftWithUndo({ projectId: value });
     },
     [updateDraftWithUndo]
   );
 
   const handleOrgBreadcrumbChange = useCallback(
-    (value: string | number | (string | number)[]) => {
-      if (Array.isArray(value)) return;
-      const nextOrgId = String(value);
+    (nextOrgId: string) => {
       const nextProject = resolvedProjects.find(
         (project) => project.orgId === nextOrgId
       );
@@ -402,45 +400,83 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
 
   const orgBreadcrumbSegment =
     orgOptions.length > 0 ? (
-      <Select
-        value={selectedProjectOrgId}
+      <PropertyDropdownField
+        value={selectedProjectOrgId ?? orgOptions[0]?.value ?? ""}
+        label={selectedProjectOrgLabel}
+        icon={<Building2 size={CREATE_WORK_ITEM_BREADCRUMB_ICON_SIZE} />}
         options={orgOptions}
         onChange={handleOrgBreadcrumbChange}
-        placeholder={selectedProjectOrgLabel}
-        size="small"
-        variant="ghost"
-        radius="pill"
-        showSearch
-        dropdownWidthMode="min-match"
-        dropdownMinWidth={220}
-        panelZIndex={10000}
-        className={CREATE_WORK_ITEM_BREADCRUMB_SELECT_CLASS}
-        dataTestId="create-work-item-org-breadcrumb-select"
+        placement="portal"
+        fieldVariant="pill"
+        triggerVariant="pill"
+        searchable
+        searchPlaceholder={t("workItems.properties.searchProjects")}
+        selected={Boolean(selectedProjectOrgId)}
+        maxWidthClassName="max-w-[220px] shrink-0"
       />
     ) : (
-      selectedProjectOrgLabel
+      <PropertyDropdownField
+        value="org"
+        label={selectedProjectOrgLabel}
+        icon={<Building2 size={CREATE_WORK_ITEM_BREADCRUMB_ICON_SIZE} />}
+        placement="portal"
+        fieldVariant="pill"
+        triggerVariant="pill"
+        readonly
+        searchable={false}
+        selected
+        maxWidthClassName="max-w-[220px] shrink-0"
+      />
     );
 
   const projectBreadcrumbSegment =
     projectOptions.length > 0 ? (
-      <Select
-        value={draft.projectId}
+      <PropertyDropdownField
+        value={draft.projectId ?? projectOptions[0]?.value ?? ""}
+        label={projectBreadcrumbLabel}
+        icon={<BookOpen size={CREATE_WORK_ITEM_BREADCRUMB_ICON_SIZE} />}
+        iconColor={selectedProject?.color}
         options={projectOptions}
         onChange={handleProjectBreadcrumbChange}
-        placeholder={projectBreadcrumbLabel}
-        size="small"
-        variant="ghost"
-        radius="pill"
-        showSearch
-        dropdownWidthMode="min-match"
-        dropdownMinWidth={220}
-        panelZIndex={10000}
-        className={CREATE_WORK_ITEM_BREADCRUMB_SELECT_CLASS}
-        dataTestId="create-work-item-project-breadcrumb-select"
+        placement="portal"
+        fieldVariant="pill"
+        triggerVariant="pill"
+        searchable
+        searchPlaceholder={t("workItems.properties.searchProjects")}
+        selected={Boolean(draft.projectId)}
+        maxWidthClassName="max-w-[220px] shrink-0"
       />
     ) : (
-      projectBreadcrumbLabel
+      <PropertyDropdownField
+        value="project"
+        label={projectBreadcrumbLabel}
+        icon={<BookOpen size={CREATE_WORK_ITEM_BREADCRUMB_ICON_SIZE} />}
+        iconColor={selectedProject?.color}
+        placement="portal"
+        fieldVariant="pill"
+        triggerVariant="pill"
+        readonly
+        searchable={false}
+        selected
+        maxWidthClassName="max-w-[220px] shrink-0"
+      />
     );
+
+  const workItemPillBreadcrumb = (
+    <div
+      className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+      data-testid="create-work-item-pill-breadcrumb"
+    >
+      {orgBreadcrumbSegment}
+      <ChevronRight
+        size={14}
+        strokeWidth={1.75}
+        className="shrink-0 text-fill-4"
+        aria-hidden
+      />
+      {projectBreadcrumbSegment}
+    </div>
+  );
 
   // Build a stub WorkItemExtended for WorkItemProperties from the draft
   const stubWorkItem = workItemDraftToStubWorkItem(draft, selectedProjectName);
@@ -604,11 +640,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   return (
     <DetailSplitLayout
       title={t("workItems.newWorkItem")}
-      breadcrumb={[
-        orgBreadcrumbSegment,
-        projectBreadcrumbSegment,
-        t("workItems.newWorkItem"),
-      ]}
+      breadcrumb={[workItemPillBreadcrumb]}
       borderlessHeader
       publishHeaderToWorkstation={publishHeaderToWorkstation}
       headerActions={
