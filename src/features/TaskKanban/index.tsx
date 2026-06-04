@@ -4,7 +4,7 @@
  * Independent session board — NOT linked to a specific repo or session.
  * Shows ALL sessions (both OS Agent and coding) grouped by status columns.
  *
- * Time filter pills (6h | 12h | 24h | 3d | 7d):
+ * Time range select (12h | 24h | 3d | 7d):
  * - All columns stay visible
  * - Sessions older than the selected window are filtered out
  *

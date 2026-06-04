@@ -236,14 +236,13 @@ export function mapSessionToKanbanColumn(
 // Time Filter Configuration
 // ============================================
 
-export type KanbanTimeFilter = "6h" | "12h" | "24h" | "3d" | "7d";
+export type KanbanTimeFilter = "12h" | "24h" | "3d" | "7d";
 export type KanbanAutoArchiveTtl = "never" | "12h" | "24h" | "3d" | "7d";
 
 export const KANBAN_TIME_FILTERS: {
   key: KanbanTimeFilter;
   labelKey: string;
 }[] = [
-  { key: "6h", labelKey: "kanban.timeFilter.6h" },
   { key: "12h", labelKey: "kanban.timeFilter.12h" },
   { key: "24h", labelKey: "kanban.timeFilter.24h" },
   { key: "3d", labelKey: "kanban.timeFilter.3d" },
@@ -262,7 +261,6 @@ export const KANBAN_AUTO_ARCHIVE_TTLS: {
 ];
 
 const TIME_FILTER_MS: Record<KanbanTimeFilter, number> = {
-  "6h": 6 * 60 * 60 * 1000,
   "12h": 12 * 60 * 60 * 1000,
   "24h": 24 * 60 * 60 * 1000,
   "3d": 3 * 24 * 60 * 60 * 1000,

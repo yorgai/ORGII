@@ -140,6 +140,7 @@
     "settingsMenu": {
       "appearance": "Apparence",
       "language": "Langue",
+      "workstation": "Poste de travail",
       "viewRam": "Voir la RAM",
       "tutorials": "Tutoriels",
       "openSettings": "Ouvrir les paramètres"

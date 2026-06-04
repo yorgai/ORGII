@@ -7,16 +7,15 @@
  * a slash command). A trailing "..." button opens `PinActionsPanel` to
  * search and manage the pinned set.
  *
- * Design: reuses StackPill so pinned actions match composer section pills:
- * 28px height, rounded-full border, and 13px medium text.
+ * Design: uses shared secondary buttons so pinned actions match other composer controls.
  */
 import { useAtom, useAtomValue } from "jotai";
 import { Layout, MoreHorizontal } from "lucide-react";
 import React, { memo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import Button from "@src/components/Button";
 import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
-import StackPill from "@src/engines/ChatPanel/InputArea/components/StackPill";
 import UserActionButton from "@src/engines/ChatPanel/InputArea/components/UserActionButton";
 import { useSlashItemsCache } from "@src/engines/ChatPanel/hooks/useInputArea/useSlashItemsCache";
 import { EditorTabService } from "@src/services/workStation";
@@ -56,24 +55,19 @@ interface ActionPillProps {
 }
 
 const ActionPill: React.FC<ActionPillProps> = memo(
-  ({ action, onClick, buttonRef }) => {
-    const [pressed, setPressed] = useState(false);
-
-    return (
-      <StackPill
-        ref={buttonRef}
-        count={0}
-        active={pressed}
-        title={action.name}
-        onClick={() => onClick(action)}
-        label={action.name}
-        className="max-w-[180px] select-none [&>span:last-child]:min-w-0 [&>span:last-child]:truncate"
-        onMouseDown={() => setPressed(true)}
-        onMouseUp={() => setPressed(false)}
-        onMouseLeave={() => setPressed(false)}
-      />
-    );
-  }
+  ({ action, onClick, buttonRef }) => (
+    <Button
+      ref={buttonRef}
+      variant="secondary"
+      size="small"
+      shape="round"
+      title={action.name}
+      onClick={(event) => onClick(action, event)}
+      className="max-w-[180px] select-none"
+    >
+      {action.name}
+    </Button>
+  )
 );
 
 ActionPill.displayName = "ActionPill";
@@ -147,12 +141,10 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
     // ── "..." panel state ─────────────────────────────────────────────────────
 
     const [panelOpen, setPanelOpen] = useState(false);
-    const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
     const moreButtonRef = useRef<HTMLButtonElement>(null);
 
     const handleOpenPanel = useCallback(() => {
       void fetchFresh();
-      setAnchorRect(moreButtonRef.current?.getBoundingClientRect() ?? null);
       setPanelOpen((prev) => !prev);
     }, [fetchFresh]);
 
@@ -240,20 +232,22 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
           />
         ))}
 
-        <StackPill
+        <Button
           ref={moreButtonRef}
-          icon={<MoreHorizontal size={13} strokeWidth={1.75} />}
-          count={0}
-          active={panelOpen}
+          variant="secondary"
+          appearance="outline"
+          size="small"
+          shape="round"
+          icon={<MoreHorizontal size={14} strokeWidth={1.75} />}
           iconOnly
           title={t("input.pinnedActions.manage")}
-          ariaLabel={t("input.pinnedActions.manage")}
+          aria-label={t("input.pinnedActions.manage")}
           onClick={handleOpenPanel}
+          className={panelOpen ? "!bg-fill-1 !text-primary-6" : ""}
         />
 
         <PinActionsPanel
           visible={panelOpen}
-          anchorRect={anchorRect}
           availableItems={availableItems}
           pinnedActions={pinnedActions}
           onTogglePin={handleTogglePin}

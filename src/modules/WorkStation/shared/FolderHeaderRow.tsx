@@ -26,6 +26,8 @@ export interface FolderHeaderRowProps {
   className?: string;
   /** Context menu handler */
   onContextMenu?: (event: React.MouseEvent) => void;
+  /** Optional trailing actions rendered on the right edge */
+  actions?: React.ReactNode;
 }
 
 export const FolderHeaderRow: React.FC<FolderHeaderRowProps> = memo(
@@ -37,6 +39,7 @@ export const FolderHeaderRow: React.FC<FolderHeaderRowProps> = memo(
     badgeCount,
     className,
     onContextMenu,
+    actions,
   }) => (
     <div
       className={`${FOLDER_HEADER.row}${className ? ` ${className}` : ""}`}
@@ -61,6 +64,7 @@ export const FolderHeaderRow: React.FC<FolderHeaderRowProps> = memo(
           </span>
         )}
       </button>
+      {actions}
     </div>
   )
 );

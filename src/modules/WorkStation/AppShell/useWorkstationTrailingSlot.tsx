@@ -4,7 +4,7 @@
  * Builds the trailing-slot ReactNode for WorkstationTabBar.
  * Extracted to isolate the complex conditional rendering logic
  * (Plus menu, Chat Panel toggle, Minimize/Restore control,
- * Layout Settings trigger, Project trailing bar) from the
+ * Project trailing bar) from the
  * main tab-bar component.
  */
 import { useAtomValue, useSetAtom } from "jotai";
@@ -12,7 +12,7 @@ import {
   Maximize2,
   MessageCircle,
   Minimize2,
-  Settings2,
+  PanelRight,
   X,
 } from "lucide-react";
 import { type ReactNode, startTransition, useMemo } from "react";
@@ -32,15 +32,16 @@ import {
   TabBarBottomPanelToggle,
   TabBarTrailingIconButton,
 } from "@src/modules/WorkStation/shared";
+import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
 import { WorkStationViewService } from "@src/services/workStation/WorkStationViewService";
 import {
   activeStationChatVisibleAtom,
   chatWidthAtom,
   toggleChatPanelMaximizedAtom,
 } from "@src/store/ui/chatPanelAtom";
+import { workStationChatPositionAtom } from "@src/store/ui/workStationAtom";
 import { workstationProjectTabBarAtom } from "@src/store/workstation";
 
-import type { UseLayoutSettingsToggleReturn } from "./useLayoutSettingsToggle";
 import type { UseWorkstationTabListReturn } from "./useWorkstationTabList";
 
 const BROWSER_PLUS_MENU_ITEMS: readonly TabBarPlusMenuItem[] = [
@@ -52,7 +53,6 @@ export interface UseWorkstationTrailingSlotOptions {
   appMode: AppModeType;
   isAllTabsView: boolean;
   visible: UseWorkstationTabListReturn["visible"];
-  layoutSettings: UseLayoutSettingsToggleReturn;
 }
 
 export interface UseWorkstationTrailingSlotReturn {
@@ -64,14 +64,14 @@ export function useWorkstationTrailingSlot({
   appMode,
   isAllTabsView,
   visible,
-  layoutSettings,
 }: UseWorkstationTrailingSlotOptions): UseWorkstationTrailingSlotReturn {
   const { t } = useTranslation(["sessions", "common", "settings"]);
   const location = useLocation();
   const getStationChatVisible = useAtomValue(activeStationChatVisibleAtom);
   const chatWidth = useAtomValue(chatWidthAtom);
+  const workStationChatPosition = useAtomValue(workStationChatPositionAtom);
   const projectTabBar = useAtomValue(workstationProjectTabBarAtom);
-  const toggleSettingsMaximized = useSetAtom(toggleChatPanelMaximizedAtom);
+  const toggleChatPanelMaximized = useSetAtom(toggleChatPanelMaximizedAtom);
 
   const isChatPanelVisible =
     getStationChatVisible("my-station") && chatWidth > 0;
@@ -79,12 +79,6 @@ export function useWorkstationTrailingSlot({
   // maximize/restore button, so the workstation-side toggle is redundant
   // and visually conflicting (two buttons driving the same atom).
   const isSettingsRoute = location.pathname.startsWith("/orgii/app/settings");
-
-  const {
-    isLayoutSettingsOpen,
-    layoutSettingsTriggerRef,
-    handleToggleLayoutSettings,
-  } = layoutSettings;
 
   const handleToggleChatPanel = useMemo(
     () => () => {
@@ -95,27 +89,14 @@ export function useWorkstationTrailingSlot({
     []
   );
 
-  const handleMaximizeSettings = useMemo(
+  const handleToggleChatPanelMaximized = useMemo(
     () => () => {
-      toggleSettingsMaximized();
+      toggleChatPanelMaximized();
     },
-    [toggleSettingsMaximized]
+    [toggleChatPanelMaximized]
   );
 
   const trailingSlot = useMemo((): ReactNode => {
-    const layoutSettingsControl = (
-      <span ref={layoutSettingsTriggerRef}>
-        <TabBarTrailingIconButton
-          title={t("common:layoutSettings.pageSettings")}
-          active={isLayoutSettingsOpen}
-          aria-pressed={isLayoutSettingsOpen}
-          onClick={handleToggleLayoutSettings}
-        >
-          <Settings2 size={16} strokeWidth={2} />
-        </TabBarTrailingIconButton>
-      </span>
-    );
-
     const plusMenuControl = isAllTabsView ? (
       <TabBarPlusMenu />
     ) : appMode === "browser" ? (
@@ -155,6 +136,37 @@ export function useWorkstationTrailingSlot({
         </span>
       </Tooltip>
     );
+
+    const hideWorkstationLabel = t("sessions:chat.hideWorkstation");
+    const hideWorkstationTooltip = (
+      <KeyboardShortcutTooltipContent
+        label={hideWorkstationLabel}
+        shortcut={getShortcutKeys("maximize_chat")}
+      />
+    );
+    const maximizeChatControl =
+      !isSettingsRoute && isChatPanelVisible ? (
+        <Tooltip
+          content={hideWorkstationTooltip}
+          position="bottom-end"
+          mouseEnterDelay={200}
+          framedPanel
+        >
+          <span className="inline-flex">
+            <TabBarTrailingIconButton
+              title={hideWorkstationLabel}
+              nativeTitle={false}
+              onClick={handleToggleChatPanelMaximized}
+            >
+              {workStationChatPosition === "left" ? (
+                <PanelRight size={HEADER_ICON_SIZE.md} strokeWidth={1.75} />
+              ) : (
+                <X size={HEADER_ICON_SIZE.md} strokeWidth={1.75} />
+              )}
+            </TabBarTrailingIconButton>
+          </span>
+        </Tooltip>
+      ) : null;
 
     const shrinkWorkstationControl = !isSettingsRoute &&
       !isChatPanelVisible && (
@@ -199,7 +211,7 @@ export function useWorkstationTrailingSlot({
           <TabBarTrailingIconButton
             title={maximizeSettingsLabel}
             nativeTitle={false}
-            onClick={handleMaximizeSettings}
+            onClick={handleToggleChatPanelMaximized}
           >
             <X size={14} strokeWidth={2} />
           </TabBarTrailingIconButton>
@@ -214,7 +226,7 @@ export function useWorkstationTrailingSlot({
           <TabBarBottomPanelToggle />
           {shrinkWorkstationControl}
           {chatPanelControl}
-          {layoutSettingsControl}
+          {maximizeChatControl}
           {closeWorkstationControl}
         </>
       );
@@ -234,7 +246,7 @@ export function useWorkstationTrailingSlot({
           />
           {shrinkWorkstationControl}
           {chatPanelControl}
-          {layoutSettingsControl}
+          {maximizeChatControl}
           {closeWorkstationControl}
         </>
       );
@@ -245,23 +257,21 @@ export function useWorkstationTrailingSlot({
         {plusMenuControl}
         {shrinkWorkstationControl}
         {chatPanelControl}
-        {layoutSettingsControl}
+        {maximizeChatControl}
         {closeWorkstationControl}
       </>
     );
   }, [
     appMode,
-    handleMaximizeSettings,
     handleToggleChatPanel,
-    handleToggleLayoutSettings,
+    handleToggleChatPanelMaximized,
     isAllTabsView,
     isChatPanelVisible,
-    isLayoutSettingsOpen,
     isSettingsRoute,
-    layoutSettingsTriggerRef,
     projectTabBar,
     t,
     visible,
+    workStationChatPosition,
   ]);
 
   return { trailingSlot, handleToggleChatPanel };

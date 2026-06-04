@@ -7,14 +7,12 @@ import React, { memo } from "react";
 
 import type { AppModeType } from "@src/config/viewModeTypes";
 import {
-  LayoutSettingsDropdown,
   TabBar,
   WorkStationTabBarLeading,
 } from "@src/modules/WorkStation/shared";
 import { CODE_EDITOR_TOUR_TARGETS } from "@src/scaffold/Tutorials/codeEditorTourConfig";
 import { currentRepoAtom } from "@src/store/repo";
 
-import { useLayoutSettingsToggle } from "./useLayoutSettingsToggle";
 import { useWorkstationTabList } from "./useWorkstationTabList";
 import { useWorkstationTrailingSlot } from "./useWorkstationTrailingSlot";
 
@@ -35,8 +33,6 @@ const WorkstationTabBar: React.FC<WorkstationTabBarProps> = memo(
   ({ appMode }) => {
     const currentRepo = useAtomValue(currentRepoAtom);
 
-    const layoutSettings = useLayoutSettingsToggle();
-
     const {
       tabsForBar,
       activeKey,
@@ -53,7 +49,6 @@ const WorkstationTabBar: React.FC<WorkstationTabBarProps> = memo(
       appMode,
       isAllTabsView,
       visible,
-      layoutSettings,
     });
 
     if (!WORKSTATION_SINGLE_HOST_MODES.includes(appMode)) {
@@ -61,28 +56,21 @@ const WorkstationTabBar: React.FC<WorkstationTabBarProps> = memo(
     }
 
     return (
-      <>
-        <TabBar
-          paneId={`workstation-${appMode}`}
-          tabs={tabsForBar}
-          activeTabId={activeKey}
-          onTabClick={handleTabClick}
-          onTabClose={handleTabClose}
-          onTabReorder={handleTabReorder}
-          onCloseOtherTabs={handleCloseOther}
-          onCloseSavedTabs={handleCloseSaved}
-          repoPath={currentRepo?.path ?? ""}
-          leadingSlot={<WorkStationTabBarLeading />}
-          trailingSlot={trailingSlot}
-          surfaceClassName=""
-          dataTourTarget={CODE_EDITOR_TOUR_TARGETS.tabBar}
-        />
-        <LayoutSettingsDropdown
-          isOpen={layoutSettings.isLayoutSettingsOpen}
-          onClose={layoutSettings.handleCloseLayoutSettings}
-          triggerRef={layoutSettings.layoutSettingsTriggerRef}
-        />
-      </>
+      <TabBar
+        paneId={`workstation-${appMode}`}
+        tabs={tabsForBar}
+        activeTabId={activeKey}
+        onTabClick={handleTabClick}
+        onTabClose={handleTabClose}
+        onTabReorder={handleTabReorder}
+        onCloseOtherTabs={handleCloseOther}
+        onCloseSavedTabs={handleCloseSaved}
+        repoPath={currentRepo?.path ?? ""}
+        leadingSlot={<WorkStationTabBarLeading />}
+        trailingSlot={trailingSlot}
+        surfaceClassName=""
+        dataTourTarget={CODE_EDITOR_TOUR_TARGETS.tabBar}
+      />
     );
   }
 );

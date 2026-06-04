@@ -5,13 +5,11 @@ import {
   FolderOutput,
   GalleryThumbnails,
   ListChevronsDownUp,
-  Maximize2,
-  Minimize2,
   MoreHorizontal,
+  PanelRight,
   Plus,
   RefreshCw,
   Search,
-  Settings2,
 } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -62,7 +60,8 @@ import { allAgentDefsAtom } from "@src/modules/MainApp/AgentOrgs/store/builtInAg
 import CreateWorkItemView, {
   type CreatedWorkItemResult,
 } from "@src/modules/ProjectManager/WorkItems/components/CreateWorkItemView";
-import { LayoutSettingsDropdown } from "@src/modules/WorkStation/shared";
+import { TabBarTrailingIconButton } from "@src/modules/WorkStation/shared";
+import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
 import { CollapsedSidebarButton } from "@src/scaffold/NavigationSidebar/CollapsedSidebarButton";
 import { PresenceMenuButton } from "@src/scaffold/NavigationSidebar/blocks/SidebarBottomBar";
@@ -244,15 +243,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       placement: "bottom",
     });
 
-    const layoutSettingsTriggerRef = React.useRef<HTMLButtonElement>(null);
-    const [isLayoutSettingsOpen, setLayoutSettingsOpen] = React.useState(false);
-    const handleToggleLayoutSettings = useCallback(() => {
-      setLayoutSettingsOpen((prev) => !prev);
-    }, []);
-    const handleCloseLayoutSettings = useCallback(() => {
-      setLayoutSettingsOpen(false);
-    }, []);
-
     const [regionNotice, setRegionNotice] =
       React.useState<ChatPanelRegionNotice | null>(null);
     const visibleRegionNotice = regionNotice;
@@ -404,23 +394,17 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       !selectedWorkItem &&
       !isBenchmarkTarget &&
       !isWorkItemTarget;
-    const showPresenceInHeader = showSessionContent
-      ? sidebarCollapsed
-      : showCreatorPresenceInHeader;
-
     const chatFocusLabel = isChatFocus
-      ? t("chat.restoreSplitView")
-      : t("chat.maximizeChatPanel");
-    const chatFocusShortcut = getShortcutKeys(
-      isChatFocus ? "maximize_work_station" : "maximize_chat"
-    );
+      ? t("chat.showWorkstation")
+      : t("chat.hideWorkstation");
+    const chatFocusShortcut = getShortcutKeys("maximize_chat");
     const chatFocusTooltip = (
       <KeyboardShortcutTooltipContent
         label={chatFocusLabel}
         shortcut={chatFocusShortcut}
       />
     );
-    const shrinkToWorkstationLabel = t("chat.shrinkToWorkstation");
+    const shrinkToWorkstationLabel = t("chat.showWorkstation");
     const shrinkToWorkstationTooltip = (
       <KeyboardShortcutTooltipContent
         label={shrinkToWorkstationLabel}
@@ -593,9 +577,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         className="flex h-9 flex-shrink-0 items-center gap-px"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
-        {showPresenceInHeader && (
-          <PresenceMenuButton dropdownPosition="bottom-end" />
-        )}
         {showSessionContent && (
           <Tooltip
             content={
@@ -629,84 +610,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             body={<p className="m-0">{visibleRegionNotice.body}</p>}
             alertClassName="!border-border-2 !bg-chat-container !text-text-1 shadow-lg"
           />
-        )}
-        {isChatFocus && showChatFocusToggle && (
-          <Tooltip
-            content={shrinkToWorkstationTooltip}
-            position="bottom-end"
-            mouseEnterDelay={200}
-            framedPanel
-          >
-            <span className="inline-flex">
-              <Button
-                htmlType="button"
-                variant="tertiary"
-                size="small"
-                iconOnly
-                onClick={handleChatFocusToggle}
-                aria-label={shrinkToWorkstationLabel}
-                icon={
-                  <Minimize2
-                    size={CHAT_PANEL_HEADER_ICON_SIZE}
-                    strokeWidth={2}
-                  />
-                }
-              />
-            </span>
-          </Tooltip>
-        )}
-        {isWorkItemTarget && !showSessionContent && !selectedWorkItem && (
-          <>
-            <label className="flex h-7 items-center gap-2 px-1 text-[12px] font-medium text-text-2">
-              <span>{t("projects:workItems.createModes.useAi")}</span>
-              <Switch
-                size="small"
-                checked={workItemCreateAiEnabled}
-                onChange={setWorkItemCreateAiEnabled}
-                ariaLabel={t("projects:workItems.createModes.useAi")}
-                dataTestId="chat-panel-create-work-item-ai-switch"
-              />
-            </label>
-            {!workItemCreateAiEnabled ? (
-              <div
-                className="pointer-events-none mx-2 h-4 w-px shrink-0 bg-border-2"
-                role="separator"
-                aria-hidden
-              />
-            ) : null}
-          </>
-        )}
-        {showChatFocusToggle && (
-          <Tooltip
-            content={chatFocusTooltip}
-            position="bottom-end"
-            mouseEnterDelay={200}
-            framedPanel
-          >
-            <span className="inline-flex">
-              <Button
-                htmlType="button"
-                variant="tertiary"
-                size="small"
-                iconOnly
-                onClick={handleChatFocusToggle}
-                aria-label={chatFocusLabel}
-                icon={
-                  isChatFocus ? (
-                    <GalleryThumbnails
-                      size={CHAT_PANEL_HEADER_ICON_SIZE}
-                      strokeWidth={2}
-                    />
-                  ) : (
-                    <Maximize2
-                      size={CHAT_PANEL_HEADER_ICON_SIZE}
-                      strokeWidth={2}
-                    />
-                  )
-                }
-              />
-            </span>
-          </Tooltip>
         )}
         {showSessionContent && (
           <Tooltip
@@ -747,35 +650,26 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         )}
         {isChatFocus && showChatFocusToggle && (
           <Tooltip
-            content={
-              <KeyboardShortcutTooltipContent
-                label={t("common:layoutSettings.pageSettings")}
-              />
-            }
+            content={shrinkToWorkstationTooltip}
             position="bottom-end"
             mouseEnterDelay={200}
             framedPanel
           >
             <span className="inline-flex">
-              <Button
-                ref={layoutSettingsTriggerRef}
-                htmlType="button"
-                variant="tertiary"
-                size="small"
-                iconOnly
-                className={
-                  isLayoutSettingsOpen ? "!bg-fill-1 !text-primary-6" : ""
-                }
-                onClick={handleToggleLayoutSettings}
-                aria-label={t("common:layoutSettings.pageSettings")}
-                aria-expanded={isLayoutSettingsOpen}
-                icon={
-                  <Settings2
-                    size={CHAT_PANEL_HEADER_PROMINENT_ICON_SIZE}
-                    strokeWidth={2}
+              <TabBarTrailingIconButton
+                title={shrinkToWorkstationLabel}
+                nativeTitle={false}
+                onClick={handleChatFocusToggle}
+              >
+                {isLeftPosition ? (
+                  <PanelRight size={HEADER_ICON_SIZE.md} strokeWidth={1.75} />
+                ) : (
+                  <GalleryThumbnails
+                    size={HEADER_ICON_SIZE.md}
+                    strokeWidth={1.75}
                   />
-                }
-              />
+                )}
+              </TabBarTrailingIconButton>
             </span>
           </Tooltip>
         )}
@@ -886,17 +780,12 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             </div>,
             document.body
           )}
-        <LayoutSettingsDropdown
-          isOpen={isLayoutSettingsOpen}
-          onClose={handleCloseLayoutSettings}
-          triggerRef={layoutSettingsTriggerRef}
-        />
       </div>
     );
 
     const headerSection = showHeader && (
       <div
-        className={`workspace-header header-tab-group relative flex flex-shrink-0 items-center gap-1.5 px-2 ${isCompactLayout ? "h-11 min-h-11 pt-2" : "h-9 min-h-9"}`}
+        className={`workspace-header header-tab-group relative flex flex-shrink-0 items-center gap-1.5 ${isCompactLayout ? "h-11 min-h-11 pl-2 pr-[7px] pt-2" : "h-9 min-h-9 px-2"}`}
         data-testid="chat-panel-header"
         data-tauri-drag-region
         style={
@@ -931,6 +820,35 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               selectorClassName="!h-7 max-w-[180px] !gap-1.5 !rounded-lg !border-0 !bg-transparent !px-1.5 !text-[13px] font-medium !text-text-1 hover:!bg-surface-hover [&_.select-suffix]:!ml-0 [&_.select-value]:-translate-y-px"
               dataTestId="chat-panel-create-target-select"
             />
+            {isWorkItemTarget && (
+              <>
+                <div
+                  className="mx-2 h-4 w-px shrink-0 bg-border-2"
+                  role="separator"
+                  aria-hidden
+                />
+                <label className="flex h-7 items-center gap-2 px-1 text-[12px] font-medium text-text-2">
+                  <span>{t("projects:workItems.createModes.useAi")}</span>
+                  <Switch
+                    size="small"
+                    checked={workItemCreateAiEnabled}
+                    onChange={setWorkItemCreateAiEnabled}
+                    ariaLabel={t("projects:workItems.createModes.useAi")}
+                    dataTestId="chat-panel-create-work-item-ai-switch"
+                  />
+                </label>
+              </>
+            )}
+            {showCreatorPresenceInHeader && (
+              <>
+                <div
+                  className="mx-2 h-4 w-px shrink-0 bg-border-2"
+                  role="separator"
+                  aria-hidden
+                />
+                <PresenceMenuButton dropdownPosition="bottom-end" />
+              </>
+            )}
           </div>
         )}
         {showSessionContent || selectedWorkItem ? (

@@ -140,6 +140,7 @@
     "settingsMenu": {
       "appearance": "外觀",
       "language": "語言",
+      "workstation": "工作站",
       "viewRam": "查看 RAM",
       "tutorials": "教學",
       "openSettings": "開啟設定"

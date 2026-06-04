@@ -91,12 +91,14 @@
       "emptyDescription": "別のステータス、Agent タイプ、または時間範囲を試してください。"
     },
     "timeFilter": {
-      "label": "表示範囲",
-      "6h": "6h",
+      "label": "範囲",
       "12h": "12h",
       "24h": "24h",
       "3d": "3d",
       "7d": "7d"
+    },
+    "filters": {
+      "allAgents": "すべての Agent"
     },
     "autoArchive": {
       "label": "自動アーカイブ",
@@ -709,6 +711,8 @@
     "showSimulator": "シミュレーターを表示",
     "fullScreenChat": "Chat パネルにフォーカス（Workstation を非表示）",
     "maximizeChatPanel": "Chat パネルを最大化",
+    "showWorkstation": "Workstation を表示",
+    "hideWorkstation": "Workstation を非表示",
     "restoreSplitView": "Workstation を表示",
     "shrinkToWorkstation": "Chat パネルを縮小（Workstation を表示）",
     "collapseAll": "すべて折りたたむ",

@@ -1723,6 +1723,12 @@
     "push": "Push",
     "fetch": "Fetch",
     "sync": "Sync",
+    "worktreeActions": "Worktree eylemleri",
+    "removeWorktree": "Worktree'yi kaldır",
+    "removeWorktreeTitle": "Worktree {{name}} kaldırılsın mı?",
+    "removeWorktreeMessage": "Bu, Worktree checkout'ını diskten kaldırır. Branch ve commits korunur.",
+    "removeWorktreeSuccess": "Worktree kaldırıldı",
+    "removeWorktreeFailed": "Worktree kaldırılamadı",
     "pill": {
       "focus": "Odak",
       "allChanges": "Tüm Değişiklikler"

@@ -6,17 +6,11 @@
  * the ops-control home tab; the latter two open in the code peek-host.
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import { Settings2 } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import {
-  LayoutSettingsDropdown,
-  StationTabBarLeading,
-  TabBar,
-  TabBarTrailingIconButton,
-} from "@src/modules/WorkStation/shared";
+import { StationTabBarLeading, TabBar } from "@src/modules/WorkStation/shared";
 import {
   CODE_EDITOR_MAIN_TERMINAL_SESSION_ID,
   OPS_CONTROL_HOME_TAB,
@@ -31,8 +25,6 @@ import {
 } from "@src/store/workstation";
 import type { WorkStationTab } from "@src/store/workstation/tabs";
 
-import { useLayoutSettingsToggle } from "./useLayoutSettingsToggle";
-
 export const KanbanStationTabBar: React.FC = memo(() => {
   const { t } = useTranslation(["navigation", "common", "sessions"]);
   const location = useLocation();
@@ -44,13 +36,6 @@ export const KanbanStationTabBar: React.FC = memo(() => {
   const setOpsControlPeekHost = useSetAtom(opsControlPeekHostAtom);
   const setOpsControlFocusedTab = useSetAtom(opsControlFocusedTabAtom);
   const setOpsControlHomeTab = useSetAtom(opsControlHomeTabAtom);
-
-  const {
-    isLayoutSettingsOpen,
-    layoutSettingsTriggerRef,
-    handleToggleLayoutSettings,
-    handleCloseLayoutSettings,
-  } = useLayoutSettingsToggle();
 
   const kanbanTab = useMemo<WorkStationTab>(
     () => ({
@@ -181,45 +166,16 @@ export const KanbanStationTabBar: React.FC = memo(() => {
 
   const leadingSlot = useMemo(() => <StationTabBarLeading />, []);
 
-  const trailingSlot = useMemo(
-    () => (
-      <span ref={layoutSettingsTriggerRef}>
-        <TabBarTrailingIconButton
-          title={t("common:layoutSettings.pageSettings")}
-          active={isLayoutSettingsOpen}
-          aria-pressed={isLayoutSettingsOpen}
-          onClick={handleToggleLayoutSettings}
-        >
-          <Settings2 size={16} strokeWidth={2} />
-        </TabBarTrailingIconButton>
-      </span>
-    ),
-    [
-      handleToggleLayoutSettings,
-      isLayoutSettingsOpen,
-      layoutSettingsTriggerRef,
-      t,
-    ]
-  );
-
   return (
-    <>
-      <TabBar
-        paneId="workstation-kanban"
-        tabs={tabs}
-        activeTabId={activeTabId}
-        onTabClick={handleTabClick}
-        onTabClose={() => {}}
-        surfaceClassName="bg-workstation-bg"
-        leadingSlot={leadingSlot}
-        trailingSlot={trailingSlot}
-      />
-      <LayoutSettingsDropdown
-        isOpen={isLayoutSettingsOpen}
-        onClose={handleCloseLayoutSettings}
-        triggerRef={layoutSettingsTriggerRef}
-      />
-    </>
+    <TabBar
+      paneId="workstation-kanban"
+      tabs={tabs}
+      activeTabId={activeTabId}
+      onTabClick={handleTabClick}
+      onTabClose={() => {}}
+      surfaceClassName="bg-workstation-bg"
+      leadingSlot={leadingSlot}
+    />
   );
 });
 

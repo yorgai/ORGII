@@ -91,12 +91,14 @@
       "emptyDescription": "尝试切换状态、Agent 类型或时间范围。"
     },
     "timeFilter": {
-      "label": "显示范围",
-      "6h": "6h",
+      "label": "范围",
       "12h": "12h",
       "24h": "24h",
       "3d": "3d",
       "7d": "7d"
+    },
+    "filters": {
+      "allAgents": "所有 Agent"
     },
     "autoArchive": {
       "label": "自动归档",
@@ -709,6 +711,8 @@
     "showSimulator": "显示模拟器",
     "fullScreenChat": "聚焦聊天面板（隐藏工作站）",
     "maximizeChatPanel": "最大化聊天面板",
+    "showWorkstation": "显示工作站",
+    "hideWorkstation": "隐藏工作站",
     "restoreSplitView": "显示工作站",
     "shrinkToWorkstation": "缩小聊天面板（显示工作站）",
     "collapseAll": "全部折叠",

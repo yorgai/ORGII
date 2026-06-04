@@ -35,7 +35,7 @@ interface KanbanFilterItem<TFilter extends string> {
 
 const ALL_AGENT_TYPE_FILTER_ITEM: KanbanFilterItem<KanbanAgentTypeFilter> = {
   key: KANBAN_AGENT_TYPE_FILTER.ALL,
-  labelKey: "common:actions.all",
+  labelKey: "kanban.filters.allAgents",
 };
 
 const RUST_AGENT_FILTER_ITEMS: Record<

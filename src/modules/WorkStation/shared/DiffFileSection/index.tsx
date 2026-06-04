@@ -36,6 +36,8 @@ export interface DiffFileSectionProps {
   onFileSelect?: (path: string) => void;
   onRequestContent?: (file: DiffFileSectionData) => void;
   hideDirectory?: boolean;
+  showBottomBorder?: boolean;
+  dataPath?: string;
 }
 
 function getDisplayPath(path: string, repoPath?: string): string {
@@ -64,6 +66,8 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
   onFileSelect,
   onRequestContent,
   hideDirectory = false,
+  showBottomBorder = true,
+  dataPath,
 }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -114,9 +118,13 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
   const { fileName, dirPath } = getFileNameAndDir(displayPath);
 
   return (
-    <div ref={sectionRef} className="border-b border-border-2">
+    <div
+      ref={sectionRef}
+      className={showBottomBorder ? "border-b border-border-2" : undefined}
+      data-diff-section-path={dataPath}
+    >
       <button
-        className="sticky top-0 z-10 flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left hover:bg-fill-2"
+        className="sticky top-0 z-10 flex w-full min-w-0 items-center gap-2 bg-[var(--cm-editor-background)] px-3 py-2 text-left hover:bg-fill-2"
         onClick={toggleExpanded}
       >
         {expanded ? (

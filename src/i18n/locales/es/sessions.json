@@ -91,11 +91,14 @@
       "emptyDescription": "Prueba otro estado, tipo de Agent o intervalo de tiempo."
     },
     "timeFilter": {
-      "6h": "6h",
+      "label": "Rango",
       "12h": "12h",
       "24h": "24h",
       "3d": "3d",
       "7d": "7d"
+    },
+    "filters": {
+      "allAgents": "Todos los agents"
     },
     "autoArchive": {
       "label": "Archivado automático",
@@ -708,6 +711,8 @@
     "showSimulator": "Mostrar simulador",
     "fullScreenChat": "Enfocar panel de chat (ocultar Workstation)",
     "maximizeChatPanel": "Maximizar panel de chat",
+    "showWorkstation": "Mostrar Workstation",
+    "hideWorkstation": "Ocultar Workstation",
     "restoreSplitView": "Mostrar Workstation",
     "shrinkToWorkstation": "Reducir panel de chat (mostrar Workstation)",
     "collapseAll": "Contraer todo",

@@ -1019,24 +1019,6 @@
       "createPR": "Create PR",
       "stash": "Stash"
     },
-    "pr": {
-      "title": "Pull Request",
-      "creating": "Creating pull request…",
-      "createError": "Failed to create pull request",
-      "readyHint": "Branch is pushed and ready for a pull request",
-      "neutralHint": "Push your branch to create a pull request",
-      "noBranch": "No branch selected",
-      "noRepoPath": "No repository path available",
-      "notAuthenticated": "Sign in to create pull requests",
-      "noOriginRemote": "No origin remote configured",
-      "cannotParseRepoName": "Could not parse repository name from origin remote",
-      "status": {
-        "open": "Open",
-        "merged": "Merged",
-        "closed": "Closed",
-        "draft": "Draft"
-      }
-    },
     "messages": {
       "pushSuccess": "Successfully pushed changes to remote",
       "pushFailed": "Push failed: {{error}}",
@@ -1072,6 +1054,24 @@
       "resolveConflicts": "Resolve conflicts",
       "conflictedFiles": "Conflicted files need resolution",
       "gitAction": "Git Action"
+    },
+    "pr": {
+      "title": "Pull Request",
+      "creating": "Creating pull request…",
+      "createError": "Failed to create pull request",
+      "readyHint": "Branch is pushed and ready for a pull request",
+      "neutralHint": "Push your branch to create a pull request",
+      "noBranch": "No branch selected",
+      "noRepoPath": "No repository path available",
+      "notAuthenticated": "Sign in to create pull requests",
+      "noOriginRemote": "No origin remote configured",
+      "cannotParseRepoName": "Could not parse repository name from origin remote",
+      "status": {
+        "open": "Open",
+        "merged": "Merged",
+        "closed": "Closed",
+        "draft": "Draft"
+      }
     }
   },
   "selectors": {
@@ -1740,6 +1740,12 @@
     "push": "Push",
     "fetch": "Fetch",
     "sync": "Sync",
+    "worktreeActions": "Worktree actions",
+    "removeWorktree": "Remove Worktree",
+    "removeWorktreeTitle": "Remove worktree {{name}}?",
+    "removeWorktreeMessage": "This removes the worktree checkout from disk. The branch and commits are kept.",
+    "removeWorktreeSuccess": "Worktree removed",
+    "removeWorktreeFailed": "Failed to remove worktree",
     "pill": {
       "focus": "Focus",
       "allChanges": "All Changes"

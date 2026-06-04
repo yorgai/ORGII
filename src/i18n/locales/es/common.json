@@ -1722,6 +1722,12 @@
     "push": "Push",
     "fetch": "Fetch",
     "sync": "Sync",
+    "worktreeActions": "Acciones de Worktree",
+    "removeWorktree": "Eliminar Worktree",
+    "removeWorktreeTitle": "¿Eliminar Worktree {{name}}?",
+    "removeWorktreeMessage": "Esto elimina el checkout Worktree del disco. La branch y los commits se conservan.",
+    "removeWorktreeSuccess": "Worktree eliminado",
+    "removeWorktreeFailed": "No se pudo eliminar el Worktree",
     "pill": {
       "focus": "Foco",
       "allChanges": "Todos los cambios"
