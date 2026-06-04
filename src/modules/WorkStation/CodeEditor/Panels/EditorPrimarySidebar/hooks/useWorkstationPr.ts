@@ -1,4 +1,4 @@
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,6 +15,7 @@ import {
   parseGithubRepoFullName,
 } from "@src/services/git/operations/createPullRequest";
 import { gitAutoCreatePrAtom } from "@src/store/ui/editorSettingsAtom";
+import { workstationPrAtom } from "@src/store/workstation/codeEditor/workstationPrAtom";
 
 import {
   formatWorkstationPrTitle,
@@ -55,6 +56,7 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
 
   const { t } = useTranslation();
   const autoCreatePr = useAtomValue(gitAutoCreatePrAtom);
+  const setWorkstationPrAtom = useSetAtom(workstationPrAtom);
   const branchKey = branchName ?? "";
 
   const [remotePrByBranch, setRemotePrByBranch] = useState<
@@ -257,6 +259,26 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
       autoTriggeredRef.current = false;
     }
   }, [readyToCreate]);
+
+  useEffect(() => {
+    setWorkstationPrAtom({
+      readyToCreate,
+      prUrl,
+      isCreating,
+      onCreatePr: handleCreatePr,
+    });
+  }, [readyToCreate, prUrl, isCreating, handleCreatePr, setWorkstationPrAtom]);
+
+  useEffect(() => {
+    return () => {
+      setWorkstationPrAtom({
+        readyToCreate: false,
+        prUrl: undefined,
+        isCreating: false,
+        onCreatePr: null,
+      });
+    };
+  }, [setWorkstationPrAtom]);
 
   return {
     prUrl,

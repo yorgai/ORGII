@@ -14,8 +14,7 @@
  * compact error row rather than a blank card so the user can see what went
  * wrong inline.
  */
-import { useSetAtom } from "jotai";
-import React, { useCallback } from "react";
+import React from "react";
 
 import CanvasInlineCard from "@src/engines/ChatPanel/blocks/CanvasInlineCard";
 import type { CanvasInlineMode } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/types";
@@ -24,7 +23,6 @@ import {
   useLifecycleLabels,
 } from "@src/engines/SessionCore/rendering/registry";
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
-import { canvasPreviewAtom } from "@src/store/session/canvasPreviewAtom";
 import { deriveToolAction } from "@src/util/ui/rendering/toolAction";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -52,15 +50,6 @@ function extractCanvasArgs(args: Record<string, unknown>): {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export const CanvasInlineAdapter: React.FC<UniversalEventProps> = (props) => {
-  const setCanvasEntry = useSetAtom(canvasPreviewAtom);
-  const handleClose = useCallback(() => {
-    setCanvasEntry((prev) =>
-      prev && prev.sessionId === props.sessionId
-        ? { ...prev, cardDismissed: true }
-        : prev
-    );
-  }, [setCanvasEntry, props.sessionId]);
-
   const action = deriveToolAction(
     props.functionName ?? props.eventType,
     props.args
@@ -100,7 +89,6 @@ export const CanvasInlineAdapter: React.FC<UniversalEventProps> = (props) => {
         title={title}
         isStreaming={isRunning && props.showActiveEventPainting === true}
         sessionId={props.sessionId}
-        onClose={handleClose}
       />
     </div>
   );
