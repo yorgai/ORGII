@@ -56,6 +56,13 @@ pub struct PRResponse {
 }
 
 #[derive(Debug, Serialize)]
+pub struct FindPRResponse {
+    pub number: u64,
+    pub url: String,
+    pub state: String,
+}
+
+#[derive(Debug, Serialize)]
 pub struct GitHubGitCredential {
     pub username: String,
     pub token: String,
@@ -292,6 +299,68 @@ pub async fn github_create_pr(
         url: data["html_url"].as_str().unwrap_or("").to_string(),
     };
     log::info!("[GitHub][Cmd] create_pr done PR #{}", pr.number);
+    Ok(pr)
+}
+
+/// Find a pull request for a head branch (open first, then all states).
+#[command]
+pub async fn github_find_pull_request(
+    user_id: String,
+    repo_full_name: String,
+    head_branch: String,
+    hosted_service_url: String,
+    hosted_token: String,
+) -> Result<Option<FindPRResponse>, String> {
+    log::info!(
+        "[GitHub][Cmd] find_pull_request repo={} head={}",
+        repo_full_name,
+        head_branch
+    );
+    let client = make_client(&user_id, &hosted_service_url, &hosted_token);
+    let owner = repo_full_name
+        .split('/')
+        .next()
+        .ok_or_else(|| format!("Invalid repo name: {}", repo_full_name))?;
+
+    let parse_pr = |data: &Value| -> Option<FindPRResponse> {
+        data.as_array()
+            .and_then(|items| items.first())
+            .map(|item| FindPRResponse {
+                number: item["number"].as_u64().unwrap_or(0),
+                url: item["html_url"].as_str().unwrap_or("").to_string(),
+                state: item["state"].as_str().unwrap_or("open").to_string(),
+            })
+    };
+
+    // Check open PRs first (most common path)
+    let open_data = client
+        .get(&format!(
+            "/repos/{}/pulls?state=open&head={}:{}&per_page=1",
+            repo_full_name, owner, head_branch
+        ))
+        .await?;
+
+    if let Some(pr) = parse_pr(&open_data) {
+        log::info!("[GitHub][Cmd] find_pull_request found open PR #{}", pr.number);
+        return Ok(Some(pr));
+    }
+
+    // Fall back to all states to detect merged / closed PRs
+    let all_data = client
+        .get(&format!(
+            "/repos/{}/pulls?state=all&head={}:{}&per_page=1",
+            repo_full_name, owner, head_branch
+        ))
+        .await?;
+
+    let pr = parse_pr(&all_data);
+    log::info!(
+        "[GitHub][Cmd] find_pull_request {}",
+        match &pr {
+            Some(p) => format!("found {} PR #{}", p.state, p.number),
+            None => "not found".to_string(),
+        }
+    );
     Ok(pr)
 }
 

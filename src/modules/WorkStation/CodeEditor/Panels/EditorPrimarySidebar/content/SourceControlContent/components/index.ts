@@ -31,3 +31,6 @@ export type { SectionHeaderProps } from "./SectionHeader";
 
 export { StagedChangesSection } from "./StagedChangesSection";
 export type { StagedChangesSectionProps } from "./StagedChangesSection";
+
+export { default as WorkstationPrSection } from "./WorkstationPrSection";
+export type { WorkstationPrSectionProps } from "./WorkstationPrSection";
