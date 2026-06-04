@@ -17,11 +17,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
 import { useContextMenu } from "@src/hooks/workStation/panels/useContextMenu";
 
-import {
-  RecentFilesSection,
-  SearchResultsPanel,
-  SecondLayerPanel,
-} from "./MenuSections";
+import { SearchResultsPanel, SecondLayerPanel } from "./MenuSections";
 import { MenuItemRow } from "./ResultItems";
 import { MENU_ITEMS, STYLE_CONFIG } from "./config";
 import type { ContextMenuProps } from "./types";
@@ -234,15 +230,6 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           className={DROPDOWN_CLASSES.panel}
           style={{ width: STYLE_CONFIG.dropdownWidth }}
         >
-          <RecentFilesSection
-            files={recentFiles}
-            onSelect={handleRecentSelect}
-            activeIndex={keyboardNavigated ? activeIndex : -1}
-            baseIndex={0}
-            onHover={handleMainItemHover}
-            onHoverEnd={resetActiveIndex}
-          />
-
           {filteredCustomMentionOptions.length > 0 && (
             <div className={DROPDOWN_CLASSES.sectionContainer}>
               {filteredCustomMentionOptions.map((option, optionIndex) => {
