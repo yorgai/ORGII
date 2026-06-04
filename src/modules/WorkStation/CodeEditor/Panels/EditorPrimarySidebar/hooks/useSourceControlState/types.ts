@@ -115,6 +115,16 @@ export interface SourceControlState {
   onStashDrop: (index: number) => Promise<boolean>;
   /** Whether there are changes that can be stashed */
   hasChangesToStash: boolean;
+
+  // Pull request
+  prUrl?: string;
+  prStatus?: string;
+  prCreating?: boolean;
+  prErrorMessage?: string | null;
+  prReadyToCreate?: boolean;
+  prEligible?: boolean;
+  autoCreatePr?: boolean;
+  onCreatePr?: () => Promise<{ url?: string; error?: string }>;
 }
 
 export interface UseSourceControlStateResult {
