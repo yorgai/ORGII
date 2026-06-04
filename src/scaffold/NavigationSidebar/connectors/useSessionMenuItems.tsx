@@ -19,10 +19,7 @@ import {
 import { isTerminalStatus } from "@src/types/session/session";
 import { formatCompactTimeAgo } from "@src/util/data/formatters/date";
 import { formatBranchLabel } from "@src/util/git/branchLabel";
-import {
-  getRustAgentType,
-  isCursorIdeSession,
-} from "@src/util/session/sessionDispatch";
+import { getRustAgentType } from "@src/util/session/sessionDispatch";
 import { isSessionInProgress } from "@src/util/session/sessionInProgress";
 import {
   getSessionListDisplayName,
@@ -252,7 +249,6 @@ export function useSessionMenuItems({
           : resolveSessionRowIcon(session),
         trailingElement: inProgress ? undefined : renderStatusDot(unread),
         shortcut: formatCompactTimeAgo(timestampSrc),
-        showMoreActions: !isCursorIdeSession(session.session_id),
       };
     },
     [untitledSession, visitedSessions]
