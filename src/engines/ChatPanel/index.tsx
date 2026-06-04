@@ -4,7 +4,6 @@ import {
   Clipboard,
   FolderOutput,
   GalleryThumbnails,
-  Info,
   ListChevronsDownUp,
   Maximize2,
   Minimize2,
@@ -107,10 +106,6 @@ import type { ChatPanelProps, ChatPanelRegionNotice } from "./types";
 
 const CHAT_PANEL_HEADER_ICON_SIZE = 14;
 const CHAT_PANEL_HEADER_PROMINENT_ICON_SIZE = 16;
-const CHAT_PANEL_WORK_ITEM_HEADER_ACTION_CLASS =
-  "!h-7 !w-7 !min-w-7 !rounded-full";
-const CHAT_PANEL_WORK_ITEM_HEADER_ACTION_ACTIVE_CLASS =
-  "!h-7 !w-7 !min-w-7 !rounded-full !bg-surface-selected !text-primary-6";
 // Builtin Agent Architect — designs and maintains agents, agent orgs, and
 // skills. Picking the "Create agent / skill" entry in the creator-target
 // dropdown is a shortcut that opens a fresh Agent session with this agent
@@ -149,8 +144,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const { openTab: openWorkStationTab } = useWorkStationTabs();
     const [contentMode, setContentMode] = useAtom(chatPanelContentModeAtom);
     const [createTarget, setCreateTarget] = useAtom(chatPanelCreateTargetAtom);
-    const [workItemCreatePropertiesOpen, setWorkItemCreatePropertiesOpen] =
-      useState(false);
     const [workItemCreateAiEnabled, setWorkItemCreateAiEnabled] =
       useState(true);
     const [workItemCreateDraft, setWorkItemCreateDraft] =
@@ -415,10 +408,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       ? sidebarCollapsed
       : showCreatorPresenceInHeader;
 
-    const handleToggleWorkItemCreateProperties = useCallback(() => {
-      setWorkItemCreatePropertiesOpen((current) => !current);
-    }, []);
-
     const chatFocusLabel = isChatFocus
       ? t("chat.restoreSplitView")
       : t("chat.maximizeChatPanel");
@@ -469,14 +458,12 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           }));
           handleNewSession();
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-          setWorkItemCreatePropertiesOpen(false);
           setWorkItemCreateAiEnabled(true);
           setWorkItemCreateDraft(null);
           return;
         }
 
         if (nextTarget !== CHAT_PANEL_CREATE_TARGET.WORK_ITEM) {
-          setWorkItemCreatePropertiesOpen(false);
           setWorkItemCreateAiEnabled(true);
           setWorkItemCreateDraft(null);
         }
@@ -524,7 +511,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           workItem,
         });
         if (!result.keepOpen) {
-          setWorkItemCreatePropertiesOpen(false);
           setWorkItemCreateAiEnabled(true);
           setWorkItemCreateDraft(null);
           setCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
@@ -690,41 +676,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               />
             ) : null}
           </>
-        )}
-        {isWorkItemTarget && !showSessionContent && !selectedWorkItem && (
-          <Tooltip
-            content={
-              workItemCreatePropertiesOpen
-                ? t("projects:workItems.hideProperties")
-                : t("projects:workItems.showProperties")
-            }
-            position="bottom-end"
-            mouseEnterDelay={200}
-          >
-            <span className="inline-flex">
-              <Button
-                htmlType="button"
-                variant="tertiary"
-                size="small"
-                iconOnly
-                className={
-                  workItemCreatePropertiesOpen
-                    ? CHAT_PANEL_WORK_ITEM_HEADER_ACTION_ACTIVE_CLASS
-                    : CHAT_PANEL_WORK_ITEM_HEADER_ACTION_CLASS
-                }
-                onClick={handleToggleWorkItemCreateProperties}
-                aria-label={
-                  workItemCreatePropertiesOpen
-                    ? t("projects:workItems.hideProperties")
-                    : t("projects:workItems.showProperties")
-                }
-                aria-pressed={workItemCreatePropertiesOpen}
-                icon={
-                  <Info size={CHAT_PANEL_HEADER_ICON_SIZE} strokeWidth={2} />
-                }
-              />
-            </span>
-          </Tooltip>
         )}
         {showChatFocusToggle && (
           <Tooltip
@@ -1162,8 +1113,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               onWorkItemCreated={handleChatPanelWorkItemCreated}
               onDraftChange={setWorkItemCreateDraft}
               showCloseAction={false}
-              propertiesOpen={workItemCreatePropertiesOpen}
-              onToggleProperties={handleToggleWorkItemCreateProperties}
+              propertiesOpen={false}
               showPropertiesAction={false}
               aiGenerateMode={workItemCreateAiEnabled}
               onAiGenerateModeChange={setWorkItemCreateAiEnabled}
