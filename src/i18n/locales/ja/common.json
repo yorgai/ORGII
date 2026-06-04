@@ -1728,6 +1728,12 @@
     "push": "Push",
     "fetch": "Fetch",
     "sync": "Sync",
+    "worktreeActions": "Worktree アクション",
+    "removeWorktree": "Worktree を削除",
+    "removeWorktreeTitle": "Worktree {{name}} を削除しますか？",
+    "removeWorktreeMessage": "ディスクから Worktree checkout を削除します。branch と commits は保持されます。",
+    "removeWorktreeSuccess": "Worktree を削除しました",
+    "removeWorktreeFailed": "Worktree の削除に失敗しました",
     "pill": {
       "focus": "フォーカス",
       "allChanges": "すべての変更"

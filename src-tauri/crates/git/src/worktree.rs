@@ -443,6 +443,59 @@ fn run_worktree_setup_command(
 }
 
 /// Remove a session's worktree and optionally delete its branch.
+pub fn remove_worktree_path(
+    repo_path: &Path,
+    worktree_path: &Path,
+    force: bool,
+) -> Result<(), String> {
+    let canonical_repo = repo_path
+        .canonicalize()
+        .map_err(|err| format!("Failed to resolve repo path: {}", err))?;
+    let canonical_worktree = worktree_path
+        .canonicalize()
+        .map_err(|err| format!("Failed to resolve worktree path: {}", err))?;
+
+    if canonical_repo == canonical_worktree {
+        return Err("Cannot remove the main worktree".to_string());
+    }
+
+    let registered = list_all_worktrees(&canonical_repo)?;
+    let is_registered = registered.iter().any(|entry| {
+        Path::new(&entry.path)
+            .canonicalize()
+            .map(|path| path == canonical_worktree)
+            .unwrap_or(false)
+    });
+
+    if !is_registered {
+        return Err(format!(
+            "Path is not a registered worktree: {}",
+            canonical_worktree.display()
+        ));
+    }
+
+    let worktree_path_string = canonical_worktree.to_string_lossy().to_string();
+    let mut args = vec!["worktree", "remove"];
+    if force {
+        args.push("--force");
+    }
+    args.push(&worktree_path_string);
+
+    let output = run_git(&canonical_repo, &args)?;
+    if !output.status.success() {
+        return Err(format!(
+            "git worktree remove failed: {}",
+            git_stderr(&output)
+        ));
+    }
+
+    info!(
+        "[worktree] Removed worktree: {}",
+        canonical_worktree.display()
+    );
+    Ok(())
+}
+
 pub fn remove_session_worktree(
     repo_path: &Path,
     session_id: &str,
@@ -455,20 +508,16 @@ pub fn remove_session_worktree(
 
     // Try git worktree remove first (handles both directory and registry)
     if wt_path.exists() {
-        let wt_path_str = wt_path.to_string_lossy().to_string();
-        let output = run_git(repo_path, &["worktree", "remove", "--force", &wt_path_str]);
-        match output {
-            Ok(ref out) if out.status.success() => {
-                info!("[worktree] Removed worktree: {}", wt_path.display());
+        if let Err(err) = remove_worktree_path(repo_path, &wt_path, true) {
+            warn!(
+                "[worktree] git worktree remove failed, cleaning up manually: {}",
+                err
+            );
+            if wt_path.exists() {
+                std::fs::remove_dir_all(&wt_path)
+                    .map_err(|err| format!("Failed to remove worktree dir: {}", err))?;
             }
-            _ => {
-                warn!("[worktree] git worktree remove failed, cleaning up manually");
-                if wt_path.exists() {
-                    std::fs::remove_dir_all(&wt_path)
-                        .map_err(|err| format!("Failed to remove worktree dir: {}", err))?;
-                }
-                let _ = run_git(repo_path, &["worktree", "prune"]);
-            }
+            let _ = run_git(repo_path, &["worktree", "prune"]);
         }
     } else {
         let _ = run_git(repo_path, &["worktree", "prune"]);

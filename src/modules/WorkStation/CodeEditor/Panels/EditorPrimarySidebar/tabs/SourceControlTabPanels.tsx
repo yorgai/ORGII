@@ -20,6 +20,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { removeGitWorktree } from "@src/api/http/git";
 import type { GitWorktreeEntry } from "@src/api/http/git/types";
 import { repoApi } from "@src/api/tauri/repo";
 import Message from "@src/components/Toast";
@@ -29,8 +30,14 @@ import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { workspaceGitStatusMapAtom } from "@src/store/git";
 import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
 import type { GitFile } from "@src/types/git/types";
+import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
+import { showGitActionDialogSafely } from "@src/util/dialogs/gitActionDialog";
 
 import SourceControlContent from "../content/SourceControlContent";
+import {
+  WorktreeActionsMenu,
+  WorktreeContextMenu,
+} from "../content/WorktreeActionsMenu";
 import { WorktreeSourceControlSection } from "../content/WorktreeSourceControlSection";
 import { useSourceControlState } from "../hooks/useSourceControlState";
 
@@ -394,6 +401,47 @@ export const MainRepoSectionContent = forwardRef<
 
 MainRepoSectionContent.displayName = "MainRepoSectionContent";
 
+async function confirmAndRemoveWorktree({
+  repoId,
+  repoPath,
+  worktree,
+  folderName,
+  onRemoved,
+  t,
+}: {
+  repoId: string;
+  repoPath: string;
+  worktree: GitWorktreeEntry;
+  folderName: string;
+  onRemoved?: () => Promise<void>;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) {
+  const confirmed = await confirmDestructiveAction({
+    title: t("sourceControl.removeWorktreeTitle", { name: folderName }),
+    message: t("sourceControl.removeWorktreeMessage"),
+    okLabel: t("sourceControl.removeWorktree"),
+  });
+  if (!confirmed) return;
+
+  try {
+    await removeGitWorktree({
+      repo_id: repoId,
+      repo_path: repoPath,
+      worktree_path: worktree.path,
+      force: true,
+    });
+    await onRemoved?.();
+    showGitActionDialogSafely(t("sourceControl.removeWorktreeSuccess"), "info");
+  } catch (error) {
+    showGitActionDialogSafely(
+      error instanceof Error
+        ? error.message
+        : t("sourceControl.removeWorktreeFailed"),
+      "error"
+    );
+  }
+}
+
 // ── SourceControlWithWorktrees ────────────────────────────────────────────────
 
 interface SourceControlWithWorktreesProps {
@@ -401,6 +449,7 @@ interface SourceControlWithWorktreesProps {
   repoId: string;
   repoName: string;
   worktrees: GitWorktreeEntry[];
+  onWorktreesRefresh?: () => Promise<void>;
   onGitFileSelect?: (file: GitFile) => void;
   /**
    * Notified whenever the file list of any pane (host or worktree) changes.
@@ -429,6 +478,7 @@ export const SourceControlWithWorktrees = forwardRef<
       repoId,
       repoName,
       worktrees,
+      onWorktreesRefresh,
       onGitFileSelect,
       onGitFilesChange,
       onGitHistorySelectionChange,
@@ -450,7 +500,10 @@ export const SourceControlWithWorktrees = forwardRef<
     const [worktreeExpanded, setWorktreeExpanded] = useState<
       Record<string, boolean>
     >({});
+    const [contextMenuWorktree, setContextMenuWorktree] =
+      useState<GitWorktreeEntry | null>(null);
 
+    const { t } = useTranslation();
     const gitStatusMap = useAtomValue(workspaceGitStatusMapAtom);
     const mainBranch = gitStatusMap.get(repoPath)?.current_branch;
 
@@ -471,6 +524,21 @@ export const SourceControlWithWorktrees = forwardRef<
     const toggleWorktree = useCallback((path: string) => {
       setWorktreeExpanded((prev) => ({ ...prev, [path]: !prev[path] }));
     }, []);
+
+    const removeWorktree = useCallback(
+      async (worktree: GitWorktreeEntry) => {
+        const folderName = worktree.path.split("/").pop() || "worktree";
+        await confirmAndRemoveWorktree({
+          repoId,
+          repoPath,
+          worktree,
+          folderName,
+          onRemoved: onWorktreesRefresh,
+          t,
+        });
+      },
+      [onWorktreesRefresh, repoId, repoPath, t]
+    );
 
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -514,6 +582,17 @@ export const SourceControlWithWorktrees = forwardRef<
                 expanded={isExpanded}
                 onToggle={() => toggleWorktree(worktree.path)}
                 branchName={worktree.branch || undefined}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  setContextMenuWorktree(worktree);
+                }}
+                actions={
+                  <WorktreeActionsMenu
+                    onRemove={() => {
+                      void removeWorktree(worktree);
+                    }}
+                  />
+                }
               />
               {isExpanded && (
                 <div className="flex min-h-[280px] flex-col overflow-hidden">
@@ -532,6 +611,14 @@ export const SourceControlWithWorktrees = forwardRef<
             </div>
           );
         })}
+        {contextMenuWorktree && (
+          <WorktreeContextMenu
+            onRemove={() => {
+              void removeWorktree(contextMenuWorktree);
+            }}
+            onClose={() => setContextMenuWorktree(null)}
+          />
+        )}
       </div>
     );
   }

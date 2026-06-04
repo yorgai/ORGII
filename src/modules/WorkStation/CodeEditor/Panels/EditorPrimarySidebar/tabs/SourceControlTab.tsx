@@ -105,7 +105,11 @@ export function useSourceControlTabConfig({
   }, [forceRefresh, refreshGitInitialization]);
 
   // Worktrees for the current repo
-  const { worktrees, hasWorktrees } = useGitWorktrees({
+  const {
+    worktrees,
+    hasWorktrees,
+    refresh: refreshWorktrees,
+  } = useGitWorktrees({
     repoId,
     repoPath,
     enabled: isGitInitialized === true,
@@ -148,12 +152,15 @@ export function useSourceControlTabConfig({
             sourceControlRef as React.RefObject<MultiRootSourceControlContentHandle>
           }
           workspaceFolders={workspaceFolders}
+          repoId={repoId}
+          repoPath={repoPath}
           onGitFileSelect={onGitFileSelect}
           onGitFilesChange={onGitFilesChange}
           onGitHistorySelectionChange={onGitHistorySelectionChange}
           showFilter={showFilter}
           viewMode={viewMode}
           worktrees={worktrees}
+          onWorktreesRefresh={refreshWorktrees}
           navigateWithoutSelecting={navigateWithoutSelecting}
           sectionFilter={sectionFilter}
         />
@@ -167,6 +174,7 @@ export function useSourceControlTabConfig({
           repoId={repoId}
           repoName={repoName}
           worktrees={worktrees}
+          onWorktreesRefresh={refreshWorktrees}
           onGitFileSelect={onGitFileSelect}
           onGitFilesChange={onGitFilesChange}
           onGitHistorySelectionChange={onGitHistorySelectionChange}
@@ -212,6 +220,7 @@ export function useSourceControlTabConfig({
     sourceControlRef,
     worktrees,
     hasWorktrees,
+    refreshWorktrees,
     t,
   ]);
 

@@ -19,6 +19,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { removeGitWorktree } from "@src/api/http/git";
 import type { GitWorktreeEntry } from "@src/api/http/git/types";
 import { FolderHeaderRow } from "@src/modules/WorkStation/shared/FolderHeaderRow";
 import { FOLDER_HEADER } from "@src/modules/WorkStation/shared/tokens";
@@ -30,12 +31,18 @@ import type { SourceControlHistorySelection } from "@src/store/workstation/tabs"
 import type { GitFile } from "@src/types/git/types";
 import type { GitRepositoryStatus } from "@src/types/session/steps";
 import type { WorkspaceFolder } from "@src/types/workspace";
+import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
+import { showGitActionDialogSafely } from "@src/util/dialogs/gitActionDialog";
 
 import {
   type UsePerRepoSourceControlResult,
   usePerRepoSourceControl,
 } from "../../hooks/usePerRepoSourceControl";
 import SourceControlContent from "../SourceControlContent";
+import {
+  WorktreeActionsMenu,
+  WorktreeContextMenu,
+} from "../WorktreeActionsMenu";
 import { WorktreeSourceControlSection } from "../WorktreeSourceControlSection";
 
 // ============================================
@@ -44,6 +51,8 @@ import { WorktreeSourceControlSection } from "../WorktreeSourceControlSection";
 
 export interface MultiRootSourceControlContentProps {
   workspaceFolders: WorkspaceFolder[];
+  repoId: string;
+  repoPath: string;
   onGitFileSelect?: (file: GitFile) => void;
   onGitFilesChange?: (files: GitFile[], scopeRepoRoot: string) => void;
   onGitHistorySelectionChange?: (
@@ -52,6 +61,7 @@ export interface MultiRootSourceControlContentProps {
   showFilter: boolean;
   viewMode: "list-tree" | "list";
   worktrees?: GitWorktreeEntry[];
+  onWorktreesRefresh?: () => Promise<void>;
   navigateWithoutSelecting?: boolean;
   /** Working-tree section filter forwarded to every per-folder pane. */
   sectionFilter?: "uncommitted" | "staged" | "unstaged";
@@ -93,6 +103,47 @@ function normalizeFsPath(path: string | undefined): string {
     ? path.replace("file://", "")
     : path;
   return stripped.replace(/\/+$/, "");
+}
+
+async function confirmAndRemoveWorktree({
+  repoId,
+  repoPath,
+  worktree,
+  folderName,
+  onRemoved,
+  t,
+}: {
+  repoId: string;
+  repoPath: string;
+  worktree: GitWorktreeEntry;
+  folderName: string;
+  onRemoved?: () => Promise<void>;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}) {
+  const confirmed = await confirmDestructiveAction({
+    title: t("sourceControl.removeWorktreeTitle", { name: folderName }),
+    message: t("sourceControl.removeWorktreeMessage"),
+    okLabel: t("sourceControl.removeWorktree"),
+  });
+  if (!confirmed) return;
+
+  try {
+    await removeGitWorktree({
+      repo_id: repoId,
+      repo_path: repoPath,
+      worktree_path: worktree.path,
+      force: true,
+    });
+    await onRemoved?.();
+    showGitActionDialogSafely(t("sourceControl.removeWorktreeSuccess"), "info");
+  } catch (error) {
+    showGitActionDialogSafely(
+      error instanceof Error
+        ? error.message
+        : t("sourceControl.removeWorktreeFailed"),
+      "error"
+    );
+  }
 }
 
 interface FolderSectionProps {
@@ -326,6 +377,9 @@ FolderSectionContent.displayName = "FolderSectionContent";
 
 interface WorktreeSectionProps {
   worktree: GitWorktreeEntry;
+  repoId?: string;
+  repoPath?: string;
+  onWorktreesRefresh?: () => Promise<void>;
   onGitFileSelect?: (file: GitFile) => void;
   showFilter: boolean;
   viewMode: "list-tree" | "list";
@@ -335,17 +389,34 @@ interface WorktreeSectionProps {
 
 const WorktreeSection: React.FC<WorktreeSectionProps> = ({
   worktree,
+  repoId,
+  repoPath,
+  onWorktreesRefresh,
   onGitFileSelect,
   showFilter,
   viewMode,
   navigateWithoutSelecting,
   sectionFilter,
 }) => {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const toggle = useCallback(() => setExpanded((prev) => !prev), []);
 
   const folderName = worktree.path.split("/").pop() || "worktree";
   const worktreeId = `worktree:${worktree.path}`;
+
+  const removeWorktree = useCallback(async () => {
+    if (!repoId || !repoPath) return;
+    await confirmAndRemoveWorktree({
+      repoId,
+      repoPath,
+      worktree,
+      folderName,
+      onRemoved: onWorktreesRefresh,
+      t,
+    });
+  }, [folderName, onWorktreesRefresh, repoId, repoPath, t, worktree]);
 
   return (
     <div className={FOLDER_HEADER.section}>
@@ -354,6 +425,20 @@ const WorktreeSection: React.FC<WorktreeSectionProps> = ({
         expanded={expanded}
         onToggle={toggle}
         branchName={worktree.branch || undefined}
+        onContextMenu={(event) => {
+          if (!repoId || !repoPath) return;
+          event.preventDefault();
+          setContextMenuOpen(true);
+        }}
+        actions={
+          repoId && repoPath ? (
+            <WorktreeActionsMenu
+              onRemove={() => {
+                void removeWorktree();
+              }}
+            />
+          ) : null
+        }
       />
       {expanded && (
         <div className="flex min-h-[280px] flex-col overflow-hidden">
@@ -367,6 +452,14 @@ const WorktreeSection: React.FC<WorktreeSectionProps> = ({
             sectionFilter={sectionFilter}
           />
         </div>
+      )}
+      {contextMenuOpen && (
+        <WorktreeContextMenu
+          onRemove={() => {
+            void removeWorktree();
+          }}
+          onClose={() => setContextMenuOpen(false)}
+        />
       )}
     </div>
   );
@@ -385,12 +478,15 @@ export const MultiRootSourceControlContent = React.forwardRef<
   (
     {
       workspaceFolders,
+      repoId,
+      repoPath,
       onGitFileSelect,
       onGitFilesChange,
       onGitHistorySelectionChange,
       showFilter,
       viewMode,
       worktrees = [],
+      onWorktreesRefresh,
       navigateWithoutSelecting,
       sectionFilter,
     },
@@ -488,6 +584,9 @@ export const MultiRootSourceControlContent = React.forwardRef<
           <WorktreeSection
             key={worktree.path}
             worktree={worktree}
+            repoId={repoId}
+            repoPath={repoPath}
+            onWorktreesRefresh={onWorktreesRefresh}
             onGitFileSelect={onGitFileSelect}
             showFilter={showFilter}
             viewMode={viewMode}

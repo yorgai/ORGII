@@ -1728,6 +1728,12 @@
     "push": "Push",
     "fetch": "Fetch",
     "sync": "Sync",
+    "worktreeActions": "Worktree 操作",
+    "removeWorktree": "移除 Worktree",
+    "removeWorktreeTitle": "移除 Worktree {{name}}？",
+    "removeWorktreeMessage": "這會從磁碟移除 Worktree checkout。branch 和 commits 會保留。",
+    "removeWorktreeSuccess": "Worktree 已移除",
+    "removeWorktreeFailed": "移除 Worktree 失敗",
     "pill": {
       "focus": "聚焦",
       "allChanges": "全部更改"
