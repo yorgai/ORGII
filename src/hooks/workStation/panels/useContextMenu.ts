@@ -35,14 +35,12 @@ import {
 } from "@src/hooks/perf/useDebouncedCallback";
 import { currentRepoAtom } from "@src/store/repo/derived";
 import { sessionsAtom } from "@src/store/session/sessionAtom";
-import { terminalSessionsAtom } from "@src/store/workstation/codeEditor/terminal";
 
 import {
   type DrilledProject,
   searchFiles,
   searchProjects,
   searchSessions,
-  searchTerminals,
 } from "./contextMenuSearchHandlers";
 
 // Default configuration
@@ -71,8 +69,6 @@ export function useContextMenu(
   const currentRepo = useAtomValue(currentRepoAtom);
   const effectiveRepoPath = opts.repoPath || currentRepo?.path || "";
 
-  // Get terminal sessions from editor state (same terminals as Workstation panel)
-  const editorTerminalSessions = useAtomValue(terminalSessionsAtom);
   // Get all sessions for @sessions search
   const allSessions = useAtomValue(sessionsAtom);
 
@@ -146,8 +142,6 @@ export function useContextMenu(
         let results: SearchResultItem[];
         if (type === "files") {
           results = await searchFiles(query, opts.repoPath ?? "");
-        } else if (type === "terminals") {
-          results = searchTerminals(query, editorTerminalSessions);
         } else if (type === "sessions") {
           results = searchSessions(query, allSessions);
         } else if (type === "projects") {
@@ -167,13 +161,7 @@ export function useContextMenu(
         setSearchLoading(false);
       }
     },
-    [
-      opts.repoPath,
-      effectiveRepoPath,
-      editorTerminalSessions,
-      allSessions,
-      updateSearchResults,
-    ]
+    [opts.repoPath, effectiveRepoPath, allSessions, updateSearchResults]
   );
 
   // Debounced context menu search — leading: true fires first call immediately

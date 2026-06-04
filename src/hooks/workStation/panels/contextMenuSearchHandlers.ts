@@ -43,30 +43,6 @@ export async function searchFiles(
   return [...results.folders, ...results.files];
 }
 
-// ── Terminals ────────────────────────────────────────────────────────────────
-
-interface TerminalLike {
-  id: string;
-  name: string;
-  isActive?: boolean;
-}
-
-export function searchTerminals(
-  query: string,
-  sessions: TerminalLike[]
-): SearchResultItem[] {
-  const filtered = query.trim()
-    ? sessions.filter((t) => t.name.toLowerCase().includes(query.toLowerCase()))
-    : sessions;
-
-  return filtered.map((terminal) => ({
-    path: terminal.id,
-    name: terminal.name || "Terminal",
-    type: "file" as const,
-    iconType: "terminal" as const,
-  }));
-}
-
 // ── Sessions ─────────────────────────────────────────────────────────────────
 
 export function searchSessions(

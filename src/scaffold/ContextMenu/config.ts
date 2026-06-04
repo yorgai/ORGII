@@ -14,7 +14,6 @@ import {
   ListChecks,
   Loader2,
   Search,
-  Terminal,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -26,7 +25,6 @@ export type MenuItemId =
   | "recent"
   | "files"
   | "folder"
-  | "terminals"
   | "terminal"
   | "sessions"
   | "session"
@@ -34,7 +32,7 @@ export type MenuItemId =
   | "project"
   | "workitem";
 
-export type SecondLayerId = "files" | "terminals" | "sessions" | "projects";
+export type SecondLayerId = "files" | "sessions" | "projects";
 
 export interface MenuItem {
   id: MenuItemId;
@@ -58,7 +56,6 @@ export const ICON_CONFIG = {
   recent: Clock,
   files: File,
   folders: Folder,
-  terminals: Terminal,
   sessions: History,
   projects: ListChecks,
   arrow: ArrowRight,
@@ -82,10 +79,6 @@ export const SECOND_LAYER_CONFIG: Record<SecondLayerId, SecondLayerConfig> = {
     title: "Files & Folders",
     icon: ICON_CONFIG.files,
   },
-  terminals: {
-    title: "Terminals",
-    icon: ICON_CONFIG.terminals,
-  },
   sessions: {
     title: "Sessions",
     icon: ICON_CONFIG.sessions,
@@ -105,12 +98,6 @@ export const MENU_ITEMS: MenuItem[] = [
     id: "files",
     label: "Files & Folders",
     icon: ICON_CONFIG.files,
-    hasSecondLayer: true,
-  },
-  {
-    id: "terminals",
-    label: "Terminals",
-    icon: ICON_CONFIG.terminals,
     hasSecondLayer: true,
   },
   {
