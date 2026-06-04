@@ -14,6 +14,7 @@ import type {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { TAB_BAR_HEIGHT } from "../config";
+import type { TabDragEventDetail } from "../tabDragTypes";
 import type { WorkStationTab } from "../types";
 
 /**
@@ -48,6 +49,23 @@ export interface UseTabDragReturn {
   handleDragEnd: (event: DragEndEvent) => void;
   /** Handle drag cancel event */
   handleDragCancel: () => void;
+}
+
+// ============================================
+// Helpers
+// ============================================
+
+function getTabFilePath(tab: WorkStationTab): {
+  filePath: string | undefined;
+  type: "directory" | "file";
+} {
+  const filePath =
+    tab.type === "file" || tab.type === "git-diff"
+      ? (tab.data.filePath as string | undefined)
+      : tab.type === "directory"
+        ? (tab.data.directoryPath as string | undefined)
+        : undefined;
+  return { filePath, type: tab.type === "directory" ? "directory" : "file" };
 }
 
 // ============================================
@@ -92,13 +110,9 @@ export function useTabDrag({
       window.addEventListener("pointermove", trackPointer, { passive: true });
 
       const foundTab = tabs.find((tab) => tab.id === tabId);
-
-      const filePath =
-        foundTab?.type === "file" || foundTab?.type === "git-diff"
-          ? (foundTab.data.filePath as string | undefined)
-          : foundTab?.type === "directory"
-            ? (foundTab.data.directoryPath as string | undefined)
-            : undefined;
+      const { filePath } = foundTab
+        ? getTabFilePath(foundTab)
+        : { filePath: undefined };
 
       if (filePath && foundTab) {
         window.__internalWorkstationTabDrag = true;
@@ -304,12 +318,9 @@ export function useTabDrag({
       const tabId = active.id as string;
 
       const foundTab = tabs.find((tab) => tab.id === tabId);
-      const filePath =
-        foundTab?.type === "file" || foundTab?.type === "git-diff"
-          ? (foundTab.data.filePath as string | undefined)
-          : foundTab?.type === "directory"
-            ? (foundTab.data.directoryPath as string | undefined)
-            : undefined;
+      const { filePath, type } = foundTab
+        ? getTabFilePath(foundTab)
+        : { filePath: undefined, type: "file" as const };
 
       setDraggingTabId(null);
       clearTabDragGlobals();
@@ -320,12 +331,12 @@ export function useTabDrag({
       lastPointerPositionRef.current = null;
 
       document.dispatchEvent(
-        new CustomEvent("tab-drag-end", {
+        new CustomEvent<TabDragEventDetail>("tab-drag-end", {
           detail: {
             tabId,
             filePath,
             name: foundTab?.title,
-            type: foundTab?.type === "directory" ? "directory" : "file",
+            type,
             pointerX,
             pointerY,
           },
