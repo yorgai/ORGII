@@ -23,6 +23,7 @@ import {
   GIT_PULL_STRATEGIES,
   type GitExecutableMode,
   type GitPullStrategy,
+  gitAutoCreatePrAtom,
   gitAutoFetchAtom,
   gitAutoFetchIntervalAtom,
   gitCoauthorAttributionEnabledAtom,
@@ -73,6 +74,7 @@ const GitPreferencesSection: React.FC = () => {
   const [autoFetchInterval, setAutoFetchInterval] = useAtom(
     gitAutoFetchIntervalAtom
   );
+  const [autoCreatePr, setAutoCreatePr] = useAtom(gitAutoCreatePrAtom);
   const [coauthorAttributionEnabled, setCoauthorAttributionEnabled] = useAtom(
     gitCoauthorAttributionEnabledAtom
   );
@@ -147,6 +149,13 @@ const GitPreferencesSection: React.FC = () => {
             />
           </SectionRow>
         )}
+
+        <SectionRow
+          label={t("git.autoCreatePr")}
+          description={t("git.autoCreatePrDesc")}
+        >
+          <Switch checked={autoCreatePr} onChange={setAutoCreatePr} />
+        </SectionRow>
 
         <SectionRow
           label={tSettings("editor.git.executableMode")}
