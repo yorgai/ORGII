@@ -177,6 +177,14 @@
     "newWorkItem": "新しい Work Item",
     "newWorkItemName": "新規 Work Item",
     "createWorkItem": "Work Item を作成",
+    "createModes": {
+      "generateWithAi": "AI で作成",
+      "manualCreation": "手動作成"
+    },
+    "linkExisting": {
+      "label": "既存の Work Item をリンク",
+      "placeholder": "リンクする Work Item を選択"
+    },
     "titlePlaceholder": "Work Item タイトル",
     "descriptionPlaceholder": "Work Item を説明...",
     "deleteWorkItem": "作業項目を削除",

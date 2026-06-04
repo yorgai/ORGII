@@ -177,6 +177,14 @@
     "newWorkItem": "Новый Work Item",
     "newWorkItemName": "Новый Work Item",
     "createWorkItem": "Создать Work Item",
+    "createModes": {
+      "generateWithAi": "Создать с AI",
+      "manualCreation": "Ручное создание"
+    },
+    "linkExisting": {
+      "label": "Связать существующий Work Item",
+      "placeholder": "Выберите Work Item для связи"
+    },
     "titlePlaceholder": "Название Work Item",
     "descriptionPlaceholder": "Описание Work Item...",
     "deleteWorkItem": "Удалить рабочий элемент",
