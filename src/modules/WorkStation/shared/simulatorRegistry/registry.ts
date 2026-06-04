@@ -18,6 +18,7 @@ import React, { lazy } from "react";
 
 import { getAppTypeForEvent } from "@src/engines/SessionCore/rendering/registry/constants";
 import { BACKGROUND_TASKS_APP_CONFIG } from "@src/engines/Simulator/apps/backgroundTasks/backgroundTasksConfig";
+import { CANVAS_APP_CONFIG } from "@src/engines/Simulator/apps/canvas/canvasConfig";
 import type {
   SimulatorAppBaseState,
   SimulatorAppConfig,
@@ -73,6 +74,11 @@ const LazySimulatorDiff = lazy(
 const LazyBackgroundTasksApp = lazy(
   () => import("@src/engines/Simulator/apps/backgroundTasks/BackgroundTasksApp")
 );
+
+const LazyCanvasApp = lazy(
+  () => import("@src/engines/Simulator/apps/canvas/CanvasApp")
+);
+
 // ============================================
 // Registry Definition
 // ============================================
@@ -125,6 +131,11 @@ export const SIMULATOR_APP_REGISTRY: Partial<
   [AppType.BACKGROUND_TASKS]: {
     ...BACKGROUND_TASKS_APP_CONFIG,
     component: LazyBackgroundTasksApp as React.ComponentType<SimulatorAppProps>,
+  },
+
+  [AppType.CANVAS]: {
+    ...CANVAS_APP_CONFIG,
+    component: LazyCanvasApp as React.ComponentType<SimulatorAppProps>,
   },
 };
 

@@ -10,6 +10,7 @@ import {
   Database,
   GitBranch,
   Globe,
+  Layout,
   ListTodo,
   MessageCircle,
 } from "lucide-react";
@@ -33,6 +34,7 @@ export const DOCK_APP_SEGMENTS: DockApp[][] = [
     { id: "BROWSER", name: "Browser", icon: Globe },
     { id: "DB_MANAGER", name: "DB Manager", icon: Database },
     { id: "STORY_MANAGER", name: "Project Manager", icon: ListTodo },
+    { id: "CANVAS", name: "Canvas", icon: Layout },
   ],
 ];
 

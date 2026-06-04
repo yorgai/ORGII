@@ -11,6 +11,7 @@ export enum AppType {
   STORY_MANAGER = "STORY_MANAGER",
   DIFF = "DIFF",
   BACKGROUND_TASKS = "BACKGROUND_TASKS",
+  CANVAS = "CANVAS",
 }
 
 /** Project manager dock app id (same as `AppType.STORY_MANAGER`; use for switch/return where needed). */
