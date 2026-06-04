@@ -321,3 +321,68 @@ pub async fn generate_commit_message(repo_path: String) -> Result<String, String
             .to_string(),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const EXPECTED_SMALL_MODELS: &[(ModelType, &str, &str)] = &[
+        (ModelType::DeepseekApi, "deepseek", "deepseek-chat"),
+        (ModelType::OpenaiApi, "openai", "gpt-4o-mini"),
+        (ModelType::GeminiApi, "gemini", "gemini-2.0-flash"),
+        (ModelType::GroqApi, "groq", "llama-3.1-8b-instant"),
+        (ModelType::XaiApi, "xai", "grok-4-fast-reasoning"),
+        (
+            ModelType::AnthropicApi,
+            "anthropic",
+            "claude-sonnet-4-20250514",
+        ),
+        (
+            ModelType::OpenrouterApi,
+            "openrouter",
+            "deepseek/deepseek-chat",
+        ),
+        (ModelType::AihubmixApi, "aihubmix", "deepseek-chat"),
+        (ModelType::DashscopeApi, "dashscope", "qwen-turbo"),
+        (ModelType::MoonshotApi, "moonshot", "moonshot-v1-8k"),
+        (ModelType::MinimaxApi, "minimax", "abab6.5s-chat"),
+        (ModelType::ZhipuApi, "zhipu", "glm-4-flash"),
+        (ModelType::VllmApi, "vllm", "default"),
+    ];
+
+    #[test]
+    fn preferred_api_types_have_explicit_small_model_defaults() {
+        assert_eq!(PREFERRED_API_TYPES.len(), EXPECTED_SMALL_MODELS.len());
+        for preferred in PREFERRED_API_TYPES {
+            let Some((_, expected_provider, expected_model)) = EXPECTED_SMALL_MODELS
+                .iter()
+                .find(|(model_type, _, _)| model_type == preferred)
+            else {
+                panic!(
+                    "preferred provider {} has no explicit small-model test fixture",
+                    preferred.as_str()
+                );
+            };
+            assert_eq!(provider_name_for(preferred), *expected_provider);
+            assert_eq!(default_model_for(preferred), *expected_model);
+        }
+    }
+
+    #[test]
+    fn git_commit_generation_excludes_providers_without_generic_defaults() {
+        for excluded in [
+            ModelType::AzureOpenaiApi,
+            ModelType::AzureAnthropicApi,
+            ModelType::OrgiiOrchestrator,
+            ModelType::CursorCli,
+            ModelType::KimiCli,
+            ModelType::OpenCode,
+        ] {
+            assert!(
+                !PREFERRED_API_TYPES.contains(&excluded),
+                "{} should not silently fall back to a generic provider/model",
+                excluded.as_str()
+            );
+        }
+    }
+}
