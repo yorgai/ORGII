@@ -1,5 +1,5 @@
 import { useSetAtom } from "jotai";
-import { Loader2, MoreHorizontal, SquarePen } from "lucide-react";
+import { Box, Loader2, MoreHorizontal, SquarePen } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -8,8 +8,18 @@ import {
   type SyncConnection,
   syncConnectionsApi,
 } from "@src/api/http/integrations";
-import { enrichedWorkItemToUI, projectApi } from "@src/api/http/project";
-import type { EnrichedWorkItem, ProjectOrg } from "@src/api/http/project";
+import {
+  enrichedWorkItemToUI,
+  projectApi,
+  projectDataToUI,
+} from "@src/api/http/project";
+import type {
+  EnrichedWorkItem,
+  LabelEntry,
+  MemberEntry,
+  ProjectData,
+  ProjectOrg,
+} from "@src/api/http/project";
 import { createLogger } from "@src/hooks/logger";
 import { useProjectDataChanged } from "@src/hooks/project";
 import { cachedLinearProjectsApi } from "@src/modules/ProjectManager/LinearProjects/linearProjectsCache";
@@ -20,7 +30,10 @@ import {
 } from "@src/modules/ProjectManager/config/manage";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import { SESSION_SIDEBAR_PAGE_SIZE } from "@src/store/session";
-import type { ChatPanelSelectedWorkItem } from "@src/store/ui/chatPanelAtom";
+import type {
+  ChatPanelSelectedProject,
+  ChatPanelSelectedWorkItem,
+} from "@src/store/ui/chatPanelAtom";
 import {
   createProjectLinearWorkItemsTab,
   openTab,
@@ -37,6 +50,7 @@ import { LOAD_MORE_GROUP_PREFIX, type ProjectsGroupByMode } from "./types";
 
 const logger = createLogger("ProjectsWorkItemSidebar");
 
+const PROJECTS_PROJECT_OVERVIEW_PREFIX = "projects-project-overview:";
 const PROJECTS_WORK_ITEM_PREFIX = "projects-work-item:";
 const PROJECTS_LINEAR_WORK_ITEM_PREFIX = "projects-linear-work-item:";
 const PROJECTS_LINEAR_LOAD_PREFIX = "projects-linear-load:";
@@ -60,6 +74,14 @@ const WORK_ITEM_PRIORITY_ORDER: readonly WorkItemPriority[] = [
   "low",
   "none",
 ];
+
+interface SidebarProject {
+  projectData: ProjectData;
+  orgId: string;
+  orgName: string;
+  labelMap: Map<string, LabelEntry>;
+  memberMap: Map<string, MemberEntry>;
+}
 
 interface SidebarWorkItem extends EnrichedWorkItem {
   projectId: string;
@@ -109,11 +131,13 @@ interface UseProjectsWorkItemMenuItemsParams {
 
 interface UseProjectsWorkItemMenuItemsResult {
   menuItems: NavigationMenuItem[];
+  projectMap: Map<string, SidebarProject>;
   workItemMap: Map<string, SidebarWorkItem>;
   linearWorkItemMap: Map<string, SidebarLinearWorkItem>;
   loading: boolean;
   getLoadMoreGroupId: (id: string) => string | null;
   loadLinearOrgWorkItems: (orgId: string) => void;
+  toChatPanelProject: (project: SidebarProject) => ChatPanelSelectedProject;
   toChatPanelWorkItem: (workItem: SidebarWorkItem) => ChatPanelSelectedWorkItem;
   openLinearWorkItem: (workItem: SidebarLinearWorkItem) => void;
 }
@@ -165,12 +189,23 @@ function createWorkItemRow(orgId: string, label: string): NavigationMenuItem {
   };
 }
 
+function getProjectOverviewMenuItemId(projectSlug: string): string {
+  return `${PROJECTS_PROJECT_OVERVIEW_PREFIX}${projectSlug}`;
+}
+
 function getWorkItemMenuItemId(workItemId: string): string {
   return `${PROJECTS_WORK_ITEM_PREFIX}${workItemId}`;
 }
 
 function getLinearWorkItemMenuItemId(workItemId: string): string {
   return `${PROJECTS_LINEAR_WORK_ITEM_PREFIX}${workItemId}`;
+}
+
+export function getProjectsProjectOverviewSlug(
+  menuItemId: string
+): string | null {
+  if (!menuItemId.startsWith(PROJECTS_PROJECT_OVERVIEW_PREFIX)) return null;
+  return menuItemId.slice(PROJECTS_PROJECT_OVERVIEW_PREFIX.length) || null;
 }
 
 export function getProjectsWorkItemId(menuItemId: string): string | null {
@@ -287,6 +322,7 @@ export function useProjectsWorkItemMenuItems({
   const { t } = useTranslation(["projects", "common", "navigation"]);
   const setLayout = useSetAtom(workstationLayoutAtom);
   const [localOrgs, setLocalOrgs] = useState<ProjectOrg[]>([]);
+  const [localProjects, setLocalProjects] = useState<SidebarProject[]>([]);
   const [workItems, setWorkItems] = useState<SidebarWorkItem[]>([]);
   const [linearOrgs, setLinearOrgs] = useState<LinearOrgRecord[]>([]);
   const [linearWorkItems, setLinearWorkItems] = useState<
@@ -314,16 +350,33 @@ export function useProjectsWorkItemMenuItems({
             : org.name,
         ])
       );
-      const results = await Promise.all(
-        projects.map(async (project): Promise<SidebarWorkItem[]> => {
-          const viewData = await projectApi.readWorkItemsViewData(project.slug);
+      const projectResults = await Promise.all(
+        projects.map(async (project) => {
+          const [viewData, labelsFile, membersFile] = await Promise.all([
+            projectApi.readWorkItemsViewData(project.slug),
+            projectApi.readLabels(project.slug),
+            projectApi.readMembers(project.slug),
+          ]);
+          const labelMap = new Map(
+            labelsFile.labels.map((label) => [label.id, label])
+          );
+          const memberMap = new Map(
+            membersFile.members.map((member) => [member.id, member])
+          );
           const orgId = project.meta.org_id || STORY_PERSONAL_ORG_FILTER_ID;
           const orgName =
             orgNameById.get(orgId) ||
             (orgId === STORY_PERSONAL_ORG_FILTER_ID
               ? t("projects:orgs.personalOrg")
               : t("navigation:labels.org", "Org"));
-          return viewData.items
+          const projectEntry: SidebarProject = {
+            projectData: project,
+            orgId,
+            orgName,
+            labelMap,
+            memberMap,
+          };
+          const projectWorkItems: SidebarWorkItem[] = viewData.items
             .filter((item) => !item.deletedAt)
             .map((item) => ({
               ...item,
@@ -334,12 +387,21 @@ export function useProjectsWorkItemMenuItems({
               orgName,
               source: "local",
             }));
+          return { projectEntry, projectWorkItems };
         })
       );
-      setWorkItems(results.flat());
+      setLocalProjects(
+        projectResults.map((projectResult) => projectResult.projectEntry)
+      );
+      setWorkItems(
+        projectResults.flatMap(
+          (projectResult) => projectResult.projectWorkItems
+        )
+      );
     } catch (error) {
       logger.error("Failed to load work item sidebar items:", error);
       setLocalOrgs([]);
+      setLocalProjects([]);
       setWorkItems([]);
     } finally {
       setLoading(false);
@@ -472,6 +534,14 @@ export function useProjectsWorkItemMenuItems({
     }, [enabled, loadLocalWorkItems])
   );
 
+  const projectMap = useMemo(() => {
+    const map = new Map<string, SidebarProject>();
+    for (const project of localProjects) {
+      map.set(project.projectData.slug, project);
+    }
+    return map;
+  }, [localProjects]);
+
   const workItemMap = useMemo(() => {
     const map = new Map<string, SidebarWorkItem>();
     for (const workItem of workItems) {
@@ -487,6 +557,21 @@ export function useProjectsWorkItemMenuItems({
     }
     return map;
   }, [linearWorkItems]);
+
+  const buildProjectOverviewRow = useCallback(
+    (projectSlug: string): NavigationMenuItem => {
+      const id = getProjectOverviewMenuItemId(projectSlug);
+      return {
+        id,
+        key: id,
+        label: t("projects:orgs.management.overview"),
+        icon: Box,
+        iconName: "box",
+        dataTestId: `sidebar-project-overview-${projectSlug}`,
+      };
+    },
+    [t]
+  );
 
   const buildWorkItemRow = useCallback(
     (workItem: SidebarAnyWorkItem): NavigationMenuItem => {
@@ -548,11 +633,31 @@ export function useProjectsWorkItemMenuItems({
           : org.name,
       ])
     );
+    const localProjectsByOrg = new Map<string, SidebarProject[]>();
+    for (const project of localProjects) {
+      const projectsForOrg = localProjectsByOrg.get(project.orgId);
+      if (projectsForOrg) {
+        projectsForOrg.push(project);
+      } else {
+        localProjectsByOrg.set(project.orgId, [project]);
+      }
+    }
+    for (const projectsForOrg of localProjectsByOrg.values()) {
+      projectsForOrg.sort((projectA, projectB) =>
+        projectA.projectData.meta.name.localeCompare(
+          projectB.projectData.meta.name
+        )
+      );
+    }
+
     const localKeySet = new Set(
       Array.from(groups.keys()).filter((key) => !key.startsWith("linear:"))
     );
     for (const org of localOrgs) {
       localKeySet.add(org.id);
+    }
+    for (const project of localProjects) {
+      localKeySet.add(project.orgId);
     }
     const localKeys = Array.from(localKeySet).sort((keyA, keyB) => {
       if (keyA === STORY_PERSONAL_ORG_FILTER_ID) return -1;
@@ -603,20 +708,72 @@ export function useProjectsWorkItemMenuItems({
           );
           continue;
         }
-      }
-      if (groupItems.length === 0) {
-        items.push(createWorkItemRow(key, t("projects:workItems.newWorkItem")));
+
+        const linearProjectGroups = new Map<string, SidebarAnyWorkItem[]>();
+        for (const workItem of groupItems) {
+          pushGroupedItems(
+            linearProjectGroups,
+            workItem.projectId || UNKNOWN_PROJECT_KEY,
+            workItem
+          );
+        }
+        const linearProjectKeys = Array.from(linearProjectGroups.keys()).sort(
+          (projectKeyA, projectKeyB) => {
+            const labelA =
+              linearProjectGroups.get(projectKeyA)?.[0]?.projectName ??
+              projectKeyA;
+            const labelB =
+              linearProjectGroups.get(projectKeyB)?.[0]?.projectName ??
+              projectKeyB;
+            return labelA.localeCompare(labelB);
+          }
+        );
+        for (const projectKey of linearProjectKeys) {
+          const projectItems = linearProjectGroups.get(projectKey) ?? [];
+          const projectGroupId = `${PROJECTS_WORK_ITEM_GROUP_PREFIX}org:${key}:project:${projectKey}`;
+          items.push(
+            separator(
+              projectGroupId,
+              projectItems[0]?.projectName ?? projectKey
+            )
+          );
+          appendGroupItems(items, projectGroupId, projectItems);
+        }
         continue;
       }
-      appendGroupItems(items, groupId, groupItems);
+
+      const orgProjects = localProjectsByOrg.get(key) ?? [];
+      const consumedProjectIds = new Set<string>();
+      for (const project of orgProjects) {
+        const projectGroupId = `${PROJECTS_WORK_ITEM_GROUP_PREFIX}org:${key}:project:${project.projectData.meta.id}`;
+        const projectItems = groupItems.filter(
+          (workItem) => workItem.projectId === project.projectData.meta.id
+        );
+        consumedProjectIds.add(project.projectData.meta.id);
+        items.push(separator(projectGroupId, project.projectData.meta.name));
+        items.push(buildProjectOverviewRow(project.projectData.slug));
+        appendGroupItems(items, projectGroupId, projectItems);
+      }
+
+      const orphanItems = groupItems.filter(
+        (workItem) => !consumedProjectIds.has(workItem.projectId)
+      );
+      if (orphanItems.length > 0) {
+        appendGroupItems(items, groupId, orphanItems);
+      }
+      if (orgProjects.length === 0 && groupItems.length === 0) {
+        items.push(createWorkItemRow(key, t("projects:workItems.newWorkItem")));
+      }
     }
     return items;
   }, [
     allWorkItems,
     appendGroupItems,
+    buildProjectOverviewRow,
     linearOrgLoadStates,
     linearOrgs,
     localOrgs,
+    localProjects,
     t,
   ]);
 
@@ -643,11 +800,17 @@ export function useProjectsWorkItemMenuItems({
       const groupItems = groups.get(key) ?? [];
       if (groupItems.length === 0) continue;
       const groupId = `${PROJECTS_WORK_ITEM_GROUP_PREFIX}project:${key}`;
+      const projectSlug = groupItems.find(
+        (item): item is SidebarWorkItem => item.source === "local"
+      )?.projectSlug;
       items.push(separator(groupId, groupItems[0]?.projectName ?? key));
+      if (projectSlug) {
+        items.push(buildProjectOverviewRow(projectSlug));
+      }
       appendGroupItems(items, groupId, groupItems);
     }
     return items;
-  }, [allWorkItems, appendGroupItems]);
+  }, [allWorkItems, appendGroupItems, buildProjectOverviewRow]);
 
   const byStatusMenuItems = useMemo<NavigationMenuItem[]>(() => {
     const groups = new Map<WorkItemStatus, SidebarAnyWorkItem[]>();
@@ -723,6 +886,19 @@ export function useProjectsWorkItemMenuItems({
     groupByMode,
   ]);
 
+  const toChatPanelProject = useCallback(
+    (project: SidebarProject): ChatPanelSelectedProject => ({
+      project: projectDataToUI(project.projectData, {
+        labelMap: project.labelMap,
+        memberMap: project.memberMap,
+      }),
+      projectSlug: project.projectData.slug,
+      orgId: project.orgId,
+      orgName: project.orgName,
+    }),
+    []
+  );
+
   const toChatPanelWorkItem = useCallback(
     (workItem: SidebarWorkItem): ChatPanelSelectedWorkItem => ({
       workItem: enrichedWorkItemToUI(workItem),
@@ -753,14 +929,16 @@ export function useProjectsWorkItemMenuItems({
 
   return {
     menuItems,
+    projectMap,
     workItemMap,
     linearWorkItemMap,
     loading,
     getLoadMoreGroupId: isProjectsWorkItemLoadMoreId,
     loadLinearOrgWorkItems: loadLinearOrgWorkItemsById,
+    toChatPanelProject,
     toChatPanelWorkItem,
     openLinearWorkItem,
   };
 }
 
-export type { SidebarLinearWorkItem, SidebarWorkItem };
+export type { SidebarLinearWorkItem, SidebarProject, SidebarWorkItem };

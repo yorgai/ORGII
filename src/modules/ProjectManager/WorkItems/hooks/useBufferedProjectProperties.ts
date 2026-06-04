@@ -117,13 +117,6 @@ export function useBufferedProjectProperties({
     [handleLocalProjectUpdate, onProjectNameUpdated]
   );
 
-  const handleProjectSummaryChange = useCallback(
-    (summary: string) => {
-      handleLocalProjectUpdate({ summary });
-    },
-    [handleLocalProjectUpdate]
-  );
-
   const handleProjectDescriptionChange = useCallback(
     (_html: string, text: string) => {
       handleLocalProjectUpdate({ description: text });
@@ -148,7 +141,6 @@ export function useBufferedProjectProperties({
     handleLocalProjectUpdate,
     handleUpdateProjectMembers,
     handleProjectNameChange,
-    handleProjectSummaryChange,
     handleProjectDescriptionChange,
     handleWorkItemPrefixUpdate,
   };

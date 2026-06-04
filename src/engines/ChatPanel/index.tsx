@@ -92,6 +92,7 @@ import {
   chatPanelCreateProjectContextAtom,
   chatPanelCreateTargetAtom,
   chatPanelMaximizedAtom,
+  chatPanelSelectedProjectAtom,
   chatPanelSelectedWorkItemAtom,
   chatTurnPaginationEnabledAtom,
   chatWidthAtom,
@@ -112,6 +113,7 @@ import { getDispatchCategory } from "@src/util/session/sessionDispatch";
 import { useReloadSession } from "./ChatHistory/hooks/useReloadSession";
 import ChatView from "./ChatView";
 import LinkSessionToWorkItemModal from "./LinkSessionToWorkItemModal";
+import ProjectPanelView from "./ProjectPanelView";
 import WorkItemPanelView from "./WorkItemPanelView";
 import { useChatPanelResize } from "./hooks/useChatPanelResize";
 import { usePanelTitle } from "./hooks/usePanelTitle";
@@ -190,6 +192,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       Boolean(SessionCreatorSlot)
     );
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
+    const selectedProject = useAtomValue(chatPanelSelectedProjectAtom);
     const createProjectContext = useAtomValue(
       chatPanelCreateProjectContextAtom
     );
@@ -316,6 +319,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       workstationActiveSessionIdAtom
     );
     const setSelectedWorkItem = useSetAtom(chatPanelSelectedWorkItemAtom);
+    const setSelectedProject = useSetAtom(chatPanelSelectedProjectAtom);
     const dispatchClearSession = useSetAtom(clearSessionAtom);
     const creatorState = useAtomValue(sessionCreatorStateAtom);
     const setCreatorState = useSetAtom(sessionCreatorStateAtom);
@@ -356,6 +360,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const handleNewSession = useCallback(() => {
       setContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
       setSelectedWorkItem(null);
+      setSelectedProject(null);
       dispatchClearSession();
       setWorkstationActiveSessionId(null);
       setActiveSessionId(null);
@@ -363,6 +368,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       dispatchClearSession,
       setActiveSessionId,
       setContentMode,
+      setSelectedProject,
       setSelectedWorkItem,
       setWorkstationActiveSessionId,
     ]);
@@ -437,21 +443,31 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       contentMode === CHAT_PANEL_CONTENT_MODE.SESSION &&
       !!currentSessionId;
     const showWorkItemContent = !!selectedWorkItem && !showSessionContent;
+    const showProjectContent =
+      !!selectedProject && !showSessionContent && !showWorkItemContent;
     const showExplicitNonSessionContent =
       contentMode === CHAT_PANEL_CONTENT_MODE.NON_SESSION;
-    const showNonSessionContent = !showWorkItemContent && !showSessionContent;
+    const showNonSessionContent =
+      !showWorkItemContent && !showProjectContent && !showSessionContent;
     const showPanelContent =
-      active || showWorkItemContent || showExplicitNonSessionContent;
+      active ||
+      showWorkItemContent ||
+      showProjectContent ||
+      showExplicitNonSessionContent;
     const showHeader =
       showWorkItemContent ||
+      showProjectContent ||
       showExplicitNonSessionContent ||
       (active && (showSessionContent || viewMode === "workStation"));
     const workItemTitle = selectedWorkItem?.workItem.name || "Work item";
+    const projectTitle = selectedProject?.project.name || t("projects.project");
     const headerTitle = selectedWorkItem
       ? currentSessionId
         ? `${workItemTitle} » ${panelTitle}`
         : workItemTitle
-      : panelTitle;
+      : selectedProject
+        ? projectTitle
+        : panelTitle;
     // The "+" (new session) button is redundant when the session sidebar is
     // visible, so only surface it in the chat header when that sidebar is off.
     const showNewSessionButton =
@@ -464,17 +480,20 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const showCreatorPresenceInHeader =
       !showSessionContent &&
       !selectedWorkItem &&
+      !selectedProject &&
       !isBenchmarkTarget &&
       !isProjectTarget &&
       !isWorkItemTarget;
     const showWorkItemAgentSwitchInHeader =
       showNonSessionContent &&
       !selectedWorkItem &&
+      !selectedProject &&
       isWorkItemTarget &&
       Boolean(SessionCreatorSlot);
     const showProjectAgentSwitchInHeader =
       showNonSessionContent &&
       !selectedWorkItem &&
+      !selectedProject &&
       isProjectTarget &&
       Boolean(SessionCreatorSlot);
     const chatFocusLabel = isChatFocus
@@ -497,6 +516,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const showEmptyChatFocusRestoreButton =
       !showSessionContent &&
       !selectedWorkItem &&
+      !selectedProject &&
       isChatFocus &&
       showChatFocusToggle;
 
@@ -602,6 +622,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
               })
             : null);
         if (!workItem) return;
+        setSelectedProject(null);
         setSelectedWorkItem({
           shortId: result.shortId,
           projectSlug: result.projectSlug ?? "",
@@ -626,6 +647,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         setActiveSessionId,
         setContentMode,
         setCreateTarget,
+        setSelectedProject,
         setSelectedWorkItem,
         setWorkstationActiveSessionId,
       ]
@@ -832,6 +854,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           labelMap: new Map(),
           memberMap: new Map(),
         });
+        setSelectedProject(null);
         setSelectedWorkItem({
           shortId: metadata.shortId,
           projectSlug: metadata.projectSlug,
@@ -854,6 +877,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         setActiveSessionId,
         setContentMode,
         setCreateTarget,
+        setSelectedProject,
         setSelectedWorkItem,
         setWorkstationActiveSessionId,
       ]
@@ -936,6 +960,63 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           });
       },
       [selectedWorkItem, setSelectedWorkItem]
+    );
+
+    const handleProjectTitleChange = useCallback(
+      (title: string) => {
+        if (!selectedProject || title === selectedProject.project.name) {
+          return;
+        }
+
+        const projectSlug =
+          selectedProject.projectSlug || selectedProject.project.slug;
+        if (!projectSlug) return;
+
+        const previousSelectedProject = selectedProject;
+        const previousDescription = selectedProject.project.description;
+        setSelectedProject({
+          ...selectedProject,
+          project: {
+            ...selectedProject.project,
+            name: title,
+            description:
+              previousDescription === selectedProject.project.name
+                ? title
+                : previousDescription,
+          },
+        });
+
+        projectApi
+          .readProject(projectSlug)
+          .then((currentProject) =>
+            projectApi.writeProject(
+              projectSlug,
+              {
+                ...currentProject.meta,
+                name: title,
+                updated_at: new Date().toISOString(),
+              },
+              currentProject.description
+            )
+          )
+          .then(() => {
+            bumpProjectListRefresh();
+            return emit("orgii-data-changed");
+          })
+          .catch(() => {
+            setSelectedProject((currentSelectedProject) => {
+              if (
+                !currentSelectedProject ||
+                currentSelectedProject.project.id !==
+                  previousSelectedProject.project.id
+              ) {
+                return currentSelectedProject;
+              }
+              return previousSelectedProject;
+            });
+          });
+      },
+      [bumpProjectListRefresh, selectedProject, setSelectedProject]
     );
 
     const headerToolbar = (
@@ -1181,7 +1262,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             <CollapsedSidebarButton />
           </div>
         ) : null}
-        {showNonSessionContent && !selectedWorkItem && (
+        {showNonSessionContent && !selectedWorkItem && !selectedProject && (
           <div
             className="flex h-9 w-auto flex-shrink-0 items-center"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
@@ -1243,7 +1324,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             )}
           </div>
         )}
-        {showSessionContent || selectedWorkItem ? (
+        {showSessionContent || selectedWorkItem || selectedProject ? (
           <>
             <div
               className="flex h-9 min-w-0 shrink items-center"
@@ -1260,6 +1341,18 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                     </span>
                   </span>
                 </SessionHoverCard>
+              ) : selectedProject ? (
+                <Input
+                  type="text"
+                  value={headerTitle}
+                  onChange={handleProjectTitleChange}
+                  borderless
+                  bgless
+                  size="small"
+                  className="h-7 min-w-0 max-w-full cursor-default rounded-lg transition-colors hover:bg-surface-hover [&_.input-inner]:!px-1.5"
+                  inputClassName="-translate-y-px truncate text-[13px] font-medium text-text-1"
+                  data-testid="chat-panel-header-title-input"
+                />
               ) : (
                 <Input
                   type="text"
@@ -1608,6 +1701,8 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {!showPanelContent ? null : showWorkItemContent ? (
           <WorkItemPanelView selectedWorkItem={selectedWorkItem} />
+        ) : showProjectContent && selectedProject ? (
+          <ProjectPanelView selectedProject={selectedProject} />
         ) : showSessionContent ? (
           <ChatView
             sessionId={currentSessionId}

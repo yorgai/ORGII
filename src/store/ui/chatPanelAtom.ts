@@ -10,6 +10,7 @@ import {
   settingsAtom,
   updateSettingAtom,
 } from "@src/store/settings/settingsAtom";
+import type { Project } from "@src/types/core/project";
 import type { WorkItem } from "@src/types/core/workItem";
 import { createZodJsonStorage } from "@src/util/core/storage/zodStorage";
 
@@ -267,6 +268,17 @@ export interface ChatPanelSelectedWorkItem {
 export const chatPanelSelectedWorkItemAtom =
   atom<ChatPanelSelectedWorkItem | null>(null);
 chatPanelSelectedWorkItemAtom.debugLabel = "chatPanelSelectedWorkItemAtom";
+
+export interface ChatPanelSelectedProject {
+  project: Project;
+  projectSlug: string;
+  orgId: string;
+  orgName?: string;
+}
+
+export const chatPanelSelectedProjectAtom =
+  atom<ChatPanelSelectedProject | null>(null);
+chatPanelSelectedProjectAtom.debugLabel = "chatPanelSelectedProjectAtom";
 
 export interface ChatPanelCreateProjectContext {
   orgId: string;

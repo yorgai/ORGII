@@ -323,7 +323,6 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
     handleLocalProjectUpdate,
     handleUpdateProjectMembers,
     handleProjectNameChange,
-    handleProjectSummaryChange,
     handleProjectDescriptionChange,
     handleWorkItemPrefixUpdate,
   } = useBufferedProjectProperties({
@@ -492,7 +491,6 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
           selectedWorkItemId={state.selectedWorkItemId}
           workItems={data.workItems}
           projectName={displayProject.name}
-          projectSummary={displayProject.summary}
           projectDescription={resolvedProjectDescription}
           projectProperties={displayProject}
           repoPath={repoPath}
@@ -515,7 +513,6 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
             handlers.handleAddListItem(status)
           }
           onProjectNameChange={handleProjectNameChange}
-          onProjectSummaryChange={handleProjectSummaryChange}
           onProjectDescriptionChange={handleProjectDescriptionChange}
           onProjectPropertiesChange={handleLocalProjectUpdate}
           onKanbanTaskMove={handlers.handleKanbanTaskMove}

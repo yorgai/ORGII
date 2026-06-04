@@ -59,7 +59,6 @@ interface WorkItemsTabContentProps {
   selectedWorkItemId: string | null;
   workItems: WorkItemExtended[];
   projectName: string;
-  projectSummary?: string;
   projectDescription?: string;
   projectProperties?: ProjectData;
   repoPath?: string | null;
@@ -84,7 +83,6 @@ interface WorkItemsTabContentProps {
   onAddProject?: () => void;
   onAddListItem: (status: WorkItemStatus) => Promise<void>;
   onProjectNameChange: (name: string) => void;
-  onProjectSummaryChange: (summary: string) => void;
   onProjectDescriptionChange: (html: string, text: string) => void;
   onProjectPropertiesChange?: (updates: Partial<ProjectData>) => void;
   onKanbanTaskMove: (taskId: string, newStatus: TaskStatus) => void;
@@ -118,7 +116,6 @@ const WorkItemsTabContent: React.FC<WorkItemsTabContentProps> = ({
   selectedWorkItemId,
   workItems,
   projectName,
-  projectSummary,
   projectDescription,
   projectProperties,
   repoPath,
@@ -139,7 +136,6 @@ const WorkItemsTabContent: React.FC<WorkItemsTabContentProps> = ({
   onAddProject,
   onAddListItem,
   onProjectNameChange,
-  onProjectSummaryChange,
   onProjectDescriptionChange,
   onProjectPropertiesChange,
   onKanbanTaskMove,
@@ -190,7 +186,6 @@ const WorkItemsTabContent: React.FC<WorkItemsTabContentProps> = ({
                 <WorkItemsOverview
                   workItems={workItems}
                   projectName={projectName}
-                  projectSummary={projectSummary}
                   projectDescription={projectDescription}
                   repoPath={repoPath}
                   availableMembers={availableMembers}
@@ -201,7 +196,6 @@ const WorkItemsTabContent: React.FC<WorkItemsTabContentProps> = ({
                   onProjectPropertiesChange={onProjectPropertiesChange}
                   precomputedStats={overviewStats}
                   onProjectNameChange={onProjectNameChange}
-                  onProjectSummaryChange={onProjectSummaryChange}
                   onProjectDescriptionChange={onProjectDescriptionChange}
                 />
               </Suspense>

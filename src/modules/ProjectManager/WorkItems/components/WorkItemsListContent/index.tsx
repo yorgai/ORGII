@@ -1,4 +1,3 @@
-import { Box, SquarePen } from "lucide-react";
 import type React from "react";
 import { type FC, type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -53,6 +52,7 @@ interface WorkItemsListContentProps {
   collapseAllSignal?: number;
   /** Render project cells read-only (cross-project Work Items page). */
   disableProjectEdit?: boolean;
+  compactRows?: boolean;
 }
 
 const EMPTY_CHECKED_WORK_ITEM_IDS = new Set<string>();
@@ -84,6 +84,7 @@ const WorkItemsListContent: FC<WorkItemsListContentProps> = ({
   statusDisabled = false,
   collapseAllSignal = 0,
   disableProjectEdit = false,
+  compactRows = false,
 }) => {
   const { t } = useTranslation("projects");
 
@@ -93,41 +94,9 @@ const WorkItemsListContent: FC<WorkItemsListContentProps> = ({
     [checkedWorkItemIds, hasControlledCheckboxes]
   );
 
-  const topCreateActions = (onAddProject || onAddListItem) && (
-    <div className="flex flex-col gap-1 px-3 pb-2 pt-3">
-      {onAddProject ? (
-        <button
-          type="button"
-          onClick={onAddProject}
-          className="flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] font-semibold text-primary-6 transition-colors hover:bg-surface-hover"
-        >
-          <Box size={16} strokeWidth={1.75} className="shrink-0" />
-          <span className="min-w-0 flex-1 truncate">
-            {t("projects.createProject")}
-          </span>
-        </button>
-      ) : null}
-      {onAddListItem ? (
-        <button
-          type="button"
-          onClick={() => {
-            void onAddListItem(WORK_ITEMS_DEFAULT_STATUS);
-          }}
-          className="flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-[13px] font-semibold text-primary-6 transition-colors hover:bg-surface-hover"
-        >
-          <SquarePen size={16} strokeWidth={1.75} className="shrink-0" />
-          <span className="min-w-0 flex-1 truncate">
-            {t("workItems.createWorkItem")}
-          </span>
-        </button>
-      ) : null}
-    </div>
-  );
-
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
-        {topCreateActions}
         {filteredWorkItems.length === 0 ? (
           workItems.length === 0 ? (
             (emptyListPlaceholder ?? (
@@ -160,7 +129,7 @@ const WorkItemsListContent: FC<WorkItemsListContentProps> = ({
             ))
           )
         ) : (
-          <div className="flex flex-col pb-3">
+          <div className={`flex flex-col ${compactRows ? "pb-2" : "pb-3"}`}>
             {groupedWorkItems.map((group) => {
               const isDeletedGroup = group.status === "deleted";
               return (
@@ -180,6 +149,7 @@ const WorkItemsListContent: FC<WorkItemsListContentProps> = ({
                         }
                       : undefined
                   }
+                  compact={compactRows}
                 >
                   {group.items.map((workItem) => (
                     <WorkItemRow
@@ -191,7 +161,7 @@ const WorkItemsListContent: FC<WorkItemsListContentProps> = ({
                       onDelete={onDeleteWorkItem}
                       onRestore={onRestoreWorkItem}
                       readonly={readonly}
-                      compact={false}
+                      compact={compactRows}
                       availableMembers={availableMembers}
                       availableProjects={availableProjects}
                       availableMilestones={availableMilestones}

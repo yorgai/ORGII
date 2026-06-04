@@ -291,7 +291,7 @@ const WorkItemRow: React.FC<WorkItemRowProps> = React.memo(
       <>
         <div
           data-testid={`work-item-row-${workItem.session_id}`}
-          className={`work-item-row group/wiRow flex min-h-[40px] items-center gap-1 rounded-lg bg-transparent pl-2 pr-5 transition-colors ${
+          className={`work-item-row group/wiRow flex items-center gap-1 rounded-lg bg-transparent transition-colors ${compact ? "min-h-8 pl-1 pr-2" : "min-h-[40px] pl-2 pr-5"} ${
             isInteractive ? "cursor-pointer hover:bg-fill-1" : "cursor-default"
           } ${isDeleted ? "opacity-70" : ""} ${isSelected ? "bg-primary-1 hover:bg-primary-1" : ""} ${visibleContextMenu ? "bg-fill-2 hover:bg-fill-2" : ""}`}
           onClick={isInteractive ? handleClick : undefined}

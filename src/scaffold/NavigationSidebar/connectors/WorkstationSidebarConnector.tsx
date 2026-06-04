@@ -46,6 +46,7 @@ import {
   chatPanelContentModeAtom,
   chatPanelCreateProjectContextAtom,
   chatPanelCreateTargetAtom,
+  chatPanelSelectedProjectAtom,
   chatPanelSelectedWorkItemAtom,
 } from "@src/store/ui/chatPanelAtom";
 import { type StationMode, stationModeAtom } from "@src/store/ui/simulatorAtom";
@@ -78,6 +79,7 @@ import {
 import {
   getProjectsLinearLoadOrgId,
   getProjectsLinearWorkItemId,
+  getProjectsProjectOverviewSlug,
   getProjectsWorkItemCreateOrgId,
   getProjectsWorkItemId,
   isProjectsLinearOrgGroupId,
@@ -148,11 +150,13 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const chatPanelContentMode = useAtomValue(chatPanelContentModeAtom);
   const chatPanelCreateTarget = useAtomValue(chatPanelCreateTargetAtom);
   const chatPanelSelectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
+  const chatPanelSelectedProject = useAtomValue(chatPanelSelectedProjectAtom);
   const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
   const setChatPanelCreateProjectContext = useSetAtom(
     chatPanelCreateProjectContextAtom
   );
   const setChatPanelCreateTarget = useSetAtom(chatPanelCreateTargetAtom);
+  const setChatPanelSelectedProject = useSetAtom(chatPanelSelectedProjectAtom);
   const setChatPanelSelectedWorkItem = useSetAtom(
     chatPanelSelectedWorkItemAtom
   );
@@ -259,11 +263,13 @@ export const WorkstationSidebarConnector: React.FC = () => {
     });
   const {
     menuItems: projectsWorkItemMenuItems,
+    projectMap: projectsProjectMap,
     workItemMap: projectsWorkItemMap,
     linearWorkItemMap: projectsLinearWorkItemMap,
     loading: projectsWorkItemsLoading,
     getLoadMoreGroupId: getProjectsLoadMoreGroupId,
     loadLinearOrgWorkItems: loadProjectsLinearOrgWorkItems,
+    toChatPanelProject,
     toChatPanelWorkItem: toChatPanelWorkItem,
     openLinearWorkItem: openProjectsLinearWorkItem,
   } = useProjectsWorkItemMenuItems({
@@ -362,7 +368,8 @@ export const WorkstationSidebarConnector: React.FC = () => {
   );
   const isChatPanelProjectsContentSelected =
     chatPanelContentMode === CHAT_PANEL_CONTENT_MODE.NON_SESSION ||
-    Boolean(chatPanelSelectedWorkItem);
+    Boolean(chatPanelSelectedWorkItem) ||
+    Boolean(chatPanelSelectedProject);
   const sessionSelectedMenuItemId =
     chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.PROJECT ||
     chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM ||
@@ -376,7 +383,8 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const resolvedProjectsSelectedMenuItemId =
     chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.PROJECT ||
     chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM ||
-    chatPanelSelectedWorkItem
+    chatPanelSelectedWorkItem ||
+    chatPanelSelectedProject
       ? projectsSelectedMenuItemId
       : "";
   const selectedMenuItemId =
@@ -416,10 +424,16 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const handleGoToNewSession = useCallback(
     (options?: GoToNewSessionOptions) => {
       setChatPanelSelectedWorkItem(null);
+      setChatPanelSelectedProject(null);
       setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
       goToNewSession(options);
     },
-    [goToNewSession, setChatPanelCreateTarget, setChatPanelSelectedWorkItem]
+    [
+      goToNewSession,
+      setChatPanelCreateTarget,
+      setChatPanelSelectedProject,
+      setChatPanelSelectedWorkItem,
+    ]
   );
 
   const {
@@ -459,6 +473,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
         resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId(PROJECTS_NEW_PROJECT_MENU_ITEM_ID);
         setChatPanelSelectedWorkItem(null);
+        setChatPanelSelectedProject(null);
         setChatPanelCreateProjectContext(null);
         setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.PROJECT);
         setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
@@ -469,6 +484,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
         resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId(PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID);
         setChatPanelSelectedWorkItem(null);
+        setChatPanelSelectedProject(null);
         setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
         setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
         return;
@@ -479,6 +495,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
         resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId(item.id);
         setChatPanelSelectedWorkItem(null);
+        setChatPanelSelectedProject(null);
         setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
         setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
         return;
@@ -502,12 +519,26 @@ export const WorkstationSidebarConnector: React.FC = () => {
         return;
       }
 
+      const projectOverviewSlug = getProjectsProjectOverviewSlug(item.id);
+      if (projectOverviewSlug) {
+        const project = projectsProjectMap.get(projectOverviewSlug);
+        if (!project) return;
+        activateMyStationRouteForProjectsContent();
+        setProjectsSelectedMenuItemId(item.id);
+        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
+        setChatPanelSelectedWorkItem(null);
+        setChatPanelSelectedProject(toChatPanelProject(project));
+        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        return;
+      }
+
       const linearWorkItemId = getProjectsLinearWorkItemId(item.id);
       if (linearWorkItemId) {
         const linearWorkItem = projectsLinearWorkItemMap.get(linearWorkItemId);
         if (!linearWorkItem) return;
         setProjectsSelectedMenuItemId(item.id);
         setChatPanelSelectedWorkItem(null);
+        setChatPanelSelectedProject(null);
         openProjectsLinearWorkItem(linearWorkItem);
         return;
       }
@@ -520,6 +551,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
       activateMyStationRouteForProjectsContent();
       setProjectsSelectedMenuItemId(item.id);
       setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
+      setChatPanelSelectedProject(null);
       setChatPanelSelectedWorkItem(chatPanelWorkItem);
       setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
     },
@@ -529,12 +561,15 @@ export const WorkstationSidebarConnector: React.FC = () => {
       loadProjectsLinearOrgWorkItems,
       openProjectsLinearWorkItem,
       projectsLinearWorkItemMap,
+      projectsProjectMap,
       projectsWorkItemMap,
       resetOpsControlStateForProjectsContent,
       setChatPanelContentMode,
       setChatPanelCreateProjectContext,
       setChatPanelCreateTarget,
+      setChatPanelSelectedProject,
       setChatPanelSelectedWorkItem,
+      toChatPanelProject,
       toChatPanelWorkItem,
     ]
   );
