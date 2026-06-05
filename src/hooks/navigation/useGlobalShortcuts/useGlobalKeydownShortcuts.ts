@@ -193,7 +193,7 @@ export function useGlobalKeydownShortcuts(
           if (event.code === "KeyU") {
             event.preventDefault();
             event.stopPropagation();
-            shortcutRegistry.dispatch("toggle_sidebar");
+            handleToggleWorkstationSidebar();
             return;
           }
           if (workStationShortcutSurface && event.code === "KeyM") {
@@ -215,6 +215,15 @@ export function useGlobalKeydownShortcuts(
       // before WKWebView delivers a keydown). ⌘/ (model) is handled here
       // as well as via the menu for dev-browser and cross-platform parity.
 
+      if (event.code === "KeyB" && !event.shiftKey && !event.altKey) {
+        const target = event.target;
+        if (isEditableElementExtended(target)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        handleToggleSidebar();
+        return;
+      }
+
       if (
         window.location.pathname.startsWith("/orgii/workstation") &&
         !event.shiftKey &&
@@ -222,13 +231,6 @@ export function useGlobalKeydownShortcuts(
       ) {
         const target = event.target;
         if (isEditableElementExtended(target)) return;
-
-        if (event.code === "KeyB") {
-          event.preventDefault();
-          event.stopPropagation();
-          handleToggleWorkstationSidebar();
-          return;
-        }
 
         if (event.code === "KeyG") {
           event.preventDefault();
