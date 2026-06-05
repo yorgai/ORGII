@@ -1,10 +1,17 @@
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import { fetchRustApi, gitRepoUrl } from "@src/api/http/git/client";
 import { getGitRemotes } from "@src/api/http/git/remotes";
-import { findPullRequestLocal } from "@src/api/tauri/github";
+import {
+  LOCAL_GITHUB_TOKEN_USER_ID,
+  findPullRequestLocal,
+  getGitHubGitCredentialForRemote,
+} from "@src/api/tauri/github";
+import { Message } from "@src/components/Message";
+import { buildIntegrationsPath } from "@src/config/mainAppPaths/integrations";
 import {
   SERVICE_AUTH_STORAGE_KEYS,
   getHostedToken,
@@ -15,6 +22,10 @@ import {
   parseGithubRepoFullName,
 } from "@src/services/git/operations/createPullRequest";
 import { gitAutoCreatePrAtom } from "@src/store/ui/editorSettingsAtom";
+import {
+  workstationPrAtom,
+  workstationPrCallbackAtom,
+} from "@src/store/workstation/codeEditor/workstationPrAtom";
 
 import {
   formatWorkstationPrTitle,
@@ -54,7 +65,10 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
   } = options;
 
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const autoCreatePr = useAtomValue(gitAutoCreatePrAtom);
+  const setWorkstationPrAtom = useSetAtom(workstationPrAtom);
+  const setWorkstationPrCallbackAtom = useSetAtom(workstationPrCallbackAtom);
   const branchKey = branchName ?? "";
 
   const [remotePrByBranch, setRemotePrByBranch] = useState<
@@ -116,10 +130,6 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
     let cancelled = false;
 
     void (async () => {
-      const token = getHostedToken();
-      const userId = localStorage.getItem(SERVICE_AUTH_STORAGE_KEYS.userId);
-      if (!token || !userId) return;
-
       try {
         const remotesData = await getGitRemotes({
           repo_id: repoId,
@@ -129,6 +139,34 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
           (remote) => remote.name === "origin"
         );
         if (!originRemote?.url) return;
+
+        const hostedToken = getHostedToken();
+        const hostedUserId = localStorage.getItem(
+          SERVICE_AUTH_STORAGE_KEYS.userId
+        );
+
+        let userId: string | null = null;
+        let token: string | null = null;
+
+        if (hostedToken && hostedUserId) {
+          userId = hostedUserId;
+          token = hostedToken;
+        } else {
+          try {
+            const credential = await getGitHubGitCredentialForRemote(
+              LOCAL_GITHUB_TOKEN_USER_ID,
+              originRemote.url
+            );
+            if (credential) {
+              userId = LOCAL_GITHUB_TOKEN_USER_ID;
+              token = credential.token;
+            }
+          } catch {
+            // no local credential available
+          }
+        }
+
+        if (!userId || !token) return;
 
         const repoFullName = parseGithubRepoFullName(originRemote.url);
         if (!repoFullName) return;
@@ -200,14 +238,25 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
     });
 
     if (result.error) {
+      if (result.error === "not_authenticated") {
+        setCreatingByBranch((current) => ({ ...current, [branchName]: false }));
+        navigate(buildIntegrationsPath({ category: "git" }));
+        Message.info({
+          id: "github-auth-required",
+          title: t("git.pr.authRequired.title"),
+          content: t("git.pr.authRequired.description"),
+          duration: 8000,
+          closable: true,
+        });
+        return { error: result.error };
+      }
+
       const message =
-        result.error === "not_authenticated"
-          ? t("git.pr.notAuthenticated")
-          : result.error === "no_origin_remote"
-            ? t("git.pr.noOriginRemote")
-            : result.error === "cannot_parse_repo_name"
-              ? t("git.pr.cannotParseRepoName")
-              : result.error;
+        result.error === "no_origin_remote"
+          ? t("git.pr.noOriginRemote")
+          : result.error === "cannot_parse_repo_name"
+            ? t("git.pr.cannotParseRepoName")
+            : result.error;
       setErrorByBranch((current) => ({ ...current, [branchName]: message }));
       setCreatingByBranch((current) => ({ ...current, [branchName]: false }));
       return { error: message };
@@ -226,9 +275,10 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
 
     setCreatingByBranch((current) => ({ ...current, [branchName]: false }));
     return { url: result.url };
-  }, [branchName, repoPath, commitMessage, repoId, t]);
+  }, [branchName, repoPath, commitMessage, repoId, t, navigate]);
 
-  const readyToCreate = eligible && !prUrl;
+  const prIsActive = !!prUrl && prStatus !== "closed" && prStatus !== "merged";
+  const readyToCreate = eligible && !prIsActive;
 
   useEffect(() => {
     handleCreatePrRef.current = handleCreatePr;
@@ -257,6 +307,25 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
       autoTriggeredRef.current = false;
     }
   }, [readyToCreate]);
+
+  useEffect(() => {
+    setWorkstationPrAtom({ readyToCreate, prUrl, isCreating });
+  }, [readyToCreate, prUrl, isCreating, setWorkstationPrAtom]);
+
+  useEffect(() => {
+    setWorkstationPrCallbackAtom({ createPr: handleCreatePr });
+  }, [handleCreatePr, setWorkstationPrCallbackAtom]);
+
+  useEffect(() => {
+    return () => {
+      setWorkstationPrAtom({
+        readyToCreate: false,
+        prUrl: undefined,
+        isCreating: false,
+      });
+      setWorkstationPrCallbackAtom({ createPr: null });
+    };
+  }, [setWorkstationPrAtom, setWorkstationPrCallbackAtom]);
 
   return {
     prUrl,

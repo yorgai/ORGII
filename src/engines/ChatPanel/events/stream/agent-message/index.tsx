@@ -116,7 +116,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
   sessionId,
   canvasUrls,
 }) => {
-  const { payload: canvasPayload, dismiss: dismissCanvas } =
+  const { payload: canvasPayload, dismiss: _dismissCanvas } =
     useCanvasPreviewForSession(sessionId);
 
   if (!content && !thinkingContent && !isStreaming && !canvasPayload)
@@ -157,7 +157,6 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
             url={canvasPayload.url}
             title={canvasPayload.title}
             isStreaming={canvasPayload.streaming ?? isStreaming}
-            onClose={dismissCanvas}
           />
         </div>
       )}
