@@ -116,7 +116,8 @@ const SettingsSidebar: React.FC = () => {
 
   return (
     <SidebarBase>
-      <SettingsRootBody topContent={settingsReturnItem} />
+      <div className="shrink-0 px-3">{settingsReturnItem}</div>
+      <SettingsRootBody />
       <SidebarBottomBar
         rightActions={<SidebarRamMonitorButton />}
         hideSettings
@@ -127,11 +128,7 @@ const SettingsSidebar: React.FC = () => {
 
 export default SettingsSidebar;
 
-interface SettingsRootBodyProps {
-  topContent?: React.ReactNode;
-}
-
-const SettingsRootBody: React.FC<SettingsRootBodyProps> = ({ topContent }) => {
+const SettingsRootBody: React.FC = () => {
   const { t } = useTranslation("settings");
   const navigate = useNavigate();
   const location = useLocation();
@@ -229,15 +226,12 @@ const SettingsRootBody: React.FC<SettingsRootBodyProps> = ({ topContent }) => {
   });
 
   return (
-    <SidebarList>
-      <div className="flex flex-col gap-1">
-        {topContent}
-        <NavigationMenu
-          items={appSectionItems}
-          selectedKeys={selectedKeys}
-          onMenuItemClick={handleItemClick}
-        />
-      </div>
+    <SidebarList className="pt-1">
+      <NavigationMenu
+        items={appSectionItems}
+        selectedKeys={selectedKeys}
+        onMenuItemClick={handleItemClick}
+      />
       {integrationsSections.map((section) => (
         <div key={section.id} className="mt-4">
           <div className="mb-2 px-2 text-[11px] font-medium uppercase tracking-wider text-text-1">

@@ -5,7 +5,7 @@
  * navigating into a specific page (e.g. Dev Record, Settings).
  *
  * Renders inside the same SidebarBase glass/resize shell as HomeSidebar:
- * - Back affordance as the first regular list row
+ * - Pinned back affordance above the scrollable list
  * - Scrollable list of icon + label items with active highlight
  */
 import { ChevronLeft, type LucideIcon } from "lucide-react";
@@ -70,19 +70,19 @@ const PageLevelSidebar: React.FC<PageLevelSidebarProps> = ({
 
   return (
     <SidebarBase>
-      <SidebarList>
-        <div className="flex flex-col gap-1">
-          <SidebarHeaderNavButton
-            icon={ChevronLeft}
-            label={backLabel}
-            onClick={onBack}
-          />
-          <NavigationMenu
-            items={menuItems}
-            selectedKeys={selectedKeys}
-            onMenuItemClick={handleMenuItemClick}
-          />
-        </div>
+      <div className="shrink-0 px-3">
+        <SidebarHeaderNavButton
+          icon={ChevronLeft}
+          label={backLabel}
+          onClick={onBack}
+        />
+      </div>
+      <SidebarList className="pt-1">
+        <NavigationMenu
+          items={menuItems}
+          selectedKeys={selectedKeys}
+          onMenuItemClick={handleMenuItemClick}
+        />
       </SidebarList>
     </SidebarBase>
   );
