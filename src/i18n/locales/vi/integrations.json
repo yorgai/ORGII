@@ -1044,7 +1044,7 @@
     "personalAccessTokenPlaceholder": "Dán token...",
     "tokenRequired": "Cần Personal access token",
     "oauthWaiting": "Đang chờ OAuth",
-    "oauthDeviceDesc": "Mở URL xác minh và nhập mã này để cấp quyền GitHub Issues.",
+    "oauthDeviceDesc": "Mở URL xác minh và nhập mã này để cấp quyền GitHub Issues",
     "oauthBrowserDesc": "Hoàn tất cấp quyền trong cửa sổ trình duyệt đã mở.",
     "oauthBrowserOpened": "Một cửa sổ trình duyệt đã được mở. Hoàn tất cấp quyền ở đó, rồi trình hướng dẫn này sẽ tiếp tục."
   },

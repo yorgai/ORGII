@@ -1041,7 +1041,7 @@
     "personalAccessTokenPlaceholder": "token 붙여넣기...",
     "tokenRequired": "Personal access token이 필요합니다",
     "oauthWaiting": "OAuth 대기 중",
-    "oauthDeviceDesc": "검증 URL을 열고 이 코드를 입력하여 GitHub Issues를 승인하세요.",
+    "oauthDeviceDesc": "검증 URL을 열고 이 코드를 입력하여 GitHub Issues를 승인하세요",
     "oauthBrowserDesc": "열린 브라우저 창에서 승인을 완료하세요.",
     "oauthBrowserOpened": "브라우저 창이 열렸습니다. 거기에서 승인을 완료하면 이 마법사가 계속됩니다."
   },

@@ -46,6 +46,21 @@ const USER_AGENT: &str = concat!("orgii-sync-oauth/", env!("CARGO_PKG_VERSION"))
 /// remains available for development builds that point at a different
 /// GitHub OAuth App (e.g. staging / a fork).
 const DEFAULT_CLIENT_ID: &str = "Ov23liGsB3lDighTSmmO";
+/// Space-separated OAuth scopes requested on `/login/device/code`.
+/// Sized to cover not just Issues but the wider set of Git surfaces that
+/// can reuse this token once we unify GitHub auth (PR view, repo
+/// contents, private `git clone`/`push` via the token as HTTPS
+/// password). Keep additions intentional: each extra scope widens the
+/// consent screen and the blast radius if the token leaks.
+///
+/// - `repo`       — full control of private repos: issues, PRs, contents,
+///                  HTTPS clone/push.
+/// - `workflow`   — read/modify `.github/workflows/*` (orthogonal to
+///                  `repo`; required when an agent edits workflow files).
+/// - `read:user`  — fetch the authenticated user's login/avatar so the
+///                  connection card can show "Signed in as @octocat"
+///                  instead of an opaque token.
+const SCOPES: &str = "repo workflow read:user";
 /// Default poll interval if the device-code response somehow omits one;
 /// GitHub always returns an interval, but the spec allows it to be
 /// missing so we pick a conservative default.
@@ -140,7 +155,7 @@ pub async fn start_device_flow_with_endpoints(
     let response = client
         .post(device_code_url)
         .header("Accept", "application/json")
-        .form(&[("client_id", client_id), ("scope", "repo")])
+        .form(&[("client_id", client_id), ("scope", SCOPES)])
         .send()
         .await
         .map_err(|err| format!("device-code request failed: {}", err))?;

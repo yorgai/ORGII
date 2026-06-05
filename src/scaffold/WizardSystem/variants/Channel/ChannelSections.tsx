@@ -238,9 +238,11 @@ export const ProjectContent: React.FC<ProjectContentProps> = ({
             {projectOAuthFlow ? (
               projectOAuthFlow.kind === OAUTH_FLOW_KIND.DEVICE ? (
                 <div className="flex flex-col gap-2 text-[12px] text-text-2">
-                  <div className="border-border rounded-md border bg-bg-2 px-3 py-2 text-[18px] font-semibold tracking-[0.2em] text-text-1">
-                    {projectOAuthFlow.user_code}
-                  </div>
+                  <Input
+                    value={projectOAuthFlow.user_code}
+                    readOnly
+                    style={SECTION_CONTROL_STYLE}
+                  />
                   <a
                     className="text-primary-6 hover:underline"
                     href={projectOAuthFlow.verification_uri}

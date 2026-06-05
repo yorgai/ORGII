@@ -1044,7 +1044,7 @@
     "personalAccessTokenPlaceholder": "Вставьте token...",
     "tokenRequired": "Personal access token обязателен",
     "oauthWaiting": "Ожидание OAuth",
-    "oauthDeviceDesc": "Откройте URL проверки и введите этот код для авторизации GitHub Issues.",
+    "oauthDeviceDesc": "Откройте URL проверки и введите этот код для авторизации GitHub Issues",
     "oauthBrowserDesc": "Завершите авторизацию в открытом окне браузера.",
     "oauthBrowserOpened": "Открыто окно браузера. Завершите авторизацию там, затем мастер продолжит работу."
   },

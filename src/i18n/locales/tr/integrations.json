@@ -1041,7 +1041,7 @@
     "personalAccessTokenPlaceholder": "Token yapıştır...",
     "tokenRequired": "Personal access token gerekli",
     "oauthWaiting": "OAuth bekleniyor",
-    "oauthDeviceDesc": "Doğrulama URL'sini açın ve GitHub Issues yetkilendirmesi için bu kodu girin.",
+    "oauthDeviceDesc": "Doğrulama URL'sini açın ve GitHub Issues yetkilendirmesi için bu kodu girin",
     "oauthBrowserDesc": "Açılan tarayıcı penceresinde yetkilendirmeyi tamamlayın.",
     "oauthBrowserOpened": "Bir tarayıcı penceresi açıldı. Yetkilendirmeyi orada tamamlayın, ardından bu sihirbaz devam eder."
   },

@@ -1041,7 +1041,7 @@
     "personalAccessTokenPlaceholder": "貼上 token...",
     "tokenRequired": "Personal access token 為必填",
     "oauthWaiting": "正在等待 OAuth",
-    "oauthDeviceDesc": "開啟驗證 URL 並輸入此代碼以授權 GitHub Issues。",
+    "oauthDeviceDesc": "開啟驗證 URL 並輸入此代碼以授權 GitHub Issues",
     "oauthBrowserDesc": "在已開啟的瀏覽器視窗中完成授權。",
     "oauthBrowserOpened": "已開啟瀏覽器視窗。請在該處完成授權，然後此精靈會繼續。"
   },
