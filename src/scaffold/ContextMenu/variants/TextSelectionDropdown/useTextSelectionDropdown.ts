@@ -152,7 +152,7 @@ export function useTextSelectionDropdown(
       }
     };
 
-    const container = containerRef?.current || document;
+    const container = containerRef?.current ?? document;
     container.addEventListener("mouseup", handleMouseUp as EventListener);
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleKeyDown);

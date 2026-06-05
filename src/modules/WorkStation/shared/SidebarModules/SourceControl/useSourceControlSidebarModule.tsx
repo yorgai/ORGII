@@ -12,7 +12,13 @@
  */
 import { useAtomValue } from "jotai";
 import { RotateCcw } from "lucide-react";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import type { SectionHeaderAction } from "@src/components/TreePanelSidebar/types";
@@ -82,6 +88,12 @@ export function useSourceControlSidebarModule({
   const { t } = useTranslation();
   const sourceControlRef = useRef<SourceControlTabHandle>(null);
   const historyRefreshRef = useRef<(() => void) | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const [showFilter, setShowFilter] = useState(false);
   const [viewMode, setViewMode] = useState<"list-tree" | "list">("list-tree");
@@ -162,7 +174,7 @@ export function useSourceControlSidebarModule({
       await onUndoAll();
       refreshGitStatus().catch(() => {});
     } finally {
-      setIsUndoingAll(false);
+      if (mountedRef.current) setIsUndoingAll(false);
     }
   }, [t, pendingCount, onUndoAll, refreshGitStatus]);
 
