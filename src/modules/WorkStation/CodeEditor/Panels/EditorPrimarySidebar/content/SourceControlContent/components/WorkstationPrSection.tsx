@@ -9,6 +9,12 @@ import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
+import {
+  HEADER_ICON_SIZE,
+  PRIMARY_SIDEBAR_HOVER,
+  SECTION_ACTION_BUTTON,
+  TYPOGRAPHY,
+} from "@src/modules/WorkStation/shared/tokens";
 
 const PR_STATUS_COLORS: Record<string, string> = {
   open: "bg-success-1 text-success-6",
@@ -55,15 +61,16 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
 
   const displayError = errorMessage ?? localError;
   const isInactive = prStatus === "closed" || prStatus === "merged";
-  const hasActivePr = !!prUrl && !isInactive;
 
   if (!eligible && !prUrl && !isCreating && !displayError) return null;
 
+  const Chevron = collapsed ? ChevronRight : ChevronDown;
+
   return (
     <div className="flex-shrink-0 border-b border-border-2">
-      {/* Section header — matches SectionHeader style */}
+      {/* Section header — same geometry as SectionHeader (h-[28px], px-3) */}
       <div
-        className="group/pr-header flex h-[28px] w-full cursor-pointer items-center gap-1.5 px-3 hover:bg-fill-1"
+        className={`group/pr-header flex h-[28px] w-full cursor-pointer items-center gap-1.5 px-3 ${PRIMARY_SIDEBAR_HOVER.row}`}
         onClick={() => setCollapsed((c) => !c)}
         role="button"
         tabIndex={0}
@@ -71,19 +78,19 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
           if (e.key === "Enter" || e.key === " ") setCollapsed((c) => !c);
         }}
       >
-        {collapsed ? (
-          <ChevronRight size={14} className="shrink-0 text-text-3" />
-        ) : (
-          <ChevronDown size={14} className="shrink-0 text-text-3" />
-        )}
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 leading-none">
-          <GitPullRequest size={12} className="shrink-0 text-text-3" />
-          <span className="truncate text-[11px] font-medium uppercase leading-none text-text-2">
-            {t("git.pr.title")}
-          </span>
-        </div>
+        <Chevron size={HEADER_ICON_SIZE.sm} className="shrink-0 text-text-3" />
+        <GitPullRequest
+          size={12}
+          className="shrink-0 text-text-3"
+          strokeWidth={1.75}
+        />
+        <span
+          className={`min-w-0 flex-1 truncate uppercase ${TYPOGRAPHY.secondary} text-text-2`}
+        >
+          {t("git.pr.title")}
+        </span>
 
-        {/* Right-side: status badge + create button */}
+        {/* Right: status badge + action button — stop click from collapsing */}
         <div
           className="flex items-center gap-1.5"
           onClick={(e) => e.stopPropagation()}
@@ -128,20 +135,22 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
 
       {/* Collapsible body */}
       {!collapsed && (
-        <div className="px-3 pb-2 pt-1">
-          {/* Existing PR link */}
+        <div className="pb-2 pt-0.5">
+          {/* PR link row */}
           {prUrl && (
             <a
               href={prUrl}
               target="_blank"
               rel="noreferrer"
-              className="group/pr-link flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-text-2 hover:bg-fill-2"
+              className={`group/pr-link flex items-center gap-2 px-3 py-1 ${PRIMARY_SIDEBAR_HOVER.row}`}
             >
               <ExternalLink
                 size={12}
-                className="shrink-0 text-text-3 group-hover/pr-link:text-primary-6"
+                className="shrink-0 text-text-3 transition-colors group-hover/pr-link:text-primary-6"
               />
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium group-hover/pr-link:text-primary-6">
+              <span
+                className={`min-w-0 flex-1 truncate ${TYPOGRAPHY.secondary} font-medium text-text-2 transition-colors group-hover/pr-link:text-primary-6`}
+              >
                 {prUrl.replace(/^https?:\/\/[^/]+\//, "")}
               </span>
             </a>
@@ -149,44 +158,42 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
 
           {/* Branch name */}
           {branchName && (
-            <div className="flex items-center gap-1 px-2 pb-0.5 pt-0">
-              <code className="text-[11px] text-text-3">{branchName}</code>
+            <div className="px-3 py-0.5">
+              <code className={`${TYPOGRAPHY.secondary} text-text-3`}>
+                {branchName}
+              </code>
             </div>
           )}
 
           {/* Error */}
           {displayError && (
-            <div className="mt-1.5 flex items-start gap-1.5 rounded-md bg-fill-2 px-2 py-1.5">
+            <div className="mx-3 mt-1 flex items-start gap-1.5 rounded-md bg-fill-2 px-2 py-1.5">
               <TriangleAlert
                 size={12}
                 className="mt-0.5 shrink-0 text-warning-6"
               />
-              <p className="min-w-0 flex-1 text-[12px] text-text-2">
+              <p
+                className={`min-w-0 flex-1 ${TYPOGRAPHY.secondary} text-text-2`}
+              >
                 {displayError}
               </p>
-              <Button
-                variant="tertiary"
-                size="mini"
-                shape="round"
+              <button
+                className={`${SECTION_ACTION_BUTTON.base} ${SECTION_ACTION_BUTTON.withLabel} shrink-0`}
                 onClick={handleCreate}
-                className="shrink-0"
               >
                 {t("actions.retry")}
-              </Button>
+              </button>
             </div>
           )}
 
-          {/* Ready hint when no PR yet */}
-          {readyToCreate && !prUrl && !isCreating && !displayError && (
-            <p className="px-2 pt-0.5 text-[12px] text-text-3">
-              {autoCreatePr ? t("git.pr.autoCreating") : t("git.pr.readyHint")}
-            </p>
-          )}
-
-          {/* Not eligible hint */}
-          {!eligible && !prUrl && !isCreating && !displayError && (
-            <p className="px-2 pt-0.5 text-[12px] text-text-3">
-              {t("git.pr.neutralHint")}
+          {/* Status hints */}
+          {!prUrl && !isCreating && !displayError && (
+            <p className={`px-3 py-0.5 ${TYPOGRAPHY.secondary} text-text-3`}>
+              {readyToCreate
+                ? autoCreatePr
+                  ? t("git.pr.autoCreating")
+                  : t("git.pr.readyHint")
+                : t("git.pr.neutralHint")}
             </p>
           )}
         </div>
