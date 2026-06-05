@@ -4,7 +4,6 @@
  * Higher-level panel components: recent files, search results,
  * and second layer panels (files, terminals, sessions, browser).
  */
-import { Search } from "lucide-react";
 import React, { memo, useEffect, useRef, useState } from "react";
 
 import FolderIcon from "@src/assets/fileTypeIcons/folder-base.svg";
@@ -256,19 +255,6 @@ export const SearchResultsPanel: React.FC<SearchResultsPanelProps> = memo(
           className={`relative ${DROPDOWN_CLASSES.panel}`}
           style={{ width: STYLE_CONFIG.secondLayerWidth }}
         >
-          <DropdownHeader>
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-              <Search
-                size={DROPDOWN_ITEM.iconSize}
-                strokeWidth={1.75}
-                className="text-text-3"
-                aria-hidden
-              />
-            </span>
-            <span className="flex min-h-5 flex-1 items-center truncate text-[13px] font-medium leading-5 text-text-1">
-              {searchQuery || "Search..."}
-            </span>
-          </DropdownHeader>
           <div
             className={DROPDOWN_CLASSES.optionsContainer}
             style={{ maxHeight: STYLE_CONFIG.maxHeight }}

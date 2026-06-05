@@ -127,7 +127,8 @@
     "sidebar": {
       "agentTypes": "Agent 類型",
       "cliAgent": "CLI Agent",
-      "rustAgent": "Rust Agent"
+      "rustAgent": "Rust Agent",
+      "removeDraft": "刪除草稿"
     },
     "resultStatus": {
       "completed": "已完成",

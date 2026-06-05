@@ -257,10 +257,6 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   const [plusSlashQuery, setPlusSlashQuery] = useState("");
   const [contextMenuKeyboardOpened, setContextMenuKeyboardOpened] =
     useState(false);
-  const [contextMenuAnchorPosition, setContextMenuAnchorPosition] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
 
   const handleOpenSkillsTools = useCallback(() => {
     setPlusSlashQuery("");
@@ -275,7 +271,6 @@ const EditorArea: React.FC<EditorAreaProps> = ({
 
   const handleContextMenuClose = useCallback(() => {
     setContextMenuKeyboardOpened(false);
-    setContextMenuAnchorPosition(null);
     setShowContextMenu(false);
     setAtSearchQuery("");
   }, [setAtSearchQuery, setShowContextMenu]);
@@ -372,10 +367,9 @@ const EditorArea: React.FC<EditorAreaProps> = ({
     return () => node.removeEventListener("keydown", handler);
   }, [voice, voiceFeatureEnabled]);
 
-  const handleAtMentionWithPosition = useCallback(
+  const handleAtMention = useCallback(
     (query: string, position: { x: number; y: number }) => {
       setContextMenuKeyboardOpened(true);
-      setContextMenuAnchorPosition(position);
       onAtMention?.(query, position);
     },
     [onAtMention]
@@ -521,7 +515,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           initialContent={initialContent ?? ""}
           placeholder={editorPlaceholder}
           onContentChange={(text) => onContentChange?.(text)}
-          onAtMention={handleAtMentionWithPosition}
+          onAtMention={handleAtMention}
           onAtMentionClose={onAtMentionClose}
           onSubmit={onSubmit}
           requireCmdEnter={true}
@@ -540,7 +534,6 @@ const EditorArea: React.FC<EditorAreaProps> = ({
         <ContextMenuPortal
           visible={showContextMenu}
           containerRef={editorContainerRef}
-          anchorPosition={contextMenuAnchorPosition}
           onClose={handleContextMenuClose}
           onSelect={onAtSelect}
           searchQuery={atSearchQuery}
@@ -548,7 +541,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           recentFiles={[]}
           repoPath={repoPath}
           keyboardHandlerRef={contextMenuFunctionRef}
-          placementStrategy="auto"
+          direction="down"
         />
 
         {/* Slash Command Menu - inline "/" trigger */}
@@ -564,8 +557,6 @@ const EditorArea: React.FC<EditorAreaProps> = ({
             onSelect={(item) => onSlashSelect?.(item)}
             onModeSelect={(mode) => onModeSelect?.(mode)}
             keyboardHandlerRef={slashCommandKeyboardHandlerRef}
-            direction={isChatPanel ? "up" : "down"}
-            placementStrategy={isChatPanel ? "fixed" : "auto"}
             showActionFlyouts
             onImageUpload={onUploadClick}
           />
@@ -591,7 +582,6 @@ const EditorArea: React.FC<EditorAreaProps> = ({
             }}
             keyboardHandlerRef={slashCommandKeyboardHandlerRef}
             searchMode="header"
-            placementStrategy={isChatPanel ? "fixed" : "auto"}
             showActionFlyouts
             onSearchQueryChange={handlePlusSlashQueryChange}
             onImageUpload={() => {
@@ -619,6 +609,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
             dropdownDirection={isChatPanel ? "up" : "down"}
             repoPath={repoPath}
             toolbarItemGap={false}
+            bottomPaddingClassName="pb-1"
             showContextInfo={false}
             pills={
               <ControlButtons

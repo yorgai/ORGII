@@ -117,12 +117,17 @@ export function useContextMenu(
   const menuItemsCount = menuStartIndex + MENU_ITEMS.length;
 
   useEffect(() => {
-    hasMovedMainHighlightRef.current = false;
+    hasMovedMainHighlightRef.current = opts.keyboardOpened ?? false;
   }, [opts.keyboardOpened, menuItemsCount, opts.externalSearchQuery]);
 
   useEffect(() => {
-    hasMovedSecondLayerHighlightRef.current = false;
-  }, [secondLayer, searchResults.length, opts.externalSearchQuery]);
+    hasMovedSecondLayerHighlightRef.current = opts.keyboardOpened ?? false;
+  }, [
+    secondLayer,
+    searchResults.length,
+    opts.externalSearchQuery,
+    opts.keyboardOpened,
+  ]);
 
   // Helper: set search results AND reset active index in one batch
   // (React 18 batches these into a single render)

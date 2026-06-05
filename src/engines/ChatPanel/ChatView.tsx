@@ -79,6 +79,8 @@ export interface ChatViewProps {
   sessionId: string;
   onRegisterSearchOpen?: (handler: (() => void) | null) => void;
   turnPaginationEnabled?: boolean;
+  /** Dock side for the containing chat panel, used to place side previews inward. */
+  position?: "left" | "right";
   /** Opaque background class for sticky headers (must match the container surface).
    *  Defaults to "bg-chat-pane" (side panel). Pass EDITOR_TAB_CANVAS_BG_CLASS for WorkStation. */
   surfaceBgClass?: string;
@@ -107,6 +109,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
     sessionId,
     onRegisterSearchOpen,
     turnPaginationEnabled = true,
+    position = "right",
     surfaceBgClass = "bg-chat-pane",
     readOnly = false,
     secondary = false,
@@ -484,6 +487,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
           {showInteractArea && (
             <ChatFloatingComposer
               composerRef={floatingComposerRef}
+              chatPanelPosition={position}
               sessionId={sessionId}
               inputAreaSessionId={inputAreaSessionId}
               currentPlanApproval={currentPlanApproval}

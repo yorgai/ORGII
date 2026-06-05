@@ -82,6 +82,8 @@ interface InputAreaProps {
   surfaceBg?: boolean;
   /** Hide the step/feedback header row (e.g. docked simulator input with external chrome) */
   omitChatHeader?: boolean;
+  /** Dock side for the containing chat panel, used to place side previews inward. */
+  chatPanelPosition?: "left" | "right";
   /** Explicit session ID for this composer surface. */
   sessionId?: string;
   onSubmitOverride?: (input: SubmitOverrideInput) => Promise<boolean>;
@@ -111,6 +113,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
     editImages,
     surfaceBg = false,
     omitChatHeader = false,
+    chatPanelPosition = "right",
     sessionId: propSessionId,
     onSubmitOverride,
     customMentionOptions,
@@ -223,6 +226,8 @@ const InputArea: React.FC<InputAreaProps> = memo(
     });
 
     const contextMenuVisible = showContextMenu;
+    const mentionTreePosition =
+      chatPanelPosition === "right" ? "left" : "right";
 
     // ── Plus-button slash menu (header mode) ─────────────────────────────────
     // Separate from the inline "/" slash menu so the two modes don't collide.
@@ -710,6 +715,8 @@ const InputArea: React.FC<InputAreaProps> = memo(
           recentFiles={recentFiles}
           repoPath={currentRepoPath || undefined}
           keyboardHandlerRef={contextMenuKeyboardHandlerRef}
+          treePosition={mentionTreePosition}
+          direction="up"
         />
 
         {/* Slash Command Menu - inline "/" trigger */}
@@ -753,8 +760,6 @@ const InputArea: React.FC<InputAreaProps> = memo(
             handlePlusSlashClose();
             handleUploadClick();
           }}
-          direction={isEditMode ? "down" : "up"}
-          placementStrategy={isEditMode ? "auto" : "fixed"}
         />
 
         {/* Quick Upload Modal */}

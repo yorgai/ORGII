@@ -41,6 +41,8 @@ export interface ComposerBarProps {
    * @default true
    */
   toolbarItemGap?: boolean;
+  /** Optional bottom padding for the toolbar row inside the composer shell. */
+  bottomPaddingClassName?: string;
   /**
    * When set with `editorSlot`, render the editor in one horizontal row with
    * the toolbar (compact chat capsule).
@@ -73,6 +75,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
     repoPath,
     submitButton,
     toolbarItemGap = true,
+    bottomPaddingClassName = "",
     inlineLayout = false,
     editorSlot,
     showContextInfo = true,
@@ -110,7 +113,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
 
     const toolbarRow = (
       <div
-        className="flex h-9 min-h-9 w-full items-center justify-between px-1 text-text-2"
+        className={`flex h-9 min-h-9 w-full items-center justify-between px-1 text-text-2 ${bottomPaddingClassName}`.trim()}
         style={{ transform: "translateZ(0)" }}
       >
         <div className={rowClass}>
@@ -191,7 +194,10 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
           };
 
       return (
-        <div className="w-full text-text-2" style={gridStyle}>
+        <div
+          className={`w-full text-text-2 ${bottomPaddingClassName}`.trim()}
+          style={gridStyle}
+        >
           {leftCluster}
           {editorWrap}
           {pillCluster}

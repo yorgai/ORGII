@@ -1,4 +1,4 @@
-import { Box, Plus, Radar, SquarePen, X } from "lucide-react";
+import { Box, Plus, Radar, SquarePen } from "lucide-react";
 import React from "react";
 
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
@@ -75,15 +75,11 @@ export function buildProjectsPinnedMenuItems({
 interface BuildDraftMenuItemsParams {
   sessionCreatorDrafts: readonly SessionCreatorDraft[];
   draftsLabel: string;
-  deleteLabel: string;
-  onDeleteDraft: (event: React.MouseEvent, draftId: string) => void;
 }
 
 export function buildDraftMenuItems({
   sessionCreatorDrafts,
   draftsLabel,
-  deleteLabel,
-  onDeleteDraft,
 }: BuildDraftMenuItemsParams): NavigationMenuItem[] {
   if (sessionCreatorDrafts.length === 0) return [];
   return [
@@ -107,10 +103,6 @@ export function buildDraftMenuItems({
         trailingElement: (
           <span className="h-1.5 w-1.5 rounded-full border border-border-3 bg-transparent" />
         ),
-        showMoreActions: true,
-        rowActionIcon: X,
-        rowActionLabel: deleteLabel,
-        onRowActionClick: (event) => onDeleteDraft(event, draft.id),
       } satisfies NavigationMenuItem;
     }),
   ];
