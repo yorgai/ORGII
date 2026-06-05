@@ -276,7 +276,9 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
           title={t("input.pinnedActions.manage")}
           aria-label={t("input.pinnedActions.manage")}
           onClick={handleOpenPanel}
-          className={panelOpen ? "!bg-fill-1 !text-primary-6" : ""}
+          className={
+            panelOpen ? "shrink-0 !bg-fill-1 !text-primary-6" : "shrink-0"
+          }
         />
 
         <PinActionsPanel

@@ -1,3 +1,4 @@
+const fs = require("fs");
 const webpack = require("webpack");
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
@@ -437,7 +438,10 @@ module.exports = (env, argv) => {
       !isProduction &&
         !useFastDev &&
         new ReactRefreshWebpackPlugin({ overlay: false }),
-      new Dotenv(),
+      new Dotenv({
+        systemvars: true,
+        silent: !fs.existsSync(path.resolve(__dirname, ".env")),
+      }),
       isProduction &&
         new MiniCssExtractPlugin({
           filename: "[name].[contenthash].css",

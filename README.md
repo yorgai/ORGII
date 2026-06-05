@@ -25,6 +25,7 @@ Useful scripts:
 - `pnpm run build` — create the production frontend bundle used by desktop builds.
 - `pnpm run tauri:build` — build the packaged desktop app with the default Tauri profile.
 - `pnpm run tauri:build:fast` — build with the faster local development profile for quicker validation.
+- `pnpm run tauri:build:fast:open` — fast iteration mode: clean only the app target for the local development profile, rebuild the Tauri app bundle, and open it immediately.
 - `pnpm run download:sidecars` — download optional native helpers for Browser Use and Computer Use features.
 - `pnpm run lint` / `pnpm run lint:fix` — check or automatically fix frontend lint issues.
 - `pnpm run test` / `pnpm run test:coverage` / `pnpm run test:watch` — run frontend tests, coverage, or watch mode.

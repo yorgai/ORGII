@@ -145,10 +145,10 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                 left: panelPosition.left,
               }}
             >
-              <div className={DROPDOWN_CLASSES.sectionLabel}>
-                {t("sidebar.groupBy.title")}
-              </div>
-              <div className={DROPDOWN_CLASSES.itemsColumnBelowHeader}>
+              <div className={DROPDOWN_CLASSES.itemsColumnPadded}>
+                <div className={DROPDOWN_CLASSES.sectionLabel}>
+                  {t("sidebar.groupBy.title")}
+                </div>
                 {groupByModes.map((mode) => {
                   const active = mode === groupByMode;
                   const itemClasses = active
@@ -169,15 +169,13 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                     </button>
                   );
                 })}
-              </div>
-              {hasExtraActions && (
-                <>
-                  <div className={DROPDOWN_CLASSES.menuSeparator} />
-                  <div className={DROPDOWN_CLASSES.itemsColumnBelowHeader}>
+                {hasExtraActions && (
+                  <>
+                    <div className={DROPDOWN_CLASSES.menuSeparator} />
                     {onRefreshSessions && (
                       <button
                         type="button"
-                        className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start gap-2 text-left`}
+                        className={DROPDOWN_CLASSES.menuActionItem}
                         onClick={handleRefreshSessions}
                       >
                         <RefreshCw
@@ -191,7 +189,7 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                     {onExportSessionJson && (
                       <button
                         type="button"
-                        className={`${DROPDOWN_CLASSES.item} ${canExportSessionJson ? DROPDOWN_CLASSES.itemHover : "cursor-not-allowed opacity-50"} w-full justify-start gap-2 text-left`}
+                        className={`${DROPDOWN_CLASSES.menuActionItem} ${canExportSessionJson ? "" : DROPDOWN_CLASSES.itemDisabled}`}
                         onClick={handleExportSessionJson}
                         disabled={!canExportSessionJson}
                       >
@@ -208,7 +206,7 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                     {onImportSessionJson && (
                       <button
                         type="button"
-                        className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start gap-2 text-left`}
+                        className={DROPDOWN_CLASSES.menuActionItem}
                         onClick={handleImportSessionJson}
                       >
                         <FolderInput
@@ -224,7 +222,7 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                     {onCollapseAll && (
                       <button
                         type="button"
-                        className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start gap-2 text-left`}
+                        className={DROPDOWN_CLASSES.menuActionItem}
                         onClick={handleCollapseAll}
                       >
                         <ListChevronsDownUp
@@ -238,7 +236,7 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                     {onMarkAllRead && (
                       <button
                         type="button"
-                        className={`${DROPDOWN_CLASSES.item} ${DROPDOWN_CLASSES.itemHover} w-full justify-start gap-2 text-left`}
+                        className={DROPDOWN_CLASSES.menuActionItem}
                         onClick={handleMarkAllRead}
                       >
                         <CheckCheck
@@ -249,9 +247,9 @@ export const SessionFilterButton: FC<SessionFilterButtonProps> = React.memo(
                         <span>{t("sidebar.actions.markAllRead")}</span>
                       </button>
                     )}
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </div>,
             document.body
           )}

@@ -417,7 +417,7 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
           return React.createElement(resolveAgentIcon(iconId), {
             size,
             strokeWidth: 1.75,
-            className: hasAgentSelected ? "text-text-1" : "text-warning-6",
+            className: hasAgentSelected ? "text-text-1" : "text-primary-6",
           });
         }
         return null;

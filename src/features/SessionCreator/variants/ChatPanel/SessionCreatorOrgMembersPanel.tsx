@@ -354,7 +354,7 @@ const SessionCreatorOrgMembersPanel: React.FC<SessionCreatorOrgMembersPanelProps
                             <Grip
                               size={PILL_SM_ICON_SIZE}
                               strokeWidth={1.75}
-                              className="text-warning-6"
+                              className="text-primary-6"
                             />
                           )
                         }

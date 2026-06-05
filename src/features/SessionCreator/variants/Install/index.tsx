@@ -85,7 +85,7 @@ const SessionCreatorInstall: React.FC<SessionCreatorInstallProps> = memo(
               <Grip
                 size={iconSize}
                 strokeWidth={1.75}
-                className="text-warning-6"
+                className="text-primary-6"
               />
             )
           }

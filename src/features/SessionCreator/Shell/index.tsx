@@ -191,7 +191,7 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
       : React.createElement(resolveAgentIcon(agentSelectorIcon.iconId), {
           size: 14,
           strokeWidth: 1.75,
-          className: hasAgentSelected ? "text-text-1" : "text-warning-6",
+          className: hasAgentSelected ? "text-text-1" : "text-primary-6",
         })
     : null;
 
