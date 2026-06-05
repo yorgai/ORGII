@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   AGENT_ORG_RUN_STATUS,
+  AGENT_ORG_USER_SENDER_ID,
   type AgentOrgInboxRow,
   type AgentOrgRunMemberView,
   type AgentOrgRunView,
@@ -32,6 +33,7 @@ interface GroupChatPendingMessage {
   targetMemberName: string;
   createdAt: string;
   displayText: string;
+  inboxRow: AgentOrgInboxRow;
 }
 
 interface UseAgentOrgGroupChatControllerOptions {
@@ -56,6 +58,43 @@ function timestampMs(value: string | null | undefined): number | null {
   if (!value) return null;
   const ms = new Date(value).getTime();
   return Number.isFinite(ms) ? ms : null;
+}
+
+function makeOptimisticInboxRow({
+  id,
+  targetMemberId,
+  targetMemberName,
+  targetAgentId,
+  body,
+  displayText,
+}: {
+  id: number;
+  targetMemberId: string;
+  targetMemberName: string;
+  targetAgentId: string;
+  body: string;
+  displayText: string;
+}): AgentOrgInboxRow {
+  const createdAt = new Date().toISOString();
+  return {
+    id,
+    recipientAgentId: targetAgentId,
+    recipientMemberId: targetMemberId,
+    senderAgentId: AGENT_ORG_USER_SENDER_ID,
+    senderMemberId: null,
+    recipientName: targetMemberName,
+    senderName: "User",
+    displayText,
+    orgRunId: null,
+    payloadKind: "plain",
+    payloadJson: JSON.stringify({
+      summary: "User group chat message",
+      text: body,
+    }),
+    requestId: null,
+    createdAt,
+    readAt: null,
+  };
 }
 
 function parseGroupChatRoute(
@@ -129,6 +168,7 @@ export function useAgentOrgGroupChatController({
   const groupChatViewSessionId = useAtomValue(groupChatViewSessionIdAtom);
   const setGroupChatViewSessionId = useSetAtom(groupChatViewSessionIdAtom);
   const groupChatDefaultAppliedRef = useRef<Set<string>>(new Set());
+  const nextOptimisticInboxRowIdRef = useRef(-1);
   const [groupChatPendingMessage, setGroupChatPendingMessage] =
     useState<GroupChatPendingMessage | null>(null);
   const [groupChatDisplayOverrides, setGroupChatDisplayOverrides] = useState<
@@ -148,13 +188,10 @@ export function useAgentOrgGroupChatController({
     ? sessionId
     : agentOrgInteractionSessionId;
 
-  const groupChatViewAvailable = useMemo(() => {
-    const members = agentOrgRunView?.members ?? [];
-    if (members.length < 2) return false;
-    return members.some(
-      (member) => !member.isCoordinator && member.sessionRuntime?.sessionId
-    );
-  }, [agentOrgRunView]);
+  const groupChatViewAvailable = useMemo(
+    () => Boolean(agentOrgRunView),
+    [agentOrgRunView]
+  );
 
   const handleGroupChatViewToggle = useCallback(
     (active: boolean) => {
@@ -183,6 +220,15 @@ export function useAgentOrgGroupChatController({
     }
   }, [groupChatViewActive, groupChatViewAvailable, setGroupChatViewSessionId]);
 
+  const groupChatInboxRows = useMemo(() => {
+    const rows = agentOrgRunView?.inbox ?? [];
+    if (!groupChatPendingMessage) return rows;
+    if (rows.some((row) => row.id === groupChatPendingMessage.rowId)) {
+      return rows;
+    }
+    return [...rows, groupChatPendingMessage.inboxRow];
+  }, [agentOrgRunView?.inbox, groupChatPendingMessage]);
+
   const {
     mergedEvents: groupChatMergedEvents,
     agents: groupChatAgents,
@@ -190,7 +236,7 @@ export function useAgentOrgGroupChatController({
   } = useGroupChatMergedEvents(
     groupChatViewActive ? sessionId : null,
     agentOrgRunView?.members ?? [],
-    agentOrgRunView?.inbox ?? [],
+    groupChatInboxRows,
     groupChatDisplayOverrides
   );
 
@@ -282,24 +328,73 @@ export function useAgentOrgGroupChatController({
       if (!route.body.trim()) {
         throw new Error("Agent Org group chat message content is required");
       }
-      const response = await sendAgentOrgGroupChatMessage(
-        sessionId,
-        route.targetMemberId,
-        route.body
-      );
+      const targetMember = route.targetMemberId
+        ? agentOrgRunView.members.find(
+            (member) => member.memberId === route.targetMemberId
+          )
+        : agentOrgRunView.members.find((member) => member.isCoordinator);
+      if (!targetMember) {
+        throw new Error("Agent Org group chat target member was not found");
+      }
+      const optimisticRowId = nextOptimisticInboxRowIdRef.current--;
+      const optimisticRow = makeOptimisticInboxRow({
+        id: optimisticRowId,
+        targetMemberId: targetMember.memberId,
+        targetMemberName: targetMember.name,
+        targetAgentId: targetMember.agentId,
+        body: route.body,
+        displayText: route.displayText,
+      });
       setGroupChatDisplayOverrides((prev) => {
         const next = new Map(prev);
-        next.set(response.inboxRow.id, route.displayText);
+        next.set(optimisticRowId, route.displayText);
         return next;
       });
       setGroupChatPendingMessage({
-        rowId: response.inboxRow.id,
-        targetMemberId: response.targetMemberId,
-        targetMemberName: response.targetMemberName,
-        createdAt: response.inboxRow.createdAt,
+        rowId: optimisticRowId,
+        targetMemberId: targetMember.memberId,
+        targetMemberName: targetMember.name,
+        createdAt: optimisticRow.createdAt,
         displayText: route.displayText,
+        inboxRow: optimisticRow,
       });
-      await refreshAgentOrgRunView();
+      try {
+        const response = await sendAgentOrgGroupChatMessage(
+          sessionId,
+          route.targetMemberId,
+          route.body
+        );
+        setGroupChatDisplayOverrides((prev) => {
+          const next = new Map(prev);
+          next.delete(optimisticRowId);
+          next.set(response.inboxRow.id, route.displayText);
+          return next;
+        });
+        setGroupChatPendingMessage({
+          rowId: response.inboxRow.id,
+          targetMemberId: response.targetMemberId,
+          targetMemberName: response.targetMemberName,
+          createdAt: response.inboxRow.createdAt,
+          displayText: route.displayText,
+          inboxRow: response.inboxRow,
+        });
+        void refreshAgentOrgRunView().catch((err: unknown) => {
+          logger.error(
+            "Failed to refresh Agent Org run after group chat send:",
+            err
+          );
+        });
+      } catch (err) {
+        setGroupChatPendingMessage((current) =>
+          current?.rowId === optimisticRowId ? null : current
+        );
+        setGroupChatDisplayOverrides((prev) => {
+          const next = new Map(prev);
+          next.delete(optimisticRowId);
+          return next;
+        });
+        throw err;
+      }
       return true;
     },
     [agentOrgRunView, groupChatViewActive, refreshAgentOrgRunView, sessionId]

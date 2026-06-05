@@ -599,12 +599,8 @@ mod bulk_writer {
             let mut current_label = label;
             let mut current_events = first_batch;
             loop {
-                let _ = save_events_retry(
-                    current_label,
-                    &sid,
-                    &current_events,
-                    BULK_WRITE_MAX_RETRIES,
-                );
+                let _ =
+                    save_events_retry(current_label, &sid, &current_events, BULK_WRITE_MAX_RETRIES);
 
                 // Drain the next pending batch, or shut down if empty.
                 // We mark `guard` as released *inside* the state lock

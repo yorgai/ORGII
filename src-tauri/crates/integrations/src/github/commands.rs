@@ -251,7 +251,10 @@ pub async fn github_find_pull_request(
         ))
         .await?;
     if let Some(pr) = parse_pr(&open_data) {
-        log::info!("[GitHub][Cmd] find_pull_request found open PR #{}", pr.number);
+        log::info!(
+            "[GitHub][Cmd] find_pull_request found open PR #{}",
+            pr.number
+        );
         return Ok(Some(pr));
     }
 
@@ -295,10 +298,7 @@ pub async fn github_list_pr_commits(
 }
 
 #[command]
-pub async fn github_list_pr_files(
-    repo_full_name: String,
-    pr_number: u64,
-) -> Result<Value, String> {
+pub async fn github_list_pr_files(repo_full_name: String, pr_number: u64) -> Result<Value, String> {
     log::info!("[GitHub][Cmd] list_pr_files repo={repo_full_name} pr={pr_number}");
     let client = make_client()?;
     client
@@ -549,9 +549,7 @@ pub async fn github_list_issues(
     page: Option<u32>,
     per_page: Option<u32>,
 ) -> Result<GitHubIssueListResponse, String> {
-    log::info!(
-        "[GitHub][Cmd] list_issues repo={repo_full_name} state={state:?}"
-    );
+    log::info!("[GitHub][Cmd] list_issues repo={repo_full_name} state={state:?}");
     let client = make_client()?;
     let per_page = per_page.unwrap_or(30);
     let page = page.unwrap_or(1);
@@ -637,9 +635,7 @@ pub async fn github_update_issue(
     labels: Option<Vec<String>>,
     assignees: Option<Vec<String>>,
 ) -> Result<GitHubIssue, String> {
-    log::info!(
-        "[GitHub][Cmd] update_issue repo={repo_full_name} issue={issue_number}"
-    );
+    log::info!("[GitHub][Cmd] update_issue repo={repo_full_name} issue={issue_number}");
     let client = make_client()?;
     let mut payload = serde_json::json!({});
     if let Some(t) = title {
@@ -677,9 +673,7 @@ pub async fn github_list_issue_comments(
     page: Option<u32>,
     per_page: Option<u32>,
 ) -> Result<Vec<GitHubIssueComment>, String> {
-    log::info!(
-        "[GitHub][Cmd] list_issue_comments repo={repo_full_name} issue={issue_number}"
-    );
+    log::info!("[GitHub][Cmd] list_issue_comments repo={repo_full_name} issue={issue_number}");
     let client = make_client()?;
     let per_page = per_page.unwrap_or(50);
     let page = page.unwrap_or(1);
@@ -701,9 +695,7 @@ pub async fn github_create_issue_comment(
     issue_number: u64,
     body: String,
 ) -> Result<GitHubIssueComment, String> {
-    log::info!(
-        "[GitHub][Cmd] create_issue_comment repo={repo_full_name} issue={issue_number}"
-    );
+    log::info!("[GitHub][Cmd] create_issue_comment repo={repo_full_name} issue={issue_number}");
     let client = make_client()?;
     let payload = serde_json::json!({ "body": body });
     let result = client
@@ -717,9 +709,7 @@ pub async fn github_create_issue_comment(
 }
 
 #[tauri::command]
-pub async fn github_list_repo_labels(
-    repo_full_name: String,
-) -> Result<Vec<IssueLabel>, String> {
+pub async fn github_list_repo_labels(repo_full_name: String) -> Result<Vec<IssueLabel>, String> {
     log::info!("[GitHub][Cmd] list_repo_labels repo={repo_full_name}");
     let client = make_client()?;
     let result = client
@@ -739,7 +729,9 @@ pub async fn github_list_repo_collaborators(
     log::info!("[GitHub][Cmd] list_repo_collaborators repo={repo_full_name}");
     let client = make_client()?;
     let result = client
-        .get(&format!("/repos/{repo_full_name}/collaborators?per_page=100"))
+        .get(&format!(
+            "/repos/{repo_full_name}/collaborators?per_page=100"
+        ))
         .await
         .map_err(|e| e.to_string())?;
     Ok(result

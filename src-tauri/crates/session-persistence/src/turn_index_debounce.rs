@@ -119,9 +119,7 @@ pub fn schedule(session_id: &str) {
     // flag so the next `schedule()` call can try again; otherwise we'd
     // wedge this session's debouncer forever.
     if let Err(err) = spawn_result {
-        tracing::warn!(
-            "[turn-index-debounce] failed to spawn worker for {session_owned}: {err}"
-        );
+        tracing::warn!("[turn-index-debounce] failed to spawn worker for {session_owned}: {err}");
         let mut state = match scheduled_state().lock() {
             Ok(guard) => guard,
             Err(poisoned) => poisoned.into_inner(),
@@ -184,9 +182,7 @@ fn debounce_worker(session: String) {
             Action::Rebuild => {
                 if let Err(err) = super::turn_index::rebuild_turn_index(&session) {
                     // Read-time rebuild will recover; just log.
-                    tracing::warn!(
-                        "[turn-index-debounce] rebuild failed for {session}: {err}"
-                    );
+                    tracing::warn!("[turn-index-debounce] rebuild failed for {session}: {err}");
                 }
                 return;
             }

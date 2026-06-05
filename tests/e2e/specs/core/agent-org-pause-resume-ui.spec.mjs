@@ -17,6 +17,8 @@ import {
   assertNoMemberIntervention,
   assertRenderedGroupChatNoQuoteOrUnreadPreview,
   assertRenderedGroupChatToggleIsIdempotent,
+  assertRenderedGroupChatComposerHasNoStop,
+  assertAgentOrgOverviewHasRunControl,
   assertRenderedInboxPinBarAbsent,
   clickGroupChatResumeButton,
   clickRenderedMemberSwitcher,
@@ -99,6 +101,9 @@ describe("Agent Org pause, resume, and sidebar rendered UI", () => {
     if (!sessionId) {
       throw new Error("Pause/Resume test: launch did not create a session id");
     }
+    await waitForRenderedGroupChatActive("default Agent Org group chat after launch");
+    await assertRenderedGroupChatComposerHasNoStop("default Agent Org group chat after launch");
+    await assertAgentOrgOverviewHasRunControl("default Agent Org group chat after launch");
 
     // Wait for the Pause button to appear in the UI while the run is live.
     // If the run completes before the Pause button ever appears, the test
@@ -595,6 +600,64 @@ describe("Agent Org pause, resume, and sidebar rendered UI", () => {
     );
   }));
 
+  it("Ask mode Agent Org sessions retain task-board dispatch semantics", async () => runAgentOrgScenarioWithTimeout("ask-mode-task-dispatch", async () => {
+    const account = await getApiAccount();
+    const model = selectPreferredModel(account);
+    const orgName = `E2E Ask Task Org ${RUN_ID}`;
+    const leadName = `E2E AT Lead ${RUN_ID}`;
+    const childName = `E2E AT Child ${RUN_ID}`;
+    await removeAgentOrgsByName(orgName);
+
+    const org = await createRenderedStrictTwoMemberAgentOrg({
+      orgName,
+      leadName,
+      childName,
+    });
+    await configureCreatorForAgentOrg({ account, model, agentOrgId: org.id });
+    await selectRenderedAgentOrg(org.id);
+    await selectRenderedExecMode("ask");
+
+    const launchPrompt = `E2E ask task dispatch ${RUN_ID}. Reply briefly.`;
+    const sessionId = await sendFromRenderedCreator(launchPrompt);
+    if (!sessionId) {
+      throw new Error("Ask task dispatch test: launch did not create a session");
+    }
+    await waitForActiveSessionExecMode(
+      sessionId,
+      "ask",
+      "ask task dispatch session mode"
+    );
+
+    let runView = null;
+    await waitForAgentOrgRunView(
+      sessionId,
+      (view) => {
+        runView = view;
+        return Boolean(view?.context?.runId && (view?.members ?? []).length > 1);
+      },
+      "ask task dispatch run view"
+    );
+    const firstWorker = runView?.members?.find(
+      (member) => member.memberId !== AGENT_ORG_COORDINATOR_MEMBER_ID
+    );
+    if (!firstWorker?.memberId) {
+      throw new Error(
+        `Ask task dispatch test could not find worker member: ${JSON.stringify(runView)}`
+      );
+    }
+
+    const taskId = `e2e-ask-task-dispatch-${RUN_ID}`;
+    const subject = `E2E Ask mode Agent Org task dispatch ${RUN_ID} stays available for task board orchestration even though Ask remains read-only for file and plan tools.`;
+    await createLongTaskPrecondition(sessionId, taskId, subject, firstWorker.memberId);
+    await waitForAgentOrgRunView(
+      sessionId,
+      (view) => Boolean(view?.tasks?.some((task) => task.id === taskId)),
+      "ask mode task created in run view"
+    );
+    await openAgentOrgOverviewPanel("ask mode task dispatch");
+    await assertLongTaskRenderedCollapsed(taskId, subject);
+  }));
+
   it("Session remains in sidebar and run can be resumed after simulated app restart", async () => runAgentOrgScenarioWithTimeout("resume-after-simulated-restart", async () => {
     // Regression guard for restart-related Agent Org history issues:
     //  - After simulated restart (mark_stale_running_sessions_abandoned +
@@ -752,23 +815,18 @@ describe("Agent Org pause, resume, and sidebar rendered UI", () => {
       );
     }
 
-    await browser.waitUntil(
-      async () =>
-        execJS(js.exists('[data-testid="agent-org-overview-resume-button"]')),
-      {
-        timeout: RENDER_TIMEOUT_MS,
-        timeoutMsg:
-          "Resume button did not appear after reopening historical paused run",
-      }
+    await waitForGroupChatPausedBanner(
+      "historical paused run after reopening from sidebar"
     );
-    const resumeAfterRestartClick = await execJS(
-      js.click('[data-testid="agent-org-overview-resume-button"]')
+    await assertRenderedGroupChatComposerHasNoStop(
+      "historical paused run after reopening from sidebar"
     );
-    if (resumeAfterRestartClick !== "clicked") {
-      throw new Error(
-        `Resume button click failed after restart: ${resumeAfterRestartClick}`
-      );
-    }
+    await assertAgentOrgOverviewHasRunControl(
+      "historical paused run after reopening from sidebar"
+    );
+    await clickGroupChatResumeButton(
+      "historical paused run after reopening from sidebar"
+    );
     await waitForAgentOrgRunView(
       sessionId,
       (view) => Boolean(view?.runStatus && view.runStatus !== "paused"),
@@ -896,6 +954,9 @@ describe("Agent Org pause, resume, and sidebar rendered UI", () => {
       text: followUpPrompt,
       label: "send-message resume follow-up retained",
     });
+    await assertRenderedGroupChatComposerHasNoStop(
+      "historical send-message resume group chat"
+    );
 
     const presentAfterSendResume = await execJS(
       js.exists(`[data-testid="sidebar-session-item-${sessionId}"]`)

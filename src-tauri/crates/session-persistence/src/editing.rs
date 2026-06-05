@@ -20,10 +20,7 @@ pub fn truncate_after_event(session_id: &str, event_id: &str) -> SqliteResult<Tr
     with_sessions_writer(|| truncate_after_event_inner(session_id, event_id))
 }
 
-fn truncate_after_event_inner(
-    session_id: &str,
-    event_id: &str,
-) -> SqliteResult<TruncateResult> {
+fn truncate_after_event_inner(session_id: &str, event_id: &str) -> SqliteResult<TruncateResult> {
     let conn = get_connection()?;
     normalize_session_sequences(&conn, session_id)?;
 

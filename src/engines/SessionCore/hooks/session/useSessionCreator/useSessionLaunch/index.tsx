@@ -372,7 +372,14 @@ export function useSessionLaunch(
         })
       );
       if (selectedAgentOrgId) {
-        await loadSidebarSessions({ forceRefresh: true });
+        void loadSidebarSessions({ forceRefresh: true }).catch(
+          (error: unknown) => {
+            console.warn(
+              "Failed to refresh sidebar after Agent Org launch",
+              error
+            );
+          }
+        );
       }
 
       injectSyntheticUserEventIfNeeded({

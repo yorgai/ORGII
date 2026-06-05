@@ -375,12 +375,12 @@ pub(crate) async fn launch_rust_agent_run(
                     session_persistence::update_org_member_id(&session_id, COORDINATOR_MEMBER_ID)
                         .map_err(|err| format!("failed to persist coordinator member_id: {err}"))?;
                     if let Some(org) = effective_org_definition.as_ref() {
-                        if let Err(err) = materialize_org_member_sessions(
-                            &record.id,
-                            org,
-                            &session_id,
-                            &name,
-                            &workspace_path,
+                        spawn_agent_org_member_materialization(
+                            record.id.clone(),
+                            org.clone(),
+                            session_id.clone(),
+                            name.clone(),
+                            workspace_path.clone(),
                             request.resources.model.clone(),
                             request.resources.account_id.clone(),
                             request.resources.key_source.clone(),
@@ -388,19 +388,7 @@ pub(crate) async fn launch_rust_agent_run(
                             request.resources.native_harness_type.clone(),
                             work_item_id.clone(),
                             project_slug.clone(),
-                        )
-                        .await
-                        {
-                            cleanup_session_after_org_run_create_failure(session_id.clone()).await;
-                            if let Err(delete_err) = AgentOrgRunStore::delete_by_id(&record.id) {
-                                tracing::warn!(
-                                    run_id = %record.id,
-                                    error = %delete_err,
-                                    "[session_launch] failed to clean up Agent Org run after member materialization failure"
-                                );
-                            }
-                            return Err(err);
-                        }
+                        );
                     }
                     if apply_member_overrides_for_future {
                         if let Some(store) = org_store {
@@ -419,6 +407,127 @@ pub(crate) async fn launch_rust_agent_run(
     };
 
     let created_at = chrono::Utc::now().to_rfc3339();
+    let has_initial_content = !request.content.trim().is_empty();
+    let native_harness_type_for_send = request
+        .resources
+        .native_harness_type
+        .as_deref()
+        .filter(|value| !value.is_empty())
+        .map(|value| {
+            core_types::providers::NativeHarnessType::parse(value)
+                .ok_or_else(|| format!("Unknown native_harness_type: {value:?}"))
+        })
+        .transpose()?;
+
+    if agent_org_run_id.is_some() {
+        let state_for_background = state.clone();
+        let session_id_for_background = session_id.clone();
+        let workspace_path_for_background = workspace_path.clone();
+        let branch_for_background = branch.clone();
+        let existing_worktree_path_for_background = existing_worktree_path.clone();
+        let additional_directories_for_background = additional_directories.clone();
+        let content_for_send = request.content.clone();
+        let model_for_send = request.resources.model.clone();
+        let account_id_for_send = request.resources.account_id.clone();
+        let mode_for_send = request.mode.clone();
+        let images_for_send = request.images.clone();
+        let ide_context_for_send = request.ide_context.clone();
+        let sub_agent_ids_for_send = request.sub_agent_ids.clone();
+        let agent_definition_id_for_send = agent_definition_id.clone();
+        let agent_org_run_id_for_background = agent_org_run_id.clone();
+        let project_slug_for_background = project_slug.clone();
+        let work_item_id_for_background = work_item_id.clone();
+        let app_handle_for_background = state.app_handle.clone();
+
+        tokio::spawn(async move {
+            let prepared_worktree_path = match prepare_rust_agent_workspace_for_launch(
+                &session_id_for_background,
+                &workspace_path_for_background,
+                branch_for_background.as_deref(),
+                isolate,
+                existing_worktree_path_for_background.as_deref(),
+                &additional_directories_for_background,
+            )
+            .await
+            {
+                Ok(path) => path,
+                Err(err) => {
+                    let message = format!(
+                        "[session_launch] workspace preparation failed for {}: {}",
+                        session_id_for_background, err
+                    );
+                    handle_background_launch_failure(
+                        &session_id_for_background,
+                        agent_org_run_id_for_background.as_deref(),
+                        project_slug_for_background.as_deref(),
+                        work_item_id_for_background.as_deref(),
+                        app_handle_for_background.as_ref(),
+                        &message,
+                        "[session_launch] failed to mark Agent Org run failed after workspace preparation error",
+                        "[session_launch] failed to mark session failed after workspace preparation error",
+                    )
+                    .await;
+                    return;
+                }
+            };
+
+            if !has_initial_content {
+                return;
+            }
+
+            let workspace_path_for_send = prepared_worktree_path
+                .clone()
+                .unwrap_or_else(|| workspace_path_for_background.clone());
+            let send_result = send_initial_turn(
+                &state_for_background,
+                &session_id_for_background,
+                content_for_send,
+                model_for_send,
+                account_id_for_send,
+                workspace_path_for_send,
+                native_harness_type_for_send,
+                mode_for_send,
+                images_for_send,
+                ide_context_for_send,
+                agent_definition_id_for_send,
+                sub_agent_ids_for_send,
+            )
+            .await;
+
+            if let Err(err) = send_result {
+                let message = format!(
+                    "[session_launch] send_message failed for {}: {}",
+                    session_id_for_background, err
+                );
+                handle_background_launch_failure(
+                    &session_id_for_background,
+                    agent_org_run_id_for_background.as_deref(),
+                    project_slug_for_background.as_deref(),
+                    work_item_id_for_background.as_deref(),
+                    app_handle_for_background.as_ref(),
+                    &message,
+                    "[session_launch] failed to mark Agent Org run failed",
+                    "[session_launch] failed to mark session failed after first-message error",
+                )
+                .await;
+            }
+        });
+
+        return Ok(AgentRunLaunchResult {
+            session_id,
+            status: if has_initial_content {
+                LaunchReturnStatus::FirstTurnStarted
+            } else {
+                LaunchReturnStatus::Idle
+            },
+            created_at,
+            workspace_path: Some(workspace_path).filter(|path| !path.is_empty()),
+            worktree_path: existing_worktree_path,
+            agent_org_id,
+            agent_org_run_id,
+        });
+    }
+
     let worktree_path = match prepare_rust_agent_workspace_for_launch(
         &session_id,
         &workspace_path,
@@ -442,7 +551,6 @@ pub(crate) async fn launch_rust_agent_run(
         }
     };
 
-    let has_initial_content = !request.content.trim().is_empty();
     if has_initial_content {
         let state_for_send = state.clone();
         let session_id_for_send = session_id.clone();
@@ -455,16 +563,6 @@ pub(crate) async fn launch_rust_agent_run(
         let mode_for_send = request.mode.clone();
         let images_for_send = request.images.clone();
         let ide_context_for_send = request.ide_context.clone();
-        let native_harness_type_for_send = request
-            .resources
-            .native_harness_type
-            .as_deref()
-            .filter(|value| !value.is_empty())
-            .map(|value| {
-                core_types::providers::NativeHarnessType::parse(value)
-                    .ok_or_else(|| format!("Unknown native_harness_type: {value:?}"))
-            })
-            .transpose()?;
         let sub_agent_ids_for_send = request.sub_agent_ids.clone();
         let agent_definition_id_for_send = agent_definition_id.clone();
         let agent_org_run_id_for_send = agent_org_run_id.clone();
@@ -494,36 +592,17 @@ pub(crate) async fn launch_rust_agent_run(
                     "[session_launch] send_message failed for {}: {}",
                     session_id_for_send, err
                 );
-                tracing::warn!("{}", message);
-                if let Some(run_id) = agent_org_run_id_for_send.as_deref() {
-                    if let Err(mark_err) = AgentOrgRunStore::mark_failed(run_id, &message) {
-                        tracing::warn!(
-                            run_id = %run_id,
-                            error = %mark_err,
-                            "[session_launch] failed to mark Agent Org run failed"
-                        );
-                    }
-                }
-                release_work_item_execution_lock_if_present(
+                handle_background_launch_failure(
+                    &session_id_for_send,
+                    agent_org_run_id_for_send.as_deref(),
                     project_slug_for_send.as_deref(),
                     work_item_id_for_send.as_deref(),
-                    &session_id_for_send,
                     app_handle_for_send.as_ref(),
+                    &message,
+                    "[session_launch] failed to mark Agent Org run failed",
+                    "[session_launch] failed to mark session failed after first-message error",
                 )
                 .await;
-                broadcast_launch_send_error(&session_id_for_send, &message);
-                crate::lifecycle::persist_session_error_event(
-                    app_handle_for_send.as_ref(),
-                    &session_id_for_send,
-                    &message,
-                );
-                if let Err(mark_err) = mark_session_failed(session_id_for_send.clone()).await {
-                    tracing::warn!(
-                        session_id = %session_id_for_send,
-                        error = %mark_err,
-                        "[session_launch] failed to mark session failed after first-message error"
-                    );
-                }
             }
         });
     }
@@ -541,6 +620,41 @@ pub(crate) async fn launch_rust_agent_run(
         agent_org_id,
         agent_org_run_id,
     })
+}
+
+async fn handle_background_launch_failure(
+    session_id: &str,
+    agent_org_run_id: Option<&str>,
+    project_slug: Option<&str>,
+    work_item_id: Option<&str>,
+    app_handle: Option<&tauri::AppHandle>,
+    message: &str,
+    run_mark_warning: &str,
+    session_mark_warning: &str,
+) {
+    tracing::warn!("{}", message);
+    if let Some(run_id) = agent_org_run_id {
+        if let Err(mark_err) = AgentOrgRunStore::mark_failed(run_id, message) {
+            tracing::warn!(
+                run_id = %run_id,
+                error = %mark_err,
+                "{}",
+                run_mark_warning
+            );
+        }
+    }
+    release_work_item_execution_lock_if_present(project_slug, work_item_id, session_id, app_handle)
+        .await;
+    broadcast_launch_send_error(session_id, message);
+    crate::lifecycle::persist_session_error_event(app_handle, session_id, message);
+    if let Err(mark_err) = mark_session_failed(session_id.to_string()).await {
+        tracing::warn!(
+            session_id = %session_id,
+            error = %mark_err,
+            "{}",
+            session_mark_warning
+        );
+    }
 }
 
 fn apply_member_launch_overrides_to_snapshot(
@@ -719,6 +833,55 @@ fn member_runtime_native_harness_type(
             .map(|parsed| Some(parsed.as_str().to_string())),
         None => Ok(fallback.clone()),
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn spawn_agent_org_member_materialization(
+    org_run_id: String,
+    org: OrgDefinition,
+    root_session_id: String,
+    root_session_name: String,
+    workspace_path: String,
+    model: Option<String>,
+    account_id: Option<String>,
+    key_source: Option<String>,
+    agent_exec_mode: Option<String>,
+    native_harness_type: Option<String>,
+    work_item_id: Option<String>,
+    project_slug: Option<String>,
+) {
+    tokio::spawn(async move {
+        if let Err(err) = materialize_org_member_sessions(
+            &org_run_id,
+            &org,
+            &root_session_id,
+            &root_session_name,
+            &workspace_path,
+            model,
+            account_id,
+            key_source,
+            agent_exec_mode,
+            native_harness_type,
+            work_item_id,
+            project_slug,
+        )
+        .await
+        {
+            tracing::warn!(
+                run_id = %org_run_id,
+                root_session_id = %root_session_id,
+                error = %err,
+                "[session_launch] failed to materialize Agent Org member sessions in background"
+            );
+            if let Err(mark_err) = AgentOrgRunStore::mark_failed(&org_run_id, &err) {
+                tracing::warn!(
+                    run_id = %org_run_id,
+                    error = %mark_err,
+                    "[session_launch] failed to mark Agent Org run failed after member materialization error"
+                );
+            }
+        }
+    });
 }
 
 #[allow(clippy::too_many_arguments)]

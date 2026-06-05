@@ -245,9 +245,7 @@ mod tests {
         upsert_secret(&conn, "alpha", "github", "gh-secret", 1000).expect("github");
 
         let l = get_secret(&conn, "alpha", "linear").unwrap().unwrap();
-        let g = get_secret(&conn, "alpha", "github")
-            .unwrap()
-            .unwrap();
+        let g = get_secret(&conn, "alpha", "github").unwrap().unwrap();
         assert_eq!(l.secret_hex, "linear-secret");
         assert_eq!(g.secret_hex, "gh-secret");
     }

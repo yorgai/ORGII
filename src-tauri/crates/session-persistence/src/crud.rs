@@ -768,8 +768,7 @@ mod tests {
             // calls reuse the same db file.
             {
                 let conn = get_connection().expect("open sessions DB");
-                super::super::schema::init_session_tables(&conn)
-                    .expect("init session schema");
+                super::super::schema::init_session_tables(&conn).expect("init session schema");
             }
 
             const NUM_THREADS: usize = 12;
@@ -801,9 +800,7 @@ mod tests {
                             history_sequence: None,
                         };
                         save_events(&sid, &[event]).map_err(|err| {
-                            format!(
-                                "thread {thread_idx} write {write_idx}: {err}"
-                            )
+                            format!("thread {thread_idx} write {write_idx}: {err}")
                         })?;
                     }
                     Ok(())

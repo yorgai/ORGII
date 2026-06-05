@@ -451,13 +451,9 @@ mod tests {
             json!({ "title": "Newer github value" }),
             false,
         );
-        let decision = resolve_with_policy(
-            &inbound,
-            &metadata,
-            "github",
-            &STUB_FIELD_MAP,
-            |_| ConflictResolution::UseRemote,
-        );
+        let decision = resolve_with_policy(&inbound, &metadata, "github", &STUB_FIELD_MAP, |_| {
+            ConflictResolution::UseRemote
+        });
         assert_eq!(decision.adopted_fields["title"], "Newer github value");
         assert_eq!(decision.new_revisions["title"].source, "github");
     }

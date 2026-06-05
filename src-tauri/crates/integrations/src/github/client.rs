@@ -66,7 +66,9 @@ impl GitHubClient {
         body: Option<Value>,
     ) -> Result<Value, String> {
         log::info!("[GitHub][API] {} {}", method, path);
-        let resp = self.do_rest_request(method.clone(), path, body.as_ref()).await?;
+        let resp = self
+            .do_rest_request(method.clone(), path, body.as_ref())
+            .await?;
         if resp.status() == StatusCode::UNAUTHORIZED {
             return Err(format!(
                 "GitHubReAuthRequired: {method} {path} returned 401"

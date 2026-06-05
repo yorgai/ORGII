@@ -917,11 +917,11 @@ async function openSeededWorkItemExecutionTab(
   let projectOpenState = null;
   await browser
     .waitUntil(
-      async () => {
+    async () => {
         const tabClick = targetProjectTabId
           ? await clickSelector(projectTabSelector)
           : "missing";
-        projectOpenState = await execJS(`
+      projectOpenState = await execJS(`
         const router = document.querySelector('[data-testid="project-manager-content-router"]');
         const activeTabId = router?.getAttribute('data-active-tab-id') || null;
         const activeTabType = router?.getAttribute('data-active-tab-type') || null;
@@ -951,18 +951,18 @@ async function openSeededWorkItemExecutionTab(
           projectOpenState.hasVisibleWorkItemRow ||
           projectOpenState.hasVisibleExecutionTab
         );
-      },
-      {
-        timeout: MOUNT_TIMEOUT_MS,
-        interval: 500,
-        timeoutMsg: `Project Work Item surface did not become visible for ${projectSlug}`,
+    },
+    {
+      timeout: MOUNT_TIMEOUT_MS,
+      interval: 500,
+      timeoutMsg: `Project Work Item surface did not become visible for ${projectSlug}`,
       }
     )
     .catch((error) => {
-      throw new Error(
+    throw new Error(
         `Project Work Item surface did not become visible for ${projectSlug}; latest=${JSON.stringify(projectOpenState)} original=${String(error?.message ?? error)}`
-      );
-    });
+    );
+  });
   const workflowSelector = '[data-testid="work-item-agent-workflow"]';
   const initialDetailState = await execJS(`
     const bodyText = document.body.innerText || '';
@@ -986,9 +986,9 @@ async function openSeededWorkItemExecutionTab(
     let rowOpenState = null;
     await browser
       .waitUntil(
-        async () => {
-          const rowClick = await clickSelector(rowSelector);
-          rowOpenState = await execJS(`
+      async () => {
+        const rowClick = await clickSelector(rowSelector);
+        rowOpenState = await execJS(`
           const bodyText = document.body.innerText || '';
           const router = document.querySelector('[data-testid="project-manager-content-router"]');
           const activeTabId = router?.getAttribute('data-active-tab-id') || null;
@@ -1021,34 +1021,34 @@ async function openSeededWorkItemExecutionTab(
             bodyText: bodyText.slice(0, 1000),
           };
         `);
-          return (
+        return (
             rowOpenState.hasWorkflow ||
             rowOpenState.hasCurrentDetail ||
-            (rowClick === "clicked" && rowOpenState.hasShortId)
-          );
-        },
-        {
-          timeout: MOUNT_TIMEOUT_MS,
-          interval: 500,
-          timeoutMsg: `Work Item row did not open detail for ${shortId}`,
+          (rowClick === "clicked" && rowOpenState.hasShortId)
+        );
+      },
+      {
+        timeout: MOUNT_TIMEOUT_MS,
+        interval: 500,
+        timeoutMsg: `Work Item row did not open detail for ${shortId}`,
         }
       )
       .catch((error) => {
-        throw new Error(
+      throw new Error(
           `Work Item row did not open detail for ${shortId}; latest=${JSON.stringify(rowOpenState)} original=${String(error?.message ?? error)}`
-        );
-      });
+      );
+    });
   }
 
-  await browser.waitUntil(
+    await browser.waitUntil(
     async () =>
       execJS(`
-        const bodyText = document.body.innerText || '';
+          const bodyText = document.body.innerText || '';
         return bodyText.includes('Linked Sessions') && bodyText.includes('Properties') && bodyText.includes('Agent') && bodyText.includes('Output') && bodyText.includes('History');
       `),
     {
       timeout: MOUNT_TIMEOUT_MS,
-      interval: 500,
+        interval: 500,
       timeoutMsg: "Work Item detail did not render current single-page detail",
     }
   );
@@ -2701,9 +2701,9 @@ describe("Work Item durable object runtime invariants", function () {
         workItemId: createdShortId,
       });
       if (duplicateLaunch.ok) {
-        throw new Error(
+      throw new Error(
           `Routine-created duplicate Work Item launch should be blocked by active lock, got: ${JSON.stringify(duplicateLaunch)}`
-        );
+      );
       }
     }
 
@@ -3466,22 +3466,22 @@ describe("Work Item durable object runtime invariants", function () {
         workItemId: shortId,
       });
       if (duplicateLaunch.ok) {
-        throw new Error(
+      throw new Error(
           `Duplicate Work Item launch should be blocked by active lock, got: ${JSON.stringify(duplicateLaunch)}`
-        );
-      }
-      const afterDuplicateItem = await waitForWorkItemLock(
-        projectSlug,
-        shortId,
-        "duplicate launch should not replace lock"
       );
-      if (
-        afterDuplicateItem.frontmatter.execution_lock.activeSessionId !==
-        activeSessionId
-      ) {
-        throw new Error(
+    }
+    const afterDuplicateItem = await waitForWorkItemLock(
+      projectSlug,
+      shortId,
+        "duplicate launch should not replace lock"
+    );
+    if (
+      afterDuplicateItem.frontmatter.execution_lock.activeSessionId !==
+      activeSessionId
+    ) {
+      throw new Error(
           `Duplicate Work Item launch changed active session id: before=${activeSessionId} after=${JSON.stringify(afterDuplicateItem.frontmatter.execution_lock)}`
-        );
+      );
       }
     }
 

@@ -394,10 +394,7 @@ impl SyncAdapter for GitHubAdapter {
             match parse_github_issue(node) {
                 Ok(change) => changes.push(change),
                 Err(err) => {
-                    log::warn!(
-                        "[sync::github] import dropped malformed issue: {}",
-                        err
-                    )
+                    log::warn!("[sync::github] import dropped malformed issue: {}", err)
                 }
             }
         }
@@ -567,20 +564,14 @@ mod tests {
     #[tokio::test]
     async fn pull_without_token_is_auth_failed() {
         let ctx = ctx_with(None, Some("{\"owner\":\"o\",\"repo\":\"r\"}"), None);
-        let err = GitHubAdapter
-            .pull("alpha", &ctx, None)
-            .await
-            .unwrap_err();
+        let err = GitHubAdapter.pull("alpha", &ctx, None).await.unwrap_err();
         assert!(matches!(err, SyncError::AuthFailed(_)), "got {:?}", err);
     }
 
     #[tokio::test]
     async fn pull_without_config_is_permanent() {
         let ctx = ctx_with(Some("tok"), None, None);
-        let err = GitHubAdapter
-            .pull("alpha", &ctx, None)
-            .await
-            .unwrap_err();
+        let err = GitHubAdapter.pull("alpha", &ctx, None).await.unwrap_err();
         assert!(matches!(err, SyncError::Permanent(_)), "got {:?}", err);
     }
 

@@ -47,8 +47,13 @@ fn read_document(path: &Path) -> Result<Option<Value>, String> {
     if !path.exists() {
         return Ok(None);
     }
-    let content = std::fs::read_to_string(path)
-        .map_err(|err| format!("Failed to read sticky notes from {}: {}", path.display(), err))?;
+    let content = std::fs::read_to_string(path).map_err(|err| {
+        format!(
+            "Failed to read sticky notes from {}: {}",
+            path.display(),
+            err
+        )
+    })?;
     let parsed: Value = serde_json::from_str(&content).map_err(|err| {
         format!(
             "Failed to parse sticky notes from {}: {}",

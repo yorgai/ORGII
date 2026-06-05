@@ -100,6 +100,8 @@ interface InputAreaProps {
   /** Status banners that should sit below the top pill row and above composer. */
   statusBanners?: React.ReactNode;
   composerShellRef?: React.Ref<HTMLDivElement>;
+  /** Keep empty-input group-chat composers send-only even while a run is active. */
+  disableStopWhenEmpty?: boolean;
 }
 
 const getStringData = (
@@ -211,6 +213,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
     topRowPills,
     statusBanners,
     composerShellRef,
+    disableStopWhenEmpty = false,
   }) => {
     const { t } = useTranslation("sessions");
 
@@ -330,6 +333,9 @@ const InputArea: React.FC<InputAreaProps> = memo(
       customMentionOptions: mergedCustomMentionOptions,
     });
 
+    const currentInputEmpty = isInputEmpty() && !hasImages;
+    const stopSuppressedForEmptyInput =
+      disableStopWhenEmpty && currentInputEmpty;
     const contextMenuVisible = showContextMenu;
     const mentionTreePosition =
       chatPanelPosition === "right" ? "left" : "right";
@@ -803,11 +809,17 @@ const InputArea: React.FC<InputAreaProps> = memo(
                   }
                   submitButton={
                     <InputActions
-                      isInputEmpty={isInputEmpty() && !hasImages}
-                      isWpGeneWorking={isWpGeneWorking}
-                      isPendingCancel={isPendingCancel}
+                      isInputEmpty={currentInputEmpty}
+                      isWpGeneWorking={
+                        stopSuppressedForEmptyInput ? false : isWpGeneWorking
+                      }
+                      isPendingCancel={
+                        stopSuppressedForEmptyInput ? false : isPendingCancel
+                      }
                       isHosted={isHosted}
-                      canStopAgent={canStopAgent}
+                      canStopAgent={
+                        stopSuppressedForEmptyInput ? false : canStopAgent
+                      }
                       canResume={canResume}
                       isSessionTerminal={isSessionTerminal}
                       onSubmit={() => void handleDivSubmit()}

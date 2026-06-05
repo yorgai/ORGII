@@ -28,9 +28,8 @@ impl GitHubConfig {
     /// human-readable error so the resulting [`super::super::super::types::SyncError::Permanent`]
     /// surfaces in project sync status with enough context.
     pub fn parse(raw: Option<&str>) -> Result<Self, String> {
-        let raw = raw.ok_or_else(|| {
-            "github requires sync_config_json with { owner, repo }".to_string()
-        })?;
+        let raw =
+            raw.ok_or_else(|| "github requires sync_config_json with { owner, repo }".to_string())?;
         let parsed: GitHubConfig = serde_json::from_str(raw)
             .map_err(|err| format!("github config not valid JSON: {}", err))?;
         if parsed.owner.is_empty() || parsed.repo.is_empty() {

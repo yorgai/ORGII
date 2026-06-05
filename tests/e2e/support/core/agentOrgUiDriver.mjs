@@ -958,9 +958,22 @@ export async function sendRenderedChatPrompt(prompt) {
     }
   );
   console.log("[agent-org-send] send button ready, clicking");
-  const clickResult = await execJS(
-    js.visibleClick('[data-testid="chat-send-button"]')
-  );
+  const clickResult = await execJS(`
+    const visibleInputShells = Array.from(document.querySelectorAll('[data-testid="chat-input"]')).filter((inputShell) => {
+      const rect = inputShell.getBoundingClientRect();
+      const style = window.getComputedStyle(inputShell);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+    });
+    const activeInputShell = visibleInputShells[visibleInputShells.length - 1] ?? null;
+    const button = activeInputShell?.querySelector('[data-testid="chat-send-button"]') ?? null;
+    if (!button) return "missing";
+    if (button.disabled) return "disabled";
+    button.scrollIntoView({ block: "center", inline: "center" });
+    button.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 }));
+    button.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, button: 0 }));
+    button.click();
+    return "clicked";
+  `);
   if (clickResult !== "clicked") {
     throw new Error(
       `chat-send-button did not click: ${clickResult} ${JSON.stringify(await execJS(js.sendState))}`
@@ -983,6 +996,34 @@ export async function waitForRenderedGroupChatActive(label) {
       timeoutMsg: `group chat view did not become active for ${label}`,
     }
   );
+}
+
+export async function assertRenderedGroupChatComposerHasNoStop(label) {
+  await waitForRenderedGroupChatActive(label);
+  const state = await execJS(`
+    const inputShell = document.querySelector('[data-chat-input-shell]');
+    const sendButton = inputShell?.querySelector('[data-testid="chat-send-button"]') ?? null;
+    return {
+      sendState: sendButton?.getAttribute('data-state') ?? null,
+      sendDisabled: sendButton?.hasAttribute('disabled') ?? null,
+    };
+  `);
+  if (state.sendState === "stop") {
+    throw new Error(`group chat composer exposed Stop for ${label}: ${JSON.stringify(state)}`);
+  }
+}
+
+export async function assertAgentOrgOverviewHasRunControl(label) {
+  await openAgentOrgOverviewPanel(label);
+  const state = await execJS(`
+    return {
+      overviewPause: Boolean(document.querySelector('[data-testid="agent-org-overview-pause-button"]')),
+      overviewResume: Boolean(document.querySelector('[data-testid="agent-org-overview-resume-button"]')),
+    };
+  `);
+  if (!state.overviewPause && !state.overviewResume) {
+    throw new Error(`Agent Org overview did not expose Pause/Resume for ${label}: ${JSON.stringify(state)}`);
+  }
 }
 
 export async function openRenderedGroupChatView() {

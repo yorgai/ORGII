@@ -124,6 +124,14 @@ fn ask_mode_uses_deny_delta() {
         !deny.contains(&"ask_user_questions".to_string()),
         "Ask must allow ask_user_questions"
     );
+    assert!(
+        !deny.contains(&"task_create".to_string()),
+        "Ask must not block Agent Org task dispatch"
+    );
+    assert!(
+        !deny.contains(&"task_update".to_string()),
+        "Ask must not block Agent Org task updates"
+    );
 }
 
 #[test]

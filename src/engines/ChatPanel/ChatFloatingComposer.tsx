@@ -95,6 +95,7 @@ interface ChatFloatingComposerProps {
   onSubmitOverride: (input: SubmitOverrideInput) => Promise<boolean>;
   customMentionOptions: ReadonlyArray<CustomMentionOption>;
   queueEditProps: QueueEditInputAreaProps;
+  disableStopWhenEmpty?: boolean;
 }
 
 const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
@@ -142,6 +143,7 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
     onSubmitOverride,
     customMentionOptions,
     queueEditProps,
+    disableStopWhenEmpty = false,
   }) => {
     const { t } = useTranslation("sessions");
     const showTopRowPills =
@@ -294,6 +296,7 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
               </>
             }
             composerShellRef={inputBoxRef}
+            disableStopWhenEmpty={disableStopWhenEmpty}
             {...queueEditProps}
           />
           {isCursorIdeSession(sessionId) && (

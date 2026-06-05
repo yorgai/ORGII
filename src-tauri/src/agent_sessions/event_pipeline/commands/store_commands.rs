@@ -143,9 +143,7 @@ pub async fn es_append(
                 );
             }
             Err(err) => {
-                tracing::warn!(
-                    "[event-pipeline] es_append_user join failed for {sid}: {err}"
-                );
+                tracing::warn!("[event-pipeline] es_append_user join failed for {sid}: {err}");
             }
         }
     }

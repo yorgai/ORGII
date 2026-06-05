@@ -35,6 +35,7 @@ import React, {
 
 import { GroupChatPausedBanner } from "@src/engines/ChatPanel/components/ChatStatusBanners";
 import { useAgentOrgGroupChatController } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatController";
+import { AgentOrgGroupChatLiveSessions } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatLiveSessions";
 import { useChatPanelState } from "@src/engines/ChatPanel/hooks/useChatPanelState";
 import { replayModeAtom } from "@src/engines/SessionCore/core/atoms/replay";
 import { chatEventsAtom } from "@src/engines/SessionCore/derived/chatEvents";
@@ -465,14 +466,26 @@ const ChatView: React.FC<ChatViewProps> = memo(
                 coordinatorSessionId={sessionId}
                 orgMembers={agentOrgRunView?.members ?? []}
               >
+                {groupChatViewActive && (
+                  <AgentOrgGroupChatLiveSessions
+                    enabled={groupChatViewActive}
+                    excludeSessionId={pipelineSessionId}
+                    members={agentOrgRunView?.members ?? []}
+                  />
+                )}
                 {groupChatViewActive &&
-                  groupChatAgents.map((agent) => (
-                    <AgentEventsTap
-                      key={agent.sessionId}
-                      sessionId={agent.sessionId}
-                      onEvents={handleGroupChatTapEvents}
-                    />
-                  ))}
+                  groupChatAgents
+                    .filter(
+                      (agent) =>
+                        !agent.sessionId.startsWith("agent-org-member-pending:")
+                    )
+                    .map((agent) => (
+                      <AgentEventsTap
+                        key={agent.sessionId}
+                        sessionId={agent.sessionId}
+                        onEvents={handleGroupChatTapEvents}
+                      />
+                    ))}
                 <ChatHistory
                   surfaceBgClass={surfaceBgClass}
                   agentOrgCurrentMemberName={
@@ -560,6 +573,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
               onSubmitOverride={handleGroupChatSubmitOverride}
               customMentionOptions={groupChatMentionOptions}
               queueEditProps={queueEditProps}
+              disableStopWhenEmpty={groupChatViewActive}
             />
           )}
         </div>

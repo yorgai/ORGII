@@ -29,7 +29,7 @@ pub use public::AgentStatusResponse;
 
 #[cfg(debug_assertions)]
 use axum::routing::post;
-use axum::{Router, routing::get};
+use axum::{routing::get, Router};
 
 // ============================================
 // Router
