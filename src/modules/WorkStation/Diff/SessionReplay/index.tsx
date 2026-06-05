@@ -147,10 +147,6 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   const diffHeaderContent = useMemo(
     () => (
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        <span
-          className="pointer-events-none mx-1.5 h-4 w-px shrink-0 bg-border-2"
-          aria-hidden
-        />
         <TabPill
           activeTab={pillMode}
           tabs={[

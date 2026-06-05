@@ -25,9 +25,15 @@
  * the simulator entry having to know which sub-mode is active.
  */
 import { useAtomValue } from "jotai";
-import React, { memo } from "react";
+import { X } from "lucide-react";
+import React, { memo, useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 
+import Button from "@src/components/Button";
+import { sessionIdAtom } from "@src/engines/SessionCore";
+import { useFileReviewBatchActions } from "@src/hooks/fileReview";
 import { workstationTabHeaderAtomByHost } from "@src/store/workstation";
+import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
 
 import { NoDragRegion } from "../NoDragRegion";
 import { SimulatorSidebarToggleButton } from "../SidebarToggleButton";
@@ -42,7 +48,31 @@ export interface SimulatorWorkstationTabHeaderProps {
 const SimulatorWorkstationTabHeaderComponent: React.FC<
   SimulatorWorkstationTabHeaderProps
 > = ({ showSidebarToggle = true, sidebarToggleDisabled = false }) => {
+  const { t } = useTranslation("sessions");
   const headerSlots = useAtomValue(workstationTabHeaderAtomByHost.simulator);
+  const globalSessionId = useAtomValue(sessionIdAtom);
+  const { pendingCount, onUndoAll } =
+    useFileReviewBatchActions(globalSessionId);
+  const [isUndoingAll, setIsUndoingAll] = useState(false);
+
+  const handleUndoAll = useCallback(async () => {
+    const confirmed = await confirmDestructiveAction({
+      title: t("actions.undoAll"),
+      message: t("confirmation.undoAllChanges", { count: pendingCount }),
+      okLabel: t("actions.undoAll"),
+      cancelLabel: t("actions.cancel"),
+    });
+    if (!confirmed) return;
+    setIsUndoingAll(true);
+    try {
+      await onUndoAll();
+    } finally {
+      setIsUndoingAll(false);
+    }
+  }, [t, pendingCount, onUndoAll]);
+
+  const showUndoAll = pendingCount > 0 && !isUndoingAll;
+
   // Border lives on this row (not on `ReplayTabBar` above) so the chrome
   // shape mirrors My Station: tab bar transparent, header strip carries
   // the single separator line under the whole tabbar+header block.
@@ -62,6 +92,19 @@ const SimulatorWorkstationTabHeaderComponent: React.FC<
       </NoDragRegion>
       <WorkstationHeaderSectionSeparator />
       <WorkstationTabHeaderSlotsView slots={headerSlots} />
+      {showUndoAll && (
+        <NoDragRegion className="ml-auto flex shrink-0 items-center">
+          <Button
+            htmlType="button"
+            variant="tertiary"
+            size="small"
+            iconOnly
+            onClick={handleUndoAll}
+            title={t("actions.undoAll")}
+            icon={<X size={14} strokeWidth={1.75} />}
+          />
+        </NoDragRegion>
+      )}
     </div>
   );
 };
