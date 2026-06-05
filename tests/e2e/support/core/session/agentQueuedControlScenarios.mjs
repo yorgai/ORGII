@@ -609,6 +609,14 @@ async function runStopRestoresInFlightScenario(config) {
       if (!state.isSessionActive && state.runtimeStatus !== "running")
         return true;
       if (state.isPendingCancel || state.userInitiatedCancel) return true;
+      const editorText = await execJS(js.editorText);
+      const restoredPromptVisible =
+        typeof editorText === "string" &&
+        editorText.includes(firstPrompt.slice(0, 80));
+      const queuedStillContainsMarker = state.queuedMessages.some((item) =>
+        item.content.includes(marker)
+      );
+      if (restoredPromptVisible && queuedStillContainsMarker) return true;
       const sendState = await execJS(js.sendState);
       if (sendState?.state === "stop" && !sendState.disabled) {
         await clickMainAction(

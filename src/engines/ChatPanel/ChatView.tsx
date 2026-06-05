@@ -409,6 +409,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
       collapsePlan,
       queueExpanded,
       processExpanded,
+      filesExpanded,
       toggleQueue,
       toggleProcess,
       toggleFiles,
@@ -527,6 +528,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
               onModeSwitchDataChange={setHasModeSwitch}
               queueExpanded={queueExpanded}
               processExpanded={processExpanded}
+              filesExpanded={filesExpanded}
               queuedMessages={sessionMessageQueue}
               onCancelQueuedMessage={cancelQueuedMessage}
               onSendQueuedMessageNow={handleSendNow}

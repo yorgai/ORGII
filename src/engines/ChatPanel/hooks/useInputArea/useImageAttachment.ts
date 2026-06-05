@@ -56,7 +56,9 @@ export function useImageAttachment(ownerId?: string) {
 
   const ownerImages = useMemo(
     () =>
-      ownerId ? images.filter((image) => image.ownerId === ownerId) : images,
+      ownerId
+        ? images.filter((image) => image.ownerId === ownerId)
+        : images.filter((image) => !image.ownerId),
     [images, ownerId]
   );
 
@@ -215,8 +217,12 @@ export function useImageAttachment(ownerId?: string) {
   );
 
   const clearImages = useCallback(() => {
-    setImages([]);
-  }, [setImages]);
+    setImages((prev) =>
+      ownerId
+        ? prev.filter((image) => image.ownerId !== ownerId)
+        : prev.filter((image) => image.ownerId)
+    );
+  }, [setImages, ownerId]);
 
   const removeImage = useCallback(
     (id: string) => {
@@ -237,9 +243,15 @@ export function useImageAttachment(ownerId?: string) {
    */
   const restoreImages = useCallback(
     (snapshot: ChatImageAttachment[]) => {
-      setImages(snapshot);
+      const restored = snapshot.map((image) => ({ ...image, ownerId }));
+      setImages((prev) => {
+        const otherOwners = ownerId
+          ? prev.filter((image) => image.ownerId !== ownerId)
+          : prev.filter((image) => image.ownerId);
+        return [...otherOwners, ...restored];
+      });
     },
-    [setImages]
+    [setImages, ownerId]
   );
 
   return {

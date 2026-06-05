@@ -236,7 +236,10 @@ export function useSessionCreatorShell({
           width: 0,
           height: 0,
         }));
-      setImageAttachments(restoredImages);
+      setImageAttachments((prev) => [
+        ...prev.filter((image) => image.ownerId),
+        ...restoredImages,
+      ]);
     }
     store.set(restoreToInputAtom, null);
     store.set(draftHasContentAtom, restoredText.trim().length > 0);

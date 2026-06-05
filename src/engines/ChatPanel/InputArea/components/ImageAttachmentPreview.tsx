@@ -97,7 +97,7 @@ const ImageAttachmentPreview: React.FC<ImageAttachmentPreviewProps> = memo(
     const [images, setImages] = useAtom(chatImageAttachmentsAtom);
     const visibleImages = ownerId
       ? images.filter((image) => image.ownerId === ownerId)
-      : images;
+      : images.filter((image) => !image.ownerId);
 
     const handleRemove = useCallback(
       (id: string) => {

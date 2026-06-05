@@ -117,9 +117,13 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
           size: 0,
           width: 0,
           height: 0,
+          ownerId: dropTargetId,
         })
       );
-      setImageAttachments((prev) => [...prev, ...restored]);
+      setImageAttachments((prev) => [
+        ...prev.filter((image) => image.ownerId !== dropTargetId),
+        ...restored,
+      ]);
     }
 
     editor.focus();
@@ -130,6 +134,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
     sessionRolledBack,
     setRestoreToInput,
     setImageAttachments,
+    dropTargetId,
     onRestoreInputContent,
     composerInputRef,
     hasContentRef,

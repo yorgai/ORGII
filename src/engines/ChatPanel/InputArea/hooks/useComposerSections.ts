@@ -278,7 +278,10 @@ export function useComposerSections({
           ...diffStatNodes
         ),
         active: filesExpanded,
-        onExpand: onFilesExpand ?? toggleFiles,
+        onExpand: () => {
+          toggleFiles();
+          onFilesExpand?.();
+        },
         testId: "composer-section-files",
       });
     }
