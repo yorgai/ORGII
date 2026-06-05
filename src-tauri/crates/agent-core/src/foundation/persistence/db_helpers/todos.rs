@@ -18,7 +18,7 @@
 
 use rusqlite::{params, Result as SqliteResult};
 
-use database::db::get_connection;
+use database::db::{begin_immediate, get_connection, with_sessions_writer};
 
 /// One todo row.
 ///
@@ -75,29 +75,31 @@ fn blocked_by_from_json(s: &str) -> Result<Vec<usize>, serde_json::Error> {
 }
 
 pub fn save_todos(session_id: &str, todos: &[TodoRecord]) -> SqliteResult<()> {
-    let conn = get_connection()?;
-    let tx = conn.unchecked_transaction()?;
-    conn.execute(
-        "DELETE FROM agent_todos WHERE session_id = ?1",
-        [session_id],
-    )?;
-    for (position, todo) in todos.iter().enumerate() {
-        conn.execute(
-            "INSERT INTO agent_todos
-                 (session_id, content, active_form, status, priority, position, blocked_by)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![
-                session_id,
-                todo.content,
-                todo.active_form,
-                todo.status,
-                todo.priority,
-                position as i64,
-                blocked_by_to_json(&todo.blocked_by),
-            ],
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let tx = begin_immediate(&conn)?;
+        tx.execute(
+            "DELETE FROM agent_todos WHERE session_id = ?1",
+            [session_id],
         )?;
-    }
-    tx.commit()
+        for (position, todo) in todos.iter().enumerate() {
+            tx.execute(
+                "INSERT INTO agent_todos
+                     (session_id, content, active_form, status, priority, position, blocked_by)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    session_id,
+                    todo.content,
+                    todo.active_form,
+                    todo.status,
+                    todo.priority,
+                    position as i64,
+                    blocked_by_to_json(&todo.blocked_by),
+                ],
+            )?;
+        }
+        tx.commit()
+    })
 }
 
 pub fn get_todos(session_id: &str) -> SqliteResult<Vec<TodoRecord>> {
@@ -134,8 +136,6 @@ pub fn get_todos(session_id: &str) -> SqliteResult<Vec<TodoRecord>> {
 /// Returns whether the row existed. Does NOT shift positions — use
 /// `save_todos` for insert/delete semantics.
 pub fn update_todo(session_id: &str, position: usize, patch: &TodoUpdate) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-
     let mut fragments: Vec<&str> = Vec::new();
     let mut bindings: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
@@ -163,6 +163,7 @@ pub fn update_todo(session_id: &str, position: usize, patch: &TodoUpdate) -> Sql
     if fragments.is_empty() {
         // Nothing to update; treat as a no-op but confirm the row exists so
         // the tool can still report accurate success/not-found to the LLM.
+        let conn = get_connection()?;
         let exists: i64 = conn.query_row(
             "SELECT COUNT(*) FROM agent_todos WHERE session_id = ?1 AND position = ?2",
             params![session_id, position as i64],
@@ -178,9 +179,12 @@ pub fn update_todo(session_id: &str, position: usize, patch: &TodoUpdate) -> Sql
     bindings.push(Box::new(session_id.to_string()));
     bindings.push(Box::new(position as i64));
 
-    let param_refs: Vec<&dyn rusqlite::ToSql> = bindings.iter().map(|b| b.as_ref()).collect();
-    let changed = conn.execute(&sql, param_refs.as_slice())?;
-    Ok(changed > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let param_refs: Vec<&dyn rusqlite::ToSql> = bindings.iter().map(|b| b.as_ref()).collect();
+        let changed = conn.execute(&sql, param_refs.as_slice())?;
+        Ok(changed > 0)
+    })
 }
 
 #[cfg(test)]

@@ -3,7 +3,7 @@
 use rusqlite::Result as SqliteResult;
 
 use crate::persistence::db_helpers as shared;
-use database::db::get_connection;
+use database::db::{get_connection, with_sessions_writer};
 
 /// Table-name prefix for the unified-session DB schema.
 ///
@@ -96,19 +96,21 @@ pub fn delete_last_user_turn(session_id: &str) -> SqliteResult<i64> {
 /// evicted from disk + DB, and unreferenced backup blobs are GC'd. Cap
 /// errors are logged but never fail the insert.
 pub fn save_snapshot(session_id: &str, tool_call_id: &str, hash: &str) -> SqliteResult<()> {
-    let conn = get_connection()?;
-    conn.execute(
-        "INSERT INTO agent_snapshots (id, session_id, tool_call_id, hash, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5)",
-        rusqlite::params![
-            uuid::Uuid::new_v4().to_string(),
-            session_id,
-            tool_call_id,
-            hash,
-            chrono::Utc::now().to_rfc3339()
-        ],
-    )?;
-    drop(conn);
+    with_sessions_writer(|| -> SqliteResult<()> {
+        let conn = get_connection()?;
+        conn.execute(
+            "INSERT INTO agent_snapshots (id, session_id, tool_call_id, hash, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![
+                uuid::Uuid::new_v4().to_string(),
+                session_id,
+                tool_call_id,
+                hash,
+                chrono::Utc::now().to_rfc3339()
+            ],
+        )?;
+        Ok(())
+    })?;
     crate::tools::file_history::enforce_session_cap_after_save(session_id);
     Ok(())
 }
@@ -211,12 +213,14 @@ pub struct PersistedSessionMemoryState {
 pub fn mark_turn_cancelled(session_id: &str) {
     let sid = session_id.to_string();
     let _ = tokio::task::block_in_place(|| -> rusqlite::Result<()> {
-        let conn = get_connection()?;
-        conn.execute(
-            "UPDATE agent_sessions SET last_turn_cancelled = 1 WHERE session_id = ?1",
-            [&sid],
-        )?;
-        Ok(())
+        with_sessions_writer(|| -> rusqlite::Result<()> {
+            let conn = get_connection()?;
+            conn.execute(
+                "UPDATE agent_sessions SET last_turn_cancelled = 1 WHERE session_id = ?1",
+                [&sid],
+            )?;
+            Ok(())
+        })
     });
 }
 
@@ -227,21 +231,28 @@ pub fn mark_turn_cancelled(session_id: &str) {
 pub fn take_turn_cancelled(session_id: &str) -> bool {
     let sid = session_id.to_string();
     tokio::task::block_in_place(|| -> bool {
-        let Ok(conn) = get_connection() else {
-            return false;
-        };
-        let flag: i64 = conn
-            .query_row(
+        // Read on a non-serialized connection (WAL allows concurrent
+        // reads); only the clear-flag write goes through the writer.
+        let flag: i64 = {
+            let Ok(conn) = get_connection() else {
+                return false;
+            };
+            conn.query_row(
                 "SELECT last_turn_cancelled FROM agent_sessions WHERE session_id = ?1",
                 [&sid],
                 |row| row.get(0),
             )
-            .unwrap_or(0);
+            .unwrap_or(0)
+        };
         if flag != 0 {
-            let _ = conn.execute(
-                "UPDATE agent_sessions SET last_turn_cancelled = 0 WHERE session_id = ?1",
-                [&sid],
-            );
+            let _ = with_sessions_writer(|| -> rusqlite::Result<()> {
+                let conn = get_connection()?;
+                conn.execute(
+                    "UPDATE agent_sessions SET last_turn_cancelled = 0 WHERE session_id = ?1",
+                    [&sid],
+                )?;
+                Ok(())
+            });
             true
         } else {
             false
@@ -255,12 +266,14 @@ pub fn save_session_memory_state(
     content: &str,
     last_msg_idx: Option<usize>,
 ) -> SqliteResult<()> {
-    let conn = get_connection()?;
-    conn.execute(
-        "UPDATE agent_sessions SET sm_content = ?2, sm_last_msg_idx = ?3 WHERE session_id = ?1",
-        rusqlite::params![session_id, content, last_msg_idx.map(|idx| idx as i64),],
-    )?;
-    Ok(())
+    with_sessions_writer(|| -> SqliteResult<()> {
+        let conn = get_connection()?;
+        conn.execute(
+            "UPDATE agent_sessions SET sm_content = ?2, sm_last_msg_idx = ?3 WHERE session_id = ?1",
+            rusqlite::params![session_id, content, last_msg_idx.map(|idx| idx as i64),],
+        )?;
+        Ok(())
+    })
 }
 
 /// Load persisted session memory state from the `agent_sessions` table.

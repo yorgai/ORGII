@@ -12,7 +12,7 @@
 
 use rusqlite::{params, Result as SqliteResult};
 
-use database::db::get_connection;
+use database::db::{get_connection, with_sessions_writer};
 
 use super::super::super::workspace::SessionWorkspace;
 use super::ops::get_session;
@@ -23,37 +23,43 @@ pub fn save_worktree_metadata(
     base_branch: &str,
     merge_status: git::worktree::WorktreeMergeStatus,
 ) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-    let updated = conn.execute(
-        "UPDATE agent_sessions \
-         SET worktree_branch = ?2, base_branch = ?3, merge_status = ?4 \
-         WHERE session_id = ?1",
-        params![session_id, branch, base_branch, merge_status.to_string()],
-    )?;
-    Ok(updated > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let updated = conn.execute(
+            "UPDATE agent_sessions \
+             SET worktree_branch = ?2, base_branch = ?3, merge_status = ?4 \
+             WHERE session_id = ?1",
+            params![session_id, branch, base_branch, merge_status.to_string()],
+        )?;
+        Ok(updated > 0)
+    })
 }
 
 pub fn update_worktree_merge_status(
     session_id: &str,
     merge_status: git::worktree::WorktreeMergeStatus,
 ) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-    let updated = conn.execute(
-        "UPDATE agent_sessions SET merge_status = ?2 WHERE session_id = ?1",
-        params![session_id, merge_status.to_string()],
-    )?;
-    Ok(updated > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let updated = conn.execute(
+            "UPDATE agent_sessions SET merge_status = ?2 WHERE session_id = ?1",
+            params![session_id, merge_status.to_string()],
+        )?;
+        Ok(updated > 0)
+    })
 }
 
 pub fn clear_worktree_metadata(session_id: &str) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-    let updated = conn.execute(
-        "UPDATE agent_sessions \
-         SET worktree_branch = NULL, base_branch = NULL, merge_status = NULL \
-         WHERE session_id = ?1",
-        params![session_id],
-    )?;
-    Ok(updated > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let updated = conn.execute(
+            "UPDATE agent_sessions \
+             SET worktree_branch = NULL, base_branch = NULL, merge_status = NULL \
+             WHERE session_id = ?1",
+            params![session_id],
+        )?;
+        Ok(updated > 0)
+    })
 }
 
 /// Load a [`SessionWorkspace`] for the given session.
@@ -122,8 +128,6 @@ pub fn load_workspace(session_id: &str) -> SqliteResult<Option<SessionWorkspace>
 /// `SessionWorkspace` (shared via `Arc<RwLock<_>>`) and the persisted
 /// `workspace_additional_json` stay in sync (memory-vs-DB split-brain).
 pub fn save_workspace(session_id: &str, workspace: &SessionWorkspace) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-
     let workspace_path = workspace.user_visible().to_string_lossy().into_owned();
     let worktree_path: Option<String> = if workspace.is_worktree() {
         Some(workspace.working_dir().to_string_lossy().into_owned())
@@ -137,15 +141,18 @@ pub fn save_workspace(session_id: &str, workspace: &SessionWorkspace) -> SqliteR
         )))
     })?;
 
-    // Does not bump `updated_at` — workspace dir add/remove is config,
-    // not conversation activity. See the invariant note in
-    // `crud/ops.rs`.
-    let updated = conn.execute(
-        "UPDATE agent_sessions \
-         SET workspace_path = ?2, worktree_path = ?3, \
-             workspace_additional_json = ?4 \
-         WHERE session_id = ?1",
-        params![session_id, workspace_path, worktree_path, json],
-    )?;
-    Ok(updated > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        // Does not bump `updated_at` — workspace dir add/remove is config,
+        // not conversation activity. See the invariant note in
+        // `crud/ops.rs`.
+        let updated = conn.execute(
+            "UPDATE agent_sessions \
+             SET workspace_path = ?2, worktree_path = ?3, \
+                 workspace_additional_json = ?4 \
+             WHERE session_id = ?1",
+            params![session_id, workspace_path, worktree_path, json],
+        )?;
+        Ok(updated > 0)
+    })
 }

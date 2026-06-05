@@ -38,8 +38,12 @@
 //! ```
 
 mod connection;
+mod writer;
 
 pub use connection::{
     configure_connection, get_connection, get_db_path, get_projects_connection,
     register_projects_init, register_sessions_init,
+};
+pub use writer::{
+    begin_immediate, sessions_writer_guard, with_sessions_writer, SessionsWriterGuard,
 };

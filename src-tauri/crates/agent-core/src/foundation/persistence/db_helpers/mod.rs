@@ -13,7 +13,7 @@ use rusqlite::{params, types::Type, Result as SqliteResult};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-use database::db::get_connection;
+use database::db::{get_connection, with_sessions_writer};
 
 const MSG_RETRY_MAX: u32 = 5;
 const MSG_RETRY_BASE_MS: u64 = 50;
@@ -120,10 +120,8 @@ fn collect_session_image_paths(prefix: &str, session_id: &str) -> SqliteResult<V
 /// Delete all rows referencing `session_id` from each table in `tables`.
 /// Also deletes any image files on disk referenced by the session's messages.
 pub fn delete_session_cascade(session_id: &str, tables: &[&str]) -> SqliteResult<()> {
-    let conn = get_connection()?;
-
-    // Collect image file paths before deleting the rows.
-    // Infer the prefix from the first table that ends with "_messages".
+    // Collect image file paths before deleting the rows. Infer the
+    // prefix from the first table that ends with "_messages".
     let prefix = tables
         .iter()
         .find(|t| t.ends_with("_messages"))
@@ -136,13 +134,16 @@ pub fn delete_session_cascade(session_id: &str, tables: &[&str]) -> SqliteResult
         }
     }
 
-    for table in tables {
-        conn.execute(
-            &format!("DELETE FROM {table} WHERE session_id = ?1"),
-            [session_id],
-        )?;
-    }
-    Ok(())
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        for table in tables {
+            conn.execute(
+                &format!("DELETE FROM {table} WHERE session_id = ?1"),
+                [session_id],
+            )?;
+        }
+        Ok(())
+    })
 }
 
 // ============================================
@@ -254,57 +255,63 @@ pub struct AgentResponse {
 ///
 /// Reads the current max sequence, assigns the next value, writes the row,
 /// and touches `updated_at` inside one `BEGIN IMMEDIATE` transaction so no
-/// other writer can interleave a sequence read between our SELECT and INSERT.
+/// other writer can interleave a sequence read between our SELECT and
+/// INSERT. The whole thing runs under the process-wide writer mutex so
+/// concurrent `insert_message_retry` callers queue in Rust instead of
+/// racing for `SQLITE_BUSY`.
 /// Hot paths must call [`insert_message_retry`] or the typed `save_*` helpers.
 fn insert_message(prefix: &str, msg: &AgentMessageRow) -> SqliteResult<String> {
-    let conn = get_connection()?;
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
 
-    let seq_sql = format!("SELECT MAX(sequence) FROM {prefix}_messages WHERE session_id = ?1");
-    let insert_sql = format!(
-        "INSERT OR REPLACE INTO {prefix}_messages
-         (id, session_id, role, content, tool_name, tool_call_id, tool_input, tool_output, model, sequence, created_at, images)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
-    );
-    let touch_sql = format!("UPDATE {prefix}_sessions SET updated_at = ?2 WHERE session_id = ?1");
+        let seq_sql = format!("SELECT MAX(sequence) FROM {prefix}_messages WHERE session_id = ?1");
+        let insert_sql = format!(
+            "INSERT OR REPLACE INTO {prefix}_messages
+             (id, session_id, role, content, tool_name, tool_call_id, tool_input, tool_output, model, sequence, created_at, images)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
+        );
+        let touch_sql =
+            format!("UPDATE {prefix}_sessions SET updated_at = ?2 WHERE session_id = ?1");
 
-    conn.execute_batch("BEGIN IMMEDIATE")?;
+        conn.execute_batch("BEGIN IMMEDIATE")?;
 
-    let max_seq: Option<i64> = conn
-        .query_row(&seq_sql, [&msg.session_id], |row| row.get(0))
-        .unwrap_or(None);
-    let sequence = max_seq.unwrap_or(-1) + 1;
-    let now = Utc::now().to_rfc3339();
+        let max_seq: Option<i64> = conn
+            .query_row(&seq_sql, [&msg.session_id], |row| row.get(0))
+            .unwrap_or(None);
+        let sequence = max_seq.unwrap_or(-1) + 1;
+        let now = Utc::now().to_rfc3339();
 
-    let result = conn.execute(
-        &insert_sql,
-        params![
-            msg.id,
-            msg.session_id,
-            msg.role,
-            msg.content,
-            msg.tool_name,
-            msg.tool_call_id,
-            msg.tool_input,
-            msg.tool_output,
-            msg.model,
-            sequence,
-            msg.created_at,
-            msg.images,
-        ],
-    );
+        let result = conn.execute(
+            &insert_sql,
+            params![
+                msg.id,
+                msg.session_id,
+                msg.role,
+                msg.content,
+                msg.tool_name,
+                msg.tool_call_id,
+                msg.tool_input,
+                msg.tool_output,
+                msg.model,
+                sequence,
+                msg.created_at,
+                msg.images,
+            ],
+        );
 
-    if let Err(err) = result {
-        let _ = conn.execute_batch("ROLLBACK");
-        return Err(err);
-    }
+        if let Err(err) = result {
+            let _ = conn.execute_batch("ROLLBACK");
+            return Err(err);
+        }
 
-    if let Err(err) = conn.execute(&touch_sql, params![msg.session_id, now]) {
-        let _ = conn.execute_batch("ROLLBACK");
-        return Err(err);
-    }
+        if let Err(err) = conn.execute(&touch_sql, params![msg.session_id, now]) {
+            let _ = conn.execute_batch("ROLLBACK");
+            return Err(err);
+        }
 
-    conn.execute_batch("COMMIT")?;
-    Ok(msg.id.clone())
+        conn.execute_batch("COMMIT")?;
+        Ok(msg.id.clone())
+    })
 }
 
 /// Internal retry wrapper around [`insert_message`].

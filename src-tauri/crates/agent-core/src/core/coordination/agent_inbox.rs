@@ -27,7 +27,7 @@ use rusqlite::{params, Connection, Result as SqliteResult};
 use serde::{Deserialize, Serialize};
 
 use crate::session::AgentExecMode;
-use database::db::get_connection;
+use database::db::{get_connection, with_sessions_writer};
 
 pub fn is_supported_agent_org_remote_mode(mode: AgentExecMode) -> bool {
     matches!(
@@ -600,35 +600,36 @@ impl AgentInboxStore {
             .map_err(|err| format!("serialize AgentMessage failed: {err}"))?;
         let now = chrono::Utc::now().to_rfc3339();
 
-        let conn = get_connection().map_err(|err| err.to_string())?;
-        conn.execute(
-            "INSERT INTO agent_inbox (
-                recipient_agent_id,
-                recipient_member_id,
-                sender_agent_id,
-                sender_member_id,
-                org_run_id,
-                payload_kind,
-                payload_json,
-                request_id,
-                created_at,
-                read_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL)",
-            params![
-                &params.recipient_agent_id,
-                params.recipient_member_id.as_deref(),
-                &params.sender_agent_id,
-                params.sender_member_id.as_deref(),
-                params.org_run_id.as_deref(),
-                &kind,
-                &payload_json,
-                request_id.as_deref(),
-                &now,
-            ],
-        )
-        .map_err(|err| err.to_string())?;
-
-        let id = conn.last_insert_rowid();
+        let id = with_sessions_writer(|| -> Result<i64, String> {
+            let conn = get_connection().map_err(|err| err.to_string())?;
+            conn.execute(
+                "INSERT INTO agent_inbox (
+                    recipient_agent_id,
+                    recipient_member_id,
+                    sender_agent_id,
+                    sender_member_id,
+                    org_run_id,
+                    payload_kind,
+                    payload_json,
+                    request_id,
+                    created_at,
+                    read_at
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL)",
+                params![
+                    &params.recipient_agent_id,
+                    params.recipient_member_id.as_deref(),
+                    &params.sender_agent_id,
+                    params.sender_member_id.as_deref(),
+                    params.org_run_id.as_deref(),
+                    &kind,
+                    &payload_json,
+                    request_id.as_deref(),
+                    &now,
+                ],
+            )
+            .map_err(|err| err.to_string())?;
+            Ok(conn.last_insert_rowid())
+        })?;
         Ok(AgentInboxRecord {
             id,
             recipient_agent_id: params.recipient_agent_id,
@@ -745,25 +746,29 @@ impl AgentInboxStore {
         if ids.is_empty() {
             return Ok(0);
         }
-        let mut conn = get_connection().map_err(|err| err.to_string())?;
-        let tx = conn
-            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
-            .map_err(|err| err.to_string())?;
-        let now = chrono::Utc::now().to_rfc3339();
-        let mut updated = 0usize;
-        {
-            let mut stmt = tx
-                .prepare("UPDATE agent_inbox SET read_at = ?1 WHERE id = ?2 AND read_at IS NULL")
+        with_sessions_writer(|| -> Result<usize, String> {
+            let mut conn = get_connection().map_err(|err| err.to_string())?;
+            let tx = conn
+                .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
                 .map_err(|err| err.to_string())?;
-            for id in ids {
-                let n = stmt
-                    .execute(params![&now, id])
+            let now = chrono::Utc::now().to_rfc3339();
+            let mut updated = 0usize;
+            {
+                let mut stmt = tx
+                    .prepare(
+                        "UPDATE agent_inbox SET read_at = ?1 WHERE id = ?2 AND read_at IS NULL",
+                    )
                     .map_err(|err| err.to_string())?;
-                updated += n;
+                for id in ids {
+                    let n = stmt
+                        .execute(params![&now, id])
+                        .map_err(|err| err.to_string())?;
+                    updated += n;
+                }
             }
-        }
-        tx.commit().map_err(|err| err.to_string())?;
-        Ok(updated)
+            tx.commit().map_err(|err| err.to_string())?;
+            Ok(updated)
+        })
     }
 }
 

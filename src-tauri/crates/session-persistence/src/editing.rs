@@ -6,7 +6,7 @@
 
 use rusqlite::{params, OptionalExtension, Result as SqliteResult};
 
-use super::connection::get_connection;
+use super::connection::{begin_immediate, get_connection, with_sessions_writer};
 use super::crud::{normalize_session_sequences, update_session_metadata};
 use super::sequence::reset_sequence;
 use super::types::{CachedEvent, TruncateResult};
@@ -17,6 +17,13 @@ use super::types::{CachedEvent, TruncateResult};
 /// (or, when no sequence is stamped, every event with a later `created_at`).
 /// This is the hard-delete model used by the edit-and-resend flow.
 pub fn truncate_after_event(session_id: &str, event_id: &str) -> SqliteResult<TruncateResult> {
+    with_sessions_writer(|| truncate_after_event_inner(session_id, event_id))
+}
+
+fn truncate_after_event_inner(
+    session_id: &str,
+    event_id: &str,
+) -> SqliteResult<TruncateResult> {
     let conn = get_connection()?;
     normalize_session_sequences(&conn, session_id)?;
 
@@ -181,79 +188,91 @@ fn delete_by_ts(conn: &rusqlite::Connection, session_id: &str, ts: &str) -> Sqli
 /// Delete a single event by ID
 /// Preserves the rest of the history
 pub fn delete_event(session_id: &str, event_id: &str) -> SqliteResult<bool> {
-    let conn = get_connection()?;
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let tx = begin_immediate(&conn)?;
 
-    let deleted = conn.execute(
-        "DELETE FROM events WHERE session_id = ?1 AND id = ?2",
-        params![session_id, event_id],
-    )?;
+        let deleted = tx.execute(
+            "DELETE FROM events WHERE session_id = ?1 AND id = ?2",
+            params![session_id, event_id],
+        )?;
 
-    if deleted > 0 {
-        // Update session metadata
-        update_session_metadata(&conn, session_id)?;
-    }
+        if deleted > 0 {
+            update_session_metadata(&conn, session_id)?;
+        }
+        tx.commit()?;
 
-    Ok(deleted > 0)
+        Ok(deleted > 0)
+    })
 }
 
 /// Update an existing event by ID
 pub fn update_event(session_id: &str, event: &CachedEvent) -> SqliteResult<bool> {
-    let conn = get_connection()?;
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
 
-    let updated = conn.execute(
-        "UPDATE events SET
-            event_type = ?3,
-            function_name = ?4,
-            thread_id = ?5,
-            args_json = ?6,
-            result_json = ?7,
-            content = ?8,
-            meta_json = ?9
-         WHERE session_id = ?1 AND id = ?2",
-        params![
-            session_id,
-            event.id,
-            event.event_type,
-            event.function_name,
-            event.thread_id,
-            event.args_json,
-            event.result_json,
-            event.content,
-            event.meta_json,
-        ],
-    )?;
+        let updated = conn.execute(
+            "UPDATE events SET
+                event_type = ?3,
+                function_name = ?4,
+                thread_id = ?5,
+                args_json = ?6,
+                result_json = ?7,
+                content = ?8,
+                meta_json = ?9
+             WHERE session_id = ?1 AND id = ?2",
+            params![
+                session_id,
+                event.id,
+                event.event_type,
+                event.function_name,
+                event.thread_id,
+                event.args_json,
+                event.result_json,
+                event.content,
+                event.meta_json,
+            ],
+        )?;
 
-    Ok(updated > 0)
+        Ok(updated > 0)
+    })
 }
 
-/// Clear all events for a session
-/// Returns the list of deleted event IDs and sequences
+/// Clear all events for a session.
+///
+/// Returns the list of deleted event IDs and sequences. The SELECT runs
+/// outside the writer lock (concurrent under WAL); the DELETE / sequence
+/// reset / metadata update run inside one `BEGIN IMMEDIATE` so the
+/// caller-visible state is atomic.
 pub fn clear_session_history(session_id: &str) -> SqliteResult<TruncateResult> {
-    let conn = get_connection()?;
-
-    // Get all event IDs and sequences before deleting. If we silently
-    // drop a row here (`filter_map(|r| r.ok())`), the returned
-    // `TruncateResult.deleted_ids` would lie about which rows the
-    // bulk `DELETE` below actually removed, so the frontend's
-    // optimistic event-list invalidation could miss the deleted row.
-    // Surface the error instead.
-    let mut stmt = conn.prepare("SELECT id, history_sequence FROM events WHERE session_id = ?1")?;
-    let to_delete: Vec<(String, Option<i64>)> = stmt
-        .query_map([session_id], |row| Ok((row.get(0)?, row.get(1)?)))?
-        .collect::<SqliteResult<Vec<(String, Option<i64>)>>>()?;
+    let to_delete: Vec<(String, Option<i64>)> = {
+        let conn = get_connection()?;
+        // If we silently drop a row here (`filter_map(|r| r.ok())`), the
+        // returned `TruncateResult.deleted_ids` would lie about which
+        // rows the bulk `DELETE` below actually removed, so the
+        // frontend's optimistic event-list invalidation could miss the
+        // deleted row. Surface the error instead.
+        let mut stmt =
+            conn.prepare("SELECT id, history_sequence FROM events WHERE session_id = ?1")?;
+        let rows = stmt
+            .query_map([session_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<SqliteResult<Vec<(String, Option<i64>)>>>()?;
+        rows
+    };
 
     let deleted_ids: Vec<String> = to_delete.iter().map(|(id, _)| id.clone()).collect();
     let deleted_sequences: Vec<i64> = to_delete.iter().filter_map(|(_, seq)| *seq).collect();
     let deleted_count = deleted_ids.len() as i64;
 
-    // Delete all events
-    conn.execute("DELETE FROM events WHERE session_id = ?1", [session_id])?;
-
-    // Reset sequence counter
-    reset_sequence(session_id, 0);
-
-    // Update session metadata
-    update_session_metadata(&conn, session_id)?;
+    with_sessions_writer(|| -> SqliteResult<()> {
+        let conn = get_connection()?;
+        let tx = begin_immediate(&conn)?;
+        tx.execute("DELETE FROM events WHERE session_id = ?1", [session_id])?;
+        reset_sequence(session_id, 0);
+        update_session_metadata(&conn, session_id)?;
+        tx.commit()?;
+        Ok(())
+    })?;
 
     Ok(TruncateResult {
         deleted_count,

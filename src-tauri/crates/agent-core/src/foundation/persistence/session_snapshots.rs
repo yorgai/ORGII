@@ -12,7 +12,7 @@ use tracing::warn;
 
 use crate::persistence::db_helpers as shared;
 use crate::tools::names as tool_names;
-use database::db::get_connection;
+use database::db::{begin_immediate, get_connection, with_sessions_writer};
 
 /// Run a schema migration, tolerating "column already exists" errors and logging anything else.
 fn try_migrate(conn: &Connection, sql: &str) {
@@ -266,12 +266,14 @@ pub fn get_snapshots(session_id: &str) -> SqliteResult<Vec<(String, String, Stri
 }
 
 pub fn truncate_snapshots_after(session_id: &str, created_at: &str) -> SqliteResult<i64> {
-    let conn = get_connection()?;
-    let deleted = conn.execute(
-        "DELETE FROM agent_snapshots WHERE session_id = ?1 AND created_at >= ?2",
-        params![session_id, created_at],
-    )?;
-    Ok(deleted as i64)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let deleted = conn.execute(
+            "DELETE FROM agent_snapshots WHERE session_id = ?1 AND created_at >= ?2",
+            params![session_id, created_at],
+        )?;
+        Ok(deleted as i64)
+    })
 }
 
 /// Return all snapshot hashes (now: per-session `file_history` snapshot IDs)
@@ -309,15 +311,17 @@ pub fn get_snapshot_created_at_by_hash(
 }
 
 pub fn clear_review_snapshots(session_id: &str) -> SqliteResult<i64> {
-    let conn = get_connection()?;
-    let deleted = conn.execute(
-        "DELETE FROM agent_snapshots WHERE session_id = ?1 AND tool_call_id != ?2",
-        params![
-            session_id,
-            crate::tools::file_history::REDO_SNAPSHOT_TOOL_CALL_ID
-        ],
-    )?;
-    Ok(deleted as i64)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let deleted = conn.execute(
+            "DELETE FROM agent_snapshots WHERE session_id = ?1 AND tool_call_id != ?2",
+            params![
+                session_id,
+                crate::tools::file_history::REDO_SNAPSHOT_TOOL_CALL_ID
+            ],
+        )?;
+        Ok(deleted as i64)
+    })
 }
 
 /// Count `agent_snapshots` rows for a given session. Used by the file-history
@@ -357,18 +361,20 @@ pub fn delete_snapshots_by_ids(session_id: &str, snapshot_ids: &[String]) -> Sql
     if snapshot_ids.is_empty() {
         return Ok(0);
     }
-    let conn = get_connection()?;
-    let tx = conn.unchecked_transaction()?;
-    let mut total: i64 = 0;
-    {
-        let mut stmt =
-            tx.prepare("DELETE FROM agent_snapshots WHERE session_id = ?1 AND hash = ?2")?;
-        for id in snapshot_ids {
-            total += stmt.execute(params![session_id, id])? as i64;
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let tx = begin_immediate(&conn)?;
+        let mut total: i64 = 0;
+        {
+            let mut stmt =
+                tx.prepare("DELETE FROM agent_snapshots WHERE session_id = ?1 AND hash = ?2")?;
+            for id in snapshot_ids {
+                total += stmt.execute(params![session_id, id])? as i64;
+            }
         }
-    }
-    tx.commit()?;
-    Ok(total)
+        tx.commit()?;
+        Ok(total)
+    })
 }
 
 pub fn get_snapshot_ids_by_tool_call_id(
@@ -405,12 +411,14 @@ pub fn list_sessions_with_snapshots() -> SqliteResult<Vec<String>> {
 /// Delete all `agent_snapshots` rows for a session. Used when mtime-based
 /// TTL pruning wipes an entire session's file-history directory.
 pub fn delete_all_snapshots_for_session(session_id: &str) -> SqliteResult<i64> {
-    let conn = get_connection()?;
-    let deleted = conn.execute(
-        "DELETE FROM agent_snapshots WHERE session_id = ?1",
-        [session_id],
-    )?;
-    Ok(deleted as i64)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let deleted = conn.execute(
+            "DELETE FROM agent_snapshots WHERE session_id = ?1",
+            [session_id],
+        )?;
+        Ok(deleted as i64)
+    })
 }
 
 /// Return the `hash` (snapshot_id) of the most-recent snapshot whose
@@ -555,21 +563,23 @@ pub fn save_file_resolution(
     file_path: &str,
     resolution: &str,
 ) -> SqliteResult<()> {
-    let conn = get_connection()?;
-    conn.execute(
-        "INSERT INTO agent_file_resolutions (session_id, file_path, resolution, created_at)
-         VALUES (?1, ?2, ?3, ?4)
-         ON CONFLICT(session_id, file_path) DO UPDATE SET
-           resolution = excluded.resolution,
-           created_at = excluded.created_at",
-        params![
-            session_id,
-            file_path,
-            resolution,
-            chrono::Utc::now().to_rfc3339()
-        ],
-    )?;
-    Ok(())
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        conn.execute(
+            "INSERT INTO agent_file_resolutions (session_id, file_path, resolution, created_at)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(session_id, file_path) DO UPDATE SET
+               resolution = excluded.resolution,
+               created_at = excluded.created_at",
+            params![
+                session_id,
+                file_path,
+                resolution,
+                chrono::Utc::now().to_rfc3339()
+            ],
+        )?;
+        Ok(())
+    })
 }
 
 pub fn get_file_resolutions(session_id: &str) -> SqliteResult<Vec<(String, String)>> {
@@ -586,12 +596,14 @@ pub fn get_file_resolutions(session_id: &str) -> SqliteResult<Vec<(String, Strin
 }
 
 pub fn clear_file_resolutions(session_id: &str) -> SqliteResult<()> {
-    let conn = get_connection()?;
-    conn.execute(
-        "DELETE FROM agent_file_resolutions WHERE session_id = ?1",
-        [session_id],
-    )?;
-    Ok(())
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        conn.execute(
+            "DELETE FROM agent_file_resolutions WHERE session_id = ?1",
+            [session_id],
+        )?;
+        Ok(())
+    })
 }
 
 // ============================================

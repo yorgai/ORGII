@@ -1940,6 +1940,7 @@ version = "0.1.0"
 dependencies = [
  "app_paths",
  "dirs",
+ "parking_lot 0.12.5",
  "rusqlite",
  "tracing",
 ]

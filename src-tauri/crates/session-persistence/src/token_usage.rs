@@ -7,6 +7,7 @@ use chrono::Utc;
 use rusqlite::{params, Result as SqliteResult};
 use serde::{Deserialize, Serialize};
 
+use super::connection::with_sessions_writer;
 use super::get_connection;
 
 // ============================================
@@ -52,29 +53,31 @@ pub fn insert_token_usage_record(
     total_tokens: i64,
     context_tokens: i64,
 ) -> SqliteResult<i64> {
-    let conn = get_connection()?;
-    let now = Utc::now().to_rfc3339();
-    conn.execute(
-        "INSERT INTO session_token_usage
-            (session_id, session_type, model, account_id,
-             input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
-             total_tokens, context_tokens, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-        params![
-            session_id,
-            session_type,
-            model,
-            account_id,
-            input_tokens,
-            output_tokens,
-            cache_read_tokens,
-            cache_write_tokens,
-            total_tokens,
-            context_tokens,
-            now,
-        ],
-    )?;
-    Ok(conn.last_insert_rowid())
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO session_token_usage
+                (session_id, session_type, model, account_id,
+                 input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
+                 total_tokens, context_tokens, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            params![
+                session_id,
+                session_type,
+                model,
+                account_id,
+                input_tokens,
+                output_tokens,
+                cache_read_tokens,
+                cache_write_tokens,
+                total_tokens,
+                context_tokens,
+                now,
+            ],
+        )?;
+        Ok(conn.last_insert_rowid())
+    })
 }
 
 /// Get all per-round token usage records for a session, ordered by created_at.
@@ -113,10 +116,12 @@ pub fn get_token_usage_records(session_id: &str) -> SqliteResult<Vec<TokenUsageR
 ///
 /// Called when a session is deleted to keep the table clean.
 pub fn delete_token_usage_records(session_id: &str) -> SqliteResult<usize> {
-    let conn = get_connection()?;
-    let affected = conn.execute(
-        "DELETE FROM session_token_usage WHERE session_id = ?1",
-        [session_id],
-    )?;
-    Ok(affected)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let affected = conn.execute(
+            "DELETE FROM session_token_usage WHERE session_id = ?1",
+            [session_id],
+        )?;
+        Ok(affected)
+    })
 }

@@ -38,12 +38,27 @@ use std::sync::{Mutex, OnceLock};
 /// projects DB layers `PRAGMA foreign_keys = ON` on top inside
 /// [`get_projects_connection`].
 pub fn configure_connection(conn: &Connection) -> SqliteResult<()> {
+    // `busy_timeout = 15000` is intentionally a *backstop*, not the primary
+    // contention strategy. The in-process writer serializer in
+    // `db::writer` queues writers in Rust so the file lock should rarely
+    // see contention; the 15s timeout only matters for the small set of
+    // call sites that have not yet been migrated to the serializer and
+    // for the cross-process case (e.g. another `orgii` instance running
+    // against the same `~/.orgii/sessions.db`).
+    //
+    // `wal_autocheckpoint = 2000` raises the WAL flush threshold from the
+    // 1000-page default. Under streaming agent load the WAL accumulates
+    // thousands of small frames per second; checkpointing on every full
+    // WAL would stall foreground writers. 2000 ≈ 8MB at the default
+    // 4KB page, which Linux/macOS/Windows can all flush in well under
+    // the writer's typical hold time.
     conn.execute_batch(
         "PRAGMA journal_mode = WAL;
          PRAGMA synchronous = NORMAL;
          PRAGMA cache_size = -64000;
          PRAGMA temp_store = MEMORY;
-         PRAGMA busy_timeout = 5000;",
+         PRAGMA busy_timeout = 15000;
+         PRAGMA wal_autocheckpoint = 2000;",
     )?;
     Ok(())
 }

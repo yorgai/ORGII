@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension, Result as SqliteResult};
 use serde::{Deserialize, Serialize};
 
-use super::connection::get_connection;
+use super::connection::{begin_immediate, get_connection, with_sessions_writer};
 use super::crud::normalize_session_sequences;
 
 const USER_MESSAGE_FUNCTION: &str = "user_message";
@@ -349,6 +349,10 @@ fn turn_summary_from_row(row: &rusqlite::Row<'_>) -> SqliteResult<CachedTurnSumm
 }
 
 pub fn rebuild_turn_index(session_id: &str) -> SqliteResult<Vec<CachedTurnSummary>> {
+    with_sessions_writer(|| rebuild_turn_index_inner(session_id))
+}
+
+fn rebuild_turn_index_inner(session_id: &str) -> SqliteResult<Vec<CachedTurnSummary>> {
     let conn = get_connection()?;
     backfill_missing_user_events(&conn, session_id)?;
     normalize_session_sequences(&conn, session_id)?;
@@ -357,7 +361,7 @@ pub fn rebuild_turn_index(session_id: &str) -> SqliteResult<Vec<CachedTurnSummar
     let (event_count, max_sequence) = event_state(&conn, session_id)?;
     let rebuilt_at = Utc::now().to_rfc3339();
 
-    let tx = conn.unchecked_transaction()?;
+    let tx = begin_immediate(&conn)?;
     tx.execute(
         "DELETE FROM session_turns WHERE session_id = ?1",
         [session_id],
@@ -423,45 +427,52 @@ pub fn rebuild_turn_index(session_id: &str) -> SqliteResult<Vec<CachedTurnSummar
 }
 
 pub fn ensure_turn_index_fresh(session_id: &str) -> SqliteResult<()> {
-    let conn = get_connection()?;
-    let inserted_user_events = backfill_missing_user_events(&conn, session_id)?;
-    if inserted_user_events > 0 {
-        normalize_session_sequences(&conn, session_id)?;
-    }
-    let (event_count, max_sequence) = event_state(&conn, session_id)?;
-    let state = conn
-        .query_row(
-            "SELECT indexed_event_count, indexed_max_sequence, index_version
-             FROM session_turn_index_state
-             WHERE session_id = ?1",
-            [session_id],
-            |row| {
-                Ok((
-                    row.get::<_, i64>(0)?,
-                    row.get::<_, Option<i64>>(1)?,
-                    row.get::<_, i64>(2)?,
-                ))
-            },
-        )
-        .optional()?;
-
-    let fresh = inserted_user_events == 0
-        && state
-            .map(
-                |(indexed_event_count, indexed_max_sequence, index_version)| {
-                    indexed_event_count == event_count
-                        && indexed_max_sequence == max_sequence
-                        && index_version == TURN_INDEX_VERSION
+    // `backfill_missing_user_events` and `normalize_session_sequences`
+    // are writers, so the freshness check and the optional rebuild all
+    // run under one writer-lock acquisition. The lock is cheap to take
+    // and easier to reason about than splitting the check across
+    // multiple guard scopes.
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let inserted_user_events = backfill_missing_user_events(&conn, session_id)?;
+        if inserted_user_events > 0 {
+            normalize_session_sequences(&conn, session_id)?;
+        }
+        let (event_count, max_sequence) = event_state(&conn, session_id)?;
+        let state = conn
+            .query_row(
+                "SELECT indexed_event_count, indexed_max_sequence, index_version
+                 FROM session_turn_index_state
+                 WHERE session_id = ?1",
+                [session_id],
+                |row| {
+                    Ok((
+                        row.get::<_, i64>(0)?,
+                        row.get::<_, Option<i64>>(1)?,
+                        row.get::<_, i64>(2)?,
+                    ))
                 },
             )
-            .unwrap_or(false);
+            .optional()?;
 
-    if fresh {
-        return Ok(());
-    }
+        let fresh = inserted_user_events == 0
+            && state
+                .map(
+                    |(indexed_event_count, indexed_max_sequence, index_version)| {
+                        indexed_event_count == event_count
+                            && indexed_max_sequence == max_sequence
+                            && index_version == TURN_INDEX_VERSION
+                    },
+                )
+                .unwrap_or(false);
 
-    drop(conn);
-    rebuild_turn_index(session_id).map(|_| ())
+        if fresh {
+            return Ok(());
+        }
+
+        drop(conn);
+        rebuild_turn_index_inner(session_id).map(|_| ())
+    })
 }
 
 pub fn load_turn_index(session_id: &str) -> SqliteResult<Vec<CachedTurnSummary>> {
