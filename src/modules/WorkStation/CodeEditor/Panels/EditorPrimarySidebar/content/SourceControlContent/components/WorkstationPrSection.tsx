@@ -76,9 +76,9 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
         ) : (
           <ChevronDown size={14} className="shrink-0 text-text-3" />
         )}
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 leading-none">
           <GitPullRequest size={12} className="shrink-0 text-text-3" />
-          <span className="truncate text-[11px] font-medium uppercase text-text-2">
+          <span className="truncate text-[11px] font-medium uppercase leading-none text-text-2">
             {t("git.pr.title")}
           </span>
         </div>
