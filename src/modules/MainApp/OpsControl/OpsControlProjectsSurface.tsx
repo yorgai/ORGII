@@ -31,6 +31,16 @@ import {
 import ProjectStatusBar from "@src/modules/WorkStation/shared/StatusBar/ProjectStatusBar";
 import { projectListRefreshAtom } from "@src/store/project/projectAtom";
 import {
+  CHAT_PANEL_CONTENT_MODE,
+  CHAT_PANEL_CREATE_TARGET,
+  activeStationChatVisibleAtom,
+  chatPanelContentModeAtom,
+  chatPanelCreateProjectContextAtom,
+  chatPanelCreateTargetAtom,
+  chatPanelSelectedWorkItemAtom,
+} from "@src/store/ui/chatPanelAtom";
+import { stationModeAtom } from "@src/store/ui/simulatorAtom";
+import {
   PROJECT_ORG_SURFACE_VIEW,
   STORY_ORG_SCOPE,
   STORY_PERSONAL_ORG_FILTER_ID,
@@ -102,17 +112,19 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
         string | undefined
       >(undefined);
       const bumpProjectListRefresh = useSetAtom(projectListRefreshAtom);
-      const {
-        projectCreateModalOpen,
-        orgCreateModalOpen,
-        workItemCreateModal,
-        openProjectCreateModal,
-        closeProjectCreateModal,
-        openOrgCreateModal,
-        closeOrgCreateModal,
-        openWorkItemCreateModal,
-        closeWorkItemCreateModal,
-      } = useProjectManagerCreateModals();
+      const { orgCreateModalOpen, openOrgCreateModal, closeOrgCreateModal } =
+        useProjectManagerCreateModals();
+
+      const setStationMode = useSetAtom(stationModeAtom);
+      const setStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
+      const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
+      const setChatPanelCreateProjectContext = useSetAtom(
+        chatPanelCreateProjectContextAtom
+      );
+      const setChatPanelCreateTarget = useSetAtom(chatPanelCreateTargetAtom);
+      const setChatPanelSelectedWorkItem = useSetAtom(
+        chatPanelSelectedWorkItemAtom
+      );
 
       const selectedProjectId = view.kind === "project" ? view.projectId : null;
       const activeRepoView =
@@ -255,13 +267,51 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
         bumpProjectListRefresh((previous) => previous + 1);
       }, [bumpProjectListRefresh]);
 
-      const handleProjectCreated = useCallback(
-        (options?: { keepOpen?: boolean }) => {
-          if (!options?.keepOpen) closeProjectCreateModal();
-          bumpProjectListRefresh((previous) => previous + 1);
-        },
-        [bumpProjectListRefresh, closeProjectCreateModal]
-      );
+      const activeProjectOrg = useMemo(() => {
+        if (view.kind === "org-hub") {
+          return {
+            orgId: view.orgId,
+            orgName: view.orgName,
+          };
+        }
+        return undefined;
+      }, [view]);
+
+      const handleCreateProject = useCallback(() => {
+        setChatPanelSelectedWorkItem(null);
+        setChatPanelCreateProjectContext({
+          orgId: activeProjectOrg?.orgId ?? STORY_PERSONAL_ORG_FILTER_ID,
+          scopeBreadcrumbLabel:
+            activeProjectOrg?.orgName ?? t("orgs.personalOrg"),
+        });
+        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.PROJECT);
+        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        setStationMode("my-station");
+        setStationChatVisible("my-station", true);
+      }, [
+        activeProjectOrg,
+        setChatPanelContentMode,
+        setChatPanelCreateProjectContext,
+        setChatPanelCreateTarget,
+        setChatPanelSelectedWorkItem,
+        setStationChatVisible,
+        setStationMode,
+        t,
+      ]);
+
+      const handleCreateWorkItem = useCallback(() => {
+        setChatPanelSelectedWorkItem(null);
+        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
+        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        setStationMode("my-station");
+        setStationChatVisible("my-station", true);
+      }, [
+        setChatPanelContentMode,
+        setChatPanelCreateTarget,
+        setChatPanelSelectedWorkItem,
+        setStationChatVisible,
+        setStationMode,
+      ]);
 
       const handleOrgCreated = useCallback(
         (org: ProjectOrg) => {
@@ -281,8 +331,8 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
                 repoName={repoName}
                 selectedProjectId={selectedProjectId}
                 onSelectProject={handleSelectProject}
-                onCreateProject={openProjectCreateModal}
-                onCreateWorkItem={openWorkItemCreateModal}
+                onCreateProject={handleCreateProject}
+                onCreateWorkItem={handleCreateWorkItem}
                 onCreateOrg={openOrgCreateModal}
                 onImportOrgs={handleImportOrgs}
                 onOpenProjects={handleOpenProjects}
@@ -313,6 +363,8 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
           activeOrgScope,
           activeRepoView,
           closePrimarySidebar,
+          handleCreateProject,
+          handleCreateWorkItem,
           handleOpenProjects,
           handleOpenWorkItems,
           handleOpenPersonalOrg,
@@ -323,8 +375,6 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
           handleImportOrgs,
           handleSelectProject,
           openOrgCreateModal,
-          openProjectCreateModal,
-          openWorkItemCreateModal,
           primarySidebarCollapsed,
           primarySidebarWidth,
           repoName,
@@ -346,8 +396,8 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
                 setView({ ...view, orgView });
               }}
               onSelectProject={handleSelectProject}
-              onCreateProject={openProjectCreateModal}
-              onCreateWorkItem={openWorkItemCreateModal}
+              onCreateProject={handleCreateProject}
+              onCreateWorkItem={handleCreateWorkItem}
               onExpandWorkItemToTab={(
                 projectId,
                 projectName,
@@ -374,7 +424,8 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
               workstationHeaderHost="kanban"
               onProjectSlugResolved={setSelectedProjectSlug}
               onOpenProjects={handleOpenProjects}
-              onCreateWorkItem={openWorkItemCreateModal}
+              onCreateProject={handleCreateProject}
+              onCreateWorkItem={handleCreateWorkItem}
               onProjectDeleted={handleProjectDeleted}
               onOpenRepoSettings={handleOpenSettings}
             />
@@ -387,7 +438,7 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
               <ProjectsPage
                 onOpenProject={handleSelectProject}
                 orgId={scopedOrgId}
-                onAddProject={openProjectCreateModal}
+                onAddProject={handleCreateProject}
                 onOpenLinearProject={handleOpenLinearProjects}
                 allowExternalSources={activeOrgScope === STORY_ORG_SCOPE.ALL}
                 publishToWorkstationHeader
@@ -401,8 +452,8 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
                 workStationTabId="ops-control-projects"
                 workstationHeaderHost="kanban"
                 orgId={scopedOrgId}
-                onCreateProject={openProjectCreateModal}
-                onCreateWorkItem={openWorkItemCreateModal}
+                onCreateProject={handleCreateProject}
+                onCreateWorkItem={handleCreateWorkItem}
                 onOpenLinearProject={handleOpenLinearProjects}
                 allowExternalSources={activeOrgScope === STORY_ORG_SCOPE.ALL}
                 onOpenWorkItem={(projectId, projectName, projectSlug) => {
@@ -447,8 +498,8 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
         handleOpenProjects,
         handleSelectProject,
         handleProjectDeleted,
-        openProjectCreateModal,
-        openWorkItemCreateModal,
+        handleCreateProject,
+        handleCreateWorkItem,
         selectedProjectSlug,
         activeOrgScope,
         scopedOrgId,
@@ -469,32 +520,6 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
         view.kind === "org-hub" &&
         view.orgScope === STORY_ORG_SCOPE.PROJECT_ORG &&
         view.orgSyncProvider === PROJECT_ORG_SYNC_PROVIDER.GIT_FOLDER;
-      const projectCreateOrgId = scopedOrgId ?? STORY_PERSONAL_ORG_FILTER_ID;
-
-      const createScopeBreadcrumbLabel = useMemo(() => {
-        if (view.kind === "project") return t("orgs.personalOrg");
-
-        if (view.kind === "org-hub") {
-          return view.orgName ?? t("orgs.personalOrg");
-        }
-
-        if (
-          view.view === "linear-projects" ||
-          view.view === "linear-work-items"
-        ) {
-          return (
-            view.linearSelection?.projectName ??
-            view.linearSelection?.teamName ??
-            t("orgs.linearOrg")
-          );
-        }
-
-        if (view.orgScope === STORY_ORG_SCOPE.PERSONAL_ORG) {
-          return t("orgs.personalOrg");
-        }
-
-        return t("workspace.title");
-      }, [t, view]);
 
       return (
         <>
@@ -522,17 +547,8 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
             appClassName="ops-control-workstation"
           />
           <ProjectManagerCreateModals
-            repoPath={repoPath}
-            repoName={repoName}
-            scopeBreadcrumbLabel={createScopeBreadcrumbLabel}
-            projectCreateOrgId={projectCreateOrgId}
-            projectCreateModalOpen={projectCreateModalOpen}
             orgCreateModalOpen={orgCreateModalOpen}
-            workItemCreateModal={workItemCreateModal}
-            onCloseProjectCreateModal={closeProjectCreateModal}
             onCloseOrgCreateModal={closeOrgCreateModal}
-            onCloseWorkItemCreateModal={closeWorkItemCreateModal}
-            onProjectCreated={handleProjectCreated}
             onOrgCreated={handleOrgCreated}
           />
         </>

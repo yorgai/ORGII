@@ -8,7 +8,7 @@
  * - Left: Sidebar (Internal dialogue / Interactions / Todo List)
  * - Right: ReplayTabBar (event-driven tabs) + stacked event viewer
  */
-import { useAtom, useAtomValue } from "jotai";
+import { useAtomValue } from "jotai";
 import React, { Suspense, lazy, memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -184,7 +184,7 @@ const SimulatorMessagesComponent: React.FC<SimulatorMessagesProps> = ({
   // global atom, which may lag or point to a different surface's active session.
   const sessionId = propSessionId ?? atomSessionId;
 
-  const [canvasPreview, setCanvasPreview] = useAtom(canvasPreviewAtom);
+  const canvasPreview = useAtomValue(canvasPreviewAtom);
   const activeCanvasPayload =
     canvasPreview?.sessionId === sessionId ? canvasPreview.payload : null;
 
@@ -200,10 +200,6 @@ const SimulatorMessagesComponent: React.FC<SimulatorMessagesProps> = ({
   );
 
   const noopSelectItem = useCallback((_itemId: string) => {}, []);
-
-  const handleCanvasClose = useCallback(() => {
-    setCanvasPreview(null);
-  }, [setCanvasPreview]);
 
   // Handle canvas events (early return AFTER all hooks)
   const sessionEvent = currentEvent as SessionEvent | undefined;
@@ -256,7 +252,6 @@ const SimulatorMessagesComponent: React.FC<SimulatorMessagesProps> = ({
         onMessageClick={handleMessageClick}
         currentEventId={state.currentEventId}
         canvasPayload={activeCanvasPayload}
-        onCanvasClose={handleCanvasClose}
       />
     </div>
   );

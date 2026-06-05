@@ -225,7 +225,9 @@ export function useProjectTabActions({
     });
     setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.PROJECT);
     setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-    setStationChatVisible(stationMode, true);
+    if (stationMode === "my-station" || stationMode === "agent-station") {
+      setStationChatVisible(stationMode, true);
+    }
   }, [
     activeProjectOrg,
     setChatPanelContentMode,
@@ -242,7 +244,9 @@ export function useProjectTabActions({
       setChatPanelSelectedWorkItem(null);
       setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
       setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-      setStationChatVisible(stationMode, true);
+      if (stationMode === "my-station" || stationMode === "agent-station") {
+        setStationChatVisible(stationMode, true);
+      }
     },
     [
       setChatPanelContentMode,

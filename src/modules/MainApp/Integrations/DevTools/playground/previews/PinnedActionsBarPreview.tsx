@@ -40,6 +40,7 @@ function PinnedActionsBarPreviewInner() {
     getEditor: NOOP_NULL,
     triggerAtMention: NOOP,
     triggerSlashContext: NOOP,
+    placeCaretAtPoint: NOOP_BOOL,
   });
 
   return (

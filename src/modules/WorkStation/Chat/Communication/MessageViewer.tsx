@@ -71,8 +71,6 @@ export interface MessageViewerProps {
   currentEventId?: string | null;
   /** Canvas payload from agent's render_inline_canvas; rendered as the last item in the stream. */
   canvasPayload?: CanvasInlinePayload | null;
-  /** Called when the user dismisses the canvas card. */
-  onCanvasClose?: () => void;
   /**
    * Switch the Communication view mode. Used by the Agent Org task-list
    * card's navigate arrow to jump from the chat stream to the Todo Kanban
@@ -101,7 +99,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
   previewSelectedPlan = false,
   currentEventId,
   canvasPayload,
-  onCanvasClose,
   setViewMode,
   orgMembers,
 }) => {
@@ -327,7 +324,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
               content={canvasPayload.content}
               url={canvasPayload.url}
               isStreaming={canvasPayload.streaming ?? false}
-              onClose={onCanvasClose}
             />
           )}
         </div>

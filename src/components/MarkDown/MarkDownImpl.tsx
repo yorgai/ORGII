@@ -249,7 +249,7 @@ CodeBlock.displayName = "CodeBlock";
 interface MarkdownRendererProps {
   content: string;
   components: Components;
-  plugins: ReadonlyArray<typeof remarkGfm>;
+  plugins: (typeof remarkGfm)[];
 }
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({

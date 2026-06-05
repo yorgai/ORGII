@@ -508,7 +508,6 @@ const WorkItemsPage: React.FC<WorkItemsPageProps> = ({
           onUpdateWorkItem={handlers.handleUpdate}
           onDeleteWorkItem={handlers.handleDelete}
           onRestoreWorkItem={handlers.handleRestore}
-          onAddProject={onCreateProject}
           onAddListItem={(status: WorkItemStatus) =>
             handlers.handleAddListItem(status)
           }

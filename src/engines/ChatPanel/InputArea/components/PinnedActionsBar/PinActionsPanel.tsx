@@ -83,7 +83,7 @@ interface PinActionsPanelProps {
    * trigger button are excluded from the click-outside handler so the parent's
    * own toggle logic fires without the panel immediately re-opening.
    */
-  triggerRef?: React.RefObject<HTMLElement>;
+  triggerRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
