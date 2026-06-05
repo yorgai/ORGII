@@ -1071,6 +1071,10 @@
         "merged": "Merged",
         "closed": "Closed",
         "draft": "Draft"
+      },
+      "authRequired": {
+        "title": "Connect GitHub",
+        "description": "Go to Settings → Integrations → Git to connect your GitHub account."
       }
     }
   },

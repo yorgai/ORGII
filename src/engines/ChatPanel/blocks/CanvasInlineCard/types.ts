@@ -29,18 +29,6 @@ export interface CanvasInlineCardProps {
   /** Whether the agent is still streaming content into this card. */
   isStreaming?: boolean;
   /**
-   * Optional external close handler. When provided, clicking ✕ calls this
-   * instead of the internal `isClosed` toggle — lets parents control
-   * card visibility.
-   */
-  onClose?: () => void;
-  /**
-   * Called when the user clicks the Summarize button in the toolbar.
-   * The parent is responsible for building the message and dispatching it
-   * to the agent. When absent the button is not rendered.
-   */
-  onSummarize?: () => void;
-  /**
    * Session ID for the canvas preview. When provided together with the
    * card's content, the toolbar shows a "View in Simulator" button that
    * jumps the Simulator panel to the CANVAS app.

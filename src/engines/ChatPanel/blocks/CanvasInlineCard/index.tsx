@@ -13,23 +13,8 @@
  * allow-same-origin). URL iframes add allow-same-origin so cross-origin
  * resources load correctly, but form submission and popups are still gated.
  */
-import {
-  ExternalLink,
-  Layout,
-  Maximize2,
-  Minimize2,
-  Monitor,
-  RefreshCw,
-  Sparkles,
-  X,
-} from "lucide-react";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Layout, Monitor } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import IconButton from "@src/components/IconButton";
@@ -66,24 +51,16 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
   title,
   initialHeight = 280,
   isStreaming = false,
-  onClose: externalOnClose,
-  onSummarize,
   sessionId,
 }) => {
   const { t } = useTranslation("sessions");
 
-  // State initializer functions run once — safe to derive from props at mount
-  const [heightStep, setHeightStep] = useState(() =>
-    resolveInitialStep(initialHeight)
-  );
-  const [isClosed, setIsClosed] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
+  const [heightStep] = useState(() => resolveInitialStep(initialHeight));
 
   // Separate refs for each iframe variant to avoid targeting the wrong window
   const htmlIframeRef = useRef<HTMLIFrameElement>(null);
 
   const currentHeight = HEIGHT_STEPS[heightStep % HEIGHT_STEPS.length];
-  const isMaxHeight = currentHeight === HEIGHT_STEPS[HEIGHT_STEPS.length - 1];
 
   // Split A2UI content into individual lines once per content update
   const a2uiLines = useMemo(() => {
@@ -103,8 +80,7 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
   }, [mode, content, a2uiLines]);
 
   // For A2UI: push only newly-arrived lines via postMessage to avoid a full
-  // iframe reload on every streaming chunk. The count ref is reset on reload
-  // so a manual reload re-sends all lines (iframe is remounted via key).
+  // iframe reload on every streaming chunk.
   const prevA2UICountRef = useRef(0);
   useEffect(() => {
     if (mode !== "a2ui") return;
@@ -129,40 +105,6 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
     }
   }, [mode, a2uiLines]);
 
-  // Reset the A2UI counter when the user reloads so lines are re-sent fresh
-  useEffect(() => {
-    prevA2UICountRef.current = 0;
-  }, [reloadKey]);
-
-  const handleToggleSize = useCallback(() => {
-    setHeightStep((prev) => (prev + 1) % HEIGHT_STEPS.length);
-  }, []);
-
-  const handleReload = useCallback(() => {
-    setReloadKey((k) => k + 1);
-  }, []);
-
-  const handleClose = useCallback(() => {
-    if (externalOnClose) {
-      externalOnClose();
-    } else {
-      setIsClosed(true);
-    }
-  }, [externalOnClose]);
-
-  const handleOpenExternal = useCallback(() => {
-    if (mode === "url" && url) {
-      window.open(url, "_blank", "noopener,noreferrer");
-      return;
-    }
-    if (srcDoc) {
-      const blob = new Blob([srcDoc], { type: "text/html" });
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, "_blank", "noopener,noreferrer");
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-    }
-  }, [mode, url, srcDoc]);
-
   const simulatorPayload = useMemo(
     () => ({ mode, content, url, title, streaming: isStreaming }),
     [mode, content, url, title, isStreaming]
@@ -171,8 +113,6 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
     sessionId,
     simulatorPayload
   );
-
-  if (isClosed) return null;
 
   const cardTitle =
     title ??
@@ -200,24 +140,6 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover/canvas:opacity-100">
-          {!isStreaming && onSummarize && (
-            <IconButton
-              onClick={onSummarize}
-              className="text-text-4 hover:bg-fill-3 hover:text-primary-6"
-              title={t("canvasCard.summarize")}
-            >
-              <Sparkles size={12} />
-            </IconButton>
-          )}
-          {!isStreaming && (
-            <IconButton
-              onClick={handleReload}
-              className="text-text-4 hover:bg-fill-3 hover:text-text-2"
-              title={t("canvasCard.reload")}
-            >
-              <RefreshCw size={12} />
-            </IconButton>
-          )}
           {handleJumpToSimulator && (
             <IconButton
               onClick={handleJumpToSimulator}
@@ -227,29 +149,6 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
               <Monitor size={12} />
             </IconButton>
           )}
-          <IconButton
-            onClick={handleOpenExternal}
-            className="text-text-4 hover:bg-fill-3 hover:text-text-2"
-            title={t("canvasCard.openExternal")}
-          >
-            <ExternalLink size={12} />
-          </IconButton>
-          <IconButton
-            onClick={handleToggleSize}
-            className="text-text-4 hover:bg-fill-3 hover:text-text-2"
-            title={
-              isMaxHeight ? t("canvasCard.shrink") : t("canvasCard.expand")
-            }
-          >
-            {isMaxHeight ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-          </IconButton>
-          <IconButton
-            onClick={handleClose}
-            className="text-text-4 hover:bg-fill-3 hover:text-text-2"
-            title={t("canvasCard.close")}
-          >
-            <X size={12} />
-          </IconButton>
         </div>
       </div>
 
@@ -261,7 +160,6 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
         {mode === "url" && url ? (
           // URL mode: separate ref, allow-same-origin so cross-origin assets load
           <iframe
-            key={`url-${reloadKey}`}
             src={url}
             className="h-full w-full border-0"
             sandbox="allow-scripts allow-same-origin allow-forms"
@@ -270,7 +168,6 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
         ) : srcDoc ? (
           // html / a2ui: injected srcDoc, no allow-same-origin
           <iframe
-            key={`doc-${reloadKey}`}
             ref={htmlIframeRef}
             srcDoc={srcDoc}
             className="h-full w-full border-0"

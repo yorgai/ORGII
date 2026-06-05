@@ -10,12 +10,13 @@
  * Design: uses shared secondary buttons so pinned actions match other composer controls.
  */
 import { useAtom, useAtomValue } from "jotai";
-import { Layout, MoreHorizontal } from "lucide-react";
+import { GitPullRequest, Layout, MoreHorizontal } from "lucide-react";
 import React, { memo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
 import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import { StackPill } from "@src/engines/ChatPanel/InputArea/components";
 import UserActionButton from "@src/engines/ChatPanel/InputArea/components/UserActionButton";
 import { useSlashItemsCache } from "@src/engines/ChatPanel/hooks/useInputArea/useSlashItemsCache";
 import { EditorTabService } from "@src/services/workStation";
@@ -24,6 +25,10 @@ import {
   type PinnedAction,
   pinnedActionsAtom,
 } from "@src/store/session/pinnedActionsAtom";
+import {
+  workstationPrAtom,
+  workstationPrCallbackAtom,
+} from "@src/store/workstation/codeEditor/workstationPrAtom";
 import { workstationLayoutAtom } from "@src/store/workstation/tabs";
 import {
   createCanvasPreviewTab,
@@ -88,6 +93,19 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
   ({ tiptapRef, sessionId }) => {
     const { t } = useTranslation("sessions");
     const [pinnedActions, setPinnedActions] = useAtom(pinnedActionsAtom);
+
+    // ── PR pill ───────────────────────────────────────────────────────────────
+
+    const { readyToCreate: prReadyToCreate, isCreating: prIsCreating } =
+      useAtomValue(workstationPrAtom);
+    const { createPr } = useAtomValue(workstationPrCallbackAtom);
+
+    const handleOpenPr = useCallback(() => {
+      if (!createPr || prIsCreating) return;
+      void createPr();
+    }, [createPr, prIsCreating]);
+
+    const showPrPill = prReadyToCreate && Boolean(createPr);
 
     // ── Canvas pill ───────────────────────────────────────────────────────────
 
@@ -215,6 +233,21 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
     return (
       <div className="relative flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-hide">
+        {showPrPill && (
+          <StackPill
+            icon={<GitPullRequest size={12} strokeWidth={1.75} />}
+            count={0}
+            active={prIsCreating}
+            label={
+              prIsCreating
+                ? t("input.pr.creating", { defaultValue: "Creating PR…" })
+                : t("input.pr.open", { defaultValue: "Open PR" })
+            }
+            title={t("input.pr.open", { defaultValue: "Open PR" })}
+            onClick={handleOpenPr}
+          />
+        )}
+
         {showCanvasPill && !isCanvasTabOpen && (
           <UserActionButton
             leftIcon={<Layout size={12} strokeWidth={1.75} />}

@@ -1,7 +1,11 @@
 import { fetchRustApi, gitRepoUrl } from "@src/api/http/git/client";
 import { gitPush } from "@src/api/http/git/operations";
 import { getGitRemotes } from "@src/api/http/git/remotes";
-import { createPRLocal } from "@src/api/tauri/github";
+import {
+  LOCAL_GITHUB_TOKEN_USER_ID,
+  createPRLocal,
+  getGitHubGitCredentialForRemote,
+} from "@src/api/tauri/github";
 import {
   SERVICE_AUTH_STORAGE_KEYS,
   getHostedToken,
@@ -9,6 +13,30 @@ import {
 import { createLogger } from "@src/hooks/logger";
 
 const logger = createLogger("createPullRequest");
+
+async function resolveGitHubAuth(
+  remoteUrl: string
+): Promise<{ userId: string; token: string } | null> {
+  const hostedToken = getHostedToken();
+  const hostedUserId = localStorage.getItem(SERVICE_AUTH_STORAGE_KEYS.userId);
+  if (hostedToken && hostedUserId) {
+    return { userId: hostedUserId, token: hostedToken };
+  }
+
+  try {
+    const credential = await getGitHubGitCredentialForRemote(
+      LOCAL_GITHUB_TOKEN_USER_ID,
+      remoteUrl
+    );
+    if (credential) {
+      return { userId: LOCAL_GITHUB_TOKEN_USER_ID, token: credential.token };
+    }
+  } catch (error) {
+    logger.warn("Local git credential lookup failed:", error);
+  }
+
+  return null;
+}
 
 export function parseGithubRepoFullName(remoteUrl: string): string | null {
   const sshMatch = remoteUrl.match(/git@[^:]+:(.+?)(?:\.git)?$/);
@@ -42,12 +70,6 @@ export async function createPullRequest(
     pushBeforeCreate = true,
   } = params;
 
-  const token = getHostedToken();
-  const userId = localStorage.getItem(SERVICE_AUTH_STORAGE_KEYS.userId);
-  if (!token || !userId) {
-    return { error: "not_authenticated" };
-  }
-
   try {
     const remotesData = await getGitRemotes({
       repo_id: repoId,
@@ -59,6 +81,12 @@ export async function createPullRequest(
     if (!originRemote?.url) {
       return { error: "no_origin_remote" };
     }
+
+    const auth = await resolveGitHubAuth(originRemote.url);
+    if (!auth) {
+      return { error: "not_authenticated" };
+    }
+    const { userId, token } = auth;
 
     const repoFullName = parseGithubRepoFullName(originRemote.url);
     if (!repoFullName) {
