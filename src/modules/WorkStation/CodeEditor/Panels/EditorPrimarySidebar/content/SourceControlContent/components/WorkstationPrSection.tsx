@@ -2,7 +2,6 @@ import { ExternalLink, GitPullRequest, TriangleAlert } from "lucide-react";
 import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import Button from "@src/components/Button";
 import type { SectionHeaderAction } from "@src/components/TreePanelSidebar/types";
 import { CollapsibleSection } from "@src/modules/WorkStation/shared/PrimarySidebarLayout/CollapsibleSection";
 import {
@@ -76,24 +75,17 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
     </div>
   );
 
-  // Header actions: Create PR button (always visible when applicable)
   const actions: SectionHeaderAction[] = [];
   if (isCreating) {
     actions.push({
       key: "pr-creating",
       icon: (
-        <Button
-          variant="primary"
-          appearance="outline"
-          size="mini"
-          shape="round"
-          loading
-          loadingSpinIcon
-          icon={<GitPullRequest size={11} />}
-          disabled
+        <span
+          className={`${SECTION_ACTION_BUTTON.base} ${SECTION_ACTION_BUTTON.withLabel} cursor-default text-primary-6 opacity-60`}
         >
+          <GitPullRequest size={11} className="shrink-0" />
           {t("git.pr.creating")}
-        </Button>
+        </span>
       ),
       tooltip: "",
       onClick: () => {},
@@ -103,17 +95,17 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
     actions.push({
       key: "pr-create",
       icon: (
-        <Button
-          variant="primary"
-          appearance="outline"
-          size="mini"
-          shape="round"
-          icon={<GitPullRequest size={11} />}
+        <button
+          className={`${SECTION_ACTION_BUTTON.base} ${SECTION_ACTION_BUTTON.withLabel} text-primary-6`}
           disabled={!onCreatePr}
-          onClick={handleCreate}
+          onClick={(e) => {
+            e.stopPropagation();
+            void handleCreate();
+          }}
         >
+          <GitPullRequest size={11} className="shrink-0" />
           {t("git.actions.createPR")}
-        </Button>
+        </button>
       ),
       tooltip: t("git.actions.createPR"),
       onClick: handleCreate,
