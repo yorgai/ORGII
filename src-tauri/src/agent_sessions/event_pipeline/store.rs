@@ -356,6 +356,9 @@ impl EventStore {
         }
 
         if let Some(&idx) = self.id_index.get(&event.id) {
+            if Self::would_downgrade_terminal_tool_call(&self.events[idx], &event) {
+                return;
+            }
             if let Some(ref old_cid) = self.events[idx].call_id {
                 self.call_id_index.remove(old_cid);
             }
@@ -518,6 +521,9 @@ impl EventStore {
             }
 
             if let Some(&idx) = self.id_index.get(&event.id) {
+                if Self::would_downgrade_terminal_tool_call(&self.events[idx], &event) {
+                    continue;
+                }
                 if let Some(ref old_cid) = self.events[idx].call_id {
                     self.call_id_index.remove(old_cid);
                 }
@@ -1384,6 +1390,24 @@ impl EventStore {
         if event.repo_path.is_none() {
             event.repo_path = self.repo_path.clone();
         }
+    }
+
+    fn would_downgrade_terminal_tool_call(
+        existing: &SessionEvent,
+        incoming: &SessionEvent,
+    ) -> bool {
+        existing.action_type == "tool_call"
+            && incoming.action_type == "tool_call"
+            && matches!(
+                existing.display_status,
+                EventDisplayStatus::Completed | EventDisplayStatus::Failed
+            )
+            && matches!(
+                incoming.display_status,
+                EventDisplayStatus::Running
+                    | EventDisplayStatus::Pending
+                    | EventDisplayStatus::AwaitingUser
+            )
     }
 
     fn insert_index_entries(&mut self, event: &SessionEvent, idx: usize) {

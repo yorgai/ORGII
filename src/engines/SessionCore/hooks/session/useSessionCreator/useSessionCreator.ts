@@ -23,7 +23,7 @@ import { useSessionDiscovery } from "@src/engines/SessionCore/hooks/session/useS
 import type { SessionCreatorLaunchMode } from "@src/features/SessionCreator/types";
 import { createSystemPathSessionSource } from "@src/features/SessionCreator/utils/systemPathSource";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
-import { useAddToAgentInsertion, useTiptapInput } from "@src/hooks/input";
+import { useAddToAgentInsertion, useComposerInput } from "@src/hooks/input";
 import {
   SYSTEM_PATH_ID,
   type SessionSource,
@@ -104,12 +104,11 @@ export function useSessionCreator(
     getRustAgentType(selectedAgentDefinitionId) === "os";
 
   // ============================================
-  // Tiptap Input Hook
+  // ComposerInput Input Hook
   // ============================================
 
   const {
-    tiptapRef,
-    atDropdownRef,
+    composerInputRef,
     contextMenuKeyboardHandlerRef,
     slashCommandKeyboardHandlerRef,
     showContextMenu,
@@ -131,7 +130,7 @@ export function useSessionCreator(
     filteredSlashItems: baseFilteredSlashItems,
     slashLoading,
     prefetchSlashItems,
-  } = useTiptapInput({
+  } = useComposerInput({
     onContentChange: (content) => {
       setEditorContent(content);
     },
@@ -143,7 +142,7 @@ export function useSessionCreator(
   });
 
   // Insert file/line references from WorkStation "Add to agent" menu.
-  useAddToAgentInsertion(tiptapRef);
+  useAddToAgentInsertion(composerInputRef);
 
   // ── Variant-supplied slash extras ────────────────────────────────────────
   // `extraSlashItems` lets variants (currently the Inbox variant) inject
@@ -304,7 +303,7 @@ export function useSessionCreator(
     handleFileUpload,
     handleRemoveFile,
     handleUploadClick,
-  } = useFileUpload({ fileInputRef, tiptapRef });
+  } = useFileUpload({ fileInputRef, composerInputRef });
 
   // Image Attachments
   const {
@@ -334,7 +333,7 @@ export function useSessionCreator(
     setSessionName,
     setEditorContent,
     setUploadedFiles,
-    tiptapRef,
+    composerInputRef,
     skipDraftLoading: skipDraftLoading || hasListingParams,
     persistDraft,
   });
@@ -376,7 +375,7 @@ export function useSessionCreator(
     advancedConfig,
     isContentEmpty: !editorContent || !editorContent.trim(),
     validateSessionConfig,
-    tiptapRef,
+    composerInputRef,
     onLaunchSuccess: handleLaunchSuccess,
     launchMode,
     workItemContext,
@@ -436,8 +435,7 @@ export function useSessionCreator(
   return {
     // Refs
     fileInputRef,
-    tiptapRef,
-    atDropdownRef,
+    composerInputRef,
     contextMenuKeyboardHandlerRef,
     slashCommandKeyboardHandlerRef,
 

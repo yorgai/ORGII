@@ -309,23 +309,23 @@ impl KeyService {
                 }
             }
             if let Some(token) = tokens.id_token.filter(|token| !token.trim().is_empty()) {
-                if model_type == ModelType::Codex {
-                    if entry.env_vars.get(CODEX_ID_TOKEN_ENV_KEY) != Some(&token) {
-                        entry
-                            .env_vars
-                            .insert(CODEX_ID_TOKEN_ENV_KEY.to_string(), token);
-                        changed = true;
-                    }
+                if model_type == ModelType::Codex
+                    && entry.env_vars.get(CODEX_ID_TOKEN_ENV_KEY) != Some(&token)
+                {
+                    entry
+                        .env_vars
+                        .insert(CODEX_ID_TOKEN_ENV_KEY.to_string(), token);
+                    changed = true;
                 }
             }
             if let Some(value) = tokens.expires_at.filter(|value| !value.trim().is_empty()) {
-                if model_type == ModelType::GeminiCli {
-                    if entry.env_vars.get(GEMINI_EXPIRES_AT_ENV) != Some(&value) {
-                        entry
-                            .env_vars
-                            .insert(GEMINI_EXPIRES_AT_ENV.to_string(), value);
-                        changed = true;
-                    }
+                if model_type == ModelType::GeminiCli
+                    && entry.env_vars.get(GEMINI_EXPIRES_AT_ENV) != Some(&value)
+                {
+                    entry
+                        .env_vars
+                        .insert(GEMINI_EXPIRES_AT_ENV.to_string(), value);
+                    changed = true;
                 }
             }
 

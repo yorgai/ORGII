@@ -13,6 +13,7 @@
  * - useContainerDrag: internal file-tree drag interception
  * - useEditorExpansion: compact pill ↔ expanded box layout toggle
  */
+import { useAtomValue } from "jotai";
 import { RotateCcw, X } from "lucide-react";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import Button from "@src/components/Button";
 import ComposerBar from "@src/components/ComposerBar";
 import ComposerShell from "@src/components/ComposerShell";
+import { hasNonEmptyTerminalBuffer } from "@src/components/TerminalInteractive/bufferCache";
 import { ChatStatusSegmentedBar } from "@src/engines/ChatPanel/components/ChatStatusBanners";
 import { useInputArea } from "@src/engines/ChatPanel/hooks/useInputArea";
 import type {
@@ -28,6 +30,11 @@ import type {
 } from "@src/engines/ChatPanel/hooks/useInputArea/types";
 import { useSessionDiscovery } from "@src/engines/SessionCore";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
+import type { MenuItemId } from "@src/scaffold/ContextMenu/config";
+import {
+  type WorkStationTab,
+  mainPaneTabsAtom,
+} from "@src/store/workstation/tabs";
 import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
 import ChatHeader from "./ChatHeader";
@@ -63,9 +70,9 @@ interface InputAreaProps {
   /** Initial content for edit mode */
   initialContent?: string;
   /** Callback when edit is submitted */
-  onEditSubmit?: (text: string) => void;
+  onEditSubmit?: (text: string, imageDataUrls?: string[]) => void;
   /** Callback when edit is submitted and immediately sent */
-  onEditSendNow?: (text: string) => void;
+  onEditSendNow?: (text: string, imageDataUrls?: string[]) => void;
   /** Callback when edit is cancelled */
   onEditCancel?: () => void;
   /** Label shown in the edit-mode header bar (e.g. "Editing queued message") */
@@ -92,7 +99,91 @@ interface InputAreaProps {
   topRowPills?: React.ReactNode;
   /** Status banners that should sit below the top pill row and above composer. */
   statusBanners?: React.ReactNode;
+  composerShellRef?: React.Ref<HTMLDivElement>;
 }
+
+const getStringData = (
+  tab: WorkStationTab,
+  key: string
+): string | undefined => {
+  const value = tab.data[key];
+  return typeof value === "string" && value.trim() ? value : undefined;
+};
+
+const getOpenedTabMentionOption = (
+  tab: WorkStationTab
+): CustomMentionOption | null => {
+  const baseOption = (
+    selectType: MenuItemId,
+    selectValue: string,
+    description: string,
+    selectDisplayName: string = tab.title
+  ): CustomMentionOption => ({
+    id: `workstation-tab:${tab.id}`,
+    label: tab.title,
+    description,
+    selectType,
+    selectValue,
+    selectDisplayName,
+  });
+
+  if (tab.type === "file" || tab.type === "git-diff") {
+    const filePath = getStringData(tab, "filePath");
+    if (!filePath) return null;
+    return baseOption("files", filePath, filePath);
+  }
+
+  if (tab.type === "directory") {
+    const directoryPath = getStringData(tab, "directoryPath");
+    if (!directoryPath) return null;
+    return baseOption("folder", directoryPath, directoryPath);
+  }
+
+  if (tab.type === "terminal") {
+    const sessionId = getStringData(tab, "sessionId");
+    if (!sessionId || !hasNonEmptyTerminalBuffer(sessionId)) return null;
+    return baseOption("terminal", sessionId, "Terminal");
+  }
+
+  if (tab.type === "browser-session") {
+    const sessionId = getStringData(tab, "sessionId");
+    if (!sessionId) return null;
+    return baseOption(
+      "browser",
+      sessionId,
+      getStringData(tab, "url") ?? "Browser"
+    );
+  }
+
+  if (tab.type === "chat-session") {
+    const sessionId = getStringData(tab, "sessionId");
+    if (!sessionId) return null;
+    return baseOption("session", sessionId, "Session");
+  }
+
+  if (tab.type === "project-workitems") {
+    const projectSlug = getStringData(tab, "projectSlug");
+    if (!projectSlug) return null;
+    return baseOption("project", projectSlug, "Work items");
+  }
+
+  if (tab.type === "workItem-detail") {
+    const workItemId = getStringData(tab, "workItemId");
+    if (!workItemId) return null;
+    return baseOption(
+      "workitem",
+      workItemId,
+      getStringData(tab, "projectName") ?? "Work item",
+      getStringData(tab, "workItemName") ?? tab.title
+    );
+  }
+
+  return null;
+};
+
+const isCustomMentionOption = (
+  option: CustomMentionOption | null
+): option is CustomMentionOption => option !== null;
 
 // ============================================
 // Component
@@ -119,6 +210,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
     customMentionOptions,
     topRowPills,
     statusBanners,
+    composerShellRef,
   }) => {
     const { t } = useTranslation("sessions");
 
@@ -137,6 +229,18 @@ const InputArea: React.FC<InputAreaProps> = memo(
     // dropdown + per-composer last-used seed.
     const { sessionId } = useSessionId({ propSessionId });
     const isCursorIde = sessionId ? isCursorIdeSession(sessionId) : false;
+    const workstationTabs = useAtomValue(mainPaneTabsAtom);
+    const openedTabMentionOptions = useMemo(
+      () =>
+        workstationTabs
+          .map(getOpenedTabMentionOption)
+          .filter(isCustomMentionOption),
+      [workstationTabs]
+    );
+    const mergedCustomMentionOptions = useMemo(
+      () => [...openedTabMentionOptions, ...(customMentionOptions ?? [])],
+      [openedTabMentionOptions, customMentionOptions]
+    );
 
     // ============================================
     // Hooks
@@ -144,9 +248,8 @@ const InputArea: React.FC<InputAreaProps> = memo(
 
     const {
       // Refs
-      tiptapRef,
+      composerInputRef,
       containerRef,
-      atDropdownRef,
       contextMenuKeyboardHandlerRef,
       slashCommandKeyboardHandlerRef,
       plusSlashCommandKeyboardHandlerRef,
@@ -206,6 +309,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
       isSessionTerminal,
 
       // Drag & drop
+      dropTargetId,
       handleDragOver,
       handleDragLeave,
       handleDrop,
@@ -216,13 +320,14 @@ const InputArea: React.FC<InputAreaProps> = memo(
       currentRepoPath,
 
       // Image attachments
+      attachedImages,
       handleImagePaste,
       hasImages,
     } = useInputArea({
       placeholder,
       sessionId: propSessionId,
       onSubmitOverride,
-      customMentionOptions,
+      customMentionOptions: mergedCustomMentionOptions,
     });
 
     const contextMenuVisible = showContextMenu;
@@ -244,6 +349,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
     }, [prefetchSlashItems]);
 
     const handleOpenContextMenu = useCallback(() => {
+      window.dispatchEvent(new Event("terminal-snapshot-request"));
       setContextMenuKeyboardOpened(false);
       setShowContextMenu(true);
     }, [setShowContextMenu]);
@@ -265,20 +371,23 @@ const InputArea: React.FC<InputAreaProps> = memo(
     // Edit Mode (extracted hook)
     // ============================================
 
+    const attachedImageDataUrls = attachedImages.map((image) => image.dataUrl);
+
     const { editContainerRef, handleEditSubmit, handleEditKeyDown } =
       useEditMode({
         effectiveEditMode: isEditMode,
         isEditMode,
         initialContent,
         onEditSubmit,
+        attachedImageDataUrls,
         onEditCancel,
-        tiptapRef,
+        composerInputRef,
       });
     const handleEditSendNow = useCallback(() => {
-      if (!tiptapRef.current || !onEditSendNow) return;
-      const text = tiptapRef.current.getTextWithPills().trim();
-      if (text) onEditSendNow(text);
-    }, [onEditSendNow, tiptapRef]);
+      if (!composerInputRef.current || !onEditSendNow) return;
+      const text = composerInputRef.current.getTextWithPills().trim();
+      if (text) onEditSendNow(text, attachedImageDataUrls);
+    }, [attachedImageDataUrls, onEditSendNow, composerInputRef]);
 
     // ============================================
     // Container Drag (extracted hook)
@@ -293,7 +402,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
       handleDragOver,
       handleDragLeave,
       handleDrop,
-      tiptapRef,
+      composerInputRef,
       containerRef,
     });
 
@@ -309,6 +418,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
 
     const handleKeyboardAtMention = useCallback(
       (query: string, position: { x: number; y: number }) => {
+        window.dispatchEvent(new Event("terminal-snapshot-request"));
         setContextMenuKeyboardOpened(true);
         handleAtMention(query, position);
       },
@@ -325,17 +435,21 @@ const InputArea: React.FC<InputAreaProps> = memo(
     //
     // Expansion triggers:
     //   1. Editor content is visually multiline (ResizeObserver in InputEditor)
-    //   2. Pending images, cite-code, reply-to, slash/@ menus, edit mode
-    //      (each adds chrome that doesn't fit in one row)
+    //   2. Pending images, cite-code, reply-to, edit mode
+    // Menus (`@`, inline `/`, and `+` skills/tools) retain the current
+    // composer height and float from the editor slot instead of forcing the
+    // compact pill row to become the expanded box.
 
     const {
       editorMultiline,
+      suppressToolbarHover,
+      acknowledgeToolbarHover,
       onEditorContentChange,
       onEditorBlur,
       observeCompact,
     } = useEditorExpansion({
       containerRef,
-      tiptapRef,
+      composerInputRef,
       handleContentChange,
       handleInputBlur,
     });
@@ -354,23 +468,20 @@ const InputArea: React.FC<InputAreaProps> = memo(
         !hasImages &&
         !isCiteCode &&
         !replyInfo.isReply &&
-        !editorMultiline &&
-        !showContextMenu &&
-        !showSlashMenu &&
-        !showPlusSlashMenu,
-      [
-        isEditMode,
-        hasImages,
-        isCiteCode,
-        replyInfo.isReply,
-        editorMultiline,
-        showContextMenu,
-        showSlashMenu,
-        showPlusSlashMenu,
-      ]
+        !editorMultiline,
+      [isEditMode, hasImages, isCiteCode, replyInfo.isReply, editorMultiline]
     );
 
     const compactShell = !isEditMode && isCursorCompactRow;
+    useEffect(() => {
+      if (!suppressToolbarHover) return;
+      window.addEventListener("pointermove", acknowledgeToolbarHover, {
+        once: true,
+      });
+      return () => {
+        window.removeEventListener("pointermove", acknowledgeToolbarHover);
+      };
+    }, [acknowledgeToolbarHover, suppressToolbarHover]);
 
     // ── Pills — declared after isCursorCompactRow so compact prop is available.
     // For Cursor IDE chats we substitute ORGII's ModePill with CursorModePill,
@@ -408,7 +519,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
         showContextInfo={!isCursorIde}
         editorSlot={
           <InputEditor
-            tiptapRef={tiptapRef}
+            composerInputRef={composerInputRef}
             showContextMenu={showContextMenu}
             contextMenuKeyboardHandlerRef={contextMenuKeyboardHandlerRef}
             showSlashMenu={showSlashMenu}
@@ -419,6 +530,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
             }
             onSlashCommand={handleSlashCommand}
             onSlashCommandClose={handleSlashCommandClose}
+            slashTriggerMode="command"
             onContentChange={handleContentChange}
             onAtMention={handleKeyboardAtMention}
             onAtMentionClose={handleAtMentionClose}
@@ -537,7 +649,10 @@ const InputArea: React.FC<InputAreaProps> = memo(
           {!isEditMode && (
             <div className="relative z-10 flex min-w-0 items-center gap-1 overflow-x-auto px-0.5 pb-1.5 scrollbar-hide">
               {topRowPills}
-              <PinnedActionsBar tiptapRef={tiptapRef} sessionId={sessionId} />
+              <PinnedActionsBar
+                composerInputRef={composerInputRef}
+                sessionId={sessionId}
+              />
             </div>
           )}
 
@@ -561,8 +676,9 @@ const InputArea: React.FC<InputAreaProps> = memo(
           )}
 
           <ComposerShell
-            ref={isEditMode ? editContainerRef : undefined}
+            ref={isEditMode ? editContainerRef : composerShellRef}
             data-chat-drop-target
+            data-chat-drop-target-id={dropTargetId}
             variant={
               compactShell
                 ? "pill"
@@ -594,26 +710,32 @@ const InputArea: React.FC<InputAreaProps> = memo(
               />
             )}
 
-            {/* Image Attachment Preview (new images) or edit-mode images (read-only) */}
-            {isEditMode && editImages && editImages.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {editImages.map((dataUrl, idx) => (
-                  <EditModeImageThumbnail
-                    key={idx}
-                    dataUrl={dataUrl}
-                    alt={`Attached image ${idx + 1}`}
-                  />
-                ))}
-              </div>
-            ) : isEditMode ? (
-              <ImageAttachmentPreview />
+            {/* Image Attachment Preview (new images) and edit-mode images (read-only) */}
+            {isEditMode ? (
+              <>
+                {editImages && editImages.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 px-6">
+                    {editImages.map((dataUrl, idx) => (
+                      <EditModeImageThumbnail
+                        key={idx}
+                        dataUrl={dataUrl}
+                        alt={`Attached image ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+                <ImageAttachmentPreview
+                  ownerId={dropTargetId}
+                  className="px-6 pb-0.5"
+                />
+              </>
             ) : null}
 
             {isEditMode ? (
               editComposerBar
             ) : (
               <div className="flex min-h-0 w-full flex-col">
-                <ImageAttachmentPreview />
+                <ImageAttachmentPreview ownerId={dropTargetId} />
                 <ComposerBar
                   onAddContent={handleOpenContextMenu}
                   onUpload={handleUploadClick}
@@ -626,7 +748,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
                   editorSlot={
                     <InputEditor
                       key="chat-panel-input-editor"
-                      tiptapRef={tiptapRef}
+                      composerInputRef={composerInputRef}
                       showContextMenu={showContextMenu}
                       contextMenuKeyboardHandlerRef={
                         contextMenuKeyboardHandlerRef
@@ -670,10 +792,14 @@ const InputArea: React.FC<InputAreaProps> = memo(
                     </>
                   }
                   pills={
-                    <>
+                    <div
+                      className={`inline-flex items-center ${
+                        suppressToolbarHover ? "pointer-events-none" : ""
+                      }`.trim()}
+                    >
                       {modePill}
                       {modelPill}
-                    </>
+                    </div>
                   }
                   submitButton={
                     <InputActions
@@ -693,13 +819,6 @@ const InputArea: React.FC<InputAreaProps> = memo(
               </div>
             )}
           </ComposerShell>
-
-          {/* Hidden anchor for dropdown position calculation */}
-          <div
-            ref={atDropdownRef}
-            className="absolute bottom-full left-0 mb-2"
-            style={{ pointerEvents: "none" }}
-          />
         </div>
 
         {/* Context Menu - rendered via portal to avoid clipping (lazy loaded) */}
@@ -716,13 +835,16 @@ const InputArea: React.FC<InputAreaProps> = memo(
           repoPath={currentRepoPath || undefined}
           keyboardHandlerRef={contextMenuKeyboardHandlerRef}
           treePosition={mentionTreePosition}
-          direction="up"
+          placement={isEditMode ? "down" : "prefer-up"}
+          anchorSelector="[data-editor-slot]"
         />
 
         {/* Slash Command Menu - inline "/" trigger */}
         <SlashCommandPortal
           visible={showSlashMenu}
           containerRef={containerRef}
+          anchorSelector="[data-editor-slot]"
+          placement={isEditMode ? "down" : "prefer-up"}
           items={filteredSlashItems}
           loading={slashLoading}
           currentMode={currentMode}
@@ -739,6 +861,8 @@ const InputArea: React.FC<InputAreaProps> = memo(
         <SlashCommandPortal
           visible={showPlusSlashMenu}
           containerRef={containerRef}
+          anchorSelector="[data-editor-slot]"
+          placement={isEditMode ? "down" : "prefer-up"}
           items={filteredSlashItems}
           loading={slashLoading}
           currentMode={currentMode}

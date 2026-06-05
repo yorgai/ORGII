@@ -19,3 +19,8 @@ app_paths = { path = "../app-paths" }
 rusqlite = { workspace = true }
 tracing = "0.1"
 dirs = "6.0"
+# Process-wide writer serializer. SQLite WAL allows concurrent readers but
+# only one writer at a time; we layer an in-process Mutex over the file
+# lock so concurrent writers queue in Rust instead of racing for the
+# `SQLITE_BUSY` slot — see `db::writer` for the full rationale.
+parking_lot = "0.12"

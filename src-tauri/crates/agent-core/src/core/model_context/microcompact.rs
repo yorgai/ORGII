@@ -38,7 +38,6 @@ const COMPACTABLE_TOOLS: &[&str] = &[
     tool_names::WEB_SEARCH,
     tool_names::WEB_FETCH,
     tool_names::EDIT_FILE,
-    tool_names::APPLY_PATCH,
     tool_names::AGENT,
 ];
 

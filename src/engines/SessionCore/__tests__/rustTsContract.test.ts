@@ -39,7 +39,6 @@ const RUST_CANONICAL_TOOLS = [
   "code_search",
   "edit_file",
   "delete_file",
-  "apply_patch",
   "manage_workspace",
   "query_lsp",
   "manage_lsp",

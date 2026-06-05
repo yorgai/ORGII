@@ -14,7 +14,7 @@ use crate::coordination::agent_member_interventions::{
 };
 use crate::coordination::agent_org_tasks::{AgentOrgTaskStore, Task, TaskStatus};
 use crate::definitions::orgs::{AgentOrgsStore, HierarchyMode, OrgDefinition, OrgMember};
-use database::db::get_connection;
+use database::db::{get_connection, with_sessions_writer};
 
 pub const COORDINATOR_MEMBER_ID: &str = "coordinator";
 const DEFAULT_COORDINATOR_DISPLAY_NAME: &str = "Coordinator";
@@ -400,8 +400,11 @@ impl AgentOrgRunStore {
             completed_at: None,
         };
 
-        let conn = get_connection().map_err(|err| err.to_string())?;
-        insert_run(&conn, &run).map_err(|err| err.to_string())?;
+        with_sessions_writer(|| -> Result<(), String> {
+            let conn = get_connection().map_err(|err| err.to_string())?;
+            insert_run(&conn, &run).map_err(|err| err.to_string())?;
+            Ok(())
+        })?;
         Ok(run)
     }
 
@@ -411,18 +414,20 @@ impl AgentOrgRunStore {
         let paused = validate_status(AgentOrgRunStatus::Paused.as_str())?;
         let running = validate_status(AgentOrgRunStatus::Running.as_str())?;
         let now = chrono::Utc::now().to_rfc3339();
-        let conn = get_connection().map_err(|err| err.to_string())?;
-        let rows_changed = conn
-            .execute(
-                "UPDATE agent_org_runs
-                 SET status = ?1,
-                     updated_at = ?2
-                 WHERE id = ?3
-                   AND status = ?4",
-                params![paused.as_str(), now, run_id, running.as_str()],
-            )
-            .map_err(|err| err.to_string())?;
-        Ok(rows_changed > 0)
+        with_sessions_writer(|| -> Result<bool, String> {
+            let conn = get_connection().map_err(|err| err.to_string())?;
+            let rows_changed = conn
+                .execute(
+                    "UPDATE agent_org_runs
+                     SET status = ?1,
+                         updated_at = ?2
+                     WHERE id = ?3
+                       AND status = ?4",
+                    params![paused.as_str(), now, run_id, running.as_str()],
+                )
+                .map_err(|err| err.to_string())?;
+            Ok(rows_changed > 0)
+        })
     }
 
     /// Called once at app startup to pause every org run that was `running`
@@ -439,17 +444,19 @@ impl AgentOrgRunStore {
         let paused = validate_status(AgentOrgRunStatus::Paused.as_str())?;
         let running = validate_status(AgentOrgRunStatus::Running.as_str())?;
         let now = chrono::Utc::now().to_rfc3339();
-        let conn = get_connection().map_err(|err| err.to_string())?;
-        let rows_changed = conn
-            .execute(
-                "UPDATE agent_org_runs
-                 SET status = ?1,
-                     updated_at = ?2
-                 WHERE status = ?3",
-                params![paused.as_str(), now, running.as_str()],
-            )
-            .map_err(|err| err.to_string())?;
-        Ok(rows_changed)
+        with_sessions_writer(|| -> Result<usize, String> {
+            let conn = get_connection().map_err(|err| err.to_string())?;
+            let rows_changed = conn
+                .execute(
+                    "UPDATE agent_org_runs
+                     SET status = ?1,
+                         updated_at = ?2
+                     WHERE status = ?3",
+                    params![paused.as_str(), now, running.as_str()],
+                )
+                .map_err(|err| err.to_string())?;
+            Ok(rows_changed)
+        })
     }
 
     /// Resume a paused run. Only transitions `paused → running`; already
@@ -458,35 +465,39 @@ impl AgentOrgRunStore {
         let running = validate_status(AgentOrgRunStatus::Running.as_str())?;
         let paused = validate_status(AgentOrgRunStatus::Paused.as_str())?;
         let now = chrono::Utc::now().to_rfc3339();
-        let conn = get_connection().map_err(|err| err.to_string())?;
-        let rows_changed = conn
-            .execute(
-                "UPDATE agent_org_runs
-                 SET status = ?1,
-                     updated_at = ?2
-                 WHERE id = ?3
-                   AND status = ?4",
-                params![running.as_str(), now, run_id, paused.as_str()],
-            )
-            .map_err(|err| err.to_string())?;
-        Ok(rows_changed > 0)
+        with_sessions_writer(|| -> Result<bool, String> {
+            let conn = get_connection().map_err(|err| err.to_string())?;
+            let rows_changed = conn
+                .execute(
+                    "UPDATE agent_org_runs
+                     SET status = ?1,
+                         updated_at = ?2
+                     WHERE id = ?3
+                       AND status = ?4",
+                    params![running.as_str(), now, run_id, paused.as_str()],
+                )
+                .map_err(|err| err.to_string())?;
+            Ok(rows_changed > 0)
+        })
     }
 
     pub fn mark_failed(run_id: &str, error_message: &str) -> Result<(), String> {
         let status = validate_status(AgentOrgRunStatus::Failed.as_str())?;
         let now = chrono::Utc::now().to_rfc3339();
-        let conn = get_connection().map_err(|err| err.to_string())?;
-        conn.execute(
-            "UPDATE agent_org_runs
-             SET status = ?1,
-                 last_error = ?2,
-                 updated_at = ?3,
-                 completed_at = ?3
-             WHERE id = ?4",
-            params![status.as_str(), error_message, now, run_id],
-        )
-        .map_err(|err| err.to_string())?;
-        Ok(())
+        with_sessions_writer(|| -> Result<(), String> {
+            let conn = get_connection().map_err(|err| err.to_string())?;
+            conn.execute(
+                "UPDATE agent_org_runs
+                 SET status = ?1,
+                     last_error = ?2,
+                     updated_at = ?3,
+                     completed_at = ?3
+                 WHERE id = ?4",
+                params![status.as_str(), error_message, now, run_id],
+            )
+            .map_err(|err| err.to_string())?;
+            Ok(())
+        })
     }
 
     pub fn reconcile_if_terminal(run_id: &str) -> Result<Option<AgentOrgRunStatus>, String> {
@@ -535,20 +546,24 @@ impl AgentOrgRunStore {
             AgentOrgRunStatus::Abandoned
         };
         let now = chrono::Utc::now().to_rfc3339();
-        conn.execute(
-            "UPDATE agent_org_runs
-             SET status = ?1,
-                 updated_at = ?2,
-                 completed_at = ?2
-             WHERE id = ?3 AND status = ?4",
-            params![
-                next_status.as_str(),
-                now,
-                run_id,
-                AgentOrgRunStatus::Running.as_str(),
-            ],
-        )
-        .map_err(|err| err.to_string())?;
+        with_sessions_writer(|| -> Result<(), String> {
+            let conn = get_connection().map_err(|err| err.to_string())?;
+            conn.execute(
+                "UPDATE agent_org_runs
+                 SET status = ?1,
+                     updated_at = ?2,
+                     completed_at = ?2
+                 WHERE id = ?3 AND status = ?4",
+                params![
+                    next_status.as_str(),
+                    now,
+                    run_id,
+                    AgentOrgRunStatus::Running.as_str(),
+                ],
+            )
+            .map_err(|err| err.to_string())?;
+            Ok(())
+        })?;
         Ok(Some(next_status))
     }
 
@@ -702,10 +717,12 @@ impl AgentOrgRunStore {
     }
 
     pub fn delete_by_id(run_id: &str) -> Result<(), String> {
-        let conn = get_connection().map_err(|err| err.to_string())?;
-        conn.execute("DELETE FROM agent_org_runs WHERE id = ?1", params![run_id])
-            .map_err(|err| err.to_string())?;
-        Ok(())
+        with_sessions_writer(|| -> Result<(), String> {
+            let conn = get_connection().map_err(|err| err.to_string())?;
+            conn.execute("DELETE FROM agent_org_runs WHERE id = ?1", params![run_id])
+                .map_err(|err| err.to_string())?;
+            Ok(())
+        })
     }
 
     /// Find the freshest materialized worker session for a canonical roster

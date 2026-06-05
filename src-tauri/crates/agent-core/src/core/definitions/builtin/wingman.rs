@@ -5,7 +5,7 @@
 //! the bundled Peekaboo desktop CLI, run shell commands, and delegate
 //! to subagents when the user asks.
 //!
-//! Coding tools (edit_file, apply_patch, LSP) are intentionally OFF by
+//! Coding tools (edit_file, LSP) are intentionally OFF by
 //! default — Wingman is a desktop co-pilot, not a code editor. Users
 //! who want it to edit files can opt in via the Tools tab.
 //!
@@ -38,7 +38,7 @@ pub const WINGMAN_AGENT_ID: &str = "builtin:wingman";
 ///   high-risk commands are still blocked by SecurityPolicy)
 /// - Workspace-only file access
 ///
-/// Coding tools (edit_file, apply_patch, LSP) are NOT in the default
+/// Coding tools (edit_file, LSP) are NOT in the default
 /// allow-list. Wingman is a desktop co-pilot, not a code editor; users
 /// who want it to mutate files can add the tools from the Tools tab.
 pub fn wingman_agent() -> AgentDefinition {
@@ -129,7 +129,6 @@ mod tests {
 
         for forbidden in [
             tool_names::EDIT_FILE,
-            tool_names::APPLY_PATCH,
             tool_names::DELETE_FILE,
             tool_names::QUERY_LSP,
             tool_names::MANAGE_LSP,

@@ -429,6 +429,12 @@ pub async fn test_agent_org_launch_coordinator(
                             Some(&handle),
                             Some(sync_workspace_path.as_path()),
                             true,
+                            Some(agent_core::lifecycle::TerminalTurnSignal {
+                                turn_id: response.turn_id.clone(),
+                                status: agent_core::lifecycle::TurnTerminalStatus::Completed,
+                                completed_at: chrono::Utc::now()
+                                    .to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                            }),
                         )
                         .await;
                         sync_response = Some(serde_json::json!({
@@ -448,6 +454,7 @@ pub async fn test_agent_org_launch_coordinator(
                             Some(&handle),
                             Some(sync_workspace_path.as_path()),
                             true,
+                            None,
                         )
                         .await;
                         return Json(serde_json::json!({
@@ -472,6 +479,7 @@ pub async fn test_agent_org_launch_coordinator(
                             Some(&handle),
                             Some(sync_workspace_path.as_path()),
                             true,
+                            None,
                         )
                         .await;
                         return Json(serde_json::json!({

@@ -119,14 +119,14 @@ export const SelectorPill = forwardRef<HTMLButtonElement, SelectorPillProps>(
     ref
   ) => {
     const labelColor = danger
-      ? "text-warning-6"
+      ? "text-primary-6"
       : active
         ? "text-primary-6"
         : "text-text-1";
     const iconSize = ICON_SIZES[size];
-    const iconColor = danger ? "text-warning-6" : "text-text-1";
+    const iconColor = danger ? "text-primary-6" : "text-text-1";
     const chevronColor = danger
-      ? "text-warning-6"
+      ? "text-primary-6"
       : active
         ? "text-primary-6"
         : "text-text-1";

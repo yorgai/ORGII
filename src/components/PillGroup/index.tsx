@@ -172,12 +172,12 @@ const PillGroup: React.FC<PillGroupProps> = memo(
           const isActive = !!segment.active;
           const isPillStyled = isHovered || isActive;
           const labelColor = segment.danger
-            ? "text-warning-6"
+            ? "text-primary-6"
             : isActive
               ? "text-primary-6"
               : "text-text-1";
           const chevronColor = segment.danger
-            ? "text-warning-6"
+            ? "text-primary-6"
             : isActive
               ? "text-primary-6"
               : "text-text-1";

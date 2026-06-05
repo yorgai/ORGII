@@ -191,9 +191,8 @@ pub async fn sync_connection_oauth_start(
         StartOauthOptions::default(),
     )
     .await
-    .map_err(|err| {
+    .inspect_err(|_err| {
         let _ = connection_store::delete(&connection.id);
-        err
     })?
     .public;
 

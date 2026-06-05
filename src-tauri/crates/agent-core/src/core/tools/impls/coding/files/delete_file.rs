@@ -64,7 +64,7 @@ impl Tool for DeleteFileTool {
             .map(|path| path.display().to_string())
             .unwrap_or_else(|| "(unrestricted)".to_string());
         Some(format!(
-            "Delete a single file in {workspace}. Refuses to delete directories. Use apply_patch for coordinated multi-file patch workflows."
+            "Delete a single file in {workspace}. Refuses to delete directories."
         ))
     }
 

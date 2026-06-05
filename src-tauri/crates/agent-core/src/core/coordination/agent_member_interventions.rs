@@ -7,7 +7,7 @@
 use rusqlite::{params, Connection, OptionalExtension, Result as SqliteResult};
 use serde::Serialize;
 
-use database::db::get_connection;
+use database::db::{get_connection, with_sessions_writer};
 
 pub const DEFAULT_INTERVENTION_TTL_SECS: i64 = 180;
 
@@ -85,7 +85,6 @@ impl AgentMemberInterventionStore {
     pub fn enter(
         params: EnterMemberInterventionParams,
     ) -> Result<AgentMemberInterventionRecord, String> {
-        let conn = get_connection().map_err(|err| err.to_string())?;
         let now = chrono::Utc::now();
         let now_text = now.to_rfc3339();
         let ttl_secs = if params.ttl_secs > 0 {
@@ -96,8 +95,10 @@ impl AgentMemberInterventionStore {
         let resume_after = (now + chrono::Duration::seconds(ttl_secs)).to_rfc3339();
         let status = MemberInterventionStatus::UserIntervention;
 
-        conn.execute(
-            "INSERT INTO agent_member_interventions (
+        with_sessions_writer(|| -> Result<(), String> {
+            let conn = get_connection().map_err(|err| err.to_string())?;
+            conn.execute(
+                "INSERT INTO agent_member_interventions (
                 org_run_id,
                 member_id,
                 agent_id,
@@ -117,19 +118,21 @@ impl AgentMemberInterventionStore {
                 last_user_activity_at = excluded.last_user_activity_at,
                 resume_after = excluded.resume_after,
                 cleared_at = NULL",
-            params![
-                params.org_run_id,
-                params.member_id,
-                params.agent_id,
-                params.session_id,
-                status.as_str(),
-                params.reason.as_deref(),
-                now_text,
-                now_text,
-                resume_after,
-            ],
-        )
-        .map_err(|err| err.to_string())?;
+                params![
+                    params.org_run_id,
+                    params.member_id,
+                    params.agent_id,
+                    params.session_id,
+                    status.as_str(),
+                    params.reason.as_deref(),
+                    now_text,
+                    now_text,
+                    resume_after,
+                ],
+            )
+            .map_err(|err| err.to_string())?;
+            Ok(())
+        })?;
 
         Self::get(&params.org_run_id, &params.member_id)?.ok_or_else(|| {
             format!(
@@ -140,17 +143,19 @@ impl AgentMemberInterventionStore {
     }
 
     pub fn clear(org_run_id: &str, member_id: &str) -> Result<bool, String> {
-        let conn = get_connection().map_err(|err| err.to_string())?;
         let now = chrono::Utc::now().to_rfc3339();
-        let updated = conn
-            .execute(
-                "UPDATE agent_member_interventions
-                 SET cleared_at = ?3
-                 WHERE org_run_id = ?1 AND member_id = ?2 AND cleared_at IS NULL",
-                params![org_run_id, member_id, now],
-            )
-            .map_err(|err| err.to_string())?;
-        Ok(updated > 0)
+        with_sessions_writer(|| -> Result<bool, String> {
+            let conn = get_connection().map_err(|err| err.to_string())?;
+            let updated = conn
+                .execute(
+                    "UPDATE agent_member_interventions
+                     SET cleared_at = ?3
+                     WHERE org_run_id = ?1 AND member_id = ?2 AND cleared_at IS NULL",
+                    params![org_run_id, member_id, now],
+                )
+                .map_err(|err| err.to_string())?;
+            Ok(updated > 0)
+        })
     }
 
     pub fn get(
@@ -203,17 +208,19 @@ impl AgentMemberInterventionStore {
     ///
     /// Returns the number of records cleared.
     pub fn clear_all_active_on_startup() -> Result<usize, String> {
-        let conn = get_connection().map_err(|err| err.to_string())?;
         let now = chrono::Utc::now().to_rfc3339();
-        let updated = conn
-            .execute(
-                "UPDATE agent_member_interventions
-                 SET cleared_at = ?1
-                 WHERE cleared_at IS NULL",
-                params![now],
-            )
-            .map_err(|err| err.to_string())?;
-        Ok(updated)
+        with_sessions_writer(|| -> Result<usize, String> {
+            let conn = get_connection().map_err(|err| err.to_string())?;
+            let updated = conn
+                .execute(
+                    "UPDATE agent_member_interventions
+                     SET cleared_at = ?1
+                     WHERE cleared_at IS NULL",
+                    params![now],
+                )
+                .map_err(|err| err.to_string())?;
+            Ok(updated)
+        })
     }
 
     pub fn list_active(org_run_id: &str) -> Result<Vec<AgentMemberInterventionRecord>, String> {

@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 pub enum AppSubtool {
     /// File read operations (read_file)
     FileRead,
-    /// File write/edit/delete operations (edit_file, delete_file, apply_patch).
+    /// File write/edit/delete operations (edit_file, delete_file, historical apply_patch events).
     /// The `file_write` subtool also covers CLI-agent-emitted delete aliases
     /// routed via the CLI alias map exposed by `init_tool_registry`.
     FileWrite,
@@ -94,7 +94,7 @@ impl AppSubtool {
 pub enum ChatBlock {
     /// ReadFileBlock — read_file (text/image/pdf)
     ReadFile,
-    /// DiffBlock — edit_file, delete_file, apply_patch, and CLI-agent delete aliases.
+    /// DiffBlock — edit_file, delete_file, historical apply_patch, and CLI-agent delete aliases.
     Diff,
     /// ShellBlock — run_shell, await_output, git/shell passthroughs
     Shell,

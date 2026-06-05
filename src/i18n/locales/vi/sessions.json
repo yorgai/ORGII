@@ -736,7 +736,7 @@
     "historyRefresh": "Làm mới",
     "historyLastUsedModel": "Model lần cuối dùng",
     "historyUntitled": "Phiên không có tên",
-    "pinSession": "Ghim lên đầu",
+    "pinSession": "Ghim",
     "unpinSession": "Bỏ ghim",
     "addTag": "Thêm thẻ...",
     "addTagPrompt": "Add tag (e.g. review, infra):",

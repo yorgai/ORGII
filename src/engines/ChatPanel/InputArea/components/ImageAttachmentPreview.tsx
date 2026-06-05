@@ -83,26 +83,40 @@ ImageThumbnail.displayName = "ImageThumbnail";
 // Main Component
 // ============================================
 
-const ImageAttachmentPreview: React.FC = memo(() => {
-  const [images, setImages] = useAtom(chatImageAttachmentsAtom);
+interface ImageAttachmentPreviewProps {
+  ownerId?: string;
+  className?: string;
+}
 
-  const handleRemove = useCallback(
-    (id: string) => {
-      setImages((prev) => prev.filter((img) => img.id !== id));
-    },
-    [setImages]
-  );
+const ImageAttachmentPreview: React.FC<ImageAttachmentPreviewProps> = memo(
+  ({ ownerId, className = "px-3 pb-0.5" }) => {
+    const [images, setImages] = useAtom(chatImageAttachmentsAtom);
+    const visibleImages = ownerId
+      ? images.filter((image) => image.ownerId === ownerId)
+      : images;
 
-  if (images.length === 0) return null;
+    const handleRemove = useCallback(
+      (id: string) => {
+        setImages((prev) => prev.filter((img) => img.id !== id));
+      },
+      [setImages]
+    );
 
-  return (
-    <div className="flex flex-wrap gap-1.5 px-3 pb-0.5">
-      {images.map((image) => (
-        <ImageThumbnail key={image.id} image={image} onRemove={handleRemove} />
-      ))}
-    </div>
-  );
-});
+    if (visibleImages.length === 0) return null;
+
+    return (
+      <div className={`flex flex-wrap gap-1.5 ${className}`}>
+        {visibleImages.map((image) => (
+          <ImageThumbnail
+            key={image.id}
+            image={image}
+            onRemove={handleRemove}
+          />
+        ))}
+      </div>
+    );
+  }
+);
 
 ImageAttachmentPreview.displayName = "ImageAttachmentPreview";
 

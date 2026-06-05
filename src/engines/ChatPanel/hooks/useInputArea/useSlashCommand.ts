@@ -8,7 +8,7 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { type RefObject, useCallback, useRef } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { buildMcpToolCommand } from "@src/engines/ChatPanel/InputArea/components/SlashCommandPortal/slashItemUtils";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session/useSessionId";
@@ -21,7 +21,7 @@ import { useSlashItemsCache } from "./useSlashItemsCache";
 const BUILTIN_SLASH_ITEMS: SlashItem[] = [];
 
 interface UseSlashCommandOptions {
-  tiptapRef: RefObject<TiptapInputRef>;
+  composerInputRef: RefObject<ComposerInputRef>;
   setShowSlashMenu: (show: boolean) => void;
   setSlashQuery: (query: string) => void;
   /**
@@ -55,7 +55,7 @@ export function useSlashCommand(
   options: UseSlashCommandOptions
 ): SlashCommandHandlers {
   const {
-    tiptapRef,
+    composerInputRef,
     setShowSlashMenu,
     setSlashQuery,
     creatorDefaultMode: forceCreatorDefault = false,
@@ -124,7 +124,7 @@ export function useSlashCommand(
 
   const handleSlashSelect = useCallback(
     (item: SlashItem) => {
-      if (!tiptapRef.current) return;
+      if (!composerInputRef.current) return;
 
       if (item.category === "skill") {
         // filePath is stored as "/<skillName>" so serializePillNode produces
@@ -135,24 +135,24 @@ export function useSlashCommand(
         // clear first then insert. Otherwise append the pill after existing
         // content so the user's prior text is preserved.
         const hasUserContent =
-          !tiptapRef.current.isEmpty() && queryRef.current.length === 0;
+          !composerInputRef.current.isEmpty() && queryRef.current.length === 0;
         if (hasUserContent) {
-          tiptapRef.current.appendFilePill(
+          composerInputRef.current.appendFilePill(
             skillToken,
             false,
             "skill",
             item.name
           );
         } else {
-          tiptapRef.current.clear();
-          tiptapRef.current.insertFilePill(
+          composerInputRef.current.clear();
+          composerInputRef.current.insertFilePill(
             skillToken,
             false,
             "skill",
             item.name
           );
         }
-        tiptapRef.current.focus();
+        composerInputRef.current.focus();
         setShowSlashMenu(false);
         setSlashQuery("");
         queryRef.current = "";
@@ -160,24 +160,24 @@ export function useSlashCommand(
       }
 
       if (item.category === "tool" && item.serverName) {
-        tiptapRef.current.setContent(
+        composerInputRef.current.setContent(
           buildMcpToolCommand(item.serverName, item.name)
         );
-        tiptapRef.current.focus();
+        composerInputRef.current.focus();
         setShowSlashMenu(false);
         setSlashQuery("");
         queryRef.current = "";
         return;
       }
 
-      tiptapRef.current.setContent(`/${item.name} `);
-      tiptapRef.current.focus();
+      composerInputRef.current.setContent(`/${item.name} `);
+      composerInputRef.current.focus();
 
       setShowSlashMenu(false);
       setSlashQuery("");
       queryRef.current = "";
     },
-    [tiptapRef, setShowSlashMenu, setSlashQuery]
+    [composerInputRef, setShowSlashMenu, setSlashQuery]
   );
 
   const handleModeSelect = useCallback(
@@ -186,11 +186,11 @@ export function useSlashCommand(
       setShowSlashMenu(false);
       setSlashQuery("");
       queryRef.current = "";
-      if (tiptapRef.current) {
-        tiptapRef.current.clear();
+      if (composerInputRef.current) {
+        composerInputRef.current.clear();
       }
     },
-    [setMode, setShowSlashMenu, setSlashQuery, tiptapRef]
+    [setMode, setShowSlashMenu, setSlashQuery, composerInputRef]
   );
 
   return {

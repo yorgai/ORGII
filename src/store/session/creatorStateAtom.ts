@@ -11,6 +11,7 @@ import { atomWithStorage } from "jotai/utils";
 
 import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
 import type { DispatchCategory } from "@src/api/tauri/session";
+import { BUILTIN_SDE_DEF_ID } from "@src/util/session/sessionDispatch";
 
 // ============================================
 // Type Definitions
@@ -96,10 +97,10 @@ const DEFAULT_STATE: SessionCreatorState = {
   dispatchCategory: "rust_agent",
   targetKind: SESSION_TARGET_KIND.AGENT,
   source: null,
-  selectedAgentDefinitionId: null,
+  selectedAgentDefinitionId: BUILTIN_SDE_DEF_ID,
   selectedAgentOrgId: null,
-  agentName: null,
-  agentIconId: null,
+  agentName: "SDE Agent",
+  agentIconId: "code",
   cliAgentType: null,
 };
 
@@ -119,8 +120,22 @@ export const sessionCreatorStateAtom = atomWithStorage<SessionCreatorState>(
       try {
         const item = localStorage.getItem(key);
         if (!item) return initialValue;
-        const parsed = JSON.parse(item);
-        return { ...initialValue, ...parsed };
+        const parsed = JSON.parse(item) as Partial<SessionCreatorState>;
+        const nextState = { ...initialValue, ...parsed };
+        if (
+          nextState.dispatchCategory === "rust_agent" &&
+          nextState.targetKind === SESSION_TARGET_KIND.AGENT &&
+          !nextState.selectedAgentDefinitionId &&
+          !nextState.selectedAgentOrgId
+        ) {
+          return {
+            ...nextState,
+            selectedAgentDefinitionId: BUILTIN_SDE_DEF_ID,
+            agentName: initialValue.agentName,
+            agentIconId: initialValue.agentIconId,
+          };
+        }
+        return nextState;
       } catch (error) {
         console.warn("[SessionCreatorState] Failed to load state:", error);
         return initialValue;

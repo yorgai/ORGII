@@ -157,7 +157,7 @@ export const SessionAggregateRecordSchema = z.object({
   // Rust side without a coordinated frontend release.
   agentExecMode: z.string().optional(),
   // Per-session unsent draft text (P3). The chat composer mirrors this
-  // into Tiptap on session activation. Cleared on send. Persisted via
+  // into ComposerInput on session activation. Cleared on send. Persisted via
   // debounced `session_patch` calls — see `useSessionDraftField`.
   draftText: z.string().optional(),
   // Per-session reply target event id (P3). Set when the user clicks

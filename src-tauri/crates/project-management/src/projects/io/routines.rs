@@ -214,12 +214,10 @@ pub fn create_routine_fire(routine_id: &str) -> Result<RoutineFire, String> {
     let fire = insert_routine_fire_in_transaction(
         &transaction,
         routine_id,
-        RoutineFireStatus::Pending,
-        None,
-        None,
-        None,
-        None,
-        None,
+        RoutineFireInsert {
+            status: RoutineFireStatus::Pending,
+            ..Default::default()
+        },
     )?;
     map_db(transaction.commit())?;
     Ok(fire)
@@ -237,56 +235,52 @@ pub fn create_routine_fire_for_policy(
         None => insert_routine_fire_in_transaction(
             &transaction,
             routine_id,
-            RoutineFireStatus::Pending,
-            None,
-            None,
-            None,
-            None,
-            None,
+            RoutineFireInsert {
+                status: RoutineFireStatus::Pending,
+                ..Default::default()
+            },
         )?,
         Some(active_fire) => match policy.concurrency_policy {
             RoutineConcurrencyPolicy::CoalesceIfActive => insert_routine_fire_in_transaction(
                 &transaction,
                 routine_id,
-                RoutineFireStatus::Coalesced,
-                None,
-                Some(active_fire.id),
-                None,
-                Some("Coalesced into active routine fire".to_string()),
-                Some(now_ms()),
+                RoutineFireInsert {
+                    status: RoutineFireStatus::Coalesced,
+                    coalesced_into_fire_id: Some(active_fire.id),
+                    error: Some("Coalesced into active routine fire".to_string()),
+                    completed_at_ms: Some(now_ms()),
+                    ..Default::default()
+                },
             )?,
             RoutineConcurrencyPolicy::SkipIfActive => insert_routine_fire_in_transaction(
                 &transaction,
                 routine_id,
-                RoutineFireStatus::Skipped,
-                None,
-                None,
-                None,
-                Some(format!(
-                    "Skipped because routine has active fire {}",
-                    active_fire.id
-                )),
-                Some(now_ms()),
+                RoutineFireInsert {
+                    status: RoutineFireStatus::Skipped,
+                    error: Some(format!(
+                        "Skipped because routine has active fire {}",
+                        active_fire.id
+                    )),
+                    completed_at_ms: Some(now_ms()),
+                    ..Default::default()
+                },
             )?,
             RoutineConcurrencyPolicy::QueueIfActive => insert_routine_fire_in_transaction(
                 &transaction,
                 routine_id,
-                RoutineFireStatus::Queued,
-                None,
-                None,
-                None,
-                Some(format!("Queued behind active fire {}", active_fire.id)),
-                None,
+                RoutineFireInsert {
+                    status: RoutineFireStatus::Queued,
+                    error: Some(format!("Queued behind active fire {}", active_fire.id)),
+                    ..Default::default()
+                },
             )?,
             RoutineConcurrencyPolicy::AlwaysCreate => insert_routine_fire_in_transaction(
                 &transaction,
                 routine_id,
-                RoutineFireStatus::Pending,
-                None,
-                None,
-                None,
-                None,
-                None,
+                RoutineFireInsert {
+                    status: RoutineFireStatus::Pending,
+                    ..Default::default()
+                },
             )?,
         },
     };
@@ -315,30 +309,47 @@ fn find_active_routine_fire_in_transaction(
     )
 }
 
-fn insert_routine_fire_in_transaction(
-    transaction: &rusqlite::Transaction<'_>,
-    routine_id: &str,
+struct RoutineFireInsert {
     status: RoutineFireStatus,
     session_id: Option<String>,
     coalesced_into_fire_id: Option<String>,
     idempotency_key: Option<String>,
     error: Option<String>,
     completed_at_ms: Option<i64>,
+}
+
+impl Default for RoutineFireInsert {
+    fn default() -> Self {
+        Self {
+            status: RoutineFireStatus::Pending,
+            session_id: None,
+            coalesced_into_fire_id: None,
+            idempotency_key: None,
+            error: None,
+            completed_at_ms: None,
+        }
+    }
+}
+
+fn insert_routine_fire_in_transaction(
+    transaction: &rusqlite::Transaction<'_>,
+    routine_id: &str,
+    input: RoutineFireInsert,
 ) -> Result<RoutineFire, String> {
     let now = now_ms();
     let fire = RoutineFire {
         id: timestamp_id("routine-fire"),
         routine_id: routine_id.to_string(),
         fired_at: to_iso8601(now),
-        status,
-        session_id,
+        status: input.status,
+        session_id: input.session_id,
         agent_org_run_id: None,
         work_item_id: None,
-        coalesced_into_fire_id,
-        idempotency_key,
+        coalesced_into_fire_id: input.coalesced_into_fire_id,
+        idempotency_key: input.idempotency_key,
         started_at: None,
-        completed_at: completed_at_ms.map(to_iso8601),
-        error,
+        completed_at: input.completed_at_ms.map(to_iso8601),
+        error: input.error,
     };
     map_db(transaction.execute(
         "INSERT INTO routine_fires (

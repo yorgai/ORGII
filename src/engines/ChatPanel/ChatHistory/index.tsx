@@ -32,7 +32,10 @@ import {
 } from "@src/hooks/perf/runtimeMemoryStats";
 import { isSessionActiveAtom } from "@src/store/session/cliSessionStatusAtom";
 import { cursorIdeTurnSummariesAtomFamily } from "@src/store/session/cursorIdeTurnSummariesAtom";
-import { turnCollapseOverrideAtom } from "@src/store/ui/collapseStateAtom";
+import {
+  collapseAllCommandAtom,
+  turnCollapseOverrideAtom,
+} from "@src/store/ui/collapseStateAtom";
 import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
 import SessionHeader from "../ChatItems/SessionHeader";
@@ -248,6 +251,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
   const isAgentWorking = useAtomValue(isSessionActiveAtom);
   const [tailIdleReadyKey, setTailIdleReadyKey] = useState<string | null>(null);
   const turnCollapseOverrides = useAtomValue(turnCollapseOverrideAtom);
+  const collapseAllCommand = useAtomValue(collapseAllCommandAtom);
 
   // --- Optimization ---
   const { optimizedChatHistory, sessionInfo } =
@@ -344,6 +348,10 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     isAgentWorking,
     collapseTailWhenIdle,
     forceCollapseAllTurns,
+    allTurnsCollapsed:
+      collapseAllCommand.epoch > 0 && collapseAllCommand.collapsed
+        ? true
+        : undefined,
     isTurnBoundaryItem,
     isTurnHeaderItem,
   });
@@ -515,6 +523,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
       turnCollapseInteractionAtRef,
       isContentOverflowingRef,
       activeSessionId: activeId,
+      staticScrollerRef,
     });
 
   // Subagent panes pass `disableTailCollapse` because every paginated page

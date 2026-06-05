@@ -12,7 +12,7 @@ import type { ComposerPillAttrs, PillIconType } from "./types";
 export const PILL_DATA_ATTR = "data-composer-pill";
 /**
  * Max age (ms) for cached terminal copy metadata. Mirrors the value
- * `TiptapInput/utils.ts` used so any in-flight `window.__orgiiLastTerminalCopy`
+ * `ComposerInput/utils.ts` used so any in-flight `window.__orgiiLastTerminalCopy`
  * payload is interpreted with the same window.
  */
 export const TERMINAL_COPY_MAX_AGE = 30_000;
@@ -20,7 +20,7 @@ export const TERMINAL_COPY_MAX_AGE = 30_000;
 /**
  * Strip characters that show up as "tofu" boxes on certain macOS keyboard
  * layouts and via remote-input layers (private-use codepoints, zero-width
- * marks, control chars). Identical to the policy `TiptapInput` used.
+ * marks, control chars). Identical to the policy `ComposerInput` used.
  */
 export function sanitizeText(value: string): string {
   return (
@@ -189,7 +189,7 @@ export function extractTextWithPills(root: HTMLElement): string {
 /**
  * Collect terminal/session/browser pill texts (the ones that have a backing
  * entry in `pillTokens` storage). Mirrors `collectContextPillTexts` from the
- * Tiptap implementation so `inputPreparation` can attach terminal blocks
+ * ComposerInput implementation so `inputPreparation` can attach terminal blocks
  * to the agent prompt without changing.
  */
 export function collectContextPillTextsFromDom(

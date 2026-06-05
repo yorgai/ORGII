@@ -12,9 +12,12 @@ import { useCallback, useMemo } from "react";
 import { simulatorEventsAtom } from "@src/engines/SessionCore/derived/simulatorEvents";
 import type { SimulatorAppConfig } from "@src/engines/Simulator/apps/core/types";
 import { useSimulatorAppState } from "@src/engines/Simulator/apps/core/useSimulatorAppState";
-import { buildConsolidatedSessionReplayDiffSectionItems } from "@src/modules/WorkStation/shared";
+import {
+  buildConsolidatedSessionReplayDiffSectionItems,
+  buildSessionReplayDiffSectionItems,
+} from "@src/modules/WorkStation/shared";
 
-import { DIFF_APP_CONFIG } from "./config";
+import { DIFF_APP_CONFIG, isCodeFilePath } from "./config";
 import type { DiffEntry, DiffFilter, SimulatorDiffState } from "./types";
 
 export interface UseDiffOptions {
@@ -43,10 +46,19 @@ export interface UseDiffReturn {
   selectEntry: (entryId: string) => void;
 }
 
+function entryMatchesFilter(entry: DiffEntry, filter: DiffFilter): boolean {
+  if (filter === "all") return true;
+  const sections = buildSessionReplayDiffSectionItems(entry);
+  const isCode =
+    sections.length > 0
+      ? sections.some((section) => isCodeFilePath(section.file.path))
+      : entry.isCode;
+  return filter === "code" ? isCode : !isCode;
+}
+
 function applyFilter(entries: DiffEntry[], filter: DiffFilter): DiffEntry[] {
   if (filter === "all") return entries;
-  if (filter === "code") return entries.filter((entry) => entry.isCode);
-  return entries.filter((entry) => !entry.isCode);
+  return entries.filter((entry) => entryMatchesFilter(entry, filter));
 }
 
 export function useDiff({ filter }: UseDiffOptions): UseDiffReturn {
@@ -62,8 +74,12 @@ export function useDiff({ filter }: UseDiffOptions): UseDiffReturn {
   const entries = useMemo(() => state.entries ?? [], [state.entries]);
 
   const counts = useMemo<DiffCounts>(() => {
-    const codeEntries = entries.filter((entry) => entry.isCode);
-    const otherEntries = entries.filter((entry) => !entry.isCode);
+    const codeEntries = entries.filter((entry) =>
+      entryMatchesFilter(entry, "code")
+    );
+    const otherEntries = entries.filter((entry) =>
+      entryMatchesFilter(entry, "other")
+    );
     return {
       all: buildConsolidatedSessionReplayDiffSectionItems(entries).length,
       code: buildConsolidatedSessionReplayDiffSectionItems(codeEntries).length,

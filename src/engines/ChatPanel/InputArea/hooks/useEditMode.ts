@@ -2,8 +2,8 @@
  * useEditMode Hook
  *
  * Encapsulates edit mode logic for InputArea:
- * - Initial content injection with retry (waits for TipTap init)
- * - Parses serialized pill format back into TipTap filePill nodes
+ * - Initial content injection with retry (waits for ComposerInput init)
+ * - Parses serialized pill format back into ComposerInput filePill nodes
  * - Submit and cancel handlers
  * - Click-outside-to-close behavior
  * - Escape key handler
@@ -26,11 +26,13 @@ interface UseEditModeOptions {
   /** Initial text to pre-fill */
   initialContent?: string;
   /** Callback when edit is submitted */
-  onEditSubmit?: (text: string) => void;
+  onEditSubmit?: (text: string, imageDataUrls?: string[]) => void;
+  /** Images newly attached while editing */
+  attachedImageDataUrls?: string[];
   /** Callback when edit is cancelled */
   onEditCancel?: () => void;
-  /** Ref to the TipTap editor handle */
-  tiptapRef: React.RefObject<{
+  /** Ref to the ComposerInput editor handle */
+  composerInputRef: React.RefObject<{
     getEditor: () => unknown | null;
     setContent: (content: string | ComposerSnapshot) => void;
     getText: () => string;
@@ -53,8 +55,9 @@ export function useEditMode({
   isEditMode,
   initialContent,
   onEditSubmit,
+  attachedImageDataUrls = [],
   onEditCancel,
-  tiptapRef,
+  composerInputRef,
 }: UseEditModeOptions): UseEditModeReturn {
   const editContainerRef = useRef<HTMLDivElement>(null);
   const savedDraftRef = useRef<string | null>(null);
@@ -63,7 +66,7 @@ export function useEditMode({
   useEffect(() => {
     if (!isEditMode) return;
 
-    const editor = tiptapRef.current;
+    const editor = composerInputRef.current;
     const currentText = editor?.getTextWithPills()?.trim() ?? "";
     savedDraftRef.current = currentText || null;
 
@@ -77,9 +80,9 @@ export function useEditMode({
         editor.setContent("");
       }
     };
-  }, [isEditMode, tiptapRef]);
+  }, [isEditMode, composerInputRef]);
 
-  // Set initial content with retry (TipTap may not be ready immediately)
+  // Set initial content with retry (ComposerInput may not be ready immediately)
   useEffect(() => {
     if (!effectiveEditMode || !initialContent) return;
 
@@ -92,14 +95,14 @@ export function useEditMode({
       if (cancelled || attempts >= MAX_ATTEMPTS) return;
       attempts++;
 
-      if (!tiptapRef.current?.getEditor()) {
+      if (!composerInputRef.current?.getEditor()) {
         setTimeout(trySetContent, RETRY_INTERVAL_MS);
         return;
       }
 
-      applyParsedContent(tiptapRef.current, initialContent);
+      applyParsedContent(composerInputRef.current, initialContent);
       if (isEditMode) {
-        setTimeout(() => tiptapRef.current?.focus(), 50);
+        setTimeout(() => composerInputRef.current?.focus(), 50);
       }
     };
 
@@ -108,18 +111,21 @@ export function useEditMode({
     return () => {
       cancelled = true;
     };
-  }, [effectiveEditMode, isEditMode, initialContent, tiptapRef]);
+  }, [effectiveEditMode, isEditMode, initialContent, composerInputRef]);
 
   // Handle edit mode submit
   const handleEditSubmit = useCallback(() => {
-    if (tiptapRef.current && onEditSubmit) {
+    if (composerInputRef.current && onEditSubmit) {
       // Use getTextWithPills to preserve pill serialization format
-      const text = tiptapRef.current.getTextWithPills().trim();
+      const text = composerInputRef.current.getTextWithPills().trim();
       if (text) {
-        onEditSubmit(text);
+        onEditSubmit(
+          text,
+          attachedImageDataUrls.length > 0 ? attachedImageDataUrls : undefined
+        );
       }
     }
-  }, [onEditSubmit, tiptapRef]);
+  }, [attachedImageDataUrls, onEditSubmit, composerInputRef]);
 
   // Handle edit mode cancel (Escape key)
   const handleEditKeyDown = useCallback(

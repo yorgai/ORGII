@@ -32,7 +32,6 @@ interface WorkItemsListSurfaceProps {
   ) => void;
   onDeleteWorkItem?: (workItemId: string) => void;
   onRestoreWorkItem?: (workItemId: string) => void;
-  onAddProject?: () => void;
   onAddListItem?: (status: WorkItemStatus) => void | Promise<void>;
   detailContent?: ReactNode;
   propertiesPanel?: ReactNode;
@@ -71,7 +70,6 @@ const WorkItemsListSurface: FC<WorkItemsListSurfaceProps> = ({
   onUpdateWorkItem,
   onDeleteWorkItem,
   onRestoreWorkItem,
-  onAddProject,
   onAddListItem,
   detailContent,
   propertiesPanel,
@@ -103,7 +101,6 @@ const WorkItemsListSurface: FC<WorkItemsListSurfaceProps> = ({
       onUpdateWorkItem={onUpdateWorkItem}
       onDeleteWorkItem={onDeleteWorkItem}
       onRestoreWorkItem={onRestoreWorkItem}
-      onAddProject={onAddProject}
       onAddListItem={onAddListItem}
       emptyListPlaceholder={emptyListPlaceholder}
       noResultsPlaceholder={noResultsPlaceholder}

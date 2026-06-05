@@ -247,7 +247,6 @@ fn with_extra_layer_applies_plan_mode_deny_delta() {
     let planned = base.with_extra_layer(layer);
 
     assert_eq!(planned.verdict("edit_file"), ToolVerdict::Deny);
-    assert_eq!(planned.verdict("apply_patch"), ToolVerdict::Deny);
     assert_eq!(planned.verdict("run_shell"), ToolVerdict::Deny);
     assert_eq!(planned.verdict("read_file"), ToolVerdict::Allow);
     assert_eq!(planned.verdict("create_plan"), ToolVerdict::Allow);

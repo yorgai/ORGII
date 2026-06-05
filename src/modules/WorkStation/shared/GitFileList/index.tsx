@@ -441,7 +441,7 @@ const GitFileList: React.FC<GitFileListProps> = ({
   // Section header actions
   const sectionActions = useMemo(
     () => (
-      <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover/header:opacity-100">
+      <div className="flex items-center gap-0.5 opacity-0 group-hover/header:opacity-100">
         {showFilterToggle && (
           <button
             className={`${HEADER_BUTTON.actionTreeRow} ${showFilter ? "text-primary-6" : ""}`}

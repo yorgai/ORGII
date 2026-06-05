@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 
 import type { ModelType } from "@src/api/tauri/rpc/schemas/validation";
 import Button from "@src/components/Button";
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import Message from "@src/components/Message";
 import ModelIcon from "@src/components/ModelIcon";
 import PillGroup, { type PillGroupSegment } from "@src/components/PillGroup";
@@ -162,7 +162,7 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
 
     const {
       fileInputRef,
-      tiptapRef,
+      composerInputRef,
       uploadedFiles,
       isLoading,
       editorContent,
@@ -302,7 +302,7 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
 
     useEffect(() => {
       if (!restoreToInput?.displayContent) return;
-      const editor = tiptapRef.current;
+      const editor = composerInputRef.current;
       if (!editor) return;
       const restoredText = restoreToInput.displayContent;
       editor.setContent(restoredText);
@@ -310,7 +310,12 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
       handleContentChangeWithTracking(restoredText);
       store.set(restoreToInputAtom, null);
       store.set(draftHasContentAtom, restoredText.trim().length > 0);
-    }, [restoreToInput, tiptapRef, handleContentChangeWithTracking, store]);
+    }, [
+      restoreToInput,
+      composerInputRef,
+      handleContentChangeWithTracking,
+      store,
+    ]);
 
     useEffect(() => {
       return () => {
@@ -417,7 +422,7 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
           return React.createElement(resolveAgentIcon(iconId), {
             size,
             strokeWidth: 1.75,
-            className: hasAgentSelected ? "text-text-1" : "text-warning-6",
+            className: hasAgentSelected ? "text-text-1" : "text-primary-6",
           });
         }
         return null;
@@ -610,7 +615,9 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
           variant="chatPanelFullScreen"
           uploadedFiles={uploadedFiles}
           onRemoveFile={handleRemoveFile}
-          tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
+          composerInputRef={
+            composerInputRef as React.RefObject<ComposerInputRef>
+          }
           onContentChange={handleContentChangeWithTracking}
           onAtMention={handleAtMention}
           onAtMentionClose={handleAtMentionClose}
@@ -721,7 +728,9 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
               className={`mx-auto w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
             >
               <PinnedActionsBar
-                tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
+                composerInputRef={
+                  composerInputRef as React.RefObject<ComposerInputRef>
+                }
               />
             </div>
 

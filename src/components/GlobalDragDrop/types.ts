@@ -27,6 +27,7 @@ export interface DroppedFileInfo {
   path: string;
   type: "file" | "folder";
   browserFile?: File;
+  dropTargetId?: string;
 }
 
 /** IDE file drop information */

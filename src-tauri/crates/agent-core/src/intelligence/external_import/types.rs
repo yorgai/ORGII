@@ -175,7 +175,6 @@ pub fn readonly_excluded_tool_names() -> Vec<String> {
     vec![
         tool_names::EDIT_FILE.to_string(),
         tool_names::DELETE_FILE.to_string(),
-        tool_names::APPLY_PATCH.to_string(),
         tool_names::RUN_SHELL.to_string(),
     ]
 }

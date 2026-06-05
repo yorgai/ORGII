@@ -26,7 +26,6 @@ import HoverAnimatedIcon, {
 const logger = createLogger("SidebarRamMonitor");
 
 const METRICS_POLL_INTERVAL_MS = 5000;
-const MAX_CHILD_PROCESS_ROWS = 4;
 const SUCCESS_FPS_THRESHOLD = 40;
 const SUCCESS_RAM_THRESHOLD_MB = 1024;
 const CHILD_PROCESS_CATEGORY = {
@@ -132,29 +131,8 @@ function formatMegabytes(megabytes: number): string {
   return `${megabytes.toFixed(1)} MB`;
 }
 
-function getProcessMemoryTotal(snapshot: MetricsSnapshot): number {
-  const appMemoryMb = snapshot.processMetrics?.memory_rss_mb ?? 0;
-  const childMemoryMb = snapshot.childProcesses.reduce(
-    (sum, childProcess) => sum + childProcess.memory_mb,
-    0
-  );
-  return appMemoryMb + childMemoryMb;
-}
-
-function formatChildProcessLabel(childProcess: ChildProcessInfo): string {
-  const parentPid = childProcess.parent_pid
-    ? ` ppid:${childProcess.parent_pid}`
-    : "";
-  const depth = childProcess.depth ? ` d:${childProcess.depth}` : "";
-  return `${childProcess.name} · pid:${childProcess.pid}${parentPid}${depth}`;
-}
-
-function isFrontendWebKitProcess(childProcess: ChildProcessInfo): boolean {
-  return (
-    childProcess.category === CHILD_PROCESS_CATEGORY.WEBVIEW ||
-    childProcess.category === CHILD_PROCESS_CATEGORY.GPU ||
-    childProcess.category === CHILD_PROCESS_CATEGORY.NETWORK
-  );
+function getAppMemoryTotal(snapshot: MetricsSnapshot): number {
+  return snapshot.processMetrics?.memory_rss_mb ?? 0;
 }
 
 const MemoryStatRow: React.FC<MemoryStatRowProps> = ({
@@ -285,10 +263,9 @@ export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
     };
   }, [isOpen, refreshAll]);
 
-  const appMemoryMb = snapshot.processMetrics?.memory_rss_mb ?? 0;
+  const appMemoryMb = getAppMemoryTotal(snapshot);
   const backendRssMb = snapshot.memoryBreakdown?.backend_rss_mb ?? appMemoryMb;
   const fileCacheMb = snapshot.memoryBreakdown?.file_cache_mb ?? 0;
-  const totalMemoryMb = getProcessMemoryTotal(snapshot);
   const terminalPtyBufferBytes = snapshot.ptyMemory.reduce(
     (sum, ptyInfo) => sum + ptyInfo.buffer_bytes,
     0
@@ -312,6 +289,7 @@ export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
     .reduce((sum, childProcess) => sum + childProcess.memory_mb, 0);
   const frontendProcessMemoryMb =
     tauriWebViewRendererMemoryMb + tauriGpuMemoryMb + tauriNetworkMemoryMb;
+  const appRamMb = appMemoryMb + frontendProcessMemoryMb;
   const webViewDiagnostics = snapshot.webViewDiagnostics;
   const webViewEstimateBytes =
     (webViewDiagnostics?.decodedImageBytes ?? 0) +
@@ -322,16 +300,6 @@ export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
     totalTerminalBufferBytes +
     runtimeRows.reduce((sum, row) => sum + row.bytes, 0);
   const attributionHintBytes = webViewEstimateBytes + runtimeEstimateBytes;
-  const topChildProcesses = snapshot.childProcesses
-    .filter(
-      (childProcess) =>
-        childProcess.memory_mb > 0 && !isFrontendWebKitProcess(childProcess)
-    )
-    .slice(0, MAX_CHILD_PROCESS_ROWS);
-  const otherProcessMemoryMb = topChildProcesses.reduce(
-    (sum, childProcess) => sum + childProcess.memory_mb,
-    0
-  );
   const ramBreakdownRows: MemoryBreakdownRow[] = [
     {
       key: "backendGroup",
@@ -352,19 +320,6 @@ export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
       value: formatMegabytes(frontendProcessMemoryMb),
       bytes: frontendProcessMemoryMb * 1024 * 1024,
     },
-    {
-      key: "otherProcessesGroup",
-      label: tSettings("monitor.otherProcessesGroup"),
-      value: formatMegabytes(otherProcessMemoryMb),
-      bytes: otherProcessMemoryMb * 1024 * 1024,
-    },
-    ...topChildProcesses.map((childProcess) => ({
-      key: `child-${childProcess.pid}`,
-      label: formatChildProcessLabel(childProcess),
-      value: formatMegabytes(childProcess.memory_mb),
-      bytes: childProcess.memory_mb * 1024 * 1024,
-      indentLevel: 1,
-    })),
     {
       key: "attributionHintsGroup",
       label: tSettings("monitor.attributionHintsGroup"),
@@ -460,11 +415,11 @@ export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
                 }
               />
               <MemoryStatRow
-                label={tSettings("monitor.memory")}
-                value={formatMegabytes(totalMemoryMb)}
+                label={tSettings("monitor.appRam", { defaultValue: "App RAM" })}
+                value={formatMegabytes(appRamMb)}
                 emphasized
                 tone={
-                  totalMemoryMb > 0 && totalMemoryMb < SUCCESS_RAM_THRESHOLD_MB
+                  appRamMb > 0 && appRamMb < SUCCESS_RAM_THRESHOLD_MB
                     ? "success"
                     : undefined
                 }
@@ -494,12 +449,7 @@ export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
                   !isAttributionHeader &&
                   row.key !== "backendGroup" &&
                   row.key !== "backendFileCache" &&
-                  row.key !== "frontendGroup" &&
-                  row.key !== "tauriWebViewRenderer" &&
-                  row.key !== "tauriGpuProcess" &&
-                  row.key !== "tauriNetworkProcess" &&
-                  row.key !== "otherProcessesGroup" &&
-                  !row.key.startsWith("child-");
+                  row.key !== "frontendGroup";
                 if (isAttributionHeader) return null;
                 if (isAttributionDetail && !showAttributionHints) return null;
 

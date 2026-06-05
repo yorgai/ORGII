@@ -69,6 +69,10 @@ export function getTerminalBuffer(sessionId: string): string | undefined {
   return buffer;
 }
 
+export function hasNonEmptyTerminalBuffer(sessionId: string): boolean {
+  return Boolean(terminalBufferCache.get(sessionId)?.trim());
+}
+
 /**
  * Set a terminal buffer with LRU eviction
  */

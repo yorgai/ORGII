@@ -64,7 +64,7 @@ export const FolderHeaderRow: React.FC<FolderHeaderRowProps> = memo(
           </span>
         )}
       </button>
-      {actions}
+      {actions && <div className={FOLDER_HEADER.actions}>{actions}</div>}
     </div>
   )
 );

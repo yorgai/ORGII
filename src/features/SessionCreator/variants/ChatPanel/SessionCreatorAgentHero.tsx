@@ -39,7 +39,7 @@ const SessionCreatorAgentHero = memo(
             <div className="flex min-w-0 items-center gap-1">
               <span
                 className={`truncate text-[15px] font-semibold leading-tight ${
-                  danger ? "text-warning-6" : "text-text-1"
+                  danger ? "text-primary-6" : "text-text-1"
                 }`}
               >
                 {name}

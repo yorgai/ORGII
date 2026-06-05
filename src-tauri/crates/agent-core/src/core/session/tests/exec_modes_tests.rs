@@ -79,7 +79,6 @@ fn plan_mode_uses_deny_delta() {
     let deny = &policy.deny;
     for blocked in &[
         "edit_file",
-        "apply_patch",
         "run_shell",
         "await_output",
         "worktree",

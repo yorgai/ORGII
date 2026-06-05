@@ -9,7 +9,7 @@
 //! (single source of truth for the category vocabulary).
 //!
 //! - [`agent_def`] — `manage_agent_def` (custom agent + org CRUD)
-//! - [`coding`]    — file I/O, exec, code_search, edit_file, apply_patch, LSP, todo, worktree, …
+//! - [`coding`]    — file I/O, exec, code_search, edit_file, LSP, todo, worktree, …
 //! - [`comms`]     — outbound messaging (`send_message`, `send_to_inbox`)
 //! - [`database`]  — `db_explore`, `db_run`
 //! - [`desktop`]   — native desktop automation tools

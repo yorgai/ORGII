@@ -32,9 +32,6 @@ export interface NavigationMenuProps {
   collapsed?: boolean;
   defaultOpenKeys?: string[];
   enableHoverIconAnimation?: boolean;
-  // Tailwind gap class for the vertical list container.
-  // Defaults to "gap-1"; Settings and Session sidebars opt into "gap-px".
-  verticalGapClassName?: string;
 }
 
 // ============================================
@@ -50,7 +47,6 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
     collapsed = false,
     defaultOpenKeys = [],
     enableHoverIconAnimation = false,
-    verticalGapClassName = "gap-1",
   }) => {
     const { t } = useTranslation();
 
@@ -170,7 +166,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
     );
 
     const handleRowActionClick = useCallback(
-      (e: React.MouseEvent<HTMLElement>, item: NavigationMenuItem) => {
+      (e: React.MouseEvent<HTMLButtonElement>, item: NavigationMenuItem) => {
         e.preventDefault();
         e.stopPropagation();
         if (item.onRowActionClick) {
@@ -454,7 +450,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
     );
 
     return (
-      <div className={`flex flex-col ${verticalGapClassName}`}>
+      <div className="flex flex-col gap-1">
         {items.map((item) => renderMenuItem(item))}
       </div>
     );

@@ -423,43 +423,46 @@ const CreateProjectView: React.FC<CreateProjectViewProps> = ({
       hideHeader
       publishHeaderToWorkstation={publishHeaderToWorkstation}
       leftContent={
-        <WorkItemContentStack
-          className="mx-auto h-full w-full max-w-[900px]"
-          titleContent={titleSection}
-          pathContent={orgBreadcrumbPill}
-          propertiesContent={propertyPills}
-          descriptionContent={
-            aiGenerateMode ? (
-              aiPromptModePill
-            ) : (
-              <ProjectContentEditor
-                key={editorResetKey}
-                ref={editorRef}
-                title={draft.name}
-                onTitleChange={handleTitleChange}
-                summary={draft.summary}
-                onSummaryChange={handleSummaryChange}
-                initialDescription={draft.description || undefined}
-                onDescriptionChange={handleDescriptionChange}
-                titleVisible={false}
-                separatorVisible={false}
-                descriptionClassName="no-bottom-border"
-                descriptionMaxHeight="100%"
-                repoPath={repoPath}
-                className="flex h-full min-h-0 flex-col"
-              />
-            )
-          }
-          descriptionFlexible={!aiGenerateMode}
-          metaClassName="px-4 py-2"
-          titleClassName="flex h-10 items-center px-2 py-0"
-          descriptionClassName={
-            aiGenerateMode
-              ? "flex shrink-0 justify-center px-4 pt-4"
-              : "min-h-0 overflow-hidden px-4 pt-2"
-          }
-          scrollable
-        />
+        <div className="mx-auto h-full w-full max-w-[932px] px-4">
+          <WorkItemContentStack
+            className="h-full w-full"
+            titleContent={titleSection}
+            pathContent={orgBreadcrumbPill}
+            propertiesContent={propertyPills}
+            descriptionContent={
+              aiGenerateMode ? (
+                aiPromptModePill
+              ) : (
+                <ProjectContentEditor
+                  key={editorResetKey}
+                  ref={editorRef}
+                  title={draft.name}
+                  onTitleChange={handleTitleChange}
+                  summary={draft.summary}
+                  onSummaryChange={handleSummaryChange}
+                  initialDescription={draft.description || undefined}
+                  onDescriptionChange={handleDescriptionChange}
+                  titleVisible={false}
+                  separatorVisible={false}
+                  descriptionClassName="no-bottom-border"
+                  descriptionMaxHeight="100%"
+                  repoPath={repoPath}
+                  className="flex h-full min-h-0 flex-col"
+                />
+              )
+            }
+            descriptionFlexible={!aiGenerateMode}
+            metaClassName="py-2"
+            titleClassName="flex h-10 items-center py-0"
+            descriptionClassName={
+              aiGenerateMode
+                ? "flex shrink-0 justify-center pt-4"
+                : "min-h-0 overflow-hidden pt-2"
+            }
+            separatorClassName=""
+            scrollable
+          />
+        </div>
       }
       footer={
         showFooter && !aiGenerateMode ? (

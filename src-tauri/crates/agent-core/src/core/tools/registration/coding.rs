@@ -6,7 +6,6 @@ use std::sync::Arc;
 
 use crate::tools::impls::coding::{
     action_router::ActionRouter,
-    apply_patch::ApplyPatchTool,
     code_search::SearchTool,
     edit_file::EditTool,
     exec::{await_tool::AwaitTool, ExecTool},
@@ -30,8 +29,8 @@ use super::{register_if_enabled, ToolDeps};
 /// Register all coding-category tools that `deps` can support.
 ///
 /// Covers: `read_file`, `list_dir`, `delete_file`, `exec`, `search`,
-/// `manage_workspace`, `edit_file`, `apply_patch`, `query_lsp`,
-/// `manage_lsp`, `todo`, `repo_setup`, `work_item`.
+/// `manage_workspace`, `edit_file`, `query_lsp`, `manage_lsp`, `todo`,
+/// `repo_setup`, `work_item`.
 pub fn register(registry: &mut ToolRegistry, deps: &ToolDeps, disabled: &HashSet<String>) {
     // Snapshot the current `working_dir()` once for tools that still pin
     // a launch-time cwd. File tools and the worktree mutator take `workspace`
@@ -169,17 +168,6 @@ pub fn register(registry: &mut ToolRegistry, deps: &ToolDeps, disabled: &HashSet
         delete_file = delete_file.with_router(router);
     }
     register_if_enabled(registry, Box::new(delete_file), disabled);
-
-    // ── Apply patch ──
-    register_if_enabled(
-        registry,
-        Box::new(
-            ApplyPatchTool::new(working_dir.clone())
-                .with_workspace_state(Arc::clone(&deps.workspace)),
-        ),
-        disabled,
-    );
-
     // ── LSP ──
     if let Some(ref handle) = deps.app_handle {
         if let Some(lsp_state) = handle.try_state::<lsp::LspManagerState>() {

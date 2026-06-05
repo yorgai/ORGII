@@ -25,6 +25,7 @@ import { useEffect } from "react";
 
 import type { DragDropBehavior, DroppedFolder } from "../types";
 import {
+  getChatDropTargetId,
   hasVisibleChatDropTarget,
   isDropInsideChatDropTarget,
   isRepositoryDropPage,
@@ -34,7 +35,8 @@ export interface UseTauriDragDropOptions {
   handleIdeFileDrop: (
     filePath: string,
     fileName?: string,
-    isFolder?: boolean
+    isFolder?: boolean,
+    dropTargetId?: string
   ) => void;
   setDroppedFolder: (folder: DroppedFolder | null) => void;
   setIsDragging: (dragging: boolean) => void;
@@ -113,10 +115,12 @@ export function useTauriDragDrop(options: UseTauriDragDropOptions): void {
 
           const paths = payload.paths;
           const position = payload.position;
-          const insideChatDropTarget = isDropInsideChatDropTarget({
+          const dropPosition = {
             x: position.x,
             y: position.y,
-          });
+          };
+          const insideChatDropTarget = isDropInsideChatDropTarget(dropPosition);
+          const dropTargetId = getChatDropTargetId(dropPosition);
 
           if (!paths || paths.length === 0) return;
 
@@ -142,7 +146,12 @@ export function useTauriDragDrop(options: UseTauriDragDropOptions): void {
 
           if (insideChatDropTarget) {
             for (const path of paths) {
-              handleIdeFileDrop(path, basename(path), looksLikeFolder(path));
+              handleIdeFileDrop(
+                path,
+                basename(path),
+                looksLikeFolder(path),
+                dropTargetId
+              );
             }
           }
         }

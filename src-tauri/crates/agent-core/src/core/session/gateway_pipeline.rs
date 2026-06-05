@@ -177,11 +177,20 @@ pub async fn process_gateway_message(
     }
 
     // ── Post-processing (shared lifecycle) ──
+    let terminal_turn = result
+        .as_ref()
+        .ok()
+        .map(|r| crate::lifecycle::TerminalTurnSignal {
+            turn_id: r.turn_id.clone(),
+            status: crate::lifecycle::TurnTerminalStatus::Completed,
+            completed_at: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+        });
     let response = result
         .as_ref()
         .map(|r| r.content.clone())
         .map_err(|e| e.clone());
-    crate::lifecycle::finalize_session(&session_key, &response, None, None, true).await;
+    crate::lifecycle::finalize_session(&session_key, &response, None, None, true, terminal_turn)
+        .await;
 
     match result {
         Ok(processing_result) => {

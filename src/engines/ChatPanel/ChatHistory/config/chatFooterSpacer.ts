@@ -10,9 +10,9 @@
 
 export const CHAT_FOOTER_SPACER = {
   /** Extra px below the last message when content fills the viewport */
-  BREATHING_ROOM_PX: 12,
+  BREATHING_ROOM_PX: 24,
   /** Minimum spacer when the thread already fills the scroll area */
-  MIN_WHEN_FULL_PX: 24,
+  MIN_WHEN_FULL_PX: 32,
   /**
    * Extra guard added on top of bottomInset so the last chat item is never
    * obscured by the absolute-positioned InputArea overlay.

@@ -29,7 +29,7 @@ import {
 } from "@src/store/ui/workStationAtom";
 
 interface SidebarWorkstationSettingsSubmenuProps {
-  panelRef: React.RefObject<HTMLDivElement | null>;
+  panelRef: React.RefObject<HTMLDivElement>;
   position: {
     left: number;
     bottom: number;

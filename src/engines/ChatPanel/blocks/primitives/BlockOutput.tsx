@@ -99,6 +99,7 @@ export interface BlockOutputProps {
   payloadRef?: PayloadRef;
   onFullPayloadLoaded?: (body: string) => void;
   collapsedMaxHeight?: number;
+  defaultScrollToBottom?: boolean;
 }
 
 /**
@@ -123,6 +124,7 @@ const BlockOutput: React.FC<BlockOutputProps> = memo(
     payloadRef,
     onFullPayloadLoaded,
     collapsedMaxHeight = COLLAPSED_MAX_HEIGHT,
+    defaultScrollToBottom = false,
   }) => {
     const { t } = useTranslation();
     const [isOutputExpanded, setIsOutputExpanded] = useState(false);
@@ -194,6 +196,18 @@ const BlockOutput: React.FC<BlockOutputProps> = memo(
       if (contentEl) observer.observe(contentEl);
       return () => observer.disconnect();
     }, [processedOutput, highlightedHtml, isOutputExpanded]);
+
+    useLayoutEffect(() => {
+      if (!defaultScrollToBottom) return;
+      const el = viewportRef.current;
+      if (!el) return;
+      el.scrollTop = el.scrollHeight;
+    }, [
+      defaultScrollToBottom,
+      processedOutput,
+      highlightedHtml,
+      isOutputExpanded,
+    ]);
 
     const canLoadFullPayload = Boolean(
       payloadRef && sessionId && eventId && fullPayload === null

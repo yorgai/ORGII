@@ -4,7 +4,7 @@
  */
 import type { RefObject } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 
 /**
  * Only the two path-ish fields `formatUserInput` actually reads. Kept
@@ -18,7 +18,7 @@ export interface FormatRepoRef {
 
 export interface FormatUserInputOptions {
   editorContent: string;
-  tiptapRef: RefObject<TiptapInputRef>;
+  composerInputRef: RefObject<ComposerInputRef>;
   repo: FormatRepoRef | undefined;
 }
 
@@ -33,10 +33,10 @@ export interface FormattedInput {
 export function formatUserInput(
   options: FormatUserInputOptions
 ): FormattedInput {
-  const { editorContent, tiptapRef, repo } = options;
+  const { editorContent, composerInputRef, repo } = options;
 
   const textContent = editorContent.trim();
-  const filePills = tiptapRef.current?.getFilePills() || [];
+  const filePills = composerInputRef.current?.getFilePills() || [];
 
   if (filePills.length === 0) {
     return { userInput: textContent, filePills };

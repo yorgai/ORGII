@@ -3,68 +3,29 @@
  *
  * Determines whether a session should show an "in progress" indicator.
  *
- * MIGRATION NOTE: The stale detection logic is now also available in Rust
- * via `session_check_health` command. For new code, prefer using
- * `checkSessionHealth()` from `@src/api/tauri/session` which uses centralized
- * thresholds. The synchronous `isSessionInProgress()` below is kept for
- * components that need a local computation without a Tauri call.
- *
- * Thresholds (must match Rust backend):
- * - PENDING_STALE_THRESHOLD_MS: 2 minutes
- * - RUNNING_STALE_THRESHOLD_MS: 5 minutes
- * - ABSOLUTE_STALE_THRESHOLD_MS: 1 hour (catches orphaned sessions with stale pid)
+ * The sidebar uses this synchronous helper when building session rows, so it
+ * must not require process-level signals that are unavailable for Rust-native
+ * / hosted agent sessions. A persisted active/working status from the backend
+ * is the source of truth for the row spinner; stale/orphan cleanup belongs in
+ * the backend status aggregation path, not in this visual helper.
  */
 
-// Thresholds must match Rust backend (src-tauri/src/session/session_aggregate.rs)
-const PENDING_STALE_THRESHOLD_MS = 2 * 60 * 1000;
-const RUNNING_STALE_THRESHOLD_MS = 5 * 60 * 1000;
-const ABSOLUTE_STALE_THRESHOLD_MS = 60 * 60 * 1000;
-
-function getSessionAge(session: {
-  updated_at?: string;
-  created_at?: string;
-}): number | null {
-  const timestamp = session.updated_at || session.created_at;
-  if (!timestamp) return null;
-  return Date.now() - new Date(timestamp).getTime();
-}
+const IN_PROGRESS_STATUSES: ReadonlySet<string> = new Set([
+  "running",
+  "installing",
+  "in_progress",
+  "pending",
+  "queued",
+  "waiting_for_funds",
+  "waiting_for_user",
+]);
 
 /**
- * Synchronous check whether a session is in progress.
- *
- * This is a local computation that doesn't require a Tauri call.
- * For the canonical implementation with full health status, use
- * `checkSessionHealth()` from `@src/api/tauri/session` instead.
+ * Synchronous check whether a session should display as in progress.
  */
 export function isSessionInProgress(
   status: string | undefined,
-  session?: { pid?: number | null; updated_at?: string; created_at?: string }
+  _session?: { pid?: number | null; updated_at?: string; created_at?: string }
 ): boolean {
-  if (status === "waiting_for_user") return true;
-
-  if (status === "running") {
-    if (session) {
-      const age = getSessionAge(session);
-      if (age !== null && age > ABSOLUTE_STALE_THRESHOLD_MS) return false;
-
-      const hasPid = session.pid != null;
-      if (!hasPid && age !== null && age > RUNNING_STALE_THRESHOLD_MS) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  if (status !== "pending") return false;
-
-  if (session) {
-    const age = getSessionAge(session);
-    if (age !== null && age > ABSOLUTE_STALE_THRESHOLD_MS) return false;
-
-    const hasPid = session.pid != null;
-    if (!hasPid && age !== null && age > PENDING_STALE_THRESHOLD_MS) {
-      return false;
-    }
-  }
-  return true;
+  return status !== undefined && IN_PROGRESS_STATUSES.has(status);
 }

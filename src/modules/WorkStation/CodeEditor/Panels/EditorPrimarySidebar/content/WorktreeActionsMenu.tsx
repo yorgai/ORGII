@@ -1,6 +1,5 @@
-import { MenuItem, Menu as TauriMenu } from "@tauri-apps/api/menu";
 import { Ellipsis, Trash2 } from "lucide-react";
-import React, { memo, useCallback, useEffect, useRef } from "react";
+import React, { memo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -13,6 +12,7 @@ import {
 import { useDropdownEngine } from "@src/hooks/dropdown";
 import {
   FOLDER_HEADER,
+  HEADER_BUTTON,
   PRIMARY_SIDEBAR_HOVER,
 } from "@src/modules/WorkStation/shared/tokens";
 
@@ -53,14 +53,18 @@ export const WorktreeActionsMenu: React.FC<WorktreeActionsMenuProps> = memo(
         <button
           ref={triggerRef}
           type="button"
-          className={FOLDER_HEADER.action}
+          className={isOpen ? HEADER_BUTTON.active : FOLDER_HEADER.action}
+          data-state={isOpen ? "open" : "closed"}
           title={t("sourceControl.worktreeActions")}
           onClick={(event) => {
             event.stopPropagation();
             toggle();
           }}
         >
-          <Ellipsis size={14} className="text-text-3" />
+          <Ellipsis
+            size={14}
+            className={isOpen ? "text-primary-6" : "text-text-3"}
+          />
         </button>
 
         {isOpen &&
@@ -99,40 +103,60 @@ export const WorktreeActionsMenu: React.FC<WorktreeActionsMenuProps> = memo(
 WorktreeActionsMenu.displayName = "WorktreeActionsMenu";
 
 export interface WorktreeContextMenuProps {
+  x: number;
+  y: number;
   onRemove: () => void;
   onClose: () => void;
 }
 
 export function WorktreeContextMenu({
+  x,
+  y,
   onRemove,
   onClose,
 }: WorktreeContextMenuProps) {
   const { t } = useTranslation();
-  const hasShownMenu = useRef(false);
 
-  useEffect(() => {
-    if (hasShownMenu.current) return;
-    hasShownMenu.current = true;
+  const handleRemove = useCallback(() => {
+    onClose();
+    onRemove();
+  }, [onClose, onRemove]);
 
-    async function showMenu() {
-      try {
-        const removeItem = await MenuItem.new({
-          text: t("sourceControl.removeWorktree"),
-          action: () => {
-            onRemove();
-          },
-        });
-        const menu = await TauriMenu.new({ items: [removeItem] });
-        await menu.popup();
-      } finally {
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9998]"
+      onClick={onClose}
+      onContextMenu={(event) => {
+        event.preventDefault();
         onClose();
-      }
-    }
-
-    showMenu();
-  }, [onClose, onRemove, t]);
-
-  return null;
+      }}
+    >
+      <div
+        className={`${DROPDOWN_CLASSES.panel} ${DROPDOWN_WIDTHS.sidebarMenuClass} ${DROPDOWN_PANEL.paddingClass}`}
+        style={{
+          position: "fixed",
+          top: y,
+          left: x,
+          zIndex: DROPDOWN_PANEL.zIndex,
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className={DROPDOWN_CLASSES.itemsColumn}>
+          <button
+            type="button"
+            className={`${DROPDOWN_CLASSES.item} ${PRIMARY_SIDEBAR_HOVER.row} w-full text-danger-6`}
+            onClick={handleRemove}
+          >
+            <Trash2 size={DROPDOWN_ITEM.iconSize} className="shrink-0" />
+            <span className="truncate">
+              {t("sourceControl.removeWorktree")}
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 export default WorktreeActionsMenu;

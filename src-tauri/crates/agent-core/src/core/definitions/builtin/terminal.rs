@@ -114,7 +114,6 @@ mod tests {
             tool_names::AGENT,
             tool_names::TOOL_SEARCH,
             tool_names::CODE_SEARCH,
-            tool_names::APPLY_PATCH,
             tool_names::DELETE_FILE,
             tool_names::QUERY_LSP,
             tool_names::MANAGE_LSP,

@@ -53,6 +53,7 @@ interface GroupChatPendingMessageView {
 
 interface ChatFloatingComposerProps {
   composerRef: React.RefObject<HTMLDivElement>;
+  inputBoxRef?: React.Ref<HTMLDivElement>;
   chatPanelPosition: "left" | "right";
   sessionId: string;
   inputAreaSessionId: string;
@@ -98,6 +99,7 @@ interface ChatFloatingComposerProps {
 const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
   ({
     composerRef,
+    inputBoxRef,
     chatPanelPosition,
     sessionId,
     inputAreaSessionId,
@@ -280,6 +282,7 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
                 {groupChatPausedBottomContent}
               </>
             }
+            composerShellRef={inputBoxRef}
             {...queueEditProps}
           />
           {isCursorIdeSession(sessionId) && (

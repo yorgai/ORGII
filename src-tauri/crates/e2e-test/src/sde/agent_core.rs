@@ -564,7 +564,7 @@ pub async fn auto_continue(cfg: &Config) -> bool {
         Ok(resp) => {
             let content = resp.content.to_lowercase();
             let has_written_file = resp.tool_calls.iter().any(|tool| {
-                tool.contains("edit_file") || tool.contains("write") || tool.contains("apply_patch")
+                tool.contains("edit_file") || tool.contains("write") || tool.contains("delete_file")
             });
 
             let has_rs_file = std::fs::read_dir(&workspace)

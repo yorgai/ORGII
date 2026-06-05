@@ -7,7 +7,7 @@
  */
 import { type ChangeEvent, type RefObject, useRef } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import { useFileUpload } from "@src/hooks/useFileUpload";
 
 export interface UseUploadContextReturn {
@@ -17,18 +17,18 @@ export interface UseUploadContextReturn {
 }
 
 interface UseUploadContextOptions {
-  tiptapRef: RefObject<TiptapInputRef>;
+  composerInputRef: RefObject<ComposerInputRef>;
 }
 
 export function useUploadContext(
   options: UseUploadContextOptions
 ): UseUploadContextReturn {
-  const { tiptapRef } = options;
+  const { composerInputRef } = options;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { handleUploadClick, handleFileUpload } = useFileUpload({
     fileInputRef,
-    tiptapRef,
+    composerInputRef,
     consumeDroppedFiles: false,
   });
 

@@ -94,7 +94,7 @@ export function buildSessionInfoSegments({
         <SourceIcon
           size={14}
           strokeWidth={1.75}
-          className={hasSource ? "text-text-1" : "text-warning-6"}
+          className={hasSource ? "text-text-1" : "text-primary-6"}
         />
       ),
       label: sourceDisplayName,

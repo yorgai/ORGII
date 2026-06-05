@@ -14,11 +14,11 @@ import type {
   ContextMenuCustomMentionOption,
   ContextMenuProps,
 } from "@/src/scaffold/ContextMenu/types";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useRef } from "react";
 import { createPortal } from "react-dom";
 
-import { DROPDOWN_PANEL } from "@src/components/Dropdown/tokens";
-import { useMentionTreePosition } from "@src/hooks/workStation/panels/useMentionTreePosition";
+import type { FloatingPlacementStrategy } from "./floatingPlacement";
+import { useFloatingPortalPosition } from "./useFloatingPortalPosition";
 
 interface ContextMenuPortalProps {
   visible: boolean;
@@ -36,29 +36,12 @@ interface ContextMenuPortalProps {
     ((e: React.KeyboardEvent) => boolean) | null
   >;
   treePosition?: ContextMenuProps["treePosition"];
-  direction?: "up" | "down";
-}
-
-interface DropdownPosition {
-  top: number;
-  left: number;
-  placement: "down" | "up";
+  placement?: FloatingPlacementStrategy;
+  /** Optional descendant of containerRef to anchor the menu against. */
+  anchorSelector?: string;
 }
 
 const ESTIMATED_DROPDOWN_HEIGHT = 260;
-const VIEWPORT_MARGIN = 8;
-
-function clampToViewport(
-  value: number,
-  size: number,
-  viewportSize: number
-): number {
-  const maxValue = Math.max(
-    VIEWPORT_MARGIN,
-    viewportSize - size - VIEWPORT_MARGIN
-  );
-  return Math.min(Math.max(VIEWPORT_MARGIN, value), maxValue);
-}
 
 const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
   visible,
@@ -73,95 +56,24 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
   recentFiles,
   repoPath,
   keyboardHandlerRef,
-  treePosition: treePositionOverride,
-  direction = "up",
+  treePosition = "left",
+  placement = "prefer-up",
+  anchorSelector,
 }) => {
-  const fallbackTreePosition = useMentionTreePosition();
-  const treePosition = treePositionOverride ?? fallbackTreePosition;
   const portalRef = useRef<HTMLDivElement>(null);
-  const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition>({
-    top: 0,
-    left: 0,
-    placement: "down",
+  const dropdownWidth = Number.parseFloat(STYLE_CONFIG.dropdownWidth);
+  const { portalPosition, isPositioned } = useFloatingPortalPosition({
+    visible,
+    containerRef,
+    floatingRef: portalRef,
+    floatingWidth: dropdownWidth,
+    fallbackHeight: ESTIMATED_DROPDOWN_HEIGHT,
+    placement,
+    anchorSelector,
+    updateKey: searchQuery,
   });
-  const [isPositioned, setIsPositioned] = useState(false);
 
-  const updateDropdownPosition = useCallback(() => {
-    if (!visible) return;
-
-    const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!containerRect) {
-      setIsPositioned(false);
-      return;
-    }
-
-    const dropdownWidth = Number.parseFloat(STYLE_CONFIG.dropdownWidth);
-    const dropdownHeight =
-      portalRef.current?.getBoundingClientRect().height ??
-      ESTIMATED_DROPDOWN_HEIGHT;
-    const anchorTop = containerRect.top;
-    const anchorBottom = containerRect.bottom;
-    const anchorLeft = containerRect.left;
-    const gap = DROPDOWN_PANEL.triggerGap;
-    const unclampedTop =
-      direction === "down"
-        ? anchorBottom + gap
-        : anchorTop - dropdownHeight - gap;
-
-    setDropdownPosition({
-      top: clampToViewport(unclampedTop, dropdownHeight, window.innerHeight),
-      left: clampToViewport(anchorLeft, dropdownWidth, window.innerWidth),
-      placement: direction,
-    });
-    setIsPositioned(true);
-  }, [containerRef, direction, visible]);
-
-  useEffect(() => {
-    if (visible) return;
-
-    const timeoutId = window.setTimeout(() => setIsPositioned(false), 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [visible]);
-
-  useEffect(() => {
-    if (!visible) return;
-
-    const animationFrameId = window.requestAnimationFrame(
-      updateDropdownPosition
-    );
-    return () => window.cancelAnimationFrame(animationFrameId);
-  }, [visible, updateDropdownPosition]);
-
-  useEffect(() => {
-    if (!visible) return;
-
-    window.addEventListener("scroll", updateDropdownPosition, true);
-    window.addEventListener("resize", updateDropdownPosition);
-
-    const parent = containerRef.current?.parentElement;
-    let resizeObserver: ResizeObserver | null = null;
-    if (parent) {
-      resizeObserver = new ResizeObserver(updateDropdownPosition);
-      resizeObserver.observe(parent);
-    }
-
-    return () => {
-      window.removeEventListener("scroll", updateDropdownPosition, true);
-      window.removeEventListener("resize", updateDropdownPosition);
-      resizeObserver?.disconnect();
-    };
-  }, [visible, containerRef, updateDropdownPosition]);
-
-  useEffect(() => {
-    if (!visible || !isPositioned) return;
-
-    const animationFrameId = window.requestAnimationFrame(
-      updateDropdownPosition
-    );
-    return () => window.cancelAnimationFrame(animationFrameId);
-  }, [visible, isPositioned, searchQuery, updateDropdownPosition]);
-
-  if (!visible || !isPositioned) return null;
+  if (!visible || !isPositioned || !portalPosition) return null;
 
   return createPortal(
     // data-context-menu-portal lets the click-outside handler in
@@ -171,11 +83,12 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
       ref={portalRef}
       data-context-menu-portal
       className={`fixed z-[99999] ${
-        dropdownPosition.placement === "down" ? "pt-0" : "pb-0"
+        portalPosition.placement === "down" ? "pt-0" : "pb-0"
       }`}
       style={{
-        top: dropdownPosition.top,
-        left: dropdownPosition.left,
+        top: portalPosition.top,
+        bottom: portalPosition.bottom,
+        left: portalPosition.left,
         width: STYLE_CONFIG.dropdownWidth,
       }}
     >

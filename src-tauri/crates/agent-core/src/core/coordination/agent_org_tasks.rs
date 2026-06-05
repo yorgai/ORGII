@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 use rusqlite::{params, Connection, OptionalExtension, Result as SqliteResult, Transaction};
 use serde::{Deserialize, Serialize};
 
-use database::db::get_connection;
+use database::db::{get_connection, with_sessions_writer};
 
 /// Task status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -445,69 +445,71 @@ impl AgentOrgTaskStore {
         let metadata_json = encode_metadata(params.metadata.as_ref())?;
         let now = now_rfc3339();
 
-        let mut conn = get_connection().map_err(|err| err.to_string())?;
-        let tx = conn
-            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
-            .map_err(|err| err.to_string())?;
-        let existing_tasks = list_tasks_with_conn(&tx, &params.org_run_id)?;
-        validate_dependency_graph_after_upsert(
-            &existing_tasks,
-            &params.org_run_id,
-            &params.id,
-            &params.blocks,
-            &params.blocked_by,
-        )?;
-        let blocks_json = encode_json_array(&params.blocks)?;
-        let blocked_by_json = encode_json_array(&params.blocked_by)?;
-
-        tx.execute(
-            "INSERT INTO agent_org_tasks (
-                id, org_run_id, subject, description, active_form, owner,
-                status, blocks_json, blocked_by_json, metadata_json,
-                created_at, updated_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11)",
-            params![
-                &params.id,
+        with_sessions_writer(|| -> Result<Task, String> {
+            let mut conn = get_connection().map_err(|err| err.to_string())?;
+            let tx = conn
+                .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+                .map_err(|err| err.to_string())?;
+            let existing_tasks = list_tasks_with_conn(&tx, &params.org_run_id)?;
+            validate_dependency_graph_after_upsert(
+                &existing_tasks,
                 &params.org_run_id,
-                &params.subject,
-                &params.description,
-                params.active_form.as_deref(),
-                params.owner.as_deref(),
-                params.status.as_wire(),
-                &blocks_json,
-                &blocked_by_json,
-                metadata_json.as_deref(),
-                &now,
-            ],
-        )
-        .map_err(|err| err.to_string())?;
+                &params.id,
+                &params.blocks,
+                &params.blocked_by,
+            )?;
+            let blocks_json = encode_json_array(&params.blocks)?;
+            let blocked_by_json = encode_json_array(&params.blocked_by)?;
 
-        let task = Task {
-            id: params.id,
-            org_run_id: params.org_run_id,
-            subject: params.subject,
-            description: params.description,
-            active_form: params.active_form,
-            owner: params.owner,
-            status: params.status,
-            blocks: params.blocks,
-            blocked_by: params.blocked_by,
-            metadata: params.metadata,
-            created_at: now.clone(),
-            updated_at: now,
-        };
-        insert_task_history_event(
-            &tx,
-            &task.org_run_id,
-            &task.id,
-            TASK_EVENT_CREATED,
-            None,
-            &task,
-            task.owner.as_deref(),
-        )?;
-        tx.commit().map_err(|err| err.to_string())?;
+            tx.execute(
+                "INSERT INTO agent_org_tasks (
+                    id, org_run_id, subject, description, active_form, owner,
+                    status, blocks_json, blocked_by_json, metadata_json,
+                    created_at, updated_at
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11)",
+                params![
+                    &params.id,
+                    &params.org_run_id,
+                    &params.subject,
+                    &params.description,
+                    params.active_form.as_deref(),
+                    params.owner.as_deref(),
+                    params.status.as_wire(),
+                    &blocks_json,
+                    &blocked_by_json,
+                    metadata_json.as_deref(),
+                    &now,
+                ],
+            )
+            .map_err(|err| err.to_string())?;
 
-        Ok(task)
+            let task = Task {
+                id: params.id,
+                org_run_id: params.org_run_id,
+                subject: params.subject,
+                description: params.description,
+                active_form: params.active_form,
+                owner: params.owner,
+                status: params.status,
+                blocks: params.blocks,
+                blocked_by: params.blocked_by,
+                metadata: params.metadata,
+                created_at: now.clone(),
+                updated_at: now,
+            };
+            insert_task_history_event(
+                &tx,
+                &task.org_run_id,
+                &task.id,
+                TASK_EVENT_CREATED,
+                None,
+                &task,
+                task.owner.as_deref(),
+            )?;
+            tx.commit().map_err(|err| err.to_string())?;
+
+            Ok(task)
+        })
     }
 
     pub fn get(org_run_id: &str, task_id: &str) -> Result<Option<Task>, String> {
@@ -553,6 +555,14 @@ impl AgentOrgTaskStore {
     /// missing row so callers can surface a clear "task_not_found" without
     /// a separate get round-trip.
     pub fn update(org_run_id: &str, task_id: &str, patch: UpdateTaskPatch) -> Result<Task, String> {
+        with_sessions_writer(|| Self::update_inner(org_run_id, task_id, patch))
+    }
+
+    fn update_inner(
+        org_run_id: &str,
+        task_id: &str,
+        patch: UpdateTaskPatch,
+    ) -> Result<Task, String> {
         let mut conn = get_connection().map_err(|err| err.to_string())?;
         let tx = conn
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
@@ -659,14 +669,16 @@ impl AgentOrgTaskStore {
     }
 
     pub fn delete(org_run_id: &str, task_id: &str) -> Result<bool, String> {
-        let conn = get_connection().map_err(|err| err.to_string())?;
-        let n = conn
-            .execute(
-                "DELETE FROM agent_org_tasks WHERE org_run_id = ?1 AND id = ?2",
-                params![org_run_id, task_id],
-            )
-            .map_err(|err| err.to_string())?;
-        Ok(n > 0)
+        with_sessions_writer(|| -> Result<bool, String> {
+            let conn = get_connection().map_err(|err| err.to_string())?;
+            let n = conn
+                .execute(
+                    "DELETE FROM agent_org_tasks WHERE org_run_id = ?1 AND id = ?2",
+                    params![org_run_id, task_id],
+                )
+                .map_err(|err| err.to_string())?;
+            Ok(n > 0)
+        })
     }
 
     /// Return the first task in the run that is `pending`, `owner IS
@@ -715,6 +727,17 @@ impl AgentOrgTaskStore {
             ));
         }
 
+        with_sessions_writer(|| {
+            Self::try_claim_inner(org_run_id, task_id, claimant_member_id, options)
+        })
+    }
+
+    fn try_claim_inner(
+        org_run_id: &str,
+        task_id: &str,
+        claimant_member_id: &str,
+        options: ClaimOptions,
+    ) -> Result<Task, ClaimError> {
         let mut conn = get_connection().map_err(|err| ClaimError::Storage(err.to_string()))?;
         let tx = conn
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
@@ -863,6 +886,13 @@ impl AgentOrgTaskStore {
         org_run_id: &str,
         owner_member_id: &str,
     ) -> Result<Vec<Task>, String> {
+        with_sessions_writer(|| Self::unassign_for_owner_inner(org_run_id, owner_member_id))
+    }
+
+    fn unassign_for_owner_inner(
+        org_run_id: &str,
+        owner_member_id: &str,
+    ) -> Result<Vec<Task>, String> {
         let mut conn = get_connection().map_err(|err| err.to_string())?;
         let tx = conn
             .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
@@ -930,6 +960,15 @@ impl AgentOrgTaskStore {
     }
 
     pub fn requeue_in_progress_for_owner(
+        org_run_id: &str,
+        owner_member_id: &str,
+    ) -> Result<Vec<Task>, String> {
+        with_sessions_writer(|| {
+            Self::requeue_in_progress_for_owner_inner(org_run_id, owner_member_id)
+        })
+    }
+
+    fn requeue_in_progress_for_owner_inner(
         org_run_id: &str,
         owner_member_id: &str,
     ) -> Result<Vec<Task>, String> {

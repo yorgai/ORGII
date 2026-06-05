@@ -71,7 +71,7 @@ const PageLevelSidebar: React.FC<PageLevelSidebarProps> = ({
   return (
     <SidebarBase>
       <SidebarList>
-        <div className="flex flex-col gap-px">
+        <div className="flex flex-col gap-1">
           <SidebarHeaderNavButton
             icon={ChevronLeft}
             label={backLabel}
@@ -81,7 +81,6 @@ const PageLevelSidebar: React.FC<PageLevelSidebarProps> = ({
             items={menuItems}
             selectedKeys={selectedKeys}
             onMenuItemClick={handleMenuItemClick}
-            verticalGapClassName="gap-px"
           />
         </div>
       </SidebarList>

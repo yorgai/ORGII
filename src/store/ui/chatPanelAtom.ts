@@ -136,7 +136,7 @@ chatVisibleAtom.debugLabel = "chatVisibleAtom";
 export const stationChatVisibilityAtom = atomWithStorage<StationChatVisibility>(
   "stationChatVisibility",
   {
-    "my-station": false,
+    "my-station": true,
     "agent-station": true,
   },
   createZodJsonStorage(StationChatVisibilitySchema),

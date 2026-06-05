@@ -64,7 +64,7 @@ export const MergeChangesSection: React.FC<MergeChangesSectionProps> = memo(
           actions={
             onStageResolved && (
               <button
-                className={`${HEADER_BUTTON.success} opacity-0 transition-opacity group-hover/header:opacity-100`}
+                className={`${HEADER_BUTTON.success} opacity-0 group-hover/header:opacity-100`}
                 onClick={async () => {
                   // Stage all conflict files
                   for (const file of conflictFiles) {

@@ -1,8 +1,8 @@
 /**
  * InputEditor Component
  *
- * Tiptap-based input area with drag-drop support and keyboard handling.
- * Uses TiptapInput for proper cursor/selection handling around file pills.
+ * ComposerInput-based input area with drag-drop support and keyboard handling.
+ * Uses ComposerInput for proper cursor/selection handling around file pills.
  */
 import React, { memo, useCallback, useRef } from "react";
 
@@ -14,7 +14,7 @@ import ComposerInput, { ComposerInputRef } from "@src/components/ComposerInput";
 
 export interface InputEditorProps {
   /** Ref to the Composer input */
-  tiptapRef: React.RefObject<ComposerInputRef>;
+  composerInputRef: React.RefObject<ComposerInputRef>;
   /** Whether context menu is visible */
   showContextMenu: boolean;
   /** Keyboard handler ref from context menu */
@@ -59,6 +59,8 @@ export interface InputEditorProps {
   onSlashCommand?: (query: string) => void;
   /** Slash command close handler */
   onSlashCommandClose?: () => void;
+  /** Slash trigger behavior for this editor surface. */
+  slashTriggerMode?: "command" | "context";
   /** Single-line height for compact composer row */
   compact?: boolean;
 }
@@ -69,7 +71,7 @@ export interface InputEditorProps {
 
 const InputEditor: React.FC<InputEditorProps> = memo(
   ({
-    tiptapRef,
+    composerInputRef,
     showContextMenu,
     contextMenuKeyboardHandlerRef,
     onContentChange,
@@ -89,6 +91,7 @@ const InputEditor: React.FC<InputEditorProps> = memo(
     plusSlashCommandKeyboardHandlerRef,
     onSlashCommand,
     onSlashCommandClose,
+    slashTriggerMode = "command",
     compact = false,
   }) => {
     const wrapperRef = useRef<HTMLDivElement>(null);
@@ -158,7 +161,7 @@ const InputEditor: React.FC<InputEditorProps> = memo(
         onBlur={onBlur}
       >
         <ComposerInput
-          ref={tiptapRef}
+          ref={composerInputRef}
           placeholder={placeholder}
           onContentChange={(text) => onContentChange?.(text)}
           onAtMention={onAtMention}
@@ -178,6 +181,7 @@ const InputEditor: React.FC<InputEditorProps> = memo(
           onSlashCommand={onSlashCommand}
           onSlashCommandClose={onSlashCommandClose}
           onKeyDownForSlashDropdown={handleKeyDownForSlashDropdown}
+          slashTriggerMode={slashTriggerMode}
           onImagePaste={onImagePaste}
         />
       </div>

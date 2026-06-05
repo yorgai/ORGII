@@ -11,7 +11,7 @@ export {
 export { default as ExtensionHero } from "./ExtensionDetailBlocks";
 export {
   ExtensionContentTabs,
-  clawHubUrl,
+  skillsShUrl,
   formatDate,
   formatNumber,
   stripFrontmatter,

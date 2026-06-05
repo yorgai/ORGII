@@ -87,7 +87,7 @@ export function isInternalDrag(
       return true;
     }
 
-    // TiptapInput file pills drag as text/html - treat as internal
+    // ComposerInput file pills drag as text/html - treat as internal
     if (
       types.includes("text/html") &&
       !types.includes("Files") &&
@@ -134,6 +134,18 @@ function getDropTargetElement(
   if (scaledElement) return scaledElement;
 
   return document.elementFromPoint(eventOrPosition.x, eventOrPosition.y);
+}
+
+export function getChatDropTargetId(
+  eventOrPosition: Event | { x: number; y: number }
+): string | undefined {
+  const targetElement = getDropTargetElement(eventOrPosition);
+  const directTarget = targetElement?.closest(CHAT_DROP_TARGET_SELECTOR);
+  if (directTarget instanceof HTMLElement) {
+    return directTarget.dataset.chatDropTargetId;
+  }
+
+  return undefined;
 }
 
 export function isDropInsideChatDropTarget(

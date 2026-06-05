@@ -57,6 +57,7 @@ import {
   ListChecks,
   ListTodo,
   ListTree,
+  Logs,
   Mail,
   MessageCircle,
   MessageCircleQuestionMark,
@@ -424,7 +425,9 @@ export function getEventIconComponent(
       return CheckCircle2;
     }
   }
-  return getToolIconComponent(eventType, undefined, action);
+
+  const toolIcon = getToolIconComponent(eventType, undefined, action);
+  return toolIcon === Wrench ? Logs : toolIcon;
 }
 
 export interface GetEventIconOptions {

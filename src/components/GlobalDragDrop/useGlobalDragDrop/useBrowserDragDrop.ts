@@ -17,6 +17,7 @@ import {
   createPreventDefaults,
   extractFilePath,
   extractFilePathAsync,
+  getChatDropTargetId,
   hasVisibleChatDropTarget,
   isDropInsideChatDropTarget,
   isInternalDrag,
@@ -70,9 +71,14 @@ export interface UseBrowserDragDropOptions {
   handleIdeFileDrop: (
     filePath: string,
     fileName?: string,
-    isFolder?: boolean
+    isFolder?: boolean,
+    dropTargetId?: string
   ) => void;
-  handleBrowserFileDrop: (file: File, isFolder?: boolean) => void;
+  handleBrowserFileDrop: (
+    file: File,
+    isFolder?: boolean,
+    dropTargetId?: string
+  ) => void;
   setDroppedFolder: (folder: DroppedFolder | null) => void;
   setIsDragging: (dragging: boolean) => void;
   setBehavior: (behavior: DragDropBehavior | null) => void;
@@ -162,6 +168,7 @@ export function useBrowserDragDrop(options: UseBrowserDragDropOptions): void {
       const types = rawTypes ? Array.from(rawTypes) : [];
 
       const insideChatDropTarget = isDropInsideChatDropTarget(e);
+      const dropTargetId = getChatDropTargetId(e);
       log("drop:received", {
         insideChatDropTarget,
         target: (e.target as Element | null)?.tagName ?? "<none>",
@@ -201,7 +208,8 @@ export function useBrowserDragDrop(options: UseBrowserDragDropOptions): void {
             handleIdeFileDrop(
               parsed.path,
               typeof parsed.name === "string" ? parsed.name : undefined,
-              parsed.type === "directory"
+              parsed.type === "directory",
+              dropTargetId
             );
           } else {
             log("drop:internal-file-tree:no-path", { parsed });
@@ -244,7 +252,8 @@ export function useBrowserDragDrop(options: UseBrowserDragDropOptions): void {
               handleIdeFileDrop(
                 fileRef.path,
                 fileRef.name,
-                fileRef.type === "directory"
+                fileRef.type === "directory",
+                dropTargetId
               );
             } else {
               log("drop:internal-file-reference:no-path");
@@ -288,13 +297,14 @@ export function useBrowserDragDrop(options: UseBrowserDragDropOptions): void {
       }
 
       if (insideChatDropTarget) {
-        handleFileDrop(dragEvent, items);
+        handleFileDrop(dragEvent, items, dropTargetId);
       }
     };
 
     const handleFileDrop = (
       dragEvent: DragEvent,
-      items: DataTransferItem[]
+      items: DataTransferItem[],
+      dropTargetId?: string
     ) => {
       // Sync extraction first (OS file drops, VS Code URI drops)
       const extracted = extractFilePath(dragEvent.dataTransfer);
@@ -304,7 +314,12 @@ export function useBrowserDragDrop(options: UseBrowserDragDropOptions): void {
           source: "extractFilePath",
           path: extracted.filePath,
         });
-        handleIdeFileDrop(extracted.filePath, extracted.fileName);
+        handleIdeFileDrop(
+          extracted.filePath,
+          extracted.fileName,
+          undefined,
+          dropTargetId
+        );
         return;
       }
 
@@ -321,7 +336,12 @@ export function useBrowserDragDrop(options: UseBrowserDragDropOptions): void {
               source: "extractFilePathAsync",
               path: result.filePath,
             });
-            handleIdeFileDrop(result.filePath, result.fileName);
+            handleIdeFileDrop(
+              result.filePath,
+              result.fileName,
+              undefined,
+              dropTargetId
+            );
           } else {
             Message.warning(t("dragDrop.couldNotExtractPathFromItem"));
           }
@@ -348,9 +368,9 @@ export function useBrowserDragDrop(options: UseBrowserDragDropOptions): void {
           hadNativePath: Boolean((file as File & { path?: string }).path),
         });
         if (fullPath && fullPath !== file.name) {
-          handleIdeFileDrop(fullPath, file.name, isFolder);
+          handleIdeFileDrop(fullPath, file.name, isFolder, dropTargetId);
         } else {
-          handleBrowserFileDrop(file, isFolder);
+          handleBrowserFileDrop(file, isFolder, dropTargetId);
         }
         return;
       }

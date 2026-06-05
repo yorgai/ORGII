@@ -4,7 +4,7 @@
  * Voice input: user clicks the mic (or hits ⌃M) to start, sees a
  * waveform UI while speaking, then stops to accept (transcription is committed
  * to the caller) or cancels to discard. The hook is composer-agnostic — it
- * yields plain transcript strings; wiring into a contenteditable / Tiptap host
+ * yields plain transcript strings; wiring into a contenteditable / ComposerInput host
  * lives in the consumer.
  *
  * Transcription runs entirely in the Chromium webview via `webkitSpeechRecognition`

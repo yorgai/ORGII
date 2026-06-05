@@ -21,7 +21,7 @@ export const GIT_LABELS = {
   commitAndSync: "Commit & Sync",
   commitStaged: "Commit Staged",
   commitAll: "Commit All",
-  syncChanges: "Sync Changes",
+  syncChanges: "Sync",
   fetchOrigin: "Fetch Origin",
 
   // Progress indicators

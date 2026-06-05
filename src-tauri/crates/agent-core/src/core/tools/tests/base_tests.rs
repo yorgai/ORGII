@@ -231,19 +231,6 @@ fn edit_tool_llm_description_none_without_workspace() {
         "EditTool without workspace should return None (fallback to static)"
     );
 }
-
-#[test]
-fn apply_patch_llm_description_contains_workspace_path() {
-    use crate::tools::impls::coding::apply_patch::ApplyPatchTool;
-    use std::path::PathBuf;
-
-    let tool = ApplyPatchTool::new(PathBuf::from("/projects/myapp"));
-    let desc = tool
-        .llm_description()
-        .expect("should return dynamic description");
-    assert!(desc.contains("/projects/myapp"));
-}
-
 #[test]
 fn search_tool_llm_description_contains_repo() {
     use crate::tools::impls::coding::code_search::SearchTool;

@@ -23,7 +23,9 @@ import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
 import type { SimulatorAppProps } from "@src/engines/Simulator/apps/core/types";
 import { usePublishWorkstationTabHeader } from "@src/hooks/workStation";
 import {
+  type DiffFileNavigationItem,
   DiffFileNavigationList,
+  type DiffFileSectionData,
   DiffSectionList,
   NoTabsPlaceholder,
   SimulatorReplayChrome,
@@ -47,6 +49,7 @@ import {
   simulatorPrimarySidebarWidthPersistAtom,
 } from "@src/store/ui/simulatorAtom";
 
+import { isCodeFilePath } from "./config";
 import type { DiffFilter } from "./types";
 import { useDiff } from "./useDiff";
 
@@ -63,6 +66,17 @@ const FILTER_BY_TAB_ID: Record<string, DiffFilter> = {
   [TAB_IDS.code]: "code",
   [TAB_IDS.other]: "other",
 };
+
+function filterSectionsByType<T extends { file: { path: string } }>(
+  sections: T[],
+  filter: DiffFilter
+): T[] {
+  if (filter === "all") return sections;
+  return sections.filter((section) => {
+    const isCode = isCodeFilePath(section.file.path);
+    return filter === "code" ? isCode : !isCode;
+  });
+}
 
 const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   mode = "simulation",
@@ -173,19 +187,25 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     enabled: counts.all > 0,
   });
 
+  const sidebarItems = useMemo(
+    () =>
+      filterSectionsByType(
+        buildConsolidatedSessionReplayDiffSectionItems(filteredEntries),
+        filter
+      ),
+    [filteredEntries, filter]
+  );
+
   const handleSidebarItemSelect = useCallback(
-    (
-      item: ReturnType<
-        typeof buildConsolidatedSessionReplayDiffSectionItems
-      >[number]
-    ) => {
+    (item: DiffFileNavigationItem<DiffFileSectionData>) => {
       if (pillMode === "all-changes") {
         setFocusedDiffPath(item.file.path);
         setFocusedDiffNonce((prev) => prev + 1);
         return;
       }
 
-      const targetEntryId = item.entryIds[item.entryIds.length - 1];
+      const entryIds = item.entryIds ?? [];
+      const targetEntryId = entryIds[entryIds.length - 1];
       if (targetEntryId) selectEntry(targetEntryId);
     },
     [pillMode, selectEntry]
@@ -201,9 +221,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
           title: t("simulator.replay.diffApp.tabLabel"),
           content: (
             <DiffFileNavigationList
-              items={buildConsolidatedSessionReplayDiffSectionItems(
-                filteredEntries
-              )}
+              items={sidebarItems}
               selectedEntryId={selectedEntryId ?? displayEntry?.entryId ?? null}
               onSelectItem={handleSidebarItemSelect}
             />
@@ -214,7 +232,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
         },
       ],
     }),
-    [filteredEntries, selectedEntryId, displayEntry, handleSidebarItemSelect, t]
+    [sidebarItems, selectedEntryId, displayEntry, handleSidebarItemSelect, t]
   );
 
   const noopTabChange = useCallback(() => {

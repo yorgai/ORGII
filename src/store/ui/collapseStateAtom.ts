@@ -3,10 +3,15 @@ import { atom } from "jotai";
 const MAX_COLLAPSE_ENTRIES = 200;
 const MAX_TURN_OVERRIDE_ENTRIES = 200;
 
+type CollapseAllCommand = {
+  epoch: number;
+  collapsed: boolean;
+};
+
 /**
- * Session-scoped collapse state for chat blocks.
+ * Global collapse state for chat blocks.
  * Maps eventId -> collapsed (boolean) so user toggles persist
- * across scroll-out/scroll-in re-mounts within the same session.
+ * across scroll-out/scroll-in re-mounts.
  */
 export const collapseStateAtom = atom<Map<string, boolean>>(new Map());
 
@@ -27,30 +32,21 @@ export const setCollapseStateAtom = atom(
   }
 );
 
-/**
- * Per-session epoch counter for "collapse all" in the chat panel.
- * Maps sessionId -> monotonic epoch.
- * Only the targeted session's blocks react to the increment.
- */
-export const collapseAllEpochMapAtom = atom<Map<string, number>>(new Map());
+/** Global command for "collapse all" / "expand all" in chat panels. */
+export const collapseAllCommandAtom = atom<CollapseAllCommand>({
+  epoch: 0,
+  collapsed: false,
+});
 
-/** Read-only: get the epoch for a specific session (0 if never triggered). */
-export function selectCollapseEpoch(
-  epochMap: Map<string, number>,
-  sessionId: string | undefined
-): number {
-  if (!sessionId) return 0;
-  return epochMap.get(sessionId) ?? 0;
-}
-
-/** Write-only: bump the collapse-all epoch for one session. */
-export const triggerCollapseAllAtom = atom(
+export const setAllBlocksCollapsedAtom = atom(
   null,
-  (get, set, sessionId: string) => {
-    const current = get(collapseAllEpochMapAtom);
-    const next = new Map(current);
-    next.set(sessionId, (current.get(sessionId) ?? 0) + 1);
-    set(collapseAllEpochMapAtom, next);
+  (get, set, collapsed: boolean) => {
+    const current = get(collapseAllCommandAtom);
+    set(collapseAllCommandAtom, {
+      epoch: current.epoch + 1,
+      collapsed,
+    });
+    set(collapseStateAtom, new Map());
     set(turnCollapseOverrideAtom, new Map());
   }
 );

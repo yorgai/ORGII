@@ -5,6 +5,7 @@ export { hasVisibleChatDropTarget, isRepositoryDropPage } from "./routeUtils";
 export {
   isInternalDrag,
   isDropInsideChatDropTarget,
+  getChatDropTargetId,
   createPreventDefaults,
   type GlobalDragWindow,
 } from "./dragDetection";

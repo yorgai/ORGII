@@ -58,6 +58,8 @@ export interface UseChatScrollOptions {
   isContentOverflowingRef: MutableRefObject<boolean>;
   /** Active session ID — used to reset internal counters on session switch. */
   activeSessionId: string | null | undefined;
+  /** Static renderer scroll root used when Virtuoso is not mounted. */
+  staticScrollerRef?: MutableRefObject<HTMLDivElement | null>;
 }
 
 export interface UseChatScrollReturn {
@@ -91,6 +93,7 @@ export function useChatScroll({
   turnCollapseInteractionAtRef,
   isContentOverflowingRef,
   activeSessionId,
+  staticScrollerRef,
 }: UseChatScrollOptions): UseChatScrollReturn {
   const atBottomRef = useRef(true);
 
@@ -132,6 +135,16 @@ export function useChatScroll({
   );
 
   const scrollToBottom = useCallback(() => {
+    const staticEl = staticScrollerRef?.current;
+    if (staticEl) {
+      if (staticEl.scrollHeight > staticEl.clientHeight) {
+        staticEl.scrollTo({
+          top: Math.max(0, staticEl.scrollHeight - staticEl.clientHeight),
+          behavior: "smooth",
+        });
+      }
+      return;
+    }
     if (virtuosoRef.current && optimizedChatHistoryLength > 0) {
       virtuosoRef.current.scrollToIndex({
         index: optimizedChatHistoryLength - 1,
@@ -139,7 +152,7 @@ export function useChatScroll({
         align: "end",
       });
     }
-  }, [optimizedChatHistoryLength, virtuosoRef]);
+  }, [optimizedChatHistoryLength, staticScrollerRef, virtuosoRef]);
 
   // Auto-scroll when new messages arrive if user was at content bottom.
   // Stands down while the latest group is pinned to top — the pin is the
@@ -174,7 +187,9 @@ export function useChatScroll({
       const timer = setTimeout(() => {
         if (pinLastGroupRef.current) return;
         if (shouldSuppressTurnCollapseFollow()) return;
-        if (!isContentOverflowingRef.current) return;
+        if (!isContentOverflowingRef.current && !staticScrollerRef?.current) {
+          return;
+        }
         scrollToBottom();
       }, 50);
       return () => clearTimeout(timer);
@@ -187,7 +202,19 @@ export function useChatScroll({
     pinLastGroupRef,
     shouldSuppressTurnCollapseFollow,
     isContentOverflowingRef,
+    staticScrollerRef,
   ]);
+
+  const scrollStaticToEndGap = useCallback(() => {
+    const staticEl = staticScrollerRef?.current;
+    if (!staticEl) return false;
+    if (staticEl.scrollHeight <= staticEl.clientHeight) return true;
+    staticEl.scrollTo({
+      top: Math.max(0, staticEl.scrollHeight - staticEl.clientHeight),
+      behavior: "auto",
+    });
+    return true;
+  }, [staticScrollerRef]);
 
   // followOutput: return false and manually scroll to the last *item*
   // (align:"end").  The footer spacer means the absolute scroll bottom
@@ -221,6 +248,7 @@ export function useChatScroll({
           if (shouldSuppressTurnCollapseFollow()) return;
           if (!isContentOverflowingRef.current) return;
           if (isPendingCancelRef.current) return;
+          if (scrollStaticToEndGap()) return;
           const len = chatHistoryLengthRef.current;
           if (len > 0) {
             virtuosoRef.current?.scrollToIndex({
@@ -241,6 +269,7 @@ export function useChatScroll({
       pinLastGroupRef,
       shouldSuppressTurnCollapseFollow,
       isContentOverflowingRef,
+      scrollStaticToEndGap,
     ]
   );
 

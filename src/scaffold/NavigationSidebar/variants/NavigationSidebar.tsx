@@ -39,7 +39,6 @@ export interface NavigationSidebarProps {
   ) => React.ReactElement;
   defaultOpenKeys?: string[];
   bottomContent?: React.ReactNode;
-  iconOnly?: boolean;
   enableHoverIconAnimation?: boolean;
   /** Add-new button in the traffic lights area (passed to SidebarBase) */
   onAddNew?: () => void;
@@ -53,8 +52,6 @@ export interface NavigationSidebarProps {
   beforeAddNewActions?: React.ReactNode;
   /** Extra controls next to add-new (passed to SidebarBase) */
   headerActions?: React.ReactNode;
-  /** Optional content rendered between the tab switcher and menu list. */
-  topContent?: React.ReactNode;
   /** Preserve top padding for the scrollable menu list. */
   listTopPadding?: boolean;
   /** Show loading placeholder instead of menu items */
@@ -69,9 +66,6 @@ export interface NavigationSidebarProps {
    */
   collapsedSectionIds?: Set<string>;
   onCollapsedSectionsChange?: (next: Set<string>) => void;
-  // Tailwind gap class for the vertical menu list.
-  // Defaults to "gap-1"; Session sidebar opts into "gap-px".
-  verticalGapClassName?: string;
 }
 
 // ============================================
@@ -91,7 +85,6 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
     renderMenuItemWrapper,
     defaultOpenKeys = [],
     bottomContent,
-    iconOnly = false,
     enableHoverIconAnimation = false,
     onAddNew,
     addIcon,
@@ -99,13 +92,11 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
     addTooltipContent,
     beforeAddNewActions,
     headerActions,
-    topContent,
     listTopPadding = false,
     isLoading = false,
     collapsibleSections = false,
     collapsedSectionIds,
     onCollapsedSectionsChange,
-    verticalGapClassName = "gap-1",
   }) => {
     // Memoize section grouping — only recompute when menuItems changes
     // Separator items (id starts with "separator-") split the list into sections.
@@ -253,7 +244,6 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
                 region="sidebar"
                 tabs={tabPillTabs}
                 onChange={onChange}
-                iconOnly={iconOnly}
               />
             </div>
           </div>
@@ -270,30 +260,18 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
               onMenuItemClick={handleMenuItemClick}
               onMenuItemContextMenu={handleMenuItemContextMenu}
               renderMenuItemWrapper={renderMenuItemWrapper}
-              verticalGapClassName={verticalGapClassName}
             />
           </div>
         )}
 
         {/* Section Container */}
         <SidebarList isLoading={isLoading} topPadding={listTopPadding}>
-          {sections.map((section, sectionIndex) => {
+          {sections.map((section) => {
             const isSectionCollapsed =
               collapsibleSections && collapsedSections.has(section.id);
 
-            const shouldMergeTopContent =
-              sectionIndex === 0 && topContent && !section.title;
-
             return (
-              <div
-                key={section.id}
-                className={
-                  shouldMergeTopContent
-                    ? `flex flex-col ${verticalGapClassName}`
-                    : undefined
-                }
-              >
-                {shouldMergeTopContent && topContent}
+              <div key={section.id}>
                 {section.title &&
                   (collapsibleSections ? (
                     <div
@@ -326,7 +304,6 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
                     onMenuItemClick={handleMenuItemClick}
                     onMenuItemContextMenu={handleMenuItemContextMenu}
                     renderMenuItemWrapper={renderMenuItemWrapper}
-                    verticalGapClassName={verticalGapClassName}
                   />
                 )}
               </div>

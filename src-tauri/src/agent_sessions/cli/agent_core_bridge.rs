@@ -209,7 +209,6 @@ fn cli_registered_tool_names() -> Vec<String> {
         tool_names::CREATE_PLAN,
         tool_names::EDIT_FILE,
         tool_names::DELETE_FILE,
-        tool_names::APPLY_PATCH,
         tool_names::RUN_SHELL,
         tool_names::AWAIT_OUTPUT,
         tool_names::MANAGE_TODO,

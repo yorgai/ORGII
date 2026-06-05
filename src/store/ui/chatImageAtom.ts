@@ -22,6 +22,7 @@ export interface ChatImageAttachment {
   /** Image dimensions */
   width: number;
   height: number;
+  ownerId?: string;
 }
 
 // ============================================

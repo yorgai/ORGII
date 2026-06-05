@@ -21,7 +21,6 @@ export interface EditorQuickActionsOptions {
     params: Record<string, unknown>,
     source: "system" | "user" | "ai"
   ) => void;
-  bottomPanelCollapsed: boolean;
   sidebarCollapsed: boolean;
   onAddWorkspace: () => void;
 }
@@ -108,23 +107,9 @@ export const TAB_TYPE_CONFIG = {
 export function createEditorQuickActions(
   options: EditorQuickActionsOptions
 ): QuickAction[] {
-  const {
-    t,
-    dispatch,
-    bottomPanelCollapsed,
-    sidebarCollapsed,
-    onAddWorkspace,
-  } = options;
+  const { t, dispatch, sidebarCollapsed, onAddWorkspace } = options;
 
   return [
-    {
-      id: "toggle-bottom-panel",
-      label: bottomPanelCollapsed
-        ? t("commands.showBottomPanel")
-        : t("commands.hideBottomPanel"),
-      shortcut: getShortcutKeys("toggle_bottom_panel"),
-      onAction: () => dispatch("panel.toggleBottom", {}, "user"),
-    },
     {
       id: "toggle-primary-sidebar",
       label: sidebarCollapsed

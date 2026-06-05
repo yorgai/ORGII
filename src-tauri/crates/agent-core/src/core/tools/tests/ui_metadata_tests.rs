@@ -17,7 +17,6 @@ fn invokable_canonical_tool_names() -> BTreeSet<&'static str> {
         names::MANAGE_WORKSPACE,
         names::EDIT_FILE,
         names::DELETE_FILE,
-        names::APPLY_PATCH,
         names::QUERY_LSP,
         names::MANAGE_LSP,
         names::MANAGE_TODO,

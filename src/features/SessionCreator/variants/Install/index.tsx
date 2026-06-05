@@ -3,7 +3,7 @@
  *
  * Lightweight SessionCreator variant for the Import Agent wizard.
  * Renders only the model selector pill + UnifiedModelPalette,
- * without TiptapInput, file upload, repo selection, or draft management.
+ * without ComposerInput, file upload, repo selection, or draft management.
  *
  * The parent provides an "Analyze" action that creates a real agent session.
  */
@@ -85,7 +85,7 @@ const SessionCreatorInstall: React.FC<SessionCreatorInstallProps> = memo(
               <Grip
                 size={iconSize}
                 strokeWidth={1.75}
-                className="text-warning-6"
+                className="text-primary-6"
               />
             )
           }

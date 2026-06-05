@@ -104,6 +104,23 @@ pub fn ensure_unified_schema(conn: &Connection) -> SqliteResult<()> {
         "ALTER TABLE agent_sessions ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0",
     );
 
+    // Durable marker for the latest backend-observed terminal turn. This is
+    // intentionally on `agent_sessions`, not only in transient websocket
+    // traffic, so stale `running` rows can be audited/repaired after a missed
+    // frontend signal or process restart.
+    try_migrate(
+        conn,
+        "ALTER TABLE agent_sessions ADD COLUMN last_terminal_turn_id TEXT",
+    );
+    try_migrate(
+        conn,
+        "ALTER TABLE agent_sessions ADD COLUMN last_terminal_turn_status TEXT",
+    );
+    try_migrate(
+        conn,
+        "ALTER TABLE agent_sessions ADD COLUMN last_terminal_turn_at TEXT",
+    );
+
     Ok(())
 }
 

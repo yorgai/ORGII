@@ -4,7 +4,7 @@
  * Exports:
  * - ExtensionHero: title, metadata rows, description
  * - ExtensionContentTabs: pill-style tab switch for arbitrary content sections
- * - Utility helpers: stripFrontmatter, formatDate, formatNumber, clawHubUrl
+ * - Utility helpers: stripFrontmatter, formatDate, formatNumber, skillsShUrl
  *
  * Used by Skills and MCP detail panels.
  */
@@ -26,7 +26,7 @@ import type { HubSkillDetail } from "@src/types/extensions";
 // Utilities
 // ---------------------------------------------------------------------------
 
-export const CLAWHUB_BASE_URL = "https://clawhub.ai";
+export const SKILLS_SH_BASE_URL = "https://skills.sh";
 
 const FRONTMATTER_RE = /^---\s*\n[\s\S]*?\n---\s*\n?/;
 
@@ -55,11 +55,8 @@ export function formatNumber(value: number): string {
   return value.toLocaleString();
 }
 
-export function clawHubUrl(detail: HubSkillDetail): string {
-  if (detail.owner) {
-    return `${CLAWHUB_BASE_URL}/${detail.owner.handle}/${detail.slug}`;
-  }
-  return `${CLAWHUB_BASE_URL}/skills/${detail.slug}`;
+export function skillsShUrl(detail: HubSkillDetail): string {
+  return `${SKILLS_SH_BASE_URL}/${detail.slug}`;
 }
 
 // ---------------------------------------------------------------------------

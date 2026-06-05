@@ -8,7 +8,7 @@ use rusqlite::{params, Result as SqliteResult};
 use tracing::warn;
 
 use crate::persistence::db_helpers as shared;
-use database::db::get_connection;
+use database::db::{get_connection, with_sessions_writer};
 
 use super::super::super::types::{SessionListFilter, SessionStatus};
 use super::record::{row_to_record, session_type, UnifiedSessionRecord, UNIFIED_SESSION_SELECT};
@@ -98,45 +98,47 @@ ON CONFLICT(session_id) DO UPDATE SET
 
 /// Upsert a unified session.
 pub fn upsert_session(record: &UnifiedSessionRecord) -> SqliteResult<()> {
-    let conn = get_connection()?;
-    let key_source_str = record.key_source.as_ref();
-    conn.execute(
-        UPSERT_SESSION_SQL,
-        params![
-            record.session_id,
-            record.name,
-            record.status,
-            record.model,
-            record.account_id,
-            record.user_input,
-            record.created_at,
-            record.updated_at,
-            record.session_type,
-            record.channel,
-            record.chat_id,
-            record.workspace_path,
-            record.work_item_id,
-            record.agent_role,
-            record.worktree_path,
-            record.worktree_branch,
-            record.base_branch,
-            record.merge_status,
-            record.project_slug,
-            record.agent_definition_id,
-            record.org_member_id,
-            record.parent_session_id,
-            record.parent_event_id,
-            record.workspace_additional_json,
-            key_source_str,
-            record.agent_exec_mode,
-            record.native_harness_type,
-            record.draft_text,
-            record.reply_target_event_id,
-            record.tags_json,
-            record.pinned as i64,
-        ],
-    )?;
-    Ok(())
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let key_source_str = record.key_source.as_ref();
+        conn.execute(
+            UPSERT_SESSION_SQL,
+            params![
+                record.session_id,
+                record.name,
+                record.status,
+                record.model,
+                record.account_id,
+                record.user_input,
+                record.created_at,
+                record.updated_at,
+                record.session_type,
+                record.channel,
+                record.chat_id,
+                record.workspace_path,
+                record.work_item_id,
+                record.agent_role,
+                record.worktree_path,
+                record.worktree_branch,
+                record.base_branch,
+                record.merge_status,
+                record.project_slug,
+                record.agent_definition_id,
+                record.org_member_id,
+                record.parent_session_id,
+                record.parent_event_id,
+                record.workspace_additional_json,
+                key_source_str,
+                record.agent_exec_mode,
+                record.native_harness_type,
+                record.draft_text,
+                record.reply_target_event_id,
+                record.tags_json,
+                record.pinned as i64,
+            ],
+        )?;
+        Ok(())
+    })
 }
 
 /// Get a session by ID.
@@ -228,34 +230,110 @@ pub fn list_sessions(filter: &SessionListFilter) -> SqliteResult<Vec<UnifiedSess
 ///
 /// Returns the number of rows updated.
 pub fn mark_stale_running_sessions_abandoned() -> SqliteResult<usize> {
-    let conn = get_connection()?;
-    let now = Utc::now().to_rfc3339();
-    // The "in-flight" set: every status that means "an event loop or user
-    // intent owns this session right now". Sourced from the typed enum so
-    // adding a new in-flight variant only requires updating one place.
-    let updated = conn.execute(
-        "UPDATE agent_sessions SET status = ?1, updated_at = ?2 \
-         WHERE status IN (?3, ?4, ?5)",
-        params![
-            SessionStatus::Abandoned.as_str(),
-            now,
-            SessionStatus::Running.as_str(),
-            SessionStatus::WaitingForUser.as_str(),
-            SessionStatus::WaitingForFunds.as_str(),
-        ],
-    )?;
-    Ok(updated)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let now = Utc::now().to_rfc3339();
+        // The "in-flight" set: every status that means "an event loop or user
+        // intent owns this session right now". Sourced from the typed enum so
+        // adding a new in-flight variant only requires updating one place.
+        let updated = conn.execute(
+            "UPDATE agent_sessions SET status = ?1, updated_at = ?2 \
+             WHERE status IN (?3, ?4, ?5)",
+            params![
+                SessionStatus::Abandoned.as_str(),
+                now,
+                SessionStatus::Running.as_str(),
+                SessionStatus::WaitingForUser.as_str(),
+                SessionStatus::WaitingForFunds.as_str(),
+            ],
+        )?;
+        Ok(updated)
+    })
 }
 
 /// Update session status.
 pub fn update_status(session_id: &str, status: SessionStatus) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-    let now = Utc::now().to_rfc3339();
-    let updated = conn.execute(
-        "UPDATE agent_sessions SET status = ?2, updated_at = ?3 WHERE session_id = ?1",
-        params![session_id, status.as_str(), now],
-    )?;
-    Ok(updated > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let now = Utc::now().to_rfc3339();
+        let updated = conn.execute(
+            "UPDATE agent_sessions SET status = ?2, updated_at = ?3 WHERE session_id = ?1",
+            params![session_id, status.as_str(), now],
+        )?;
+        Ok(updated > 0)
+    })
+}
+
+/// Atomically persist the durable terminal-turn marker and the UI-visible
+/// session status.
+///
+/// `agent:complete` is a transient stream signal; this helper gives the
+/// backend a durable, queryable record that a turn reached a terminal state so
+/// list/sidebar state can be reconciled if a process or frontend misses a
+/// broadcast. The update is idempotent: repeating the same terminal marker for
+/// a session leaves the row in the same final state.
+pub fn finalize_terminal_turn_status(
+    session_id: &str,
+    turn_id: &str,
+    turn_status: &str,
+    session_status: SessionStatus,
+    completed_at: &str,
+) -> SqliteResult<bool> {
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let updated = conn.execute(
+            "UPDATE agent_sessions
+             SET status = ?2,
+                 updated_at = ?3,
+                 last_terminal_turn_id = ?4,
+                 last_terminal_turn_status = ?5,
+                 last_terminal_turn_at = ?3
+             WHERE session_id = ?1",
+            params![
+                session_id,
+                session_status.as_str(),
+                completed_at,
+                turn_id,
+                turn_status,
+            ],
+        )?;
+        Ok(updated > 0)
+    })
+}
+
+/// Repair rows that still say `running` even though this backend has already
+/// durably recorded a terminal turn for them.
+///
+/// This catches the exact failure mode where a turn finished and wrote its
+/// terminal marker, but a later process/frontend observation still sees the
+/// session-level status stuck in an in-flight state.
+pub fn reconcile_sessions_with_terminal_turn_markers() -> SqliteResult<usize> {
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let updated = conn.execute(
+            "UPDATE agent_sessions
+             SET status = CASE
+                   WHEN last_terminal_turn_status = ?4 THEN ?5
+                   WHEN last_terminal_turn_status = ?6 THEN ?7
+                   ELSE ?1
+                 END,
+                 updated_at = COALESCE(last_terminal_turn_at, updated_at)
+             WHERE status IN (?2, ?3)
+               AND last_terminal_turn_id IS NOT NULL
+               AND last_terminal_turn_status IN (?4, ?6, ?8)",
+            params![
+                SessionStatus::Completed.as_str(),
+                SessionStatus::Running.as_str(),
+                SessionStatus::WaitingForFunds.as_str(),
+                "cancelled",
+                SessionStatus::Cancelled.as_str(),
+                "failed",
+                SessionStatus::Failed.as_str(),
+                "completed",
+            ],
+        )?;
+        Ok(updated)
+    })
 }
 
 /// Link an existing session record to a Work Item. This is metadata, not
@@ -266,26 +344,30 @@ pub fn update_work_item_link(
     work_item_id: &str,
     agent_role: Option<&str>,
 ) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-    let updated = conn.execute(
-        "UPDATE agent_sessions
-         SET work_item_id = ?2,
-             project_slug = ?3,
-             agent_role = COALESCE(?4, agent_role)
-         WHERE session_id = ?1",
-        params![session_id, work_item_id, project_slug, agent_role],
-    )?;
-    Ok(updated > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let updated = conn.execute(
+            "UPDATE agent_sessions
+             SET work_item_id = ?2,
+                 project_slug = ?3,
+                 agent_role = COALESCE(?4, agent_role)
+             WHERE session_id = ?1",
+            params![session_id, work_item_id, project_slug, agent_role],
+        )?;
+        Ok(updated > 0)
+    })
 }
 
 /// Set the canonical Agent Org roster member id for a session.
 pub fn update_org_member_id(session_id: &str, org_member_id: &str) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-    let updated = conn.execute(
-        "UPDATE agent_sessions SET org_member_id = ?2 WHERE session_id = ?1",
-        params![session_id, org_member_id],
-    )?;
-    Ok(updated > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let updated = conn.execute(
+            "UPDATE agent_sessions SET org_member_id = ?2 WHERE session_id = ?1",
+            params![session_id, org_member_id],
+        )?;
+        Ok(updated > 0)
+    })
 }
 
 // `updated_at` invariant
@@ -312,23 +394,27 @@ pub fn update_org_member_id(session_id: &str, org_member_id: &str) -> SqliteResu
 /// Update the model for a session. Does not bump `updated_at` —
 /// switching models is config, not activity.
 pub fn update_model(session_id: &str, model: &str) -> SqliteResult<()> {
-    let conn = get_connection()?;
-    conn.execute(
-        "UPDATE agent_sessions SET model = ?2 WHERE session_id = ?1",
-        params![session_id, model],
-    )?;
-    Ok(())
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        conn.execute(
+            "UPDATE agent_sessions SET model = ?2 WHERE session_id = ?1",
+            params![session_id, model],
+        )?;
+        Ok(())
+    })
 }
 
 /// Update the account_id for a session. Does not bump `updated_at`
 /// (see invariant note above).
 pub fn update_account_id(session_id: &str, account_id: &str) -> SqliteResult<()> {
-    let conn = get_connection()?;
-    conn.execute(
-        "UPDATE agent_sessions SET account_id = ?2 WHERE session_id = ?1",
-        params![session_id, account_id],
-    )?;
-    Ok(())
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        conn.execute(
+            "UPDATE agent_sessions SET account_id = ?2 WHERE session_id = ?1",
+            params![session_id, account_id],
+        )?;
+        Ok(())
+    })
 }
 
 /// Atomically update `model` and `account_id` together.
@@ -344,19 +430,21 @@ pub fn update_model_and_account(
     model: &str,
     account_id: Option<&str>,
 ) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-    let affected = if let Some(acc_id) = account_id {
-        conn.execute(
-            "UPDATE agent_sessions SET model = ?2, account_id = ?3 WHERE session_id = ?1",
-            params![session_id, model, acc_id],
-        )?
-    } else {
-        conn.execute(
-            "UPDATE agent_sessions SET model = ?2 WHERE session_id = ?1",
-            params![session_id, model],
-        )?
-    };
-    Ok(affected > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let affected = if let Some(acc_id) = account_id {
+            conn.execute(
+                "UPDATE agent_sessions SET model = ?2, account_id = ?3 WHERE session_id = ?1",
+                params![session_id, model, acc_id],
+            )?
+        } else {
+            conn.execute(
+                "UPDATE agent_sessions SET model = ?2 WHERE session_id = ?1",
+                params![session_id, model],
+            )?
+        };
+        Ok(affected > 0)
+    })
 }
 
 /// Update the per-session execution mode (`build` / `ask` /
@@ -369,12 +457,14 @@ pub fn update_model_and_account(
 ///
 /// Does not bump `updated_at` (see invariant note above).
 pub fn update_agent_exec_mode(session_id: &str, mode: &str) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-    let affected = conn.execute(
-        "UPDATE agent_sessions SET agent_exec_mode = ?2 WHERE session_id = ?1",
-        params![session_id, mode],
-    )?;
-    Ok(affected > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let affected = conn.execute(
+            "UPDATE agent_sessions SET agent_exec_mode = ?2 WHERE session_id = ?1",
+            params![session_id, mode],
+        )?;
+        Ok(affected > 0)
+    })
 }
 
 /// Update the per-session unsent draft text. `text = None` clears the
@@ -388,8 +478,10 @@ pub fn update_agent_exec_mode(session_id: &str, mode: &str) -> SqliteResult<bool
 /// Does not bump `updated_at` (see invariant note above) — typing in
 /// the composer is not conversation activity.
 pub fn update_draft_text(session_id: &str, text: Option<&str>) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-    update_draft_text_with_conn(&conn, session_id, text)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        update_draft_text_with_conn(&conn, session_id, text)
+    })
 }
 
 /// Connection-injectable variant of [`update_draft_text`]. Production
@@ -423,8 +515,10 @@ pub fn update_reply_target_event_id(
     session_id: &str,
     event_id: Option<&str>,
 ) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-    update_reply_target_event_id_with_conn(&conn, session_id, event_id)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        update_reply_target_event_id_with_conn(&conn, session_id, event_id)
+    })
 }
 
 /// Connection-injectable variant of [`update_reply_target_event_id`].
@@ -449,27 +543,31 @@ pub fn update_reply_target_event_id_with_conn(
 ///
 /// `tags` is serialized as a JSON array; `None` (empty slice) stores `NULL`.
 pub fn update_tags(session_id: &str, tags: &[String]) -> SqliteResult<bool> {
-    let conn = get_connection()?;
     let json_value: Option<String> = if tags.is_empty() {
         None
     } else {
         serde_json::to_string(tags).ok()
     };
-    let affected = conn.execute(
-        "UPDATE agent_sessions SET tags_json = ?2 WHERE session_id = ?1",
-        params![session_id, json_value],
-    )?;
-    Ok(affected > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let affected = conn.execute(
+            "UPDATE agent_sessions SET tags_json = ?2 WHERE session_id = ?1",
+            params![session_id, json_value],
+        )?;
+        Ok(affected > 0)
+    })
 }
 
 /// Update the `pinned` column for a session.
 pub fn update_pinned(session_id: &str, pinned: bool) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-    let affected = conn.execute(
-        "UPDATE agent_sessions SET pinned = ?2 WHERE session_id = ?1",
-        params![session_id, pinned as i64],
-    )?;
-    Ok(affected > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let affected = conn.execute(
+            "UPDATE agent_sessions SET pinned = ?2 WHERE session_id = ?1",
+            params![session_id, pinned as i64],
+        )?;
+        Ok(affected > 0)
+    })
 }
 
 /// Set `agent_definition_id` on a session row that doesn't have one yet.
@@ -477,13 +575,15 @@ pub fn update_pinned(session_id: &str, pinned: bool) -> SqliteResult<bool> {
 /// Used during init for auto-registered sessions (OS/SDE) whose DB row
 /// was created before the definition was known.
 pub fn backfill_agent_definition_id(session_id: &str, definition_id: &str) -> Result<(), String> {
-    let conn = get_connection().map_err(|err| format!("DB connection failed: {}", err))?;
-    conn.execute(
-        "UPDATE agent_sessions SET agent_definition_id = ?1 WHERE session_id = ?2 AND agent_definition_id IS NULL",
-        params![definition_id, session_id],
-    )
-    .map_err(|err| format!("DB update failed: {}", err))?;
-    Ok(())
+    with_sessions_writer(|| -> Result<(), String> {
+        let conn = get_connection().map_err(|err| format!("DB connection failed: {}", err))?;
+        conn.execute(
+            "UPDATE agent_sessions SET agent_definition_id = ?1 WHERE session_id = ?2 AND agent_definition_id IS NULL",
+            params![definition_id, session_id],
+        )
+        .map_err(|err| format!("DB update failed: {}", err))?;
+        Ok(())
+    })
 }
 
 /// Delete a session and all related data.
@@ -572,17 +672,19 @@ pub fn delete_session(session_id: &str) -> SqliteResult<()> {
     // Soft-unlink learnings produced by this session: keep the learning
     // itself (it is a knowledge artefact, not session transient state) but
     // null the back-pointer so it no longer dangles to a deleted session.
-    {
+    let unlink_result = with_sessions_writer(|| -> SqliteResult<()> {
         let conn = get_connection()?;
-        if let Err(err) = conn.execute(
+        conn.execute(
             "UPDATE learnings SET source_session_id = NULL WHERE source_session_id = ?1",
             [session_id],
-        ) {
-            warn!(
-                "Failed to null learnings.source_session_id for deleted session {}: {}",
-                session_id, err
-            );
-        }
+        )?;
+        Ok(())
+    });
+    if let Err(err) = unlink_result {
+        warn!(
+            "Failed to null learnings.source_session_id for deleted session {}: {}",
+            session_id, err
+        );
     }
 
     // Per-session file-history is addressed by session_id alone, so drop the

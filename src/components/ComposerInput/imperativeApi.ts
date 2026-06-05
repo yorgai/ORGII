@@ -3,7 +3,7 @@
  *
  * Exposes the shared composer ref surface used across the codebase. The
  * façade returned by `getEditor()` covers the chainable insert-content pattern
- * (`useTiptapInput.handleAtMentionClick` and `useSlashCommand` both use
+ * (`useComposerInput.handleAtMentionClick` and `useSlashCommand` both use
  * `editor.chain().focus().insertContent("...").run()`).
  */
 import {

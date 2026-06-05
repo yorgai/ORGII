@@ -10,7 +10,7 @@
  * `imperativeApi.ts`.
  *
  * The component exposes the shared `ComposerInputRef` contract, so every
- * existing consumer (`useTiptapInput`, `useSlashCommand`, `useDraftManagement`,
+ * existing consumer (`useComposerInput`, `useSlashCommand`, `useDraftManagement`,
  * `inputPreparation`, …) keeps working without any signature changes.
  */
 import { useAtomValue } from "jotai";

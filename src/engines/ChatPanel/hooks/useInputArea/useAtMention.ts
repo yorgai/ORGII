@@ -6,7 +6,7 @@
 import type { MenuItemId } from "@/src/scaffold/ContextMenu/config";
 import { type MutableRefObject, type RefObject, useCallback } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import { getTerminalBuffer } from "@src/components/TerminalInteractive/bufferCache";
 import { storePillText } from "@src/config/pillTokens";
 import {
@@ -19,7 +19,7 @@ import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 import type { AtMentionHandlers, CustomMentionOption } from "./types";
 
 interface UseAtMentionOptions {
-  tiptapRef: RefObject<TiptapInputRef>;
+  composerInputRef: RefObject<ComposerInputRef>;
   hasContentRef: MutableRefObject<boolean>;
   setShowContextMenu: (show: boolean) => void;
   setAtSearchQuery: (query: string) => void;
@@ -28,7 +28,7 @@ interface UseAtMentionOptions {
 
 export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
   const {
-    tiptapRef,
+    composerInputRef,
     hasContentRef,
     setShowContextMenu,
     setAtSearchQuery,
@@ -36,7 +36,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
   } = options;
 
   /**
-   * Handle @ mention from TiptapInput
+   * Handle @ mention from ComposerInput
    */
   const handleAtMention = useCallback(
     (query: string, _position: { x: number; y: number }) => {
@@ -59,9 +59,9 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
    */
   const handleAtSelect = useCallback(
     (type: MenuItemId | string, value?: string, displayName?: string) => {
-      if (!tiptapRef.current || !value) {
-        console.warn("[handleAtSelect] Missing tiptapRef or value", {
-          tiptapRef: !!tiptapRef.current,
+      if (!composerInputRef.current || !value) {
+        console.warn("[handleAtSelect] Missing composerInputRef or value", {
+          composerInputRef: !!composerInputRef.current,
           value,
         });
         setShowContextMenu(false);
@@ -79,7 +79,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
           break;
         case "repo":
           // Insert repo pill (path = repo path, displayName = repo name)
-          tiptapRef.current.insertFilePill(
+          composerInputRef.current.insertFilePill(
             value,
             false,
             "repo",
@@ -89,7 +89,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
           break;
         case "branch":
           // Insert branch pill (path = repoPath|branchName for serialization)
-          tiptapRef.current.insertFilePill(
+          composerInputRef.current.insertFilePill(
             value,
             false,
             "branch",
@@ -99,7 +99,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
           break;
         case "folder":
           // Insert folder pill with folder icon
-          tiptapRef.current.insertFilePill(
+          composerInputRef.current.insertFilePill(
             value,
             true, // is a folder
             "folder",
@@ -124,14 +124,14 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
 
             storePillText(pillPath, buffer);
 
-            tiptapRef.current.insertFilePill(
+            composerInputRef.current.insertFilePill(
               pillPath,
               false,
               "terminal",
               pillDisplayName
             );
           } else {
-            tiptapRef.current.insertFilePill(
+            composerInputRef.current.insertFilePill(
               value,
               false,
               "terminal",
@@ -144,7 +144,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
         case "sessions":
         case "session": {
           const sessionPillPath = `session://${value}/${Date.now()}`;
-          tiptapRef.current.insertFilePill(
+          composerInputRef.current.insertFilePill(
             sessionPillPath,
             false,
             "session",
@@ -156,7 +156,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
         }
         case "browser": {
           const browserPillPath = `browser://${value}/${Date.now()}`;
-          tiptapRef.current.insertFilePill(
+          composerInputRef.current.insertFilePill(
             browserPillPath,
             false,
             "browser",
@@ -168,7 +168,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
         }
         case "projects":
         case "project":
-          tiptapRef.current.insertFilePill(
+          composerInputRef.current.insertFilePill(
             value,
             false,
             "project",
@@ -178,7 +178,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
           break;
         case "workitem": {
           const workitemPillPath = `workitem://${value}/${Date.now()}`;
-          tiptapRef.current.insertFilePill(
+          composerInputRef.current.insertFilePill(
             workitemPillPath,
             false,
             "workitem",
@@ -191,7 +191,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
         case "codebase": {
           // `value` is the full absolute path (repo_path/relative_path)
           // Insert as a regular file pill; the file path is what the agent needs
-          tiptapRef.current.insertFilePill(
+          composerInputRef.current.insertFilePill(
             value,
             false,
             "file",
@@ -208,7 +208,7 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
       setAtSearchQuery("");
     },
     [
-      tiptapRef,
+      composerInputRef,
       hasContentRef,
       handleSelectFile,
       setShowContextMenu,
@@ -218,12 +218,21 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
 
   const handleCustomMentionSelect = useCallback(
     (option: CustomMentionOption) => {
-      if (!tiptapRef.current) {
+      if (!composerInputRef.current) {
         setShowContextMenu(false);
         setAtSearchQuery("");
         return;
       }
-      tiptapRef.current.insertFilePill(
+      if (option.selectType && option.selectValue) {
+        handleAtSelect(
+          option.selectType,
+          option.selectValue,
+          option.selectDisplayName ?? option.label
+        );
+        return;
+      }
+
+      composerInputRef.current.insertFilePill(
         `member://${option.id}`,
         false,
         "member",
@@ -233,7 +242,13 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
       setShowContextMenu(false);
       setAtSearchQuery("");
     },
-    [tiptapRef, hasContentRef, setShowContextMenu, setAtSearchQuery]
+    [
+      composerInputRef,
+      hasContentRef,
+      handleAtSelect,
+      setShowContextMenu,
+      setAtSearchQuery,
+    ]
   );
 
   return {

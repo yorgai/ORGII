@@ -15,6 +15,7 @@ export interface DroppedFile {
   path: string;
   type: "file" | "folder";
   browserFile?: File;
+  dropTargetId?: string;
 }
 
 // ============================================

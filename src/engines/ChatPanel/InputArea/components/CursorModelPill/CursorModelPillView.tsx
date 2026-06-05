@@ -107,7 +107,7 @@ const CursorModelPillView: React.FC<CursorModelPillViewProps> = ({
       icon: effectiveModel ? (
         <ModelIcon modelName={effectiveModel} size={iconSize} />
       ) : (
-        <Grip size={iconSize} strokeWidth={1.75} className="text-warning-6" />
+        <Grip size={iconSize} strokeWidth={1.75} className="text-primary-6" />
       ),
       label: displayLabel,
       title:

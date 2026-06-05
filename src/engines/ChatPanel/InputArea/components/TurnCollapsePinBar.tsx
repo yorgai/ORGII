@@ -30,6 +30,7 @@ import {
   EventBlockHeaderTitle,
 } from "@src/engines/ChatPanel/blocks/primitives";
 import {
+  collapseAllCommandAtom,
   setTurnCollapseOverrideAtom,
   turnCollapseOverrideAtom,
 } from "@src/store/ui/collapseStateAtom";
@@ -102,11 +103,16 @@ const TurnCollapsePinBar: React.FC<TurnCollapsePinBarProps> = memo(
   }) => {
     const { t } = useTranslation("sessions");
     const overrideMap = useAtomValue(turnCollapseOverrideAtom);
+    const collapseAllCommand = useAtomValue(collapseAllCommandAtom);
     const setOverride = useSetAtom(setTurnCollapseOverrideAtom);
     const [isLoading, setIsLoading] = useState(false);
 
     const override = overrideMap.get(turnId);
-    const collapsed = override ?? defaultCollapsed;
+    const forcedCollapsed =
+      collapseAllCommand.epoch > 0 && collapseAllCommand.collapsed
+        ? true
+        : undefined;
+    const collapsed = override ?? forcedCollapsed ?? defaultCollapsed;
     const expanded = !collapsed;
 
     const handleToggle = useCallback(async () => {
@@ -121,13 +127,17 @@ const TurnCollapsePinBar: React.FC<TurnCollapsePinBarProps> = memo(
           setIsLoading(false);
         }
       }
-      // Clear the override when it matches the default so the map stays small.
+      // Clear the override when it matches the effective command/default
+      // fallback so the map stays small while preserving manual toggles after
+      // a bulk collapse/expand command.
+      const fallbackCollapsed = forcedCollapsed ?? defaultCollapsed;
       const nextValue =
-        nextCollapsed === defaultCollapsed ? undefined : nextCollapsed;
+        nextCollapsed === fallbackCollapsed ? undefined : nextCollapsed;
       setOverride({ turnId, collapsed: nextValue });
     }, [
       collapsed,
       defaultCollapsed,
+      forcedCollapsed,
       isLoading,
       onExpand,
       setOverride,

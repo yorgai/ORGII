@@ -27,6 +27,7 @@ interface ExpandOverlayProps {
   onToggle: (e: React.MouseEvent) => void;
   collapsedLabel?: string;
   expandedLabel?: string;
+  collapsedFadeHeightClass?: string;
   /** Tailwind `from-*` class for the gradient background (default: "from-fill-2") */
   fadeFrom?: string;
 }
@@ -36,13 +37,14 @@ const ExpandOverlay: React.FC<ExpandOverlayProps> = ({
   onToggle,
   collapsedLabel,
   expandedLabel,
+  collapsedFadeHeightClass = "h-14",
   fadeFrom = "from-fill-2",
 }) => {
   if (!isExpanded) {
     return (
       <>
         <div
-          className={`pointer-events-none absolute bottom-0 left-0 right-0 h-14 bg-gradient-to-t ${fadeFrom} to-transparent`}
+          className={`pointer-events-none absolute bottom-0 left-0 right-0 ${collapsedFadeHeightClass} bg-gradient-to-t ${fadeFrom} to-transparent`}
         />
         <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center pb-1 opacity-0 transition-opacity group-hover/expand:opacity-100">
           <FloatingExpandPill

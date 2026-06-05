@@ -1,4 +1,4 @@
-import { LogIn, RefreshCw } from "lucide-react";
+import { ArrowUpRight, LogIn, RefreshCw } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -18,6 +18,8 @@ import {
 } from "@src/modules/shared/layouts";
 
 const LOGIN_COLUMN_WIDTH_CLASS = ONBOARDING_LOADING_VIDEO_WIDTH_CLASS;
+const GITHUB_REPO_URL = "https://github.com/yorg-ai/orgii";
+const OSS_LOGIN_ENABLED = false;
 
 /** Primary CTAs — taller than default `Button` large for login prominence */
 const LOGIN_ACTION_BUTTON_CLASS = `pointer-events-auto relative z-10 h-14 ${LOGIN_COLUMN_WIDTH_CLASS} text-base font-medium`;
@@ -112,24 +114,39 @@ const LoginForm: React.FC<LoginFormProps> = ({
             </InlineAlert>
           )}
 
-          <Button
-            variant="primary"
-            size="large"
-            loading={isLoading}
-            onClick={onLogin}
-            className={LOGIN_ACTION_BUTTON_CLASS}
-          >
-            {isLoading ? t("login.signingIn") : t("login.button")}
-          </Button>
+          {OSS_LOGIN_ENABLED && (
+            <Button
+              variant="primary"
+              size="large"
+              loading={isLoading}
+              onClick={onLogin}
+              className={LOGIN_ACTION_BUTTON_CLASS}
+            >
+              {isLoading ? t("login.signingIn") : t("login.button")}
+            </Button>
+          )}
 
           <Button
-            variant="secondary"
+            variant="primary"
             size="large"
             onClick={onSkip}
             className={LOGIN_ACTION_BUTTON_CLASS}
             loading={false}
           >
-            {t("login.skipButton")}
+            {t("login.startButton")}
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="large"
+            href={GITHUB_REPO_URL}
+            target="_blank"
+            rel="noreferrer noopener"
+            className={LOGIN_ACTION_BUTTON_CLASS}
+            icon={<ArrowUpRight className="h-4 w-4" />}
+            iconPosition="right"
+          >
+            {t("login.githubRepoButton")}
           </Button>
 
           <p className="m-0 text-center text-xs leading-normal text-text-3">

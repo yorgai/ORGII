@@ -339,6 +339,28 @@ pub(crate) async fn send_message_impl(
                 .unwrap_or_default();
             session.end_turn(final_turn_state, stats).await;
 
+            let terminal_turn =
+                response
+                    .as_ref()
+                    .ok()
+                    .map(|r| crate::lifecycle::TerminalTurnSignal {
+                        turn_id: r.turn_id.clone(),
+                        status: match final_turn_state {
+                            crate::session::DialogTurnState::Cancelled => {
+                                crate::lifecycle::TurnTerminalStatus::Cancelled
+                            }
+                            crate::session::DialogTurnState::Failed => {
+                                crate::lifecycle::TurnTerminalStatus::Failed
+                            }
+                            crate::session::DialogTurnState::Running
+                            | crate::session::DialogTurnState::Completed => {
+                                crate::lifecycle::TurnTerminalStatus::Completed
+                            }
+                        },
+                        completed_at: chrono::Utc::now()
+                            .to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                    });
+
             let content_result = response.map(|r| r.content);
 
             crate::lifecycle::finalize_session(
@@ -347,6 +369,7 @@ pub(crate) async fn send_message_impl(
                 app_handle.as_ref(),
                 Some(workspace_root.as_path()),
                 load_workspace_resources,
+                terminal_turn,
             )
             .await;
 

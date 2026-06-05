@@ -305,11 +305,10 @@ fn pty_info_from_session(session_id: &str, session: &PtySession) -> PtyInfo {
         cwd: session.cwd.clone(),
         name: session.name.clone(),
         created_at: session.created_at,
-        last_output_at: session
+        last_output_at: *session
             .last_output_at
             .lock()
-            .expect("last_output_at mutex poisoned")
-            .clone(),
+            .expect("last_output_at mutex poisoned"),
         has_output_tap: session.output_tap.is_some(),
         unacked_bytes: session.unacked_bytes.load(Ordering::Relaxed),
         redacted_output_chars: session

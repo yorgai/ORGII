@@ -1,19 +1,18 @@
 //! E2E scenarios for the file-history / snapshot system.
 //!
-//! File deletion can flow through either `apply_patch` with a `*** Delete File:`
-//! hunk or the first-class `delete_file` tool. The snapshot system must capture
-//! both so deleted files can be restored via rewind.
+//! File deletion flows through the first-class `delete_file` tool. The snapshot
+//! system must capture deleted files so they can be restored via rewind.
 
 use super::tmp_workspace_path;
 use crate::config::Config;
 use crate::harness;
 use std::path::Path;
 
-/// Verify that deleting a file via `apply_patch` creates a recoverable snapshot.
+/// Verify that deleting a file creates a recoverable snapshot.
 ///
 /// Steps:
 ///   1. Create a file in a fresh workspace directory.
-///   2. Ask the agent to delete it via `apply_patch` (not `run_shell`/`rm`).
+///   2. Ask the agent to delete it via `delete_file` (not `run_shell`/`rm`).
 ///   3. Assert the file is gone AND a file-history snapshot exists on disk
 ///      with the deleted file tracked.
 pub async fn delete_file_snapshot(cfg: &Config) -> bool {
@@ -27,9 +26,9 @@ pub async fn delete_file_snapshot(cfg: &Config) -> bool {
     match harness::send_sde_message(
         cfg,
         &format!(
-            "Delete the file at '{}' using the apply_patch tool with a \
-             '*** Delete File:' hunk. Do NOT use a shell command (no `rm`, \
-             no `run_shell`). After deleting, confirm it no longer exists.",
+            "Delete the file at '{}' using the delete_file tool directly. \
+             Do NOT use a shell command (no `rm`, no `run_shell`). After deleting, \
+             confirm it no longer exists.",
             target.display()
         ),
         &session_id,
@@ -44,8 +43,7 @@ pub async fn delete_file_snapshot(cfg: &Config) -> bool {
         Ok(resp) => {
             let content_lower = resp.content.to_lowercase();
             let file_gone = !target.exists();
-            let used_delete_path = harness::assert_sde_tool_used(&resp, "apply_patch")
-                || harness::assert_sde_tool_used(&resp, "delete_file");
+            let used_delete_path = harness::assert_sde_tool_used(&resp, "delete_file");
 
             // Verify the snapshot directory exists and contains a backup of the
             // deleted file. Layout (see `agent_core::tools::file_history`):
@@ -73,10 +71,7 @@ pub async fn delete_file_snapshot(cfg: &Config) -> bool {
                             || content_lower.contains("gone")
                             || content_lower.contains("no longer exists"),
                     ),
-                    (
-                        "Used delete path (apply_patch or delete_file)",
-                        used_delete_path,
-                    ),
+                    ("Used delete_file", used_delete_path),
                     ("Snapshot directory exists", snapshot_exists),
                     ("Manifest tracks deleted file", manifest_tracks_file),
                 ],
@@ -98,7 +93,7 @@ pub async fn create_file_rewind_deletes_created_file(cfg: &Config) -> bool {
     match harness::send_sde_message(
         cfg,
         &format!(
-            "Use the edit_file tool to create exactly this file: '{}'. The file content must be exactly 'CODEX_BACKEND_REWIND_MARKER'. Do NOT use apply_patch. Do NOT use a shell command. After creating it, confirm the file exists.",
+            "Use the edit_file tool to create exactly this file: '{}'. The file content must be exactly 'CODEX_BACKEND_REWIND_MARKER'. Do NOT use a shell command. After creating it, confirm the file exists.",
             target.display()
         ),
         &session_id,
@@ -113,7 +108,6 @@ pub async fn create_file_rewind_deletes_created_file(cfg: &Config) -> bool {
         Ok(resp) => {
             let created = target.exists();
             let used_edit_file = harness::assert_sde_tool_used(&resp, "edit_file");
-            let avoided_patch = !harness::assert_sde_tool_used(&resp, "apply_patch");
             let content_ok = std::fs::read_to_string(&target)
                 .map(|content| content == "CODEX_BACKEND_REWIND_MARKER")
                 .unwrap_or(false);
@@ -136,7 +130,6 @@ pub async fn create_file_rewind_deletes_created_file(cfg: &Config) -> bool {
                 &[
                     ("Got response", !resp.content.is_empty()),
                     ("Used edit_file", used_edit_file),
-                    ("Did not use apply_patch", avoided_patch),
                     ("File actually created", created),
                     ("Created file content matches marker", content_ok),
                     ("Snapshot row exists", earliest_created_at.is_some()),
@@ -150,10 +143,8 @@ pub async fn create_file_rewind_deletes_created_file(cfg: &Config) -> bool {
 
 /// Verify that the first-class `delete_file` tool creates a recoverable snapshot.
 ///
-/// This is separate from `delete_file_snapshot`, which pins the apply_patch
-/// delete hunk path. Here the agent must call `delete_file` directly so the
-/// restored builtin tool stays wired through registration, policy, and file
-/// history snapshot guards.
+/// This pins that the restored builtin `delete_file` tool stays wired through
+/// registration, policy, and file history snapshot guards.
 pub async fn delete_file_tool_snapshot(cfg: &Config) -> bool {
     let session_id = format!("{}-delete-tool-snapshot", cfg.session_prefix);
     let project = tmp_workspace_path("delete-tool-snapshot");
@@ -165,7 +156,7 @@ pub async fn delete_file_tool_snapshot(cfg: &Config) -> bool {
     match harness::send_sde_message(
         cfg,
         &format!(
-            "Delete the file at '{}' using the delete_file tool directly. Do NOT use apply_patch, do NOT use a shell command, and do NOT use rm. After deleting, confirm it no longer exists.",
+            "Delete the file at '{}' using the delete_file tool directly. Do NOT use a shell command, and do NOT use rm. After deleting, confirm it no longer exists.",
             target.display()
         ),
         &session_id,
@@ -181,7 +172,6 @@ pub async fn delete_file_tool_snapshot(cfg: &Config) -> bool {
             let content_lower = resp.content.to_lowercase();
             let file_gone = !target.exists();
             let used_delete_file = harness::assert_sde_tool_used(&resp, "delete_file");
-            let avoided_patch = !harness::assert_sde_tool_used(&resp, "apply_patch");
 
             let home = std::env::var("HOME").unwrap_or_default();
             let snapshots_dir = Path::new(&home)
@@ -206,7 +196,6 @@ pub async fn delete_file_tool_snapshot(cfg: &Config) -> bool {
                             || content_lower.contains("no longer exists"),
                     ),
                     ("Used delete_file tool", used_delete_file),
-                    ("Did not use apply_patch", avoided_patch),
                     ("Snapshot directory exists", snapshot_exists),
                     ("Manifest tracks deleted file", manifest_tracks_file),
                 ],

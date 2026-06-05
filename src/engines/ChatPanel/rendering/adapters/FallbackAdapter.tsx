@@ -121,7 +121,7 @@ export const FallbackAdapter: React.FC<UniversalEventProps> = (props) => {
   const worktreeLabels = useLifecycleLabels("worktree", "list");
   const state = statusToLifecycle(props.status);
 
-  const toolLabels = useLifecycleLabels(props.eventType, action);
+  const toolLabels = useLifecycleLabels(displayToolName, action);
   const title =
     toolLabels[state] ||
     getToolDisplayLabelFromRegistry(displayToolName, action);

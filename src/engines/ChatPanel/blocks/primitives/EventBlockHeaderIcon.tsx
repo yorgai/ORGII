@@ -42,7 +42,7 @@ export interface EventBlockHeaderIconProps {
    * Use with headers where click navigates/locates and icon toggles collapse.
    */
   revealChevronOnIconHoverOnly?: boolean;
-  /** When true, plays a repeating stroke-draw animation in primary-6 */
+  /** When true, plays a repeating stroke-draw animation in text-1 */
   isLoading?: boolean;
   /** When true, icon renders in muted text-3 to signal attempted/failed */
   isFailed?: boolean;
@@ -84,7 +84,7 @@ export const EventBlockHeaderIcon: React.FC<EventBlockHeaderIconProps> = ({
     hasContent;
 
   const wrapperClass = isLoading
-    ? `${EVENT_BLOCK_ICON_WRAPPER_CLASSES} [&_svg]:text-primary-6 ${className}`
+    ? `${EVENT_BLOCK_ICON_WRAPPER_CLASSES} [&_svg]:text-text-1 ${className}`
     : isFailed
       ? `${EVENT_BLOCK_ICON_WRAPPER_CLASSES} [&_svg]:text-text-3 ${className}`
       : `${EVENT_BLOCK_ICON_WRAPPER_CLASSES} ${className}`;

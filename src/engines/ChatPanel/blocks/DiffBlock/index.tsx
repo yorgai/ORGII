@@ -108,12 +108,9 @@ const SegmentView: React.FC<SegmentViewProps> = ({
       ? (displayContent ?? "").split("\n").length
       : linesAdded;
 
-  // For new-file writes, append a muted "(New)" suffix right next to the
-  // green `+N` count so the header reads e.g. `+123 (New)`. Uses the
-  // `secondary` tone (text-text-2) instead of an attention-grabbing color
-  // because the green `+N` already communicates "addition".
+  // For new-file writes, append a muted "New" suffix next to the green `+N` count.
   const trailingTags = syntheticAddDiff
-    ? ([{ tone: "secondary", text: `(${t("tools.new")})` }] as const)
+    ? ([{ tone: "secondary", text: t("tools.new") }] as const)
     : undefined;
 
   if (resolvedContent) {

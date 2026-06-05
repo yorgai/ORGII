@@ -11,7 +11,7 @@
  */
 import { readFile } from "@tauri-apps/plugin-fs";
 import { useAtom } from "jotai";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import Message from "@src/components/Message";
 import {
@@ -51,15 +51,21 @@ function mimeFromPath(path: string): string | undefined {
   return EXTENSION_MIME[match[1]];
 }
 
-export function useImageAttachment() {
+export function useImageAttachment(ownerId?: string) {
   const [images, setImages] = useAtom(chatImageAttachmentsAtom);
+
+  const ownerImages = useMemo(
+    () =>
+      ownerId ? images.filter((image) => image.ownerId === ownerId) : images,
+    [images, ownerId]
+  );
 
   // Keep a ref in sync with the current image count so ingestFiles can read
   // the latest value without being recreated on every images.length change.
-  const imagesLengthRef = useRef(images.length);
+  const imagesLengthRef = useRef(ownerImages.length);
   useEffect(() => {
-    imagesLengthRef.current = images.length;
-  }, [images.length]);
+    imagesLengthRef.current = ownerImages.length;
+  }, [ownerImages.length]);
 
   /**
    * Shared tail: run each File through `optimizeImage` and push the results
@@ -101,6 +107,7 @@ export function useImageAttachment() {
             size: result.optimizedSize,
             width: result.finalDimensions.width,
             height: result.finalDimensions.height,
+            ownerId,
           });
         } catch (error) {
           console.error("[ImageAttachment] Failed to optimize image:", error);
@@ -112,7 +119,7 @@ export function useImageAttachment() {
         setImages((prev) => [...prev, ...newAttachments]);
       }
     },
-    [setImages]
+    [setImages, ownerId]
   );
 
   const handleImagePaste = useCallback(
@@ -186,12 +193,12 @@ export function useImageAttachment() {
   );
 
   return {
-    images,
+    images: ownerImages,
     handleImagePaste,
     handleImagePath,
     clearImages,
     removeImage,
     restoreImages,
-    hasImages: images.length > 0,
+    hasImages: ownerImages.length > 0,
   };
 }

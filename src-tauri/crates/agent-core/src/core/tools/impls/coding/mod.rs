@@ -3,7 +3,6 @@
 //! One file (or subfolder) per tool — the file/folder name matches the tool
 //! name. Helper-only modules (`action_router`, `terminal_log`) are kept flat.
 //!
-//! - [`apply_patch`]   — `apply_patch` tool (subfolder: engine + tests)
 //! - [`code_search`]   — `code_search` tool
 //! - [`edit_file`]     — `edit_file` tool (subfolder: strategies + tests)
 //! - [`exec`]          — `run_shell` + `await_output` tools (subfolder)
@@ -20,7 +19,6 @@
 //! - [`terminal_log`]  — terminal session log helpers
 
 pub mod action_router;
-pub mod apply_patch;
 pub mod code_search;
 pub mod edit_file;
 pub mod exec;

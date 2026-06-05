@@ -130,13 +130,13 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
 
     // When an editorSlot is provided we keep ONE stable DOM layout for both
     // the inline pill row and the full stacked composer. Switching
-    // layouts is pure CSS (grid template areas) so the Tiptap editor is never
+    // layouts is pure CSS (grid template areas) so the ComposerInput editor is never
     // unmounted when `inlineLayout` flips — preserving focus, selection, and
     // document state across the transition.
     //
     // Four children, always in the same order:
     //   0. leftCluster  (leftPrefix + add button)
-    //   1. editorWrap   (the TiptapInput)
+    //   1. editorWrap   (the ComposerInput)
     //   2. pillCluster  (mode/model/status pills)
     //   3. rightCluster (context + submit)
     //

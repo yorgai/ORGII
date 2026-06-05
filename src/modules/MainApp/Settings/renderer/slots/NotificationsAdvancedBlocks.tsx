@@ -1,7 +1,4 @@
 import {
-  ExpandableTableRow,
-  SECTION_DESCRIPTION_CLASSES,
-  SECTION_LABEL_LIGHT_CLASSES,
   SectionContainer,
   SectionRow,
 } from "@/src/modules/shared/layouts/SectionLayout";
@@ -31,34 +28,28 @@ interface NotificationCategoryConfig {
     | "sessionStatus"
     | "gitOperations";
   labelKey: string;
-  descKey: string;
 }
 
 const NOTIFICATION_CATEGORIES: NotificationCategoryConfig[] = [
   {
     key: "taskCompletion",
     labelKey: "notifications.taskCompletion",
-    descKey: "notifications.taskCompletionDesc",
   },
   {
     key: "agentApproval",
     labelKey: "notifications.agentApproval",
-    descKey: "notifications.agentApprovalDesc",
   },
   {
     key: "errors",
     labelKey: "notifications.errors",
-    descKey: "notifications.errorsDesc",
   },
   {
     key: "sessionStatus",
     labelKey: "notifications.sessionStatus",
-    descKey: "notifications.sessionStatusDesc",
   },
   {
     key: "gitOperations",
     labelKey: "notifications.gitOperations",
-    descKey: "notifications.gitOperationsDesc",
   },
 ];
 
@@ -91,7 +82,6 @@ const NotificationsAdvancedBlocks: React.FC = () => {
 
   const [permissionStatus, setPermissionStatus] = useState<string>("unknown");
   const [isTesting, setIsTesting] = useState(false);
-  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -183,54 +173,35 @@ const NotificationsAdvancedBlocks: React.FC = () => {
         </SectionRow>
 
         {completionSound && (
-          <>
-            <SectionRow label={t("notifications.volume")}>
-              <div className="w-[160px] max-w-full">
-                <Slider
-                  value={soundVolume}
-                  onChange={handleVolumeChange}
-                  min={0}
-                  max={100}
-                  showTooltip={false}
-                  noPadding
-                />
-              </div>
-            </SectionRow>
-
-            <ExpandableTableRow
-              label={t("notifications.categories")}
-              expanded={categoriesExpanded}
-              onToggle={() => setCategoriesExpanded((v) => !v)}
-            >
-              <div className="flex flex-col divide-y divide-border-1">
-                {NOTIFICATION_CATEGORIES.map((category) => (
-                  <div
-                    key={category.key}
-                    className="flex items-center justify-between gap-4 py-2"
-                  >
-                    <div>
-                      <div className={SECTION_LABEL_LIGHT_CLASSES}>
-                        {t(category.labelKey)}
-                      </div>
-                      <div className={SECTION_DESCRIPTION_CLASSES}>
-                        {t(category.descKey)}
-                      </div>
-                    </div>
-                    <Switch
-                      checked={categoryValues[category.key]}
-                      onChange={() =>
-                        categorySetters[category.key](
-                          !categoryValues[category.key]
-                        )
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-            </ExpandableTableRow>
-          </>
+          <SectionRow label={t("notifications.volume")}>
+            <div className="w-[160px] max-w-full">
+              <Slider
+                value={soundVolume}
+                onChange={handleVolumeChange}
+                min={0}
+                max={100}
+                showTooltip={false}
+                noPadding
+              />
+            </div>
+          </SectionRow>
         )}
       </SectionContainer>
+
+      {completionSound && (
+        <SectionContainer>
+          {NOTIFICATION_CATEGORIES.map((category) => (
+            <SectionRow key={category.key} label={t(category.labelKey)}>
+              <Switch
+                checked={categoryValues[category.key]}
+                onChange={() =>
+                  categorySetters[category.key](!categoryValues[category.key])
+                }
+              />
+            </SectionRow>
+          ))}
+        </SectionContainer>
+      )}
 
       <SectionContainer>
         <SectionRow label={t("notifications.enableSystem")}>

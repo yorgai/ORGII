@@ -66,7 +66,6 @@ pub const DEFAULT_SUBAGENT_DISABLED: &[&str] = &[
     tool_names::MANAGE_FILE_HISTORY,
     tool_names::EDIT_FILE,
     tool_names::DELETE_FILE,
-    tool_names::APPLY_PATCH,
     tool_names::SETUP_REPO,
     tool_names::MANAGE_WORK_ITEM,
     tool_names::MANAGE_AGENT_DEF,
@@ -144,7 +143,7 @@ pub fn default_subagent_disabled_tools() -> Vec<String> {
 /// grant SDE workers app/session administration. Result:
 ///
 /// - **OS Agent** (`coding: None`, `desktop: Some`, `browser: Some`):
-///   excludes coding tools (edit_file, apply_patch, query_lsp, manage_lsp)
+///   excludes coding tools (edit_file, query_lsp, manage_lsp)
 ///   and internal browser automation. Keeps desktop, external browser, core.
 /// - **SDE Agent** (`coding: Some`, all others None): excludes the 15
 ///   desktop tools and browser tools. Keeps coding,
@@ -255,10 +254,6 @@ mod tests {
         assert!(
             excluded.contains(&tool_names::EDIT_FILE.to_string()),
             "OS should exclude edit_file by default (coding: None)"
-        );
-        assert!(
-            excluded.contains(&tool_names::APPLY_PATCH.to_string()),
-            "OS should exclude apply_patch by default"
         );
         assert!(
             excluded.contains(&tool_names::QUERY_LSP.to_string()),

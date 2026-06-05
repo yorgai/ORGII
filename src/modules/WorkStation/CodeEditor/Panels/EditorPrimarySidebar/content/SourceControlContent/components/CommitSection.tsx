@@ -202,8 +202,7 @@ export const CommitSection: React.FC<CommitSectionProps> = memo(
     const sparkleButton = null;
 
     const commitMessagePlaceholder = t("placeholders.commitMessage");
-    const wrapperClass =
-      "flex-shrink-0 border-t border-border-2 px-3 pb-2 pt-2";
+    const wrapperClass = "flex-shrink-0 px-3 pb-2 pt-1";
     const innerGap = "relative mb-2";
     const textareaClassName = "textarea-pane-surface text-[13px]";
 

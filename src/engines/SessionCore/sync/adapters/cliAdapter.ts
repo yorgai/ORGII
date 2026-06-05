@@ -54,6 +54,7 @@ import {
   makeThinkingEvent,
   makeToolCallEvent,
 } from "./shared/eventBuilders";
+import { mergeStreamingText } from "./shared/streamTextAccumulator";
 import {
   buildToolArgsFromParsed,
   parsePartialToolArgs,
@@ -357,7 +358,7 @@ export const cliAdapter: SessionAdapter = {
           msgStreamId = createStreamMessageId(sessionId);
           msgStartedAt = chunk.created_at || new Date().toISOString();
         }
-        msgContent += deltaText;
+        msgContent = mergeStreamingText(msgContent, deltaText);
         eventStoreProxy.upsert(
           buildStreamingEvent(
             msgStreamId,
@@ -382,7 +383,7 @@ export const cliAdapter: SessionAdapter = {
           thinkStreamId = createStreamThinkingId(sessionId);
           thinkStartedAt = chunk.created_at || new Date().toISOString();
         }
-        thinkContent += deltaText;
+        thinkContent = mergeStreamingText(thinkContent, deltaText);
         eventStoreProxy.upsert(
           buildStreamingEvent(
             thinkStreamId,

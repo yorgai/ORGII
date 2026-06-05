@@ -89,7 +89,7 @@ export const ChangesSection: React.FC<ChangesSectionProps> = memo(
           actions={
             <>
               <button
-                className={`group/discard ${HEADER_BUTTON.danger} opacity-0 transition-opacity group-hover/header:opacity-100`}
+                className={`group/discard ${HEADER_BUTTON.danger} opacity-0 group-hover/header:opacity-100`}
                 onClick={onDiscardAll}
                 title={GIT_LABELS.discardAllChanges}
               >

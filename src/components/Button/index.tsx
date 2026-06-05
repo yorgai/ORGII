@@ -109,6 +109,9 @@ export interface ButtonProps extends Omit<
   /** Anchor target */
   target?: string;
 
+  /** Anchor relationship */
+  rel?: string;
+
   /** Children content */
   children?: React.ReactNode;
 
@@ -268,6 +271,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       htmlType = "button",
       href,
       target,
+      rel,
       children,
       className = "",
       style,
@@ -423,6 +427,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         <a
           href={href}
           target={target}
+          rel={rel}
           className={buttonClassName}
           style={buttonStyles}
           onClick={

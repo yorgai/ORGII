@@ -29,4 +29,7 @@
 
 pub mod db;
 
-pub use db::{configure_connection, get_db_path, register_projects_init, register_sessions_init};
+pub use db::{
+    begin_immediate, configure_connection, get_db_path, register_projects_init,
+    register_sessions_init, sessions_writer_guard, with_sessions_writer, SessionsWriterGuard,
+};

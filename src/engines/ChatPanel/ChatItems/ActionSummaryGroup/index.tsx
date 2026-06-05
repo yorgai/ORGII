@@ -34,6 +34,7 @@ export interface ActionSummaryGroupProps {
 interface CategorizedEvent {
   category: ActionSummaryCategory;
   event: SessionEvent;
+  isLastItem?: boolean;
 }
 
 // ============================================
@@ -56,6 +57,20 @@ function ActivityBlock({ event }: { event: SessionEvent }) {
   return (
     <Suspense fallback={<ActivityBlockFallback />}>{renderEvent()}</Suspense>
   );
+}
+
+function suppressLoadingForNonLastRunningEvent(
+  event: SessionEvent,
+  isLastItem: boolean
+): SessionEvent {
+  if (isLastItem || event.displayStatus !== "running") return event;
+
+  return {
+    ...event,
+    displayStatus: "completed",
+    activityStatus: "processed",
+    isDelta: false,
+  };
 }
 
 // ============================================
@@ -95,10 +110,14 @@ function buildGroupSummary(
 // ============================================
 
 function renderEventBlock(
-  { event }: CategorizedEvent,
+  { event, isLastItem }: CategorizedEvent,
   _index: number
 ): React.ReactNode {
-  return <ActivityBlock event={event} />;
+  const renderedEvent = suppressLoadingForNonLastRunningEvent(
+    event,
+    isLastItem === true
+  );
+  return <ActivityBlock event={renderedEvent} />;
 }
 
 // ============================================
@@ -123,13 +142,20 @@ const ActionSummaryGroup: React.FC<ActionSummaryGroupProps> = ({
   );
 
   const orderedItems: CategorizedEvent[] = useMemo(() => {
-    if (items && items.length > 0) return items;
-    return entries.flatMap((entry) =>
-      entry.events.map((event) => ({
-        category: entry.category,
-        event,
-      }))
-    );
+    const baseItems =
+      items && items.length > 0
+        ? items
+        : entries.flatMap((entry) =>
+            entry.events.map((event) => ({
+              category: entry.category,
+              event,
+            }))
+          );
+
+    return baseItems.map((item, index) => ({
+      ...item,
+      isLastItem: index === baseItems.length - 1,
+    }));
   }, [items, entries]);
 
   if (totalCount === 0) return null;

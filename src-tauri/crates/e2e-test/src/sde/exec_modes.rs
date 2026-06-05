@@ -28,13 +28,12 @@ pub async fn plan_mode_denies_writes(cfg: &Config) -> bool {
     let effective_tools = harness::fetch_effective_tools(cfg, &session_id, "plan").await;
     let _ = harness::cleanup_sde_session(cfg, &session_id).await;
 
-    let (content, edit_called, patch_called, shell_called) =
+    let (content, edit_called, shell_called) =
         resp.as_ref()
-            .map_or((String::new(), true, true, true), |response| {
+            .map_or((String::new(), true, true), |response| {
                 (
                     response.content.clone(),
                     harness::assert_sde_tool_used(response, "edit_file"),
-                    harness::assert_sde_tool_used(response, "apply_patch"),
                     harness::assert_sde_tool_used(response, "run_shell"),
                 )
             });
@@ -48,11 +47,10 @@ pub async fn plan_mode_denies_writes(cfg: &Config) -> bool {
         registered_has_edit_file,
         prompt_has_create_plan,
         prompt_has_edit_file,
-        prompt_has_apply_patch,
         prompt_has_run_shell,
     ) = effective_tools
         .as_ref()
-        .map_or((String::new(), false, false, true, true, true), |tools| {
+        .map_or((String::new(), false, false, true, true), |tools| {
             (
                 tools.agent_exec_mode.clone(),
                 tools
@@ -67,10 +65,6 @@ pub async fn plan_mode_denies_writes(cfg: &Config) -> bool {
                     .prompt_tool_names
                     .iter()
                     .any(|name| name == "edit_file"),
-                tools
-                    .prompt_tool_names
-                    .iter()
-                    .any(|name| name == "apply_patch"),
                 tools
                     .prompt_tool_names
                     .iter()
@@ -92,10 +86,8 @@ pub async fn plan_mode_denies_writes(cfg: &Config) -> bool {
             ),
             ("Prompt tools include create_plan", prompt_has_create_plan),
             ("Prompt tools exclude edit_file", !prompt_has_edit_file),
-            ("Prompt tools exclude apply_patch", !prompt_has_apply_patch),
             ("Prompt tools exclude run_shell", !prompt_has_run_shell),
             ("edit_file was NOT called", !edit_called),
-            ("apply_patch was NOT called", !patch_called),
             ("run_shell was NOT called", !shell_called),
             ("Non-plan target file unchanged on disk", file_unchanged),
         ],
@@ -121,14 +113,13 @@ pub async fn plan_mode_writes_to_plan_file(cfg: &Config) -> bool {
     let resp =
         harness::send_sde_message(cfg, &prompt, &session_id, "plan", &project, None, false).await;
 
-    let (content, create_called, edit_called, patch_called, shell_called) =
+    let (content, create_called, edit_called, shell_called) =
         resp.as_ref()
-            .map_or((String::new(), false, true, true, true), |response| {
+            .map_or((String::new(), false, true, true), |response| {
                 (
                     response.content.clone(),
                     harness::assert_sde_tool_used(response, "create_plan"),
                     harness::assert_sde_tool_used(response, "edit_file"),
-                    harness::assert_sde_tool_used(response, "apply_patch"),
                     harness::assert_sde_tool_used(response, "run_shell"),
                 )
             });
@@ -185,7 +176,6 @@ pub async fn plan_mode_writes_to_plan_file(cfg: &Config) -> bool {
             ("HTTP succeeded", resp.is_ok()),
             ("create_plan WAS called", create_called),
             ("edit_file was NOT called", !edit_called),
-            ("apply_patch was NOT called", !patch_called),
             ("run_shell was NOT called", !shell_called),
             (
                 "Exactly one plan file under .orgii/plans",

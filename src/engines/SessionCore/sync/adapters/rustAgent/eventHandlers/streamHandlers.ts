@@ -12,6 +12,7 @@ import {
   makeThinkingEvent,
   makeToolCallEvent,
 } from "../../shared/eventBuilders";
+import { mergeStreamingText } from "../../shared/streamTextAccumulator";
 import {
   buildToolArgsFromParsed,
   extractThinkContent,
@@ -42,7 +43,9 @@ function appendLiveStreamDelta(
   if (!refs.idRef.current) {
     refs.idRef.current = `${idPrefix}-${sessionId}-${Date.now()}`;
   }
-  refs.contentRef.current = capStreamContent(refs.contentRef.current + delta);
+  refs.contentRef.current = capStreamContent(
+    mergeStreamingText(refs.contentRef.current, delta)
+  );
 }
 
 export function handleMessageDelta(

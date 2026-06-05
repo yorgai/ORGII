@@ -92,9 +92,9 @@ export function useSubmitMessage({
         return;
       }
 
-      if (!refs.tiptapRef.current) return;
+      if (!refs.composerInputRef.current) return;
 
-      let displayText = refs.tiptapRef.current.getTextWithPills();
+      let displayText = refs.composerInputRef.current.getTextWithPills();
       const hasText = displayText.trim().length > 0;
       const hasAttachedImages = imageAttachment.hasImages;
 
@@ -157,7 +157,8 @@ export function useSubmitMessage({
       await waitForPendingPills();
 
       // ── Terminal pill text collection ─────────────────────────────────────
-      const terminalTexts = refs.tiptapRef.current.getTerminalPillTexts();
+      const terminalTexts =
+        refs.composerInputRef.current.getTerminalPillTexts();
       const terminalEntries = Object.entries(terminalTexts);
       let agentContent: string | undefined;
       if (terminalEntries.length > 0) {
@@ -175,7 +176,7 @@ export function useSubmitMessage({
       // ── Snapshot before optimistic clear ─────────────────────────────────
       // Lets us restore the full composer state (text + images + cite-code)
       // if the outgoing request fails, preventing silent data loss.
-      const editorSnapshot = refs.tiptapRef.current.getSnapshot();
+      const editorSnapshot = refs.composerInputRef.current.getSnapshot();
       const imagesSnapshot: ChatImageAttachment[] =
         imageAttachment.images.slice();
       const citeSnapshot: CiteCodeSnapshot | null = citeCode.isCiteCode
@@ -183,7 +184,7 @@ export function useSubmitMessage({
         : null;
 
       // ── Optimistic clear ──────────────────────────────────────────────────
-      refs.tiptapRef.current.clear();
+      refs.composerInputRef.current.clear();
       refs.setHasContent(false);
       if (citeCode.isCiteCode) {
         citeCode.clearCiteCode();
@@ -223,7 +224,7 @@ export function useSubmitMessage({
         // ── Restore on failure ────────────────────────────────────────────
         // Each restore branch is independent so one failure doesn't block others.
         try {
-          const editor = refs.tiptapRef.current;
+          const editor = refs.composerInputRef.current;
           if (editor && editorSnapshot) {
             editor.setContent(editorSnapshot);
             refs.setHasContent(true);

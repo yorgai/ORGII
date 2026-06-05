@@ -7,7 +7,7 @@
  */
 import React, { useCallback } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import { insertPillFromTabPayload } from "@src/shared/dnd/dropTargetUtils";
 import { useTabDragEndToPill } from "@src/shared/dnd/useTabDragEndToPill";
 
@@ -18,7 +18,7 @@ interface UseContainerDragOptions {
   handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   handleDragLeave: (e: React.DragEvent<HTMLDivElement>) => void;
   handleDrop: (e: React.DragEvent<HTMLDivElement>) => void;
-  tiptapRef: React.RefObject<TiptapInputRef>;
+  composerInputRef: React.RefObject<ComposerInputRef>;
   containerRef: React.RefObject<HTMLDivElement>;
 }
 
@@ -33,7 +33,7 @@ export function useContainerDrag({
   handleDragOver,
   handleDragLeave,
   handleDrop,
-  tiptapRef,
+  composerInputRef,
   containerRef,
 }: UseContainerDragOptions): UseContainerDragReturn {
   const isDragOver = useTabDragHover(containerRef);
@@ -42,7 +42,7 @@ export function useContainerDrag({
   // we listen for the custom event dispatched by useTabDrag and check whether
   // the pointer release landed inside our drop target using the pointer
   // coordinates forwarded in the event detail.
-  useTabDragEndToPill(containerRef, tiptapRef);
+  useTabDragEndToPill(containerRef, composerInputRef);
 
   // Handle drag events at container level to catch internal file drags early
   const handleContainerDragOver = useCallback(
@@ -104,7 +104,7 @@ export function useContainerDrag({
           return;
         }
 
-        insertPillFromTabPayload(tiptapRef, {
+        insertPillFromTabPayload(composerInputRef, {
           ...data,
           pointerX: e.clientX,
           pointerY: e.clientY,
@@ -121,7 +121,7 @@ export function useContainerDrag({
         handleDrop(e);
       }
     },
-    [handleDrop, tiptapRef]
+    [handleDrop, composerInputRef]
   );
 
   return {

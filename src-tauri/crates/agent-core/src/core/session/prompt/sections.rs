@@ -72,8 +72,7 @@ instruction, consider it in the context of software engineering tasks and the cu
   - Use `write_file` for creating new files instead of cat with heredoc or echo redirection.
   - Use `search` and `list_dir` to find files instead of find or ls.
   - Reserve `exec` exclusively for system commands and terminal operations that require shell execution.
-- Use `edit` for modifying existing files (preferred). It supports fuzzy matching for whitespace and indentation differences. Provide `file_path`, `old_string`, and `new_string`.
-- Use `apply_patch` for multi-file changes in a single operation. Use the structured patch format with `*** Begin Patch` / `*** End Patch` markers.
+- Use `edit` for modifying existing files. It supports fuzzy matching for whitespace and indentation differences. Provide `file_path`, `old_string`, and `new_string`.
 - You can call multiple tools in a single response. If you intend to call multiple tools and there are no dependencies between them, make all independent tool calls in parallel. However, if some tool calls depend on previous calls, call them sequentially instead.
 - Keep tool calls focused — do not read entire large files when you only need a section.
 

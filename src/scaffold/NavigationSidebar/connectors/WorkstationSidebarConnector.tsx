@@ -824,7 +824,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
           />
         }
         beforeAddNewActions={homeHeaderAction}
-        verticalGapClassName="gap-0.5"
         listTopPadding
         bottomContent={
           <SidebarBottomBar rightActions={sidebarBottomRightActions} />

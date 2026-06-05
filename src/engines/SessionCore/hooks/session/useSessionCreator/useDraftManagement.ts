@@ -9,7 +9,7 @@ import { useAtom, useAtomValue } from "jotai";
 import { type RefObject, useEffect, useRef } from "react";
 
 import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import type { UploadedFile } from "@src/features/SessionCreator/types";
 import {
   type SessionCreatorDraft,
@@ -28,7 +28,7 @@ export interface UseDraftManagementOptions {
   setSessionName: (name: string) => void;
   setEditorContent: (content: string) => void;
   setUploadedFiles: (files: UploadedFile[]) => void;
-  tiptapRef: RefObject<TiptapInputRef>;
+  composerInputRef: RefObject<ComposerInputRef>;
   /** Skip draft loading if market listing is being loaded from URL */
   skipDraftLoading?: boolean;
   /** Persist editor content into the shared pre-launch draft store. */
@@ -45,7 +45,7 @@ export function useDraftManagement(options: UseDraftManagementOptions) {
     setSessionName,
     setEditorContent,
     setUploadedFiles,
-    tiptapRef,
+    composerInputRef,
     skipDraftLoading = false,
     persistDraft = true,
   } = options;
@@ -108,27 +108,30 @@ export function useDraftManagement(options: UseDraftManagementOptions) {
       // a file pill just inserted via @ menu). Calling setContent("") would:
       //   1. Destroy in-progress user input.
       //   2. Fire onAtMentionClose, dismissing an active @ menu.
-      // The TiptapInput initialContent prop handles the empty-editor initial
+      // The ComposerInput initialContent prop handles the empty-editor initial
       // state; we do not need to enforce it here.
       return;
     }
 
     let retryTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
-    // Restores editorContent into the Tiptap editor, skipping the call when
+    // Restores editorContent into the ComposerInput editor, skipping the call when
     // the editor already shows the same text — setContent unconditionally fires
     // onAtMentionClose, so a no-op call would dismiss an active @ menu.
     const restoreEditorContent = (content: string) => {
-      if (!tiptapRef.current) {
+      if (!composerInputRef.current) {
         retryTimeoutId = setTimeout(() => {
-          if (tiptapRef.current && tiptapRef.current.getText() !== content) {
-            tiptapRef.current.setContent(content);
+          if (
+            composerInputRef.current &&
+            composerInputRef.current.getText() !== content
+          ) {
+            composerInputRef.current.setContent(content);
           }
         }, 100);
         return;
       }
-      if (tiptapRef.current.getText() !== content) {
-        tiptapRef.current.setContent(content);
+      if (composerInputRef.current.getText() !== content) {
+        composerInputRef.current.setContent(content);
       }
     };
 
@@ -154,7 +157,7 @@ export function useDraftManagement(options: UseDraftManagementOptions) {
     setSessionName,
     setUploadedFiles,
     skipDraftLoading,
-    tiptapRef,
+    composerInputRef,
   ]);
 
   useEffect(() => {

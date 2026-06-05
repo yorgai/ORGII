@@ -6,9 +6,9 @@ import { useTabDragEndToPill } from "@src/shared/dnd/useTabDragEndToPill";
 
 export function useTabDragDrop(
   containerRef: RefObject<HTMLElement>,
-  tiptapRef: RefObject<ComposerInputRef>
+  composerInputRef: RefObject<ComposerInputRef>
 ): boolean {
   const isDragOver = useTabDragHover(containerRef);
-  useTabDragEndToPill(containerRef, tiptapRef);
+  useTabDragEndToPill(containerRef, composerInputRef);
   return isDragOver;
 }

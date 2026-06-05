@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import Input from "@src/components/Input";
 import Markdown from "@src/components/MarkDown";
-import { CodeMirrorEditor } from "@src/features/CodeMirror";
 import { useBenchmarkTasks } from "@src/hooks/benchmark/useBenchmarkTasks";
-import { FileHeader } from "@src/modules/WorkStation/shared";
+import WorkItemContentStack from "@src/modules/ProjectManager/WorkItems/components/WorkItemContentStack";
+import { PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS } from "@src/modules/ProjectManager/shared/placeholderTokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
 interface BenchmarkPanelProps {
@@ -24,17 +25,6 @@ function formatTaskMarkdown(
   return `# ${title || taskId}\n\n${metadata}\n\n---\n\n${instruction}`;
 }
 
-function getBenchmarkHeaderPath(
-  taskId: string | null | undefined,
-  repo: string | null | undefined
-): string {
-  if (!taskId) return "Benchmark";
-  const taskFileName = `${taskId}.md`;
-  return repo?.trim()
-    ? `Benchmark/${repo.trim()}/${taskFileName}`
-    : `Benchmark/${taskFileName}`;
-}
-
 export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
   className,
 }) => {
@@ -42,7 +32,6 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
   const { error, isLoadingDetail, selectedTask } = useBenchmarkTasks({
     loadOnMount: false,
   });
-  const [isPreviewMode, setIsPreviewMode] = useState(true);
 
   const markdownContent = useMemo(() => {
     if (!selectedTask) return "";
@@ -54,73 +43,95 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
     );
   }, [selectedTask]);
 
-  const headerPath = useMemo(
-    () => getBenchmarkHeaderPath(selectedTask?.taskId, selectedTask?.repo),
-    [selectedTask?.repo, selectedTask?.taskId]
-  );
+  const metadataItems = useMemo(() => {
+    if (!selectedTask) return [];
+    return [
+      selectedTask.repo?.trim() || null,
+      selectedTask.taskId,
+      selectedTask.difficulty,
+      selectedTask.wordCount ? `${selectedTask.wordCount} words` : null,
+    ].filter(Boolean);
+  }, [selectedTask]);
 
   return (
     <div
       className={`${className ?? ""} flex h-full min-h-0 flex-col overflow-hidden`}
     >
-      <FileHeader
-        publishToHost="code"
-        filePath={headerPath}
-        disableNavigation
-        isMarkdownFile={!!selectedTask}
-        isPreviewMode={isPreviewMode}
-        onTogglePreview={() => setIsPreviewMode((current) => !current)}
-        previewLabel={t("common:common.preview")}
-      />
-
-      <div className="min-h-0 flex-1 overflow-hidden">
-        {error ? (
-          <Placeholder
-            variant="error"
-            placement="detail-panel"
-            title={t("common:errors.failedToLoad")}
-            subtitle={error}
-            fillParentHeight
-          />
-        ) : isLoadingDetail ? (
-          <Placeholder
-            variant="loading"
-            placement="detail-panel"
-            title={t("creator.benchmark.loading")}
-            fillParentHeight
-          />
-        ) : selectedTask ? (
-          isPreviewMode ? (
-            <div className="scrollbar-overlay h-full overflow-y-auto p-5">
-              <div className="allow-select-deep max-w-[920px] select-text text-[13px] leading-6 text-text-2">
-                <Markdown
-                  textContent={markdownContent}
-                  useChatCodeBlock
-                  skipPreprocess
+      {error ? (
+        <Placeholder
+          variant="error"
+          placement="detail-panel"
+          title={t("common:errors.failedToLoad")}
+          subtitle={error}
+          fillParentHeight
+        />
+      ) : isLoadingDetail ? (
+        <Placeholder
+          variant="loading"
+          placement="detail-panel"
+          title={t("creator.benchmark.loading")}
+          fillParentHeight
+        />
+      ) : selectedTask ? (
+        <div className="flex h-full min-h-0 flex-col overflow-hidden">
+          <div className="mx-auto h-full w-full max-w-[932px] px-4">
+            <WorkItemContentStack
+              className="h-full w-full"
+              titleContent={
+                <Input
+                  type="text"
+                  value="Load benchmark"
+                  onChange={() => undefined}
+                  readOnly
+                  borderless
+                  bgless
+                  size="small"
+                  className="h-7 min-w-0 max-w-full flex-1 cursor-default rounded-lg transition-colors hover:bg-surface-hover [&_.input-inner]:!px-1.5"
+                  inputClassName={`-translate-y-px truncate text-[13px] font-medium text-text-1 ${PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS}`}
+                  data-testid="load-benchmark-title-input"
                 />
-              </div>
-            </div>
-          ) : (
-            <CodeMirrorEditor
-              value={markdownContent}
-              filePath={headerPath}
-              language="markdown"
-              readOnly
-              registerWithService={false}
-              enableLinting={false}
-              enableMinimap={false}
-              enableDirtyDiff={false}
+              }
+              pathContent={
+                <div className="flex min-w-0 items-center gap-1.5 text-[12px] text-text-2">
+                  {metadataItems.map((item, index) => (
+                    <React.Fragment key={`${item}-${index}`}>
+                      {index > 0 ? (
+                        <span className="text-text-4" aria-hidden>
+                          ·
+                        </span>
+                      ) : null}
+                      <span className="max-w-[220px] truncate">{item}</span>
+                    </React.Fragment>
+                  ))}
+                </div>
+              }
+              descriptionContent={
+                <div className="scrollbar-overlay h-full overflow-y-auto">
+                  <div className="allow-select-deep max-w-[920px] select-text text-[13px] leading-6 text-text-2">
+                    <Markdown
+                      textContent={markdownContent}
+                      useChatCodeBlock
+                      skipPreprocess
+                    />
+                  </div>
+                </div>
+              }
+              descriptionFlexible
+              metaClassName="py-2"
+              titleClassName="flex h-10 items-center py-0"
+              descriptionClassName="min-h-0 overflow-hidden py-4"
+              separatorClassName=""
             />
-          )
-        ) : (
-          <Placeholder
-            variant="empty"
-            placement="detail-panel"
-            title={t("creator.benchmark.selectTaskHint")}
-            fillParentHeight
-          />
-        )}
-      </div>
+          </div>
+        </div>
+      ) : (
+        <Placeholder
+          variant="empty"
+          placement="detail-panel"
+          title={t("creator.benchmark.selectTaskHint")}
+          fillParentHeight
+        />
+      )}
     </div>
   );
 };

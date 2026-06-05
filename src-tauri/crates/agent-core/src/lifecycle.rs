@@ -9,7 +9,7 @@ use core_types::session_event::{
 use serde::Serialize;
 use tauri::Emitter;
 
-use crate::bus::event_pipeline_bridge;
+use crate::bus::{broadcast_event, event_pipeline_bridge};
 use crate::coordination::agent_inbox::{MemberIdleReason, SYSTEM_SENDER_ID};
 use crate::coordination::agent_org_runs::{AgentOrgRunContext, AgentOrgRunStore};
 use crate::coordination::agent_org_tasks::{self, AgentOrgTaskStore};
@@ -28,6 +28,97 @@ use crate::tools::impls::orchestration::org_send_message::InboxWakeHook;
 struct SessionStatusChangedPayload<'a> {
     session_id: &'a str,
     status: &'a str,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TurnTerminalStatus {
+    Completed,
+    Cancelled,
+    Failed,
+}
+
+impl TurnTerminalStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Completed => "completed",
+            Self::Cancelled => "cancelled",
+            Self::Failed => "failed",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TerminalTurnSignal {
+    pub turn_id: String,
+    pub status: TurnTerminalStatus,
+    pub completed_at: String,
+}
+
+fn emit_session_status_changed(
+    app_handle: Option<&tauri::AppHandle>,
+    session_id: &str,
+    status: AgentSessionStatus,
+) {
+    let Some(handle) = app_handle else {
+        return;
+    };
+
+    if let Err(err) = handle.emit(
+        "session-status-changed",
+        SessionStatusChangedPayload {
+            session_id,
+            status: status.as_ref(),
+        },
+    ) {
+        tracing::warn!(
+            "[lifecycle] Failed to emit session-status-changed for {}: {}",
+            session_id,
+            err
+        );
+    }
+}
+
+fn persist_and_emit_terminal_turn(
+    session_id: &str,
+    terminal_turn: &TerminalTurnSignal,
+    final_status: AgentSessionStatus,
+    app_handle: Option<&tauri::AppHandle>,
+) {
+    let session_status: crate::session::SessionStatus = final_status.into();
+    match session_persistence::finalize_terminal_turn_status(
+        session_id,
+        &terminal_turn.turn_id,
+        terminal_turn.status.as_str(),
+        session_status,
+        &terminal_turn.completed_at,
+    ) {
+        Ok(true) => {}
+        Ok(false) => tracing::warn!(
+            session_id = %session_id,
+            turn_id = %terminal_turn.turn_id,
+            "[lifecycle] terminal turn marker was not persisted because the session row was missing"
+        ),
+        Err(err) => tracing::warn!(
+            session_id = %session_id,
+            turn_id = %terminal_turn.turn_id,
+            error = %err,
+            "[lifecycle] failed to persist terminal turn marker"
+        ),
+    }
+
+    emit_session_status_changed(app_handle, session_id, final_status);
+
+    broadcast_event(
+        "agent:turn_completed",
+        serde_json::json!({
+            "sessionId": session_id,
+            "turnId": terminal_turn.turn_id,
+            "turnStatus": terminal_turn.status.as_str(),
+            "sessionStatus": final_status.as_ref(),
+            "completedAt": terminal_turn.completed_at,
+            "persisted": true,
+        }),
+    );
 }
 
 pub fn build_session_error_event(session_id: &str, message: &str) -> SessionEvent {
@@ -258,6 +349,7 @@ pub async fn finalize_session(
     app_handle: Option<&tauri::AppHandle>,
     workspace_path: Option<&std::path::Path>,
     load_workspace_resources: bool,
+    terminal_turn: Option<TerminalTurnSignal>,
 ) -> AgentSessionStatus {
     let is_agent_org_member_session = {
         let sid = session_id.to_string();
@@ -285,7 +377,9 @@ pub async fn finalize_session(
         AgentSessionStatus::Failed
     };
 
-    {
+    if let Some(ref terminal_turn) = terminal_turn {
+        persist_and_emit_terminal_turn(session_id, terminal_turn, final_status, app_handle);
+    } else {
         let sid = session_id.to_string();
         if let Err(err) = tokio::task::spawn_blocking(move || {
             let status: crate::session::SessionStatus = final_status.into();
@@ -297,6 +391,8 @@ pub async fn finalize_session(
         {
             tracing::warn!("[lifecycle] spawn_blocking panicked during status update: {err}");
         }
+
+        emit_session_status_changed(app_handle, session_id, final_status);
     }
 
     if is_agent_org_member_session {
@@ -328,25 +424,6 @@ pub async fn finalize_session(
     // NOTE: Error broadcasting is handled by the scheduler. Do NOT broadcast here
     // to avoid duplicate transient error notifications; this path only persists
     // the authoritative EventStore row for UI history/replay.
-
-    // Broadcast the durable status so every open Tauri window can update
-    // the session card without waiting for the next full session-list poll.
-    if let Some(handle) = app_handle {
-        let status_str = final_status.as_ref();
-        if let Err(err) = handle.emit(
-            "session-status-changed",
-            SessionStatusChangedPayload {
-                session_id,
-                status: status_str,
-            },
-        ) {
-            tracing::warn!(
-                "[lifecycle] Failed to emit session-status-changed for {}: {}",
-                session_id,
-                err
-            );
-        }
-    }
 
     if final_status.is_terminal() {
         crate::session::file_registry::unregister_session(session_id);

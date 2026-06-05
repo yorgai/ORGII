@@ -76,7 +76,7 @@ pub fn os_agent() -> AgentDefinition {
 
         // Tool availability is opt-in/out inside the OS capability boundary.
         // OS Agent ships with capability-mismatched tools excluded by
-        // default (coding tools — edit_file, apply_patch, query_lsp, etc.).
+        // default (coding tools — edit_file, query_lsp, etc.).
         // Desktop, browser, plugins, management, and core tools remain available.
         // `manage_project`, `manage_work_item`, and `manage_agent_def`
         // are available directly as management-capability tools.
@@ -144,7 +144,6 @@ mod tests {
 
         for tool in [
             tool_names::EDIT_FILE,
-            tool_names::APPLY_PATCH,
             tool_names::QUERY_LSP,
             tool_names::MANAGE_LSP,
         ] {

@@ -9,10 +9,7 @@ import type { CanvasInlineMode } from "@src/engines/ChatPanel/blocks/CanvasInlin
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { clearMcpProgressForCallAtom } from "@src/store/session/mcpProgressAtom";
 
-import {
-  makeToolCallEvent,
-  makeToolResultEvent,
-} from "../../shared/eventBuilders";
+import { makeToolResultEvent } from "../../shared/eventBuilders";
 import { isShellTool } from "../../shared/streamingParsers";
 import {
   SPAWNED_SESSION_RE,
@@ -57,7 +54,6 @@ export function handleToolCall(
     );
     return;
   }
-  const finalMessageId = `tool-call-${toolCallId}`;
 
   if (ctx.toolCallDeltaBuffersRef) {
     for (const [
@@ -71,20 +67,10 @@ export function handleToolCall(
     }
   }
 
-  const toolCallEvent = makeToolCallEvent(
-    finalMessageId,
-    sessionId,
-    event.tool,
-    toolCallId,
-    event.args || {},
-    false
-  );
-
-  if (ctx.features.hasToolCallDelta) {
-    eventStoreProxy.upsert(toolCallEvent, sessionId);
-  } else {
-    eventStoreProxy.append([toolCallEvent], sessionId);
-  }
+  // Rust pushes the authoritative `tool-call-${toolCallId}` event into the
+  // EventStore before broadcasting `agent:tool_call`. Do not synthesize or
+  // upsert a duplicate frontend event here: a delayed broadcast handler can
+  // otherwise downgrade an already-completed Rust event back to `running`.
 
   if (event.tool) {
     window.dispatchEvent(
@@ -126,23 +112,15 @@ export async function handleToolResult(
     }
   }
 
-  // SDE: simple result handling
+  // Rust pushes the authoritative `tool-result-${toolCallId}` event into the
+  // EventStore before broadcasting `agent:tool_result`; the Rust store then
+  // merges it into the matching tool_call by callId and marks it completed.
+  // Do not synthesize a frontend result event from this broadcast preview — it
+  // can race with/downgrade the authoritative row and may truncate full output.
   if (!ctx.features.hasCodingSessionBridge) {
     if (event.tool && isShellTool(event.tool)) {
       ctx.execOutputBufferRef.current = "";
     }
-    if (!toolCallId) {
-      eventStoreProxy.completeLastRunning(sessionId);
-    } else {
-      const resultEvent = makeToolResultEvent(
-        sessionId,
-        event.tool,
-        toolCallId,
-        event.result || ""
-      );
-      eventStoreProxy.mergeEvents([resultEvent], sessionId);
-    }
-
     return;
   }
 
@@ -179,17 +157,8 @@ export async function handleToolResult(
     }
   }
 
-  if (toolCallId) {
-    const resultEvent = makeToolResultEvent(
-      sessionId,
-      event.tool,
-      toolCallId,
-      resultContent
-    );
-    eventStoreProxy.mergeEvents([resultEvent], sessionId);
-  } else {
-    eventStoreProxy.completeLastRunning(sessionId);
-  }
+  // The result row itself is already in the Rust EventStore. The broadcast
+  // result is only used here for subagent-session detection above.
 
   if (trackedParentEventId) {
     eventStoreProxy.updateById(

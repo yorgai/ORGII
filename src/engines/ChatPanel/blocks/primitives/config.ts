@@ -375,7 +375,7 @@ export const EVENT_BLOCK_ICON_CLASSES =
  * EventBlockHeaderIcon or inline Loader2.
  */
 export const EVENT_LOADING_SHIMMER_TEXT_CLASSES =
-  "bg-gradient-to-r from-primary-4 via-primary-6 to-primary-4 bg-[length:260%_100%] bg-clip-text text-transparent animate-shimmer-text";
+  "bg-gradient-to-r from-text-3 via-text-1 to-text-3 bg-[length:260%_100%] bg-clip-text text-transparent animate-shimmer-text";
 
 /**
  * Standard title classes

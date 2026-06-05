@@ -227,13 +227,15 @@ const UserChatItem = ({
   }, []);
 
   const handleEditSubmitInternal = useCallback(
-    (newText: string) => {
+    (newText: string, addedImageDataUrls?: string[]) => {
       setIsEditing(false);
-      const rustImages =
-        messageImages && messageImages.length > 0
+      const rustImages = [
+        ...((messageImages && messageImages.length > 0
           ? messageImages.map(imageRefToRustPath)
-          : undefined;
-      onEditSubmit?.(newText, rustImages);
+          : []) as string[]),
+        ...(addedImageDataUrls ?? []),
+      ];
+      onEditSubmit?.(newText, rustImages.length > 0 ? rustImages : undefined);
     },
     [onEditSubmit, messageImages]
   );
@@ -338,6 +340,7 @@ const UserChatItem = ({
                   <ExpandOverlay
                     isExpanded={false}
                     onToggle={handleToggleTruncation}
+                    collapsedFadeHeightClass="h-8"
                     fadeFrom="from-chat-input"
                   />
                 )}

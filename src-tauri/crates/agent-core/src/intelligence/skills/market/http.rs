@@ -1,10 +1,10 @@
-//! ClawHub API endpoints + shared HTTP client builder.
+//! skills.sh API endpoints + shared HTTP client builder.
 
 use reqwest::Client;
 
-pub(super) const CLAWHUB_BASE_URL: &str = "https://clawhub.ai";
-pub(super) const CLAWHUB_SEARCH_PATH: &str = "/api/v1/search";
-pub(super) const CLAWHUB_SKILLS_PATH: &str = "/api/v1/skills";
+pub(super) const SKILLS_SH_BASE_URL: &str = "https://skills.sh";
+pub(super) const SKILLS_SH_SEARCH_PATH: &str = "/api/search";
+pub(super) const SKILLS_SH_DOWNLOAD_PATH: &str = "/api/download";
 
 const HTTP_USER_AGENT: &str = "orgii-skills-hub/1.0";
 

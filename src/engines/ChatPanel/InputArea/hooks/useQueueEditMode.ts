@@ -26,8 +26,8 @@ export interface QueueEditInputAreaProps {
   isEditMode: boolean;
   initialContent: string | undefined;
   editImages: string[] | undefined;
-  onEditSubmit: (text: string) => void;
-  onEditSendNow?: (text: string) => void;
+  onEditSubmit: (text: string, imageDataUrls?: string[]) => void;
+  onEditSendNow?: (text: string, imageDataUrls?: string[]) => void;
   onEditCancel: () => void;
   editLabel: string | undefined;
   showEditHeader: boolean;
@@ -42,25 +42,33 @@ export function useQueueEditMode({
   const setQueueEditTarget = useSetAtom(queueEditTargetAtom);
 
   const commitEdit = useCallback(
-    (text: string): string | null => {
+    (text: string, addedImageDataUrls?: string[]): string | null => {
       if (!queueEditTarget) return null;
-      onCommit(queueEditTarget.messageId, text, queueEditTarget.imageDataUrls);
+      const imageDataUrls = [
+        ...(queueEditTarget.imageDataUrls ?? []),
+        ...(addedImageDataUrls ?? []),
+      ];
+      onCommit(
+        queueEditTarget.messageId,
+        text,
+        imageDataUrls.length > 0 ? imageDataUrls : undefined
+      );
       return queueEditTarget.messageId;
     },
     [queueEditTarget, onCommit]
   );
 
   const onEditSubmit = useCallback(
-    (text: string) => {
-      commitEdit(text);
+    (text: string, addedImageDataUrls?: string[]) => {
+      commitEdit(text, addedImageDataUrls);
       setQueueEditTarget(null);
     },
     [commitEdit, setQueueEditTarget]
   );
 
   const onEditSendNow = useCallback(
-    (text: string) => {
-      const messageId = commitEdit(text);
+    (text: string, addedImageDataUrls?: string[]) => {
+      const messageId = commitEdit(text, addedImageDataUrls);
       setQueueEditTarget(null);
       if (messageId) onCommitSendNow?.(messageId);
     },

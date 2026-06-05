@@ -41,7 +41,6 @@ pub const TOOL_GROUPS: &[(&str, &[&str])] = &[
             tool_names::LIST_DIR,
             tool_names::EDIT_FILE,
             tool_names::DELETE_FILE,
-            tool_names::APPLY_PATCH,
         ],
     ),
     (

@@ -53,10 +53,7 @@ import {
 } from "@src/modules/WorkStation/shared";
 import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
 import { repoSelectorOpenAtom } from "@src/store/ui/overlayAtom";
-import {
-  workStationEditorSecondaryCollapsedAtom,
-  workStationPrimarySidebarCollapsedAtom,
-} from "@src/store/ui/workStationAtom";
+import { workStationPrimarySidebarCollapsedAtom } from "@src/store/ui/workStationAtom";
 import { gitReviewNavigationAtom } from "@src/store/workstation/codeEditor/gitReviewNavigationAtom";
 import {
   type SourceControlHistorySelection,
@@ -473,9 +470,6 @@ const EditorContent: React.FC<EditorContentProps> = memo(
     const isExplorerHome = activeTab?.type === "explorer";
 
     // Panel state for dynamic quick action labels
-    const bottomPanelCollapsed = useAtomValue(
-      workStationEditorSecondaryCollapsedAtom
-    );
     const sidebarCollapsed = useAtomValue(
       workStationPrimarySidebarCollapsedAtom
     );
@@ -492,17 +486,10 @@ const EditorContent: React.FC<EditorContentProps> = memo(
         createEditorQuickActions({
           t,
           dispatch,
-          bottomPanelCollapsed,
           sidebarCollapsed,
           onAddWorkspace: handleOpenAddWorkspace,
         }),
-      [
-        t,
-        dispatch,
-        bottomPanelCollapsed,
-        sidebarCollapsed,
-        handleOpenAddWorkspace,
-      ]
+      [t, dispatch, sidebarCollapsed, handleOpenAddWorkspace]
     );
 
     // ============================================

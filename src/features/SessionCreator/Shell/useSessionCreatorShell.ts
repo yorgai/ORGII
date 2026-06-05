@@ -110,7 +110,7 @@ export function useSessionCreatorShell({
   // ── Session Creator Hook ──────────────────────────────────────────────────
   const {
     fileInputRef,
-    tiptapRef,
+    composerInputRef,
     uploadedFiles,
     isLoading,
     advancedConfig,
@@ -215,7 +215,7 @@ export function useSessionCreatorShell({
 
   useEffect(() => {
     if (!restoreToInput?.displayContent) return;
-    const editor = tiptapRef.current;
+    const editor = composerInputRef.current;
     if (!editor) return;
     const restoredText = restoreToInput.displayContent;
     editor.setContent(restoredText);
@@ -223,7 +223,12 @@ export function useSessionCreatorShell({
     handleContentChangeWithTracking(restoredText);
     store.set(restoreToInputAtom, null);
     store.set(draftHasContentAtom, restoredText.trim().length > 0);
-  }, [restoreToInput, tiptapRef, handleContentChangeWithTracking, store]);
+  }, [
+    restoreToInput,
+    composerInputRef,
+    handleContentChangeWithTracking,
+    store,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -465,7 +470,7 @@ export function useSessionCreatorShell({
     t,
     // Editor state
     fileInputRef,
-    tiptapRef,
+    composerInputRef,
     uploadedFiles,
     isLoading,
     advancedConfig,

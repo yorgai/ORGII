@@ -230,13 +230,12 @@ const SettingsRootBody: React.FC<SettingsRootBodyProps> = ({ topContent }) => {
 
   return (
     <SidebarList>
-      <div className="flex flex-col gap-px">
+      <div className="flex flex-col gap-1">
         {topContent}
         <NavigationMenu
           items={appSectionItems}
           selectedKeys={selectedKeys}
           onMenuItemClick={handleItemClick}
-          verticalGapClassName="gap-px"
         />
       </div>
       {integrationsSections.map((section) => (

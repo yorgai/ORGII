@@ -1,6 +1,6 @@
 import { useAtomValue } from "jotai";
-import { GitFork, Loader2, MoreHorizontal } from "lucide-react";
-import React, { type ReactNode, useCallback, useMemo } from "react";
+import { GitFork, MoreHorizontal } from "lucide-react";
+import { type ReactNode, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { RUST_AGENT_TYPE } from "@src/api/tauri/agent/types";
@@ -88,11 +88,9 @@ function loadMoreRow(
     id: `${LOAD_MORE_PREFIX}${category}`,
     key: `${LOAD_MORE_PREFIX}${category}`,
     label,
-    icon: loading ? undefined : MoreHorizontal,
-    iconName: loading ? undefined : "more-horizontal",
-    iconElement: loading ? (
-      <SpinningLoader size={14} strokeWidth={2} />
-    ) : undefined,
+    icon: MoreHorizontal,
+    iconName: "more-horizontal",
+    trailingElement: loading ? renderBreathingStatusDot() : undefined,
     visualTone: "secondary",
     disabled: loading,
   };
@@ -107,11 +105,9 @@ function groupLoadMoreRow(
     id: `${LOAD_MORE_GROUP_PREFIX}${groupId}`,
     key: `${LOAD_MORE_GROUP_PREFIX}${groupId}`,
     label,
-    icon: loading ? undefined : MoreHorizontal,
-    iconName: loading ? undefined : "more-horizontal",
-    iconElement: loading ? (
-      <SpinningLoader size={14} strokeWidth={2} />
-    ) : undefined,
+    icon: MoreHorizontal,
+    iconName: "more-horizontal",
+    trailingElement: loading ? renderBreathingStatusDot() : undefined,
     visualTone: "secondary",
     disabled: loading,
   };
@@ -135,26 +131,49 @@ export function getLoadMoreGroupId(id: string): string | null {
   return id.slice(LOAD_MORE_GROUP_PREFIX.length) || null;
 }
 
-const SpinningLoader = React.memo(
-  (props: { size?: number; strokeWidth?: number; className?: string }) => (
-    <Loader2
-      size={props.size}
-      strokeWidth={props.strokeWidth}
-      className={`${props.className ?? ""} animate-spin`}
-    />
-  )
-);
-SpinningLoader.displayName = "SpinningLoader";
-
-function renderStatusDot(unread: boolean): ReactNode {
+function renderBreathingStatusDot(): ReactNode {
   return (
     <span
-      aria-label={unread ? "Unread" : undefined}
-      aria-hidden={unread ? undefined : true}
-      className={`h-1.5 w-1.5 rounded-full ${unread ? "" : "bg-fill-4"}`}
-      style={unread ? { backgroundColor: "#F59E0B" } : undefined}
+      aria-label="Working"
+      className="h-1.5 w-1.5 rounded-full bg-primary-6 motion-safe:animate-[sidebar-working-dot-breathe_1.6s_ease-in-out_infinite] motion-reduce:opacity-80"
+    >
+      <style>{`
+        @keyframes sidebar-working-dot-breathe {
+          0%, 100% { opacity: 0.45; transform: scale(0.9); }
+          50% { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </span>
+  );
+}
+
+function renderStatusDot(
+  tone: "default" | "unread" | "asking" = "default"
+): ReactNode {
+  const ariaLabel =
+    tone === "unread"
+      ? "Unread"
+      : tone === "asking"
+        ? "Pending question"
+        : undefined;
+  const colorClass =
+    tone === "unread"
+      ? "bg-success-6"
+      : tone === "asking"
+        ? "bg-warning-6"
+        : "bg-fill-4";
+
+  return (
+    <span
+      aria-label={ariaLabel}
+      aria-hidden={ariaLabel ? undefined : true}
+      className={`h-1.5 w-1.5 rounded-full ${colorClass}`}
     />
   );
+}
+
+function isSessionPendingAsking(session: Session): boolean {
+  return session.status === "waiting_for_user";
 }
 
 function isSessionCompletedUnread(
@@ -219,6 +238,16 @@ export function useSessionMenuItems({
     [sortedSessions]
   );
 
+  const pinnedSessions = useMemo(
+    () => visibleSessions.filter((session) => session.pinned),
+    [visibleSessions]
+  );
+
+  const unpinnedSessions = useMemo(
+    () => visibleSessions.filter((session) => !session.pinned),
+    [visibleSessions]
+  );
+
   const sessionMap = useMemo(() => {
     const map = new Map<string, Session>();
     for (const session of visibleSessions) {
@@ -233,8 +262,13 @@ export function useSessionMenuItems({
       const displayName = getSessionListDisplayName(session, untitledSession);
       const timestampSrc =
         session.updated_at || session.updated_time || session.created_at;
-      const unread =
-        !inProgress && isSessionCompletedUnread(session, visitedSessions);
+      const pendingAsking = isSessionPendingAsking(session);
+      const unread = isSessionCompletedUnread(session, visitedSessions);
+      const statusDotTone = pendingAsking
+        ? "asking"
+        : unread
+          ? "unread"
+          : "default";
 
       return {
         id: session.session_id,
@@ -244,10 +278,12 @@ export function useSessionMenuItems({
         subtitle: shouldShowWorktreeSubtitle(session)
           ? worktreeSubtitle(session.worktreeBranch)
           : undefined,
-        icon: inProgress
-          ? (SpinningLoader as unknown as typeof Loader2)
-          : resolveSessionRowIcon(session),
-        trailingElement: inProgress ? undefined : renderStatusDot(unread),
+        icon: resolveSessionRowIcon(session),
+        trailingElement: pendingAsking
+          ? renderStatusDot(statusDotTone)
+          : inProgress
+            ? renderBreathingStatusDot()
+            : renderStatusDot(statusDotTone),
         shortcut: formatCompactTimeAgo(timestampSrc),
       };
     },
@@ -323,6 +359,17 @@ export function useSessionMenuItems({
     [tCommon]
   );
 
+  const pinnedLabel = tCommon("sessions:chat.historyPinned", "Pinned");
+
+  const appendPinnedSessions = useCallback(
+    (items: NavigationMenuItem[]): boolean => {
+      if (pinnedSessions.length === 0) return false;
+      items.push(separator("pinned", pinnedLabel));
+      return appendGroupSessions(items, "pinned", pinnedSessions);
+    },
+    [appendGroupSessions, pinnedLabel, pinnedSessions]
+  );
+
   const byTimeMenuItems = useMemo<NavigationMenuItem[]>(() => {
     const groups: Record<DateGroupKey, Session[]> = {
       today: [],
@@ -330,12 +377,12 @@ export function useSessionMenuItems({
       thisWeek: [],
       older: [],
     };
-    for (const session of visibleSessions) {
+    for (const session of unpinnedSessions) {
       groups[getDateGroup(session)].push(session);
     }
 
     const items: NavigationMenuItem[] = [];
-    let hasHiddenLocalSessions = false;
+    let hasHiddenLocalSessions = appendPinnedSessions(items);
     for (const groupKey of DATE_GROUP_KEYS) {
       const groupSessions = groups[groupKey];
       if (groupSessions.length === 0) continue;
@@ -349,9 +396,10 @@ export function useSessionMenuItems({
     }
     return items;
   }, [
-    visibleSessions,
+    unpinnedSessions,
     DATE_GROUP_LABELS,
     appendGroupSessions,
+    appendPinnedSessions,
     appendTrailingLoadMoreItems,
   ]);
 
@@ -361,7 +409,7 @@ export function useSessionMenuItems({
     const groups = new Map<SessionGroupKey, Session[]>();
     const agentOrgGroups = new Map<string, Session[]>();
 
-    for (const session of visibleSessions) {
+    for (const session of unpinnedSessions) {
       if (session.agentOrgId) {
         const bucket = agentOrgGroups.get(session.agentOrgId);
         if (bucket) {
@@ -383,6 +431,7 @@ export function useSessionMenuItems({
 
     const items: NavigationMenuItem[] = [];
     const loadMoreEmitted = new Set<SessionListCategory>();
+    appendPinnedSessions(items);
     const sortedAgentOrgGroups = Array.from(agentOrgGroups.entries()).sort(
       ([orgIdA, sessionsA], [orgIdB, sessionsB]) => {
         const labelA = sessionsA[0]?.agentOrgName ?? orgIdA;
@@ -427,7 +476,12 @@ export function useSessionMenuItems({
       }
     }
     return items;
-  }, [visibleSessions, appendGroupSessions, loadMoreRowFor]);
+  }, [
+    unpinnedSessions,
+    appendGroupSessions,
+    appendPinnedSessions,
+    loadMoreRowFor,
+  ]);
 
   // ── By workspace ──────────────────────────────────────────────────
 
@@ -438,7 +492,7 @@ export function useSessionMenuItems({
 
   const byWorkspaceMenuItems = useMemo<NavigationMenuItem[]>(() => {
     const groups = new Map<string, Session[]>();
-    for (const session of visibleSessions) {
+    for (const session of unpinnedSessions) {
       const rawPath = session.repoPath?.replace(/\/+$/, "") ?? "";
       const key = rawPath || NO_WORKSPACE_KEY;
       const bucket = groups.get(key);
@@ -458,7 +512,7 @@ export function useSessionMenuItems({
     });
 
     const items: NavigationMenuItem[] = [];
-    let hasHiddenLocalSessions = false;
+    let hasHiddenLocalSessions = appendPinnedSessions(items);
     for (const key of orderedKeys) {
       const groupSessions = groups.get(key);
       if (!groupSessions || groupSessions.length === 0) continue;
@@ -476,27 +530,23 @@ export function useSessionMenuItems({
     }
     return items;
   }, [
-    visibleSessions,
+    unpinnedSessions,
     repoPathToName,
     noWorkspaceLabel,
     appendGroupSessions,
+    appendPinnedSessions,
     appendTrailingLoadMoreItems,
   ]);
 
   // ── By tags ───────────────────────────────────────────────────────
 
   const noTagsLabel = tCommon("sessions:chat.historyNoTags", "Untagged");
-  const pinnedLabel = tCommon("sessions:chat.historyPinned", "Pinned");
 
   const byTagsMenuItems = useMemo<NavigationMenuItem[]>(() => {
     const tagGroups = new Map<string, Session[]>();
-    const pinnedSessions: Session[] = [];
     const untaggedSessions: Session[] = [];
 
-    for (const session of visibleSessions) {
-      if (session.pinned) {
-        pinnedSessions.push(session);
-      }
+    for (const session of unpinnedSessions) {
       const sessionTags = session.tags ?? [];
       if (sessionTags.length === 0) {
         untaggedSessions.push(session);
@@ -513,14 +563,7 @@ export function useSessionMenuItems({
     }
 
     const items: NavigationMenuItem[] = [];
-    let hasHiddenLocalSessions = false;
-
-    if (pinnedSessions.length > 0) {
-      items.push(separator("pinned", pinnedLabel));
-      hasHiddenLocalSessions =
-        appendGroupSessions(items, "tags:pinned", pinnedSessions) ||
-        hasHiddenLocalSessions;
-    }
+    let hasHiddenLocalSessions = appendPinnedSessions(items);
 
     const sortedTags = Array.from(tagGroups.keys()).sort((tagA, tagB) =>
       tagA.localeCompare(tagB)
@@ -546,11 +589,11 @@ export function useSessionMenuItems({
     }
     return items;
   }, [
-    visibleSessions,
+    unpinnedSessions,
     appendGroupSessions,
+    appendPinnedSessions,
     appendTrailingLoadMoreItems,
     noTagsLabel,
-    pinnedLabel,
   ]);
 
   // ── Active menu ───────────────────────────────────────────────────

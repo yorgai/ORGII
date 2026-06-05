@@ -16,9 +16,14 @@ export interface UseFileHandlersReturn {
   handleIdeFileDrop: (
     filePath: string,
     fileName?: string,
-    isFolder?: boolean
+    isFolder?: boolean,
+    dropTargetId?: string
   ) => void;
-  handleBrowserFileDrop: (file: File, isFolder?: boolean) => void;
+  handleBrowserFileDrop: (
+    file: File,
+    isFolder?: boolean,
+    dropTargetId?: string
+  ) => void;
 }
 
 export function useFileHandlers(): UseFileHandlersReturn {
@@ -26,7 +31,12 @@ export function useFileHandlers(): UseFileHandlersReturn {
   const setIsShowChat = useSetAtom(editorChatVisibleAtom);
 
   const handleIdeFileDrop = useCallback(
-    (filePath: string, fileName?: string, isFolder?: boolean) => {
+    (
+      filePath: string,
+      fileName?: string,
+      isFolder?: boolean,
+      dropTargetId?: string
+    ) => {
       const pathParts = filePath.split("/");
       const finalFileName =
         fileName || pathParts[pathParts.length - 1] || "Unknown";
@@ -36,6 +46,7 @@ export function useFileHandlers(): UseFileHandlersReturn {
         name: finalFileName,
         path: filePath,
         type: isFolder ? "folder" : "file",
+        dropTargetId,
       };
 
       setDroppedFiles((prev) => [...prev, file]);
@@ -45,13 +56,14 @@ export function useFileHandlers(): UseFileHandlersReturn {
   );
 
   const handleBrowserFileDrop = useCallback(
-    (browserFile: File, isFolder?: boolean) => {
+    (browserFile: File, isFolder?: boolean, dropTargetId?: string) => {
       const file: DroppedFileInfo = {
         id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         name: browserFile.name || "dropped-file",
         path: browserFile.name || "dropped-file",
         type: isFolder ? "folder" : "file",
         browserFile,
+        dropTargetId,
       };
 
       setDroppedFiles((prev) => [...prev, file]);

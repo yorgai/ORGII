@@ -662,7 +662,6 @@ fn read_labels_in_tx(
     Ok(out)
 }
 
-#[allow(clippy::too_many_arguments)]
 fn build_frontmatter(
     project_id: Option<String>,
     core: &AtomicCore,

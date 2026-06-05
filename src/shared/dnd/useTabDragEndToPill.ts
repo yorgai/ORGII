@@ -11,7 +11,7 @@ import {
 
 export function useTabDragEndToPill(
   containerRef: RefObject<HTMLElement | null>,
-  tiptapRef: RefObject<ComposerInputRef | null>
+  composerInputRef: RefObject<ComposerInputRef | null>
 ): void {
   useEffect(() => {
     const handleTabDragEnd = (e: Event) => {
@@ -20,7 +20,7 @@ export function useTabDragEndToPill(
       if (pointerX == null || pointerY == null) return;
       if (!isPointerOverDropTarget(containerRef, pointerX, pointerY)) return;
       if (pill) {
-        insertPillFromTabPayload(tiptapRef, {
+        insertPillFromTabPayload(composerInputRef, {
           ...pill,
           pointerX,
           pointerY,
@@ -28,12 +28,12 @@ export function useTabDragEndToPill(
         return;
       }
       if (!filePath) return;
-      insertTabAsPill(tiptapRef, filePath, name, type);
+      insertTabAsPill(composerInputRef, filePath, name, type);
     };
 
     document.addEventListener("tab-drag-end", handleTabDragEnd);
     return () => {
       document.removeEventListener("tab-drag-end", handleTabDragEnd);
     };
-  }, [containerRef, tiptapRef]);
+  }, [containerRef, composerInputRef]);
 }

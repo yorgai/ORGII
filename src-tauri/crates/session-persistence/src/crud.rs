@@ -11,7 +11,7 @@ use rusqlite::{params, Connection, OptionalExtension, Result as SqliteResult};
 
 use database::db::get_db_path;
 
-use super::connection::get_connection;
+use super::connection::{begin_immediate, get_connection, with_sessions_writer};
 use super::sequence::{get_next_sequence, increment_sequence, reset_sequence};
 use super::types::{
     CacheStats, CachedEvent, CachedSession, CrossSessionSearchHit, SearchResult, SessionMetadata,
@@ -68,92 +68,116 @@ pub(crate) fn normalize_session_sequences(conn: &Connection, session_id: &str) -
     Ok(())
 }
 
-/// Save events to cache
+/// Save events to cache.
+///
+/// Runs under the process-wide writer serializer (`with_sessions_writer`)
+/// with `BEGIN IMMEDIATE` so concurrent callers queue in Rust instead of
+/// racing for `SQLITE_BUSY` mid-transaction.
+///
+/// `rebuild_turn_index` is **debounced** to run asynchronously rather
+/// than synchronously at the tail of every batch. The streaming agent
+/// pipeline emits hundreds of events per second across parent + child
+/// sessions; doing an in-line rebuild after each batch doubles the
+/// writer-mutex traffic (events INSERT, then index DELETE+INSERT) and
+/// re-runs `normalize_session_sequences` over the full tail every time.
+/// The turn index is eventually consistent — `load_turn_index` calls
+/// `ensure_turn_index_fresh` which detects drift and rebuilds lazily,
+/// so any reader always sees correct results. See
+/// `turn_index_debounce` for the coalescing scheduler.
 pub fn save_events(session_id: &str, events: &[CachedEvent]) -> SqliteResult<()> {
-    let conn = get_connection()?;
-    let tx = conn.unchecked_transaction()?;
+    with_sessions_writer(|| -> SqliteResult<()> {
+        let conn = get_connection()?;
+        let tx = begin_immediate(&conn)?;
 
-    // Initialize sequence counter from DB if needed
-    get_next_sequence(&conn, session_id)?;
+        get_next_sequence(&conn, session_id)?;
 
-    let mut stmt = conn.prepare_cached(
-        "INSERT OR REPLACE INTO events
-         (id, session_id, event_type, function_name, thread_id, args_json, result_json,
-          content, created_at, meta_json, history_sequence)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-    )?;
+        let mut stmt = conn.prepare_cached(
+            "INSERT OR REPLACE INTO events
+             (id, session_id, event_type, function_name, thread_id, args_json, result_json,
+              content, created_at, meta_json, history_sequence)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+        )?;
 
-    let mut time_start: Option<String> = None;
-    let mut time_end: Option<String> = None;
+        let mut time_start: Option<String> = None;
+        let mut time_end: Option<String> = None;
 
-    for event in events {
-        if is_ts_placeholder_id(&event.id) {
-            continue;
+        for event in events {
+            if is_ts_placeholder_id(&event.id) {
+                continue;
+            }
+            // `save_events` is `INSERT OR REPLACE`: it rewrites the whole row.
+            // The frontend's in-memory event cache does NOT track the server-
+            // owned `history_sequence` stamp (minted by the sequence counter).
+            // When the frontend re-submits an already persisted event after a
+            // reload, the field comes back as `None`. Replacing the row with
+            // `None` would desync `history_sequence` from `created_at` and
+            // break truncate cutoffs. So: for an event the frontend submits
+            // without a stamp, KEEP the value already persisted; only mint a
+            // fresh sequence for genuinely new rows.
+            let seq = match event.history_sequence {
+                Some(seq) => seq,
+                None => existing_event_sequence(&conn, session_id, &event.id)?
+                    .unwrap_or_else(|| increment_sequence(session_id)),
+            };
+
+            stmt.execute(params![
+                event.id,
+                event.session_id,
+                event.event_type,
+                event.function_name,
+                event.thread_id,
+                event.args_json,
+                event.result_json,
+                event.content,
+                event.created_at,
+                event.meta_json,
+                seq,
+            ])?;
+
+            if time_start.is_none() || event.created_at < *time_start.as_ref().unwrap() {
+                time_start = Some(event.created_at.clone());
+            }
+            if time_end.is_none() || event.created_at > *time_end.as_ref().unwrap() {
+                time_end = Some(event.created_at.clone());
+            }
         }
-        // `save_events` is `INSERT OR REPLACE`: it rewrites the whole row.
-        // The frontend's in-memory event cache does NOT track the server-
-        // owned `history_sequence` stamp (minted by the sequence counter).
-        // When the frontend re-submits an already persisted event after a
-        // reload, the field comes back as `None`. Replacing the row with
-        // `None` would desync `history_sequence` from `created_at` and
-        // break truncate cutoffs. So: for an event the frontend submits
-        // without a stamp, KEEP the value already persisted; only mint a
-        // fresh sequence for genuinely new rows.
-        let seq = match event.history_sequence {
-            Some(seq) => seq,
-            None => existing_event_sequence(&conn, session_id, &event.id)?
-                .unwrap_or_else(|| increment_sequence(session_id)),
-        };
 
-        stmt.execute(params![
-            event.id,
-            event.session_id,
-            event.event_type,
-            event.function_name,
-            event.thread_id,
-            event.args_json,
-            event.result_json,
-            event.content,
-            event.created_at,
-            event.meta_json,
-            seq,
-        ])?;
+        let now = Utc::now().timestamp();
+        conn.execute(
+            "INSERT INTO sessions (session_id, event_count, cached_at, time_range_start, time_range_end, specs_json)
+             VALUES (?1,
+                     (SELECT COUNT(*) FROM events WHERE session_id = ?1),
+                     ?2, ?3, ?4, NULL)
+             ON CONFLICT(session_id) DO UPDATE SET
+                 event_count      = excluded.event_count,
+                 cached_at        = excluded.cached_at,
+                 time_range_start = excluded.time_range_start,
+                 time_range_end   = excluded.time_range_end",
+            params![session_id, now, time_start, time_end],
+        )?;
 
-        // Track time range
-        if time_start.is_none() || event.created_at < *time_start.as_ref().unwrap() {
-            time_start = Some(event.created_at.clone());
-        }
-        if time_end.is_none() || event.created_at > *time_end.as_ref().unwrap() {
-            time_end = Some(event.created_at.clone());
-        }
-    }
+        normalize_session_sequences(&conn, session_id)?;
+        drop(stmt);
 
-    // Update session metadata, preserving existing specs_json
-    let now = Utc::now().timestamp();
-    conn.execute(
-        "INSERT INTO sessions (session_id, event_count, cached_at, time_range_start, time_range_end, specs_json)
-         VALUES (?1,
-                 (SELECT COUNT(*) FROM events WHERE session_id = ?1),
-                 ?2, ?3, ?4, NULL)
-         ON CONFLICT(session_id) DO UPDATE SET
-             event_count      = excluded.event_count,
-             cached_at        = excluded.cached_at,
-             time_range_start = excluded.time_range_start,
-             time_range_end   = excluded.time_range_end",
-        params![session_id, now, time_start, time_end],
-    )?;
-
-    normalize_session_sequences(&conn, session_id)?;
-
-    tx.commit()?;
-    super::turn_index::rebuild_turn_index(session_id)?;
+        tx.commit()?;
+        Ok(())
+    })?;
+    super::turn_index_debounce::schedule(session_id);
     Ok(())
 }
 
 /// Load all events for a session.
+///
+/// `normalize_session_sequences` is a writer (per-row UPDATEs) so it
+/// runs under the writer serializer. The subsequent SELECT does not
+/// need the lock and runs on the same connection after the guard
+/// drops.
 pub fn load_events(session_id: &str) -> SqliteResult<Vec<CachedEvent>> {
     let conn = get_connection()?;
-    normalize_session_sequences(&conn, session_id)?;
+    with_sessions_writer(|| -> SqliteResult<()> {
+        normalize_session_sequences(&conn, session_id)?;
+        Ok(())
+    })?;
     let mut stmt = conn.prepare_cached(
         "SELECT id, session_id, event_type, function_name, thread_id,
                 args_json, result_json, content, created_at, meta_json, history_sequence
@@ -292,21 +316,30 @@ pub fn get_session_metadata(session_id: &str) -> SqliteResult<Option<SessionMeta
     }
 }
 
-/// Delete a session and its events
+/// Delete a session and its events.
+///
+/// All four DELETEs run inside a single `BEGIN IMMEDIATE` transaction
+/// under the writer serializer so the cascade is atomic with respect to
+/// other writers — a concurrent `save_events` cannot observe a half-
+/// deleted session (events gone, sessions row still present).
 pub fn delete_session(session_id: &str) -> SqliteResult<()> {
-    let conn = get_connection()?;
-    conn.execute("DELETE FROM events WHERE session_id = ?1", [session_id])?;
-    conn.execute(
-        "DELETE FROM session_turns WHERE session_id = ?1",
-        [session_id],
-    )?;
-    conn.execute(
-        "DELETE FROM session_turn_index_state WHERE session_id = ?1",
-        [session_id],
-    )?;
-    conn.execute("DELETE FROM sessions WHERE session_id = ?1", [session_id])?;
-    app_paths::cleanup_scratchpad_by_session_id(session_id);
-    Ok(())
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let tx = begin_immediate(&conn)?;
+        tx.execute("DELETE FROM events WHERE session_id = ?1", [session_id])?;
+        tx.execute(
+            "DELETE FROM session_turns WHERE session_id = ?1",
+            [session_id],
+        )?;
+        tx.execute(
+            "DELETE FROM session_turn_index_state WHERE session_id = ?1",
+            [session_id],
+        )?;
+        tx.execute("DELETE FROM sessions WHERE session_id = ?1", [session_id])?;
+        tx.commit()?;
+        app_paths::cleanup_scratchpad_by_session_id(session_id);
+        Ok(())
+    })
 }
 
 /// Delete the last "user_message" event and every event that came after it.
@@ -317,75 +350,92 @@ pub fn delete_session(session_id: &str) -> SqliteResult<()> {
 ///
 /// Returns the number of rows removed.
 pub fn delete_last_user_event_and_after(session_id: &str) -> SqliteResult<i64> {
-    let conn = get_connection()?;
-    normalize_session_sequences(&conn, session_id)?;
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let tx = begin_immediate(&conn)?;
+        normalize_session_sequences(&conn, session_id)?;
 
-    let last_user_seq: Option<i64> = conn
-        .query_row(
-            "SELECT history_sequence FROM events
-             WHERE session_id = ?1 AND function_name = 'user_message'
-             ORDER BY COALESCE(history_sequence, 0) DESC, created_at DESC
-             LIMIT 1",
+        let last_user_seq: Option<i64> = tx
+            .query_row(
+                "SELECT history_sequence FROM events
+                 WHERE session_id = ?1 AND function_name = 'user_message'
+                 ORDER BY COALESCE(history_sequence, 0) DESC, created_at DESC
+                 LIMIT 1",
+                [session_id],
+                |row| row.get::<_, Option<i64>>(0),
+            )
+            .optional()?
+            .flatten();
+
+        let Some(seq) = last_user_seq else {
+            tx.commit()?;
+            return Ok(0);
+        };
+
+        let deleted = tx.execute(
+            "DELETE FROM events
+             WHERE session_id = ?1
+               AND COALESCE(history_sequence, 0) >= ?2",
+            params![session_id, seq],
+        )?;
+
+        tx.execute(
+            "UPDATE sessions
+             SET event_count = (SELECT COUNT(*) FROM events WHERE session_id = ?1)
+             WHERE session_id = ?1",
             [session_id],
-            |row| row.get::<_, Option<i64>>(0),
-        )
-        .optional()?
-        .flatten();
+        )?;
+        reset_sequence(session_id, seq);
+        tx.commit()?;
+        super::turn_index::rebuild_turn_index(session_id)?;
 
-    let Some(seq) = last_user_seq else {
-        return Ok(0);
-    };
-
-    let deleted = conn.execute(
-        "DELETE FROM events
-         WHERE session_id = ?1
-           AND COALESCE(history_sequence, 0) >= ?2",
-        params![session_id, seq],
-    )?;
-
-    // Refresh metadata so event_count reflects the truncation.
-    conn.execute(
-        "UPDATE sessions
-         SET event_count = (SELECT COUNT(*) FROM events WHERE session_id = ?1)
-         WHERE session_id = ?1",
-        [session_id],
-    )?;
-    reset_sequence(session_id, seq);
-    super::turn_index::rebuild_turn_index(session_id)?;
-
-    Ok(deleted as i64)
+        Ok(deleted as i64)
+    })
 }
 
-/// Clear sessions older than TTL
+/// Clear sessions older than TTL.
+///
+/// The lookup is split from the deletes so the writer lock is held only
+/// while DELETEs and the optional `incremental_vacuum` run. SELECTs are
+/// concurrent under WAL and do not need the writer lock.
 pub fn clear_old_sessions(max_age_hours: i64) -> SqliteResult<i64> {
-    let conn = get_connection()?;
     let cutoff = Utc::now().timestamp() - (max_age_hours * 3600);
 
-    // Get session IDs to delete. `session_id` is `TEXT NOT NULL`, so
-    // `row.get(0)` should never fail in practice — but if it does (e.g.
-    // future schema drift), surfacing the error prevents silently
-    // skipping the per-session `events` / `agent_snapshots` cleanup
-    // while the bulk `DELETE FROM sessions` below still succeeds, which
-    // would otherwise orphan the child rows.
-    let mut stmt = conn.prepare("SELECT session_id FROM sessions WHERE cached_at < ?1")?;
-    let session_ids: Vec<String> = stmt
-        .query_map([cutoff], |row| row.get(0))?
-        .collect::<SqliteResult<Vec<String>>>()?;
+    let session_ids: Vec<String> = {
+        let conn = get_connection()?;
+        // `session_id` is `TEXT NOT NULL`, so `row.get(0)` should never
+        // fail in practice — but if it does (e.g. future schema drift),
+        // surfacing the error prevents silently skipping the per-session
+        // cleanup while the bulk `DELETE FROM sessions` below still
+        // succeeds and orphans the child rows.
+        let mut stmt = conn.prepare("SELECT session_id FROM sessions WHERE cached_at < ?1")?;
+        let ids = stmt
+            .query_map([cutoff], |row| row.get(0))?
+            .collect::<SqliteResult<Vec<String>>>()?;
+        ids
+    };
 
     let count = session_ids.len() as i64;
 
-    // Delete events, sessions, and associated snapshot records
-    for sid in &session_ids {
-        conn.execute("DELETE FROM events WHERE session_id = ?1", [sid])?;
-        let _ = conn.execute("DELETE FROM agent_snapshots WHERE session_id = ?1", [sid]);
-    }
-    conn.execute("DELETE FROM sessions WHERE cached_at < ?1", [cutoff])?;
+    with_sessions_writer(|| -> SqliteResult<()> {
+        let conn = get_connection()?;
+        let tx = begin_immediate(&conn)?;
+        for sid in &session_ids {
+            tx.execute("DELETE FROM events WHERE session_id = ?1", [sid])?;
+            let _ = tx.execute("DELETE FROM agent_snapshots WHERE session_id = ?1", [sid]);
+        }
+        tx.execute("DELETE FROM sessions WHERE cached_at < ?1", [cutoff])?;
+        tx.commit()?;
 
-    // Reclaim space incrementally (VACUUM locks the entire DB and blocks
-    // concurrent readers in WAL mode; incremental_vacuum is non-blocking).
-    if count > 0 {
-        conn.execute_batch("PRAGMA incremental_vacuum(100);")?;
-    }
+        // `incremental_vacuum` is a top-level PRAGMA and cannot run
+        // inside the transaction. Reclaim space immediately after the
+        // commit while still inside the writer lock so a concurrent
+        // writer doesn't sneak between commit and vacuum.
+        if count > 0 {
+            conn.execute_batch("PRAGMA incremental_vacuum(100);")?;
+        }
+        Ok(())
+    })?;
 
     Ok(count)
 }
@@ -472,65 +522,66 @@ pub(crate) fn update_session_metadata(conn: &Connection, session_id: &str) -> Sq
 /// This is the preferred write path when the caller already has specs/timeRange
 /// (e.g. migrated from IndexedDB).
 pub fn save_session(session: &CachedSession) -> SqliteResult<()> {
-    let conn = get_connection()?;
-    let tx = conn.unchecked_transaction()?;
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let tx = begin_immediate(&conn)?;
 
-    // Remove existing events for a clean replace
-    conn.execute(
-        "DELETE FROM events WHERE session_id = ?1",
-        [&session.session_id],
-    )?;
+        tx.execute(
+            "DELETE FROM events WHERE session_id = ?1",
+            [&session.session_id],
+        )?;
 
-    // Reset sequence counter
-    super::sequence::reset_sequence(&session.session_id, 0);
+        super::sequence::reset_sequence(&session.session_id, 0);
 
-    let mut stmt = conn.prepare_cached(
-        "INSERT OR REPLACE INTO events
-         (id, session_id, event_type, function_name, thread_id, args_json, result_json,
-          content, created_at, meta_json, history_sequence)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-    )?;
+        let mut stmt = conn.prepare_cached(
+            "INSERT OR REPLACE INTO events
+             (id, session_id, event_type, function_name, thread_id, args_json, result_json,
+              content, created_at, meta_json, history_sequence)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+        )?;
 
-    let mut persisted_count: i64 = 0;
-    for (idx, event) in session.events.iter().enumerate() {
-        if is_ts_placeholder_id(&event.id) {
-            continue;
+        let mut persisted_count: i64 = 0;
+        for (idx, event) in session.events.iter().enumerate() {
+            if is_ts_placeholder_id(&event.id) {
+                continue;
+            }
+            let seq = event.history_sequence.unwrap_or(idx as i64 + 1);
+            stmt.execute(params![
+                event.id,
+                event.session_id,
+                event.event_type,
+                event.function_name,
+                event.thread_id,
+                event.args_json,
+                event.result_json,
+                event.content,
+                event.created_at,
+                event.meta_json,
+                seq,
+            ])?;
+            persisted_count += 1;
         }
-        let seq = event.history_sequence.unwrap_or(idx as i64 + 1);
-        stmt.execute(params![
-            event.id,
-            event.session_id,
-            event.event_type,
-            event.function_name,
-            event.thread_id,
-            event.args_json,
-            event.result_json,
-            event.content,
-            event.created_at,
-            event.meta_json,
-            seq,
-        ])?;
-        persisted_count += 1;
-    }
+        drop(stmt);
 
-    let now = Utc::now().timestamp();
-    conn.execute(
-        "INSERT OR REPLACE INTO sessions
-             (session_id, event_count, cached_at, time_range_start, time_range_end, specs_json)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![
-            session.session_id,
-            persisted_count,
-            now,
-            session.time_range_start,
-            session.time_range_end,
-            session.specs_json,
-        ],
-    )?;
+        let now = Utc::now().timestamp();
+        tx.execute(
+            "INSERT OR REPLACE INTO sessions
+                 (session_id, event_count, cached_at, time_range_start, time_range_end, specs_json)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                session.session_id,
+                persisted_count,
+                now,
+                session.time_range_start,
+                session.time_range_end,
+                session.specs_json,
+            ],
+        )?;
 
-    tx.commit()?;
-    super::turn_index::rebuild_turn_index(&session.session_id)?;
-    Ok(())
+        tx.commit()?;
+        super::turn_index::rebuild_turn_index(&session.session_id)?;
+        Ok(())
+    })
 }
 
 /// Load full session data: events + specs_json + timeRange.
@@ -551,18 +602,23 @@ pub fn load_session(session_id: &str) -> SqliteResult<Option<CachedSession>> {
 
 /// Update specs_json for an existing session without touching events.
 pub fn update_session_specs(session_id: &str, specs_json: &str) -> SqliteResult<bool> {
-    let conn = get_connection()?;
-    let affected = conn.execute(
-        "UPDATE sessions SET specs_json = ?2 WHERE session_id = ?1",
-        params![session_id, specs_json],
-    )?;
-    Ok(affected > 0)
+    with_sessions_writer(|| {
+        let conn = get_connection()?;
+        let affected = conn.execute(
+            "UPDATE sessions SET specs_json = ?2 WHERE session_id = ?1",
+            params![session_id, specs_json],
+        )?;
+        Ok(affected > 0)
+    })
 }
 
 /// Get event by ID
 pub fn get_event(session_id: &str, event_id: &str) -> SqliteResult<Option<CachedEvent>> {
     let conn = get_connection()?;
-    normalize_session_sequences(&conn, session_id)?;
+    with_sessions_writer(|| -> SqliteResult<()> {
+        normalize_session_sequences(&conn, session_id)?;
+        Ok(())
+    })?;
 
     let result = conn.query_row(
         "SELECT id, session_id, event_type, function_name, thread_id,
@@ -603,9 +659,12 @@ mod tests {
     static ORGII_HOME_TEST_LOCK: StdMutex<()> = StdMutex::new(());
 
     fn with_temp_orgii_home<R>(run: impl FnOnce() -> R) -> R {
-        let _guard = ORGII_HOME_TEST_LOCK
-            .lock()
-            .expect("lock ORGII_HOME test guard");
+        // Tolerate poison so that one panicking test doesn't take down
+        // every other test that shares the ORGII_HOME env var.
+        let _guard = match ORGII_HOME_TEST_LOCK.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
         let previous = std::env::var("ORGII_HOME").ok();
         let root = std::env::temp_dir().join(format!(
             "orgii-session-persistence-test-{}",
@@ -628,6 +687,23 @@ mod tests {
         with_temp_orgii_home(|| {
             let conn = get_connection().expect("open sessions DB");
             super::super::schema::init_session_tables(&conn).expect("init session schema");
+            // `load_turn_index` runs `backfill_missing_user_events`, which
+            // reads from `agent_messages`. That table is owned by the
+            // `agent-core` schema layer in production, but this crate's
+            // test fixture has to mirror it locally so the query
+            // resolves.
+            conn.execute_batch(
+                "CREATE TABLE IF NOT EXISTS agent_messages (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    sequence INTEGER NOT NULL,
+                    created_at TEXT NOT NULL,
+                    images TEXT
+                );",
+            )
+            .expect("create agent_messages fixture table");
             let session_id = "legacy-sequence-session";
 
             conn.execute(
@@ -673,6 +749,81 @@ mod tests {
             assert_eq!(turns.len(), 1);
             assert_eq!(turns[0].turn_id, "user-1");
             assert_eq!(turns[0].start_sequence, 0);
+        });
+    }
+
+    /// Concurrent `save_events` on the same session from many threads
+    /// must not return `database is locked`.
+    ///
+    /// Before the writer-mutex fix this regularly produced
+    /// `SQLITE_BUSY` once N (here 12) threads each issued ~25
+    /// back-to-back `save_events` calls against the same db file. With
+    /// the process-wide writer serializer + `BEGIN IMMEDIATE`, every
+    /// write queues in Rust and the file lock sees exactly one writer
+    /// at a time, so every call must succeed.
+    #[test]
+    fn save_events_under_contention_never_returns_database_locked() {
+        with_temp_orgii_home(|| {
+            // Initialise schema once; per-thread `get_connection()`
+            // calls reuse the same db file.
+            {
+                let conn = get_connection().expect("open sessions DB");
+                super::super::schema::init_session_tables(&conn)
+                    .expect("init session schema");
+            }
+
+            const NUM_THREADS: usize = 12;
+            const WRITES_PER_THREAD: usize = 25;
+            let session_id = "contention-session";
+
+            let mut handles = Vec::with_capacity(NUM_THREADS);
+            for thread_idx in 0..NUM_THREADS {
+                let sid = session_id.to_string();
+                handles.push(std::thread::spawn(move || -> Result<(), String> {
+                    for write_idx in 0..WRITES_PER_THREAD {
+                        let event_id = format!("evt-{thread_idx}-{write_idx}");
+                        let created_at = format!(
+                            "2026-06-05T00:00:{:02}.{:03}Z",
+                            write_idx % 60,
+                            thread_idx * 10
+                        );
+                        let event = CachedEvent {
+                            id: event_id,
+                            session_id: sid.clone(),
+                            event_type: "raw".to_string(),
+                            function_name: Some("user_message".to_string()),
+                            thread_id: None,
+                            args_json: "{}".to_string(),
+                            result_json: "{}".to_string(),
+                            content: format!("write {thread_idx}/{write_idx}"),
+                            created_at,
+                            meta_json: None,
+                            history_sequence: None,
+                        };
+                        save_events(&sid, &[event]).map_err(|err| {
+                            format!(
+                                "thread {thread_idx} write {write_idx}: {err}"
+                            )
+                        })?;
+                    }
+                    Ok(())
+                }));
+            }
+
+            for handle in handles {
+                handle
+                    .join()
+                    .expect("worker thread panicked")
+                    .expect("save_events under contention");
+            }
+
+            // Sanity check: every write landed.
+            let events = load_events(session_id).expect("load events");
+            assert_eq!(
+                events.len(),
+                NUM_THREADS * WRITES_PER_THREAD,
+                "expected every concurrent save to persist"
+            );
         });
     }
 }

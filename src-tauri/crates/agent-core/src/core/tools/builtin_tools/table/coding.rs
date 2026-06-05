@@ -287,7 +287,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
     ToolEntry {
         name: tool_names::DELETE_FILE,
         description: "Delete a single file from the workspace.",
-        description_detail: "Deletes exactly one file after workspace sandbox validation. Refuses to delete directories. Use apply_patch for coordinated multi-file patch workflows.",
+        description_detail: "Deletes exactly one file after workspace sandbox validation. Refuses to delete directories.",
         category: tool_categories::CODING,
         icon_id: "trash-2",
         simulator_app: AppCode,
@@ -299,25 +299,6 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         label_failed: "tools.deleteFileFailed",
         actions: &[
             action_sub!("delete", "Delete a single file", FileWrite, labels: "tools.deleteFileDeleteRunning", "tools.deleteFileDeleteDone", "tools.deleteFileDeleteFailed"),
-        ],
-        required_capability: CapCoding,
-        ..DEFAULT_TOOL_ENTRY
-    },
-    ToolEntry {
-        name: tool_names::APPLY_PATCH,
-        description: "Apply structured multi-file patches.",
-        description_detail: "Applies structured patch payloads across one or many paths in one step. Use for coordinated file changes that mirror patch- or diff-style workflows.",
-        category: tool_categories::CODING,
-        icon_id: "file-diff",
-        simulator_app: AppCode,
-        app_subtool: FileWrite,
-        chat_block: CbDiff,
-        human_tool_key: Some(HtCode),
-        label_running: "tools.applyPatchRunning",
-        label_done: "tools.applyPatchDone",
-        label_failed: "tools.applyPatchFailed",
-        actions: &[
-            action_sub!("apply", "Apply a structured multi-file patch", FileWrite, labels: "tools.applyPatchApplyRunning", "tools.applyPatchApplyDone", "tools.applyPatchApplyFailed"),
         ],
         required_capability: CapCoding,
         ..DEFAULT_TOOL_ENTRY

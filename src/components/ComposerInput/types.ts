@@ -4,7 +4,7 @@
  * Shared types for the lightweight composer input used across SessionCreator
  * and ChatPanel. The wire-level shape mirrors the previous editor ref contract
  * so the surrounding hooks
- * (`useTiptapInput`, `useAddToAgentInsertion`, `useDraftManagement`,
+ * (`useComposerInput`, `useAddToAgentInsertion`, `useDraftManagement`,
  * `useSlashCommand`, `inputPreparation`, `useInputFormatter`, etc.) keep
  * working without ProseMirror.
  */
@@ -81,8 +81,8 @@ export interface ComposerInputProps {
   /** Keyboard handler for the slash-trigger dropdown */
   onKeyDownForSlashDropdown?: (event: KeyboardEvent) => boolean;
   /**
-   * Slash behavior: command mode opens only for `/` as the whole input;
-   * context mode opens wherever `/` is typed and behaves like @ mentions.
+   * Slash behavior: both modes open wherever `/` is typed, like @ mentions.
+   * The mode is kept so consumers can distinguish command vs context surfaces.
    */
   slashTriggerMode?: "command" | "context";
   /** Called for clipboard image attachments */
@@ -193,7 +193,7 @@ export interface ComposerInputRef {
 
 /**
  * Chainable façade returned by `getEditor()`. Only the surface that existing
- * callers (`useTiptapInput.handleAtMentionClick`, `useSlashCommand`) use is
+ * callers (`useComposerInput.handleAtMentionClick`, `useSlashCommand`) use is
  * implemented — there is no general editor command surface.
  */
 export interface ComposerEditorFacade {

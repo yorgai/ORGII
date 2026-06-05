@@ -119,7 +119,7 @@ const SectionHeaderRow: React.FC<SectionHeaderRowProps> = memo(
       actions = (
         <>
           <button
-            className={`group/discard ${HEADER_BUTTON.danger} opacity-0 transition-opacity group-hover/header:opacity-100`}
+            className={`group/discard ${HEADER_BUTTON.danger} opacity-0 group-hover/header:opacity-100`}
             onClick={(event) => {
               event.stopPropagation();
               onDiscardAll?.();
@@ -157,7 +157,7 @@ const SectionHeaderRow: React.FC<SectionHeaderRowProps> = memo(
       actions = (
         <>
           <button
-            className={`${HEADER_BUTTON.actionTreeRow} opacity-0 transition-opacity group-hover/header:opacity-100`}
+            className={`${HEADER_BUTTON.actionTreeRow} opacity-0 group-hover/header:opacity-100`}
             onClick={(event) => {
               event.stopPropagation();
               onUnstageAll?.();
@@ -167,7 +167,7 @@ const SectionHeaderRow: React.FC<SectionHeaderRowProps> = memo(
             <Minus size={14} strokeWidth={1.75} />
           </button>
           <button
-            className={`${HEADER_BUTTON.actionTreeRow} opacity-0 transition-opacity group-hover/header:opacity-100`}
+            className={`${HEADER_BUTTON.actionTreeRow} opacity-0 group-hover/header:opacity-100`}
             onClick={(event) => {
               event.stopPropagation();
               onOpenStagedChanges?.();

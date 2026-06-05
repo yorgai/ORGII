@@ -121,6 +121,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const store = useStore();
     const rootRef = useRef<HTMLDivElement>(null);
     const floatingComposerRef = useRef<HTMLDivElement>(null);
+    const inputBoxRef = useRef<HTMLDivElement>(null);
     const [floatingComposerInset, setFloatingComposerInset] = useState(
       CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX
     );
@@ -187,11 +188,14 @@ const ChatView: React.FC<ChatViewProps> = memo(
         });
         return () => window.cancelAnimationFrame(animationFrameId);
       }
-      const element = floatingComposerRef.current;
-      if (!element) return;
+      const rootElement = rootRef.current;
+      const inputBoxElement = inputBoxRef.current;
+      if (!rootElement || !inputBoxElement) return;
 
       const updateInset = () => {
-        const height = Math.ceil(element.getBoundingClientRect().height);
+        const rootRect = rootElement.getBoundingClientRect();
+        const inputBoxRect = inputBoxElement.getBoundingClientRect();
+        const height = Math.ceil(rootRect.bottom - inputBoxRect.top);
         setFloatingComposerInset((previous) =>
           Math.abs(previous - height) >= 4 ? height : previous
         );
@@ -199,7 +203,8 @@ const ChatView: React.FC<ChatViewProps> = memo(
 
       updateInset();
       const resizeObserver = new ResizeObserver(updateInset);
-      resizeObserver.observe(element);
+      resizeObserver.observe(rootElement);
+      resizeObserver.observe(inputBoxElement);
       return () => resizeObserver.disconnect();
     }, [showInteractArea]);
 
@@ -497,6 +502,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
           {showInteractArea && (
             <ChatFloatingComposer
               composerRef={floatingComposerRef}
+              inputBoxRef={inputBoxRef}
               chatPanelPosition={position}
               sessionId={sessionId}
               inputAreaSessionId={inputAreaSessionId}

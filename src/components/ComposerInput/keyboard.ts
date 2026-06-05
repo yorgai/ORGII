@@ -8,7 +8,7 @@
  *  - @ mention dropdown navigation delegation
  *  - Slash command dropdown navigation delegation
  *  - @ detection (after the character lands, mark mention active and notify)
- *  - / detection at position 0 in an empty editor
+ *  - / detection (after the character lands, mark slash command active and notify)
  *  - Enter to submit (Cmd/Ctrl+Enter or bare Enter based on `requireCmdEnter`)
  *  - Escape to close dropdowns
  *
@@ -119,7 +119,7 @@ export function createKeyDownHandler(ctx: KeyDownHandlerContext) {
     // Cmd/Ctrl+A → select all editor content. Webkit-based contenteditable
     // hosts that have `display: block` + `white-space: nowrap` (the compact
     // chat row) sometimes refuse the native shortcut, so we drive the
-    // selection ourselves to guarantee parity with TiptapInput.
+    // selection ourselves to guarantee parity with ComposerInput.
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "a") {
       event.preventDefault();
       const range = document.createRange();
@@ -150,11 +150,13 @@ export function createKeyDownHandler(ctx: KeyDownHandlerContext) {
     }
 
     if (event.key === "/" && !ctx.getAtMention().active) {
+      // Let the character land in the editor, then mark the slash command as
+      // active. This intentionally mirrors @ mention behavior: slash commands
+      // are triggerable from non-empty input too, with the query starting after
+      // the typed `/`.
       setTimeout(() => {
         const liveHost = ctx.host();
         if (!liveHost) return;
-        const text = ctx.getText();
-        if (ctx.slashTriggerMode === "command" && text !== "/") return;
         const range = rangeInsideHost(liveHost);
         const offset = caretTextOffset(liveHost, range);
         ctx.setSlashCommand({

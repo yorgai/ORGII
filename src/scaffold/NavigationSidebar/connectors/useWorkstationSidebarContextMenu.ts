@@ -77,8 +77,8 @@ export function useWorkstationSidebarContextMenu({
           action: () => handleExportMarkdown(item.id),
         });
         const pinLabel = session?.pinned
-          ? tCommon("sessions:chat.unpinSession", "Unpin from Top")
-          : tCommon("sessions:chat.pinSession", "Pin to Top");
+          ? tCommon("sessions:chat.unpinSession", "Unpin")
+          : tCommon("sessions:chat.pinSession", "Pin");
         const pinItem = await MenuItem.new({
           text: pinLabel,
           action: () => handleTogglePin(item.id),

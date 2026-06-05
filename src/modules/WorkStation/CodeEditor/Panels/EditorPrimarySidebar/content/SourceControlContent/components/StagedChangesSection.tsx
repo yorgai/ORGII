@@ -64,14 +64,14 @@ export const StagedChangesSection: React.FC<StagedChangesSectionProps> = memo(
           actions={
             <>
               <button
-                className={`${HEADER_BUTTON.actionTreeRow} opacity-0 transition-opacity group-hover/header:opacity-100`}
+                className={`${HEADER_BUTTON.actionTreeRow} opacity-0 group-hover/header:opacity-100`}
                 onClick={onUnstageAll}
                 title={`Unstage All Changes\n\nShortcut: ${SHORTCUTS.unstageAll}`}
               >
                 <Minus size={14} strokeWidth={1.75} />
               </button>
               <button
-                className={`${HEADER_BUTTON.actionTreeRow} opacity-0 transition-opacity group-hover/header:opacity-100`}
+                className={`${HEADER_BUTTON.actionTreeRow} opacity-0 group-hover/header:opacity-100`}
                 onClick={onOpenStagedChanges}
                 title={GIT_LABELS.openStagedChanges}
               >

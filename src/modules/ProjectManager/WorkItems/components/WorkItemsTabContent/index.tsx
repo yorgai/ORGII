@@ -80,7 +80,6 @@ interface WorkItemsTabContentProps {
   ) => void;
   onDeleteWorkItem: (workItemId: string) => Promise<void>;
   onRestoreWorkItem: (workItemId: string) => Promise<void>;
-  onAddProject?: () => void;
   onAddListItem: (status: WorkItemStatus) => Promise<void>;
   onProjectNameChange: (name: string) => void;
   onProjectDescriptionChange: (html: string, text: string) => void;
@@ -133,7 +132,6 @@ const WorkItemsTabContent: React.FC<WorkItemsTabContentProps> = ({
   onUpdateWorkItem,
   onDeleteWorkItem,
   onRestoreWorkItem,
-  onAddProject,
   onAddListItem,
   onProjectNameChange,
   onProjectDescriptionChange,
@@ -267,7 +265,6 @@ const WorkItemsTabContent: React.FC<WorkItemsTabContentProps> = ({
           onUpdateWorkItem={onUpdateWorkItem}
           onDeleteWorkItem={onDeleteWorkItem}
           onRestoreWorkItem={onRestoreWorkItem}
-          onAddProject={onAddProject}
           onAddListItem={onAddListItem}
           detailContent={detailContent}
           propertiesPanel={propertiesPanel}

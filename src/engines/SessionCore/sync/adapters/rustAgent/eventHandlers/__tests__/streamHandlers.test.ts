@@ -128,6 +128,37 @@ describe("Rust Agent stream handlers", () => {
     expect(replaceAndRemoveSpy).not.toHaveBeenCalled();
   });
 
+  it("normalizes cumulative message delta snapshots without duplicating prefixes", () => {
+    const ctx = createCtx();
+
+    handleMessageDelta(
+      { type: "agent:message_delta", content: "Hello" },
+      "session-1",
+      ctx
+    );
+    handleMessageDelta(
+      { type: "agent:message_delta", content: "Hello world" },
+      "session-1",
+      ctx
+    );
+
+    expect(ctx.assistantStreamRef?.current.contentRef.current).toBe(
+      "Hello world"
+    );
+    expect(ctx.onStreamingDeltaRef?.current).toHaveBeenLastCalledWith({
+      isStreaming: true,
+      isThinking: false,
+      content: "Hello world",
+    });
+    expect(upsertSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        result: { observation: "Hello world" },
+        displayText: "Hello world",
+      }),
+      "session-1"
+    );
+  });
+
   it("replaces live message event with backend-authoritative completion", async () => {
     const ctx = createCtx();
     handleMessageDelta(
@@ -190,6 +221,37 @@ describe("Rust Agent stream handlers", () => {
       "session-1"
     );
     expect(replaceAndRemoveSpy).not.toHaveBeenCalled();
+  });
+
+  it("normalizes cumulative thinking delta snapshots without duplicating prefixes", () => {
+    const ctx = createCtx();
+
+    handleThinkingDelta(
+      { type: "agent:thinking_delta", content: "Thinking" },
+      "session-1",
+      ctx
+    );
+    handleThinkingDelta(
+      { type: "agent:thinking_delta", content: "Thinking through it" },
+      "session-1",
+      ctx
+    );
+
+    expect(ctx.thinkingStreamRef?.current.contentRef.current).toBe(
+      "Thinking through it"
+    );
+    expect(ctx.onStreamingDeltaRef?.current).toHaveBeenLastCalledWith({
+      isStreaming: true,
+      isThinking: true,
+      content: "Thinking through it",
+    });
+    expect(upsertSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        result: { observation: "Thinking through it" },
+        displayText: "Thinking through it",
+      }),
+      "session-1"
+    );
   });
 
   it("replaces live thinking event with backend-authoritative completion", async () => {

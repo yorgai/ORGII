@@ -801,19 +801,22 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
               </div>
             </div>
           ) : null}
-          <WorkItemContentStack
-            className="mx-auto h-full w-full max-w-[900px]"
-            titleContent={titleSection}
-            pathContent={workItemPillBreadcrumb}
-            propertiesContent={inlinePropertyPills}
-            descriptionContent={
-              showManualInputs ? descriptionSection : undefined
-            }
-            descriptionFlexible={showManualInputs}
-            metaClassName="px-4 py-2"
-            titleClassName="flex h-10 items-center px-2 py-0"
-            descriptionClassName="min-h-0 overflow-hidden px-4"
-          />
+          <div className="mx-auto h-full w-full max-w-[932px] px-4">
+            <WorkItemContentStack
+              className="h-full w-full"
+              titleContent={titleSection}
+              pathContent={workItemPillBreadcrumb}
+              propertiesContent={inlinePropertyPills}
+              descriptionContent={
+                showManualInputs ? descriptionSection : undefined
+              }
+              descriptionFlexible={showManualInputs}
+              metaClassName="py-2"
+              titleClassName="flex h-10 items-center py-0"
+              descriptionClassName="min-h-0 overflow-hidden"
+              separatorClassName=""
+            />
+          </div>
         </div>
       }
       rightContent={
