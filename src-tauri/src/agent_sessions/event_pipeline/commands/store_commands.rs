@@ -119,9 +119,12 @@ pub async fn es_append(
 
     if !user_events.is_empty() {
         let persist_sid = sid.clone();
-        // Synchronously persist user events: callers that follow this
-        // `append` with a truncate need the row to be queryable by id.
-        tokio::task::spawn_blocking(move || {
+        // Keep append UI-first: the EventStore has already been updated in memory
+        // and listeners have been notified. SQLite cache write-through is still
+        // attempted synchronously for edit/regenerate lookup freshness, but a
+        // transient writer lock must not crash the rendered app or roll back the
+        // visible user turn.
+        let persist_result = tokio::task::spawn_blocking(move || {
             save_events_retry(
                 "es_append_user",
                 &persist_sid,
@@ -130,7 +133,21 @@ pub async fn es_append(
             )
         })
         .await
-        .map_err(|err| format!("es_append spawn_blocking join failed: {err}"))??;
+        .map_err(|err| format!("es_append spawn_blocking join failed: {err}"));
+
+        match persist_result {
+            Ok(Ok(())) => {}
+            Ok(Err(err)) => {
+                tracing::warn!(
+                    "[event-pipeline] best-effort es_append_user failed for {sid}: {err}"
+                );
+            }
+            Err(err) => {
+                tracing::warn!(
+                    "[event-pipeline] es_append_user join failed for {sid}: {err}"
+                );
+            }
+        }
     }
 
     Ok(())

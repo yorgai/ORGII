@@ -101,8 +101,6 @@ async function runScenarioWithToolRendering(config, scenarioName, runner) {
       const canTryProviderAccountFallback =
         isProviderAccountBlockedError(error);
       const canTryProviderMarkerFallback =
-        (isGeminiConfig(candidateConfig) ||
-          isClaudeCodeConfig(candidateConfig)) &&
         isProviderNondeterministicMarkerError(error);
       if (
         !canTryGeminiFallback &&
