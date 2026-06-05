@@ -1048,6 +1048,9 @@
     "oauthBrowserDesc": "Hoàn tất cấp quyền trong cửa sổ trình duyệt đã mở.",
     "oauthBrowserOpened": "Một cửa sổ trình duyệt đã được mở. Hoàn tất cấp quyền ở đó, rồi trình hướng dẫn này sẽ tiếp tục."
   },
+  "gitConnections": {
+    "github": "GitHub"
+  },
   "builtInTools": {
     "title": "Công cụ tích hợp",
     "tabTools": "Công cụ tích hợp",
@@ -1329,7 +1332,14 @@
     "accountDisconnected": "Đã ngắt kết nối tài khoản GitHub \"{{name}}\"",
     "accountDisconnectFailed": "Không thể ngắt kết nối tài khoản GitHub",
     "connectRepoDesc": "Kết nối tài khoản GitHub để truy cập kho lưu trữ",
-    "github": "GitHub"
+    "github": "GitHub",
+    "signInWithGithub": "Đăng nhập bằng GitHub",
+    "signInWithGithubDesc": "Cấp quyền cho ORGII qua luồng thiết bị GitHub. Không cần máy chủ tự lưu trữ.",
+    "oauthWaiting": "Đang chờ cấp quyền",
+    "oauthDeviceCodeDesc": "Mở URL bên dưới và nhập mã này",
+    "oauthOpenGithub": "Mở GitHub",
+    "oauthCancel": "Hủy",
+    "oauthFailed": "Cấp quyền thất bại"
   },
   "skillsHub": {
     "title": "Skills Hub",

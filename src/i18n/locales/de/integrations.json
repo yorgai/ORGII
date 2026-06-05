@@ -1048,6 +1048,9 @@
     "oauthBrowserDesc": "Schließen Sie die Autorisierung im geöffneten Browserfenster ab.",
     "oauthBrowserOpened": "Ein Browserfenster wurde geöffnet. Schließen Sie dort die Autorisierung ab, danach fährt der Assistent fort."
   },
+  "gitConnections": {
+    "github": "GitHub"
+  },
   "builtInTools": {
     "title": "Integrierte Tools",
     "tabTools": "Integrierte Tools",
@@ -1329,7 +1332,14 @@
     "accountDisconnected": "GitHub-Konto \"{{name}}\" getrennt",
     "accountDisconnectFailed": "Trennen des GitHub-Kontos fehlgeschlagen",
     "connectRepoDesc": "GitHub-Konto verbinden, um auf Repos zuzugreifen",
-    "github": "GitHub"
+    "github": "GitHub",
+    "signInWithGithub": "Mit GitHub anmelden",
+    "signInWithGithubDesc": "ORGII über den GitHub Device Flow autorisieren. Kein Server-Hosting nötig.",
+    "oauthWaiting": "Warten auf Autorisierung",
+    "oauthDeviceCodeDesc": "Öffne die URL unten und gib diesen Code ein",
+    "oauthOpenGithub": "GitHub öffnen",
+    "oauthCancel": "Abbrechen",
+    "oauthFailed": "Autorisierung fehlgeschlagen"
   },
   "skillsHub": {
     "title": "Skills Hub",

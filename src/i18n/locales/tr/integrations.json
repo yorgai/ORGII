@@ -1045,6 +1045,9 @@
     "oauthBrowserDesc": "Açılan tarayıcı penceresinde yetkilendirmeyi tamamlayın.",
     "oauthBrowserOpened": "Bir tarayıcı penceresi açıldı. Yetkilendirmeyi orada tamamlayın, ardından bu sihirbaz devam eder."
   },
+  "gitConnections": {
+    "github": "GitHub"
+  },
   "builtInTools": {
     "title": "Yerleşik araçlar",
     "tabTools": "Yerleşik araçlar",
@@ -1326,7 +1329,14 @@
     "accountDisconnected": "GitHub hesabı \"{{name}}\" bağlantısı kesildi",
     "accountDisconnectFailed": "GitHub hesabı bağlantısı kesilemedi",
     "connectRepoDesc": "Depolara erişmek için bir GitHub hesabı bağlayın",
-    "github": "GitHub"
+    "github": "GitHub",
+    "signInWithGithub": "GitHub ile oturum aç",
+    "signInWithGithubDesc": "ORGII'yi GitHub Device Flow üzerinden yetkilendirin. Sunucu barındırma gerekmez.",
+    "oauthWaiting": "Yetkilendirme bekleniyor",
+    "oauthDeviceCodeDesc": "Aşağıdaki URL'yi açın ve bu kodu girin",
+    "oauthOpenGithub": "GitHub'ı aç",
+    "oauthCancel": "İptal",
+    "oauthFailed": "Yetkilendirme başarısız"
   },
   "skillsHub": {
     "title": "Skills Hub",

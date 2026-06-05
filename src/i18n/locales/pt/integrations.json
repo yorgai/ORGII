@@ -1048,6 +1048,9 @@
     "oauthBrowserDesc": "Conclua a autorização na janela do navegador aberta.",
     "oauthBrowserOpened": "Uma janela do navegador foi aberta. Conclua a autorização ali e o assistente continuará."
   },
+  "gitConnections": {
+    "github": "GitHub"
+  },
   "builtInTools": {
     "title": "Ferramentas integradas",
     "tabTools": "Ferramentas integradas",
@@ -1318,7 +1321,14 @@
     "accountDisconnected": "Conta do GitHub \"{{name}}\" desconectada",
     "accountDisconnectFailed": "Falha ao desconectar a conta do GitHub",
     "connectRepoDesc": "Conecte uma conta do GitHub para acessar Repos",
-    "github": "GitHub"
+    "github": "GitHub",
+    "signInWithGithub": "Entrar com GitHub",
+    "signInWithGithubDesc": "Autorize o ORGII via fluxo de dispositivo do GitHub. Sem hospedagem de servidor.",
+    "oauthWaiting": "Aguardando autorização",
+    "oauthDeviceCodeDesc": "Abra a URL abaixo e insira este código",
+    "oauthOpenGithub": "Abrir GitHub",
+    "oauthCancel": "Cancelar",
+    "oauthFailed": "Falha na autorização"
   },
   "skillsHub": {
     "title": "Skills Hub",

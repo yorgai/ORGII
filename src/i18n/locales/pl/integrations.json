@@ -1045,6 +1045,9 @@
     "oauthBrowserDesc": "Dokończ autoryzację w otwartym oknie przeglądarki.",
     "oauthBrowserOpened": "Otwarto okno przeglądarki. Dokończ tam autoryzację, a kreator będzie kontynuował."
   },
+  "gitConnections": {
+    "github": "GitHub"
+  },
   "builtInTools": {
     "title": "Wbudowane narzędzia",
     "tabTools": "Wbudowane narzędzia",
@@ -1315,7 +1318,14 @@
     "accountDisconnected": "Konto GitHub „{{name}}” rozłączono",
     "accountDisconnectFailed": "Nie udało się rozłączyć konta GitHub",
     "connectRepoDesc": "Połącz konto GitHub, aby uzyskać dostęp do Repo",
-    "github": "GitHub"
+    "github": "GitHub",
+    "signInWithGithub": "Zaloguj się przez GitHub",
+    "signInWithGithubDesc": "Autoryzuj ORGII przez GitHub Device Flow. Bez konieczności hostowania serwera.",
+    "oauthWaiting": "Oczekiwanie na autoryzację",
+    "oauthDeviceCodeDesc": "Otwórz URL poniżej i wpisz ten kod",
+    "oauthOpenGithub": "Otwórz GitHub",
+    "oauthCancel": "Anuluj",
+    "oauthFailed": "Autoryzacja nie powiodła się"
   },
   "skillsHub": {
     "title": "Centrum umiejętności",

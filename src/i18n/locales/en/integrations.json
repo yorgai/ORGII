@@ -1061,6 +1061,9 @@
     "oauthBrowserDesc": "Complete authorization in the browser window that opened.",
     "oauthBrowserOpened": "A browser window was opened. Finish authorization there, then this wizard will continue."
   },
+  "gitConnections": {
+    "github": "GitHub"
+  },
   "builtInTools": {
     "title": "Built-in tools",
     "tabTools": "Built-in tools",
@@ -1333,7 +1336,14 @@
     "accountDisconnected": "GitHub account \"{{name}}\" disconnected",
     "accountDisconnectFailed": "Failed to disconnect GitHub account",
     "connectRepoDesc": "Connect a GitHub account to access repos",
-    "github": "GitHub"
+    "github": "GitHub",
+    "signInWithGithub": "Sign in with GitHub",
+    "signInWithGithubDesc": "Authorize ORGII via GitHub's device flow. No server hosting required.",
+    "oauthWaiting": "Waiting for authorization",
+    "oauthDeviceCodeDesc": "Open the URL below and enter this code",
+    "oauthOpenGithub": "Open GitHub",
+    "oauthCancel": "Cancel",
+    "oauthFailed": "Authorization failed"
   },
   "skillsHub": {
     "title": "Skills Hub",

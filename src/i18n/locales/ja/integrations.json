@@ -1048,6 +1048,9 @@
     "oauthBrowserDesc": "開いたブラウザウィンドウで承認を完了してください。",
     "oauthBrowserOpened": "ブラウザウィンドウが開きました。そこで承認を完了すると、このウィザードが続行します。"
   },
+  "gitConnections": {
+    "github": "GitHub"
+  },
   "builtInTools": {
     "title": "組み込みツール",
     "tabTools": "組み込みツール",
@@ -1329,7 +1332,14 @@
     "accountDisconnected": "GitHub アカウント \"{{name}}\" を切断しました",
     "accountDisconnectFailed": "GitHub アカウントの切断に失敗しました",
     "connectRepoDesc": "GitHubアカウントを接続してリポジトリにアクセス",
-    "github": "GitHub"
+    "github": "GitHub",
+    "signInWithGithub": "GitHub でサインイン",
+    "signInWithGithubDesc": "GitHub のデバイスフローで ORGII を認証します。サーバー不要。",
+    "oauthWaiting": "認証を待っています",
+    "oauthDeviceCodeDesc": "下記の URL を開き、このコードを入力してください",
+    "oauthOpenGithub": "GitHub を開く",
+    "oauthCancel": "キャンセル",
+    "oauthFailed": "認証に失敗しました"
   },
   "skillsHub": {
     "title": "Skills Hub",

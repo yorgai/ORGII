@@ -1048,6 +1048,9 @@
     "oauthBrowserDesc": "Завершите авторизацию в открытом окне браузера.",
     "oauthBrowserOpened": "Открыто окно браузера. Завершите авторизацию там, затем мастер продолжит работу."
   },
+  "gitConnections": {
+    "github": "GitHub"
+  },
   "builtInTools": {
     "title": "Встроенные инструменты",
     "tabTools": "Встроенные инструменты",
@@ -1329,7 +1332,14 @@
     "accountDisconnected": "Аккаунт GitHub \"{{name}}\" отключён",
     "accountDisconnectFailed": "Не удалось отключить аккаунт GitHub",
     "connectRepoDesc": "Подключите аккаунт GitHub для доступа к репо",
-    "github": "GitHub"
+    "github": "GitHub",
+    "signInWithGithub": "Войти через GitHub",
+    "signInWithGithubDesc": "Авторизуйте ORGII через GitHub Device Flow. Свой сервер не нужен.",
+    "oauthWaiting": "Ожидание авторизации",
+    "oauthDeviceCodeDesc": "Откройте URL ниже и введите этот код",
+    "oauthOpenGithub": "Открыть GitHub",
+    "oauthCancel": "Отмена",
+    "oauthFailed": "Ошибка авторизации"
   },
   "skillsHub": {
     "title": "Skills Hub",

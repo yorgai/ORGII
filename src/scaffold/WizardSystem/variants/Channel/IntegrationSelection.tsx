@@ -26,6 +26,7 @@ import {
 import type { SelectionGridOption } from "@src/scaffold/WizardSystem/primitives";
 
 import {
+  GIT_ADAPTER_TYPES,
   SERVICE_TYPES,
   STORY_SYNC_ADAPTER_TYPES,
   type WizardCategory,
@@ -140,6 +141,11 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
       label: t(adapter.labelKey),
       iconElement: <IntegrationIcon type={adapter.type} size={18} />,
     }));
+    const gitOptions = GIT_ADAPTER_TYPES.map((adapter) => ({
+      key: adapter.type,
+      label: t(adapter.labelKey),
+      iconElement: <IntegrationIcon type={adapter.type} size={18} />,
+    }));
 
     return [
       {
@@ -168,6 +174,13 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
         label: t("categories.projects"),
         options: projectOptions,
         selectOptions: toSelectOptions(projectOptions),
+        selectable: true,
+      },
+      {
+        category: "git",
+        label: t("categories.git"),
+        options: gitOptions,
+        selectOptions: toSelectOptions(gitOptions),
         selectable: true,
       },
     ];

@@ -1064,6 +1064,9 @@
     "oauthBrowserDesc": "在已打开的浏览器窗口中完成授权。",
     "oauthBrowserOpened": "已打开浏览器窗口。请在那里完成授权，然后此向导会继续。"
   },
+  "gitConnections": {
+    "github": "GitHub"
+  },
   "builtInTools": {
     "title": "内置工具",
     "tabTools": "内置工具",
@@ -1345,7 +1348,14 @@
     "accountDisconnected": "GitHub 账户 \"{{name}}\" 已断开",
     "accountDisconnectFailed": "断开 GitHub 账户失败",
     "connectRepoDesc": "连接 GitHub 账户以访问仓库",
-    "github": "GitHub"
+    "github": "GitHub",
+    "signInWithGithub": "使用 GitHub 登录",
+    "signInWithGithubDesc": "通过 GitHub 设备流授权 ORGII，无需自建服务器。",
+    "oauthWaiting": "等待授权",
+    "oauthDeviceCodeDesc": "打开下方 URL 并输入此代码",
+    "oauthOpenGithub": "打开 GitHub",
+    "oauthCancel": "取消",
+    "oauthFailed": "授权失败"
   },
   "skillsHub": {
     "title": "Skills Hub",

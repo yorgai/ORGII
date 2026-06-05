@@ -1045,6 +1045,9 @@
     "oauthBrowserDesc": "在已開啟的瀏覽器視窗中完成授權。",
     "oauthBrowserOpened": "已開啟瀏覽器視窗。請在該處完成授權，然後此精靈會繼續。"
   },
+  "gitConnections": {
+    "github": "GitHub"
+  },
   "builtInTools": {
     "title": "內置工具",
     "tabTools": "內置工具",
@@ -1326,7 +1329,14 @@
     "accountDisconnected": "GitHub 賬戶 \"{{name}}\" 已斷開",
     "accountDisconnectFailed": "斷開 GitHub 賬戶失敗",
     "connectRepoDesc": "連接 GitHub 賬戶以訪問倉庫",
-    "github": "GitHub"
+    "github": "GitHub",
+    "signInWithGithub": "使用 GitHub 登入",
+    "signInWithGithubDesc": "透過 GitHub 裝置流程授權 ORGII，無需自建伺服器。",
+    "oauthWaiting": "等待授權",
+    "oauthDeviceCodeDesc": "開啟下方 URL 並輸入此代碼",
+    "oauthOpenGithub": "開啟 GitHub",
+    "oauthCancel": "取消",
+    "oauthFailed": "授權失敗"
   },
   "skillsHub": {
     "title": "Skills Hub",

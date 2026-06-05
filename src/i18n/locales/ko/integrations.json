@@ -1045,6 +1045,9 @@
     "oauthBrowserDesc": "열린 브라우저 창에서 승인을 완료하세요.",
     "oauthBrowserOpened": "브라우저 창이 열렸습니다. 거기에서 승인을 완료하면 이 마법사가 계속됩니다."
   },
+  "gitConnections": {
+    "github": "GitHub"
+  },
   "builtInTools": {
     "title": "기본 제공 도구",
     "tabTools": "기본 제공 도구",
@@ -1326,7 +1329,14 @@
     "accountDisconnected": "GitHub 계정 \"{{name}}\" 연결이 해제되었습니다",
     "accountDisconnectFailed": "GitHub 계정 연결 해제에 실패했습니다",
     "connectRepoDesc": "GitHub 계정을 연결하여 저장소에 액세스",
-    "github": "GitHub"
+    "github": "GitHub",
+    "signInWithGithub": "GitHub으로 로그인",
+    "signInWithGithubDesc": "GitHub Device Flow로 ORGII를 인증합니다. 서버 호스팅이 필요 없습니다.",
+    "oauthWaiting": "인증 대기 중",
+    "oauthDeviceCodeDesc": "아래 URL을 열고 이 코드를 입력하세요",
+    "oauthOpenGithub": "GitHub 열기",
+    "oauthCancel": "취소",
+    "oauthFailed": "인증 실패"
   },
   "skillsHub": {
     "title": "Skills Hub",
