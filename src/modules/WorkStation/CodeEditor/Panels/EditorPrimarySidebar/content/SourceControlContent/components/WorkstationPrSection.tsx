@@ -61,17 +61,14 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
   // Header title: section name + status badge
   const titleNode = (
     <div className="flex min-w-0 flex-1 items-center gap-1.5">
-      <GitPullRequest
-        size={12}
-        className="shrink-0 text-text-3"
-        strokeWidth={1.75}
-      />
-      <span className="truncate text-[12px] font-medium uppercase text-text-2">
+      <span
+        className={`truncate uppercase text-text-2 ${TYPOGRAPHY.sectionTitle}`}
+      >
         {t("git.pr.title")}
       </span>
       {prUrl && prStatus && (
         <span
-          className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${PR_STATUS_COLORS[prStatus] ?? "bg-fill-2 text-text-3"}`}
+          className={`ml-1 rounded px-1.5 py-0.5 ${TYPOGRAPHY.badge} ${PR_STATUS_COLORS[prStatus] ?? "bg-fill-2 text-text-3"}`}
         >
           {t(`git.pr.status.${prStatus}`, { defaultValue: prStatus })}
         </span>
