@@ -32,9 +32,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useNavigate } from "react-router-dom";
 
-import { ROUTES } from "@src/config/routes";
 import { GroupChatPausedBanner } from "@src/engines/ChatPanel/components/ChatStatusBanners";
 import { useAgentOrgGroupChatController } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatController";
 import { useChatPanelState } from "@src/engines/ChatPanel/hooks/useChatPanelState";
@@ -60,10 +58,7 @@ import {
   queueFlushRequestAtom,
   reorderQueueAtom,
 } from "@src/store/ui/messageQueueAtom";
-import {
-  simulatorSelectedAppAtom,
-  stationModeAtom,
-} from "@src/store/ui/simulatorAtom";
+import { simulatorSelectedAppAtom } from "@src/store/ui/simulatorAtom";
 import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
 import ChatFloatingComposer from "./ChatFloatingComposer";
@@ -388,25 +383,13 @@ const ChatView: React.FC<ChatViewProps> = memo(
       currentPlanApproval && shouldShowCurrentPlanSurface
     );
 
-    const navigate = useNavigate();
-    const stationMode = useAtomValue(stationModeAtom);
-    const setStationMode = useSetAtom(stationModeAtom);
     const setSelectedApp = useSetAtom(simulatorSelectedAppAtom);
     const setReplayMode = useSetAtom(replayModeAtom);
 
-    const stationModeRef = useRef(stationMode);
-    useEffect(() => {
-      stationModeRef.current = stationMode;
-    }, [stationMode]);
-
     const handleFilesExpand = useCallback(() => {
-      if (stationModeRef.current === "agent-station") {
-        setStationMode("my-station");
-      }
-      navigate(ROUTES.workStation.code.path);
       setSelectedApp(AppType.DIFF);
       setReplayMode("replay");
-    }, [setStationMode, navigate, setSelectedApp, setReplayMode]);
+    }, [setSelectedApp, setReplayMode]);
 
     const {
       questionCollapsed,
