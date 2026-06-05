@@ -18,7 +18,13 @@
  * - Callback refs are updated without triggering extension rebuilds
  */
 import CodeMirror from "@uiw/react-codemirror";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 
 import { CustomScrollbar } from "@src/components/CustomScrollbar";
 import { useGitBlame } from "@src/hooks/git/useGitBlame";
@@ -54,6 +60,28 @@ function rememberEditorScrollTop(key: string, scrollTop: number): void {
     const oldestKey = editorScrollTopByKey.keys().next().value;
     if (oldestKey) editorScrollTopByKey.delete(oldestKey);
   }
+}
+
+function canUseEditorScrollState(scrollElement: HTMLElement): boolean {
+  return (
+    scrollElement.isConnected &&
+    scrollElement.clientHeight > 0 &&
+    scrollElement.getClientRects().length > 0
+  );
+}
+
+function restoreEditorScrollTop(
+  scrollElement: HTMLElement,
+  scrollTop: number
+): boolean {
+  if (!canUseEditorScrollState(scrollElement)) return false;
+  const maxScrollTop = Math.max(
+    0,
+    scrollElement.scrollHeight - scrollElement.clientHeight
+  );
+  if (maxScrollTop <= 0 && scrollTop > 0) return false;
+  scrollElement.scrollTop = Math.min(scrollTop, maxScrollTop);
+  return true;
 }
 
 // Re-export types for consumers
@@ -119,6 +147,8 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   const minimapHostRef = useRef<HTMLDivElement>(null);
   const memoryStatsKeyRef = useRef(Symbol("codemirror-memory"));
   const scrollStateKey = filePath || language || null;
+  const latestScrollStateKeyRef = useRef(scrollStateKey);
+  latestScrollStateKeyRef.current = scrollStateKey;
 
   // ============================================
   // EDITOR SERVICE: Register EditorView for AI/service access
@@ -128,27 +158,45 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
       registerWithService,
     });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!scrollElement || !scrollStateKey) return;
 
-    const savedScrollTop = editorScrollTopByKey.get(scrollStateKey);
-    const frameId = window.requestAnimationFrame(() => {
-      if (savedScrollTop === undefined) return;
-      const maxScrollTop = Math.max(
-        0,
-        scrollElement.scrollHeight - scrollElement.clientHeight
-      );
-      scrollElement.scrollTop = Math.min(savedScrollTop, maxScrollTop);
-    });
+    const effectScrollStateKey = scrollStateKey;
+    const savedScrollTop = editorScrollTopByKey.get(effectScrollStateKey);
+    const frameIds: number[] = [];
+    let restoring = savedScrollTop !== undefined;
+    const scheduleRestore = (remainingAttempts: number) => {
+      const frameId = window.requestAnimationFrame(() => {
+        if (savedScrollTop === undefined) return;
+        if (latestScrollStateKeyRef.current !== effectScrollStateKey) return;
+        const restored = restoreEditorScrollTop(scrollElement, savedScrollTop);
+        if (restored) {
+          restoring = false;
+        } else if (remainingAttempts > 0) {
+          scheduleRestore(remainingAttempts - 1);
+        }
+      });
+      frameIds.push(frameId);
+    };
+
+    scheduleRestore(4);
 
     const handleScroll = () => {
-      rememberEditorScrollTop(scrollStateKey, scrollElement.scrollTop);
+      if (restoring) return;
+      if (latestScrollStateKeyRef.current !== effectScrollStateKey) return;
+      if (!canUseEditorScrollState(scrollElement)) return;
+      rememberEditorScrollTop(effectScrollStateKey, scrollElement.scrollTop);
     };
 
     scrollElement.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
-      window.cancelAnimationFrame(frameId);
-      rememberEditorScrollTop(scrollStateKey, scrollElement.scrollTop);
+      if (
+        latestScrollStateKeyRef.current === effectScrollStateKey &&
+        canUseEditorScrollState(scrollElement)
+      ) {
+        rememberEditorScrollTop(effectScrollStateKey, scrollElement.scrollTop);
+      }
+      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
       scrollElement.removeEventListener("scroll", handleScroll);
     };
   }, [scrollElement, scrollStateKey]);

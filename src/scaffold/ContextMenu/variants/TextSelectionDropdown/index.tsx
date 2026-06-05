@@ -37,7 +37,6 @@ import { useTranslation } from "react-i18next";
 import {
   DROPDOWN_CLASSES,
   DROPDOWN_ITEM,
-  DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import { Session, recentSessionsAtom } from "@src/store/session";
 import { stripPillReferences } from "@src/util/session/stripPillReferences";
@@ -505,18 +504,7 @@ const TextSelectionDropdown: React.FC<TextSelectionDropdownProps> = ({
           className={DROPDOWN_CLASSES.panel}
           style={{ width: STYLE_CONFIG.dropdownWidth }}
         >
-          {source === "editor" && (
-            <div className={DROPDOWN_CLASSES.sectionLabel}>
-              {t("selectionMenu.title")}
-            </div>
-          )}
-          <div
-            className={
-              source === "editor"
-                ? DROPDOWN_PANEL.paddingBelowHeaderClass
-                : DROPDOWN_PANEL.paddingClass
-            }
-          >
+          <div className={DROPDOWN_CLASSES.itemsColumnPadded}>
             {menuItems.map((item, index) => {
               const IconComponent = item.icon;
               let label: string;

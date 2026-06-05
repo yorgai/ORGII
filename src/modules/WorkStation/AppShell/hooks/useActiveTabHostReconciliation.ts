@@ -24,7 +24,7 @@
  * fight their selection.
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import {
   dockFilterAtom,
@@ -37,17 +37,6 @@ import {
   tabToLegacyHost,
 } from "@src/store/workstation/legacyTabHostAdapter";
 
-/**
- * Per-host preferred "blank state" tab type. When reconciliation needs
- * to pick a code-host tab and Explorer exists, pick Explorer; otherwise
- * fall back to the first tab whose host matches.
- */
-const PREFERRED_BLANK_TAB_TYPE_BY_HOST: Partial<
-  Record<LegacyPeekHost, string>
-> = {
-  code: "explorer",
-};
-
 export function useActiveTabHostReconciliation(
   effectiveHost: LegacyPeekHost | null
 ): void {
@@ -55,19 +44,33 @@ export function useActiveTabHostReconciliation(
   const tabs = useAtomValue(mainPaneTabsAtom);
   const activeTabId = useAtomValue(mainPaneActiveTabIdAtom);
   const setLayout = useSetAtom(workstationLayoutAtom);
+  const lastActiveTabIdByHostRef = useRef<
+    Partial<Record<LegacyPeekHost, string>>
+  >({});
 
   useEffect(() => {
-    if (!effectiveHost || dockFilter === "all" || tabs.length === 0) return;
-
     const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
     const activeHost = activeTab ? tabToLegacyHost(activeTab) : null;
+    if (activeTab && activeHost) {
+      lastActiveTabIdByHostRef.current[activeHost] = activeTab.id;
+    }
+
+    if (!effectiveHost || dockFilter === "all" || tabs.length === 0) return;
     if (activeHost === effectiveHost) return;
 
-    const preferredType = PREFERRED_BLANK_TAB_TYPE_BY_HOST[effectiveHost];
+    const rememberedTabId = lastActiveTabIdByHostRef.current[effectiveHost];
+    const rememberedTarget = rememberedTabId
+      ? tabs.find(
+          (tab) =>
+            tab.id === rememberedTabId && tabToLegacyHost(tab) === effectiveHost
+        )
+      : null;
     const target =
-      (preferredType ? tabs.find((tab) => tab.type === preferredType) : null) ??
+      rememberedTarget ??
       tabs.find((tab) => tabToLegacyHost(tab) === effectiveHost);
     if (!target || target.id === activeTabId) return;
+
+    lastActiveTabIdByHostRef.current[effectiveHost] = target.id;
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLayout((prev) => {
