@@ -207,15 +207,6 @@
       },
       "commitsTo": "{{repo}} への Commits",
       "commitsToMultiple": "{{repos}} への Commits"
-    },
-    "list": {
-      "updated": "更新済み",
-      "timeRange": "時間範囲",
-      "started": "開始時刻",
-      "lastUpdated": "最終更新",
-      "agentModel": "Agent · モデル",
-      "emptyTitle": "これらのフィルターに一致するセッションはありません",
-      "emptyDescription": "別のステータス、Agent タイプ、または時間範囲を試してください。"
     }
   },
   "changes": {
@@ -1865,7 +1856,12 @@
       "targetRepoPathTitle": "対象 Repo パス",
       "targetRepoPathPlaceholder": "/Users/you/Documents/GitHub/project-repo",
       "applyInWorktree": "Worktree に適用",
-      "worktreePathLabel": "Worktree"
+      "worktreePathLabel": "Worktree",
+      "singleRun": "単一実行",
+      "batchRun": "バッチ実行",
+      "sourcePathPlaceholder": "Benchmark JSONL またはデータセットリポジトリのパス",
+      "localPath": "ローカルパス",
+      "runType": "実行タイプ"
     },
     "skillsAndTools": "Skills とツール"
   },

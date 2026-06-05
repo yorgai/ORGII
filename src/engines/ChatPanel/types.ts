@@ -46,6 +46,8 @@ export interface ChatPanelProps {
     variant?: "default" | "fullScreen";
     centerFullScreenContent?: boolean;
     footerSlot?: ReactNode;
+    leadingActionSlot?: ReactNode;
+    hideRepoLine?: boolean;
     onRegionNoticeChange?: (notice: ChatPanelRegionNotice | null) => void;
     hidePresenceButton?: boolean;
     batchStartMode?: boolean;

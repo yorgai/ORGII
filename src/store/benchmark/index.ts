@@ -1,4 +1,5 @@
 import { atom } from "jotai";
+import { atomWithStorage } from "jotai/utils";
 
 import {
   BENCHMARK_EVALUATION_MODE,
@@ -11,14 +12,18 @@ import {
   type BenchmarkTaskIndexRow,
 } from "@src/api/tauri/benchmark";
 
-export const DEFAULT_SWE_BENCH_PRO_SOURCE =
-  "/Users/laptop-h/Documents/GitHub/SWE-bench_Pro-os/helper_code/sweap_eval_full_v2.jsonl";
+const BENCHMARK_SOURCE_PATH_STORAGE_KEY = "orgii:benchmarkSourcePath";
+
+export const DEFAULT_BENCHMARK_SOURCE_PATH = "";
 export const DEFAULT_SWE_BENCH_TARGET_REPO_PATH = "";
 
 export const BENCHMARK_TASK_LIST_LIMIT = 250;
 
 export const benchmarkKindAtom = atom(BENCHMARK_KIND.SWE_BENCH_PRO);
-export const benchmarkSourcePathAtom = atom(DEFAULT_SWE_BENCH_PRO_SOURCE);
+export const benchmarkSourcePathAtom = atomWithStorage(
+  BENCHMARK_SOURCE_PATH_STORAGE_KEY,
+  DEFAULT_BENCHMARK_SOURCE_PATH
+);
 export const benchmarkEvaluationModeAtom = atom<BenchmarkEvaluationMode>(
   BENCHMARK_EVALUATION_MODE.LOCAL_DOCKER
 );

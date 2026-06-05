@@ -207,15 +207,6 @@
       },
       "commitsTo": "Commits в {{repo}}",
       "commitsToMultiple": "Commits в {{repos}}"
-    },
-    "list": {
-      "updated": "Обновлено",
-      "timeRange": "Диапазон времени",
-      "started": "Начато",
-      "lastUpdated": "Последнее обновление",
-      "agentModel": "Agent · Модель",
-      "emptyTitle": "Нет сессий, соответствующих этим фильтрам",
-      "emptyDescription": "Попробуйте другой статус, тип Agent или период."
     }
   },
   "changes": {
@@ -1871,7 +1862,12 @@
       "targetRepoPathTitle": "Путь к целевому Repo",
       "targetRepoPathPlaceholder": "/Users/you/Documents/GitHub/project-repo",
       "applyInWorktree": "Применить в Worktree",
-      "worktreePathLabel": "Worktree"
+      "worktreePathLabel": "Worktree",
+      "singleRun": "Одиночный запуск",
+      "batchRun": "Пакетный запуск",
+      "sourcePathPlaceholder": "Путь к JSONL benchmark или репозиторию набора данных",
+      "localPath": "локальный путь",
+      "runType": "Тип запуска"
     },
     "skillsAndTools": "Skills и инструменты"
   },

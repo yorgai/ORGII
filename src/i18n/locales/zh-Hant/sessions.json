@@ -1856,7 +1856,12 @@
       "targetRepoPathTitle": "目標 Repo 路徑",
       "targetRepoPathPlaceholder": "/Users/you/Documents/GitHub/project-repo",
       "applyInWorktree": "套用到 Worktree",
-      "worktreePathLabel": "Worktree"
+      "worktreePathLabel": "Worktree",
+      "singleRun": "單次執行",
+      "batchRun": "批次執行",
+      "sourcePathPlaceholder": "Benchmark JSONL 或資料集 repo 路徑",
+      "localPath": "本機路徑",
+      "runType": "執行類型"
     },
     "skillsAndTools": "Skills 與工具"
   },

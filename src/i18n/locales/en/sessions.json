@@ -207,15 +207,6 @@
         "completed": "Completed session",
         "stillWorking": "Still working"
       }
-    },
-    "list": {
-      "updated": "Updated",
-      "timeRange": "Time Range",
-      "started": "Started",
-      "lastUpdated": "Last Updated",
-      "agentModel": "Agent · Model",
-      "emptyTitle": "No sessions match these filters",
-      "emptyDescription": "Try a different status, agent type, or time window."
     }
   },
   "worktreeCompare": {
@@ -1885,7 +1876,12 @@
       "targetRepoPathTitle": "Target repo path",
       "targetRepoPathPlaceholder": "/Users/you/Documents/GitHub/project-repo",
       "applyInWorktree": "Apply in Worktree",
-      "worktreePathLabel": "Worktree"
+      "worktreePathLabel": "Worktree",
+      "singleRun": "Single run",
+      "batchRun": "Batch run",
+      "sourcePathPlaceholder": "Path to benchmark JSONL or dataset repo",
+      "localPath": "local path",
+      "runType": "Run type"
     },
     "skillsAndTools": "Skills & Tools"
   },

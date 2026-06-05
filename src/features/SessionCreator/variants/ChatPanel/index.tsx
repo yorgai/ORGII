@@ -96,6 +96,8 @@ export interface SessionCreatorChatPanelProps {
   centerFullScreenContent?: boolean;
   className?: string;
   footerSlot?: React.ReactNode;
+  leadingActionSlot?: React.ReactNode;
+  hideRepoLine?: boolean;
   initialContent?: string;
   onRegionNoticeChange?: (notice: ChatPanelRegionNotice | null) => void;
   onSessionStart?: (info: SessionLaunchSuccessInfo) => void;
@@ -144,6 +146,8 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
       centerFullScreenContent = false,
       className = "",
       footerSlot,
+      leadingActionSlot,
+      hideRepoLine = false,
       initialContent,
       onDraftSnapshotChange,
       onRegionNoticeChange,
@@ -740,14 +744,17 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
 
             <div className="session-creator-chat-panel-fullscreen-composer w-full">
               {editorArea}
-              <div className="session-creator-chat-panel-fullscreen-repo-row px-1 pb-2 pt-3">
-                {repoPills}
-              </div>
+              {!hideRepoLine && (
+                <div className="session-creator-chat-panel-fullscreen-repo-row px-1 pb-2 pt-3">
+                  {repoPills}
+                </div>
+              )}
             </div>
 
             <div
               className={`mx-auto flex w-full items-center ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
             >
+              {leadingActionSlot}
               <Button
                 variant="secondary"
                 appearance="outline"

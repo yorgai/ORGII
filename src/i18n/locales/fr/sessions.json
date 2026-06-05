@@ -207,15 +207,6 @@
       },
       "commitsTo": "Commits vers {{repo}}",
       "commitsToMultiple": "Commits vers {{repos}}"
-    },
-    "list": {
-      "updated": "Mis à jour",
-      "timeRange": "Plage horaire",
-      "started": "Démarré",
-      "lastUpdated": "Dernière mise à jour",
-      "agentModel": "Agent · Modèle",
-      "emptyTitle": "Aucune session ne correspond à ces filtres",
-      "emptyDescription": "Essayez un autre statut, type d'Agent ou intervalle."
     }
   },
   "changes": {
@@ -1865,7 +1856,12 @@
       "targetRepoPathTitle": "Chemin du Repo cible",
       "targetRepoPathPlaceholder": "/Users/you/Documents/GitHub/project-repo",
       "applyInWorktree": "Appliquer dans Worktree",
-      "worktreePathLabel": "Worktree"
+      "worktreePathLabel": "Worktree",
+      "singleRun": "Exécution unique",
+      "batchRun": "Exécution groupée",
+      "sourcePathPlaceholder": "Chemin vers un JSONL de benchmark ou un dépôt de jeu de données",
+      "localPath": "chemin local",
+      "runType": "Type d’exécution"
     },
     "skillsAndTools": "Skills et outils"
   },

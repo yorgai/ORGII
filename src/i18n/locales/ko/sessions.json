@@ -207,15 +207,6 @@
       },
       "commitsTo": "{{repo}} Commits",
       "commitsToMultiple": "{{repos}} Commits"
-    },
-    "list": {
-      "updated": "Updated",
-      "timeRange": "Time Range",
-      "started": "Started",
-      "lastUpdated": "Last Updated",
-      "agentModel": "Agent · Model",
-      "emptyTitle": "No sessions match these filters",
-      "emptyDescription": "Try a different status, Agent type, or time window."
     }
   },
   "changes": {
@@ -1865,7 +1856,12 @@
       "targetRepoPathTitle": "대상 Repo 경로",
       "targetRepoPathPlaceholder": "/Users/you/Documents/GitHub/project-repo",
       "applyInWorktree": "Worktree에 적용",
-      "worktreePathLabel": "Worktree"
+      "worktreePathLabel": "Worktree",
+      "singleRun": "단일 실행",
+      "batchRun": "배치 실행",
+      "sourcePathPlaceholder": "Benchmark JSONL 또는 데이터셋 repo 경로",
+      "localPath": "로컬 경로",
+      "runType": "실행 유형"
     },
     "skillsAndTools": "Skills 및 도구"
   },

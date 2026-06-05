@@ -207,15 +207,6 @@
       },
       "commitsTo": "Commits tới {{repo}}",
       "commitsToMultiple": "Commits tới {{repos}}"
-    },
-    "list": {
-      "updated": "Đã cập nhật",
-      "timeRange": "Khoảng thời gian",
-      "started": "Đã bắt đầu",
-      "lastUpdated": "Cập nhật lần cuối",
-      "agentModel": "Agent · Mô hình",
-      "emptyTitle": "Không có phiên nào khớp với các bộ lọc này",
-      "emptyDescription": "Hãy thử trạng thái, loại Agent hoặc khoảng thời gian khác."
     }
   },
   "changes": {
@@ -1865,7 +1856,12 @@
       "targetRepoPathTitle": "Đường dẫn Repo đích",
       "targetRepoPathPlaceholder": "/Users/you/Documents/GitHub/project-repo",
       "applyInWorktree": "Áp dụng trong Worktree",
-      "worktreePathLabel": "Worktree"
+      "worktreePathLabel": "Worktree",
+      "singleRun": "Chạy đơn",
+      "batchRun": "Chạy hàng loạt",
+      "sourcePathPlaceholder": "Đường dẫn JSONL benchmark hoặc repo tập dữ liệu",
+      "localPath": "đường dẫn cục bộ",
+      "runType": "Kiểu chạy"
     },
     "skillsAndTools": "Skills và công cụ"
   },

@@ -207,15 +207,6 @@
       },
       "commitsTo": "{{repo}} için Commits",
       "commitsToMultiple": "{{repos}} için Commits"
-    },
-    "list": {
-      "updated": "Güncellendi",
-      "timeRange": "Zaman aralığı",
-      "started": "Başlatıldı",
-      "lastUpdated": "Son güncelleme",
-      "agentModel": "Agent · Model",
-      "emptyTitle": "Bu filtrelerle eşleşen oturum yok",
-      "emptyDescription": "Farklı bir durum, Agent türü veya zaman aralığı deneyin."
     }
   },
   "changes": {
@@ -1865,7 +1856,12 @@
       "targetRepoPathTitle": "Hedef Repo yolu",
       "targetRepoPathPlaceholder": "/Users/you/Documents/GitHub/project-repo",
       "applyInWorktree": "Worktree içinde uygula",
-      "worktreePathLabel": "Worktree"
+      "worktreePathLabel": "Worktree",
+      "singleRun": "Tek çalıştırma",
+      "batchRun": "Toplu çalıştırma",
+      "sourcePathPlaceholder": "Benchmark JSONL veya veri kümesi repo yolu",
+      "localPath": "yerel yol",
+      "runType": "Çalıştırma türü"
     },
     "skillsAndTools": "Skills ve araçlar"
   },
