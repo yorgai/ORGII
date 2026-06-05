@@ -1,7 +1,8 @@
 import {
+  ChevronDown,
+  ChevronRight,
   ExternalLink,
   GitPullRequest,
-  Loader2,
   TriangleAlert,
 } from "lucide-react";
 import React, { useCallback, useState } from "react";
@@ -12,7 +13,7 @@ import Button from "@src/components/Button";
 const PR_STATUS_COLORS: Record<string, string> = {
   open: "bg-success-1 text-success-6",
   merged: "bg-primary-1 text-primary-6",
-  closed: "bg-danger-1 text-danger-6",
+  closed: "bg-fill-3 text-text-3",
   draft: "bg-warning-1 text-warning-6",
 };
 
@@ -40,6 +41,7 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
   onCreatePr,
 }) => {
   const { t } = useTranslation();
+  const [collapsed, setCollapsed] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleCreate = useCallback(async () => {
@@ -52,153 +54,147 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
   }, [onCreatePr]);
 
   const displayError = errorMessage ?? localError;
+  const isInactive = prStatus === "closed" || prStatus === "merged";
+  const hasActivePr = !!prUrl && !isInactive;
 
-  if (prUrl) {
-    const statusColor =
-      PR_STATUS_COLORS[prStatus ?? ""] ?? "bg-fill-2 text-text-3";
-    const isInactive = prStatus === "closed" || prStatus === "merged";
-    return (
-      <div className="flex-shrink-0 border-b border-border-2 px-3 py-2">
-        <div className="rounded-lg bg-fill-2 px-3 py-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-text-3">
-                <GitPullRequest size={12} />
-                {t("git.pr.title")}
-              </div>
-              <a
-                href={prUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-6 hover:underline"
-              >
-                <ExternalLink size={13} />
-                <span className="truncate">
-                  {prUrl.replace(/^https?:\/\/[^/]+\//, "")}
-                </span>
-              </a>
-              <div className="mt-1 flex items-center gap-2">
-                {prStatus && (
-                  <span
-                    className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${statusColor}`}
-                  >
-                    {t(`git.pr.status.${prStatus}`, { defaultValue: prStatus })}
-                  </span>
-                )}
-                {branchName && (
-                  <code className="text-[11px] text-text-3">{branchName}</code>
-                )}
-              </div>
-            </div>
-            {isInactive && readyToCreate && onCreatePr && (
-              <Button
-                variant="primary"
-                appearance="outline"
-                size="small"
-                icon={<GitPullRequest size={13} />}
-                onClick={handleCreate}
-                className="shrink-0"
-              >
-                {t("git.actions.createPR")}
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (!eligible && !prUrl && !isCreating && !displayError) return null;
 
-  if (isCreating) {
-    return (
-      <div className="flex-shrink-0 border-b border-border-2 px-3 py-2">
-        <div className="rounded-lg bg-fill-2 px-3 py-2.5">
-          <div className="flex items-center gap-2">
-            <Loader2 size={14} className="animate-spin text-primary-6" />
-            <p className="text-sm text-text-2">{t("git.pr.creating")}</p>
-          </div>
-          {branchName && (
-            <code className="mt-1 block text-[11px] text-text-3">
-              {branchName}
-            </code>
-          )}
-        </div>
-      </div>
-    );
-  }
+  return (
+    <div className="flex-shrink-0 border-b border-border-2">
+      {/* Section header — matches SectionHeader style */}
+      <div
+        className="group/pr-header flex h-[28px] w-full items-center gap-1.5 px-3 hover:bg-fill-1"
+        onClick={() => setCollapsed((c) => !c)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") setCollapsed((c) => !c);
+        }}
+      >
+        {collapsed ? (
+          <ChevronRight size={14} className="shrink-0 text-text-3" />
+        ) : (
+          <ChevronDown size={14} className="shrink-0 text-text-3" />
+        )}
+        <GitPullRequest size={12} className="shrink-0 text-text-3" />
+        <span className="min-w-0 flex-1 truncate text-[11px] font-medium uppercase text-text-2">
+          {t("git.pr.title")}
+        </span>
 
-  if (displayError) {
-    return (
-      <div className="flex-shrink-0 border-b border-border-2 px-3 py-2">
-        <div className="rounded-lg bg-fill-2 px-3 py-2.5">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex min-w-0 flex-1 items-start gap-1.5">
-              <TriangleAlert
-                size={13}
-                className="mt-0.5 shrink-0 text-warning-6"
-              />
-              <div className="min-w-0">
-                <p className="text-[13px] text-text-2">{displayError}</p>
-                {branchName && (
-                  <code className="mt-0.5 block text-[11px] text-text-3">
-                    {branchName}
-                  </code>
-                )}
-              </div>
-            </div>
-            <Button
-              variant="tertiary"
-              size="mini"
-              shape="round"
-              onClick={handleCreate}
-              className="shrink-0"
+        {/* Right-side: status badge or create button */}
+        <div
+          className="flex items-center gap-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {hasActivePr && prStatus && (
+            <span
+              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${PR_STATUS_COLORS[prStatus] ?? "bg-fill-2 text-text-3"}`}
             >
-              {t("actions.retry")}
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (readyToCreate && !autoCreatePr) {
-    return (
-      <div className="flex-shrink-0 border-b border-border-2 px-3 py-2">
-        <div className="rounded-lg bg-fill-2 px-3 py-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-sm text-text-2">{t("git.pr.readyHint")}</p>
-              {branchName && (
-                <code className="mt-1 block text-[11px] text-text-3">
-                  {branchName}
-                </code>
-              )}
-            </div>
+              {t(`git.pr.status.${prStatus}`, { defaultValue: prStatus })}
+            </span>
+          )}
+          {isInactive && prStatus && (
+            <span
+              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${PR_STATUS_COLORS[prStatus] ?? "bg-fill-2 text-text-3"}`}
+            >
+              {t(`git.pr.status.${prStatus}`, { defaultValue: prStatus })}
+            </span>
+          )}
+          {readyToCreate && !isCreating && (
             <Button
               variant="primary"
               appearance="outline"
-              size="small"
-              icon={<GitPullRequest size={13} />}
+              size="mini"
+              shape="round"
+              icon={<GitPullRequest size={11} />}
               onClick={handleCreate}
               disabled={!onCreatePr}
             >
               {t("git.actions.createPR")}
             </Button>
-          </div>
+          )}
+          {isCreating && (
+            <Button
+              variant="primary"
+              appearance="outline"
+              size="mini"
+              shape="round"
+              loading
+              loadingSpinIcon
+              icon={<GitPullRequest size={11} />}
+              disabled
+            >
+              {t("git.pr.creating")}
+            </Button>
+          )}
         </div>
       </div>
-    );
-  }
 
-  if (!branchName || !eligible) {
-    return null;
-  }
+      {/* Collapsible body */}
+      {!collapsed && (
+        <div className="px-3 pb-2.5 pt-0.5">
+          {/* Existing open PR */}
+          {prUrl && (
+            <a
+              href={prUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="group/pr-link flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-text-2 hover:bg-fill-2"
+            >
+              <ExternalLink
+                size={12}
+                className="shrink-0 text-text-3 group-hover/pr-link:text-primary-6"
+              />
+              <span className="min-w-0 flex-1 truncate font-medium group-hover/pr-link:text-primary-6">
+                {prUrl.replace(/^https?:\/\/[^/]+\//, "")}
+              </span>
+            </a>
+          )}
 
-  return (
-    <div className="flex-shrink-0 border-b border-border-2 px-3 py-2">
-      <div className="rounded-lg bg-fill-2 px-3 py-2.5">
-        <p className="text-sm text-text-2">{t("git.pr.neutralHint")}</p>
-        <code className="mt-1 block text-[11px] text-text-3">{branchName}</code>
-      </div>
+          {/* Branch name */}
+          {branchName && (
+            <div className="mt-0.5 flex items-center gap-1 px-2">
+              <code className="text-[11px] text-text-3">{branchName}</code>
+            </div>
+          )}
+
+          {/* Error */}
+          {displayError && (
+            <div className="mt-1.5 flex items-start gap-1.5 rounded-md bg-fill-2 px-2 py-1.5">
+              <TriangleAlert
+                size={12}
+                className="mt-0.5 shrink-0 text-warning-6"
+              />
+              <p className="min-w-0 flex-1 text-[12px] text-text-2">
+                {displayError}
+              </p>
+              <Button
+                variant="tertiary"
+                size="mini"
+                shape="round"
+                onClick={handleCreate}
+                className="shrink-0"
+              >
+                {t("actions.retry")}
+              </Button>
+            </div>
+          )}
+
+          {/* Ready hint when no PR yet */}
+          {readyToCreate && !prUrl && !isCreating && !displayError && (
+            <p className="px-2 pt-0.5 text-[12px] text-text-3">
+              {autoCreatePr ? t("git.pr.autoCreating") : t("git.pr.readyHint")}
+            </p>
+          )}
+
+          {/* Not eligible hint */}
+          {!eligible && !prUrl && !isCreating && !displayError && (
+            <p className="px-2 pt-0.5 text-[12px] text-text-3">
+              {t("git.pr.neutralHint")}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 };

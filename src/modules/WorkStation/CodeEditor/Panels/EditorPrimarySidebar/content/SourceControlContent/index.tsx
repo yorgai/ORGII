@@ -434,6 +434,19 @@ export const SourceControlContent: React.FC<SourceControlContentProps> = memo(
 
     return (
       <div className={rootClassName}>
+        {/* PR Section — above commit, Cursor-style */}
+        <WorkstationPrSection
+          branchName={branchName}
+          prUrl={prUrl}
+          prStatus={prStatus}
+          isCreating={prCreating}
+          errorMessage={prErrorMessage}
+          readyToCreate={prReadyToCreate}
+          eligible={prEligible}
+          autoCreatePr={autoCreatePr}
+          onCreatePr={onCreatePr}
+        />
+
         {/* Commit Section */}
         <CommitSection
           commitMessage={commitMessage}
@@ -471,18 +484,6 @@ export const SourceControlContent: React.FC<SourceControlContentProps> = memo(
           fetchLoading={fetchLoading}
           ahead={ahead}
           behind={behind}
-        />
-
-        <WorkstationPrSection
-          branchName={branchName}
-          prUrl={prUrl}
-          prStatus={prStatus}
-          isCreating={prCreating}
-          errorMessage={prErrorMessage}
-          readyToCreate={prReadyToCreate}
-          eligible={prEligible}
-          autoCreatePr={autoCreatePr}
-          onCreatePr={onCreatePr}
         />
 
         {/* Filter input - conditionally rendered */}
