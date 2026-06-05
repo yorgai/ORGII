@@ -10,7 +10,10 @@ import {
   STYLE_CONFIG,
 } from "@/src/scaffold/ContextMenu/config";
 import { ContextMenu } from "@/src/scaffold/ContextMenu/exports";
-import type { ContextMenuCustomMentionOption } from "@/src/scaffold/ContextMenu/types";
+import type {
+  ContextMenuCustomMentionOption,
+  ContextMenuProps,
+} from "@/src/scaffold/ContextMenu/types";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -20,7 +23,6 @@ import { useMentionTreePosition } from "@src/hooks/workStation/panels/useMention
 interface ContextMenuPortalProps {
   visible: boolean;
   containerRef: React.RefObject<HTMLElement | null>;
-  anchorPosition?: { x: number; y: number } | null;
   onClose: () => void;
   onSelect: (type: MenuItemId, value?: string, displayName?: string) => void;
   customMentionOptions?: ReadonlyArray<ContextMenuCustomMentionOption>;
@@ -33,16 +35,14 @@ interface ContextMenuPortalProps {
   keyboardHandlerRef: React.MutableRefObject<
     ((e: React.KeyboardEvent) => boolean) | null
   >;
-  /** Defaults to "fixed-up" so bottom chat inputs keep opening upward. */
-  placementStrategy?: "fixed-up" | "auto";
+  treePosition?: ContextMenuProps["treePosition"];
+  direction?: "up" | "down";
 }
-
-type DropdownPlacement = "down" | "up";
 
 interface DropdownPosition {
   top: number;
   left: number;
-  placement: DropdownPlacement;
+  placement: "down" | "up";
 }
 
 const ESTIMATED_DROPDOWN_HEIGHT = 260;
@@ -63,7 +63,6 @@ function clampToViewport(
 const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
   visible,
   containerRef,
-  anchorPosition,
   onClose,
   onSelect,
   customMentionOptions,
@@ -74,9 +73,11 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
   recentFiles,
   repoPath,
   keyboardHandlerRef,
-  placementStrategy = "fixed-up",
+  treePosition: treePositionOverride,
+  direction = "up",
 }) => {
-  const treePosition = useMentionTreePosition();
+  const fallbackTreePosition = useMentionTreePosition();
+  const treePosition = treePositionOverride ?? fallbackTreePosition;
   const portalRef = useRef<HTMLDivElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition>({
     top: 0,
@@ -98,25 +99,22 @@ const ContextMenuPortal: React.FC<ContextMenuPortalProps> = ({
     const dropdownHeight =
       portalRef.current?.getBoundingClientRect().height ??
       ESTIMATED_DROPDOWN_HEIGHT;
-    const anchorX = anchorPosition?.x ?? containerRect.left;
-    const anchorY = anchorPosition?.y ?? containerRect.bottom;
+    const anchorTop = containerRect.top;
+    const anchorBottom = containerRect.bottom;
+    const anchorLeft = containerRect.left;
     const gap = DROPDOWN_PANEL.triggerGap;
-    const spaceBelow = window.innerHeight - anchorY - gap - VIEWPORT_MARGIN;
-    const spaceAbove = anchorY - gap - VIEWPORT_MARGIN;
-    const opensDown =
-      placementStrategy === "auto" &&
-      (dropdownHeight <= spaceBelow || spaceBelow >= spaceAbove);
-    const unclampedTop = opensDown
-      ? anchorY + gap
-      : anchorY - dropdownHeight - gap;
+    const unclampedTop =
+      direction === "down"
+        ? anchorBottom + gap
+        : anchorTop - dropdownHeight - gap;
 
     setDropdownPosition({
       top: clampToViewport(unclampedTop, dropdownHeight, window.innerHeight),
-      left: clampToViewport(anchorX, dropdownWidth, window.innerWidth),
-      placement: opensDown ? "down" : "up",
+      left: clampToViewport(anchorLeft, dropdownWidth, window.innerWidth),
+      placement: direction,
     });
     setIsPositioned(true);
-  }, [anchorPosition, containerRef, placementStrategy, visible]);
+  }, [containerRef, direction, visible]);
 
   useEffect(() => {
     if (visible) return;

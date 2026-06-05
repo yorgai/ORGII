@@ -12,12 +12,17 @@ import {
   isCursorIdeSession,
 } from "@src/util/session/sessionDispatch";
 
+import {
+  getDraftIdFromMenuItemId,
+  isDraftMenuItemId,
+} from "./sidebarConnectorUtils";
 import type { UseRenameSessionModalResult } from "./useRenameSessionModal";
 
 interface UseWorkstationSidebarContextMenuParams {
   sessionMap: Map<string, Session>;
   rename: UseRenameSessionModalResult;
   handleDeleteSession: (sessionId: string) => Promise<void>;
+  handleDeleteDraft: (draftId: string) => void;
   handleExportMarkdown: (sessionId: string) => Promise<void>;
   handleTogglePin: (sessionId: string) => Promise<void>;
   handleAddTag: (sessionId: string) => Promise<void>;
@@ -28,6 +33,7 @@ export function useWorkstationSidebarContextMenu({
   sessionMap,
   rename,
   handleDeleteSession,
+  handleDeleteDraft,
   handleExportMarkdown,
   handleTogglePin,
   handleAddTag,
@@ -41,6 +47,18 @@ export function useWorkstationSidebarContextMenu({
     async (event: MouseEvent, _key: string, item: NavigationMenuItem) => {
       event.preventDefault();
       event.stopPropagation();
+
+      if (isDraftMenuItemId(item.id)) {
+        const draftId = getDraftIdFromMenuItemId(item.id);
+        if (!draftId) return;
+        const removeDraftItem = await MenuItem.new({
+          text: tCommon("sessions:sidebar.removeDraft", "Remove draft"),
+          action: () => handleDeleteDraft(draftId),
+        });
+        const menu = await TauriMenu.new({ items: [removeDraftItem] });
+        await menu.popup();
+        return;
+      }
 
       if (!sessionMap.has(item.id)) return;
 
@@ -97,6 +115,7 @@ export function useWorkstationSidebarContextMenu({
       tCommon,
       rename,
       handleDeleteSession,
+      handleDeleteDraft,
       handleExportMarkdown,
       handleTogglePin,
       handleAddTag,

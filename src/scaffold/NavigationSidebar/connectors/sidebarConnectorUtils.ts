@@ -28,6 +28,10 @@ export function getDraftIdFromMenuItemId(menuItemId: string): string | null {
   return menuItemId.slice(SESSION_CREATOR_DRAFT_MENU_PREFIX.length) || null;
 }
 
+export function isDraftMenuItemId(menuItemId: string): boolean {
+  return getDraftIdFromMenuItemId(menuItemId) !== null;
+}
+
 export function getDraftPreviewText(draft: SessionCreatorDraft): string {
   if (draft.sessionName.trim()) return draft.sessionName.trim();
   const textContent = draft.editorContent

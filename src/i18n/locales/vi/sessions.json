@@ -127,7 +127,8 @@
     "sidebar": {
       "agentTypes": "Loại Agent",
       "cliAgent": "CLI Agent",
-      "rustAgent": "Rust Agent"
+      "rustAgent": "Rust Agent",
+      "removeDraft": "Xóa bản nháp"
     },
     "resultStatus": {
       "completed": "Hoàn thành",

@@ -127,7 +127,8 @@
     "sidebar": {
       "agentTypes": "Agent タイプ",
       "cliAgent": "CLI Agent",
-      "rustAgent": "Rust Agent"
+      "rustAgent": "Rust Agent",
+      "removeDraft": "ドラフトを削除"
     },
     "resultStatus": {
       "completed": "完了",

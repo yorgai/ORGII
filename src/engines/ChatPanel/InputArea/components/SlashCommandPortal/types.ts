@@ -43,14 +43,6 @@ export interface SlashCommandPortalProps {
   onImageUpload?: () => void;
   /** When false, hides mode rows in inline search results for non-session editors. */
   showModeRows?: boolean;
-  /**
-   * Which direction the menu opens relative to the container.
-   * "up" (default) opens above the container — suitable for bottom-anchored inputs.
-   * "down" opens below the container — suitable for top-anchored inputs (e.g. edit mode).
-   */
-  direction?: "up" | "down";
-  /** Defaults to "fixed" so bottom chat inputs keep opening upward. */
-  placementStrategy?: "fixed" | "auto";
 }
 
 // ── Internal list-entry union ─────────────────────────────────────────────────

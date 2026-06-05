@@ -53,6 +53,7 @@ interface GroupChatPendingMessageView {
 
 interface ChatFloatingComposerProps {
   composerRef: React.RefObject<HTMLDivElement>;
+  chatPanelPosition: "left" | "right";
   sessionId: string;
   inputAreaSessionId: string;
   currentPlanApproval: PendingPlanApproval | null | undefined;
@@ -98,6 +99,7 @@ interface ChatFloatingComposerProps {
 const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
   ({
     composerRef,
+    chatPanelPosition,
     sessionId,
     inputAreaSessionId,
     currentPlanApproval,
@@ -250,6 +252,7 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
 
           <InputArea
             omitChatHeader
+            chatPanelPosition={chatPanelPosition}
             sessionId={inputAreaSessionId}
             onSubmitOverride={onSubmitOverride}
             customMentionOptions={customMentionOptions}

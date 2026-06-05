@@ -127,7 +127,8 @@
     "sidebar": {
       "agentTypes": "Типы Agent",
       "cliAgent": "CLI Agent",
-      "rustAgent": "Rust Agent"
+      "rustAgent": "Rust Agent",
+      "removeDraft": "Удалить черновик"
     },
     "resultStatus": {
       "completed": "Завершено",
