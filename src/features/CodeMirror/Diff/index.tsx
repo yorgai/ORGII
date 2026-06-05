@@ -41,6 +41,7 @@ import {
   foldPlaceholderTheme,
   getCodeMirrorTheme,
 } from "../config";
+import { createCopyFileRefExtension } from "../shared/createCopyFileRefExtension";
 import { getLanguageExtension } from "../shared/languageExtensions";
 import "./index.scss";
 
@@ -265,6 +266,8 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
 
     const langExt = getLanguageExtension(filePath, language);
     if (langExt) exts.push(langExt);
+
+    if (filePath) exts.push(createCopyFileRefExtension(filePath));
 
     exts.push(findReplaceExtension());
 
