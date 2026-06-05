@@ -277,7 +277,8 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
     return { url: result.url };
   }, [branchName, repoPath, commitMessage, repoId, t, navigate]);
 
-  const readyToCreate = eligible && !prUrl;
+  const prIsActive = !!prUrl && prStatus !== "closed" && prStatus !== "merged";
+  const readyToCreate = eligible && !prIsActive;
 
   useEffect(() => {
     handleCreatePrRef.current = handleCreatePr;

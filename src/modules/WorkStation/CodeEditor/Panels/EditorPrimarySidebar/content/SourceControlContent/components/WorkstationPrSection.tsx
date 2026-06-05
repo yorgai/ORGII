@@ -56,6 +56,7 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
   if (prUrl) {
     const statusColor =
       PR_STATUS_COLORS[prStatus ?? ""] ?? "bg-fill-2 text-text-3";
+    const isInactive = prStatus === "closed" || prStatus === "merged";
     return (
       <div className="flex-shrink-0 border-b border-border-2 px-3 py-2">
         <div className="rounded-lg bg-fill-2 px-3 py-2.5">
@@ -89,6 +90,18 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
                 )}
               </div>
             </div>
+            {isInactive && readyToCreate && onCreatePr && (
+              <Button
+                variant="primary"
+                appearance="outline"
+                size="small"
+                icon={<GitPullRequest size={13} />}
+                onClick={handleCreate}
+                className="shrink-0"
+              >
+                {t("git.actions.createPR")}
+              </Button>
+            )}
           </div>
         </div>
       </div>
