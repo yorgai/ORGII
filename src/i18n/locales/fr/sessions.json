@@ -127,7 +127,8 @@
     "sidebar": {
       "agentTypes": "Types d’Agent",
       "cliAgent": "CLI Agent",
-      "rustAgent": "Rust Agent"
+      "rustAgent": "Rust Agent",
+      "removeDraft": "Supprimer le brouillon"
     },
     "resultStatus": {
       "completed": "Terminé",

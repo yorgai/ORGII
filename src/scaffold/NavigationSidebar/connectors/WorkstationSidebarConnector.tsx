@@ -281,15 +281,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const rename = useRenameSessionModal();
   const activeSessionId = useAtomValue(workstationActiveSessionIdAtom) ?? "";
 
-  const handleDeleteDraft = useCallback(
-    (event: React.MouseEvent, draftId: string) => {
-      event.preventDefault();
-      event.stopPropagation();
-      deleteSessionCreatorDraft(draftId);
-    },
-    [deleteSessionCreatorDraft]
-  );
-
   const sessionPinnedMenuItems = useMemo<NavigationMenuItem[]>(
     () =>
       buildPinnedMenuItems({
@@ -314,10 +305,8 @@ export const WorkstationSidebarConnector: React.FC = () => {
       buildDraftMenuItems({
         sessionCreatorDrafts,
         draftsLabel: t("labels.drafts"),
-        deleteLabel: tCommon("actions.delete"),
-        onDeleteDraft: handleDeleteDraft,
       }),
-    [handleDeleteDraft, sessionCreatorDrafts, t, tCommon]
+    [sessionCreatorDrafts, t]
   );
 
   const sessionSidebarMenuItems = useMemo(
@@ -461,6 +450,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     sessionMap,
     rename,
     handleDeleteSession,
+    handleDeleteDraft: deleteSessionCreatorDraft,
     handleExportMarkdown,
     handleTogglePin,
     handleAddTag,

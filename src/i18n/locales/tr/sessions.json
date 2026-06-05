@@ -127,7 +127,8 @@
     "sidebar": {
       "agentTypes": "Agent Türleri",
       "cliAgent": "CLI Agent",
-      "rustAgent": "Rust Agent"
+      "rustAgent": "Rust Agent",
+      "removeDraft": "Taslağı kaldır"
     },
     "resultStatus": {
       "completed": "Tamamlandı",

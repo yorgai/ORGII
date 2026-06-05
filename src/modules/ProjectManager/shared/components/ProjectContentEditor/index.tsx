@@ -330,7 +330,7 @@ const ProjectContentEditor = forwardRef<
               recentFiles={[]}
               repoPath={repoPath ?? undefined}
               keyboardHandlerRef={contextMenuKeyboardHandlerRef}
-              placementStrategy="auto"
+              direction="down"
             />
             <SlashCommandPortal
               visible={showSlashMenu}
@@ -343,8 +343,6 @@ const ProjectContentEditor = forwardRef<
               onSelect={handleProjectSlashSelect}
               onModeSelect={handleModeSelect}
               keyboardHandlerRef={slashCommandKeyboardHandlerRef}
-              direction="down"
-              placementStrategy="auto"
               showModeRows={false}
             />
           </div>

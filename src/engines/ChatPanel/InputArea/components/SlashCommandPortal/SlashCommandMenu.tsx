@@ -23,6 +23,10 @@ import {
 } from "@src/components/Dropdown/tokens";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
 
+import {
+  type FloatingPosition,
+  computePreferUpFloatingPosition,
+} from "../floatingPlacement";
 import FlyoutSubmenu from "./FlyoutSubmenu";
 import {
   DividerRow,
@@ -39,42 +43,6 @@ import { usePortalPosition } from "./usePortalPosition";
 
 const PANEL_WIDTH = 280;
 const MAX_PANEL_HEIGHT = 360;
-const VIEWPORT_MARGIN = 8;
-
-type PortalPlacement = "up" | "down";
-
-function clampToViewport(
-  value: number,
-  size: number,
-  viewportSize: number
-): number {
-  const maxValue = Math.max(
-    VIEWPORT_MARGIN,
-    viewportSize - size - VIEWPORT_MARGIN
-  );
-  return Math.min(Math.max(VIEWPORT_MARGIN, value), maxValue);
-}
-
-function choosePortalPlacement(
-  preferredDirection: PortalPlacement,
-  position: { top: number; bottom: number },
-  dropdownHeight: number
-): PortalPlacement {
-  const gap = DROPDOWN_PANEL.triggerGap;
-  const spaceAbove = position.top - gap - VIEWPORT_MARGIN;
-  const spaceBelow =
-    window.innerHeight - position.bottom - gap - VIEWPORT_MARGIN;
-
-  if (preferredDirection === "down") {
-    return dropdownHeight <= spaceBelow || spaceBelow >= spaceAbove
-      ? "down"
-      : "up";
-  }
-
-  return dropdownHeight <= spaceAbove || spaceAbove >= spaceBelow
-    ? "up"
-    : "down";
-}
 
 const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   visible,
@@ -92,8 +60,6 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   showActionFlyouts = false,
   onImageUpload,
   showModeRows = true,
-  direction = "up",
-  placementStrategy = "fixed",
 }) => {
   const { t } = useTranslation("sessions");
   const isHeaderMode = searchMode === "header";
@@ -108,8 +74,9 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   const [openFlyout, setOpenFlyout] = useState<OpenFlyoutState | null>(null);
   const [flyoutHighlightIndex, setFlyoutHighlightIndex] = useState(0);
   const [panelRight, setPanelRight] = useState(0);
-  const [portalPlacement, setPortalPlacement] =
-    useState<PortalPlacement>(direction);
+  const [portalPosition, setPortalPosition] = useState<FloatingPosition | null>(
+    null
+  );
   const [portalMaxHeight, setPortalMaxHeight] = useState(MAX_PANEL_HEIGHT);
 
   // Position the portal above the container
@@ -156,12 +123,12 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   }
 
   useEffect(() => {
-    if (!isHeaderMode || !visible || !isPositioned) return;
+    if (!isHeaderMode || !visible || !isPositioned || !portalPosition) return;
     const frame = requestAnimationFrame(() => {
       searchInputRef.current?.focus();
     });
     return () => cancelAnimationFrame(frame);
-  }, [isHeaderMode, visible, isPositioned]);
+  }, [isHeaderMode, visible, isPositioned, portalPosition]);
 
   // Scroll highlighted item into view
   useEffect(() => {
@@ -184,23 +151,19 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   const updatePortalPlacement = useCallback(() => {
     if (!visible || !isPositioned) return;
 
-    const el = portalContainerRef.current;
-    const measuredHeight = el?.getBoundingClientRect().height ?? 320;
-    const placement =
-      placementStrategy === "auto"
-        ? choosePortalPlacement(direction, position, measuredHeight)
-        : direction;
-    const gap = DROPDOWN_PANEL.triggerGap;
-    const availableHeight =
-      placement === "down"
-        ? window.innerHeight - position.bottom - gap - VIEWPORT_MARGIN
-        : position.top - gap - VIEWPORT_MARGIN;
+    const element = portalContainerRef.current;
+    const measuredHeight = element?.getBoundingClientRect().height ?? 320;
+    const floatingPosition = computePreferUpFloatingPosition({
+      anchorRect: position,
+      floatingWidth: PANEL_WIDTH,
+      floatingHeight: measuredHeight,
+    });
 
-    setPortalPlacement(placement);
+    setPortalPosition(floatingPosition);
     setPortalMaxHeight(
-      Math.min(MAX_PANEL_HEIGHT, Math.max(120, Math.floor(availableHeight)))
+      Math.min(MAX_PANEL_HEIGHT, floatingPosition.availableHeight)
     );
-  }, [direction, isPositioned, placementStrategy, position, visible]);
+  }, [isPositioned, position, visible]);
 
   useLayoutEffect(() => {
     const animationFrameId = window.requestAnimationFrame(
@@ -246,9 +209,11 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
     return () => document.removeEventListener("mousedown", handler);
   }, [visible, isPositioned, onClose]);
 
+  const menuReady = visible && isPositioned && Boolean(portalPosition);
+
   // Wire keyboard navigation
   useKeyboard({
-    visible,
+    visible: menuReady,
     entries,
     totalFlat,
     highlightIndex,
@@ -283,26 +248,13 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
     []
   );
 
-  if (!isPositioned) return null;
+  if (!isPositioned || !portalPosition) return null;
 
-  const portalLeft = clampToViewport(
-    position.left,
-    PANEL_WIDTH,
-    window.innerWidth
-  );
-  const portalStyle =
-    portalPlacement === "down"
-      ? {
-          top: position.bottom + DROPDOWN_PANEL.triggerGap,
-          left: portalLeft,
-          width: PANEL_WIDTH,
-        }
-      : {
-          top: position.top - DROPDOWN_PANEL.triggerGap,
-          left: portalLeft,
-          width: PANEL_WIDTH,
-          transform: "translateY(-100%)",
-        };
+  const portalStyle = {
+    top: portalPosition.top,
+    left: portalPosition.left,
+    width: PANEL_WIDTH,
+  };
 
   return createPortal(
     <div

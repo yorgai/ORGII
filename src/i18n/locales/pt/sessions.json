@@ -133,7 +133,8 @@
     "sidebar": {
       "agentTypes": "Tipos de Agent",
       "cliAgent": "CLI Agent",
-      "rustAgent": "Rust Agent"
+      "rustAgent": "Rust Agent",
+      "removeDraft": "Remover rascunho"
     },
     "resultStatus": {
       "completed": "Concluído",
