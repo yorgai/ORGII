@@ -88,7 +88,7 @@ fn run_git_command(repo_path: &PathBuf, args: &[&str]) -> Result<std::process::O
         match result {
             Ok(output) => return Ok(output),
             Err(e) => {
-                last_error = format!("{}", e);
+                last_error = e.to_string();
 
                 // Only retry transient errors
                 if !is_transient_error(&last_error) {

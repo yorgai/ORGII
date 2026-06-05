@@ -253,7 +253,6 @@ pub fn delete_project(slug: &str) -> Result<(), String> {
 // Row mapping
 // ---------------------------------------------------------------------
 
-#[allow(clippy::too_many_arguments)]
 fn row_to_project_data(row: &rusqlite::Row<'_>) -> rusqlite::Result<ProjectData> {
     let id: String = row.get(0)?;
     let name: String = row.get(1)?;

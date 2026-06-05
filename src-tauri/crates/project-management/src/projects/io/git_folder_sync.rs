@@ -207,25 +207,30 @@ fn scan_json_project_file_conflicts(
         conflicts.push(sync_conflict(
             folder_path,
             path,
-            ProjectGitFolderConflictKind::GitMarker,
-            ProjectGitFolderConflictEntityType::Project,
-            project_slug,
-            None,
-            "Project file contains Git conflict markers",
-            Some(content),
+            SyncConflictInput {
+                kind: ProjectGitFolderConflictKind::GitMarker,
+                entity_type: ProjectGitFolderConflictEntityType::Project,
+                project_slug,
+                work_item_short_id: None,
+                message: "Project file contains Git conflict markers",
+                content: Some(content),
+            },
         ));
         return Ok(());
     }
     if let Err(error) = serde_json::from_str::<ProjectFileRecord>(&content) {
+        let message = format!("Project file has invalid JSON: {}", error);
         conflicts.push(sync_conflict(
             folder_path,
             path,
-            ProjectGitFolderConflictKind::ParseError,
-            ProjectGitFolderConflictEntityType::Project,
-            project_slug,
-            None,
-            &format!("Project file has invalid JSON: {}", error),
-            Some(content),
+            SyncConflictInput {
+                kind: ProjectGitFolderConflictKind::ParseError,
+                entity_type: ProjectGitFolderConflictEntityType::Project,
+                project_slug,
+                work_item_short_id: None,
+                message: &message,
+                content: Some(content),
+            },
         ));
     }
     Ok(())
@@ -247,53 +252,64 @@ fn scan_work_item_file_conflicts(
         conflicts.push(sync_conflict(
             folder_path,
             path,
-            ProjectGitFolderConflictKind::GitMarker,
-            ProjectGitFolderConflictEntityType::WorkItem,
-            project_slug,
-            work_item_short_id.as_deref(),
-            "Work item file contains Git conflict markers",
-            Some(content),
+            SyncConflictInput {
+                kind: ProjectGitFolderConflictKind::GitMarker,
+                entity_type: ProjectGitFolderConflictEntityType::WorkItem,
+                project_slug,
+                work_item_short_id: work_item_short_id.as_deref(),
+                message: "Work item file contains Git conflict markers",
+                content: Some(content),
+            },
         ));
         return Ok(());
     }
     match split_markdown_frontmatter(&content) {
         Some((frontmatter_yaml, _body)) => {
             if let Err(error) = serde_yaml::from_str::<WorkItemFrontmatter>(frontmatter_yaml) {
+                let message = format!("Work item frontmatter has invalid YAML: {}", error);
                 conflicts.push(sync_conflict(
                     folder_path,
                     path,
-                    ProjectGitFolderConflictKind::ParseError,
-                    ProjectGitFolderConflictEntityType::WorkItem,
-                    project_slug,
-                    work_item_short_id.as_deref(),
-                    &format!("Work item frontmatter has invalid YAML: {}", error),
-                    Some(content),
+                    SyncConflictInput {
+                        kind: ProjectGitFolderConflictKind::ParseError,
+                        entity_type: ProjectGitFolderConflictEntityType::WorkItem,
+                        project_slug,
+                        work_item_short_id: work_item_short_id.as_deref(),
+                        message: &message,
+                        content: Some(content),
+                    },
                 ));
             }
         }
         None => conflicts.push(sync_conflict(
             folder_path,
             path,
-            ProjectGitFolderConflictKind::ParseError,
-            ProjectGitFolderConflictEntityType::WorkItem,
-            project_slug,
-            work_item_short_id.as_deref(),
-            "Work item file is missing YAML frontmatter",
-            Some(content),
+            SyncConflictInput {
+                kind: ProjectGitFolderConflictKind::ParseError,
+                entity_type: ProjectGitFolderConflictEntityType::WorkItem,
+                project_slug,
+                work_item_short_id: work_item_short_id.as_deref(),
+                message: "Work item file is missing YAML frontmatter",
+                content: Some(content),
+            },
         )),
     }
     Ok(())
 }
 
+struct SyncConflictInput<'a> {
+    kind: ProjectGitFolderConflictKind,
+    entity_type: ProjectGitFolderConflictEntityType,
+    project_slug: &'a str,
+    work_item_short_id: Option<&'a str>,
+    message: &'a str,
+    content: Option<String>,
+}
+
 fn sync_conflict(
     folder_path: &Path,
     path: &Path,
-    kind: ProjectGitFolderConflictKind,
-    entity_type: ProjectGitFolderConflictEntityType,
-    project_slug: &str,
-    work_item_short_id: Option<&str>,
-    message: &str,
-    content: Option<String>,
+    input: SyncConflictInput<'_>,
 ) -> ProjectGitFolderSyncConflict {
     let relative_path = path
         .strip_prefix(folder_path)
@@ -302,18 +318,18 @@ fn sync_conflict(
         .to_string();
     ProjectGitFolderSyncConflict {
         id: sanitize_file_stem(&relative_path),
-        kind,
-        entity_type,
+        kind: input.kind,
+        entity_type: input.entity_type,
         file_path: path.to_string_lossy().to_string(),
         relative_path,
-        message: message.to_string(),
-        project_slug: if project_slug.is_empty() {
+        message: input.message.to_string(),
+        project_slug: if input.project_slug.is_empty() {
             None
         } else {
-            Some(project_slug.to_string())
+            Some(input.project_slug.to_string())
         },
-        work_item_short_id: work_item_short_id.map(|value| value.to_string()),
-        content,
+        work_item_short_id: input.work_item_short_id.map(|value| value.to_string()),
+        content: input.content,
     }
 }
 
