@@ -2,6 +2,7 @@ export type {
   HubSkillDetail,
   HubSkillStats,
   HubSkillOwner,
+  HubSkillResult,
   HubInstallResult,
   InstalledSkill,
   SkillUpdateInfo,

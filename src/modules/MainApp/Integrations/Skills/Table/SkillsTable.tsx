@@ -24,6 +24,7 @@ import {
   getSkillResolvedSourceLabel,
   resolveSkillWorkspace,
 } from "../skillSourceLabel";
+import FindSkillsSection from "./FindSkillsSection";
 import InlineExternalSkillsImport from "./InlineExternalSkillsImport";
 import SkillInlineExpandedCard from "./SkillInlineExpandedCard";
 import {
@@ -320,6 +321,7 @@ export const SkillsTable: React.FC<SkillsTableProps> = ({
             onCompleted={onImportCompleted}
             onAfterImport={onAfterImport}
           />
+          <FindSkillsSection />
         </div>
       </div>
     </ScrollPreservation>

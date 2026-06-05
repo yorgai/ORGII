@@ -1,4 +1,4 @@
-/** Stats block from ClawHub skill detail. */
+/** Stats block from a remote skill directory detail response. */
 export interface HubSkillStats {
   comments: number;
   downloads: number;
@@ -8,14 +8,14 @@ export interface HubSkillStats {
   versions: number;
 }
 
-/** Owner info from ClawHub skill detail. */
+/** Owner info from a remote skill directory detail response. */
 export interface HubSkillOwner {
   handle: string;
   displayName?: string;
   image?: string;
 }
 
-/** Full skill detail from ClawHub `/api/v1/skills/{slug}`. */
+/** Full skill detail from the skills.sh directory/download API. */
 export interface HubSkillDetail {
   slug: string;
   name: string;
@@ -27,15 +27,30 @@ export interface HubSkillDetail {
   updatedAt?: number;
   changelog?: string;
   skillMd?: string;
+  source?: string;
+  skillId?: string;
+  installs?: number;
+  snapshotHash?: string;
 }
 
-/** Result of installing a skill from ClawHub. */
+/** Search result from the remote skills directory. */
+export interface HubSkillResult {
+  slug: string;
+  name: string;
+  description: string;
+  updatedAt?: number;
+  source?: string;
+  skillId?: string;
+  installs?: number;
+}
+
+/** Result of installing a skill from the remote skills directory. */
 export interface HubInstallResult {
   name: string;
   path: string;
 }
 
-/** Info about a skill with an available update on ClawHub. */
+/** Info about a skill with an available update from the remote skills directory. */
 export interface SkillUpdateInfo {
   name: string;
   slug: string;
@@ -61,11 +76,15 @@ export type DescriptionQuality =
  *
  * - `WORKSPACE`        — `<workspace>/.orgii/skills/<name>/`
  * - `BUILTIN`          — `~/.orgii/skills/<name>/` (per-user, default)
- * - `EMBEDDED_BUILTIN` — binary-embedded skills that ship with ORGII */
+ * - `EMBEDDED_BUILTIN` — binary-embedded skills that ship with ORGII
+ * - `SKILLS_SH`        — skills installed from skills.sh snapshots
+ * - `GITHUB`           — skills installed from GitHub-backed directory entries */
 export const SKILL_SOURCE = {
   WORKSPACE: "workspace",
   BUILTIN: "builtin",
   EMBEDDED_BUILTIN: "embedded_builtin",
+  SKILLS_SH: "skills_sh",
+  GITHUB: "github",
 } as const;
 export type SkillSource = (typeof SKILL_SOURCE)[keyof typeof SKILL_SOURCE];
 
