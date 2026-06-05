@@ -341,7 +341,10 @@ pub async fn github_find_pull_request(
         .await?;
 
     if let Some(pr) = parse_pr(&open_data) {
-        log::info!("[GitHub][Cmd] find_pull_request found open PR #{}", pr.number);
+        log::info!(
+            "[GitHub][Cmd] find_pull_request found open PR #{}",
+            pr.number
+        );
         return Ok(Some(pr));
     }
 

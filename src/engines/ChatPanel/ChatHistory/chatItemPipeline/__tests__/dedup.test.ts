@@ -66,6 +66,21 @@ function makeThinkingMessage(
   });
 }
 
+function makeUserMessage(
+  content: string,
+  overrides: Record<string, unknown> = {}
+) {
+  return makeSessionEvent({
+    action_type: "raw",
+    function: "user_message",
+    source: "user",
+    displayVariant: "message",
+    displayText: content,
+    result: { message: { content } },
+    ...overrides,
+  });
+}
+
 describe("isAssistantMessageEvent", () => {
   beforeEach(() => {
     resetActivityCounter();
@@ -312,6 +327,41 @@ describe("buildDedupMaps", () => {
 // Assistant Message Content Dedup
 // ============================================
 
+describe("buildDedupMaps — user message dedup", () => {
+  beforeEach(() => {
+    resetActivityCounter();
+  });
+
+  it("keeps persisted user message over matching optimistic user input", () => {
+    const optimistic = makeUserMessage("Please do the task", {
+      id: "user-input-123",
+    });
+    const persisted = makeUserMessage("Please do the task", {
+      id: "user-message-456",
+      result: {
+        backendPersisted: true,
+        message: { content: "Please do the task" },
+      },
+    });
+
+    const { duplicateUserIds } = buildDedupMaps([optimistic, persisted]);
+
+    expect(duplicateUserIds.has(optimistic.id)).toBe(true);
+    expect(duplicateUserIds.has(persisted.id)).toBe(false);
+  });
+
+  it("deduplicates repeated identical user messages across a transcript", () => {
+    const first = makeUserMessage("Repeat this", { id: "user-message-1" });
+    const assistant = makeAssistantMessage("Done");
+    const second = makeUserMessage("Repeat this", { id: "user-message-2" });
+
+    const { duplicateUserIds } = buildDedupMaps([first, assistant, second]);
+
+    expect(duplicateUserIds.has(first.id)).toBe(true);
+    expect(duplicateUserIds.has(second.id)).toBe(false);
+  });
+});
+
 describe("buildDedupMaps — assistant message dedup", () => {
   beforeEach(() => {
     resetActivityCounter();
@@ -346,13 +396,14 @@ describe("buildDedupMaps — assistant message dedup", () => {
     expect(duplicateAssistantIds.size).toBe(0);
   });
 
-  it("does not deduplicate across non-assistant events", () => {
+  it("deduplicates repeated assistant text across non-assistant events in one turn", () => {
     const msg1 = makeAssistantMessage("Same content");
     const toolCall = makeCompletedToolCall("read_file");
     const msg2 = makeAssistantMessage("Same content");
 
     const { duplicateAssistantIds } = buildDedupMaps([msg1, toolCall, msg2]);
-    expect(duplicateAssistantIds.size).toBe(0);
+    expect(duplicateAssistantIds.has(msg1.id)).toBe(true);
+    expect(duplicateAssistantIds.has(msg2.id)).toBe(false);
   });
 
   it("handles three consecutive identical messages — keeps only the last", () => {
@@ -399,7 +450,7 @@ describe("buildDedupMaps — assistant message dedup", () => {
     expect(duplicateAssistantIds.has(msg1.id)).toBe(true);
   });
 
-  it("does not interfere with running tool_call dedup", () => {
+  it("deduplicates repeated assistant text while also deduplicating running tool calls", () => {
     const running = makeRunningToolCall("read_file");
     const msg1 = makeAssistantMessage("Hello");
     const completed = makeCompletedToolCall("read_file");
@@ -412,7 +463,8 @@ describe("buildDedupMaps — assistant message dedup", () => {
       msg2,
     ]);
     expect(runningChunksToSkip.has(running.id)).toBe(true);
-    expect(duplicateAssistantIds.size).toBe(0);
+    expect(duplicateAssistantIds.has(msg1.id)).toBe(true);
+    expect(duplicateAssistantIds.has(msg2.id)).toBe(false);
   });
 
   it("deduplicates repeated thinking/message segment pairs", () => {
@@ -434,7 +486,18 @@ describe("buildDedupMaps — assistant message dedup", () => {
     expect(duplicateAssistantIds.has(msg2.id)).toBe(false);
   });
 
-  it("keeps repeated assistant text when a tool call separates the turns", () => {
+  it("deduplicates repeated assistant text within one user turn even around tools", () => {
+    const msg1 = makeAssistantMessage("Reading the updated request.");
+    const toolCall = makeCompletedToolCall("read_file");
+    const msg2 = makeAssistantMessage("Reading the updated request.");
+
+    const { duplicateAssistantIds } = buildDedupMaps([msg1, toolCall, msg2]);
+
+    expect(duplicateAssistantIds.has(msg1.id)).toBe(true);
+    expect(duplicateAssistantIds.has(msg2.id)).toBe(false);
+  });
+
+  it("deduplicates repeated thinking text within one user turn even around tools", () => {
     const think1 = makeThinkingMessage("Need inspect file");
     const msg1 = makeAssistantMessage("I will inspect it.");
     const toolCall = makeCompletedToolCall("read_file");
@@ -449,6 +512,9 @@ describe("buildDedupMaps — assistant message dedup", () => {
       msg2,
     ]);
 
-    expect(duplicateAssistantIds.size).toBe(0);
+    expect(duplicateAssistantIds.has(think1.id)).toBe(true);
+    expect(duplicateAssistantIds.has(msg1.id)).toBe(true);
+    expect(duplicateAssistantIds.has(think2.id)).toBe(false);
+    expect(duplicateAssistantIds.has(msg2.id)).toBe(false);
   });
 });

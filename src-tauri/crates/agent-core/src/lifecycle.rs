@@ -591,11 +591,7 @@ mod tests {
             agent_definition_id: None,
             org_member_id: Some("member-worker".to_string()),
             parent_session_id: Some("root-session".to_string()),
-            agent_exec_mode: Some(
-                crate::session::AgentExecMode::Ask
-                    .as_str()
-                    .to_string(),
-            ),
+            agent_exec_mode: Some(crate::session::AgentExecMode::Ask.as_str().to_string()),
             ..Default::default()
         })
         .expect("upsert member session");
@@ -698,10 +694,7 @@ mod tests {
         assert_eq!(call.member_agent_id, "builtin:sde");
         assert_eq!(call.member_name, "Worker");
         assert_eq!(call.reason, MemberIdleReason::Failed);
-        assert_eq!(
-            call.current_mode,
-            Some(crate::session::AgentExecMode::Ask)
-        );
+        assert_eq!(call.current_mode, Some(crate::session::AgentExecMode::Ask));
         assert_eq!(
             call.failure_reason.as_deref(),
             Some("HTTP 429: rate limit exceeded")

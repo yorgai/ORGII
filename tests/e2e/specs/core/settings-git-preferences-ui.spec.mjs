@@ -83,7 +83,38 @@ async function pointerClick(selector, label) {
 
 async function selectOption(selectTestId, optionTestId, label) {
   await pointerClick(`[data-testid="${selectTestId}"]`, `${label} select`);
-  await pointerClick(`[data-testid="${optionTestId}"]`, `${label} option`);
+  await waitForScript(
+    `
+      const option = document.querySelector('[data-testid="' + arguments[0] + '"]');
+      if (!option) {
+        return {
+          ok: false,
+          reason: 'missing-option',
+          bodyText: document.body.innerText.slice(0, 1600),
+          testIds: Array.from(document.querySelectorAll('[data-testid]')).map((item) => item.getAttribute('data-testid')).slice(-120),
+        };
+      }
+      const rect = option.getBoundingClientRect();
+      const style = window.getComputedStyle(option);
+      return {
+        ok: rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden',
+        rect: { left: Math.round(rect.left), top: Math.round(rect.top), width: Math.round(rect.width), height: Math.round(rect.height) },
+        text: option.textContent?.trim().replace(/\\s+/g, ' ').slice(0, 120) ?? '',
+      };
+    `,
+    `${label} option did not render`,
+    [optionTestId]
+  );
+  await browser.executeScript(
+    `
+      const option = document.querySelector('[data-testid="' + arguments[0] + '"]');
+      option?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+      option?.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+      option?.click();
+      return true;
+    `,
+    [optionTestId]
+  );
 }
 
 async function readSettings() {

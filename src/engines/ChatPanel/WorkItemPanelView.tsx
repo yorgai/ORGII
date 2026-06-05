@@ -1,7 +1,7 @@
 import { emit } from "@tauri-apps/api/event";
 import { useSetAtom } from "jotai";
-import { ChevronRight } from "lucide-react";
-import React, { useCallback } from "react";
+import { ChevronRight, ExternalLink, X } from "lucide-react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -17,17 +17,14 @@ import {
   WorkItemProperties,
 } from "@src/modules/ProjectManager/WorkItems/components";
 import { WORK_ITEM_PROPERTY_INLINE_FIELDS } from "@src/modules/ProjectManager/WorkItems/components/WorkItemProperties";
+import { activeSessionIdAtom } from "@src/store/session";
 import {
-  activeSessionIdAtom,
-  workstationActiveSessionIdAtom,
-} from "@src/store/session";
-import {
-  CHAT_PANEL_CONTENT_MODE,
   type ChatPanelSelectedWorkItem,
-  chatPanelContentModeAtom,
   chatPanelSelectedWorkItemAtom,
 } from "@src/store/ui/chatPanelAtom";
 import type { WorkItem } from "@src/types/core/workItem";
+
+import ChatView from "./ChatView";
 
 const logger = createLogger("WorkItemPanelView");
 interface WorkItemPanelViewProps {
@@ -156,10 +153,9 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
 }) => {
   const { t } = useTranslation("projects");
   const setSelectedWorkItem = useSetAtom(chatPanelSelectedWorkItemAtom);
-  const setContentMode = useSetAtom(chatPanelContentModeAtom);
   const setActiveSessionId = useSetAtom(activeSessionIdAtom);
-  const setWorkstationActiveSessionId = useSetAtom(
-    workstationActiveSessionIdAtom
+  const [floatingSessionId, setFloatingSessionId] = useState<string | null>(
+    null
   );
 
   const handleUpdateWorkItem = useCallback(
@@ -210,15 +206,31 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
 
   const handleOpenSession = useCallback(
     (sessionId: string) => {
-      setContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
+      setFloatingSessionId(sessionId);
       setActiveSessionId(sessionId);
-      setWorkstationActiveSessionId(sessionId);
     },
-    [setActiveSessionId, setContentMode, setWorkstationActiveSessionId]
+    [setActiveSessionId]
   );
 
-  const activeLinkedSession = selectedWorkItem.workItem.linkedSessions?.find(
+  const handleCloseFloatingSession = useCallback(() => {
+    setFloatingSessionId(null);
+  }, []);
+
+  const linkedSessions = useMemo(
+    () => selectedWorkItem.workItem.linkedSessions ?? [],
+    [selectedWorkItem.workItem.linkedSessions]
+  );
+  const activeLinkedSession = linkedSessions.find(
     (session) => session.status === "running"
+  );
+  const floatingSession = useMemo(
+    () =>
+      floatingSessionId
+        ? linkedSessions.find(
+            (session) => session.session_id === floatingSessionId
+          )
+        : undefined,
+    [floatingSessionId, linkedSessions]
   );
 
   const workItemContentKey = `${selectedWorkItem.projectSlug}:${
@@ -284,7 +296,7 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
 
   return (
     <div
-      className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
+      className="relative flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
       data-testid="chat-panel-work-item-detail"
     >
       <WorkItemContent
@@ -299,6 +311,48 @@ export const WorkItemPanelView: React.FC<WorkItemPanelViewProps> = ({
         onOpenSession={handleOpenSession}
         activeAgentSessionId={activeLinkedSession?.session_id ?? null}
       />
+      {floatingSessionId && (
+        <div
+          className="absolute inset-x-3 bottom-3 top-16 z-30 flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border-1 bg-chat-pane shadow-2xl"
+          data-testid="work-item-floating-session-chat"
+          data-session-id={floatingSessionId}
+        >
+          <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b border-border-1 bg-bg-1/95 px-3 backdrop-blur">
+            <div className="flex min-w-0 items-center gap-2">
+              <ExternalLink size={14} className="shrink-0 text-text-3" />
+              <div className="min-w-0">
+                <div className="truncate text-[12px] font-semibold text-text-1">
+                  {floatingSession?.result_preview ||
+                    floatingSession?.sub_agent_name ||
+                    floatingSession?.agent_role ||
+                    floatingSessionId}
+                </div>
+                <div className="truncate text-[11px] text-text-4">
+                  {floatingSession?.status
+                    ? `${floatingSession.status} · ${floatingSession.session_type}`
+                    : floatingSessionId}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-text-3 transition-colors hover:bg-fill-2 hover:text-text-1"
+              onClick={handleCloseFloatingSession}
+              aria-label="Close linked session chat"
+              data-testid="work-item-floating-session-chat-close"
+            >
+              <X size={15} />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <ChatView
+              sessionId={floatingSessionId}
+              secondary
+              surfaceBgClass="bg-chat-pane"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

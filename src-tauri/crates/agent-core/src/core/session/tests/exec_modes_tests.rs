@@ -12,10 +12,7 @@ use crate::session::AgentExecMode;
 #[test]
 fn parse_known_modes() {
     assert_eq!(AgentExecMode::parse("plan"), Some(AgentExecMode::Plan));
-    assert_eq!(
-        AgentExecMode::parse("ask"),
-        Some(AgentExecMode::Ask)
-    );
+    assert_eq!(AgentExecMode::parse("ask"), Some(AgentExecMode::Ask));
     assert_eq!(AgentExecMode::parse("review"), Some(AgentExecMode::Review));
     assert_eq!(AgentExecMode::parse("debug"), Some(AgentExecMode::Debug));
     assert_eq!(
@@ -359,7 +356,6 @@ fn ask_serde_round_trip() {
     let parsed: AgentExecMode = serde_json::from_str(&json).unwrap();
     assert_eq!(parsed, mode);
 }
-
 
 // -- TurnConfig.max_iterations semantics --
 //

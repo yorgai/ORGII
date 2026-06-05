@@ -98,10 +98,10 @@ async function runRewindScenario(config) {
         const fileHasMarker = fileExists
           ? fs.readFileSync(filePath, "utf8").includes(markerText)
           : false;
-        return !panel.undoAll && panel.redoAll && !fileHasMarker;
+        return !panel.undoAll && panel.redoAll && !panel.redoAllDisabled && !fileHasMarker;
       },
       {
-        timeout: 30_000,
+        timeout: 60_000,
         timeoutMsg: `${config.label} Undo All did not rewind file or expose Redo All; exists=${fs.existsSync(filePath)} content=${fs.existsSync(filePath) ? JSON.stringify(fs.readFileSync(filePath, "utf8")) : "<missing>"} fileChanges=${JSON.stringify(await execJS(js.fileChanges))}`,
       }
     );

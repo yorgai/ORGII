@@ -76,6 +76,22 @@ describe("messageQueueAtom", () => {
       );
       expect(store.get(messageQueueAtom)[0].imageDataUrls).toEqual(images);
     });
+
+    it("ignores duplicate enqueue requests for the same session and content", () => {
+      const msg1 = makeMessage({
+        id: "m1",
+        content: "same",
+        displayContent: "same display",
+      });
+      const msg2 = makeMessage({
+        id: "m2",
+        content: "same",
+        displayContent: "same display",
+      });
+      store.set(enqueueMessageAtom, msg1);
+      store.set(enqueueMessageAtom, msg2);
+      expect(store.get(messageQueueAtom)).toEqual([msg1]);
+    });
   });
 
   // =============================================

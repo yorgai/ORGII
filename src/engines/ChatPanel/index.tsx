@@ -130,6 +130,7 @@ const CHAT_PANEL_HEADER_PROMINENT_ICON_SIZE = 16;
 // dropdown is a shortcut that opens a fresh Agent session with this agent
 // pre-selected.
 const AGENT_ARCHITECT_DEF_ID = "builtin:agent-architect";
+const WORK_ITEM_DEFAULT_AGENT_DEF_ID = "builtin:work-item-manager";
 const AI_WORK_ITEM_DEFAULT_TITLE = "AI Work Item Draft";
 
 interface AiWorkItemLaunchMetadata {
@@ -706,6 +707,18 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           };
         }
 
+        const fallbackAgent = allAgentDefs.find(
+          (definition) => definition.id === WORK_ITEM_DEFAULT_AGENT_DEF_ID
+        );
+        if (fallbackAgent) {
+          return {
+            assigneeId: fallbackAgent.id,
+            assigneeType: "agent",
+            assigneeName: fallbackAgent.name,
+            agentDefinitionId: fallbackAgent.id,
+          };
+        }
+
         return null;
       },
       [
@@ -730,7 +743,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       const projects = await projectApi.readProjects();
       const selectedProject = draft.projectId
         ? projects.find((project) => project.meta.id === draft.projectId)
-        : projects[0];
+        : undefined;
       const selectedProjectSlug = selectedProject?.slug ?? "";
       const selectedProjectId =
         selectedProject?.meta.id ?? draft.projectId ?? "";
@@ -1000,7 +1013,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             )
           )
           .then(() => {
-            bumpProjectListRefresh();
+            bumpProjectListRefresh((previous) => previous + 1);
             return emit("orgii-data-changed");
           })
           .catch(() => {

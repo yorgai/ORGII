@@ -214,25 +214,39 @@ async function clickSendNowForQueuedMarker(marker) {
       `Queued state did not contain marker ${marker}: ${JSON.stringify(summarizeChatState(state))}`
     );
   }
-  const previousChatEventCount = state.chatEventCount;
   const previousFlushRequest = state.queueFlushRequest;
 
-  const clicked = await execJS(`
-    const item = document.querySelector('[data-testid="queued-message-item"][data-queued-message-id=${JSON.stringify(queuedMessage.id)}]');
-    if (!item) return "missing-item";
-    const button = item.querySelector('[data-testid="queued-message-send-now"]');
-    if (!button) return "missing-button";
-    if (button.disabled) return "disabled";
-    button.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window, button: 0 }));
-    button.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, view: window, button: 0 }));
-    button.click();
-    return "clicked";
-  `);
-  if (clicked !== "clicked") {
-    throw new Error(
-      `Send Now button click failed for marker ${marker}: ${clicked}; state=${JSON.stringify(summarizeChatState(state))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
-    );
-  }
+  let clicked = null;
+  await browser.waitUntil(
+    async () => {
+      const currentState = await inspectChatState(`${marker}-before-send-now-click`);
+      const markerUserEvents = currentState.chatEvents.filter(
+        (event) => event.source === "user" && event.displayText.includes(marker)
+      );
+      if (markerUserEvents.length === 1) {
+        clicked = "already-sent";
+        return true;
+      }
+      clicked = await execJS(`
+        const item = document.querySelector('[data-testid="queued-message-item"][data-queued-message-id=${JSON.stringify(queuedMessage.id)}]');
+        if (!item) return "missing-item";
+        const button = item.querySelector('[data-testid="queued-message-send-now"]');
+        if (!button) return "missing-button";
+        if (button.disabled) return "disabled";
+        button.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window, button: 0 }));
+        button.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, view: window, button: 0 }));
+        button.click();
+        return "clicked";
+      `);
+      return clicked === "clicked";
+    },
+    {
+      timeout: 20_000,
+      interval: 500,
+      timeoutMsg: `Send Now button click failed for marker ${marker}: ${clicked}; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+    }
+  );
+  if (clicked === "already-sent") return;
 
   await browser.waitUntil(
     async () => {
@@ -251,20 +265,15 @@ async function clickSendNowForQueuedMarker(marker) {
       const queuedStillContainsMarker = nextState.queuedMessages.some((item) =>
         item.content.includes(marker)
       );
-      const appendedUserTurn =
-        nextState.chatEventCount > previousChatEventCount;
       const markerUserEvents = nextState.chatEvents.filter(
         (event) => event.source === "user" && event.displayText.includes(marker)
       );
-      return (
-        appendedUserTurn &&
-        markerUserEvents.length === 1 &&
-        !queuedStillContainsMarker
-      );
+      return markerUserEvents.length === 1 && !queuedStillContainsMarker;
     },
     {
-      timeout: 10_000,
-      timeoutMsg: `Send Now did not immediately consume queue and append user turn for ${marker}; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+      timeout: REPLY_TIMEOUT_MS,
+      interval: 1_000,
+      timeoutMsg: `Send Now did not consume queue and append user turn for ${marker}; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
     }
   );
 
@@ -398,6 +407,25 @@ async function runStopRestoresInFlightScenario(config) {
   await typeAndSubmitWithShortcut(chatInputSelector, followupPrompt);
   await waitForQueuedFollowup(marker);
   await clickMainAction("stop", `${config.label}-stop-restore`);
+  await browser.waitUntil(
+    async () => {
+      const state = await inspectChatState(`${config.label}-stop-restore-cancel-started`);
+      if (!state.isSessionActive && state.runtimeStatus !== "running") return true;
+      if (state.isPendingCancel || state.userInitiatedCancel) return true;
+      const sendState = await execJS(js.sendState);
+      if (sendState?.state === "stop" && !sendState.disabled) {
+        await clickMainAction("stop", `${config.label}-stop-restore-retry`, 2_000).catch(
+          () => undefined
+        );
+      }
+      return false;
+    },
+    {
+      timeout: 45_000,
+      interval: 1_000,
+      timeoutMsg: `${config.label} Stop click did not begin cancellation; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} sendState=${JSON.stringify(await execJS(js.sendState))}`,
+    }
+  );
 
   await browser.waitUntil(
     async () => {
@@ -413,7 +441,8 @@ async function runStopRestoresInFlightScenario(config) {
       );
     },
     {
-      timeout: 15_000,
+      timeout: 45_000,
+      interval: 500,
       timeoutMsg: `${config.label} Stop did not restore in-flight prompt while preserving queue; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
     }
   );

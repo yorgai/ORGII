@@ -224,8 +224,12 @@ export function processChatItems(
   // ------------------------------------------
   // Pre-pass: dedup running tool_call chunks + assistant messages
   // ------------------------------------------
-  const { runningChunksToSkip, runningArgsMap, duplicateAssistantIds } =
-    buildDedupMaps(events);
+  const {
+    runningChunksToSkip,
+    runningArgsMap,
+    duplicateAssistantIds,
+    duplicateUserIds,
+  } = buildDedupMaps(events);
 
   // ------------------------------------------
   // Main processing loop
@@ -237,7 +241,8 @@ export function processChatItems(
 
     if (
       runningChunksToSkip.has(event.id) ||
-      duplicateAssistantIds.has(event.id)
+      duplicateAssistantIds.has(event.id) ||
+      duplicateUserIds.has(event.id)
     ) {
       continue;
     }

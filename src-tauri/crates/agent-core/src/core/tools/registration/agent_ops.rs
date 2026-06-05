@@ -20,7 +20,10 @@ use crate::tools::registry::ToolRegistry;
 
 use super::{register_if_enabled, ToolDeps};
 
-fn should_register_question_tool(has_agent_org_context: bool, current_member_id: Option<&str>) -> bool {
+fn should_register_question_tool(
+    has_agent_org_context: bool,
+    current_member_id: Option<&str>,
+) -> bool {
     !has_agent_org_context || current_member_id == Some(COORDINATOR_MEMBER_ID)
 }
 
@@ -110,7 +113,10 @@ mod tests {
 
     #[test]
     fn registers_ask_user_for_agent_org_coordinator_only() {
-        assert!(should_register_question_tool(true, Some(COORDINATOR_MEMBER_ID)));
+        assert!(should_register_question_tool(
+            true,
+            Some(COORDINATOR_MEMBER_ID)
+        ));
         assert!(!should_register_question_tool(true, Some("worker-a")));
         assert!(!should_register_question_tool(true, None));
     }

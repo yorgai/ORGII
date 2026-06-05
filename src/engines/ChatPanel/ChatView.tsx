@@ -311,10 +311,12 @@ const ChatView: React.FC<ChatViewProps> = memo(
         const message = messageQueue.find((item) => item.id === messageId);
         if (!message) return;
         promoteQueuedMessage(messageId);
-        if (isSessionActive) {
-          void interruptSession({ restoreQueueHead: false });
-        }
-        setQueueFlushRequest((requestId) => requestId + 1);
+        void (async () => {
+          if (isSessionActive) {
+            await interruptSession({ restoreQueueHead: false });
+          }
+          setQueueFlushRequest((requestId) => requestId + 1);
+        })();
       },
       [
         messageQueue,

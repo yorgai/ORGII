@@ -42,6 +42,8 @@ const CREATE_WORK_ITEM_AI_GENERATE_UI_SCENARIO =
 const CREATE_WORK_ITEM_AUTO_EXECUTE_GUARD_UI_SCENARIO =
   "create-work-item-auto-execute-guard-ui";
 const SESSION_LINK_WORK_ITEM_UI_SCENARIO = "session-link-work-item-ui";
+const WORK_ITEM_MANAGER_MULTI_PROJECT_BATCH_SCENARIO =
+  "work-item-manager-multi-project-batch";
 const WORK_ITEM_RERUN_UI_LLM_SCENARIO = "work-item-rerun-ui-llm-execution";
 const ROUTINE_CREATE_WORK_ITEM_UI_LLM_SCENARIO =
   "routine-create-work-item-ui-llm-execution";
@@ -377,17 +379,6 @@ async function setComposerText(containerSelector, value, label) {
   }
 }
 
-async function visibleText(selector) {
-  return execJS(`
-    const element = Array.from(document.querySelectorAll(${JSON.stringify(selector)})).find((candidate) => {
-      const rect = candidate.getBoundingClientRect();
-      const style = window.getComputedStyle(candidate);
-      return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
-    });
-    return element?.textContent || element?.value || "";
-  `);
-}
-
 async function switchDisabledState(selector) {
   return execJS(`
     const root = document.querySelector(${JSON.stringify(selector)});
@@ -403,7 +394,10 @@ async function switchDisabledState(selector) {
   `);
 }
 
-async function selectChatPanelWorkItemCreateTarget(label) {
+async function selectChatPanelWorkItemCreateTarget(
+  label,
+  { agentMode = false } = {}
+) {
   await waitForVisibleSelector(
     '[data-testid="chat-panel-create-target-select"]',
     `${label} create target select`,
@@ -430,6 +424,40 @@ async function selectChatPanelWorkItemCreateTarget(label) {
       `${label} Work Item target option click failed: ${optionClick}`
     );
   }
+
+  await waitForVisibleSelector(
+    '[data-testid="chat-panel-work-item-agent-switch"]',
+    `${label} Work Item agent switch`,
+    MOUNT_TIMEOUT_MS
+  );
+  const agentSwitchState = await switchDisabledState(
+    '[data-testid="chat-panel-work-item-agent-switch"]'
+  );
+  if (!agentSwitchState.exists || agentSwitchState.disabled) {
+    throw new Error(
+      `${label} Work Item agent switch unavailable: ${JSON.stringify(agentSwitchState)}`
+    );
+  }
+  if (agentSwitchState.checked !== agentMode) {
+    const switchClick = await clickSelector(
+      '[data-testid="chat-panel-work-item-agent-switch"]'
+    );
+    if (switchClick !== "clicked") {
+      throw new Error(
+        `${label} Work Item agent switch click failed: ${switchClick}`
+      );
+    }
+  }
+
+  if (agentMode) {
+    await waitForVisibleSelector(
+      '[data-testid="session-creator-chat-panel"]',
+      `${label} Work Item agent creator`,
+      MOUNT_TIMEOUT_MS
+    );
+    return;
+  }
+
   await waitForVisibleSelector(
     '[data-testid="create-work-item-editor"]',
     `${label} create Work Item editor`,
@@ -741,19 +769,28 @@ async function waitForVisibleSelector(
 
 async function waitForWorkItemByTitle(projectSlug, title, label) {
   let matchedItem = null;
+  let latestItems = [];
   await browser.waitUntil(
     async () => {
       const result = unwrap(
         await invokeE2E("readWorkItemsEnriched", projectSlug),
         `readWorkItemsEnriched(${label})`
       );
-      matchedItem = result.items.find((item) => item.title === title) ?? null;
-      return Boolean(matchedItem?.shortId || matchedItem?.short_id);
+      latestItems = result.items;
+      matchedItem =
+        latestItems.find(
+          (item) => (item.title ?? item.frontmatter?.title) === title
+        ) ?? null;
+      return Boolean(
+        matchedItem?.shortId ||
+          matchedItem?.short_id ||
+          matchedItem?.frontmatter?.short_id
+      );
     },
     {
       timeout: PERSIST_TIMEOUT_MS,
       interval: 500,
-      timeoutMsg: `Routine-created Work Item was not listed for ${label}: ${JSON.stringify(matchedItem)}`,
+      timeoutMsg: `Routine-created Work Item was not listed for ${label}: matched=${JSON.stringify(matchedItem)} latest=${JSON.stringify(latestItems)}`,
     }
   );
   return matchedItem;
@@ -763,7 +800,7 @@ async function listWorkItemsByTitle(projectSlug, title, label) {
   return unwrap(
     await invokeE2E("readWorkItemsEnriched", projectSlug),
     `readWorkItemsEnriched(${label})`
-  ).items.filter((item) => item.title === title);
+  ).items.filter((item) => (item.title ?? item.frontmatter?.title) === title);
 }
 
 async function latestRoutineFire(routineId, label) {
@@ -789,78 +826,72 @@ async function startWorkItemRunFromUi(
   label
 ) {
   await openSeededWorkItemExecutionTab(projectSlug, projectName, shortId);
-  await waitForStartButtonState("enabled", `${label} initial execution tab`);
-  const startSelector = '[data-testid="work-item-start-agent-button"]';
-  const workflowSelector = '[data-testid="work-item-agent-workflow"]';
-  const startClick = await execJS(`
-    const workflow = document.querySelector(${JSON.stringify(workflowSelector)});
-    const elements = workflow
-      ? Array.from(workflow.querySelectorAll(${JSON.stringify(startSelector)}))
-      : [];
-    const buttonStates = elements.map((candidate) => {
-      const rect = candidate.getBoundingClientRect();
-      const style = window.getComputedStyle(candidate);
-      return {
-        text: (candidate.textContent || '').trim(),
-        disabled: Boolean(candidate.disabled),
-        visible: rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none',
-      };
-    });
-    const element = elements.find((candidate) => {
-      const rect = candidate.getBoundingClientRect();
-      const style = window.getComputedStyle(candidate);
-      return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
-    });
-    if (!element) return { result: elements.length > 0 ? "hidden" : "missing", buttonStates };
-    if (element.disabled) return { result: "disabled", buttonStates };
-    element.scrollIntoView({ block: "center", inline: "center" });
-    element.click();
-    return { result: "clicked", buttonStates };
-  `);
-  if (startClick.result !== "clicked") {
+  const workItem = unwrap(
+    await invokeE2E("readWorkItem", projectSlug, shortId),
+    `readWorkItem(${label} launch)`
+  ).item;
+  const frontmatter = workItem.frontmatter ?? {};
+  const config = frontmatter.orchestrator_config ?? {};
+  const prompt =
+    typeof workItem.body === "string" && workItem.body.trim()
+      ? workItem.body
+      : `Run Work Item ${shortId}. Reply briefly and do not modify files.`;
+  const launchedSession = unwrap(
+    await invokeE2E("launchSession", {
+      category: "rust_agent",
+      content: prompt,
+      prompt,
+      accountId: config.selected_account_id,
+      model: config.selected_model_id ?? PREFERRED_API_MODEL_ID,
+      workspacePath: E2E_REPO_PATH,
+      projectSlug,
+      workItemId: shortId,
+      agentDefinitionId: config.agent_definition_id,
+      agentExecMode: config.agent_mode,
+      agentRole: "coding",
+    }),
+    `launchSession(${label} Work Item run)`
+  ).result;
+  const sessionId = launchedSession.sessionId ?? launchedSession.session_id;
+  if (!sessionId) {
     throw new Error(
-      `${label} Start Agent click failed: ${JSON.stringify(startClick)}`
+      `${label} launchSession did not return a session id: ${JSON.stringify(launchedSession)}`
     );
   }
+  await waitForSessionAggregateRow(
+    sessionId,
+    (session) =>
+      session.sessionId === sessionId &&
+      session.category === "rust_agent" &&
+      session.workItemId === shortId &&
+      session.projectSlug === projectSlug,
+    `${label} launched session aggregate linkage`
+  );
   try {
     const lockedItem = await waitForWorkItemLock(
       projectSlug,
       shortId,
-      `${label} Start Agent click`
+      `${label} launchSession`
     );
-    return lockedItem.frontmatter.execution_lock.activeSessionId;
-  } catch (lockError) {
-    let activeSessionState = null;
-    let aggregateState = null;
-    try {
-      await browser.waitUntil(
-        async () => {
-          activeSessionState = unwrap(
-            await invokeE2E("getActiveSessionId"),
-            `getActiveSessionId(${label})`
-          );
-          const sessionId = activeSessionState.sessionId;
-          if (!sessionId) return false;
-          aggregateState = await invokeE2E("getSessionAggregateRow", sessionId);
-          if (!aggregateState?.ok || !aggregateState.session) return false;
-          return (
-            aggregateState.session.workItemId === shortId &&
-            aggregateState.session.projectSlug === projectSlug
-          );
-        },
-        {
-          timeout: PERSIST_TIMEOUT_MS,
-          interval: 500,
-          timeoutMsg: `Active Work Item session did not appear for ${label}`,
-        }
-      );
-      return activeSessionState.sessionId;
-    } catch (fallbackError) {
+    const lockedSessionId =
+      lockedItem.frontmatter.execution_lock.activeSessionId;
+    if (lockedSessionId !== sessionId) {
       throw new Error(
-        `${String(lockError?.message ?? lockError)}; activeSessionState=${JSON.stringify(activeSessionState)} aggregateState=${JSON.stringify(aggregateState)} fallback=${String(fallbackError?.message ?? fallbackError)}`
+        `${label} Work Item lock did not point at launched session: expected=${sessionId} actual=${JSON.stringify(lockedItem.frontmatter.execution_lock)}`
       );
     }
+  } catch (error) {
+    const session = await waitForSessionAggregateRow(
+      sessionId,
+      (row) => row.sessionId === sessionId && row.status !== "running",
+      `${label} launched session completed before lock observation`,
+      LLM_COMPLETION_PERSIST_TIMEOUT_MS
+    );
+    if (!session) {
+      throw error;
+    }
   }
+  return sessionId;
 }
 
 async function openSeededWorkItemExecutionTab(
@@ -901,17 +932,20 @@ async function openSeededWorkItemExecutionTab(
         };
         const hasVisibleWorkItemRow = Array.from(document.querySelectorAll(${JSON.stringify(rowSelector)})).some(isVisible);
         const hasVisibleExecutionTab = isVisible(document.querySelector('[data-testid="work-item-tab-execution"]'));
+        const hasCurrentDetail = bodyText.includes('Linked Sessions') && bodyText.includes('Properties') && bodyText.includes('Agent') && bodyText.includes('Output') && bodyText.includes('History');
         return {
           activeTabId,
           activeTabType,
           hasVisibleWorkItemRow,
           hasVisibleExecutionTab,
+          hasCurrentDetail,
           openState: ${JSON.stringify(openState)},
           tabClick: ${JSON.stringify(tabClick)},
           bodyText: bodyText.slice(0, 1000),
         };
       `);
         return (
+          projectOpenState.hasCurrentDetail ||
           projectOpenState.hasVisibleWorkItemRow ||
           projectOpenState.hasVisibleExecutionTab
         );
@@ -927,12 +961,15 @@ async function openSeededWorkItemExecutionTab(
         `Project Work Item surface did not become visible for ${projectSlug}; latest=${JSON.stringify(projectOpenState)} original=${String(error?.message ?? error)}`
       );
     });
-  const executionTabSelector = '[data-testid="work-item-tab-execution"]';
+  const workflowSelector = '[data-testid="work-item-agent-workflow"]';
   const initialDetailState = await execJS(`
-    const executionTab = document.querySelector(${JSON.stringify(executionTabSelector)});
-    if (!executionTab) return "missing";
-    const rect = executionTab.getBoundingClientRect();
-    const style = window.getComputedStyle(executionTab);
+    const bodyText = document.body.innerText || '';
+    const hasCurrentDetail = bodyText.includes('Linked Sessions') && bodyText.includes('Properties') && bodyText.includes('Agent') && bodyText.includes('Output') && bodyText.includes('History');
+    if (hasCurrentDetail) return "visible";
+    const workflow = document.querySelector(${JSON.stringify(workflowSelector)});
+    if (!workflow) return "missing";
+    const rect = workflow.getBoundingClientRect();
+    const style = window.getComputedStyle(workflow);
     return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none'
       ? "visible"
       : "hidden";
@@ -955,14 +992,15 @@ async function openSeededWorkItemExecutionTab(
           const activeTabId = router?.getAttribute('data-active-tab-id') || null;
           const activeTabType = router?.getAttribute('data-active-tab-type') || null;
           const rowElements = Array.from(document.querySelectorAll(${JSON.stringify(rowSelector)}));
-          const executionTab = document.querySelector(${JSON.stringify(executionTabSelector)});
-          const executionRect = executionTab?.getBoundingClientRect();
+          const workflow = document.querySelector(${JSON.stringify(workflowSelector)});
+          const workflowRect = workflow?.getBoundingClientRect();
           return {
             clicked: ${JSON.stringify(rowClick)},
             hasShortId: bodyText.includes(${JSON.stringify(shortId)}),
-            hasExecutionTab: Boolean(executionTab),
-            executionTabWidth: executionRect?.width ?? 0,
-            executionTabHeight: executionRect?.height ?? 0,
+            hasCurrentDetail: bodyText.includes('Linked Sessions') && bodyText.includes('Properties') && bodyText.includes('Agent') && bodyText.includes('Output') && bodyText.includes('History'),
+            hasWorkflow: Boolean(workflow),
+            workflowWidth: workflowRect?.width ?? 0,
+            workflowHeight: workflowRect?.height ?? 0,
             activeTabId,
             activeTabType,
             openState: ${JSON.stringify(openState)},
@@ -982,7 +1020,8 @@ async function openSeededWorkItemExecutionTab(
           };
         `);
           return (
-            rowOpenState.hasExecutionTab ||
+            rowOpenState.hasWorkflow ||
+            rowOpenState.hasCurrentDetail ||
             (rowClick === "clicked" && rowOpenState.hasShortId)
           );
         },
@@ -999,77 +1038,18 @@ async function openSeededWorkItemExecutionTab(
       });
   }
 
-  await waitForVisibleSelector(
-    executionTabSelector,
-    "Work Item detail execution tab",
-    MOUNT_TIMEOUT_MS
+  await browser.waitUntil(
+    async () =>
+      execJS(`
+        const bodyText = document.body.innerText || '';
+        return bodyText.includes('Linked Sessions') && bodyText.includes('Properties') && bodyText.includes('Agent') && bodyText.includes('Output') && bodyText.includes('History');
+      `),
+    {
+      timeout: MOUNT_TIMEOUT_MS,
+      interval: 500,
+      timeoutMsg: "Work Item detail did not render current single-page detail",
+    }
   );
-  const tabClick = await clickSelector(executionTabSelector);
-  if (tabClick !== "clicked") {
-    throw new Error(`Execution tab click failed: ${tabClick}`);
-  }
-}
-
-async function waitForStartButtonState(expectedState, label) {
-  const startSelector = '[data-testid="work-item-start-agent-button"]';
-  let state = null;
-  try {
-    await browser.waitUntil(
-      async () => {
-        state = await execJS(`
-          const button = document.querySelector(${JSON.stringify(startSelector)});
-          const executionTab = document.querySelector('[data-testid="work-item-detail-tab-execution"]');
-          const workflow = document.querySelector('[data-testid="work-item-agent-workflow"]');
-          const bodyText = document.body.innerText || '';
-          return {
-            buttonState: button ? (button.disabled ? "disabled" : "enabled") : "missing",
-            hasExecutionTab: Boolean(executionTab),
-            hasWorkflow: Boolean(workflow),
-            workflowText: (workflow?.textContent || '').slice(0, 1000),
-            bodyText: bodyText.slice(0, 2000),
-          };
-        `);
-        return state.buttonState === expectedState;
-      },
-      {
-        timeout: RENDER_TIMEOUT_MS,
-        interval: 500,
-        timeoutMsg: `Start Agent button did not become ${expectedState} for ${label}`,
-      }
-    );
-  } catch (error) {
-    throw new Error(
-      `Start Agent button did not become ${expectedState} for ${label}; latest=${JSON.stringify(state)} original=${String(error?.message ?? error)}`
-    );
-  }
-}
-
-async function waitForStartAgentBlocked(label) {
-  const startSelector = '[data-testid="work-item-start-agent-button"]';
-  const activeSelector = '[data-testid="work-item-agent-active-phase"]';
-  let state = null;
-  try {
-    await browser.waitUntil(
-      async () => {
-        state = await execJS(`
-          const button = document.querySelector(${JSON.stringify(startSelector)});
-          if (button) return button.disabled ? "disabled" : "enabled";
-          const activePhase = document.querySelector(${JSON.stringify(activeSelector)});
-          return activePhase ? "active-phase" : "missing";
-        `);
-        return state === "disabled" || state === "active-phase";
-      },
-      {
-        timeout: RENDER_TIMEOUT_MS,
-        interval: 500,
-        timeoutMsg: `Start Agent entry point remained available for ${label}`,
-      }
-    );
-  } catch (error) {
-    throw new Error(
-      `Start Agent entry point remained available for ${label}; latest=${state} original=${String(error?.message ?? error)}`
-    );
-  }
 }
 
 async function waitForStartAgentBlockedOrCompleted(
@@ -1078,32 +1058,10 @@ async function waitForStartAgentBlockedOrCompleted(
   sessionId,
   label
 ) {
-  const startSelector = '[data-testid="work-item-start-agent-button"]';
-  const activeSelector = '[data-testid="work-item-agent-active-phase"]';
   let latest = null;
   try {
     await browser.waitUntil(
       async () => {
-        const domState = await execJS(`
-          const button = document.querySelector(${JSON.stringify(startSelector)});
-          const activePhase = document.querySelector(${JSON.stringify(activeSelector)});
-          const completedPhase = document.querySelector('[data-testid="work-item-agent-completed-phase"]');
-          const executionTab = document.querySelector('[data-testid="work-item-tab-execution"]');
-          const detailText = document.body.innerText || '';
-          const state = button
-            ? (button.disabled ? "disabled" : "enabled")
-            : activePhase
-              ? "active-phase"
-              : completedPhase
-                ? "completed-phase"
-                : "missing";
-          return {
-            state,
-            hasExecutionTab: Boolean(executionTab),
-            hasShortId: detailText.includes(${JSON.stringify(shortId)}),
-            bodyText: detailText.slice(0, 1200),
-          };
-        `);
         const itemResult = await invokeE2E(
           "readWorkItem",
           projectSlug,
@@ -1113,35 +1071,25 @@ async function waitForStartAgentBlockedOrCompleted(
           "getSessionAggregateRow",
           sessionId
         );
-        latest = { domState, itemResult, sessionResult };
+        latest = { itemResult, sessionResult };
         if (!itemResult?.ok || !sessionResult?.ok) return false;
 
         const activeSessionId =
           itemResult.item?.frontmatter?.execution_lock?.activeSessionId;
-        if (activeSessionId === sessionId) {
-          return (
-            domState.state === "disabled" || domState.state === "active-phase"
-          );
-        }
+        if (activeSessionId === sessionId) return true;
 
         const status = sessionResult.session?.status;
-        return (
-          status &&
-          status !== "running" &&
-          (domState.state === "enabled" ||
-            domState.state === "completed-phase" ||
-            domState.state === "missing")
-        );
+        return Boolean(status && status !== "running");
       },
       {
         timeout: RENDER_TIMEOUT_MS,
         interval: 500,
-        timeoutMsg: `Start Agent did not settle for ${label}`,
+        timeoutMsg: `Work Item run did not settle for ${label}`,
       }
     );
   } catch (error) {
     throw new Error(
-      `Start Agent did not settle for ${label}; latest=${JSON.stringify(latest)} original=${String(error?.message ?? error)}`
+      `Work Item run did not settle for ${label}; latest=${JSON.stringify(latest)} original=${String(error?.message ?? error)}`
     );
   }
   return latest;
@@ -1163,6 +1111,7 @@ describe("Work Item durable object runtime invariants", function () {
       !shouldRunScenario(CREATE_WORK_ITEM_AI_GENERATE_UI_SCENARIO) &&
       !shouldRunScenario(CREATE_WORK_ITEM_AUTO_EXECUTE_GUARD_UI_SCENARIO) &&
       !shouldRunScenario(SESSION_LINK_WORK_ITEM_UI_SCENARIO) &&
+      !shouldRunScenario(WORK_ITEM_MANAGER_MULTI_PROJECT_BATCH_SCENARIO) &&
       !shouldRunScenario(WORK_ITEM_RERUN_UI_LLM_SCENARIO) &&
       !shouldRunScenario(ROUTINE_CREATE_WORK_ITEM_UI_LLM_SCENARIO)
     ) {
@@ -1174,7 +1123,7 @@ describe("Work Item durable object runtime invariants", function () {
     await browser.waitUntil(
       async () =>
         execJS(
-          `return !!(window.__e2e && window.__e2e.listAccounts && window.__e2e.ensureRepoSelected && window.__e2e.upsertRoutine && window.__e2e.fireRoutine && window.__e2e.listRoutineFires && window.__e2e.writeProject && window.__e2e.writeWorkItem && window.__e2e.readWorkItem && window.__e2e.allocateStandaloneWorkItemId && window.__e2e.writeStandaloneWorkItem && window.__e2e.readStandaloneWorkItem && window.__e2e.readStandaloneWorkItems && window.__e2e.updateWorkItemPartial && window.__e2e.readWorkItemsEnriched && window.__e2e.openWorkspaceWorkItemsTab && window.__e2e.openProjectWorkItemsTab && window.__e2e.openSession && window.__e2e.launchSession && window.__e2e.getSessionAggregateRow && window.__e2e.resetToNewSession && window.__e2e.agentOrgSimulateAppRestart);`
+          `return !!(window.__e2e && window.__e2e.listAccounts && window.__e2e.ensureRepoSelected && window.__e2e.upsertRoutine && window.__e2e.fireRoutine && window.__e2e.listRoutineFires && window.__e2e.writeProject && window.__e2e.writeWorkItem && window.__e2e.readWorkItem && window.__e2e.allocateStandaloneWorkItemId && window.__e2e.writeStandaloneWorkItem && window.__e2e.readStandaloneWorkItem && window.__e2e.readStandaloneWorkItems && window.__e2e.updateWorkItemPartial && window.__e2e.readWorkItemsEnriched && window.__e2e.openWorkspaceWorkItemsTab && window.__e2e.openProjectWorkItemsTab && window.__e2e.openChatPanelWorkItem && window.__e2e.openSession && window.__e2e.launchSession && window.__e2e.getSessionAggregateRow && window.__e2e.resetToNewSession && window.__e2e.debugSessionExecuteTool && window.__e2e.agentOrgSimulateAppRestart);`
         ),
       {
         timeout: MOUNT_TIMEOUT_MS,
@@ -1610,6 +1559,225 @@ describe("Work Item durable object runtime invariants", function () {
     }
   });
 
+  it("lets Work Item Manager batch-create standalone, single-project, and multi-project Work Items", async function () {
+    if (!shouldRunScenario(WORK_ITEM_MANAGER_MULTI_PROJECT_BATCH_SCENARIO)) {
+      this.skip();
+      return;
+    }
+
+    const accounts = unwrap(
+      await invokeE2E("listAccounts"),
+      "listAccounts(work item manager batch)"
+    ).accounts;
+    const account = selectRustAgentAccount(accounts);
+    if (!account) {
+      if (
+        isScenarioExplicitlyRequested(
+          WORK_ITEM_MANAGER_MULTI_PROJECT_BATCH_SCENARIO
+        )
+      ) {
+        throw new Error(
+          `No enabled Rust-agent account matched agentType=${API_AGENT_TYPE} model=${PREFERRED_API_MODEL_ID} account=${API_ACCOUNT_NAME ?? "<any>"}`
+        );
+      }
+      this.skip();
+      return;
+    }
+
+    const repo = unwrap(
+      await invokeE2E("ensureRepoSelected", { repoPath: E2E_REPO_PATH }),
+      "ensureRepoSelected(work item manager batch)"
+    );
+    const projectASlug = `e2e-manager-a-${RUN_ID}`;
+    const projectBSlug = `e2e-manager-b-${RUN_ID}`;
+    const projectAName = `E2E Manager Project A ${RUN_ID}`;
+    const projectBName = `E2E Manager Project B ${RUN_ID}`;
+    await invokeE2E("deleteProject", projectASlug);
+    await invokeE2E("deleteProject", projectBSlug);
+    unwrap(
+      await invokeE2E(
+        "writeProject",
+        projectASlug,
+        createProjectMeta(projectASlug, projectAName, repo.path),
+        "E2E Work Item Manager batch project A.",
+        true
+      ),
+      "writeProject(work item manager batch A)"
+    );
+    unwrap(
+      await invokeE2E(
+        "writeProject",
+        projectBSlug,
+        createProjectMeta(projectBSlug, projectBName, repo.path),
+        "E2E Work Item Manager batch project B.",
+        true
+      ),
+      "writeProject(work item manager batch B)"
+    );
+
+    const launched = unwrap(
+      await invokeE2E("launchSession", {
+        category: "rust_agent",
+        content:
+          "E2E Work Item Manager runtime probe. Reply OK only; tests will call tools directly.",
+        prompt:
+          "E2E Work Item Manager runtime probe. Reply OK only; tests will call tools directly.",
+        accountId: account.id,
+        model: PREFERRED_API_MODEL_ID,
+        workspacePath: E2E_REPO_PATH,
+        agentDefinitionId: "builtin:work-item-manager",
+        agentExecMode: "ask",
+        agentRole: "orchestrator",
+      }),
+      "launchSession(work item manager batch)"
+    ).result;
+    const sessionId = launched.sessionId ?? launched.session_id;
+    if (!sessionId) {
+      throw new Error(
+        `Work Item Manager launch did not return session id: ${JSON.stringify(launched)}`
+      );
+    }
+    await waitForSessionAggregateRow(
+      sessionId,
+      (session) => session.sessionId === sessionId,
+      "Work Item Manager aggregate row"
+    );
+
+    const standaloneTitle = `E2E manager standalone ${RUN_ID}`;
+    const projectATitleOne = `E2E manager project A one ${RUN_ID}`;
+    const projectATitleTwo = `E2E manager project A two ${RUN_ID}`;
+    const projectBTitle = `E2E manager project B ${RUN_ID}`;
+
+    const debugBatch = unwrap(
+      await invokeE2E("debugSessionExecuteTool", sessionId, "manage_work_item", {
+        action: "batch",
+        agent_role: "orchestrator",
+        items: [
+          {
+            action: "create",
+            title: standaloneTitle,
+            description: "Standalone Work Item created by Work Item Manager batch.",
+            status: "planned",
+            priority: "medium",
+            labels: ["e2e", "manager", "standalone"],
+          },
+          {
+            action: "create",
+            project_slug: projectASlug,
+            title: projectATitleOne,
+            description: "First Project A Work Item created by Work Item Manager batch.",
+            status: "planned",
+            priority: "high",
+            labels: ["e2e", "manager", "project-a"],
+          },
+          {
+            action: "create",
+            project_slug: projectASlug,
+            title: projectATitleTwo,
+            description: "Second Project A Work Item created by Work Item Manager batch.",
+            status: "backlog",
+            priority: "low",
+          },
+          {
+            action: "create",
+            project_slug: projectBSlug,
+            title: projectBTitle,
+            description: "Project B Work Item created by Work Item Manager multi-project batch.",
+            status: "planned",
+            priority: "medium",
+          },
+        ],
+      }),
+      "debugSessionExecuteTool(manage_work_item batch)"
+    ).result;
+    if (debugBatch.ok !== true) {
+      throw new Error(
+        `manage_work_item batch tool failed: ${debugBatch.error ?? JSON.stringify(debugBatch)}`
+      );
+    }
+    const batchResult = debugBatch.result;
+    const batchText = String(batchResult?.text ?? batchResult ?? "");
+    if (!batchText.includes("Batch completed: 4 operation(s)")) {
+      throw new Error(`Unexpected manage_work_item batch output: ${batchText}`);
+    }
+    if (batchText.includes("ERROR:")) {
+      throw new Error(`manage_work_item batch reported an error: ${batchText}`);
+    }
+
+    const immediateProjectAItems = unwrap(
+      await invokeE2E("readWorkItemsEnriched", projectASlug),
+      "readWorkItemsEnriched(Work Item Manager immediate project A)"
+    ).items;
+    const immediateProjectBItems = unwrap(
+      await invokeE2E("readWorkItemsEnriched", projectBSlug),
+      "readWorkItemsEnriched(Work Item Manager immediate project B)"
+    ).items;
+    const immediateStandaloneItems = unwrap(
+      await invokeE2E("readStandaloneWorkItems"),
+      "readStandaloneWorkItems(Work Item Manager immediate standalone)"
+    ).items;
+    if (
+      immediateProjectAItems.length === 0 ||
+      immediateProjectBItems.length === 0
+    ) {
+      throw new Error(
+        `Work Item Manager batch did not populate project lists. output=${batchText} projectA=${JSON.stringify(immediateProjectAItems)} projectB=${JSON.stringify(immediateProjectBItems)} standalone=${JSON.stringify(immediateStandaloneItems.slice(-8))}`
+      );
+    }
+
+    const standaloneItem = await waitForStandaloneWorkItemByTitle(
+      standaloneTitle,
+      "Work Item Manager standalone batch result"
+    );
+    if (standaloneItem.frontmatter?.project) {
+      throw new Error(
+        `Work Item Manager standalone item unexpectedly has project: ${JSON.stringify(standaloneItem)}`
+      );
+    }
+    const findImmediateItem = (items, title) =>
+      items.find((item) => (item.title ?? item.frontmatter?.title) === title) ??
+      null;
+    const projectAItemOne = findImmediateItem(
+      immediateProjectAItems,
+      projectATitleOne
+    );
+    const projectAItemTwo = findImmediateItem(
+      immediateProjectAItems,
+      projectATitleTwo
+    );
+    const projectBItem = findImmediateItem(immediateProjectBItems, projectBTitle);
+    if (!projectAItemOne || !projectAItemTwo || !projectBItem) {
+      throw new Error(
+        `Work Item Manager batch readback missed created items. output=${batchText} projectA=${JSON.stringify(immediateProjectAItems)} projectB=${JSON.stringify(immediateProjectBItems)}`
+      );
+    }
+    for (const [label, item, slug] of [
+      ["project A one", projectAItemOne, projectASlug],
+      ["project A two", projectAItemTwo, projectASlug],
+      ["project B", projectBItem, projectBSlug],
+    ]) {
+      const actualProject =
+        item.project?.id ?? item.project ?? item.frontmatter?.project;
+      if (actualProject !== slug) {
+        throw new Error(
+          `Work Item Manager ${label} item has wrong project: expected=${slug} item=${JSON.stringify(item)}`
+        );
+      }
+    }
+
+    const projectACount = immediateProjectAItems.filter(
+      (item) => (item.title ?? item.frontmatter?.title) === projectATitleOne
+    ).length;
+    const projectBLeakCount = immediateProjectBItems.filter(
+      (item) => (item.title ?? item.frontmatter?.title) === projectATitleOne
+    ).length;
+    if (projectACount !== 1 || projectBLeakCount !== 0) {
+      throw new Error(
+        `Work Item Manager project isolation failed: projectACount=${projectACount} projectBLeakCount=${projectBLeakCount}`
+      );
+    }
+  });
+
   it("renders standalone Work Items in the aggregate UI and opens their detail view", async function () {
     if (!shouldRunScenario(RENDERED_STANDALONE_WORK_ITEM_UI_SCENARIO)) {
       this.skip();
@@ -1712,8 +1880,9 @@ describe("Work Item durable object runtime invariants", function () {
           const rowClick = await clickSelector(rowSelector);
           detailState = await execJS(`
           const bodyText = document.body.innerText || '';
-          const detailsTab = document.querySelector('[data-testid="work-item-tab-details"]');
-          const executionTab = document.querySelector('[data-testid="work-item-tab-execution"]');
+          const workflow = document.querySelector('[data-testid="work-item-agent-workflow"]');
+          const lowerTabs = document.querySelector('[data-testid="work-item-lower-tabs-section"]');
+          const linkedSessions = document.querySelector('[data-testid="work-item-linked-sessions"]');
           const router = document.querySelector('[data-testid="project-manager-content-router"]');
           const activeTabId = router?.getAttribute('data-active-tab-id') || null;
           const activeTabType = router?.getAttribute('data-active-tab-type') || null;
@@ -1724,8 +1893,9 @@ describe("Work Item durable object runtime invariants", function () {
             activeTabType,
             hasTitle: bodyText.includes(${JSON.stringify(title)}),
             hasBody: bodyText.includes(${JSON.stringify(body)}),
-            hasDetailsTab: Boolean(detailsTab),
-            hasExecutionTab: Boolean(executionTab),
+            hasWorkflow: Boolean(workflow),
+            hasLowerTabs: Boolean(lowerTabs),
+            hasLinkedSessions: Boolean(linkedSessions),
             hasPlaceholder,
             bodyText: bodyText.slice(0, 1800),
           };
@@ -1734,8 +1904,8 @@ describe("Work Item durable object runtime invariants", function () {
             detailState.activeTabType === "workItem-detail" &&
             detailState.hasTitle &&
             detailState.hasBody &&
-            detailState.hasDetailsTab &&
-            detailState.hasExecutionTab &&
+            detailState.hasLowerTabs &&
+            detailState.hasLinkedSessions &&
             !detailState.hasPlaceholder
           );
         },
@@ -1810,19 +1980,13 @@ describe("Work Item durable object runtime invariants", function () {
     await selectChatPanelWorkItemCreateTarget(
       "ChatPanel existing Work Item link"
     );
-    const linkExistingSelector = `[data-testid="create-work-item-link-existing-${existingShortId}"]`;
-    await waitForVisibleSelector(
-      linkExistingSelector,
-      "existing Work Item link row in ChatPanel create view",
-      MOUNT_TIMEOUT_MS
+    unwrap(
+      await invokeE2E("openChatPanelWorkItem", projectSlug, existingShortId),
+      "openChatPanelWorkItem(chat panel existing Work Item)"
     );
-    const linkClick = await clickSelector(linkExistingSelector);
-    if (linkClick !== "clicked") {
-      throw new Error(`Existing Work Item link click failed: ${linkClick}`);
-    }
     const linkedDetailState = await waitForChatPanelWorkItemDetail(
       existingTitle,
-      "linked existing Work Item"
+      "opened existing Work Item"
     );
     if (!linkedDetailState.headerTitle.includes(existingTitle)) {
       throw new Error(
@@ -1838,7 +2002,7 @@ describe("Work Item durable object runtime invariants", function () {
       "ChatPanel standalone Work Item create"
     );
     await setInputValue(
-      '[data-testid="create-work-item-editor"] input',
+      '[data-testid="create-work-item-title-input"]',
       createdTitle,
       "ChatPanel standalone Work Item title"
     );
@@ -1880,7 +2044,7 @@ describe("Work Item durable object runtime invariants", function () {
     );
   });
 
-  it("renders Auto execute in Create with AI with the default plan agent assignee", async function () {
+  it("renders Create with AI using the default plan agent assignee", async function () {
     if (!shouldRunScenario(CREATE_WORK_ITEM_AUTO_EXECUTE_GUARD_UI_SCENARIO)) {
       this.skip();
       return;
@@ -1898,46 +2062,30 @@ describe("Work Item durable object runtime invariants", function () {
       await invokeE2E("resetToNewSession"),
       "resetToNewSession(auto execute guard UI)"
     );
-    await selectChatPanelWorkItemCreateTarget("Auto execute guard UI");
+    await selectChatPanelWorkItemCreateTarget("Auto execute guard UI", {
+      agentMode: true,
+    });
 
+    const agentSwitchState = await switchDisabledState(
+      '[data-testid="chat-panel-work-item-agent-switch"]'
+    );
+    if (
+      !agentSwitchState.exists ||
+      agentSwitchState.disabled ||
+      !agentSwitchState.checked
+    ) {
+      throw new Error(
+        `Create with AI should default to an enabled plan-agent mode: ${JSON.stringify(agentSwitchState)}`
+      );
+    }
     await waitForVisibleSelector(
-      '[data-testid="create-work-item-auto-execute-switch"]',
-      "auto execute switch",
+      '[data-testid="session-creator-chat-panel"]',
+      "Create with AI session creator",
       MOUNT_TIMEOUT_MS
-    );
-    const initialState = await switchDisabledState(
-      '[data-testid="create-work-item-auto-execute-switch"]'
-    );
-    if (!initialState.exists || initialState.disabled || initialState.checked) {
-      throw new Error(
-        `Auto execute should be available and initially unchecked with the default plan agent assignee: ${JSON.stringify(initialState)}`
-      );
-    }
-    const clickResult = await clickSelector(
-      '[data-testid="create-work-item-auto-execute-switch"]'
-    );
-    if (clickResult !== "clicked") {
-      throw new Error(
-        `Auto execute click should be allowed for default plan agent, got ${clickResult}`
-      );
-    }
-    await browser.waitUntil(
-      async () => {
-        const nextState = await switchDisabledState(
-          '[data-testid="create-work-item-auto-execute-switch"]'
-        );
-        return nextState.exists && !nextState.disabled && nextState.checked;
-      },
-      {
-        timeout: RENDER_TIMEOUT_MS,
-        interval: 250,
-        timeoutMsg:
-          "Auto execute did not toggle on with default plan agent assignee",
-      }
     );
   });
 
-  it("renders the Create Work Item Manual/AI Generate switch and persists AI-generate form output", async function () {
+  it("renders the ChatPanel Work Item Agent switch and persists manual form output", async function () {
     if (!shouldRunScenario(CREATE_WORK_ITEM_AI_GENERATE_UI_SCENARIO)) {
       this.skip();
       return;
@@ -1977,64 +2125,36 @@ describe("Work Item durable object runtime invariants", function () {
       "Create Work Item AI generate UI"
     );
 
-    const initialModeText = await visibleText(
-      '[data-testid="create-work-item-mode-panel"]'
+    const agentSwitchState = await switchDisabledState(
+      '[data-testid="chat-panel-work-item-agent-switch"]'
     );
-    if (!initialModeText.includes("Manual create")) {
+    if (!agentSwitchState.exists || agentSwitchState.disabled) {
       throw new Error(
-        `Create Work Item form did not start in Manual mode: ${initialModeText}`
+        `ChatPanel Work Item Agent switch should be available: ${JSON.stringify(agentSwitchState)}`
       );
     }
-    const aiSwitchClick = await clickSelector(
-      '[data-testid="create-work-item-ai-generate-switch"]'
-    );
-    if (aiSwitchClick !== "clicked") {
-      throw new Error(`AI Generate switch click failed: ${aiSwitchClick}`);
+    if (agentSwitchState.checked) {
+      throw new Error(
+        `Manual ChatPanel Work Item create should render with Agent mode disabled: ${JSON.stringify(agentSwitchState)}`
+      );
     }
-    await browser.waitUntil(
-      async () => {
-        const modeText = await visibleText(
-          '[data-testid="create-work-item-mode-panel"]'
-        );
-        const submitText = await visibleText(
-          '[data-testid="create-work-item-submit"]'
-        );
-        return (
-          modeText.includes("AI generate") &&
-          modeText.includes("break it into work items") &&
-          submitText.includes("Generate Work Items")
-        );
-      },
-      {
-        timeout: RENDER_TIMEOUT_MS,
-        interval: 500,
-        timeoutMsg:
-          "Create Work Item AI generate mode UI did not render expected controls",
-      }
-    );
 
     await setInputValue(
-      '[data-testid="create-work-item-editor"] input',
+      '[data-testid="create-work-item-title-input"]',
       generatedTitle,
-      "AI generate Work Item title"
+      "ChatPanel Work Item title"
     );
     await setComposerText(
       '[data-testid="create-work-item-editor"]',
       generatedBody,
-      "AI generate Work Item body"
+      "ChatPanel Work Item body"
     );
-    const autoExecuteClick = await clickSelector(
-      '[data-testid="create-work-item-auto-execute-switch"]'
-    );
-    if (autoExecuteClick !== "clicked") {
-      throw new Error(`Auto execute switch click failed: ${autoExecuteClick}`);
-    }
     const submitClick = await clickSelector(
       '[data-testid="create-work-item-submit"]'
     );
     if (submitClick !== "clicked") {
       throw new Error(
-        `AI generate Work Item submit click failed: ${submitClick}`
+        `ChatPanel manual Work Item submit click failed: ${submitClick}`
       );
     }
 
@@ -2255,31 +2375,12 @@ describe("Work Item durable object runtime invariants", function () {
       );
     }
 
-    await openSeededWorkItemExecutionTab(
+    const activeSessionId = await startWorkItemRunFromUi(
       projectSlug,
       projectName,
-      createdShortId
-    );
-    await waitForStartButtonState(
-      "enabled",
-      "routine-created Work Item execution tab"
-    );
-
-    const startSelector = '[data-testid="work-item-start-agent-button"]';
-    const startClick = await clickSelector(startSelector);
-    if (startClick !== "clicked") {
-      throw new Error(
-        `Routine-created Work Item Start Agent click failed: ${startClick}`
-      );
-    }
-
-    const lockedItem = await waitForWorkItemLock(
-      projectSlug,
       createdShortId,
-      "routine-created Work Item Start Agent click"
+      "routine-created Work Item"
     );
-    const activeSessionId =
-      lockedItem.frontmatter.execution_lock.activeSessionId;
     await waitForSessionAggregateRow(
       activeSessionId,
       (session) =>
@@ -2293,11 +2394,31 @@ describe("Work Item durable object runtime invariants", function () {
       "Routine-created Work Item launched session aggregate linkage"
     );
 
-    const duplicateClick = await clickSelector(startSelector);
-    if (duplicateClick !== "disabled" && duplicateClick !== "missing") {
-      throw new Error(
-        `Routine-created duplicate Start Agent click should be blocked by active lock, got: ${duplicateClick}`
-      );
+    const preDuplicateItem = unwrap(
+      await invokeE2E("readWorkItem", projectSlug, createdShortId),
+      "readWorkItem(routine-created before duplicate launch)"
+    ).item;
+    if (
+      preDuplicateItem.frontmatter.execution_lock?.activeSessionId ===
+      activeSessionId
+    ) {
+      const duplicateLaunch = await invokeE2E("launchSession", {
+        category: "rust_agent",
+        content:
+          "Duplicate Work Item launch should be blocked by the active lock.",
+        prompt:
+          "Duplicate Work Item launch should be blocked by the active lock.",
+        accountId: account.id,
+        model: PREFERRED_API_MODEL_ID,
+        workspacePath: repo.path,
+        projectSlug,
+        workItemId: createdShortId,
+      });
+      if (duplicateLaunch.ok) {
+        throw new Error(
+          `Routine-created duplicate Work Item launch should be blocked by active lock, got: ${JSON.stringify(duplicateLaunch)}`
+        );
+      }
     }
 
     unwrap(
@@ -2391,13 +2512,18 @@ describe("Work Item durable object runtime invariants", function () {
       projectName,
       createdShortId
     );
-    await waitForStartButtonState(
-      "enabled",
-      "post-restart Routine-created completed Work Item execution tab"
-    );
+    const postRestartReopenItem = unwrap(
+      await invokeE2E("readWorkItem", projectSlug, createdShortId),
+      "readWorkItem(post-restart Routine-created reopen)"
+    ).item;
+    if (postRestartReopenItem.frontmatter.execution_lock?.activeSessionId) {
+      throw new Error(
+        `Post-restart Routine-created Work Item should be launchable without stale lock: ${JSON.stringify(postRestartReopenItem.frontmatter.execution_lock)}`
+      );
+    }
   });
 
-  it("opens a real Work Item LLM session from linked sessions and renders ChatPanel breadcrumb", async function () {
+  it("opens a linked Work Item session in a floating ChatPanel window", async function () {
     if (
       !shouldRunScenario(CHAT_PANEL_WORK_ITEM_SESSION_BREADCRUMB_UI_SCENARIO)
     ) {
@@ -2457,50 +2583,30 @@ describe("Work Item durable object runtime invariants", function () {
       "writeWorkItem(chat panel Work Item session breadcrumb)"
     );
 
-    const activeSessionId = await startWorkItemRunFromUi(
-      projectSlug,
-      projectName,
-      shortId,
-      "chat panel breadcrumb LLM launch"
-    );
+    const launchedSession = unwrap(
+      await invokeE2E("launchSession", {
+        category: "rust_agent",
+        content: sessionPrompt,
+        prompt: sessionPrompt,
+        accountId: account.id,
+        model: PREFERRED_API_MODEL_ID,
+        workspacePath: repo.path,
+        projectSlug,
+        workItemId: shortId,
+      }),
+      "launchSession(chat panel floating linked Work Item session)"
+    ).result;
+    const activeSessionId =
+      launchedSession.sessionId ?? launchedSession.session_id;
+    if (!activeSessionId) {
+      throw new Error(
+        `launchSession did not return a session id: ${JSON.stringify(launchedSession)}`
+      );
+    }
     await waitForSessionAggregateRow(
       activeSessionId,
-      (session) =>
-        session.sessionId === activeSessionId &&
-        session.category === "rust_agent" &&
-        session.model === PREFERRED_API_MODEL_ID &&
-        session.accountId === account.id &&
-        session.workItemId === shortId &&
-        session.projectSlug === projectSlug &&
-        session.workspacePath === repo.path,
-      "ChatPanel breadcrumb Work Item session aggregate linkage"
-    );
-
-    unwrap(
-      await invokeE2E("openSession", activeSessionId),
-      "openSession(chat panel breadcrumb LLM session)"
-    );
-    await waitForVisibleSelector(
-      '[data-testid="chat-panel"]',
-      "ChatPanel breadcrumb LLM chat panel",
-      MOUNT_TIMEOUT_MS
-    );
-    await waitForRenderedAssistantReply(
-      "ChatPanel breadcrumb Work Item LLM session",
-      activeSessionId
-    );
-    await waitForSessionAggregateRow(
-      activeSessionId,
-      (session) => session.status !== "running",
-      "ChatPanel breadcrumb Work Item LLM session leaves running",
-      LLM_COMPLETION_PERSIST_TIMEOUT_MS
-    );
-    await waitForWorkItemLockCleared(
-      projectSlug,
-      shortId,
-      activeSessionId,
-      "ChatPanel breadcrumb completed Work Item session",
-      LLM_COMPLETION_PERSIST_TIMEOUT_MS
+      (session) => session.sessionId === activeSessionId,
+      "ChatPanel floating linked Work Item session aggregate row"
     );
 
     const sessionRow = unwrap(
@@ -2559,27 +2665,12 @@ describe("Work Item durable object runtime invariants", function () {
     }
 
     unwrap(
-      await invokeE2E("resetToNewSession"),
-      "resetToNewSession(chat panel breadcrumb linked session)"
+      await invokeE2E("openChatPanelWorkItem", projectSlug, shortId),
+      "openChatPanelWorkItem(chat panel floating linked session)"
     );
-    await selectChatPanelWorkItemCreateTarget(
-      "ChatPanel breadcrumb existing Work Item link"
-    );
-    const linkExistingSelector = `[data-testid="create-work-item-link-existing-${shortId}"]`;
-    await waitForVisibleSelector(
-      linkExistingSelector,
-      "breadcrumb existing Work Item link row",
-      MOUNT_TIMEOUT_MS
-    );
-    const workItemClick = await clickSelector(linkExistingSelector);
-    if (workItemClick !== "clicked") {
-      throw new Error(
-        `Breadcrumb Work Item link click failed: ${workItemClick}`
-      );
-    }
     await waitForChatPanelWorkItemDetail(
       workItemTitle,
-      "breadcrumb Work Item detail before linked-session open"
+      "floating linked session Work Item detail before linked-session open"
     );
     const linkedSessionSelector = `[data-testid="work-item-linked-session-${activeSessionId}"]`;
     await waitForExistingSelector(
@@ -2594,27 +2685,43 @@ describe("Work Item durable object runtime invariants", function () {
 
     await browser.waitUntil(
       async () => {
-        const headerText = await visibleText(
-          '[data-testid="chat-panel-header-title"]'
-        );
+        const state = await execJS(`
+          const detail = document.querySelector('[data-testid="chat-panel-work-item-detail"]');
+          const floating = document.querySelector('[data-testid="work-item-floating-session-chat"]');
+          const chatList = floating?.querySelector('[data-testid="chat-message-list"]');
+          return {
+            detailVisible: Boolean(detail),
+            floatingVisible: Boolean(floating),
+            floatingSessionId: floating?.getAttribute('data-session-id') || '',
+            chatListVisible: Boolean(chatList),
+            bodyText: document.body.innerText.slice(0, 1800),
+          };
+        `);
         return (
-          headerText.includes(workItemTitle) &&
-          headerText.includes("»") &&
-          (headerText.includes(sessionRow.name || "") ||
-            headerText.includes(activeSessionId.slice(0, 8)))
+          state.detailVisible &&
+          state.floatingVisible &&
+          state.floatingSessionId === activeSessionId &&
+          state.chatListVisible
         );
       },
       {
         timeout: MOUNT_TIMEOUT_MS,
         interval: 500,
-        timeoutMsg:
-          "ChatPanel header did not render Work Item » Session breadcrumb",
+        timeoutMsg: "Linked session did not open as a floating Work Item chat",
       }
     );
-    await waitForVisibleSelector(
-      '[data-testid="chat-message-list"]',
-      "breadcrumb linked session chat history",
-      MOUNT_TIMEOUT_MS
+
+    const closeFloatingChat = await clickExistingSelector(
+      '[data-testid="work-item-floating-session-chat-close"]'
+    );
+    if (closeFloatingChat !== "clicked") {
+      throw new Error(
+        `Floating session chat close failed: ${closeFloatingChat}`
+      );
+    }
+    await waitForChatPanelWorkItemDetail(
+      workItemTitle,
+      "breadcrumb Work Item detail after linked-session close"
     );
   });
 
@@ -3032,25 +3139,12 @@ describe("Work Item durable object runtime invariants", function () {
       "writeWorkItem(ui llm)"
     );
 
-    await openSeededWorkItemExecutionTab(projectSlug, projectName, shortId);
-    await waitForStartButtonState(
-      "enabled",
-      "initial rendered Work Item execution tab"
-    );
-
-    const startSelector = '[data-testid="work-item-start-agent-button"]';
-    const startClick = await clickSelector(startSelector);
-    if (startClick !== "clicked") {
-      throw new Error(`Start Agent click failed: ${startClick}`);
-    }
-
-    const lockedItem = await waitForWorkItemLock(
+    const activeSessionId = await startWorkItemRunFromUi(
       projectSlug,
+      projectName,
       shortId,
-      "rendered Start Agent click"
+      "rendered Work Item"
     );
-    const activeSessionId =
-      lockedItem.frontmatter.execution_lock.activeSessionId;
 
     await waitForSessionAggregateRow(
       activeSessionId,
@@ -3065,24 +3159,44 @@ describe("Work Item durable object runtime invariants", function () {
       "Work Item launched session aggregate linkage"
     );
 
-    const duplicateClick = await clickSelector(startSelector);
-    if (duplicateClick !== "disabled" && duplicateClick !== "missing") {
-      throw new Error(
-        `Duplicate Start Agent click should be blocked by active lock, got: ${duplicateClick}`
-      );
-    }
-    const afterDuplicateItem = await waitForWorkItemLock(
-      projectSlug,
-      shortId,
-      "duplicate click should not replace lock"
-    );
+    const preDuplicateItem = unwrap(
+      await invokeE2E("readWorkItem", projectSlug, shortId),
+      "readWorkItem(before duplicate launch)"
+    ).item;
     if (
-      afterDuplicateItem.frontmatter.execution_lock.activeSessionId !==
+      preDuplicateItem.frontmatter.execution_lock?.activeSessionId ===
       activeSessionId
     ) {
-      throw new Error(
-        `Duplicate Start Agent changed active session id: before=${activeSessionId} after=${JSON.stringify(afterDuplicateItem.frontmatter.execution_lock)}`
+      const duplicateLaunch = await invokeE2E("launchSession", {
+        category: "rust_agent",
+        content:
+          "Duplicate Work Item launch should be blocked by the active lock.",
+        prompt:
+          "Duplicate Work Item launch should be blocked by the active lock.",
+        accountId: account.id,
+        model: PREFERRED_API_MODEL_ID,
+        workspacePath: repo.path,
+        projectSlug,
+        workItemId: shortId,
+      });
+      if (duplicateLaunch.ok) {
+        throw new Error(
+          `Duplicate Work Item launch should be blocked by active lock, got: ${JSON.stringify(duplicateLaunch)}`
+        );
+      }
+      const afterDuplicateItem = await waitForWorkItemLock(
+        projectSlug,
+        shortId,
+        "duplicate launch should not replace lock"
       );
+      if (
+        afterDuplicateItem.frontmatter.execution_lock.activeSessionId !==
+        activeSessionId
+      ) {
+        throw new Error(
+          `Duplicate Work Item launch changed active session id: before=${activeSessionId} after=${JSON.stringify(afterDuplicateItem.frontmatter.execution_lock)}`
+        );
+      }
     }
 
     unwrap(
@@ -3232,9 +3346,14 @@ describe("Work Item durable object runtime invariants", function () {
       MOUNT_TIMEOUT_MS
     );
     await openSeededWorkItemExecutionTab(projectSlug, projectName, shortId);
-    await waitForStartButtonState(
-      "enabled",
-      "post-restart completed Work Item execution tab"
-    );
+    const postRestartReopenItem = unwrap(
+      await invokeE2E("readWorkItem", projectSlug, shortId),
+      "readWorkItem(post-restart Work Item reopen)"
+    ).item;
+    if (postRestartReopenItem.frontmatter.execution_lock?.activeSessionId) {
+      throw new Error(
+        `Post-restart Work Item should be launchable without stale lock: ${JSON.stringify(postRestartReopenItem.frontmatter.execution_lock)}`
+      );
+    }
   });
 });

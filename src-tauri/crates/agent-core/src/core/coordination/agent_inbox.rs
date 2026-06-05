@@ -404,7 +404,10 @@ impl AgentMessage {
                 }
                 if let Some(mode) = next_mode {
                     if !is_supported_agent_org_remote_mode(*mode) {
-                        return Err("PlanApprovalResponse.next_mode must be one of: build, ask, plan".into());
+                        return Err(
+                            "PlanApprovalResponse.next_mode must be one of: build, ask, plan"
+                                .into(),
+                        );
                     }
                 }
             }
@@ -489,9 +492,7 @@ impl AgentMessage {
                     return Err("ExecModeSetRequest.request_id must not be empty".into());
                 }
                 if !is_supported_agent_org_remote_mode(*mode) {
-                    return Err(
-                        "ExecModeSetRequest.mode must be one of: build, ask, plan".into(),
-                    );
+                    return Err("ExecModeSetRequest.mode must be one of: build, ask, plan".into());
                 }
                 if let Some(r) = reason {
                     if r.len() > 500 {

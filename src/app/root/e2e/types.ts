@@ -631,6 +631,10 @@ export interface E2EHelpers {
     projectName: string,
     projectSlug?: string
   ) => Promise<{ ok: true } | Err>;
+  openChatPanelWorkItem: (
+    projectSlug: string,
+    shortId: string
+  ) => Promise<{ ok: true } | Err>;
   openAgentTab: (
     agentId: string,
     tab: string

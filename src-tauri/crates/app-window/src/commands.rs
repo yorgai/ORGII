@@ -22,7 +22,7 @@ use objc2::msg_send;
 #[cfg(target_os = "macos")]
 use objc2::runtime::{AnyClass, AnyObject};
 
-use super::{CreateWindowOptions, create_window};
+use super::{create_window, CreateWindowOptions};
 
 /// Set the native zoom factor for the main WebView and inline child WebViews.
 #[tauri::command]

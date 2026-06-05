@@ -7,17 +7,17 @@
 #[cfg(test)]
 mod tests_extended {
     use crate::core::definitions::builtin::{
-        get_builtin_agent, get_builtin_agents, is_builtin_agent,
-        BASE_AGENT_ID, OS_AGENT_ID, SDE_AGENT_ID, WINGMAN_AGENT_ID,
-        EXPLORE_AGENT_ID, GENERAL_AGENT_ID,
-        MEMORY_EXTRACTOR_ID, MEMORY_CONSOLIDATOR_ID,
-        TERMINAL_AGENT_ID, AI_RESEARCH_AGENT_ID, AGENT_ARCHITECT_ID,
-        BUILTIN_PREFIX,
+        get_builtin_agent, get_builtin_agents, is_builtin_agent, AGENT_ARCHITECT_ID,
+        AI_RESEARCH_AGENT_ID, BASE_AGENT_ID, BUILTIN_PREFIX, EXPLORE_AGENT_ID, GENERAL_AGENT_ID,
+        MEMORY_CONSOLIDATOR_ID, MEMORY_EXTRACTOR_ID, OS_AGENT_ID, SDE_AGENT_ID, TERMINAL_AGENT_ID,
+        WINGMAN_AGENT_ID,
     };
-    use crate::core::definitions::resolved::{ResolvedAgent, ResolveError, SkillsParams, ResolvedToolSelection};
+    use crate::core::definitions::resolved::{
+        ResolveError, ResolvedAgent, ResolvedToolSelection, SkillsParams,
+    };
     use crate::core::definitions::schema::{
-        AgentDefinition, AgentLearningsConfig, AgentPolicy, AgentTier,
-        AgentToolSelection, SessionMode, SessionModel,
+        AgentDefinition, AgentLearningsConfig, AgentPolicy, AgentTier, AgentToolSelection,
+        SessionMode, SessionModel,
     };
     use crate::core::session::overrides::SessionOverrides;
     use std::collections::HashSet;
@@ -257,7 +257,10 @@ mod tests_extended {
     #[test]
     fn get_builtin_agents_returns_non_empty() {
         let agents = get_builtin_agents();
-        assert!(!agents.is_empty(), "get_builtin_agents must return at least one agent");
+        assert!(
+            !agents.is_empty(),
+            "get_builtin_agents must return at least one agent"
+        );
     }
 
     #[test]
@@ -289,7 +292,11 @@ mod tests_extended {
     #[test]
     fn all_builtin_agents_have_built_in_true() {
         for agent in get_builtin_agents() {
-            assert!(agent.built_in, "Agent {} should have built_in = true", agent.id);
+            assert!(
+                agent.built_in,
+                "Agent {} should have built_in = true",
+                agent.id
+            );
         }
     }
 
@@ -440,8 +447,16 @@ mod tests_extended {
             ..Default::default()
         };
         let json = serde_json::to_string(&def).expect("serialize");
-        assert!(json.contains("selectedModelId"), "expected camelCase selectedModelId in: {}", json);
-        assert!(json.contains("builtIn"), "expected camelCase builtIn in: {}", json);
+        assert!(
+            json.contains("selectedModelId"),
+            "expected camelCase selectedModelId in: {}",
+            json
+        );
+        assert!(
+            json.contains("builtIn"),
+            "expected camelCase builtIn in: {}",
+            json
+        );
     }
 
     #[test]
@@ -453,8 +468,16 @@ mod tests_extended {
         };
         let json = serde_json::to_string(&def).expect("serialize");
         // None optional fields should be skipped
-        assert!(!json.contains("selectedModelId"), "None field should be skipped: {}", json);
-        assert!(!json.contains("description"), "None field should be skipped: {}", json);
+        assert!(
+            !json.contains("selectedModelId"),
+            "None field should be skipped: {}",
+            json
+        );
+        assert!(
+            !json.contains("description"),
+            "None field should be skipped: {}",
+            json
+        );
     }
 
     #[test]
@@ -567,8 +590,16 @@ mod tests_extended {
     fn session_model_serializes_camel_case_keys() {
         let sm = SessionModel::default();
         let json = serde_json::to_string(&sm).expect("serialize");
-        assert!(json.contains("maxIterations"), "expected maxIterations in {}", json);
-        assert!(json.contains("processingLock"), "expected processingLock in {}", json);
+        assert!(
+            json.contains("maxIterations"),
+            "expected maxIterations in {}",
+            json
+        );
+        assert!(
+            json.contains("processingLock"),
+            "expected processingLock in {}",
+            json
+        );
     }
 
     // =========================================================================
@@ -597,7 +628,10 @@ mod tests_extended {
         let json = serde_json::to_string(&original).expect("serialize");
         let restored: AgentPolicy = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(restored.workspace_only, true);
-        assert_eq!(restored.blocked_commands, vec!["rm".to_string(), "sudo".to_string()]);
+        assert_eq!(
+            restored.blocked_commands,
+            vec!["rm".to_string(), "sudo".to_string()]
+        );
     }
 
     #[test]
@@ -605,7 +639,11 @@ mod tests_extended {
         let policy = AgentPolicy::default();
         let json = serde_json::to_string(&policy).expect("serialize");
         // skip_serializing_if = "Vec::is_empty" means the key should be absent
-        assert!(!json.contains("blockedCommands"), "empty blocked_commands should be skipped: {}", json);
+        assert!(
+            !json.contains("blockedCommands"),
+            "empty blocked_commands should be skipped: {}",
+            json
+        );
     }
 
     // =========================================================================
@@ -640,7 +678,10 @@ mod tests_extended {
         let json = serde_json::to_string(&original).expect("serialize");
         let restored: AgentLearningsConfig = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(restored.enabled, original.enabled);
-        assert_eq!(restored.extract_memories_enabled, original.extract_memories_enabled);
+        assert_eq!(
+            restored.extract_memories_enabled,
+            original.extract_memories_enabled
+        );
         assert_eq!(restored.auto_dream_enabled, original.auto_dream_enabled);
     }
 
@@ -648,8 +689,16 @@ mod tests_extended {
     fn learnings_config_json_uses_camel_case() {
         let cfg = AgentLearningsConfig::default();
         let json = serde_json::to_string(&cfg).expect("serialize");
-        assert!(json.contains("extractMemoriesEnabled"), "expected camelCase in {}", json);
-        assert!(json.contains("autoDreamEnabled"), "expected camelCase in {}", json);
+        assert!(
+            json.contains("extractMemoriesEnabled"),
+            "expected camelCase in {}",
+            json
+        );
+        assert!(
+            json.contains("autoDreamEnabled"),
+            "expected camelCase in {}",
+            json
+        );
     }
 
     // =========================================================================
@@ -696,7 +745,11 @@ mod tests_extended {
             ..Default::default()
         });
         let result = ResolvedAgent::resolve(&def, None, &default_overrides());
-        assert!(result.is_ok(), "Resolve should succeed with model set: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "Resolve should succeed with model set: {:?}",
+            result.err()
+        );
     }
 
     #[test]
@@ -851,7 +904,11 @@ mod tests_extended {
             source_dirs: vec!["/dir".to_string()],
         };
         let json = serde_json::to_string(&sp).expect("serialize");
-        assert!(json.contains("sourceDirs"), "expected sourceDirs in {}", json);
+        assert!(
+            json.contains("sourceDirs"),
+            "expected sourceDirs in {}",
+            json
+        );
     }
 
     // =========================================================================
@@ -928,8 +985,11 @@ mod tests_extended {
         };
         let err = ResolvedAgent::resolve(&def, None, &default_overrides()).unwrap_err();
         let msg = err.to_string();
-        assert!( msg.contains("error-msg-test"),
-            "Error message should contain agent id, got: {}", msg);
+        assert!(
+            msg.contains("error-msg-test"),
+            "Error message should contain agent id, got: {}",
+            msg
+        );
     }
     // =========================================================================
     // 26. Multiple builtin agents all resolve successfully
@@ -941,7 +1001,12 @@ mod tests_extended {
             let def = with_model(agent);
             let id = def.id.clone();
             let result = ResolvedAgent::resolve(&def, None, &default_overrides());
-            assert!(result.is_ok(), "Agent {:?} failed to resolve: {:?}", id, result.err());
+            assert!(
+                result.is_ok(),
+                "Agent {:?} failed to resolve: {:?}",
+                id,
+                result.err()
+            );
         }
     }
 
@@ -949,8 +1014,8 @@ mod tests_extended {
     fn all_builtin_resolved_agents_have_non_empty_id() {
         for agent in get_builtin_agents() {
             let def = with_model(agent);
-            let resolved = ResolvedAgent::resolve(&def, None, &default_overrides())
-                .expect("resolve");
+            let resolved =
+                ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
             assert!(!resolved.agent_id.is_empty());
         }
     }
@@ -959,9 +1024,13 @@ mod tests_extended {
     fn all_builtin_resolved_agents_have_positive_max_tokens() {
         for agent in get_builtin_agents() {
             let def = with_model(agent);
-            let resolved = ResolvedAgent::resolve(&def, None, &default_overrides())
-                .expect("resolve");
-            assert!(resolved.max_tokens > 0, "max_tokens must be > 0 for {}", resolved.agent_id);
+            let resolved =
+                ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
+            assert!(
+                resolved.max_tokens > 0,
+                "max_tokens must be > 0 for {}",
+                resolved.agent_id
+            );
         }
     }
 
@@ -969,9 +1038,13 @@ mod tests_extended {
     fn all_builtin_resolved_agents_have_positive_context_window() {
         for agent in get_builtin_agents() {
             let def = with_model(agent);
-            let resolved = ResolvedAgent::resolve(&def, None, &default_overrides())
-                .expect("resolve");
-            assert!(resolved.context_window > 0, "context_window must be > 0 for {}", resolved.agent_id);
+            let resolved =
+                ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
+            assert!(
+                resolved.context_window > 0,
+                "context_window must be > 0 for {}",
+                resolved.agent_id
+            );
         }
     }
 
@@ -979,9 +1052,13 @@ mod tests_extended {
     fn all_builtin_resolved_agents_have_non_negative_temperature() {
         for agent in get_builtin_agents() {
             let def = with_model(agent);
-            let resolved = ResolvedAgent::resolve(&def, None, &default_overrides())
-                .expect("resolve");
-            assert!(resolved.temperature >= 0.0, "temperature must be >= 0 for {}", resolved.agent_id);
+            let resolved =
+                ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
+            assert!(
+                resolved.temperature >= 0.0,
+                "temperature must be >= 0 for {}",
+                resolved.agent_id
+            );
         }
     }
 
@@ -989,10 +1066,13 @@ mod tests_extended {
     fn all_builtin_resolved_agents_have_positive_max_iterations() {
         for agent in get_builtin_agents() {
             let def = with_model(agent);
-            let resolved = ResolvedAgent::resolve(&def, None, &default_overrides())
-                .expect("resolve");
-            assert!(resolved.session_model.max_iterations > 0,
-                "max_iterations must be > 0 for {}", resolved.agent_id);
+            let resolved =
+                ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
+            assert!(
+                resolved.session_model.max_iterations > 0,
+                "max_iterations must be > 0 for {}",
+                resolved.agent_id
+            );
         }
     }
 
@@ -1065,7 +1145,10 @@ mod tests_extended {
     fn sde_resolved_compaction_enabled() {
         let def = with_model(get_builtin_agent(SDE_AGENT_ID).expect("sde exists"));
         let resolved = ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
-        assert!(resolved.compaction.enabled, "resolved SDE compaction must be enabled");
+        assert!(
+            resolved.compaction.enabled,
+            "resolved SDE compaction must be enabled"
+        );
     }
 
     #[test]
@@ -1073,14 +1156,20 @@ mod tests_extended {
         let os = get_builtin_agent(OS_AGENT_ID).expect("os exists");
         let sm = os.session_model.expect("OS must have session_model");
         // OS agent uses singleton / no compaction
-        assert!(sm.compaction.is_none(), "OS agent should not have compaction");
+        assert!(
+            sm.compaction.is_none(),
+            "OS agent should not have compaction"
+        );
     }
 
     #[test]
     fn wingman_session_model_has_no_compaction() {
         let wm = get_builtin_agent(WINGMAN_AGENT_ID).expect("wingman exists");
         let sm = wm.session_model.expect("Wingman must have session_model");
-        assert!(sm.compaction.is_none(), "Wingman should not have compaction");
+        assert!(
+            sm.compaction.is_none(),
+            "Wingman should not have compaction"
+        );
     }
 
     // =========================================================================
@@ -1098,7 +1187,10 @@ mod tests_extended {
     fn sde_agent_policy_workspace_only_is_false() {
         let sde = get_builtin_agent(SDE_AGENT_ID).expect("sde exists");
         let policy = sde.agent_policy.expect("SDE must have agent_policy");
-        assert!(!policy.workspace_only, "SDE agent should not restrict to workspace");
+        assert!(
+            !policy.workspace_only,
+            "SDE agent should not restrict to workspace"
+        );
     }
 
     #[test]
@@ -1119,7 +1211,10 @@ mod tests_extended {
     fn os_policy_blocked_commands_is_empty_by_default() {
         let os = get_builtin_agent(OS_AGENT_ID).expect("os exists");
         let policy = os.agent_policy.expect("OS must have agent_policy");
-        assert!(policy.blocked_commands.is_empty(), "OS agent ships with no blocked commands");
+        assert!(
+            policy.blocked_commands.is_empty(),
+            "OS agent ships with no blocked commands"
+        );
     }
 
     // =========================================================================
@@ -1131,7 +1226,11 @@ mod tests_extended {
         let def = with_model(get_builtin_agent(OS_AGENT_ID).expect("os exists"));
         let resolved = ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
         let json = serde_json::to_string(&resolved).expect("serialize");
-        assert!(json.contains("agentId"), "expected agentId in: {}", &json[..200.min(json.len())]);
+        assert!(
+            json.contains("agentId"),
+            "expected agentId in: {}",
+            &json[..200.min(json.len())]
+        );
     }
 
     #[test]
@@ -1139,7 +1238,10 @@ mod tests_extended {
         let def = with_model(get_builtin_agent(OS_AGENT_ID).expect("os exists"));
         let resolved = ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
         let json = serde_json::to_string(&resolved).expect("serialize");
-        assert!(json.contains("selectedModelId"), "expected selectedModelId in JSON");
+        assert!(
+            json.contains("selectedModelId"),
+            "expected selectedModelId in JSON"
+        );
     }
 
     #[test]
@@ -1147,7 +1249,10 @@ mod tests_extended {
         let def = with_model(get_builtin_agent(OS_AGENT_ID).expect("os exists"));
         let resolved = ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
         let json = serde_json::to_string(&resolved).expect("serialize");
-        assert!(json.contains("sessionModel"), "expected sessionModel in JSON");
+        assert!(
+            json.contains("sessionModel"),
+            "expected sessionModel in JSON"
+        );
     }
 
     #[test]
@@ -1163,7 +1268,10 @@ mod tests_extended {
         let def = with_model(get_builtin_agent(SDE_AGENT_ID).expect("sde exists"));
         let resolved = ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
         let json = serde_json::to_string(&resolved).expect("serialize");
-        assert!(json.contains("contextWindow"), "expected contextWindow in JSON");
+        assert!(
+            json.contains("contextWindow"),
+            "expected contextWindow in JSON"
+        );
     }
 
     #[test]
@@ -1171,7 +1279,10 @@ mod tests_extended {
         let def = with_model(get_builtin_agent(OS_AGENT_ID).expect("os exists"));
         let resolved = ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
         let json = serde_json::to_string(&resolved).expect("serialize");
-        assert!(json.contains("loadWorkspaceResources"), "expected loadWorkspaceResources in JSON");
+        assert!(
+            json.contains("loadWorkspaceResources"),
+            "expected loadWorkspaceResources in JSON"
+        );
     }
 
     #[test]
@@ -1209,7 +1320,10 @@ mod tests_extended {
     fn os_session_model_has_no_processing_lock() {
         let os = get_builtin_agent(OS_AGENT_ID).expect("os exists");
         let sm = os.session_model.expect("OS has session model");
-        assert!(!sm.processing_lock, "OS agent allows concurrent requests (no lock)");
+        assert!(
+            !sm.processing_lock,
+            "OS agent allows concurrent requests (no lock)"
+        );
     }
 
     #[test]
@@ -1223,7 +1337,10 @@ mod tests_extended {
     fn sde_session_model_has_processing_lock() {
         let sde = get_builtin_agent(SDE_AGENT_ID).expect("sde exists");
         let sm = sde.session_model.expect("SDE has session model");
-        assert!(sm.processing_lock, "SDE serializes requests via processing lock");
+        assert!(
+            sm.processing_lock,
+            "SDE serializes requests via processing lock"
+        );
     }
 
     #[test]
@@ -1237,7 +1354,10 @@ mod tests_extended {
     fn wingman_max_iterations_is_30() {
         let wm = get_builtin_agent(WINGMAN_AGENT_ID).expect("wingman exists");
         let sm = wm.session_model.expect("Wingman has session model");
-        assert_eq!(sm.max_iterations, 30, "Wingman has a short iteration budget");
+        assert_eq!(
+            sm.max_iterations, 30,
+            "Wingman has a short iteration budget"
+        );
     }
 
     #[test]
@@ -1329,7 +1449,10 @@ mod tests_extended {
     fn sde_agent_has_no_desktop_capability() {
         let sde = get_builtin_agent(SDE_AGENT_ID).expect("sde exists");
         let caps = sde.capabilities.expect("SDE has capabilities");
-        assert!(caps.desktop.is_none(), "SDE must not have desktop capability");
+        assert!(
+            caps.desktop.is_none(),
+            "SDE must not have desktop capability"
+        );
     }
 
     #[test]
@@ -1349,7 +1472,10 @@ mod tests_extended {
     #[test]
     fn base_agent_has_no_capabilities() {
         let base = get_builtin_agent(BASE_AGENT_ID).expect("base exists");
-        assert!(base.capabilities.is_none(), "Base agent has no special capabilities");
+        assert!(
+            base.capabilities.is_none(),
+            "Base agent has no special capabilities"
+        );
     }
 
     // =========================================================================
@@ -1661,7 +1787,10 @@ mod tests_extended {
         };
         let json = serde_json::to_string(&original).expect("serialize");
         let restored: AgentDefinition = serde_json::from_str(&json).expect("deserialize");
-        assert_eq!(restored.description.as_deref(), Some("A useful description."));
+        assert_eq!(
+            restored.description.as_deref(),
+            Some("A useful description.")
+        );
     }
 
     // =========================================================================
@@ -1673,11 +1802,12 @@ mod tests_extended {
         for agent in get_builtin_agents() {
             let def = with_model(agent);
             let id = def.id.clone();
-            let resolved = ResolvedAgent::resolve(&def, None, &default_overrides())
-                .expect("resolve");
+            let resolved =
+                ResolvedAgent::resolve(&def, None, &default_overrides()).expect("resolve");
             assert!(
                 !resolved.workspace().as_os_str().is_empty(),
-                "Workspace must not be empty for agent {}", id
+                "Workspace must not be empty for agent {}",
+                id
             );
         }
     }
@@ -1732,9 +1862,9 @@ mod tests_extended {
         for agent in get_builtin_agents() {
             assert!(
                 agent.max_instances.is_none(),
-                "Agent {} should have max_instances=None (use system default)", agent.id
+                "Agent {} should have max_instances=None (use system default)",
+                agent.id
             );
         }
     }
-
-}  // end mod tests_extended
+} // end mod tests_extended

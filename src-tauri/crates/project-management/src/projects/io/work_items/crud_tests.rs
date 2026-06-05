@@ -318,6 +318,29 @@ fn allocate_short_id_increments_counter_and_skips_used_numbers() {
 }
 
 #[test]
+fn allocate_short_id_skips_same_prefix_across_projects() {
+    let _sandbox = test_env::sandbox();
+    seed_project("alpha", "pa");
+    write_project("beta", &project_fixture("pb", "beta", "Beta"), "", true).expect("seed beta");
+
+    let alpha_id = allocate_short_id("alpha").expect("alloc alpha");
+    assert_eq!(alpha_id, "AAA-0001");
+    let alpha_fm = work_item_fixture(&alpha_id, &alpha_id, "Alpha task");
+    write_work_item("alpha", &alpha_id, &alpha_fm, "").expect("write alpha");
+
+    let beta_id = allocate_short_id("beta").expect("alloc beta");
+    assert_eq!(
+        beta_id, "AAA-0002",
+        "workitems.id is global, so shared prefixes must not collide across projects"
+    );
+    let beta_fm = work_item_fixture(&beta_id, &beta_id, "Beta task");
+    write_work_item("beta", &beta_id, &beta_fm, "").expect("write beta");
+
+    assert_eq!(read_all_work_items("alpha").expect("alpha items").len(), 1);
+    assert_eq!(read_all_work_items("beta").expect("beta items").len(), 1);
+}
+
+#[test]
 fn allocate_short_id_unknown_project_errors() {
     let _sandbox = test_env::sandbox();
     let err = allocate_short_id("ghost").unwrap_err();
