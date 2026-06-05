@@ -37,7 +37,6 @@ interface WorkItemsListContentProps {
   onDeleteWorkItem?: (workItemId: string) => void;
   onRestoreWorkItem?: (workItemId: string) => void;
   readonly?: boolean;
-  onAddProject?: () => void;
   onAddListItem?: (status: WorkItemStatus) => void | Promise<void>;
   emptyListPlaceholder?: ReactNode;
   noResultsPlaceholder?: ReactNode;
@@ -73,7 +72,6 @@ const WorkItemsListContent: FC<WorkItemsListContentProps> = ({
   onDeleteWorkItem,
   onRestoreWorkItem,
   readonly = false,
-  onAddProject,
   onAddListItem,
   emptyListPlaceholder,
   noResultsPlaceholder,
