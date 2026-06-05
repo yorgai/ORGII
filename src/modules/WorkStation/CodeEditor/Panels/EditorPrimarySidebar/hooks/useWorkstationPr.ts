@@ -5,7 +5,11 @@ import { useNavigate } from "react-router-dom";
 
 import { fetchRustApi, gitRepoUrl } from "@src/api/http/git/client";
 import { getGitRemotes } from "@src/api/http/git/remotes";
-import { findPullRequestLocal } from "@src/api/tauri/github";
+import {
+  LOCAL_GITHUB_TOKEN_USER_ID,
+  findPullRequestLocal,
+  getGitHubGitCredentialForRemote,
+} from "@src/api/tauri/github";
 import { Message } from "@src/components/Message";
 import { buildIntegrationsPath } from "@src/config/mainAppPaths/integrations";
 import {
@@ -126,10 +130,6 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
     let cancelled = false;
 
     void (async () => {
-      const token = getHostedToken();
-      const userId = localStorage.getItem(SERVICE_AUTH_STORAGE_KEYS.userId);
-      if (!token || !userId) return;
-
       try {
         const remotesData = await getGitRemotes({
           repo_id: repoId,
@@ -139,6 +139,34 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
           (remote) => remote.name === "origin"
         );
         if (!originRemote?.url) return;
+
+        const hostedToken = getHostedToken();
+        const hostedUserId = localStorage.getItem(
+          SERVICE_AUTH_STORAGE_KEYS.userId
+        );
+
+        let userId: string | null = null;
+        let token: string | null = null;
+
+        if (hostedToken && hostedUserId) {
+          userId = hostedUserId;
+          token = hostedToken;
+        } else {
+          try {
+            const credential = await getGitHubGitCredentialForRemote(
+              LOCAL_GITHUB_TOKEN_USER_ID,
+              originRemote.url
+            );
+            if (credential) {
+              userId = LOCAL_GITHUB_TOKEN_USER_ID;
+              token = credential.token;
+            }
+          } catch {
+            // no local credential available
+          }
+        }
+
+        if (!userId || !token) return;
 
         const repoFullName = parseGithubRepoFullName(originRemote.url);
         if (!repoFullName) return;
