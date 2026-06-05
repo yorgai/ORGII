@@ -63,7 +63,7 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
     <div className="flex-shrink-0 border-b border-border-2">
       {/* Section header — matches SectionHeader style */}
       <div
-        className="group/pr-header flex h-[28px] w-full items-center gap-1.5 px-3 hover:bg-fill-1"
+        className="group/pr-header flex h-[28px] w-full cursor-pointer items-center gap-1.5 px-3 hover:bg-fill-1"
         onClick={() => setCollapsed((c) => !c)}
         role="button"
         tabIndex={0}
@@ -76,44 +76,26 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
         ) : (
           <ChevronDown size={14} className="shrink-0 text-text-3" />
         )}
-        <GitPullRequest size={12} className="shrink-0 text-text-3" />
-        <span className="min-w-0 flex-1 truncate text-[11px] font-medium uppercase text-text-2">
-          {t("git.pr.title")}
-        </span>
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <GitPullRequest size={12} className="shrink-0 text-text-3" />
+          <span className="truncate text-[11px] font-medium uppercase text-text-2">
+            {t("git.pr.title")}
+          </span>
+        </div>
 
-        {/* Right-side: status badge or create button */}
+        {/* Right-side: status badge + create button */}
         <div
           className="flex items-center gap-1.5"
           onClick={(e) => e.stopPropagation()}
         >
-          {hasActivePr && prStatus && (
+          {prUrl && prStatus && (
             <span
               className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${PR_STATUS_COLORS[prStatus] ?? "bg-fill-2 text-text-3"}`}
             >
               {t(`git.pr.status.${prStatus}`, { defaultValue: prStatus })}
             </span>
           )}
-          {isInactive && prStatus && (
-            <span
-              className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${PR_STATUS_COLORS[prStatus] ?? "bg-fill-2 text-text-3"}`}
-            >
-              {t(`git.pr.status.${prStatus}`, { defaultValue: prStatus })}
-            </span>
-          )}
-          {readyToCreate && !isCreating && (
-            <Button
-              variant="primary"
-              appearance="outline"
-              size="mini"
-              shape="round"
-              icon={<GitPullRequest size={11} />}
-              onClick={handleCreate}
-              disabled={!onCreatePr}
-            >
-              {t("git.actions.createPR")}
-            </Button>
-          )}
-          {isCreating && (
+          {isCreating ? (
             <Button
               variant="primary"
               appearance="outline"
@@ -126,14 +108,28 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
             >
               {t("git.pr.creating")}
             </Button>
+          ) : (
+            readyToCreate && (
+              <Button
+                variant="primary"
+                appearance="outline"
+                size="mini"
+                shape="round"
+                icon={<GitPullRequest size={11} />}
+                onClick={handleCreate}
+                disabled={!onCreatePr}
+              >
+                {t("git.actions.createPR")}
+              </Button>
+            )
           )}
         </div>
       </div>
 
       {/* Collapsible body */}
       {!collapsed && (
-        <div className="px-3 pb-2.5 pt-0.5">
-          {/* Existing open PR */}
+        <div className="px-3 pb-2 pt-1">
+          {/* Existing PR link */}
           {prUrl && (
             <a
               href={prUrl}
@@ -145,7 +141,7 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
                 size={12}
                 className="shrink-0 text-text-3 group-hover/pr-link:text-primary-6"
               />
-              <span className="min-w-0 flex-1 truncate font-medium group-hover/pr-link:text-primary-6">
+              <span className="min-w-0 flex-1 truncate text-[13px] font-medium group-hover/pr-link:text-primary-6">
                 {prUrl.replace(/^https?:\/\/[^/]+\//, "")}
               </span>
             </a>
@@ -153,7 +149,7 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
 
           {/* Branch name */}
           {branchName && (
-            <div className="mt-0.5 flex items-center gap-1 px-2">
+            <div className="flex items-center gap-1 px-2 pb-0.5 pt-0">
               <code className="text-[11px] text-text-3">{branchName}</code>
             </div>
           )}
