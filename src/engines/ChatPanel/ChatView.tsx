@@ -389,15 +389,20 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const stationMode = useAtomValue(stationModeAtom);
     const setStationMode = useSetAtom(stationModeAtom);
 
+    const stationModeRef = useRef(stationMode);
+    useEffect(() => {
+      stationModeRef.current = stationMode;
+    }, [stationMode]);
+
     const handleFilesExpand = useCallback(() => {
-      if (stationMode === "agent-station") {
+      if (stationModeRef.current === "agent-station") {
         setStationMode("my-station");
       }
       navigate(ROUTES.workStation.code.path);
       setTimeout(() => {
         EditorTabService.openTab(createSourceControlTab(0));
       }, 0);
-    }, [stationMode, setStationMode, navigate]);
+    }, [setStationMode, navigate]);
 
     const {
       questionCollapsed,
@@ -410,7 +415,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
       collapsePlan,
       queueExpanded,
       processExpanded,
-      filesExpanded,
       toggleQueue,
       toggleProcess,
       toggleFiles,
@@ -528,7 +532,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
               onModeSwitchDataChange={setHasModeSwitch}
               queueExpanded={queueExpanded}
               processExpanded={processExpanded}
-              filesExpanded={filesExpanded}
               queuedMessages={sessionMessageQueue}
               onCancelQueuedMessage={cancelQueuedMessage}
               onSendQueuedMessageNow={handleSendNow}
