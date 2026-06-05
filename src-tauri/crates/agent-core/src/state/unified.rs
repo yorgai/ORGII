@@ -122,7 +122,23 @@ impl AgentAppState {
         // Clean up stale session registry files from a previous crash
         crate::session::file_registry::cleanup_stale_sessions(&[]);
 
-        // Mark any DB sessions stuck in "running" (from a prior crash) as abandoned
+        // First repair rows whose latest turn already wrote a durable terminal
+        // marker but whose session-level status is still in-flight. This is a
+        // stronger signal than startup crash cleanup: the backend observed a
+        // terminal turn, so don't downgrade it to `abandoned` below.
+        match crate::session::persistence::reconcile_sessions_with_terminal_turn_markers() {
+            Ok(0) => {}
+            Ok(n) => info!(
+                "[agent-state] Reconciled {} session(s) from terminal turn markers on startup",
+                n
+            ),
+            Err(err) => warn!(
+                "[agent-state] Failed to reconcile terminal turn markers on startup: {}",
+                err
+            ),
+        }
+
+        // Mark any remaining DB sessions stuck in "running" (from a prior crash) as abandoned
         // so the frontend doesn't show phantom active sessions on reload.
         match crate::session::persistence::mark_stale_running_sessions_abandoned() {
             Ok(0) => {}

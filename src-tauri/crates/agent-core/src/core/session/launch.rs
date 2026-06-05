@@ -435,6 +435,7 @@ pub(crate) async fn launch_rust_agent_run(
                 project_slug.as_deref(),
                 work_item_id.as_deref(),
                 &session_id,
+                state.app_handle.as_ref(),
             )
             .await;
             return Err(err);
@@ -507,6 +508,7 @@ pub(crate) async fn launch_rust_agent_run(
                     project_slug_for_send.as_deref(),
                     work_item_id_for_send.as_deref(),
                     &session_id_for_send,
+                    app_handle_for_send.as_ref(),
                 )
                 .await;
                 broadcast_launch_send_error(&session_id_for_send, &message);
@@ -1210,6 +1212,7 @@ async fn release_work_item_execution_lock_if_present(
     project_slug: Option<&str>,
     work_item_id: Option<&str>,
     session_id: &str,
+    app_handle: Option<&tauri::AppHandle>,
 ) {
     let (Some(project_slug), Some(work_item_id)) = (project_slug, work_item_id) else {
         return;
@@ -1217,12 +1220,24 @@ async fn release_work_item_execution_lock_if_present(
     let project_slug = project_slug.to_string();
     let work_item_id = work_item_id.to_string();
     let session_id = session_id.to_string();
-    let result = tokio::task::spawn_blocking(move || {
-        project_io::release_execution_lock(&project_slug, &work_item_id, &session_id)
+    let result = tokio::task::spawn_blocking({
+        let project_slug = project_slug.clone();
+        let work_item_id = work_item_id.clone();
+        let session_id = session_id.clone();
+        move || project_io::release_execution_lock(&project_slug, &work_item_id, &session_id)
     })
     .await;
     match result {
-        Ok(Ok(())) => {}
+        Ok(Ok(())) => {
+            if let Some(handle) = app_handle {
+                use tauri::Emitter;
+                let ts = chrono::Utc::now().to_rfc3339();
+                let _ = handle.emit(
+                    project_management::projects::events::DATA_CHANGED_EVENT,
+                    &ts,
+                );
+            }
+        }
         Ok(Err(err)) => {
             tracing::warn!(
                 error = %err,

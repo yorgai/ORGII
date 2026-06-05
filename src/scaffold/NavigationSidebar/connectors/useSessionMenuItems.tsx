@@ -1,6 +1,6 @@
 import { useAtomValue } from "jotai";
 import { GitFork, MoreHorizontal } from "lucide-react";
-import React, { type ReactNode, useCallback, useMemo } from "react";
+import { type ReactNode, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { RUST_AGENT_TYPE } from "@src/api/tauri/agent/types";
@@ -147,15 +147,33 @@ function renderBreathingStatusDot(): ReactNode {
   );
 }
 
-function renderStatusDot(unread: boolean): ReactNode {
+function renderStatusDot(
+  tone: "default" | "unread" | "asking" = "default"
+): ReactNode {
+  const ariaLabel =
+    tone === "unread"
+      ? "Unread"
+      : tone === "asking"
+        ? "Pending question"
+        : undefined;
+  const colorClass =
+    tone === "unread"
+      ? "bg-success-6"
+      : tone === "asking"
+        ? "bg-warning-6"
+        : "bg-fill-4";
+
   return (
     <span
-      aria-label={unread ? "Unread" : undefined}
-      aria-hidden={unread ? undefined : true}
-      className={`h-1.5 w-1.5 rounded-full ${unread ? "" : "bg-fill-4"}`}
-      style={unread ? { backgroundColor: "#F59E0B" } : undefined}
+      aria-label={ariaLabel}
+      aria-hidden={ariaLabel ? undefined : true}
+      className={`h-1.5 w-1.5 rounded-full ${colorClass}`}
     />
   );
+}
+
+function isSessionPendingAsking(session: Session): boolean {
+  return session.status === "waiting_for_user";
 }
 
 function isSessionCompletedUnread(
@@ -244,8 +262,13 @@ export function useSessionMenuItems({
       const displayName = getSessionListDisplayName(session, untitledSession);
       const timestampSrc =
         session.updated_at || session.updated_time || session.created_at;
-      const unread =
-        !inProgress && isSessionCompletedUnread(session, visitedSessions);
+      const pendingAsking = isSessionPendingAsking(session);
+      const unread = isSessionCompletedUnread(session, visitedSessions);
+      const statusDotTone = pendingAsking
+        ? "asking"
+        : unread
+          ? "unread"
+          : "default";
 
       return {
         id: session.session_id,
@@ -256,9 +279,11 @@ export function useSessionMenuItems({
           ? worktreeSubtitle(session.worktreeBranch)
           : undefined,
         icon: resolveSessionRowIcon(session),
-        trailingElement: inProgress
-          ? renderBreathingStatusDot()
-          : renderStatusDot(unread),
+        trailingElement: pendingAsking
+          ? renderStatusDot(statusDotTone)
+          : inProgress
+            ? renderBreathingStatusDot()
+            : renderStatusDot(statusDotTone),
         shortcut: formatCompactTimeAgo(timestampSrc),
       };
     },

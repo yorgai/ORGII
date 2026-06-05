@@ -22,10 +22,11 @@ mod messages;
 // `load_session_memory_state` but no caller names it directly, so it
 // doesn't need to be re-exported either.
 pub use crud::{
-    backfill_agent_definition_id, clear_worktree_metadata, delete_session, get_child_sessions,
-    get_parent_session, get_session, list_sessions, load_workspace,
-    mark_stale_running_sessions_abandoned, save_workspace, save_worktree_metadata, session_type,
-    update_account_id, update_agent_exec_mode, update_draft_text, update_model,
+    backfill_agent_definition_id, clear_worktree_metadata, delete_session,
+    finalize_terminal_turn_status, get_child_sessions, get_parent_session, get_session,
+    list_sessions, load_workspace, mark_stale_running_sessions_abandoned,
+    reconcile_sessions_with_terminal_turn_markers, save_workspace, save_worktree_metadata,
+    session_type, update_account_id, update_agent_exec_mode, update_draft_text, update_model,
     update_model_and_account, update_org_member_id, update_pinned, update_reply_target_event_id,
     update_status, update_tags, update_work_item_link, update_worktree_merge_status,
     upsert_session, UnifiedSessionRecord,
