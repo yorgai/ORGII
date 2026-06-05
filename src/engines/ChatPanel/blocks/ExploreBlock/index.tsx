@@ -147,7 +147,12 @@ const ExploreBlock: React.FC<ExploreBlockProps> = React.memo(
       handleHeaderMouseEnter,
       handleHeaderMouseLeave,
       handleLocate,
-    } = useBlockHeader({ defaultCollapsed, eventId, collapseAllValue: false });
+    } = useBlockHeader({
+      defaultCollapsed,
+      eventId,
+      collapseAllValue: false,
+      preserveDefaultOnExpand: true,
+    });
 
     const dirName = dirPath.split("/").pop() || dirPath;
     const hasMeaningfulDirPath = Boolean(dirPath) && dirPath !== ".";

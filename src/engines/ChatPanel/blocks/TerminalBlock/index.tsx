@@ -72,7 +72,7 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
     exitCode,
     executionTime: _executionTime,
     isError = false,
-    defaultCollapsed = false,
+    defaultCollapsed,
     title,
     eventId,
     sessionId,
@@ -87,15 +87,13 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
     const isBackground = processStatus === "background";
     const isStillRunning = isLoading || isBackground;
     // Visibility policy:
+    // - Caller-provided defaults always win.
     // - Errors → expanded (need to see what failed).
     // - Still running OR backgrounded → expanded (user wants to watch progress;
     //   backgrounded processes especially need the Stop button reachable).
-    // - Done & no error → collapse to a chip unless caller overrode it.
-    const effectiveDefaultCollapsed = isErrorExit
-      ? false
-      : isStillRunning
-        ? false
-        : defaultCollapsed;
+    // - Done & no error → collapse to a chip by default.
+    const effectiveDefaultCollapsed =
+      defaultCollapsed ?? (isErrorExit ? false : isStillRunning ? false : true);
 
     const {
       isCollapsed,
@@ -109,6 +107,7 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
       defaultCollapsed: effectiveDefaultCollapsed,
       eventId,
       collapseAllValue: true,
+      preserveDefaultOnExpand: true,
     });
 
     const wasStillRunningRef = useRef(isStillRunning);

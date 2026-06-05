@@ -349,7 +349,9 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     collapseTailWhenIdle,
     forceCollapseAllTurns,
     allTurnsCollapsed:
-      collapseAllCommand.epoch > 0 ? collapseAllCommand.collapsed : undefined,
+      collapseAllCommand.epoch > 0 && collapseAllCommand.collapsed
+        ? true
+        : undefined,
     isTurnBoundaryItem,
     isTurnHeaderItem,
   });

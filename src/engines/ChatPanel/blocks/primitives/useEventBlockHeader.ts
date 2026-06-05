@@ -32,6 +32,12 @@ export interface UseEventBlockHeaderOptions {
    * - `undefined` (default) — this block does not participate
    */
   collapseAllValue?: boolean;
+  /**
+   * When true, the global "expand all" command does not force this block
+   * open. Use this for tool blocks whose default/auto-collapse behavior
+   * should remain authoritative (terminal output, explore/ls results, etc.).
+   */
+  preserveDefaultOnExpand?: boolean;
 }
 
 export interface UseEventBlockHeaderReturn {
@@ -66,6 +72,7 @@ export function useEventBlockHeader(
     onToggle,
     eventId,
     collapseAllValue,
+    preserveDefaultOnExpand = false,
   } = options;
 
   const isNested = useContext(NestedBlockContext);
@@ -83,16 +90,17 @@ export function useEventBlockHeader(
   // expanded by clicking. The persisted collapse map is still checked so
   // a user's explicit expand survives re-renders.
   const nestedDefault = true;
+  const defaultCollapsedValue = isNested ? nestedDefault : defaultCollapsed;
   const persistedCollapsed =
     eventId !== undefined ? collapseMap.get(eventId) : undefined;
   const commandCollapsed =
-    participates && collapseAllCommand.epoch > 0
+    participates &&
+    collapseAllCommand.epoch > 0 &&
+    (!preserveDefaultOnExpand || collapseAllCommand.collapsed)
       ? collapseAllCommand.collapsed === collapseAllValue
       : undefined;
   const initialCollapsed =
-    persistedCollapsed ??
-    commandCollapsed ??
-    (isNested ? nestedDefault : defaultCollapsed);
+    persistedCollapsed ?? commandCollapsed ?? defaultCollapsedValue;
 
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
@@ -107,7 +115,11 @@ export function useEventBlockHeader(
     collapseAllCommand.epoch !== prevEpoch
   ) {
     setPrevEpoch(collapseAllCommand.epoch);
-    setIsCollapsed(collapseAllCommand.collapsed === collapseAllValue);
+    setIsCollapsed(
+      preserveDefaultOnExpand && !collapseAllCommand.collapsed
+        ? defaultCollapsedValue
+        : collapseAllCommand.collapsed === collapseAllValue
+    );
   }
 
   const toggleCollapsed = useCallback(() => {

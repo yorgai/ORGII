@@ -45,6 +45,7 @@ const SearchBlock: React.FC<SearchBlockProps> = React.memo(
       defaultCollapsed: true,
       eventId,
       collapseAllValue: false,
+      preserveDefaultOnExpand: true,
     });
 
     const toolIcon = getToolIcon("code_search", {

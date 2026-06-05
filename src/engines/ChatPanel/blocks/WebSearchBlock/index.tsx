@@ -89,7 +89,12 @@ const WebSearchBlock: React.FC<WebSearchBlockProps> = React.memo(
       handleHeaderMouseEnter,
       handleHeaderMouseLeave,
       handleLocate,
-    } = useBlockHeader({ defaultCollapsed, eventId, collapseAllValue: false });
+    } = useBlockHeader({
+      defaultCollapsed,
+      eventId,
+      collapseAllValue: false,
+      preserveDefaultOnExpand: true,
+    });
 
     const hasResults = results.length > 0;
     const toolIcon = getToolIcon("web_search", {

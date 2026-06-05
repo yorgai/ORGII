@@ -109,7 +109,9 @@ const TurnCollapsePinBar: React.FC<TurnCollapsePinBarProps> = memo(
 
     const override = overrideMap.get(turnId);
     const forcedCollapsed =
-      collapseAllCommand.epoch > 0 ? collapseAllCommand.collapsed : undefined;
+      collapseAllCommand.epoch > 0 && collapseAllCommand.collapsed
+        ? true
+        : undefined;
     const collapsed = override ?? forcedCollapsed ?? defaultCollapsed;
     const expanded = !collapsed;
 

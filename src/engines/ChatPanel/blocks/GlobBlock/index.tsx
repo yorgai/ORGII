@@ -44,6 +44,7 @@ const GlobBlock: React.FC<GlobBlockProps> = React.memo(
       defaultCollapsed: true,
       eventId,
       collapseAllValue: false,
+      preserveDefaultOnExpand: true,
     });
 
     return (
