@@ -10,10 +10,15 @@
  * Returns a `PrimarySidebarTab` ready to be passed to
  * `PrimarySidebarLayoutWithSections`.
  */
+import { useAtomValue } from "jotai";
+import { RotateCcw } from "lucide-react";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { SectionHeaderAction } from "@src/components/TreePanelSidebar/types";
+import { useGitStatus } from "@src/contexts/git";
+import { sessionIdAtom } from "@src/engines/SessionCore";
+import { useFileReviewBatchActions } from "@src/hooks/fileReview";
 import { useRefreshSpin } from "@src/hooks/ui";
 import {
   ICON_CONFIG,
@@ -28,6 +33,7 @@ import {
 import type { PrimarySidebarTab } from "@src/modules/WorkStation/shared/PrimarySidebarLayout";
 import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
 import type { GitFile } from "@src/types/git/types";
+import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
 
 import type { SourceControlFilterMode } from "./SourceControlFilterHeader";
 
@@ -135,7 +141,56 @@ export function useSourceControlSidebarModule({
     [handleHistoryRefreshClick, historyRefreshSpinClass]
   );
 
-  const actions = isHistoryMode ? historyActions : sourceControlActions;
+  const globalSessionId = useAtomValue(sessionIdAtom);
+  const { pendingCount, onUndoAll } =
+    useFileReviewBatchActions(globalSessionId);
+  const { forceRefresh: refreshGitStatus } = useGitStatus();
+  const [isUndoingAll, setIsUndoingAll] = useState(false);
+
+  const handleUndoAll = useCallback(async () => {
+    const confirmed = await confirmDestructiveAction({
+      title: t("sessions:actions.undoAll"),
+      message: t("sessions:confirmation.undoAllChanges", {
+        count: pendingCount,
+      }),
+      okLabel: t("sessions:actions.undoAll"),
+      cancelLabel: t("sessions:actions.cancel"),
+    });
+    if (!confirmed) return;
+    setIsUndoingAll(true);
+    try {
+      await onUndoAll();
+      refreshGitStatus().catch(() => {});
+    } finally {
+      setIsUndoingAll(false);
+    }
+  }, [t, pendingCount, onUndoAll, refreshGitStatus]);
+
+  const undoAllAction = useMemo<SectionHeaderAction>(
+    () => ({
+      key: "undo-all-changes",
+      icon: (
+        <RotateCcw
+          size={PANEL_CONSTANTS.ACTION_ICON_SIZE}
+          strokeWidth={PANEL_CONSTANTS.ACTION_ICON_STROKE}
+        />
+      ),
+      tooltip: t("sessions:actions.undoAll"),
+      onClick: handleUndoAll,
+      forceVisible: true,
+    }),
+    [handleUndoAll, t]
+  );
+
+  const sourceControlActionsWithUndo = useMemo<SectionHeaderAction[]>(
+    () =>
+      pendingCount > 0 && !isUndoingAll
+        ? [undoAllAction, ...sourceControlActions]
+        : sourceControlActions,
+    [pendingCount, isUndoingAll, undoAllAction, sourceControlActions]
+  );
+
+  const actions = isHistoryMode ? historyActions : sourceControlActionsWithUndo;
   const sectionTitle = isHistoryMode
     ? t("common:labels.gitHistory")
     : t("tabs.sourceControl");
