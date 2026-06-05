@@ -16,7 +16,6 @@ import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
 import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
-import { StackPill } from "@src/engines/ChatPanel/InputArea/components";
 import UserActionButton from "@src/engines/ChatPanel/InputArea/components/UserActionButton";
 import { useSlashItemsCache } from "@src/engines/ChatPanel/hooks/useInputArea/useSlashItemsCache";
 import { EditorTabService } from "@src/services/workStation";
@@ -234,18 +233,24 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
     return (
       <div className="relative flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-hide">
         {showPrPill && (
-          <StackPill
-            icon={<GitPullRequest size={12} strokeWidth={1.75} />}
-            count={0}
-            active={prIsCreating}
-            label={
-              prIsCreating
-                ? t("input.pr.creating", { defaultValue: "Creating PR…" })
-                : t("input.pr.open", { defaultValue: "Open PR" })
-            }
+          <Button
+            variant="secondary"
+            size="small"
+            shape="round"
             title={t("input.pr.open", { defaultValue: "Open PR" })}
             onClick={handleOpenPr}
-          />
+            loading={prIsCreating}
+            icon={
+              !prIsCreating ? (
+                <GitPullRequest size={12} strokeWidth={1.75} />
+              ) : undefined
+            }
+            className="max-w-[180px] select-none"
+          >
+            {prIsCreating
+              ? t("input.pr.creating", { defaultValue: "Creating PR…" })
+              : t("input.pr.open", { defaultValue: "Open PR" })}
+          </Button>
         )}
 
         {showCanvasPill && !isCanvasTabOpen && (
