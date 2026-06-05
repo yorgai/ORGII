@@ -23,6 +23,8 @@ export interface DedupResult {
   runningArgsMap: Map<string, Record<string, unknown>>;
   /** Chunk IDs of duplicate assistant messages that should be skipped */
   duplicateAssistantIds: Set<string>;
+  /** Chunk IDs of duplicate optimistic/persisted user messages that should be skipped */
+  duplicateUserIds: Set<string>;
 }
 
 /**
@@ -91,11 +93,17 @@ export function buildDedupMaps(events: SessionEvent[]): DedupResult {
     }
   }
 
-  // ── Pass 2: Assistant message content dedup ──
+  // ── Pass 2: Assistant/user message content dedup ──
 
   const duplicateAssistantIds = buildAssistantDedupSet(events);
+  const duplicateUserIds = buildUserDedupSet(events);
 
-  return { runningChunksToSkip, runningArgsMap, duplicateAssistantIds };
+  return {
+    runningChunksToSkip,
+    runningArgsMap,
+    duplicateAssistantIds,
+    duplicateUserIds,
+  };
 }
 
 /**
@@ -106,6 +114,52 @@ export function buildDedupMaps(events: SessionEvent[]): DedupResult {
  * the last assistant message in a group without reimplementing the
  * classification rules.
  */
+function normalizeDisplayText(value: string | undefined): string {
+  return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function isUserMessageEvent(event: SessionEvent): boolean {
+  return event.source === "user" && event.displayVariant === "message";
+}
+
+function preferUserEventId(left: SessionEvent, right: SessionEvent): string {
+  const leftIsOptimistic = left.id.startsWith("user-input-");
+  const rightIsOptimistic = right.id.startsWith("user-input-");
+  if (leftIsOptimistic !== rightIsOptimistic) {
+    return leftIsOptimistic ? right.id : left.id;
+  }
+  const leftPersisted = Boolean(left.result?.backendPersisted);
+  const rightPersisted = Boolean(right.result?.backendPersisted);
+  if (leftPersisted !== rightPersisted)
+    return leftPersisted ? left.id : right.id;
+  return right.id;
+}
+
+function buildUserDedupSet(events: SessionEvent[]): Set<string> {
+  const duplicates = new Set<string>();
+  const seenByText = new Map<string, SessionEvent>();
+
+  for (const event of events) {
+    if (!isUserMessageEvent(event)) continue;
+
+    const text = normalizeDisplayText(event.displayText);
+    if (!text) continue;
+
+    const previous = seenByText.get(text);
+    if (!previous) {
+      seenByText.set(text, event);
+      continue;
+    }
+
+    const keepId = preferUserEventId(previous, event);
+    const drop = keepId === previous.id ? event : previous;
+    duplicates.add(drop.id);
+    seenByText.set(text, keepId === previous.id ? previous : event);
+  }
+
+  return duplicates;
+}
+
 function isTurnSummaryEvent(event: SessionEvent): boolean {
   return (
     event.displayVariant === "summary" ||
@@ -181,8 +235,30 @@ function buildAssistantDedupSet(events: SessionEvent[]): Set<string> {
   const duplicates = new Set<string>();
   let prevText = "";
   let prevId = "";
+  let thinkingByTextInTurn = new Map<string, string>();
+  let assistantByTextInTurn = new Map<string, string>();
 
   for (const event of events) {
+    if (event.source === "user") {
+      thinkingByTextInTurn = new Map();
+      assistantByTextInTurn = new Map();
+      prevText = "";
+      prevId = "";
+      continue;
+    }
+
+    if (isThinkingMessage(event)) {
+      const text = normalizeDisplayText(extractAssistantText(event));
+      if (text) {
+        const previousThinkingId = thinkingByTextInTurn.get(text);
+        if (previousThinkingId) {
+          duplicates.add(previousThinkingId);
+        }
+        thinkingByTextInTurn.set(text, event.id);
+      }
+      continue;
+    }
+
     if (!isAssistantMessage(event)) {
       prevText = "";
       prevId = "";
@@ -195,6 +271,13 @@ function buildAssistantDedupSet(events: SessionEvent[]): Set<string> {
       prevId = "";
       continue;
     }
+
+    const normalizedText = normalizeDisplayText(text);
+    const previousAssistantId = assistantByTextInTurn.get(normalizedText);
+    if (previousAssistantId) {
+      duplicates.add(previousAssistantId);
+    }
+    assistantByTextInTurn.set(normalizedText, event.id);
 
     if (text === prevText && prevId) {
       duplicates.add(prevId);

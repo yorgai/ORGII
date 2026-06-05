@@ -34,6 +34,7 @@ mod sde;
 mod subagents;
 mod terminal;
 mod wingman;
+mod work_item_manager;
 
 pub use agent_architect::*;
 pub use ai_research::*;
@@ -45,6 +46,7 @@ pub use sde::*;
 pub use subagents::*;
 pub use terminal::*;
 pub use wingman::*;
+pub use work_item_manager::*;
 
 use super::schema::AgentDefinition;
 
@@ -110,6 +112,7 @@ pub fn get_builtin_agents() -> Vec<AgentDefinition> {
         ai_research_agent(),
         agent_architect(),
         wingman_agent(),
+        work_item_manager_agent(),
         // Subagents (used by the unified `agent` tool)
         explore_agent(),
         general_agent(),
@@ -131,7 +134,7 @@ mod tests {
     #[test]
     fn test_builtin_agents_count() {
         let agents = get_builtin_agents();
-        assert_eq!(agents.len(), 11); // base, os, sde, terminal, ai-research, agent-architect, wingman + 2 subagents + 2 memory subagents
+        assert_eq!(agents.len(), 12); // base, os, sde, terminal, ai-research, agent-architect, wingman, work-item-manager + 2 subagents + 2 memory subagents
     }
 
     #[test]
@@ -143,6 +146,7 @@ mod tests {
         assert!(is_builtin_agent(AI_RESEARCH_AGENT_ID));
         assert!(is_builtin_agent(AGENT_ARCHITECT_ID));
         assert!(is_builtin_agent(WINGMAN_AGENT_ID));
+        assert!(is_builtin_agent(WORK_ITEM_MANAGER_AGENT_ID));
         assert!(is_builtin_agent(EXPLORE_AGENT_ID));
         assert!(is_builtin_agent(GENERAL_AGENT_ID));
         assert!(is_builtin_agent(MEMORY_EXTRACTOR_ID));

@@ -69,8 +69,19 @@ enqueueCountAtom.debugLabel = "enqueueCountAtom";
 export const enqueueMessageAtom = atom(
   null,
   (_get, set, message: QueuedMessage) => {
-    set(messageQueueAtom, (prev) => [...prev, message]);
-    set(enqueueCountAtom, (n) => n + 1);
+    let added = false;
+    set(messageQueueAtom, (prev) => {
+      const duplicate = prev.some(
+        (existing) =>
+          existing.sessionId === message.sessionId &&
+          existing.content === message.content &&
+          existing.displayContent === message.displayContent
+      );
+      if (duplicate) return prev;
+      added = true;
+      return [...prev, message];
+    });
+    if (added) set(enqueueCountAtom, (n) => n + 1);
   }
 );
 enqueueMessageAtom.debugLabel = "enqueueMessageAtom";

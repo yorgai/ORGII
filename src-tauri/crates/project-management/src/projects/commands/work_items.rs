@@ -112,11 +112,9 @@ pub async fn work_item_read_standalone_item(
     org_id: Option<String>,
     short_id: String,
 ) -> Result<WorkItemData, String> {
-    tokio::task::spawn_blocking(move || {
-        io::read_standalone_work_item(org_id.as_deref(), &short_id)
-    })
-    .await
-    .map_err(|err| format!("Task join error: {}", err))?
+    tokio::task::spawn_blocking(move || io::read_standalone_work_item(org_id.as_deref(), &short_id))
+        .await
+        .map_err(|err| format!("Task join error: {}", err))?
 }
 
 // ---------------------------------------------------------------------

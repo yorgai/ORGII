@@ -19,9 +19,8 @@ pub(super) use AppSubtool::{
 pub(super) use ChatBlock::{
     CanvasInline as CbCanvasInline, Diff as CbDiff, Explore as CbExplore, Fallback as CbFallback,
     Glob as CbGlob, OrgTask as CbOrgTask, PlanDoc as CbPlanDoc, ReadFile as CbReadFile,
-    Search as CbSearch, SentMessage as CbSentMessage, SetupRepo as CbSetupRepo,
-    Shell as CbShell, Subagent as CbSubagent, TitleOnly as CbTitleOnly, Todo as CbTodo,
-    WebSearch as CbWebSearch,
+    Search as CbSearch, SentMessage as CbSentMessage, SetupRepo as CbSetupRepo, Shell as CbShell,
+    Subagent as CbSubagent, TitleOnly as CbTitleOnly, Todo as CbTodo, WebSearch as CbWebSearch,
 };
 pub(super) use HumanToolKey::{
     Browser as HtBrowser,

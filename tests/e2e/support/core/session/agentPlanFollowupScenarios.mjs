@@ -1090,9 +1090,13 @@ function normalizeEventText(text) {
 
 async function assertNoDuplicateThinkingEvents(label) {
   const state = await inspectChatState(`${label}-thinking-dedup`);
+  const eventById = new Map((state.chatEvents ?? []).map((event) => [event.id, event]));
+  const visibleEvents = (state.pipelineItems ?? [])
+    .map((item) => (item.eventId ? eventById.get(item.eventId) : null))
+    .filter(Boolean);
   let currentUserTurnIndex = 0;
   let seenInTurn = new Map();
-  for (const event of state.chatEvents ?? []) {
+  for (const event of visibleEvents) {
     if (event.source === "user") {
       currentUserTurnIndex += 1;
       seenInTurn = new Map();
@@ -1104,7 +1108,7 @@ async function assertNoDuplicateThinkingEvents(label) {
     const existing = seenInTurn.get(text);
     if (existing) {
       throw new Error(
-        `${label} duplicated thinking event in user turn ${currentUserTurnIndex}; first=${existing} second=${event.id} text=${JSON.stringify(text.slice(0, 180))} state=${JSON.stringify(summarizeChatState(state))}`
+        `${label} duplicated visible thinking event in user turn ${currentUserTurnIndex}; first=${existing} second=${event.id} text=${JSON.stringify(text.slice(0, 180))} state=${JSON.stringify(summarizeChatState(state))}`
       );
     }
     seenInTurn.set(text, event.id);

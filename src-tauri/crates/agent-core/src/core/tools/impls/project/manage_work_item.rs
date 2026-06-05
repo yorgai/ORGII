@@ -4,7 +4,7 @@
 //! shared implementations used by agent tools and Tauri work-item commands.
 
 use async_trait::async_trait;
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 use crate::tool_infra::OrchestratorConfigOverrides;
 use crate::tools::names as tool_names;
@@ -97,6 +97,63 @@ impl WorkItemTool {
         })
     }
 
+    fn batch_items(params: &Value) -> Result<Vec<Value>, ToolError> {
+        let Some(items) = params.get("items") else {
+            return Err(ToolError::InvalidParams(
+                "items array is required for batch".to_string(),
+            ));
+        };
+        let items = items.as_array().ok_or_else(|| {
+            ToolError::InvalidParams("items must be an array for batch".to_string())
+        })?;
+        if items.is_empty() {
+            return Err(ToolError::InvalidParams(
+                "items must contain at least one operation".to_string(),
+            ));
+        }
+
+        let mut merged_items = Vec::with_capacity(items.len());
+        for (idx, item) in items.iter().enumerate() {
+            let item_obj = item.as_object().ok_or_else(|| {
+                ToolError::InvalidParams(format!("items[{idx}] must be an object"))
+            })?;
+            let mut merged = Map::new();
+            if let Some(project_slug) = params.get("project_slug") {
+                merged.insert("project_slug".to_string(), project_slug.clone());
+            }
+            if let Some(session_status) = params.get("session_status") {
+                merged.insert("session_status".to_string(), session_status.clone());
+            }
+            if let Some(agent_role) = params.get("agent_role") {
+                merged.insert("agent_role".to_string(), agent_role.clone());
+            }
+            for (key, value) in item_obj {
+                merged.insert(key.clone(), value.clone());
+            }
+            if !merged.contains_key("action") {
+                return Err(ToolError::InvalidParams(format!(
+                    "items[{idx}].action is required"
+                )));
+            }
+            merged_items.push(Value::Object(merged));
+        }
+        Ok(merged_items)
+    }
+
+    async fn execute_batch(&self, params: &Value) -> Result<String, ToolError> {
+        let items = Self::batch_items(params)?;
+        let mut lines = vec![format!("Batch completed: {} operation(s)", items.len())];
+        for (idx, item) in items.into_iter().enumerate() {
+            let tool = WorkItemTool::new(self.session_id.clone());
+            let result = Box::pin(tool.execute_text(item)).await;
+            match result {
+                Ok(text) => lines.push(format!("{}. OK: {}", idx + 1, text)),
+                Err(err) => lines.push(format!("{}. ERROR: {}", idx + 1, err)),
+            }
+        }
+        Ok(lines.join("\n"))
+    }
+
     fn orchestrator_overrides_from_params(params: &Value) -> Option<OrchestratorConfigOverrides> {
         let account = optional_string(params, "selected_account_id");
         let model = optional_string(params, "selected_model_id");
@@ -174,7 +231,11 @@ impl WorkItemTool {
             *body = description;
         }
         if let Some(project) = optional_string(params, "project") {
-            fm.project = if project.is_empty() { None } else { Some(project) };
+            fm.project = if project.is_empty() {
+                None
+            } else {
+                Some(project)
+            };
         }
         if let Some(status) = optional_string(params, "status") {
             fm.status = status;
@@ -183,7 +244,11 @@ impl WorkItemTool {
             fm.priority = priority;
         }
         if let Some(assignee) = optional_string(params, "assignee") {
-            fm.assignee = if assignee.is_empty() { None } else { Some(assignee) };
+            fm.assignee = if assignee.is_empty() {
+                None
+            } else {
+                Some(assignee)
+            };
         }
         if let Some(labels) = Self::optional_string_array(params, "labels") {
             fm.labels = labels;
@@ -196,7 +261,11 @@ impl WorkItemTool {
             };
         }
         if let Some(parent) = optional_string(params, "parent") {
-            fm.parent = if parent.is_empty() { None } else { Some(parent) };
+            fm.parent = if parent.is_empty() {
+                None
+            } else {
+                Some(parent)
+            };
         }
         if let Some(start_date) = optional_string(params, "start_date") {
             fm.start_date = if start_date.is_empty() {
@@ -258,7 +327,8 @@ impl WorkItemTool {
         fm: &mut WorkItemFrontmatter,
         params: &Value,
     ) -> Result<String, ToolError> {
-        let session_id = optional_string(params, "session_id").unwrap_or_else(|| self.session_id.clone());
+        let session_id =
+            optional_string(params, "session_id").unwrap_or_else(|| self.session_id.clone());
         let status = Self::parse_linked_session_status(optional_string(params, "session_status"))?;
         let agent_role = Self::parse_agent_role(optional_string(params, "agent_role"))?;
         let now = chrono::Utc::now().to_rfc3339();
@@ -305,7 +375,8 @@ impl WorkItemTool {
         fm: &mut WorkItemFrontmatter,
         params: &Value,
     ) -> String {
-        let session_id = optional_string(params, "session_id").unwrap_or_else(|| self.session_id.clone());
+        let session_id =
+            optional_string(params, "session_id").unwrap_or_else(|| self.session_id.clone());
         fm.linked_sessions
             .retain(|linked| linked.session_id != session_id);
         fm.updated_at = chrono::Utc::now().to_rfc3339();
@@ -388,8 +459,8 @@ impl WorkItemTool {
         let target_date = optional_string(&params, "target_date");
         let starred = optional_bool(&params, "starred").unwrap_or(false);
         let todos = Self::optional_todos(&params).unwrap_or_default();
-        let orchestrator_config = Self::orchestrator_overrides_from_params(&params)
-            .map(Self::config_from_overrides);
+        let orchestrator_config =
+            Self::orchestrator_overrides_from_params(&params).map(Self::config_from_overrides);
         let schedule = Self::parse_schedule(&params);
 
         run_blocking("create_standalone_work_item", move || {
@@ -430,13 +501,19 @@ impl WorkItemTool {
                 work_products: vec![],
             };
             io::write_standalone_work_item(None, &short_id, &frontmatter, &body)?;
-            Ok(format!("Created standalone work item '{}' [{}]", title, short_id))
+            Ok(format!(
+                "Created standalone work item '{}' [{}]",
+                title, short_id
+            ))
         })
         .await
         .map_err(ToolError::ExecutionFailed)
     }
 
-    async fn update_standalone_work_item(short_id: String, params: Value) -> Result<String, ToolError> {
+    async fn update_standalone_work_item(
+        short_id: String,
+        params: Value,
+    ) -> Result<String, ToolError> {
         run_blocking("update_standalone_work_item", move || {
             let mut item = io::read_standalone_work_item(None, &short_id)?;
             Self::apply_updates(&mut item.frontmatter, &mut item.body, &params)
@@ -464,7 +541,12 @@ impl WorkItemTool {
         .map_err(ToolError::ExecutionFailed)
     }
 
-    async fn link_session(&self, scope: WorkItemScope, short_id: String, params: Value) -> Result<String, ToolError> {
+    async fn link_session(
+        &self,
+        scope: WorkItemScope,
+        short_id: String,
+        params: Value,
+    ) -> Result<String, ToolError> {
         match scope {
             WorkItemScope::Project(project_slug) => {
                 let session_id = self.session_id.clone();
@@ -490,9 +572,9 @@ impl WorkItemTool {
                 run_blocking("link_standalone_work_item_session", move || {
                     let mut item = io::read_standalone_work_item(None, &short_id)?;
                     let tool = WorkItemTool::new(session_id);
-                    let linked_session_id =
-                        tool.link_session_to_frontmatter(&mut item.frontmatter, &params)
-                            .map_err(|err| err.to_string())?;
+                    let linked_session_id = tool
+                        .link_session_to_frontmatter(&mut item.frontmatter, &params)
+                        .map_err(|err| err.to_string())?;
                     io::write_standalone_work_item(None, &short_id, &item.frontmatter, &item.body)?;
                     Ok(format!(
                         "Linked session {} to standalone work item [{}]",
@@ -505,7 +587,12 @@ impl WorkItemTool {
         }
     }
 
-    async fn unlink_session(&self, scope: WorkItemScope, short_id: String, params: Value) -> Result<String, ToolError> {
+    async fn unlink_session(
+        &self,
+        scope: WorkItemScope,
+        short_id: String,
+        params: Value,
+    ) -> Result<String, ToolError> {
         match scope {
             WorkItemScope::Project(project_slug) => {
                 let session_id = self.session_id.clone();
@@ -560,8 +647,9 @@ impl Tool for WorkItemTool {
 
     fn llm_description(&self) -> Option<String> {
         Some(
-            "Manage work items (tasks, issues, bugs). Omit project_slug for standalone work items. \
-             Supports: list, read, create, update, delete, add_delegation, link_session, unlink_session. \
+            "Manage work items (tasks, issues, bugs) in the global project store. Omit project_slug for standalone work items. \
+             Supports: list, read, create, update, delete, add_delegation, link_session, unlink_session, batch. \
+             Use batch for multiple Work Items and put project_slug on each item when operations target different Projects. \
              Use link_session to attach the current chat/session to an existing work item; create may be used first."
                 .to_string(),
         )
@@ -574,7 +662,7 @@ impl Tool for WorkItemTool {
                 "action": {
                     "type": "string",
                     "description": "The operation to perform.",
-                    "enum": ["list", "read", "create", "update", "delete", "add_delegation", "link_session", "unlink_session"]
+                    "enum": ["list", "read", "create", "update", "delete", "add_delegation", "link_session", "unlink_session", "batch"]
                 },
                 "project_slug": {
                     "type": "string",
@@ -644,6 +732,11 @@ impl Tool for WorkItemTool {
                         "cron": { "type": "string" },
                         "enabled": { "type": "boolean" }
                     }
+                },
+                "items": {
+                    "type": "array",
+                    "description": "Batch operations. Each item is a manage_work_item parameter object with its own action. Parent project_slug/session_status/agent_role are inherited when omitted; item project_slug overrides parent for multi-project batches.",
+                    "items": { "type": "object" }
                 }
             },
             "required": ["action"]
@@ -652,6 +745,9 @@ impl Tool for WorkItemTool {
 
     async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
         let action = required_string(&params, "action")?;
+        if action == "batch" {
+            return self.execute_batch(&params).await;
+        }
         let scope = Self::resolve_scope(&params)?;
 
         match action.as_str() {
@@ -679,7 +775,9 @@ impl Tool for WorkItemTool {
                         &project_slug,
                         &title,
                         optional_string(&params, "description").unwrap_or_default().as_str(),
-                        optional_string(&params, "project").as_deref(),
+                        optional_string(&params, "project")
+                            .as_deref()
+                            .or(Some(project_slug.as_str())),
                         optional_string(&params, "status").as_deref(),
                         optional_string(&params, "priority").as_deref(),
                         optional_string(&params, "assignee").as_deref(),
@@ -797,7 +895,7 @@ impl Tool for WorkItemTool {
                 ))
             }
             _ => Err(ToolError::InvalidParams(format!(
-                "Unknown work_item action: '{}'. Valid actions: list, read, create, update, delete, add_delegation, link_session, unlink_session",
+                "Unknown work_item action: '{}'. Valid actions: list, read, create, update, delete, add_delegation, link_session, unlink_session, batch",
                 action
             ))),
         }

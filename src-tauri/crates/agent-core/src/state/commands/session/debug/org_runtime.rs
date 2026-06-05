@@ -151,9 +151,12 @@ pub async fn debug_session_execute_tool(
     tool_name: String,
     params: Value,
 ) -> Result<DebugOrgToolResult, String> {
-    if !matches!(tool_name.as_str(), names::READ_FILE) {
+    if !matches!(
+        tool_name.as_str(),
+        names::READ_FILE | names::MANAGE_WORK_ITEM
+    ) {
         return Err(format!(
-            "debug_session_execute_tool only allows safe audited tools [read_file]; got '{tool_name}'"
+            "debug_session_execute_tool only allows audited tools [read_file, manage_work_item]; got '{tool_name}'"
         ));
     }
 

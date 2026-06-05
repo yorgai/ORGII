@@ -73,17 +73,16 @@ pub fn update_work_item_partial_enriched(
     updates: &WorkItemPartialUpdate,
 ) -> Result<EnrichedWorkItem, String> {
     let updated = super::atomic::update_work_item_partial(project_slug, short_id, updates)?;
-    let (project_name, labels, members) = if let Some(updated_project_id) =
-        updated.frontmatter.project.as_deref()
-    {
-        (
-            Some(read_project_name_by_id(updated_project_id)?),
-            read_labels(updated_project_id)?.labels,
-            read_members(updated_project_id)?.members,
-        )
-    } else {
-        (None, Vec::new(), Vec::new())
-    };
+    let (project_name, labels, members) =
+        if let Some(updated_project_id) = updated.frontmatter.project.as_deref() {
+            (
+                Some(read_project_name_by_id(updated_project_id)?),
+                read_labels(updated_project_id)?.labels,
+                read_members(updated_project_id)?.members,
+            )
+        } else {
+            (None, Vec::new(), Vec::new())
+        };
     let label_map = build_label_map(&labels);
     let member_map = build_member_map(&members);
 

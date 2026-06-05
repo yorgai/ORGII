@@ -249,21 +249,25 @@ export function useSessionActions(options: UseSessionActionsOptions) {
       if (!restoreQueueHead) {
         setUserInitiatedCancel(false);
         setPendingCancel(true);
-        void SessionService.interrupt({
-          sessionId,
-          reason: CANCEL_REASON.FORCE_SEND,
-          onError: (msg: string) => {
-            Message.error(t(msg));
-          },
-        }).catch((error: unknown) => {
+        try {
+          await SessionService.interrupt({
+            sessionId,
+            reason: CANCEL_REASON.FORCE_SEND,
+            onError: (msg: string) => {
+              Message.error(t(msg));
+            },
+          });
+          await eventStoreProxy.finalizeRunningEventsAsStopped(sessionId);
+        } catch (error: unknown) {
           console.error(
             "[useSessionActions] send-now interrupt failed:",
             error
           );
+        } finally {
           setPendingCancel(false);
           setSessionRuntimeStatus("idle");
           setStreamRetryStatus(null);
-        });
+        }
         return;
       }
 

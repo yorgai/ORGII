@@ -209,6 +209,9 @@ const js = {
     if (element.disabled) return "disabled";
     const state = element.getAttribute("data-state");
     if (state !== ${JSON.stringify(expectedState)}) return "state:" + String(state);
+    element.scrollIntoView({ block: "center", inline: "center" });
+    element.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window, button: 0 }));
+    element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, view: window, button: 0 }));
     element.click();
     return "clicked";
   `,
@@ -525,9 +528,12 @@ function findDuplicateTranscriptEntries(entries) {
 
 async function assertNoDuplicateTranscriptMessages(label) {
   const state = await inspectChatState(`${label}-duplicate-transcript-events`);
-  const eventEntries = (state.chatEvents ?? [])
+  const eventById = new Map((state.chatEvents ?? []).map((event) => [event.id, event]));
+  const eventEntries = (state.pipelineItems ?? [])
+    .map((item) => (item.eventId ? eventById.get(item.eventId) : null))
     .filter(
       (event) =>
+        event &&
         (event.source === "user" || event.source === "assistant") &&
         event.displayVariant === "message"
     )
@@ -535,12 +541,12 @@ async function assertNoDuplicateTranscriptMessages(label) {
       id: event.id,
       source: event.source,
       text: event.displayText,
-      surface: "event-store",
+      surface: "event-pipeline",
     }));
   const eventDuplicates = findDuplicateTranscriptEntries(eventEntries);
   if (eventDuplicates.length > 0) {
     throw new Error(
-      `${label} duplicate transcript messages in EventStore; duplicates=${JSON.stringify(eventDuplicates.slice(0, 3))} state=${JSON.stringify(summarizeChatState(state))}`
+      `${label} duplicate transcript messages in Event pipeline; duplicates=${JSON.stringify(eventDuplicates.slice(0, 3))} state=${JSON.stringify(summarizeChatState(state))}`
     );
   }
 
@@ -1266,7 +1272,11 @@ async function configureScenario(config, overrides = {}) {
 async function assertSingleUserPromptInActiveTranscript(firstPrompt) {
   const promptPrefix = firstPrompt.slice(0, 120);
   const state = await inspectChatState("single-user-prompt-check");
-  const matchingUserEvents = (state.chatEvents ?? []).filter(
+  const eventById = new Map((state.chatEvents ?? []).map((event) => [event.id, event]));
+  const visibleEvents = (state.pipelineItems ?? [])
+    .map((item) => (item.eventId ? eventById.get(item.eventId) : null))
+    .filter(Boolean);
+  const matchingUserEvents = visibleEvents.filter(
     (event) =>
       event.source === "user" &&
       event.displayVariant === "message" &&

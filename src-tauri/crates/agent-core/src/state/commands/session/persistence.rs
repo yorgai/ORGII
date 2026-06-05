@@ -4,10 +4,10 @@ use crate::persistence::db_helpers as shared;
 use crate::persistence::session_snapshots;
 use crate::session::persistence as session_persistence;
 use crate::session::{SessionListFilter, SessionStatus};
-use core_types::workflow::{AgentRole, LinkedSession, LinkedSessionStatus, LinkedSessionType};
 use crate::state::control_flow::CancelReason;
 use crate::state::AgentAppState;
 use crate::tools::file_history;
+use core_types::workflow::{AgentRole, LinkedSession, LinkedSessionStatus, LinkedSessionType};
 
 /// Load conversation messages for a session.
 #[tauri::command]
@@ -158,7 +158,12 @@ pub async fn agent_link_session_to_work_item(
     agent_role: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let updated_record = tokio::task::spawn_blocking(move || {
-        link_session_to_work_item_sync(&session_id, &project_slug, &work_item_id, agent_role.as_deref())
+        link_session_to_work_item_sync(
+            &session_id,
+            &project_slug,
+            &work_item_id,
+            agent_role.as_deref(),
+        )
     })
     .await
     .map_err(|err| err.to_string())??;
@@ -166,7 +171,10 @@ pub async fn agent_link_session_to_work_item(
     {
         use tauri::Emitter;
         let ts = chrono::Utc::now().to_rfc3339();
-        let _ = app.emit(project_management::projects::events::DATA_CHANGED_EVENT, &ts);
+        let _ = app.emit(
+            project_management::projects::events::DATA_CHANGED_EVENT,
+            &ts,
+        );
     }
 
     shared::to_json_value(updated_record).map_err(|err| err.to_string())
@@ -190,7 +198,11 @@ fn link_session_to_work_item_sync(
             session.work_item_id.as_deref(),
         ) {
             if old_project_slug != project_slug || old_work_item_id != work_item_id {
-                remove_linked_session_from_work_item(old_project_slug, old_work_item_id, session_id)?;
+                remove_linked_session_from_work_item(
+                    old_project_slug,
+                    old_work_item_id,
+                    session_id,
+                )?;
             }
         }
     }
@@ -212,14 +224,20 @@ fn remove_linked_session_from_work_item(
     work_item_id: &str,
     session_id: &str,
 ) -> Result<(), String> {
-    project_management::projects::io::update_work_item_atomic(project_slug, work_item_id, |frontmatter, _body| {
-        let original_len = frontmatter.linked_sessions.len();
-        frontmatter.linked_sessions.retain(|linked| linked.session_id != session_id);
-        if frontmatter.linked_sessions.len() != original_len {
-            frontmatter.updated_at = chrono::Utc::now().to_rfc3339();
-        }
-        Ok(())
-    })
+    project_management::projects::io::update_work_item_atomic(
+        project_slug,
+        work_item_id,
+        |frontmatter, _body| {
+            let original_len = frontmatter.linked_sessions.len();
+            frontmatter
+                .linked_sessions
+                .retain(|linked| linked.session_id != session_id);
+            if frontmatter.linked_sessions.len() != original_len {
+                frontmatter.updated_at = chrono::Utc::now().to_rfc3339();
+            }
+            Ok(())
+        },
+    )
     .map(|_| ())
 }
 
@@ -229,28 +247,32 @@ fn upsert_linked_session_on_work_item(
     session: &session_persistence::UnifiedSessionRecord,
     agent_role: Option<&str>,
 ) -> Result<(), String> {
-    project_management::projects::io::update_work_item_atomic(project_slug, work_item_id, |frontmatter, _body| {
-        let linked = linked_session_from_record(session, agent_role);
-        match frontmatter
-            .linked_sessions
-            .iter_mut()
-            .find(|candidate| candidate.session_id == session.session_id)
-        {
-            Some(existing) => {
-                existing.session_type = linked.session_type;
-                existing.agent_role = linked.agent_role;
-                existing.status = linked.status;
-                existing.completed_at = linked.completed_at;
-                existing.total_tokens = linked.total_tokens;
-                if existing.result_preview.is_none() {
-                    existing.result_preview = linked.result_preview;
+    project_management::projects::io::update_work_item_atomic(
+        project_slug,
+        work_item_id,
+        |frontmatter, _body| {
+            let linked = linked_session_from_record(session, agent_role);
+            match frontmatter
+                .linked_sessions
+                .iter_mut()
+                .find(|candidate| candidate.session_id == session.session_id)
+            {
+                Some(existing) => {
+                    existing.session_type = linked.session_type;
+                    existing.agent_role = linked.agent_role;
+                    existing.status = linked.status;
+                    existing.completed_at = linked.completed_at;
+                    existing.total_tokens = linked.total_tokens;
+                    if existing.result_preview.is_none() {
+                        existing.result_preview = linked.result_preview;
+                    }
                 }
+                None => frontmatter.linked_sessions.push(linked),
             }
-            None => frontmatter.linked_sessions.push(linked),
-        }
-        frontmatter.updated_at = chrono::Utc::now().to_rfc3339();
-        Ok(())
-    })
+            frontmatter.updated_at = chrono::Utc::now().to_rfc3339();
+            Ok(())
+        },
+    )
     .map(|_| ())
 }
 
@@ -261,7 +283,9 @@ fn linked_session_from_record(
     let status = linked_session_status(&session.status);
     let completed_at = matches!(
         status,
-        LinkedSessionStatus::Completed | LinkedSessionStatus::Failed | LinkedSessionStatus::Cancelled
+        LinkedSessionStatus::Completed
+            | LinkedSessionStatus::Failed
+            | LinkedSessionStatus::Cancelled
     )
     .then(|| session.updated_at.clone());
     LinkedSession {
@@ -291,9 +315,9 @@ fn linked_session_status(raw: &str) -> LinkedSessionStatus {
         Some(SessionStatus::Cancelled | SessionStatus::Abandoned | SessionStatus::Timeout) => {
             LinkedSessionStatus::Cancelled
         }
-        Some(SessionStatus::Running | SessionStatus::WaitingForUser | SessionStatus::WaitingForFunds) => {
-            LinkedSessionStatus::Running
-        }
+        Some(
+            SessionStatus::Running | SessionStatus::WaitingForUser | SessionStatus::WaitingForFunds,
+        ) => LinkedSessionStatus::Running,
         _ => LinkedSessionStatus::Completed,
     }
 }

@@ -660,8 +660,13 @@ async function waitForIntermediateStreamEvents(label, finalText = null) {
               String(event.displayText ?? "").includes(finalText)
           )
         : false;
+      const hasAssistantOrToolEvent = (state.chatEvents ?? []).some(
+        (event) => event.source !== "user"
+      );
       const turnEnded =
-        !state.isSessionActive && state.runtimeStatus !== "running";
+        hasAssistantOrToolEvent &&
+        !state.isSessionActive &&
+        state.runtimeStatus !== "running";
       return turnEnded || finalTextSeen;
     },
     {
@@ -1017,8 +1022,31 @@ async function editFirstUserMessageAndResend(label, prompt) {
   );
 
   const inputSelector = await waitForChatInput();
-  await typeAndClickSend(inputSelector, prompt);
-
+  const beforeEditState = await inspectChatState(`${label}-before-edit-resend-click`);
+  const typed = await execJS(js.clearAndType(inputSelector, prompt));
+  if (!typed.includes(prompt)) {
+    throw new Error(`${label} failed to type edited prompt: ${typed}`);
+  }
+  const resendClicked = await execJS(`
+    const visible = (node) => {
+      if (!node) return false;
+      const rect = node.getBoundingClientRect();
+      const style = window.getComputedStyle(node);
+      return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+    };
+    const buttons = Array.from(document.querySelectorAll('button')).filter(visible);
+    const resend = buttons.find((button) => (button.textContent || '').trim() === 'Resend');
+    if (!resend) {
+      return { clicked: false, buttons: buttons.map((button) => (button.textContent || '').trim()).filter(Boolean).slice(0, 20) };
+    }
+    resend.click();
+    return { clicked: true };
+  `);
+  if (!resendClicked?.clicked) {
+    throw new Error(
+      `${label} could not click edit resend button: ${JSON.stringify(resendClicked)}`
+    );
+  }
   const revertClicked = await execJS(`
     const buttons = Array.from(document.querySelectorAll('button'));
     const revert = buttons.find((button) => (button.textContent || '').includes('Revert changes'));
@@ -1029,6 +1057,20 @@ async function editFirstUserMessageAndResend(label, prompt) {
   if (revertClicked !== "not-open" && revertClicked !== "clicked") {
     throw new Error(`${label} revert dialog click failed: ${revertClicked}`);
   }
+
+  await browser.waitUntil(
+    async () => {
+      const state = await inspectChatState(`${label}-after-edit-resend-click`);
+      return (state.chatEvents ?? []).some(
+        (event) => event.source === "user" && String(event.displayText ?? "").includes(prompt.slice(0, 120))
+      );
+    },
+    {
+      timeout: 30_000,
+      interval: 500,
+      timeoutMsg: `${label} edit resend did not append replacement prompt; before=${JSON.stringify(summarizeChatState(beforeEditState))} after=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))}`,
+    }
+  );
 }
 
 async function waitForPlanRevisionCleared(label, staleRevisionId) {
@@ -1051,8 +1093,8 @@ async function waitForPlanRevisionCleared(label, staleRevisionId) {
       );
     },
     {
-      timeout: 10_000,
-      interval: 500,
+      timeout: REPLY_TIMEOUT_MS,
+      interval: 1_000,
       timeoutMsg: `${label} stale plan revision remained after edit/resend; stale=${JSON.stringify(staleRevisionId)} state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} ui=${JSON.stringify(await execJS(js.planUi))}`,
     }
   );

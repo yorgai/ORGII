@@ -153,13 +153,7 @@ pub fn write_work_item(
     ))?;
     drop(connection);
 
-    write_work_item_with_scope(
-        Some(project_id),
-        &org_id,
-        short_id,
-        frontmatter,
-        body,
-    )
+    write_work_item_with_scope(Some(project_id), &org_id, short_id, frontmatter, body)
 }
 
 pub fn write_standalone_work_item(
@@ -349,23 +343,24 @@ pub fn allocate_short_id(project_slug: &str) -> Result<String, String> {
     let tx =
         map_db(connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate))?;
 
-    let (project_id, prefix, mut next_id) = map_db(
+    let (project_id, org_id, prefix, mut next_id) = map_db(
         tx.query_row(
-            "SELECT id, short_id_prefix, next_work_item_id
+            "SELECT id, org_id, short_id_prefix, next_work_item_id
              FROM projects WHERE slug = ?1",
             params![project_slug],
             |row| {
                 let id: String = row.get(0)?;
-                let prefix: String = row.get(1)?;
-                let next_id: i64 = row.get(2)?;
-                Ok((id, prefix, next_id))
+                let org_id: String = row.get(1)?;
+                let prefix: String = row.get(2)?;
+                let next_id: i64 = row.get(3)?;
+                Ok((id, org_id, prefix, next_id))
             },
         )
         .optional(),
     )?
     .ok_or_else(|| format!("Project '{}' not found", project_slug))?;
 
-    if let Some(max_existing) = max_existing_work_item_number(&tx, &project_id, &prefix)? {
+    if let Some(max_existing) = max_existing_work_item_number(&tx, &org_id, &prefix)? {
         let min_next = (max_existing as i64).saturating_add(1);
         if next_id < min_next {
             next_id = min_next;
@@ -482,10 +477,12 @@ where
 }
 
 /// Count the largest numeric suffix used by an existing work item with
-/// `prefix` inside `project_id`. Returns `None` when none exist.
+/// `prefix` inside the org. `workitems.id` is global and currently equals
+/// `short_id`, so allocation must avoid collisions across projects that share
+/// a prefix, not just inside one project.
 fn max_existing_work_item_number<C>(
     connection: &C,
-    project_id: &str,
+    org_id: &str,
     prefix: &str,
 ) -> Result<Option<u32>, String>
 where
@@ -497,8 +494,8 @@ where
 
     let pattern = format!("{}-%", prefix);
     let rows = connection.query_string_rows(
-        "SELECT short_id FROM workitems WHERE project_id = ?1 AND short_id LIKE ?2",
-        params![project_id, pattern],
+        "SELECT short_id FROM workitems WHERE org_id = ?1 AND short_id LIKE ?2",
+        params![org_id, pattern],
     )?;
 
     max_numeric_suffix(rows, prefix)

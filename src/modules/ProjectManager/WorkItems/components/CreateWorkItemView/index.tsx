@@ -217,8 +217,7 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   >({});
   const [loadedLabels, setLoadedLabels] = useState<WorkItemLabel[]>([]);
 
-  const defaultProjectId =
-    projectId ?? availableProjects[0]?.id ?? loadedProjects[0]?.id;
+  const defaultProjectId = projectId;
   const { draft, updateDraft, setDraft, resetDraft, clearDraft } =
     useWorkItemCreatorDraft({
       seedProjectId: projectId,
@@ -469,8 +468,12 @@ const CreateWorkItemView: React.FC<CreateWorkItemViewProps> = ({
   const projectBreadcrumbSegment =
     projectOptions.length > 0 ? (
       <PropertyDropdownField
-        value={draft.projectId ?? projectOptions[0]?.value ?? ""}
-        label={projectBreadcrumbLabel}
+        value={draft.projectId ?? ""}
+        label={
+          draft.projectId
+            ? projectBreadcrumbLabel
+            : t("projects.dashboardTitle")
+        }
         icon={null}
         options={projectOptions}
         onChange={handleProjectBreadcrumbChange}

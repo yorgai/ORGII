@@ -1,3 +1,4 @@
+import { enrichedWorkItemToUI, projectApi } from "@src/api/http/project";
 import { rpc } from "@src/api/tauri/rpc";
 import { buildAgentOrgsPath } from "@src/config/mainAppPaths";
 import { agentOrgsActiveTabAtom } from "@src/modules/MainApp/AgentOrgs/store/agentOrgsActiveTabAtom";
@@ -5,8 +6,12 @@ import { allAgentDefsAtom } from "@src/modules/MainApp/AgentOrgs/store/builtInAg
 import { router } from "@src/router";
 import { reposAtom, selectedRepoIdAtom } from "@src/store/repo/atoms";
 import {
+  CHAT_PANEL_CONTENT_MODE,
   activeStationChatVisibleAtom,
+  chatPanelContentModeAtom,
   chatPanelMaximizedAtom,
+  chatPanelSelectedWorkItemAtom,
+  chatWidthAtom,
 } from "@src/store/ui/chatPanelAtom";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import {
@@ -249,6 +254,42 @@ export function createNavigationHelpers(store: E2EStore) {
     }
   };
 
+  const openChatPanelWorkItem = async (
+    projectSlug: string,
+    shortId: string
+  ): Promise<{ ok: true } | Err> => {
+    try {
+      const projects = await projectApi.readProjects();
+      const project = projects.find(
+        (candidate) => candidate.slug === projectSlug
+      );
+      const enrichedItems = await projectApi.readWorkItemsEnriched(projectSlug);
+      const workItem = enrichedItems.find((item) => item.shortId === shortId);
+      if (!workItem) {
+        return {
+          ok: false,
+          error: `openChatPanelWorkItem: Work Item not found ${projectSlug}/${shortId}`,
+        };
+      }
+      store.set(stationModeAtom, "my-station");
+      store.set(dockFilterAtom, "project");
+      store.set(chatPanelMaximizedAtom, true);
+      store.set(chatWidthAtom, 560);
+      store.set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+      store.set(chatPanelSelectedWorkItemAtom, {
+        workItem: enrichedWorkItemToUI(workItem),
+        projectId: project?.slug ?? projectSlug,
+        projectName: project?.meta?.name ?? projectSlug,
+        projectSlug,
+        shortId,
+      });
+      await new Promise((resolve) => window.setTimeout(resolve, 100));
+      return { ok: true };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   const inspectWorkstationSurface = async (): Promise<
     | {
         ok: true;
@@ -300,6 +341,7 @@ export function createNavigationHelpers(store: E2EStore) {
     getLocationPathname,
     openWorkspaceWorkItemsTab,
     openProjectWorkItemsTab,
+    openChatPanelWorkItem,
     openAgentTab,
     openOrgTab,
     inspectWorkstationSurface,

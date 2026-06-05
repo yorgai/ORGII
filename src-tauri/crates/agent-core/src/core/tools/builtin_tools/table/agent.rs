@@ -80,8 +80,8 @@ pub(super) static TOOLS: &[ToolEntry] = &[
     },
     ToolEntry {
         name: tool_names::MANAGE_WORK_ITEM,
-        description: "Manage work items (tasks, issues, bugs) on a project.",
-        description_detail: "CRUD over work items (list_items, read_item, create_item, update_item, delete_item) plus `start_item` to dispatch a work item to the SDE agent. Work items live on a project from `manage_project`.",
+        description: "Manage standalone or project-scoped work items (tasks, issues, bugs).",
+        description_detail: "CRUD over Work Items (list/read/create/update/delete), link or unlink sessions, and batch multiple operations. Omit project_slug for standalone Work Items; set project_slug per batch item for multi-project creation.",
         category: tool_categories::PROJECT,
         icon_id: "layout-list",
         simulator_app: AppProject,
@@ -112,6 +112,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
                 labels: "tools.deleteWorkItemRunning", "tools.deleteWorkItemDone", "tools.deleteWorkItemFailed"
             ),
             action_sub!("start_item", "Dispatch a work item to the SDE agent", SubProject, labels: "tools.manageWorkItemStartItemRunning", "tools.manageWorkItemStartItemDone", "tools.manageWorkItemStartItemFailed"),
+            action_sub!("batch", "Run multiple standalone or project-scoped Work Item operations", SubProject, labels: "tools.manageWorkItemRunning", "tools.manageWorkItemDone", "tools.manageWorkItemFailed"),
         ],
         required_capability: CapManagement,
         ..DEFAULT_TOOL_ENTRY
