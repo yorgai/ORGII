@@ -1806,7 +1806,7 @@
       "title": "Benchmark",
       "description": "Browse SWE-bench Pro tasks, choose what to run, and check the local benchmark environment before evaluation.",
       "phaseLabel": "Task browser",
-      "sourcePath": "Task source",
+      "sourcePath": "Carpeta de benchmark",
       "evaluationMode": "Evaluation mode",
       "evaluationModes": {
         "patchOnly": "Patch only",
@@ -1859,9 +1859,17 @@
       "worktreePathLabel": "Worktree",
       "singleRun": "Ejecución única",
       "batchRun": "Ejecución por lotes",
-      "sourcePathPlaceholder": "Ruta al JSONL de benchmark o repo de dataset",
+      "sourcePathPlaceholder": "Ruta a la carpeta de benchmark",
       "localPath": "ruta local",
-      "runType": "Tipo de ejecución"
+      "runType": "Tipo de ejecución",
+      "kindTitle": "Benchmark",
+      "kinds": {
+        "sweBenchPro": "SWE-bench Pro",
+        "terminalBench": "Terminal-Bench"
+      },
+      "selectedTasks": "{{selected}}/{{total}} seleccionadas",
+      "concurrency": "Paralelo",
+      "taskLoadingUnsupported": "La carga de tareas aún no está disponible para este benchmark; usa preflight para comprobar la fuente local."
     },
     "skillsAndTools": "Skills y herramientas"
   },

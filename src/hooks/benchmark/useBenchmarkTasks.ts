@@ -1,4 +1,4 @@
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { useCallback, useEffect } from "react";
 
 import { benchmarkApi } from "@src/api/tauri/benchmark";
@@ -23,7 +23,7 @@ export function useBenchmarkTasks({
   loadDetail = true,
   loadOnMount = true,
 }: UseBenchmarkTasksOptions = {}) {
-  const kind = useAtomValue(benchmarkKindAtom);
+  const [kind, setKind] = useAtom(benchmarkKindAtom);
   const [sourcePath, setSourcePath] = useAtom(benchmarkSourcePathAtom);
   const [tasks, setTasks] = useAtom(benchmarkTasksAtom);
   const [selectedTaskId, setSelectedTaskId] = useAtom(
@@ -200,8 +200,10 @@ export function useBenchmarkTasks({
     isLoadingDetail,
     isLoadingTasks,
     loadTasks,
+    kind,
     selectedTask,
     selectedTaskId,
+    setKind,
     setSelectedTaskId,
     setSourcePath,
     sourcePath,

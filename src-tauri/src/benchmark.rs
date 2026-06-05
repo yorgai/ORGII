@@ -1,16 +1,22 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock};
 
+use agent_core::definitions::orgs::{AgentOrgsStore, OrgMemberLaunchOverride};
+use agent_core::state::commands::session::launch::{
+    session_launch_impl, SessionLaunchParams, SessionLaunchResult,
+};
+use agent_core::state::AgentAppState;
 use chrono::Utc;
 use git::worktree::create_session_worktree;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, BufReader as TokioBufReader};
 use tokio::process::Command;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Semaphore};
+use tauri::Manager;
 use uuid::Uuid;
 
 const BENCHMARK_KIND_SWE_BENCH_PRO: &str = "swe_bench_pro";
@@ -23,13 +29,29 @@ const BENCHMARK_RUN_STATUS_PASSED: &str = "passed";
 const BENCHMARK_RUN_STATUS_FAILED: &str = "failed";
 const BENCHMARK_RUN_STATUS_CANCELLED: &str = "cancelled";
 const BENCHMARK_RUN_STATUS_APPLIED: &str = "applied";
+const BENCHMARK_AGENT_BATCH_STATUS_QUEUED: &str = "queued";
+const BENCHMARK_AGENT_BATCH_STATUS_RUNNING: &str = "running";
+const BENCHMARK_AGENT_BATCH_STATUS_LAUNCHED: &str = "launched";
+const BENCHMARK_AGENT_BATCH_STATUS_FAILED: &str = "failed";
+const BENCHMARK_AGENT_BATCH_STATUS_CANCELLED: &str = "cancelled";
+const DEFAULT_AGENT_BATCH_CONCURRENCY: usize = 2;
+const MAX_AGENT_BATCH_CONCURRENCY: usize = 8;
 const SWE_BENCH_PRO_REPO_PATH: &str = "/Users/laptop-h/Documents/GitHub/SWE-bench_Pro-os";
 const SWE_BENCH_PRO_EVALUATOR_SCRIPT: &str = "swe_bench_pro_eval.py";
 const SWE_BENCH_PRO_RUN_SCRIPTS_DIR: &str = "run_scripts";
 const SWE_BENCH_PRO_DOCKERHUB_USERNAME: &str = "jefzda";
+const SWE_BENCH_PRO_DATASET_CANDIDATES: &[&str] = &[
+    "helper_code/sweap_eval_full_v2.jsonl",
+    "sweap_eval_full_v2.jsonl",
+    "swe_bench_pro.jsonl",
+    "swe-bench-pro.jsonl",
+];
+const BENCHMARK_PYTHON_PACKAGES: &[&str] = &["docker", "numpy", "pandas"];
 const MAX_RUN_LOG_LINES: usize = 1_000;
 
 static BENCHMARK_RUNS: LazyLock<Arc<Mutex<HashMap<String, BenchmarkRunStatus>>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
+static BENCHMARK_AGENT_BATCHES: LazyLock<Arc<Mutex<HashMap<String, BenchmarkAgentBatchStatus>>>> =
     LazyLock::new(|| Arc::new(Mutex::new(HashMap::new())));
 
 #[derive(Debug, Deserialize)]
@@ -91,6 +113,90 @@ pub struct BenchmarkGetRunStatusRequest {
 #[serde(rename_all = "camelCase")]
 pub struct BenchmarkCancelRunRequest {
     pub run_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkAgentLaunchSelection {
+    pub category: String,
+    pub workspace_path: Option<String>,
+    pub key_source: Option<String>,
+    pub account_id: Option<String>,
+    pub model: Option<String>,
+    pub native_harness_type: Option<String>,
+    pub platform: Option<String>,
+    pub branch: Option<String>,
+    pub hosted_token: Option<String>,
+    pub tier: Option<String>,
+    pub agent_definition_id: Option<String>,
+    pub agent_org_id: Option<String>,
+    #[serde(default)]
+    pub agent_org_member_overrides: HashMap<String, OrgMemberLaunchOverride>,
+    #[serde(default)]
+    pub apply_agent_org_member_overrides_for_future: bool,
+    #[serde(default)]
+    pub isolate: bool,
+    pub mode: Option<String>,
+    pub worktree_path: Option<String>,
+    pub project_slug: Option<String>,
+    #[serde(default)]
+    pub additional_directories: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkStartAgentBatchRequest {
+    pub kind: String,
+    pub source_path: String,
+    pub task_ids: Vec<String>,
+    pub launch: BenchmarkAgentLaunchSelection,
+    pub concurrency: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkGetAgentBatchStatusRequest {
+    pub batch_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkCancelAgentBatchRequest {
+    pub batch_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkAgentBatchItem {
+    pub task_id: String,
+    pub status: String,
+    pub session_id: Option<String>,
+    pub session_name: Option<String>,
+    pub started_at: Option<String>,
+    pub finished_at: Option<String>,
+    pub error: Option<String>,
+    pub logs: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkAgentBatchStatus {
+    pub batch_id: String,
+    pub benchmark_kind: String,
+    pub source_path: String,
+    pub status: String,
+    pub total_tasks: usize,
+    pub queued: usize,
+    pub running: usize,
+    pub launched: usize,
+    pub failed: usize,
+    pub cancelled: usize,
+    pub created_at: String,
+    pub started_at: Option<String>,
+    pub finished_at: Option<String>,
+    pub concurrency: usize,
+    pub items: Vec<BenchmarkAgentBatchItem>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -345,6 +451,312 @@ pub async fn benchmark_cancel_run(
         .ok_or_else(|| format!("Benchmark run not found: {}", request.run_id))
 }
 
+#[tauri::command]
+pub async fn benchmark_start_agent_batch(
+    app_handle: tauri::AppHandle,
+    request: BenchmarkStartAgentBatchRequest,
+) -> Result<BenchmarkAgentBatchStatus, String> {
+    ensure_swe_bench_pro(&request.kind)?;
+    if request.task_ids.is_empty() {
+        return Err("Select at least one benchmark task to launch.".to_string());
+    }
+
+    let concurrency = request
+        .concurrency
+        .unwrap_or(DEFAULT_AGENT_BATCH_CONCURRENCY)
+        .clamp(1, MAX_AGENT_BATCH_CONCURRENCY);
+    let batch_id = Uuid::new_v4().to_string();
+    let created_at = Utc::now().to_rfc3339();
+    let items = request
+        .task_ids
+        .iter()
+        .map(|task_id| BenchmarkAgentBatchItem {
+            task_id: task_id.clone(),
+            status: BENCHMARK_AGENT_BATCH_STATUS_QUEUED.to_string(),
+            session_id: None,
+            session_name: None,
+            started_at: None,
+            finished_at: None,
+            error: None,
+            logs: vec!["Queued for agent launch.".to_string()],
+        })
+        .collect::<Vec<_>>();
+    let status = BenchmarkAgentBatchStatus {
+        batch_id: batch_id.clone(),
+        benchmark_kind: request.kind.clone(),
+        source_path: request.source_path.clone(),
+        status: BENCHMARK_AGENT_BATCH_STATUS_RUNNING.to_string(),
+        total_tasks: items.len(),
+        queued: items.len(),
+        running: 0,
+        launched: 0,
+        failed: 0,
+        cancelled: 0,
+        created_at,
+        started_at: Some(Utc::now().to_rfc3339()),
+        finished_at: None,
+        concurrency,
+        items,
+        error: None,
+    };
+
+    BENCHMARK_AGENT_BATCHES
+        .lock()
+        .await
+        .insert(batch_id.clone(), status);
+
+    let semaphore = Arc::new(Semaphore::new(concurrency));
+    for task_id in request.task_ids {
+        let app_handle = app_handle.clone();
+        let batch_id = batch_id.clone();
+        let kind = request.kind.clone();
+        let source_path = request.source_path.clone();
+        let launch = request.launch.clone();
+        let semaphore = Arc::clone(&semaphore);
+        tauri::async_runtime::spawn(async move {
+            let Ok(_permit) = semaphore.acquire_owned().await else {
+                mark_agent_batch_item_failed(
+                    &batch_id,
+                    &task_id,
+                    "Launch queue closed before this task could start.".to_string(),
+                )
+                .await;
+                return;
+            };
+            if is_agent_batch_cancelled(&batch_id).await {
+                mark_agent_batch_item_cancelled(&batch_id, &task_id).await;
+                return;
+            }
+            mark_agent_batch_item_running(&batch_id, &task_id).await;
+            let detail = match read_swe_bench_task(&source_path, &task_id) {
+                Ok(detail) => detail,
+                Err(error) => {
+                    mark_agent_batch_item_failed(&batch_id, &task_id, error).await;
+                    return;
+                }
+            };
+            if is_agent_batch_cancelled(&batch_id).await {
+                mark_agent_batch_item_cancelled(&batch_id, &task_id).await;
+                return;
+            }
+            let prompt = benchmark_agent_prompt(&kind, &detail);
+            let params = benchmark_launch_params(&launch, &detail.index.task_id, prompt);
+            let state = app_handle.state::<AgentAppState>();
+            let org_store = app_handle.state::<AgentOrgsStore>();
+            match session_launch_impl(&state, Some(org_store.inner()), params).await {
+                Ok(result) => {
+                    mark_agent_batch_item_launched(&batch_id, &task_id, result).await;
+                }
+                Err(error) => {
+                    mark_agent_batch_item_failed(&batch_id, &task_id, error).await;
+                }
+            }
+        });
+    }
+
+    BENCHMARK_AGENT_BATCHES
+        .lock()
+        .await
+        .get(&batch_id)
+        .cloned()
+        .ok_or_else(|| format!("Benchmark agent batch not found: {batch_id}"))
+}
+
+#[tauri::command]
+pub async fn benchmark_get_agent_batch_status(
+    request: BenchmarkGetAgentBatchStatusRequest,
+) -> Result<BenchmarkAgentBatchStatus, String> {
+    BENCHMARK_AGENT_BATCHES
+        .lock()
+        .await
+        .get(&request.batch_id)
+        .cloned()
+        .ok_or_else(|| format!("Benchmark agent batch not found: {}", request.batch_id))
+}
+
+#[tauri::command]
+pub async fn benchmark_cancel_agent_batch(
+    request: BenchmarkCancelAgentBatchRequest,
+) -> Result<BenchmarkAgentBatchStatus, String> {
+    let mut batches = BENCHMARK_AGENT_BATCHES.lock().await;
+    let batch = batches
+        .get_mut(&request.batch_id)
+        .ok_or_else(|| format!("Benchmark agent batch not found: {}", request.batch_id))?;
+    let now = Utc::now().to_rfc3339();
+    for item in &mut batch.items {
+        if item.status == BENCHMARK_AGENT_BATCH_STATUS_QUEUED {
+            item.status = BENCHMARK_AGENT_BATCH_STATUS_CANCELLED.to_string();
+            item.finished_at = Some(now.clone());
+            item.logs.push("Cancelled before launch.".to_string());
+            trim_logs(&mut item.logs);
+        }
+    }
+    batch.status = BENCHMARK_AGENT_BATCH_STATUS_CANCELLED.to_string();
+    batch.finished_at = Some(now);
+    refresh_agent_batch_counts(batch);
+    Ok(batch.clone())
+}
+
+async fn is_agent_batch_cancelled(batch_id: &str) -> bool {
+    BENCHMARK_AGENT_BATCHES
+        .lock()
+        .await
+        .get(batch_id)
+        .is_some_and(|batch| batch.status == BENCHMARK_AGENT_BATCH_STATUS_CANCELLED)
+}
+
+async fn mark_agent_batch_item_running(batch_id: &str, task_id: &str) {
+    update_agent_batch_item(batch_id, task_id, |item| {
+        item.status = BENCHMARK_AGENT_BATCH_STATUS_RUNNING.to_string();
+        item.started_at = Some(Utc::now().to_rfc3339());
+        item.logs.push("Launching background agent session.".to_string());
+        trim_logs(&mut item.logs);
+    })
+    .await;
+}
+
+async fn mark_agent_batch_item_cancelled(batch_id: &str, task_id: &str) {
+    update_agent_batch_item(batch_id, task_id, |item| {
+        item.status = BENCHMARK_AGENT_BATCH_STATUS_CANCELLED.to_string();
+        item.finished_at = Some(Utc::now().to_rfc3339());
+        item.logs.push("Cancelled before agent launch.".to_string());
+        trim_logs(&mut item.logs);
+    })
+    .await;
+}
+
+async fn mark_agent_batch_item_launched(
+    batch_id: &str,
+    task_id: &str,
+    result: SessionLaunchResult,
+) {
+    update_agent_batch_item(batch_id, task_id, |item| {
+        item.status = BENCHMARK_AGENT_BATCH_STATUS_LAUNCHED.to_string();
+        item.session_id = Some(result.session_id);
+        item.session_name = Some(result.name);
+        item.finished_at = Some(Utc::now().to_rfc3339());
+        item.logs.push("Background agent session launched.".to_string());
+        trim_logs(&mut item.logs);
+    })
+    .await;
+}
+
+async fn mark_agent_batch_item_failed(batch_id: &str, task_id: &str, error: String) {
+    update_agent_batch_item(batch_id, task_id, |item| {
+        item.status = BENCHMARK_AGENT_BATCH_STATUS_FAILED.to_string();
+        item.finished_at = Some(Utc::now().to_rfc3339());
+        item.error = Some(error.clone());
+        item.logs.push(format!("Launch failed: {error}"));
+        trim_logs(&mut item.logs);
+    })
+    .await;
+}
+
+async fn update_agent_batch_item<F>(batch_id: &str, task_id: &str, update: F)
+where
+    F: FnOnce(&mut BenchmarkAgentBatchItem),
+{
+    let mut batches = BENCHMARK_AGENT_BATCHES.lock().await;
+    let Some(batch) = batches.get_mut(batch_id) else {
+        return;
+    };
+    if let Some(item) = batch.items.iter_mut().find(|item| item.task_id == task_id) {
+        update(item);
+    }
+    refresh_agent_batch_counts(batch);
+}
+
+fn refresh_agent_batch_counts(batch: &mut BenchmarkAgentBatchStatus) {
+    batch.queued = batch
+        .items
+        .iter()
+        .filter(|item| item.status == BENCHMARK_AGENT_BATCH_STATUS_QUEUED)
+        .count();
+    batch.running = batch
+        .items
+        .iter()
+        .filter(|item| item.status == BENCHMARK_AGENT_BATCH_STATUS_RUNNING)
+        .count();
+    batch.launched = batch
+        .items
+        .iter()
+        .filter(|item| item.status == BENCHMARK_AGENT_BATCH_STATUS_LAUNCHED)
+        .count();
+    batch.failed = batch
+        .items
+        .iter()
+        .filter(|item| item.status == BENCHMARK_AGENT_BATCH_STATUS_FAILED)
+        .count();
+    batch.cancelled = batch
+        .items
+        .iter()
+        .filter(|item| item.status == BENCHMARK_AGENT_BATCH_STATUS_CANCELLED)
+        .count();
+
+    if batch.running > 0 || batch.queued > 0 {
+        if batch.status != BENCHMARK_AGENT_BATCH_STATUS_CANCELLED {
+            batch.status = BENCHMARK_AGENT_BATCH_STATUS_RUNNING.to_string();
+        }
+        return;
+    }
+
+    if batch.finished_at.is_none() {
+        batch.finished_at = Some(Utc::now().to_rfc3339());
+    }
+    if batch.failed > 0 {
+        batch.status = BENCHMARK_AGENT_BATCH_STATUS_FAILED.to_string();
+    } else if batch.cancelled > 0 {
+        batch.status = BENCHMARK_AGENT_BATCH_STATUS_CANCELLED.to_string();
+    } else {
+        batch.status = BENCHMARK_AGENT_BATCH_STATUS_LAUNCHED.to_string();
+    }
+}
+
+fn benchmark_launch_params(
+    launch: &BenchmarkAgentLaunchSelection,
+    task_id: &str,
+    content: String,
+) -> SessionLaunchParams {
+    SessionLaunchParams {
+        category: launch.category.clone(),
+        content,
+        workspace_path: launch.workspace_path.clone(),
+        key_source: launch.key_source.clone(),
+        account_id: launch.account_id.clone(),
+        model: launch.model.clone(),
+        native_harness_type: launch.native_harness_type.clone(),
+        platform: launch.platform.clone(),
+        branch: launch.branch.clone(),
+        hosted_token: launch.hosted_token.clone(),
+        tier: launch.tier.clone(),
+        name: Some(format!("Benchmark: {task_id}")),
+        background: true,
+        images: None,
+        ide_context: None,
+        agent_definition_id: launch.agent_definition_id.clone(),
+        agent_org_id: launch.agent_org_id.clone(),
+        agent_org_member_overrides: launch.agent_org_member_overrides.clone(),
+        apply_agent_org_member_overrides_for_future: launch
+            .apply_agent_org_member_overrides_for_future,
+        isolate: launch.isolate,
+        mode: launch.mode.clone(),
+        work_item_id: None,
+        agent_role: None,
+        worktree_path: launch.worktree_path.clone(),
+        project_slug: launch.project_slug.clone(),
+        additional_directories: launch.additional_directories.clone(),
+    }
+}
+
+fn benchmark_agent_prompt(kind: &str, detail: &BenchmarkTaskDetail) -> String {
+    let repo = detail.index.repo.as_deref().unwrap_or("the target repository");
+    format!(
+        "You are running an official benchmark task. The final result will be evaluated by the benchmark harness, not by ORGII.\n\nBenchmark: {kind}\nTask ID: {task_id}\nRepository: {repo}\n\nInstructions:\n- Make the minimal code changes needed to satisfy the task.\n- Do not modify unrelated files.\n- Do not invent new tests or change benchmark tests unless the task explicitly requires it.\n- When you finish, summarize the changed files and the validation you ran.\n- Leave the repository in a state where a git diff captures your solution patch.\n\nTask:\n{instruction}",
+        task_id = detail.index.task_id,
+        instruction = detail.instruction
+    )
+}
+
 async fn run_swe_bench_preflight(
     kind: &str,
     source_path: &str,
@@ -354,13 +766,17 @@ async fn run_swe_bench_preflight(
 ) -> Result<BenchmarkPreflightResult, String> {
     ensure_swe_bench_pro(kind)?;
     let mut checks = Vec::new();
-    let source_path_buf = PathBuf::from(source_path);
-    let source_exists = source_path_buf.is_file();
+    let resolved_source_path = resolve_swe_bench_source_path(source_path);
+    let source_detail = match &resolved_source_path {
+        Ok(path) => format!("{} → {}", source_path, path.display()),
+        Err(error) => error.clone(),
+    };
+    let source_exists = resolved_source_path.is_ok();
     checks.push(BenchmarkPreflightCheck {
         id: "source_path".to_string(),
-        label: "SWE-bench Pro JSONL source".to_string(),
+        label: "SWE-bench Pro dataset folder".to_string(),
         ok: source_exists,
-        detail: Some(source_path.to_string()),
+        detail: Some(source_detail),
     });
 
     let mut readable_rows = 0usize;
@@ -536,15 +952,29 @@ async fn push_swe_bench_local_docker_checks(
         detail: Some(docker_info.unwrap_or_else(|error| error)),
     });
 
-    for package_name in ["docker", "pandas"] {
-        let package_check =
-            command_version("python3", &["-c", &format!("import {package_name}")]).await;
-        checks.push(BenchmarkPreflightCheck {
-            id: format!("python_package_{package_name}"),
-            label: format!("Python package: {package_name}"),
-            ok: package_check.is_ok(),
-            detail: Some(package_check.unwrap_or_else(|error| error)),
-        });
+    let benchmark_python = ensure_benchmark_python_env().await;
+    checks.push(BenchmarkPreflightCheck {
+        id: "benchmark_python_env".to_string(),
+        label: "ORGII benchmark Python environment".to_string(),
+        ok: benchmark_python.is_ok(),
+        detail: Some(
+            benchmark_python
+                .as_ref()
+                .map(|path| path.display().to_string())
+                .unwrap_or_else(|error| error.clone()),
+        ),
+    });
+
+    if let Ok(python_path) = benchmark_python {
+        for package_name in BENCHMARK_PYTHON_PACKAGES {
+            let package_check = run_python_import(&python_path, package_name).await;
+            checks.push(BenchmarkPreflightCheck {
+                id: format!("python_package_{package_name}"),
+                label: format!("Python package: {package_name}"),
+                ok: package_check.is_ok(),
+                detail: Some(package_check.unwrap_or_else(|error| error)),
+            });
+        }
     }
 
     let evaluator_script = swe_bench_evaluator_script_path();
@@ -692,11 +1122,18 @@ async fn build_swe_bench_run_plan(
     if patch.trim().is_empty() {
         return Err("Patch content is required to run SWE-bench Pro evaluation".to_string());
     }
-    let task = read_swe_bench_task(source_path, task_id)?;
+    let resolved_source_path = resolve_swe_bench_source_path(source_path)?;
+    let resolved_source_path_string = resolved_source_path.display().to_string();
+    let task = read_swe_bench_task(&resolved_source_path_string, task_id)?;
 
-    let preflight =
-        run_swe_bench_preflight(kind, source_path, evaluation_mode, Some(task_id), repo_path)
-            .await?;
+    let preflight = run_swe_bench_preflight(
+        kind,
+        &resolved_source_path_string,
+        evaluation_mode,
+        Some(task_id),
+        repo_path,
+    )
+    .await?;
     let run_id = format!("swe-{}", Uuid::new_v4());
     let output_dir = benchmark_run_output_dir(&run_id);
     std::fs::create_dir_all(&output_dir)
@@ -738,7 +1175,7 @@ async fn build_swe_bench_run_plan(
     let command_preview = if evaluation_mode == EVALUATION_MODE_PATCH_ONLY {
         swe_bench_patch_only_command_preview(&task, &patch_path)
     } else {
-        swe_bench_command_preview(source_path, &patch_path, &output_dir)
+        swe_bench_command_preview(&resolved_source_path_string, &patch_path, &output_dir)
     };
 
     Ok(BenchmarkRunPlan {
@@ -746,7 +1183,7 @@ async fn build_swe_bench_run_plan(
         benchmark_kind: kind.to_string(),
         evaluation_mode: evaluation_mode.to_string(),
         task_id: task_id.to_string(),
-        source_path: source_path.to_string(),
+        source_path: resolved_source_path_string,
         repo_path: repo_path_string,
         patch_path: patch_path.display().to_string(),
         output_dir: output_dir.display().to_string(),
@@ -878,7 +1315,28 @@ async fn run_swe_bench_process(plan: BenchmarkRunPlan) {
         return;
     };
 
-    let mut command = Command::new("python3");
+    let benchmark_python = match ensure_benchmark_python_env().await {
+        Ok(path) => path,
+        Err(error) => {
+            finish_run(
+                &plan.run_id,
+                BENCHMARK_RUN_STATUS_FAILED,
+                None,
+                Some(format!(
+                    "Benchmark Python environment is not ready: {error}"
+                )),
+            )
+            .await;
+            return;
+        }
+    };
+    append_run_log(
+        &plan.run_id,
+        format!("Benchmark Python: {}", benchmark_python.display()),
+    )
+    .await;
+
+    let mut command = Command::new(&benchmark_python);
     command
         .arg(evaluator_script)
         .arg("--raw_sample_path")
@@ -1047,10 +1505,70 @@ fn ensure_supported_swe_bench_mode(evaluation_mode: &str) -> Result<(), String> 
     }
 }
 
-fn read_swe_bench_rows(source_path: &str) -> Result<Vec<Value>, String> {
+fn resolve_swe_bench_source_path(source_path: &str) -> Result<PathBuf, String> {
     let path = Path::new(source_path);
-    let file =
-        File::open(path).map_err(|error| format!("Failed to open {source_path}: {error}"))?;
+    if path.is_file() {
+        return Ok(path.to_path_buf());
+    }
+    if !path.is_dir() {
+        return Err(format!(
+            "SWE-bench Pro source does not exist: {source_path}"
+        ));
+    }
+
+    for candidate in SWE_BENCH_PRO_DATASET_CANDIDATES {
+        let candidate_path = path.join(candidate);
+        if candidate_path.is_file() {
+            return Ok(candidate_path);
+        }
+    }
+
+    let mut jsonl_files = Vec::new();
+    collect_jsonl_files(path, &mut jsonl_files)?;
+    if jsonl_files.len() == 1 {
+        return Ok(jsonl_files.remove(0));
+    }
+
+    if jsonl_files.is_empty() {
+        return Err(format!(
+            "No SWE-bench Pro JSONL dataset found in folder: {source_path}"
+        ));
+    }
+
+    let candidate_list = jsonl_files
+        .iter()
+        .map(|path| path.display().to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    Err(format!(
+        "Multiple JSONL files found in benchmark folder. Use a folder containing one dataset file or one of the known SWE-bench Pro paths. Found: {candidate_list}"
+    ))
+}
+
+fn collect_jsonl_files(dir: &Path, jsonl_files: &mut Vec<PathBuf>) -> Result<(), String> {
+    for entry in fs::read_dir(dir).map_err(|error| format!("Failed to read folder: {error}"))? {
+        let entry = entry.map_err(|error| format!("Failed to read folder entry: {error}"))?;
+        let path = entry.path();
+        if path.is_dir() {
+            collect_jsonl_files(&path, jsonl_files)?;
+        } else if path
+            .extension()
+            .is_some_and(|extension| extension.to_string_lossy() == "jsonl")
+        {
+            jsonl_files.push(path);
+        }
+    }
+    Ok(())
+}
+
+fn read_swe_bench_rows(source_path: &str) -> Result<Vec<Value>, String> {
+    let path = resolve_swe_bench_source_path(source_path)?;
+    let file = File::open(&path).map_err(|error| {
+        format!(
+            "Failed to open SWE-bench Pro dataset {}: {error}",
+            path.display()
+        )
+    })?;
     let reader = BufReader::new(file);
     let mut rows = Vec::new();
     for (line_index, line) in reader.lines().enumerate() {
@@ -1205,6 +1723,147 @@ async fn run_command_for_stdout(
     Ok(stdout)
 }
 
+async fn ensure_benchmark_python_env() -> Result<PathBuf, String> {
+    let env_dir = benchmark_python_env_dir();
+    let python_path = benchmark_python_path();
+    if !python_path.is_file() {
+        fs::create_dir_all(
+            env_dir
+                .parent()
+                .ok_or_else(|| "Invalid benchmark Python environment path".to_string())?,
+        )
+        .map_err(|error| format!("Failed to create benchmark Python env directory: {error}"))?;
+
+        let uv_result = Command::new("uv")
+            .arg("venv")
+            .arg("--python")
+            .arg("python3")
+            .arg(&env_dir)
+            .output()
+            .await;
+        let created_with_uv = uv_result
+            .as_ref()
+            .map(|output| output.status.success())
+            .unwrap_or(false);
+        if !created_with_uv {
+            let output = Command::new("python3")
+                .arg("-m")
+                .arg("venv")
+                .arg(&env_dir)
+                .output()
+                .await
+                .map_err(|error| format!("Failed to create benchmark Python venv: {error}"))?;
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+                return Err(if stderr.is_empty() {
+                    format!("python3 -m venv exited with {}", output.status)
+                } else {
+                    stderr
+                });
+            }
+        }
+    }
+
+    if benchmark_python_packages_ready(&python_path).await {
+        return Ok(python_path);
+    }
+
+    install_benchmark_python_packages(&python_path).await?;
+    if benchmark_python_packages_ready(&python_path).await {
+        Ok(python_path)
+    } else {
+        Err("Benchmark Python packages were installed but import checks still fail".to_string())
+    }
+}
+
+async fn benchmark_python_packages_ready(python_path: &Path) -> bool {
+    for package_name in BENCHMARK_PYTHON_PACKAGES {
+        if run_python_import(python_path, package_name).await.is_err() {
+            return false;
+        }
+    }
+    true
+}
+
+async fn install_benchmark_python_packages(python_path: &Path) -> Result<(), String> {
+    let uv_output = Command::new("uv")
+        .arg("pip")
+        .arg("install")
+        .arg("--python")
+        .arg(python_path)
+        .arg("--upgrade")
+        .arg("--force-reinstall")
+        .args(BENCHMARK_PYTHON_PACKAGES.iter().copied())
+        .output()
+        .await;
+    if let Ok(output) = uv_output {
+        if output.status.success() {
+            return Ok(());
+        }
+    }
+
+    let ensurepip_output = Command::new(python_path)
+        .arg("-m")
+        .arg("ensurepip")
+        .arg("--upgrade")
+        .output()
+        .await
+        .map_err(|error| format!("Failed to bootstrap benchmark Python pip: {error}"))?;
+    if !ensurepip_output.status.success() {
+        let stderr = String::from_utf8_lossy(&ensurepip_output.stderr)
+            .trim()
+            .to_string();
+        return Err(if stderr.is_empty() {
+            format!("ensurepip exited with {}", ensurepip_output.status)
+        } else {
+            stderr
+        });
+    }
+
+    let output = Command::new(python_path)
+        .arg("-m")
+        .arg("pip")
+        .arg("install")
+        .arg("--upgrade")
+        .arg("--force-reinstall")
+        .args(BENCHMARK_PYTHON_PACKAGES.iter().copied())
+        .output()
+        .await
+        .map_err(|error| format!("Failed to install benchmark Python packages: {error}"))?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    Err(if stderr.is_empty() {
+        format!(
+            "Benchmark Python package install exited with {}",
+            output.status
+        )
+    } else {
+        stderr
+    })
+}
+
+async fn run_python_import(python_path: &Path, package_name: &str) -> Result<String, String> {
+    let output = Command::new(python_path)
+        .arg("-c")
+        .arg(format!(
+            "import {package_name}; print(getattr({package_name}, '__version__', 'ok'))"
+        ))
+        .output()
+        .await
+        .map_err(|error| format!("Failed to run {}: {error}", python_path.display()))?;
+    if output.status.success() {
+        return Ok(String::from_utf8_lossy(&output.stdout).trim().to_string());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    Err(if stderr.is_empty() {
+        format!("{} exited with {}", python_path.display(), output.status)
+    } else {
+        stderr
+    })
+}
+
 async fn terminate_process(process_id: u32) -> Result<(), String> {
     #[cfg(unix)]
     let output = Command::new("kill")
@@ -1256,6 +1915,21 @@ fn benchmark_runs_dir() -> PathBuf {
     app_paths::orgii_root().join("benchmark-runs")
 }
 
+fn benchmark_python_env_dir() -> PathBuf {
+    app_paths::orgii_root()
+        .join("benchmark-python")
+        .join(".venv")
+}
+
+fn benchmark_python_path() -> PathBuf {
+    let env_dir = benchmark_python_env_dir();
+    if cfg!(windows) {
+        env_dir.join("Scripts").join("python.exe")
+    } else {
+        env_dir.join("bin").join("python")
+    }
+}
+
 fn benchmark_run_output_dir(run_id: &str) -> PathBuf {
     benchmark_runs_dir().join(run_id)
 }
@@ -1266,7 +1940,7 @@ fn swe_bench_command_preview(
     output_dir: &Path,
 ) -> Vec<String> {
     vec![
-        "python3".to_string(),
+        benchmark_python_path().display().to_string(),
         swe_bench_evaluator_script_path().display().to_string(),
         "--raw_sample_path".to_string(),
         source_path.to_string(),

@@ -502,15 +502,26 @@ export function createAIImpactTab(): WorkStationTab {
   return aiImpactTabFactory({});
 }
 
-export const benchmarkTabFactory = defineTabFactory<Record<string, never>>({
+export interface BenchmarkTabData {
+  batchId?: string;
+  selectedTaskId?: string;
+}
+
+export const benchmarkTabFactory = defineTabFactory<BenchmarkTabData>({
   tabType: "benchmark",
-  idStrategy: { type: "singleton", id: "benchmark:main" },
-  getTitle: () => "Benchmark",
+  idStrategy: {
+    type: "keyed",
+    prefix: "benchmark",
+    getKey: (data) => data.batchId ?? "main",
+  },
+  getTitle: (data) => (data.batchId ? "Benchmark Run" : "Benchmark"),
   icon: "BookLock",
 });
 
-export function createBenchmarkTab(): WorkStationTab {
-  return benchmarkTabFactory({});
+export function createBenchmarkTab(
+  data: BenchmarkTabData = {}
+): WorkStationTab {
+  return benchmarkTabFactory(data);
 }
 
 export const lintScanTabFactory = defineTabFactory<{ repoPath: string }>({

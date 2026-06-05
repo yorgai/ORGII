@@ -425,10 +425,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         toggleChatFocus();
       }
     }, [isChatFocus, openWorkStationTab, toggleChatFocus]);
-    const {
-      footerSlot: benchmarkPanel,
-      leadingActionSlot: benchmarkActionSlot,
-    } = useBenchmarkSessionCreatorSlots({
+    const { footerSlot: benchmarkPanel } = useBenchmarkSessionCreatorSlots({
       enabled: isBenchmarkTarget,
       onOpenBenchmarkTab: handleOpenBenchmarkTab,
     });
@@ -706,7 +703,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const creatorClassName = "min-h-0 flex-1";
     const emptyChatContent = (
       <ChatPanelEmptyContent
-        benchmarkActionSlot={benchmarkActionSlot}
         benchmarkPanel={benchmarkPanel}
         createProjectContext={createProjectContext}
         createTarget={createTarget}

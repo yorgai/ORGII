@@ -1812,7 +1812,7 @@
       "title": "Benchmark",
       "description": "Browse SWE-bench Pro tasks, choose what to run, and check the local benchmark environment before evaluation.",
       "phaseLabel": "Task browser",
-      "sourcePath": "Task source",
+      "sourcePath": "Папка Benchmark",
       "evaluationMode": "Evaluation mode",
       "evaluationModes": {
         "patchOnly": "Patch only",
@@ -1865,9 +1865,17 @@
       "worktreePathLabel": "Worktree",
       "singleRun": "Одиночный запуск",
       "batchRun": "Пакетный запуск",
-      "sourcePathPlaceholder": "Путь к JSONL benchmark или репозиторию набора данных",
+      "sourcePathPlaceholder": "Путь к папке Benchmark",
       "localPath": "локальный путь",
-      "runType": "Тип запуска"
+      "runType": "Тип запуска",
+      "kindTitle": "Benchmark",
+      "kinds": {
+        "sweBenchPro": "SWE-bench Pro",
+        "terminalBench": "Terminal-Bench"
+      },
+      "selectedTasks": "Выбрано: {{selected}}/{{total}}",
+      "concurrency": "Параллельно",
+      "taskLoadingUnsupported": "Загрузка задач для этого Benchmark пока недоступна; используйте preflight для проверки локального источника."
     },
     "skillsAndTools": "Skills и инструменты"
   },

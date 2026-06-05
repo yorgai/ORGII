@@ -1,5 +1,7 @@
 import { invoke as invokeTauri } from "@tauri-apps/api/core";
 
+import type { SessionLaunchParams } from "@src/api/tauri/agent/session";
+
 export const BENCHMARK_KIND = {
   SWE_BENCH_PRO: "swe_bench_pro",
   TERMINAL_BENCH: "terminal_bench",
@@ -27,6 +29,66 @@ export const BENCHMARK_RUN_STATUS = {
 
 export type BenchmarkRunStatusValue =
   (typeof BENCHMARK_RUN_STATUS)[keyof typeof BENCHMARK_RUN_STATUS];
+
+export const BENCHMARK_AGENT_BATCH_STATUS = {
+  QUEUED: "queued",
+  RUNNING: "running",
+  LAUNCHED: "launched",
+  FAILED: "failed",
+  CANCELLED: "cancelled",
+} as const;
+
+export type BenchmarkAgentBatchStatusValue =
+  (typeof BENCHMARK_AGENT_BATCH_STATUS)[keyof typeof BENCHMARK_AGENT_BATCH_STATUS];
+
+export const BENCHMARK_RUN_TYPE = {
+  SINGLE: "single",
+  BATCH: "batch",
+} as const;
+
+export type BenchmarkRunType =
+  (typeof BENCHMARK_RUN_TYPE)[keyof typeof BENCHMARK_RUN_TYPE];
+
+export type BenchmarkAgentLaunchSelection = Omit<
+  SessionLaunchParams,
+  | "content"
+  | "name"
+  | "background"
+  | "images"
+  | "ideContext"
+  | "workItemId"
+  | "agentRole"
+>;
+
+export interface BenchmarkAgentBatchItem {
+  taskId: string;
+  status: BenchmarkAgentBatchStatusValue;
+  sessionId?: string | null;
+  sessionName?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  error?: string | null;
+  logs: string[];
+}
+
+export interface BenchmarkAgentBatchStatus {
+  batchId: string;
+  benchmarkKind: BenchmarkKind;
+  sourcePath: string;
+  status: BenchmarkAgentBatchStatusValue;
+  totalTasks: number;
+  queued: number;
+  running: number;
+  launched: number;
+  failed: number;
+  cancelled: number;
+  createdAt: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  concurrency: number;
+  items: BenchmarkAgentBatchItem[];
+  error?: string | null;
+}
 
 export interface BenchmarkTaskIndexRow {
   benchmarkKind: BenchmarkKind;
@@ -142,6 +204,22 @@ export interface BenchmarkCancelRunRequest {
   runId: string;
 }
 
+export interface BenchmarkStartAgentBatchRequest {
+  kind: BenchmarkKind;
+  sourcePath: string;
+  taskIds: string[];
+  launch: BenchmarkAgentLaunchSelection;
+  concurrency?: number;
+}
+
+export interface BenchmarkGetAgentBatchStatusRequest {
+  batchId: string;
+}
+
+export interface BenchmarkCancelAgentBatchRequest {
+  batchId: string;
+}
+
 export const benchmarkApi = {
   listTasks(
     request: BenchmarkListTasksRequest
@@ -185,5 +263,32 @@ export const benchmarkApi = {
 
   cancelRun(request: BenchmarkCancelRunRequest): Promise<BenchmarkRunStatus> {
     return invokeTauri<BenchmarkRunStatus>("benchmark_cancel_run", { request });
+  },
+
+  startAgentBatch(
+    request: BenchmarkStartAgentBatchRequest
+  ): Promise<BenchmarkAgentBatchStatus> {
+    return invokeTauri<BenchmarkAgentBatchStatus>(
+      "benchmark_start_agent_batch",
+      { request }
+    );
+  },
+
+  getAgentBatchStatus(
+    request: BenchmarkGetAgentBatchStatusRequest
+  ): Promise<BenchmarkAgentBatchStatus> {
+    return invokeTauri<BenchmarkAgentBatchStatus>(
+      "benchmark_get_agent_batch_status",
+      { request }
+    );
+  },
+
+  cancelAgentBatch(
+    request: BenchmarkCancelAgentBatchRequest
+  ): Promise<BenchmarkAgentBatchStatus> {
+    return invokeTauri<BenchmarkAgentBatchStatus>(
+      "benchmark_cancel_agent_batch",
+      { request }
+    );
   },
 };

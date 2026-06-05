@@ -29,6 +29,7 @@ import SessionHoverCard from "@src/components/SessionHoverCard";
 import Switch from "@src/components/Switch";
 import Tooltip from "@src/components/Tooltip";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
+import type { DropdownEnginePosition } from "@src/hooks/dropdown";
 import { COLLAPSED_SIDEBAR_CHROME_OFFSET } from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
 import { TabBarTrailingIconButton } from "@src/modules/WorkStation/shared";
 import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
@@ -68,7 +69,7 @@ interface ChatPanelHeaderProps {
   handleWorkItemAgentCreatorToggle: (enabled: boolean) => void;
   handleWorkItemTitleChange: (title: string) => void;
   headerActionsDropdownRef: React.RefObject<HTMLDivElement | null>;
-  headerActionsPosition: { top: number; right: number };
+  headerActionsPosition: DropdownEnginePosition;
   headerActionsTriggerRef: React.RefObject<HTMLButtonElement | null>;
   headerTitle: string;
   isChatFocus: boolean;
@@ -225,7 +226,9 @@ export function ChatPanelHeader({
         >
           <span className="inline-flex">
             <Button
-              ref={headerActionsTriggerRef}
+              ref={
+                headerActionsTriggerRef as React.RefObject<HTMLButtonElement>
+              }
               htmlType="button"
               variant="tertiary"
               size="small"
@@ -339,12 +342,12 @@ export function ChatPanelHeader({
         isHeaderActionsPositioned &&
         createPortal(
           <div
-            ref={headerActionsDropdownRef}
+            ref={headerActionsDropdownRef as React.RefObject<HTMLDivElement>}
             className={`${DROPDOWN_CLASSES.menuPanelBase} ${DROPDOWN_WIDTHS.sidebarMenuClass}`}
             style={{
               position: "fixed",
-              top: headerActionsPosition.top,
-              right: headerActionsPosition.right,
+              top: headerActionsPosition.top ?? 0,
+              right: headerActionsPosition.right ?? 0,
               zIndex: 9999,
             }}
           >

@@ -1806,7 +1806,7 @@
       "title": "Benchmark",
       "description": "Browse SWE-bench Pro tasks, choose what to run, and check the local benchmark environment before evaluation.",
       "phaseLabel": "Task browser",
-      "sourcePath": "Task source",
+      "sourcePath": "Benchmark フォルダ",
       "evaluationMode": "Evaluation mode",
       "evaluationModes": {
         "patchOnly": "Patch only",
@@ -1859,9 +1859,17 @@
       "worktreePathLabel": "Worktree",
       "singleRun": "単一実行",
       "batchRun": "バッチ実行",
-      "sourcePathPlaceholder": "Benchmark JSONL またはデータセットリポジトリのパス",
+      "sourcePathPlaceholder": "Benchmark フォルダへのパス",
       "localPath": "ローカルパス",
-      "runType": "実行タイプ"
+      "runType": "実行タイプ",
+      "kindTitle": "Benchmark",
+      "kinds": {
+        "sweBenchPro": "SWE-bench Pro",
+        "terminalBench": "Terminal-Bench"
+      },
+      "selectedTasks": "{{selected}}/{{total}} 件選択済み",
+      "concurrency": "並列数",
+      "taskLoadingUnsupported": "この Benchmark ではタスク読み込みはまだ利用できません。preflight でローカルソースを確認してください。"
     },
     "skillsAndTools": "Skills とツール"
   },

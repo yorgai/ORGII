@@ -17,6 +17,7 @@ import {
 } from "@src/store/workstation/projectManager";
 import { STORY_PERSONAL_ORG_FILTER_ID } from "@src/store/workstation/tabs";
 
+import { BenchmarkRunBuilder } from "./BenchmarkRunBuilder";
 import type { ChatPanelProps, ChatPanelRegionNotice } from "./types";
 
 type SessionCreatorSlot = NonNullable<ChatPanelProps["sessionCreatorSlot"]>;
@@ -29,7 +30,6 @@ interface DefaultAiWorkItemAssignee {
 }
 
 interface ChatPanelEmptyContentProps {
-  benchmarkActionSlot: React.ReactNode;
   benchmarkPanel: React.ReactNode;
   createProjectContext: ChatPanelCreateProjectContext | null;
   createTarget: ChatPanelCreateTarget;
@@ -57,7 +57,6 @@ interface ChatPanelEmptyContentProps {
 }
 
 export function ChatPanelEmptyContent({
-  benchmarkActionSlot,
   benchmarkPanel,
   createProjectContext,
   createTarget,
@@ -171,17 +170,9 @@ export function ChatPanelEmptyContent({
   }
 
   if (createTarget === CHAT_PANEL_CREATE_TARGET.BENCHMARK) {
-    if (!SessionCreatorSlot) return null;
-
     return (
-      <SessionCreatorSlot
+      <BenchmarkRunBuilder
         className={creatorClassName}
-        variant={creatorVariant}
-        centerFullScreenContent
-        hidePresenceButton
-        onRegionNoticeChange={handleRegionNoticeChange}
-        leadingActionSlot={benchmarkActionSlot}
-        hideRepoLine
         footerSlot={benchmarkPanel}
       />
     );
