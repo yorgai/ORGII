@@ -301,6 +301,7 @@
     "history": "기록",
     "execution": "실행",
     "gitHistory": "Git 기록",
+    "noPullRequest": "풀 리퀘스트 없음",
     "operationLog": "작업 로그",
     "gitDashboard": "대시보드",
     "changedFiles": "변경된 파일",
@@ -507,7 +508,7 @@
   },
   "prerequisite": {
     "missingTitle": "필수 구성 요소 누락",
-    "missing": "{{binary}}이(가) 필요하지만 이 시스템에서 찾을 수 없습니다. 이 방법을 사용하려면 먼저 {{binary}}을(를) 설치하세요."
+    "missing": "{{binary}}이(가) 필요하지만 이 시스템에서 찾을 수 없습니다. 이 방법을 사용하려면 먼저 {{binary}}을(를) 설치하세요"
   },
   "terminology": {
     "agent": "Agent",

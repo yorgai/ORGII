@@ -7,8 +7,8 @@
   "jsonView": {
     "headerTitle": "settings.jsonc（コア）",
     "scopeTitle": "JSON の範囲",
-    "scopeDescription": "このエディタには、スキーマで管理されるコア設定のみが含まれます。",
-    "notCovered": "対象外: コード検索インデックス、アップデート、依存関係、モニター、および Agent の大部分のセクション。",
+    "scopeDescription": "このエディタには、スキーマで管理されるコア設定のみが含まれます",
+    "notCovered": "対象外: コード検索インデックス、アップデート、依存関係、モニター、および Agent の大部分のセクション",
     "invalidJson": "無効な JSON: {{detail}}"
   },
   "sections": {
@@ -815,8 +815,8 @@
     "networkOrg": "ISP / 組織",
     "networkProviderRegions": "Provider リージョン",
     "regionDetected": "現在の地域：{{region}}",
-    "regionRestricted": "{{providers}} のモデルはお住まいの地域で利用できない可能性があります。",
-    "regionServicesRestricted": "{{services}} などのサービスはお住まいの地域でブロックまたは制限されている可能性があります。",
+    "regionRestricted": "{{providers}} のモデルはお住まいの地域で利用できない可能性があります",
+    "regionServicesRestricted": "{{services}} などのサービスはお住まいの地域でブロックまたは制限されている可能性があります",
     "gitProxy": "Git Proxy",
     "gitProxyActive": "Proxy 検出",
     "gitProxyNone": "直接接続（Proxy なし）",
@@ -1298,7 +1298,7 @@
     "errors": {
       "pairInitFailed": "ペアリングセッションを開始できませんでした。Relay URL を確認して再試行してください。",
       "codeExpired": "ペアリングコードの有効期限が切れました。再度ペアリングを開始してください。",
-      "unknown": "Relay との通信中にエラーが発生しました。"
+      "unknown": "Relay との通信中にエラーが発生しました"
     },
     "hosting": {
       "title": "Relay はどこで実行しますか?",

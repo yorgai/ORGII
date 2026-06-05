@@ -301,6 +301,7 @@
     "history": "履歴",
     "execution": "実行",
     "gitHistory": "Git 履歴",
+    "noPullRequest": "プルリクエストがありません",
     "operationLog": "操作ログ",
     "gitDashboard": "ダッシュボード",
     "changedFiles": "変更されたファイル",
@@ -507,7 +508,7 @@
   },
   "prerequisite": {
     "missingTitle": "前提条件が不足しています",
-    "missing": "{{binary}} が必要ですが、このシステムで見つかりませんでした。この方法を使用するには、先に {{binary}} をインストールしてください。"
+    "missing": "{{binary}} が必要ですが、このシステムで見つかりませんでした。この方法を使用するには、先に {{binary}} をインストールしてください"
   },
   "terminology": {
     "agent": "Agent",

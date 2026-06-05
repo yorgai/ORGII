@@ -152,7 +152,7 @@
     },
     "edit": {
       "title": "編輯賬戶",
-      "apiChangeHint": "如需更新 API Key、密鑰或服務商設置，請刪除此賬戶並重新添加。",
+      "apiChangeHint": "如需更新 API Key、密鑰或服務商設置，請刪除此賬戶並重新添加",
       "saved": "已保存更改"
     },
     "quota": {
@@ -210,11 +210,11 @@
     "officialUrl": "官方 URL",
     "customUrl": "自定義 URL",
     "customBaseUrlRiskTitle": "自定義 URL 警告",
-    "customBaseUrlRiskWarning": "使用自定義 Base URL 可能將您的 API 密鑰和數據暴露給第三方服務器。僅在使用可信代理、自建部署或已知安全端點時使用。",
+    "customBaseUrlRiskWarning": "使用自定義 Base URL 可能將您的 API 密鑰和數據暴露給第三方服務器。僅在使用可信代理、自建部署或已知安全端點時使用",
     "addBaseUrl": "添加自定義 Base URL（選填）",
     "localModel": {
       "title": "本地模型 Cookbook",
-      "description": "選擇本地執行環境預設，確認 OpenAI 相容端點，加入一個或多個模型 ID，然後儲存此帳戶以在 Chat 中使用本地模型。",
+      "description": "選擇本地執行環境預設，確認 OpenAI 相容端點，加入一個或多個模型 ID，然後儲存此帳戶以在 Chat 中使用本地模型",
       "runtimeLabel": "執行環境預設",
       "runtimeDesc": "選擇正在執行的本地服務。預設會自動填入端點和初始模型 ID。",
       "baseUrlDesc": "OpenAI 相容的本地端點。請先啟動執行環境，然後驗證或儲存。",
@@ -324,8 +324,8 @@
     "kiroIdentityCenterUrlInvalid": "URL 格式應爲：https://d-xxxxxxxxxx.awsapps.com/start",
     "kiroRegion": "區域",
     "kiroRegionDesc": "您的 Identity Center 所在的 AWS 區域",
-    "kiroRequiresCli": "需要安裝 kiro-cli。",
-    "kiroRequiresCliHint": "前往 Integrations → {{models}} → {{installedClis}} 進行安裝。",
+    "kiroRequiresCli": "需要安裝 kiro-cli",
+    "kiroRequiresCliHint": "前往 Integrations → {{models}} → {{installedClis}} 進行安裝",
     "kiroDetectErrorHint": "請確保已安裝 kiro-cli 並且至少登錄過一次",
     "cursorDetectErrorHint": "請確保已安裝 Cursor 並且至少登錄過一次",
     "genericDetectErrorHint": "請確保 CLI 工具已安裝並配置了有效的密鑰",
@@ -339,7 +339,7 @@
     "claudeCodeSignedIn": "Claude Code 已連接",
     "claudeCodeOAuthHint": "這會保存一個 claude_code OAuth 賬戶，供使用 anthropic_native 的 Rust agents 使用。",
     "claudeCodeBrowserHint": "請在內置瀏覽器中完成 Claude Code 授權。",
-    "claudeCodeSignInErrorHint": "關閉瀏覽器後重試登錄。沒有 Token 被保存。",
+    "claudeCodeSignInErrorHint": "關閉瀏覽器後重試登錄。沒有 Token 被保存",
     "connectedViaChatGpt": "已通過 ChatGPT Plus/Pro 登錄連接",
     "apiKeyDetectedFromConfig": "已從本地配置檢測到 API Key",
     "findApiKeyFromConfig": "從本地配置文件查找 API Key",
@@ -418,7 +418,7 @@
     "validApiKeyFormat": "API Key 格式有效",
     "deploymentModels": {
       "sectionTitle": "Deployment Model",
-      "description": "輸入您的端點上可用的模型或部署名稱。",
+      "description": "輸入您的端點上可用的模型或部署名稱",
       "placeholder": "例如 claude-sonnet-4-5, gpt-4o...",
       "addModel": "添加模型"
     },
@@ -451,8 +451,8 @@
     "cursorLoginReadyDesc": "請在下方產生並貼上 Cursor API Key。沒有這個 API Key，Cursor CLI agent 無法使用。",
     "cursorApiKeyBrowserHint": "登入後，ORGII 會開啟 Cursor dashboard。請在那裡產生 User API Key，然後貼到下方",
     "cursorApiKeyRecommendedTitle": "建議提供 Cursor API Key",
-    "cursorApiKeyRecommendedDesc": "如果你只想把 Cursor 用於 ORGII 的 Rust agents，可以不提供 Cursor API Key；只需透過內建瀏覽器登入，或提供 session token。",
-    "cursorApiKeyRecommendedAction": "如果你還想在 ORGII 中使用 Cursor CLI，請提供 Cursor API Key。",
+    "cursorApiKeyRecommendedDesc": "如果你只想把 Cursor 用於 ORGII 的 Rust agents，可以不提供 Cursor API Key；只需透過內建瀏覽器登入，或提供 session token",
+    "cursorApiKeyRecommendedAction": "如果你還想在 ORGII 中使用 Cursor CLI，請提供 Cursor API Key",
     "openCursorApiKeys": "開啟 Cursor API Keys",
     "codexSetupMethodDesc": "透過 ChatGPT 登入、本機偵測或 OpenAI API key 連接 Codex",
     "codexSignInTitle": "Codex 登入",
@@ -462,24 +462,24 @@
     "codexSignedIn": "Codex 已連線",
     "codexOAuthHint": "這會儲存一個用於 ChatGPT Codex 後端存取的 codex OAuth 帳號。",
     "codexBrowserHint": "請在內嵌瀏覽器中完成 Codex 授權。",
-    "codexSignInErrorHint": "關閉瀏覽器並重新登入。未儲存任何 Token。",
+    "codexSignInErrorHint": "關閉瀏覽器並重新登入。未儲存任何 Token",
     "codexAutodetectTitle": "偵測 Codex 會話",
     "codexAutodetectDesc": "從本機環境讀取 ~/.codex/auth.json 和 OPENAI_API_KEY",
     "codexCredentialLabel": "Codex 憑證",
     "codexCredentialDesc": "貼上 Codex OAuth access token 或 OpenAI API key",
     "codexCredentialPlaceholder": "eyJ... 或 sk-...",
     "codexConnected": "Codex 已連接",
-    "codexDetectErrorHint": "請使用內嵌瀏覽器登入，或手動貼上 OpenAI API key。",
-    "codexValidationErrorHint": "檢查 token 或 API key 是否有效，然後重試。",
+    "codexDetectErrorHint": "請使用內嵌瀏覽器登入，或手動貼上 OpenAI API key",
+    "codexValidationErrorHint": "檢查 token 或 API key 是否有效，然後重試",
     "geminiSetupMethodDesc": "Connect Gemini CLI with Google sign-in, local detection, or a Gemini API key",
     "geminiSignInTitle": "Gemini Sign In",
     "geminiSignInDesc": "Sign in to Google for Gemini CLI in a native secure sign-in window. ORGII captures the callback, resolves the Code Assist project, and stores OAuth tokens locally.",
     "signInWithGemini": "Sign in with Gemini",
     "geminiReadyToSignIn": "Ready to sign in to Gemini",
     "geminiSignedIn": "Gemini connected",
-    "geminiOAuthHint": "This saves a Gemini OAuth account for official Gemini CLI access.",
+    "geminiOAuthHint": "This saves a Gemini OAuth account for official Gemini CLI access",
     "geminiBrowserHint": "Complete Google authorization in the secure sign-in window.",
-    "geminiSignInErrorHint": "Close the sign-in window and try signing in again. No token was saved.",
+    "geminiSignInErrorHint": "Close the sign-in window and try signing in again. No token was saved",
     "geminiProjectId": "Code Assist project: {{projectId}}",
     "geminiAutodetectTitle": "Detect Gemini session",
     "geminiAutodetectDesc": "Reads ~/.gemini/oauth_creds.json and GEMINI_API_KEY from your local environment",
@@ -487,8 +487,8 @@
     "geminiApiKeyDesc": "Paste a Gemini API key if you do not want to use Google sign-in",
     "geminiApiKeyPlaceholder": "AIza...",
     "geminiConnected": "Gemini connected",
-    "geminiDetectErrorHint": "Sign in with the secure native window, or paste a Gemini API key manually.",
-    "geminiValidationErrorHint": "Check that the Gemini token or API key is valid and try again."
+    "geminiDetectErrorHint": "Sign in with the secure native window, or paste a Gemini API key manually",
+    "geminiValidationErrorHint": "Check that the Gemini token or API key is valid and try again"
   },
   "integrations": {
     "title": "集成",
@@ -535,7 +535,7 @@
     "verified": "已驗證",
     "sanctionWarning": {
       "title": "服務可用性警告",
-      "message": "由於貿易限制，{{services}} 在您所在地區可能不可用。"
+      "message": "由於貿易限制，{{services}} 在您所在地區可能不可用"
     }
   },
   "channels": {
@@ -807,7 +807,7 @@
     "pickProvider": "提供商",
     "pickProviderDesc": "選擇提供商",
     "selectVariant": "連接方式",
-    "variantCodex": "Codex",
+    "variantSubscription": "訂閱",
     "variantApiKey": "API Key"
   },
   "modelsTable": {
@@ -1475,7 +1475,7 @@
     "connecting": "連接中...",
     "connectingTitle": "正在啓動 {{count}} 個 MCP server…(初次啓動可能需要數秒)",
     "connectingSlow": "仍在連接…",
-    "connectingSlowBody": "首次啓動可能需要稍等。如果某個 server 似乎卡住了,可以打開它的詳情面板手動重連。",
+    "connectingSlowBody": "首次啓動可能需要稍等。如果某個 server 似乎卡住了,可以打開它的詳情面板手動重連",
     "testConnection": "測試連接",
     "testSuccess": "連接成功",
     "testFailed": "測試失敗",
@@ -2292,7 +2292,7 @@
       "addConnection": "添加",
       "testPassed": "連接測試通過",
       "saved": "連接已添加",
-      "savedDesc": "數據庫連接已保存。你可以關閉此嚮導。"
+      "savedDesc": "數據庫連接已保存。你可以關閉此嚮導"
     }
   },
   "devTools": {

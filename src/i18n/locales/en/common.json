@@ -301,6 +301,7 @@
     "history": "History",
     "execution": "Execution",
     "gitHistory": "Git History",
+    "noPullRequest": "No pull request",
     "operationLog": "Operation Log",
     "gitDashboard": "Dashboard",
     "changedFiles": "Changed Files",
@@ -507,7 +508,7 @@
   },
   "prerequisite": {
     "missingTitle": "Missing prerequisite",
-    "missing": "{{binary}} is required but was not found on this system. Install it first to use this method."
+    "missing": "{{binary}} is required but was not found on this system. Install it first to use this method"
   },
   "terminology": {
     "agent": "Agent",

@@ -152,7 +152,7 @@
     },
     "edit": {
       "title": "Hesabı düzenle",
-      "apiChangeHint": "API Key, kimlik bilgileri veya sağlayıcı ayarlarını güncellemek için bu hesabı silin ve yenisini ekleyin.",
+      "apiChangeHint": "API Key, kimlik bilgileri veya sağlayıcı ayarlarını güncellemek için bu hesabı silin ve yenisini ekleyin",
       "saved": "Değişiklikler kaydedildi"
     },
     "quota": {
@@ -210,11 +210,11 @@
     "officialUrl": "Resmi URL",
     "customUrl": "Özel URL",
     "customBaseUrlRiskTitle": "Özel URL Uyarısı",
-    "customBaseUrlRiskWarning": "Özel Base URL kullanmak API anahtarınızı ve verilerinizi üçüncü taraf sunuculara açabilir. Yalnızca güvenilir proxy'ler, kendi barındırdığınız dağıtımlar veya bilinen güvenli uç noktalar için kullanın.",
+    "customBaseUrlRiskWarning": "Özel Base URL kullanmak API anahtarınızı ve verilerinizi üçüncü taraf sunuculara açabilir. Yalnızca güvenilir proxy'ler, kendi barındırdığınız dağıtımlar veya bilinen güvenli uç noktalar için kullanın",
     "addBaseUrl": "Özel Base URL ekle (İsteğe bağlı)",
     "localModel": {
       "title": "Yerel model Cookbook",
-      "description": "Yerel runtime presetini seçin, OpenAI uyumlu endpoint'i onaylayın, bir veya daha fazla model ID ekleyin ve yerel modelleri Chat içinde kullanmak için bu hesabı kaydedin.",
+      "description": "Yerel runtime presetini seçin, OpenAI uyumlu endpoint'i onaylayın, bir veya daha fazla model ID ekleyin ve yerel modelleri Chat içinde kullanmak için bu hesabı kaydedin",
       "runtimeLabel": "Runtime preseti",
       "runtimeDesc": "Çalıştırdığınız yerel sunucuyu seçin. Presetler endpoint'i ve başlangıç model ID'lerini doldurur.",
       "baseUrlDesc": "OpenAI uyumlu yerel endpoint. Önce runtime'ı başlatın, sonra doğrulayın veya kaydedin.",
@@ -324,8 +324,8 @@
     "kiroIdentityCenterUrlInvalid": "URL şu formatta olmalı: https://d-xxxxxxxxxx.awsapps.com/start",
     "kiroRegion": "Bölge",
     "kiroRegionDesc": "Identity Center'ınızın yapılandırıldığı AWS bölgesi",
-    "kiroRequiresCli": "kiro-cli kurulumu gereklidir.",
-    "kiroRequiresCliHint": "Kurulum için Integrations → {{models}} → {{installedClis}} bölümüne gidin.",
+    "kiroRequiresCli": "kiro-cli kurulumu gereklidir",
+    "kiroRequiresCliHint": "Kurulum için Integrations → {{models}} → {{installedClis}} bölümüne gidin",
     "kiroDetectErrorHint": "kiro-cli'nin kurulu olduğundan ve en az bir kez giriş yaptığınızdan emin olun",
     "cursorDetectErrorHint": "Cursor'ın kurulu olduğundan ve en az bir kez giriş yaptığınızdan emin olun",
     "genericDetectErrorHint": "CLI aracının kurulu olduğundan ve geçerli kimlik bilgileriyle yapılandırıldığından emin olun",
@@ -339,7 +339,7 @@
     "claudeCodeSignedIn": "Claude Code bağlı",
     "claudeCodeOAuthHint": "Bu, anthropic_native kullanan Rust agents için bir claude_code OAuth hesabı kaydeder.",
     "claudeCodeBrowserHint": "Dahili tarayıcıda Claude Code yetkilendirmesini tamamlayın.",
-    "claudeCodeSignInErrorHint": "Tarayıcıyı kapatıp tekrar giriş yapmayı deneyin. Token kaydedilmedi.",
+    "claudeCodeSignInErrorHint": "Tarayıcıyı kapatıp tekrar giriş yapmayı deneyin. Token kaydedilmedi",
     "connectedViaChatGpt": "ChatGPT Plus/Pro girişi ile bağlandı",
     "apiKeyDetectedFromConfig": "Yerel yapılandırmadan API Key algılandı",
     "findApiKeyFromConfig": "Yerel yapılandırma dosyalarından API Key bul",
@@ -418,7 +418,7 @@
     "validApiKeyFormat": "Geçerli API Key formatı",
     "deploymentModels": {
       "sectionTitle": "Deployment Model",
-      "description": "Endpoint'inizde mevcut olan model veya dağıtım adlarını girin.",
+      "description": "Endpoint'inizde mevcut olan model veya dağıtım adlarını girin",
       "placeholder": "ör. claude-sonnet-4-5, gpt-4o...",
       "addModel": "Model Ekle"
     },
@@ -451,8 +451,8 @@
     "cursorLoginReadyDesc": "Aşağıda bir Cursor API Key oluşturup yapıştırın. Cursor CLI agent bu API Key olmadan çalışmaz.",
     "cursorApiKeyBrowserHint": "Giriş yaptıktan sonra ORGII Cursor dashboard'u açar. Orada bir User API Key oluşturun ve aşağıya yapıştırın",
     "cursorApiKeyRecommendedTitle": "Cursor API Key önerilir",
-    "cursorApiKeyRecommendedDesc": "Cursor'u yalnızca ORGII'nin Rust agents ile kullanmak istiyorsanız Cursor API Key olmadan devam edebilirsiniz; sadece dahili tarayıcıyla oturum açın veya bir session token sağlayın.",
-    "cursorApiKeyRecommendedAction": "ORGII içinde Cursor CLI de kullanmak istiyorsanız bir Cursor API Key sağlayın.",
+    "cursorApiKeyRecommendedDesc": "Cursor'u yalnızca ORGII'nin Rust agents ile kullanmak istiyorsanız Cursor API Key olmadan devam edebilirsiniz; sadece dahili tarayıcıyla oturum açın veya bir session token sağlayın",
+    "cursorApiKeyRecommendedAction": "ORGII içinde Cursor CLI de kullanmak istiyorsanız bir Cursor API Key sağlayın",
     "openCursorApiKeys": "Cursor API Keys'i aç",
     "codexSetupMethodDesc": "Codex'i ChatGPT oturumu, yerel algılama veya OpenAI API key ile bağlayın",
     "codexSignInTitle": "Codex oturum açma",
@@ -462,24 +462,24 @@
     "codexSignedIn": "Codex bağlandı",
     "codexOAuthHint": "Bu, ChatGPT Codex backend erişimi için bir codex OAuth hesabı kaydeder.",
     "codexBrowserHint": "Codex yetkilendirmesini yerleşik tarayıcıda tamamlayın.",
-    "codexSignInErrorHint": "Tarayıcıyı kapatıp yeniden oturum açmayı deneyin. Token kaydedilmedi.",
+    "codexSignInErrorHint": "Tarayıcıyı kapatıp yeniden oturum açmayı deneyin. Token kaydedilmedi",
     "codexAutodetectTitle": "Codex oturumunu algıla",
     "codexAutodetectDesc": "Yerel ortamınızdan ~/.codex/auth.json ve OPENAI_API_KEY okur",
     "codexCredentialLabel": "Codex kimlik bilgisi",
     "codexCredentialDesc": "Codex OAuth access token veya OpenAI API key yapıştırın",
     "codexCredentialPlaceholder": "eyJ... veya sk-...",
     "codexConnected": "Codex bağlandı",
-    "codexDetectErrorHint": "Yerleşik tarayıcıyla oturum açın veya OpenAI API key'i elle yapıştırın.",
-    "codexValidationErrorHint": "Token veya API key'in geçerli olduğunu kontrol edip tekrar deneyin.",
+    "codexDetectErrorHint": "Yerleşik tarayıcıyla oturum açın veya OpenAI API key'i elle yapıştırın",
+    "codexValidationErrorHint": "Token veya API key'in geçerli olduğunu kontrol edip tekrar deneyin",
     "geminiSetupMethodDesc": "Connect Gemini CLI with Google sign-in, local detection, or a Gemini API key",
     "geminiSignInTitle": "Gemini Sign In",
     "geminiSignInDesc": "Sign in to Google for Gemini CLI in a native secure sign-in window. ORGII captures the callback, resolves the Code Assist project, and stores OAuth tokens locally.",
     "signInWithGemini": "Sign in with Gemini",
     "geminiReadyToSignIn": "Ready to sign in to Gemini",
     "geminiSignedIn": "Gemini connected",
-    "geminiOAuthHint": "This saves a Gemini OAuth account for official Gemini CLI access.",
+    "geminiOAuthHint": "This saves a Gemini OAuth account for official Gemini CLI access",
     "geminiBrowserHint": "Complete Google authorization in the secure sign-in window.",
-    "geminiSignInErrorHint": "Close the sign-in window and try signing in again. No token was saved.",
+    "geminiSignInErrorHint": "Close the sign-in window and try signing in again. No token was saved",
     "geminiProjectId": "Code Assist project: {{projectId}}",
     "geminiAutodetectTitle": "Detect Gemini session",
     "geminiAutodetectDesc": "Reads ~/.gemini/oauth_creds.json and GEMINI_API_KEY from your local environment",
@@ -487,8 +487,8 @@
     "geminiApiKeyDesc": "Paste a Gemini API key if you do not want to use Google sign-in",
     "geminiApiKeyPlaceholder": "AIza...",
     "geminiConnected": "Gemini connected",
-    "geminiDetectErrorHint": "Sign in with the secure native window, or paste a Gemini API key manually.",
-    "geminiValidationErrorHint": "Check that the Gemini token or API key is valid and try again."
+    "geminiDetectErrorHint": "Sign in with the secure native window, or paste a Gemini API key manually",
+    "geminiValidationErrorHint": "Check that the Gemini token or API key is valid and try again"
   },
   "integrations": {
     "title": "Entegrasyonlar",
@@ -535,7 +535,7 @@
     "verified": "Doğrulandı",
     "sanctionWarning": {
       "title": "Hizmet Erişilebilirlik Uyarısı",
-      "message": "Ticari kısıtlamalar nedeniyle {{services}} bölgenizde kullanılamayabilir."
+      "message": "Ticari kısıtlamalar nedeniyle {{services}} bölgenizde kullanılamayabilir"
     }
   },
   "channels": {
@@ -807,7 +807,7 @@
     "pickProvider": "Sağlayıcı",
     "pickProviderDesc": "Bir sağlayıcı seçin",
     "selectVariant": "Bağlantı yöntemi",
-    "variantCodex": "Codex",
+    "variantSubscription": "Abonelik",
     "variantApiKey": "API Key"
   },
   "modelsTable": {
@@ -1475,7 +1475,7 @@
     "connecting": "Bağlanıyor...",
     "connectingTitle": "{{count}} MCP sunucusu başlatılıyor… (birkaç saniye sürebilir)",
     "connectingSlow": "Hâlâ bağlanıyor…",
-    "connectingSlowBody": "İlk başlatmada biraz sürebilir. Bir sunucu takılmış görünüyorsa, ayrıntı panelini açıp yeniden bağlayın.",
+    "connectingSlowBody": "İlk başlatmada biraz sürebilir. Bir sunucu takılmış görünüyorsa, ayrıntı panelini açıp yeniden bağlayın",
     "testConnection": "Bağlantıyı Test Et",
     "testSuccess": "Bağlantı başarılı",
     "testFailed": "Test başarısız",
@@ -2292,7 +2292,7 @@
       "addConnection": "Ekle",
       "testPassed": "Bağlantı testi başarılı",
       "saved": "Bağlantı eklendi",
-      "savedDesc": "Veritabanı bağlantısı kaydedildi. Bu sihirbazı kapatabilirsiniz."
+      "savedDesc": "Veritabanı bağlantısı kaydedildi. Bu sihirbazı kapatabilirsiniz"
     }
   },
   "devTools": {

@@ -7,8 +7,8 @@
   "jsonView": {
     "headerTitle": "settings.jsonc (Kern)",
     "scopeTitle": "JSON-Umfang",
-    "scopeDescription": "Dieser Editor enthält nur schema-gestützte Kern-Einstellungen.",
-    "notCovered": "Hier nicht enthalten: Integrationen, Code-Such-Indexierung, Update, Abhängigkeiten, Monitor sowie die meisten Agent-Bereiche.",
+    "scopeDescription": "Dieser Editor enthält nur schema-gestützte Kern-Einstellungen",
+    "notCovered": "Hier nicht enthalten: Integrationen, Code-Such-Indexierung, Update, Abhängigkeiten, Monitor sowie die meisten Agent-Bereiche",
     "invalidJson": "Ungültiges JSON: {{detail}}"
   },
   "sections": {
@@ -815,8 +815,8 @@
     "networkOrg": "ISP / Org.",
     "networkProviderRegions": "Provider-Regionen",
     "regionDetected": "Ihr Standort: {{region}}",
-    "regionRestricted": "Modelle von {{providers}} sind in Ihrer Region möglicherweise nicht offiziell verfügbar.",
-    "regionServicesRestricted": "Dienste wie {{services}} sind in Ihrer Region möglicherweise gesperrt oder eingeschränkt.",
+    "regionRestricted": "Modelle von {{providers}} sind in Ihrer Region möglicherweise nicht offiziell verfügbar",
+    "regionServicesRestricted": "Dienste wie {{services}} sind in Ihrer Region möglicherweise gesperrt oder eingeschränkt",
     "gitProxy": "Git Proxy",
     "gitProxyActive": "Proxy erkannt",
     "gitProxyNone": "Direktverbindung (kein Proxy)",
@@ -1298,7 +1298,7 @@
     "errors": {
       "pairInitFailed": "Kopplungssitzung konnte nicht gestartet werden. Prüfe die Relay-URL und versuche es erneut.",
       "codeExpired": "Der Kopplungscode ist abgelaufen. Bitte starte eine neue Sitzung.",
-      "unknown": "Bei der Kommunikation mit dem Relay ist ein Fehler aufgetreten."
+      "unknown": "Bei der Kommunikation mit dem Relay ist ein Fehler aufgetreten"
     },
     "hosting": {
       "title": "Wo soll der Relay laufen?",

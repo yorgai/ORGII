@@ -89,9 +89,6 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
     prUrl,
     readyToCreate,
     isCreating: prCreating,
-    hasUpstream,
-    uncommittedCount,
-    isDefaultBranch,
   } = useAtomValue(workstationPrAtom);
   const { createPr: onCreatePr } = useAtomValue(workstationPrCallbackAtom);
   const prEligible = readyToCreate;
@@ -217,32 +214,11 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
   if (!parsedPr) {
     const displayError = localCreateError;
     if (!prEligible && !displayError) {
-      let subtitle = t(
-        "labels.noPullRequestHint",
-        "Push this branch to a GitHub remote to enable creating a pull request."
-      );
-      if (isDefaultBranch) {
-        subtitle = t(
-          "labels.noPullRequestHintDefaultBranch",
-          "Switch to a feature branch to create a pull request."
-        );
-      } else if (uncommittedCount > 0) {
-        subtitle = t(
-          "labels.noPullRequestHintUncommitted",
-          "Commit your changes before creating a pull request."
-        );
-      } else if (!hasUpstream) {
-        subtitle = t(
-          "labels.noPullRequestHintNoUpstream",
-          "Push this branch to a GitHub remote to enable creating a pull request."
-        );
-      }
       return (
         <Placeholder
           variant="empty"
           placement="sidebar"
           title={t("labels.noPullRequest", "No pull request")}
-          subtitle={subtitle}
           fillParentHeight
         />
       );

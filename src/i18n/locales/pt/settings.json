@@ -7,8 +7,8 @@
   "jsonView": {
     "headerTitle": "settings.jsonc (Núcleo)",
     "scopeTitle": "Escopo do JSON",
-    "scopeDescription": "Este editor inclui apenas as configurações principais suportadas pelo schema.",
-    "notCovered": "Não abrangidos aqui: Indexação de Busca de Código, Atualização, Dependências, Monitor e a maioria das seções de Agent.",
+    "scopeDescription": "Este editor inclui apenas as configurações principais suportadas pelo schema",
+    "notCovered": "Não abrangidos aqui: Indexação de Busca de Código, Atualização, Dependências, Monitor e a maioria das seções de Agent",
     "invalidJson": "JSON inválido: {{detail}}"
   },
   "sections": {
@@ -816,8 +816,8 @@
     "networkOrg": "ISP / Organização",
     "networkProviderRegions": "Regiões do Provedor",
     "regionDetected": "Você está em: {{region}}",
-    "regionRestricted": "Modelos de {{providers}} podem não estar oficialmente disponíveis na sua região.",
-    "regionServicesRestricted": "Serviços como {{services}} podem estar bloqueados ou restritos na sua região.",
+    "regionRestricted": "Modelos de {{providers}} podem não estar oficialmente disponíveis na sua região",
+    "regionServicesRestricted": "Serviços como {{services}} podem estar bloqueados ou restritos na sua região",
     "gitProxy": "Proxy Git",
     "gitProxyActive": "Proxy detectado",
     "gitProxyNone": "Conexão direta (sem proxy)",
@@ -1298,7 +1298,7 @@
     "errors": {
       "pairInitFailed": "Não foi possível iniciar uma sessão de pareamento. Verifique a URL do relay e tente novamente.",
       "codeExpired": "O código de pareamento expirou. Inicie uma nova sessão de pareamento.",
-      "unknown": "Algo deu errado ao se comunicar com o relay."
+      "unknown": "Algo deu errado ao se comunicar com o relay"
     },
     "hosting": {
       "title": "Onde o relay deve rodar?",

@@ -301,6 +301,7 @@
     "history": "Verlauf",
     "execution": "Ausführung",
     "gitHistory": "Git-Verlauf",
+    "noPullRequest": "Keine Pull Request",
     "operationLog": "Operationsprotokoll",
     "gitDashboard": "Dashboard",
     "changedFiles": "Geänderte Dateien",
@@ -507,7 +508,7 @@
   },
   "prerequisite": {
     "missingTitle": "Fehlende Voraussetzung",
-    "missing": "{{binary}} wird benötigt, wurde aber auf diesem System nicht gefunden. Installieren Sie es zuerst, um diese Methode zu verwenden."
+    "missing": "{{binary}} wird benötigt, wurde aber auf diesem System nicht gefunden. Installieren Sie es zuerst, um diese Methode zu verwenden"
   },
   "terminology": {
     "agent": "Agent",

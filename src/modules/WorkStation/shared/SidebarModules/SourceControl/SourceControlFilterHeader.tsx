@@ -128,6 +128,11 @@ const SourceControlFilterHeader: React.FC<SourceControlFilterHeaderProps> =
             ),
             triggerLabel: t("common:labels.gitHistory"),
           },
+          {
+            value: "pr",
+            label: <span className="whitespace-nowrap">Pull Request</span>,
+            triggerLabel: "Pull Request",
+          },
         ];
       }, [getCountLabel, getModeCount, t]);
 

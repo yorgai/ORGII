@@ -155,7 +155,7 @@
     },
     "edit": {
       "title": "Chỉnh sửa tài khoản",
-      "apiChangeHint": "Để cập nhật API Key, thông tin xác thực hoặc cài đặt nhà cung cấp, hãy xóa tài khoản này và thêm mới.",
+      "apiChangeHint": "Để cập nhật API Key, thông tin xác thực hoặc cài đặt nhà cung cấp, hãy xóa tài khoản này và thêm mới",
       "saved": "Đã lưu thay đổi"
     },
     "quota": {
@@ -213,11 +213,11 @@
     "officialUrl": "URL chính thức",
     "customUrl": "URL tùy chỉnh",
     "customBaseUrlRiskTitle": "Cảnh báo URL tùy chỉnh",
-    "customBaseUrlRiskWarning": "Sử dụng Base URL tùy chỉnh có thể khiến khóa API và dữ liệu của bạn bị lộ cho máy chủ bên thứ ba. Chỉ sử dụng cho proxy đáng tin cậy, triển khai tự lưu trữ hoặc điểm cuối bảo mật đã biết.",
+    "customBaseUrlRiskWarning": "Sử dụng Base URL tùy chỉnh có thể khiến khóa API và dữ liệu của bạn bị lộ cho máy chủ bên thứ ba. Chỉ sử dụng cho proxy đáng tin cậy, triển khai tự lưu trữ hoặc điểm cuối bảo mật đã biết",
     "addBaseUrl": "Thêm Base URL tùy chỉnh (Tùy chọn)",
     "localModel": {
       "title": "Cookbook mô hình cục bộ",
-      "description": "Chọn preset runtime cục bộ, xác nhận endpoint tương thích OpenAI, thêm một hoặc nhiều ID mô hình rồi lưu tài khoản này để dùng mô hình cục bộ trong Chat.",
+      "description": "Chọn preset runtime cục bộ, xác nhận endpoint tương thích OpenAI, thêm một hoặc nhiều ID mô hình rồi lưu tài khoản này để dùng mô hình cục bộ trong Chat",
       "runtimeLabel": "Preset runtime",
       "runtimeDesc": "Chọn máy chủ cục bộ đang chạy. Preset sẽ điền endpoint và ID mô hình khởi đầu.",
       "baseUrlDesc": "Endpoint cục bộ tương thích OpenAI. Hãy khởi động runtime trước khi xác thực hoặc lưu.",
@@ -327,8 +327,8 @@
     "kiroIdentityCenterUrlInvalid": "URL phải có dạng: https://d-xxxxxxxxxx.awsapps.com/start",
     "kiroRegion": "Khu vực",
     "kiroRegionDesc": "Khu vực AWS nơi Identity Center của bạn được cấu hình",
-    "kiroRequiresCli": "Yêu cầu cài đặt kiro-cli.",
-    "kiroRequiresCliHint": "Đi tới Integrations → {{models}} → {{installedClis}} để cài đặt.",
+    "kiroRequiresCli": "Yêu cầu cài đặt kiro-cli",
+    "kiroRequiresCliHint": "Đi tới Integrations → {{models}} → {{installedClis}} để cài đặt",
     "kiroDetectErrorHint": "Đảm bảo kiro-cli đã được cài đặt và bạn đã đăng nhập ít nhất một lần",
     "cursorDetectErrorHint": "Đảm bảo Cursor đã được cài đặt và bạn đã đăng nhập ít nhất một lần",
     "genericDetectErrorHint": "Đảm bảo công cụ CLI đã được cài đặt và cấu hình với thông tin xác thực hợp lệ",
@@ -342,7 +342,7 @@
     "claudeCodeSignedIn": "Claude Code đã kết nối",
     "claudeCodeOAuthHint": "Thao tác này lưu tài khoản claude_code OAuth cho Rust agents dùng anthropic_native.",
     "claudeCodeBrowserHint": "Hoàn tất ủy quyền Claude Code trong trình duyệt tích hợp.",
-    "claudeCodeSignInErrorHint": "Đóng trình duyệt và thử đăng nhập lại. Chưa lưu Token nào.",
+    "claudeCodeSignInErrorHint": "Đóng trình duyệt và thử đăng nhập lại. Chưa lưu Token nào",
     "connectedViaChatGpt": "Đã kết nối qua ChatGPT Plus/Pro",
     "apiKeyDetectedFromConfig": "Đã phát hiện API key từ cấu hình cục bộ",
     "findApiKeyFromConfig": "Tìm API key từ các tệp cấu hình cục bộ",
@@ -421,7 +421,7 @@
     "validApiKeyFormat": "Định dạng API Key hợp lệ",
     "deploymentModels": {
       "sectionTitle": "Deployment Model",
-      "description": "Nhập tên mô hình hoặc tên triển khai có sẵn trên endpoint của bạn.",
+      "description": "Nhập tên mô hình hoặc tên triển khai có sẵn trên endpoint của bạn",
       "placeholder": "ví dụ: claude-sonnet-4-5, gpt-4o...",
       "addModel": "Thêm mô hình"
     },
@@ -454,8 +454,8 @@
     "cursorLoginReadyDesc": "Hãy tạo và dán Cursor API Key bên dưới. Cursor CLI agent sẽ không hoạt động nếu thiếu API Key này.",
     "cursorApiKeyBrowserHint": "Sau khi đăng nhập, ORGII sẽ mở dashboard Cursor. Hãy tạo User API Key ở đó rồi dán vào bên dưới",
     "cursorApiKeyRecommendedTitle": "Nên cung cấp Cursor API Key",
-    "cursorApiKeyRecommendedDesc": "Bạn có thể tiếp tục mà không cần Cursor API Key nếu chỉ muốn dùng Cursor với Rust agents của ORGII; chỉ cần đăng nhập bằng trình duyệt nội bộ hoặc cung cấp session token.",
-    "cursorApiKeyRecommendedAction": "Hãy cung cấp Cursor API Key nếu bạn cũng muốn dùng Cursor CLI trong ORGII.",
+    "cursorApiKeyRecommendedDesc": "Bạn có thể tiếp tục mà không cần Cursor API Key nếu chỉ muốn dùng Cursor với Rust agents của ORGII; chỉ cần đăng nhập bằng trình duyệt nội bộ hoặc cung cấp session token",
+    "cursorApiKeyRecommendedAction": "Hãy cung cấp Cursor API Key nếu bạn cũng muốn dùng Cursor CLI trong ORGII",
     "openCursorApiKeys": "Mở Cursor API Keys",
     "codexSetupMethodDesc": "Kết nối Codex bằng đăng nhập ChatGPT, tự phát hiện cục bộ hoặc OpenAI API key",
     "codexSignInTitle": "Đăng nhập Codex",
@@ -465,24 +465,24 @@
     "codexSignedIn": "Codex đã kết nối",
     "codexOAuthHint": "Thao tác này lưu tài khoản OAuth codex để truy cập backend ChatGPT Codex.",
     "codexBrowserHint": "Hoàn tất ủy quyền Codex trong trình duyệt nhúng.",
-    "codexSignInErrorHint": "Đóng trình duyệt và thử đăng nhập lại. Chưa lưu Token nào.",
+    "codexSignInErrorHint": "Đóng trình duyệt và thử đăng nhập lại. Chưa lưu Token nào",
     "codexAutodetectTitle": "Phát hiện phiên Codex",
     "codexAutodetectDesc": "Đọc ~/.codex/auth.json và OPENAI_API_KEY từ môi trường cục bộ",
     "codexCredentialLabel": "Thông tin Codex",
     "codexCredentialDesc": "Dán Codex OAuth access token hoặc OpenAI API key",
     "codexCredentialPlaceholder": "eyJ... hoặc sk-...",
     "codexConnected": "Codex đã kết nối",
-    "codexDetectErrorHint": "Đăng nhập bằng trình duyệt nhúng hoặc dán thủ công OpenAI API key.",
-    "codexValidationErrorHint": "Kiểm tra token hoặc API key có hợp lệ không rồi thử lại.",
+    "codexDetectErrorHint": "Đăng nhập bằng trình duyệt nhúng hoặc dán thủ công OpenAI API key",
+    "codexValidationErrorHint": "Kiểm tra token hoặc API key có hợp lệ không rồi thử lại",
     "geminiSetupMethodDesc": "Connect Gemini CLI with Google sign-in, local detection, or a Gemini API key",
     "geminiSignInTitle": "Gemini Sign In",
     "geminiSignInDesc": "Sign in to Google for Gemini CLI in a native secure sign-in window. ORGII captures the callback, resolves the Code Assist project, and stores OAuth tokens locally.",
     "signInWithGemini": "Sign in with Gemini",
     "geminiReadyToSignIn": "Ready to sign in to Gemini",
     "geminiSignedIn": "Gemini connected",
-    "geminiOAuthHint": "This saves a Gemini OAuth account for official Gemini CLI access.",
+    "geminiOAuthHint": "This saves a Gemini OAuth account for official Gemini CLI access",
     "geminiBrowserHint": "Complete Google authorization in the secure sign-in window.",
-    "geminiSignInErrorHint": "Close the sign-in window and try signing in again. No token was saved.",
+    "geminiSignInErrorHint": "Close the sign-in window and try signing in again. No token was saved",
     "geminiProjectId": "Code Assist project: {{projectId}}",
     "geminiAutodetectTitle": "Detect Gemini session",
     "geminiAutodetectDesc": "Reads ~/.gemini/oauth_creds.json and GEMINI_API_KEY from your local environment",
@@ -490,8 +490,8 @@
     "geminiApiKeyDesc": "Paste a Gemini API key if you do not want to use Google sign-in",
     "geminiApiKeyPlaceholder": "AIza...",
     "geminiConnected": "Gemini connected",
-    "geminiDetectErrorHint": "Sign in with the secure native window, or paste a Gemini API key manually.",
-    "geminiValidationErrorHint": "Check that the Gemini token or API key is valid and try again."
+    "geminiDetectErrorHint": "Sign in with the secure native window, or paste a Gemini API key manually",
+    "geminiValidationErrorHint": "Check that the Gemini token or API key is valid and try again"
   },
   "integrations": {
     "title": "Tích hợp",
@@ -538,7 +538,7 @@
     "verified": "Đã xác minh",
     "sanctionWarning": {
       "title": "Cảnh báo khả dụng dịch vụ",
-      "message": "{{services}} có thể không khả dụng trong khu vực của bạn do hạn chế thương mại."
+      "message": "{{services}} có thể không khả dụng trong khu vực của bạn do hạn chế thương mại"
     }
   },
   "channels": {
@@ -810,7 +810,7 @@
     "pickProvider": "Nhà cung cấp",
     "pickProviderDesc": "Chọn một nhà cung cấp",
     "selectVariant": "Phương thức kết nối",
-    "variantCodex": "Codex",
+    "variantSubscription": "Gói đăng ký",
     "variantApiKey": "API Key"
   },
   "modelsTable": {
@@ -1478,7 +1478,7 @@
     "connecting": "Đang kết nối...",
     "connectingTitle": "Đang khởi động {{count}} MCP server… (có thể mất vài giây)",
     "connectingSlow": "Vẫn đang kết nối…",
-    "connectingSlowBody": "Lần chạy đầu tiên có thể mất một chút. Nếu một server có vẻ bị treo, mở bảng chi tiết của nó để kết nối lại.",
+    "connectingSlowBody": "Lần chạy đầu tiên có thể mất một chút. Nếu một server có vẻ bị treo, mở bảng chi tiết của nó để kết nối lại",
     "testConnection": "Kiểm tra kết nối",
     "testSuccess": "Kết nối thành công",
     "testFailed": "Kiểm tra thất bại",
@@ -2295,7 +2295,7 @@
       "addConnection": "Thêm",
       "testPassed": "Kiểm tra kết nối thành công",
       "saved": "Đã thêm kết nối",
-      "savedDesc": "Kết nối cơ sở dữ liệu đã được lưu. Bạn có thể đóng trình hướng dẫn này."
+      "savedDesc": "Kết nối cơ sở dữ liệu đã được lưu. Bạn có thể đóng trình hướng dẫn này"
     }
   },
   "devTools": {

@@ -7,8 +7,8 @@
   "jsonView": {
     "headerTitle": "settings.jsonc (Núcleo)",
     "scopeTitle": "Alcance de JSON",
-    "scopeDescription": "Este editor solo incluye configuraciones principales respaldadas por esquema.",
-    "notCovered": "No cubre: Indexación de búsqueda de código, Actualización, Dependencias, Monitor y la mayoría de secciones de Agent.",
+    "scopeDescription": "Este editor solo incluye configuraciones principales respaldadas por esquema",
+    "notCovered": "No cubre: Indexación de búsqueda de código, Actualización, Dependencias, Monitor y la mayoría de secciones de Agent",
     "invalidJson": "JSON no válido: {{detail}}"
   },
   "sections": {
@@ -815,8 +815,8 @@
     "networkOrg": "ISP / Org",
     "networkProviderRegions": "Regiones de Provider",
     "regionDetected": "Estás en: {{region}}",
-    "regionRestricted": "Los modelos de {{providers}} podrían no estar disponibles oficialmente en tu región.",
-    "regionServicesRestricted": "Servicios como {{services}} pueden estar bloqueados o restringidos en tu región.",
+    "regionRestricted": "Los modelos de {{providers}} podrían no estar disponibles oficialmente en tu región",
+    "regionServicesRestricted": "Servicios como {{services}} pueden estar bloqueados o restringidos en tu región",
     "gitProxy": "Git Proxy",
     "gitProxyActive": "Proxy detectado",
     "gitProxyNone": "Conexión directa (sin Proxy)",
@@ -1298,7 +1298,7 @@
     "errors": {
       "pairInitFailed": "No se pudo iniciar la sesión de emparejamiento. Revisa la URL del Relay e inténtalo de nuevo.",
       "codeExpired": "El código de emparejamiento expiró. Inicia una nueva sesión.",
-      "unknown": "Ocurrió un error al comunicarse con el Relay."
+      "unknown": "Ocurrió un error al comunicarse con el Relay"
     },
     "hosting": {
       "title": "¿Dónde debe ejecutarse el Relay?",

@@ -7,8 +7,8 @@
   "jsonView": {
     "headerTitle": "settings.jsonc (Noyau)",
     "scopeTitle": "Portée JSON",
-    "scopeDescription": "Cet éditeur inclut uniquement les paramètres principaux couverts par le schéma.",
-    "notCovered": "Non couvert ici : Indexation de recherche de code, Mise à jour, Dépendances, Système et réseau et la plupart des sections Agent.",
+    "scopeDescription": "Cet éditeur inclut uniquement les paramètres principaux couverts par le schéma",
+    "notCovered": "Non couvert ici : Indexation de recherche de code, Mise à jour, Dépendances, Système et réseau et la plupart des sections Agent",
     "invalidJson": "JSON invalide : {{detail}}"
   },
   "sections": {
@@ -815,8 +815,8 @@
     "networkOrg": "FAI / Org",
     "networkProviderRegions": "Régions Provider",
     "regionDetected": "Vous êtes en : {{region}}",
-    "regionRestricted": "Les modèles de {{providers}} pourraient ne pas être officiellement disponibles dans votre région.",
-    "regionServicesRestricted": "Des services comme {{services}} peuvent être bloqués ou restreints dans votre région.",
+    "regionRestricted": "Les modèles de {{providers}} pourraient ne pas être officiellement disponibles dans votre région",
+    "regionServicesRestricted": "Des services comme {{services}} peuvent être bloqués ou restreints dans votre région",
     "gitProxy": "Git Proxy",
     "gitProxyActive": "Proxy détecté",
     "gitProxyNone": "Connexion directe (pas de Proxy)",
@@ -1298,7 +1298,7 @@
     "errors": {
       "pairInitFailed": "Impossible de démarrer une session d'association. Vérifiez l'URL Relay et réessayez.",
       "codeExpired": "Le code d'association a expiré. Démarrez une nouvelle session.",
-      "unknown": "Une erreur s'est produite lors de la communication avec le Relay."
+      "unknown": "Une erreur s'est produite lors de la communication avec le Relay"
     },
     "hosting": {
       "title": "Où le Relay doit-il s'exécuter ?",

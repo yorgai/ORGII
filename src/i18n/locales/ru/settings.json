@@ -7,8 +7,8 @@
   "jsonView": {
     "headerTitle": "settings.jsonc (Ядро)",
     "scopeTitle": "Область JSON",
-    "scopeDescription": "Этот редактор включает только базовые настройки, поддерживаемые схемой.",
-    "notCovered": "Не покрывается здесь: Индексация поиска кода, Обновление, Зависимости, Монитор и большинство разделов Agent.",
+    "scopeDescription": "Этот редактор включает только базовые настройки, поддерживаемые схемой",
+    "notCovered": "Не покрывается здесь: Индексация поиска кода, Обновление, Зависимости, Монитор и большинство разделов Agent",
     "invalidJson": "Недопустимый JSON: {{detail}}"
   },
   "sections": {
@@ -815,8 +815,8 @@
     "networkOrg": "ISP / Орг.",
     "networkProviderRegions": "Регионы Provider",
     "regionDetected": "Вы находитесь в: {{region}}",
-    "regionRestricted": "Модели {{providers}} могут быть официально недоступны в вашем регионе.",
-    "regionServicesRestricted": "Сервисы {{services}} могут быть заблокированы или ограничены в вашем регионе.",
+    "regionRestricted": "Модели {{providers}} могут быть официально недоступны в вашем регионе",
+    "regionServicesRestricted": "Сервисы {{services}} могут быть заблокированы или ограничены в вашем регионе",
     "gitProxy": "Git Proxy",
     "gitProxyActive": "Proxy обнаружен",
     "gitProxyNone": "Прямое подключение (без Proxy)",
@@ -1300,7 +1300,7 @@
     "errors": {
       "pairInitFailed": "Не удалось начать сессию привязки. Проверьте URL Relay и повторите попытку.",
       "codeExpired": "Срок действия кода привязки истек. Начните новую сессию.",
-      "unknown": "Ошибка при связи с Relay."
+      "unknown": "Ошибка при связи с Relay"
     },
     "hosting": {
       "title": "Где должен работать Relay?",

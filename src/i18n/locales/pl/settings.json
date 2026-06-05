@@ -7,8 +7,8 @@
   "jsonView": {
     "headerTitle": "settings.jsonc (Rdzeń)",
     "scopeTitle": "Zakres JSON",
-    "scopeDescription": "Ten edytor zawiera tylko ustawienia rdzenia oparte na schemacie.",
-    "notCovered": "Nie uwzględniono tutaj: indeksowania wyszukiwania kodu, aktualizacji, zależności, monitora oraz większości sekcji Agent.",
+    "scopeDescription": "Ten edytor zawiera tylko ustawienia rdzenia oparte na schemacie",
+    "notCovered": "Nie uwzględniono tutaj: indeksowania wyszukiwania kodu, aktualizacji, zależności, monitora oraz większości sekcji Agent",
     "invalidJson": "Nieprawidłowy JSON: {{detail}}"
   },
   "sections": {
@@ -816,8 +816,8 @@
     "networkOrg": "ISP / Org",
     "networkProviderRegions": "Regiony dostawcy",
     "regionDetected": "Jesteś w: {{region}}",
-    "regionRestricted": "Modele od {{providers}} mogą nie być oficjalnie dostępne w Twoim regionie.",
-    "regionServicesRestricted": "Usługi takie jak {{services}} mogą być zablokowane lub ograniczone w Twoim regionie.",
+    "regionRestricted": "Modele od {{providers}} mogą nie być oficjalnie dostępne w Twoim regionie",
+    "regionServicesRestricted": "Usługi takie jak {{services}} mogą być zablokowane lub ograniczone w Twoim regionie",
     "gitProxy": "Proxy Git",
     "gitProxyActive": "Wykryto proxy",
     "gitProxyNone": "Połączenie bezpośrednie (brak proxy)",
@@ -1298,7 +1298,7 @@
     "errors": {
       "pairInitFailed": "Nie udało się rozpocząć sesji parowania. Sprawdź URL relay i spróbuj ponownie.",
       "codeExpired": "Kod parowania wygasł. Rozpocznij nową sesję parowania.",
-      "unknown": "Coś poszło nie tak podczas komunikacji z relay."
+      "unknown": "Coś poszło nie tak podczas komunikacji z relay"
     },
     "hosting": {
       "title": "Gdzie powinien działać relay?",

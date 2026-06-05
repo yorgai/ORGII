@@ -301,6 +301,7 @@
     "history": "Historia",
     "execution": "Wykonanie",
     "gitHistory": "Historia Git",
+    "noPullRequest": "Brak pull requesta",
     "operationLog": "Dziennik operacji",
     "gitDashboard": "Panel",
     "changedFiles": "Zmienione pliki",
@@ -507,7 +508,7 @@
   },
   "prerequisite": {
     "missingTitle": "Brak wymaganego komponentu",
-    "missing": "{{binary}} jest wymagane, ale nie zostało znalezione w systemie. Zainstaluj je najpierw, aby skorzystać z tej metody."
+    "missing": "{{binary}} jest wymagane, ale nie zostało znalezione w systemie. Zainstaluj je najpierw, aby skorzystać z tej metody"
   },
   "terminology": {
     "agent": "Agent",

@@ -7,8 +7,8 @@
   "jsonView": {
     "headerTitle": "settings.jsonc (Lõi)",
     "scopeTitle": "Phạm vi JSON",
-    "scopeDescription": "Trình chỉnh sửa này chỉ bao gồm các cài đặt lõi được hỗ trợ bởi schema.",
-    "notCovered": "Không bao gồm tại đây: Lập chỉ mục tìm kiếm mã, Cập nhật, Phụ thuộc, Giám sát và phần lớn các mục Agent.",
+    "scopeDescription": "Trình chỉnh sửa này chỉ bao gồm các cài đặt lõi được hỗ trợ bởi schema",
+    "notCovered": "Không bao gồm tại đây: Lập chỉ mục tìm kiếm mã, Cập nhật, Phụ thuộc, Giám sát và phần lớn các mục Agent",
     "invalidJson": "JSON không hợp lệ: {{detail}}"
   },
   "sections": {
@@ -815,8 +815,8 @@
     "networkOrg": "ISP / Tổ chức",
     "networkProviderRegions": "Vùng Provider",
     "regionDetected": "Bạn đang ở: {{region}}",
-    "regionRestricted": "Các mô hình từ {{providers}} có thể không khả dụng chính thức trong khu vực của bạn.",
-    "regionServicesRestricted": "Các dịch vụ như {{services}} có thể bị chặn hoặc hạn chế trong khu vực của bạn.",
+    "regionRestricted": "Các mô hình từ {{providers}} có thể không khả dụng chính thức trong khu vực của bạn",
+    "regionServicesRestricted": "Các dịch vụ như {{services}} có thể bị chặn hoặc hạn chế trong khu vực của bạn",
     "gitProxy": "Git Proxy",
     "gitProxyActive": "Phát hiện Proxy",
     "gitProxyNone": "Kết nối trực tiếp (không có Proxy)",
@@ -1298,7 +1298,7 @@
     "errors": {
       "pairInitFailed": "Không thể bắt đầu phiên ghép nối. Hãy kiểm tra URL Relay và thử lại.",
       "codeExpired": "Mã ghép nối đã hết hạn. Vui lòng bắt đầu phiên mới.",
-      "unknown": "Đã xảy ra lỗi khi giao tiếp với Relay."
+      "unknown": "Đã xảy ra lỗi khi giao tiếp với Relay"
     },
     "hosting": {
       "title": "Relay nên chạy ở đâu?",

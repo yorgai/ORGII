@@ -7,8 +7,8 @@
   "jsonView": {
     "headerTitle": "settings.jsonc (Çekirdek)",
     "scopeTitle": "JSON kapsamı",
-    "scopeDescription": "Bu düzenleyici yalnızca şema destekli çekirdek ayarları içerir.",
-    "notCovered": "Burada yer almaz: Kod Arama İndeksleme, Güncelleme, Bağımlılıklar, Monitör ve Agent bölümlerinin çoğu.",
+    "scopeDescription": "Bu düzenleyici yalnızca şema destekli çekirdek ayarları içerir",
+    "notCovered": "Burada yer almaz: Kod Arama İndeksleme, Güncelleme, Bağımlılıklar, Monitör ve Agent bölümlerinin çoğu",
     "invalidJson": "Geçersiz JSON: {{detail}}"
   },
   "sections": {
@@ -815,8 +815,8 @@
     "networkOrg": "ISP / Kuruluş",
     "networkProviderRegions": "Provider Bölgeleri",
     "regionDetected": "Bulunduğunuz bölge: {{region}}",
-    "regionRestricted": "{{providers}} modelleri bölgenizde resmi olarak kullanılamayabilir.",
-    "regionServicesRestricted": "{{services}} gibi hizmetler bölgenizde engellenmiş veya kısıtlanmış olabilir.",
+    "regionRestricted": "{{providers}} modelleri bölgenizde resmi olarak kullanılamayabilir",
+    "regionServicesRestricted": "{{services}} gibi hizmetler bölgenizde engellenmiş veya kısıtlanmış olabilir",
     "gitProxy": "Git Proxy",
     "gitProxyActive": "Proxy algılandı",
     "gitProxyNone": "Doğrudan bağlantı (Proxy yok)",
@@ -1299,7 +1299,7 @@
     "errors": {
       "pairInitFailed": "Eşleştirme oturumu başlatılamadı. Relay URL'sini kontrol edip tekrar dene.",
       "codeExpired": "Eşleştirme kodunun süresi doldu. Lütfen yeni bir oturum başlat.",
-      "unknown": "Relay ile iletişim sırasında bir hata oluştu."
+      "unknown": "Relay ile iletişim sırasında bir hata oluştu"
     },
     "hosting": {
       "title": "Relay nerede çalışmalı?",

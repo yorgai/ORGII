@@ -7,8 +7,8 @@
   "jsonView": {
     "headerTitle": "settings.jsonc（核心）",
     "scopeTitle": "JSON 範圍",
-    "scopeDescription": "此編輯器僅包含由 schema 支持的核心設置。",
-    "notCovered": "此處不包含：代碼搜索索引、更新、依賴、監控，以及大部分 Agent 分區。",
+    "scopeDescription": "此編輯器僅包含由 schema 支持的核心設置",
+    "notCovered": "此處不包含：代碼搜索索引、更新、依賴、監控，以及大部分 Agent 分區",
     "invalidJson": "JSON 格式無效：{{detail}}"
   },
   "sections": {
@@ -815,8 +815,8 @@
     "networkOrg": "ISP / 組織",
     "networkProviderRegions": "Provider 區域",
     "regionDetected": "您所在地區：{{region}}",
-    "regionRestricted": "{{providers}} 的模型可能在您所在地區不可用。",
-    "regionServicesRestricted": "{{services}} 等服務可能在您所在地區被封鎖或限制。",
+    "regionRestricted": "{{providers}} 的模型可能在您所在地區不可用",
+    "regionServicesRestricted": "{{services}} 等服務可能在您所在地區被封鎖或限制",
     "gitProxy": "Git Proxy",
     "gitProxyActive": "檢測到 Proxy",
     "gitProxyNone": "直連（無 Proxy）",
@@ -1298,7 +1298,7 @@
     "errors": {
       "pairInitFailed": "無法啓動配對會話。請檢查 Relay URL 後重試。",
       "codeExpired": "配對碼已過期,請重新發起配對。",
-      "unknown": "與 Relay 通信時發生錯誤。"
+      "unknown": "與 Relay 通信時發生錯誤"
     },
     "hosting": {
       "title": "Relay 應該在哪裏運行?",

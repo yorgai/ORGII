@@ -7,8 +7,8 @@
   "jsonView": {
     "headerTitle": "settings.jsonc (코어)",
     "scopeTitle": "JSON 범위",
-    "scopeDescription": "이 편집기에는 스키마 기반 코어 설정만 포함됩니다.",
-    "notCovered": "여기서 다루지 않는 항목: 코드 검색 인덱싱, 업데이트, 종속성, 모니터 및 대부분의 Agent 섹션.",
+    "scopeDescription": "이 편집기에는 스키마 기반 코어 설정만 포함됩니다",
+    "notCovered": "여기서 다루지 않는 항목: 코드 검색 인덱싱, 업데이트, 종속성, 모니터 및 대부분의 Agent 섹션",
     "invalidJson": "잘못된 JSON: {{detail}}"
   },
   "sections": {
@@ -815,8 +815,8 @@
     "networkOrg": "ISP / 조직",
     "networkProviderRegions": "Provider 리전",
     "regionDetected": "현재 위치: {{region}}",
-    "regionRestricted": "{{providers}}의 모델은 현재 지역에서 공식적으로 사용할 수 없을 수 있습니다.",
-    "regionServicesRestricted": "{{services}} 등의 서비스가 현재 지역에서 차단되거나 제한될 수 있습니다.",
+    "regionRestricted": "{{providers}}의 모델은 현재 지역에서 공식적으로 사용할 수 없을 수 있습니다",
+    "regionServicesRestricted": "{{services}} 등의 서비스가 현재 지역에서 차단되거나 제한될 수 있습니다",
     "gitProxy": "Git Proxy",
     "gitProxyActive": "Proxy 감지됨",
     "gitProxyNone": "직접 연결 (Proxy 없음)",
@@ -1299,7 +1299,7 @@
     "errors": {
       "pairInitFailed": "페어링 세션을 시작할 수 없습니다. Relay URL 을 확인한 후 다시 시도하세요.",
       "codeExpired": "페어링 코드가 만료되었습니다. 새 세션을 시작하세요.",
-      "unknown": "Relay 와 통신하는 중 오류가 발생했습니다."
+      "unknown": "Relay 와 통신하는 중 오류가 발생했습니다"
     },
     "hosting": {
       "title": "Relay 를 어디에서 실행할까요?",

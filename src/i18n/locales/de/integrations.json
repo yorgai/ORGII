@@ -155,7 +155,7 @@
     },
     "edit": {
       "title": "Konto bearbeiten",
-      "apiChangeHint": "Um Ihren API Key, Anmeldedaten oder Anbietereinstellungen zu aktualisieren, löschen Sie dieses Konto und erstellen Sie ein neues.",
+      "apiChangeHint": "Um Ihren API Key, Anmeldedaten oder Anbietereinstellungen zu aktualisieren, löschen Sie dieses Konto und erstellen Sie ein neues",
       "saved": "Änderungen gespeichert"
     },
     "quota": {
@@ -213,11 +213,11 @@
     "officialUrl": "Offizielle URL",
     "customUrl": "Benutzerdefinierte URL",
     "customBaseUrlRiskTitle": "Warnung: Benutzerdefinierte URL",
-    "customBaseUrlRiskWarning": "Eine benutzerdefinierte Base-URL kann Ihren API-Schlüssel und Ihre Daten Drittanbieter-Servern aussetzen. Verwenden Sie dies nur für vertrauenswürdige Proxys, selbst gehostete Bereitstellungen oder bekannte sichere Endpunkte.",
+    "customBaseUrlRiskWarning": "Eine benutzerdefinierte Base-URL kann Ihren API-Schlüssel und Ihre Daten Drittanbieter-Servern aussetzen. Verwenden Sie dies nur für vertrauenswürdige Proxys, selbst gehostete Bereitstellungen oder bekannte sichere Endpunkte",
     "addBaseUrl": "Benutzerdefinierte Base URL hinzufügen (Optional)",
     "localModel": {
       "title": "Lokales Modell-Cookbook",
-      "description": "Wählen Sie ein lokales Runtime-Preset, bestätigen Sie den OpenAI-kompatiblen Endpoint, fügen Sie ein oder mehrere Modell-IDs hinzu und speichern Sie dieses Konto, um lokale Modelle in Chat zu verwenden.",
+      "description": "Wählen Sie ein lokales Runtime-Preset, bestätigen Sie den OpenAI-kompatiblen Endpoint, fügen Sie ein oder mehrere Modell-IDs hinzu und speichern Sie dieses Konto, um lokale Modelle in Chat zu verwenden",
       "runtimeLabel": "Runtime-Preset",
       "runtimeDesc": "Wählen Sie den lokalen Server aus, der läuft. Presets füllen Endpoint und Startmodelle aus.",
       "baseUrlDesc": "OpenAI-kompatibler lokaler Endpoint. Starten Sie die Runtime, bevor Sie validieren oder speichern.",
@@ -327,8 +327,8 @@
     "kiroIdentityCenterUrlInvalid": "URL sollte so aussehen: https://d-xxxxxxxxxx.awsapps.com/start",
     "kiroRegion": "Region",
     "kiroRegionDesc": "Die AWS-Region, in der Ihr Identity Center konfiguriert ist",
-    "kiroRequiresCli": "Erfordert die Installation von kiro-cli.",
-    "kiroRequiresCliHint": "Gehen Sie zu Integrations → {{models}} → {{installedClis}} zur Installation.",
+    "kiroRequiresCli": "Erfordert die Installation von kiro-cli",
+    "kiroRequiresCliHint": "Gehen Sie zu Integrations → {{models}} → {{installedClis}} zur Installation",
     "kiroDetectErrorHint": "Stellen Sie sicher, dass kiro-cli installiert ist und Sie sich mindestens einmal angemeldet haben",
     "cursorDetectErrorHint": "Stellen Sie sicher, dass Cursor installiert ist und Sie sich mindestens einmal angemeldet haben",
     "genericDetectErrorHint": "Stellen Sie sicher, dass das CLI-Tool installiert und mit gültigen Anmeldedaten konfiguriert ist",
@@ -342,7 +342,7 @@
     "claudeCodeSignedIn": "Claude Code verbunden",
     "claudeCodeOAuthHint": "Dies speichert ein claude_code OAuth-Konto für Rust agents mit anthropic_native.",
     "claudeCodeBrowserHint": "Schließen Sie die Claude Code-Autorisierung im integrierten Browser ab.",
-    "claudeCodeSignInErrorHint": "Schließen Sie den Browser und versuchen Sie die Anmeldung erneut. Es wurde kein Token gespeichert.",
+    "claudeCodeSignInErrorHint": "Schließen Sie den Browser und versuchen Sie die Anmeldung erneut. Es wurde kein Token gespeichert",
     "connectedViaChatGpt": "Verbunden über ChatGPT Plus/Pro",
     "apiKeyDetectedFromConfig": "API Key aus lokaler Config erkannt",
     "findApiKeyFromConfig": "API Key in lokalen Configsdateien suchen",
@@ -421,7 +421,7 @@
     "validApiKeyFormat": "Gültiges API-Key-Format",
     "deploymentModels": {
       "sectionTitle": "Deployment Model",
-      "description": "Geben Sie die auf Ihrem Endpoint verfügbaren Modell- oder Deployment-Namen ein.",
+      "description": "Geben Sie die auf Ihrem Endpoint verfügbaren Modell- oder Deployment-Namen ein",
       "placeholder": "z.B. claude-sonnet-4-5, gpt-4o...",
       "addModel": "Modell hinzufügen"
     },
@@ -454,8 +454,8 @@
     "cursorLoginReadyDesc": "Erstellen Sie unten einen Cursor API Key und fügen Sie ihn ein. Cursor CLI agent funktioniert ohne diesen API Key nicht.",
     "cursorApiKeyBrowserHint": "Nach der Anmeldung öffnet ORGII das Cursor dashboard. Erstellen Sie dort einen User API Key und fügen Sie ihn unten ein",
     "cursorApiKeyRecommendedTitle": "Cursor API Key empfohlen",
-    "cursorApiKeyRecommendedDesc": "Sie können ohne Cursor API Key fortfahren, wenn Sie Cursor nur mit den Rust agents von ORGII verwenden möchten; melden Sie sich einfach mit dem internen Browser an oder geben Sie ein session token an.",
-    "cursorApiKeyRecommendedAction": "Geben Sie einen Cursor API Key an, wenn Sie auch Cursor CLI innerhalb von ORGII verwenden möchten.",
+    "cursorApiKeyRecommendedDesc": "Sie können ohne Cursor API Key fortfahren, wenn Sie Cursor nur mit den Rust agents von ORGII verwenden möchten; melden Sie sich einfach mit dem internen Browser an oder geben Sie ein session token an",
+    "cursorApiKeyRecommendedAction": "Geben Sie einen Cursor API Key an, wenn Sie auch Cursor CLI innerhalb von ORGII verwenden möchten",
     "openCursorApiKeys": "Cursor API Keys öffnen",
     "codexSetupMethodDesc": "Verbinde Codex per ChatGPT-Login, lokaler Erkennung oder OpenAI API key",
     "codexSignInTitle": "Codex-Anmeldung",
@@ -465,24 +465,24 @@
     "codexSignedIn": "Codex verbunden",
     "codexOAuthHint": "Dies speichert ein codex OAuth-Konto für den Zugriff auf das ChatGPT Codex Backend.",
     "codexBrowserHint": "Schließe die Codex-Autorisierung im eingebetteten Browser ab.",
-    "codexSignInErrorHint": "Schließe den Browser und versuche die Anmeldung erneut. Es wurde kein Token gespeichert.",
+    "codexSignInErrorHint": "Schließe den Browser und versuche die Anmeldung erneut. Es wurde kein Token gespeichert",
     "codexAutodetectTitle": "Codex-Sitzung erkennen",
     "codexAutodetectDesc": "Liest ~/.codex/auth.json und OPENAI_API_KEY aus deiner lokalen Umgebung",
     "codexCredentialLabel": "Codex-Zugangsdaten",
     "codexCredentialDesc": "Füge ein Codex OAuth access token oder einen OpenAI API key ein",
     "codexCredentialPlaceholder": "eyJ... oder sk-...",
     "codexConnected": "Codex verbunden",
-    "codexDetectErrorHint": "Melde dich mit dem eingebetteten Browser an oder füge manuell einen OpenAI API key ein.",
-    "codexValidationErrorHint": "Prüfe, ob token oder API key gültig ist, und versuche es erneut.",
+    "codexDetectErrorHint": "Melde dich mit dem eingebetteten Browser an oder füge manuell einen OpenAI API key ein",
+    "codexValidationErrorHint": "Prüfe, ob token oder API key gültig ist, und versuche es erneut",
     "geminiSetupMethodDesc": "Connect Gemini CLI with Google sign-in, local detection, or a Gemini API key",
     "geminiSignInTitle": "Gemini Sign In",
     "geminiSignInDesc": "Sign in to Google for Gemini CLI in a native secure sign-in window. ORGII captures the callback, resolves the Code Assist project, and stores OAuth tokens locally.",
     "signInWithGemini": "Sign in with Gemini",
     "geminiReadyToSignIn": "Ready to sign in to Gemini",
     "geminiSignedIn": "Gemini connected",
-    "geminiOAuthHint": "This saves a Gemini OAuth account for official Gemini CLI access.",
+    "geminiOAuthHint": "This saves a Gemini OAuth account for official Gemini CLI access",
     "geminiBrowserHint": "Complete Google authorization in the secure sign-in window.",
-    "geminiSignInErrorHint": "Close the sign-in window and try signing in again. No token was saved.",
+    "geminiSignInErrorHint": "Close the sign-in window and try signing in again. No token was saved",
     "geminiProjectId": "Code Assist project: {{projectId}}",
     "geminiAutodetectTitle": "Detect Gemini session",
     "geminiAutodetectDesc": "Reads ~/.gemini/oauth_creds.json and GEMINI_API_KEY from your local environment",
@@ -490,8 +490,8 @@
     "geminiApiKeyDesc": "Paste a Gemini API key if you do not want to use Google sign-in",
     "geminiApiKeyPlaceholder": "AIza...",
     "geminiConnected": "Gemini connected",
-    "geminiDetectErrorHint": "Sign in with the secure native window, or paste a Gemini API key manually.",
-    "geminiValidationErrorHint": "Check that the Gemini token or API key is valid and try again."
+    "geminiDetectErrorHint": "Sign in with the secure native window, or paste a Gemini API key manually",
+    "geminiValidationErrorHint": "Check that the Gemini token or API key is valid and try again"
   },
   "integrations": {
     "title": "Integrationen",
@@ -538,7 +538,7 @@
     "verified": "Verifiziert",
     "sanctionWarning": {
       "title": "Verfügbarkeitswarnung",
-      "message": "{{services}} sind in Ihrer Region aufgrund von Handelsbeschränkungen möglicherweise nicht verfügbar."
+      "message": "{{services}} sind in Ihrer Region aufgrund von Handelsbeschränkungen möglicherweise nicht verfügbar"
     }
   },
   "channels": {
@@ -810,7 +810,7 @@
     "pickProvider": "Anbieter",
     "pickProviderDesc": "Wählen Sie einen Anbieter",
     "selectVariant": "Verbindungsmethode",
-    "variantCodex": "Codex",
+    "variantSubscription": "Abonnement",
     "variantApiKey": "API Key"
   },
   "modelsTable": {
@@ -1478,7 +1478,7 @@
     "connecting": "Verbindung wird hergestellt...",
     "connectingTitle": "Starte {{count}} MCP-Server… (kann einige Sekunden dauern)",
     "connectingSlow": "Verbindung wird noch hergestellt…",
-    "connectingSlowBody": "Beim ersten Start kann das einen Moment dauern. Wenn ein Server hängt, öffne sein Detailfenster und verbinde ihn neu.",
+    "connectingSlowBody": "Beim ersten Start kann das einen Moment dauern. Wenn ein Server hängt, öffne sein Detailfenster und verbinde ihn neu",
     "testConnection": "Verbindung testen",
     "testSuccess": "Verbindung erfolgreich",
     "testFailed": "Test fehlgeschlagen",
@@ -2295,7 +2295,7 @@
       "addConnection": "Hinzufügen",
       "testPassed": "Verbindungstest bestanden",
       "saved": "Verbindung hinzugefügt",
-      "savedDesc": "Die Datenbankverbindung wurde gespeichert. Sie können diesen Assistenten schließen."
+      "savedDesc": "Die Datenbankverbindung wurde gespeichert. Sie können diesen Assistenten schließen"
     }
   },
   "devTools": {

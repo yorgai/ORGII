@@ -7,8 +7,8 @@
   "jsonView": {
     "headerTitle": "settings.jsonc (Core)",
     "scopeTitle": "JSON scope",
-    "scopeDescription": "This editor includes schema-backed core settings only.",
-    "notCovered": "Not covered here: Code Search Indexing, Update, Dependencies, System & Network, and most Agent sections.",
+    "scopeDescription": "This editor includes schema-backed core settings only",
+    "notCovered": "Not covered here: Code Search Indexing, Update, Dependencies, System & Network, and most Agent sections",
     "invalidJson": "Invalid JSON: {{detail}}"
   },
   "sections": {
@@ -816,8 +816,8 @@
     "networkOrg": "ISP / Org",
     "networkProviderRegions": "Provider Regions",
     "regionDetected": "You are in: {{region}}",
-    "regionRestricted": "Models from {{providers}} may not be officially available in your region.",
-    "regionServicesRestricted": "Services like {{services}} may be blocked or restricted in your region.",
+    "regionRestricted": "Models from {{providers}} may not be officially available in your region",
+    "regionServicesRestricted": "Services like {{services}} may be blocked or restricted in your region",
     "gitProxy": "Git Proxy",
     "gitProxyActive": "Proxy detected",
     "gitProxyNone": "Direct connection (no proxy)",
@@ -1298,7 +1298,7 @@
     "errors": {
       "pairInitFailed": "Could not start a pairing session. Check the relay URL and try again.",
       "codeExpired": "The pairing code expired. Please start a new pairing session.",
-      "unknown": "Something went wrong while talking to the relay."
+      "unknown": "Something went wrong while talking to the relay"
     },
     "hosting": {
       "title": "Where should the relay run?",

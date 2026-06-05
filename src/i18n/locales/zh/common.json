@@ -301,6 +301,7 @@
     "history": "历史",
     "execution": "执行",
     "gitHistory": "Git 历史",
+    "noPullRequest": "无 Pull Request",
     "operationLog": "操作日志",
     "gitDashboard": "仪表盘",
     "changedFiles": "已更改的文件",
@@ -507,7 +508,7 @@
   },
   "prerequisite": {
     "missingTitle": "缺少前置依赖",
-    "missing": "此方法需要 {{binary}}，但在当前系统中未找到。请先安装 {{binary}} 再使用此方法。"
+    "missing": "此方法需要 {{binary}}，但在当前系统中未找到。请先安装 {{binary}} 再使用此方法"
   },
   "terminology": {
     "agent": "Agent",

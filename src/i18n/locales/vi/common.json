@@ -301,6 +301,7 @@
     "history": "Lịch sử",
     "execution": "Thực thi",
     "gitHistory": "Lịch sử Git",
+    "noPullRequest": "Không có pull request",
     "operationLog": "Nhật ký thao tác",
     "gitDashboard": "Bảng điều khiển",
     "changedFiles": "Tệp đã thay đổi",
@@ -507,7 +508,7 @@
   },
   "prerequisite": {
     "missingTitle": "Thiếu điều kiện tiên quyết",
-    "missing": "{{binary}} là bắt buộc nhưng không tìm thấy trên hệ thống này. Hãy cài đặt {{binary}} trước để sử dụng phương thức này."
+    "missing": "{{binary}} là bắt buộc nhưng không tìm thấy trên hệ thống này. Hãy cài đặt {{binary}} trước để sử dụng phương thức này"
   },
   "terminology": {
     "agent": "Agent",
