@@ -149,12 +149,12 @@ export function useSourceControlSidebarModule({
 
   const handleUndoAll = useCallback(async () => {
     const confirmed = await confirmDestructiveAction({
-      title: t("sessions:actions.undoAll"),
-      message: t("sessions:confirmation.undoAllChanges", {
+      title: t("common:actions.undoAll"),
+      message: t("common:confirmation.undoAllChanges", {
         count: pendingCount,
       }),
-      okLabel: t("sessions:actions.undoAll"),
-      cancelLabel: t("sessions:actions.cancel"),
+      okLabel: t("common:actions.undoAll"),
+      cancelLabel: t("common:actions.cancel"),
     });
     if (!confirmed) return;
     setIsUndoingAll(true);
@@ -175,7 +175,7 @@ export function useSourceControlSidebarModule({
           strokeWidth={PANEL_CONSTANTS.ACTION_ICON_STROKE}
         />
       ),
-      tooltip: t("sessions:actions.undoAll"),
+      tooltip: t("common:actions.undoAll"),
       onClick: handleUndoAll,
       forceVisible: true,
     }),

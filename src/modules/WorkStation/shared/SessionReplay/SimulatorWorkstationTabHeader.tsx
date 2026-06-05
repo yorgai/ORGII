@@ -48,7 +48,7 @@ export interface SimulatorWorkstationTabHeaderProps {
 const SimulatorWorkstationTabHeaderComponent: React.FC<
   SimulatorWorkstationTabHeaderProps
 > = ({ showSidebarToggle = true, sidebarToggleDisabled = false }) => {
-  const { t } = useTranslation("sessions");
+  const { t } = useTranslation("common");
   const headerSlots = useAtomValue(workstationTabHeaderAtomByHost.simulator);
   const globalSessionId = useAtomValue(sessionIdAtom);
   const { pendingCount, onUndoAll } =
