@@ -1,6 +1,5 @@
-import { MenuItem, Menu as TauriMenu } from "@tauri-apps/api/menu";
 import { Ellipsis, Trash2 } from "lucide-react";
-import React, { memo, useCallback, useEffect, useRef } from "react";
+import React, { memo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -99,40 +98,60 @@ export const WorktreeActionsMenu: React.FC<WorktreeActionsMenuProps> = memo(
 WorktreeActionsMenu.displayName = "WorktreeActionsMenu";
 
 export interface WorktreeContextMenuProps {
+  x: number;
+  y: number;
   onRemove: () => void;
   onClose: () => void;
 }
 
 export function WorktreeContextMenu({
+  x,
+  y,
   onRemove,
   onClose,
 }: WorktreeContextMenuProps) {
   const { t } = useTranslation();
-  const hasShownMenu = useRef(false);
 
-  useEffect(() => {
-    if (hasShownMenu.current) return;
-    hasShownMenu.current = true;
+  const handleRemove = useCallback(() => {
+    onClose();
+    onRemove();
+  }, [onClose, onRemove]);
 
-    async function showMenu() {
-      try {
-        const removeItem = await MenuItem.new({
-          text: t("sourceControl.removeWorktree"),
-          action: () => {
-            onRemove();
-          },
-        });
-        const menu = await TauriMenu.new({ items: [removeItem] });
-        await menu.popup();
-      } finally {
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9998]"
+      onClick={onClose}
+      onContextMenu={(event) => {
+        event.preventDefault();
         onClose();
-      }
-    }
-
-    showMenu();
-  }, [onClose, onRemove, t]);
-
-  return null;
+      }}
+    >
+      <div
+        className={`${DROPDOWN_CLASSES.panel} ${DROPDOWN_WIDTHS.sidebarMenuClass} ${DROPDOWN_PANEL.paddingClass}`}
+        style={{
+          position: "fixed",
+          top: y,
+          left: x,
+          zIndex: DROPDOWN_PANEL.zIndex,
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className={DROPDOWN_CLASSES.itemsColumn}>
+          <button
+            type="button"
+            className={`${DROPDOWN_CLASSES.item} ${PRIMARY_SIDEBAR_HOVER.row} w-full text-danger-6`}
+            onClick={handleRemove}
+          >
+            <Trash2 size={DROPDOWN_ITEM.iconSize} className="shrink-0" />
+            <span className="truncate">
+              {t("sourceControl.removeWorktree")}
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 export default WorktreeActionsMenu;

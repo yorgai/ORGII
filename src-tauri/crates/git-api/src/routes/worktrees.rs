@@ -80,8 +80,15 @@ pub async fn remove_worktree(
     let repo_path = resolve_repo_path(&repo_id, query.path.as_deref())?;
     let worktree_path = validate_path(&request.worktree_path)?;
 
-    git::worktree::remove_worktree_path(&repo_path, &worktree_path, request.force)
-        .map_err(GitApiError::from_git_error)?;
+    let force = request.force;
+    tokio::task::spawn_blocking(move || {
+        git::worktree::remove_worktree_path(&repo_path, &worktree_path, force)
+    })
+    .await
+    .map_err(|err| GitApiError::Internal {
+        message: format!("Worktree removal task failed: {err}"),
+    })?
+    .map_err(GitApiError::from_git_error)?;
 
     Ok(Json(WorktreeRemoveResponse {
         status: 0,

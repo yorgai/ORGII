@@ -518,8 +518,11 @@ export const SourceControlWithWorktrees = forwardRef<
     const [worktreeExpanded, setWorktreeExpanded] = useState<
       Record<string, boolean>
     >({});
-    const [contextMenuWorktree, setContextMenuWorktree] =
-      useState<GitWorktreeEntry | null>(null);
+    const [contextMenuState, setContextMenuState] = useState<{
+      worktree: GitWorktreeEntry;
+      x: number;
+      y: number;
+    } | null>(null);
 
     const { t } = useTranslation();
     const gitStatusMap = useAtomValue(workspaceGitStatusMapAtom);
@@ -602,7 +605,11 @@ export const SourceControlWithWorktrees = forwardRef<
                 branchName={worktree.branch || undefined}
                 onContextMenu={(event) => {
                   event.preventDefault();
-                  setContextMenuWorktree(worktree);
+                  setContextMenuState({
+                    worktree,
+                    x: event.clientX,
+                    y: event.clientY,
+                  });
                 }}
                 actions={
                   <WorktreeActionsMenu
@@ -629,12 +636,14 @@ export const SourceControlWithWorktrees = forwardRef<
             </div>
           );
         })}
-        {contextMenuWorktree && (
+        {contextMenuState && (
           <WorktreeContextMenu
+            x={contextMenuState.x}
+            y={contextMenuState.y}
             onRemove={() => {
-              void removeWorktree(contextMenuWorktree);
+              void removeWorktree(contextMenuState.worktree);
             }}
-            onClose={() => setContextMenuWorktree(null)}
+            onClose={() => setContextMenuState(null)}
           />
         )}
       </div>

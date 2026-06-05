@@ -400,7 +400,10 @@ const WorktreeSection: React.FC<WorktreeSectionProps> = ({
 }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const toggle = useCallback(() => setExpanded((prev) => !prev), []);
 
   const folderName = worktree.path.split("/").pop() || "worktree";
@@ -428,7 +431,7 @@ const WorktreeSection: React.FC<WorktreeSectionProps> = ({
         onContextMenu={(event) => {
           if (!repoId || !repoPath) return;
           event.preventDefault();
-          setContextMenuOpen(true);
+          setContextMenuPosition({ x: event.clientX, y: event.clientY });
         }}
         actions={
           repoId && repoPath ? (
@@ -453,12 +456,14 @@ const WorktreeSection: React.FC<WorktreeSectionProps> = ({
           />
         </div>
       )}
-      {contextMenuOpen && (
+      {contextMenuPosition && (
         <WorktreeContextMenu
+          x={contextMenuPosition.x}
+          y={contextMenuPosition.y}
           onRemove={() => {
             void removeWorktree();
           }}
-          onClose={() => setContextMenuOpen(false)}
+          onClose={() => setContextMenuPosition(null)}
         />
       )}
     </div>
