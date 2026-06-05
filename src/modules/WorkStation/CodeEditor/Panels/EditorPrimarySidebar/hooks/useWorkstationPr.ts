@@ -218,6 +218,7 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
     url?: string;
     error?: string;
   }> => {
+    if (isCreating) return {};
     if (!branchName) {
       return { error: t("git.pr.noBranch") };
     }
@@ -275,7 +276,7 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
 
     setCreatingByBranch((current) => ({ ...current, [branchName]: false }));
     return { url: result.url };
-  }, [branchName, repoPath, commitMessage, repoId, t, navigate]);
+  }, [isCreating, branchName, repoPath, commitMessage, repoId, t, navigate]);
 
   const prIsActive = !!prUrl && prStatus !== "closed" && prStatus !== "merged";
   const readyToCreate = eligible && !prIsActive;

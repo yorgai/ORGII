@@ -62,7 +62,7 @@ export function isWorkstationPrEligible(
   const { branch, defaultBranch, hasUpstream, ahead, uncommittedCount } = input;
   if (!branch || !hasUpstream) return false;
   if (branch === defaultBranch) return false;
-  if (ahead > 0) return false;
+  if (ahead === 0) return false;
   if (uncommittedCount > 0) return false;
   return true;
 }

@@ -46,13 +46,13 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleCreate = useCallback(async () => {
-    if (!onCreatePr) return;
+    if (isCreating || !onCreatePr) return;
     setLocalError(null);
     const result = await onCreatePr();
     if (result.error && result.error !== "not_authenticated") {
       setLocalError(result.error);
     }
-  }, [onCreatePr]);
+  }, [isCreating, onCreatePr]);
 
   const displayError = errorMessage ?? localError;
 
