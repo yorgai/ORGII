@@ -72,7 +72,6 @@ interface ChatFloatingComposerProps {
   onModeSwitchDataChange: (hasData: boolean) => void;
   queueExpanded: boolean;
   processExpanded: boolean;
-  filesExpanded: boolean;
   queuedMessages: Parameters<typeof QueuedMessages>[0]["messages"];
   onCancelQueuedMessage: Parameters<typeof QueuedMessages>[0]["onCancel"];
   onSendQueuedMessageNow: Parameters<typeof QueuedMessages>[0]["onSendNow"];
@@ -118,7 +117,6 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
     onModeSwitchDataChange,
     queueExpanded,
     processExpanded,
-    filesExpanded,
     queuedMessages,
     onCancelQueuedMessage,
     onSendQueuedMessageNow,
