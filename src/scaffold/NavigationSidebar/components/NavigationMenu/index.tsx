@@ -170,7 +170,7 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
     );
 
     const handleRowActionClick = useCallback(
-      (e: React.MouseEvent<HTMLButtonElement>, item: NavigationMenuItem) => {
+      (e: React.MouseEvent<HTMLElement>, item: NavigationMenuItem) => {
         e.preventDefault();
         e.stopPropagation();
         if (item.onRowActionClick) {
@@ -302,11 +302,8 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
         const menuItemNode = (
           <div
             key={item.key}
-            onContextMenu={
-              onMenuItemContextMenu
-                ? (e: React.MouseEvent) =>
-                    onMenuItemContextMenu(e, item.key, item)
-                : undefined
+            onContextMenu={(e: React.MouseEvent) =>
+              onMenuItemContextMenu?.(e, item.key, item)
             }
           >
             <div

@@ -75,10 +75,7 @@ export interface ComposerInputProps {
   /** Keyboard handler that the @-dropdown can claim for navigation */
   onKeyDownForDropdown?: (event: KeyboardEvent) => boolean;
   /** Called when the user types `/` for a command/context trigger */
-  onSlashCommand?: (
-    query: string,
-    cursorPosition?: { x: number; y: number }
-  ) => void;
+  onSlashCommand?: (query: string) => void;
   /** Called when the slash trigger session closes */
   onSlashCommandClose?: () => void;
   /** Keyboard handler for the slash-trigger dropdown */

@@ -118,19 +118,18 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     externalSearchQuery !== undefined &&
     (inlineSearchOnEmpty || externalSearchQuery.length > 0);
 
-  const { handleMenuItemClick, handleRecentSelect, handleSearchResultSelect } =
-    useMenuEffects({
-      visible,
-      onClose,
-      dropdownRef,
-      keyboardHandlerRef,
-      handleKeyDown,
-      handleSelect,
-      setSecondLayer,
-      secondLayer,
-      searchResults,
-      reset,
-    });
+  const { handleMenuItemClick, handleSearchResultSelect } = useMenuEffects({
+    visible,
+    onClose,
+    dropdownRef,
+    keyboardHandlerRef,
+    handleKeyDown,
+    handleSelect,
+    setSecondLayer,
+    secondLayer,
+    searchResults,
+    reset,
+  });
 
   const handleMainItemHover = useCallback(
     (itemIndex: number) => {

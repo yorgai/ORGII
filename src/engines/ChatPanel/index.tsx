@@ -1708,6 +1708,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             sessionId={currentSessionId}
             onRegisterSearchOpen={handleRegisterSearchOpen}
             turnPaginationEnabled={paginationEnabled}
+            position={position}
           />
         ) : (
           emptyChatContent

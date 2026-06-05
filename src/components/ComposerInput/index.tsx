@@ -199,11 +199,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
               slashCommandRef.current = { active: false, startOffset: 0 };
               onSlashCommandCloseRef.current?.();
             } else {
-              const rect = range.getBoundingClientRect();
-              onSlashCommandRef.current?.(query, {
-                x: rect.left,
-                y: rect.bottom,
-              });
+              onSlashCommandRef.current?.(query);
             }
           }
         }
@@ -412,11 +408,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
               startOffset: caretOffset,
               hasTriggerChar: false,
             };
-            const rect = range.getBoundingClientRect();
-            onSlashCommandRef.current?.("", {
-              x: rect.left,
-              y: rect.bottom,
-            });
+            onSlashCommandRef.current?.("");
           },
           getSlashCommandState: () => ({
             active: slashCommandRef.current.active,
