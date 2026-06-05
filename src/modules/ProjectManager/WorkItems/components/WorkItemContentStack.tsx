@@ -15,13 +15,8 @@ interface WorkItemContentStackProps {
   descriptionClassName?: string;
   todosClassName?: string;
   lowerClassName?: string;
+  separatorClassName?: string;
 }
-
-const INSET_SEPARATOR = (
-  <div className="shrink-0 px-4" aria-hidden>
-    <div className="border-t border-border-2" />
-  </div>
-);
 
 export default function WorkItemContentStack({
   titleContent,
@@ -38,6 +33,7 @@ export default function WorkItemContentStack({
   descriptionClassName = "px-4 py-4",
   todosClassName = "px-4 pb-4",
   lowerClassName = "px-4 pt-4",
+  separatorClassName = "px-4",
 }: WorkItemContentStackProps) {
   const scrollClassName = scrollable
     ? "overflow-y-auto scrollbar-hide"
@@ -48,6 +44,12 @@ export default function WorkItemContentStack({
     ? "min-h-0 flex-1"
     : "shrink-0";
 
+  const separator = (
+    <div className={`shrink-0 ${separatorClassName}`.trim()} aria-hidden>
+      <div className="border-t border-border-2" />
+    </div>
+  );
+
   return (
     <div
       className={`flex min-h-0 flex-1 flex-col ${scrollClassName} ${className}`.trim()}
@@ -57,7 +59,7 @@ export default function WorkItemContentStack({
           {titleContent}
         </div>
       ) : null}
-      {titleContent && hasMetaContent ? INSET_SEPARATOR : null}
+      {titleContent && hasMetaContent ? separator : null}
       {hasMetaContent ? (
         <div className={`shrink-0 ${metaClassName}`.trim()}>
           <div className="flex min-w-0 max-w-full items-center overflow-x-auto overflow-y-visible scrollbar-hide">
@@ -74,7 +76,7 @@ export default function WorkItemContentStack({
           </div>
         </div>
       ) : null}
-      {hasTopSeparator ? INSET_SEPARATOR : null}
+      {hasTopSeparator ? separator : null}
       {descriptionContent ? (
         <div
           className={`${descriptionLayoutClassName} ${descriptionClassName}`.trim()}
@@ -89,7 +91,7 @@ export default function WorkItemContentStack({
       ) : null}
       {lowerContent ? (
         <>
-          {INSET_SEPARATOR}
+          {separator}
           <div className={`min-h-0 flex-1 ${lowerClassName}`.trim()}>
             {lowerContent}
           </div>
