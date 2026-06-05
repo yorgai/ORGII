@@ -273,7 +273,6 @@ export function useSourceControlState(
     repoId: selectedRepoId || repoId,
     branchName: currentBranch,
     hasUpstream,
-    ahead,
     uncommittedCount,
     commitMessage,
   });

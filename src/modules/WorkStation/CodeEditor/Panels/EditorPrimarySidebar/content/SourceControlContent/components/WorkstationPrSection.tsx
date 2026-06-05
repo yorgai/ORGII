@@ -1,13 +1,10 @@
-import { ExternalLink, GitPullRequest, TriangleAlert } from "lucide-react";
+import { ExternalLink, TriangleAlert } from "lucide-react";
 import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import Button from "@src/components/Button";
-import type { SectionHeaderAction } from "@src/components/TreePanelSidebar/types";
 import { CollapsibleSection } from "@src/modules/WorkStation/shared/PrimarySidebarLayout/CollapsibleSection";
 import {
   PRIMARY_SIDEBAR_HOVER,
-  SECTION_ACTION_BUTTON,
   TYPOGRAPHY,
 } from "@src/modules/WorkStation/shared/tokens";
 
@@ -46,13 +43,13 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleCreate = useCallback(async () => {
-    if (!onCreatePr) return;
+    if (isCreating || !onCreatePr) return;
     setLocalError(null);
     const result = await onCreatePr();
     if (result.error && result.error !== "not_authenticated") {
       setLocalError(result.error);
     }
-  }, [onCreatePr]);
+  }, [isCreating, onCreatePr]);
 
   const displayError = errorMessage ?? localError;
 
@@ -61,68 +58,20 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
   // Header title: section name + status badge
   const titleNode = (
     <div className="flex min-w-0 flex-1 items-center gap-1.5">
-      <GitPullRequest
-        size={12}
-        className="shrink-0 text-text-3"
-        strokeWidth={1.75}
-      />
-      <span className="truncate text-[12px] font-medium uppercase text-text-2">
+      <span
+        className={`truncate uppercase text-text-2 ${TYPOGRAPHY.sectionTitle}`}
+      >
         {t("git.pr.title")}
       </span>
       {prUrl && prStatus && (
         <span
-          className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${PR_STATUS_COLORS[prStatus] ?? "bg-fill-2 text-text-3"}`}
+          className={`ml-1 rounded px-1.5 py-0.5 ${TYPOGRAPHY.badge} ${PR_STATUS_COLORS[prStatus] ?? "bg-fill-2 text-text-3"}`}
         >
           {t(`git.pr.status.${prStatus}`, { defaultValue: prStatus })}
         </span>
       )}
     </div>
   );
-
-  // Header actions: Create PR button (always visible when applicable)
-  const actions: SectionHeaderAction[] = [];
-  if (isCreating) {
-    actions.push({
-      key: "pr-creating",
-      icon: (
-        <Button
-          variant="primary"
-          appearance="outline"
-          size="mini"
-          shape="round"
-          loading
-          loadingSpinIcon
-          icon={<GitPullRequest size={11} />}
-          disabled
-        >
-          {t("git.pr.creating")}
-        </Button>
-      ),
-      tooltip: "",
-      onClick: () => {},
-      forceVisible: true,
-    });
-  } else if (readyToCreate) {
-    actions.push({
-      key: "pr-create",
-      icon: (
-        <Button
-          variant="primary"
-          appearance="outline"
-          size="mini"
-          shape="round"
-          icon={<GitPullRequest size={11} />}
-          disabled={!onCreatePr}
-          onClick={handleCreate}
-        >
-          {t("git.actions.createPR")}
-        </Button>
-      ),
-      tooltip: t("git.actions.createPR"),
-      onClick: handleCreate,
-      forceVisible: true,
-    });
-  }
 
   return (
     <CollapsibleSection
@@ -133,7 +82,6 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
       resizable={false}
       isLast
       hideSeparator
-      actions={actions}
     >
       <div className="pb-2 pt-0.5">
         {/* PR link */}

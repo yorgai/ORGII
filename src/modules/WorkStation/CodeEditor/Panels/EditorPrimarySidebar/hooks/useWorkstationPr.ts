@@ -43,7 +43,6 @@ export interface UseWorkstationPrOptions {
   repoId?: string;
   branchName?: string;
   hasUpstream: boolean;
-  ahead: number;
   uncommittedCount: number;
   commitMessage?: string;
 }
@@ -59,7 +58,6 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
     repoId = "default",
     branchName,
     hasUpstream,
-    ahead,
     uncommittedCount,
     commitMessage,
   } = options;
@@ -208,16 +206,16 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
         branch: branchName,
         defaultBranch,
         hasUpstream,
-        ahead,
         uncommittedCount,
       }),
-    [branchName, defaultBranch, hasUpstream, ahead, uncommittedCount]
+    [branchName, defaultBranch, hasUpstream, uncommittedCount]
   );
 
   const handleCreatePr = useCallback(async (): Promise<{
     url?: string;
     error?: string;
   }> => {
+    if (isCreating) return {};
     if (!branchName) {
       return { error: t("git.pr.noBranch") };
     }
@@ -275,7 +273,7 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
 
     setCreatingByBranch((current) => ({ ...current, [branchName]: false }));
     return { url: result.url };
-  }, [branchName, repoPath, commitMessage, repoId, t, navigate]);
+  }, [isCreating, branchName, repoPath, commitMessage, repoId, t, navigate]);
 
   const prIsActive = !!prUrl && prStatus !== "closed" && prStatus !== "merged";
   const readyToCreate = eligible && !prIsActive;
