@@ -6,7 +6,6 @@ import {
   GitBranch,
   GitCommitVertical,
   Grip,
-  MessagesSquare,
   Timer,
 } from "lucide-react";
 import React, { memo, useMemo } from "react";
@@ -186,9 +185,31 @@ export const SessionHoverCardContent: React.FC<SessionHoverCardContentProps> =
           iconClassName={agentSessionInfo.textClassName}
         >
           <div
-            className={`truncate ${agentSessionInfo.textClassName ?? "text-text-2"}`}
+            className={`flex min-w-0 items-center truncate ${agentSessionInfo.textClassName ?? "text-text-2"}`}
+            title={
+              modelTitle
+                ? `${agentSessionInfo.label} · ${modelTitle}`
+                : undefined
+            }
           >
-            {agentSessionInfo.label}
+            <span className="truncate">{agentSessionInfo.label}</span>
+            {modelLabel && (
+              <>
+                <span className="mx-1 text-text-4">·</span>
+                <span className="mr-1 flex shrink-0 items-center">
+                  {modelIconName ? (
+                    <ModelIcon
+                      modelName={modelIconName}
+                      agentType={modelIconAgent}
+                      size={13}
+                    />
+                  ) : (
+                    <Grip size={13} strokeWidth={1.75} />
+                  )}
+                </span>
+                <span className="truncate">{modelLabel}</span>
+              </>
+            )}
           </div>
         </HoverCardRow>
         {repoName && (
@@ -208,46 +229,34 @@ export const SessionHoverCardContent: React.FC<SessionHoverCardContentProps> =
             </div>
           </HoverCardRow>
         )}
-        {modelLabel && (
-          <HoverCardRow
-            icon={
-              modelIconName ? (
-                <ModelIcon
-                  modelName={modelIconName}
-                  agentType={modelIconAgent}
-                  size={13}
-                />
-              ) : (
-                <Grip size={13} strokeWidth={1.75} />
-              )
-            }
-          >
-            <div className="truncate text-text-2" title={modelTitle}>
-              {modelLabel}
-            </div>
-          </HoverCardRow>
-        )}
-        {turnOverview && turnOverview.turnCount > 0 && (
-          <HoverCardRow icon={<MessagesSquare size={13} strokeWidth={1.75} />}>
-            <div className="truncate text-text-2">
-              <span className="text-text-3">{t("history.detail.rounds")}</span>
-              <span className="mx-1 text-text-4">·</span>
-              <span>
-                {t("history.detail.roundCount", {
-                  count: turnOverview.turnCount,
-                })}
-              </span>
-            </div>
-          </HoverCardRow>
-        )}
-        {workedDurationLabel && (
+        {(workedDurationLabel ||
+          (turnOverview && turnOverview.turnCount > 0)) && (
           <HoverCardRow icon={<Timer size={13} strokeWidth={1.75} />}>
-            <div className="truncate text-text-2" title={workedDurationLabel}>
+            <div
+              className="truncate text-text-2"
+              title={workedDurationLabel ?? undefined}
+            >
               <span className="text-text-3">
-                {t("history.detail.agentWorked")}
+                {workedDurationLabel
+                  ? t("history.detail.agentWorked")
+                  : t("history.detail.rounds")}
               </span>
-              <span className="mx-1 text-text-4">·</span>
-              <span>{workedDurationLabel}</span>
+              {workedDurationLabel && (
+                <>
+                  <span className="mx-1 text-text-4">·</span>
+                  <span>{workedDurationLabel}</span>
+                </>
+              )}
+              {turnOverview && turnOverview.turnCount > 0 && (
+                <>
+                  <span className="mx-1 text-text-4">·</span>
+                  <span>
+                    {t("history.detail.roundCount", {
+                      count: turnOverview.turnCount,
+                    })}
+                  </span>
+                </>
+              )}
             </div>
           </HoverCardRow>
         )}
