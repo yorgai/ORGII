@@ -43,7 +43,6 @@ export interface UseWorkstationPrOptions {
   repoId?: string;
   branchName?: string;
   hasUpstream: boolean;
-  ahead: number;
   uncommittedCount: number;
   commitMessage?: string;
 }
@@ -59,7 +58,6 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
     repoId = "default",
     branchName,
     hasUpstream,
-    ahead,
     uncommittedCount,
     commitMessage,
   } = options;
@@ -208,10 +206,9 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
         branch: branchName,
         defaultBranch,
         hasUpstream,
-        ahead,
         uncommittedCount,
       }),
-    [branchName, defaultBranch, hasUpstream, ahead, uncommittedCount]
+    [branchName, defaultBranch, hasUpstream, uncommittedCount]
   );
 
   const handleCreatePr = useCallback(async (): Promise<{

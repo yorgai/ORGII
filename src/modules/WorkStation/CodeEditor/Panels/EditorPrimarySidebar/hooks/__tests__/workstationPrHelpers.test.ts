@@ -41,7 +41,19 @@ describe("isWorkstationPrEligible", () => {
         branch: "feat/pr",
         defaultBranch: "main",
         hasUpstream: true,
-        ahead: 0,
+        uncommittedCount: 0,
+      })
+    ).toBe(true);
+  });
+
+  it("returns true even when tracking branch is fully in sync (ahead=0 relative to remote)", () => {
+    // hasUpstream=true means the branch is pushed; we no longer gate on ahead count
+    // because ahead tracks relative to the tracking branch, not the default branch
+    expect(
+      isWorkstationPrEligible({
+        branch: "feat/pr",
+        defaultBranch: "main",
+        hasUpstream: true,
         uncommittedCount: 0,
       })
     ).toBe(true);
@@ -53,19 +65,6 @@ describe("isWorkstationPrEligible", () => {
         branch: "main",
         defaultBranch: "main",
         hasUpstream: true,
-        ahead: 0,
-        uncommittedCount: 0,
-      })
-    ).toBe(false);
-  });
-
-  it("returns false when commits are not pushed", () => {
-    expect(
-      isWorkstationPrEligible({
-        branch: "feat/pr",
-        defaultBranch: "main",
-        hasUpstream: true,
-        ahead: 2,
         uncommittedCount: 0,
       })
     ).toBe(false);
@@ -77,7 +76,6 @@ describe("isWorkstationPrEligible", () => {
         branch: "feat/pr",
         defaultBranch: "main",
         hasUpstream: true,
-        ahead: 0,
         uncommittedCount: 3,
       })
     ).toBe(false);
@@ -89,7 +87,6 @@ describe("isWorkstationPrEligible", () => {
         branch: "feat/pr",
         defaultBranch: "main",
         hasUpstream: false,
-        ahead: 0,
         uncommittedCount: 0,
       })
     ).toBe(false);
@@ -101,7 +98,6 @@ describe("isWorkstationPrEligible", () => {
         branch: undefined,
         defaultBranch: "main",
         hasUpstream: true,
-        ahead: 0,
         uncommittedCount: 0,
       })
     ).toBe(false);

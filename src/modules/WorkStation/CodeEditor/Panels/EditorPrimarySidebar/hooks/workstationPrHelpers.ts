@@ -10,7 +10,6 @@ export interface WorkstationPrEligibilityInput {
   branch?: string;
   defaultBranch: string;
   hasUpstream: boolean;
-  ahead: number;
   uncommittedCount: number;
 }
 
@@ -59,10 +58,9 @@ export function setStoredWorkstationPr(
 export function isWorkstationPrEligible(
   input: WorkstationPrEligibilityInput
 ): boolean {
-  const { branch, defaultBranch, hasUpstream, ahead, uncommittedCount } = input;
+  const { branch, defaultBranch, hasUpstream, uncommittedCount } = input;
   if (!branch || !hasUpstream) return false;
   if (branch === defaultBranch) return false;
-  if (ahead === 0) return false;
   if (uncommittedCount > 0) return false;
   return true;
 }
