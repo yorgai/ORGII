@@ -1,12 +1,10 @@
-import { ExternalLink, GitPullRequest, TriangleAlert } from "lucide-react";
+import { ExternalLink, TriangleAlert } from "lucide-react";
 import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { SectionHeaderAction } from "@src/components/TreePanelSidebar/types";
 import { CollapsibleSection } from "@src/modules/WorkStation/shared/PrimarySidebarLayout/CollapsibleSection";
 import {
   PRIMARY_SIDEBAR_HOVER,
-  SECTION_ACTION_BUTTON,
   TYPOGRAPHY,
 } from "@src/modules/WorkStation/shared/tokens";
 
@@ -75,44 +73,6 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
     </div>
   );
 
-  const actions: SectionHeaderAction[] = [];
-  if (isCreating) {
-    actions.push({
-      key: "pr-creating",
-      icon: (
-        <span
-          className={`${SECTION_ACTION_BUTTON.base} ${SECTION_ACTION_BUTTON.withLabel} cursor-default text-primary-6 opacity-60`}
-        >
-          <GitPullRequest size={11} className="shrink-0" />
-          {t("git.pr.creating")}
-        </span>
-      ),
-      tooltip: "",
-      onClick: () => {},
-      forceVisible: true,
-    });
-  } else if (readyToCreate) {
-    actions.push({
-      key: "pr-create",
-      icon: (
-        <button
-          className={`${SECTION_ACTION_BUTTON.base} ${SECTION_ACTION_BUTTON.withLabel} text-primary-6`}
-          disabled={!onCreatePr}
-          onClick={(e) => {
-            e.stopPropagation();
-            void handleCreate();
-          }}
-        >
-          <GitPullRequest size={11} className="shrink-0" />
-          {t("git.actions.createPR")}
-        </button>
-      ),
-      tooltip: t("git.actions.createPR"),
-      onClick: handleCreate,
-      forceVisible: true,
-    });
-  }
-
   return (
     <CollapsibleSection
       title={titleNode}
@@ -122,7 +82,6 @@ const WorkstationPrSection: React.FC<WorkstationPrSectionProps> = ({
       resizable={false}
       isLast
       hideSeparator
-      actions={actions}
     >
       <div className="pb-2 pt-0.5">
         {/* PR link */}
