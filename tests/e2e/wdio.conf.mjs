@@ -648,7 +648,7 @@ function buildWebDriverApp() {
       "--manifest-path",
       resolve(repoRoot, "src-tauri/Cargo.toml"),
       "-p",
-      "app",
+      "orgii",
       "--features",
       "webdriver",
     ],
