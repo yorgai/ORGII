@@ -1,10 +1,10 @@
-//! Skills Hub — search and install skills from ClawHub.
+//! Skills Hub — search and install skills from skills.sh.
 //!
-//! Provides Tauri commands to browse the ClawHub registry and install
+//! Provides Tauri commands to browse the skills.sh directory and install
 //! skills into `~/.orgii/skills/`. Submodules:
 //!
 //! - `types`   — wire types shared by every endpoint
-//! - `http`    — ClawHub URL constants + HTTP client builder
+//! - `http`    — skills.sh URL constants + HTTP client builder
 //! - `search`  — `skills_hub_search`
 //! - `browse`  — `skills_hub_browse` (no-query default list)
 //! - `detail`  — `skills_hub_detail`

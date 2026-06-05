@@ -1,7 +1,7 @@
 //! Per-skill on-disk cache for `HubSkillDetail`.
 //!
-//! Stored as `.clawhub-detail.json` inside each installed skill directory so
-//! that `skills_check_updates` can read the slug + installed version offline.
+//! Stored as `.skills-sh-detail.json` inside each installed skill directory so
+//! that `skills_check_updates` can read the slug + installed snapshot hash offline.
 
 use std::fs;
 
@@ -9,11 +9,11 @@ use app_paths::global_skills_dir;
 
 use super::types::HubSkillDetail;
 
-pub(super) const CACHE_FILENAME: &str = ".clawhub-detail.json";
+pub(super) const CACHE_FILENAME: &str = ".skills-sh-detail.json";
 
 /// Read cached hub detail for an installed skill.
 ///
-/// Looks for `.clawhub-detail.json` next to the skill's `SKILL.md`.
+/// Looks for `.skills-sh-detail.json` next to the skill's `SKILL.md`.
 #[tauri::command]
 pub async fn skills_hub_detail_cache_read(name: String) -> Result<Option<HubSkillDetail>, String> {
     let skills_dir = global_skills_dir();
@@ -34,7 +34,7 @@ pub async fn skills_hub_detail_cache_read(name: String) -> Result<Option<HubSkil
 
 /// Write hub detail cache for an installed skill.
 ///
-/// Stores `.clawhub-detail.json` next to the skill's `SKILL.md`.
+/// Stores `.skills-sh-detail.json` next to the skill's `SKILL.md`.
 #[tauri::command]
 pub async fn skills_hub_detail_cache_write(
     name: String,

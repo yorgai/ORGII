@@ -1,19 +1,26 @@
-//! Wire types for the ClawHub Skills Hub API.
+//! Wire types for the skills.sh Skills directory API.
 //!
 //! Field names match the upstream JSON; `serde(rename_all = "camelCase")`
 //! keeps the Rust side snake_case while honoring the wire format.
 
 use serde::{Deserialize, Serialize};
 
-/// A skill search result. Fields match the actual ClawHub search response.
+/// A skill search result normalized from the skills.sh search response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HubSkillResult {
+    /// skills.sh public detail path, e.g. `vercel-labs/skills/find-skills`.
     pub slug: String,
     pub name: String,
     pub description: String,
     #[serde(default)]
     pub updated_at: Option<u64>,
+    #[serde(default)]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub skill_id: Option<String>,
+    #[serde(default)]
+    pub installs: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,6 +70,14 @@ pub struct HubSkillDetail {
     pub changelog: Option<String>,
     #[serde(default)]
     pub skill_md: Option<String>,
+    #[serde(default)]
+    pub source: Option<String>,
+    #[serde(default)]
+    pub skill_id: Option<String>,
+    #[serde(default)]
+    pub installs: Option<u64>,
+    #[serde(default)]
+    pub snapshot_hash: Option<String>,
 }
 
 /// Result of installing a skill.
@@ -73,7 +88,21 @@ pub struct HubInstallResult {
     pub path: String,
 }
 
-/// Info about a skill that has an available update on ClawHub.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillSnapshotFile {
+    pub path: String,
+    pub contents: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkillDownloadResponse {
+    pub files: Vec<SkillSnapshotFile>,
+    pub hash: String,
+}
+
+/// Info about a skill that has an available update on skills.sh.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SkillUpdateInfo {
