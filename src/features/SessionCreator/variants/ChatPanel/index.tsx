@@ -3,7 +3,15 @@ import {
   DispatchCategoryPalette,
 } from "@/src/scaffold/GlobalSpotlight/palettes";
 import { useAtomValue, useSetAtom, useStore } from "jotai";
-import { Airplay, ArrowUp, Plus, Trash2, Users } from "lucide-react";
+import {
+  Airplay,
+  ArrowUp,
+  Network,
+  Paperclip,
+  Plus,
+  Tags,
+  Trash2,
+} from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -18,7 +26,6 @@ import Button from "@src/components/Button";
 import type { ComposerInputRef } from "@src/components/ComposerInput";
 import Message from "@src/components/Message";
 import ModelIcon from "@src/components/ModelIcon";
-import PillGroup, { type PillGroupSegment } from "@src/components/PillGroup";
 import { resolveAgentIcon } from "@src/config/agentIcons";
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { isRegionSanctioned } from "@src/config/providerRegions";
@@ -67,9 +74,11 @@ import { getRustAgentType } from "@src/util/session/sessionDispatch";
 
 import { EditorArea, SessionInfoLine } from "../../components";
 import BonusModal from "../../components/BonusModal";
+import AttachmentPanel from "./AttachmentPopover";
 import ScreenPickerModal from "./ScreenPickerModal";
 import SessionCreatorAgentHero from "./SessionCreatorAgentHero";
 import SessionCreatorOrgMembersPanel from "./SessionCreatorOrgMembersPanel";
+import TagPanel from "./TagPanel";
 import "./index.scss";
 import { resolveSessionCreatorAgentHeroContent } from "./resolveSessionCreatorAgentHero";
 import { useSessionCreatorChatPanelHandlers } from "./useSessionCreatorChatPanelHandlers";
@@ -242,6 +251,14 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
 
     const [isCategorySelectorOpen, setIsCategorySelectorOpen] = useState(false);
     const agentHeroRef = useRef<HTMLButtonElement>(null);
+    const [isAttachmentPanelOpen, setIsAttachmentPanelOpen] = useState(false);
+    const handleToggleAttachment = useCallback(() => {
+      setIsAttachmentPanelOpen((prev) => !prev);
+    }, []);
+    const [isTagPanelOpen, setIsTagPanelOpen] = useState(false);
+    const handleToggleTag = useCallback(() => {
+      setIsTagPanelOpen((prev) => !prev);
+    }, []);
     const modelPickerStyle = useAtomValue(modelPickerStyleAtom);
     const [openOrgMembersPanelId, setOpenOrgMembersPanelId] = useState<
       string | null
@@ -551,28 +568,11 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
       [canLaunch, draftSnapshot, handleLaunch]
     );
 
-    const orgMembersSegments: PillGroupSegment[] = useMemo(
-      () => [
-        {
-          id: "org-members-toggle",
-          icon: React.createElement(Users, {
-            size: 12,
-            className: "text-text-2",
-          }),
-          label: t("creator.orgMembers.configButton"),
-          active: isOrgMembersPanelOpen,
-          ariaLabel: t("creator.orgMembers.configButton"),
-          onClick: () =>
-            setOpenOrgMembersPanelId((currentId) =>
-              currentId === selectedAgentOrgId
-                ? null
-                : (selectedAgentOrgId ?? null)
-            ),
-          dataTestId: "session-creator-org-members-toggle",
-        },
-      ],
-      [isOrgMembersPanelOpen, selectedAgentOrgId, t]
-    );
+    const handleToggleOrgMembers = useCallback(() => {
+      setOpenOrgMembersPanelId((currentId) =>
+        currentId === selectedAgentOrgId ? null : (selectedAgentOrgId ?? null)
+      );
+    }, [selectedAgentOrgId]);
 
     const displayedRepoId =
       isOSMode && !sessionRepoId ? SYSTEM_HOME_SOURCE_ID : sessionRepoId;
@@ -725,41 +725,113 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
             </div>
 
             <div
-              className={`mx-auto w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
+              className={`mx-auto flex w-full items-center ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
             >
-              <PinnedActionsBar
-                composerInputRef={
-                  composerInputRef as React.RefObject<ComposerInputRef>
+              <Button
+                variant="secondary"
+                appearance="outline"
+                size="small"
+                shape="round"
+                iconOnly
+                icon={<Paperclip size={14} strokeWidth={1.75} />}
+                title={t("common:actions.upload")}
+                aria-label={t("common:actions.upload")}
+                aria-expanded={isAttachmentPanelOpen}
+                aria-controls="session-creator-attachment-panel"
+                onClick={handleToggleAttachment}
+                className={
+                  isAttachmentPanelOpen
+                    ? "shrink-0 !bg-fill-1 !text-primary-6"
+                    : "shrink-0"
                 }
               />
+              <Button
+                variant="secondary"
+                appearance="outline"
+                size="small"
+                shape="round"
+                iconOnly
+                icon={<Tags size={14} strokeWidth={1.75} />}
+                title="Add tag"
+                aria-label="Add tag"
+                aria-expanded={isTagPanelOpen}
+                aria-controls="session-creator-tag-panel"
+                onClick={handleToggleTag}
+                className={
+                  isTagPanelOpen
+                    ? "ml-1 shrink-0 !bg-fill-1 !text-primary-6"
+                    : "ml-1 shrink-0"
+                }
+              />
+              {selectedOrg && (
+                <Button
+                  variant="secondary"
+                  appearance="outline"
+                  size="small"
+                  shape="round"
+                  icon={<Network size={14} strokeWidth={1.75} />}
+                  title={t("creator.orgMembers.configButton")}
+                  aria-label={t("creator.orgMembers.configButton")}
+                  aria-expanded={isOrgMembersPanelOpen}
+                  aria-controls="session-creator-org-members-panel"
+                  onClick={handleToggleOrgMembers}
+                  className={
+                    isOrgMembersPanelOpen
+                      ? "ml-1 shrink-0 !bg-fill-1 !text-primary-6"
+                      : "ml-1 shrink-0"
+                  }
+                  data-testid="session-creator-org-members-toggle"
+                >
+                  {t("creator.orgMembers.configButton")}
+                </Button>
+              )}
+              <span
+                aria-hidden
+                className="mx-2 h-4 w-px shrink-0 bg-border-2"
+              />
+              <div className="min-w-0 flex-1">
+                <PinnedActionsBar
+                  composerInputRef={
+                    composerInputRef as React.RefObject<ComposerInputRef>
+                  }
+                />
+              </div>
             </div>
 
-            {selectedOrg && isOrgMembersPanelOpen && (
-              <SessionCreatorOrgMembersPanel
-                org={selectedOrg}
-                advancedConfig={advancedConfig}
-                onAdvancedConfigChange={handleAdvancedConfigChange}
-                allAgents={allAgentDefinitions}
-                cliAgents={cliAgentList}
-              />
+            {isAttachmentPanelOpen && (
+              <div
+                className={`mx-auto w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
+              >
+                <AttachmentPanel open={isAttachmentPanelOpen} />
+              </div>
             )}
 
-            {(!hidePresenceButton || selectedOrg) && (
+            {isTagPanelOpen && (
+              <div
+                className={`mx-auto w-full ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
+              >
+                <TagPanel open={isTagPanelOpen} />
+              </div>
+            )}
+
+            {selectedOrg && isOrgMembersPanelOpen && (
+              <div id="session-creator-org-members-panel">
+                <SessionCreatorOrgMembersPanel
+                  org={selectedOrg}
+                  advancedConfig={advancedConfig}
+                  onAdvancedConfigChange={handleAdvancedConfigChange}
+                  allAgents={allAgentDefinitions}
+                  cliAgents={cliAgentList}
+                />
+              </div>
+            )}
+
+            {!hidePresenceButton && (
               <div className="flex w-full items-center justify-center gap-2 pt-1">
-                {selectedOrg && (
-                  <div className="inline-flex">
-                    <PillGroup segments={orgMembersSegments} />
-                  </div>
-                )}
-                {selectedOrg && !hidePresenceButton && (
-                  <span aria-hidden className="h-4 w-px bg-border-2" />
-                )}
-                {!hidePresenceButton && (
-                  <PresenceMenuButton
-                    variant="detailed"
-                    dropdownPosition="bottom-start"
-                  />
-                )}
+                <PresenceMenuButton
+                  variant="detailed"
+                  dropdownPosition="bottom-start"
+                />
               </div>
             )}
 
