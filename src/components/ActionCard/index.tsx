@@ -32,6 +32,7 @@
  * />
  * ```
  */
+import cn from "classnames";
 import { ArrowRight, Check, Info } from "lucide-react";
 import React from "react";
 
@@ -40,6 +41,41 @@ import Tooltip from "@src/components/Tooltip";
 
 import { VARIANT_STYLES } from "./config";
 import type { ActionCardProps } from "./types";
+
+const CheckboxIndicator: React.FC<{ selected: boolean }> = ({ selected }) => (
+  <span
+    className={cn(
+      "flex h-4 w-4 flex-shrink-0 items-center justify-center rounded",
+      selected
+        ? "border-primary-6 bg-primary-6"
+        : "border border-text-4 bg-transparent"
+    )}
+  >
+    {selected && <Check size={10} className="text-white" />}
+  </span>
+);
+
+const RadioIndicator: React.FC<{ selected: boolean }> = ({ selected }) => (
+  <span
+    className={cn(
+      "flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border",
+      selected ? "border-primary-6" : "border-text-4"
+    )}
+  >
+    {selected && <span className="h-2 w-2 rounded-full bg-primary-6" />}
+  </span>
+);
+
+const InfoTooltip: React.FC<{ content: string }> = ({ content }) => (
+  <Tooltip content={content} showArrow={false} position="top">
+    <span
+      className="flex-shrink-0 cursor-help text-text-3 hover:text-text-2"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <Info size={14} />
+    </span>
+  </Tooltip>
+);
 
 const ActionCard: React.FC<ActionCardProps> = ({
   title,
@@ -65,82 +101,65 @@ const ActionCard: React.FC<ActionCardProps> = ({
 }) => {
   const variantConfig = VARIANT_STYLES[variant];
 
-  const handleClick = () => {
-    if (!disabled && !buttonText) {
-      // Only trigger onClick on card click if there's no button
-      onClick();
-    }
+  const hasSelector = showSelect || showCheckbox || showRadio;
+  const isSelected = hasSelector && selected;
+  const hasButton = Boolean(buttonText);
+
+  const handleCardClick = () => {
+    if (disabled || hasButton) return;
+    onClick();
   };
 
   const handleButtonClick = () => {
-    if (!disabled) {
-      onClick();
-    }
+    if (disabled) return;
+    onClick();
   };
 
-  // Determine container classes - use selected styling when showSelect/showCheckbox is true and selected
-  const hasSelector = showSelect || showCheckbox || showRadio;
-  const isSelectedState = hasSelector && selected;
-  const containerClasses = [
-    isSelectedState
+  const containerClass = cn(
+    showArrow && "group",
+    isSelected
       ? variantConfig.selectedContainerClass
       : variantConfig.containerClass,
-    !buttonText ? variantConfig.containerHoverClass : "",
-    disabled ? "opacity-50 cursor-not-allowed" : "",
-    className,
-  ]
-    .filter(Boolean)
-    .join(" ");
+    !hasButton && variantConfig.containerHoverClass,
+    disabled && "opacity-50 cursor-not-allowed",
+    className
+  );
 
-  // Resolve icon: iconElement takes precedence over icon
   const iconColorClass =
-    iconPreserveColor || !isSelectedState
-      ? variantConfig.iconClass
-      : variantConfig.selectedIconClass;
+    isSelected && !iconPreserveColor
+      ? variantConfig.selectedIconClass
+      : variantConfig.iconClass;
+
+  const titleClass = isSelected
+    ? variantConfig.selectedTitleClass
+    : variantConfig.titleClass;
+
+  const showTrailingCheck =
+    showSelect && showSelectionCheck && !showCheckbox && !showRadio && selected;
 
   return (
     <div
-      className={`${showArrow ? "group" : ""}${containerClasses}`}
-      onClick={handleClick}
+      className={containerClass}
+      onClick={handleCardClick}
       data-testid={dataTestId}
     >
       <div className="flex items-center gap-2">
         {showCheckbox && !showRadio && (
-          <span
-            className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded ${
-              selected
-                ? "border-primary-6 bg-primary-6"
-                : "border border-text-4 bg-transparent"
-            }`}
-          >
-            {selected && <Check size={10} className="text-white" />}
-          </span>
+          <CheckboxIndicator selected={selected} />
         )}
-        {showRadio && (
-          <span
-            className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border ${
-              selected ? "border-primary-6" : "border-text-4"
-            }`}
-          >
-            {selected && <span className="h-2 w-2 rounded-full bg-primary-6" />}
-          </span>
-        )}
+        {showRadio && <RadioIndicator selected={selected} />}
+
         {iconElement ? (
-          <div className={`flex-shrink-0 ${iconColorClass}`}>{iconElement}</div>
+          <div className={cn("flex-shrink-0", iconColorClass)}>
+            {iconElement}
+          </div>
         ) : Icon ? (
           <Icon size={16} className={iconColorClass} />
         ) : null}
+
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p
-              className={
-                isSelectedState
-                  ? variantConfig.selectedTitleClass
-                  : variantConfig.titleClass
-              }
-            >
-              {title}
-            </p>
+            <p className={titleClass}>{title}</p>
             {badge && (
               <span className="inline-flex flex-shrink-0 items-center rounded-full bg-primary-1 px-1.5 py-0.5 text-[10px] font-medium leading-none text-primary-6">
                 {badge}
@@ -151,17 +170,10 @@ const ActionCard: React.FC<ActionCardProps> = ({
             <p className={variantConfig.descriptionClass}>{description}</p>
           )}
         </div>
-        {tooltip && !(hasSelector && selected) && (
-          <Tooltip content={tooltip} showArrow={false} position="top">
-            <span
-              className="flex-shrink-0 cursor-help text-text-3 hover:text-text-2"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <Info size={14} />
-            </span>
-          </Tooltip>
-        )}
-        {buttonText && (
+
+        {tooltip && !isSelected && <InfoTooltip content={tooltip} />}
+
+        {hasButton && (
           <Button
             variant={variant === "primary" ? "primary" : "secondary"}
             size="small"
@@ -172,11 +184,8 @@ const ActionCard: React.FC<ActionCardProps> = ({
             {buttonText}
           </Button>
         )}
-        {showSelect &&
-          showSelectionCheck &&
-          !showCheckbox &&
-          !showRadio &&
-          selected &&
+
+        {showTrailingCheck &&
           (tooltip ? (
             <Tooltip content={tooltip} showArrow={false} position="top">
               <span className="flex-shrink-0 cursor-help">
@@ -186,6 +195,7 @@ const ActionCard: React.FC<ActionCardProps> = ({
           ) : (
             <Check size={14} className="flex-shrink-0 text-primary-6" />
           ))}
+
         {showArrow && (
           <ArrowRight
             size={14}

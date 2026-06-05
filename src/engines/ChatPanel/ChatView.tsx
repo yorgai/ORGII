@@ -32,7 +32,9 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useNavigate } from "react-router-dom";
 
+import { ROUTES } from "@src/config/routes";
 import { GroupChatPausedBanner } from "@src/engines/ChatPanel/components/ChatStatusBanners";
 import { useAgentOrgGroupChatController } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatController";
 import { useChatPanelState } from "@src/engines/ChatPanel/hooks/useChatPanelState";
@@ -40,6 +42,7 @@ import { chatEventsAtom } from "@src/engines/SessionCore/derived/chatEvents";
 import { derivePlanApprovalViewState } from "@src/engines/SessionCore/derived/planDisplayEvents";
 import { useFileReviewSync } from "@src/hooks/fileReview";
 import { useSessionWorkspaceSync } from "@src/hooks/session/useSessionWorkspaceSync";
+import { EditorTabService } from "@src/services/workStation";
 import { activeSessionIdAtom } from "@src/store/session";
 import {
   isSessionActiveAtom,
@@ -56,6 +59,8 @@ import {
   queueFlushRequestAtom,
   reorderQueueAtom,
 } from "@src/store/ui/messageQueueAtom";
+import { stationModeAtom } from "@src/store/ui/simulatorAtom";
+import { createSourceControlTab } from "@src/store/workstation/tabs";
 import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
 import ChatFloatingComposer from "./ChatFloatingComposer";
@@ -378,6 +383,20 @@ const ChatView: React.FC<ChatViewProps> = memo(
       currentPlanApproval && shouldShowCurrentPlanSurface
     );
 
+    const navigate = useNavigate();
+    const stationMode = useAtomValue(stationModeAtom);
+    const setStationMode = useSetAtom(stationModeAtom);
+
+    const handleFilesExpand = useCallback(() => {
+      if (stationMode === "agent-station") {
+        setStationMode("my-station");
+      }
+      navigate(ROUTES.workStation.code.path);
+      setTimeout(() => {
+        EditorTabService.openTab(createSourceControlTab(0));
+      }, 0);
+    }, [stationMode, setStationMode, navigate]);
+
     const {
       questionCollapsed,
       permissionCollapsed,
@@ -405,6 +424,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
       hasPermission,
       hasModeSwitch,
       hasPlan,
+      onFilesExpand: handleFilesExpand,
     });
 
     const hasAgentOrgIntervention =

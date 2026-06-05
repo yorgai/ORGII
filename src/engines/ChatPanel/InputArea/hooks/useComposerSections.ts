@@ -42,6 +42,8 @@ export interface UseComposerSectionsOptions {
   hasModeSwitch?: boolean;
   /** Whether the CreatePlanCard currently has a pending plan to review. */
   hasPlan?: boolean;
+  /** When provided, clicking the files pill navigates directly instead of expanding the card. */
+  onFilesExpand?: () => void;
 }
 
 type ActiveSection = "queue" | "process" | "files" | null;
@@ -54,6 +56,7 @@ export function useComposerSections({
   hasPermission = false,
   hasModeSwitch = false,
   hasPlan = false,
+  onFilesExpand,
 }: UseComposerSectionsOptions) {
   // Primary card collapsed states
   const [questionCollapsed, setQuestionCollapsed] = useState(false);
@@ -275,7 +278,7 @@ export function useComposerSections({
           ...diffStatNodes
         ),
         active: filesExpanded,
-        onExpand: toggleFiles,
+        onExpand: onFilesExpand ?? toggleFiles,
         testId: "composer-section-files",
       });
     }
@@ -308,6 +311,7 @@ export function useComposerSections({
     toggleQueue,
     toggleProcess,
     toggleFiles,
+    onFilesExpand,
   ]);
 
   return {

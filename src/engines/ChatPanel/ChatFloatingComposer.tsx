@@ -207,14 +207,6 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
               onVisibleCountChange={onProcessVisibleCountChange}
             />
           )}
-          {filesExpanded && (
-            <CompactFileChanges
-              key={`files-expanded-${sessionId}`}
-              onToggle={onToggleFiles}
-              onVisibleStatsChange={onFileChangeStatsChange}
-            />
-          )}
-
           {!processExpanded && (
             <ActiveProcesses
               key={`process-hidden-${sessionId}`}
@@ -223,14 +215,12 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
               hidden
             />
           )}
-          {!filesExpanded && (
-            <CompactFileChanges
-              key={`files-hidden-${sessionId}`}
-              onToggle={onToggleFiles}
-              onVisibleStatsChange={onFileChangeStatsChange}
-              hidden
-            />
-          )}
+          <CompactFileChanges
+            key={`files-hidden-${sessionId}`}
+            onToggle={onToggleFiles}
+            onVisibleStatsChange={onFileChangeStatsChange}
+            hidden
+          />
 
           <QueueEditModeCard />
 
