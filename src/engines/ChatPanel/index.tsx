@@ -6,6 +6,7 @@ import {
   GalleryThumbnails,
   Link2,
   ListChevronsDownUp,
+  ListChevronsUpDown,
   Maximize2,
   MoreHorizontal,
   Plus,
@@ -98,7 +99,10 @@ import {
   chatWidthAtom,
   toggleChatPanelMaximizedAtom,
 } from "@src/store/ui/chatPanelAtom";
-import { triggerCollapseAllAtom } from "@src/store/ui/collapseStateAtom";
+import {
+  collapseAllCommandAtom,
+  setAllBlocksCollapsedAtom,
+} from "@src/store/ui/collapseStateAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
 import {
   PROJECT_CREATOR_DRAFT_ID,
@@ -314,7 +318,8 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const [isExportModalOpen, setExportModalOpen] = useState(false);
     const [isLinkWorkItemModalOpen, setLinkWorkItemModalOpen] = useState(false);
 
-    const triggerCollapseAll = useSetAtom(triggerCollapseAllAtom);
+    const collapseAllCommand = useAtomValue(collapseAllCommandAtom);
+    const setAllBlocksCollapsed = useSetAtom(setAllBlocksCollapsedAtom);
     const setActiveSessionId = useSetAtom(activeSessionIdAtom);
     const setWorkstationActiveSessionId = useSetAtom(
       workstationActiveSessionIdAtom
@@ -327,12 +332,16 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const bumpProjectListRefresh = useSetAtom(projectListRefreshAtom);
     const allAgentDefs = useAtomValue(allAgentDefsAtom);
 
-    const handleCollapseAll = useCallback(() => {
-      if (currentSessionId) {
-        triggerCollapseAll(currentSessionId);
-      }
+    const allBlocksCollapsed =
+      collapseAllCommand.epoch > 0 ? collapseAllCommand.collapsed : false;
+    const collapseToggleLabel = allBlocksCollapsed
+      ? t("common:actions.expandAll")
+      : t("common:actions.collapseAll");
+
+    const handleToggleAllBlocksCollapsed = useCallback(() => {
+      setAllBlocksCollapsed(!allBlocksCollapsed);
       closeHeaderActionsMenu();
-    }, [triggerCollapseAll, currentSessionId, closeHeaderActionsMenu]);
+    }, [allBlocksCollapsed, setAllBlocksCollapsed, closeHeaderActionsMenu]);
 
     const handleRegisterSearchOpen = useCallback(
       (handler: (() => void) | null) => {
@@ -1040,7 +1049,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         {showSessionContent && (
           <Tooltip
             content={
-              <KeyboardShortcutTooltipContent label={t("chat.collapseAll")} />
+              <KeyboardShortcutTooltipContent label={collapseToggleLabel} />
             }
             position="bottom-end"
             mouseEnterDelay={200}
@@ -1052,13 +1061,20 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
                 variant="tertiary"
                 size="small"
                 iconOnly
-                onClick={handleCollapseAll}
-                aria-label={t("chat.collapseAll")}
+                onClick={handleToggleAllBlocksCollapsed}
+                aria-label={collapseToggleLabel}
                 icon={
-                  <ListChevronsDownUp
-                    size={CHAT_PANEL_HEADER_ICON_SIZE}
-                    strokeWidth={2}
-                  />
+                  allBlocksCollapsed ? (
+                    <ListChevronsUpDown
+                      size={CHAT_PANEL_HEADER_ICON_SIZE}
+                      strokeWidth={2}
+                    />
+                  ) : (
+                    <ListChevronsDownUp
+                      size={CHAT_PANEL_HEADER_ICON_SIZE}
+                      strokeWidth={2}
+                    />
+                  )
                 }
               />
             </span>

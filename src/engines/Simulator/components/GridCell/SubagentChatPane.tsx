@@ -44,11 +44,8 @@
  * A trailing message-icon button injected into `TurnPaginationControls`
  * (via `paginationTrailingSlot`) flips local `showGroupUserMessage`
  * state on so the user can re-surface the prompt without leaving the
- * cell. A second collapse-all button next to it calls
- * `triggerCollapseAllAtom(sessionId)` — the same atom the main
- * ChatPanel header uses — so every block inside this cell snaps
- * shut without touching neighbouring subagent cells (collapse epoch
- * is keyed by ChatSessionContext sessionId).
+ * cell. A second collapse-all button next to it calls the same global
+ * atom the main ChatPanel header uses.
  * `PlanTodoPinBar` stays permanently hidden via `hidePinnedBars`
  * — it's the parent session's affordance, not the subagent cell's.
  *
@@ -76,7 +73,7 @@ import ChatHistory from "@src/engines/ChatPanel/ChatHistory";
 import { ChatHistoryOverrideContext } from "@src/engines/ChatPanel/ChatHistoryOverrideContext";
 import { ChatSessionContext } from "@src/engines/ChatPanel/ChatSessionContext";
 import { chatEventsForSessionAtomFamily } from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
-import { triggerCollapseAllAtom } from "@src/store/ui/collapseStateAtom";
+import { setAllBlocksCollapsedAtom } from "@src/store/ui/collapseStateAtom";
 
 interface SubagentChatPaneProps {
   /** Subagent session id — passed to ChatSessionContext so the chat events
@@ -103,14 +100,10 @@ const SubagentChatPaneComponent: React.FC<SubagentChatPaneProps> = ({
   // ChatHistory re-reads via `useChatHistory()` and picks up our override.
   const allEvents = useAtomValue(chatEventsForSessionAtomFamily(sessionId));
 
-  // Collapse-all hook — same atom the main ChatPanel header uses
-  // (`triggerCollapseAllAtom`). Because the inner ChatHistory is wrapped
-  // in `ChatSessionContext.Provider value={sessionId}`, only blocks
-  // inside this cell react to the epoch bump.
-  const triggerCollapseAll = useSetAtom(triggerCollapseAllAtom);
+  const setAllBlocksCollapsed = useSetAtom(setAllBlocksCollapsedAtom);
   const handleCollapseAll = useCallback(() => {
-    triggerCollapseAll(sessionId);
-  }, [triggerCollapseAll, sessionId]);
+    setAllBlocksCollapsed(true);
+  }, [setAllBlocksCollapsed]);
 
   // Slice events to the replay cursor. When `cursorMs` is null OR the
   // cursor is at/past the last event, we pass `undefined` so the

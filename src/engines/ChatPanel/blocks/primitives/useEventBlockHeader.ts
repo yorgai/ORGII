@@ -8,13 +8,11 @@
  * creating a circular dependency through the SessionCore barrel.
  */
 import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 
-import { useChatSessionId } from "@src/engines/ChatPanel/ChatSessionContext";
 import {
-  collapseAllEpochMapAtom,
+  collapseAllCommandAtom,
   collapseStateAtom,
-  selectCollapseEpoch,
   setCollapseStateAtom,
 } from "@src/store/ui/collapseStateAtom";
 
@@ -76,26 +74,25 @@ export function useEventBlockHeader(
   const persistCollapse = useSetAtom(setCollapseStateAtom);
 
   const participates = collapseAllValue !== undefined;
-  const epochMap = useAtomValue(collapseAllEpochMapAtom);
-  const sessionId = useChatSessionId();
-  const collapseAllEpoch = useMemo(
-    () => (participates ? selectCollapseEpoch(epochMap, sessionId) : 0),
-    [participates, epochMap, sessionId]
-  );
+  const command = useAtomValue(collapseAllCommandAtom);
+  const collapseAllCommand = participates
+    ? command
+    : { epoch: 0, collapsed: false };
 
   // Nested (subagent sub-activity) blocks default collapsed but can be
   // expanded by clicking. The persisted collapse map is still checked so
-  // a user's explicit expand survives re-renders within the same session.
+  // a user's explicit expand survives re-renders.
   const nestedDefault = true;
+  const persistedCollapsed =
+    eventId !== undefined ? collapseMap.get(eventId) : undefined;
+  const commandCollapsed =
+    participates && collapseAllCommand.epoch > 0
+      ? collapseAllCommand.collapsed === collapseAllValue
+      : undefined;
   const initialCollapsed =
-    participates && collapseAllEpoch > 0
-      ? collapseAllValue
-      : eventId !== undefined
-        ? (collapseMap.get(eventId) ??
-          (isNested ? nestedDefault : defaultCollapsed))
-        : isNested
-          ? nestedDefault
-          : defaultCollapsed;
+    persistedCollapsed ??
+    commandCollapsed ??
+    (isNested ? nestedDefault : defaultCollapsed);
 
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
@@ -104,17 +101,22 @@ export function useEventBlockHeader(
     return () => setIsHeaderHovered(false);
   }, []);
 
-  const [prevEpoch, setPrevEpoch] = useState(collapseAllEpoch);
-  if (collapseAllValue !== undefined && collapseAllEpoch !== prevEpoch) {
-    setPrevEpoch(collapseAllEpoch);
-    setIsCollapsed(collapseAllValue);
+  const [prevEpoch, setPrevEpoch] = useState(collapseAllCommand.epoch);
+  if (
+    collapseAllValue !== undefined &&
+    collapseAllCommand.epoch !== prevEpoch
+  ) {
+    setPrevEpoch(collapseAllCommand.epoch);
+    setIsCollapsed(collapseAllCommand.collapsed === collapseAllValue);
   }
 
   const toggleCollapsed = useCallback(() => {
     setIsCollapsed((prev) => {
       const newValue = !prev;
       onToggle?.(newValue);
-      if (eventId) persistCollapse({ eventId, collapsed: newValue });
+      if (eventId) {
+        persistCollapse({ eventId, collapsed: newValue });
+      }
       return newValue;
     });
   }, [onToggle, eventId, persistCollapse]);
