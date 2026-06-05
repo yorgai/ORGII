@@ -3,7 +3,7 @@
  *
  * The shared SessionCreator base component composed by all variants
  * (`Factory`, `Inbox`, `ChatPanel`, and the embedded layout).
- * It owns the Tiptap editor, slash menu, agent picker, model/mode pills,
+ * It owns the ComposerInput editor, slash menu, agent picker, model/mode pills,
  * repo/branch line, and the launch button. Variants wrap this Shell with
  * extra logic (group-chat tagging, reply-mode header overrides, factory
  * styling, etc.) via props like `headerOverride`, `extraSlashItems`, and
@@ -16,7 +16,7 @@ import { X } from "lucide-react";
 import React, { Suspense } from "react";
 
 import type { ModelType } from "@src/api/tauri/rpc/schemas/validation";
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import ModelIcon from "@src/components/ModelIcon";
 import SelectorPill from "@src/components/SelectorPill";
 import { resolveAgentIcon } from "@src/config/agentIcons";
@@ -112,7 +112,7 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
   const {
     t,
     fileInputRef,
-    tiptapRef,
+    composerInputRef,
     uploadedFiles,
     isLoading,
     advancedConfig,
@@ -316,7 +316,7 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
         variant="chatPanel"
         uploadedFiles={uploadedFiles}
         onRemoveFile={handleRemoveFile}
-        tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
+        composerInputRef={composerInputRef as React.RefObject<ComposerInputRef>}
         onContentChange={handleContentChangeWithTracking}
         onAtMention={handleAtMention}
         onAtMentionClose={handleAtMentionClose}
@@ -370,7 +370,7 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
       />
 
       <PinnedActionsBar
-        tiptapRef={tiptapRef as React.RefObject<TiptapInputRef>}
+        composerInputRef={composerInputRef as React.RefObject<ComposerInputRef>}
       />
 
       {/* Agent Selector Modal */}

@@ -30,7 +30,8 @@ export type MenuItemId =
   | "session"
   | "projects"
   | "project"
-  | "workitem";
+  | "workitem"
+  | "browser";
 
 export type SecondLayerId = "files" | "sessions" | "projects";
 

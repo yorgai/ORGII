@@ -45,10 +45,10 @@ function getDisplayName(path: string, name: string | undefined): string {
 }
 
 export function insertPillFromTabPayload(
-  tiptapRef: RefObject<ComposerInputRef | null>,
+  composerInputRef: RefObject<ComposerInputRef | null>,
   payload: InsertPillOptions
 ): void {
-  if (!tiptapRef.current) return;
+  if (!composerInputRef.current) return;
   if (!payload.path) return;
 
   const iconType = payload.iconType ?? (payload.isFolder ? "folder" : "file");
@@ -56,18 +56,26 @@ export function insertPillFromTabPayload(
   const displayName = getDisplayName(payload.path, payload.name);
 
   if (payload.pointerX != null && payload.pointerY != null) {
-    tiptapRef.current.placeCaretAtPoint(payload.pointerX, payload.pointerY);
+    composerInputRef.current.placeCaretAtPoint(
+      payload.pointerX,
+      payload.pointerY
+    );
   }
 
   if (iconType === "workitem") {
     const pillPath = `workitem://${payload.path}/${Date.now()}`;
-    tiptapRef.current.insertFilePill(pillPath, false, "workitem", displayName);
+    composerInputRef.current.insertFilePill(
+      pillPath,
+      false,
+      "workitem",
+      displayName
+    );
     loadWorkItemPillContent(payload.path, pillPath);
     Message.success(`Added ${displayName} as context`);
     return;
   }
 
-  tiptapRef.current.insertFilePill(
+  composerInputRef.current.insertFilePill(
     payload.path,
     isFolder,
     iconType,
@@ -77,12 +85,12 @@ export function insertPillFromTabPayload(
 }
 
 export function insertTabAsPill(
-  tiptapRef: RefObject<ComposerInputRef | null>,
+  composerInputRef: RefObject<ComposerInputRef | null>,
   filePath: string,
   name: string | undefined,
   type: string | undefined
 ): void {
-  insertPillFromTabPayload(tiptapRef, {
+  insertPillFromTabPayload(composerInputRef, {
     path: filePath,
     name,
     iconType: type === "directory" ? "folder" : "file",

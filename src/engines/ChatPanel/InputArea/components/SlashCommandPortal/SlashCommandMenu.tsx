@@ -1,7 +1,7 @@
 /**
  * SlashCommandMenu — the main dropdown panel.
  *
- * Composes useEntries, usePortalPosition, useKeyboard, FlyoutSubmenu,
+ * Composes useEntries, useFloatingPortalPosition, useKeyboard, FlyoutSubmenu,
  * and the individual MenuRow components into the full slash command experience.
  */
 import { Search } from "lucide-react";
@@ -23,10 +23,7 @@ import {
 } from "@src/components/Dropdown/tokens";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
 
-import {
-  type FloatingPosition,
-  computePreferUpFloatingPosition,
-} from "../floatingPlacement";
+import { useFloatingPortalPosition } from "../useFloatingPortalPosition";
 import FlyoutSubmenu from "./FlyoutSubmenu";
 import {
   DividerRow,
@@ -39,7 +36,6 @@ import {
 import type { OpenFlyoutState, SlashCommandPortalProps } from "./types";
 import { useEntries } from "./useEntries";
 import { useKeyboard } from "./useKeyboard";
-import { usePortalPosition } from "./usePortalPosition";
 
 const PANEL_WIDTH = 280;
 const MAX_PANEL_HEIGHT = 360;
@@ -47,6 +43,8 @@ const MAX_PANEL_HEIGHT = 360;
 const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   visible,
   containerRef,
+  anchorSelector,
+  placement = "prefer-up",
   items,
   loading,
   currentMode,
@@ -74,13 +72,6 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   const [openFlyout, setOpenFlyout] = useState<OpenFlyoutState | null>(null);
   const [flyoutHighlightIndex, setFlyoutHighlightIndex] = useState(0);
   const [panelRight, setPanelRight] = useState(0);
-  const [portalPosition, setPortalPosition] = useState<FloatingPosition | null>(
-    null
-  );
-  const [portalMaxHeight, setPortalMaxHeight] = useState(MAX_PANEL_HEIGHT);
-
-  // Position the portal above the container
-  const { position, isPositioned } = usePortalPosition(visible, containerRef);
 
   // Build the unified entry list
   const { entries, totalFlat } = useEntries({
@@ -90,6 +81,20 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
     hasImageUpload: Boolean(onImageUpload),
     showModeRows,
   });
+
+  const placementUpdateKey = `${searchQuery}\0${entries.length}\0${openFlyout?.kind ?? ""}`;
+  const { portalPosition, portalMaxHeight, isPositioned } =
+    useFloatingPortalPosition({
+      visible,
+      containerRef,
+      floatingRef: portalContainerRef,
+      floatingWidth: PANEL_WIDTH,
+      fallbackHeight: 320,
+      placement,
+      anchorSelector,
+      updateKey: placementUpdateKey,
+      maxHeight: MAX_PANEL_HEIGHT,
+    });
 
   // Reset highlight to 0 when the list shape changes (derived state)
   const listIdentity = useMemo(
@@ -146,51 +151,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [position, isPositioned]);
-
-  const updatePortalPlacement = useCallback(() => {
-    if (!visible || !isPositioned) return;
-
-    const element = portalContainerRef.current;
-    const measuredHeight = element?.getBoundingClientRect().height ?? 320;
-    const floatingPosition = computePreferUpFloatingPosition({
-      anchorRect: position,
-      floatingWidth: PANEL_WIDTH,
-      floatingHeight: measuredHeight,
-    });
-
-    setPortalPosition(floatingPosition);
-    setPortalMaxHeight(
-      Math.min(MAX_PANEL_HEIGHT, floatingPosition.availableHeight)
-    );
-  }, [isPositioned, position, visible]);
-
-  useLayoutEffect(() => {
-    const animationFrameId = window.requestAnimationFrame(
-      updatePortalPlacement
-    );
-    return () => window.cancelAnimationFrame(animationFrameId);
-  }, [entries, openFlyout, searchQuery, updatePortalPlacement]);
-
-  useEffect(() => {
-    if (!visible || !isPositioned) return;
-
-    window.addEventListener("resize", updatePortalPlacement);
-    window.addEventListener("scroll", updatePortalPlacement, true);
-
-    const el = portalContainerRef.current;
-    let resizeObserver: ResizeObserver | null = null;
-    if (el) {
-      resizeObserver = new ResizeObserver(updatePortalPlacement);
-      resizeObserver.observe(el);
-    }
-
-    return () => {
-      window.removeEventListener("resize", updatePortalPlacement);
-      window.removeEventListener("scroll", updatePortalPlacement, true);
-      resizeObserver?.disconnect();
-    };
-  }, [isPositioned, updatePortalPlacement, visible]);
+  }, [isPositioned]);
 
   // Click outside → close (but not when clicking inside a flyout portal)
   useEffect(() => {
@@ -252,6 +213,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
 
   const portalStyle = {
     top: portalPosition.top,
+    bottom: portalPosition.bottom,
     left: portalPosition.left,
     width: PANEL_WIDTH,
   };
@@ -259,7 +221,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   return createPortal(
     <div
       ref={portalContainerRef}
-      className="fixed z-[99999] flex flex-col gap-2 pb-2"
+      className="fixed z-[99999] flex flex-col gap-2"
       style={portalStyle}
     >
       {/* Main panel */}

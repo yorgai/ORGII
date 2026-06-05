@@ -3,7 +3,7 @@
  */
 import type { RefObject } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import type {
   AdvancedConfig,
   SessionCreatorLaunchMode,
@@ -38,7 +38,7 @@ export interface UseSessionLaunchOptions {
   advancedConfig: AdvancedConfig;
   isContentEmpty: boolean;
   validateSessionConfig: () => SessionValidationResult;
-  tiptapRef: RefObject<TiptapInputRef>;
+  composerInputRef: RefObject<ComposerInputRef>;
   onLaunchSuccess?: (info: SessionLaunchSuccessInfo) => void;
   launchMode?: SessionCreatorLaunchMode;
   workItemContext?: SessionLaunchWorkItemContext;

@@ -366,6 +366,15 @@ export const DROPDOWN_CLASSES = {
     " "
   ),
 
+  /** Inset separator between dropdown list groups. */
+  menuSeparatorInset: [
+    "mx-1.5",
+    "my-1",
+    "border-t",
+    "border-solid",
+    "border-border-2",
+  ].join(" "),
+
   /** Search input container */
   searchContainer: [
     "flex",

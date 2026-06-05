@@ -3,7 +3,7 @@
  *
  * Renders user message text with inline file/repo/branch pills.
  * Parses the serialized pill format: `displayName [type:path]`
- * produced by TiptapInput.getTextWithPills().
+ * produced by ComposerInput.getTextWithPills().
  */
 import {
   Code,

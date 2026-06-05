@@ -1,7 +1,7 @@
 export {
-  useTiptapInput,
+  useComposerInput,
   type ContextItem,
-  type UseTiptapInputOptions,
-  type UseTiptapInputReturn,
-} from "./useTiptapInput";
+  type UseComposerInputOptions,
+  type UseComposerInputReturn,
+} from "./useComposerInput";
 export { useAddToAgentInsertion } from "./useAddToAgentInsertion";

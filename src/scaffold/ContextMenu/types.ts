@@ -28,6 +28,9 @@ export interface ContextMenuCustomMentionOption {
   id: string;
   label: string;
   description?: string;
+  selectType?: MenuItemId;
+  selectValue?: string;
+  selectDisplayName?: string;
 }
 
 export interface ContextMenuProps {

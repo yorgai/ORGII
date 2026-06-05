@@ -177,15 +177,17 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = memo(
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         {React.createElement(icon, {
           size: DROPDOWN_ITEM.iconSize,
-          className: "text-text-2",
+          className: "shrink-0 text-text-2",
           strokeWidth: 1.75,
         })}
-        <span className="min-w-0 text-[13px] text-text-1">{label}</span>
+        <span className="min-w-0 shrink truncate text-[13px] text-text-1">
+          {label}
+        </span>
         {description && (
-          <span className="truncate text-[12px] text-text-3">
+          <span className="min-w-0 flex-1 truncate text-[12px] text-text-3">
             {description}
           </span>
         )}

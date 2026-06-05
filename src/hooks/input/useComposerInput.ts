@@ -1,12 +1,12 @@
 /**
- * useTiptapInput Hook
+ * useComposerInput Hook
  *
  * Provides state and handlers for ComposerInput integration.
  * This is a simpler alternative to useContextInput that uses the browser's
  * contenteditable selection and cursor management.
  *
  * @example
- * const { tiptapRef, handleAtSelect, ... } = useTiptapInput({
+ * const { composerInputRef, handleAtSelect, ... } = useComposerInput({
  *   onContentChange: (content) => */
 import {
   type MutableRefObject,
@@ -17,8 +17,8 @@ import {
 } from "react";
 
 import {
+  type ComposerInputRef,
   type PillIconType,
-  type ComposerInputRef as TiptapInputRef,
 } from "@src/components/ComposerInput";
 import { getTerminalBuffer } from "@src/components/TerminalInteractive/bufferCache";
 import { storePillText } from "@src/config/pillTokens";
@@ -96,7 +96,7 @@ export interface ContextItem {
   name: string;
 }
 
-export interface UseTiptapInputOptions {
+export interface UseComposerInputOptions {
   /** Callback when text content changes */
   onContentChange?: (text: string) => void;
   /** Callback when context items (file pills) change */
@@ -111,11 +111,9 @@ export interface UseTiptapInputOptions {
   creatorDefaultMode?: boolean;
 }
 
-export interface UseTiptapInputReturn {
+export interface UseComposerInputReturn {
   /** Ref to attach to ComposerInput */
-  tiptapRef: RefObject<TiptapInputRef>;
-  /** @ dropdown container ref */
-  atDropdownRef: RefObject<HTMLDivElement>;
+  composerInputRef: RefObject<ComposerInputRef>;
   /** Keyboard handler ref for context menu navigation */
   contextMenuKeyboardHandlerRef: RefObject<{
     handleKeyDown: (e: KeyboardEvent) => boolean;
@@ -174,9 +172,9 @@ export interface UseTiptapInputReturn {
 // Hook Implementation
 // ============================================
 
-export function useTiptapInput(
-  options: UseTiptapInputOptions = {}
-): UseTiptapInputReturn {
+export function useComposerInput(
+  options: UseComposerInputOptions = {}
+): UseComposerInputReturn {
   const {
     onContentChange: _onContentChange,
     onContextItemsChange,
@@ -187,8 +185,7 @@ export function useTiptapInput(
   // Refs
   // ============================================
 
-  const tiptapRef = useRef<TiptapInputRef>(null);
-  const atDropdownRef = useRef<HTMLDivElement>(null);
+  const composerInputRef = useRef<ComposerInputRef>(null);
   const contextMenuKeyboardHandlerRef = useRef<{
     handleKeyDown: (e: KeyboardEvent) => boolean;
   }>(null);
@@ -225,7 +222,7 @@ export function useTiptapInput(
     slashLoading,
     prefetchItems: prefetchSlashItems,
   } = useSlashCommand({
-    tiptapRef,
+    composerInputRef,
     setShowSlashMenu,
     setSlashQuery,
     creatorDefaultMode,
@@ -301,7 +298,7 @@ export function useTiptapInput(
    */
   const handleAtSelect = useCallback(
     (type: string, value?: string, displayName?: string) => {
-      if (!tiptapRef.current || !value) return;
+      if (!composerInputRef.current || !value) return;
 
       // Determine icon type based on menu selection
       const iconType = getIconType(type);
@@ -322,7 +319,7 @@ export function useTiptapInput(
 
           storePillText(pillPath, buffer);
 
-          tiptapRef.current.insertFilePill(
+          composerInputRef.current.insertFilePill(
             pillPath,
             false,
             "terminal",
@@ -345,7 +342,7 @@ export function useTiptapInput(
       if (iconType === "session") {
         const pillPath = `session://${value}/${Date.now()}`;
         const pillDisplayName = displayName || "Session";
-        tiptapRef.current.insertFilePill(
+        composerInputRef.current.insertFilePill(
           pillPath,
           false,
           "session",
@@ -367,7 +364,7 @@ export function useTiptapInput(
       if (iconType === "browser") {
         const pillPath = `browser://${value}/${Date.now()}`;
         const pillDisplayName = displayName || "Browser Tab";
-        tiptapRef.current.insertFilePill(
+        composerInputRef.current.insertFilePill(
           pillPath,
           false,
           "browser",
@@ -399,7 +396,7 @@ export function useTiptapInput(
         displayName || value.split("/").pop() || value;
 
       // Insert the pill with correct icon type and display name
-      tiptapRef.current.insertFilePill(
+      composerInputRef.current.insertFilePill(
         value,
         isFolder,
         iconType,
@@ -428,9 +425,9 @@ export function useTiptapInput(
    */
   const handleAtMentionClick = useCallback(() => {
     setContextMenuKeyboardOpened(false);
-    if (!tiptapRef.current) return;
+    if (!composerInputRef.current) return;
 
-    const editor = tiptapRef.current.getEditor();
+    const editor = composerInputRef.current.getEditor();
     if (!editor) return;
 
     // Focus and insert @ character
@@ -438,7 +435,7 @@ export function useTiptapInput(
 
     // Trigger @ mention mode (sets internal state + calls onAtMention)
     setTimeout(() => {
-      tiptapRef.current?.triggerAtMention();
+      composerInputRef.current?.triggerAtMention();
     }, 0);
   }, []);
 
@@ -446,7 +443,7 @@ export function useTiptapInput(
    * Get plain text content
    */
   const getTextContent = useCallback((): string => {
-    return tiptapRef.current?.getText() || "";
+    return composerInputRef.current?.getText() || "";
   }, []);
 
   /**
@@ -456,14 +453,14 @@ export function useTiptapInput(
     filePath: string;
     fileName: string;
   }> => {
-    return tiptapRef.current?.getFilePills() || [];
+    return composerInputRef.current?.getFilePills() || [];
   }, []);
 
   /**
    * Clear input
    */
   const clearInput = useCallback(() => {
-    tiptapRef.current?.clear();
+    composerInputRef.current?.clear();
     setContextItems([]);
   }, []);
 
@@ -471,7 +468,7 @@ export function useTiptapInput(
    * Focus input
    */
   const focusInput = useCallback(() => {
-    tiptapRef.current?.focus();
+    composerInputRef.current?.focus();
   }, []);
 
   // ============================================
@@ -479,8 +476,7 @@ export function useTiptapInput(
   // ============================================
 
   return {
-    tiptapRef,
-    atDropdownRef,
+    composerInputRef,
     contextMenuKeyboardHandlerRef,
     slashCommandKeyboardHandlerRef,
     showContextMenu,
@@ -515,4 +511,4 @@ export function useTiptapInput(
   };
 }
 
-export default useTiptapInput;
+export default useComposerInput;

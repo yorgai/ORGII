@@ -15,7 +15,7 @@ import ComposerInputSurface from "@src/components/ComposerInput/ComposerInputSur
 import Input from "@src/components/Input";
 import ContextMenuPortal from "@src/engines/ChatPanel/InputArea/components/ContextMenuPortal";
 import SlashCommandPortal from "@src/engines/ChatPanel/InputArea/components/SlashCommandPortal";
-import { useTiptapInput } from "@src/hooks/input";
+import { useComposerInput } from "@src/hooks/input";
 import { PROJECT_MANAGER_TEXT_PLACEHOLDER_CLASS } from "@src/modules/ProjectManager/shared/placeholderTokens";
 import type { SlashItem } from "@src/types/extensions";
 
@@ -150,7 +150,7 @@ const ProjectContentEditor = forwardRef<
     >(null);
 
     const {
-      tiptapRef: editorRef,
+      composerInputRef: editorRef,
       showContextMenu,
       atSearchQuery,
       handleAtMention,
@@ -167,7 +167,7 @@ const ProjectContentEditor = forwardRef<
       currentMode,
       filteredSlashItems,
       slashLoading,
-    } = useTiptapInput();
+    } = useComposerInput();
 
     const skillSlashItems = useMemo<SlashItem[]>(
       () => filteredSlashItems.filter((item) => item.category === "skill"),
@@ -330,11 +330,12 @@ const ProjectContentEditor = forwardRef<
               recentFiles={[]}
               repoPath={repoPath ?? undefined}
               keyboardHandlerRef={contextMenuKeyboardHandlerRef}
-              direction="down"
+              placement="down"
             />
             <SlashCommandPortal
               visible={showSlashMenu}
               containerRef={editorContainerRef}
+              placement="down"
               items={skillSlashItems}
               loading={slashLoading}
               currentMode={currentMode}

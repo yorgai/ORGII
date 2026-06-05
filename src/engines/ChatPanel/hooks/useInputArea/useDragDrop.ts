@@ -5,7 +5,7 @@
  */
 import { type DragEvent, type RefObject, useCallback } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import Message from "@src/components/Message";
 
 import type { DragDropHandlers } from "./types";
@@ -29,11 +29,11 @@ function removeDragOverStyle(element: HTMLElement): void {
 }
 
 interface UseDragDropOptions {
-  tiptapRef: RefObject<TiptapInputRef>;
+  composerInputRef: RefObject<ComposerInputRef>;
 }
 
 export function useDragDrop(options: UseDragDropOptions): DragDropHandlers {
-  const { tiptapRef } = options;
+  const { composerInputRef } = options;
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     // Check if this is an internal file drag using global flag
@@ -119,19 +119,19 @@ export function useDragDrop(options: UseDragDropOptions): DragDropHandlers {
       }
 
       // Insert file pill
-      if (!tiptapRef.current) {
+      if (!composerInputRef.current) {
         return;
       }
 
       const isFolder = fileRef.type === "directory";
-      tiptapRef.current.insertFilePill(
+      composerInputRef.current.insertFilePill(
         fileRef.path,
         isFolder,
         isFolder ? "folder" : "file"
       );
       Message.success(`Added ${fileRef.name} as context`);
     },
-    [tiptapRef]
+    [composerInputRef]
   );
 
   return {

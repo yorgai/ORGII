@@ -1,7 +1,7 @@
 /**
  * Paste handling for ComposerInput.
  *
- * Mirrors `TiptapInput/editorHandlers/pasteHandler.ts` priority order:
+ * Mirrors `ComposerInput/editorHandlers/pasteHandler.ts` priority order:
  *   1. Image files → forwarded to `onImagePaste`, paste suppressed.
  *   2. Terminal selection (`window.__orgiiLastTerminalCopy` within window) →
  *      insert a terminal pill, suppress paste.

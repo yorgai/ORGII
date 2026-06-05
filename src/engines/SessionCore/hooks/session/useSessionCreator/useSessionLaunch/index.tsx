@@ -85,7 +85,7 @@ export function useSessionLaunch(
     advancedConfig,
     isContentEmpty,
     validateSessionConfig,
-    tiptapRef,
+    composerInputRef,
     onLaunchSuccess,
     launchMode = SESSION_CREATOR_LAUNCH_MODE.START_FOREGROUND,
     workItemContext,
@@ -266,7 +266,7 @@ export function useSessionLaunch(
     const { agentInput, userInput } = await prepareLaunchInput({
       editorContent,
       effectiveSource,
-      tiptapRef,
+      composerInputRef,
     });
 
     const isBackgroundLaunch = isBackgroundLaunchMode(launchMode);
@@ -431,7 +431,7 @@ export function useSessionLaunch(
     editorContent,
     t,
     effectiveSource,
-    tiptapRef,
+    composerInputRef,
     launchMode,
     dispatchCategory,
     executeCursorIdeLaunch,

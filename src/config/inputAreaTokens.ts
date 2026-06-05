@@ -27,7 +27,7 @@ export const INPUT_AREA = {
   borderRadiusEdit: 8,
   borderRadiusEditClass: "rounded-lg",
 
-  /** Border radius for inner editor (Tiptap) */
+  /** Border radius for inner editor (ComposerInput) */
   borderRadiusEditor: 6,
   borderRadiusEditorClass: "rounded-md",
 
@@ -169,7 +169,7 @@ export const INPUT_AREA_CLASSES = {
     INPUT_AREA_PADDING_COMPACT.gapClass,
   ].join(" "),
 
-  /** Editor inner (Tiptap) */
+  /** Editor inner (ComposerInput) */
   editorInner: INPUT_AREA.borderRadiusEditorClass,
 } as const;
 

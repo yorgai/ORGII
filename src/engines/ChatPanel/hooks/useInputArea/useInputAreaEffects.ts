@@ -6,7 +6,7 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { type MutableRefObject, type RefObject, useEffect } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import Message from "@src/components/Message";
 import { useAddToAgentInsertion } from "@src/hooks/input/useAddToAgentInsertion";
 import {
@@ -28,9 +28,8 @@ import { useImageAttachment } from "./useImageAttachment";
 
 interface UseInputAreaEffectsOptions {
   // Refs
-  tiptapRef: RefObject<TiptapInputRef>;
+  composerInputRef: RefObject<ComposerInputRef>;
   dropTargetId: string;
-  atDropdownRef: RefObject<HTMLDivElement>;
   hasContentRef: MutableRefObject<boolean>;
 
   // State
@@ -51,9 +50,8 @@ interface UseInputAreaEffectsOptions {
 
 export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
   const {
-    tiptapRef,
+    composerInputRef,
     dropTargetId,
-    atDropdownRef,
     hasContentRef,
     showContextMenu,
     setShowContextMenu,
@@ -89,7 +87,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
   useEffect(() => {
     if (!restoreToInput || sessionRolledBack) return;
 
-    const editor = tiptapRef.current;
+    const editor = composerInputRef.current;
     if (!editor) {
       return;
     }
@@ -133,21 +131,16 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
     setRestoreToInput,
     setImageAttachments,
     onRestoreInputContent,
-    tiptapRef,
+    composerInputRef,
     hasContentRef,
   ]);
 
-  // Click outside handler for @ dropdown.
-  // Must check BOTH the local anchor ref AND the portal-rendered ContextMenu
-  // (which lives in document.body via createPortal, outside the atDropdownRef tree).
-  // We match both the inner `.context-menu` div AND the outer portal shell
-  // (data-context-menu-portal) so that clicks on the paddingBottom gap between
-  // the shell edge and the ContextMenu panel do not spuriously close the menu.
+  // Click outside handler for @ dropdown. The menu is rendered through a
+  // document.body portal, so check the portal shell directly.
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Node)) return;
-      if (atDropdownRef.current?.contains(target)) return;
 
       const portalShell = document.querySelector("[data-context-menu-portal]");
       if (portalShell?.contains(target)) return;
@@ -162,7 +155,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showContextMenu, atDropdownRef, setShowContextMenu]);
+  }, [showContextMenu, setShowContextMenu]);
 
   // Pre-warm file search index when workspace path changes.
   // Starting immediately avoids the common cold-search race where the user
@@ -188,20 +181,20 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
     }
 
     const insertTimer = setTimeout(() => {
-      if (tiptapRef.current) {
+      if (composerInputRef.current) {
         // citeFileName contains the full file path (e.g., /path/to/file.tsx)
         // Extract just the filename for display
         const displayFileName = citeFileName.split("/").pop() || citeFileName;
 
         // Insert file reference with line range like @index.tsx (1-483)
-        tiptapRef.current.insertFileReference({
+        composerInputRef.current.insertFileReference({
           filePath: citeFileName,
           fileName: displayFileName,
           lineStart: selectedCiteRange.start,
           lineEnd: selectedCiteRange.end,
         });
       }
-      tiptapRef.current?.focus();
+      composerInputRef.current?.focus();
     }, 100);
 
     return () => clearTimeout(insertTimer);
@@ -210,7 +203,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
     selectedCiteText,
     selectedCiteRange,
     citeFileName,
-    tiptapRef,
+    composerInputRef,
   ]);
 
   // Listen for internal file drop events dispatched by GlobalDragDrop
@@ -239,12 +232,12 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
       }
 
       const insertPill = () => {
-        if (!tiptapRef.current) {
+        if (!composerInputRef.current) {
           return;
         }
 
         const isFolder = fileRef.type === "directory";
-        tiptapRef.current.insertFilePill(
+        composerInputRef.current.insertFilePill(
           fileRef.path,
           isFolder,
           isFolder ? "folder" : "file"
@@ -264,10 +257,10 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
         handleInternalFileDrop
       );
     };
-  }, [tiptapRef]);
+  }, [composerInputRef]);
 
   // Consume pending "add-to-agent" requests — shared with SessionCreator.
-  useAddToAgentInsertion(tiptapRef);
+  useAddToAgentInsertion(composerInputRef);
 
   // Process Dropped Files from GlobalDragDrop.
   //
@@ -275,7 +268,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
   //   - Images → `handleImagePath` → optimize → `chatImageAttachmentsAtom`
   //     → `ImageAttachmentPreview` thumbnail.  This keeps drag on parity with
   //     paste/upload (everything routes through one atom, one optimize step).
-  //   - Other files (incl. folders) → `insertFilePill` into Tiptap.
+  //   - Other files (incl. folders) → `insertFilePill` into ComposerInput.
   useEffect(() => {
     if (droppedFiles.length === 0) return;
 
@@ -284,7 +277,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
     );
     if (filesForThisTarget.length === 0) return;
 
-    // Track retry timers for cleanup if Tiptap isn't mounted yet.
+    // Track retry timers for cleanup if ComposerInput isn't mounted yet.
     const retryTimers: ReturnType<typeof setTimeout>[] = [];
     let cancelled = false;
 
@@ -319,10 +312,10 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
       const insertPills = () => {
         if (cancelled) return;
 
-        if (tiptapRef.current) {
+        if (composerInputRef.current) {
           otherFiles.forEach((file) => {
             const isFolder = file.type === "folder";
-            tiptapRef.current?.insertFilePill(
+            composerInputRef.current?.insertFilePill(
               file.path,
               isFolder,
               isFolder ? "folder" : "file"
@@ -353,7 +346,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
     droppedFiles,
     dropTargetId,
     clearDroppedFiles,
-    tiptapRef,
+    composerInputRef,
     hasContentRef,
     handleImagePath,
     handleImagePaste,

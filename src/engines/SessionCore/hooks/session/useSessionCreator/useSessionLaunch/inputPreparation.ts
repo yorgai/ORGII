@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import type { SessionSource } from "@src/store/session/creatorStateAtom";
 
 import { formatUserInput } from "./useInputFormatter";
@@ -13,25 +13,26 @@ export interface PreparedLaunchInput {
 export interface PrepareLaunchInputOptions {
   editorContent: string;
   effectiveSource: SessionSource | null;
-  tiptapRef: RefObject<TiptapInputRef>;
+  composerInputRef: RefObject<ComposerInputRef>;
 }
 
 export async function prepareLaunchInput(
   options: PrepareLaunchInputOptions
 ): Promise<PreparedLaunchInput> {
-  const { editorContent, effectiveSource, tiptapRef } = options;
+  const { editorContent, effectiveSource, composerInputRef } = options;
   const repoRef = effectiveSource?.repoPath
     ? { path: effectiveSource.repoPath }
     : undefined;
 
-  const userInput = tiptapRef.current?.getTextWithPills
-    ? (tiptapRef.current.getTextWithPills() || "").trim()
-    : formatUserInput({ editorContent, tiptapRef, repo: repoRef }).userInput;
+  const userInput = composerInputRef.current?.getTextWithPills
+    ? (composerInputRef.current.getTextWithPills() || "").trim()
+    : formatUserInput({ editorContent, composerInputRef, repo: repoRef })
+        .userInput;
 
   const { waitForPendingPills } = await import("@src/util/contextPillContent");
   await waitForPendingPills();
 
-  const terminalTexts = tiptapRef.current?.getTerminalPillTexts?.();
+  const terminalTexts = composerInputRef.current?.getTerminalPillTexts?.();
   const terminalEntries = terminalTexts ? Object.entries(terminalTexts) : [];
   if (terminalEntries.length === 0) {
     return { userInput, agentInput: userInput };

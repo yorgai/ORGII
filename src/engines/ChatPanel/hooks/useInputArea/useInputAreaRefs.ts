@@ -9,14 +9,13 @@ import {
   useRef,
 } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 
 import type { InputAreaRefs } from "./types";
 
 export function useInputAreaRefs(): InputAreaRefs {
-  const tiptapRef = useRef<TiptapInputRef>(null);
+  const composerInputRef = useRef<ComposerInputRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const atDropdownRef = useRef<HTMLDivElement>(null);
   const hasContentRef = useRef(false);
   const contextMenuKeyboardHandlerRef = useRef<
     ((event: ReactKeyboardEvent) => boolean) | null
@@ -34,9 +33,8 @@ export function useInputAreaRefs(): InputAreaRefs {
   }, []);
 
   return {
-    tiptapRef,
+    composerInputRef,
     containerRef,
-    atDropdownRef,
     contextMenuKeyboardHandlerRef,
     slashCommandKeyboardHandlerRef,
     plusSlashCommandKeyboardHandlerRef,

@@ -175,6 +175,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
                 key={option.id}
                 icon={AtSign}
                 label={option.label}
+                description={option.description}
                 isActive={keyboardNavigated && activeIndex === optionIndex}
                 dataTestId="agent-org-mention-option"
                 dataMentionId={option.id}
@@ -230,24 +231,28 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           style={{ width: STYLE_CONFIG.dropdownWidth }}
         >
           {filteredCustomMentionOptions.length > 0 && (
-            <div className={DROPDOWN_CLASSES.sectionContainer}>
-              {filteredCustomMentionOptions.map((option, optionIndex) => {
-                const itemIndex = recentCount + optionIndex;
-                return (
-                  <MenuItemRow
-                    key={option.id}
-                    icon={AtSign}
-                    label={option.label}
-                    isActive={keyboardNavigated && activeIndex === itemIndex}
-                    dataTestId="agent-org-mention-option"
-                    dataMentionId={option.id}
-                    onClick={() => onCustomMentionSelect?.(option)}
-                    onMouseEnter={() => handleMainItemHover(itemIndex)}
-                    onMouseLeave={resetActiveIndex}
-                  />
-                );
-              })}
-            </div>
+            <>
+              <div className={DROPDOWN_CLASSES.itemsColumnPadded}>
+                {filteredCustomMentionOptions.map((option, optionIndex) => {
+                  const itemIndex = recentCount + optionIndex;
+                  return (
+                    <MenuItemRow
+                      key={option.id}
+                      icon={AtSign}
+                      label={option.label}
+                      description={option.description}
+                      isActive={keyboardNavigated && activeIndex === itemIndex}
+                      dataTestId="agent-org-mention-option"
+                      dataMentionId={option.id}
+                      onClick={() => onCustomMentionSelect?.(option)}
+                      onMouseEnter={() => handleMainItemHover(itemIndex)}
+                      onMouseLeave={resetActiveIndex}
+                    />
+                  );
+                })}
+              </div>
+              <div className={DROPDOWN_CLASSES.menuSeparatorInset} />
+            </>
           )}
 
           <div className={DROPDOWN_CLASSES.itemsColumnPadded}>

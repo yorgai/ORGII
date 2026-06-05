@@ -15,7 +15,7 @@ import React, { memo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import { StackPill } from "@src/engines/ChatPanel/InputArea/components";
 import UserActionButton from "@src/engines/ChatPanel/InputArea/components/UserActionButton";
 import { useSlashItemsCache } from "@src/engines/ChatPanel/hooks/useInputArea/useSlashItemsCache";
@@ -81,7 +81,7 @@ ActionPill.displayName = "ActionPill";
 
 export interface PinnedActionsBarProps {
   /** Ref to the tiptap editor, used to insert content when a pill is clicked. */
-  tiptapRef: React.RefObject<TiptapInputRef>;
+  composerInputRef: React.RefObject<ComposerInputRef>;
   /**
    * Active session ID — when provided, a Canvas pill appears whenever the
    * session has a live canvas payload and the canvas tab is not already open.
@@ -90,7 +90,7 @@ export interface PinnedActionsBarProps {
 }
 
 const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
-  ({ tiptapRef, sessionId }) => {
+  ({ composerInputRef, sessionId }) => {
     const { t } = useTranslation("sessions");
     const [pinnedActions, setPinnedActions] = useAtom(pinnedActionsAtom);
 
@@ -138,15 +138,15 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
     // ── Built-in "Setup Repo" action ──────────────────────────────────────────
 
     const handleSetupRepo = useCallback(() => {
-      if (!tiptapRef.current) return;
-      tiptapRef.current.appendFilePill(
+      if (!composerInputRef.current) return;
+      composerInputRef.current.appendFilePill(
         "/setup-repo",
         false,
         "skill",
         "setup-repo"
       );
-      tiptapRef.current.focus();
-    }, [tiptapRef]);
+      composerInputRef.current.focus();
+    }, [composerInputRef]);
 
     // ── Available items (shared cache) ────────────────────────────────────────
 
@@ -197,22 +197,22 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
           return;
         }
 
-        if (!tiptapRef.current) return;
+        if (!composerInputRef.current) return;
 
         if (action.category === "skill") {
           const skillToken = `/${action.skillName ?? action.name}`;
-          tiptapRef.current.appendFilePill(
+          composerInputRef.current.appendFilePill(
             skillToken,
             false,
             "skill",
             action.name
           );
-          tiptapRef.current.focus();
+          composerInputRef.current.focus();
           return;
         }
 
         if (action.category === "tool" && action.serverName) {
-          tiptapRef.current
+          composerInputRef.current
             .getEditor()
             ?.chain()
             .focus()
@@ -221,14 +221,14 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
           return;
         }
 
-        tiptapRef.current
+        composerInputRef.current
           .getEditor()
           ?.chain()
           .focus()
           .insertContent(`/${action.name} `)
           .run();
       },
-      [tiptapRef, handleSetupRepo]
+      [composerInputRef, handleSetupRepo]
     );
 
     return (

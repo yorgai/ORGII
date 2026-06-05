@@ -5,7 +5,7 @@
  * 1. Inline title style (natural language with dropdowns/inputs)
  * 2. Two content styles:
  *    - Inline: Natural language sentences with inline dropdowns
- *    - Input box: TipTap-based for command-line inputs
+ *    - Input box: ComposerInput-based for command-line inputs
  */
 import cn from "classnames";
 import { ChevronDown, ChevronUp, GitBranch, X } from "lucide-react";

@@ -8,7 +8,7 @@
  *     `chatImageAttachmentsAtom` (rendered as thumbnails by `EditorArea`).
  *   - Drag-drop (from OS / file tree, via `droppedFilesAtom`): same split —
  *     images go to `useImageAttachment.handleImagePath` (Tauri-path aware),
- *     non-images are inserted as Tiptap pills.
+ *     non-images are inserted as ComposerInput pills.
  *
  * All image state lives in `chatImageAttachmentsAtom`. Non-image state lives
  * in local `uploadedFiles` because it's tied to the SessionCreator draft
@@ -23,7 +23,7 @@ import {
   useState,
 } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import { isImageName } from "@src/engines/ChatPanel/hooks/useInputArea/imageExtensions";
 import { useImageAttachment } from "@src/engines/ChatPanel/hooks/useInputArea/useImageAttachment";
 import type { UploadedFile } from "@src/features/SessionCreator/types";
@@ -34,7 +34,7 @@ import {
 
 export interface UseFileUploadOptions {
   fileInputRef: RefObject<HTMLInputElement>;
-  tiptapRef: RefObject<TiptapInputRef>;
+  composerInputRef: RefObject<ComposerInputRef>;
   /**
    * Whether this hook should consume global drag-drop payloads.
    *
@@ -46,7 +46,11 @@ export interface UseFileUploadOptions {
 }
 
 export function useFileUpload(options: UseFileUploadOptions) {
-  const { fileInputRef, tiptapRef, consumeDroppedFiles = true } = options;
+  const {
+    fileInputRef,
+    composerInputRef,
+    consumeDroppedFiles = true,
+  } = options;
 
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
@@ -57,7 +61,7 @@ export function useFileUpload(options: UseFileUploadOptions) {
 
   /**
    * Handle file picker selection: images → unified image atom, everything
-   * else → `uploadedFiles` (non-image pills) + Tiptap insertion.
+   * else → `uploadedFiles` (non-image pills) + ComposerInput insertion.
    */
   const handleFileUpload = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -77,9 +81,9 @@ export function useFileUpload(options: UseFileUploadOptions) {
         await handleImagePaste(imageFiles);
       }
 
-      if (otherFiles.length > 0 && tiptapRef.current) {
+      if (otherFiles.length > 0 && composerInputRef.current) {
         otherFiles.forEach((file) => {
-          tiptapRef.current?.insertFilePill(file.name, false, "file");
+          composerInputRef.current?.insertFilePill(file.name, false, "file");
         });
       }
 
@@ -87,7 +91,7 @@ export function useFileUpload(options: UseFileUploadOptions) {
         fileInputRef.current.value = "";
       }
     },
-    [fileInputRef, tiptapRef, handleImagePaste]
+    [fileInputRef, composerInputRef, handleImagePaste]
   );
 
   const handleRemoveFile = useCallback((fileId: string) => {
@@ -100,7 +104,7 @@ export function useFileUpload(options: UseFileUploadOptions) {
 
   /**
    * Consume `droppedFilesAtom` — images to the unified atom, non-images as
-   * Tiptap pills.  We no longer populate the local `uploadedFiles` from drag
+   * ComposerInput pills.  We no longer populate the local `uploadedFiles` from drag
    * drops; that surface is for explicit file-picker selections that outlive
    * a message edit cycle (which drag-drop inputs don't need).
    */
@@ -133,10 +137,10 @@ export function useFileUpload(options: UseFileUploadOptions) {
 
     if (otherFiles.length > 0) {
       const insertPills = () => {
-        if (tiptapRef.current) {
+        if (composerInputRef.current) {
           otherFiles.forEach((file) => {
             const isFolder = file.type === "folder";
-            tiptapRef.current?.insertFilePill(
+            composerInputRef.current?.insertFilePill(
               file.path,
               isFolder,
               isFolder ? "folder" : "file"
@@ -154,7 +158,7 @@ export function useFileUpload(options: UseFileUploadOptions) {
     consumeDroppedFiles,
     droppedFiles,
     clearDroppedFiles,
-    tiptapRef,
+    composerInputRef,
     handleImagePath,
     handleImagePaste,
   ]);

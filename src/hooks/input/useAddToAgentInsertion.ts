@@ -5,21 +5,21 @@
  * SessionCreator. Watches `addToAgentAtom` for pending "add file/lines to
  * agent" requests written by the WorkStation code-editor text-selection
  * dropdown, inserts the appropriate pill/reference into the provided
- * TiptapInput ref, and then clears the atom.
+ * ComposerInput ref, and then clears the atom.
  *
  * A scheduled retry loop handles both React's passive-effect timing and the
- * case where Tiptap hasn't finished initialising yet (e.g. the chat panel just
+ * case where ComposerInput hasn't finished initialising yet (e.g. the chat panel just
  * opened and the ref is still null on the first render).
  */
 import { useAtomValue, useSetAtom } from "jotai";
 import { type RefObject, useEffect } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import { storePillText } from "@src/config/pillTokens";
 import { addToAgentAtom } from "@src/store/ui/addToAgentAtom";
 
 export function useAddToAgentInsertion(
-  tiptapRef: RefObject<TiptapInputRef>
+  composerInputRef: RefObject<ComposerInputRef>
 ): void {
   const request = useAtomValue(addToAgentAtom);
   const clearRequest = useSetAtom(addToAgentAtom);
@@ -39,7 +39,7 @@ export function useAddToAgentInsertion(
       if (cancelled) return;
       retryTimeoutId = null;
 
-      const editor = tiptapRef.current;
+      const editor = composerInputRef.current;
       if (!editor) {
         scheduleInsert(50);
         return;
@@ -83,5 +83,5 @@ export function useAddToAgentInsertion(
       cancelled = true;
       if (retryTimeoutId !== null) clearTimeout(retryTimeoutId);
     };
-  }, [request, tiptapRef, clearRequest]);
+  }, [request, composerInputRef, clearRequest]);
 }

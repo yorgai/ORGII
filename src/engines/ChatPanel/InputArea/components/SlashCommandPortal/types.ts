@@ -6,6 +6,8 @@ import type {
 } from "@src/config/sessionCreatorConfig";
 import type { SlashItem, SlashItemCategory } from "@src/types/extensions";
 
+import type { FloatingPlacementStrategy } from "../floatingPlacement";
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
@@ -18,6 +20,9 @@ export type SlashCommandSearchMode = "inline" | "header";
 export interface SlashCommandPortalProps {
   visible: boolean;
   containerRef: React.RefObject<HTMLElement | null>;
+  /** Optional descendant of containerRef to anchor the menu against. */
+  anchorSelector?: string;
+  placement?: FloatingPlacementStrategy;
   items: SlashItem[];
   loading: boolean;
   currentMode: AgentExecMode;

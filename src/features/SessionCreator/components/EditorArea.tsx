@@ -4,7 +4,7 @@
  * Main editor area for SessionCreator with file uploads, typing area,
  * context menu, and control buttons.
  *
- * Uses TiptapInput for proper cursor/selection handling around file pills.
+ * Uses ComposerInput for proper cursor/selection handling around file pills.
  */
 import { type MenuItemId } from "@/src/scaffold/ContextMenu/config";
 import { useAtomValue } from "jotai";
@@ -58,7 +58,7 @@ export interface EditorAreaProps {
   /** Remove file handler */
   onRemoveFile: (fileId: string) => void;
   /** Composer input ref */
-  tiptapRef: React.RefObject<ComposerInputRef>;
+  composerInputRef: React.RefObject<ComposerInputRef>;
   /** Content change handler */
   onContentChange?: (text: string) => void;
   /** @ mention handler */
@@ -127,9 +127,9 @@ export interface EditorAreaProps {
   launchLabel?: string;
   /** Optional extra className for the outer composer shell */
   shellClassName?: string;
-  /** Optional minimum height for the Tiptap editor region. */
+  /** Optional minimum height for the ComposerInput editor region. */
   editorMinHeight?: number;
-  /** Optional maximum height for the Tiptap editor region. */
+  /** Optional maximum height for the ComposerInput editor region. */
   editorMaxHeight?: number;
   /** When true, auto-opens the model selector (e.g. after an incompatible agent switch) */
   requestModelOpen?: boolean;
@@ -175,7 +175,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   onTitleChange,
   uploadedFiles,
   onRemoveFile,
-  tiptapRef,
+  composerInputRef,
   onContentChange,
   onAtMention,
   onAtMentionClose,
@@ -302,13 +302,13 @@ const EditorArea: React.FC<EditorAreaProps> = ({
 
   const voiceFeatureEnabled = useAtomValue(voiceInputEnabledAtom);
 
-  const isDragOver = useTabDragDrop(editorContainerRef, tiptapRef);
+  const isDragOver = useTabDragDrop(editorContainerRef, composerInputRef);
 
   const handleVoiceCommit = useCallback(
     (transcript: string) => {
       const trimmed = transcript.trim();
       if (!trimmed) return;
-      const editor = tiptapRef.current;
+      const editor = composerInputRef.current;
       if (!editor) return;
       const existing = editor.getText();
       const separator =
@@ -318,7 +318,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
       editor.focus();
       onContentChange?.(next);
     },
-    [onContentChange, tiptapRef]
+    [onContentChange, composerInputRef]
   );
 
   const handleVoiceError = useCallback(
@@ -511,7 +511,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
 
         {/* Composer Input Area */}
         <ComposerInput
-          ref={tiptapRef}
+          ref={composerInputRef}
           initialContent={initialContent ?? ""}
           placeholder={editorPlaceholder}
           onContentChange={(text) => onContentChange?.(text)}
@@ -541,7 +541,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           recentFiles={[]}
           repoPath={repoPath}
           keyboardHandlerRef={contextMenuFunctionRef}
-          direction="down"
+          placement="down"
         />
 
         {/* Slash Command Menu - inline "/" trigger */}
@@ -549,6 +549,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           <SlashCommandPortal
             visible={showSlashMenu}
             containerRef={editorContainerRef}
+            placement="down"
             items={filteredSlashItems}
             loading={slashLoading}
             currentMode={currentMode}
@@ -567,6 +568,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           <SlashCommandPortal
             visible={showPlusSlashMenu}
             containerRef={editorContainerRef}
+            placement="down"
             items={filteredSlashItems}
             loading={slashLoading}
             currentMode={currentMode}

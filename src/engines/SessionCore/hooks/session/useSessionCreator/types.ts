@@ -4,7 +4,7 @@
 import type { ChangeEvent, MutableRefObject, RefObject } from "react";
 
 import type { AgentInfo, ProviderInfo } from "@src/api/http/config";
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import type {
   AdvancedConfig,
@@ -25,8 +25,7 @@ export interface ContextMenuKeyboardHandler {
 export interface UseSessionCreatorReturn {
   // Refs
   fileInputRef: RefObject<HTMLInputElement>;
-  tiptapRef: RefObject<TiptapInputRef>;
-  atDropdownRef: RefObject<HTMLDivElement>;
+  composerInputRef: RefObject<ComposerInputRef>;
   contextMenuKeyboardHandlerRef: RefObject<ContextMenuKeyboardHandler>;
   slashCommandKeyboardHandlerRef: MutableRefObject<
     ((e: KeyboardEvent) => boolean) | null

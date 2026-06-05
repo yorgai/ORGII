@@ -20,7 +20,7 @@ const NOOP_MAP = () => ({});
 const NOOP_SNAPSHOT = () => ({ parts: [] as never[] });
 
 function PinnedActionsBarPreviewInner() {
-  const mockTiptapRef = useRef<ComposerInputRef>({
+  const mockComposerInputRef = useRef<ComposerInputRef>({
     getText: NOOP_STR,
     getTextWithPills: NOOP_STR,
     getTerminalPillTexts: NOOP_MAP,
@@ -53,7 +53,7 @@ function PinnedActionsBarPreviewInner() {
         <div className="flex w-full flex-shrink-0 flex-col items-center px-2 py-2">
           <div className="flex w-full max-w-[800px] flex-col gap-1.5">
             <div className="rounded-[12px] border border-solid border-border-2 bg-chat-input px-1.5 pb-1.5 pt-2.5">
-              <PinnedActionsBar tiptapRef={mockTiptapRef} />
+              <PinnedActionsBar composerInputRef={mockComposerInputRef} />
               <div className="flex h-8 items-center px-2 text-[13px] text-text-3 opacity-40">
                 Input area (mocked)
               </div>

@@ -87,7 +87,7 @@ export function isInternalDrag(
       return true;
     }
 
-    // TiptapInput file pills drag as text/html - treat as internal
+    // ComposerInput file pills drag as text/html - treat as internal
     if (
       types.includes("text/html") &&
       !types.includes("Files") &&

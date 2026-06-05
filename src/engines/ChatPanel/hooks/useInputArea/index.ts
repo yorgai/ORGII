@@ -15,7 +15,7 @@
  *
  * @example
  * const {
- *   tiptapRef, handleDivSubmit, clearCiteCode,
+ *   composerInputRef, handleDivSubmit, clearCiteCode,
  *   handleUploadClick, handleAtMention, ...
  * } = useInputArea();
  */
@@ -167,7 +167,7 @@ export function useInputArea(
   // The chat composer's text is mirrored onto `sessions.draft_text` so it
   // survives navigation, app restarts, and background row refreshes.
   // Three things to coordinate:
-  //   1. On session switch, restore the persisted draft into Tiptap.
+  //   1. On session switch, restore the persisted draft into ComposerInput.
   //   2. While typing, debounce-write the latest text via `setDraft`.
   //   3. On send, immediately clear the draft (`flushDraft("")`) so the
   //      next session activation doesn't see a stale value.
@@ -212,12 +212,12 @@ export function useInputArea(
   const imageDraftHydratingRef = useRef(false);
 
   const fileSelection = useFileSelection({
-    tiptapRef: refs.tiptapRef,
+    composerInputRef: refs.composerInputRef,
     hasContentRef: refs.hasContentRef,
   });
 
   const atMention = useAtMention({
-    tiptapRef: refs.tiptapRef,
+    composerInputRef: refs.composerInputRef,
     hasContentRef: refs.hasContentRef,
     setShowContextMenu: state.setShowContextMenu,
     setAtSearchQuery: state.setAtSearchQuery,
@@ -225,7 +225,7 @@ export function useInputArea(
   });
 
   const slashCommand = useSlashCommand({
-    tiptapRef: refs.tiptapRef,
+    composerInputRef: refs.composerInputRef,
     setShowSlashMenu: state.setShowSlashMenu,
     setSlashQuery: state.setSlashQuery,
   });
@@ -274,11 +274,11 @@ export function useInputArea(
   );
 
   const uploadContext = useUploadContext({
-    tiptapRef: refs.tiptapRef,
+    composerInputRef: refs.composerInputRef,
   });
 
   const dragDrop = useDragDrop({
-    tiptapRef: refs.tiptapRef,
+    composerInputRef: refs.composerInputRef,
   });
 
   // ============================================
@@ -286,9 +286,8 @@ export function useInputArea(
   // ============================================
 
   useInputAreaEffects({
-    tiptapRef: refs.tiptapRef,
+    composerInputRef: refs.composerInputRef,
     dropTargetId,
-    atDropdownRef: refs.atDropdownRef,
     hasContentRef: refs.hasContentRef,
     showContextMenu: state.showContextMenu,
     setShowContextMenu: state.setShowContextMenu,
@@ -310,7 +309,8 @@ export function useInputArea(
 
   const handleContentChange = useCallback(
     (text: string) => {
-      const draftText = refs.tiptapRef.current?.getTextWithPills() ?? text;
+      const draftText =
+        refs.composerInputRef.current?.getTextWithPills() ?? text;
       const cleanedText = draftText.trim();
       refs.setHasContent(cleanedText.length > 0);
 
@@ -340,7 +340,7 @@ export function useInputArea(
       return;
     }
     if (seededSessionRef.current === draftSessionId) return;
-    const editor = refs.tiptapRef.current;
+    const editor = refs.composerInputRef.current;
     if (!editor) return;
     if (!persistedDraft) {
       editor.clear();
@@ -368,8 +368,8 @@ export function useInputArea(
   }, [draftSessionId, persistedDraft, refs]);
 
   const isInputEmpty = useCallback(() => {
-    return refs.tiptapRef.current?.isEmpty() ?? true;
-  }, [refs.tiptapRef]);
+    return refs.composerInputRef.current?.isEmpty() ?? true;
+  }, [refs.composerInputRef]);
 
   // ============================================
   // Event Handlers - Message Submission
@@ -436,9 +436,8 @@ export function useInputArea(
 
   return {
     // Refs
-    tiptapRef: refs.tiptapRef,
+    composerInputRef: refs.composerInputRef,
     containerRef: refs.containerRef,
-    atDropdownRef: refs.atDropdownRef,
     contextMenuKeyboardHandlerRef: refs.contextMenuKeyboardHandlerRef,
     slashCommandKeyboardHandlerRef: refs.slashCommandKeyboardHandlerRef,
     plusSlashCommandKeyboardHandlerRef: refs.plusSlashCommandKeyboardHandlerRef,

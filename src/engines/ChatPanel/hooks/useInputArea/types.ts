@@ -1,7 +1,6 @@
 /**
  * Shared types for useInputArea hook modules
  */
-import type { MenuItemId, RecentFile } from "@/src/scaffold/ContextMenu/config";
 import type {
   ChangeEvent,
   DragEvent,
@@ -10,8 +9,9 @@ import type {
   RefObject,
 } from "react";
 
-import type { ComposerInputRef as TiptapInputRef } from "@src/components/ComposerInput";
+import type { ComposerInputRef } from "@src/components/ComposerInput";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
+import type { MenuItemId, RecentFile } from "@src/scaffold/ContextMenu/config";
 import type { ChatImageAttachment } from "@src/store/ui/chatImageAtom";
 import type { SlashItem } from "@src/types/extensions/types";
 
@@ -29,6 +29,9 @@ export interface CustomMentionOption {
   id: string;
   label: string;
   description?: string;
+  selectType?: MenuItemId;
+  selectValue?: string;
+  selectDisplayName?: string;
 }
 
 export interface UseInputAreaOptions {
@@ -49,9 +52,8 @@ export interface SubmitMessageOptions {
 // ============================================
 
 export interface InputAreaRefs {
-  tiptapRef: RefObject<TiptapInputRef>;
+  composerInputRef: RefObject<ComposerInputRef>;
   containerRef: RefObject<HTMLDivElement>;
-  atDropdownRef: RefObject<HTMLDivElement>;
   contextMenuKeyboardHandlerRef: MutableRefObject<
     ((event: ReactKeyboardEvent) => boolean) | null
   >;
@@ -141,9 +143,8 @@ export interface DragDropHandlers {
 
 export interface UseInputAreaReturn {
   // Refs
-  tiptapRef: RefObject<TiptapInputRef>;
+  composerInputRef: RefObject<ComposerInputRef>;
   containerRef: RefObject<HTMLDivElement>;
-  atDropdownRef: RefObject<HTMLDivElement>;
   contextMenuKeyboardHandlerRef: MutableRefObject<
     ((event: ReactKeyboardEvent) => boolean) | null
   >;

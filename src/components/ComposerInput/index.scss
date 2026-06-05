@@ -1,7 +1,7 @@
 /**
  * ComposerInput Styles
  *
- * Mirrors the TiptapInput layout so the swap is visually identical:
+ * Mirrors the ComposerInput layout so the swap is visually identical:
  *  - same padding, line-height, caret color
  *  - same compact / expanded chat-input behavior
  *  - same placeholder styling (driven by `[data-placeholder]` on the host)
@@ -70,7 +70,7 @@
 }
 
 // Pill selection: when the user selects across pills, highlight in the
-// system Highlight color (matches Tiptap behavior).
+// system Highlight color (matches ComposerInput behavior).
 .composer-pill {
   user-select: none;
   -webkit-user-select: none;
@@ -99,9 +99,19 @@
   min-width: 0;
 }
 
-.composer-input.chat-input-editor:not(.chat-input-compact)
+.composer-input.chat-input-editor:not(.chat-input-compact) {
+  height: auto !important;
+
+  .composer-input-wrapper {
+    height: auto;
+    min-height: 60px;
+  }
+
   .composer-input-content {
-  white-space: pre-wrap;
+    height: auto;
+    min-height: 60px;
+    white-space: pre-wrap;
+  }
 }
 
 .composer-input.chat-input-editor.chat-input-compact {
