@@ -1050,7 +1050,6 @@
   },
   "projectConnections": {
     "linear": "Linear",
-    "githubIssues": "GitHub Issues",
     "authMethod": "身份验证",
     "authMethodDesc": "选择此账户如何向跟踪器验证身份",
     "authPat": "Personal access token",
@@ -1060,7 +1059,6 @@
     "personalAccessTokenPlaceholder": "粘贴 token...",
     "tokenRequired": "Personal access token 是必填项",
     "oauthWaiting": "正在等待 OAuth",
-    "oauthDeviceDesc": "打开验证 URL 并输入此代码以授权 GitHub Issues",
     "oauthBrowserDesc": "在已打开的浏览器窗口中完成授权。",
     "oauthBrowserOpened": "已打开浏览器窗口。请在那里完成授权，然后此向导会继续。"
   },

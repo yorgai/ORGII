@@ -1034,7 +1034,6 @@
   },
   "projectConnections": {
     "linear": "Linear",
-    "githubIssues": "GitHub Issues",
     "authMethod": "認証",
     "authMethodDesc": "このアカウントがトラッカーに認証する方法を選択します",
     "authPat": "Personal access token",
@@ -1044,7 +1043,6 @@
     "personalAccessTokenPlaceholder": "token を貼り付け...",
     "tokenRequired": "Personal access token は必須です",
     "oauthWaiting": "OAuth を待機中",
-    "oauthDeviceDesc": "検証 URL を開き、このコードを入力して GitHub Issues を承認してください",
     "oauthBrowserDesc": "開いたブラウザウィンドウで承認を完了してください。",
     "oauthBrowserOpened": "ブラウザウィンドウが開きました。そこで承認を完了すると、このウィザードが続行します。"
   },

@@ -51,7 +51,6 @@ export type BrandIntegrationType =
   | "weixin"
   | "wecom"
   | "github"
-  | "github_issues"
   | "gitlab"
   | "linear"
   | "smithery";
@@ -82,7 +81,6 @@ export const INTEGRATION_ICON_MAP: Record<
   weixin: WeChatIcon,
   wecom: WeChatIcon,
   github: GitHubIcon,
-  github_issues: GitHubIcon,
   gitlab: GitLabIcon,
   linear: LinearIcon,
   smithery: SmitheryIcon,

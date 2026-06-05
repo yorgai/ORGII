@@ -4,7 +4,6 @@ export const SERVICE_TYPES = [
 
 export const STORY_SYNC_ADAPTER_TYPES = [
   { type: "linear", labelKey: "projectConnections.linear" },
-  { type: "github_issues", labelKey: "projectConnections.githubIssues" },
 ] as const;
 
 export type ServiceType = (typeof SERVICE_TYPES)[number]["type"];

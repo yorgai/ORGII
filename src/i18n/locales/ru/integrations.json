@@ -1034,7 +1034,6 @@
   },
   "projectConnections": {
     "linear": "Linear",
-    "githubIssues": "GitHub Issues",
     "authMethod": "Аутентификация",
     "authMethodDesc": "Выберите способ входа этого аккаунта в трекер",
     "authPat": "Personal access token",
@@ -1044,7 +1043,6 @@
     "personalAccessTokenPlaceholder": "Вставьте token...",
     "tokenRequired": "Personal access token обязателен",
     "oauthWaiting": "Ожидание OAuth",
-    "oauthDeviceDesc": "Откройте URL проверки и введите этот код для авторизации GitHub Issues",
     "oauthBrowserDesc": "Завершите авторизацию в открытом окне браузера.",
     "oauthBrowserOpened": "Открыто окно браузера. Завершите авторизацию там, затем мастер продолжит работу."
   },

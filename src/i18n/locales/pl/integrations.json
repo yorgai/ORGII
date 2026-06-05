@@ -1031,7 +1031,6 @@
   },
   "projectConnections": {
     "linear": "Linear",
-    "githubIssues": "GitHub Issues",
     "authMethod": "Uwierzytelnianie",
     "authMethodDesc": "Wybierz, jak to konto uwierzytelnia się w trackerze",
     "authPat": "Personal access token",
@@ -1041,7 +1040,6 @@
     "personalAccessTokenPlaceholder": "Wklej token...",
     "tokenRequired": "Personal access token jest wymagany",
     "oauthWaiting": "Oczekiwanie na OAuth",
-    "oauthDeviceDesc": "Otwórz URL weryfikacyjny i wpisz ten kod, aby autoryzować GitHub Issues",
     "oauthBrowserDesc": "Dokończ autoryzację w otwartym oknie przeglądarki.",
     "oauthBrowserOpened": "Otwarto okno przeglądarki. Dokończ tam autoryzację, a kreator będzie kontynuował."
   },

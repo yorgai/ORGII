@@ -52,8 +52,6 @@ function getProjectConnectionTypeKey(connection: SyncConnection): string {
   switch (connection.adapter_id) {
     case STORY_SYNC_ADAPTER.LINEAR:
       return "projectConnections.linear";
-    case STORY_SYNC_ADAPTER.GITHUB_ISSUES:
-      return "projectConnections.githubIssues";
   }
 }
 
@@ -61,8 +59,6 @@ function getProjectConnectionIcon(connection: SyncConnection): string {
   switch (connection.adapter_id) {
     case STORY_SYNC_ADAPTER.LINEAR:
       return "linear";
-    case STORY_SYNC_ADAPTER.GITHUB_ISSUES:
-      return "github";
   }
 }
 
