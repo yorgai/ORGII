@@ -1,6 +1,8 @@
 import type { Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 
+import { getFileName } from "@src/util/file/pathUtils";
+
 export function createCopyFileRefExtension(filePath: string): Extension {
   return EditorView.domEventHandlers({
     copy(event, view) {
@@ -16,10 +18,9 @@ export function createCopyFileRefExtension(filePath: string): Extension {
         "application/x-orgii-file-reference",
         JSON.stringify({
           filePath,
-          fileName: filePath.split("/").pop() ?? filePath,
+          fileName: getFileName(filePath),
           lineStart: fromLine,
           lineEnd: toLine,
-          text,
         })
       );
       clipboardData.setData("text/plain", text);

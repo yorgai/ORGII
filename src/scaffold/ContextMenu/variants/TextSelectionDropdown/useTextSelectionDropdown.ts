@@ -14,7 +14,7 @@
  *   source: 'terminal',
  *   enabled: true,
  *   onAskAgent: (text) => */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getUiScaleFromCssVar } from "@src/lib/dndKit";
 
@@ -41,6 +41,10 @@ export function useTextSelectionDropdown(
 
   // State
   const [visible, setVisible] = useState(false);
+  const visibleRef = useRef(visible);
+  useEffect(() => {
+    visibleRef.current = visible;
+  }, [visible]);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [selectedText, setSelectedText] = useState("");
 
@@ -131,7 +135,7 @@ export function useTextSelectionDropdown(
 
     // Handle click outside to close dropdown
     const handleClickOutside = (event: MouseEvent) => {
-      if (visible) {
+      if (visibleRef.current) {
         const target = event.target;
         if (!(target instanceof Node)) return;
         const dropdown = document.querySelector(".text-selection-dropdown");
@@ -143,7 +147,7 @@ export function useTextSelectionDropdown(
 
     // Handle escape key
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && visible) {
+      if (event.key === "Escape" && visibleRef.current) {
         hideDropdown();
       }
     };
@@ -161,7 +165,7 @@ export function useTextSelectionDropdown(
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [enabled, visible, containerRef, showDropdown, hideDropdown]);
+  }, [enabled, containerRef, showDropdown, hideDropdown]);
 
   return {
     visible,

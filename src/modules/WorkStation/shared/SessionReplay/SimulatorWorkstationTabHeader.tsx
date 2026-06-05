@@ -26,7 +26,7 @@
  */
 import { useAtomValue } from "jotai";
 import { X } from "lucide-react";
-import React, { memo, useCallback, useState } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
@@ -55,6 +55,13 @@ const SimulatorWorkstationTabHeaderComponent: React.FC<
     useFileReviewBatchActions(globalSessionId);
   const [isUndoingAll, setIsUndoingAll] = useState(false);
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const handleUndoAll = useCallback(async () => {
     const confirmed = await confirmDestructiveAction({
       title: t("actions.undoAll"),
@@ -67,7 +74,7 @@ const SimulatorWorkstationTabHeaderComponent: React.FC<
     try {
       await onUndoAll();
     } finally {
-      setIsUndoingAll(false);
+      if (mountedRef.current) setIsUndoingAll(false);
     }
   }, [t, pendingCount, onUndoAll]);
 

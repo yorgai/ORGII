@@ -134,7 +134,6 @@ export function createPasteHandler(ctx: PasteHandlerContext) {
           fileName: string;
           lineStart: number;
           lineEnd: number;
-          text: string;
         };
         ctx.insertPill({
           filePath: fileRef.filePath,

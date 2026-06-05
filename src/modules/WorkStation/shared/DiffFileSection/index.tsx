@@ -88,8 +88,9 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const setAddToAgent = useSetAtom(addToAgentAtom);
 
-  const { fileName: displayName } = getFileNameAndDir(
-    getDisplayPath(file.path, repoPath)
+  const { fileName: displayName } = useMemo(
+    () => getFileNameAndDir(getDisplayPath(file.path, repoPath)),
+    [file.path, repoPath]
   );
 
   const handleAddToContext = useCallback(
@@ -112,6 +113,7 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
     source: "terminal",
     containerRef,
     onAddToContext: handleAddToContext,
+    enabled: expanded,
   });
 
   useEffect(() => {
