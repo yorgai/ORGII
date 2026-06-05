@@ -3,7 +3,7 @@ import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { STORY_SYNC_AUTH_METHOD } from "@src/api/http/integrations";
-import type { OAuthFlowStart } from "@src/api/http/project";
+import { OAUTH_FLOW_KIND, type OAuthFlowStart } from "@src/api/http/project";
 import Button from "@src/components/Button";
 import InlineAlert from "@src/components/InlineAlert";
 import Input from "@src/components/Input";
@@ -228,15 +228,35 @@ export const ProjectContent: React.FC<ProjectContentProps> = ({
             }
             description={
               projectOAuthFlow
-                ? t("projectConnections.oauthBrowserDesc")
+                ? projectOAuthFlow.kind === OAUTH_FLOW_KIND.DEVICE
+                  ? t("projectConnections.oauthDeviceDesc")
+                  : t("projectConnections.oauthBrowserDesc")
                 : t("keyVault.signInDesc")
             }
             required
           >
             {projectOAuthFlow ? (
-              <div className="text-[12px] text-text-2">
-                {t("projectConnections.oauthBrowserOpened")}
-              </div>
+              projectOAuthFlow.kind === OAUTH_FLOW_KIND.DEVICE ? (
+                <div className="flex flex-col gap-2 text-[12px] text-text-2">
+                  <Input
+                    value={projectOAuthFlow.user_code}
+                    readOnly
+                    style={SECTION_CONTROL_STYLE}
+                  />
+                  <a
+                    className="text-primary-6 hover:underline"
+                    href={projectOAuthFlow.verification_uri}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {projectOAuthFlow.verification_uri}
+                  </a>
+                </div>
+              ) : (
+                <div className="text-[12px] text-text-2">
+                  {t("projectConnections.oauthBrowserOpened")}
+                </div>
+              )
             ) : (
               <Button
                 variant="primary"

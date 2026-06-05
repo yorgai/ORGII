@@ -1047,6 +1047,7 @@
   },
   "projectConnections": {
     "linear": "Linear",
+    "githubIssues": "GitHub Issues",
     "authMethod": "Authentication",
     "authMethodDesc": "Choose how this account authenticates with the tracker",
     "authPat": "Personal access token",
@@ -1056,6 +1057,7 @@
     "personalAccessTokenPlaceholder": "Paste token...",
     "tokenRequired": "Personal access token is required",
     "oauthWaiting": "Waiting for OAuth",
+    "oauthDeviceDesc": "Open the verification URL and enter this code to authorize GitHub Issues",
     "oauthBrowserDesc": "Complete authorization in the browser window that opened.",
     "oauthBrowserOpened": "A browser window was opened. Finish authorization there, then this wizard will continue."
   },

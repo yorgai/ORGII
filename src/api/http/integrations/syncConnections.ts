@@ -4,6 +4,7 @@ import type { OAuthFlowStart } from "@src/api/http/project/syncTypes";
 
 export const STORY_SYNC_ADAPTER = {
   LINEAR: "linear",
+  GITHUB_ISSUES: "github_issues",
 } as const;
 
 export const STORY_SYNC_AUTH_METHOD = {
