@@ -157,6 +157,8 @@
     "zod-to-json-schema": "^3.25.1"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19",
+    "@commitlint/config-conventional": "^19",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.11",
     "@svgr/webpack": "^8.1.0",
     "@swc/core": "^1.15.5",

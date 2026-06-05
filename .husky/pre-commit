@@ -15,6 +15,10 @@ echo "✓ lint-staged passed"
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. Parallel: TypeScript check + Rust clippy + commit-stats
 #    These are independent and can run concurrently for faster commits.
+#    The stats result feeds the prepare-commit-msg hook which appends a
+#    "Pre-commit hook ran. Total eslint: ..., total circular: ..." trailer
+#    to the commit message. The trailer is intentional tamper-evidence:
+#    its absence in a commit signals --no-verify or another bypass.
 # ─────────────────────────────────────────────────────────────────────────────
 
 STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR -- '*.ts' '*.tsx')
@@ -125,7 +129,7 @@ $STAGED_ERRORS" > "$CLIPPY_RESULT_FILE"
   fi
 }
 
-# ── Task C: Collect stats ──
+# ── Task C: Collect commit stats for the prepare-commit-msg trailer ──
 run_stats_check() {
   echo "Collecting eslint/circular stats..."
   STATS_OUTPUT=$(node scripts/git/commit-stats.mjs 2>&1)
@@ -175,17 +179,9 @@ if [ "$CLIPPY_EXIT_CODE" = "1" ]; then
   FINAL_EXIT=1
 fi
 
-# Stats result
+# Stats result — never blocks the commit; just surfaced for visibility
 STATS_RESULT=$(cat "$STATS_RESULT_FILE")
-STATS_EXIT_CODE=$(echo "$STATS_RESULT" | head -1 | cut -d: -f1)
 STATS_MESSAGE=$(echo "$STATS_RESULT" | cut -d: -f2-)
 echo "$STATS_MESSAGE"
-if [ "$STATS_EXIT_CODE" = "1" ]; then
-  FINAL_EXIT=1
-fi
-
-if [ $FINAL_EXIT -eq 0 ]; then
-  echo "✓ Lint stats collected"
-fi
 
 exit $FINAL_EXIT

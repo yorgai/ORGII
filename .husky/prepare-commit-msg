@@ -1,12 +1,14 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-# Append eslint and circular dependency counts to commit message
+# Append a tamper-evidence trailer to commit messages so reviewers can tell
+# at a glance whether the pre-commit hook ran. Commits with no trailer were
+# created with `--no-verify` or with hooks otherwise bypassed.
 MSG_FILE="$1"
 STATS_FILE=".git/COMMIT_STATS.json"
 
 if [ -f "$STATS_FILE" ] && [ -f "$MSG_FILE" ]; then
-  if ! grep -Eq "(Total eslint:|\[eslint:.*circular:.*\])" "$MSG_FILE" 2>/dev/null; then
+  if ! grep -q "Pre-commit hook ran\." "$MSG_FILE" 2>/dev/null; then
     COUNTS=$(node -e '
       const fs = require("fs");
       try {
@@ -15,7 +17,7 @@ if [ -f "$STATS_FILE" ] && [ -f "$MSG_FILE" ]; then
       } catch (_) {}
     ')
     if [ -n "$COUNTS" ]; then
-      printf '\n%s\n' "$COUNTS" >> "$MSG_FILE"
+      printf '\nPre-commit hook ran. %s\n' "$COUNTS" >> "$MSG_FILE"
     fi
   fi
 fi

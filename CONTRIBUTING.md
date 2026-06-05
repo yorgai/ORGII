@@ -126,6 +126,13 @@ Use the type that best matches the change. Common types include `feat`, `fix`, `
 
 Every commit must include a proper message body unless the change is truly trivial. The body should explain why the change exists, summarize the important behavior or architecture changes, and mention notable verification or migration details. Do not leave commits with only a subject line or only automated hook metadata.
 
+The pre-commit hook appends a tamper-evidence trailer of the form
+`Pre-commit hook ran. Total eslint: N, total circular: N` to every commit
+it processes. The trailer is intentional: commits without it were created
+with `--no-verify`, `HUSKY=0`, or another bypass, and reviewers should
+treat such commits with extra scrutiny. Do not strip the trailer when
+amending or rewording.
+
 Examples:
 
 ```text
@@ -148,13 +155,7 @@ Clarify that commits need a scoped Conventional Commit subject and a
 body that explains intent, not just automated hook metadata.
 ```
 
-The commit hook may append repository health metadata in this format:
-
-```text
-Total eslint: 0, total circular: 0
-```
-
-That metadata is not a substitute for a proper commit message body.
+A `commit-msg` git hook runs [commitlint](https://commitlint.js.org/) with `@commitlint/config-conventional` and the project's `commitlint.config.cjs` on every commit. The hook rejects subjects that are missing a type, exceed 72 characters, end with a period, use uppercase types or scopes, or otherwise fail the rules. Fix the message and commit again rather than bypassing the hook.
 
 Pull request descriptions must include a clear summary and a test plan. If checks were not run, explain why and list any partial verification performed.
 
