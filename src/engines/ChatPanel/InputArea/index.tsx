@@ -21,7 +21,9 @@ import { useTranslation } from "react-i18next";
 import Button from "@src/components/Button";
 import ComposerBar from "@src/components/ComposerBar";
 import ComposerShell from "@src/components/ComposerShell";
+import Message from "@src/components/Message";
 import { hasNonEmptyTerminalBuffer } from "@src/components/TerminalInteractive/bufferCache";
+import { VoiceInputButton, VoiceRecordingBar } from "@src/components/Voice";
 import { ChatStatusSegmentedBar } from "@src/engines/ChatPanel/components/ChatStatusBanners";
 import { useInputArea } from "@src/engines/ChatPanel/hooks/useInputArea";
 import type {
@@ -30,7 +32,9 @@ import type {
 } from "@src/engines/ChatPanel/hooks/useInputArea/types";
 import { useSessionDiscovery } from "@src/engines/SessionCore";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
+import { type VoiceInputError, useVoiceInput } from "@src/hooks/voice";
 import type { MenuItemId } from "@src/scaffold/ContextMenu/config";
+import { voiceInputEnabledAtom } from "@src/store/platform/voiceInputAtom";
 import {
   type WorkStationTab,
   mainPaneTabsAtom,
@@ -340,6 +344,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
     const contextMenuVisible = showContextMenu;
     const mentionTreePosition =
       chatPanelPosition === "right" ? "left" : "right";
+    const voiceFeatureEnabled = useAtomValue(voiceInputEnabledAtom);
 
     // ── Plus-button slash menu (header mode) ─────────────────────────────────
     // Separate from the inline "/" slash menu so the two modes don't collide.
@@ -431,6 +436,76 @@ const InputArea: React.FC<InputAreaProps> = memo(
       },
       [handleAtMention]
     );
+
+    const handleVoiceCommit = useCallback(
+      (transcript: string) => {
+        const trimmed = transcript.trim();
+        if (!trimmed) return;
+        const editor = composerInputRef.current;
+        if (!editor) return;
+        const existing = editor.getText();
+        const separator =
+          existing.length === 0 || /\s$/.test(existing) ? "" : " ";
+        editor.setContent(`${existing}${separator}${trimmed}`);
+        editor.focus();
+      },
+      [composerInputRef]
+    );
+
+    const handleVoiceError = useCallback(
+      (err: VoiceInputError) => {
+        if (err.code === "permission-denied") {
+          Message.error(t("input.voiceErrorPermission"));
+        } else if (err.code === "unsupported") {
+          Message.error(t("input.voiceErrorUnsupported"));
+        } else if (err.code === "audio-capture") {
+          Message.error(t("input.voiceErrorAudio"));
+        } else if (err.code === "no-speech") {
+          return;
+        } else if (err.code !== "aborted") {
+          Message.error(t("input.voiceErrorGeneric"));
+        }
+      },
+      [t]
+    );
+
+    const voice = useVoiceInput({
+      onCommit: handleVoiceCommit,
+      onError: handleVoiceError,
+    });
+
+    const showVoiceUi = voiceFeatureEnabled && voice.isRecording && !isEditMode;
+
+    useEffect(() => {
+      if (!voiceFeatureEnabled || isEditMode) return;
+      const node = containerRef.current;
+      if (!node) return;
+      let shortcutActive = false;
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (!event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
+          return;
+        }
+        if (event.key.toLowerCase() !== "m" || event.repeat) return;
+        event.preventDefault();
+        event.stopPropagation();
+        shortcutActive = true;
+        voice.start();
+      };
+      const handleKeyUp = (event: KeyboardEvent) => {
+        if (!shortcutActive) return;
+        if (event.key.toLowerCase() !== "m" && event.key !== "Control") return;
+        event.preventDefault();
+        event.stopPropagation();
+        shortcutActive = false;
+        voice.stop();
+      };
+      node.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("keyup", handleKeyUp, true);
+      return () => {
+        node.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("keyup", handleKeyUp, true);
+      };
+    }, [containerRef, isEditMode, voice, voiceFeatureEnabled]);
 
     // ============================================
     // Compact composer capsule
@@ -743,92 +818,116 @@ const InputArea: React.FC<InputAreaProps> = memo(
             ) : (
               <div className="flex min-h-0 w-full flex-col">
                 <ImageAttachmentPreview ownerId={dropTargetId} />
-                <ComposerBar
-                  onAddContent={handleOpenContextMenu}
-                  onUpload={handleUploadClick}
-                  onOpenSkillsTools={handleOpenSkillsTools}
-                  dropdownDirection="up"
-                  toolbarItemGap={false}
-                  repoPath={currentRepoPath}
-                  inlineLayout={isCursorCompactRow}
-                  showContextInfo={!isCursorIde}
-                  editorSlot={
-                    <InputEditor
-                      key="chat-panel-input-editor"
-                      composerInputRef={composerInputRef}
-                      showContextMenu={showContextMenu}
-                      contextMenuKeyboardHandlerRef={
-                        contextMenuKeyboardHandlerRef
-                      }
-                      showSlashMenu={showSlashMenu}
-                      slashCommandKeyboardHandlerRef={
-                        slashCommandKeyboardHandlerRef
-                      }
-                      showPlusSlashMenu={showPlusSlashMenu}
-                      plusSlashCommandKeyboardHandlerRef={
-                        plusSlashCommandKeyboardHandlerRef
-                      }
-                      onSlashCommand={handleSlashCommand}
-                      onSlashCommandClose={handleSlashCommandClose}
-                      onContentChange={onEditorContentChange}
-                      onAtMention={handleKeyboardAtMention}
-                      onAtMentionClose={handleAtMentionClose}
-                      onSubmit={() => void handleDivSubmit()}
-                      onFocus={() => setIsInputFocused(true)}
-                      onBlur={onEditorBlur}
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      placeholder={placeholder || t("input.defaultPlaceholder")}
-                      onImagePaste={handleImagePaste}
-                      compact={isCursorCompactRow}
-                    />
-                  }
-                  leftPrefix={
-                    <>
-                      <CiteCodePreview
-                        isCiteCode={isCiteCode}
-                        selectedCiteRange={selectedCiteRange}
-                        citeFileName={citeFileName}
-                        onClear={clearCiteCode}
+                {showVoiceUi ? (
+                  <VoiceRecordingBar
+                    elapsedSeconds={voice.elapsedSeconds}
+                    onCancel={voice.cancel}
+                    onAccept={voice.stop}
+                    onAddContent={handleOpenContextMenu}
+                  />
+                ) : (
+                  <ComposerBar
+                    onAddContent={handleOpenContextMenu}
+                    onUpload={handleUploadClick}
+                    onOpenSkillsTools={handleOpenSkillsTools}
+                    dropdownDirection="up"
+                    toolbarItemGap={false}
+                    repoPath={currentRepoPath}
+                    inlineLayout={isCursorCompactRow}
+                    showContextInfo={!isCursorIde}
+                    editorSlot={
+                      <InputEditor
+                        key="chat-panel-input-editor"
+                        composerInputRef={composerInputRef}
+                        showContextMenu={showContextMenu}
+                        contextMenuKeyboardHandlerRef={
+                          contextMenuKeyboardHandlerRef
+                        }
+                        showSlashMenu={showSlashMenu}
+                        slashCommandKeyboardHandlerRef={
+                          slashCommandKeyboardHandlerRef
+                        }
+                        showPlusSlashMenu={showPlusSlashMenu}
+                        plusSlashCommandKeyboardHandlerRef={
+                          plusSlashCommandKeyboardHandlerRef
+                        }
+                        onSlashCommand={handleSlashCommand}
+                        onSlashCommandClose={handleSlashCommandClose}
+                        onContentChange={onEditorContentChange}
+                        onAtMention={handleKeyboardAtMention}
+                        onAtMentionClose={handleAtMentionClose}
+                        onSubmit={() => void handleDivSubmit()}
+                        onFocus={() => setIsInputFocused(true)}
+                        onBlur={onEditorBlur}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        placeholder={
+                          placeholder || t("input.defaultPlaceholder")
+                        }
+                        onImagePaste={handleImagePaste}
+                        compact={isCursorCompactRow}
                       />
-                      <ReplyInfoDisplay
-                        replyInfo={replyInfo}
-                        onClose={() => setReplyInfo({ isReply: false })}
-                      />
-                    </>
-                  }
-                  pills={
-                    <div
-                      className={`inline-flex items-center ${
-                        suppressToolbarHover ? "pointer-events-none" : ""
-                      }`.trim()}
-                    >
-                      {modePill}
-                      {modelPill}
-                    </div>
-                  }
-                  submitButton={
-                    <InputActions
-                      isInputEmpty={currentInputEmpty}
-                      isWpGeneWorking={
-                        stopSuppressedForEmptyInput ? false : isWpGeneWorking
-                      }
-                      isPendingCancel={
-                        stopSuppressedForEmptyInput ? false : isPendingCancel
-                      }
-                      isHosted={isHosted}
-                      canStopAgent={
-                        stopSuppressedForEmptyInput ? false : canStopAgent
-                      }
-                      canResume={canResume}
-                      isSessionTerminal={isSessionTerminal}
-                      onSubmit={() => void handleDivSubmit()}
-                      onInterrupt={interruptSession}
-                      onResume={resumeSession}
-                    />
-                  }
-                />
+                    }
+                    leftPrefix={
+                      <>
+                        <CiteCodePreview
+                          isCiteCode={isCiteCode}
+                          selectedCiteRange={selectedCiteRange}
+                          citeFileName={citeFileName}
+                          onClear={clearCiteCode}
+                        />
+                        <ReplyInfoDisplay
+                          replyInfo={replyInfo}
+                          onClose={() => setReplyInfo({ isReply: false })}
+                        />
+                      </>
+                    }
+                    pills={
+                      <div
+                        className={`inline-flex items-center ${
+                          suppressToolbarHover ? "pointer-events-none" : ""
+                        }`.trim()}
+                      >
+                        {modePill}
+                        {modelPill}
+                      </div>
+                    }
+                    submitButton={
+                      <>
+                        {voiceFeatureEnabled && (
+                          <VoiceInputButton
+                            onPressStart={voice.start}
+                            onPressEnd={voice.stop}
+                            disabled={!voice.isSupported}
+                          />
+                        )}
+                        <InputActions
+                          isInputEmpty={currentInputEmpty}
+                          isWpGeneWorking={
+                            stopSuppressedForEmptyInput
+                              ? false
+                              : isWpGeneWorking
+                          }
+                          isPendingCancel={
+                            stopSuppressedForEmptyInput
+                              ? false
+                              : isPendingCancel
+                          }
+                          isHosted={isHosted}
+                          canStopAgent={
+                            stopSuppressedForEmptyInput ? false : canStopAgent
+                          }
+                          canResume={canResume}
+                          isSessionTerminal={isSessionTerminal}
+                          onSubmit={() => void handleDivSubmit()}
+                          onInterrupt={interruptSession}
+                          onResume={resumeSession}
+                        />
+                      </>
+                    }
+                  />
+                )}
               </div>
             )}
           </ComposerShell>

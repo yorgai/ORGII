@@ -298,8 +298,16 @@ export function useGlobalKeydownShortcuts(
           break;
         }
 
-        case "m":
+        case "m": {
           if (event.altKey) return;
+          const target = event.target;
+          if (
+            event.ctrlKey &&
+            !event.metaKey &&
+            isEditableElementExtended(target)
+          ) {
+            return;
+          }
           event.preventDefault();
           event.stopPropagation();
           if (event.shiftKey) {
@@ -308,6 +316,7 @@ export function useGlobalKeydownShortcuts(
             shortcutRegistry.dispatch("hide_window");
           }
           break;
+        }
 
         case "n":
           event.preventDefault();

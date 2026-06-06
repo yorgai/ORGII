@@ -346,25 +346,36 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   const showVoiceUi =
     voiceFeatureEnabled && voice.isRecording && !isKanban && !hideLaunchButton;
 
-  // Ctrl+M toggles dictation while focus is inside this composer container.
-  // Scoped to the editor host so it doesn't steal the shortcut from other
-  // surfaces (e.g. ChatPanel InputArea, which owns its own handler).
+  // Ctrl+M acts as push-to-talk while focus is inside this composer container.
   useEffect(() => {
     if (!voiceFeatureEnabled) return;
     const node = editorContainerRef.current;
     if (!node) return;
-    const handler = (event: KeyboardEvent) => {
+    let shortcutActive = false;
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (!event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
         return;
       }
-      if (event.key.toLowerCase() !== "m") return;
-      if (!voice.isSupported) return;
+      if (event.key.toLowerCase() !== "m" || event.repeat) return;
       event.preventDefault();
       event.stopPropagation();
-      voice.toggle();
+      shortcutActive = true;
+      voice.start();
     };
-    node.addEventListener("keydown", handler);
-    return () => node.removeEventListener("keydown", handler);
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (!shortcutActive) return;
+      if (event.key.toLowerCase() !== "m" && event.key !== "Control") return;
+      event.preventDefault();
+      event.stopPropagation();
+      shortcutActive = false;
+      voice.stop();
+    };
+    node.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp, true);
+    return () => {
+      node.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp, true);
+    };
   }, [voice, voiceFeatureEnabled]);
 
   const handleAtMention = useCallback(
@@ -626,8 +637,12 @@ const EditorArea: React.FC<EditorAreaProps> = ({
             submitButton={
               !isKanban && !hideLaunchButton ? (
                 <>
-                  {voiceFeatureEnabled && voice.isSupported && (
-                    <VoiceInputButton onStart={voice.start} />
+                  {voiceFeatureEnabled && (
+                    <VoiceInputButton
+                      onPressStart={voice.start}
+                      onPressEnd={voice.stop}
+                      disabled={!voice.isSupported}
+                    />
                   )}
                   <LaunchButton
                     disabled={launchDisabled ?? false}

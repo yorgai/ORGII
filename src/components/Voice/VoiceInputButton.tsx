@@ -8,7 +8,7 @@
  * toolbar row while capture is active.
  */
 import { Mic } from "lucide-react";
-import React, { memo } from "react";
+import React, { memo, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
@@ -17,30 +17,91 @@ import { INPUT_AREA_BUTTONS } from "@src/config/inputAreaTokens";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 
 interface VoiceInputButtonProps {
-  onStart: () => void;
+  onPressStart: () => void;
+  onPressEnd: () => void;
   /**
-   * If false the button is rendered as disabled (e.g. SpeechRecognition is
-   * not available in this environment). The tooltip still surfaces the
-   * reason so the user gets feedback on hover.
+   * If false the control still renders, but pressing it is a no-op and the
+   * tooltip explains the unavailable recognizer state.
    */
   disabled?: boolean;
 }
 
 const VoiceInputButton: React.FC<VoiceInputButtonProps> = memo(
-  ({ onStart, disabled = false }) => {
+  ({ onPressStart, onPressEnd, disabled = false }) => {
     const { t } = useTranslation();
+    const activePointerIdRef = useRef<number | null>(null);
+    const isPressingRef = useRef(false);
+
+    const startPress = useCallback(() => {
+      if (disabled || isPressingRef.current) return;
+      isPressingRef.current = true;
+      onPressStart();
+    }, [disabled, onPressStart]);
+
+    const endPress = useCallback(() => {
+      if (!isPressingRef.current) return;
+      isPressingRef.current = false;
+      activePointerIdRef.current = null;
+      onPressEnd();
+    }, [onPressEnd]);
+
+    const handlePointerDown = useCallback(
+      (event: React.PointerEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        activePointerIdRef.current = event.pointerId;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        startPress();
+      },
+      [startPress]
+    );
+
+    const handlePointerUp = useCallback(
+      (event: React.PointerEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        if (activePointerIdRef.current === event.pointerId) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        endPress();
+      },
+      [endPress]
+    );
+
+    const handlePointerCancel = useCallback(
+      (event: React.PointerEvent<HTMLButtonElement>) => {
+        if (activePointerIdRef.current === event.pointerId) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        endPress();
+      },
+      [endPress]
+    );
 
     const buttonNode = (
       <button
         type="button"
-        onClick={onStart}
-        disabled={disabled}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        onPointerLeave={handlePointerCancel}
+        onKeyDown={(event) => {
+          if (event.key === " " || event.key === "Enter") {
+            event.preventDefault();
+            startPress();
+          }
+        }}
+        onKeyUp={(event) => {
+          if (event.key === " " || event.key === "Enter") {
+            event.preventDefault();
+            endPress();
+          }
+        }}
         className={`${INPUT_AREA_BUTTONS.iconButtonBase} ${
           disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
         } leading-none`}
         style={{ lineHeight: 0 }}
         data-testid="composer-voice-input-button"
         aria-label={t("common:tooltips.startVoiceInput")}
+        aria-disabled={disabled}
       >
         <Mic
           size={INPUT_AREA_BUTTONS.iconSize}
