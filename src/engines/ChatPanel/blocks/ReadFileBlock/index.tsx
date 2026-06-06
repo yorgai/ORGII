@@ -35,9 +35,10 @@ export type ReadFileBlockProps = UniversalEventProps & {
 export const ReadFileBlock: React.FC<ReadFileBlockProps> = (props) => {
   const { eventId, status } = props;
 
-  const { fileName } = useMemo(() => extractFileData(props), [props]);
+  const { filePath, fileName } = useMemo(() => extractFileData(props), [props]);
 
-  const displayName = fileName ? getFileName(fileName) || fileName : "file";
+  const iconName = fileName || getFileName(filePath) || "file";
+  const displayName = filePath || fileName || "file";
   const isLoading =
     status === "running" && props.showActiveEventPainting === true;
   const isFailed = status === "failed";
@@ -99,11 +100,13 @@ export const ReadFileBlock: React.FC<ReadFileBlockProps> = (props) => {
           className="text-text-1"
         >
           <FileTypeIcon
-            fileName={displayName}
+            fileName={iconName}
             size="small"
             className="mr-1.5 shrink-0"
           />
-          <span className="min-w-0 truncate">{displayName}</span>
+          <span data-testid="read-file-path" className="min-w-0 truncate">
+            {displayName}
+          </span>
         </EventBlockHeaderSubtitle>
       </EventBlockHeader>
     </div>

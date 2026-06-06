@@ -139,6 +139,18 @@ describe("normalizeFileViewPayload", () => {
     expect(normalized.content).toBe("data");
   });
 
+  it("normalizes Cursor camel-case read_file target paths", () => {
+    const normalized = normalizeFileViewPayload({
+      function: "Read",
+      args: { targetFile: "/Users/vinceorz/Projects/ORGII/src/app/root.tsx" },
+      result: { content: "data" },
+    });
+    expect(normalized.filePath).toBe(
+      "/Users/vinceorz/Projects/ORGII/src/app/root.tsx"
+    );
+    expect(normalized.fileName).toBe("root.tsx");
+  });
+
   it("returns empty content when result is missing", () => {
     const normalized = normalizeFileViewPayload({
       function: "read_file",

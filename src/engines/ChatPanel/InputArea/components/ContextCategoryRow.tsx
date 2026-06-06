@@ -13,6 +13,7 @@ export interface ContextCategoryRowProps {
   label: string;
   tokens: number;
   hex: string;
+  categoryKey?: string;
   isHovered: boolean;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -23,11 +24,15 @@ const ContextCategoryRow = memo(
     label,
     tokens,
     hex,
+    categoryKey,
     isHovered,
     onMouseEnter,
     onMouseLeave,
   }: ContextCategoryRowProps) => (
     <div
+      data-testid={
+        categoryKey ? `context-info-category-${categoryKey}` : undefined
+      }
       className="flex cursor-default items-center gap-2.5 rounded-md px-1 py-[3px]"
       style={{
         backgroundColor: isHovered ? "rgba(128,128,128,0.08)" : undefined,

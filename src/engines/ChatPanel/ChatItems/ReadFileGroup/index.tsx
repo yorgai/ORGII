@@ -11,7 +11,12 @@ import { useTranslation } from "react-i18next";
 
 import { ChatCodeBlock, StackedBlock } from "@src/engines/ChatPanel/blocks";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
-import { getFileName as getFileNameFromPath } from "@src/util/file/pathUtils";
+
+import {
+  getReadFileName,
+  getReadFilePath,
+  getReadFilePathSummary,
+} from "../readFileEventData";
 
 // ============================================
 // Types
@@ -64,41 +69,6 @@ function getFileContent(event: SessionEvent): string | null {
   return null;
 }
 
-function getFilePath(event: SessionEvent): string {
-  const argsPath =
-    (event.args?.file_path as string) ||
-    (event.args?.path as string) ||
-    (event.args?.target_file as string) ||
-    (event.args?.file_name as string) ||
-    "";
-  if (argsPath) return argsPath;
-
-  const result = event.result;
-  if (result) {
-    const successData = result.success as Record<string, unknown> | undefined;
-    const outputSuccess = (result.output as Record<string, unknown> | undefined)
-      ?.success as Record<string, unknown> | undefined;
-
-    return (
-      (result.file_path as string) ||
-      (result.path as string) ||
-      (successData?.file_path as string) ||
-      (successData?.path as string) ||
-      (outputSuccess?.file_path as string) ||
-      (outputSuccess?.path as string) ||
-      ""
-    );
-  }
-
-  return "";
-}
-
-function getFileName(event: SessionEvent): string {
-  const filePath = getFilePath(event);
-  if (filePath) return getFileNameFromPath(filePath);
-  return "unknown";
-}
-
 // Matches the right-aligned line-number prefix emitted by
 // `foundation/tool_infra/file.rs::format_text_result`.
 // Current separator: `│` (U+2502). Legacy: `→` (U+2192) for older sessions.
@@ -139,14 +109,14 @@ const ReadFileGroup: React.FC<ReadFileGroupProps> = ({ events }) => {
   if (events.length === 1 && withContent.length === 1) {
     const event = events[0];
     const content = getFileContent(event);
-    const filePath = getFilePath(event);
+    const filePath = getReadFilePath(event);
 
     if (content) {
       return (
         <ChatCodeBlock
           code={cleanFileContent(content)}
           filePath={filePath}
-          title={getFileName(event)}
+          title={getReadFileName(event)}
           defaultCollapsed={false}
           showLineCount={false}
         />
@@ -155,22 +125,24 @@ const ReadFileGroup: React.FC<ReadFileGroupProps> = ({ events }) => {
   }
 
   const groupLabel = t("tools.nFiles", { count: events.length });
+  const pathSummary = getReadFilePathSummary(events);
 
   return (
     <StackedBlock
       items={events}
       icon={<FileText size={14} className="text-text-2" />}
       label={`Read ${groupLabel}`}
+      groupSummary={pathSummary}
       renderItem={(event) => {
         const content = getFileContent(event);
-        const filePath = getFilePath(event);
+        const filePath = getReadFilePath(event);
 
         if (!content) {
           return (
             <ChatCodeBlock
-              code={getFileName(event)}
+              code={getReadFileName(event)}
               language="text"
-              title={getFileName(event)}
+              title={getReadFileName(event)}
               defaultCollapsed
               showLineCount={false}
               eventId={event.id}
@@ -182,7 +154,7 @@ const ReadFileGroup: React.FC<ReadFileGroupProps> = ({ events }) => {
           <ChatCodeBlock
             code={cleanFileContent(content)}
             filePath={filePath}
-            title={getFileName(event)}
+            title={getReadFileName(event)}
             defaultCollapsed
             showLineCount={false}
             eventId={event.id}

@@ -574,10 +574,20 @@ fn extract_file_path(args: &serde_json::Value, result: &serde_json::Value) -> Op
     args_obj
         .and_then(|o| {
             str_field(o, "file_path")
+                .or_else(|| str_field(o, "filePath"))
                 .or_else(|| str_field(o, "path"))
                 .or_else(|| str_field(o, "target_file"))
+                .or_else(|| str_field(o, "targetFile"))
         })
-        .or_else(|| result_obj.and_then(|o| str_field(o, "file_path")))
+        .or_else(|| {
+            result_obj.and_then(|o| {
+                str_field(o, "file_path")
+                    .or_else(|| str_field(o, "filePath"))
+                    .or_else(|| str_field(o, "target_file"))
+                    .or_else(|| str_field(o, "targetFile"))
+                    .or_else(|| str_field(o, "path"))
+            })
+        })
 }
 
 fn extract_command(args: &serde_json::Value, result: &serde_json::Value) -> Option<String> {

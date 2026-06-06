@@ -90,6 +90,15 @@ function buildSubmitPayloadKey(
   });
 }
 
+function stableSubmitHash(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 interface UseWorkspaceChatOptions {
   sessionId?: string;
 }
@@ -275,6 +284,9 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         agentContent,
         imageDataUrls
       );
+      const directClientMessageId = `direct:${sessionId}:${stableSubmitHash(
+        submitPayloadKey
+      )}`;
       if (
         !options.forceDispatch &&
         _sharedSubmitGuard.current &&
@@ -378,7 +390,8 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
           contentForAgent,
           imageDataUrls,
           undefined,
-          displayTextForDispatch
+          displayTextForDispatch,
+          directClientMessageId
         );
       } catch (error) {
         console.error("Error sending message:", error);
@@ -424,8 +437,16 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       setLoading(true);
 
       try {
+        const submitPayloadKey = buildSubmitPayloadKey(sessionId, content);
         await addUserMessage(content);
-        await dispatchMessageBySessionType(sessionId, content);
+        await dispatchMessageBySessionType(
+          sessionId,
+          content,
+          undefined,
+          undefined,
+          undefined,
+          `direct:${sessionId}:${stableSubmitHash(submitPayloadKey)}`
+        );
       } catch (error) {
         console.error("Error sending message:", error);
         Message.error(t("errors.failedToSendMessage"));

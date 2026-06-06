@@ -65,7 +65,8 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
       content: string,
       imageDataUrls?: string[],
       modelSelectionOverride?: LastModelSelection,
-      displayText?: string
+      displayText?: string,
+      clientMessageId?: string
     ): Promise<void> => {
       // Read directly from the store at call time to avoid stale-closure
       // race: if the user changes the mode pill and immediately sends a
@@ -107,6 +108,7 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
           accountId,
           mode: agentExecMode,
           imageDataUrls,
+          clientMessageId,
         });
         // Bump the row's `updated_at` to "now" so the sidebar /
         // Kanban "recent activity" views float this session to the

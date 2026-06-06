@@ -218,8 +218,8 @@ export function useSessionCreator(
       return createSystemPathSessionSource(SYSTEM_PATH_ID.HOME, t);
     }
 
-    // Workspace mode: use the primary folder so launch gets the correct
-    // workspace path rather than a stale selectedRepoIdAtom value.
+    // Workspace mode: use the primary folder so launch gets the stable
+    // workspace root rather than a stale selectedRepoIdAtom value.
     if (isMultiRoot && primaryFolder) {
       return {
         type: "local",

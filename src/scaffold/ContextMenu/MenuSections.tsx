@@ -152,6 +152,15 @@ const ResultItemRow: React.FC<ResultItemRowProps> = memo(
         <span className="min-w-0 flex-1 truncate text-[13px] text-text-1">
           {displayName}
         </span>
+        {item.repoName ? (
+          <span
+            data-testid="context-menu-result-source"
+            className="ml-2 max-w-[96px] shrink-0 truncate rounded-md bg-fill-2 px-1.5 py-0.5 text-[11px] leading-4 text-text-3"
+            title={item.repoPath ?? item.repoName}
+          >
+            {item.repoName}
+          </span>
+        ) : null}
       </div>
     );
   }

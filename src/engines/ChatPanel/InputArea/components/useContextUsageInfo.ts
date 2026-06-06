@@ -40,9 +40,35 @@ export function formatTokenCount(count: number): string {
   return `${count}`;
 }
 
+interface PolicyListItem {
+  name: string;
+  enabled: boolean;
+  estimatedTokens: number;
+  source?: "global" | "workspace" | "personal";
+}
+
 interface RulesDataCache {
   key: string;
   rules: RuleTokenEstimate[];
+}
+
+export function filterContextRules(
+  policies: PolicyListItem[]
+): RuleTokenEstimate[] {
+  return policies
+    .filter((policy) => policy.enabled && policy.source !== "personal")
+    .map((policy) => ({
+      name: policy.name,
+      estimatedTokens: policy.estimatedTokens,
+      source: policy.source,
+    }));
+}
+
+export function resolveRulesTokens(
+  liveBreakdown: ContextBreakdown | null,
+  estimatedRulesTokens: number
+): number {
+  return liveBreakdown?.rulesTokens ?? estimatedRulesTokens;
 }
 
 export function useContextUsageInfo(repoPath?: string): ContextUsageInfo {
@@ -78,7 +104,7 @@ export function useContextUsageInfo(repoPath?: string): ContextUsageInfo {
     () => rules.reduce((sum, rule) => sum + rule.estimatedTokens, 0),
     [rules]
   );
-  const rulesTokens = liveBreakdown?.rulesTokens ?? estimatedRulesTokens;
+  const rulesTokens = resolveRulesTokens(liveBreakdown, estimatedRulesTokens);
 
   const isPreview = sessionTokens === 0 && estimatedRulesTokens > 0;
   const displayTokens =
@@ -113,14 +139,7 @@ export function useContextUsageInfo(repoPath?: string): ContextUsageInfo {
     >("policies_list", { workspacePath: repoPath })
       .then((result) => {
         if (cancelled) return;
-        const enabled = result
-          .filter((policy) => policy.enabled && policy.source !== "personal")
-          .map((policy) => ({
-            name: policy.name,
-            estimatedTokens: policy.estimatedTokens,
-            source: policy.source,
-          }));
-        setRulesCache({ key: repoPath, rules: enabled });
+        setRulesCache({ key: repoPath, rules: filterContextRules(result) });
       })
       .catch(() => {
         if (cancelled) return;

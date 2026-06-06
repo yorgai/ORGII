@@ -7,6 +7,7 @@ import {
   isBrowserTool,
   isSearchTool,
 } from "@src/engines/SessionCore/rendering/registry/toolCategories";
+import { extractFilePathFromPayloads } from "@src/util/file/filePathPayload";
 import {
   deriveToolAction,
   formatBrowserCliCommandTarget,
@@ -193,7 +194,7 @@ export function extractArgsSummary(
   const url = (args.url || args.uri) as string | undefined;
   if (url) return url.length > 60 ? url.substring(0, 60) + "..." : url;
 
-  const path = (args.path || args.file_path) as string | undefined;
+  const path = extractFilePathFromPayloads([args]);
   if (path) return path;
 
   const command = args.command as string | undefined;

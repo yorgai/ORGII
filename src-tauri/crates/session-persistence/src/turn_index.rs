@@ -322,7 +322,22 @@ fn build_turn_drafts(rows: &[IndexEventRow]) -> Vec<TurnDraft> {
         drafts.push(turn);
     }
 
+    materialized_turn_drafts(drafts)
+}
+
+fn materialized_turn_drafts(drafts: Vec<TurnDraft>) -> Vec<TurnDraft> {
+    let last_index = drafts.len().saturating_sub(1);
     drafts
+        .into_iter()
+        .enumerate()
+        .filter_map(|(index, draft)| {
+            if draft.body_event_count > 0 || index == last_index {
+                Some(draft)
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 fn turn_summary_from_row(row: &rusqlite::Row<'_>) -> SqliteResult<CachedTurnSummary> {
@@ -600,5 +615,47 @@ mod tests {
         assert_eq!(drafts.len(), 1);
         assert_eq!(drafts[0].turn_id, "user-message-authoritative");
         assert_eq!(drafts[0].start_sequence, 3);
+    }
+
+    #[test]
+    fn consecutive_user_messages_do_not_materialize_ghost_pending_turns() {
+        let rows = vec![
+            row(
+                "user-message-queued-ghost",
+                Some(USER_MESSAGE_FUNCTION),
+                r#"{"backendPersisted":true}"#,
+                1,
+            ),
+            row(
+                "user-message-authoritative",
+                Some(USER_MESSAGE_FUNCTION),
+                r#"{"backendPersisted":true}"#,
+                2,
+            ),
+            row("assistant-event", Some("assistant_message"), "{}", 3),
+        ];
+
+        let drafts = build_turn_drafts(&rows);
+
+        assert_eq!(drafts.len(), 1);
+        assert_eq!(drafts[0].turn_id, "user-message-authoritative");
+        assert_eq!(drafts[0].start_sequence, 2);
+        assert_eq!(drafts[0].body_event_count, 1);
+    }
+
+    #[test]
+    fn latest_user_only_turn_still_materializes_as_pending() {
+        let rows = vec![row(
+            "user-message-latest",
+            Some(USER_MESSAGE_FUNCTION),
+            r#"{"backendPersisted":true}"#,
+            1,
+        )];
+
+        let drafts = build_turn_drafts(&rows);
+
+        assert_eq!(drafts.len(), 1);
+        assert_eq!(drafts[0].turn_id, "user-message-latest");
+        assert_eq!(drafts[0].body_event_count, 0);
     }
 }

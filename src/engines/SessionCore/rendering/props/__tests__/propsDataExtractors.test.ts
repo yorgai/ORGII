@@ -244,6 +244,15 @@ describe("extractFileData", () => {
       expect(extractFileData(props).filePath).toBe("src/target.ts");
     });
 
+    it("gets filePath from camel-case Cursor read args", () => {
+      const props = makeUniversalProps({
+        args: { targetFile: "/Users/vinceorz/Projects/ORGII/src/app/root.tsx" },
+      });
+      expect(extractFileData(props).filePath).toBe(
+        "/Users/vinceorz/Projects/ORGII/src/app/root.tsx"
+      );
+    });
+
     it("gets filePath from args.path", () => {
       const props = makeUniversalProps({ args: { path: "src/path.ts" } });
       expect(extractFileData(props).filePath).toBe("src/path.ts");

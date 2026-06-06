@@ -1,6 +1,11 @@
 /**
  * File read data extractor.
  */
+import {
+  FILE_NAME_PAYLOAD_KEYS,
+  extractFilePathFromPayloads,
+  readPayloadString,
+} from "@src/util/file/filePathPayload";
 import { getFileName } from "@src/util/file/pathUtils";
 
 import type {
@@ -24,22 +29,11 @@ export function extractFileData(props: UniversalEventProps): ExtractedFileData {
   const { args, result } = props;
   const successData = extractSuccessData(result);
 
-  const filePath =
-    (args?.file_path as string) ||
-    (args?.target_file as string) ||
-    (args?.path as string) ||
-    (successData?.path as string) ||
-    (successData?.file_path as string) ||
-    (successData?.target_file as string) ||
-    (result?.file_path as string) ||
-    (result?.path as string) ||
-    (result?.target_file as string) ||
-    "";
-
+  const filePath = extractFilePathFromPayloads([args, successData, result]);
   const directFileName =
-    (args?.file_name as string) ||
-    (successData?.file_name as string) ||
-    (result?.file_name as string);
+    readPayloadString(args, FILE_NAME_PAYLOAD_KEYS) ??
+    readPayloadString(successData, FILE_NAME_PAYLOAD_KEYS) ??
+    readPayloadString(result, FILE_NAME_PAYLOAD_KEYS);
 
   const fileName = filePath ? getFileName(filePath) : directFileName || "";
 

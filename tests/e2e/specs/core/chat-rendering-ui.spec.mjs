@@ -223,6 +223,7 @@ function chunk(items, size) {
 async function waitForApp() {
   await waitForFrontendReady();
   await browser.setTimeout({ script: 5_000 });
+  await execJS(`localStorage.setItem('orgii:auth_skipped', '1'); return true;`);
   await browser.waitUntil(
     async () => {
       try {
@@ -571,6 +572,84 @@ async function assertDedupRenderedOnce() {
   expect(finalCounts).toEqual({ thought: 1, answer: 1, assistantBubbles: 1 });
 }
 
+async function assertMultiRepoReadPathRendered() {
+  const sessionId = `e2e-render-multirepo-read-${Date.now()}`;
+  const baseTime = Date.now();
+  const orgiiPath = "/Users/vinceorz/Projects/ORGII/src/app/root.tsx";
+  const claudePath = "/Users/vinceorz/Projects/claude_code/README.md";
+  const userEvent = {
+    ...withCreatedAt(makeOrderUserEvent("multi-read-user", "Read two files"), baseTime),
+    sessionId,
+  };
+  const readEvents = [orgiiPath, claudePath].map((targetFile, index) => ({
+    id: `multi-read-${index}`,
+    chunk_id: `multi-read-${index}`,
+    sessionId,
+    createdAt: new Date(baseTime + 1_000 + index).toISOString(),
+    functionName: "read_file",
+    uiCanonical: "read_file",
+    actionType: "tool_call",
+    args: { targetFile },
+    result: {
+      content: `content for ${targetFile}`,
+      observation: `content for ${targetFile}`,
+      is_delta: false,
+    },
+    source: "assistant",
+    displayText: `Read ${targetFile}`,
+    displayStatus: "completed",
+    displayVariant: "tool_call",
+    activityStatus: "agent",
+    isDelta: false,
+  }));
+  const assistantEvent = {
+    ...withCreatedAt(
+      makeOrderAssistantEvent("multi-read-assistant", "message", "Read complete"),
+      baseTime + 3_000
+    ),
+    sessionId,
+  };
+
+  const seed = await invokeE2E("seedChatEvents", sessionId, [
+    userEvent,
+    ...readEvents,
+    assistantEvent,
+  ]);
+  if (!seed || seed.ok !== true) {
+    throw new Error(
+      `seedChatEvents failed for multi-root read path: ${seed?.error ?? "unknown"}`
+    );
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const state = await execJS(`
+        const paths = Array.from(document.querySelectorAll('[data-testid="read-file-path"]'))
+          .map((node) => node.textContent || "");
+        const body = document.body.innerText || "";
+        return {
+          paths,
+          body: body.slice(0, 3000),
+          hasOrgii: body.includes(${JSON.stringify(orgiiPath)}) || paths.some((path) => path.includes(${JSON.stringify(orgiiPath)})),
+          hasClaude: body.includes(${JSON.stringify(claudePath)}) || paths.some((path) => path.includes(${JSON.stringify(claudePath)})),
+          hasGenericOnly: paths.some((path) => path.trim() === "file"),
+        };
+      `);
+      return state.hasOrgii && state.hasClaude && !state.hasGenericOnly;
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `multi-root read file paths did not render: ${JSON.stringify(
+        await execJS(`
+          const paths = Array.from(document.querySelectorAll('[data-testid="read-file-path"]'))
+            .map((node) => node.textContent || "");
+          return { paths, body: (document.body.innerText || "").slice(0, 3000) };
+        `)
+      )}`,
+    }
+  );
+}
+
 async function assertThinkingChronologicalOrder() {
   const orderedEventIds = [
     "order-user-a",
@@ -662,6 +741,13 @@ async function assertThinkingChronologicalOrder() {
 describe("Core chat rendering UI", () => {
   before(async () => {
     await waitForApp();
+    const repo = await invokeE2E("ensureRepoSelected", {
+      repoPath: "/Users/vinceorz/Projects/ORGII",
+      repoName: "ORGII",
+    });
+    if (!repo || repo.ok !== true) {
+      throw new Error(`ensureRepoSelected failed: ${repo?.error ?? "unknown"}`);
+    }
     const navigation = await invokeE2E("navigateTo", "/orgii/workstation/code");
     if (!navigation || navigation.ok !== true) {
       throw new Error(`navigateTo failed: ${navigation?.error ?? "unknown"}`);
@@ -703,6 +789,10 @@ describe("Core chat rendering UI", () => {
     for (const [batchIndex, batchTools] of batches.entries()) {
       await assertBatchRendered(batchIndex, batchTools);
     }
+  });
+
+  it("renders multi-repo read file targets as paths instead of generic file labels", async () => {
+    await assertMultiRepoReadPathRendered();
   });
 
   it("renders a duplicated thought/answer segment pair only once", async () => {

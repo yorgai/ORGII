@@ -42,6 +42,26 @@ fn test_normalize_tool_call() {
 }
 
 #[test]
+fn test_normalize_tool_call_accepts_cursor_camel_case_target_file() {
+    let chunk = RawActivityChunk {
+        chunk_id: Some("chunk-camel-read".to_string()),
+        action_type: Some("tool_call".to_string()),
+        function: Some("Read".to_string()),
+        args: Some(serde_json::json!({"targetFile": "/Users/vinceorz/Projects/ORGII/src/app/root.tsx"})),
+        result: Some(serde_json::json!({"content": "export {};"})),
+        created_at: Some("2025-01-15T10:30:00.000Z".to_string()),
+        ..Default::default()
+    };
+
+    let event = normalize_chunk(&chunk, "sess-1");
+    assert_eq!(event.function_name, "read_file");
+    assert_eq!(
+        event.file_path,
+        Some("/Users/vinceorz/Projects/ORGII/src/app/root.tsx".to_string())
+    );
+}
+
+#[test]
 fn test_normalize_thinking() {
     let chunk = RawActivityChunk {
         chunk_id: Some("chunk-2".to_string()),

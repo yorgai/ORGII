@@ -128,31 +128,13 @@ export function useSlashCommand(
       if (!composerInputRef.current) return;
 
       if (item.category === "skill") {
-        // filePath is stored as "/<skillName>" so serializePillNode produces
-        // `name [skill:/<skillName>]` and useSubmitMessage expands it to
-        // `/<skillName>` for the Rust backend's skill expansion.
         const skillToken = `/${item.skillName ?? item.name}`;
-        // When the editor only contains the "/" query trigger (or is empty),
-        // clear first then insert. Otherwise append the pill after existing
-        // content so the user's prior text is preserved.
-        const hasUserContent =
-          !composerInputRef.current.isEmpty() && queryRef.current.length === 0;
-        if (hasUserContent) {
-          composerInputRef.current.appendFilePill(
-            skillToken,
-            false,
-            "skill",
-            item.name
-          );
-        } else {
-          composerInputRef.current.clear();
-          composerInputRef.current.insertFilePill(
-            skillToken,
-            false,
-            "skill",
-            item.name
-          );
-        }
+        composerInputRef.current.insertFilePill(
+          skillToken,
+          false,
+          "skill",
+          item.name
+        );
         composerInputRef.current.focus();
         setShowSlashMenu(false);
         setSlashQuery("");

@@ -175,15 +175,14 @@ impl SecurityPolicy {
             return Err("Agent is in read-only mode — command execution is disabled.".into());
         }
 
-        // Block subshell injection operators
-        if command.contains('`') {
-            return Err("Backtick subshell operators are not allowed.".into());
-        }
-        if command.contains("$(") {
-            return Err("$() subshell operators are not allowed.".into());
-        }
-        if command.contains("${") {
-            return Err("${} parameter expansion is not allowed.".into());
+        if let Some(substitution) = executable_substitution(command) {
+            return Err(match substitution {
+                ShellSubstitution::Backtick => {
+                    "Backtick subshell operators are not allowed.".into()
+                }
+                ShellSubstitution::Command => "$() subshell operators are not allowed.".into(),
+                ShellSubstitution::Parameter => "${} parameter expansion is not allowed.".into(),
+            });
         }
 
         // If no blocked commands configured, allow all
@@ -399,6 +398,102 @@ impl std::fmt::Debug for SecurityPolicy {
 // Helpers
 // ============================================
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ShellSubstitution {
+    Backtick,
+    Command,
+    Parameter,
+}
+
+fn executable_substitution(command: &str) -> Option<ShellSubstitution> {
+    let bytes = command.as_bytes();
+    let mut index = 0;
+    let mut in_single_quote = false;
+    let mut in_double_quote = false;
+    let mut heredoc_until: Option<String> = None;
+    let mut at_line_start = true;
+
+    while index < bytes.len() {
+        if let Some(delimiter) = heredoc_until.as_deref() {
+            let line_end = command[index..]
+                .find('\n')
+                .map(|offset| index + offset)
+                .unwrap_or(bytes.len());
+            let line = command[index..line_end].trim_end_matches('\r');
+            if line == delimiter {
+                heredoc_until = None;
+            }
+            index = (line_end + 1).min(bytes.len());
+            at_line_start = true;
+            continue;
+        }
+
+        if !in_single_quote && !in_double_quote {
+            if let Some((delimiter, body_start)) = quoted_heredoc_start(&command[index..]) {
+                heredoc_until = Some(delimiter);
+                index += body_start;
+                at_line_start = true;
+                continue;
+            }
+        }
+
+        let byte = bytes[index];
+        match byte {
+            b'\\' => {
+                index = (index + 2).min(bytes.len());
+                at_line_start = false;
+                continue;
+            }
+            b'\'' if !in_double_quote => {
+                in_single_quote = !in_single_quote;
+            }
+            b'"' if !in_single_quote => {
+                in_double_quote = !in_double_quote;
+            }
+            b'`' if !in_single_quote => return Some(ShellSubstitution::Backtick),
+            b'$' if !in_single_quote && index + 1 < bytes.len() => match bytes[index + 1] {
+                b'(' => return Some(ShellSubstitution::Command),
+                b'{' => return Some(ShellSubstitution::Parameter),
+                _ => {}
+            },
+            b'\n' => {
+                at_line_start = true;
+                index += 1;
+                continue;
+            }
+            _ => {}
+        }
+
+        if !byte.is_ascii_whitespace() || !at_line_start {
+            at_line_start = false;
+        }
+        index += 1;
+    }
+
+    None
+}
+
+fn quoted_heredoc_start(input: &str) -> Option<(String, usize)> {
+    let marker = input.strip_prefix("<<")?;
+    let marker = marker.strip_prefix('-').unwrap_or(marker).trim_start();
+    let quote = marker.as_bytes().first().copied()?;
+    if quote != b'\'' && quote != b'"' {
+        return None;
+    }
+
+    let rest = &marker[1..];
+    let end_quote = rest.find(quote as char)?;
+    let delimiter = &rest[..end_quote];
+    if delimiter.is_empty() {
+        return None;
+    }
+
+    let after = &rest[end_quote + 1..];
+    let newline = after.find('\n')?;
+    let consumed = input.len() - after[newline + 1..].len();
+    Some((delimiter.to_string(), consumed))
+}
+
 /// Skip leading environment variable assignments in a command segment.
 ///
 /// `FOO=bar BAZ=qux git commit` → `git commit`
@@ -484,6 +579,55 @@ mod tests {
         assert!(matches!(
             policy.validate_command_execution("git push origin main", false),
             ValidationResult::NeedsApproval(_, _)
+        ));
+    }
+
+    #[test]
+    fn full_autonomy_allows_literal_backticks_inside_single_quotes() {
+        let policy = SecurityPolicy::permissive(std::env::temp_dir());
+
+        assert!(matches!(
+            policy.validate_command_execution("python -c 'print(`not shell`)'", false),
+            ValidationResult::Allowed(CommandRiskLevel::Low)
+        ));
+    }
+
+    #[test]
+    fn full_autonomy_allows_literal_backticks_in_quoted_heredoc_body() {
+        let policy = SecurityPolicy::permissive(std::env::temp_dir());
+        let command = "python <<'PY'\nprint(`not shell`)\nPY";
+
+        assert!(matches!(
+            policy.validate_command_execution(command, false),
+            ValidationResult::Allowed(CommandRiskLevel::Low)
+        ));
+    }
+
+    #[test]
+    fn full_autonomy_still_denies_executable_subshells() {
+        let policy = SecurityPolicy::permissive(std::env::temp_dir());
+
+        assert!(matches!(
+            policy.validate_command_execution("echo `whoami`", false),
+            ValidationResult::Denied(reason) if reason.contains("Backtick subshell")
+        ));
+        assert!(matches!(
+            policy.validate_command_execution("echo $(whoami)", false),
+            ValidationResult::Denied(reason) if reason.contains("$() subshell")
+        ));
+        assert!(matches!(
+            policy.validate_command_execution("echo ${HOME}", false),
+            ValidationResult::Denied(reason) if reason.contains("parameter expansion")
+        ));
+    }
+
+    #[test]
+    fn full_autonomy_denies_subshells_inside_double_quotes() {
+        let policy = SecurityPolicy::permissive(std::env::temp_dir());
+
+        assert!(matches!(
+            policy.validate_command_execution("echo \"`whoami`\"", false),
+            ValidationResult::Denied(reason) if reason.contains("Backtick subshell")
         ));
     }
 

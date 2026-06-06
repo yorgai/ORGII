@@ -7,6 +7,7 @@
  */
 import { normalizeFunctionName } from "@src/lib/activityData/activityNormalizers";
 import type { BackendEvent } from "@src/types/session/steps";
+import { extractFilePathFromPayloads } from "@src/util/file/filePathPayload";
 
 // ============================================
 // Types
@@ -260,8 +261,7 @@ export function normalizeFileViewPayload(
   const args = activityData?.args || event.args || {};
   const result = activityData?.result || event.result;
 
-  // File path can be in args.file_path or args.path (backend uses path)
-  const filePath = args?.file_path || args?.path || "";
+  const filePath = extractFilePathFromPayloads([args]);
 
   if (!result) {
     return {
@@ -305,7 +305,7 @@ export function normalizeFileViewPayload(
 
   // Extract file path from result if not in args (some backends put it in result)
   const finalFilePath =
-    filePath || normalizedResult?.path || normalizedResult?.file_path || "";
+    filePath || extractFilePathFromPayloads([normalizedResult]);
 
   return {
     filePath: finalFilePath,

@@ -2,6 +2,20 @@ import { extractArgsSummary } from "../argsSummary";
 import { parseAgentMessageCard } from "../cardParsers";
 
 describe("extractArgsSummary", () => {
+  it("shows camel-case file targets instead of a generic tool label", () => {
+    expect(
+      extractArgsSummary("Read", {
+        targetFile: "/Users/vinceorz/Projects/ORGII/src/app/root.tsx",
+      })
+    ).toBe("/Users/vinceorz/Projects/ORGII/src/app/root.tsx");
+
+    expect(
+      extractArgsSummary("read_file", {
+        filePath: "/Users/vinceorz/Projects/claude_code/README.md",
+      })
+    ).toBe("/Users/vinceorz/Projects/claude_code/README.md");
+  });
+
   it("shows browser CLI command target without duplicating the parsed title", () => {
     expect(
       extractArgsSummary("control_browser_with_agent_browser", {
