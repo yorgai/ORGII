@@ -1880,6 +1880,8 @@
       "singleRun": "Execução única",
       "batchRun": "Execução em lote",
       "sourcePathPlaceholder": "Caminho para a pasta de benchmark",
+      "workingDirectory": "Diretório de trabalho",
+      "workingDirectoryPlaceholder": "Caminho onde os agentes devem clonar ou modificar repositórios",
       "localPath": "caminho local",
       "runType": "Tipo de execução",
       "kindTitle": "Benchmark",
@@ -1889,7 +1891,15 @@
       },
       "selectedTasks": "{{selected}}/{{total}} selecionadas",
       "concurrency": "Paralelo",
-      "taskLoadingUnsupported": "O carregamento de tarefas ainda não está disponível para este benchmark; use o preflight para verificar a fonte local."
+      "taskLoadingUnsupported": "O carregamento de tarefas ainda não está disponível para este benchmark; use o preflight para verificar a fonte local.",
+      "attemptTitle": "Tentativa",
+      "batchProgress": "{{total}} no total · {{queued}} na fila · {{running}} em execução · {{launched}} iniciadas · {{failed}} falharam · {{cancelled}} canceladas",
+      "sessionGroupTitle": "Sessões de benchmark",
+      "sessionGroupProgress": "{{total}} no total · {{queued}} na fila · {{running}} em execução · {{launched}} iniciadas · {{failed}} falharam · {{cancelled}} canceladas",
+      "sessionLabel": "Session: {{sessionId}}",
+      "noSessionYet": "Ainda sem Session",
+      "testResultPending": "Resultado do teste pendente",
+      "taskBreadcrumb": "{{attempt}} > {{task}}"
     },
     "skillsAndTools": "Skills e ferramentas"
   },

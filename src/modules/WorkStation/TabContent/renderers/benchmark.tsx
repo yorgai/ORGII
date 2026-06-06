@@ -10,7 +10,7 @@ import {
 import type { UnifiedTabContentProps } from "../types";
 
 const BenchmarkTabRenderer: React.FC<UnifiedTabContentProps> = memo(
-  ({ tab }) => {
+  ({ tab, isActive }) => {
     const setActiveBatchId = useSetAtom(benchmarkActiveBatchIdAtom);
     const setActiveBatchTaskId = useSetAtom(benchmarkActiveBatchTaskIdAtom);
     const batchId =
@@ -27,7 +27,7 @@ const BenchmarkTabRenderer: React.FC<UnifiedTabContentProps> = memo(
 
     return (
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        <BenchmarkPanel />
+        <BenchmarkPanel surface="taskInfo" publishHeader={isActive} />
       </div>
     );
   }

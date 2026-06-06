@@ -30,6 +30,7 @@ interface DefaultAiWorkItemAssignee {
 }
 
 interface ChatPanelEmptyContentProps {
+  benchmarkFooter: React.ReactNode;
   benchmarkPanel: React.ReactNode;
   createProjectContext: ChatPanelCreateProjectContext | null;
   createTarget: ChatPanelCreateTarget;
@@ -57,6 +58,7 @@ interface ChatPanelEmptyContentProps {
 }
 
 export function ChatPanelEmptyContent({
+  benchmarkFooter,
   benchmarkPanel,
   createProjectContext,
   createTarget,
@@ -173,7 +175,8 @@ export function ChatPanelEmptyContent({
     return (
       <BenchmarkRunBuilder
         className={creatorClassName}
-        footerSlot={benchmarkPanel}
+        bodySlot={benchmarkPanel}
+        footerSlot={benchmarkFooter}
       />
     );
   }

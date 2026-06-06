@@ -1860,6 +1860,8 @@
       "singleRun": "Chạy đơn",
       "batchRun": "Chạy hàng loạt",
       "sourcePathPlaceholder": "Đường dẫn tới thư mục benchmark",
+      "workingDirectory": "Thư mục làm việc",
+      "workingDirectoryPlaceholder": "Đường dẫn để Agent clone hoặc sửa đổi repo",
       "localPath": "đường dẫn cục bộ",
       "runType": "Kiểu chạy",
       "kindTitle": "Benchmark",
@@ -1869,7 +1871,15 @@
       },
       "selectedTasks": "Đã chọn {{selected}}/{{total}}",
       "concurrency": "Song song",
-      "taskLoadingUnsupported": "Chưa thể tải tác vụ cho benchmark này; hãy dùng preflight để kiểm tra nguồn cục bộ."
+      "taskLoadingUnsupported": "Chưa thể tải tác vụ cho benchmark này; hãy dùng preflight để kiểm tra nguồn cục bộ.",
+      "attemptTitle": "Attempt",
+      "batchProgress": "Tổng {{total}} · {{queued}} đang chờ · {{running}} đang chạy · {{launched}} đã khởi chạy · {{failed}} thất bại · {{cancelled}} đã hủy",
+      "sessionGroupTitle": "Benchmark sessions",
+      "sessionGroupProgress": "Tổng {{total}} · {{queued}} đang chờ · {{running}} đang chạy · {{launched}} đã khởi chạy · {{failed}} thất bại · {{cancelled}} đã hủy",
+      "sessionLabel": "Session: {{sessionId}}",
+      "noSessionYet": "Chưa có Session",
+      "testResultPending": "Đang chờ kết quả kiểm thử",
+      "taskBreadcrumb": "{{attempt}} > {{task}}"
     },
     "skillsAndTools": "Skills và công cụ"
   },

@@ -1860,6 +1860,8 @@
       "singleRun": "Tek çalıştırma",
       "batchRun": "Toplu çalıştırma",
       "sourcePathPlaceholder": "Benchmark klasörünün yolu",
+      "workingDirectory": "Çalışma dizini",
+      "workingDirectoryPlaceholder": "Agent'ların repoları klonlayacağı veya değiştireceği yol",
       "localPath": "yerel yol",
       "runType": "Çalıştırma türü",
       "kindTitle": "Benchmark",
@@ -1869,7 +1871,15 @@
       },
       "selectedTasks": "{{selected}}/{{total}} seçildi",
       "concurrency": "Paralel",
-      "taskLoadingUnsupported": "Bu benchmark için görev yükleme henüz kullanılamıyor; yerel kaynağı kontrol etmek için preflight kullanın."
+      "taskLoadingUnsupported": "Bu benchmark için görev yükleme henüz kullanılamıyor; yerel kaynağı kontrol etmek için preflight kullanın.",
+      "attemptTitle": "Attempt",
+      "batchProgress": "Toplam {{total}} · {{queued}} kuyrukta · {{running}} çalışıyor · {{launched}} başlatıldı · {{failed}} başarısız · {{cancelled}} iptal edildi",
+      "sessionGroupTitle": "Benchmark sessions",
+      "sessionGroupProgress": "Toplam {{total}} · {{queued}} kuyrukta · {{running}} çalışıyor · {{launched}} başlatıldı · {{failed}} başarısız · {{cancelled}} iptal edildi",
+      "sessionLabel": "Session: {{sessionId}}",
+      "noSessionYet": "Henüz Session yok",
+      "testResultPending": "Test sonucu bekleniyor",
+      "taskBreadcrumb": "{{attempt}} > {{task}}"
     },
     "skillsAndTools": "Skills ve araçlar"
   },

@@ -6,8 +6,11 @@ import {
   ChevronRight,
   Clipboard,
   FolderOpen,
+  ListChevronsDownUp,
+  ListChevronsUpDown,
   Search,
   TriangleAlert,
+  X,
 } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -34,6 +37,7 @@ import {
   benchmarkBatchConcurrencyAtom,
   benchmarkBatchSelectedTaskIdsAtom,
   benchmarkRunTypeAtom,
+  benchmarkWorkingDirectoryAtom,
 } from "@src/store/benchmark";
 
 interface UseBenchmarkSessionCreatorSlotsOptions {
@@ -42,6 +46,7 @@ interface UseBenchmarkSessionCreatorSlotsOptions {
 }
 
 interface BenchmarkSessionCreatorSlots {
+  bodySlot: React.ReactNode;
   footerSlot: React.ReactNode;
 }
 
@@ -57,9 +62,14 @@ export function useBenchmarkSessionCreatorSlots({
   const [benchmarkBatchConcurrency, setBenchmarkBatchConcurrency] = useAtom(
     benchmarkBatchConcurrencyAtom
   );
+  const [benchmarkWorkingDirectory, setBenchmarkWorkingDirectory] = useAtom(
+    benchmarkWorkingDirectoryAtom
+  );
   const benchmarkAgentBatchError = useAtomValue(benchmarkAgentBatchErrorAtom);
   const setActiveBatchTaskId = useSetAtom(benchmarkActiveBatchTaskIdAtom);
   const [benchmarkTaskSearch, setBenchmarkTaskSearch] = useState("");
+  const [benchmarkPreflightDismissed, setBenchmarkPreflightDismissed] =
+    useState(false);
   const [collapsedBenchmarkTaskGroups, setCollapsedBenchmarkTaskGroups] =
     useState<Set<string>>(() => new Set());
   const {
@@ -142,16 +152,6 @@ export function useBenchmarkSessionCreatorSlots({
   const canLoadBenchmarkTasks = benchmarkKind === BENCHMARK_KIND.SWE_BENCH_PRO;
   const isBenchmarkAgentBatchRunning =
     benchmarkAgentBatchStatus?.status === BENCHMARK_AGENT_BATCH_STATUS.RUNNING;
-  const benchmarkAgentBatchProgressText = benchmarkAgentBatchStatus
-    ? t("creator.benchmark.batchProgress", {
-        total: benchmarkAgentBatchStatus.totalTasks,
-        queued: benchmarkAgentBatchStatus.queued,
-        running: benchmarkAgentBatchStatus.running,
-        launched: benchmarkAgentBatchStatus.launched,
-        failed: benchmarkAgentBatchStatus.failed,
-        cancelled: benchmarkAgentBatchStatus.cancelled,
-      })
-    : null;
   const benchmarkPreflightReadyCount =
     benchmarkPreflight?.checks.filter((check) => check.ok).length ?? 0;
   const benchmarkPreflightTotalCount = benchmarkPreflight?.checks.length ?? 0;
@@ -362,6 +362,17 @@ export function useBenchmarkSessionCreatorSlots({
     }
   }, [setBenchmarkSourcePath, t]);
 
+  const handleBenchmarkPickWorkingDirectory = useCallback(async () => {
+    const selected = await open({
+      multiple: false,
+      directory: true,
+      title: t("creator.benchmark.workingDirectory"),
+    });
+    if (typeof selected === "string") {
+      setBenchmarkWorkingDirectory(selected);
+    }
+  }, [setBenchmarkWorkingDirectory, t]);
+
   const handleBenchmarkEvaluationModeChange = useCallback(
     (value: string | number | (string | number)[]) => {
       if (typeof value === "string") {
@@ -372,6 +383,7 @@ export function useBenchmarkSessionCreatorSlots({
   );
 
   const handleBenchmarkPreflight = useCallback(() => {
+    setBenchmarkPreflightDismissed(false);
     void refreshBenchmarkPreflight();
   }, [refreshBenchmarkPreflight]);
 
@@ -399,250 +411,25 @@ export function useBenchmarkSessionCreatorSlots({
     void navigator.clipboard.writeText(benchmarkPreflightCopyText);
   }, [benchmarkPreflightCopyText]);
 
-  const footerSlot = enabled ? (
-    <div
-      id="session-creator-benchmark-panel"
-      className={`flex w-full flex-col gap-3 rounded-[12px] border border-solid border-border-2 p-3 ${SURFACE_TOKENS.surface}`}
-    >
-      <div className="grid grid-cols-2 gap-2">
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <div className="text-[13px] font-semibold text-text-1">
-            {t("creator.benchmark.kindTitle")}
-          </div>
-          <Select
-            value={benchmarkKind}
-            options={benchmarkKindOptions}
-            onChange={handleBenchmarkKindChange}
-            size="small"
-            radius="lg"
-            className="w-full"
-          />
-        </div>
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <div className="text-[13px] font-semibold text-text-1">
-            {t("creator.benchmark.runType")}
-          </div>
-          <Select
-            value={benchmarkRunType}
-            options={benchmarkRunTypeOptions}
-            onChange={handleBenchmarkRunTypeChange}
-            size="small"
-            radius="lg"
-            className="w-full"
-          />
-        </div>
-      </div>
+  const handleCloseBenchmarkPreflight = useCallback(() => {
+    setBenchmarkPreflightDismissed(true);
+  }, []);
 
-      <div className="flex flex-col gap-2 border-t border-solid border-border-2 pt-3">
-        <div className="text-[13px] font-semibold text-text-1">
-          {t("creator.benchmark.sourcePath")} (
-          {t("creator.benchmark.localPath")})
-        </div>
-        <div className="flex items-center gap-2">
-          <Input
-            value={benchmarkSourcePath}
-            onChange={setBenchmarkSourcePath}
-            placeholder={t("creator.benchmark.sourcePathPlaceholder")}
-            size="small"
-            className="min-w-0 flex-1"
-            allowClear
-          />
-          <Button
-            htmlType="button"
-            variant="secondary"
-            size="small"
-            iconOnly
-            icon={<FolderOpen size={14} strokeWidth={1.75} />}
-            title={t("common:actions.browse")}
-            aria-label={t("common:actions.browse")}
-            onClick={handleBenchmarkPickSourceFolder}
-          />
-          <Button
-            htmlType="button"
-            variant="secondary"
-            size="small"
-            onClick={handleBenchmarkLoadTasks}
-            disabled={
-              isLoadingBenchmarkTasks ||
-              !benchmarkSourcePath.trim() ||
-              !canLoadBenchmarkTasks
-            }
-          >
-            {t("common:actions.load")}
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2 border-t border-solid border-border-2 pt-3">
-        <div className="flex items-center gap-2">
-          <div className="shrink-0 text-[13px] font-semibold text-text-1">
-            {t("creator.benchmark.taskSelectionTitle")}
-          </div>
-          <div className="text-[13px] text-text-2">
-            {t("creator.benchmark.selectedTasks", {
-              selected: selectedBatchTaskIds.length,
-              total: benchmarkTasks.length,
-            })}
-          </div>
-          <div className="flex flex-1 items-center justify-end">
-            <button
-              type="button"
-              className="text-[12px] font-medium text-text-2 hover:text-text-1"
-              onClick={handleBenchmarkToggleAllGroups}
-              disabled={benchmarkTaskGroups.length === 0}
-            >
-              {allBenchmarkTaskGroupsCollapsed
-                ? t("common:actions.expandAll")
-                : t("common:actions.collapseAll")}
-            </button>
-            <div className="mx-2 h-4 w-px bg-border-2" />
-            <Checkbox
-              checked={allVisibleTasksSelected}
-              indeterminate={
-                !allVisibleTasksSelected && someVisibleTasksSelected
-              }
-              disabled={isLoadingBenchmarkTasks || benchmarkTasks.length === 0}
-              size="small"
-              onChange={handleBenchmarkSelectAllTasks}
-            >
-              {t("common:actions.selectAll")}
-            </Checkbox>
-          </div>
-        </div>
-        <Input
-          value={benchmarkTaskSearch}
-          onChange={setBenchmarkTaskSearch}
-          placeholder={t("creator.benchmark.searchPlaceholder")}
-          prefix={<Search size={14} />}
-          allowClear
-          size="small"
-        />
-        <div className="scrollbar-overlay flex max-h-64 flex-col gap-2 overflow-y-auto py-1">
-          {benchmarkTaskGroups.map((group) => {
-            const groupTaskIds = group.tasks.map((task) => task.taskId);
-            const allGroupTasksSelected = groupTaskIds.every((taskId) =>
-              selectedBatchTaskIds.includes(taskId)
-            );
-            const someGroupTasksSelected = groupTaskIds.some((taskId) =>
-              selectedBatchTaskIds.includes(taskId)
-            );
-            const isCollapsed = collapsedBenchmarkTaskGroups.has(group.repo);
-            return (
-              <div key={group.repo} className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 rounded-md px-1 py-1">
-                  <button
-                    type="button"
-                    className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
-                    onClick={() => handleBenchmarkToggleGroup(group.repo)}
-                  >
-                    {isCollapsed ? (
-                      <ChevronRight
-                        size={14}
-                        className="shrink-0 text-text-3"
-                      />
-                    ) : (
-                      <ChevronDown size={14} className="shrink-0 text-text-3" />
-                    )}
-                    <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-text-3">
-                      {group.repo}
-                    </span>
-                    <span className="shrink-0 text-[11px] text-text-3">
-                      {group.tasks.length}
-                    </span>
-                  </button>
-                  <Checkbox
-                    checked={allGroupTasksSelected}
-                    indeterminate={
-                      !allGroupTasksSelected && someGroupTasksSelected
-                    }
-                    disabled={
-                      isLoadingBenchmarkTasks || groupTaskIds.length === 0
-                    }
-                    size="small"
-                    onChange={(checked) =>
-                      handleBenchmarkSelectGroupTasks(groupTaskIds, checked)
-                    }
-                  >
-                    {t("common:actions.selectAll")}
-                  </Checkbox>
-                </div>
-                {!isCollapsed ? (
-                  <div className="flex flex-col divide-y divide-border-2">
-                    {group.tasks.map((task) => {
-                      const checked = selectedBatchTaskIds.includes(
-                        task.taskId
-                      );
-                      return (
-                        <div
-                          key={task.taskId}
-                          className="flex cursor-pointer items-center gap-2 px-2 py-1.5"
-                          onClick={() => {
-                            if (
-                              !isLoadingBenchmarkTasks &&
-                              canLoadBenchmarkTasks
-                            ) {
-                              handleBenchmarkTaskToggle(task.taskId, !checked);
-                            }
-                          }}
-                        >
-                          <Checkbox
-                            checked={checked}
-                            disabled={
-                              isLoadingBenchmarkTasks || !canLoadBenchmarkTasks
-                            }
-                            size="small"
-                            onClick={(event) => event.stopPropagation()}
-                            onChange={(nextChecked) =>
-                              handleBenchmarkTaskToggle(
-                                task.taskId,
-                                nextChecked
-                              )
-                            }
-                            ariaLabel={task.taskId}
-                          />
-                          <span className="min-w-0 flex-1 truncate text-left text-[12px] font-medium text-text-1">
-                            {task.title || task.taskId}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-        {!canLoadBenchmarkTasks ? (
-          <p className="m-0 text-[12px] leading-5 text-text-3">
-            {t("creator.benchmark.taskLoadingUnsupported")}
-          </p>
-        ) : benchmarkError ? (
-          <InlineAlert
-            type="danger"
-            title={t("common:errors.failedToLoad")}
-            className="!py-2"
-          >
-            <p className="m-0 break-words text-[12px] leading-5">
-              {benchmarkError}
-            </p>
-          </InlineAlert>
-        ) : !isLoadingBenchmarkTasks && benchmarkTasks.length === 0 ? (
-          <p className="m-0 text-[12px] leading-5 text-text-3">
-            {t("creator.benchmark.emptyTasks")}
-          </p>
-        ) : null}
-      </div>
-
-      <div className="flex flex-col gap-2 border-t border-solid border-border-2 pt-3">
+  const bodySlot = enabled ? (
+    <>
+      <div
+        id="session-creator-benchmark-panel"
+        className={`flex w-full flex-col gap-3 rounded-[12px] border border-solid border-border-2 p-3 ${SURFACE_TOKENS.surface}`}
+      >
         <div className="grid grid-cols-2 gap-2">
           <div className="flex min-w-0 flex-col gap-1.5">
             <div className="text-[13px] font-semibold text-text-1">
-              {t("creator.benchmark.evaluationModeTitle")}
+              {t("creator.benchmark.kindTitle")}
             </div>
             <Select
-              value={benchmarkEvaluationMode}
-              options={benchmarkEvaluationModeOptions}
-              onChange={handleBenchmarkEvaluationModeChange}
+              value={benchmarkKind}
+              options={benchmarkKindOptions}
+              onChange={handleBenchmarkKindChange}
               size="small"
               radius="lg"
               className="w-full"
@@ -650,152 +437,452 @@ export function useBenchmarkSessionCreatorSlots({
           </div>
           <div className="flex min-w-0 flex-col gap-1.5">
             <div className="text-[13px] font-semibold text-text-1">
-              {t("creator.benchmark.concurrency")}
+              {t("creator.benchmark.runType")}
             </div>
-            <Input
-              value={String(benchmarkBatchConcurrency)}
-              onChange={handleBenchmarkConcurrencyChange}
+            <Select
+              value={benchmarkRunType}
+              options={benchmarkRunTypeOptions}
+              onChange={handleBenchmarkRunTypeChange}
               size="small"
+              radius="lg"
               className="w-full"
             />
           </div>
         </div>
-        {isBenchmarkPatchOnlyMode && (
-          <Input
-            value={benchmarkTargetRepoPath}
-            onChange={setBenchmarkTargetRepoPath}
-            placeholder={t("creator.benchmark.targetRepoPathPlaceholder")}
-            size="small"
-            allowClear
-          />
-        )}
-      </div>
 
-      <div className="flex flex-col gap-2 border-t border-solid border-border-2 pt-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            htmlType="button"
-            variant="secondary"
-            size="small"
-            onClick={onOpenBenchmarkTab}
-          >
-            {t("creator.benchmark.openWorkstationTab")}
-          </Button>
-          <Button
-            htmlType="button"
-            variant="secondary"
-            size="small"
-            onClick={handleBenchmarkPreflight}
-            disabled={
-              isBenchmarkRunLoading ||
-              (canLoadBenchmarkTasks && !selectedBenchmarkTaskId)
-            }
-          >
-            {t("creator.benchmark.runPreflight")}
-          </Button>
-          {isBenchmarkAgentBatchRunning ? (
+        <div className="flex flex-col gap-2 border-t border-solid border-border-2 pt-3">
+          <div className="text-[13px] font-semibold text-text-1">
+            {t("creator.benchmark.sourcePath")} (
+            {t("creator.benchmark.localPath")})
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              value={benchmarkSourcePath}
+              onChange={setBenchmarkSourcePath}
+              placeholder={t("creator.benchmark.sourcePathPlaceholder")}
+              size="small"
+              className="min-w-0 flex-1"
+              allowClear
+            />
             <Button
               htmlType="button"
               variant="secondary"
               size="small"
-              onClick={handleBenchmarkCancelBatch}
-              disabled={isBenchmarkAgentBatchLoading}
-            >
-              {t("common:actions.cancel")}
-            </Button>
-          ) : (
+              iconOnly
+              icon={<FolderOpen size={14} strokeWidth={1.75} />}
+              title={t("common:actions.browse")}
+              aria-label={t("common:actions.browse")}
+              onClick={handleBenchmarkPickSourceFolder}
+            />
             <Button
               htmlType="button"
               variant="primary"
               size="small"
-              onClick={handleBenchmarkStartBatch}
+              onClick={handleBenchmarkLoadTasks}
               disabled={
-                isBenchmarkAgentBatchLoading ||
                 isLoadingBenchmarkTasks ||
-                !canLoadBenchmarkTasks ||
                 !benchmarkSourcePath.trim() ||
-                benchmarkTaskIdsForLaunch.length === 0
+                !canLoadBenchmarkTasks
               }
             >
-              {t("creator.start")}
+              {t("common:actions.load")}
             </Button>
-          )}
+          </div>
         </div>
 
-        {benchmarkAgentBatchProgressText ? (
-          <div className="rounded-lg border border-solid border-border-2 px-3 py-2 text-[12px] leading-5 text-text-2">
-            {benchmarkAgentBatchProgressText}
+        <div className="flex flex-col gap-2">
+          <div className="text-[13px] font-semibold text-text-1">
+            {t("creator.benchmark.workingDirectory")}
           </div>
-        ) : null}
+          <div className="flex items-center gap-2">
+            <Input
+              value={benchmarkWorkingDirectory}
+              onChange={setBenchmarkWorkingDirectory}
+              placeholder={t("creator.benchmark.workingDirectoryPlaceholder")}
+              size="small"
+              className="min-w-0 flex-1"
+              allowClear
+            />
+            <Button
+              htmlType="button"
+              variant="secondary"
+              size="small"
+              iconOnly
+              icon={<FolderOpen size={14} strokeWidth={1.75} />}
+              title={t("common:actions.browse")}
+              aria-label={t("common:actions.browse")}
+              onClick={handleBenchmarkPickWorkingDirectory}
+            />
+          </div>
+        </div>
 
-        {benchmarkAgentBatchError ? (
-          <div className="allow-select-deep scrollbar-overlay max-h-24 w-full overflow-y-auto break-words rounded-lg border border-solid border-danger-3 px-3 py-2 text-left text-[12px] leading-5 text-danger-6">
-            {benchmarkAgentBatchError}
-          </div>
-        ) : benchmarkRunError ? (
-          <div className="allow-select-deep scrollbar-overlay max-h-24 w-full overflow-y-auto break-words rounded-lg border border-solid border-danger-3 px-3 py-2 text-left text-[12px] leading-5 text-danger-6">
-            {benchmarkRunError}
-          </div>
-        ) : benchmarkPreflightChecks.length > 0 ? (
-          <div className="allow-select-deep flex max-h-40 w-full flex-col overflow-hidden rounded-lg border border-solid border-border-2 text-left text-[12px] leading-5">
-            <div className="flex shrink-0 items-center gap-2 border-b border-solid border-border-2 px-3 py-2">
-              <div
-                className={`min-w-0 flex-1 font-medium ${benchmarkPreflightStatusClass}`}
-              >
-                {benchmarkPreflightSummary}
-              </div>
+        <div className="flex flex-col gap-2 border-t border-solid border-border-2 pt-3">
+          <div className="flex items-center gap-2">
+            <div className="shrink-0 text-[13px] font-semibold text-text-1">
+              {t("creator.benchmark.taskSelectionTitle")}
+            </div>
+            <div className="text-[13px] text-text-2">
+              {t("creator.benchmark.selectedTasks", {
+                selected: selectedBatchTaskIds.length,
+                total: benchmarkTasks.length,
+              })}
+            </div>
+            <div className="flex flex-1 items-center justify-end">
               <Button
                 htmlType="button"
                 variant="tertiary"
                 size="small"
                 iconOnly
-                icon={<Clipboard size={13} strokeWidth={1.8} />}
-                title={t("common:actions.copy")}
-                aria-label={t("common:actions.copy")}
-                onClick={handleCopyBenchmarkPreflight}
+                icon={
+                  allBenchmarkTaskGroupsCollapsed ? (
+                    <ListChevronsUpDown size={14} strokeWidth={1.75} />
+                  ) : (
+                    <ListChevronsDownUp size={14} strokeWidth={1.75} />
+                  )
+                }
+                title={
+                  allBenchmarkTaskGroupsCollapsed
+                    ? t("common:actions.expandAll")
+                    : t("common:actions.collapseAll")
+                }
+                aria-label={
+                  allBenchmarkTaskGroupsCollapsed
+                    ? t("common:actions.expandAll")
+                    : t("common:actions.collapseAll")
+                }
+                onClick={handleBenchmarkToggleAllGroups}
+                disabled={benchmarkTaskGroups.length === 0}
               />
-            </div>
-            <div className="scrollbar-overlay flex min-h-0 flex-col gap-2 overflow-y-auto px-3 py-2">
-              {benchmarkPreflightNeedsSetupChecks.length > 0 && (
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5 font-medium text-warning-6">
-                    <TriangleAlert size={13} strokeWidth={1.8} />
-                    {t("creator.benchmark.needsSetup")}
-                  </div>
-                  <div className="flex flex-col gap-0.5 pl-[19px] text-warning-6">
-                    {benchmarkPreflightNeedsSetupChecks.map((check) => (
-                      <div key={check.id} className="break-words">
-                        {check.detail
-                          ? `${check.label}: ${check.detail}`
-                          : check.label}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {benchmarkPreflightReadyChecks.length > 0 && (
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5 font-medium text-success-6">
-                    <CheckCircle2 size={13} strokeWidth={1.8} />
-                    {t("creator.benchmark.ready")}
-                  </div>
-                  <div className="flex flex-col gap-0.5 pl-[19px] text-success-6">
-                    {benchmarkPreflightReadyChecks.map((check) => (
-                      <div key={check.id} className="break-words">
-                        {check.detail
-                          ? `${check.label}: ${check.detail}`
-                          : check.label}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="mx-2 h-4 w-px bg-border-2" />
+              <Checkbox
+                checked={allVisibleTasksSelected}
+                indeterminate={
+                  !allVisibleTasksSelected && someVisibleTasksSelected
+                }
+                disabled={
+                  isLoadingBenchmarkTasks || benchmarkTasks.length === 0
+                }
+                size="small"
+                onChange={handleBenchmarkSelectAllTasks}
+              >
+                {t("common:actions.selectAll")}
+              </Checkbox>
             </div>
           </div>
-        ) : null}
+          <Input
+            value={benchmarkTaskSearch}
+            onChange={setBenchmarkTaskSearch}
+            placeholder={t("creator.benchmark.searchPlaceholder")}
+            prefix={<Search size={14} />}
+            allowClear
+            size="small"
+          />
+          <div className="scrollbar-overlay flex max-h-64 flex-col gap-2 overflow-y-auto py-1">
+            {benchmarkTaskGroups.map((group) => {
+              const groupTaskIds = group.tasks.map((task) => task.taskId);
+              const allGroupTasksSelected = groupTaskIds.every((taskId) =>
+                selectedBatchTaskIds.includes(taskId)
+              );
+              const someGroupTasksSelected = groupTaskIds.some((taskId) =>
+                selectedBatchTaskIds.includes(taskId)
+              );
+              const isCollapsed = collapsedBenchmarkTaskGroups.has(group.repo);
+              return (
+                <div key={group.repo} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2 rounded-md px-2 py-1">
+                    <button
+                      type="button"
+                      className="flex h-4 w-4 shrink-0 items-center justify-center text-text-3 hover:text-text-1"
+                      onClick={() => handleBenchmarkToggleGroup(group.repo)}
+                      aria-label={
+                        isCollapsed
+                          ? t("common:actions.expand")
+                          : t("common:actions.collapse")
+                      }
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight size={14} className="shrink-0" />
+                      ) : (
+                        <ChevronDown size={14} className="shrink-0" />
+                      )}
+                    </button>
+                    <Checkbox
+                      checked={allGroupTasksSelected}
+                      indeterminate={
+                        !allGroupTasksSelected && someGroupTasksSelected
+                      }
+                      disabled={
+                        isLoadingBenchmarkTasks || groupTaskIds.length === 0
+                      }
+                      size="small"
+                      onChange={(checked) =>
+                        handleBenchmarkSelectGroupTasks(groupTaskIds, checked)
+                      }
+                      ariaLabel={t("common:actions.selectAll")}
+                    />
+                    <button
+                      type="button"
+                      className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                      onClick={() => handleBenchmarkToggleGroup(group.repo)}
+                    >
+                      <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-text-3">
+                        {group.repo}
+                      </span>
+                      <span className="shrink-0 text-[11px] text-text-3">
+                        {group.tasks.length}
+                      </span>
+                    </button>
+                  </div>
+                  {!isCollapsed ? (
+                    <div className="flex flex-col divide-y divide-border-2">
+                      {group.tasks.map((task) => {
+                        const checked = selectedBatchTaskIds.includes(
+                          task.taskId
+                        );
+                        return (
+                          <div
+                            key={task.taskId}
+                            className="flex cursor-pointer items-center gap-2 py-1.5 pl-8 pr-2"
+                            onClick={() => {
+                              if (
+                                !isLoadingBenchmarkTasks &&
+                                canLoadBenchmarkTasks
+                              ) {
+                                handleBenchmarkTaskToggle(
+                                  task.taskId,
+                                  !checked
+                                );
+                              }
+                            }}
+                          >
+                            <Checkbox
+                              checked={checked}
+                              disabled={
+                                isLoadingBenchmarkTasks ||
+                                !canLoadBenchmarkTasks
+                              }
+                              size="small"
+                              onClick={(event) => event.stopPropagation()}
+                              onChange={(nextChecked) =>
+                                handleBenchmarkTaskToggle(
+                                  task.taskId,
+                                  nextChecked
+                                )
+                              }
+                              ariaLabel={task.taskId}
+                            />
+                            <span className="min-w-0 flex-1 truncate text-left text-[12px] text-text-1">
+                              {task.taskId}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+          {!canLoadBenchmarkTasks ? (
+            <p className="m-0 text-[12px] leading-5 text-text-3">
+              {t("creator.benchmark.taskLoadingUnsupported")}
+            </p>
+          ) : benchmarkError ? (
+            <InlineAlert
+              type="danger"
+              title={t("common:errors.failedToLoad")}
+              className="!py-2"
+            >
+              <p className="m-0 break-words text-[12px] leading-5">
+                {benchmarkError}
+              </p>
+            </InlineAlert>
+          ) : !isLoadingBenchmarkTasks && benchmarkTasks.length === 0 ? (
+            <p className="m-0 text-[12px] leading-5 text-text-3">
+              {t("creator.benchmark.emptyTasks")}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-solid border-border-2 pt-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="text-[13px] font-semibold text-text-1">
+                {t("creator.benchmark.evaluationModeTitle")}
+              </div>
+              <Select
+                value={benchmarkEvaluationMode}
+                options={benchmarkEvaluationModeOptions}
+                onChange={handleBenchmarkEvaluationModeChange}
+                size="small"
+                radius="lg"
+                className="w-full"
+              />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="text-[13px] font-semibold text-text-1">
+                {t("creator.benchmark.concurrency")}
+              </div>
+              <Input
+                value={String(benchmarkBatchConcurrency)}
+                onChange={handleBenchmarkConcurrencyChange}
+                size="small"
+                className="w-full"
+              />
+            </div>
+          </div>
+          {isBenchmarkPatchOnlyMode && (
+            <Input
+              value={benchmarkTargetRepoPath}
+              onChange={setBenchmarkTargetRepoPath}
+              placeholder={t("creator.benchmark.targetRepoPathPlaceholder")}
+              size="small"
+              allowClear
+            />
+          )}
+        </div>
       </div>
-    </div>
+
+      {!benchmarkPreflightDismissed &&
+        (benchmarkAgentBatchError ||
+          benchmarkRunError ||
+          benchmarkPreflightChecks.length > 0) && (
+          <div
+            id="session-creator-benchmark-preflight-panel"
+            className={`allow-select-deep flex w-full flex-col rounded-[12px] border border-solid border-border-2 text-left text-[12px] leading-5 ${SURFACE_TOKENS.surface}`}
+          >
+            {benchmarkAgentBatchError ? (
+              <div className="allow-select-deep scrollbar-overlay max-h-24 w-full overflow-y-auto break-words rounded-lg border border-solid border-danger-3 px-3 py-2 text-left text-[12px] leading-5 text-danger-6">
+                {benchmarkAgentBatchError}
+              </div>
+            ) : benchmarkRunError ? (
+              <div className="allow-select-deep scrollbar-overlay max-h-24 w-full overflow-y-auto break-words rounded-lg border border-solid border-danger-3 px-3 py-2 text-left text-[12px] leading-5 text-danger-6">
+                {benchmarkRunError}
+              </div>
+            ) : benchmarkPreflightChecks.length > 0 ? (
+              <>
+                <div className="flex shrink-0 items-center gap-2 border-b border-solid border-border-2 px-3 py-2">
+                  <div
+                    className={`min-w-0 flex-1 font-medium ${benchmarkPreflightStatusClass}`}
+                  >
+                    {benchmarkPreflightSummary}
+                  </div>
+                  <Button
+                    htmlType="button"
+                    variant="tertiary"
+                    size="small"
+                    iconOnly
+                    icon={<Clipboard size={13} strokeWidth={1.8} />}
+                    title={t("common:actions.copy")}
+                    aria-label={t("common:actions.copy")}
+                    onClick={handleCopyBenchmarkPreflight}
+                  />
+                  <Button
+                    htmlType="button"
+                    variant="tertiary"
+                    size="small"
+                    iconOnly
+                    icon={<X size={13} strokeWidth={1.8} />}
+                    title={t("common:actions.close")}
+                    aria-label={t("common:actions.close")}
+                    onClick={handleCloseBenchmarkPreflight}
+                  />
+                </div>
+                <div className="flex flex-col gap-2 px-3 py-2">
+                  {benchmarkPreflightNeedsSetupChecks.length > 0 && (
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5 font-medium text-warning-6">
+                        <TriangleAlert size={13} strokeWidth={1.8} />
+                        {t("creator.benchmark.needsSetup")}
+                      </div>
+                      <div className="flex flex-col gap-0.5 pl-[19px] text-warning-6">
+                        {benchmarkPreflightNeedsSetupChecks.map((check) => (
+                          <div key={check.id} className="break-words">
+                            {check.detail
+                              ? `${check.label}: ${check.detail}`
+                              : check.label}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {benchmarkPreflightReadyChecks.length > 0 && (
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5 font-medium text-success-6">
+                        <CheckCircle2 size={13} strokeWidth={1.8} />
+                        {t("creator.benchmark.ready")}
+                      </div>
+                      <div className="flex flex-col gap-0.5 pl-[19px] text-success-6">
+                        {benchmarkPreflightReadyChecks.map((check) => (
+                          <div key={check.id} className="break-words">
+                            {check.detail
+                              ? `${check.label}: ${check.detail}`
+                              : check.label}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : null}
+          </div>
+        )}
+    </>
   ) : null;
 
-  return { footerSlot };
+  const footerSlot = enabled ? (
+    <>
+      <Button
+        htmlType="button"
+        variant="secondary"
+        size="small"
+        onClick={onOpenBenchmarkTab}
+      >
+        {t("creator.benchmark.openWorkstationTab")}
+      </Button>
+      <Button
+        htmlType="button"
+        variant="secondary"
+        size="small"
+        onClick={handleBenchmarkPreflight}
+        disabled={
+          isBenchmarkRunLoading ||
+          (canLoadBenchmarkTasks && !selectedBenchmarkTaskId)
+        }
+      >
+        {t("creator.benchmark.runPreflight")}
+      </Button>
+      {isBenchmarkAgentBatchRunning ? (
+        <Button
+          htmlType="button"
+          variant="secondary"
+          size="small"
+          onClick={handleBenchmarkCancelBatch}
+          disabled={isBenchmarkAgentBatchLoading}
+        >
+          {t("common:actions.cancel")}
+        </Button>
+      ) : (
+        <Button
+          htmlType="button"
+          variant="primary"
+          size="small"
+          onClick={handleBenchmarkStartBatch}
+          disabled={
+            isBenchmarkAgentBatchLoading ||
+            isLoadingBenchmarkTasks ||
+            !canLoadBenchmarkTasks ||
+            !benchmarkSourcePath.trim() ||
+            !benchmarkWorkingDirectory.trim() ||
+            benchmarkTaskIdsForLaunch.length === 0
+          }
+        >
+          {t("creator.start")}
+        </Button>
+      )}
+    </>
+  ) : null;
+
+  return { bodySlot, footerSlot };
 }

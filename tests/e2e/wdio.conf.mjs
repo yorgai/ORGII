@@ -450,10 +450,56 @@ if (orgiiHome) {
   resetDerivedProjectDatabaseForIsolatedRun(orgiiHome);
   process.env.ORGII_HOME = orgiiHome;
 }
+function ensureBenchmarkDockerFixtureRepo() {
+  if (process.env.ORGII_SWE_BENCH_PRO_REPO_PATH) return;
+  const fixtureRoot = join(tmpdir(), "orgii-e2e-swe-bench-pro-fixture");
+  const runScriptsDir = join(fixtureRoot, "run_scripts", "e2e_docker_task");
+  mkdirSync(runScriptsDir, { recursive: true });
+  writeFileSync(
+    join(fixtureRoot, "swe_bench_pro_eval.py"),
+    `#!/usr/bin/env python3
+import argparse
+import json
+import os
+import subprocess
+import sys
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--raw_sample_path", required=True)
+parser.add_argument("--patch_path", required=True)
+parser.add_argument("--output_dir", required=True)
+parser.add_argument("--scripts_dir", required=True)
+parser.add_argument("--dockerhub_username")
+parser.add_argument("--use_local_docker", action="store_true")
+parser.add_argument("--num_workers", default="1")
+args = parser.parse_args()
+
+with open(args.patch_path, "r", encoding="utf-8") as handle:
+    patch_rows = json.load(handle)
+task_id = patch_rows[0]["instance_id"]
+command = ["docker", "run", "--rm", "alpine:3.20", "sh", "-lc", "echo orgii-docker-benchmark-e2e"]
+print("running docker command:", " ".join(command), flush=True)
+completed = subprocess.run(command, text=True, capture_output=True)
+print(completed.stdout, end="", flush=True)
+if completed.stderr:
+    print(completed.stderr, end="", file=sys.stderr, flush=True)
+os.makedirs(args.output_dir, exist_ok=True)
+with open(os.path.join(args.output_dir, "eval_results.json"), "w", encoding="utf-8") as handle:
+    json.dump({task_id: completed.returncode == 0 and "orgii-docker-benchmark-e2e" in completed.stdout}, handle)
+sys.exit(completed.returncode)
+`,
+    "utf8"
+  );
+  writeFileSync(join(runScriptsDir, "run_script.sh"), "#!/usr/bin/env bash\necho e2e run script\n", "utf8");
+  writeFileSync(join(runScriptsDir, "parser.py"), "print('e2e parser')\n", "utf8");
+  process.env.ORGII_SWE_BENCH_PRO_REPO_PATH = fixtureRoot;
+}
+
 process.env.ORGII_IDE_SERVER_PORT = String(ideServerPort);
 process.env.E2E_BASE_URL =
   process.env.E2E_BASE_URL ?? `http://127.0.0.1:${ideServerPort}`;
 ensureE2EWorkspaceRepo();
+ensureBenchmarkDockerFixtureRepo();
 
 const WDIO_PRE_FLIGHT_PORTS = [webDriverPort, frontendPort, ideServerPort];
 const WDIO_PRE_FLIGHT_PROCESS_PATTERNS = [

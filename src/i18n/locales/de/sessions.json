@@ -1860,6 +1860,8 @@
       "singleRun": "Einzellauf",
       "batchRun": "Batch-Ausführung",
       "sourcePathPlaceholder": "Pfad zum Benchmark-Ordner",
+      "workingDirectory": "Arbeitsverzeichnis",
+      "workingDirectoryPlaceholder": "Pfad, in dem Agents Repos klonen oder ändern sollen",
       "localPath": "lokaler Pfad",
       "runType": "Ausführungstyp",
       "kindTitle": "Benchmark",
@@ -1869,7 +1871,15 @@
       },
       "selectedTasks": "{{selected}}/{{total}} ausgewählt",
       "concurrency": "Parallel",
-      "taskLoadingUnsupported": "Das Laden von Aufgaben ist für diesen Benchmark noch nicht verfügbar; nutze den Preflight, um die lokale Quelle zu prüfen."
+      "taskLoadingUnsupported": "Das Laden von Aufgaben ist für diesen Benchmark noch nicht verfügbar; nutze den Preflight, um die lokale Quelle zu prüfen.",
+      "attemptTitle": "Versuch",
+      "batchProgress": "{{total}} gesamt · {{queued}} in Warteschlange · {{running}} läuft · {{launched}} gestartet · {{failed}} fehlgeschlagen · {{cancelled}} abgebrochen",
+      "sessionGroupTitle": "Benchmark-Sitzungen",
+      "sessionGroupProgress": "{{total}} gesamt · {{queued}} in Warteschlange · {{running}} läuft · {{launched}} gestartet · {{failed}} fehlgeschlagen · {{cancelled}} abgebrochen",
+      "sessionLabel": "Session: {{sessionId}}",
+      "noSessionYet": "Noch keine Session",
+      "testResultPending": "Testergebnis ausstehend",
+      "taskBreadcrumb": "{{attempt}} > {{task}}"
     },
     "skillsAndTools": "Skills & Tools"
   },

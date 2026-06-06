@@ -1860,6 +1860,8 @@
       "singleRun": "单次运行",
       "batchRun": "批量运行",
       "sourcePathPlaceholder": "Benchmark 文件夹路径",
+      "workingDirectory": "工作目录",
+      "workingDirectoryPlaceholder": "Agent 克隆或修改仓库的路径",
       "localPath": "本地路径",
       "runType": "运行类型",
       "kindTitle": "Benchmark",
@@ -1869,7 +1871,15 @@
       },
       "selectedTasks": "已选择 {{selected}}/{{total}} 个",
       "concurrency": "并行数",
-      "taskLoadingUnsupported": "此 Benchmark 暂不支持加载任务；请使用 preflight 检查本地来源。"
+      "taskLoadingUnsupported": "此 Benchmark 暂不支持加载任务；请使用 preflight 检查本地来源。",
+      "attemptTitle": "Attempt",
+      "batchProgress": "共 {{total}} 个 · {{queued}} 个排队 · {{running}} 个运行中 · {{launched}} 个已启动 · {{failed}} 个失败 · {{cancelled}} 个已取消",
+      "sessionGroupTitle": "Benchmark sessions",
+      "sessionGroupProgress": "共 {{total}} 个 · {{queued}} 个排队 · {{running}} 个运行中 · {{launched}} 个已启动 · {{failed}} 个失败 · {{cancelled}} 个已取消",
+      "sessionLabel": "Session：{{sessionId}}",
+      "noSessionYet": "暂无 Session",
+      "testResultPending": "测试结果待定",
+      "taskBreadcrumb": "{{attempt}} > {{task}}"
     },
     "skillsAndTools": "Skills 与工具"
   },

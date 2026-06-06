@@ -5,11 +5,15 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock};
 
 use agent_core::definitions::orgs::{AgentOrgsStore, OrgMemberLaunchOverride};
+use agent_core::session::persistence::{
+    self as session_persistence, session_type, UnifiedSessionRecord,
+};
 use agent_core::state::commands::session::launch::{
     session_launch_impl, SessionLaunchParams, SessionLaunchResult,
 };
 use agent_core::state::AgentAppState;
-use chrono::Utc;
+use chrono::{Local, Utc};
+use core_types::key_source::KeySource;
 use git::worktree::create_session_worktree;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -46,6 +50,7 @@ const SWE_BENCH_PRO_DATASET_CANDIDATES: &[&str] = &[
     "swe_bench_pro.jsonl",
     "swe-bench-pro.jsonl",
 ];
+const E2E_DOCKER_BENCHMARK_TASK_ID: &str = "e2e_docker_task";
 const BENCHMARK_PYTHON_PACKAGES: &[&str] = &["docker", "numpy", "pandas"];
 const MAX_RUN_LOG_LINES: usize = 1_000;
 
@@ -165,7 +170,13 @@ pub struct BenchmarkCancelAgentBatchRequest {
     pub batch_id: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkListAgentBatchHistoriesRequest {
+    pub limit: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BenchmarkAgentBatchItem {
     pub task_id: String,
@@ -178,12 +189,14 @@ pub struct BenchmarkAgentBatchItem {
     pub logs: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BenchmarkAgentBatchStatus {
     pub batch_id: String,
     pub benchmark_kind: String,
     pub source_path: String,
+    pub master_session_id: String,
+    pub master_session_name: String,
     pub status: String,
     pub total_tasks: usize,
     pub queued: usize,
@@ -366,7 +379,7 @@ pub async fn benchmark_start_run(
         request.repo_path.as_deref(),
     )
     .await?;
-    if !plan.preflight.ready {
+    if !plan.preflight.ready && !is_e2e_docker_benchmark_task(&plan) {
         return Err(format!(
             "Benchmark preflight is not ready for {} execution",
             plan.evaluation_mode
@@ -454,18 +467,37 @@ pub async fn benchmark_cancel_run(
 #[tauri::command]
 pub async fn benchmark_start_agent_batch(
     app_handle: tauri::AppHandle,
-    request: BenchmarkStartAgentBatchRequest,
+    mut request: BenchmarkStartAgentBatchRequest,
 ) -> Result<BenchmarkAgentBatchStatus, String> {
     ensure_swe_bench_pro(&request.kind)?;
     if request.task_ids.is_empty() {
         return Err("Select at least one benchmark task to launch.".to_string());
     }
+    let workspace_path = request
+        .launch
+        .workspace_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|path| !path.is_empty())
+        .ok_or_else(|| "Set a working directory before launching benchmark agents.".to_string())?
+        .to_string();
+    fs::create_dir_all(&workspace_path).map_err(|error| {
+        format!("Failed to create benchmark working directory {workspace_path}: {error}")
+    })?;
+    request.launch.workspace_path = Some(workspace_path);
 
     let concurrency = request
         .concurrency
         .unwrap_or(DEFAULT_AGENT_BATCH_CONCURRENCY)
         .clamp(1, MAX_AGENT_BATCH_CONCURRENCY);
     let batch_id = Uuid::new_v4().to_string();
+    let master_session_name = benchmark_session_name(&request.kind);
+    let master_session_id = create_benchmark_master_session(
+        &master_session_name,
+        &request.kind,
+        &request.source_path,
+        &request.launch,
+    )?;
     let created_at = Utc::now().to_rfc3339();
     let items = request
         .task_ids
@@ -485,6 +517,8 @@ pub async fn benchmark_start_agent_batch(
         batch_id: batch_id.clone(),
         benchmark_kind: request.kind.clone(),
         source_path: request.source_path.clone(),
+        master_session_id: master_session_id.clone(),
+        master_session_name: master_session_name.clone(),
         status: BENCHMARK_AGENT_BATCH_STATUS_RUNNING.to_string(),
         total_tasks: items.len(),
         queued: items.len(),
@@ -504,6 +538,7 @@ pub async fn benchmark_start_agent_batch(
         .lock()
         .await
         .insert(batch_id.clone(), status);
+    persist_agent_batch_by_id(&batch_id).await?;
 
     let semaphore = Arc::new(Semaphore::new(concurrency));
     for task_id in request.task_ids {
@@ -512,6 +547,7 @@ pub async fn benchmark_start_agent_batch(
         let kind = request.kind.clone();
         let source_path = request.source_path.clone();
         let launch = request.launch.clone();
+        let master_session_id = master_session_id.clone();
         let semaphore = Arc::clone(&semaphore);
         tauri::async_runtime::spawn(async move {
             let Ok(_permit) = semaphore.acquire_owned().await else {
@@ -540,7 +576,12 @@ pub async fn benchmark_start_agent_batch(
                 return;
             }
             let prompt = benchmark_agent_prompt(&kind, &detail);
-            let params = benchmark_launch_params(&launch, &detail.index.task_id, prompt);
+            let params = benchmark_launch_params(
+                &launch,
+                prompt,
+                Some(task_id.clone()),
+                Some(master_session_id.clone()),
+            );
             let state = app_handle.state::<AgentAppState>();
             let org_store = app_handle.state::<AgentOrgsStore>();
             match session_launch_impl(&state, Some(org_store.inner()), params).await {
@@ -566,12 +607,27 @@ pub async fn benchmark_start_agent_batch(
 pub async fn benchmark_get_agent_batch_status(
     request: BenchmarkGetAgentBatchStatusRequest,
 ) -> Result<BenchmarkAgentBatchStatus, String> {
-    BENCHMARK_AGENT_BATCHES
+    if let Some(status) = BENCHMARK_AGENT_BATCHES
         .lock()
         .await
         .get(&request.batch_id)
         .cloned()
-        .ok_or_else(|| format!("Benchmark agent batch not found: {}", request.batch_id))
+    {
+        return Ok(status);
+    }
+    load_agent_batch_history(&request.batch_id)
+}
+
+#[tauri::command]
+pub async fn benchmark_list_agent_batch_histories(
+    request: BenchmarkListAgentBatchHistoriesRequest,
+) -> Result<Vec<BenchmarkAgentBatchStatus>, String> {
+    let mut histories = load_agent_batch_histories()?;
+    histories.sort_by(|left, right| right.created_at.cmp(&left.created_at));
+    if let Some(limit) = request.limit {
+        histories.truncate(limit);
+    }
+    Ok(histories)
 }
 
 #[tauri::command]
@@ -594,7 +650,10 @@ pub async fn benchmark_cancel_agent_batch(
     batch.status = BENCHMARK_AGENT_BATCH_STATUS_CANCELLED.to_string();
     batch.finished_at = Some(now);
     refresh_agent_batch_counts(batch);
-    Ok(batch.clone())
+    let status = batch.clone();
+    drop(batches);
+    persist_agent_batch_status(&status)?;
+    Ok(status)
 }
 
 async fn is_agent_batch_cancelled(batch_id: &str) -> bool {
@@ -658,14 +717,24 @@ async fn update_agent_batch_item<F>(batch_id: &str, task_id: &str, update: F)
 where
     F: FnOnce(&mut BenchmarkAgentBatchItem),
 {
-    let mut batches = BENCHMARK_AGENT_BATCHES.lock().await;
-    let Some(batch) = batches.get_mut(batch_id) else {
-        return;
+    let status = {
+        let mut batches = BENCHMARK_AGENT_BATCHES.lock().await;
+        let Some(batch) = batches.get_mut(batch_id) else {
+            return;
+        };
+        if let Some(item) = batch.items.iter_mut().find(|item| item.task_id == task_id) {
+            update(item);
+        }
+        refresh_agent_batch_counts(batch);
+        batch.clone()
     };
-    if let Some(item) = batch.items.iter_mut().find(|item| item.task_id == task_id) {
-        update(item);
+    if let Err(error) = persist_agent_batch_status(&status) {
+        tracing::warn!(
+            batch_id = %status.batch_id,
+            error = %error,
+            "[benchmark] failed to persist agent batch status"
+        );
     }
-    refresh_agent_batch_counts(batch);
 }
 
 fn refresh_agent_batch_counts(batch: &mut BenchmarkAgentBatchStatus) {
@@ -716,8 +785,9 @@ fn refresh_agent_batch_counts(batch: &mut BenchmarkAgentBatchStatus) {
 
 fn benchmark_launch_params(
     launch: &BenchmarkAgentLaunchSelection,
-    task_id: &str,
     content: String,
+    session_name: Option<String>,
+    parent_session_id: Option<String>,
 ) -> SessionLaunchParams {
     SessionLaunchParams {
         category: launch.category.clone(),
@@ -731,7 +801,7 @@ fn benchmark_launch_params(
         branch: launch.branch.clone(),
         hosted_token: launch.hosted_token.clone(),
         tier: launch.tier.clone(),
-        name: Some(format!("Benchmark: {task_id}")),
+        name: session_name,
         background: true,
         images: None,
         ide_context: None,
@@ -746,8 +816,66 @@ fn benchmark_launch_params(
         agent_role: None,
         worktree_path: launch.worktree_path.clone(),
         project_slug: launch.project_slug.clone(),
+        parent_session_id,
         additional_directories: launch.additional_directories.clone(),
     }
+}
+
+fn benchmark_session_name(kind: &str) -> String {
+    let benchmark_name = benchmark_display_name(kind);
+    let timestamp = Local::now().format("%H:%M");
+    format!("{benchmark_name} - {timestamp}")
+}
+
+fn benchmark_display_name(kind: &str) -> &'static str {
+    match kind {
+        BENCHMARK_KIND_SWE_BENCH_PRO => "SWE-bench Pro",
+        BENCHMARK_KIND_TERMINAL_BENCH => "Terminal-Bench",
+        _ => "Benchmark",
+    }
+}
+
+fn create_benchmark_master_session(
+    name: &str,
+    kind: &str,
+    source_path: &str,
+    launch: &BenchmarkAgentLaunchSelection,
+) -> Result<String, String> {
+    let session_id = format!("benchmark-{}", Uuid::new_v4());
+    let now = Utc::now().to_rfc3339();
+    let key_source = launch
+        .key_source
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+        .and_then(KeySource::parse)
+        .unwrap_or_default();
+    let user_input = format!(
+        "Benchmark run coordinator\n\nBenchmark: {}\nSource: {}",
+        benchmark_display_name(kind),
+        source_path
+    );
+    let session = UnifiedSessionRecord {
+        session_id: session_id.clone(),
+        name: name.to_string(),
+        status: agent_core::session::SessionStatus::Running
+            .as_str()
+            .to_string(),
+        model: launch.model.clone(),
+        account_id: launch.account_id.clone(),
+        user_input: Some(user_input),
+        created_at: now.clone(),
+        updated_at: now,
+        session_type: session_type::CODING.to_string(),
+        workspace_path: launch.workspace_path.clone(),
+        project_slug: launch.project_slug.clone(),
+        agent_definition_id: launch.agent_definition_id.clone(),
+        key_source,
+        agent_exec_mode: launch.mode.clone().filter(|mode| !mode.trim().is_empty()),
+        native_harness_type: launch.native_harness_type.clone(),
+        ..Default::default()
+    };
+    session_persistence::upsert_session(&session).map_err(|err| err.to_string())?;
+    Ok(session_id)
 }
 
 fn benchmark_agent_prompt(kind: &str, detail: &BenchmarkTaskDetail) -> String {
@@ -756,8 +884,14 @@ fn benchmark_agent_prompt(kind: &str, detail: &BenchmarkTaskDetail) -> String {
         .repo
         .as_deref()
         .unwrap_or("the target repository");
+    let base_commit = detail
+        .index
+        .metadata
+        .get("base_commit")
+        .and_then(string_value)
+        .unwrap_or("the task base commit");
     format!(
-        "You are running an official benchmark task. The final result will be evaluated by the benchmark harness, not by ORGII.\n\nBenchmark: {kind}\nTask ID: {task_id}\nRepository: {repo}\n\nInstructions:\n- Make the minimal code changes needed to satisfy the task.\n- Do not modify unrelated files.\n- Do not invent new tests or change benchmark tests unless the task explicitly requires it.\n- When you finish, summarize the changed files and the validation you ran.\n- Leave the repository in a state where a git diff captures your solution patch.\n\nTask:\n{instruction}",
+        "You are running an official benchmark task. The final result will be evaluated by the benchmark harness, not by ORGII.\n\nBenchmark: {kind}\nTask ID: {task_id}\nRepository: {repo}\nBase commit: {base_commit}\n\nInstructions:\n- Work inside the configured working directory. If the target repository is not already present there, clone it from its public upstream repository into that working directory before editing.\n- After cloning or locating the repository, check out the task base commit before applying changes.\n- Make the minimal code changes needed to satisfy the task.\n- Do not modify unrelated files.\n- Do not invent new tests or change benchmark tests unless the task explicitly requires it.\n- When you finish, summarize the changed files and the validation you ran.\n- Leave the repository in a state where a git diff captures your solution patch.\n\nTask:\n{instruction}",
         task_id = detail.index.task_id,
         instruction = detail.instruction
     )
@@ -1300,6 +1434,11 @@ async fn run_swe_bench_process(plan: BenchmarkRunPlan) {
     append_run_log(&plan.run_id, format!("Output dir: {}", plan.output_dir)).await;
     append_run_log(&plan.run_id, format!("Patch JSON: {}", plan.patch_path)).await;
 
+    if is_e2e_docker_benchmark_task(&plan) {
+        run_e2e_docker_benchmark_process(plan).await;
+        return;
+    }
+
     let Some(evaluator_script) = plan.evaluator_script.as_deref() else {
         finish_run(
             &plan.run_id,
@@ -1430,6 +1569,105 @@ async fn run_swe_bench_process(plan: BenchmarkRunPlan) {
             .await;
         }
     }
+}
+
+async fn run_e2e_docker_benchmark_process(plan: BenchmarkRunPlan) {
+    append_run_log(
+        &plan.run_id,
+        "Running ORGII Docker benchmark E2E evaluator fixture.".to_string(),
+    )
+    .await;
+    append_run_log(&plan.run_id, "orgii-docker-benchmark-e2e".to_string()).await;
+
+    let mut command = Command::new("docker");
+    command
+        .arg("info")
+        .arg("--format")
+        .arg("{{.ServerVersion}}")
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(error) => {
+            finish_run(
+                &plan.run_id,
+                BENCHMARK_RUN_STATUS_FAILED,
+                None,
+                Some(format!("Failed to spawn Docker evaluator fixture: {error}")),
+            )
+            .await;
+            return;
+        }
+    };
+
+    if let Some(process_id) = child.id() {
+        set_run_process_id(&plan.run_id, process_id).await;
+    }
+
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+    let run_id_for_stdout = plan.run_id.clone();
+    let run_id_for_stderr = plan.run_id.clone();
+    let stdout_task = tokio::spawn(async move {
+        if let Some(stdout_pipe) = stdout {
+            let mut lines = TokioBufReader::new(stdout_pipe).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                append_run_log(&run_id_for_stdout, format!("stdout: {line}")).await;
+            }
+        }
+    });
+    let stderr_task = tokio::spawn(async move {
+        if let Some(stderr_pipe) = stderr {
+            let mut lines = TokioBufReader::new(stderr_pipe).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                append_run_log(&run_id_for_stderr, format!("stderr: {line}")).await;
+            }
+        }
+    });
+
+    let wait_result = child.wait().await;
+    let _ = tokio::join!(stdout_task, stderr_task);
+    match wait_result {
+        Ok(exit_status) => {
+            let exit_code = exit_status.code();
+            let result = serde_json::json!(exit_status.success());
+            let status = if exit_status.success() {
+                BENCHMARK_RUN_STATUS_PASSED
+            } else {
+                BENCHMARK_RUN_STATUS_FAILED
+            };
+            let results_path = Path::new(&plan.output_dir).join("eval_results.json");
+            if let Err(error) = fs::write(
+                &results_path,
+                serde_json::json!({ plan.task_id.clone(): result }).to_string(),
+            ) {
+                append_run_log(
+                    &plan.run_id,
+                    format!("Failed to write E2E eval results: {error}"),
+                )
+                .await;
+            }
+            finish_run_with_result(&plan.run_id, status, exit_code, Some(result), None).await;
+        }
+        Err(error) => {
+            finish_run(
+                &plan.run_id,
+                BENCHMARK_RUN_STATUS_FAILED,
+                None,
+                Some(format!(
+                    "Failed while waiting for Docker evaluator fixture: {error}"
+                )),
+            )
+            .await;
+        }
+    }
+}
+
+fn is_e2e_docker_benchmark_task(plan: &BenchmarkRunPlan) -> bool {
+    cfg!(debug_assertions)
+        && plan.evaluation_mode == EVALUATION_MODE_LOCAL_DOCKER
+        && plan.task_id == E2E_DOCKER_BENCHMARK_TASK_ID
 }
 
 async fn set_run_process_id(run_id: &str, process_id: u32) {
@@ -1906,7 +2144,9 @@ fn modal_config_path() -> PathBuf {
 }
 
 fn swe_bench_repo_path() -> PathBuf {
-    PathBuf::from(SWE_BENCH_PRO_REPO_PATH)
+    std::env::var("ORGII_SWE_BENCH_PRO_REPO_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from(SWE_BENCH_PRO_REPO_PATH))
 }
 
 fn swe_bench_evaluator_script_path() -> PathBuf {
@@ -1919,6 +2159,96 @@ fn swe_bench_run_scripts_dir() -> PathBuf {
 
 fn benchmark_runs_dir() -> PathBuf {
     app_paths::orgii_root().join("benchmark-runs")
+}
+
+fn benchmark_agent_batch_histories_dir() -> PathBuf {
+    benchmark_runs_dir().join("agent-batches")
+}
+
+fn benchmark_agent_batch_history_path(batch_id: &str) -> PathBuf {
+    benchmark_agent_batch_histories_dir().join(format!("{batch_id}.json"))
+}
+
+fn persist_agent_batch_status(status: &BenchmarkAgentBatchStatus) -> Result<(), String> {
+    let dir = benchmark_agent_batch_histories_dir();
+    fs::create_dir_all(&dir).map_err(|err| {
+        format!(
+            "Failed to create benchmark agent batch history dir {}: {err}",
+            dir.display()
+        )
+    })?;
+    let path = benchmark_agent_batch_history_path(&status.batch_id);
+    let tmp_path = path.with_extension("json.tmp");
+    let serialized = serde_json::to_string_pretty(status)
+        .map_err(|err| format!("Failed to serialize benchmark agent batch history: {err}"))?;
+    fs::write(&tmp_path, serialized).map_err(|err| {
+        format!(
+            "Failed to write benchmark agent batch history tmp file {}: {err}",
+            tmp_path.display()
+        )
+    })?;
+    fs::rename(&tmp_path, &path).map_err(|err| {
+        format!(
+            "Failed to replace benchmark agent batch history file {}: {err}",
+            path.display()
+        )
+    })
+}
+
+async fn persist_agent_batch_by_id(batch_id: &str) -> Result<(), String> {
+    let status = BENCHMARK_AGENT_BATCHES
+        .lock()
+        .await
+        .get(batch_id)
+        .cloned()
+        .ok_or_else(|| format!("Benchmark agent batch not found: {batch_id}"))?;
+    persist_agent_batch_status(&status)
+}
+
+fn load_agent_batch_history(batch_id: &str) -> Result<BenchmarkAgentBatchStatus, String> {
+    let path = benchmark_agent_batch_history_path(batch_id);
+    let raw = fs::read_to_string(&path)
+        .map_err(|err| format!("Benchmark agent batch not found: {batch_id} ({})", err))?;
+    serde_json::from_str(&raw).map_err(|err| {
+        format!(
+            "Failed to parse benchmark agent batch history {}: {err}",
+            path.display()
+        )
+    })
+}
+
+fn load_agent_batch_histories() -> Result<Vec<BenchmarkAgentBatchStatus>, String> {
+    let dir = benchmark_agent_batch_histories_dir();
+    if !dir.exists() {
+        return Ok(Vec::new());
+    }
+    let entries = fs::read_dir(&dir).map_err(|err| {
+        format!(
+            "Failed to read benchmark agent batch history dir {}: {err}",
+            dir.display()
+        )
+    })?;
+    let mut histories = Vec::new();
+    for entry in entries {
+        let entry = entry.map_err(|err| format!("Failed to read history dir entry: {err}"))?;
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+        let raw = fs::read_to_string(&path).map_err(|err| {
+            format!(
+                "Failed to read benchmark agent batch history {}: {err}",
+                path.display()
+            )
+        })?;
+        histories.push(serde_json::from_str(&raw).map_err(|err| {
+            format!(
+                "Failed to parse benchmark agent batch history {}: {err}",
+                path.display()
+            )
+        })?);
+    }
+    Ok(histories)
 }
 
 fn benchmark_python_env_dir() -> PathBuf {

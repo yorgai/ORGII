@@ -304,6 +304,7 @@ pub async fn test_agent_org_launch_coordinator(
         agent_role: None,
         worktree_path: None,
         project_slug: None,
+        parent_session_id: None,
         additional_directories: Vec::new(),
     };
 

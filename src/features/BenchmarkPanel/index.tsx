@@ -1,23 +1,49 @@
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
   BENCHMARK_AGENT_BATCH_STATUS,
   type BenchmarkAgentBatchItem,
 } from "@src/api/tauri/benchmark";
-import Button from "@src/components/Button";
 import Markdown from "@src/components/MarkDown";
+import ModelIcon from "@src/components/ModelIcon";
+import TabPill from "@src/components/TabPill";
+import { CodeMirrorEditor } from "@src/features/CodeMirror";
 import { useBenchmarkAgentBatchRun } from "@src/hooks/benchmark/useBenchmarkAgentBatchRun";
 import { useBenchmarkTasks } from "@src/hooks/benchmark/useBenchmarkTasks";
-import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import { usePublishWorkstationTabHeader } from "@src/hooks/workStation";
+import {
+  Placeholder,
+  SessionGroupPage,
+  type SessionTableItem,
+} from "@src/modules/shared/layouts/blocks";
 import {
   benchmarkActiveBatchTaskIdAtom,
   benchmarkAgentBatchStatusAtom,
 } from "@src/store/benchmark";
+import {
+  activeSessionIdAtom,
+  loadSessions,
+  sessionsAtom,
+  workstationActiveSessionIdAtom,
+} from "@src/store/session";
+import {
+  CHAT_PANEL_CONTENT_MODE,
+  chatPanelContentModeAtom,
+} from "@src/store/ui/chatPanelAtom";
+import {
+  formatReplayDateLabel,
+  toIntlLocaleTag,
+} from "@src/util/data/formatters/date";
+import { formatModelNameFull } from "@src/util/formatModelName";
+
+type BenchmarkPanelSurface = "taskInfo" | "runList";
 
 interface BenchmarkPanelProps {
   className?: string;
+  surface?: BenchmarkPanelSurface;
+  publishHeader?: boolean;
 }
 
 function formatTaskMarkdown(
@@ -33,33 +59,52 @@ function formatTaskMarkdown(
   return `# ${title || taskId}\n\n${metadata}\n\n---\n\n${instruction}`;
 }
 
-function itemStatusClass(status: BenchmarkAgentBatchItem["status"]): string {
+function getDisplayItemStatus(
+  status: BenchmarkAgentBatchItem["status"]
+): BenchmarkAgentBatchItem["status"] {
   if (status === BENCHMARK_AGENT_BATCH_STATUS.LAUNCHED) {
-    return "border-success-3 bg-success-1 text-success-7";
+    return BENCHMARK_AGENT_BATCH_STATUS.RUNNING;
+  }
+  return status;
+}
+
+function itemStatusColor(status: BenchmarkAgentBatchItem["status"]): string {
+  if (status === BENCHMARK_AGENT_BATCH_STATUS.RUNNING) {
+    return "var(--color-primary-6)";
   }
   if (status === BENCHMARK_AGENT_BATCH_STATUS.FAILED) {
-    return "border-danger-3 bg-danger-1 text-danger-7";
+    return "var(--color-danger-6)";
   }
   if (status === BENCHMARK_AGENT_BATCH_STATUS.CANCELLED) {
-    return "border-warning-3 bg-warning-1 text-warning-7";
+    return "var(--color-warning-6)";
   }
-  return "border-border-2 bg-fill-1 text-text-2";
+  return "var(--color-fill-4)";
 }
 
 export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
   className,
+  surface = "taskInfo",
+  publishHeader = true,
 }) => {
-  const { t } = useTranslation(["sessions", "common"]);
+  const { t, i18n } = useTranslation(["sessions", "common"]);
   const batchStatus = useAtomValue(benchmarkAgentBatchStatusAtom);
+  const sessions = useAtomValue(sessionsAtom);
   const [activeTaskId, setActiveTaskId] = useAtom(
     benchmarkActiveBatchTaskIdAtom
   );
   const setBenchmarkBatchStatus = useSetAtom(benchmarkAgentBatchStatusAtom);
+  const setActiveSessionId = useSetAtom(activeSessionIdAtom);
+  const setWorkstationActiveSessionId = useSetAtom(
+    workstationActiveSessionIdAtom
+  );
+  const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
   const { refreshBatchStatus } = useBenchmarkAgentBatchRun();
   const { error, isLoadingDetail, selectedTask, setSelectedTaskId } =
     useBenchmarkTasks({
+      loadDetail: surface === "taskInfo",
       loadOnMount: false,
     });
+  const [taskPreviewMode, setTaskPreviewMode] = useState(true);
 
   const activeItem = useMemo(
     () =>
@@ -68,6 +113,24 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
         : null,
     [activeTaskId, batchStatus?.items]
   );
+
+  useEffect(() => {
+    if (surface !== "runList" || activeTaskId || !batchStatus?.items.length) {
+      return;
+    }
+    const firstTaskId = batchStatus.items[0]?.taskId;
+    if (!firstTaskId) {
+      return;
+    }
+    setActiveTaskId(firstTaskId);
+    setSelectedTaskId(firstTaskId);
+  }, [
+    activeTaskId,
+    batchStatus?.items,
+    setActiveTaskId,
+    setSelectedTaskId,
+    surface,
+  ]);
 
   const markdownContent = useMemo(() => {
     if (!selectedTask) return "";
@@ -78,13 +141,66 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
       selectedTask.instruction
     );
   }, [selectedTask]);
+  const handleToggleTaskPreview = useCallback(() => {
+    setTaskPreviewMode((currentMode) => !currentMode);
+  }, []);
+  const headerPreviewToggle = useMemo(
+    () => (
+      <div className="flex h-7 shrink-0 items-center">
+        <TabPill
+          activeTab={taskPreviewMode ? "preview" : "source"}
+          tabs={[
+            {
+              key: "source",
+              label: t("common:common.raw"),
+            },
+            {
+              key: "preview",
+              label: t("common:common.preview"),
+            },
+          ]}
+          onChange={(key) => {
+            if (key === "preview" && !taskPreviewMode)
+              handleToggleTaskPreview();
+            if (key === "source" && taskPreviewMode) handleToggleTaskPreview();
+          }}
+          variant="pill"
+          color="fill"
+          fillWidth={false}
+          size="small"
+        />
+      </div>
+    ),
+    [handleToggleTaskPreview, t, taskPreviewMode]
+  );
+
+  usePublishWorkstationTabHeader({
+    host: "code",
+    content: {
+      trailing: headerPreviewToggle,
+    },
+    enabled: surface === "taskInfo" && publishHeader,
+  });
 
   const handleSelectTask = useCallback(
     (item: BenchmarkAgentBatchItem) => {
       setActiveTaskId(item.taskId);
       setSelectedTaskId(item.taskId);
+      if (!item.sessionId) {
+        return;
+      }
+      setActiveSessionId(item.sessionId);
+      setWorkstationActiveSessionId(item.sessionId);
+      setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
+      void loadSessions({ forceRefresh: true });
     },
-    [setActiveTaskId, setSelectedTaskId]
+    [
+      setActiveSessionId,
+      setActiveTaskId,
+      setChatPanelContentMode,
+      setSelectedTaskId,
+      setWorkstationActiveSessionId,
+    ]
   );
 
   const handleRefresh = useCallback(() => {
@@ -95,15 +211,193 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
     });
   }, [refreshBatchStatus, setBenchmarkBatchStatus]);
 
-  if (!batchStatus) {
-    return (
-      <div
-        className={`${className ?? ""} flex h-full min-h-0 flex-col overflow-hidden`}
-      >
+  const displayedRunningCount = batchStatus
+    ? batchStatus.running + batchStatus.launched
+    : 0;
+
+  const sessionsById = useMemo(
+    () => new Map(sessions.map((session) => [session.session_id, session])),
+    [sessions]
+  );
+  const dateTimeLabelOptions = useMemo(
+    () => ({
+      todayLabel: t("common:relativeDate.today"),
+      yesterdayLabel: t("common:relativeDate.yesterday"),
+      locale: toIntlLocaleTag(i18n.resolvedLanguage),
+    }),
+    [i18n.resolvedLanguage, t]
+  );
+  const benchmarkSessionListItems = useMemo<SessionTableItem[]>(
+    () =>
+      batchStatus?.items.map((item) => {
+        const displayStatus = getDisplayItemStatus(item.status);
+        const session = item.sessionId
+          ? sessionsById.get(item.sessionId)
+          : undefined;
+        const workspacePath = session?.worktreePath ?? session?.repoPath;
+        const workspaceLabel = workspacePath
+          ? (workspacePath.split(/[\\/]/).filter(Boolean).pop() ??
+            workspacePath)
+          : session?.repo_name;
+        const modelLabel = session?.model
+          ? formatModelNameFull(session.model)
+          : undefined;
+
+        return {
+          id: item.taskId,
+          title: item.taskId,
+          description: undefined,
+          statusLabel: displayStatus,
+          statusColor: itemStatusColor(displayStatus),
+          agentIcon: session?.cliAgentType ? (
+            <ModelIcon agentType={session.cliAgentType} size={14} />
+          ) : undefined,
+          agentLabel: session?.agentDisplayName ?? session?.cliAgentType,
+          modelIcon: session?.model ? (
+            <ModelIcon
+              modelName={session.model}
+              agentType={session.cliAgentType}
+              size={14}
+            />
+          ) : undefined,
+          modelLabel,
+          workspaceLabel,
+          workspaceTitle: workspacePath,
+          startedLabel: formatReplayDateLabel(
+            item.startedAt ?? session?.created_at,
+            {
+              ...dateTimeLabelOptions,
+              withSeconds: false,
+              monthStyle: "short",
+            }
+          ),
+          lastUpdatedLabel: formatReplayDateLabel(
+            item.finishedAt ?? session?.updated_at ?? item.startedAt,
+            {
+              ...dateTimeLabelOptions,
+              withSeconds: false,
+              monthStyle: "short",
+            }
+          ),
+          active: activeTaskId === item.taskId,
+          testId: "benchmark-run-task-row",
+          dataAttributes: {
+            "data-benchmark-task-id": item.taskId,
+            "data-benchmark-task-status": displayStatus,
+          },
+        };
+      }) ?? [],
+    [activeTaskId, batchStatus?.items, dateTimeLabelOptions, sessionsById]
+  );
+
+  const handleSelectBenchmarkSessionListItem = useCallback(
+    (listItem: SessionTableItem) => {
+      const benchmarkItem = batchStatus?.items.find(
+        (item) => item.taskId === listItem.id
+      );
+      if (!benchmarkItem) return;
+      handleSelectTask(benchmarkItem);
+    },
+    [batchStatus?.items, handleSelectTask]
+  );
+
+  const taskDetailContent = useMemo(() => {
+    if (error) {
+      return (
+        <Placeholder
+          variant="error"
+          placement="detail-panel"
+          title={t("common:errors.failedToLoad")}
+          subtitle={error}
+          fillParentHeight
+        />
+      );
+    }
+
+    if (isLoadingDetail) {
+      return (
+        <Placeholder
+          variant="loading"
+          placement="detail-panel"
+          title={t("creator.benchmark.loading")}
+          fillParentHeight
+        />
+      );
+    }
+
+    if (!selectedTask) {
+      return (
         <Placeholder
           variant="empty"
           placement="detail-panel"
           title={t("creator.benchmark.selectTaskHint")}
+          fillParentHeight
+        />
+      );
+    }
+
+    return (
+      <div
+        className="relative h-full min-h-0"
+        data-testid="benchmark-run-task-detail"
+      >
+        {activeItem?.error ? (
+          <div className="bg-fill-0 absolute left-4 right-4 top-3 z-10 rounded-lg border border-solid border-border-2 px-3 py-2 text-[12px] leading-5 text-danger-6 shadow-sm">
+            {activeItem.error}
+          </div>
+        ) : null}
+        {taskPreviewMode ? (
+          <div className="markdown-preview-container scrollbar-overlay h-full min-h-0 overflow-y-auto p-6">
+            <div className="allow-select-deep mx-auto max-w-[920px] select-text text-[13px] leading-6 text-text-2">
+              <Markdown
+                textContent={markdownContent}
+                useChatCodeBlock
+                skipPreprocess
+              />
+            </div>
+          </div>
+        ) : (
+          <CodeMirrorEditor
+            value={markdownContent}
+            filePath="benchmark-task.md"
+            height="100%"
+            readOnly
+            enableLinting={false}
+            registerWithService={false}
+          />
+        )}
+      </div>
+    );
+  }, [
+    activeItem,
+    error,
+    isLoadingDetail,
+    markdownContent,
+    selectedTask,
+    t,
+    taskPreviewMode,
+  ]);
+
+  if (surface === "taskInfo") {
+    return (
+      <div
+        className={`${className ?? ""} flex h-full min-h-0 flex-col overflow-hidden`}
+      >
+        {taskDetailContent}
+      </div>
+    );
+  }
+
+  if (!batchStatus) {
+    return (
+      <div
+        className={`${className ?? ""} flex h-full min-h-0 flex-col overflow-hidden`}
+        data-testid="benchmark-run-page"
+      >
+        <Placeholder
+          variant="empty"
+          placement="detail-panel"
+          title={t("creator.benchmark.noSessionYet")}
           fillParentHeight
         />
       </div>
@@ -111,123 +405,32 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
   }
 
   return (
-    <div
-      className={`${className ?? ""} flex h-full min-h-0 flex-col overflow-hidden`}
-    >
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-solid border-border-2 px-4 py-3">
-        <div className="min-w-0">
-          <div className="truncate text-[13px] font-semibold text-text-1">
-            {t("creator.benchmark.attemptTitle")}
-          </div>
-          <div className="truncate text-[12px] text-text-3">
-            {t("creator.benchmark.batchProgress", {
-              total: batchStatus.totalTasks,
-              queued: batchStatus.queued,
-              running: batchStatus.running,
-              launched: batchStatus.launched,
-              failed: batchStatus.failed,
-              cancelled: batchStatus.cancelled,
-            })}
-          </div>
-        </div>
-        <Button
-          htmlType="button"
-          variant="secondary"
-          size="small"
-          onClick={handleRefresh}
-        >
-          {t("common:actions.refresh")}
-        </Button>
-      </div>
-
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(260px,340px)_1fr] overflow-hidden">
-        <div className="scrollbar-overlay min-h-0 overflow-y-auto border-r border-solid border-border-2 p-3">
-          <div className="flex flex-col gap-2">
-            {batchStatus.items.map((item) => (
-              <button
-                key={item.taskId}
-                type="button"
-                className={`flex w-full flex-col gap-1 rounded-lg border border-solid px-3 py-2 text-left transition-colors hover:bg-fill-1 ${
-                  activeTaskId === item.taskId
-                    ? "border-primary-4 bg-primary-1"
-                    : "bg-fill-0 border-border-2"
-                }`}
-                onClick={() => handleSelectTask(item)}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-text-1">
-                    {item.taskId}
-                  </span>
-                  <span
-                    className={`shrink-0 rounded-full border border-solid px-2 py-0.5 text-[10px] font-medium ${itemStatusClass(item.status)}`}
-                  >
-                    {item.status}
-                  </span>
-                </div>
-                <div className="truncate text-[11px] text-text-3">
-                  {item.sessionId
-                    ? t("creator.benchmark.sessionLabel", {
-                        sessionId: item.sessionId,
-                      })
-                    : t("creator.benchmark.noSessionYet")}
-                </div>
-                <div className="truncate text-[11px] text-text-3">
-                  {t("creator.benchmark.testResultPending")}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="min-h-0 overflow-hidden">
-          {error ? (
-            <Placeholder
-              variant="error"
-              placement="detail-panel"
-              title={t("common:errors.failedToLoad")}
-              subtitle={error}
-              fillParentHeight
-            />
-          ) : isLoadingDetail ? (
-            <Placeholder
-              variant="loading"
-              placement="detail-panel"
-              title={t("creator.benchmark.loading")}
-              fillParentHeight
-            />
-          ) : selectedTask ? (
-            <div className="scrollbar-overlay h-full min-h-0 overflow-y-auto px-4 py-4">
-              <div className="bg-fill-0 mb-3 rounded-lg border border-solid border-border-2 px-3 py-2 text-[12px] leading-5 text-text-2">
-                <div>
-                  {t("creator.benchmark.taskBreadcrumb", {
-                    attempt: t("creator.benchmark.attemptTitle"),
-                    task: selectedTask.taskId,
-                  })}
-                </div>
-                {activeItem?.error ? (
-                  <div className="mt-1 break-words text-danger-6">
-                    {activeItem.error}
-                  </div>
-                ) : null}
-              </div>
-              <div className="allow-select-deep mx-auto max-w-[920px] select-text text-[13px] leading-6 text-text-2">
-                <Markdown
-                  textContent={markdownContent}
-                  useChatCodeBlock
-                  skipPreprocess
-                />
-              </div>
-            </div>
-          ) : (
-            <Placeholder
-              variant="empty"
-              placement="detail-panel"
-              title={t("creator.benchmark.selectTaskHint")}
-              fillParentHeight
-            />
-          )}
-        </div>
-      </div>
-    </div>
+    <SessionGroupPage
+      className={className}
+      testId="benchmark-run-page"
+      headerTestId="benchmark-run-header"
+      listTestId="benchmark-run-task-list"
+      dataAttributes={{
+        "data-benchmark-batch-id": batchStatus.batchId,
+        "data-benchmark-status": batchStatus.status,
+      }}
+      title={t("creator.benchmark.sessionGroupTitle")}
+      subtitle={t("creator.benchmark.sessionGroupProgress", {
+        total: batchStatus.totalTasks,
+        queued: batchStatus.queued,
+        running: displayedRunningCount,
+        launched: 0,
+        failed: batchStatus.failed,
+        cancelled: batchStatus.cancelled,
+      })}
+      items={benchmarkSessionListItems}
+      onSelectItem={handleSelectBenchmarkSessionListItem}
+      actions={[
+        {
+          label: t("common:actions.refresh"),
+          onClick: handleRefresh,
+        },
+      ]}
+    />
   );
 };

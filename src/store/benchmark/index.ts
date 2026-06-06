@@ -17,8 +17,11 @@ import {
 } from "@src/api/tauri/benchmark";
 
 const BENCHMARK_SOURCE_PATH_STORAGE_KEY = "orgii:benchmarkSourcePath";
+const BENCHMARK_WORKING_DIRECTORY_STORAGE_KEY =
+  "orgii:benchmarkWorkingDirectory";
 
 export const DEFAULT_BENCHMARK_SOURCE_PATH = "";
+export const DEFAULT_BENCHMARK_WORKING_DIRECTORY = "";
 export const DEFAULT_SWE_BENCH_TARGET_REPO_PATH = "";
 
 export const BENCHMARK_TASK_LIST_LIMIT = 250;
@@ -30,6 +33,10 @@ export const benchmarkKindAtom = atom<BenchmarkKind>(
 export const benchmarkSourcePathAtom = atomWithStorage(
   BENCHMARK_SOURCE_PATH_STORAGE_KEY,
   DEFAULT_BENCHMARK_SOURCE_PATH
+);
+export const benchmarkWorkingDirectoryAtom = atomWithStorage(
+  BENCHMARK_WORKING_DIRECTORY_STORAGE_KEY,
+  DEFAULT_BENCHMARK_WORKING_DIRECTORY
 );
 export const benchmarkEvaluationModeAtom = atom<BenchmarkEvaluationMode>(
   BENCHMARK_EVALUATION_MODE.LOCAL_DOCKER

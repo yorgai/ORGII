@@ -18,6 +18,7 @@ import { resolveSessionCreatorAgentHeroContent } from "@src/features/SessionCrea
 import { useAgentCompatibility } from "@src/hooks/models/useAgentCompatibility";
 import { useAgentDefinitions } from "@src/modules/MainApp/AgentOrgs/hooks/useAgentDefinitions";
 import { useAgentOrgs } from "@src/modules/MainApp/AgentOrgs/hooks/useAgentOrgs";
+import { PANEL_FOOTER_TOKENS } from "@src/modules/shared/layouts/blocks";
 import type { AgentSelection } from "@src/scaffold/GlobalSpotlight/palettes";
 import {
   SESSION_TARGET_KIND,
@@ -34,11 +35,13 @@ import { modelPickerStyleAtom } from "@src/store/ui/chatPanelAtom";
 import { getRustAgentType } from "@src/util/session/sessionDispatch";
 
 interface BenchmarkRunBuilderProps {
+  bodySlot: React.ReactNode;
   className: string;
   footerSlot: React.ReactNode;
 }
 
 export function BenchmarkRunBuilder({
+  bodySlot,
   className,
   footerSlot,
 }: BenchmarkRunBuilderProps): React.ReactNode {
@@ -196,9 +199,15 @@ export function BenchmarkRunBuilder({
             />
           </div>
 
-          {footerSlot}
+          {bodySlot}
         </div>
       </div>
+
+      {footerSlot ? (
+        <div className={`${PANEL_FOOTER_TOKENS.container} justify-end`}>
+          {footerSlot}
+        </div>
+      ) : null}
 
       {modelPickerStyle === "dropdown" ? (
         <DispatchCategoryDropdown

@@ -247,6 +247,7 @@ chatPanelCreateTargetAtom.debugLabel = "chatPanelCreateTargetAtom";
 export const CHAT_PANEL_CONTENT_MODE = {
   SESSION: "session",
   NON_SESSION: "nonSession",
+  BENCHMARK_SESSION_GROUP: "benchmarkSessionGroup",
 } as const;
 
 export type ChatPanelContentMode =

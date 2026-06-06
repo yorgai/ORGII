@@ -24,6 +24,7 @@ import {
 import { SIDEBAR_MEMORY_KIND, useSidebarMemoryEntry } from "@src/hooks/perf";
 import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
+import { benchmarkAgentBatchStatusAtom } from "@src/store/benchmark";
 import { repoMapAtom } from "@src/store/repo";
 import {
   SESSION_SIDEBAR_PAGE_SIZE,
@@ -284,6 +285,12 @@ export const WorkstationSidebarConnector: React.FC = () => {
 
   const rename = useRenameSessionModal();
   const activeSessionId = useAtomValue(workstationActiveSessionIdAtom) ?? "";
+  const benchmarkBatchStatus = useAtomValue(benchmarkAgentBatchStatusAtom);
+  const highlightedSessionId = benchmarkBatchStatus?.items.some(
+    (item) => item.sessionId === activeSessionId
+  )
+    ? benchmarkBatchStatus.masterSessionId
+    : activeSessionId;
 
   const sessionPinnedMenuItems = useMemo<NavigationMenuItem[]>(
     () =>
@@ -373,7 +380,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
       ? ""
       : getSelectedMenuItemId({
           selectedPinnedMenuItemId,
-          activeSessionId,
+          activeSessionId: highlightedSessionId,
           selectedDraftMenuItemId,
         });
   const resolvedProjectsSelectedMenuItemId =

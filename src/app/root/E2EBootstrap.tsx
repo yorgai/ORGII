@@ -61,6 +61,7 @@ import {
   removeAccount,
 } from "./e2e/helpers/accounts";
 import { createAgentOrgHelpers } from "./e2e/helpers/agentOrgs";
+import { createBenchmarkE2EHelpers } from "./e2e/helpers/benchmark";
 import { createConfigHelpers } from "./e2e/helpers/config";
 import { createDebugEndpointHelpers } from "./e2e/helpers/debugEndpoints";
 import { createExternalToolHelpers } from "./e2e/helpers/externalTools";
@@ -275,6 +276,13 @@ export const E2EBootstrap: FC = () => {
       inspectWorkstationSurface,
     } = createNavigationHelpers(store);
 
+    const {
+      seedBenchmarkRun,
+      inspectBenchmarkRun,
+      startLocalDockerBenchmarkRun,
+      getBenchmarkRunStatus,
+    } = createBenchmarkE2EHelpers(store);
+
     const helpers: E2EHelpers = {
       addAccount,
       addCursorNativeAccount,
@@ -422,6 +430,10 @@ export const E2EBootstrap: FC = () => {
       openAgentTab,
       openOrgTab,
       inspectWorkstationSurface,
+      seedBenchmarkRun,
+      inspectBenchmarkRun,
+      startLocalDockerBenchmarkRun,
+      getBenchmarkRunStatus,
     };
 
     registerE2EHelpers(helpers);

@@ -1860,6 +1860,8 @@
       "singleRun": "単一実行",
       "batchRun": "バッチ実行",
       "sourcePathPlaceholder": "Benchmark フォルダへのパス",
+      "workingDirectory": "作業ディレクトリ",
+      "workingDirectoryPlaceholder": "Agent が Repo を clone または変更するパス",
       "localPath": "ローカルパス",
       "runType": "実行タイプ",
       "kindTitle": "Benchmark",
@@ -1869,7 +1871,15 @@
       },
       "selectedTasks": "{{selected}}/{{total}} 件選択済み",
       "concurrency": "並列数",
-      "taskLoadingUnsupported": "この Benchmark ではタスク読み込みはまだ利用できません。preflight でローカルソースを確認してください。"
+      "taskLoadingUnsupported": "この Benchmark ではタスク読み込みはまだ利用できません。preflight でローカルソースを確認してください。",
+      "attemptTitle": "Attempt",
+      "batchProgress": "合計 {{total}} · キュー {{queued}} · 実行中 {{running}} · 起動済み {{launched}} · 失敗 {{failed}} · キャンセル {{cancelled}}",
+      "sessionGroupTitle": "Benchmark sessions",
+      "sessionGroupProgress": "合計 {{total}} · キュー {{queued}} · 実行中 {{running}} · 起動済み {{launched}} · 失敗 {{failed}} · キャンセル {{cancelled}}",
+      "sessionLabel": "Session: {{sessionId}}",
+      "noSessionYet": "Session はまだありません",
+      "testResultPending": "テスト結果は保留中",
+      "taskBreadcrumb": "{{attempt}} > {{task}}"
     },
     "skillsAndTools": "Skills とツール"
   },

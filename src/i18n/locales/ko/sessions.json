@@ -1860,6 +1860,8 @@
       "singleRun": "단일 실행",
       "batchRun": "배치 실행",
       "sourcePathPlaceholder": "Benchmark 폴더 경로",
+      "workingDirectory": "작업 디렉터리",
+      "workingDirectoryPlaceholder": "Agent가 Repo를 클론하거나 수정할 경로",
       "localPath": "로컬 경로",
       "runType": "실행 유형",
       "kindTitle": "Benchmark",
@@ -1869,7 +1871,15 @@
       },
       "selectedTasks": "{{selected}}/{{total}}개 선택됨",
       "concurrency": "병렬 수",
-      "taskLoadingUnsupported": "이 Benchmark에서는 아직 작업 로드를 사용할 수 없습니다. preflight로 로컬 소스를 확인하세요."
+      "taskLoadingUnsupported": "이 Benchmark에서는 아직 작업 로드를 사용할 수 없습니다. preflight로 로컬 소스를 확인하세요.",
+      "attemptTitle": "Attempt",
+      "batchProgress": "총 {{total}}개 · 대기 {{queued}}개 · 실행 중 {{running}}개 · 시작됨 {{launched}}개 · 실패 {{failed}}개 · 취소 {{cancelled}}개",
+      "sessionGroupTitle": "Benchmark sessions",
+      "sessionGroupProgress": "총 {{total}}개 · 대기 {{queued}}개 · 실행 중 {{running}}개 · 시작됨 {{launched}}개 · 실패 {{failed}}개 · 취소 {{cancelled}}개",
+      "sessionLabel": "Session: {{sessionId}}",
+      "noSessionYet": "아직 Session 없음",
+      "testResultPending": "테스트 결과 대기 중",
+      "taskBreadcrumb": "{{attempt}} > {{task}}"
     },
     "skillsAndTools": "Skills 및 도구"
   },

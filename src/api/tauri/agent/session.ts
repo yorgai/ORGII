@@ -397,6 +397,7 @@ export interface SessionLaunchParams {
   agentRole?: string;
   worktreePath?: string;
   projectSlug?: string;
+  parentSessionId?: string;
 
   /**
    * Extra workspace folders granted at launch time (multi-root IDE

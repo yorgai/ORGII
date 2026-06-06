@@ -1866,6 +1866,8 @@
       "singleRun": "Одиночный запуск",
       "batchRun": "Пакетный запуск",
       "sourcePathPlaceholder": "Путь к папке Benchmark",
+      "workingDirectory": "Рабочий каталог",
+      "workingDirectoryPlaceholder": "Путь, где агенты должны клонировать или изменять репозитории",
       "localPath": "локальный путь",
       "runType": "Тип запуска",
       "kindTitle": "Benchmark",
@@ -1875,7 +1877,15 @@
       },
       "selectedTasks": "Выбрано: {{selected}}/{{total}}",
       "concurrency": "Параллельно",
-      "taskLoadingUnsupported": "Загрузка задач для этого Benchmark пока недоступна; используйте preflight для проверки локального источника."
+      "taskLoadingUnsupported": "Загрузка задач для этого Benchmark пока недоступна; используйте preflight для проверки локального источника.",
+      "attemptTitle": "Attempt",
+      "batchProgress": "Всего {{total}} · {{queued}} в очереди · {{running}} выполняется · {{launched}} запущено · {{failed}} ошибок · {{cancelled}} отменено",
+      "sessionGroupTitle": "Benchmark sessions",
+      "sessionGroupProgress": "Всего {{total}} · {{queued}} в очереди · {{running}} выполняется · {{launched}} запущено · {{failed}} ошибок · {{cancelled}} отменено",
+      "sessionLabel": "Session: {{sessionId}}",
+      "noSessionYet": "Session пока нет",
+      "testResultPending": "Результат теста ожидается",
+      "taskBreadcrumb": "{{attempt}} > {{task}}"
     },
     "skillsAndTools": "Skills и инструменты"
   },

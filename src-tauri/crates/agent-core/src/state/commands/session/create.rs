@@ -43,6 +43,7 @@ pub(crate) async fn create_session_impl(
     key_source: Option<String>,
     agent_exec_mode: Option<String>,
     native_harness_type: Option<String>,
+    parent_session_id: Option<String>,
 ) -> Result<serde_json::Value, String> {
     // Trace the incoming key_source so drift between frontend and
     // backend posture is visible in logs. The field is now persisted
@@ -118,6 +119,7 @@ pub(crate) async fn create_session_impl(
         worktree_path,
         project_slug,
         agent_definition_id,
+        parent_session_id,
         key_source: resolved_key_source,
         // Persist the user's launch-time mode choice (from `SessionLaunchParams.mode`)
         // so the row reflects the ModePill selection from the very first turn,

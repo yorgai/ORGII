@@ -1860,6 +1860,8 @@
       "singleRun": "單次執行",
       "batchRun": "批次執行",
       "sourcePathPlaceholder": "Benchmark 資料夾路徑",
+      "workingDirectory": "工作目錄",
+      "workingDirectoryPlaceholder": "Agent 複製或修改 Repo 的路徑",
       "localPath": "本機路徑",
       "runType": "執行類型",
       "kindTitle": "Benchmark",
@@ -1869,7 +1871,15 @@
       },
       "selectedTasks": "已選擇 {{selected}}/{{total}} 個",
       "concurrency": "並行數",
-      "taskLoadingUnsupported": "此 Benchmark 暫不支援載入任務；請使用 preflight 檢查本機來源。"
+      "taskLoadingUnsupported": "此 Benchmark 暫不支援載入任務；請使用 preflight 檢查本機來源。",
+      "attemptTitle": "Attempt",
+      "batchProgress": "共 {{total}} 個 · {{queued}} 個排隊 · {{running}} 個執行中 · {{launched}} 個已啟動 · {{failed}} 個失敗 · {{cancelled}} 個已取消",
+      "sessionGroupTitle": "Benchmark sessions",
+      "sessionGroupProgress": "共 {{total}} 個 · {{queued}} 個排隊 · {{running}} 個執行中 · {{launched}} 個已啟動 · {{failed}} 個失敗 · {{cancelled}} 個已取消",
+      "sessionLabel": "Session：{{sessionId}}",
+      "noSessionYet": "暫無 Session",
+      "testResultPending": "測試結果待定",
+      "taskBreadcrumb": "{{attempt}} > {{task}}"
     },
     "skillsAndTools": "Skills 與工具"
   },

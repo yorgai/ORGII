@@ -72,6 +72,7 @@ pub struct SessionLaunchParams {
     pub agent_role: Option<String>,
     pub worktree_path: Option<String>,
     pub project_slug: Option<String>,
+    pub parent_session_id: Option<String>,
 
     /// Extra workspace folders granted at launch time (multi-root IDE
     /// workspaces). Each path is injected into the session's
@@ -198,6 +199,7 @@ async fn launch_rust_agent(
             name: Some(name.clone()),
             images: params.images,
             ide_context: params.ide_context,
+            parent_session_id: params.parent_session_id,
             sub_agent_ids: Vec::new(),
         },
     )
@@ -298,7 +300,7 @@ async fn launch_cli_agent(
         background: params.background,
         key_source: params.key_source,
         additional_directories: extras,
-        parent_session_id: None,
+        parent_session_id: params.parent_session_id,
         org_member_id: None,
         user_input: params.content,
         ide_context: params.ide_context,

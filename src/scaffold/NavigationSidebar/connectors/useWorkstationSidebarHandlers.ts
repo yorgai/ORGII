@@ -4,10 +4,16 @@ import { useSetAtom } from "jotai";
 import { type Dispatch, type SetStateAction, useCallback } from "react";
 
 import { deleteSession } from "@src/api/tauri/agent";
+import { benchmarkApi } from "@src/api/tauri/benchmark";
 import { rpc } from "@src/api/tauri/rpc";
 import Message from "@src/components/Message";
 import type { GoToNewSessionOptions } from "@src/hooks/navigation/useAppNavigation";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
+import {
+  benchmarkActiveBatchIdAtom,
+  benchmarkActiveBatchTaskIdAtom,
+  benchmarkAgentBatchStatusAtom,
+} from "@src/store/benchmark";
 import {
   SESSION_SIDEBAR_PAGE_SIZE,
   type Session,
@@ -73,6 +79,13 @@ export function useWorkstationSidebarHandlers({
   tCommon,
 }: UseWorkstationSidebarHandlersParams): UseWorkstationSidebarHandlersResult {
   const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
+  const setBenchmarkAgentBatchStatus = useSetAtom(
+    benchmarkAgentBatchStatusAtom
+  );
+  const setBenchmarkActiveBatchId = useSetAtom(benchmarkActiveBatchIdAtom);
+  const setBenchmarkActiveBatchTaskId = useSetAtom(
+    benchmarkActiveBatchTaskIdAtom
+  );
   const setChatPanelSelectedWorkItem = useSetAtom(
     chatPanelSelectedWorkItemAtom
   );
@@ -174,6 +187,31 @@ export function useWorkstationSidebarHandlers({
         sessionRouteLabel
       );
 
+      if (isBenchmarkCoordinatorSession(originalSession)) {
+        setChatPanelContentMode(
+          CHAT_PANEL_CONTENT_MODE.BENCHMARK_SESSION_GROUP
+        );
+        setChatPanelSelectedWorkItem(null);
+        setChatPanelStickyNotesOpen(false);
+        promoteActiveSessionCreatorDraft();
+        void benchmarkApi
+          .listAgentBatchHistories({ limit: 100 })
+          .then((histories) =>
+            histories.find((history) => history.masterSessionId === item.id)
+          )
+          .then((history) => {
+            if (!history) return;
+            setBenchmarkAgentBatchStatus(history);
+            setBenchmarkActiveBatchId(history.batchId);
+            setBenchmarkActiveBatchTaskId(null);
+          });
+        openSession(item.id, sessionName, originalSession.repoPath);
+        setChatPanelContentMode(
+          CHAT_PANEL_CONTENT_MODE.BENCHMARK_SESSION_GROUP
+        );
+        return;
+      }
+
       setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
       setChatPanelSelectedWorkItem(null);
       setChatPanelStickyNotesOpen(false);
@@ -190,6 +228,9 @@ export function useWorkstationSidebarHandlers({
       promoteActiveSessionCreatorDraft,
       selectedMenuItemId,
       sessionRouteLabel,
+      setBenchmarkActiveBatchId,
+      setBenchmarkActiveBatchTaskId,
+      setBenchmarkAgentBatchStatus,
       setChatPanelContentMode,
       setChatPanelSelectedWorkItem,
       setChatPanelStickyNotesOpen,
@@ -255,4 +296,8 @@ function loadMoreCategoryAction(
   sessionListCategory: SessionListCategory
 ): Promise<void> {
   return loadMoreCategory(sessionListCategory);
+}
+
+function isBenchmarkCoordinatorSession(session: Session): boolean {
+  return session.user_input?.startsWith("Benchmark run coordinator\n") ?? false;
 }

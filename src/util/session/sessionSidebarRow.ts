@@ -1,7 +1,7 @@
 /**
  * Shared display helpers for session rows (sidebar, chat history panel, etc.).
  */
-import type { LucideIcon } from "lucide-react";
+import { FlaskConical, type LucideIcon } from "lucide-react";
 
 import type { CliAgentType } from "@src/api/types/keys";
 import { getIconProvider } from "@src/components/ModelIcon/config";
@@ -21,6 +21,7 @@ type SessionRowIconInput =
   | string
   | {
       session_id: string;
+      user_input?: string;
       agentIconId?: string;
       cliAgentType?: CliAgentType;
     };
@@ -52,6 +53,9 @@ type SessionRowIconInput =
  */
 export function resolveSessionRowIcon(input: SessionRowIconInput): LucideIcon {
   if (typeof input !== "string") {
+    if (input.user_input?.startsWith("Benchmark run coordinator")) {
+      return FlaskConical;
+    }
     if (input.agentIconId) {
       return resolveAgentIcon(input.agentIconId);
     }

@@ -1882,6 +1882,8 @@
       "singleRun": "Pojedyncze uruchomienie",
       "batchRun": "Uruchomienie zbiorcze",
       "sourcePathPlaceholder": "Ścieżka do folderu benchmarku",
+      "workingDirectory": "Katalog roboczy",
+      "workingDirectoryPlaceholder": "Ścieżka, gdzie agenci mają klonować lub modyfikować repozytoria",
       "localPath": "ścieżka lokalna",
       "runType": "Typ uruchomienia",
       "kindTitle": "Benchmark",
@@ -1891,7 +1893,15 @@
       },
       "selectedTasks": "Wybrano: {{selected}}/{{total}}",
       "concurrency": "Równolegle",
-      "taskLoadingUnsupported": "Ładowanie zadań nie jest jeszcze dostępne dla tego benchmarku; użyj preflight, aby sprawdzić lokalne źródło."
+      "taskLoadingUnsupported": "Ładowanie zadań nie jest jeszcze dostępne dla tego benchmarku; użyj preflight, aby sprawdzić lokalne źródło.",
+      "attemptTitle": "Attempt",
+      "batchProgress": "Łącznie {{total}} · {{queued}} w kolejce · {{running}} uruchomione · {{launched}} wystartowało · {{failed}} niepowodzeń · {{cancelled}} anulowano",
+      "sessionGroupTitle": "Benchmark sessions",
+      "sessionGroupProgress": "Łącznie {{total}} · {{queued}} w kolejce · {{running}} uruchomione · {{launched}} wystartowało · {{failed}} niepowodzeń · {{cancelled}} anulowano",
+      "sessionLabel": "Session: {{sessionId}}",
+      "noSessionYet": "Brak Session",
+      "testResultPending": "Wynik testu oczekuje",
+      "taskBreadcrumb": "{{attempt}} > {{task}}"
     },
     "skillsAndTools": "Skills i narzędzia"
   },

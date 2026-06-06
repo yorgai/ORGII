@@ -1880,6 +1880,8 @@
       "singleRun": "Single run",
       "batchRun": "Batch run",
       "sourcePathPlaceholder": "Path to benchmark folder",
+      "workingDirectory": "Working directory",
+      "workingDirectoryPlaceholder": "Path where agents should clone or modify repos",
       "localPath": "local path",
       "runType": "Run type",
       "kindTitle": "Benchmark",
@@ -1889,7 +1891,15 @@
       },
       "selectedTasks": "{{selected}}/{{total}} selected",
       "concurrency": "Parallel",
-      "taskLoadingUnsupported": "Task loading is not available for this benchmark yet; use preflight to check the local source."
+      "taskLoadingUnsupported": "Task loading is not available for this benchmark yet; use preflight to check the local source.",
+      "attemptTitle": "Attempt",
+      "batchProgress": "{{total}} total · {{queued}} queued · {{running}} running · {{launched}} launched · {{failed}} failed · {{cancelled}} cancelled",
+      "sessionGroupTitle": "Benchmark sessions",
+      "sessionGroupProgress": "{{total}} total · {{queued}} queued · {{running}} running · {{launched}} launched · {{failed}} failed · {{cancelled}} cancelled",
+      "sessionLabel": "Session: {{sessionId}}",
+      "noSessionYet": "No session yet",
+      "testResultPending": "Test result pending",
+      "taskBreadcrumb": "{{attempt}} > {{task}}"
     },
     "skillsAndTools": "Skills & Tools"
   },

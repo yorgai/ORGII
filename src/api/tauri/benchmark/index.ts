@@ -58,6 +58,7 @@ export type BenchmarkAgentLaunchSelection = Omit<
   | "ideContext"
   | "workItemId"
   | "agentRole"
+  | "parentSessionId"
 >;
 
 export interface BenchmarkAgentBatchItem {
@@ -75,6 +76,8 @@ export interface BenchmarkAgentBatchStatus {
   batchId: string;
   benchmarkKind: BenchmarkKind;
   sourcePath: string;
+  masterSessionId: string;
+  masterSessionName: string;
   status: BenchmarkAgentBatchStatusValue;
   totalTasks: number;
   queued: number;
@@ -220,6 +223,10 @@ export interface BenchmarkCancelAgentBatchRequest {
   batchId: string;
 }
 
+export interface BenchmarkListAgentBatchHistoriesRequest {
+  limit?: number;
+}
+
 export const benchmarkApi = {
   listTasks(
     request: BenchmarkListTasksRequest
@@ -279,6 +286,15 @@ export const benchmarkApi = {
   ): Promise<BenchmarkAgentBatchStatus> {
     return invokeTauri<BenchmarkAgentBatchStatus>(
       "benchmark_get_agent_batch_status",
+      { request }
+    );
+  },
+
+  listAgentBatchHistories(
+    request: BenchmarkListAgentBatchHistoriesRequest = {}
+  ): Promise<BenchmarkAgentBatchStatus[]> {
+    return invokeTauri<BenchmarkAgentBatchStatus[]>(
+      "benchmark_list_agent_batch_histories",
       { request }
     );
   },

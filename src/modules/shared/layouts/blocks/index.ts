@@ -6,7 +6,11 @@
 
 export { default as BrowseCard } from "./BrowseCard";
 export { default as HintWithInfo } from "./HintWithInfo";
+export { default as SessionGroupPage } from "./SessionGroupPage";
+export { default as SessionTable } from "./SessionTable";
 export type { HintWithInfoProps } from "./HintWithInfo";
+export type { SessionGroupPageProps } from "./SessionGroupPage";
+export type { SessionTableItem } from "./SessionTable";
 export type { BrowseCardProps } from "./BrowseCard";
 
 export { default as CollapsibleSection } from "./CollapsibleSection";

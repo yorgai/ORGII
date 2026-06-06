@@ -150,7 +150,7 @@ const BenchmarkSidebarContent = memo(
                     const taskNode: TreeRowNode = {
                       id: task.taskId,
                       name: task.taskId,
-                      path: task.title || task.taskId,
+                      path: task.taskId,
                       type: "file",
                       icon: (
                         <BookLock
@@ -167,7 +167,6 @@ const BenchmarkSidebarContent = memo(
                         depth={1}
                         isSelected={task.taskId === selectedTaskId}
                         onClick={() => setSelectedTaskId(task.taskId)}
-                        showPathHint
                       />
                     );
                   })

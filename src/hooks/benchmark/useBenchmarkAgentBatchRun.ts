@@ -21,23 +21,29 @@ import {
   benchmarkRunTypeAtom,
   benchmarkSelectedTaskIdAtom,
   benchmarkSourcePathAtom,
+  benchmarkWorkingDirectoryAtom,
 } from "@src/store/benchmark";
 import {
   SESSION_TARGET_KIND,
+  activeSessionIdAtom,
   creatorDefaultExecModeAtom,
+  loadSidebarSessions,
   sessionCreatorStateAtom,
+  workstationActiveSessionIdAtom,
 } from "@src/store/session";
 import {
-  createBenchmarkTab,
-  openTab,
-  workstationLayoutAtom,
-} from "@src/store/workstation/tabs";
+  CHAT_PANEL_CONTENT_MODE,
+  activeStationChatVisibleAtom,
+  chatPanelContentModeAtom,
+  chatPanelMaximizedAtom,
+} from "@src/store/ui/chatPanelAtom";
 
 const AGENT_BATCH_STATUS_POLL_INTERVAL_MS = 2_000;
 
 export function useBenchmarkAgentBatchRun() {
   const kind = useAtomValue(benchmarkKindAtom);
   const sourcePath = useAtomValue(benchmarkSourcePathAtom);
+  const workingDirectory = useAtomValue(benchmarkWorkingDirectoryAtom);
   const selectedTaskId = useAtomValue(benchmarkSelectedTaskIdAtom);
   const runType = useAtomValue(benchmarkRunTypeAtom);
   const selectedBatchTaskIds = useAtomValue(benchmarkBatchSelectedTaskIdsAtom);
@@ -52,7 +58,13 @@ export function useBenchmarkAgentBatchRun() {
   const setActiveBatchId = useSetAtom(benchmarkActiveBatchIdAtom);
   const setActiveBatchTaskId = useSetAtom(benchmarkActiveBatchTaskIdAtom);
   const setBatchError = useSetAtom(benchmarkAgentBatchErrorAtom);
-  const setWorkstationLayout = useSetAtom(workstationLayoutAtom);
+  const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
+  const setActiveStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
+  const setChatPanelMaximized = useSetAtom(chatPanelMaximizedAtom);
+  const setActiveSessionId = useSetAtom(activeSessionIdAtom);
+  const setWorkstationActiveSessionId = useSetAtom(
+    workstationActiveSessionIdAtom
+  );
 
   const taskIdsForLaunch = useMemo(() => {
     if (runType === "single") {
@@ -76,7 +88,8 @@ export function useBenchmarkAgentBatchRun() {
       creatorState.dispatchCategory === DISPATCH_CATEGORY.RUST_AGENT;
     const launch: BenchmarkAgentLaunchSelection = {
       category: creatorState.dispatchCategory,
-      workspacePath: creatorState.source?.repoPath || undefined,
+      workspacePath:
+        workingDirectory.trim() || creatorState.source?.repoPath || undefined,
       keySource: resolvedKeys.keySource,
       accountId: resolvedKeys.accountId,
       model: resolvedKeys.model,
@@ -106,7 +119,13 @@ export function useBenchmarkAgentBatchRun() {
       mode: agentExecMode,
     };
     return launch;
-  }, [advancedConfig, agentExecMode, creatorState, setBatchError]);
+  }, [
+    advancedConfig,
+    agentExecMode,
+    creatorState,
+    setBatchError,
+    workingDirectory,
+  ]);
 
   const refreshBatchStatus = useCallback(async () => {
     if (!batchStatus?.batchId) {
@@ -129,6 +148,12 @@ export function useBenchmarkAgentBatchRun() {
       setBatchError("Select at least one benchmark task before launching.");
       return null;
     }
+    if (!workingDirectory.trim()) {
+      setBatchError(
+        "Set a working directory before launching benchmark agents."
+      );
+      return null;
+    }
 
     setIsBatchLoading(true);
     setBatchError(null);
@@ -147,11 +172,12 @@ export function useBenchmarkAgentBatchRun() {
       setBatchStatus(status);
       setActiveBatchId(status.batchId);
       setActiveBatchTaskId(null);
-      const tab = createBenchmarkTab({ batchId: status.batchId });
-      setWorkstationLayout((previous) => ({
-        ...previous,
-        mainPane: openTab(previous.mainPane, tab),
-      }));
+      setActiveSessionId(status.masterSessionId);
+      setWorkstationActiveSessionId(status.masterSessionId);
+      setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.BENCHMARK_SESSION_GROUP);
+      setActiveStationChatVisible("my-station", true);
+      setChatPanelMaximized(false);
+      void loadSidebarSessions({ forceRefresh: true });
       return status;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -166,12 +192,17 @@ export function useBenchmarkAgentBatchRun() {
     kind,
     setActiveBatchId,
     setActiveBatchTaskId,
+    setActiveSessionId,
+    setActiveStationChatVisible,
     setBatchError,
     setBatchStatus,
+    setChatPanelContentMode,
+    setChatPanelMaximized,
     setIsBatchLoading,
-    setWorkstationLayout,
+    setWorkstationActiveSessionId,
     sourcePath,
     taskIdsForLaunch,
+    workingDirectory,
   ]);
 
   const cancelBatch = useCallback(async () => {
@@ -194,6 +225,31 @@ export function useBenchmarkAgentBatchRun() {
       setIsBatchLoading(false);
     }
   }, [batchStatus?.batchId, setBatchError, setBatchStatus, setIsBatchLoading]);
+
+  useEffect(() => {
+    if (batchStatus?.batchId) {
+      return undefined;
+    }
+    let cancelled = false;
+    benchmarkApi
+      .listAgentBatchHistories({ limit: 1 })
+      .then((histories) => {
+        if (cancelled || histories.length === 0) return;
+        const [latestHistory] = histories;
+        setBatchStatus(latestHistory);
+        setActiveBatchId(latestHistory.batchId);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          setBatchError(message);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [batchStatus?.batchId, setActiveBatchId, setBatchError, setBatchStatus]);
 
   useEffect(() => {
     if (

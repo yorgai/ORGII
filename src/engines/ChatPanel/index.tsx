@@ -22,6 +22,7 @@ import {
   clearSessionAtom,
   eventsAtom,
 } from "@src/engines/SessionCore/core/atoms";
+import { BenchmarkPanel } from "@src/features/BenchmarkPanel";
 import { useDropdownEngine } from "@src/hooks/dropdown";
 import { useShouldOffsetChatPanelHeader } from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
 import { useWorkStationTabs } from "@src/hooks/workStation/tabs";
@@ -29,6 +30,7 @@ import { allAgentDefsAtom } from "@src/modules/MainApp/AgentOrgs/store/builtInAg
 import type { CreatedWorkItemResult } from "@src/modules/ProjectManager/WorkItems/components/CreateWorkItemView";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
 import { VerticalResizeHandle } from "@src/scaffold/Resize";
+import { benchmarkAgentBatchStatusAtom } from "@src/store/benchmark";
 import { projectListRefreshAtom } from "@src/store/project/projectAtom";
 import { currentRepoAtom } from "@src/store/repo";
 import {
@@ -203,6 +205,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const setCreatorState = useSetAtom(sessionCreatorStateAtom);
     const bumpProjectListRefresh = useSetAtom(projectListRefreshAtom);
     const allAgentDefs = useAtomValue(allAgentDefsAtom);
+    const benchmarkBatchStatus = useAtomValue(benchmarkAgentBatchStatusAtom);
 
     const allBlocksCollapsed =
       collapseAllCommand.epoch > 0 ? collapseAllCommand.collapsed : false;
@@ -311,36 +314,49 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
     const sessionSidebarVisible = sessionSidebarWidth > 0;
+    const showBenchmarkSessionGroupContent =
+      active && contentMode === CHAT_PANEL_CONTENT_MODE.BENCHMARK_SESSION_GROUP;
     const showSessionContent =
       active &&
+      !showBenchmarkSessionGroupContent &&
       contentMode === CHAT_PANEL_CONTENT_MODE.SESSION &&
       !!currentSessionId;
-    const showWorkItemContent = !!selectedWorkItem && !showSessionContent;
+    const showWorkItemContent =
+      !!selectedWorkItem &&
+      !showBenchmarkSessionGroupContent &&
+      !showSessionContent;
     const showProjectContent =
-      !!selectedProject && !showSessionContent && !showWorkItemContent;
+      !!selectedProject &&
+      !showBenchmarkSessionGroupContent &&
+      !showSessionContent &&
+      !showWorkItemContent;
     // Sticky-notes board sits at the same precedence rank as project /
     // work-item — render it only when no session / work-item / project is
     // active. The atom is mutually exclusive at write time (entry points
     // null out the sibling atoms), so we just gate read-side here.
     const showStickyNotesContent =
       stickyNotesOpen &&
+      !showBenchmarkSessionGroupContent &&
       !showSessionContent &&
       !showWorkItemContent &&
       !showProjectContent;
     const showExplicitNonSessionContent =
       contentMode === CHAT_PANEL_CONTENT_MODE.NON_SESSION;
     const showNonSessionContent =
+      !showBenchmarkSessionGroupContent &&
       !showWorkItemContent &&
       !showProjectContent &&
       !showStickyNotesContent &&
       !showSessionContent;
     const showPanelContent =
       active ||
+      showBenchmarkSessionGroupContent ||
       showWorkItemContent ||
       showProjectContent ||
       showStickyNotesContent ||
       showExplicitNonSessionContent;
     const showHeader =
+      showBenchmarkSessionGroupContent ||
       showStickyNotesContent ||
       showWorkItemContent ||
       showProjectContent ||
@@ -348,17 +364,58 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       (active && (showSessionContent || viewMode === "workStation"));
     const workItemTitle = selectedWorkItem?.workItem.name || "Work item";
     const projectTitle = selectedProject?.project.name || t("projects.project");
-    const headerTitle = showStickyNotesContent
-      ? t("navigation:stickyNotes.boardTitle")
-      : selectedWorkItem
-        ? currentSessionId
-          ? `${workItemTitle} » ${panelTitle}`
-          : workItemTitle
-        : selectedProject
-          ? projectTitle
-          : panelTitle;
+    const benchmarkMasterSessionId = benchmarkBatchStatus?.masterSessionId;
+    const benchmarkSessionGroupTitle =
+      benchmarkBatchStatus?.masterSessionName ??
+      t("creator.benchmark.sessionGroupTitle");
+    const showBenchmarkChildSessionContent =
+      showSessionContent &&
+      Boolean(activeSession?.parentSessionId) &&
+      activeSession?.parentSessionId === benchmarkMasterSessionId;
+    const headerTitle = showBenchmarkSessionGroupContent
+      ? benchmarkSessionGroupTitle
+      : showBenchmarkChildSessionContent
+        ? `${benchmarkSessionGroupTitle} > ${panelTitle}`
+        : showStickyNotesContent
+          ? t("navigation:stickyNotes.boardTitle")
+          : selectedWorkItem
+            ? currentSessionId
+              ? `${workItemTitle} » ${panelTitle}`
+              : workItemTitle
+            : selectedProject
+              ? projectTitle
+              : panelTitle;
     // The "+" (new session) button is redundant when the session sidebar is
     // visible, so only surface it in the chat header when that sidebar is off.
+    const handleBenchmarkSessionGroupHeaderClick = useCallback(() => {
+      if (!benchmarkMasterSessionId) return;
+      setActiveSessionId(benchmarkMasterSessionId);
+      setWorkstationActiveSessionId(benchmarkMasterSessionId);
+      setContentMode(CHAT_PANEL_CONTENT_MODE.BENCHMARK_SESSION_GROUP);
+    }, [
+      benchmarkMasterSessionId,
+      setActiveSessionId,
+      setContentMode,
+      setWorkstationActiveSessionId,
+    ]);
+
+    const benchmarkHeaderTitleContent = showBenchmarkChildSessionContent ? (
+      <span className="flex min-w-0 items-center gap-1">
+        <button
+          type="button"
+          className="min-w-0 truncate rounded px-1 text-[13px] font-medium text-text-1 hover:bg-surface-hover"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleBenchmarkSessionGroupHeaderClick();
+          }}
+        >
+          {benchmarkSessionGroupTitle}
+        </button>
+        <span className="shrink-0 text-text-4">&gt;</span>
+        <span className="min-w-0 truncate">{panelTitle}</span>
+      </span>
+    ) : undefined;
+
     const showNewSessionButton =
       showSessionContent && sidebarCollapsed && !sessionSidebarVisible;
     const isBenchmarkTarget =
@@ -367,6 +424,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const isWorkItemTarget =
       createTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM;
     const showCreatorPresenceInHeader =
+      !showBenchmarkSessionGroupContent &&
       !showSessionContent &&
       !selectedWorkItem &&
       !selectedProject &&
@@ -399,6 +457,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       />
     );
     const showEmptyChatFocusRestoreButton =
+      !showBenchmarkSessionGroupContent &&
       !showSessionContent &&
       !selectedWorkItem &&
       !selectedProject &&
@@ -425,10 +484,11 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         toggleChatFocus();
       }
     }, [isChatFocus, openWorkStationTab, toggleChatFocus]);
-    const { footerSlot: benchmarkPanel } = useBenchmarkSessionCreatorSlots({
-      enabled: isBenchmarkTarget,
-      onOpenBenchmarkTab: handleOpenBenchmarkTab,
-    });
+    const { bodySlot: benchmarkPanel, footerSlot: benchmarkFooter } =
+      useBenchmarkSessionCreatorSlots({
+        enabled: isBenchmarkTarget,
+        onOpenBenchmarkTab: handleOpenBenchmarkTab,
+      });
 
     const handleChatPanelProjectCreated = useCallback(
       (options?: { keepOpen?: boolean }) => {
@@ -669,6 +729,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         headerActionsPosition={headerActionsPosition}
         headerActionsTriggerRef={headerActionsTriggerRef}
         headerTitle={headerTitle}
+        headerTitleContent={benchmarkHeaderTitleContent}
         isChatFocus={isChatFocus}
         isCompactLayout={isCompactLayout}
         isHeaderActionsOpen={isHeaderActionsOpen}
@@ -691,6 +752,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         showStickyNotesContent={showStickyNotesContent}
         showWorkItemAgentCreator={showWorkItemAgentCreator}
         showWorkItemAgentSwitchInHeader={showWorkItemAgentSwitchInHeader}
+        showBenchmarkSessionGroupContent={showBenchmarkSessionGroupContent}
         t={t}
         toggleHeaderActionsMenu={toggleHeaderActionsMenu}
         visibleRegionNotice={visibleRegionNotice}
@@ -703,6 +765,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const creatorClassName = "min-h-0 flex-1";
     const emptyChatContent = (
       <ChatPanelEmptyContent
+        benchmarkFooter={benchmarkFooter}
         benchmarkPanel={benchmarkPanel}
         createProjectContext={createProjectContext}
         createTarget={createTarget}
@@ -728,7 +791,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const chatColumn = (
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        {!showPanelContent ? null : showWorkItemContent ? (
+        {!showPanelContent ? null : showBenchmarkSessionGroupContent ? (
+          <BenchmarkPanel surface="runList" />
+        ) : showWorkItemContent ? (
           <WorkItemPanelView selectedWorkItem={selectedWorkItem} />
         ) : showProjectContent && selectedProject ? (
           <ProjectPanelView selectedProject={selectedProject} />

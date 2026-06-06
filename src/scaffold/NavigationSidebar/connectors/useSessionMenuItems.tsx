@@ -1,16 +1,25 @@
 import { useAtomValue } from "jotai";
 import { GitFork, MoreHorizontal } from "lucide-react";
-import { type ReactNode, useCallback, useMemo } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { RUST_AGENT_TYPE } from "@src/api/tauri/agent/types";
+import { benchmarkApi } from "@src/api/tauri/benchmark";
 import {
   SESSION_GROUP_LABELS,
   SESSION_GROUP_ORDER,
   type SessionGroupKey,
   getSessionGroupKey,
 } from "@src/config/sessionAgentGroups";
+import { createLogger } from "@src/hooks/logger";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
+import { benchmarkAgentBatchStatusAtom } from "@src/store/benchmark";
 import {
   type Session,
   type SessionListCategory,
@@ -40,6 +49,7 @@ import {
 
 const DATE_GROUP_KEYS = ["today", "yesterday", "thisWeek", "older"] as const;
 const DEFAULT_GROUP_VISIBLE_COUNT = 10;
+const logger = createLogger("SessionSidebar");
 type DateGroupKey = (typeof DATE_GROUP_KEYS)[number];
 
 function getDateGroup(session: Session): DateGroupKey {
@@ -195,8 +205,13 @@ function worktreeSubtitle(branch: string | undefined): ReactNode {
   );
 }
 
+function isBenchmarkSessionRow(session: Session): boolean {
+  return session.user_input?.startsWith("Benchmark run coordinator") ?? false;
+}
+
 function shouldShowWorktreeSubtitle(session: Session): boolean {
   return (
+    !isBenchmarkSessionRow(session) &&
     Boolean(session.worktreePath) &&
     getRustAgentType(session.session_id) !== RUST_AGENT_TYPE.TERMINAL
   );
@@ -232,10 +247,70 @@ export function useSessionMenuItems({
 }: UseSessionMenuItemsParams): UseSessionMenuItemsResult {
   const { t: tCommon } = useTranslation();
   const pagination = useAtomValue(sessionPaginationAtom);
+  const benchmarkAgentBatchStatus = useAtomValue(benchmarkAgentBatchStatusAtom);
+  const [benchmarkHistoryChildSessionIds, setBenchmarkHistoryChildSessionIds] =
+    useState<ReadonlySet<string>>(() => new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    benchmarkApi
+      .listAgentBatchHistories()
+      .then((histories) => {
+        if (cancelled) return;
+        setBenchmarkHistoryChildSessionIds(
+          new Set(
+            histories.flatMap((history) =>
+              history.items
+                .map((item) => item.sessionId)
+                .filter((sessionId): sessionId is string => Boolean(sessionId))
+            )
+          )
+        );
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        logger.warn("Failed to load benchmark batch histories:", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const benchmarkChildSessionIds = useMemo(
+    () =>
+      new Set(
+        benchmarkAgentBatchStatus?.items
+          .map((item) => item.sessionId)
+          .filter((sessionId): sessionId is string => Boolean(sessionId)) ?? []
+      ),
+    [benchmarkAgentBatchStatus?.items]
+  );
+
+  const benchmarkCoordinatorSessionIds = useMemo(
+    () =>
+      new Set(
+        sortedSessions
+          .filter(isBenchmarkSessionRow)
+          .map((session) => session.session_id)
+      ),
+    [sortedSessions]
+  );
 
   const visibleSessions = useMemo(
-    () => sortedSessions.filter(isPrimarySessionListSession),
-    [sortedSessions]
+    () =>
+      sortedSessions.filter(
+        (session) =>
+          isPrimarySessionListSession(session) &&
+          !benchmarkChildSessionIds.has(session.session_id) &&
+          !benchmarkHistoryChildSessionIds.has(session.session_id) &&
+          !benchmarkCoordinatorSessionIds.has(session.parentSessionId ?? "")
+      ),
+    [
+      benchmarkChildSessionIds,
+      benchmarkCoordinatorSessionIds,
+      benchmarkHistoryChildSessionIds,
+      sortedSessions,
+    ]
   );
 
   const pinnedSessions = useMemo(

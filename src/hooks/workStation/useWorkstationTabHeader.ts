@@ -47,16 +47,22 @@ export function usePublishWorkstationTabHeader({
   const ownedContentRef = useRef<WorkstationTabHeaderSlots | null>(null);
 
   useLayoutEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setHeader((prev) => (prev === ownedContentRef.current ? null : prev));
+      ownedContentRef.current = null;
+      return;
+    }
+
     ownedContentRef.current = normalizedContent;
     setHeader(normalizedContent);
+  }, [enabled, normalizedContent, setHeader]);
+
+  useLayoutEffect(() => {
     return () => {
-      // Only clear the slot if it's still showing our content; otherwise
-      // a newer publisher already took ownership and we'd erase theirs.
       setHeader((prev) => (prev === ownedContentRef.current ? null : prev));
       ownedContentRef.current = null;
     };
-  }, [enabled, normalizedContent, setHeader]);
+  }, [setHeader]);
 }
 
 export type { WorkstationTabHeaderHost };

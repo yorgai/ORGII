@@ -72,6 +72,7 @@ interface ChatPanelHeaderProps {
   headerActionsPosition: DropdownEnginePosition;
   headerActionsTriggerRef: React.RefObject<HTMLButtonElement | null>;
   headerTitle: string;
+  headerTitleContent?: React.ReactNode;
   isChatFocus: boolean;
   isCompactLayout: boolean;
   isHeaderActionsOpen: boolean;
@@ -81,6 +82,7 @@ interface ChatPanelHeaderProps {
   selectedProjectVisible: boolean;
   selectedWorkItemVisible: boolean;
   shouldOffsetHeaderForCollapsedSidebar: boolean;
+  showBenchmarkSessionGroupContent: boolean;
   showChatFocusToggle: boolean;
   showCreatorPresenceInHeader: boolean;
   showHeader: boolean;
@@ -125,6 +127,7 @@ export function ChatPanelHeader({
   headerActionsPosition,
   headerActionsTriggerRef,
   headerTitle,
+  headerTitleContent,
   isChatFocus,
   isCompactLayout,
   isHeaderActionsOpen,
@@ -134,6 +137,7 @@ export function ChatPanelHeader({
   selectedProjectVisible,
   selectedWorkItemVisible,
   shouldOffsetHeaderForCollapsedSidebar,
+  showBenchmarkSessionGroupContent,
   showChatFocusToggle,
   showCreatorPresenceInHeader,
   showHeader,
@@ -508,7 +512,8 @@ export function ChatPanelHeader({
             )}
           </div>
         )}
-      {showSessionContent ||
+      {showBenchmarkSessionGroupContent ||
+      showSessionContent ||
       selectedWorkItemVisible ||
       selectedProjectVisible ||
       showStickyNotesContent ? (
@@ -517,7 +522,16 @@ export function ChatPanelHeader({
             className="flex h-9 min-w-0 shrink items-center"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
-            {showStickyNotesContent ? (
+            {showBenchmarkSessionGroupContent ? (
+              <span className="flex h-7 min-w-0 max-w-full cursor-default items-center gap-1.5 rounded-lg px-1.5 text-[13px] font-medium text-text-1 transition-colors hover:bg-surface-hover">
+                <span
+                  className="min-w-0 -translate-y-px truncate"
+                  data-testid="chat-panel-header-title"
+                >
+                  {headerTitle}
+                </span>
+              </span>
+            ) : showStickyNotesContent ? (
               <span className="flex h-7 min-w-0 max-w-full cursor-default items-center gap-1.5 rounded-lg px-1.5 text-[13px] font-medium text-text-1 transition-colors hover:bg-surface-hover">
                 <span
                   className="min-w-0 -translate-y-px truncate"
@@ -534,7 +548,7 @@ export function ChatPanelHeader({
                     className="min-w-0 -translate-y-px truncate"
                     data-testid="chat-panel-header-title"
                   >
-                    {headerTitle}
+                    {headerTitleContent ?? headerTitle}
                   </span>
                 </span>
               </SessionHoverCard>

@@ -44,6 +44,7 @@ pub(crate) struct AgentRunLaunchRequest {
     pub name: Option<String>,
     pub images: Option<Vec<String>>,
     pub ide_context: Option<IdeContext>,
+    pub parent_session_id: Option<String>,
     pub sub_agent_ids: Vec<String>,
 }
 
@@ -199,6 +200,7 @@ pub async fn launch_agent_session(
             name: Some(format!("{}: {}", agent_role, work_item_id)),
             images: None,
             ide_context: None,
+            parent_session_id: None,
             sub_agent_ids: sub_agent_ids.to_vec(),
         },
     )
@@ -328,6 +330,7 @@ pub(crate) async fn launch_rust_agent_run(
         request.resources.key_source.clone(),
         request.mode.clone(),
         request.resources.native_harness_type.clone(),
+        request.parent_session_id.clone(),
     )
     .await?;
 
