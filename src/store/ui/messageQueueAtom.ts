@@ -29,6 +29,11 @@ export interface QueuedMessage {
    * care about a specific mode should keep doing).
    */
   agentExecMode?: AgentExecMode;
+  /**
+   * True when this was enqueued while a turn was active/pending. It must not
+   * dispatch until the queue watcher observes a terminal edge after enqueue.
+   */
+  requiresRuntimeSettle?: boolean;
   status: "queued";
   createdAt: string;
 }
@@ -105,7 +110,9 @@ export const forceSendMessageAtom = atom(
     set(messageQueueAtom, (prev) => prev.filter((msg) => msg.id !== messageId));
     set(forceSendPendingQueueAtom, (prev) => {
       const duplicate = prev.some((msg) => msg.id === messageId);
-      return duplicate ? prev : [message, ...prev];
+      return duplicate
+        ? prev
+        : [{ ...message, requiresRuntimeSettle: false }, ...prev];
     });
   }
 );

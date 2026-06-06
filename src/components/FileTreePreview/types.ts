@@ -28,6 +28,8 @@ export interface FileTreePreviewProps {
   itemType?: "file" | "folder";
   /** Repository root path - used to compute relative paths */
   repoPath?: string;
+  /** Human-readable source/root label for multi-root previews. */
+  sourceLabel?: string;
   /** Custom width for the panel */
   width?: string | number;
   /** Additional CSS classes */

@@ -20,6 +20,10 @@ import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import {
+  markQueueTurnWorking,
+  shouldQueueSubmitAsActiveTurn,
+} from "@src/engines/SessionCore/hooks/session/queueTurnGate";
+import {
   isPendingCancelAtom,
   isSessionActiveAtom,
   lastUserMessageAtom,
@@ -147,11 +151,29 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
   // Sync the shared submit guard with runtime status so it clears
   // when the session finishes, regardless of which instance started it.
   useEffect(() => {
+    const observedSessionId =
+      propSessionId ||
+      coreSessionId ||
+      resolvedSessionId ||
+      activeSessionId ||
+      workstationActiveSessionId ||
+      null;
+    if (isWpGeneWorking && observedSessionId) {
+      markQueueTurnWorking(observedSessionId);
+      return;
+    }
     if (!isWpGeneWorking) {
       _sharedSubmitGuard.current = false;
       _sharedSubmitPayload.current = null;
     }
-  }, [isWpGeneWorking]);
+  }, [
+    activeSessionId,
+    coreSessionId,
+    isWpGeneWorking,
+    propSessionId,
+    resolvedSessionId,
+    workstationActiveSessionId,
+  ]);
 
   // ============================================
   // Session ID Helper
@@ -224,8 +246,15 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         latestSessionRuntimeStatus === "installing" ||
         latestSessionRuntimeStatus === "waiting_for_user" ||
         latestSessionRuntimeStatus === "waiting_for_funds";
+      const submitShouldQueueAsActiveTurn = shouldQueueSubmitAsActiveTurn({
+        sessionId,
+        isActive: latestIsSessionActive,
+        runtimeIsWorking,
+        pendingCancel: latestIsPendingCancel,
+        submitGuardActive: _sharedSubmitGuard.current,
+      });
       const supportsQueuedFollowups =
-        runtimeIsWorking ||
+        submitShouldQueueAsActiveTurn ||
         isAgentSession(sessionId) ||
         isCliSession(sessionId) ||
         isCursorIdeSession(sessionId);
@@ -251,10 +280,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       if (
         !options.forceDispatch &&
         supportsQueuedFollowups &&
-        (latestIsSessionActive ||
-          runtimeIsWorking ||
-          _sharedSubmitGuard.current ||
-          latestIsPendingCancel)
+        submitShouldQueueAsActiveTurn
       ) {
         setSessChatInput("");
 
@@ -297,6 +323,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
           imageDataUrls,
           modelSelection: snapshotSelection,
           agentExecMode: snapshotMode,
+          requiresRuntimeSettle: true,
           status: "queued",
           createdAt: new Date().toISOString(),
         });

@@ -43,6 +43,7 @@ export interface UseFileUploadOptions {
    * this to avoid adding the same dropped image twice.
    */
   consumeDroppedFiles?: boolean;
+  imageOwnerId?: string;
 }
 
 export function useFileUpload(options: UseFileUploadOptions) {
@@ -50,6 +51,7 @@ export function useFileUpload(options: UseFileUploadOptions) {
     fileInputRef,
     composerInputRef,
     consumeDroppedFiles = true,
+    imageOwnerId,
   } = options;
 
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -57,7 +59,8 @@ export function useFileUpload(options: UseFileUploadOptions) {
   const droppedFiles = useAtomValue(droppedFilesAtom);
   const clearDroppedFiles = useSetAtom(clearDroppedFilesAtom);
 
-  const { handleImagePaste, handleImagePath } = useImageAttachment();
+  const { handleImagePaste, handleImagePath } =
+    useImageAttachment(imageOwnerId);
 
   /**
    * Handle file picker selection: images → unified image atom, everything

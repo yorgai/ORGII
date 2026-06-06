@@ -85,7 +85,7 @@ const InputActions: React.FC<InputActionsProps> = memo(
       }
       if (showStop) {
         if (canStopAgent) {
-          await onInterrupt();
+          void onInterrupt();
         } else {
           Message.info(t("sessions:chat.workspaceIsWorking"));
         }
@@ -93,7 +93,7 @@ const InputActions: React.FC<InputActionsProps> = memo(
       }
       if (reinforceCancel) {
         if (canStopAgent) {
-          await onInterrupt();
+          void onInterrupt();
         }
         return;
       }

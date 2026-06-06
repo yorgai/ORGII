@@ -16,6 +16,10 @@ export interface SearchResultItem {
   path: string;
   /** Optional display name (if different from path) */
   name?: string;
+  /** Root used to produce this result, needed for multi-root previews. */
+  repoPath?: string;
+  /** Human-readable root/source label for multi-root results. */
+  repoName?: string;
   /** Optional icon type for special items (terminal, session, project, work item) */
   iconType?: "terminal" | "session" | "project" | "workitem";
 }

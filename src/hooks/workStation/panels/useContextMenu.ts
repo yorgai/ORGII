@@ -25,6 +25,7 @@ import {
   type KeyboardEvent,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -35,6 +36,7 @@ import {
 } from "@src/hooks/perf/useDebouncedCallback";
 import { currentRepoAtom } from "@src/store/repo/derived";
 import { sessionsAtom } from "@src/store/session/sessionAtom";
+import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";
 
 import {
   type DrilledProject,
@@ -67,7 +69,31 @@ export function useContextMenu(
 
   // Fallback repo path — always available even when session repoPath is not set
   const currentRepo = useAtomValue(currentRepoAtom);
+  const workspaceFolders = useAtomValue(workspaceFoldersAtom);
   const effectiveRepoPath = opts.repoPath || currentRepo?.path || "";
+
+  const searchRoots = useMemo<Array<{ path: string; name: string }>>(() => {
+    const roots =
+      workspaceFolders.length > 0
+        ? workspaceFolders.map((folder) => ({
+            path: folder.path,
+            name: folder.name,
+          }))
+        : [];
+    if (
+      effectiveRepoPath &&
+      !roots.some((root) => root.path === effectiveRepoPath)
+    ) {
+      roots.unshift({
+        path: effectiveRepoPath,
+        name:
+          currentRepo?.name ??
+          effectiveRepoPath.split("/").pop() ??
+          effectiveRepoPath,
+      });
+    }
+    return roots;
+  }, [currentRepo?.name, effectiveRepoPath, workspaceFolders]);
 
   // Get all sessions for @sessions search
   const allSessions = useAtomValue(sessionsAtom);
@@ -146,7 +172,40 @@ export function useContextMenu(
       try {
         let results: SearchResultItem[];
         if (type === "files") {
-          results = await searchFiles(query, opts.repoPath ?? "");
+          const roots =
+            searchRoots.length > 0
+              ? searchRoots
+              : effectiveRepoPath
+                ? [
+                    {
+                      path: effectiveRepoPath,
+                      name:
+                        currentRepo?.name ??
+                        effectiveRepoPath.split("/").pop() ??
+                        effectiveRepoPath,
+                    },
+                  ]
+                : [];
+          const perRootResults = await Promise.all(
+            roots.map(async (root) => {
+              const matches = await searchFiles(query, root.path);
+              return matches.map((match) => ({
+                ...match,
+                repoPath: root.path,
+                repoName: root.name,
+              }));
+            })
+          );
+          const seen = new Set<string>();
+          results = perRootResults
+            .flat()
+            .filter((item) => {
+              const key = `${item.type}\0${item.path}`;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            })
+            .slice(0, 20);
         } else if (type === "sessions") {
           results = searchSessions(query, allSessions);
         } else if (type === "projects") {
@@ -166,7 +225,13 @@ export function useContextMenu(
         setSearchLoading(false);
       }
     },
-    [opts.repoPath, effectiveRepoPath, allSessions, updateSearchResults]
+    [
+      effectiveRepoPath,
+      currentRepo?.name,
+      searchRoots,
+      allSessions,
+      updateSearchResults,
+    ]
   );
 
   // Debounced context menu search — leading: true fires first call immediately

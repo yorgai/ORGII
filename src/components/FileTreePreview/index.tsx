@@ -98,7 +98,14 @@ const buildFileTree = (filePath: string): TreeNode[] => {
 // ============================================
 
 const FileTreePreview: React.FC<FileTreePreviewProps> = memo(
-  ({ path, itemType = "file", repoPath, width, className = "" }) => {
+  ({
+    path,
+    itemType = "file",
+    repoPath,
+    sourceLabel,
+    width,
+    className = "",
+  }) => {
     // Convert to repo-relative path
     const relativePath = useMemo(
       () => getRepoRelativePath(path, repoPath),
@@ -152,6 +159,11 @@ const FileTreePreview: React.FC<FileTreePreviewProps> = memo(
         className={`overflow-hidden rounded-[8px] border border-solid border-border-2 bg-bg-2 shadow-md ${className}`}
         style={{ width: width || STYLE_CONFIG.defaultWidth }}
       >
+        {sourceLabel ? (
+          <div className="border-0 border-b border-solid border-border-2 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-text-3">
+            {sourceLabel}
+          </div>
+        ) : null}
         <div className="px-3 py-2">{renderTree(tree)}</div>
       </div>
     );

@@ -275,6 +275,7 @@ export function useInputArea(
 
   const uploadContext = useUploadContext({
     composerInputRef: refs.composerInputRef,
+    imageOwnerId: dropTargetId,
   });
 
   const dragDrop = useDragDrop({

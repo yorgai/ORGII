@@ -142,7 +142,9 @@ describe("messageQueueAtom", () => {
       store.set(forceSendMessageAtom, "m2");
 
       expect(store.get(messageQueueAtom)).toEqual([msg1]);
-      expect(store.get(forceSendPendingQueueAtom)).toEqual([msg2]);
+      expect(store.get(forceSendPendingQueueAtom)).toEqual([
+        { ...msg2, requiresRuntimeSettle: false },
+      ]);
     });
 
     it("keeps the force-sent message at pending priority without duplicating it", () => {
@@ -153,7 +155,20 @@ describe("messageQueueAtom", () => {
       store.set(forceSendMessageAtom, "m1");
 
       expect(store.get(messageQueueAtom)).toEqual([]);
-      expect(store.get(forceSendPendingQueueAtom)).toEqual([msg]);
+      expect(store.get(forceSendPendingQueueAtom)).toEqual([
+        { ...msg, requiresRuntimeSettle: false },
+      ]);
+    });
+
+    it("clears runtime-settle gating for explicit force-send", () => {
+      const msg = makeMessage({ id: "m1", requiresRuntimeSettle: true });
+      store.set(enqueueMessageAtom, msg);
+
+      store.set(forceSendMessageAtom, "m1");
+
+      expect(
+        store.get(forceSendPendingQueueAtom)[0].requiresRuntimeSettle
+      ).toBe(false);
     });
 
     it("is a no-op when ID is not in the visible queue", () => {

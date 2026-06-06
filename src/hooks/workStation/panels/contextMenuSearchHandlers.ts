@@ -9,6 +9,7 @@ import { STYLE_CONFIG } from "@src/scaffold/ContextMenu/config";
 import type { SearchResultItem } from "@src/scaffold/ContextMenu/types";
 import type { Session } from "@src/store/session/sessionAtom";
 import {
+  type SearchResults,
   isNativeSearchAvailable,
   searchFilesNative,
 } from "@src/util/platform/tauri/fileSearch";
@@ -25,11 +26,21 @@ export async function searchFiles(
 
   const searchQuery = query.trim();
   const startedAt = performance.now();
-  const results = await searchFilesNative({
-    root_path: repoPath,
-    query: searchQuery,
-    max_results: STYLE_CONFIG.searchResultsMaxItems,
-  });
+  let results: SearchResults;
+  try {
+    results = await searchFilesNative({
+      root_path: repoPath,
+      query: searchQuery,
+      max_results: STYLE_CONFIG.searchResultsMaxItems,
+    });
+  } catch (error) {
+    console.warn("[ContextMenu] File search failed for root", {
+      repoPath,
+      queryLength: searchQuery.length,
+      error,
+    });
+    return [];
+  }
   const elapsedMs = Math.round(performance.now() - startedAt);
   if (elapsedMs > 500) {
     console.warn("[ContextMenu] Slow file search", {

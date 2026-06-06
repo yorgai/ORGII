@@ -18,18 +18,20 @@ export interface UseUploadContextReturn {
 
 interface UseUploadContextOptions {
   composerInputRef: RefObject<ComposerInputRef>;
+  imageOwnerId?: string;
 }
 
 export function useUploadContext(
   options: UseUploadContextOptions
 ): UseUploadContextReturn {
-  const { composerInputRef } = options;
+  const { composerInputRef, imageOwnerId } = options;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { handleUploadClick, handleFileUpload } = useFileUpload({
     fileInputRef,
     composerInputRef,
     consumeDroppedFiles: false,
+    imageOwnerId,
   });
 
   return {

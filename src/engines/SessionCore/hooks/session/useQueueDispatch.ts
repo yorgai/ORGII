@@ -53,8 +53,13 @@ import { resolveModelForMessage } from "@src/util/session/resolveModelForMessage
 import { selectionFromSession } from "@src/util/session/selectionFromSession";
 import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
+import {
+  hasQueueTurnSettledAfter,
+  markQueueTurnSettled,
+} from "./queueTurnGate";
+
 const MAX_SENT_QUEUE_ID_CACHE = 200;
-const MIN_QUEUE_VISIBLE_MS = 350;
+const MIN_QUEUE_VISIBLE_MS = 1_200;
 
 function queuedMessageAgeMs(message: QueuedMessage): number {
   const createdAtMs = Date.parse(message.createdAt);
@@ -309,6 +314,16 @@ export function useQueueDispatch(): void {
 
     if (!nextMsg || editingRef.current) return;
 
+    if (nextMsg.requiresRuntimeSettle) {
+      const createdAtMs = Date.parse(nextMsg.createdAt);
+      if (
+        Number.isFinite(createdAtMs) &&
+        !hasQueueTurnSettledAfter(nextMsg.sessionId, createdAtMs)
+      ) {
+        return;
+      }
+    }
+
     const visibleDelayMs = MIN_QUEUE_VISIBLE_MS - queuedMessageAgeMs(nextMsg);
     if (visibleDelayMs > 0) {
       const timerId = window.setTimeout(() => {
@@ -366,6 +381,10 @@ export function useQueueDispatch(): void {
     }
 
     if (!wasActive) return;
+    const activeSessionId = activeSessionIdRef.current;
+    if (activeSessionId) {
+      markQueueTurnSettled(activeSessionId);
+    }
     tryDispatchNext();
   }, [isSessionActive, tryDispatchNext]);
 
@@ -385,6 +404,11 @@ export function useQueueDispatch(): void {
     prevPendingCancelRef.current = isPendingCancel;
 
     if (!wasPending || isPendingCancel || isSessionActive) return;
+
+    const activeSessionId = activeSessionIdRef.current;
+    if (activeSessionId) {
+      markQueueTurnSettled(activeSessionId);
+    }
 
     if (userCancelRef.current) {
       setUserInitiatedCancel(false);

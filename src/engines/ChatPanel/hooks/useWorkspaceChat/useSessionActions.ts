@@ -12,6 +12,7 @@ import Message from "@src/components/Message";
 import {
   clearSessionAtom,
   pendingSyntheticEventAtom,
+  streamingDeltaContentAtom,
 } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
@@ -101,6 +102,23 @@ export function useSessionActions(options: UseSessionActionsOptions) {
   );
   const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
   const setStreamRetryStatus = useSetAtom(streamRetryStatusAtom);
+  const setStreamingDeltaContent = useSetAtom(streamingDeltaContentAtom);
+
+  const stopVisibleStreaming = useCallback(
+    (sessionId: string) => {
+      setStreamRetryStatus(null);
+      setStreamingDeltaContent((prev) => {
+        if (!prev.has(sessionId)) return prev;
+        const next = new Map(prev);
+        next.delete(sessionId);
+        return next;
+      });
+      void eventStoreProxy.setStreaming(false, sessionId).catch((error) => {
+        logger.warn("failed to stop EventStore streaming snapshot:", error);
+      });
+    },
+    [setStreamRetryStatus, setStreamingDeltaContent]
+  );
 
   const resumeSession = useCallback(async () => {
     const sessionId = getSessionId();
@@ -226,7 +244,7 @@ export function useSessionActions(options: UseSessionActionsOptions) {
 
         dispatchClearSession();
         setSessionRuntimeStatus("idle");
-        setStreamRetryStatus(null);
+        stopVisibleStreaming(sessionId);
         setWorkstationActiveSessionId(null);
         setActiveSessionId(null);
 
@@ -245,9 +263,11 @@ export function useSessionActions(options: UseSessionActionsOptions) {
         return;
       }
 
-      // Cases 2 & 3: normal cancel flow — keep the session view open
-      // and wait for Rust to confirm before clearing the pending state.
+      // Cases 2 & 3: normal cancel flow — keep the session view open, but
+      // stop visible streaming immediately. Queue release still waits for the
+      // real cancel-settle path via isPendingCancel/userInitiatedCancel.
       setPendingCancel(true);
+      stopVisibleStreaming(sessionId);
 
       if (restoreQueueHead) {
         setSessionRolledBack(false);
@@ -293,6 +313,7 @@ export function useSessionActions(options: UseSessionActionsOptions) {
         // operation rather than a graceful stop.
         setUserInitiatedCancel(false);
         setPendingCancel(true);
+        stopVisibleStreaming(sessionId);
         try {
           await SessionService.interrupt({
             sessionId,
@@ -310,36 +331,49 @@ export function useSessionActions(options: UseSessionActionsOptions) {
         } finally {
           setPendingCancel(false);
           setSessionRuntimeStatus("idle");
-          setStreamRetryStatus(null);
+          stopVisibleStreaming(sessionId);
         }
         return;
       }
 
-      try {
-        await SessionService.interrupt({
-          sessionId,
-          reason: CANCEL_REASON.USER_STOP,
-          onError: (msg: string) => {
-            Message.error(t(msg));
-          },
-        });
-        await eventStoreProxy.finalizeRunningEventsAsStopped(sessionId);
-        // isPendingCancel is intentionally NOT cleared here on the success path.
-        // Rust will emit an agent:complete (or agent:error) event after winding
-        // down the turn; the runtime-status handler that processes that event is
-        // responsible for clearing isPendingCancel. Clearing it here would
-        // create a race: the input area could re-enable and the queue could
-        // flush a follow-up message before Rust has actually stopped.
-      } catch (error) {
-        console.error("[useSessionActions] interrupt failed:", error);
-        setPendingCancel(false);
-        if (restoreQueueHead) setUserInitiatedCancel(false);
-        // Session is gone (already completed/removed): Rust will never send
-        // agent:complete, so reset the runtime status ourselves to unblock
-        // the input area and queue dispatch.
-        setSessionRuntimeStatus("idle");
-        setStreamRetryStatus(null);
-      }
+      void (async () => {
+        let watchdogId: number | null = window.setTimeout(() => {
+          watchdogId = null;
+          setPendingCancel(false);
+          setSessionRuntimeStatus("idle");
+          stopVisibleStreaming(sessionId);
+        }, 10_000);
+
+        try {
+          await SessionService.interrupt({
+            sessionId,
+            reason: CANCEL_REASON.USER_STOP,
+            onError: (msg: string) => {
+              Message.error(t(msg));
+            },
+          });
+          await eventStoreProxy.finalizeRunningEventsAsStopped(sessionId);
+          // isPendingCancel is intentionally NOT cleared here on the success path.
+          // Rust will emit an agent:complete (or agent:error) event after winding
+          // down the turn; the runtime-status handler that processes that event is
+          // responsible for clearing isPendingCancel. Clearing it here would
+          // create a race: the input area could re-enable and the queue could
+          // flush a follow-up message before Rust has actually stopped.
+        } catch (error) {
+          console.error("[useSessionActions] interrupt failed:", error);
+          setPendingCancel(false);
+          if (restoreQueueHead) setUserInitiatedCancel(false);
+          // Session is gone (already completed/removed): Rust will never send
+          // agent:complete, so reset the runtime status ourselves to unblock
+          // the input area and queue dispatch.
+          setSessionRuntimeStatus("idle");
+          stopVisibleStreaming(sessionId);
+        } finally {
+          if (watchdogId !== null) {
+            window.clearTimeout(watchdogId);
+          }
+        }
+      })();
     },
     [
       dispatchClearSession,
@@ -350,7 +384,7 @@ export function useSessionActions(options: UseSessionActionsOptions) {
       setRestoreToInput,
       setSessionRolledBack,
       setSessionRuntimeStatus,
-      setStreamRetryStatus,
+      stopVisibleStreaming,
       setUserInitiatedCancel,
       setWorkstationActiveSessionId,
       store,
