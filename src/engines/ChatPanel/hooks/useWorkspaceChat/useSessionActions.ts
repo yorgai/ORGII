@@ -12,6 +12,7 @@ import Message from "@src/components/Message";
 import { clearLiveStreamingForSession } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import { pendingSyntheticEventAtom } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { clearSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
 import {
@@ -69,6 +70,63 @@ export function resolveRestorableUserMessage(options: {
   }
 
   return null;
+}
+
+const STOP_RESTORE_SNAPSHOT_TAIL_LIMIT = 200;
+
+function readStopRestoreTail(events: SessionEvent[]): SessionEvent[] {
+  return events.length > STOP_RESTORE_SNAPSHOT_TAIL_LIMIT
+    ? events.slice(-STOP_RESTORE_SNAPSHOT_TAIL_LIMIT)
+    : events;
+}
+
+export function restoreStoppedTurnFromSnapshot(options: {
+  sessionId: string;
+  lastUserMessage: RestorableUserMessage | null;
+  pendingDisplayText?: string;
+  pendingImages?: unknown;
+  setRestoreToInput: (value: RestorableUserMessage) => void;
+}): void {
+  const snap = eventStoreProxy.getLatestSessionSnapshot(options.sessionId);
+  const chatEvents = readStopRestoreTail(snap?.chatEvents ?? []);
+  let lastUserIdx = -1;
+  for (let i = chatEvents.length - 1; i >= 0; i -= 1) {
+    if (chatEvents[i].source === "user") {
+      lastUserIdx = i;
+      break;
+    }
+  }
+
+  const snapshotUserEvent = lastUserIdx >= 0 ? chatEvents[lastUserIdx] : null;
+  const currentUserMessage = resolveRestorableUserMessage({
+    snapshotDisplayText: snapshotUserEvent?.displayText,
+    snapshotImages: snapshotUserEvent?.result?.images,
+    lastUserMessage: options.lastUserMessage,
+    pendingDisplayText: options.pendingDisplayText,
+    pendingImages: options.pendingImages,
+  });
+  if (!currentUserMessage) return;
+
+  options.setRestoreToInput({
+    displayContent: currentUserMessage.displayContent,
+    imageDataUrls: currentUserMessage.imageDataUrls,
+  });
+
+  const turnHasVisibleOutput = chatEvents
+    .slice(lastUserIdx + 1)
+    .some((ev) => ev.source !== "user" && ev.displayVariant !== "thinking");
+  if (turnHasVisibleOutput || !snapshotUserEvent?.id) return;
+
+  const sessionHasPriorContent = chatEvents
+    .slice(0, lastUserIdx)
+    .some((ev) => ev.source !== "user");
+  if (!sessionHasPriorContent) return;
+
+  void eventStoreProxy
+    .truncateBeforeId(snapshotUserEvent.id, options.sessionId)
+    .catch((err) => {
+      console.warn("[useSessionActions] Failed to prune user event:", err);
+    });
 }
 
 interface UseSessionActionsOptions {
@@ -148,37 +206,15 @@ export function useSessionActions(options: UseSessionActionsOptions) {
 
       const lastUserMessage = store.get(lastUserMessageAtom);
       const pendingSyntheticEvent = store.get(pendingSyntheticEventAtom);
-
-      // Derive "has visible output" from the EventStore snapshot.
-      // chatEvents already excludes thinking deltas (Rust is_visible_in_chat
-      // filter), so we check for any non-user, non-thinking event after
-      // the last user message.
-      const snap = eventStoreProxy.getLatestSessionSnapshot(sessionId);
-      const chatEvents = snap?.chatEvents ?? [];
-      let lastUserIdx = -1;
-      for (let i = chatEvents.length - 1; i >= 0; i -= 1) {
-        if (chatEvents[i].source === "user") {
-          lastUserIdx = i;
-          break;
-        }
-      }
-      const turnHasVisibleOutput = chatEvents
-        .slice(lastUserIdx + 1)
-        .some((ev) => ev.source !== "user" && ev.displayVariant !== "thinking");
-      const sessionHasPriorContent =
-        lastUserIdx > 0 &&
-        chatEvents.slice(0, lastUserIdx).some((ev) => ev.source !== "user");
-      const snapshotUserEvent =
-        lastUserIdx >= 0 ? chatEvents[lastUserIdx] : null;
+      const pendingDisplayText =
+        pendingSyntheticEvent?.source === "user"
+          ? pendingSyntheticEvent.displayText
+          : undefined;
+      const pendingImages = pendingSyntheticEvent?.result?.images;
       const currentUserMessage = resolveRestorableUserMessage({
-        snapshotDisplayText: snapshotUserEvent?.displayText,
-        snapshotImages: snapshotUserEvent?.result?.images,
         lastUserMessage,
-        pendingDisplayText:
-          pendingSyntheticEvent?.source === "user"
-            ? pendingSyntheticEvent.displayText
-            : undefined,
-        pendingImages: pendingSyntheticEvent?.result?.images,
+        pendingDisplayText,
+        pendingImages,
       });
 
       // Cases 2 & 3: normal cancel flow — keep the session view open, but
@@ -191,27 +227,22 @@ export function useSessionActions(options: UseSessionActionsOptions) {
         setSessionRolledBack(false);
         setUserInitiatedCancel(true);
 
-        if (!turnHasVisibleOutput && currentUserMessage) {
-          setRestoreToInput({
-            displayContent: currentUserMessage.displayContent,
-            imageDataUrls: currentUserMessage.imageDataUrls,
-          });
-          if (sessionHasPriorContent && snapshotUserEvent?.id) {
-            void eventStoreProxy
-              .truncateBeforeId(snapshotUserEvent.id, sessionId)
-              .catch((err) => {
-                console.warn(
-                  "[useSessionActions] Failed to prune user event:",
-                  err
-                );
-              });
-          }
-        } else if (currentUserMessage) {
+        if (currentUserMessage) {
           setRestoreToInput({
             displayContent: currentUserMessage.displayContent,
             imageDataUrls: currentUserMessage.imageDataUrls,
           });
         }
+
+        window.setTimeout(() => {
+          restoreStoppedTurnFromSnapshot({
+            sessionId,
+            lastUserMessage,
+            pendingDisplayText,
+            pendingImages,
+            setRestoreToInput,
+          });
+        }, 100);
       }
 
       if (!restoreQueueHead) {
