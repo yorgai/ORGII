@@ -375,6 +375,10 @@ impl TurnEventHandler for UnifiedEventHandler {
     }
 
     fn on_file_change(&self, session_id: &str, tool_name: &str, file_paths: &[String]) {
+        if self.is_cancelled() {
+            return;
+        }
+
         let workspace_path = self
             .config
             .workspace_path
@@ -517,6 +521,10 @@ impl TurnEventHandler for UnifiedEventHandler {
         tool_name: &str,
         args: &Value,
     ) {
+        if self.is_cancelled() {
+            return;
+        }
+
         snapshots::take_snapshot(
             self.config.workspace_path.as_deref(),
             session_id,

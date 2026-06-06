@@ -171,16 +171,18 @@ async function switchAgentMode(
   // the user creates afterwards. Optimistic upsert so the ModePill
   // and mode-aware UI repaint on the same frame.
   const sessionBefore = store.get(sessionByIdAtom(sessionId));
-  if (sessionBefore) {
-    upsertSession({
-      ...sessionBefore,
-      agentExecMode: targetMode as AgentExecMode,
+  if (sessionBefore?.agentExecMode !== targetMode) {
+    if (sessionBefore) {
+      upsertSession({
+        ...sessionBefore,
+        agentExecMode: targetMode as AgentExecMode,
+      });
+    }
+    await rpc.sessionAggregate.patch({
+      sessionId,
+      patch: { agentExecMode: targetMode },
     });
   }
-  await rpc.sessionAggregate.patch({
-    sessionId,
-    patch: { agentExecMode: targetMode },
-  });
 
   await respondModeSwitch(sessionId, "switch", targetMode);
 

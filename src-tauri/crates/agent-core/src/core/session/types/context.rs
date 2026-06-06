@@ -29,6 +29,8 @@ pub struct ProcessingContext {
     /// the event's `display_text` so editing a historical message
     /// re-populates the pill rather than the expanded YAML content.
     pub display_text: Option<String>,
+    /// Stable logical turn id assigned by `AgentSession::begin_turn`.
+    pub turn_id: Option<String>,
 }
 
 /// User presence mode — QQ-style availability signal the user sets in the

@@ -121,6 +121,7 @@ pub async fn process_gateway_message(
         is_resume: false,
         channel: Some(msg.channel.clone()),
         chat_id: Some(msg.chat_id.clone()),
+        turn_id: None,
     };
 
     let result =

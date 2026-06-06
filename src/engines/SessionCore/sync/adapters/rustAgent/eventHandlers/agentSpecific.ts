@@ -312,6 +312,7 @@ export function handleExitPlanMode(
   // stale pill over throwing inside an event-stream handler.
   const restoreMode = coerceAgentExecMode(detail.restoreMode);
   const session = store.get(sessionByIdAtom(eventSessionId));
+  if (session?.agentExecMode === restoreMode) return;
   if (session) {
     upsertSession({ ...session, agentExecMode: restoreMode });
   }

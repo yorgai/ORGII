@@ -75,6 +75,13 @@ pub async fn ensure_pty_initialized(
     )
     .await?;
 
+    ::terminal::agent_tool::write_to_session(
+        pty_session_id,
+        "unsetopt BANG_HIST 2>/dev/null\nset +H 2>/dev/null\n",
+        pty.sessions.clone(),
+    )
+    .await?;
+
     pty.initialized_sessions
         .lock()
         .insert(pty_session_id.to_string());

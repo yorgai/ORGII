@@ -77,6 +77,10 @@ pub(crate) fn is_error_text(text: &str) -> bool {
     text.starts_with(TOOL_ERROR_PREFIX)
 }
 
+pub(crate) fn is_cancelled(cancel_flag: Option<&Arc<AtomicBool>>) -> bool {
+    cancel_flag.is_some_and(|flag| flag.load(std::sync::atomic::Ordering::Relaxed))
+}
+
 /// Inject the LLM-assigned `tool_call_id` into the top-level params object
 /// so tools that need per-call identity can read it without relying on
 /// global side-channels. No-op when `params` is not a JSON object

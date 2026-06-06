@@ -95,6 +95,8 @@ pub struct TurnInput {
     pub channel: Option<String>,
     /// Chat/conversation identifier within the channel.
     pub chat_id: Option<String>,
+    /// Stable logical turn id assigned when AgentSession begins the turn.
+    pub turn_id: Option<String>,
 }
 
 // ============================================
@@ -374,8 +376,12 @@ impl UnifiedMessageProcessor {
         content: &str,
         context: ProcessingContext,
     ) -> Result<ProcessingResult, String> {
-        // 0. Assign a stable turn ID for this round-trip.
-        let turn_id = uuid::Uuid::new_v4().to_string();
+        // 0. Use the AgentSession turn id when available so active_turn,
+        // live stream broadcasts, and terminal markers describe the same turn.
+        let turn_id = context
+            .turn_id
+            .clone()
+            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
         // 0a. Clear stale turn summary from previous turn so readers
         //     never mistake an old summary for the current turn's.

@@ -148,7 +148,7 @@ impl WingmanLoop {
             Box::pin(async move {
                 cancel_flag.store(false, std::sync::atomic::Ordering::SeqCst);
 
-                session_arc_for_closure.begin_turn(content.clone()).await;
+                let turn_id = session_arc_for_closure.begin_turn(content.clone()).await;
 
                 let images =
                     screenshot_b64.map(|b64| vec![format!("data:image/jpeg;base64,{}", b64)]);
@@ -162,6 +162,7 @@ impl WingmanLoop {
                     is_resume: false,
                     channel: None,
                     chat_id: None,
+                    turn_id: Some(turn_id.clone()),
                 };
 
                 let response = crate::session::process_message(

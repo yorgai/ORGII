@@ -125,6 +125,7 @@ pub async fn channel_process_message(
         is_resume: false,
         channel: None,
         chat_id: None,
+        turn_id: None,
     };
 
     const CALLER_TIMEOUT_SECS: u64 = 180;

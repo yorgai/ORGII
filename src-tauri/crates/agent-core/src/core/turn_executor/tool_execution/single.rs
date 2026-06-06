@@ -1,6 +1,6 @@
 //! Sequential execution of a single tool call (write tools or lone read tools).
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -25,6 +25,7 @@ use super::super::types::{PermissionProvider, TurnEventHandler};
 use super::detect_stream_parse_error;
 use super::diff_feedback::compute_diff_feedback;
 use super::inject_call_id;
+use super::is_cancelled;
 use super::is_error_text;
 use super::ToolBatchOutcome;
 
@@ -63,6 +64,14 @@ pub(super) async fn execute_single_tool(
         Some(action) => format!("{}_{}", tool_call.name, action),
         None => tool_call.name.clone(),
     };
+
+    if is_cancelled(cancel_flag) {
+        info!(
+            "[agent-core] Cancelled before tool call emission (session={})",
+            session_id
+        );
+        return SingleResult::EarlyExit(ToolBatchOutcome::Cancelled);
+    }
 
     handler.on_tool_call(
         session_id,
@@ -112,6 +121,10 @@ pub(super) async fn execute_single_tool(
             .and_then(|h| h.modified_params)
             .unwrap_or_else(|| tool_call.arguments.clone());
 
+        if is_cancelled(cancel_flag) {
+            return SingleResult::EarlyExit(ToolBatchOutcome::Cancelled);
+        }
+
         // Streaming parse-error short-circuit: the provider's stream
         // gave us bytes we couldn't decode as JSON, and `streaming.rs`
         // replaced the args with a marker. Skip the tool entirely and
@@ -146,6 +159,9 @@ pub(super) async fn execute_single_tool(
         )
         .await
         {
+            if is_cancelled(cancel_flag) {
+                return SingleResult::EarlyExit(ToolBatchOutcome::Cancelled);
+            }
             handler.on_tool_result(
                 session_id,
                 &tool_call.id,
@@ -172,6 +188,9 @@ pub(super) async fn execute_single_tool(
         };
 
         if let Some(stale_err) = file_time_error {
+            if is_cancelled(cancel_flag) {
+                return SingleResult::EarlyExit(ToolBatchOutcome::Cancelled);
+            }
             warn!(
                 "[agent-core] FileTime guard rejected {}: {}",
                 tool_call.name, stale_err
@@ -191,6 +210,9 @@ pub(super) async fn execute_single_tool(
             result_is_error = true;
             err_result
         } else {
+            if is_cancelled(cancel_flag) {
+                return SingleResult::EarlyExit(ToolBatchOutcome::Cancelled);
+            }
             handler.on_tool_execute_start(
                 session_id,
                 &tool_call.id,
@@ -205,6 +227,13 @@ pub(super) async fn execute_single_tool(
                 .execute_with_policy(&tool_call.name, exec_args, policy)
                 .await;
             let duration_ms = exec_start.elapsed().as_millis() as u64;
+            if is_cancelled(cancel_flag) {
+                info!(
+                    "[agent-core] Cancelled after tool execution before result processing (session={})",
+                    session_id
+                );
+                return SingleResult::EarlyExit(ToolBatchOutcome::Cancelled);
+            }
 
             // Split the structured outcome into:
             //   - `raw_result`: the LLM-facing string used by every
@@ -312,6 +341,10 @@ pub(super) async fn execute_single_tool(
         }
     };
 
+    if is_cancelled(cancel_flag) {
+        return SingleResult::EarlyExit(ToolBatchOutcome::Cancelled);
+    }
+
     let ui_metadata = tools
         .get(&tool_call.name)
         .and_then(|tool| tool.ui_metadata(&tool_call.arguments, &result));
@@ -374,10 +407,7 @@ pub(super) async fn execute_single_tool(
         return SingleResult::EarlyExit(ToolBatchOutcome::EndTurn(String::new()));
     }
 
-    if cancel_flag
-        .as_ref()
-        .is_some_and(|f| f.load(Ordering::Relaxed))
-    {
+    if is_cancelled(cancel_flag) {
         info!(
             "[agent-core] Cancelled between tool calls (session={})",
             session_id

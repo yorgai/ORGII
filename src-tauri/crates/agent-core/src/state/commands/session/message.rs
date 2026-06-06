@@ -300,7 +300,7 @@ pub(crate) async fn send_message_impl(
         let session = session_for_closure;
 
         Box::pin(async move {
-            session.begin_turn(content.clone()).await;
+            let turn_id = session.begin_turn(content.clone()).await;
 
             let input = crate::session::TurnInput {
                 content: content.clone(),
@@ -311,6 +311,7 @@ pub(crate) async fn send_message_impl(
                 is_resume,
                 channel: None,
                 chat_id: None,
+                turn_id: Some(turn_id.clone()),
             };
 
             let response =
