@@ -114,7 +114,7 @@ const APP_GRID_ACTION_IDS: Partial<Record<string, string>> = {
   // which lands on the Code Editor route (the launchpad dashboard is
   // pinned there as the first tab).
   "dev-record": ACTION_ID.APP_GO_TO_DEV_RECORD,
-  inbox: ACTION_ID.APP_GO_TO_INBOX,
+  changelog: ACTION_ID.APP_GO_TO_CHANGELOG,
   projects: ACTION_ID.APP_GO_TO_STORIES,
   settings: ACTION_ID.APP_GO_TO_SETTINGS,
 };

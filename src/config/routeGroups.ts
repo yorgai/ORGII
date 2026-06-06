@@ -102,14 +102,6 @@ export const APP_HOME_ROUTES = {
     "home",
     "Start Page - home landing"
   ),
-  inbox: route(
-    "/orgii/app/inbox",
-    "Inbox",
-    "mainApp",
-    "app",
-    "inbox",
-    "Unified inbox for notifications, promotions, and updates"
-  ),
   changelog: route(
     "/orgii/app/changelog",
     "Changelog",

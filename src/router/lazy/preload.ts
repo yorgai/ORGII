@@ -31,7 +31,6 @@ const loadOpsControl: RouteLoader = () =>
 const APP_ROUTE_LOADERS: Record<string, RouteLoader | RouteLoader[]> = {
   "start-page": () => import("@src/modules/MainApp/StartPage"),
   settings: [loadSettingsSlot, loadAgentOrgs, loadMyRole],
-  inbox: () => import("@src/modules/MainApp/Inbox"),
   changelog: () => import("@src/modules/MainApp/Changelog"),
   "journey/record": () => import("@src/modules/MainApp/DevRecord"),
   "market/tokens": loadMarketPlaceholder,
@@ -63,7 +62,7 @@ const scheduleIdle: (cb: () => void) => void =
     : (cb) => setTimeout(cb, 50);
 
 /**
- * Preload a single route's chunk based on its full path (e.g. "/orgii/app/inbox").
+ * Preload a single route's chunk based on its full path (e.g. "/orgii/app/changelog").
  * Deduplicates so each chunk is only fetched once.
  */
 function preloadRouteSegment(

@@ -16,13 +16,6 @@ export const SelectRepoPage = React.lazy(
     )
 );
 
-export const InboxPage = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "inbox", webpackPrefetch: true */ "@src/modules/MainApp/Inbox"
-    )
-);
-
 export const ChangelogPage = React.lazy(
   () =>
     import(

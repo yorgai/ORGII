@@ -14,7 +14,7 @@ export const ACTION_ID = {
   APP_GO_TO_MARKET: "app.goToMarket",
   APP_GO_TO_STORIES: "app.goToProjects",
   APP_GO_TO_DEV_RECORD: "app.goToDevRecord",
-  APP_GO_TO_INBOX: "app.goToInbox",
+  APP_GO_TO_CHANGELOG: "app.goToChangelog",
   APP_GO_TO_OPS_CONTROL: "app.goToOpsControl",
   APP_GO_TO_AGENT_ORGS: "app.goToAgentOrgs",
   APP_GO_TO_INTEGRATIONS: "app.goToIntegrations",

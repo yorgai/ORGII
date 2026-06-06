@@ -6,12 +6,12 @@
  * maps to a route; otherwise from ICON_CONFIG.
  */
 import {
+  ChartNoAxesGantt,
   ChevronsLeftRightEllipsis,
   Code2,
   Database,
   Globe,
   History,
-  Inbox,
   ListTodo,
   Network,
   Play,
@@ -39,7 +39,7 @@ import {
 export const ICON_CONFIG = {
   projects: ListTodo,
   dbManager: Database,
-  inbox: Inbox,
+  changelog: ChartNoAxesGantt,
   opsControl: Radar,
   startSession: Play,
   integrations: ChevronsLeftRightEllipsis,
@@ -82,12 +82,12 @@ const economyIcon = getSegmentIcon("market") ?? ICON_CONFIG.settings;
 export const APP_GRID_ITEMS: AppItem[] = [
   // ========== Row 1 (4 items) ==========
   {
-    id: "inbox",
-    labelKey: "navigation:labels.inbox",
-    icon: ICON_CONFIG.inbox,
-    iconName: "inbox",
-    action: "inbox",
-    routePath: ROUTES.app.home.inbox.path,
+    id: "changelog",
+    labelKey: "navigation:routes.changelog",
+    icon: ICON_CONFIG.changelog,
+    iconName: "chart-no-axes-gantt",
+    action: "changelog",
+    routePath: ROUTES.app.home.changelog.path,
   },
   {
     id: "economy",

@@ -159,12 +159,12 @@ const appGoToDevRecord = defineRouteNavigationAction(
   ["open dev record", "show development record"]
 );
 
-const appGoToInbox = defineRouteNavigationAction(
-  ACTION_ID.APP_GO_TO_INBOX,
-  "Open the Inbox",
-  ROUTES.app.home.inbox.path,
-  "Opened Inbox",
-  ["open inbox"]
+const appGoToChangelog = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_CHANGELOG,
+  "Open the Changelog",
+  ROUTES.app.home.changelog.path,
+  "Opened Changelog",
+  ["open changelog", "show changes"]
 );
 
 const appGoToOpsControl = defineRouteNavigationAction(
@@ -251,7 +251,7 @@ export const appNavigationZodActions = [
   appGoToStartPage,
   appGoToProjects,
   appGoToDevRecord,
-  appGoToInbox,
+  appGoToChangelog,
   appGoToOpsControl,
   appGoToAgentOrgs,
   appGoToIntegrations,

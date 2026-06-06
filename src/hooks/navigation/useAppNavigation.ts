@@ -123,7 +123,6 @@ export interface UseAppNavigationReturn {
   goToStartPage: () => void;
   goToSettings: () => void;
   goToProjects: () => void;
-  goToInbox: () => void;
   goToMarket: () => void;
   goToIntegrations: (options?: {
     category?: IntegrationsCategorySegment;
@@ -212,7 +211,7 @@ export function useAppNavigation(): UseAppNavigationReturn {
   // ========================================
 
   const goToStartPage = useCallback(() => {
-    navigateToMainApp(ROUTES.app.home.start.path, {
+    navigateToMainApp(ROUTES.app.home.changelog.path, {
       title: "Start Page",
       icon: "home",
     });
@@ -228,11 +227,6 @@ export function useAppNavigation(): UseAppNavigationReturn {
   const goToProjects = useCallback(() => {
     promoteActiveSessionCreatorDraft();
     navigate(ROUTES.workStation.project.path);
-  }, [navigate, promoteActiveSessionCreatorDraft]);
-
-  const goToInbox = useCallback(() => {
-    promoteActiveSessionCreatorDraft();
-    navigate(ROUTES.app.home.inbox.path);
   }, [navigate, promoteActiveSessionCreatorDraft]);
 
   const goToMarket = useCallback(() => {
@@ -361,7 +355,6 @@ export function useAppNavigation(): UseAppNavigationReturn {
     goToStartPage,
     goToSettings,
     goToProjects,
-    goToInbox,
     goToMarket,
     goToIntegrations,
     goToAgentOrgs,

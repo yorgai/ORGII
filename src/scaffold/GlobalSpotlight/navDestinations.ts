@@ -91,8 +91,8 @@ const PAGES: NavDestination[] = [
   dest("nav-start-page", ROUTES.app.home.start.path, "pages", {
     keywords: ["home", "landing", "start"],
   }),
-  dest("nav-inbox", ROUTES.app.home.inbox.path, "pages", {
-    keywords: ["notifications", "updates", "messages"],
+  dest("nav-changelog", ROUTES.app.home.changelog.path, "pages", {
+    keywords: ["updates", "changes", "release notes"],
   }),
   dest("nav-code-editor", ROUTES.workStation.code.path, "pages", {
     keywords: ["editor", "files", "ide"],

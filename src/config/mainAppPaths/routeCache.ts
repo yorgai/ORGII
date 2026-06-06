@@ -47,11 +47,6 @@ export function deriveRouteCacheKey(pathname: string): string {
       classifySettingsRouteRoot(settingsPathname)
     ];
   }
-
-  if (head === "inbox") {
-    return head;
-  }
-
   if (head === "market" && stripped.length >= 2) {
     return `market/${stripped[1]}`;
   }
