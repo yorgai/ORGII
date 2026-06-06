@@ -332,7 +332,6 @@ const SessionCreatorChatPanelSingle = React.forwardRef<
       if (!editor) return;
       const restoredText = restoreToInput.displayContent;
       editor.setContent(restoredText);
-      editor.focus();
       handleContentChangeWithTracking(restoredText);
       if (restoreToInput.imageDataUrls?.length) {
         const restoredImages: ChatImageAttachment[] =

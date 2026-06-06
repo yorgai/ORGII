@@ -45,6 +45,7 @@ interface UseInputAreaEffectsOptions {
   // Repo path for debug logging
   currentRepoPath: string | undefined;
 
+  onBeforeRestoreInputContent?: () => void;
   onRestoreInputContent?: (text: string) => void;
 }
 
@@ -60,6 +61,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
     selectedCiteRange,
     citeFileName,
     currentRepoPath,
+    onBeforeRestoreInputContent,
     onRestoreInputContent,
   } = options;
 
@@ -98,6 +100,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
         ? `${restoreToInput.displayContent}\n${current}`
         : restoreToInput.displayContent;
 
+    onBeforeRestoreInputContent?.();
     editor.setContent(next);
     hasContentRef.current = next.trim().length > 0;
     onRestoreInputContent?.(next);
@@ -126,8 +129,6 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
       ]);
     }
 
-    editor.focus();
-
     setRestoreToInput(null);
   }, [
     restoreToInput,
@@ -135,6 +136,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
     setRestoreToInput,
     setImageAttachments,
     dropTargetId,
+    onBeforeRestoreInputContent,
     onRestoreInputContent,
     composerInputRef,
     hasContentRef,

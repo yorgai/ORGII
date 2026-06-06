@@ -64,6 +64,49 @@ interface PatchState {
   error: string | null;
 }
 
+function normalizedOptionalText(
+  value: string | null | undefined
+): string | undefined {
+  return value == null || value === "" ? undefined : value;
+}
+
+function patchWouldChangeSession(
+  before: Session,
+  options: PatchOptions
+): boolean {
+  if (options.model !== undefined && before.model !== options.model)
+    return true;
+  if (options.accountId !== undefined && before.accountId !== options.accountId)
+    return true;
+  if (
+    options.agentExecMode !== undefined &&
+    before.agentExecMode !== options.agentExecMode
+  )
+    return true;
+  if (
+    options.draftText !== undefined &&
+    before.draftText !== normalizedOptionalText(options.draftText)
+  )
+    return true;
+  if (
+    options.replyTargetEventId !== undefined &&
+    before.replyTargetEventId !==
+      normalizedOptionalText(options.replyTargetEventId)
+  )
+    return true;
+  if (options.tags !== undefined) {
+    const current = before.tags ?? [];
+    if (
+      current.length !== options.tags.length ||
+      current.some((tag, index) => tag !== options.tags?.[index])
+    )
+      return true;
+  }
+  if (options.pinned !== undefined && before.pinned !== options.pinned)
+    return true;
+  return false;
+}
+
 /**
  * Low-level patch primitive: optimistic write → RPC → rollback on error.
  *
@@ -100,6 +143,11 @@ function usePatchSession(): {
         const message = `useSessionPatch: session ${sessionId} not in local store`;
         setState({ isPatching: false, error: message });
         throw new Error(message);
+      }
+
+      if (!patchWouldChangeSession(before, options)) {
+        setState({ isPatching: false, error: null });
+        return;
       }
 
       const optimistic: Session = { ...before };
