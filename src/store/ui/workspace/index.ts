@@ -1,1 +1,1 @@
-export * from "./workspaceFoldersAtom";
+export * from "../workspaceFoldersAtom";

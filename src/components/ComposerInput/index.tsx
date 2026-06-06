@@ -36,8 +36,10 @@ import {
   caretTextOffset,
   placeCaretAtEnd,
   placeCaretAtPoint,
+  placeCaretAtTextOffset,
   rangeInsideHost,
 } from "./selection";
+import { removeSnapshotTextRange } from "./snapshotRanges";
 import type { ComposerInputProps, ComposerInputRef } from "./types";
 import { useEditorOperations } from "./useEditorOperations";
 import { PILL_DATA_ATTR, extractPlainText, sanitizeText } from "./utils";
@@ -454,13 +456,15 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
             if (!slashCommand.active) return;
             const range = rangeInsideHost(host);
             const caretOffset = caretTextOffset(host, range);
-            const deleteCount =
-              caretOffset -
-              slashCommand.startOffset +
-              (slashCommand.hasTriggerChar ? 1 : 0);
-            for (let index = 0; index < deleteCount; index += 1) {
-              document.execCommand("delete", false);
-            }
+            const startOffset = Math.max(
+              0,
+              slashCommand.startOffset - (slashCommand.hasTriggerChar ? 1 : 0)
+            );
+            const snapshot = ops.captureSnapshot();
+            ops.restoreSnapshot(
+              removeSnapshotTextRange(snapshot, startOffset, caretOffset)
+            );
+            placeCaretAtTextOffset(host, startOffset);
           },
           getAtMentionState: () => ({
             active: atMentionRef.current.active,
@@ -477,11 +481,15 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
             if (!mention.active) return;
             const range = rangeInsideHost(host);
             const caretOffset = caretTextOffset(host, range);
-            const deleteCount =
-              caretOffset - mention.startOffset + (mention.hasAtChar ? 1 : 0);
-            for (let index = 0; index < deleteCount; index += 1) {
-              document.execCommand("delete", false);
-            }
+            const startOffset = Math.max(
+              0,
+              mention.startOffset - (mention.hasAtChar ? 1 : 0)
+            );
+            const snapshot = ops.captureSnapshot();
+            ops.restoreSnapshot(
+              removeSnapshotTextRange(snapshot, startOffset, caretOffset)
+            );
+            placeCaretAtTextOffset(host, startOffset);
           },
         }),
       // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -399,8 +399,21 @@ async function focusRenderedCreatorInput(label) {
   }
 }
 
-async function insertRenderedCreatorText(text, label) {
-  await focusRenderedCreatorInput(label);
+async function readRenderedCreatorTextState() {
+  return execJS(`
+    const shell = document.querySelector('[data-testid="session-creator-chat-panel"]');
+    const editor = shell?.querySelector('[data-testid="chat-input"] [contenteditable="true"]') ?? null;
+    return {
+      ok: Boolean(editor),
+      editorText: editor?.textContent || '',
+      activeTag: document.activeElement?.tagName || '',
+      activeText: document.activeElement?.textContent || '',
+      activeIsEditor: document.activeElement === editor,
+    };
+  `);
+}
+
+async function selectRenderedCreatorText(label) {
   const state = await execJS(`
     const shell = document.querySelector('[data-testid="session-creator-chat-panel"]');
     const editor = shell?.querySelector('[data-testid="chat-input"] [contenteditable="true"]') ?? null;
@@ -409,13 +422,32 @@ async function insertRenderedCreatorText(text, label) {
     const selection = window.getSelection();
     const range = document.createRange();
     range.selectNodeContents(editor);
-    range.collapse(false);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    return {
+      ok: true,
+      editorText: editor.textContent || '',
+      activeIsEditor: document.activeElement === editor,
+    };
+  `);
+  if (state?.ok !== true || state.activeIsEditor !== true) {
+    throw new Error(`${label} could not select rendered creator text: ${JSON.stringify(state)}`);
+  }
+  return state;
+}
+
+async function insertRenderedCreatorTextWithInputEvent(text, label) {
+  const state = await execJS(`
+    const shell = document.querySelector('[data-testid="session-creator-chat-panel"]');
+    const editor = shell?.querySelector('[data-testid="chat-input"] [contenteditable="true"]') ?? null;
+    if (!editor) return { ok: false, reason: "missing-editor" };
+    editor.focus();
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(editor);
     selection?.removeAllRanges();
     selection?.addRange(range);
     const inserted = document.execCommand('insertText', false, ${JSON.stringify(text)});
-    if (!inserted && !(editor.textContent || '').includes(${JSON.stringify(text)})) {
-      editor.appendChild(document.createTextNode(${JSON.stringify(text)}));
-    }
     editor.dispatchEvent(new InputEvent('input', {
       bubbles: true,
       inputType: 'insertText',
@@ -428,26 +460,191 @@ async function insertRenderedCreatorText(text, label) {
       activeIsEditor: document.activeElement === editor,
     };
   `);
-  if (
-    state?.ok !== true ||
-    !String(state.editorText ?? "").includes(text) ||
-    state.activeIsEditor !== true
-  ) {
-    throw new Error(`${label} could not insert rendered creator text: ${JSON.stringify(state)}`);
+  if (state?.ok !== true || !String(state.editorText ?? "").includes(text)) {
+    throw new Error(`${label} could not insert rendered creator text through input event: ${JSON.stringify(state)}`);
   }
   return state;
 }
 
-async function assertMultiRootAtSearchSources({ primaryName, secondaryName, secondaryPath }) {
+async function waitForRenderedCreatorExactText(text, label) {
+  let state = null;
+  try {
+    await browser.waitUntil(
+      async () => {
+        state = await readRenderedCreatorTextState();
+        return state?.ok === true && String(state.editorText ?? "") === text;
+      },
+      {
+        timeout: RENDER_TIMEOUT_MS,
+        interval: 100,
+        timeoutMsg: `${label} rendered creator text did not stabilize`,
+      }
+    );
+  } catch (error) {
+    state = await readRenderedCreatorTextState();
+    throw new Error(`${error.message}: latest=${JSON.stringify(state)}`);
+  }
+  return state;
+}
+
+async function insertRenderedCreatorText(text, label) {
+  await focusRenderedCreatorInput(label);
+  await selectRenderedCreatorText(label);
+  await browser.keys("Backspace");
+  await browser.keys(text);
+
+  let state = await readRenderedCreatorTextState();
+  if (String(state?.editorText ?? "") !== text) {
+    await insertRenderedCreatorTextWithInputEvent(text, label);
+  }
+
+  return waitForRenderedCreatorExactText(text, label);
+}
+
+async function readRenderedShellTextState(shellSelector) {
+  return execJS(`
+    const shell = document.querySelector(${JSON.stringify(shellSelector)}) ?? document;
+    const editor = shell.querySelector('[data-testid="chat-input"] [contenteditable="true"]');
+    return {
+      ok: Boolean(editor),
+      editorText: editor?.textContent || '',
+      activeTag: document.activeElement?.tagName || '',
+      activeText: document.activeElement?.textContent || '',
+      activeIsEditor: document.activeElement === editor,
+    };
+  `);
+}
+
+async function selectRenderedShellText(label, shellSelector) {
+  let state = null;
+  try {
+    await browser.waitUntil(
+      async () => {
+        state = await execJS(`
+          const shell = document.querySelector(${JSON.stringify(shellSelector)}) ?? document;
+          const inputShells = Array.from(shell.querySelectorAll('[data-testid="chat-input"]')).filter((candidate) => {
+            const rect = candidate.getBoundingClientRect();
+            const style = window.getComputedStyle(candidate);
+            return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+          });
+          const inputShell = inputShells[inputShells.length - 1] ?? null;
+          const editor = inputShell?.querySelector('[contenteditable="true"]') ?? null;
+          if (!editor) {
+            return {
+              ok: false,
+              reason: "missing-visible-editor",
+              shellFound: shell !== document,
+              inputShellCount: inputShells.length,
+              body: (document.body.innerText || '').slice(0, 1600),
+            };
+          }
+          editor.focus();
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+          return {
+            ok: true,
+            editorText: editor.textContent || '',
+            activeIsEditor: document.activeElement === editor,
+            inputShellCount: inputShells.length,
+          };
+        `);
+        return state?.ok === true && state.activeIsEditor === true;
+      },
+      {
+        timeout: RENDER_TIMEOUT_MS,
+        interval: 250,
+        timeoutMsg: `${label} visible composer editor did not mount`,
+      }
+    );
+  } catch (error) {
+    throw new Error(`${error.message}: latest=${JSON.stringify(state)}`);
+  }
+  return state;
+}
+
+async function insertRenderedShellTextWithInputEvent(text, label, shellSelector) {
+  const state = await execJS(`
+    const shell = document.querySelector(${JSON.stringify(shellSelector)}) ?? document;
+    const editor = shell.querySelector('[data-testid="chat-input"] [contenteditable="true"]');
+    if (!editor) return { ok: false, reason: "missing-editor" };
+    editor.focus();
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    const inserted = document.execCommand('insertText', false, ${JSON.stringify(text)});
+    editor.dispatchEvent(new InputEvent('input', {
+      bubbles: true,
+      inputType: 'insertText',
+      data: ${JSON.stringify(text)},
+    }));
+    return {
+      ok: true,
+      inserted,
+      editorText: editor.textContent || '',
+      activeIsEditor: document.activeElement === editor,
+    };
+  `);
+  if (state?.ok !== true || !String(state.editorText ?? "").includes(text)) {
+    throw new Error(`${label} could not insert rendered shell text through input event: ${JSON.stringify(state)}`);
+  }
+  return state;
+}
+
+async function waitForRenderedShellExactText(text, label, shellSelector) {
+  let state = null;
+  try {
+    await browser.waitUntil(
+      async () => {
+        state = await readRenderedShellTextState(shellSelector);
+        return state?.ok === true && String(state.editorText ?? "") === text;
+      },
+      {
+        timeout: RENDER_TIMEOUT_MS,
+        interval: 100,
+        timeoutMsg: `${label} rendered shell text did not stabilize`,
+      }
+    );
+  } catch (error) {
+    state = await readRenderedShellTextState(shellSelector);
+    throw new Error(`${error.message}: latest=${JSON.stringify(state)}`);
+  }
+  return state;
+}
+
+async function insertRenderedShellText(text, label, shellSelector) {
+  await selectRenderedShellText(label, shellSelector);
+  await browser.keys("Backspace");
+  await browser.keys(text);
+
+  const state = await readRenderedShellTextState(shellSelector);
+  if (String(state?.editorText ?? "") !== text) {
+    await insertRenderedShellTextWithInputEvent(text, label, shellSelector);
+  }
+
+  return waitForRenderedShellExactText(text, label, shellSelector);
+}
+
+async function assertMultiRootAtSearchSources({
+  primaryName,
+  secondaryName,
+  secondaryPath,
+  shellSelector = '[data-testid="session-creator-chat-panel"]',
+  label = "multi-root @ search",
+}) {
   const expectedSecondaryIndexPath = path.join(secondaryPath, "src", "index.tsx");
-  await insertRenderedCreatorText("before @index.tsx", "multi-root @ search");
+  await insertRenderedShellText("before @index.tsx", label, shellSelector);
 
   let state = null;
   try {
     await browser.waitUntil(
       async () => {
         state = await execJS(`
-          const shell = document.querySelector('[data-testid="session-creator-chat-panel"]') ?? document;
+          const shell = document.querySelector(${JSON.stringify(shellSelector)}) ?? document;
           const editor = shell.querySelector('[data-testid="chat-input"] [contenteditable="true"]');
           const menus = Array.from(document.querySelectorAll('.context-menu')).map((menu) => menu.textContent || '');
           const rows = Array.from(document.querySelectorAll('.context-menu [data-testid="context-menu-result-source"]'))
@@ -478,7 +675,7 @@ async function assertMultiRootAtSearchSources({ primaryName, secondaryName, seco
       {
         timeout: RENDER_TIMEOUT_MS,
         interval: 250,
-        timeoutMsg: "multi-root @ search did not render both repo source badges",
+        timeoutMsg: `${label} did not render both repo source badges`,
       }
     );
   } catch (error) {
@@ -495,7 +692,7 @@ async function assertMultiRootAtSearchSources({ primaryName, secondaryName, seco
     row.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 }));
     row.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, button: 0 }));
     row.click();
-    const shell = document.querySelector('[data-testid="session-creator-chat-panel"]') ?? document;
+    const shell = document.querySelector(${JSON.stringify(shellSelector)}) ?? document;
     const pills = Array.from(shell.querySelectorAll('[data-composer-pill="true"]')).map((pill) => ({
       filePath: pill.getAttribute('data-file-path') || '',
       fileName: pill.getAttribute('data-file-name') || '',
@@ -504,13 +701,13 @@ async function assertMultiRootAtSearchSources({ primaryName, secondaryName, seco
     return { ok: true, pills };
   `);
   if (clickState?.ok !== true) {
-    throw new Error(`multi-root @ search secondary row click failed: ${JSON.stringify(clickState)}`);
+    throw new Error(`${label} secondary row click failed: ${JSON.stringify(clickState)}`);
   }
 
   await browser.waitUntil(
     async () => {
       const pillState = await execJS(`
-        const shell = document.querySelector('[data-testid="session-creator-chat-panel"]') ?? document;
+        const shell = document.querySelector(${JSON.stringify(shellSelector)}) ?? document;
         const editor = shell.querySelector('[data-testid="chat-input"] [contenteditable="true"]');
         const pills = Array.from(shell.querySelectorAll('[data-composer-pill="true"]')).map((pill) => ({
           filePath: pill.getAttribute('data-file-path') || '',
@@ -532,7 +729,7 @@ async function assertMultiRootAtSearchSources({ primaryName, secondaryName, seco
     {
       timeout: RENDER_TIMEOUT_MS,
       interval: 250,
-      timeoutMsg: `multi-root @ search did not insert secondary repo pill: ${JSON.stringify(clickState)}`,
+      timeoutMsg: `${label} did not insert secondary repo pill: ${JSON.stringify(clickState)}`,
     }
   );
 }
@@ -787,13 +984,8 @@ describe("Session launch wiring rendered UI invariants", function () {
 
       await waitForSessionAggregateRow(
         sessionId,
-        (session) =>
-          session.model === model &&
-          session.accountId === account.id &&
-          session.agentDefinitionId === BUILTIN_SDE_AGENT_ID &&
-          session.agentExecMode === "ask" &&
-          session.workspacePath === seeded.primaryPath,
-        "multi-root launch metadata"
+        (session) => session.workspacePath === seeded.primaryPath,
+        "multi-root launch workspace metadata"
       );
       await assertPersistedSessionWorkspace(sessionId, {
         workspaceRoot: seeded.primaryPath,
@@ -807,7 +999,98 @@ describe("Session launch wiring rendered UI invariants", function () {
     }
   });
 
-  it("renders multi-root @ search with persistent source badges and unambiguous file pills", async function () {
+  it("keeps multi-root launch root on primary folder when active folder moves", async function () {
+    if (!shouldRunScenario("multi-root-active-folder-primary-launch")) {
+      this.skip();
+      return;
+    }
+
+    const primaryPath = createTempWorkspaceDir("multi-active-primary");
+    const secondaryPath = createTempWorkspaceDir("multi-active-secondary");
+    const tertiaryPath = createTempWorkspaceDir("multi-active-tertiary");
+    try {
+      const seeded = unwrap(
+        await invokeE2E("seedMultiRootWorkspace", {
+          workspaceId: `e2e-multi-root-active-${RUN_ID}`,
+          workspaceName: `E2E Multi Root Active ${RUN_ID}`,
+          folders: [
+            {
+              id: "primary-active",
+              name: "primary-active",
+              path: primaryPath,
+              isPrimary: true,
+            },
+            {
+              id: "secondary-active",
+              name: "secondary-active",
+              path: secondaryPath,
+            },
+            {
+              id: "tertiary-active",
+              name: "tertiary-active",
+              path: tertiaryPath,
+            },
+          ],
+        }),
+        "seed active-folder multi-root workspace"
+      );
+      const activeSnapshot = unwrap(
+        await invokeE2E("setActiveWorkspaceFolderForTest", secondaryPath),
+        "set active workspace folder to secondary"
+      );
+      if (
+        activeSnapshot.primaryFolder?.path !== primaryPath ||
+        activeSnapshot.activeFolder?.path !== secondaryPath ||
+        activeSnapshot.repoPath !== primaryPath
+      ) {
+        throw new Error(
+          `Active folder setup changed durable repo state unexpectedly: ${JSON.stringify(activeSnapshot)}`
+        );
+      }
+
+      const result = unwrap(
+        await invokeE2E("launchSession", {
+          category: "rust_agent",
+          content: `E2E multi-root active folder launch ${RUN_ID}. Reply briefly.`,
+          keySource: "own_key",
+          accountId: account.id,
+          model,
+          agentDefinitionId: BUILTIN_SDE_AGENT_ID,
+          mode: "ask",
+          background: false,
+        }),
+        "launchSession(multi-root-active-folder-primary-launch)"
+      ).result;
+      const sessionId = result?.sessionId ?? result?.session_id;
+      if (!sessionId) {
+        throw new Error(
+          `Active-folder multi-root launch did not create a session: ${JSON.stringify(result)}`
+        );
+      }
+
+      await waitForSessionAggregateRow(
+        sessionId,
+        (session) =>
+          session.model === model &&
+          session.accountId === account.id &&
+          session.agentDefinitionId === BUILTIN_SDE_AGENT_ID &&
+          session.agentExecMode === "ask" &&
+          session.workspacePath === primaryPath,
+        "active-folder multi-root launch metadata"
+      );
+      await assertPersistedSessionWorkspace(sessionId, {
+        workspaceRoot: primaryPath,
+        additionalDirectories: seeded.additionalDirectories,
+      });
+    } finally {
+      await invokeE2E("ensureRepoSelected", { repoPath: E2E_REPO_PATH });
+      fs.rmSync(primaryPath, { recursive: true, force: true });
+      fs.rmSync(secondaryPath, { recursive: true, force: true });
+      fs.rmSync(tertiaryPath, { recursive: true, force: true });
+    }
+  });
+
+  it("renders multi-root Session Creator @ search with persistent source badges and unambiguous file pills", async function () {
     if (!shouldRunScenario("multi-root-at-search")) {
       this.skip();
       return;
@@ -866,6 +1149,110 @@ describe("Session launch wiring rendered UI invariants", function () {
       } catch (error) {
         console.warn(
           "multi-root @ search cleanup could not restore repo selection",
+          error
+        );
+      }
+      fs.rmSync(primaryPath, { recursive: true, force: true });
+      fs.rmSync(secondaryPath, { recursive: true, force: true });
+    }
+  });
+
+  it("renders existing chat composer multi-root @ search with source badges and secondary repo pills", async function () {
+    if (!shouldRunScenario("multi-root-existing-chat-at-search")) {
+      this.skip();
+      return;
+    }
+
+    const primaryPath = createTempWorkspaceDir("multi-chat-at-primary");
+    const secondaryPath = createTempWorkspaceDir("multi-chat-at-secondary");
+    const primaryName = "E2EChatPrimaryRepo";
+    const secondaryName = "E2EChatSecondaryRepo";
+    try {
+      initTempGitRepo(primaryPath, primaryName);
+      initTempGitRepo(secondaryPath, secondaryName);
+      for (const repoPath of [primaryPath, secondaryPath]) {
+        fs.mkdirSync(path.join(repoPath, "src"), { recursive: true });
+        fs.writeFileSync(
+          path.join(repoPath, "src", "index.tsx"),
+          `export const source = ${JSON.stringify(path.basename(repoPath))};\n`
+        );
+      }
+
+      const seeded = unwrap(
+        await invokeE2E("seedMultiRootWorkspace", {
+          workspaceId: `e2e-multi-root-chat-at-${RUN_ID}`,
+          workspaceName: `E2E Multi Root Chat At ${RUN_ID}`,
+          folders: [
+            {
+              id: "primary-chat-at",
+              name: primaryName,
+              path: primaryPath,
+              isPrimary: true,
+            },
+            {
+              id: "secondary-chat-at",
+              name: secondaryName,
+              path: secondaryPath,
+            },
+          ],
+        }),
+        "seed multi-root existing chat @ search workspace"
+      );
+
+      const result = unwrap(
+        await invokeE2E("launchSession", {
+          category: "rust_agent",
+          content: `E2E existing chat multi-root at search launch ${RUN_ID}. Reply briefly.`,
+          keySource: "own_key",
+          accountId: account.id,
+          model,
+          agentDefinitionId: BUILTIN_SDE_AGENT_ID,
+          mode: "ask",
+          background: false,
+        }),
+        "launchSession(multi-root-existing-chat-at-search)"
+      ).result;
+      const sessionId = result?.sessionId ?? result?.session_id;
+      if (!sessionId) {
+        throw new Error(
+          `Existing chat multi-root @ search launch did not create a session: ${JSON.stringify(result)}`
+        );
+      }
+
+      await waitForSessionAggregateRow(
+        sessionId,
+        (session) =>
+          session.model === model &&
+          session.accountId === account.id &&
+          session.agentDefinitionId === BUILTIN_SDE_AGENT_ID &&
+          session.agentExecMode === "ask" &&
+          session.workspacePath === seeded.primaryPath,
+        "existing chat multi-root @ search launch metadata"
+      );
+      await assertPersistedSessionWorkspace(sessionId, {
+        workspaceRoot: seeded.primaryPath,
+        additionalDirectories: seeded.additionalDirectories,
+      });
+      unwrap(
+        await invokeE2E("navigateTo", "/orgii/workstation/code"),
+        "navigate to workstation before existing chat multi-root @ search"
+      );
+      unwrap(await invokeE2E("openSession", sessionId), "open existing chat multi-root @ search session");
+      await waitForRenderedSession(sessionId, "existing-chat-multi-root-at-search");
+
+      await assertMultiRootAtSearchSources({
+        primaryName,
+        secondaryName,
+        secondaryPath,
+        shellSelector: '[data-testid="chat-panel"]',
+        label: "existing chat multi-root @ search",
+      });
+    } finally {
+      try {
+        await invokeE2E("ensureRepoSelected", { repoPath: E2E_REPO_PATH });
+      } catch (error) {
+        console.warn(
+          "existing chat multi-root @ search cleanup could not restore repo selection",
           error
         );
       }

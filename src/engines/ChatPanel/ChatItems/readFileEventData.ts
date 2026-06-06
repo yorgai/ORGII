@@ -36,3 +36,15 @@ export function getReadFileName(event: SessionEvent): string {
   if (filePath) return getFileNameFromPath(filePath);
   return "unknown";
 }
+
+export function getReadFilePathSummary(
+  events: readonly SessionEvent[],
+  visibleCount = 3
+): string {
+  const paths = events.map(getReadFilePath).filter(Boolean);
+  if (paths.length === 0) return "unknown";
+
+  const visible = paths.slice(0, visibleCount).join(" · ");
+  const remainingCount = paths.length - visibleCount;
+  return remainingCount > 0 ? `${visible} +${remainingCount}` : visible;
+}

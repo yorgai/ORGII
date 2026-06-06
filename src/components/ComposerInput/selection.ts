@@ -86,6 +86,82 @@ function getCaretRangeFromPoint(x: number, y: number): Range | null {
   return null;
 }
 
+export function placeCaretAtTextOffset(
+  host: HTMLElement,
+  targetOffset: number
+): void {
+  host.focus();
+  const range = document.createRange();
+  let remaining = Math.max(0, targetOffset);
+
+  const placeAtEnd = () => {
+    range.selectNodeContents(host);
+    range.collapse(false);
+  };
+
+  const visit = (node: Node): boolean => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent ?? "";
+      if (remaining <= text.length) {
+        range.setStart(node, remaining);
+        range.collapse(true);
+        return true;
+      }
+      remaining -= text.length;
+      return false;
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) return false;
+    const element = node as HTMLElement;
+    if (element.tagName === "BR") {
+      if (remaining <= 1) {
+        range.setStartAfter(element);
+        range.collapse(true);
+        return true;
+      }
+      remaining -= 1;
+      return false;
+    }
+
+    if (element.getAttribute(PILL_DATA_ATTR) === "true") {
+      const textLength = (element.textContent ?? "").length;
+      if (remaining <= 0) {
+        range.setStartBefore(element);
+        range.collapse(true);
+        return true;
+      }
+      if (remaining <= textLength) {
+        range.setStartAfter(element);
+        range.collapse(true);
+        return true;
+      }
+      remaining -= textLength;
+      return false;
+    }
+
+    for (const child of Array.from(element.childNodes)) {
+      if (visit(child)) return true;
+    }
+    return false;
+  };
+
+  for (const child of Array.from(host.childNodes)) {
+    if (visit(child)) {
+      const selection = window.getSelection();
+      if (!selection) return;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return;
+    }
+  }
+
+  placeAtEnd();
+  const selection = window.getSelection();
+  if (!selection) return;
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
 export function placeCaretAtPoint(
   host: HTMLElement,
   x: number,

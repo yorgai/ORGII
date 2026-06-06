@@ -83,7 +83,7 @@ pub struct SessionLaunchParams {
     /// Empty for single-repo launches. Absolute, canonicalised paths
     /// are expected; the frontend is responsible for filtering out the
     /// primary folder (which is passed via `workspace_path`).
-    #[serde(default)]
+    #[serde(default, alias = "additional_directories")]
     pub additional_directories: Vec<String>,
 }
 

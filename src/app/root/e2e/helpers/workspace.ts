@@ -14,6 +14,10 @@ import {
   activeWorkspaceNameAtom,
   workspaceFoldersAtom,
 } from "@src/store/ui/workspaceFoldersAtom";
+import {
+  activeFolderAtom,
+  primaryFolderAtom,
+} from "@src/store/workspace/derived";
 
 import { asError } from "../result";
 import type {
@@ -155,15 +159,49 @@ export function createWorkspaceHelpers(store: E2EStore) {
         kind: REPO_KIND.GIT,
       }));
       const workspaceId = opts.workspaceId ?? "e2e-multi-root-workspace";
-      store.set(workspaceFoldersAtom, normalizedFolders);
-      store.set(activeWorkspaceIdAtom, workspaceId);
-      store.set(activeWorkspaceNameAtom, opts.workspaceName ?? null);
-      store.set(activeFolderIdAtom, primary.id);
-      store.set(reposAtom, repos);
-      store.set(selectedRepoIdAtom, primary.repoId);
-      store.set(repositoryIdAtom, primary.repoId);
-      store.set(repositoryNameAtom, primary.name);
-      store.set(repoPathAtom, primary.path);
+      const applySeed = () => {
+        store.set(workspaceFoldersAtom, normalizedFolders);
+        store.set(activeWorkspaceIdAtom, workspaceId);
+        store.set(activeWorkspaceNameAtom, opts.workspaceName ?? null);
+        store.set(activeFolderIdAtom, primary.id);
+        store.set(reposAtom, repos);
+        store.set(selectedRepoIdAtom, primary.repoId);
+        store.set(repositoryIdAtom, primary.repoId);
+        store.set(repositoryNameAtom, primary.name);
+        store.set(repoPathAtom, primary.path);
+      };
+      const seededPaths = new Set(
+        normalizedFolders.map((folder) => folder.path)
+      );
+      const isSeedApplied = () => {
+        const currentPaths = store
+          .get(workspaceFoldersAtom)
+          .map((folder) => folder.path);
+        return (
+          currentPaths.length === normalizedFolders.length &&
+          currentPaths.every((path) => seededPaths.has(path)) &&
+          store.get(repoPathAtom) === primary.path &&
+          store.get(selectedRepoIdAtom) === primary.repoId
+        );
+      };
+      applySeed();
+      const deadline = Date.now() + 1_500;
+      let stableChecks = 0;
+      while (Date.now() < deadline && stableChecks < 3) {
+        await new Promise((resolve) => window.setTimeout(resolve, 100));
+        if (isSeedApplied()) {
+          stableChecks += 1;
+        } else {
+          applySeed();
+          stableChecks = 0;
+        }
+      }
+      if (!isSeedApplied()) {
+        return {
+          ok: false,
+          error: `seedMultiRootWorkspace: seeded workspace did not stabilize; folders=${JSON.stringify(store.get(workspaceFoldersAtom))}`,
+        };
+      }
       return {
         ok: true,
         workspaceId,
@@ -198,6 +236,46 @@ export function createWorkspaceHelpers(store: E2EStore) {
     }
   };
 
+  const setActiveWorkspaceFolderForTest = async (
+    folderIdOrPath: string | null
+  ): Promise<
+    Result<{
+      primaryFolder: Json | null;
+      activeFolder: Json | null;
+      folders: Json[];
+      selectedRepoId: string;
+      repoPath: string;
+    }>
+  > => {
+    try {
+      const folders = store.get(workspaceFoldersAtom);
+      const matchedFolder =
+        folderIdOrPath === null
+          ? null
+          : folders.find(
+              (folder) =>
+                folder.id === folderIdOrPath || folder.path === folderIdOrPath
+            );
+      if (folderIdOrPath !== null && !matchedFolder) {
+        return {
+          ok: false,
+          error: `setActiveWorkspaceFolderForTest: unknown folder id/path ${folderIdOrPath}; folders=${JSON.stringify(folders)}`,
+        };
+      }
+      store.set(activeFolderIdAtom, matchedFolder?.id ?? null);
+      return {
+        ok: true,
+        primaryFolder: store.get(primaryFolderAtom) as Json | null,
+        activeFolder: store.get(activeFolderAtom) as Json | null,
+        folders: store.get(workspaceFoldersAtom) as Json[],
+        selectedRepoId: store.get(selectedRepoIdAtom),
+        repoPath: store.get(repoPathAtom),
+      };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   const readSessionWorkspaceFromDb = async (
     sessionId: string
   ): Promise<Result<{ result: Json }>> => {
@@ -223,6 +301,7 @@ export function createWorkspaceHelpers(store: E2EStore) {
     ensureRepoSelected,
     seedMultiRootWorkspace,
     clearWorkspaceRepos,
+    setActiveWorkspaceFolderForTest,
     readSessionWorkspaceFromDb,
   };
 }

@@ -151,6 +151,7 @@ export const E2EBootstrap: FC = () => {
       ensureRepoSelected,
       seedMultiRootWorkspace,
       clearWorkspaceRepos,
+      setActiveWorkspaceFolderForTest,
       readSessionWorkspaceFromDb,
     } = createWorkspaceHelpers(store);
 
@@ -321,6 +322,7 @@ export const E2EBootstrap: FC = () => {
       ensureRepoSelected,
       seedMultiRootWorkspace,
       clearWorkspaceRepos,
+      setActiveWorkspaceFolderForTest,
       readSessionWorkspaceFromDb,
       readSessionPromptEnvironmentBlock,
       readSdeTranscript,

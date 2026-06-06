@@ -300,11 +300,19 @@ export function createSessionHelpers(store: E2EStore) {
         agent_role: launchParams.agentRole ?? launchParams.agent_role,
         worktree_path: launchParams.worktreePath ?? launchParams.worktree_path,
         project_slug: launchParams.projectSlug ?? launchParams.project_slug,
-        additional_directories: additionalDirectories,
+        additionalDirectories,
       };
       const result = (await invoke("session_launch", {
         params: rustParams,
       })) as Json;
+      if (result && typeof result === "object") {
+        (result as Json).__e2eLaunchParams = {
+          workspace_path: rustParams.workspace_path,
+          additionalDirectories: rustParams.additionalDirectories,
+          workspaceFolders: store.get(workspaceFoldersAtom),
+          selectedRepoId: store.get(selectedRepoIdAtom),
+        };
+      }
       const sessionId =
         typeof result.sessionId === "string"
           ? result.sessionId

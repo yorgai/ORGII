@@ -12,6 +12,15 @@ const MOUNT_TIMEOUT_MS = 60_000;
 const RENDER_TIMEOUT_MS = 12_000;
 const RUN_ID = Date.now();
 const BATCH_SIZE = 6;
+const E2E_REPO_PATH = process.env.E2E_REPO_PATH ?? "/tmp/orgii-e2e-workspace-repo";
+const SCENARIO_FILTER = (process.env.E2E_CHAT_RENDERING_SCENARIOS ?? "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+function shouldRunScenario(name) {
+  return SCENARIO_FILTER.length === 0 || SCENARIO_FILTER.includes(name);
+}
 
 const SKIP_CHAT_TOOLS = new Set([
   "agent",
@@ -767,8 +776,8 @@ describe("Core chat rendering UI", () => {
   before(async () => {
     await waitForApp();
     const repo = await invokeE2E("ensureRepoSelected", {
-      repoPath: "/Users/vinceorz/Projects/ORGII",
-      repoName: "ORGII",
+      repoPath: E2E_REPO_PATH,
+      repoName: "E2E Fixture Repo",
     });
     if (!repo || repo.ok !== true) {
       throw new Error(`ensureRepoSelected failed: ${repo?.error ?? "unknown"}`);
@@ -779,7 +788,12 @@ describe("Core chat rendering UI", () => {
     }
   });
 
-  it("renders all metadata-ledger tool-call classes from seeded history", async () => {
+  it("renders all metadata-ledger tool-call classes from seeded history", async function () {
+    if (!shouldRunScenario("metadata-ledger")) {
+      this.skip();
+      return;
+    }
+
     const toolsResult = await invokeE2E("listAllTools");
     if (!toolsResult || toolsResult.ok !== true) {
       throw new Error(
@@ -816,15 +830,30 @@ describe("Core chat rendering UI", () => {
     }
   });
 
-  it("renders multi-repo read file targets as paths instead of generic file labels", async () => {
+  it("renders multi-repo read file targets as paths instead of generic file labels", async function () {
+    if (!shouldRunScenario("multi-repo-read-path")) {
+      this.skip();
+      return;
+    }
+
     await assertMultiRepoReadPathRendered();
   });
 
-  it("renders a duplicated thought/answer segment pair only once", async () => {
+  it("renders a duplicated thought/answer segment pair only once", async function () {
+    if (!shouldRunScenario("dedup")) {
+      this.skip();
+      return;
+    }
+
     await assertDedupRenderedOnce();
   });
 
-  it("renders thinking in chronological turn position without duplicates", async () => {
+  it("renders thinking in chronological turn position without duplicates", async function () {
+    if (!shouldRunScenario("thinking-order")) {
+      this.skip();
+      return;
+    }
+
     await assertThinkingChronologicalOrder();
   });
 });

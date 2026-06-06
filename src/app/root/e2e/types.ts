@@ -200,6 +200,15 @@ export interface E2EHelpers {
     }>
   >;
   clearWorkspaceRepos: () => Promise<Result<{ cleared: true }>>;
+  setActiveWorkspaceFolderForTest: (folderId: string | null) => Promise<
+    Result<{
+      primaryFolder: Json | null;
+      activeFolder: Json | null;
+      folders: Json[];
+      selectedRepoId: string;
+      repoPath: string;
+    }>
+  >;
   readSessionWorkspaceFromDb: (
     sessionId: string
   ) => Promise<Result<{ result: Json }>>;

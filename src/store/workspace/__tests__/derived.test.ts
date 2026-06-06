@@ -1,0 +1,68 @@
+import { createStore } from "jotai/vanilla";
+import { describe, expect, it } from "vitest";
+
+import { fileSelectedPathAtom } from "@src/store/workstation/codeEditor/file";
+import type { WorkspaceFolder } from "@src/types/workspace";
+
+import { workspaceFoldersAtom as workspaceFoldersAtomFromLegacyBarrel } from "../../ui/workspace";
+import {
+  activeFolderIdAtom,
+  workspaceFoldersAtom,
+} from "../../ui/workspaceFoldersAtom";
+import { activeFolderAtom, primaryFolderAtom } from "../derived";
+
+const folders: WorkspaceFolder[] = [
+  {
+    id: "primary",
+    name: "Primary Repo",
+    path: "/tmp/orgii-primary",
+    uri: "file:///tmp/orgii-primary",
+    isPrimary: true,
+    repoId: "primary-repo-id",
+  },
+  {
+    id: "secondary",
+    name: "Secondary Repo",
+    path: "/tmp/orgii-secondary",
+    uri: "file:///tmp/orgii-secondary",
+    repoId: "secondary-repo-id",
+  },
+  {
+    id: "nested",
+    name: "Nested Repo",
+    path: "/tmp/orgii-secondary/packages/nested",
+    uri: "file:///tmp/orgii-secondary/packages/nested",
+    repoId: "nested-repo-id",
+  },
+];
+
+describe("workspace derived atoms", () => {
+  it("keeps legacy workspace barrel wired to the canonical folder atom", () => {
+    expect(workspaceFoldersAtomFromLegacyBarrel).toBe(workspaceFoldersAtom);
+  });
+
+  it("keeps primary folder stable when active folder is overridden", () => {
+    const store = createStore();
+    store.set(workspaceFoldersAtom, folders);
+
+    expect(store.get(primaryFolderAtom)?.id).toBe("primary");
+    expect(store.get(activeFolderAtom)?.id).toBe("primary");
+
+    store.set(activeFolderIdAtom, "secondary");
+
+    expect(store.get(primaryFolderAtom)?.id).toBe("primary");
+    expect(store.get(activeFolderAtom)?.id).toBe("secondary");
+  });
+
+  it("uses the most specific editor-owning folder only as active focus", () => {
+    const store = createStore();
+    store.set(workspaceFoldersAtom, folders);
+    store.set(
+      fileSelectedPathAtom,
+      "/tmp/orgii-secondary/packages/nested/src/index.ts"
+    );
+
+    expect(store.get(activeFolderAtom)?.id).toBe("nested");
+    expect(store.get(primaryFolderAtom)?.id).toBe("primary");
+  });
+});
