@@ -399,20 +399,26 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       setWorkstationActiveSessionId,
     ]);
 
+    const benchmarkHeaderSegmentClass =
+      "flex h-7 min-w-0 max-w-full items-center rounded-lg px-1.5 text-[13px] font-medium text-text-1 transition-colors";
     const benchmarkHeaderTitleContent = showBenchmarkChildSessionContent ? (
       <span className="flex min-w-0 items-center gap-1">
         <button
           type="button"
-          className="min-w-0 truncate rounded px-1 text-[13px] font-medium text-text-1 hover:bg-surface-hover"
+          className={`${benchmarkHeaderSegmentClass} cursor-pointer hover:bg-surface-hover`}
           onClick={(event) => {
             event.stopPropagation();
             handleBenchmarkSessionGroupHeaderClick();
           }}
         >
-          {benchmarkSessionGroupTitle}
+          <span className="min-w-0 -translate-y-px truncate">
+            {benchmarkSessionGroupTitle}
+          </span>
         </button>
         <span className="shrink-0 text-text-4">&gt;</span>
-        <span className="min-w-0 truncate">{panelTitle}</span>
+        <span className={`${benchmarkHeaderSegmentClass} cursor-default`}>
+          <span className="min-w-0 -translate-y-px truncate">{panelTitle}</span>
+        </span>
       </span>
     ) : undefined;
 

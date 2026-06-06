@@ -18,6 +18,7 @@ export interface SessionGroupPageProps {
   items: SessionTableItem[];
   onSelectItem?: (item: SessionTableItem) => void;
   actions?: SessionGroupPageAction[];
+  toolbar?: React.ReactNode;
   className?: string;
   testId?: string;
   headerTestId?: string;
@@ -31,6 +32,7 @@ export const SessionGroupPage: React.FC<SessionGroupPageProps> = ({
   items,
   onSelectItem,
   actions = [],
+  toolbar,
   className,
   testId,
   headerTestId,
@@ -73,6 +75,12 @@ export const SessionGroupPage: React.FC<SessionGroupPageProps> = ({
           </div>
         ) : null}
       </div>
+
+      {toolbar ? (
+        <div className="flex shrink-0 items-center gap-2 border-b border-solid border-border-2 px-4 py-2">
+          {toolbar}
+        </div>
+      ) : null}
 
       <div className="min-h-0 flex-1 overflow-hidden" data-testid={listTestId}>
         <SessionTable items={items} onSelect={onSelectItem} />

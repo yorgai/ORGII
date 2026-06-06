@@ -2,13 +2,8 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   CheckCircle2,
-  ChevronDown,
-  ChevronRight,
   Clipboard,
   FolderOpen,
-  ListChevronsDownUp,
-  ListChevronsUpDown,
-  Search,
   TriangleAlert,
   X,
 } from "lucide-react";
@@ -23,11 +18,10 @@ import {
   type BenchmarkEvaluationMode,
 } from "@src/api/tauri/benchmark";
 import Button from "@src/components/Button";
-import Checkbox from "@src/components/Checkbox";
-import InlineAlert from "@src/components/InlineAlert";
 import Input from "@src/components/Input";
 import Select, { type SelectOption } from "@src/components/Select";
 import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
+import BenchmarkTaskSelector from "@src/features/BenchmarkPanel/BenchmarkTaskSelector";
 import { useBenchmarkAgentBatchRun } from "@src/hooks/benchmark/useBenchmarkAgentBatchRun";
 import { useBenchmarkRun } from "@src/hooks/benchmark/useBenchmarkRun";
 import { useBenchmarkTasks } from "@src/hooks/benchmark/useBenchmarkTasks";
@@ -197,51 +191,6 @@ export function useBenchmarkSessionCreatorSlots({
     t,
   ]);
 
-  const normalizedBenchmarkTaskSearch = benchmarkTaskSearch
-    .trim()
-    .toLowerCase();
-  const benchmarkTaskGroups = useMemo(() => {
-    const groups = new Map<string, typeof benchmarkTasks>();
-    for (const task of benchmarkTasks) {
-      const groupKey = task.repo ?? t("creator.benchmark.unknownRepo");
-      const searchableText =
-        `${task.taskId} ${task.title} ${task.repo ?? ""}`.toLowerCase();
-      if (
-        normalizedBenchmarkTaskSearch &&
-        !searchableText.includes(normalizedBenchmarkTaskSearch)
-      ) {
-        continue;
-      }
-      const existing = groups.get(groupKey) ?? [];
-      existing.push(task);
-      groups.set(groupKey, existing);
-    }
-    return Array.from(groups.entries()).map(([repo, tasks]) => ({
-      repo,
-      tasks,
-    }));
-  }, [benchmarkTasks, normalizedBenchmarkTaskSearch, t]);
-  const visibleBenchmarkTaskIds = useMemo(
-    () =>
-      benchmarkTaskGroups.flatMap((group) =>
-        group.tasks.map((task) => task.taskId)
-      ),
-    [benchmarkTaskGroups]
-  );
-  const allVisibleTasksSelected =
-    visibleBenchmarkTaskIds.length > 0 &&
-    visibleBenchmarkTaskIds.every((taskId) =>
-      selectedBatchTaskIds.includes(taskId)
-    );
-  const someVisibleTasksSelected = visibleBenchmarkTaskIds.some((taskId) =>
-    selectedBatchTaskIds.includes(taskId)
-  );
-  const allBenchmarkTaskGroupsCollapsed =
-    benchmarkTaskGroups.length > 0 &&
-    benchmarkTaskGroups.every((group) =>
-      collapsedBenchmarkTaskGroups.has(group.repo)
-    );
-
   const handleBenchmarkKindChange = useCallback(
     (value: string | number | (string | number)[]) => {
       if (typeof value !== "string") {
@@ -289,23 +238,18 @@ export function useBenchmarkSessionCreatorSlots({
   );
 
   const handleBenchmarkSelectAllTasks = useCallback(
-    (checked: boolean) => {
+    (checked: boolean, visibleTaskIds: string[]) => {
       setSelectedBatchTaskIds((currentTaskIds) => {
-        const visibleTaskIdSet = new Set(visibleBenchmarkTaskIds);
+        const visibleTaskIdSet = new Set(visibleTaskIds);
         const nextTaskIds = checked
-          ? Array.from(new Set([...currentTaskIds, ...visibleBenchmarkTaskIds]))
+          ? Array.from(new Set([...currentTaskIds, ...visibleTaskIds]))
           : currentTaskIds.filter((taskId) => !visibleTaskIdSet.has(taskId));
         setSelectedBenchmarkTaskId(nextTaskIds[0] ?? null);
         setActiveBatchTaskId(nextTaskIds[0] ?? null);
         return nextTaskIds;
       });
     },
-    [
-      setActiveBatchTaskId,
-      setSelectedBatchTaskIds,
-      setSelectedBenchmarkTaskId,
-      visibleBenchmarkTaskIds,
-    ]
+    [setActiveBatchTaskId, setSelectedBatchTaskIds, setSelectedBenchmarkTaskId]
   );
 
   const handleBenchmarkSelectGroupTasks = useCallback(
@@ -335,17 +279,14 @@ export function useBenchmarkSessionCreatorSlots({
     });
   }, []);
 
-  const handleBenchmarkToggleAllGroups = useCallback(() => {
+  const handleBenchmarkToggleAllGroups = useCallback((repos: string[]) => {
     setCollapsedBenchmarkTaskGroups((currentGroups) => {
-      if (
-        benchmarkTaskGroups.length > 0 &&
-        benchmarkTaskGroups.every((group) => currentGroups.has(group.repo))
-      ) {
+      if (repos.length > 0 && repos.every((repo) => currentGroups.has(repo))) {
         return new Set();
       }
-      return new Set(benchmarkTaskGroups.map((group) => group.repo));
+      return new Set(repos);
     });
-  }, [benchmarkTaskGroups]);
+  }, []);
 
   const handleBenchmarkLoadTasks = useCallback(() => {
     void loadBenchmarkTasks();
@@ -516,193 +457,22 @@ export function useBenchmarkSessionCreatorSlots({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-solid border-border-2 pt-3">
-          <div className="flex items-center gap-2">
-            <div className="shrink-0 text-[13px] font-semibold text-text-1">
-              {t("creator.benchmark.taskSelectionTitle")}
-            </div>
-            <div className="text-[13px] text-text-2">
-              {t("creator.benchmark.selectedTasks", {
-                selected: selectedBatchTaskIds.length,
-                total: benchmarkTasks.length,
-              })}
-            </div>
-            <div className="flex flex-1 items-center justify-end">
-              <Button
-                htmlType="button"
-                variant="tertiary"
-                size="small"
-                iconOnly
-                icon={
-                  allBenchmarkTaskGroupsCollapsed ? (
-                    <ListChevronsUpDown size={14} strokeWidth={1.75} />
-                  ) : (
-                    <ListChevronsDownUp size={14} strokeWidth={1.75} />
-                  )
-                }
-                title={
-                  allBenchmarkTaskGroupsCollapsed
-                    ? t("common:actions.expandAll")
-                    : t("common:actions.collapseAll")
-                }
-                aria-label={
-                  allBenchmarkTaskGroupsCollapsed
-                    ? t("common:actions.expandAll")
-                    : t("common:actions.collapseAll")
-                }
-                onClick={handleBenchmarkToggleAllGroups}
-                disabled={benchmarkTaskGroups.length === 0}
-              />
-              <div className="mx-2 h-4 w-px bg-border-2" />
-              <Checkbox
-                checked={allVisibleTasksSelected}
-                indeterminate={
-                  !allVisibleTasksSelected && someVisibleTasksSelected
-                }
-                disabled={
-                  isLoadingBenchmarkTasks || benchmarkTasks.length === 0
-                }
-                size="small"
-                onChange={handleBenchmarkSelectAllTasks}
-              >
-                {t("common:actions.selectAll")}
-              </Checkbox>
-            </div>
-          </div>
-          <Input
-            value={benchmarkTaskSearch}
-            onChange={setBenchmarkTaskSearch}
-            placeholder={t("creator.benchmark.searchPlaceholder")}
-            prefix={<Search size={14} />}
-            allowClear
-            size="small"
-          />
-          <div className="scrollbar-overlay flex max-h-64 flex-col gap-2 overflow-y-auto py-1">
-            {benchmarkTaskGroups.map((group) => {
-              const groupTaskIds = group.tasks.map((task) => task.taskId);
-              const allGroupTasksSelected = groupTaskIds.every((taskId) =>
-                selectedBatchTaskIds.includes(taskId)
-              );
-              const someGroupTasksSelected = groupTaskIds.some((taskId) =>
-                selectedBatchTaskIds.includes(taskId)
-              );
-              const isCollapsed = collapsedBenchmarkTaskGroups.has(group.repo);
-              return (
-                <div key={group.repo} className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2 rounded-md px-2 py-1">
-                    <button
-                      type="button"
-                      className="flex h-4 w-4 shrink-0 items-center justify-center text-text-3 hover:text-text-1"
-                      onClick={() => handleBenchmarkToggleGroup(group.repo)}
-                      aria-label={
-                        isCollapsed
-                          ? t("common:actions.expand")
-                          : t("common:actions.collapse")
-                      }
-                    >
-                      {isCollapsed ? (
-                        <ChevronRight size={14} className="shrink-0" />
-                      ) : (
-                        <ChevronDown size={14} className="shrink-0" />
-                      )}
-                    </button>
-                    <Checkbox
-                      checked={allGroupTasksSelected}
-                      indeterminate={
-                        !allGroupTasksSelected && someGroupTasksSelected
-                      }
-                      disabled={
-                        isLoadingBenchmarkTasks || groupTaskIds.length === 0
-                      }
-                      size="small"
-                      onChange={(checked) =>
-                        handleBenchmarkSelectGroupTasks(groupTaskIds, checked)
-                      }
-                      ariaLabel={t("common:actions.selectAll")}
-                    />
-                    <button
-                      type="button"
-                      className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
-                      onClick={() => handleBenchmarkToggleGroup(group.repo)}
-                    >
-                      <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-text-3">
-                        {group.repo}
-                      </span>
-                      <span className="shrink-0 text-[11px] text-text-3">
-                        {group.tasks.length}
-                      </span>
-                    </button>
-                  </div>
-                  {!isCollapsed ? (
-                    <div className="flex flex-col divide-y divide-border-2">
-                      {group.tasks.map((task) => {
-                        const checked = selectedBatchTaskIds.includes(
-                          task.taskId
-                        );
-                        return (
-                          <div
-                            key={task.taskId}
-                            className="flex cursor-pointer items-center gap-2 py-1.5 pl-8 pr-2"
-                            onClick={() => {
-                              if (
-                                !isLoadingBenchmarkTasks &&
-                                canLoadBenchmarkTasks
-                              ) {
-                                handleBenchmarkTaskToggle(
-                                  task.taskId,
-                                  !checked
-                                );
-                              }
-                            }}
-                          >
-                            <Checkbox
-                              checked={checked}
-                              disabled={
-                                isLoadingBenchmarkTasks ||
-                                !canLoadBenchmarkTasks
-                              }
-                              size="small"
-                              onClick={(event) => event.stopPropagation()}
-                              onChange={(nextChecked) =>
-                                handleBenchmarkTaskToggle(
-                                  task.taskId,
-                                  nextChecked
-                                )
-                              }
-                              ariaLabel={task.taskId}
-                            />
-                            <span className="min-w-0 flex-1 truncate text-left text-[12px] text-text-1">
-                              {task.taskId}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-          {!canLoadBenchmarkTasks ? (
-            <p className="m-0 text-[12px] leading-5 text-text-3">
-              {t("creator.benchmark.taskLoadingUnsupported")}
-            </p>
-          ) : benchmarkError ? (
-            <InlineAlert
-              type="danger"
-              title={t("common:errors.failedToLoad")}
-              className="!py-2"
-            >
-              <p className="m-0 break-words text-[12px] leading-5">
-                {benchmarkError}
-              </p>
-            </InlineAlert>
-          ) : !isLoadingBenchmarkTasks && benchmarkTasks.length === 0 ? (
-            <p className="m-0 text-[12px] leading-5 text-text-3">
-              {t("creator.benchmark.emptyTasks")}
-            </p>
-          ) : null}
-        </div>
+        <BenchmarkTaskSelector
+          className="border-t border-solid border-border-2 pt-3"
+          tasks={benchmarkTasks}
+          selectedTaskIds={selectedBatchTaskIds}
+          searchValue={benchmarkTaskSearch}
+          collapsedGroups={collapsedBenchmarkTaskGroups}
+          isLoading={isLoadingBenchmarkTasks}
+          canLoadTasks={canLoadBenchmarkTasks}
+          error={benchmarkError}
+          onSearchChange={setBenchmarkTaskSearch}
+          onToggleTask={handleBenchmarkTaskToggle}
+          onSelectAllVisible={handleBenchmarkSelectAllTasks}
+          onSelectGroup={handleBenchmarkSelectGroupTasks}
+          onToggleGroup={handleBenchmarkToggleGroup}
+          onToggleAllGroups={handleBenchmarkToggleAllGroups}
+        />
 
         <div className="flex flex-col gap-2 border-t border-solid border-border-2 pt-3">
           <div className="grid grid-cols-2 gap-2">

@@ -65,8 +65,8 @@ export const SessionTable: React.FC<SessionTableProps> = ({
                 disabled={item.disabled}
                 data-testid={item.testId}
                 className={`grid w-full ${SESSION_TABLE_GRID_CLASS} items-center gap-4 border-b border-border-2 px-5 py-2 text-left transition-colors hover:bg-fill-1 ${
-                  item.disabled ? "cursor-default opacity-60" : "cursor-pointer"
-                }`}
+                  item.active ? "bg-fill-1" : ""
+                } ${item.disabled ? "cursor-default opacity-60" : "cursor-pointer"}`}
                 onClick={() => {
                   if (item.disabled) return;
                   onSelect?.(item);

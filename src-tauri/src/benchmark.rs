@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -11,6 +11,7 @@ use agent_core::session::persistence::{
 use agent_core::state::commands::session::launch::{
     session_launch_impl, SessionLaunchParams, SessionLaunchResult,
 };
+use agent_core::state::control_flow::CancelReason;
 use agent_core::state::AgentAppState;
 use chrono::{Local, Utc};
 use core_types::key_source::KeySource;
@@ -38,6 +39,12 @@ const BENCHMARK_AGENT_BATCH_STATUS_RUNNING: &str = "running";
 const BENCHMARK_AGENT_BATCH_STATUS_LAUNCHED: &str = "launched";
 const BENCHMARK_AGENT_BATCH_STATUS_FAILED: &str = "failed";
 const BENCHMARK_AGENT_BATCH_STATUS_CANCELLED: &str = "cancelled";
+const BENCHMARK_AGENT_SUBMISSIONS_DIR: &str = ".orgii/benchmark-results";
+const BENCHMARK_AGENT_SUBMISSION_PATCH_FILE: &str = "solution.patch";
+const BENCHMARK_BATCH_TASK_ACTION_ADD: &str = "add";
+const BENCHMARK_BATCH_TASK_ACTION_REMOVE: &str = "remove";
+const BENCHMARK_BATCH_TASK_ACTION_CANCEL: &str = "cancel";
+const BENCHMARK_BATCH_TASK_ACTION_RESTART: &str = "restart";
 const DEFAULT_AGENT_BATCH_CONCURRENCY: usize = 2;
 const MAX_AGENT_BATCH_CONCURRENCY: usize = 8;
 const SWE_BENCH_PRO_REPO_PATH: &str = "/Users/laptop-h/Documents/GitHub/SWE-bench_Pro-os";
@@ -120,7 +127,7 @@ pub struct BenchmarkCancelRunRequest {
     pub run_id: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BenchmarkAgentLaunchSelection {
     pub category: String,
@@ -172,6 +179,24 @@ pub struct BenchmarkCancelAgentBatchRequest {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct BenchmarkEvaluateAgentBatchRequest {
+    pub batch_id: String,
+    pub evaluation_mode: Option<String>,
+    #[serde(default)]
+    pub task_ids: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BenchmarkUpdateAgentBatchTasksRequest {
+    pub batch_id: String,
+    pub action: String,
+    #[serde(default)]
+    pub task_ids: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BenchmarkListAgentBatchHistoriesRequest {
     pub limit: Option<usize>,
 }
@@ -187,6 +212,14 @@ pub struct BenchmarkAgentBatchItem {
     pub finished_at: Option<String>,
     pub error: Option<String>,
     pub logs: Vec<String>,
+    #[serde(default)]
+    pub submitted_patch_path: Option<String>,
+    #[serde(default)]
+    pub evaluation_run_id: Option<String>,
+    #[serde(default)]
+    pub evaluation_status: Option<String>,
+    #[serde(default)]
+    pub evaluation_error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -195,6 +228,8 @@ pub struct BenchmarkAgentBatchStatus {
     pub batch_id: String,
     pub benchmark_kind: String,
     pub source_path: String,
+    #[serde(default)]
+    pub launch: Option<BenchmarkAgentLaunchSelection>,
     pub master_session_id: String,
     pub master_session_name: String,
     pub status: String,
@@ -484,7 +519,7 @@ pub async fn benchmark_start_agent_batch(
     fs::create_dir_all(&workspace_path).map_err(|error| {
         format!("Failed to create benchmark working directory {workspace_path}: {error}")
     })?;
-    request.launch.workspace_path = Some(workspace_path);
+    request.launch.workspace_path = Some(workspace_path.clone());
 
     let concurrency = request
         .concurrency
@@ -502,21 +537,13 @@ pub async fn benchmark_start_agent_batch(
     let items = request
         .task_ids
         .iter()
-        .map(|task_id| BenchmarkAgentBatchItem {
-            task_id: task_id.clone(),
-            status: BENCHMARK_AGENT_BATCH_STATUS_QUEUED.to_string(),
-            session_id: None,
-            session_name: None,
-            started_at: None,
-            finished_at: None,
-            error: None,
-            logs: vec!["Queued for agent launch.".to_string()],
-        })
+        .map(|task_id| create_agent_batch_item(task_id, &workspace_path))
         .collect::<Vec<_>>();
     let status = BenchmarkAgentBatchStatus {
         batch_id: batch_id.clone(),
         benchmark_kind: request.kind.clone(),
         source_path: request.source_path.clone(),
+        launch: Some(request.launch.clone()),
         master_session_id: master_session_id.clone(),
         master_session_name: master_session_name.clone(),
         status: BENCHMARK_AGENT_BATCH_STATUS_RUNNING.to_string(),
@@ -575,7 +602,16 @@ pub async fn benchmark_start_agent_batch(
                 mark_agent_batch_item_cancelled(&batch_id, &task_id).await;
                 return;
             }
-            let prompt = benchmark_agent_prompt(&kind, &detail);
+            let submitted_patch_path = launch
+                .workspace_path
+                .as_deref()
+                .map(|path| benchmark_agent_submission_patch_path(path, &task_id))
+                .unwrap_or_else(|| {
+                    format!(
+                        "{BENCHMARK_AGENT_SUBMISSIONS_DIR}/{task_id}/{BENCHMARK_AGENT_SUBMISSION_PATCH_FILE}"
+                    )
+                });
+            let prompt = benchmark_agent_prompt(&kind, &detail, &submitted_patch_path);
             let params = benchmark_launch_params(
                 &launch,
                 prompt,
@@ -613,9 +649,9 @@ pub async fn benchmark_get_agent_batch_status(
         .get(&request.batch_id)
         .cloned()
     {
-        return Ok(status);
+        return refresh_agent_batch_evaluations(status).await;
     }
-    load_agent_batch_history(&request.batch_id)
+    refresh_agent_batch_evaluations(load_agent_batch_history(&request.batch_id)?).await
 }
 
 #[tauri::command]
@@ -628,6 +664,249 @@ pub async fn benchmark_list_agent_batch_histories(
         histories.truncate(limit);
     }
     Ok(histories)
+}
+
+async fn load_agent_batch_for_update(batch_id: &str) -> Result<BenchmarkAgentBatchStatus, String> {
+    if let Some(status) = BENCHMARK_AGENT_BATCHES.lock().await.get(batch_id).cloned() {
+        return Ok(status);
+    }
+    let status = load_agent_batch_history(batch_id)?;
+    BENCHMARK_AGENT_BATCHES
+        .lock()
+        .await
+        .insert(batch_id.to_string(), status.clone());
+    Ok(status)
+}
+
+async fn persist_updated_agent_batch(
+    mut batch: BenchmarkAgentBatchStatus,
+) -> Result<BenchmarkAgentBatchStatus, String> {
+    refresh_agent_batch_counts(&mut batch);
+    BENCHMARK_AGENT_BATCHES
+        .lock()
+        .await
+        .insert(batch.batch_id.clone(), batch.clone());
+    persist_agent_batch_status(&batch)?;
+    Ok(batch)
+}
+
+async fn refresh_agent_batch_evaluations(
+    mut batch: BenchmarkAgentBatchStatus,
+) -> Result<BenchmarkAgentBatchStatus, String> {
+    let runs = BENCHMARK_RUNS.lock().await;
+    let mut changed = false;
+    for item in &mut batch.items {
+        let Some(run_id) = item.evaluation_run_id.as_deref() else {
+            continue;
+        };
+        let Some(run_status) = runs.get(run_id) else {
+            continue;
+        };
+        if item.evaluation_status.as_deref() != Some(run_status.status.as_str()) {
+            item.evaluation_status = Some(run_status.status.clone());
+            changed = true;
+        }
+        if item.evaluation_error != run_status.error {
+            item.evaluation_error = run_status.error.clone();
+            changed = true;
+        }
+    }
+    drop(runs);
+    if changed {
+        BENCHMARK_AGENT_BATCHES
+            .lock()
+            .await
+            .insert(batch.batch_id.clone(), batch.clone());
+        persist_agent_batch_status(&batch)?;
+    }
+    Ok(batch)
+}
+
+#[tauri::command]
+pub async fn benchmark_evaluate_agent_batch(
+    request: BenchmarkEvaluateAgentBatchRequest,
+) -> Result<BenchmarkAgentBatchStatus, String> {
+    let evaluation_mode = request
+        .evaluation_mode
+        .as_deref()
+        .map(str::trim)
+        .filter(|mode| !mode.is_empty())
+        .unwrap_or(EVALUATION_MODE_LOCAL_DOCKER)
+        .to_string();
+    ensure_supported_swe_bench_mode(&evaluation_mode)?;
+
+    let task_filter = if request.task_ids.is_empty() {
+        None
+    } else {
+        Some(request.task_ids.iter().cloned().collect::<HashSet<_>>())
+    };
+    let mut batch = load_agent_batch_for_update(&request.batch_id).await?;
+    let mut evaluation_requests = Vec::new();
+
+    for item in &mut batch.items {
+        if task_filter
+            .as_ref()
+            .is_some_and(|task_ids| !task_ids.contains(&item.task_id))
+        {
+            continue;
+        }
+        if item.session_id.is_none() {
+            item.evaluation_error = Some("Agent session has not launched yet.".to_string());
+            continue;
+        }
+        let submitted_patch_path = item.submitted_patch_path.clone().ok_or_else(|| {
+            format!(
+                "Benchmark task {} does not have a patch submission path.",
+                item.task_id
+            )
+        })?;
+        let patch = match fs::read_to_string(&submitted_patch_path) {
+            Ok(patch) => patch,
+            Err(error) => {
+                item.evaluation_error = Some(format!(
+                    "Failed to read submitted patch at {submitted_patch_path}: {error}"
+                ));
+                continue;
+            }
+        };
+        if patch.trim().is_empty() {
+            item.evaluation_error =
+                Some(format!("Submitted patch is empty: {submitted_patch_path}"));
+            continue;
+        }
+        evaluation_requests.push((item.task_id.clone(), submitted_patch_path, patch));
+    }
+
+    for (task_id, submitted_patch_path, patch) in evaluation_requests {
+        let status = benchmark_start_run(BenchmarkStartRunRequest {
+            kind: batch.benchmark_kind.clone(),
+            source_path: batch.source_path.clone(),
+            task_id: task_id.clone(),
+            patch,
+            evaluation_mode: evaluation_mode.clone(),
+            repo_path: None,
+        })
+        .await?;
+        if let Some(item) = batch.items.iter_mut().find(|item| item.task_id == task_id) {
+            item.submitted_patch_path = Some(submitted_patch_path);
+            item.evaluation_run_id = Some(status.run_id);
+            item.evaluation_status = Some(status.status);
+            item.evaluation_error = status.error;
+            item.logs.push(format!(
+                "Started benchmark evaluation from {}.",
+                item.submitted_patch_path
+                    .as_deref()
+                    .unwrap_or("submitted patch")
+            ));
+            trim_logs(&mut item.logs);
+        }
+    }
+
+    persist_updated_agent_batch(batch).await
+}
+
+#[tauri::command]
+pub async fn benchmark_update_agent_batch_tasks(
+    app_handle: tauri::AppHandle,
+    request: BenchmarkUpdateAgentBatchTasksRequest,
+) -> Result<BenchmarkAgentBatchStatus, String> {
+    if request.task_ids.is_empty() {
+        return Err("Select at least one benchmark task.".to_string());
+    }
+    let mut batch = load_agent_batch_for_update(&request.batch_id).await?;
+    let launch = batch
+        .launch
+        .clone()
+        .ok_or_else(|| "This benchmark batch is missing launch settings.".to_string())?;
+    let workspace_path = launch
+        .workspace_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|path| !path.is_empty())
+        .ok_or_else(|| "This benchmark batch is missing a working directory.".to_string())?
+        .to_string();
+    let task_ids = request.task_ids.iter().cloned().collect::<HashSet<_>>();
+    let now = Utc::now().to_rfc3339();
+    let mut task_ids_to_spawn = Vec::new();
+
+    match request.action.as_str() {
+        BENCHMARK_BATCH_TASK_ACTION_ADD => {
+            batch.status = BENCHMARK_AGENT_BATCH_STATUS_RUNNING.to_string();
+            batch.finished_at = None;
+            let existing_task_ids = batch
+                .items
+                .iter()
+                .map(|item| item.task_id.clone())
+                .collect::<HashSet<_>>();
+            for task_id in &request.task_ids {
+                if existing_task_ids.contains(task_id) {
+                    continue;
+                }
+                batch
+                    .items
+                    .push(create_agent_batch_item(task_id, &workspace_path));
+                task_ids_to_spawn.push(task_id.clone());
+            }
+        }
+        BENCHMARK_BATCH_TASK_ACTION_REMOVE => {
+            for item in &mut batch.items {
+                if task_ids.contains(&item.task_id) && item.session_id.is_some() {
+                    cancel_agent_batch_item_session(&app_handle, item).await;
+                    item.status = BENCHMARK_AGENT_BATCH_STATUS_CANCELLED.to_string();
+                    item.finished_at = Some(now.clone());
+                    item.logs
+                        .push("Cancelled; launched sessions stay in history.".to_string());
+                    trim_logs(&mut item.logs);
+                }
+            }
+            batch
+                .items
+                .retain(|item| !(task_ids.contains(&item.task_id) && item.session_id.is_none()));
+        }
+        BENCHMARK_BATCH_TASK_ACTION_CANCEL => {
+            for item in &mut batch.items {
+                if !task_ids.contains(&item.task_id) {
+                    continue;
+                }
+                cancel_agent_batch_item_session(&app_handle, item).await;
+                item.status = BENCHMARK_AGENT_BATCH_STATUS_CANCELLED.to_string();
+                item.finished_at = Some(now.clone());
+                item.logs.push("Cancelled by user.".to_string());
+                trim_logs(&mut item.logs);
+            }
+        }
+        BENCHMARK_BATCH_TASK_ACTION_RESTART => {
+            batch.status = BENCHMARK_AGENT_BATCH_STATUS_RUNNING.to_string();
+            batch.finished_at = None;
+            for task_id in &request.task_ids {
+                if let Some(item) = batch.items.iter_mut().find(|item| item.task_id == *task_id) {
+                    cancel_agent_batch_item_session(&app_handle, item).await;
+                    *item = create_agent_batch_item(task_id, &workspace_path);
+                } else {
+                    batch
+                        .items
+                        .push(create_agent_batch_item(task_id, &workspace_path));
+                }
+                task_ids_to_spawn.push(task_id.clone());
+            }
+        }
+        other => return Err(format!("Unsupported benchmark batch task action: {other}")),
+    }
+
+    batch.total_tasks = batch.items.len();
+    let updated_batch = persist_updated_agent_batch(batch).await?;
+    for task_id in task_ids_to_spawn {
+        spawn_agent_batch_task(
+            app_handle.clone(),
+            updated_batch.batch_id.clone(),
+            updated_batch.benchmark_kind.clone(),
+            updated_batch.source_path.clone(),
+            launch.clone(),
+            updated_batch.master_session_id.clone(),
+            task_id,
+        );
+    }
+    Ok(updated_batch)
 }
 
 #[tauri::command]
@@ -654,6 +933,26 @@ pub async fn benchmark_cancel_agent_batch(
     drop(batches);
     persist_agent_batch_status(&status)?;
     Ok(status)
+}
+
+fn create_agent_batch_item(task_id: &str, workspace_path: &str) -> BenchmarkAgentBatchItem {
+    BenchmarkAgentBatchItem {
+        task_id: task_id.to_string(),
+        status: BENCHMARK_AGENT_BATCH_STATUS_QUEUED.to_string(),
+        session_id: None,
+        session_name: None,
+        started_at: None,
+        finished_at: None,
+        error: None,
+        logs: vec!["Queued for agent launch.".to_string()],
+        submitted_patch_path: Some(benchmark_agent_submission_patch_path(
+            workspace_path,
+            task_id,
+        )),
+        evaluation_run_id: None,
+        evaluation_status: None,
+        evaluation_error: None,
+    }
 }
 
 async fn is_agent_batch_cancelled(batch_id: &str) -> bool {
@@ -711,6 +1010,70 @@ async fn mark_agent_batch_item_failed(batch_id: &str, task_id: &str, error: Stri
         trim_logs(&mut item.logs);
     })
     .await;
+}
+
+async fn cancel_agent_batch_item_session(
+    app_handle: &tauri::AppHandle,
+    item: &BenchmarkAgentBatchItem,
+) {
+    let Some(session_id) = item.session_id.as_deref() else {
+        return;
+    };
+    let state = app_handle.state::<AgentAppState>();
+    state
+        .cancel_session(session_id, CancelReason::ProgrammaticShutdown)
+        .await;
+}
+
+fn spawn_agent_batch_task(
+    app_handle: tauri::AppHandle,
+    batch_id: String,
+    kind: String,
+    source_path: String,
+    launch: BenchmarkAgentLaunchSelection,
+    master_session_id: String,
+    task_id: String,
+) {
+    tauri::async_runtime::spawn(async move {
+        if is_agent_batch_cancelled(&batch_id).await {
+            mark_agent_batch_item_cancelled(&batch_id, &task_id).await;
+            return;
+        }
+        mark_agent_batch_item_running(&batch_id, &task_id).await;
+        let detail = match read_swe_bench_task(&source_path, &task_id) {
+            Ok(detail) => detail,
+            Err(error) => {
+                mark_agent_batch_item_failed(&batch_id, &task_id, error).await;
+                return;
+            }
+        };
+        let submitted_patch_path = launch
+            .workspace_path
+            .as_deref()
+            .map(|path| benchmark_agent_submission_patch_path(path, &task_id))
+            .unwrap_or_else(|| {
+                format!(
+                    "{BENCHMARK_AGENT_SUBMISSIONS_DIR}/{task_id}/{BENCHMARK_AGENT_SUBMISSION_PATCH_FILE}"
+                )
+            });
+        let prompt = benchmark_agent_prompt(&kind, &detail, &submitted_patch_path);
+        let params = benchmark_launch_params(
+            &launch,
+            prompt,
+            Some(task_id.clone()),
+            Some(master_session_id.clone()),
+        );
+        let state = app_handle.state::<AgentAppState>();
+        let org_store = app_handle.state::<AgentOrgsStore>();
+        match session_launch_impl(&state, Some(org_store.inner()), params).await {
+            Ok(result) => {
+                mark_agent_batch_item_launched(&batch_id, &task_id, result).await;
+            }
+            Err(error) => {
+                mark_agent_batch_item_failed(&batch_id, &task_id, error).await;
+            }
+        }
+    });
 }
 
 async fn update_agent_batch_item<F>(batch_id: &str, task_id: &str, update: F)
@@ -878,7 +1241,11 @@ fn create_benchmark_master_session(
     Ok(session_id)
 }
 
-fn benchmark_agent_prompt(kind: &str, detail: &BenchmarkTaskDetail) -> String {
+fn benchmark_agent_prompt(
+    kind: &str,
+    detail: &BenchmarkTaskDetail,
+    submitted_patch_path: &str,
+) -> String {
     let repo = detail
         .index
         .repo
@@ -889,10 +1256,11 @@ fn benchmark_agent_prompt(kind: &str, detail: &BenchmarkTaskDetail) -> String {
         .metadata
         .get("base_commit")
         .and_then(string_value)
-        .unwrap_or("the task base commit");
+        .unwrap_or_else(|| "the task base commit".to_string());
     format!(
-        "You are running an official benchmark task. The final result will be evaluated by the benchmark harness, not by ORGII.\n\nBenchmark: {kind}\nTask ID: {task_id}\nRepository: {repo}\nBase commit: {base_commit}\n\nInstructions:\n- Work inside the configured working directory. If the target repository is not already present there, clone it from its public upstream repository into that working directory before editing.\n- After cloning or locating the repository, check out the task base commit before applying changes.\n- Make the minimal code changes needed to satisfy the task.\n- Do not modify unrelated files.\n- Do not invent new tests or change benchmark tests unless the task explicitly requires it.\n- When you finish, summarize the changed files and the validation you ran.\n- Leave the repository in a state where a git diff captures your solution patch.\n\nTask:\n{instruction}",
+        "You are running an official benchmark task. The final result will be evaluated by the benchmark harness, not by ORGII.\n\nBenchmark: {kind}\nTask ID: {task_id}\nRepository: {repo}\nBase commit: {base_commit}\nPatch submission path: {submitted_patch_path}\n\nInstructions:\n- Work inside the configured working directory. If the target repository is not already present there, clone it from its public upstream repository into that working directory before editing.\n- After cloning or locating the repository, check out the task base commit before applying changes.\n- Make the minimal code changes needed to satisfy the task.\n- Do not modify unrelated files.\n- Do not invent new tests or change benchmark tests unless the task explicitly requires it.\n- Before finishing, write your final unified diff patch to the patch submission path above. Create parent directories if needed.\n- The patch file must contain only the solution diff that should be evaluated.\n- When you finish, summarize the changed files, the validation you ran, and confirm that you wrote the patch file.\n- Leave the repository in a state where a git diff captures your solution patch.\n\nTask:\n{instruction}",
         task_id = detail.index.task_id,
+        submitted_patch_path = submitted_patch_path,
         instruction = detail.instruction
     )
 }
@@ -2159,6 +2527,15 @@ fn swe_bench_run_scripts_dir() -> PathBuf {
 
 fn benchmark_runs_dir() -> PathBuf {
     app_paths::orgii_root().join("benchmark-runs")
+}
+
+fn benchmark_agent_submission_patch_path(workspace_path: &str, task_id: &str) -> String {
+    PathBuf::from(workspace_path)
+        .join(BENCHMARK_AGENT_SUBMISSIONS_DIR)
+        .join(task_id)
+        .join(BENCHMARK_AGENT_SUBMISSION_PATCH_FILE)
+        .display()
+        .to_string()
 }
 
 fn benchmark_agent_batch_histories_dir() -> PathBuf {

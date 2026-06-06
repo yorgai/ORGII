@@ -127,6 +127,8 @@ benchmark::benchmark_cancel_run,
 benchmark::benchmark_start_agent_batch,
 benchmark::benchmark_get_agent_batch_status,
 benchmark::benchmark_list_agent_batch_histories,
+benchmark::benchmark_evaluate_agent_batch,
+benchmark::benchmark_update_agent_batch_tasks,
 benchmark::benchmark_cancel_agent_batch,
 // Runner commands - Cursor session capture
 agent_sessions::cli::platform_adapters::cursor::session_capture::start_cursor_native_oauth_login,

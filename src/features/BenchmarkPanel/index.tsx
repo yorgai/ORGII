@@ -4,11 +4,22 @@ import { useTranslation } from "react-i18next";
 
 import {
   BENCHMARK_AGENT_BATCH_STATUS,
+  BENCHMARK_BATCH_TASK_ACTION,
+  BENCHMARK_EVALUATION_MODE,
+  BENCHMARK_KIND,
+  BENCHMARK_RUN_STATUS,
   type BenchmarkAgentBatchItem,
+  type BenchmarkBatchTaskAction,
+  type BenchmarkTaskIndexRow,
+  benchmarkApi,
 } from "@src/api/tauri/benchmark";
+import Button from "@src/components/Button";
+import Input from "@src/components/Input";
 import Markdown from "@src/components/MarkDown";
 import ModelIcon from "@src/components/ModelIcon";
 import TabPill from "@src/components/TabPill";
+import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
+import BenchmarkTaskSelector from "@src/features/BenchmarkPanel/BenchmarkTaskSelector";
 import { CodeMirrorEditor } from "@src/features/CodeMirror";
 import { useBenchmarkAgentBatchRun } from "@src/hooks/benchmark/useBenchmarkAgentBatchRun";
 import { useBenchmarkTasks } from "@src/hooks/benchmark/useBenchmarkTasks";
@@ -19,6 +30,7 @@ import {
   type SessionTableItem,
 } from "@src/modules/shared/layouts/blocks";
 import {
+  BENCHMARK_TASK_LIST_LIMIT,
   benchmarkActiveBatchTaskIdAtom,
   benchmarkAgentBatchStatusAtom,
 } from "@src/store/benchmark";
@@ -68,7 +80,19 @@ function getDisplayItemStatus(
   return status;
 }
 
-function itemStatusColor(status: BenchmarkAgentBatchItem["status"]): string {
+function itemStatusColor(
+  status: BenchmarkAgentBatchItem["status"],
+  evaluationStatus?: BenchmarkAgentBatchItem["evaluationStatus"]
+): string {
+  if (evaluationStatus === BENCHMARK_RUN_STATUS.PASSED) {
+    return "var(--color-success-6)";
+  }
+  if (evaluationStatus === BENCHMARK_RUN_STATUS.FAILED) {
+    return "var(--color-danger-6)";
+  }
+  if (evaluationStatus === BENCHMARK_RUN_STATUS.RUNNING) {
+    return "var(--color-primary-6)";
+  }
   if (status === BENCHMARK_AGENT_BATCH_STATUS.RUNNING) {
     return "var(--color-primary-6)";
   }
@@ -99,6 +123,21 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
   );
   const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
   const { refreshBatchStatus } = useBenchmarkAgentBatchRun();
+  const [isEvaluatingBatch, setIsEvaluatingBatch] = useState(false);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
+  const [addTasksPanelOpen, setAddTasksPanelOpen] = useState(false);
+  const [addTasksSearch, setAddTasksSearch] = useState("");
+  const [addTaskIds, setAddTaskIds] = useState<string[]>([]);
+  const [addTaskRows, setAddTaskRows] = useState<BenchmarkTaskIndexRow[]>([]);
+  const [addTasksLoading, setAddTasksLoading] = useState(false);
+  const [addTasksError, setAddTasksError] = useState<string | null>(null);
+  const [collapsedAddTaskGroups, setCollapsedAddTaskGroups] = useState<
+    Set<string>
+  >(() => new Set());
+  const [isUpdatingBatchTasks, setIsUpdatingBatchTasks] = useState(false);
+  const [batchTaskActionError, setBatchTaskActionError] = useState<
+    string | null
+  >(null);
   const { error, isLoadingDetail, selectedTask, setSelectedTaskId } =
     useBenchmarkTasks({
       loadDetail: surface === "taskInfo",
@@ -113,6 +152,48 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
         : null,
     [activeTaskId, batchStatus?.items]
   );
+
+  useEffect(() => {
+    if (!addTasksPanelOpen || !batchStatus) {
+      return;
+    }
+    if (batchStatus.benchmarkKind !== BENCHMARK_KIND.SWE_BENCH_PRO) {
+      setAddTaskRows([]);
+      setAddTasksError(null);
+      setAddTasksLoading(false);
+      return;
+    }
+    let cancelled = false;
+    async function loadAddTaskRows() {
+      setAddTasksLoading(true);
+      setAddTasksError(null);
+      try {
+        const rows = await benchmarkApi.listTasks({
+          kind: batchStatus.benchmarkKind,
+          sourcePath: batchStatus.sourcePath,
+          limit: BENCHMARK_TASK_LIST_LIMIT,
+        });
+        if (cancelled) return;
+        const existingTaskIds = new Set(
+          batchStatus.items.map((item) => item.taskId)
+        );
+        setAddTaskRows(rows.filter((row) => !existingTaskIds.has(row.taskId)));
+      } catch (error) {
+        if (cancelled) return;
+        setAddTasksError(
+          error instanceof Error ? error.message : String(error)
+        );
+      } finally {
+        if (!cancelled) {
+          setAddTasksLoading(false);
+        }
+      }
+    }
+    void loadAddTaskRows();
+    return () => {
+      cancelled = true;
+    };
+  }, [addTasksPanelOpen, batchStatus]);
 
   useEffect(() => {
     if (surface !== "runList" || activeTaskId || !batchStatus?.items.length) {
@@ -211,6 +292,139 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
     });
   }, [refreshBatchStatus, setBenchmarkBatchStatus]);
 
+  const selectedBatchTaskActionIds = useMemo(
+    () => (activeTaskId ? [activeTaskId] : []),
+    [activeTaskId]
+  );
+
+  const updateBatchTasks = useCallback(
+    async (action: BenchmarkBatchTaskAction, taskIds: string[]) => {
+      if (!batchStatus?.batchId || taskIds.length === 0) return false;
+      setIsUpdatingBatchTasks(true);
+      setBatchTaskActionError(null);
+      try {
+        const status = await benchmarkApi.updateAgentBatchTasks({
+          batchId: batchStatus.batchId,
+          action,
+          taskIds,
+        });
+        setBenchmarkBatchStatus(status);
+        void loadSessions({ forceRefresh: true });
+        return true;
+      } catch (error) {
+        setBatchTaskActionError(
+          error instanceof Error ? error.message : String(error)
+        );
+        return false;
+      } finally {
+        setIsUpdatingBatchTasks(false);
+      }
+    },
+    [batchStatus?.batchId, setBenchmarkBatchStatus]
+  );
+
+  const handleUpdateSelectedBatchTasks = useCallback(
+    async (action: BenchmarkBatchTaskAction) => {
+      await updateBatchTasks(action, selectedBatchTaskActionIds);
+    },
+    [selectedBatchTaskActionIds, updateBatchTasks]
+  );
+
+  const handleAddSelectedBatchTasks = useCallback(async () => {
+    const updated = await updateBatchTasks(
+      BENCHMARK_BATCH_TASK_ACTION.ADD,
+      addTaskIds
+    );
+    if (updated) {
+      setAddTaskIds([]);
+      setAddTasksPanelOpen(false);
+    }
+  }, [addTaskIds, updateBatchTasks]);
+
+  const handleToggleAddTask = useCallback(
+    (taskId: string, checked: boolean) => {
+      setAddTaskIds((currentTaskIds) =>
+        checked
+          ? Array.from(new Set([...currentTaskIds, taskId]))
+          : currentTaskIds.filter((currentTaskId) => currentTaskId !== taskId)
+      );
+    },
+    []
+  );
+
+  const handleSelectAllAddTasks = useCallback(
+    (checked: boolean, visibleTaskIds: string[]) => {
+      setAddTaskIds((currentTaskIds) => {
+        const visibleTaskIdSet = new Set(visibleTaskIds);
+        return checked
+          ? Array.from(new Set([...currentTaskIds, ...visibleTaskIds]))
+          : currentTaskIds.filter((taskId) => !visibleTaskIdSet.has(taskId));
+      });
+    },
+    []
+  );
+
+  const handleSelectAddTaskGroup = useCallback(
+    (taskIds: string[], checked: boolean) => {
+      setAddTaskIds((currentTaskIds) => {
+        const groupTaskIdSet = new Set(taskIds);
+        return checked
+          ? Array.from(new Set([...currentTaskIds, ...taskIds]))
+          : currentTaskIds.filter((taskId) => !groupTaskIdSet.has(taskId));
+      });
+    },
+    []
+  );
+
+  const handleToggleAddTaskGroup = useCallback((repo: string) => {
+    setCollapsedAddTaskGroups((currentGroups) => {
+      const nextGroups = new Set(currentGroups);
+      if (nextGroups.has(repo)) {
+        nextGroups.delete(repo);
+      } else {
+        nextGroups.add(repo);
+      }
+      return nextGroups;
+    });
+  }, []);
+
+  const handleToggleAllAddTaskGroups = useCallback((repos: string[]) => {
+    setCollapsedAddTaskGroups((currentGroups) => {
+      if (repos.length > 0 && repos.every((repo) => currentGroups.has(repo))) {
+        return new Set();
+      }
+      return new Set(repos);
+    });
+  }, []);
+
+  const handleToggleAddTasksPanel = useCallback(() => {
+    setAddTasksPanelOpen((currentOpen) => !currentOpen);
+  }, []);
+
+  const handleCancelAddTasks = useCallback(() => {
+    setAddTasksPanelOpen(false);
+    setAddTaskIds([]);
+  }, []);
+
+  const handleEvaluateSubmittedPatches = useCallback(async () => {
+    if (!batchStatus?.batchId) return;
+    setIsEvaluatingBatch(true);
+    setEvaluationError(null);
+    try {
+      const status = await benchmarkApi.evaluateAgentBatch({
+        batchId: batchStatus.batchId,
+        evaluationMode: BENCHMARK_EVALUATION_MODE.LOCAL_DOCKER,
+      });
+      setBenchmarkBatchStatus(status);
+    } catch (error) {
+      setEvaluationError(
+        error instanceof Error ? error.message : String(error)
+      );
+    } finally {
+      setIsEvaluatingBatch(false);
+    }
+  }, [batchStatus?.batchId, setBenchmarkBatchStatus]);
+
   const displayedRunningCount = batchStatus
     ? batchStatus.running + batchStatus.launched
     : 0;
@@ -243,12 +457,16 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
           ? formatModelNameFull(session.model)
           : undefined;
 
+        const statusLabel = item.evaluationStatus
+          ? `${displayStatus} · ${item.evaluationStatus}`
+          : displayStatus;
+
         return {
           id: item.taskId,
           title: item.taskId,
           description: undefined,
-          statusLabel: displayStatus,
-          statusColor: itemStatusColor(displayStatus),
+          statusLabel,
+          statusColor: itemStatusColor(displayStatus, item.evaluationStatus),
           agentIcon: session?.cliAgentType ? (
             <ModelIcon agentType={session.cliAgentType} size={14} />
           ) : undefined,
@@ -388,6 +606,175 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
     );
   }
 
+  const canEvaluateSubmittedPatches = Boolean(
+    batchStatus?.items.some((item) => item.sessionId && item.submittedPatchPath)
+  );
+  const canUpdateSelectedBatchTasks =
+    Boolean(batchStatus?.batchId) && selectedBatchTaskActionIds.length > 0;
+  const runListSubtitle =
+    batchTaskActionError ??
+    evaluationError ??
+    t("creator.benchmark.sessionGroupProgress", {
+      total: batchStatus?.totalTasks ?? 0,
+      queued: batchStatus?.queued ?? 0,
+      running: displayedRunningCount,
+      launched: 0,
+      failed: batchStatus?.failed ?? 0,
+      cancelled: batchStatus?.cancelled ?? 0,
+    });
+  const batchTaskToolbar = (
+    <div className="flex w-full min-w-0 flex-col gap-2">
+      <div className="flex w-full min-w-0 items-center justify-end gap-2">
+        <Button
+          htmlType="button"
+          size="small"
+          variant={addTasksPanelOpen ? "primary" : "secondary"}
+          disabled={isUpdatingBatchTasks}
+          onClick={handleToggleAddTasksPanel}
+          data-testid="benchmark-batch-add-tasks-toggle"
+        >
+          {t("common:actions.add")}
+        </Button>
+        <Button
+          htmlType="button"
+          size="small"
+          variant="secondary"
+          disabled={isUpdatingBatchTasks || !canUpdateSelectedBatchTasks}
+          onClick={() =>
+            void handleUpdateSelectedBatchTasks(
+              BENCHMARK_BATCH_TASK_ACTION.REMOVE
+            )
+          }
+          data-testid="benchmark-batch-remove-tasks"
+        >
+          {t("common:actions.remove")}
+        </Button>
+        <Button
+          htmlType="button"
+          size="small"
+          variant="secondary"
+          disabled={isUpdatingBatchTasks || !canUpdateSelectedBatchTasks}
+          onClick={() =>
+            void handleUpdateSelectedBatchTasks(
+              BENCHMARK_BATCH_TASK_ACTION.CANCEL
+            )
+          }
+          data-testid="benchmark-batch-cancel-tasks"
+        >
+          {t("common:actions.stop")}
+        </Button>
+        <Button
+          htmlType="button"
+          size="small"
+          variant="primary"
+          disabled={isUpdatingBatchTasks || !canUpdateSelectedBatchTasks}
+          onClick={() =>
+            void handleUpdateSelectedBatchTasks(
+              BENCHMARK_BATCH_TASK_ACTION.RESTART
+            )
+          }
+          data-testid="benchmark-batch-restart-tasks"
+        >
+          {t("common:actions.restart")}
+        </Button>
+      </div>
+      {addTasksPanelOpen && batchStatus ? (
+        <div
+          className={`flex w-full flex-col gap-3 rounded-[12px] border border-solid border-border-2 p-3 ${SURFACE_TOKENS.surface}`}
+        >
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="text-[13px] font-semibold text-text-1">
+                {t("creator.benchmark.kindTitle")}
+              </div>
+              <Input
+                value={t(
+                  `creator.benchmark.kinds.${
+                    batchStatus.benchmarkKind === BENCHMARK_KIND.TERMINAL_BENCH
+                      ? "terminalBench"
+                      : "sweBenchPro"
+                  }`
+                )}
+                onChange={() => undefined}
+                size="small"
+                className="w-full"
+                disabled
+              />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="text-[13px] font-semibold text-text-1">
+                {t("creator.benchmark.workingDirectory")}
+              </div>
+              <Input
+                value={batchStatus.launch?.workspacePath ?? ""}
+                onChange={() => undefined}
+                size="small"
+                className="w-full"
+                disabled
+              />
+            </div>
+          </div>
+          <div className="flex min-w-0 flex-col gap-1.5 border-t border-solid border-border-2 pt-3">
+            <div className="text-[13px] font-semibold text-text-1">
+              {t("creator.benchmark.sourcePath")} (
+              {t("creator.benchmark.localPath")})
+            </div>
+            <Input
+              value={batchStatus.sourcePath}
+              onChange={() => undefined}
+              size="small"
+              className="w-full"
+              disabled
+            />
+          </div>
+          <BenchmarkTaskSelector
+            className="border-t border-solid border-border-2 pt-3"
+            tasks={addTaskRows}
+            selectedTaskIds={addTaskIds}
+            searchValue={addTasksSearch}
+            collapsedGroups={collapsedAddTaskGroups}
+            isLoading={addTasksLoading}
+            canLoadTasks={
+              batchStatus.benchmarkKind === BENCHMARK_KIND.SWE_BENCH_PRO
+            }
+            error={addTasksError}
+            onSearchChange={setAddTasksSearch}
+            onToggleTask={handleToggleAddTask}
+            onSelectAllVisible={handleSelectAllAddTasks}
+            onSelectGroup={handleSelectAddTaskGroup}
+            onToggleGroup={handleToggleAddTaskGroup}
+            onToggleAllGroups={handleToggleAllAddTaskGroups}
+          />
+          <div className="flex items-center justify-end gap-2 border-t border-solid border-border-2 pt-3">
+            <Button
+              htmlType="button"
+              size="small"
+              variant="secondary"
+              disabled={isUpdatingBatchTasks}
+              onClick={handleCancelAddTasks}
+            >
+              {t("common:actions.cancel")}
+            </Button>
+            <Button
+              htmlType="button"
+              size="small"
+              variant="primary"
+              disabled={
+                isUpdatingBatchTasks ||
+                addTaskIds.length === 0 ||
+                addTasksLoading
+              }
+              onClick={() => void handleAddSelectedBatchTasks()}
+              data-testid="benchmark-batch-add-selected-tasks"
+            >
+              {t("common:actions.add")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+
   if (!batchStatus) {
     return (
       <div
@@ -415,17 +802,18 @@ export const BenchmarkPanel: React.FC<BenchmarkPanelProps> = ({
         "data-benchmark-status": batchStatus.status,
       }}
       title={t("creator.benchmark.sessionGroupTitle")}
-      subtitle={t("creator.benchmark.sessionGroupProgress", {
-        total: batchStatus.totalTasks,
-        queued: batchStatus.queued,
-        running: displayedRunningCount,
-        launched: 0,
-        failed: batchStatus.failed,
-        cancelled: batchStatus.cancelled,
-      })}
+      subtitle={runListSubtitle}
       items={benchmarkSessionListItems}
       onSelectItem={handleSelectBenchmarkSessionListItem}
+      toolbar={batchTaskToolbar}
       actions={[
+        {
+          label: t("creator.benchmark.evaluateSubmitted"),
+          onClick: handleEvaluateSubmittedPatches,
+          variant: "primary",
+          disabled: isEvaluatingBatch || !canEvaluateSubmittedPatches,
+          testId: "benchmark-evaluate-submitted-patches",
+        },
         {
           label: t("common:actions.refresh"),
           onClick: handleRefresh,
