@@ -47,7 +47,9 @@ fn test_normalize_tool_call_accepts_cursor_camel_case_target_file() {
         chunk_id: Some("chunk-camel-read".to_string()),
         action_type: Some("tool_call".to_string()),
         function: Some("Read".to_string()),
-        args: Some(serde_json::json!({"targetFile": "/Users/vinceorz/Projects/ORGII/src/app/root.tsx"})),
+        args: Some(
+            serde_json::json!({"targetFile": "/Users/vinceorz/Projects/ORGII/src/app/root.tsx"}),
+        ),
         result: Some(serde_json::json!({"content": "export {};"})),
         created_at: Some("2025-01-15T10:30:00.000Z".to_string()),
         ..Default::default()
@@ -296,6 +298,7 @@ fn test_tool_call_extracts_nested_args() {
             .as_str(),
         Some("/src/lib.rs")
     );
+    assert_eq!(event.file_path.as_deref(), Some("/src/lib.rs"));
 }
 
 #[test]

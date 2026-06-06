@@ -17,13 +17,13 @@
  */
 import React, { memo, useEffect, useRef } from "react";
 
+import { useBlockHeader } from "../useBlockLocate";
 import { EventBlockHeader } from "./EventBlockHeader";
 import { EventBlockHeaderIcon } from "./EventBlockHeaderIcon";
 import {
   EventBlockHeaderSubtitle,
   EventBlockHeaderTitle,
 } from "./EventBlockHeaderTextSlots";
-import { useEventBlockHeader } from "./useEventBlockHeader";
 
 // ============================================
 // Types
@@ -44,6 +44,8 @@ export interface StackedBlockProps<T> {
   defaultCollapsed?: boolean;
   /** Collapse when this value changes from false to true. */
   collapseWhen?: boolean;
+  /** Optional event ID used by the group header navigate icon. */
+  eventId?: string;
 }
 
 // ============================================
@@ -58,6 +60,7 @@ function StackedBlockInner<T>({
   groupSummary,
   defaultCollapsed = true,
   collapseWhen,
+  eventId,
 }: StackedBlockProps<T>) {
   const {
     isCollapsed,
@@ -66,7 +69,8 @@ function StackedBlockInner<T>({
     handleHeaderClick,
     handleHeaderMouseEnter,
     handleHeaderMouseLeave,
-  } = useEventBlockHeader({ defaultCollapsed, collapseAllValue: true });
+    handleLocate,
+  } = useBlockHeader({ defaultCollapsed, collapseAllValue: true, eventId });
   const previousCollapseWhenRef = useRef(collapseWhen);
 
   useEffect(() => {
@@ -84,6 +88,7 @@ function StackedBlockInner<T>({
         isCollapsed={isCollapsed}
         withHover={false}
         onClick={handleHeaderClick}
+        onNavigate={eventId ? handleLocate : undefined}
         onMouseEnter={handleHeaderMouseEnter}
         onMouseLeave={handleHeaderMouseLeave}
       >

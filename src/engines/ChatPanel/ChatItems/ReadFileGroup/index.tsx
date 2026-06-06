@@ -12,11 +12,7 @@ import { useTranslation } from "react-i18next";
 import { ChatCodeBlock, StackedBlock } from "@src/engines/ChatPanel/blocks";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 
-import {
-  getReadFileName,
-  getReadFilePath,
-  getReadFilePathSummary,
-} from "../readFileEventData";
+import { getReadFileName, getReadFilePath } from "../readFileEventData";
 
 // ============================================
 // Types
@@ -125,14 +121,14 @@ const ReadFileGroup: React.FC<ReadFileGroupProps> = ({ events }) => {
   }
 
   const groupLabel = t("tools.nFiles", { count: events.length });
-  const pathSummary = getReadFilePathSummary(events);
 
   return (
     <StackedBlock
       items={events}
       icon={<FileText size={14} className="text-text-2" />}
       label={`Read ${groupLabel}`}
-      groupSummary={pathSummary}
+      groupSummary={groupLabel}
+      eventId={events[0]?.id}
       renderItem={(event) => {
         const content = getFileContent(event);
         const filePath = getReadFilePath(event);

@@ -37,8 +37,9 @@ export const ReadFileBlock: React.FC<ReadFileBlockProps> = (props) => {
 
   const { filePath, fileName } = useMemo(() => extractFileData(props), [props]);
 
-  const iconName = fileName || getFileName(filePath) || "file";
-  const displayName = filePath || fileName || "file";
+  const displayName = fileName || getFileName(filePath) || "file";
+  const fullPathTitle = filePath || fileName || "file";
+  const iconName = displayName;
   const isLoading =
     status === "running" && props.showActiveEventPainting === true;
   const isFailed = status === "failed";
@@ -74,7 +75,7 @@ export const ReadFileBlock: React.FC<ReadFileBlockProps> = (props) => {
   return (
     <div
       className={`${getEventBlockContainerClasses(false)} animate-fade-in`}
-      title={displayName}
+      title={fullPathTitle}
     >
       <EventBlockHeader
         isCollapsed

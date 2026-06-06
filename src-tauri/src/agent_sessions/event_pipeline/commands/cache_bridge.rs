@@ -2,7 +2,7 @@
 //!
 //! Load/save events from SQLite cache with SessionEvent <-> CachedEvent conversion.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use dev_record::cursor_db_history::CURSORIDE_SESSION_PREFIX;
 use serde::{Deserialize, Serialize};
@@ -19,7 +19,10 @@ use session_persistence as sqlite_cache;
 
 use super::{save_events_retry, schedule_notify, EventStoreState, BULK_WRITE_MAX_RETRIES};
 
+const ACTION_TYPE_TOOL_CALL: &str = "tool_call";
 const ACTION_TYPE_TOOL_RESULT: &str = "tool_result";
+
+const FILE_PATH_KEYS: &[&str] = &["file_path", "path", "fileName", "file_name", "target_file"];
 
 fn is_cursor_ide_session_id(session_id: &str) -> bool {
     session_id.starts_with(CURSORIDE_SESSION_PREFIX)
@@ -265,6 +268,124 @@ fn dedup_by_call_id(events: Vec<SessionEvent>) -> Vec<SessionEvent> {
 // session's `parent_session_id` guarantees it belongs to this parent — the
 // only ambiguity is *which* candidate maps to *which* child, and chronological
 // order is the strongest heuristic available.
+fn read_tool_inputs_by_call_id(
+    session_id: &str,
+) -> Result<HashMap<String, serde_json::Value>, String> {
+    use rusqlite::params;
+
+    let conn = sqlite_cache::get_connection().map_err(|err| err.to_string())?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT tool_call_id, tool_input
+             FROM agent_messages
+             WHERE session_id = ?1
+               AND tool_call_id IS NOT NULL
+               AND tool_input IS NOT NULL
+               AND TRIM(tool_input) != ''",
+        )
+        .map_err(|err| err.to_string())?;
+
+    let rows = stmt
+        .query_map(params![session_id], |row| {
+            let call_id: String = row.get(0)?;
+            let tool_input: String = row.get(1)?;
+            Ok((call_id, tool_input))
+        })
+        .map_err(|err| err.to_string())?;
+
+    let mut inputs = HashMap::new();
+    for row in rows {
+        let (call_id, tool_input) = row.map_err(|err| err.to_string())?;
+        let parsed = serde_json::from_str::<serde_json::Value>(&tool_input)
+            .map_err(|err| format!("failed to parse tool_input for call_id {call_id}: {err}"))?;
+        inputs.insert(call_id, normalize_event_record_value(parsed));
+    }
+
+    Ok(inputs)
+}
+
+fn extract_file_path_from_json(value: &serde_json::Value) -> Option<String> {
+    let obj = value.as_object()?;
+    FILE_PATH_KEYS.iter().find_map(|key| {
+        obj.get(*key)
+            .and_then(|path| path.as_str())
+            .filter(|path| !path.trim().is_empty())
+            .map(String::from)
+    })
+}
+
+fn merge_missing_args_from_tool_input(event: &mut SessionEvent, tool_input: &serde_json::Value) {
+    if let (Some(event_args), Some(input_args)) =
+        (event.args.as_object_mut(), tool_input.as_object())
+    {
+        for (key, value) in input_args {
+            if !event_args.contains_key(key) {
+                event_args.insert(key.clone(), value.clone());
+            }
+        }
+    }
+
+    if event.file_path.is_none() {
+        event.file_path = extract_file_path_from_json(&event.args)
+            .or_else(|| extract_file_path_from_json(tool_input));
+    }
+
+    event.recompute_extracted();
+}
+
+fn backfill_tool_inputs_from_messages(session_id: &str, events: &mut [SessionEvent]) {
+    let candidates: Vec<usize> = events
+        .iter()
+        .enumerate()
+        .filter(|(_, event)| event.action_type == ACTION_TYPE_TOOL_CALL)
+        .filter(|(_, event)| event.call_id.is_some())
+        .filter(|(_, event)| {
+            event.args.as_object().is_none_or(|args| args.is_empty()) || event.file_path.is_none()
+        })
+        .map(|(idx, _)| idx)
+        .collect();
+
+    if candidates.is_empty() {
+        return;
+    }
+
+    let tool_inputs = match read_tool_inputs_by_call_id(session_id) {
+        Ok(inputs) => inputs,
+        Err(err) => {
+            tracing::warn!(
+                "[cache_bridge] failed to load tool inputs for {}: {}",
+                session_id,
+                err
+            );
+            return;
+        }
+    };
+
+    if tool_inputs.is_empty() {
+        return;
+    }
+
+    let mut backfilled = 0usize;
+    for idx in candidates {
+        let Some(call_id) = events[idx].call_id.as_deref() else {
+            continue;
+        };
+        let Some(tool_input) = tool_inputs.get(call_id) else {
+            continue;
+        };
+        merge_missing_args_from_tool_input(&mut events[idx], tool_input);
+        backfilled += 1;
+    }
+
+    if backfilled > 0 {
+        tracing::info!(
+            "[cache_bridge] backfilled {} tool event(s) from agent_messages for {}",
+            backfilled,
+            session_id
+        );
+    }
+}
+
 fn backfill_subagent_links(session_id: &str, events: &mut [SessionEvent]) {
     let total_agent_events = events
         .iter()
@@ -686,6 +807,7 @@ pub async fn es_load_from_cache(
         .map(|ce| cached_event_to_session_event(&ce))
         .collect();
     let mut events = dedup_by_call_id(events);
+    backfill_tool_inputs_from_messages(&session_id, &mut events);
     backfill_subagent_links(&session_id, &mut events);
     let count = events.len();
     if count > 0 {
@@ -803,6 +925,7 @@ pub async fn cache_load_session_events(session_id: String) -> Result<Vec<Session
         .map_err(|e| e.to_string())?;
     let events: Vec<SessionEvent> = cached.iter().map(cached_event_to_session_event).collect();
     let mut events = dedup_by_call_id(events);
+    backfill_tool_inputs_from_messages(&session_id, &mut events);
     backfill_subagent_links(&session_id, &mut events);
     Ok(events)
 }
@@ -957,6 +1080,7 @@ pub async fn cache_load_session_turn_body(
         .map(cached_event_to_session_event)
         .collect();
     let mut events = dedup_by_call_id(events);
+    backfill_tool_inputs_from_messages(&session_id, &mut events);
     backfill_subagent_links(&session_id, &mut events);
 
     Ok(SessionTurnBodyWindow {
@@ -1010,6 +1134,7 @@ async fn load_initial_turn_window_events(
             .then_with(|| left.id.cmp(&right.id))
     });
     let mut events = dedup_by_call_id(events);
+    backfill_tool_inputs_from_messages(session_id, &mut events);
     backfill_subagent_links(session_id, &mut events);
 
     Ok(SessionInitialTurnWindow {
@@ -1216,6 +1341,7 @@ pub async fn cache_load_full_session(
         let events: Vec<SessionEvent> =
             s.events.iter().map(cached_event_to_session_event).collect();
         let mut events = dedup_by_call_id(events);
+        backfill_tool_inputs_from_messages(&s.session_id, &mut events);
         backfill_subagent_links(&s.session_id, &mut events);
         FullSessionPayload {
             session_id: s.session_id,

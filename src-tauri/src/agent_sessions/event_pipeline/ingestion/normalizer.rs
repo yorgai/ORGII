@@ -73,9 +73,9 @@ pub fn normalize_chunk(chunk: &RawActivityChunk, session_id: &str) -> SessionEve
     let activity_status = infer_activity_status(action_type, &result_val);
     let source = infer_source(action_type, &result_val);
 
-    let file_path = extract_file_path(&args_obj, &result_val);
-    let command = extract_command(&args_obj, &result_val);
-    let call_id = extract_call_id(chunk, &args_obj, &result_val);
+    let file_path = extract_file_path(&normalized_args, &result_val);
+    let command = extract_command(&normalized_args, &result_val);
+    let call_id = extract_call_id(chunk, &normalized_args, &result_val);
     let is_delta = action_type.contains("delta")
         || raw_function.contains("delta")
         || result_val

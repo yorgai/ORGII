@@ -20,7 +20,6 @@ import { getRegistryEventType } from "@src/lib/activityData/activityNormalizers"
 
 import type { ActionSummaryCategory } from "../../ChatHistory/chatItemPipeline/classifiers";
 import type { ActionSummaryEntry } from "../../ChatHistory/chatItemPipeline/types";
-import { getReadFilePathSummary } from "../readFileEventData";
 
 // ============================================
 // Types
@@ -86,11 +85,9 @@ function buildGroupSummary(
   for (const entry of entries) {
     const count = entry.events.length;
     switch (entry.category) {
-      case "read": {
-        const pathSummary = getReadFilePathSummary(entry.events);
-        parts.push(pathSummary ?? t("tools.exploreSummary.read", { count }));
+      case "read":
+        parts.push(t("tools.exploreSummary.read", { count }));
         break;
-      }
       case "search":
         parts.push(t("tools.exploreSummary.search", { count }));
         break;
@@ -181,6 +178,7 @@ const ActionSummaryGroup: React.FC<ActionSummaryGroupProps> = ({
         groupSummary={groupSummary}
         defaultCollapsed={closedByBoundary}
         collapseWhen={closedByBoundary}
+        eventId={firstEvent?.id}
         renderItem={renderEventBlock}
       />
     </div>
