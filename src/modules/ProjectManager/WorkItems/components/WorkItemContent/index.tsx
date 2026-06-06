@@ -1,5 +1,5 @@
-import { ExternalLink } from "lucide-react";
-import React, { useRef } from "react";
+import { Bot, Terminal } from "lucide-react";
+import React, { useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import TabPill from "@src/components/TabPill";
@@ -8,9 +8,18 @@ import {
   ProjectContentEditor,
   type ProjectContentEditorRef,
 } from "@src/modules/ProjectManager/shared";
-import { DetailPanelContainer } from "@src/modules/shared/layouts/blocks";
+import {
+  DetailPanelContainer,
+  SessionTable,
+  type SessionTableItem,
+} from "@src/modules/shared/layouts/blocks";
 import type { LinkedSession } from "@src/types/core/workItem";
+import {
+  formatReplayDateLabel,
+  toIntlLocaleTag,
+} from "@src/util/data/formatters/date";
 
+import { ROLE_I18N_KEYS, STATUS_I18N_KEYS } from "../AgentWorkflow/types";
 import TodoChecklist from "../TodoChecklist";
 import WorkItemContentStack from "../WorkItemContentStack";
 import HistoryTab from "./HistoryTab";
@@ -20,60 +29,105 @@ import type { SessionTab, WorkItemContentProps } from "./types";
 
 interface LinkedSessionsListProps {
   sessions: LinkedSession[];
+  activeAgentSessionId?: string | null;
   onOpenSession?: (sessionId: string) => void;
+}
+
+const LINKED_SESSION_STATUS_COLOR: Record<LinkedSession["status"], string> = {
+  running: "var(--color-primary-6)",
+  completed: "var(--color-success-6)",
+  failed: "var(--color-danger-6)",
+  cancelled: "var(--color-warning-6)",
+};
+
+function getLinkedSessionTitle(session: LinkedSession): string {
+  if (session.result_preview) return session.result_preview;
+  if (session.sub_agent_name) return session.sub_agent_name;
+  return session.session_id;
 }
 
 const LinkedSessionsList: React.FC<LinkedSessionsListProps> = ({
   sessions,
+  activeAgentSessionId,
   onOpenSession,
 }) => {
-  const { t } = useTranslation("projects");
+  const { t, i18n } = useTranslation(["projects", "common"]);
+  const dateTimeLabelOptions = useMemo(
+    () => ({
+      todayLabel: t("common:relativeDate.today"),
+      yesterdayLabel: t("common:relativeDate.yesterday"),
+      locale: toIntlLocaleTag(i18n.resolvedLanguage),
+    }),
+    [i18n.resolvedLanguage, t]
+  );
+  const tableItems = useMemo<SessionTableItem[]>(() => {
+    if (sessions.length === 0) {
+      return [
+        {
+          id: "work-item-linked-sessions-empty",
+          title: t("workItems.sessions.emptyOverview"),
+          statusLabel: "—",
+          disabled: true,
+          testId: "work-item-linked-sessions-empty-row",
+        },
+      ];
+    }
+
+    return sessions.map((session) => {
+      const roleLabelKey = ROLE_I18N_KEYS[session.agent_role];
+      const statusLabelKey = STATUS_I18N_KEYS[session.status];
+      const roleLabel = roleLabelKey
+        ? t(roleLabelKey)
+        : session.sub_agent_name || session.agent_role;
+      const statusLabel = statusLabelKey ? t(statusLabelKey) : session.status;
+      const agentIcon =
+        session.session_type === "cli" ? (
+          <Terminal size={14} strokeWidth={1.75} className="text-text-3" />
+        ) : (
+          <Bot size={14} strokeWidth={1.75} className="text-text-3" />
+        );
+
+      return {
+        id: session.session_id,
+        title: getLinkedSessionTitle(session),
+        description:
+          session.result_preview &&
+          session.result_preview !== session.session_id
+            ? session.session_id
+            : undefined,
+        statusLabel,
+        statusColor: LINKED_SESSION_STATUS_COLOR[session.status],
+        agentIcon,
+        agentLabel: roleLabel,
+        modelLabel: session.session_type,
+        workspaceLabel: session.parent_session_id,
+        workspaceTitle: session.parent_session_id,
+        startedLabel: formatReplayDateLabel(session.started_at, {
+          ...dateTimeLabelOptions,
+          withSeconds: false,
+          monthStyle: "short",
+        }),
+        lastUpdatedLabel: formatReplayDateLabel(
+          session.completed_at ?? session.started_at,
+          {
+            ...dateTimeLabelOptions,
+            withSeconds: false,
+            monthStyle: "short",
+          }
+        ),
+        active: session.session_id === activeAgentSessionId,
+        testId: `work-item-linked-session-${session.session_id}`,
+      };
+    });
+  }, [activeAgentSessionId, dateTimeLabelOptions, sessions, t]);
 
   return (
     <div data-testid="work-item-linked-sessions">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <h4 className="m-0 text-[12px] font-semibold text-text-2">
-          {t("workItems.sessions.linkedSessions")}
-        </h4>
-      </div>
-      {sessions.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border-2 bg-fill-1 px-3 py-4">
-          <p className="m-0 text-[12px] font-medium text-text-2">
-            {t("workItems.sessions.emptyOverview")}
-          </p>
-          <p className="m-0 mt-1 text-[11px] text-text-4">
-            {t("workItems.sessions.emptyOverviewHint")}
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {sessions.map((session) => (
-            <button
-              key={`${session.session_id}-${session.session_type}`}
-              type="button"
-              data-testid={`work-item-linked-session-${session.session_id}`}
-              className="group flex w-full items-center justify-between gap-3 rounded-lg border border-solid border-border-1 bg-bg-1 px-3 py-2 text-left transition-colors hover:border-border-2 hover:bg-surface-hover"
-              onClick={() => onOpenSession?.(session.session_id)}
-            >
-              <span className="min-w-0">
-                <span className="block truncate text-[12px] font-medium text-text-1">
-                  {session.result_preview ||
-                    session.sub_agent_name ||
-                    session.agent_role ||
-                    session.session_id}
-                </span>
-                <span className="mt-0.5 block truncate text-[11px] text-text-3">
-                  {session.status} · {session.session_type}
-                </span>
-              </span>
-              <ExternalLink
-                size={13}
-                className="shrink-0 text-text-3 group-hover:text-text-1"
-              />
-            </button>
-          ))}
-        </div>
-      )}
+      <SessionTable
+        items={tableItems}
+        onSelect={(item) => onOpenSession?.(item.id)}
+        className="max-h-[360px]"
+      />
     </div>
   );
 };
@@ -184,6 +238,7 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
       {activeSessionTab === "session" && (
         <LinkedSessionsList
           sessions={workItem.linkedSessions ?? []}
+          activeAgentSessionId={activeAgentSessionId}
           onOpenSession={onOpenSession}
         />
       )}
