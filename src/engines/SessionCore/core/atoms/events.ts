@@ -50,7 +50,7 @@ import type { SessionEvent } from "../types";
  *
  * Set by the `onStreamingDelta` callback in useSessionSync (keyed by sessionId).
  * Cleared per-session on streaming_complete, session complete, and session switch.
- * The EventStore still receives throttled upserts for persistence/recovery.
+ * Token-level live content must not be written to the durable EventStore.
  */
 export const streamingDeltaContentAtom = atom<Map<string, string>>(
   new Map<string, string>()

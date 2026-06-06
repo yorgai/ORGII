@@ -4,20 +4,8 @@
  * Handlers for message, thinking, and tool call delta events.
  * Also handles agent:streaming_complete from Rust StreamingBuffer.
  */
-import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
-import type { SessionEvent } from "@src/engines/SessionCore/core/types";
-
-import {
-  makeAssistantEvent,
-  makeThinkingEvent,
-  makeToolCallEvent,
-} from "../../shared/eventBuilders";
 import { mergeStreamingText } from "../../shared/streamTextAccumulator";
-import {
-  buildToolArgsFromParsed,
-  extractThinkContent,
-  parsePartialToolArgs,
-} from "../../shared/streamingParsers";
+import { extractThinkContent } from "../../shared/streamingParsers";
 import { capStreamContent } from "../../shared/subagentTracking";
 import type { AgentWSEvent, StreamRefs } from "../../shared/types";
 import {
@@ -26,77 +14,12 @@ import {
   clearThinkingStreamRefs,
   getToolCallId,
   getToolName,
-  isSessionStreamingStopped,
   updateStreamingInfo,
 } from "./streamHelpers";
 import type { EventHandlerContext } from "./types";
 
 function toolCallDeltaMessageId(toolCallId: string): string {
   return `tool-call-${toolCallId}`;
-}
-
-interface PendingLiveUpsert {
-  event: SessionEvent;
-  sessionId: string;
-  turnId?: string;
-}
-
-const pendingLiveUpserts = new Map<string, PendingLiveUpsert>();
-let pendingLiveFlushScheduled = false;
-
-function liveUpsertKey(sessionId: string, eventId: string): string {
-  return `${sessionId}:${eventId}`;
-}
-
-function scheduleLiveUpsert(
-  event: PendingLiveUpsert["event"],
-  sessionId: string,
-  turnId?: string
-): void {
-  pendingLiveUpserts.set(liveUpsertKey(sessionId, event.id), {
-    event,
-    sessionId,
-    turnId,
-  });
-
-  if (pendingLiveFlushScheduled) return;
-  pendingLiveFlushScheduled = true;
-  const flush = () => {
-    pendingLiveFlushScheduled = false;
-    const upserts = Array.from(pendingLiveUpserts.values());
-    pendingLiveUpserts.clear();
-    for (const pending of upserts) {
-      if (isSessionStreamingStopped(pending.sessionId, pending.turnId)) {
-        continue;
-      }
-      void eventStoreProxy.upsert(pending.event, pending.sessionId);
-    }
-  };
-
-  if (typeof requestAnimationFrame === "function") {
-    requestAnimationFrame(flush);
-  } else {
-    globalThis.setTimeout(flush, 16);
-  }
-}
-
-export function cancelPendingLiveStreamWrites(
-  sessionId: string,
-  eventId?: string | null
-): void {
-  if (eventId) {
-    pendingLiveUpserts.delete(liveUpsertKey(sessionId, eventId));
-  } else {
-    for (const [key, pending] of pendingLiveUpserts) {
-      if (pending.sessionId === sessionId) {
-        pendingLiveUpserts.delete(key);
-      }
-    }
-  }
-
-  if (pendingLiveUpserts.size === 0) {
-    pendingLiveFlushScheduled = false;
-  }
 }
 
 function appendLiveStreamDelta(
@@ -144,19 +67,6 @@ export function handleMessageDelta(
     ctx.inlineThinkingIdRef.current ||= `thinking-inline-${Date.now()}`;
   }
 
-  if (streamRefs.idRef.current) {
-    scheduleLiveUpsert(
-      makeAssistantEvent(
-        streamRefs.idRef.current,
-        sessionId,
-        rawAccumulated,
-        true
-      ),
-      sessionId,
-      event.turnId
-    );
-  }
-
   updateStreamingInfo(ctx, true, false, rawAccumulated);
 }
 
@@ -184,44 +94,14 @@ export function handleThinkingDelta(
   const streamRefs = ctx.thinkingStreamRef.current;
   const accumulated = streamRefs.contentRef.current;
   updateStreamingInfo(ctx, true, true, accumulated);
-
-  if (streamRefs.idRef.current) {
-    scheduleLiveUpsert(
-      makeThinkingEvent(streamRefs.idRef.current, sessionId, accumulated, true),
-      sessionId,
-      event.turnId
-    );
-  }
 }
 
 /**
  * Accumulate a streamed tool_call fragment.
  *
- * Buffer-then-upsert, keyed on the wire `tool_call_id`:
- *
- * 1. Each `index` (the OpenAI / Anthropic streaming position) gets one
- *    in-memory buffer. Fragments accumulate there — no store event is
- *    written until we have the real `tool_call_id` from the provider.
- * 2. The first delta that carries an id promotes the buffer: `messageId`
- *    becomes `tool-call-${toolCallId}` and we upsert. Every subsequent
- *    delta for the same index re-upserts using the same stable id.
- * 3. Once `buffer.toolCallId` is set, later deltas that carry a DIFFERENT
- *    id are rejected with a warning (wire-schema corruption — do not let
- *    the identity drift and create two store rows).
- *
- * Why buffer-then-upsert: `merge_events` (Rust) pairs tool_call ↔
- * tool_result strictly by `callId`. The old path synthesized
- * `pending-tc-${index}` ids, upserted an event under that fake id, and
- * then upserted again under the real id when it landed — leaving a
- * zombie event in the store with no matching result, which broke the
- * `create_plan` → Build-button wiring. The only safe policy is: do not
- * publish an event until its identity is final.
- *
- * The cost is that the UI card for a tool call appears one delta later
- * in the very rare case the provider withholds `tool_call_id` on the
- * first delta. In practice OpenAI/Anthropic always emit `id` on the
- * first delta for a given `index`, so this is a no-op for the common
- * path and a correctness fix for the pathological one.
+ * Tool-call deltas are buffered in memory only. The durable `tool_call` row is
+ * written by Rust when the call identity and payload are authoritative; token-
+ * frequency deltas must never create EventStore rows.
  */
 export function handleToolCallDelta(
   event: AgentWSEvent,
@@ -287,18 +167,7 @@ export function handleToolCallDelta(
     return;
   }
 
-  const parsed = parsePartialToolArgs(buffer.argsJson);
-  const toolArgs = buildToolArgsFromParsed(parsed);
-
-  const toolCallEvent = makeToolCallEvent(
-    buffer.messageId,
-    sessionId,
-    buffer.toolName,
-    buffer.toolCallId,
-    toolArgs,
-    true
-  );
-  scheduleLiveUpsert(toolCallEvent, sessionId, event.turnId);
+  // Tool-call deltas stay ephemeral; the authoritative tool_call event is written by Rust.
 }
 
 /**
@@ -317,11 +186,6 @@ export async function handleStreamingComplete(
   const streamType = event.streamType as "message" | "thinking" | undefined;
 
   if (streamType === "message") {
-    const liveMessageId = ctx.assistantStreamRef?.current.idRef.current || null;
-    if (liveMessageId) {
-      cancelPendingLiveStreamWrites(_sessionId, liveMessageId);
-      await eventStoreProxy.removeByIdPrefix(liveMessageId, _sessionId);
-    }
     clearMessageStreamRefs(ctx);
     ctx.setStreaming(false);
     ctx.onStatusChangeRef.current?.("completed");
@@ -332,11 +196,6 @@ export async function handleStreamingComplete(
   }
 
   if (streamType === "thinking") {
-    const liveThinkingId = ctx.thinkingStreamRef?.current.idRef.current || null;
-    if (liveThinkingId) {
-      cancelPendingLiveStreamWrites(_sessionId, liveThinkingId);
-      await eventStoreProxy.removeByIdPrefix(liveThinkingId, _sessionId);
-    }
     clearThinkingStreamRefs(ctx);
     return;
   }

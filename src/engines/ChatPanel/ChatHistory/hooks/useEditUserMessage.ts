@@ -24,6 +24,7 @@ import {
 import Message from "@src/components/Message";
 import useWorkspaceChat from "@src/engines/ChatPanel/hooks/useWorkspaceChat";
 import { editTruncationTimestampAtom } from "@src/engines/SessionCore";
+import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { truncateAfterEvent } from "@src/engines/SessionCore/storage/sqliteCache";
@@ -155,6 +156,10 @@ export function useEditUserMessage(): (
       }
 
       try {
+        if (initiatedSessionId) {
+          await cancelTurnForTimelineBoundary(initiatedSessionId, "rewind");
+        }
+
         if (
           initiatedSessionId &&
           createdAt &&

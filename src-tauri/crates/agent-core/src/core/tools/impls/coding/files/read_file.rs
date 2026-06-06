@@ -613,7 +613,8 @@ mod tests {
             "description was: {description}"
         );
         assert!(
-            description.contains("Use absolute paths for files outside the primary working directory"),
+            description
+                .contains("Use absolute paths for files outside the primary working directory"),
             "description was: {description}"
         );
     }

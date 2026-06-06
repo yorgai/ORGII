@@ -21,9 +21,9 @@
 import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
-import { CANCEL_REASON } from "@src/api/tauri/agent";
 import { Message } from "@src/components/Message";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
+import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
@@ -351,11 +351,7 @@ export function useQueueDispatch(): void {
       explicitInterruptSessionRef.current = activeSessionId;
       void (async () => {
         try {
-          await SessionService.interrupt({
-            sessionId: activeSessionId,
-            reason: CANCEL_REASON.FORCE_SEND,
-          });
-          await eventStoreProxy.finalizeRunningEventsAsStopped(activeSessionId);
+          await cancelTurnForTimelineBoundary(activeSessionId, "force-send");
         } catch (error) {
           console.error("[useQueueDispatch] explicit interrupt failed:", error);
         } finally {

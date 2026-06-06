@@ -6,7 +6,11 @@
  */
 import { atom } from "jotai";
 
-import { derivedSnapshotAtom, eventsAtom } from "../core/atoms/events";
+import {
+  derivedSnapshotAtom,
+  eventsAtom,
+  streamingDeltaContentAtom,
+} from "../core/atoms/events";
 import { sessionIdAtom } from "../core/atoms/metadata";
 import type { Snapshot } from "../core/store/EventStoreProxy";
 import type { SessionEvent } from "../core/types";
@@ -39,6 +43,39 @@ function isStreamingSnap(snap: Snapshot): boolean {
 let _prevSessionId: string | null = null;
 let _prevChatEvents: SessionEvent[] = [];
 
+function appendLiveAssistantEvent(
+  events: SessionEvent[],
+  sessionId: string | null,
+  content: string | null
+): SessionEvent[] {
+  if (!sessionId || !content) return events;
+  const liveId = `live-assistant-${sessionId}`;
+  const lastEvent = events[events.length - 1];
+  if (lastEvent?.id === liveId && lastEvent.displayText === content) {
+    return events;
+  }
+  return [
+    ...events.filter((event) => event.id !== liveId),
+    {
+      id: liveId,
+      chunk_id: null,
+      sessionId,
+      createdAt: "1970-01-01T00:00:00.000Z",
+      functionName: "assistant_message",
+      uiCanonical: "assistant_message",
+      actionType: "assistant",
+      args: {},
+      result: { observation: content },
+      source: "assistant",
+      displayText: content,
+      displayStatus: "running",
+      displayVariant: "message",
+      activityStatus: "agent",
+      isDelta: true,
+    },
+  ];
+}
+
 export const chatEventsAtom = atom((get) => {
   const snap = get(derivedSnapshotAtom);
   const sessionId = get(sessionIdAtom);
@@ -50,8 +87,16 @@ export const chatEventsAtom = atom((get) => {
     _prevChatEvents = [];
   }
 
+  const liveContent = sessionId
+    ? (get(streamingDeltaContentAtom).get(sessionId) ?? null)
+    : null;
+
   if (snap && "chatEvents" in snap) {
-    const next = derivePlanDisplayEvents(snap.chatEvents);
+    const next = appendLiveAssistantEvent(
+      derivePlanDisplayEvents(snap.chatEvents),
+      sessionId,
+      liveContent
+    );
 
     if (isStreamingSnap(snap)) {
       _prevChatEvents = next;
@@ -78,7 +123,11 @@ export const chatEventsAtom = atom((get) => {
   // raw StreamingSnapshot without chatEvents). Filter JS-side, same as
   // messagesEventsAtom / simulatorEventsAtom do in their own fallback paths.
   const events = get(eventsAtom);
-  return derivePlanDisplayEvents(events.filter(isVisibleInChat));
+  return appendLiveAssistantEvent(
+    derivePlanDisplayEvents(events.filter(isVisibleInChat)),
+    sessionId,
+    liveContent
+  );
 });
 chatEventsAtom.debugLabel = "session/chatEvents";
 

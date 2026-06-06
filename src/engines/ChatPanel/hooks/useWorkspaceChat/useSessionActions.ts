@@ -9,28 +9,19 @@ import { useTranslation } from "react-i18next";
 
 import { CANCEL_REASON } from "@src/api/tauri/agent";
 import Message from "@src/components/Message";
-import {
-  pendingSyntheticEventAtom,
-  streamingDeltaContentAtom,
-} from "@src/engines/SessionCore/core/atoms";
+import { clearLiveStreamingForSession } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
+import { pendingSyntheticEventAtom } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
-import {
-  clearSessionStreamingStopped,
-  markSessionStreamingStopped,
-} from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
-import { createLogger } from "@src/hooks/logger";
+import { clearSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
 import {
   isPendingCancelAtom,
   lastUserMessageAtom,
   restoreToInputAtom,
   sessionRolledBackAtom,
   sessionRuntimeStatusAtom,
-  streamRetryStatusAtom,
   userInitiatedCancelAtom,
 } from "@src/store/session/cliSessionStatusAtom";
-
-const logger = createLogger("UseSessionActions");
 
 interface RestorableUserMessage {
   displayContent: string;
@@ -93,25 +84,9 @@ export function useSessionActions(options: UseSessionActionsOptions) {
   const setRestoreToInput = useSetAtom(restoreToInputAtom);
   const setSessionRolledBack = useSetAtom(sessionRolledBackAtom);
   const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
-  const setStreamRetryStatus = useSetAtom(streamRetryStatusAtom);
-  const setStreamingDeltaContent = useSetAtom(streamingDeltaContentAtom);
-
-  const stopVisibleStreaming = useCallback(
-    (sessionId: string) => {
-      markSessionStreamingStopped(sessionId);
-      setStreamRetryStatus(null);
-      setStreamingDeltaContent((prev) => {
-        if (!prev.has(sessionId)) return prev;
-        const next = new Map(prev);
-        next.delete(sessionId);
-        return next;
-      });
-      void eventStoreProxy.setStreaming(false, sessionId).catch((error) => {
-        logger.warn("failed to stop EventStore streaming snapshot:", error);
-      });
-    },
-    [setStreamRetryStatus, setStreamingDeltaContent]
-  );
+  const stopVisibleStreaming = useCallback((sessionId: string) => {
+    clearLiveStreamingForSession(sessionId);
+  }, []);
 
   const resumeSession = useCallback(async () => {
     const sessionId = getSessionId();

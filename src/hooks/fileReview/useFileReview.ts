@@ -28,6 +28,7 @@ import {
   revertToSnapshot,
 } from "@src/api/tauri/agent";
 import type { SnapshotRecord } from "@src/api/tauri/agent";
+import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
 import { sessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
@@ -438,6 +439,7 @@ export function useFileReviewBatchActions(
     }
 
     try {
+      await cancelTurnForTimelineBoundary(sessionId, "rewind");
       const results = await Promise.all(
         Array.from(earliestBySession.entries()).map(
           ([ownerSessionId, createdAt]) =>
@@ -490,6 +492,7 @@ export function useFileReviewBatchActions(
     if (redoSnapshotAnchors.length === 0 || !sessionId) return;
 
     try {
+      await cancelTurnForTimelineBoundary(sessionId, "rewind");
       const results = await Promise.all(
         redoSnapshotAnchors.map((anchor) =>
           restoreSnapshot(anchor.sessionId, anchor.snapshotId)
