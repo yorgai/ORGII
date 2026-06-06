@@ -89,7 +89,8 @@ const SourceControlFilterHeader: React.FC<SourceControlFilterHeaderProps> =
     }) => {
       const { t } = useTranslation("sessions");
       const { prUrl, readyToCreate } = useAtomValue(workstationPrAtom);
-      const showPrOption = Boolean(prUrl) || readyToCreate || mode === "pr";
+      const showPrOption =
+        Boolean(prUrl) || readyToCreate || mode === "pr" || mode === "issues";
 
       const getModeCount = useCallback(
         (modeId: SourceControlFilterMode) => {

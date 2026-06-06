@@ -1,5 +1,5 @@
 import { useAtomValue, useSetAtom } from "jotai";
-import { GitPullRequest, History } from "lucide-react";
+import { CircleDot, GitPullRequest, History } from "lucide-react";
 import React, { memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -42,6 +42,12 @@ const SourceControlHeaderActionsComponent: React.FC = () => {
     setSidebarCollapsed(false);
   }, [filterMode, filterModeHandler, setSidebarCollapsed]);
 
+  const handleToggleIssues = useCallback(() => {
+    const nextMode = filterMode === "issues" ? "uncommitted" : "issues";
+    filterModeHandler?.(nextMode);
+    setSidebarCollapsed(false);
+  }, [filterMode, filterModeHandler, setSidebarCollapsed]);
+
   if (
     activeApp !== "code" ||
     activeTab?.type !== "source-control" ||
@@ -52,8 +58,10 @@ const SourceControlHeaderActionsComponent: React.FC = () => {
 
   const historyActive = filterMode === "history";
   const prActive = filterMode === "pr";
+  const issuesActive = filterMode === "issues";
   const historyLabel = t("labels.gitHistory");
   const prLabel = t("labels.pullRequest", "Pull request");
+  const issuesLabel = t("labels.issues", "Issues");
 
   return (
     <>
@@ -82,6 +90,17 @@ const SourceControlHeaderActionsComponent: React.FC = () => {
           title={prLabel}
           aria-label={prLabel}
           icon={<GitPullRequest size={HEADER_ICON_SIZE.sm} strokeWidth={2} />}
+        />
+        <Button
+          htmlType="button"
+          variant="tertiary"
+          size="small"
+          iconOnly
+          className={issuesActive ? "!bg-fill-2 !text-primary-6" : ""}
+          onClick={handleToggleIssues}
+          title={issuesLabel}
+          aria-label={issuesLabel}
+          icon={<CircleDot size={HEADER_ICON_SIZE.sm} strokeWidth={2} />}
         />
       </div>
       <WorkstationHeaderSectionSeparator className="mx-1" />
