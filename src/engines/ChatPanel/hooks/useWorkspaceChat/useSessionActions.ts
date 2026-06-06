@@ -15,6 +15,10 @@ import {
 } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
+import {
+  clearSessionStreamingStopped,
+  markSessionStreamingStopped,
+} from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
 import { createLogger } from "@src/hooks/logger";
 import {
   isPendingCancelAtom,
@@ -94,6 +98,7 @@ export function useSessionActions(options: UseSessionActionsOptions) {
 
   const stopVisibleStreaming = useCallback(
     (sessionId: string) => {
+      markSessionStreamingStopped(sessionId);
       setStreamRetryStatus(null);
       setStreamingDeltaContent((prev) => {
         if (!prev.has(sessionId)) return prev;
@@ -116,6 +121,7 @@ export function useSessionActions(options: UseSessionActionsOptions) {
     }
 
     try {
+      clearSessionStreamingStopped(sessionId);
       await SessionService.resumeCli({
         sessionId,
         onError: (msg: string) => {

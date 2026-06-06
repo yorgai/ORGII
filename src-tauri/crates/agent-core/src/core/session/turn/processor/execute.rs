@@ -64,7 +64,9 @@ impl UnifiedMessageProcessor {
                 .load(std::sync::atomic::Ordering::SeqCst),
         };
 
-        let handler = UnifiedEventHandler::new(self.event_handler_config.clone());
+        let mut event_handler_config = self.event_handler_config.clone();
+        event_handler_config.turn_id = Some(turn_id.to_string());
+        let handler = UnifiedEventHandler::new(event_handler_config);
 
         // Set session key for streaming tools
         self.runtime.tool_registry.set_session_key(session_id).await;

@@ -60,7 +60,10 @@ pub(super) fn build_tool_call_event(
     tool_name: &str,
     display_name: &str,
     args: &Value,
+    repo_path: Option<&str>,
 ) -> SessionEvent {
+    let file_path = extract_file_path(args);
+    let repo_path = repo_path.map(ToString::to_string);
     let initial_status = if crate::core::tools::is_interactive_tool(tool_name) {
         EventDisplayStatus::AwaitingUser
     } else {
@@ -84,17 +87,26 @@ pub(super) fn build_tool_call_event(
         thread_id: None,
         process_id: None,
         call_id: Some(tool_call_id.to_string()),
-        file_path: None,
+        file_path,
         command: None,
         is_delta: None,
         repo_id: None,
-        repo_path: None,
+        repo_path,
         extracted: None,
         payload_refs: Vec::new(),
         last_extract_at: None,
     };
     event.recompute_extracted();
     event
+}
+
+fn extract_file_path(args: &Value) -> Option<String> {
+    let object = args.as_object()?;
+    ["file_path", "filePath", "target_file", "targetFile", "path"]
+        .iter()
+        .find_map(|key| object.get(*key)?.as_str())
+        .filter(|path| !path.is_empty())
+        .map(ToString::to_string)
 }
 
 /// Build a `SessionEvent` for a tool_result. The `merge_events` path in

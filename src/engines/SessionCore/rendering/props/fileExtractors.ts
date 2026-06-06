@@ -20,7 +20,7 @@ import {
 } from "./extractorShared";
 
 export function extractFileData(props: UniversalEventProps): ExtractedFileData {
-  if (props.rustExtracted?.kind === "file") {
+  if (props.rustExtracted?.kind === "file" && props.rustExtracted.filePath) {
     const { filePath, fileName, content, language, lineCount } =
       props.rustExtracted;
     return { filePath, fileName, content, language, lineCount };

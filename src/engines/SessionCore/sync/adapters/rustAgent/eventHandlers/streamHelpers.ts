@@ -7,6 +7,65 @@ import { resetStreamRefs } from "../../shared/eventBuilders";
 import type { AgentWSEvent } from "../../shared/types";
 import type { EventHandlerContext } from "./types";
 
+const STOPPED_TURNS_PER_SESSION_LIMIT = 20;
+
+const stoppedStreamingSessions = new Set<string>();
+const activeStreamingTurnBySession = new Map<string, string>();
+const stoppedStreamingTurnsBySession = new Map<string, Set<string>>();
+
+function stoppedTurnSetForSession(sessionId: string): Set<string> {
+  let stoppedTurns = stoppedStreamingTurnsBySession.get(sessionId);
+  if (!stoppedTurns) {
+    stoppedTurns = new Set<string>();
+    stoppedStreamingTurnsBySession.set(sessionId, stoppedTurns);
+  }
+  return stoppedTurns;
+}
+
+export function noteSessionStreamingTurn(
+  sessionId: string,
+  turnId: string | undefined
+): void {
+  if (!turnId) return;
+  if (stoppedStreamingSessions.has(sessionId)) {
+    stoppedTurnSetForSession(sessionId).add(turnId);
+    return;
+  }
+  if (isSessionStreamingStopped(sessionId, turnId)) return;
+  activeStreamingTurnBySession.set(sessionId, turnId);
+}
+
+export function markSessionStreamingStopped(sessionId: string): void {
+  const activeTurnId = activeStreamingTurnBySession.get(sessionId);
+  if (!activeTurnId) {
+    stoppedStreamingSessions.add(sessionId);
+    return;
+  }
+
+  const stoppedTurns = stoppedTurnSetForSession(sessionId);
+  stoppedTurns.add(activeTurnId);
+  while (stoppedTurns.size > STOPPED_TURNS_PER_SESSION_LIMIT) {
+    const oldestTurnId = stoppedTurns.values().next().value;
+    if (!oldestTurnId) break;
+    stoppedTurns.delete(oldestTurnId);
+  }
+}
+
+export function clearSessionStreamingStopped(sessionId: string): void {
+  stoppedStreamingSessions.delete(sessionId);
+  activeStreamingTurnBySession.delete(sessionId);
+}
+
+export function isSessionStreamingStopped(
+  sessionId: string,
+  turnId?: string
+): boolean {
+  if (turnId && stoppedStreamingTurnsBySession.get(sessionId)?.has(turnId)) {
+    return true;
+  }
+  return stoppedStreamingSessions.has(sessionId);
+}
+
 /**
  * Reset all streaming state in context.
  * Used by handleComplete and handleError to avoid code duplication.

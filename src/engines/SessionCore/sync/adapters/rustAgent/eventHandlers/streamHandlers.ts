@@ -5,7 +5,6 @@
  * Also handles agent:streaming_complete from Rust StreamingBuffer.
  */
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
-import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 
 import {
   makeAssistantEvent,
@@ -239,8 +238,8 @@ export function handleToolCallDelta(
  *
  * Rust Agent already pushed the authoritative completed stream event into the
  * backend EventStore before broadcasting this notification. The frontend must
- * not upsert/replace that event again; it only clears transient live-stream
- * refs so current-turn UI stops showing stale partial text.
+ * not upsert/replace that event again; it only removes transient live-stream
+ * placeholders so current-turn UI stops showing stale partial text.
  */
 export async function handleStreamingComplete(
   event: AgentWSEvent,
@@ -248,21 +247,11 @@ export async function handleStreamingComplete(
   ctx: EventHandlerContext
 ): Promise<void> {
   const streamType = event.streamType as "message" | "thinking" | undefined;
-  const completeEvent = event.event;
-
-  if (!completeEvent) {
-    console.warn("[streamHandlers] streaming_complete missing event payload");
-    return;
-  }
 
   if (streamType === "message") {
     const liveMessageId = ctx.assistantStreamRef?.current.idRef.current || null;
     if (liveMessageId) {
-      await eventStoreProxy.replaceAndRemove(
-        liveMessageId,
-        completeEvent as SessionEvent,
-        (completeEvent as SessionEvent).sessionId
-      );
+      await eventStoreProxy.removeByIdPrefix(liveMessageId, _sessionId);
     }
     clearMessageStreamRefs(ctx);
     ctx.setStreaming(false);
@@ -276,11 +265,7 @@ export async function handleStreamingComplete(
   if (streamType === "thinking") {
     const liveThinkingId = ctx.thinkingStreamRef?.current.idRef.current || null;
     if (liveThinkingId) {
-      await eventStoreProxy.replaceAndRemove(
-        liveThinkingId,
-        completeEvent as SessionEvent,
-        (completeEvent as SessionEvent).sessionId
-      );
+      await eventStoreProxy.removeByIdPrefix(liveThinkingId, _sessionId);
     }
     clearThinkingStreamRefs(ctx);
     return;

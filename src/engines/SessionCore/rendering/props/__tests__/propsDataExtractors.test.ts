@@ -258,6 +258,20 @@ describe("extractFileData", () => {
       expect(extractFileData(props).filePath).toBe("src/path.ts");
     });
 
+    it("falls back when rust extracted file path is empty", () => {
+      const props = makeUniversalProps({
+        args: { path: "packages/web/src/App.tsx" },
+        rustExtracted: {
+          kind: "file",
+          filePath: "",
+          fileName: "",
+          language: "plaintext",
+        },
+      });
+      expect(extractFileData(props).filePath).toBe("packages/web/src/App.tsx");
+      expect(extractFileData(props).fileName).toBe("App.tsx");
+    });
+
     it("gets filePath from successData.path", () => {
       const props = makeUniversalProps({
         result: { output: { success: { path: "src/success.ts" } } },

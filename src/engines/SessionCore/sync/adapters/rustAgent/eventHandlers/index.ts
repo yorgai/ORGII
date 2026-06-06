@@ -47,7 +47,11 @@ import {
   handleThinkingDelta,
   handleToolCallDelta,
 } from "./streamHandlers";
-import { getEventSessionId } from "./streamHelpers";
+import {
+  getEventSessionId,
+  isSessionStreamingStopped,
+  noteSessionStreamingTurn,
+} from "./streamHelpers";
 import { handleCodingSessionEvent } from "./subagentHandlers";
 import {
   handleExecOutput,
@@ -94,6 +98,13 @@ const STREAM_RETRY_RECOVERY_EVENTS = new Set<string>([
   "agent:mcp_progress",
 ]);
 
+const LIVE_STREAM_EVENTS_IGNORED_AFTER_STOP = new Set<string>([
+  "agent:message_delta",
+  "agent:thinking_delta",
+  "agent:tool_call_delta",
+  "agent:streaming_complete",
+]);
+
 export async function dispatchAgentEvent(
   event: AgentWSEvent,
   ctx: EventHandlerContext
@@ -137,6 +148,13 @@ export async function dispatchAgentEvent(
     eventSessionId !== ctx.filterSessionIdRef.current
   ) {
     return;
+  }
+
+  if (sessionId && LIVE_STREAM_EVENTS_IGNORED_AFTER_STOP.has(event.type)) {
+    noteSessionStreamingTurn(sessionId, event.turnId);
+    if (isSessionStreamingStopped(sessionId, event.turnId)) {
+      return;
+    }
   }
 
   // Any subsequent successful activity from the same session means the retry

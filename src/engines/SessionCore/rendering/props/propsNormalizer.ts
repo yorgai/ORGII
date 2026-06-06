@@ -207,6 +207,7 @@ export function normalizeEventProps(
       functionName: sessionEvent.functionName,
       callId: sessionEvent.callId,
       filePath: sessionEvent.filePath,
+      repoPath: sessionEvent.repoPath,
       sessionId: sessionEvent.sessionId,
       args,
       result,
@@ -249,6 +250,9 @@ export function normalizeEventProps(
     filePath:
       (input as { filePath?: string; file_path?: string }).filePath ||
       (input as { filePath?: string; file_path?: string }).file_path,
+    repoPath:
+      (input as { repoPath?: string; repo_path?: string }).repoPath ||
+      (input as { repoPath?: string; repo_path?: string }).repo_path,
     args: normalized.args,
     result: normalized.result,
     status,

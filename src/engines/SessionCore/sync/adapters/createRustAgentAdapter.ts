@@ -45,7 +45,13 @@ import {
   createEventHandlerContext,
   dispatchAgentEvent,
 } from "./rustAgent/eventHandlers";
-import { resetAllStreamingState } from "./rustAgent/eventHandlers/streamHelpers";
+import {
+  clearSessionStreamingStopped,
+  isSessionStreamingStopped,
+  markSessionStreamingStopped,
+  noteSessionStreamingTurn,
+  resetAllStreamingState,
+} from "./rustAgent/eventHandlers/streamHelpers";
 import type {
   AgentTokenUsage,
   AgentWSEvent,
@@ -345,6 +351,12 @@ export function createRustAgentAdapter(
       ]);
 
       const PLAN_SUBMITTED_END_TURN_PREFIX = "PLAN_SUBMITTED_END_TURN:";
+      const LIVE_STREAM_EVENTS_IGNORED_AFTER_STOP = new Set([
+        "agent:message_delta",
+        "agent:thinking_delta",
+        "agent:tool_call_delta",
+        "agent:streaming_complete",
+      ]);
 
       return {
         handleEvent(raw: RawSessionEvent): void {
@@ -357,6 +369,15 @@ export function createRustAgentAdapter(
             ...payload,
             type: raw.type,
           } as unknown as AgentWSEvent;
+
+          if (LIVE_STREAM_EVENTS_IGNORED_AFTER_STOP.has(event.type)) {
+            noteSessionStreamingTurn(sessionId, event.turnId);
+          }
+
+          const shouldIgnoreAfterStop =
+            isSessionStreamingStopped(sessionId, event.turnId) &&
+            LIVE_STREAM_EVENTS_IGNORED_AFTER_STOP.has(event.type);
+          if (shouldIgnoreAfterStop) return;
 
           const isPlanReadyTerminal =
             event.type === "agent:plan_ready_for_approval" &&
@@ -527,6 +548,7 @@ export function createRustAgentAdapter(
       // workspace_root. Using the global repo selection atom would collide
       // when two sessions on different repos are open simultaneously.
       const activePath = sessionRepoPath ?? undefined;
+      clearSessionStreamingStopped(sessionId);
       if (!isResume && content.trim()) {
         await enterAgentOrgSessionIntervention(sessionId);
       }
@@ -552,6 +574,7 @@ export function createRustAgentAdapter(
     },
 
     async stopSession(sessionId: string, reason: CancelReason): Promise<void> {
+      markSessionStreamingStopped(sessionId);
       await cancel(sessionId, reason);
     },
   };

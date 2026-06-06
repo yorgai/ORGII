@@ -169,6 +169,11 @@ pub async fn process_message(
         lsp_manager,
         app_handle: app_handle.clone(),
         hook_executor: Some(hook_executor),
+        turn_id: None,
+        active_repo_path: input
+            .ide_context
+            .as_ref()
+            .and_then(|ctx| ctx.repo_path.clone()),
     };
 
     let policy = Arc::clone(&runtime.policy);

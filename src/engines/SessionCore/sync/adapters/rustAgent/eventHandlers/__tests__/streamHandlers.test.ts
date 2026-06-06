@@ -2,22 +2,31 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 
+import { dispatchAgentEvent } from "..";
 import {
   handleMessageDelta,
   handleStreamingComplete,
   handleThinkingDelta,
 } from "../streamHandlers";
+import {
+  clearSessionStreamingStopped,
+  markSessionStreamingStopped,
+} from "../streamHelpers";
 import type { EventHandlerContext } from "../types";
 
-const { upsertSpy, replaceAndRemoveSpy } = vi.hoisted(() => ({
-  upsertSpy: vi.fn().mockResolvedValue(undefined),
-  replaceAndRemoveSpy: vi.fn().mockResolvedValue(true),
-}));
+const { upsertSpy, replaceAndRemoveSpy, removeByIdPrefixSpy } = vi.hoisted(
+  () => ({
+    upsertSpy: vi.fn().mockResolvedValue(undefined),
+    replaceAndRemoveSpy: vi.fn().mockResolvedValue(true),
+    removeByIdPrefixSpy: vi.fn().mockResolvedValue(1),
+  })
+);
 
 vi.mock("@src/engines/SessionCore/core/store/EventStoreProxy", () => ({
   eventStoreProxy: {
     upsert: upsertSpy,
     replaceAndRemove: replaceAndRemoveSpy,
+    removeByIdPrefix: removeByIdPrefixSpy,
   },
 }));
 
@@ -93,6 +102,84 @@ function makeThinkingCompleteEvent(): SessionEvent {
 describe("Rust Agent stream handlers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearSessionStreamingStopped("session-1");
+  });
+
+  it("drops stopped-turn live stream events without poisoning the next turn", async () => {
+    const ctx = createCtx();
+
+    await dispatchAgentEvent(
+      {
+        type: "agent:message_delta",
+        sessionId: "session-1",
+        turnId: "turn-a",
+        content: "before stop",
+      },
+      ctx
+    );
+    expect(upsertSpy).toHaveBeenCalledTimes(1);
+    vi.clearAllMocks();
+
+    markSessionStreamingStopped("session-1");
+
+    await dispatchAgentEvent(
+      {
+        type: "agent:message_delta",
+        sessionId: "session-1",
+        turnId: "turn-a",
+        content: "late",
+      },
+      ctx
+    );
+    await dispatchAgentEvent(
+      {
+        type: "agent:thinking_delta",
+        sessionId: "session-1",
+        turnId: "turn-a",
+        content: "late",
+      },
+      ctx
+    );
+    await dispatchAgentEvent(
+      {
+        type: "agent:tool_call_delta",
+        sessionId: "session-1",
+        turnId: "turn-a",
+        toolCallId: "call-1",
+        tool: "edit_file",
+        argumentsDelta: "{}",
+      },
+      ctx
+    );
+    await dispatchAgentEvent(
+      {
+        type: "agent:streaming_complete",
+        sessionId: "session-1",
+        turnId: "turn-a",
+        streamType: "message",
+        event: makeMessageCompleteEvent(),
+      },
+      ctx
+    );
+
+    expect(upsertSpy).not.toHaveBeenCalled();
+    expect(replaceAndRemoveSpy).not.toHaveBeenCalled();
+    expect(ctx.setStreaming).not.toHaveBeenCalled();
+    expect(ctx.onStatusChangeRef.current).not.toHaveBeenCalledWith("running");
+
+    clearSessionStreamingStopped("session-1");
+    await dispatchAgentEvent(
+      {
+        type: "agent:message_delta",
+        sessionId: "session-1",
+        turnId: "turn-b",
+        content: "new turn",
+      },
+      ctx
+    );
+
+    expect(upsertSpy).toHaveBeenCalledTimes(1);
+    expect(ctx.setStreaming).toHaveBeenCalledWith(true);
   });
 
   it("upserts message deltas as live EventStore events", () => {
@@ -159,7 +246,7 @@ describe("Rust Agent stream handlers", () => {
     );
   });
 
-  it("replaces live message event with backend-authoritative completion", async () => {
+  it("removes live message placeholder on backend-authoritative completion", async () => {
     const ctx = createCtx();
     handleMessageDelta(
       { type: "agent:message_delta", content: "Hello" },
@@ -183,9 +270,9 @@ describe("Rust Agent stream handlers", () => {
     expect(ctx.assistantStreamRef?.current.contentRef.current).toBe("");
     expect(ctx.setStreaming).toHaveBeenCalledWith(false);
     expect(ctx.onStatusChangeRef.current).toHaveBeenCalledWith("completed");
-    expect(replaceAndRemoveSpy).toHaveBeenCalledWith(
+    expect(replaceAndRemoveSpy).not.toHaveBeenCalled();
+    expect(removeByIdPrefixSpy).toHaveBeenCalledWith(
       liveMessageId,
-      completeEvent,
       "session-1"
     );
   });
@@ -254,7 +341,7 @@ describe("Rust Agent stream handlers", () => {
     );
   });
 
-  it("replaces live thinking event with backend-authoritative completion", async () => {
+  it("removes live thinking placeholder on backend-authoritative completion", async () => {
     const ctx = createCtx();
     handleThinkingDelta(
       { type: "agent:thinking_delta", content: "Thinking" },
@@ -282,9 +369,9 @@ describe("Rust Agent stream handlers", () => {
       content: "",
     });
     expect(upsertSpy).toHaveBeenCalled();
-    expect(replaceAndRemoveSpy).toHaveBeenCalledWith(
+    expect(replaceAndRemoveSpy).not.toHaveBeenCalled();
+    expect(removeByIdPrefixSpy).toHaveBeenCalledWith(
       liveThinkingId,
-      completeEvent,
       "session-1"
     );
   });

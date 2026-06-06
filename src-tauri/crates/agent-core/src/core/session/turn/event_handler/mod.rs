@@ -96,6 +96,12 @@ pub struct EventHandlerConfig {
 
     /// Lifecycle hook executor (loaded from `.orgii/hooks.json`).
     pub hook_executor: Option<Arc<HookExecutor>>,
+
+    /// Stable logical turn id for live stream broadcasts.
+    pub turn_id: Option<String>,
+
+    /// Active IDE repository path for multi-root workspace tool rendering.
+    pub active_repo_path: Option<String>,
 }
 
 /// Unified event handler for agent turns.
@@ -140,6 +146,7 @@ impl UnifiedEventHandler {
                 "agent:streaming_complete",
                 serde_json::json!({
                     "sessionId": session_id,
+                    "turnId": self.config.turn_id.as_deref(),
                     "streamType": "thinking",
                     "event": event,
                 }),
@@ -154,6 +161,7 @@ impl UnifiedEventHandler {
                 "agent:streaming_complete",
                 serde_json::json!({
                     "sessionId": session_id,
+                    "turnId": self.config.turn_id.as_deref(),
                     "streamType": "message",
                     "event": event,
                 }),
@@ -203,6 +211,7 @@ impl TurnEventHandler for UnifiedEventHandler {
             "agent:message_delta",
             serde_json::json!({
                 "sessionId": session_id,
+                "turnId": self.config.turn_id.as_deref(),
                 "content": content,
             }),
         );
@@ -215,6 +224,7 @@ impl TurnEventHandler for UnifiedEventHandler {
             "agent:thinking_delta",
             serde_json::json!({
                 "sessionId": session_id,
+                "turnId": self.config.turn_id.as_deref(),
                 "content": thinking,
             }),
         );
@@ -249,6 +259,7 @@ impl TurnEventHandler for UnifiedEventHandler {
             "agent:tool_call_delta",
             serde_json::json!({
                 "sessionId": session_id,
+                "turnId": self.config.turn_id.as_deref(),
                 "index": index,
                 "toolCallId": tool_call_id,
                 "tool": tool_name,
@@ -307,6 +318,7 @@ impl TurnEventHandler for UnifiedEventHandler {
             tool_name,
             display_name,
             &stored_args,
+            self.config.active_repo_path.as_deref(),
         );
         self.push_to_store(session_id, event);
 
@@ -357,7 +369,8 @@ impl TurnEventHandler for UnifiedEventHandler {
         }
 
         if super::streaming::is_file_modifying_tool(tool_name) && tool_result_is_error(result) {
-            match crate::tools::file_history::discard_tool_call_snapshots(session_id, tool_call_id) {
+            match crate::tools::file_history::discard_tool_call_snapshots(session_id, tool_call_id)
+            {
                 Ok(stats) if stats.db_rows_removed > 0 || stats.manifests_removed > 0 => warn!(
                     "[unified_handler] discarded failed tool snapshot session={} tool_call_id={} tool={} db_rows={} manifests={}",
                     session_id,
