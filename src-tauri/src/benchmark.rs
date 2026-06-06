@@ -13,10 +13,10 @@ use chrono::Utc;
 use git::worktree::create_session_worktree;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tauri::Manager;
 use tokio::io::{AsyncBufReadExt, BufReader as TokioBufReader};
 use tokio::process::Command;
 use tokio::sync::{Mutex, Semaphore};
-use tauri::Manager;
 use uuid::Uuid;
 
 const BENCHMARK_KIND_SWE_BENCH_PRO: &str = "swe_bench_pro";
@@ -609,7 +609,8 @@ async fn mark_agent_batch_item_running(batch_id: &str, task_id: &str) {
     update_agent_batch_item(batch_id, task_id, |item| {
         item.status = BENCHMARK_AGENT_BATCH_STATUS_RUNNING.to_string();
         item.started_at = Some(Utc::now().to_rfc3339());
-        item.logs.push("Launching background agent session.".to_string());
+        item.logs
+            .push("Launching background agent session.".to_string());
         trim_logs(&mut item.logs);
     })
     .await;
@@ -635,7 +636,8 @@ async fn mark_agent_batch_item_launched(
         item.session_id = Some(result.session_id);
         item.session_name = Some(result.name);
         item.finished_at = Some(Utc::now().to_rfc3339());
-        item.logs.push("Background agent session launched.".to_string());
+        item.logs
+            .push("Background agent session launched.".to_string());
         trim_logs(&mut item.logs);
     })
     .await;
@@ -749,7 +751,11 @@ fn benchmark_launch_params(
 }
 
 fn benchmark_agent_prompt(kind: &str, detail: &BenchmarkTaskDetail) -> String {
-    let repo = detail.index.repo.as_deref().unwrap_or("the target repository");
+    let repo = detail
+        .index
+        .repo
+        .as_deref()
+        .unwrap_or("the target repository");
     format!(
         "You are running an official benchmark task. The final result will be evaluated by the benchmark harness, not by ORGII.\n\nBenchmark: {kind}\nTask ID: {task_id}\nRepository: {repo}\n\nInstructions:\n- Make the minimal code changes needed to satisfy the task.\n- Do not modify unrelated files.\n- Do not invent new tests or change benchmark tests unless the task explicitly requires it.\n- When you finish, summarize the changed files and the validation you ran.\n- Leave the repository in a state where a git diff captures your solution patch.\n\nTask:\n{instruction}",
         task_id = detail.index.task_id,

@@ -18,6 +18,7 @@ import { isHostedKey } from "@src/api/tauri/session";
 import Message from "@src/components/Message";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
+import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import {
   markQueueTurnWorking,
@@ -28,6 +29,7 @@ import {
   isSessionActiveAtom,
   lastUserMessageAtom,
   sessionRuntimeStatusAtom,
+  userInitiatedCancelAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultExecModeAtom } from "@src/store/session/creatorDefaultExecModeAtom";
 import {
@@ -241,11 +243,20 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       const latestSessionRuntimeStatus = store.get(sessionRuntimeStatusAtom);
       const latestIsSessionActive = store.get(isSessionActiveAtom);
       const latestIsPendingCancel = store.get(isPendingCancelAtom);
+      const latestUserInitiatedCancel = store.get(userInitiatedCancelAtom);
+      const latestSnapshot =
+        eventStoreProxy.getLatestSessionSnapshot(sessionId);
+      const snapshotShowsActiveTurn =
+        latestSnapshot?.hasRunningEvent === true ||
+        (latestSnapshot != null &&
+          "streaming" in latestSnapshot &&
+          latestSnapshot.streaming === true);
       const runtimeIsWorking =
         latestSessionRuntimeStatus === "running" ||
         latestSessionRuntimeStatus === "installing" ||
         latestSessionRuntimeStatus === "waiting_for_user" ||
-        latestSessionRuntimeStatus === "waiting_for_funds";
+        latestSessionRuntimeStatus === "waiting_for_funds" ||
+        snapshotShowsActiveTurn;
       const submitShouldQueueAsActiveTurn = shouldQueueSubmitAsActiveTurn({
         sessionId,
         isActive: latestIsSessionActive,
@@ -323,7 +334,8 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
           imageDataUrls,
           modelSelection: snapshotSelection,
           agentExecMode: snapshotMode,
-          requiresRuntimeSettle: true,
+          requiresRuntimeSettle: !latestUserInitiatedCancel,
+          dispatchAfterUserCancel: latestUserInitiatedCancel,
           status: "queued",
           createdAt: new Date().toISOString(),
         });

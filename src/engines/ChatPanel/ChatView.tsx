@@ -45,7 +45,6 @@ import { useFileReviewSync } from "@src/hooks/fileReview";
 import { useSessionWorkspaceSync } from "@src/hooks/session/useSessionWorkspaceSync";
 import { activeSessionIdAtom } from "@src/store/session";
 import {
-  isSessionActiveAtom,
   sessionRuntimeStatusAtom,
   streamRetryStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
@@ -74,7 +73,6 @@ import { useAgentOrgMemberSessionJump } from "./InputArea/components/useAgentOrg
 import { useAgentOrgRunView } from "./InputArea/components/useAgentOrgRunView";
 import { useComposerSections } from "./InputArea/hooks/useComposerSections";
 import { useQueueEditMode } from "./InputArea/hooks/useQueueEditMode";
-import { useSessionActions } from "./hooks/useWorkspaceChat/useSessionActions";
 
 const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
 
@@ -304,41 +302,17 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const cancelQueuedMessage = useSetAtom(dequeueMessageAtom);
     const editQueuedMessage = useSetAtom(editMessageAtom);
     const reorderQueue = useSetAtom(reorderQueueAtom);
-    const isSessionActive = useAtomValue(isSessionActiveAtom);
     const forceSendQueuedMessage = useSetAtom(forceSendMessageAtom);
     const setQueueFlushRequest = useSetAtom(queueFlushRequestAtom);
 
-    const getQueueSessionId = useCallback(
-      () => queueSessionId,
-      [queueSessionId]
-    );
-    const { interruptSession } = useSessionActions({
-      getSessionId: getQueueSessionId,
-    });
     const handleSendNow = useCallback(
       (messageId: string) => {
         const message = messageQueue.find((item) => item.id === messageId);
         if (!message) return;
         forceSendQueuedMessage(messageId);
-        void (async () => {
-          try {
-            if (isSessionActive) {
-              await interruptSession({ restoreQueueHead: false });
-            }
-          } catch (err) {
-            console.error("[handleSendNow] interrupt failed:", err);
-          } finally {
-            setQueueFlushRequest((requestId) => requestId + 1);
-          }
-        })();
+        setQueueFlushRequest((requestId) => requestId + 1);
       },
-      [
-        messageQueue,
-        forceSendQueuedMessage,
-        interruptSession,
-        isSessionActive,
-        setQueueFlushRequest,
-      ]
+      [messageQueue, forceSendQueuedMessage, setQueueFlushRequest]
     );
 
     const handleCommitQueueEdit = useCallback(

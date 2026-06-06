@@ -14,18 +14,21 @@ import {
   assertUniqueConfigLabels,
   filteredConfigs,
   listAccounts,
+  runAskForceSendScenario,
+  runAskWriteDeniedScenario,
+  runBurstQueueSendNowOrderingScenario,
+  runChaosControlFlowScenario,
   runForceSendScenario,
   runFreshStopImageRestoreScenario,
   runFreshStopRollbackScenario,
   runIntermediateStreamingScenario,
-  runAskForceSendScenario,
-  runAskWriteDeniedScenario,
   runPlanBuildDirectScenario,
   runPlanEditResendScenario,
   runPlanStopScenario,
   runPlanUpdateSupersedesScenario,
   runPlanWriteBeforeBuildDeniedScenario,
   runRewindScenario,
+  runStopDoubleClickDoesNotResubmitScenario,
   runStopRestoresInFlightScenario,
   rustAgentConfigs,
   scenarioConfigs,
@@ -78,7 +81,9 @@ async function runScenarioWithToolRendering(config, scenarioName, runner) {
         /reset after (?:\d+h|[1-9]\d{3,}s)/i.test(errorMessage);
       const geminiStartupOrMarkerStall =
         isGeminiConfig(candidateConfig) &&
-        (errorMessage.includes("did not enter a working state before follow-up") ||
+        (errorMessage.includes(
+          "did not enter a working state before follow-up"
+        ) ||
           errorMessage.includes("follow-up marker never appeared"));
       if (
         isGeminiConfig(candidateConfig) &&
@@ -94,7 +99,9 @@ async function runScenarioWithToolRendering(config, scenarioName, runner) {
       const canTryGeminiFallback =
         isGeminiConfig(candidateConfig) &&
         (isGeminiTransientCapacityError(error) ||
-          errorMessage.includes("did not enter a working state before follow-up"));
+          errorMessage.includes(
+            "did not enter a working state before follow-up"
+          ));
       const canTryClaudeCodeFallback =
         isClaudeCodeConfig(candidateConfig) &&
         isClaudeCodeTransientAuthError(error);
@@ -131,6 +138,9 @@ const CONTROL_SCENARIO_NAMES = [
   "fresh-stop",
   "fresh-stop-image",
   "stop-restore",
+  "chaos-control-flow",
+  "burst-queue-send-now-ordering",
+  "stop-double-click-no-resubmit",
   "force-send",
   "rewind",
   "plan-build-direct",
@@ -232,12 +242,38 @@ describe("ORGII force-send queued follow-up behavior", function () {
     }
   });
 
-  it("restores uploaded images when a fresh first-send Stop rolls back to the creator across Rust AgentExecMode sessions", async function () {
-    await runScenario("fresh-stop-image", runFreshStopImageRestoreScenario, this);
+  it("keeps a fresh first-send prompt visible and restores uploaded images on Stop across Rust AgentExecMode sessions", async function () {
+    await runScenario(
+      "fresh-stop-image",
+      runFreshStopImageRestoreScenario,
+      this
+    );
   });
 
-  it("rolls back a fresh first-send Stop to the creator across Rust AgentExecMode sessions", async function () {
+  it("keeps a fresh first-send prompt visible and restores its draft on Stop across Rust AgentExecMode sessions", async function () {
     await runScenario("fresh-stop", runFreshStopRollbackScenario, this);
+  });
+
+  it("survives mixed Stop, resend, Send Now, Stop, and double-queue control flow across Rust and CLI agents", async function () {
+    this.timeout(1_200_000);
+    await runScenario("chaos-control-flow", runChaosControlFlowScenario, this);
+  });
+
+  it("keeps burst queued siblings parked when the user force-sends the middle item then Stops and resends", async function () {
+    this.timeout(1_200_000);
+    await runScenario(
+      "burst-queue-send-now-ordering",
+      runBurstQueueSendNowOrderingScenario,
+      this
+    );
+  });
+
+  it("does not resubmit a restored draft when the user double-clicks Stop", async function () {
+    await runScenario(
+      "stop-double-click-no-resubmit",
+      runStopDoubleClickDoesNotResubmitScenario,
+      this
+    );
   });
 
   it("restores the in-flight prompt on Stop without consuming queued follow-ups across Rust and CLI agents", async function () {
@@ -287,19 +323,11 @@ describe("ORGII force-send queued follow-up behavior", function () {
   });
 
   it("keeps Ask mode read-only even when the user asks for file edits across Rust AgentExecMode sessions", async function () {
-    await runScenario(
-      "ask-write-denied",
-      runAskWriteDeniedScenario,
-      this
-    );
+    await runScenario("ask-write-denied", runAskWriteDeniedScenario, this);
   });
 
   it("force-sends read-only follow-ups in Ask mode without plan or rewind UI across Rust AgentExecMode sessions", async function () {
     this.timeout(1_200_000);
-    await runScenario(
-      "ask-force-send",
-      runAskForceSendScenario,
-      this
-    );
+    await runScenario("ask-force-send", runAskForceSendScenario, this);
   });
 });

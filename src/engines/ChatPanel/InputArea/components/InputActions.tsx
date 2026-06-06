@@ -16,7 +16,7 @@
  *   6. Otherwise              → Submit (arrow up, inactive color, noop)
  */
 import { ArrowUp, RotateCcw, Square } from "lucide-react";
-import React, { memo } from "react";
+import React, { memo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
@@ -64,6 +64,7 @@ const InputActions: React.FC<InputActionsProps> = memo(
     tone = "primary",
   }) => {
     const { t } = useTranslation();
+    const suppressSubmitClickUntilRef = useRef(0);
 
     // Non-empty input ALWAYS wins over the working indicator: the user can
     // type a new message while the agent is running, and it will be silently
@@ -80,11 +81,15 @@ const InputActions: React.FC<InputActionsProps> = memo(
 
     const handleClick = async () => {
       if (showSubmit) {
+        if (Date.now() < suppressSubmitClickUntilRef.current) {
+          return;
+        }
         onSubmit();
         return;
       }
       if (showStop) {
         if (canStopAgent) {
+          suppressSubmitClickUntilRef.current = Date.now() + 700;
           void onInterrupt();
         } else {
           Message.info(t("sessions:chat.workspaceIsWorking"));

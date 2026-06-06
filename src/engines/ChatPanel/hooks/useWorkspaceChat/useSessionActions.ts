@@ -10,17 +10,12 @@ import { useTranslation } from "react-i18next";
 import { CANCEL_REASON } from "@src/api/tauri/agent";
 import Message from "@src/components/Message";
 import {
-  clearSessionAtom,
   pendingSyntheticEventAtom,
   streamingDeltaContentAtom,
 } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { createLogger } from "@src/hooks/logger";
-import {
-  activeSessionIdAtom,
-  workstationActiveSessionIdAtom,
-} from "@src/store/session";
 import {
   isPendingCancelAtom,
   lastUserMessageAtom,
@@ -30,7 +25,6 @@ import {
   streamRetryStatusAtom,
   userInitiatedCancelAtom,
 } from "@src/store/session/cliSessionStatusAtom";
-import { messageQueueAtom } from "@src/store/ui/messageQueueAtom";
 
 const logger = createLogger("UseSessionActions");
 
@@ -93,13 +87,7 @@ export function useSessionActions(options: UseSessionActionsOptions) {
   const setPendingCancel = useSetAtom(isPendingCancelAtom);
   const setUserInitiatedCancel = useSetAtom(userInitiatedCancelAtom);
   const setRestoreToInput = useSetAtom(restoreToInputAtom);
-  const dispatchClearSession = useSetAtom(clearSessionAtom);
-  const setPendingSyntheticEvent = useSetAtom(pendingSyntheticEventAtom);
   const setSessionRolledBack = useSetAtom(sessionRolledBackAtom);
-  const setActiveSessionId = useSetAtom(activeSessionIdAtom);
-  const setWorkstationActiveSessionId = useSetAtom(
-    workstationActiveSessionIdAtom
-  );
   const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
   const setStreamRetryStatus = useSetAtom(streamRetryStatusAtom);
   const setStreamingDeltaContent = useSetAtom(streamingDeltaContentAtom);
@@ -149,18 +137,17 @@ export function useSessionActions(options: UseSessionActionsOptions) {
    *   - `false` — Programmatic interrupt for Send Now. No restore and no
    *     rollback; the queued message becomes the next user turn immediately.
    *
-   * Three cases (all decided from the state snapshot at click time):
+   * Cursor-aligned Stop behavior (all decided from the click-time snapshot):
    *
-   *   1. No queued messages + no agent output yet
-   *      → Return to the session creator immediately with the message restored.
-   *        Rust cancel and DB rollback fire in the background.
-   *
-   *   2. No queued messages + agent already produced output
-   *      → Interrupt only. History stays intact.
-   *
-   *   3. Queue is non-empty
-   *      → Restore the active in-flight prompt to the input box and keep queued
-   *        follow-ups queued. Stop should not consume or reorder the queue.
+   *   - The button/composer unlock immediately; visible streaming stops
+   *     optimistically before the Rust RPC completes.
+   *   - If the stopped turn has no visible assistant output, restore the active
+   *     prompt to the composer. When an older round exists, prune the no-output
+   *     user event so history visually returns to the previous round. When this
+   *     is the first round, keep the user prompt visible instead of clearing the
+   *     transcript to a blank creator state.
+   *   - Queued follow-ups stay queued. Stop must not consume, reorder, or
+   *     auto-dispatch them.
    */
   const interruptSession = useCallback(
     async (options?: { restoreQueueHead?: boolean }) => {
@@ -171,7 +158,13 @@ export function useSessionActions(options: UseSessionActionsOptions) {
         return;
       }
 
-      const queue = store.get(messageQueueAtom);
+      if (restoreQueueHead) {
+        setUserInitiatedCancel(true);
+        setPendingCancel(true);
+        stopVisibleStreaming(sessionId);
+        setSessionRuntimeStatus("idle");
+      }
+
       const lastUserMessage = store.get(lastUserMessageAtom);
       const pendingSyntheticEvent = store.get(pendingSyntheticEventAtom);
 
@@ -207,62 +200,6 @@ export function useSessionActions(options: UseSessionActionsOptions) {
         pendingImages: pendingSyntheticEvent?.result?.images,
       });
 
-      // Case 1: stopped before any visible agent output with no pending queue
-      // AND no prior completed turns — a truly fresh first-send.
-      // Navigate back to the creator immediately — no UI wait for Rust.
-      if (
-        restoreQueueHead &&
-        !queue[0] &&
-        !turnHasVisibleOutput &&
-        !sessionHasPriorContent
-      ) {
-        setPendingSyntheticEvent(null);
-        setSessionRolledBack(true);
-        if (currentUserMessage) {
-          setRestoreToInput({
-            displayContent: currentUserMessage.displayContent,
-            imageDataUrls: currentUserMessage.imageDataUrls,
-          });
-        }
-        // Prune the orphaned user event from the client-side cache.
-        void (async () => {
-          try {
-            const current = await eventStoreProxy.getEvents();
-            for (let i = current.length - 1; i >= 0; i -= 1) {
-              if (current[i].source === "user") {
-                await eventStoreProxy.truncateBeforeId(current[i].id);
-                return;
-              }
-            }
-          } catch (err) {
-            console.warn(
-              "[useSessionActions] Failed to prune cancelled user event:",
-              err
-            );
-          }
-        })();
-
-        dispatchClearSession();
-        setSessionRuntimeStatus("idle");
-        stopVisibleStreaming(sessionId);
-        setWorkstationActiveSessionId(null);
-        setActiveSessionId(null);
-
-        // Fire the backend cancel + rollback in the background.
-        void SessionService.interrupt({
-          sessionId,
-          reason: CANCEL_REASON.USER_STOP,
-          onError: (msg: string) => {
-            Message.error(t(msg));
-          },
-        })
-          .then(() => eventStoreProxy.finalizeRunningEventsAsStopped(sessionId))
-          .catch((err: unknown) => {
-            logger.warn("background cancel failed:", err);
-          });
-        return;
-      }
-
       // Cases 2 & 3: normal cancel flow — keep the session view open, but
       // stop visible streaming immediately. Queue release still waits for the
       // real cancel-settle path via isPendingCancel/userInitiatedCancel.
@@ -278,22 +215,24 @@ export function useSessionActions(options: UseSessionActionsOptions) {
             displayContent: currentUserMessage.displayContent,
             imageDataUrls: currentUserMessage.imageDataUrls,
           });
-          void (async () => {
-            try {
-              const events = await eventStoreProxy.getEvents();
-              for (let i = events.length - 1; i >= 0; i -= 1) {
-                if (events[i].source === "user") {
-                  await eventStoreProxy.truncateBeforeId(events[i].id);
-                  return;
+          if (sessionHasPriorContent) {
+            void (async () => {
+              try {
+                const events = await eventStoreProxy.getEvents();
+                for (let i = events.length - 1; i >= 0; i -= 1) {
+                  if (events[i].source === "user") {
+                    await eventStoreProxy.truncateBeforeId(events[i].id);
+                    return;
+                  }
                 }
+              } catch (err) {
+                console.warn(
+                  "[useSessionActions] Failed to prune user event:",
+                  err
+                );
               }
-            } catch (err) {
-              console.warn(
-                "[useSessionActions] Failed to prune user event:",
-                err
-              );
-            }
-          })();
+            })();
+          }
         } else if (currentUserMessage) {
           setRestoreToInput({
             displayContent: currentUserMessage.displayContent,
@@ -337,8 +276,14 @@ export function useSessionActions(options: UseSessionActionsOptions) {
       }
 
       void (async () => {
-        let watchdogId: number | null = window.setTimeout(() => {
-          watchdogId = null;
+        window.setTimeout(() => {
+          const latestStatus = store.get(sessionRuntimeStatusAtom);
+          const runtimeStartedAnotherTurn =
+            latestStatus === "running" ||
+            latestStatus === "installing" ||
+            latestStatus === "waiting_for_user" ||
+            latestStatus === "waiting_for_funds";
+          if (runtimeStartedAnotherTurn) return;
           setPendingCancel(false);
           setSessionRuntimeStatus("idle");
           stopVisibleStreaming(sessionId);
@@ -354,39 +299,31 @@ export function useSessionActions(options: UseSessionActionsOptions) {
           });
           await eventStoreProxy.finalizeRunningEventsAsStopped(sessionId);
           // isPendingCancel is intentionally NOT cleared here on the success path.
-          // Rust will emit an agent:complete (or agent:error) event after winding
-          // down the turn; the runtime-status handler that processes that event is
-          // responsible for clearing isPendingCancel. Clearing it here would
-          // create a race: the input area could re-enable and the queue could
-          // flush a follow-up message before Rust has actually stopped.
+          // Rust usually emits agent:complete / agent:error after winding down the
+          // turn, and the runtime-status handler clears isPendingCancel there. The
+          // watchdog above is deliberately left alive as the fallback for Rust-native
+          // turns that accept the interrupt RPC but never emit a terminal event.
         } catch (error) {
           console.error("[useSessionActions] interrupt failed:", error);
           setPendingCancel(false);
-          if (restoreQueueHead) setUserInitiatedCancel(false);
-          // Session is gone (already completed/removed): Rust will never send
-          // agent:complete, so reset the runtime status ourselves to unblock
-          // the input area and queue dispatch.
+          // Keep userInitiatedCancel set for user Stop even if the backend
+          // interrupt races with completion or fails. The visible UI has already
+          // performed Cursor-style Stop/restore; the next explicit Send must
+          // consume that Stop intent instead of becoming a parked follow-up that
+          // waits for a settle edge that may never arrive.
           setSessionRuntimeStatus("idle");
           stopVisibleStreaming(sessionId);
-        } finally {
-          if (watchdogId !== null) {
-            window.clearTimeout(watchdogId);
-          }
         }
       })();
     },
     [
-      dispatchClearSession,
       getSessionId,
-      setActiveSessionId,
       setPendingCancel,
-      setPendingSyntheticEvent,
       setRestoreToInput,
       setSessionRolledBack,
       setSessionRuntimeStatus,
       stopVisibleStreaming,
       setUserInitiatedCancel,
-      setWorkstationActiveSessionId,
       store,
       t,
     ]

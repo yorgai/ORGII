@@ -1,5 +1,6 @@
 import {
   hasQueueTurnSettledAfter,
+  hasQueueTurnWorkedThenSettledAfter,
   markQueueTurnSettled,
   markQueueTurnWorking,
   resetQueueTurnGateForTests,
@@ -65,5 +66,18 @@ describe("queueTurnGate", () => {
 
     markQueueTurnSettled("session-1", 1_250);
     expect(hasQueueTurnSettledAfter("session-1", 1_100)).toBe(true);
+  });
+
+  it("does not treat a late settle from the previous turn as settling a new explicit turn", () => {
+    markQueueTurnWorking("session-1", 1_000);
+    markQueueTurnSettled("session-1", 1_600);
+
+    expect(hasQueueTurnWorkedThenSettledAfter("session-1", 1_500)).toBe(false);
+
+    markQueueTurnWorking("session-1", 1_700);
+    expect(hasQueueTurnWorkedThenSettledAfter("session-1", 1_500)).toBe(false);
+
+    markQueueTurnSettled("session-1", 1_900);
+    expect(hasQueueTurnWorkedThenSettledAfter("session-1", 1_500)).toBe(true);
   });
 });

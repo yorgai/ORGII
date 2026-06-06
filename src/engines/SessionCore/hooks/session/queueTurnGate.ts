@@ -19,6 +19,15 @@ export function hasQueueTurnSettledAfter(
   return lastSettleAt > at;
 }
 
+export function hasQueueTurnWorkedThenSettledAfter(
+  sessionId: string,
+  at: number
+): boolean {
+  const lastWorkingAt = lastObservedWorkingAtBySession.get(sessionId) ?? 0;
+  const lastSettleAt = lastObservedSettleAtBySession.get(sessionId) ?? 0;
+  return lastWorkingAt > at && lastSettleAt > lastWorkingAt;
+}
+
 interface ShouldQueueAsActiveOptions {
   sessionId: string;
   isActive: boolean;

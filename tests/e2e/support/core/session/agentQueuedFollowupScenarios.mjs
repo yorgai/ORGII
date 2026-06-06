@@ -18,9 +18,12 @@ export {
   waitForApp,
 } from "./agentQueuedFollowupDriver.mjs";
 export {
+  runBurstQueueSendNowOrderingScenario,
+  runChaosControlFlowScenario,
   runForceSendScenario,
   runFreshStopImageRestoreScenario,
   runFreshStopRollbackScenario,
+  runStopDoubleClickDoesNotResubmitScenario,
   runStopRestoresInFlightScenario,
 } from "./agentQueuedControlScenarios.mjs";
 export {

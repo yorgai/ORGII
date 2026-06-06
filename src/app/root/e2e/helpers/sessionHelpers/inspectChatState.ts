@@ -116,6 +116,9 @@ export function createInspectChatStateHelper(store: E2EStore) {
         id: message.id,
         sessionId: message.sessionId,
         content: message.content,
+        requiresRuntimeSettle: message.requiresRuntimeSettle,
+        dispatchAfterUserCancel: message.dispatchAfterUserCancel,
+        createdAt: message.createdAt,
       }));
       const activeSessionId = store.get(activeSessionIdAtom);
       const activeSession = activeSessionId

@@ -85,12 +85,13 @@ sessionContextBreakdownAtom.debugLabel = "sessionContextBreakdown";
  * Pending-cancel flag.
  *
  * Set to `true` the moment the user clicks the stop button. Cleared when Rust
- * broadcasts `agent:complete` / `agent:error` (the actual turn wind-down).
+ * broadcasts a terminal status (the actual turn wind-down).
  *
  * Used by the "silent queue" UX: while this flag is true, any new user message
  * is enqueued (not dispatched) so the user never sees a "wait, the agent is
- * still stopping" state. The falling-edge watcher in `useQueueDispatch` flushes
- * the queue once the status truly transitions to a terminal state.
+ * still stopping" state. User Stop never auto-flushes preserved queued
+ * follow-ups; only an explicit Send Now or a later natural turn completion may
+ * release them.
  */
 export const isPendingCancelAtom = atom<boolean>(false);
 isPendingCancelAtom.debugLabel = "isPendingCancel";

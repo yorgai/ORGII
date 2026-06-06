@@ -34,6 +34,12 @@ export interface QueuedMessage {
    * dispatch until the queue watcher observes a terminal edge after enqueue.
    */
   requiresRuntimeSettle?: boolean;
+  /**
+   * User explicitly pressed Send after Stop restored the draft while Rust was
+   * still winding down. This message is the next active prompt once cancel
+   * settles; older queued follow-ups must stay parked behind it.
+   */
+  dispatchAfterUserCancel?: boolean;
   status: "queued";
   createdAt: string;
 }

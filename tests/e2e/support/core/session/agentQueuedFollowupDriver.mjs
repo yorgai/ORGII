@@ -488,6 +488,18 @@ function summarizeChatState(state) {
     stationMode: state.stationMode,
     isSessionActive: state.isSessionActive,
     chatEventCount: state.chatEventCount,
+    queuedMessages: (state.queuedMessages ?? []).map((message) => ({
+      id: message.id,
+      sessionId: message.sessionId,
+      content: truncateDiagnosticText(message.content),
+      requiresRuntimeSettle: message.requiresRuntimeSettle,
+      dispatchAfterUserCancel: message.dispatchAfterUserCancel,
+      createdAt: message.createdAt,
+    })),
+    queueFlushRequest: state.queueFlushRequest,
+    isPendingCancel: state.isPendingCancel,
+    userInitiatedCancel: state.userInitiatedCancel,
+    isQueueEditing: state.isQueueEditing,
     streamingDelta: state.streamingDelta,
     fileChangesCount: state.fileChangesCount,
     pendingReviewCount: state.pendingReviewCount,
@@ -536,17 +548,22 @@ function normalizeTranscriptText(text) {
 }
 
 function findDuplicateTranscriptEntries(entries) {
-  const seen = new Map();
+  let turnIndex = 0;
+  let seenInTurn = new Map();
   const duplicates = [];
   for (const entry of entries) {
     const text = normalizeTranscriptText(entry.text);
+    if (entry.source === "user") {
+      turnIndex += 1;
+      seenInTurn = new Map();
+    }
     if (text.length < 12) continue;
-    const key = `${entry.source}:${text}`;
-    const existing = seen.get(key);
+    const key = `${turnIndex}:${entry.source}:${text}`;
+    const existing = seenInTurn.get(key);
     if (existing) {
-      duplicates.push({ first: existing, second: entry, text });
+      duplicates.push({ first: existing, second: entry, text, turnIndex });
     } else {
-      seen.set(key, entry);
+      seenInTurn.set(key, entry);
     }
   }
   return duplicates;
@@ -582,14 +599,14 @@ async function assertNoDuplicateTranscriptMessages(label) {
       const rect = node.getBoundingClientRect();
       return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
     };
-    const entries = [];
-    document.querySelectorAll('[data-testid="chat-message-user-editable"]').forEach((node, index) => {
-      if (isVisible(node)) entries.push({ source: 'user', id: String(index), text: node.textContent || '', surface: 'rendered' });
-    });
-    document.querySelectorAll('[data-testid="chat-message-assistant"]').forEach((node, index) => {
-      if (isVisible(node)) entries.push({ source: 'assistant', id: String(index), text: node.textContent || '', surface: 'rendered' });
-    });
-    return entries;
+    return Array.from(document.querySelectorAll('[data-testid="chat-message-user-editable"], [data-testid="chat-message-assistant"]'))
+      .filter(isVisible)
+      .map((node, index) => ({
+        source: node.matches('[data-testid="chat-message-user-editable"]') ? 'user' : 'assistant',
+        id: String(index),
+        text: node.textContent || '',
+        surface: 'rendered',
+      }));
   `);
   const renderedDuplicates = findDuplicateTranscriptEntries(renderedEntries);
   if (renderedDuplicates.length > 0) {

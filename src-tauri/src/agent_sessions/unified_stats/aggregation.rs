@@ -14,7 +14,7 @@ const AGENT_ORG_ICON_ID: &str = "network";
 
 use super::conversion::{
     cli_session_to_aggregate_record, os_session_to_aggregate_record,
-    sde_session_to_aggregate_record,
+    sde_session_to_aggregate_record, AgentMetadataResolver,
 };
 use super::display::matches_text_query;
 use super::status::{is_active_status, is_completed_status, is_failed_status};
@@ -41,6 +41,7 @@ pub fn list_all_sessions(filter: Option<&SessionFilter>) -> Result<SessionListRe
     let load_os = wants_category("os");
 
     let mut all_sessions: Vec<SessionAggregateRecord> = Vec::new();
+    let mut metadata_resolver = (load_agent || load_os).then(AgentMetadataResolver::new);
 
     if load_cli {
         let cli_sessions = cli_session_persistence::list_sessions()
@@ -59,8 +60,11 @@ pub fn list_all_sessions(filter: Option<&SessionFilter>) -> Result<SessionListRe
         let sde_sessions = session_persistence::list_sessions(&sde_filter)
             .map_err(|err| format!("Failed to load SDE Agent sessions: {}", err))?;
         all_sessions.reserve(sde_sessions.len());
+        let resolver = metadata_resolver
+            .as_mut()
+            .expect("agent metadata resolver initialized for agent sessions");
         for session in sde_sessions {
-            all_sessions.push(sde_session_to_aggregate_record(session));
+            all_sessions.push(sde_session_to_aggregate_record(session, resolver));
         }
 
         let org_member_filter = agent_core::session::SessionListFilter {
@@ -70,8 +74,11 @@ pub fn list_all_sessions(filter: Option<&SessionFilter>) -> Result<SessionListRe
         let org_member_sessions = session_persistence::list_sessions(&org_member_filter)
             .map_err(|err| format!("Failed to load Agent Org member sessions: {}", err))?;
         all_sessions.reserve(org_member_sessions.len());
+        let resolver = metadata_resolver
+            .as_mut()
+            .expect("agent metadata resolver initialized for org member sessions");
         for session in org_member_sessions {
-            all_sessions.push(sde_session_to_aggregate_record(session));
+            all_sessions.push(sde_session_to_aggregate_record(session, resolver));
         }
 
         annotate_agent_org_root_rows(&mut all_sessions)?;
@@ -85,8 +92,11 @@ pub fn list_all_sessions(filter: Option<&SessionFilter>) -> Result<SessionListRe
         let os_sessions = session_persistence::list_sessions(&os_filter)
             .map_err(|err| format!("Failed to load OS Agent sessions: {}", err))?;
         all_sessions.reserve(os_sessions.len());
+        let resolver = metadata_resolver
+            .as_mut()
+            .expect("agent metadata resolver initialized for OS sessions");
         for session in os_sessions {
-            all_sessions.push(os_session_to_aggregate_record(session));
+            all_sessions.push(os_session_to_aggregate_record(session, resolver));
         }
     }
 
