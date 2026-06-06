@@ -18,6 +18,7 @@ import { isHostedKey } from "@src/api/tauri/session";
 import Message from "@src/components/Message";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
+import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import {
   markQueueTurnWorking,
@@ -241,11 +242,19 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       const latestSessionRuntimeStatus = store.get(sessionRuntimeStatusAtom);
       const latestIsSessionActive = store.get(isSessionActiveAtom);
       const latestIsPendingCancel = store.get(isPendingCancelAtom);
+      const latestSnapshot =
+        eventStoreProxy.getLatestSessionSnapshot(sessionId);
+      const snapshotShowsActiveTurn =
+        latestSnapshot?.hasRunningEvent === true ||
+        (latestSnapshot != null &&
+          "streaming" in latestSnapshot &&
+          latestSnapshot.streaming === true);
       const runtimeIsWorking =
         latestSessionRuntimeStatus === "running" ||
         latestSessionRuntimeStatus === "installing" ||
         latestSessionRuntimeStatus === "waiting_for_user" ||
-        latestSessionRuntimeStatus === "waiting_for_funds";
+        latestSessionRuntimeStatus === "waiting_for_funds" ||
+        snapshotShowsActiveTurn;
       const submitShouldQueueAsActiveTurn = shouldQueueSubmitAsActiveTurn({
         sessionId,
         isActive: latestIsSessionActive,

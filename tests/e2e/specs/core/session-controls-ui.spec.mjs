@@ -14,12 +14,12 @@ import {
   assertUniqueConfigLabels,
   filteredConfigs,
   listAccounts,
+  runAskForceSendScenario,
+  runAskWriteDeniedScenario,
   runForceSendScenario,
   runFreshStopImageRestoreScenario,
   runFreshStopRollbackScenario,
   runIntermediateStreamingScenario,
-  runAskForceSendScenario,
-  runAskWriteDeniedScenario,
   runPlanBuildDirectScenario,
   runPlanEditResendScenario,
   runPlanStopScenario,
@@ -78,7 +78,9 @@ async function runScenarioWithToolRendering(config, scenarioName, runner) {
         /reset after (?:\d+h|[1-9]\d{3,}s)/i.test(errorMessage);
       const geminiStartupOrMarkerStall =
         isGeminiConfig(candidateConfig) &&
-        (errorMessage.includes("did not enter a working state before follow-up") ||
+        (errorMessage.includes(
+          "did not enter a working state before follow-up"
+        ) ||
           errorMessage.includes("follow-up marker never appeared"));
       if (
         isGeminiConfig(candidateConfig) &&
@@ -94,7 +96,9 @@ async function runScenarioWithToolRendering(config, scenarioName, runner) {
       const canTryGeminiFallback =
         isGeminiConfig(candidateConfig) &&
         (isGeminiTransientCapacityError(error) ||
-          errorMessage.includes("did not enter a working state before follow-up"));
+          errorMessage.includes(
+            "did not enter a working state before follow-up"
+          ));
       const canTryClaudeCodeFallback =
         isClaudeCodeConfig(candidateConfig) &&
         isClaudeCodeTransientAuthError(error);
@@ -232,11 +236,15 @@ describe("ORGII force-send queued follow-up behavior", function () {
     }
   });
 
-  it("restores uploaded images when a fresh first-send Stop rolls back to the creator across Rust AgentExecMode sessions", async function () {
-    await runScenario("fresh-stop-image", runFreshStopImageRestoreScenario, this);
+  it("keeps a fresh first-send prompt visible and restores uploaded images on Stop across Rust AgentExecMode sessions", async function () {
+    await runScenario(
+      "fresh-stop-image",
+      runFreshStopImageRestoreScenario,
+      this
+    );
   });
 
-  it("rolls back a fresh first-send Stop to the creator across Rust AgentExecMode sessions", async function () {
+  it("keeps a fresh first-send prompt visible and restores its draft on Stop across Rust AgentExecMode sessions", async function () {
     await runScenario("fresh-stop", runFreshStopRollbackScenario, this);
   });
 
@@ -287,19 +295,11 @@ describe("ORGII force-send queued follow-up behavior", function () {
   });
 
   it("keeps Ask mode read-only even when the user asks for file edits across Rust AgentExecMode sessions", async function () {
-    await runScenario(
-      "ask-write-denied",
-      runAskWriteDeniedScenario,
-      this
-    );
+    await runScenario("ask-write-denied", runAskWriteDeniedScenario, this);
   });
 
   it("force-sends read-only follow-ups in Ask mode without plan or rewind UI across Rust AgentExecMode sessions", async function () {
     this.timeout(1_200_000);
-    await runScenario(
-      "ask-force-send",
-      runAskForceSendScenario,
-      this
-    );
+    await runScenario("ask-force-send", runAskForceSendScenario, this);
   });
 });

@@ -14,11 +14,11 @@
  * NOTE on cancel-restore: restoring the active in-flight user message happens
  * SYNCHRONOUSLY inside `useSessionActions.interruptSession` at click time.
  * This hook is only responsible for auto-flushing queued follow-ups once the
- * session truly goes idle (either natural completion or a non-user-initiated
- * cancel). The `userCancelRef` guard below stops Stop from immediately
- * dispatching preserved queued follow-ups.
+ * session reaches a natural queue-releasing terminal edge. User Stop only
+ * unlocks the composer and restores the draft; it never consumes preserved
+ * queued follow-ups.
  */
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
 import { Message } from "@src/components/Message";
@@ -53,10 +53,7 @@ import { resolveModelForMessage } from "@src/util/session/resolveModelForMessage
 import { selectionFromSession } from "@src/util/session/selectionFromSession";
 import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
-import {
-  hasQueueTurnSettledAfter,
-  markQueueTurnSettled,
-} from "./queueTurnGate";
+import { hasQueueTurnSettledAfter } from "./queueTurnGate";
 
 const MAX_SENT_QUEUE_ID_CACHE = 200;
 const MIN_QUEUE_VISIBLE_MS = 1_200;
@@ -68,6 +65,7 @@ function queuedMessageAgeMs(message: QueuedMessage): number {
 }
 
 export function useQueueDispatch(): void {
+  const store = useStore();
   const isSessionActive = useAtomValue(isSessionActiveAtom);
   const runtimeStatus = useAtomValue(sessionRuntimeStatusAtom);
   const isPendingCancel = useAtomValue(isPendingCancelAtom);
@@ -266,7 +264,15 @@ export function useQueueDispatch(): void {
   // Tracks which sessionId currently holds the lock, so we can detect
   // session switches and release a stale lock immediately.
   const lockSessionIdRef = useRef<string | null>(null);
-  const prevActiveRef = useRef(isSessionActive);
+  const isRuntimeWorkingStatus = useCallback((status: string) => {
+    return (
+      status === "running" ||
+      status === "installing" ||
+      status === "waiting_for_user" ||
+      status === "waiting_for_funds"
+    );
+  }, []);
+  const prevRuntimeWorkingRef = useRef(isRuntimeWorkingStatus(runtimeStatus));
 
   const rememberSentQueueId = useCallback((messageId: string) => {
     if (sentQueuedMessageIdsRef.current.has(messageId)) return;
@@ -284,18 +290,28 @@ export function useQueueDispatch(): void {
   const tryDispatchNextRef = useRef<(() => void) | null>(null);
 
   const tryDispatchNext = useCallback(() => {
+    const latestPendingCancel = store.get(isPendingCancelAtom);
+    const latestUserCancel = store.get(userInitiatedCancelAtom);
+    const latestRuntimeStatus = store.get(sessionRuntimeStatusAtom);
+    const latestQueue = store.get(messageQueueAtom);
+    const latestForceSendQueue = store.get(forceSendPendingQueueAtom);
+    const latestActiveSessionId = store.get(sessionIdAtom);
+    const latestIsEditing = store.get(queueEditingAtom);
+
+    pendingCancelRef.current = latestPendingCancel;
+    userCancelRef.current = latestUserCancel;
+    runtimeStatusRef.current = latestRuntimeStatus;
+    queueRef.current = latestQueue;
+    forceSendQueueRef.current = latestForceSendQueue;
+    activeSessionIdRef.current = latestActiveSessionId;
+    editingRef.current = latestIsEditing;
+
     // Hold off while Rust is still winding down a cancelled turn — the
     // sessionHandlers will clear isPendingCancelAtom when agent:complete /
     // agent:error actually lands, which triggers this watcher again.
-    if (pendingCancelRef.current) return;
+    if (latestPendingCancel) return;
 
-    const status = runtimeStatusRef.current;
-    const sessionStillActive =
-      status === "running" ||
-      status === "installing" ||
-      status === "waiting_for_user" ||
-      status === "waiting_for_funds";
-    if (sessionStillActive) return;
+    if (isRuntimeWorkingStatus(latestRuntimeStatus)) return;
 
     // Hold off if the most recent cancel was user-initiated. Stop restores the
     // active in-flight user message synchronously in useSessionActions;
@@ -303,7 +319,7 @@ export function useQueueDispatch(): void {
     // has a chance to revise or cancel the restored prompt. The flag is cleared
     // when the cancel settles, so after the user resends the queue flushes
     // normally.
-    if (userCancelRef.current) return;
+    if (latestUserCancel) return;
 
     const activeSessionId = activeSessionIdRef.current;
     const nextMsg =
@@ -357,7 +373,7 @@ export function useQueueDispatch(): void {
       dispatchLockRef.current = false;
       lockSessionIdRef.current = null;
     });
-  }, [dequeueMessage, rememberSentQueueId]);
+  }, [dequeueMessage, isRuntimeWorkingStatus, rememberSentQueueId, store]);
 
   useEffect(() => {
     for (const msg of forceSendQueue) {
@@ -370,23 +386,29 @@ export function useQueueDispatch(): void {
   }, [tryDispatchNext]);
 
   useEffect(() => {
-    const wasActive = prevActiveRef.current;
-    prevActiveRef.current = isSessionActive;
-
     if (isSessionActive) {
-      // Session became active — release any stale lock from a previous dispatch
+      // Session became active — release any stale lock from a previous dispatch.
+      dispatchLockRef.current = false;
+      lockSessionIdRef.current = null;
+    }
+  }, [isSessionActive]);
+
+  useEffect(() => {
+    const isWorking = isRuntimeWorkingStatus(runtimeStatus);
+    const wasWorking = prevRuntimeWorkingRef.current;
+    prevRuntimeWorkingRef.current = isWorking;
+
+    if (isWorking) {
       dispatchLockRef.current = false;
       lockSessionIdRef.current = null;
       return;
     }
 
-    if (!wasActive) return;
-    const activeSessionId = activeSessionIdRef.current;
-    if (activeSessionId) {
-      markQueueTurnSettled(activeSessionId);
+    if (!wasWorking || pendingCancelRef.current || userCancelRef.current) {
+      return;
     }
     tryDispatchNext();
-  }, [isSessionActive, tryDispatchNext]);
+  }, [isRuntimeWorkingStatus, runtimeStatus, tryDispatchNext]);
 
   // Falling edge of isPendingCancel: Rust finished winding down the
   // cancelled turn (sessionHandlers cleared the flag).
@@ -397,18 +419,14 @@ export function useQueueDispatch(): void {
   // until the user sends again.
   //
   // Non-user cancels (e.g. a Send Now interrupt with restoreQueueHead=false):
-  // just flush.
+  // may flush explicitly because force-send entries do not require a natural
+  // runtime settle edge.
   const prevPendingCancelRef = useRef(isPendingCancel);
   useEffect(() => {
     const wasPending = prevPendingCancelRef.current;
     prevPendingCancelRef.current = isPendingCancel;
 
     if (!wasPending || isPendingCancel || isSessionActive) return;
-
-    const activeSessionId = activeSessionIdRef.current;
-    if (activeSessionId) {
-      markQueueTurnSettled(activeSessionId);
-    }
 
     if (userCancelRef.current) {
       setUserInitiatedCancel(false);
@@ -438,6 +456,9 @@ export function useQueueDispatch(): void {
     const prev = prevFlushRef.current;
     prevFlushRef.current = flushRequest;
     if (flushRequest === prev) return;
+    if (store.get(isPendingCancelAtom) || store.get(userInitiatedCancelAtom)) {
+      return;
+    }
 
     setUserInitiatedCancel(false);
     userCancelRef.current = false;
@@ -458,6 +479,7 @@ export function useQueueDispatch(): void {
     isQueueEditing,
     queue,
     setUserInitiatedCancel,
+    store,
     tryDispatchNext,
   ]);
 }

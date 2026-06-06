@@ -5,6 +5,7 @@ import type {
   SessionEvent,
   SessionLoadStatus,
 } from "@src/engines/SessionCore/core/types";
+import { markQueueTurnSettled } from "@src/engines/SessionCore/hooks/session/queueTurnGate";
 import { type SessionStatus, updateSessionStatus } from "@src/store/session";
 import type {
   ContextBreakdown,
@@ -63,6 +64,10 @@ const TERMINAL_HANDLER_STATUSES = new Set<string>([
   "completed",
   "failed",
   "cancelled",
+]);
+const QUEUE_RELEASING_TERMINAL_STATUSES = new Set<string>([
+  "completed",
+  "failed",
 ]);
 
 export function resetSessionSwitchState(
@@ -154,6 +159,19 @@ export function createSessionEventHandlerCallbacks(
         actions.setSessionRuntimeError(errorMessage);
       }
       if (TERMINAL_HANDLER_STATUSES.has(status)) {
+        const latestSnapshot =
+          eventStoreProxy.getLatestSessionSnapshot(sessionId);
+        const snapshotStillActive =
+          latestSnapshot?.hasRunningEvent === true ||
+          (latestSnapshot != null &&
+            "streaming" in latestSnapshot &&
+            latestSnapshot.streaming === true);
+        if (
+          QUEUE_RELEASING_TERMINAL_STATUSES.has(status) &&
+          !snapshotStillActive
+        ) {
+          markQueueTurnSettled(sessionId);
+        }
         actions.setPendingCancel(false);
         eventStoreProxy.unpinSession(sessionId);
         updateSessionStatus(sessionId, status as SessionStatus);

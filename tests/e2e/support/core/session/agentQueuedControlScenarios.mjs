@@ -75,7 +75,9 @@ async function switchStationMode(mode, label) {
 }
 
 function markerUserTranscriptEvents(state, marker) {
-  const eventById = new Map((state.chatEvents ?? []).map((event) => [event.id, event]));
+  const eventById = new Map(
+    (state.chatEvents ?? []).map((event) => [event.id, event])
+  );
   const pipelineEvents = (state.pipelineItems ?? [])
     .map((item) => (item.eventId ? eventById.get(item.eventId) : null))
     .filter(
@@ -87,7 +89,8 @@ function markerUserTranscriptEvents(state, marker) {
   if (pipelineEvents.length > 0) return pipelineEvents;
   return (state.chatEvents ?? []).filter(
     (event) =>
-      event.source === "user" && String(event.displayText ?? "").includes(marker)
+      event.source === "user" &&
+      String(event.displayText ?? "").includes(marker)
   );
 }
 
@@ -267,6 +270,77 @@ async function waitForQueuedOrForceSentFollowup(marker) {
   );
 }
 
+async function assertQueuedFollowupRemainsParked(label, marker) {
+  await browser.pause(1_500);
+  const state = await inspectChatState(`${label}-queue-parked`);
+  const queuedStillContainsMarker = state.queuedMessages.some((item) =>
+    item.content.includes(marker)
+  );
+  const markerWasSentAsUserTurn = state.chatEvents.some(
+    (event) => event.source === "user" && event.displayText.includes(marker)
+  );
+  if (!queuedStillContainsMarker || markerWasSentAsUserTurn) {
+    throw new Error(
+      `${label} queued follow-up was not parked; queuedStillContainsMarker=${queuedStillContainsMarker} markerWasSentAsUserTurn=${markerWasSentAsUserTurn} state=${JSON.stringify(summarizeChatState(state))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
+    );
+  }
+}
+
+async function assertComposerImmediatelyUnlockedAfterStop(label, marker) {
+  await browser.waitUntil(
+    async () => {
+      const sendState = await execJS(js.sendState);
+      return sendState?.state === "submit" && sendState.disabled === false;
+    },
+    {
+      timeout: 2_000,
+      interval: 100,
+      timeoutMsg: `${label} Stop did not immediately flip back to Send; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} sendState=${JSON.stringify(await execJS(js.sendState))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+    }
+  );
+
+  const probe = `STOP_TYPEABLE_PROBE_${Date.now()}`;
+  const result = await execJS(`
+    const editor = document.querySelector('[data-testid="chat-input"] [contenteditable="true"]');
+    if (!editor) return { ok: false, reason: "missing-editor" };
+    const before = editor.textContent || "";
+    editor.focus();
+    const focused = document.activeElement === editor;
+    const editable = editor.isContentEditable === true;
+    const inserted = document.execCommand("insertText", false, ${JSON.stringify(" " + probe)});
+    const afterInsert = editor.textContent || "";
+    const typed = afterInsert.includes(${JSON.stringify(probe)});
+    if (typed) {
+      document.execCommand("undo", false, null);
+      if ((editor.textContent || "") !== before) {
+        document.execCommand("selectAll", false, null);
+        document.execCommand("insertText", false, before);
+      }
+      editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "historyUndo", data: null }));
+    }
+    return { ok: focused && editable && inserted && typed, focused, editable, inserted, typed, before: before.slice(0, 120), afterInsert: afterInsert.slice(0, 160) };
+  `);
+  if (!result?.ok) {
+    throw new Error(
+      `${label} composer was not focusable/typeable immediately after Stop; result=${JSON.stringify(result)} state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
+    );
+  }
+
+  await browser.pause(1_500);
+  const state = await inspectChatState(`${label}-queue-after-stop-unlock`);
+  const queuedStillContainsMarker = state.queuedMessages.some((item) =>
+    item.content.includes(marker)
+  );
+  const markerWasSentAsUserTurn = state.chatEvents.some(
+    (event) => event.source === "user" && event.displayText.includes(marker)
+  );
+  if (!queuedStillContainsMarker || markerWasSentAsUserTurn) {
+    throw new Error(
+      `${label} queued follow-up moved after Stop instead of staying queued; queuedStillContainsMarker=${queuedStillContainsMarker} markerWasSentAsUserTurn=${markerWasSentAsUserTurn} state=${JSON.stringify(summarizeChatState(state))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
+    );
+  }
+}
+
 async function assertComposerResponsiveAfterStop(label, expectedText) {
   await browser.waitUntil(
     async () => {
@@ -310,7 +384,8 @@ async function waitForQueuedFollowup(marker) {
         state.queuedMessages.some((item) => item.content.includes(marker)) ||
         queuedItems.some(
           (item) =>
-            item.text.includes(marker) || item.text.includes(visibleMarkerPrefix)
+            item.text.includes(marker) ||
+            item.text.includes(visibleMarkerPrefix)
         )
       );
     },
@@ -369,9 +444,11 @@ async function clickSendNowForQueuedMarker(marker) {
 
   await browser.waitUntil(
     async () => {
-      const instantState = await inspectChatState(`${marker}-force-send-instant`);
-      const queuedStillContainsMarker = instantState.queuedMessages.some((item) =>
-        item.content.includes(marker)
+      const instantState = await inspectChatState(
+        `${marker}-force-send-instant`
+      );
+      const queuedStillContainsMarker = instantState.queuedMessages.some(
+        (item) => item.content.includes(marker)
       );
       const markerUserEvents = markerUserTranscriptEvents(instantState, marker);
       return markerUserEvents.length === 1 && !queuedStillContainsMarker;
@@ -409,7 +486,6 @@ async function clickSendNowForQueuedMarker(marker) {
       timeoutMsg: `Send Now did not consume queue and append user turn for ${marker}; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
     }
   );
-
 }
 
 async function waitForMarkerReply(marker, label) {
@@ -521,19 +597,28 @@ async function runFreshStopRollbackScenario(config) {
       const mode = await execJS(js.mode);
       const editorText = await execJS(js.editorText);
       const state = await inspectChatState(`${config.label}-fresh-stop`);
+      const promptStillVisible = state.chatEvents.some(
+        (event) =>
+          event.source === "user" &&
+          event.displayText?.includes(firstPrompt.slice(0, 80))
+      );
       return (
-        mode === "creator" &&
+        mode === "chat" &&
         typeof editorText === "string" &&
         editorText.includes(firstPrompt.slice(0, 80)) &&
+        promptStillVisible &&
         state.queuedMessages.length === 0
       );
     },
     {
       timeout: 15_000,
-      timeoutMsg: `${config.label} fresh Stop did not rollback to creator with prompt restored; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+      timeoutMsg: `${config.label} fresh Stop did not keep first prompt visible with draft restored; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
     }
   );
-  await assertComposerResponsiveAfterStop(`${config.label}-fresh-stop`, firstPrompt);
+  await assertComposerResponsiveAfterStop(
+    `${config.label}-fresh-stop`,
+    firstPrompt
+  );
 }
 
 async function runFreshStopImageRestoreScenario(config) {
@@ -565,10 +650,15 @@ async function runFreshStopImageRestoreScenario(config) {
       const state = await inspectChatState(
         `${config.label}-image-cancel-restore`
       );
+      const promptStillVisible = state.chatEvents.some(
+        (event) =>
+          event.source === "user" && event.displayText?.includes(marker)
+      );
       return (
-        (mode === "creator" || mode === "chat") &&
+        mode === "chat" &&
         typeof editorText === "string" &&
         editorText.includes(marker) &&
+        promptStillVisible &&
         imageState.count >= 1 &&
         imageState.fileNames.some(
           (fileName) =>
@@ -583,7 +673,10 @@ async function runFreshStopImageRestoreScenario(config) {
       timeoutMsg: `${config.label} fresh Stop did not restore image attachment with prompt; imageState=${JSON.stringify(await execJS(js.imageAttachmentState))} state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
     }
   );
-  await assertComposerResponsiveAfterStop(`${config.label}-image-stop`, imagePrompt);
+  await assertComposerResponsiveAfterStop(
+    `${config.label}-image-stop`,
+    imagePrompt
+  );
 }
 
 async function runStopRestoresInFlightScenario(config) {
@@ -600,7 +693,15 @@ async function runStopRestoresInFlightScenario(config) {
   const chatInputSelector = await waitForChatInput();
   await typeAndSubmitWithShortcut(chatInputSelector, followupPrompt);
   await waitForQueuedFollowup(marker);
+  await assertQueuedFollowupRemainsParked(
+    `${config.label}-active-turn-before-stop`,
+    marker
+  );
   await clickMainAction("stop", `${config.label}-stop-restore`);
+  await assertComposerImmediatelyUnlockedAfterStop(
+    `${config.label}-stop-restore`,
+    marker
+  );
   await browser.waitUntil(
     async () => {
       const state = await inspectChatState(
