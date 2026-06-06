@@ -27,6 +27,14 @@ export interface DedupResult {
   duplicateUserIds: Set<string>;
 }
 
+function getEventCallId(event: SessionEvent): string | undefined {
+  return (
+    event.callId ||
+    (event as { call_id?: string }).call_id ||
+    (event.result?.call_id as string | undefined)
+  );
+}
+
 /**
  * Scan event history and build all dedup maps in a single pass.
  */
@@ -38,20 +46,20 @@ export function buildDedupMaps(events: SessionEvent[]): DedupResult {
 
   const transientByFunc = new Map<string, number[]>();
   const transientByCallId = new Map<string, number[]>();
+  const completedToolCallByCallId = new Map<string, number>();
   for (let idx = 0; idx < events.length; idx++) {
     const event = events[idx];
     if (event.actionType !== "tool_call" || !event.id) continue;
 
-    const callId =
-      event.callId || (event.result?.call_id as string | undefined);
+    const callId = getEventCallId(event);
     if (callId && event.args && Object.keys(event.args).length > 0) {
       runningArgsMap.set(callId, event.args);
     }
 
     const isRunning =
       event.result?.status === "running" || event.displayStatus === "running";
-    const isCallRow = event.id.startsWith("tool-call-");
-    if (!isRunning && !(isCallRow && callId)) continue;
+    if (callId && !isRunning) completedToolCallByCallId.set(callId, idx);
+    if (!isRunning) continue;
 
     const fn = event.functionName || "";
     if (!transientByFunc.has(fn)) transientByFunc.set(fn, []);
@@ -77,8 +85,13 @@ export function buildDedupMaps(events: SessionEvent[]): DedupResult {
       continue;
     }
 
-    const callId =
-      event.callId || (event.result?.call_id as string | undefined);
+    const callId = getEventCallId(event);
+    if (event.actionType === "tool_result" && callId) {
+      const completedCallIdx = completedToolCallByCallId.get(callId);
+      if (completedCallIdx !== undefined && completedCallIdx < jdx) {
+        runningChunksToSkip.add(event.id);
+      }
+    }
     const matchingTransientIndices = callId
       ? transientByCallId.get(callId)
       : transientByFunc.get(event.functionName || "");

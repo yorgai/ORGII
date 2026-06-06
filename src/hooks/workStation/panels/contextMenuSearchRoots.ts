@@ -46,6 +46,19 @@ export function buildContextMenuSearchRoots(params: {
   return roots;
 }
 
+export function buildRootSearchResult(
+  root: ContextMenuSearchRoot
+): SearchResultItem {
+  return {
+    type: "folder",
+    path: root.path,
+    name: root.name,
+    repoPath: root.path,
+    repoName: root.name,
+    iconType: "repo",
+  };
+}
+
 export function attachSearchRootMetadata(
   matches: SearchResultItem[],
   root: ContextMenuSearchRoot

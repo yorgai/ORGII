@@ -215,23 +215,15 @@ export function useSessionActions(options: UseSessionActionsOptions) {
             displayContent: currentUserMessage.displayContent,
             imageDataUrls: currentUserMessage.imageDataUrls,
           });
-          if (sessionHasPriorContent) {
-            void (async () => {
-              try {
-                const events = await eventStoreProxy.getEvents();
-                for (let i = events.length - 1; i >= 0; i -= 1) {
-                  if (events[i].source === "user") {
-                    await eventStoreProxy.truncateBeforeId(events[i].id);
-                    return;
-                  }
-                }
-              } catch (err) {
+          if (sessionHasPriorContent && snapshotUserEvent?.id) {
+            void eventStoreProxy
+              .truncateBeforeId(snapshotUserEvent.id, sessionId)
+              .catch((err) => {
                 console.warn(
                   "[useSessionActions] Failed to prune user event:",
                   err
                 );
-              }
-            })();
+              });
           }
         } else if (currentUserMessage) {
           setRestoreToInput({

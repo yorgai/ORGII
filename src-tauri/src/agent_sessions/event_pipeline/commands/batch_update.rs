@@ -38,6 +38,20 @@ pub async fn es_complete_last_running(
     Ok(result)
 }
 
+#[tauri::command]
+pub async fn es_finalize_running_as_stopped(
+    app: AppHandle,
+    state: State<'_, EventStoreState>,
+    session_id: Option<String>,
+) -> Result<usize, String> {
+    let sid = state.resolve_session_id(session_id)?;
+    let count = state.with_store_mut(&sid, |store| store.finalize_running_as_stopped());
+    if count > 0 {
+        schedule_notify(&app, &state, &sid);
+    }
+    Ok(count)
+}
+
 /// Batch-update multiple events by IDs with the same patch.
 #[tauri::command]
 pub async fn es_patch_by_ids(

@@ -206,6 +206,7 @@ export function normalizeEventProps(
       eventType,
       functionName: sessionEvent.functionName,
       callId: sessionEvent.callId,
+      filePath: sessionEvent.filePath,
       sessionId: sessionEvent.sessionId,
       args,
       result,
@@ -245,6 +246,9 @@ export function normalizeEventProps(
     eventId,
     eventType,
     functionName: rawFunctionName,
+    filePath:
+      (input as { filePath?: string; file_path?: string }).filePath ||
+      (input as { filePath?: string; file_path?: string }).file_path,
     args: normalized.args,
     result: normalized.result,
     status,

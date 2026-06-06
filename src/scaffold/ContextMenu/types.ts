@@ -20,8 +20,8 @@ export interface SearchResultItem {
   repoPath?: string;
   /** Human-readable root/source label for multi-root results. */
   repoName?: string;
-  /** Optional icon type for special items (terminal, session, project, work item) */
-  iconType?: "terminal" | "session" | "project" | "workitem";
+  /** Optional icon type for special items (terminal, session, repo, project, work item) */
+  iconType?: "terminal" | "session" | "repo" | "project" | "workitem";
 }
 
 // ============================================

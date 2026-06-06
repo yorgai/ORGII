@@ -69,6 +69,35 @@ const QUEUE_RELEASING_TERMINAL_STATUSES = new Set<string>([
   "completed",
   "failed",
 ]);
+const QUEUE_SETTLE_SNAPSHOT_RECHECK_LIMIT = 20;
+const QUEUE_SETTLE_SNAPSHOT_RECHECK_MS = 100;
+
+function snapshotShowsActiveTurn(sessionId: string): boolean {
+  const latestSnapshot = eventStoreProxy.getLatestSessionSnapshot(sessionId);
+  return (
+    latestSnapshot?.hasRunningEvent === true ||
+    (latestSnapshot != null &&
+      "streaming" in latestSnapshot &&
+      latestSnapshot.streaming === true)
+  );
+}
+
+function markQueueTurnSettledWhenSnapshotIdle(
+  sessionId: string,
+  attempt = 0
+): void {
+  if (
+    !snapshotShowsActiveTurn(sessionId) ||
+    attempt >= QUEUE_SETTLE_SNAPSHOT_RECHECK_LIMIT
+  ) {
+    markQueueTurnSettled(sessionId);
+    return;
+  }
+
+  globalThis.setTimeout(() => {
+    markQueueTurnSettledWhenSnapshotIdle(sessionId, attempt + 1);
+  }, QUEUE_SETTLE_SNAPSHOT_RECHECK_MS);
+}
 
 export function resetSessionSwitchState(
   actions: SessionSwitchStateActions
@@ -159,18 +188,8 @@ export function createSessionEventHandlerCallbacks(
         actions.setSessionRuntimeError(errorMessage);
       }
       if (TERMINAL_HANDLER_STATUSES.has(status)) {
-        const latestSnapshot =
-          eventStoreProxy.getLatestSessionSnapshot(sessionId);
-        const snapshotStillActive =
-          latestSnapshot?.hasRunningEvent === true ||
-          (latestSnapshot != null &&
-            "streaming" in latestSnapshot &&
-            latestSnapshot.streaming === true);
-        if (
-          QUEUE_RELEASING_TERMINAL_STATUSES.has(status) &&
-          !snapshotStillActive
-        ) {
-          markQueueTurnSettled(sessionId);
+        if (QUEUE_RELEASING_TERMINAL_STATUSES.has(status)) {
+          markQueueTurnSettledWhenSnapshotIdle(sessionId);
         }
         actions.setPendingCancel(false);
         eventStoreProxy.unpinSession(sessionId);

@@ -187,6 +187,10 @@ const eventStore = {
     .input(schemas.sessionCore.NullableSessionIdInput)
     .output(z.string().nullable())
     .build(),
+  finalizeRunningAsStopped: defineProcedure("es_finalize_running_as_stopped")
+    .input(schemas.sessionCore.NullableSessionIdInput)
+    .output(z.number())
+    .build(),
   patchByIds: defineProcedure("es_patch_by_ids")
     .input(schemas.sessionCore.PatchByIdsInput)
     .output(z.number())

@@ -267,7 +267,7 @@ export function createWorkspaceHelpers(store: E2EStore) {
         ok: true,
         primaryFolder: store.get(primaryFolderAtom) as Json | null,
         activeFolder: store.get(activeFolderAtom) as Json | null,
-        folders: store.get(workspaceFoldersAtom) as Json[],
+        folders: store.get(workspaceFoldersAtom) as unknown as Json[],
         selectedRepoId: store.get(selectedRepoIdAtom),
         repoPath: store.get(repoPathAtom),
       };

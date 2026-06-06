@@ -1,8 +1,6 @@
 const lastObservedWorkingAtBySession = new Map<string, number>();
 const lastObservedSettleAtBySession = new Map<string, number>();
 
-export const SUBMIT_ACTIVE_GRACE_MS = 2_500;
-
 const QUEUE_RUNTIME_WORKING_STATUSES = new Set<string>([
   "running",
   "installing",
@@ -57,16 +55,13 @@ export function shouldQueueSubmitAsActiveTurn({
   runtimeIsWorking,
   pendingCancel,
   submitGuardActive,
-  now = Date.now(),
 }: ShouldQueueAsActiveOptions): boolean {
   if (isActive || runtimeIsWorking || pendingCancel || submitGuardActive) {
     return true;
   }
 
   const lastWorkingAt = lastObservedWorkingAtBySession.get(sessionId) ?? 0;
-  if (lastWorkingAt <= 0 || now - lastWorkingAt >= SUBMIT_ACTIVE_GRACE_MS) {
-    return false;
-  }
+  if (lastWorkingAt <= 0) return false;
 
   const lastSettleAt = lastObservedSettleAtBySession.get(sessionId) ?? 0;
   return lastSettleAt < lastWorkingAt;

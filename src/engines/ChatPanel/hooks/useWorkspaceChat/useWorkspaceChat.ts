@@ -296,10 +296,10 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         return;
       }
       // Enqueue if the agent is running OR a cancel is mid-flight.
-      // `isPendingCancel` is set by interruptSession() and cleared by the
-      // agent:complete/error handler, covering the window where the user
-      // clicked stop but Rust has not yet wound the turn down. The queue
-      // will auto-flush on the runtime-status falling edge.
+      // Ordinary queued follow-ups stay frontend-owned until a non-cancel
+      // terminal settle explicitly releases them; they must not enter Rust's
+      // scheduler queue early, because Rust will auto-run scheduler entries
+      // immediately after a Stop/cancelled turn.
       if (
         !options.forceDispatch &&
         supportsQueuedFollowups &&

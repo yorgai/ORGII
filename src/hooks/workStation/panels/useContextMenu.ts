@@ -47,6 +47,7 @@ import {
 import {
   attachSearchRootMetadata,
   buildContextMenuSearchRoots,
+  buildRootSearchResult,
   mergeSearchResultsByRoot,
 } from "./contextMenuSearchRoots";
 
@@ -172,7 +173,9 @@ export function useContextMenu(
               )
             )
           );
-          results = mergeSearchResultsByRoot(perRootResults, 20);
+          const rootResults = searchRoots.map(buildRootSearchResult);
+          const fileResults = mergeSearchResultsByRoot(perRootResults, 20);
+          results = [...rootResults, ...fileResults].slice(0, 20);
         } else if (type === "sessions") {
           results = searchSessions(query, allSessions);
         } else if (type === "projects") {
@@ -329,7 +332,9 @@ export function useContextMenu(
               const selected = searchResults[secondLayerActiveIndex];
               // Use iconType for project/work items, otherwise secondLayer.
               let selectType: MenuItemId = secondLayer;
-              if (selected.iconType === "project") {
+              if (selected.iconType === "repo") {
+                selectType = "repo";
+              } else if (selected.iconType === "project") {
                 selectType = "project";
               } else if (selected.iconType === "workitem") {
                 selectType = "workitem";

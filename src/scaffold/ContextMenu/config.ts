@@ -25,6 +25,7 @@ export type MenuItemId =
   | "recent"
   | "files"
   | "folder"
+  | "repo"
   | "terminal"
   | "sessions"
   | "session"

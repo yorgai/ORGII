@@ -629,6 +629,92 @@ async function insertRenderedShellText(text, label, shellSelector) {
   return waitForRenderedShellExactText(text, label, shellSelector);
 }
 
+async function openEditorPaletteSearch(query, label) {
+  const opened = await execJS(`
+    document.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'p',
+      code: 'KeyP',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    }));
+    return true;
+  `);
+  if (opened !== true) {
+    throw new Error(`${label} failed to dispatch Cmd+P`);
+  }
+
+  await browser.waitUntil(
+    async () => execJS(`return !!document.querySelector('[data-spotlight-input="true"]');`),
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      interval: 250,
+      timeoutMsg: `${label} editor palette input did not open`,
+    }
+  );
+
+  const inputState = await execJS(`
+    const input = document.querySelector('[data-spotlight-input="true"]');
+    if (!input) return { ok: false, reason: 'missing-input' };
+    input.focus();
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    setter?.call(input, ${JSON.stringify(query)});
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: ${JSON.stringify(query)} }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return { ok: true, value: input.value };
+  `);
+  if (inputState?.ok !== true || inputState?.value !== query) {
+    throw new Error(`${label} failed to set palette query: ${JSON.stringify(inputState)}`);
+  }
+}
+
+async function assertMultiRootEditorPaletteSearch({
+  secondaryName,
+  secondaryFilePath,
+  query,
+  label = "multi-root Cmd+P search",
+}) {
+  await openEditorPaletteSearch(query, label);
+
+  let state = null;
+  await browser.waitUntil(
+    async () => {
+      state = await execJS(`
+        const rows = Array.from(document.querySelectorAll('[data-spotlight-item-id]')).map((row) => ({
+          id: row.getAttribute('data-spotlight-item-id') || '',
+          text: row.textContent || '',
+        }));
+        return {
+          inputValue: document.querySelector('[data-spotlight-input="true"]')?.value || '',
+          rows,
+          body: (document.body.innerText || '').slice(0, 2400),
+        };
+      `);
+      return (state?.rows ?? []).some(
+        (row) =>
+          String(row.id) === secondaryFilePath ||
+          (String(row.id).includes(path.basename(secondaryFilePath)) &&
+            String(row.text).includes(secondaryName))
+      );
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      interval: 250,
+      timeoutMsg: `${label} did not render secondary repo file result`,
+    }
+  );
+
+  const matched = (state?.rows ?? []).find(
+    (row) =>
+      String(row.id) === secondaryFilePath ||
+      (String(row.id).includes(path.basename(secondaryFilePath)) &&
+        String(row.text).includes(secondaryName))
+  );
+  if (!matched) {
+    throw new Error(`${label} missing secondary repo row: ${JSON.stringify(state)}`);
+  }
+}
+
 async function assertMultiRootAtSearchSources({
   primaryName,
   secondaryName,
@@ -636,6 +722,84 @@ async function assertMultiRootAtSearchSources({
   shellSelector = '[data-testid="session-creator-chat-panel"]',
   label = "multi-root @ search",
 }) {
+  await insertRenderedShellText(`repo @${secondaryName}`, label, shellSelector);
+
+  let rootState = null;
+  try {
+    await browser.waitUntil(
+      async () => {
+        rootState = await execJS(`
+          const shell = document.querySelector(${JSON.stringify(shellSelector)}) ?? document;
+          const editor = shell.querySelector('[data-testid="chat-input"] [contenteditable="true"]');
+          const rows = Array.from(document.querySelectorAll('.context-menu [class*="cursor-pointer"]'))
+            .map((row) => ({
+              text: row.textContent || '',
+            }));
+          return {
+            rows,
+            editorText: editor?.textContent || '',
+            body: (document.body.innerText || '').slice(0, 2400),
+          };
+        `);
+        return (
+          String(rootState?.editorText ?? "").includes(`repo @${secondaryName}`) &&
+          (rootState?.rows ?? []).some((row) => String(row.text ?? "").startsWith(secondaryName))
+        );
+      },
+      {
+        timeout: RENDER_TIMEOUT_MS,
+        interval: 250,
+        timeoutMsg: `${label} did not render repo root row`,
+      }
+    );
+  } catch (error) {
+    throw new Error(
+      `${error.message}: latest=${JSON.stringify(rootState)}`
+    );
+  }
+
+  const rootClickState = await execJS(`
+    const rows = Array.from(document.querySelectorAll('.context-menu [class*="cursor-pointer"]'));
+    const row = rows.find((candidate) => (candidate.textContent || '').startsWith(${JSON.stringify(secondaryName)}));
+    if (!row) return { ok: false, reason: "missing-root-row", rows: rows.map((node) => node.textContent || '') };
+    row.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 }));
+    row.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, button: 0 }));
+    row.click();
+    return { ok: true };
+  `);
+  if (rootClickState?.ok !== true) {
+    throw new Error(`${label} root row click failed: ${JSON.stringify(rootClickState)}`);
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const pillState = await execJS(`
+        const shell = document.querySelector(${JSON.stringify(shellSelector)}) ?? document;
+        const editor = shell.querySelector('[data-testid="chat-input"] [contenteditable="true"]');
+        const pills = Array.from(shell.querySelectorAll('[data-composer-pill="true"]')).map((pill) => ({
+          filePath: pill.getAttribute('data-file-path') || '',
+          fileName: pill.getAttribute('data-file-name') || '',
+          iconType: pill.getAttribute('data-icon-type') || '',
+        }));
+        return { editorText: editor?.textContent || '', pills };
+      `);
+      return (
+        !String(pillState?.editorText ?? "").includes(`@${secondaryName}`) &&
+        (pillState?.pills ?? []).some(
+          (pill) =>
+            String(pill.filePath ?? "") === secondaryPath &&
+            String(pill.fileName ?? "") === secondaryName &&
+            String(pill.iconType ?? "") === "repo"
+        )
+      );
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      interval: 250,
+      timeoutMsg: `${label} did not insert secondary repo root pill: ${JSON.stringify(rootClickState)}`,
+    }
+  );
+
   const expectedSecondaryIndexPath = path.join(secondaryPath, "src", "index.tsx");
   await insertRenderedShellText("before @index.tsx", label, shellSelector);
 
@@ -665,7 +829,9 @@ async function assertMultiRootAtSearchSources({
             body: (document.body.innerText || '').slice(0, 2400),
           };
         `);
-        const sources = (state?.rows ?? []).map((row) => row.source);
+        const sources = (state?.rows ?? [])
+          .filter((row) => String(row.rowText ?? "").includes("index.tsx"))
+          .map((row) => row.source);
         return (
           String(state?.editorText ?? "").includes("before @index.tsx") &&
           sources.includes(primaryName) &&
@@ -686,7 +852,10 @@ async function assertMultiRootAtSearchSources({
 
   const clickState = await execJS(`
     const badges = Array.from(document.querySelectorAll('.context-menu [data-testid="context-menu-result-source"]'));
-    const badge = badges.find((candidate) => (candidate.textContent || '').includes(${JSON.stringify(secondaryName)}));
+    const badge = badges.find((candidate) => {
+      const rowText = candidate.closest('[class*="cursor-pointer"]')?.textContent || '';
+      return (candidate.textContent || '').includes(${JSON.stringify(secondaryName)}) && rowText.includes('index.tsx');
+    });
     const row = badge?.closest('[class*="cursor-pointer"]') ?? null;
     if (!row) return { ok: false, reason: "missing-secondary-row", badges: badges.map((node) => node.textContent || '') };
     row.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 0 }));
@@ -1149,6 +1318,75 @@ describe("Session launch wiring rendered UI invariants", function () {
       } catch (error) {
         console.warn(
           "multi-root @ search cleanup could not restore repo selection",
+          error
+        );
+      }
+      fs.rmSync(primaryPath, { recursive: true, force: true });
+      fs.rmSync(secondaryPath, { recursive: true, force: true });
+    }
+  });
+
+  it("renders Cmd+P file search results from secondary workspace roots", async function () {
+    if (!shouldRunScenario("multi-root-cmd-p-search")) {
+      this.skip();
+      return;
+    }
+
+    const primaryPath = createTempWorkspaceDir("multi-cmdp-primary");
+    const secondaryPath = createTempWorkspaceDir("multi-cmdp-secondary");
+    const primaryName = "E2ECmdPPrimaryRepo";
+    const secondaryName = "E2ECmdPSecondaryRepo";
+    const secondaryFileName = `secondary-cmdp-target-${RUN_ID}.tsx`;
+    const secondaryFilePath = path.join(secondaryPath, "src", secondaryFileName);
+    try {
+      initTempGitRepo(primaryPath, primaryName);
+      initTempGitRepo(secondaryPath, secondaryName);
+      fs.mkdirSync(path.join(primaryPath, "src"), { recursive: true });
+      fs.mkdirSync(path.join(secondaryPath, "src"), { recursive: true });
+      fs.writeFileSync(
+        path.join(primaryPath, "src", `primary-cmdp-only-${RUN_ID}.tsx`),
+        "export const primaryOnly = true;\n"
+      );
+      fs.writeFileSync(
+        secondaryFilePath,
+        "export const secondaryCmdPOnly = true;\n"
+      );
+
+      unwrap(
+        await invokeE2E("seedMultiRootWorkspace", {
+          workspaceId: `e2e-multi-root-cmdp-${RUN_ID}`,
+          workspaceName: `E2E Multi Root CmdP ${RUN_ID}`,
+          folders: [
+            {
+              id: "primary-cmdp",
+              name: primaryName,
+              path: primaryPath,
+              isPrimary: true,
+            },
+            {
+              id: "secondary-cmdp",
+              name: secondaryName,
+              path: secondaryPath,
+            },
+          ],
+        }),
+        "seed multi-root Cmd+P workspace"
+      );
+      unwrap(
+        await invokeE2E("navigateTo", "/orgii/workstation/code"),
+        "navigate to workstation before multi-root Cmd+P search"
+      );
+      await assertMultiRootEditorPaletteSearch({
+        secondaryName,
+        secondaryFilePath,
+        query: secondaryFileName.replace(/\.tsx$/, ""),
+      });
+    } finally {
+      try {
+        await invokeE2E("ensureRepoSelected", { repoPath: E2E_REPO_PATH });
+      } catch (error) {
+        console.warn(
+          "multi-root Cmd+P cleanup could not restore repo selection",
           error
         );
       }

@@ -21,12 +21,11 @@ describe("ComposerInput snapshot ranges", () => {
       parts: [{ kind: "text", text: "before @index.tsx" }],
     };
 
+    const [textPart] = snapshot.parts;
+    if (textPart.kind !== "text") throw new Error("expected text part");
+
     expect(
-      removeSnapshotTextRange(
-        snapshot,
-        "before ".length,
-        snapshot.parts[0].text.length
-      )
+      removeSnapshotTextRange(snapshot, "before ".length, textPart.text.length)
     ).toEqual({
       parts: [{ kind: "text", text: "before " }],
     });

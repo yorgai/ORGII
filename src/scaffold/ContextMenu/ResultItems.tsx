@@ -4,7 +4,13 @@
  * Reusable item-level components for rendering menu items,
  * search result icons, and empty/loading states.
  */
-import { FolderKanban, History, ListChecks, Terminal } from "lucide-react";
+import {
+  Code,
+  FolderKanban,
+  History,
+  ListChecks,
+  Terminal,
+} from "lucide-react";
 import React, { memo } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -96,6 +102,16 @@ export const ResultItemIcon: React.FC<{
   if (item.iconType === "session") {
     return (
       <History
+        size={DROPDOWN_ITEM.iconSize}
+        strokeWidth={1.75}
+        className={iconAccent}
+      />
+    );
+  }
+
+  if (item.iconType === "repo") {
+    return (
+      <Code
         size={DROPDOWN_ITEM.iconSize}
         strokeWidth={1.75}
         className={iconAccent}

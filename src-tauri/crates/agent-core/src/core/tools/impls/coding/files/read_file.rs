@@ -157,17 +157,31 @@ impl Tool for ReadFileTool {
     }
 
     fn llm_description(&self) -> Option<String> {
-        let workspace = self
-            .allowed_dir
-            .snapshot()
-            .map(|p| p.display().to_string())
-            .unwrap_or_else(|| "(unrestricted)".to_string());
+        let mut roots = Vec::new();
+        if let Some(root) = self.allowed_dir.snapshot() {
+            roots.push(root);
+        }
+        roots.extend(merge_additional_dirs(
+            &self.additional_allowed_dirs,
+            self.workspace_state.as_ref(),
+        ));
+        roots.sort();
+        roots.dedup();
+        let workspace = if roots.is_empty() {
+            "(unrestricted)".to_string()
+        } else {
+            roots
+                .iter()
+                .map(|p| p.display().to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
         Some(format!(
             "Read a file in {workspace}. Supports text, PDF (text extraction), \
              images (JPEG/PNG/GIF/WebP — inline for vision models), \
              and Jupyter notebooks (.ipynb). \
              Optional line-range with offset/limit. Default: up to 2000 lines. \
-             Files over 256 KB require offset/limit.\n\
+             Files over 256 KB require offset/limit. Use absolute paths for files outside the primary working directory.\n\
              Output format: each line is prefixed with a right-aligned line number and │ separator, \
              e.g. \"     1│first line\". This prefix is metadata — never include it in old_string \
              when editing."
@@ -580,5 +594,27 @@ mod tests {
         let tool = ReadFileTool::new(None);
         tool.set_active_repo(&repo.path().to_string_lossy()).await;
         assert!(tool.allowed_dir.snapshot().is_none());
+    }
+
+    #[test]
+    fn llm_description_lists_additional_roots() {
+        let repo = TempDir::new().unwrap();
+        let extra = TempDir::new().unwrap();
+        let tool = ReadFileTool::new(Some(repo.path().to_path_buf()))
+            .with_readonly_extra_dir(extra.path().to_path_buf());
+
+        let description = tool.llm_description().unwrap();
+        assert!(
+            description.contains(&repo.path().display().to_string()),
+            "description was: {description}"
+        );
+        assert!(
+            description.contains(&extra.path().display().to_string()),
+            "description was: {description}"
+        );
+        assert!(
+            description.contains("Use absolute paths for files outside the primary working directory"),
+            "description was: {description}"
+        );
     }
 }

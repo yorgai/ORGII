@@ -29,7 +29,10 @@ export function extractFileData(props: UniversalEventProps): ExtractedFileData {
   const { args, result } = props;
   const successData = extractSuccessData(result);
 
-  const filePath = extractFilePathFromPayloads([args, successData, result]);
+  const filePath =
+    extractFilePathFromPayloads([args, successData, result]) ||
+    props.filePath ||
+    "";
   const directFileName =
     readPayloadString(args, FILE_NAME_PAYLOAD_KEYS) ??
     readPayloadString(successData, FILE_NAME_PAYLOAD_KEYS) ??

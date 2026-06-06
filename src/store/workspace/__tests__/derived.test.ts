@@ -25,6 +25,7 @@ const folders: WorkspaceFolder[] = [
     name: "Secondary Repo",
     path: "/tmp/orgii-secondary",
     uri: "file:///tmp/orgii-secondary",
+    isPrimary: false,
     repoId: "secondary-repo-id",
   },
   {
@@ -32,6 +33,7 @@ const folders: WorkspaceFolder[] = [
     name: "Nested Repo",
     path: "/tmp/orgii-secondary/packages/nested",
     uri: "file:///tmp/orgii-secondary/packages/nested",
+    isPrimary: false,
     repoId: "nested-repo-id",
   },
 ];

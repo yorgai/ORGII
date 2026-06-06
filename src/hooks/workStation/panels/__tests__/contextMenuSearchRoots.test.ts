@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   attachSearchRootMetadata,
   buildContextMenuSearchRoots,
+  buildRootSearchResult,
   mergeSearchResultsByRoot,
 } from "../contextMenuSearchRoots";
 
@@ -32,6 +33,22 @@ describe("contextMenuSearchRoots", () => {
     expect(roots).toEqual([
       { name: "Current Repo", path: "/workspace/current" },
     ]);
+  });
+
+  it("builds a selectable repo result for the search root", () => {
+    expect(
+      buildRootSearchResult({
+        name: "Current Repo",
+        path: "/workspace/current",
+      })
+    ).toEqual({
+      type: "folder",
+      path: "/workspace/current",
+      name: "Current Repo",
+      repoPath: "/workspace/current",
+      repoName: "Current Repo",
+      iconType: "repo",
+    });
   });
 
   it("keeps colliding result paths from different roots distinct", () => {

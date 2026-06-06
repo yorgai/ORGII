@@ -258,6 +258,33 @@ describe("processChatItems", () => {
 
       expect(items[0].event?.args?.file_path).toBe("src/main.ts");
     });
+
+    it("skips a later tool_result when the matching tool_call already completed", () => {
+      const callEvent = makeSessionEvent({
+        id: "tool-call-read-1",
+        action_type: "tool_call",
+        function: "read_file",
+        args: { path: "/repo-a/package.json" },
+        result: { content: "{}" },
+        callId: "call-read-1",
+      });
+      const resultEvent = makeSessionEvent({
+        id: "tool-result-read-1",
+        action_type: "tool_result",
+        function: "read_file",
+        args: {},
+        result: { content: "{}", call_id: "call-read-1" },
+        callId: "call-read-1",
+      });
+
+      const { items } = processChatItems([callEvent, resultEvent], {
+        preFilterEmptyActivities: false,
+        groupActionSummaries: false,
+        groupReadFileActivities: false,
+      });
+
+      expect(items.map((item) => item.event?.id)).toEqual([callEvent.id]);
+    });
   });
 
   describe("action summary grouping", () => {

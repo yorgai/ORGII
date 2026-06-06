@@ -253,7 +253,9 @@ export function processChatItems(
       (!event.args || Object.keys(event.args).length === 0)
     ) {
       const resultCallId =
-        event.callId || (event.result?.call_id as string | undefined);
+        event.callId ||
+        (event as { call_id?: string }).call_id ||
+        (event.result?.call_id as string | undefined);
       if (resultCallId) {
         const runningArgs = runningArgsMap.get(resultCallId);
         if (runningArgs) {

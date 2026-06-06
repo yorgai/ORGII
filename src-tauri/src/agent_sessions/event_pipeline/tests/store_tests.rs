@@ -434,6 +434,38 @@ fn test_patch_by_ids_with_missing() {
 }
 
 #[test]
+fn test_finalize_running_as_stopped_skips_user_events() {
+    let mut store = EventStore::new();
+    let mut user_running = make_running_event("user-running");
+    user_running.source = EventSource::User;
+    let completed = make_event("completed", "message");
+    store.set(vec![
+        make_running_event("assistant-running"),
+        user_running,
+        completed,
+    ]);
+
+    let count = store.finalize_running_as_stopped();
+    assert_eq!(count, 1);
+
+    let stopped = store.get_by_id("assistant-running").unwrap();
+    assert_eq!(stopped.display_status, EventDisplayStatus::Completed);
+    assert_eq!(stopped.activity_status, ActivityStatus::Processed);
+    assert_eq!(stopped.is_delta, Some(false));
+    assert_eq!(stopped.result["status"], "cancelled");
+    assert_eq!(stopped.result["reason"], "user_stop");
+
+    assert_eq!(
+        store.get_by_id("user-running").unwrap().display_status,
+        EventDisplayStatus::Running
+    );
+    assert_eq!(
+        store.get_by_id("completed").unwrap().display_status,
+        EventDisplayStatus::Completed
+    );
+}
+
+#[test]
 fn test_remove_by_id_prefix() {
     let mut store = EventStore::new();
     store.set(vec![

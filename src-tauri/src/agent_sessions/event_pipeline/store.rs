@@ -578,6 +578,35 @@ impl EventStore {
         None
     }
 
+    pub fn finalize_running_as_stopped(&mut self) -> usize {
+        let mut changed_ids = Vec::new();
+        for event in self.events.iter_mut() {
+            if event.display_status == EventDisplayStatus::Running
+                && event.source != EventSource::User
+            {
+                event.display_status = EventDisplayStatus::Completed;
+                event.activity_status = ActivityStatus::Processed;
+                event.is_delta = Some(false);
+                event.result = serde_json::json!({
+                    "status": "cancelled",
+                    "reason": "user_stop",
+                    "content": "Session stopped by user.",
+                    "observation": "Session stopped by user.",
+                });
+                changed_ids.push(event.id.clone());
+            }
+        }
+        if changed_ids.is_empty() {
+            return 0;
+        }
+        let count = changed_ids.len();
+        for event_id in changed_ids {
+            self.mark_changed(event_id);
+        }
+        self.version += 1;
+        count
+    }
+
     /// Mark all in-flight streaming placeholders as finalized.
     ///
     /// TS-side delta accumulation creates placeholder events with

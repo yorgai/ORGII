@@ -3,23 +3,36 @@
  *
  * File search mode for EditorPalette - integrates with native file search
  */
-import { createElement, useEffect, useRef, useState } from "react";
+import { createElement, useEffect, useMemo, useRef, useState } from "react";
 
 import FileTypeIcon, {
   getFileTypeFromName,
 } from "@src/components/FileTypeIcon";
 import {
+  type ContextMenuSearchRoot,
+  buildContextMenuSearchRoots,
+} from "@src/hooks/workStation/panels/contextMenuSearchRoots";
+import type { Repo } from "@src/store/repo/types";
+import type { WorkspaceFolder } from "@src/types/workspace";
+import {
+  DEFAULT_MAX_SEARCH_RESULTS,
   prewarmFileIndex,
   searchFilesNative,
 } from "@src/util/platform/tauri/fileSearch";
 
 import type { SpotlightItem } from "../../../shared";
 import type { FileSearchResult } from "../types";
+import {
+  mapNativeFileResultsForRoot,
+  mergeFileModeResults,
+} from "./fileModeSearch";
 
 export interface UseFileModeOptions {
   repoPath: string;
   searchTerm: string;
   enabled: boolean;
+  currentRepo?: Pick<Repo, "name" | "path"> | null;
+  workspaceFolders?: ReadonlyArray<Pick<WorkspaceFolder, "path" | "name">>;
   onFileOpen?: (path: string) => void;
 }
 
@@ -36,6 +49,8 @@ export function useFileMode({
   repoPath,
   searchTerm,
   enabled,
+  currentRepo,
+  workspaceFolders,
   onFileOpen,
 }: UseFileModeOptions): UseFileModeReturn {
   const [files, setFiles] = useState<FileSearchResult[]>([]);
@@ -44,6 +59,16 @@ export function useFileMode({
 
   // Track whether the first search has fired so we can skip debounce for it
   const hasFiredFirstSearch = useRef(false);
+  const searchRoots = useMemo<ContextMenuSearchRoot[]>(
+    () =>
+      buildContextMenuSearchRoots({
+        repoPath,
+        currentRepo,
+        workspaceFolders,
+      }),
+    [currentRepo, repoPath, workspaceFolders]
+  );
+  const searchRootsKey = searchRoots.map((root) => root.path).join("\0");
 
   // Reset first-search flag when spotlight is disabled (closed)
   useEffect(() => {
@@ -53,16 +78,18 @@ export function useFileMode({
   }, [enabled]);
 
   useEffect(() => {
-    if (!enabled || !repoPath) return;
+    if (!enabled || searchRoots.length === 0) return;
 
-    prewarmFileIndex(repoPath).catch(() => {
-      // Non-fatal — search will still work if prewarm fails.
-    });
-  }, [enabled, repoPath]);
+    for (const root of searchRoots) {
+      prewarmFileIndex(root.path).catch(() => {
+        // Non-fatal — search will still work if prewarm fails.
+      });
+    }
+  }, [enabled, searchRootsKey]);
 
   // Search files
   useEffect(() => {
-    if (!enabled || !repoPath) {
+    if (!enabled || searchRoots.length === 0) {
       setFiles([]);
       return;
     }
@@ -80,49 +107,57 @@ export function useFileMode({
 
       try {
         const startedAt = performance.now();
-        const results = await searchFilesNative({
-          root_path: repoPath,
-          query: searchTerm,
-          // Use default (500) - comprehensive search like VS Code
-          // For Spotlight UI, we may show fewer but search is complete
-          exclude_dirs: [
-            "node_modules",
-            ".git",
-            "dist",
-            "build",
-            ".next",
-            "target",
-            ".cache",
-            "coverage",
-            "__pycache__",
-            ".venv",
-            "venv",
-          ],
-        });
+        const resultGroups = await Promise.all(
+          searchRoots.map(async (root) => {
+            const results = await searchFilesNative({
+              root_path: root.path,
+              query: searchTerm,
+              max_results: DEFAULT_MAX_SEARCH_RESULTS,
+              exclude_dirs: [
+                "node_modules",
+                ".git",
+                "dist",
+                "build",
+                ".next",
+                "target",
+                ".cache",
+                "coverage",
+                "__pycache__",
+                ".venv",
+                "venv",
+              ],
+            });
+            return {
+              root,
+              results,
+            };
+          })
+        );
         const elapsedMs = Math.round(performance.now() - startedAt);
+        const nativeSearchTimeMs = resultGroups.reduce(
+          (sum, group) => sum + group.results.search_time_ms,
+          0
+        );
+        const totalIndexed = resultGroups.reduce(
+          (sum, group) => sum + group.results.total_indexed,
+          0
+        );
         if (elapsedMs > 500) {
           console.warn("[EditorPalette] Slow file search", {
             elapsedMs,
-            nativeSearchTimeMs: results.search_time_ms,
-            totalIndexed: results.total_indexed,
+            nativeSearchTimeMs,
+            totalIndexed,
+            roots: searchRoots.length,
             queryLength: searchTerm.length,
           });
         }
 
-        const fileResults: FileSearchResult[] = results.files.map((f) => {
-          // Extract relative path and directory
-          const relativePath = f.path.replace(repoPath, "").replace(/^\//, "");
-          const parts = relativePath.split("/");
-          const name = parts[parts.length - 1];
-          const directory = parts.slice(0, -1).join("/") || "/";
-
-          return {
-            path: f.path,
-            name,
-            directory,
-            score: f.score,
-          };
-        });
+        const fileResults: FileSearchResult[] = mergeFileModeResults(
+          resultGroups.map((group) =>
+            mapNativeFileResultsForRoot(group.results.files, group.root)
+          ),
+          DEFAULT_MAX_SEARCH_RESULTS
+        );
 
         setFiles(fileResults);
       } catch (err) {
@@ -144,7 +179,7 @@ export function useFileMode({
     // Debounce subsequent searches (150ms)
     const timer = setTimeout(searchFiles, 150);
     return () => clearTimeout(timer);
-  }, [repoPath, searchTerm, enabled]);
+  }, [searchRoots, searchRootsKey, searchTerm, enabled]);
 
   // Convert files to spotlight items
   const items: SpotlightItem[] = files.map((file) => {
@@ -166,7 +201,9 @@ export function useFileMode({
       icon: FileIcon,
       type: "file",
       data: {
-        rightLabel: file.directory,
+        rightLabel: file.repoName
+          ? `${file.repoName} · ${file.directory}`
+          : file.directory,
       },
       action: () => {
         onFileOpen?.(file.path);

@@ -457,30 +457,9 @@ class EventStoreProxyImpl {
   }
 
   async finalizeRunningEventsAsStopped(sessionId: string): Promise<number> {
-    const events = await this.getEvents(sessionId);
-    const runningIds = events
-      .filter(
-        (event) => event.displayStatus === "running" && event.source !== "user"
-      )
-      .map((event) => event.id);
-
-    if (runningIds.length === 0) return 0;
-
-    return this.patchByIds(
-      runningIds,
-      {
-        displayStatus: "completed",
-        activityStatus: "processed",
-        isDelta: false,
-        result: {
-          status: "cancelled",
-          reason: "user_stop",
-          content: "Session stopped by user.",
-          observation: "Session stopped by user.",
-        },
-      },
-      sessionId
-    );
+    return rpc.sessionCore.eventStore.finalizeRunningAsStopped({
+      sessionId,
+    });
   }
 
   /** Remove events whose IDs start with a given prefix. Returns count removed. */

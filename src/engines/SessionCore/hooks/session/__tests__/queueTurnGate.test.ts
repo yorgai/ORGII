@@ -13,7 +13,7 @@ describe("queueTurnGate", () => {
     resetQueueTurnGateForTests();
   });
 
-  it("treats a recently working unsettled turn as active even if current atoms look idle", () => {
+  it("treats an unsettled working turn as active even if current atoms look idle", () => {
     markQueueTurnWorking("session-1", 1_000);
 
     expect(
@@ -23,7 +23,7 @@ describe("queueTurnGate", () => {
         runtimeIsWorking: false,
         pendingCancel: false,
         submitGuardActive: false,
-        now: 1_500,
+        now: 60_000,
       })
     ).toBe(true);
   });

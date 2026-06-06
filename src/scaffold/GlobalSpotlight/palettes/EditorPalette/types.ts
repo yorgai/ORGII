@@ -37,4 +37,6 @@ export interface FileSearchResult {
   name: string;
   directory: string;
   score?: number;
+  repoPath?: string;
+  repoName?: string;
 }
