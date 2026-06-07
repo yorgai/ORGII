@@ -45,6 +45,8 @@
     "project": "项目",
     "projects": "项目",
     "projectManager": "项目管理器",
+    "myKeys": "我的密钥",
+    "myAgents": "我的 Agents",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -134,6 +136,10 @@
       "markAllRead": "全部标为已读",
       "openHome": "打开主页",
       "openWorkstation": "打开工作站"
+    },
+    "folderCounts": {
+      "repo": "{{count}}个仓库",
+      "multiRepoWorkspace": "{{count}}个多仓库工作区"
     },
     "bottomBar": {
       "settings": "设置",
@@ -260,6 +266,12 @@
       "analysisCleared": "分析已清除"
     },
     "addRepo": "添加工作区"
+  },
+  "myRole": {
+    "tabs": {
+      "status": "我的状态",
+      "about": "关于我"
+    }
   },
   "launchpad": {
     "sections": {

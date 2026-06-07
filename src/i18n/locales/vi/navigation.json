@@ -45,6 +45,8 @@
     "project": "Dự án",
     "projects": "Project",
     "projectManager": "Project Manager",
+    "myKeys": "Khóa của tôi",
+    "myAgents": "Agents của tôi",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -135,6 +137,10 @@
       "openHome": "Mở Home",
       "openWorkstation": "Mở Workstation"
     },
+    "folderCounts": {
+      "repo": "{{count}} Repo",
+      "multiRepoWorkspace": "{{count}} Workspace đa Repo"
+    },
     "bottomBar": {
       "settings": "Cài đặt",
       "clockLabel": "Thời gian hiện tại"
@@ -168,6 +174,12 @@
       "duration1h": "1 giờ",
       "duration2h": "2 giờ",
       "durationTomorrow": "Ngày mai"
+    }
+  },
+  "myRole": {
+    "tabs": {
+      "status": "Trạng thái của tôi",
+      "about": "Về tôi"
     }
   },
   "launchpad": {

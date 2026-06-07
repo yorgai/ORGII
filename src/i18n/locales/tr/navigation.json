@@ -45,6 +45,8 @@
     "project": "Proje",
     "projects": "Projects",
     "projectManager": "Project Manager",
+    "myKeys": "Anahtarlarım",
+    "myAgents": "Agents’larım",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -135,6 +137,10 @@
       "openHome": "Home’u aç",
       "openWorkstation": "Workstation’ı aç"
     },
+    "folderCounts": {
+      "repo": "{{count}} Repo",
+      "multiRepoWorkspace": "{{count}} çoklu repo Workspace"
+    },
     "bottomBar": {
       "settings": "Ayarlar",
       "clockLabel": "Şu anki saat"
@@ -168,6 +174,12 @@
       "duration1h": "1 saat",
       "duration2h": "2 saat",
       "durationTomorrow": "Yarın"
+    }
+  },
+  "myRole": {
+    "tabs": {
+      "status": "Durumum",
+      "about": "Hakkımda"
     }
   },
   "launchpad": {

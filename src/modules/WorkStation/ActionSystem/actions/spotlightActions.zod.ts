@@ -24,7 +24,7 @@ import { defineZodAction } from "../schema/defineZodAction";
 // Actions
 // ============================================
 
-const workspacePickerModeSchema = z.enum(["switch", "add", "create"]);
+const workspacePickerModeSchema = z.enum(["switch", "open", "add", "create"]);
 
 const spotlightOpen = defineZodAction(
   {
@@ -85,12 +85,13 @@ const spotlightOpenWorkspacePicker = defineZodAction(
     description: "Open Spotlight's workspace picker flow",
     params: z.object({
       mode: workspacePickerModeSchema.describe(
-        "Workspace picker mode: switch, add, or create"
+        "Workspace picker mode: switch, open, add, or create"
       ),
     }),
     layer: "gui",
     examples: [
       "switch workspace",
+      "open folder",
       "add workspace",
       "create Multi-repo Workspace",
     ],

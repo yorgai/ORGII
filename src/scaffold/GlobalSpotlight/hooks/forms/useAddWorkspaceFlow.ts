@@ -151,7 +151,7 @@ export function useAddWorkspaceFlow(
   const addWorkspaceText = useMemo(
     () => ({
       options: {
-        openWorkspace: t("actions.open"),
+        openWorkspace: t("actions.openFolder"),
         createWorkspace: t("selectors.repo.addOptions.createWorkspace"),
         cloneFromGitHub: t("cloneForm.titleCloneFromGitHub"),
         cloneFromGitHubUrl: t("selectors.repo.addOptions.cloneFromGitHubUrl"),

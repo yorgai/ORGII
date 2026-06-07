@@ -29,7 +29,7 @@ export function createEditorSpotlightRequest(
 }
 
 export function createWorkspaceSpotlightRequest(
-  mode: "switch" | "add" | "create"
+  mode: "switch" | "open" | "add" | "create"
 ): SpotlightInitialQuery {
   return {
     query: "",
@@ -74,7 +74,7 @@ export function openEditorSpotlight(
 }
 
 export function openWorkspaceSpotlight(
-  mode: "switch" | "add" | "create"
+  mode: "switch" | "open" | "add" | "create"
 ): void {
   if (!isStoreInitialized()) return;
   const store = getInstrumentedStore();

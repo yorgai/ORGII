@@ -232,7 +232,7 @@ export type SpotlightInitialEditorMode = "file" | "command" | "symbol";
 
 export type SpotlightInitialLayer =
   | { kind: "default" }
-  | { kind: "workspace"; mode: "switch" | "add" | "create" }
+  | { kind: "workspace"; mode: "switch" | "open" | "add" | "create" }
   | { kind: "branch" }
   | { kind: "editor"; mode?: SpotlightInitialEditorMode }
   | { kind: "agentSessionSearch" };

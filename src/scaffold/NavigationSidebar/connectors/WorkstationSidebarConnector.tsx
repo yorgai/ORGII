@@ -7,6 +7,7 @@ import {
   FolderTree,
   Folders,
   House,
+  ListChevronsDownUp,
   ListTodo,
   MessageCircle,
   MoreHorizontal,
@@ -25,20 +26,29 @@ import React, {
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
 import { type WorkspaceRecord } from "@src/api/tauri/workspace";
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
+import ModelIcon from "@src/components/ModelIcon";
 import SessionHoverCard from "@src/components/SessionHoverCard";
 import Tooltip from "@src/components/Tooltip";
 import WorkItemHoverCard from "@src/components/WorkItemHoverCard";
+import { resolveAgentIcon } from "@src/config/agentIcons";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { ROUTES } from "@src/config/routes";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
+import { useKeyVault } from "@src/hooks/keyVault";
 import {
   type GoToNewSessionOptions,
   useAppNavigation,
 } from "@src/hooks/navigation/useAppNavigation";
 import { SIDEBAR_MEMORY_KIND, useSidebarMemoryEntry } from "@src/hooks/perf";
 import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
+import {
+  rustBuiltInVariantsFromDefinitions,
+  useLaunchpadAgentCatalog,
+} from "@src/modules/WorkStation/Launchpad/hooks/useLaunchpadAgentCatalog";
+import { openWorkspaceSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
 import type {
   NavigationMenuItem,
   NavigationMenuRowAction,
@@ -88,7 +98,10 @@ import {
   opsControlPeekHostAtom,
 } from "@src/store/workstation";
 import type { WorkspaceFolder } from "@src/types/workspace";
-import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
+import {
+  getRustAgentType,
+  isCursorIdeSession,
+} from "@src/util/session/sessionDispatch";
 
 import { SidebarBottomBar } from "../blocks";
 import NavigationSidebar from "../variants/NavigationSidebar";
@@ -134,6 +147,7 @@ import {
 } from "./workstationSidebarData";
 import {
   buildDraftMenuItems,
+  buildFoldersPinnedMenuItems,
   buildPinnedMenuItems,
   buildProjectsPinnedMenuItems,
 } from "./workstationSidebarMenuItems";
@@ -143,8 +157,14 @@ type WorkstationSidebarKey = "folders" | "workstation" | "projects";
 const FOLDERS_WORKSPACES_SECTION_ID = "separator-folders-workspaces";
 const FOLDERS_REPOS_SECTION_ID = "separator-folders-repos";
 const FOLDERS_PINNED_SECTION_ID = "separator-folders-pinned";
+const FOLDERS_ADD_WORKSPACE_ITEM_ID = "folders-add-workspace";
+const FOLDERS_CREATE_WORKSPACE_ITEM_ID = "folders-create-workspace";
+const FOLDERS_MY_KEYS_SECTION_ID = "separator-folders-my-keys";
+const FOLDERS_MY_AGENTS_SECTION_ID = "separator-folders-my-agents";
 const FOLDERS_WORKSPACE_ITEM_PREFIX = "folders-workspace:";
 const FOLDERS_REPO_ITEM_PREFIX = "folders-repo:";
+const FOLDERS_KEY_ITEM_PREFIX = "folders-key:";
+const FOLDERS_AGENT_ITEM_PREFIX = "folders-agent:";
 const PINNED_FOLDERS_STORAGE_KEY = "orgii:navigationSidebar:pinnedFolders";
 
 interface PinnedFolderTarget {
@@ -324,6 +344,9 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const pinnedFolderTargetKeys = useAtomValue(pinnedFolderTargetSetAtom);
   const dispatchSetWorkspaceFolders = useSetAtom(setWorkspaceFoldersAtom);
   const setActiveWorkspaceName = useSetAtom(activeWorkspaceNameAtom);
+  const { localAccounts } = useKeyVault({ autoLoad: true });
+  const { installedCliAgents, builtInRustAgents, customRustAgents } =
+    useLaunchpadAgentCatalog();
   const { selectRepo } = useRepoSelection({ autoLoad: false });
   const repoPathToName = useMemo(() => buildRepoPathToName(repoMap), [repoMap]);
   const resolveWorkspaceRepoName = useMemo(
@@ -438,6 +461,17 @@ export const WorkstationSidebarConnector: React.FC = () => {
     [createProjectLabel, createWorkItemLabel]
   );
 
+  const foldersPinnedMenuItems = useMemo<NavigationMenuItem[]>(
+    () =>
+      buildFoldersPinnedMenuItems({
+        addWorkspaceItemId: FOLDERS_ADD_WORKSPACE_ITEM_ID,
+        addWorkspaceLabel: tCommon("actions.addWorkspace"),
+        createWorkspaceItemId: FOLDERS_CREATE_WORKSPACE_ITEM_ID,
+        createWorkspaceLabel: t("common:workspaceForm.createWorkspace"),
+      }),
+    [t, tCommon]
+  );
+
   const draftMenuItems = useMemo<NavigationMenuItem[]>(
     () =>
       buildDraftMenuItems({
@@ -524,6 +558,77 @@ export const WorkstationSidebarConnector: React.FC = () => {
     ]
   );
 
+  const foldersKeyMenuItems = useMemo<NavigationMenuItem[]>(
+    () =>
+      localAccounts.map((account) => ({
+        id: `${FOLDERS_KEY_ITEM_PREFIX}${account.id}`,
+        key: `${FOLDERS_KEY_ITEM_PREFIX}${account.id}`,
+        label: account.name,
+        iconElement: (
+          <ModelIcon
+            agentType={account.modelType}
+            size={16}
+            className="shrink-0 text-text-2"
+          />
+        ),
+        disabled: true,
+      })),
+    [localAccounts]
+  );
+
+  const foldersAgentMenuItems = useMemo<NavigationMenuItem[]>(() => {
+    const cliItems = installedCliAgents
+      .slice()
+      .sort((agentA, agentB) => Number(agentB.popular) - Number(agentA.popular))
+      .map((agent) => ({
+        id: `${FOLDERS_AGENT_ITEM_PREFIX}cli:${agent.name}`,
+        key: `${FOLDERS_AGENT_ITEM_PREFIX}cli:${agent.name}`,
+        label: agent.displayName,
+        iconElement: (
+          <ModelIcon
+            agentType={agent.name as CliAgentType}
+            size={16}
+            className="shrink-0 text-text-2"
+          />
+        ),
+        disabled: true,
+      }));
+
+    const rustBuiltInVariants =
+      rustBuiltInVariantsFromDefinitions(builtInRustAgents);
+    const rustItems = rustBuiltInVariants.map((rustType) => {
+      const definition = builtInRustAgents.find(
+        (definitionItem) => getRustAgentType(definitionItem.id) === rustType
+      );
+      const IconComponent = resolveAgentIcon(definition?.iconId);
+      const label = definition?.name ?? rustType;
+      return {
+        id: `${FOLDERS_AGENT_ITEM_PREFIX}rust:${rustType}`,
+        key: `${FOLDERS_AGENT_ITEM_PREFIX}rust:${rustType}`,
+        label,
+        iconElement: (
+          <IconComponent size={16} strokeWidth={1.75} className="text-text-2" />
+        ),
+        disabled: true,
+      };
+    });
+
+    const customItems = customRustAgents.map((definition) => {
+      const IconComponent = resolveAgentIcon(definition.iconId);
+      return {
+        id: `${FOLDERS_AGENT_ITEM_PREFIX}custom:${definition.id}`,
+        key: `${FOLDERS_AGENT_ITEM_PREFIX}custom:${definition.id}`,
+        label: definition.name,
+        iconElement: (
+          <IconComponent size={16} strokeWidth={1.75} className="text-text-2" />
+        ),
+        disabled: true,
+      };
+    });
+
+    return [...rustItems, ...customItems, ...cliItems];
+  }, [builtInRustAgents, customRustAgents, installedCliAgents]);
+
   const foldersSidebarMenuItems = useMemo<NavigationMenuItem[]>(() => {
     const items: NavigationMenuItem[] = [];
     const pinnedItems = pinnedFolderTargets
@@ -553,10 +658,9 @@ export const WorkstationSidebarConnector: React.FC = () => {
       items.push({
         id: FOLDERS_WORKSPACES_SECTION_ID,
         key: FOLDERS_WORKSPACES_SECTION_ID,
-        label: t(
-          "common:workspaceForm.multiRepoWorkspace",
-          "Multi-Repo Workspace"
-        ),
+        label: t("sidebar.folderCounts.multiRepoWorkspace", {
+          count: workspaceItems.length,
+        }),
       });
       items.push(...workspaceItems);
     }
@@ -569,13 +673,29 @@ export const WorkstationSidebarConnector: React.FC = () => {
     items.push({
       id: FOLDERS_REPOS_SECTION_ID,
       key: FOLDERS_REPOS_SECTION_ID,
-      label: t("common:selectors.spotlight.paramLabels.repo"),
+      label: t("sidebar.folderCounts.repo", { count: repoItems.length }),
     });
     items.push(...repoItems);
+
+    items.push({
+      id: FOLDERS_MY_KEYS_SECTION_ID,
+      key: FOLDERS_MY_KEYS_SECTION_ID,
+      label: t("labels.myKeys"),
+    });
+    items.push(...foldersKeyMenuItems);
+
+    items.push({
+      id: FOLDERS_MY_AGENTS_SECTION_ID,
+      key: FOLDERS_MY_AGENTS_SECTION_ID,
+      label: t("labels.myAgents"),
+    });
+    items.push(...foldersAgentMenuItems);
 
     return items;
   }, [
     createFolderMenuItem,
+    foldersAgentMenuItems,
+    foldersKeyMenuItems,
     pinnedFolderTargetKeys,
     pinnedFolderTargets,
     pinnedLabel,
@@ -612,7 +732,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     activeSidebarKey === "projects"
       ? projectsPinnedMenuItems
       : activeSidebarKey === "folders"
-        ? []
+        ? foldersPinnedMenuItems
         : sessionPinnedMenuItems;
 
   const selectedDraftMenuItemId = getSelectedDraftMenuItemId(
@@ -841,6 +961,16 @@ export const WorkstationSidebarConnector: React.FC = () => {
 
   const handleFoldersMenuItemClick = useCallback(
     (_key: string, item: NavigationMenuItem) => {
+      if (item.id === FOLDERS_ADD_WORKSPACE_ITEM_ID) {
+        openWorkspaceSpotlight("add");
+        return;
+      }
+
+      if (item.id === FOLDERS_CREATE_WORKSPACE_ITEM_ID) {
+        openWorkspaceSpotlight("create");
+        return;
+      }
+
       const workspaceId = item.id.startsWith(FOLDERS_WORKSPACE_ITEM_PREFIX)
         ? item.id.slice(FOLDERS_WORKSPACE_ITEM_PREFIX.length)
         : "";
@@ -1116,6 +1246,10 @@ export const WorkstationSidebarConnector: React.FC = () => {
     setCollapsedSectionIds(new Set(allSectionIds));
   }, [allSectionIds]);
 
+  const handleCollapseAllActiveSections = useCallback(() => {
+    resolvedSetCollapsedSectionIds(new Set(allSectionIds));
+  }, [allSectionIds, resolvedSetCollapsedSectionIds]);
+
   const handleMarkAllRead = useCallback(() => {
     markAllSessionsVisited(sessions.map((session) => session.session_id));
   }, [sessions]);
@@ -1180,6 +1314,16 @@ export const WorkstationSidebarConnector: React.FC = () => {
         getGroupByLabel={getProjectsGroupByLabel}
         onSelect={handleProjectsGroupBySelect}
       />
+    ) : activeSidebarKey === "folders" ? (
+      <button
+        type="button"
+        title={t("sidebar.actions.collapseAll")}
+        aria-label={t("sidebar.actions.collapseAll")}
+        className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
+        onClick={handleCollapseAllActiveSections}
+      >
+        <ListChevronsDownUp size={16} strokeWidth={2} className="text-text-2" />
+      </button>
     ) : activeSidebarKey === "workstation" ? (
       <SessionFilterButton
         groupByMode={groupByMode}

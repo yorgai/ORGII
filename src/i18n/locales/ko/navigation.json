@@ -45,6 +45,8 @@
     "project": "프로젝트",
     "projects": "Projects",
     "projectManager": "Project 관리자",
+    "myKeys": "내 키",
+    "myAgents": "내 Agents",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -135,6 +137,10 @@
       "openHome": "홈 열기",
       "openWorkstation": "Workstation 열기"
     },
+    "folderCounts": {
+      "repo": "{{count}}개 Repo",
+      "multiRepoWorkspace": "{{count}}개 멀티 Repo Workspace"
+    },
     "bottomBar": {
       "settings": "설정",
       "clockLabel": "현재 시각"
@@ -168,6 +174,12 @@
       "duration1h": "1 시간",
       "duration2h": "2 시간",
       "durationTomorrow": "내일"
+    }
+  },
+  "myRole": {
+    "tabs": {
+      "status": "내 상태",
+      "about": "내 소개"
     }
   },
   "launchpad": {

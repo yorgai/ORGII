@@ -45,6 +45,8 @@
     "project": "Projekt",
     "projects": "Historie",
     "projectManager": "Project Manager",
+    "myKeys": "Moje klucze",
+    "myAgents": "Moi Agents",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -135,6 +137,10 @@
       "openHome": "Otwórz Home",
       "openWorkstation": "Otwórz Workstation"
     },
+    "folderCounts": {
+      "repo": "{{count}} Repo",
+      "multiRepoWorkspace": "{{count}} Workspace z wieloma Repo"
+    },
     "bottomBar": {
       "settings": "Ustawienia",
       "clockLabel": "Aktualny czas"
@@ -168,6 +174,12 @@
       "duration1h": "1 godzinę",
       "duration2h": "2 godziny",
       "durationTomorrow": "Jutro"
+    }
+  },
+  "myRole": {
+    "tabs": {
+      "status": "Mój status",
+      "about": "O mnie"
     }
   },
   "launchpad": {

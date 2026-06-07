@@ -45,6 +45,8 @@
     "project": "プロジェクト",
     "projects": "Projects",
     "projectManager": "Project マネージャー",
+    "myKeys": "自分のキー",
+    "myAgents": "自分の Agents",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -135,6 +137,10 @@
       "openHome": "ホームを開く",
       "openWorkstation": "Workstation を開く"
     },
+    "folderCounts": {
+      "repo": "{{count}} Repo",
+      "multiRepoWorkspace": "{{count}} マルチ Repo Workspace"
+    },
     "bottomBar": {
       "settings": "設定",
       "clockLabel": "現在時刻"
@@ -168,6 +174,12 @@
       "duration1h": "1 時間",
       "duration2h": "2 時間",
       "durationTomorrow": "明日"
+    }
+  },
+  "myRole": {
+    "tabs": {
+      "status": "自分のステータス",
+      "about": "自分について"
     }
   },
   "launchpad": {

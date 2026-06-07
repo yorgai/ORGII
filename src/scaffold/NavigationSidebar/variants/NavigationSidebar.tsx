@@ -111,9 +111,9 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
       let currentTitle: string | undefined;
       let currentId = "default";
 
-      menuItems.forEach((item) => {
+      menuItems.forEach((item, index) => {
         if (item.id?.startsWith("separator-")) {
-          if (currentSection.length > 0) {
+          if (index > 0) {
             result.push({
               id: currentId,
               title: currentTitle,
@@ -128,7 +128,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
         }
       });
 
-      if (currentSection.length > 0) {
+      if (currentSection.length > 0 || currentTitle) {
         result.push({
           id: currentId,
           title: currentTitle,

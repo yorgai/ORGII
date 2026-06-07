@@ -35,7 +35,7 @@ import { PaletteBody, SpotlightShell } from "./shell";
 import type { GlobalSpotlightProps, RepoItem } from "./types";
 import { SpotlightConfirmationView } from "./views";
 
-type WorkspacePickerMode = "switch" | "add" | "create";
+type WorkspacePickerMode = "switch" | "open" | "add" | "create";
 
 interface EmbeddedEditorPaletteState {
   mode: EditorPaletteMode;
@@ -432,7 +432,11 @@ const GlobalSpotlightInner: React.FC<
     spotlight.state.path.length > 0;
   const effectiveCurrentRepoId = selectedRepoId || undefined;
   const initialWorkspaceStage: AddWorkspaceModalStage =
-    workspacePickerMode === "create" ? "create-workspace" : null;
+    workspacePickerMode === "create"
+      ? "create-workspace"
+      : workspacePickerMode === "open"
+        ? "add-workspace-existing"
+        : null;
   const activeActionChip =
     workspacePickerMode === "switch" ||
     (branchPickerOpen && embeddedBranchMode === "checkout")

@@ -45,6 +45,8 @@
     "project": "Проект",
     "projects": "Projects",
     "projectManager": "Project Manager",
+    "myKeys": "Мои ключи",
+    "myAgents": "Мои Agents",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -135,6 +137,10 @@
       "openHome": "Открыть Home",
       "openWorkstation": "Открыть Workstation"
     },
+    "folderCounts": {
+      "repo": "{{count}} репо",
+      "multiRepoWorkspace": "{{count}} мульти-Repo Workspace"
+    },
     "bottomBar": {
       "settings": "Настройки",
       "clockLabel": "Текущее время"
@@ -168,6 +174,12 @@
       "duration1h": "1 час",
       "duration2h": "2 часа",
       "durationTomorrow": "Завтра"
+    }
+  },
+  "myRole": {
+    "tabs": {
+      "status": "Мой статус",
+      "about": "Обо мне"
     }
   },
   "launchpad": {
