@@ -30,25 +30,31 @@ interface NavigationMenuParentRowProps {
   onToggleSubmenu: (key: string) => void;
 }
 
-export function NavigationMenuParentRow({
-  item,
-  isChild,
-  isOpen,
-  submenuSelected,
-  collapsed,
-  t,
-  renderIcon,
-  renderMenuItem,
-  onMenuItemClick,
-  onMenuItemContextMenu,
-  onRowMouseEnter,
-  onToggleSubmenu,
-}: NavigationMenuParentRowProps): React.ReactElement {
+export const NavigationMenuParentRow = React.forwardRef<
+  HTMLDivElement,
+  NavigationMenuParentRowProps
+>(function NavigationMenuParentRow(
+  {
+    item,
+    isChild,
+    isOpen,
+    submenuSelected,
+    collapsed,
+    t,
+    renderIcon,
+    renderMenuItem,
+    onMenuItemClick,
+    onMenuItemContextMenu,
+    onRowMouseEnter,
+    onToggleSubmenu,
+  },
+  ref
+): React.ReactElement {
   const iconColor = submenuSelected ? "text-primary-6" : "text-text-1";
 
   return (
     <div
-      key={item.key}
+      ref={ref}
       className="mb-1"
       onContextMenu={
         onMenuItemContextMenu
@@ -121,12 +127,16 @@ export function NavigationMenuParentRow({
 
       {isOpen && !collapsed && item.children && (
         <div className="mt-1 space-y-1">
-          {item.children.map((child) => renderMenuItem(child, true))}
+          {item.children.map((child) => (
+            <React.Fragment key={child.key}>
+              {renderMenuItem(child, true)}
+            </React.Fragment>
+          ))}
         </div>
       )}
     </div>
   );
-}
+});
 
 interface NavigationMenuLeafRowProps {
   item: NavigationMenuItem;
@@ -145,18 +155,24 @@ interface NavigationMenuLeafRowProps {
   onRowActionClick: NavigationMenuRowActionClickHandler;
 }
 
-export function NavigationMenuLeafRow({
-  item,
-  isChild,
-  isSelected,
-  collapsed,
-  t,
-  renderIcon,
-  onMenuItemClick,
-  onMenuItemContextMenu,
-  onRowMouseEnter,
-  onRowActionClick,
-}: NavigationMenuLeafRowProps): React.ReactElement {
+export const NavigationMenuLeafRow = React.forwardRef<
+  HTMLDivElement,
+  NavigationMenuLeafRowProps
+>(function NavigationMenuLeafRow(
+  {
+    item,
+    isChild,
+    isSelected,
+    collapsed,
+    t,
+    renderIcon,
+    onMenuItemClick,
+    onMenuItemContextMenu,
+    onRowMouseEnter,
+    onRowActionClick,
+  },
+  ref
+): React.ReactElement {
   const isSecondaryTone = item.visualTone === "secondary";
   const iconColor = item.disabled
     ? isSecondaryTone
@@ -170,7 +186,7 @@ export function NavigationMenuLeafRow({
 
   return (
     <div
-      key={item.key}
+      ref={ref}
       onContextMenu={(event: React.MouseEvent) =>
         onMenuItemContextMenu?.(event, item.key, item)
       }
@@ -240,7 +256,7 @@ export function NavigationMenuLeafRow({
       </div>
     </div>
   );
-}
+});
 
 interface RenderLeafRowAccessoryArgs {
   item: NavigationMenuItem;

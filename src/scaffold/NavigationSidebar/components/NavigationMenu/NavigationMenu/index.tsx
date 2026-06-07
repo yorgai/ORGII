@@ -197,7 +197,9 @@ const NavigationMenu: React.FC<NavigationMenuProps> = React.memo(
 
     return (
       <div className="flex flex-col gap-1">
-        {items.map((item) => renderMenuItem(item))}
+        {items.map((item) => (
+          <React.Fragment key={item.key}>{renderMenuItem(item)}</React.Fragment>
+        ))}
       </div>
     );
   }
