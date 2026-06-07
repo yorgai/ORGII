@@ -231,6 +231,10 @@ export function useChatPanelContentState({
         </span>
       )}
     </span>
+  ) : showWorkspaceDashboardContent ? (
+    <span className={`${BENCHMARK_HEADER_SEGMENT_CLASS} cursor-default`}>
+      <span className="min-w-0 -translate-y-px truncate">{headerTitle}</span>
+    </span>
   ) : undefined;
 
   const showNewSessionButton =

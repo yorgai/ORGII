@@ -1,8 +1,8 @@
 import { Code, FolderTree } from "lucide-react";
 import React from "react";
 
-import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
 import type { WorkspaceRecord } from "@src/api/tauri/workspace";
+import type { CliAgentType } from "@src/api/types/keys";
 import ModelIcon from "@src/components/ModelIcon";
 import { resolveAgentIcon } from "@src/config/agentIcons";
 import type { AvailableAgent } from "@src/config/cliAgents";
@@ -24,7 +24,6 @@ export const FOLDERS_WORKSPACE_ITEM_PREFIX = "folders-workspace:";
 export const FOLDERS_REPO_ITEM_PREFIX = "folders-repo:";
 const FOLDERS_KEY_ITEM_PREFIX = "folders-key:";
 const FOLDERS_AGENT_ITEM_PREFIX = "folders-agent:";
-
 export interface FolderTarget {
   kind: "workspace" | "repo";
   id: string;

@@ -514,6 +514,7 @@ const AppShell = () => {
               </div>
             </div>
           </AppLayout>
+          <GuiControlToggle />
           <TutorialsModal
             open={tutorialsModalOpen}
             onClose={() => setTutorialsModalOpen(false)}
@@ -528,7 +529,6 @@ const AppShell = () => {
             open={codeEditorTourOpen}
             onClose={() => setCodeEditorTourOpen(false)}
           />
-          <GuiControlToggle />
         </div>
       </BrowserProvider>
     </TerminalProvider>

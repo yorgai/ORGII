@@ -1,5 +1,5 @@
 import { useSetAtom } from "jotai";
-import { Expand, LayoutDashboard, Play, Plus } from "lucide-react";
+import { Expand, Play, Plus } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -12,7 +12,6 @@ import { useKeyVault } from "@src/hooks/keyVault";
 import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
 import {
   CollapsibleSection,
-  PanelHeader,
   Placeholder,
 } from "@src/modules/shared/layouts/blocks";
 import type { Repo } from "@src/store/repo/types";
@@ -483,11 +482,6 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
 
     return (
       <div className="flex h-full min-h-0 w-full flex-col">
-        <PanelHeader
-          title={t("navigation:sidebar.dashboard")}
-          icon={LayoutDashboard}
-          borderBottom
-        />
         <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
           <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 px-4 py-5">
             <div className="flex flex-col gap-2">

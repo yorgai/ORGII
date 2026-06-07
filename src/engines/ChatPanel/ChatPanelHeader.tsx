@@ -516,7 +516,8 @@ export function ChatPanelHeader({
       showSessionContent ||
       selectedWorkItemVisible ||
       selectedProjectVisible ||
-      showStickyNotesContent ? (
+      showStickyNotesContent ||
+      headerTitleContent ? (
         <>
           <div
             className="flex h-9 min-w-0 shrink items-center"
