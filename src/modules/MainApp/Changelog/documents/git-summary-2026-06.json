@@ -3,7 +3,7 @@
   "month": "2026-06",
   "range": {
     "start": "2026-06-01",
-    "end": "2026-06-03"
+    "end": "2026-06-06"
   },
   "days": [
     {
@@ -43,6 +43,86 @@
         "Expanded E2E coverage for slash mode behavior, plan lifecycle handling, and canvas-related interactions to protect complex session flows.",
         "Improved queue and pinned-action handling behind the chat input so pending work can be represented more safely in session state.",
         "Refined operational task data handling for Ops Control so runtime task lists can support the new list-view experience."
+      ],
+      "modelsUsed": ["GPT 5.5", "Opus 4.6"]
+    },
+    {
+      "date": "2026-06-03",
+      "commitCount": 68,
+      "summary": "Work centered on decoupling Work Items from project scope, introducing the Changelog timeline view, polishing chat composer and plus-menu interactions, and adding the ORGII high contrast theme. The day also expanded KeyVault, Git preferences, Agent settings, and agent-core test coverage while continuing cleanup around markdown editing, terminal agents, tutorial tours, shortcuts, and WorkStation sidebar chrome.",
+      "frontendChangeBullets": [
+        "Added the Changelog timeline view so users can browse product progress directly inside MainApp.",
+        "Decoupled Work Items from project scope, making standalone work easier to create and manage outside a single project container.",
+        "Improved chat composer interactions, including plus-menu focus restoration, keyboard navigation, display-mode pills, skill pill previews, and safer pill text rendering in user bubbles.",
+        "Added the ORGII high contrast theme and refined sidebar hover animations, collapsed WorkStation chrome, shortcut tooltips, and sidebar toggle behavior.",
+        "Replaced remaining Tiptap editing surfaces with the shared markdown editor and polished dropdown, context-menu, and project dropdown interactions."
+      ],
+      "backendChangeBullets": [
+        "Expanded agent-core and agent DTO coverage with extended tests around definitions, provider wiring, and agent configuration behavior.",
+        "Aligned Rust test inputs with the display_text field used by chat pill rendering, improving consistency between persisted messages and UI display data.",
+        "Added Terminal Agent support and updated terminal assets used by the embedded terminal workflow.",
+        "Stabilized routine reruns, settings hit testing, webpack dev startup, and DOM event target handling to reduce regressions in daily development flows.",
+        "Expanded E2E coverage for KeyVault settings, Git preferences, Agent settings, rendered agent selector paths, and Work Item flows."
+      ],
+      "modelsUsed": ["GPT 5.5", "Opus 4.6"]
+    },
+    {
+      "date": "2026-06-04",
+      "commitCount": 73,
+      "summary": "A WorkStation and chat-panel heavy day refined project and work-item creation inside chat, added PR creation and lookup surfaces to Source Control, improved GitHub authentication feedback, and consolidated diff navigation. Canvas simulator work added setup_repo routing, simulator app views, and chat-to-simulator jumps, while broader refactors improved app chrome, tab drag-and-drop utilities, markdown rendering performance, and session launch coverage.",
+      "frontendChangeBullets": [
+        "Moved project and work-item creation deeper into the chat panel so users can start project work and agent sessions from the conversation surface.",
+        "Added PR creation and open-PR quick-action UI in WorkStation Source Control, including clearer section layout, filter controls, and PR pill behavior.",
+        "Improved GitHub auth failure handling by routing users to Settings and showing clearer feedback when PR creation cannot authenticate.",
+        "Added canvas simulator app surfaces, setup_repo chat blocks, and chat-to-simulator jumps for richer generated-app previews.",
+        "Refined app chrome, inline work-item properties, sidebar hover behavior, tab drag-and-drop reuse, and markdown rendering performance."
+      ],
+      "backendChangeBullets": [
+        "Added the github_find_pull_request Tauri command and PR state wiring used by WorkStation Source Control and shared PR creation flows.",
+        "Improved Source Control status refresh behavior and local GitHub token fallback handling for PR workflows.",
+        "Added Rust support for canvas simulator app routing and setup_repo blocks so chat output can open richer simulator experiences.",
+        "Expanded rendered E2E coverage for provider matrix wiring, Ask mode, custom agent launch, session launch wiring, Work Items, and agent selector flows.",
+        "Consolidated diff file navigation and layout settings behind WorkStation sidebar patterns for more maintainable source-control behavior."
+      ],
+      "modelsUsed": ["GPT 5.5", "Opus 4.6"]
+    },
+    {
+      "date": "2026-06-05",
+      "commitCount": 95,
+      "summary": "The busiest day of the range focused on WorkStation PR v2, queued session controls, GitHub device-flow authentication, source-control filtering, and diff-to-chat workflows. It also hardened session persistence by serializing SQLite writers, cleaned up native session terminal state, removed the built-in apply_patch tool, renamed the Tauri binary to orgii, and swept TypeScript, lint, audit, and circular-dependency issues across the app.",
+      "frontendChangeBullets": [
+        "Redesigned the WorkStation PR section in the Source Control sidebar with shared tokens, compact actions, clearer eligibility rules, and safer recreate behavior after closed or merged PRs.",
+        "Added Pull Request filtering in Source Control and wired PR lookup into the CodeEditor-level workflow so PR context follows the active file and branch.",
+        "Improved queued session controls, cache saves, and UI behavior after rebase so pending actions remain stable during complex chat flows.",
+        "Added diff selection actions that copy file-reference clipboard data and send selected changes into chat, making review and follow-up prompts faster.",
+        "Polished chat, composer, and WorkStation surfaces with global chat collapse controls, workstation context pills, file-change diff pills, improved composer placement, and steadier tab and scroll state."
+      ],
+      "backendChangeBullets": [
+        "Serialized SQLite writers to prevent sessions.db lock storms during high-volume native session activity.",
+        "Finalized native session terminal state more cleanly so Rust-backed sessions shut down and report terminal status more reliably.",
+        "Added Rust GitHub PR commands and consolidated GitHub device-flow authentication around a baked public client id and local token fallback behavior.",
+        "Renamed the Tauri main binary from app to orgii and updated related command and CI expectations.",
+        "Removed the built-in apply_patch tool, switched skill installs to skills.sh snapshots, enforced Conventional Commits with commitlint, and swept outstanding TypeScript and lint errors."
+      ],
+      "modelsUsed": ["GPT 5.5", "Opus 4.6"]
+    },
+    {
+      "date": "2026-06-06",
+      "commitCount": 35,
+      "summary": "Work focused on benchmark batch workflows, push-to-talk voice input, GitHub Issues integration, chat queue hardening, replay search rendering, and compacted Rust session history. The day also improved coordinator responsiveness, session diff routing, multi-root composer behavior, browser inspect cleanup, sidebar keybindings, and Source Control-aligned issue surfaces.",
+      "frontendChangeBullets": [
+        "Added push-to-talk voice input in chat, expanding composer interaction options for hands-free or quick spoken prompts.",
+        "Added benchmark batch session and reusable batch task management flows, with clearer benchmark session headers and skipped-evaluation failure reporting.",
+        "Introduced GitHub Issues UI in WorkStation with sidebar wiring, design-system components, icon buttons, and Source Control-aligned filter behavior.",
+        "Improved replay search result rendering, sticky notes board behavior, inline ghost fields, status bar spacing, and pinned-page back navigation.",
+        "Hardened chat queue controls, Stop semantics, session controls, file mentions, multi-root composer edge cases, and isolated UI E2E coverage."
+      ],
+      "backendChangeBullets": [
+        "Added GitHub Issues backend commands, atoms, helpers, and localized strings to support issue browsing from WorkStation surfaces.",
+        "Persisted compacted Rust session history and verified compacted provider payloads so long-running agent sessions retain cleaner historical state.",
+        "Kept Agent Org coordinator sessions responsive and coordinator roots visible during active multi-agent workflows.",
+        "Avoided global CLI resume lock stalls, improving reliability when multiple CLI-backed sessions resume or continue in parallel.",
+        "Updated the fast-open package name, webdriver app target, GitHub adapter wording, and pre-commit cleanup paths used by the June workflow."
       ],
       "modelsUsed": ["GPT 5.5", "Opus 4.6"]
     }
