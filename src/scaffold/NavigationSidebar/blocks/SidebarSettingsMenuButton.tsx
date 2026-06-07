@@ -6,7 +6,7 @@ import {
   HelpCircle,
   Languages,
   Laptop,
-  PanelLeft,
+  MessageCircle,
   Settings,
 } from "lucide-react";
 import React, {
@@ -496,12 +496,12 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
                 }
               >
                 <span className="flex min-w-0 items-center gap-2">
-                  <PanelLeft
+                  <MessageCircle
                     size={DROPDOWN_ITEM.iconSize}
                     className={MENU_ICON_CLASS_NAME}
                   />
                   <span className="truncate">
-                    {t("common:layoutSettings.chatPanelLocation")}
+                    {t("common:layoutSettings.newChatPanel")}
                   </span>
                 </span>
                 <ChevronRight

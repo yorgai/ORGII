@@ -11,6 +11,7 @@ import Switch from "@src/components/Switch";
 import {
   type ModelPickerStyle,
   activeStationChatVisibleAtom,
+  chatTurnPaginationEnabledAtom,
   modelPickerStyleAtom,
 } from "@src/store/ui/chatPanelAtom";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
@@ -119,6 +120,9 @@ export const SidebarWorkstationSettingsSubmenu: React.FC<SidebarWorkstationSetti
     );
     const [modelPickerStyle, setModelPickerStyle] =
       useAtom(modelPickerStyleAtom);
+    const [chatTurnPaginationEnabled, setChatTurnPaginationEnabled] = useAtom(
+      chatTurnPaginationEnabledAtom
+    );
     const internalLayoutMode = useAtomValue(workStationInternalLayoutModeAtom);
     const setInternalLayoutMode = useSetAtom(
       workStationInternalLayoutModePersistAtom
@@ -172,6 +176,12 @@ export const SidebarWorkstationSettingsSubmenu: React.FC<SidebarWorkstationSetti
             value={agentChatPosition}
             options={chatPositionOptions}
             onChange={setAgentChatPosition}
+          />
+          <div className={DROPDOWN_CLASSES.menuSeparator} />
+          <SwitchControlRow
+            label={t("layoutSettings.chatPanelPagination")}
+            checked={chatTurnPaginationEnabled}
+            onChange={setChatTurnPaginationEnabled}
           />
         </>
       ) : (

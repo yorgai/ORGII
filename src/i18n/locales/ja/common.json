@@ -1453,6 +1453,7 @@
     "toolLayout": "ワークステーション",
     "dockAutoHide": "Dock を自動的に隠す",
     "modelPickerStyle": "ピッカー",
+    "chatPanelPagination": "ページネーション",
     "modelPickerSpotlight": "Spotlight",
     "modelPickerMenu": "メニュー",
     "replaySession": "Replay セッション",

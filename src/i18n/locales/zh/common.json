@@ -1453,6 +1453,7 @@
     "toolLayout": "工作站",
     "dockAutoHide": "程序坞自动隐藏",
     "modelPickerStyle": "选择器样式",
+    "chatPanelPagination": "分页",
     "modelPickerSpotlight": "Spotlight",
     "modelPickerMenu": "菜单",
     "replaySession": "Replay 会话",

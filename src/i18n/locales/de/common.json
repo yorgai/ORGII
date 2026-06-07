@@ -1452,6 +1452,7 @@
     "toolLayout": "Arbeitsstation",
     "dockAutoHide": "Dock automatisch ausblenden",
     "modelPickerStyle": "Auswahl",
+    "chatPanelPagination": "Paginierung",
     "modelPickerSpotlight": "Spotlight",
     "modelPickerMenu": "Menü",
     "replaySession": "Replay-Sitzung",
