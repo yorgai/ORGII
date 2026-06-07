@@ -7,6 +7,7 @@
 import { type ComponentType, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { LANGUAGE_NAMES } from "@src/i18n";
 import { REPO_KIND } from "@src/store/repo";
 
 import { ICONS } from "../../config";
@@ -60,6 +61,14 @@ export function useConfirmationPage(
       });
     }
 
+    if (state.currentLanguage) {
+      parameters.push({
+        label: t("settings:general.language"),
+        value: LANGUAGE_NAMES[state.currentLanguage],
+        icon: ICONS.language,
+      });
+    }
+
     return {
       actionLabel: action.labelKey ? t(action.labelKey) : action.label,
       actionIcon: action.icon,
@@ -70,6 +79,7 @@ export function useConfirmationPage(
     state.currentAction,
     state.currentRepo,
     state.currentBranch,
+    state.currentLanguage,
     t,
   ]);
 

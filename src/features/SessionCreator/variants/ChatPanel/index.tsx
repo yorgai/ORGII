@@ -62,7 +62,10 @@ import {
 import { modelPickerStyleAtom } from "@src/store/ui/chatPanelAtom";
 import { draftHasContentAtom } from "@src/store/ui/draftAtom";
 import { getBigThreeRegionModelTypeForSession } from "@src/util/session/regionAlertModel";
-import { getRustAgentType } from "@src/util/session/sessionDispatch";
+import {
+  BUILTIN_GUI_CONTROL_DEF_ID,
+  getRustAgentType,
+} from "@src/util/session/sessionDispatch";
 
 import { EditorArea, SessionInfoLine } from "../../components";
 import BonusModal from "../../components/BonusModal";
@@ -342,19 +345,22 @@ const SessionCreatorChatPanelSingle: React.FC<
   const sessionRepoKind = sessionRepo?.kind ?? currentRepo?.kind;
   const currentRepoPath = effectiveSource?.repoPath ?? "";
 
+  const allAgentDefinitions = useMemo(
+    () => [
+      ...builtInAgents.filter(
+        (agent) => agent.id !== BUILTIN_GUI_CONTROL_DEF_ID
+      ),
+      ...customAgents,
+    ],
+    [builtInAgents, customAgents]
+  );
+
   const selectedAgentDefinition = useMemo(
     () =>
       selectedAgentDefId
-        ? [...builtInAgents, ...customAgents].find(
-            (agent) => agent.id === selectedAgentDefId
-          )
+        ? allAgentDefinitions.find((agent) => agent.id === selectedAgentDefId)
         : undefined,
-    [builtInAgents, customAgents, selectedAgentDefId]
-  );
-
-  const allAgentDefinitions = useMemo(
-    () => [...builtInAgents, ...customAgents],
-    [builtInAgents, customAgents]
+    [allAgentDefinitions, selectedAgentDefId]
   );
 
   const selectedOrg = useMemo(

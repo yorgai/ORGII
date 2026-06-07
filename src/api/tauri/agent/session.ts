@@ -528,12 +528,20 @@ export async function wingmanListMonitors(): Promise<WingmanMonitor[]> {
   return rpc.agentSession.wingmanListMonitors();
 }
 
+export interface IdeActionResultPayload {
+  success: boolean;
+  message: string;
+  data?: unknown;
+}
+
 export async function sendIdeActionResult(
-  requestId: string,
-  result: Record<string, unknown>
+  correlationId: string,
+  result: IdeActionResultPayload
 ): Promise<void> {
   return rpc.agentSession.sendIdeActionResult({
-    requestId,
-    result: JSON.stringify(result),
+    correlationId,
+    success: result.success,
+    message: result.message,
+    ...(typeof result.data === "undefined" ? {} : { data: result.data }),
   });
 }

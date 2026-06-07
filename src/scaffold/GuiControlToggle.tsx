@@ -1,9 +1,28 @@
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { ArrowUp, Bot, MessageCircle, MousePointer2, X } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
+import {
+  ArrowUp,
+  CheckCircle2,
+  Loader2,
+  MessageCircle,
+  MousePointer2,
+  MousePointerClick,
+  RefreshCw,
+  X,
+  XCircle,
+} from "lucide-react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
-import { sessionLaunch } from "@src/api/tauri/agent/session";
+import {
+  type SessionLaunchResult,
+  sessionLaunch,
+} from "@src/api/tauri/agent/session";
 import {
   DISPATCH_CATEGORY,
   KEY_SOURCE,
@@ -18,6 +37,10 @@ import { VoiceInputButton, VoiceRecordingBar } from "@src/components/Voice";
 import { INPUT_AREA_BUTTONS } from "@src/config/inputAreaTokens";
 import InputEditor from "@src/engines/ChatPanel/InputArea/components/InputEditor";
 import { useEditorExpansion } from "@src/engines/ChatPanel/InputArea/hooks/useEditorExpansion";
+import { extractArgsSummary } from "@src/engines/ChatPanel/blocks/ToolCallBlock/helpers/argsSummary";
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import { chatEventsForSessionAtomFamily } from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
+import type { AgentExecMode } from "@src/features/SessionCreator/config";
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
 import { type VoiceInputError, useVoiceInput } from "@src/hooks/voice";
@@ -29,13 +52,15 @@ import {
   creatorDefaultModelSelectionAtom,
   extractModelPair,
 } from "@src/store/session/creatorDefaultModelAtom";
+import { upsertSession } from "@src/store/session/sessionAtom";
 import { modelSelectorAtom } from "@src/store/ui/modelSelectorAtom";
 import {
-  guiControlEnabledAtom,
-  toggleGuiControlEnabledAtom,
+  closeGuiControlComposerAtom,
+  guiControlComposerOpenAtom,
+  openGuiControlAtom,
 } from "@src/store/ui/uiAtom";
 import { invokeTauri } from "@src/util/platform/tauri";
-import { BUILTIN_OS_DEF_ID } from "@src/util/session/sessionDispatch";
+import { BUILTIN_GUI_CONTROL_DEF_ID } from "@src/util/session/sessionDispatch";
 
 export const GUI_CONTROL_TOGGLE_SHORTCUT_ID = "toggle_gui_control";
 export const GUI_CONTROL_SUBMIT_EVENT = "orgii:gui-control-submit";
@@ -45,8 +70,23 @@ const GUI_CONTROL_MODE = {
   SELECTION: "selection",
 } as const;
 
+const GUI_CONTROL_AGENT_NAME = "ORGII GUI Control";
+const GUI_CONTROL_SESSION_NAME = "Agent Control";
+const GUI_CONTROL_AGENT_ICON_ID = "mouse-pointer-click";
+const GUI_CONTROL_AGENT_EXEC_MODE: AgentExecMode = "build";
+const EMPTY_GUI_CONTROL_EVENTS_ATOM = atom<SessionEvent[]>([]);
+
 type GuiControlMode = (typeof GUI_CONTROL_MODE)[keyof typeof GUI_CONTROL_MODE];
 type GuiControlRunStatus = "idle" | "sending" | "running" | "error";
+
+type GuiControlActivityStatus = "running" | "completed" | "failed";
+
+interface GuiControlActivityItem {
+  id: string;
+  title: string;
+  detail: string;
+  status: GuiControlActivityStatus;
+}
 
 interface ModePillProps {
   mode: GuiControlMode;
@@ -118,10 +158,127 @@ function resolveControlModelLabel(
   );
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getStringRecordValue(value: unknown, key: string): string | null {
+  if (!isRecord(value)) return null;
+  const recordValue = value[key];
+  return typeof recordValue === "string" && recordValue.trim().length > 0
+    ? recordValue.trim()
+    : null;
+}
+
+function formatActivityText(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function formatGuiAction(action: string): string {
+  return action
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[._-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getActivityStatus(event: SessionEvent): GuiControlActivityStatus {
+  if (event.displayStatus === "failed") return "failed";
+  if (event.displayStatus === "running" || event.isDelta) return "running";
+  return "completed";
+}
+
+function toGuiControlActivityItem(
+  event: SessionEvent
+): GuiControlActivityItem | null {
+  if (event.source === "user") return null;
+
+  const toolName = event.uiCanonical || event.functionName;
+  const status = getActivityStatus(event);
+
+  if (toolName === "control_orgii") {
+    const args = isRecord(event.args) ? event.args : {};
+    const action = getStringRecordValue(args, "action") ?? "GUI action";
+    const summary = extractArgsSummary(toolName, args);
+    const resultText = getStringRecordValue(event.result, "content");
+    return {
+      id: event.id,
+      title: formatGuiAction(action),
+      detail: formatActivityText(resultText ?? (summary || action)),
+      status,
+    };
+  }
+
+  if (event.source === "assistant" && event.displayText.trim().length > 0) {
+    return {
+      id: event.id,
+      title: "Response",
+      detail: formatActivityText(event.displayText),
+      status,
+    };
+  }
+
+  if (
+    toolName &&
+    toolName !== "agent_message" &&
+    event.displayText.trim().length > 0
+  ) {
+    return {
+      id: event.id,
+      title: formatGuiAction(toolName),
+      detail: formatActivityText(event.displayText),
+      status,
+    };
+  }
+
+  return null;
+}
+
+function useGuiControlActivity(
+  sessionId: string | null
+): GuiControlActivityItem[] {
+  const eventsAtom = sessionId
+    ? chatEventsForSessionAtomFamily(sessionId)
+    : EMPTY_GUI_CONTROL_EVENTS_ATOM;
+  const events = useAtomValue(eventsAtom);
+
+  return useMemo(() => {
+    if (!sessionId) return [];
+    return events
+      .map(toGuiControlActivityItem)
+      .filter((item): item is GuiControlActivityItem => item !== null)
+      .slice(-3)
+      .reverse();
+  }, [events, sessionId]);
+}
+
+function upsertGuiControlSession(result: SessionLaunchResult): void {
+  upsertSession({
+    session_id: result.sessionId,
+    status: result.status,
+    created_at: result.createdAt,
+    updated_at: result.createdAt,
+    user_input: result.userInput || result.name,
+    name: result.name,
+    branch: result.branch ?? "",
+    is_active: true,
+    category: DISPATCH_CATEGORY.RUST_AGENT,
+    model: result.model,
+    agentExecMode: GUI_CONTROL_AGENT_EXEC_MODE,
+    agentDefinitionId: BUILTIN_GUI_CONTROL_DEF_ID,
+    agentIconId: GUI_CONTROL_AGENT_ICON_ID,
+    agentDisplayName: GUI_CONTROL_AGENT_NAME,
+    ...(result.accountId ? { accountId: result.accountId } : {}),
+    ...(result.background ? { background: true } : {}),
+    ...(result.workspacePath ? { repoPath: result.workspacePath } : {}),
+    ...(result.worktreePath ? { worktreePath: result.worktreePath } : {}),
+  });
+}
+
 export function GuiControlToggle(): React.ReactNode {
   const { t } = useTranslation("common");
-  const enabled = useAtomValue(guiControlEnabledAtom);
-  const toggleGuiControlEnabled = useSetAtom(toggleGuiControlEnabledAtom);
+  const open = useAtomValue(guiControlComposerOpenAtom);
+  const openGuiControl = useSetAtom(openGuiControlAtom);
+  const closeGuiControlComposer = useSetAtom(closeGuiControlComposerAtom);
   const voiceFeatureEnabled = useAtomValue(voiceInputEnabledAtom);
   const creatorDefaultLastModel = useValidatedLastPair();
   const setCreatorDefaultModel = useSetAtom(creatorDefaultModelSelectionAtom);
@@ -137,6 +294,8 @@ export function GuiControlToggle(): React.ReactNode {
   const [mode, setMode] = useState<GuiControlMode>(GUI_CONTROL_MODE.INPUT);
   const [draftText, setDraftText] = useState("");
   const [runStatus, setRunStatus] = useState<GuiControlRunStatus>("idle");
+  const [controlSessionId, setControlSessionId] = useState<string | null>(null);
+  const activityItems = useGuiControlActivity(controlSessionId);
 
   const placeholder =
     mode === GUI_CONTROL_MODE.SELECTION
@@ -195,16 +354,18 @@ export function GuiControlToggle(): React.ReactNode {
   }, [isCompactRow, observeCompact]);
 
   useEffect(() => {
-    if (!enabled || showVoiceUi) return;
+    if (!open || showVoiceUi) return;
     const frame = requestAnimationFrame(() => {
       composerInputRef.current?.focus();
     });
     return () => cancelAnimationFrame(frame);
-  }, [enabled, showVoiceUi]);
+  }, [open, showVoiceUi]);
 
   const handleSubmit = useCallback(() => {
     const text = composerInputRef.current?.getTextWithPills().trim() ?? "";
     if (!text || sendingRef.current) return;
+
+    openGuiControl();
 
     const prompt = buildControlPrompt(mode, text);
     const modelConfig = resolveControlModel(creatorDefaultLastModel);
@@ -229,8 +390,8 @@ export function GuiControlToggle(): React.ReactNode {
           const result = await sessionLaunch({
             category: DISPATCH_CATEGORY.RUST_AGENT,
             content: prompt,
-            name: "Agent Control",
-            agentDefinitionId: BUILTIN_OS_DEF_ID,
+            name: GUI_CONTROL_SESSION_NAME,
+            agentDefinitionId: BUILTIN_GUI_CONTROL_DEF_ID,
             keySource: modelConfig.keySource,
             ...(modelConfig.model ? { model: modelConfig.model } : {}),
             ...(modelConfig.accountId
@@ -239,6 +400,8 @@ export function GuiControlToggle(): React.ReactNode {
             ideContext,
           });
           controlSessionIdRef.current = result.sessionId;
+          setControlSessionId(result.sessionId);
+          upsertGuiControlSession(result);
         }
 
         setRunStatus("running");
@@ -258,13 +421,20 @@ export function GuiControlToggle(): React.ReactNode {
         sendingRef.current = false;
       }
     })();
-  }, [creatorDefaultLastModel, mode]);
+  }, [creatorDefaultLastModel, mode, openGuiControl]);
 
   const handleClose = useCallback(() => {
     if (voice.isRecording) voice.cancel();
     if (isModelOpen) setSelectorState({ isOpen: false });
-    toggleGuiControlEnabled();
-  }, [isModelOpen, setSelectorState, toggleGuiControlEnabled, voice]);
+    closeGuiControlComposer();
+  }, [closeGuiControlComposer, isModelOpen, setSelectorState, voice]);
+
+  const handleRefreshSession = useCallback(() => {
+    controlSessionIdRef.current = null;
+    setControlSessionId(null);
+    setRunStatus("idle");
+    requestAnimationFrame(() => composerInputRef.current?.focus());
+  }, []);
 
   const handleOpenModelSelector = useCallback(() => {
     setSelectorState({ isOpen: true });
@@ -293,7 +463,7 @@ export function GuiControlToggle(): React.ReactNode {
   }, []);
 
   useEffect(() => {
-    if (!enabled || !voiceFeatureEnabled) return;
+    if (!open || !voiceFeatureEnabled) return;
     const node = containerRef.current;
     if (!node) return;
     let shortcutActive = false;
@@ -321,12 +491,12 @@ export function GuiControlToggle(): React.ReactNode {
       node.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp, true);
     };
-  }, [enabled, voice, voiceFeatureEnabled]);
+  }, [open, voice, voiceFeatureEnabled]);
 
-  if (!enabled) return null;
+  if (!open) return null;
 
   const elevatedShadowClass =
-    "shadow-[0_18px_48px_rgba(0,0,0,0.24)] hover:shadow-[0_18px_48px_rgba(0,0,0,0.24)] focus-within:shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-primary-6)_15%,transparent),0_18px_48px_rgba(0,0,0,0.24)] dark:shadow-[0_18px_56px_rgba(0,0,0,0.55)] dark:hover:shadow-[0_18px_56px_rgba(0,0,0,0.55)] dark:focus-within:shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-primary-6)_18%,transparent),0_18px_56px_rgba(0,0,0,0.55)]";
+    "!shadow-[0_18px_48px_rgba(0,0,0,0.24)] hover:!shadow-[0_18px_48px_rgba(0,0,0,0.24)] focus-within:!shadow-[0_18px_48px_rgba(0,0,0,0.24)] active:!shadow-[0_18px_48px_rgba(0,0,0,0.24)] dark:!shadow-[0_18px_56px_rgba(0,0,0,0.55)] dark:hover:!shadow-[0_18px_56px_rgba(0,0,0,0.55)] dark:focus-within:!shadow-[0_18px_56px_rgba(0,0,0,0.55)] dark:active:!shadow-[0_18px_56px_rgba(0,0,0,0.55)]";
   const controlModelLabel = resolveControlModelLabel(creatorDefaultLastModel);
   const statusLabel =
     runStatus === "sending"
@@ -334,7 +504,8 @@ export function GuiControlToggle(): React.ReactNode {
       : runStatus === "error"
         ? t("status.error")
         : t("status.running");
-  const showStatusLine = runStatus !== "idle" || controlSessionIdRef.current;
+  const showStatusLine = runStatus !== "idle" || Boolean(controlSessionId);
+  const latestActivity = activityItems[0];
 
   return (
     <div
@@ -346,22 +517,40 @@ export function GuiControlToggle(): React.ReactNode {
         aria-hidden
       />
       {showStatusLine && (
-        <div className="pointer-events-auto z-10 mb-2 flex max-w-[min(720px,calc(100vw-48px))] items-center gap-2 rounded-full border border-border-2 bg-bg-1/90 px-3 py-1 text-[12px] text-text-2 shadow-sm backdrop-blur">
-          <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-primary-1 text-primary-6">
-            <Bot size={12} strokeWidth={1.8} />
-          </span>
-          <span className="font-medium text-text-1">
-            {t("terminology.osAgent")}
-          </span>
-          <span className="text-text-4">·</span>
-          <span>{statusLabel}</span>
-          <span className="text-text-4">·</span>
-          <span className="max-w-[260px] truncate">{controlModelLabel}</span>
+        <div className="pointer-events-auto z-10 mb-2 w-[min(600px,calc(100vw-48px))] rounded-2xl border border-border-2 bg-bg-2 px-3 py-2 text-[12px] text-text-2 shadow-sm backdrop-blur">
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-1 text-primary-6">
+              <MousePointerClick size={13} strokeWidth={1.8} />
+            </span>
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-center gap-1.5 text-text-1">
+                {latestActivity?.status === "running" && (
+                  <Loader2
+                    size={12}
+                    strokeWidth={1.8}
+                    className="animate-spin"
+                  />
+                )}
+                {latestActivity?.status === "failed" && (
+                  <XCircle size={12} strokeWidth={1.8} />
+                )}
+                {latestActivity?.status === "completed" && (
+                  <CheckCircle2 size={12} strokeWidth={1.8} />
+                )}
+                <span className="font-medium">
+                  {latestActivity?.title ?? statusLabel}
+                </span>
+              </div>
+              <div className="whitespace-normal break-words leading-5">
+                {latestActivity?.detail ?? controlModelLabel}
+              </div>
+            </div>
+          </div>
         </div>
       )}
       <ComposerShell
         variant={isCompactRow ? "pill" : "default"}
-        className={`pointer-events-auto z-10 w-[min(720px,calc(100vw-48px))] ${elevatedShadowClass}`}
+        className={`pointer-events-auto z-10 w-[min(600px,calc(100vw-48px))] ${elevatedShadowClass}`}
         data-action="gui-control.input"
       >
         {showVoiceUi ? (
@@ -389,6 +578,19 @@ export function GuiControlToggle(): React.ReactNode {
                   aria-label={t("actions.close")}
                 >
                   <X size={INPUT_AREA_BUTTONS.iconSize} strokeWidth={1.75} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRefreshSession}
+                  className={`${INPUT_AREA_BUTTONS.iconButtonBase} shrink-0 leading-none`}
+                  style={{ lineHeight: 0 }}
+                  aria-label={t("actions.refresh")}
+                  title={t("actions.refresh")}
+                >
+                  <RefreshCw
+                    size={INPUT_AREA_BUTTONS.iconSize}
+                    strokeWidth={1.75}
+                  />
                 </button>
                 <AgentControlModePill mode={mode} onClick={handleToggleMode} />
               </>

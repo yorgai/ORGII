@@ -21,12 +21,9 @@ import { useAtom, useAtomValue } from "jotai";
 import React, { useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { ACTION_ID, useActionSystemOptional } from "@src/ActionSystem";
 import { getMaterialConfig } from "@src/components/Glass/config";
 import { useRegionLuminance } from "@src/hooks/theme/useRegionLuminance";
-import {
-  ACTION_ID,
-  useActionSystemOptional,
-} from "@src/modules/WorkStation/ActionSystem";
 import { appGridConfigAtom } from "@src/store/ui/appGridAtom";
 import { resolvedBackgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
 import { classNames } from "@src/util/ui/classNames";

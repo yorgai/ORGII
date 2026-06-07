@@ -5,15 +5,14 @@
  */
 import { z } from "zod";
 
+import { ACTION_ID } from "@src/ActionSystem/actionIds";
+import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { PanelService } from "@src/services/panel";
 import type {
   BottomPanelTab,
   PrimarySidebarTabKey,
 } from "@src/store/ui/workStationAtom";
-
-import { ACTION_ID } from "../../actionIds";
-import { defineZodAction } from "../../schema/defineZodAction";
 
 // Source Control is no longer a regular sidebar tab — it lives in the
 // tab-specific Diff sidebar — so it's not exposed as a panel.show target.

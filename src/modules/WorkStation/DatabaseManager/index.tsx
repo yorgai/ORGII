@@ -8,8 +8,9 @@
  * - Shown when user switches to "data" mode.
  * - DatabaseLayout handles all panel orchestration
  */
-import { ActionSystemProvider } from "@/src/modules/WorkStation/ActionSystem";
 import React, { memo } from "react";
+
+import { ActionSystemProvider } from "@src/ActionSystem";
 
 import { DatabaseLayout } from "./DatabaseLayout";
 

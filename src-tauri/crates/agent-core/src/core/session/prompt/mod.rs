@@ -7,6 +7,7 @@
 
 pub mod builder;
 pub(crate) mod cache;
+pub(crate) mod gui_control_retrieval;
 pub(crate) mod helpers;
 pub mod ide_context;
 pub(crate) mod registry;

@@ -5,9 +5,11 @@
 //! same policy-filtered tool surface used when building the prompt, so it is
 //! the single source of truth for runtime tool availability.
 
-use agent_core::definitions::{OS_AGENT_ID, SDE_AGENT_ID};
+use agent_core::definitions::{GUI_CONTROL_AGENT_ID, OS_AGENT_ID, SDE_AGENT_ID};
 use agent_core::tools::names::{
-    MANAGE_AGENT_DEF, MANAGE_PROJECT, MANAGE_SESSION, MANAGE_WORK_ITEM,
+    ASK_USER_QUESTIONS, CONTROL_BROWSER_WITH_PLAYWRIGHT, CONTROL_DESKTOP_WITH_PEEKABOO,
+    CONTROL_ORGII, EDIT_FILE, MANAGE_AGENT_DEF, MANAGE_PROJECT, MANAGE_SESSION, MANAGE_WORK_ITEM,
+    READ_FILE, RUN_SHELL,
 };
 
 use super::tmp_workspace_path;
@@ -206,6 +208,104 @@ pub async fn agent_definition_management_tools_follow_effective_tools_source(cfg
             (
                 "OS management prompt metadata carries canonical management capability",
                 os_management_metadata_is_canonical,
+            ),
+        ],
+    )
+}
+
+pub async fn gui_control_agent_has_narrow_effective_tools(cfg: &Config) -> bool {
+    harness::reset_agent_config(cfg, GUI_CONTROL_AGENT_ID).await;
+
+    let session_id = format!("{}-gui-control-tools", cfg.session_prefix);
+    let project = tmp_workspace_path("gui-control-tools");
+    let launch = harness::launch_seed_only_with_opts(
+        cfg,
+        &project,
+        &[],
+        &harness::LaunchSeedOnlyOpts {
+            session_id_hint: Some(&session_id),
+            agent_definition_id: Some(GUI_CONTROL_AGENT_ID),
+            agent_exec_mode: Some("build"),
+            initialize_runtime: true,
+        },
+    )
+    .await;
+    let runtime_session_id = launch
+        .as_ref()
+        .ok()
+        .and_then(|launch| launch.session_id.as_deref())
+        .unwrap_or(&session_id);
+    let effective_tools = harness::fetch_effective_tools(cfg, runtime_session_id, "build").await;
+
+    let _ = harness::cleanup_sde_session(cfg, runtime_session_id).await;
+    harness::reset_agent_config(cfg, GUI_CONTROL_AGENT_ID).await;
+
+    let prompt_tools = effective_tools
+        .as_ref()
+        .map(|tools| tools.prompt_tool_names.as_slice())
+        .unwrap_or(&[]);
+    let registered_tools = effective_tools
+        .as_ref()
+        .map(|tools| tools.registered_tool_names.as_slice())
+        .unwrap_or(&[]);
+    let mode = effective_tools
+        .as_ref()
+        .map(|tools| tools.agent_exec_mode.as_str())
+        .unwrap_or_default();
+
+    harness::print_result(
+        "GUI Control agent has narrow effective tools",
+        &format!(
+            "session={} prompt_tools={:?}",
+            runtime_session_id, prompt_tools
+        ),
+        &[
+            (
+                "GUI Control seed-only launch initialized runtime",
+                launch.as_ref().is_ok_and(|launch| launch.ok),
+            ),
+            ("Effective-tools HTTP succeeded", effective_tools.is_ok()),
+            ("Effective mode is build", mode == "build"),
+            (
+                "Prompt includes GUI action bridge tool",
+                contains_tool(prompt_tools, CONTROL_ORGII),
+            ),
+            (
+                "Prompt includes session bridge tool",
+                contains_tool(prompt_tools, MANAGE_SESSION),
+            ),
+            (
+                "Prompt includes ask-user tool",
+                contains_tool(prompt_tools, ASK_USER_QUESTIONS),
+            ),
+            ("Prompt includes read_file", contains_tool(prompt_tools, READ_FILE)),
+            (
+                "Prompt excludes shell",
+                !contains_tool(prompt_tools, RUN_SHELL),
+            ),
+            (
+                "Prompt excludes edit_file",
+                !contains_tool(prompt_tools, EDIT_FILE),
+            ),
+            (
+                "Prompt excludes desktop automation",
+                !contains_tool(prompt_tools, CONTROL_DESKTOP_WITH_PEEKABOO),
+            ),
+            (
+                "Prompt excludes browser automation",
+                !contains_tool(prompt_tools, CONTROL_BROWSER_WITH_PLAYWRIGHT),
+            ),
+            (
+                "Registry includes same GUI action bridge tool",
+                contains_tool(registered_tools, CONTROL_ORGII),
+            ),
+            (
+                "Registry includes same session bridge tool",
+                contains_tool(registered_tools, MANAGE_SESSION),
+            ),
+            (
+                "Registry excludes shell",
+                !contains_tool(registered_tools, RUN_SHELL),
             ),
         ],
     )

@@ -6,10 +6,10 @@
  *
  * Uses dispatch() for all git operations to ensure AI/human unification.
  */
-import { useActionSystemOptional } from "@/src/modules/WorkStation/ActionSystem";
 import { type MutableRefObject, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useActionSystemOptional } from "@src/ActionSystem";
 import { getGitRemotes } from "@src/api/http/git/remotes";
 import {
   LARGE_PUSH_THRESHOLD,

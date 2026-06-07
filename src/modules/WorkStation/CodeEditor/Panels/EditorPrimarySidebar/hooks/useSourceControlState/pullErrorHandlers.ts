@@ -2,12 +2,12 @@
  * Shared pull error handling logic for useSyncOperations.
  * Both handleSync and handlePull share the same dialog flow for pull errors.
  */
+import type { TypedDispatch } from "@src/ActionSystem";
 import {
   PullConflictDialog,
   RebaseConflictDialog,
 } from "@src/components/GitDialogs";
 import type { GitOperationResult } from "@src/hooks/git/useGitOperations";
-import type { TypedDispatch } from "@src/modules/WorkStation/ActionSystem/ActionSystemContext";
 import type { GitFile } from "@src/types/git/types";
 
 export interface HandlePullErrorOptions {

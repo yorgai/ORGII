@@ -22,12 +22,12 @@
  */
 import type { ZodTypeAny } from "zod";
 
+import type { ZodAction } from "@src/ActionSystem/schema/defineZodAction";
+import { zodActionRegistry } from "@src/ActionSystem/schema/zodRegistry";
 import { FileService } from "@src/services/file";
 import { GitOperationsService, GitService } from "@src/services/git";
 import { TestService } from "@src/services/test";
 
-import type { ZodAction } from "../schema/defineZodAction";
-import { zodActionRegistry } from "../schema/zodRegistry";
 import { appViewZodActions } from "./actions/appViewActions.zod";
 import { editorZodActions } from "./actions/editorActions.zod";
 import { editorTabZodActions } from "./actions/editorTabActions.zod";

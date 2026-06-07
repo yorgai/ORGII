@@ -6,6 +6,8 @@
  */
 import { z } from "zod";
 
+import { ACTION_ID } from "@src/ActionSystem/actionIds";
+import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import {
   closeGlobalSpotlight,
@@ -14,8 +16,6 @@ import {
 import { FileOperationsService } from "@src/services/file";
 import { searchFilesNative } from "@src/util/platform/tauri/fileSearch";
 
-import { ACTION_ID } from "../../../actionIds";
-import { defineZodAction } from "../../../schema/defineZodAction";
 import { resolvePath } from "./utils";
 
 export function createFileOpenActions(repoPath: string) {

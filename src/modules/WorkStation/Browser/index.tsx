@@ -9,8 +9,9 @@
  * - BrowserLayout handles all panel orchestration
  * - Supports two modes: Browser (webview) and Designer (.orgii canvas)
  */
-import { ActionSystemProvider } from "@/src/modules/WorkStation/ActionSystem";
 import React, { memo } from "react";
+
+import { ActionSystemProvider } from "@src/ActionSystem";
 
 import { BrowserLayout } from "./BrowserLayout";
 import type { BrowserProps } from "./types";

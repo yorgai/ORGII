@@ -1,7 +1,265 @@
 /**
- * App Navigation Actions — top-level ActionSystem
+ * App Navigation Actions
  *
- * Re-exports from the canonical WorkStation ActionSystem to avoid duplicating
- * action definitions. Both registries share the same actions.
+ * App-level routing and view mode switching.
+ * Uses React Router navigate() under the hood via the global Jotai store.
+ *
+ * Category: "app"
  */
-export { appNavigationZodActions } from "@src/modules/WorkStation/ActionSystem/actions/navigationActions.zod";
+import { z } from "zod";
+
+import { ACTION_ID } from "@src/ActionSystem/actionIds";
+import { defineAppActionRegistration } from "@src/ActionSystem/schema/actionRegistration";
+import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
+import { buildIntegrationsPath } from "@src/config/mainAppPaths";
+import { ROUTES } from "@src/config/routes";
+import {
+  activeSessionIdAtom,
+  workstationActiveSessionIdAtom,
+} from "@src/store/session";
+import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
+
+// ============================================
+// Helpers
+// ============================================
+
+/**
+ * Navigate using the app's router.
+ * Since we can't use React hooks outside components, we dispatch
+ * a custom event that the AppShell listens for.
+ */
+function appNavigate(path: string, replace = false): void {
+  window.dispatchEvent(
+    new CustomEvent("action-system-navigate", {
+      detail: { path, replace },
+    })
+  );
+}
+
+function defineRouteNavigationAction(
+  id: string,
+  description: string,
+  path: string,
+  successMessage: string,
+  examples: string[]
+) {
+  return defineZodAction(
+    {
+      id,
+      category: "app",
+      description,
+      params: z.object({}),
+      layer: "gui",
+      examples,
+    },
+    async () => {
+      appNavigate(path);
+      return { success: true, message: successMessage };
+    }
+  );
+}
+
+// ============================================
+// Actions
+// ============================================
+
+const appNavigateAction = defineZodAction(
+  {
+    id: ACTION_ID.APP_NAVIGATE,
+    category: "app",
+    description: "Navigate to any app route by path",
+    params: z.object({
+      path: z.string().describe("Route path (e.g. /orgii/app/settings)"),
+      title: z.string().optional().describe("Route title metadata"),
+      icon: z.string().optional().describe("Route icon metadata"),
+      replace: z.boolean().optional().describe("Replace current history entry"),
+    }),
+    layer: "gui",
+    examples: [
+      "navigate to settings",
+      "go to the market",
+      "open the start page",
+    ],
+  },
+  async ({ path, replace }) => {
+    appNavigate(path, replace);
+    return { success: true, message: `Navigated to ${path}` };
+  }
+);
+
+const appGoToSettings = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_SETTINGS,
+  "Open the Settings page",
+  ROUTES.app.settings.path,
+  "Opened settings",
+  ["open settings"]
+);
+
+const appGoToEditor = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_EDITOR,
+  "Switch to the Code Editor (Workstation)",
+  ROUTES.workStation.code.path,
+  "Switched to Code Editor",
+  ["open the code editor", "switch to editor"]
+);
+
+const appGoToBrowser = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_BROWSER,
+  "Switch to the Browser (Workstation)",
+  ROUTES.workStation.browser.path,
+  "Switched to Browser",
+  ["open the browser", "switch to browser"]
+);
+
+const appGoToDatabase = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_DATABASE,
+  "Switch to the Database Manager (Workstation)",
+  ROUTES.workStation.database.path,
+  "Switched to Database Manager",
+  ["open the database manager", "switch to database"]
+);
+
+const appGoToChat = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_CHAT,
+  "Switch to Chat (Workstation)",
+  ROUTES.workStation.chat.path,
+  "Switched to Chat",
+  ["open chat", "switch to chat", "show chat"]
+);
+
+const appGoToStartPage = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_START_PAGE,
+  "Navigate to the Start Page",
+  ROUTES.app.home.start.path,
+  "Opened Start Page",
+  ["go home", "open start page"]
+);
+
+const appGoToMarket = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_MARKET,
+  "Open the Token Market page",
+  ROUTES.app.market.tokenMarket.path,
+  "Opened Token Market",
+  ["open the market", "go to token market"]
+);
+
+const appGoToProjects = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_STORIES,
+  "Switch to the Project Manager",
+  ROUTES.workStation.project.path,
+  "Switched to Project Manager",
+  ["open projects", "open project manager"]
+);
+
+const appGoToDevRecord = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_DEV_RECORD,
+  "Open the Dev Record page",
+  ROUTES.app.journey.record.path,
+  "Opened Dev Record",
+  ["open dev record", "show development record"]
+);
+
+const appGoToChangelog = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_CHANGELOG,
+  "Open the Changelog",
+  ROUTES.app.home.changelog.path,
+  "Opened Changelog",
+  ["open changelog", "show changes"]
+);
+
+const appGoToOpsControl = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_OPS_CONTROL,
+  "Open Ops Control",
+  ROUTES.workStation.kanban.path,
+  "Opened Ops Control",
+  ["open ops control", "open kanban"]
+);
+
+const appGoToAgentOrgs = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_AGENT_ORGS,
+  "Open Agent Orgs",
+  ROUTES.app.home.agentOrgs.path,
+  "Opened Agent Orgs",
+  ["open agent orgs", "show agents"]
+);
+
+const appGoToIntegrations = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_INTEGRATIONS,
+  "Open Agent Orgs integrations",
+  buildIntegrationsPath({ category: "models" }),
+  "Opened integrations",
+  ["open integrations", "manage models"]
+);
+
+const appGoToConnections = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_CONNECTIONS,
+  "Open integration connections",
+  buildIntegrationsPath({ category: "connections" }),
+  "Opened integration connections",
+  ["open connections", "manage connections", "connect github"]
+);
+
+const appGoToModelKeys = defineRouteNavigationAction(
+  ACTION_ID.APP_GO_TO_MODEL_KEYS,
+  "Open model key accounts",
+  `${buildIntegrationsPath({ category: "models" })}?modelsTab=my-accounts`,
+  "Opened model key accounts",
+  ["open model keys", "manage accounts", "manage keys"]
+);
+
+const appGoToSession = defineZodAction(
+  {
+    id: ACTION_ID.APP_GO_TO_SESSION,
+    category: "app",
+    description: "Navigate to an agent session",
+    params: z.object({
+      sessionId: z
+        .string()
+        .optional()
+        .describe("Session ID to open. Omit for new session."),
+    }),
+    layer: "gui",
+    examples: ["start a new session", "open session abc123"],
+  },
+  async ({ sessionId }) => {
+    const store = getInstrumentedStore();
+    if (sessionId) {
+      store.set(workstationActiveSessionIdAtom, sessionId);
+      store.set(activeSessionIdAtom, sessionId);
+      appNavigate(ROUTES.workStation.base.path);
+      return { success: true, message: `Opened session ${sessionId}` };
+    }
+    store.set(workstationActiveSessionIdAtom, null);
+    store.set(activeSessionIdAtom, null);
+    appNavigate(ROUTES.workStation.base.path);
+    return { success: true, message: "Opened new session" };
+  }
+);
+
+// ============================================
+// Export
+// ============================================
+
+export const appNavigationZodActions = [
+  appNavigateAction,
+  appGoToSettings,
+  appGoToEditor,
+  appGoToBrowser,
+  appGoToDatabase,
+  appGoToChat,
+  appGoToMarket,
+  appGoToStartPage,
+  appGoToProjects,
+  appGoToDevRecord,
+  appGoToChangelog,
+  appGoToOpsControl,
+  appGoToAgentOrgs,
+  appGoToIntegrations,
+  appGoToConnections,
+  appGoToModelKeys,
+  appGoToSession,
+];
+
+export const appNavigationActionRegistration = defineAppActionRegistration(
+  appNavigationZodActions
+);

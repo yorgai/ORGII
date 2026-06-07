@@ -57,7 +57,8 @@ pub const SUBAGENT_RETIRED_TOOL_ALIASES: &[&str] = &["task", "spawn_sub_agent"];
 /// defence-in-depth.
 pub const DEFAULT_SUBAGENT_DISABLED: &[&str] = &[
     tool_names::MANAGE_NODES,
-    // tool_names::CONTROL_ORGII, // Tool disabled entirely (cowork / voice mode WIP)
+    tool_names::CONTROL_ORGII,
+    tool_names::SPOTLIGHT,
     tool_names::DB_EXPLORE,
     tool_names::DB_RUN,
     tool_names::QUERY_LSP,
@@ -118,7 +119,8 @@ pub fn derive_disabled_tools(restrict_to: &[String], excluded: &[String]) -> Has
 /// keeps Settings/Wizard affordances aligned with the default harness role.
 pub fn supported_agents_for(tool_name: &str) -> Vec<AgentKind> {
     match tool_name {
-        tool_names::MANAGE_SESSION
+        tool_names::CONTROL_ORGII
+        | tool_names::MANAGE_SESSION
         | tool_names::MANAGE_PROJECT
         | tool_names::MANAGE_WORK_ITEM
         | tool_names::MANAGE_AGENT_DEF => vec![AgentKind::Os, AgentKind::Custom],

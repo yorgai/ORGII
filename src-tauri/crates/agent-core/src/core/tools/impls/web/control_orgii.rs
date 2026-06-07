@@ -16,17 +16,19 @@
 //! 3. Frontend calls `agent_ide_action_result` Tauri command with the result.
 //! 4. Bridge resolves the pending oneshot channel and returns the result.
 //!
-//! The user-facing `control_orgii` LLM tool that wrapped this bridge has been
-//! removed; the bridge itself stays because non-LLM call sites still need it.
+//! `control_orgii` wraps this bridge for the dedicated GUI Control agent;
+//! other tools use the same bridge for session and coding dispatch.
 
+use async_trait::async_trait;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tokio::sync::oneshot;
 use tracing::{info, warn};
 
 use crate::bus::broadcast_event;
-use crate::tools::traits::{required_string, ToolError};
+use crate::tools::names as tool_names;
+use crate::tools::traits::{required_string, Tool, ToolError};
 
 /// Maximum number of pending IDE action requests (FIFO eviction).
 const MAX_PENDING: usize = 50;
@@ -38,6 +40,7 @@ const IDE_ACTION_TIMEOUT_SECS: u64 = 10;
 pub struct ActionBridgeResult {
     pub success: bool,
     pub message: String,
+    pub data: Option<Value>,
 }
 
 /// Shared bridge for pending GUI action requests.
@@ -109,9 +112,164 @@ impl ActionBridge {
     }
 }
 
+pub struct OrgiiControlTool {
+    bridge: Arc<ActionBridge>,
+}
+
+impl OrgiiControlTool {
+    pub fn new(bridge: Arc<ActionBridge>) -> Self {
+        Self { bridge }
+    }
+}
+
+#[async_trait]
+impl Tool for OrgiiControlTool {
+    fn name(&self) -> &str {
+        tool_names::CONTROL_ORGII
+    }
+
+    fn category(&self) -> &str {
+        crate::tools::categories::WEB
+    }
+
+    fn description(&self) -> &str {
+        "Inspect and control the ORGII GUI through the frontend ActionSystem. Prefer action=gui.inspect to discover registered actions and visible controls, then action=gui.execute or a direct registered action to execute one."
+    }
+
+    fn parameters(&self) -> Value {
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["dispatch"],
+                    "description": "Optional. Omit this for normal use; dispatch is the only preferred operation."
+                },
+                "action": {
+                    "type": "string",
+                    "description": "Registered frontend ActionSystem action ID. Use gui.inspect to discover actions/controls, gui.execute to execute a manifest target, or an exact registered action ID for obvious actions."
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Deprecated. Put query inside params when using action=gui.inspect."
+                },
+                "params": {
+                    "type": "object",
+                    "description": "Parameters for the selected action. Use an empty object when the action has no parameters.",
+                    "additionalProperties": true
+                }
+            },
+            "required": []
+        })
+    }
+
+    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+        execute_gui_control_operation(&self.bridge, tool_names::CONTROL_ORGII, params).await
+    }
+}
+
 // ============================================================================
 // Shared execution logic
 // ============================================================================
+
+async fn execute_gui_control_operation(
+    bridge: &ActionBridge,
+    tool_name: &str,
+    params: Value,
+) -> Result<String, ToolError> {
+    let operation = params
+        .get("operation")
+        .and_then(Value::as_str)
+        .unwrap_or("dispatch")
+        .to_string();
+
+    match operation.as_str() {
+        "list" | "inspect" => {
+            execute_gui_operation_with_timeout(
+                bridge,
+                tool_name,
+                &operation,
+                params,
+                IDE_ACTION_TIMEOUT_SECS,
+            )
+            .await
+        }
+        "dispatch" => execute_gui_action(bridge, tool_name, params).await,
+        other => Err(ToolError::InvalidParams(format!(
+            "Unsupported control_orgii operation: {other}"
+        ))),
+    }
+}
+
+fn format_bridge_result(tool_name: &str, result: ActionBridgeResult) -> String {
+    if result.success {
+        match result.data {
+            Some(data) => serde_json::to_string_pretty(&data).unwrap_or(result.message),
+            None => result.message,
+        }
+    } else {
+        format!("{tool_name} action failed: {}", result.message)
+    }
+}
+
+async fn execute_gui_operation_with_timeout(
+    bridge: &ActionBridge,
+    tool_name: &str,
+    operation: &str,
+    params: Value,
+    timeout_secs: u64,
+) -> Result<String, ToolError> {
+    let action = params
+        .get("action")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .unwrap_or_else(|| "gui.inspect".to_string());
+    let mut action_params = params
+        .get("params")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
+    let query = params.get("query").cloned();
+    let correlation_id = uuid::Uuid::new_v4().to_string();
+
+    info!(
+        "[{tool_name}] GUI operation: operation={operation}, action={action}, correlation_id={correlation_id}"
+    );
+
+    let (sender, receiver) = oneshot::channel();
+    bridge.insert(correlation_id.clone(), sender);
+
+    if let Some(query) = query {
+        action_params["query"] = query;
+    }
+
+    broadcast_event(
+        "agent:ide_action",
+        serde_json::json!({
+            "sessionId": "",
+            "correlationId": correlation_id,
+            "operation": operation,
+            "action": action,
+            "params": action_params,
+        }),
+    );
+
+    match tokio::time::timeout(std::time::Duration::from_secs(timeout_secs), receiver).await {
+        Ok(Ok(result)) => Ok(format_bridge_result(tool_name, result)),
+        Ok(Err(_)) => Err(ToolError::ExecutionFailed(
+            "Action channel closed unexpectedly. The frontend may not be connected.".to_string(),
+        )),
+        Err(_) => {
+            let mut pending = bridge.pending.lock().unwrap();
+            let mut order = bridge.order.lock().unwrap();
+            pending.remove(&correlation_id);
+            order.retain(|key| key != &correlation_id);
+
+            Err(ToolError::Timeout(format!(
+                "{tool_name} operation '{operation}' timed out after {timeout_secs}s. The frontend may not be listening."
+            )))
+        }
+    }
+}
 
 /// Execute an action through the frontend ActionSystem via the `ActionBridge`
 /// request/response mechanism (delivered over the Tauri IPC Channel).
@@ -171,13 +329,7 @@ pub async fn execute_gui_action_with_timeout(
 
     // Wait for the frontend to respond (with timeout)
     match tokio::time::timeout(std::time::Duration::from_secs(timeout_secs), receiver).await {
-        Ok(Ok(result)) => {
-            if result.success {
-                Ok(result.message)
-            } else {
-                Ok(format!("{tool_name} action failed: {}", result.message))
-            }
-        }
+        Ok(Ok(result)) => Ok(format_bridge_result(tool_name, result)),
         Ok(Err(_)) => Err(ToolError::ExecutionFailed(
             "Action channel closed unexpectedly. The frontend may not be connected.".to_string(),
         )),

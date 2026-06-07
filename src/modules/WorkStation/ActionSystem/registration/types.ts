@@ -5,7 +5,10 @@
  */
 import type { z } from "zod";
 
-import type { ActionMeta, ZodAction } from "../schema/defineZodAction";
+import type {
+  ActionMeta,
+  ZodAction,
+} from "@src/ActionSystem/schema/defineZodAction";
 
 /**
  * Action result returned by executors

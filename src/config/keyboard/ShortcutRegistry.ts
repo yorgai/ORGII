@@ -181,7 +181,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   },
   {
     id: "toggle_gui_control",
-    description: "Toggle Agent Control",
+    description: "Open Agent Control",
     key: "g",
     modifiers: ["cmd", "alt"],
     accelerator: "CmdOrCtrl+Alt+G",

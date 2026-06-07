@@ -166,6 +166,30 @@ describe("ZodActionRegistry", () => {
 
       expect(ids).toEqual(["layer.guiDefault", "layer.guiExplicit"]);
     });
+
+    it("getGUIControlManifest preserves GUI action metadata and excludes action-layer actions", () => {
+      const manifest = registry.getGUIControlManifest();
+      const ids = manifest.actions.map((action) => action.id);
+
+      expect(ids).toEqual(["layer.guiDefault", "layer.guiExplicit"]);
+      expect(ids).not.toContain("layer.actionOnly");
+      expect(manifest.actions[0]).toMatchObject({
+        kind: "action",
+        id: "layer.guiDefault",
+        category: "view",
+        description: "Implicit gui layer",
+        layer: "gui",
+        tags: [],
+        examples: [],
+      });
+      expect(manifest.actions[0].paramsSchema).toBeDefined();
+      expect(
+        Object.prototype.hasOwnProperty.call(
+          manifest.actions[0].paramsSchema as Record<string, unknown>,
+          "$schema"
+        )
+      ).toBe(false);
+    });
   });
 
   describe("getActionLayer", () => {

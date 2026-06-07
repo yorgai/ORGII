@@ -19,16 +19,17 @@
 import { useAtomValue } from "jotai";
 import { useEffect, useRef } from "react";
 
+import {
+  ACTION_ID,
+  initializeServices,
+  registerCoreActions,
+  zodActionRegistry,
+} from "@src/ActionSystem";
 import { sendIdeActionResult } from "@src/api/tauri/agent";
 import {
   AI_VISUALIZER_CONFIG,
   getGlobalVisualizer,
 } from "@src/components/AIActionVisualizer";
-import {
-  initializeServices,
-  registerCoreActions,
-  zodActionRegistry,
-} from "@src/modules/WorkStation/ActionSystem";
 import { currentRepoAtom } from "@src/store/repo";
 import { guiControlEnabledAtom } from "@src/store/ui/uiAtom";
 
@@ -39,11 +40,45 @@ const GUI_CONTROL_REQUIRED_MESSAGE =
 // Types
 // ============================================
 
+type IDEActionOperation = "list" | "inspect" | "dispatch";
+
 interface IDEActionDetail {
   correlationId: string;
-  action: string;
+  action?: string;
   params: Record<string, unknown>;
+  operation?: IDEActionOperation;
   sessionId?: string;
+}
+
+function getStringParam(
+  params: Record<string, unknown> | undefined,
+  key: string
+): string | undefined {
+  const value = params?.[key];
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+}
+
+function matchesGuiManifestQuery(
+  action: ReturnType<
+    typeof zodActionRegistry.getGUIControlManifest
+  >["actions"][number],
+  query: string
+): boolean {
+  const haystack = [
+    action.id,
+    action.category,
+    action.description,
+    action.longDescription,
+    ...(action.tags ?? []),
+    ...(action.examples ?? []),
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(query.toLowerCase());
 }
 
 // ============================================
@@ -61,6 +96,7 @@ export function useOSAgentIDEActions(): void {
   const guiControlEnabled = useAtomValue(guiControlEnabledAtom);
   const cleanupRef = useRef<(() => void) | null>(null);
   const guiControlEnabledRef = useRef(false);
+  const handledCorrelationIdsRef = useRef<Set<string>>(new Set());
   const repoPathRef = useRef<string>("");
 
   useEffect(() => {
@@ -88,11 +124,72 @@ export function useOSAgentIDEActions(): void {
 
     async function handleIDEAction(evt: Event) {
       const detail = (evt as CustomEvent<IDEActionDetail>).detail;
-      if (!detail?.correlationId || !detail?.action) return;
+      if (!detail?.correlationId) return;
 
-      const { correlationId, action, params } = detail;
+      if (handledCorrelationIdsRef.current.has(detail.correlationId)) return;
+      handledCorrelationIdsRef.current.add(detail.correlationId);
+      if (handledCorrelationIdsRef.current.size > 100) {
+        const oldestCorrelationId = handledCorrelationIdsRef.current
+          .values()
+          .next().value;
+        if (oldestCorrelationId)
+          handledCorrelationIdsRef.current.delete(oldestCorrelationId);
+      }
+
+      const { correlationId, params } = detail;
+      const operation = detail.operation ?? "dispatch";
+      const action = detail.action ?? getStringParam(params, "action");
 
       try {
+        if (operation === "list") {
+          const query = getStringParam(params, "query");
+          const inspectResult = await zodActionRegistry.execute(
+            ACTION_ID.GUI_INSPECT,
+            {
+              ...(query ? { query } : {}),
+            }
+          );
+          await sendIdeActionResult(correlationId, {
+            success: inspectResult.success,
+            message: inspectResult.message ?? "Collected GUI manifest",
+            data: inspectResult.data,
+          });
+          return;
+        }
+
+        if (operation === "inspect") {
+          const targetAction = action ?? getStringParam(params, "actionId");
+          const manifest = zodActionRegistry.getGUIControlManifest();
+          const query = getStringParam(params, "query");
+          const actions = targetAction
+            ? manifest.actions.filter(
+                (manifestAction) => manifestAction.id === targetAction
+              )
+            : query
+              ? manifest.actions.filter((manifestAction) =>
+                  matchesGuiManifestQuery(manifestAction, query)
+                )
+              : manifest.actions;
+
+          await sendIdeActionResult(correlationId, {
+            success: targetAction ? actions.length === 1 : true,
+            message:
+              targetAction && actions.length === 0
+                ? `Unknown GUI action: ${targetAction}`
+                : `Inspected ${actions.length} GUI action${actions.length === 1 ? "" : "s"}`,
+            data: { actions },
+          });
+          return;
+        }
+
+        if (!action) {
+          await sendIdeActionResult(correlationId, {
+            success: false,
+            message: "Missing action for GUI dispatch",
+          });
+          return;
+        }
+
         // Check if actions are registered (registry might be empty if no repo is selected)
         if (!zodActionRegistry.has(action)) {
           // Return a helpful error listing available IDE-exposed actions
@@ -118,8 +215,14 @@ export function useOSAgentIDEActions(): void {
         const actionObj = zodActionRegistry.get(action);
         const category = actionObj?.meta.category ?? "";
 
+        const isReadOnlyGuiInspect = action === ACTION_ID.GUI_INSPECT;
+
         // Session actions are backend session control; GUI-layer actions require the explicit global toggle.
-        if (!guiControlEnabledRef.current && category !== "session") {
+        if (
+          !isReadOnlyGuiInspect &&
+          !guiControlEnabledRef.current &&
+          category !== "session"
+        ) {
           await sendIdeActionResult(correlationId, {
             success: false,
             message: `${GUI_CONTROL_REQUIRED_MESSAGE} (action="${action}")`,
@@ -145,10 +248,7 @@ export function useOSAgentIDEActions(): void {
           return;
         }
 
-        // ── AI cursor visualization (non-blocking) ──
-        // Show the AI cursor for dispatch actions so the user can follow
-        // what the agent is doing. Fire-and-forget; doesn't block execution.
-        const visualizer = getGlobalVisualizer();
+        const visualizer = isReadOnlyGuiInspect ? null : getGlobalVisualizer();
         if (visualizer) {
           const zodAction = zodActionRegistry.get(action);
           const description = zodAction?.meta.description ?? action;
@@ -159,10 +259,8 @@ export function useOSAgentIDEActions(): void {
           });
         }
 
-        // Execute the action through the ActionSystem (Zod-validated)
         const result = await zodActionRegistry.execute(action, params);
 
-        // Hide visualization after action completes
         if (visualizer) {
           setTimeout(() => {
             visualizer.hide();
@@ -176,6 +274,7 @@ export function useOSAgentIDEActions(): void {
             (result.success
               ? `Action "${action}" completed successfully`
               : `Action "${action}" failed`),
+          data: result.data,
         });
       } catch (error) {
         const errorVisualizer = getGlobalVisualizer();

@@ -9,10 +9,10 @@
  *
  * Uses dispatch() for all stash operations to ensure AI/human unification.
  */
-import { useActionSystemOptional } from "@/src/modules/WorkStation/ActionSystem";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useActionSystemOptional } from "@src/ActionSystem";
 import { gitApi } from "@src/api/http/git";
 import type { StashEntry } from "@src/api/http/git/types";
 import { showGitActionDialogSafely } from "@src/util/dialogs/gitActionDialog";

@@ -60,7 +60,10 @@ import {
 } from "@src/store/ui/chatImageAtom";
 import { draftHasContentAtom } from "@src/store/ui/draftAtom";
 import type { SlashItem } from "@src/types/extensions";
-import { getRustAgentType } from "@src/util/session/sessionDispatch";
+import {
+  BUILTIN_GUI_CONTROL_DEF_ID,
+  getRustAgentType,
+} from "@src/util/session/sessionDispatch";
 
 export interface UseSessionCreatorShellOptions {
   onSessionStart?: () => void;
@@ -414,9 +417,12 @@ export function useSessionCreatorShell({
   const selectedAgentDefinition = useMemo(
     () =>
       selectedAgentDefId
-        ? [...builtInAgents, ...customAgents].find(
-            (agent) => agent.id === selectedAgentDefId
-          )
+        ? [
+            ...builtInAgents.filter(
+              (agent) => agent.id !== BUILTIN_GUI_CONTROL_DEF_ID
+            ),
+            ...customAgents,
+          ].find((agent) => agent.id === selectedAgentDefId)
         : undefined,
     [builtInAgents, customAgents, selectedAgentDefId]
   );

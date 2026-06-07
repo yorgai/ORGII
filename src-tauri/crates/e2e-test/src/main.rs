@@ -98,6 +98,11 @@ fn all_scenarios() -> Vec<ScenarioDef> {
         ),
         scenario!(
             "sde",
+            "gui-control-agent-effective-tools",
+            sde::gui_control_agent_has_narrow_effective_tools
+        ),
+        scenario!(
+            "sde",
             "agent-definition-sde-endpoint-rejects-missing-explicit-definition",
             sde::agent_definition_sde_endpoint_rejects_missing_explicit_definition
         ),

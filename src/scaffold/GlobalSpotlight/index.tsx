@@ -409,6 +409,8 @@ const GlobalSpotlightInner: React.FC<
         return t("selectors.spotlight.placeholders.branch");
       case "source":
         return t("selectors.spotlight.placeholders.source");
+      case "language":
+        return t("settings:general.languageSearchPlaceholder");
       default:
         return t("selectors.spotlight.placeholders.actions");
     }

@@ -13,14 +13,15 @@ import {
   useRef,
 } from "react";
 
-import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
-import { showScaleMessage } from "@src/hooks/navigation/useGlobalShortcuts/types";
-import { useFilteredItems } from "@src/hooks/search";
 import {
   ACTION_ID,
   type ActionId,
   useActionSystemOptional,
-} from "@src/modules/WorkStation/ActionSystem";
+} from "@src/ActionSystem";
+import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
+import { showScaleMessage } from "@src/hooks/navigation/useGlobalShortcuts/types";
+import { useFilteredItems } from "@src/hooks/search";
+import type { SupportedLanguage } from "@src/i18n";
 import { AppViewService } from "@src/services/app";
 import { PanelService } from "@src/services/panel";
 import { WorkStationViewService } from "@src/services/workStation";
@@ -135,13 +136,13 @@ export function useSpotlight(
     (
       actionId: ActionId,
       payload: Record<string, unknown>,
-      fallback: () => void
+      fallback?: () => void
     ) => {
       if (actionSystem?.isValidAction(actionId)) {
         void actionSystem.dispatch(actionId, payload, "user");
-      } else {
-        fallback();
+        return;
       }
+      fallback?.();
     },
     [actionSystem]
   );
@@ -214,9 +215,16 @@ export function useSpotlight(
 
   const handleSelectStaticAction = useCallback(
     (action: SpotlightStaticActionDefinition) => {
-      dispatchActionOrFallback(action.actionId, action.payload, () => {
-        runStaticActionFallback(action.fallback);
-      });
+      const fallback = action.fallback;
+      dispatchActionOrFallback(
+        action.actionId,
+        action.payload,
+        fallback
+          ? () => {
+              runStaticActionFallback(fallback);
+            }
+          : undefined
+      );
 
       if (action.closeOnSuccess) {
         closeModal?.();
@@ -292,6 +300,19 @@ export function useSpotlight(
     [dispatch]
   );
 
+  const handleSelectLanguage = useCallback(
+    (language: SupportedLanguage, label: string) => {
+      dispatch({
+        type: "PUSH_LANGUAGE",
+        payload: { language, label },
+      });
+      dispatchActionOrFallback(ACTION_ID.SETTINGS_SET_LANGUAGE, { language });
+      closeModal?.();
+      dispatch({ type: "RESET_TO_IDLE" });
+    },
+    [closeModal, dispatch, dispatchActionOrFallback]
+  );
+
   const handleSelectPath = useCallback(
     (
       path: string,
@@ -316,6 +337,7 @@ export function useSpotlight(
     onSelectEditorAction: handleSelectEditorAction,
     onSelectRepo: handleSelectRepo,
     onSelectBranch: handleSelectBranch,
+    onSelectLanguage: handleSelectLanguage,
     onSelectPath: handleSelectPath,
     isEditorRoute,
     isWorkStationRoute,

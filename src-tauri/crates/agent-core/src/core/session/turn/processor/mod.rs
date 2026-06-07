@@ -471,7 +471,9 @@ impl UnifiedMessageProcessor {
 
         // 3b. Build dynamic context (changes per-turn — separate system message
         // so the stable prefix can be cached by the Anthropic prompt caching API).
-        let dynamic_sections = self.build_dynamic_sections(session_id, None).await;
+        let dynamic_sections = self
+            .build_dynamic_sections(session_id, None, Some(content))
+            .await;
 
         // 4. Build provider messages from the already-loaded history.
         let mut messages: Vec<Value> = Vec::with_capacity(history.len() + 3);

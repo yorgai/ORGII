@@ -13,28 +13,32 @@
  */
 import {
   ArrowLeftRight,
+  Contrast,
   Dock,
   FolderPlus,
   FolderTree,
   GitBranch,
   GitPullRequest,
+  LayoutPanelLeft,
+  LayoutPanelTop,
   List,
+  Menu,
   MessageCircle,
+  Moon,
   PanelBottom,
   PanelLeft,
   Play,
   RotateCcw,
   Search,
+  Sparkles,
   SquareTerminal,
+  Sun,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
 
+import { ACTION_ID, type ActionId } from "@src/ActionSystem";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
-import {
-  ACTION_ID,
-  type ActionId,
-} from "@src/modules/WorkStation/ActionSystem";
 
 import type { SpotlightItem } from "../../types";
 
@@ -50,6 +54,23 @@ export type SpotlightStaticActionId =
   | "add-workspace"
   | "create-multi-repo-workspace"
   | "toggle-sidebar"
+  | "set-light-theme"
+  | "set-dark-theme"
+  | "set-high-contrast-theme"
+  | "set-my-station-chat-left"
+  | "set-my-station-chat-right"
+  | "set-agent-station-chat-left"
+  | "set-agent-station-chat-right"
+  | "enable-chat-pagination"
+  | "disable-chat-pagination"
+  | "use-model-picker-spotlight"
+  | "use-model-picker-dropdown"
+  | "set-comfort-layout"
+  | "set-compact-layout"
+  | "set-workstation-sidebar-left"
+  | "set-workstation-sidebar-right"
+  | "enable-dock-auto-hide"
+  | "disable-dock-auto-hide"
   | "zoom-in"
   | "zoom-out"
   | "zoom-reset"
@@ -93,7 +114,7 @@ export interface SpotlightStaticActionDefinition {
   shortcut?: string;
   actionId: ActionId;
   payload: Record<string, unknown>;
-  fallback: SpotlightStaticActionFallback;
+  fallback?: SpotlightStaticActionFallback;
   closeOnSuccess: boolean;
 }
 
@@ -188,6 +209,213 @@ export const WORKSPACE_ACTIONS = [
     closeOnSuccess: false,
   },
 ] satisfies SpotlightStaticActionDefinition[];
+
+export function buildThemeActions(
+  currentThemeId: string
+): SpotlightStaticActionDefinition[] {
+  const actions: SpotlightStaticActionDefinition[] = [];
+
+  if (currentThemeId !== "github-light") {
+    actions.push({
+      id: "set-light-theme",
+      labelKey: "settings:general.light",
+      icon: Sun,
+      keywords: ["light theme", "light mode", "theme", "appearance"],
+      actionId: ACTION_ID.THEME_SET_LIGHT,
+      payload: {},
+      closeOnSuccess: true,
+    });
+  }
+
+  if (currentThemeId !== "github-dark") {
+    actions.push({
+      id: "set-dark-theme",
+      labelKey: "settings:general.dark",
+      icon: Moon,
+      keywords: ["dark theme", "dark mode", "theme", "appearance"],
+      actionId: ACTION_ID.THEME_SET_DARK,
+      payload: {},
+      closeOnSuccess: true,
+    });
+  }
+
+  if (currentThemeId !== "orgii-high-contrast") {
+    actions.push({
+      id: "set-high-contrast-theme",
+      labelKey: "settings:general.highContrast",
+      icon: Contrast,
+      keywords: [
+        "high contrast",
+        "contrast theme",
+        "accessibility theme",
+        "theme",
+        "appearance",
+      ],
+      actionId: ACTION_ID.THEME_SET_HIGH_CONTRAST,
+      payload: {},
+      closeOnSuccess: true,
+    });
+  }
+
+  return actions;
+}
+
+export function buildChatPanelSettingsActions({
+  myStationChatPosition,
+  agentStationChatPosition,
+  chatTurnPaginationEnabled,
+  modelPickerStyle,
+  internalLayoutMode,
+  workstationSidebarPosition,
+  dockAutoHide,
+}: {
+  myStationChatPosition: "left" | "right";
+  agentStationChatPosition: "left" | "right";
+  chatTurnPaginationEnabled: boolean;
+  modelPickerStyle: "spotlight" | "dropdown";
+  internalLayoutMode: "comfort" | "compact";
+  workstationSidebarPosition: "left" | "right";
+  dockAutoHide: boolean;
+}): SpotlightStaticActionDefinition[] {
+  const actions: SpotlightStaticActionDefinition[] = [];
+
+  actions.push({
+    id:
+      myStationChatPosition === "left"
+        ? "set-my-station-chat-right"
+        : "set-my-station-chat-left",
+    labelKey:
+      myStationChatPosition === "left"
+        ? "common:layoutSettings.chatRight"
+        : "common:layoutSettings.chatLeft",
+    icon: MessageCircle,
+    keywords: [
+      "my station chat",
+      "chat panel location",
+      "chat left",
+      "chat right",
+    ],
+    actionId:
+      myStationChatPosition === "left"
+        ? ACTION_ID.CHAT_PANEL_SET_MY_STATION_RIGHT
+        : ACTION_ID.CHAT_PANEL_SET_MY_STATION_LEFT,
+    payload: {},
+    closeOnSuccess: true,
+  });
+
+  actions.push({
+    id:
+      agentStationChatPosition === "left"
+        ? "set-agent-station-chat-right"
+        : "set-agent-station-chat-left",
+    labelKey:
+      agentStationChatPosition === "left"
+        ? "common:layoutSettings.chatRight"
+        : "common:layoutSettings.chatLeft",
+    icon: MessageCircle,
+    keywords: [
+      "agent station chat",
+      "agent chat location",
+      "chat panel location",
+    ],
+    actionId:
+      agentStationChatPosition === "left"
+        ? ACTION_ID.CHAT_PANEL_SET_AGENT_STATION_RIGHT
+        : ACTION_ID.CHAT_PANEL_SET_AGENT_STATION_LEFT,
+    payload: {},
+    closeOnSuccess: true,
+  });
+
+  actions.push({
+    id: chatTurnPaginationEnabled
+      ? "disable-chat-pagination"
+      : "enable-chat-pagination",
+    labelKey: "common:layoutSettings.chatPanelPagination",
+    icon: LayoutPanelTop,
+    keywords: ["chat pagination", "turn pagination", "chat rounds"],
+    actionId: chatTurnPaginationEnabled
+      ? ACTION_ID.CHAT_PANEL_DISABLE_PAGINATION
+      : ACTION_ID.CHAT_PANEL_ENABLE_PAGINATION,
+    payload: {},
+    closeOnSuccess: true,
+  });
+
+  actions.push({
+    id:
+      modelPickerStyle === "spotlight"
+        ? "use-model-picker-dropdown"
+        : "use-model-picker-spotlight",
+    labelKey:
+      modelPickerStyle === "spotlight"
+        ? "common:layoutSettings.modelPickerMenu"
+        : "common:layoutSettings.modelPickerSpotlight",
+    icon: modelPickerStyle === "spotlight" ? Menu : Sparkles,
+    keywords: ["model picker", "model menu", "model spotlight", "picker"],
+    actionId:
+      modelPickerStyle === "spotlight"
+        ? ACTION_ID.CHAT_PANEL_USE_MODEL_PICKER_DROPDOWN
+        : ACTION_ID.CHAT_PANEL_USE_MODEL_PICKER_SPOTLIGHT,
+    payload: {},
+    closeOnSuccess: true,
+  });
+
+  actions.push({
+    id:
+      internalLayoutMode === "comfort"
+        ? "set-compact-layout"
+        : "set-comfort-layout",
+    labelKey:
+      internalLayoutMode === "comfort"
+        ? "common:layoutSettings.compact"
+        : "common:layoutSettings.comfort",
+    icon: LayoutPanelLeft,
+    keywords: ["layout mode", "compact layout", "comfort layout", "density"],
+    actionId:
+      internalLayoutMode === "comfort"
+        ? ACTION_ID.WORKSTATION_SET_COMPACT_LAYOUT
+        : ACTION_ID.WORKSTATION_SET_COMFORT_LAYOUT,
+    payload: {},
+    closeOnSuccess: true,
+  });
+
+  actions.push({
+    id:
+      workstationSidebarPosition === "left"
+        ? "set-workstation-sidebar-right"
+        : "set-workstation-sidebar-left",
+    labelKey:
+      workstationSidebarPosition === "left"
+        ? "common:layoutSettings.right"
+        : "common:layoutSettings.left",
+    icon: PanelLeft,
+    keywords: [
+      "workstation sidebar",
+      "sidebar position",
+      "left sidebar",
+      "right sidebar",
+    ],
+    actionId:
+      workstationSidebarPosition === "left"
+        ? ACTION_ID.WORKSTATION_SET_SIDEBAR_RIGHT
+        : ACTION_ID.WORKSTATION_SET_SIDEBAR_LEFT,
+    payload: {},
+    closeOnSuccess: true,
+  });
+
+  actions.push({
+    id: dockAutoHide ? "disable-dock-auto-hide" : "enable-dock-auto-hide",
+    labelKey: "common:layoutSettings.dockAutoHide",
+    icon: Dock,
+    keywords: ["dock auto hide", "dock", "auto hide dock", "keep dock visible"],
+    actionId: dockAutoHide
+      ? ACTION_ID.WORKSTATION_DISABLE_DOCK_AUTO_HIDE
+      : ACTION_ID.WORKSTATION_ENABLE_DOCK_AUTO_HIDE,
+    payload: {},
+    closeOnSuccess: true,
+  });
+
+  return actions;
+}
 
 export const EDITOR_ACTIONS = [
   {

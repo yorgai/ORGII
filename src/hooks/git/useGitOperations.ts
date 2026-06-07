@@ -15,9 +15,9 @@
  * - Loading states for UI feedback
  * - Git status refresh after operations
  */
-import { useActionSystemOptional } from "@/src/modules/WorkStation/ActionSystem";
 import { useCallback, useEffect, useState } from "react";
 
+import { useActionSystemOptional } from "@src/ActionSystem";
 import type { GitErrorType } from "@src/api/http/git/streaming";
 import { useGitStatus } from "@src/contexts/git";
 import { GitOperationsService } from "@src/services/git/GitOperationsService";

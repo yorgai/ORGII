@@ -8,10 +8,10 @@ import { ask, open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { zodActionRegistry } from "@src/ActionSystem/schema/zodRegistry";
 import { repoApi } from "@src/api/tauri/repo";
 import Message from "@src/components/Toast";
 import { createLogger } from "@src/hooks/logger";
-import { zodActionRegistry } from "@src/modules/WorkStation/ActionSystem/schema/zodRegistry";
 
 const logger = createLogger("WorkspaceForm");
 const SYSTEM_WORKSPACE_FOLDER_NAMES = new Set([

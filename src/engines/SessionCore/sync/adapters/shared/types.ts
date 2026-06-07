@@ -126,6 +126,7 @@ export interface AgentWSEvent {
   todos?: unknown[];
   /** OS Agent: IDE action correlation (agent:ide_action) */
   correlationId?: string;
+  operation?: "list" | "inspect" | "dispatch";
   action?: string;
   params?: Record<string, unknown>;
   agentType?: RustAgentType;

@@ -42,6 +42,7 @@ import {
   type SessionTargetKind,
 } from "@src/store/session/creatorStateAtom";
 import { invokeTauri } from "@src/util/platform/tauri/init";
+import { BUILTIN_GUI_CONTROL_DEF_ID } from "@src/util/session/sessionDispatch";
 
 import { ManageModelsFooterAction } from "../../components";
 import { useAccountFooterForHovered } from "../../hooks";
@@ -182,7 +183,10 @@ export const DispatchCategoryPalette: React.FC<
   // Merge built-in primary agents and custom agents into a single dispatchable list
   const allAgents = useMemo(
     () => [
-      ...builtInAgents.filter((agent) => agent.tier === "primary"),
+      ...builtInAgents.filter(
+        (agent) =>
+          agent.tier === "primary" && agent.id !== BUILTIN_GUI_CONTROL_DEF_ID
+      ),
       ...customAgents,
     ],
     [builtInAgents, customAgents]

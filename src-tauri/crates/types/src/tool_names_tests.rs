@@ -45,6 +45,7 @@ fn tool_name_constants_are_stable_wire_strings() {
     assert_eq!(CONTROL_EXTERNAL_BROWSER, "control_external_browser");
     assert_eq!(CONTROL_INTERNAL_BROWSER, "control_internal_browser");
     assert_eq!(CONTROL_ORGII, "control_orgii");
+    assert_eq!(SPOTLIGHT, "spotlight");
 
     // ── Desktop ──
     assert_eq!(

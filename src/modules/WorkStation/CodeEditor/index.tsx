@@ -8,10 +8,10 @@ import { useTerminalState } from "@/src/engines/TerminalCore/hooks/useTerminalSt
 import { useCodeEditorHandlers } from "@/src/hooks/workStation/editor/useCodeEditorHandlers";
 import { useGitDiffState } from "@/src/hooks/workStation/git/useGitDiffState";
 import { useCodeEditor } from "@/src/hooks/workStation/useCodeEditor";
-import { ActionSystemProvider } from "@/src/modules/WorkStation/ActionSystem";
 import { useAtomValue, useSetAtom } from "jotai";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 
+import { ActionSystemProvider } from "@src/ActionSystem";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import { useEditorRepoCacheSync } from "@src/hooks/ui/tabs";
 import { useWorkStationPanels } from "@src/hooks/workStation";

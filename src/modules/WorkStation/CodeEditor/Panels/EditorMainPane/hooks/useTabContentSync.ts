@@ -9,10 +9,7 @@
  */
 import { useEffect, useRef } from "react";
 
-import {
-  ACTION_ID,
-  useActionSystem,
-} from "@src/modules/WorkStation/ActionSystem";
+import { ACTION_ID, useActionSystem } from "@src/ActionSystem";
 import type { PanelState } from "@src/store/workstation/tabs";
 
 import type { UseTabContentSyncOptions } from "../types";

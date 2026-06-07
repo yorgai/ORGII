@@ -5,6 +5,8 @@
  */
 import { z } from "zod";
 
+import { ACTION_ID } from "@src/ActionSystem/actionIds";
+import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
 import {
   type ResetMode,
   gitCherryPick,
@@ -12,9 +14,6 @@ import {
   gitRevert,
 } from "@src/api/http/git";
 import { GitOperationsService, GitService } from "@src/services/git";
-
-import { ACTION_ID } from "../../../actionIds";
-import { defineZodAction } from "../../../schema/defineZodAction";
 
 export const gitAmend = defineZodAction(
   {

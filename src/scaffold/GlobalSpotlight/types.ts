@@ -5,7 +5,7 @@ import type { SpotlightItem, SpotlightItemData, StatusType } from "./shared";
 // ============ PARAM TYPES ============
 
 /** Types of parameters that actions can require */
-export type ParamType = "repo" | "branch" | "source";
+export type ParamType = "repo" | "branch" | "source" | "language";
 
 // ============ PATH SEGMENT ============
 

@@ -45,6 +45,14 @@ export function setGlobalVisualizer(
   globalVisualizer = controller;
 }
 
+export function clearGlobalVisualizer(
+  controller: AIActionVisualizerController
+): void {
+  if (globalVisualizer === controller) {
+    globalVisualizer = null;
+  }
+}
+
 export function getGlobalVisualizer(): AIActionVisualizerController | null {
   return globalVisualizer;
 }

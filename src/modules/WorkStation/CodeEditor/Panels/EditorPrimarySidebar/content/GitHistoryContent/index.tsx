@@ -18,6 +18,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useActionSystem } from "@src/ActionSystem";
 import { getGitCommits } from "@src/api/http/git/commits";
 import type { GitCommitInfo } from "@src/api/http/git/types";
 import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
@@ -26,7 +27,6 @@ import {
   type UseWorkStationTabsReturn,
   useWorkStationTabs,
 } from "@src/hooks/workStation/tabs/useWorkStationTabs";
-import { useActionSystem } from "@src/modules/WorkStation/ActionSystem";
 import { PRIMARY_SIDEBAR_HOVER } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import {

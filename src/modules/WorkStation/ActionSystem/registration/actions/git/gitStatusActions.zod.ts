@@ -6,11 +6,10 @@
  */
 import { z } from "zod";
 
+import { ACTION_ID } from "@src/ActionSystem/actionIds";
+import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
 import { getGitDiffSummary, getGitStatus } from "@src/api/http/git";
 import { GitService } from "@src/services/git";
-
-import { ACTION_ID } from "../../../actionIds";
-import { defineZodAction } from "../../../schema/defineZodAction";
 
 // ============================================
 // Helper: Format status data for LLM

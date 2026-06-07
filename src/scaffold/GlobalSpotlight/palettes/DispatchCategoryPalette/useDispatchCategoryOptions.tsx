@@ -36,6 +36,7 @@ import { useCliAgents } from "@src/modules/MainApp/Integrations/KeyVault/CliClie
 import { agentRegistryAtom } from "@src/store/session/agentRegistryAtom";
 import { SESSION_TARGET_KIND } from "@src/store/session/creatorStateAtom";
 import { invokeTauri } from "@src/util/platform/tauri/init";
+import { BUILTIN_GUI_CONTROL_DEF_ID } from "@src/util/session/sessionDispatch";
 
 import type { SpotlightItem } from "../../types";
 import type { AgentSelection } from "./types";
@@ -154,7 +155,10 @@ export function useDispatchCategoryOptions(
 
   const allAgents = useMemo(
     () => [
-      ...builtInAgents.filter((agent) => agent.tier === "primary"),
+      ...builtInAgents.filter(
+        (agent) =>
+          agent.tier === "primary" && agent.id !== BUILTIN_GUI_CONTROL_DEF_ID
+      ),
       ...customAgents,
     ],
     [builtInAgents, customAgents]

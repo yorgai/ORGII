@@ -1,12 +1,12 @@
 import { useAtom, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
-import { getViewModeForRoute } from "@src/config/routeViewModeConfig";
 import {
   ACTION_ID,
   type ActionId,
   useActionSystemOptional,
-} from "@src/modules/WorkStation/ActionSystem";
+} from "@src/ActionSystem";
+import { getViewModeForRoute } from "@src/config/routeViewModeConfig";
 import {
   createAgentSessionSearchSpotlightRequest,
   createEditorSpotlightRequest,

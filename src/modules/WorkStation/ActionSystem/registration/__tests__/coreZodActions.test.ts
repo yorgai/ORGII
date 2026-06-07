@@ -2,12 +2,20 @@
  * WorkStation core Zod actions: schema uniqueness, LLM tool JSON, and registry wiring.
  */
 import { afterEach, describe, expect, it } from "vitest";
+import type { ZodTypeAny } from "zod";
 
-import { ACTION_ID } from "../../actionIds";
-import { spotlightZodActions } from "../../actions/spotlightActions.zod";
-import { appZoomZodActions } from "../../actions/zoomActions.zod";
-import { zodActionToLLMTool } from "../../schema/defineZodAction";
-import { zodActionRegistry } from "../../schema/zodRegistry";
+import { ACTION_ID } from "@src/ActionSystem/actionIds";
+import { guiControlZodActions } from "@src/ActionSystem/actions/guiControlActions.zod";
+import { spotlightZodActions } from "@src/ActionSystem/actions/spotlightActions.zod";
+import { appZoomZodActions } from "@src/ActionSystem/actions/zoomActions.zod";
+import { collectAppZodActions } from "@src/ActionSystem/collectAppActions";
+import {
+  type ZodAction,
+  zodActionToLLMTool,
+} from "@src/ActionSystem/schema/defineZodAction";
+import { zodActionRegistry } from "@src/ActionSystem/schema/zodRegistry";
+import { settingsZodActions } from "@src/store/ui/actions/languageActions.zod";
+
 import {
   getAllCoreZodActions,
   registerCoreActions,
@@ -53,6 +61,57 @@ describe("getAllCoreZodActions", () => {
     expect(ids.has(ACTION_ID.WORKSTATION_OPEN_FILE_FOLDER_TAB)).toBe(true);
     expect(ids.has(ACTION_ID.WORKSTATION_OPEN_SOURCE_CONTROL_TAB)).toBe(true);
     expect(ids.has(ACTION_ID.WORKSTATION_OPEN_TERMINAL_TAB)).toBe(true);
+  });
+});
+
+describe("collectAppZodActions", () => {
+  it("auto-discovers app action registrations from feature-owned action files", () => {
+    const ids = new Set(collectAppZodActions().map((action) => action.meta.id));
+
+    expect(ids.has(ACTION_ID.GUI_INSPECT)).toBe(true);
+    expect(ids.has(ACTION_ID.SIDEBAR_TOGGLE)).toBe(true);
+    expect(ids.has(ACTION_ID.SPOTLIGHT_OPEN)).toBe(true);
+    expect(ids.has(ACTION_ID.APP_ZOOM_IN)).toBe(true);
+    expect(ids.has(ACTION_ID.SETTINGS_SET_LANGUAGE)).toBe(true);
+  });
+});
+
+describe("app-level guiControlZodActions", () => {
+  it("includes GUI inspect and execute manifest actions", () => {
+    const ids = new Set(guiControlZodActions.map((action) => action.meta.id));
+    expect(ids.has(ACTION_ID.GUI_INSPECT)).toBe(true);
+    expect(ids.has(ACTION_ID.GUI_EXECUTE)).toBe(true);
+  });
+
+  it("produces OpenAI-style LLM tool definitions for GUI control actions", () => {
+    for (const action of guiControlZodActions) {
+      const genericAction: ZodAction<ZodTypeAny> = action;
+      const tool = zodActionToLLMTool(genericAction);
+      expect(tool.type).toBe("function");
+      expect(tool.function.name).toBe(action.meta.id.replace(/\./g, "_"));
+      expect(tool.function.description.length).toBeGreaterThan(0);
+      expect(tool.function.parameters).toBeDefined();
+    }
+  });
+});
+
+describe("app-level settingsZodActions", () => {
+  it("includes a GUI-safe language setter", () => {
+    const ids = new Set(settingsZodActions.map((action) => action.meta.id));
+    expect(ids.has(ACTION_ID.SETTINGS_SET_LANGUAGE)).toBe(true);
+  });
+
+  it("produces an OpenAI-style LLM tool definition for the language action", () => {
+    const languageAction = settingsZodActions.find(
+      (action) => action.meta.id === ACTION_ID.SETTINGS_SET_LANGUAGE
+    );
+    expect(languageAction).toBeDefined();
+    if (!languageAction) return;
+
+    const tool = zodActionToLLMTool(languageAction);
+    expect(tool.type).toBe("function");
+    expect(tool.function.name).toBe("settings_language_set");
+    expect(tool.function.parameters).toBeDefined();
   });
 });
 

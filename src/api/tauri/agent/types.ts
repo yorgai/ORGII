@@ -8,6 +8,7 @@ import type { SessionStatus } from "@src/types/session/session";
 
 export const RUST_AGENT_TYPE = {
   OS: "os",
+  GUI_CONTROL: "gui_control",
   SDE: "sde",
   WINGMAN: "wingman",
   TERMINAL: "terminal",

@@ -84,8 +84,18 @@ impl UnifiedMessageProcessor {
         &self,
         session_id: &str,
         memory_prefetch_section: Option<&str>,
+        user_message: Option<&str>,
     ) -> Vec<String> {
         let mut dynamic_sections: Vec<String> = Vec::new();
+
+        if let Some(user_message) = user_message {
+            if let Some(section) = crate::core::session::prompt::gui_control_retrieval::build_gui_control_relevant_controls_section(
+                self.runtime.agent_definition_id.as_deref(),
+                user_message,
+            ) {
+                dynamic_sections.push(section);
+            }
+        }
 
         // Apply .orgii/hooks.json prompt hooks (PrePromptBuild event)
         if let Some(ref executor) = self.event_handler_config.hook_executor {

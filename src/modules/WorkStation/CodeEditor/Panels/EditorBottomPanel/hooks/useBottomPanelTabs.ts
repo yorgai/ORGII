@@ -3,9 +3,9 @@
  *
  * Manages bottom panel tab state and tab change actions.
  */
-import { useActionSystem } from "@/src/modules/WorkStation/ActionSystem";
 import { useCallback } from "react";
 
+import { useActionSystem } from "@src/ActionSystem";
 import { useBottomPanelState } from "@src/hooks/workStation";
 import type { BottomPanelTab } from "@src/store/ui/workStationAtom";
 

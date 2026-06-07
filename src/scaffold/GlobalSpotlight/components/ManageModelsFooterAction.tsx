@@ -12,11 +12,8 @@ import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { ACTION_ID, useActionSystemOptional } from "@src/ActionSystem";
 import { buildIntegrationsPath } from "@src/config/mainAppPaths";
-import {
-  ACTION_ID,
-  useActionSystemOptional,
-} from "@src/modules/WorkStation/ActionSystem";
 
 import { SpotlightFooterAction } from "./SpotlightFooterAction";
 

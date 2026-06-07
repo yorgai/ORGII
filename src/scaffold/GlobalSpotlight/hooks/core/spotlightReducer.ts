@@ -6,6 +6,7 @@
  */
 import { Folder, GitBranch } from "lucide-react";
 
+import { LANGUAGE_NAMES, type SupportedLanguage } from "@src/i18n";
 import { REPO_KIND } from "@src/store/repo/types";
 
 import { TAG_COLORS, getActionById } from "../../config";
@@ -34,6 +35,7 @@ export const initialSpotlightState: SpotlightState = {
   currentAction: null,
   currentRepo: null,
   currentBranch: null,
+  currentLanguage: null,
   missingParam: null,
   isComplete: false,
 };
@@ -49,6 +51,7 @@ function computeDerivedState(path: PathSegment[]): {
   currentAction: ActionDefinition | null;
   currentRepo: RepoItem | null;
   currentBranch: string | null;
+  currentLanguage: SupportedLanguage | null;
   missingParam: ParamType | null;
   isComplete: boolean;
 } {
@@ -66,6 +69,10 @@ function computeDerivedState(path: PathSegment[]): {
   // Find current branch
   const branchSegment = path.find((segment) => segment.type === "branch");
   const currentBranch = branchSegment?.label || null;
+
+  const languageSegment = path.find((segment) => segment.type === "language");
+  const currentLanguage =
+    (languageSegment?.data as SupportedLanguage | undefined) ?? null;
 
   // Determine missing param
   let missingParam: ParamType | null = null;
@@ -88,6 +95,7 @@ function computeDerivedState(path: PathSegment[]): {
     currentAction,
     currentRepo,
     currentBranch,
+    currentLanguage,
     missingParam,
     isComplete,
   };
@@ -222,6 +230,37 @@ export function spotlightReducer(
       };
     }
 
+    case "PUSH_LANGUAGE": {
+      const { language, label } = action.payload;
+      const newPath = [
+        ...state.path,
+        {
+          type: "language" as const,
+          id: language,
+          label,
+          icon: LANGUAGE_NAMES[language],
+          color: TAG_COLORS.language,
+          data: language,
+        },
+      ];
+
+      const derived = computeDerivedState(newPath);
+      const stage = determineStage(
+        state.stage,
+        derived.isComplete,
+        newPath.length
+      );
+
+      return {
+        ...state,
+        path: newPath,
+        searchQuery: "",
+        selectedIndex: 0,
+        stage,
+        ...derived,
+      };
+    }
+
     case "PUSH_SEGMENT": {
       const newPath = [...state.path, action.payload.segment];
       const derived = computeDerivedState(newPath);
@@ -293,6 +332,7 @@ export function spotlightReducer(
         currentAction: null,
         currentRepo: null,
         currentBranch: null,
+        currentLanguage: null,
         missingParam: null,
         isComplete: false,
       };

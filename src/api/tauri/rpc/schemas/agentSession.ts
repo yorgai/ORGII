@@ -304,6 +304,8 @@ export const WingmanMonitorSchema = z.object({
 });
 
 export const IdeActionResultInput = z.object({
-  requestId: z.string(),
-  result: z.string(),
+  correlationId: z.string(),
+  success: z.boolean(),
+  message: z.string(),
+  data: z.unknown().optional(),
 });

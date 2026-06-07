@@ -27,6 +27,7 @@ import React, {
 } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
+import { AIActionVisualizer } from "@src/components/AIActionVisualizer";
 import {
   getColorPairById,
   resolveColorPair,
@@ -528,6 +529,7 @@ const AppShell = () => {
             open={codeEditorTourOpen}
             onClose={() => setCodeEditorTourOpen(false)}
           />
+          <AIActionVisualizer />
           <GuiControlToggle />
         </div>
       </BrowserProvider>

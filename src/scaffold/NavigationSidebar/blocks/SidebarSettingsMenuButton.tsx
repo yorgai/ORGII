@@ -1,4 +1,4 @@
-import { useAtomValue, useSetAtom } from "jotai";
+import { useSetAtom } from "jotai";
 import {
   ChevronRight,
   Contrast,
@@ -43,10 +43,7 @@ import { useAppearanceState } from "@src/modules/MainApp/Settings/sections/useAp
 import { GUI_CONTROL_TOGGLE_SHORTCUT_ID } from "@src/scaffold/GuiControlToggle";
 import { TUTORIALS_OPEN_EVENT } from "@src/scaffold/Tutorials/tutorialRegistry";
 import { languageAtom } from "@src/store/ui/languageAtom";
-import {
-  guiControlEnabledAtom,
-  toggleGuiControlEnabledAtom,
-} from "@src/store/ui/uiAtom";
+import { openGuiControlAtom } from "@src/store/ui/uiAtom";
 
 import HoverAnimatedIcon, {
   triggerIconAnimation,
@@ -89,8 +86,7 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
   const preserveRamPanelOnMenuCloseRef = useRef(false);
   const dropdownInsideRefs = useMemo(() => [submenuPanelRef], []);
   const setLanguagePreference = useSetAtom(languageAtom);
-  const guiControlEnabled = useAtomValue(guiControlEnabledAtom);
-  const toggleGuiControlEnabled = useSetAtom(toggleGuiControlEnabledAtom);
+  const openGuiControl = useSetAtom(openGuiControlAtom);
   const [activeSubmenu, setActiveSubmenu] = useState<SettingsSubmenu | null>(
     null
   );
@@ -227,10 +223,10 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
     closeAll();
   }, [closeAll]);
 
-  const handleToggleGuiControl = useCallback(() => {
-    toggleGuiControlEnabled();
+  const handleOpenGuiControl = useCallback(() => {
+    openGuiControl();
     closeAll();
-  }, [closeAll, toggleGuiControlEnabled]);
+  }, [closeAll, openGuiControl]);
 
   const handleSelectAppearanceMode = useCallback(
     async (mode: AppearanceMode) => {
@@ -307,11 +303,10 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
             <div className={DROPDOWN_CLASSES.itemsColumn}>
               <button
                 type="button"
-                className={`${DROPDOWN_CLASSES.menuActionItem} justify-between ${guiControlEnabled ? DROPDOWN_CLASSES.itemSelected : ""}`}
+                className={`${DROPDOWN_CLASSES.menuActionItem} justify-between`}
                 onMouseEnter={() => setActiveSubmenu(null)}
                 onFocus={() => setActiveSubmenu(null)}
-                onClick={handleToggleGuiControl}
-                aria-pressed={guiControlEnabled}
+                onClick={handleOpenGuiControl}
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <MousePointer2

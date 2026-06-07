@@ -6,7 +6,14 @@
  * all builders are deterministic functions of their arguments.
  */
 import {
+  LANGUAGE_NAMES,
+  SUPPORTED_LANGUAGES,
+  type SupportedLanguage,
+} from "@src/i18n";
+
+import {
   ACTIONS,
+  ICONS,
   type NavDestination,
   type NavDestinationGroup,
 } from "../../config";
@@ -97,6 +104,47 @@ export function buildStaticActionItems(
     shortcut: action.shortcut,
     action: () => onSelectStaticAction(action),
   }));
+}
+
+export function buildLanguageItems(
+  currentLanguage: SupportedLanguage,
+  searchQuery: string,
+  onSelectLanguage: (language: SupportedLanguage, label: string) => void,
+  translate: Translator
+): SpotlightItem[] {
+  const queryLower = searchQuery.trim().toLowerCase();
+
+  return SUPPORTED_LANGUAGES.flatMap((language) => {
+    const translatedName = translate(
+      `settings:general.languageNames.${language}`
+    );
+    const nativeName = LANGUAGE_NAMES[language];
+    const label =
+      translatedName === nativeName
+        ? nativeName
+        : `${translatedName} · ${nativeName}`;
+    const matches =
+      !queryLower ||
+      language.toLowerCase().includes(queryLower) ||
+      translatedName.toLowerCase().includes(queryLower) ||
+      nativeName.toLowerCase().includes(queryLower);
+
+    if (!matches) return [];
+
+    return [
+      {
+        id: `language-${language}`,
+        label,
+        icon: ICONS.language,
+        type: "option" as const,
+        data: {
+          isCurrentSelection: language === currentLanguage,
+          tagLabel: language,
+        },
+        action: () => onSelectLanguage(language, label),
+      },
+    ];
+  });
 }
 
 export function buildEditorActionItems(

@@ -12,8 +12,7 @@
  *   // In React (connects the output channel):
  *   GUIAgentService.connect(outputState);
  */
-import type { ActionResult } from "@/src/modules/WorkStation/ActionSystem/types";
-
+import type { ActionResult } from "@src/ActionSystem/schema/defineZodAction";
 import type { UseOutputChannelsReturn } from "@src/hooks/workStation/output/useOutputChannels";
 
 // ============================================

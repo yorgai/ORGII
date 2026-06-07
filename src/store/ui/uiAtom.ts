@@ -255,14 +255,31 @@ inspectModeLockedAtom.debugLabel = "inspectModeLockedAtom";
 export const inspectModeEnabledAtom = atom<boolean>(false);
 inspectModeEnabledAtom.debugLabel = "inspectModeEnabledAtom";
 
+/** Whether the Agent Control composer is visible. */
+export const guiControlComposerOpenAtom = atom<boolean>(false);
+guiControlComposerOpenAtom.debugLabel = "guiControlComposerOpenAtom";
+
 /** Global agent GUI-control mode. When enabled, agent-originated GUI actions may dispatch through the Zod ActionSystem. */
 export const guiControlEnabledAtom = atom<boolean>(false);
 guiControlEnabledAtom.debugLabel = "guiControlEnabledAtom";
 
-export const toggleGuiControlEnabledAtom = atom(null, (get, set) => {
-  set(guiControlEnabledAtom, !get(guiControlEnabledAtom));
+export const openGuiControlAtom = atom(null, (_get, set) => {
+  set(guiControlEnabledAtom, true);
+  set(guiControlComposerOpenAtom, true);
 });
-toggleGuiControlEnabledAtom.debugLabel = "toggleGuiControlEnabledAtom";
+openGuiControlAtom.debugLabel = "openGuiControlAtom";
+
+export const closeGuiControlComposerAtom = atom(null, (_get, set) => {
+  set(guiControlComposerOpenAtom, false);
+});
+closeGuiControlComposerAtom.debugLabel = "closeGuiControlComposerAtom";
+
+export const toggleGuiControlComposerAtom = atom(null, (get, set) => {
+  const nextOpen = !get(guiControlComposerOpenAtom);
+  set(guiControlEnabledAtom, true);
+  set(guiControlComposerOpenAtom, nextOpen);
+});
+toggleGuiControlComposerAtom.debugLabel = "toggleGuiControlComposerAtom";
 
 // ============================================
 // Loading & Status

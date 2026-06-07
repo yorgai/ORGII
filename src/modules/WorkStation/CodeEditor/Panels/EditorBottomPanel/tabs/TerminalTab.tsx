@@ -16,9 +16,9 @@ import { Bot, Terminal, Trash2 } from "lucide-react";
 import React, { Suspense, useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useActionSystem } from "@src/ActionSystem";
 import { TreeRowBase } from "@src/components/TreeRow";
 import { useResizeHandle } from "@src/hooks/ui/useResizeHandle";
-import { useActionSystem } from "@src/modules/WorkStation/ActionSystem";
 import { HEADER_BUTTON } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { VerticalResizeHandle } from "@src/scaffold/Resize";

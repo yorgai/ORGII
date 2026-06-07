@@ -13,10 +13,9 @@
  */
 import { z } from "zod";
 
+import { ACTION_ID } from "@src/ActionSystem/actionIds";
+import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
 import { TerminalService } from "@src/services/terminal";
-
-import { ACTION_ID } from "../../actionIds";
-import { defineZodAction } from "../../schema/defineZodAction";
 
 // ============================================
 // Terminal Actions

@@ -5,7 +5,6 @@
  * Handles both section headers and file/directory items.
  * Uses TreeRowBase for file items to maintain consistency.
  */
-import { useActionSystemOptional } from "@/src/modules/WorkStation/ActionSystem";
 import { useAtomValue } from "jotai";
 import {
   Archive,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 
+import { useActionSystemOptional } from "@src/ActionSystem";
 import {
   GitStatusBadge,
   TREE_INDENT_PX,

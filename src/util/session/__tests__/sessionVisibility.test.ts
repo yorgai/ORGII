@@ -30,4 +30,14 @@ describe("isPrimarySessionListSession", () => {
       })
     ).toBe(false);
   });
+
+  it("temporarily keeps GUI Control sessions visible for trajectory inspection", () => {
+    expect(
+      isPrimarySessionListSession({
+        session_id: "guicontrol-root:subagent:trajectory",
+        parentSessionId: "osagent-root",
+        orgMemberId: "internal-gui-control",
+      })
+    ).toBe(true);
+  });
 });

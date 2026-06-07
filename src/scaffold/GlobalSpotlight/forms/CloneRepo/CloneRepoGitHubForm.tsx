@@ -15,15 +15,12 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { ACTION_ID, useActionSystemOptional } from "@src/ActionSystem";
 import type { GitHubRepo } from "@src/api/http/github/types";
 import Button from "@src/components/Button";
 import Input from "@src/components/Input";
 import Radio from "@src/components/Radio";
 import { buildIntegrationsPath } from "@src/config/mainAppPaths";
-import {
-  ACTION_ID,
-  useActionSystemOptional,
-} from "@src/modules/WorkStation/ActionSystem";
 import { PanelFooter, Placeholder } from "@src/modules/shared/layouts/blocks";
 
 import { ICONS } from "../../config";

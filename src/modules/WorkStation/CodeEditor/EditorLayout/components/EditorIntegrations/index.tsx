@@ -17,15 +17,12 @@ import { useLspDiagnostics } from "@/src/hooks/workStation/diagnostics/useLspDia
 import { useSetAtom } from "jotai";
 import { type FC, memo, useCallback, useEffect } from "react";
 
+import { ACTION_ID, useActionSystem } from "@src/ActionSystem";
 import { useTestRunner } from "@src/hooks/testRunner";
 import { useFileWatchOutputIntegration } from "@src/hooks/workStation/output/useFileWatchOutputIntegration";
 import type { UseOutputChannelsReturn } from "@src/hooks/workStation/output/useOutputChannels";
 import { useTaskOutputIntegration } from "@src/hooks/workStation/output/useTaskOutputIntegration";
 import { useGitOutputIntegration } from "@src/hooks/workStation/useGitOutputIntegration";
-import {
-  ACTION_ID,
-  useActionSystem,
-} from "@src/modules/WorkStation/ActionSystem";
 import { GUIAgentService } from "@src/services";
 import type {
   BottomPanelTab,

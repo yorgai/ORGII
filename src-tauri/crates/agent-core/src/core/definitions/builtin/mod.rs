@@ -27,6 +27,7 @@
 mod agent_architect;
 mod ai_research;
 mod base;
+mod gui_control;
 mod memory_consolidator;
 mod memory_extractor;
 mod os;
@@ -39,6 +40,7 @@ mod work_item_manager;
 pub use agent_architect::*;
 pub use ai_research::*;
 pub use base::*;
+pub use gui_control::*;
 pub use memory_consolidator::*;
 pub use memory_extractor::*;
 pub use os::*;
@@ -107,6 +109,7 @@ pub fn get_builtin_agents() -> Vec<AgentDefinition> {
         // Core agents
         base_agent(),
         os_agent(),
+        gui_control_agent(),
         sde_agent(),
         terminal_agent(),
         ai_research_agent(),
@@ -134,13 +137,14 @@ mod tests {
     #[test]
     fn test_builtin_agents_count() {
         let agents = get_builtin_agents();
-        assert_eq!(agents.len(), 12); // base, os, sde, terminal, ai-research, agent-architect, wingman, work-item-manager + 2 subagents + 2 memory subagents
+        assert_eq!(agents.len(), 13); // base, os, gui-control, sde, terminal, ai-research, agent-architect, wingman, work-item-manager + 2 subagents + 2 memory subagents
     }
 
     #[test]
     fn test_builtin_agent_ids() {
         assert!(is_builtin_agent(BASE_AGENT_ID));
         assert!(is_builtin_agent(OS_AGENT_ID));
+        assert!(is_builtin_agent(GUI_CONTROL_AGENT_ID));
         assert!(is_builtin_agent(SDE_AGENT_ID));
         assert!(is_builtin_agent(TERMINAL_AGENT_ID));
         assert!(is_builtin_agent(AI_RESEARCH_AGENT_ID));

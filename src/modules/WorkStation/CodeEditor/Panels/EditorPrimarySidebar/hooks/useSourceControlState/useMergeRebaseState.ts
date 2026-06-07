@@ -8,8 +8,8 @@
  */
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
+import { useActionSystemOptional } from "@src/ActionSystem";
 import { RebaseConflictDialog } from "@src/components/GitDialogs";
-import { useActionSystemOptional } from "@src/modules/WorkStation/ActionSystem";
 import type { GitFile } from "@src/types/git/types";
 import type { GitRepositoryStatus } from "@src/types/session/steps";
 

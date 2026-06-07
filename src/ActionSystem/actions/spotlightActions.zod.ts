@@ -1,1 +1,184 @@
-export { spotlightZodActions } from "@src/modules/WorkStation/ActionSystem/actions/spotlightActions.zod";
+/**
+ * Spotlight Actions
+ *
+ * Control the global spotlight search (Cmd+K).
+ *
+ * Category: "spotlight"
+ */
+import { z } from "zod";
+
+import { ACTION_ID } from "@src/ActionSystem/actionIds";
+import { defineAppActionRegistration } from "@src/ActionSystem/schema/actionRegistration";
+import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
+import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
+import {
+  openAgentSessionSearchSpotlight,
+  openBranchSpotlight,
+  openEditorSpotlight,
+  openWorkspaceSpotlight,
+} from "@src/scaffold/GlobalSpotlight/openSpotlight";
+import { spotlightOpenAtom } from "@src/store/ui/uiAtom";
+import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
+
+// ============================================
+// Actions
+// ============================================
+
+const workspacePickerModeSchema = z.enum(["switch", "open", "add", "create"]);
+
+const spotlightOpen = defineZodAction(
+  {
+    id: ACTION_ID.SPOTLIGHT_OPEN,
+    category: "spotlight",
+    description: "Open the global spotlight search",
+    params: z.object({}),
+    layer: "gui",
+    shortcut: getShortcutKeys("spotlight_open"),
+    examples: ["open spotlight", "search anything", "quick search"],
+  },
+  async () => {
+    const store = getInstrumentedStore();
+    store.set(spotlightOpenAtom, true);
+    return { success: true, message: "Spotlight opened" };
+  }
+);
+
+const spotlightClose = defineZodAction(
+  {
+    id: ACTION_ID.SPOTLIGHT_CLOSE,
+    category: "spotlight",
+    description: "Close the global spotlight search",
+    params: z.object({}),
+    layer: "gui",
+  },
+  async () => {
+    const store = getInstrumentedStore();
+    store.set(spotlightOpenAtom, false);
+    return { success: true, message: "Spotlight closed" };
+  }
+);
+
+const spotlightToggle = defineZodAction(
+  {
+    id: ACTION_ID.SPOTLIGHT_TOGGLE,
+    category: "spotlight",
+    description: "Toggle the global spotlight search",
+    params: z.object({}),
+    layer: "gui",
+    shortcut: getShortcutKeys("spotlight_open"),
+  },
+  async () => {
+    const store = getInstrumentedStore();
+    const current = store.get(spotlightOpenAtom);
+    store.set(spotlightOpenAtom, !current);
+    return {
+      success: true,
+      message: current ? "Spotlight closed" : "Spotlight opened",
+    };
+  }
+);
+
+const spotlightOpenWorkspacePicker = defineZodAction(
+  {
+    id: ACTION_ID.SPOTLIGHT_OPEN_WORKSPACE_PICKER,
+    category: "spotlight",
+    description: "Open Spotlight's workspace picker flow",
+    params: z.object({
+      mode: workspacePickerModeSchema.describe(
+        "Workspace picker mode: switch, open, add, or create"
+      ),
+    }),
+    layer: "gui",
+    examples: [
+      "switch workspace",
+      "open folder",
+      "add workspace",
+      "create Multi-repo Workspace",
+    ],
+  },
+  async ({ mode }) => {
+    openWorkspaceSpotlight(mode);
+    return { success: true, message: `Opened workspace picker: ${mode}` };
+  }
+);
+
+const spotlightOpenBranchPicker = defineZodAction(
+  {
+    id: ACTION_ID.SPOTLIGHT_OPEN_BRANCH_PICKER,
+    category: "spotlight",
+    description: "Open Spotlight's branch picker flow",
+    params: z.object({}),
+    layer: "gui",
+    examples: ["switch branch", "open branch picker", "checkout branch"],
+  },
+  async () => {
+    openBranchSpotlight();
+    return { success: true, message: "Opened branch picker" };
+  }
+);
+
+const spotlightOpenEditorFile = defineZodAction(
+  {
+    id: ACTION_ID.SPOTLIGHT_OPEN_EDITOR_FILE,
+    category: "spotlight",
+    description: "Open Spotlight's Code Editor file search flow",
+    params: z.object({}),
+    layer: "gui",
+    shortcut: getShortcutKeys("quick_open"),
+    examples: ["open file", "quick open file", "find file"],
+  },
+  async () => {
+    openEditorSpotlight("");
+    return { success: true, message: "Opened file search" };
+  }
+);
+
+const spotlightOpenEditorCommand = defineZodAction(
+  {
+    id: ACTION_ID.SPOTLIGHT_OPEN_EDITOR_COMMAND,
+    category: "spotlight",
+    description: "Open Spotlight's Code Editor command flow",
+    params: z.object({}),
+    layer: "gui",
+    shortcut: getShortcutKeys("spotlight_open"),
+    examples: ["open command palette", "run editor command"],
+  },
+  async () => {
+    openEditorSpotlight("", "command");
+    return { success: true, message: "Opened editor command palette" };
+  }
+);
+
+const spotlightOpenAgentSessionSearch = defineZodAction(
+  {
+    id: ACTION_ID.SPOTLIGHT_OPEN_AGENT_SESSION_SEARCH,
+    category: "spotlight",
+    description: "Open Spotlight's Agent session search flow",
+    params: z.object({}),
+    layer: "gui",
+    shortcut: getShortcutKeys("agent_session_search"),
+    examples: ["search agent sessions", "open session", "find session"],
+  },
+  async () => {
+    openAgentSessionSearchSpotlight();
+    return { success: true, message: "Opened Agent session search" };
+  }
+);
+
+// ============================================
+// Export
+// ============================================
+
+export const spotlightZodActions = [
+  spotlightOpen,
+  spotlightClose,
+  spotlightToggle,
+  spotlightOpenWorkspacePicker,
+  spotlightOpenBranchPicker,
+  spotlightOpenEditorFile,
+  spotlightOpenEditorCommand,
+  spotlightOpenAgentSessionSearch,
+];
+
+export const spotlightActionRegistration =
+  defineAppActionRegistration(spotlightZodActions);

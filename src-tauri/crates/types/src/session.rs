@@ -6,6 +6,9 @@
 /// OS Agent (workspace-isolated subagent host) sessions.
 pub const OS_SESSION_PREFIX: &str = "osagent-";
 
+/// ORGII GUI Control agent sessions.
+pub const GUI_CONTROL_SESSION_PREFIX: &str = "guicontrol-";
+
 /// SDE Agent (software-development-engineer) sessions.
 pub const SDE_SESSION_PREFIX: &str = "sdeagent-";
 

@@ -133,53 +133,79 @@ pub(crate) fn extract_session_id(message: &str) -> Option<String> {
     None
 }
 
-/// Dispatch a message to all Tauri Channels registered for its session_id.
-///
-/// A channel is only removed after `MAX_CONSECUTIVE_FAILURES` consecutive
-/// `send()` errors, not on the first failure. This prevents transient
-/// hiccups (e.g. WebView momentarily busy) from permanently severing the
-/// event stream.
-fn dispatch_to_channels(message: &str) {
-    let sid = match extract_session_id(message) {
-        Some(sid) => sid,
-        None => return,
-    };
+fn event_type(message: &str) -> Option<String> {
+    let parsed: serde_json::Value = serde_json::from_str(message).ok()?;
+    parsed
+        .get("type")
+        .and_then(|value| value.as_str())
+        .map(str::to_string)
+}
 
-    if let Ok(mut map) = get_registry().write() {
-        if let Some(channels) = map.get_mut(&sid) {
-            for entry in channels.iter_mut() {
-                if entry.channel.send(message.to_string()).is_ok() {
-                    entry.consecutive_failures = 0;
-                } else {
-                    entry.consecutive_failures += 1;
-                    if entry.consecutive_failures == 1 {
-                        tracing::warn!(
-                            "[IPC] Channel {} for session {} send failed (attempt {}/{})",
-                            entry.channel_id,
-                            sid,
-                            entry.consecutive_failures,
-                            MAX_CONSECUTIVE_FAILURES
-                        );
-                    }
-                }
-            }
-            channels.retain(|entry| {
-                if entry.consecutive_failures >= MAX_CONSECUTIVE_FAILURES {
-                    tracing::warn!(
-                        "[IPC] Dropping channel {} for session {} after {} consecutive failures",
-                        entry.channel_id,
-                        sid,
-                        entry.consecutive_failures
-                    );
-                    false
-                } else {
-                    true
-                }
-            });
-            if channels.is_empty() {
-                map.remove(&sid);
+fn dispatch_to_channel_entries(session_id: &str, channels: &mut Vec<RegisteredChannel>, message: &str) {
+    for entry in channels.iter_mut() {
+        if entry.channel.send(message.to_string()).is_ok() {
+            entry.consecutive_failures = 0;
+        } else {
+            entry.consecutive_failures += 1;
+            if entry.consecutive_failures == 1 {
+                tracing::warn!(
+                    "[IPC] Channel {} for session {} send failed (attempt {}/{})",
+                    entry.channel_id,
+                    session_id,
+                    entry.consecutive_failures,
+                    MAX_CONSECUTIVE_FAILURES
+                );
             }
         }
+    }
+
+    channels.retain(|entry| {
+        if entry.consecutive_failures >= MAX_CONSECUTIVE_FAILURES {
+            tracing::warn!(
+                "[IPC] Dropping channel {} for session {} after {} consecutive failures",
+                entry.channel_id,
+                session_id,
+                entry.consecutive_failures
+            );
+            false
+        } else {
+            true
+        }
+    });
+}
+
+/// Dispatch a message to all Tauri Channels registered for its session_id.
+///
+/// Session-less IDE action requests are global UI-control bridge messages, so
+/// they are delivered to every registered frontend channel. The first mounted
+/// frontend listener to answer resolves the bridge correlation ID.
+fn dispatch_to_channels(message: &str) {
+    let target_session_id = extract_session_id(message);
+    let is_global_ide_action = target_session_id.is_none()
+        && event_type(message).as_deref() == Some("agent:ide_action");
+
+    if !is_global_ide_action && target_session_id.is_none() {
+        return;
+    }
+
+    if let Ok(mut map) = get_registry().write() {
+        if let Some(sid) = target_session_id {
+            if let Some(channels) = map.get_mut(&sid) {
+                dispatch_to_channel_entries(&sid, channels, message);
+                if channels.is_empty() {
+                    map.remove(&sid);
+                }
+            }
+            return;
+        }
+
+        let session_ids: Vec<String> = map.keys().cloned().collect();
+        for sid in session_ids {
+            if let Some(channels) = map.get_mut(&sid) {
+                dispatch_to_channel_entries(&sid, channels, message);
+            }
+        }
+        map.retain(|_, channels| !channels.is_empty());
     }
 }
 

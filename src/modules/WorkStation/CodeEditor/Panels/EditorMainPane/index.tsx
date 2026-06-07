@@ -20,7 +20,6 @@
  * - types.ts     - TypeScript types
  * - config.ts    - Constants and configuration
  */
-import { useActionSystem } from "@/src/modules/WorkStation/ActionSystem";
 import { useAtomValue, useSetAtom } from "jotai";
 import {
   ArrowLeft,
@@ -40,6 +39,7 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useActionSystem } from "@src/ActionSystem";
 import Button from "@src/components/Button";
 import TabPill from "@src/components/TabPill";
 import { useGitStatus } from "@src/contexts/git";

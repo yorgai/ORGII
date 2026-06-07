@@ -1,9 +1,8 @@
 import { z } from "zod";
 
+import { ACTION_ID } from "@src/ActionSystem/actionIds";
+import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
-
-import { ACTION_ID } from "../../actionIds";
-import { defineZodAction } from "../../schema/defineZodAction";
 
 const NAVIGATION_SHORTCUT_OPTIONS = {
   toggleChatPanelMaximizedWhenActive: true,

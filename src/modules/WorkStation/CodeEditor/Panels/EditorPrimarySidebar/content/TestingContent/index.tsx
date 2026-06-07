@@ -7,12 +7,12 @@
  *
  * Uses dispatch() for actions (unified with AI commands).
  */
-import { useActionSystem } from "@/src/modules/WorkStation/ActionSystem";
 import { useAtomValue } from "jotai";
 import { ChevronDown, ChevronRight, Filter as FilterIcon } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useActionSystem } from "@src/ActionSystem";
 import Input from "@src/components/Input";
 import { TREE_ROW_HEIGHT } from "@src/components/TreeRow";
 import type {

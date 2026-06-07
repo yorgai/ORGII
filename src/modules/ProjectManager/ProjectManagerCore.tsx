@@ -10,8 +10,9 @@
  * - Sidebar: Projects list with create/delete
  * - Main: Work items for selected project (List, Kanban, Gantt, Calendar, Overview)
  */
-import { ActionSystemProvider } from "@/src/modules/WorkStation/ActionSystem";
 import React, { memo } from "react";
+
+import { ActionSystemProvider } from "@src/ActionSystem";
 
 import { ProjectManagerLayout } from "./ProjectManagerLayout";
 

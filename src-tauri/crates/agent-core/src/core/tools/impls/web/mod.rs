@@ -15,5 +15,6 @@ pub mod control_browser_with_agent_browser;
 pub mod control_browser_with_playwright;
 pub mod control_internal_browser;
 pub mod control_orgii;
+pub mod spotlight;
 pub mod web_fetch;
 pub mod web_search;

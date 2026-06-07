@@ -16,13 +16,23 @@ import { useAtomValue } from "jotai";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { SupportedLanguage } from "@src/i18n";
 import {
   chatPanelMaximizedAtom,
+  chatTurnPaginationEnabledAtom,
   chatVisibleAtom,
+  modelPickerStyleAtom,
 } from "@src/store/ui/chatPanelAtom";
+import { languageAtom } from "@src/store/ui/languageAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
+import { globalThemeIdAtom } from "@src/store/ui/uiAtom";
 import {
+  sessionChatPositionAtom,
+  workStationChatPositionAtom,
+  workStationDockAutoHideAtom,
   workStationEditorSecondaryCollapsedAtom,
+  workStationInternalLayoutModeAtom,
+  workStationLayoutModeAtom,
   workStationPrimarySidebarCollapsedAtom,
 } from "@src/store/ui/workStationAtom";
 import { activeStatusBarCallbacksAtom } from "@src/store/ui/workStationLayout/statusBarAtoms";
@@ -47,6 +57,8 @@ import {
   type SpotlightEditorActionId,
   type SpotlightStaticActionDefinition,
   WORKSPACE_ACTIONS,
+  buildChatPanelSettingsActions,
+  buildThemeActions,
   buildViewActions,
 } from "./spotlightActionDefinitions";
 import {
@@ -54,6 +66,7 @@ import {
   buildActionItems,
   buildEditorActionItems,
   buildGroupedDefaultItems,
+  buildLanguageItems,
   buildNavDestinationItem,
   buildRepoActionItems,
   buildStaticActionItems,
@@ -85,6 +98,7 @@ interface SpotlightItemsHandlers {
   onSelectEditorAction: (actionId: SpotlightEditorActionId) => void;
   onSelectRepo: (repo: RepoItem) => void;
   onSelectBranch: (branch: BranchItem) => void;
+  onSelectLanguage: (language: SupportedLanguage, label: string) => void;
   onSelectPath: (
     path: string,
     label: string,
@@ -114,6 +128,15 @@ export function useSpotlightItems(
   );
   const isChatPanelMaximized = useAtomValue(chatPanelMaximizedAtom);
   const isChatPanelVisible = useAtomValue(chatVisibleAtom);
+  const globalThemeId = useAtomValue(globalThemeIdAtom);
+  const myStationChatPosition = useAtomValue(workStationChatPositionAtom);
+  const agentStationChatPosition = useAtomValue(sessionChatPositionAtom);
+  const chatTurnPaginationEnabled = useAtomValue(chatTurnPaginationEnabledAtom);
+  const modelPickerStyle = useAtomValue(modelPickerStyleAtom);
+  const internalLayoutMode = useAtomValue(workStationInternalLayoutModeAtom);
+  const workstationSidebarPosition = useAtomValue(workStationLayoutModeAtom);
+  const dockAutoHide = useAtomValue(workStationDockAutoHideAtom);
+  const currentLanguage = useAtomValue(languageAtom);
   const { t } = useTranslation();
   const translate: Translator = t;
 
@@ -123,6 +146,7 @@ export function useSpotlightItems(
     onSelectEditorAction,
     onSelectRepo,
     onSelectBranch,
+    onSelectLanguage,
     onSelectPath,
     currentRepoId,
     isEditorRoute,
@@ -149,6 +173,16 @@ export function useSpotlightItems(
     const quickNavigationActions = isWorkStationRoute
       ? QUICK_NAVIGATION_ACTIONS
       : [];
+    const themeActions = buildThemeActions(globalThemeId);
+    const chatPanelSettingsActions = buildChatPanelSettingsActions({
+      myStationChatPosition,
+      agentStationChatPosition,
+      chatTurnPaginationEnabled,
+      modelPickerStyle,
+      internalLayoutMode,
+      workstationSidebarPosition,
+      dockAutoHide,
+    });
 
     if (stage === "confirming" || stage === "executing") {
       return [];
@@ -165,6 +199,8 @@ export function useSpotlightItems(
         staticCommandActions: [
           ...AGENT_SESSION_ACTIONS,
           ...WORKSPACE_ACTIONS,
+          ...themeActions,
+          ...chatPanelSettingsActions,
           ...quickNavigationActions,
           ...viewActions,
         ],
@@ -198,6 +234,14 @@ export function useSpotlightItems(
           onAction: onSelectBranch,
         });
       }
+      if (missingParam === "language") {
+        return buildLanguageItems(
+          currentLanguage,
+          searchQuery,
+          onSelectLanguage,
+          translate
+        );
+      }
       return [];
     }
 
@@ -229,7 +273,7 @@ export function useSpotlightItems(
       ? buildEditorActionItems(onSelectEditorAction, translate)
       : [];
     const viewItems = buildStaticActionItems(
-      viewActions,
+      [...themeActions, ...chatPanelSettingsActions, ...viewActions],
       onSelectStaticAction,
       translate
     );
@@ -260,6 +304,15 @@ export function useSpotlightItems(
     isBottomPanelCollapsed,
     isChatPanelMaximized,
     isChatPanelVisible,
+    globalThemeId,
+    myStationChatPosition,
+    agentStationChatPosition,
+    chatTurnPaginationEnabled,
+    modelPickerStyle,
+    internalLayoutMode,
+    workstationSidebarPosition,
+    dockAutoHide,
+    currentLanguage,
     isEditorRoute,
     isWorkStationRoute,
     filteredRepos,
@@ -270,6 +323,7 @@ export function useSpotlightItems(
     onSelectEditorAction,
     onSelectRepo,
     onSelectBranch,
+    onSelectLanguage,
     onSelectPath,
     translate,
   ]);

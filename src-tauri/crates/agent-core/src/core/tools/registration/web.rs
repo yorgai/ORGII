@@ -5,6 +5,8 @@ use std::collections::HashSet;
 use crate::tools::impls::web::control_browser_with_agent_browser;
 use crate::tools::impls::web::control_browser_with_playwright;
 use crate::tools::impls::web::control_internal_browser::InternalBrowserTool;
+use crate::tools::impls::web::control_orgii::OrgiiControlTool;
+use crate::tools::impls::web::spotlight::SpotlightTool;
 use crate::tools::impls::web::web_fetch::WebFetchTool;
 use crate::tools::impls::web::web_search::WebSearchTool;
 use crate::tools::registry::ToolRegistry;
@@ -17,6 +19,15 @@ use super::{register_if_enabled, ToolDeps};
 /// Covers: `web_search`, `web_fetch`, exactly one selected external browser CLI
 /// tool, and `control_internal_browser`.
 pub async fn register(registry: &mut ToolRegistry, deps: &ToolDeps, disabled: &HashSet<String>) {
+    if let Some(bridge) = deps.action_bridge.clone() {
+        register_if_enabled(
+            registry,
+            Box::new(OrgiiControlTool::new(bridge.clone())),
+            disabled,
+        );
+        register_if_enabled(registry, Box::new(SpotlightTool::new(bridge)), disabled);
+    }
+
     register_if_enabled(
         registry,
         Box::new(WebSearchTool::new(deps.web_search_api_key.clone())),

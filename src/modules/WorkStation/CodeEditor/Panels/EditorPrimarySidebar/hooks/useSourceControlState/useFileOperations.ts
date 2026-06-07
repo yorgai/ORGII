@@ -10,11 +10,11 @@
  * - Uses streaming output to Output panel (when available)
  * - Provides identical behavior for human clicks, AI commands, and Spotlight
  */
-import { useActionSystemOptional } from "@/src/modules/WorkStation/ActionSystem";
 import { remove } from "@tauri-apps/plugin-fs";
 import { type Dispatch, type SetStateAction, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useActionSystemOptional } from "@src/ActionSystem";
 import type { GitFile } from "@src/types/git/types";
 import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";
 

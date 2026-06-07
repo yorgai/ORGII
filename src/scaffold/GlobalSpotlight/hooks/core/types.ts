@@ -5,6 +5,8 @@
  */
 import type { ComponentType } from "react";
 
+import type { SupportedLanguage } from "@src/i18n";
+
 import type {
   ActionDefinition,
   BranchItem,
@@ -53,6 +55,8 @@ export interface SpotlightState {
   currentRepo: RepoItem | null;
   /** Current branch in path (if any) */
   currentBranch: string | null;
+  /** Current language in path (if any) */
+  currentLanguage: SupportedLanguage | null;
   /** Next parameter type needed (if any) */
   missingParam: ParamType | null;
   /** Whether all required params are filled */
@@ -73,6 +77,10 @@ export type SpotlightAction =
   | {
       type: "PUSH_BRANCH";
       payload: { branchName: string; branchData?: BranchItem };
+    }
+  | {
+      type: "PUSH_LANGUAGE";
+      payload: { language: SupportedLanguage; label: string };
     }
   | { type: "PUSH_SEGMENT"; payload: { segment: PathSegment } }
   | { type: "POP_SEGMENT" }

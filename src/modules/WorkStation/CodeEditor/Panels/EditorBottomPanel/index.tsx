@@ -21,9 +21,9 @@ import {
   type UseTerminalStateReturn,
   getTerminalDisplayTitle,
 } from "@/src/engines/TerminalCore/exports";
-import { useActionSystem } from "@/src/modules/WorkStation/ActionSystem";
 import React, { memo, useCallback, useMemo } from "react";
 
+import { useActionSystem } from "@src/ActionSystem";
 import { useBottomPanelState } from "@src/hooks/workStation";
 import {
   BOTTOM_PANEL_TABS,

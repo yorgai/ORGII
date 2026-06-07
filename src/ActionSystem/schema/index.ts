@@ -1,19 +1,28 @@
-/**
- * Zod Action Schema Module
- *
- * Exports the Zod-based action definition system.
- */
+export {
+  defineAppActionRegistration,
+  extractAppActionRegistrations,
+  isAppZodActionRegistration,
+  type AppZodActionRegistration,
+  type WorkStationActionContext,
+  type WorkStationZodActionRegistration,
+  type ZodActionRegistration,
+} from "./actionRegistration";
+
 export {
   defineZodAction,
+  zodActionToGUIControlManifestAction,
   zodActionToLLMTool,
   type ActionCategory,
   type ActionExecutor,
+  type ActionId,
   type ActionLayer,
   type ActionMeta,
   type ActionParams,
   type ActionResult,
+  type GUIControlManifest,
+  type GUIControlManifestAction,
   type LLMToolDefinition,
   type ZodAction,
 } from "./defineZodAction";
 
-export { zodActionRegistry } from "./zodRegistry";
+export { zodActionRegistry, ZodActionRegistry } from "./zodRegistry";

@@ -19,6 +19,7 @@ import {
   Globe,
   History,
   Home,
+  Languages,
   LaptopMinimal,
   Layers,
   Layout,
@@ -35,6 +36,9 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+
+import { ACTION_ID } from "@src/ActionSystem";
+import { LANGUAGE_NAMES, SUPPORTED_LANGUAGES } from "@src/i18n";
 
 import type { ActionDefinition } from "./types";
 
@@ -55,6 +59,7 @@ export const ICONS = {
   repo: Code,
   config: Settings,
   done: Check,
+  language: Languages,
 
   // Workspace modes
   focusMode: Focus,
@@ -113,6 +118,25 @@ export const ICONS = {
 // This is the core config - each action defines what parameters it needs
 
 export const ACTIONS: ActionDefinition[] = [
+  {
+    id: ACTION_ID.SETTINGS_SET_LANGUAGE,
+    label: "Change language",
+    labelKey: "settings:general.language",
+    pillLabelKey: "settings:general.language",
+    icon: ICONS.language,
+    color: "primary",
+    requiredParams: ["language"],
+    keywords: ["language", "locale", "translation", "i18n"],
+    aliases: [
+      "change language",
+      "set language",
+      "switch language",
+      "app language",
+      ...SUPPORTED_LANGUAGES,
+      ...Object.values(LANGUAGE_NAMES),
+    ],
+  },
+
   // File actions - require repo
   {
     id: "show-in-finder",
@@ -156,6 +180,7 @@ export const TAG_COLORS: Record<string, string> = {
   action: "primary", // blue (primary-6)
   repo: "warning", // orange (warning-6)
   branch: "warning", // orange (warning-6)
+  language: "success",
 };
 
 // ============ SPOTLIGHT POSITIONING CONFIG ============

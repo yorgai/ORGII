@@ -6,11 +6,10 @@
  */
 import { z } from "zod";
 
+import { ACTION_ID } from "@src/ActionSystem/actionIds";
+import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
 import { EditorTabService } from "@src/services/workStation";
 import { createUrlPreviewTab } from "@src/store/workstation/tabs/factories";
-
-import { ACTION_ID } from "../../actionIds";
-import { defineZodAction } from "../../schema/defineZodAction";
 
 export const urlPreview = defineZodAction(
   {

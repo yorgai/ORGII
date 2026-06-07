@@ -3,7 +3,6 @@
  *
  * Returns action configurations for each tab in the bottom panel.
  */
-import { useActionSystem } from "@/src/modules/WorkStation/ActionSystem";
 import {
   BrushCleaning,
   CopyPlus,
@@ -16,6 +15,7 @@ import {
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useActionSystem } from "@src/ActionSystem";
 import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
 import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
 import type { BottomPanelTab } from "@src/store/ui/workStationAtom";

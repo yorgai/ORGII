@@ -1,11 +1,11 @@
 import { z } from "zod";
 
+import { ACTION_ID } from "@src/ActionSystem/actionIds";
+import { defineAppActionRegistration } from "@src/ActionSystem/schema/actionRegistration";
+import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
 import { showScaleMessage } from "@src/hooks/navigation/useGlobalShortcuts/types";
 import { UI_SCALE_CONFIG, uiScaleAtom } from "@src/store/ui/uiAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
-
-import { ACTION_ID } from "../actionIds";
-import { defineZodAction } from "../schema/defineZodAction";
 
 const emptyParams = z.object({});
 
@@ -75,3 +75,6 @@ const appZoomReset = defineZodAction(
 );
 
 export const appZoomZodActions = [appZoomIn, appZoomOut, appZoomReset];
+
+export const appZoomActionRegistration =
+  defineAppActionRegistration(appZoomZodActions);

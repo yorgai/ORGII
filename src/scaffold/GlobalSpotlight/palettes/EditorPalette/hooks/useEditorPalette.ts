@@ -7,11 +7,8 @@ import { useAtomValue } from "jotai";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { ACTION_ID, useActionSystem } from "@src/ActionSystem";
 import { ROUTES } from "@src/config/routes";
-import {
-  ACTION_ID,
-  useActionSystem,
-} from "@src/modules/WorkStation/ActionSystem";
 import { FileOperationsService } from "@src/services/file";
 import { currentRepoAtom } from "@src/store/repo/derived";
 import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";

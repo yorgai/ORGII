@@ -21,6 +21,7 @@ import { createPortal } from "react-dom";
 import { AI_VISUALIZER_CONFIG } from "./config";
 import "./index.scss";
 import {
+  clearGlobalVisualizer,
   setGlobalVisualizer,
   useAIActionVisualizer,
 } from "./useAIActionVisualizer";
@@ -86,7 +87,7 @@ export const AIActionVisualizer: React.FC = () => {
   useEffect(() => {
     setGlobalVisualizer(controller);
     return () => {
-      setGlobalVisualizer(null);
+      clearGlobalVisualizer(controller);
     };
   }, [controller]);
 

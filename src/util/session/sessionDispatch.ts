@@ -58,6 +58,13 @@ export const SESSION_PREFIX_REGISTRY: readonly SessionPrefixConfig[] = [
     defId: "builtin:os",
   },
   {
+    prefix: "guicontrol-",
+    category: "rust_agent",
+    variant: RUST_AGENT_TYPE.GUI_CONTROL,
+    iconId: "mouse-pointer-click",
+    defId: "builtin:gui-control",
+  },
+  {
     prefix: "sdeagent-",
     category: "rust_agent",
     variant: RUST_AGENT_TYPE.SDE,
@@ -109,6 +116,9 @@ export const SESSION_PREFIX_REGISTRY: readonly SessionPrefixConfig[] = [
 /** Prefix for OS Agent session IDs */
 export const OS_AGENT_SESSION_PREFIX = "osagent-";
 
+/** Prefix for ORGII GUI Control Agent session IDs */
+export const GUI_CONTROL_SESSION_PREFIX = "guicontrol-";
+
 /** Prefix for SDE Agent session IDs (Rust-native coding agent) */
 export const SDE_AGENT_SESSION_PREFIX = "sdeagent-";
 
@@ -131,6 +141,9 @@ export const TERMINAL_AGENT_SESSION_PREFIX = "terminalagent-";
 
 /** Agent definition ID for the built-in OS Agent */
 export const BUILTIN_OS_DEF_ID = "builtin:os";
+
+/** Agent definition ID for the built-in ORGII GUI Control Agent */
+export const BUILTIN_GUI_CONTROL_DEF_ID = "builtin:gui-control";
 
 /** Agent definition ID for the built-in SDE Agent */
 export const BUILTIN_SDE_DEF_ID = "builtin:sde";

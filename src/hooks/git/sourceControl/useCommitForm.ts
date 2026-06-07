@@ -1,4 +1,3 @@
-import { useActionSystemOptional } from "@/src/modules/WorkStation/ActionSystem";
 import { useAtomValue } from "jotai";
 import {
   type Dispatch,
@@ -8,6 +7,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useActionSystemOptional } from "@src/ActionSystem";
 import { useGitOperations } from "@src/hooks/git/useGitOperations";
 import { gitOutputIntegrationAtom } from "@src/store/workstation/codeEditor/outputIntegration";
 import type { GitFile } from "@src/types/git/types";

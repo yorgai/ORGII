@@ -6,10 +6,10 @@
  */
 import { z } from "zod";
 
+import { ACTION_ID } from "@src/ActionSystem/actionIds";
+import { defineAppActionRegistration } from "@src/ActionSystem/schema/actionRegistration";
+import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
 import { showInFinder } from "@src/util/platform/ipcRenderer";
-
-import { ACTION_ID } from "../actionIds";
-import { defineZodAction } from "../schema/defineZodAction";
 
 const fileRevealInOsFileManager = defineZodAction(
   {
@@ -32,3 +32,6 @@ const fileRevealInOsFileManager = defineZodAction(
 );
 
 export const appFileZodActions = [fileRevealInOsFileManager];
+
+export const appFileActionRegistration =
+  defineAppActionRegistration(appFileZodActions);
