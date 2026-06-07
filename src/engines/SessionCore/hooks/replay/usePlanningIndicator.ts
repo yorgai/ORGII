@@ -53,7 +53,7 @@ import { isInteractiveTool } from "@src/engines/SessionCore/core/interactiveTool
 import {
   isPendingCancelAtom,
   isSessionActiveAtom,
-  sessionRuntimeStatusAtom,
+  setSessionRuntimeStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 
 /** How long (ms) to wait without new events before showing the indicator */
@@ -90,7 +90,7 @@ export function usePlanningIndicator(): PlanningIndicatorState {
   const isPendingCancel = useAtomValue(isPendingCancelAtom);
   const snapshot = useAtomValue(derivedSnapshotAtom);
   const version = useAtomValue(eventStoreVersionAtom);
-  const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
+  const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
 
   const anyRunning = snapshot?.hasRunningEvent ?? false;
 
@@ -238,7 +238,7 @@ export function usePlanningIndicator(): PlanningIndicatorState {
           "forcing session status to 'completed'. This usually means Rust dropped agent:complete " +
           "or the idle agent:queue_status frame."
       );
-      setSessionRuntimeStatus("completed");
+      setSessionRuntimeStatus({ status: "completed", source: "planning" });
     }, PLANNING_WATCHDOG_MS);
     return () => {
       window.clearTimeout(timerId);

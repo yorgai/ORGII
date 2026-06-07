@@ -208,7 +208,7 @@ export function useInputArea(
   // the editor and clobber what the user is currently typing. Only the
   // session-id transition is allowed to touch the editor content here.
   const seededSessionRef = useRef<string | null>(null);
-  const suppressNextDraftWriteRef = useRef(false);
+  const programmaticInputMutationDepthRef = useRef(0);
   const imageDraftSessionRef = useRef<string | null>(null);
   const imageDraftHydratingRef = useRef(false);
 
@@ -263,11 +263,18 @@ export function useInputArea(
     writeImageDraft(draftSessionId, attachmentImages);
   }, [draftSessionId, attachmentImages]);
 
-  const suppressNextDraftWrite = useCallback(() => {
-    suppressNextDraftWriteRef.current = true;
-    queueMicrotask(() => {
-      suppressNextDraftWriteRef.current = false;
-    });
+  const withProgrammaticInputMutation = useCallback((mutation: () => void) => {
+    programmaticInputMutationDepthRef.current += 1;
+    try {
+      mutation();
+    } finally {
+      window.setTimeout(() => {
+        programmaticInputMutationDepthRef.current = Math.max(
+          0,
+          programmaticInputMutationDepthRef.current - 1
+        );
+      }, 0);
+    }
   }, []);
 
   const handleRestoreInputContent = useCallback(
@@ -302,7 +309,7 @@ export function useInputArea(
     selectedCiteRange: citeCode.selectedCiteRange,
     citeFileName: citeCode.citeFileName,
     currentRepoPath,
-    onBeforeRestoreInputContent: suppressNextDraftWrite,
+    withProgrammaticInputMutation,
     onRestoreInputContent: handleRestoreInputContent,
   });
 
@@ -324,8 +331,7 @@ export function useInputArea(
       // Pass to workspace chat handler
       handleSessInputChange(draftText);
 
-      if (suppressNextDraftWriteRef.current) {
-        suppressNextDraftWriteRef.current = false;
+      if (programmaticInputMutationDepthRef.current > 0) {
         return;
       }
 

@@ -171,6 +171,7 @@ pub async fn process_message(
         hook_executor: Some(hook_executor),
         turn_id: input.turn_id.clone(),
         cancel_flag: Some(Arc::clone(&session.cancel_flag)),
+        active_turn_generation: Some(Arc::clone(&session.active_turn_generation)),
         active_repo_path: input
             .ide_context
             .as_ref()

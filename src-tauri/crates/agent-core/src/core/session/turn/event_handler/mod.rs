@@ -104,6 +104,10 @@ pub struct EventHandlerConfig {
     /// stop at the Rust boundary once this flag is set; frontend filtering is too late.
     pub cancel_flag: Option<Arc<AtomicBool>>,
 
+    /// Synchronous active-turn generation mirror. Durable EventStore writes
+    /// must match this generation when a turn id is bound.
+    pub active_turn_generation: Option<Arc<parking_lot::RwLock<Option<String>>>>,
+
     /// Active IDE repository path for multi-root workspace tool rendering.
     pub active_repo_path: Option<String>,
 }
@@ -128,6 +132,19 @@ impl UnifiedEventHandler {
             .cancel_flag
             .as_ref()
             .is_some_and(|flag| flag.load(Ordering::SeqCst))
+    }
+
+    fn is_current_turn_generation(&self) -> bool {
+        let Some(bound_turn_id) = self.config.turn_id.as_deref() else {
+            return true;
+        };
+        let Some(active_turn_generation) = self.config.active_turn_generation.as_ref() else {
+            return true;
+        };
+        active_turn_generation
+            .read()
+            .as_deref()
+            .is_some_and(|active_turn_id| active_turn_id == bound_turn_id)
     }
 
     /// Creates a new unified event handler.
@@ -200,7 +217,7 @@ impl UnifiedEventHandler {
     /// handler was constructed without an app handle (tests / non-Tauri
     /// callers).
     fn push_to_store(&self, session_id: &str, event: SessionEvent) {
-        if self.is_cancelled() {
+        if self.is_cancelled() || !self.is_current_turn_generation() {
             return;
         }
 
@@ -216,7 +233,7 @@ impl UnifiedEventHandler {
     /// the assistant message — preventing the frontend from rendering a
     /// stale `StreamingCursor` during tool execution.
     fn finalize_streaming_in_store(&self, session_id: &str) {
-        if self.is_cancelled() {
+        if self.is_cancelled() || !self.is_current_turn_generation() {
             return;
         }
 
@@ -633,7 +650,34 @@ impl TurnEventHandler for UnifiedEventHandler {
 
 #[cfg(test)]
 mod tests {
-    use super::should_push_assistant_event;
+    use std::sync::Arc;
+
+    use super::{should_push_assistant_event, EventHandlerConfig, UnifiedEventHandler};
+
+    #[test]
+    fn current_turn_generation_rejects_stale_bound_turn() {
+        let active_turn_generation =
+            Arc::new(parking_lot::RwLock::new(Some("turn-new".to_string())));
+        let handler = UnifiedEventHandler::new(EventHandlerConfig {
+            turn_id: Some("turn-old".to_string()),
+            active_turn_generation: Some(active_turn_generation),
+            ..Default::default()
+        });
+
+        assert!(!handler.is_current_turn_generation());
+    }
+
+    #[test]
+    fn current_turn_generation_accepts_matching_bound_turn() {
+        let active_turn_generation = Arc::new(parking_lot::RwLock::new(Some("turn-1".to_string())));
+        let handler = UnifiedEventHandler::new(EventHandlerConfig {
+            turn_id: Some("turn-1".to_string()),
+            active_turn_generation: Some(active_turn_generation),
+            ..Default::default()
+        });
+
+        assert!(handler.is_current_turn_generation());
+    }
 
     #[test]
     fn assistant_event_pushes_for_non_streaming_text_with_tool_calls() {

@@ -28,6 +28,7 @@ import {
   isSessionActiveAtom,
   lastUserMessageAtom,
   sessionRuntimeStatusAtom,
+  setSessionRuntimeStatusAtom,
   userInitiatedCancelAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultExecModeAtom } from "@src/store/session/creatorDefaultExecModeAtom";
@@ -121,7 +122,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
   // Atoms
   // ============================================
   const isWpGeneWorking = useAtomValue(isSessionActiveAtom);
-  const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
+  const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
   const setLastUserMessage = useSetAtom(lastUserMessageAtom);
   // SessionCore engine-level session ID — always tracks the currently
   // synced session (set by loadSessionAtom inside useSessionSync).
@@ -361,7 +362,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       // before `activationVersion` is captured, breaking the cold-start
       // condition (`activationVersion === version`) and forcing the indicator
       // to wait the full 1-second warm-path delay instead of appearing instantly.
-      setSessionRuntimeStatus("running");
+      setSessionRuntimeStatus({ status: "running", source: "dispatch" });
       setSessChatInput("");
       setLoading(true);
       _sharedSubmitGuard.current = true;
@@ -389,7 +390,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         Message.error(t("errors.failedToSendMessage"));
         _sharedSubmitGuard.current = false;
         _sharedSubmitPayload.current = null;
-        setSessionRuntimeStatus("idle");
+        setSessionRuntimeStatus({ status: "idle", source: "dispatch" });
         if (!userEventAppended) throw error;
         // NOT re-thrown after user event append: the message is already visible
         // in chat, so restoring the editor would create a duplicate-send risk.

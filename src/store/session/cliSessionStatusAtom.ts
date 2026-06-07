@@ -22,6 +22,30 @@ export type { CliSessionStatus } from "@src/types/session/session";
 export const sessionRuntimeStatusAtom = atom<CliSessionStatus>("idle");
 sessionRuntimeStatusAtom.debugLabel = "sessionRuntimeStatus";
 
+export type SessionRuntimeStatusSource =
+  | "dispatch"
+  | "queue"
+  | "sync"
+  | "timeline-boundary"
+  | "planning"
+  | "launch"
+  | "interactive-event"
+  | "repo-setup"
+  | "session-reset"
+  | "e2e";
+
+export const setSessionRuntimeStatusAtom = atom(
+  null,
+  (
+    _get,
+    set,
+    update: { status: CliSessionStatus; source: SessionRuntimeStatusSource }
+  ) => {
+    set(sessionRuntimeStatusAtom, update.status);
+  }
+);
+setSessionRuntimeStatusAtom.debugLabel = "setSessionRuntimeStatus";
+
 /** Error message from the last failed session run. Cleared on new run start. */
 export const sessionRuntimeErrorAtom = atom<string | null>(null);
 sessionRuntimeErrorAtom.debugLabel = "sessionRuntimeError";

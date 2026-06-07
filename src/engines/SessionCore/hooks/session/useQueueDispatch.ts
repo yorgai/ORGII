@@ -34,6 +34,7 @@ import {
   isSessionActiveAtom,
   lastUserMessageAtom,
   sessionRuntimeStatusAtom,
+  setSessionRuntimeStatusAtom,
   userInitiatedCancelAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultExecModeAtom } from "@src/store/session/creatorDefaultExecModeAtom";
@@ -85,7 +86,7 @@ export function useQueueDispatch(): void {
   const isQueueEditing = useAtomValue(queueEditingAtom);
   const flushRequest = useAtomValue(queueFlushRequestAtom);
   const dequeueMessage = useSetAtom(dequeueMessageAtom);
-  const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
+  const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
   const sessionMap = useAtomValue(sessionMapAtom);
   const creatorDefaultSelection = useAtomValue(
     creatorDefaultModelSelectionAtom
@@ -171,7 +172,7 @@ export function useQueueDispatch(): void {
       // starts immediately, rather than waiting for the first SSE event from
       // Rust (which can take several seconds). The real status_changed event
       // from Rust will overwrite this when it arrives.
-      setSessionRuntimeStatus("running");
+      setSessionRuntimeStatus({ status: "running", source: "queue" });
       markQueueTurnWorking(sessionId);
 
       // Both `modelSelection` and `agentExecMode` on QueuedMessage are
@@ -220,13 +221,13 @@ export function useQueueDispatch(): void {
           // so the next queued follow-up can flush immediately.
           onDone();
           if (isCursorIdeSession(sessionId)) {
-            setSessionRuntimeStatus("idle");
+            setSessionRuntimeStatus({ status: "idle", source: "queue" });
           }
         } catch (err) {
           console.error("[useQueueDispatch] dispatch failed:", err);
           // IPC failed before Rust even received the message — reset status
           // back to idle so the UI doesn't stay stuck in "running".
-          setSessionRuntimeStatus("idle");
+          setSessionRuntimeStatus({ status: "idle", source: "queue" });
           dequeueMessage(msg.id);
           onDone();
           const detail = err instanceof Error ? err.message : String(err);
@@ -346,7 +347,7 @@ export function useQueueDispatch(): void {
         } finally {
           explicitInterruptSessionRef.current = null;
           setPendingCancel(false);
-          setSessionRuntimeStatus("idle");
+          setSessionRuntimeStatus({ status: "idle", source: "queue" });
           window.setTimeout(() => tryDispatchNextRef.current?.(), 0);
         }
       })();

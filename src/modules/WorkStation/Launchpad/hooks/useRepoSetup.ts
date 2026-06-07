@@ -21,7 +21,7 @@ import { SessionService } from "@src/engines/SessionCore/services/SessionService
 import { createSyntheticUserEvent } from "@src/engines/SessionCore/sync/adapters/shared";
 import { createLogger } from "@src/hooks/logger";
 import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
-import { sessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
+import { setSessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
 
 import { buildSetupPrompt } from "../config";
 import type { DetectedConfigFile, RepoType } from "../types";
@@ -74,7 +74,7 @@ export function useRepoSetup(): UseRepoSetupReturn {
   const { openSession } = useSessionView();
   const dispatchLoadSession = useSetAtom(loadSessionAtom);
   const setPendingSyntheticEvent = useSetAtom(pendingSyntheticEventAtom);
-  const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
+  const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
 
   // Auto-launch tracking: open WorkStation browser tab when the agent
   // calls setup_repo with action="launch_app".
@@ -138,7 +138,7 @@ export function useRepoSetup(): UseRepoSetupReturn {
         const syntheticEvent = createSyntheticUserEvent(sessionId, prompt);
         setPendingSyntheticEvent(syntheticEvent);
         dispatchLoadSession({ sessionId, events: [syntheticEvent] });
-        setSessionRuntimeStatus("running");
+        setSessionRuntimeStatus({ status: "running", source: "repo-setup" });
 
         openSession(sessionId, sessionName, context.repoPath);
       } catch (error) {

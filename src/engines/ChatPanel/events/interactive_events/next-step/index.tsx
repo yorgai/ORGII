@@ -29,7 +29,7 @@ import {
 import { useLifecycleLabels } from "@src/engines/SessionCore/rendering/registry";
 import {
   isSessionActiveAtom,
-  sessionRuntimeStatusAtom,
+  setSessionRuntimeStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 import { activeSessionIdAtom } from "@src/store/session/viewAtom";
 
@@ -157,7 +157,7 @@ const ChatVariant: React.FC<{
   const sessionId = useAtomValue(activeSessionIdAtom);
   const isSessionActive = useAtomValue(isSessionActiveAtom);
   const events = useAtomValue(eventsAtom);
-  const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
+  const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
 
   const { addUserMessage, dispatchMessageBySessionType } = useMessageDispatch({
     getSessionId: () => sessionId,
@@ -220,7 +220,10 @@ const ChatVariant: React.FC<{
       // isSessionActive first flips true. If addUserMessage runs first the
       // EventStore version bumps before activationVersion is recorded, so
       // coldStartVisible stays false and the indicator is delayed by 1 second.
-      setSessionRuntimeStatus("running");
+      setSessionRuntimeStatus({
+        status: "running",
+        source: "interactive-event",
+      });
 
       void (async () => {
         try {

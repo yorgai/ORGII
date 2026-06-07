@@ -45,7 +45,7 @@ interface UseInputAreaEffectsOptions {
   // Repo path for debug logging
   currentRepoPath: string | undefined;
 
-  onBeforeRestoreInputContent?: () => void;
+  withProgrammaticInputMutation?: (mutation: () => void) => void;
   onRestoreInputContent?: (text: string) => void;
 }
 
@@ -61,7 +61,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
     selectedCiteRange,
     citeFileName,
     currentRepoPath,
-    onBeforeRestoreInputContent,
+    withProgrammaticInputMutation,
     onRestoreInputContent,
   } = options;
 
@@ -100,10 +100,16 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
         ? `${restoreToInput.displayContent}\n${current}`
         : restoreToInput.displayContent;
 
-    onBeforeRestoreInputContent?.();
-    editor.setContent(next);
-    hasContentRef.current = next.trim().length > 0;
-    onRestoreInputContent?.(next);
+    const restoreMutation = () => {
+      editor.setContent(next);
+      hasContentRef.current = next.trim().length > 0;
+      onRestoreInputContent?.(next);
+    };
+    if (withProgrammaticInputMutation) {
+      withProgrammaticInputMutation(restoreMutation);
+    } else {
+      restoreMutation();
+    }
 
     // Restore image attachments that were captured before the cancel.
     // Data URLs are already optimized, so we reconstruct ChatImageAttachment
@@ -136,7 +142,7 @@ export function useInputAreaEffects(options: UseInputAreaEffectsOptions): void {
     setRestoreToInput,
     setImageAttachments,
     dropTargetId,
-    onBeforeRestoreInputContent,
+    withProgrammaticInputMutation,
     onRestoreInputContent,
     composerInputRef,
     hasContentRef,

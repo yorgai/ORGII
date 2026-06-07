@@ -3,7 +3,7 @@ import { SessionService } from "@src/engines/SessionCore/services/SessionService
 import { markSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
 import {
   isPendingCancelAtom,
-  sessionRuntimeStatusAtom,
+  setSessionRuntimeStatusAtom,
   streamRetryStatusAtom,
   userInitiatedCancelAtom,
 } from "@src/store/session/cliSessionStatusAtom";
@@ -46,7 +46,10 @@ export function beginTimelineBoundary(
 ): void {
   const store = getInstrumentedStore();
   clearLiveStreamingForSession(sessionId);
-  store.set(sessionRuntimeStatusAtom, "idle");
+  store.set(setSessionRuntimeStatusAtom, {
+    status: "idle",
+    source: "timeline-boundary",
+  });
 
   if (reason === "stop") {
     store.set(userInitiatedCancelAtom, true);

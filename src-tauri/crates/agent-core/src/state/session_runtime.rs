@@ -165,6 +165,9 @@ pub struct AgentSession {
     /// Protected by a `Mutex` so callers can replace it atomically at
     /// turn boundaries without holding the global sessions lock.
     pub active_turn: tokio::sync::Mutex<Option<DialogTurn>>,
+    /// Synchronous mirror of `active_turn.turn_id` for non-async event-store
+    /// write guards on hot paths.
+    pub active_turn_generation: Arc<parking_lot::RwLock<Option<String>>>,
     /// Per-session FIFO message queue.
     ///
     /// All incoming messages are enqueued here and processed one at a time
@@ -286,6 +289,7 @@ impl AgentSession {
             processing_lock: Arc::new(tokio::sync::Mutex::new(())),
             last_active_at: tokio::sync::Mutex::new(Instant::now()),
             active_turn: tokio::sync::Mutex::new(None),
+            active_turn_generation: Arc::new(parking_lot::RwLock::new(None)),
             scheduler: DialogScheduler::new(session_id_for_scheduler, 32),
             em_state: Arc::new(tokio::sync::Mutex::new(ExtractMemoriesState::default())),
             ad_state: Arc::new(tokio::sync::Mutex::new(AutoDreamState::default())),
@@ -376,6 +380,7 @@ impl AgentSession {
     pub async fn begin_turn(&self, user_input: String) -> String {
         let turn = DialogTurn::new(user_input, Arc::clone(&self.cancel_flag));
         let turn_id = turn.turn_id.clone();
+        *self.active_turn_generation.write() = Some(turn_id.clone());
         *self.active_turn.lock().await = Some(turn);
         turn_id
     }
@@ -390,6 +395,7 @@ impl AgentSession {
             turn.finalize(turn_state, stats);
         }
         *guard = None;
+        *self.active_turn_generation.write() = None;
     }
 
     /// Return the `turn_id` of the currently executing turn, if any.

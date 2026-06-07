@@ -32,7 +32,7 @@ import {
 } from "@src/store/session";
 import {
   lastUserMessageAtom,
-  sessionRuntimeStatusAtom,
+  setSessionRuntimeStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultExecModeAtom } from "@src/store/session/creatorDefaultExecModeAtom";
 import { cursorCreatorModeOverrideAtom } from "@src/store/session/cursorModeOverrideAtom";
@@ -143,7 +143,7 @@ export function useSessionLaunch(
   );
   const setStationMode = useSetAtom(stationModeAtom);
   const setLastUserMessage = useSetAtom(lastUserMessageAtom);
-  const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
+  const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
   const setSessionSource = useSetAtom(sessionSourceAtom);
   const showAuthError = useCallback(() => {
     triggerSessionExpired();
@@ -401,7 +401,7 @@ export function useSessionLaunch(
           workItemContext: resolvedWorkItemContext ?? undefined,
         });
       } else {
-        setSessionRuntimeStatus("running");
+        setSessionRuntimeStatus({ status: "running", source: "launch" });
         if (
           dispatchCategory === DISPATCH_CATEGORY.CLI_AGENT &&
           !sessionUsesHostedKey

@@ -22,6 +22,7 @@ import {
   restoreToInputAtom,
   sessionRolledBackAtom,
   sessionRuntimeStatusAtom,
+  setSessionRuntimeStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 
 interface RestorableUserMessage {
@@ -83,7 +84,7 @@ export function useSessionActions(options: UseSessionActionsOptions) {
   const setPendingCancel = useSetAtom(isPendingCancelAtom);
   const setRestoreToInput = useSetAtom(restoreToInputAtom);
   const setSessionRolledBack = useSetAtom(sessionRolledBackAtom);
-  const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
+  const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
   const stopVisibleStreaming = useCallback((sessionId: string) => {
     clearLiveStreamingForSession(sessionId);
   }, []);
@@ -162,7 +163,10 @@ export function useSessionActions(options: UseSessionActionsOptions) {
               latestStatus === "waiting_for_funds";
             if (runtimeStartedAnotherTurn) return;
             setPendingCancel(false);
-            setSessionRuntimeStatus("idle");
+            setSessionRuntimeStatus({
+              status: "idle",
+              source: "timeline-boundary",
+            });
             stopVisibleStreaming(sessionId);
           }, 10_000);
 
@@ -170,7 +174,10 @@ export function useSessionActions(options: UseSessionActionsOptions) {
             onError: (msg: string) => {
               Message.error(t(msg));
               setPendingCancel(false);
-              setSessionRuntimeStatus("idle");
+              setSessionRuntimeStatus({
+                status: "idle",
+                source: "timeline-boundary",
+              });
               stopVisibleStreaming(sessionId);
             },
           });
@@ -184,7 +191,7 @@ export function useSessionActions(options: UseSessionActionsOptions) {
         },
       });
       setPendingCancel(false);
-      setSessionRuntimeStatus("idle");
+      setSessionRuntimeStatus({ status: "idle", source: "timeline-boundary" });
       stopVisibleStreaming(sessionId);
     },
     [

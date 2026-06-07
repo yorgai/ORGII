@@ -18,12 +18,13 @@ import {
 import { usePartialRecovery } from "@src/engines/SessionCore/hooks/hostedKey";
 import { createLogger } from "@src/hooks/logger";
 import {
+  type CliSessionStatus,
   isPendingCancelAtom,
   sessionContextBreakdownAtom,
   sessionContextTokensAtom,
   sessionRolledBackAtom,
   sessionRuntimeErrorAtom,
-  sessionRuntimeStatusAtom,
+  setSessionRuntimeStatusAtom,
   streamRetryStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 import { pendingPlanApprovalsAtom } from "@src/store/session/planApprovalAtom";
@@ -68,7 +69,15 @@ export function useSessionSync(
   const setWpReadOnly = useSetAtom(wpReadOnlyAtom);
   const setSessionContextTokens = useSetAtom(sessionContextTokensAtom);
   const setSessionContextBreakdown = useSetAtom(sessionContextBreakdownAtom);
-  const setSessionRuntimeStatus = useSetAtom(sessionRuntimeStatusAtom);
+  const setSessionRuntimeStatusAtomValue = useSetAtom(
+    setSessionRuntimeStatusAtom
+  );
+  const setSessionRuntimeStatus = useCallback(
+    (status: CliSessionStatus) => {
+      setSessionRuntimeStatusAtomValue({ status, source: "sync" });
+    },
+    [setSessionRuntimeStatusAtomValue]
+  );
   const setSessionRuntimeError = useSetAtom(sessionRuntimeErrorAtom);
   const setPendingCancel = useSetAtom(isPendingCancelAtom);
   const setSessionRolledBack = useSetAtom(sessionRolledBackAtom);
