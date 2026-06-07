@@ -9,9 +9,8 @@ import {
   SUPPORTED_LANGUAGES,
   type SupportedLanguage,
 } from "@src/i18n";
+import { languageAtom } from "@src/store/ui/languageAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
-
-import { languageAtom } from "../languageAtom";
 
 const SupportedLanguageSchema = z.enum(SUPPORTED_LANGUAGES);
 

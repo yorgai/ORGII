@@ -14,10 +14,6 @@ import {
 } from "react";
 
 import {
-  AI_VISUALIZER_CONFIG,
-  getGlobalVisualizer,
-} from "@src/components/AIActionVisualizer";
-import {
   cleanupServices,
   initializeServices,
   registerCoreActions,
@@ -81,41 +77,6 @@ export function ActionSystemProvider({
     };
   }, [repoPath, repoId]);
 
-  const visualizeAIAction = useCallback(
-    async (
-      type: string,
-      payload: Record<string, unknown>
-    ): Promise<boolean> => {
-      const visualizer = getGlobalVisualizer();
-      if (!visualizer) return false;
-
-      const zodAction = zodActionRegistry.get(type);
-      const description = zodAction?.meta.description ?? type;
-
-      visualizer.show({
-        actionType: type,
-        payload,
-        description,
-      });
-
-      await new Promise((resolve) =>
-        setTimeout(resolve, AI_VISUALIZER_CONFIG.defaultVisualDelay)
-      );
-
-      return true;
-    },
-    []
-  );
-
-  const hideVisualization = useCallback(() => {
-    const visualizer = getGlobalVisualizer();
-    if (visualizer) {
-      setTimeout(() => {
-        visualizer.hide();
-      }, AI_VISUALIZER_CONFIG.highlightLingerDuration);
-    }
-  }, []);
-
   const dispatch = useCallback(
     async (
       type: string,
@@ -125,34 +86,21 @@ export function ActionSystemProvider({
       GUIAgentService.logAction(type, payload, source);
 
       const startTime = performance.now();
-      let didVisualize = false;
 
       try {
-        if (source === "ai") {
-          didVisualize = await visualizeAIAction(type, payload);
-        }
-
         const result = await zodActionRegistry.execute(type, payload);
         const duration = performance.now() - startTime;
         GUIAgentService.logResult(type, result, duration);
-
-        if (didVisualize) {
-          hideVisualization();
-        }
 
         return result;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         GUIAgentService.logError(type, error);
 
-        if (didVisualize) {
-          hideVisualization();
-        }
-
         return { success: false, message };
       }
     },
-    [visualizeAIAction, hideVisualization]
+    []
   );
 
   const getActionIds = useCallback(() => {

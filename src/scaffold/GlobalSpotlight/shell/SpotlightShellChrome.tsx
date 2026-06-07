@@ -2,30 +2,17 @@
  * SpotlightShellChrome
  *
  * Low-level chrome for SpotlightShell: Glass panel + optional portal +
- * backdrop + sidebar-aware centering + footer slot beneath the panel.
+ * backdrop + viewport-centered positioning + footer slot beneath the panel.
  *
  * This is a direct merge of the previous SelectorContainer + SpotlightPortal
  * layer. Only consumed by SpotlightShell; palettes never see this component.
  */
-import { useAtomValue } from "jotai";
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useLocation } from "react-router-dom";
 
 import Glass from "@src/components/Glass";
 import type { MaterialThickness } from "@src/components/Glass/config";
-import { hasSidebar } from "@src/config/sidebarRegistry";
 import { useOverlayLayer } from "@src/store/ui/overlayLayerAtom";
-import {
-  sidebarCollapsedAtom,
-  sidebarWidthAtom,
-} from "@src/store/ui/sidebarAtom";
 
 import { SPOTLIGHT_CONFIG, SPOTLIGHT_GLASS_PANEL_CLASS } from "../constants";
 import { SPOTLIGHT_STYLES } from "../styles";
@@ -43,45 +30,6 @@ export interface SpotlightShellChromeProps {
   children: React.ReactNode;
 }
 
-// ============ POSITION HOOK ============
-
-function useSidebarAwarePosition(isOpen: boolean, asPortal: boolean) {
-  const [left, setLeft] = useState<string | number>("50%");
-  const [isReady, setIsReady] = useState(false);
-  const isCollapsed = useAtomValue(sidebarCollapsedAtom);
-  const sidebarWidth = useAtomValue(sidebarWidthAtom);
-  const location = useLocation();
-
-  const calc = useCallback(() => {
-    if (!asPortal) return "50%";
-    let offset = 0;
-    if (hasSidebar(location.pathname) && !isCollapsed) {
-      const isMac = navigator.platform.toLowerCase().includes("mac");
-      if (isMac) offset = sidebarWidth;
-    }
-    const vw = window.innerWidth;
-    return offset + (vw - offset) / 2;
-  }, [asPortal, isCollapsed, sidebarWidth, location.pathname]);
-
-  useLayoutEffect(() => {
-    if (!isOpen) {
-      requestAnimationFrame(() => setIsReady(false));
-      return;
-    }
-    const update = () => {
-      setLeft(calc());
-      requestAnimationFrame(() => setIsReady(true));
-    };
-    update();
-    if (asPortal) {
-      window.addEventListener("resize", update);
-      return () => window.removeEventListener("resize", update);
-    }
-  }, [isOpen, asPortal, calc]);
-
-  return { left, isReady };
-}
-
 // ============ COMPONENT ============
 
 export const SpotlightShellChrome: React.FC<SpotlightShellChromeProps> = ({
@@ -94,7 +42,6 @@ export const SpotlightShellChrome: React.FC<SpotlightShellChromeProps> = ({
   footer,
   children,
 }) => {
-  const { left } = useSidebarAwarePosition(isOpen, asPortal);
   const inputHostRef = useRef<HTMLDivElement | null>(null);
 
   useOverlayLayer(isOpen && asPortal);
@@ -185,11 +132,16 @@ export const SpotlightShellChrome: React.FC<SpotlightShellChromeProps> = ({
         }}
       />
       <div
+        className="pointer-events-none fixed inset-x-0 top-0 h-12 bg-gradient-to-b from-bg-1/90 to-transparent"
+        style={{ zIndex: SPOTLIGHT_CONFIG.backdropZIndex }}
+        aria-hidden
+      />
+      <div
         data-spotlight-container
         style={{
           position: "fixed",
           top: SPOTLIGHT_CONFIG.topOffset,
-          left,
+          left: "50%",
           transform: "translateX(-50%)",
           zIndex: SPOTLIGHT_CONFIG.containerZIndex,
           width: `min(${width}px, calc(100vw - 160px))`,

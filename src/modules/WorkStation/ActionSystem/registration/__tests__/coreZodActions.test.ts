@@ -6,6 +6,7 @@ import type { ZodTypeAny } from "zod";
 
 import { ACTION_ID } from "@src/ActionSystem/actionIds";
 import { guiControlZodActions } from "@src/ActionSystem/actions/guiControlActions.zod";
+import { settingsZodActions } from "@src/ActionSystem/actions/languageActions.zod";
 import { spotlightZodActions } from "@src/ActionSystem/actions/spotlightActions.zod";
 import { appZoomZodActions } from "@src/ActionSystem/actions/zoomActions.zod";
 import { collectAppZodActions } from "@src/ActionSystem/collectAppActions";
@@ -14,7 +15,6 @@ import {
   zodActionToLLMTool,
 } from "@src/ActionSystem/schema/defineZodAction";
 import { zodActionRegistry } from "@src/ActionSystem/schema/zodRegistry";
-import { settingsZodActions } from "@src/store/ui/actions/languageActions.zod";
 
 import {
   getAllCoreZodActions,

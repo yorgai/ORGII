@@ -24,6 +24,7 @@ interface ContainerEnginesSectionProps {
   error: string | null;
   onRefresh: () => void;
   defaultOpen?: boolean;
+  compact?: boolean;
 }
 
 const KIND_LABEL_KEY = {
@@ -41,6 +42,7 @@ const ContainerEnginesSection: React.FC<ContainerEnginesSectionProps> = ({
   error,
   onRefresh,
   defaultOpen = false,
+  compact = false,
 }) => {
   const { t } = useTranslation(["navigation", "common"]);
   const { spinClass, handleClick: handleRefreshClick } = useRefreshSpin(
@@ -120,6 +122,7 @@ const ContainerEnginesSection: React.FC<ContainerEnginesSectionProps> = ({
           : t("navigation:launchpad.containerEngines.title")
       }
       defaultOpen={defaultOpen}
+      compact={compact}
       actions={
         <Button
           variant="tertiary"

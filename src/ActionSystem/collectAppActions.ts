@@ -1,5 +1,6 @@
 import type { ZodTypeAny } from "zod";
 
+import * as appActionExports from "./actions";
 import { extractAppActionRegistrations } from "./schema/actionRegistration";
 import type { ZodAction } from "./schema/defineZodAction";
 
@@ -9,18 +10,18 @@ interface WebpackRequireContext {
 }
 
 declare const require: {
-  context: (
+  context?: (
     directory: string,
     useSubdirectories: boolean,
     regExp: RegExp
   ) => WebpackRequireContext;
 };
 
-const actionContext = require.context(
-  "../",
-  true,
-  /\/actions\/[^/]+\.zod\.ts$/
-);
+function createWebpackActionContext(): WebpackRequireContext | null {
+  return typeof require.context === "function"
+    ? require.context("../", true, /\/actions\/[^/]+\.zod\.ts$/)
+    : null;
+}
 
 function isCoreRegistrationActionPath(path: string): boolean {
   return path.includes(
@@ -29,6 +30,9 @@ function isCoreRegistrationActionPath(path: string): boolean {
 }
 
 function collectAppActionModules(): unknown[] {
+  const actionContext = createWebpackActionContext();
+  if (!actionContext) return [appActionExports];
+
   return actionContext
     .keys()
     .filter((path) => !isCoreRegistrationActionPath(path))

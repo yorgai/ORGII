@@ -9,11 +9,12 @@
  */
 import { MenuItem, Menu as TauriMenu } from "@tauri-apps/api/menu";
 import i18next from "i18next";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import {
   ArrowUpRight,
   ChartNoAxesGantt,
   FolderGit2,
+  Search,
   SquareMousePointer,
 } from "lucide-react";
 import React, { useCallback, useMemo } from "react";
@@ -27,10 +28,12 @@ import { ROUTES } from "@src/config/routes";
 import { useRouteLabel } from "@src/hooks/i18n";
 import { SIDEBAR_MEMORY_KIND, useSidebarMemoryEntry } from "@src/hooks/perf";
 import { devRecordActiveViewAtom } from "@src/store/ui/devRecordToolbarAtom";
+import { spotlightOpenAtom } from "@src/store/ui/uiAtom";
 import { openExternalLink } from "@src/util/platform/ipcRenderer";
 
 import { SidebarBottomBar } from "../blocks";
 import type { NavigationMenuItem } from "../components/NavigationMenu/config";
+import { SidebarSearchShortcutTooltip } from "../connectors/WorkstationSidebarConnector/sidebarTabs";
 import type { SidebarTab } from "../types";
 import { routeToMenuItem } from "../utils/menuFromRoutes";
 import DevRecordSidebar from "./DevRecordSidebar";
@@ -66,6 +69,7 @@ const HomeSidebar: React.FC = () => {
   const { getTranslatedRouteLabel } = useRouteLabel();
   const navigate = useNavigate();
   const location = useLocation();
+  const setSpotlightOpen = useSetAtom(spotlightOpenAtom);
   const [activeDevRecordView, setActiveDevRecordView] = useAtom(
     devRecordActiveViewAtom
   );
@@ -152,6 +156,10 @@ const HomeSidebar: React.FC = () => {
   const handleOpenWorkstation = useCallback(() => {
     navigate(ROUTES.workStation.base.path, { replace: false });
   }, [navigate]);
+
+  const handleOpenSpotlight = useCallback(() => {
+    setSpotlightOpen(true);
+  }, [setSpotlightOpen]);
 
   const workstationHeaderAction = useMemo(
     () => (
@@ -253,7 +261,15 @@ const HomeSidebar: React.FC = () => {
       selectedKey={selectedKey}
       onMenuItemClick={handleMenuItemClick}
       onMenuItemContextMenu={handleMenuItemContextMenu}
-      headerActions={workstationHeaderAction}
+      onAddNew={handleOpenSpotlight}
+      addIcon={Search}
+      addLabel={t("common:actions.search")}
+      addTooltipContent={
+        <SidebarSearchShortcutTooltip
+          searchLabel={t("common:actions.search")}
+        />
+      }
+      beforeAddNewActions={workstationHeaderAction}
       defaultOpenKeys={["workspace"]}
       enableHoverIconAnimation
       bottomContent={<SidebarBottomBar />}

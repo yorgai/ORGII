@@ -6,8 +6,8 @@
  * Agents / Orgs / CLIs switcher lives inside the page, not in a drill-down
  * sidebar level.
  */
-import { useAtomValue } from "jotai";
-import { Infinity as InfinityIcon, ChevronLeft } from "lucide-react";
+import { useAtomValue, useSetAtom } from "jotai";
+import { Infinity as InfinityIcon, ChevronLeft, Search } from "lucide-react";
 import React, { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -25,6 +25,7 @@ import {
 import { ROUTES } from "@src/config/routes";
 import { SIDEBAR_MEMORY_KIND, useSidebarMemoryEntry } from "@src/hooks/perf";
 import { APP_SECTIONS } from "@src/modules/MainApp/Settings/config";
+import { spotlightOpenAtom } from "@src/store/ui/uiAtom";
 import { settingsReturnRouteAtom } from "@src/store/ui/viewModeAtom";
 
 import SidebarBase from "../SidebarBase";
@@ -36,6 +37,7 @@ import {
 import NavigationMenu from "../components/NavigationMenu";
 import type { NavigationMenuItem } from "../components/NavigationMenu/config";
 import { SidebarRamMonitorButton } from "../connectors/SidebarRamMonitorButton";
+import { SidebarSearchShortcutTooltip } from "../connectors/WorkstationSidebarConnector/sidebarTabs";
 
 interface SettingsRootSectionConfig {
   id: string;
@@ -98,10 +100,15 @@ const SettingsSidebar: React.FC = () => {
   const { t } = useTranslation("navigation");
   const navigate = useNavigate();
   const settingsReturnRoute = useAtomValue(settingsReturnRouteAtom);
+  const setSpotlightOpen = useSetAtom(spotlightOpenAtom);
 
   const handleBack = useCallback(() => {
     navigate(settingsReturnRoute || ROUTES.app.home.start.path);
   }, [navigate, settingsReturnRoute]);
+
+  const handleOpenSpotlight = useCallback(() => {
+    setSpotlightOpen(true);
+  }, [setSpotlightOpen]);
 
   const settingsReturnItem = useMemo(
     () => (
@@ -115,7 +122,16 @@ const SettingsSidebar: React.FC = () => {
   );
 
   return (
-    <SidebarBase>
+    <SidebarBase
+      onAddNew={handleOpenSpotlight}
+      addIcon={Search}
+      addLabel={t("common:actions.search")}
+      addTooltipContent={
+        <SidebarSearchShortcutTooltip
+          searchLabel={t("common:actions.search")}
+        />
+      }
+    >
       <div className="shrink-0 px-3">{settingsReturnItem}</div>
       <SettingsRootBody />
       <SidebarBottomBar

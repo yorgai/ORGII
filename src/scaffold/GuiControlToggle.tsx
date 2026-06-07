@@ -517,7 +517,10 @@ export function GuiControlToggle(): React.ReactNode {
         aria-hidden
       />
       {showStatusLine && (
-        <div className="pointer-events-auto z-10 mb-2 w-[min(600px,calc(100vw-48px))] rounded-2xl border border-border-2 bg-bg-2 px-3 py-2 text-[12px] text-text-2 shadow-sm backdrop-blur">
+        <div
+          className="pointer-events-auto z-10 mb-2 rounded-2xl border border-border-2 bg-bg-2 px-3 py-2 text-[12px] text-text-2 shadow-sm backdrop-blur"
+          style={{ width: "min(600px, calc(100vw - 48px))" }}
+        >
           <div className="flex items-start gap-2">
             <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-1 text-primary-6">
               <MousePointerClick size={13} strokeWidth={1.8} />
@@ -550,7 +553,8 @@ export function GuiControlToggle(): React.ReactNode {
       )}
       <ComposerShell
         variant={isCompactRow ? "pill" : "default"}
-        className={`pointer-events-auto z-10 w-[min(600px,calc(100vw-48px))] ${elevatedShadowClass}`}
+        className={`pointer-events-auto z-10 ${elevatedShadowClass}`}
+        style={{ width: "min(600px, calc(100vw - 48px))" }}
         data-action="gui-control.input"
       >
         {showVoiceUi ? (

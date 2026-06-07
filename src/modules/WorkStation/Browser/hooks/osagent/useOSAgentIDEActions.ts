@@ -16,6 +16,7 @@
  * Also ensures that ActionSystem actions are registered (via registerCoreActions)
  * so they're available even if the Workstation editor isn't mounted.
  */
+import { Channel, invoke } from "@tauri-apps/api/core";
 import { useAtomValue } from "jotai";
 import { useEffect, useRef } from "react";
 
@@ -26,10 +27,6 @@ import {
   zodActionRegistry,
 } from "@src/ActionSystem";
 import { sendIdeActionResult } from "@src/api/tauri/agent";
-import {
-  AI_VISUALIZER_CONFIG,
-  getGlobalVisualizer,
-} from "@src/components/AIActionVisualizer";
 import { currentRepoAtom } from "@src/store/repo";
 import { guiControlEnabledAtom } from "@src/store/ui/uiAtom";
 
@@ -48,6 +45,47 @@ interface IDEActionDetail {
   params: Record<string, unknown>;
   operation?: IDEActionOperation;
   sessionId?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseIdeActionEnvelope(rawMessage: string): IDEActionDetail | null {
+  const parsed = JSON.parse(rawMessage) as unknown;
+  if (!isRecord(parsed) || parsed.type !== "agent:ide_action") return null;
+  const payload = parsed.payload;
+  if (!isRecord(payload)) return null;
+
+  const correlationId = payload.correlationId;
+  if (typeof correlationId !== "string" || correlationId.length === 0) {
+    return null;
+  }
+
+  const operation = payload.operation;
+  const action = payload.action;
+  const params = payload.params;
+  const sessionId = payload.sessionId;
+
+  return {
+    correlationId,
+    ...(operation === "list" ||
+    operation === "inspect" ||
+    operation === "dispatch"
+      ? { operation }
+      : {}),
+    ...(typeof action === "string" ? { action } : {}),
+    params: isRecord(params) ? params : {},
+    ...(typeof sessionId === "string" ? { sessionId } : {}),
+  };
+}
+
+function dispatchIdeActionDetail(detail: IDEActionDetail): void {
+  window.dispatchEvent(
+    new CustomEvent("agent-ide-action", {
+      detail,
+    })
+  );
 }
 
 function getStringParam(
@@ -106,6 +144,47 @@ export function useOSAgentIDEActions(): void {
   useEffect(() => {
     guiControlEnabledRef.current = guiControlEnabled;
   }, [guiControlEnabled]);
+
+  useEffect(() => {
+    const sessionId = "";
+    const channel = new Channel<string>();
+    let cancelled = false;
+    let channelId: number | null = null;
+
+    channel.onmessage = (rawMessage: string) => {
+      if (cancelled) return;
+      try {
+        const detail = parseIdeActionEnvelope(rawMessage);
+        if (detail) dispatchIdeActionDetail(detail);
+      } catch {
+        return;
+      }
+    };
+
+    invoke<number>("subscribe_session_events", {
+      sessionId,
+      onEvent: channel,
+    })
+      .then((id) => {
+        if (cancelled) {
+          void invoke("unsubscribe_session_events", {
+            sessionId,
+            channelId: id,
+          });
+          return;
+        }
+        channelId = id;
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+      channel.onmessage = () => undefined;
+      if (channelId !== null) {
+        void invoke("unsubscribe_session_events", { sessionId, channelId });
+      }
+    };
+  }, []);
 
   // Register actions and listen for IDE action events
   useEffect(() => {
@@ -248,24 +327,7 @@ export function useOSAgentIDEActions(): void {
           return;
         }
 
-        const visualizer = isReadOnlyGuiInspect ? null : getGlobalVisualizer();
-        if (visualizer) {
-          const zodAction = zodActionRegistry.get(action);
-          const description = zodAction?.meta.description ?? action;
-          visualizer.show({
-            actionType: action,
-            payload: params,
-            description,
-          });
-        }
-
         const result = await zodActionRegistry.execute(action, params);
-
-        if (visualizer) {
-          setTimeout(() => {
-            visualizer.hide();
-          }, AI_VISUALIZER_CONFIG.highlightLingerDuration);
-        }
 
         await sendIdeActionResult(correlationId, {
           success: result.success,
@@ -277,11 +339,6 @@ export function useOSAgentIDEActions(): void {
           data: result.data,
         });
       } catch (error) {
-        const errorVisualizer = getGlobalVisualizer();
-        if (errorVisualizer) {
-          errorVisualizer.hide();
-        }
-
         const errorMessage =
           error instanceof Error ? error.message : String(error);
         await sendIdeActionResult(correlationId, {

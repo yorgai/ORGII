@@ -1,5 +1,5 @@
 import { useSetAtom } from "jotai";
-import { Expand, Play, Plus } from "lucide-react";
+import { Expand, LayoutDashboard, Play, Plus } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -12,6 +12,7 @@ import { useKeyVault } from "@src/hooks/keyVault";
 import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
 import {
   CollapsibleSection,
+  PanelHeader,
   Placeholder,
 } from "@src/modules/shared/layouts/blocks";
 import type { Repo } from "@src/store/repo/types";
@@ -46,19 +47,19 @@ interface LaunchpadDashboardProps {
 }
 
 const LAUNCHPAD_TILE_CLASS =
-  "group/launchpadtile flex w-24 shrink-0 flex-col items-center gap-2 border-none bg-transparent p-0 text-center outline-none";
+  "group/launchpadtile flex w-20 shrink-0 flex-col items-center gap-1.5 border-none bg-transparent p-0 text-center outline-none";
 
 const LAUNCHPAD_TILE_ICON_CLASS =
-  "relative flex h-16 w-20 items-center justify-center rounded-xl transition-colors duration-150 group-hover/launchpadtile:bg-fill-2";
+  "relative flex h-12 w-16 items-center justify-center rounded-lg transition-colors duration-150 group-hover/launchpadtile:bg-fill-2";
 
 const LAUNCHPAD_TILE_ICON_SELECTED_CLASS =
-  "relative flex h-16 w-20 items-center justify-center rounded-xl bg-fill-2 transition-colors duration-150";
+  "relative flex h-12 w-16 items-center justify-center rounded-lg bg-fill-2 transition-colors duration-150";
 
 const LAUNCHPAD_TILE_LABEL_CLASS =
-  "line-clamp-2 w-24 text-center text-[13px] font-medium leading-tight text-text-2 transition-colors group-hover/launchpadtile:text-text-1";
+  "line-clamp-2 w-20 text-center text-[12px] font-normal leading-tight text-text-2 transition-colors group-hover/launchpadtile:text-text-1";
 
 const LAUNCHPAD_TILE_LABEL_SELECTED_CLASS =
-  "line-clamp-2 w-24 text-center text-[13px] font-medium leading-tight text-text-1";
+  "line-clamp-2 w-20 text-center text-[12px] font-normal leading-tight text-text-1";
 
 interface LaunchpadCollapsibleSectionProps {
   title: string;
@@ -67,15 +68,7 @@ interface LaunchpadCollapsibleSectionProps {
 
 const LaunchpadCollapsibleSection: React.FC<LaunchpadCollapsibleSectionProps> =
   memo(({ title, children }) => (
-    <CollapsibleSection
-      title={title}
-      compact
-      titleClassName="text-[13px] font-semibold text-text-1"
-      headerRowClassName="mb-3"
-      chevronSize={16}
-      chevronStrokeWidth={1.75}
-      chevronClassName="text-text-2"
-    >
+    <CollapsibleSection title={title} compact chevronStrokeWidth={1.75}>
       {children}
     </CollapsibleSection>
   ));
@@ -84,7 +77,7 @@ LaunchpadCollapsibleSection.displayName = "LaunchpadCollapsibleSection";
 const LaunchpadHScrollFade: React.FC<{
   children: React.ReactNode;
   gap?: string;
-}> = ({ children, gap = "gap-3" }) => (
+}> = ({ children, gap = "gap-2" }) => (
   <div
     className="relative overflow-hidden"
     style={{
@@ -122,7 +115,7 @@ const LaunchpadTile: React.FC<LaunchpadTileProps> = memo(
         >
           {icon}
           {status ? (
-            <span className="absolute right-2 top-2">{status}</span>
+            <span className="absolute right-1.5 top-1.5">{status}</span>
           ) : null}
         </div>
         <span
@@ -174,8 +167,8 @@ const LaunchpadAddTile: React.FC<LaunchpadAddTileProps> = memo(
       aria-label={label}
     >
       <div className={LAUNCHPAD_TILE_ICON_CLASS}>
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-bg-1">
-          <Plus size={20} strokeWidth={1.75} className="text-text-3" />
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-1">
+          <Plus size={18} strokeWidth={1.75} className="text-text-3" />
         </span>
       </div>
       <span className={LAUNCHPAD_TILE_LABEL_CLASS}>{label}</span>
@@ -214,7 +207,7 @@ const LaunchpadWorkspaceCard: React.FC<LaunchpadWorkspaceCardProps> = memo(
           <MacFolderIcon
             color="var(--color-primary-6)"
             label={initial}
-            size={44}
+            size={36}
             className="shrink-0"
           />
         </div>
@@ -331,7 +324,7 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
         .map((agent) => ({
           key: agent.name,
           label: agent.displayName,
-          icon: <ModelIcon agentType={agent.name as CliAgentType} size={36} />,
+          icon: <ModelIcon agentType={agent.name as CliAgentType} size={30} />,
           onLaunch: () => {
             setCreatorState((prev) => ({
               ...prev,
@@ -378,7 +371,7 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
           key: rustType,
           label,
           icon: React.createElement(IconComponent, {
-            size: 36,
+            size: 30,
             strokeWidth: 1.75,
             className: "text-text-2",
           }),
@@ -412,7 +405,7 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
           key: definition.id,
           label: definition.name,
           icon: React.createElement(IconComponent, {
-            size: 36,
+            size: 30,
             strokeWidth: 1.75,
             className: "text-text-2",
           }),
@@ -490,8 +483,13 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
 
     return (
       <div className="flex h-full min-h-0 w-full flex-col">
+        <PanelHeader
+          title={t("navigation:sidebar.dashboard")}
+          icon={LayoutDashboard}
+          borderBottom
+        />
         <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
-          <div className="mx-auto flex w-full max-w-[980px] flex-col gap-8 px-4 py-6">
+          <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5 px-4 py-5">
             <div className="flex flex-col gap-2">
               <LaunchpadCollapsibleSection
                 title={t("navigation:launchpad.myWorkspaces")}
@@ -578,7 +576,7 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
                         icon={
                           <ModelIcon
                             agentType={account.modelType}
-                            size={36}
+                            size={30}
                             className="shrink-0 text-text-2"
                           />
                         }
@@ -607,6 +605,7 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
               error={enginesError}
               onRefresh={refreshEngines}
               defaultOpen={false}
+              compact
             />
 
             <ContainersSection
@@ -618,6 +617,7 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
               emptyTitle={t("navigation:launchpad.containers.emptyTitle")}
               emptySubtitle={t("navigation:launchpad.containers.emptySubtitle")}
               defaultOpen={false}
+              compact
             />
           </div>
         </div>

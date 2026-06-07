@@ -30,6 +30,7 @@ interface ContainersSectionProps {
   emptyTitle: string;
   emptySubtitle?: string;
   defaultOpen?: boolean;
+  compact?: boolean;
 }
 
 const STATE_DOT_CLASS: Record<string, string> = {
@@ -73,6 +74,7 @@ const ContainersSection: React.FC<ContainersSectionProps> = ({
   emptyTitle,
   emptySubtitle,
   defaultOpen = false,
+  compact = false,
 }) => {
   const { t } = useTranslation(["navigation", "common"]);
   const [selectedInspect, setSelectedInspect] =
@@ -252,6 +254,7 @@ const ContainersSection: React.FC<ContainersSectionProps> = ({
     <CollapsibleSection
       title={containers.length > 0 ? `${title} (${containers.length})` : title}
       defaultOpen={defaultOpen}
+      compact={compact}
       actions={
         <Button
           variant="tertiary"
