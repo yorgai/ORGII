@@ -1,0 +1,97 @@
+import { GitFork } from "lucide-react";
+import type { ReactNode } from "react";
+
+import { RUST_AGENT_TYPE } from "@src/api/tauri/agent/types";
+import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
+import type { Session } from "@src/store/session";
+import { isTerminalStatus } from "@src/types/session/session";
+import { formatCompactTimeAgo } from "@src/util/data/formatters/date";
+import { formatBranchLabel } from "@src/util/git/branchLabel";
+import { getRustAgentType } from "@src/util/session/sessionDispatch";
+import { isSessionInProgress } from "@src/util/session/sessionInProgress";
+import {
+  getSessionListDisplayName,
+  resolveSessionRowIcon,
+} from "@src/util/session/sessionSidebarRow";
+
+import { renderBreathingStatusDot, renderStatusDot } from "./statusIndicators";
+
+export function separator(id: string, title = ""): NavigationMenuItem {
+  return { id: `separator-${id}`, key: `separator-${id}`, label: title };
+}
+
+export function isSessionPendingAsking(session: Session): boolean {
+  return session.status === "waiting_for_user";
+}
+
+export function isSessionCompletedUnread(
+  session: Session,
+  visitedSessions: ReadonlySet<string>
+): boolean {
+  if (!isTerminalStatus(session.status)) return false;
+  if (session.mergeStatus === "pending") return false;
+  return !visitedSessions.has(session.session_id);
+}
+
+function worktreeSubtitle(branch: string | undefined): ReactNode {
+  const label = formatBranchLabel(branch) || "worktree";
+  return (
+    <>
+      <GitFork size={10} strokeWidth={2} className="shrink-0" />
+      <span className="truncate">{label}</span>
+    </>
+  );
+}
+
+export function isBenchmarkSessionRow(session: Session): boolean {
+  return session.user_input?.startsWith("Benchmark run coordinator") ?? false;
+}
+
+function shouldShowWorktreeSubtitle(session: Session): boolean {
+  return (
+    !isBenchmarkSessionRow(session) &&
+    Boolean(session.worktreePath) &&
+    getRustAgentType(session.session_id) !== RUST_AGENT_TYPE.TERMINAL
+  );
+}
+
+interface BuildSessionMenuItemParams {
+  session: Session;
+  untitledSession: string;
+  visitedSessions: ReadonlySet<string>;
+}
+
+export function buildSessionMenuItem({
+  session,
+  untitledSession,
+  visitedSessions,
+}: BuildSessionMenuItemParams): NavigationMenuItem {
+  const inProgress = isSessionInProgress(session.status, session);
+  const displayName = getSessionListDisplayName(session, untitledSession);
+  const timestampSrc =
+    session.updated_at || session.updated_time || session.created_at;
+  const pendingAsking = isSessionPendingAsking(session);
+  const unread = isSessionCompletedUnread(session, visitedSessions);
+  const statusDotTone = pendingAsking
+    ? "asking"
+    : unread
+      ? "unread"
+      : "default";
+
+  return {
+    id: session.session_id,
+    key: session.session_id,
+    label: displayName,
+    dataTestId: `sidebar-session-item-${session.session_id}`,
+    subtitle: shouldShowWorktreeSubtitle(session)
+      ? worktreeSubtitle(session.worktreeBranch)
+      : undefined,
+    icon: resolveSessionRowIcon(session),
+    trailingElement: pendingAsking
+      ? renderStatusDot(statusDotTone)
+      : inProgress
+        ? renderBreathingStatusDot()
+        : renderStatusDot(statusDotTone),
+    shortcut: formatCompactTimeAgo(timestampSrc),
+  };
+}

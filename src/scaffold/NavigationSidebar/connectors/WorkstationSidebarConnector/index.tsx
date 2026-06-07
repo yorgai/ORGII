@@ -1,17 +1,6 @@
 import { RenameModal } from "@/src/scaffold/ModalSystem/variants";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import {
-  Folders,
-  House,
-  ListChevronsDownUp,
-  ListTodo,
-  MessageCircle,
-  MoreHorizontal,
-  Pin,
-  PinOff,
-  Search,
-  X,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -22,36 +11,21 @@ import React, {
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
-import SessionHoverCard from "@src/components/SessionHoverCard";
-import Tooltip from "@src/components/Tooltip";
-import WorkItemHoverCard from "@src/components/WorkItemHoverCard";
-import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { ROUTES } from "@src/config/routes";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import { useKeyVault } from "@src/hooks/keyVault";
-import {
-  type GoToNewSessionOptions,
-  useAppNavigation,
-} from "@src/hooks/navigation/useAppNavigation";
-import { SIDEBAR_MEMORY_KIND, useSidebarMemoryEntry } from "@src/hooks/perf";
+import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
 import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
 import { useLaunchpadAgentCatalog } from "@src/modules/WorkStation/Launchpad/hooks/useLaunchpadAgentCatalog";
-import { openWorkspaceSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
-import type {
-  NavigationMenuItem,
-  NavigationMenuRowAction,
-} from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
+import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import { benchmarkAgentBatchStatusAtom } from "@src/store/benchmark";
 import { repoMapAtom, reposAtom } from "@src/store/repo";
 import {
-  SESSION_SIDEBAR_PAGE_SIZE,
   activeSessionCreatorDraftIdAtom,
   deleteSessionCreatorDraftAtom,
   loadSidebarSessions,
   markAllSessionsVisited,
   promoteActiveSessionCreatorDraftAtom,
-  refreshCursorIdeSidebarSessions,
   sessionCreatorDraftListAtom,
   sessionLoadingAtom,
   sessionsAtom,
@@ -59,8 +33,6 @@ import {
   workstationActiveSessionIdAtom,
 } from "@src/store/session";
 import {
-  CHAT_PANEL_CONTENT_MODE,
-  CHAT_PANEL_CREATE_TARGET,
   activeStationChatVisibleAtom,
   chatPanelContentModeAtom,
   chatPanelCreateProjectContextAtom,
@@ -82,35 +54,15 @@ import {
   opsControlFocusedTabAtom,
   opsControlPeekHostAtom,
 } from "@src/store/workstation";
-import type { WorkspaceFolder } from "@src/types/workspace";
-import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
 import { SidebarBottomBar } from "../../blocks";
 import NavigationSidebar from "../../variants/NavigationSidebar";
-import { SessionFilterButton } from "../SessionFilterButton";
-import {
-  CURSOR_IDE_REFRESH_INTERVAL_MS,
-  PROJECTS_NEW_PROJECT_MENU_ITEM_ID,
-  PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID,
-  STICKY_NOTES_MENU_ITEM_ID,
-  getDraftIdFromMenuItemId,
-} from "../sidebarConnectorUtils";
+import { STICKY_NOTES_MENU_ITEM_ID } from "../sidebarConnectorUtils";
 import {
   projectsSidebarGroupByAtom,
   sidebarGroupByAtom,
 } from "../sidebarGroupByAtom";
 import {
-  GROUP_BY_MODES,
-  type GroupByMode,
-  PROJECTS_GROUP_BY_MODES,
-  type ProjectsGroupByMode,
-} from "../types";
-import {
-  getProjectsLinearLoadOrgId,
-  getProjectsLinearWorkItemId,
-  getProjectsProjectOverviewSlug,
-  getProjectsWorkItemCreateOrgId,
-  getProjectsWorkItemId,
   isProjectsLinearOrgGroupId,
   useProjectsWorkItemMenuItems,
 } from "../useProjectsWorkItemMenuItems";
@@ -122,48 +74,33 @@ import {
   DEFAULT_COLLAPSED_SECTION_IDS,
   buildRepoPathToName,
   getAllSectionIds,
-  getSelectedDraftMenuItemId,
-  getSelectedMenuItemId,
-  getSelectedPinnedMenuItemId,
   sortSessionsByActivity,
 } from "../workstationSidebarData";
+import { useSidebarBottomRightActions } from "./bottomActions";
+import { buildWorkspaceRepoNameResolver } from "./foldersSidebarMenuItems";
 import {
-  buildDraftMenuItems,
-  buildFoldersPinnedMenuItems,
-  buildPinnedMenuItems,
-  buildProjectsPinnedMenuItems,
-} from "../workstationSidebarMenuItems";
+  useRenderProjectsMenuItemWrapper,
+  useRenderSessionMenuItemWrapper,
+} from "./menuItemWrappers";
+import { resolveSelectedMenuItemIds } from "./menuSelection";
+import { useSessionEntryActions } from "./sessionEntryActions";
+import { useDecorateSessionRowActions } from "./sessionRowActions";
+import { useWorkstationSidebarMemory } from "./sidebarMemory";
 import {
-  FOLDERS_ADD_WORKSPACE_ITEM_ID,
-  FOLDERS_CREATE_WORKSPACE_ITEM_ID,
-  FOLDERS_DASHBOARD_ITEM_ID,
-  FOLDERS_REPO_ITEM_PREFIX,
-  FOLDERS_WORKSPACE_ITEM_PREFIX,
-  buildFoldersSidebarMenuItems,
-  buildWorkspaceRepoNameResolver,
-  getFolderItemId,
-  getRepoDisplayName,
-} from "./foldersSidebarMenuItems";
-
-type WorkstationSidebarKey = "folders" | "workstation" | "projects";
-
-function SidebarSearchShortcutTooltip({
-  searchLabel,
-}: {
-  searchLabel: string;
-}): React.ReactElement {
-  return (
-    <KeyboardShortcutTooltipContent
-      rows={[
-        { label: "Spotlight", shortcut: getShortcutKeys("spotlight_open") },
-        {
-          label: `${searchLabel} session`,
-          shortcut: getShortcutKeys("agent_session_search"),
-        },
-      ]}
-    />
-  );
-}
+  useFoldersSidebarMenuItems,
+  usePinnedMenuItems,
+  useSessionSidebarMenuItems,
+} from "./sidebarMenuCollections";
+import { useSidebarSessionRefreshEffects } from "./sidebarSessionRefresh";
+import {
+  HomeHeaderAction,
+  SidebarSearchShortcutTooltip,
+  isWorkstationSidebarKey,
+  useWorkstationSidebarTabs,
+} from "./sidebarTabs";
+import type { WorkstationSidebarKey } from "./types";
+import { useFoldersMenuItemClick } from "./useFoldersMenuItemClick";
+import { useProjectsMenuItemClick } from "./useProjectsMenuItemClick";
 
 export const WorkstationSidebarConnector: React.FC = () => {
   const { t } = useTranslation("navigation");
@@ -224,47 +161,20 @@ export const WorkstationSidebarConnector: React.FC = () => {
     useState("");
   const [foldersDashboardSelected, setFoldersDashboardSelected] =
     useState(false);
-
-  const tabs = useMemo(
-    () => [
-      {
-        key: "folders",
-        label: t("labels.folders"),
-        icon: Folders,
-        iconName: "folders",
-      },
-      {
-        key: "workstation",
-        label: t("labels.session"),
-        icon: MessageCircle,
-        iconName: "message-circle",
-      },
-      {
-        key: "projects",
-        label: t("labels.project"),
-        icon: ListTodo,
-        iconName: "list-todo",
-      },
-    ],
-    [t]
-  );
+  const tabs = useWorkstationSidebarTabs(t);
 
   const handleTabChange = useCallback((key: string) => {
-    if (key !== "folders" && key !== "workstation" && key !== "projects")
-      return;
+    if (!isWorkstationSidebarKey(key)) return;
     if (key !== "folders") setFoldersDashboardSelected(false);
     setActiveSidebarKey(key);
   }, []);
 
-  useEffect(() => {
-    void loadSidebarSessions({ forceRefresh: true });
-  }, []);
+  useSidebarSessionRefreshEffects();
 
   const sortedSessions = useMemo(
     () => sortSessionsByActivity(sessions),
     [sessions]
   );
-
   const repoMap = useAtomValue(repoMapAtom);
   const repos = useAtomValue(reposAtom);
   const savedWorkspaces = useAtomValue(savedWorkspacesAtom);
@@ -279,27 +189,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
     () => buildWorkspaceRepoNameResolver(repos),
     [repos]
   );
-
-  useEffect(() => {
-    const refreshCursorIdeSessions = () => {
-      if (document.visibilityState !== "visible") return;
-      void refreshCursorIdeSidebarSessions();
-    };
-
-    const intervalId = window.setInterval(
-      refreshCursorIdeSessions,
-      CURSOR_IDE_REFRESH_INTERVAL_MS
-    );
-    document.addEventListener("visibilitychange", refreshCursorIdeSessions);
-
-    return () => {
-      window.clearInterval(intervalId);
-      document.removeEventListener(
-        "visibilitychange",
-        refreshCursorIdeSessions
-      );
-    };
-  }, []);
 
   const [groupByMode, setGroupByMode] = useAtom(sidebarGroupByAtom);
   const [projectsGroupByMode, setProjectsGroupByMode] = useAtom(
@@ -348,7 +237,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     getLoadMoreGroupId: getProjectsLoadMoreGroupId,
     loadLinearOrgWorkItems: loadProjectsLinearOrgWorkItems,
     toChatPanelProject,
-    toChatPanelWorkItem: toChatPanelWorkItem,
+    toChatPanelWorkItem,
     openLinearWorkItem: openProjectsLinearWorkItem,
   } = useProjectsWorkItemMenuItems({
     enabled: activeSidebarKey === "projects",
@@ -365,80 +254,29 @@ export const WorkstationSidebarConnector: React.FC = () => {
     ? benchmarkBatchStatus.masterSessionId
     : activeSessionId;
 
-  const sessionPinnedMenuItems = useMemo<NavigationMenuItem[]>(
-    () =>
-      buildPinnedMenuItems({
-        newSessionLabel,
-        newSessionShortcut: getShortcutKeys("new_session"),
-        kanbanLabel: t("routes.kanban"),
-        kanbanRoutePath: ROUTES.workStation.kanban.path,
-        stickyNotesLabel,
-      }),
-    [newSessionLabel, stickyNotesLabel, t]
-  );
-
-  const projectsPinnedMenuItems = useMemo<NavigationMenuItem[]>(
-    () =>
-      buildProjectsPinnedMenuItems({
-        createProjectLabel,
-        createWorkItemLabel,
-      }),
-    [createProjectLabel, createWorkItemLabel]
-  );
-
-  const foldersPinnedMenuItems = useMemo<NavigationMenuItem[]>(
-    () =>
-      buildFoldersPinnedMenuItems({
-        dashboardItemId: FOLDERS_DASHBOARD_ITEM_ID,
-        dashboardLabel: t("launchpad.dashboard"),
-        addWorkspaceItemId: FOLDERS_ADD_WORKSPACE_ITEM_ID,
-        addWorkspaceLabel: tCommon("actions.addWorkspace"),
-        createWorkspaceItemId: FOLDERS_CREATE_WORKSPACE_ITEM_ID,
-        createWorkspaceLabel: t("common:workspaceForm.createWorkspace"),
-      }),
-    [t, tCommon]
-  );
-
-  const draftMenuItems = useMemo<NavigationMenuItem[]>(
-    () =>
-      buildDraftMenuItems({
-        sessionCreatorDrafts,
-        draftsLabel: t("labels.drafts"),
-      }),
-    [sessionCreatorDrafts, t]
-  );
-
-  const sessionSidebarMenuItems = useMemo(
-    () => [...draftMenuItems, ...menuItems],
-    [draftMenuItems, menuItems]
-  );
-
-  const foldersSidebarMenuItems = useMemo<NavigationMenuItem[]>(
-    () =>
-      buildFoldersSidebarMenuItems({
-        savedWorkspaces,
-        repos,
-        localAccounts,
-        installedCliAgents,
-        builtInRustAgents,
-        customRustAgents,
-        multiRepoWorkspaceCountLabel: (count) =>
-          t("sidebar.folderCounts.multiRepoWorkspace", { count }),
-        repoCountLabel: (count) => t("sidebar.folderCounts.repo", { count }),
-        myKeysLabel: t("labels.myKeys"),
-        myAgentsLabel: t("labels.myAgents"),
-      }),
-    [
-      builtInRustAgents,
-      customRustAgents,
-      installedCliAgents,
-      localAccounts,
-      repos,
-      savedWorkspaces,
-      t,
-    ]
-  );
-
+  const { pinnedMenuItems } = usePinnedMenuItems({
+    activeSidebarKey,
+    createProjectLabel,
+    createWorkItemLabel,
+    newSessionLabel,
+    stickyNotesLabel,
+    t,
+    tCommon,
+  });
+  const sessionSidebarMenuItems = useSessionSidebarMenuItems({
+    menuItems,
+    sessionCreatorDrafts,
+    t,
+  });
+  const foldersSidebarMenuItems = useFoldersSidebarMenuItems({
+    savedWorkspaces,
+    repos,
+    localAccounts,
+    installedCliAgents,
+    builtInRustAgents,
+    customRustAgents,
+    t,
+  });
   const projectsSidebarMenuItems = projectsWorkItemMenuItems;
 
   useEffect(() => {
@@ -462,55 +300,23 @@ export const WorkstationSidebarConnector: React.FC = () => {
       return nextIds;
     });
   }, [activeSidebarKey, projectsGroupByMode, projectsSidebarMenuItems]);
-
-  const pinnedMenuItems =
-    activeSidebarKey === "projects"
-      ? projectsPinnedMenuItems
-      : activeSidebarKey === "folders"
-        ? foldersPinnedMenuItems
-        : sessionPinnedMenuItems;
-
-  const selectedDraftMenuItemId = getSelectedDraftMenuItemId(
-    activeSessionCreatorDraftId,
-    sessionCreatorDrafts
-  );
-  const selectedPinnedMenuItemId = getSelectedPinnedMenuItemId(
-    location.pathname,
-    ROUTES.workStation.kanban.path
-  );
-  const isChatPanelProjectsContentSelected =
-    chatPanelContentMode === CHAT_PANEL_CONTENT_MODE.NON_SESSION ||
-    Boolean(chatPanelSelectedWorkItem) ||
-    Boolean(chatPanelSelectedProject);
-  const sessionSelectedMenuItemId = chatPanelStickyNotesOpen
-    ? STICKY_NOTES_MENU_ITEM_ID
-    : chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.PROJECT ||
-        chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM ||
-        isChatPanelProjectsContentSelected
-      ? ""
-      : getSelectedMenuItemId({
-          selectedPinnedMenuItemId,
-          activeSessionId: highlightedSessionId,
-          selectedDraftMenuItemId,
-        });
-  const resolvedProjectsSelectedMenuItemId =
-    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.PROJECT ||
-    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM ||
-    chatPanelSelectedWorkItem ||
-    chatPanelSelectedProject
-      ? projectsSelectedMenuItemId
-      : "";
-  const foldersSelectedMenuItemId = chatPanelSelectedWorkspace
-    ? getFolderItemId(chatPanelSelectedWorkspace)
-    : foldersDashboardSelected
-      ? FOLDERS_DASHBOARD_ITEM_ID
-      : "";
-  const selectedMenuItemId =
-    activeSidebarKey === "projects"
-      ? resolvedProjectsSelectedMenuItemId
-      : activeSidebarKey === "folders"
-        ? foldersSelectedMenuItemId
-        : sessionSelectedMenuItemId;
+  const { selectedMenuItemId, sessionSelectedMenuItemId } =
+    resolveSelectedMenuItemIds({
+      activeSessionCreatorDraftId,
+      activeSessionId: highlightedSessionId,
+      activeSidebarKey,
+      chatPanelContentMode,
+      chatPanelCreateTarget,
+      chatPanelSelectedProject,
+      chatPanelSelectedWorkItem,
+      chatPanelSelectedWorkspace,
+      chatPanelStickyNotesOpen,
+      foldersDashboardSelected,
+      kanbanRoutePath: ROUTES.workStation.kanban.path,
+      pathname: location.pathname,
+      projectsSelectedMenuItemId,
+      sessionCreatorDrafts,
+    });
   const resolvedCollapsedSectionIds =
     activeSidebarKey === "projects"
       ? projectsCollapsedSectionIds
@@ -540,55 +346,23 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const activateMyStationRouteForProjectsContent = useCallback(() => {
     const targetRoute = ROUTES.workStation.code.path;
     resetOpsControlStateForProjectsContent();
-    if (location.pathname !== targetRoute) {
-      navigate(targetRoute);
-    }
+    if (location.pathname !== targetRoute) navigate(targetRoute);
   }, [location.pathname, navigate, resetOpsControlStateForProjectsContent]);
 
-  const handleGoToNewSession = useCallback(
-    (options?: GoToNewSessionOptions) => {
-      setChatPanelSelectedWorkItem(null);
-      setChatPanelSelectedProject(null);
-      setChatPanelSelectedWorkspace(null);
-      setChatPanelStickyNotesOpen(false);
-      setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-      goToNewSession(options);
-    },
-    [
+  const { handleGoToNewSession, handleOpenStickyNotes } =
+    useSessionEntryActions({
       goToNewSession,
+      navigate,
+      pathname: location.pathname,
+      resetOpsControlStateForProjectsContent,
+      setChatPanelContentMode,
+      setChatPanelCreateProjectContext,
       setChatPanelCreateTarget,
       setChatPanelSelectedProject,
-      setChatPanelSelectedWorkspace,
       setChatPanelSelectedWorkItem,
+      setChatPanelSelectedWorkspace,
       setChatPanelStickyNotesOpen,
-    ]
-  );
-
-  const handleOpenStickyNotes = useCallback(() => {
-    resetOpsControlStateForProjectsContent();
-    setChatPanelSelectedWorkItem(null);
-    setChatPanelSelectedProject(null);
-    setChatPanelSelectedWorkspace(null);
-    setChatPanelCreateProjectContext(null);
-    setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-    setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-    setChatPanelStickyNotesOpen(true);
-    const targetRoute = ROUTES.workStation.code.path;
-    if (location.pathname !== targetRoute) {
-      navigate(targetRoute);
-    }
-  }, [
-    location.pathname,
-    navigate,
-    resetOpsControlStateForProjectsContent,
-    setChatPanelContentMode,
-    setChatPanelCreateProjectContext,
-    setChatPanelCreateTarget,
-    setChatPanelSelectedProject,
-    setChatPanelSelectedWorkspace,
-    setChatPanelSelectedWorkItem,
-    setChatPanelStickyNotesOpen,
-  ]);
+    });
 
   const {
     handleDeleteSession,
@@ -610,7 +384,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
     setGroupVisibleCounts,
     tCommon,
   });
-
   const handleMenuItemContextMenu = useWorkstationSidebarContextMenu({
     sessionMap,
     rename,
@@ -622,75 +395,21 @@ export const WorkstationSidebarConnector: React.FC = () => {
     tCommon,
   });
 
-  const decorateSessionRowActions = useCallback(
-    (items: readonly NavigationMenuItem[]): NavigationMenuItem[] =>
-      items.map((item) => {
-        const draftId = getDraftIdFromMenuItemId(item.id);
-        if (draftId) {
-          return {
-            ...item,
-            showMoreActions: true,
-            rowActions: [
-              {
-                icon: X,
-                label: tCommon("sessions:sidebar.removeDraft", "Remove draft"),
-                onClick: () => deleteSessionCreatorDraft(draftId),
-              },
-            ],
-          };
-        }
-
-        const session = sessionMap.get(item.id);
-        if (!session) return item;
-        const rowActions: NavigationMenuRowAction[] = [
-          {
-            icon: session.pinned ? PinOff : Pin,
-            label: session.pinned ? unpinFolderLabel : pinFolderLabel,
-            onClick: () => {
-              void handleTogglePin(item.id);
-            },
-          },
-        ];
-        if (!isCursorIdeSession(item.id)) {
-          rowActions.push({
-            icon: MoreHorizontal,
-            label: tCommon("actions.more"),
-            active: activeSessionMoreMenuId === item.id,
-            onClick: (event) => {
-              setActiveSessionMoreMenuId(item.id);
-              void handleMenuItemContextMenu(event, item.key, item).finally(
-                () => {
-                  setActiveSessionMoreMenuId((currentId) =>
-                    currentId === item.id ? "" : currentId
-                  );
-                }
-              );
-            },
-          });
-        }
-        return {
-          ...item,
-          showMoreActions: true,
-          rowActions,
-        };
-      }),
-    [
-      activeSessionMoreMenuId,
-      deleteSessionCreatorDraft,
-      handleMenuItemContextMenu,
-      handleTogglePin,
-      pinFolderLabel,
-      sessionMap,
-      tCommon,
-      unpinFolderLabel,
-    ]
-  );
-
+  const decorateSessionRowActions = useDecorateSessionRowActions({
+    activeSessionMoreMenuId,
+    deleteSessionCreatorDraft,
+    handleMenuItemContextMenu,
+    handleTogglePin,
+    pinLabel: pinFolderLabel,
+    sessionMap,
+    setActiveSessionMoreMenuId,
+    tCommon,
+    unpinLabel: unpinFolderLabel,
+  });
   const decoratedSessionSidebarMenuItems = useMemo(
     () => decorateSessionRowActions(sessionSidebarMenuItems),
     [decorateSessionRowActions, sessionSidebarMenuItems]
   );
-
   const sidebarMenuItems =
     activeSidebarKey === "projects"
       ? projectsSidebarMenuItems
@@ -698,331 +417,50 @@ export const WorkstationSidebarConnector: React.FC = () => {
         ? foldersSidebarMenuItems
         : decoratedSessionSidebarMenuItems;
 
-  const handleFoldersMenuItemClick = useCallback(
-    (_key: string, item: NavigationMenuItem) => {
-      if (item.id === FOLDERS_DASHBOARD_ITEM_ID) {
-        resetOpsControlStateForProjectsContent();
-        setProjectsSelectedMenuItemId("");
-        setFoldersDashboardSelected(true);
-        setChatPanelWorkspaceDashboardOpen(true);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateProjectContext(null);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-        navigate(ROUTES.workStation.code.path);
-        return;
-      }
-
-      if (item.id === FOLDERS_ADD_WORKSPACE_ITEM_ID) {
-        openWorkspaceSpotlight("add");
-        return;
-      }
-
-      if (item.id === FOLDERS_CREATE_WORKSPACE_ITEM_ID) {
-        openWorkspaceSpotlight("create");
-        return;
-      }
-
-      const workspaceId = item.id.startsWith(FOLDERS_WORKSPACE_ITEM_PREFIX)
-        ? item.id.slice(FOLDERS_WORKSPACE_ITEM_PREFIX.length)
-        : "";
-      if (workspaceId) {
-        const workspace = savedWorkspaces.find(
-          (candidate) => candidate.workspaceId === workspaceId
-        );
-        if (!workspace) return;
-        const folders: WorkspaceFolder[] = workspace.folders.map((folder) => ({
-          id: crypto.randomUUID(),
-          name: resolveWorkspaceRepoName(folder),
-          path: folder.folderPath,
-          uri: `file://${folder.folderPath}`,
-          isPrimary: folder.isPrimary,
-          repoId: folder.repoId ?? undefined,
-          kind: folder.kind === "folder" ? "folder" : "git",
-        }));
-        dispatchSetWorkspaceFolders(folders, workspace.workspaceId);
-        setActiveWorkspaceName(workspace.name);
-        resetOpsControlStateForProjectsContent();
-        setProjectsSelectedMenuItemId("");
-        setFoldersDashboardSelected(false);
-        setChatPanelWorkspaceDashboardOpen(false);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateProjectContext(null);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-        setChatPanelSelectedWorkspace({
-          kind: "workspace",
-          id: workspace.workspaceId,
-          name: workspace.name,
-          folderCount: folders.length,
-          repoIds: folders
-            .map((folder) => folder.repoId)
-            .filter((repoId): repoId is string => Boolean(repoId)),
-        });
-        navigate(ROUTES.workStation.code.path);
-        return;
-      }
-
-      const repoId = item.id.startsWith(FOLDERS_REPO_ITEM_PREFIX)
-        ? item.id.slice(FOLDERS_REPO_ITEM_PREFIX.length)
-        : "";
-      if (!repoId) return;
-      const repo = repos.find((candidate) => candidate.id === repoId);
-      selectRepo(repoId);
-      dispatchSetWorkspaceFolders([], null);
-      setActiveWorkspaceName(null);
-      resetOpsControlStateForProjectsContent();
-      setProjectsSelectedMenuItemId("");
-      setFoldersDashboardSelected(false);
-      setChatPanelWorkspaceDashboardOpen(false);
-      setChatPanelSelectedWorkItem(null);
-      setChatPanelSelectedProject(null);
-      setChatPanelStickyNotesOpen(false);
-      setChatPanelCreateProjectContext(null);
-      setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-      setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-      setChatPanelSelectedWorkspace({
-        kind: "repo",
-        id: repoId,
-        name: repo ? getRepoDisplayName(repo) : item.label,
-        path: repo?.path ?? undefined,
-      });
-      navigate(ROUTES.workStation.code.path);
-    },
-    [
-      dispatchSetWorkspaceFolders,
-      navigate,
-      repos,
-      resetOpsControlStateForProjectsContent,
-      resolveWorkspaceRepoName,
-      savedWorkspaces,
-      selectRepo,
-      setActiveWorkspaceName,
-      setChatPanelContentMode,
-      setChatPanelCreateProjectContext,
-      setChatPanelCreateTarget,
-      setChatPanelWorkspaceDashboardOpen,
-      setChatPanelSelectedProject,
-      setChatPanelSelectedWorkspace,
-      setChatPanelSelectedWorkItem,
-      setChatPanelStickyNotesOpen,
-      setFoldersDashboardSelected,
-      setProjectsSelectedMenuItemId,
-    ]
-  );
-
-  const handleProjectsMenuItemClick = useCallback(
-    (_key: string, item: NavigationMenuItem) => {
-      if (item.id === PROJECTS_NEW_PROJECT_MENU_ITEM_ID) {
-        resetOpsControlStateForProjectsContent();
-        setProjectsSelectedMenuItemId(PROJECTS_NEW_PROJECT_MENU_ITEM_ID);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateProjectContext(null);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.PROJECT);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-        return;
-      }
-
-      if (item.id === PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID) {
-        resetOpsControlStateForProjectsContent();
-        setProjectsSelectedMenuItemId(PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-        return;
-      }
-
-      const createWorkItemOrgId = getProjectsWorkItemCreateOrgId(item.id);
-      if (createWorkItemOrgId) {
-        resetOpsControlStateForProjectsContent();
-        setProjectsSelectedMenuItemId(item.id);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-        return;
-      }
-
-      const linearLoadOrgId = getProjectsLinearLoadOrgId(item.id);
-      if (linearLoadOrgId) {
-        loadProjectsLinearOrgWorkItems(linearLoadOrgId);
-        return;
-      }
-
-      const loadMoreGroupId = getProjectsLoadMoreGroupId(item.id);
-      if (loadMoreGroupId) {
-        setProjectsGroupVisibleCounts((previousCounts) => {
-          const nextCounts = new Map(previousCounts);
-          const current =
-            nextCounts.get(loadMoreGroupId) ?? SESSION_SIDEBAR_PAGE_SIZE;
-          nextCounts.set(loadMoreGroupId, current + SESSION_SIDEBAR_PAGE_SIZE);
-          return nextCounts;
-        });
-        return;
-      }
-
-      const projectOverviewSlug = getProjectsProjectOverviewSlug(item.id);
-      if (projectOverviewSlug) {
-        const project = projectsProjectMap.get(projectOverviewSlug);
-        if (!project) return;
-        activateMyStationRouteForProjectsContent();
-        setProjectsSelectedMenuItemId(item.id);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(toChatPanelProject(project));
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-        return;
-      }
-
-      const linearWorkItemId = getProjectsLinearWorkItemId(item.id);
-      if (linearWorkItemId) {
-        const linearWorkItem = projectsLinearWorkItemMap.get(linearWorkItemId);
-        if (!linearWorkItem) return;
-        setProjectsSelectedMenuItemId(item.id);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        openProjectsLinearWorkItem(linearWorkItem);
-        return;
-      }
-
-      const workItemId = getProjectsWorkItemId(item.id);
-      if (!workItemId) return;
-      const workItem = projectsWorkItemMap.get(workItemId);
-      if (!workItem) return;
-      const chatPanelWorkItem = toChatPanelWorkItem(workItem);
-      activateMyStationRouteForProjectsContent();
-      setProjectsSelectedMenuItemId(item.id);
-      setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-      setChatPanelSelectedProject(null);
-      setChatPanelSelectedWorkspace(null);
-      setChatPanelSelectedWorkItem(chatPanelWorkItem);
-      setChatPanelStickyNotesOpen(false);
-      setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-    },
-    [
-      activateMyStationRouteForProjectsContent,
-      getProjectsLoadMoreGroupId,
-      loadProjectsLinearOrgWorkItems,
-      openProjectsLinearWorkItem,
-      projectsLinearWorkItemMap,
-      projectsProjectMap,
-      projectsWorkItemMap,
-      resetOpsControlStateForProjectsContent,
-      setChatPanelContentMode,
-      setChatPanelCreateProjectContext,
-      setChatPanelCreateTarget,
-      setChatPanelSelectedProject,
-      setChatPanelSelectedWorkspace,
-      setChatPanelSelectedWorkItem,
-      setChatPanelStickyNotesOpen,
-      toChatPanelProject,
-      toChatPanelWorkItem,
-    ]
-  );
-
+  const handleFoldersMenuItemClick = useFoldersMenuItemClick({
+    dispatchSetWorkspaceFolders,
+    navigate,
+    repos,
+    resetOpsControlStateForProjectsContent,
+    resolveWorkspaceRepoName,
+    savedWorkspaces,
+    selectRepo,
+    setActiveWorkspaceName,
+    setChatPanelContentMode,
+    setChatPanelCreateProjectContext,
+    setChatPanelCreateTarget,
+    setChatPanelSelectedProject,
+    setChatPanelSelectedWorkItem,
+    setChatPanelSelectedWorkspace,
+    setChatPanelStickyNotesOpen,
+    setChatPanelWorkspaceDashboardOpen,
+    setFoldersDashboardSelected,
+    setProjectsSelectedMenuItemId,
+  });
+  const handleProjectsMenuItemClick = useProjectsMenuItemClick({
+    activateMyStationRouteForProjectsContent,
+    getProjectsLoadMoreGroupId,
+    loadProjectsLinearOrgWorkItems,
+    openProjectsLinearWorkItem: openProjectsLinearWorkItem,
+    projectsLinearWorkItemMap,
+    projectsProjectMap,
+    projectsWorkItemMap,
+    resetOpsControlStateForProjectsContent,
+    setChatPanelContentMode,
+    setChatPanelCreateProjectContext,
+    setChatPanelCreateTarget,
+    setChatPanelSelectedProject,
+    setChatPanelSelectedWorkItem,
+    setChatPanelSelectedWorkspace,
+    setChatPanelStickyNotesOpen,
+    setProjectsGroupVisibleCounts,
+    setProjectsSelectedMenuItemId,
+    toChatPanelProject,
+    toChatPanelWorkItem,
+  });
   const handleOpenSpotlight = useCallback(() => {
     setSpotlightOpen(true);
   }, [setSpotlightOpen]);
-
-  const homeHeaderAction = useMemo(
-    () => (
-      <Tooltip
-        content={
-          <KeyboardShortcutTooltipContent
-            label={t("sidebar.actions.openHome")}
-          />
-        }
-        position="bottom"
-        mouseEnterDelay={200}
-        framedPanel
-      >
-        <div className="inline-flex">
-          <button
-            type="button"
-            className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
-            onClick={goToStartPage}
-            aria-label={homeLabel}
-          >
-            <House size={16} strokeWidth={2} className="text-text-2" />
-          </button>
-        </div>
-      </Tooltip>
-    ),
-    [goToStartPage, homeLabel, t]
-  );
-
-  const renderSessionMenuItemWrapper = useCallback(
-    (item: NavigationMenuItem, node: React.ReactElement) => {
-      if (!sessionMap.has(item.id)) return node;
-      return (
-        <SessionHoverCard
-          key={item.key}
-          sessionId={item.id}
-          position="right-start"
-          mouseEnterDelay={1000}
-          mouseLeaveDelay={100}
-        >
-          {node}
-        </SessionHoverCard>
-      );
-    },
-    [sessionMap]
-  );
-
-  const renderProjectsMenuItemWrapper = useCallback(
-    (item: NavigationMenuItem, node: React.ReactElement) => {
-      const workItemId = getProjectsWorkItemId(item.id);
-      if (workItemId) {
-        return (
-          <WorkItemHoverCard
-            key={item.key}
-            workItem={projectsWorkItemMap.get(workItemId)}
-            position="right-start"
-            mouseEnterDelay={1000}
-            mouseLeaveDelay={100}
-          >
-            {node}
-          </WorkItemHoverCard>
-        );
-      }
-
-      const linearWorkItemId = getProjectsLinearWorkItemId(item.id);
-      if (linearWorkItemId) {
-        return (
-          <WorkItemHoverCard
-            key={item.key}
-            workItem={projectsLinearWorkItemMap.get(linearWorkItemId)}
-            position="right-start"
-            mouseEnterDelay={1000}
-            mouseLeaveDelay={100}
-          >
-            {node}
-          </WorkItemHoverCard>
-        );
-      }
-
-      return node;
-    },
-    [projectsLinearWorkItemMap, projectsWorkItemMap]
-  );
   const workstationMenuItemClick = useCallback(
     (key: string, item: NavigationMenuItem) => {
       if (item.id === STICKY_NOTES_MENU_ITEM_ID) {
@@ -1033,6 +471,14 @@ export const WorkstationSidebarConnector: React.FC = () => {
     },
     [handleMenuItemClick, handleOpenStickyNotes]
   );
+
+  const renderSessionMenuItemWrapper =
+    useRenderSessionMenuItemWrapper(sessionMap);
+  const renderProjectsMenuItemWrapper = useRenderProjectsMenuItemWrapper({
+    projectsLinearWorkItemMap,
+    projectsWorkItemMap,
+  });
+
   const resolvedMenuItemClick =
     activeSidebarKey === "projects"
       ? handleProjectsMenuItemClick
@@ -1047,123 +493,56 @@ export const WorkstationSidebarConnector: React.FC = () => {
       : activeSidebarKey === "folders"
         ? undefined
         : renderSessionMenuItemWrapper;
-
   const allSectionIds = useMemo(
     () => getAllSectionIds(sidebarMenuItems),
     [sidebarMenuItems]
   );
-
   const handleCollapseAll = useCallback(() => {
     setCollapsedSectionIds(new Set(allSectionIds));
   }, [allSectionIds]);
-
   const handleMarkAllRead = useCallback(() => {
     markAllSessionsVisited(sessions.map((session) => session.session_id));
   }, [sessions]);
-
   const handleRefreshSessions = useCallback(() => {
     void loadSidebarSessions({ forceRefresh: true });
   }, []);
-
   const handleCollapseAllActiveSections = useCallback(() => {
     resolvedSetCollapsedSectionIds(new Set(allSectionIds));
   }, [allSectionIds, resolvedSetCollapsedSectionIds]);
-
   const isLoading =
     activeSidebarKey === "workstation"
       ? sessionsLoading && sessions.length === 0
       : activeSidebarKey === "projects"
         ? projectsWorkItemsLoading && projectsSidebarMenuItems.length === 0
         : false;
+  const sidebarBottomRightActions = useSidebarBottomRightActions({
+    activeSidebarKey,
+    defaultedProjectsLinearSectionIdsRef,
+    groupByMode,
+    handleCollapseAll,
+    handleCollapseAllActiveSections,
+    handleMarkAllRead,
+    handleRefreshSessions,
+    projectsGroupByMode,
+    setGroupByMode,
+    setProjectsCollapsedSectionIds,
+    setProjectsGroupByMode,
+    setProjectsGroupVisibleCounts,
+    setProjectsSelectedMenuItemId,
+    t,
+    tProjects,
+  });
 
-  const getProjectsGroupByLabel = useCallback(
-    (mode: string) => {
-      switch (mode) {
-        case "byProject":
-          return tProjects("projects.groupBy.project");
-        case "byStatus":
-          return tProjects("projects.groupBy.status");
-        case "byPriority":
-          return tProjects("projects.groupBy.priority");
-        case "byOrg":
-        default:
-          return tProjects("projects.groupBy.org");
-      }
-    },
-    [tProjects]
-  );
-
-  const handleSessionGroupBySelect = useCallback(
-    (mode: string) => {
-      if (!GROUP_BY_MODES.includes(mode as GroupByMode)) {
-        return;
-      }
-      setGroupByMode(mode as GroupByMode);
-    },
-    [setGroupByMode]
-  );
-
-  const handleProjectsGroupBySelect = useCallback(
-    (mode: string) => {
-      if (!PROJECTS_GROUP_BY_MODES.includes(mode as ProjectsGroupByMode)) {
-        return;
-      }
-      setProjectsGroupByMode(mode as ProjectsGroupByMode);
-      setProjectsSelectedMenuItemId("");
-      setProjectsGroupVisibleCounts(new Map());
-      setProjectsCollapsedSectionIds(new Set());
-      defaultedProjectsLinearSectionIdsRef.current.clear();
-    },
-    [setProjectsGroupByMode]
-  );
-
-  const sidebarBottomRightActions =
-    activeSidebarKey === "projects" ? (
-      <SessionFilterButton
-        groupByMode={projectsGroupByMode}
-        groupByModes={PROJECTS_GROUP_BY_MODES}
-        getGroupByLabel={getProjectsGroupByLabel}
-        onSelect={handleProjectsGroupBySelect}
-      />
-    ) : activeSidebarKey === "folders" ? (
-      <button
-        type="button"
-        title={t("sidebar.actions.collapseAll")}
-        aria-label={t("sidebar.actions.collapseAll")}
-        className="flex h-[28px] w-[28px] cursor-pointer items-center justify-center rounded-[100px] border-none bg-transparent p-0 transition-colors duration-150 hover:bg-fill-2"
-        onClick={handleCollapseAllActiveSections}
-      >
-        <ListChevronsDownUp size={16} strokeWidth={2} className="text-text-2" />
-      </button>
-    ) : activeSidebarKey === "workstation" ? (
-      <SessionFilterButton
-        groupByMode={groupByMode}
-        onSelect={handleSessionGroupBySelect}
-        onCollapseAll={handleCollapseAll}
-        onMarkAllRead={handleMarkAllRead}
-        onRefreshSessions={handleRefreshSessions}
-      />
-    ) : null;
-
-  useSidebarMemoryEntry({
-    kind: SIDEBAR_MEMORY_KIND.SESSION,
-    label:
-      activeSidebarKey === "projects"
-        ? "Projects sidebar"
-        : activeSidebarKey === "folders"
-          ? "Folders sidebar"
-          : "Session sidebar",
-    items: pinnedMenuItems.length + sidebarMenuItems.length,
-    sections: allSectionIds.length,
-    tabs: tabs.length,
-    source: {
-      activeSessionId,
-      collapsedSectionIds: Array.from(collapsedSectionIds),
-      groupByMode,
-      pinnedMenuItems,
-      selectedMenuItemId,
-      sidebarMenuItems,
-    },
+  useWorkstationSidebarMemory({
+    activeSessionId,
+    activeSidebarKey,
+    allSectionIds,
+    collapsedSectionIds,
+    groupByMode,
+    pinnedMenuItems,
+    selectedMenuItemId,
+    sidebarMenuItems,
+    tabCount: tabs.length,
   });
 
   return (
@@ -1186,7 +565,13 @@ export const WorkstationSidebarConnector: React.FC = () => {
             searchLabel={tCommon("actions.search")}
           />
         }
-        beforeAddNewActions={homeHeaderAction}
+        beforeAddNewActions={
+          <HomeHeaderAction
+            label={homeLabel}
+            tooltipLabel={t("sidebar.actions.openHome")}
+            onClick={goToStartPage}
+          />
+        }
         listTopPadding
         bottomContent={
           <SidebarBottomBar rightActions={sidebarBottomRightActions} />

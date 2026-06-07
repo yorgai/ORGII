@@ -20,7 +20,6 @@ import React, {
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
-import DropdownSelectedCheck from "@src/components/Dropdown/DropdownSelectedCheck";
 import {
   DROPDOWN_CLASSES,
   DROPDOWN_ITEM,
@@ -53,23 +52,16 @@ import HoverAnimatedIcon, {
   triggerIconAnimation,
 } from "../components/HoverAnimatedIcon";
 import { SidebarRamMonitorPanel } from "../connectors/SidebarRamMonitorButton";
-import { SidebarWorkstationSettingsSubmenu } from "./SidebarWorkstationSettingsSubmenu";
+import {
+  type SettingsSubmenu,
+  SidebarSettingsMenuSubmenus,
+  type SubmenuPosition,
+} from "./SidebarSettingsMenuSubmenus";
 
 const SUBMENU_WIDTH_PX = 220;
 const SUBMENU_GAP_PX = DROPDOWN_PANEL.submenuGap;
 const MENU_ICON_CLASS_NAME = "shrink-0 text-text-2";
 const MENU_ARROW_CLASS_NAME = "text-text-3";
-
-type SettingsSubmenu =
-  | "appearance"
-  | "language"
-  | "chatPanelLocation"
-  | "workstation";
-
-interface SubmenuPosition {
-  left: number;
-  bottom: number;
-}
 
 function getSubmenuPosition(
   trigger: HTMLElement,
@@ -279,117 +271,6 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
     []
   );
 
-  const renderSubmenu = () => {
-    if (!activeSubmenu || !submenuPosition) return null;
-
-    if (
-      activeSubmenu === "chatPanelLocation" ||
-      activeSubmenu === "workstation"
-    ) {
-      return createPortal(
-        <SidebarWorkstationSettingsSubmenu
-          panelRef={submenuPanelRef}
-          position={submenuPosition}
-          mode={activeSubmenu}
-          onPointerDown={handleSubmenuPointerDown}
-          onMouseDown={handleSubmenuMouseDown}
-        />,
-        document.body
-      );
-    }
-
-    if (activeSubmenu === "appearance") {
-      return createPortal(
-        <div
-          ref={submenuPanelRef}
-          className={`${DROPDOWN_CLASSES.menuPanelWithHeaderBase} ${DROPDOWN_WIDTHS.panelWidthClass} fixed`}
-          style={{ left: submenuPosition.left, bottom: submenuPosition.bottom }}
-          onPointerDown={handleSubmenuPointerDown}
-          onMouseDown={handleSubmenuMouseDown}
-        >
-          <div
-            className={`${DROPDOWN_CLASSES.itemsColumnPadded} scrollbar-overlay max-h-[320px] overflow-y-auto`}
-          >
-            <div className={DROPDOWN_CLASSES.sectionLabel}>
-              {tSettings("general.appearanceMode")}
-            </div>
-            {appearanceModeOptions.map((option) => {
-              const selected = appearanceMode === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`${DROPDOWN_CLASSES.menuActionItem} ${selected ? DROPDOWN_CLASSES.itemSelected : ""} justify-between`}
-                  onClick={() => void handleSelectAppearanceMode(option.value)}
-                  aria-selected={selected}
-                >
-                  <span>{option.label}</span>
-                  {selected && <DropdownSelectedCheck />}
-                </button>
-              );
-            })}
-            <div className={DROPDOWN_CLASSES.menuSeparator} />
-            <div className={DROPDOWN_CLASSES.sectionLabel}>
-              {tSettings("general.themePreset")}
-            </div>
-            {themeOptions.map((theme) => {
-              const selected = globalThemeId === theme.value;
-              return (
-                <button
-                  key={theme.value}
-                  type="button"
-                  className={`${DROPDOWN_CLASSES.menuActionItem} ${selected ? DROPDOWN_CLASSES.itemSelected : ""} justify-between`}
-                  onClick={() => void handleSelectTheme(String(theme.value))}
-                  aria-selected={selected}
-                >
-                  <span>{theme.label}</span>
-                  {selected && <DropdownSelectedCheck />}
-                </button>
-              );
-            })}
-          </div>
-        </div>,
-        document.body
-      );
-    }
-
-    return createPortal(
-      <div
-        ref={submenuPanelRef}
-        className={`${DROPDOWN_CLASSES.menuPanelWithHeaderBase} ${DROPDOWN_WIDTHS.panelWidthClass} fixed`}
-        style={{ left: submenuPosition.left, bottom: submenuPosition.bottom }}
-        onPointerDown={handleSubmenuPointerDown}
-        onMouseDown={handleSubmenuMouseDown}
-      >
-        <div className="scrollbar-overlay max-h-[320px] overflow-y-auto">
-          <div className={DROPDOWN_CLASSES.itemsColumnPadded}>
-            {languageOptions.map((language) => {
-              const selected = currentLanguage === language.value;
-              return (
-                <button
-                  key={language.value}
-                  type="button"
-                  className={`${DROPDOWN_CLASSES.menuActionItem} ${selected ? DROPDOWN_CLASSES.itemSelected : ""} justify-between`}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    void handleSelectLanguage(language.value);
-                  }}
-                  onClick={() => void handleSelectLanguage(language.value)}
-                  aria-selected={selected}
-                >
-                  <span>{language.label}</span>
-                  {selected && <DropdownSelectedCheck />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>,
-      document.body
-    );
-  };
-
   return (
     <>
       <div ref={triggerRef} title={t("sidebar.bottomBar.settings")}>
@@ -596,7 +477,24 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
           </div>,
           document.body
         )}
-      {renderSubmenu()}
+      <SidebarSettingsMenuSubmenus
+        activeSubmenu={activeSubmenu}
+        appearanceMode={appearanceMode}
+        appearanceModeLabel={tSettings("general.appearanceMode")}
+        appearanceModeOptions={appearanceModeOptions}
+        currentLanguage={currentLanguage}
+        globalThemeId={globalThemeId}
+        languageOptions={languageOptions}
+        submenuPanelRef={submenuPanelRef}
+        submenuPosition={submenuPosition}
+        themeOptions={themeOptions}
+        themePresetLabel={tSettings("general.themePreset")}
+        onSelectAppearanceMode={(mode) => void handleSelectAppearanceMode(mode)}
+        onSelectLanguage={(language) => void handleSelectLanguage(language)}
+        onSelectTheme={(themeId) => void handleSelectTheme(themeId)}
+        onSubmenuMouseDown={handleSubmenuMouseDown}
+        onSubmenuPointerDown={handleSubmenuPointerDown}
+      />
       {ramPanelPosition && (
         <SidebarRamMonitorPanel
           isOpen={ramPanelOpen}
