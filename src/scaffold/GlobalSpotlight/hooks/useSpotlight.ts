@@ -60,7 +60,9 @@ export function useSpotlight(
   props: GlobalSpotlightProps & {
     isOpen: boolean;
     closeModal?: () => void;
-    onOpenWorkspacePicker?: (mode: "switch" | "add" | "create") => void;
+    onOpenWorkspacePicker?: (
+      mode: "switch" | "open" | "add" | "create"
+    ) => void;
     onOpenBranchPicker?: () => void;
     onOpenEditorPalette?: (prefix: string, mode?: EditorPaletteMode) => void;
     onOpenAgentSessionSearch?: () => void;

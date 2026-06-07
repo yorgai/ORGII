@@ -26,7 +26,9 @@ import {
   CHAT_PANEL_CONTENT_MODE,
   chatPanelContentModeAtom,
   chatPanelSelectedWorkItemAtom,
+  chatPanelSelectedWorkspaceAtom,
   chatPanelStickyNotesOpenAtom,
+  chatPanelWorkspaceDashboardOpenAtom,
 } from "@src/store/ui/chatPanelAtom";
 import { invokeTauri } from "@src/util/platform/tauri/init";
 import { isCliSession } from "@src/util/session/sessionDispatch";
@@ -86,8 +88,14 @@ export function useWorkstationSidebarHandlers({
   const setBenchmarkActiveBatchTaskId = useSetAtom(
     benchmarkActiveBatchTaskIdAtom
   );
+  const setChatPanelWorkspaceDashboardOpen = useSetAtom(
+    chatPanelWorkspaceDashboardOpenAtom
+  );
   const setChatPanelSelectedWorkItem = useSetAtom(
     chatPanelSelectedWorkItemAtom
+  );
+  const setChatPanelSelectedWorkspace = useSetAtom(
+    chatPanelSelectedWorkspaceAtom
   );
   const setChatPanelStickyNotesOpen = useSetAtom(chatPanelStickyNotesOpenAtom);
 
@@ -192,6 +200,8 @@ export function useWorkstationSidebarHandlers({
           CHAT_PANEL_CONTENT_MODE.BENCHMARK_SESSION_GROUP
         );
         setChatPanelSelectedWorkItem(null);
+        setChatPanelWorkspaceDashboardOpen(false);
+        setChatPanelSelectedWorkspace(null);
         setChatPanelStickyNotesOpen(false);
         promoteActiveSessionCreatorDraft();
         void benchmarkApi
@@ -214,6 +224,8 @@ export function useWorkstationSidebarHandlers({
 
       setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
       setChatPanelSelectedWorkItem(null);
+      setChatPanelWorkspaceDashboardOpen(false);
+      setChatPanelSelectedWorkspace(null);
       setChatPanelStickyNotesOpen(false);
       promoteActiveSessionCreatorDraft();
       openSession(item.id, sessionName, originalSession.repoPath);
@@ -232,6 +244,8 @@ export function useWorkstationSidebarHandlers({
       setBenchmarkActiveBatchTaskId,
       setBenchmarkAgentBatchStatus,
       setChatPanelContentMode,
+      setChatPanelWorkspaceDashboardOpen,
+      setChatPanelSelectedWorkspace,
       setChatPanelSelectedWorkItem,
       setChatPanelStickyNotesOpen,
       setGroupVisibleCounts,

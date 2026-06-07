@@ -9,6 +9,7 @@ import {
 } from "@src/engines/ChatPanel/config";
 import {
   clearSessionAtom,
+  eventCountAtom,
   eventsAtom,
 } from "@src/engines/SessionCore/core/atoms";
 import { useDropdownEngine } from "@src/hooks/dropdown";
@@ -34,7 +35,9 @@ import {
   chatPanelMaximizedAtom,
   chatPanelSelectedProjectAtom,
   chatPanelSelectedWorkItemAtom,
+  chatPanelSelectedWorkspaceAtom,
   chatPanelStickyNotesOpenAtom,
+  chatPanelWorkspaceDashboardOpenAtom,
   chatTurnPaginationEnabledAtom,
   chatWidthAtom,
   toggleChatPanelMaximizedAtom,
@@ -100,6 +103,10 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
 
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
     const selectedProject = useAtomValue(chatPanelSelectedProjectAtom);
+    const selectedWorkspace = useAtomValue(chatPanelSelectedWorkspaceAtom);
+    const workspaceDashboardOpen = useAtomValue(
+      chatPanelWorkspaceDashboardOpenAtom
+    );
     const stickyNotesOpen = useAtomValue(chatPanelStickyNotesOpenAtom);
     const createProjectContext = useAtomValue(
       chatPanelCreateProjectContextAtom
@@ -159,6 +166,10 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     );
     const setSelectedWorkItem = useSetAtom(chatPanelSelectedWorkItemAtom);
     const setSelectedProject = useSetAtom(chatPanelSelectedProjectAtom);
+    const setSelectedWorkspace = useSetAtom(chatPanelSelectedWorkspaceAtom);
+    const setWorkspaceDashboardOpen = useSetAtom(
+      chatPanelWorkspaceDashboardOpenAtom
+    );
     const setStickyNotesOpen = useSetAtom(chatPanelStickyNotesOpenAtom);
     const addStickyNotesSection = useSetAtom(addSectionAtom);
     const dispatchClearSession = useSetAtom(clearSessionAtom);
@@ -208,6 +219,8 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       setContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
       setSelectedWorkItem(null);
       setSelectedProject(null);
+      setSelectedWorkspace(null);
+      setWorkspaceDashboardOpen(false);
       setStickyNotesOpen(false);
       dispatchClearSession();
       setWorkstationActiveSessionId(null);
@@ -217,8 +230,10 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       setActiveSessionId,
       setContentMode,
       setSelectedProject,
+      setSelectedWorkspace,
       setSelectedWorkItem,
       setStickyNotesOpen,
+      setWorkspaceDashboardOpen,
       setWorkstationActiveSessionId,
     ]);
 
@@ -226,6 +241,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       addStickyNotesSection();
     }, [addStickyNotesSection]);
 
+    const eventCount = useAtomValue(eventCountAtom);
     const events = useAtomValue(eventsAtom);
     const [copyEventJsonLabel, setCopyEventJsonLabel] = React.useState<
       "idle" | "copied" | "failed"
@@ -286,6 +302,8 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       panelTitle,
       selectedProject,
       selectedWorkItem,
+      selectedWorkspace,
+      workspaceDashboardOpen,
       setActiveSessionId,
       setContentMode,
       setWorkstationActiveSessionId,
@@ -412,7 +430,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         createTarget={createTarget}
         createTargetOptions={createTargetOptions}
         currentSessionId={currentSessionId ?? null}
-        eventsLength={events.length}
+        eventsLength={eventCount}
         handleAddStickyNotesSection={handleAddStickyNotesSection}
         handleChatFocusToggle={handleChatFocusToggle}
         handleCopyEventJson={handleCopyEventJson}
@@ -479,6 +497,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         position={position}
         selectedProject={selectedProject}
         selectedWorkItem={selectedWorkItem}
+        selectedWorkspace={selectedWorkspace}
         showBenchmarkSessionGroupContent={
           contentState.showBenchmarkSessionGroupContent
         }
@@ -490,6 +509,10 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         showSessionContent={contentState.showSessionContent}
         showStickyNotesContent={contentState.showStickyNotesContent}
         showWorkItemContent={contentState.showWorkItemContent}
+        showWorkspaceDashboardContent={
+          contentState.showWorkspaceDashboardContent
+        }
+        showWorkspaceOverviewContent={contentState.showWorkspaceOverviewContent}
       />
     );
 

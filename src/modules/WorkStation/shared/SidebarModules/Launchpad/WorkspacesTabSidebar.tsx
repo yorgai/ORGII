@@ -1,20 +1,11 @@
 /**
  * WorkspacesTabSidebar
  *
- * Tab-specific sidebar for the `launchpad-dashboard` (pinned) and
- * `launchpad-repo` (per-workspace) tab types. Renders Dashboard,
- * multi-repo workspaces, and repos as explorer-style collapsible sections.
- *
- * Clicking the Dashboard row activates the pinned `launchpad-dashboard`
- * tab; clicking a workspace activates that workspace's folders; clicking
- * a repo opens (or focuses) its keyed `launchpad-repo` tab in the main
- * pane.
- *
- * Registered for both launchpad tab types so it shows up whether the
- * dashboard or a workspace detail page is active.
+ * Tab-specific sidebar for `launchpad-repo` tabs. Renders multi-repo
+ * workspaces and repos as explorer-style collapsible sections.
  */
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { Check, Code, FolderTree, LayoutDashboard } from "lucide-react";
+import { Check, Code, FolderTree } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -31,7 +22,6 @@ import {
   setWorkspaceFoldersAtom,
 } from "@src/store/ui/workspaceFoldersAtom";
 import {
-  LAUNCHPAD_DASHBOARD_TAB_ID,
   createLaunchpadRepoTab,
   openTab as openTabMutation,
   workstationLayoutAtom,
@@ -51,8 +41,6 @@ import {
 
 const NAV_ICON_SIZE = 14;
 const NAV_ICON_STROKE = 1.75;
-const DASHBOARD_NODE_ID = "__workspaces_sidebar_dashboard__";
-
 function repoDisplayName(repo: Repo): string {
   return repo.name || repo.path?.split("/").pop() || "Repo";
 }
@@ -95,7 +83,6 @@ const WorkspacesTabSidebar: TabSidebarComponent = memo(
     const dispatchSetFolders = useSetAtom(setWorkspaceFoldersAtom);
     const setActiveWorkspaceName = useSetAtom(activeWorkspaceNameAtom);
 
-    const isDashboardActive = tab.type === "launchpad-dashboard";
     const selectedRepoId = useMemo<string | null>(() => {
       if (tab.type !== "launchpad-repo") return null;
       const repoId = (tab.data as { repoId?: unknown } | undefined)?.repoId;
@@ -124,23 +111,6 @@ const WorkspacesTabSidebar: TabSidebarComponent = memo(
       () => buildWorkspaceRepoNameResolver(repos),
       [repos]
     );
-
-    const handleSelectDashboard = useCallback(() => {
-      setLayout((prev) => {
-        if (!prev) return prev;
-        const existing = prev.mainPane?.tabs.find(
-          (entry) => entry.id === LAUNCHPAD_DASHBOARD_TAB_ID
-        );
-        if (!existing) return prev;
-        return {
-          ...prev,
-          mainPane: {
-            ...prev.mainPane,
-            activeTabId: LAUNCHPAD_DASHBOARD_TAB_ID,
-          },
-        };
-      });
-    }, [setLayout]);
 
     const handleSelectRepo = useCallback(
       (repo: Repo) => {
@@ -177,28 +147,6 @@ const WorkspacesTabSidebar: TabSidebarComponent = memo(
       },
       [dispatchSetFolders, resolveWorkspaceRepoName, setActiveWorkspaceName]
     );
-
-    const dashboardRow = useMemo(() => {
-      const node: TreeRowNode = {
-        id: DASHBOARD_NODE_ID,
-        name: t("launchpad.dashboard"),
-        path: DASHBOARD_NODE_ID,
-        type: "file",
-        icon: (
-          <LayoutDashboard size={NAV_ICON_SIZE} strokeWidth={NAV_ICON_STROKE} />
-        ),
-      };
-      return (
-        <TreeRowBase
-          key={DASHBOARD_NODE_ID}
-          node={node}
-          depth={0}
-          isSelected={isDashboardActive}
-          onClick={handleSelectDashboard}
-          dataPath={DASHBOARD_NODE_ID}
-        />
-      );
-    }, [handleSelectDashboard, isDashboardActive, t]);
 
     const orderedWorkspaces = useMemo(
       () =>
@@ -298,16 +246,7 @@ const WorkspacesTabSidebar: TabSidebarComponent = memo(
     );
 
     const sidebarSections = useMemo<PanelSection[]>(() => {
-      const sections: PanelSection[] = [
-        {
-          key: "dashboard",
-          title: t("common:selectors.spotlight.groups.workspace"),
-          content: <div className="flex flex-col py-1">{dashboardRow}</div>,
-          defaultFlexGrow: 0.25,
-          autoHeight: true,
-          resizable: false,
-        },
-      ];
+      const sections: PanelSection[] = [];
 
       if (orderedWorkspaces.length > 0) {
         sections.push({
@@ -339,7 +278,6 @@ const WorkspacesTabSidebar: TabSidebarComponent = memo(
 
       return sections;
     }, [
-      dashboardRow,
       emptyWorkspacesContent,
       orderedWorkspaces.length,
       repoLoading,
@@ -377,10 +315,6 @@ const WorkspacesTabSidebar: TabSidebarComponent = memo(
 
 WorkspacesTabSidebar.displayName = "WorkspacesTabSidebar";
 
-registerTabSidebar("launchpad-dashboard", {
-  component: WorkspacesTabSidebar,
-  keepAlive: true,
-});
 registerTabSidebar("launchpad-repo", {
   component: WorkspacesTabSidebar,
   keepAlive: true,

@@ -194,6 +194,14 @@ export function GuiControlToggle(): React.ReactNode {
     observeCompact(isCompactRow);
   }, [isCompactRow, observeCompact]);
 
+  useEffect(() => {
+    if (!enabled || showVoiceUi) return;
+    const frame = requestAnimationFrame(() => {
+      composerInputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [enabled, showVoiceUi]);
+
   const handleSubmit = useCallback(() => {
     const text = composerInputRef.current?.getTextWithPills().trim() ?? "";
     if (!text || sendingRef.current) return;

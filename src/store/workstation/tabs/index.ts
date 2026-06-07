@@ -159,10 +159,7 @@ export {
   agentConfigTabFactory,
   createAgentConfigTab,
   // Launchpad factories
-  LAUNCHPAD_DASHBOARD_TAB_ID,
-  launchpadDashboardTabFactory,
   launchpadRepoTabFactory,
-  createLaunchpadDashboardTab,
   createLaunchpadRepoTab,
 } from "./factories";
 

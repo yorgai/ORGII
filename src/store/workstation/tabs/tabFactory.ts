@@ -110,7 +110,6 @@ const DEFAULT_CATEGORY_BY_TYPE: Record<
   "subagent-detail": "subagent",
   "agent-config": "agent-config",
   "kanban-station": "ops-control",
-  "launchpad-dashboard": "launchpad",
   "launchpad-repo": "launchpad",
   "canvas-preview": "preview",
 };

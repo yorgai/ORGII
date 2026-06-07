@@ -29,7 +29,7 @@ export interface UseSpotlightEffectsOptions {
   isOpen: boolean;
   dispatch: Dispatch<SpotlightAction>;
   closeModal: () => void;
-  onOpenWorkspaceLayer?: (mode: "switch" | "add" | "create") => void;
+  onOpenWorkspaceLayer?: (mode: "switch" | "open" | "add" | "create") => void;
   onOpenBranchLayer?: () => void;
   onOpenEditorLayer?: (
     query: string,

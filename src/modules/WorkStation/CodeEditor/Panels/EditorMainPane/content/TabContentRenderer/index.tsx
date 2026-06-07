@@ -52,10 +52,6 @@ const EditorSettings = React.lazy(
   () => import("@src/modules/WorkStation/Settings")
 );
 const ChatView = React.lazy(() => import("@src/engines/ChatPanel/ChatView"));
-const LaunchpadDashboardRenderer = React.lazy(
-  () =>
-    import("@src/modules/WorkStation/TabContent/renderers/launchpadDashboard")
-);
 const LaunchpadRepoRenderer = React.lazy(
   () => import("@src/modules/WorkStation/TabContent/renderers/launchpadRepo")
 );
@@ -602,23 +598,6 @@ const TabContentRenderer: React.FC<TabContentRendererProps> = memo(
           </Suspense>
         );
       }
-
-      // Launchpad: pinned dashboard + per-repo detail tabs, both
-      // delegated to the unified-registry renderer wrappers under
-      // `WorkStation/TabContent/renderers/`. They render in the Code
-      // Editor surface because the standalone Launchpad host was
-      // retired — the dashboard tab is the first pinned fixture and
-      // each repo opens a closable keyed tab via the dashboard.
-      case "launchpad-dashboard":
-        return (
-          <Suspense fallback={<LazyFallback />}>
-            <LaunchpadDashboardRenderer
-              tab={activeTab}
-              paneId="main"
-              isActive
-            />
-          </Suspense>
-        );
 
       case "launchpad-repo":
         return (

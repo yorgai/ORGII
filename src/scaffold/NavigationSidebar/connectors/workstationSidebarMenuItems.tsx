@@ -2,6 +2,7 @@ import {
   Box,
   FolderSymlink,
   FolderTree,
+  LayoutDashboard,
   Plus,
   Radar,
   SquarePen,
@@ -38,6 +39,8 @@ interface BuildProjectsPinnedMenuItemsParams {
 }
 
 interface BuildFoldersPinnedMenuItemsParams {
+  dashboardItemId: string;
+  dashboardLabel: string;
   addWorkspaceItemId: string;
   addWorkspaceLabel: string;
   createWorkspaceItemId: string;
@@ -101,12 +104,21 @@ export function buildProjectsPinnedMenuItems({
 }
 
 export function buildFoldersPinnedMenuItems({
+  dashboardItemId,
+  dashboardLabel,
   addWorkspaceItemId,
   addWorkspaceLabel,
   createWorkspaceItemId,
   createWorkspaceLabel,
 }: BuildFoldersPinnedMenuItemsParams): NavigationMenuItem[] {
   return [
+    {
+      id: dashboardItemId,
+      key: dashboardItemId,
+      label: dashboardLabel,
+      icon: LayoutDashboard,
+      iconName: "layout-dashboard",
+    },
     {
       id: addWorkspaceItemId,
       key: addWorkspaceItemId,

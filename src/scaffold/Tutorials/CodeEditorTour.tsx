@@ -15,7 +15,6 @@ import { WorkStationViewService } from "@src/services/workStation/WorkStationVie
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import { type DockFilter, dockFilterAtom } from "@src/store/workstation";
 import { sourceControlFilterModeAtom } from "@src/store/workstation/codeEditor/sourceControlFilterModeAtom";
-import { LAUNCHPAD_DASHBOARD_TAB_ID } from "@src/store/workstation/tabs";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import { CODE_EDITOR_TOUR_TARGETS } from "./codeEditorTourConfig";
@@ -251,7 +250,7 @@ const CodeEditorTour: React.FC<CodeEditorTourProps> = ({ open, onClose }) => {
       void WorkStationViewService.openSourceControlTab();
     }
     if (currentStep.openDashboard) {
-      void WorkStationViewService.openCodeEditorTab(LAUNCHPAD_DASHBOARD_TAB_ID);
+      void WorkStationViewService.openFileFolderTab();
     }
   }, [
     currentStep.dockFilter,

@@ -9,7 +9,7 @@ import { useCodeEditorHandlers } from "@/src/hooks/workStation/editor/useCodeEdi
 import { useGitDiffState } from "@/src/hooks/workStation/git/useGitDiffState";
 import { useCodeEditor } from "@/src/hooks/workStation/useCodeEditor";
 import { ActionSystemProvider } from "@/src/modules/WorkStation/ActionSystem";
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
@@ -26,9 +26,9 @@ import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";
 import {
   CODE_EDITOR_MAIN_TERMINAL_SESSION_ID,
   explorerTabFactory,
-  launchpadDashboardTabFactory,
   sourceControlTabFactory,
   terminalTabFactory,
+  workstationLayoutAtom,
 } from "@src/store/workstation/tabs";
 
 import {
@@ -108,7 +108,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
     // The single main pane's active tab. SidebarSlot resolves tab-specific
     // sidebars further below — after `useCodeEditorHandlers` runs — so git
     // file-row clicks can be wired to `handleGitFileSelect`.
-    const { activeTab } = useWorkStationTabs();
+    const { activeTab, tabs } = useWorkStationTabs();
+    const setLayout = useSetAtom(workstationLayoutAtom);
 
     // === Local state, status-bar sync, and misc handlers ===
     const {
@@ -148,6 +149,28 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
       const preloadTimer = window.setTimeout(preloadSourceControlTabContent, 0);
       return () => window.clearTimeout(preloadTimer);
     }, []);
+
+    useEffect(() => {
+      if (!tabs.some((tab) => String(tab.type) === "launchpad-dashboard"))
+        return;
+      setLayout((previousLayout) => {
+        const nextTabs = previousLayout.mainPane.tabs.filter(
+          (tab) => String(tab.type) !== "launchpad-dashboard"
+        );
+        const activeTabStillExists = nextTabs.some(
+          (tab) => tab.id === previousLayout.mainPane.activeTabId
+        );
+        return {
+          ...previousLayout,
+          mainPane: {
+            tabs: nextTabs,
+            activeTabId: activeTabStillExists
+              ? previousLayout.mainPane.activeTabId
+              : (nextTabs[0]?.id ?? null),
+          },
+        };
+      });
+    }, [setLayout, tabs]);
 
     // === Consolidated event listeners ===
     // Editor command-palette shortcuts now drive GlobalSpotlight's "Editor"
@@ -201,18 +224,11 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
     });
 
     // === Pinned tabs (always-visible icon-only tabs) ===
-    // Order matters — the tab bar renders pinned tabs in this sequence,
-    // so the Launchpad dashboard sits as the first fixture (its rocket
-    // tile is the "home" entry for the editor surface), followed by the
-    // historical trio: terminal, source control, explorer.
+    // Keep the editor fixtures focused on editor tools. Workspace overview
+    // lives in the chat panel so it can share the standard panel header.
     const explorerTab = useMemo(() => explorerTabFactory({}), []);
-    const launchpadDashboardTab = useMemo(
-      () => launchpadDashboardTabFactory({}),
-      []
-    );
     const pinnedTabs = useMemo(
       () => [
-        launchpadDashboardTab,
         terminalTabFactory({
           sessionId: CODE_EDITOR_MAIN_TERMINAL_SESSION_ID,
           sessionName: "Terminal",
@@ -226,7 +242,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
         }),
         explorerTab,
       ],
-      [explorerTab, launchpadDashboardTab, sourceControlFilterCounts.unstaged]
+      [explorerTab, sourceControlFilterCounts.unstaged]
     );
     usePinnedTabs({
       enabled: Boolean(repoPath),

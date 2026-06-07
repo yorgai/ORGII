@@ -236,11 +236,6 @@ const KanbanStationEntry: RendererEntry = {
   debugLabel: "kanban-station",
 };
 
-const LaunchpadDashboardEntry: RendererEntry = {
-  Component: lazy(() => import("./renderers/launchpadDashboard")),
-  debugLabel: "launchpad-dashboard",
-};
-
 const BenchmarkEntry: RendererEntry = {
   Component: lazy(() => import("./renderers/benchmark")),
   debugLabel: "benchmark",
@@ -320,7 +315,6 @@ export const REGISTRY: TabContentRegistry = {
   "kanban-station": KanbanStationEntry,
 
   // Launchpad
-  "launchpad-dashboard": LaunchpadDashboardEntry,
   "launchpad-repo": LaunchpadRepoEntry,
 
   // Canvas Preview

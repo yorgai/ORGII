@@ -12,7 +12,6 @@ export { default as GitDiffTabRenderer } from "./gitDiff";
 export { default as GitLogTabRenderer } from "./gitLog";
 export { default as GitStashDetailTabRenderer } from "./gitStashDetail";
 export { default as KanbanStationTabRenderer } from "./kanbanStation";
-export { default as LaunchpadDashboardTabRenderer } from "./launchpadDashboard";
 export { default as LaunchpadRepoTabRenderer } from "./launchpadRepo";
 export { default as LintScanTabRenderer } from "./lintScan";
 export { default as OutputTabRenderer } from "./output";

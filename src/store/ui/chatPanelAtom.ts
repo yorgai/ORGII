@@ -280,6 +280,23 @@ export const chatPanelSelectedProjectAtom =
   atom<ChatPanelSelectedProject | null>(null);
 chatPanelSelectedProjectAtom.debugLabel = "chatPanelSelectedProjectAtom";
 
+export interface ChatPanelSelectedWorkspace {
+  kind: "workspace" | "repo";
+  id: string;
+  name: string;
+  path?: string;
+  folderCount?: number;
+  repoIds?: string[];
+}
+
+export const chatPanelSelectedWorkspaceAtom =
+  atom<ChatPanelSelectedWorkspace | null>(null);
+chatPanelSelectedWorkspaceAtom.debugLabel = "chatPanelSelectedWorkspaceAtom";
+
+export const chatPanelWorkspaceDashboardOpenAtom = atom<boolean>(false);
+chatPanelWorkspaceDashboardOpenAtom.debugLabel =
+  "chatPanelWorkspaceDashboardOpenAtom";
+
 /**
  * Whether the chat-panel slot is rendering the full-page Sticky Notes
  * board. Mutually exclusive with WorkItem/Project at the render layer

@@ -46,7 +46,6 @@ function usesFallbackCodeSidebar(tab: WorkStationTab | null): boolean {
     tab.type !== "source-control" &&
     tab.type !== "terminal" &&
     tab.type !== "benchmark" &&
-    tab.type !== "launchpad-dashboard" &&
     tab.type !== "launchpad-repo"
   );
 }

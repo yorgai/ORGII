@@ -147,13 +147,7 @@ export { agentConfigTabFactory, createAgentConfigTab } from "./agentConfig";
 export type { AgentConfigTabData, AgentConfigTabVariant } from "../types";
 
 // Launchpad
-export {
-  LAUNCHPAD_DASHBOARD_TAB_ID,
-  launchpadDashboardTabFactory,
-  launchpadRepoTabFactory,
-  createLaunchpadDashboardTab,
-  createLaunchpadRepoTab,
-} from "./launchpad";
+export { launchpadRepoTabFactory, createLaunchpadRepoTab } from "./launchpad";
 export type { LaunchpadRepoTabData } from "./launchpad";
 
 // Canvas Preview

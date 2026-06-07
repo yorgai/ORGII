@@ -9,12 +9,15 @@ import { BenchmarkPanel } from "@src/features/BenchmarkPanel";
 import type {
   ChatPanelSelectedProject,
   ChatPanelSelectedWorkItem,
+  ChatPanelSelectedWorkspace,
 } from "@src/store/ui/chatPanelAtom";
 
 import ChatView from "./ChatView";
 import ProjectPanelView from "./ProjectPanelView";
 import StickyNotesPanelView from "./StickyNotesPanelView";
 import WorkItemPanelView from "./WorkItemPanelView";
+import WorkspaceDashboardPanelView from "./WorkspaceDashboardPanelView";
+import WorkspaceOverviewPanelView from "./WorkspaceOverviewPanelView";
 
 interface ChatPanelContentProps {
   chatFocusLabel: string;
@@ -26,6 +29,7 @@ interface ChatPanelContentProps {
   position: "left" | "right";
   selectedProject: ChatPanelSelectedProject | null;
   selectedWorkItem: ChatPanelSelectedWorkItem | null;
+  selectedWorkspace: ChatPanelSelectedWorkspace | null;
   showBenchmarkSessionGroupContent: boolean;
   showEmptyChatFocusRestoreButton: boolean;
   showPanelContent: boolean;
@@ -33,6 +37,8 @@ interface ChatPanelContentProps {
   showSessionContent: boolean;
   showStickyNotesContent: boolean;
   showWorkItemContent: boolean;
+  showWorkspaceDashboardContent: boolean;
+  showWorkspaceOverviewContent: boolean;
 }
 
 export function ChatPanelContent({
@@ -45,6 +51,7 @@ export function ChatPanelContent({
   position,
   selectedProject,
   selectedWorkItem,
+  selectedWorkspace,
   showBenchmarkSessionGroupContent,
   showEmptyChatFocusRestoreButton,
   showPanelContent,
@@ -52,6 +59,8 @@ export function ChatPanelContent({
   showSessionContent,
   showStickyNotesContent,
   showWorkItemContent,
+  showWorkspaceDashboardContent,
+  showWorkspaceOverviewContent,
 }: ChatPanelContentProps): React.ReactNode {
   const chatFocusTooltip = (
     <KeyboardShortcutTooltipContent
@@ -68,6 +77,10 @@ export function ChatPanelContent({
         <WorkItemPanelView selectedWorkItem={selectedWorkItem} />
       ) : showProjectContent && selectedProject ? (
         <ProjectPanelView selectedProject={selectedProject} />
+      ) : showWorkspaceDashboardContent ? (
+        <WorkspaceDashboardPanelView />
+      ) : showWorkspaceOverviewContent && selectedWorkspace ? (
+        <WorkspaceOverviewPanelView selectedWorkspace={selectedWorkspace} />
       ) : showStickyNotesContent ? (
         <StickyNotesPanelView />
       ) : showSessionContent && currentSessionId ? (

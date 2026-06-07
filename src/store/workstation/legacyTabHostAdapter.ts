@@ -84,8 +84,8 @@ export function tabTypeToLegacyHost(type: WorkStationTabType): LegacyPeekHost {
     case "workItem-detail":
       return "project";
     default:
-      // Includes launchpad-dashboard / launchpad-repo — both render in
-      // the Code Editor surface alongside file / git / terminal tabs.
+      // Includes launchpad-repo, which renders in the Code Editor surface
+      // alongside file / git / terminal tabs.
       return "code";
   }
 }

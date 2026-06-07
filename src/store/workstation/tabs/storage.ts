@@ -15,21 +15,45 @@
  * longer exist). Old keys are ignored — the user's open-tab list will
  * reset once on first launch after the upgrade.
  */
-import type { PanelState, WorkStationLayoutState } from "./types";
+import { FILE_TAB_TYPES, TOOL_TAB_TYPES } from "./types";
+import type {
+  PanelState,
+  WorkStationLayoutState,
+  WorkStationTab,
+} from "./types";
 
 export const LAYOUT_STORAGE_KEY = "workstation:layout-v2";
+
+const VALID_WORKSTATION_TAB_TYPES = new Set<string>([
+  ...FILE_TAB_TYPES,
+  ...TOOL_TAB_TYPES,
+]);
+
+function isValidWorkStationTab(value: unknown): value is WorkStationTab {
+  if (!value || typeof value !== "object") return false;
+  const tab = value as Partial<WorkStationTab>;
+  return (
+    typeof tab.id === "string" &&
+    VALID_WORKSTATION_TAB_TYPES.has(String(tab.type))
+  );
+}
 
 function validatePanelState(value: unknown): PanelState {
   if (!value || typeof value !== "object") {
     return { tabs: [], activeTabId: null };
   }
   const candidate = value as Record<string, unknown>;
+  const tabs = Array.isArray(candidate.tabs)
+    ? candidate.tabs.filter(isValidWorkStationTab)
+    : [];
+  const activeTabId =
+    typeof candidate.activeTabId === "string" &&
+    tabs.some((tab) => tab.id === candidate.activeTabId)
+      ? candidate.activeTabId
+      : (tabs[0]?.id ?? null);
   return {
-    tabs: Array.isArray(candidate.tabs)
-      ? (candidate.tabs as PanelState["tabs"])
-      : [],
-    activeTabId:
-      typeof candidate.activeTabId === "string" ? candidate.activeTabId : null,
+    tabs,
+    activeTabId,
   };
 }
 

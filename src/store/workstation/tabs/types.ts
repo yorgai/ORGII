@@ -66,7 +66,6 @@ export type WorkStationTabType =
   // Ops Control station tabs
   | "kanban-station"
   // Launchpad tabs
-  | "launchpad-dashboard"
   | "launchpad-repo"
   // Canvas preview tab — renders agent-generated canvas from canvasPreviewAtom
   | "canvas-preview";
@@ -453,7 +452,6 @@ export const TOOL_TAB_TYPES = [
   "agent-config",
   "kanban-station",
   // Launchpad tabs
-  "launchpad-dashboard",
   "launchpad-repo",
 ] as const;
 

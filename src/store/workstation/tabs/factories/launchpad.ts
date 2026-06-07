@@ -1,38 +1,11 @@
 /**
  * Launchpad Tab Factories
  *
- * The Launchpad hosts two kinds of tabs:
- *
- *   - `launchpad-dashboard` — pinned, singleton, non-closable. Shows the
- *     workspaces grid. Acts as the launchpad's "home" tab, parallel to the
- *     Code Editor's Explorer tab.
- *   - `launchpad-repo`      — keyed by repo id. Opens the per-repo detail page
- *     (env vars, scripts, analysis) when the user clicks a repo in the
- *     sidebar or in the dashboard grid.
+ * Launchpad repo details remain as keyed tabs. The workspace dashboard grid
+ * has moved into the Folders sidebar and chat panel overview surfaces.
  */
 import { defineTabFactory } from "../tabFactory";
 import type { WorkStationTab } from "../types";
-
-// ============================================
-// Dashboard (singleton, pinned)
-// ============================================
-
-export const LAUNCHPAD_DASHBOARD_TAB_ID = "launchpad-dashboard:main";
-
-export const launchpadDashboardTabFactory = defineTabFactory<
-  Record<string, never>
->({
-  tabType: "launchpad-dashboard",
-  idStrategy: { type: "singleton", id: LAUNCHPAD_DASHBOARD_TAB_ID },
-  getTitle: () => "Dashboard",
-  icon: "LayoutDashboard",
-  closable: false,
-  pinned: true,
-});
-
-export function createLaunchpadDashboardTab(): WorkStationTab {
-  return launchpadDashboardTabFactory({});
-}
 
 // ============================================
 // Repo detail (keyed by repo id)
