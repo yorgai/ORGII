@@ -17,7 +17,7 @@ import {
   type UseEventBlockHeaderOptions,
   type UseEventBlockHeaderReturn,
   useEventBlockHeader,
-} from "./primitives";
+} from "./primitives/useEventBlockHeader";
 
 /**
  * Extended header hook that adds event-replay locate support.

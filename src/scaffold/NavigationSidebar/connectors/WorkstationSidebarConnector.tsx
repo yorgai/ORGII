@@ -1,6 +1,14 @@
 import { RenameModal } from "@/src/scaffold/ModalSystem/variants";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { Box, House, Search, SquareMousePointer } from "lucide-react";
+import {
+  Code,
+  FolderTree,
+  Folders,
+  House,
+  ListTodo,
+  MessageCircle,
+  Search,
+} from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -11,12 +19,14 @@ import React, {
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { type WorkspaceRecord } from "@src/api/tauri/workspace";
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
 import SessionHoverCard from "@src/components/SessionHoverCard";
 import Tooltip from "@src/components/Tooltip";
 import WorkItemHoverCard from "@src/components/WorkItemHoverCard";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { ROUTES } from "@src/config/routes";
+import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import {
   type GoToNewSessionOptions,
   useAppNavigation,
@@ -25,7 +35,12 @@ import { SIDEBAR_MEMORY_KIND, useSidebarMemoryEntry } from "@src/hooks/perf";
 import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import { benchmarkAgentBatchStatusAtom } from "@src/store/benchmark";
-import { repoMapAtom } from "@src/store/repo";
+import {
+  type Repo,
+  repoMapAtom,
+  reposAtom,
+  selectedRepoIdAtom,
+} from "@src/store/repo";
 import {
   SESSION_SIDEBAR_PAGE_SIZE,
   activeSessionCreatorDraftIdAtom,
@@ -54,14 +69,20 @@ import {
 import { type StationMode, stationModeAtom } from "@src/store/ui/simulatorAtom";
 import { spotlightOpenAtom } from "@src/store/ui/uiAtom";
 import {
+  activeWorkspaceIdAtom,
+  activeWorkspaceNameAtom,
+  savedWorkspacesAtom,
+  setWorkspaceFoldersAtom,
+} from "@src/store/workspace";
+import {
   opsControlFocusedTabAtom,
   opsControlPeekHostAtom,
 } from "@src/store/workstation";
+import type { WorkspaceFolder } from "@src/types/workspace";
 
 import { SidebarBottomBar } from "../blocks";
 import NavigationSidebar from "../variants/NavigationSidebar";
 import { SessionFilterButton } from "./SessionFilterButton";
-import { SessionImportExportModal } from "./SessionImportExportModal";
 import {
   CURSOR_IDE_REFRESH_INTERVAL_MS,
   PROJECTS_NEW_PROJECT_MENU_ITEM_ID,
@@ -106,8 +127,46 @@ import {
   buildProjectsPinnedMenuItems,
 } from "./workstationSidebarMenuItems";
 
-type SessionImportExportMode = "export" | "import";
-type WorkstationSidebarKey = "workstation" | "projects";
+type WorkstationSidebarKey = "folders" | "workstation" | "projects";
+
+const FOLDERS_WORKSPACES_SECTION_ID = "separator-folders-workspaces";
+const FOLDERS_REPOS_SECTION_ID = "separator-folders-repos";
+const FOLDERS_WORKSPACE_ITEM_PREFIX = "folders-workspace:";
+const FOLDERS_REPO_ITEM_PREFIX = "folders-repo:";
+
+function getRepoDisplayName(repo: Repo): string {
+  return repo.name || repo.path?.split("/").pop() || "Repo";
+}
+
+function normalizeFsPath(path: string | undefined): string {
+  if (!path) return "";
+  const stripped = path.startsWith("file://")
+    ? path.replace("file://", "")
+    : path;
+  return stripped.replace(/\/+$/, "");
+}
+
+function buildWorkspaceRepoNameResolver(repos: readonly Repo[]) {
+  const byId = new Map<string, string>();
+  const byPath = new Map<string, string>();
+  for (const repo of repos) {
+    const name = getRepoDisplayName(repo);
+    byId.set(repo.id, name);
+    const normalizedPath = normalizeFsPath(repo.path ?? repo.fs_uri);
+    if (normalizedPath) byPath.set(normalizedPath, name);
+  }
+  return (folder: WorkspaceRecord["folders"][number]): string => {
+    if (folder.repoId) {
+      const idMatch = byId.get(folder.repoId);
+      if (idMatch) return idMatch;
+    }
+    return byPath.get(normalizeFsPath(folder.folderPath)) ?? folder.folderName;
+  };
+}
+
+function getWorkspaceFolderCountLabel(count: number): string {
+  return `${count} ${count === 1 ? "repo" : "repos"}`;
+}
 
 function SidebarSearchShortcutTooltip({
   searchLabel,
@@ -178,23 +237,30 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const tabs = useMemo(
     () => [
       {
+        key: "folders",
+        label: t("labels.folders"),
+        icon: Folders,
+        iconName: "folders",
+      },
+      {
         key: "workstation",
-        label: t("routes.session"),
-        icon: SquareMousePointer,
-        iconName: "square-mouse-pointer",
+        label: t("labels.session"),
+        icon: MessageCircle,
+        iconName: "message-circle",
       },
       {
         key: "projects",
-        label: t("labels.projects"),
-        icon: Box,
-        iconName: "box",
+        label: t("labels.project"),
+        icon: ListTodo,
+        iconName: "list-todo",
       },
     ],
     [t]
   );
 
   const handleTabChange = useCallback((key: string) => {
-    if (key !== "workstation" && key !== "projects") return;
+    if (key !== "folders" && key !== "workstation" && key !== "projects")
+      return;
     setActiveSidebarKey(key);
   }, []);
 
@@ -208,7 +274,18 @@ export const WorkstationSidebarConnector: React.FC = () => {
   );
 
   const repoMap = useAtomValue(repoMapAtom);
+  const repos = useAtomValue(reposAtom);
+  const selectedRepoId = useAtomValue(selectedRepoIdAtom);
+  const savedWorkspaces = useAtomValue(savedWorkspacesAtom);
+  const activeWorkspaceId = useAtomValue(activeWorkspaceIdAtom);
+  const dispatchSetWorkspaceFolders = useSetAtom(setWorkspaceFoldersAtom);
+  const setActiveWorkspaceName = useSetAtom(activeWorkspaceNameAtom);
+  const { selectRepo } = useRepoSelection({ autoLoad: false });
   const repoPathToName = useMemo(() => buildRepoPathToName(repoMap), [repoMap]);
+  const resolveWorkspaceRepoName = useMemo(
+    () => buildWorkspaceRepoNameResolver(repos),
+    [repos]
+  );
 
   useEffect(() => {
     const refreshCursorIdeSessions = () => {
@@ -244,11 +321,12 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(
     () => new Set(DEFAULT_COLLAPSED_SECTION_IDS)
   );
+  const [foldersCollapsedSectionIds, setFoldersCollapsedSectionIds] = useState<
+    Set<string>
+  >(() => new Set());
   const [projectsCollapsedSectionIds, setProjectsCollapsedSectionIds] =
     useState<Set<string>>(() => new Set());
   const defaultedProjectsLinearSectionIdsRef = useRef<Set<string>>(new Set());
-  const [importExportMode, setImportExportMode] =
-    useState<SessionImportExportMode | null>(null);
 
   const untitledSession = t("sidebar.defaults.untitledSession");
   const newSessionLabel = t("labels.newSession");
@@ -327,6 +405,51 @@ export const WorkstationSidebarConnector: React.FC = () => {
     [draftMenuItems, menuItems]
   );
 
+  const foldersSidebarMenuItems = useMemo<NavigationMenuItem[]>(() => {
+    const items: NavigationMenuItem[] = [];
+
+    if (savedWorkspaces.length > 0) {
+      items.push({
+        id: FOLDERS_WORKSPACES_SECTION_ID,
+        key: FOLDERS_WORKSPACES_SECTION_ID,
+        label: t("common:selectors.repo.sections.workspace"),
+      });
+      items.push(
+        ...savedWorkspaces.map((workspace) => {
+          const folderCount = workspace.folders.length;
+          const memberNames = workspace.folders.map(resolveWorkspaceRepoName);
+          return {
+            id: `${FOLDERS_WORKSPACE_ITEM_PREFIX}${workspace.workspaceId}`,
+            key: `${FOLDERS_WORKSPACE_ITEM_PREFIX}${workspace.workspaceId}`,
+            label: workspace.name,
+            subtitle: memberNames.join(", "),
+            icon: FolderTree,
+            iconName: "folder-tree",
+            shortcut: getWorkspaceFolderCountLabel(folderCount),
+          } satisfies NavigationMenuItem;
+        })
+      );
+    }
+
+    items.push({
+      id: FOLDERS_REPOS_SECTION_ID,
+      key: FOLDERS_REPOS_SECTION_ID,
+      label: t("common:selectors.repo.sections.repo"),
+    });
+    items.push(
+      ...repos.map((repo) => ({
+        id: `${FOLDERS_REPO_ITEM_PREFIX}${repo.id}`,
+        key: `${FOLDERS_REPO_ITEM_PREFIX}${repo.id}`,
+        label: getRepoDisplayName(repo),
+        subtitle: repo.path ?? repo.fs_uri,
+        icon: Code,
+        iconName: "code",
+      }))
+    );
+
+    return items;
+  }, [repos, resolveWorkspaceRepoName, savedWorkspaces, t]);
+
   const projectsSidebarMenuItems = projectsWorkItemMenuItems;
 
   useEffect(() => {
@@ -354,11 +477,15 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const pinnedMenuItems =
     activeSidebarKey === "projects"
       ? projectsPinnedMenuItems
-      : sessionPinnedMenuItems;
+      : activeSidebarKey === "folders"
+        ? []
+        : sessionPinnedMenuItems;
   const sidebarMenuItems =
     activeSidebarKey === "projects"
       ? projectsSidebarMenuItems
-      : sessionSidebarMenuItems;
+      : activeSidebarKey === "folders"
+        ? foldersSidebarMenuItems
+        : sessionSidebarMenuItems;
 
   const selectedDraftMenuItemId = getSelectedDraftMenuItemId(
     activeSessionCreatorDraftId,
@@ -390,18 +517,29 @@ export const WorkstationSidebarConnector: React.FC = () => {
     chatPanelSelectedProject
       ? projectsSelectedMenuItemId
       : "";
+  const foldersSelectedMenuItemId = activeWorkspaceId
+    ? `${FOLDERS_WORKSPACE_ITEM_PREFIX}${activeWorkspaceId}`
+    : selectedRepoId
+      ? `${FOLDERS_REPO_ITEM_PREFIX}${selectedRepoId}`
+      : "";
   const selectedMenuItemId =
     activeSidebarKey === "projects"
       ? resolvedProjectsSelectedMenuItemId
-      : sessionSelectedMenuItemId;
+      : activeSidebarKey === "folders"
+        ? foldersSelectedMenuItemId
+        : sessionSelectedMenuItemId;
   const resolvedCollapsedSectionIds =
     activeSidebarKey === "projects"
       ? projectsCollapsedSectionIds
-      : collapsedSectionIds;
+      : activeSidebarKey === "folders"
+        ? foldersCollapsedSectionIds
+        : collapsedSectionIds;
   const resolvedSetCollapsedSectionIds =
     activeSidebarKey === "projects"
       ? setProjectsCollapsedSectionIds
-      : setCollapsedSectionIds;
+      : activeSidebarKey === "folders"
+        ? setFoldersCollapsedSectionIds
+        : setCollapsedSectionIds;
 
   const resetOpsControlStateForProjectsContent = useCallback(() => {
     const stationMode: StationMode = "my-station";
@@ -496,6 +634,50 @@ export const WorkstationSidebarConnector: React.FC = () => {
     handleAddTag,
     tCommon,
   });
+
+  const handleFoldersMenuItemClick = useCallback(
+    (_key: string, item: NavigationMenuItem) => {
+      const workspaceId = item.id.startsWith(FOLDERS_WORKSPACE_ITEM_PREFIX)
+        ? item.id.slice(FOLDERS_WORKSPACE_ITEM_PREFIX.length)
+        : "";
+      if (workspaceId) {
+        const workspace = savedWorkspaces.find(
+          (candidate) => candidate.workspaceId === workspaceId
+        );
+        if (!workspace) return;
+        const folders: WorkspaceFolder[] = workspace.folders.map((folder) => ({
+          id: crypto.randomUUID(),
+          name: resolveWorkspaceRepoName(folder),
+          path: folder.folderPath,
+          uri: `file://${folder.folderPath}`,
+          isPrimary: folder.isPrimary,
+          repoId: folder.repoId ?? undefined,
+          kind: folder.kind === "folder" ? "folder" : "git",
+        }));
+        dispatchSetWorkspaceFolders(folders, workspace.workspaceId);
+        setActiveWorkspaceName(workspace.name);
+        goToStartPage();
+        return;
+      }
+
+      const repoId = item.id.startsWith(FOLDERS_REPO_ITEM_PREFIX)
+        ? item.id.slice(FOLDERS_REPO_ITEM_PREFIX.length)
+        : "";
+      if (!repoId) return;
+      selectRepo(repoId);
+      dispatchSetWorkspaceFolders([], null);
+      setActiveWorkspaceName(null);
+      goToStartPage();
+    },
+    [
+      dispatchSetWorkspaceFolders,
+      goToStartPage,
+      resolveWorkspaceRepoName,
+      savedWorkspaces,
+      selectRepo,
+      setActiveWorkspaceName,
+    ]
+  );
 
   const handleProjectsMenuItemClick = useCallback(
     (_key: string, item: NavigationMenuItem) => {
@@ -709,13 +891,17 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const resolvedMenuItemClick =
     activeSidebarKey === "projects"
       ? handleProjectsMenuItemClick
-      : workstationMenuItemClick;
+      : activeSidebarKey === "folders"
+        ? handleFoldersMenuItemClick
+        : workstationMenuItemClick;
   const resolvedMenuItemContextMenu =
-    activeSidebarKey === "projects" ? undefined : handleMenuItemContextMenu;
+    activeSidebarKey === "workstation" ? handleMenuItemContextMenu : undefined;
   const resolvedRenderMenuItemWrapper =
     activeSidebarKey === "projects"
       ? renderProjectsMenuItemWrapper
-      : renderSessionMenuItemWrapper;
+      : activeSidebarKey === "folders"
+        ? undefined
+        : renderSessionMenuItemWrapper;
 
   const allSectionIds = useMemo(
     () => getAllSectionIds(sidebarMenuItems),
@@ -734,34 +920,12 @@ export const WorkstationSidebarConnector: React.FC = () => {
     void loadSidebarSessions({ forceRefresh: true });
   }, []);
 
-  const handleOpenExportSessionJson = useCallback(() => {
-    setImportExportMode("export");
-  }, []);
-
-  const handleOpenImportSessionJson = useCallback(() => {
-    setImportExportMode("import");
-  }, []);
-
-  const handleCloseImportExport = useCallback(() => {
-    setImportExportMode(null);
-  }, []);
-
-  const activeSession = activeSessionId
-    ? sessionMap.get(activeSessionId)
-    : undefined;
-
-  const handleImportedSession = useCallback(
-    (sessionId: string, sessionName: string) => {
-      promoteActiveSessionCreatorDraft();
-      openSession(sessionId, sessionName);
-    },
-    [openSession, promoteActiveSessionCreatorDraft]
-  );
-
   const isLoading =
     activeSidebarKey === "workstation"
       ? sessionsLoading && sessions.length === 0
-      : projectsWorkItemsLoading && projectsSidebarMenuItems.length === 0;
+      : activeSidebarKey === "projects"
+        ? projectsWorkItemsLoading && projectsSidebarMenuItems.length === 0
+        : false;
 
   const getProjectsGroupByLabel = useCallback(
     (mode: string) => {
@@ -812,25 +976,24 @@ export const WorkstationSidebarConnector: React.FC = () => {
         getGroupByLabel={getProjectsGroupByLabel}
         onSelect={handleProjectsGroupBySelect}
       />
-    ) : (
+    ) : activeSidebarKey === "workstation" ? (
       <SessionFilterButton
         groupByMode={groupByMode}
         onSelect={handleSessionGroupBySelect}
         onCollapseAll={handleCollapseAll}
         onMarkAllRead={handleMarkAllRead}
         onRefreshSessions={handleRefreshSessions}
-        // Session JSON import/export is temporarily hidden from the sidebar
-        // menu. Re-pass `onExportSessionJson={handleOpenExportSessionJson}` and
-        // `onImportSessionJson={handleOpenImportSessionJson}` (plus
-        // `canExportSessionJson`) to bring it back; the handlers and modal
-        // wiring below are intentionally left in place.
       />
-    );
+    ) : null;
 
   useSidebarMemoryEntry({
     kind: SIDEBAR_MEMORY_KIND.SESSION,
     label:
-      activeSidebarKey === "projects" ? "Projects sidebar" : "Session sidebar",
+      activeSidebarKey === "projects"
+        ? "Projects sidebar"
+        : activeSidebarKey === "folders"
+          ? "Folders sidebar"
+          : "Session sidebar",
     items: pinnedMenuItems.length + sidebarMenuItems.length,
     sections: allSectionIds.length,
     tabs: tabs.length,
@@ -873,14 +1036,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
         collapsibleSections
         collapsedSectionIds={resolvedCollapsedSectionIds}
         onCollapsedSectionsChange={resolvedSetCollapsedSectionIds}
-      />
-      <SessionImportExportModal
-        visible={importExportMode !== null}
-        mode={importExportMode ?? "export"}
-        activeSession={activeSession}
-        sessionFallbackName={t("routes.session")}
-        onClose={handleCloseImportExport}
-        onImported={handleImportedSession}
       />
       <RenameModal
         visible={rename.visible}

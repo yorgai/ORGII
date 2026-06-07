@@ -38,8 +38,6 @@ const logger = createLogger("CompactFileChanges");
 export interface UseCompactFileDataOptions {
   sessionId: string | null;
   initialData?: FileChangesResult;
-  pendingCount: number;
-  canRedo: boolean;
 }
 
 export interface UseCompactFileDataReturn {
@@ -51,8 +49,6 @@ export interface UseCompactFileDataReturn {
 export function useCompactFileData({
   sessionId,
   initialData,
-  pendingCount,
-  canRedo,
 }: UseCompactFileDataOptions): UseCompactFileDataReturn {
   const events = useAtomValue(sortedEventsAtom);
   const resolvedFiles = useAtomValue(resolvedFilePathsAtom);

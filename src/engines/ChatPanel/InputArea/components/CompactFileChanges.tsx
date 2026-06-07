@@ -116,8 +116,6 @@ const CompactFileChanges: React.FC<CompactFileChangesProps> = memo(
       useCompactFileData({
         sessionId,
         initialData,
-        pendingCount,
-        canRedo,
       });
 
     const hasPendingActions = pendingCount > 0;
