@@ -29,6 +29,7 @@ import {
   type WorkstationTabHeaderHost,
   usePublishWorkstationTabHeader,
 } from "@src/hooks/workStation";
+import { WorkstationToolbarTooltip } from "@src/modules/WorkStation/shared";
 import {
   FILE_BAR_ROW_CLASSES,
   HEADER_ICON_SIZE,
@@ -257,6 +258,9 @@ export const WebUrlBar: React.FC<WebUrlBarProps> = memo(
     const inputContainerClass = isFocused
       ? "relative flex h-7 min-w-0 flex-1 cursor-text items-center rounded-lg border border-primary-6 bg-fill-2 shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-primary-6)_15%,transparent)] transition-[border-color,box-shadow,background-color] duration-150"
       : "relative flex h-7 min-w-0 flex-1 cursor-text items-center rounded-lg border border-transparent bg-transparent transition-[border-color,box-shadow,background-color] duration-150 hover:border-border-3 hover:bg-fill-2";
+    const reloadControlLabel = isLoading
+      ? t("common:actions.stop")
+      : t("common:actions.reload");
 
     const headerContent = (
       <div
@@ -266,41 +270,47 @@ export const WebUrlBar: React.FC<WebUrlBarProps> = memo(
       >
         {/* Navigation Buttons (Back / Forward / Refresh) */}
         <div className="flex items-center gap-px">
-          <Button
-            htmlType="button"
-            variant="tertiary"
-            size="small"
-            iconOnly
-            onClick={onBack}
-            disabled={!canGoBack}
-            title={t("tooltips.goBack")}
-            icon={<ArrowLeft size={HEADER_ICON_SIZE.md} />}
-          />
-          <Button
-            htmlType="button"
-            variant="tertiary"
-            size="small"
-            iconOnly
-            onClick={onForward}
-            disabled={!canGoForward}
-            title={t("tooltips.goForward")}
-            icon={<ArrowRight size={HEADER_ICON_SIZE.md} />}
-          />
-          <Button
-            htmlType="button"
-            variant="tertiary"
-            size="small"
-            iconOnly
-            onClick={isLoading ? onStop : onReload}
-            title={isLoading ? "Stop loading" : "Reload page"}
-            icon={
-              isLoading ? (
-                <X size={HEADER_ICON_SIZE.sm} />
-              ) : (
-                <RefreshCw size={HEADER_ICON_SIZE.sm} />
-              )
-            }
-          />
+          <WorkstationToolbarTooltip label={t("tooltips.goBack")}>
+            <Button
+              htmlType="button"
+              variant="tertiary"
+              size="small"
+              iconOnly
+              onClick={onBack}
+              disabled={!canGoBack}
+              aria-label={t("tooltips.goBack")}
+              icon={<ArrowLeft size={HEADER_ICON_SIZE.md} />}
+            />
+          </WorkstationToolbarTooltip>
+          <WorkstationToolbarTooltip label={t("tooltips.goForward")}>
+            <Button
+              htmlType="button"
+              variant="tertiary"
+              size="small"
+              iconOnly
+              onClick={onForward}
+              disabled={!canGoForward}
+              aria-label={t("tooltips.goForward")}
+              icon={<ArrowRight size={HEADER_ICON_SIZE.md} />}
+            />
+          </WorkstationToolbarTooltip>
+          <WorkstationToolbarTooltip label={reloadControlLabel}>
+            <Button
+              htmlType="button"
+              variant="tertiary"
+              size="small"
+              iconOnly
+              onClick={isLoading ? onStop : onReload}
+              aria-label={reloadControlLabel}
+              icon={
+                isLoading ? (
+                  <X size={HEADER_ICON_SIZE.sm} />
+                ) : (
+                  <RefreshCw size={HEADER_ICON_SIZE.sm} />
+                )
+              }
+            />
+          </WorkstationToolbarTooltip>
         </div>
 
         {/* URL Input Container */}
@@ -384,76 +394,103 @@ export const WebUrlBar: React.FC<WebUrlBarProps> = memo(
           onToggleDevToolsPane) && (
           <div className="flex items-center gap-px">
             {onToggleInspectMode && (
-              <Button
-                htmlType="button"
-                variant="tertiary"
-                size="small"
-                iconOnly
-                onClick={onToggleInspectMode}
-                title={t(
+              <WorkstationToolbarTooltip
+                label={t(
                   isInspectMode
                     ? "tooltips.disableInspectMode"
                     : "tooltips.enableInspectMode"
                 )}
-                className={isInspectMode ? "!bg-fill-2 !text-primary-6" : ""}
-                icon={<PenTool size={HEADER_ICON_SIZE.sm} />}
-              />
+              >
+                <Button
+                  htmlType="button"
+                  variant="tertiary"
+                  size="small"
+                  iconOnly
+                  onClick={onToggleInspectMode}
+                  aria-label={t(
+                    isInspectMode
+                      ? "tooltips.disableInspectMode"
+                      : "tooltips.enableInspectMode"
+                  )}
+                  className={isInspectMode ? "!bg-fill-2 !text-primary-6" : ""}
+                  icon={<PenTool size={HEADER_ICON_SIZE.sm} />}
+                />
+              </WorkstationToolbarTooltip>
             )}
 
             {onScreenshot && (
-              <Button
-                htmlType="button"
-                variant="tertiary"
-                size="small"
-                iconOnly
-                onClick={onScreenshot}
-                disabled={isCapturingScreenshot}
-                title={t("tooltips.captureScreenshot")}
-                icon={
-                  isCapturingScreenshot ? (
-                    <Loader2
-                      size={HEADER_ICON_SIZE.md}
-                      className="animate-spin"
-                    />
-                  ) : (
-                    <Camera size={HEADER_ICON_SIZE.md} />
-                  )
-                }
-              />
+              <WorkstationToolbarTooltip
+                label={t("tooltips.captureScreenshot")}
+              >
+                <Button
+                  htmlType="button"
+                  variant="tertiary"
+                  size="small"
+                  iconOnly
+                  onClick={onScreenshot}
+                  disabled={isCapturingScreenshot}
+                  aria-label={t("tooltips.captureScreenshot")}
+                  icon={
+                    isCapturingScreenshot ? (
+                      <Loader2
+                        size={HEADER_ICON_SIZE.md}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <Camera size={HEADER_ICON_SIZE.md} />
+                    )
+                  }
+                />
+              </WorkstationToolbarTooltip>
             )}
 
             {onOpenNativeDevTools && (
-              <Button
-                htmlType="button"
-                variant="tertiary"
-                size="small"
-                iconOnly
-                onClick={onOpenNativeDevTools}
-                title={t("tooltips.openNativeDevTools")}
-                icon={<Code size={HEADER_ICON_SIZE.md} />}
-              />
+              <WorkstationToolbarTooltip
+                label={t("tooltips.openNativeDevTools")}
+              >
+                <Button
+                  htmlType="button"
+                  variant="tertiary"
+                  size="small"
+                  iconOnly
+                  onClick={onOpenNativeDevTools}
+                  aria-label={t("tooltips.openNativeDevTools")}
+                  icon={<Code size={HEADER_ICON_SIZE.md} />}
+                />
+              </WorkstationToolbarTooltip>
             )}
 
             {onToggleDevToolsPane && (
-              <Button
-                htmlType="button"
-                variant="tertiary"
-                size="small"
-                iconOnly
-                className={
-                  devToolsPaneCollapsed ? "" : "!bg-fill-2 !text-primary-6"
-                }
-                onClick={onToggleDevToolsPane}
-                aria-pressed={!devToolsPaneCollapsed}
-                title={
+              <WorkstationToolbarTooltip
+                label={
                   devToolsPaneCollapsed
                     ? t("sessions:titleBar.showDevTools")
                     : t("sessions:titleBar.hideDevTools")
                 }
-                icon={
-                  <PencilRuler size={HEADER_ICON_SIZE.sm} strokeWidth={1.75} />
-                }
-              />
+              >
+                <Button
+                  htmlType="button"
+                  variant="tertiary"
+                  size="small"
+                  iconOnly
+                  className={
+                    devToolsPaneCollapsed ? "" : "!bg-fill-2 !text-primary-6"
+                  }
+                  onClick={onToggleDevToolsPane}
+                  aria-pressed={!devToolsPaneCollapsed}
+                  aria-label={
+                    devToolsPaneCollapsed
+                      ? t("sessions:titleBar.showDevTools")
+                      : t("sessions:titleBar.hideDevTools")
+                  }
+                  icon={
+                    <PencilRuler
+                      size={HEADER_ICON_SIZE.sm}
+                      strokeWidth={1.75}
+                    />
+                  }
+                />
+              </WorkstationToolbarTooltip>
             )}
           </div>
         )}

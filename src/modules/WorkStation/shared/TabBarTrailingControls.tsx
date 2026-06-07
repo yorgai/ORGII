@@ -50,6 +50,7 @@ export const TabBarDevToolsToggle: React.FC = memo(() => {
   return (
     <TabBarTrailingIconButton
       title="Show DevTools"
+      shortcutId="browser_devtools"
       onClick={() => callbacks.onToggleDevTools?.()}
     >
       <PencilRuler size={HEADER_ICON_SIZE.sm} strokeWidth={1.75} />

@@ -219,7 +219,7 @@ export function useAppNavigation(): UseAppNavigationReturn {
   // ========================================
 
   const goToStartPage = useCallback(() => {
-    navigateToMainApp(ROUTES.app.home.changelog.path, {
+    navigateToMainApp(ROUTES.app.home.start.path, {
       title: "Start Page",
       icon: "home",
     });
