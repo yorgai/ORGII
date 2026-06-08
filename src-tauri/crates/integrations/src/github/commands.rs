@@ -555,7 +555,7 @@ pub async fn github_list_issues(
     let page = page.unwrap_or(1);
     let state_str = state.as_deref().unwrap_or("open");
     let mut url = format!(
-        "/repos/{repo_full_name}/issues?state={state_str}&per_page={per_page}&page={page}&filter=all"
+        "/repos/{repo_full_name}/issues?state={state_str}&per_page={per_page}&page={page}"
     );
     if let Some(l) = &labels {
         url.push_str(&format!("&labels={l}"));
