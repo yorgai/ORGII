@@ -159,21 +159,23 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
           {/* Close / Reopen inline action */}
           <div>
             {isOpen ? (
-              <button
-                type="button"
+              <Button
+                htmlType="button"
+                variant="secondary"
+                size="mini"
                 onClick={onCloseIssue}
-                className={`${TYPOGRAPHY.secondary} text-text-3 transition-colors hover:text-text-1`}
               >
                 Close issue
-              </button>
+              </Button>
             ) : (
-              <button
-                type="button"
+              <Button
+                htmlType="button"
+                variant="secondary"
+                size="mini"
                 onClick={onReopenIssue}
-                className={`${TYPOGRAPHY.secondary} hover:text-success-7 text-success-6 transition-colors`}
               >
                 Reopen issue
-              </button>
+              </Button>
             )}
           </div>
         </div>

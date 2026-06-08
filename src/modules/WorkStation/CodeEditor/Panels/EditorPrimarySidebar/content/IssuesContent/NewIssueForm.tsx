@@ -3,8 +3,10 @@ import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { GitHubIssueLabel, GitHubIssueUser } from "@src/api/tauri/github";
+import Avatar from "@src/components/Avatar";
 import Button from "@src/components/Button";
 import Input from "@src/components/Input";
+import Textarea from "@src/components/Textarea";
 import { TYPOGRAPHY } from "@src/config/workstation/tokens";
 import { getLabelColorStyle } from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/hooks/workstationIssueHelpers";
 
@@ -79,15 +81,16 @@ export const NewIssueForm: React.FC<NewIssueFormProps> = memo(
         />
 
         {/* Body */}
-        <textarea
+        <Textarea
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={(val) => setBody(val)}
           placeholder={t(
             "git.issues.newIssueBodyPlaceholder",
             "Describe the issue (optional)…"
           )}
           rows={4}
-          className={`w-full resize-y rounded border border-border-2 bg-fill-1 px-2 py-1.5 ${TYPOGRAPHY.value} text-text-1 placeholder:text-text-3 focus:border-primary-6 focus:outline-none`}
+          size="small"
+          resize="vertical"
         />
 
         {/* Labels */}
@@ -142,11 +145,7 @@ export const NewIssueForm: React.FC<NewIssueFormProps> = memo(
                         : "text-text-2 hover:bg-fill-2"
                     }`}
                   >
-                    <img
-                      src={user.avatar_url}
-                      alt={user.login}
-                      className="h-3.5 w-3.5 rounded-full"
-                    />
+                    <Avatar size={14} src={user.avatar_url} />
                     {user.login}
                   </button>
                 );
