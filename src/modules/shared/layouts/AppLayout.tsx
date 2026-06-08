@@ -241,7 +241,7 @@ const AppLayoutComponent: React.FC<AppLayoutProps> = ({
               data-main-content
             >
               <div
-                className={`relative isolate flex h-full min-h-0 min-w-0 ${isChatOnLeft ? "flex-row-reverse" : "flex-row"} overflow-hidden ${needsPadding ? "rounded-page" : ""} bg-bg-2`}
+                className={`relative isolate flex h-full min-h-0 min-w-0 ${isChatOnLeft ? "flex-row-reverse" : "flex-row"} overflow-hidden ${needsPadding ? "rounded-page" : ""}`}
               >
                 <div
                   // Maximizing the slot collapses the workbench surface to

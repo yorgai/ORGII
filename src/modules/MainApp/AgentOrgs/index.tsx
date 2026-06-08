@@ -382,7 +382,7 @@ const AgentOrgsPage: React.FC = () => {
   };
 
   return (
-    <div className="settings-page absolute inset-0 overflow-hidden bg-bg-2">
+    <div className="settings-page absolute inset-0 overflow-hidden">
       <InternalHeader
         noPanelHeader
         contentPadding

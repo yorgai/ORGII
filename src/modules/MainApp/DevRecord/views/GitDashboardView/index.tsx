@@ -420,7 +420,7 @@ const GitDashboardContent: React.FC<GitDashboardContentProps> = ({
     showAuthorBreakdown && contributorStats.length > 0;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-bg-2">
+    <div className="flex h-full flex-col overflow-hidden">
       <InternalHeader
         noPanelHeader
         contentPadding

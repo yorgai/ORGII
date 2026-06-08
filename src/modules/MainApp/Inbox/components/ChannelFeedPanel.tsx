@@ -71,7 +71,7 @@ const ChannelFeedPanel: React.FC<ChannelFeedPanelProps> = ({
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-bg-2">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Channel header */}
       <div className={PANEL_HEADER_TOKENS.row}>
         <div className="flex min-w-0 flex-1 items-center gap-2">

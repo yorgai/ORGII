@@ -176,7 +176,7 @@ const SettingsSlotIntegrationsBody: React.FC = () => {
 
   const content = hasFullPageDetail ? (
     <SplitViewLayout
-      className="settings-page absolute inset-0 overflow-hidden bg-bg-2"
+      className="settings-page absolute inset-0 overflow-hidden"
       collapsible={true}
       listWidth={300}
       minListWidth={220}
@@ -186,7 +186,7 @@ const SettingsSlotIntegrationsBody: React.FC = () => {
       mainContent={<IntegrationsDetailPanel {...detailPanelProps} />}
     />
   ) : (
-    <div className="settings-page absolute inset-0 overflow-hidden bg-bg-2">
+    <div className="settings-page absolute inset-0 overflow-hidden">
       <IntegrationsDetailPanel {...detailPanelProps} />
     </div>
   );
@@ -316,7 +316,7 @@ const SettingsSlot: React.FC<SettingsSlotProps> = ({
       )}
       <div
         ref={panelRef}
-        className="relative flex h-full min-w-0 max-w-full flex-1 flex-col overflow-hidden bg-bg-2"
+        className="relative flex h-full min-w-0 max-w-full flex-1 flex-col overflow-hidden"
         style={
           {
             // Match ChatPanel: inset/comfort mode rounds the slot; full/

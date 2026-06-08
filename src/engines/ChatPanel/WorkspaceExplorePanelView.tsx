@@ -334,7 +334,7 @@ const WorkspaceExplorePanelView: React.FC = () => {
       <h1
         className={`${titleSizeClass} font-semibold leading-tight text-text-1`}
       >
-        Find a repo, clone it, turn it into your next app
+        Find a repo and turn it into your next app
       </h1>
       <form
         className="flex w-full flex-col gap-3"

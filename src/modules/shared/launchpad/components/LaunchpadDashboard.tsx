@@ -485,7 +485,7 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
     );
 
     return (
-      <div className="flex h-full min-h-0 w-full flex-col bg-bg-2">
+      <div className="flex h-full min-h-0 w-full flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto px-4 scrollbar-hide">
           <div
             className={`flex flex-col gap-5 py-5 ${DETAIL_PANEL_TOKENS.contentWidth}`}

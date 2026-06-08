@@ -37,7 +37,7 @@ const Inbox: React.FC = () => {
 
   return (
     <SplitViewLayout
-      className="h-full rounded-page bg-bg-2"
+      className="h-full rounded-page"
       collapsible={true}
       listWidth={200}
       minListWidth={160}

@@ -280,7 +280,7 @@ const Settings: React.FC = () => {
 
   if (subpage) {
     return (
-      <div className="settings-page h-full overflow-hidden bg-bg-2">
+      <div className="settings-page h-full overflow-hidden">
         <Suspense
           fallback={<Placeholder variant="loading" placement="detail-panel" />}
         >

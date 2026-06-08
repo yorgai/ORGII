@@ -85,7 +85,7 @@ const GitDiffViewer: React.FC<GitDiffViewerProps> = ({
   const hasContent = oldValue !== undefined && newValue !== undefined;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-bg-2">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Diff Content */}
       {loading || !hasContent ? (
         // Loading state

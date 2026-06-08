@@ -228,7 +228,7 @@ const SubpageLayout: React.FC<SubpageLayoutProps> = ({
           minLeftWidth={SIDEBAR_MIN_WIDTH}
           maxLeftWidth={SIDEBAR_MAX_WIDTH}
           leftPanel={
-            <div className="flex h-full flex-col bg-bg-2 pt-3">
+            <div className="flex h-full flex-col pt-3">
               <div className="scrollbar-overlay min-h-0 flex-1 overflow-y-auto px-2">
                 <div className="flex flex-col gap-0.5 pb-2">
                   {anchors.map((anchor) => {
@@ -256,7 +256,7 @@ const SubpageLayout: React.FC<SubpageLayoutProps> = ({
             </div>
           }
           rightPanel={
-            <ResponsiveContainer className="h-full min-w-0 bg-bg-2">
+            <ResponsiveContainer className="h-full min-w-0">
               {contentArea}
             </ResponsiveContainer>
           }

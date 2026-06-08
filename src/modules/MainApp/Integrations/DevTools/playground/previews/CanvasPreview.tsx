@@ -126,7 +126,7 @@ export function CanvasPreview() {
   const visibleLines = DEMO_JSONL.slice(0, streamedCount);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-bg-2">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* preview controls */}
       <div className="flex shrink-0 items-center gap-3 border-b border-border-1 bg-fill-2 px-4 py-2">
         <span className="text-xs font-medium text-text-2">Canvas Preview</span>

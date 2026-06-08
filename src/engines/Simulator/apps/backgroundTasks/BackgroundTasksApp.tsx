@@ -88,7 +88,7 @@ const BackgroundTasksApp: React.FC<BackgroundTasksAppProps> = ({
   }
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-bg-2">
+    <div className="flex h-full w-full flex-col overflow-hidden">
       <MultiTaskHeader
         taskCount={childCount}
         onClose={onClose}

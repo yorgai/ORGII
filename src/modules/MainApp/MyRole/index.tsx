@@ -173,7 +173,7 @@ const MyRolePage: React.FC = () => {
   );
 
   return (
-    <div className="settings-page absolute inset-0 overflow-hidden rounded-page bg-bg-2">
+    <div className="settings-page absolute inset-0 overflow-hidden rounded-page">
       <div className="custom-scrollbar h-full overflow-y-auto px-6 pb-8 pt-2">
         <SectionHeading
           title={t("myRole.pageTitle", { defaultValue: "My Roles" })}
