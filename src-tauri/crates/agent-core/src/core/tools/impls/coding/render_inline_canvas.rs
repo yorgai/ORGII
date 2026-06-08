@@ -9,9 +9,10 @@
 //!   iframe. The agent should inline all styles and scripts.
 //! - `"url"` — a URL that will be loaded inside an embedded iframe. Only
 //!   HTTPS URLs or relative paths are accepted by the frontend sandbox.
-//! - `"a2ui"` — a streaming JSONL sequence of A2UI element descriptors
-//!   (heading, text, code, image, button, divider, list). Each JSONL line is
-//!   streamed incrementally to the card as it arrives.
+//! - `"a2ui"` — a streaming JSONL sequence of A2UI element descriptors.
+//!   Supported types: heading, text, code, image, button, divider, list,
+//!   table, chart, form. Each JSONL line is streamed incrementally to the
+//!   card as it arrives.
 //!
 //! ## Return value
 //! The tool echoes back the accepted payload as a JSON confirmation so the LLM
@@ -55,11 +56,32 @@ impl Tool for RenderInlineCanvasTool {
          - \"url\": Embed an HTTPS URL in an iframe. Suitable for live dashboards or\n\
            documentation pages that are safe to embed.\n\
          - \"a2ui\": Stream a sequence of typed UI elements as JSONL lines. Each line is\n\
-           a JSON object with a \"type\" field: heading | text | code | image | button |\n\
-           divider | list. Elements are appended incrementally as the response streams.\n\n\
+           a JSON object with a \"type\" field. Supported types:\n\
+           heading | text | code | image | button | divider | list | table | chart | form\n\n\
+         A2UI element reference:\n\
+         - heading:  {\"type\":\"heading\",\"content\":\"Title\"}\n\
+         - text:     {\"type\":\"text\",\"content\":\"Paragraph text\"}\n\
+         - code:     {\"type\":\"code\",\"content\":\"print('hello')\"}\n\
+         - image:    {\"type\":\"image\",\"content\":\"https://…/image.png\"}\n\
+         - divider:  {\"type\":\"divider\"}\n\
+         - list:     {\"type\":\"list\",\"items\":[\"Item 1\",\"Item 2\"]}\n\
+         - button:   {\"type\":\"button\",\"content\":\"Run Analysis\",\"actionId\":\"run_analysis\"}\n\
+           actionId triggers a bidirectional callback — the frontend fires onAction(actionId).\n\
+         - table:    {\"type\":\"table\",\"headers\":[\"Col1\",\"Col2\",\"Col3\"],\n\
+                      \"rows\":[[\"A\",\"B\",\"C\"],[\"D\",\"E\",\"F\"]]}\n\
+           Data table with a styled header row and alternating row colours.\n\
+         - chart:    {\"type\":\"chart\",\"chartType\":\"bar\",\"title\":\"Q1 Sales\",\n\
+                      \"data\":{\"labels\":[\"Jan\",\"Feb\",\"Mar\"],\n\
+                               \"datasets\":[{\"label\":\"Revenue\",\"values\":[72,88,60]}]}}\n\
+           Bar or line chart rendered with recharts. chartType is \"bar\" or \"line\".\n\
+         - form:     {\"type\":\"form\",\n\
+                      \"fields\":[{\"name\":\"query\",\"label\":\"Search\",\"inputType\":\"text\"}],\n\
+                      \"submitLabel\":\"Submit\",\"actionId\":\"search\"}\n\
+           Interactive form. inputType: \"text\" | \"select\" | \"checkbox\".\n\
+           On submit, onAction(actionId, fieldValues) is fired.\n\n\
          Guidelines:\n\
-         - Prefer \"html\" for charts, graphs, and data tables.\n\
-         - Prefer \"a2ui\" for structured reports with mixed content types.\n\
+         - Prefer \"a2ui\" for structured reports, tables, and charts — it streams incrementally.\n\
+         - Prefer \"html\" only for bespoke layouts that none of the a2ui types can express.\n\
          - Keep HTML payloads under 64 KB for smooth rendering.\n\
          - Always set a descriptive \"title\" — it appears in the card header."
     }
