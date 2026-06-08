@@ -659,6 +659,8 @@
     "selectedOf": "Zaznaczono {{selected}} z {{total}}"
   },
   "chat": {
+    "planApprovedLabel": "Wykonywanie zatwierdzonego planu",
+    "planApprovedEditedLabel": "Wykonywanie zatwierdzonego planu (edytowany)",
     "sessionStarted": "Sesja rozpoczęta",
     "contentCopied": "Treść skopiowana!",
     "failedToCopyContent": "Nie udało się skopiować treści",

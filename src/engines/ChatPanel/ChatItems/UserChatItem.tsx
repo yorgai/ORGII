@@ -1,4 +1,10 @@
-import { File, Image, PencilLine, Sparkles } from "lucide-react";
+import {
+  ClipboardCheck,
+  File,
+  Image,
+  PencilLine,
+  Sparkles,
+} from "lucide-react";
 import {
   type FC,
   type MouseEvent,
@@ -26,6 +32,7 @@ import { stripExpandedPillContent } from "../InputArea/utils/pillContentParser";
 const USER_MSG_MAX_LINES = 3;
 const USER_MSG_MAX_CHARS = 120;
 const AGENT_ORG_INBOX_TRANSCRIPT_PREFIX = "Acknowledged inbox batch";
+const PLAN_APPROVED_PREFIX = "[Plan approved";
 
 // ============================================
 // Types
@@ -257,8 +264,14 @@ const UserChatItem = ({
   }
 
   const isRepoSetup = editedText.startsWith(REPO_SETUP_PROMPT_MARKER);
+  const isPlanApproved = fullContent.startsWith(PLAN_APPROVED_PREFIX);
+  const planApprovedEdited =
+    isPlanApproved && fullContent.startsWith("[Plan approved (edited)");
   const isEditableDisplay = Boolean(
-    onEditSubmit && !isRepoSetup && !isAgentOrgInboxTranscript
+    onEditSubmit &&
+    !isRepoSetup &&
+    !isAgentOrgInboxTranscript &&
+    !isPlanApproved
   );
   const displayNeedsTruncation = needsTruncation;
 
@@ -300,6 +313,18 @@ const UserChatItem = ({
             <Sparkles size={14} className="text-primary-6" />
             <span className="chat-block-title font-medium text-text-1">
               {t("chat.repoSetupLabel")}
+            </span>
+          </div>
+        ) : isPlanApproved ? (
+          <div className="flex items-center gap-2 py-0.5">
+            <ClipboardCheck size={14} className="text-primary-6" />
+            <span className="chat-block-title font-medium text-text-1">
+              {planApprovedEdited
+                ? t(
+                    "chat.planApprovedEditedLabel",
+                    "Implementing approved plan (edited)"
+                  )
+                : t("chat.planApprovedLabel", "Implementing approved plan")}
             </span>
           </div>
         ) : (

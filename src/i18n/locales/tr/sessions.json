@@ -651,6 +651,8 @@
     "selectedOf": "{{total}} içinden {{selected}} seçildi"
   },
   "chat": {
+    "planApprovedLabel": "Onaylanan plan uygulanıyor",
+    "planApprovedEditedLabel": "Onaylanan plan uygulanıyor (düzenlendi)",
     "sessionStarted": "Session başlatıldı",
     "contentCopied": "İçerik kopyalandı!",
     "failedToCopyContent": "İçerik kopyalanamadı",

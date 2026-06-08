@@ -651,6 +651,8 @@
     "selectedOf": "Đã chọn {{selected}} / {{total}}"
   },
   "chat": {
+    "planApprovedLabel": "Đang thực hiện kế hoạch đã duyệt",
+    "planApprovedEditedLabel": "Đang thực hiện kế hoạch đã duyệt (đã chỉnh sửa)",
     "sessionStarted": "Session đã bắt đầu",
     "contentCopied": "Đã sao chép nội dung!",
     "failedToCopyContent": "Sao chép nội dung thất bại",

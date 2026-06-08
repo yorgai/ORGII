@@ -653,6 +653,8 @@
     "selectedOf": "Выбрано {{selected}} из {{total}}"
   },
   "chat": {
+    "planApprovedLabel": "Выполняется утверждённый план",
+    "planApprovedEditedLabel": "Выполняется утверждённый план (изменён)",
     "sessionStarted": "Session запущена",
     "contentCopied": "Содержимое скопировано!",
     "failedToCopyContent": "Не удалось скопировать содержимое",

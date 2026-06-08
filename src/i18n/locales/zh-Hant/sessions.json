@@ -651,6 +651,8 @@
     "selectedOf": "已選 {{selected}} / {{total}}"
   },
   "chat": {
+    "planApprovedLabel": "執行已核准的計畫",
+    "planApprovedEditedLabel": "執行已核准的計畫（已編輯）",
     "sessionStarted": "Session 已開始",
     "contentCopied": "內容複製！",
     "failedToCopyContent": "複製內容失敗",

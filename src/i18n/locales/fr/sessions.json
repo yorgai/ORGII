@@ -651,6 +651,8 @@
     "selectedOf": "{{selected}} sur {{total}} sélectionnés"
   },
   "chat": {
+    "planApprovedLabel": "Exécution du plan approuvé",
+    "planApprovedEditedLabel": "Exécution du plan approuvé (modifié)",
     "sessionStarted": "Session démarrée",
     "contentCopied": "Contenu copié !",
     "failedToCopyContent": "Échec de la copie du contenu",

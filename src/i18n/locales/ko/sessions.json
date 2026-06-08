@@ -651,6 +651,8 @@
     "selectedOf": "{{total}}개 중 {{selected}}개 선택"
   },
   "chat": {
+    "planApprovedLabel": "승인된 계획 실행 중",
+    "planApprovedEditedLabel": "승인된 계획 실행 중 (편집됨)",
     "sessionStarted": "Session이 시작되었습니다",
     "contentCopied": "콘텐츠가 복사되었습니다!",
     "failedToCopyContent": "콘텐츠 복사에 실패했습니다",
