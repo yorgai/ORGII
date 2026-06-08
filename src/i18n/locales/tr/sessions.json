@@ -2083,11 +2083,11 @@
     "recentSessions": "Son oturumlar",
     "viewAllSessions": "Tüm oturumları görüntüle",
     "noSessionsYet": "Henüz oturum yok",
-    "myAgents": "Agent'larım",
+    "myAgents": "{{count}} Agent'ım",
     "noAgentsAvailable": "Kullanılabilir Agent yok",
     "newAgentSession": "Yeni {{agent}} oturumu",
     "addAgent": "Agent ekle",
-    "myApiKeys": "API Anahtarlarım",
+    "myApiKeys": "{{count}} Key'im",
     "addApiKey": "API Anahtarı ekle",
     "noRepoSelected": "Depo seçilmedi",
     "diff": {

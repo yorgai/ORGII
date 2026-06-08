@@ -45,8 +45,6 @@
     "project": "專案",
     "projects": "專案",
     "projectManager": "專案管理器",
-    "myKeys": "我的密鑰",
-    "myAgents": "我的 Agents",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -276,10 +274,6 @@
   "launchpad": {
     "sections": {
       "other": "其他"
-    },
-    "tabs": {
-      "myApps": "我的應用",
-      "myRepos": "我的倉庫"
     },
     "searchPlaceholder": "搜索工作區...",
     "emptyTitle": "尚無工作區",

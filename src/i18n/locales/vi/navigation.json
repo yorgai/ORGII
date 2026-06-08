@@ -45,8 +45,6 @@
     "project": "Dự án",
     "projects": "Project",
     "projectManager": "Project Manager",
-    "myKeys": "Khóa của tôi",
-    "myAgents": "Agents của tôi",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -185,10 +183,6 @@
   "launchpad": {
     "sections": {
       "other": "Khác"
-    },
-    "tabs": {
-      "myApps": "Ứng dụng của tôi",
-      "myRepos": "Repo của tôi"
     },
     "searchPlaceholder": "Tìm kiếm workspace...",
     "emptyTitle": "Chưa có workspace",

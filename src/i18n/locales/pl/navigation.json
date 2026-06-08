@@ -45,8 +45,6 @@
     "project": "Projekt",
     "projects": "Historie",
     "projectManager": "Project Manager",
-    "myKeys": "Moje klucze",
-    "myAgents": "Moi Agents",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -185,10 +183,6 @@
   "launchpad": {
     "sections": {
       "other": "Inne"
-    },
-    "tabs": {
-      "myApps": "Moje aplikacje",
-      "myRepos": "Moje repozytoria"
     },
     "searchPlaceholder": "Szukaj obszarów roboczych...",
     "emptyTitle": "Brak obszarów roboczych",

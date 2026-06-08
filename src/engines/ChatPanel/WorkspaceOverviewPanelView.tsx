@@ -1,45 +1,42 @@
-import { openPath } from "@tauri-apps/plugin-opener";
-import { useSetAtom } from "jotai";
+import { useAtom } from "jotai";
 import {
-  ExternalLink,
+  ArrowDown,
+  ArrowUp,
+  Diff,
   FolderGit2,
-  FolderSearch,
   FolderTree,
-  Plus,
+  GitBranch,
 } from "lucide-react";
-import React, { memo, useCallback, useMemo } from "react";
+import React, { memo, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import Button from "@src/components/Button";
-import Message from "@src/components/Message";
+import { PropertyDropdownField } from "@src/components/PropertyField/PropertyDropdownField";
+import TabPill from "@src/components/TabPill";
+import type { TabPillItem } from "@src/components/TabPill";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
-import {
-  CollapsibleSection,
-  DETAIL_PANEL_TOKENS,
-  DetailPanelContainer,
-  Placeholder,
-} from "@src/modules/shared/layouts/blocks";
-import { openWorkspaceSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
-import type { Repo } from "@src/store/repo/types";
+import WorkItemContentStack from "@src/modules/ProjectManager/WorkItems/components/WorkItemContentStack";
+import { RepoDetailPage } from "@src/modules/shared/launchpad/components";
+import { DetailPanelContainer } from "@src/modules/shared/layouts/blocks";
+import { useRepoGitStatus } from "@src/scaffold/GlobalSpotlight/hooks/useRepoGitStatus";
 import {
   type ChatPanelSelectedWorkspace,
-  chatPanelSelectedWorkspaceAtom,
+  WORKSPACE_OVERVIEW_TAB,
+  type WorkspaceOverviewTab,
+  chatPanelWorkspaceOverviewTabAtom,
 } from "@src/store/ui/chatPanelAtom";
-import { getFileManagerRevealLabelKey } from "@src/util/platform/fileManagerLabels";
 
 interface WorkspaceOverviewPanelViewProps {
   selectedWorkspace: ChatPanelSelectedWorkspace;
 }
 
-function repoDisplayName(repo: Repo): string {
-  return repo.name || repo.path?.split("/").pop() || "Repo";
-}
-
 const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
   memo(({ selectedWorkspace }) => {
     const { t } = useTranslation(["navigation", "common"]);
-    const setSelectedWorkspace = useSetAtom(chatPanelSelectedWorkspaceAtom);
+    const [activeTab, setActiveTab] = useAtom(
+      chatPanelWorkspaceOverviewTabAtom
+    );
     const { repos } = useRepoSelection({ autoLoad: true });
+
     const selectedRepo = useMemo(
       () =>
         selectedWorkspace.kind === "repo"
@@ -48,167 +45,197 @@ const WorkspaceOverviewPanelView: React.FC<WorkspaceOverviewPanelViewProps> =
       [repos, selectedWorkspace.id, selectedWorkspace.kind]
     );
 
-    const workspaceFolders = useMemo(() => {
-      if (selectedWorkspace.kind !== "workspace") return [];
-      return (
-        selectedWorkspace.repoIds
-          ?.map((repoId) => repos.find((repo) => repo.id === repoId))
-          .filter((repo): repo is Repo => Boolean(repo)) ?? []
-      );
-    }, [repos, selectedWorkspace.kind, selectedWorkspace.repoIds]);
+    const isRepo = selectedWorkspace.kind === "repo";
+    const detailsTabAvailable = isRepo && Boolean(selectedRepo);
 
-    const visibleRepos = selectedRepo ? [selectedRepo] : workspaceFolders;
+    // Force back to Overview when the selected workspace cannot show details
+    // (workspace-kind, or repo not yet hydrated). Prevents a stale "details"
+    // selection from showing a blank panel after switching workspaces.
+    useEffect(() => {
+      if (
+        !detailsTabAvailable &&
+        activeTab === WORKSPACE_OVERVIEW_TAB.DETAILS
+      ) {
+        setActiveTab(WORKSPACE_OVERVIEW_TAB.OVERVIEW);
+      }
+    }, [activeTab, detailsTabAvailable, setActiveTab]);
 
-    const handleOpenDetails = useCallback(() => {
-      if (selectedWorkspace.kind === "repo" && selectedRepo) {
-        setSelectedWorkspace({
-          kind: "repo",
-          id: selectedRepo.id,
-          name: repoDisplayName(selectedRepo),
-          path: selectedRepo.path ?? undefined,
+    // Single-repo git status only. Multi-root workspaces don't surface
+    // an aggregated badge for now — agreed scope for this iteration.
+    const repoIdsForStatus = useMemo(
+      () => (selectedRepo ? [selectedRepo.id] : []),
+      [selectedRepo]
+    );
+    const { gitStatusMap } = useRepoGitStatus({
+      repoIds: repoIdsForStatus,
+      selectedRepoId: selectedRepo?.id,
+      enabled: Boolean(selectedRepo),
+    });
+    const repoGitStatus = selectedRepo
+      ? gitStatusMap[selectedRepo.id]
+      : undefined;
+
+    const tabs = useMemo<TabPillItem[]>(() => {
+      const items: TabPillItem[] = [
+        {
+          key: WORKSPACE_OVERVIEW_TAB.OVERVIEW,
+          label: t("common:labels.overview"),
+        },
+      ];
+      if (detailsTabAvailable) {
+        items.push({
+          key: WORKSPACE_OVERVIEW_TAB.DETAILS,
+          label: t("common:labels.details"),
         });
       }
-    }, [selectedRepo, selectedWorkspace.kind, setSelectedWorkspace]);
+      return items;
+    }, [detailsTabAvailable, t]);
 
-    const handleShowInFinder = useCallback(async () => {
-      const targetPath = selectedWorkspace.path ?? selectedRepo?.path;
-      if (!targetPath) return;
-      try {
-        await openPath(targetPath);
-      } catch (error) {
-        Message.error(
-          t("common:errors.openInFinderFailed", {
-            defaultValue: "Failed to open in Finder",
-          })
-        );
-      }
-    }, [selectedRepo?.path, selectedWorkspace.path, t]);
+    const handleTabChange = useCallback(
+      (key: string) => {
+        setActiveTab(key as WorkspaceOverviewTab);
+      },
+      [setActiveTab]
+    );
 
-    const handleAddWorkspace = useCallback(() => {
-      openWorkspaceSpotlight("add");
-    }, []);
+    const resolvedActiveTab: WorkspaceOverviewTab = detailsTabAvailable
+      ? activeTab
+      : WORKSPACE_OVERVIEW_TAB.OVERVIEW;
+
+    // Internal breadcrumb row — mirrors WorkItem/Project panels'
+    // pathContent slot (org > project pills). For the workspace
+    // overview, we surface a single pill identifying the kind (workspace
+    // vs. repo) so users always see a consistent context indicator.
+    const kindLabel =
+      selectedWorkspace.kind === "workspace"
+        ? t("common:workspaceForm.multiRepoWorkspace")
+        : t("common:selectors.repo.sections.repo");
+    const headerPath = (
+      <div
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+        data-testid="chat-panel-workspace-overview-breadcrumb"
+      >
+        <PropertyDropdownField
+          value={selectedWorkspace.kind}
+          label={kindLabel}
+          icon={
+            selectedWorkspace.kind === "workspace" ? (
+              <FolderTree size={13} strokeWidth={1.8} />
+            ) : (
+              <FolderGit2 size={13} strokeWidth={1.8} />
+            )
+          }
+          placement="portal"
+          fieldVariant="pill"
+          triggerVariant="pill"
+          readonly
+          searchable={false}
+          selected
+          maxWidthClassName="max-w-[220px] shrink-0"
+        />
+      </div>
+    );
+
+    // Internal property row — read-only git status for the selected
+    // repo, styled like the WorkStation StatusBar (branch chip + counts
+    // for behind/ahead/uncommitted). Hidden entirely for multi-root
+    // workspaces or when no repo is selected.
+    const branchName = selectedRepo?.branch;
+    const uncommitted = repoGitStatus?.uncommittedFiles ?? 0;
+    const ahead = repoGitStatus?.ahead ?? 0;
+    const behind = repoGitStatus?.behind ?? 0;
+    const hasGitActivity = uncommitted > 0 || ahead > 0 || behind > 0;
+    const inlineProperties = selectedRepo ? (
+      <div className="flex flex-wrap items-center gap-3 text-[12px] text-text-2">
+        {branchName && (
+          <span
+            className="flex items-center gap-1.5"
+            title={t("workstation.branchTooltip", { branch: branchName })}
+          >
+            <GitBranch size={13} strokeWidth={2} className="text-text-2" />
+            <span className="font-medium text-text-1">{branchName}</span>
+          </span>
+        )}
+        {hasGitActivity ? (
+          <span className="flex items-center gap-3">
+            {uncommitted > 0 && (
+              <span
+                className="flex items-center gap-1"
+                title={`${uncommitted} file${uncommitted !== 1 ? "s" : ""} uncommitted`}
+              >
+                <Diff size={12} />
+                <span className="tabular-nums">{uncommitted}</span>
+              </span>
+            )}
+            {behind > 0 && (
+              <span
+                className="flex items-center gap-1"
+                title={`${behind} commit${behind !== 1 ? "s" : ""} behind`}
+              >
+                <ArrowDown size={12} />
+                <span className="tabular-nums">{behind}</span>
+              </span>
+            )}
+            {ahead > 0 && (
+              <span
+                className="flex items-center gap-1"
+                title={`${ahead} commit${ahead !== 1 ? "s" : ""} ahead`}
+              >
+                <ArrowUp size={12} />
+                <span className="tabular-nums">{ahead}</span>
+              </span>
+            )}
+          </span>
+        ) : (
+          branchName && (
+            <span className="text-text-3">{t("common:status.noChanges")}</span>
+          )
+        )}
+      </div>
+    ) : null;
+
+    const detailsBody =
+      resolvedActiveTab === WORKSPACE_OVERVIEW_TAB.DETAILS && selectedRepo ? (
+        <RepoDetailPage repo={selectedRepo} />
+      ) : null;
+
+    const descriptionContent = (
+      <section
+        className="flex flex-col"
+        data-testid="chat-panel-workspace-overview-section"
+      >
+        <div className="mb-4 flex items-center justify-start">
+          <TabPill
+            tabs={tabs}
+            activeTab={resolvedActiveTab}
+            onChange={handleTabChange}
+            variant="simple"
+            fillWidth={false}
+            size="large"
+          />
+        </div>
+        {detailsBody}
+      </section>
+    );
 
     return (
-      <DetailPanelContainer testId="workspace-overview-panel">
-        <div className={DETAIL_PANEL_TOKENS.scrollContent}>
-          <div className={DETAIL_PANEL_TOKENS.sectionGap}>
-            <div className="rounded-xl border border-border-2 bg-fill-1 p-3">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-1 text-primary-6">
-                  {selectedWorkspace.kind === "workspace" ? (
-                    <FolderTree size={20} strokeWidth={1.8} />
-                  ) : (
-                    <FolderGit2 size={20} strokeWidth={1.8} />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] font-semibold text-text-1">
-                    {selectedWorkspace.name}
-                  </div>
-                  <div className="mt-0.5 truncate text-[12px] text-text-3">
-                    {selectedWorkspace.kind === "workspace"
-                      ? t("common:workspaceForm.multiRepoWorkspace")
-                      : t("common:selectors.repo.sections.repo")}
-                  </div>
-                  {selectedWorkspace.path ? (
-                    <div
-                      className="mt-2 truncate text-[12px] text-text-3"
-                      title={selectedWorkspace.path}
-                    >
-                      {selectedWorkspace.path}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button
-                  variant="secondary"
-                  appearance="outline"
-                  size="small"
-                  icon={<ExternalLink size={13} strokeWidth={2} />}
-                  onClick={handleOpenDetails}
-                >
-                  {t("common:actions.open")}
-                </Button>
-                {(selectedWorkspace.path || selectedRepo?.path) && (
-                  <Button
-                    variant="secondary"
-                    appearance="outline"
-                    size="small"
-                    icon={<FolderSearch size={13} strokeWidth={2} />}
-                    onClick={handleShowInFinder}
-                  >
-                    {t(getFileManagerRevealLabelKey())}
-                  </Button>
-                )}
-                <Button
-                  variant="secondary"
-                  appearance="outline"
-                  size="small"
-                  icon={<Plus size={13} strokeWidth={2} />}
-                  onClick={handleAddWorkspace}
-                >
-                  {t("common:actions.addWorkspace")}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <CollapsibleSection title={t("common:labels.overview")} defaultOpen>
-            <div className="rounded-lg border border-border-2 bg-fill-1 p-3">
-              <div className="flex items-center gap-2 text-[12px] text-text-3">
-                <FolderGit2 size={13} strokeWidth={2} />
-                {t("common:selectors.repo.sections.repo")}
-              </div>
-              <div className="mt-1 text-[20px] font-semibold text-text-1">
-                {visibleRepos.length ||
-                  (selectedWorkspace.kind === "repo" ? 1 : 0)}
-              </div>
-            </div>
-          </CollapsibleSection>
-
-          <CollapsibleSection
-            title={t("common:selectors.repo.sections.repo")}
-            defaultOpen
-          >
-            {visibleRepos.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {visibleRepos.map((repo) => (
-                  <div
-                    key={repo.id}
-                    className="flex min-w-0 items-center gap-2 rounded-lg border border-border-2 bg-fill-1 px-3 py-2"
-                  >
-                    <FolderGit2
-                      size={14}
-                      strokeWidth={2}
-                      className="shrink-0 text-primary-6"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-[13px] font-medium text-text-1">
-                        {repoDisplayName(repo)}
-                      </div>
-                      {repo.path ? (
-                        <div
-                          className="truncate text-[11px] text-text-3"
-                          title={repo.path}
-                        >
-                          {repo.path}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Placeholder
-                variant="empty"
-                placement="sidebar"
-                title={t("navigation:launchpad.emptyWorkspaces")}
-              />
-            )}
-          </CollapsibleSection>
-        </div>
-      </DetailPanelContainer>
+      <div
+        className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden"
+        data-testid="chat-panel-workspace-overview-detail"
+      >
+        <DetailPanelContainer
+          className="relative bg-bg-2"
+          testId="workspace-overview-panel"
+        >
+          <WorkItemContentStack
+            pathContent={headerPath}
+            propertiesContent={inlineProperties}
+            descriptionContent={descriptionContent}
+            descriptionFlexible
+            scrollable
+          />
+        </DetailPanelContainer>
+      </div>
     );
   });
 

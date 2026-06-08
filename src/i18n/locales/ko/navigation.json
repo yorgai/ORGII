@@ -45,8 +45,6 @@
     "project": "프로젝트",
     "projects": "Projects",
     "projectManager": "Project 관리자",
-    "myKeys": "내 키",
-    "myAgents": "내 Agents",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -185,10 +183,6 @@
   "launchpad": {
     "sections": {
       "other": "기타"
-    },
-    "tabs": {
-      "myApps": "내 앱",
-      "myRepos": "내 저장소"
     },
     "searchPlaceholder": "워크스페이스 검색...",
     "emptyTitle": "워크스페이스가 없습니다",

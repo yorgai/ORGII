@@ -2082,11 +2082,11 @@
     "recentSessions": "Phiên gần đây",
     "viewAllSessions": "Xem tất cả phiên",
     "noSessionsYet": "Chưa có phiên nào",
-    "myAgents": "Agent của tôi",
+    "myAgents": "{{count}} Agent của tôi",
     "noAgentsAvailable": "Không có Agent khả dụng",
     "newAgentSession": "Phiên {{agent}} mới",
     "addAgent": "Thêm Agent",
-    "myApiKeys": "API Key của tôi",
+    "myApiKeys": "{{count}} Key của tôi",
     "addApiKey": "Thêm API Key",
     "noRepoSelected": "Chưa chọn kho lưu trữ",
     "diff": {

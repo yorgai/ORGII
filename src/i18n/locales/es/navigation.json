@@ -45,8 +45,6 @@
     "project": "Proyecto",
     "projects": "Projects",
     "projectManager": "Project Manager",
-    "myKeys": "Mis claves",
-    "myAgents": "Mis Agents",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -187,10 +185,6 @@
   "launchpad": {
     "sections": {
       "other": "Otros"
-    },
-    "tabs": {
-      "myApps": "Mis Apps",
-      "myRepos": "Mis Repos"
     },
     "searchPlaceholder": "Buscar espacios de trabajo...",
     "emptyTitle": "Sin espacios de trabajo",

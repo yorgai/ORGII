@@ -2082,11 +2082,11 @@
     "recentSessions": "最近のセッション",
     "viewAllSessions": "すべてのセッションを表示",
     "noSessionsYet": "セッションはまだありません",
-    "myAgents": "マイ Agent",
+    "myAgents": "マイ Agent {{count}} 件",
     "noAgentsAvailable": "利用可能な Agent がありません",
     "newAgentSession": "新しい {{agent}} セッション",
     "addAgent": "Agent を追加",
-    "myApiKeys": "マイ API Key",
+    "myApiKeys": "マイ Key {{count}} 件",
     "addApiKey": "API Key を追加",
     "noRepoSelected": "リポジトリが選択されていません",
     "diff": {

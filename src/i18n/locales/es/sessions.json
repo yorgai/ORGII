@@ -2082,11 +2082,11 @@
     "recentSessions": "Sesiones recientes",
     "viewAllSessions": "Ver todas las sesiones",
     "noSessionsYet": "Aún no hay sesiones",
-    "myAgents": "Mis Agents",
+    "myAgents": "Mis {{count}} Agents",
     "noAgentsAvailable": "No hay Agents disponibles",
     "newAgentSession": "Nueva sesión de {{agent}}",
     "addAgent": "Agregar Agent",
-    "myApiKeys": "Mis claves API",
+    "myApiKeys": "Mis {{count}} Keys",
     "addApiKey": "Agregar clave API",
     "noRepoSelected": "Ningún repositorio seleccionado",
     "diff": {

@@ -45,8 +45,6 @@
     "project": "プロジェクト",
     "projects": "Projects",
     "projectManager": "Project マネージャー",
-    "myKeys": "自分のキー",
-    "myAgents": "自分の Agents",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -185,10 +183,6 @@
   "launchpad": {
     "sections": {
       "other": "その他"
-    },
-    "tabs": {
-      "myApps": "マイアプリ",
-      "myRepos": "マイリポジトリ"
     },
     "searchPlaceholder": "ワークスペースを検索...",
     "emptyTitle": "ワークスペースがありません",

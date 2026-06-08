@@ -2083,11 +2083,11 @@
     "recentSessions": "最近的 Session",
     "viewAllSessions": "查看所有 Session",
     "noSessionsYet": "暂无 Session",
-    "myAgents": "我的 Agent",
+    "myAgents": "我的 {{count}} 个 Agent",
     "noAgentsAvailable": "暂无可用的 Agent",
     "newAgentSession": "新建 {{agent}} Session",
     "addAgent": "添加 Agent",
-    "myApiKeys": "我的 API Key",
+    "myApiKeys": "我的 {{count}} 个 Key",
     "addApiKey": "添加 API Key",
     "noRepoSelected": "未选择仓库",
     "diff": {

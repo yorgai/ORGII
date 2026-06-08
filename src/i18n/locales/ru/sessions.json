@@ -2089,11 +2089,11 @@
     "recentSessions": "Недавние сессии",
     "viewAllSessions": "Все сессии",
     "noSessionsYet": "Пока нет сессий",
-    "myAgents": "Мои Agent",
+    "myAgents": "Мои Agent ({{count}})",
     "noAgentsAvailable": "Нет доступных Agent",
     "newAgentSession": "Новая сессия {{agent}}",
     "addAgent": "Добавить Agent",
-    "myApiKeys": "Мои API Key",
+    "myApiKeys": "Мои Key ({{count}})",
     "addApiKey": "Добавить API Key",
     "noRepoSelected": "Репозиторий не выбран",
     "diff": {

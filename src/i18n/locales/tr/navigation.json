@@ -45,8 +45,6 @@
     "project": "Proje",
     "projects": "Projects",
     "projectManager": "Project Manager",
-    "myKeys": "Anahtarlarım",
-    "myAgents": "Agents’larım",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -185,10 +183,6 @@
   "launchpad": {
     "sections": {
       "other": "Diğer"
-    },
-    "tabs": {
-      "myApps": "Uygulamalarım",
-      "myRepos": "Repolarım"
     },
     "searchPlaceholder": "Çalışma alanı ara...",
     "emptyTitle": "Henüz çalışma alanı yok",

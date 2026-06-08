@@ -45,8 +45,6 @@
     "project": "Проект",
     "projects": "Projects",
     "projectManager": "Project Manager",
-    "myKeys": "Мои ключи",
-    "myAgents": "Мои Agents",
     "diff": "Diff"
   },
   "trajectoryPanel": {
@@ -185,10 +183,6 @@
   "launchpad": {
     "sections": {
       "other": "Другое"
-    },
-    "tabs": {
-      "myApps": "Мои приложения",
-      "myRepos": "Мои репозитории"
     },
     "searchPlaceholder": "Поиск рабочих областей...",
     "emptyTitle": "Нет рабочих областей",

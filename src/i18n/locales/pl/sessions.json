@@ -2090,11 +2090,11 @@
     "recentSessions": "Ostatnie sesje",
     "viewAllSessions": "Wyświetl wszystkie sesje",
     "noSessionsYet": "Brak sesji",
-    "myAgents": "Moje Agenty",
+    "myAgents": "Moje {{count}} Agentów",
     "noAgentsAvailable": "Brak dostępnych Agentów",
     "newAgentSession": "Nowa sesja {{agent}}",
     "addAgent": "Dodaj Agenta",
-    "myApiKeys": "Moje klucze API",
+    "myApiKeys": "Moje {{count}} Keys",
     "addApiKey": "Dodaj klucz API",
     "noRepoSelected": "Nie wybrano Repo",
     "diff": {

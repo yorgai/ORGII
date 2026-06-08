@@ -2088,11 +2088,11 @@
     "recentSessions": "Recent sessions",
     "viewAllSessions": "View all sessions",
     "noSessionsYet": "No sessions yet",
-    "myAgents": "My Agents",
+    "myAgents": "My {{count}} Agents",
     "noAgentsAvailable": "No agents available",
     "newAgentSession": "New {{agent}} session",
     "addAgent": "Add agent",
-    "myApiKeys": "My API Keys",
+    "myApiKeys": "My {{count}} Keys",
     "addApiKey": "Add API key",
     "noRepoSelected": "No repository selected",
     "diff": {
