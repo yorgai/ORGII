@@ -56,20 +56,20 @@ export function createBrowserQuickActions(
       onAction: onNewPrivateTab,
     },
     {
-      id: "toggle-sidebar",
-      label: sidebarCollapsed
-        ? t("commands.showPrimarySidebar")
-        : t("commands.hidePrimarySidebar"),
-      shortcut: getShortcutKeys("browser_sidebar"),
-      onAction: onToggleSidebar,
-    },
-    {
       id: "toggle-devtools",
       label: devToolsCollapsed
         ? t("commands.showDevTools")
         : t("commands.hideDevTools"),
       shortcut: getShortcutKeys("browser_devtools"),
       onAction: onToggleDevTools,
+    },
+    {
+      id: "toggle-sidebar",
+      label: sidebarCollapsed
+        ? t("commands.showPrimarySidebar")
+        : t("commands.hidePrimarySidebar"),
+      shortcut: getShortcutKeys("browser_sidebar"),
+      onAction: onToggleSidebar,
     },
   ];
 }
