@@ -257,14 +257,14 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
             isFailed={isError}
           />
           <span
-            className={`min-w-0 shrink truncate font-medium ${isStillRunning ? EVENT_LOADING_SHIMMER_TEXT_CLASSES : isError ? "text-text-3" : "text-text-1"}`}
+            className={`min-w-0 shrink truncate ${isStillRunning ? `font-bold ${EVENT_LOADING_SHIMMER_TEXT_CLASSES}` : isError ? "font-medium text-text-3" : "font-medium text-text-1"}`}
             title={displayTitle}
           >
             {displayTitle}
           </span>
           {commandSymbols.length > 0 ? (
             <span
-              className={`shrink-0 ${isStillRunning ? EVENT_LOADING_SHIMMER_TEXT_CLASSES : "text-text-1"}`}
+              className={`shrink-0 ${isStillRunning ? `font-bold ${EVENT_LOADING_SHIMMER_TEXT_CLASSES}` : "text-text-1"}`}
               title={commandSymbols.join(", ")}
             >
               {commandSymbols.length <= 2
