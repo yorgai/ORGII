@@ -1,3 +1,5 @@
+import { compactRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
+
 /**
  * Fallback formatter for unregistered tools only.
  * Built-in tool/action labels must come from the Rust tool registry.
@@ -48,12 +50,15 @@ export function formatToolArg(
     return undefined;
   };
 
-  const baseName = (p: string): string => {
-    const parts = p.split("/").filter(Boolean);
-    return parts.length > 0 ? parts[parts.length - 1] : p;
-  };
+  const repoPath = pickString("repo_path", "repoPath");
+  const cwd = pickString(
+    "cwd",
+    "working_dir",
+    "workingDir",
+    "workingDirectory"
+  );
 
-  // File-path tools → basename of the target file.
+  // File-path tools → repo-aware path so multi-root rows are not ambiguous.
   const pathArg = pickString(
     "file_path",
     "filePath",
@@ -61,13 +66,16 @@ export function formatToolArg(
     "targetFile",
     "path"
   );
-  if (pathArg) return baseName(pathArg);
+  if (pathArg)
+    return compactRepoPathForDisplay({ path: pathArg, repoPath, cwd });
 
-  // Directory-list tools → trailing folder name.
+  // Directory-list tools → repo-aware directory.
   const dirArg = pickString("target_directory", "targetDirectory", "dir");
   if (dirArg) {
     const trimmed = dirArg.replace(/\/+$/, "");
-    return trimmed.length > 0 ? `${baseName(trimmed)}/` : "./";
+    return trimmed.length > 0
+      ? `${compactRepoPathForDisplay({ path: trimmed, repoPath, cwd })}/`
+      : "./";
   }
 
   // Search-style tools → the query/pattern.

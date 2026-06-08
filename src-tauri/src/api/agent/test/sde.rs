@@ -56,6 +56,26 @@ pub struct SdeTestRequest {
     additional_directories: Vec<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct CodeSearchToolTestRequest {
+    default_repo: String,
+    params: serde_json::Value,
+}
+
+pub async fn test_code_search_tool(
+    Json(request): Json<CodeSearchToolTestRequest>,
+) -> Json<serde_json::Value> {
+    use agent_core::tools::impls::coding::code_search::SearchTool;
+    use agent_core::tools::traits::Tool;
+    use std::path::PathBuf;
+
+    let tool = SearchTool::new(PathBuf::from(request.default_repo));
+    match tool.execute_text(request.params).await {
+        Ok(output) => Json(serde_json::json!({ "ok": true, "output": output })),
+        Err(err) => Json(serde_json::json!({ "ok": false, "error": err.to_string() })),
+    }
+}
+
 pub async fn test_sde_message(Json(request): Json<SdeTestRequest>) -> Json<serde_json::Value> {
     use tauri::Manager;
 

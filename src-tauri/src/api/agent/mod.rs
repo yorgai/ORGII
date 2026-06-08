@@ -75,6 +75,10 @@ pub fn create_routes() -> Router {
         )
         .route("/test/sde", post(test::sde::test_sde_message))
         .route(
+            "/test/tool/code-search",
+            post(test::sde::test_code_search_tool),
+        )
+        .route(
             "/test/tool-schemas/{session_id}",
             get(test::sde::test_tool_schemas),
         )

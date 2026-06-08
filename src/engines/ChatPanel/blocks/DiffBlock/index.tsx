@@ -20,6 +20,7 @@ import type {
   UniversalEventProps,
 } from "@src/engines/SessionCore/rendering/types/universalProps";
 import { getFileName } from "@src/util/file/pathUtils";
+import { formatRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
 
 import ChatCodeBlock from "../CodeBlock";
 import {
@@ -65,12 +66,14 @@ interface SegmentViewProps {
   segment: ExtractedEditData;
   isLoading: boolean;
   eventId: string;
+  repoPath?: string;
 }
 
 const SegmentView: React.FC<SegmentViewProps> = ({
   segment,
   isLoading,
   eventId,
+  repoPath,
 }) => {
   const { t } = useTranslation("sessions");
   const {
@@ -82,6 +85,10 @@ const SegmentView: React.FC<SegmentViewProps> = ({
     linesAdded = 0,
     linesRemoved = 0,
   } = segment;
+
+  const displayPath = formatRepoPathForDisplay({ path: filePath, repoPath });
+  const displayTitle =
+    displayPath.displayPath || fileName || getFileName(filePath) || "file";
 
   const displayDiff = diff ? decodeStreamContent(diff) : undefined;
   const displayContent = newContent
@@ -120,7 +127,7 @@ const SegmentView: React.FC<SegmentViewProps> = ({
           code={resolvedContent}
           language={resolvedLanguage}
           filePath={filePath}
-          title={fileName}
+          title={displayTitle}
           separateTitle={false}
           showLineNumbers
           defaultCollapsed={false}
@@ -143,7 +150,7 @@ const SegmentView: React.FC<SegmentViewProps> = ({
           code=""
           language={resolvedLanguage}
           filePath={filePath}
-          title={fileName}
+          title={displayTitle}
           separateTitle={false}
           defaultCollapsed
           eventId={eventId}
@@ -191,6 +198,13 @@ const DeleteFileView: React.FC<DiffBlockProps> = (props) => {
     fileName = filePath ? getFileName(filePath) || "file" : "file";
   }
 
+  const displayPath = formatRepoPathForDisplay({
+    path: filePath,
+    repoPath: props.repoPath,
+  });
+  const displayTitle =
+    displayPath.displayPath || fileName || getFileName(filePath) || "file";
+
   if (status === "running") {
     const deleteIcon = getToolIcon("delete_file", {
       size: SESSION_UI_TOKENS.ICON.SIZE_SM,
@@ -214,7 +228,7 @@ const DeleteFileView: React.FC<DiffBlockProps> = (props) => {
     <ChatCodeBlock
       code=""
       filePath={filePath}
-      title={fileName}
+      title={displayTitle}
       hasContent={false}
       defaultCollapsed
       trailingTags={[{ tone: "danger", text: t("tools.deleted") }]}
@@ -278,12 +292,21 @@ const EditView: React.FC<EditViewProps> = (props) => {
       {segments.map((segment, segmentIndex) => {
         const segmentKey = `${segment.filePath}-${segmentIndex}`;
         if (segment.isDeleted) {
+          const displayPath = formatRepoPathForDisplay({
+            path: segment.filePath,
+            repoPath: props.repoPath,
+          });
+          const displayTitle =
+            displayPath.displayPath ||
+            segment.fileName ||
+            getFileName(segment.filePath) ||
+            "file";
           return (
             <ChatCodeBlock
               key={segmentKey}
               code=""
               filePath={segment.filePath}
-              title={segment.fileName}
+              title={displayTitle}
               hasContent={false}
               defaultCollapsed
               trailingTags={[{ tone: "danger", text: t("tools.deleted") }]}
@@ -296,6 +319,7 @@ const EditView: React.FC<EditViewProps> = (props) => {
             segment={segment}
             isLoading={isLoading}
             eventId={eventId}
+            repoPath={props.repoPath}
           />
         );
       })}

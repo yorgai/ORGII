@@ -11,6 +11,7 @@ import {
   useLifecycleLabels,
 } from "@src/engines/SessionCore/rendering/registry";
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
+import { formatRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
 import { getToolDisplayLabelFromRegistry } from "@src/util/ui/rendering/registryToolLabel";
 
 import SearchBlock from "../../blocks/SearchBlock";
@@ -24,6 +25,16 @@ export const SearchAdapter: React.FC<UniversalEventProps> = (props) => {
   if (state === "failed") return null;
 
   const { query } = extractSearchData(props);
+  const targetPath =
+    (props.args?.repo_path as string | undefined) ||
+    (props.args?.repoPath as string | undefined) ||
+    (props.args?.path as string | undefined) ||
+    props.repoPath ||
+    undefined;
+  const targetLabel = targetPath
+    ? formatRepoPathForDisplay({ path: targetPath, repoPath: props.repoPath })
+        .displayPath
+    : undefined;
   const title =
     labels[state] ||
     getToolDisplayLabelFromRegistry(props.eventType, searchAction);
@@ -39,6 +50,7 @@ export const SearchAdapter: React.FC<UniversalEventProps> = (props) => {
         eventId={props.eventId}
         action={searchAction}
         title={title}
+        targetPath={targetLabel}
       />
     </div>
   );

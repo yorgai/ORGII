@@ -18,6 +18,7 @@ import { getToolIcon } from "@src/config/toolIcons";
 import { extractShellData } from "@src/engines/SessionCore/rendering/props/propsDataExtractors";
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
 import { killAgentShellProcess } from "@src/services/terminal";
+import { formatRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
 
 import TerminalBlock from "../TerminalBlock";
 import {
@@ -132,6 +133,7 @@ const RunShellView: React.FC<ShellBlockProps> = (props) => {
     killHandle,
     shellPid,
     shellProcessStatus,
+    cwd,
   } = shellData;
 
   const outputPayloadRef = props.payloadRefs?.find(
@@ -196,6 +198,10 @@ const RunShellView: React.FC<ShellBlockProps> = (props) => {
     trimmedDescription && trimmedDescription.length > 0
       ? trimmedDescription
       : props.title;
+  const cwdLabel = cwd
+    ? formatRepoPathForDisplay({ path: cwd, repoPath: props.repoPath })
+        .displayPath
+    : undefined;
 
   return (
     <TerminalBlock
@@ -213,6 +219,7 @@ const RunShellView: React.FC<ShellBlockProps> = (props) => {
       payloadRef={isLoading ? streamPayloadRef : outputPayloadRef}
       pid={shellPid}
       processStatus={shellProcessStatus}
+      cwdLabel={cwdLabel}
       onStop={handleStop}
     />
   );

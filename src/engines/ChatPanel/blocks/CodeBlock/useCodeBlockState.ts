@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useCallbackRefEffect } from "@src/hooks/dom/useCallbackRefEffect";
-import { getFileName } from "@src/util/file/pathUtils";
+import { formatRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
 
 import { detectLanguageFromPath, getLanguageDisplayName } from "./config";
 import {
@@ -82,8 +82,13 @@ export function useCodeBlockState({
   }, [filePath, title, detectedLanguage]);
 
   const displayTitle = useMemo(() => {
-    if (title) return getFileName(title) || title;
-    if (filePath) return getFileName(filePath) || languageDisplayName;
+    if (title) return title;
+    if (filePath) {
+      return (
+        formatRepoPathForDisplay({ path: filePath }).displayPath ||
+        languageDisplayName
+      );
+    }
     return languageDisplayName;
   }, [title, filePath, languageDisplayName]);
 

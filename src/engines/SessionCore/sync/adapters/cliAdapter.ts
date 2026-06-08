@@ -14,6 +14,7 @@
 import { convertFileSrc, invoke as tauriInvoke } from "@tauri-apps/api/core";
 
 import { enterAgentOrgSessionIntervention } from "@src/api/tauri/agent";
+import type { CancelReason } from "@src/api/tauri/agent/session";
 import type { MergeStatus } from "@src/api/tauri/rpc/schemas/validation";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
@@ -650,7 +651,7 @@ export const cliAdapter: SessionAdapter = {
     await waitForCliRunBoundary(sessionId, previousStatus?.updatedAt);
   },
 
-  async stopSession(sessionId: string): Promise<void> {
-    await tauriInvoke("cli_agent_cancel", { sessionId });
+  async stopSession(sessionId: string, reason: CancelReason): Promise<void> {
+    await tauriInvoke("cli_agent_cancel", { sessionId, reason });
   },
 };

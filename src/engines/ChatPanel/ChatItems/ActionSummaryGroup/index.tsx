@@ -17,9 +17,11 @@ import { StackedBlock } from "@src/engines/ChatPanel/blocks/primitives";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { getChatLazyComponent } from "@src/engines/SessionCore/rendering/registry/events";
 import { getRegistryEventType } from "@src/lib/activityData/activityNormalizers";
+import { formatRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
 
 import type { ActionSummaryCategory } from "../../ChatHistory/chatItemPipeline/classifiers";
 import type { ActionSummaryEntry } from "../../ChatHistory/chatItemPipeline/types";
+import { getReadFileName, getReadFilePath } from "../readFileEventData";
 
 // ============================================
 // Types
@@ -77,6 +79,15 @@ function suppressLoadingForNonLastRunningEvent(
 // Header Label Builder
 // ============================================
 
+function formatReadEventPath(event: SessionEvent): string {
+  const filePath = getReadFilePath(event);
+  const display = formatRepoPathForDisplay({
+    path: filePath,
+    repoPath: event.repoPath,
+  });
+  return display.displayPath || getReadFileName(event) || "file";
+}
+
 function buildGroupSummary(
   entries: ActionSummaryEntry[],
   t: (key: string, opts?: Record<string, unknown>) => string
@@ -85,9 +96,11 @@ function buildGroupSummary(
   for (const entry of entries) {
     const count = entry.events.length;
     switch (entry.category) {
-      case "read":
-        parts.push(t("tools.exploreSummary.read", { count }));
+      case "read": {
+        const paths = entry.events.map(formatReadEventPath).join(", ");
+        parts.push(paths || t("tools.exploreSummary.read", { count }));
         break;
+      }
       case "search":
         parts.push(t("tools.exploreSummary.search", { count }));
         break;

@@ -573,10 +573,16 @@ impl CliAgentParser for ClaudeCodeParser {
                     .get("is_error")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false);
+                let stop_reason = data
+                    .get("stop_reason")
+                    .or_else(|| data.get("stopReason"))
+                    .or_else(|| data.get("subtype"))
+                    .and_then(|v| v.as_str());
                 let mut chunk = ActivityChunk::new(&self.session_id, "session_end", "session_end");
                 chunk.result = serde_json::json!({
                     "success": !is_error,
                     "error_message": data.get("error").and_then(|v| v.as_str()),
+                    "stop_reason": stop_reason,
                 });
                 vec![chunk]
             }

@@ -284,16 +284,29 @@ mod tests {
     #[test]
     fn test_claude_code_result_with_usage() {
         let mut parser = ClaudeCodeParser::new("test-session");
-        let line = r#"{"type":"result","session_id":"sess-123","is_error":false,"usage":{"input_tokens":500,"output_tokens":100,"cache_read_input_tokens":200}}"#;
+        let line = r#"{"type":"result","session_id":"sess-123","is_error":false,"subtype":"success","usage":{"input_tokens":500,"output_tokens":100,"cache_read_input_tokens":200}}"#;
         let chunks = parser.parse_line(line);
 
         assert_eq!(chunks.len(), 1);
         assert_eq!(chunks[0].action_type, "session_end");
         assert_eq!(chunks[0].result["success"], true);
+        assert_eq!(chunks[0].result["stop_reason"], "success");
 
         let usage = parser.token_usage().expect("Should have usage");
         assert_eq!(usage.input_tokens, 500);
         assert_eq!(usage.output_tokens, 100);
         assert_eq!(usage.cache_read_tokens, 200);
+    }
+
+    #[test]
+    fn test_claude_code_result_preserves_stop_reason() {
+        let mut parser = ClaudeCodeParser::new("test-session");
+        let line = r#"{"type":"result","session_id":"sess-123","is_error":false,"stop_reason":"end_turn"}"#;
+        let chunks = parser.parse_line(line);
+
+        assert_eq!(chunks.len(), 1);
+        assert_eq!(chunks[0].action_type, "session_end");
+        assert_eq!(chunks[0].result["success"], true);
+        assert_eq!(chunks[0].result["stop_reason"], "end_turn");
     }
 }

@@ -15,6 +15,7 @@ import { getToolIcon } from "@src/config/toolIcons";
 import { extractFileData } from "@src/engines/SessionCore/rendering/props/propsDataExtractors";
 import type { UniversalEventProps } from "@src/engines/SessionCore/rendering/types/universalProps";
 import { getFileName } from "@src/util/file/pathUtils";
+import { formatRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
 
 import { extractResultText } from "../ToolCallBlock/helpers";
 import {
@@ -32,42 +33,18 @@ export type ReadFileBlockProps = UniversalEventProps & {
   title?: string;
 };
 
-function normalizePathForDisplay(path: string): string {
-  return path.replace(/\\/g, "/");
-}
-
-function formatReadFileDisplayPath(
-  filePath: string,
-  repoPath?: string
-): string {
-  const normalizedFile = normalizePathForDisplay(filePath);
-  const normalizedRepo = repoPath ? normalizePathForDisplay(repoPath) : "";
-  if (!normalizedFile) return "";
-  if (!normalizedRepo) {
-    return normalizedFile;
-  }
-
-  const repoName = getFileName(normalizedRepo) || normalizedRepo;
-  if (!normalizedFile.startsWith("/") && !/^[A-Za-z]:\//.test(normalizedFile)) {
-    return `${repoName}/${normalizedFile}`;
-  }
-  if (!normalizedFile.startsWith(`${normalizedRepo}/`)) {
-    return normalizedFile;
-  }
-
-  const relativePath = normalizedFile.slice(normalizedRepo.length + 1);
-  return relativePath ? `${repoName}/${relativePath}` : repoName;
-}
-
 export const ReadFileBlock: React.FC<ReadFileBlockProps> = (props) => {
   const { eventId, status } = props;
 
   const { filePath, fileName } = useMemo(() => extractFileData(props), [props]);
 
-  const displayPath = formatReadFileDisplayPath(filePath, props.repoPath);
+  const displayPath = formatRepoPathForDisplay({
+    path: filePath,
+    repoPath: props.repoPath,
+  });
   const displayName =
-    displayPath || fileName || getFileName(filePath) || "file";
-  const fullPathTitle = filePath || fileName || "file";
+    displayPath.displayPath || fileName || getFileName(filePath) || "file";
+  const fullPathTitle = displayPath.title || filePath || fileName || "file";
   const iconName = fileName || getFileName(filePath) || displayName;
   const isLoading =
     status === "running" && props.showActiveEventPainting === true;

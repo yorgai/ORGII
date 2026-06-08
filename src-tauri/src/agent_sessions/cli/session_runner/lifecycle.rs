@@ -3,6 +3,7 @@
 use super::super::persistence;
 use super::super::types::SessionStatus;
 use super::helpers::RUNNING_SESSIONS;
+use agent_core::state::control_flow::CancelReason;
 
 #[cfg(unix)]
 fn signal_process_tree(pid: i64, signal: libc::c_int) -> bool {
@@ -80,7 +81,7 @@ pub async fn kill_running_agent(session_id: &str) -> bool {
 /// `cli_agent_message` always re-allocate a fresh token anyway.
 /// The old token expires via the agent-proxy inactivity timeout or
 /// is released on session deletion.
-pub async fn cancel_session(session_id: &str) -> Result<bool, String> {
+pub async fn cancel_session(session_id: &str, reason: CancelReason) -> Result<bool, String> {
     // The previous `.ok().flatten()` collapsed a DB error and a
     // legitimate "session not found" into the same `None`. The
     // status_changed broadcast below would then ship without
@@ -110,14 +111,16 @@ pub async fn cancel_session(session_id: &str) -> Result<bool, String> {
         "type": "code_session.status_changed",
         "session_id": session_id,
         "status": "cancelled",
+        "reason": reason.as_str(),
         "background": session.as_ref().is_some_and(|s| s.background),
         "session_name": session.as_ref().map(|s| s.name.clone()),
     });
     crate::api::websocket_handler::broadcast(status_msg.to_string());
 
     tracing::info!(
-        "[CodeSession] Session {} cancelled (had_running={})",
+        "[CodeSession] Session {} cancelled (reason={}, had_running={})",
         session_id,
+        reason.as_str(),
         had_running
     );
 

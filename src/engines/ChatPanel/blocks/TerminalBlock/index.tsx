@@ -61,6 +61,8 @@ export interface TerminalBlockProps {
   pid?: number;
   /** Process status: running, background, exited, killed */
   processStatus?: "running" | "background" | "exited" | "killed";
+  /** Optional working directory label for multi-repo shell commands */
+  cwdLabel?: string;
   /** Callback when user clicks Stop */
   onStop?: (pid: number) => void;
 }
@@ -81,6 +83,7 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
     streamOutput,
     pid,
     processStatus,
+    cwdLabel,
     onStop,
   }) => {
     const isErrorExit = exitCode !== undefined && exitCode !== 0;
@@ -267,6 +270,14 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
               {commandSymbols.length <= 2
                 ? commandSymbols.join(", ")
                 : `${commandSymbols.slice(0, 2).join(", ")}, +${commandSymbols.length - 2}`}
+            </span>
+          ) : null}
+          {cwdLabel ? (
+            <span
+              className="min-w-0 shrink truncate text-text-3"
+              title={cwdLabel}
+            >
+              in {cwdLabel}
             </span>
           ) : null}
           {!isStillRunning && exitCode !== undefined && exitCode !== 0 && (

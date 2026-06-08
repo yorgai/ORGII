@@ -26,6 +26,8 @@ export interface GlobBlockProps {
   isLoading?: boolean;
   /** Optional event ID for simulator replay */
   eventId?: string;
+  /** Optional repo/path context for multi-root workspaces */
+  targetPath?: string;
   /**
    * Pre-translated header title for the current state. Adapter resolves via
    * `useLifecycleLabels("code_search", "find_files")` (or `"glob_file_search"`).
@@ -34,7 +36,7 @@ export interface GlobBlockProps {
 }
 
 const GlobBlock: React.FC<GlobBlockProps> = React.memo(
-  ({ pattern, isLoading = false, eventId, title }) => {
+  ({ pattern, isLoading = false, eventId, title, targetPath }) => {
     const {
       isHeaderHovered,
       handleHeaderMouseEnter,
@@ -70,10 +72,10 @@ const GlobBlock: React.FC<GlobBlockProps> = React.memo(
           <EventBlockHeaderTitle isLoading={isLoading}>
             {title}
           </EventBlockHeaderTitle>
-          {pattern && (
+          {(pattern || targetPath) && (
             <EventBlockHeaderSubtitle
               isLoading={isLoading}
-              title={pattern}
+              title={[pattern, targetPath].filter(Boolean).join(" · ")}
               className="text-text-1"
             >
               <FileTypeIcon
@@ -82,6 +84,11 @@ const GlobBlock: React.FC<GlobBlockProps> = React.memo(
                 className="mr-1.5 shrink-0"
               />
               <span className="min-w-0 truncate">{pattern}</span>
+              {targetPath && (
+                <span className="min-w-0 truncate text-text-3">
+                  in {targetPath}
+                </span>
+              )}
             </EventBlockHeaderSubtitle>
           )}
         </EventBlockHeader>

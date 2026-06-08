@@ -4,6 +4,7 @@ use super::persistence::{self, CliHistoryMutation, CodeSession, CreateCodeSessio
 use super::session_runner;
 use super::types::{KeySource, SessionStatus};
 use agent_core::session::IdeContext;
+use agent_core::state::control_flow::CancelReason;
 use core_types::activity::ActivityChunk;
 use core_types::session::CLI_SESSION_PREFIX;
 use core_types::worktree::{MergeStrategy, WorktreeMergeResult};
@@ -474,8 +475,11 @@ pub async fn cli_agent_history_mutation(
 
 /// Cancel a running session.
 #[tauri::command]
-pub async fn cli_agent_cancel(session_id: String) -> Result<bool, String> {
-    session_runner::cancel_session(&session_id).await
+pub async fn cli_agent_cancel(
+    session_id: String,
+    reason: Option<CancelReason>,
+) -> Result<bool, String> {
+    session_runner::cancel_session(&session_id, reason.unwrap_or_default()).await
 }
 
 /// List all code sessions.

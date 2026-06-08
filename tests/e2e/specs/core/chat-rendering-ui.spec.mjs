@@ -8,6 +8,12 @@
  * virtualization does not hide off-screen rows from the assertion.
  */
 
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
+import { e2eUrl } from "../../support/core/e2eBaseUrl.mjs";
+
 const MOUNT_TIMEOUT_MS = 60_000;
 const RENDER_TIMEOUT_MS = 12_000;
 const RUN_ID = Date.now();
@@ -59,6 +65,25 @@ async function waitForFrontendReady() {
       timeoutMsg: `frontend dev server never became ready at ${url}`,
     }
   );
+}
+
+async function postJson(pathname, body) {
+  const response = await fetch(e2eUrl(pathname), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  let payload;
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(`POST ${pathname} returned non-JSON ${response.status}: ${text}`);
+  }
+  if (!response.ok) {
+    throw new Error(`POST ${pathname} failed ${response.status}: ${text}`);
+  }
+  return payload;
 }
 
 async function invokeE2E(method, ...args) {
@@ -583,6 +608,176 @@ async function assertDedupRenderedOnce() {
   expect(finalCounts).toEqual({ thought: 1, answer: 1, assistantBubbles: 1 });
 }
 
+async function assertMultiRepoGrepTargetsExplicitRepoPath() {
+  const root = await mkdtemp(path.join(tmpdir(), `orgii-e2e-multirepo-grep-${RUN_ID}-`));
+  const primaryRepo = path.join(root, "primary");
+  const siblingRepo = path.join(root, "sibling");
+  const primarySentinel = `ORGII_MULTI_REPO_GREP_PRIMARY_${RUN_ID}`;
+  const siblingSentinel = `ORGII_MULTI_REPO_GREP_SIBLING_${RUN_ID}`;
+
+  try {
+    await mkdir(path.join(primaryRepo, "src"), { recursive: true });
+    await mkdir(path.join(siblingRepo, "src"), { recursive: true });
+    await writeFile(
+      path.join(primaryRepo, "src", "sentinel.ts"),
+      `export const primary = ${JSON.stringify(primarySentinel)};\n`
+    );
+    await writeFile(
+      path.join(siblingRepo, "src", "sentinel.ts"),
+      `export const sibling = ${JSON.stringify(siblingSentinel)};\n`
+    );
+
+    const result = await postJson("/agent/test/tool/code-search", {
+      default_repo: primaryRepo,
+      params: {
+        action: "grep",
+        pattern: siblingSentinel,
+        repo_path: siblingRepo,
+        max_results: 20,
+      },
+    });
+
+    if (!result?.ok) {
+      throw new Error(`multi-repo grep endpoint failed: ${result?.error ?? "unknown"}`);
+    }
+
+    const output = String(result.output ?? "");
+    if (!output.includes(siblingSentinel)) {
+      throw new Error(`multi-repo grep missed sibling sentinel: ${output}`);
+    }
+    if (output.includes(primarySentinel)) {
+      throw new Error(`multi-repo grep leaked primary sentinel while targeting sibling: ${output}`);
+    }
+    if (!output.includes(siblingRepo)) {
+      throw new Error(`multi-repo grep output did not identify sibling repo/path: ${output}`);
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+async function assertMultiRepoRenderedPathContext() {
+  const sessionId = `e2e-render-multirepo-context-${Date.now()}`;
+  const baseTime = Date.now();
+  const repoA = `/tmp/orgii-e2e-collision-a-${RUN_ID}/app`;
+  const repoB = `/tmp/orgii-e2e-collision-b-${RUN_ID}/app`;
+  const fileA = `${repoA}/src/index.ts`;
+  const fileB = `${repoB}/src/index.ts`;
+  const expectedA = `orgii-e2e-collision-a-${RUN_ID}/app/src/index.ts`;
+  const expectedB = `orgii-e2e-collision-b-${RUN_ID}/app/src/index.ts`;
+  const events = [
+    {
+      ...withCreatedAt(makeOrderUserEvent("multi-context-user", "Use both app repos"), baseTime),
+      sessionId,
+    },
+    {
+      id: "multi-context-read-a",
+      chunk_id: "multi-context-read-a",
+      sessionId,
+      createdAt: new Date(baseTime + 1_000).toISOString(),
+      functionName: "read_file",
+      uiCanonical: "read_file",
+      actionType: "tool_call",
+      args: { file_path: fileA },
+      result: { content: "read A", observation: "read A", is_delta: false },
+      repoPath: repoA,
+      source: "assistant",
+      displayText: `Read ${fileA}`,
+      displayStatus: "completed",
+      displayVariant: "tool_call",
+      activityStatus: "agent",
+      isDelta: false,
+    },
+    {
+      id: "multi-context-edit-b",
+      chunk_id: "multi-context-edit-b",
+      sessionId,
+      createdAt: new Date(baseTime + 2_000).toISOString(),
+      functionName: "edit_file_by_replace",
+      uiCanonical: "edit_file",
+      actionType: "tool_call",
+      args: { path: fileB, old_string: "old", new_string: "new" },
+      result: { content: "@@ -1 +1\n-old\n+new", observation: "edited", is_delta: false },
+      repoPath: repoB,
+      source: "assistant",
+      displayText: `Edit ${fileB}`,
+      displayStatus: "completed",
+      displayVariant: "tool_call",
+      activityStatus: "agent",
+      isDelta: false,
+    },
+    {
+      id: "multi-context-search-b",
+      chunk_id: "multi-context-search-b",
+      sessionId,
+      createdAt: new Date(baseTime + 3_000).toISOString(),
+      functionName: "code_search",
+      uiCanonical: "code_search",
+      actionType: "tool_call",
+      args: { action: "grep", pattern: "sharedSymbol", repo_path: repoB },
+      result: { content: `${fileB}:1:sharedSymbol`, observation: "matched", is_delta: false },
+      repoPath: repoB,
+      source: "assistant",
+      displayText: "Search sharedSymbol",
+      displayStatus: "completed",
+      displayVariant: "tool_call",
+      activityStatus: "agent",
+      isDelta: false,
+    },
+    {
+      id: "multi-context-shell-a",
+      chunk_id: "multi-context-shell-a",
+      sessionId,
+      createdAt: new Date(baseTime + 4_000).toISOString(),
+      functionName: "run_shell",
+      uiCanonical: "run_shell",
+      actionType: "tool_call",
+      args: { command: "npm test", cwd: repoA },
+      result: { output: "ok", content: "ok", observation: "ok", is_delta: false },
+      repoPath: repoA,
+      source: "assistant",
+      displayText: "Run npm test",
+      displayStatus: "completed",
+      displayVariant: "tool_call",
+      activityStatus: "agent",
+      isDelta: false,
+    },
+    {
+      ...withCreatedAt(
+        makeOrderAssistantEvent("multi-context-assistant", "message", "Done"),
+        baseTime + 5_000
+      ),
+      sessionId,
+    },
+  ];
+
+  const seed = await invokeE2E("seedChatEvents", sessionId, events);
+  if (!seed || seed.ok !== true) {
+    throw new Error(`seedChatEvents failed for multi-repo context: ${seed?.error ?? "unknown"}`);
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const state = await execJS(`
+        const body = document.body.innerText || "";
+        return {
+          body,
+          hasA: body.includes(${JSON.stringify(expectedA)}),
+          hasB: body.includes(${JSON.stringify(expectedB)}),
+          leakedAmbiguous: body.includes(" app/src/index.ts") && !body.includes(${JSON.stringify(expectedA)}),
+        };
+      `);
+      return state.hasA && state.hasB && !state.leakedAmbiguous;
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `multi-repo rendered path context missing: ${JSON.stringify(
+        await execJS(`return { body: (document.body.innerText || "").slice(0, 5000) };`)
+      )}`,
+    }
+  );
+}
+
 async function assertMultiRepoReadPathRendered() {
   const sessionId = `e2e-render-multirepo-read-${Date.now()}`;
   const baseTime = Date.now();
@@ -837,6 +1032,24 @@ describe("Core chat rendering UI", () => {
     }
 
     await assertMultiRepoReadPathRendered();
+  });
+
+  it("greps the explicitly targeted sibling repo in a multi-repo workspace", async function () {
+    if (!shouldRunScenario("multi-repo-grep-path")) {
+      this.skip();
+      return;
+    }
+
+    await assertMultiRepoGrepTargetsExplicitRepoPath();
+  });
+
+  it("renders repo-disambiguated paths for multi-repo tool rows", async function () {
+    if (!shouldRunScenario("multi-repo-rendered-path-context")) {
+      this.skip();
+      return;
+    }
+
+    await assertMultiRepoRenderedPathContext();
   });
 
   it("renders a duplicated thought/answer segment pair only once", async function () {
