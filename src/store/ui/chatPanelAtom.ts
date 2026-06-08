@@ -298,6 +298,16 @@ chatPanelWorkspaceDashboardOpenAtom.debugLabel =
   "chatPanelWorkspaceDashboardOpenAtom";
 
 /**
+ * Whether the chat-panel slot is rendering the GitHub repo search /
+ * "Explore" view. Mutually exclusive with the workspace dashboard,
+ * sticky notes, project, work item, and session surfaces at the render
+ * layer (precedence enforced in `ChatPanel/index.tsx`). Entry points
+ * that open Explore must clear those sibling atoms.
+ */
+export const chatPanelExploreOpenAtom = atom<boolean>(false);
+chatPanelExploreOpenAtom.debugLabel = "chatPanelExploreOpenAtom";
+
+/**
  * Selected tab on the chat-panel workspace overview surface
  * (`WorkspaceOverviewPanelView`). The overview/details split is
  * orthogonal to which workspace is selected; entry points that drill

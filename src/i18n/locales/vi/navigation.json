@@ -323,6 +323,9 @@
     },
     "addWorkspace": "Thêm Workspace"
   },
+  "explore": {
+    "title": "Khám phá"
+  },
   "workstation": {
     "dockFilter": {
       "all": "Tất cả các thẻ",

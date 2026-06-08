@@ -1,5 +1,6 @@
 import {
   Box,
+  Compass,
   LayoutDashboard,
   Plus,
   Radar,
@@ -39,6 +40,8 @@ interface BuildProjectsPinnedMenuItemsParams {
 interface BuildFoldersPinnedMenuItemsParams {
   dashboardItemId: string;
   dashboardLabel: string;
+  exploreItemId: string;
+  exploreLabel: string;
 }
 
 export function buildPinnedMenuItems({
@@ -100,6 +103,8 @@ export function buildProjectsPinnedMenuItems({
 export function buildFoldersPinnedMenuItems({
   dashboardItemId,
   dashboardLabel,
+  exploreItemId,
+  exploreLabel,
 }: BuildFoldersPinnedMenuItemsParams): NavigationMenuItem[] {
   return [
     {
@@ -108,6 +113,13 @@ export function buildFoldersPinnedMenuItems({
       label: dashboardLabel,
       icon: LayoutDashboard,
       iconName: "layout-dashboard",
+    },
+    {
+      id: exploreItemId,
+      key: exploreItemId,
+      label: exploreLabel,
+      icon: Compass,
+      iconName: "compass",
     },
   ];
 }

@@ -8,6 +8,7 @@ import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
 import Button from "@src/components/Button";
 import ModelIcon from "@src/components/ModelIcon";
 import { resolveAgentIcon } from "@src/config/agentIcons";
+import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { useKeyVault } from "@src/hooks/keyVault";
 import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
 import {
@@ -485,8 +486,10 @@ const LaunchpadDashboard: React.FC<LaunchpadDashboardProps> = memo(
 
     return (
       <div className="flex h-full min-h-0 w-full flex-col bg-bg-2">
-        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
-          <div className="flex w-full flex-col gap-5 px-4 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 scrollbar-hide">
+          <div
+            className={`flex flex-col gap-5 py-5 ${DETAIL_PANEL_TOKENS.contentWidth}`}
+          >
             <div className="flex flex-col gap-2">
               <LaunchpadCollapsibleSection
                 title={t("navigation:launchpad.myWorkspaces")}

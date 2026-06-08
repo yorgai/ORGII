@@ -20,6 +20,7 @@ import {
 } from "../workstationSidebarMenuItems";
 import {
   FOLDERS_DASHBOARD_ITEM_ID,
+  FOLDERS_EXPLORE_ITEM_ID,
   buildFoldersSidebarMenuItems,
 } from "./foldersSidebarMenuItems";
 import type { WorkstationSidebarKey } from "./types";
@@ -69,6 +70,8 @@ export function usePinnedMenuItems({
       buildFoldersPinnedMenuItems({
         dashboardItemId: FOLDERS_DASHBOARD_ITEM_ID,
         dashboardLabel: t("launchpad.dashboard"),
+        exploreItemId: FOLDERS_EXPLORE_ITEM_ID,
+        exploreLabel: t("explore.title", { defaultValue: "Explore" }),
       }),
     [t]
   );

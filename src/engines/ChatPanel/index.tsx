@@ -32,6 +32,7 @@ import {
   chatPanelContentModeAtom,
   chatPanelCreateProjectContextAtom,
   chatPanelCreateTargetAtom,
+  chatPanelExploreOpenAtom,
   chatPanelMaximizedAtom,
   chatPanelSelectedProjectAtom,
   chatPanelSelectedWorkItemAtom,
@@ -107,6 +108,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const workspaceDashboardOpen = useAtomValue(
       chatPanelWorkspaceDashboardOpenAtom
     );
+    const exploreOpen = useAtomValue(chatPanelExploreOpenAtom);
     const stickyNotesOpen = useAtomValue(chatPanelStickyNotesOpenAtom);
     const createProjectContext = useAtomValue(
       chatPanelCreateProjectContextAtom
@@ -298,6 +300,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       contentMode,
       createTarget,
       currentSessionId: currentSessionId ?? null,
+      exploreOpen,
       isChatFocus,
       panelTitle,
       selectedProject,
@@ -504,6 +507,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         showEmptyChatFocusRestoreButton={
           contentState.showEmptyChatFocusRestoreButton
         }
+        showExploreContent={contentState.showExploreContent}
         showPanelContent={contentState.showPanelContent}
         showProjectContent={contentState.showProjectContent}
         showSessionContent={contentState.showSessionContent}

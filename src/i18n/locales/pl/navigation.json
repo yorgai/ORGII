@@ -323,6 +323,9 @@
     },
     "addWorkspace": "Dodaj workspace"
   },
+  "explore": {
+    "title": "Odkrywaj"
+  },
   "workstation": {
     "dockFilter": {
       "all": "Wszystkie karty",

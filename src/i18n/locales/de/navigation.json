@@ -325,6 +325,9 @@
     },
     "addWorkspace": "Workspace hinzufügen"
   },
+  "explore": {
+    "title": "Entdecken"
+  },
   "workstation": {
     "dockFilter": {
       "all": "Alle Tabs",

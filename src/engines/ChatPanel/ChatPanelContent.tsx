@@ -17,6 +17,7 @@ import ProjectPanelView from "./ProjectPanelView";
 import StickyNotesPanelView from "./StickyNotesPanelView";
 import WorkItemPanelView from "./WorkItemPanelView";
 import WorkspaceDashboardPanelView from "./WorkspaceDashboardPanelView";
+import WorkspaceExplorePanelView from "./WorkspaceExplorePanelView";
 import WorkspaceOverviewPanelView from "./WorkspaceOverviewPanelView";
 
 interface ChatPanelContentProps {
@@ -32,6 +33,7 @@ interface ChatPanelContentProps {
   selectedWorkspace: ChatPanelSelectedWorkspace | null;
   showBenchmarkSessionGroupContent: boolean;
   showEmptyChatFocusRestoreButton: boolean;
+  showExploreContent: boolean;
   showPanelContent: boolean;
   showProjectContent: boolean;
   showSessionContent: boolean;
@@ -54,6 +56,7 @@ export function ChatPanelContent({
   selectedWorkspace,
   showBenchmarkSessionGroupContent,
   showEmptyChatFocusRestoreButton,
+  showExploreContent,
   showPanelContent,
   showProjectContent,
   showSessionContent,
@@ -79,6 +82,8 @@ export function ChatPanelContent({
         <ProjectPanelView selectedProject={selectedProject} />
       ) : showWorkspaceDashboardContent ? (
         <WorkspaceDashboardPanelView />
+      ) : showExploreContent ? (
+        <WorkspaceExplorePanelView />
       ) : showWorkspaceOverviewContent && selectedWorkspace ? (
         <WorkspaceOverviewPanelView selectedWorkspace={selectedWorkspace} />
       ) : showStickyNotesContent ? (

@@ -40,6 +40,7 @@ import {
   chatPanelContentModeAtom,
   chatPanelCreateProjectContextAtom,
   chatPanelCreateTargetAtom,
+  chatPanelExploreOpenAtom,
   chatPanelSelectedProjectAtom,
   chatPanelSelectedWorkItemAtom,
   chatPanelSelectedWorkspaceAtom,
@@ -151,6 +152,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const setChatPanelWorkspaceDashboardOpen = useSetAtom(
     chatPanelWorkspaceDashboardOpenAtom
   );
+  const setChatPanelExploreOpen = useSetAtom(chatPanelExploreOpenAtom);
   const setChatPanelSelectedProject = useSetAtom(chatPanelSelectedProjectAtom);
   const setChatPanelSelectedWorkItem = useSetAtom(
     chatPanelSelectedWorkItemAtom
@@ -176,11 +178,15 @@ export const WorkstationSidebarConnector: React.FC = () => {
     useState("");
   const [foldersDashboardSelected, setFoldersDashboardSelected] =
     useState(false);
+  const [foldersExploreSelected, setFoldersExploreSelected] = useState(false);
   const tabs = useWorkstationSidebarTabs(t);
 
   const handleTabChange = useCallback((key: string) => {
     if (!isWorkstationSidebarKey(key)) return;
-    if (key !== "folders") setFoldersDashboardSelected(false);
+    if (key !== "folders") {
+      setFoldersDashboardSelected(false);
+      setFoldersExploreSelected(false);
+    }
     setActiveSidebarKey(key);
   }, []);
 
@@ -383,6 +389,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
       chatPanelSelectedWorkspace,
       chatPanelStickyNotesOpen,
       foldersDashboardSelected,
+      foldersExploreSelected,
       kanbanRoutePath: ROUTES.workStation.kanban.path,
       pathname: location.pathname,
       projectsSelectedMenuItemId,
@@ -500,6 +507,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     setChatPanelContentMode,
     setChatPanelCreateProjectContext,
     setChatPanelCreateTarget,
+    setChatPanelExploreOpen,
     setChatPanelSelectedProject,
     setChatPanelSelectedWorkItem,
     setChatPanelSelectedWorkspace,
@@ -507,6 +515,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     setChatPanelWorkspaceDashboardOpen,
     setChatPanelWorkspaceOverviewTab,
     setFoldersDashboardSelected,
+    setFoldersExploreSelected,
     setProjectsSelectedMenuItemId,
   });
   const handleProjectsMenuItemClick = useProjectsMenuItemClick({

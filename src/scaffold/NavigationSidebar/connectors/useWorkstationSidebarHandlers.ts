@@ -25,6 +25,7 @@ import {
 import {
   CHAT_PANEL_CONTENT_MODE,
   chatPanelContentModeAtom,
+  chatPanelExploreOpenAtom,
   chatPanelSelectedWorkItemAtom,
   chatPanelSelectedWorkspaceAtom,
   chatPanelStickyNotesOpenAtom,
@@ -91,6 +92,7 @@ export function useWorkstationSidebarHandlers({
   const setChatPanelWorkspaceDashboardOpen = useSetAtom(
     chatPanelWorkspaceDashboardOpenAtom
   );
+  const setChatPanelExploreOpen = useSetAtom(chatPanelExploreOpenAtom);
   const setChatPanelSelectedWorkItem = useSetAtom(
     chatPanelSelectedWorkItemAtom
   );
@@ -201,6 +203,7 @@ export function useWorkstationSidebarHandlers({
         );
         setChatPanelSelectedWorkItem(null);
         setChatPanelWorkspaceDashboardOpen(false);
+        setChatPanelExploreOpen(false);
         setChatPanelSelectedWorkspace(null);
         setChatPanelStickyNotesOpen(false);
         promoteActiveSessionCreatorDraft();
@@ -225,6 +228,7 @@ export function useWorkstationSidebarHandlers({
       setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
       setChatPanelSelectedWorkItem(null);
       setChatPanelWorkspaceDashboardOpen(false);
+      setChatPanelExploreOpen(false);
       setChatPanelSelectedWorkspace(null);
       setChatPanelStickyNotesOpen(false);
       promoteActiveSessionCreatorDraft();
@@ -244,6 +248,7 @@ export function useWorkstationSidebarHandlers({
       setBenchmarkActiveBatchTaskId,
       setBenchmarkAgentBatchStatus,
       setChatPanelContentMode,
+      setChatPanelExploreOpen,
       setChatPanelWorkspaceDashboardOpen,
       setChatPanelSelectedWorkspace,
       setChatPanelSelectedWorkItem,

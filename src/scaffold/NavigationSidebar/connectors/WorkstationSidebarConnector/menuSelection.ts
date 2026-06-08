@@ -17,6 +17,7 @@ import {
 } from "../workstationSidebarData";
 import {
   FOLDERS_DASHBOARD_ITEM_ID,
+  FOLDERS_EXPLORE_ITEM_ID,
   getFolderItemId,
 } from "./foldersSidebarMenuItems";
 import type { WorkstationSidebarKey } from "./types";
@@ -32,6 +33,7 @@ interface ResolveSelectedMenuItemIdParams {
   chatPanelSelectedWorkspace: ChatPanelSelectedWorkspace | null;
   chatPanelStickyNotesOpen: boolean;
   foldersDashboardSelected: boolean;
+  foldersExploreSelected: boolean;
   kanbanRoutePath: string;
   pathname: string;
   projectsSelectedMenuItemId: string;
@@ -54,6 +56,7 @@ export function resolveSelectedMenuItemIds({
   chatPanelSelectedWorkspace,
   chatPanelStickyNotesOpen,
   foldersDashboardSelected,
+  foldersExploreSelected,
   kanbanRoutePath,
   pathname,
   projectsSelectedMenuItemId,
@@ -91,9 +94,11 @@ export function resolveSelectedMenuItemIds({
       : "";
   const foldersSelectedMenuItemId = chatPanelSelectedWorkspace
     ? getFolderItemId(chatPanelSelectedWorkspace)
-    : foldersDashboardSelected
-      ? FOLDERS_DASHBOARD_ITEM_ID
-      : "";
+    : foldersExploreSelected
+      ? FOLDERS_EXPLORE_ITEM_ID
+      : foldersDashboardSelected
+        ? FOLDERS_DASHBOARD_ITEM_ID
+        : "";
   const selectedMenuItemId =
     activeSidebarKey === "projects"
       ? resolvedProjectsSelectedMenuItemId

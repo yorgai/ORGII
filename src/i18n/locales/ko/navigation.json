@@ -323,6 +323,9 @@
     },
     "addWorkspace": "Workspace 추가"
   },
+  "explore": {
+    "title": "탐색"
+  },
   "workstation": {
     "dockFilter": {
       "all": "모든 탭",

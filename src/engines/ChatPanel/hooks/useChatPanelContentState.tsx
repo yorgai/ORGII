@@ -21,6 +21,7 @@ interface UseChatPanelContentStateOptions {
   contentMode: ChatPanelContentMode;
   createTarget: ChatPanelCreateTarget;
   currentSessionId: string | null;
+  exploreOpen: boolean;
   isChatFocus: boolean;
   panelTitle: string;
   selectedProject: ChatPanelSelectedProject | null;
@@ -49,6 +50,7 @@ export interface ChatPanelContentState {
   showBenchmarkSessionGroupContent: boolean;
   showCreatorPresenceInHeader: boolean;
   showEmptyChatFocusRestoreButton: boolean;
+  showExploreContent: boolean;
   showExplicitNonSessionContent: boolean;
   showHeader: boolean;
   showNewSessionButton: boolean;
@@ -75,6 +77,7 @@ export function useChatPanelContentState({
   contentMode,
   createTarget,
   currentSessionId,
+  exploreOpen,
   isChatFocus,
   panelTitle,
   selectedProject,
@@ -120,13 +123,21 @@ export function useChatPanelContentState({
     !showSessionContent &&
     !showWorkItemContent &&
     !showProjectContent;
+  const showExploreContent =
+    exploreOpen &&
+    !showBenchmarkSessionGroupContent &&
+    !showSessionContent &&
+    !showWorkItemContent &&
+    !showProjectContent &&
+    !showWorkspaceDashboardContent;
   const showWorkspaceOverviewContent =
     Boolean(selectedWorkspace) &&
     !showBenchmarkSessionGroupContent &&
     !showSessionContent &&
     !showWorkItemContent &&
     !showProjectContent &&
-    !showWorkspaceDashboardContent;
+    !showWorkspaceDashboardContent &&
+    !showExploreContent;
   const showStickyNotesContent =
     stickyNotesOpen &&
     !showBenchmarkSessionGroupContent &&
@@ -134,6 +145,7 @@ export function useChatPanelContentState({
     !showWorkItemContent &&
     !showProjectContent &&
     !showWorkspaceDashboardContent &&
+    !showExploreContent &&
     !showWorkspaceOverviewContent;
   const showExplicitNonSessionContent =
     contentMode === CHAT_PANEL_CONTENT_MODE.NON_SESSION;
@@ -142,6 +154,7 @@ export function useChatPanelContentState({
     !showWorkItemContent &&
     !showProjectContent &&
     !showWorkspaceDashboardContent &&
+    !showExploreContent &&
     !showWorkspaceOverviewContent &&
     !showStickyNotesContent &&
     !showSessionContent;
@@ -151,6 +164,7 @@ export function useChatPanelContentState({
     showWorkItemContent ||
     showProjectContent ||
     showWorkspaceDashboardContent ||
+    showExploreContent ||
     showWorkspaceOverviewContent ||
     showStickyNotesContent ||
     showExplicitNonSessionContent;
@@ -160,6 +174,7 @@ export function useChatPanelContentState({
     showWorkItemContent ||
     showProjectContent ||
     showWorkspaceDashboardContent ||
+    showExploreContent ||
     showWorkspaceOverviewContent ||
     showExplicitNonSessionContent ||
     (active && (showSessionContent || viewMode === "workStation"));
@@ -186,9 +201,11 @@ export function useChatPanelContentState({
             ? projectTitle
             : showWorkspaceDashboardContent
               ? t("navigation:launchpad.dashboard")
-              : selectedWorkspace
-                ? workspaceTitle
-                : panelTitle;
+              : showExploreContent
+                ? t("navigation:explore.title", { defaultValue: "Explore" })
+                : selectedWorkspace
+                  ? workspaceTitle
+                  : panelTitle;
 
   const handleBenchmarkSessionGroupHeaderClick = useCallback(() => {
     if (!benchmarkMasterSessionId) return;
@@ -231,7 +248,9 @@ export function useChatPanelContentState({
         </span>
       )}
     </span>
-  ) : showWorkspaceDashboardContent || showWorkspaceOverviewContent ? (
+  ) : showWorkspaceDashboardContent ||
+    showExploreContent ||
+    showWorkspaceOverviewContent ? (
     <span className={`${BENCHMARK_HEADER_SEGMENT_CLASS} cursor-default`}>
       <span className="min-w-0 -translate-y-px truncate">{headerTitle}</span>
     </span>
@@ -249,6 +268,7 @@ export function useChatPanelContentState({
     !selectedProject &&
     !selectedWorkspace &&
     !showStickyNotesContent &&
+    !showExploreContent &&
     !isBenchmarkTarget &&
     !isProjectTarget &&
     !isWorkItemTarget;
@@ -258,6 +278,7 @@ export function useChatPanelContentState({
     !selectedProject &&
     !selectedWorkspace &&
     !showStickyNotesContent &&
+    !showExploreContent &&
     isWorkItemTarget &&
     sessionCreatorAvailable;
   const showProjectAgentSwitchInHeader =
@@ -266,6 +287,7 @@ export function useChatPanelContentState({
     !selectedProject &&
     !selectedWorkspace &&
     !showStickyNotesContent &&
+    !showExploreContent &&
     isProjectTarget &&
     sessionCreatorAvailable;
   const showEmptyChatFocusRestoreButton =
@@ -275,6 +297,7 @@ export function useChatPanelContentState({
     !selectedProject &&
     !selectedWorkspace &&
     !showStickyNotesContent &&
+    !showExploreContent &&
     isChatFocus &&
     showChatFocusToggle;
 
@@ -289,6 +312,7 @@ export function useChatPanelContentState({
     showBenchmarkSessionGroupContent,
     showCreatorPresenceInHeader,
     showEmptyChatFocusRestoreButton,
+    showExploreContent,
     showExplicitNonSessionContent,
     showHeader,
     showNewSessionButton,

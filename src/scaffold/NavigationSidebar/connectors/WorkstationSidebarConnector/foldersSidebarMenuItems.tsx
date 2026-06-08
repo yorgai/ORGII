@@ -19,6 +19,7 @@ import { getRustAgentType } from "@src/util/session/sessionDispatch";
 export const FOLDERS_WORKSPACES_SECTION_ID = "separator-folders-workspaces";
 export const FOLDERS_REPOS_SECTION_ID = "separator-folders-repos";
 export const FOLDERS_DASHBOARD_ITEM_ID = "folders-dashboard";
+export const FOLDERS_EXPLORE_ITEM_ID = "folders-explore";
 const FOLDERS_MY_KEYS_SECTION_ID = "separator-folders-my-keys";
 export const FOLDERS_MY_AGENTS_SECTION_ID = "separator-folders-my-agents";
 export const FOLDERS_MY_AGENTS_COLLAPSE_SECTION_ID = "folders-my-agents";

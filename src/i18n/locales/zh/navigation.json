@@ -404,7 +404,7 @@
       }
     },
     "actions": {
-      "switchToRepo": "切换到此仓库",
+      "switchToRepo": "切换",
       "startSession": "开始会话",
       "openDetails": "打开详情",
       "locateInFinder": "在 Finder 中显示",
@@ -413,6 +413,9 @@
       "removeFailed": "移除工作区失败"
     },
     "addWorkspace": "添加工作区"
+  },
+  "explore": {
+    "title": "探索"
   },
   "workstation": {
     "dockFilter": {

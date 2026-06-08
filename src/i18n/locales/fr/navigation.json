@@ -325,6 +325,9 @@
     },
     "addWorkspace": "Ajouter un espace de travail"
   },
+  "explore": {
+    "title": "Explorer"
+  },
   "workstation": {
     "dockFilter": {
       "all": "Tous les onglets",

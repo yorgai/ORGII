@@ -323,6 +323,9 @@
     },
     "addWorkspace": "Workspace ekle"
   },
+  "explore": {
+    "title": "Keşfet"
+  },
   "workstation": {
     "dockFilter": {
       "all": "Tüm Sekmeler",

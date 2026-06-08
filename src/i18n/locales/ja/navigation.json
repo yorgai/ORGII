@@ -323,6 +323,9 @@
     },
     "addWorkspace": "Workspace を追加"
   },
+  "explore": {
+    "title": "探す"
+  },
   "workstation": {
     "dockFilter": {
       "all": "すべてのタブ",

@@ -353,6 +353,29 @@
     },
     "addWorkspace": "Add workspace"
   },
+  "explore": {
+    "title": "Explore",
+    "search": "Search",
+    "searching": "Searching...",
+    "searchPlaceholder": "Search GitHub repositories (e.g. language:rust tauri)",
+    "clone": "Clone",
+    "cloning": "Cloning...",
+    "openOnGithub": "GitHub",
+    "cloneSuccess": "Cloned {{name}}",
+    "cloneFailed": "Clone failed",
+    "cloneNoTarget": "No default workspace folder configured. Set one in Settings.",
+    "errorTitle": "Search failed",
+    "noResultsTitle": "No repositories matched",
+    "noResultsSubtitle": "Try a different query or sort.",
+    "resultsCount": "{{shown}} of {{total}} repositories",
+    "partial": "(partial — search timed out)",
+    "sort": {
+      "bestMatch": "Best match",
+      "stars": "Stars",
+      "updated": "Recently updated",
+      "forks": "Forks"
+    }
+  },
   "changelog": {
     "title": "Changelog",
     "subtitle": "Product updates",

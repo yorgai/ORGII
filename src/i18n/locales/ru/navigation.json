@@ -323,6 +323,9 @@
     },
     "addWorkspace": "Добавить workspace"
   },
+  "explore": {
+    "title": "Обзор"
+  },
   "workstation": {
     "dockFilter": {
       "all": "Все вкладки",

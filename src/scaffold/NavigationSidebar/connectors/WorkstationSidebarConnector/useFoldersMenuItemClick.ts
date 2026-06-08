@@ -21,6 +21,7 @@ import type { WorkspaceFolder } from "@src/types/workspace";
 
 import {
   FOLDERS_DASHBOARD_ITEM_ID,
+  FOLDERS_EXPLORE_ITEM_ID,
   FOLDERS_REPO_ITEM_PREFIX,
   FOLDERS_WORKSPACE_ITEM_PREFIX,
   getRepoDisplayName,
@@ -49,10 +50,12 @@ interface UseFoldersMenuItemClickParams {
   setChatPanelSelectedProject: NullableSetter<ChatPanelSelectedProject>;
   setChatPanelSelectedWorkItem: NullableSetter<ChatPanelSelectedWorkItem>;
   setChatPanelSelectedWorkspace: NullableSetter<ChatPanelSelectedWorkspace>;
+  setChatPanelExploreOpen: (open: boolean) => void;
   setChatPanelStickyNotesOpen: (open: boolean) => void;
   setChatPanelWorkspaceDashboardOpen: (open: boolean) => void;
   setChatPanelWorkspaceOverviewTab: (tab: WorkspaceOverviewTab) => void;
   setFoldersDashboardSelected: (selected: boolean) => void;
+  setFoldersExploreSelected: (selected: boolean) => void;
   setProjectsSelectedMenuItemId: (id: string) => void;
 }
 
@@ -70,11 +73,13 @@ export function useFoldersMenuItemClick({
   setChatPanelCreateTarget,
   setChatPanelSelectedProject,
   setChatPanelSelectedWorkItem,
+  setChatPanelExploreOpen,
   setChatPanelSelectedWorkspace,
   setChatPanelStickyNotesOpen,
   setChatPanelWorkspaceDashboardOpen,
   setChatPanelWorkspaceOverviewTab,
   setFoldersDashboardSelected,
+  setFoldersExploreSelected,
   setProjectsSelectedMenuItemId,
 }: UseFoldersMenuItemClickParams): (
   key: string,
@@ -86,7 +91,27 @@ export function useFoldersMenuItemClick({
         resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId("");
         setFoldersDashboardSelected(true);
+        setFoldersExploreSelected(false);
         setChatPanelWorkspaceDashboardOpen(true);
+        setChatPanelExploreOpen(false);
+        setChatPanelSelectedWorkItem(null);
+        setChatPanelSelectedProject(null);
+        setChatPanelSelectedWorkspace(null);
+        setChatPanelStickyNotesOpen(false);
+        setChatPanelCreateProjectContext(null);
+        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
+        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        navigate(ROUTES.workStation.code.path);
+        return;
+      }
+
+      if (item.id === FOLDERS_EXPLORE_ITEM_ID) {
+        resetOpsControlStateForProjectsContent();
+        setProjectsSelectedMenuItemId("");
+        setFoldersDashboardSelected(false);
+        setFoldersExploreSelected(true);
+        setChatPanelExploreOpen(true);
+        setChatPanelWorkspaceDashboardOpen(false);
         setChatPanelSelectedWorkItem(null);
         setChatPanelSelectedProject(null);
         setChatPanelSelectedWorkspace(null);
@@ -120,6 +145,8 @@ export function useFoldersMenuItemClick({
         resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId("");
         setFoldersDashboardSelected(false);
+        setFoldersExploreSelected(false);
+        setChatPanelExploreOpen(false);
         setChatPanelWorkspaceDashboardOpen(false);
         setChatPanelSelectedWorkItem(null);
         setChatPanelSelectedProject(null);
@@ -153,6 +180,8 @@ export function useFoldersMenuItemClick({
       resetOpsControlStateForProjectsContent();
       setProjectsSelectedMenuItemId("");
       setFoldersDashboardSelected(false);
+      setFoldersExploreSelected(false);
+      setChatPanelExploreOpen(false);
       setChatPanelWorkspaceDashboardOpen(false);
       setChatPanelSelectedWorkItem(null);
       setChatPanelSelectedProject(null);
@@ -182,12 +211,14 @@ export function useFoldersMenuItemClick({
       setChatPanelCreateProjectContext,
       setChatPanelCreateTarget,
       setChatPanelSelectedProject,
+      setChatPanelExploreOpen,
       setChatPanelSelectedWorkspace,
       setChatPanelSelectedWorkItem,
       setChatPanelStickyNotesOpen,
       setChatPanelWorkspaceDashboardOpen,
       setChatPanelWorkspaceOverviewTab,
       setFoldersDashboardSelected,
+      setFoldersExploreSelected,
       setProjectsSelectedMenuItemId,
     ]
   );
