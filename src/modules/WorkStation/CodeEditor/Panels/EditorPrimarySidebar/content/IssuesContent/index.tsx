@@ -4,21 +4,28 @@
  * GitHub Issues panel for the workstation primary sidebar.
  * Interaction patterns aligned with SourceControlContent:
  * - "Filter issues…" input (same style as "Filter changes…")
- * - CollapsibleSection grouping for Open/Closed issues
- * - State filter as compact header actions on the section header
+ * - Single CollapsibleSection with a compact status dropdown in the header
  */
 import { useSetAtom } from "jotai";
-import { Filter as FilterIcon, RefreshCw } from "lucide-react";
+import {
+  CircleDot,
+  Filter as FilterIcon,
+  ListFilter,
+  RefreshCw,
+  XCircle,
+} from "lucide-react";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import Dropdown from "@src/components/Dropdown";
 import Input from "@src/components/Input";
 import { buildIntegrationsPath } from "@src/config/mainAppPaths/integrations";
 import {
   COUNT_BADGE,
   HEADER_BUTTON,
   HEADER_ICON_SIZE,
+  SECTION_ACTION_BUTTON,
   getCountBadgeSizeClass,
 } from "@src/config/workstation/tokens";
 import { CollapsibleSection } from "@src/modules/WorkStation/shared/PrimarySidebarLayout";
@@ -73,8 +80,8 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
 
     const [showNewIssueForm, setShowNewIssueForm] = useState(false);
     const [creatingIssue, setCreatingIssue] = useState(false);
-    const [openCollapsed, setOpenCollapsed] = useState(false);
-    const [closedCollapsed, setClosedCollapsed] = useState(false);
+    const [sectionCollapsed, setSectionCollapsed] = useState(false);
+    const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
     const listRef = useRef<HTMLDivElement>(null);
 
     const handleOpenNewIssueForm = useCallback(() => {
@@ -147,78 +154,96 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
       );
     }
 
-    const openIssues = issues.filter((i) => i.state === "open");
-    const closedIssues = issues.filter((i) => i.state === "closed");
+    const countBadge = (
+      <span
+        className={`${COUNT_BADGE.base} ${getCountBadgeSizeClass(issues.length)} ${COUNT_BADGE.primary}`}
+      >
+        {issues.length}
+      </span>
+    );
 
-    const showOpenSection = filterState === "open" || filterState === "all";
-    const showClosedSection = filterState === "closed" || filterState === "all";
+    const sectionTitle = (
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="truncate">Issues</span>
+        {countBadge}
+      </span>
+    );
 
-    // State filter compact toggle actions rendered in the section header area
-    const filterActions: { value: IssueFilterState; label: string }[] = [
-      { value: "open", label: "Open" },
-      { value: "closed", label: "Closed" },
-      { value: "all", label: "All" },
+    // Status filter dropdown options — icon + label per state
+    const filterOptions = [
+      {
+        value: "open" as IssueFilterState,
+        label: "Open",
+        icon: <CircleDot size={13} strokeWidth={1.75} />,
+        color: "text-success-6",
+      },
+      {
+        value: "closed" as IssueFilterState,
+        label: "Closed",
+        icon: <XCircle size={13} strokeWidth={1.75} />,
+        color: "text-text-3",
+      },
+      {
+        value: "all" as IssueFilterState,
+        label: "All",
+        icon: <ListFilter size={13} strokeWidth={1.75} />,
+        color: "text-text-3",
+      },
     ];
 
-    const stateFilterNode = (
-      <div className="flex rounded border border-border-2 bg-fill-1">
-        {filterActions.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setFilterState(value);
-            }}
-            className={`px-1.5 py-[1px] text-[10px] font-medium transition-colors first:rounded-l last:rounded-r ${
-              filterState === value
-                ? "bg-primary-6 text-white"
-                : "text-text-3 hover:text-text-1"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-    );
+    const currentFilter = filterOptions.find((f) => f.value === filterState)!;
 
-    // Count badge for section header (matching SectionHeader style)
-    const openCountBadge = (
-      <span
-        className={`${COUNT_BADGE.base} ${getCountBadgeSizeClass(openIssues.length)} ${COUNT_BADGE.primary}`}
+    const statusDropdown = (
+      <Dropdown
+        popupVisible={filterDropdownOpen}
+        onVisibleChange={setFilterDropdownOpen}
+        position="bottom-end"
+        droplist={
+          <div className="min-w-[110px] py-1">
+            {filterOptions.map(({ value, label, icon, color }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFilterState(value);
+                  setFilterDropdownOpen(false);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] transition-colors hover:bg-fill-2 ${
+                  filterState === value ? "text-text-1" : "text-text-2"
+                }`}
+              >
+                <span className={color}>{icon}</span>
+                <span>{label}</span>
+                {filterState === value && (
+                  <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-primary-6" />
+                )}
+              </button>
+            ))}
+          </div>
+        }
       >
-        {openIssues.length}
-      </span>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className={`${SECTION_ACTION_BUTTON.base} gap-1 px-1.5 py-0.5 text-[11px] font-medium ${
+            filterDropdownOpen
+              ? "bg-fill-2 text-text-1"
+              : "text-text-3 hover:text-text-1"
+          }`}
+          title={`Filter: ${currentFilter.label}`}
+        >
+          <span className={currentFilter.color}>{currentFilter.icon}</span>
+          <span>{currentFilter.label}</span>
+        </button>
+      </Dropdown>
     );
 
-    const closedCountBadge = (
-      <span
-        className={`${COUNT_BADGE.base} ${getCountBadgeSizeClass(closedIssues.length)} ${COUNT_BADGE.primary}`}
-      >
-        {closedIssues.length}
-      </span>
-    );
-
-    // Section title with count badge embedded (mimics "STAGED CHANGES (4)" pattern)
-    const openSectionTitle = (
-      <span className="flex min-w-0 items-center gap-1.5">
-        <span className="truncate">Open Issues</span>
-        {openCountBadge}
-      </span>
-    );
-
-    const closedSectionTitle = (
-      <span className="flex min-w-0 items-center gap-1.5">
-        <span className="truncate">Closed Issues</span>
-        {closedCountBadge}
-      </span>
-    );
-
-    // Refresh + state filter as section header actions
     const issuesSectionActions = [
       {
         key: "filter-state",
-        customRender: stateFilterNode,
+        customRender: statusDropdown,
+        forceVisible: filterDropdownOpen,
       },
       {
         key: "refresh",
@@ -285,81 +310,39 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
           fillParentHeight
         />
       );
-    } else if (issues.length === 0) {
-      listContent = (
-        <Placeholder
-          variant="empty"
-          placement="sidebar"
-          title={t("git.issues.empty", "No {{state}} issues", {
-            state: filterState,
-          })}
-          fillParentHeight
-        />
-      );
     } else {
       listContent = (
         <div ref={listRef} className="flex flex-1 flex-col overflow-y-auto">
-          {showOpenSection && (
-            <CollapsibleSection
-              title={openSectionTitle}
-              collapsed={openCollapsed}
-              onCollapseChange={setOpenCollapsed}
-              collapsible
-              resizable={false}
-              isLast={!showClosedSection}
-              autoHeight={!showClosedSection}
-              hideSeparator={!showClosedSection}
-              actions={issuesSectionActions}
-            >
-              {openIssues.length === 0 ? (
-                <Placeholder
-                  variant="empty"
-                  placement="sidebar"
-                  title="No open issues"
+          <CollapsibleSection
+            title={sectionTitle}
+            collapsed={sectionCollapsed}
+            onCollapseChange={setSectionCollapsed}
+            collapsible
+            resizable={false}
+            isLast
+            autoHeight={false}
+            hideSeparator
+            actions={issuesSectionActions}
+          >
+            {issues.length === 0 ? (
+              <Placeholder
+                variant="empty"
+                placement="sidebar"
+                title={t("git.issues.empty", "No {{state}} issues", {
+                  state: filterState,
+                })}
+              />
+            ) : (
+              issues.map((issue) => (
+                <IssueRow
+                  key={issue.number}
+                  issue={issue}
+                  isSelected={false}
+                  onClick={() => selectIssue(issue)}
                 />
-              ) : (
-                openIssues.map((issue) => (
-                  <IssueRow
-                    key={issue.number}
-                    issue={issue}
-                    isSelected={false}
-                    onClick={() => selectIssue(issue)}
-                  />
-                ))
-              )}
-            </CollapsibleSection>
-          )}
-
-          {showClosedSection && (
-            <CollapsibleSection
-              title={closedSectionTitle}
-              collapsed={closedCollapsed}
-              onCollapseChange={setClosedCollapsed}
-              collapsible
-              resizable={false}
-              isLast
-              autoHeight
-              hideSeparator
-              actions={!showOpenSection ? issuesSectionActions : []}
-            >
-              {closedIssues.length === 0 ? (
-                <Placeholder
-                  variant="empty"
-                  placement="sidebar"
-                  title="No closed issues"
-                />
-              ) : (
-                closedIssues.map((issue) => (
-                  <IssueRow
-                    key={issue.number}
-                    issue={issue}
-                    isSelected={false}
-                    onClick={() => selectIssue(issue)}
-                  />
-                ))
-              )}
-            </CollapsibleSection>
-          )}
+              ))
+            )}
+          </CollapsibleSection>
         </div>
       );
     }
