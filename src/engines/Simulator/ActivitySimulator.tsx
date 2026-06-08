@@ -55,14 +55,11 @@ const ActivitySimulator: React.FC = memo(() => {
   const autoLayoutEnabled = useAtomValue(simulatorAutoLayoutAtom);
   const showDock = useAtomValue(simulatorShowDockAtom);
   const workStationLayoutMode = useAtomValue(workStationLayoutModeAtom);
-  const [selectedApp, setSelectedApp] = useAtom(simulatorSelectedAppAtom);
   const chatVisible = useAtomValue(chatVisibleAtom);
   const simulatorInputCollapsed = useAtomValue(
     simulatorInlineChatInputCollapsedAtom
   );
-  const setSimulatorInlineChatCollapsed = useSetAtom(
-    simulatorInlineChatInputCollapsedAtom
-  );
+  const [selectedApp, setSelectedApp] = useAtom(simulatorSelectedAppAtom);
   const replayMode = useAtomValue(replayModeAtom);
   const setReplayMode = useSetAtom(replayModeAtom) as (
     mode: ReplayMode
@@ -219,6 +216,8 @@ const ActivitySimulator: React.FC = memo(() => {
     forceAppType: isBgTasksSelected ? null : effectiveSelectedApp,
     currentEvent: isBgTasksSelected ? currentEvent : displayEvent,
   };
+  const showFloatingInputOverlay =
+    showDock && !chatVisible && hasSession && !simulatorInputCollapsed;
 
   if (!hasSession) {
     return (
@@ -250,17 +249,11 @@ const ActivitySimulator: React.FC = memo(() => {
                   <ActivitySimulatorGrid {...gridProps} />
                 )}
 
-                {/* ── Floating chat input overlay ── */}
-                {showDock && !chatVisible && hasSession && (
+                {showFloatingInputOverlay && (
                   <div
                     className={`pointer-events-none absolute inset-0 z-[25] flex flex-col justify-end p-3 sm:p-4 ${floatingDockComposerAlignClass}`}
                   >
-                    <SimulatorFloatingInput
-                      collapsed={simulatorInputCollapsed}
-                      alignClass={floatingDockComposerAlignClass}
-                      onCollapse={() => setSimulatorInlineChatCollapsed(true)}
-                      onExpand={() => setSimulatorInlineChatCollapsed(false)}
-                    />
+                    <SimulatorFloatingInput />
                   </div>
                 )}
               </div>

@@ -5,15 +5,20 @@
  * The progress slider is now handled by MusicPlayerReplayBar on the dock border.
  */
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { Keyboard } from "lucide-react";
 import React, { memo, useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
+import Button from "@src/components/Button";
 import {
   currentSimulatorEventIndexAtom,
   navigateNextSimulatorEventAtom,
   simulatorEventCountAtom,
 } from "@src/engines/SessionCore";
+import { chatVisibleAtom } from "@src/store/ui/chatPanelAtom";
 import {
   type SimulatorPlaybackSpeed,
+  simulatorInlineChatInputCollapsedAtom,
   simulatorPlaybackSpeedAtom,
   simulatorSessionPlaybackPlayingAtom,
 } from "@src/store/ui/simulatorAtom";
@@ -30,12 +35,20 @@ const AUTOPLAY_BASE_INTERVAL_MS = 2000;
  * callers write.
  */
 const FloatingReplayContainer: React.FC = memo(() => {
+  const { t } = useTranslation("sessions");
   const [isReplaying, setIsReplaying] = useAtom(
     simulatorSessionPlaybackPlayingAtom
   );
   const navigateNext = useSetAtom(navigateNextSimulatorEventAtom);
   const currentIndex = useAtomValue(currentSimulatorEventIndexAtom);
   const eventCount = useAtomValue(simulatorEventCountAtom);
+  const chatVisible = useAtomValue(chatVisibleAtom);
+  const simulatorInputCollapsed = useAtomValue(
+    simulatorInlineChatInputCollapsedAtom
+  );
+  const setSimulatorInlineChatCollapsed = useSetAtom(
+    simulatorInlineChatInputCollapsedAtom
+  );
 
   const [playbackSpeed, setPlaybackSpeedAtom] = useAtom(
     simulatorPlaybackSpeedAtom
@@ -100,6 +113,29 @@ const FloatingReplayContainer: React.FC = memo(() => {
           playbackSpeed={playbackSpeed}
           onPlaybackSpeedChange={setPlaybackSpeed}
         />
+        {!chatVisible ? (
+          <Button
+            variant="secondary"
+            size="default"
+            shape="circle"
+            iconOnly
+            icon={
+              <Keyboard
+                size={16}
+                strokeWidth={1.75}
+                className={
+                  simulatorInputCollapsed ? undefined : "text-primary-6"
+                }
+              />
+            }
+            className="shadow-md"
+            onClick={() =>
+              setSimulatorInlineChatCollapsed(!simulatorInputCollapsed)
+            }
+            aria-label={t("simulator.replay.dockShowChatInput")}
+            title={t("simulator.replay.dockShowChatInput")}
+          />
+        ) : null}
       </div>
     </div>
   );
