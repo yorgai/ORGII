@@ -69,6 +69,31 @@ export function hasTurnBlockingRunningSessionEvent(
   });
 }
 
+export function isComposerBlockingRunningSessionEvent(
+  event: SessionEvent
+): boolean {
+  if (!isTurnBlockingRunningSessionEvent(event)) return false;
+
+  const shellProcessStatus = shellProcessStatusFromArgs(event.args);
+  if (shellProcessStatus) {
+    return TURN_BLOCKING_SHELL_PROCESS_STATUSES.has(shellProcessStatus);
+  }
+
+  return (
+    event.actionType === "tool_call" || event.displayVariant === "tool_call"
+  );
+}
+
+export function hasComposerBlockingRunningSessionEvent(
+  events: readonly SessionEvent[],
+  sessionId: string
+): boolean {
+  return events.some((event) => {
+    if (event.sessionId && event.sessionId !== sessionId) return false;
+    return isComposerBlockingRunningSessionEvent(event);
+  });
+}
+
 export function isTimelineBoundaryClosableRunningEvent(
   event: SessionEvent,
   sessionId: string

@@ -918,6 +918,14 @@ async function assertBackgroundProcessPinnedToChatSession() {
     }
   );
 
+  const sendState = await execJS(`
+    const button = document.querySelector('[data-testid="chat-send-button"]');
+    return button ? button.getAttribute("data-state") : null;
+  `);
+  if (sendState !== "submit") {
+    throw new Error(`background process must not keep composer in stop state: ${sendState}`);
+  }
+
   const clickResult = await execJS(`
     const pill = document.querySelector('[data-testid="composer-section-process"]');
     if (!pill) return "missing";
@@ -944,13 +952,11 @@ async function assertBackgroundProcessPinnedToChatSession() {
   );
 }
 
-async function assertWorkingFooterShownForHiddenRunningEvent() {
-  const sessionId = `e2e-render-working-footer-${Date.now()}`;
-  const baseTime = Date.now();
-  const events = [
+function makeHiddenRunningEvents(sessionId, baseTime) {
+  return [
     {
-      id: "working-footer-user",
-      chunk_id: "working-footer-user",
+      id: "hidden-running-user",
+      chunk_id: "hidden-running-user",
       sessionId,
       createdAt: new Date(baseTime).toISOString(),
       functionName: "user_message",
@@ -970,8 +976,8 @@ async function assertWorkingFooterShownForHiddenRunningEvent() {
       isDelta: false,
     },
     {
-      id: "working-footer-hidden-running",
-      chunk_id: "working-footer-hidden-running",
+      id: "hidden-running-status",
+      chunk_id: "hidden-running-status",
       sessionId,
       createdAt: new Date(baseTime + 1_000).toISOString(),
       functionName: "hidden_status",
@@ -987,6 +993,12 @@ async function assertWorkingFooterShownForHiddenRunningEvent() {
       isDelta: false,
     },
   ];
+}
+
+async function assertWorkingFooterShownForHiddenRunningEvent() {
+  const sessionId = `e2e-render-working-footer-${Date.now()}`;
+  const baseTime = Date.now();
+  const events = makeHiddenRunningEvents(sessionId, baseTime);
 
   const seed = await invokeE2E("seedChatEvents", sessionId, events, {
     chatPanelMaximized: true,
@@ -1010,6 +1022,40 @@ async function assertWorkingFooterShownForHiddenRunningEvent() {
       timeoutMsg: `working footer did not render for hidden running event: ${JSON.stringify(
         await execJS(`return { body: (document.body.innerText || "").slice(0, 5000) };`)
       )}; state=${JSON.stringify(await invokeE2E("inspectChatState"))}`,
+    }
+  );
+}
+
+async function assertStaleHiddenRunningEventDoesNotHoldStopButton() {
+  const sessionId = `e2e-render-stale-hidden-running-${Date.now()}`;
+  const baseTime = Date.now();
+  const seed = await invokeE2E("seedChatEvents", sessionId, makeHiddenRunningEvents(sessionId, baseTime), {
+    chatPanelMaximized: true,
+    stationMode: "my-station",
+  });
+  if (!seed || seed.ok !== true) {
+    throw new Error(`seedChatEvents failed for stale hidden running event: ${seed?.error ?? "unknown"}`);
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const sendState = await execJS(`
+        const button = document.querySelector('[data-testid="chat-send-button"]');
+        return button ? button.getAttribute("data-state") : null;
+      `);
+      return sendState === "submit";
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `stale hidden running event kept composer in stop state: ${JSON.stringify(
+        await execJS(`
+          const button = document.querySelector('[data-testid="chat-send-button"]');
+          return {
+            sendState: button ? button.getAttribute("data-state") : null,
+            body: (document.body.innerText || "").slice(0, 5000),
+          };
+        `)
+      )}`,
     }
   );
 }
@@ -1277,6 +1323,15 @@ describe("Core chat rendering UI", () => {
     }
 
     await assertWorkingFooterShownForHiddenRunningEvent();
+  });
+
+  it("does not keep Stop active for stale hidden running events", async function () {
+    if (!shouldRunScenario("stale-hidden-running-stop-state")) {
+      this.skip();
+      return;
+    }
+
+    await assertStaleHiddenRunningEventDoesNotHoldStopButton();
   });
 
   it("renders multi-repo read file targets as paths instead of generic file labels", async function () {

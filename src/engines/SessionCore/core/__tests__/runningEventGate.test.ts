@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  hasComposerBlockingRunningSessionEvent,
   hasRunningSessionEvent,
   hasTurnBlockingRunningSessionEvent,
 } from "../runningEventGate";
@@ -26,12 +27,29 @@ function shellEvent(
   } as unknown as SessionEvent;
 }
 
+function hiddenStatusEvent(): SessionEvent {
+  return {
+    id: "hidden-running",
+    sessionId: "session-1",
+    source: "assistant",
+    createdAt: new Date().toISOString(),
+    actionType: "raw",
+    functionName: "hidden_status",
+    displayStatus: "running",
+    displayVariant: "session",
+    result: { status: "running" },
+  } as unknown as SessionEvent;
+}
+
 describe("runningEventGate", () => {
   it("treats background shell processes as live resources but not turn-blocking work", () => {
     const events = [shellEvent("background")];
 
     expect(hasRunningSessionEvent(events, "session-1")).toBe(true);
     expect(hasTurnBlockingRunningSessionEvent(events, "session-1")).toBe(false);
+    expect(hasComposerBlockingRunningSessionEvent(events, "session-1")).toBe(
+      false
+    );
   });
 
   it("treats foreground shell processes as both live and turn-blocking", () => {
@@ -39,6 +57,9 @@ describe("runningEventGate", () => {
 
     expect(hasRunningSessionEvent(events, "session-1")).toBe(true);
     expect(hasTurnBlockingRunningSessionEvent(events, "session-1")).toBe(true);
+    expect(hasComposerBlockingRunningSessionEvent(events, "session-1")).toBe(
+      true
+    );
   });
 
   it("does not treat exited shell processes as live or turn-blocking", () => {
@@ -46,5 +67,18 @@ describe("runningEventGate", () => {
 
     expect(hasRunningSessionEvent(events, "session-1")).toBe(false);
     expect(hasTurnBlockingRunningSessionEvent(events, "session-1")).toBe(false);
+    expect(hasComposerBlockingRunningSessionEvent(events, "session-1")).toBe(
+      false
+    );
+  });
+
+  it("keeps hidden running status events out of composer stop state", () => {
+    const events = [hiddenStatusEvent()];
+
+    expect(hasRunningSessionEvent(events, "session-1")).toBe(true);
+    expect(hasTurnBlockingRunningSessionEvent(events, "session-1")).toBe(true);
+    expect(hasComposerBlockingRunningSessionEvent(events, "session-1")).toBe(
+      false
+    );
   });
 });

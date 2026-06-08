@@ -27,7 +27,7 @@ import { useDataContext } from "@src/contexts/workspace/DataContext";
 import useWorkspaceChat from "@src/engines/ChatPanel/hooks/useWorkspaceChat";
 import { useRepositoryInfo } from "@src/engines/SessionCore";
 import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
-import { hasRunningSessionEvent } from "@src/engines/SessionCore/core/runningEventGate";
+import { hasComposerBlockingRunningSessionEvent } from "@src/engines/SessionCore/core/runningEventGate";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import { createLogger } from "@src/hooks/logger";
 import {
@@ -172,16 +172,16 @@ export function useInputArea(
   });
   const activeSessionId = propSessionId ?? resolvedActiveSessionId;
   const draftSessionId = activeSessionId ?? "";
-  const hasRunningEvent = activeSessionId
-    ? hasRunningSessionEvent(sessionEvents, activeSessionId)
+  const hasComposerBlockingRunningEvent = activeSessionId
+    ? hasComposerBlockingRunningSessionEvent(sessionEvents, activeSessionId)
     : false;
 
   // Visual "agent is working" flag — drives the Stop vs. Send icon.
-  // The authoritative source is the union of session runtime activity and
-  // EventStore tool lifecycle. This matches shell-task semantics: an empty
-  // composer must not hide Stop while a backend tool is still running.
+  // This uses the composer-specific gate: foreground tools remain stoppable,
+  // while background processes and hidden status sentinels stay in footer/replay
+  // surfaces without keeping the main button stuck in Stop.
   const isWpGeneWorking =
-    (isSessionActive || hasRunningEvent) && !isPendingCancel;
+    (isSessionActive || hasComposerBlockingRunningEvent) && !isPendingCancel;
 
   // Session-scoped repo path. When a session is active prefer its persisted
   // `repo_path` (the value that drove `workspace_root` at session start) over
