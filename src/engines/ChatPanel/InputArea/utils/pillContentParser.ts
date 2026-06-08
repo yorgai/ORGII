@@ -62,6 +62,14 @@ export function parsePillTextToSnapshot(text: string): ComposerSnapshot {
 
       // Split the raw capture into "preceding text on this line" + the actual
       // pill filename (last whitespace-delimited token before the bracket).
+      //
+      // When the user types in a language without inter-word spaces (CJK) and
+      // the pill sits directly against the preceding text, there is no space
+      // to anchor the split — treat all of `rawDisplayName` as preceding text
+      // and fall back to the path's basename for the pill display name. The
+      // alternative (treating the whole capture as the display name) would
+      // swallow the user's prose into the pill (e.g. the entire Chinese
+      // message would render as a single blue file pill).
       const rawDisplayName = match[1];
       const lastSpaceIdx = rawDisplayName.search(/\s[^\s]*$/);
       let precedingText: string;
@@ -70,8 +78,8 @@ export function parsePillTextToSnapshot(text: string): ComposerSnapshot {
         precedingText = rawDisplayName.slice(0, lastSpaceIdx + 1);
         fileName = rawDisplayName.slice(lastSpaceIdx + 1).trim();
       } else {
-        precedingText = "";
-        fileName = rawDisplayName.trim();
+        precedingText = rawDisplayName;
+        fileName = match[3].split("/").pop()?.split("::")[0] || match[3];
       }
 
       if (matchStart > lastIndex) {

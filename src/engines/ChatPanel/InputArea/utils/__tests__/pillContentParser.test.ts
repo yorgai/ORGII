@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { hasPillSyntax, stripExpandedPillContent } from "../pillContentParser";
+import {
+  hasPillSyntax,
+  parsePillTextToSnapshot,
+  stripExpandedPillContent,
+} from "../pillContentParser";
 
 // ============================================================
 // stripExpandedPillContent
@@ -62,5 +66,113 @@ describe("stripExpandedPillContent", () => {
 describe("hasPillSyntax", () => {
   it("returns false for plain text", () => {
     expect(hasPillSyntax("hello world")).toBe(false);
+  });
+});
+
+// ============================================================
+// parsePillTextToSnapshot
+// ============================================================
+
+describe("parsePillTextToSnapshot", () => {
+  it("splits ASCII text + pill on the trailing whitespace", () => {
+    const snapshot = parsePillTextToSnapshot(
+      "look at package.json [file:/repo/package.json]"
+    );
+    expect(snapshot.parts).toEqual([
+      { kind: "text", text: "look at " },
+      {
+        kind: "pill",
+        attrs: {
+          filePath: "/repo/package.json",
+          fileName: "package.json",
+          isFolder: false,
+          iconType: "file",
+          lineStart: null,
+          lineEnd: null,
+        },
+      },
+    ]);
+  });
+
+  it("does not swallow CJK prose into the pill display name when no space precedes the pill", () => {
+    // Regression: previously `lastSpaceIdx === -1` made the entire CJK prefix
+    // become the pill's fileName, rendering the whole sentence as a single
+    // blue file pill.
+    const snapshot = parsePillTextToSnapshot(
+      "生成一个plan给我看看这个package.json [file:/repo/package.json]"
+    );
+    expect(snapshot.parts).toEqual([
+      { kind: "text", text: "生成一个plan给我看看这个package.json" },
+      {
+        kind: "pill",
+        attrs: {
+          filePath: "/repo/package.json",
+          fileName: "package.json",
+          isFolder: false,
+          iconType: "file",
+          lineStart: null,
+          lineEnd: null,
+        },
+      },
+    ]);
+  });
+
+  it("falls back to the path basename when there is no preceding text at all", () => {
+    const snapshot = parsePillTextToSnapshot("[file:/repo/src/utils.ts]");
+    // No match[1] capture means the regex requires non-empty preceding text;
+    // verify we still produce a sane result when one exists but has no space.
+    const tight = parsePillTextToSnapshot("foo[file:/repo/src/utils.ts]");
+    expect(tight.parts).toEqual([
+      { kind: "text", text: "foo" },
+      {
+        kind: "pill",
+        attrs: {
+          filePath: "/repo/src/utils.ts",
+          fileName: "utils.ts",
+          isFolder: false,
+          iconType: "file",
+          lineStart: null,
+          lineEnd: null,
+        },
+      },
+    ]);
+    // PILL_REGEX requires at least one char before "[", so a bare pill cannot
+    // match — snapshot stays as a single literal text part.
+    expect(snapshot.parts).toEqual([
+      { kind: "text", text: "[file:/repo/src/utils.ts]" },
+    ]);
+  });
+
+  it("preserves newlines between pills", () => {
+    const snapshot = parsePillTextToSnapshot(
+      "first foo.ts [file:/a/foo.ts]\nsecond bar.ts [file:/a/bar.ts]"
+    );
+    expect(snapshot.parts).toEqual([
+      { kind: "text", text: "first " },
+      {
+        kind: "pill",
+        attrs: {
+          filePath: "/a/foo.ts",
+          fileName: "foo.ts",
+          isFolder: false,
+          iconType: "file",
+          lineStart: null,
+          lineEnd: null,
+        },
+      },
+      { kind: "newline" },
+      { kind: "text", text: "second " },
+      {
+        kind: "pill",
+        attrs: {
+          filePath: "/a/bar.ts",
+          fileName: "bar.ts",
+          isFolder: false,
+          iconType: "file",
+          lineStart: null,
+          lineEnd: null,
+        },
+      },
+    ]);
   });
 });
