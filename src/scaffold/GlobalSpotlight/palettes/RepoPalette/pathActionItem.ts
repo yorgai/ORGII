@@ -7,19 +7,17 @@ import {
 
 interface BuildOpenPathItemArgs {
   searchQuery: string;
-  matchCount: number;
   addLabel: string;
   onOpenPath: (candidatePath: string) => void;
 }
 
 export function buildOpenPathItem({
   searchQuery,
-  matchCount,
   addLabel,
   onOpenPath,
 }: BuildOpenPathItemArgs): SpotlightItem | null {
   const candidatePath = getWorkspacePathCandidate(searchQuery);
-  if (!candidatePath || matchCount > 0) return null;
+  if (!candidatePath) return null;
 
   const folderName = getWorkspacePathDisplayName(candidatePath);
 

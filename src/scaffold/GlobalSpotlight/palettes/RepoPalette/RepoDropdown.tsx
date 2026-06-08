@@ -267,7 +267,6 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
     () =>
       buildOpenPathItem({
         searchQuery,
-        matchCount: filteredRepos.length + filteredWorkspaces.length,
         addLabel: t("selectors.repo.pathImport.addLabel"),
         onOpenPath: (candidatePath) => {
           void importWorkspacePath({
@@ -280,8 +279,6 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
       }),
     [
       workspaceForm.handleImportWorkspace,
-      filteredRepos.length,
-      filteredWorkspaces.length,
       invalidPathMessage,
       invalidPathTitle,
       searchQuery,

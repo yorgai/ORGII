@@ -271,6 +271,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
     setModalStage,
     onClose,
     refreshReposForce,
+    searchQuery,
     setEditingWorkspace:
       addWorkspaceFlow.multiRepoWorkspaceForm.setEditingWorkspace,
   });
@@ -335,7 +336,6 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
     () =>
       buildOpenPathItem({
         searchQuery,
-        matchCount: filteredRepos.length + workspaceItems.length,
         addLabel: paletteText.addFolderLabel,
         onOpenPath: (candidatePath) => {
           void importWorkspacePath({
@@ -349,12 +349,10 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
       }),
     [
       addWorkspaceFlow.localWorkspaceForm.handleImportWorkspace,
-      filteredRepos.length,
       paletteText.invalidPathMessage,
       paletteText.invalidPathTitle,
       paletteText.addFolderLabel,
       searchQuery,
-      workspaceItems.length,
     ]
   );
 

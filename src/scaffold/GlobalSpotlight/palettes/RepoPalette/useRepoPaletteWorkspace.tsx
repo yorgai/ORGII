@@ -20,6 +20,7 @@ import {
   listWorkspaces,
 } from "@src/api/tauri/workspace";
 import Message from "@src/components/Toast";
+import { useFilteredItems } from "@src/hooks/search";
 import {
   activeWorkspaceIdAtom,
   activeWorkspaceNameAtom,
@@ -46,6 +47,8 @@ export interface UseRepoPaletteWorkspaceOptions {
   setModalStage: (stage: AddWorkspaceModalStage) => void;
   onClose: () => void;
   refreshReposForce: () => Promise<void>;
+  /** Free-text search query used to filter workspace items by name + member repos. */
+  searchQuery: string;
   /** multiRepoWorkspaceForm from useAddWorkspaceFlow — only `setEditingWorkspace` is needed */
   setEditingWorkspace: (ws: WorkspaceRecord) => void;
 }
@@ -100,6 +103,7 @@ export function useRepoPaletteWorkspace({
   setModalStage,
   onClose,
   refreshReposForce,
+  searchQuery,
   setEditingWorkspace,
 }: UseRepoPaletteWorkspaceOptions): UseRepoPaletteWorkspaceReturn {
   const { t } = useTranslation();
@@ -291,8 +295,25 @@ export function useRepoPaletteWorkspace({
     t,
   ]);
 
+  const getWorkspaceSearchText = useCallback(
+    (ws: WorkspaceRecord): string => {
+      const memberNames = ws.folders.map(resolveWorkspaceRepoName);
+      const memberPaths = ws.folders.map((folder) => folder.folderPath ?? "");
+      return [ws.name, ...memberNames, ...memberPaths]
+        .filter(Boolean)
+        .join(" ");
+    },
+    [resolveWorkspaceRepoName]
+  );
+
+  const { filteredItems: filteredWorkspaces } = useFilteredItems({
+    items: savedWorkspaces,
+    searchQuery,
+    getSearchText: getWorkspaceSearchText,
+  });
+
   const workspaceItems = useMemo((): SpotlightItem[] => {
-    const orderedWorkspaces = [...savedWorkspaces].sort(
+    const orderedWorkspaces = [...filteredWorkspaces].sort(
       (workspaceA, workspaceB) => {
         if (workspaceA.workspaceId === activeWorkspaceId) return -1;
         if (workspaceB.workspaceId === activeWorkspaceId) return 1;
@@ -363,7 +384,7 @@ export function useRepoPaletteWorkspace({
       };
     });
   }, [
-    savedWorkspaces,
+    filteredWorkspaces,
     activeWorkspaceId,
     handleWorkspaceSelect,
     handleEditWorkspace,
