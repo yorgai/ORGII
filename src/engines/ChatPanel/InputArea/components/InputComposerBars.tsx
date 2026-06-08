@@ -397,7 +397,7 @@ export const NormalComposerContent: React.FC<NormalComposerContentProps> = ({
             </div>
           }
           submitButton={
-            <>
+            <div className="flex h-7 items-center gap-0.5">
               {voiceFeatureEnabled && (
                 <VoiceInputButton
                   onPressStart={voice.start}
@@ -423,7 +423,7 @@ export const NormalComposerContent: React.FC<NormalComposerContentProps> = ({
                 onInterrupt={onInterrupt}
                 onResume={onResume}
               />
-            </>
+            </div>
           }
         />
       )}
