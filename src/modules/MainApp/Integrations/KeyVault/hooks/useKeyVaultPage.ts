@@ -4,7 +4,6 @@
  * Wizard open-state is read from the URL via {@link useWizardParam}:
  *
  *   ?wizard=key-add              → add a new BYOK key (CLI agent or API key)
- *   ?wizard=hosted-api-add       → add an ORGII hosted API key
  *
  * Renaming an existing account happens inline inside the table's expanded
  * card (Edit tab) — there is no standalone edit wizard.
@@ -19,7 +18,6 @@ import { useNavigate } from "react-router-dom";
 
 import type { SaveKeyRequest as RpcSaveKeyRequest } from "@src/api/tauri/rpc/schemas/validation";
 import type { ModelType, SaveKeyRequest } from "@src/api/types/keys";
-import { ORGII_ORCHESTRATOR } from "@src/assets/providers";
 import Message from "@src/components/Message";
 import { WIZARD_IDS, buildIntegrationsPath } from "@src/config/mainAppPaths";
 import { useKeyVault } from "@src/hooks/keyVault";
@@ -60,7 +58,6 @@ export function useKeyVaultPage() {
   // Wizard open-state derived from URL
   const { wizard, openWizard } = useWizardParam();
   const showAddForm = wizard === WIZARD_IDS.KEY_ADD;
-  const showOrgiiAddForm = wizard === WIZARD_IDS.ORGII_API_ADD;
 
   const closeKeyVaultWizard = useCallback(() => {
     navigate(buildIntegrationsPath({ category: "models" }), { replace: true });
@@ -223,7 +220,6 @@ export function useKeyVaultPage() {
 
     // Form state
     showAddForm,
-    showOrgiiAddForm,
     formLoading,
     selectedAccountId,
 
@@ -238,30 +234,7 @@ export function useKeyVaultPage() {
       setSelectedAccountId(null);
       openWizard(WIZARD_IDS.KEY_ADD);
     },
-    handleAddOrgiiApi: () => {
-      setSelectedAccountId(null);
-      openWizard(WIZARD_IDS.ORGII_API_ADD);
-    },
     handleFormSubmit,
-    handleOrgiiApiSubmit: async (name: string, apiKey: string) => {
-      setFormLoading(true);
-      try {
-        const saved = await saveKey({
-          agent_type: ORGII_ORCHESTRATOR,
-          name,
-          api_key: apiKey,
-          auth_method: "api_key",
-        });
-        await refresh();
-        if (saved?.id) setSelectedAccountId(saved.id);
-      } catch (err) {
-        Message.error(
-          err instanceof Error ? err.message : t("common:status.saveFailed")
-        );
-      } finally {
-        setFormLoading(false);
-      }
-    },
     handleFormCancel: closeKeyVaultWizard,
     handleEditAccountSave,
     refresh,

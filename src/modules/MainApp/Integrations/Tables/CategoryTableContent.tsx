@@ -172,7 +172,6 @@ export const CategoryTableContent: React.FC<CategoryTableContentProps> = (
           loading={props.accountsLoading}
           onSelect={props.onSelectAccount}
           onAdd={() => onAddAction("add-model")}
-          onCreateOrgiiApiKey={() => onAddAction("create-orgii-api-key")}
           onRefresh={props.onRefreshAccounts}
           onEditAccount={props.onEditAccount}
           onEditAccountSave={props.onEditAccountSave}

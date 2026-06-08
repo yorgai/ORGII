@@ -61,7 +61,6 @@ interface AccountsTableProps {
   loading: boolean;
   onSelect: (id: string | null, mode?: DetailMode) => void;
   onAdd: () => void;
-  onCreateOrgiiApiKey?: () => void;
   onRefresh?: () => Promise<void>;
   onEditAccount?: (accountId: string) => void;
   onEditAccountSave?: (

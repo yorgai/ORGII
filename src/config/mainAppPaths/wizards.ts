@@ -1,6 +1,5 @@
 export const WIZARD_IDS = {
   KEY_ADD: "key-add",
-  ORGII_API_ADD: "orgii-api-add",
   MCP_ADD: "mcp-add",
   MCP_EDIT: "mcp-edit",
   SKILL_CREATE: "skill-create",

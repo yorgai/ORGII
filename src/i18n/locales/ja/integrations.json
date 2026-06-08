@@ -1095,7 +1095,6 @@
   },
   "toolbarPlusMenu": {
     "addProviderKey": "プロバイダーキーを追加",
-    "createOrgiiApiKey": "ORGII API キーを作成",
     "addMcpServer": "MCP サーバーを追加",
     "createSkill": "Skills を作成",
     "addWebAppCommand": "Web App コマンドを追加",
@@ -1236,7 +1235,6 @@
   "addOptions": {
     "addModel": "モデル API Key を追加",
     "bringYourOwnKey": "自分のキーを持ち込む",
-    "createOrgiiApi": "ORGII API を作成",
     "addCli": "CLI Agent を追加",
     "addConnection": "追加",
     "addChannelOrService": "チャネルまたはサービスを追加",
@@ -1247,18 +1245,6 @@
     "addDatabase": "データベースを追加",
     "addRule": "ルールを追加",
     "importRule": "ルールをインポート"
-  },
-  "orgiiApi": {
-    "wizardTitle": "ORGII API キーを追加",
-    "nameLabel": "名前",
-    "nameDesc": "この API キーの表示名",
-    "namePlaceholder": "例: Production、Development",
-    "keyLabel": "API キー",
-    "keyDesc": "ORGII ウェブサイトで生成した API キーを貼り付け",
-    "keyPlaceholder": "orgii-...",
-    "openOrgiiLabel": "キーをまだお持ちでない場合",
-    "openOrgiiDesc": "ORGII アカウントページを開いてキーを生成",
-    "openOrgii": "ORGII を開く"
   },
   "routines": {
     "searchPlaceholder": "Search Routines...",

@@ -12,7 +12,6 @@ import {
   FileText,
   GitBranch,
   Key,
-  Settings as SettingsIcon,
   Unplug,
 } from "lucide-react";
 
@@ -65,12 +64,6 @@ function buildModelsDropdownItems(
       label: t("toolbarPlusMenu.addProviderKey"),
       icon: Key,
       onClick: () => dispatch("add-model"),
-    },
-    {
-      id: "create-orgii-api",
-      label: t("toolbarPlusMenu.createOrgiiApiKey"),
-      icon: SettingsIcon,
-      onClick: () => dispatch("create-orgii-api-key"),
     },
   ];
 }

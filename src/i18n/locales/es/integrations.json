@@ -1092,7 +1092,6 @@
   },
   "toolbarPlusMenu": {
     "addProviderKey": "Añadir clave de proveedor",
-    "createOrgiiApiKey": "Crear clave API de ORGII",
     "addMcpServer": "Añadir servidor MCP",
     "createSkill": "Crear skills",
     "addWebAppCommand": "Añadir comando Web App",
@@ -1233,7 +1232,6 @@
   "addOptions": {
     "addModel": "Agregar modelo API Key",
     "bringYourOwnKey": "Traer tu propia clave",
-    "createOrgiiApi": "Crear ORGII API",
     "addCli": "Agregar CLI Agent",
     "addConnection": "Añadir",
     "addChannelOrService": "Añadir canal o servicio",
@@ -1244,18 +1242,6 @@
     "addDatabase": "Agregar base de datos",
     "addRule": "Agregar política",
     "importRule": "Importar política"
-  },
-  "orgiiApi": {
-    "wizardTitle": "Agregar clave API ORGII",
-    "nameLabel": "Nombre",
-    "nameDesc": "Nombre para esta clave API",
-    "namePlaceholder": "ej. Producción, Desarrollo",
-    "keyLabel": "Clave API",
-    "keyDesc": "Pega una clave API generada en el sitio web de ORGII",
-    "keyPlaceholder": "orgii-...",
-    "openOrgiiLabel": "¿Aún no tienes una clave?",
-    "openOrgiiDesc": "Abre la página de cuenta de ORGII para generar una",
-    "openOrgii": "Abrir ORGII"
   },
   "routines": {
     "searchPlaceholder": "Search Routines...",

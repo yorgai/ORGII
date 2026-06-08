@@ -1092,7 +1092,6 @@
   },
   "toolbarPlusMenu": {
     "addProviderKey": "添加提供商密鑰",
-    "createOrgiiApiKey": "創建 ORGII API 密鑰",
     "addMcpServer": "添加 MCP 服務器",
     "createSkill": "創建 Skills",
     "addWebAppCommand": "添加 Web 應用命令",
@@ -1233,7 +1232,6 @@
   "addOptions": {
     "addModel": "添加模型 API Key",
     "bringYourOwnKey": "自帶密鑰",
-    "createOrgiiApi": "創建 ORGII API",
     "addCli": "添加 CLI Agent",
     "addConnection": "添加",
     "addChannelOrService": "添加頻道或服務",
@@ -1244,18 +1242,6 @@
     "addDatabase": "添加數據庫",
     "addRule": "新增規則",
     "importRule": "匯入規則"
-  },
-  "orgiiApi": {
-    "wizardTitle": "添加 ORGII API 密鑰",
-    "nameLabel": "名稱",
-    "nameDesc": "此 API 密鑰的顯示名稱",
-    "namePlaceholder": "例如 Production、Development",
-    "keyLabel": "API 密鑰",
-    "keyDesc": "粘貼在 ORGII 網站生成的 API 密鑰",
-    "keyPlaceholder": "orgii-...",
-    "openOrgiiLabel": "還沒有密鑰？",
-    "openOrgiiDesc": "打開 ORGII 賬戶頁面生成一個",
-    "openOrgii": "打開 ORGII"
   },
   "routines": {
     "searchPlaceholder": "搜索 Routines...",

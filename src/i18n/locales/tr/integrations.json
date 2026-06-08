@@ -1092,7 +1092,6 @@
   },
   "toolbarPlusMenu": {
     "addProviderKey": "Sağlayıcı anahtarı ekle",
-    "createOrgiiApiKey": "ORGII API anahtarı oluştur",
     "addMcpServer": "MCP sunucusu ekle",
     "createSkill": "Skills oluştur",
     "addWebAppCommand": "Web App komutu ekle",
@@ -1233,7 +1232,6 @@
   "addOptions": {
     "addModel": "Model API Key Ekle",
     "bringYourOwnKey": "Kendi anahtarını getir",
-    "createOrgiiApi": "ORGII API oluştur",
     "addCli": "CLI Agent Ekle",
     "addConnection": "Ekle",
     "addChannelOrService": "Kanal veya servis ekle",
@@ -1244,18 +1242,6 @@
     "addDatabase": "Veritabanı ekle",
     "addRule": "Politika ekle",
     "importRule": "Politika içe aktar"
-  },
-  "orgiiApi": {
-    "wizardTitle": "ORGII API Anahtarı Ekle",
-    "nameLabel": "Ad",
-    "nameDesc": "Bu API anahtarı için görünen ad",
-    "namePlaceholder": "ör. Production, Development",
-    "keyLabel": "API Anahtarı",
-    "keyDesc": "ORGII web sitesinde oluşturulan bir API anahtarını yapıştır",
-    "keyPlaceholder": "orgii-...",
-    "openOrgiiLabel": "Henüz bir anahtarın yok mu?",
-    "openOrgiiDesc": "Bir tane oluşturmak için ORGII hesap sayfasını aç",
-    "openOrgii": "ORGII'yi Aç"
   },
   "routines": {
     "searchPlaceholder": "Search Routines...",

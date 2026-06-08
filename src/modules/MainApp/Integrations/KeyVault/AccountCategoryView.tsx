@@ -1,7 +1,6 @@
 import React from "react";
 
 import { KeyVaultWizard } from "@src/scaffold/WizardSystem/variants/KeyVault";
-import OrgiiApiWizard from "@src/scaffold/WizardSystem/variants/OrgiiApi/OrgiiApiWizard";
 
 import type { CategoryTableContentProps } from "../Tables";
 import { CategoryTableContent } from "../Tables";
@@ -15,15 +14,6 @@ export const AccountCategoryView: React.FC<{
   onExpand?: () => void;
   onClosePreview: () => void;
 }> = ({ accounts, tableProps }) => {
-  if (accounts.showOrgiiAddForm) {
-    return (
-      <OrgiiApiWizard
-        onSubmit={accounts.handleOrgiiApiSubmit}
-        onCancel={accounts.handleFormCancel}
-      />
-    );
-  }
-
   if (accounts.showAddForm) {
     return (
       <KeyVaultWizard
