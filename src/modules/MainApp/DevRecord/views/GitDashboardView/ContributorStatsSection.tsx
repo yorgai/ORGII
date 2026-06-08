@@ -7,7 +7,7 @@ import SettingsTable, {
   type SettingsTableColumn,
 } from "@src/components/SettingsTable";
 import { CollapsibleSection } from "@src/modules/shared/layouts/blocks";
-import { formatCompactTimeAgo } from "@src/util/data/formatters/date";
+import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import { STAT_CARD_CONFIG } from "../../statCardConfig";
 import type { ContributorStats } from "./types";
@@ -120,7 +120,7 @@ export function ContributorStatsSection({
         renderCell: (row) =>
           row.lastCommitDate ? (
             <span className={`${SETTINGS_TABLE_CELL.muted} whitespace-nowrap`}>
-              {formatCompactTimeAgo(row.lastCommitDate)}
+              {formatRelativeTime(row.lastCommitDate, "nano")}
             </span>
           ) : (
             <span className={SETTINGS_TABLE_CELL.muted}>—</span>

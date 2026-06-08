@@ -9,7 +9,7 @@
  * - Single IPC call for all view data
  * - Search and status filtering done in Rust
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { enrichedWorkItemToUI, projectApi } from "@src/api/http/project";
 import type {
@@ -25,6 +25,7 @@ import type { CalendarEvent } from "@src/features/CalendarView";
 import type { GanttTask } from "@src/features/GanttChart";
 import type { KanbanTask } from "@src/features/KanbanBoard";
 import { createLogger } from "@src/hooks/logger";
+import { useDebouncedCallback } from "@src/hooks/perf";
 import { useProjectDataChanged } from "@src/hooks/project";
 import type { WorkItem as WorkItemExtended } from "@src/types/core/workItem";
 
@@ -207,22 +208,15 @@ export function useWorkItemsData({
 
   // Debounced search query for IPC calls (avoid IPC on every keystroke)
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const debouncedSetSearchQuery = useDebouncedCallback(
+    (q: string) => setDebouncedSearchQuery(q),
+    300
+  );
 
   useEffect(() => {
-    if (searchDebounceRef.current) {
-      clearTimeout(searchDebounceRef.current);
-    }
-    searchDebounceRef.current = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 300);
-
-    return () => {
-      if (searchDebounceRef.current) {
-        clearTimeout(searchDebounceRef.current);
-      }
-    };
-  }, [searchQuery]);
+    debouncedSetSearchQuery(searchQuery);
+  }, [searchQuery, debouncedSetSearchQuery]);
 
   const fetchViewData = useCallback(async () => {
     if (!projectSlug) {

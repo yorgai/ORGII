@@ -48,3 +48,10 @@ export type {
 // Safe hover (unmount-safe, no stuck hover states)
 export { useSafeHover, useSafeHoverCallbacks } from "./useSafeHover";
 export type { UseSafeHoverOptions } from "./useSafeHover";
+
+// Collapsible toggle state (open/closed sections)
+export { useCollapsible } from "./useCollapsible";
+export type {
+  UseCollapsibleOptions,
+  UseCollapsibleReturn,
+} from "./useCollapsible";

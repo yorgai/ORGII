@@ -342,7 +342,9 @@ export function useQueueDispatch(): void {
     );
     const explicitMsg = forcedMsg ?? postCancelSendMsg;
     const activeSessionId = explicitMsg?.sessionId ?? activeSessionIdHint;
-    if (!activeSessionId) return;
+    if (!activeSessionId) {
+      return;
+    }
 
     // Hold off while Rust is still winding down a cancelled turn — the
     // sessionHandlers will clear isPendingCancelAtom when agent:complete /
@@ -361,7 +363,9 @@ export function useQueueDispatch(): void {
       const interruptRequestedAt =
         explicitInterruptRequestedAtByQueueIdRef.current.get(explicitMsg.id);
       if (runtimeWorking && !interruptRequestedAt) {
-        if (explicitInterruptSessionRef.current === explicitMsg.id) return;
+        if (explicitInterruptSessionRef.current === explicitMsg.id) {
+          return;
+        }
         const requestedAt = Date.now();
         explicitInterruptRequestedAtByQueueIdRef.current.set(
           explicitMsg.id,
@@ -410,7 +414,9 @@ export function useQueueDispatch(): void {
       explicitMsg ??
       queueRef.current.find((message) => message.sessionId === activeSessionId);
 
-    if (!nextMsg || editingRef.current) return;
+    if (!nextMsg || editingRef.current) {
+      return;
+    }
 
     const explicitBypassesRuntimeSettle =
       explicitMsg !== undefined && nextMsg.id === explicitMsg.id;
@@ -457,7 +463,9 @@ export function useQueueDispatch(): void {
       lockSessionIdRef.current = null;
     }
 
-    if (dispatchLockRef.current) return;
+    if (dispatchLockRef.current) {
+      return;
+    }
     if (sentQueuedMessageIdsRef.current.has(nextMsg.id)) {
       dequeueMessage(nextMsg.id);
       return;

@@ -1,8 +1,11 @@
 /**
- * StatusBadge Component
+ * StatusCountBadge Component
  *
  * Displays status counts with icons (errors, warnings, passed, etc.)
  * Used in Problems panel, Test Results, and other summary displays.
+ *
+ * Renamed from `StatusBadge` to avoid collision with `@src/components/StatusBadge`
+ * (the animated-pulse status-pill component).
  */
 import {
   AlertCircle,
@@ -24,7 +27,7 @@ export type StatusVariant =
   | "info"
   | "neutral";
 
-export interface StatusBadgeProps {
+export interface StatusCountBadgeProps {
   /** Status type determines icon and color */
   variant: StatusVariant;
   /** Count to display */
@@ -81,7 +84,7 @@ const VARIANT_CONFIG: Record<StatusVariant, VariantConfig> = {
 // Component
 // ============================================
 
-export const StatusBadge: React.FC<StatusBadgeProps> = memo(
+export const StatusCountBadge: React.FC<StatusCountBadgeProps> = memo(
   ({
     variant,
     count,
@@ -90,7 +93,6 @@ export const StatusBadge: React.FC<StatusBadgeProps> = memo(
     iconSize = 14,
     className = "",
   }) => {
-    // Don't render if count is 0 and showZero is false
     if (count === 0 && !showZero) {
       return null;
     }
@@ -99,7 +101,6 @@ export const StatusBadge: React.FC<StatusBadgeProps> = memo(
     const Icon = config.icon;
     const displayLabel = label ?? config.defaultLabel;
 
-    // Pluralize label if count !== 1
     const pluralizedLabel =
       displayLabel && count !== 1 && !displayLabel.endsWith("s")
         ? `${displayLabel}s`
@@ -119,7 +120,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = memo(
   }
 );
 
-StatusBadge.displayName = "StatusBadge";
+StatusCountBadge.displayName = "StatusCountBadge";
 
 // ============================================
 // StatusSummary - Multiple badges in a row
@@ -163,10 +164,10 @@ export const StatusSummary: React.FC<StatusSummaryProps> = memo(
 
     return (
       <div className={`flex items-center ${GAP_CLASSES[gap]} ${className}`}>
-        <StatusBadge variant="error" count={errors} />
-        <StatusBadge variant="warning" count={warnings} />
-        <StatusBadge variant="success" count={passed} />
-        <StatusBadge variant="info" count={info} />
+        <StatusCountBadge variant="error" count={errors} />
+        <StatusCountBadge variant="warning" count={warnings} />
+        <StatusCountBadge variant="success" count={passed} />
+        <StatusCountBadge variant="info" count={info} />
       </div>
     );
   }
@@ -174,4 +175,4 @@ export const StatusSummary: React.FC<StatusSummaryProps> = memo(
 
 StatusSummary.displayName = "StatusSummary";
 
-export default StatusBadge;
+export default StatusCountBadge;

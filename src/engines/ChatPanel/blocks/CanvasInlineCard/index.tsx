@@ -1,26 +1,29 @@
 /**
  * CanvasInlineCard — Agent-generated interactive preview embedded in chat.
  *
- * Renders a sandboxed iframe directly in the message stream. Three modes:
- *   html  — static HTML from the agent (e.g. a report, a chart)
- *   url   — external URL (e.g. a web page the agent navigated to)
- *   a2ui  — incremental JSONL stream; elements are appended as they arrive
+ * Renders a card directly in the message stream. Three modes:
+ *   html  — static HTML from the agent, sandboxed iframe (security isolation)
+ *   url   — external URL, sandboxed iframe with allow-same-origin
+ *   a2ui  — incremental JSONL stream rendered as native React components
  *
- * Unlike the WorkStation Canvas tab (full-height simulator surface), this
- * card is compact, collapsible, and lives inline between chat messages.
+ * For a2ui mode the previous iframe + postMessage approach has been replaced
+ * with A2UIRenderer, which receives the parsed lines directly as props and
+ * re-renders incrementally without any full reload.
  *
- * Security: html/a2ui iframes use sandbox="allow-scripts" only (no
- * allow-same-origin). URL iframes add allow-same-origin so cross-origin
- * resources load correctly, but form submission and popups are still gated.
+ * Security:
+ *   - html iframes: sandbox="allow-scripts" only (no allow-same-origin)
+ *   - url iframes: allow-same-origin so cross-origin assets load correctly
+ *   - a2ui: DOMPurify sanitizes type="html" elements in A2UIRenderer
  */
 import { Layout, Monitor } from "lucide-react";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import IconButton from "@src/components/IconButton";
 
+import A2UIRenderer, { type A2UIRendererHandle } from "./A2UIRenderer";
 import { CanvasErrorBoundary } from "./CanvasErrorBoundary";
-import { buildA2UIDocument, buildHtmlDocument } from "./canvasBuilder";
+import { buildHtmlDocument } from "./canvasBuilder";
 import type { CanvasInlineCardProps } from "./types";
 import { useJumpToSimulatorCanvas } from "./useJumpToSimulatorCanvas";
 
@@ -52,58 +55,28 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
   initialHeight = 280,
   isStreaming = false,
   sessionId,
+  onAction,
 }) => {
   const { t } = useTranslation("sessions");
 
   const [heightStep] = useState(() => resolveInitialStep(initialHeight));
-
-  // Separate refs for each iframe variant to avoid targeting the wrong window
-  const htmlIframeRef = useRef<HTMLIFrameElement>(null);
+  const rendererRef = useRef<A2UIRendererHandle>(null);
 
   const currentHeight = HEIGHT_STEPS[heightStep % HEIGHT_STEPS.length];
 
-  // Split A2UI content into individual lines once per content update
+  // Split A2UI content into individual lines — React state update on each
+  // streaming chunk causes A2UIRenderer to diff only new elements.
   const a2uiLines = useMemo(() => {
     if (mode !== "a2ui" || !content) return [];
     return content.split("\n").filter(Boolean);
   }, [mode, content]);
 
-  // Full document for html/a2ui modes — used both as srcDoc initial load
-  // and as fallback when postMessage incremental push is unavailable.
-  // Guard with content truthiness: empty string produces a blank dark iframe,
-  // which should fall through to the "Waiting / No content" fallback instead.
-  const srcDoc = useMemo(() => {
+  // Build the srcDoc only for html mode. For a2ui mode we no longer generate
+  // a document — native React handles the incremental rendering.
+  const htmlSrcDoc = useMemo(() => {
     if (mode === "html" && content) return buildHtmlDocument(content);
-    if (mode === "a2ui" && a2uiLines.length > 0)
-      return buildA2UIDocument(a2uiLines);
     return undefined;
-  }, [mode, content, a2uiLines]);
-
-  // For A2UI: push only newly-arrived lines via postMessage to avoid a full
-  // iframe reload on every streaming chunk.
-  const prevA2UICountRef = useRef(0);
-  useEffect(() => {
-    if (mode !== "a2ui") return;
-    const prev = prevA2UICountRef.current;
-    const current = a2uiLines.length;
-    if (current <= prev) return;
-
-    prevA2UICountRef.current = current;
-
-    const newLines = a2uiLines.slice(prev);
-    const iframe = htmlIframeRef.current;
-    if (iframe?.contentWindow) {
-      try {
-        iframe.contentWindow.postMessage(
-          { type: "a2ui_push", lines: newLines },
-          "*"
-        );
-      } catch {
-        // Sandboxed iframes reject postMessage in some older browsers — the
-        // full document is already set via srcDoc, so the content is not lost.
-      }
-    }
-  }, [mode, a2uiLines]);
+  }, [mode, content]);
 
   const simulatorPayload = useMemo(
     () => ({ mode, content, url, title, streaming: isStreaming }),
@@ -121,6 +94,53 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
       : mode === "a2ui"
         ? t("canvasCard.titleA2ui")
         : t("canvasCard.titleHtml"));
+
+  // ── render content area ───────────────────────────────────────────────────
+
+  let contentArea: React.ReactNode;
+
+  if (mode === "url" && url) {
+    contentArea = (
+      <iframe
+        src={url}
+        className="h-full w-full border-0"
+        sandbox="allow-scripts allow-same-origin allow-forms"
+        title={cardTitle}
+      />
+    );
+  } else if (mode === "html" && htmlSrcDoc) {
+    // HTML mode: still uses iframe for sandboxed security isolation.
+    // Setting key={htmlSrcDoc.length} avoids full reload on every char — the
+    // document only reloads when the content length changes by a meaningful
+    // amount (streaming updates to existing content are stable here since the
+    // agent typically sends the full document in one shot for html mode).
+    contentArea = (
+      <iframe
+        srcDoc={htmlSrcDoc}
+        className="h-full w-full border-0"
+        sandbox="allow-scripts"
+        title={cardTitle}
+      />
+    );
+  } else if (mode === "a2ui" && a2uiLines.length > 0) {
+    contentArea = (
+      <A2UIRenderer
+        ref={rendererRef}
+        lines={a2uiLines}
+        onAction={onAction}
+        sessionId={sessionId}
+        className="h-full"
+      />
+    );
+  } else {
+    contentArea = (
+      <div className="flex h-full items-center justify-center">
+        <span className="text-xs text-text-4">
+          {isStreaming ? t("canvasCard.waiting") : t("canvasCard.empty")}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="group/canvas my-2 overflow-hidden rounded-lg border border-border-1 bg-bg-2">
@@ -152,35 +172,12 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
         </div>
       </div>
 
-      {/* ── iframe ── */}
+      {/* ── Content ── */}
       <div
         className="relative w-full overflow-hidden transition-[height] duration-300 ease-in-out"
         style={{ height: currentHeight }}
       >
-        {mode === "url" && url ? (
-          // URL mode: separate ref, allow-same-origin so cross-origin assets load
-          <iframe
-            src={url}
-            className="h-full w-full border-0"
-            sandbox="allow-scripts allow-same-origin allow-forms"
-            title={cardTitle}
-          />
-        ) : srcDoc ? (
-          // html / a2ui: injected srcDoc, no allow-same-origin
-          <iframe
-            ref={htmlIframeRef}
-            srcDoc={srcDoc}
-            className="h-full w-full border-0"
-            sandbox="allow-scripts"
-            title={cardTitle}
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <span className="text-xs text-text-4">
-              {isStreaming ? t("canvasCard.waiting") : t("canvasCard.empty")}
-            </span>
-          </div>
-        )}
+        {contentArea}
 
         {/* Streaming progress bar — pulsing accent line at bottom edge */}
         {isStreaming && (

@@ -1,9 +1,12 @@
 /**
- * Status Badge Component
+ * LspActionsCell Component
  *
  * Unified actions cell: enable/disable switch + icon-only install/uninstall.
  * Shows loading state on buttons while action is in progress;
  * detailed output is in the Settings bottom panel terminal.
+ *
+ * Renamed from `StatusBadge` to avoid collision with `@src/components/StatusBadge`
+ * (the animated-pulse status-pill component).
  */
 import Button from "@/src/components/Button";
 import Switch from "@/src/components/Switch";
@@ -12,7 +15,7 @@ import React, { memo } from "react";
 
 import type { ActionState } from "../types";
 
-interface StatusBadgeProps {
+interface LspActionsCellProps {
   installed: boolean;
   onInstall?: () => void;
   onUninstall?: () => void;
@@ -23,7 +26,7 @@ interface StatusBadgeProps {
   onWorkspaceToggle?: (enabled: boolean) => void;
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = memo(
+export const LspActionsCell: React.FC<LspActionsCellProps> = memo(
   ({
     installed,
     onInstall,
@@ -71,4 +74,4 @@ export const StatusBadge: React.FC<StatusBadgeProps> = memo(
   }
 );
 
-StatusBadge.displayName = "StatusBadge";
+LspActionsCell.displayName = "LspActionsCell";

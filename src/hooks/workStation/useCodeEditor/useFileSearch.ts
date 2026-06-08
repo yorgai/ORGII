@@ -5,8 +5,9 @@
  * Provides deferred search results for smoother UI during rapid typing.
  */
 import { useAtom, useSetAtom } from "jotai";
-import { useCallback, useDeferredValue, useRef } from "react";
+import { useCallback, useDeferredValue } from "react";
 
+import { useDebouncedCallback } from "@src/hooks/perf";
 import type { FileSearchResult } from "@src/store/workstation/codeEditor/file";
 import {
   fileClearSearchAtom,
@@ -47,17 +48,12 @@ export function useFileSearch(repoPath: string): UseFileSearchReturn {
   // Deferred search results for smoother UI during rapid typing
   const deferredSearchResults = useDeferredValue(searchResults);
 
-  // Debounce timer ref to prevent firing IPC on every keystroke
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Track whether the first search in a burst has fired (leading edge)
-  const hasFiredLeadingRef = useRef(false);
+  /** Debounce delay for file search IPC calls (ms) */
+  const SEARCH_DEBOUNCE_MS = 150;
 
   // ============================================
   // Search files (leading + debounced trailing IPC)
   // ============================================
-
-  /** Debounce delay for subsequent file search IPC calls (ms) */
-  const SEARCH_DEBOUNCE_MS = 150;
 
   /** Execute the actual search IPC call */
   const executeSearch = useCallback(
@@ -102,41 +98,32 @@ export function useFileSearch(repoPath: string): UseFileSearchReturn {
     [repoPath, setSearchResults, setSearchError, setSearchLoading]
   );
 
+  const debouncedExecuteSearch = useDebouncedCallback(
+    (query: string) => {
+      executeSearch(query);
+    },
+    SEARCH_DEBOUNCE_MS,
+    { leading: true }
+  );
+
   const searchFiles = useCallback(
     async (query: string) => {
-      // Cancel any pending debounced search
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-        debounceTimerRef.current = null;
-      }
-
       if (!query.trim()) {
+        debouncedExecuteSearch.cancel();
         setSearchResults([]);
         setSearchQuery("");
         setSearchLoading(false);
-        hasFiredLeadingRef.current = false;
         return;
       }
 
-      // Update query immediately for responsive UI
       setSearchQuery(query);
       setSearchLoading(true);
       setSearchError(null);
 
-      // Leading edge: fire first search immediately for instant results
-      if (!hasFiredLeadingRef.current) {
-        hasFiredLeadingRef.current = true;
-        executeSearch(query);
-        return;
-      }
-
-      // Trailing edge: debounce subsequent searches to avoid IPC spam
-      debounceTimerRef.current = setTimeout(() => {
-        executeSearch(query);
-      }, SEARCH_DEBOUNCE_MS);
+      debouncedExecuteSearch(query);
     },
     [
-      executeSearch,
+      debouncedExecuteSearch,
       setSearchQuery,
       setSearchLoading,
       setSearchError,

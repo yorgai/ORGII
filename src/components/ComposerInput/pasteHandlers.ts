@@ -3,18 +3,21 @@
  *
  * Mirrors `ComposerInput/editorHandlers/pasteHandler.ts` priority order:
  *   1. Image files → forwarded to `onImagePaste`, paste suppressed.
- *   2. Terminal selection (`window.__orgiiLastTerminalCopy` within window) →
+ *   2. Composer fragment (`application/x-orgii-composer-fragment`) → re-insert
+ *      text and pills from a prior cut/copy within the same editor.
+ *   3. Terminal selection (`window.__orgiiLastTerminalCopy` within window) →
  *      insert a terminal pill, suppress paste.
- *   3. File reference (`application/x-orgii-file-reference`) → insert a
+ *   4. File reference (`application/x-orgii-file-reference`) → insert a
  *      file-reference pill with line range, suppress paste.
- *   4. Skill path or frontmatter → insert a skill pill, suppress paste.
- *   5. Otherwise, sanitize the plain-text payload and insert it manually so
+ *   5. Skill path or frontmatter → insert a skill pill, suppress paste.
+ *   6. Otherwise, sanitize the plain-text payload and insert it manually so
  *      `contenteditable` does not pull in formatted HTML from the source.
  */
 import { storePillText } from "@src/config/pillTokens";
 import { createLogger } from "@src/hooks/logger";
 import type { InstalledSkill } from "@src/types/extensions";
 
+import type { ComposerFragmentPart } from "./cutHandler";
 import type { ComposerPillAttrs } from "./types";
 import { TERMINAL_COPY_MAX_AGE, sanitizeText } from "./utils";
 
@@ -92,6 +95,30 @@ export function createPasteHandler(ctx: PasteHandlerContext) {
       event.preventDefault();
       onImagePaste(imageFiles);
       return true;
+    }
+
+    // Composer fragment — rich paste from a prior cut/copy within this editor.
+    // Handles text runs, newlines, and pills (with full metadata) in order.
+    const fragmentData = clipboardData.getData(
+      "application/x-orgii-composer-fragment"
+    );
+    if (fragmentData) {
+      try {
+        const parts = JSON.parse(fragmentData) as ComposerFragmentPart[];
+        event.preventDefault();
+        for (const part of parts) {
+          if (part.kind === "text") {
+            ctx.insertTextAtCaret(part.text);
+          } else if (part.kind === "newline") {
+            ctx.insertTextAtCaret("\n");
+          } else if (part.kind === "pill") {
+            ctx.insertPill(part.attrs);
+          }
+        }
+        return true;
+      } catch {
+        // Malformed JSON — fall through to plain-text handling.
+      }
     }
 
     const pastedText = clipboardData.getData("text/plain");

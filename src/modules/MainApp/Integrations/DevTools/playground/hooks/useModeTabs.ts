@@ -15,6 +15,7 @@ export function useModeTabsDefinition() {
       { key: "ui" as const, label: t("devTools.modeUi") },
       { key: "tool" as const, label: t("devTools.modeTool") },
       { key: "input" as const, label: t("devTools.modeInput") },
+      { key: "session-link" as const, label: t("devTools.modeSessionLink") },
     ],
     [t]
   );

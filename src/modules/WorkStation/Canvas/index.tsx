@@ -1,19 +1,25 @@
 /**
  * Canvas App
  *
- * Renders agent-generated dynamic UI in a sandboxed iframe.
+ * Renders agent-generated dynamic UI in a sandboxed iframe (html/url modes)
+ * or as native React components (a2ui mode).
+ *
  * Listens for canvas events from the backend via WebSocket:
- * - canvas:present - Show HTML content or URL
- * - canvas:hide - Hide the canvas
- * - canvas:navigate - Navigate to a URL
- * - canvas:eval - Execute JavaScript in the canvas
- * - canvas:a2ui_push - Push A2UI JSONL content
- * - canvas:a2ui_reset - Reset A2UI state
+ * - canvas:present     — Show HTML content or URL
+ * - canvas:hide        — Hide the canvas
+ * - canvas:navigate    — Navigate to a URL
+ * - canvas:eval        — Execute JavaScript via A2UIRenderer.evalScript
+ * - canvas:a2ui_push   — Push A2UI JSONL content (accumulated incrementally)
+ * - canvas:a2ui_reset  — Reset A2UI state
  */
 import { ExternalLink, Layout, Maximize2, Minimize2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import A2UIRenderer, {
+  type A2UIRendererHandle,
+} from "@src/engines/ChatPanel/blocks/CanvasInlineCard/A2UIRenderer";
+import { buildHtmlDocument } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/canvasBuilder";
 import type { SimulatorAppProps } from "@src/engines/Simulator/apps/core/types";
 import {
   NoTabsPlaceholder,
@@ -55,6 +61,7 @@ function CanvasApp(props: SimulatorAppProps) {
   const [state, setState] = useState<CanvasState>(INITIAL_STATE);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const a2uiRendererRef = useRef<A2UIRendererHandle>(null);
   const { t } = useTranslation("sessions");
   const { t: tCommon } = useTranslation("common");
   const simulatorPlaceholderActions = useSimulatorPlaceholderActions(
@@ -99,14 +106,19 @@ function CanvasApp(props: SimulatorAppProps) {
           break;
 
         case "canvas:eval":
-          if (iframeRef.current?.contentWindow && data.javascript) {
-            try {
-              iframeRef.current.contentWindow.postMessage(
-                { type: "canvas_eval", javascript: data.javascript },
-                "*"
-              );
-            } catch {
-              // Sandboxed iframe may reject postMessage
+          if (data.javascript) {
+            // For a2ui mode use the renderer's sandboxed eval
+            if (a2uiRendererRef.current) {
+              a2uiRendererRef.current.evalScript(data.javascript as string);
+            } else if (iframeRef.current?.contentWindow) {
+              try {
+                iframeRef.current.contentWindow.postMessage(
+                  { type: "canvas_eval", javascript: data.javascript },
+                  "*"
+                );
+              } catch {
+                // Sandboxed iframe may reject postMessage
+              }
             }
           }
           break;
@@ -155,13 +167,6 @@ function CanvasApp(props: SimulatorAppProps) {
     setIsFullscreen((prev) => !prev);
   }, []);
 
-  const iframeSrcDoc =
-    state.mode === "html" && state.html
-      ? buildSandboxedHtml(state.html)
-      : state.mode === "a2ui" && state.a2uiLines.length > 0
-        ? buildA2UIHtml(state.a2uiLines)
-        : undefined;
-
   if (!state.visible && state.mode === "empty") {
     return (
       <NoTabsPlaceholder
@@ -171,6 +176,11 @@ function CanvasApp(props: SimulatorAppProps) {
       />
     );
   }
+
+  const htmlSrcDoc =
+    state.mode === "html" && state.html
+      ? buildHtmlDocument(state.html)
+      : undefined;
 
   return (
     <div
@@ -232,13 +242,19 @@ function CanvasApp(props: SimulatorAppProps) {
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
             title={t("simulator.replay.canvas.iframeTitle")}
           />
-        ) : iframeSrcDoc ? (
+        ) : htmlSrcDoc ? (
           <iframe
             ref={iframeRef}
-            srcDoc={iframeSrcDoc}
+            srcDoc={htmlSrcDoc}
             className="h-full w-full border-0"
             sandbox="allow-scripts"
             title={t("simulator.replay.canvas.iframeTitle")}
+          />
+        ) : state.mode === "a2ui" && state.a2uiLines.length > 0 ? (
+          <A2UIRenderer
+            ref={a2uiRendererRef}
+            lines={state.a2uiLines}
+            className="h-full"
           />
         ) : (
           <Placeholder
@@ -252,97 +268,6 @@ function CanvasApp(props: SimulatorAppProps) {
       </div>
     </div>
   );
-}
-
-// ============================================
-// Helpers
-// ============================================
-
-function buildSandboxedHtml(html: string): string {
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 16px;
-      font-family: system-ui, -apple-system, sans-serif;
-      color: #e0e0e0;
-      background: #1a1a2e;
-    }
-    a { color: #7c9ef7; }
-    pre, code { font-family: ui-monospace, monospace; background: rgba(255,255,255,0.05); padding: 2px 4px; border-radius: 4px; }
-    pre { padding: 12px; overflow-x: auto; }
-  </style>
-  <script>
-    window.addEventListener('message', (event) => {
-      if (event.data?.type === 'canvas_eval' && event.data.javascript) {
-        try { eval(event.data.javascript); } catch(e) { console.error('[canvas eval]', e); }
-      }
-    });
-  </script>
-</head>
-<body>
-${html}
-</body>
-</html>`;
-}
-
-function buildA2UIHtml(lines: string[]): string {
-  const elements = lines
-    .map((line) => {
-      try {
-        const parsed = JSON.parse(line) as Record<string, unknown>;
-        return renderA2UIElement(parsed);
-      } catch {
-        return `<p>${escapeHtml(line)}</p>`;
-      }
-    })
-    .join("\n");
-
-  return buildSandboxedHtml(elements);
-}
-
-function renderA2UIElement(element: Record<string, unknown>): string {
-  const elementType = (element.type as string) || "text";
-  const content = (element.content as string) || "";
-  const style = (element.style as string) || "";
-
-  switch (elementType) {
-    case "heading":
-      return `<h2 style="${escapeHtml(style)}">${escapeHtml(content)}</h2>`;
-    case "text":
-      return `<p style="${escapeHtml(style)}">${escapeHtml(content)}</p>`;
-    case "code":
-      return `<pre style="${escapeHtml(style)}"><code>${escapeHtml(content)}</code></pre>`;
-    case "image":
-      return `<img src="${escapeHtml(content)}" style="max-width: 100%; ${escapeHtml(style)}" />`;
-    case "button":
-      return `<button style="padding: 8px 16px; border-radius: 6px; border: 1px solid #555; background: #2a2a4a; color: #e0e0e0; cursor: pointer; ${escapeHtml(style)}">${escapeHtml(content)}</button>`;
-    case "divider":
-      return `<hr style="border: 0; border-top: 1px solid #333; margin: 16px 0; ${escapeHtml(style)}" />`;
-    case "list": {
-      const items = Array.isArray(element.items)
-        ? (element.items as string[])
-            .map((item) => `<li>${escapeHtml(String(item))}</li>`)
-            .join("")
-        : "";
-      return `<ul style="${escapeHtml(style)}">${items}</ul>`;
-    }
-    default:
-      return `<div style="${escapeHtml(style)}">${escapeHtml(content)}</div>`;
-  }
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 export default CanvasApp;

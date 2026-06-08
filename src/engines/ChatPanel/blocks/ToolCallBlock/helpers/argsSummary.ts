@@ -8,6 +8,7 @@ import {
   isSearchTool,
 } from "@src/engines/SessionCore/rendering/registry/toolCategories";
 import { extractFilePathFromPayloads } from "@src/util/file/filePathPayload";
+import { truncate } from "@src/util/string/truncate";
 import {
   deriveToolAction,
   formatBrowserCliCommandTarget,
@@ -38,9 +39,7 @@ function formatSearchArgsSummary(
   const pattern =
     (args.pattern as string | undefined) || (args.query as string | undefined);
   if (pattern) {
-    const truncated =
-      pattern.length > 40 ? pattern.substring(0, 40) + "..." : pattern;
-    return `"${truncated}"`;
+    return `"${truncate(pattern, 40, { ellipsis: "..." })}"`;
   }
   const path = args.path as string | undefined;
   if (path) return path;
@@ -58,7 +57,7 @@ function formatBrowserArgsSummary(
     case "navigate": {
       const url = args.targetUrl as string | undefined;
       return url
-        ? `navigate ${url.length > 50 ? url.substring(0, 50) + "..." : url}`
+        ? `navigate ${truncate(url, 50, { ellipsis: "..." })}`
         : "navigate";
     }
     case "act": {
@@ -71,8 +70,7 @@ function formatBrowserArgsSummary(
 
       if (kind === "click" && ref) return `click ${ref}`;
       if (kind === "type" && text) {
-        const preview = text.length > 30 ? text.substring(0, 30) + "..." : text;
-        return `type "${preview}"${ref ? ` into ${ref}` : ""}`;
+        return `type "${truncate(text, 30, { ellipsis: "..." })}"${ref ? ` into ${ref}` : ""}`;
       }
       if (kind === "press" && key) return `press ${key}`;
       if (kind === "hover" && ref) return `hover ${ref}`;
@@ -108,9 +106,6 @@ function formatAgentSendMessageSummary(args: Record<string, unknown>): string {
 
   const recipient = recipientMemberId || "?";
 
-  const truncate = (text: string, max: number): string =>
-    text.length > max ? text.substring(0, max) + "..." : text;
-
   let body = "";
   switch (kind) {
     case "plain": {
@@ -120,24 +115,26 @@ function formatAgentSendMessageSummary(args: Record<string, unknown>): string {
           : typeof args.text === "string"
             ? args.text
             : "";
-      if (summary) body = `"${truncate(summary, 60)}"`;
+      if (summary) body = `"${truncate(summary, 60, { ellipsis: "..." })}"`;
       break;
     }
     case "shutdown_request": {
       const reason = typeof args.reason === "string" ? args.reason : "";
-      if (reason) body = truncate(reason, 60);
+      if (reason) body = truncate(reason, 60, { ellipsis: "..." });
       break;
     }
     case "shutdown_response": {
       const accepted = args.accepted === true;
       const note = typeof args.note === "string" ? args.note : "";
       const accLabel = accepted ? "accepted" : "rejected";
-      body = note ? `${accLabel} · ${truncate(note, 50)}` : accLabel;
+      body = note
+        ? `${accLabel} · ${truncate(note, 50, { ellipsis: "..." })}`
+        : accLabel;
       break;
     }
     default: {
       const note = typeof args.note === "string" ? args.note : "";
-      if (note) body = truncate(note, 60);
+      if (note) body = truncate(note, 60, { ellipsis: "..." });
       break;
     }
   }
@@ -184,26 +181,24 @@ export function extractArgsSummary(
     for (const field of secondaryFields) {
       const val = args[field];
       if (typeof val === "string" && val.length > 0) {
-        const truncated = val.length > 50 ? val.substring(0, 50) + "..." : val;
-        return `${action} ${truncated}`;
+        return `${action} ${truncate(val, 50, { ellipsis: "..." })}`;
       }
     }
     return action;
   }
 
   const url = (args.url || args.uri) as string | undefined;
-  if (url) return url.length > 60 ? url.substring(0, 60) + "..." : url;
+  if (url) return truncate(url, 60, { ellipsis: "..." });
 
   const path = extractFilePathFromPayloads([args]);
   if (path) return path;
 
   const command = args.command as string | undefined;
-  if (command)
-    return command.length > 60 ? command.substring(0, 60) + "..." : command;
+  if (command) return truncate(command, 60, { ellipsis: "..." });
 
   const content = args.content as string | undefined;
   if (content && (toolName === "send_message" || toolName === "message"))
-    return content.length > 60 ? content.substring(0, 60) + "..." : content;
+    return truncate(content, 60, { ellipsis: "..." });
 
   return "";
 }

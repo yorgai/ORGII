@@ -9,12 +9,13 @@ import {
   SectionRow,
 } from "@/src/modules/shared/layouts/SectionLayout";
 import { useAtom } from "jotai";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Input from "@src/components/Input";
 import Message from "@src/components/Message";
 import Select from "@src/components/Select";
+import { useDebouncedCallback } from "@src/hooks/perf";
 import {
   type ShellType,
   customShellPathAtom,
@@ -31,32 +32,22 @@ const TerminalSection: React.FC = () => {
 
   const [localCustomShellPath, setLocalCustomShellPath] =
     useState(customShellPath);
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setLocalCustomShellPath(customShellPath);
   }, [customShellPath]);
 
+  const debouncedSaveShellPath = useDebouncedCallback((path: string) => {
+    setCustomShellPath(path);
+    if (shellType === "custom") {
+      Message.success("Custom command updated");
+    }
+  }, CUSTOM_SHELL_DEBOUNCE_MS);
+
   useEffect(() => {
     if (localCustomShellPath === customShellPath) return;
-
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    debounceTimerRef.current = setTimeout(() => {
-      setCustomShellPath(localCustomShellPath);
-      if (shellType === "custom") {
-        Message.success("Custom command updated");
-      }
-    }, CUSTOM_SHELL_DEBOUNCE_MS);
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [localCustomShellPath, customShellPath, setCustomShellPath, shellType]);
+    debouncedSaveShellPath(localCustomShellPath);
+  }, [localCustomShellPath, customShellPath, debouncedSaveShellPath]);
 
   const handleShellTypeChange = useCallback(
     (value: ShellType) => {

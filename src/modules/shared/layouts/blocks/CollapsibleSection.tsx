@@ -5,9 +5,10 @@
  * Used in detail panels for Code Accounts, Channels, Memory Browser, etc.
  */
 import { ChevronDown, ChevronRight } from "lucide-react";
-import React, { useState } from "react";
+import React from "react";
 
 import { COLLAPSIBLE_SECTION_TOKENS } from "@src/config/detailPanelTokens";
+import { useCollapsible } from "@src/hooks/ui/useCollapsible";
 
 export interface CollapsibleSectionProps {
   title: string;
@@ -57,15 +58,10 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   chevronClassName: chevronClassNameProp,
   onOpenChange,
 }) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
-  const toggleOpen = () => {
-    setIsOpen((prev) => {
-      const next = !prev;
-      onOpenChange?.(next);
-      return next;
-    });
-  };
+  const { isOpen, toggle: toggleOpen } = useCollapsible({
+    defaultOpen,
+    onOpenChange,
+  });
 
   const wrapperClass = compact ? "" : COLLAPSIBLE_SECTION_TOKENS.wrapper;
 

@@ -32,6 +32,7 @@ import { useTranslation } from "react-i18next";
 
 import { projectSyncStatusAtom, syncDeepLinkAtom } from "@src/store/sync";
 import { activeStatusBarCallbacksAtom } from "@src/store/ui/workStationAtom";
+import { truncate } from "@src/util/string/truncate";
 import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import { StatusBarButton } from "./StatusBarBase";
@@ -42,11 +43,6 @@ export interface ProjectSyncStatusWidgetProps {
 }
 
 const TOOLTIP_ERROR_LIMIT = 80;
-
-function truncate(value: string, max: number): string {
-  if (value.length <= max) return value;
-  return `${value.slice(0, max - 1)}…`;
-}
 
 const ProjectSyncStatusWidget: React.FC<ProjectSyncStatusWidgetProps> = memo(
   ({ projectSlug }) => {

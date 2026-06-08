@@ -1,4 +1,5 @@
 import type { GitHubIssue } from "@src/api/tauri/github";
+import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 export function formatIssueStateLabel(state: string): string {
   if (state === "open") return "Open";
@@ -50,16 +51,7 @@ export function getLabelColorStyle(hexColor: string): {
 }
 
 export function formatTimeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return "today";
-  if (diffDays === 1) return "yesterday";
-  if (diffDays < 30) return `${diffDays}d ago`;
-  const diffMonths = Math.floor(diffDays / 30);
-  if (diffMonths < 12) return `${diffMonths}mo ago`;
-  return `${Math.floor(diffMonths / 12)}y ago`;
+  return formatRelativeTime(dateString, "issue");
 }
 
 export function parseGithubIssueNumber(url: string): number | null {

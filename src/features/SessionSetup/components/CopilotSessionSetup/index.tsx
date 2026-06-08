@@ -19,6 +19,7 @@ import { v4 as uuidv4 } from "uuid";
 import Button from "@src/components/Button";
 import InlineAlert from "@src/components/InlineAlert";
 import Input from "@src/components/Input";
+import { useWebviewPositionSync } from "@src/hooks/workStation/sessionCapture/useWebviewPositionSync";
 import {
   SectionContainer,
   SectionRow,
@@ -239,52 +240,7 @@ const CopilotSessionSetup: React.FC<CopilotSessionSetupProps> = ({
     }
   }, [isCapturing]);
 
-  // Handle resize and scroll
-  useEffect(() => {
-    if (!isCapturing) return;
-
-    let rafId: number | null = null;
-    let lastRect = { x: 0, y: 0, width: 0, height: 0 };
-
-    const scheduleUpdate = () => {
-      if (rafId !== null) return;
-
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        if (containerRef.current) {
-          const rect = containerRef.current.getBoundingClientRect();
-          if (
-            rect.left !== lastRect.x ||
-            rect.top !== lastRect.y ||
-            rect.width !== lastRect.width ||
-            rect.height !== lastRect.height
-          ) {
-            lastRect = {
-              x: rect.left,
-              y: rect.top,
-              width: rect.width,
-              height: rect.height,
-            };
-            updatePosition();
-          }
-        }
-      });
-    };
-
-    window.addEventListener("resize", scheduleUpdate);
-    window.addEventListener("scroll", scheduleUpdate, true);
-    scheduleUpdate();
-    const intervalId = setInterval(scheduleUpdate, 200);
-
-    return () => {
-      window.removeEventListener("resize", scheduleUpdate);
-      window.removeEventListener("scroll", scheduleUpdate, true);
-      clearInterval(intervalId);
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
-    };
-  }, [isCapturing, updatePosition]);
+  useWebviewPositionSync(containerRef, isCapturing, updatePosition);
 
   // Start browser when showBrowser changes to true
   useEffect(() => {

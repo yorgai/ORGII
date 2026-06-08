@@ -34,7 +34,7 @@ import {
   type SourceControlHistorySelection,
   createGitCommitDetailTab,
 } from "@src/store/workstation/tabs";
-import { formatCompactTimeAgo } from "@src/util/data/formatters/date";
+import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import GitHistoryContextMenu from "./GitHistoryContextMenu";
 import {
@@ -186,7 +186,7 @@ const CommitRow: React.FC<CommitRowProps> = memo(
             <span className="truncate">{authorName}</span>
             {authorDate && (
               <span className="flex-shrink-0">
-                {formatCompactTimeAgo(authorDate)}
+                {formatRelativeTime(authorDate, "nano")}
               </span>
             )}
           </div>

@@ -25,9 +25,10 @@
  * ```
  */
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import { useDebouncedCallback } from "@src/hooks/perf";
 
 // ============================================
 // Types
@@ -142,7 +143,6 @@ export function useChatSearch(
   const [useRegex, setUseRegex] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
 
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchIdRef = useRef(0);
 
   const performSearch = useCallback(
@@ -225,25 +225,25 @@ export function useChatSearch(
     ]
   );
 
+  const debouncedPerformSearch = useDebouncedCallback(
+    (q: string) => performSearch(q),
+    debounceMs
+  );
+
   const handleQueryChange = useCallback(
     (newQuery: string) => {
       setQuery(newQuery);
 
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-
       if (!newQuery.trim()) {
+        debouncedPerformSearch.cancel();
         setResults([]);
         setCurrentResultIndex(0);
         return;
       }
 
-      debounceTimerRef.current = setTimeout(() => {
-        performSearch(newQuery);
-      }, debounceMs);
+      debouncedPerformSearch(newQuery);
     },
-    [debounceMs, performSearch]
+    [debouncedPerformSearch]
   );
 
   const navigateToResult = useCallback(
@@ -281,11 +281,8 @@ export function useChatSearch(
     setResults([]);
     setCurrentResultIndex(0);
     searchIdRef.current++;
-
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-  }, []);
+    debouncedPerformSearch.cancel();
+  }, [debouncedPerformSearch]);
 
   const toggleCaseSensitive = useCallback(() => {
     setCaseSensitive((prev) => {
@@ -318,14 +315,6 @@ export function useChatSearch(
     },
     [results]
   );
-
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
 
   return {
     query,

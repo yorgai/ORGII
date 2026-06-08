@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { rpc } from "@src/api/tauri/rpc";
 import type { CrossSessionSearchHit } from "@src/api/tauri/rpc/schemas/sessionCore";
+import { useDebouncedCallback } from "@src/hooks/perf";
 import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
 import { sessionMapAtom } from "@src/store/session/sessionAtom";
 
@@ -35,42 +36,37 @@ export const AllSessionsSearchPalette: React.FC<
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<CrossSessionSearchHit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevIsOpenRef = useRef(isOpen);
+
+  const debouncedSearch = useDebouncedCallback((q: string) => {
+    if (!q.trim()) {
+      setHits([]);
+      return;
+    }
+    setIsLoading(true);
+    rpc.sessionCore.cache
+      .searchAllSessions({ query: q, limit: 30 })
+      .then((results) => setHits(results))
+      .catch(() => setHits([]))
+      .finally(() => setIsLoading(false));
+  }, 200);
 
   // Reset state when palette closes. Using a ref comparison avoids calling
   // setState synchronously inside an effect body (react-hooks/set-state-in-effect).
   useEffect(() => {
     if (prevIsOpenRef.current && !isOpen) {
-      debounceRef.current && clearTimeout(debounceRef.current);
+      debouncedSearch.cancel();
       setTimeout(() => {
         setQuery("");
         setHits([]);
       }, 0);
     }
     prevIsOpenRef.current = isOpen;
-  }, [isOpen]);
+  }, [isOpen, debouncedSearch]);
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!query.trim()) {
-      debounceRef.current = setTimeout(() => setHits([]), 0);
-      return () => {
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-      };
-    }
-    debounceRef.current = setTimeout(() => {
-      setIsLoading(true);
-      rpc.sessionCore.cache
-        .searchAllSessions({ query, limit: 30 })
-        .then((results) => setHits(results))
-        .catch(() => setHits([]))
-        .finally(() => setIsLoading(false));
-    }, 200);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [query]);
+    debouncedSearch(query);
+  }, [query, debouncedSearch]);
 
   const handleNavigate = useCallback(
     (sessionId: string, sessionName: string, repoPath: string) => {

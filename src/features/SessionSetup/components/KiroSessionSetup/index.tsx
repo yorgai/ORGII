@@ -33,6 +33,7 @@ import Input from "@src/components/Input";
 import Select from "@src/components/Select";
 import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
 import { useKiroSessionCapture } from "@src/hooks/workStation/sessionCapture/useKiroSessionCapture";
+import { useWebviewPositionSync } from "@src/hooks/workStation/sessionCapture/useWebviewPositionSync";
 import {
   SECTION_CONTROL_STYLE,
   SECTION_GAP_CLASSES,
@@ -187,50 +188,7 @@ const KiroSessionSetup: React.FC<KiroSessionSetupProps> = ({
     }
   }, [verificationUrl, showBrowser, isWebviewOpen, isLoggedIn, openWebview]);
 
-  // Handle resize - update webview position
-  useEffect(() => {
-    if (!isWebviewOpen) return;
-
-    let rafId: number | null = null;
-    let lastRect = { x: 0, y: 0, width: 0, height: 0 };
-
-    const scheduleUpdate = () => {
-      if (rafId !== null) return;
-
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        if (containerRef.current) {
-          const rect = containerRef.current.getBoundingClientRect();
-          if (
-            rect.left !== lastRect.x ||
-            rect.top !== lastRect.y ||
-            rect.width !== lastRect.width ||
-            rect.height !== lastRect.height
-          ) {
-            lastRect = {
-              x: rect.left,
-              y: rect.top,
-              width: rect.width,
-              height: rect.height,
-            };
-            updatePosition();
-          }
-        }
-      });
-    };
-
-    window.addEventListener("resize", scheduleUpdate);
-    window.addEventListener("scroll", scheduleUpdate, true);
-    scheduleUpdate();
-
-    return () => {
-      window.removeEventListener("resize", scheduleUpdate);
-      window.removeEventListener("scroll", scheduleUpdate, true);
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
-    };
-  }, [isWebviewOpen, updatePosition]);
+  useWebviewPositionSync(containerRef, isWebviewOpen, updatePosition, 0);
 
   // Validate form
   const isStartUrlValid = startUrl.includes(".awsapps.com/start");

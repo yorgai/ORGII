@@ -10,8 +10,8 @@ import React from "react";
 
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import type { SessionCreatorDraft } from "@src/store/session";
-import { formatCompactTimeAgo } from "@src/util/data/formatters/date";
 import { resolveSessionRowIcon } from "@src/util/session/sessionSidebarRow";
+import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import {
   NEW_SESSION_MENU_ITEM_ID,
@@ -139,7 +139,7 @@ export function buildDraftMenuItems({
           agentIconId: draft.agentIconId ?? undefined,
           cliAgentType: draft.cliAgentType ?? undefined,
         }),
-        shortcut: formatCompactTimeAgo(draft.createdAt),
+        shortcut: formatRelativeTime(draft.createdAt, "nano"),
         trailingElement: (
           <span className="h-1.5 w-1.5 rounded-full border border-border-3 bg-transparent" />
         ),

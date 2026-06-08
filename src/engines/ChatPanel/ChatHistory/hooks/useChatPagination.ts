@@ -10,6 +10,7 @@
 import { useAtomValue } from "jotai";
 import React, { useCallback, useEffect, useRef } from "react";
 
+import { useDebouncedCallback } from "@src/hooks/perf";
 import {
   ACTIVITY_PREFETCH_CONFIG,
   hasMoreActivitiesAtom,
@@ -58,12 +59,12 @@ export function useChatPagination({
   const isLoadingMore = useAtomValue(isLoadingMoreActivitiesAtom);
   const loadMoreActivities = useAtomValue(loadMoreActivitiesCallbackAtom);
 
-  const rangeDebounceRef = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => {
-    return () => {
-      if (rangeDebounceRef.current) clearTimeout(rangeDebounceRef.current);
-    };
-  }, []);
+  const debouncedSetVisibleRange = useDebouncedCallback(
+    (range: { startIndex: number; endIndex: number }) => {
+      setVisibleRange(range);
+    },
+    RANGE_DEBOUNCE_MS
+  );
 
   const handleRangeChanged = useCallback(
     (range: { startIndex: number; endIndex: number }) => {
@@ -74,10 +75,7 @@ export function useChatPagination({
 
       // Debounce the state update to avoid re-render jitter during
       // sticky-header transitions (the "kissing" bounce).
-      clearTimeout(rangeDebounceRef.current);
-      rangeDebounceRef.current = setTimeout(() => {
-        setVisibleRange(range);
-      }, RANGE_DEBOUNCE_MS);
+      debouncedSetVisibleRange(range);
 
       if (ACTIVITY_PREFETCH_CONFIG.enabled) {
         const itemsFromEnd = optimizedChatHistoryLength - 1 - range.endIndex;
@@ -95,7 +93,7 @@ export function useChatPagination({
       }
     },
     [
-      setVisibleRange,
+      debouncedSetVisibleRange,
       visibleRangeEndRef,
       optimizedChatHistoryLength,
       hasMoreActivities,

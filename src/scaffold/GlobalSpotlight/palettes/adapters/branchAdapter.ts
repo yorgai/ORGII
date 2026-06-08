@@ -4,7 +4,7 @@
  * Converts BranchItem domain objects into SpotlightItem format.
  * Shared across BranchSelector and the main spotlight.
  */
-import { formatTimeAgo } from "@src/util/data/formatters/date";
+import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import { ICONS } from "../../config";
 import type { BranchItem, SpotlightItem } from "../../types";
@@ -32,7 +32,7 @@ export function buildBranchSpotlightItem(
       ? "Remote"
       : "Local";
   const lastCommit = branch.lastCommitDate
-    ? formatTimeAgo(branch.lastCommitDate)
+    ? formatRelativeTime(branch.lastCommitDate, "short")
     : "";
   const desc = lastCommit ? `${branchType} · ${lastCommit}` : branchType;
 

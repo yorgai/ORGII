@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { OrgMember } from "@src/modules/MainApp/AgentOrgs/types";
+import { truncate } from "@src/util/string/truncate";
 
 import {
   type RoutingDecision,
@@ -86,7 +87,7 @@ export function ReachabilityPreview({
                   className="text-fg-muted px-2 py-1 text-left font-normal"
                   title={node.name}
                 >
-                  {truncate(node.name)}
+                  {truncate(node.name, 14)}
                 </th>
               ))}
             </tr>
@@ -98,7 +99,7 @@ export function ReachabilityPreview({
                   className="text-fg-default px-2 py-1 text-left font-normal"
                   title={from.name}
                 >
-                  {truncate(from.name)}
+                  {truncate(from.name, 14)}
                 </th>
                 {graph.nodes.map((to) => {
                   const decision: RoutingDecision =
@@ -123,11 +124,6 @@ export function ReachabilityPreview({
       </div>
     </div>
   );
-}
-
-function truncate(value: string, max = 14): string {
-  if (value.length <= max) return value;
-  return `${value.slice(0, max - 1)}…`;
 }
 
 function cellClass(decision: RoutingDecision, isSelf: boolean): string {

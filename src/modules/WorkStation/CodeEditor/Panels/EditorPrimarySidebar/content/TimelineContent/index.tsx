@@ -9,15 +9,16 @@ import { useTranslation } from "react-i18next";
 
 import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
 import { useFileHistory } from "@src/hooks/git/useFileHistory";
+import { getBasename } from "@src/modules/WorkStation/CodeEditor/SessionReplay/CodePanel/pathUtils";
 import {
   HEADER_BUTTON,
   PRIMARY_SIDEBAR_HOVER,
 } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import { TIMELINE_CONSTANTS, TIMELINE_ICONS } from "./config";
 import type { TimelineCommitInfo, TimelineContentProps } from "./types";
-import { formatRelativeTime, getBasename } from "./utils";
 
 // ============================================
 // Timeline Entry Component
@@ -73,7 +74,7 @@ const TimelineEntry: React.FC<TimelineEntryProps> = memo(
 
           {/* Line 2: time · name · id */}
           <div className="truncate text-[11px] text-text-3">
-            {formatRelativeTime(timestamp)} · {author} · {shortSha}
+            {formatRelativeTime(timestamp, "compact")} · {author} · {shortSha}
           </div>
         </div>
 

@@ -24,6 +24,8 @@ import {
 } from "react";
 import type { VirtuosoHandle } from "react-virtuoso";
 
+import { useDebouncedCallback } from "@src/hooks/perf";
+
 // ============================================
 // Types
 // ============================================
@@ -107,13 +109,6 @@ export function useChatScroll({
     return () => cancelAnimationFrame(scrollRafRef.current);
   }, []);
 
-  const bottomDebounceRef = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => {
-    return () => {
-      if (bottomDebounceRef.current) clearTimeout(bottomDebounceRef.current);
-    };
-  }, []);
-
   const shouldSuppressTurnCollapseFollow = useCallback(() => {
     return (
       performance.now() - turnCollapseInteractionAtRef.current <
@@ -121,17 +116,17 @@ export function useChatScroll({
     );
   }, [turnCollapseInteractionAtRef]);
 
+  const debouncedSetAtBottom = useDebouncedCallback((bottom: boolean) => {
+    setAtBottom(bottom);
+    setIsChatScrolledToBottom(bottom);
+  }, AT_BOTTOM_DEBOUNCE_MS);
+
   const handleAtBottomStateChange = useCallback(
     (bottom: boolean) => {
       atBottomRef.current = bottom;
-
-      clearTimeout(bottomDebounceRef.current);
-      bottomDebounceRef.current = setTimeout(() => {
-        setAtBottom(bottom);
-        setIsChatScrolledToBottom(bottom);
-      }, AT_BOTTOM_DEBOUNCE_MS);
+      debouncedSetAtBottom(bottom);
     },
-    [setAtBottom, setIsChatScrolledToBottom]
+    [debouncedSetAtBottom]
   );
 
   const scrollToBottom = useCallback(() => {

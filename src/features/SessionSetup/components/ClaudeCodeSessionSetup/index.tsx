@@ -13,7 +13,10 @@ import { useTranslation } from "react-i18next";
 import Button from "@src/components/Button";
 import InlineAlert from "@src/components/InlineAlert";
 import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
-import { useClaudeCodeOAuthCapture } from "@src/hooks/workStation/sessionCapture";
+import {
+  useClaudeCodeOAuthCapture,
+  useWebviewPositionSync,
+} from "@src/hooks/workStation/sessionCapture";
 import {
   SectionContainer,
   SectionRow,
@@ -95,51 +98,7 @@ const ClaudeCodeSessionSetup: React.FC<ClaudeCodeSessionSetupProps> = ({
     return () => clearTimeout(timer);
   }, [isSigningIn, isWebviewOpen, showBrowser, startLogin]);
 
-  useEffect(() => {
-    if (!isWebviewOpen) return;
-
-    let rafId: number | null = null;
-    let lastRect = { x: 0, y: 0, width: 0, height: 0 };
-
-    const scheduleUpdate = () => {
-      if (rafId !== null) return;
-
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        if (!containerRef.current) return;
-
-        const rect = containerRef.current.getBoundingClientRect();
-        if (
-          rect.left !== lastRect.x ||
-          rect.top !== lastRect.y ||
-          rect.width !== lastRect.width ||
-          rect.height !== lastRect.height
-        ) {
-          lastRect = {
-            x: rect.left,
-            y: rect.top,
-            width: rect.width,
-            height: rect.height,
-          };
-          void updatePosition();
-        }
-      });
-    };
-
-    window.addEventListener("resize", scheduleUpdate);
-    window.addEventListener("scroll", scheduleUpdate, true);
-    scheduleUpdate();
-    const intervalId = setInterval(scheduleUpdate, 200);
-
-    return () => {
-      window.removeEventListener("resize", scheduleUpdate);
-      window.removeEventListener("scroll", scheduleUpdate, true);
-      clearInterval(intervalId);
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
-    };
-  }, [isWebviewOpen, updatePosition]);
+  useWebviewPositionSync(containerRef, isWebviewOpen, updatePosition);
 
   const handleCloseBrowser = useCallback(() => {
     void closeWebview();

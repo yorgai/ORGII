@@ -16,6 +16,7 @@
  *   onAskAgent: (text) => */
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useDebouncedCallback } from "@src/hooks/perf";
 import { getUiScaleFromCssVar } from "@src/lib/dndKit";
 
 import { DropdownAction } from "./config";
@@ -85,52 +86,44 @@ export function useTextSelectionDropdown(
     [selectedText, onAskAgent, onAddToContext, hideDropdown]
   );
 
+  const debouncedHandleMouseUp = useDebouncedCallback((event: MouseEvent) => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      return;
+    }
+
+    const text = selection.toString().trim();
+    if (!text) return;
+
+    if (containerRef?.current) {
+      const range = selection.getRangeAt(0);
+      const commonAncestor = range.commonAncestorContainer;
+      const container = containerRef.current;
+
+      if (!container.contains(commonAncestor)) {
+        return;
+      }
+    }
+
+    const offsetX = 10;
+    const offsetY = 10;
+    const uiScale = getUiScaleFromCssVar();
+
+    showDropdown(
+      {
+        x: event.clientX / uiScale + offsetX,
+        y: event.clientY / uiScale + offsetY,
+      },
+      text
+    );
+  }, SELECTION_DEBOUNCE_MS);
+
   // Listen for mouseup events to detect selection
   useEffect(() => {
     if (!enabled) return;
 
-    let debounceTimer: NodeJS.Timeout | null = null;
-
     const handleMouseUp = (event: MouseEvent) => {
-      // Clear any pending debounce
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-
-      debounceTimer = setTimeout(() => {
-        const selection = window.getSelection();
-        if (!selection || selection.isCollapsed) {
-          return;
-        }
-
-        const text = selection.toString().trim();
-        if (!text) return;
-
-        // If containerRef provided, check if selection is within container
-        if (containerRef?.current) {
-          const range = selection.getRangeAt(0);
-          const commonAncestor = range.commonAncestorContainer;
-          const container = containerRef.current;
-
-          // Check if selection is within the container
-          if (!container.contains(commonAncestor)) {
-            return;
-          }
-        }
-
-        // Calculate position based on mouse position with offset
-        const offsetX = 10;
-        const offsetY = 10;
-        const uiScale = getUiScaleFromCssVar();
-
-        showDropdown(
-          {
-            x: event.clientX / uiScale + offsetX,
-            y: event.clientY / uiScale + offsetY,
-          },
-          text
-        );
-      }, SELECTION_DEBOUNCE_MS);
+      debouncedHandleMouseUp(event);
     };
 
     // Handle click outside to close dropdown
@@ -158,14 +151,18 @@ export function useTextSelectionDropdown(
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
+      debouncedHandleMouseUp.cancel();
       container.removeEventListener("mouseup", handleMouseUp as EventListener);
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [enabled, containerRef, showDropdown, hideDropdown]);
+  }, [
+    enabled,
+    containerRef,
+    showDropdown,
+    hideDropdown,
+    debouncedHandleMouseUp,
+  ]);
 
   return {
     visible,

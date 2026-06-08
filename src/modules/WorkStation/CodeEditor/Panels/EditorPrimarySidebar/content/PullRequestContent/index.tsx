@@ -31,7 +31,7 @@ import {
   workstationPrCallbackAtom,
 } from "@src/store/workstation/codeEditor/workstationPrAtom";
 import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
-import { formatCompactTimeAgo } from "@src/util/data/formatters/date";
+import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 const PR_STATUS_COLORS: Record<string, string> = {
   open: "bg-success-1 text-success-6",
@@ -371,7 +371,7 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
                   <span className="truncate">{commit.authorName}</span>
                   {commit.authorDate && (
                     <span className="flex-shrink-0">
-                      {formatCompactTimeAgo(commit.authorDate)}
+                      {formatRelativeTime(commit.authorDate, "nano")}
                     </span>
                   )}
                 </div>

@@ -1,6 +1,6 @@
 import type { EventDisplayStatus } from "@src/engines/SessionCore/core/types";
 
-export type PreviewMode = "ui" | "tool" | "input";
+export type PreviewMode = "ui" | "tool" | "input" | "session-link";
 
 export type PlaygroundVariant = "chat" | "simulator";
 

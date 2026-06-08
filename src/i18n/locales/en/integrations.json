@@ -2326,6 +2326,7 @@
     "modeUi": "UI Preview",
     "modeTool": "Tools",
     "modeInput": "Input",
+    "modeSessionLink": "Session Link",
     "selectionMode": "Selection",
     "selectionModeSingle": "Single",
     "selectionModeMultiple": "Multiple",

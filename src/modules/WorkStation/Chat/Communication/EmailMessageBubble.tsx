@@ -44,6 +44,7 @@ import {
   formatSmartDateTime,
   toIntlLocaleTag,
 } from "@src/util/data/formatters/date";
+import { truncate } from "@src/util/string/truncate";
 
 import { resolveSenderName } from "./AgentEventBubbles";
 import type { MessageEntry } from "./types";
@@ -93,10 +94,6 @@ interface EmailMessageBubbleProps {
    * generic "Agent" label when omitted.
    */
   orgMembers?: ReadonlyArray<AgentOrgRunMemberView>;
-}
-
-function truncate(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 }
 
 function firstLine(text: string): string {

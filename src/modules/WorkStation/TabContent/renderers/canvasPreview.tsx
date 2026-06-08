@@ -9,10 +9,8 @@ import { useAtom } from "jotai";
 import { ExternalLink, Layout } from "lucide-react";
 import React, { memo, useCallback, useMemo } from "react";
 
-import {
-  buildA2UIDocument,
-  buildHtmlDocument,
-} from "@src/engines/ChatPanel/blocks/CanvasInlineCard/canvasBuilder";
+import A2UIRenderer from "@src/engines/ChatPanel/blocks/CanvasInlineCard/A2UIRenderer";
+import { buildHtmlDocument } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/canvasBuilder";
 import { EditorTabService } from "@src/services/workStation";
 import { canvasPreviewAtom } from "@src/store/session/canvasPreviewAtom";
 import { getCanvasPreviewTabId } from "@src/store/workstation/tabs/factories/canvasPreview";
@@ -37,11 +35,12 @@ const CanvasPreviewTabRenderer: React.FC<UnifiedTabContentProps> = memo(
       if (payload.mode === "html" && payload.content) {
         return buildHtmlDocument(payload.content);
       }
-      if (payload.mode === "a2ui" && payload.content) {
-        const lines = payload.content.split("\n").filter(Boolean);
-        return buildA2UIDocument(lines);
-      }
       return undefined;
+    }, [payload]);
+
+    const a2uiLines = useMemo(() => {
+      if (!payload || payload.mode !== "a2ui" || !payload.content) return [];
+      return payload.content.split("\n").filter(Boolean);
     }, [payload]);
 
     const handleOpenExternal = useCallback(() => {
@@ -117,6 +116,8 @@ const CanvasPreviewTabRenderer: React.FC<UnifiedTabContentProps> = memo(
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
               title={payload.title ?? "Canvas"}
             />
+          ) : payload.mode === "a2ui" && a2uiLines.length > 0 ? (
+            <A2UIRenderer lines={a2uiLines} className="h-full" />
           ) : srcDoc ? (
             <iframe
               srcDoc={srcDoc}

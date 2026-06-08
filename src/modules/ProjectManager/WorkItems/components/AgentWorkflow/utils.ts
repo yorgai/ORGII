@@ -11,6 +11,7 @@ import {
 import React from "react";
 
 import { isSubagentSpawningTool } from "@src/engines/SessionCore/sync/adapters/shared";
+import { truncate as truncateStr } from "@src/util/string/truncate";
 
 import type { AgentMessage } from "./types";
 
@@ -34,10 +35,8 @@ function getToolIcon(toolName: string | null): React.ReactNode {
   return TOOL_ICONS.default;
 }
 
-export function truncate(text: string, maxLen: number): string {
-  const singleLine = text.replace(/\n/g, " ").trim();
-  if (singleLine.length <= maxLen) return singleLine;
-  return singleLine.slice(0, maxLen) + "...";
+function truncate(text: string, maxLen: number): string {
+  return truncateStr(text, maxLen, { collapseNewlines: true, ellipsis: "..." });
 }
 
 export function parseSubAgentInfo(toolInput: string): {

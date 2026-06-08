@@ -20,49 +20,6 @@ import { parseApiDate } from "./dateCore";
 export { parseApiDate };
 
 /**
- * Format a relative time string (e.g., "5 min ago", "2 hours ago")
- * This uses the current timezone setting for display.
- *
- * @param dateString - The date string from the API (assumed UTC if no timezone)
- * @returns A human-readable relative time string
- */
-export const formatTimeAgo = (
-  dateString: string | null | undefined
-): string => {
-  if (!dateString) return "—";
-
-  try {
-    const date = parseApiDate(dateString);
-    if (!date) return "—";
-
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMins < 0) {
-      // Future date - might be a timezone issue, show "Just now" as fallback
-      return "Just now";
-    }
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffHours < 24)
-      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 30) return `${diffDays} days ago`;
-    if (diffDays < 365) {
-      const diffMonths = Math.floor(diffDays / 30);
-      return `${diffMonths} month${diffMonths > 1 ? "s" : ""} ago`;
-    }
-    const diffYears = Math.floor(diffDays / 365);
-    return `${diffYears} year${diffYears > 1 ? "s" : ""} ago`;
-  } catch {
-    return "—";
-  }
-};
-
-/**
  * Format a date for display in the user's preferred timezone.
  *
  * @param dateString - The date string from the API (assumed UTC if no timezone)
@@ -476,14 +433,85 @@ export const compareDates = (
 };
 
 // ============================================
-// Legacy formatters — see dateTimeLegacy.ts
+// Legacy formatters (browser-local, no timezone setting)
 // ============================================
-export {
-  formatCompactTimeAgo,
-  formatDashBoardTime,
-  formatDateTime,
-  fromNow,
-  getUserTimeZoneOffset,
-  paymentFormatDate,
-  timeAgo,
-} from "./dateTimeLegacy";
+
+/**
+ * Format a Unix timestamp as a readable date/time string
+ * @param timestamp - Unix timestamp in seconds
+ * @returns Formatted string like "Jan 05, 2025, 14:30"
+ */
+export const formatDateTime = (timestamp: number): string => {
+  const date = new Date(timestamp * 1000);
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  const month = months[date.getMonth()];
+  const day = date.getDate().toString().padStart(2, "0");
+  const year = date.getFullYear();
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+
+  return `${month} ${day}, ${year}, ${hours}:${minutes}`;
+};
+
+/**
+ * Format a payment date string (MM-DD-YYYY) to readable format
+ * @param dateString - Date string in MM-DD-YYYY format
+ * @returns Formatted string like "January 5, 2025"
+ */
+export function paymentFormatDate(dateString: string): string {
+  if (!dateString) return "";
+
+  const parts = dateString.split("-");
+  if (parts.length !== 3) return "";
+
+  const [month, day, year] = parts;
+  const date = new Date(`${year}-${month}-${day}`);
+
+  if (isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+}
+
+/**
+ * Format seconds as HH:MM:SS for dashboard display
+ * @param seconds - Total seconds
+ * @returns Formatted string like "02h 15m 30s"
+ */
+export function formatDashBoardTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  return [
+    String(hours).padStart(2, "0") + "h",
+    String(minutes).padStart(2, "0") + "m",
+    String(secs).padStart(2, "0") + "s",
+  ].join(" ");
+}
+
+/**
+ * Get the user's timezone offset in minutes
+ * @returns Timezone offset in minutes (positive for ahead of UTC)
+ */
+export const getUserTimeZoneOffset = (): number => {
+  const now = new Date();
+  return -now.getTimezoneOffset();
+};

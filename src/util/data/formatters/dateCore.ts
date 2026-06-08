@@ -2,9 +2,8 @@
  * Date Core
  *
  * Leaf module with primitive date helpers that have no upward dependencies
- * on other formatters or on the store. Both `date.ts` (timezone-aware
- * formatters) and `dateTimeLegacy.ts` (browser-local formatters) import
- * from here, so this file MUST NOT import from either of them.
+ * on other formatters or on the store. `date.ts` imports from here, so this
+ * file MUST NOT import from `date.ts`.
  */
 
 /**

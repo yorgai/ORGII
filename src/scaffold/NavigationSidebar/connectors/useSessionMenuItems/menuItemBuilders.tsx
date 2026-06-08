@@ -5,7 +5,6 @@ import { RUST_AGENT_TYPE } from "@src/api/tauri/agent/types";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import type { Session } from "@src/store/session";
 import { isTerminalStatus } from "@src/types/session/session";
-import { formatCompactTimeAgo } from "@src/util/data/formatters/date";
 import { formatBranchLabel } from "@src/util/git/branchLabel";
 import { getRustAgentType } from "@src/util/session/sessionDispatch";
 import { isSessionInProgress } from "@src/util/session/sessionInProgress";
@@ -13,6 +12,7 @@ import {
   getSessionListDisplayName,
   resolveSessionRowIcon,
 } from "@src/util/session/sessionSidebarRow";
+import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import { renderBreathingStatusDot, renderStatusDot } from "./statusIndicators";
 
@@ -92,6 +92,6 @@ export function buildSessionMenuItem({
       : inProgress
         ? renderBreathingStatusDot()
         : renderStatusDot(statusDotTone),
-    shortcut: formatCompactTimeAgo(timestampSrc),
+    shortcut: formatRelativeTime(timestampSrc, "nano"),
   };
 }

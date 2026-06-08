@@ -34,9 +34,9 @@ import {
 } from "@src/store/workstation/tabs";
 import type { PanelState } from "@src/store/workstation/tabs";
 import { isPreviewOnlyFile } from "@src/util/file/previewTypes";
+import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import type { CommitInfo, CursorPosition, LspStatus } from "../shared";
-import { formatRelativeTime } from "./Panels/EditorPrimarySidebar/content/TimelineContent/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -104,7 +104,7 @@ export function useCodeEditorLocalState({
         return {
           message: String(commitMessage),
           author: String(commitAuthor),
-          time: formatRelativeTime(String(commitTimestamp)),
+          time: formatRelativeTime(String(commitTimestamp), "compact"),
           shortSha: String(focusedActiveTab.data.headShortSha || ""),
         };
       }

@@ -17,11 +17,11 @@ import {
   sessionsAtom,
 } from "@src/store/session";
 import type { Session } from "@src/store/session";
-import { formatCompactTimeAgo } from "@src/util/data/formatters/date";
 import {
   getSessionListDisplayName,
   resolveSessionRowIcon,
 } from "@src/util/session/sessionSidebarRow";
+import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import type { BasePaletteProps } from "../../shared";
 import { PaletteBody, SpotlightShell } from "../../shell";
@@ -121,7 +121,7 @@ export const AgentSessionSearchPalette: React.FC<
           icon: resolveSessionRowIcon(session),
           type: "option" as const,
           data: {
-            rightLabel: formatCompactTimeAgo(timestamp),
+            rightLabel: formatRelativeTime(timestamp, "nano"),
             tagLabel: session.status,
           },
           action: () => handleOpenSession(session),

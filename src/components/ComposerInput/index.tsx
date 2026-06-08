@@ -28,6 +28,7 @@ import { installedSkillsAtom } from "@src/store/skills/installedSkillsAtom";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
 
 import ComposerPill from "./ComposerPill";
+import { createCutHandler } from "./cutHandler";
 import { buildImperativeApi } from "./imperativeApi";
 import "./index.scss";
 import { type MentionState, createKeyDownHandler } from "./keyboard";
@@ -253,6 +254,17 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
       [ops.insertPill, ops.insertTextAtCaret]
     );
 
+    const handleCut = useMemo(
+      () =>
+        createCutHandler({
+          reconcilePillsFromDom: ops.reconcilePillsFromDom,
+          onAfterCut: handleInput,
+        }),
+      // handleInput is stable (useCallback with stable deps); ops is stable.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [ops.reconcilePillsFromDom, handleInput]
+    );
+
     // Wrap `insertNewline` so a bare-Enter / Shift+Enter newline still
     // flows through the same notify-host path that native typing does.
     // The op mutates the DOM directly (no `beforeinput`/`input` event),
@@ -334,16 +346,21 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
         handlePaste(event);
         handleInput();
       };
+      const handleCutEvent = (event: ClipboardEvent) => {
+        handleCut(event);
+      };
       host.addEventListener("compositionstart", handleCompositionStart);
       host.addEventListener("compositionend", handleCompositionEnd);
       host.addEventListener("beforeinput", handleBeforeInput);
       host.addEventListener("paste", handlePasteEvent);
+      host.addEventListener("cut", handleCutEvent);
       host.addEventListener("keydown", handleKeyDown);
       return () => {
         host.removeEventListener("compositionstart", handleCompositionStart);
         host.removeEventListener("compositionend", handleCompositionEnd);
         host.removeEventListener("beforeinput", handleBeforeInput);
         host.removeEventListener("paste", handlePasteEvent);
+        host.removeEventListener("cut", handleCutEvent);
         host.removeEventListener("keydown", handleKeyDown);
       };
       // ops is stable (object from useEditorOperations never changes identity).
@@ -352,6 +369,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
       hostRef,
       ops.insertTextAtCaret,
       handlePaste,
+      handleCut,
       handleKeyDown,
       handleInput,
     ]);

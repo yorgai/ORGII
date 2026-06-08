@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import type { CommitDiffResult } from "@src/api/http/git/types";
 import { usePublishWorkstationTabHeader } from "@src/hooks/workStation";
 import { DIFF_STATS } from "@src/modules/WorkStation/shared/tokens";
-import { formatCompactTimeAgo } from "@src/util/data/formatters/date";
+import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 interface CommitTabHeaderProps {
   shortSha: string;
@@ -49,7 +49,7 @@ export const CommitTabHeader: React.FC<CommitTabHeaderProps> = ({
             )}
             {commitDiff?.author?.date && (
               <span className="flex-shrink-0 text-[12px] text-text-3">
-                {formatCompactTimeAgo(commitDiff.author.date)}
+                {formatRelativeTime(commitDiff.author.date, "nano")}
               </span>
             )}
             {commitDiff?.stats && (

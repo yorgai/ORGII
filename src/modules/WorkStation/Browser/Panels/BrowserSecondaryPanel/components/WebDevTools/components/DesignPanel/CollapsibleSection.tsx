@@ -5,7 +5,9 @@
  * Follows the same styling as PanelSectionHeader.
  */
 import { ChevronDown, ChevronRight } from "lucide-react";
-import React, { memo, useCallback, useState } from "react";
+import React, { memo, useEffect } from "react";
+
+import { useCollapsible } from "@src/hooks/ui/useCollapsible";
 
 // ============================================
 // Types
@@ -73,23 +75,24 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
     collapseAllKey,
     expandAllKey,
   }) => {
-    const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-    const [prevCollapseKey, setPrevCollapseKey] = useState(collapseAllKey);
-    const [prevExpandKey, setPrevExpandKey] = useState(expandAllKey);
+    const {
+      isOpen: isExpanded,
+      toggle: handleToggle,
+      open,
+      close,
+    } = useCollapsible({
+      defaultOpen: defaultExpanded,
+    });
 
-    // Update expanded state when keys change (React recommended pattern - setState during render)
-    if (collapseAllKey !== undefined && collapseAllKey !== prevCollapseKey) {
-      setPrevCollapseKey(collapseAllKey);
-      setIsExpanded(false);
-    }
-    if (expandAllKey !== undefined && expandAllKey !== prevExpandKey) {
-      setPrevExpandKey(expandAllKey);
-      setIsExpanded(true);
-    }
+    useEffect(() => {
+      if (collapseAllKey !== undefined) close();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [collapseAllKey]);
 
-    const handleToggle = useCallback(() => {
-      setIsExpanded((prev) => !prev);
-    }, []);
+    useEffect(() => {
+      if (expandAllKey !== undefined) open();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [expandAllKey]);
 
     return (
       <div className="mb-2 last:mb-0">

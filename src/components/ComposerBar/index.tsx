@@ -163,7 +163,7 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
       );
       const pillCluster = (
         <div
-          className="flex min-w-0 shrink-0 items-center"
+          className="flex min-w-0 shrink-0 items-center gap-1"
           style={{ gridArea: "pills" }}
         >
           {pills}
@@ -181,19 +181,23 @@ const ComposerBar: React.FC<ComposerBarProps> = memo(
         </div>
       );
 
+      // columnGap: 6px is intentionally larger than the Tailwind gap-1 (4px)
+      // used inside each cluster — the inter-cluster spacing should be wider
+      // than the intra-cluster icon-to-icon spacing.
       const gridStyle: React.CSSProperties = inlineLayout
         ? {
             display: "grid",
             gridTemplateColumns: "auto 1fr auto auto",
             gridTemplateAreas: '"left editor pills right"',
             alignItems: "center",
-            columnGap: 2,
+            columnGap: 6,
           }
         : {
             display: "grid",
             gridTemplateColumns: "auto auto 1fr",
             gridTemplateAreas: '"editor editor editor" "left pills right"',
             rowGap: 4,
+            columnGap: 6,
           };
 
       return (

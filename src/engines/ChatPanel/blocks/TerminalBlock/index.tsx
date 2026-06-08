@@ -59,7 +59,12 @@ export interface TerminalBlockProps {
   streamOutput?: string;
   /** Process ID (for Stop button) */
   pid?: number;
-  /** Process status: running, background, exited, killed */
+  /**
+   * Process status: running, background, exited, killed.
+   * NOTE: `"running"` alone does NOT show the Stop button; `isLoading` must
+   * also be true. Only `"background"` keeps the Stop button visible when
+   * `isLoading` is false.
+   */
   processStatus?: "running" | "background" | "exited" | "killed";
   /** Optional working directory label for multi-repo shell commands */
   cwdLabel?: string;
@@ -173,6 +178,10 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
     // (isLoading=false, processStatus="background") still show Stop because
     // `isBackground` keeps `isStillRunning` true.
     const [isStopping, setIsStopping] = useState(false);
+    useEffect(() => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (!isStillRunning) setIsStopping(false);
+    }, [isStillRunning]);
     const effectiveIsStopping = isStopping && isStillRunning;
     const canStop = pid !== undefined && isStillRunning;
 

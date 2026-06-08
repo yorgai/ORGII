@@ -12,7 +12,7 @@ import "@src/engines/ChatPanel/ChatHistory/ActivityRouter.scss";
 import "@src/engines/ChatPanel/ChatHistory/index.scss";
 
 import "./ToolEventPreview.scss";
-import { ToolDefinitionPreview } from "./previews";
+import { SessionLinkCardPreview, ToolDefinitionPreview } from "./previews";
 import { SingleEventPreview } from "./single-event";
 import type { PreviewMode } from "./types";
 
@@ -24,6 +24,8 @@ export function ToolEventPreview() {
       <div className="tool-event-preview-content">
         {mode === "tool" ? (
           <ToolDefinitionPreview mode={mode} onModeChange={setMode} />
+        ) : mode === "session-link" ? (
+          <SessionLinkCardPreview mode={mode} onModeChange={setMode} />
         ) : (
           <SingleEventPreview mode={mode} onModeChange={setMode} />
         )}
