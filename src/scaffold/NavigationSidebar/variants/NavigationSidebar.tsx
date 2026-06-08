@@ -13,7 +13,10 @@ import SidebarBase from "../SidebarBase";
 import { SidebarList } from "../blocks";
 import HoverAnimatedIcon from "../components/HoverAnimatedIcon";
 import NavigationMenu from "../components/NavigationMenu";
-import type { NavigationMenuItem } from "../components/NavigationMenu/config";
+import type {
+  NavigationMenuItem,
+  NavigationMenuRowAction,
+} from "../components/NavigationMenu/config";
 import type { SidebarTab } from "../types";
 
 // ============================================
@@ -106,10 +109,12 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
         id: string;
         title?: string;
         items: NavigationMenuItem[];
+        headerActions?: readonly NavigationMenuRowAction[];
       }[] = [];
       let currentSection: NavigationMenuItem[] = [];
       let currentTitle: string | undefined;
       let currentId = "default";
+      let currentHeaderActions: readonly NavigationMenuRowAction[] | undefined;
 
       menuItems.forEach((item, index) => {
         if (item.id?.startsWith("separator-")) {
@@ -118,11 +123,16 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
               id: currentId,
               title: currentTitle,
               items: currentSection,
+              headerActions: currentHeaderActions,
             });
             currentSection = [];
           }
           currentId = item.id.replace("separator-", "");
           currentTitle = item.label || undefined;
+          currentHeaderActions =
+            item.rowActions && item.rowActions.length > 0
+              ? item.rowActions
+              : undefined;
         } else {
           currentSection.push(item);
         }
@@ -133,6 +143,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
           id: currentId,
           title: currentTitle,
           items: currentSection,
+          headerActions: currentHeaderActions,
         });
       }
 
@@ -276,22 +287,47 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
                 {section.title &&
                   (collapsibleSections ? (
                     <div
-                      className={`${isSectionCollapsed ? "" : "mb-px"} flex h-7 cursor-pointer items-center gap-3 px-2`}
+                      className={`${isSectionCollapsed ? "" : "mb-px"} group/section-title flex h-7 cursor-pointer items-center gap-2 px-2`}
                       onClick={() => toggleSection(section.id)}
                     >
-                      <span className="inline-flex flex-shrink-0 items-center leading-none text-text-2">
+                      <span className="min-w-0 truncate text-[11px] font-medium uppercase tracking-wider text-text-2">
+                        {section.title}
+                      </span>
+                      <span className="hidden flex-shrink-0 items-center leading-none text-text-2 group-hover/section-title:inline-flex">
                         {isSectionCollapsed ? (
                           <ChevronRight size={14} strokeWidth={2} />
                         ) : (
                           <ChevronDown size={14} strokeWidth={2} />
                         )}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-[11px] font-medium uppercase tracking-wider text-text-1">
-                        {section.title}
-                      </span>
+                      {section.headerActions && (
+                        <span className="ml-auto hidden flex-shrink-0 items-center gap-0.5 leading-none text-text-2 group-hover/section-title:inline-flex">
+                          {section.headerActions.map((action) => {
+                            const ActionIcon = action.icon;
+                            return (
+                              <button
+                                key={action.label}
+                                type="button"
+                                title={action.label}
+                                aria-label={action.label}
+                                className="flex h-5 w-5 items-center justify-center rounded text-text-2 transition-colors duration-150 hover:bg-fill-2 hover:text-text-1 focus:outline-none"
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  action.onClick(event);
+                                }}
+                              >
+                                {ActionIcon ? (
+                                  <ActionIcon size={14} strokeWidth={2} />
+                                ) : null}
+                              </button>
+                            );
+                          })}
+                        </span>
+                      )}
                     </div>
                   ) : (
-                    <div className="mb-2 px-2 text-[11px] font-medium uppercase tracking-wider text-text-1">
+                    <div className="mb-2 px-2 text-[11px] font-medium uppercase tracking-wider text-text-2">
                       {section.title}
                     </div>
                   ))}

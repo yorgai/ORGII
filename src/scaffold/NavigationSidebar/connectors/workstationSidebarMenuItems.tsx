@@ -1,7 +1,5 @@
 import {
   Box,
-  FolderSymlink,
-  FolderTree,
   LayoutDashboard,
   Plus,
   Radar,
@@ -41,10 +39,6 @@ interface BuildProjectsPinnedMenuItemsParams {
 interface BuildFoldersPinnedMenuItemsParams {
   dashboardItemId: string;
   dashboardLabel: string;
-  addWorkspaceItemId: string;
-  addWorkspaceLabel: string;
-  createWorkspaceItemId: string;
-  createWorkspaceLabel: string;
 }
 
 export function buildPinnedMenuItems({
@@ -106,10 +100,6 @@ export function buildProjectsPinnedMenuItems({
 export function buildFoldersPinnedMenuItems({
   dashboardItemId,
   dashboardLabel,
-  addWorkspaceItemId,
-  addWorkspaceLabel,
-  createWorkspaceItemId,
-  createWorkspaceLabel,
 }: BuildFoldersPinnedMenuItemsParams): NavigationMenuItem[] {
   return [
     {
@@ -118,20 +108,6 @@ export function buildFoldersPinnedMenuItems({
       label: dashboardLabel,
       icon: LayoutDashboard,
       iconName: "layout-dashboard",
-    },
-    {
-      id: addWorkspaceItemId,
-      key: addWorkspaceItemId,
-      label: addWorkspaceLabel,
-      icon: FolderSymlink,
-      iconName: "folder-symlink",
-    },
-    {
-      id: createWorkspaceItemId,
-      key: createWorkspaceItemId,
-      label: createWorkspaceLabel,
-      icon: FolderTree,
-      iconName: "folder-tree",
     },
   ];
 }
