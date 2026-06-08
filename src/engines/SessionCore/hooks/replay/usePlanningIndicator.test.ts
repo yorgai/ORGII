@@ -43,4 +43,22 @@ describe("shouldShowPlanningIndicator", () => {
       })
     ).toBe(false);
   });
+
+  it("shows when non-visible running events exist but no visible running row is painted", () => {
+    expect(
+      shouldShowPlanningIndicator({
+        ...baseInput,
+        anyRunning: false,
+      })
+    ).toBe(true);
+  });
+
+  it("hides while a visible running row is painted", () => {
+    expect(
+      shouldShowPlanningIndicator({
+        ...baseInput,
+        anyRunning: true,
+      })
+    ).toBe(false);
+  });
 });

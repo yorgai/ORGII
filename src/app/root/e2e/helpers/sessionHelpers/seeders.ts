@@ -45,6 +45,12 @@ export function createSessionSeederHelpers(store: E2EStore) {
       chatPanelMaximized?: boolean;
       chatWidth?: number;
       currentEventId?: string;
+      runtimeStatus?:
+        | "idle"
+        | "running"
+        | "installing"
+        | "waiting_for_user"
+        | "waiting_for_funds";
       stationMode?: "my-station" | "agent-station";
       selectedApp?: "CODE_EDITOR";
     }
@@ -69,6 +75,9 @@ export function createSessionSeederHelpers(store: E2EStore) {
 
       const snapshot = await eventStoreProxy.getSnapshot(sessionId);
       store.set(derivedSnapshotAtom, snapshot);
+      if (options?.runtimeStatus) {
+        store.set(sessionRuntimeStatusAtom, options.runtimeStatus);
+      }
       if (options?.selectedApp === "CODE_EDITOR") {
         store.set(simulatorSelectedAppAtom, AppType.CODE_EDITOR);
         store.set(simulatorFollowAppLockAtom, AppType.CODE_EDITOR);

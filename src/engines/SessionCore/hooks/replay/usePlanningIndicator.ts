@@ -50,6 +50,7 @@ import {
   eventStoreVersionAtom,
 } from "@src/engines/SessionCore/core/atoms/events";
 import { isInteractiveTool } from "@src/engines/SessionCore/core/interactiveTools";
+import { isRunningSessionEvent } from "@src/engines/SessionCore/core/runningEventGate";
 import {
   isPendingCancelAtom,
   isSessionActiveAtom,
@@ -133,7 +134,10 @@ export function usePlanningIndicator(): PlanningIndicatorState {
   const version = useAtomValue(eventStoreVersionAtom);
   const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
 
-  const anyRunning = snapshot?.hasRunningEvent ?? false;
+  const anyRunning = useMemo(() => {
+    if (!snapshot || !("chatEvents" in snapshot)) return false;
+    return snapshot.chatEvents.some(isRunningSessionEvent);
+  }, [snapshot]);
 
   const hasAwaitingUserInteraction = useMemo(() => {
     if (!snapshot || !("events" in snapshot)) return false;

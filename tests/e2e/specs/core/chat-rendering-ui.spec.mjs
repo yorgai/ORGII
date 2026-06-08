@@ -944,6 +944,76 @@ async function assertBackgroundProcessPinnedToChatSession() {
   );
 }
 
+async function assertWorkingFooterShownForHiddenRunningEvent() {
+  const sessionId = `e2e-render-working-footer-${Date.now()}`;
+  const baseTime = Date.now();
+  const events = [
+    {
+      id: "working-footer-user",
+      chunk_id: "working-footer-user",
+      sessionId,
+      createdAt: new Date(baseTime).toISOString(),
+      functionName: "user_message",
+      uiCanonical: "user_message",
+      actionType: "raw",
+      args: {},
+      result: {
+        type: "user",
+        message: "Keep working",
+        is_delta: false,
+      },
+      source: "user",
+      displayText: "Keep working",
+      displayStatus: "completed",
+      displayVariant: "message",
+      activityStatus: "processed",
+      isDelta: false,
+    },
+    {
+      id: "working-footer-hidden-running",
+      chunk_id: "working-footer-hidden-running",
+      sessionId,
+      createdAt: new Date(baseTime + 1_000).toISOString(),
+      functionName: "hidden_status",
+      uiCanonical: "hidden_status",
+      actionType: "raw",
+      args: {},
+      result: { status: "running", is_delta: false },
+      source: "assistant",
+      displayText: "",
+      displayStatus: "running",
+      displayVariant: "session",
+      activityStatus: "agent",
+      isDelta: false,
+    },
+  ];
+
+  const seed = await invokeE2E("seedChatEvents", sessionId, events, {
+    chatPanelMaximized: true,
+    runtimeStatus: "running",
+    stationMode: "my-station",
+  });
+  if (!seed || seed.ok !== true) {
+    throw new Error(`seedChatEvents failed for working footer: ${seed?.error ?? "unknown"}`);
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const footer = await execJS(`
+        const el = document.querySelector('[data-testid="planning-footer"]');
+        return el ? el.textContent || "" : "";
+      `);
+      return /Planning next step|Working on|Thinking|working/i.test(footer);
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `working footer did not render for hidden running event: ${JSON.stringify(
+        await execJS(`return { body: (document.body.innerText || "").slice(0, 5000) };`)
+      )}; state=${JSON.stringify(await invokeE2E("inspectChatState"))}`,
+    }
+  );
+}
+
 async function assertMultiRepoReadPathRendered() {
   const sessionId = `e2e-render-multirepo-read-${Date.now()}`;
   const baseTime = Date.now();
@@ -1198,6 +1268,15 @@ describe("Core chat rendering UI", () => {
     }
 
     await assertBackgroundProcessPinnedToChatSession();
+  });
+
+  it("shows the working footer when running events are hidden from chat", async function () {
+    if (!shouldRunScenario("working-footer-hidden-running")) {
+      this.skip();
+      return;
+    }
+
+    await assertWorkingFooterShownForHiddenRunningEvent();
   });
 
   it("renders multi-repo read file targets as paths instead of generic file labels", async function () {

@@ -512,6 +512,12 @@ export interface E2EHelpers {
       chatPanelMaximized?: boolean;
       chatWidth?: number;
       currentEventId?: string;
+      runtimeStatus?:
+        | "idle"
+        | "running"
+        | "installing"
+        | "waiting_for_user"
+        | "waiting_for_funds";
       stationMode?: "my-station" | "agent-station";
       selectedApp?: "CODE_EDITOR";
     }
