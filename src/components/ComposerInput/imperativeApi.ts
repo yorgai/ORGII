@@ -28,6 +28,8 @@ export interface ImperativeApiContext {
   setHostContent: (text: string) => void;
   restoreSnapshot: (snapshot: ComposerSnapshot) => void;
   captureSnapshot: () => ComposerSnapshot;
+  markHistoryBoundary: () => void;
+  commitHistoryBoundary: () => void;
   clearHost: () => void;
   focusHost: () => void;
   placeCaretAtPoint: (x: number, y: number) => boolean;
@@ -113,10 +115,12 @@ export function buildImperativeApi(
     isEmpty: () => ctx.isHostEmpty(),
     insertMentionText: (text: string) => {
       const mention = ctx.getAtMentionState();
+      ctx.markHistoryBoundary();
       if (mention.active) {
         ctx.consumeMentionQuery();
       }
       ctx.insertTextAtCaret(text);
+      ctx.commitHistoryBoundary();
       if (mention.active) {
         ctx.closeAtMention();
       }
@@ -130,6 +134,7 @@ export function buildImperativeApi(
       const fileName = displayName || filePath.split("/").pop() || filePath;
       const mention = ctx.getAtMentionState();
       const slashCommand = ctx.getSlashCommandState();
+      ctx.markHistoryBoundary();
       if (mention.active) {
         ctx.consumeMentionQuery();
       } else if (slashCommand.active) {
@@ -146,6 +151,7 @@ export function buildImperativeApi(
       // Trailing space so the next typed character lands after the pill
       // without nudging the caret back into it.
       ctx.insertTextAtCaret(" ");
+      ctx.commitHistoryBoundary();
       if (mention.active) {
         ctx.closeAtMention();
       } else if (slashCommand.active) {
@@ -171,6 +177,7 @@ export function buildImperativeApi(
       // at the front followed by a space separator, then re-append the
       // original parts so the user's prior text is preserved.
       const existing = ctx.captureSnapshot();
+      ctx.markHistoryBoundary();
       ctx.restoreSnapshot({
         parts: [
           { kind: "pill", attrs: pillAttrs },
@@ -178,6 +185,7 @@ export function buildImperativeApi(
           ...existing.parts,
         ],
       });
+      ctx.commitHistoryBoundary();
     },
     appendFilePill: (
       filePath: string,
@@ -199,6 +207,7 @@ export function buildImperativeApi(
       // inserted before the pill so it reads as a distinct token.
       const existing = ctx.captureSnapshot();
       const hasContent = existing.parts.length > 0;
+      ctx.markHistoryBoundary();
       ctx.restoreSnapshot({
         parts: [
           ...existing.parts,
@@ -207,6 +216,7 @@ export function buildImperativeApi(
           { kind: "text", text: " " },
         ],
       });
+      ctx.commitHistoryBoundary();
     },
     insertFileReference: (options) => {
       const fileName =
@@ -215,6 +225,7 @@ export function buildImperativeApi(
         options.filePath;
       const mention = ctx.getAtMentionState();
       const slashCommand = ctx.getSlashCommandState();
+      ctx.markHistoryBoundary();
       if (mention.active) {
         ctx.consumeMentionQuery();
       } else if (slashCommand.active) {
@@ -229,6 +240,7 @@ export function buildImperativeApi(
         lineEnd: options.lineEnd,
       });
       ctx.insertTextAtCaret(" ");
+      ctx.commitHistoryBoundary();
       if (mention.active) {
         ctx.closeAtMention();
       } else if (slashCommand.active) {

@@ -21,11 +21,29 @@ import type { ComposerPillAttrs, ComposerSnapshot } from "./types";
 import { PILL_DATA_ATTR, extractPlainText, pillDataAttributes } from "./utils";
 
 const PILL_ID_ATTR = "data-pill-id";
+const MAX_HISTORY_ENTRIES = 100;
 
 let pillIdCounter = 0;
 function nextPillId(): string {
   pillIdCounter += 1;
   return `composer-pill-${Date.now().toString(36)}-${pillIdCounter}`;
+}
+
+function snapshotsEqual(
+  left: ComposerSnapshot,
+  right: ComposerSnapshot
+): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function pushHistoryEntry(
+  stack: ComposerSnapshot[],
+  snapshot: ComposerSnapshot
+): void {
+  const previous = stack[stack.length - 1];
+  if (previous && snapshotsEqual(previous, snapshot)) return;
+  stack.push(snapshot);
+  if (stack.length > MAX_HISTORY_ENTRIES) stack.shift();
 }
 
 export interface PillEntry {
@@ -40,6 +58,14 @@ export interface UseEditorOperationsResult {
   insertPill: (attrs: ComposerPillAttrs) => void;
   /** Insert text at the current caret position (preserves newlines) */
   insertTextAtCaret: (text: string) => void;
+  /** Capture the current document before a programmatic edit. */
+  markHistoryBoundary: () => void;
+  /** Store the current programmatic edit as one undoable transaction. */
+  commitHistoryBoundary: () => void;
+  /** Undo the latest programmatic editor transaction. */
+  undo: () => boolean;
+  /** Redo the latest undone programmatic editor transaction. */
+  redo: () => boolean;
   /** Replace all contents with `text` (no pills) */
   setHostContent: (text: string) => void;
   /** Restore the editor from a structured snapshot (text + pills + newlines) */
@@ -66,6 +92,9 @@ export function useEditorOperations(): UseEditorOperationsResult {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const pillHostsRef = useRef<Map<string, HTMLSpanElement>>(new Map());
   const pillAttrsRef = useRef<Map<string, ComposerPillAttrs>>(new Map());
+  const undoStackRef = useRef<ComposerSnapshot[]>([]);
+  const redoStackRef = useRef<ComposerSnapshot[]>([]);
+  const historyBoundaryRef = useRef<ComposerSnapshot | null>(null);
   const [pillEntries, setPillEntries] = useState<PillEntry[]>([]);
 
   const syncPillEntries = useCallback(() => {
@@ -89,12 +118,18 @@ export function useEditorOperations(): UseEditorOperationsResult {
       const host = hostRef.current;
       if (!host) return;
       const id = nextPillId();
+      host
+        .querySelectorAll<HTMLElement>("[data-last-inserted-pill]")
+        .forEach((element) =>
+          element.removeAttribute("data-last-inserted-pill")
+        );
       const span = document.createElement("span");
       const dataAttrs = pillDataAttributes(attrs);
       Object.entries(dataAttrs).forEach(([key, value]) => {
         span.setAttribute(key, value);
       });
       span.setAttribute(PILL_ID_ATTR, id);
+      span.setAttribute("data-last-inserted-pill", "true");
       span.setAttribute("contenteditable", "false");
       pillHostsRef.current.set(id, span);
       pillAttrsRef.current.set(id, attrs);
@@ -190,11 +225,11 @@ export function useEditorOperations(): UseEditorOperationsResult {
     [syncPillEntries]
   );
 
-  const restoreSnapshot = useCallback(
+  const restoreSnapshotContent = useCallback(
     (snapshot: ComposerSnapshot) => {
       const host = hostRef.current;
-      if (!host) return;
-      if (!snapshot?.parts) return;
+      if (!host) return false;
+      if (!snapshot?.parts) return false;
       pillHostsRef.current.clear();
       pillAttrsRef.current.clear();
       host.textContent = "";
@@ -218,8 +253,18 @@ export function useEditorOperations(): UseEditorOperationsResult {
         }
       }
       syncPillEntries();
+      return true;
     },
     [syncPillEntries]
+  );
+
+  const restoreSnapshot = useCallback(
+    (snapshot: ComposerSnapshot) => {
+      if (restoreSnapshotContent(snapshot)) {
+        placeCaretAtEnd(hostRef.current as HTMLElement);
+      }
+    },
+    [restoreSnapshotContent]
   );
 
   const captureSnapshot = useCallback((): ComposerSnapshot => {
@@ -251,12 +296,49 @@ export function useEditorOperations(): UseEditorOperationsResult {
     return { parts };
   }, []);
 
+  const markHistoryBoundary = useCallback(() => {
+    historyBoundaryRef.current = captureSnapshot();
+  }, [captureSnapshot]);
+
+  const commitHistoryBoundary = useCallback(() => {
+    const before = historyBoundaryRef.current;
+    historyBoundaryRef.current = null;
+    if (!before) return;
+    const after = captureSnapshot();
+    if (snapshotsEqual(before, after)) return;
+    pushHistoryEntry(undoStackRef.current, before);
+    redoStackRef.current = [];
+  }, [captureSnapshot]);
+
+  const undo = useCallback(() => {
+    const previous = undoStackRef.current.pop();
+    if (!previous) return false;
+    pushHistoryEntry(redoStackRef.current, captureSnapshot());
+    const restored = restoreSnapshotContent(previous);
+    const host = hostRef.current;
+    if (restored && host) placeCaretAtEnd(host);
+    historyBoundaryRef.current = null;
+    return restored;
+  }, [captureSnapshot, restoreSnapshotContent]);
+
+  const redo = useCallback(() => {
+    const next = redoStackRef.current.pop();
+    if (!next) return false;
+    pushHistoryEntry(undoStackRef.current, captureSnapshot());
+    const restored = restoreSnapshotContent(next);
+    const host = hostRef.current;
+    if (restored && host) placeCaretAtEnd(host);
+    historyBoundaryRef.current = null;
+    return restored;
+  }, [captureSnapshot, restoreSnapshotContent]);
+
   const clearHost = useCallback(() => {
     const host = hostRef.current;
     if (!host) return;
     pillHostsRef.current.clear();
     pillAttrsRef.current.clear();
     host.textContent = "";
+    historyBoundaryRef.current = null;
     syncPillEntries();
   }, [syncPillEntries]);
 
@@ -333,6 +415,10 @@ export function useEditorOperations(): UseEditorOperationsResult {
       pillEntries,
       insertPill,
       insertTextAtCaret,
+      markHistoryBoundary,
+      commitHistoryBoundary,
+      undo,
+      redo,
       setHostContent,
       restoreSnapshot,
       captureSnapshot,
@@ -348,6 +434,10 @@ export function useEditorOperations(): UseEditorOperationsResult {
       pillEntries,
       insertPill,
       insertTextAtCaret,
+      markHistoryBoundary,
+      commitHistoryBoundary,
+      undo,
+      redo,
       setHostContent,
       restoreSnapshot,
       captureSnapshot,

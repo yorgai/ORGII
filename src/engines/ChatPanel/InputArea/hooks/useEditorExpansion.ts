@@ -123,6 +123,15 @@ export function useEditorExpansion({
         root?.querySelector<HTMLElement>(".composer-input-content") ?? null;
       const hasPills = content?.querySelector("[data-composer-pill]") != null;
 
+      // Any inserted pill switches the regular chat composer out of the
+      // single-line compact row. Pills are atomic inline tokens; keeping them
+      // inside the compact layout makes caret and selection painting diverge
+      // between this path and the taller creator/edit surfaces.
+      if (hasPills) {
+        dispatch({ type: "setMultiline", value: true });
+        return;
+      }
+
       // An explicit newline always expands — even if the document is
       // otherwise blank. User just pressed Enter on an empty editor to
       // start composing a multi-line message; staying compact would hide

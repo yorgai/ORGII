@@ -78,6 +78,9 @@ export const InputAreaPortals: React.FC<InputAreaPortalsProps> = ({
   onPlusSlashQueryChange,
 }) => {
   const portalPlacement = isEditMode ? "down" : "prefer-up";
+  const menuAnchorSelector = isEditMode
+    ? "[data-editor-slot]"
+    : "[data-composer-menu-anchor]";
 
   return (
     <>
@@ -95,13 +98,13 @@ export const InputAreaPortals: React.FC<InputAreaPortalsProps> = ({
         keyboardHandlerRef={contextMenuKeyboardHandlerRef}
         treePosition={mentionTreePosition}
         placement={portalPlacement}
-        anchorSelector="[data-editor-slot]"
+        anchorSelector={menuAnchorSelector}
       />
 
       <SlashCommandPortal
         visible={showSlashMenu}
         containerRef={containerRef}
-        anchorSelector="[data-editor-slot]"
+        anchorSelector={menuAnchorSelector}
         placement={portalPlacement}
         items={filteredSlashItems}
         loading={slashLoading}
@@ -118,7 +121,7 @@ export const InputAreaPortals: React.FC<InputAreaPortalsProps> = ({
       <SlashCommandPortal
         visible={showPlusSlashMenu}
         containerRef={containerRef}
-        anchorSelector="[data-editor-slot]"
+        anchorSelector={menuAnchorSelector}
         placement={portalPlacement}
         items={filteredSlashItems}
         loading={slashLoading}

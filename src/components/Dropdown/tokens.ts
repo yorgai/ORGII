@@ -56,7 +56,7 @@ export const DROPDOWN_PANEL = {
   optionsMaxHeightClass: "max-h-[200px]",
 
   /** Gap between trigger and dropdown (px). Default for useDropdownEngine. */
-  triggerGap: 8,
+  triggerGap: 1.5,
   /** Gap between primary dropdown and second-level submenu/flyout panels. */
   submenuGap: 8,
   /** Tight gap for sidebar tab lists and inline menus */

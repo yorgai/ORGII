@@ -321,6 +321,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
 
           <ComposerShell
             ref={isEditMode ? editContainerRef : composerShellRef}
+            data-composer-menu-anchor
             data-chat-drop-target
             data-chat-drop-target-id={dropTargetId}
             data-testid={isEditMode ? "chat-message-edit-composer" : undefined}

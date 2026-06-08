@@ -52,6 +52,25 @@
   // Preserve newlines but still soft-wrap.
   white-space: pre-wrap;
 
+  // Treat portal-backed pill hosts as a single inline atom so WebKit does not
+  // paint the caret at internal icon/text boundaries.
+  > [data-composer-pill="true"] {
+    display: inline-block;
+    white-space: nowrap;
+    vertical-align: baseline;
+  }
+
+  > [data-composer-pill="true"].is-selection-covered {
+    background: Highlight;
+    color: HighlightText;
+    border-radius: 3px;
+  }
+
+  > [data-composer-pill="true"].is-selection-covered .composer-pill,
+  > [data-composer-pill="true"].is-selection-covered .composer-pill * {
+    color: HighlightText !important;
+  }
+
   // Placeholder driven by [data-placeholder] on the host when empty.
   &.is-empty::before {
     content: attr(data-placeholder);

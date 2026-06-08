@@ -23,7 +23,17 @@ export function placeCaretAtEnd(host: HTMLElement): void {
 /** Place the caret immediately after the given DOM node. */
 export function placeCaretAfter(node: Node): void {
   const range = document.createRange();
-  range.setStartAfter(node);
+  if (node.nodeType === Node.TEXT_NODE) {
+    range.setStart(node, (node.textContent ?? "").length);
+  } else {
+    const parent = node.parentNode;
+    if (parent) {
+      const childIndex = Array.prototype.indexOf.call(parent.childNodes, node);
+      range.setStart(parent, childIndex + 1);
+    } else {
+      range.setStartAfter(node);
+    }
+  }
   range.collapse(true);
   const selection = window.getSelection();
   if (!selection) return;
@@ -160,6 +170,36 @@ export function placeCaretAtTextOffset(
   if (!selection) return;
   selection.removeAllRanges();
   selection.addRange(range);
+}
+
+export function placeCaretAfterPill(pill: HTMLElement): void {
+  const range = document.createRange();
+  const nextSibling = pill.nextSibling;
+  if (nextSibling?.nodeType === Node.TEXT_NODE) {
+    const text = nextSibling.textContent ?? "";
+    range.setStart(nextSibling, text.length);
+  } else {
+    range.setStartAfter(pill);
+  }
+  range.collapse(true);
+  const selection = window.getSelection();
+  if (!selection) return;
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+export function normalizeCollapsedSelectionAroundPills(
+  host: HTMLElement
+): void {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || !selection.isCollapsed) {
+    return;
+  }
+  const range = selection.getRangeAt(0);
+  if (!host.contains(range.startContainer)) return;
+  const pill = findPillAncestor(range.startContainer);
+  if (!pill) return;
+  placeCaretAfterPill(pill);
 }
 
 export function placeCaretAtPoint(

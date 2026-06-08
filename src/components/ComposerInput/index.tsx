@@ -19,6 +19,7 @@ import React, {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
 } from "react";
@@ -34,6 +35,8 @@ import { type MentionState, createKeyDownHandler } from "./keyboard";
 import { createPasteHandler } from "./pasteHandlers";
 import {
   caretTextOffset,
+  normalizeCollapsedSelectionAroundPills,
+  placeCaretAfterPill,
   placeCaretAtEnd,
   placeCaretAtPoint,
   placeCaretAtTextOffset,
@@ -42,7 +45,12 @@ import {
 import { removeSnapshotTextRange } from "./snapshotRanges";
 import type { ComposerInputProps, ComposerInputRef } from "./types";
 import { useEditorOperations } from "./useEditorOperations";
-import { PILL_DATA_ATTR, extractPlainText, sanitizeText } from "./utils";
+import {
+  PILL_DATA_ATTR,
+  extractPlainText,
+  extractSerializedTextFromRange,
+  sanitizeText,
+} from "./utils";
 
 export type {
   ComposerInputProps,
@@ -126,6 +134,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
     // ===== Composition + mention state =====
     const isComposingRef = useRef(false);
     const compositionEndedAtRef = useRef(0);
+    const pendingCaretAfterPillRef = useRef(false);
     const atMentionRef = useRef<MentionState>({
       active: false,
       startOffset: 0,
@@ -156,11 +165,34 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
     }, [ops]);
 
     // ===== Mention-driven update handler =====
+    const updateCoveredPillSelection = useCallback(() => {
+      const host = hostRef.current;
+      if (!host) return;
+      const pills = host.querySelectorAll<HTMLElement>(`[${PILL_DATA_ATTR}]`);
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+        pills.forEach((pill) => pill.classList.remove("is-selection-covered"));
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      if (!host.contains(range.commonAncestorContainer)) {
+        pills.forEach((pill) => pill.classList.remove("is-selection-covered"));
+        return;
+      }
+      pills.forEach((pill) => {
+        pill.classList.toggle(
+          "is-selection-covered",
+          range.intersectsNode(pill)
+        );
+      });
+    }, [hostRef]);
+
     const handleInput = useCallback(
       (nativeEvent?: Event) => {
         const host = hostRef.current;
         if (!host) return;
         ops.reconcilePillsFromDom();
+        ops.commitHistoryBoundary();
 
         const text = extractPlainText(host);
         const hasPills = host.querySelector(`[${PILL_DATA_ATTR}]`) != null;
@@ -245,12 +277,15 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
     const handlePaste = useMemo(
       () =>
         createPasteHandler({
-          insertPill: ops.insertPill,
+          insertPill: (attrs) => {
+            pendingCaretAfterPillRef.current = true;
+            ops.insertPill(attrs);
+          },
           insertTextAtCaret: ops.insertTextAtCaret,
           getOnImagePaste: () => onImagePasteRef.current,
           getInstalledSkills: () => installedSkillsRef.current,
         }),
-      [ops.insertPill, ops.insertTextAtCaret]
+      [ops]
     );
 
     // Wrap `insertNewline` so a bare-Enter / Shift+Enter newline still
@@ -261,6 +296,18 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
     const insertNewlineAndNotify = useCallback(() => {
       ops.insertNewline();
       handleInput();
+    }, [ops, handleInput]);
+
+    const undoAndNotify = useCallback(() => {
+      const restored = ops.undo();
+      if (restored) handleInput();
+      return restored;
+    }, [ops, handleInput]);
+
+    const redoAndNotify = useCallback(() => {
+      const restored = ops.redo();
+      if (restored) handleInput();
+      return restored;
     }, [ops, handleInput]);
 
     const handleKeyDown = useMemo(
@@ -303,10 +350,19 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
             return host ? extractPlainText(host) : "";
           },
           insertNewline: insertNewlineAndNotify,
+          undo: undoAndNotify,
+          redo: redoAndNotify,
           requireCmdEnter,
           slashTriggerMode,
         }),
-      [hostRef, insertNewlineAndNotify, requireCmdEnter, slashTriggerMode]
+      [
+        hostRef,
+        insertNewlineAndNotify,
+        redoAndNotify,
+        requireCmdEnter,
+        slashTriggerMode,
+        undoAndNotify,
+      ]
     );
 
     // ===== Native event wiring =====
@@ -322,29 +378,51 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
       };
       const handleBeforeInput = (event: InputEvent) => {
         if (isComposingRef.current) return;
+        ops.markHistoryBoundary();
         if (event.inputType === "insertText" && event.data) {
           const sanitized = sanitizeText(event.data);
           if (sanitized !== event.data) {
             event.preventDefault();
             if (sanitized) ops.insertTextAtCaret(sanitized);
+            ops.commitHistoryBoundary();
+            handleInput();
           }
         }
       };
       const handlePasteEvent = (event: ClipboardEvent) => {
+        ops.markHistoryBoundary();
         handlePaste(event);
+        ops.commitHistoryBoundary();
         handleInput();
+      };
+      const handleCopyEvent = (event: ClipboardEvent) => {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+        const range = selection.getRangeAt(0);
+        if (!host.contains(range.commonAncestorContainer)) return;
+        const text = extractSerializedTextFromRange(range);
+        if (!text) return;
+        event.preventDefault();
+        event.clipboardData?.setData("text/plain", text);
       };
       host.addEventListener("compositionstart", handleCompositionStart);
       host.addEventListener("compositionend", handleCompositionEnd);
       host.addEventListener("beforeinput", handleBeforeInput);
       host.addEventListener("paste", handlePasteEvent);
+      host.addEventListener("copy", handleCopyEvent);
       host.addEventListener("keydown", handleKeyDown);
+      document.addEventListener("selectionchange", updateCoveredPillSelection);
       return () => {
         host.removeEventListener("compositionstart", handleCompositionStart);
         host.removeEventListener("compositionend", handleCompositionEnd);
         host.removeEventListener("beforeinput", handleBeforeInput);
         host.removeEventListener("paste", handlePasteEvent);
+        host.removeEventListener("copy", handleCopyEvent);
         host.removeEventListener("keydown", handleKeyDown);
+        document.removeEventListener(
+          "selectionchange",
+          updateCoveredPillSelection
+        );
       };
       // ops is stable (object from useEditorOperations never changes identity).
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -354,6 +432,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
       handlePaste,
       handleKeyDown,
       handleInput,
+      updateCoveredPillSelection,
     ]);
 
     // ===== Initial content + autoFocus =====
@@ -385,6 +464,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
         buildImperativeApi({
           host: () => hostRef.current,
           insertPill: (attrs) => {
+            pendingCaretAfterPillRef.current = true;
             ops.insertPill(attrs);
             updateEmptyState();
             const host = hostRef.current;
@@ -410,6 +490,8 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
             if (host) onContentChangeRef.current?.(extractPlainText(host));
           },
           captureSnapshot: () => ops.captureSnapshot(),
+          markHistoryBoundary: ops.markHistoryBoundary,
+          commitHistoryBoundary: ops.commitHistoryBoundary,
           clearHost: () => {
             resetMentionState();
             ops.clearHost();
@@ -524,8 +606,10 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
         <ComposerPill
           attrs={entry.attrs}
           onDelete={() => {
+            ops.markHistoryBoundary();
             target.parentNode?.removeChild(target);
             ops.reconcilePillsFromDom();
+            ops.commitHistoryBoundary();
             updateEmptyState();
             const host = ops.hostRef.current;
             if (host) onContentChangeRef.current?.(extractPlainText(host));
@@ -535,6 +619,27 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
         entry.id
       );
     });
+
+    useLayoutEffect(() => {
+      const host = hostRef.current;
+      if (!host) return;
+      normalizeCollapsedSelectionAroundPills(host);
+      if (!pendingCaretAfterPillRef.current) return;
+
+      const frameId = requestAnimationFrame(() => {
+        const liveHost = hostRef.current;
+        if (!liveHost) return;
+        const insertedPill = liveHost.querySelector<HTMLElement>(
+          "[data-last-inserted-pill]"
+        );
+        if (!insertedPill) return;
+        placeCaretAfterPill(insertedPill);
+        insertedPill.removeAttribute("data-last-inserted-pill");
+        pendingCaretAfterPillRef.current = false;
+      });
+
+      return () => cancelAnimationFrame(frameId);
+    }, [hostRef, pillEntries]);
 
     return (
       <div

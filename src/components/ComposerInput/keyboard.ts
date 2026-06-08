@@ -63,6 +63,8 @@ export interface KeyDownHandlerContext {
   getText: () => string;
   /** Insert a literal newline at the caret. Used for Shift+Enter / bare Enter. */
   insertNewline: () => void;
+  undo: () => boolean;
+  redo: () => boolean;
   /** Whether bare Enter inserts a newline (false) or submits (true). */
   requireCmdEnter: boolean;
   slashTriggerMode: "command" | "context";
@@ -110,6 +112,22 @@ export function createKeyDownHandler(ctx: KeyDownHandlerContext) {
     // dropdown is visibly open (opened via button, not via typed "/").
     if (onSlashKeys && DROPDOWN_NAV_KEYS.includes(event.key)) {
       const handled = onSlashKeys(event);
+      if (handled) {
+        event.preventDefault();
+        return;
+      }
+    }
+
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
+      const handled = event.shiftKey ? ctx.redo() : ctx.undo();
+      if (handled) {
+        event.preventDefault();
+        return;
+      }
+    }
+
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "y") {
+      const handled = ctx.redo();
       if (handled) {
         event.preventDefault();
         return;

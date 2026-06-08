@@ -186,6 +186,13 @@ export function extractTextWithPills(root: HTMLElement): string {
   );
 }
 
+export function extractSerializedTextFromRange(range: Range): string {
+  const fragment = range.cloneContents();
+  const container = document.createElement("div");
+  container.appendChild(fragment);
+  return extractTextWithPills(container);
+}
+
 /**
  * Collect terminal/session/browser pill texts (the ones that have a backing
  * entry in `pillTokens` storage). Mirrors `collectContextPillTexts` from the
