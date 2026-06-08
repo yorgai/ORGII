@@ -3,6 +3,7 @@ import {
   CircleDot,
   ExternalLink,
   Loader,
+  MessageSquare,
   XCircle,
 } from "lucide-react";
 import React, { memo, useCallback, useState } from "react";
@@ -14,6 +15,7 @@ import Button from "@src/components/Button";
 import Textarea from "@src/components/Textarea";
 import {
   HEADER_BUTTON,
+  HEADER_CLASSES,
   HEADER_ICON_SIZE,
   TYPOGRAPHY,
 } from "@src/config/workstation/tokens";
@@ -63,8 +65,8 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
 
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex shrink-0 items-center gap-2 border-b border-border-1 px-3 py-2">
+        {/* ── Header bar ─────────────────────────────────────────────────── */}
+        <div className={HEADER_CLASSES.pageHeader}>
           <button
             type="button"
             onClick={onClose}
@@ -74,26 +76,41 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
             <ArrowLeft size={HEADER_ICON_SIZE.sm} strokeWidth={2} />
           </button>
 
+          {/* Issue number badge */}
           <span
-            className={`shrink-0 ${isOpen ? "text-success-6" : "text-text-3"}`}
+            className={`shrink-0 rounded px-1 py-[1px] font-mono ${TYPOGRAPHY.secondary} bg-fill-2 text-text-3`}
           >
-            {isOpen ? (
-              <CircleDot size={HEADER_ICON_SIZE.sm} strokeWidth={2} />
-            ) : (
-              <XCircle size={HEADER_ICON_SIZE.sm} strokeWidth={2} />
-            )}
+            #{issue.number}
           </span>
 
+          {/* Title — truncated in the header */}
           <span
-            className={`min-w-0 flex-1 truncate ${TYPOGRAPHY.value} font-medium text-text-1`}
+            className={`min-w-0 flex-1 truncate ${TYPOGRAPHY.sectionTitle} text-text-1`}
+            title={issue.title}
           >
-            <span
-              className={`mr-1 font-mono ${TYPOGRAPHY.secondary} text-text-3`}
-            >
-              #{issue.number}
-            </span>
             {issue.title}
           </span>
+
+          {/* Status action — close / reopen as a very small ghost button */}
+          {isOpen ? (
+            <button
+              type="button"
+              onClick={onCloseIssue}
+              className={`shrink-0 rounded px-1.5 py-[3px] ${TYPOGRAPHY.secondary} text-text-3 transition-colors hover:bg-fill-2 hover:text-text-1`}
+              title="Close issue"
+            >
+              Close
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onReopenIssue}
+              className={`shrink-0 rounded px-1.5 py-[3px] ${TYPOGRAPHY.secondary} text-success-6 transition-colors hover:bg-success-1`}
+              title="Reopen issue"
+            >
+              Reopen
+            </button>
+          )}
 
           <button
             type="button"
@@ -105,11 +122,34 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
           </button>
         </div>
 
-        {/* Scrollable body */}
+        {/* ── Scrollable content ──────────────────────────────────────────── */}
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          {/* Meta */}
-          <div className="flex flex-col gap-1.5 border-b border-border-1 px-3 py-2">
-            {/* Author */}
+          {/* ── Issue title + status ──────────────────────────────────────── */}
+          <div className="flex flex-col gap-2 px-4 pb-3 pt-4">
+            {/* Status pill + full title */}
+            <div className="flex flex-wrap items-start gap-2">
+              <span
+                className={`mt-px inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-[3px] ${TYPOGRAPHY.badge} ${
+                  isOpen
+                    ? "text-success-7 bg-success-1"
+                    : "bg-fill-2 text-text-3"
+                }`}
+              >
+                {isOpen ? (
+                  <CircleDot size={11} strokeWidth={2} />
+                ) : (
+                  <XCircle size={11} strokeWidth={2} />
+                )}
+                {isOpen ? "Open" : "Closed"}
+              </span>
+              <h2
+                className={`min-w-0 flex-1 ${TYPOGRAPHY.sectionTitle} leading-[1.4] text-text-1`}
+              >
+                {issue.title}
+              </h2>
+            </div>
+
+            {/* Author row */}
             <div
               className={`flex items-center gap-1.5 ${TYPOGRAPHY.secondary} text-text-3`}
             >
@@ -118,6 +158,12 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
                 {issue.user.login}
               </span>
               <span>opened {formatTimeAgo(issue.created_at)}</span>
+              {comments.length > 0 && (
+                <span className="ml-auto flex items-center gap-0.5">
+                  <MessageSquare size={11} strokeWidth={1.75} />
+                  <span>{comments.length}</span>
+                </span>
+              )}
             </div>
 
             {/* Labels */}
@@ -128,7 +174,7 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
                   return (
                     <span
                       key={label.id}
-                      className={`rounded-full px-1.5 py-[1px] ${TYPOGRAPHY.badge} leading-tight`}
+                      className={`rounded-full px-2 py-[2px] ${TYPOGRAPHY.badge} leading-tight`}
                       style={style}
                     >
                       {label.name}
@@ -141,87 +187,91 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
             {/* Assignees */}
             {issue.assignees.length > 0 && (
               <div
-                className={`flex flex-wrap items-center gap-1 ${TYPOGRAPHY.secondary} text-text-3`}
+                className={`flex flex-wrap items-center gap-1.5 ${TYPOGRAPHY.secondary} text-text-3`}
               >
-                <span>Assigned:</span>
-                {issue.assignees.map((user) => (
-                  <span key={user.login} className="flex items-center gap-0.5">
-                    <Avatar size={14} src={user.avatar_url} />
-                    <span className="text-text-2">{user.login}</span>
-                  </span>
-                ))}
+                <span className="text-text-3">Assigned to</span>
+                <div className="flex items-center gap-1">
+                  {issue.assignees.map((user) => (
+                    <span
+                      key={user.login}
+                      className="flex items-center gap-1 rounded-full bg-fill-2 px-1.5 py-[2px]"
+                    >
+                      <Avatar size={12} src={user.avatar_url} />
+                      <span className="text-text-2">{user.login}</span>
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Body */}
-          {issue.body && (
-            <div className="border-b border-border-1 px-3 py-2">
+          {/* ── Issue body ────────────────────────────────────────────────── */}
+          {issue.body ? (
+            <div className="border-t border-border-1 px-4 py-3">
               <p
                 className={`whitespace-pre-wrap ${TYPOGRAPHY.value} leading-relaxed text-text-1`}
               >
                 {issue.body}
               </p>
             </div>
-          )}
+          ) : null}
 
-          {/* Action row */}
-          <div className="border-b border-border-1 px-3 py-2">
-            {isOpen ? (
-              <Button
-                htmlType="button"
-                variant="secondary"
-                size="mini"
-                onClick={onCloseIssue}
+          {/* ── Comments section ──────────────────────────────────────────── */}
+          <div className="flex flex-1 flex-col border-t border-border-1">
+            {/* Section heading */}
+            <div className="px-4 pb-1 pt-3">
+              <span
+                className={`${TYPOGRAPHY.secondary} font-medium uppercase tracking-wide text-text-3`}
               >
-                Close issue
-              </Button>
-            ) : (
-              <Button
-                htmlType="button"
-                variant="success"
-                appearance="outline"
-                size="mini"
-                onClick={onReopenIssue}
-              >
-                Reopen issue
-              </Button>
-            )}
-          </div>
+                {commentsLoading
+                  ? "Comments"
+                  : `Comments${comments.length > 0 ? ` (${comments.length})` : ""}`}
+              </span>
+            </div>
 
-          {/* Comments */}
-          <div className="flex flex-1 flex-col">
             {commentsLoading ? (
               <div className="flex items-center justify-center py-6 text-text-3">
                 <Loader size={14} className="animate-spin" />
               </div>
+            ) : comments.length === 0 ? (
+              <div
+                className={`px-4 py-2 ${TYPOGRAPHY.secondary} italic text-text-3`}
+              >
+                No comments yet
+              </div>
             ) : (
-              comments.map((comment) => (
-                <div
-                  key={comment.id}
-                  className="border-b border-border-1 px-3 py-2"
-                >
+              <div className="flex flex-col">
+                {comments.map((comment) => (
                   <div
-                    className={`mb-1 flex items-center gap-1.5 ${TYPOGRAPHY.secondary} text-text-3`}
+                    key={comment.id}
+                    className="flex gap-2.5 border-b border-border-1 px-4 py-3 last:border-b-0"
                   >
-                    <Avatar size={16} src={comment.user.avatar_url} />
-                    <span className="font-medium text-text-2">
-                      {comment.user.login}
-                    </span>
-                    <span>{formatTimeAgo(comment.created_at)}</span>
+                    <div className="shrink-0 pt-[1px]">
+                      <Avatar size={18} src={comment.user.avatar_url} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className={`mb-1 flex items-center gap-1.5 ${TYPOGRAPHY.secondary} text-text-3`}
+                      >
+                        <span className="font-medium text-text-2">
+                          {comment.user.login}
+                        </span>
+                        <span>{formatTimeAgo(comment.created_at)}</span>
+                      </div>
+                      <p
+                        className={`whitespace-pre-wrap ${TYPOGRAPHY.value} leading-relaxed text-text-1`}
+                      >
+                        {comment.body}
+                      </p>
+                    </div>
                   </div>
-                  <p
-                    className={`whitespace-pre-wrap ${TYPOGRAPHY.value} leading-relaxed text-text-1`}
-                  >
-                    {comment.body}
-                  </p>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Add comment */}
-          <div className="shrink-0 px-3 py-2">
+          {/* ── Comment composer ──────────────────────────────────────────── */}
+          <div className="shrink-0 border-t border-border-1 px-4 py-3">
             <Textarea
               value={commentBody}
               onChange={setCommentBody}
@@ -234,7 +284,7 @@ export const IssueDetailPanel: React.FC<IssueDetailPanelProps> = memo(
               resize="none"
               className="mb-2"
             />
-            <div className="flex justify-end">
+            <div className="flex items-center justify-end gap-2">
               <Button
                 htmlType="button"
                 variant="primary"
