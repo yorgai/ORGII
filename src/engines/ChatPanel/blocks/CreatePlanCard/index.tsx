@@ -363,7 +363,9 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
               className={`overflow-y-auto overflow-x-hidden px-3 py-2 ${ready ? "max-h-[280px]" : "max-h-[160px]"}`}
             >
               {content.trim() ? (
-                <Markdown textContent={content} skipPreprocess />
+                <div className="chat-block-content leading-relaxed text-text-2">
+                  <Markdown textContent={content} skipPreprocess />
+                </div>
               ) : (
                 <span className="chat-block-content text-text-3">
                   {t("planDoc.emptyPlan")}
