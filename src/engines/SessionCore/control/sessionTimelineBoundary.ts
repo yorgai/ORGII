@@ -1,5 +1,5 @@
 import { CANCEL_REASON } from "@src/api/tauri/agent";
-import { isTimelineBoundaryClosableRunningEvent } from "@src/engines/SessionCore/core/runningEventGate";
+import { isTimelineBoundaryClosableRuntimeEvent } from "@src/engines/SessionCore/core/runningEventGate";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { markSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
@@ -70,7 +70,7 @@ async function closeRunningEventsForTimelineBoundary(
 ): Promise<void> {
   const events = await eventStoreProxy.getEvents(sessionId);
   const runningEventIds = events
-    .filter((event) => isTimelineBoundaryClosableRunningEvent(event, sessionId))
+    .filter((event) => isTimelineBoundaryClosableRuntimeEvent(event, sessionId))
     .map((event) => event.id);
   if (runningEventIds.length === 0) return;
 

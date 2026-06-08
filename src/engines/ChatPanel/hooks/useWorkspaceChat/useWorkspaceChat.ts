@@ -19,7 +19,7 @@ import Message from "@src/components/Message";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
-import { hasComposerBlockingRunningSessionEvent } from "@src/engines/SessionCore/core/runningEventGate";
+import { sessionHasComposerStopBlockingWork } from "@src/engines/SessionCore/core/runningEventGate";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import {
   PENDING_RUST_ACTIVE_TURN_ID,
@@ -274,7 +274,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         latestSessionRuntimeStatus === "installing" ||
         latestSessionRuntimeStatus === "waiting_for_user" ||
         latestSessionRuntimeStatus === "waiting_for_funds" ||
-        hasComposerBlockingRunningSessionEvent(
+        sessionHasComposerStopBlockingWork(
           store.get(sortedEventsAtom),
           sessionId
         );

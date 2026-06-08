@@ -19,7 +19,7 @@ import {
   isBackendUserMessageEvent,
   isSyntheticUserInputEvent,
 } from "../../sync/utils/activityIds";
-import { isRunningSessionEvent } from "../runningEventGate";
+import { isLiveRuntimeResourceEvent } from "../runningEventGate";
 import { eventStoreProxy } from "../store/EventStoreProxy";
 import type { SessionEvent, SessionSpec } from "../types";
 import {
@@ -265,7 +265,7 @@ export const loadSessionAtom = atom(
       lastEvent: mergedEvents[mergedEvents.length - 1] ?? null,
       eventIndex,
       chatEventCount: mergedEvents.filter(isVisibleInChat).length,
-      hasRunningEvent: mergedEvents.some(isRunningSessionEvent),
+      hasRunningEvent: mergedEvents.some(isLiveRuntimeResourceEvent),
     });
 
     // Merge events into Rust EventStore with explicit sessionId.

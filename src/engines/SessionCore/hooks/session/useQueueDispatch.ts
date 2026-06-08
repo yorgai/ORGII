@@ -27,7 +27,7 @@ import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
-import { hasTurnBlockingRunningSessionEvent } from "@src/engines/SessionCore/core/runningEventGate";
+import { sessionHasTurnBlockingRuntimeEvent } from "@src/engines/SessionCore/core/runningEventGate";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { createSyntheticUserEvent } from "@src/engines/SessionCore/sync/adapters/shared";
@@ -74,8 +74,8 @@ function queuedMessageAgeMs(message: QueuedMessage): number {
   return Date.now() - createdAtMs;
 }
 
-function hasTurnBlockingRunningEventForSession(sessionId: string): boolean {
-  return hasTurnBlockingRunningSessionEvent(
+function hasTurnBlockingRuntimeEventForSession(sessionId: string): boolean {
+  return sessionHasTurnBlockingRuntimeEvent(
     getInstrumentedStore().get(sortedEventsAtom),
     sessionId
   );
@@ -355,7 +355,7 @@ export function useQueueDispatch(): void {
     const runtimeWorking =
       latestIsSessionActive ||
       isQueueRuntimeStillWorking(latestRuntimeStatus) ||
-      hasTurnBlockingRunningEventForSession(activeSessionId);
+      hasTurnBlockingRuntimeEventForSession(activeSessionId);
     if (runtimeWorking && !explicitMsg) return;
     if (explicitMsg) {
       const interruptRequestedAt =
@@ -430,7 +430,7 @@ export function useQueueDispatch(): void {
         const stillWorking =
           store.get(isSessionActiveAtom) ||
           isQueueRuntimeStillWorking(store.get(sessionRuntimeStatusAtom)) ||
-          hasTurnBlockingRunningEventForSession(nextMsg.sessionId);
+          hasTurnBlockingRuntimeEventForSession(nextMsg.sessionId);
         if (stillWorking || store.get(isPendingCancelAtom)) return;
       }
     }

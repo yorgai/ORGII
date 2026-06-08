@@ -5,6 +5,25 @@ const TERMINAL_SHELL_PROCESS_STATUSES = new Set(["exited", "killed"]);
 const ACTIVE_SHELL_PROCESS_STATUSES = new Set(["running", "background"]);
 const TURN_BLOCKING_SHELL_PROCESS_STATUSES = new Set(["running"]);
 
+/**
+ * Running-state gates intentionally model different product questions.
+ *
+ * - Live runtime resource: anything still alive or diagnostically relevant.
+ *   Includes background shells and hidden status sentinels. Use for replay,
+ *   planning footer, visibility filtering, dedup, and diagnostic surfaces.
+ * - Turn-blocking runtime event: work that should hold queue dispatch because
+ *   the current turn may still be authoritative.
+ * - Composer stop-blocking work: foreground user-stoppable work only. This is
+ *   the only event-list fallback that may hold the main composer in Stop state
+ *   or force a normal submit into the active-turn queue.
+ * - Timeline boundary closable event: running work that can be force-closed
+ *   during stop/force-send/rewind boundary transitions.
+ *
+ * Do not use live-resource gates for composer or submit behavior. That
+ * recreates the completed-turn-still-shows-Stop bug when stale hidden running
+ * records or background process markers remain in EventStore.
+ */
+
 export function shellProcessStatusFromArgs(args: unknown): string | undefined {
   if (!args) return undefined;
   if (typeof args === "object") {
@@ -19,7 +38,7 @@ export function shellProcessStatusFromArgs(args: unknown): string | undefined {
   }
 }
 
-export function isRunningSessionEvent(event: SessionEvent): boolean {
+export function isLiveRuntimeResourceEvent(event: SessionEvent): boolean {
   const shellProcessStatus = shellProcessStatusFromArgs(event.args);
   if (
     shellProcessStatus &&
@@ -37,19 +56,17 @@ export function isRunningSessionEvent(event: SessionEvent): boolean {
   );
 }
 
-export function hasRunningSessionEvent(
+export function sessionHasLiveRuntimeResource(
   events: readonly SessionEvent[],
   sessionId: string
 ): boolean {
   return events.some((event) => {
     if (event.sessionId && event.sessionId !== sessionId) return false;
-    return isRunningSessionEvent(event);
+    return isLiveRuntimeResourceEvent(event);
   });
 }
 
-export function isTurnBlockingRunningSessionEvent(
-  event: SessionEvent
-): boolean {
+export function isTurnBlockingRuntimeEvent(event: SessionEvent): boolean {
   const shellProcessStatus = shellProcessStatusFromArgs(event.args);
   if (shellProcessStatus) {
     return TURN_BLOCKING_SHELL_PROCESS_STATUSES.has(shellProcessStatus);
@@ -59,20 +76,18 @@ export function isTurnBlockingRunningSessionEvent(
   );
 }
 
-export function hasTurnBlockingRunningSessionEvent(
+export function sessionHasTurnBlockingRuntimeEvent(
   events: readonly SessionEvent[],
   sessionId: string
 ): boolean {
   return events.some((event) => {
     if (event.sessionId && event.sessionId !== sessionId) return false;
-    return isTurnBlockingRunningSessionEvent(event);
+    return isTurnBlockingRuntimeEvent(event);
   });
 }
 
-export function isComposerBlockingRunningSessionEvent(
-  event: SessionEvent
-): boolean {
-  if (!isTurnBlockingRunningSessionEvent(event)) return false;
+export function isComposerStopBlockingEvent(event: SessionEvent): boolean {
+  if (!isTurnBlockingRuntimeEvent(event)) return false;
 
   const shellProcessStatus = shellProcessStatusFromArgs(event.args);
   if (shellProcessStatus) {
@@ -84,22 +99,22 @@ export function isComposerBlockingRunningSessionEvent(
   );
 }
 
-export function hasComposerBlockingRunningSessionEvent(
+export function sessionHasComposerStopBlockingWork(
   events: readonly SessionEvent[],
   sessionId: string
 ): boolean {
   return events.some((event) => {
     if (event.sessionId && event.sessionId !== sessionId) return false;
-    return isComposerBlockingRunningSessionEvent(event);
+    return isComposerStopBlockingEvent(event);
   });
 }
 
-export function isTimelineBoundaryClosableRunningEvent(
+export function isTimelineBoundaryClosableRuntimeEvent(
   event: SessionEvent,
   sessionId: string
 ): boolean {
   if (event.sessionId && event.sessionId !== sessionId) return false;
-  if (!isRunningSessionEvent(event)) return false;
+  if (!isLiveRuntimeResourceEvent(event)) return false;
   if (
     isInteractiveTool(event.functionName) ||
     isInteractiveTool(event.uiCanonical)

@@ -23,7 +23,7 @@ import Message from "@src/components/Message";
 import { extractQuestionBatch } from "@src/engines/ChatPanel/InputArea/AskQuestionCard/extractQuestionBatch";
 import { chatEventsAtom } from "@src/engines/SessionCore";
 import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
-import { hasComposerBlockingRunningSessionEvent } from "@src/engines/SessionCore/core/runningEventGate";
+import { sessionHasComposerStopBlockingWork } from "@src/engines/SessionCore/core/runningEventGate";
 import {
   isPendingCancelAtom,
   isSessionActiveAtom,
@@ -237,7 +237,7 @@ export function useSubmitMessage({
             latestRuntimeStatus === "waiting_for_user" ||
             latestRuntimeStatus === "waiting_for_funds" ||
             (draftSessionId
-              ? hasComposerBlockingRunningSessionEvent(
+              ? sessionHasComposerStopBlockingWork(
                   store.get(sortedEventsAtom),
                   draftSessionId
                 )

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  hasComposerBlockingRunningSessionEvent,
-  hasRunningSessionEvent,
-  hasTurnBlockingRunningSessionEvent,
+  sessionHasComposerStopBlockingWork,
+  sessionHasLiveRuntimeResource,
+  sessionHasTurnBlockingRuntimeEvent,
 } from "../runningEventGate";
 import type { SessionEvent } from "../types";
 
@@ -42,43 +42,42 @@ function hiddenStatusEvent(): SessionEvent {
 }
 
 describe("runningEventGate", () => {
-  it("treats background shell processes as live resources but not turn-blocking work", () => {
+  it("classifies background shell as live resource only", () => {
     const events = [shellEvent("background")];
 
-    expect(hasRunningSessionEvent(events, "session-1")).toBe(true);
-    expect(hasTurnBlockingRunningSessionEvent(events, "session-1")).toBe(false);
-    expect(hasComposerBlockingRunningSessionEvent(events, "session-1")).toBe(
-      false
-    );
+    expect(sessionHasLiveRuntimeResource(events, "session-1")).toBe(true);
+    expect(sessionHasTurnBlockingRuntimeEvent(events, "session-1")).toBe(false);
+    expect(sessionHasComposerStopBlockingWork(events, "session-1")).toBe(false);
   });
 
-  it("treats foreground shell processes as both live and turn-blocking", () => {
+  it("classifies foreground shell as live, turn-blocking, and composer-stop-blocking", () => {
     const events = [shellEvent("running")];
 
-    expect(hasRunningSessionEvent(events, "session-1")).toBe(true);
-    expect(hasTurnBlockingRunningSessionEvent(events, "session-1")).toBe(true);
-    expect(hasComposerBlockingRunningSessionEvent(events, "session-1")).toBe(
-      true
-    );
+    expect(sessionHasLiveRuntimeResource(events, "session-1")).toBe(true);
+    expect(sessionHasTurnBlockingRuntimeEvent(events, "session-1")).toBe(true);
+    expect(sessionHasComposerStopBlockingWork(events, "session-1")).toBe(true);
   });
 
-  it("does not treat exited shell processes as live or turn-blocking", () => {
-    const events = [shellEvent("exited")];
+  it.each(["exited", "killed"] as const)(
+    "classifies %s shell as settled for every running role",
+    (shellProcessStatus) => {
+      const events = [shellEvent(shellProcessStatus)];
 
-    expect(hasRunningSessionEvent(events, "session-1")).toBe(false);
-    expect(hasTurnBlockingRunningSessionEvent(events, "session-1")).toBe(false);
-    expect(hasComposerBlockingRunningSessionEvent(events, "session-1")).toBe(
-      false
-    );
-  });
+      expect(sessionHasLiveRuntimeResource(events, "session-1")).toBe(false);
+      expect(sessionHasTurnBlockingRuntimeEvent(events, "session-1")).toBe(
+        false
+      );
+      expect(sessionHasComposerStopBlockingWork(events, "session-1")).toBe(
+        false
+      );
+    }
+  );
 
-  it("keeps hidden running status events out of composer stop state", () => {
+  it("classifies hidden running status as live and turn-blocking but not composer-stop-blocking", () => {
     const events = [hiddenStatusEvent()];
 
-    expect(hasRunningSessionEvent(events, "session-1")).toBe(true);
-    expect(hasTurnBlockingRunningSessionEvent(events, "session-1")).toBe(true);
-    expect(hasComposerBlockingRunningSessionEvent(events, "session-1")).toBe(
-      false
-    );
+    expect(sessionHasLiveRuntimeResource(events, "session-1")).toBe(true);
+    expect(sessionHasTurnBlockingRuntimeEvent(events, "session-1")).toBe(true);
+    expect(sessionHasComposerStopBlockingWork(events, "session-1")).toBe(false);
   });
 });

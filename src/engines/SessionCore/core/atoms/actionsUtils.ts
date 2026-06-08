@@ -22,7 +22,7 @@ import {
   simulatorSelectedAppAtom,
 } from "@src/store/ui/simulatorAtom";
 
-import { isRunningSessionEvent } from "../runningEventGate";
+import { isLiveRuntimeResourceEvent } from "../runningEventGate";
 import type { SessionEvent } from "../types";
 import {
   editTruncationTimestampAtom,
@@ -52,7 +52,8 @@ export function extendRunningArgsCache(
 ): Map<string, Record<string, unknown>> {
   for (const evt of events) {
     if (
-      (isRunningSessionEvent(evt) || evt.displayStatus === "awaiting_user") &&
+      (isLiveRuntimeResourceEvent(evt) ||
+        evt.displayStatus === "awaiting_user") &&
       evt.callId &&
       evt.args &&
       Object.keys(evt.args).length > 0

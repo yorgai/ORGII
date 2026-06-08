@@ -14,7 +14,7 @@
  *    (upsert) where two events with different IDs but the same content
  *    can briefly coexist in the EventStore.
  */
-import { isRunningSessionEvent } from "@src/engines/SessionCore/core/runningEventGate";
+import { isLiveRuntimeResourceEvent } from "@src/engines/SessionCore/core/runningEventGate";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { isSyntheticUserInputEvent } from "@src/engines/SessionCore/sync/utils/activityIds";
 
@@ -58,7 +58,7 @@ export function buildDedupMaps(events: SessionEvent[]): DedupResult {
       runningArgsMap.set(callId, event.args);
     }
 
-    const isRunning = isRunningSessionEvent(event);
+    const isRunning = isLiveRuntimeResourceEvent(event);
     if (callId && !isRunning) completedToolCallByCallId.set(callId, idx);
     if (!isRunning) continue;
 
@@ -79,7 +79,7 @@ export function buildDedupMaps(events: SessionEvent[]): DedupResult {
     ) {
       continue;
     }
-    if (isRunningSessionEvent(event)) {
+    if (isLiveRuntimeResourceEvent(event)) {
       continue;
     }
 

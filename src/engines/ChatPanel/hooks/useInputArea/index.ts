@@ -27,7 +27,7 @@ import { useDataContext } from "@src/contexts/workspace/DataContext";
 import useWorkspaceChat from "@src/engines/ChatPanel/hooks/useWorkspaceChat";
 import { useRepositoryInfo } from "@src/engines/SessionCore";
 import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
-import { hasComposerBlockingRunningSessionEvent } from "@src/engines/SessionCore/core/runningEventGate";
+import { sessionHasComposerStopBlockingWork } from "@src/engines/SessionCore/core/runningEventGate";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import { createLogger } from "@src/hooks/logger";
 import {
@@ -172,8 +172,8 @@ export function useInputArea(
   });
   const activeSessionId = propSessionId ?? resolvedActiveSessionId;
   const draftSessionId = activeSessionId ?? "";
-  const hasComposerBlockingRunningEvent = activeSessionId
-    ? hasComposerBlockingRunningSessionEvent(sessionEvents, activeSessionId)
+  const hasComposerStopBlockingWork = activeSessionId
+    ? sessionHasComposerStopBlockingWork(sessionEvents, activeSessionId)
     : false;
 
   // Visual "agent is working" flag — drives the Stop vs. Send icon.
@@ -181,7 +181,7 @@ export function useInputArea(
   // while background processes and hidden status sentinels stay in footer/replay
   // surfaces without keeping the main button stuck in Stop.
   const isWpGeneWorking =
-    (isSessionActive || hasComposerBlockingRunningEvent) && !isPendingCancel;
+    (isSessionActive || hasComposerStopBlockingWork) && !isPendingCancel;
 
   // Session-scoped repo path. When a session is active prefer its persisted
   // `repo_path` (the value that drove `workspace_root` at session start) over
