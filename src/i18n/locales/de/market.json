@@ -549,13 +549,6 @@
       }
     }
   },
-  "bonusModal": {
-    "bonusTitle": "Überraschungsbonus!",
-    "marginTitle": "Stufe nicht verfügbar",
-    "bonusDescription": "Keine {{originalTier}} keys verfügbar. Wir haben einen {{actualTier}} key zu einem besseren Preis gefunden!",
-    "marginDescription": "Keine {{originalTier}} keys verfügbar. Wir haben einen {{actualTier}} key gefunden — Ihnen wird der {{originalTier}}-Tarif berechnet.",
-    "acceptBonus": "Bonus annehmen"
-  },
   "orgiiOrchestrator": {
     "name": "ORGII Pool",
     "description": "Verwalteter Modellpool mit fester Credit-Preisgestaltung",

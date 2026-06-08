@@ -36,7 +36,7 @@ import {
   type RunningLocation,
 } from "@src/config/sessionCreatorConfig";
 import {
-  createSystemHomeRepoItem,
+  isSystemHomeRepoItem,
   isSystemPathRepoItem,
 } from "@src/features/SessionCreator/utils/systemPathSource";
 import { useDropdownEngine } from "@src/hooks/dropdown";
@@ -56,6 +56,7 @@ import {
   getSessionInfoDisplayState,
 } from "./SessionInfoLine/buildSessionInfoSegments";
 import { type LocationRow } from "./SessionInfoLine/locationConfig";
+import { useSystemPathRepoItems } from "./SessionInfoLine/useSystemPathRepoItems";
 
 // ============================================
 // Type Definitions
@@ -284,10 +285,7 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
     [onRepoSelect, onRepoChange]
   );
 
-  const systemPathSourceItem = useMemo(
-    () => (includeSystemPaths ? createSystemHomeRepoItem(t) : undefined),
-    [includeSystemPaths, t]
-  );
+  const systemPathSourceItems = useSystemPathRepoItems(includeSystemPaths, t);
 
   const handleBranchSelect = useCallback(
     (branch: string) => {
@@ -341,13 +339,18 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
   const isMultiRoot = useAtomValue(isMultiRootWorkspaceAtom);
   const workspaceName = useAtomValue(workspaceNameAtom);
 
-  const isSystemPath =
-    includeSystemPaths &&
-    isSystemPathRepoItem({
+  const currentRepoItem = useMemo(
+    () => ({
       id: repoId ?? "",
       name: repoName ?? "",
       kind: repoKind,
-    });
+    }),
+    [repoId, repoName, repoKind]
+  );
+  const isSystemPath =
+    includeSystemPaths && isSystemPathRepoItem(currentRepoItem);
+  const isSystemHome =
+    includeSystemPaths && isSystemHomeRepoItem(currentRepoItem);
 
   const { sourceDisplayName, SourceIcon, hasSource, showBranchRow } = useMemo(
     () =>
@@ -357,6 +360,7 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
         repoName,
         repoKind,
         isSystemPathSource: isSystemPath,
+        isSystemHomeSource: isSystemHome,
         hideBranch,
         t,
       }),
@@ -366,6 +370,7 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
       repoName,
       repoKind,
       isSystemPath,
+      isSystemHome,
       hideBranch,
       t,
     ]
@@ -495,7 +500,7 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
           onSelect={handleRepoSelected}
           currentRepoId={repoId}
           anchorRef={repoTriggerRef}
-          leadingRepo={systemPathSourceItem}
+          leadingRepos={systemPathSourceItems}
         />
       ) : (
         <RepoPalette
@@ -505,7 +510,7 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
           currentRepoId={repoId}
           switchPathLabel={t("selectors.sessionInfo.sessionWorkspace")}
           hideActionClose
-          leadingRepo={systemPathSourceItem}
+          leadingRepos={systemPathSourceItems}
         />
       )}
 

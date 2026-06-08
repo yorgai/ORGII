@@ -549,13 +549,6 @@
       }
     }
   },
-  "bonusModal": {
-    "bonusTitle": "Surprise Bonus!",
-    "marginTitle": "Tier Unavailable",
-    "bonusDescription": "No {{originalTier}} keys available. We found a {{actualTier}} key at a better price!",
-    "marginDescription": "No {{originalTier}} keys available. We found a {{actualTier}} key — you'll be charged at the {{originalTier}} rate.",
-    "acceptBonus": "Accept Bonus"
-  },
   "orgiiOrchestrator": {
     "name": "ORGII Pool",
     "description": "Managed model pool with flat credit pricing",

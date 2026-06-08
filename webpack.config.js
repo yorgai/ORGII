@@ -34,7 +34,6 @@ module.exports = (env, argv) => {
   return {
     entry: {
       main: "./src/index.tsx",
-      "orgii-preview": "./src/modules/WorkStation/OrgiiPreview/index.tsx",
     },
     output: {
       path: path.resolve(__dirname, "build"),
@@ -425,12 +424,6 @@ module.exports = (env, argv) => {
         template: "./public/index.html",
         chunks: ["main"],
         filename: "index.html",
-      }),
-      // ORGII Preview HTML (isolated component preview)
-      new HtmlWebpackPlugin({
-        template: "./public/orgii-preview.html",
-        chunks: ["orgii-preview"],
-        filename: "orgii-preview.html",
       }),
       // NOTE: HotModuleReplacementPlugin is automatically added by webpack-dev-server when hot: true
       // ReactRefreshWebpackPlugin works with SWC's refresh: true option to enable

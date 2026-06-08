@@ -1045,7 +1045,9 @@
     "oauthBrowserOpened": "Otwarto okno przeglądarki. Dokończ tam autoryzację, a kreator będzie kontynuował."
   },
   "gitConnections": {
-    "github": "GitHub"
+    "github": "GitHub",
+    "methodScan": "Automatyczne wykrywanie",
+    "methodOAuth": "Zaloguj się przez GitHub"
   },
   "builtInTools": {
     "title": "Wbudowane narzędzia",
@@ -1092,7 +1094,6 @@
   },
   "toolbarPlusMenu": {
     "addProviderKey": "Dodaj klucz dostawcy",
-    "createOrgiiApiKey": "Utwórz klucz ORGII API",
     "addMcpServer": "Dodaj serwer MCP",
     "createSkill": "Utwórz Skills",
     "addWebAppCommand": "Dodaj polecenie aplikacji webowej",
@@ -1212,7 +1213,6 @@
   "addOptions": {
     "addModel": "Dodaj klucz API modelu",
     "bringYourOwnKey": "Użyj własnego klucza",
-    "createOrgiiApi": "Utwórz ORGII API",
     "addCli": "Dodaj Agent CLI",
     "addConnection": "Dodaj",
     "addChannelOrService": "Dodaj kanał lub usługę",
@@ -1223,18 +1223,6 @@
     "addRoutine": "Dodaj procedurę",
     "addDatabase": "Dodaj bazę danych",
     "importRule": "Importuj politykę"
-  },
-  "orgiiApi": {
-    "wizardTitle": "Dodaj klucz ORGII API",
-    "nameLabel": "Nazwa",
-    "nameDesc": "Wyświetlana nazwa dla tego klucza API",
-    "namePlaceholder": "np. Production, Development",
-    "keyLabel": "Klucz API",
-    "keyDesc": "Wklej klucz API wygenerowany na stronie ORGII",
-    "keyPlaceholder": "orgii-...",
-    "openOrgiiLabel": "Nie masz jeszcze klucza?",
-    "openOrgiiDesc": "Otwórz stronę konta ORGII, aby wygenerować klucz",
-    "openOrgii": "Otwórz ORGII"
   },
   "rulesTabs": {
     "rules": "Reguły",

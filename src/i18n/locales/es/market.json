@@ -549,13 +549,6 @@
       }
     }
   },
-  "bonusModal": {
-    "bonusTitle": "¡Bonus sorpresa!",
-    "marginTitle": "Nivel no disponible",
-    "bonusDescription": "No hay {{originalTier}} keys disponibles. ¡Encontramos un {{actualTier}} key a mejor precio!",
-    "marginDescription": "No hay {{originalTier}} keys disponibles. Encontramos un {{actualTier}} key — se te cobrará la tarifa {{originalTier}}.",
-    "acceptBonus": "Aceptar bonus"
-  },
   "orgiiOrchestrator": {
     "name": "ORGII Pool",
     "description": "Grupo de modelos gestionado con precios en créditos",

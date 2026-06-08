@@ -1,12 +1,12 @@
 import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   ArrowUp,
+  BrushCleaning,
   CheckCircle2,
   Loader2,
   MessageCircle,
   MousePointer2,
   MousePointerClick,
-  RefreshCw,
   X,
   XCircle,
 } from "lucide-react";
@@ -512,7 +512,13 @@ export function GuiControlToggle(): React.ReactNode {
       ref={containerRef}
       className="fixed inset-x-0 bottom-0 z-[70] flex flex-col items-center px-6 pb-6 pt-16"
     >
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-bg-1 via-bg-1/70 to-transparent" />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-bg-1 via-bg-1/70 to-transparent"
+        style={{
+          borderBottomLeftRadius: "var(--border-radius-window)",
+          borderBottomRightRadius: "var(--border-radius-window)",
+        }}
+      />
       {showStatusLine && (
         <div
           className="pointer-events-auto z-10 mb-2 rounded-2xl border border-border-2 bg-bg-2 px-3 py-2 text-[12px] text-text-2 shadow-sm backdrop-blur"
@@ -588,7 +594,7 @@ export function GuiControlToggle(): React.ReactNode {
                   aria-label={t("actions.refresh")}
                   title={t("actions.refresh")}
                 >
-                  <RefreshCw
+                  <BrushCleaning
                     size={INPUT_AREA_BUTTONS.iconSize}
                     strokeWidth={1.75}
                   />

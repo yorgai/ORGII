@@ -7,8 +7,8 @@
     "inputMode": "Controle",
     "selectionMode": "Resposta",
     "toggleMode": "Alternar modo de entrada",
-    "inputPlaceholder": "Diga ao Agent o que fazer...",
-    "selectionPlaceholder": "Digite a seleção ou resposta...",
+    "inputPlaceholder": "Deixe o Agent controlar este aplicativo...",
+    "selectionPlaceholder": "Faça qualquer pergunta sobre o ORGII...",
     "submit": "Enviar entrada de Agent Control",
     "menuToggle": "Agent Control",
     "selectModel": "Selecionar modelo"
@@ -64,6 +64,7 @@
     "clear": "Limpar",
     "open": "Abrir",
     "view": "Ver",
+    "openInApp": "Abrir no app",
     "openToRight": "Abrir à direita",
     "new": "Novo",
     "rename": "Renomear",
@@ -289,6 +290,7 @@
     "status": "Status",
     "version": "Versão",
     "details": "Detalhes",
+    "overview": "Visão geral",
     "description": "Descrição",
     "stats": "Estatísticas",
     "recentChanges": "Alterações recentes",
@@ -308,8 +310,6 @@
     "regularBrowsing": "Navegação normal",
     "privateBrowsing": "Navegação privada",
     "globalTokens": "Tokens globais",
-    "addedComponents": "Componentes adicionados",
-    "candidates": "Candidatos",
     "addedConnections": "Conexões adicionadas",
     "pendingConnections": "Conexões pendentes",
     "history": "Histórico",
@@ -821,12 +821,8 @@
     "noMatchingTokens": "Nenhum Token correspondente encontrado",
     "noTokensAvailable": "Nenhum Token disponível",
     "retryToScanAgain": "Tente novamente para varrer outra vez",
-    "noComponentsFound": "Nenhum componente encontrado",
-    "openRepoWithComponents": "Abra um Repo com componentes React",
     "noTokensFound": "Nenhum Token encontrado",
     "addCssVariables": "Adicione variáveis CSS ao seu projeto",
-    "noStorybooksFound": "Nenhum storybook encontrado",
-    "createOrgiiFiles": "Crie arquivos .orgii.tsx para adicionar componentes",
     "loadingAccountStatus": "Carregando status da conta...",
     "noRepositorySelected": "Nenhum Repo selecionado",
     "selectRepositoryFromHome": "Selecione um Repo na página inicial para abrir.",
@@ -1262,6 +1258,10 @@
         "home": {
           "label": "Home",
           "description": "Escopo padrão do OS Agent para automação de desktop"
+        },
+        "documents": {
+          "label": "Documentos",
+          "description": "Pasta Documentos"
         }
       }
     },
@@ -1459,7 +1459,7 @@
     "compact": "Compacto",
     "comfort": "Conforto",
     "theme": "Tema",
-    "primaryPanel": "Barra lateral principal",
+    "primaryPanel": "Barra lateral",
     "sidebarPosition": "Posição da barra lateral",
     "bottomPanel": "Painel inferior",
     "titleBar": "Barra de título",
@@ -1521,8 +1521,8 @@
   "commands": {
     "showBottomPanel": "Mostrar painel inferior",
     "hideBottomPanel": "Ocultar painel inferior",
-    "showPrimarySidebar": "Mostrar barra lateral principal",
-    "hidePrimarySidebar": "Ocultar barra lateral principal",
+    "showPrimarySidebar": "Mostrar barra lateral",
+    "hidePrimarySidebar": "Ocultar barra lateral",
     "searchFiles": "Pesquisar arquivos",
     "openBrowser": "Abrir navegador",
     "switchWorkspace": "Alternar / adicionar Workspace",
@@ -2017,6 +2017,7 @@
       "browser": "Navegador",
       "settings": "Configurações",
       "newTab": "Nova aba",
+      "newPrivateTab": "Nova aba privada",
       "newTerminal": "Novo terminal",
       "untitled": "Sem título"
     },

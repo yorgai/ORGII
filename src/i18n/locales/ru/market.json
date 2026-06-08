@@ -549,13 +549,6 @@
       }
     }
   },
-  "bonusModal": {
-    "bonusTitle": "Сюрприз-бонус!",
-    "marginTitle": "Уровень недоступен",
-    "bonusDescription": "Нет доступных {{originalTier}} keys. Мы нашли {{actualTier}} key по лучшей цене!",
-    "marginDescription": "Нет доступных {{originalTier}} keys. Мы нашли {{actualTier}} key — с вас будет взиматься тариф {{originalTier}}.",
-    "acceptBonus": "Принять бонус"
-  },
   "orgiiOrchestrator": {
     "name": "ORGII Pool",
     "description": "Управляемый пул моделей с фиксированными ценами в кредитах",

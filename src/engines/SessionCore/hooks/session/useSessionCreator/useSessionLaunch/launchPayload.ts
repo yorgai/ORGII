@@ -139,9 +139,7 @@ export function buildSessionLaunchPayload(
     workspaceFolders,
   } = options;
 
-  const sessionRepoPath = isSystemPathSource(effectiveSource)
-    ? ""
-    : (effectiveSource?.repoPath ?? "");
+  const sessionRepoPath = effectiveSource?.repoPath ?? "";
   const sessionBranch = isSystemPathSource(effectiveSource)
     ? undefined
     : (resolvedKeys.branch ?? effectiveSource?.branch ?? undefined);

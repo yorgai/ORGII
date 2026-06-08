@@ -126,7 +126,11 @@ export const SpotlightShellChrome: React.FC<SpotlightShellChromeProps> = ({
       />
       <div
         className="pointer-events-none fixed inset-x-0 top-0 h-12 bg-gradient-to-b from-bg-1/90 to-transparent"
-        style={{ zIndex: SPOTLIGHT_CONFIG.backdropZIndex }}
+        style={{
+          zIndex: SPOTLIGHT_CONFIG.backdropZIndex,
+          borderTopLeftRadius: "var(--border-radius-window)",
+          borderTopRightRadius: "var(--border-radius-window)",
+        }}
         aria-hidden
       />
       <div

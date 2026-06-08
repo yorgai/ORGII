@@ -49,7 +49,6 @@ import {
 import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";
 import { emitOpenWorkspace } from "@src/util/ui/window/windowManager";
 
-import { useBonusAcceptance } from "./bonusState";
 import {
   buildCursorComposerParams,
   buildCursorIdeSession,
@@ -104,14 +103,6 @@ export function useSessionLaunch(
     showAddFundsModal,
     showBuyCreditsModal,
   } = useWalletModalState();
-  const {
-    acceptBonus,
-    bonusResolverRef,
-    declineBonus,
-    pendingBonusInfo,
-    setPendingBonusInfo,
-  } = useBonusAcceptance();
-
   const navigate = useNavigate();
   const location = useLocation();
   const dispatchCategory = useAtomValue(dispatchCategoryAtom);
@@ -310,12 +301,6 @@ export function useSessionLaunch(
           clearDraft(null);
           showAuthError();
         },
-        onBonusDetected: (info) => {
-          return new Promise<boolean>((resolve) => {
-            setPendingBonusInfo(info);
-            bonusResolverRef.current = resolve;
-          });
-        },
       });
 
       if (!resolvedKeys) return false;
@@ -445,8 +430,6 @@ export function useSessionLaunch(
     advancedConfig,
     clearDraft,
     showAuthError,
-    setPendingBonusInfo,
-    bonusResolverRef,
     agentExecMode,
     imageDataUrls,
     isContentEmpty,
@@ -478,8 +461,5 @@ export function useSessionLaunch(
     closeAddFundsModal,
     showBuyCreditsModal,
     closeBuyCreditsModal,
-    pendingBonusInfo,
-    acceptBonus,
-    declineBonus,
   };
 }

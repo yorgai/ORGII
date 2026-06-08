@@ -7,29 +7,29 @@
  * and direct CSS variable references. Migration to custom tokens can be done incrementally.
  */
 :root {
-  /* Background color slots */
-  --bg-1: #0b0b0f;
-  --bg-2: #2d2d2d;
-  --bg-3: #3d4f5f;
-  --bg-4: #1a1a2e;
-  --bg-5: #1e3a5f;
-  --bg-6: #0f3460;
-  --bg-7: #22264b;
-  --bg-8: #0f4c5c;
-  --bg-9: #1a3c34;
-  --bg-10: #1f3a2e;
-  --bg-11: #2e382a;
-  --bg-12: #3d1f3d;
-  --bg-13: #3a1b33;
-  --bg-14: #4a1c2e;
-  --bg-15: #4a1518;
-  --bg-16: #3a2418;
-  --bg-17: #3a2a12;
-  --bg-18: #2c2618;
-  --bg-19: #2a1f18;
+  /* Desktop background color slots */
+  --desktop-bg-1: #0b0b0f;
+  --desktop-bg-2: #2d2d2d;
+  --desktop-bg-3: #3d4f5f;
+  --desktop-bg-4: #1a1a2e;
+  --desktop-bg-5: #1e3a5f;
+  --desktop-bg-6: #0f3460;
+  --desktop-bg-7: #22264b;
+  --desktop-bg-8: #0f4c5c;
+  --desktop-bg-9: #1a3c34;
+  --desktop-bg-10: #1f3a2e;
+  --desktop-bg-11: #2e382a;
+  --desktop-bg-12: #3d1f3d;
+  --desktop-bg-13: #3a1b33;
+  --desktop-bg-14: #4a1c2e;
+  --desktop-bg-15: #4a1518;
+  --desktop-bg-16: #3a2418;
+  --desktop-bg-17: #3a2a12;
+  --desktop-bg-18: #2c2618;
+  --desktop-bg-19: #2a1f18;
 
   /* Code editor */
-  --cm-editor-background: #0d1117;
+  --cm-editor-background: #0a0a0a;
   --cm-editor-foreground: #c9d1d9;
   --cm-editor-selection: #003d73;
   --cm-editor-gutter-bg: var(--cm-editor-background);
@@ -125,29 +125,29 @@ body {
   --color-warning-5: #ff9a2e;
   --color-warning-6: #ff7d00;
 
-  /* Background color slots */
-  --bg-1: #0b0b0f;
-  --bg-2: #2d2d2d;
-  --bg-3: #3d4f5f;
-  --bg-4: #1a1a2e;
-  --bg-5: #1e3a5f;
-  --bg-6: #0f3460;
-  --bg-7: #22264b;
-  --bg-8: #0f4c5c;
-  --bg-9: #1a3c34;
-  --bg-10: #1f3a2e;
-  --bg-11: #2e382a;
-  --bg-12: #3d1f3d;
-  --bg-13: #3a1b33;
-  --bg-14: #4a1c2e;
-  --bg-15: #4a1518;
-  --bg-16: #3a2418;
-  --bg-17: #3a2a12;
-  --bg-18: #2c2618;
-  --bg-19: #2a1f18;
+  /* Desktop background color slots */
+  --desktop-bg-1: #0b0b0f;
+  --desktop-bg-2: #2d2d2d;
+  --desktop-bg-3: #3d4f5f;
+  --desktop-bg-4: #1a1a2e;
+  --desktop-bg-5: #1e3a5f;
+  --desktop-bg-6: #0f3460;
+  --desktop-bg-7: #22264b;
+  --desktop-bg-8: #0f4c5c;
+  --desktop-bg-9: #1a3c34;
+  --desktop-bg-10: #1f3a2e;
+  --desktop-bg-11: #2e382a;
+  --desktop-bg-12: #3d1f3d;
+  --desktop-bg-13: #3a1b33;
+  --desktop-bg-14: #4a1c2e;
+  --desktop-bg-15: #4a1518;
+  --desktop-bg-16: #3a2418;
+  --desktop-bg-17: #3a2a12;
+  --desktop-bg-18: #2c2618;
+  --desktop-bg-19: #2a1f18;
 
   /* Code editor */
-  --cm-editor-background: #0d1117;
+  --cm-editor-background: #0a0a0a;
   --cm-editor-foreground: #c9d1d9;
   --cm-editor-selection: #003d73;
   --cm-editor-gutter-bg: var(--cm-editor-background);

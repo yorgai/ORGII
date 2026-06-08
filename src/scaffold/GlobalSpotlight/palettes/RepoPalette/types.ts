@@ -26,7 +26,7 @@ export interface RepoPaletteProps extends BasePaletteProps {
   asBody?: boolean;
   switchPathLabel?: string;
   hideActionClose?: boolean;
-  leadingRepo?: RepoItem;
+  leadingRepos?: readonly RepoItem[];
 }
 
 export interface RepoPaletteText {
@@ -40,7 +40,6 @@ export interface RepoPaletteText {
   addPlaceholder: string;
   addEntryLabel: string;
   openFolderLabel: string;
-  sectionWorkspaceLabel: string;
   sectionCurrentLabel: string;
   sectionSystemPathsLabel: string;
   sectionRepoLabel: string;

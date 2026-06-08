@@ -68,7 +68,6 @@ import {
 } from "@src/util/session/sessionDispatch";
 
 import { EditorArea, SessionInfoLine } from "../../components";
-import BonusModal from "../../components/BonusModal";
 import AttachmentPanel from "./AttachmentPopover";
 import ScreenPickerModal from "./ScreenPickerModal";
 import SessionCreatorAgentHero from "./SessionCreatorAgentHero";
@@ -157,9 +156,6 @@ const SessionCreatorChatPanelSingle: React.FC<
     handleAtSelect,
     handleLaunch: originalHandleLaunch,
     handleBranchChange,
-    pendingBonusInfo,
-    acceptBonus,
-    declineBonus,
     attachedImages,
     handleImagePaste,
     removeImage,
@@ -209,6 +205,7 @@ const SessionCreatorChatPanelSingle: React.FC<
   const agentVariant = getRustAgentType(selectedAgentDefId);
   const isRustMode = dispatchCategory === "rust_agent";
   const isOSMode = isRustMode && agentVariant === "os";
+  const isSDEMode = isRustMode && agentVariant === "sde";
   const isWingmanMode = isRustMode && agentVariant === "wingman";
   const isCliMode = dispatchCategory === "cli_agent";
   const isCursorIdeMode = dispatchCategory === "cursor_ide";
@@ -545,7 +542,7 @@ const SessionCreatorChatPanelSingle: React.FC<
           onRepoChange={handleRepoChange}
           onRepoSelect={handleRepoSelectForSession}
           repoKind={sessionRepoKind}
-          includeSystemPaths={isOSMode}
+          includeSystemPaths={isOSMode || isSDEMode}
           branchName={
             isOSMode && !sessionRepoId ? undefined : effectiveBranchName
           }
@@ -808,14 +805,6 @@ const SessionCreatorChatPanelSingle: React.FC<
           currentAgentDefinitionId={selectedAgentDefId ?? undefined}
           currentAgentOrgId={selectedAgentOrgId ?? undefined}
           currentCliAgentType={cliAgentType ?? undefined}
-        />
-      )}
-
-      {pendingBonusInfo && (
-        <BonusModal
-          bonusInfo={pendingBonusInfo}
-          onAccept={acceptBonus}
-          onDecline={declineBonus}
         />
       )}
 

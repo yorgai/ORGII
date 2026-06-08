@@ -166,6 +166,8 @@ export const SpotlightItemRow = memo<SpotlightItemRowProps>(
     const isDanger = !!data.isDanger;
     const itemTextClassName = isDanger ? "text-danger-6" : "text-text-1";
     const itemIconClassName = isDanger ? "text-danger-6" : "text-text-2";
+    // Only the currently-checked option uses medium weight; regular rows are normal.
+    const labelWeightClass = isCurrentSelection ? "font-medium" : "font-normal";
     const modelSection =
       typeof data.modelSection === "string" ? data.modelSection : undefined;
     const modelId = typeof data.modelId === "string" ? data.modelId : undefined;
@@ -269,7 +271,7 @@ export const SpotlightItemRow = memo<SpotlightItemRowProps>(
         )}
 
         {item.icon && (
-          <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-fill-2">
+          <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center">
             {isCurrentSelection ? (
               <Check size={18} className="text-primary-6" strokeWidth={2.5} />
             ) : typeof item.icon === "string" ? (
@@ -287,7 +289,7 @@ export const SpotlightItemRow = memo<SpotlightItemRowProps>(
         <div className="min-w-0 flex-1 basis-0">
           <div className="flex min-w-0 items-center gap-2">
             {item.type === "hint" && data.prefix ? (
-              <span className="truncate text-[15px] font-medium">
+              <span className={`truncate text-[15px] ${labelWeightClass}`}>
                 <span className="text-text-1">
                   <HighlightText
                     text={item.label.replace(`  ${data.prefix}`, "")}
@@ -298,7 +300,7 @@ export const SpotlightItemRow = memo<SpotlightItemRowProps>(
               </span>
             ) : item.type === "hint" ? (
               <span
-                className={`truncate text-[15px] font-medium ${itemTextClassName}`}
+                className={`truncate text-[15px] ${labelWeightClass} ${itemTextClassName}`}
               >
                 <HighlightText text={item.label} query={searchQuery} />
               </span>
@@ -307,7 +309,7 @@ export const SpotlightItemRow = memo<SpotlightItemRowProps>(
                 {data.labelContent as React.ReactNode}
               </span>
             ) : item.type === "command" && item.label.includes(": ") ? (
-              <span className="truncate text-[14px] font-medium">
+              <span className={`truncate text-[14px] ${labelWeightClass}`}>
                 <span className="text-text-3">
                   {item.label.split(": ")[0]}:
                 </span>{" "}
@@ -320,7 +322,7 @@ export const SpotlightItemRow = memo<SpotlightItemRowProps>(
               </span>
             ) : (
               <span
-                className={`truncate text-[14px] font-medium ${itemTextClassName}`}
+                className={`truncate text-[14px] ${labelWeightClass} ${itemTextClassName}`}
               >
                 <HighlightText text={item.label} query={searchQuery} />
               </span>

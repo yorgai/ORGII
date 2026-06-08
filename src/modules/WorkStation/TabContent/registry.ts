@@ -157,11 +157,6 @@ const BrowserSessionEntry: RendererEntry = {
   debugLabel: "browser-session",
 };
 
-const ComponentPreviewEntry: RendererEntry = {
-  Component: lazy(() => import("./renderers/componentPreview")),
-  debugLabel: "component-preview",
-};
-
 const TokenCategoryEntry: RendererEntry = {
   Component: lazy(() => import("./renderers/tokenCategory")),
   requiresRepo: true,
@@ -241,11 +236,6 @@ const BenchmarkEntry: RendererEntry = {
   debugLabel: "benchmark",
 };
 
-const LaunchpadRepoEntry: RendererEntry = {
-  Component: lazy(() => import("./renderers/launchpadRepo")),
-  debugLabel: "launchpad-repo",
-};
-
 // ============================================
 // Canvas Preview renderer
 // ============================================
@@ -297,7 +287,6 @@ export const REGISTRY: TabContentRegistry = {
 
   // Browser
   "browser-session": BrowserSessionEntry,
-  "component-preview": ComponentPreviewEntry,
   "token-category": TokenCategoryEntry,
   devtools: DevtoolsEntry,
 
@@ -322,9 +311,6 @@ export const REGISTRY: TabContentRegistry = {
 
   // Ops Control
   "kanban-station": KanbanStationEntry,
-
-  // Launchpad
-  "launchpad-repo": LaunchpadRepoEntry,
 
   // Canvas Preview
   "canvas-preview": CanvasPreviewEntry,

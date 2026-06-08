@@ -34,6 +34,7 @@ export const SESSION_SOURCE_TYPE = {
 
 export const SYSTEM_PATH_ID = {
   HOME: "home",
+  DOCUMENTS: "documents",
 } as const;
 
 /** Unified source type for session creation */

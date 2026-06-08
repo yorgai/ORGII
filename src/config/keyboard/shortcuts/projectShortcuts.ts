@@ -4,8 +4,8 @@ export const PROJECT_SHORTCUTS: ShortcutEntry[] = [
   {
     id: "project_toggle_sidebar",
     command: "Toggle sidebar",
-    macKeys: "⌘B",
-    winKeys: "Ctrl+B",
+    macKeys: "⌥⌘U",
+    winKeys: "Ctrl+Alt+U",
     scope: "project",
     category: "panels",
   },

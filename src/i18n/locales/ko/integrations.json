@@ -1045,7 +1045,9 @@
     "oauthBrowserOpened": "브라우저 창이 열렸습니다. 거기에서 승인을 완료하면 이 마법사가 계속됩니다."
   },
   "gitConnections": {
-    "github": "GitHub"
+    "github": "GitHub",
+    "methodScan": "자동 감지",
+    "methodOAuth": "GitHub로 로그인"
   },
   "builtInTools": {
     "title": "기본 제공 도구",
@@ -1092,7 +1094,6 @@
   },
   "toolbarPlusMenu": {
     "addProviderKey": "제공자 키 추가",
-    "createOrgiiApiKey": "ORGII API 키 만들기",
     "addMcpServer": "MCP 서버 추가",
     "createSkill": "Skills 만들기",
     "addWebAppCommand": "Web App 명령 추가",
@@ -1233,7 +1234,6 @@
   "addOptions": {
     "addModel": "모델 API Key 추가",
     "bringYourOwnKey": "자체 키 가져오기",
-    "createOrgiiApi": "ORGII API 만들기",
     "addCli": "CLI Agent 추가",
     "addConnection": "추가",
     "addChannelOrService": "채널 또는 서비스 추가",
@@ -1244,18 +1244,6 @@
     "addDatabase": "데이터베이스 추가",
     "addRule": "규칙 추가",
     "importRule": "규칙 가져오기"
-  },
-  "orgiiApi": {
-    "wizardTitle": "ORGII API 키 추가",
-    "nameLabel": "이름",
-    "nameDesc": "이 API 키의 표시 이름",
-    "namePlaceholder": "예: Production, Development",
-    "keyLabel": "API 키",
-    "keyDesc": "ORGII 웹사이트에서 생성된 API 키 붙여넣기",
-    "keyPlaceholder": "orgii-...",
-    "openOrgiiLabel": "키가 없으신가요?",
-    "openOrgiiDesc": "ORGII 계정 페이지를 열어 키를 생성하세요",
-    "openOrgii": "ORGII 열기"
   },
   "routines": {
     "searchPlaceholder": "Search Routines...",

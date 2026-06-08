@@ -62,7 +62,10 @@ export const BackgroundSettings: React.FC<BackgroundSettingsProps> = ({
   } = useBackgroundSettings();
 
   const initialBackgroundSource: BackgroundContentSource =
-    !config.backgroundColor && !config.glass && !!config.imageUrl
+    !config.backgroundColorId &&
+    !config.backgroundColor &&
+    !config.glass &&
+    !!config.imageUrl
       ? BACKGROUND_CONTENT_SOURCE.IMAGES
       : BACKGROUND_CONTENT_SOURCE.COLORS;
   const [backgroundContentSource, setBackgroundContentSource] =

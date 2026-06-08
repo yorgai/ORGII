@@ -111,14 +111,6 @@ export function createEditorQuickActions(
 
   return [
     {
-      id: "toggle-primary-sidebar",
-      label: sidebarCollapsed
-        ? t("commands.showPrimarySidebar")
-        : t("commands.hidePrimarySidebar"),
-      shortcut: getShortcutKeys("toggle_workstation_sidebar"),
-      onAction: () => dispatch("panel.togglePrimary", {}, "user"),
-    },
-    {
       id: "search-files",
       label: t("commands.searchFiles"),
       shortcut: getShortcutKeys("quick_open"),
@@ -128,6 +120,14 @@ export function createEditorQuickActions(
       id: "add-workspace",
       label: t("commands.switchWorkspace"),
       onAction: onAddWorkspace,
+    },
+    {
+      id: "toggle-primary-sidebar",
+      label: sidebarCollapsed
+        ? t("commands.showPrimarySidebar")
+        : t("commands.hidePrimarySidebar"),
+      shortcut: getShortcutKeys("toggle_workstation_sidebar"),
+      onAction: () => dispatch("panel.togglePrimary", {}, "user"),
     },
   ];
 }

@@ -24,7 +24,9 @@ import {
   createSystemPathSessionSource,
   getSystemHomeSourceLabel,
   getSystemPathIdFromRepoItem,
+  getSystemPathSourcePath,
   isSystemPathSource,
+  isSystemPathSourceId,
 } from "@src/features/SessionCreator/utils/systemPathSource";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import { useKeyVault } from "@src/hooks/keyVault";
@@ -143,9 +145,6 @@ export function useSessionCreatorShell({
     closeAddFundsModal,
     showBuyCreditsModal,
     closeBuyCreditsModal,
-    pendingBonusInfo,
-    acceptBonus,
-    declineBonus,
     attachedImages,
     handleImagePaste,
     removeImage,
@@ -183,6 +182,7 @@ export function useSessionCreatorShell({
   const agentVariant = getRustAgentType(selectedAgentDefId);
   const isRustMode = dispatchCategory === "rust_agent";
   const isOSMode = isRustMode && agentVariant === "os";
+  const isSDEMode = isRustMode && agentVariant === "sde";
   const isCliMode = dispatchCategory === "cli_agent";
   const isCursorIdeMode = dispatchCategory === "cursor_ide";
 
@@ -370,9 +370,16 @@ export function useSessionCreatorShell({
 
   const handleRepoSelectForSession = useCallback(
     (repoId: string, repo: RepoItem) => {
-      const systemPathId = getSystemPathIdFromRepoItem(repo);
-      if (systemPathId) {
-        setSessionSource(createSystemPathSessionSource(systemPathId, t));
+      if (isSystemPathSourceId(repo.id)) {
+        setSessionSource(
+          createSystemPathSessionSource({
+            systemPathId: getSystemPathIdFromRepoItem(repo),
+            t,
+            repoId,
+            repoName: repo.name,
+            repoPath: getSystemPathSourcePath(repo),
+          })
+        );
         return;
       }
 
@@ -404,7 +411,7 @@ export function useSessionCreatorShell({
     [repos, sessionRepoId]
   );
   const repoDisplayName = isSystemHomeSource
-    ? getSystemHomeSourceLabel(t)
+    ? (effectiveSource?.repoName ?? getSystemHomeSourceLabel(t))
     : (effectiveSource?.repoName ?? sessionRepo?.name);
   const effectiveBranchName = isSystemPath
     ? undefined
@@ -412,7 +419,7 @@ export function useSessionCreatorShell({
   const sessionRepoKind = isSystemPath
     ? undefined
     : (sessionRepo?.kind ?? currentRepo?.kind);
-  const currentRepoPath = isSystemPath ? "" : (effectiveSource?.repoPath ?? "");
+  const currentRepoPath = effectiveSource?.repoPath ?? "";
 
   const selectedAgentDefinition = useMemo(
     () =>
@@ -527,9 +534,6 @@ export function useSessionCreatorShell({
     closeAddFundsModal,
     showBuyCreditsModal,
     closeBuyCreditsModal,
-    pendingBonusInfo,
-    acceptBonus,
-    declineBonus,
     // Images
     attachedImages,
     handleImagePaste,
@@ -558,6 +562,7 @@ export function useSessionCreatorShell({
     requestModelOpen,
     setRequestModelOpen,
     isOSMode,
+    isSDEMode,
     // Repo/branch
     sessionRepoId,
     repoDisplayName,

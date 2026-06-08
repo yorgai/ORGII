@@ -19,6 +19,8 @@ import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import {
   createSystemPathSessionSource,
   getSystemPathIdFromRepoItem,
+  getSystemPathSourcePath,
+  isSystemPathSourceId,
 } from "@src/features/SessionCreator/utils/systemPathSource";
 import {
   isSourceCompatibleWithAgent,
@@ -124,9 +126,16 @@ export function useSessionCreatorChatPanelHandlers({
   // Session-only repo pick; the global repo selection is untouched.
   const handleRepoSelectForSession = useCallback(
     (selectedRepoId: string, repo: RepoItem) => {
-      const systemPathId = getSystemPathIdFromRepoItem(repo);
-      if (systemPathId) {
-        setSessionSource(createSystemPathSessionSource(systemPathId, t));
+      if (isSystemPathSourceId(repo.id)) {
+        setSessionSource(
+          createSystemPathSessionSource({
+            systemPathId: getSystemPathIdFromRepoItem(repo),
+            t,
+            repoId: selectedRepoId,
+            repoName: repo.name,
+            repoPath: getSystemPathSourcePath(repo),
+          })
+        );
         return;
       }
 

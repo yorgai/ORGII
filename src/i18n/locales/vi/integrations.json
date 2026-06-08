@@ -1048,7 +1048,9 @@
     "oauthBrowserOpened": "Một cửa sổ trình duyệt đã được mở. Hoàn tất cấp quyền ở đó, rồi trình hướng dẫn này sẽ tiếp tục."
   },
   "gitConnections": {
-    "github": "GitHub"
+    "github": "GitHub",
+    "methodScan": "Tự động phát hiện",
+    "methodOAuth": "Đăng nhập bằng GitHub"
   },
   "builtInTools": {
     "title": "Công cụ tích hợp",
@@ -1095,7 +1097,6 @@
   },
   "toolbarPlusMenu": {
     "addProviderKey": "Thêm khóa nhà cung cấp",
-    "createOrgiiApiKey": "Tạo khóa API ORGII",
     "addMcpServer": "Thêm máy chủ MCP",
     "createSkill": "Tạo Skills",
     "addWebAppCommand": "Thêm lệnh Web App",
@@ -1236,7 +1237,6 @@
   "addOptions": {
     "addModel": "Thêm API Key mô hình",
     "bringYourOwnKey": "Dùng khóa của bạn",
-    "createOrgiiApi": "Tạo ORGII API",
     "addCli": "Thêm CLI Agent",
     "addConnection": "Thêm",
     "addChannelOrService": "Thêm kênh hoặc dịch vụ",
@@ -1247,18 +1247,6 @@
     "addDatabase": "Thêm cơ sở dữ liệu",
     "addRule": "Thêm quy tắc",
     "importRule": "Nhập quy tắc"
-  },
-  "orgiiApi": {
-    "wizardTitle": "Thêm khóa API ORGII",
-    "nameLabel": "Tên",
-    "nameDesc": "Tên hiển thị cho khóa API này",
-    "namePlaceholder": "ví dụ: Production, Development",
-    "keyLabel": "Khóa API",
-    "keyDesc": "Dán khóa API được tạo trên trang web ORGII",
-    "keyPlaceholder": "orgii-...",
-    "openOrgiiLabel": "Chưa có khóa?",
-    "openOrgiiDesc": "Mở trang tài khoản ORGII để tạo khóa",
-    "openOrgii": "Mở ORGII"
   },
   "routines": {
     "searchPlaceholder": "Search Routines...",

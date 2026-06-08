@@ -1,84 +1,11 @@
 //! Types for Component Index
 //!
 //! Data structures for storing and querying component source locations.
-//! Also includes prop extraction types for lazy "Storybook for AI" functionality.
+//! Includes source-location types for Browser inspector lookups.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-
-// ============================================
-// Prop Extraction Types (Lazy Loading)
-// ============================================
-
-/// TypeScript type representation for props
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-#[derive(Default)]
-pub enum PropType {
-    /// Primitive types
-    String,
-    Number,
-    Boolean,
-    /// Literal types: "primary" | "secondary"
-    StringLiteral(Vec<String>),
-    /// Union of other types
-    Union(Vec<PropType>),
-    /// Array type: string[], number[]
-    Array(Box<PropType>),
-    /// Object type with nested props
-    Object(Vec<PropInfo>),
-    /// Function type: () => void, (x: number) => string
-    Function {
-        params: String,
-        return_type: String,
-    },
-    /// React node/element
-    ReactNode,
-    /// Reference to another type (for complex types we can't inline)
-    TypeRef(String),
-    /// Any/unknown (fallback)
-    #[default]
-    Unknown,
-}
-
-/// Single prop definition extracted from TypeScript
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
-pub struct PropInfo {
-    /// Prop name
-    pub name: String,
-    /// Parsed type
-    pub prop_type: PropType,
-    /// Original TypeScript type annotation (for display)
-    pub type_annotation: String,
-    /// Whether the prop is required (no ? modifier)
-    pub required: bool,
-    /// Default value if found
-    pub default_value: Option<String>,
-    /// JSDoc description
-    pub description: Option<String>,
-}
-
-/// Full component details including props (returned by lazy extraction)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ComponentDetails {
-    /// Component name
-    pub name: String,
-    /// File path
-    pub file: PathBuf,
-    /// Line number of definition
-    pub line: u32,
-    /// Component kind
-    pub kind: ComponentKind,
-    /// Extracted props (empty if extraction failed)
-    pub props: Vec<PropInfo>,
-    /// Props interface/type name if found (e.g., "ButtonProps")
-    pub props_type_name: Option<String>,
-    /// JSDoc description of the component
-    pub description: Option<String>,
-    /// Time taken to extract props (ms)
-    pub extraction_time_ms: u64,
-}
 
 // ============================================
 // Component Kind & Location Types

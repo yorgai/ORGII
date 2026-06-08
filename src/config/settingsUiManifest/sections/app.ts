@@ -55,6 +55,7 @@ const EDITOR_SECTION_KEYS = keysByPrefixes([
   "editor.",
   "terminal.",
   "externalIde.",
+  "workspace.",
   "git.",
 ]);
 const MONITOR_SECTION_KEYS = keysByPrefixes(["network."]);

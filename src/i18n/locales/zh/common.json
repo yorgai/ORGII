@@ -7,8 +7,8 @@
     "inputMode": "控制",
     "selectionMode": "回答",
     "toggleMode": "切换输入模式",
-    "inputPlaceholder": "告诉 Agent 要做什么...",
-    "selectionPlaceholder": "输入选择项或回答...",
+    "inputPlaceholder": "让 Agent 控制此应用...",
+    "selectionPlaceholder": "向 ORGII 提任何问题...",
     "submit": "提交 Agent Control 输入",
     "menuToggle": "Agent Control",
     "selectModel": "选择模型"
@@ -63,6 +63,7 @@
     "clear": "清除",
     "open": "打开",
     "view": "查看",
+    "openInApp": "在 App 中打开",
     "openToRight": "在右侧打开",
     "new": "新建",
     "rename": "重命名",
@@ -289,6 +290,7 @@
     "status": "状态",
     "version": "版本",
     "details": "详情",
+    "overview": "概览",
     "description": "描述",
     "stats": "统计",
     "recentChanges": "最近变更",
@@ -308,8 +310,6 @@
     "regularBrowsing": "常规浏览",
     "privateBrowsing": "隐私浏览",
     "globalTokens": "全局 Token",
-    "addedComponents": "已添加组件",
-    "candidates": "候选组件",
     "addedConnections": "已添加连接",
     "pendingConnections": "待处理连接",
     "history": "历史",
@@ -821,12 +821,8 @@
     "noMatchingTokens": "未找到匹配的 Token",
     "noTokensAvailable": "无可用 Token",
     "retryToScanAgain": "重试以重新扫描",
-    "noComponentsFound": "未找到组件",
-    "openRepoWithComponents": "打开包含 React 组件的仓库",
     "noTokensFound": "未找到 Token",
     "addCssVariables": "向项目添加 CSS 变量",
-    "noStorybooksFound": "未找到 Storybook",
-    "createOrgiiFiles": "创建 .orgii.tsx 文件以添加组件",
     "loadingAccountStatus": "正在加载账户状态...",
     "noRepositorySelected": "未选择仓库",
     "selectRepositoryFromHome": "请从首页选择一个仓库以打开。",
@@ -1263,6 +1259,10 @@
         "home": {
           "label": "Home",
           "description": "OS Agent 桌面自动化的默认范围"
+        },
+        "documents": {
+          "label": "Documents",
+          "description": "Documents 文件夹"
         }
       }
     },
@@ -1460,7 +1460,7 @@
     "compact": "紧凑",
     "comfort": "舒适",
     "theme": "主题",
-    "primaryPanel": "主侧边栏",
+    "primaryPanel": "侧边栏",
     "sidebarPosition": "侧边栏位置",
     "bottomPanel": "底部面板",
     "titleBar": "标题栏",
@@ -1527,8 +1527,8 @@
   "commands": {
     "showBottomPanel": "显示底部面板",
     "hideBottomPanel": "隐藏底部面板",
-    "showPrimarySidebar": "显示主侧边栏",
-    "hidePrimarySidebar": "隐藏主侧边栏",
+    "showPrimarySidebar": "显示侧边栏",
+    "hidePrimarySidebar": "隐藏侧边栏",
     "searchFiles": "搜索文件",
     "openBrowser": "打开浏览器",
     "switchWorkspace": "切换 / 添加工作区",
@@ -2023,6 +2023,7 @@
       "browser": "浏览器",
       "settings": "设置",
       "newTab": "新标签页",
+      "newPrivateTab": "新隐私标签页",
       "newTerminal": "新建终端",
       "untitled": "未命名"
     },

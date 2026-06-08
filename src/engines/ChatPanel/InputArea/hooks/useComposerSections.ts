@@ -42,7 +42,7 @@ export interface UseComposerSectionsOptions {
   hasModeSwitch?: boolean;
   /** Whether the CreatePlanCard currently has a pending plan to review. */
   hasPlan?: boolean;
-  /** When provided, clicking the files pill navigates directly instead of expanding the card. */
+  /** Optional override for the files pill click; defaults to expanding the in-composer file changes card. */
   onFilesExpand?: () => void;
 }
 

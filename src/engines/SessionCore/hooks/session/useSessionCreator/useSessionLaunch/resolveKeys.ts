@@ -40,17 +40,8 @@ export interface ResolvedKeys {
   tier?: string;
 }
 
-export interface BonusInfo {
-  hasBonus: boolean;
-  bonusMessage: string | null;
-  originalTier: string | null;
-  actualTier: string | null;
-  bonusExhausted: boolean;
-}
-
 export interface KeyCallbacks {
   onAuthError: () => void;
-  onBonusDetected?: (info: BonusInfo) => Promise<boolean>;
 }
 
 // ============================================

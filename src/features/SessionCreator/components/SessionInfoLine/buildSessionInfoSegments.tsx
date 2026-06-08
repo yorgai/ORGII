@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { Code, FolderTree, GitBranch, Home } from "lucide-react";
+import { Code, Folder, FolderTree, GitBranch, Home } from "lucide-react";
 import React from "react";
 
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
@@ -19,13 +19,14 @@ interface SessionInfoDisplayParams {
   repoName?: string;
   repoKind?: RepoKind;
   isSystemPathSource?: boolean;
+  isSystemHomeSource?: boolean;
   hideBranch: boolean;
   t: TFunction;
 }
 
 export interface SessionInfoDisplayState {
   sourceDisplayName: string;
-  SourceIcon: typeof FolderTree | typeof Code | typeof Home;
+  SourceIcon: typeof FolderTree | typeof Code | typeof Home | typeof Folder;
   hasSource: boolean;
   showBranchRow: boolean;
 }
@@ -36,6 +37,7 @@ export function getSessionInfoDisplayState({
   repoName,
   repoKind,
   isSystemPathSource = false,
+  isSystemHomeSource = false,
   hideBranch,
   t,
 }: SessionInfoDisplayParams): SessionInfoDisplayState {
@@ -43,7 +45,13 @@ export function getSessionInfoDisplayState({
     sourceDisplayName:
       (isMultiRoot ? workspaceName : repoName) ||
       t("selectors.sessionInfo.sourcePlaceholder"),
-    SourceIcon: isSystemPathSource ? Home : isMultiRoot ? FolderTree : Code,
+    SourceIcon: isSystemHomeSource
+      ? Home
+      : isSystemPathSource
+        ? Folder
+        : isMultiRoot
+          ? FolderTree
+          : Code,
     hasSource: !!repoName || isMultiRoot,
     showBranchRow:
       !hideBranch &&

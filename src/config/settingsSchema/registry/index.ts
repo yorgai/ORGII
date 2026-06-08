@@ -10,6 +10,7 @@ import { MOBILE_REMOTE_SETTINGS_REGISTRY } from "./mobileRemote";
 import { NETWORK_SETTINGS_REGISTRY } from "./network";
 import { NOTIFICATIONS_SETTINGS_REGISTRY } from "./notifications";
 import { TERMINAL_SETTINGS_REGISTRY } from "./terminal";
+import { WORKSPACE_SETTINGS_REGISTRY } from "./workspace";
 
 export const SETTINGS_REGISTRY = {
   ...GENERAL_SETTINGS_REGISTRY,
@@ -19,6 +20,7 @@ export const SETTINGS_REGISTRY = {
   ...CHAT_SETTINGS_REGISTRY,
   ...GIT_SETTINGS_REGISTRY,
   ...EXTERNAL_IDE_SETTINGS_REGISTRY,
+  ...WORKSPACE_SETTINGS_REGISTRY,
   ...AGENT_SETTINGS_REGISTRY,
   ...AGENT_BROWSER_SETTINGS_REGISTRY,
   ...NETWORK_SETTINGS_REGISTRY,
@@ -32,6 +34,7 @@ export const SETTINGS_CATEGORY_LABELS: Record<SettingsCategory, string> = {
   notifications: "Notifications",
   chat: "Chat Appearance",
   externalIde: "External IDE",
+  workspace: "Workspace",
   git: "Git",
   agent: "Agent",
   agentBrowser: "Computer Use",

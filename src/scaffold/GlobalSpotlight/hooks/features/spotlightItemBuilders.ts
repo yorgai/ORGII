@@ -139,7 +139,6 @@ export function buildLanguageItems(
         type: "option" as const,
         data: {
           isCurrentSelection: language === currentLanguage,
-          tagLabel: language,
         },
         action: () => onSelectLanguage(language, label),
       },

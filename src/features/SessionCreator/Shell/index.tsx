@@ -13,7 +13,7 @@
  */
 import { DispatchCategoryPalette } from "@/src/scaffold/GlobalSpotlight/palettes";
 import { X } from "lucide-react";
-import React, { Suspense } from "react";
+import React from "react";
 
 import type { ModelType } from "@src/api/tauri/rpc/schemas/validation";
 import type { ComposerInputRef } from "@src/components/ComposerInput";
@@ -38,16 +38,6 @@ import type { SlashItem } from "@src/types/extensions";
 
 import { EditorArea, SessionInfoLine } from "../components";
 import { useSessionCreatorShell } from "./useSessionCreatorShell";
-
-// Lazy-load modals — they're only opened on user action, never on first paint.
-// Bundling them eagerly bloats the Shell's critical chunk (and therefore every
-// variant that composes it).
-const BonusModal = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "session-creator-modals" */ "../components/BonusModal"
-    )
-);
 
 // ============================================
 // Types
@@ -135,9 +125,6 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
     handleAdvancedConfigChange,
     handleRepoChange,
     handleRepoSelectForSession,
-    pendingBonusInfo,
-    acceptBonus,
-    declineBonus,
     attachedImages,
     handleImagePaste,
     removeImage,
@@ -162,6 +149,7 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
     requestModelOpen,
     setRequestModelOpen,
     isOSMode,
+    isSDEMode,
     sessionRepoId,
     repoDisplayName,
     currentRepoPath,
@@ -230,7 +218,7 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
           onRepoChange={handleRepoChange}
           onRepoSelect={handleRepoSelectForSession}
           repoKind={sessionRepoKind}
-          includeSystemPaths={isOSMode}
+          includeSystemPaths={isOSMode || isSDEMode}
           branchName={
             isOSMode && !sessionRepoId ? undefined : effectiveBranchName
           }
@@ -275,7 +263,7 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
           onRepoChange={handleRepoChange}
           onRepoSelect={handleRepoSelectForSession}
           repoKind={sessionRepoKind}
-          includeSystemPaths={isOSMode}
+          includeSystemPaths={isOSMode || isSDEMode}
           branchName={
             isOSMode && !sessionRepoId ? undefined : effectiveBranchName
           }
@@ -392,16 +380,6 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
         modals from un-archived `.market/` and renders them gated on
         showAddFundsModal / showBuyCreditsModal from useSessionCreator.
       */}
-
-      {pendingBonusInfo && (
-        <Suspense fallback={null}>
-          <BonusModal
-            bonusInfo={pendingBonusInfo}
-            onAccept={acceptBonus}
-            onDecline={declineBonus}
-          />
-        </Suspense>
-      )}
     </div>
   );
 };

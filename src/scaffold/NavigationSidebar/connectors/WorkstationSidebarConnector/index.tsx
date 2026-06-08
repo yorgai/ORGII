@@ -11,14 +11,17 @@ import React, {
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import type { WorkspaceRecord } from "@src/api/tauri/workspace";
 import { ROUTES } from "@src/config/routes";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import { useKeyVault } from "@src/hooks/keyVault";
 import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
 import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
-import { useLaunchpadAgentCatalog } from "@src/modules/WorkStation/Launchpad/hooks/useLaunchpadAgentCatalog";
+import { useLaunchpadAgentCatalog } from "@src/modules/shared/launchpad/hooks";
+import { openWorkspaceSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import { benchmarkAgentBatchStatusAtom } from "@src/store/benchmark";
+import type { Repo } from "@src/store/repo";
 import { repoMapAtom, reposAtom } from "@src/store/repo";
 import {
   activeSessionCreatorDraftIdAtom,
@@ -42,10 +45,12 @@ import {
   chatPanelSelectedWorkspaceAtom,
   chatPanelStickyNotesOpenAtom,
   chatPanelWorkspaceDashboardOpenAtom,
+  chatPanelWorkspaceOverviewTabAtom,
 } from "@src/store/ui/chatPanelAtom";
 import { type StationMode, stationModeAtom } from "@src/store/ui/simulatorAtom";
 import { spotlightOpenAtom } from "@src/store/ui/uiAtom";
 import {
+  activeWorkspaceIdAtom,
   activeWorkspaceNameAtom,
   savedWorkspacesAtom,
   setWorkspaceFoldersAtom,
@@ -77,7 +82,12 @@ import {
   sortSessionsByActivity,
 } from "../workstationSidebarData";
 import { useSidebarBottomRightActions } from "./bottomActions";
-import { buildWorkspaceRepoNameResolver } from "./foldersSidebarMenuItems";
+import {
+  FOLDERS_MY_AGENTS_COLLAPSE_SECTION_ID,
+  FOLDERS_REPO_ITEM_PREFIX,
+  FOLDERS_WORKSPACE_ITEM_PREFIX,
+  buildWorkspaceRepoNameResolver,
+} from "./foldersSidebarMenuItems";
 import {
   useRenderProjectsMenuItemWrapper,
   useRenderSessionMenuItemWrapper,
@@ -100,6 +110,7 @@ import {
 } from "./sidebarTabs";
 import type { WorkstationSidebarKey } from "./types";
 import { useFoldersMenuItemClick } from "./useFoldersMenuItemClick";
+import { useFoldersSidebarContextMenu } from "./useFoldersSidebarContextMenu";
 import { useProjectsMenuItemClick } from "./useProjectsMenuItemClick";
 
 export const WorkstationSidebarConnector: React.FC = () => {
@@ -147,6 +158,9 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const setChatPanelSelectedWorkspace = useSetAtom(
     chatPanelSelectedWorkspaceAtom
   );
+  const setChatPanelWorkspaceOverviewTab = useSetAtom(
+    chatPanelWorkspaceOverviewTabAtom
+  );
   const setChatPanelStickyNotesOpen = useSetAtom(chatPanelStickyNotesOpenAtom);
   const setStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
   const setStationMode = useSetAtom(stationModeAtom);
@@ -157,6 +171,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const [activeSidebarKey, setActiveSidebarKey] =
     useState<WorkstationSidebarKey>("workstation");
   const [activeSessionMoreMenuId, setActiveSessionMoreMenuId] = useState("");
+  const [activeFolderMoreMenuId, setActiveFolderMoreMenuId] = useState("");
   const [projectsSelectedMenuItemId, setProjectsSelectedMenuItemId] =
     useState("");
   const [foldersDashboardSelected, setFoldersDashboardSelected] =
@@ -177,13 +192,16 @@ export const WorkstationSidebarConnector: React.FC = () => {
   );
   const repoMap = useAtomValue(repoMapAtom);
   const repos = useAtomValue(reposAtom);
-  const savedWorkspaces = useAtomValue(savedWorkspacesAtom);
+  const [savedWorkspaces, setSavedWorkspaces] = useAtom(savedWorkspacesAtom);
+  const activeWorkspaceId = useAtomValue(activeWorkspaceIdAtom);
   const dispatchSetWorkspaceFolders = useSetAtom(setWorkspaceFoldersAtom);
   const setActiveWorkspaceName = useSetAtom(activeWorkspaceNameAtom);
   const { localAccounts } = useKeyVault({ autoLoad: true });
   const { installedCliAgents, builtInRustAgents, customRustAgents } =
     useLaunchpadAgentCatalog();
-  const { selectRepo } = useRepoSelection({ autoLoad: false });
+  const { selectRepo, forceRefreshRepos } = useRepoSelection({
+    autoLoad: false,
+  });
   const repoPathToName = useMemo(() => buildRepoPathToName(repoMap), [repoMap]);
   const resolveWorkspaceRepoName = useMemo(
     () => buildWorkspaceRepoNameResolver(repos),
@@ -205,7 +223,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
   );
   const [foldersCollapsedSectionIds, setFoldersCollapsedSectionIds] = useState<
     Set<string>
-  >(() => new Set());
+  >(() => new Set([FOLDERS_MY_AGENTS_COLLAPSE_SECTION_ID]));
   const [projectsCollapsedSectionIds, setProjectsCollapsedSectionIds] =
     useState<Set<string>>(() => new Set());
   const defaultedProjectsLinearSectionIdsRef = useRef<Set<string>>(new Set());
@@ -261,13 +279,60 @@ export const WorkstationSidebarConnector: React.FC = () => {
     newSessionLabel,
     stickyNotesLabel,
     t,
-    tCommon,
   });
   const sessionSidebarMenuItems = useSessionSidebarMenuItems({
     menuItems,
     sessionCreatorDrafts,
     t,
   });
+  const clearActiveWorkspace = useCallback(() => {
+    dispatchSetWorkspaceFolders([], null);
+    setActiveWorkspaceName(null);
+  }, [dispatchSetWorkspaceFolders, setActiveWorkspaceName]);
+
+  const { openWorkspaceMenu, openRepoMenu } = useFoldersSidebarContextMenu({
+    activeWorkspaceId,
+    clearActiveWorkspace,
+    forceRefreshRepos,
+    setSavedWorkspaces,
+    tCommon,
+  });
+
+  const handleAddWorkspaceFolder = useCallback(() => {
+    openWorkspaceSpotlight("add");
+  }, []);
+  const handleCreateMultiRepoWorkspace = useCallback(() => {
+    openWorkspaceSpotlight("create");
+  }, []);
+
+  const handleMoreActionsForWorkspace = useCallback(
+    (
+      _event: React.MouseEvent<HTMLButtonElement>,
+      workspace: WorkspaceRecord
+    ) => {
+      const itemId = `${FOLDERS_WORKSPACE_ITEM_PREFIX}${workspace.workspaceId}`;
+      setActiveFolderMoreMenuId(itemId);
+      void openWorkspaceMenu(workspace).finally(() => {
+        setActiveFolderMoreMenuId((current) =>
+          current === itemId ? "" : current
+        );
+      });
+    },
+    [openWorkspaceMenu]
+  );
+  const handleMoreActionsForRepo = useCallback(
+    (_event: React.MouseEvent<HTMLButtonElement>, repo: Repo) => {
+      const itemId = `${FOLDERS_REPO_ITEM_PREFIX}${repo.id}`;
+      setActiveFolderMoreMenuId(itemId);
+      void openRepoMenu(repo).finally(() => {
+        setActiveFolderMoreMenuId((current) =>
+          current === itemId ? "" : current
+        );
+      });
+    },
+    [openRepoMenu]
+  );
+
   const foldersSidebarMenuItems = useFoldersSidebarMenuItems({
     savedWorkspaces,
     repos,
@@ -276,6 +341,12 @@ export const WorkstationSidebarConnector: React.FC = () => {
     builtInRustAgents,
     customRustAgents,
     t,
+    tCommon,
+    onAddWorkspaceFolder: handleAddWorkspaceFolder,
+    onCreateMultiRepoWorkspace: handleCreateMultiRepoWorkspace,
+    onMoreActionsForWorkspace: handleMoreActionsForWorkspace,
+    onMoreActionsForRepo: handleMoreActionsForRepo,
+    activeMoreMenuId: activeFolderMoreMenuId,
   });
   const projectsSidebarMenuItems = projectsWorkItemMenuItems;
 
@@ -434,6 +505,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     setChatPanelSelectedWorkspace,
     setChatPanelStickyNotesOpen,
     setChatPanelWorkspaceDashboardOpen,
+    setChatPanelWorkspaceOverviewTab,
     setFoldersDashboardSelected,
     setProjectsSelectedMenuItemId,
   });
@@ -485,8 +557,38 @@ export const WorkstationSidebarConnector: React.FC = () => {
       : activeSidebarKey === "folders"
         ? handleFoldersMenuItemClick
         : workstationMenuItemClick;
+
+  const handleFoldersMenuItemContextMenu = useCallback(
+    (event: React.MouseEvent, _key: string, item: NavigationMenuItem) => {
+      if (item.id.startsWith(FOLDERS_WORKSPACE_ITEM_PREFIX)) {
+        const workspaceId = item.id.slice(FOLDERS_WORKSPACE_ITEM_PREFIX.length);
+        const workspace = savedWorkspaces.find(
+          (candidate) => candidate.workspaceId === workspaceId
+        );
+        if (!workspace) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void openWorkspaceMenu(workspace);
+        return;
+      }
+      if (item.id.startsWith(FOLDERS_REPO_ITEM_PREFIX)) {
+        const repoId = item.id.slice(FOLDERS_REPO_ITEM_PREFIX.length);
+        const repo = repos.find((candidate) => candidate.id === repoId);
+        if (!repo) return;
+        event.preventDefault();
+        event.stopPropagation();
+        void openRepoMenu(repo);
+      }
+    },
+    [openRepoMenu, openWorkspaceMenu, repos, savedWorkspaces]
+  );
+
   const resolvedMenuItemContextMenu =
-    activeSidebarKey === "workstation" ? handleMenuItemContextMenu : undefined;
+    activeSidebarKey === "workstation"
+      ? handleMenuItemContextMenu
+      : activeSidebarKey === "folders"
+        ? handleFoldersMenuItemContextMenu
+        : undefined;
   const resolvedRenderMenuItemWrapper =
     activeSidebarKey === "projects"
       ? renderProjectsMenuItemWrapper

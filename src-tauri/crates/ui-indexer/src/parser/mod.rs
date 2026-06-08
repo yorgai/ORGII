@@ -5,23 +5,14 @@
 //! - Vue SFC - via regex-based parsing
 //! - Svelte - via regex-based parsing
 //!
-//! Also includes:
-//! - Props extraction (lazy, on-demand) for TypeScript components
-
 mod jsx;
-mod props_extractor;
-mod story_extractor;
 mod svelte;
 mod token_extractor;
 mod vue;
 
 pub use jsx::JsxParser;
-pub use props_extractor::PropsExtractor;
-pub use story_extractor::{StoryExtractor, StoryFileInfo};
 pub use svelte::SvelteParser;
-pub use token_extractor::{
-    TokenDefinitionExtractor, TokenDefinitionsResult, TokenExtractionResult, TokenExtractor,
-};
+pub use token_extractor::{TokenDefinitionExtractor, TokenDefinitionsResult};
 pub use vue::VueParser;
 
 use std::path::Path;

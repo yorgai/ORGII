@@ -6,11 +6,6 @@ import BambooBlueBg from "@src/assets/bg/bamboo-blue.jpg";
 import BambooGreenBg from "@src/assets/bg/bamboo-green.jpg";
 import MountainBlueBg from "@src/assets/bg/mountain-blue.jpg";
 import MountainGreenBg from "@src/assets/bg/mountain-green.jpg";
-import {
-  BACKGROUND_COLOR_PAIRS,
-  getColorPairById as getColorPairByIdShared,
-  resolveColorPair as resolveColorPairShared,
-} from "@src/config/appearance/backgroundColorPairs";
 
 import type { AnimationPreset, ImagePreset } from "./types";
 
@@ -146,30 +141,9 @@ export const PRESET_ANIMATIONS: AnimationPreset[] = [
 ];
 
 // ═══════════════════════════════════════════════════════════════
-// COLOR PRESETS
-// Curated paired palette. Each entry resolves to a "light" hex (used in
-// light mode) and a "dark" hex (used in dark mode). Switching the
-// appearance mode automatically swaps to the paired value.
-// Re-exported from the canonical appearance config so the UI grid and the
-// `resolvedBackgroundConfigAtom` share the exact same source of truth.
-// ═══════════════════════════════════════════════════════════════
-
-export const PRESET_COLORS = BACKGROUND_COLOR_PAIRS;
-export const getColorPairById = getColorPairByIdShared;
-export const resolveColorPair = resolveColorPairShared;
-
-// ═══════════════════════════════════════════════════════════════
 // CONSTANTS
-// Re-exported from the canonical appearance config layer so the BackgroundPage
-// UI can keep importing from this file while the store layer (uiAtom,
-// backgroundInit) no longer needs to reach into a Settings sub-page.
 // ═══════════════════════════════════════════════════════════════
 
-export {
-  CUSTOM_COLOR_STORAGE_KEY,
-  DEFAULT_BUNDLED_BACKGROUND_IMAGE,
-} from "@src/config/appearance/backgroundConfig";
-export const DEFAULT_CUSTOM_COLOR = "#1a1a2e";
 /** Upper bound for DIY solid colors saved in background config */
 export const MAX_CUSTOM_BACKGROUND_COLORS = 24;
 

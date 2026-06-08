@@ -28,12 +28,12 @@ export const defaultSettingsGithubLight = {
 };
 
 export const defaultSettingsGithubDark = {
-  background: "#0d1117",
+  background: "#0a0a0a",
   foreground: "#c9d1d9",
   caret: "#c9d1d9",
   selection: "#003d73",
   selectionMatch: "#003d73",
-  gutterBackground: "#0d1117",
+  gutterBackground: "#0a0a0a",
   gutterForeground: "#8b949e",
   lineHighlight: "#36334280",
 };
@@ -50,7 +50,7 @@ export function createGithubTheme(
   isDark: boolean
 ): ReturnType<typeof createTheme> {
   const settings = {
-    background: cssVar("--cm-editor-background", isDark ? "#0d1117" : "#fff"),
+    background: cssVar("--cm-editor-background", isDark ? "#0a0a0a" : "#fff"),
     foreground: cssVar(
       "--cm-editor-foreground",
       isDark ? "#c9d1d9" : "#24292e"
@@ -62,7 +62,7 @@ export function createGithubTheme(
     ),
     gutterBackground: cssVar(
       "--cm-editor-gutter-bg",
-      isDark ? "#0d1117" : "#fff"
+      isDark ? "#0a0a0a" : "#fff"
     ),
     gutterForeground: cssVar(
       "--cm-editor-gutter-fg",

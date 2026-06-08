@@ -4,8 +4,8 @@ export const DATABASE_SHORTCUTS: ShortcutEntry[] = [
   {
     id: "db_sidebar",
     command: "Toggle sidebar",
-    macKeys: "⌘B",
-    winKeys: "Ctrl+B",
+    macKeys: "⌥⌘U",
+    winKeys: "Ctrl+Alt+U",
     scope: "database",
     category: "panels",
   },

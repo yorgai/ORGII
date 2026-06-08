@@ -1,4 +1,4 @@
-import { Globe, KeyRound, Keyboard, Search } from "lucide-react";
+import { Globe, KeyRound, Keyboard, ScanSearch } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -329,8 +329,8 @@ export const GitContent: React.FC<GitContentProps> = ({
     () => [
       {
         key: STORY_SYNC_AUTH_METHOD.SCAN,
-        label: t("gitConnections.methodScan", "Detect on this machine"),
-        icon: Search,
+        label: t("gitConnections.methodScan", "Auto Detect"),
+        icon: ScanSearch,
       },
       {
         key: STORY_SYNC_AUTH_METHOD.OAUTH,
@@ -339,12 +339,12 @@ export const GitContent: React.FC<GitContentProps> = ({
       },
       {
         key: STORY_SYNC_AUTH_METHOD.PAT,
-        label: t("gitConnections.methodPat", "Personal access token"),
+        label: "PAT",
         icon: Keyboard,
       },
       {
         key: STORY_SYNC_AUTH_METHOD.SSH,
-        label: t("gitConnections.methodSsh", "SSH key"),
+        label: "SSH key",
         icon: KeyRound,
       },
     ],

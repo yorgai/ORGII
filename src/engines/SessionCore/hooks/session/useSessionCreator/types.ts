@@ -92,17 +92,6 @@ export interface UseSessionCreatorReturn {
   showBuyCreditsModal: boolean;
   closeBuyCreditsModal: () => void;
 
-  // Bonus modal (shown when a cheaper tier was matched)
-  pendingBonusInfo: {
-    hasBonus: boolean;
-    bonusMessage: string | null;
-    originalTier: string | null;
-    actualTier: string | null;
-    bonusExhausted: boolean;
-  } | null;
-  acceptBonus: () => void;
-  declineBonus: () => void;
-
   // Branch change handler — updates the session-scoped draft branch only.
   // Does NOT perform a git checkout.
   handleBranchChange: (branch: string) => void;

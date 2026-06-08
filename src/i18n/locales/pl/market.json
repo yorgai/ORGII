@@ -549,13 +549,6 @@
       }
     }
   },
-  "bonusModal": {
-    "bonusTitle": "Niespodzianka — bonus!",
-    "marginTitle": "Poziom niedostępny",
-    "bonusDescription": "Brak dostępnych kluczy {{originalTier}}. Znaleźliśmy klucz {{actualTier}} w lepszej cenie!",
-    "marginDescription": "Brak dostępnych kluczy {{originalTier}}. Znaleźliśmy klucz {{actualTier}} — zostaniesz obciążony według stawki {{originalTier}}.",
-    "acceptBonus": "Przyjmij bonus"
-  },
   "orgiiOrchestrator": {
     "name": "ORGII Pool",
     "description": "Zarządzana pula modeli z jednolitą ceną w kredytach",

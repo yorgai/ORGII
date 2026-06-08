@@ -7,8 +7,8 @@
     "inputMode": "Управление",
     "selectionMode": "Ответ",
     "toggleMode": "Переключить режим ввода",
-    "inputPlaceholder": "Скажите Agent, что сделать...",
-    "selectionPlaceholder": "Введите выбор или ответ...",
+    "inputPlaceholder": "Позвольте Agent управлять этим приложением...",
+    "selectionPlaceholder": "Задайте любой вопрос об ORGII...",
     "submit": "Отправить ввод Agent Control",
     "menuToggle": "Agent Control",
     "selectModel": "Выбрать модель"
@@ -63,6 +63,7 @@
     "clear": "Очистить",
     "open": "Открыть",
     "view": "Просмотреть",
+    "openInApp": "Открыть в приложении",
     "openToRight": "Открыть справа",
     "new": "Новый",
     "rename": "Переименовать",
@@ -289,6 +290,7 @@
     "status": "Статус",
     "version": "Версия",
     "details": "Подробности",
+    "overview": "Обзор",
     "description": "Описание",
     "stats": "Статистика",
     "recentChanges": "Последние изменения",
@@ -308,8 +310,6 @@
     "regularBrowsing": "Обычный просмотр",
     "privateBrowsing": "Приватный просмотр",
     "globalTokens": "Глобальные Token",
-    "addedComponents": "Добавленные компоненты",
-    "candidates": "Кандидаты",
     "addedConnections": "Добавленные подключения",
     "pendingConnections": "Ожидающие подключения",
     "history": "История",
@@ -821,12 +821,8 @@
     "noMatchingTokens": "Совпадающие Token не найдены",
     "noTokensAvailable": "Нет доступных Token",
     "retryToScanAgain": "Повторить сканирование",
-    "noComponentsFound": "Компоненты не найдены",
-    "openRepoWithComponents": "Откройте репо с компонентами React",
     "noTokensFound": "Token не найдены",
     "addCssVariables": "Добавьте CSS-переменные в проект",
-    "noStorybooksFound": "Storybook не найдены",
-    "createOrgiiFiles": "Создайте файлы .orgii.tsx для добавления компонентов",
     "loadingAccountStatus": "Загрузка статуса аккаунта...",
     "noRepositorySelected": "Репо не выбран",
     "selectRepositoryFromHome": "Выберите репо на главной странице, чтобы открыть его.",
@@ -1262,6 +1258,10 @@
         "home": {
           "label": "Home",
           "description": "Область по умолчанию для OS Agent при автоматизации рабочего стола"
+        },
+        "documents": {
+          "label": "Документы",
+          "description": "Папка Документы"
         }
       }
     },
@@ -1459,7 +1459,7 @@
     "compact": "Компактный",
     "comfort": "Комфортный",
     "theme": "Тема",
-    "primaryPanel": "Основная боковая панель",
+    "primaryPanel": "Боковая панель",
     "sidebarPosition": "Положение панели",
     "bottomPanel": "Нижняя панель",
     "titleBar": "Строка заголовка",
@@ -1521,8 +1521,8 @@
   "commands": {
     "showBottomPanel": "Показать нижнюю панель",
     "hideBottomPanel": "Скрыть нижнюю панель",
-    "showPrimarySidebar": "Показать основную боковую панель",
-    "hidePrimarySidebar": "Скрыть основную боковую панель",
+    "showPrimarySidebar": "Показать боковую панель",
+    "hidePrimarySidebar": "Скрыть боковую панель",
     "searchFiles": "Поиск файлов",
     "openBrowser": "Открыть браузер",
     "switchWorkspace": "Переключить / добавить Workspace",
@@ -2017,6 +2017,7 @@
       "browser": "Браузер",
       "settings": "Настройки",
       "newTab": "Новая вкладка",
+      "newPrivateTab": "Новая приватная вкладка",
       "newTerminal": "Новый терминал",
       "untitled": "Без названия"
     },

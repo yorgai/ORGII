@@ -9,9 +9,6 @@ import BambooBlueBg from "@src/assets/bg/bamboo-blue.jpg";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-/** localStorage key that holds the legacy single custom picker colour. */
-export const CUSTOM_COLOR_STORAGE_KEY = "orgii_custom_bg_color";
-
 /** Bundled image used as `imageUrl` seed in the default background config. */
 export const DEFAULT_BUNDLED_BACKGROUND_IMAGE = BambooBlueBg;
 
@@ -43,30 +40,4 @@ export function sanitizeCustomColorsArray(raw: unknown): string[] {
     if (normalized && !out.includes(normalized)) out.push(normalized);
   }
   return out;
-}
-
-/**
- * Build the DIY colour palette from the stored array, legacy picker key, and
- * the active custom hex. Used by uiAtom during initial hydration to migrate
- * users who had a colour stored under the legacy CUSTOM_COLOR_STORAGE_KEY.
- */
-export function mergeStoredCustomColors(params: {
-  parsedCustomColors: unknown;
-  backgroundColor: unknown;
-  backgroundColorId: unknown;
-  legacyPickerHex: string | null;
-}): string[] {
-  const list = sanitizeCustomColorsArray(params.parsedCustomColors);
-  const push = (hex: string | null) => {
-    if (!hex || list.includes(hex)) return;
-    list.push(hex);
-  };
-  const legacyNorm = params.legacyPickerHex
-    ? normalizeHexColor(params.legacyPickerHex)
-    : null;
-  push(legacyNorm);
-  if (!params.backgroundColorId && typeof params.backgroundColor === "string") {
-    push(normalizeHexColor(params.backgroundColor));
-  }
-  return list;
 }

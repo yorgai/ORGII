@@ -17,7 +17,7 @@ import { type MutableRefObject, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { invalidateFileCache } from "@src/hooks/workStation/editor/useFileContent";
-import { tabToLegacyHost } from "@src/store/workstation/legacyTabHostAdapter";
+import { tabToHost } from "@src/store/workstation/tabHost";
 import {
   type PanelState,
   workstationLayoutAtom,
@@ -94,7 +94,7 @@ export function useEditorPaneState(
   // globally-active tab is owned by another host.
   const activeTab = useMemo(() => {
     const rawTab = tabs.find((tab) => tab.id === rawActiveTabId) ?? null;
-    if (rawTab && tabToLegacyHost(rawTab) === "code") return rawTab;
+    if (rawTab && tabToHost(rawTab) === "code") return rawTab;
     return tabs.find((tab) => tab.type === "explorer") ?? null;
   }, [tabs, rawActiveTabId]);
 

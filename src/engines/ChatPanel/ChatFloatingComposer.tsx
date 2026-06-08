@@ -73,7 +73,6 @@ interface ChatFloatingComposerProps {
   onModeSwitchDataChange: (hasData: boolean) => void;
   queueExpanded: boolean;
   processExpanded: boolean;
-  filesExpanded: boolean;
   queuedMessages: Parameters<typeof QueuedMessages>[0]["messages"];
   onCancelQueuedMessage: Parameters<typeof QueuedMessages>[0]["onCancel"];
   onSendQueuedMessageNow: Parameters<typeof QueuedMessages>[0]["onSendNow"];
@@ -121,7 +120,6 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
     onModeSwitchDataChange,
     queueExpanded,
     processExpanded,
-    filesExpanded,
     queuedMessages,
     onCancelQueuedMessage,
     onSendQueuedMessageNow,
@@ -219,21 +217,12 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
               hidden
             />
           )}
-          {filesExpanded && (
-            <CompactFileChanges
-              key={`files-expanded-${sessionId}`}
-              onToggle={onToggleFiles}
-              onVisibleStatsChange={onFileChangeStatsChange}
-            />
-          )}
-          {!filesExpanded && (
-            <CompactFileChanges
-              key={`files-hidden-${sessionId}`}
-              onToggle={onToggleFiles}
-              onVisibleStatsChange={onFileChangeStatsChange}
-              hidden
-            />
-          )}
+          <CompactFileChanges
+            key={`files-tracker-${sessionId}`}
+            onToggle={onToggleFiles}
+            onVisibleStatsChange={onFileChangeStatsChange}
+            hidden
+          />
 
           <QueueEditModeCard />
 

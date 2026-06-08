@@ -12,7 +12,7 @@
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
-import { backgroundImageAtom } from "@src/store";
+import { backgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
 import { getRelativeLuminance } from "@src/util/ui/theme/luminance";
 
 // Hook configuration options
@@ -120,7 +120,7 @@ export function useContrastJs(
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const { selector, lightColor, darkColor, autoInit } = opts;
 
-  const config = useAtomValue(backgroundImageAtom);
+  const config = useAtomValue(backgroundConfigAtom);
   const enabled = config.adaptiveColors ?? true;
   const observerRef = useRef<MutationObserver | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);

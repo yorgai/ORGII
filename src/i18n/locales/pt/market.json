@@ -549,13 +549,6 @@
       }
     }
   },
-  "bonusModal": {
-    "bonusTitle": "Bônus surpresa!",
-    "marginTitle": "Nível indisponível",
-    "bonusDescription": "Nenhuma chave {{originalTier}} disponível. Encontramos uma chave {{actualTier}} a um Preço melhor!",
-    "marginDescription": "Nenhuma chave {{originalTier}} disponível. Encontramos uma chave {{actualTier}} — você será cobrado pela taxa de {{originalTier}}.",
-    "acceptBonus": "Aceitar bônus"
-  },
   "orgiiOrchestrator": {
     "name": "ORGII Pool",
     "description": "Pool de modelos gerenciado com Preço fixo por Crédito",

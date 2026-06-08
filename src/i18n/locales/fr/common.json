@@ -7,8 +7,8 @@
     "inputMode": "Contrôle",
     "selectionMode": "Réponse",
     "toggleMode": "Changer le mode de saisie",
-    "inputPlaceholder": "Dites à l'Agent quoi faire...",
-    "selectionPlaceholder": "Saisissez la sélection ou la réponse...",
+    "inputPlaceholder": "Laissez l'Agent contrôler cette application...",
+    "selectionPlaceholder": "Posez n'importe quelle question sur ORGII...",
     "submit": "Envoyer la saisie Agent Control",
     "menuToggle": "Agent Control",
     "selectModel": "Choisir le modèle"
@@ -63,6 +63,7 @@
     "clear": "Effacer",
     "open": "Ouvrir",
     "view": "Afficher",
+    "openInApp": "Ouvrir dans l'app",
     "openToRight": "Ouvrir à droite",
     "new": "Nouveau",
     "rename": "Renommer",
@@ -289,6 +290,7 @@
     "status": "Statut",
     "version": "Version",
     "details": "Détails",
+    "overview": "Aperçu",
     "description": "Description",
     "stats": "Statistiques",
     "recentChanges": "Changements récents",
@@ -308,8 +310,6 @@
     "regularBrowsing": "Navigation classique",
     "privateBrowsing": "Navigation privée",
     "globalTokens": "Tokens globaux",
-    "addedComponents": "Composants ajoutés",
-    "candidates": "Candidats",
     "addedConnections": "Connexions ajoutées",
     "pendingConnections": "Connexions en attente",
     "history": "Historique",
@@ -821,12 +821,8 @@
     "noMatchingTokens": "Aucun token correspondant trouvé",
     "noTokensAvailable": "Aucun token disponible",
     "retryToScanAgain": "Réessayer pour analyser à nouveau",
-    "noComponentsFound": "Aucun composant trouvé",
-    "openRepoWithComponents": "Ouvrez un dépôt avec des composants React",
     "noTokensFound": "Aucun token trouvé",
     "addCssVariables": "Ajoutez des variables CSS à votre projet",
-    "noStorybooksFound": "Aucun storybook trouvé",
-    "createOrgiiFiles": "Créez des fichiers .orgii.tsx pour ajouter des composants",
     "loadingAccountStatus": "Chargement du statut du compte...",
     "noRepositorySelected": "Aucun dépôt sélectionné",
     "selectRepositoryFromHome": "Choisissez un dépôt depuis l’accueil.",
@@ -1262,6 +1258,10 @@
         "home": {
           "label": "Home",
           "description": "Portée par défaut de l’OS Agent pour l’automatisation du bureau"
+        },
+        "documents": {
+          "label": "Documents",
+          "description": "Dossier Documents"
         }
       }
     },
@@ -1459,7 +1459,7 @@
     "compact": "Compact",
     "comfort": "Confort",
     "theme": "Thème",
-    "primaryPanel": "Barre latérale principale",
+    "primaryPanel": "Barre latérale",
     "sidebarPosition": "Position de la barre latérale",
     "bottomPanel": "Panneau inférieur",
     "titleBar": "Barre de titre",
@@ -1524,8 +1524,8 @@
   "commands": {
     "showBottomPanel": "Afficher le panneau inférieur",
     "hideBottomPanel": "Masquer le panneau inférieur",
-    "showPrimarySidebar": "Afficher la barre latérale principale",
-    "hidePrimarySidebar": "Masquer la barre latérale principale",
+    "showPrimarySidebar": "Afficher la barre latérale",
+    "hidePrimarySidebar": "Masquer la barre latérale",
     "searchFiles": "Rechercher des fichiers",
     "openBrowser": "Ouvrir le navigateur",
     "switchWorkspace": "Changer / Ajouter un espace de travail",
@@ -2020,6 +2020,7 @@
       "browser": "Navigateur",
       "settings": "Paramètres",
       "newTab": "Nouvel onglet",
+      "newPrivateTab": "Nouvel onglet privé",
       "newTerminal": "Nouveau terminal",
       "untitled": "Sans titre"
     },

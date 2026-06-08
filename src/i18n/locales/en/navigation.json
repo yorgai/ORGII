@@ -45,8 +45,6 @@
     "project": "Project",
     "projects": "Projects",
     "projectManager": "Project Manager",
-    "myKeys": "My Keys",
-    "myAgents": "My Agents",
     "diff": "Diff"
   },
   "workstation": {
@@ -215,10 +213,6 @@
   "launchpad": {
     "sections": {
       "other": "Other"
-    },
-    "tabs": {
-      "myApps": "My Apps",
-      "myRepos": "My Repos"
     },
     "searchPlaceholder": "Search workspaces...",
     "emptyTitle": "No workspaces yet",

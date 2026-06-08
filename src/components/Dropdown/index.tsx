@@ -35,6 +35,8 @@ import React, {
   useState,
 } from "react";
 
+import { useDropdownAutoKeyboard } from "@src/hooks/dropdown";
+
 import DropdownMenuSurface from "./DropdownMenuSurface";
 import DropdownOptionsContent from "./DropdownOptionsContent";
 import DropdownTriggerWrapper from "./DropdownTriggerWrapper";
@@ -183,6 +185,18 @@ const Dropdown: React.FC<DropdownProps> = ({
     },
     [isControlled, onVisibleChange]
   );
+
+  // Droplist mode parity with `useDropdownEngine`: discover button rows in
+  // the panel subtree and drive Arrow/Home/End/Enter navigation. Options
+  // mode runs its own typed keyboard handler (`useDropdownKeyboard`) below,
+  // so we only enable the auto fallback for droplist mode.
+  const autoKeyboardClose = useCallback(() => setVisible(false), [setVisible]);
+  useDropdownAutoKeyboard({
+    isOpen: visible && !isOptionsMode,
+    panelRef: dropdownRef,
+    onClose: autoKeyboardClose,
+    enabled: !isOptionsMode,
+  });
 
   const flatOptions = useMemo(
     () => (rawOptions ? flattenOptions(rawOptions) : []),

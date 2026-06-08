@@ -549,13 +549,6 @@
       }
     }
   },
-  "bonusModal": {
-    "bonusTitle": "Sürpriz Bonus!",
-    "marginTitle": "Seviye Kullanılamıyor",
-    "bonusDescription": "{{originalTier}} key mevcut değil. {{actualTier}} key'i daha iyi bir fiyata bulduk!",
-    "marginDescription": "{{originalTier}} key mevcut değil. {{actualTier}} key'i bulduk — {{originalTier}} tarifesi üzerinden ücretlendirileceksiniz.",
-    "acceptBonus": "Bonusu Kabul Et"
-  },
   "orgiiOrchestrator": {
     "name": "ORGII Pool",
     "description": "Sabit Credit fiyatlı yönetilen model havuzu",

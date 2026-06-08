@@ -158,9 +158,6 @@ export {
   // Agent Config factories
   agentConfigTabFactory,
   createAgentConfigTab,
-  // Launchpad factories
-  launchpadRepoTabFactory,
-  createLaunchpadRepoTab,
   // GitHub Issue Detail factories
   githubIssueDetailTabFactory,
   createGitHubIssueDetailTab,
@@ -206,8 +203,6 @@ export type {
   // Agent Config data types
   AgentConfigTabData,
   AgentConfigTabVariant,
-  // Launchpad data types
-  LaunchpadRepoTabData,
   // GitHub Issue Detail data types
   GitHubIssueDetailTabData,
 } from "./factories";

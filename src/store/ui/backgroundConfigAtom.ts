@@ -9,8 +9,6 @@
  *   - Adaptive colors
  *
  * Persisted to localStorage under `orgii_background_config`.
- * One-time migration merges the old `orgii_custom_color` key into
- * `customColors` and removes the legacy key.
  */
 import { atom } from "jotai";
 
@@ -19,9 +17,8 @@ import {
   resolveColorPair,
 } from "@src/config/appearance/backgroundColorPairs";
 import {
-  CUSTOM_COLOR_STORAGE_KEY,
   DEFAULT_BUNDLED_BACKGROUND_IMAGE,
-  mergeStoredCustomColors,
+  sanitizeCustomColorsArray,
 } from "@src/config/appearance/backgroundConfig";
 
 // ============================================
@@ -37,17 +34,16 @@ export interface BackgroundConfig {
   /** DIY solid hex colors (#rrggbb), shown after presets */
   customColors?: string[];
   /**
-   * Resolved hex color currently applied. For preset pairs this mirrors the
-   * theme-appropriate side of the pair so legacy consumers reading
-   * `backgroundColor` keep working without resolving the pair themselves.
-   * For a custom color pick this holds the user's exact hex.
+   * Applied CSS color. For preset pairs this is a theme-aware desktop
+   * background token (`var(--desktop-bg-*)`); for custom colors this is the
+   * user's exact hex value.
    */
   backgroundColor?: string;
   /**
-   * Stable ID of the active preset color pair (e.g. "classic", "ocean").
-   * When set, `backgroundColor` is derived from this pair + the active
-   * appearance mode by `resolvedBackgroundConfigAtom`. Absent for custom
-   * colors and image backgrounds.
+   * Stable ID of the active preset desktop background pair (e.g. "classic",
+   * "ocean"). When set, `resolvedBackgroundConfigAtom` derives
+   * `backgroundColor` from the active pair token. Absent for custom colors and
+   * image backgrounds.
    */
   backgroundColorId?: string;
   animation?: string;
@@ -65,7 +61,6 @@ const BACKGROUND_CONFIG_KEY = "orgii_background_config";
 const VALID_GLASS_LEVELS = new Set(["regular", "medium", "thick"]);
 
 const DEFAULT_BACKGROUND_PAIR_ID = "graphite";
-const DEFAULT_BACKGROUND_PAIR = getColorPairById(DEFAULT_BACKGROUND_PAIR_ID);
 
 const DEFAULT_BACKGROUND_CONFIG: BackgroundConfig = {
   imageUrl: DEFAULT_BUNDLED_BACKGROUND_IMAGE,
@@ -74,9 +69,6 @@ const DEFAULT_BACKGROUND_CONFIG: BackgroundConfig = {
   customColors: [],
   adaptiveColors: true,
   backgroundColorId: DEFAULT_BACKGROUND_PAIR_ID,
-  backgroundColor: DEFAULT_BACKGROUND_PAIR
-    ? resolveColorPair(DEFAULT_BACKGROUND_PAIR)
-    : undefined,
 };
 
 function getStoredBackgroundConfig(): BackgroundConfig {
@@ -91,28 +83,10 @@ function getStoredBackgroundConfig(): BackgroundConfig {
         ...DEFAULT_BACKGROUND_CONFIG,
         ...parsed,
       } as BackgroundConfig;
-
-      const sanitizedAnimation =
-        merged.animation === "retro-gameoflife" ? undefined : merged.animation;
-
-      let legacyPickerHex: string | null = null;
-      try {
-        legacyPickerHex = localStorage.getItem(CUSTOM_COLOR_STORAGE_KEY);
-      } catch {
-        legacyPickerHex = null;
-      }
-      const customColors = mergeStoredCustomColors({
-        parsedCustomColors: merged.customColors,
-        backgroundColor: merged.backgroundColor,
-        backgroundColorId: merged.backgroundColorId,
-        legacyPickerHex,
-      });
-      try {
-        localStorage.removeItem(CUSTOM_COLOR_STORAGE_KEY);
-      } catch {
-        /* ignore */
-      }
-      return { ...merged, animation: sanitizedAnimation, customColors };
+      return {
+        ...merged,
+        customColors: sanitizeCustomColorsArray(merged.customColors),
+      };
     }
   } catch (err) {
     console.warn("[BackgroundConfig] Failed to parse stored config:", err);
@@ -167,6 +141,3 @@ export const activeColorPairIdAtom = atom(
   (get) => get(backgroundConfigAtom).backgroundColorId
 );
 activeColorPairIdAtom.debugLabel = "activeColorPairIdAtom";
-
-/** Legacy alias — kept for backward compatibility with old imports */
-export const backgroundImageAtom = backgroundConfigAtom;

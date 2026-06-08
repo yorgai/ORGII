@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { useMemo } from "react";
+import { type MouseEvent, useMemo } from "react";
 
 import type { WorkspaceRecord } from "@src/api/tauri/workspace";
 import type { AvailableAgent } from "@src/config/cliAgents";
@@ -7,6 +7,7 @@ import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { ROUTES } from "@src/config/routes";
 import type { KeyVaultAccount } from "@src/hooks/keyVault/types";
 import type { AgentDefinition } from "@src/modules/MainApp/AgentOrgs/types";
+import { rustBuiltInVariantsFromDefinitions } from "@src/modules/shared/launchpad/hooks";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import type { Repo } from "@src/store/repo";
 import type { SessionCreatorDraft } from "@src/store/session";
@@ -18,8 +19,6 @@ import {
   buildProjectsPinnedMenuItems,
 } from "../workstationSidebarMenuItems";
 import {
-  FOLDERS_ADD_WORKSPACE_ITEM_ID,
-  FOLDERS_CREATE_WORKSPACE_ITEM_ID,
   FOLDERS_DASHBOARD_ITEM_ID,
   buildFoldersSidebarMenuItems,
 } from "./foldersSidebarMenuItems";
@@ -34,7 +33,6 @@ interface UsePinnedMenuItemsParams {
   newSessionLabel: string;
   stickyNotesLabel: string;
   t: TFunction<"navigation">;
-  tCommon: TCommon;
 }
 
 interface UsePinnedMenuItemsResult {
@@ -49,7 +47,6 @@ export function usePinnedMenuItems({
   newSessionLabel,
   stickyNotesLabel,
   t,
-  tCommon,
 }: UsePinnedMenuItemsParams): UsePinnedMenuItemsResult {
   const sessionPinnedMenuItems = useMemo<NavigationMenuItem[]>(
     () =>
@@ -72,12 +69,8 @@ export function usePinnedMenuItems({
       buildFoldersPinnedMenuItems({
         dashboardItemId: FOLDERS_DASHBOARD_ITEM_ID,
         dashboardLabel: t("launchpad.dashboard"),
-        addWorkspaceItemId: FOLDERS_ADD_WORKSPACE_ITEM_ID,
-        addWorkspaceLabel: tCommon("actions.addWorkspace"),
-        createWorkspaceItemId: FOLDERS_CREATE_WORKSPACE_ITEM_ID,
-        createWorkspaceLabel: t("common:workspaceForm.createWorkspace"),
       }),
-    [t, tCommon]
+    [t]
   );
   const pinnedMenuItems =
     activeSidebarKey === "projects"
@@ -120,6 +113,18 @@ interface UseFoldersSidebarMenuItemsParams {
   repos: readonly Repo[];
   savedWorkspaces: readonly WorkspaceRecord[];
   t: TFunction<"navigation">;
+  tCommon: TCommon;
+  onAddWorkspaceFolder: () => void;
+  onCreateMultiRepoWorkspace: () => void;
+  onMoreActionsForWorkspace: (
+    event: MouseEvent<HTMLButtonElement>,
+    workspace: WorkspaceRecord
+  ) => void;
+  onMoreActionsForRepo: (
+    event: MouseEvent<HTMLButtonElement>,
+    repo: Repo
+  ) => void;
+  activeMoreMenuId: string;
 }
 
 export function useFoldersSidebarMenuItems({
@@ -130,7 +135,25 @@ export function useFoldersSidebarMenuItems({
   repos,
   savedWorkspaces,
   t,
+  tCommon,
+  onAddWorkspaceFolder,
+  onCreateMultiRepoWorkspace,
+  onMoreActionsForWorkspace,
+  onMoreActionsForRepo,
+  activeMoreMenuId,
 }: UseFoldersSidebarMenuItemsParams): NavigationMenuItem[] {
+  // Total agents count — must mirror what buildFoldersAgentMenuItems
+  // renders. Rust built-ins are deduped via the catalog helper so the
+  // tile/row counts agree (one row per unique RustAgentType variant).
+  const rustBuiltInVariantCount = useMemo(
+    () => rustBuiltInVariantsFromDefinitions([...builtInRustAgents]).length,
+    [builtInRustAgents]
+  );
+  const totalAgentsCount =
+    installedCliAgents.length +
+    rustBuiltInVariantCount +
+    customRustAgents.length;
+
   return useMemo<NavigationMenuItem[]>(
     () =>
       buildFoldersSidebarMenuItems({
@@ -143,17 +166,42 @@ export function useFoldersSidebarMenuItems({
         multiRepoWorkspaceCountLabel: (count) =>
           t("sidebar.folderCounts.multiRepoWorkspace", { count }),
         repoCountLabel: (count) => t("sidebar.folderCounts.repo", { count }),
-        myKeysLabel: t("labels.myKeys"),
-        myAgentsLabel: t("labels.myAgents"),
+        myKeysLabel: t("sessions:controlTower.myApiKeys", {
+          count: localAccounts.length,
+        }),
+        myAgentsLabel: t("sessions:controlTower.myAgents", {
+          count: totalAgentsCount,
+        }),
+        onAddWorkspaceFolder,
+        onCreateMultiRepoWorkspace,
+        onMoreActionsForWorkspace,
+        onMoreActionsForRepo,
+        moreActionLabel: tCommon("actions.more"),
+        addWorkspaceFolderLabel: tCommon(
+          "ellipsisMenu.addWorkspace",
+          "Add workspace..."
+        ),
+        createMultiRepoWorkspaceLabel: tCommon(
+          "workspaceForm.createWorkspace",
+          "Create Multi-repo Workspace"
+        ),
+        activeMoreMenuId,
       }),
     [
+      totalAgentsCount,
+      activeMoreMenuId,
       builtInRustAgents,
       customRustAgents,
       installedCliAgents,
       localAccounts,
+      onAddWorkspaceFolder,
+      onCreateMultiRepoWorkspace,
+      onMoreActionsForRepo,
+      onMoreActionsForWorkspace,
       repos,
       savedWorkspaces,
       t,
+      tCommon,
     ]
   );
 }

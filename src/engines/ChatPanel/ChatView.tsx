@@ -72,6 +72,7 @@ import { useComposerSections } from "./InputArea/hooks/useComposerSections";
 import { useQueueEditMode } from "./InputArea/hooks/useQueueEditMode";
 
 const CHAT_FLOATING_COMPOSER_FALLBACK_INSET_PX = 72;
+const FILE_CHANGE_STATS_EMPTY_GRACE_MS = 1200;
 
 export interface ChatViewProps {
   /** Session ID to display. Sync bridges and events load for this session. */
@@ -364,6 +365,26 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const hasPlan = Boolean(
       currentPlanApproval && shouldShowCurrentPlanSurface
     );
+    const lastFileChangeStatsRef = useRef({
+      count: 0,
+      additions: 0,
+      deletions: 0,
+    });
+    const clearFileChangeStatsTimerRef = useRef<number | null>(null);
+    const handleFilesNavigate = useCallback(() => {
+      store.set(stationModeAtom, "agent-station");
+      store.set(simulatorSelectedAppAtom, AppType.DIFF);
+      store.set(replayModeAtom, "replay");
+      store.set(currentEventIdAtom, null);
+    }, [store]);
+
+    useEffect(() => {
+      return () => {
+        if (clearFileChangeStatsTimerRef.current !== null) {
+          window.clearTimeout(clearFileChangeStatsTimerRef.current);
+        }
+      };
+    }, []);
 
     const {
       questionCollapsed,
@@ -376,7 +397,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
       collapsePlan,
       queueExpanded,
       processExpanded,
-      filesExpanded,
       toggleQueue,
       toggleProcess,
       toggleFiles,
@@ -392,6 +412,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
       hasPermission,
       hasModeSwitch,
       hasPlan,
+      onFilesExpand: handleFilesNavigate,
     });
 
     const hasAgentOrgIntervention =
@@ -506,7 +527,6 @@ const ChatView: React.FC<ChatViewProps> = memo(
               onModeSwitchDataChange={setHasModeSwitch}
               queueExpanded={queueExpanded}
               processExpanded={processExpanded}
-              filesExpanded={filesExpanded}
               queuedMessages={sessionMessageQueue}
               onCancelQueuedMessage={cancelQueuedMessage}
               onSendQueuedMessageNow={handleSendNow}
@@ -515,7 +535,38 @@ const ChatView: React.FC<ChatViewProps> = memo(
               onToggleProcess={toggleProcess}
               onToggleFiles={toggleFiles}
               onProcessVisibleCountChange={setProcessVisibleCount}
-              onFileChangeStatsChange={setFileChangeStats}
+              onFileChangeStatsChange={(stats) => {
+                if (clearFileChangeStatsTimerRef.current !== null) {
+                  window.clearTimeout(clearFileChangeStatsTimerRef.current);
+                  clearFileChangeStatsTimerRef.current = null;
+                }
+
+                if (stats.count > 0) {
+                  lastFileChangeStatsRef.current = stats;
+                  setFileChangeStats(stats);
+                  return;
+                }
+
+                const lastStats = lastFileChangeStatsRef.current;
+                if (lastStats.count > 0) {
+                  setFileChangeStats(lastStats);
+                  clearFileChangeStatsTimerRef.current = window.setTimeout(
+                    () => {
+                      lastFileChangeStatsRef.current = {
+                        count: 0,
+                        additions: 0,
+                        deletions: 0,
+                      };
+                      setFileChangeStats(stats);
+                      clearFileChangeStatsTimerRef.current = null;
+                    },
+                    FILE_CHANGE_STATS_EMPTY_GRACE_MS
+                  );
+                  return;
+                }
+
+                setFileChangeStats(stats);
+              }}
               groupChatPendingMessage={groupChatPendingMessage}
               groupChatViewActive={groupChatViewActive}
               hasAnyInlineSection={hasAny}

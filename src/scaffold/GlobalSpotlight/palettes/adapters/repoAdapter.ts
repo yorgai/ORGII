@@ -6,7 +6,10 @@
  */
 import type { ReactNode } from "react";
 
-import { isSystemPathRepoItem } from "@src/features/SessionCreator/utils/systemPathSource";
+import {
+  isSystemHomeRepoItem,
+  isSystemPathRepoItem,
+} from "@src/features/SessionCreator/utils/systemPathSource";
 import { REPO_KIND } from "@src/store/repo";
 
 import { ICONS } from "../../config";
@@ -43,9 +46,9 @@ export function buildRepoSpotlightItem(
   return {
     id: `${idPrefix}${repo.id}`,
     label: repo.name,
-    icon: isSystemPathRepoItem(repo)
+    icon: isSystemHomeRepoItem(repo)
       ? ICONS.home
-      : repo.kind === REPO_KIND.FOLDER
+      : isSystemPathRepoItem(repo) || repo.kind === REPO_KIND.FOLDER
         ? ICONS.folder
         : ICONS.repo,
     type: "repo" as const,

@@ -10,8 +10,6 @@ import { createElement } from "react";
 import { ACTION_ICON_SIZE } from "./config";
 import type {
   ActionItem,
-  AddedComponentsActionsOptions,
-  CandidatesActionsOptions,
   GlobalTokensActionsOptions,
   PagesActionsOptions,
 } from "./types";
@@ -99,98 +97,3 @@ export function getGlobalTokensActions({
 
   return actions;
 }
-
-// ============================================
-// Added Components Actions
-// ============================================
-
-/**
- * Get header actions for Added Components section
- */
-export function getAddedComponentsActions({
-  showFilter,
-  onToggleFilter,
-  onCollapseAll,
-  onRefresh,
-}: AddedComponentsActionsOptions): ActionItem[] {
-  const actions: ActionItem[] = [
-    {
-      key: "filter",
-      icon: createElement(Filter, {
-        size: ACTION_ICON_SIZE,
-        className: showFilter ? "text-primary-6" : "",
-      }),
-      tooltip: "Filter",
-      onClick: onToggleFilter,
-    },
-  ];
-
-  if (onCollapseAll) {
-    actions.push({
-      key: "collapse-all",
-      icon: createElement(ListChevronsDownUp, { size: 16 }),
-      tooltip: "Collapse All",
-      onClick: onCollapseAll,
-    });
-  }
-
-  if (onRefresh) {
-    actions.push({
-      key: "refresh",
-      icon: createElement(RefreshCw, { size: ACTION_ICON_SIZE }),
-      tooltip: "Rescan Storybooks",
-      onClick: onRefresh,
-    });
-  }
-
-  return actions;
-}
-
-// ============================================
-// Candidates (Repo Components) Actions
-// ============================================
-
-/**
- * Get header actions for Candidates section
- */
-export function getCandidatesActions({
-  showFilter,
-  onToggleFilter,
-  onCollapseAll,
-  onRefresh,
-}: CandidatesActionsOptions): ActionItem[] {
-  const actions: ActionItem[] = [
-    {
-      key: "filter",
-      icon: createElement(Filter, {
-        size: ACTION_ICON_SIZE,
-        className: showFilter ? "text-primary-6" : "",
-      }),
-      tooltip: "Filter",
-      onClick: onToggleFilter,
-    },
-  ];
-
-  if (onCollapseAll) {
-    actions.push({
-      key: "collapse-all",
-      icon: createElement(ListChevronsDownUp, { size: 16 }),
-      tooltip: "Collapse All",
-      onClick: onCollapseAll,
-    });
-  }
-
-  if (onRefresh) {
-    actions.push({
-      key: "refresh",
-      icon: createElement(RefreshCw, { size: ACTION_ICON_SIZE }),
-      tooltip: "Rescan Components",
-      onClick: onRefresh,
-    });
-  }
-
-  return actions;
-}
-
-// Backwards compatibility alias
-export const getRepoComponentsActions = getCandidatesActions;

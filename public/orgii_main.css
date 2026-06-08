@@ -7,26 +7,26 @@
  * and direct CSS variable references. Migration to custom tokens can be done incrementally.
  */
 :root {
-  /* Background color slots */
-  --bg-1: #f7f4ee;
-  --bg-2: #e8e8e8;
-  --bg-3: #d4dbe2;
-  --bg-4: #e2e4ee;
-  --bg-5: #c8d8e8;
-  --bg-6: #dce8f4;
-  --bg-7: #ddd7ee;
-  --bg-8: #cce2df;
-  --bg-9: #d4e4dc;
-  --bg-10: #c8dcc9;
-  --bg-11: #d8dfcb;
-  --bg-12: #dbc8dc;
-  --bg-13: #e0cfdc;
-  --bg-14: #e5cfcc;
-  --bg-15: #ebd0cf;
-  --bg-16: #e8c9a8;
-  --bg-17: #efd8b5;
-  --bg-18: #e2ded3;
-  --bg-19: #e0d5c7;
+  /* Desktop background color slots */
+  --desktop-bg-1: #f7f4ee;
+  --desktop-bg-2: #e8e8e8;
+  --desktop-bg-3: #d4dbe2;
+  --desktop-bg-4: #e2e4ee;
+  --desktop-bg-5: #c8d8e8;
+  --desktop-bg-6: #dce8f4;
+  --desktop-bg-7: #ddd7ee;
+  --desktop-bg-8: #cce2df;
+  --desktop-bg-9: #d4e4dc;
+  --desktop-bg-10: #c8dcc9;
+  --desktop-bg-11: #d8dfcb;
+  --desktop-bg-12: #dbc8dc;
+  --desktop-bg-13: #e0cfdc;
+  --desktop-bg-14: #e5cfcc;
+  --desktop-bg-15: #ebd0cf;
+  --desktop-bg-16: #e8c9a8;
+  --desktop-bg-17: #efd8b5;
+  --desktop-bg-18: #e2ded3;
+  --desktop-bg-19: #e0d5c7;
 
   /* Code editor */
   --cm-editor-background: #ffffff;

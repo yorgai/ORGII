@@ -1048,7 +1048,9 @@
     "oauthBrowserOpened": "Открыто окно браузера. Завершите авторизацию там, затем мастер продолжит работу."
   },
   "gitConnections": {
-    "github": "GitHub"
+    "github": "GitHub",
+    "methodScan": "Автообнаружение",
+    "methodOAuth": "Войти через GitHub"
   },
   "builtInTools": {
     "title": "Встроенные инструменты",
@@ -1095,7 +1097,6 @@
   },
   "toolbarPlusMenu": {
     "addProviderKey": "Добавить ключ провайдера",
-    "createOrgiiApiKey": "Создать ключ ORGII API",
     "addMcpServer": "Добавить MCP-сервер",
     "createSkill": "Создать Skills",
     "addWebAppCommand": "Добавить команду Web App",
@@ -1236,7 +1237,6 @@
   "addOptions": {
     "addModel": "Добавить API Key модели",
     "bringYourOwnKey": "Свой ключ",
-    "createOrgiiApi": "Создать ORGII API",
     "addCli": "Добавить CLI Agent",
     "addConnection": "Добавить",
     "addChannelOrService": "Добавить канал или сервис",
@@ -1247,18 +1247,6 @@
     "addDatabase": "Добавить базу данных",
     "addRule": "Добавить политику",
     "importRule": "Импортировать политику"
-  },
-  "orgiiApi": {
-    "wizardTitle": "Добавить API-ключ ORGII",
-    "nameLabel": "Название",
-    "nameDesc": "Отображаемое имя для этого API-ключа",
-    "namePlaceholder": "напр. Production, Development",
-    "keyLabel": "API-ключ",
-    "keyDesc": "Вставьте API-ключ, сгенерированный на сайте ORGII",
-    "keyPlaceholder": "orgii-...",
-    "openOrgiiLabel": "Ещё нет ключа?",
-    "openOrgiiDesc": "Откройте страницу аккаунта ORGII, чтобы создать ключ",
-    "openOrgii": "Открыть ORGII"
   },
   "routines": {
     "searchPlaceholder": "Search Routines...",

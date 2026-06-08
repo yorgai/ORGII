@@ -7,8 +7,8 @@
     "inputMode": "Điều khiển",
     "selectionMode": "Trả lời",
     "toggleMode": "Chuyển chế độ nhập",
-    "inputPlaceholder": "Cho Agent biết cần làm gì...",
-    "selectionPlaceholder": "Nhập lựa chọn hoặc câu trả lời...",
+    "inputPlaceholder": "Để Agent điều khiển ứng dụng này...",
+    "selectionPlaceholder": "Đặt bất kỳ câu hỏi nào về ORGII...",
     "submit": "Gửi nội dung Agent Control",
     "menuToggle": "Agent Control",
     "selectModel": "Chọn model"
@@ -63,6 +63,7 @@
     "clear": "Xóa",
     "open": "Mở",
     "view": "Xem",
+    "openInApp": "Mở trong ứng dụng",
     "openToRight": "Mở ở bên phải",
     "new": "Mới",
     "rename": "Đổi tên",
@@ -289,6 +290,7 @@
     "status": "Trạng thái",
     "version": "Phiên bản",
     "details": "Chi tiết",
+    "overview": "Tổng quan",
     "description": "Mô tả",
     "stats": "Thống kê",
     "recentChanges": "Thay đổi gần đây",
@@ -308,8 +310,6 @@
     "regularBrowsing": "Duyệt thường",
     "privateBrowsing": "Duyệt riêng tư",
     "globalTokens": "Token toàn cục",
-    "addedComponents": "Thành phần đã thêm",
-    "candidates": "Ứng viên",
     "addedConnections": "Kết nối đã thêm",
     "pendingConnections": "Kết nối đang chờ",
     "history": "Lịch sử",
@@ -821,12 +821,8 @@
     "noMatchingTokens": "Không tìm thấy Token phù hợp",
     "noTokensAvailable": "Không có Token khả dụng",
     "retryToScanAgain": "Thử lại để quét lần nữa",
-    "noComponentsFound": "Không tìm thấy thành phần",
-    "openRepoWithComponents": "Mở kho lưu trữ có thành phần React",
     "noTokensFound": "Không tìm thấy Token",
     "addCssVariables": "Thêm biến CSS vào dự án của bạn",
-    "noStorybooksFound": "Không tìm thấy Storybook",
-    "createOrgiiFiles": "Tạo tệp .orgii.tsx để thêm thành phần",
     "loadingAccountStatus": "Đang tải trạng thái tài khoản...",
     "noRepositorySelected": "Chưa chọn kho lưu trữ",
     "selectRepositoryFromHome": "Vui lòng chọn một kho lưu trữ từ trang chủ để mở.",
@@ -1263,6 +1259,10 @@
         "home": {
           "label": "Home",
           "description": "Phạm vi mặc định của OS Agent cho tự động hóa desktop"
+        },
+        "documents": {
+          "label": "Tài liệu",
+          "description": "Thư mục Tài liệu"
         }
       }
     },
@@ -1460,7 +1460,7 @@
     "compact": "Gọn",
     "comfort": "Thoải mái",
     "theme": "Giao diện",
-    "primaryPanel": "Thanh bên chính",
+    "primaryPanel": "Thanh bên",
     "sidebarPosition": "Vị trí thanh bên",
     "bottomPanel": "Bảng dưới",
     "titleBar": "Thanh tiêu đề",
@@ -1522,8 +1522,8 @@
   "commands": {
     "showBottomPanel": "Hiện bảng dưới",
     "hideBottomPanel": "Ẩn bảng dưới",
-    "showPrimarySidebar": "Hiện thanh bên chính",
-    "hidePrimarySidebar": "Ẩn thanh bên chính",
+    "showPrimarySidebar": "Hiện thanh bên",
+    "hidePrimarySidebar": "Ẩn thanh bên",
     "searchFiles": "Tìm kiếm tệp",
     "openBrowser": "Mở trình duyệt",
     "switchWorkspace": "Chuyển / Thêm Workspace",
@@ -2018,6 +2018,7 @@
       "browser": "Trình duyệt",
       "settings": "Cài đặt",
       "newTab": "Tab mới",
+      "newPrivateTab": "Tab riêng tư mới",
       "newTerminal": "Terminal mới",
       "untitled": "Chưa đặt tên"
     },

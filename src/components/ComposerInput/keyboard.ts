@@ -38,7 +38,7 @@ export interface MentionState {
 
 export interface KeyDownHandlerContext {
   host: () => HTMLDivElement | null;
-  isComposing: () => boolean;
+  isComposing: (event: KeyboardEvent) => boolean;
   getAtMention: () => MentionState;
   setAtMention: (state: MentionState) => void;
   getSlashCommand: () => MentionState;
@@ -86,7 +86,7 @@ function caretCoords(host: HTMLElement): { x: number; y: number } {
 
 export function createKeyDownHandler(ctx: KeyDownHandlerContext) {
   return (event: KeyboardEvent): void => {
-    if (event.isComposing || ctx.isComposing()) return;
+    if (ctx.isComposing(event)) return;
     const host = ctx.host();
     if (!host) return;
 

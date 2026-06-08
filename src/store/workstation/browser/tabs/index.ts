@@ -3,7 +3,6 @@
  *
  * Centralized tab system for the Browser surface:
  * - Browser sessions (webview tabs)
- * - Component previews (Storybook for AI)
  * - Token categories (design tokens)
  *
  * All workstation tabs live in the single `workstationLayoutAtom.mainPane`
@@ -41,14 +40,6 @@ export interface BrowserSessionData {
   isLoading?: boolean;
 }
 
-export interface ComponentPreviewData {
-  id: string;
-  name: string;
-  filePath: string;
-  line: number;
-  kind: string;
-}
-
 export interface TokenCategoryData {
   category: string;
 }
@@ -61,10 +52,6 @@ export function createBrowserSessionTabId(sessionId: string): string {
   return `browser:${sessionId}`;
 }
 
-export function createComponentPreviewTabId(previewId: string): string {
-  return `preview:${previewId}`;
-}
-
 export function createTokenCategoryTabId(category: string): string {
   return `token:${category}`;
 }
@@ -73,20 +60,12 @@ export function isBrowserSessionTab(tabId: string): boolean {
   return tabId.startsWith("browser:");
 }
 
-export function isComponentPreviewTab(tabId: string): boolean {
-  return tabId.startsWith("preview:");
-}
-
 export function isTokenCategoryTab(tabId: string): boolean {
   return tabId.startsWith("token:");
 }
 
 export function extractSessionId(tabId: string): string {
   return tabId.replace("browser:", "");
-}
-
-export function extractPreviewId(tabId: string): string {
-  return tabId.replace("preview:", "");
 }
 
 export function extractTokenCategory(tabId: string): string {
@@ -98,21 +77,72 @@ export function extractTokenCategory(tabId: string): string {
 // ============================================
 
 /**
+ * Sentinel titles persisted on a browser session when the user hasn't
+ * yet navigated to a page that has its own document title. Treated as
+ * "no real title yet" by every display site so URL-derived fallbacks
+ * win, and translated to the user's locale when shown as-is.
+ *
+ * IMPORTANT: these strings must stay in English on disk — they're the
+ * wire / localStorage representation. The i18n layer maps them to the
+ * locale-specific label at render time
+ * (`common:controlTower.sidebar.newTab` /
+ * `common:controlTower.sidebar.newPrivateTab`). Changing them here
+ * would invalidate every persisted browser session.
+ */
+export const NEW_TAB_TITLE = "New Tab";
+export const NEW_PRIVATE_TAB_TITLE = "New Private Tab";
+
+/** True when `title` is one of the placeholder sentinels above. */
+export function isPlaceholderBrowserSessionTitle(
+  title: string | undefined
+): boolean {
+  return title === NEW_TAB_TITLE || title === NEW_PRIVATE_TAB_TITLE;
+}
+
+/**
  * Resolve the display title for a browser session.
- * Prefers the page title (when not the placeholder "New Tab"), then the URL's
- * site name, then "New Tab" as a final fallback.
+ * Prefers the page title (when not a placeholder sentinel), then the URL's
+ * site name, then the appropriate placeholder as a final fallback.
+ *
+ * The returned placeholder is still in English; callers that render to
+ * the user must run it through {@link translatePlaceholderBrowserSessionTitle}
+ * (or the equivalent inline check) so it picks up the user's locale.
  */
 export function getBrowserSessionDisplayTitle(session: {
   title?: string;
   url?: string;
 }): string {
-  if (session.title && session.title !== "New Tab") {
+  if (session.title && !isPlaceholderBrowserSessionTitle(session.title)) {
     return session.title;
   }
   if (session.url) {
     return getSiteNameFromUrl(session.url);
   }
-  return "New Tab";
+  return session.title === NEW_PRIVATE_TAB_TITLE
+    ? NEW_PRIVATE_TAB_TITLE
+    : NEW_TAB_TITLE;
+}
+
+/**
+ * Map a placeholder sentinel ("New Tab" / "New Private Tab") to its
+ * locale-specific label via the supplied `t` function. Non-placeholder
+ * strings pass through unchanged.
+ *
+ * Accepts the `t` function from any namespace; uses absolute keys
+ * (`common:controlTower.sidebar.*`) so it doesn't depend on the
+ * caller's active namespace.
+ */
+export function translatePlaceholderBrowserSessionTitle(
+  title: string,
+  t: (key: string) => string
+): string {
+  if (title === NEW_TAB_TITLE) {
+    return t("common:controlTower.sidebar.newTab");
+  }
+  if (title === NEW_PRIVATE_TAB_TITLE) {
+    return t("common:controlTower.sidebar.newPrivateTab");
+  }
+  return title;
 }
 
 // ============================================
@@ -127,7 +157,7 @@ export function createBrowserSessionTab(
   return {
     id: createBrowserSessionTabId(sessionId),
     type: "browser-session",
-    title: title || "New Tab",
+    title: title || NEW_TAB_TITLE,
     // Intentionally omit `icon`: SortableTab's `type === "browser-session"`
     // branch renders FaviconIcon, which prefers the URL-derived favicon over
     // the Lucide Globe fallback. Setting a Lucide name here would short-circuit
@@ -137,27 +167,6 @@ export function createBrowserSessionTab(
       url: data.url ?? "",
       incognito: data.incognito ?? false,
       isLoading: data.isLoading ?? false,
-    },
-    hasUnsavedChanges: false,
-  };
-}
-
-export function createComponentPreviewTab(
-  previewId: string,
-  name: string,
-  data: Omit<ComponentPreviewData, "id" | "name">
-): WorkStationTab {
-  return {
-    id: createComponentPreviewTabId(previewId),
-    type: "component-preview",
-    title: name,
-    icon: "Code2",
-    data: {
-      id: previewId,
-      name,
-      filePath: data.filePath,
-      line: data.line,
-      kind: data.kind,
     },
     hasUnsavedChanges: false,
   };
@@ -199,7 +208,6 @@ export function createColorTokensTab(): WorkStationTab {
 
 const BROWSER_TAB_TYPES: ReadonlySet<WorkStationTabType> = new Set([
   "browser-session",
-  "component-preview",
   "token-category",
 ]);
 
@@ -334,14 +342,6 @@ export const isShowingBrowserSessionAtom = atom((get) => {
 });
 
 /**
- * Check if showing a component preview
- */
-export const isShowingComponentPreviewAtom = atom((get) => {
-  const activeTab = get(activeBrowserTabAtom);
-  return activeTab?.type === "component-preview";
-});
-
-/**
  * Check if showing a token category
  */
 export const isShowingTokenCategoryAtom = atom((get) => {
@@ -355,14 +355,6 @@ export const isShowingTokenCategoryAtom = atom((get) => {
 export const browserSessionTabsAtom = atom((get) => {
   const state = get(browserTabsAtom);
   return state.tabs.filter((tab) => tab.type === "browser-session");
-});
-
-/**
- * Get all component preview tabs
- */
-export const componentPreviewTabsAtom = atom((get) => {
-  const state = get(browserTabsAtom);
-  return state.tabs.filter((tab) => tab.type === "component-preview");
 });
 
 /**

@@ -7,8 +7,8 @@
     "inputMode": "Control",
     "selectionMode": "Answer",
     "toggleMode": "Toggle input mode",
-    "inputPlaceholder": "Tell the agent what to do...",
-    "selectionPlaceholder": "Type the selection or answer...",
+    "inputPlaceholder": "Let agent control this app...",
+    "selectionPlaceholder": "Ask any questions about ORGII...",
     "submit": "Submit Agent Control input",
     "menuToggle": "Agent Control",
     "selectModel": "Select model"
@@ -140,7 +140,8 @@
     "closeIssue": "Close issue",
     "reopenIssue": "Reopen issue",
     "addComment": "Add comment",
-    "editIssue": "Edit issue"
+    "editIssue": "Edit issue",
+    "openInApp": "Open in App"
   },
   "refreshToast": {
     "successName": "{{name}} refreshed",
@@ -313,8 +314,6 @@
     "regularBrowsing": "Regular Browsing",
     "privateBrowsing": "Private Browsing",
     "globalTokens": "Global Tokens",
-    "addedComponents": "Added Components",
-    "candidates": "Candidates",
     "addedConnections": "Added Connections",
     "pendingConnections": "Pending Connections",
     "history": "History",
@@ -345,7 +344,8 @@
     "closedIssues": "Closed",
     "issueComments": "{{count}} comment",
     "issueComments_one": "1 comment",
-    "issueComments_other": "{{count}} comments"
+    "issueComments_other": "{{count}} comments",
+    "overview": "Overview"
   },
   "searchModes": {
     "keywordLabel": "Keyword",
@@ -833,12 +833,8 @@
     "noMatchingTokens": "No matching tokens found",
     "noTokensAvailable": "No tokens available",
     "retryToScanAgain": "Retry to scan again",
-    "noComponentsFound": "No components found",
-    "openRepoWithComponents": "Open a repo with React components",
     "noTokensFound": "No tokens found",
     "addCssVariables": "Add CSS variables to your project",
-    "noStorybooksFound": "No storybooks found",
-    "createOrgiiFiles": "Create .orgii.tsx files to add components",
     "loadingAccountStatus": "Loading account status...",
     "noRepositorySelected": "No Repo Selected",
     "selectRepositoryFromHome": "Please select a repo from the home page to open.",
@@ -1327,6 +1323,10 @@
         "home": {
           "label": "Home",
           "description": "Default OS Agent scope for desktop automation"
+        },
+        "documents": {
+          "label": "Documents",
+          "description": "Documents folder"
         }
       }
     },
@@ -1524,7 +1524,7 @@
     "compact": "Compact",
     "comfort": "Comfort",
     "theme": "Theme",
-    "primaryPanel": "Primary sidebar",
+    "primaryPanel": "Sidebar",
     "sidebarPosition": "Sidebar position",
     "bottomPanel": "Bottom panel",
     "titleBar": "Title bar",
@@ -1586,8 +1586,8 @@
   "commands": {
     "showBottomPanel": "Show Bottom Panel",
     "hideBottomPanel": "Hide Bottom Panel",
-    "showPrimarySidebar": "Show Primary Sidebar",
-    "hidePrimarySidebar": "Hide Primary Sidebar",
+    "showPrimarySidebar": "Show Sidebar",
+    "hidePrimarySidebar": "Hide Sidebar",
     "searchFiles": "Search Files",
     "openBrowser": "Open Browser",
     "switchWorkspace": "Switch / Add Workspace",
@@ -2083,7 +2083,8 @@
       "settings": "Settings",
       "newTab": "New Tab",
       "newTerminal": "New Terminal",
-      "untitled": "Untitled"
+      "untitled": "Untitled",
+      "newPrivateTab": "New Private Tab"
     },
     "statusBar": {
       "workspaceSuffix": "{{name}} Workspace",

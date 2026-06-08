@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 
 // Direct leaf import to avoid pulling @src/store's barrel — which transitively
 // reaches Glass → useBackgroundImage and creates a circular dependency.
-import { backgroundImageAtom } from "@src/store/ui/backgroundConfigAtom";
+import { backgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
 import {
   addToBackgroundCache,
   backgroundImageCache,
@@ -53,7 +53,7 @@ function getInitialImageUrl(
  * Hook to load the currently selected background image
  */
 export function useBackgroundImage(): string {
-  const config = useAtomValue(backgroundImageAtom);
+  const config = useAtomValue(backgroundConfigAtom);
 
   // Synchronous initialization — no blank frame for preset images
   const [loadedImageUrl, setLoadedImageUrl] = useState<string>(() =>

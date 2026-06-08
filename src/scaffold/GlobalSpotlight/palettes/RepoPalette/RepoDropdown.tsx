@@ -27,7 +27,10 @@ import {
   DROPDOWN_ITEM,
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
-import { isSystemPathRepoItem } from "@src/features/SessionCreator/utils/systemPathSource";
+import {
+  isSystemHomeRepoItem,
+  isSystemPathRepoItem,
+} from "@src/features/SessionCreator/utils/systemPathSource";
 import {
   type UseDropdownListNavigationReturn,
   useDropdownEngine,
@@ -95,7 +98,11 @@ const RepoRow: React.FC<RepoRowProps> = ({
   keyboardProps,
 }) => {
   const isSystemPath = isSystemPathRepoItem(repo);
-  const Icon = isSystemPath ? ICONS.home : ICONS.repo;
+  const Icon = isSystemHomeRepoItem(repo)
+    ? ICONS.home
+    : isSystemPath
+      ? ICONS.folder
+      : ICONS.repo;
   const shouldShowDescription = Boolean(repo.description && !isSystemPath);
 
   return (
@@ -185,8 +192,8 @@ export interface RepoDropdownProps {
   currentRepoId?: string;
   /** Element the dropdown is anchored to. */
   anchorRef: React.RefObject<HTMLElement | null>;
-  /** Optional first-class system path source row. */
-  leadingRepo?: RepoItem;
+  /** Optional first-class system path source rows. */
+  leadingRepos?: readonly RepoItem[];
 }
 
 export const RepoDropdown: React.FC<RepoDropdownProps> = ({
@@ -195,7 +202,7 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
   onSelect,
   currentRepoId,
   anchorRef,
-  leadingRepo,
+  leadingRepos = [],
 }) => {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -283,9 +290,7 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
   );
 
   const sections = useMemo<RepoDropdownSection[]>(() => {
-    const allRepos = leadingRepo
-      ? [leadingRepo, ...filteredRepos]
-      : filteredRepos;
+    const allRepos = [...leadingRepos, ...filteredRepos];
     const currentItems: DropdownRepoItem[] = [];
     const systemItems: DropdownRepoItem[] = [];
     const folderWorkspaceItems: DropdownRepoItem[] = [];
@@ -366,7 +371,7 @@ export const RepoDropdown: React.FC<RepoDropdownProps> = ({
     filteredRepos,
     filteredWorkspaces,
     currentRepoId,
-    leadingRepo,
+    leadingRepos,
     openPathItem,
     searchQuery,
     t,

@@ -298,6 +298,30 @@ chatPanelWorkspaceDashboardOpenAtom.debugLabel =
   "chatPanelWorkspaceDashboardOpenAtom";
 
 /**
+ * Selected tab on the chat-panel workspace overview surface
+ * (`WorkspaceOverviewPanelView`). The overview/details split is
+ * orthogonal to which workspace is selected; entry points that drill
+ * into a specific repo (e.g. the dashboard's "Open details" button)
+ * set this to `"details"` along with `chatPanelSelectedWorkspaceAtom`.
+ *
+ * Persisted only in-memory — switching workspaces resets the
+ * selection (handled inside `WorkspaceOverviewPanelView`).
+ */
+export const WORKSPACE_OVERVIEW_TAB = {
+  OVERVIEW: "overview",
+  DETAILS: "details",
+} as const;
+
+export type WorkspaceOverviewTab =
+  (typeof WORKSPACE_OVERVIEW_TAB)[keyof typeof WORKSPACE_OVERVIEW_TAB];
+
+export const chatPanelWorkspaceOverviewTabAtom = atom<WorkspaceOverviewTab>(
+  WORKSPACE_OVERVIEW_TAB.OVERVIEW
+);
+chatPanelWorkspaceOverviewTabAtom.debugLabel =
+  "chatPanelWorkspaceOverviewTabAtom";
+
+/**
  * Whether the chat-panel slot is rendering the full-page Sticky Notes
  * board. Mutually exclusive with WorkItem/Project at the render layer
  * (precedence enforced in ChatPanel/index.tsx) — entry points must

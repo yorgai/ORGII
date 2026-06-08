@@ -167,11 +167,6 @@ export function useIntegrationsPage() {
           extensions.clearExtensionState();
           accountsHook.handleAddAccount();
           break;
-        case "create-orgii-api-key":
-          navigateToCategory("models");
-          extensions.clearExtensionState();
-          accountsHook.handleAddOrgiiApi();
-          break;
         case "add-connection":
           navigateToCategory("connections");
           extensions.clearExtensionState();

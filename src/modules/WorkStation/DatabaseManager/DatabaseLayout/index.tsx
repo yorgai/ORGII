@@ -40,7 +40,7 @@ import {
   dataStatusBarStateAtom,
 } from "@src/store/ui/workStationAtom";
 import { addConnectionConfig } from "@src/store/workstation/database";
-import { tabToLegacyHost } from "@src/store/workstation/legacyTabHostAdapter";
+import { tabToHost } from "@src/store/workstation/tabHost";
 import {
   createAddConnectionTab,
   createTableTab,
@@ -105,12 +105,12 @@ export const DatabaseLayout: React.FC<DatabaseLayoutProps> = memo(
     const { tabs, activeTab, openTab, closeTab } = useWorkStationTabs();
 
     const dataTabs = useMemo(
-      () => tabs.filter((tab) => tabToLegacyHost(tab) === "data"),
+      () => tabs.filter((tab) => tabToHost(tab) === "data"),
       [tabs]
     );
     const dataActiveTab = useMemo(() => {
       if (!activeTab) return null;
-      return tabToLegacyHost(activeTab) === "data" ? activeTab : null;
+      return tabToHost(activeTab) === "data" ? activeTab : null;
     }, [activeTab]);
 
     // Derive selected connection/table from the data-host active tab.

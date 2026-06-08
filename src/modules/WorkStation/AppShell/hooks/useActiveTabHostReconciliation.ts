@@ -33,24 +33,24 @@ import {
   workstationLayoutAtom,
 } from "@src/store/workstation";
 import {
-  type LegacyPeekHost,
-  tabToLegacyHost,
-} from "@src/store/workstation/legacyTabHostAdapter";
+  type WorkstationTabHost,
+  tabToHost,
+} from "@src/store/workstation/tabHost";
 
 export function useActiveTabHostReconciliation(
-  effectiveHost: LegacyPeekHost | null
+  effectiveHost: WorkstationTabHost | null
 ): void {
   const dockFilter = useAtomValue(dockFilterAtom);
   const tabs = useAtomValue(mainPaneTabsAtom);
   const activeTabId = useAtomValue(mainPaneActiveTabIdAtom);
   const setLayout = useSetAtom(workstationLayoutAtom);
   const lastActiveTabIdByHostRef = useRef<
-    Partial<Record<LegacyPeekHost, string>>
+    Partial<Record<WorkstationTabHost, string>>
   >({});
 
   useEffect(() => {
     const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null;
-    const activeHost = activeTab ? tabToLegacyHost(activeTab) : null;
+    const activeHost = activeTab ? tabToHost(activeTab) : null;
     if (activeTab && activeHost) {
       lastActiveTabIdByHostRef.current[activeHost] = activeTab.id;
     }
@@ -62,12 +62,11 @@ export function useActiveTabHostReconciliation(
     const rememberedTarget = rememberedTabId
       ? tabs.find(
           (tab) =>
-            tab.id === rememberedTabId && tabToLegacyHost(tab) === effectiveHost
+            tab.id === rememberedTabId && tabToHost(tab) === effectiveHost
         )
       : null;
     const target =
-      rememberedTarget ??
-      tabs.find((tab) => tabToLegacyHost(tab) === effectiveHost);
+      rememberedTarget ?? tabs.find((tab) => tabToHost(tab) === effectiveHost);
     if (!target || target.id === activeTabId) return;
 
     lastActiveTabIdByHostRef.current[effectiveHost] = target.id;

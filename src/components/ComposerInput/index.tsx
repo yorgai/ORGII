@@ -50,6 +50,8 @@ export type {
   PillIconType,
 } from "./types";
 
+const IME_COMPOSITION_END_ENTER_GRACE_MS = 30;
+
 function findInlineAtMention(
   text: string,
   caretOffset: number
@@ -123,6 +125,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
 
     // ===== Composition + mention state =====
     const isComposingRef = useRef(false);
+    const compositionEndedAtRef = useRef(0);
     const atMentionRef = useRef<MentionState>({
       active: false,
       startOffset: 0,
@@ -264,7 +267,20 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
       () =>
         createKeyDownHandler({
           host: () => hostRef.current,
-          isComposing: () => isComposingRef.current,
+          isComposing: (event) => {
+            if (
+              event.isComposing ||
+              isComposingRef.current ||
+              event.keyCode === 229
+            ) {
+              return true;
+            }
+            return (
+              event.key === "Enter" &&
+              performance.now() - compositionEndedAtRef.current <
+                IME_COMPOSITION_END_ENTER_GRACE_MS
+            );
+          },
           getAtMention: () => atMentionRef.current,
           setAtMention: (state) => {
             atMentionRef.current = state;
@@ -302,6 +318,7 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
       };
       const handleCompositionEnd = () => {
         isComposingRef.current = false;
+        compositionEndedAtRef.current = performance.now();
       };
       const handleBeforeInput = (event: InputEvent) => {
         if (isComposingRef.current) return;

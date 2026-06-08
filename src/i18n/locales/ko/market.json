@@ -549,13 +549,6 @@
       }
     }
   },
-  "bonusModal": {
-    "bonusTitle": "깜짝 보너스!",
-    "marginTitle": "티어 사용 불가",
-    "bonusDescription": "{{originalTier}} key를 사용할 수 없습니다. {{actualTier}} key를 더 좋은 가격에 찾았습니다!",
-    "marginDescription": "{{originalTier}} key를 사용할 수 없습니다. {{actualTier}} key를 찾았습니다 — {{originalTier}} 요금이 청구됩니다.",
-    "acceptBonus": "보너스 수락"
-  },
   "orgiiOrchestrator": {
     "name": "ORGII Pool",
     "description": "Credit 정액 요금의 관리형 모델 풀",

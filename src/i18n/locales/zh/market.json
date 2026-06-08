@@ -549,13 +549,6 @@
       }
     }
   },
-  "bonusModal": {
-    "bonusTitle": "惊喜奖励！",
-    "marginTitle": "等级不可用",
-    "bonusDescription": "没有可用的 {{originalTier}} key。我们找到了价格更优的 {{actualTier}} key！",
-    "marginDescription": "没有可用的 {{originalTier}} key。我们找到了 {{actualTier}} key — 将按 {{originalTier}} 费率收费。",
-    "acceptBonus": "接受奖励"
-  },
   "orgiiOrchestrator": {
     "name": "ORGII Pool",
     "description": "统一 Credit 定价的托管模型池",

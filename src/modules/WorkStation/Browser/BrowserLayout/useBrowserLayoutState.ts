@@ -19,12 +19,7 @@ import { useWorkStationTabShortcutBridge } from "@src/hooks/workStation";
 import { useBrowserPaneState } from "@src/hooks/workStation/browser/useBrowserPaneState";
 import { useBrowserSessions } from "@src/hooks/workStation/browser/useBrowserSessions";
 import { useBrowserAutomation } from "@src/modules/WorkStation/Browser/hooks/osagent/useBrowserAutomation";
-import {
-  type CatalogEntry,
-  useComponentCatalog,
-} from "@src/modules/WorkStation/Browser/hooks/useComponentCatalog";
 import { useGlobalTokens } from "@src/modules/WorkStation/Browser/hooks/useGlobalTokens";
-import type { ProjectFileInfo } from "@src/modules/WorkStation/Browser/hooks/useOrgiiProjects";
 import { addToAgentAtom } from "@src/store/ui/addToAgentAtom";
 import {
   workStationDevToolsCollapsedAtom,
@@ -34,7 +29,6 @@ import {
   browserTabsAtom,
   createBrowserSessionTabId,
   createColorTokensTab,
-  createComponentPreviewTab,
   extractSessionId,
   isBrowserSessionTab,
 } from "@src/store/workstation/browser/tabs";
@@ -63,15 +57,8 @@ export function useBrowserLayoutState({
   const browserPane = useBrowserPaneState();
   const browserTabsState = useAtomValue(browserTabsAtom);
 
-  const [catalogEnabled, setCatalogEnabled] = useState(false);
-  const { selectedDetails, extractingProps, selectComponent } =
-    useComponentCatalog({ repoPath: catalogEnabled ? repoPath : undefined });
-
   const [tokenScanEnabled, setTokenScanEnabled] = useState(false);
   useGlobalTokens({ repoPath, autoScan: tokenScanEnabled });
-
-  const [selectedProjectFile, setSelectedProjectFile] =
-    useState<ProjectFileInfo | null>(null);
 
   const closingSessionIdsRef = useRef<Set<string>>(new Set());
   const browserStateRef = useRef(browser.browserState);
@@ -163,39 +150,6 @@ export function useBrowserLayoutState({
     onCloseActiveTab: handleWorkStationCloseActiveBrowserTab,
   });
 
-  const handleSelectProjectComponent = useCallback(
-    (projectFile: ProjectFileInfo) => {
-      if (!catalogEnabled) setCatalogEnabled(true);
-      setSelectedProjectFile(projectFile);
-      const componentName =
-        projectFile.meta.title.split("/").pop() || "Component";
-      const previewId = projectFile.file;
-      const tab = createComponentPreviewTab(previewId, componentName, {
-        filePath: projectFile.file,
-        line: 1,
-        kind: "project",
-      });
-      browserPane.openTab(tab);
-    },
-    [browserPane, catalogEnabled]
-  );
-
-  const handlePreviewRepoComponent = useCallback(
-    async (entry: CatalogEntry) => {
-      if (!catalogEnabled) setCatalogEnabled(true);
-      await selectComponent(entry);
-      setSelectedProjectFile(null);
-      const previewId = `${entry.location.file}:${entry.name}`;
-      const tab = createComponentPreviewTab(previewId, entry.name, {
-        filePath: entry.location.file,
-        line: entry.location.line,
-        kind: entry.location.kind,
-      });
-      browserPane.openTab(tab);
-    },
-    [selectComponent, browserPane, catalogEnabled]
-  );
-
   const handleOpenColorTokens = useCallback(() => {
     if (!tokenScanEnabled) setTokenScanEnabled(true);
     const tab = createColorTokensTab();
@@ -226,18 +180,7 @@ export function useBrowserLayoutState({
   );
 
   const isShowingBrowserSession = activeTab?.type === "browser-session";
-  const isShowingComponentPreview = activeTab?.type === "component-preview";
   const isShowingTokenCategory = activeTab?.type === "token-category";
-
-  const activePreviewData = isShowingComponentPreview
-    ? (activeTab?.data as {
-        id: string;
-        name: string;
-        filePath: string;
-        line: number;
-        kind: string;
-      })
-    : null;
 
   const activeTokenCategory = isShowingTokenCategory
     ? (activeTab?.data as { category: string })?.category
@@ -300,20 +243,13 @@ export function useBrowserLayoutState({
     hasOpenTabs,
     tabBarProps,
     isShowingBrowserSession,
-    isShowingComponentPreview,
     isShowingTokenCategory,
-    activePreviewData,
     activeTokenCategory,
     showBrowserViewport,
     hasBrowserSessions,
-    selectedDetails,
-    extractingProps,
-    selectedProjectFile,
     browserQuickActions,
     handleSelectSession,
     handleCloseSession,
-    handleSelectProjectComponent,
-    handlePreviewRepoComponent,
     handleOpenColorTokens,
     handleOpenHistoryUrl,
     handleOpenEditor,

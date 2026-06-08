@@ -7,8 +7,8 @@
     "inputMode": "Sterowanie",
     "selectionMode": "Odpowiedź",
     "toggleMode": "Przełącz tryb wejścia",
-    "inputPlaceholder": "Powiedz Agent, co zrobić...",
-    "selectionPlaceholder": "Wpisz wybór lub odpowiedź...",
+    "inputPlaceholder": "Pozwól Agentowi sterować tą aplikacją...",
+    "selectionPlaceholder": "Zadaj dowolne pytanie o ORGII...",
     "submit": "Prześlij wejście Agent Control",
     "menuToggle": "Agent Control",
     "selectModel": "Wybierz model"
@@ -64,6 +64,7 @@
     "clear": "Wyczyść",
     "open": "Otwórz",
     "view": "Wyświetl",
+    "openInApp": "Otwórz w aplikacji",
     "openToRight": "Otwórz po prawej",
     "new": "Nowy",
     "rename": "Zmień nazwę",
@@ -289,6 +290,7 @@
     "status": "Status",
     "version": "Wersja",
     "details": "Szczegóły",
+    "overview": "Przegląd",
     "description": "Opis",
     "stats": "Statystyki",
     "recentChanges": "Ostatnie zmiany",
@@ -308,8 +310,6 @@
     "regularBrowsing": "Zwykłe przeglądanie",
     "privateBrowsing": "Przeglądanie prywatne",
     "globalTokens": "Globalne Tokeny",
-    "addedComponents": "Dodane komponenty",
-    "candidates": "Kandydaci",
     "addedConnections": "Dodane połączenia",
     "pendingConnections": "Oczekujące połączenia",
     "history": "Historia",
@@ -821,12 +821,8 @@
     "noMatchingTokens": "Nie znaleziono pasujących Tokenów",
     "noTokensAvailable": "Brak dostępnych Tokenów",
     "retryToScanAgain": "Ponów próbę, aby ponownie zeskanować",
-    "noComponentsFound": "Nie znaleziono komponentów",
-    "openRepoWithComponents": "Otwórz Repo z komponentami React",
     "noTokensFound": "Nie znaleziono Tokenów",
     "addCssVariables": "Dodaj zmienne CSS do swojego projektu",
-    "noStorybooksFound": "Nie znaleziono storybooków",
-    "createOrgiiFiles": "Utwórz pliki .orgii.tsx, aby dodać komponenty",
     "loadingAccountStatus": "Ładowanie statusu konta...",
     "noRepositorySelected": "Nie wybrano Repo",
     "selectRepositoryFromHome": "Wybierz Repo ze strony głównej, aby otworzyć.",
@@ -1262,6 +1258,10 @@
         "home": {
           "label": "Home",
           "description": "Domyślny zakres OS Agent dla automatyzacji pulpitu"
+        },
+        "documents": {
+          "label": "Dokumenty",
+          "description": "Folder Dokumenty"
         }
       }
     },
@@ -1459,7 +1459,7 @@
     "compact": "Kompaktowy",
     "comfort": "Komfortowy",
     "theme": "Motyw",
-    "primaryPanel": "Główny pasek boczny",
+    "primaryPanel": "Pasek boczny",
     "sidebarPosition": "Pozycja paska bocznego",
     "bottomPanel": "Dolny panel",
     "titleBar": "Pasek tytułu",
@@ -1521,8 +1521,8 @@
   "commands": {
     "showBottomPanel": "Pokaż dolny panel",
     "hideBottomPanel": "Ukryj dolny panel",
-    "showPrimarySidebar": "Pokaż główny pasek boczny",
-    "hidePrimarySidebar": "Ukryj główny pasek boczny",
+    "showPrimarySidebar": "Pokaż pasek boczny",
+    "hidePrimarySidebar": "Ukryj pasek boczny",
     "searchFiles": "Szukaj plików",
     "openBrowser": "Otwórz przeglądarkę",
     "switchWorkspace": "Przełącz / dodaj Workspace",
@@ -2017,6 +2017,7 @@
       "browser": "Przeglądarka",
       "settings": "Ustawienia",
       "newTab": "Nowa karta",
+      "newPrivateTab": "Nowa karta prywatna",
       "newTerminal": "Nowy terminal",
       "untitled": "Bez tytułu"
     },

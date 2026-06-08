@@ -3,8 +3,6 @@
  * Extracted from useBrowserLayoutState to keep that file under the hook
  * line limit.
  */
-import { getSiteNameFromUrl } from "@src/store/ui/globalTabsAtom";
-
 import type { ElementInfo } from "../hooks/useWebviewInspector";
 
 /**
@@ -44,17 +42,4 @@ export function buildSelectedElementText(
     lines.push(`Text: ${preview}`);
   }
   return lines.join("\n");
-}
-
-export function getBrowserSessionDisplayTitle(session: {
-  title?: string;
-  url?: string;
-}): string {
-  if (session.title && session.title !== "New Tab") {
-    return session.title;
-  }
-  if (session.url) {
-    return getSiteNameFromUrl(session.url);
-  }
-  return "New Tab";
 }

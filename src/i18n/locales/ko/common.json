@@ -7,8 +7,8 @@
     "inputMode": "Control",
     "selectionMode": "Answer",
     "toggleMode": "입력 모드 전환",
-    "inputPlaceholder": "수행할 작업을 Agent에게 알려주세요...",
-    "selectionPlaceholder": "선택 항목 또는 답변을 입력하세요...",
+    "inputPlaceholder": "Agent가 이 앱을 제어하도록 하세요...",
+    "selectionPlaceholder": "ORGII에 대해 무엇이든 물어보세요...",
     "submit": "Agent Control 입력 제출",
     "menuToggle": "Agent Control",
     "selectModel": "모델 선택"
@@ -63,6 +63,7 @@
     "clear": "지우기",
     "open": "열기",
     "view": "보기",
+    "openInApp": "앱에서 열기",
     "openToRight": "오른쪽에 열기",
     "new": "새로 만들기",
     "rename": "이름 바꾸기",
@@ -289,6 +290,7 @@
     "status": "상태",
     "version": "버전",
     "details": "상세",
+    "overview": "개요",
     "description": "설명",
     "stats": "통계",
     "recentChanges": "최근 변경",
@@ -308,8 +310,6 @@
     "regularBrowsing": "일반 탐색",
     "privateBrowsing": "비공개 탐색",
     "globalTokens": "글로벌 Token",
-    "addedComponents": "추가된 컴포넌트",
-    "candidates": "후보",
     "addedConnections": "추가된 연결",
     "pendingConnections": "대기 중인 연결",
     "history": "기록",
@@ -821,12 +821,8 @@
     "noMatchingTokens": "일치하는 Token을 찾을 수 없습니다",
     "noTokensAvailable": "사용 가능한 Token이 없습니다",
     "retryToScanAgain": "다시 스캔하려면 재시도",
-    "noComponentsFound": "컴포넌트를 찾을 수 없습니다",
-    "openRepoWithComponents": "React 컴포넌트가 있는 저장소를 열어주세요",
     "noTokensFound": "Token을 찾을 수 없습니다",
     "addCssVariables": "프로젝트에 CSS 변수를 추가하세요",
-    "noStorybooksFound": "Storybook을 찾을 수 없습니다",
-    "createOrgiiFiles": ".orgii.tsx 파일을 만들어 컴포넌트를 추가하세요",
     "loadingAccountStatus": "계정 상태 로드 중...",
     "noRepositorySelected": "선택된 리포지토리가 없습니다",
     "selectRepositoryFromHome": "열려면 홈 페이지에서 리포지토리를 선택하세요.",
@@ -1263,6 +1259,10 @@
         "home": {
           "label": "Home",
           "description": "데스크톱 자동화를 위한 OS Agent 기본 범위"
+        },
+        "documents": {
+          "label": "Documents",
+          "description": "Documents 폴더"
         }
       }
     },
@@ -1460,7 +1460,7 @@
     "compact": "컴팩트",
     "comfort": "편안함",
     "theme": "테마",
-    "primaryPanel": "기본 사이드바",
+    "primaryPanel": "사이드바",
     "sidebarPosition": "사이드바 위치",
     "bottomPanel": "하단 패널",
     "titleBar": "제목 표시줄",
@@ -1522,8 +1522,8 @@
   "commands": {
     "showBottomPanel": "하단 패널 표시",
     "hideBottomPanel": "하단 패널 숨기기",
-    "showPrimarySidebar": "기본 사이드바 표시",
-    "hidePrimarySidebar": "기본 사이드바 숨기기",
+    "showPrimarySidebar": "사이드바 표시",
+    "hidePrimarySidebar": "사이드바 숨기기",
     "searchFiles": "파일 검색",
     "openBrowser": "브라우저 열기",
     "switchWorkspace": "Workspace 전환 / 추가",
@@ -2018,6 +2018,7 @@
       "browser": "브라우저",
       "settings": "설정",
       "newTab": "새 탭",
+      "newPrivateTab": "새 시크릿 탭",
       "newTerminal": "새 터미널",
       "untitled": "제목 없음"
     },

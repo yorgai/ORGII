@@ -67,14 +67,4 @@ export interface UseSessionLaunchReturn {
    */
   showBuyCreditsModal: boolean;
   closeBuyCreditsModal: () => void;
-  /** Bonus info when a cheaper tier was matched (null = no bonus pending) */
-  pendingBonusInfo: {
-    hasBonus: boolean;
-    bonusMessage: string | null;
-    originalTier: string | null;
-    actualTier: string | null;
-    bonusExhausted: boolean;
-  } | null;
-  acceptBonus: () => void;
-  declineBonus: () => void;
 }

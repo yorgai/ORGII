@@ -8,7 +8,9 @@ import { Plus, X } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { MAX_CUSTOM_BACKGROUND_COLORS, PRESET_COLORS } from "../config";
+import { BACKGROUND_COLOR_PAIRS } from "@src/config/appearance/backgroundColorPairs";
+
+import { MAX_CUSTOM_BACKGROUND_COLORS } from "../config";
 import type { BackgroundConfig } from "../types";
 import { normalizeHexColor } from "../utils";
 
@@ -60,7 +62,7 @@ export const ColorSection: React.FC<ColorSectionProps> = ({
   return (
     <SectionRow label={t("background.colors")} layout="vertical">
       <div className="flex flex-wrap gap-2">
-        {PRESET_COLORS.map((pair) => {
+        {BACKGROUND_COLOR_PAIRS.map((pair) => {
           const isSelected = config.backgroundColorId === pair.id;
 
           return (

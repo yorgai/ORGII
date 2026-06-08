@@ -549,13 +549,6 @@
       }
     }
   },
-  "bonusModal": {
-    "bonusTitle": "サプライズボーナス！",
-    "marginTitle": "ティア利用不可",
-    "bonusDescription": "{{originalTier}} key が利用できません。{{actualTier}} key をより良い価格で見つけました！",
-    "marginDescription": "{{originalTier}} key が利用できません。{{actualTier}} key を見つけました — {{originalTier}} の料金で請求されます。",
-    "acceptBonus": "ボーナスを受け取る"
-  },
   "orgiiOrchestrator": {
     "name": "ORGII Pool",
     "description": "Credit 定額料金のマネージドモデルプール",

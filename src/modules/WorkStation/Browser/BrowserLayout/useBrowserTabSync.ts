@@ -19,10 +19,10 @@ import {
   createBrowserSessionTab,
   createBrowserSessionTabId,
   extractSessionId,
+  getBrowserSessionDisplayTitle,
   isBrowserSessionTab,
+  translatePlaceholderBrowserSessionTitle,
 } from "@src/store/workstation/browser/tabs";
-
-import { getBrowserSessionDisplayTitle } from "./browserLayoutUtils";
 
 interface BrowserStateRef {
   sessions: BrowserSession[];
@@ -104,9 +104,7 @@ export function useBrowserTabSync({
           const displayTitle = getBrowserSessionDisplayTitle(session);
           return createBrowserSessionTab(
             session.id,
-            displayTitle === "New Tab"
-              ? t("common:controlTower.sidebar.newTab")
-              : displayTitle,
+            translatePlaceholderBrowserSessionTitle(displayTitle, t),
             {
               url: session.url,
               incognito: session.incognito,
@@ -201,7 +199,10 @@ export function useBrowserTabSync({
         : [
             createBrowserSessionTab(
               activeSession.id,
-              getBrowserSessionDisplayTitle(activeSession),
+              translatePlaceholderBrowserSessionTitle(
+                getBrowserSessionDisplayTitle(activeSession),
+                t
+              ),
               {
                 url: activeSession.url,
                 incognito: activeSession.incognito,
@@ -227,6 +228,7 @@ export function useBrowserTabSync({
     browserState.activeSessionId,
     browserState.sessions,
     setBrowserTabs,
+    t,
   ]);
 
   // ----------------------------------------------------------------

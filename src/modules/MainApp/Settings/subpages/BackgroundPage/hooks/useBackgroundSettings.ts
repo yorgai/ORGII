@@ -10,6 +10,11 @@ import { useNavigate } from "react-router-dom";
 
 import Message from "@src/components/Message";
 import {
+  BACKGROUND_COLOR_PAIRS,
+  getColorPairById,
+  resolveColorPair,
+} from "@src/config/appearance/backgroundColorPairs";
+import {
   APPEARANCE_MODE_OPTIONS,
   type AppearanceMode,
   GLOBAL_THEMES,
@@ -36,12 +41,7 @@ import { prewarmColor } from "@src/util/ui/theme/glassMaterial";
 import { preloadThemeCss, swapThemeCss } from "@src/util/ui/theme/swapThemeCss";
 import { showThemeTransitionCover } from "@src/util/ui/theme/themeTransitionCover";
 
-import {
-  MAX_CUSTOM_BACKGROUND_COLORS,
-  PRESET_COLORS,
-  getColorPairById,
-  resolveColorPair,
-} from "../config";
+import { MAX_CUSTOM_BACKGROUND_COLORS } from "../config";
 import type { MatrixCharSet, StorageInfo } from "../types";
 import { normalizeHexColor } from "../utils";
 import { useBackgroundImageHandlers } from "./useBackgroundImageHandlers";
@@ -272,7 +272,7 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
         ...config,
         imageUrl: "",
         selectedImageId: undefined,
-        backgroundColor: resolveColorPair(pair),
+        backgroundColor: undefined,
         backgroundColorId: pair.id,
         glass: undefined,
       });
@@ -372,13 +372,13 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
       };
 
       if (removingActive) {
-        const firstPair = PRESET_COLORS[0];
+        const firstPair = BACKGROUND_COLOR_PAIRS[0];
         if (firstPair) {
           nextConfig = {
             ...nextConfig,
             imageUrl: "",
             selectedImageId: undefined,
-            backgroundColor: resolveColorPair(firstPair),
+            backgroundColor: undefined,
             backgroundColorId: firstPair.id,
             glass: undefined,
           };

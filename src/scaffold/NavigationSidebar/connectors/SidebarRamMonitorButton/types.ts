@@ -2,7 +2,13 @@ import type React from "react";
 
 import type { WebViewRuntimeDiagnostics } from "@src/hooks/perf";
 
-import type { CHILD_PROCESS_CATEGORY } from "./constants";
+export const CHILD_PROCESS_CATEGORY = {
+  TERMINAL: "terminal",
+  WEBVIEW: "webview",
+  GPU: "gpu",
+  NETWORK: "network",
+  OTHER: "other",
+} as const;
 
 export type ChildProcessCategory =
   (typeof CHILD_PROCESS_CATEGORY)[keyof typeof CHILD_PROCESS_CATEGORY];

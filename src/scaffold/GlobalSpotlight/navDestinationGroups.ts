@@ -263,15 +263,6 @@ export const ACTIONS: NavDestination[] = [
     }
   ),
   wizardDest(
-    "action-add-orgii-api",
-    buildIntegrationsPath({ category: "models" }),
-    WIZARD_IDS.ORGII_API_ADD,
-    {
-      labelKey: "integrations:addOptions.createOrgiiApi",
-      keywords: ["orgii api", "orchestrator", "create key"],
-    }
-  ),
-  wizardDest(
     "action-add-mcp",
     buildExternalSkillsetsPath({ tab: "mcp" }),
     WIZARD_IDS.MCP_ADD,

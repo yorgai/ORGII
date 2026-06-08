@@ -7,8 +7,8 @@
     "inputMode": "Control",
     "selectionMode": "Answer",
     "toggleMode": "入力モードを切り替え",
-    "inputPlaceholder": "何をするか Agent に伝える...",
-    "selectionPlaceholder": "選択または回答を入力...",
+    "inputPlaceholder": "Agent にこのアプリを操作させる...",
+    "selectionPlaceholder": "ORGII について何でも質問する...",
     "submit": "Agent Control 入力を送信",
     "menuToggle": "Agent Control",
     "selectModel": "モデルを選択"
@@ -63,6 +63,7 @@
     "clear": "クリア",
     "open": "開く",
     "view": "表示",
+    "openInApp": "App で開く",
     "openToRight": "右側で開く",
     "new": "新規",
     "rename": "名前を変更",
@@ -289,6 +290,7 @@
     "status": "ステータス",
     "version": "バージョン",
     "details": "詳細",
+    "overview": "概要",
     "description": "説明",
     "stats": "統計",
     "recentChanges": "最近の変更",
@@ -308,8 +310,6 @@
     "regularBrowsing": "通常ブラウジング",
     "privateBrowsing": "プライベートブラウジング",
     "globalTokens": "グローバル Token",
-    "addedComponents": "追加済みコンポーネント",
-    "candidates": "候補",
     "addedConnections": "追加済み接続",
     "pendingConnections": "保留中の接続",
     "history": "履歴",
@@ -821,12 +821,8 @@
     "noMatchingTokens": "一致する Token が見つかりません",
     "noTokensAvailable": "利用可能な Token がありません",
     "retryToScanAgain": "再試行してスキャン",
-    "noComponentsFound": "コンポーネントが見つかりません",
-    "openRepoWithComponents": "React コンポーネントを含むリポジトリを開いてください",
     "noTokensFound": "Token が見つかりません",
     "addCssVariables": "プロジェクトに CSS 変数を追加してください",
-    "noStorybooksFound": "Storybook が見つかりません",
-    "createOrgiiFiles": ".orgii.tsx ファイルを作成してコンポーネントを追加",
     "loadingAccountStatus": "アカウントステータスを読み込み中...",
     "noRepositorySelected": "リポジトリが選択されていません",
     "selectRepositoryFromHome": "ホームページからリポジトリを選択して開いてください。",
@@ -1263,6 +1259,10 @@
         "home": {
           "label": "Home",
           "description": "デスクトップ自動化用 OS Agent の既定スコープ"
+        },
+        "documents": {
+          "label": "Documents",
+          "description": "Documents フォルダ"
         }
       }
     },
@@ -1460,7 +1460,7 @@
     "compact": "コンパクト",
     "comfort": "快適",
     "theme": "テーマ",
-    "primaryPanel": "プライマリサイドバー",
+    "primaryPanel": "サイドバー",
     "sidebarPosition": "サイドバーの位置",
     "bottomPanel": "下部パネル",
     "titleBar": "タイトルバー",
@@ -1527,8 +1527,8 @@
   "commands": {
     "showBottomPanel": "ボトムパネルを表示",
     "hideBottomPanel": "ボトムパネルを非表示",
-    "showPrimarySidebar": "プライマリサイドバーを表示",
-    "hidePrimarySidebar": "プライマリサイドバーを非表示",
+    "showPrimarySidebar": "サイドバーを表示",
+    "hidePrimarySidebar": "サイドバーを非表示",
     "searchFiles": "ファイルを検索",
     "openBrowser": "ブラウザを開く",
     "switchWorkspace": "Workspace を切り替え / 追加",
@@ -2023,6 +2023,7 @@
       "browser": "ブラウザ",
       "settings": "設定",
       "newTab": "新しいタブ",
+      "newPrivateTab": "新しいプライベートタブ",
       "newTerminal": "新規 Terminal",
       "untitled": "タイトルなし"
     },

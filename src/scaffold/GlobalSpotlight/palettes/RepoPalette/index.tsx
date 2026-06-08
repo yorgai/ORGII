@@ -64,7 +64,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
   asBody = false,
   switchPathLabel,
   hideActionClose = false,
-  leadingRepo,
+  leadingRepos = [],
   onGoBackToParent,
 }) => {
   const { t } = useTranslation();
@@ -107,7 +107,6 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
       addPlaceholder: t("selectors.spotlight.placeholders.source"),
       addEntryLabel: t("selectors.repo.addEntry"),
       openFolderLabel: t("actions.openFolder"),
-      sectionWorkspaceLabel: t("selectors.repo.sections.workspace"),
       sectionCurrentLabel: t("selectors.repo.sections.current"),
       sectionSystemPathsLabel: t("selectors.repo.sections.systemPaths"),
       sectionRepoLabel: t("selectors.repo.sections.repo"),
@@ -230,11 +229,8 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
   // ============ ITEMS ============
   const sectionedAddItems = useMemo(
     (): SpotlightItem[] =>
-      buildSectionedAddItems(
-        addWorkspaceFlow.addWorkspaceItems,
-        paletteText.sectionWorkspaceLabel
-      ),
-    [addWorkspaceFlow.addWorkspaceItems, paletteText.sectionWorkspaceLabel]
+      buildSectionedAddItems(addWorkspaceFlow.addWorkspaceItems),
+    [addWorkspaceFlow.addWorkspaceItems]
   );
 
   const toggleManageMode = useCallback(() => {
@@ -412,7 +408,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
         currentRepoId,
         isMultiRoot,
         isManageMode,
-        leadingRepo,
+        leadingRepos,
         selectedIds,
         searchQuery,
         paletteText,
@@ -435,7 +431,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
       handleRepoSelectWithWorkspaceExit,
       isManageMode,
       isMultiRoot,
-      leadingRepo,
+      leadingRepos,
       openPathItem,
       paletteText,
       renderRepoTrashAction,

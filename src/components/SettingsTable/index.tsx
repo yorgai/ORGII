@@ -198,6 +198,7 @@ export interface SettingsTableProps<RowData> {
   rowClassName?: string | ((row: RowData, index: number) => string);
   rowDataTestId?: (row: RowData, index: number) => string | undefined;
   className?: string;
+  rootClassName?: string;
 }
 
 function SettingsTableToolbar({
@@ -419,6 +420,7 @@ export default function SettingsTable<RowData>({
   rowClassName,
   rowDataTestId,
   className = "",
+  rootClassName = "",
 }: SettingsTableProps<RowData>) {
   const searchRef = useRef<HTMLDivElement>(null);
   const [searchHeight, setSearchHeight] = useState(0);
@@ -515,10 +517,16 @@ export default function SettingsTable<RowData>({
   }, [needsPagination, paginationFooter, pageSizeOptions]);
 
   const hasHeader = !!searchBar || hasSelectFilterRow;
+  const rootClasses = [
+    "settings-table-root min-w-0 max-w-full rounded-lg bg-surface-container",
+    rootClassName,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div
-      className="settings-table-root min-w-0 max-w-full rounded-lg bg-surface-container"
+      className={rootClasses}
       style={
         hasHeader
           ? ({ "--search-bar-h": `${searchHeight}px` } as React.CSSProperties)

@@ -77,7 +77,6 @@ const AddOptionsGrid: React.FC<AddOptionsGridProps> = ({ onAction }) => {
 function formatDefault(action: AddAction): string {
   const MAP: Record<AddAction, string> = {
     "add-model": "Add Account",
-    "create-orgii-api-key": "Create API Key",
     "add-connection": "Add",
     "add-git-connection": "Add Git Connection",
     "add-database": "Add Database",

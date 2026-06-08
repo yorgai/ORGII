@@ -215,7 +215,10 @@ export function useSessionCreator(
     if (sessionSource) return sessionSource;
 
     if (isOSMode) {
-      return createSystemPathSessionSource(SYSTEM_PATH_ID.HOME, t);
+      return createSystemPathSessionSource({
+        systemPathId: SYSTEM_PATH_ID.HOME,
+        t,
+      });
     }
 
     // Workspace mode: use the primary folder so launch gets the stable
@@ -365,9 +368,6 @@ export function useSessionCreator(
     closeAddFundsModal,
     showBuyCreditsModal,
     closeBuyCreditsModal,
-    pendingBonusInfo,
-    acceptBonus,
-    declineBonus,
   } = useSessionLaunch({
     effectiveSource,
     editorContent,
@@ -495,11 +495,6 @@ export function useSessionCreator(
     closeAddFundsModal,
     showBuyCreditsModal,
     closeBuyCreditsModal,
-
-    // Bonus modal
-    pendingBonusInfo,
-    acceptBonus,
-    declineBonus,
 
     // Branch handlers.
     //   - `handleBranchChange` (session-scoped): writes sessionSource.branch

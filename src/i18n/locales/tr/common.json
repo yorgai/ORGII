@@ -7,8 +7,8 @@
     "inputMode": "Kontrol",
     "selectionMode": "Yanıt",
     "toggleMode": "Girdi modunu değiştir",
-    "inputPlaceholder": "Agent'a ne yapacağını söyle...",
-    "selectionPlaceholder": "Seçimi veya yanıtı yaz...",
+    "inputPlaceholder": "Agent'ın bu uygulamayı kontrol etmesine izin ver...",
+    "selectionPlaceholder": "ORGII hakkında herhangi bir soru sor...",
     "submit": "Agent Control girdisini gönder",
     "menuToggle": "Agent Control",
     "selectModel": "Model seç"
@@ -63,6 +63,7 @@
     "clear": "Temizle",
     "open": "Aç",
     "view": "Görüntüle",
+    "openInApp": "Uygulamada Aç",
     "openToRight": "Sağda aç",
     "new": "Yeni",
     "rename": "Yeniden Adlandır",
@@ -289,6 +290,7 @@
     "status": "Durum",
     "version": "Sürüm",
     "details": "Detaylar",
+    "overview": "Genel Bakış",
     "description": "Açıklama",
     "stats": "İstatistikler",
     "recentChanges": "Son değişiklikler",
@@ -308,8 +310,6 @@
     "regularBrowsing": "Normal Gezinme",
     "privateBrowsing": "Gizli Gezinme",
     "globalTokens": "Genel Token'lar",
-    "addedComponents": "Eklenen Bileşenler",
-    "candidates": "Adaylar",
     "addedConnections": "Eklenen Bağlantılar",
     "pendingConnections": "Bekleyen Bağlantılar",
     "history": "Geçmiş",
@@ -821,12 +821,8 @@
     "noMatchingTokens": "Eşleşen Token bulunamadı",
     "noTokensAvailable": "Kullanılabilir Token yok",
     "retryToScanAgain": "Tekrar taramak için yeniden deneyin",
-    "noComponentsFound": "Bileşen bulunamadı",
-    "openRepoWithComponents": "React bileşenleri içeren bir depo açın",
     "noTokensFound": "Token bulunamadı",
     "addCssVariables": "Projenize CSS değişkenleri ekleyin",
-    "noStorybooksFound": "Storybook bulunamadı",
-    "createOrgiiFiles": "Bileşen eklemek için .orgii.tsx dosyaları oluşturun",
     "loadingAccountStatus": "Hesap durumu yükleniyor...",
     "noRepositorySelected": "Depo seçilmedi",
     "selectRepositoryFromHome": "Açmak için ana sayfadan bir depo seçin.",
@@ -1263,6 +1259,10 @@
         "home": {
           "label": "Home",
           "description": "Masaüstü otomasyonu için varsayılan OS Agent kapsamı"
+        },
+        "documents": {
+          "label": "Belgeler",
+          "description": "Belgeler klasörü"
         }
       }
     },
@@ -1460,7 +1460,7 @@
     "compact": "Kompakt",
     "comfort": "Konfor",
     "theme": "Tema",
-    "primaryPanel": "Ana kenar çubuğu",
+    "primaryPanel": "Kenar çubuğu",
     "sidebarPosition": "Kenar çubuğu konumu",
     "bottomPanel": "Alt panel",
     "titleBar": "Başlık çubuğu",
@@ -1522,8 +1522,8 @@
   "commands": {
     "showBottomPanel": "Alt paneli göster",
     "hideBottomPanel": "Alt paneli gizle",
-    "showPrimarySidebar": "Ana kenar çubuğunu göster",
-    "hidePrimarySidebar": "Ana kenar çubuğunu gizle",
+    "showPrimarySidebar": "Kenar çubuğunu göster",
+    "hidePrimarySidebar": "Kenar çubuğunu gizle",
     "searchFiles": "Dosya ara",
     "openBrowser": "Tarayıcıyı aç",
     "switchWorkspace": "Workspace değiştir / ekle",
@@ -2018,6 +2018,7 @@
       "browser": "Tarayıcı",
       "settings": "Ayarlar",
       "newTab": "Yeni sekme",
+      "newPrivateTab": "Yeni gizli sekme",
       "newTerminal": "Yeni terminal",
       "untitled": "Başlıksız"
     },

@@ -12,8 +12,8 @@ export const BROWSER_SHORTCUTS: ShortcutEntry[] = [
   {
     id: "browser_sidebar",
     command: "Toggle sidebar",
-    macKeys: "⌘B",
-    winKeys: "Ctrl+B",
+    macKeys: "⌥⌘U",
+    winKeys: "Ctrl+Alt+U",
     scope: "browser",
     category: "panels",
   },

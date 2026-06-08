@@ -83,7 +83,7 @@
 // ==========================================
 
 .table-tbody {
-  background: var(--bg-1);
+  background: var(--color-bg-1);
 }
 
 .table-row,
@@ -429,13 +429,13 @@
 
     &.table-hover .table-row:hover > .table-td:last-child,
     &.table-clickable .table-row:hover > .table-td:last-child {
-      background: var(--color-fill-1);
+      background: var(--color-surface-container);
 
       &::before {
         background: linear-gradient(
           90deg,
           transparent 0%,
-          var(--color-fill-1) 100%
+          var(--color-surface-container) 100%
         );
       }
     }
@@ -447,15 +447,29 @@
     height: 1px; // allow child flex container to use h-full
   }
 
+  .table-row,
+  .table-expanded-row,
+  .table-tbody > tr:not(.table-row):not(.table-expanded-row),
+  .table-empty {
+    background: var(--color-surface-container);
+  }
+
   &.table-hover .table-row,
-  &.table-hover .table-expanded-row {
+  &.table-hover .table-expanded-row,
+  &.table-clickable .table-row,
+  &.table-clickable .table-expanded-row {
     &:hover {
-      background: var(--color-fill-1);
+      background: var(--color-surface-container);
     }
   }
 
-  &.table-expanded-no-hover .table-expanded-row:hover {
-    background: transparent;
+  &.table-expanded-no-hover .table-expanded-row:hover,
+  .table-row-hover-suppressed:hover {
+    background: var(--color-surface-container) !important;
+  }
+
+  .table-expanded-row .bg-chat-input {
+    background: var(--color-surface-container);
   }
 
   &.table-policy-fixed-layout .table {
@@ -603,7 +617,7 @@
 .table-pagination-wrapper {
   padding: 16px;
   border-top: 1px solid var(--border-1);
-  background: var(--bg-1);
+  background: var(--color-bg-1);
   border-radius: 0 0 8px 8px;
 }
 
@@ -626,7 +640,7 @@
   padding: 4px 8px;
   border: 1px solid var(--border-2);
   border-radius: 4px;
-  background: var(--bg-1);
+  background: var(--color-bg-1);
   color: var(--text-1);
   font-size: 13px;
   cursor: pointer;
@@ -666,7 +680,7 @@
     padding: 4px 8px;
     border: 1px solid var(--border-2);
     border-radius: 4px;
-    background: var(--bg-1);
+    background: var(--color-bg-1);
     color: var(--text-1);
     font-size: 13px;
     text-align: center;
@@ -693,7 +707,7 @@
   }
 
   .table-tbody {
-    background: var(--bg-2);
+    background: var(--color-bg-2);
   }
 }
 

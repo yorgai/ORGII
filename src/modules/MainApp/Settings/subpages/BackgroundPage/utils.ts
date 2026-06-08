@@ -1,16 +1,15 @@
 /**
  * Background Page Utility Functions
  *
- * normalizeHexColor, sanitizeCustomColorsArray, and mergeStoredCustomColors
- * are canonical in @src/config/appearance/backgroundConfig and re-exported
- * here so BackgroundPage components can keep their existing import path.
+ * normalizeHexColor and sanitizeCustomColorsArray are canonical in
+ * @src/config/appearance/backgroundConfig and re-exported here so
+ * BackgroundPage components can keep their existing import path.
  */
 import type { AnimationPreset, ColorPair, ImagePreset } from "./types";
 
 export {
   normalizeHexColor,
   sanitizeCustomColorsArray,
-  mergeStoredCustomColors,
 } from "@src/config/appearance/backgroundConfig";
 
 /**

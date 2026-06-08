@@ -17,7 +17,7 @@
  */
 import { atom } from "jotai";
 
-import { type LegacyPeekHost, tabToLegacyHost } from "../legacyTabHostAdapter";
+import { type WorkstationTabHost, tabToHost } from "../tabHost";
 import { activeWorkStationTabAtom } from "../tabs";
 
 /**
@@ -49,8 +49,8 @@ export const dockFilterAtom = atom<DockFilter>(DEFAULT_DOCK_FILTER);
  * Outside "All Tabs" the route is the source of truth; consumers should
  * branch on `dockFilterAtom === "all"` before reading this atom.
  */
-export const activeHostAtom = atom<LegacyPeekHost>((get) => {
+export const activeHostAtom = atom<WorkstationTabHost>((get) => {
   const activeTab = get(activeWorkStationTabAtom);
-  return activeTab ? tabToLegacyHost(activeTab) : "code";
+  return activeTab ? tabToHost(activeTab) : "code";
 });
 activeHostAtom.debugLabel = "activeHostAtom";

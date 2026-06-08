@@ -3,7 +3,7 @@
  *
  * Layout orchestrator for Browser mode. Composes:
  * - Left: BrowserPrimarySidebar (sessions + design + settings tabs)
- * - Center: WebViewport (webview) or ComponentPreviewPanel (for repo components)
+ * - Center: WebViewport (webview)
  * - Right: WebInspector (DevTools) or DOM Editor panel
  * - Bottom: BrowserStatusBar
  *
@@ -46,9 +46,6 @@ import type { BrowserLayoutProps } from "./types";
 import { useBrowserLayoutState } from "./useBrowserLayoutState";
 
 // Lazy-load heavy secondary panels
-const ComponentPreviewPanel = React.lazy(
-  () => import("../Panels/BrowserMainPane/content/ComponentPreviewContent")
-);
 const TokenManagerPanel = React.lazy(
   () => import("../Panels/BrowserMainPane/content/TokenManagerContent")
 );
@@ -119,9 +116,6 @@ export const BrowserLayout: React.FC<BrowserLayoutProps> = memo(
               onNewSession={state.browser.handleNewSession}
               onNewPrivateSession={state.browser.handleNewPrivateSession}
               onCloseSession={state.handleCloseSession}
-              onSelectProjectComponent={state.handleSelectProjectComponent}
-              selectedProjectPath={state.selectedProjectFile?.file ?? null}
-              onPreviewRepoComponent={state.handlePreviewRepoComponent}
               onOpenColorTokens={state.handleOpenColorTokens}
               onOpenHistoryUrl={state.handleOpenHistoryUrl}
             />
@@ -141,9 +135,6 @@ export const BrowserLayout: React.FC<BrowserLayoutProps> = memo(
         state.browser.handleNewSession,
         state.browser.handleNewPrivateSession,
         state.handleCloseSession,
-        state.handleSelectProjectComponent,
-        state.selectedProjectFile?.file,
-        state.handlePreviewRepoComponent,
         state.handleOpenColorTokens,
         state.handleOpenHistoryUrl,
         state.browser.primarySidebarCollapsed,
@@ -178,41 +169,6 @@ export const BrowserLayout: React.FC<BrowserLayoutProps> = memo(
                 >
                   <TokenManagerPanel
                     category={state.activeTokenCategory}
-                    repoPath={repoPath}
-                  />
-                </Suspense>
-              </div>
-            )}
-
-          {state.hasOpenTabs &&
-            state.isShowingComponentPreview &&
-            state.activePreviewData && (
-              <div className="absolute inset-0 z-10 bg-workstation-bg">
-                <Suspense
-                  fallback={
-                    <Placeholder
-                      variant="loading"
-                      placement="detail-panel"
-                      fillParentHeight
-                      className={WORK_STATION_PLACEHOLDER_PAGE_BG_CLASS}
-                    />
-                  }
-                >
-                  <ComponentPreviewPanel
-                    preview={{
-                      id: state.activePreviewData.id,
-                      name: state.activePreviewData.name,
-                      filePath: state.activePreviewData.filePath,
-                      line: state.activePreviewData.line,
-                      kind: state.activePreviewData.kind,
-                    }}
-                    details={state.selectedDetails}
-                    projectFile={state.selectedProjectFile}
-                    isLoading={state.extractingProps}
-                    onOpenSource={() => {}}
-                    onRefresh={() => {
-                      // TODO: Re-extract props
-                    }}
                     repoPath={repoPath}
                   />
                 </Suspense>

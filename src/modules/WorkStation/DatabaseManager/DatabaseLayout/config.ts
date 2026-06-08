@@ -34,14 +34,6 @@ export function createDatabaseQuickActions(
 
   return [
     {
-      id: "toggle-sidebar",
-      label: sidebarCollapsed
-        ? t("commands.showPrimarySidebar")
-        : t("commands.hidePrimarySidebar"),
-      shortcut: getShortcutKeys("db_sidebar"),
-      onAction: onToggleSidebar,
-    },
-    {
       id: "connections",
       label: t("commands.connections"),
       shortcut: getShortcutKeys("db_connections"),
@@ -56,6 +48,14 @@ export function createDatabaseQuickActions(
       label: t("commands.searchFiles"),
       shortcut: getShortcutKeys("quick_open"),
       onAction: onOpenSpotlight,
+    },
+    {
+      id: "toggle-sidebar",
+      label: sidebarCollapsed
+        ? t("commands.showPrimarySidebar")
+        : t("commands.hidePrimarySidebar"),
+      shortcut: getShortcutKeys("db_sidebar"),
+      onAction: onToggleSidebar,
     },
   ];
 }

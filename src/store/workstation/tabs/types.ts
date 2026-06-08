@@ -41,7 +41,6 @@ export type WorkStationTabType =
   | "add-connection"
   // Browser tabs
   | "browser-session"
-  | "component-preview"
   | "token-category"
   /** DevTools right panel (Elements / Console / Network) */
   | "devtools"
@@ -65,8 +64,6 @@ export type WorkStationTabType =
   | "agent-config"
   // Ops Control station tabs
   | "kanban-station"
-  // Launchpad tabs
-  | "launchpad-repo"
   // Canvas preview tab — renders agent-generated canvas from canvasPreviewAtom
   | "canvas-preview"
   // GitHub Issues detail tab — opened from the sidebar Issues panel
@@ -156,7 +153,7 @@ export interface WorkStationTab {
  * All tabs across every content host (Code Editor, Browser, Database,
  * Project Manager, Launchpad) live in this single pool — the active
  * content host is derived from the active tab's type / category via
- * `tabToLegacyHost`, not from a separate pane bucket.
+ * `tabToHost`, not from a separate pane bucket.
  */
 export interface PanelState {
   tabs: WorkStationTab[];
@@ -265,17 +262,6 @@ export interface WorkItemDetailTabData {
 export interface NewWorkItemTabData {
   projectId: string;
   projectName: string;
-}
-
-/**
- * Data stored in component preview tabs
- */
-export interface ComponentPreviewTabData {
-  previewId: string;
-  name: string;
-  filePath: string;
-  line: number;
-  kind: string;
 }
 
 /**
@@ -437,7 +423,6 @@ export const TOOL_TAB_TYPES = [
   "add-connection",
   // Browser tabs
   "browser-session",
-  "component-preview",
   "token-category",
   // Project Manager tabs
   "project-dashboard",
@@ -453,8 +438,6 @@ export const TOOL_TAB_TYPES = [
   "subagent-detail",
   "agent-config",
   "kanban-station",
-  // Launchpad tabs
-  "launchpad-repo",
   // GitHub Issues detail
   "github-issue-detail",
 ] as const;

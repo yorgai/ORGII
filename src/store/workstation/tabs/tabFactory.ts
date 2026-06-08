@@ -93,7 +93,6 @@ const DEFAULT_CATEGORY_BY_TYPE: Record<
   schema: "db-schema",
   "add-connection": "db-table",
   "browser-session": "browser",
-  "component-preview": "browser",
   "token-category": "browser",
   devtools: "browser",
   "project-dashboard": "project",
@@ -110,7 +109,6 @@ const DEFAULT_CATEGORY_BY_TYPE: Record<
   "subagent-detail": "subagent",
   "agent-config": "agent-config",
   "kanban-station": "ops-control",
-  "launchpad-repo": "launchpad",
   "canvas-preview": "preview",
   "github-issue-detail": "git",
 };

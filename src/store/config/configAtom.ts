@@ -6,6 +6,8 @@
  */
 import { atom } from "jotai";
 
+import { WORKSPACE_DEFAULT_REPO_LOCATION } from "@src/config/workspaceDefaultRepoPaths";
+import type { WorkspaceDefaultRepoLocation } from "@src/config/workspaceDefaultRepoPaths";
 import {
   settingsAtom,
   updateSettingAtom,
@@ -23,6 +25,44 @@ export const preferIDEAtom = atom(
   }
 );
 preferIDEAtom.debugLabel = "preferIDEAtom";
+
+// ============================================
+// Workspace Defaults Settings (backed by settings.jsonc)
+// ============================================
+
+export const workspaceDefaultRepoLocationAtom = atom(
+  (get) =>
+    get(settingsAtom)[
+      "workspace.defaultRepoLocation"
+    ] as WorkspaceDefaultRepoLocation,
+  (_get, set, value: WorkspaceDefaultRepoLocation) => {
+    set(updateSettingAtom, { key: "workspace.defaultRepoLocation", value });
+  }
+);
+workspaceDefaultRepoLocationAtom.debugLabel =
+  "workspaceDefaultRepoLocationAtom";
+
+export const workspaceCustomDefaultRepoPathAtom = atom(
+  (get) => get(settingsAtom)["workspace.customDefaultRepoPath"],
+  (_get, set, value: string) => {
+    set(updateSettingAtom, { key: "workspace.customDefaultRepoPath", value });
+  }
+);
+workspaceCustomDefaultRepoPathAtom.debugLabel =
+  "workspaceCustomDefaultRepoPathAtom";
+
+export const effectiveWorkspaceDefaultRepoLocationAtom = atom((get) => {
+  const location = get(workspaceDefaultRepoLocationAtom);
+  if (
+    location === WORKSPACE_DEFAULT_REPO_LOCATION.CUSTOM &&
+    !get(workspaceCustomDefaultRepoPathAtom).trim()
+  ) {
+    return WORKSPACE_DEFAULT_REPO_LOCATION.DOCUMENTS_ORGII;
+  }
+  return location;
+});
+effectiveWorkspaceDefaultRepoLocationAtom.debugLabel =
+  "effectiveWorkspaceDefaultRepoLocationAtom";
 
 // ============================================
 // Internal UI Editor Config

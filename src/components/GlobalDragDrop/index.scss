@@ -5,7 +5,7 @@
   gap: 16px;
   padding: 48px;
   border-radius: 16px;
-  background-color: rgba(var(--bg-2), 0.95);
+  background-color: color-mix(in srgb, var(--color-bg-2) 95%, transparent);
   backdrop-filter: blur(12px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   border: 2px solid var(--color-primary-6);

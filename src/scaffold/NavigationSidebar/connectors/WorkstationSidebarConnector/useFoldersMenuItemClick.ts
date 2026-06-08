@@ -3,7 +3,6 @@ import type { NavigateFunction } from "react-router-dom";
 
 import type { WorkspaceRecord } from "@src/api/tauri/workspace";
 import { ROUTES } from "@src/config/routes";
-import { openWorkspaceSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import type { Repo } from "@src/store/repo";
 import {
@@ -15,12 +14,12 @@ import {
   type ChatPanelSelectedProject,
   type ChatPanelSelectedWorkItem,
   type ChatPanelSelectedWorkspace,
+  WORKSPACE_OVERVIEW_TAB,
+  type WorkspaceOverviewTab,
 } from "@src/store/ui/chatPanelAtom";
 import type { WorkspaceFolder } from "@src/types/workspace";
 
 import {
-  FOLDERS_ADD_WORKSPACE_ITEM_ID,
-  FOLDERS_CREATE_WORKSPACE_ITEM_ID,
   FOLDERS_DASHBOARD_ITEM_ID,
   FOLDERS_REPO_ITEM_PREFIX,
   FOLDERS_WORKSPACE_ITEM_PREFIX,
@@ -52,6 +51,7 @@ interface UseFoldersMenuItemClickParams {
   setChatPanelSelectedWorkspace: NullableSetter<ChatPanelSelectedWorkspace>;
   setChatPanelStickyNotesOpen: (open: boolean) => void;
   setChatPanelWorkspaceDashboardOpen: (open: boolean) => void;
+  setChatPanelWorkspaceOverviewTab: (tab: WorkspaceOverviewTab) => void;
   setFoldersDashboardSelected: (selected: boolean) => void;
   setProjectsSelectedMenuItemId: (id: string) => void;
 }
@@ -73,6 +73,7 @@ export function useFoldersMenuItemClick({
   setChatPanelSelectedWorkspace,
   setChatPanelStickyNotesOpen,
   setChatPanelWorkspaceDashboardOpen,
+  setChatPanelWorkspaceOverviewTab,
   setFoldersDashboardSelected,
   setProjectsSelectedMenuItemId,
 }: UseFoldersMenuItemClickParams): (
@@ -94,16 +95,6 @@ export function useFoldersMenuItemClick({
         setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
         setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
         navigate(ROUTES.workStation.code.path);
-        return;
-      }
-
-      if (item.id === FOLDERS_ADD_WORKSPACE_ITEM_ID) {
-        openWorkspaceSpotlight("add");
-        return;
-      }
-
-      if (item.id === FOLDERS_CREATE_WORKSPACE_ITEM_ID) {
-        openWorkspaceSpotlight("create");
         return;
       }
 
@@ -146,6 +137,7 @@ export function useFoldersMenuItemClick({
             .map((folder) => folder.repoId)
             .filter((repoId): repoId is string => Boolean(repoId)),
         });
+        setChatPanelWorkspaceOverviewTab(WORKSPACE_OVERVIEW_TAB.OVERVIEW);
         navigate(ROUTES.workStation.code.path);
         return;
       }
@@ -174,6 +166,7 @@ export function useFoldersMenuItemClick({
         name: repo ? getRepoDisplayName(repo) : item.label,
         path: repo?.path ?? undefined,
       });
+      setChatPanelWorkspaceOverviewTab(WORKSPACE_OVERVIEW_TAB.OVERVIEW);
       navigate(ROUTES.workStation.code.path);
     },
     [
@@ -193,6 +186,7 @@ export function useFoldersMenuItemClick({
       setChatPanelSelectedWorkItem,
       setChatPanelStickyNotesOpen,
       setChatPanelWorkspaceDashboardOpen,
+      setChatPanelWorkspaceOverviewTab,
       setFoldersDashboardSelected,
       setProjectsSelectedMenuItemId,
     ]

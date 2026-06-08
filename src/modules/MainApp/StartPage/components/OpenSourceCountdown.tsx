@@ -6,7 +6,7 @@
  */
 import React, { useEffect, useState } from "react";
 
-const RELEASE_DATE = new Date("2026-06-09T00:00:00").getTime();
+const RELEASE_DATE = new Date("2026-06-14T12:00:00").getTime();
 
 function getRemaining(): {
   days: number;

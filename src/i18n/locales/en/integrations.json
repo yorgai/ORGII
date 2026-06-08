@@ -1061,7 +1061,9 @@
     "oauthBrowserOpened": "A browser window was opened. Finish authorization there, then this wizard will continue."
   },
   "gitConnections": {
-    "github": "GitHub"
+    "github": "GitHub",
+    "methodScan": "Auto Detect",
+    "methodOAuth": "Sign in with GitHub"
   },
   "builtInTools": {
     "title": "Built-in tools",
@@ -1108,7 +1110,6 @@
   },
   "toolbarPlusMenu": {
     "addProviderKey": "Add provider key",
-    "createOrgiiApiKey": "Create ORGII API key",
     "addMcpServer": "Add MCP server",
     "createSkill": "Create skills",
     "addWebAppCommand": "Add web app command",
@@ -1228,7 +1229,6 @@
   "addOptions": {
     "addModel": "Add Model API Key",
     "bringYourOwnKey": "Bring your own key",
-    "createOrgiiApi": "Create a ORGII API",
     "addCli": "Add CLI Agent",
     "addConnection": "Add",
     "addChannelOrService": "Add channel or service",
@@ -1239,18 +1239,6 @@
     "addRoutine": "Add Routine",
     "addDatabase": "Add Database",
     "importRule": "Import Policy"
-  },
-  "orgiiApi": {
-    "wizardTitle": "Add ORGII API Key",
-    "nameLabel": "Name",
-    "nameDesc": "Display name for this API key",
-    "namePlaceholder": "e.g. Production, Development",
-    "keyLabel": "API Key",
-    "keyDesc": "Paste an API key generated on the ORGII website",
-    "keyPlaceholder": "orgii-...",
-    "openOrgiiLabel": "Don't have a key yet?",
-    "openOrgiiDesc": "Open the ORGII account page to generate one",
-    "openOrgii": "Open ORGII"
   },
   "rulesTabs": {
     "rules": "Rules",

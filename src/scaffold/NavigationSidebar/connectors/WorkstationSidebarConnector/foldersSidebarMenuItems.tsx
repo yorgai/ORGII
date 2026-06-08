@@ -1,5 +1,5 @@
-import { Code, FolderTree } from "lucide-react";
-import React from "react";
+import { Code, FolderTree, MoreHorizontal, Plus } from "lucide-react";
+import React, { type MouseEvent } from "react";
 
 import type { WorkspaceRecord } from "@src/api/tauri/workspace";
 import type { CliAgentType } from "@src/api/types/keys";
@@ -8,18 +8,20 @@ import { resolveAgentIcon } from "@src/config/agentIcons";
 import type { AvailableAgent } from "@src/config/cliAgents";
 import type { KeyVaultAccount } from "@src/hooks/keyVault/types";
 import type { AgentDefinition } from "@src/modules/MainApp/AgentOrgs/types";
-import { rustBuiltInVariantsFromDefinitions } from "@src/modules/WorkStation/Launchpad/hooks/useLaunchpadAgentCatalog";
-import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
+import { rustBuiltInVariantsFromDefinitions } from "@src/modules/shared/launchpad/hooks";
+import type {
+  NavigationMenuItem,
+  NavigationMenuRowAction,
+} from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import type { Repo } from "@src/store/repo";
 import { getRustAgentType } from "@src/util/session/sessionDispatch";
 
 export const FOLDERS_WORKSPACES_SECTION_ID = "separator-folders-workspaces";
 export const FOLDERS_REPOS_SECTION_ID = "separator-folders-repos";
-export const FOLDERS_ADD_WORKSPACE_ITEM_ID = "folders-add-workspace";
-export const FOLDERS_CREATE_WORKSPACE_ITEM_ID = "folders-create-workspace";
 export const FOLDERS_DASHBOARD_ITEM_ID = "folders-dashboard";
 const FOLDERS_MY_KEYS_SECTION_ID = "separator-folders-my-keys";
-const FOLDERS_MY_AGENTS_SECTION_ID = "separator-folders-my-agents";
+export const FOLDERS_MY_AGENTS_SECTION_ID = "separator-folders-my-agents";
+export const FOLDERS_MY_AGENTS_COLLAPSE_SECTION_ID = "folders-my-agents";
 export const FOLDERS_WORKSPACE_ITEM_PREFIX = "folders-workspace:";
 export const FOLDERS_REPO_ITEM_PREFIX = "folders-repo:";
 const FOLDERS_KEY_ITEM_PREFIX = "folders-key:";
@@ -29,7 +31,24 @@ export interface FolderTarget {
   id: string;
 }
 
-interface BuildFoldersSidebarMenuItemsParams {
+interface FolderRowActionHandlers {
+  onAddWorkspaceFolder: () => void;
+  onCreateMultiRepoWorkspace: () => void;
+  onMoreActionsForWorkspace: (
+    event: MouseEvent<HTMLButtonElement>,
+    workspace: WorkspaceRecord
+  ) => void;
+  onMoreActionsForRepo: (
+    event: MouseEvent<HTMLButtonElement>,
+    repo: Repo
+  ) => void;
+  moreActionLabel: string;
+  addWorkspaceFolderLabel: string;
+  createMultiRepoWorkspaceLabel: string;
+  activeMoreMenuId: string;
+}
+
+interface BuildFoldersSidebarMenuItemsParams extends FolderRowActionHandlers {
   savedWorkspaces: readonly WorkspaceRecord[];
   repos: readonly Repo[];
   localAccounts: readonly KeyVaultAccount[];
@@ -86,10 +105,18 @@ function createFolderMenuItem({
   target,
   savedWorkspaces,
   repos,
+  onMoreActionsForWorkspace,
+  onMoreActionsForRepo,
+  moreActionLabel,
+  activeMoreMenuId,
 }: {
   target: FolderTarget;
   savedWorkspaces: readonly WorkspaceRecord[];
   repos: readonly Repo[];
+  onMoreActionsForWorkspace: FolderRowActionHandlers["onMoreActionsForWorkspace"];
+  onMoreActionsForRepo: FolderRowActionHandlers["onMoreActionsForRepo"];
+  moreActionLabel: string;
+  activeMoreMenuId: string;
 }): NavigationMenuItem | null {
   const itemId = getFolderItemId(target);
   if (target.kind === "workspace") {
@@ -97,6 +124,14 @@ function createFolderMenuItem({
       (candidate) => candidate.workspaceId === target.id
     );
     if (!workspace) return null;
+    const rowActions: NavigationMenuRowAction[] = [
+      {
+        icon: MoreHorizontal,
+        label: moreActionLabel,
+        active: activeMoreMenuId === itemId,
+        onClick: (event) => onMoreActionsForWorkspace(event, workspace),
+      },
+    ];
     return {
       id: itemId,
       key: itemId,
@@ -105,11 +140,20 @@ function createFolderMenuItem({
       iconName: "folder-tree",
       shortcut: getWorkspaceFolderCountLabel(workspace.folders.length),
       showMoreActions: true,
+      rowActions,
     };
   }
 
   const repo = repos.find((candidate) => candidate.id === target.id);
   if (!repo) return null;
+  const rowActions: NavigationMenuRowAction[] = [
+    {
+      icon: MoreHorizontal,
+      label: moreActionLabel,
+      active: activeMoreMenuId === itemId,
+      onClick: (event) => onMoreActionsForRepo(event, repo),
+    },
+  ];
   return {
     id: itemId,
     key: itemId,
@@ -117,6 +161,7 @@ function createFolderMenuItem({
     icon: Code,
     iconName: "code",
     showMoreActions: true,
+    rowActions,
   };
 }
 
@@ -210,6 +255,14 @@ export function buildFoldersSidebarMenuItems({
   repoCountLabel,
   myKeysLabel,
   myAgentsLabel,
+  onAddWorkspaceFolder,
+  onCreateMultiRepoWorkspace,
+  onMoreActionsForWorkspace,
+  onMoreActionsForRepo,
+  moreActionLabel,
+  addWorkspaceFolderLabel,
+  createMultiRepoWorkspaceLabel,
+  activeMoreMenuId,
 }: BuildFoldersSidebarMenuItemsParams): NavigationMenuItem[] {
   const items: NavigationMenuItem[] = [];
 
@@ -219,6 +272,10 @@ export function buildFoldersSidebarMenuItems({
         target: { kind: "workspace", id: workspace.workspaceId },
         savedWorkspaces,
         repos,
+        onMoreActionsForWorkspace,
+        onMoreActionsForRepo,
+        moreActionLabel,
+        activeMoreMenuId,
       })
     )
     .filter((item): item is NavigationMenuItem => Boolean(item));
@@ -227,6 +284,13 @@ export function buildFoldersSidebarMenuItems({
     id: FOLDERS_WORKSPACES_SECTION_ID,
     key: FOLDERS_WORKSPACES_SECTION_ID,
     label: multiRepoWorkspaceCountLabel(workspaceItems.length),
+    rowActions: [
+      {
+        icon: Plus,
+        label: createMultiRepoWorkspaceLabel,
+        onClick: () => onCreateMultiRepoWorkspace(),
+      },
+    ],
   });
   items.push(...workspaceItems);
 
@@ -236,6 +300,10 @@ export function buildFoldersSidebarMenuItems({
         target: { kind: "repo", id: repo.id },
         savedWorkspaces,
         repos,
+        onMoreActionsForWorkspace,
+        onMoreActionsForRepo,
+        moreActionLabel,
+        activeMoreMenuId,
       })
     )
     .filter((item): item is NavigationMenuItem => Boolean(item));
@@ -244,6 +312,13 @@ export function buildFoldersSidebarMenuItems({
     id: FOLDERS_REPOS_SECTION_ID,
     key: FOLDERS_REPOS_SECTION_ID,
     label: repoCountLabel(repoItems.length),
+    rowActions: [
+      {
+        icon: Plus,
+        label: addWorkspaceFolderLabel,
+        onClick: () => onAddWorkspaceFolder(),
+      },
+    ],
   });
   items.push(...repoItems);
 

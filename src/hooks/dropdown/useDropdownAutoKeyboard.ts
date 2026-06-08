@@ -15,8 +15,9 @@
  *     `--color-fill-2` background as :hover).
  *   - Capture document-level keydown while open: ArrowUp/Down/Home/End
  *     move the highlight, Enter dispatches a synthetic click on the
- *     highlighted node, Escape closes via the engine's existing handler
- *     (we don't double-handle it here).
+ *     highlighted node, Escape closes the dropdown.
+ *     `useDropdownEngine` also installs a bubble-phase Escape handler;
+ *     our capture-phase `stopPropagation` keeps it from running twice.
  *   - Start with no highlight on open (matches native macOS menu / Cursor
  *     palette behaviour: a click-to-open + hover-and-click flow doesn't
  *     surprise the user with a pre-highlighted row; the first ArrowDown
@@ -28,8 +29,18 @@
  *     engine (the explicit path takes over) or when `autoKeyboardNavigation`
  *     is disabled (e.g. `Select`, which already runs its own
  *     `useDropdownKeyboard` against a typed option list).
- *   - Must not steal keys from inputs inside the panel (search boxes).
- *     The handler bails when the event target is an editable element.
+ *   - Must not steal text-editing keys from editable elements in the
+ *     panel. The handler bails when the event target is editable AND the
+ *     key would have a meaningful editing effect:
+ *       - `<textarea>` / `contentEditable`: bail on every key.
+ *       - `<input>` (single-line): bail on every key EXCEPT ArrowUp /
+ *         ArrowDown / Enter, which have no caret-movement effect there
+ *         and are forwarded to the highlight/commit logic. This is what
+ *         lets a "search input + action rows" panel (e.g.
+ *         `TabBarPlusMenu`) be driven entirely from the keyboard.
+ *       - Escape inside an editable element is left to the host
+ *         component (typical contract: the input clears itself / closes
+ *         the panel via its own `onKeyDown`).
  */
 import { type RefObject, useCallback, useEffect, useRef } from "react";
 
@@ -91,11 +102,33 @@ function queryRows(panel: HTMLElement | null): HTMLElement[] {
   );
 }
 
-function isEditableTarget(target: EventTarget | null): boolean {
+/**
+ * Returns true when the event target is an editable element AND the
+ * pressed key would have a meaningful editing effect on it.
+ *
+ * Single-line `<input>` elements ignore ArrowUp/ArrowDown, so those keys
+ * are allowed through to drive the dropdown highlight even when focus is
+ * inside the panel's search input. Home/End are kept "bail" inside inputs
+ * because they move the caret, which the user expects to keep working.
+ * Multi-line targets (`<textarea>`, `contentEditable`) bail unconditionally
+ * so caret movement isn't hijacked.
+ *
+ * Enter is always allowed through; the hook's own handler only commits a
+ * row when one is highlighted, otherwise the editable element's native
+ * Enter handler (e.g. search submit) keeps working.
+ */
+function shouldBailForEditableTarget(
+  target: EventTarget | null,
+  key: string
+): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
-  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (tag === "SELECT") return true;
+  if (tag === "TEXTAREA") return true;
   if (target.isContentEditable) return true;
+  if (tag === "INPUT") {
+    return key !== "ArrowUp" && key !== "ArrowDown" && key !== "Enter";
+  }
   return false;
 }
 
@@ -221,8 +254,11 @@ export function useDropdownAutoKeyboard({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.isComposing) return;
-      // Don't hijack typing inside a search input nested in the panel.
-      if (isEditableTarget(event.target)) return;
+      // Don't hijack typing inside an editable element nested in the
+      // panel. Single-line `<input>` lets ArrowUp/ArrowDown/Enter through
+      // so a search-with-actions layout (e.g. `TabBarPlusMenu`) can be
+      // driven entirely from the keyboard without manual wiring.
+      if (shouldBailForEditableTarget(event.target, event.key)) return;
 
       switch (event.key) {
         case "ArrowDown":
@@ -247,8 +283,9 @@ export function useDropdownAutoKeyboard({
           return;
         case "Enter": {
           // Only commit when a row is highlighted. Otherwise let the
-          // event reach whatever has focus (e.g. the trigger), so
-          // pressing Enter on an unopened dropdown doesn't silently
+          // event reach whatever has focus (e.g. the trigger or a search
+          // input with its own submit handler), so pressing Enter on an
+          // unopened dropdown or in an empty search box doesn't silently
           // do nothing.
           if (indexRef.current < 0) return;
           event.preventDefault();
@@ -257,7 +294,18 @@ export function useDropdownAutoKeyboard({
           if (committed) onClose();
           return;
         }
-        // Escape is owned by `useDropdownEngine`'s own handler.
+        case "Escape": {
+          // `useDropdownEngine` runs its own Escape handler, so in that
+          // path this branch is a redundant close (the panel is already
+          // about to unmount). For consumers wiring this hook directly
+          // (e.g. the legacy `Dropdown` component in droplist mode) this
+          // is the only Escape handler, so closing here is required for
+          // keyboard parity with the engine path.
+          event.preventDefault();
+          event.stopPropagation();
+          onClose();
+          return;
+        }
       }
     };
 

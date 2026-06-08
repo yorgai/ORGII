@@ -12,6 +12,8 @@
  *   the current collapsed state of each sidebar/panel.
  */
 import {
+  ArrowBigLeft,
+  ArrowBigRight,
   ArrowLeftRight,
   Contrast,
   Dock,
@@ -288,7 +290,7 @@ export function buildChatPanelSettingsActions({
       myStationChatPosition === "left"
         ? "common:spotlightActions.moveMyStationChatRight"
         : "common:spotlightActions.moveMyStationChatLeft",
-    icon: MessageCircle,
+    icon: myStationChatPosition === "left" ? ArrowBigRight : ArrowBigLeft,
     keywords: [
       "my station chat",
       "chat panel location",
@@ -312,7 +314,7 @@ export function buildChatPanelSettingsActions({
       agentStationChatPosition === "left"
         ? "common:spotlightActions.moveAgentStationChatRight"
         : "common:spotlightActions.moveAgentStationChatLeft",
-    icon: MessageCircle,
+    icon: agentStationChatPosition === "left" ? ArrowBigRight : ArrowBigLeft,
     keywords: [
       "agent station chat",
       "agent chat location",

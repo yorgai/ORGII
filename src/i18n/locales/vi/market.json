@@ -549,13 +549,6 @@
       }
     }
   },
-  "bonusModal": {
-    "bonusTitle": "Phần thưởng bất ngờ!",
-    "marginTitle": "Cấp độ không khả dụng",
-    "bonusDescription": "Không có khóa {{originalTier}} khả dụng. Chúng tôi đã tìm thấy khóa {{actualTier}} với giá tốt hơn!",
-    "marginDescription": "Không có khóa {{originalTier}} khả dụng. Chúng tôi đã tìm thấy khóa {{actualTier}} — bạn sẽ bị tính phí theo mức {{originalTier}}.",
-    "acceptBonus": "Nhận thưởng"
-  },
   "orgiiOrchestrator": {
     "name": "ORGII Pool",
     "description": "Nhóm mô hình được quản lý với giá Credit cố định",

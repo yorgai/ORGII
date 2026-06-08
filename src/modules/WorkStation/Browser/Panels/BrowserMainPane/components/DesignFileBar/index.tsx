@@ -2,7 +2,7 @@
  * DesignFileBar Component
  *
  * A 38px file/path bar for design content panels, similar to FileHeader in Code Editor.
- * Used by ComponentPreviewContent and TokenManagerContent.
+ * Used by TokenManagerContent.
  */
 import { type LucideIcon, Search } from "lucide-react";
 import React, { memo, useCallback, useRef, useState } from "react";
