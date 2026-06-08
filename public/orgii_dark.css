@@ -7,26 +7,26 @@
  * and direct CSS variable references. Migration to custom tokens can be done incrementally.
  */
 :root {
-  /* Desktop background color slots */
-  --desktop-bg-1: #0b0b0f;
-  --desktop-bg-2: #2d2d2d;
-  --desktop-bg-3: #3d4f5f;
-  --desktop-bg-4: #1a1a2e;
-  --desktop-bg-5: #1e3a5f;
-  --desktop-bg-6: #0f3460;
-  --desktop-bg-7: #22264b;
-  --desktop-bg-8: #0f4c5c;
-  --desktop-bg-9: #1a3c34;
-  --desktop-bg-10: #1f3a2e;
-  --desktop-bg-11: #2e382a;
-  --desktop-bg-12: #3d1f3d;
-  --desktop-bg-13: #3a1b33;
-  --desktop-bg-14: #4a1c2e;
-  --desktop-bg-15: #4a1518;
-  --desktop-bg-16: #3a2418;
-  --desktop-bg-17: #3a2a12;
-  --desktop-bg-18: #2c2618;
-  --desktop-bg-19: #2a1f18;
+  /* App background color slots */
+  --app-bg-1: #0b0b0f;
+  --app-bg-2: #2d2d2d;
+  --app-bg-3: #3d4f5f;
+  --app-bg-4: #1a1a2e;
+  --app-bg-5: #1e3a5f;
+  --app-bg-6: #0f3460;
+  --app-bg-7: #22264b;
+  --app-bg-8: #0f4c5c;
+  --app-bg-9: #1a3c34;
+  --app-bg-10: #1f3a2e;
+  --app-bg-11: #2e382a;
+  --app-bg-12: #3d1f3d;
+  --app-bg-13: #3a1b33;
+  --app-bg-14: #4a1c2e;
+  --app-bg-15: #4a1518;
+  --app-bg-16: #3a2418;
+  --app-bg-17: #3a2a12;
+  --app-bg-18: #2c2618;
+  --app-bg-19: #2a1f18;
 
   /* Code editor */
   --cm-editor-background: #0a0a0a;
@@ -124,27 +124,6 @@ body {
   --color-warning-4: #ffb65d;
   --color-warning-5: #ff9a2e;
   --color-warning-6: #ff7d00;
-
-  /* Desktop background color slots */
-  --desktop-bg-1: #0b0b0f;
-  --desktop-bg-2: #2d2d2d;
-  --desktop-bg-3: #3d4f5f;
-  --desktop-bg-4: #1a1a2e;
-  --desktop-bg-5: #1e3a5f;
-  --desktop-bg-6: #0f3460;
-  --desktop-bg-7: #22264b;
-  --desktop-bg-8: #0f4c5c;
-  --desktop-bg-9: #1a3c34;
-  --desktop-bg-10: #1f3a2e;
-  --desktop-bg-11: #2e382a;
-  --desktop-bg-12: #3d1f3d;
-  --desktop-bg-13: #3a1b33;
-  --desktop-bg-14: #4a1c2e;
-  --desktop-bg-15: #4a1518;
-  --desktop-bg-16: #3a2418;
-  --desktop-bg-17: #3a2a12;
-  --desktop-bg-18: #2c2618;
-  --desktop-bg-19: #2a1f18;
 
   /* Code editor */
   --cm-editor-background: #0a0a0a;

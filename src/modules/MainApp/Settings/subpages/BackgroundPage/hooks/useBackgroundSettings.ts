@@ -10,10 +10,10 @@ import { useNavigate } from "react-router-dom";
 
 import Message from "@src/components/Message";
 import {
-  BACKGROUND_COLOR_PAIRS,
-  getColorPairById,
-  resolveColorPair,
-} from "@src/config/appearance/backgroundColorPairs";
+  BACKGROUND_COLOR_PRESETS,
+  getBackgroundColorPresetById,
+  resolveBackgroundColorPreset,
+} from "@src/config/appearance/backgroundColors";
 import {
   APPEARANCE_MODE_OPTIONS,
   type AppearanceMode,
@@ -61,7 +61,7 @@ export interface UseBackgroundSettingsReturn {
   // Handlers
   handleBack: () => void;
   handleImageSelect: (imageUrl: string, imageId?: string) => void;
-  handleColorSelect: (pairId: string) => void;
+  handleColorSelect: (presetId: string) => void;
   handleAnimationSelect: (animationId: string) => void;
   handleAnimationClear: () => void;
   handleSelectCustomPaletteHex: (hex: string) => void;
@@ -216,10 +216,10 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
 
   useEffect(() => {
     if (!config.backgroundColorId) return;
-    const pair = getColorPairById(config.backgroundColorId);
-    if (!pair) return;
-    prewarmColor(resolveColorPair(pair));
-  }, [config.backgroundColorId, globalThemeId]);
+    const preset = getBackgroundColorPresetById(config.backgroundColorId);
+    if (!preset) return;
+    prewarmColor(resolveBackgroundColorPreset(preset));
+  }, [config.backgroundColorId]);
 
   // Undo/redo for config changes (Ctrl+Z / Cmd+Z)
   const undoStack = useUndoStackWithRestore<BackgroundConfig>({
@@ -265,15 +265,15 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
   );
 
   const handleColorSelect = useCallback(
-    (pairId: string) => {
-      const pair = getColorPairById(pairId);
-      if (!pair) return;
+    (presetId: string) => {
+      const preset = getBackgroundColorPresetById(presetId);
+      if (!preset) return;
       setConfigWithUndo({
         ...config,
         imageUrl: "",
         selectedImageId: undefined,
-        backgroundColor: undefined,
-        backgroundColorId: pair.id,
+        backgroundColor: resolveBackgroundColorPreset(preset),
+        backgroundColorId: preset.id,
         glass: undefined,
       });
     },
@@ -372,14 +372,14 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
       };
 
       if (removingActive) {
-        const firstPair = BACKGROUND_COLOR_PAIRS[0];
-        if (firstPair) {
+        const firstPreset = BACKGROUND_COLOR_PRESETS[0];
+        if (firstPreset) {
           nextConfig = {
             ...nextConfig,
             imageUrl: "",
             selectedImageId: undefined,
-            backgroundColor: undefined,
-            backgroundColorId: firstPair.id,
+            backgroundColor: resolveBackgroundColorPreset(firstPreset),
+            backgroundColorId: firstPreset.id,
             glass: undefined,
           };
         }

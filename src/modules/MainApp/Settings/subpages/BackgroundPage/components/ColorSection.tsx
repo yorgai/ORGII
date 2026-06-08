@@ -8,7 +8,7 @@ import { Plus, X } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
-import { BACKGROUND_COLOR_PAIRS } from "@src/config/appearance/backgroundColorPairs";
+import { BACKGROUND_COLOR_PRESETS } from "@src/config/appearance/backgroundColors";
 
 import { MAX_CUSTOM_BACKGROUND_COLORS } from "../config";
 import type { BackgroundConfig } from "../types";
@@ -26,7 +26,7 @@ const SWATCH_SELECTED =
 interface ColorSectionProps {
   config: BackgroundConfig;
   translationNamespace: string;
-  onColorSelect: (pairId: string) => void;
+  onColorSelect: (presetId: string) => void;
   onSelectCustomHex: (hex: string) => void;
   onAddCustomHex: (hex: string) => void;
   onRemoveCustomHex: (hex: string, event: React.MouseEvent) => void;
@@ -62,17 +62,17 @@ export const ColorSection: React.FC<ColorSectionProps> = ({
   return (
     <SectionRow label={t("background.colors")} layout="vertical">
       <div className="flex flex-wrap gap-2">
-        {BACKGROUND_COLOR_PAIRS.map((pair) => {
-          const isSelected = config.backgroundColorId === pair.id;
+        {BACKGROUND_COLOR_PRESETS.map((preset) => {
+          const isSelected = config.backgroundColorId === preset.id;
 
           return (
             <button
-              key={pair.id}
+              key={preset.id}
               type="button"
-              title={pair.description}
+              title={preset.description}
               className={`${SWATCH_BASE} ${isSelected ? SWATCH_SELECTED : SWATCH_IDLE}`}
-              style={{ backgroundColor: `var(${pair.cssVar})` }}
-              onClick={() => onColorSelect(pair.id)}
+              style={{ backgroundColor: `var(${preset.cssVar})` }}
+              onClick={() => onColorSelect(preset.id)}
             />
           );
         })}

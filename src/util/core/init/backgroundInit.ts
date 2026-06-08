@@ -33,7 +33,7 @@ interface BackgroundConfig {
   blurAmount?: number;
   customImages?: string[];
   adaptiveColors?: boolean;
-  /** Preset color pair id (matches `BackgroundConfig` in uiAtom). */
+  /** Preset color ID (matches `BackgroundConfig` in uiAtom). */
   backgroundColorId?: string;
   backgroundColor?: string;
   animation?: string;
@@ -139,7 +139,7 @@ export const initBackgroundImage = async (): Promise<void> => {
 
     const config: BackgroundConfig = JSON.parse(storedConfig);
 
-    // If the user is on a solid color (preset pair or custom hex), there is
+    // If the user is on a solid color (preset or custom hex), there is
     // no image to preload — the color paints synchronously from the atom.
     if (config.backgroundColorId || config.backgroundColor) {
       return;

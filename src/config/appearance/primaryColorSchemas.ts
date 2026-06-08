@@ -1,22 +1,25 @@
 /**
- * Pregenerated primary ramps for each background color-pair preset.
+ * Pregenerated primary ramps for each background color preset.
  *
- * Keys mirror `BACKGROUND_COLOR_PAIRS[].id`. Values reference the same objects
+ * Keys mirror `BACKGROUND_COLOR_PRESETS[].id`. Values reference the same objects
  * as `PRIMARY_COLOR_PALETTES` (shared memory). Use for "accent follows
  * background" without sampling hex or images at runtime.
  */
-import { BACKGROUND_COLOR_PAIRS } from "./backgroundColorPairs";
+import { BACKGROUND_COLOR_PRESETS } from "./backgroundColors";
 import {
   PRIMARY_COLOR_PALETTES,
   type PrimaryColorSchema,
 } from "./primaryColors";
 
-type ColorPairId = (typeof BACKGROUND_COLOR_PAIRS)[number]["id"];
+type BackgroundColorPresetId = (typeof BACKGROUND_COLOR_PRESETS)[number]["id"];
 
 type NonBluePreset = keyof typeof PRIMARY_COLOR_PALETTES;
 
-/** Curated preset per pair (semantic match to the pair name / hue). */
-const BACKGROUND_PAIR_TO_PRESET: Record<ColorPairId, NonBluePreset> = {
+/** Curated primary preset per background color name / hue. */
+const BACKGROUND_COLOR_TO_PRESET: Record<
+  BackgroundColorPresetId,
+  NonBluePreset
+> = {
   classic: "mono",
   graphite: "mono",
   slate: "teal",
@@ -38,26 +41,33 @@ const BACKGROUND_PAIR_TO_PRESET: Record<ColorPairId, NonBluePreset> = {
   coffee: "orange",
 };
 
-function buildPairSchemas(): Record<ColorPairId, PrimaryColorSchema> {
-  const out = {} as Record<ColorPairId, PrimaryColorSchema>;
-  for (const key of Object.keys(BACKGROUND_PAIR_TO_PRESET) as ColorPairId[]) {
-    const preset = BACKGROUND_PAIR_TO_PRESET[key];
+function buildBackgroundColorSchemas(): Record<
+  BackgroundColorPresetId,
+  PrimaryColorSchema
+> {
+  const out = {} as Record<BackgroundColorPresetId, PrimaryColorSchema>;
+  for (const key of Object.keys(
+    BACKGROUND_COLOR_TO_PRESET
+  ) as BackgroundColorPresetId[]) {
+    const preset = BACKGROUND_COLOR_TO_PRESET[key];
     out[key] = PRIMARY_COLOR_PALETTES[preset];
   }
   return out;
 }
 
-/** Full `--primary-*` schema for every bundled background color pair id. */
-export const PRIMARY_SCHEMA_BY_BACKGROUND_PAIR_ID: Record<
-  ColorPairId,
+/** Full `--primary-*` schema for every bundled background color ID. */
+export const PRIMARY_SCHEMA_BY_BACKGROUND_COLOR_ID: Record<
+  BackgroundColorPresetId,
   PrimaryColorSchema
-> = buildPairSchemas();
+> = buildBackgroundColorSchemas();
 
-export function getPrimarySchemaForBackgroundPairId(
-  pairId: string | undefined
+export function getPrimarySchemaForBackgroundColorId(
+  colorId: string | undefined
 ): PrimaryColorSchema | null {
-  if (!pairId || !(pairId in PRIMARY_SCHEMA_BY_BACKGROUND_PAIR_ID)) {
+  if (!colorId || !(colorId in PRIMARY_SCHEMA_BY_BACKGROUND_COLOR_ID)) {
     return null;
   }
-  return PRIMARY_SCHEMA_BY_BACKGROUND_PAIR_ID[pairId as ColorPairId];
+  return PRIMARY_SCHEMA_BY_BACKGROUND_COLOR_ID[
+    colorId as BackgroundColorPresetId
+  ];
 }

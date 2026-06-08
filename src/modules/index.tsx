@@ -17,7 +17,6 @@
 import { registerAppActions } from "@/src/ActionSystem/registerAppActions";
 import { useAtomValue, useSetAtom } from "jotai";
 import React, {
-  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -27,10 +26,6 @@ import React, {
 } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
-import {
-  getColorPairById,
-  resolveColorPair,
-} from "@src/config/appearance/backgroundColorPairs";
 import { useRouteViewMode } from "@src/config/routeViewModeConfig";
 import { ROUTES } from "@src/config/routes";
 import { BrowserProvider, TerminalProvider } from "@src/contexts/workstation";
@@ -40,10 +35,10 @@ import { useBackgroundImage } from "@src/hooks/theme/useBackgroundImage";
 import { useOpenUrlInBrowser } from "@src/hooks/workStation/browser/useOpenUrlInBrowser";
 import { useUrlPreviewEvents } from "@src/hooks/workStation/tabs";
 import { useNarrowChatFocus } from "@src/hooks/workStation/useNarrowChatFocus";
+import WorkStationPage from "@src/modules/WorkStation";
 import { useGlobalBrowserWebviewLayering } from "@src/modules/WorkStation/Browser/hooks";
 import { useOSAgentIDEActions } from "@src/modules/WorkStation/Browser/hooks/osagent";
 import { SharedBrowserApp } from "@src/modules/WorkStation/Browser/shared";
-import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import {
   preloadMainAppRoutes,
   preloadWingmanWindows,
@@ -58,11 +53,7 @@ import {
   TUTORIALS_OPEN_EVENT,
   TutorialsModal,
 } from "@src/scaffold/Tutorials";
-import {
-  activeColorPairIdAtom,
-  globalThemeIdAtom,
-  resolvedBackgroundConfigAtom,
-} from "@src/store";
+import { resolvedBackgroundConfigAtom } from "@src/store";
 import { useSyncStatusBridge } from "@src/store/sync";
 import {
   type ChatPanelMode,
@@ -103,9 +94,6 @@ import {
 } from "./shared/layouts/viewContainerTokens";
 import { useWorkStationPipelineBridge } from "./useWorkStationPipelineBridge";
 
-// Lazy load persistent views for code splitting
-const WorkStationPage = React.lazy(() => import("./WorkStation"));
-
 /**
  * Main Orgii Component
  *
@@ -133,16 +121,12 @@ const AppShell = () => {
   const { isAuthenticated } = useServiceAuthState();
 
   const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
-  const activeColorPairId = useAtomValue(activeColorPairIdAtom);
-  const globalThemeId = useAtomValue(globalThemeIdAtom);
   const currentBackgroundImage = useBackgroundImage();
 
   useEffect(() => {
-    if (!activeColorPairId) return;
-    const pair = getColorPairById(activeColorPairId);
-    if (!pair) return;
-    prewarmColor(resolveColorPair(pair));
-  }, [activeColorPairId, globalThemeId]);
+    if (!backgroundConfig.backgroundColor) return;
+    prewarmColor(backgroundConfig.backgroundColor);
+  }, [backgroundConfig.backgroundColor]);
 
   const viewMode = useRouteViewMode();
 
@@ -490,16 +474,14 @@ const AppShell = () => {
                       : undefined
                   }
                 >
-                  <Suspense fallback={<Placeholder variant="loading" />}>
-                    <WorkStationPage
-                      isActive={isWorkStationViewActive}
-                      chatPanelFocused={effectiveChatFocus}
-                      isFullMode={
-                        globalLayoutMethod === "full" ||
-                        globalLayoutMethod === "compact"
-                      }
-                    />
-                  </Suspense>
+                  <WorkStationPage
+                    isActive={isWorkStationViewActive}
+                    chatPanelFocused={effectiveChatFocus}
+                    isFullMode={
+                      globalLayoutMethod === "full" ||
+                      globalLayoutMethod === "compact"
+                    }
+                  />
                 </div>
               )}
 

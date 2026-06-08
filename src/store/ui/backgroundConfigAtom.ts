@@ -3,7 +3,7 @@
  *
  * Manages the app's wallpaper / background state:
  *   - Image (bundled presets + user uploads)
- *   - Solid color (preset pairs + custom hex)
+ *   - Solid color (preset IDs + custom hex)
  *   - Animation type
  *   - Glass thickness
  *   - Adaptive colors
@@ -13,9 +13,9 @@
 import { atom } from "jotai";
 
 import {
-  getColorPairById,
-  resolveColorPair,
-} from "@src/config/appearance/backgroundColorPairs";
+  getBackgroundColorPresetById,
+  resolveBackgroundColorPreset,
+} from "@src/config/appearance/backgroundColors";
 import {
   DEFAULT_BUNDLED_BACKGROUND_IMAGE,
   sanitizeCustomColorsArray,
@@ -33,17 +33,11 @@ export interface BackgroundConfig {
   adaptiveColors?: boolean;
   /** DIY solid hex colors (#rrggbb), shown after presets */
   customColors?: string[];
-  /**
-   * Applied CSS color. For preset pairs this is a theme-aware desktop
-   * background token (`var(--desktop-bg-*)`); for custom colors this is the
-   * user's exact hex value.
-   */
+  /** Applied CSS color. Presets use app background tokens; custom colors use literal values. */
   backgroundColor?: string;
   /**
-   * Stable ID of the active preset desktop background pair (e.g. "classic",
-   * "ocean"). When set, `resolvedBackgroundConfigAtom` derives
-   * `backgroundColor` from the active pair token. Absent for custom colors and
-   * image backgrounds.
+   * Stable ID of the active preset desktop background color (e.g. "classic",
+   * "ocean"). Absent for custom colors and image backgrounds.
    */
   backgroundColorId?: string;
   animation?: string;
@@ -60,7 +54,7 @@ const BACKGROUND_CONFIG_KEY = "orgii_background_config";
 
 const VALID_GLASS_LEVELS = new Set(["regular", "medium", "thick"]);
 
-const DEFAULT_BACKGROUND_PAIR_ID = "graphite";
+const DEFAULT_BACKGROUND_COLOR_ID = "graphite";
 
 const DEFAULT_BACKGROUND_CONFIG: BackgroundConfig = {
   imageUrl: DEFAULT_BUNDLED_BACKGROUND_IMAGE,
@@ -68,7 +62,7 @@ const DEFAULT_BACKGROUND_CONFIG: BackgroundConfig = {
   customImages: [],
   customColors: [],
   adaptiveColors: true,
-  backgroundColorId: DEFAULT_BACKGROUND_PAIR_ID,
+  backgroundColorId: DEFAULT_BACKGROUND_COLOR_ID,
 };
 
 function getStoredBackgroundConfig(): BackgroundConfig {
@@ -113,31 +107,19 @@ export const backgroundConfigPersistAtom = atom(
 );
 
 /**
- * Resolved background config: when a paired preset is active, swaps the
- * `backgroundColor` to the active public-theme CSS variable for that semantic
- * slot. Falls through to the raw config for custom colors and image
- * backgrounds.
+ * Resolved background config: when a preset ID is active, ensures
+ * `backgroundColor` points at the preset's app background CSS slot. Theme CSS
+ * owns the slot values, so the selected ID follows Light / Dark / High Contrast.
  */
 export const resolvedBackgroundConfigAtom = atom<BackgroundConfig>((get) => {
   const config = get(backgroundConfigAtom);
-  const pairId = config.backgroundColorId;
-  if (!pairId) return config;
-  const pair = getColorPairById(pairId);
-  if (!pair) return config;
+  const presetId = config.backgroundColorId;
+  if (!presetId) return config;
+  const preset = getBackgroundColorPresetById(presetId);
+  if (!preset) return config;
   return {
     ...config,
-    backgroundColor: resolveColorPair(pair),
+    backgroundColor: resolveBackgroundColorPreset(preset),
   };
 });
 resolvedBackgroundConfigAtom.debugLabel = "resolvedBackgroundConfigAtom";
-
-/**
- * Narrow selector for the active color-pair id. Components that only need to
- * react to preset *changes* (e.g. the glass-material prewarm effect) should
- * read this atom instead of the full config to avoid re-running on every
- * unrelated tweak (blur amount, animation speed, etc.).
- */
-export const activeColorPairIdAtom = atom(
-  (get) => get(backgroundConfigAtom).backgroundColorId
-);
-activeColorPairIdAtom.debugLabel = "activeColorPairIdAtom";

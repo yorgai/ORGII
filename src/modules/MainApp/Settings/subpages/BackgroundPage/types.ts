@@ -2,7 +2,7 @@
  * Background Page Types
  */
 
-export type { ColorPair } from "@src/config/appearance/backgroundColorPairs";
+export type { BackgroundColorPreset } from "@src/config/appearance/backgroundColors";
 
 export type ThemeMode = "dark" | "light" | "both";
 
@@ -23,7 +23,7 @@ export type GlassLevel = "regular" | "medium" | "thick";
 
 export interface BackgroundConfig {
   backgroundColor?: string;
-  /** ID of the active paired color preset (e.g. "classic"); see ColorPair. */
+  /** ID of the active color preset (e.g. "classic"). */
   backgroundColorId?: string;
   imageUrl?: string;
   selectedImageId?: string;

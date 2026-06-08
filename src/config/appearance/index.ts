@@ -18,6 +18,6 @@ export {
 } from "./primaryColors";
 
 export {
-  PRIMARY_SCHEMA_BY_BACKGROUND_PAIR_ID,
-  getPrimarySchemaForBackgroundPairId,
+  PRIMARY_SCHEMA_BY_BACKGROUND_COLOR_ID,
+  getPrimarySchemaForBackgroundColorId,
 } from "./primaryColorSchemas";
