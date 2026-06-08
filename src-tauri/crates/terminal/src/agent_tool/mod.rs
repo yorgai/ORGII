@@ -47,6 +47,36 @@ const DEFAULT_AGENT_ROWS: u16 = 40;
 const DEFAULT_AGENT_COLS: u16 = 120;
 const AGENT_OUTPUT_TAP_CAPACITY: usize = 8192;
 
+/// npm injects these into any process it spawns (e.g. when ORGII is launched via
+/// `npm run tauri:dev`). They leak into PTY shells through env inheritance and
+/// trigger spurious nvm warnings ("nvm is not compatible with npm_config_prefix").
+/// Strip them so the embedded shell sees the same env a user's interactive
+/// terminal would.
+const NPM_LEAKED_ENV_VARS: &[&str] = &[
+    "npm_config_prefix",
+    "npm_config_globalconfig",
+    "npm_config_global_prefix",
+    "npm_config_local_prefix",
+    "npm_config_userconfig",
+    "npm_config_cache",
+    "npm_config_node_gyp",
+    "npm_config_init_module",
+    "npm_config_legacy_peer_deps",
+    "npm_config_loglevel",
+    "npm_config_noproxy",
+    "npm_config_npm_version",
+    "npm_config_user_agent",
+    "npm_command",
+    "npm_execpath",
+    "npm_lifecycle_event",
+    "npm_lifecycle_script",
+    "npm_node_execpath",
+    "npm_package_json",
+    "npm_package_name",
+    "npm_package_version",
+    "INIT_CWD",
+];
+
 /// When unacknowledged bytes exceed this, pause the reader loop.
 const HIGH_WATERMARK: usize = 100_000;
 /// Resume reading when unacknowledged bytes drop below this.
@@ -169,6 +199,14 @@ pub async fn create_session(params: CreateSessionParams) -> Result<(), String> {
                 builder.arg(arg);
             }
         }
+
+        // Strip npm-injected env vars that would otherwise leak into the
+        // interactive shell when ORGII is launched via `npm run tauri:dev`.
+        // These are launch-time artifacts of the npm CLI, not user intent.
+        for var in NPM_LEAKED_ENV_VARS {
+            builder.env_remove(var);
+        }
+
         builder
     };
 

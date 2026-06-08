@@ -316,6 +316,20 @@ function killDescendants(pid) {
   }
 }
 
+// npm injects npm_config_* / npm_* / INIT_CWD into any script it runs. These
+// leak all the way down into the ORGII Rust process and its embedded PTY
+// shells, where nvm complains ("nvm is not compatible with npm_config_prefix").
+// Scrub them before handing env off to the tauri/orgii child.
+function cleanChildEnv() {
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("npm_") || key === "INIT_CWD") {
+      delete env[key];
+    }
+  }
+  return env;
+}
+
 function startTauriDev(features) {
   const tauriBin = path.join(rootDir, "node_modules", ".bin", "tauri");
   const tauriProcess = spawn(
@@ -324,6 +338,7 @@ function startTauriDev(features) {
     {
       stdio: ["inherit", "pipe", "pipe"],
       cwd: rootDir,
+      env: cleanChildEnv(),
     }
   );
 
