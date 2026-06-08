@@ -34,3 +34,30 @@ fn test_hash_consistency() {
         IndexManager::hash_repo_path(path3)
     );
 }
+
+#[test]
+fn test_index_manager_normalizes_equivalent_repo_paths() {
+    let manager = IndexManager::new();
+
+    let handle1 = manager.get_or_index("/Users/test/repo", None).unwrap();
+    let handle2 = manager.get_or_index("/Users/test/repo/./", None).unwrap();
+
+    assert_eq!(handle1.repo_hash, handle2.repo_hash);
+    assert_eq!(handle1.repo_path, "/Users/test/repo");
+
+    let indexes = manager.indexes.lock().unwrap();
+    assert_eq!(indexes.len(), 1);
+}
+
+#[test]
+fn test_index_manager_keeps_same_basename_repos_distinct() {
+    let manager = IndexManager::new();
+
+    let handle1 = manager.get_or_index("/tmp/workspace-a/app", None).unwrap();
+    let handle2 = manager.get_or_index("/tmp/workspace-b/app", None).unwrap();
+
+    assert_ne!(handle1.repo_hash, handle2.repo_hash);
+
+    let indexes = manager.indexes.lock().unwrap();
+    assert_eq!(indexes.len(), 2);
+}

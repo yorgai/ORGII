@@ -14,6 +14,7 @@ import {
 import React from "react";
 
 import FileTypeIcon from "@src/components/FileTypeIcon";
+import { formatRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
 
 import {
   BlockOutput,
@@ -216,17 +217,15 @@ const SearchFilesOutput: React.FC<{ files: string[]; repoPath?: string }> = ({
     layout="body"
     items={files}
     renderItem={(filePath) => {
-      const displayPath =
-        repoPath && filePath.startsWith(repoPath)
-          ? filePath.substring(repoPath.length + 1)
-          : filePath;
+      const display = formatRepoPathForDisplay({ path: filePath, repoPath });
+      const displayPath = display.displayPath || filePath;
       const parts = displayPath.split("/");
       const fileName = parts.pop() || displayPath;
       const dir = parts.length > 0 ? parts.join("/") + "/" : "";
 
       return (
         <ComposerStackListRow
-          title={filePath}
+          title={display.title || filePath}
           leading={<FileTypeIcon fileName={fileName} size="small" />}
           primary={fileName}
           secondary={dir || undefined}

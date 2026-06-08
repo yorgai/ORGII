@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { formatRepoPathForDisplay } from "./repoPathDisplay";
+import {
+  formatRepoPathForDisplay,
+  formatToolTargetPath,
+  pickToolArgString,
+} from "./repoPathDisplay";
 
 describe("formatRepoPathForDisplay", () => {
   it("formats absolute paths relative to a disambiguating root label", () => {
@@ -45,5 +49,38 @@ describe("formatRepoPathForDisplay", () => {
     });
 
     expect(display.displayPath).toBe("work/repo/src/index.ts");
+  });
+
+  it("extracts nested tool arguments consistently", () => {
+    expect(
+      pickToolArgString(
+        { tool_input: { repo_path: " /tmp/workspace-a/app " } },
+        "repo_path",
+        "repoPath"
+      )
+    ).toBe("/tmp/workspace-a/app");
+  });
+
+  it("formats tool targets with explicit repo path before generic path", () => {
+    expect(
+      formatToolTargetPath({
+        args: {
+          repo_path: "/tmp/workspace-b/app",
+          path: "/tmp/workspace-a/app/src/index.ts",
+        },
+        repoPath: "/tmp/workspace-a/app",
+        pathKeys: ["path"],
+      })
+    ).toBe("workspace-b/app");
+  });
+
+  it("falls back to current repo when tool args omit a target", () => {
+    expect(
+      formatToolTargetPath({
+        args: { pattern: "README" },
+        repoPath: "/tmp/workspace-a/app",
+        pathKeys: ["path"],
+      })
+    ).toBe("workspace-a/app");
   });
 });

@@ -507,7 +507,14 @@ export interface E2EHelpers {
   ) => Promise<Result<{ session: Json | null; diagnostics?: Json }>>;
   seedChatEvents: (
     sessionId: string,
-    events: Json[]
+    events: Json[],
+    options?: {
+      chatPanelMaximized?: boolean;
+      chatWidth?: number;
+      currentEventId?: string;
+      stationMode?: "my-station" | "agent-station";
+      selectedApp?: "CODE_EDITOR";
+    }
   ) => Promise<Result<{ eventCount: number; chatEventCount: number }>>;
   seedModeSwitchSession: (input: {
     sessionId?: string;

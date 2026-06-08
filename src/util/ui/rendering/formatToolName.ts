@@ -1,4 +1,7 @@
-import { compactRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
+import {
+  compactRepoPathForDisplay,
+  pickToolArgString,
+} from "@src/util/file/repoPathDisplay";
 
 /**
  * Fallback formatter for unregistered tools only.
@@ -24,31 +27,8 @@ export function formatToolArg(
 ): string | undefined {
   if (!args || typeof args !== "object") return undefined;
 
-  const nestedArgs = (value: unknown): Record<string, unknown> | undefined => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
-      return undefined;
-    }
-    return value as Record<string, unknown>;
-  };
-
-  const argSources = [
-    args,
-    nestedArgs(args.input),
-    nestedArgs(args.params),
-    nestedArgs(args.arguments),
-    nestedArgs(args.tool_input),
-    nestedArgs(args.toolInput),
-  ].filter((source): source is Record<string, unknown> => Boolean(source));
-
-  const pickString = (...keys: string[]): string | undefined => {
-    for (const source of argSources) {
-      for (const key of keys) {
-        const v = source[key];
-        if (typeof v === "string" && v.trim().length > 0) return v.trim();
-      }
-    }
-    return undefined;
-  };
+  const pickString = (...keys: string[]): string | undefined =>
+    pickToolArgString(args, ...keys);
 
   const repoPath = pickString("repo_path", "repoPath");
   const cwd = pickString(

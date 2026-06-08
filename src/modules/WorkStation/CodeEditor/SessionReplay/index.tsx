@@ -99,6 +99,7 @@ const SessionReplayIDEComponent: React.FC<SimulatorIDEProps> = ({
   } = useCodeEditorReplay({
     currentEventId: eventId,
     currentEventType,
+    currentEvent: sessionEvent,
     currentFileData,
     currentShellData,
   });

@@ -7,7 +7,7 @@
 //! - `test_tool_schemas` (tool-schema introspection)
 //! - `test_sde_mode_switch_*` / `test_sde_plan_approval_*`
 //! - `test_sde_permission_*` / `test_sde_question_*`
-//! - `test_sde_cleanup` / `test_em_state_get` / `test_turn_summary_get`
+//! - `test_sde_cleanup` / `test_em_state_get`
 //! - `test_sde_todos_*` / `test_sde_seed_orphan` / `test_sde_transcript_get`
 //!
 //! Only compiled in dev builds; `create_routes` in `api/agent/mod.rs`
@@ -1539,37 +1539,6 @@ pub async fn test_em_state_get(
             "turns_since_extraction": em_snap.turns_since_extraction,
             "pending_messages_len": em_snap.pending_messages_len,
         },
-    }))
-}
-
-pub async fn test_turn_summary_get(
-    axum::extract::Path(session_id): axum::extract::Path<String>,
-) -> Json<serde_json::Value> {
-    use tauri::Manager;
-
-    let handle = match crate::api::get_app_handle() {
-        Some(h) => h,
-        None => {
-            return Json(serde_json::json!({ "error": "AppHandle not initialized" }));
-        }
-    };
-    let state = handle.state::<agent_core::state::AgentAppState>();
-    let session = match state.get_session(&session_id).await {
-        Some(s) => s,
-        None => {
-            return Json(serde_json::json!({
-                "error": "session not found",
-                "session_id": session_id,
-            }));
-        }
-    };
-
-    let summary = session.last_turn_summary.lock().await.clone();
-
-    Json(serde_json::json!({
-        "ok": true,
-        "session_id": session_id,
-        "summary": summary,
     }))
 }
 

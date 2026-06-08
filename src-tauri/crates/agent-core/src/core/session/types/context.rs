@@ -188,7 +188,7 @@ pub struct ProcessingResult {
     /// Whether the response was truncated.
     #[serde(default)]
     pub truncated: bool,
-    /// Turn completion summary (generated for long turns).
+    /// Deprecated legacy turn completion summary. New Rust turns no longer populate this.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub turn_summary: Option<String>,
     /// Signals that compact-fork took effect during this call.

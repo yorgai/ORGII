@@ -656,6 +656,73 @@ async function assertMultiRepoGrepTargetsExplicitRepoPath() {
   }
 }
 
+async function assertMultiRepoSearchTargetRendered() {
+  const sessionId = `e2e-render-multirepo-search-target-${Date.now()}`;
+  const baseTime = Date.now();
+  const repoA = `/tmp/orgii-e2e-search-target-a-${RUN_ID}/app`;
+  const repoB = `/tmp/orgii-e2e-search-target-b-${RUN_ID}/app`;
+  const expectedRepoB = `in orgii-e2e-search-target-b-${RUN_ID}/app`;
+  const events = [
+    {
+      ...withCreatedAt(makeOrderUserEvent("multi-search-target-user", "Search sibling repo"), baseTime),
+      sessionId,
+    },
+    {
+      id: "multi-search-target-tool",
+      chunk_id: "multi-search-target-tool",
+      sessionId,
+      createdAt: new Date(baseTime + 1_000).toISOString(),
+      functionName: "code_search",
+      uiCanonical: "code_search",
+      actionType: "tool_call",
+      args: { action: "grep", pattern: "sharedSymbol", repo_path: repoB, path: `${repoA}/src/index.ts` },
+      result: { content: `${repoB}/src/index.ts:1:sharedSymbol`, observation: "matched", is_delta: false },
+      repoPath: repoA,
+      source: "assistant",
+      displayText: "Search sharedSymbol",
+      displayStatus: "completed",
+      displayVariant: "tool_call",
+      activityStatus: "agent",
+      isDelta: false,
+    },
+    {
+      ...withCreatedAt(
+        makeOrderAssistantEvent("multi-search-target-assistant", "message", "Search complete"),
+        baseTime + 2_000
+      ),
+      sessionId,
+    },
+  ];
+
+  const seed = await invokeE2E("seedChatEvents", sessionId, events);
+  if (!seed || seed.ok !== true) {
+    throw new Error(`seedChatEvents failed for multi-repo search target: ${seed?.error ?? "unknown"}`);
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const state = await execJS(`
+        const history = document.querySelector('[data-testid="chat-message-list"]');
+        const body = history ? (history.innerText || "") : (document.body.innerText || "");
+        return {
+          body,
+          hasPattern: body.includes("sharedSymbol"),
+          hasTarget: body.includes(${JSON.stringify(expectedRepoB)}),
+          hasWrongTarget: body.includes(${JSON.stringify(`in orgii-e2e-search-target-a-${RUN_ID}/app`)}),
+          leakedAbsoluteRepo: body.includes(${JSON.stringify(repoB)}),
+        };
+      `);
+      return state.hasPattern && state.hasTarget && !state.hasWrongTarget && !state.leakedAbsoluteRepo;
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `multi-repo search target did not render explicit repo_path compactly: ${JSON.stringify(
+        await execJS(`return { body: (document.body.innerText || "").slice(0, 5000) };`)
+      )}`,
+    }
+  );
+}
+
 async function assertMultiRepoRenderedPathContext() {
   const sessionId = `e2e-render-multirepo-context-${Date.now()}`;
   const baseTime = Date.now();
@@ -1041,6 +1108,15 @@ describe("Core chat rendering UI", () => {
     }
 
     await assertMultiRepoGrepTargetsExplicitRepoPath();
+  });
+
+  it("renders explicit multi-repo search targets with root-qualified labels", async function () {
+    if (!shouldRunScenario("multi-repo-search-target")) {
+      this.skip();
+      return;
+    }
+
+    await assertMultiRepoSearchTargetRendered();
   });
 
   it("renders repo-disambiguated paths for multi-repo tool rows", async function () {

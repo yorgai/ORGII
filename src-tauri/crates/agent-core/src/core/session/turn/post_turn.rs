@@ -1,10 +1,9 @@
 //! Post-turn background work.
 //!
 //! Fire-and-forget tasks that run after the user has received `agent:complete`:
-//! session-memory extraction, workspace-memory extraction, auto-dream consolidation,
-//! and long-turn summarization. Each helper is a thin wrapper around a
-//! `tokio::spawn` block — kept out of `processor::process` so the core turn
-//! orchestration stays readable.
+//! session-memory extraction, workspace-memory extraction, and auto-dream consolidation.
+//! Each helper is a thin wrapper around a `tokio::spawn` block — kept out of
+//! `processor::process` so the core turn orchestration stays readable.
 //!
 //! All post-turn work is gated by `should_run_post_turn_work` on the caller
 //! side; cancelled turns skip every branch (never do background LLM work for
@@ -365,62 +364,6 @@ pub(super) async fn spawn_auto_dream(input: AutoDreamInput<'_>) {
         };
         if let Err(err) = auto_dream::run_consolidation(&mut state, params).await {
             warn!("[auto_dream] Failed for session {}: {}", sid, err);
-        }
-    });
-}
-
-// ── Turn completion summary (step 10) ───────────────────────────────
-
-/// Input bundle for [`spawn_turn_summary`].
-pub(super) struct TurnSummaryInput<'a> {
-    pub session_id: &'a str,
-    pub turn_id: &'a str,
-    pub created_at: &'a str,
-    pub messages: Vec<Value>,
-    pub fork_provider: ForkProviderSpec,
-    pub tool_calls_count: u32,
-    pub wall_time_secs: u64,
-    pub last_turn_summary: Arc<Mutex<Option<String>>>,
-}
-
-/// Spawn the long-turn digest generator. Fire-and-forget: the summary is
-/// broadcast via `agent:turn_summary`, not returned in `ProcessingResult`.
-pub(super) fn spawn_turn_summary(input: TurnSummaryInput<'_>) {
-    let TurnSummaryInput {
-        session_id,
-        turn_id,
-        created_at,
-        messages,
-        fork_provider,
-        tool_calls_count,
-        wall_time_secs,
-        last_turn_summary,
-    } = input;
-
-    let sid = session_id.to_string();
-    let turn_id = turn_id.to_string();
-    let created_at = created_at.to_string();
-    tokio::spawn(async move {
-        let provider = match fresh_fork_provider(&fork_provider).await {
-            Ok(provider) => provider,
-            Err(err) => {
-                warn!("[turn_summary] Failed for session {}: {}", sid, err);
-                return;
-            }
-        };
-        if let Some(text) = super::summary::generate_and_broadcast(
-            &messages,
-            provider.as_ref(),
-            &fork_provider.model,
-            &sid,
-            &turn_id,
-            &created_at,
-            tool_calls_count,
-            wall_time_secs,
-        )
-        .await
-        {
-            *last_turn_summary.lock().await = Some(text);
         }
     });
 }

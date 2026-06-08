@@ -305,6 +305,7 @@ export interface SimulatorIDEProps {
 export interface UseSimulatorIDEOptions {
   currentEventId: string;
   currentEventType: IDEEventType;
+  currentEvent?: SessionEvent | null;
   currentFileData?: CurrentFileData;
   currentShellData?: CurrentShellData;
 }

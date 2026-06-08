@@ -10,6 +10,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::Emitter;
@@ -107,7 +108,8 @@ impl IndexManager {
         repo_path: &str,
         app_handle: Option<tauri::AppHandle>,
     ) -> Result<IndexHandle, String> {
-        let repo_hash = Self::hash_repo_path(repo_path);
+        let repo_path = Self::normalize_repo_path(repo_path);
+        let repo_hash = Self::hash_repo_path(&repo_path);
         let mut indexes = self.indexes.lock().unwrap();
 
         // Check if index already exists
@@ -120,7 +122,7 @@ impl IndexManager {
 
         // Create new index entry
         let handle = IndexHandle {
-            repo_path: repo_path.to_string(),
+            repo_path: repo_path.clone(),
             repo_hash: repo_hash.clone(),
             state: IndexState::Pending,
             progress: IndexProgress {
@@ -146,7 +148,7 @@ impl IndexManager {
 
         // Start background indexing
         if let Some(app) = app_handle {
-            self.start_background_indexing(repo_path, app);
+            self.start_background_indexing(&repo_path, app);
         }
 
         Ok(handle)
@@ -159,7 +161,8 @@ impl IndexManager {
         state: IndexState,
         progress: IndexProgress,
     ) -> Result<(), String> {
-        let repo_hash = Self::hash_repo_path(repo_path);
+        let repo_path = Self::normalize_repo_path(repo_path);
+        let repo_hash = Self::hash_repo_path(&repo_path);
         let mut indexes = self.indexes.lock().unwrap();
 
         if let Some(entry) = indexes.get_mut(&repo_hash) {
@@ -175,7 +178,8 @@ impl IndexManager {
     /// Release a reference to an index
     /// When reference count reaches 0, the index may be cached or cleaned up
     pub fn release_index(&self, repo_path: &str) {
-        let repo_hash = Self::hash_repo_path(repo_path);
+        let repo_path = Self::normalize_repo_path(repo_path);
+        let repo_hash = Self::hash_repo_path(&repo_path);
         let mut indexes = self.indexes.lock().unwrap();
 
         if let Some(entry) = indexes.get_mut(&repo_hash) {
@@ -194,7 +198,8 @@ impl IndexManager {
 
     /// Get specific index handle
     pub fn get_index(&self, repo_path: &str) -> Option<IndexHandle> {
-        let repo_hash = Self::hash_repo_path(repo_path);
+        let repo_path = Self::normalize_repo_path(repo_path);
+        let repo_hash = Self::hash_repo_path(&repo_path);
         let indexes = self.indexes.lock().unwrap();
         indexes.get(&repo_hash).map(|entry| entry.handle.clone())
     }
@@ -279,6 +284,23 @@ impl IndexManager {
 
             let _ = app_handle.emit("index_complete", &manager.get_index(&repo_path));
         });
+    }
+
+    fn normalize_repo_path(repo_path: &str) -> String {
+        let path = Path::new(repo_path);
+        let mut normalized = PathBuf::new();
+
+        for component in path.components() {
+            match component {
+                Component::CurDir => {}
+                Component::ParentDir => {
+                    normalized.pop();
+                }
+                other => normalized.push(other.as_os_str()),
+            }
+        }
+
+        normalized.to_string_lossy().replace('\\', "/")
     }
 
     /// Hash repository path to create consistent ID

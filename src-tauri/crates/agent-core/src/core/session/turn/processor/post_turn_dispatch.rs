@@ -9,12 +9,9 @@
 //! 4. **Session memory extraction** — fire-and-forget, 60s timeout.
 //! 5. **Extract memories** — forked extractor agent, fire-and-forget.
 //! 6. **Auto-dream** — periodic memory consolidation, fire-and-forget.
-//! 7. **Long-turn digest** — only if `should_summarize(tool_calls,
-//!    wall_time)`; broadcast via `agent:turn_summary`.
 //!
-//! All four spawns above use [`should_run_post_turn_work`] to skip the
-//! work for cancelled turns (the user explicitly stopped — we don't
-//! want to charge them tokens summarizing a turn they killed).
+//! Post-turn background work uses [`should_run_post_turn_work`] to skip the
+//! work for cancelled turns (the user explicitly stopped).
 
 use tracing::info;
 
@@ -24,7 +21,6 @@ use crate::turn_executor::TurnResult;
 
 use super::super::post_turn as post_turn_jobs;
 use super::super::streaming::{broadcast_agent_complete, AgentCompleteParams};
-use super::super::summary;
 
 /// Inputs for [`UnifiedMessageProcessor::dispatch_post_turn_work`].
 ///
@@ -39,8 +35,6 @@ pub(super) struct PostTurnInputs<'a> {
     pub messages: &'a [serde_json::Value],
     pub result: &'a TurnResult,
     pub tool_calls_count: u32,
-    pub wall_time_secs: u64,
-    pub turn_completed_at: &'a str,
     pub final_turn_state: DialogTurnState,
 }
 
@@ -55,8 +49,6 @@ impl UnifiedMessageProcessor {
             messages,
             result,
             tool_calls_count,
-            wall_time_secs,
-            turn_completed_at,
             final_turn_state,
         } = inputs;
 
@@ -166,25 +158,6 @@ impl UnifiedMessageProcessor {
                 })
                 .await;
             }
-        }
-
-        // 10. Long-turn completion digest (fire-and-forget).
-        //
-        // Broadcast via `agent:turn_summary` (not returned in ProcessingResult)
-        // so the scheduler isn't blocked while the LLM generates it.
-        if final_turn_state == DialogTurnState::Completed
-            && summary::should_summarize(tool_calls_count, wall_time_secs)
-        {
-            post_turn_jobs::spawn_turn_summary(post_turn_jobs::TurnSummaryInput {
-                session_id,
-                turn_id,
-                created_at: turn_completed_at,
-                messages: messages.to_vec(),
-                fork_provider: fork_provider.clone(),
-                tool_calls_count,
-                wall_time_secs,
-                last_turn_summary: self.session.last_turn_summary.clone(),
-            });
         }
     }
 }

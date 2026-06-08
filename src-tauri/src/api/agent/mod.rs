@@ -143,10 +143,6 @@ pub fn create_routes() -> Router {
             get(test::sde::test_em_state_get),
         )
         .route(
-            "/test/turn-summary/{session_id}",
-            get(test::sde::test_turn_summary_get),
-        )
-        .route(
             "/test/learning/reflect/{session_id}",
             post(test::learning::test_learning_reflect),
         )

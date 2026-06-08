@@ -16,10 +16,85 @@ export interface RepoPathDisplayParts {
   title: string;
 }
 
+export type RepoPathArgs = Record<string, unknown> | undefined;
+
+export interface ToolTargetPathInput {
+  args?: RepoPathArgs;
+  repoPath?: string;
+  pathKeys: string[];
+}
+
 const WINDOWS_ABSOLUTE_RE = /^[A-Za-z]:\//;
 
 export function normalizeDisplayPath(path: string | undefined): string {
   return (path ?? "").trim().replace(/\\/g, "/").replace(/\/+/g, "/");
+}
+
+function nestedArgs(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  return value as Record<string, unknown>;
+}
+
+function argSources(args: RepoPathArgs): Record<string, unknown>[] {
+  if (!args || typeof args !== "object") return [];
+  return [
+    args,
+    nestedArgs(args.input),
+    nestedArgs(args.params),
+    nestedArgs(args.arguments),
+    nestedArgs(args.tool_input),
+    nestedArgs(args.toolInput),
+  ].filter((source): source is Record<string, unknown> => Boolean(source));
+}
+
+export function pickToolArgString(
+  args: RepoPathArgs,
+  ...keys: string[]
+): string | undefined {
+  for (const source of argSources(args)) {
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === "string" && value.trim().length > 0) {
+        return value.trim();
+      }
+    }
+  }
+  return undefined;
+}
+
+export function resolveToolTargetPath({
+  args,
+  repoPath,
+  pathKeys,
+}: ToolTargetPathInput): string | undefined {
+  return (
+    pickToolArgString(args, "repo_path", "repoPath") ||
+    pickToolArgString(args, ...pathKeys) ||
+    repoPath ||
+    undefined
+  );
+}
+
+export function formatToolTargetPath(
+  input: ToolTargetPathInput
+): string | undefined {
+  const explicitRepoPath = pickToolArgString(
+    input.args,
+    "repo_path",
+    "repoPath"
+  );
+  const targetPath =
+    explicitRepoPath ||
+    pickToolArgString(input.args, ...input.pathKeys) ||
+    input.repoPath ||
+    undefined;
+  const rootPath = explicitRepoPath || input.repoPath;
+  return targetPath
+    ? formatRepoPathForDisplay({ path: targetPath, repoPath: rootPath })
+        .displayPath
+    : undefined;
 }
 
 function isAbsolutePath(path: string): boolean {

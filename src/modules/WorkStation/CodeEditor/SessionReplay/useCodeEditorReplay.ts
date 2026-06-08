@@ -25,6 +25,7 @@ import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { simulatorEventsAtom } from "@src/engines/SessionCore/derived/simulatorEvents";
 
 import { deriveIDEState, matchesIDEEventRecord } from "./config";
+import { applyLiveOperationOverlay } from "./liveOperationOverlay";
 import {
   resolveSelectedExploreOperation,
   resolveSelectedFileOperation,
@@ -103,6 +104,7 @@ export function useCodeEditorReplay(
   const {
     currentEventId,
     currentEventType,
+    currentEvent,
     currentFileData,
     currentShellData,
   } = options;
@@ -347,69 +349,18 @@ export function useCodeEditorReplay(
   }, [currentShellData, currentEventId]);
 
   // ============================================
-  // Merge Operations with Current
+  // Merge Operations with Live Current Event
   // ============================================
 
-  const allFileOperations = useMemo(() => {
-    const ops = [...derivedState.fileOperations];
-
-    // Add or update current file operation
-    if (currentFileOperation) {
-      // Check both eventId and relatedEventIds (for consolidated entries)
-      const existingIndex = ops.findIndex(
-        (op) =>
-          op.eventId === currentEventId ||
-          op.relatedEventIds?.includes(currentEventId)
-      );
-      if (existingIndex >= 0) {
-        // Update the existing consolidated entry to mark as current
-        ops[existingIndex] = {
-          ...ops[existingIndex],
-          isCurrent: true,
-          // Use content from current operation (if available)
-          content: currentFileOperation.content || ops[existingIndex].content,
-          oldContent:
-            currentFileOperation.oldContent || ops[existingIndex].oldContent,
-          newContent:
-            currentFileOperation.newContent || ops[existingIndex].newContent,
-          diff: currentFileOperation.diff || ops[existingIndex].diff,
-          oldStartLine:
-            currentFileOperation.oldStartLine ||
-            ops[existingIndex].oldStartLine,
-          newStartLine:
-            currentFileOperation.newStartLine ||
-            ops[existingIndex].newStartLine,
-          writeHasBaselineContent:
-            currentFileOperation.writeHasBaselineContent ??
-            ops[existingIndex].writeHasBaselineContent,
-        };
-      } else {
-        ops.push(currentFileOperation);
-      }
-    }
-
-    return ops;
-  }, [derivedState.fileOperations, currentFileOperation, currentEventId]);
-
-  const allShellOperations = useMemo(() => {
-    const ops = [...derivedState.shellOperations];
-
-    // Add or update current shell operation
-    if (currentShellOperation) {
-      const existingIndex = ops.findIndex(
-        (op) => op.eventId === currentEventId
-      );
-      if (existingIndex >= 0) {
-        ops[existingIndex] = currentShellOperation;
-        return ops;
-      } else {
-        // Add at beginning (newest first)
-        return [currentShellOperation, ...ops];
-      }
-    }
-
-    return ops;
-  }, [derivedState.shellOperations, currentShellOperation, currentEventId]);
+  const {
+    fileOperations: allFileOperations,
+    shellOperations: allShellOperations,
+    exploreOperations: allExploreOperations,
+    toolOperations: allToolOperations,
+  } = useMemo(
+    () => applyLiveOperationOverlay(derivedState, currentEvent),
+    [derivedState, currentEvent]
+  );
 
   // ============================================
   // Filter File Operations
@@ -434,9 +385,6 @@ export function useCodeEditorReplay(
 
     return filtered;
   }, [allFileOperations, fileViewMode, fileFilterQuery]);
-
-  const allExploreOperations = derivedState.exploreOperations;
-  const allToolOperations = derivedState.toolOperations;
 
   // ============================================
   // Selected Operations

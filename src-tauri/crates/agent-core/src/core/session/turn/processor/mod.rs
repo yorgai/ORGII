@@ -30,7 +30,6 @@ mod prompt;
 use serde_json::Value;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::time::Instant;
 use tracing::{debug, info, warn};
 
 use crate::core::session::prompt::cache::{RenderedSystemBlockScope, ORGII_SYSTEM_CACHE_SCOPE_KEY};
@@ -383,10 +382,6 @@ impl UnifiedMessageProcessor {
             .clone()
             .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
-        // 0a. Clear stale turn summary from previous turn so readers
-        //     never mistake an old summary for the current turn's.
-        *self.session.last_turn_summary.lock().await = None;
-
         // 0b. Restore persisted SM state on first turn (lazy init)
         if self.sm_config.enabled {
             let mut sm_state = self.sm_state.lock().await;
@@ -621,7 +616,6 @@ impl UnifiedMessageProcessor {
         }
 
         // 7. Execute turn (with reactive ContextTooLong recovery).
-        let turn_start = Instant::now();
         let turn_result = self
             .execute_turn_with_reactive_retry(session_id, &turn_id, &mut messages)
             .await;
@@ -634,12 +628,7 @@ impl UnifiedMessageProcessor {
         let tool_calls_count = handler.tool_call_count();
 
         // Flush any pending streaming content before completing the turn.
-        // Capture the turn-completion anchor immediately after the final body
-        // event is pushed, before any async post-turn work can overlap with
-        // the next user turn.
         handler.flush_streaming(session_id);
-        let turn_completed_at =
-            chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
 
         // Update nag-reminder counter based on whether manage_todo was called
         // during this turn. Reset to 0 on any todo call; increment otherwise.
@@ -683,8 +672,6 @@ impl UnifiedMessageProcessor {
             messages: &messages,
             result: &result,
             tool_calls_count,
-            wall_time_secs: turn_start.elapsed().as_secs(),
-            turn_completed_at: &turn_completed_at,
             final_turn_state,
         })
         .await;

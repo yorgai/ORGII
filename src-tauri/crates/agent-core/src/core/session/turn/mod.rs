@@ -4,7 +4,6 @@
 //! - [`processor`]: `UnifiedMessageProcessor` — orchestrates one LLM turn
 //! - [`event_handler`]: `UnifiedEventHandler` — handles tool calls, persistence, hooks
 //! - [`streaming`]: broadcast helpers + `StreamingError` types
-//! - [`summary`]: post-turn digest generation
 //! - [`background_reminder`]: injects active background job context into prompts
 
 /// `#[doc(hidden)]` because the only external caller is the
@@ -17,7 +16,6 @@ pub(crate) mod event_handler;
 mod post_turn;
 mod processor;
 pub(crate) mod streaming;
-pub(crate) mod summary;
 
 /// `#[doc(hidden)]` because the only external caller is the
 /// `app::api::agent::test::core` debug route, reached via

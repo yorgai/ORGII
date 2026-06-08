@@ -233,11 +233,8 @@ export function createRustAgentAdapter(
       // _turnCompleted: true after a terminal event (agent:complete / agent:error)
       //   has been processed. Once set, no further event can re-trigger "running"
       //   until reset() is called (session switch). This blocks all trailing events
-      //   that arrive after completion:
-      //   - agent:turn_summary (generated post-complete via side_query, may be slow)
-      //   - agent:warning (from async memory extraction failures)
-      //   - agent:queue_status (scheduler idle broadcast)
-      //   (agent:subagent_* events were retired — Rust owns that path now)
+      //   Legacy trailing events are blocked here so old persisted/replayed
+      //   summaries cannot re-trigger "running" after completion.
       let _runningSignaled = false;
       let _turnCompleted = false;
       let _hasQueuedFollowup = false;
@@ -323,7 +320,7 @@ export function createRustAgentAdapter(
       // are never part of an active turn. Safe to ignore for "running" signaling
       // regardless of _turnCompleted state.
       //
-      // - agent:turn_summary — generated post-complete via async side_query
+      // - agent:turn_summary — legacy summary events from older sessions
       // - agent:warning — from async background task failures (memory extraction, etc.)
       // - agent:queue_status — scheduler idle broadcasts; active queue status is
       //   handled separately as a real running-state signal
