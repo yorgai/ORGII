@@ -16,6 +16,11 @@ import { WorkstationToolbarTooltip } from "@src/modules/WorkStation/shared";
 import { HEADER_BUTTON } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { getSiteNameFromUrl } from "@src/store/ui/globalTabsAtom";
+import {
+  NEW_TAB_TITLE,
+  isPlaceholderBrowserSessionTitle,
+  translatePlaceholderBrowserSessionTitle,
+} from "@src/store/workstation/browser/tabs";
 
 // ============================================
 // Types
@@ -39,16 +44,18 @@ export interface SessionsTabProps {
 // ============================================
 
 /**
- * Get display title from session - prefer title, fallback to site name, then "New Tab"
+ * Get display title from session - prefer title, fallback to site name,
+ * then the appropriate placeholder sentinel (still in English; callers
+ * translate via `translatePlaceholderBrowserSessionTitle`).
  */
 function getDisplayTitle(session: BrowserSession): string {
-  if (session.title && session.title !== "New Tab") {
+  if (session.title && !isPlaceholderBrowserSessionTitle(session.title)) {
     return session.title;
   }
   if (session.url) {
     return getSiteNameFromUrl(session.url);
   }
-  return "New Tab";
+  return session.title || NEW_TAB_TITLE;
 }
 
 // ============================================
@@ -66,10 +73,10 @@ const SessionItem: React.FC<SessionItemProps> = memo(
   ({ session, isActive, onSelect, onClose }) => {
     const { t } = useTranslation();
     const rawDisplayTitle = getDisplayTitle(session);
-    const displayTitle =
-      rawDisplayTitle === "New Tab"
-        ? t("common:controlTower.sidebar.newTab")
-        : rawDisplayTitle;
+    const displayTitle = translatePlaceholderBrowserSessionTitle(
+      rawDisplayTitle,
+      t
+    );
 
     const icon = (
       <FaviconIcon
@@ -150,10 +157,9 @@ export const SessionsTab: React.FC<SessionsTabProps> = memo(
 
       return sessions.filter((session) => {
         const rawDisplayTitle = getDisplayTitle(session);
-        const title = (
-          rawDisplayTitle === "New Tab"
-            ? t("common:controlTower.sidebar.newTab")
-            : rawDisplayTitle
+        const title = translatePlaceholderBrowserSessionTitle(
+          rawDisplayTitle,
+          t
         ).toLowerCase();
         const url = (session.url ?? "").toLowerCase();
         return title.includes(normalizedQuery) || url.includes(normalizedQuery);

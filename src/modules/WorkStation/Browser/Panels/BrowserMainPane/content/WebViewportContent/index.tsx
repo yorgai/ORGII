@@ -14,11 +14,12 @@ import { useTranslation } from "react-i18next";
 
 import { EDITOR_TAB_CANVAS_BG_CLASS } from "@src/config/workstation/tokens";
 import type { WorkstationTabHeaderHost } from "@src/hooks/workStation";
-import { getSiteNameFromUrl } from "@src/store/ui/globalTabsAtom";
 import {
   closeBrowserTabAtom,
   extractSessionId,
+  getBrowserSessionDisplayTitle,
   switchBrowserTabAtom,
+  translatePlaceholderBrowserSessionTitle,
 } from "@src/store/workstation/browser/tabs";
 
 import { useWebviewScreenshot } from "../../../../hooks/useWebviewScreenshot";
@@ -29,19 +30,6 @@ const ABOUT_BLANK_URL = "about:blank";
 function isBlankBrowserUrl(url?: string): boolean {
   const normalizedUrl = url?.trim().toLowerCase();
   return !normalizedUrl || normalizedUrl.startsWith(ABOUT_BLANK_URL);
-}
-
-function getBrowserSessionDisplayTitle(session: {
-  title?: string;
-  url?: string;
-}): string {
-  if (session.title && session.title !== "New Tab") {
-    return session.title;
-  }
-  if (session.url) {
-    return getSiteNameFromUrl(session.url);
-  }
-  return "New Tab";
 }
 
 // ============================================
@@ -140,10 +128,7 @@ export const WebViewport: React.FC<WebViewportProps> = memo(
           return {
             id: `browser:${session.id}`,
             type: "browser-session" as const,
-            title:
-              displayTitle === "New Tab"
-                ? t("common:controlTower.sidebar.newTab")
-                : displayTitle,
+            title: translatePlaceholderBrowserSessionTitle(displayTitle, t),
             data: {
               sessionId: session.id,
               url: session.url,

@@ -10,6 +10,7 @@ import { FaviconIcon } from "@src/components/FaviconIcon";
 import { TreeRowBase, type TreeRowNode } from "@src/components/TreeRow";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { getSiteNameFromUrl } from "@src/store/ui/globalTabsAtom";
+import { isPlaceholderBrowserSessionTitle } from "@src/store/workstation/browser/tabs";
 
 interface BrowserHistoryListEntry extends BrowserHistoryEntry {
   id: string;
@@ -41,7 +42,9 @@ function getStartOfToday(): number {
 }
 
 function getHistoryTitle(entry: BrowserHistoryListEntry): string {
-  if (entry.title && entry.title !== "New Tab") return entry.title;
+  if (entry.title && !isPlaceholderBrowserSessionTitle(entry.title)) {
+    return entry.title;
+  }
   return getSiteNameFromUrl(entry.url);
 }
 

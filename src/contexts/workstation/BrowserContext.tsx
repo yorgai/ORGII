@@ -21,6 +21,8 @@ import { v4 as uuidv4 } from "uuid";
 import { useGlobalBrowserTabs } from "@src/hooks/ui/tabs/useGlobalTabs";
 import { useSyncBrowserTabs } from "@src/hooks/ui/tabs/useSyncGlobalTabs";
 import {
+  NEW_PRIVATE_TAB_TITLE,
+  NEW_TAB_TITLE,
   createBrowserSessionTabId,
   extractSessionId,
   isBrowserSessionTab as isBrowserSessionTabId,
@@ -50,12 +52,12 @@ const BrowserContext = createContext<BrowserContextValue | null>(null);
 
 // Helper function to extract title from URL
 const getTitleFromUrl = (url: string): string => {
-  if (!url) return "New Tab";
+  if (!url) return NEW_TAB_TITLE;
   try {
     const urlObj = new URL(url);
-    return urlObj.hostname || "New Tab";
+    return urlObj.hostname || NEW_TAB_TITLE;
   } catch {
-    return "New Tab";
+    return NEW_TAB_TITLE;
   }
 };
 
@@ -312,8 +314,8 @@ export const BrowserProvider: React.FC<{ children: React.ReactNode }> = ({
       title: url
         ? getTitleFromUrl(url)
         : incognito
-          ? "New Private Tab"
-          : "New Tab",
+          ? NEW_PRIVATE_TAB_TITLE
+          : NEW_TAB_TITLE,
       url: url || "",
       history: url ? [url] : [],
       historyIndex: url ? 0 : -1,

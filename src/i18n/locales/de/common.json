@@ -2022,6 +2022,7 @@
       "browser": "Browser",
       "settings": "Einstellungen",
       "newTab": "Neuer Tab",
+      "newPrivateTab": "Neuer privater Tab",
       "newTerminal": "Neues Terminal",
       "untitled": "Unbenannt"
     },

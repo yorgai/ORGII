@@ -2023,6 +2023,7 @@
       "browser": "ブラウザ",
       "settings": "設定",
       "newTab": "新しいタブ",
+      "newPrivateTab": "新しいプライベートタブ",
       "newTerminal": "新規 Terminal",
       "untitled": "タイトルなし"
     },

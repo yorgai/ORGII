@@ -31,6 +31,7 @@ import { PrimarySidebarLayoutWithSections } from "@src/modules/WorkStation/share
 import type { PrimarySidebarTab } from "@src/modules/WorkStation/shared/PrimarySidebarLayout/PrimarySidebarLayoutWithSections";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { getSiteNameFromUrl } from "@src/store/ui/globalTabsAtom";
+import { isPlaceholderBrowserSessionTitle } from "@src/store/workstation/browser/tabs";
 import { deriveToolAction } from "@src/util/ui/rendering/toolAction";
 
 import {
@@ -178,7 +179,7 @@ const EntryList: React.FC<EntryListProps> = ({
       {visibleEntries.map((entry) => {
         const isActive = entry.entryId === activeEntryId;
         const title =
-          entry.title && entry.title !== "New Tab"
+          entry.title && !isPlaceholderBrowserSessionTitle(entry.title)
             ? entry.title
             : getSiteNameFromUrl(entry.url);
         const displayName = entry.subtitle

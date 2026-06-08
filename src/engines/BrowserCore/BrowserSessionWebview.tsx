@@ -14,6 +14,7 @@ import {
   simulatorPrimarySidebarPositionAtom,
   simulatorPrimarySidebarWidthAtom,
 } from "@src/store/ui/simulatorAtom";
+import { NEW_TAB_TITLE } from "@src/store/workstation/browser/tabs";
 import { BrowserSession } from "@src/types/ui/tabs";
 
 const ABOUT_BLANK_URL = "about:blank";
@@ -38,12 +39,12 @@ interface BrowserSessionWebviewProps {
 
 // Helper function to extract title from URL
 const getTitleFromUrl = (url: string): string => {
-  if (!url) return "New Tab";
+  if (!url) return NEW_TAB_TITLE;
   try {
     const urlObj = new URL(url);
-    return urlObj.hostname || "New Tab";
+    return urlObj.hostname || NEW_TAB_TITLE;
   } catch {
-    return "New Tab";
+    return NEW_TAB_TITLE;
   }
 };
 

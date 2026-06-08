@@ -224,7 +224,7 @@ export const BrowserPrimarySidebar: React.FC<BrowserPrimarySidebarProps> = memo(
               className={showFilterRegularSessions ? "text-primary-6" : ""}
             />
           ),
-          tooltip: "Filter",
+          tooltip: t("common:actions.filter"),
           onClick: handleToggleFilterRegularSessions,
         },
         ...(!hideNewSessionActions
@@ -258,7 +258,7 @@ export const BrowserPrimarySidebar: React.FC<BrowserPrimarySidebarProps> = memo(
               className={showFilterPrivateSessions ? "text-primary-6" : ""}
             />
           ),
-          tooltip: "Filter",
+          tooltip: t("common:actions.filter"),
           onClick: handleToggleFilterPrivateSessions,
         },
         ...(!hideNewSessionActions
@@ -266,7 +266,7 @@ export const BrowserPrimarySidebar: React.FC<BrowserPrimarySidebarProps> = memo(
               {
                 key: "new-private-session",
                 icon: <Plus size={14} />,
-                tooltip: "New Private Tab",
+                tooltip: t("common:controlTower.sidebar.newPrivateTab"),
                 onClick: onNewPrivateSession || onNewSession,
               },
             ]
@@ -278,6 +278,7 @@ export const BrowserPrimarySidebar: React.FC<BrowserPrimarySidebarProps> = memo(
         hideNewSessionActions,
         onNewPrivateSession,
         onNewSession,
+        t,
       ]
     );
 

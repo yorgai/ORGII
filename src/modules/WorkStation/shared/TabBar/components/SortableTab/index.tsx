@@ -23,6 +23,10 @@ import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
 import { CODE_EDITOR_TOUR_TARGETS } from "@src/scaffold/Tutorials/codeEditorTourConfig";
 import type { GitFileInfo } from "@src/store/git";
+import {
+  isPlaceholderBrowserSessionTitle,
+  translatePlaceholderBrowserSessionTitle,
+} from "@src/store/workstation/browser/tabs";
 import { resolveProjectManagerTabTitle } from "@src/store/workstation/tabs";
 
 import { WorkstationToolbarTooltip } from "../../../WorkstationToolbarTooltip";
@@ -175,8 +179,11 @@ export const SortableTab: React.FC<SortableTabProps> = memo(
     };
 
     const getDisplayTitle = () => {
-      if (tab.type === "browser-session" && tab.title === "New Tab") {
-        return t("common:controlTower.sidebar.newTab");
+      if (
+        tab.type === "browser-session" &&
+        isPlaceholderBrowserSessionTitle(tab.title)
+      ) {
+        return translatePlaceholderBrowserSessionTitle(tab.title, t);
       }
       if (
         tab.type === "project-dashboard" ||

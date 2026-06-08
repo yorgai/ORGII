@@ -2020,6 +2020,7 @@
       "browser": "Navigateur",
       "settings": "Paramètres",
       "newTab": "Nouvel onglet",
+      "newPrivateTab": "Nouvel onglet privé",
       "newTerminal": "Nouveau terminal",
       "untitled": "Sans titre"
     },

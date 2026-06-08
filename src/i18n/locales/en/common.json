@@ -2083,7 +2083,8 @@
       "settings": "Settings",
       "newTab": "New Tab",
       "newTerminal": "New Terminal",
-      "untitled": "Untitled"
+      "untitled": "Untitled",
+      "newPrivateTab": "New Private Tab"
     },
     "statusBar": {
       "workspaceSuffix": "{{name}} Workspace",

@@ -13,16 +13,18 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
+import { NEW_TAB_TITLE } from "@src/store/workstation/browser/tabs";
+
 import type { BrowserSession } from "../types";
 
 // Helper function to extract title from URL
 const getTitleFromUrl = (url: string): string => {
-  if (!url) return "New Tab";
+  if (!url) return NEW_TAB_TITLE;
   try {
     const urlObj = new URL(url);
-    return urlObj.hostname || "New Tab";
+    return urlObj.hostname || NEW_TAB_TITLE;
   } catch {
-    return "New Tab";
+    return NEW_TAB_TITLE;
   }
 };
 
@@ -36,7 +38,7 @@ const getDefaultState = (): {
     sessions: [
       {
         id: defaultSessionId,
-        title: "New Tab",
+        title: NEW_TAB_TITLE,
         url: "",
         history: [],
         historyIndex: -1,
@@ -127,7 +129,7 @@ export function useBrowserState(
       const newSessionId = uuidv4();
       const newSession: BrowserSession = {
         id: newSessionId,
-        title: url ? getTitleFromUrl(url) : "New Tab",
+        title: url ? getTitleFromUrl(url) : NEW_TAB_TITLE,
         url: url || "",
         history: url ? [url] : [],
         historyIndex: url ? 0 : -1,
@@ -163,7 +165,7 @@ export function useBrowserState(
           const newSessionId = uuidv4();
           const newSession: BrowserSession = {
             id: newSessionId,
-            title: "New Tab",
+            title: NEW_TAB_TITLE,
             url: "",
             history: [],
             historyIndex: -1,

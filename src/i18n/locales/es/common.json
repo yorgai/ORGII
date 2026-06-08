@@ -2017,6 +2017,7 @@
       "browser": "Navegador",
       "settings": "Configuración",
       "newTab": "Nueva pestaña",
+      "newPrivateTab": "Nueva pestaña privada",
       "newTerminal": "Nueva terminal",
       "untitled": "Sin título"
     },

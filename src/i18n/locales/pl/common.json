@@ -2017,6 +2017,7 @@
       "browser": "Przeglądarka",
       "settings": "Ustawienia",
       "newTab": "Nowa karta",
+      "newPrivateTab": "Nowa karta prywatna",
       "newTerminal": "Nowy terminal",
       "untitled": "Bez tytułu"
     },

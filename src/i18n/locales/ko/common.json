@@ -2018,6 +2018,7 @@
       "browser": "브라우저",
       "settings": "설정",
       "newTab": "새 탭",
+      "newPrivateTab": "새 시크릿 탭",
       "newTerminal": "새 터미널",
       "untitled": "제목 없음"
     },

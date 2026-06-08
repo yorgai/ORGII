@@ -2023,6 +2023,7 @@
       "browser": "浏览器",
       "settings": "设置",
       "newTab": "新标签页",
+      "newPrivateTab": "新隐私标签页",
       "newTerminal": "新建终端",
       "untitled": "未命名"
     },
