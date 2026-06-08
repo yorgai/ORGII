@@ -54,14 +54,6 @@ url = "2"
 # Tracing for logging.rs warn paths
 tracing = "0.1"
 
-# `orgii_preview.rs` (ORGII's component-preview webview, à la Storybook —
-# loads `orgii-preview.html` from the webpack dev server and renders
-# isolated React components with custom props) compiles each component's
-# `.scss` to CSS via `grass` and post-processes the output with `regex`
-# to add `!important` to color/background/border properties so injected
-# styles beat the host page's specificity.
-grass = "0.13"
-regex = "1.9.5"
 
 # macOS-specific: vibrancy on standalone browser windows + ObjC bridges
 # for WKWebView cookie store, NSHTTPCookieStorage fallback, NSStringFrom*.

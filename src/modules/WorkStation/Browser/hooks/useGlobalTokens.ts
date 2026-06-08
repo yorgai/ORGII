@@ -4,7 +4,7 @@
  * Scans the repository for CSS variable definitions and provides:
  * - Auto-discovered tokens from CSS/SCSS files
  * - Token values and sources
- * - Import tokens into component preview
+ * - Token categories for the browser design panel
  *
  * @see Documentation/Architecture-Guide/orgii-editor/orgii-project-format-0130.md
  */
@@ -159,7 +159,7 @@ export function useGlobalTokens(
       setTokens(result.tokens);
       setCategories(categorizeTokens(result.tokens));
 
-      // Update global atom for injection
+      // Update global token cache
       setScannedTokens(result.tokens);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

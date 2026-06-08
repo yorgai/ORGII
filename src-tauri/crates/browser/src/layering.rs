@@ -54,7 +54,7 @@ pub fn browser_webview_bring_to_front(app: AppHandle, label: String) -> Result<(
 /// when any overlay opens, and lift them back on close.
 ///
 /// Matches labels that begin with `"browser-session-"` — the prefix used by
-/// `BrowserSessionWebview` in the frontend. Orgii component previews and
+/// `BrowserSessionWebview` in the frontend. Preview webviews and
 /// other inline webviews are intentionally excluded because they don't
 /// occupy the same regions where selectors/sidebars render.
 ///

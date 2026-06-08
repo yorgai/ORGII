@@ -41,7 +41,6 @@ export type WorkStationTabType =
   | "add-connection"
   // Browser tabs
   | "browser-session"
-  | "component-preview"
   | "token-category"
   /** DevTools right panel (Elements / Console / Network) */
   | "devtools"
@@ -268,17 +267,6 @@ export interface NewWorkItemTabData {
 }
 
 /**
- * Data stored in component preview tabs
- */
-export interface ComponentPreviewTabData {
-  previewId: string;
-  name: string;
-  filePath: string;
-  line: number;
-  kind: string;
-}
-
-/**
  * Data stored in token category tabs
  */
 export interface TokenCategoryTabData {
@@ -437,7 +425,6 @@ export const TOOL_TAB_TYPES = [
   "add-connection",
   // Browser tabs
   "browser-session",
-  "component-preview",
   "token-category",
   // Project Manager tabs
   "project-dashboard",

@@ -3,7 +3,6 @@ export { default as AgentConfigTabRenderer } from "./agentConfig";
 export { default as AIImpactTabRenderer } from "./aiImpact";
 export { default as BrowserSessionTabRenderer } from "./browserSession";
 export { default as ChatSessionTabRenderer } from "./chatSession";
-export { default as ComponentPreviewTabRenderer } from "./componentPreview";
 export { default as DevtoolsTabRenderer } from "./devtools";
 export { default as ExplorerTabRenderer } from "./explorer";
 export { default as FileTabRenderer } from "./file";

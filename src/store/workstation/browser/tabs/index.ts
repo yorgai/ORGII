@@ -3,7 +3,6 @@
  *
  * Centralized tab system for the Browser surface:
  * - Browser sessions (webview tabs)
- * - Component previews (Storybook for AI)
  * - Token categories (design tokens)
  *
  * All workstation tabs live in the single `workstationLayoutAtom.mainPane`
@@ -41,14 +40,6 @@ export interface BrowserSessionData {
   isLoading?: boolean;
 }
 
-export interface ComponentPreviewData {
-  id: string;
-  name: string;
-  filePath: string;
-  line: number;
-  kind: string;
-}
-
 export interface TokenCategoryData {
   category: string;
 }
@@ -61,10 +52,6 @@ export function createBrowserSessionTabId(sessionId: string): string {
   return `browser:${sessionId}`;
 }
 
-export function createComponentPreviewTabId(previewId: string): string {
-  return `preview:${previewId}`;
-}
-
 export function createTokenCategoryTabId(category: string): string {
   return `token:${category}`;
 }
@@ -73,20 +60,12 @@ export function isBrowserSessionTab(tabId: string): boolean {
   return tabId.startsWith("browser:");
 }
 
-export function isComponentPreviewTab(tabId: string): boolean {
-  return tabId.startsWith("preview:");
-}
-
 export function isTokenCategoryTab(tabId: string): boolean {
   return tabId.startsWith("token:");
 }
 
 export function extractSessionId(tabId: string): string {
   return tabId.replace("browser:", "");
-}
-
-export function extractPreviewId(tabId: string): string {
-  return tabId.replace("preview:", "");
 }
 
 export function extractTokenCategory(tabId: string): string {
@@ -193,27 +172,6 @@ export function createBrowserSessionTab(
   };
 }
 
-export function createComponentPreviewTab(
-  previewId: string,
-  name: string,
-  data: Omit<ComponentPreviewData, "id" | "name">
-): WorkStationTab {
-  return {
-    id: createComponentPreviewTabId(previewId),
-    type: "component-preview",
-    title: name,
-    icon: "Code2",
-    data: {
-      id: previewId,
-      name,
-      filePath: data.filePath,
-      line: data.line,
-      kind: data.kind,
-    },
-    hasUnsavedChanges: false,
-  };
-}
-
 export function createTokenCategoryTab(category: string): WorkStationTab {
   return {
     id: createTokenCategoryTabId(category),
@@ -250,7 +208,6 @@ export function createColorTokensTab(): WorkStationTab {
 
 const BROWSER_TAB_TYPES: ReadonlySet<WorkStationTabType> = new Set([
   "browser-session",
-  "component-preview",
   "token-category",
 ]);
 
@@ -385,14 +342,6 @@ export const isShowingBrowserSessionAtom = atom((get) => {
 });
 
 /**
- * Check if showing a component preview
- */
-export const isShowingComponentPreviewAtom = atom((get) => {
-  const activeTab = get(activeBrowserTabAtom);
-  return activeTab?.type === "component-preview";
-});
-
-/**
  * Check if showing a token category
  */
 export const isShowingTokenCategoryAtom = atom((get) => {
@@ -406,14 +355,6 @@ export const isShowingTokenCategoryAtom = atom((get) => {
 export const browserSessionTabsAtom = atom((get) => {
   const state = get(browserTabsAtom);
   return state.tabs.filter((tab) => tab.type === "browser-session");
-});
-
-/**
- * Get all component preview tabs
- */
-export const componentPreviewTabsAtom = atom((get) => {
-  const state = get(browserTabsAtom);
-  return state.tabs.filter((tab) => tab.type === "component-preview");
 });
 
 /**

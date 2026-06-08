@@ -15,7 +15,6 @@ import {
   type PrimarySidebarTab,
 } from "@/src/modules/WorkStation/shared";
 import {
-  BookOpen,
   Code2,
   Filter as FilterIcon,
   Globe,
@@ -27,15 +26,9 @@ import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { SectionHeaderAction } from "@src/components/TreePanelSidebar/types";
-import type { CatalogEntry } from "@src/modules/WorkStation/Browser/hooks/useComponentCatalog";
-import type { ProjectFileInfo } from "@src/modules/WorkStation/Browser/hooks/useOrgiiProjects";
 
 import {
-  DesignTabAddedComponents,
   DesignTabGlobalTokens,
-  DesignTabRepoComponents,
-  getAddedComponentsActions,
-  getCandidatesActions,
   getGlobalTokensActions,
 } from "./tabs/DesignTab";
 import HistoryTab from "./tabs/HistoryTab";
@@ -65,13 +58,6 @@ export interface BrowserPrimarySidebarProps {
   /** Hide per-section new-tab actions when creation is owned by outer chrome. */
   hideNewSessionActions?: boolean;
 
-  // Design tab props
-  /** Select a component with storybook (from Added Components) */
-  onSelectProjectComponent?: (projectFile: ProjectFileInfo) => void;
-  /** Currently selected project file path */
-  selectedProjectPath?: string | null;
-  /** Preview a repo component (from Candidates) */
-  onPreviewRepoComponent?: (entry: CatalogEntry) => void;
   /** Open Color Tokens consolidated tab */
   onOpenColorTokens?: () => void;
 }
@@ -91,9 +77,6 @@ export const BrowserPrimarySidebar: React.FC<BrowserPrimarySidebarProps> = memo(
     onCloseSession,
     onOpenHistoryUrl,
     hideNewSessionActions = false,
-    onSelectProjectComponent,
-    selectedProjectPath,
-    onPreviewRepoComponent,
     onOpenColorTokens,
   }) => {
     const { t } = useTranslation();
@@ -103,71 +86,23 @@ export const BrowserPrimarySidebar: React.FC<BrowserPrimarySidebarProps> = memo(
 
     // Filter state for design sections (follows explorer pattern)
     const [showFilterTokens, setShowFilterTokens] = useState(false);
-    const [showFilterAddedComponents, setShowFilterAddedComponents] =
-      useState(false);
-    const [showFilterCandidates, setShowFilterCandidates] = useState(false);
     const [showFilterRegularSessions, setShowFilterRegularSessions] =
       useState(false);
     const [showFilterPrivateSessions, setShowFilterPrivateSessions] =
       useState(false);
 
     // State to store collapseAll/refresh callbacks from child components
-    const [collapseAllCandidates, setCollapseAllCandidates] = useState<
-      (() => void) | null
-    >(null);
     const [refreshTokens, setRefreshTokens] = useState<(() => void) | null>(
       null
-    );
-    const [refreshAddedComponents, setRefreshAddedComponents] = useState<
-      (() => void) | null
-    >(null);
-    const [refreshCandidates, setRefreshCandidates] = useState<
-      (() => void) | null
-    >(null);
-
-    // Handlers to register callbacks
-    const handleRegisterCollapseAllCandidates = useCallback(
-      (collapseAll: () => void) => {
-        setCollapseAllCandidates(() => collapseAll);
-      },
-      []
     );
 
     const handleRegisterRefreshTokens = useCallback((refresh: () => void) => {
       setRefreshTokens(() => refresh);
     }, []);
 
-    const handleRegisterRefreshAddedComponents = useCallback(
-      (refresh: () => void) => {
-        setRefreshAddedComponents(() => refresh);
-      },
-      []
-    );
-
-    const handleRegisterRefreshCandidates = useCallback(
-      (refresh: () => void) => {
-        setRefreshCandidates(() => refresh);
-      },
-      []
-    );
-
-    // Collapse all handlers
-    const handleCollapseAllCandidates = useCallback(() => {
-      collapseAllCandidates?.();
-    }, [collapseAllCandidates]);
-
-    // Refresh handlers
     const handleRefreshTokens = useCallback(() => {
       refreshTokens?.();
     }, [refreshTokens]);
-
-    const handleRefreshAddedComponents = useCallback(() => {
-      refreshAddedComponents?.();
-    }, [refreshAddedComponents]);
-
-    const handleRefreshCandidates = useCallback(() => {
-      refreshCandidates?.();
-    }, [refreshCandidates]);
 
     // Handle tab change
     const handleTabChange = useCallback((tab: string) => {
@@ -177,16 +112,6 @@ export const BrowserPrimarySidebar: React.FC<BrowserPrimarySidebarProps> = memo(
     // Toggle filter for Global Tokens section
     const handleToggleFilterTokens = useCallback(() => {
       setShowFilterTokens((prev) => !prev);
-    }, []);
-
-    // Toggle filter for Added Components section
-    const handleToggleFilterAddedComponents = useCallback(() => {
-      setShowFilterAddedComponents((prev) => !prev);
-    }, []);
-
-    // Toggle filter for Candidates section
-    const handleToggleFilterCandidates = useCallback(() => {
-      setShowFilterCandidates((prev) => !prev);
     }, []);
 
     const handleToggleFilterRegularSessions = useCallback(() => {
@@ -293,38 +218,6 @@ export const BrowserPrimarySidebar: React.FC<BrowserPrimarySidebarProps> = memo(
       [showFilterTokens, handleToggleFilterTokens, handleRefreshTokens]
     );
 
-    // Section header actions for Added Components
-    const addedComponentsActions: SectionHeaderAction[] = useMemo(
-      () =>
-        getAddedComponentsActions({
-          showFilter: showFilterAddedComponents,
-          onToggleFilter: handleToggleFilterAddedComponents,
-          onRefresh: handleRefreshAddedComponents,
-        }),
-      [
-        showFilterAddedComponents,
-        handleToggleFilterAddedComponents,
-        handleRefreshAddedComponents,
-      ]
-    );
-
-    // Section header actions for Candidates
-    const candidatesActions: SectionHeaderAction[] = useMemo(
-      () =>
-        getCandidatesActions({
-          showFilter: showFilterCandidates,
-          onToggleFilter: handleToggleFilterCandidates,
-          onCollapseAll: handleCollapseAllCandidates,
-          onRefresh: handleRefreshCandidates,
-        }),
-      [
-        showFilterCandidates,
-        handleToggleFilterCandidates,
-        handleCollapseAllCandidates,
-        handleRefreshCandidates,
-      ]
-    );
-
     // Build tabs configuration
     const tabs: PrimarySidebarTab[] = useMemo(
       () => [
@@ -411,40 +304,6 @@ export const BrowserPrimarySidebar: React.FC<BrowserPrimarySidebarProps> = memo(
               resizable: true,
               actions: globalTokensActions,
             },
-            {
-              key: "added-components",
-              title: t("labels.addedComponents"),
-              icon: <BookOpen size={14} strokeWidth={1.75} />,
-              content: (
-                <DesignTabAddedComponents
-                  repoPath={repoPath}
-                  onSelectComponent={onSelectProjectComponent}
-                  selectedPath={selectedProjectPath}
-                  showFilter={showFilterAddedComponents}
-                  onRegisterRefresh={handleRegisterRefreshAddedComponents}
-                />
-              ),
-              defaultFlexGrow: 1,
-              resizable: true,
-              actions: addedComponentsActions,
-            },
-            {
-              key: "candidates",
-              title: t("labels.candidates"),
-              icon: <Code2 size={14} strokeWidth={1.75} />,
-              content: (
-                <DesignTabRepoComponents
-                  repoPath={repoPath}
-                  onPreviewComponent={onPreviewRepoComponent}
-                  showFilter={showFilterCandidates}
-                  onRegisterCollapseAll={handleRegisterCollapseAllCandidates}
-                  onRegisterRefresh={handleRegisterRefreshCandidates}
-                />
-              ),
-              defaultFlexGrow: 1,
-              resizable: true,
-              actions: candidatesActions,
-            },
           ],
         },
       ],
@@ -466,16 +325,6 @@ export const BrowserPrimarySidebar: React.FC<BrowserPrimarySidebarProps> = memo(
         onOpenColorTokens,
         handleRegisterRefreshTokens,
         globalTokensActions,
-        onSelectProjectComponent,
-        selectedProjectPath,
-        showFilterAddedComponents,
-        handleRegisterRefreshAddedComponents,
-        addedComponentsActions,
-        onPreviewRepoComponent,
-        showFilterCandidates,
-        handleRegisterCollapseAllCandidates,
-        handleRegisterRefreshCandidates,
-        candidatesActions,
       ]
     );
 

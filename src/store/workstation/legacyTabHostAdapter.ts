@@ -63,7 +63,6 @@ export function categoryToLegacyHost(
 export function tabTypeToLegacyHost(type: WorkStationTabType): LegacyPeekHost {
   switch (type) {
     case "browser-session":
-    case "component-preview":
     case "token-category":
     case "devtools":
       return "browser";

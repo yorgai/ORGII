@@ -157,11 +157,6 @@ const BrowserSessionEntry: RendererEntry = {
   debugLabel: "browser-session",
 };
 
-const ComponentPreviewEntry: RendererEntry = {
-  Component: lazy(() => import("./renderers/componentPreview")),
-  debugLabel: "component-preview",
-};
-
 const TokenCategoryEntry: RendererEntry = {
   Component: lazy(() => import("./renderers/tokenCategory")),
   requiresRepo: true,
@@ -297,7 +292,6 @@ export const REGISTRY: TabContentRegistry = {
 
   // Browser
   "browser-session": BrowserSessionEntry,
-  "component-preview": ComponentPreviewEntry,
   "token-category": TokenCategoryEntry,
   devtools: DevtoolsEntry,
 

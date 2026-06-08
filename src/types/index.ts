@@ -51,10 +51,6 @@ export * as TestingTypes from "./testing";
 export * as UITypes from "./ui";
 export * as TabTypes from "./ui/tabs";
 export * as AgentIconTypes from "./ui/agentIcons";
-
-// ORGII project format types
-export * as OrgiiTypes from "./orgii_preview";
-
 // Terminal types (shell profiles)
 export * as TerminalTypes from "./terminal";
 

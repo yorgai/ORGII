@@ -4,7 +4,7 @@
  * Centralized header dimensions, button styles, and class strings for Workstation.
  * Follows the same pattern as DROPDOWN_CLASSES in @src/components/Dropdown/tokens.
  *
- * Used by: FileHeader, WebUrlBar, ComponentPreviewContent, SearchBar,
+ * Used by: FileHeader, WebUrlBar, SearchBar,
  *          CollapsibleSection, PanelSectionHeader, ActionBar, IconButton, etc.
  */
 import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
@@ -200,7 +200,7 @@ export const FILE_BAR_ROW_CLASSES =
 export const HEADER_CLASSES = {
   /**
    * File bar header (top bar showing file path / URL / preview info).
-   * Used by: FileHeader, WebUrlBar, ComponentPreviewContent
+   * Used by: FileHeader, WebUrlBar
    *
    * Height: 40px, horizontal layout, shrink-proof, 8px left / 4px right padding.
    */

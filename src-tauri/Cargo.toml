@@ -275,12 +275,10 @@ agent_core = { path = "crates/agent-core" }
 
 # Frontend-source-aware component index: parses tsx/jsx/vue/svelte to
 # build a component-name → source-location map for the Browser inspector
-# (jump-to-source from a clicked DOM element), plus the lazy
-# `ui_index_extract_props` / `extract_projects` / token-extraction
-# Tauri commands that power the Component Catalog and "Storybook for
-# AI" surfaces. Pure leaf — `app` only registers the commands in
-# `commands/handler_list.inc` and `.manage()`s the `UiIndexState`
-# in `run()`.
+# (jump-to-source from a clicked DOM element), plus token-extraction
+# Tauri commands that power the design-token panel. Pure leaf — `app`
+# only registers the commands in `commands/handler_list.inc` and
+# `.manage()`s the `UiIndexState` in `run()`.
 ui_indexer = { path = "crates/ui-indexer" }
 
 # Local-only developer activity timeline: heartbeat collector, external
