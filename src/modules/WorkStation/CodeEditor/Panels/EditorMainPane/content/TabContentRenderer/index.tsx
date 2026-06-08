@@ -52,9 +52,6 @@ const EditorSettings = React.lazy(
   () => import("@src/modules/WorkStation/Settings")
 );
 const ChatView = React.lazy(() => import("@src/engines/ChatPanel/ChatView"));
-const LaunchpadRepoRenderer = React.lazy(
-  () => import("@src/modules/WorkStation/TabContent/renderers/launchpadRepo")
-);
 
 export function preloadSourceControlTabContent(): void {
   void loadSourceControlMainContent();
@@ -598,13 +595,6 @@ const TabContentRenderer: React.FC<TabContentRendererProps> = memo(
           </Suspense>
         );
       }
-
-      case "launchpad-repo":
-        return (
-          <Suspense fallback={<LazyFallback />}>
-            <LaunchpadRepoRenderer tab={activeTab} paneId="main" isActive />
-          </Suspense>
-        );
 
       default:
         if (REGISTRY[activeTab.type]) {

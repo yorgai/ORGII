@@ -1,12 +1,12 @@
 import { atom, useAtom, useAtomValue, useSetAtom } from "jotai";
 import {
   ArrowUp,
+  BrushCleaning,
   CheckCircle2,
   Loader2,
   MessageCircle,
   MousePointer2,
   MousePointerClick,
-  RefreshCw,
   X,
   XCircle,
 } from "lucide-react";
@@ -35,7 +35,6 @@ import Message from "@src/components/Message";
 import ModelSelectorPill from "@src/components/ModelSelectorPill";
 import { VoiceInputButton, VoiceRecordingBar } from "@src/components/Voice";
 import { INPUT_AREA_BUTTONS } from "@src/config/inputAreaTokens";
-// Replace lucide imports to use BrushCleaning instead of RefreshCw.
 import InputEditor from "@src/engines/ChatPanel/InputArea/components/InputEditor";
 import { useEditorExpansion } from "@src/engines/ChatPanel/InputArea/hooks/useEditorExpansion";
 import { extractArgsSummary } from "@src/engines/ChatPanel/blocks/ToolCallBlock/helpers/argsSummary";
@@ -595,7 +594,7 @@ export function GuiControlToggle(): React.ReactNode {
                   aria-label={t("actions.refresh")}
                   title={t("actions.refresh")}
                 >
-                  <RefreshCw
+                  <BrushCleaning
                     size={INPUT_AREA_BUTTONS.iconSize}
                     strokeWidth={1.75}
                   />

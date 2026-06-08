@@ -43,8 +43,7 @@ function usesFallbackCodeSidebar(tab: WorkStationTab | null): boolean {
     tab.type !== "agent-config" &&
     tab.type !== "source-control" &&
     tab.type !== "terminal" &&
-    tab.type !== "benchmark" &&
-    tab.type !== "launchpad-repo"
+    tab.type !== "benchmark"
   );
 }
 
