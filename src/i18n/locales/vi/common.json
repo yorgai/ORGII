@@ -1161,6 +1161,7 @@
         "addByTemplate": "Thêm Workspace bằng {source}"
       },
       "pathImport": {
+        "addLabel": "Thêm",
         "invalidTitle": "Mở thư mục",
         "invalidMessage": "\"{{path}}\" không phải là đường dẫn thư mục hợp lệ."
       },

@@ -107,6 +107,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
       addPlaceholder: t("selectors.spotlight.placeholders.source"),
       addEntryLabel: t("selectors.repo.addEntry"),
       openFolderLabel: t("actions.openFolder"),
+      addFolderLabel: t("selectors.repo.pathImport.addLabel"),
       sectionCurrentLabel: t("selectors.repo.sections.current"),
       sectionSystemPathsLabel: t("selectors.repo.sections.systemPaths"),
       sectionRepoLabel: t("selectors.repo.sections.repo"),
@@ -237,8 +238,10 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
     setIsManageMode((prev) => {
       if (prev) {
         setSelectedIds(new Set());
+        return false;
       }
-      return !prev;
+      setSearchQuery("");
+      return true;
     });
   }, []);
 
@@ -333,7 +336,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
       buildOpenPathItem({
         searchQuery,
         matchCount: filteredRepos.length + workspaceItems.length,
-        openLabel: paletteText.openFolderLabel,
+        addLabel: paletteText.addFolderLabel,
         onOpenPath: (candidatePath) => {
           void importWorkspacePath({
             candidatePath,
@@ -349,7 +352,7 @@ export const RepoPalette: React.FC<RepoPaletteProps> = ({
       filteredRepos.length,
       paletteText.invalidPathMessage,
       paletteText.invalidPathTitle,
-      paletteText.openFolderLabel,
+      paletteText.addFolderLabel,
       searchQuery,
       workspaceItems.length,
     ]

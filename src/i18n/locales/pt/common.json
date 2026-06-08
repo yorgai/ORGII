@@ -1160,6 +1160,7 @@
         "addByTemplate": "Adicionar workspace por {source}"
       },
       "pathImport": {
+        "addLabel": "Adicionar",
         "invalidTitle": "Abrir pasta",
         "invalidMessage": "\"{{path}}\" não é um caminho de pasta válido."
       },

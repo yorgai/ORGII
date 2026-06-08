@@ -1160,6 +1160,7 @@
         "addByTemplate": "Añadir espacio de trabajo por {source}"
       },
       "pathImport": {
+        "addLabel": "Añadir",
         "invalidTitle": "Abrir carpeta",
         "invalidMessage": "\"{{path}}\" no es una ruta de carpeta válida."
       },

@@ -1161,6 +1161,7 @@
         "addByTemplate": "{source} ile Workspace ekle"
       },
       "pathImport": {
+        "addLabel": "Ekle",
         "invalidTitle": "Klasör aç",
         "invalidMessage": "\"{{path}}\" geçerli bir klasör yolu değil."
       },
@@ -1472,8 +1473,11 @@
     "dockAutoHide": "Dock otomatik gizle",
     "modelPickerStyle": "Seçici",
     "chatPanelPagination": "Sayfalama",
+    "captionPlacement": "Altyazı satırı",
     "modelPickerSpotlight": "Spotlight",
     "modelPickerMenu": "Menü",
+    "above": "Üstte",
+    "below": "Altta",
     "left": "Sol",
     "right": "Sağ",
     "ramSection": "Bellek ve performans",

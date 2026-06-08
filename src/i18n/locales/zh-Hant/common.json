@@ -1161,6 +1161,7 @@
         "addByTemplate": "透過 {source} 新增工作區"
       },
       "pathImport": {
+        "addLabel": "新增",
         "invalidTitle": "開啟資料夾",
         "invalidMessage": "「{{path}}」不是有效的資料夾路徑。"
       },

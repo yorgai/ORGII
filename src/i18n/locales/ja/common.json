@@ -1161,6 +1161,7 @@
         "addByTemplate": "{source} で Workspace を追加"
       },
       "pathImport": {
+        "addLabel": "追加",
         "invalidTitle": "フォルダを開く",
         "invalidMessage": "「{{path}}」は有効なフォルダパスではありません。"
       },

@@ -1161,6 +1161,7 @@
         "addByTemplate": "通过 {source} 添加工作区"
       },
       "pathImport": {
+        "addLabel": "添加",
         "invalidTitle": "打开文件夹",
         "invalidMessage": "“{{path}}” 不是有效的文件夹路径。"
       },

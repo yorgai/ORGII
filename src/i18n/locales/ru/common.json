@@ -1160,6 +1160,7 @@
         "addByTemplate": "Добавить workspace через {source}"
       },
       "pathImport": {
+        "addLabel": "Добавить",
         "invalidTitle": "Открыть папку",
         "invalidMessage": "«{{path}}» не является допустимым путем к папке."
       },

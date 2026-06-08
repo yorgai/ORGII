@@ -1160,6 +1160,7 @@
         "addByTemplate": "Workspace hinzufügen über {source}"
       },
       "pathImport": {
+        "addLabel": "Hinzufügen",
         "invalidTitle": "Ordner öffnen",
         "invalidMessage": "\"{{path}}\" ist kein gültiger Ordnerpfad."
       },
@@ -1471,8 +1472,11 @@
     "dockAutoHide": "Dock automatisch ausblenden",
     "modelPickerStyle": "Auswahl",
     "chatPanelPagination": "Paginierung",
+    "captionPlacement": "Beschriftungszeile",
     "modelPickerSpotlight": "Spotlight",
     "modelPickerMenu": "Menü",
+    "above": "Oben",
+    "below": "Unten",
     "replaySession": "Replay-Sitzung",
     "captionBar": "Agent-Nachrichtenleiste",
     "location": "Position",

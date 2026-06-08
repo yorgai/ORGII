@@ -1160,6 +1160,7 @@
         "addByTemplate": "Dodaj workspace przez {source}"
       },
       "pathImport": {
+        "addLabel": "Dodaj",
         "invalidTitle": "Otwórz folder",
         "invalidMessage": "„{{path}}” nie jest prawidłową ścieżką folderu."
       },

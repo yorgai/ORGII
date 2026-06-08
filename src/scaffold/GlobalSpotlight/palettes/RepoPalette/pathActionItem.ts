@@ -8,22 +8,24 @@ import {
 interface BuildOpenPathItemArgs {
   searchQuery: string;
   matchCount: number;
-  openLabel: string;
+  addLabel: string;
   onOpenPath: (candidatePath: string) => void;
 }
 
 export function buildOpenPathItem({
   searchQuery,
   matchCount,
-  openLabel,
+  addLabel,
   onOpenPath,
 }: BuildOpenPathItemArgs): SpotlightItem | null {
   const candidatePath = getWorkspacePathCandidate(searchQuery);
   if (!candidatePath || matchCount > 0) return null;
 
+  const folderName = getWorkspacePathDisplayName(candidatePath);
+
   return {
     id: "repo-open-path-candidate",
-    label: `${openLabel} ${getWorkspacePathDisplayName(candidatePath)}`,
+    label: `${addLabel} "${folderName}"`,
     desc: candidatePath,
     icon: ICONS.folder,
     type: "action",

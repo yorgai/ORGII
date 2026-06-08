@@ -1225,6 +1225,7 @@
         "addByTemplate": "Add workspace by {source}"
       },
       "pathImport": {
+        "addLabel": "Add",
         "invalidTitle": "Open Folder",
         "invalidMessage": "\"{{path}}\" is not a valid folder path."
       },

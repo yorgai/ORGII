@@ -1160,6 +1160,7 @@
         "addByTemplate": "Ajouter un espace de travail par {source}"
       },
       "pathImport": {
+        "addLabel": "Ajouter",
         "invalidTitle": "Ouvrir un dossier",
         "invalidMessage": "\"{{path}}\" n’est pas un chemin de dossier valide."
       },

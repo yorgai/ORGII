@@ -1161,6 +1161,7 @@
         "addByTemplate": "{source}(으)로 Workspace 추가"
       },
       "pathImport": {
+        "addLabel": "추가",
         "invalidTitle": "폴더 열기",
         "invalidMessage": "“{{path}}”은(는) 유효한 폴더 경로가 아닙니다."
       },
@@ -1472,8 +1473,11 @@
     "dockAutoHide": "Dock 자동 숨김",
     "modelPickerStyle": "선택기",
     "chatPanelPagination": "페이지네이션",
+    "captionPlacement": "캡션 행",
     "modelPickerSpotlight": "Spotlight",
     "modelPickerMenu": "메뉴",
+    "above": "위",
+    "below": "아래",
     "left": "왼쪽",
     "right": "오른쪽",
     "ramSection": "메모리 및 성능",
