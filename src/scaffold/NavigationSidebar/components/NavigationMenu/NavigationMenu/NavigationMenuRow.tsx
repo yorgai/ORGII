@@ -11,7 +11,10 @@ import type {
   NavigationMenuRowMouseEnterHandler,
 } from "./types";
 
-interface NavigationMenuParentRowProps {
+interface NavigationMenuParentRowProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "children"
+> {
   item: NavigationMenuItem;
   isChild: boolean;
   isOpen: boolean;
@@ -47,6 +50,9 @@ export const NavigationMenuParentRow = React.forwardRef<
     onMenuItemContextMenu,
     onRowMouseEnter,
     onToggleSubmenu,
+    onMouseEnter,
+    onMouseLeave,
+    ...rootProps
   },
   ref
 ): React.ReactElement {
@@ -54,8 +60,11 @@ export const NavigationMenuParentRow = React.forwardRef<
 
   return (
     <div
+      {...rootProps}
       ref={ref}
-      className="mb-1"
+      className={`mb-1 ${rootProps.className ?? ""}`}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       onContextMenu={
         onMenuItemContextMenu
           ? (event: React.MouseEvent) =>
@@ -138,7 +147,10 @@ export const NavigationMenuParentRow = React.forwardRef<
   );
 });
 
-interface NavigationMenuLeafRowProps {
+interface NavigationMenuLeafRowProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "children"
+> {
   item: NavigationMenuItem;
   isChild: boolean;
   isSelected: boolean;
@@ -170,6 +182,9 @@ export const NavigationMenuLeafRow = React.forwardRef<
     onMenuItemContextMenu,
     onRowMouseEnter,
     onRowActionClick,
+    onMouseEnter,
+    onMouseLeave,
+    ...rootProps
   },
   ref
 ): React.ReactElement {
@@ -186,7 +201,11 @@ export const NavigationMenuLeafRow = React.forwardRef<
 
   return (
     <div
+      {...rootProps}
       ref={ref}
+      className={rootProps.className}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       onContextMenu={(event: React.MouseEvent) =>
         onMenuItemContextMenu?.(event, item.key, item)
       }

@@ -21,7 +21,7 @@ const InlineInfoCard: React.FC<InlineInfoCardProps> = ({
     >
       <div
         className={cn(
-          "relative min-w-0 max-w-full overflow-hidden rounded-lg border border-border-2 bg-chat-input px-4 py-2 [contain:inline-size]",
+          "relative min-w-0 max-w-full overflow-hidden rounded-lg border border-border-2 bg-bg-1 px-4 py-2 [contain:inline-size]",
           contentClassName
         )}
       >
