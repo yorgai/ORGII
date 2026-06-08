@@ -17,6 +17,7 @@ import {
   sessionsAtom,
   upsertSession,
 } from "@src/store/session/sessionAtom";
+import { updateShellProcessAtom } from "@src/store/session/shellProcessAtom";
 import {
   activeSessionIdAtom,
   openSessionAtom,
@@ -249,9 +250,50 @@ export function createSessionSeederHelpers(store: E2EStore) {
     }
   };
 
+  const seedShellProcess = async (input: {
+    sessionId: string;
+    pid: number;
+    command: string;
+    logPath?: string;
+    status?: "running" | "background";
+  }): Promise<Result<{ sessionId: string; pid: number }>> => {
+    try {
+      if (!input.sessionId) {
+        return {
+          ok: false,
+          error: "seedShellProcess: `sessionId` is required",
+        };
+      }
+      if (!Number.isFinite(input.pid) || input.pid <= 0) {
+        return {
+          ok: false,
+          error: "seedShellProcess: positive `pid` is required",
+        };
+      }
+      store.set(updateShellProcessAtom, {
+        type: "start",
+        sessionId: input.sessionId,
+        pid: input.pid,
+        command: input.command,
+        logPath: input.logPath,
+      });
+      if (input.status === "background") {
+        store.set(updateShellProcessAtom, {
+          type: "background",
+          sessionId: input.sessionId,
+          pid: input.pid,
+        });
+      }
+      return { ok: true, sessionId: input.sessionId, pid: input.pid };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   return {
     seedChatEvents,
     seedModeSwitchSession,
     seedPlanCard,
+    seedShellProcess,
   };
 }

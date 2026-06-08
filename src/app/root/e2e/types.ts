@@ -528,6 +528,13 @@ export interface E2EHelpers {
     title?: string;
     content: string;
   }) => Promise<Result<{ planRevisionId: string }>>;
+  seedShellProcess: (input: {
+    sessionId: string;
+    pid: number;
+    command: string;
+    logPath?: string;
+    status?: "running" | "background";
+  }) => Promise<Result<{ sessionId: string; pid: number }>>;
   inspectChatState: () => Promise<
     Result<{
       activeSessionId: string | null;

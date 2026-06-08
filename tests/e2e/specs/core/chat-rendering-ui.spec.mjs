@@ -845,6 +845,105 @@ async function assertMultiRepoRenderedPathContext() {
   );
 }
 
+async function assertBackgroundProcessPinnedToChatSession() {
+  const sessionId = `e2e-render-bg-process-chat-${Date.now()}`;
+  const command = `sleep 120 # E2E_BG_PROCESS_PIN_${RUN_ID}`;
+  const baseTime = Date.now();
+  const events = [
+    {
+      id: "bg-process-user",
+      chunk_id: "bg-process-user",
+      sessionId,
+      createdAt: new Date(baseTime).toISOString(),
+      functionName: "user_message",
+      uiCanonical: "user_message",
+      actionType: "raw",
+      args: {},
+      result: {
+        type: "user",
+        message: "Start a background process",
+        is_delta: false,
+      },
+      source: "user",
+      displayText: "Start a background process",
+      displayStatus: "completed",
+      displayVariant: "message",
+      activityStatus: "processed",
+      isDelta: false,
+    },
+  ];
+
+  const seed = await invokeE2E("seedChatEvents", sessionId, events, {
+    chatPanelMaximized: true,
+    stationMode: "my-station",
+  });
+  if (!seed || seed.ok !== true) {
+    throw new Error(`seedChatEvents failed for bg process pin: ${seed?.error ?? "unknown"}`);
+  }
+
+  const processSeed = await invokeE2E("seedShellProcess", {
+    sessionId,
+    pid: 90321,
+    command,
+    status: "background",
+  });
+  if (!processSeed || processSeed.ok !== true) {
+    throw new Error(`seedShellProcess failed: ${processSeed?.error ?? "unknown"}`);
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const state = await execJS(`
+        const body = document.body.innerText || "";
+        const pills = Array.from(document.querySelectorAll('[data-testid="composer-section-process"]'))
+          .map((el) => el.textContent || "");
+        return {
+          body,
+          pills,
+          hasProcessPill: pills.some((text) => text.includes("1")),
+        };
+      `);
+      return state.hasProcessPill;
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `background process pill did not render: ${JSON.stringify(
+        await execJS(`
+          return {
+            body: (document.body.innerText || "").slice(0, 5000),
+            pills: Array.from(document.querySelectorAll('[data-testid="composer-section-process"]')).map((el) => el.textContent || ""),
+          };
+        `)
+      )}`,
+    }
+  );
+
+  const clickResult = await execJS(`
+    const pill = document.querySelector('[data-testid="composer-section-process"]');
+    if (!pill) return "missing";
+    pill.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window, button: 0 }));
+    pill.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, view: window, button: 0 }));
+    pill.click();
+    return "clicked";
+  `);
+  if (clickResult !== "clicked") {
+    throw new Error(`failed to click process pill: ${clickResult}`);
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const body = await execJS(`return document.body.innerText || "";`);
+      return body.includes(command);
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `expanded background process command missing: ${JSON.stringify(
+        await execJS(`return { body: (document.body.innerText || "").slice(0, 5000) };`)
+      )}`,
+    }
+  );
+}
+
 async function assertMultiRepoReadPathRendered() {
   const sessionId = `e2e-render-multirepo-read-${Date.now()}`;
   const baseTime = Date.now();
@@ -1090,6 +1189,15 @@ describe("Core chat rendering UI", () => {
     for (const [batchIndex, batchTools] of batches.entries()) {
       await assertBatchRendered(batchIndex, batchTools);
     }
+  });
+
+  it("pins background shell processes for the rendered chat session", async function () {
+    if (!shouldRunScenario("background-process-pin")) {
+      this.skip();
+      return;
+    }
+
+    await assertBackgroundProcessPinnedToChatSession();
   });
 
   it("renders multi-repo read file targets as paths instead of generic file labels", async function () {
