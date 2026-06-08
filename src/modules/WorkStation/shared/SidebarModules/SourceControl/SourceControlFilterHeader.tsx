@@ -9,7 +9,7 @@
  * Repo-agnostic: all state is owned by the caller (`useSourceControlSidebarModule`).
  */
 import { useAtomValue } from "jotai";
-import { CircleDot, Ellipsis, RefreshCw } from "lucide-react";
+import { Ellipsis, RefreshCw } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -153,8 +153,7 @@ const SourceControlFilterHeader: React.FC<SourceControlFilterHeaderProps> =
                 {
                   value: "issues",
                   label: (
-                    <span className="flex items-center gap-1.5 whitespace-nowrap">
-                      <CircleDot size={14} className="text-text-3" />
+                    <span className="whitespace-nowrap">
                       {t("common:labels.issues", "Issues")}
                     </span>
                   ),
