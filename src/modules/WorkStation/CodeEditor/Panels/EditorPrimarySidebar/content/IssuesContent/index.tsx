@@ -4,7 +4,8 @@
  * GitHub Issues panel for the workstation primary sidebar.
  * Interaction patterns aligned with SourceControlContent:
  * - "Filter issues…" input (same style as "Filter changes…")
- * - Single CollapsibleSection with a compact status dropdown in the header
+ * - Inline status filter + refresh controls below the search input
+ * - The outer CollapsibleSection header ("ISSUES") is provided by the sidebar module
  */
 import { useSetAtom } from "jotai";
 import {
@@ -22,14 +23,11 @@ import Dropdown from "@src/components/Dropdown";
 import Input from "@src/components/Input";
 import { buildIntegrationsPath } from "@src/config/mainAppPaths/integrations";
 import {
-  COUNT_BADGE,
   HEADER_BUTTON,
   HEADER_ICON_SIZE,
   SECTION_ACTION_BUTTON,
-  getCountBadgeSizeClass,
 } from "@src/config/workstation/tokens";
 import { useWorkStationTabs } from "@src/hooks/workStation/tabs/useWorkStationTabs";
-import { CollapsibleSection } from "@src/modules/WorkStation/shared/PrimarySidebarLayout";
 import { usePrimarySidebarSurface } from "@src/modules/WorkStation/shared/hooks/usePrimarySidebarSurface";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { workstationIssueCallbackAtom } from "@src/store/workstation/codeEditor/workstationIssueAtom";
@@ -78,7 +76,6 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
 
     const [showNewIssueForm, setShowNewIssueForm] = useState(false);
     const [creatingIssue, setCreatingIssue] = useState(false);
-    const [sectionCollapsed, setSectionCollapsed] = useState(false);
     const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
     const listRef = useRef<HTMLDivElement>(null);
 
@@ -156,21 +153,6 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
 
     // ── Render ────────────────────────────────────────────────────────────────
 
-    const countBadge = (
-      <span
-        className={`${COUNT_BADGE.base} ${getCountBadgeSizeClass(issues.length)} ${COUNT_BADGE.primary}`}
-      >
-        {issues.length}
-      </span>
-    );
-
-    const sectionTitle = (
-      <span className="flex min-w-0 items-center gap-1.5">
-        <span className="truncate">Issues</span>
-        {countBadge}
-      </span>
-    );
-
     // Status filter dropdown options — icon + label per state
     const filterOptions = [
       {
@@ -241,34 +223,27 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
       </Dropdown>
     );
 
-    const issuesSectionActions = [
-      {
-        key: "filter-state",
-        customRender: statusDropdown,
-        forceVisible: filterDropdownOpen,
-      },
-      {
-        key: "refresh",
-        customRender: (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              refresh();
-            }}
-            disabled={loading}
-            className={HEADER_BUTTON.actionDisabled}
-            title={t("actions.refresh", "Refresh")}
-          >
-            <RefreshCw
-              size={HEADER_ICON_SIZE.sm}
-              strokeWidth={2}
-              className={loading ? "animate-spin" : undefined}
-            />
-          </button>
-        ),
-      },
-    ];
+    const inlineActions = (
+      <div className="flex shrink-0 items-center gap-1 px-2 pb-1">
+        {statusDropdown}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            refresh();
+          }}
+          disabled={loading}
+          className={HEADER_BUTTON.actionDisabled}
+          title={t("actions.refresh", "Refresh")}
+        >
+          <RefreshCw
+            size={HEADER_ICON_SIZE.sm}
+            strokeWidth={2}
+            className={loading ? "animate-spin" : undefined}
+          />
+        </button>
+      </div>
+    );
 
     let listContent: React.ReactNode;
 
@@ -315,45 +290,34 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
     } else {
       listContent = (
         <div ref={listRef} className="flex flex-1 flex-col overflow-y-auto">
-          <CollapsibleSection
-            title={sectionTitle}
-            collapsed={sectionCollapsed}
-            onCollapseChange={setSectionCollapsed}
-            collapsible
-            resizable={false}
-            isLast
-            autoHeight={false}
-            hideSeparator
-            actions={issuesSectionActions}
-          >
-            {issues.length === 0 ? (
-              <Placeholder
-                variant="empty"
-                placement="sidebar"
-                title={t("git.issues.empty", "No {{state}} issues", {
-                  state: filterState,
-                })}
+          {inlineActions}
+          {issues.length === 0 ? (
+            <Placeholder
+              variant="empty"
+              placement="sidebar"
+              title={t("git.issues.empty", "No {{state}} issues", {
+                state: filterState,
+              })}
+            />
+          ) : (
+            issues.map((issue) => (
+              <IssueRow
+                key={issue.number}
+                issue={issue}
+                isSelected={false}
+                onClick={() => {
+                  selectIssue(issue);
+                  openTab(
+                    createGitHubIssueDetailTab(
+                      issue.number,
+                      issue.title,
+                      repoPath
+                    )
+                  );
+                }}
               />
-            ) : (
-              issues.map((issue) => (
-                <IssueRow
-                  key={issue.number}
-                  issue={issue}
-                  isSelected={false}
-                  onClick={() => {
-                    selectIssue(issue);
-                    openTab(
-                      createGitHubIssueDetailTab(
-                        issue.number,
-                        issue.title,
-                        repoPath
-                      )
-                    );
-                  }}
-                />
-              ))
-            )}
-          </CollapsibleSection>
+            ))
+          )}
         </div>
       );
     }
