@@ -266,23 +266,29 @@ const ContainersSection: React.FC<ContainersSectionProps> = ({
       }
     >
       {error ? (
-        <Placeholder
-          variant="error"
-          title={t("navigation:launchpad.containers.dockerUnavailable")}
-          subtitle={error}
-          action={{
-            label: t("common:actions.refresh"),
-            onClick: onRefresh,
-          }}
-        />
+        <div className="rounded-lg bg-fill-2 p-4">
+          <Placeholder
+            variant="error"
+            title={t("navigation:launchpad.containers.dockerUnavailable")}
+            subtitle={error}
+            action={{
+              label: t("common:actions.refresh"),
+              onClick: onRefresh,
+            }}
+          />
+        </div>
       ) : loading ? (
-        <Placeholder variant="loading" />
+        <div className="rounded-lg bg-fill-2 p-4">
+          <Placeholder variant="loading" />
+        </div>
       ) : containers.length === 0 ? (
-        <Placeholder
-          variant="empty"
-          title={emptyTitle}
-          subtitle={emptySubtitle}
-        />
+        <div className="rounded-lg bg-fill-2 p-4">
+          <Placeholder
+            variant="empty"
+            title={emptyTitle}
+            subtitle={emptySubtitle}
+          />
+        </div>
       ) : (
         <>
           <SettingsTable<ContainerSummary>

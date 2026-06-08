@@ -25,8 +25,6 @@ export { TerminalTabSidebar } from "./Terminal";
 
 export { BenchmarkTabSidebar } from "./Benchmark";
 
-export { WorkspacesTabSidebar } from "./Launchpad";
-
 export {
   registerTabSidebar,
   getTabSidebarDescriptor,

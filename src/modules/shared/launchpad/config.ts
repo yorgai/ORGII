@@ -11,13 +11,6 @@ import { REPO_SETUP_PROMPT_MARKER } from "@src/config/repoSetupMarker";
 
 import type { DetectedConfigFile, RepoType } from "./types";
 
-export type LaunchpadView = "myApps" | "myRepos";
-
-export const LAUNCHPAD_VIEWS: { key: LaunchpadView; labelKey: string }[] = [
-  { key: "myApps", labelKey: "launchpad.tabs.myApps" },
-  { key: "myRepos", labelKey: "launchpad.tabs.myRepos" },
-];
-
 const REPO_COLORS = [
   "#FF6B6B",
   "#4ECDC4",

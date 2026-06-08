@@ -24,21 +24,26 @@ import TabPill from "@src/components/TabPill";
 import type { TabPillItem } from "@src/components/TabPill";
 import { InfoRow } from "@src/modules/MainApp/Integrations/shared/InfoRow";
 import {
+  useContainers,
+  useEnvCrud,
+  useRepoContainers,
+  useRepoDetection,
+  useScriptCrud,
+} from "@src/modules/shared/launchpad/hooks";
+import type {
+  EnvVar,
+  RepoScript,
+  ScriptCategory,
+} from "@src/modules/shared/launchpad/types";
+import {
   CollapsibleSection,
   DETAIL_PANEL_TOKENS,
-  DetailPanelContainer,
 } from "@src/modules/shared/layouts/blocks";
 import type { Repo } from "@src/store/repo/types";
 import { copyText } from "@src/util/data/clipboard";
 
-import { useContainers } from "../hooks/useContainers";
-import { useEnvCrud } from "../hooks/useEnvCrud";
-import { useRepoContainers } from "../hooks/useRepoContainers";
-import { useRepoDetection } from "../hooks/useRepoDetection";
-import { useScriptCrud } from "../hooks/useScriptCrud";
-import type { EnvVar, RepoScript, ScriptCategory } from "../types";
+import ContainersSection from "../ContainersSection";
 import AgentLauncherSection from "./AgentLauncherSection";
-import ContainersSection from "./ContainersSection";
 import {
   STATUS_DOT_COLOR,
   STATUS_LABEL_KEY,
@@ -401,199 +406,201 @@ const RepoDetailPage: React.FC<RepoDetailPageProps> = ({
     });
   }, [scripts, scriptSearch, activeCategory]);
 
+  // Render directly into the parent's descriptionContent slot — no
+  // outer DetailPanelContainer, no extra scroll wrapper, no width cap.
+  // Scrolling and horizontal padding are owned by the enclosing
+  // WorkItemContentStack, matching the Overview tab's layout exactly.
+  // The fragment-level `relative` wrapper exists only to anchor the
+  // floating AgentLauncherSection's `absolute bottom-2` positioning.
   return (
-    <DetailPanelContainer className="relative">
-      <div className={DETAIL_PANEL_TOKENS.scrollContent}>
-        <div className={DETAIL_PANEL_TOKENS.contentWidthWithPadding}>
-          {/* Info Section */}
-          <div className={DETAIL_PANEL_TOKENS.sectionGap}>
-            <div className="rounded-lg bg-surface-container p-4">
-              <h3
-                className="mb-3 truncate text-[14px] font-semibold text-text-1"
-                title={repoName}
-              >
-                {repoName}
-              </h3>
-              <div className={DETAIL_PANEL_TOKENS.contentStack}>
-                <InfoRow
-                  label={t("launchpad.preview.repoType")}
-                  value={repoTypeLabel}
-                />
-                <InfoRow label={t("launchpad.detail.path")} value={repoPath} />
-                <InfoRow label={t("launchpad.preview.status")}>
-                  <StatusDot
-                    color={STATUS_DOT_COLOR[envStatus]}
-                    size="inline"
-                    labelClassName={`text-[12px] font-medium ${STATUS_TEXT_COLOR[envStatus]}`}
-                    label={t(STATUS_LABEL_KEY[envStatus])}
-                  />
-                </InfoRow>
-                {badges.length > 0 && (
-                  <InfoRow label={t("launchpad.preview.tools")}>
-                    <div className="flex items-center gap-1.5">
-                      {badges.map((badge) => (
-                        <span
-                          key={badge}
-                          className="rounded bg-fill-3 px-1.5 py-0.5 text-[11px] text-text-2"
-                        >
-                          {badge}
-                        </span>
-                      ))}
-                    </div>
-                  </InfoRow>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Config Files */}
-          {configFiles.length > 0 && (
-            <CollapsibleSection title={t("launchpad.preview.configFiles")}>
-              <div
-                className={`${DETAIL_PANEL_TOKENS.contentStack} rounded-lg bg-surface-container p-4`}
-              >
-                {configFiles.map((file) => (
-                  <div
-                    key={file.path}
-                    className="flex min-h-[24px] min-w-0 items-center gap-2"
-                  >
-                    <FileTypeIcon fileName={file.name} size="small" />
+    <div className="relative flex flex-col">
+      {/* Info Section */}
+      <div className={DETAIL_PANEL_TOKENS.sectionGap}>
+        <div className="rounded-lg bg-fill-2 p-4">
+          <h3
+            className="mb-3 truncate text-[14px] font-semibold text-text-1"
+            title={repoName}
+          >
+            {repoName}
+          </h3>
+          <div className={DETAIL_PANEL_TOKENS.contentStack}>
+            <InfoRow
+              label={t("launchpad.preview.repoType")}
+              value={repoTypeLabel}
+            />
+            <InfoRow label={t("launchpad.detail.path")} value={repoPath} />
+            <InfoRow label={t("launchpad.preview.status")}>
+              <StatusDot
+                color={STATUS_DOT_COLOR[envStatus]}
+                size="inline"
+                labelClassName={`text-[12px] font-medium ${STATUS_TEXT_COLOR[envStatus]}`}
+                label={t(STATUS_LABEL_KEY[envStatus])}
+              />
+            </InfoRow>
+            {badges.length > 0 && (
+              <InfoRow label={t("launchpad.preview.tools")}>
+                <div className="flex items-center gap-1.5">
+                  {badges.map((badge) => (
                     <span
-                      className="min-w-0 flex-1 truncate text-[12px] text-text-1"
-                      title={file.path}
+                      key={badge}
+                      className="rounded bg-fill-3 px-1.5 py-0.5 text-[11px] text-text-2"
                     >
-                      {file.name}
+                      {badge}
                     </span>
-                  </div>
-                ))}
-              </div>
-            </CollapsibleSection>
-          )}
-
-          {showRepoContainersSection ? (
-            <ContainersSection
-              title={t("launchpad.containers.repoTitle")}
-              containers={repoContainers}
-              loading={containersLoading}
-              error={containersError}
-              onRefresh={refreshContainers}
-              emptyTitle={t("launchpad.containers.repoEmptyTitle")}
-              emptySubtitle={t("launchpad.containers.repoEmptySubtitle")}
-            />
-          ) : null}
-
-          {/* Env Vars Section */}
-          <CollapsibleSection
-            title={
-              envVars.length > 0
-                ? `${t("launchpad.detail.envVarsTitle")} (${envVars.filter((v) => v.filled).length}/${envVars.length})`
-                : t("launchpad.detail.envVarsTitle")
-            }
-            defaultOpen
-          >
-            <SettingsTable<EnvVar>
-              columns={envColumns}
-              rows={filteredEnvVars}
-              getRowKey={(row) => row.key}
-              headerHeight="compact"
-              emptyTitle={
-                envSearch
-                  ? t("common:status.noResults")
-                  : t("launchpad.detail.noEnvVars")
-              }
-              className="table-layout-fixed"
-              searchBar={{
-                searchValue: envSearch,
-                searchPlaceholder: t("launchpad.detail.searchEnvVars"),
-                onSearchChange: setEnvSearch,
-                onSearchClear: () => setEnvSearch(""),
-                searchCountText:
-                  filteredEnvVars.length !== envVars.length
-                    ? `${filteredEnvVars.length} / ${envVars.length}`
-                    : undefined,
-              }}
-              addFooter={
-                showAddEnv
-                  ? undefined
-                  : {
-                      label: t("launchpad.detail.addEnvVar"),
-                      onClick: () => setShowAddEnv(true),
-                    }
-              }
-            />
-
-            {showAddEnv && (
-              <div className="mt-3">
-                <AddEnvVarRow onAdd={addVar} />
-              </div>
+                  ))}
+                </div>
+              </InfoRow>
             )}
-          </CollapsibleSection>
-
-          {/* Scripts Section */}
-          <CollapsibleSection
-            title={
-              scripts.length > 0
-                ? `${t("launchpad.detail.scriptsTitle")} (${scripts.length})`
-                : t("launchpad.detail.scriptsTitle")
-            }
-            defaultOpen
-          >
-            <SettingsTable<RepoScript>
-              columns={scriptColumns}
-              rows={filteredScripts}
-              getRowKey={(row) => `${row.source}:${row.command}`}
-              headerHeight="tall"
-              className="table-layout-fixed"
-              searchBar={{
-                searchValue: scriptSearch,
-                searchPlaceholder: t("launchpad.detail.searchScripts"),
-                onSearchChange: setScriptSearch,
-                onSearchClear: () => setScriptSearch(""),
-                searchCountText:
-                  filteredScripts.length !== scripts.length
-                    ? `${filteredScripts.length} / ${scripts.length}`
-                    : undefined,
-                tabPills:
-                  categoryTabs.length > 2 ? (
-                    <TabPill
-                      tabs={categoryTabs}
-                      activeTab={activeCategory}
-                      onChange={handleCategoryChange}
-                      variant="pill"
-                      colorScheme="muted"
-                      fillWidth={false}
-                      wrap
-                      size="small"
-                      className="w-full"
-                    />
-                  ) : undefined,
-              }}
-              emptyTitle={
-                scriptSearch || activeCategory !== "all"
-                  ? t("common:status.noResults")
-                  : t("launchpad.detail.noScripts")
-              }
-              addFooter={
-                showAddScript
-                  ? undefined
-                  : {
-                      label: t("launchpad.detail.addScript"),
-                      onClick: () => setShowAddScript(true),
-                    }
-              }
-            />
-
-            {showAddScript && (
-              <div className="mt-3">
-                <AddScriptRow onAdd={addScript} />
-              </div>
-            )}
-          </CollapsibleSection>
+          </div>
         </div>
       </div>
 
+      {/* Config Files */}
+      {configFiles.length > 0 && (
+        <CollapsibleSection title={t("launchpad.preview.configFiles")}>
+          <div
+            className={`${DETAIL_PANEL_TOKENS.contentStack} rounded-lg bg-fill-2 p-4`}
+          >
+            {configFiles.map((file) => (
+              <div
+                key={file.path}
+                className="flex min-h-[24px] min-w-0 items-center gap-2"
+              >
+                <FileTypeIcon fileName={file.name} size="small" />
+                <span
+                  className="min-w-0 flex-1 truncate text-[12px] text-text-1"
+                  title={file.path}
+                >
+                  {file.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {showRepoContainersSection ? (
+        <ContainersSection
+          title={t("launchpad.containers.repoTitle")}
+          containers={repoContainers}
+          loading={containersLoading}
+          error={containersError}
+          onRefresh={refreshContainers}
+          emptyTitle={t("launchpad.containers.repoEmptyTitle")}
+          emptySubtitle={t("launchpad.containers.repoEmptySubtitle")}
+        />
+      ) : null}
+
+      {/* Env Vars Section */}
+      <CollapsibleSection
+        title={
+          envVars.length > 0
+            ? `${t("launchpad.detail.envVarsTitle")} (${envVars.filter((v) => v.filled).length}/${envVars.length})`
+            : t("launchpad.detail.envVarsTitle")
+        }
+        defaultOpen
+      >
+        <SettingsTable<EnvVar>
+          columns={envColumns}
+          rows={filteredEnvVars}
+          getRowKey={(row) => row.key}
+          headerHeight="compact"
+          emptyTitle={
+            envSearch
+              ? t("common:status.noResults")
+              : t("launchpad.detail.noEnvVars")
+          }
+          className="table-layout-fixed"
+          searchBar={{
+            searchValue: envSearch,
+            searchPlaceholder: t("launchpad.detail.searchEnvVars"),
+            onSearchChange: setEnvSearch,
+            onSearchClear: () => setEnvSearch(""),
+            searchCountText:
+              filteredEnvVars.length !== envVars.length
+                ? `${filteredEnvVars.length} / ${envVars.length}`
+                : undefined,
+          }}
+          addFooter={
+            showAddEnv
+              ? undefined
+              : {
+                  label: t("launchpad.detail.addEnvVar"),
+                  onClick: () => setShowAddEnv(true),
+                }
+          }
+        />
+
+        {showAddEnv && (
+          <div className="mt-3">
+            <AddEnvVarRow onAdd={addVar} />
+          </div>
+        )}
+      </CollapsibleSection>
+
+      {/* Scripts Section */}
+      <CollapsibleSection
+        title={
+          scripts.length > 0
+            ? `${t("launchpad.detail.scriptsTitle")} (${scripts.length})`
+            : t("launchpad.detail.scriptsTitle")
+        }
+        defaultOpen
+      >
+        <SettingsTable<RepoScript>
+          columns={scriptColumns}
+          rows={filteredScripts}
+          getRowKey={(row) => `${row.source}:${row.command}`}
+          headerHeight="tall"
+          className="table-layout-fixed"
+          searchBar={{
+            searchValue: scriptSearch,
+            searchPlaceholder: t("launchpad.detail.searchScripts"),
+            onSearchChange: setScriptSearch,
+            onSearchClear: () => setScriptSearch(""),
+            searchCountText:
+              filteredScripts.length !== scripts.length
+                ? `${filteredScripts.length} / ${scripts.length}`
+                : undefined,
+            tabPills:
+              categoryTabs.length > 2 ? (
+                <TabPill
+                  tabs={categoryTabs}
+                  activeTab={activeCategory}
+                  onChange={handleCategoryChange}
+                  variant="pill"
+                  colorScheme="muted"
+                  fillWidth={false}
+                  wrap
+                  size="small"
+                  className="w-full"
+                />
+              ) : undefined,
+          }}
+          emptyTitle={
+            scriptSearch || activeCategory !== "all"
+              ? t("common:status.noResults")
+              : t("launchpad.detail.noScripts")
+          }
+          addFooter={
+            showAddScript
+              ? undefined
+              : {
+                  label: t("launchpad.detail.addScript"),
+                  onClick: () => setShowAddScript(true),
+                }
+          }
+        />
+
+        {showAddScript && (
+          <div className="mt-3">
+            <AddScriptRow onAdd={addScript} />
+          </div>
+        )}
+      </CollapsibleSection>
+
       <AgentLauncherSection context={setupContext} />
-    </DetailPanelContainer>
+    </div>
   );
 };
 

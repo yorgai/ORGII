@@ -146,10 +146,6 @@ export type { SubagentDetailTabData } from "../types";
 export { agentConfigTabFactory, createAgentConfigTab } from "./agentConfig";
 export type { AgentConfigTabData, AgentConfigTabVariant } from "../types";
 
-// Launchpad
-export { launchpadRepoTabFactory, createLaunchpadRepoTab } from "./launchpad";
-export type { LaunchpadRepoTabData } from "./launchpad";
-
 // Canvas Preview
 export {
   CANVAS_PREVIEW_TAB_ID_PREFIX,

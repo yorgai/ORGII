@@ -134,23 +134,29 @@ const ContainerEnginesSection: React.FC<ContainerEnginesSectionProps> = ({
       }
     >
       {error ? (
-        <Placeholder
-          variant="error"
-          title={t("navigation:launchpad.containerEngines.errorTitle")}
-          subtitle={error}
-          action={{
-            label: t("common:actions.refresh"),
-            onClick: onRefresh,
-          }}
-        />
+        <div className="rounded-lg bg-fill-2 p-4">
+          <Placeholder
+            variant="error"
+            title={t("navigation:launchpad.containerEngines.errorTitle")}
+            subtitle={error}
+            action={{
+              label: t("common:actions.refresh"),
+              onClick: onRefresh,
+            }}
+          />
+        </div>
       ) : loading ? (
-        <Placeholder variant="loading" />
+        <div className="rounded-lg bg-fill-2 p-4">
+          <Placeholder variant="loading" />
+        </div>
       ) : engines.length === 0 ? (
-        <Placeholder
-          variant="empty"
-          title={t("navigation:launchpad.containerEngines.emptyTitle")}
-          subtitle={t("navigation:launchpad.containerEngines.emptySubtitle")}
-        />
+        <div className="rounded-lg bg-fill-2 p-4">
+          <Placeholder
+            variant="empty"
+            title={t("navigation:launchpad.containerEngines.emptyTitle")}
+            subtitle={t("navigation:launchpad.containerEngines.emptySubtitle")}
+          />
+        </div>
       ) : (
         <SettingsTable<ContainerEngineCandidate>
           columns={columns}

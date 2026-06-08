@@ -14,12 +14,12 @@ import { useTranslation } from "react-i18next";
 import Button from "@src/components/Button";
 import Input from "@src/components/Input";
 import Select from "@src/components/Select";
+import type { ScriptCategory } from "@src/modules/shared/launchpad/types";
 import {
   SectionContainer,
   SectionRow,
 } from "@src/modules/shared/layouts/SectionLayout";
 
-import type { ScriptCategory } from "../types";
 import { CATEGORY_OPTIONS } from "./RepoDetailConfig";
 
 // ── AddEnvVarRow ──────────────────────────────────────────────────────────────

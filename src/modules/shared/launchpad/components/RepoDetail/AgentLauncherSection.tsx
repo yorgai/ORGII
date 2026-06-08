@@ -30,13 +30,15 @@ import {
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useModelPillLabel } from "@src/hooks/models";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
+import {
+  type RepoSetupContext,
+  useRepoSetup,
+} from "@src/modules/shared/launchpad/hooks";
 import { UnifiedModelPalette } from "@src/scaffold/GlobalSpotlight/palettes";
 import {
   creatorDefaultModelSelectionAtom,
   extractModelPair,
 } from "@src/store/session/creatorDefaultModelAtom";
-
-import { type RepoSetupContext, useRepoSetup } from "../hooks/useRepoSetup";
 
 interface AgentLauncherSectionProps {
   context: RepoSetupContext;

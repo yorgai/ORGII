@@ -9,7 +9,7 @@
  *   - Setup (auto-detects repo + creates agent session with setup prompt)
  *   - Switch to this repo (sets the global selection + jumps to Editor)
  *   - Start session (sets global selection + opens Agent Station)
- *   - Open details (opens the existing launchpad-repo tab)
+ *   - Open details (opens the repo-detail view in the chat panel)
  *   - Locate in Finder (reveals the path in the OS file manager)
  *   - Remove (deletes the repo record after a destructive confirmation)
  *

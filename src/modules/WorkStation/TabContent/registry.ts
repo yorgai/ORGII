@@ -236,11 +236,6 @@ const BenchmarkEntry: RendererEntry = {
   debugLabel: "benchmark",
 };
 
-const LaunchpadRepoEntry: RendererEntry = {
-  Component: lazy(() => import("./renderers/launchpadRepo")),
-  debugLabel: "launchpad-repo",
-};
-
 // ============================================
 // Canvas Preview renderer
 // ============================================
@@ -316,9 +311,6 @@ export const REGISTRY: TabContentRegistry = {
 
   // Ops Control
   "kanban-station": KanbanStationEntry,
-
-  // Launchpad
-  "launchpad-repo": LaunchpadRepoEntry,
 
   // Canvas Preview
   "canvas-preview": CanvasPreviewEntry,

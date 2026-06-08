@@ -7,7 +7,7 @@ import {
   SCRIPT_CATEGORIES,
   type ScriptCategory,
   type SetupStatus,
-} from "../types";
+} from "@src/modules/shared/launchpad/types";
 
 export const STATUS_DOT_COLOR: Record<SetupStatus, string> = {
   not_analyzed: "bg-danger-6",
