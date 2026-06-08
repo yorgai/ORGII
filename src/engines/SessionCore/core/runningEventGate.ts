@@ -109,6 +109,48 @@ export function sessionHasComposerStopBlockingWork(
   });
 }
 
+function eventTimestampMs(event: SessionEvent): number {
+  const parsed = Date.parse(event.createdAt);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isAssistantTurnActivity(event: SessionEvent): boolean {
+  if (event.source !== "assistant") return false;
+  if (!isTurnBlockingRuntimeEvent(event)) return false;
+  if (
+    event.displayVariant === "thinking" ||
+    event.displayVariant === "tool_call"
+  ) {
+    return true;
+  }
+  return (
+    event.actionType === "assistant" ||
+    event.actionType === "llm_thinking" ||
+    event.actionType === "tool_call"
+  );
+}
+
+export function latestAssistantActivityAfterLastUserAt(
+  events: readonly SessionEvent[],
+  sessionId: string
+): number | undefined {
+  let lastUserAt = 0;
+  let latestActivityAt = 0;
+  for (const event of events) {
+    if (event.sessionId && event.sessionId !== sessionId) continue;
+    const at = eventTimestampMs(event);
+    if (event.source === "user") {
+      lastUserAt = Math.max(lastUserAt, at);
+      latestActivityAt = 0;
+      continue;
+    }
+    if (at >= lastUserAt && isAssistantTurnActivity(event)) {
+      latestActivityAt = Math.max(latestActivityAt, at);
+    }
+  }
+  return latestActivityAt > 0 ? latestActivityAt : undefined;
+}
+
 export function isTimelineBoundaryClosableRuntimeEvent(
   event: SessionEvent,
   sessionId: string

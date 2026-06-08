@@ -439,19 +439,73 @@ async function waitForQueuedOrForceSentFollowup(marker) {
       return (
         state.queuedMessages.some((item) => item.content.includes(marker)) ||
         queuedItems.some((item) => item.text.includes(marker)) ||
-        markerUserTranscriptEvents(state, marker).length > 0 ||
-        markerSyntheticPreviewEvents(state, marker).length > 0
+        markerUserTranscriptEvents(state, marker).length > 0
       );
     },
     {
       timeout: QUEUE_TIMEOUT_MS,
-      timeoutMsg: `follow-up marker ${marker} never appeared in queued messages or a force-sent user turn; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+      timeoutMsg: `follow-up marker ${marker} never appeared in queued messages or a durable force-sent user turn; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
     }
   );
 }
 
+async function readRenderedRoundBoundarySnapshot(marker) {
+  return execJS(`
+    const marker = ${JSON.stringify(marker)};
+    const isVisible = (node) => {
+      if (!node) return false;
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    };
+    const chatList = document.querySelector('[data-testid="chat-message-list"]');
+    const roundControl = Array.from(document.querySelectorAll('[data-testid="turn-pagination-current-round"]')).find(isVisible) || null;
+    const userMessages = chatList
+      ? Array.from(chatList.querySelectorAll('[data-testid="chat-message-user-editable"]')).filter(isVisible)
+      : [];
+    const markerUserMessages = userMessages
+      .map((node) => (node.textContent || "").trim())
+      .filter((text) => text.includes(marker));
+    const queuedItems = Array.from(document.querySelectorAll('[data-testid="queued-message-item"]'))
+      .filter(isVisible)
+      .map((node) => (node.textContent || "").trim())
+      .filter((text) => text.includes(marker));
+    return {
+      roundLabel: roundControl ? (roundControl.textContent || "").trim() : "",
+      userMessageCount: userMessages.length,
+      markerUserMessageCount: markerUserMessages.length,
+      markerUserMessages,
+      queuedItemCount: queuedItems.length,
+      queuedItems,
+      chatListText: chatList ? (chatList.textContent || "").slice(0, 2000) : "",
+    };
+  `);
+}
+
+async function assertRenderedRoundBoundaryWhileQueued(label, marker) {
+  const samples = [];
+  const deadline = Date.now() + 2_000;
+  while (Date.now() < deadline) {
+    const state = await inspectChatState(`${label}-round-boundary`);
+    const snapshot = await readRenderedRoundBoundarySnapshot(marker);
+    samples.push(snapshot);
+    const syntheticPreviewCount = markerSyntheticPreviewEvents(state, marker).length;
+    if (snapshot.markerUserMessageCount > 0 || syntheticPreviewCount > 0) {
+      throw new Error(
+        `${label} queued follow-up crossed the rendered round boundary before dispatch; marker=${marker} syntheticPreviewCount=${syntheticPreviewCount} snapshot=${JSON.stringify(snapshot)} state=${JSON.stringify(summarizeChatState(state))}`
+      );
+    }
+    await browser.pause(250);
+  }
+  if (samples.every((sample) => sample.queuedItemCount === 0)) {
+    throw new Error(
+      `${label} queued follow-up was not rendered in the composer queue while parked; marker=${marker} samples=${JSON.stringify(samples)} state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))}`
+    );
+  }
+}
+
 async function assertQueuedFollowupRemainsParked(label, marker) {
-  await browser.pause(1_500);
+  await assertRenderedRoundBoundaryWhileQueued(label, marker);
   const state = await inspectChatState(`${label}-queue-parked`);
   assertQueuedMarkerState(state, label, marker, {
     shouldBeQueued: true,
@@ -463,7 +517,7 @@ function assertQueuedMarkerState(
   state,
   label,
   marker,
-  { shouldBeQueued, shouldBeUserTurn, allowSyntheticUserTurn = false }
+  { shouldBeQueued, shouldBeUserTurn }
 ) {
   const queuedAtomCount = state.queuedMessages.filter((item) =>
     item.content.includes(marker)
@@ -473,18 +527,16 @@ function assertQueuedMarkerState(
     marker
   ).length;
   const userTurnCount = markerUserTranscriptEvents(state, marker).length;
-  const queuedDisplayCount = queuedAtomCount + syntheticPreviewCount;
-  const effectiveUserTurnCount = allowSyntheticUserTurn
-    ? userTurnCount + syntheticPreviewCount
-    : userTurnCount;
+  const effectiveUserTurnCount = userTurnCount;
   if (
-    (shouldBeQueued && queuedDisplayCount === 0) ||
+    syntheticPreviewCount !== 0 ||
+    (shouldBeQueued && queuedAtomCount === 0) ||
     (!shouldBeQueued && queuedAtomCount !== 0) ||
     (shouldBeUserTurn && effectiveUserTurnCount !== 1) ||
     (!shouldBeUserTurn && userTurnCount !== 0)
   ) {
     throw new Error(
-      `${label} marker state mismatch for ${marker}; queuedAtomCount=${queuedAtomCount} syntheticPreviewCount=${syntheticPreviewCount} queuedDisplayCount=${queuedDisplayCount} userTurnCount=${userTurnCount} effectiveUserTurnCount=${effectiveUserTurnCount} expected=${JSON.stringify({ shouldBeQueued, shouldBeUserTurn, allowSyntheticUserTurn })} state=${JSON.stringify(summarizeChatState(state))}`
+      `${label} marker state mismatch for ${marker}; queuedAtomCount=${queuedAtomCount} syntheticPreviewCount=${syntheticPreviewCount} userTurnCount=${userTurnCount} effectiveUserTurnCount=${effectiveUserTurnCount} expected=${JSON.stringify({ shouldBeQueued, shouldBeUserTurn })} state=${JSON.stringify(summarizeChatState(state))}`
     );
   }
 }
@@ -583,21 +635,21 @@ async function assertComposerResponsiveAfterStop(label, expectedText) {
 }
 
 async function waitForMarkerState(label, marker, expected, timeout = 20_000) {
-  await browser.waitUntil(
-    async () => {
-      const state = await inspectChatState(`${label}-marker-state`);
-      try {
-        assertQueuedMarkerState(state, label, marker, expected);
-        return true;
-      } catch {
-        return false;
-      }
-    },
-    {
-      timeout,
-      interval: 500,
-      timeoutMsg: `${label} marker ${marker} did not reach expected state ${JSON.stringify(expected)}; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+  const deadline = Date.now() + timeout;
+  let lastError = null;
+  while (Date.now() < deadline) {
+    const state = await inspectChatState(`${label}-marker-state`);
+    try {
+      assertQueuedMarkerState(state, label, marker, expected);
+      return;
+    } catch (error) {
+      lastError = error;
     }
+    await browser.pause(500);
+  }
+  const finalState = await invokeE2E("inspectChatState");
+  throw new Error(
+    `${label} marker ${marker} did not reach expected state ${JSON.stringify(expected)}; lastError=${lastError?.message ?? String(lastError)} finalState=${JSON.stringify(summarizeChatState(finalState))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
   );
 }
 
@@ -627,9 +679,9 @@ async function clickSendNowForQueuedMarker(marker) {
   if (!queuedMessage) {
     const markerUserEvents = markerUserTranscriptEvents(state, marker);
     const markerPreviewEvents = markerSyntheticPreviewEvents(state, marker);
-    if (markerUserEvents.length + markerPreviewEvents.length === 1) return;
+    if (markerUserEvents.length === 1 && markerPreviewEvents.length === 0) return;
     throw new Error(
-      `Queued state did not contain marker ${marker}: ${JSON.stringify(summarizeChatState(state))}`
+      `Queued state did not contain marker ${marker}: markerUserEvents=${markerUserEvents.length} markerPreviewEvents=${markerPreviewEvents.length} state=${JSON.stringify(summarizeChatState(state))}`
     );
   }
   const previousFlushRequest = state.queueFlushRequest;
@@ -706,7 +758,8 @@ async function clickSendNowForQueuedMarker(marker) {
         marker
       );
       return (
-        markerUserEvents.length + markerPreviewEvents.length >= 1 &&
+        markerUserEvents.length >= 1 &&
+        markerPreviewEvents.length === 0 &&
         !queuedStillContainsMarker
       );
     },
@@ -811,6 +864,15 @@ function longRunningPromptForConfig(config, waitSeconds = 20) {
     `Start a deliberately long, harmless task for ${config.label}.`,
     `Create a stoppable window by waiting for about ${waitSeconds} seconds before the final answer.`,
     "After the wait completes, reply with a short confirmation.",
+  ].join(" ");
+}
+
+function repoExplorationPromptForConfig(config, waitSeconds = 20) {
+  return [
+    `Explore the current fixture repo for ${config.label} before answering.`,
+    "Read README.md and package.json, inspect src/math.ts, and search under src for math-related symbols or text.",
+    `Use whichever normal repo-inspection tools are appropriate, then keep the turn active for about ${waitSeconds} seconds before the final answer.`,
+    "After the exploration and wait complete, summarize the files you inspected in one short sentence.",
   ].join(" ");
 }
 
@@ -1039,7 +1101,6 @@ async function runBurstQueueSendNowOrderingScenario(config) {
     {
       shouldBeQueued: false,
       shouldBeUserTurn: true,
-      allowSyntheticUserTurn: true,
     },
     60_000
   );
@@ -1074,7 +1135,6 @@ async function runBurstQueueSendNowOrderingScenario(config) {
     {
       shouldBeQueued: false,
       shouldBeUserTurn: true,
-      allowSyntheticUserTurn: true,
     },
     60_000
   );
@@ -1098,7 +1158,7 @@ async function runBurstQueueSendNowOrderingScenario(config) {
 
 async function runQueueAutodispatchesAfterNaturalCompletionScenario(config) {
   const suffix = `${config.label.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
-  const firstPrompt = longRunningPromptForConfig(config, 8);
+  const firstPrompt = repoExplorationPromptForConfig(config, 8);
   const marker = `QUEUE_AUTODISPATCH_AFTER_COMPLETE_${suffix}`;
   const followupPrompt = `This queued follow-up must auto-dispatch after the active turn naturally completes: ${marker}`;
 
@@ -1124,10 +1184,9 @@ async function runQueueAutodispatchesAfterNaturalCompletionScenario(config) {
       const queuedStillContainsMarker = state.queuedMessages.some((item) =>
         item.content.includes(marker)
       );
-      const markerWasSent =
-        markerUserTranscriptEvents(state, marker).length > 0 ||
-        markerSyntheticPreviewEvents(state, marker).length > 0;
-      return markerWasSent && !queuedStillContainsMarker;
+      const markerWasSent = markerUserTranscriptEvents(state, marker).length > 0;
+      const markerPreviewEvents = markerSyntheticPreviewEvents(state, marker).length;
+      return markerWasSent && markerPreviewEvents === 0 && !queuedStillContainsMarker;
     },
     {
       timeout: REPLY_TIMEOUT_MS,
@@ -1139,7 +1198,7 @@ async function runQueueAutodispatchesAfterNaturalCompletionScenario(config) {
 
 async function runQueueDoesNotAutoflushWhileActiveScenario(config) {
   const suffix = `${config.label.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
-  const firstPrompt = longRunningPromptForConfig(config);
+  const firstPrompt = repoExplorationPromptForConfig(config);
   const clickMarker = `NO_AUTOFLUSH_CLICK_${suffix}`;
   const shortcutMarker = `NO_AUTOFLUSH_SHORTCUT_${suffix}`;
   const clickPrompt = `This click-submitted follow-up must stay queued while the active turn is still running: ${clickMarker}`;
@@ -1308,7 +1367,6 @@ async function runChaosControlFlowScenario(config) {
     {
       shouldBeQueued: false,
       shouldBeUserTurn: true,
-      allowSyntheticUserTurn: true,
     },
     60_000
   );
@@ -1330,7 +1388,6 @@ async function runChaosControlFlowScenario(config) {
     {
       shouldBeQueued: false,
       shouldBeUserTurn: true,
-      allowSyntheticUserTurn: true,
     },
     60_000
   );
@@ -1375,7 +1432,6 @@ async function runChaosControlFlowScenario(config) {
     {
       shouldBeQueued: false,
       shouldBeUserTurn: true,
-      allowSyntheticUserTurn: true,
     },
     60_000
   );
@@ -1392,7 +1448,6 @@ async function runChaosControlFlowScenario(config) {
     {
       shouldBeQueued: false,
       shouldBeUserTurn: true,
-      allowSyntheticUserTurn: true,
     },
     60_000
   );

@@ -63,6 +63,7 @@ import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
 import {
   getQueueTurnReleaseAtAfter,
+  hasObservedUnsettledQueueTurn,
   hasQueueTurnSettledAfter,
   hasQueueTurnTerminatedAfter,
   isQueueRuntimeStillWorking,
@@ -232,9 +233,7 @@ export function useQueueDispatch(): void {
 
       void (async () => {
         try {
-          if (!optimisticVisibleQueueIdsRef.current.has(msg.id)) {
-            await addUserMessage(displayContent, sessionId, imageDataUrls);
-          }
+          await addUserMessage(displayContent, sessionId, imageDataUrls);
           void enterAgentOrgSessionIntervention(sessionId).catch((error) => {
             console.warn("[useQueueDispatch] intervention failed:", error);
           });
@@ -286,21 +285,6 @@ export function useQueueDispatch(): void {
       setLastUserMessage,
       setSessionRuntimeStatus,
     ]
-  );
-
-  const optimisticVisibleQueueIdsRef = useRef<Set<string>>(new Set());
-
-  const showQueuedMessageOptimistically = useCallback(
-    (msg: QueuedMessage) => {
-      if (optimisticVisibleQueueIdsRef.current.has(msg.id)) return;
-      optimisticVisibleQueueIdsRef.current.add(msg.id);
-      setLastUserMessage({
-        displayContent: msg.displayContent,
-        imageDataUrls: msg.imageDataUrls,
-      });
-      void addUserMessage(msg.displayContent, msg.sessionId, msg.imageDataUrls);
-    },
-    [addUserMessage, setLastUserMessage]
   );
 
   const dispatchRef = useRef<typeof dispatchMessage>(dispatchMessage);
@@ -363,7 +347,8 @@ export function useQueueDispatch(): void {
           (latestIsSessionActive ||
             isQueueRuntimeStillWorking(latestRuntimeStatus))) ||
         isSessionRowRuntimeWorking(latestSessionMap, message.sessionId) ||
-        hasTurnBlockingRuntimeEventForSession(message.sessionId);
+        hasTurnBlockingRuntimeEventForSession(message.sessionId) ||
+        hasObservedUnsettledQueueTurn(message.sessionId);
       if (messageRuntimeWorking) return false;
       if (message.requiresRuntimeSettle) {
         const createdAtMs = Date.parse(message.createdAt);
@@ -411,7 +396,8 @@ export function useQueueDispatch(): void {
         (latestIsSessionActive ||
           isQueueRuntimeStillWorking(latestRuntimeStatus))) ||
       isSessionRowRuntimeWorking(latestSessionMap, activeSessionId) ||
-      hasTurnBlockingRuntimeEventForSession(activeSessionId);
+      hasTurnBlockingRuntimeEventForSession(activeSessionId) ||
+      hasObservedUnsettledQueueTurn(activeSessionId);
     if (runtimeWorking && !explicitMsg) return;
     if (explicitMsg) {
       const interruptRequestedAt =
@@ -500,7 +486,8 @@ export function useQueueDispatch(): void {
       if (!explicitMsg) {
         const stillWorking =
           isSessionRowRuntimeWorking(latestSessionMap, nextMsg.sessionId) ||
-          hasTurnBlockingRuntimeEventForSession(nextMsg.sessionId);
+          hasTurnBlockingRuntimeEventForSession(nextMsg.sessionId) ||
+          hasObservedUnsettledQueueTurn(nextMsg.sessionId);
         const activeSessionPendingCancel =
           (nextMsg.sessionId === store.get(sessionIdAtom) ||
             nextMsg.sessionId === store.get(activeSessionIdAtom)) &&
@@ -549,12 +536,6 @@ export function useQueueDispatch(): void {
       lockSessionIdRef.current = null;
     });
   }, [dequeueMessage, rememberSentQueueId, setUserInitiatedCancel, store]);
-
-  useEffect(() => {
-    for (const msg of forceSendQueue) {
-      showQueuedMessageOptimistically(msg);
-    }
-  }, [forceSendQueue, showQueuedMessageOptimistically]);
 
   useEffect(() => {
     tryDispatchNextRef.current = tryDispatchNext;

@@ -46,7 +46,7 @@ export const CLI_SESSION_STATUSES = new Set<string>([
 
 /** Retry delays for reconciling in-flight history after a session switch. */
 export const IN_FLIGHT_HISTORY_RECONCILE_DELAYS_MS = [
-  0, 1_500, 3_000, 6_000, 12_000,
+  0, 1_500, 3_000, 6_000, 12_000, 24_000, 48_000,
 ];
 
 /**

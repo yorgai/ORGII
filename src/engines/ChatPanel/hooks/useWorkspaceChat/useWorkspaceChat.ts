@@ -19,11 +19,15 @@ import Message from "@src/components/Message";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
-import { sessionHasComposerStopBlockingWork } from "@src/engines/SessionCore/core/runningEventGate";
+import {
+  latestAssistantActivityAfterLastUserAt,
+  sessionHasComposerStopBlockingWork,
+} from "@src/engines/SessionCore/core/runningEventGate";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import {
   PENDING_RUST_ACTIVE_TURN_ID,
   hasObservedUnsettledQueueTurn,
+  hasQueueTurnSettledAfter,
   markQueueTurnWorking,
   shouldQueueSubmitAsActiveTurn,
 } from "@src/engines/SessionCore/hooks/session/queueTurnGate";
@@ -307,11 +311,20 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         store
           .get(forceSendPendingQueueAtom)
           .some((message) => message.sessionId === sessionId);
+      const latestTurnActivityAt = latestAssistantActivityAfterLastUserAt(
+        store.get(sortedEventsAtom),
+        sessionId
+      );
+      const hasUnsettledRenderedTurnActivity =
+        latestTurnActivityAt !== undefined &&
+        !hasQueueTurnSettledAfter(sessionId, latestTurnActivityAt);
+      const hasObservedWorkingTurn = hasObservedUnsettledQueueTurn(sessionId);
       const submitShouldQueueAsActiveTurn =
         options.forceQueueAsActiveTurn ||
         effectiveUserInitiatedCancel ||
         hasQueuedSibling ||
-        hasObservedUnsettledQueueTurn(sessionId) ||
+        hasObservedWorkingTurn ||
+        hasUnsettledRenderedTurnActivity ||
         shouldQueueSubmitAsActiveTurn({
           sessionId,
           isActive: latestIsSessionActive,
@@ -389,7 +402,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
           requiresRuntimeSettle: !effectiveUserInitiatedCancel,
           releaseAfterTurnId: effectiveUserInitiatedCancel
             ? undefined
-            : isAgentSession(sessionId)
+            : isAgentSession(sessionId) || hasObservedWorkingTurn
               ? PENDING_RUST_ACTIVE_TURN_ID
               : undefined,
           dispatchAfterUserCancel: effectiveUserInitiatedCancel,

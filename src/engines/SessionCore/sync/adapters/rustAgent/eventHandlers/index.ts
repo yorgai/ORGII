@@ -9,6 +9,7 @@
  * which capabilities are active per session (not per variant).
  */
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import { markQueueTurnWorking } from "@src/engines/SessionCore/hooks/session/queueTurnGate";
 import { createLogger } from "@src/hooks/logger";
 
 import {
@@ -110,6 +111,24 @@ const LIVE_STREAM_EVENTS_IGNORED_AFTER_STOP = new Set<string>([
   "agent:streaming_complete",
 ]);
 
+const QUEUE_TURN_ACTIVITY_EVENTS = new Set<string>([
+  "agent:message_delta",
+  "agent:thinking_delta",
+  "agent:tool_call_delta",
+  "agent:streaming_complete",
+  "agent:tool_call",
+  "agent:tool_result",
+  "agent:interaction_finalized",
+  "agent:shell_process_started",
+  "agent:shell_process_backgrounded",
+  "agent:shell_process_exited",
+  "agent:mcp_progress",
+  "agent:context_usage",
+  "agent:plan_ready_for_approval",
+  "agent:question_request",
+  "permission:request",
+]);
+
 export async function dispatchAgentEvent(
   event: AgentWSEvent,
   ctx: EventHandlerContext
@@ -167,6 +186,10 @@ export async function dispatchAgentEvent(
   // so plan/tool/question surfaces do not leave a ghost "Reconnecting" state.
   if (STREAM_RETRY_RECOVERY_EVENTS.has(event.type)) {
     clearStreamRetryStatus(ctx, sessionId);
+  }
+
+  if (sessionId && QUEUE_TURN_ACTIVITY_EVENTS.has(event.type)) {
+    markQueueTurnWorking(sessionId);
   }
 
   switch (event.type) {

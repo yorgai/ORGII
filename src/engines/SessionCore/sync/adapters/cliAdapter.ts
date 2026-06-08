@@ -16,8 +16,10 @@ import { convertFileSrc, invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { enterAgentOrgSessionIntervention } from "@src/api/tauri/agent";
 import type { CancelReason } from "@src/api/tauri/agent/session";
 import type { MergeStatus } from "@src/api/tauri/rpc/schemas/validation";
+import { loadSessionAtom } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import { markQueueTurnSettled } from "@src/engines/SessionCore/hooks/session/queueTurnGate";
 import {
   normalizeChunkRust,
   processChunksRust,
@@ -111,6 +113,22 @@ type CliStatusResponse = {
   updatedAt?: string;
 };
 
+const CLI_TERMINAL_STATUSES = new Set<CliSessionStatus>([
+  "completed",
+  "failed",
+  "error",
+  "cancelled",
+  "abandoned",
+  "timeout",
+  "archived",
+]);
+
+function isCliTerminalStatus(
+  status: CliSessionStatus | undefined
+): status is CliSessionStatus {
+  return status !== undefined && CLI_TERMINAL_STATUSES.has(status);
+}
+
 async function readCliStatus(
   sessionId: string
 ): Promise<CliStatusResponse | null> {
@@ -122,22 +140,60 @@ async function readCliStatus(
 async function waitForCliRunBoundary(
   sessionId: string,
   previousUpdatedAt: string | null | undefined
-): Promise<void> {
+): Promise<CliStatusResponse | null> {
   const deadline = Date.now() + 15_000;
   let lastStatus: CliStatusResponse | null = null;
   while (Date.now() < deadline) {
     lastStatus = await readCliStatus(sessionId);
+    const hasNewStatus =
+      !previousUpdatedAt || lastStatus?.updatedAt !== previousUpdatedAt;
     if (
-      lastStatus?.status === "running" &&
-      (!previousUpdatedAt || lastStatus.updatedAt !== previousUpdatedAt)
+      hasNewStatus &&
+      (lastStatus?.status === "running" ||
+        isCliTerminalStatus(lastStatus?.status))
     ) {
-      return;
+      return lastStatus;
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   throw new Error(
     `CLI run boundary was not observed for ${sessionId}; lastStatus=${JSON.stringify(lastStatus)}`
+  );
+}
+
+async function refreshLoadedCliHistory(
+  sessionId: string
+): Promise<SessionEvent[]> {
+  if (!isStoreInitialized()) return [];
+  const events = await cliAdapter.loadHistory(
+    sessionId,
+    new AbortController().signal
+  );
+  if (events.length === 0) return events;
+  await eventStoreProxy.mergeEvents(events, sessionId);
+  getInstrumentedStore().set(loadSessionAtom, { sessionId, events });
+  return events;
+}
+
+function eventContainsText(event: SessionEvent, text: string): boolean {
+  return JSON.stringify(event).includes(text);
+}
+
+async function waitForPersistedCliUserEvent(
+  sessionId: string,
+  content: string
+): Promise<void> {
+  const deadline = Date.now() + 15_000;
+  let lastEventCount = 0;
+  while (Date.now() < deadline) {
+    const events = await refreshLoadedCliHistory(sessionId);
+    lastEventCount = events.length;
+    if (events.some((event) => eventContainsText(event, content))) return;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(
+    `CLI user event was not persisted for ${sessionId}; eventCount=${lastEventCount}`
   );
 }
 
@@ -648,7 +704,19 @@ export const cliAdapter: SessionAdapter = {
         : {}),
       ...(ideContext ? { ideContext } : {}),
     });
-    await waitForCliRunBoundary(sessionId, previousStatus?.updatedAt);
+    const acceptedStatus = await waitForCliRunBoundary(
+      sessionId,
+      previousStatus?.updatedAt
+    );
+    await waitForPersistedCliUserEvent(sessionId, content);
+    if (isCliTerminalStatus(acceptedStatus?.status)) {
+      markQueueTurnSettled(
+        sessionId,
+        Date.now(),
+        undefined,
+        acceptedStatus.status
+      );
+    }
   },
 
   async stopSession(sessionId: string, reason: CancelReason): Promise<void> {
