@@ -5,12 +5,18 @@
  * Handles both "myGitHub" and "githubUrl" workflows.
  */
 import { open } from "@tauri-apps/plugin-dialog";
+import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { zodActionRegistry } from "@src/ActionSystem/schema/zodRegistry";
 import type { GitHubRepo } from "@src/api/http/github/types";
 import Message from "@src/components/Toast";
 import { useGitHubConnections } from "@src/hooks/git";
+import {
+  effectiveWorkspaceDefaultRepoLocationAtom,
+  workspaceCustomDefaultRepoPathAtom,
+} from "@src/store/config/configAtom";
+import { resolveDefaultRepoParentPath } from "@src/util/workspace/defaultRepoPath";
 
 // ============================================
 // Types
@@ -60,6 +66,12 @@ export function useCloneForm(
   options: UseCloneFormOptions = {}
 ): UseCloneFormReturn {
   const { onSuccess, onClose } = options;
+  const defaultRepoLocation = useAtomValue(
+    effectiveWorkspaceDefaultRepoLocationAtom
+  );
+  const customDefaultRepoPath = useAtomValue(
+    workspaceCustomDefaultRepoPathAtom
+  );
 
   // Sub-tab state
   const [subTab, setSubTab] = useState<"myGitHub" | "githubUrl">("myGitHub");
@@ -134,6 +146,26 @@ export function useCloneForm(
   // Loading state from GitHub connections hook
   const isLoadingRepos = isLoadingConnections;
 
+  useEffect(() => {
+    if (localPath.trim()) return;
+
+    let cancelled = false;
+    resolveDefaultRepoParentPath({
+      location: defaultRepoLocation,
+      customPath: customDefaultRepoPath,
+    })
+      .then((path) => {
+        if (!cancelled && path.trim()) {
+          setLocalPath(path);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [customDefaultRepoPath, defaultRepoLocation, localPath]);
+
   // Reset form
   const resetForm = useCallback(() => {
     setSubTab("myGitHub");
@@ -190,9 +222,23 @@ export function useCloneForm(
 
       setLoading(true);
       try {
+        const requestedPath = path.trim();
+        const defaultPath = await resolveDefaultRepoParentPath({
+          location: defaultRepoLocation,
+          customPath: customDefaultRepoPath,
+        });
+        const targetDir =
+          requestedPath === defaultPath
+            ? await resolveDefaultRepoParentPath({
+                location: defaultRepoLocation,
+                customPath: customDefaultRepoPath,
+                ensureDirectory: true,
+              })
+            : requestedPath;
+
         const result = await zodActionRegistry.execute("repo.clone", {
           url: url.trim(),
-          targetDir: path.trim(),
+          targetDir,
         });
 
         if (result.success) {
@@ -216,7 +262,7 @@ export function useCloneForm(
         setLoading(false);
       }
     },
-    [resetForm, onClose, onSuccess]
+    [customDefaultRepoPath, defaultRepoLocation, resetForm, onClose, onSuccess]
   );
 
   return {

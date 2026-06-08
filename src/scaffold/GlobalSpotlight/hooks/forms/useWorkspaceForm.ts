@@ -5,13 +5,19 @@
  * Uses .git presence to decide whether a directory is a Git workspace.
  */
 import { ask, open } from "@tauri-apps/plugin-dialog";
-import { useCallback, useState } from "react";
+import { useAtomValue } from "jotai";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { zodActionRegistry } from "@src/ActionSystem/schema/zodRegistry";
 import { repoApi } from "@src/api/tauri/repo";
 import Message from "@src/components/Toast";
 import { createLogger } from "@src/hooks/logger";
+import {
+  effectiveWorkspaceDefaultRepoLocationAtom,
+  workspaceCustomDefaultRepoPathAtom,
+} from "@src/store/config/configAtom";
+import { resolveDefaultRepoParentPath } from "@src/util/workspace/defaultRepoPath";
 
 const logger = createLogger("WorkspaceForm");
 const SYSTEM_WORKSPACE_FOLDER_NAMES = new Set([
@@ -61,6 +67,12 @@ export function useWorkspaceForm(
 ): UseWorkspaceFormReturn {
   const { t } = useTranslation();
   const { onSuccess, onClose } = options;
+  const defaultRepoLocation = useAtomValue(
+    effectiveWorkspaceDefaultRepoLocationAtom
+  );
+  const customDefaultRepoPath = useAtomValue(
+    workspaceCustomDefaultRepoPathAtom
+  );
 
   const [workspaceName, setWorkspaceName] = useState("");
   const [workspacePath, setWorkspacePath] = useState("");
@@ -71,6 +83,26 @@ export function useWorkspaceForm(
     setWorkspacePath("");
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (workspacePath.trim()) return;
+
+    let cancelled = false;
+    resolveDefaultRepoParentPath({
+      location: defaultRepoLocation,
+      customPath: customDefaultRepoPath,
+    })
+      .then((path) => {
+        if (!cancelled && path.trim()) {
+          setWorkspacePath(path);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [customDefaultRepoPath, defaultRepoLocation, workspacePath]);
 
   const handleChoosePath = useCallback(
     async (mode: "new" | "existing"): Promise<string | null> => {
@@ -114,7 +146,19 @@ export function useWorkspaceForm(
 
       setLoading(true);
       try {
-        const trimmedPath = path.trim();
+        const requestedPath = path.trim();
+        const defaultPath = await resolveDefaultRepoParentPath({
+          location: defaultRepoLocation,
+          customPath: customDefaultRepoPath,
+        });
+        const trimmedPath =
+          requestedPath === defaultPath
+            ? await resolveDefaultRepoParentPath({
+                location: defaultRepoLocation,
+                customPath: customDefaultRepoPath,
+                ensureDirectory: true,
+              })
+            : requestedPath;
         const trimmedName = name.trim();
         const pathSeparator = trimmedPath.includes("\\") ? "\\" : "/";
         const fullPath = trimmedPath.endsWith(pathSeparator)
@@ -149,7 +193,14 @@ export function useWorkspaceForm(
         setLoading(false);
       }
     },
-    [resetForm, onClose, onSuccess, shouldInitializeGit]
+    [
+      customDefaultRepoPath,
+      defaultRepoLocation,
+      resetForm,
+      onClose,
+      onSuccess,
+      shouldInitializeGit,
+    ]
   );
 
   const handleImportWorkspace = useCallback(

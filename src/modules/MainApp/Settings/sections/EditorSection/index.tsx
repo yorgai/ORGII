@@ -16,6 +16,7 @@ import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import ExternalIdeSection from "./components/ExternalIdeSection";
 import LanguageServersSection from "./components/LanguageServersSection";
 import TerminalSection from "./components/TerminalSettingsSection";
+import WorkspaceDefaultPathSection from "./components/WorkspaceDefaultPathSection";
 
 const IndexingSection = lazy(
   () => import("@src/modules/MainApp/Settings/sections/IndexingSection")
@@ -47,6 +48,7 @@ const EditorSection: React.FC<EditorSectionProps> = ({ activeTab }) => {
   return (
     <>
       <ExternalIdeSection />
+      <WorkspaceDefaultPathSection />
       <TerminalSection />
       <LanguageServersSection />
     </>

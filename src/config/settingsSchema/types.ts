@@ -20,6 +20,7 @@ export type SettingsCategory =
   | "notifications"
   | "chat"
   | "externalIde"
+  | "workspace"
   | "git"
   | "agent"
   | "agentBrowser"
