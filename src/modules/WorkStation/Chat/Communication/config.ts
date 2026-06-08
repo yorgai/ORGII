@@ -19,6 +19,7 @@ import {
   isPlanDisplayEvent,
 } from "@src/engines/SessionCore/derived/planDisplayEvents";
 import { getAppSubtool } from "@src/engines/SessionCore/rendering/registry/initToolRegistry";
+import { isSyntheticUserInputEvent } from "@src/engines/SessionCore/sync/utils/activityIds";
 import { defineSimulatorAppConfig } from "@src/engines/Simulator/apps/core/configFactory";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
 
@@ -70,6 +71,21 @@ function deriveInteractionMessages(messages: MessageEntry[]): MessageEntry[] {
   });
 }
 
+function normalizeMessageDedupeText(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function isOptimisticUserEvent(event: SessionEvent): boolean {
+  return isSyntheticUserInputEvent(event);
+}
+
+function getCommunicationUserEchoKey(message: MessageEntry): string | null {
+  if (message.sender !== "user") return null;
+  const text = normalizeMessageDedupeText(message.content);
+  if (!text) return null;
+  return `${message.event.sessionId ?? ""}:${text}`;
+}
+
 function isUserRawEvent(event: SessionEvent): boolean {
   const functionName = event.functionName?.toLowerCase() || "";
   if (functionName !== "raw_event" && functionName !== "raw") {
@@ -112,6 +128,7 @@ function buildMessageLists(events: SessionEvent[]) {
   const todoMessages: MessageEntry[] = [];
   const interactionMessages: MessageEntry[] = [];
   const messageIndex = new Map<string, MessageEntry>();
+  const pendingOptimisticUserMessages = new Map<string, MessageEntry>();
 
   for (const [eventIndex, event] of events.entries()) {
     const subtool = getAppSubtool(event.functionName);
@@ -154,6 +171,20 @@ function buildMessageLists(events: SessionEvent[]) {
         Boolean(message.content.trim()) ||
         isAskQuestionEvent(event);
       if (hasContent) {
+        const userEchoKey = getCommunicationUserEchoKey(message);
+        if (userEchoKey && isOptimisticUserEvent(event)) {
+          pendingOptimisticUserMessages.set(userEchoKey, message);
+        } else if (userEchoKey) {
+          const optimistic = pendingOptimisticUserMessages.get(userEchoKey);
+          if (optimistic) {
+            const optimisticIndex = chatMessages.findIndex(
+              (entry) => entry.eventId === optimistic.eventId
+            );
+            if (optimisticIndex !== -1) chatMessages.splice(optimisticIndex, 1);
+            messageIndex.delete(optimistic.eventId);
+            pendingOptimisticUserMessages.delete(userEchoKey);
+          }
+        }
         chatMessages.push(message);
         messageIndex.set(event.id, message);
       }

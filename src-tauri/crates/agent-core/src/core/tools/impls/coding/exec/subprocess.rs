@@ -1,9 +1,10 @@
 //! Subprocess execution: fast `tokio::process::Command` path with real-time streaming.
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tracing::{info, warn};
 
@@ -139,6 +140,105 @@ pub fn format_command_result(
     }
 }
 
+#[cfg(unix)]
+fn signal_process_group(pid: u32, signal: libc::c_int) -> std::io::Result<()> {
+    let process_group = -(pid as libc::pid_t);
+    let group_result = unsafe { libc::kill(process_group, signal) };
+    if group_result == 0 {
+        return Ok(());
+    }
+
+    let group_error = std::io::Error::last_os_error();
+    let process_result = unsafe { libc::kill(pid as libc::pid_t, signal) };
+    if process_result == 0 {
+        return Ok(());
+    }
+
+    let process_error = std::io::Error::last_os_error();
+    if group_error.raw_os_error() == Some(libc::ESRCH) {
+        Err(process_error)
+    } else {
+        Err(group_error)
+    }
+}
+
+#[cfg(unix)]
+async fn terminate_child_tree(pid: u32, child: &mut tokio::process::Child) {
+    if pid != 0 {
+        if let Err(err) = signal_process_group(pid, libc::SIGTERM) {
+            if err.raw_os_error() != Some(libc::ESRCH) {
+                warn!(
+                    "[subprocess] Failed to SIGTERM process group {}: {}",
+                    pid, err
+                );
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+        match child.try_wait() {
+            Ok(Some(_)) => return,
+            Ok(None) => {}
+            Err(err) => {
+                warn!(
+                    "[subprocess] Failed to inspect child after SIGTERM: {}",
+                    err
+                );
+            }
+        }
+        if let Err(err) = signal_process_group(pid, libc::SIGKILL) {
+            if err.raw_os_error() != Some(libc::ESRCH) {
+                warn!(
+                    "[subprocess] Failed to SIGKILL process group {}: {}",
+                    pid, err
+                );
+            }
+        }
+    }
+    if let Err(err) = child.kill().await {
+        warn!("[subprocess] Failed to kill child process: {}", err);
+    }
+}
+
+#[cfg(windows)]
+async fn terminate_child_tree(_pid: u32, child: &mut tokio::process::Child) {
+    if let Err(err) = child.kill().await {
+        warn!("[subprocess] Failed to kill child process: {}", err);
+    }
+}
+
+async fn join_reader_task(task: tokio::task::JoinHandle<()>, stream: &str) {
+    if tokio::time::timeout(Duration::from_secs(5), task)
+        .await
+        .is_err()
+    {
+        warn!("[subprocess] {} reader did not finish within 5s", stream);
+    }
+}
+
+fn finish_cancelled_process(
+    pid: u32,
+    session_key: Option<&str>,
+    log_writer: Option<&Arc<StdMutex<TerminalLogWriter>>>,
+) -> Result<String, ToolError> {
+    if let Some(ref log) = log_writer {
+        if let Ok(mut writer) = log.lock() {
+            let _ = writer.finalize(LogProcessStatus::Killed, None);
+        }
+    }
+
+    if let Some(session_id) = session_key {
+        broadcast_exec_output(
+            session_id,
+            &format!("[process {} cancelled by user]", pid),
+            "system",
+        );
+        broadcast_process_exited(session_id, pid, None, true);
+    }
+
+    Err(ToolError::ExecutionFailed(
+        "Command cancelled by user".to_string(),
+    ))
+}
+
 /// Execute a command via `tokio::process::Command` with real-time streaming.
 ///
 /// Streams stdout/stderr line-by-line via `agent:exec_output` events
@@ -163,6 +263,7 @@ pub async fn execute_via_command(
     mode: ExecMode,
     session_key: Option<&str>,
     terminal_logs_root: Option<&PathBuf>,
+    cancel_flag: Option<&AtomicBool>,
 ) -> Result<String, ToolError> {
     if let Some(session_id) = session_key {
         let header = format!("$ {}", command);
@@ -236,6 +337,9 @@ pub async fn execute_via_command(
                 }
             }
         } else {
+            if let Some(session_id) = session_key {
+                broadcast_process_started(session_id, pid, command, None);
+            }
             None
         };
 
@@ -322,80 +426,84 @@ pub async fn execute_via_command(
         );
     }
 
-    let wait_result = tokio::time::timeout(Duration::from_secs(effective_wait), child.wait()).await;
-
-    match wait_result {
-        Ok(Ok(exit_status)) => {
-            let was_signaled = exit_status.code().is_none();
-            let exit_code = exit_status.code().unwrap_or(-1);
-
-            if tokio::time::timeout(Duration::from_secs(5), stdout_task)
-                .await
-                .is_err()
-            {
-                warn!("[subprocess] stdout reader did not finish within 5s");
-            }
-            if tokio::time::timeout(Duration::from_secs(5), stderr_task)
-                .await
-                .is_err()
-            {
-                warn!("[subprocess] stderr reader did not finish within 5s");
-            }
-
-            if let Some(ref log) = log_writer {
-                if let Ok(mut writer) = log.lock() {
-                    let log_status = if was_signaled {
-                        LogProcessStatus::Killed
-                    } else {
-                        LogProcessStatus::Exited(exit_code)
-                    };
-                    let log_exit = if was_signaled { None } else { Some(exit_code) };
-                    let _ = writer.finalize(log_status, log_exit);
-                }
-            }
-
-            let stdout = stdout_buf.lock().map(|b| b.clone()).unwrap_or_default();
-            let stderr = stderr_buf.lock().map(|b| b.clone()).unwrap_or_default();
-
-            if let Some(session_id) = session_key {
-                if was_signaled {
-                    broadcast_exec_output(
-                        session_id,
-                        &format!("[process {} killed by signal]", pid),
-                        "system",
-                    );
-                } else {
-                    broadcast_exec_output(
-                        session_id,
-                        &format!("[exit code: {}]", exit_code),
-                        "system",
-                    );
-                }
-                broadcast_process_exited(session_id, pid, Some(exit_code), was_signaled);
-            }
-
-            format_command_result(&stdout, &stderr, exit_code)
+    let wait_started_at = Instant::now();
+    loop {
+        if cancel_flag.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
+            terminate_child_tree(pid, &mut child).await;
+            join_reader_task(stdout_task, "stdout").await;
+            join_reader_task(stderr_task, "stderr").await;
+            return finish_cancelled_process(pid, session_key, log_writer.as_ref());
         }
 
-        Ok(Err(err)) => Err(ToolError::ExecutionFailed(format!(
-            "Failed to wait for process: {}",
-            err
-        ))),
+        match child.try_wait() {
+            Ok(Some(exit_status)) => {
+                let was_signaled = exit_status.code().is_none();
+                let exit_code = exit_status.code().unwrap_or(-1);
 
-        Err(_) => handle_backgrounded(
-            command,
-            pid,
-            effective_wait,
-            BackgroundReason::Timeout,
-            child,
-            log_writer.clone(),
-            log_path.clone(),
-            stdout_task,
-            stderr_task,
-            stdout_buf.clone(),
-            stderr_buf.clone(),
-            session_key,
-        ),
+                join_reader_task(stdout_task, "stdout").await;
+                join_reader_task(stderr_task, "stderr").await;
+
+                if let Some(ref log) = log_writer {
+                    if let Ok(mut writer) = log.lock() {
+                        let log_status = if was_signaled {
+                            LogProcessStatus::Killed
+                        } else {
+                            LogProcessStatus::Exited(exit_code)
+                        };
+                        let log_exit = if was_signaled { None } else { Some(exit_code) };
+                        let _ = writer.finalize(log_status, log_exit);
+                    }
+                }
+
+                let stdout = stdout_buf.lock().map(|b| b.clone()).unwrap_or_default();
+                let stderr = stderr_buf.lock().map(|b| b.clone()).unwrap_or_default();
+
+                if let Some(session_id) = session_key {
+                    if was_signaled {
+                        broadcast_exec_output(
+                            session_id,
+                            &format!("[process {} killed by signal]", pid),
+                            "system",
+                        );
+                    } else {
+                        broadcast_exec_output(
+                            session_id,
+                            &format!("[exit code: {}]", exit_code),
+                            "system",
+                        );
+                    }
+                    broadcast_process_exited(session_id, pid, Some(exit_code), was_signaled);
+                }
+
+                return format_command_result(&stdout, &stderr, exit_code);
+            }
+            Ok(None) => {}
+            Err(err) => {
+                return Err(ToolError::ExecutionFailed(format!(
+                    "Failed to wait for process: {}",
+                    err
+                )));
+            }
+        }
+
+        if wait_started_at.elapsed() >= Duration::from_secs(effective_wait) {
+            return handle_backgrounded(
+                command,
+                pid,
+                effective_wait,
+                BackgroundReason::Timeout,
+                child,
+                log_writer.clone(),
+                log_path.clone(),
+                stdout_task,
+                stderr_task,
+                stdout_buf.clone(),
+                stderr_buf.clone(),
+                session_key,
+            );
+        }
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
     }
 }
 

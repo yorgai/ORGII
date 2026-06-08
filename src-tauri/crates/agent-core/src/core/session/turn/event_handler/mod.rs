@@ -422,10 +422,6 @@ impl TurnEventHandler for UnifiedEventHandler {
         display_name: &str,
         result: &str,
     ) {
-        if self.is_cancelled() {
-            return;
-        }
-
         if let Err(err) =
             unified_persistence::save_tool_result_msg(session_id, tool_call_id, tool_name, result)
         {

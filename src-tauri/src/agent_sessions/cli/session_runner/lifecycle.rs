@@ -64,10 +64,8 @@ pub async fn kill_running_agent(session_id: &str) -> bool {
     };
 
     if let Ok(Some(session)) = persistence::get_session(session_id) {
-        if session.status == SessionStatus::Running {
-            if let Some(pid) = session.pid {
-                terminate_process_tree(pid, session_id).await;
-            }
+        if let Some(pid) = session.pid {
+            terminate_process_tree(pid, session_id).await;
         }
     }
 

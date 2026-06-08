@@ -168,7 +168,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
 
     const currentInputEmpty = isInputEmpty() && !hasImages;
     const stopSuppressedForEmptyInput =
-      disableStopWhenEmpty && currentInputEmpty;
+      disableStopWhenEmpty && currentInputEmpty && !isWpGeneWorking;
     const mentionTreePosition =
       chatPanelPosition === "right" ? "left" : "right";
     const voiceFeatureEnabled = useAtomValue(voiceInputEnabledAtom);
@@ -282,9 +282,15 @@ const InputArea: React.FC<InputAreaProps> = memo(
       () => setReplyInfo({ isReply: false }),
       [setReplyInfo]
     );
-    const submitMessage = useCallback(() => {
-      void handleDivSubmit();
-    }, [handleDivSubmit]);
+    const submitMessage = useCallback(
+      (capturedText?: string) => {
+        void handleDivSubmit({
+          forceQueueAsActiveTurn: isWpGeneWorking || isPendingCancel,
+          capturedText,
+        });
+      },
+      [handleDivSubmit, isPendingCancel, isWpGeneWorking]
+    );
 
     return (
       <div
@@ -317,6 +323,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
             ref={isEditMode ? editContainerRef : composerShellRef}
             data-chat-drop-target
             data-chat-drop-target-id={dropTargetId}
+            data-testid={isEditMode ? "chat-message-edit-composer" : undefined}
             variant={getComposerShellVariant({
               compactShell,
               isEditMode,

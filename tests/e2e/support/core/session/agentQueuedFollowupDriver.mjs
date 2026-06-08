@@ -172,7 +172,20 @@ const js = {
   exists: (selector) =>
     `return !!document.querySelector(${JSON.stringify(selector)});`,
   clearAndType: (selector, text) => `
-    const element = document.querySelector(${JSON.stringify(selector)});
+    const isVisible = (element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    };
+    const visibleInputShells = Array.from(document.querySelectorAll('[data-testid="chat-input"]')).filter(isVisible);
+    const activeInputShell = visibleInputShells[visibleInputShells.length - 1] ?? null;
+    const scopedEditors = activeInputShell
+      ? Array.from(activeInputShell.querySelectorAll(${JSON.stringify(selector)})).filter(isVisible)
+      : [];
+    const editors = scopedEditors.length > 0
+      ? scopedEditors
+      : Array.from(document.querySelectorAll(${JSON.stringify(selector)})).filter(isVisible);
+    const element = editors[editors.length - 1] ?? null;
     if (!element) return "missing";
     element.focus();
     document.execCommand("selectAll", false, null);
@@ -181,7 +194,12 @@ const js = {
     return ok ? (element.textContent || "") : "insert-failed";
   `,
   click: (selector) => `
-    const element = document.querySelector(${JSON.stringify(selector)});
+    const isVisible = (element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    };
+    const element = Array.from(document.querySelectorAll(${JSON.stringify(selector)})).find(isVisible);
     if (!element) return "missing";
     if (element.disabled) return "disabled";
     element.click();
@@ -204,7 +222,18 @@ const js = {
     return "clicked";
   `,
   clickWhenState: (selector, expectedState) => `
-    const element = document.querySelector(${JSON.stringify(selector)});
+    const isVisible = (element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    };
+    const visibleInputShells = Array.from(document.querySelectorAll('[data-testid="chat-input"]')).filter(isVisible);
+    const activeInputShell = visibleInputShells[visibleInputShells.length - 1] ?? null;
+    const scopedElements = activeInputShell ? Array.from(activeInputShell.querySelectorAll(${JSON.stringify(selector)})).filter(isVisible) : [];
+    const elements = scopedElements.length > 0
+      ? scopedElements
+      : Array.from(document.querySelectorAll(${JSON.stringify(selector)})).filter(isVisible);
+    const element = elements[elements.length - 1] ?? null;
     if (!element) return "missing";
     if (element.disabled) return "disabled";
     const state = element.getAttribute("data-state");
@@ -216,8 +245,23 @@ const js = {
     return "clicked";
   `,
   sendState: `
-    const button = document.querySelector('[data-testid="chat-send-button"]');
-    const editor = document.querySelector(${JSON.stringify(CHAT_INPUT_SELECTOR)});
+    const isVisible = (element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    };
+    const visibleInputShells = Array.from(document.querySelectorAll('[data-testid="chat-input"]')).filter(isVisible);
+    const activeInputShell = visibleInputShells[visibleInputShells.length - 1] ?? null;
+    const scopedButtons = activeInputShell ? Array.from(activeInputShell.querySelectorAll('[data-testid="chat-send-button"]')).filter(isVisible) : [];
+    const buttons = scopedButtons.length > 0
+      ? scopedButtons
+      : Array.from(document.querySelectorAll('[data-testid="chat-send-button"]')).filter(isVisible);
+    const scopedEditors = activeInputShell ? Array.from(activeInputShell.querySelectorAll(${JSON.stringify(CHAT_INPUT_SELECTOR)})).filter(isVisible) : [];
+    const editors = scopedEditors.length > 0
+      ? scopedEditors
+      : Array.from(document.querySelectorAll(${JSON.stringify(CHAT_INPUT_SELECTOR)})).filter(isVisible);
+    const button = buttons[buttons.length - 1] ?? null;
+    const editor = editors[editors.length - 1] ?? null;
     if (!button) return null;
     return {
       state: button.getAttribute("data-state"),
@@ -226,7 +270,18 @@ const js = {
     };
   `,
   editorText: `
-    const editor = document.querySelector(${JSON.stringify(CHAT_INPUT_SELECTOR)});
+    const isVisible = (element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+    };
+    const visibleInputShells = Array.from(document.querySelectorAll('[data-testid="chat-input"]')).filter(isVisible);
+    const activeInputShell = visibleInputShells[visibleInputShells.length - 1] ?? null;
+    const scopedEditors = activeInputShell ? Array.from(activeInputShell.querySelectorAll(${JSON.stringify(CHAT_INPUT_SELECTOR)})).filter(isVisible) : [];
+    const editors = scopedEditors.length > 0
+      ? scopedEditors
+      : Array.from(document.querySelectorAll(${JSON.stringify(CHAT_INPUT_SELECTOR)})).filter(isVisible);
+    const editor = editors[editors.length - 1] ?? null;
     return editor ? (editor.textContent || "") : null;
   `,
   imageAttachmentState: `
@@ -406,6 +461,64 @@ const js = {
     const pill = document.querySelector('[data-testid="agent-exec-mode-pill"]');
     return pill ? (pill.textContent || '').trim() : null;
   `,
+  installControlFlowInstrumentation: `
+    const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    if (!window.__orgiiE2EControlFlowProbe) {
+      window.__orgiiE2EControlFlowProbe = {
+        installedAt: now(),
+        invokeCounts: {},
+        invokeLog: [],
+        maxEventLoopLagMs: 0,
+        lastTickAt: now(),
+        tickCount: 0,
+        tickTimer: null,
+      };
+    }
+    const probe = window.__orgiiE2EControlFlowProbe;
+    if (!probe.tickTimer) {
+      const tick = () => {
+        const current = now();
+        const expectedGap = 100;
+        const lag = Math.max(0, current - probe.lastTickAt - expectedGap);
+        probe.maxEventLoopLagMs = Math.max(probe.maxEventLoopLagMs || 0, lag);
+        probe.lastTickAt = current;
+        probe.tickCount = (probe.tickCount || 0) + 1;
+        probe.tickTimer = window.setTimeout(tick, expectedGap);
+      };
+      probe.lastTickAt = now();
+      probe.tickTimer = window.setTimeout(tick, 100);
+    }
+    const patchInvoke = (container, keyPath) => {
+      if (!container || typeof container.invoke !== 'function' || container.__orgiiE2EInvokePatched) return false;
+      const original = container.invoke.bind(container);
+      container.__orgiiE2EOriginalInvoke = original;
+      container.invoke = (...args) => {
+        const command = String(args[0] ?? 'unknown');
+        probe.invokeCounts[command] = (probe.invokeCounts[command] || 0) + 1;
+        probe.invokeLog.push({ command, at: now(), keyPath });
+        if (probe.invokeLog.length > 500) probe.invokeLog.splice(0, probe.invokeLog.length - 500);
+        return original(...args);
+      };
+      container.__orgiiE2EInvokePatched = true;
+      return true;
+    };
+    const patched = [];
+    if (patchInvoke(window.__TAURI__?.core, '__TAURI__.core')) patched.push('__TAURI__.core');
+    if (patchInvoke(window.__TAURI_INTERNALS__, '__TAURI_INTERNALS__')) patched.push('__TAURI_INTERNALS__');
+    return { ok: true, patched, snapshot: { ...probe, tickTimer: !!probe.tickTimer } };
+  `,
+  readControlFlowInstrumentation: `
+    const probe = window.__orgiiE2EControlFlowProbe;
+    if (!probe) return null;
+    return {
+      installedAt: probe.installedAt,
+      invokeCounts: { ...(probe.invokeCounts || {}), ...(window.__orgiiE2ERpcCounts || {}) },
+      invokeLog: [ ...(probe.invokeLog || []), ...(window.__orgiiE2ERpcLog || []) ].slice(-80),
+      maxEventLoopLagMs: probe.maxEventLoopLagMs || 0,
+      lastTickAt: probe.lastTickAt,
+      tickCount: probe.tickCount || 0,
+    };
+  `,
   pageDump: `
     return {
       mode: (() => {
@@ -414,7 +527,21 @@ const js = {
         return creator ? "creator" : history ? "chat" : "unknown";
       })(),
       sendState: (() => {
-        const button = document.querySelector('[data-testid="chat-send-button"]');
+        const isVisible = (node) => {
+          if (!node) return false;
+          const style = window.getComputedStyle(node);
+          const rect = node.getBoundingClientRect();
+          return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+        };
+        const visibleInputShells = Array.from(document.querySelectorAll('[data-testid="chat-input"]')).filter(isVisible);
+        const activeInputShell = visibleInputShells[visibleInputShells.length - 1] ?? null;
+        const scopedButtons = activeInputShell
+          ? Array.from(activeInputShell.querySelectorAll('[data-testid="chat-send-button"]'))
+          : [];
+        const buttons = scopedButtons.length > 0
+          ? scopedButtons
+          : Array.from(document.querySelectorAll('[data-testid="chat-send-button"]')).filter(isVisible);
+        const button = buttons[buttons.length - 1] ?? null;
         return button ? { state: button.getAttribute("data-state"), disabled: button.disabled } : null;
       })(),
       queuedItems: Array.from(document.querySelectorAll('[data-testid="queued-message-item"]')).map((node) => ({
@@ -496,6 +623,16 @@ function summarizeChatState(state) {
       dispatchAfterUserCancel: message.dispatchAfterUserCancel,
       createdAt: message.createdAt,
     })),
+    forceSendPendingMessages: (state.forceSendPendingMessages ?? []).map(
+      (message) => ({
+        id: message.id,
+        sessionId: message.sessionId,
+        content: truncateDiagnosticText(message.content),
+        requiresRuntimeSettle: message.requiresRuntimeSettle,
+        dispatchAfterUserCancel: message.dispatchAfterUserCancel,
+        createdAt: message.createdAt,
+      })
+    ),
     queueFlushRequest: state.queueFlushRequest,
     isPendingCancel: state.isPendingCancel,
     userInitiatedCancel: state.userInitiatedCancel,
@@ -665,6 +802,63 @@ async function assertLiveAssistantOverlayOrdering(label) {
   }
 }
 
+function findAdjacentDuplicateEntries(entries) {
+  const duplicates = [];
+  let previous = null;
+  for (const entry of entries) {
+    const text = normalizeTranscriptText(entry.text);
+    if (text.length < 12) {
+      previous = null;
+      continue;
+    }
+    const current = { ...entry, text };
+    if (
+      previous &&
+      previous.source === current.source &&
+      previous.text === current.text
+    ) {
+      duplicates.push({ first: previous, second: current, text });
+    }
+    previous = current;
+  }
+  return duplicates;
+}
+
+async function assertNoDuplicateCommunicationMessages(label) {
+  const entries = await execJS(`
+    const root = document.querySelector('[data-testid="communication-message-viewer"]');
+    if (!root) return [];
+    const isVisible = (node) => {
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    };
+    return Array.from(root.querySelectorAll('[data-replay-user-msg], [data-replay-agent-msg]'))
+      .filter(isVisible)
+      .map((node, index) => ({
+        source: node.hasAttribute('data-replay-user-msg') ? 'user' : 'assistant',
+        id: String(index),
+        text: node.textContent || '',
+        surface: 'communication',
+      }));
+  `);
+  const duplicates = findAdjacentDuplicateEntries(entries);
+  if (duplicates.length > 0) {
+    throw new Error(
+      `${label} duplicate adjacent Communication messages; duplicates=${JSON.stringify(duplicates.slice(0, 3))} entries=${JSON.stringify(entries.map((entry) => ({ ...entry, text: truncateDiagnosticText(entry.text, 160) })))} state=${JSON.stringify(summarizeChatState(await inspectChatState(`${label}-communication-duplicates`)))}`
+    );
+  }
+}
+
+async function assertNoVisiblePlanningFooter(label) {
+  const ui = await execJS(js.planUi);
+  if ((ui?.planningFooterCount ?? 0) > 0) {
+    throw new Error(
+      `${label} still shows planning footer; ui=${JSON.stringify(ui)} state=${JSON.stringify(summarizeChatState(await inspectChatState(`${label}-planning-footer`)))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`
+    );
+  }
+}
+
 async function assertNoDuplicateTranscriptMessages(label) {
   const state = await inspectChatState(`${label}-duplicate-transcript-events`);
   const eventById = new Map((state.chatEvents ?? []).map((event) => [event.id, event]));
@@ -720,6 +914,51 @@ function accountMatchesName(account, accountName) {
   return (
     !accountName || account.name === accountName || account.id === accountName
   );
+}
+
+async function installControlFlowInstrumentation(label) {
+  const result = await execJS(js.installControlFlowInstrumentation);
+  if (!result?.ok) {
+    throw new Error(`${label} failed to install control-flow instrumentation: ${JSON.stringify(result)}`);
+  }
+  return result;
+}
+
+async function readControlFlowInstrumentation() {
+  return (await execJS(js.readControlFlowInstrumentation)) ?? {
+    invokeCounts: {},
+    invokeLog: [],
+    maxEventLoopLagMs: 0,
+    tickCount: 0,
+  };
+}
+
+async function assertControlFlowHealthyAfterStop(label, beforeProbe, options = {}) {
+  const afterProbe = await readControlFlowInstrumentation();
+  const beforeCounts = beforeProbe?.invokeCounts ?? {};
+  const afterCounts = afterProbe?.invokeCounts ?? {};
+  const sessionPatchDelta =
+    (afterCounts.session_patch ?? 0) - (beforeCounts.session_patch ?? 0);
+  const maxSessionPatchDelta = options.maxSessionPatchDelta ?? 2;
+  if (sessionPatchDelta > maxSessionPatchDelta) {
+    throw new Error(
+      `${label} session_patch storm after Stop; delta=${sessionPatchDelta} max=${maxSessionPatchDelta} before=${JSON.stringify(beforeProbe)} after=${JSON.stringify(afterProbe)} state=${JSON.stringify(summarizeChatState(await inspectChatState(`${label}-patch-storm`)))}`
+    );
+  }
+
+  const maxEventLoopLagMs = options.maxEventLoopLagMs ?? 1500;
+  if ((afterProbe.maxEventLoopLagMs ?? 0) > maxEventLoopLagMs) {
+    throw new Error(
+      `${label} browser event loop lag indicates freeze; maxLagMs=${afterProbe.maxEventLoopLagMs} limit=${maxEventLoopLagMs} probe=${JSON.stringify(afterProbe)} state=${JSON.stringify(summarizeChatState(await inspectChatState(`${label}-event-loop-lag`)))}`
+    );
+  }
+
+  await assertNoVisiblePlanningFooter(`${label}-control-flow-health`);
+  await assertLiveAssistantOverlayOrdering(`${label}-control-flow-health`);
+  await assertTurnSummaryOrdering(`${label}-control-flow-health`);
+  await assertNoDurableLiveStreamPlaceholders(`${label}-control-flow-health`);
+  await assertNoDuplicateTranscriptMessages(`${label}-control-flow-health`);
+  await assertNoDuplicateCommunicationMessages(`${label}-control-flow-health`);
 }
 
 function accountMatchesChain(account, accountChain) {
@@ -1292,7 +1531,9 @@ async function typeAndClickSend(inputSelector, prompt) {
       timeoutMsg: `send button never became submit after typing ${JSON.stringify(prompt.slice(0, 80))}; sendState=${JSON.stringify(await execJS(js.sendState))}; active=${JSON.stringify(await invokeE2E("getActiveSessionId"))}; chat=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))}; dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
     }
   );
-  const clicked = await execJS(js.click('[data-testid="chat-send-button"]'));
+  const clicked = await execJS(
+    js.clickWhenState('[data-testid="chat-send-button"]', "submit")
+  );
   if (clicked !== "clicked") {
     const state = await execJS(js.sendState);
     throw new Error(
@@ -1408,6 +1649,17 @@ async function configureScenario(config, overrides = {}) {
   );
 }
 
+function parseMaybeJson(value) {
+  if (!value) return {};
+  if (typeof value === "object") return value;
+  if (typeof value !== "string") return {};
+  try {
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
+}
+
 async function assertSingleUserPromptInActiveTranscript(firstPrompt) {
   const promptPrefix = firstPrompt.slice(0, 120);
   const state = await inspectChatState("single-user-prompt-check");
@@ -1415,12 +1667,21 @@ async function assertSingleUserPromptInActiveTranscript(firstPrompt) {
   const visibleEvents = (state.pipelineItems ?? [])
     .map((item) => (item.eventId ? eventById.get(item.eventId) : null))
     .filter(Boolean);
-  const matchingUserEvents = visibleEvents.filter(
-    (event) =>
-      event.source === "user" &&
-      event.displayVariant === "message" &&
-      String(event.displayText ?? "").includes(promptPrefix)
+  const rawEventById = new Map(
+    (state.rawEvents ?? []).map((event) => [event.id, event])
   );
+  const matchingUserEvents = visibleEvents.filter((event) => {
+    if (
+      event.source !== "user" ||
+      event.displayVariant !== "message" ||
+      !String(event.displayText ?? "").includes(promptPrefix)
+    ) {
+      return false;
+    }
+    const rawEvent = rawEventById.get(event.id);
+    const result = parseMaybeJson(rawEvent?.result);
+    return result.syntheticUserInput !== true;
+  });
   if (matchingUserEvents.length > 1) {
     throw new Error(
       `duplicate user prompt detected in active transcript; count=${matchingUserEvents.length} promptPrefix=${JSON.stringify(promptPrefix)} state=${JSON.stringify(summarizeChatState(state))}`
@@ -1556,10 +1817,13 @@ export {
   CONTROL_LABEL_FILTER,
   QUEUE_TIMEOUT_MS,
   REPLY_TIMEOUT_MS,
+  assertControlFlowHealthyAfterStop,
   assertKnownControlScenarios,
   assertLiveAssistantOverlayOrdering,
+  assertNoDuplicateCommunicationMessages,
   assertNoDuplicateTranscriptMessages,
   assertNoDurableLiveStreamPlaceholders,
+  assertNoVisiblePlanningFooter,
   assertProgressUiSettledAfterAssistantReply,
   assertTurnSummaryOrdering,
   assertUniqueConfigLabels,
@@ -1568,6 +1832,7 @@ export {
   execJS,
   filteredConfigs,
   inspectChatState,
+  installControlFlowInstrumentation,
   invokeE2E,
   isClaudeCodeConfig,
   isClaudeCodeTransientAuthError,
@@ -1577,6 +1842,7 @@ export {
   isProviderNondeterministicMarkerError,
   js,
   listAccounts,
+  readControlFlowInstrumentation,
   rustAgentConfigs,
   scenarioConfigs,
   shouldRunScenario,

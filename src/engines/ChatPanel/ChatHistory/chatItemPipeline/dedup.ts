@@ -14,7 +14,9 @@
  *    (upsert) where two events with different IDs but the same content
  *    can briefly coexist in the EventStore.
  */
+import { isRunningSessionEvent } from "@src/engines/SessionCore/core/runningEventGate";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+import { isSyntheticUserInputEvent } from "@src/engines/SessionCore/sync/utils/activityIds";
 
 export interface DedupResult {
   /** Chunk IDs of transient tool-call rows that should be skipped once a result row exists */
@@ -56,8 +58,7 @@ export function buildDedupMaps(events: SessionEvent[]): DedupResult {
       runningArgsMap.set(callId, event.args);
     }
 
-    const isRunning =
-      event.result?.status === "running" || event.displayStatus === "running";
+    const isRunning = isRunningSessionEvent(event);
     if (callId && !isRunning) completedToolCallByCallId.set(callId, idx);
     if (!isRunning) continue;
 
@@ -78,10 +79,7 @@ export function buildDedupMaps(events: SessionEvent[]): DedupResult {
     ) {
       continue;
     }
-    if (
-      event.result?.status === "running" ||
-      event.displayStatus === "running"
-    ) {
+    if (isRunningSessionEvent(event)) {
       continue;
     }
 
@@ -89,7 +87,7 @@ export function buildDedupMaps(events: SessionEvent[]): DedupResult {
     if (event.actionType === "tool_result" && callId) {
       const completedCallIdx = completedToolCallByCallId.get(callId);
       if (completedCallIdx !== undefined && completedCallIdx < jdx) {
-        runningChunksToSkip.add(event.id);
+        runningChunksToSkip.add(events[completedCallIdx].id);
       }
     }
     const matchingTransientIndices = callId
@@ -135,39 +133,33 @@ function isUserMessageEvent(event: SessionEvent): boolean {
   return event.source === "user" && event.displayVariant === "message";
 }
 
-function preferUserEventId(left: SessionEvent, right: SessionEvent): string {
-  const leftIsOptimistic = left.id.startsWith("user-input-");
-  const rightIsOptimistic = right.id.startsWith("user-input-");
-  if (leftIsOptimistic !== rightIsOptimistic) {
-    return leftIsOptimistic ? right.id : left.id;
-  }
-  const leftPersisted = Boolean(left.result?.backendPersisted);
-  const rightPersisted = Boolean(right.result?.backendPersisted);
-  if (leftPersisted !== rightPersisted)
-    return leftPersisted ? left.id : right.id;
-  return right.id;
+function isOptimisticUserEvent(event: SessionEvent): boolean {
+  return isSyntheticUserInputEvent(event);
 }
 
 function buildUserDedupSet(events: SessionEvent[]): Set<string> {
   const duplicates = new Set<string>();
-  const seenByText = new Map<string, SessionEvent>();
+  let pendingOptimisticByText = new Map<string, SessionEvent>();
 
   for (const event of events) {
-    if (!isUserMessageEvent(event)) continue;
+    if (!isUserMessageEvent(event)) {
+      pendingOptimisticByText = new Map();
+      continue;
+    }
 
     const text = normalizeDisplayText(event.displayText);
     if (!text) continue;
 
-    const previous = seenByText.get(text);
-    if (!previous) {
-      seenByText.set(text, event);
+    if (isOptimisticUserEvent(event)) {
+      pendingOptimisticByText.set(text, event);
       continue;
     }
 
-    const keepId = preferUserEventId(previous, event);
-    const drop = keepId === previous.id ? event : previous;
-    duplicates.add(drop.id);
-    seenByText.set(text, keepId === previous.id ? previous : event);
+    const optimistic = pendingOptimisticByText.get(text);
+    if (optimistic) {
+      duplicates.add(optimistic.id);
+      pendingOptimisticByText.delete(text);
+    }
   }
 
   return duplicates;

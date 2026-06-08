@@ -268,12 +268,12 @@ export function createRustAgentAdapter(
             tokenUsage ? toTokenUsageInfo(tokenUsage) : undefined
           );
         },
-        onStatusChange: (status: string, errorMessage?: string) => {
-          if (status === "completed" && _hasQueuedFollowup) {
-            callbacks.onStatusChange?.("running");
-            return;
-          }
-          callbacks.onStatusChange?.(status, errorMessage);
+        onStatusChange: (
+          status: string,
+          errorMessage?: string,
+          meta?: { turnId?: string; turnStatus?: string }
+        ) => {
+          callbacks.onStatusChange?.(status, errorMessage, meta);
         },
         onPermissionRequest: features.hasPermissionRequest
           ? (event: PermissionRequestEvent) => {
@@ -309,9 +309,11 @@ export function createRustAgentAdapter(
         },
       });
 
-      // Terminal event types — signal turn completion and lock out further "running" signals
+      // Terminal event types — signal turn completion and lock out further "running" signals.
+      // `agent:turn_completed` is a lifecycle terminal marker, not transcript content.
       const TERMINAL_EVENTS = new Set([
         "agent:complete",
+        "agent:turn_completed",
         "agent:error",
         "agent:stream_error_exhausted",
         "agent:session_evicted",
@@ -464,6 +466,9 @@ export function createRustAgentAdapter(
                   event.type === "agent:error" ||
                   event.type === "agent:stream_error_exhausted" ||
                   event.type === "agent:session_evicted" ||
+                  event.turnStatus === "failed" ||
+                  event.sessionStatus === "failed" ||
+                  event.sessionStatus === "error" ||
                   event.isStreamError === true;
               }
             })
@@ -484,6 +489,9 @@ export function createRustAgentAdapter(
                   event.type === "agent:error" ||
                   event.type === "agent:stream_error_exhausted" ||
                   event.type === "agent:session_evicted" ||
+                  event.turnStatus === "failed" ||
+                  event.sessionStatus === "failed" ||
+                  event.sessionStatus === "error" ||
                   event.isStreamError === true;
                 _consecutiveDispatchFailures = 0;
                 return;

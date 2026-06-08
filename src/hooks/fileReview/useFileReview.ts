@@ -28,7 +28,7 @@ import {
   revertToSnapshot,
 } from "@src/api/tauri/agent";
 import type { SnapshotRecord } from "@src/api/tauri/agent";
-import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
+import { beginTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
 import { sessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
@@ -405,7 +405,7 @@ interface UseFileReviewBatchActionsResult {
     createdAt: string;
   }>;
   onUndoAll: () => Promise<void>;
-  onKeepAll: () => void;
+  onKeepAll: () => Promise<void>;
   onRedo: () => Promise<void>;
 }
 
@@ -430,6 +430,8 @@ export function useFileReviewBatchActions(
   const onUndoAll = useCallback(async () => {
     if (pendingSnapshotAnchors.length === 0 || !sessionId) return;
 
+    beginTimelineBoundary(sessionId, "rewind");
+
     const earliestBySession = new Map<string, string>();
     for (const anchor of pendingSnapshotAnchors) {
       const currentEarliest = earliestBySession.get(anchor.sessionId);
@@ -439,7 +441,6 @@ export function useFileReviewBatchActions(
     }
 
     try {
-      await cancelTurnForTimelineBoundary(sessionId, "rewind");
       const results = await Promise.all(
         Array.from(earliestBySession.entries()).map(
           ([ownerSessionId, createdAt]) =>
@@ -455,9 +456,7 @@ export function useFileReviewBatchActions(
           `Undo All completed without restoring or deleting files: ${JSON.stringify(results)}`
         );
       }
-      setRedoSnapshotAnchors(
-        results.flatMap((result) => result.redoAnchors ?? [])
-      );
+      const redoAnchors = results.flatMap((result) => result.redoAnchors ?? []);
       const reviewSessionIds = new Set([
         sessionId,
         ...pendingSnapshotAnchors.map((anchor) => anchor.sessionId),
@@ -468,6 +467,7 @@ export function useFileReviewBatchActions(
         )
       );
       dispatchUndoAll();
+      setRedoSnapshotAnchors(redoAnchors);
     } catch (error) {
       console.error("[useFileReviewBatchActions] Revert all failed:", error);
       throw error;
@@ -479,20 +479,17 @@ export function useFileReviewBatchActions(
     setRedoSnapshotAnchors,
   ]);
 
-  const onKeepAll = useCallback(() => {
-    dispatchKeepAll();
+  const onKeepAll = useCallback(async () => {
     if (sessionId) {
-      resolveReview(sessionId).catch((err: unknown) =>
-        console.warn("[useFileReviewBatchActions] resolve_review:", err)
-      );
+      await resolveReview(sessionId);
     }
+    dispatchKeepAll();
   }, [sessionId, dispatchKeepAll]);
 
   const onRedo = useCallback(async () => {
     if (redoSnapshotAnchors.length === 0 || !sessionId) return;
 
     try {
-      await cancelTurnForTimelineBoundary(sessionId, "rewind");
       const results = await Promise.all(
         redoSnapshotAnchors.map((anchor) =>
           restoreSnapshot(anchor.sessionId, anchor.snapshotId)
@@ -507,9 +504,9 @@ export function useFileReviewBatchActions(
           `Redo completed without restoring or deleting files: ${JSON.stringify(results)}`
         );
       }
-      setRedoSnapshotAnchors([]);
       await resolveReview(sessionId);
       dispatchUndoAll();
+      setRedoSnapshotAnchors([]);
     } catch (error) {
       console.error("[useFileReviewBatchActions] Redo failed:", error);
       throw error;

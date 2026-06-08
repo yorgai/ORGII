@@ -53,6 +53,7 @@ import { isInteractiveTool } from "@src/engines/SessionCore/core/interactiveTool
 import {
   isPendingCancelAtom,
   isSessionActiveAtom,
+  sessionRuntimeStatusAtom,
   setSessionRuntimeStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 
@@ -69,6 +70,45 @@ const PLANNING_SLOW_HINT_MS = 10_000;
  * past a full minute almost certainly indicates a missed `agent:complete`.
  */
 const PLANNING_WATCHDOG_MS = 60_000;
+
+export interface PlanningIndicatorVisibilityInput {
+  runtimeStatus: string;
+  isSessionActive: boolean;
+  isPendingCancel: boolean;
+  hasAwaitingUserInteraction: boolean;
+  lastIsSettledAssistantMessage: boolean;
+  anyRunning: boolean;
+  coldStartVisible: boolean;
+  idleAfterVersion: number | null;
+  version: number;
+}
+
+export function shouldShowPlanningIndicator({
+  runtimeStatus,
+  isSessionActive,
+  isPendingCancel,
+  hasAwaitingUserInteraction,
+  lastIsSettledAssistantMessage,
+  anyRunning,
+  coldStartVisible,
+  idleAfterVersion,
+  version,
+}: PlanningIndicatorVisibilityInput): boolean {
+  const runtimeCanShowPlanning =
+    runtimeStatus === "running" ||
+    runtimeStatus === "installing" ||
+    runtimeStatus === "waiting_for_user" ||
+    runtimeStatus === "waiting_for_funds";
+  return (
+    runtimeCanShowPlanning &&
+    isSessionActive &&
+    !isPendingCancel &&
+    !hasAwaitingUserInteraction &&
+    !lastIsSettledAssistantMessage &&
+    !anyRunning &&
+    (coldStartVisible || idleAfterVersion === version)
+  );
+}
 
 export interface PlanningIndicatorState {
   /** 1 when the planning footer should show, 0 when hidden */
@@ -88,6 +128,7 @@ export interface PlanningIndicatorState {
 export function usePlanningIndicator(): PlanningIndicatorState {
   const isSessionActive = useAtomValue(isSessionActiveAtom);
   const isPendingCancel = useAtomValue(isPendingCancelAtom);
+  const runtimeStatus = useAtomValue(sessionRuntimeStatusAtom);
   const snapshot = useAtomValue(derivedSnapshotAtom);
   const version = useAtomValue(eventStoreVersionAtom);
   const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
@@ -202,13 +243,17 @@ export function usePlanningIndicator(): PlanningIndicatorState {
   // session active while waiting for a click. That is not planning.
   const coldStartVisible =
     activationVersion !== null && activationVersion === version;
-  const visible =
-    isSessionActive &&
-    !isPendingCancel &&
-    !hasAwaitingUserInteraction &&
-    !lastIsSettledAssistantMessage &&
-    !anyRunning &&
-    (coldStartVisible || idleAfterVersion === version);
+  const visible = shouldShowPlanningIndicator({
+    runtimeStatus,
+    isSessionActive,
+    isPendingCancel,
+    hasAwaitingUserInteraction,
+    lastIsSettledAssistantMessage,
+    anyRunning,
+    coldStartVisible,
+    idleAfterVersion,
+    version,
+  });
 
   const [showSlowHint, setShowSlowHint] = useState(false);
 

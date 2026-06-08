@@ -1,12 +1,18 @@
 import { CANCEL_REASON } from "@src/api/tauri/agent";
+import { isTimelineBoundaryClosableRunningEvent } from "@src/engines/SessionCore/core/runningEventGate";
+import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { markSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
+import { killAgentShellProcess } from "@src/services/terminal";
 import {
   isPendingCancelAtom,
+  isSessionActiveAtom,
+  sessionRuntimeStatusAtom,
   setSessionRuntimeStatusAtom,
   streamRetryStatusAtom,
   userInitiatedCancelAtom,
 } from "@src/store/session/cliSessionStatusAtom";
+import { shellProcessMapAtom } from "@src/store/session/shellProcessAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
 import { streamingDeltaContentAtom } from "../core/atoms";
@@ -40,12 +46,83 @@ export function clearLiveStreamingForSession(sessionId: string): void {
   });
 }
 
+async function killActiveShellProcessesForStop(
+  sessionId: string
+): Promise<void> {
+  const processes = getInstrumentedStore()
+    .get(shellProcessMapAtom)
+    .get(sessionId);
+  if (!processes) return;
+
+  await Promise.allSettled(
+    [...processes.values()]
+      .filter(
+        (process) =>
+          process.status === "running" || process.status === "background"
+      )
+      .map((process) => killAgentShellProcess({ pid: process.pid, sessionId }))
+  );
+}
+
+async function closeRunningEventsForTimelineBoundary(
+  sessionId: string,
+  reason: TimelineBoundaryReason
+): Promise<void> {
+  const events = await eventStoreProxy.getEvents(sessionId);
+  const runningEventIds = events
+    .filter((event) => isTimelineBoundaryClosableRunningEvent(event, sessionId))
+    .map((event) => event.id);
+  if (runningEventIds.length === 0) return;
+
+  await eventStoreProxy.patchByIds(
+    runningEventIds,
+    {
+      displayStatus: reason === "rewind" ? "completed" : "failed",
+      activityStatus: "processed",
+    },
+    sessionId
+  );
+}
+
+function shouldInterruptForTimelineBoundary(
+  _sessionId: string,
+  reason: TimelineBoundaryReason
+): boolean {
+  if (reason !== "rewind") return true;
+
+  const store = getInstrumentedStore();
+  const runtimeStatus = store.get(sessionRuntimeStatusAtom);
+  return (
+    store.get(isSessionActiveAtom) ||
+    runtimeStatus === "running" ||
+    runtimeStatus === "installing"
+  );
+}
+
 export function beginTimelineBoundary(
   sessionId: string,
   reason: TimelineBoundaryReason
 ): void {
   const store = getInstrumentedStore();
   clearLiveStreamingForSession(sessionId);
+  if (reason === "stop") {
+    void killActiveShellProcessesForStop(sessionId).catch((error) => {
+      console.warn(
+        "[sessionTimelineBoundary] failed to kill active shell processes",
+        error
+      );
+    });
+  }
+  if (reason !== "force-send") {
+    void closeRunningEventsForTimelineBoundary(sessionId, reason).catch(
+      (error) => {
+        console.warn(
+          "[sessionTimelineBoundary] failed to close running events",
+          error
+        );
+      }
+    );
+  }
   store.set(setSessionRuntimeStatusAtom, {
     status: "idle",
     source: "timeline-boundary",
@@ -78,6 +155,7 @@ export async function cancelTurnForTimelineBoundary(
   options: { onError?: (message: string) => void } = {}
 ): Promise<void> {
   beginTimelineBoundary(sessionId, reason);
+  if (!shouldInterruptForTimelineBoundary(sessionId, reason)) return;
   const key = boundaryKey(sessionId, reason);
   if (interruptInFlightByBoundary.has(key)) return;
   interruptInFlightByBoundary.add(key);

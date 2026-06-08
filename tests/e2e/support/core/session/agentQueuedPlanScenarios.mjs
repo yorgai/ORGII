@@ -1027,7 +1027,11 @@ async function editFirstUserMessageAndResend(label, prompt) {
     }
   );
 
-  const inputSelector = await waitForChatInput();
+  const inputSelector = '[data-testid="chat-message-edit-composer"] [contenteditable="true"]';
+  await browser.waitUntil(async () => execJS(js.exists(inputSelector)), {
+    timeout: 5_000,
+    timeoutMsg: `${label} edit composer input did not mount`,
+  });
   const beforeEditState = await inspectChatState(`${label}-before-edit-resend-click`);
   const typed = await execJS(js.clearAndType(inputSelector, prompt));
   if (!typed.includes(prompt)) {
@@ -1040,7 +1044,8 @@ async function editFirstUserMessageAndResend(label, prompt) {
       const style = window.getComputedStyle(node);
       return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
     };
-    const buttons = Array.from(document.querySelectorAll('button')).filter(visible);
+    const editComposer = document.querySelector('[data-testid="chat-message-edit-composer"]');
+    const buttons = Array.from((editComposer || document).querySelectorAll('button')).filter(visible);
     const resend = buttons.find((button) => (button.textContent || '').trim() === 'Resend');
     if (!resend) {
       return { clicked: false, buttons: buttons.map((button) => (button.textContent || '').trim()).filter(Boolean).slice(0, 20) };
@@ -1074,7 +1079,7 @@ async function editFirstUserMessageAndResend(label, prompt) {
     {
       timeout: 30_000,
       interval: 500,
-      timeoutMsg: `${label} edit resend did not append replacement prompt; before=${JSON.stringify(summarizeChatState(beforeEditState))} after=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))}`,
+      timeoutMsg: `${label} edit resend did not append replacement prompt; clicked=${JSON.stringify(resendClicked)} before=${JSON.stringify(summarizeChatState(beforeEditState))} after=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))}`,
     }
   );
 }

@@ -1,5 +1,6 @@
 //! Persistence commands for session data (no Tauri state needed).
 
+use crate::interaction::plan_approval::persistence::PlanApprovalStore;
 use crate::persistence::db_helpers as shared;
 use crate::persistence::session_snapshots;
 use crate::session::persistence as session_persistence;
@@ -89,6 +90,7 @@ pub async fn agent_truncate_after_message(
 
         session_snapshots::truncate_snapshots_after(&session_id, &created_at)
             .map_err(|err| err.to_string())?;
+        PlanApprovalStore::delete_by_session(&session_id).map_err(|err| err.to_string())?;
         session_persistence::truncate_messages_after(&session_id, &created_at)
             .map_err(|err| err.to_string())
     })

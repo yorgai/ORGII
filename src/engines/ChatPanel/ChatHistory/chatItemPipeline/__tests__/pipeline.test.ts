@@ -259,7 +259,7 @@ describe("processChatItems", () => {
       expect(items[0].event?.args?.file_path).toBe("src/main.ts");
     });
 
-    it("skips a later tool_result when the matching tool_call already completed", () => {
+    it("keeps a later tool_result as the final visible result for a completed tool_call", () => {
       const callEvent = makeSessionEvent({
         id: "tool-call-read-1",
         action_type: "tool_call",
@@ -283,7 +283,7 @@ describe("processChatItems", () => {
         groupReadFileActivities: false,
       });
 
-      expect(items.map((item) => item.event?.id)).toEqual([callEvent.id]);
+      expect(items.map((item) => item.event?.id)).toEqual([resultEvent.id]);
     });
   });
 

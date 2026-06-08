@@ -227,13 +227,6 @@ pub(super) async fn execute_single_tool(
                 .execute_with_policy(&tool_call.name, exec_args, policy)
                 .await;
             let duration_ms = exec_start.elapsed().as_millis() as u64;
-            if is_cancelled(cancel_flag) {
-                info!(
-                    "[agent-core] Cancelled after tool execution before result processing (session={})",
-                    session_id
-                );
-                return SingleResult::EarlyExit(ToolBatchOutcome::Cancelled);
-            }
 
             // Split the structured outcome into:
             //   - `raw_result`: the LLM-facing string used by every
@@ -341,10 +334,6 @@ pub(super) async fn execute_single_tool(
         }
     };
 
-    if is_cancelled(cancel_flag) {
-        return SingleResult::EarlyExit(ToolBatchOutcome::Cancelled);
-    }
-
     let ui_metadata = tools
         .get(&tool_call.name)
         .and_then(|tool| tool.ui_metadata(&tool_call.arguments, &result));
@@ -380,6 +369,14 @@ pub(super) async fn execute_single_tool(
                 result_is_error,
             );
         }
+    }
+
+    if is_cancelled(cancel_flag) {
+        info!(
+            "[agent-core] Cancelled after tool result emission (session={})",
+            session_id
+        );
+        return SingleResult::EarlyExit(ToolBatchOutcome::Cancelled);
     }
 
     if tool_call.name == crate::tools::names::SUGGEST_MODE_SWITCH

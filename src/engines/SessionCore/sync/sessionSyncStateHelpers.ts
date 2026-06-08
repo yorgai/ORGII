@@ -68,10 +68,6 @@ const TERMINAL_HANDLER_STATUSES = new Set<string>([
   "failed",
   "cancelled",
 ]);
-const QUEUE_RELEASING_TERMINAL_STATUSES = new Set<string>([
-  "completed",
-  "failed",
-]);
 export function resetSessionSwitchState(
   actions: SessionSwitchStateActions
 ): void {
@@ -154,16 +150,19 @@ export function createSessionEventHandlerCallbacks(
         actions.setSessionContextBreakdown(tokenUsage.contextBreakdown);
       }
     },
-    onStatusChange: (status, errorMessage) => {
+    onStatusChange: (status, errorMessage, meta) => {
       logStatusChange(status, errorMessage);
       actions.setSessionRuntimeStatus(toCliSessionStatus(status));
       if (status === "failed" && errorMessage) {
         actions.setSessionRuntimeError(errorMessage);
       }
       if (TERMINAL_HANDLER_STATUSES.has(status)) {
-        if (QUEUE_RELEASING_TERMINAL_STATUSES.has(status)) {
-          markQueueTurnSettled(sessionId);
-        }
+        markQueueTurnSettled(
+          sessionId,
+          Date.now(),
+          meta?.turnId,
+          meta?.turnStatus ?? status
+        );
         actions.setPendingCancel(false);
         eventStoreProxy.unpinSession(sessionId);
         updateSessionStatus(sessionId, status as SessionStatus);

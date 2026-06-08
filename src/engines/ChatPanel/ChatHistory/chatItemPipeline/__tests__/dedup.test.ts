@@ -335,6 +335,10 @@ describe("buildDedupMaps — user message dedup", () => {
   it("keeps persisted user message over matching optimistic user input", () => {
     const optimistic = makeUserMessage("Please do the task", {
       id: "user-input-123",
+      result: {
+        syntheticUserInput: true,
+        message: { content: "Please do the task" },
+      },
     });
     const persisted = makeUserMessage("Please do the task", {
       id: "user-message-456",
@@ -350,14 +354,30 @@ describe("buildDedupMaps — user message dedup", () => {
     expect(duplicateUserIds.has(persisted.id)).toBe(false);
   });
 
-  it("deduplicates repeated identical user messages across a transcript", () => {
+  it("does not treat user-input-prefixed backend events as optimistic echoes", () => {
+    const first = makeUserMessage("Repeat this", {
+      id: "user-input-backend-1",
+      result: { message: { content: "Repeat this" } },
+    });
+    const second = makeUserMessage("Repeat this", {
+      id: "user-message-2",
+      result: { message: { content: "Repeat this" } },
+    });
+
+    const { duplicateUserIds } = buildDedupMaps([first, second]);
+
+    expect(duplicateUserIds.has(first.id)).toBe(false);
+    expect(duplicateUserIds.has(second.id)).toBe(false);
+  });
+
+  it("keeps repeated identical user messages across separate rounds", () => {
     const first = makeUserMessage("Repeat this", { id: "user-message-1" });
     const assistant = makeAssistantMessage("Done");
     const second = makeUserMessage("Repeat this", { id: "user-message-2" });
 
     const { duplicateUserIds } = buildDedupMaps([first, assistant, second]);
 
-    expect(duplicateUserIds.has(first.id)).toBe(true);
+    expect(duplicateUserIds.has(first.id)).toBe(false);
     expect(duplicateUserIds.has(second.id)).toBe(false);
   });
 });

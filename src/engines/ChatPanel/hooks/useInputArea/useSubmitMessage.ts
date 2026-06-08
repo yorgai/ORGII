@@ -22,6 +22,13 @@ import { rejectQuestion, respondQuestion } from "@src/api/tauri/agent";
 import Message from "@src/components/Message";
 import { extractQuestionBatch } from "@src/engines/ChatPanel/InputArea/AskQuestionCard/extractQuestionBatch";
 import { chatEventsAtom } from "@src/engines/SessionCore";
+import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
+import { hasRunningSessionEvent } from "@src/engines/SessionCore/core/runningEventGate";
+import {
+  isPendingCancelAtom,
+  isSessionActiveAtom,
+  sessionRuntimeStatusAtom,
+} from "@src/store/session/cliSessionStatusAtom";
 import type { ChatImageAttachment } from "@src/store/ui/chatImageAtom";
 import { wpReadOnlyAtom } from "@src/store/ui/chatPanelAtom";
 
@@ -61,8 +68,14 @@ export interface UseSubmitMessageOptions {
     displayText: string,
     agentContent?: string,
     imageDataUrls?: string[],
-    options?: { forceDispatch?: boolean; forceSendNow?: boolean }
+    options?: {
+      forceDispatch?: boolean;
+      forceSendNow?: boolean;
+      forceQueueAsActiveTurn?: boolean;
+    }
   ) => Promise<void>;
+  isWpGeneWorking: boolean;
+  isPendingCancel: boolean;
   onSubmitOverride?: (input: SubmitOverrideInput) => Promise<boolean>;
 }
 
@@ -79,6 +92,8 @@ export function useSubmitMessage({
   imageAttachment,
   citeCode,
   handleSessChatSubmit,
+  isWpGeneWorking,
+  isPendingCancel,
   onSubmitOverride,
 }: UseSubmitMessageOptions): (options?: SubmitMessageOptions) => Promise<void> {
   const { t } = useTranslation("sessions");
@@ -94,7 +109,11 @@ export function useSubmitMessage({
 
       if (!refs.composerInputRef.current) return;
 
-      let displayText = refs.composerInputRef.current.getTextWithPills();
+      const liveDisplayText = refs.composerInputRef.current.getTextWithPills();
+      let displayText =
+        liveDisplayText.trim().length > 0
+          ? liveDisplayText
+          : (options.capturedText ?? "");
       const hasText = displayText.trim().length > 0;
       const hasAttachedImages = imageAttachment.hasImages;
 
@@ -211,12 +230,36 @@ export function useSubmitMessage({
             })
           : false;
         if (!overrideHandled) {
+          const latestRuntimeStatus = store.get(sessionRuntimeStatusAtom);
+          const runtimeIsWorking =
+            latestRuntimeStatus === "running" ||
+            latestRuntimeStatus === "installing" ||
+            latestRuntimeStatus === "waiting_for_user" ||
+            latestRuntimeStatus === "waiting_for_funds" ||
+            (draftSessionId
+              ? hasRunningSessionEvent(
+                  store.get(sortedEventsAtom),
+                  draftSessionId
+                )
+              : false);
+          const forceQueueAsActiveTurn =
+            options.forceQueueAsActiveTurn ||
+            store.get(isSessionActiveAtom) ||
+            runtimeIsWorking ||
+            store.get(isPendingCancelAtom) ||
+            isWpGeneWorking ||
+            isPendingCancel;
           await handleSessChatSubmit(
             undefined,
             displayText || "(image)",
             agentContent,
             dispatchImages,
-            options.forceSendNow ? { forceSendNow: true } : undefined
+            options.forceSendNow || forceQueueAsActiveTurn
+              ? {
+                  forceSendNow: options.forceSendNow,
+                  forceQueueAsActiveTurn,
+                }
+              : undefined
           );
         }
         submitSucceeded = true;
@@ -288,6 +331,8 @@ export function useSubmitMessage({
       wpReadOnly,
       store,
       handleSessChatSubmit,
+      isWpGeneWorking,
+      isPendingCancel,
       citeCode,
       refs,
       imageAttachment,

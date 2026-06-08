@@ -535,6 +535,13 @@ impl UnifiedMessageProcessor {
             );
         }
 
+        if super::super::recovery::ensure_tool_result_pairing(&mut messages) {
+            info!(
+                "[unified_processor] Normalized tool_result pairing before pre-turn context work for session {}",
+                session_id
+            );
+        }
+
         // 4c. Agent-org inbox drain.
         //
         // For sessions running inside an `AgentOrgRun`, fetch every
@@ -604,6 +611,13 @@ impl UnifiedMessageProcessor {
                 prefetch_hook.abort_pending();
             }
             return Ok(redirect);
+        }
+
+        if super::super::recovery::ensure_tool_result_pairing(&mut messages) {
+            info!(
+                "[unified_processor] Normalized tool_result pairing before provider request for session {}",
+                session_id
+            );
         }
 
         // 7. Execute turn (with reactive ContextTooLong recovery).

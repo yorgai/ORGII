@@ -223,9 +223,6 @@ pub(super) async fn execute_parallel_group(
             .collect();
 
         exec_outputs.extend(futures::future::join_all(exec_futures).await);
-        if is_cancelled(cancel_flag) {
-            return ParallelResult::EarlyExit(denied_count, ToolBatchOutcome::Cancelled);
-        }
     }
 
     let mut results_by_index: std::collections::BTreeMap<usize, ExecResult> =
@@ -248,12 +245,6 @@ pub(super) async fn execute_parallel_group(
     let mut executed_count = 0;
 
     for (idx, display_name, result) in &blocked_results {
-        if is_cancelled(cancel_flag) {
-            return ParallelResult::EarlyExit(
-                executed_count + denied_count,
-                ToolBatchOutcome::Cancelled,
-            );
-        }
         let call = calls[*idx];
         let is_err = is_error_text(result);
         handler.on_tool_result(session_id, &call.id, &call.name, display_name, result);
@@ -268,12 +259,6 @@ pub(super) async fn execute_parallel_group(
     }
 
     for (_idx, exec_result) in results_by_index {
-        if is_cancelled(cancel_flag) {
-            return ParallelResult::EarlyExit(
-                executed_count + denied_count,
-                ToolBatchOutcome::Cancelled,
-            );
-        }
         let call = calls[exec_result.index];
 
         // Split the exec outcome into:

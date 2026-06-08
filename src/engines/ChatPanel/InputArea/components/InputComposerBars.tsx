@@ -59,7 +59,7 @@ interface SharedComposerBarProps {
 interface EditComposerBarProps extends SharedComposerBarProps {
   onContentChange: (text: string) => void;
   onBlur: () => void;
-  onSubmit: () => void;
+  onSubmit: (capturedText?: string) => void;
   onEditCancel?: () => void;
   onEditSendNow?: () => void;
   quietEditSurface: boolean;
@@ -212,7 +212,7 @@ export const EditComposerBar: React.FC<EditComposerBarProps> = ({
               shape="round"
               htmlType="button"
               className="enabled:hover:bg-fill-3 enabled:hover:text-text-1"
-              onClick={onSubmit}
+              onClick={() => onSubmit()}
             >
               {t("common:actions.save")}
             </Button>
@@ -233,7 +233,7 @@ export const EditComposerBar: React.FC<EditComposerBarProps> = ({
             shape="round"
             htmlType="button"
             icon={<RotateCcw size={13} strokeWidth={2} />}
-            onClick={onSubmit}
+            onClick={() => onSubmit()}
           >
             {t("common:actions.resend")}
           </Button>
@@ -264,7 +264,7 @@ interface NormalComposerContentProps extends SharedComposerBarProps {
   suppressToolbarHover: boolean;
   onContentChange: (text: string) => void;
   onBlur: () => void;
-  onSubmit: () => void;
+  onSubmit: (capturedText?: string) => void;
   placeholder?: string;
   currentInputEmpty: boolean;
   stopSuppressedForEmptyInput: boolean;

@@ -75,8 +75,12 @@ export interface EventHandlerCallbacks {
   onQuestionRequest?: (event: QuestionRequestInfo) => void;
   /** Called on streaming delta for crash recovery. */
   onStreamingDelta?: (info: StreamingDeltaInfo) => void;
-  /** Called when CLI session status changes. */
-  onStatusChange?: (status: string, error?: string) => void;
+  /** Called when CLI/session status changes. Rust turn-completed includes turn metadata. */
+  onStatusChange?: (
+    status: string,
+    error?: string,
+    meta?: { turnId?: string; turnStatus?: string }
+  ) => void;
   /** Called when CLI token usage updates. */
   onTokenUpdate?: (tokens: number) => void;
 }

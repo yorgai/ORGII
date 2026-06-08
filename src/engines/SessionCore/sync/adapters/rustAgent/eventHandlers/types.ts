@@ -59,7 +59,12 @@ export interface EventHandlerContext {
     ((tokenUsage?: AgentTokenUsage) => void) | undefined
   >;
   onStatusChangeRef: MutableRefObject<
-    ((status: string, errorMessage?: string) => void) | undefined
+    | ((
+        status: string,
+        errorMessage?: string,
+        meta?: { turnId?: string; turnStatus?: string }
+      ) => void)
+    | undefined
   >;
   onPermissionRequestRef?: MutableRefObject<
     ((event: PermissionRequestEvent) => void) | undefined

@@ -8,8 +8,10 @@ import {
 import {
   configureScenario,
   execJS,
+  installControlFlowInstrumentation,
   invokeE2E,
   js,
+  readControlFlowInstrumentation,
   typeAndClickSend,
   unwrap,
   waitForChatInput,
@@ -92,6 +94,7 @@ async function runRewindScenario(config) {
     await ensureMarkerFileCreated(config, filePath, markerText);
     await waitForRuntimeIdle(`${config.label}-rewind-before-undo`);
     await waitForFileChangesPanel(`${config.label}-rewind`);
+    await installControlFlowInstrumentation(`${config.label}-rewind-undo`);
 
     await clickUndoAllAndConfirm(`${config.label}-rewind`);
 
@@ -106,7 +109,7 @@ async function runRewindScenario(config) {
       },
       {
         timeout: 60_000,
-        timeoutMsg: `${config.label} Undo All did not rewind file or expose Redo All; exists=${fs.existsSync(filePath)} content=${fs.existsSync(filePath) ? JSON.stringify(fs.readFileSync(filePath, "utf8")) : "<missing>"} fileChanges=${JSON.stringify(await execJS(js.fileChanges))}`,
+        timeoutMsg: `${config.label} Undo All did not rewind file or expose Redo All; exists=${fs.existsSync(filePath)} content=${fs.existsSync(filePath) ? JSON.stringify(fs.readFileSync(filePath, "utf8")) : "<missing>"} fileChanges=${JSON.stringify(await execJS(js.fileChanges))} controlFlow=${JSON.stringify(await readControlFlowInstrumentation())}`,
       }
     );
     await assertCliHistoryMutationIfApplicable(
@@ -131,19 +134,25 @@ async function runRewindScenario(config) {
       2
     );
 
-    const surfaces = await assertStationSurfacesConsistent(
-      `${config.label}-redo`
-    );
-    if (
-      surfaces.myStation.undoAll ||
-      surfaces.agentStation.undoAll ||
-      surfaces.myStation.redoAll ||
-      surfaces.agentStation.redoAll
-    ) {
+    try {
+      await browser.waitUntil(
+        async () => {
+          const finalFileChanges = await execJS(js.fileChanges);
+          return !finalFileChanges.undoAll && !finalFileChanges.redoAll;
+        },
+        {
+          timeout: 10_000,
+          interval: 500,
+          timeoutMsg: `${config.label} file review controls remained after Redo All`,
+        }
+      );
+    } catch (error) {
+      const finalFileChanges = await execJS(js.fileChanges).catch(() => null);
       throw new Error(
-        `${config.label} file review controls remained after Redo All; surfaces=${JSON.stringify(surfaces)}`
+        `${config.label} file review controls remained after Redo All; fileChanges=${JSON.stringify(finalFileChanges)}; original=${error instanceof Error ? error.message : String(error)}`
       );
     }
+    await assertStationSurfacesConsistent(`${config.label}-redo`);
   } finally {
     await execJS(
       `window.__orgiiE2EAutoConfirmDestructive = false; return true;`

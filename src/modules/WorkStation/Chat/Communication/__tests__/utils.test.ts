@@ -150,6 +150,117 @@ describe("derivePlanTitle", () => {
 });
 
 describe("deriveMessagesState", () => {
+  it("replaces optimistic user echo with the backend user message in Communication chat", () => {
+    const optimisticUserMessage = minimalSessionEvent({
+      id: "user-input-1",
+      functionName: "user_message",
+      source: "user",
+      displayText: "探索一下repo",
+      result: {
+        syntheticUserInput: true,
+        message: { role: "user", content: "探索一下repo" },
+      },
+    });
+    const backendUserMessage = minimalSessionEvent({
+      id: "user-1-loaded-copy",
+      functionName: "user_message",
+      source: "user",
+      displayText: "探索一下repo",
+      result: { message: { role: "user", content: "探索一下repo" } },
+    });
+
+    const state = deriveMessagesState(
+      [optimisticUserMessage, backendUserMessage],
+      null
+    );
+
+    expect(state.chatMessages.map((message) => message.eventId)).toEqual([
+      "user-1-loaded-copy",
+    ]);
+  });
+
+  it("does not treat user-input-prefixed backend messages as optimistic echoes", () => {
+    const firstUserMessage = minimalSessionEvent({
+      id: "user-input-backend-1",
+      functionName: "user_message",
+      source: "user",
+      displayText: "探索一下repo",
+      result: { message: { role: "user", content: "探索一下repo" } },
+    });
+    const secondUserMessage = minimalSessionEvent({
+      id: "user-2",
+      functionName: "user_message",
+      source: "user",
+      displayText: "探索一下repo",
+      result: { message: { role: "user", content: "探索一下repo" } },
+    });
+
+    const state = deriveMessagesState(
+      [firstUserMessage, secondUserMessage],
+      null
+    );
+
+    expect(state.chatMessages.map((message) => message.eventId)).toEqual([
+      "user-input-backend-1",
+      "user-2",
+    ]);
+  });
+
+  it("keeps same user text when resent in the same session", () => {
+    const firstUserMessage = minimalSessionEvent({
+      id: "user-1",
+      functionName: "user_message",
+      source: "user",
+      displayText: "探索一下repo",
+      result: { message: { role: "user", content: "探索一下repo" } },
+    });
+    const secondUserMessage = minimalSessionEvent({
+      id: "user-2",
+      functionName: "user_message",
+      source: "user",
+      displayText: "探索一下repo",
+      result: { message: { role: "user", content: "探索一下repo" } },
+    });
+
+    const state = deriveMessagesState(
+      [firstUserMessage, secondUserMessage],
+      null
+    );
+
+    expect(state.chatMessages.map((message) => message.eventId)).toEqual([
+      "user-1",
+      "user-2",
+    ]);
+  });
+
+  it("keeps same user text in different sessions", () => {
+    const firstUserMessage = minimalSessionEvent({
+      id: "user-1",
+      sessionId: "session-a",
+      functionName: "raw_event",
+      source: "user",
+      result: { type: "user", message: "探索一下repo" },
+    });
+    const secondUserMessage = minimalSessionEvent({
+      id: "user-2",
+      sessionId: "session-b",
+      functionName: "user_message",
+      source: "user",
+      displayText: "探索一下repo",
+      result: { message: { role: "user", content: "探索一下repo" } },
+    });
+
+    const state = deriveMessagesState(
+      [firstUserMessage, secondUserMessage],
+      null
+    );
+
+    expect(state.chatMessages.map((message) => message.eventId)).toEqual([
+      "user-1",
+      "user-2",
+    ]);
+  });
+
   it("keeps plan documents in the interaction bucket for aggregate Messages rendering", () => {
     const userMessage = minimalSessionEvent({
       id: "user-1",

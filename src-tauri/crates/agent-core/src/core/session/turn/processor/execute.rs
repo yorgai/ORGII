@@ -68,8 +68,12 @@ impl UnifiedMessageProcessor {
         event_handler_config.turn_id = Some(turn_id.to_string());
         let handler = UnifiedEventHandler::new(event_handler_config);
 
-        // Set session key for streaming tools
+        // Set per-turn context for streaming/cancellable tools.
         self.runtime.tool_registry.set_session_key(session_id).await;
+        self.runtime
+            .tool_registry
+            .set_cancel_flag(Arc::clone(&self.session.cancel_flag))
+            .await;
 
         // Propagate permission provider to tools (ExecTool uses it for command-level confirmation)
         self.runtime

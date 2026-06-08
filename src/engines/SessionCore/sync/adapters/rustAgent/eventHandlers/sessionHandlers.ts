@@ -16,6 +16,19 @@ import type { AgentTokenUsage, AgentWSEvent } from "../../shared/types";
 import { resetAllStreamingState } from "./streamHelpers";
 import type { EventHandlerContext } from "./types";
 
+function settleTerminalRuntime(
+  sessionId: string,
+  ctx: EventHandlerContext,
+  status: "completed" | "failed" | "cancelled" = "completed",
+  errorMessage?: string,
+  meta?: { turnId?: string; turnStatus?: string }
+): void {
+  resetAllStreamingState(ctx);
+  ctx.setStreaming(false);
+  clearStreamRetryStatus(ctx, sessionId);
+  ctx.onStatusChangeRef.current?.(status, errorMessage, meta);
+}
+
 export function handleComplete(
   event: AgentWSEvent,
   sessionId: string,
@@ -43,6 +56,24 @@ export function handleComplete(
       : undefined;
   ctx.onAgentCompleteRef.current?.(tokenUsage);
   ctx.onStatusChangeRef.current?.("completed");
+}
+
+export function handleTurnCompleted(
+  event: AgentWSEvent,
+  sessionId: string,
+  ctx: EventHandlerContext
+): void {
+  const cancelled =
+    event.turnStatus === "cancelled" || event.sessionStatus === "cancelled";
+  const failed =
+    event.turnStatus === "failed" ||
+    event.sessionStatus === "failed" ||
+    event.sessionStatus === "error";
+  const status = cancelled ? "cancelled" : failed ? "failed" : "completed";
+  settleTerminalRuntime(sessionId, ctx, status, undefined, {
+    turnId: event.turnId,
+    turnStatus: event.turnStatus,
+  });
 }
 
 export function handleTurnSummary(

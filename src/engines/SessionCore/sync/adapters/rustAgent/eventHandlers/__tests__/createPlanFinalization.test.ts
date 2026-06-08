@@ -219,7 +219,7 @@ describe("create_plan streaming finalization", () => {
     );
   });
 
-  it("keeps streamed draft, final tool call, and tool result on one stable event id", () => {
+  it("buffers streamed create_plan deltas without creating duplicate EventStore rows", async () => {
     const ctx = createCtx();
 
     handleToolCallDelta(
@@ -234,11 +234,13 @@ describe("create_plan streaming finalization", () => {
       ctx
     );
 
-    expect(storeEvents.has("tool-call-call_plan_1")).toBe(true);
+    expect(storeEvents.has("tool-call-call_plan_1")).toBe(false);
     expect(storeEvents.has("tool-call-draft-call_plan_1")).toBe(false);
-    expect(storeEvents.get("tool-call-call_plan_1")?.displayStatus).toBe(
-      "awaiting_user"
-    );
+    expect(ctx.toolCallDeltaBuffersRef!.current.get(0)).toMatchObject({
+      toolCallId: "call_plan_1",
+      toolName: "create_plan",
+      messageId: "tool-call-call_plan_1",
+    });
 
     handleToolCall(
       {
@@ -252,17 +254,10 @@ describe("create_plan streaming finalization", () => {
       ctx
     );
 
-    expect(upsertSpy).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        id: "tool-call-call_plan_1",
-        callId: "call_plan_1",
-        functionName: "create_plan",
-      }),
-      "session-1"
-    );
-    expect(storeEvents.size).toBe(1);
+    expect(upsertSpy).not.toHaveBeenCalled();
+    expect(ctx.toolCallDeltaBuffersRef!.current.has(0)).toBe(false);
 
-    handleToolResult(
+    await handleToolResult(
       {
         type: "agent:tool_result",
         tool: "create_plan",
@@ -273,12 +268,9 @@ describe("create_plan streaming finalization", () => {
       ctx
     );
 
-    const finalEvent = storeEvents.get("tool-call-call_plan_1");
-    expect(finalEvent?.displayStatus).toBe("completed");
-    expect(finalEvent?.result).toMatchObject({
-      content: "PLAN_SUBMITTED_END_TURN:{}",
-    });
+    expect(storeEvents.size).toBe(0);
     expect(storeEvents.has("tool-result-call_plan_1")).toBe(false);
+    expect(mergeSpy).not.toHaveBeenCalled();
     expect(completeLastRunningSpy).not.toHaveBeenCalled();
   });
 });

@@ -35,6 +35,12 @@ export interface QueuedMessage {
    */
   requiresRuntimeSettle?: boolean;
   /**
+   * Rust-native active turn id observed at enqueue time. When present, natural
+   * queue release must be driven by that exact turn's terminal event rather
+   * than by session-level status edges, which can briefly flap during tool use.
+   */
+  releaseAfterTurnId?: string;
+  /**
    * User explicitly pressed Send after Stop restored the draft while Rust was
    * still winding down. This message is the next active prompt once cancel
    * settles; older queued follow-ups must stay parked behind it.
@@ -84,7 +90,10 @@ export const enqueueMessageAtom = atom(
   null,
   (_get, set, message: QueuedMessage) => {
     let added = false;
-    set(messageQueueAtom, (prev) => {
+    const targetAtom = message.dispatchAfterUserCancel
+      ? forceSendPendingQueueAtom
+      : messageQueueAtom;
+    set(targetAtom, (prev) => {
       const duplicate = prev.some(
         (existing) =>
           existing.sessionId === message.sessionId &&
@@ -93,7 +102,12 @@ export const enqueueMessageAtom = atom(
       );
       if (duplicate) return prev;
       added = true;
-      return [...prev, message];
+      return [
+        ...prev,
+        message.dispatchAfterUserCancel
+          ? { ...message, requiresRuntimeSettle: false }
+          : message,
+      ];
     });
     if (added) set(enqueueCountAtom, (n) => n + 1);
   }

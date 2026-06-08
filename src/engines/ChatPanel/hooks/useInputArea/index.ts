@@ -26,6 +26,8 @@ import { useChatContext } from "@src/contexts/workspace/ChatContext";
 import { useDataContext } from "@src/contexts/workspace/DataContext";
 import useWorkspaceChat from "@src/engines/ChatPanel/hooks/useWorkspaceChat";
 import { useRepositoryInfo } from "@src/engines/SessionCore";
+import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
+import { hasRunningSessionEvent } from "@src/engines/SessionCore/core/runningEventGate";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import { createLogger } from "@src/hooks/logger";
 import {
@@ -134,17 +136,7 @@ export function useInputArea(
   const isPendingCancel = useAtomValue(isPendingCancelAtom);
   const runtimeStatus = useAtomValue(sessionRuntimeStatusAtom);
 
-  // Visual "agent is working" flag — drives the Stop vs. Send icon.
-  // We flip this to `false` the moment the user clicks Stop (i.e. while
-  // `isPendingCancel` is true) so the icon flips instantly even if Rust
-  // takes a few seconds to actually wind the turn down.
-  //
-  // The "if Rust ignores the cancel, can I try again?" case is handled
-  // inside `InputActions`: when `isPendingCancel` is true and the input is
-  // empty, clicking the (Send-looking) button re-fires `interrupt()`.
-  // So we get instant visual feedback AND stay clickable through a stuck
-  // backend.
-  const isWpGeneWorking = isSessionActive && !isPendingCancel;
+  const sessionEvents = useAtomValue(sortedEventsAtom);
   // Retry is only meaningful for `failed` runs. A user-initiated cancel should
   // never surface the orange retry button — the user stopped on purpose.
   const isSessionTerminal = runtimeStatus === "failed";
@@ -180,6 +172,16 @@ export function useInputArea(
   });
   const activeSessionId = propSessionId ?? resolvedActiveSessionId;
   const draftSessionId = activeSessionId ?? "";
+  const hasRunningEvent = activeSessionId
+    ? hasRunningSessionEvent(sessionEvents, activeSessionId)
+    : false;
+
+  // Visual "agent is working" flag — drives the Stop vs. Send icon.
+  // The authoritative source is the union of session runtime activity and
+  // EventStore tool lifecycle. This matches shell-task semantics: an empty
+  // composer must not hide Stop while a backend tool is still running.
+  const isWpGeneWorking =
+    (isSessionActive || hasRunningEvent) && !isPendingCancel;
 
   // Session-scoped repo path. When a session is active prefer its persisted
   // `repo_path` (the value that drove `workspace_root` at session start) over
@@ -402,6 +404,8 @@ export function useInputArea(
     imageAttachment,
     citeCode,
     handleSessChatSubmit,
+    isWpGeneWorking,
+    isPendingCancel,
     onSubmitOverride,
   });
 

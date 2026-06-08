@@ -40,6 +40,12 @@ export function noteSessionStreamingTurn(
   activeStreamingTurnBySession.set(sessionId, turnId);
 }
 
+export function getActiveSessionStreamingTurn(
+  sessionId: string
+): string | undefined {
+  return activeStreamingTurnBySession.get(sessionId);
+}
+
 export function markSessionStreamingStopped(sessionId: string): void {
   const activeTurnId = activeStreamingTurnBySession.get(sessionId);
   if (!activeTurnId) {

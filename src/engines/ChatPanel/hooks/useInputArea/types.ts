@@ -45,6 +45,8 @@ export interface UseInputAreaOptions {
 
 export interface SubmitMessageOptions {
   forceSendNow?: boolean;
+  forceQueueAsActiveTurn?: boolean;
+  capturedText?: string;
 }
 
 // ============================================

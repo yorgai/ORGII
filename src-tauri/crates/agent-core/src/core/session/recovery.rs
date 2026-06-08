@@ -14,6 +14,8 @@
 use serde_json::Value;
 use tracing::info;
 
+use std::collections::HashSet;
+
 use crate::core::turn_executor::helpers::{msg_role, msg_tool_calls};
 
 #[cfg(debug_assertions)]
@@ -74,6 +76,9 @@ pub enum InterruptionType {
 /// present. `detect_turn_interruption` must recognise it to avoid treating a
 /// clean user-cancel as a crash that needs recovery.
 pub const USER_INTERRUPT_SENTINEL: &str = "[Request interrupted by user]";
+
+const SYNTHETIC_INTERRUPTED_TOOL_RESULT: &str =
+    "Tool execution was interrupted before a result was produced. Retry if needed.";
 
 /// Return true if the last message in `messages` is the in-memory interrupt
 /// sentinel injected by the processor after a user cancel.
@@ -297,6 +302,121 @@ pub(crate) fn filter_unresolved_tool_uses(messages: &mut Vec<Value>) -> usize {
     debug_counters::record_filter(removed);
 
     removed
+}
+
+/// Ensure every assistant `tool_calls` envelope is immediately followed by
+/// matching `tool` result rows before history is sent to a provider.
+///
+/// User Stop / Force Send can persist a new user turn after an interrupted tool
+/// call, so tail-only resume cleanup is not sufficient. This mirrors Claude
+/// Code's request-boundary pairing repair: preserve the assistant turn and add
+/// synthetic error tool results directly after it, while removing stray tool
+/// rows that no longer have a live assistant parent.
+pub(crate) fn ensure_tool_result_pairing(messages: &mut Vec<Value>) -> bool {
+    if messages.is_empty() {
+        return false;
+    }
+
+    let original_len = messages.len();
+    let mut result = Vec::with_capacity(messages.len());
+    let mut repaired = false;
+    let mut all_seen_tool_call_ids = HashSet::new();
+    let mut idx = 0;
+
+    while idx < messages.len() {
+        let mut msg = messages[idx].clone();
+        if msg_role(&msg) != "assistant" {
+            if msg_role(&msg) == "tool" {
+                repaired = true;
+            } else {
+                result.push(msg);
+            }
+            idx += 1;
+            continue;
+        }
+
+        let mut tool_call_ids = Vec::new();
+        let mut filtered_tool_calls = Vec::new();
+        if let Some(tool_calls) = msg_tool_calls(&msg) {
+            for tool_call in tool_calls {
+                if let Some(id) = tool_call.get("id").and_then(|id| id.as_str()) {
+                    if all_seen_tool_call_ids.insert(id.to_string()) {
+                        tool_call_ids.push(id.to_string());
+                        filtered_tool_calls.push(tool_call.clone());
+                    } else {
+                        repaired = true;
+                    }
+                }
+            }
+        }
+        if let Some(object) = msg.as_object_mut() {
+            if !filtered_tool_calls.is_empty() {
+                object.insert("tool_calls".to_string(), Value::Array(filtered_tool_calls));
+            } else if object.remove("tool_calls").is_some() {
+                repaired = true;
+                if object.get("content").is_none_or(Value::is_null) {
+                    object.insert(
+                        "content".to_string(),
+                        Value::String("[Duplicate tool call removed]".to_string()),
+                    );
+                }
+            }
+        }
+
+        result.push(msg);
+        if tool_call_ids.is_empty() {
+            idx += 1;
+            continue;
+        }
+
+        let next_idx = idx + 1;
+        let mut consumed_tool_rows = 0;
+        let mut matched_ids = HashSet::new();
+        let tool_call_id_set: HashSet<&str> = tool_call_ids.iter().map(String::as_str).collect();
+
+        while next_idx + consumed_tool_rows < messages.len() {
+            let candidate = &messages[next_idx + consumed_tool_rows];
+            if msg_role(candidate) != "tool" {
+                break;
+            }
+            consumed_tool_rows += 1;
+            if let Some(tool_call_id) = candidate.get("tool_call_id").and_then(|id| id.as_str()) {
+                if tool_call_id_set.contains(tool_call_id)
+                    && matched_ids.insert(tool_call_id.to_string())
+                {
+                    result.push(candidate.clone());
+                } else {
+                    repaired = true;
+                }
+            } else {
+                repaired = true;
+            }
+        }
+
+        for tool_call_id in tool_call_ids {
+            if !matched_ids.contains(&tool_call_id) {
+                repaired = true;
+                result.push(serde_json::json!({
+                    "role": "tool",
+                    "tool_call_id": tool_call_id,
+                    "content": SYNTHETIC_INTERRUPTED_TOOL_RESULT,
+                }));
+            }
+        }
+
+        idx = next_idx + consumed_tool_rows;
+    }
+
+    if repaired {
+        info!(
+            "[recovery] ensured tool_result pairing before provider request ({} -> {} messages)",
+            original_len,
+            result.len()
+        );
+        *messages = result;
+    }
+
+    repaired
 }
 
 #[cfg(test)]
@@ -578,5 +698,81 @@ mod tests {
         let removed = filter_unresolved_tool_uses(&mut messages);
         assert_eq!(removed, 0);
         assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn ensure_pairing_repairs_mid_history_orphan_before_new_user_turn() {
+        let mut messages = vec![
+            json!({"role": "system", "content": "prompt"}),
+            json!({"role": "user", "content": "read file"}),
+            json!({
+                "role": "assistant",
+                "content": null,
+                "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "read_file", "arguments": "{}"}}]
+            }),
+            json!({"role": "user", "content": "new prompt after stop"}),
+        ];
+
+        assert!(ensure_tool_result_pairing(&mut messages));
+        assert_eq!(messages[3]["role"], "tool");
+        assert_eq!(messages[3]["tool_call_id"], "call_1");
+        assert_eq!(messages[4]["role"], "user");
+        assert_eq!(messages[4]["content"], "new prompt after stop");
+    }
+
+    #[test]
+    fn ensure_pairing_strips_orphan_tool_rows() {
+        let mut messages = vec![
+            json!({"role": "system", "content": "prompt"}),
+            json!({"role": "tool", "tool_call_id": "missing", "content": "late result"}),
+            json!({"role": "user", "content": "continue"}),
+        ];
+
+        assert!(ensure_tool_result_pairing(&mut messages));
+        assert_eq!(messages.len(), 2);
+        assert_eq!(messages[0]["role"], "system");
+        assert_eq!(messages[1]["role"], "user");
+    }
+
+    #[test]
+    fn ensure_pairing_dedupes_duplicate_tool_results() {
+        let mut messages = vec![
+            json!({"role": "user", "content": "read file"}),
+            json!({
+                "role": "assistant",
+                "content": null,
+                "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "read_file", "arguments": "{}"}}]
+            }),
+            json!({"role": "tool", "tool_call_id": "call_1", "content": "first"}),
+            json!({"role": "tool", "tool_call_id": "call_1", "content": "duplicate"}),
+            json!({"role": "user", "content": "next"}),
+        ];
+
+        assert!(ensure_tool_result_pairing(&mut messages));
+        let tool_rows: Vec<&Value> = messages
+            .iter()
+            .filter(|msg| msg_role(msg) == "tool")
+            .collect();
+        assert_eq!(tool_rows.len(), 1);
+        assert_eq!(tool_rows[0]["content"], "first");
+        assert_eq!(messages.last().unwrap()["content"], "next");
+    }
+
+    #[test]
+    fn ensure_pairing_noops_clean_history() {
+        let mut messages = vec![
+            json!({"role": "user", "content": "read file"}),
+            json!({
+                "role": "assistant",
+                "content": null,
+                "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "read_file", "arguments": "{}"}}]
+            }),
+            json!({"role": "tool", "tool_call_id": "call_1", "content": "contents"}),
+            json!({"role": "assistant", "content": "done"}),
+        ];
+        let original = messages.clone();
+
+        assert!(!ensure_tool_result_pairing(&mut messages));
+        assert_eq!(messages, original);
     }
 }

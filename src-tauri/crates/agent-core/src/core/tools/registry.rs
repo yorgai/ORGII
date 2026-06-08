@@ -8,6 +8,7 @@
 mod tests;
 
 use std::collections::HashMap;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use serde_json::Value;
@@ -404,6 +405,13 @@ impl ToolRegistry {
     pub async fn set_session_key(&self, session_key: &str) {
         for tool in self.all_tools() {
             tool.set_session_key(session_key).await;
+        }
+    }
+
+    /// Set the active turn cancellation signal on all tools that can block.
+    pub async fn set_cancel_flag(&self, cancel_flag: Arc<AtomicBool>) {
+        for tool in self.all_tools() {
+            tool.set_cancel_flag(Arc::clone(&cancel_flag)).await;
         }
     }
 

@@ -21,10 +21,13 @@
 import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
+import { enterAgentOrgSessionIntervention } from "@src/api/tauri/agent";
 import { Message } from "@src/components/Message";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
+import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms/metadata";
+import { hasTurnBlockingRunningSessionEvent } from "@src/engines/SessionCore/core/runningEventGate";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { createSyntheticUserEvent } from "@src/engines/SessionCore/sync/adapters/shared";
@@ -51,24 +54,31 @@ import {
   queueEditingAtom,
   queueFlushRequestAtom,
 } from "@src/store/ui/messageQueueAtom";
+import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 import { resolveModelForMessage } from "@src/util/session/resolveModelForMessage";
 import { selectionFromSession } from "@src/util/session/selectionFromSession";
 import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
 import {
   hasQueueTurnSettledAfter,
-  hasQueueTurnWorkedThenSettledAfter,
+  hasQueueTurnTerminatedAfter,
   isQueueRuntimeStillWorking,
   markQueueTurnWorking,
 } from "./queueTurnGate";
 
 const MAX_SENT_QUEUE_ID_CACHE = 200;
 const MIN_QUEUE_VISIBLE_MS = 1_200;
-
 function queuedMessageAgeMs(message: QueuedMessage): number {
   const createdAtMs = Date.parse(message.createdAt);
   if (!Number.isFinite(createdAtMs)) return MIN_QUEUE_VISIBLE_MS;
   return Date.now() - createdAtMs;
+}
+
+function hasTurnBlockingRunningEventForSession(sessionId: string): boolean {
+  return hasTurnBlockingRunningSessionEvent(
+    getInstrumentedStore().get(sortedEventsAtom),
+    sessionId
+  );
 }
 
 export function useQueueDispatch(): void {
@@ -78,10 +88,10 @@ export function useQueueDispatch(): void {
   const isPendingCancel = useAtomValue(isPendingCancelAtom);
   const userInitiatedCancel = useAtomValue(userInitiatedCancelAtom);
   const setUserInitiatedCancel = useSetAtom(userInitiatedCancelAtom);
-  const setPendingCancel = useSetAtom(isPendingCancelAtom);
   const setLastUserMessage = useSetAtom(lastUserMessageAtom);
   const queue = useAtomValue(messageQueueAtom);
   const forceSendQueue = useAtomValue(forceSendPendingQueueAtom);
+  const sortedEvents = useAtomValue(sortedEventsAtom);
   const activeSessionId = useAtomValue(sessionIdAtom);
   const isQueueEditing = useAtomValue(queueEditingAtom);
   const flushRequest = useAtomValue(queueFlushRequestAtom);
@@ -160,12 +170,25 @@ export function useQueueDispatch(): void {
     []
   );
 
+  const sentQueuedMessageIdsRef = useRef<Set<string>>(new Set());
+  const sentQueuedMessageIdOrderRef = useRef<string[]>([]);
+  const rememberSentQueueId = useCallback((messageId: string) => {
+    if (sentQueuedMessageIdsRef.current.has(messageId)) return;
+    sentQueuedMessageIdsRef.current.add(messageId);
+    sentQueuedMessageIdOrderRef.current.push(messageId);
+    while (
+      sentQueuedMessageIdOrderRef.current.length > MAX_SENT_QUEUE_ID_CACHE
+    ) {
+      const expiredId = sentQueuedMessageIdOrderRef.current.shift();
+      if (expiredId) sentQueuedMessageIdsRef.current.delete(expiredId);
+    }
+  }, []);
+
   const dispatchMessage = useCallback(
     (msg: QueuedMessage, onDone: () => void) => {
       const { sessionId, content, displayContent, imageDataUrls } = msg;
       const deps = depsRef.current;
 
-      dequeueMessage(msg.id);
       setLastUserMessage({ displayContent, imageDataUrls });
 
       // Optimistically mark the session as running so the planning indicator
@@ -197,6 +220,9 @@ export function useQueueDispatch(): void {
           if (!optimisticVisibleQueueIdsRef.current.has(msg.id)) {
             await addUserMessage(displayContent, sessionId, imageDataUrls);
           }
+          void enterAgentOrgSessionIntervention(sessionId).catch((error) => {
+            console.warn("[useQueueDispatch] intervention failed:", error);
+          });
           // Pass displayContent as displayText when it differs from content
           // (i.e. skill pills were expanded) so the persisted event stores
           // the pill format and re-editing shows the pill, not the YAML.
@@ -216,6 +242,7 @@ export function useQueueDispatch(): void {
           // surfaces in "recent activity" views (sidebar / Kanban)
           // without waiting for the next session list refresh.
           markSessionActive(sessionId);
+          rememberSentQueueId(msg.id);
           dequeueMessage(msg.id);
           // Release the lock before Cursor IDE triggers its synthetic idle edge,
           // so the next queued follow-up can flush immediately.
@@ -228,7 +255,6 @@ export function useQueueDispatch(): void {
           // IPC failed before Rust even received the message — reset status
           // back to idle so the UI doesn't stay stuck in "running".
           setSessionRuntimeStatus({ status: "idle", source: "queue" });
-          dequeueMessage(msg.id);
           onDone();
           const detail = err instanceof Error ? err.message : String(err);
           Message.error({
@@ -241,6 +267,7 @@ export function useQueueDispatch(): void {
     [
       addUserMessage,
       dequeueMessage,
+      rememberSentQueueId,
       setLastUserMessage,
       setSessionRuntimeStatus,
     ]
@@ -268,8 +295,6 @@ export function useQueueDispatch(): void {
 
   // --- falling-edge dispatch with lock ---
   const dispatchLockRef = useRef(false);
-  const sentQueuedMessageIdsRef = useRef<Set<string>>(new Set());
-  const sentQueuedMessageIdOrderRef = useRef<string[]>([]);
   // Tracks which sessionId currently holds the lock, so we can detect
   // session switches and release a stale lock immediately.
   const lockSessionIdRef = useRef<string | null>(null);
@@ -279,29 +304,19 @@ export function useQueueDispatch(): void {
   );
   const prevRuntimeWorkingRef = useRef(isRuntimeWorkingStatus(runtimeStatus));
 
-  const rememberSentQueueId = useCallback((messageId: string) => {
-    if (sentQueuedMessageIdsRef.current.has(messageId)) return;
-    sentQueuedMessageIdsRef.current.add(messageId);
-    sentQueuedMessageIdOrderRef.current.push(messageId);
-    while (
-      sentQueuedMessageIdOrderRef.current.length > MAX_SENT_QUEUE_ID_CACHE
-    ) {
-      const expiredId = sentQueuedMessageIdOrderRef.current.shift();
-      if (expiredId) sentQueuedMessageIdsRef.current.delete(expiredId);
-    }
-  }, []);
-
   const flushTimersRef = useRef<number[]>([]);
   const explicitInterruptSessionRef = useRef<string | null>(null);
-  const explicitDispatchStartedAtBySessionRef = useRef<Map<string, number>>(
+  const explicitInterruptRequestedAtByQueueIdRef = useRef<Map<string, number>>(
     new Map()
   );
   const tryDispatchNextRef = useRef<(() => void) | null>(null);
+  const handledFlushRequestRef = useRef(flushRequest);
 
   const tryDispatchNext = useCallback(() => {
     const latestPendingCancel = store.get(isPendingCancelAtom);
     const latestUserCancel = store.get(userInitiatedCancelAtom);
     const latestRuntimeStatus = store.get(sessionRuntimeStatusAtom);
+    const latestIsSessionActive = store.get(isSessionActiveAtom);
     const latestQueue = store.get(messageQueueAtom);
     const latestForceSendQueue = store.get(forceSendPendingQueueAtom);
     const latestActiveSessionId = store.get(sessionIdAtom);
@@ -315,16 +330,19 @@ export function useQueueDispatch(): void {
     activeSessionIdRef.current = latestActiveSessionId;
     editingRef.current = latestIsEditing;
 
-    const activeSessionId = activeSessionIdRef.current;
-    if (!activeSessionId) return;
-    const forcedMsg = forceSendQueueRef.current.find(
-      (message) => message.sessionId === activeSessionId
-    );
+    const activeSessionIdHint = activeSessionIdRef.current;
+    const forcedMsg = forceSendQueueRef.current[0];
+    const latestFlushRequest = store.get(queueFlushRequestAtom);
+    if (latestFlushRequest < handledFlushRequestRef.current) {
+      handledFlushRequestRef.current = latestFlushRequest;
+    }
+    const flushRequested = latestFlushRequest > handledFlushRequestRef.current;
     const postCancelSendMsg = queueRef.current.find(
-      (message) =>
-        message.sessionId === activeSessionId && message.dispatchAfterUserCancel
+      (message) => message.dispatchAfterUserCancel
     );
     const explicitMsg = forcedMsg ?? postCancelSendMsg;
+    const activeSessionId = explicitMsg?.sessionId ?? activeSessionIdHint;
+    if (!activeSessionId) return;
 
     // Hold off while Rust is still winding down a cancelled turn — the
     // sessionHandlers will clear isPendingCancelAtom when agent:complete /
@@ -334,24 +352,46 @@ export function useQueueDispatch(): void {
     // accepted Stop but stayed visually running can strand the user's resend.
     if (latestPendingCancel && !explicitMsg) return;
 
-    const runtimeWorking = isQueueRuntimeStillWorking(latestRuntimeStatus);
+    const runtimeWorking =
+      latestIsSessionActive ||
+      isQueueRuntimeStillWorking(latestRuntimeStatus) ||
+      hasTurnBlockingRunningEventForSession(activeSessionId);
     if (runtimeWorking && !explicitMsg) return;
-    if (runtimeWorking && explicitMsg) {
-      if (explicitInterruptSessionRef.current === activeSessionId) return;
-      explicitInterruptSessionRef.current = activeSessionId;
-      void (async () => {
-        try {
-          await cancelTurnForTimelineBoundary(activeSessionId, "force-send");
-        } catch (error) {
-          console.error("[useQueueDispatch] explicit interrupt failed:", error);
-        } finally {
-          explicitInterruptSessionRef.current = null;
-          setPendingCancel(false);
-          setSessionRuntimeStatus({ status: "idle", source: "queue" });
-          window.setTimeout(() => tryDispatchNextRef.current?.(), 0);
-        }
-      })();
-      return;
+    if (explicitMsg) {
+      const interruptRequestedAt =
+        explicitInterruptRequestedAtByQueueIdRef.current.get(explicitMsg.id);
+      if (runtimeWorking && !interruptRequestedAt) {
+        if (explicitInterruptSessionRef.current === explicitMsg.id) return;
+        const requestedAt = Date.now();
+        explicitInterruptRequestedAtByQueueIdRef.current.set(
+          explicitMsg.id,
+          requestedAt
+        );
+        explicitInterruptSessionRef.current = explicitMsg.id;
+        void cancelTurnForTimelineBoundary(activeSessionId, "force-send")
+          .catch((error) => {
+            explicitInterruptRequestedAtByQueueIdRef.current.delete(
+              explicitMsg.id
+            );
+            console.error(
+              "[useQueueDispatch] explicit interrupt failed:",
+              error
+            );
+          })
+          .finally(() => {
+            explicitInterruptSessionRef.current = null;
+            tryDispatchNextRef.current?.();
+          });
+        return;
+      }
+
+      if (
+        interruptRequestedAt &&
+        runtimeWorking &&
+        !hasQueueTurnTerminatedAfter(activeSessionId, interruptRequestedAt)
+      ) {
+        return;
+      }
     }
 
     // Hold off if the most recent cancel was user-initiated. Stop restores the
@@ -361,7 +401,7 @@ export function useQueueDispatch(): void {
     // is when the user explicitly presses Send again while that cancel is
     // settling; that message becomes the next active prompt once Rust is idle.
     if (latestUserCancel && !explicitMsg) return;
-    if (latestUserCancel) {
+    if (latestUserCancel && explicitMsg?.dispatchAfterUserCancel) {
       setUserInitiatedCancel(false);
       userCancelRef.current = false;
     }
@@ -372,23 +412,27 @@ export function useQueueDispatch(): void {
 
     if (!nextMsg || editingRef.current) return;
 
-    if (nextMsg.requiresRuntimeSettle) {
+    const explicitBypassesRuntimeSettle =
+      explicitMsg !== undefined && nextMsg.id === explicitMsg.id;
+    if (nextMsg.requiresRuntimeSettle && !explicitBypassesRuntimeSettle) {
       const createdAtMs = Date.parse(nextMsg.createdAt);
-      const explicitStarts = explicitDispatchStartedAtBySessionRef.current;
-      const explicitDispatchStartedAt =
-        explicitStarts.get(nextMsg.sessionId) ?? 0;
-      const requiredSettleAfter = Math.max(
-        Number.isFinite(createdAtMs) ? createdAtMs : 0,
-        explicitDispatchStartedAt
+      const requiredSettleAfter = Number.isFinite(createdAtMs)
+        ? createdAtMs
+        : 0;
+      const hasSettled = hasQueueTurnSettledAfter(
+        nextMsg.sessionId,
+        requiredSettleAfter,
+        nextMsg.releaseAfterTurnId
       );
-      const hasSettled =
-        explicitDispatchStartedAt > 0
-          ? hasQueueTurnWorkedThenSettledAfter(
-              nextMsg.sessionId,
-              explicitDispatchStartedAt
-            )
-          : hasQueueTurnSettledAfter(nextMsg.sessionId, requiredSettleAfter);
       if (!hasSettled) return;
+
+      if (!explicitMsg) {
+        const stillWorking =
+          store.get(isSessionActiveAtom) ||
+          isQueueRuntimeStillWorking(store.get(sessionRuntimeStatusAtom)) ||
+          hasTurnBlockingRunningEventForSession(nextMsg.sessionId);
+        if (stillWorking || store.get(isPendingCancelAtom)) return;
+      }
     }
 
     const visibleDelayMs = MIN_QUEUE_VISIBLE_MS - queuedMessageAgeMs(nextMsg);
@@ -406,7 +450,8 @@ export function useQueueDispatch(): void {
     if (
       dispatchLockRef.current &&
       nextMsg &&
-      lockSessionIdRef.current !== nextMsg.sessionId
+      (lockSessionIdRef.current !== nextMsg.sessionId ||
+        (explicitMsg && nextMsg.id === explicitMsg.id))
     ) {
       dispatchLockRef.current = false;
       lockSessionIdRef.current = null;
@@ -417,12 +462,10 @@ export function useQueueDispatch(): void {
       dequeueMessage(nextMsg.id);
       return;
     }
+    explicitInterruptRequestedAtByQueueIdRef.current.delete(nextMsg.id);
     rememberSentQueueId(nextMsg.id);
-    if (explicitMsg && nextMsg.id === explicitMsg.id) {
-      explicitDispatchStartedAtBySessionRef.current.set(
-        nextMsg.sessionId,
-        Date.now()
-      );
+    if (flushRequested) {
+      handledFlushRequestRef.current = latestFlushRequest;
     }
     dispatchLockRef.current = true;
     lockSessionIdRef.current = nextMsg.sessionId;
@@ -430,14 +473,7 @@ export function useQueueDispatch(): void {
       dispatchLockRef.current = false;
       lockSessionIdRef.current = null;
     });
-  }, [
-    dequeueMessage,
-    rememberSentQueueId,
-    setPendingCancel,
-    setSessionRuntimeStatus,
-    setUserInitiatedCancel,
-    store,
-  ]);
+  }, [dequeueMessage, rememberSentQueueId, setUserInitiatedCancel, store]);
 
   useEffect(() => {
     for (const msg of forceSendQueue) {
@@ -458,17 +494,12 @@ export function useQueueDispatch(): void {
   }, [isSessionActive]);
 
   useEffect(() => {
-    const activeSessionId = activeSessionIdRef.current;
-    const hasExplicitDispatchForActiveSession =
-      forceSendQueue.some((message) => message.sessionId === activeSessionId) ||
-      queue.some(
-        (message) =>
-          message.sessionId === activeSessionId &&
-          message.dispatchAfterUserCancel
-      );
-    if (!hasExplicitDispatchForActiveSession) return;
+    const hasExplicitDispatch =
+      forceSendQueue.length > 0 ||
+      queue.some((message) => message.dispatchAfterUserCancel);
+    if (!hasExplicitDispatch) return;
     tryDispatchNext();
-  }, [forceSendQueue, queue, tryDispatchNext]);
+  }, [forceSendQueue, queue, sortedEvents, tryDispatchNext]);
 
   useEffect(() => {
     const isWorking = isRuntimeWorkingStatus(runtimeStatus);
@@ -481,11 +512,16 @@ export function useQueueDispatch(): void {
       return;
     }
 
-    if (!wasWorking || pendingCancelRef.current || userCancelRef.current) {
+    const latestPendingCancel = store.get(isPendingCancelAtom);
+    const latestUserCancel = store.get(userInitiatedCancelAtom);
+    pendingCancelRef.current = latestPendingCancel;
+    userCancelRef.current = latestUserCancel;
+
+    if (!wasWorking || latestPendingCancel || latestUserCancel) {
       return;
     }
     tryDispatchNext();
-  }, [isRuntimeWorkingStatus, runtimeStatus, tryDispatchNext]);
+  }, [isRuntimeWorkingStatus, runtimeStatus, store, tryDispatchNext]);
 
   // Falling edge of isPendingCancel: Rust finished winding down the
   // cancelled turn (sessionHandlers cleared the flag).
@@ -543,12 +579,13 @@ export function useQueueDispatch(): void {
     const prev = prevFlushRef.current;
     prevFlushRef.current = flushRequest;
     if (flushRequest === prev) return;
-    if (store.get(isPendingCancelAtom)) {
-      return;
-    }
     const activeSessionId = store.get(sessionIdAtom);
     const hasExplicitPostCancelDispatch =
-      forceSendQueue.some((message) => message.sessionId === activeSessionId) ||
+      forceSendQueue.some(
+        (message) =>
+          message.sessionId === activeSessionId &&
+          message.dispatchAfterUserCancel
+      ) ||
       queue.some(
         (message) =>
           message.sessionId === activeSessionId &&
@@ -558,12 +595,18 @@ export function useQueueDispatch(): void {
       return;
     }
 
-    setUserInitiatedCancel(false);
-    userCancelRef.current = false;
-    queueRef.current = queue;
-    forceSendQueueRef.current = forceSendQueue;
-    editingRef.current = isQueueEditing;
-    if (isQueueEditing) return;
+    if (hasExplicitPostCancelDispatch) {
+      setUserInitiatedCancel(false);
+      userCancelRef.current = false;
+    }
+    const latestQueue = store.get(messageQueueAtom);
+    const latestForceSendQueue = store.get(forceSendPendingQueueAtom);
+    const latestIsQueueEditing = store.get(queueEditingAtom);
+    queueRef.current = latestQueue;
+    forceSendQueueRef.current = latestForceSendQueue;
+    editingRef.current = latestIsQueueEditing;
+    if (latestIsQueueEditing) return;
+
     tryDispatchNext();
     flushTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
     flushTimersRef.current = [

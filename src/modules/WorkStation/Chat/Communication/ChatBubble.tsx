@@ -521,7 +521,11 @@ export const ChatBubble: React.FC<{
     <ChatItemWrap
       variant={isUser ? "default" : "text"}
       className={`w-full min-w-0 ${isUser ? "" : "overflow-hidden"}`}
-      dataAttr={isUser ? { "data-replay-user-msg": index } : undefined}
+      dataAttr={
+        isUser
+          ? { "data-replay-user-msg": index }
+          : { "data-replay-agent-msg": index }
+      }
     >
       <ChatBubbleLayout
         align="left"

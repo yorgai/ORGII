@@ -19,6 +19,7 @@ import {
   isBackendUserMessageEvent,
   isSyntheticUserInputEvent,
 } from "../../sync/utils/activityIds";
+import { isRunningSessionEvent } from "../runningEventGate";
 import { eventStoreProxy } from "../store/EventStoreProxy";
 import type { SessionEvent, SessionSpec } from "../types";
 import {
@@ -215,20 +216,34 @@ export const loadSessionAtom = atom(
     }
 
     if (mergedEvents.some(isBackendUserMessageEvent)) {
-      // Before dropping the synthetic placeholder, capture its displayText so
-      // that pill-formatted messages (e.g. skill pills → "name [skill:/name]")
-      // survive in the chat history even after the backend user event arrives.
-      // The backend event's displayText is the agent-facing content (/name),
-      // which lacks the rich pill format the user originally sent.
-      const firstSynthetic = mergedEvents.find(isSyntheticUserInputEvent);
-      const syntheticDisplayText = firstSynthetic?.displayText ?? null;
+      const syntheticDisplayTextByContent = new Map<string, string>();
+      for (const event of mergedEvents) {
+        if (!isSyntheticUserInputEvent(event)) continue;
+        const content =
+          typeof event.result?.message === "object" &&
+          event.result.message !== null &&
+          "content" in event.result.message
+            ? String(event.result.message.content ?? "")
+            : event.displayText;
+        if (content && event.displayText && content !== event.displayText) {
+          syntheticDisplayTextByContent.set(content, event.displayText);
+        }
+      }
 
       mergedEvents = mergedEvents
         .filter((event) => !isSyntheticUserInputEvent(event))
         .map((event) => {
+          if (!isBackendUserMessageEvent(event)) return event;
+          const content =
+            typeof event.result?.message === "object" &&
+            event.result.message !== null &&
+            "content" in event.result.message
+              ? String(event.result.message.content ?? "")
+              : event.displayText;
+          const syntheticDisplayText =
+            syntheticDisplayTextByContent.get(content);
           if (
             syntheticDisplayText &&
-            isBackendUserMessageEvent(event) &&
             event.displayText !== syntheticDisplayText
           ) {
             return { ...event, displayText: syntheticDisplayText };
@@ -250,9 +265,7 @@ export const loadSessionAtom = atom(
       lastEvent: mergedEvents[mergedEvents.length - 1] ?? null,
       eventIndex,
       chatEventCount: mergedEvents.filter(isVisibleInChat).length,
-      hasRunningEvent: mergedEvents.some(
-        (event) => event.displayStatus === "running"
-      ),
+      hasRunningEvent: mergedEvents.some(isRunningSessionEvent),
     });
 
     // Merge events into Rust EventStore with explicit sessionId.

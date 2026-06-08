@@ -38,6 +38,7 @@ import {
   handleSessionEvicted,
   handleStreamErrorExhausted,
   handleStreamRetry,
+  handleTurnCompleted,
   handleTurnSummary,
   handleWarning,
 } from "./sessionHandlers";
@@ -197,6 +198,9 @@ export async function dispatchAgentEvent(
       break;
     case "agent:complete":
       handleComplete(event, sessionId, ctx);
+      break;
+    case "agent:turn_completed":
+      handleTurnCompleted(event, sessionId, ctx);
       break;
     case "agent:error":
       handleError(event, sessionId, ctx);

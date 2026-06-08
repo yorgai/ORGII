@@ -49,6 +49,7 @@ describe("COMPONENT_LOADERS", () => {
     "mcp_tool",
     "turn_summary",
     "worktree",
+    "setup_repo",
     "suggest_next_steps",
     "rate_limit_hint",
     "tool_call",

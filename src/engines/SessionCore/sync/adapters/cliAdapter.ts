@@ -105,6 +105,41 @@ interface StoredSession {
   totalTokens?: number;
 }
 
+type CliStatusResponse = {
+  status?: CliSessionStatus;
+  updatedAt?: string;
+};
+
+async function readCliStatus(
+  sessionId: string
+): Promise<CliStatusResponse | null> {
+  return (await tauriInvoke("cli_agent_status", {
+    sessionId,
+  })) as CliStatusResponse | null;
+}
+
+async function waitForCliRunBoundary(
+  sessionId: string,
+  previousUpdatedAt: string | null | undefined
+): Promise<void> {
+  const deadline = Date.now() + 15_000;
+  let lastStatus: CliStatusResponse | null = null;
+  while (Date.now() < deadline) {
+    lastStatus = await readCliStatus(sessionId);
+    if (
+      lastStatus?.status === "running" &&
+      (!previousUpdatedAt || lastStatus.updatedAt !== previousUpdatedAt)
+    ) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  throw new Error(
+    `CLI run boundary was not observed for ${sessionId}; lastStatus=${JSON.stringify(lastStatus)}`
+  );
+}
+
 // ============================================================================
 // Adapter
 // ============================================================================
@@ -313,6 +348,8 @@ export const cliAdapter: SessionAdapter = {
     }
 
     function handleActivity(chunk: ActivityChunk): void {
+      callbacks.onStatusChange?.("running");
+
       if (
         chunk.function === "user_message" &&
         (chunk.action_type === "raw" || chunk.action_type === "raw_event")
@@ -598,6 +635,7 @@ export const cliAdapter: SessionAdapter = {
     if (!isResume && content.trim()) {
       await enterAgentOrgSessionIntervention(sessionId);
     }
+    const previousStatus = await readCliStatus(sessionId);
     await tauriInvoke("cli_agent_message", {
       sessionId,
       content,
@@ -609,6 +647,7 @@ export const cliAdapter: SessionAdapter = {
         : {}),
       ...(ideContext ? { ideContext } : {}),
     });
+    await waitForCliRunBoundary(sessionId, previousStatus?.updatedAt);
   },
 
   async stopSession(sessionId: string): Promise<void> {

@@ -276,6 +276,15 @@ pub async fn cli_agent_run(
     sessions.insert(session_id.clone(), handle);
     tracing::info!(session_id = %session_id, "cli_agent_run: background runner registered");
 
+    persistence::update_status(&session_id, SessionStatus::Running)
+        .map_err(|err| format!("DB error updating status: {err}"))?;
+    let running_msg = serde_json::json!({
+        "type": "code_session.status_changed",
+        "session_id": session_id,
+        "status": "running",
+    });
+    crate::api::websocket_handler::broadcast(running_msg.to_string());
+
     Ok(())
 }
 

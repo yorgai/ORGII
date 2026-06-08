@@ -10,6 +10,7 @@
  * for the Tauri-side derived computations. The TS versions are used
  * by Jotai derived atoms that need synchronous filtering.
  */
+import { isRunningSessionEvent } from "../core/runningEventGate";
 import type { SessionEvent } from "../core/types";
 import { PLAN_EVENT_NAME } from "../derived/planDisplayEvents";
 
@@ -167,7 +168,7 @@ function isVisibleInSimulatorOrMessages(event: SessionEvent): boolean {
   // Hide "running" status events — except for tool calls whose live args are
   // user-visible in replay.
   if (
-    event.displayStatus === "running" &&
+    isRunningSessionEvent(event) &&
     !(
       event.displayVariant === "tool_call" &&
       (SPAWNING_TOOL_NAMES.has(event.functionName) ||

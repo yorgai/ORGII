@@ -25,6 +25,11 @@ import {
   setSessionRuntimeStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 
+import {
+  markRestoredStopDraft,
+  suppressRestoredStopSubmit,
+} from "./stopSubmitGuard";
+
 interface RestorableUserMessage {
   displayContent: string;
   imageDataUrls?: string[];
@@ -134,6 +139,7 @@ export function useSessionActions(options: UseSessionActionsOptions) {
 
       if (restoreQueueHead) {
         beginStopBoundary(sessionId);
+        markRestoredStopDraft(sessionId);
         setSessionRolledBack(false);
 
         const pendingSyntheticEvent = store.get(pendingSyntheticEventAtom);
@@ -148,6 +154,11 @@ export function useSessionActions(options: UseSessionActionsOptions) {
 
         if (currentUserMessage) {
           setRestoreToInput({
+            displayContent: currentUserMessage.displayContent,
+            imageDataUrls: currentUserMessage.imageDataUrls,
+          });
+          suppressRestoredStopSubmit({
+            sessionId,
             displayContent: currentUserMessage.displayContent,
             imageDataUrls: currentUserMessage.imageDataUrls,
           });

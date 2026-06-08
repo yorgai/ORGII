@@ -147,7 +147,9 @@ const CompactFileChanges: React.FC<CompactFileChangesProps> = memo(
 
     const handleKeepAll = useCallback(() => {
       if (batchActionsDisabled) return;
-      onKeepAll();
+      void onKeepAll().catch((error: unknown) => {
+        logger.error("Keep all failed:", error);
+      });
     }, [batchActionsDisabled, onKeepAll]);
 
     const handleRedo = useCallback(async () => {
@@ -273,8 +275,9 @@ const CompactFileChanges: React.FC<CompactFileChangesProps> = memo(
     // Visibility
     // ============================================
 
-    const visibleStatFiles = hasPendingActions ? visibleFiles : allFiles;
-    const isHidden = !canRedo && visibleStatFiles.length === 0;
+    const shouldShowFileActions = hasPendingActions || canRedo;
+    const visibleStatFiles = shouldShowFileActions ? visibleFiles : [];
+    const isHidden = !shouldShowFileActions || visibleStatFiles.length === 0;
     const visibleStats = useMemo<FileChangeVisibleStats>(() => {
       if (isHidden) return { count: 0, additions: 0, deletions: 0 };
       return visibleStatFiles.reduce<FileChangeVisibleStats>(

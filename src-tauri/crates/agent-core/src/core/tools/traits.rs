@@ -66,6 +66,7 @@
 
 use async_trait::async_trait;
 use serde_json::Value;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use crate::turn_executor::PermissionProvider;
@@ -176,6 +177,10 @@ pub trait Tool: Send + Sync {
     /// Set the agent session key for correlating streaming events (e.g., exec output).
     /// Default implementation is a no-op.
     async fn set_session_key(&self, _session_key: &str) {}
+
+    /// Set the active turn's cancellation signal on tools that can block.
+    /// Default implementation is a no-op.
+    async fn set_cancel_flag(&self, _cancel_flag: Arc<AtomicBool>) {}
 
     /// Snapshot the parent's current conversation messages for fork-path subagents.
     /// Called by the processor before each turn. The unified `AgentTool` uses this

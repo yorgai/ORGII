@@ -55,6 +55,26 @@ export interface RpcProcedure<
 // Core invoke
 // ============================================================================
 
+declare global {
+  interface Window {
+    __orgiiE2ERpcCounts?: Record<string, number>;
+    __orgiiE2ERpcLog?: Array<{ command: string; at: number }>;
+  }
+}
+
+function recordE2ERpcInvoke(command: string): void {
+  if (process.env.NODE_ENV === "production") return;
+  if (typeof window === "undefined") return;
+  window.__orgiiE2ERpcCounts ??= {};
+  window.__orgiiE2ERpcCounts[command] =
+    (window.__orgiiE2ERpcCounts[command] ?? 0) + 1;
+  window.__orgiiE2ERpcLog ??= [];
+  window.__orgiiE2ERpcLog.push({ command, at: performance.now() });
+  if (window.__orgiiE2ERpcLog.length > 500) {
+    window.__orgiiE2ERpcLog.splice(0, window.__orgiiE2ERpcLog.length - 500);
+  }
+}
+
 /**
  * Type-safe invoke: validates input, calls Tauri, validates output.
  *
@@ -85,6 +105,7 @@ export async function typedInvoke<
   }
 
   // Call Rust
+  recordE2ERpcInvoke(command);
   let raw: unknown;
   try {
     raw = await invoke(

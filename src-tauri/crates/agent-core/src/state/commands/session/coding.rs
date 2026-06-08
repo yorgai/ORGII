@@ -6,18 +6,7 @@ use crate::foundation::session_bridge;
 use crate::persistence::db_helpers as shared;
 use crate::persistence::session_snapshots;
 use crate::session::persistence as session_persistence;
-use crate::state::control_flow::CancelReason;
-use crate::state::AgentAppState;
 use crate::tools::file_history;
-
-async fn invalidate_timeline_mutation(state: &AgentAppState, session_id: &str) {
-    if let Some(session) = state.get_session(session_id).await {
-        session.scheduler.invalidate_pending();
-        session
-            .cancel_active_turn(CancelReason::ModeSwitchAbort)
-            .await;
-    }
-}
 
 fn review_session_ids(session_id: &str) -> Vec<String> {
     let mut session_ids = vec![session_id.to_string()];
@@ -30,6 +19,19 @@ fn review_session_ids(session_id: &str) -> Vec<String> {
         ),
     }
     session_ids
+}
+
+fn invalidate_cli_resume_state_best_effort(session_id: String, mutation_reason: &'static str) {
+    std::thread::spawn(move || {
+        if let Err(err) = session_bridge::clear_cli_resume_state(&session_id, mutation_reason) {
+            tracing::warn!(
+                "[agent_review] failed to clear CLI resume state for {} after {}: {}",
+                session_id,
+                mutation_reason,
+                err
+            );
+        }
+    });
 }
 
 /// Get files modified by a session.
@@ -108,11 +110,9 @@ pub async fn agent_get_snapshots(session_id: String) -> Result<Vec<serde_json::V
 /// not just the first one.
 #[tauri::command]
 pub async fn agent_revert(
-    state: tauri::State<'_, AgentAppState>,
     created_at: String,
     session_id: String,
 ) -> Result<serde_json::Value, String> {
-    invalidate_timeline_mutation(&state, &session_id).await;
     tokio::task::spawn_blocking(move || {
         let mut restored = 0usize;
         let mut deleted = 0usize;
@@ -128,23 +128,10 @@ pub async fn agent_revert(
                     deleted += stats.deleted;
                     skipped += stats.skipped_unchanged;
                     failed += stats.failed;
-                    let clear_result = session_bridge::clear_cli_resume_state(
-                        &review_session_id,
+                    invalidate_cli_resume_state_best_effort(
+                        review_session_id.clone(),
                         session_bridge::CLI_HISTORY_MUTATION_FILE_REWIND,
                     );
-                    match clear_result {
-                        Ok(true) => tracing::info!(
-                            "[agent_revert] cleared CLI resume state for {} after file rewind",
-                            review_session_id
-                        ),
-                        Ok(false) => {}
-                        Err(err) => {
-                            failed += 1;
-                            errors.push(format!(
-                                "{review_session_id}: failed to clear CLI resume state after rewind: {err}"
-                            ));
-                        }
-                    }
 
                     if let Some(redo_id) = stats.redo_snapshot_id {
                         match session_snapshots::get_snapshot_created_at_by_hash(
@@ -202,19 +189,16 @@ pub async fn agent_revert(
 /// redo anchors and intentionally does not use `created_at` rewind semantics.
 #[tauri::command]
 pub async fn agent_restore_snapshot(
-    state: tauri::State<'_, AgentAppState>,
     session_id: String,
     snapshot_id: String,
 ) -> Result<serde_json::Value, String> {
-    invalidate_timeline_mutation(&state, &session_id).await;
     tokio::task::spawn_blocking(move || {
         let stats = file_history::restore_snapshot(&session_id, &snapshot_id)
             .map_err(|err| format!("Failed to restore snapshot: {err}"))?;
-        session_bridge::clear_cli_resume_state(
-            &session_id,
+        invalidate_cli_resume_state_best_effort(
+            session_id.clone(),
             session_bridge::CLI_HISTORY_MUTATION_SNAPSHOT_RESTORE,
-        )
-        .map_err(|err| format!("Failed to clear CLI resume state after restore: {err}"))?;
+        );
         Ok(serde_json::json!({
             "reverted": stats.restored + stats.deleted,
             "restored": stats.restored,

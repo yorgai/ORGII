@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { handleTurnSummary } from "../sessionHandlers";
+import { handleTurnCompleted, handleTurnSummary } from "../sessionHandlers";
+import type { EventHandlerContext } from "../types";
 
 const { appendSpy, upsertSpy } = vi.hoisted(() => ({
   appendSpy: vi.fn().mockResolvedValue(undefined),
@@ -13,6 +14,23 @@ vi.mock("@src/engines/SessionCore/core/store/EventStoreProxy", () => ({
     upsert: upsertSpy,
   },
 }));
+
+function ref<T>(value: T): { current: T } {
+  return { current: value };
+}
+
+function createCtx(): EventHandlerContext {
+  return {
+    filterSessionIdRef: ref("session-1"),
+    execOutputBufferRef: ref(""),
+    onAgentCompleteRef: ref(undefined),
+    onStatusChangeRef: ref(vi.fn()),
+    onQuestionRequestRef: ref(undefined),
+    setStreaming: vi.fn(),
+    features: {},
+    getDefaultStore: () => null,
+  };
+}
 
 describe("Rust Agent session handlers", () => {
   beforeEach(() => {
@@ -63,6 +81,34 @@ describe("Rust Agent session handlers", () => {
       "session-1"
     );
 
+    expect(upsertSpy).not.toHaveBeenCalled();
+    expect(appendSpy).not.toHaveBeenCalled();
+  });
+
+  it("settles agent:turn_completed without writing duplicate transcript events", () => {
+    const ctx = createCtx();
+
+    handleTurnCompleted(
+      {
+        type: "agent:turn_completed",
+        sessionId: "session-1",
+        turnId: "turn-1",
+        turnStatus: "completed",
+        sessionStatus: "idle",
+      },
+      "session-1",
+      ctx
+    );
+
+    expect(ctx.setStreaming).toHaveBeenCalledWith(false);
+    expect(ctx.onStatusChangeRef.current).toHaveBeenCalledWith(
+      "completed",
+      undefined,
+      {
+        turnId: "turn-1",
+        turnStatus: "completed",
+      }
+    );
     expect(upsertSpy).not.toHaveBeenCalled();
     expect(appendSpy).not.toHaveBeenCalled();
   });

@@ -19,6 +19,7 @@ export interface TabBarTrailingIconButtonProps extends Omit<
   shortcutId?: string;
   tooltipPosition?: "top" | "bottom" | "bottom-start" | "bottom-end";
   tooltipDisabled?: boolean;
+  nativeTitle?: boolean;
   className?: string;
   children: React.ReactNode;
 }
@@ -32,6 +33,7 @@ export const TabBarTrailingIconButton: React.FC<TabBarTrailingIconButtonProps> =
       shortcutId,
       tooltipPosition = "bottom",
       tooltipDisabled = false,
+      nativeTitle = true,
       className = "",
       children,
       ...buttonProps
@@ -43,7 +45,7 @@ export const TabBarTrailingIconButton: React.FC<TabBarTrailingIconButtonProps> =
           size="small"
           iconOnly
           className={`${active ? "!bg-fill-1 !text-primary-6" : ""} ${className}`.trim()}
-          title={undefined}
+          title={nativeTitle ? title : undefined}
           aria-label={buttonProps["aria-label"] ?? title}
           onClick={onClick}
           icon={children}
