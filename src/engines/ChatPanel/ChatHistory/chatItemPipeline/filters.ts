@@ -31,6 +31,44 @@ function hasShellCommand(event: SessionEvent): boolean {
   );
 }
 
+/**
+ * Mirrors AgentMessageEvent's text extraction (stream/agent-message/index.tsx
+ * `extractText` + the rawContent fallback chain). Returns true if the event
+ * has any text source that would survive into the chat bubble — used to
+ * suppress empty agent_message wrappers.
+ */
+function hasAgentMessageBody(event: SessionEvent): boolean {
+  if (event.isDelta) return true;
+  if (event.displayText && event.displayText.trim()) return true;
+  const result = event.result;
+  if (result) {
+    const observation = result["observation"];
+    if (typeof observation === "string" && observation.trim()) return true;
+    if (
+      observation &&
+      typeof observation === "object" &&
+      typeof (observation as Record<string, unknown>).content === "string" &&
+      ((observation as Record<string, unknown>).content as string).trim()
+    ) {
+      return true;
+    }
+    const content = result["content"];
+    if (typeof content === "string" && content.trim()) return true;
+    if (
+      content &&
+      typeof content === "object" &&
+      typeof (content as Record<string, unknown>).content === "string" &&
+      ((content as Record<string, unknown>).content as string).trim()
+    ) {
+      return true;
+    }
+  }
+  const taskDescription = event.args?.["task_description"];
+  if (typeof taskDescription === "string" && taskDescription.trim())
+    return true;
+  return false;
+}
+
 function hasShellOutput(result: Record<string, unknown>): boolean {
   const success = result.success as Record<string, unknown> | undefined;
   const failure = result.failure as Record<string, unknown> | undefined;
@@ -67,13 +105,17 @@ export function willEventRenderContent(event: SessionEvent): boolean {
   const actionType = event.actionType;
   const functionName = event.functionName;
 
-  // Assistant/agent messages always render — they contain conversation content.
+  // Assistant/agent messages render only when they actually carry text
+  // (either streaming, displayText, a result body, or a task_description arg).
+  // Without this guard, an agent_message whose payload landed only in <think>
+  // tags — or arrived empty — would still produce an empty ChatItemWrap
+  // bubble between real messages.
   if (
     actionType === "assistant" ||
     functionName === "assistant_message" ||
     functionName === "agent_message"
   ) {
-    return true;
+    return hasAgentMessageBody(event);
   }
 
   // raw/raw_event: user messages render, but events with no function and no

@@ -309,6 +309,88 @@ describe("willEventRenderContent", () => {
     });
   });
 
+  describe("agent_message / assistant", () => {
+    it("returns true for assistant with displayText", () => {
+      const event = makeSessionEvent({
+        action_type: "assistant",
+        function: "assistant_message",
+        displayText: "Hello",
+        result: {},
+      });
+      expect(willEventRenderContent(event)).toBe(true);
+    });
+
+    it("returns true for agent_message with result.observation text", () => {
+      const event = makeSessionEvent({
+        action_type: "assistant",
+        function: "agent_message",
+        result: { observation: "answer body" },
+      });
+      expect(willEventRenderContent(event)).toBe(true);
+    });
+
+    it("returns true for streaming delta even without body", () => {
+      const event = {
+        ...makeSessionEvent({
+          action_type: "assistant",
+          function: "agent_message",
+          result: {},
+        }),
+        isDelta: true,
+      };
+      expect(willEventRenderContent(event)).toBe(true);
+    });
+
+    it("returns true when only result.content is populated", () => {
+      const event = makeSessionEvent({
+        action_type: "assistant",
+        function: "agent_message",
+        result: { content: "wrapped text" },
+      });
+      expect(willEventRenderContent(event)).toBe(true);
+    });
+
+    it("returns true when observation is an object carrying a content string", () => {
+      const event = makeSessionEvent({
+        action_type: "assistant",
+        function: "agent_message",
+        result: { observation: { content: "answer" } },
+      });
+      expect(willEventRenderContent(event)).toBe(true);
+    });
+
+    it("returns true when args.task_description is the only text source", () => {
+      const event = makeSessionEvent({
+        action_type: "assistant",
+        function: "agent_message",
+        args: { task_description: "delegated subtask" },
+        result: {},
+      });
+      expect(willEventRenderContent(event)).toBe(true);
+    });
+
+    it("returns false for an empty non-streaming agent_message (prevents empty wrapper)", () => {
+      const event = makeSessionEvent({
+        action_type: "assistant",
+        function: "agent_message",
+        result: {},
+      });
+      expect(willEventRenderContent(event)).toBe(false);
+    });
+
+    it("returns false for an agent_message whose only text was inside <think> tags", () => {
+      // After stripping <think>...</think> the rendered content is empty, so
+      // displayText that consists only of whitespace should still be filtered.
+      const event = makeSessionEvent({
+        action_type: "assistant",
+        function: "agent_message",
+        displayText: "   ",
+        result: { observation: "  \n  " },
+      });
+      expect(willEventRenderContent(event)).toBe(false);
+    });
+  });
+
   describe("CLI alias resolution", () => {
     it("handles Shell alias (resolves to run_shell)", () => {
       const event = makeSessionEvent({
