@@ -155,7 +155,7 @@ export interface WorkStationTab {
  * All tabs across every content host (Code Editor, Browser, Database,
  * Project Manager, Launchpad) live in this single pool — the active
  * content host is derived from the active tab's type / category via
- * `tabToLegacyHost`, not from a separate pane bucket.
+ * `tabToHost`, not from a separate pane bucket.
  */
 export interface PanelState {
   tabs: WorkStationTab[];

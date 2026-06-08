@@ -24,12 +24,12 @@ import {
 } from "@src/store/workstation";
 import type { DockFilter } from "@src/store/workstation";
 import {
-  type LegacyPeekHost,
-  tabToLegacyHost,
-} from "@src/store/workstation/legacyTabHostAdapter";
+  type WorkstationTabHost,
+  tabToHost,
+} from "@src/store/workstation/tabHost";
 import type { WorkStationTab } from "@src/store/workstation/tabs";
 
-function dockFilterToHost(filter: DockFilter): LegacyPeekHost | null {
+function dockFilterToHost(filter: DockFilter): WorkstationTabHost | null {
   switch (filter) {
     case "all":
       return null;
@@ -72,14 +72,14 @@ export function useWorkstationTabList(): UseWorkstationTabListReturn {
   const visible = useMemo(() => {
     if (dockFilter === "all") return entries;
     if (!hostFilter) return [];
-    return entries.filter((entry) => tabToLegacyHost(entry.tab) === hostFilter);
+    return entries.filter((entry) => tabToHost(entry.tab) === hostFilter);
   }, [dockFilter, entries, hostFilter]);
 
   const realTabHostSet = useMemo(() => {
-    const set = new Set<LegacyPeekHost>();
+    const set = new Set<WorkstationTabHost>();
     for (const entry of visible) {
       if (entry.tab.type === "file" && !entry.tab.pinned) {
-        set.add(tabToLegacyHost(entry.tab));
+        set.add(tabToHost(entry.tab));
       }
     }
     return set;
@@ -88,7 +88,7 @@ export function useWorkstationTabList(): UseWorkstationTabListReturn {
   const { tabsForBar, activeKey } = useMemo(() => {
     const filteredVisible = visible.filter((entry) => {
       if (!entry.tab.hideWhenOthersExist) return true;
-      return !realTabHostSet.has(tabToLegacyHost(entry.tab));
+      return !realTabHostSet.has(tabToHost(entry.tab));
     });
 
     const pinned: WorkStationTab[] = [];

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import { activeStatusBarAppAtom } from "@src/store/ui/workStationLayout/statusBarAtoms";
 
-import type { LegacyPeekHost } from "./legacyTabHostAdapter";
+import type { WorkstationTabHost } from "./tabHost";
 import type { TabFocusRequest } from "./tabRegistry";
 
 /**
@@ -90,7 +90,7 @@ export const opsControlHomeTabAtom = atom<OpsControlHomeTab>(
 );
 opsControlHomeTabAtom.debugLabel = "opsControlHomeTabAtom";
 
-export const opsControlPeekHostAtom = atom<LegacyPeekHost | null>(null);
+export const opsControlPeekHostAtom = atom<WorkstationTabHost | null>(null);
 opsControlPeekHostAtom.debugLabel = "opsControlPeekHostAtom";
 
 export const opsControlFocusedTabAtom = atom<TabFocusRequest | null>(null);
