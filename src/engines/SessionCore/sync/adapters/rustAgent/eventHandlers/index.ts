@@ -30,6 +30,7 @@ import {
   handleHeartbeat,
   handleSecretRequest,
   handleSetupRepoUpdate,
+  handleWorkspaceCloneProgress,
 } from "./fileChangeHandlers";
 import { handleMcpProgress } from "./mcpHandlers";
 import {
@@ -270,6 +271,12 @@ export async function dispatchAgentEvent(
       // value via the secure modal. The plaintext does not flow through
       // this event — only the request metadata.
       handleSecretRequest(event, eventSessionId || sessionId);
+      break;
+    case "agent:workspace_clone_progress":
+      // Side-channel: `manage_workspace` clone action is streaming
+      // `git clone --progress` output. The matching ToolCallBlock listens
+      // by toolCallId and renders a thin progress strip.
+      handleWorkspaceCloneProgress(event, eventSessionId || sessionId);
       break;
     case "agent:heartbeat":
       // Side-channel: long-running automation liveness ping. The Rust

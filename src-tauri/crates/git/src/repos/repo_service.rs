@@ -11,9 +11,32 @@
 //! - Registers / unregisters the git watcher where appropriate.
 //! - Runs blocking work inside `spawn_blocking` so callers can `.await` safely.
 
+use std::process::Stdio;
+use std::sync::Arc;
+use tokio::io::{AsyncBufReadExt, BufReader};
+
 use super::repo_db::{self, RepoKind, RepoRecord};
 use super::{register_workspace_with_watcher, unregister_workspace_from_watcher};
 use crate::util::tokio_git_command;
+
+/// One progress update emitted while `git clone --progress` runs.
+///
+/// `phase` is the human-readable phase reported by git on stderr (e.g.
+/// `"Receiving objects"`, `"Resolving deltas"`, `"Counting objects"`).
+/// `percent` is `0..=100` when git supplied one, `None` for status lines
+/// without a percentage (so the UI can decide whether to render an
+/// indeterminate state vs. update the bar).
+#[derive(Debug, Clone)]
+pub struct CloneProgress {
+    pub phase: String,
+    pub percent: Option<u8>,
+    /// Raw status line (trimmed). Useful for logging / debugging or when
+    /// callers want to surface the exact git wording.
+    pub raw: String,
+}
+
+/// Type-erased async-safe progress callback.
+pub type CloneProgressCallback = Arc<dyn Fn(CloneProgress) + Send + Sync + 'static>;
 
 // ============================================
 // Helpers
@@ -174,10 +197,28 @@ pub async fn import_auto(path: String, name: Option<String>) -> Result<RepoRecor
 // ============================================
 
 /// Clone a remote git repository into `target_dir/<name>` and register it.
+///
+/// Thin wrapper around [`clone_github_with_progress`] for callers that
+/// don't care about live progress updates (e.g. the Tauri server command).
 pub async fn clone_github(
     url: String,
     target_dir: String,
     name: Option<String>,
+) -> Result<RepoRecord, String> {
+    clone_github_with_progress(url, target_dir, name, None).await
+}
+
+/// Clone variant that streams `git clone --progress` stderr and forwards
+/// parsed [`CloneProgress`] updates to `on_progress` if supplied.
+///
+/// The callback is invoked synchronously from a tokio task — keep it
+/// cheap (a channel send or `bus::broadcast_event` is fine). It is never
+/// invoked after this function returns.
+pub async fn clone_github_with_progress(
+    url: String,
+    target_dir: String,
+    name: Option<String>,
+    on_progress: Option<CloneProgressCallback>,
 ) -> Result<RepoRecord, String> {
     let repo_name = match name {
         Some(n) if !n.trim().is_empty() => n,
@@ -200,15 +241,64 @@ pub async fn clone_github(
 
     let clone_path = format!("{}/{}", target_dir.trim_end_matches('/'), repo_name);
 
-    let output = tokio_git_command()?
-        .args(["clone", &url, &clone_path])
-        .output()
-        .await
+    let mut child = tokio_git_command()?
+        .args(["clone", "--progress", &url, &clone_path])
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
         .map_err(|e| format!("Failed to run git clone: {}", e))?;
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("Git clone failed: {}", stderr.trim()));
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "Failed to capture git clone stderr".to_string())?;
+
+    // git progress lines on stderr are separated by `\r` (carriage return)
+    // for in-place updates; the final line for each phase ends in `\n`.
+    // `read_until` with `b'\r'` gives us each intermediate update too.
+    let progress_cb = on_progress.clone();
+    let mut collected_stderr = String::new();
+    let drain = async {
+        let mut reader = BufReader::new(stderr);
+        let mut buf: Vec<u8> = Vec::with_capacity(256);
+        loop {
+            buf.clear();
+            // Read up to the next `\r` *or* `\n`; both signal an update.
+            // We can't pass two delimiters to `read_until`, so we read
+            // until `\n` and split on `\r` ourselves.
+            let n = reader
+                .read_until(b'\n', &mut buf)
+                .await
+                .map_err(|e| format!("Failed to read git stderr: {}", e))?;
+            if n == 0 {
+                break;
+            }
+            let chunk = String::from_utf8_lossy(&buf);
+            collected_stderr.push_str(&chunk);
+            for line in chunk.split(['\r', '\n']) {
+                let line = line.trim();
+                if line.is_empty() {
+                    continue;
+                }
+                if let Some(cb) = progress_cb.as_ref() {
+                    if let Some(update) = parse_clone_progress_line(line) {
+                        cb(update);
+                    }
+                }
+            }
+        }
+        Ok::<_, String>(())
+    };
+
+    drain.await?;
+
+    let status = child
+        .wait()
+        .await
+        .map_err(|e| format!("Failed to wait for git clone: {}", e))?;
+
+    if !status.success() {
+        return Err(format!("Git clone failed: {}", collected_stderr.trim()));
     }
 
     let canonical_path = std::path::Path::new(&clone_path)
@@ -225,6 +315,40 @@ pub async fn clone_github(
 
     register_workspace_with_watcher(&persisted.repo_id, &persisted.path, &persisted.name);
     Ok(persisted)
+}
+
+/// Parse a single `git clone --progress` stderr status line into a
+/// [`CloneProgress`].
+///
+/// Git progress lines look like:
+///   `Receiving objects:  42% (1234/2940), 1.23 MiB | 5.00 MiB/s`
+///   `Resolving deltas: 100% (1234/1234), done.`
+///   `Counting objects: 2940, done.`
+///   `remote: Enumerating objects: 2940, done.`
+///
+/// We extract the phase (substring before the first `:`) and the percent
+/// if present. Lines we can't parse return `None` (the caller skips them).
+fn parse_clone_progress_line(line: &str) -> Option<CloneProgress> {
+    let trimmed = line.trim_start_matches("remote: ").trim();
+    let colon = trimmed.find(':')?;
+    let phase = trimmed[..colon].trim().to_string();
+    if phase.is_empty() {
+        return None;
+    }
+    let rest = trimmed[colon + 1..].trim();
+
+    // Find a `<digits>%` token anywhere in `rest`.
+    let percent = rest.split_whitespace().find_map(|tok| {
+        let tok = tok.trim_end_matches(',');
+        let digits = tok.strip_suffix('%')?;
+        digits.parse::<u8>().ok()
+    });
+
+    Some(CloneProgress {
+        phase,
+        percent,
+        raw: trimmed.to_string(),
+    })
 }
 
 // ============================================
@@ -362,4 +486,47 @@ pub async fn remove(repo_id: String) -> Result<Option<RepoRecord>, String> {
 
     unregister_workspace_from_watcher(&record.repo_id);
     Ok(Some(record))
+}
+
+// ============================================
+// Tests
+// ============================================
+
+#[cfg(test)]
+mod progress_tests {
+    use super::*;
+
+    #[test]
+    fn parses_receiving_objects() {
+        let p =
+            parse_clone_progress_line("Receiving objects:  42% (1234/2940), 1.23 MiB | 5.00 MiB/s")
+                .unwrap();
+        assert_eq!(p.phase, "Receiving objects");
+        assert_eq!(p.percent, Some(42));
+    }
+
+    #[test]
+    fn parses_resolving_deltas_complete() {
+        let p = parse_clone_progress_line("Resolving deltas: 100% (1234/1234), done.").unwrap();
+        assert_eq!(p.phase, "Resolving deltas");
+        assert_eq!(p.percent, Some(100));
+    }
+
+    #[test]
+    fn parses_counting_objects_no_percent() {
+        let p = parse_clone_progress_line("Counting objects: 2940, done.").unwrap();
+        assert_eq!(p.phase, "Counting objects");
+        assert_eq!(p.percent, None);
+    }
+
+    #[test]
+    fn strips_remote_prefix() {
+        let p = parse_clone_progress_line("remote: Enumerating objects: 2940, done.").unwrap();
+        assert_eq!(p.phase, "Enumerating objects");
+    }
+
+    #[test]
+    fn rejects_lines_without_colon() {
+        assert!(parse_clone_progress_line("Cloning into 'foo'...").is_none());
+    }
 }

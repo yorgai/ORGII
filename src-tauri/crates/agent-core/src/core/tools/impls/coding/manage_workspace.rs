@@ -14,15 +14,19 @@
 //! All actions delegate to `git::repos::repo_service`, the same layer
 //! the Tauri commands use, so human UI and agent share one implementation.
 
+use std::sync::Arc;
+use std::sync::Mutex as StdMutex;
+
 use async_trait::async_trait;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
+use tokio::sync::Mutex as TokioMutex;
 
 use crate::tools::names as tool_names;
 use crate::tools::traits::{params_schema, parse_params, Tool, ToolError};
 use git::repos::repo_db::RepoRecord;
-use git::repos::repo_service;
+use git::repos::repo_service::{self, CloneProgress, CloneProgressCallback};
 
 // ============================================
 // Params
@@ -90,12 +94,87 @@ pub enum ManageWorkspaceParams {
 
 /// Unified workspace management tool.
 #[derive(Default)]
-pub struct ManageWorkspaceTool;
+pub struct ManageWorkspaceTool {
+    /// Set per-turn by the processor via [`Tool::set_session_key`]; used as
+    /// the `sessionId` on `agent:workspace_clone_progress` events so the
+    /// frontend can route progress to the right tool-call card.
+    session_key: TokioMutex<Option<String>>,
+}
 
 impl ManageWorkspaceTool {
     pub fn new() -> Self {
-        Self
+        Self {
+            session_key: TokioMutex::new(None),
+        }
     }
+}
+
+/// Throttle progress events to at most ~10 Hz per phase so we don't flood
+/// the frontend with hundreds of intermediate `Receiving objects` updates.
+/// We always send the first and last (100%) update for each phase, plus
+/// any update that bumps the percent by ≥1.
+struct ProgressThrottle {
+    last_phase: Option<String>,
+    last_percent: Option<u8>,
+    last_emit: std::time::Instant,
+}
+
+impl ProgressThrottle {
+    fn new() -> Self {
+        Self {
+            last_phase: None,
+            last_percent: None,
+            last_emit: std::time::Instant::now()
+                .checked_sub(std::time::Duration::from_secs(1))
+                .unwrap_or_else(std::time::Instant::now),
+        }
+    }
+
+    fn should_emit(&mut self, update: &CloneProgress) -> bool {
+        let phase_changed = self.last_phase.as_deref() != Some(update.phase.as_str());
+        let is_terminal = update.percent == Some(100);
+        let percent_changed = update.percent != self.last_percent;
+        let throttled = self.last_emit.elapsed() >= std::time::Duration::from_millis(100);
+
+        let emit = phase_changed || is_terminal || (percent_changed && throttled);
+        if emit {
+            self.last_phase = Some(update.phase.clone());
+            self.last_percent = update.percent;
+            self.last_emit = std::time::Instant::now();
+        }
+        emit
+    }
+}
+
+fn extract_call_id(params: &Value) -> Option<String> {
+    params
+        .as_object()?
+        .get(crate::core::turn_executor::tool_execution::TOOL_CALL_ID_KEY)
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+}
+
+fn build_progress_callback(session_id: String, tool_call_id: String) -> CloneProgressCallback {
+    let throttle = Arc::new(StdMutex::new(ProgressThrottle::new()));
+    Arc::new(move |update: CloneProgress| {
+        let pass = match throttle.lock() {
+            Ok(mut guard) => guard.should_emit(&update),
+            Err(_) => true,
+        };
+        if !pass {
+            return;
+        }
+        crate::bus::broadcast_event(
+            "agent:workspace_clone_progress",
+            serde_json::json!({
+                "sessionId": session_id,
+                "toolCallId": tool_call_id,
+                "phase": update.phase,
+                "percent": update.percent,
+                "raw": update.raw,
+            }),
+        );
+    })
 }
 
 #[async_trait]
@@ -110,19 +189,37 @@ impl Tool for ManageWorkspaceTool {
 
     fn description(&self) -> &str {
         "Manage orgii workspaces (git repositories and work folders) tracked by the IDE.\n\n\
+         ## Required: `action` field\n\
+         Every call MUST include an `action` field as the first key of the arguments object. There is no default. Calling without `action` fails with `missing field 'action'`.\n\n\
          ## Actions\n\
          - **list**   — List all currently tracked workspaces with names, absolute paths, and kinds (git/folder). Use this FIRST when the user mentions a project by name — it's instant and avoids slow filesystem searches.\n\
          - **add**    — Register an existing local directory as a workspace. Kind (git / folder) is auto-detected from the presence of `.git`; non-git directories get `git init` run automatically.\n\
          - **clone**  — Clone a remote git URL into `target_dir/<name>` and register it. Uses the user's configured git credentials.\n\
          - **create** — Create a new empty workspace. Defaults to `git=true` (runs `git init`); set `git=false` for a plain work folder.\n\
-         - **remove** — Unregister a workspace. Files on disk are NOT deleted — only the tracked entry."
+         - **remove** — Unregister a workspace. Files on disk are NOT deleted — only the tracked entry.\n\n\
+         ## Examples\n\
+         - `{\"action\": \"list\"}`\n\
+         - `{\"action\": \"add\", \"path\": \"/Users/me/code/my-app\"}`\n\
+         - `{\"action\": \"clone\", \"url\": \"https://github.com/foo/bar\", \"target_dir\": \"/Users/me/code\"}`\n\
+         - `{\"action\": \"create\", \"path\": \"/Users/me/code/new-thing\", \"git\": true}`\n\
+         - `{\"action\": \"remove\", \"path\": \"/Users/me/code/old-thing\"}`"
     }
 
     fn parameters(&self) -> Value {
         params_schema::<ManageWorkspaceParams>()
     }
 
+    async fn set_session_key(&self, session_key: &str) {
+        *self.session_key.lock().await = Some(session_key.to_string());
+    }
+
     async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+        // Read `__call_id` + the captured session key BEFORE handing the
+        // params to serde — those are framework-internal metadata keys
+        // that the typed `ManageWorkspaceParams` enum doesn't model.
+        let tool_call_id = extract_call_id(&params);
+        let session_id = self.session_key.lock().await.clone();
+
         let params: ManageWorkspaceParams = parse_params(params)?;
         match params {
             ManageWorkspaceParams::List => exec_list().await,
@@ -131,7 +228,13 @@ impl Tool for ManageWorkspaceTool {
                 url,
                 target_dir,
                 name,
-            } => exec_clone(url, target_dir, name).await,
+            } => {
+                let progress = match (session_id, tool_call_id) {
+                    (Some(sid), Some(cid)) => Some(build_progress_callback(sid, cid)),
+                    _ => None,
+                };
+                exec_clone(url, target_dir, name, progress).await
+            }
             ManageWorkspaceParams::Create { path, name, git } => exec_create(path, name, git).await,
             ManageWorkspaceParams::Remove { path, repo_id } => {
                 exec_remove(path.as_deref(), repo_id.as_deref()).await
@@ -181,8 +284,9 @@ async fn exec_clone(
     url: String,
     target_dir: String,
     name: Option<String>,
+    on_progress: Option<CloneProgressCallback>,
 ) -> Result<String, ToolError> {
-    let record = repo_service::clone_github(url, target_dir, name)
+    let record = repo_service::clone_github_with_progress(url, target_dir, name, on_progress)
         .await
         .map_err(into_tool_err)?;
     Ok(format!("Cloned workspace (1):\n{}", format_entry(&record)))

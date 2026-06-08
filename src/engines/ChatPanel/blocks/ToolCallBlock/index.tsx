@@ -27,6 +27,7 @@ import { useBlockHeader } from "../useBlockLocate";
 import McpProgressRow from "./McpProgressRow";
 import OutputContent from "./OutputContent";
 import ToolResultActions from "./ToolResultActions";
+import WorkspaceCloneProgressRow from "./WorkspaceCloneProgressRow";
 import {
   DEFAULT_VISIBLE_LINES,
   SEARCH_NO_RESULT_MESSAGES,
@@ -159,18 +160,25 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
     );
 
     const styledOutput = useMemo(() => {
-      if (toolName === "manage_workspace" && hasResult) {
+      if (toolName === "manage_workspace") {
         const action =
           typeof args.action === "string" ? args.action : undefined;
-        if (action && action !== "list") {
+        // For mutation actions (add/clone/create/remove) we can render the
+        // workspace-info card from args alone — that way the user sees the
+        // URL / target_dir / path the moment the call starts, not only once
+        // the (potentially slow) git operation finishes. On failure we
+        // fall through to the raw output so the error message is visible.
+        if (action && action !== "list" && !isError) {
           const rows = buildWorkspaceInfoRows(args);
           if (rows && rows.length > 0) {
             return { type: "workspaceInfo" as const, rows };
           }
         }
-        const text = extractResultText(result);
-        const workspaces = text ? parseManageWorkspaceResult(text) : null;
-        if (workspaces) return { type: "workspaces" as const, workspaces };
+        if (hasResult) {
+          const text = extractResultText(result);
+          const workspaces = text ? parseManageWorkspaceResult(text) : null;
+          if (workspaces) return { type: "workspaces" as const, workspaces };
+        }
       }
       if (
         toolName === "await_output" &&
@@ -237,7 +245,7 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
       }
 
       return null;
-    }, [toolName, hasResult, result, args]);
+    }, [toolName, hasResult, result, args, isError]);
 
     const hideRawArgs = hasStyledOutput(toolName);
 
@@ -285,7 +293,10 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
 
     // Jump-to-source target — present only when the tool references a
     // concrete file on disk (read/write/edit-style tools).
-    const toolSource = useMemo(() => extractToolSource(args), [args]);
+    const toolSource = useMemo(
+      () => extractToolSource(toolName, args),
+      [toolName, args]
+    );
 
     const resultActions =
       !isLoading && toolSource ? (
@@ -294,6 +305,17 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
 
     const showMcpProgress = Boolean(
       isLoading && callId && sessionId && !isCollapsed
+    );
+
+    // Show a GitHub-Desktop-style strip while `manage_workspace` is in
+    // its `clone` action. The Rust side streams `git clone --progress`
+    // stderr; the strip subscribes to those broadcasts by `callId`.
+    const showCloneProgress = Boolean(
+      isLoading &&
+      !isCollapsed &&
+      callId &&
+      toolName === "manage_workspace" &&
+      args.action === "clone"
     );
 
     return (
@@ -332,10 +354,17 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
         {!isCollapsed &&
           (hasContent ||
             showMcpProgress ||
-            (isLoading && (argsText || streamOutput))) && (
+            showCloneProgress ||
+            (isLoading && (argsText || streamOutput || styledOutput))) && (
             <div
               className={`${EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES} animate-fade-in`}
             >
+              {showCloneProgress && callId && (
+                <WorkspaceCloneProgressRow
+                  toolCallId={callId}
+                  sessionId={sessionId}
+                />
+              )}
               {showMcpProgress && callId && sessionId && (
                 <McpProgressRow sessionId={sessionId} toolCallId={callId} />
               )}
@@ -352,10 +381,31 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
                 </BlockSection>
               )}
 
-              {isLoading && streamOutput && (
+              {isLoading && styledOutput && (
                 <BlockSection
                   label={t("tools.outputSection")}
                   borderTop={argsText.length > 0}
+                >
+                  <OutputContent
+                    styledOutput={styledOutput}
+                    isBrowserSnapshot={false}
+                    resultContent=""
+                    hasOutput={false}
+                    outputText=""
+                    isError={false}
+                    hasResult={false}
+                    completedLabel={completedLabel}
+                    sessionId={sessionId}
+                    eventId={eventId}
+                    payloadRef={outputPayloadRef}
+                  />
+                </BlockSection>
+              )}
+
+              {isLoading && streamOutput && (
+                <BlockSection
+                  label={t("tools.outputSection")}
+                  borderTop={argsText.length > 0 || Boolean(styledOutput)}
                 >
                   <BlockOutput
                     output={streamOutput}
