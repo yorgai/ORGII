@@ -405,6 +405,9 @@ importers:
       css-minimizer-webpack-plugin:
         specifier: ^7.0.2
         version: 7.0.4(webpack@5.105.4)
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
       dotenv-webpack:
         specifier: ^8.0.1
         version: 8.1.1(webpack@5.105.4)
@@ -4166,6 +4169,10 @@ packages:
     engines: {node: '>=10'}
     peerDependencies:
       webpack: ^4 || ^5
+
+  dotenv@17.4.2:
+    resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
+    engines: {node: '>=12'}
 
   dotenv@8.6.0:
     resolution: {integrity: sha512-IrPdXQsk2BbzvCBGBOTmmSH5SodmqZNt4ERAZDmW4CT+tL8VtvinqywuANaFu4bOMWki16nqf0e4oC0QIaDr/g==}
@@ -12439,6 +12446,8 @@ snapshots:
     dependencies:
       dotenv-defaults: 2.0.2
       webpack: 5.105.4(@swc/core@1.15.18)(webpack-cli@5.1.4)
+
+  dotenv@17.4.2: {}
 
   dotenv@8.6.0: {}
 
