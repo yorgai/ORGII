@@ -40,6 +40,7 @@ const logger = createLogger("ActiveProcesses");
 
 export interface ActiveProcessesProps {
   onToggle: () => void;
+  sessionId?: string | null;
   onVisibleCountChange?: (count: number) => void;
   /** When true, keeps component mounted (for count tracking) but renders nothing visible. */
   hidden?: boolean;
@@ -91,9 +92,16 @@ ProcessRow.displayName = "ProcessRow";
 // ============================================
 
 const ActiveProcesses: React.FC<ActiveProcessesProps> = memo(
-  ({ onToggle, onVisibleCountChange, hidden, initialProcesses }) => {
+  ({
+    onToggle,
+    sessionId: sessionIdProp,
+    onVisibleCountChange,
+    hidden,
+    initialProcesses,
+  }) => {
     const { t } = useTranslation("common");
-    const sessionId = useAtomValue(activeSessionIdAtom);
+    const activeSessionId = useAtomValue(activeSessionIdAtom);
+    const sessionId = sessionIdProp ?? activeSessionId;
     const processMap = useAtomValue(shellProcessMapAtom);
 
     const activeProcesses = useMemo(() => {

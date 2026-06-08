@@ -205,6 +205,7 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
           {processExpanded && (
             <ActiveProcesses
               key={`process-expanded-${sessionId}`}
+              sessionId={sessionId}
               onToggle={onToggleProcess}
               onVisibleCountChange={onProcessVisibleCountChange}
             />
@@ -212,6 +213,7 @@ const ChatFloatingComposer: React.FC<ChatFloatingComposerProps> = memo(
           {!processExpanded && (
             <ActiveProcesses
               key={`process-hidden-${sessionId}`}
+              sessionId={sessionId}
               onToggle={onToggleProcess}
               onVisibleCountChange={onProcessVisibleCountChange}
               hidden
