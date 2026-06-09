@@ -255,14 +255,6 @@ export const SourceControlTabContent = forwardRef<
         hasUpstream={sourceControlState.state.hasUpstream}
         onPublish={sourceControlState.state.onPublish}
         publishLoading={sourceControlState.state.publishLoading}
-        prUrl={sourceControlState.state.prUrl}
-        prStatus={sourceControlState.state.prStatus}
-        prCreating={sourceControlState.state.prCreating}
-        prErrorMessage={sourceControlState.state.prErrorMessage}
-        prReadyToCreate={sourceControlState.state.prReadyToCreate}
-        prEligible={sourceControlState.state.prEligible}
-        autoCreatePr={sourceControlState.state.autoCreatePr}
-        onCreatePr={sourceControlState.state.onCreatePr}
         onRefresh={refresh}
       />
     );
@@ -403,14 +395,6 @@ export const MainRepoSectionContent = forwardRef<
         hasUpstream={sourceControlState.state.hasUpstream}
         onPublish={sourceControlState.state.onPublish}
         publishLoading={sourceControlState.state.publishLoading}
-        prUrl={sourceControlState.state.prUrl}
-        prStatus={sourceControlState.state.prStatus}
-        prCreating={sourceControlState.state.prCreating}
-        prErrorMessage={sourceControlState.state.prErrorMessage}
-        prReadyToCreate={sourceControlState.state.prReadyToCreate}
-        prEligible={sourceControlState.state.prEligible}
-        autoCreatePr={sourceControlState.state.autoCreatePr}
-        onCreatePr={sourceControlState.state.onCreatePr}
         onRefresh={refresh}
       />
     );
