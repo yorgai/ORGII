@@ -309,6 +309,35 @@ const QuestionHistoryBlock: React.FC<{
 };
 
 // ============================================
+// Streaming placeholder — shown while `args.questions` hasn't streamed in yet
+// ============================================
+
+const QuestionStreamingPlaceholder: React.FC<{ eventId?: string }> = ({
+  eventId,
+}) => {
+  const lifecycle = useLifecycleLabels("ask_user_questions");
+  return (
+    <div
+      className={getEventBlockContainerClasses(false)}
+      data-tool-call-event-id={eventId}
+      data-tool-call-name="ask_user_questions"
+    >
+      <EventBlockHeader isCollapsed withHover={false}>
+        <EventBlockHeaderIcon
+          icon={STATUS_ICON.pending}
+          isCollapsed
+          isHeaderHovered={false}
+          hasContent={false}
+        />
+        <EventBlockHeaderTitle isLoading>
+          {lifecycle.running}
+        </EventBlockHeaderTitle>
+      </EventBlockHeader>
+    </div>
+  );
+};
+
+// ============================================
 // Main Component
 // ============================================
 
@@ -328,7 +357,20 @@ export const AskQuestionEvent: React.FC<AskQuestionEventProps> = (props) => {
     ((props as Record<string, unknown>).id as string | undefined);
 
   if (!normalizedProps) return null;
-  if (pairs.length === 0) return null;
+
+  const showActiveEventPainting =
+    normalizedProps.showActiveEventPainting ?? false;
+  const isStreaming =
+    rawStatus !== "completed" &&
+    rawStatus !== "failed" &&
+    showActiveEventPainting;
+
+  if (pairs.length === 0) {
+    if (isStreaming) {
+      return <QuestionStreamingPlaceholder eventId={eventId} />;
+    }
+    return null;
+  }
 
   const status = resolveDisplayStatus(rawStatus, isAnswered);
 
@@ -338,7 +380,7 @@ export const AskQuestionEvent: React.FC<AskQuestionEventProps> = (props) => {
       status={status}
       eventId={eventId}
       variant={props.variant}
-      showActiveEventPainting={normalizedProps.showActiveEventPainting ?? false}
+      showActiveEventPainting={showActiveEventPainting}
     />
   );
 };

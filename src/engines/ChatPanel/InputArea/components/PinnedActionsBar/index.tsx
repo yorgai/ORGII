@@ -67,7 +67,7 @@ const ActionPill: React.FC<ActionPillProps> = memo(
       shape="round"
       title={action.name}
       onClick={(event) => onClick(action, event)}
-      className="max-w-[180px] select-none"
+      className="max-w-[180px] shrink-0 select-none"
     >
       {action.name}
     </Button>
@@ -245,44 +245,56 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
     );
 
     return (
-      <div className="relative flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-hide">
-        {showPrPill && (
-          <Button
-            variant="secondary"
-            size="small"
-            shape="round"
-            title={t("input.pr.open", { defaultValue: "Open PR" })}
-            onClick={handleOpenPr}
-            loading={prIsCreating}
-            icon={
-              !prIsCreating ? (
-                <GitPullRequest size={12} strokeWidth={1.75} />
-              ) : undefined
-            }
-            className="max-w-[180px] select-none"
-          >
-            {prIsCreating
-              ? t("input.pr.creating", { defaultValue: "Creating PR…" })
-              : t("input.pr.open", { defaultValue: "Open PR" })}
-          </Button>
-        )}
+      <div className="relative flex min-w-0 flex-1 items-center gap-1">
+        <div className="relative min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1 overflow-x-auto scrollbar-hide">
+            {showPrPill && (
+              <Button
+                variant="secondary"
+                size="small"
+                shape="round"
+                title={t("input.pr.open", { defaultValue: "Open PR" })}
+                onClick={handleOpenPr}
+                loading={prIsCreating}
+                icon={
+                  !prIsCreating ? (
+                    <GitPullRequest size={12} strokeWidth={1.75} />
+                  ) : undefined
+                }
+                className="max-w-[180px] shrink-0 select-none"
+              >
+                {prIsCreating
+                  ? t("input.pr.creating", { defaultValue: "Creating PR…" })
+                  : t("input.pr.open", { defaultValue: "Open PR" })}
+              </Button>
+            )}
 
-        {showCanvasPill && !isCanvasTabOpen && (
-          <UserActionButton
-            leftIcon={<Layout size={12} strokeWidth={1.75} />}
-            title="Canvas"
-            onClick={handleOpenCanvas}
-            onClose={handleClearCanvas}
-          />
-        )}
+            {showCanvasPill && !isCanvasTabOpen && (
+              <div className="shrink-0">
+                <UserActionButton
+                  leftIcon={<Layout size={12} strokeWidth={1.75} />}
+                  title="Canvas"
+                  onClick={handleOpenCanvas}
+                  onClose={handleClearCanvas}
+                />
+              </div>
+            )}
 
-        {pinnedActions.map((action) => (
-          <ActionPill
-            key={actionKey(action)}
-            action={action}
-            onClick={handlePillClick}
-          />
-        ))}
+            {pinnedActions.map((action) => (
+              <ActionPill
+                key={actionKey(action)}
+                action={action}
+                onClick={handlePillClick}
+              />
+            ))}
+          </div>
+          {hasLeadingPills && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[var(--color-chat-input)] to-transparent"
+            />
+          )}
+        </div>
 
         <Button
           ref={moreButtonRef}
