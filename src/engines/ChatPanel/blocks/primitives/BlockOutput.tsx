@@ -100,6 +100,7 @@ export interface BlockOutputProps {
   onFullPayloadLoaded?: (body: string) => void;
   collapsedMaxHeight?: number;
   defaultScrollToBottom?: boolean;
+  expandLineThreshold?: number;
 }
 
 /**
@@ -125,6 +126,7 @@ const BlockOutput: React.FC<BlockOutputProps> = memo(
     onFullPayloadLoaded,
     collapsedMaxHeight = COLLAPSED_MAX_HEIGHT,
     defaultScrollToBottom = false,
+    expandLineThreshold,
   }) => {
     const { t } = useTranslation();
     const [isOutputExpanded, setIsOutputExpanded] = useState(false);
@@ -183,25 +185,48 @@ const BlockOutput: React.FC<BlockOutputProps> = memo(
     const viewportRef = useRef<HTMLDivElement | null>(null);
     const contentRef = useRef<HTMLDivElement | null>(null);
     const [needsExpand, setNeedsExpand] = useState(false);
+    const [scrollTop, setScrollTop] = useState(0);
     useLayoutEffect(() => {
       const el = viewportRef.current;
       if (!el) return;
       const measure = () => {
-        setNeedsExpand(el.scrollHeight > el.clientHeight + 1);
+        setNeedsExpand(
+          el.scrollHeight > el.clientHeight + 1 ||
+            (defaultScrollToBottom && el.scrollTop > 1) ||
+            (expandLineThreshold !== undefined &&
+              outputLines.length > expandLineThreshold)
+        );
       };
       measure();
+      const handleScroll = () => {
+        setScrollTop(el.scrollTop);
+        measure();
+      };
       const observer = new ResizeObserver(measure);
       observer.observe(el);
       const contentEl = contentRef.current;
       if (contentEl) observer.observe(contentEl);
-      return () => observer.disconnect();
-    }, [processedOutput, highlightedHtml, isOutputExpanded]);
+      el.addEventListener("scroll", handleScroll, { passive: true });
+      return () => {
+        observer.disconnect();
+        el.removeEventListener("scroll", handleScroll);
+      };
+    }, [
+      processedOutput,
+      highlightedHtml,
+      isOutputExpanded,
+      defaultScrollToBottom,
+      expandLineThreshold,
+      outputLines.length,
+    ]);
 
     useLayoutEffect(() => {
       if (!defaultScrollToBottom) return;
       const el = viewportRef.current;
       if (!el) return;
       el.scrollTop = el.scrollHeight;
+      setScrollTop(el.scrollTop);
+      setNeedsExpand(el.scrollHeight > el.clientHeight + 1 || el.scrollTop > 1);
     }, [
       defaultScrollToBottom,
       processedOutput,
@@ -243,6 +268,24 @@ const BlockOutput: React.FC<BlockOutputProps> = memo(
     }, [eventId, onFullPayloadLoaded, payloadKey, payloadRef, sessionId]);
 
     const preClassesShared = `block-output__pre m-0 whitespace-pre ${EVENT_SNIPPET_INNER_PADDING_CLASS} leading-normal`;
+    const useTopCollapsedOverlay = defaultScrollToBottom && !isOutputExpanded;
+    const showExpandOverlay = needsExpand || isOutputExpanded;
+
+    const expandOverlay = showExpandOverlay ? (
+      <ExpandOverlay
+        isExpanded={isOutputExpanded}
+        onToggle={() => {
+          if (isOutputExpanded) {
+            viewportRef.current?.scrollTo({ top: 0 });
+          }
+          setIsOutputExpanded(!isOutputExpanded);
+        }}
+        collapsedLabel={t("common:showMore")}
+        collapsedFadeEdge={useTopCollapsedOverlay ? "top" : "bottom"}
+        collapsedOffsetPx={useTopCollapsedOverlay ? scrollTop : 0}
+        fadeFrom={EVENT_BLOCK_FADE_FROM}
+      />
+    ) : null;
 
     return (
       <div
@@ -262,6 +305,7 @@ const BlockOutput: React.FC<BlockOutputProps> = memo(
               }
         }
       >
+        {useTopCollapsedOverlay ? expandOverlay : null}
         <div ref={contentRef}>
           {highlightLang && highlightedHtml ? (
             <div
@@ -327,19 +371,7 @@ const BlockOutput: React.FC<BlockOutputProps> = memo(
           </div>
         )}
 
-        {(needsExpand || isOutputExpanded) && (
-          <ExpandOverlay
-            isExpanded={isOutputExpanded}
-            onToggle={() => {
-              if (isOutputExpanded) {
-                viewportRef.current?.scrollTo({ top: 0 });
-              }
-              setIsOutputExpanded(!isOutputExpanded);
-            }}
-            collapsedLabel={t("common:showMore")}
-            fadeFrom={EVENT_BLOCK_FADE_FROM}
-          />
-        )}
+        {!useTopCollapsedOverlay ? expandOverlay : null}
       </div>
     );
   }

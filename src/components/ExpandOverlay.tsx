@@ -3,9 +3,10 @@
  *
  * Reusable gradient-fade + hover-visible pill for expand/collapse.
  *
- * **Collapsed**: absolute gradient overlay at the bottom of the content
- * area, with a centered pill that appears on hover (parent needs Tailwind
- * `group`).
+ * **Collapsed**: absolute gradient overlay at the clipped edge of the
+ * content area, with a centered pill that appears on hover (parent needs
+ * Tailwind `group`). The clipped edge defaults to the bottom; use `top`
+ * for bottom-aligned previews whose hidden content is above the viewport.
  *
  * **Expanded**: a `position: sticky` bar at the bottom with a short
  * bottom-to-top fade above the pill (no fixed min-height — avoids a dead
@@ -28,6 +29,8 @@ interface ExpandOverlayProps {
   collapsedLabel?: string;
   expandedLabel?: string;
   collapsedFadeHeightClass?: string;
+  collapsedFadeEdge?: "top" | "bottom";
+  collapsedOffsetPx?: number;
   /** Tailwind `from-*` class for the gradient background (default: "from-fill-2") */
   fadeFrom?: string;
 }
@@ -38,15 +41,26 @@ const ExpandOverlay: React.FC<ExpandOverlayProps> = ({
   collapsedLabel,
   expandedLabel,
   collapsedFadeHeightClass = "h-14",
+  collapsedFadeEdge = "bottom",
+  collapsedOffsetPx = 0,
   fadeFrom = "from-fill-2",
 }) => {
+  const isTopFade = collapsedFadeEdge === "top";
+  const collapsedOffsetStyle = isTopFade
+    ? { transform: `translateY(${collapsedOffsetPx}px)` }
+    : undefined;
+
   if (!isExpanded) {
     return (
       <>
         <div
-          className={`pointer-events-none absolute bottom-0 left-0 right-0 ${collapsedFadeHeightClass} bg-gradient-to-t ${fadeFrom} to-transparent`}
+          className={`pointer-events-none absolute left-0 right-0 z-10 ${isTopFade ? "top-0 bg-gradient-to-b" : "bottom-0 bg-gradient-to-t"} ${collapsedFadeHeightClass} ${fadeFrom} to-transparent`}
+          style={collapsedOffsetStyle}
         />
-        <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center pb-1 opacity-0 transition-opacity group-hover/expand:opacity-100">
+        <div
+          className={`absolute left-0 right-0 z-20 flex justify-center opacity-0 transition-opacity group-hover/expand:opacity-100 ${isTopFade ? "top-0 pt-1" : "bottom-0 pb-1"}`}
+          style={collapsedOffsetStyle}
+        >
           <FloatingExpandPill
             expanded={false}
             onClick={onToggle}

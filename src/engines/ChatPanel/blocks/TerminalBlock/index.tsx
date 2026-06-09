@@ -34,12 +34,10 @@ import {
 import { useBlockHeader } from "../useBlockLocate";
 import { formatCommandForDisplay, getCommandSymbolList } from "./commandParser";
 
-// Pixel caps for the inline command preview. Match the BlockOutput defaults
-// (and ChatCodeBlock's 5-line collapsed footprint at ~24px line-height) so
-// the command and output regions clamp to a consistent height and the fade +
-// "Show more" pill remain visible whenever content actually overflows.
-const TERMINAL_INLINE_PREVIEW_MAX_HEIGHT = 120;
+const TERMINAL_COMMAND_PREVIEW_MAX_HEIGHT = 79;
+const TERMINAL_OUTPUT_PREVIEW_MAX_HEIGHT = 72;
 const TERMINAL_EXPANDED_MAX_HEIGHT = "min(320px, 30vh)";
+const TERMINAL_COMMAND_EXPAND_LINE_THRESHOLD = 3;
 
 export interface TerminalBlockProps {
   command?: string;
@@ -65,8 +63,6 @@ export interface TerminalBlockProps {
    * also be true. Backgrounded processes show status/PID only.
    */
   processStatus?: "running" | "background" | "exited" | "killed";
-  /** Optional working directory label for multi-repo shell commands */
-  cwdLabel?: string;
   /** Callback when user clicks Stop */
   onStop?: (pid: number) => void;
 }
@@ -87,7 +83,6 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
     streamOutput,
     pid,
     processStatus,
-    cwdLabel,
     onStop,
   }) => {
     const isErrorExit = exitCode !== undefined && exitCode !== 0;
@@ -142,7 +137,7 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
       () => (command ? formatCommandForDisplay(command) : ""),
       [command]
     );
-    // Always clamp the command region to TERMINAL_INLINE_PREVIEW_MAX_HEIGHT
+    // Always clamp the command region to TERMINAL_COMMAND_PREVIEW_MAX_HEIGHT
     // and measure the viewport's own scrollHeight vs clientHeight to decide
     // whether to surface the fade + Show more pill. Doing the measurement on
     // the always-clamped viewport (instead of a separate content wrapper
@@ -151,19 +146,43 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
     // whether or not Shiki has finished highlighting, and even after
     // collapse/expand remounts the inner DOM.
     const commandViewportRef = useRef<HTMLDivElement | null>(null);
+    const commandContentRef = useRef<HTMLDivElement | null>(null);
     const [commandOverflows, setCommandOverflows] = useState(false);
     const [isCommandExpanded, setIsCommandExpanded] = useState(false);
 
     useLayoutEffect(() => {
-      const element = commandViewportRef.current;
-      if (!element) return;
+      const viewportElement = commandViewportRef.current;
+      const contentElement = commandContentRef.current;
+      if (!viewportElement || !contentElement) return;
       const measure = () => {
-        setCommandOverflows(element.scrollHeight > element.clientHeight + 1);
+        const computedStyle = window.getComputedStyle(contentElement);
+        const lineHeight = Number.parseFloat(computedStyle.lineHeight) || 20;
+        const fontSize = Number.parseFloat(computedStyle.fontSize) || 13;
+        const contentHeight = contentElement.scrollHeight;
+        const visibleLineCount = Math.ceil(contentHeight / lineHeight);
+        const averageCharacterWidth = fontSize * 0.62;
+        const estimatedCharactersPerLine = Math.max(
+          1,
+          Math.floor(viewportElement.clientWidth / averageCharacterWidth)
+        );
+        const estimatedWrappedLineCount = Math.ceil(
+          formattedCommand.length / estimatedCharactersPerLine
+        );
+        setCommandOverflows(
+          contentHeight > viewportElement.clientHeight + 1 ||
+            visibleLineCount > TERMINAL_COMMAND_EXPAND_LINE_THRESHOLD ||
+            estimatedWrappedLineCount > TERMINAL_COMMAND_EXPAND_LINE_THRESHOLD
+        );
       };
       measure();
+      const frame = window.requestAnimationFrame(measure);
       const observer = new ResizeObserver(measure);
-      observer.observe(element);
-      return () => observer.disconnect();
+      observer.observe(viewportElement);
+      observer.observe(contentElement);
+      return () => {
+        window.cancelAnimationFrame(frame);
+        observer.disconnect();
+      };
     }, [formattedCommand, isCommandExpanded]);
 
     // Stop button state — reset when process finishes.
@@ -278,14 +297,6 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
                 : `${commandSymbols.slice(0, 2).join(", ")}, +${commandSymbols.length - 2}`}
             </span>
           ) : null}
-          {cwdLabel ? (
-            <span
-              className="min-w-0 shrink truncate text-text-3"
-              title={cwdLabel}
-            >
-              in {cwdLabel}
-            </span>
-          ) : null}
           {!isStillRunning && exitCode !== undefined && exitCode !== 0 && (
             <span className="shrink-0 text-danger-6">exit {exitCode}</span>
           )}
@@ -305,21 +316,23 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
                         overflowX: "auto",
                       }
                     : {
-                        maxHeight: TERMINAL_INLINE_PREVIEW_MAX_HEIGHT,
+                        maxHeight: TERMINAL_COMMAND_PREVIEW_MAX_HEIGHT,
                         overflowY: "hidden",
                         overflowX: "auto",
                       }
                 }
               >
-                <TerminalCommand
-                  command={formattedCommand}
-                  prefix="$"
-                  className="terminal-command--chat"
-                  shikiTheme={shikiTheme}
-                  style={{
-                    fontSize: "var(--chat-code-font-size, 13px)",
-                  }}
-                />
+                <div ref={commandContentRef}>
+                  <TerminalCommand
+                    command={formattedCommand}
+                    prefix="$"
+                    className="terminal-command--chat"
+                    shikiTheme={shikiTheme}
+                    style={{
+                      fontSize: "var(--chat-code-font-size, 13px)",
+                    }}
+                  />
+                </div>
                 {(commandOverflows || isCommandExpanded) && (
                   <ExpandOverlay
                     isExpanded={isCommandExpanded}
@@ -359,8 +372,9 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
                 sessionId={sessionId}
                 eventId={eventId}
                 payloadRef={payloadRef}
-                collapsedMaxHeight={TERMINAL_INLINE_PREVIEW_MAX_HEIGHT}
+                collapsedMaxHeight={TERMINAL_OUTPUT_PREVIEW_MAX_HEIGHT}
                 defaultScrollToBottom
+                expandLineThreshold={TERMINAL_COMMAND_EXPAND_LINE_THRESHOLD}
               />
             )}
           </div>
