@@ -38,24 +38,3 @@ export interface GitHubBranch {
   protected: boolean;
   is_default: boolean;
 }
-
-export interface CreatePullRequestRequest {
-  connection_id: string;
-  repo_full_name: string;
-  title: string;
-  body: string;
-  head_branch: string;
-  base_branch: string;
-  draft?: boolean;
-}
-
-export interface PullRequestResponse {
-  number: number;
-  url: string;
-  html_url: string;
-  state: string;
-  title: string;
-  head_branch: string;
-  base_branch: string;
-  created_at: string;
-}
