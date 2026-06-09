@@ -2,6 +2,8 @@
 
 We ask everyone participating in the ORGII community to be respectful, empathetic, and constructive.
 
+<!-- test/draft-pr-3: minor update for PR workflow testing -->
+
 ## Expected behavior
 
 - Treat others with kindness and professionalism.
