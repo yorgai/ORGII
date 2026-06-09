@@ -1491,6 +1491,9 @@ fn normalize_args_for_canonical(canonical: &str, cursor_name: &str, args: &mut V
             move_string_field(obj, "globPattern", "pattern");
             move_string_field(obj, "targetDirectory", "path");
         }
+        "run_command_line" => {
+            move_string_field(obj, "commandDescription", "description");
+        }
         // web_fetch is renamed to web_search but keeps Cursor's `url` field.
         // `WebSearchAdapter` reads `query` only — surface the URL there too
         // so the card shows something meaningful.

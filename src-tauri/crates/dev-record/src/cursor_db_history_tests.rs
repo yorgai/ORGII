@@ -453,6 +453,21 @@ fn read_file_args_translate_targetfile_to_canonical() {
 }
 
 #[test]
+fn terminal_command_description_maps_to_shell_description() {
+    let conn = empty_test_db();
+    let bubble = make_tool_bubble(
+        "run_terminal_command_v2",
+        r#"{"command":"git log -5 --oneline","cwd":"","commandDescription":"Show recent git commits"}"#,
+        r#"{"output":"812aae8a feat(session): import external agent history\n","rejected":false}"#,
+    );
+    let chunk = assistant_tool_bubble_to_chunk(&conn, TEST_SESSION_ID, &bubble).expect("chunk");
+
+    assert_eq!(chunk.function, "run_command_line");
+    assert_eq!(chunk.args["command"], "git log -5 --oneline");
+    assert_eq!(chunk.args["description"], "Show recent git commits");
+}
+
+#[test]
 fn edit_file_args_translate_path_and_resolve_content_blobs() {
     let conn = empty_test_db();
     insert_blob(&conn, "composer.content.before123", "keep\nold\n");
