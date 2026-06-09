@@ -225,6 +225,28 @@ export async function createPRLocal(
   });
 }
 
+export interface OpenPRItem {
+  number: number;
+  url: string;
+  title: string;
+  state: string;
+  head_branch: string;
+  base_branch: string;
+  draft: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function listOpenPRsLocal(
+  repoFullName: string,
+  perPage?: number
+): Promise<OpenPRItem[]> {
+  return invokeWithAuth<OpenPRItem[]>("github_list_open_prs", {
+    repoFullName,
+    perPage: perPage ?? null,
+  });
+}
+
 export async function findPullRequestLocal(
   repoFullName: string,
   headBranch: string

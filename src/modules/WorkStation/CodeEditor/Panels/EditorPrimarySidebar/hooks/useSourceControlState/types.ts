@@ -118,9 +118,7 @@ export interface SourceControlState {
 
   // Pull request
   prUrl?: string;
-  prStatus?: string;
   prCreating?: boolean;
-  prErrorMessage?: string | null;
   prReadyToCreate?: boolean;
   prEligible?: boolean;
   autoCreatePr?: boolean;

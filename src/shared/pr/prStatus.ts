@@ -97,6 +97,10 @@ export function getPrStatusVariant(status: string): PrStatusVariant {
 /**
  * i18n key for a PR status label, relative to the `common` namespace
  * (e.g. `labels.prStatus.open`). Never returns hardcoded English.
+ *
+ * **Required i18n namespace:** `common` — callers must obtain `t` via
+ * `useTranslation("common")` (or equivalent) before passing the returned key
+ * to `t(...)`. The key will not resolve correctly in any other namespace.
  */
 export function getPrStatusLabelKey(status: string): string {
   return `labels.prStatus.${status}`;
