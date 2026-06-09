@@ -40,6 +40,22 @@
 - [ ] PR link has discernible text (repo/path)
 - [ ] Error alert retry action is keyboard accessible
 
+## Single-mount consolidation (behavior fix)
+
+`useWorkstationPr` is now mounted exactly once, at the editor level
+(`useSourceControlSetup`). The Source Control panel (`useSourceControlState`)
+mirrors the published `workstationPrAtom` instead of mounting a second copy,
+and publishes its commit summary via `workstationPrCommitMessageAtom` so PR
+titles still reflect the typed commit message.
+
+| #   | Scenario                              | Steps                                                              | Expected Result                                              |
+| --- | ------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------ |
+| 1   | No duplicate GitHub PR lookups        | Open a pushed feature branch with Source Control tab visible       | PR lookup fires once (not twice); no duplicate network calls |
+| 2   | No duplicate auto-create              | Enable `git.autoCreatePr` on a clean pushed branch                 | PR is created exactly once (no double-create race)           |
+| 3   | PR title uses commit message          | Type a commit summary, then create PR from the panel               | PR title is the first line of the commit summary             |
+| 4   | PR title without Source Control panel | Create PR via PinnedActionsBar pill without opening Source Control | PR title falls back to the branch name                       |
+| 5   | Protected-branch create PR            | Push to protected branch, choose "Create Pull Request"             | PR created via the shared atom callback for the same repo    |
+
 ## Acceptance Criteria
 
 - [ ] PR section appears below commit/sync controls in Source Control sidebar
@@ -47,3 +63,4 @@
 - [ ] Protected branch push surfaces PR creation path
 - [ ] `git.autoCreatePr` setting controls automatic PR creation
 - [ ] Work item PR flow still works via shared `createPullRequest` helper
+- [ ] `useWorkstationPr` is mounted exactly once (no duplicate lookups/timers/races)
