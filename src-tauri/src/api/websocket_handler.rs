@@ -141,7 +141,11 @@ fn event_type(message: &str) -> Option<String> {
         .map(str::to_string)
 }
 
-fn dispatch_to_channel_entries(session_id: &str, channels: &mut Vec<RegisteredChannel>, message: &str) {
+fn dispatch_to_channel_entries(
+    session_id: &str,
+    channels: &mut Vec<RegisteredChannel>,
+    message: &str,
+) {
     for entry in channels.iter_mut() {
         if entry.channel.send(message.to_string()).is_ok() {
             entry.consecutive_failures = 0;
@@ -181,8 +185,8 @@ fn dispatch_to_channel_entries(session_id: &str, channels: &mut Vec<RegisteredCh
 /// frontend listener to answer resolves the bridge correlation ID.
 fn dispatch_to_channels(message: &str) {
     let target_session_id = extract_session_id(message);
-    let is_global_ide_action = target_session_id.is_none()
-        && event_type(message).as_deref() == Some("agent:ide_action");
+    let is_global_ide_action =
+        target_session_id.is_none() && event_type(message).as_deref() == Some("agent:ide_action");
 
     if !is_global_ide_action && target_session_id.is_none() {
         return;

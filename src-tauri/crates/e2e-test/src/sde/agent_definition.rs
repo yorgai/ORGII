@@ -278,7 +278,10 @@ pub async fn gui_control_agent_has_narrow_effective_tools(cfg: &Config) -> bool 
                 "Prompt includes ask-user tool",
                 contains_tool(prompt_tools, ASK_USER_QUESTIONS),
             ),
-            ("Prompt includes read_file", contains_tool(prompt_tools, READ_FILE)),
+            (
+                "Prompt includes read_file",
+                contains_tool(prompt_tools, READ_FILE),
+            ),
             (
                 "Prompt excludes shell",
                 !contains_tool(prompt_tools, RUN_SHELL),
