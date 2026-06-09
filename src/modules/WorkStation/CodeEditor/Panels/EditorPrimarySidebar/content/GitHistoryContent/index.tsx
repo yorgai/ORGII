@@ -212,6 +212,8 @@ export interface GitHistoryContentProps {
   onRefreshReady?: (refresh: () => void) => void;
   /** Receives the selected commit when the host wants inline detail rendering. */
   onHistorySelectionChange?: (selection: SourceControlHistorySelection) => void;
+  /** Case-insensitive substring filter applied to commit messages */
+  filterQuery?: string;
 }
 
 type GitHistoryTabsApi = Pick<
@@ -227,6 +229,7 @@ const GitHistoryContentInner: React.FC<GitHistoryContentInnerProps> = ({
   viewMode = "graph",
   onRefreshReady,
   onHistorySelectionChange,
+  filterQuery,
   openTab,
   activeTab,
   updateTabData,
@@ -364,13 +367,20 @@ const GitHistoryContentInner: React.FC<GitHistoryContentInnerProps> = ({
     return () => observer.disconnect();
   }, [hasMore, handleLoadMore]);
 
+  const filteredCommits = useMemo(() => {
+    if (!filterQuery) return commits;
+    const lower = filterQuery.toLowerCase();
+    return commits.filter((c) => c.summary.toLowerCase().includes(lower));
+  }, [commits, filterQuery]);
+
   // Compute graph layout — pure function, deterministic output for same input
+  // When a filter is active we skip the graph (flat list only)
   const graphData = useMemo(() => {
-    if (!isGraphMode || commits.length === 0) {
+    if (!isGraphMode || filteredCommits.length === 0 || filterQuery) {
       return { nodeMap: new Map<string, CommitGraphNode>(), maxLanes: 1 };
     }
     const state = createGraphState();
-    assignLanesIncremental(state, commits);
+    assignLanesIncremental(state, filteredCommits);
     const nodeMap = new Map<string, CommitGraphNode>();
     let maxLanes = 1;
     for (const node of state.nodes) {
@@ -378,7 +388,7 @@ const GitHistoryContentInner: React.FC<GitHistoryContentInnerProps> = ({
       if (node.activeLaneCount > maxLanes) maxLanes = node.activeLaneCount;
     }
     return { nodeMap, maxLanes };
-  }, [commits, isGraphMode]);
+  }, [filteredCommits, isGraphMode, filterQuery]);
 
   const graphSvgWidth = graphData.maxLanes * LANE_WIDTH;
 
@@ -468,20 +478,31 @@ const GitHistoryContentInner: React.FC<GitHistoryContentInnerProps> = ({
 
   return (
     <div className="flex h-full flex-col overflow-auto scrollbar-hide">
-      {commits.map((commit, index) => (
-        <CommitRow
-          key={commit.sha}
-          commit={commit}
-          isSelected={commit.sha === activeCommitSha}
-          graphNode={
-            isGraphMode ? graphData.nodeMap.get(commit.sha) : undefined
-          }
-          svgWidth={graphSvgWidth}
-          isFirst={index === 0}
-          onSelect={handleCommitSelect}
-          onContextMenu={handleCommitContextMenu}
+      {filteredCommits.length === 0 && filterQuery ? (
+        <Placeholder
+          variant="empty"
+          placement="sidebar"
+          title={t("placeholders.noResults", "No results")}
+          fillParentHeight
         />
-      ))}
+      ) : (
+        filteredCommits.map((commit, index) => (
+          <CommitRow
+            key={commit.sha}
+            commit={commit}
+            isSelected={commit.sha === activeCommitSha}
+            graphNode={
+              isGraphMode && !filterQuery
+                ? graphData.nodeMap.get(commit.sha)
+                : undefined
+            }
+            svgWidth={graphSvgWidth}
+            isFirst={index === 0}
+            onSelect={handleCommitSelect}
+            onContextMenu={handleCommitContextMenu}
+          />
+        ))
+      )}
 
       {/* Infinite scroll sentinel + loading indicator */}
       {hasMore && (
