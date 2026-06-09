@@ -38,14 +38,14 @@
     "folders": "文件夹",
     "inbox": "收件箱",
     "issues": "工作项",
-    "agentKanban": "Ops Control",
     "history": "历史",
     "controlTower": "Control Tower",
     "backgroundTasks": "后台任务",
     "project": "项目",
     "projects": "项目",
     "projectManager": "项目管理器",
-    "diff": "Diff"
+    "diff": "Diff",
+    "opsControl": "Ops Control"
   },
   "trajectoryPanel": {
     "title": "轨迹",
@@ -58,7 +58,6 @@
     "session": "聊天",
     "startSession": "开始会话",
     "sessions": "Session 列表",
-    "kanban": "Ops Control",
     "selectProject": "选择项目",
     "startPage": "起始页",
     "inbox": "收件箱",
@@ -82,7 +81,8 @@
     "signingIn": "正在登录...",
     "appLauncher": "应用启动器",
     "ideaArea": "想法广场",
-    "changelog": "更新日志"
+    "changelog": "更新日志",
+    "opsControl": "Ops Control"
   },
   "appGrid": {
     "customizeGrid": "自定义网格",

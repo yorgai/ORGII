@@ -35,10 +35,12 @@ describe("getWorkStationStationTitleCenter", () => {
       icon: "ListTodoIcon",
       label: "labels.projectManager",
     });
-    expect(getWorkStationStationTitleCenter("kanban", navigationT)).toEqual({
-      icon: "RadarIcon",
-      label: "routes.kanban",
-    });
+    expect(getWorkStationStationTitleCenter("opsControl", navigationT)).toEqual(
+      {
+        icon: "RadarIcon",
+        label: "routes.opsControl",
+      }
+    );
   });
 
   it("falls back to code editor for unknown modes", () => {

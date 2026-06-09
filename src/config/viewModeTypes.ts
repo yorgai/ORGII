@@ -16,4 +16,4 @@ export type AppModeType =
   | "browser"
   | "chat"
   | "project"
-  | "kanban";
+  | "opsControl";

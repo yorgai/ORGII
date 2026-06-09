@@ -129,11 +129,11 @@ export const APP_GRID_ITEMS: AppItem[] = [
   },
   {
     id: "ops-control",
-    labelKey: "navigation:routes.kanban",
+    labelKey: "navigation:routes.opsControl",
     icon: ICON_CONFIG.opsControl,
     iconName: "radar",
     action: "ops-control",
-    routePath: ROUTES.workStation.kanban.path,
+    routePath: ROUTES.workStation.opsControl.path,
   },
   {
     id: "create-session",

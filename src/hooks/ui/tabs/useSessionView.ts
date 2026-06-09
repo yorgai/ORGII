@@ -18,10 +18,8 @@ import {
   workstationActiveSessionIdAtom,
 } from "@src/store/session";
 import {
-  CHAT_PANEL_CONTENT_MODE,
-  chatPanelContentModeAtom,
-  chatPanelSelectedWorkItemAtom,
-  chatPanelStickyNotesOpenAtom,
+  CHAT_PANEL_SURFACE_KIND,
+  chatPanelNavigateAtom,
 } from "@src/store/ui/chatPanelAtom";
 
 // ============================================
@@ -65,11 +63,7 @@ export function useSessionView(): UseSessionViewReturn {
   const hasActiveSession = useAtomValue(hasActiveSessionAtom);
 
   const jumpToSession = useSetAtom(jumpToSessionAtom);
-  const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
-  const setChatPanelSelectedWorkItem = useSetAtom(
-    chatPanelSelectedWorkItemAtom
-  );
-  const setChatPanelStickyNotesOpen = useSetAtom(chatPanelStickyNotesOpenAtom);
+  const navigateChatPanel = useSetAtom(chatPanelNavigateAtom);
   const closeSessionAction = useSetAtom(closeSessionAtom);
   const updateMetadataAction = useSetAtom(updateSessionMetadataAtom);
 
@@ -77,26 +71,18 @@ export function useSessionView(): UseSessionViewReturn {
     (sessionId: string, sessionName?: string, repoPath?: string): void => {
       // Single atom write — `jumpToSessionAtom` accepts the rich
       // payload form so we don't double-flush sessionViewAtom.
-      setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
-      setChatPanelSelectedWorkItem(null);
-      setChatPanelStickyNotesOpen(false);
+      navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.SESSION });
       jumpToSession({ sessionId, sessionName, repoPath });
       navigate(ROUTES.workStation.base.path);
     },
-    [
-      jumpToSession,
-      navigate,
-      setChatPanelContentMode,
-      setChatPanelSelectedWorkItem,
-      setChatPanelStickyNotesOpen,
-    ]
+    [jumpToSession, navigate, navigateChatPanel]
   );
 
   const closeSession = useCallback((): void => {
-    setChatPanelStickyNotesOpen(false);
+    navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.SESSION });
     closeSessionAction();
     navigate(ROUTES.workStation.base.path);
-  }, [closeSessionAction, navigate, setChatPanelStickyNotesOpen]);
+  }, [closeSessionAction, navigate, navigateChatPanel]);
 
   const updateMetadata = useCallback(
     (updates: { sessionName?: string; repoPath?: string }): void => {

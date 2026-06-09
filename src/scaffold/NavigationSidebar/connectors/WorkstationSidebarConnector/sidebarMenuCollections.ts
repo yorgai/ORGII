@@ -54,8 +54,9 @@ export function usePinnedMenuItems({
       buildPinnedMenuItems({
         newSessionLabel,
         newSessionShortcut: getShortcutKeys("new_session"),
-        kanbanLabel: t("routes.kanban"),
-        kanbanRoutePath: ROUTES.workStation.kanban.path,
+        opsControlLabel: t("routes.opsControl"),
+        opsControlRoutePath: ROUTES.workStation.opsControl.path,
+        opsControlShortcut: getShortcutKeys("open_ops_control"),
         stickyNotesLabel,
       }),
     [newSessionLabel, stickyNotesLabel, t]

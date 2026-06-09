@@ -6,10 +6,9 @@ import { openWorkspaceSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotli
 import type { Repo } from "@src/store/repo";
 import { repoLoadingAtom, reposAtom } from "@src/store/repo";
 import {
+  CHAT_PANEL_SURFACE_KIND,
   WORKSPACE_OVERVIEW_TAB,
-  chatPanelSelectedWorkspaceAtom,
-  chatPanelWorkspaceDashboardOpenAtom,
-  chatPanelWorkspaceOverviewTabAtom,
+  chatPanelNavigateAtom,
 } from "@src/store/ui/chatPanelAtom";
 
 function repoDisplayName(repo: Repo): string {
@@ -19,11 +18,7 @@ function repoDisplayName(repo: Repo): string {
 export default function WorkspaceDashboardPanelView(): React.ReactElement {
   const repos = useAtomValue(reposAtom);
   const loading = useAtomValue(repoLoadingAtom);
-  const setSelectedWorkspace = useSetAtom(chatPanelSelectedWorkspaceAtom);
-  const setWorkspaceDashboardOpen = useSetAtom(
-    chatPanelWorkspaceDashboardOpenAtom
-  );
-  const setWorkspaceOverviewTab = useSetAtom(chatPanelWorkspaceOverviewTabAtom);
+  const navigateChatPanel = useSetAtom(chatPanelNavigateAtom);
   const [selectedDashboardRepoId, setSelectedDashboardRepoId] = useState<
     string | null
   >(null);
@@ -34,16 +29,18 @@ export default function WorkspaceDashboardPanelView(): React.ReactElement {
   // in the same chat-panel slot — there is no separate detail mode.
   const handleOpenRepoDetails = useCallback(
     (repo: Repo) => {
-      setSelectedWorkspace({
-        kind: "repo",
-        id: repo.id,
-        name: repoDisplayName(repo),
-        path: repo.path ?? undefined,
+      navigateChatPanel({
+        kind: CHAT_PANEL_SURFACE_KIND.WORKSPACE_OVERVIEW,
+        workspace: {
+          kind: "repo",
+          id: repo.id,
+          name: repoDisplayName(repo),
+          path: repo.path ?? undefined,
+        },
+        tab: WORKSPACE_OVERVIEW_TAB.DETAILS,
       });
-      setWorkspaceOverviewTab(WORKSPACE_OVERVIEW_TAB.DETAILS);
-      setWorkspaceDashboardOpen(false);
     },
-    [setSelectedWorkspace, setWorkspaceDashboardOpen, setWorkspaceOverviewTab]
+    [navigateChatPanel]
   );
 
   return (

@@ -71,8 +71,8 @@ export const WORK_STATION_ROUTES = {
     "list-todo",
     "Project and work item management"
   ),
-  kanban: route(
-    "/orgii/workstation/kanban",
+  opsControl: route(
+    "/orgii/workstation/ops-control",
     "Ops Control",
     "workStation",
     "workstation",

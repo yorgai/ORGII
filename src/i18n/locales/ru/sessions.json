@@ -72,14 +72,14 @@
       }
     }
   },
-  "kanban": {
+  "opsControl": {
     "sessions": "Session",
-    "replayBarAriaLabel": "Хронология воспроизведения Kanban",
-    "followLabel": "Текущий Kanban",
+    "replayBarAriaLabel": "Ops Control replay timeline",
+    "followLabel": "Current Ops Control",
     "view": {
-      "kanban": "Kanban",
       "list": "Список",
-      "diary": "Дневник"
+      "diary": "Дневник",
+      "opsControl": "Ops Control"
     },
     "list": {
       "updated": "Обновлено",

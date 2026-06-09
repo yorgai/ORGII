@@ -28,10 +28,10 @@ interface AppShellContentProps {
   isActive: boolean;
   chatPanelFocused: boolean;
   isAgentStation: boolean;
-  isKanbanStation: boolean;
+  isOpsControlStation: boolean;
   opsControlPeekHost: "code" | "browser" | "data" | "project" | null;
   hasVisitedAgentStation: boolean;
-  hasVisitedKanbanStation: boolean;
+  hasVisitedOpsControlStation: boolean;
   hasVisitedCode: boolean;
   hasVisitedData: boolean;
   hasVisitedBrowser: boolean;
@@ -66,10 +66,10 @@ export function AppShellContent({
   isActive,
   chatPanelFocused,
   isAgentStation,
-  isKanbanStation,
+  isOpsControlStation,
   opsControlPeekHost,
   hasVisitedAgentStation,
-  hasVisitedKanbanStation,
+  hasVisitedOpsControlStation,
   hasVisitedCode,
   hasVisitedData,
   hasVisitedBrowser,
@@ -152,12 +152,14 @@ export function AppShellContent({
         </div>
       )}
 
-      {(isKanbanStation || hasVisitedKanbanStation) && (
+      {(isOpsControlStation || hasVisitedOpsControlStation) && (
         <div
           className="h-full w-full"
           style={{
             display:
-              isKanbanStation && opsControlPeekHost === null ? "block" : "none",
+              isOpsControlStation && opsControlPeekHost === null
+                ? "block"
+                : "none",
           }}
         >
           <Suspense fallback={<AppShellLoadingPlaceholder />}>
@@ -170,7 +172,8 @@ export function AppShellContent({
         className="h-full w-full"
         style={{
           display:
-            isAgentStation || (isKanbanStation && opsControlPeekHost === null)
+            isAgentStation ||
+            (isOpsControlStation && opsControlPeekHost === null)
               ? "none"
               : "contents",
         }}

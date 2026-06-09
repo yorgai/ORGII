@@ -81,7 +81,7 @@ export interface ProjectsPageProps {
   /** Workstation tab id used to publish tab-bar trailing controls. */
   workStationTabId?: string;
   /** Host slot used by the global WorkstationTabHeader. */
-  workstationHeaderHost?: "project" | "kanban";
+  workstationHeaderHost?: "project" | "opsControl";
   /** Org hub surface pills shown after the breadcrumb (Overview / Projects / …). */
   orgSurfaceControls?: React.ReactNode;
 }

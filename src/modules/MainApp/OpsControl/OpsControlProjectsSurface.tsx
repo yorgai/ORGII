@@ -31,14 +31,9 @@ import {
 import ProjectStatusBar from "@src/modules/WorkStation/shared/StatusBar/ProjectStatusBar";
 import { projectListRefreshAtom } from "@src/store/project/projectAtom";
 import {
-  CHAT_PANEL_CONTENT_MODE,
-  CHAT_PANEL_CREATE_TARGET,
+  CHAT_PANEL_SURFACE_KIND,
   activeStationChatVisibleAtom,
-  chatPanelContentModeAtom,
-  chatPanelCreateProjectContextAtom,
-  chatPanelCreateTargetAtom,
-  chatPanelSelectedWorkItemAtom,
-  chatPanelStickyNotesOpenAtom,
+  chatPanelNavigateAtom,
 } from "@src/store/ui/chatPanelAtom";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import {
@@ -118,17 +113,7 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
 
       const setStationMode = useSetAtom(stationModeAtom);
       const setStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
-      const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
-      const setChatPanelCreateProjectContext = useSetAtom(
-        chatPanelCreateProjectContextAtom
-      );
-      const setChatPanelCreateTarget = useSetAtom(chatPanelCreateTargetAtom);
-      const setChatPanelSelectedWorkItem = useSetAtom(
-        chatPanelSelectedWorkItemAtom
-      );
-      const setChatPanelStickyNotesOpen = useSetAtom(
-        chatPanelStickyNotesOpenAtom
-      );
+      const navigateChatPanel = useSetAtom(chatPanelNavigateAtom);
 
       const selectedProjectId = view.kind === "project" ? view.projectId : null;
       const activeRepoView =
@@ -282,44 +267,29 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
       }, [view]);
 
       const handleCreateProject = useCallback(() => {
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateProjectContext({
-          orgId: activeProjectOrg?.orgId ?? STORY_PERSONAL_ORG_FILTER_ID,
-          scopeBreadcrumbLabel:
-            activeProjectOrg?.orgName ?? t("orgs.personalOrg"),
+        navigateChatPanel({
+          kind: CHAT_PANEL_SURFACE_KIND.NEW_PROJECT,
+          createProjectContext: {
+            orgId: activeProjectOrg?.orgId ?? STORY_PERSONAL_ORG_FILTER_ID,
+            scopeBreadcrumbLabel:
+              activeProjectOrg?.orgName ?? t("orgs.personalOrg"),
+          },
         });
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.PROJECT);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
         setStationMode("my-station");
         setStationChatVisible("my-station", true);
       }, [
         activeProjectOrg,
-        setChatPanelContentMode,
-        setChatPanelCreateProjectContext,
-        setChatPanelCreateTarget,
-        setChatPanelSelectedWorkItem,
-        setChatPanelStickyNotesOpen,
+        navigateChatPanel,
         setStationChatVisible,
         setStationMode,
         t,
       ]);
 
       const handleCreateWorkItem = useCallback(() => {
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.NEW_WORK_ITEM });
         setStationMode("my-station");
         setStationChatVisible("my-station", true);
-      }, [
-        setChatPanelContentMode,
-        setChatPanelCreateTarget,
-        setChatPanelSelectedWorkItem,
-        setChatPanelStickyNotesOpen,
-        setStationChatVisible,
-        setStationMode,
-      ]);
+      }, [navigateChatPanel, setStationChatVisible, setStationMode]);
 
       const handleOrgCreated = useCallback(
         (org: ProjectOrg) => {
@@ -429,7 +399,7 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
               cachedProjectSlug={selectedProjectSlug ?? view.projectSlug}
               isActive
               workStationTabId="ops-control-projects"
-              workstationHeaderHost="kanban"
+              workstationHeaderHost="opsControl"
               onProjectSlugResolved={setSelectedProjectSlug}
               onOpenProjects={handleOpenProjects}
               onCreateProject={handleCreateProject}
@@ -451,14 +421,14 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
                 allowExternalSources={activeOrgScope === STORY_ORG_SCOPE.ALL}
                 publishToWorkstationHeader
                 workStationTabId="ops-control-projects"
-                workstationHeaderHost="kanban"
+                workstationHeaderHost="opsControl"
               />
             );
           case "work-items":
             return (
               <ProjectWorkItemsTabContent
                 workStationTabId="ops-control-projects"
-                workstationHeaderHost="kanban"
+                workstationHeaderHost="opsControl"
                 orgId={scopedOrgId}
                 onCreateProject={handleCreateProject}
                 onCreateWorkItem={handleCreateWorkItem}
@@ -483,7 +453,7 @@ const OpsControlProjectsSurface: React.FC<OpsControlProjectsSurfaceProps> =
                 teamId={view.linearSelection?.teamId}
                 teamName={view.linearSelection?.teamName}
                 workStationTabId="ops-control-projects"
-                workstationHeaderHost="kanban"
+                workstationHeaderHost="opsControl"
                 isActive
                 onOpenLinearProject={(selection) => {
                   if (view.view === "linear-work-items") {

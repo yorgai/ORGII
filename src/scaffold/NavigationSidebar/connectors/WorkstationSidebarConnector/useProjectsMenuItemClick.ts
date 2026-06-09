@@ -3,14 +3,10 @@ import { useCallback } from "react";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import { SESSION_SIDEBAR_PAGE_SIZE } from "@src/store/session";
 import {
-  CHAT_PANEL_CONTENT_MODE,
-  CHAT_PANEL_CREATE_TARGET,
-  type ChatPanelContentMode,
-  type ChatPanelCreateProjectContext,
-  type ChatPanelCreateTarget,
+  CHAT_PANEL_SURFACE_KIND,
+  type ChatPanelNavigateCommand,
   type ChatPanelSelectedProject,
   type ChatPanelSelectedWorkItem,
-  type ChatPanelSelectedWorkspace,
 } from "@src/store/ui/chatPanelAtom";
 
 import {
@@ -25,24 +21,16 @@ import {
   getProjectsWorkItemId,
 } from "../useProjectsWorkItemMenuItems";
 
-type NullableSetter<T> = (value: T | null) => void;
-
 interface UseProjectsMenuItemClickParams<Project, WorkItem, LinearWorkItem> {
   activateMyStationRouteForProjectsContent: () => void;
   getProjectsLoadMoreGroupId: (id: string) => string | null;
   loadProjectsLinearOrgWorkItems: (orgId: string) => void;
+  navigateChatPanel: (command: ChatPanelNavigateCommand) => void;
   openProjectsLinearWorkItem: (workItem: LinearWorkItem) => void;
   projectsLinearWorkItemMap: ReadonlyMap<string, LinearWorkItem>;
   projectsProjectMap: ReadonlyMap<string, Project>;
   projectsWorkItemMap: ReadonlyMap<string, WorkItem>;
   resetOpsControlStateForProjectsContent: () => void;
-  setChatPanelContentMode: (mode: ChatPanelContentMode) => void;
-  setChatPanelCreateProjectContext: NullableSetter<ChatPanelCreateProjectContext>;
-  setChatPanelCreateTarget: (target: ChatPanelCreateTarget) => void;
-  setChatPanelSelectedProject: NullableSetter<ChatPanelSelectedProject>;
-  setChatPanelSelectedWorkItem: NullableSetter<ChatPanelSelectedWorkItem>;
-  setChatPanelSelectedWorkspace: NullableSetter<ChatPanelSelectedWorkspace>;
-  setChatPanelStickyNotesOpen: (open: boolean) => void;
   setProjectsGroupVisibleCounts: React.Dispatch<
     React.SetStateAction<Map<string, number>>
   >;
@@ -55,18 +43,12 @@ export function useProjectsMenuItemClick<Project, WorkItem, LinearWorkItem>({
   activateMyStationRouteForProjectsContent,
   getProjectsLoadMoreGroupId,
   loadProjectsLinearOrgWorkItems,
+  navigateChatPanel,
   openProjectsLinearWorkItem,
   projectsLinearWorkItemMap,
   projectsProjectMap,
   projectsWorkItemMap,
   resetOpsControlStateForProjectsContent,
-  setChatPanelContentMode,
-  setChatPanelCreateProjectContext,
-  setChatPanelCreateTarget,
-  setChatPanelSelectedProject,
-  setChatPanelSelectedWorkItem,
-  setChatPanelSelectedWorkspace,
-  setChatPanelStickyNotesOpen,
   setProjectsGroupVisibleCounts,
   setProjectsSelectedMenuItemId,
   toChatPanelProject,
@@ -80,25 +62,14 @@ export function useProjectsMenuItemClick<Project, WorkItem, LinearWorkItem>({
       if (item.id === PROJECTS_NEW_PROJECT_MENU_ITEM_ID) {
         resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId(PROJECTS_NEW_PROJECT_MENU_ITEM_ID);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateProjectContext(null);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.PROJECT);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.NEW_PROJECT });
         return;
       }
 
       if (item.id === PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID) {
         resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId(PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.NEW_WORK_ITEM });
         return;
       }
 
@@ -106,12 +77,7 @@ export function useProjectsMenuItemClick<Project, WorkItem, LinearWorkItem>({
       if (createWorkItemOrgId) {
         resetOpsControlStateForProjectsContent();
         setProjectsSelectedMenuItemId(item.id);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.WORK_ITEM);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.NEW_WORK_ITEM });
         return;
       }
 
@@ -139,12 +105,10 @@ export function useProjectsMenuItemClick<Project, WorkItem, LinearWorkItem>({
         if (!project) return;
         activateMyStationRouteForProjectsContent();
         setProjectsSelectedMenuItemId(item.id);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(toChatPanelProject(project));
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        navigateChatPanel({
+          kind: CHAT_PANEL_SURFACE_KIND.PROJECT,
+          project: toChatPanelProject(project),
+        });
         return;
       }
 
@@ -153,10 +117,7 @@ export function useProjectsMenuItemClick<Project, WorkItem, LinearWorkItem>({
         const linearWorkItem = projectsLinearWorkItemMap.get(linearWorkItemId);
         if (!linearWorkItem) return;
         setProjectsSelectedMenuItemId(item.id);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
+        navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.SESSION });
         openProjectsLinearWorkItem(linearWorkItem);
         return;
       }
@@ -168,29 +129,21 @@ export function useProjectsMenuItemClick<Project, WorkItem, LinearWorkItem>({
       const chatPanelWorkItem = toChatPanelWorkItem(workItem);
       activateMyStationRouteForProjectsContent();
       setProjectsSelectedMenuItemId(item.id);
-      setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-      setChatPanelSelectedProject(null);
-      setChatPanelSelectedWorkspace(null);
-      setChatPanelSelectedWorkItem(chatPanelWorkItem);
-      setChatPanelStickyNotesOpen(false);
-      setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+      navigateChatPanel({
+        kind: CHAT_PANEL_SURFACE_KIND.WORK_ITEM,
+        workItem: chatPanelWorkItem,
+      });
     },
     [
       activateMyStationRouteForProjectsContent,
       getProjectsLoadMoreGroupId,
       loadProjectsLinearOrgWorkItems,
+      navigateChatPanel,
       openProjectsLinearWorkItem,
       projectsLinearWorkItemMap,
       projectsProjectMap,
       projectsWorkItemMap,
       resetOpsControlStateForProjectsContent,
-      setChatPanelContentMode,
-      setChatPanelCreateProjectContext,
-      setChatPanelCreateTarget,
-      setChatPanelSelectedProject,
-      setChatPanelSelectedWorkspace,
-      setChatPanelSelectedWorkItem,
-      setChatPanelStickyNotesOpen,
       setProjectsGroupVisibleCounts,
       setProjectsSelectedMenuItemId,
       toChatPanelProject,

@@ -32,8 +32,8 @@ export function getWorkStationStationTitleCenter(
       return { icon: Package2, label: t("labels.session") };
     case "project":
       return { icon: ListTodo, label: t("labels.projectManager") };
-    case "kanban":
-      return { icon: Radar, label: t("routes.kanban") };
+    case "opsControl":
+      return { icon: Radar, label: t("routes.opsControl") };
     case "other":
       return { icon: MonitorDot, label: t("labels.other") };
     default:

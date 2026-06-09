@@ -22,7 +22,6 @@ import {
   OPS_CONTROL_SESSION_PREVIEW_SURFACE_CLASS,
 } from "@src/config/opsControlCardTokens";
 import type { KanbanTask, TaskStatus } from "@src/features/KanbanBoard";
-import { agentKanbanCreatorVisibleAtom } from "@src/store/ui/agentKanbanCreatorAtom";
 import { kanbanReplayModeAtom } from "@src/store/ui/kanbanReplayAtom";
 import {
   kanbanAgentTypeFilterAtom,
@@ -33,6 +32,7 @@ import {
   kanbanSidebarFilterAtom,
   kanbanTimeFilterAtom,
 } from "@src/store/ui/kanbanViewStateAtom";
+import { opsControlCreatorVisibleAtom } from "@src/store/ui/opsControlCreatorAtom";
 import { openWorktreeCompareWindow } from "@src/util/ui/window/windowManager";
 
 import { parseFactoryViewMode } from "./components/FactoryViewPill";
@@ -109,7 +109,7 @@ const Kanban: React.FC<TaskKanbanProps> = ({
     kanbanManualFinishedSessionIdsAtom
   );
   const [creatorVisible, setCreatorVisible] = useAtom(
-    agentKanbanCreatorVisibleAtom
+    opsControlCreatorVisibleAtom
   );
   const kanbanReplayMode = useAtomValue(kanbanReplayModeAtom);
 

@@ -38,14 +38,14 @@
     "folders": "Folders",
     "inbox": "Inbox",
     "issues": "Work Items",
-    "agentKanban": "Ops Control",
     "history": "History",
     "controlTower": "Control Tower",
     "backgroundTasks": "Background Tasks",
     "project": "Project",
     "projects": "Projects",
     "projectManager": "Project Manager",
-    "diff": "Diff"
+    "diff": "Diff",
+    "opsControl": "Ops Control"
   },
   "workstation": {
     "dockFilter": {
@@ -86,7 +86,6 @@
     "session": "Chat",
     "startSession": "Start session",
     "sessions": "Sessions",
-    "kanban": "Ops Control",
     "selectProject": "Select Project",
     "startPage": "Start Page",
     "inbox": "Inbox",
@@ -110,7 +109,8 @@
     "signingIn": "Signing in...",
     "launchpad": "Launchpad",
     "ideaArea": "Idea Area",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "opsControl": "Ops Control"
   },
   "appGrid": {
     "customizeGrid": "Customize Grid",

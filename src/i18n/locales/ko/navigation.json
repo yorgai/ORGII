@@ -38,14 +38,14 @@
     "folders": "폴더",
     "inbox": "받은 편지함",
     "issues": "작업 항목",
-    "agentKanban": "Ops Control",
     "history": "기록",
     "controlTower": "Control Tower",
     "backgroundTasks": "백그라운드 작업",
     "project": "프로젝트",
     "projects": "Projects",
     "projectManager": "Project 관리자",
-    "diff": "Diff"
+    "diff": "Diff",
+    "opsControl": "Ops Control"
   },
   "trajectoryPanel": {
     "title": "트래젝터리",
@@ -58,7 +58,6 @@
     "session": "채팅",
     "startSession": "세션 시작",
     "sessions": "Session 목록",
-    "kanban": "Ops Control",
     "selectProject": "Project 선택",
     "startPage": "시작 페이지",
     "inbox": "받은 편지함",
@@ -82,7 +81,8 @@
     "signingIn": "로그인 중...",
     "launchpad": "Launchpad",
     "ideaArea": "아이디어 공간",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "opsControl": "Ops Control"
   },
   "appGrid": {
     "customizeGrid": "그리드 사용자 지정",

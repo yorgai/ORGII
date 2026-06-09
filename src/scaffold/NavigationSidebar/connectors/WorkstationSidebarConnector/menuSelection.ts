@@ -32,9 +32,9 @@ interface ResolveSelectedMenuItemIdParams {
   chatPanelSelectedWorkItem: ChatPanelSelectedWorkItem | null;
   chatPanelSelectedWorkspace: ChatPanelSelectedWorkspace | null;
   chatPanelStickyNotesOpen: boolean;
-  foldersDashboardSelected: boolean;
-  foldersExploreSelected: boolean;
-  kanbanRoutePath: string;
+  chatPanelWorkspaceDashboardOpen: boolean;
+  chatPanelExploreOpen: boolean;
+  opsControlRoutePath: string;
   pathname: string;
   projectsSelectedMenuItemId: string;
   sessionCreatorDrafts: readonly SessionCreatorDraft[];
@@ -55,9 +55,9 @@ export function resolveSelectedMenuItemIds({
   chatPanelSelectedWorkItem,
   chatPanelSelectedWorkspace,
   chatPanelStickyNotesOpen,
-  foldersDashboardSelected,
-  foldersExploreSelected,
-  kanbanRoutePath,
+  chatPanelWorkspaceDashboardOpen,
+  chatPanelExploreOpen,
+  opsControlRoutePath,
   pathname,
   projectsSelectedMenuItemId,
   sessionCreatorDrafts,
@@ -68,7 +68,7 @@ export function resolveSelectedMenuItemIds({
   );
   const selectedPinnedMenuItemId = getSelectedPinnedMenuItemId(
     pathname,
-    kanbanRoutePath
+    opsControlRoutePath
   );
   const isChatPanelProjectsContentSelected =
     chatPanelContentMode === CHAT_PANEL_CONTENT_MODE.NON_SESSION ||
@@ -94,9 +94,9 @@ export function resolveSelectedMenuItemIds({
       : "";
   const foldersSelectedMenuItemId = chatPanelSelectedWorkspace
     ? getFolderItemId(chatPanelSelectedWorkspace)
-    : foldersExploreSelected
+    : chatPanelExploreOpen
       ? FOLDERS_EXPLORE_ITEM_ID
-      : foldersDashboardSelected
+      : chatPanelWorkspaceDashboardOpen
         ? FOLDERS_DASHBOARD_ITEM_ID
         : "";
   const selectedMenuItemId =

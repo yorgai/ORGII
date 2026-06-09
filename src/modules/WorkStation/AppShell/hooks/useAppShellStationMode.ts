@@ -16,7 +16,7 @@ import {
 interface AppShellStationModeState {
   stationMode: StationMode;
   isAgentStation: boolean;
-  isKanbanStation: boolean;
+  isOpsControlStation: boolean;
   opsControlPeekHost: "code" | "browser" | "data" | "project" | null;
   hasVisitedAgentStation: boolean;
   illuminateAgentStationChrome: boolean;
@@ -34,7 +34,7 @@ export function useAppShellStationMode({
   const setOpsControlPeekHost = useSetAtom(opsControlPeekHostAtom);
   const setOpsControlFocusedTab = useSetAtom(opsControlFocusedTabAtom);
   const isAgentStation = stationMode === "agent-station";
-  const isKanbanStation = stationMode === "ops-control";
+  const isOpsControlStation = stationMode === "ops-control";
   const replayMode = useAtomValue(replayModeAtom);
   const sessionPlaybackPlaying = useAtomValue(
     simulatorSessionPlaybackPlayingAtom
@@ -46,7 +46,7 @@ export function useAppShellStationMode({
   }, [stationMode]);
 
   useEffect(() => {
-    if (appMode === "kanban") {
+    if (appMode === "opsControl") {
       if (stationModeRef.current !== "ops-control") {
         setStationMode("ops-control");
       }
@@ -58,11 +58,11 @@ export function useAppShellStationMode({
   }, [appMode, setStationMode]);
 
   useEffect(() => {
-    if (isKanbanStation || opsControlPeekHost === null) return;
+    if (isOpsControlStation || opsControlPeekHost === null) return;
     setOpsControlPeekHost(null);
     setOpsControlFocusedTab(null);
   }, [
-    isKanbanStation,
+    isOpsControlStation,
     opsControlPeekHost,
     setOpsControlFocusedTab,
     setOpsControlPeekHost,
@@ -89,7 +89,7 @@ export function useAppShellStationMode({
   return {
     stationMode,
     isAgentStation,
-    isKanbanStation,
+    isOpsControlStation,
     opsControlPeekHost,
     hasVisitedAgentStation,
     illuminateAgentStationChrome,

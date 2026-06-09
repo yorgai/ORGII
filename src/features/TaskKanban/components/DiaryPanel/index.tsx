@@ -71,12 +71,12 @@ function getEventIcon(kind: DiaryEventKind): React.ReactNode {
 function getEventLabelKey(kind: DiaryEventKind): string {
   switch (kind) {
     case DIARY_EVENT_KIND.Completed:
-      return "kanban.diary.event.completed";
+      return "opsControl.diary.event.completed";
     case DIARY_EVENT_KIND.StillWorking:
-      return "kanban.diary.event.stillWorking";
+      return "opsControl.diary.event.stillWorking";
     case DIARY_EVENT_KIND.Started:
     default:
-      return "kanban.diary.event.started";
+      return "opsControl.diary.event.started";
   }
 }
 
@@ -123,8 +123,8 @@ const DiaryPanel: React.FC<DiaryPanelProps> = ({
         <Placeholder
           variant="empty"
           placement="sidebar"
-          title={t("kanban.diary.emptyTitle")}
-          subtitle={t("kanban.diary.emptySubtitle")}
+          title={t("opsControl.diary.emptyTitle")}
+          subtitle={t("opsControl.diary.emptySubtitle")}
         />
       </aside>
     );

@@ -49,10 +49,10 @@ export const SessionTable: React.FC<SessionTableProps> = ({
         >
           <div>{t("common:labels.name")}</div>
           <div>{t("common:labels.status")}</div>
-          <div>{t("sessions:kanban.list.agentModel")}</div>
+          <div>{t("sessions:opsControl.list.agentModel")}</div>
           <div>{t("common:selectors.shared.workspace")}</div>
-          <div>{t("sessions:kanban.list.started")}</div>
-          <div>{t("sessions:kanban.list.lastUpdated")}</div>
+          <div>{t("sessions:opsControl.list.started")}</div>
+          <div>{t("sessions:opsControl.list.lastUpdated")}</div>
         </div>
 
         <div>

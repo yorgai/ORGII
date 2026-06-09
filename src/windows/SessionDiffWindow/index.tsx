@@ -153,9 +153,9 @@ const SessionDiffWindow: React.FC<SessionDiffWindowProps> = ({
   const handleDiscard = useCallback(async () => {
     if (discarding) return;
     const { ask } = await import("@tauri-apps/plugin-dialog");
-    const confirmed = await ask(t("kanban.discard.confirmMessage"), {
+    const confirmed = await ask(t("opsControl.discard.confirmMessage"), {
       kind: "warning",
-      okLabel: t("kanban.discard.discard"),
+      okLabel: t("opsControl.discard.discard"),
       cancelLabel: t("common:actions.cancel"),
     });
     if (!confirmed) return;
@@ -174,7 +174,7 @@ const SessionDiffWindow: React.FC<SessionDiffWindowProps> = ({
       {/* Header */}
       <div className="flex flex-shrink-0 items-center gap-2 border-b border-border-2 px-4 py-2">
         <span className="text-[13px] font-medium text-text-1">
-          {title ?? t("kanban.diff.windowTitle")}
+          {title ?? t("opsControl.diff.windowTitle")}
         </span>
         <span className="truncate text-[11px] text-text-3">{sessionId}</span>
         {files.length > 0 && (
@@ -189,7 +189,7 @@ const SessionDiffWindow: React.FC<SessionDiffWindowProps> = ({
             {mergeStatus === "merged" ? (
               <span className="flex items-center gap-1 text-[12px] text-green-400">
                 <Check size={13} strokeWidth={2} />
-                {t("kanban.merge.merged")}
+                {t("opsControl.merge.merged")}
               </span>
             ) : (
               <Button
@@ -200,8 +200,8 @@ const SessionDiffWindow: React.FC<SessionDiffWindowProps> = ({
                 disabled={mergeStatus === "merging"}
               >
                 {mergeStatus === "merging"
-                  ? t("kanban.merge.merging")
-                  : t("kanban.merge.merge")}
+                  ? t("opsControl.merge.merging")
+                  : t("opsControl.merge.merge")}
               </Button>
             )}
             <Button
@@ -213,8 +213,8 @@ const SessionDiffWindow: React.FC<SessionDiffWindowProps> = ({
               disabled={discarding || mergeStatus === "merged"}
             >
               {discarding
-                ? t("kanban.discard.discarding")
-                : t("kanban.discard.discard")}
+                ? t("opsControl.discard.discarding")
+                : t("opsControl.discard.discard")}
             </Button>
           </div>
         )}
@@ -234,7 +234,7 @@ const SessionDiffWindow: React.FC<SessionDiffWindowProps> = ({
           <Placeholder
             variant="error"
             placement="detail-panel"
-            title={t("kanban.merge.failedToLoadDiff")}
+            title={t("opsControl.merge.failedToLoadDiff")}
             subtitle={error}
           />
         </div>
@@ -245,7 +245,7 @@ const SessionDiffWindow: React.FC<SessionDiffWindowProps> = ({
           <Placeholder
             variant="empty"
             placement="detail-panel"
-            title={t("kanban.merge.noChanges")}
+            title={t("opsControl.merge.noChanges")}
           />
         </div>
       )}
@@ -255,7 +255,7 @@ const SessionDiffWindow: React.FC<SessionDiffWindowProps> = ({
           {/* File tree sidebar */}
           <div className="scrollbar-overlay flex w-[220px] flex-shrink-0 flex-col overflow-y-auto border-r border-border-2">
             <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-text-3">
-              {t("kanban.diff.filesChanged")}
+              {t("opsControl.diff.filesChanged")}
             </div>
             {files.map((file, idx) => {
               const isSelected = idx === selectedFileIdx;

@@ -38,14 +38,14 @@
     "folders": "Папки",
     "inbox": "Входящие",
     "issues": "Рабочие элементы",
-    "agentKanban": "Ops Control",
     "history": "История",
     "controlTower": "Control Tower",
     "backgroundTasks": "Фоновые задачи",
     "project": "Проект",
     "projects": "Projects",
     "projectManager": "Project Manager",
-    "diff": "Diff"
+    "diff": "Diff",
+    "opsControl": "Ops Control"
   },
   "trajectoryPanel": {
     "title": "Траектория",
@@ -58,7 +58,6 @@
     "session": "Чат",
     "startSession": "Начать сессию",
     "sessions": "Session",
-    "kanban": "Ops Control",
     "selectProject": "Выбрать Project",
     "startPage": "Главная страница",
     "inbox": "Входящие",
@@ -82,7 +81,8 @@
     "signingIn": "Выполняется вход...",
     "launchpad": "Launchpad",
     "ideaArea": "Пространство идей",
-    "changelog": "Журнал изменений"
+    "changelog": "Журнал изменений",
+    "opsControl": "Ops Control"
   },
   "appGrid": {
     "customizeGrid": "Настроить сетку",

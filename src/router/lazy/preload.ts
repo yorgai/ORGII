@@ -45,7 +45,7 @@ const APP_ROUTE_LOADERS: Record<string, RouteLoader | RouteLoader[]> = {
 };
 
 const WORKSTATION_ROUTE_LOADERS: Record<string, RouteLoader | RouteLoader[]> = {
-  kanban: loadOpsControl,
+  "ops-control": loadOpsControl,
 };
 
 function runLoaders(loader: RouteLoader | RouteLoader[]): void {

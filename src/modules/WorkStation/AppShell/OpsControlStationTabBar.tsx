@@ -1,9 +1,9 @@
 /**
- * KanbanStationTabBar
+ * OpsControlStationTabBar
  *
- * Tab bar for the Ops Control / Kanban view. Owns four pinned tabs:
- * Kanban, Projects, Terminal, and Source Control. The first two switch
- * the ops-control home tab; the latter two open in the code peek-host.
+ * Tab bar for Ops Control. Owns four pinned tabs: Ops Control, Projects,
+ * Terminal, and Source Control. The first two switch the ops-control home tab;
+ * the latter two open in the code peek-host.
  */
 import { useAtomValue, useSetAtom } from "jotai";
 import { memo, useCallback, useMemo } from "react";
@@ -25,7 +25,7 @@ import {
 } from "@src/store/workstation";
 import type { WorkStationTab } from "@src/store/workstation/tabs";
 
-export const KanbanStationTabBar: React.FC = memo(() => {
+export const OpsControlStationTabBar: React.FC = memo(() => {
   const { t } = useTranslation(["navigation", "common", "sessions"]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -37,11 +37,11 @@ export const KanbanStationTabBar: React.FC = memo(() => {
   const setOpsControlFocusedTab = useSetAtom(opsControlFocusedTabAtom);
   const setOpsControlHomeTab = useSetAtom(opsControlHomeTabAtom);
 
-  const kanbanTab = useMemo<WorkStationTab>(
+  const opsControlTab = useMemo<WorkStationTab>(
     () => ({
-      id: "ops-control-kanban",
-      type: "kanban-station",
-      title: t("sessions:kanban.view.kanban"),
+      id: "ops-control-home",
+      type: "ops-control-station",
+      title: t("sessions:opsControl.view.opsControl"),
       icon: "Radar",
       data: {},
       closable: false,
@@ -81,8 +81,8 @@ export const KanbanStationTabBar: React.FC = memo(() => {
   );
 
   const tabs = useMemo<WorkStationTab[]>(
-    () => [kanbanTab, projectsTab, terminalTab, sourceControlTab],
-    [kanbanTab, sourceControlTab, projectsTab, terminalTab]
+    () => [opsControlTab, projectsTab, terminalTab, sourceControlTab],
+    [opsControlTab, sourceControlTab, projectsTab, terminalTab]
   );
 
   const activeTabId = useMemo(() => {
@@ -92,11 +92,11 @@ export const KanbanStationTabBar: React.FC = memo(() => {
         return sourceControlTab.id;
       }
     }
-    return opsControlHomeTab === OPS_CONTROL_HOME_TAB.STORIES
+    return opsControlHomeTab === OPS_CONTROL_HOME_TAB.PROJECTS
       ? projectsTab.id
-      : kanbanTab.id;
+      : opsControlTab.id;
   }, [
-    kanbanTab.id,
+    opsControlTab.id,
     opsControlFocusedTab,
     opsControlHomeTab,
     opsControlPeekHost,
@@ -138,12 +138,12 @@ export const KanbanStationTabBar: React.FC = memo(() => {
 
   const handleTabClick = useCallback(
     (tabId: string) => {
-      if (tabId === kanbanTab.id) {
-        setOpsControlView(OPS_CONTROL_HOME_TAB.KANBAN);
+      if (tabId === opsControlTab.id) {
+        setOpsControlView(OPS_CONTROL_HOME_TAB.OPS_CONTROL);
         return;
       }
       if (tabId === projectsTab.id) {
-        setOpsControlView(OPS_CONTROL_HOME_TAB.STORIES);
+        setOpsControlView(OPS_CONTROL_HOME_TAB.PROJECTS);
         return;
       }
       if (tabId === terminalTab.id) {
@@ -155,7 +155,7 @@ export const KanbanStationTabBar: React.FC = memo(() => {
       }
     },
     [
-      kanbanTab.id,
+      opsControlTab.id,
       openPinnedCodeTab,
       setOpsControlView,
       sourceControlTab,
@@ -168,7 +168,7 @@ export const KanbanStationTabBar: React.FC = memo(() => {
 
   return (
     <TabBar
-      paneId="workstation-kanban"
+      paneId="workstation-ops-control"
       tabs={tabs}
       activeTabId={activeTabId}
       onTabClick={handleTabClick}
@@ -179,4 +179,4 @@ export const KanbanStationTabBar: React.FC = memo(() => {
   );
 });
 
-KanbanStationTabBar.displayName = "KanbanStationTabBar";
+OpsControlStationTabBar.displayName = "OpsControlStationTabBar";

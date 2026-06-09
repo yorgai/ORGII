@@ -170,7 +170,7 @@ const appGoToChangelog = defineRouteNavigationAction(
 const appGoToOpsControl = defineRouteNavigationAction(
   ACTION_ID.APP_GO_TO_OPS_CONTROL,
   "Open Ops Control",
-  ROUTES.workStation.kanban.path,
+  ROUTES.workStation.opsControl.path,
   "Opened Ops Control",
   ["open ops control", "open kanban"]
 );

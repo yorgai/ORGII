@@ -492,7 +492,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       <activeColumn.icon size={16} />
                     </div>
                     <div className="kanban-column__title">
-                      {t(`sessions:kanban.boardColumns.${activeColumn.id}`)}
+                      {t(`sessions:opsControl.boardColumns.${activeColumn.id}`)}
                     </div>
                   </div>
                 </div>

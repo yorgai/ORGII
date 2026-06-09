@@ -72,14 +72,14 @@
       }
     }
   },
-  "kanban": {
+  "opsControl": {
     "sessions": "Session",
-    "replayBarAriaLabel": "Kanban 回放时间线",
-    "followLabel": "当前 Kanban",
+    "replayBarAriaLabel": "Ops Control replay timeline",
+    "followLabel": "Current Ops Control",
     "view": {
-      "kanban": "看板",
       "list": "列表",
-      "diary": "日志"
+      "diary": "日志",
+      "opsControl": "Ops Control"
     },
     "list": {
       "updated": "已更新",

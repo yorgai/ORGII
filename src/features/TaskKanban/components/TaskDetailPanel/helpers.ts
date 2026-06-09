@@ -24,11 +24,11 @@ export function getMergeStrategyLabel(
 ): string {
   switch (strategy) {
     case "auto":
-      return t("kanban.merge.strategyAuto");
+      return t("opsControl.merge.strategyAuto");
     case "ff":
-      return t("kanban.merge.strategyFf");
+      return t("opsControl.merge.strategyFf");
     case "leave":
-      return t("kanban.merge.strategyLeave");
+      return t("opsControl.merge.strategyLeave");
   }
 }
 
@@ -37,10 +37,10 @@ export function getMergeFailureMessage(
   t: TFunction<"sessions">
 ): string {
   return result.conflicts.length > 0
-    ? t("kanban.merge.conflictsIn", {
+    ? t("opsControl.merge.conflictsIn", {
         files: result.conflicts.join(", "),
       })
-    : (result.error ?? t("kanban.merge.failed"));
+    : (result.error ?? t("opsControl.merge.failed"));
 }
 
 export function isDirtyRepoMergeError(message: string): boolean {
@@ -54,7 +54,7 @@ export function isDirtyRepoMergeError(message: string): boolean {
 export function buildDiscardConfirmationMessage(
   t: TFunction<"sessions">
 ): string {
-  return `${t("kanban.merge.discardConfirmTitle")}\n\n${t(
-    "kanban.merge.discardConfirmMessage"
+  return `${t("opsControl.merge.discardConfirmTitle")}\n\n${t(
+    "opsControl.merge.discardConfirmMessage"
   )}`;
 }

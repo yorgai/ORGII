@@ -38,14 +38,14 @@
     "folders": "フォルダー",
     "inbox": "受信トレイ",
     "issues": "ワークアイテム",
-    "agentKanban": "Ops Control",
     "history": "履歴",
     "controlTower": "Control Tower",
     "backgroundTasks": "バックグラウンドタスク",
     "project": "プロジェクト",
     "projects": "Projects",
     "projectManager": "Project マネージャー",
-    "diff": "Diff"
+    "diff": "Diff",
+    "opsControl": "Ops Control"
   },
   "trajectoryPanel": {
     "title": "トラジェクトリ",
@@ -58,7 +58,6 @@
     "session": "チャット",
     "startSession": "セッションを開始",
     "sessions": "Session一覧",
-    "kanban": "Ops Control",
     "selectProject": "Projectを選択",
     "startPage": "スタートページ",
     "inbox": "受信トレイ",
@@ -82,7 +81,8 @@
     "signingIn": "サインイン中...",
     "launchpad": "Launchpad",
     "ideaArea": "アイデアエリア",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "opsControl": "Ops Control"
   },
   "appGrid": {
     "customizeGrid": "グリッドのカスタマイズ",

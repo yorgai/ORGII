@@ -23,13 +23,8 @@ import {
   upsertSession,
 } from "@src/store/session";
 import {
-  CHAT_PANEL_CONTENT_MODE,
-  chatPanelContentModeAtom,
-  chatPanelExploreOpenAtom,
-  chatPanelSelectedWorkItemAtom,
-  chatPanelSelectedWorkspaceAtom,
-  chatPanelStickyNotesOpenAtom,
-  chatPanelWorkspaceDashboardOpenAtom,
+  CHAT_PANEL_SURFACE_KIND,
+  chatPanelNavigateAtom,
 } from "@src/store/ui/chatPanelAtom";
 import { invokeTauri } from "@src/util/platform/tauri/init";
 import { isCliSession } from "@src/util/session/sessionDispatch";
@@ -81,7 +76,7 @@ export function useWorkstationSidebarHandlers({
   setGroupVisibleCounts,
   tCommon,
 }: UseWorkstationSidebarHandlersParams): UseWorkstationSidebarHandlersResult {
-  const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
+  const navigateChatPanel = useSetAtom(chatPanelNavigateAtom);
   const setBenchmarkAgentBatchStatus = useSetAtom(
     benchmarkAgentBatchStatusAtom
   );
@@ -89,18 +84,6 @@ export function useWorkstationSidebarHandlers({
   const setBenchmarkActiveBatchTaskId = useSetAtom(
     benchmarkActiveBatchTaskIdAtom
   );
-  const setChatPanelWorkspaceDashboardOpen = useSetAtom(
-    chatPanelWorkspaceDashboardOpenAtom
-  );
-  const setChatPanelExploreOpen = useSetAtom(chatPanelExploreOpenAtom);
-  const setChatPanelSelectedWorkItem = useSetAtom(
-    chatPanelSelectedWorkItemAtom
-  );
-  const setChatPanelSelectedWorkspace = useSetAtom(
-    chatPanelSelectedWorkspaceAtom
-  );
-  const setChatPanelStickyNotesOpen = useSetAtom(chatPanelStickyNotesOpenAtom);
-
   const handleDeleteSession = useCallback(
     async (sessionId: string) => {
       try {
@@ -198,14 +181,9 @@ export function useWorkstationSidebarHandlers({
       );
 
       if (isBenchmarkCoordinatorSession(originalSession)) {
-        setChatPanelContentMode(
-          CHAT_PANEL_CONTENT_MODE.BENCHMARK_SESSION_GROUP
-        );
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelWorkspaceDashboardOpen(false);
-        setChatPanelExploreOpen(false);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
+        navigateChatPanel({
+          kind: CHAT_PANEL_SURFACE_KIND.BENCHMARK_SESSION_GROUP,
+        });
         promoteActiveSessionCreatorDraft();
         void benchmarkApi
           .listAgentBatchHistories({ limit: 100 })
@@ -219,18 +197,10 @@ export function useWorkstationSidebarHandlers({
             setBenchmarkActiveBatchTaskId(null);
           });
         openSession(item.id, sessionName, originalSession.repoPath);
-        setChatPanelContentMode(
-          CHAT_PANEL_CONTENT_MODE.BENCHMARK_SESSION_GROUP
-        );
         return;
       }
 
-      setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
-      setChatPanelSelectedWorkItem(null);
-      setChatPanelWorkspaceDashboardOpen(false);
-      setChatPanelExploreOpen(false);
-      setChatPanelSelectedWorkspace(null);
-      setChatPanelStickyNotesOpen(false);
+      navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.SESSION });
       promoteActiveSessionCreatorDraft();
       openSession(item.id, sessionName, originalSession.repoPath);
     },
@@ -240,6 +210,7 @@ export function useWorkstationSidebarHandlers({
       sessionMap,
       openSession,
       goToNewSession,
+      navigateChatPanel,
       navigateTo,
       promoteActiveSessionCreatorDraft,
       selectedMenuItemId,
@@ -247,12 +218,6 @@ export function useWorkstationSidebarHandlers({
       setBenchmarkActiveBatchId,
       setBenchmarkActiveBatchTaskId,
       setBenchmarkAgentBatchStatus,
-      setChatPanelContentMode,
-      setChatPanelExploreOpen,
-      setChatPanelWorkspaceDashboardOpen,
-      setChatPanelSelectedWorkspace,
-      setChatPanelSelectedWorkItem,
-      setChatPanelStickyNotesOpen,
       setGroupVisibleCounts,
     ]
   );

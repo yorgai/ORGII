@@ -16,7 +16,7 @@ import { currentRepoAtom } from "@src/store/repo";
 import { useWorkstationTabList } from "./useWorkstationTabList";
 import { useWorkstationTrailingSlot } from "./useWorkstationTrailingSlot";
 
-export { KanbanStationTabBar } from "./KanbanStationTabBar";
+export { OpsControlStationTabBar } from "./OpsControlStationTabBar";
 
 const WORKSTATION_SINGLE_HOST_MODES: AppModeType[] = [
   "code",

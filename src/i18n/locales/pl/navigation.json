@@ -38,14 +38,14 @@
     "folders": "Foldery",
     "inbox": "Skrzynka",
     "issues": "Zadania",
-    "agentKanban": "Ops Control",
     "history": "Historia",
     "controlTower": "Wieża kontrolna",
     "backgroundTasks": "Zadania w tle",
     "project": "Projekt",
     "projects": "Historie",
     "projectManager": "Project Manager",
-    "diff": "Diff"
+    "diff": "Diff",
+    "opsControl": "Ops Control"
   },
   "trajectoryPanel": {
     "title": "Trajektoria",
@@ -58,7 +58,6 @@
     "session": "Czat",
     "startSession": "Rozpocznij sesję",
     "sessions": "Sesje",
-    "kanban": "Ops Control",
     "selectProject": "Wybierz historię",
     "startPage": "Strona startowa",
     "inbox": "Skrzynka",
@@ -82,7 +81,8 @@
     "signingIn": "Logowanie...",
     "launchpad": "Launchpad",
     "ideaArea": "Strefa pomysłów",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "opsControl": "Ops Control"
   },
   "appGrid": {
     "customizeGrid": "Dostosuj siatkę",

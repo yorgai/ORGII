@@ -6,10 +6,10 @@ import {
   OPS_CONTROL_SESSION_CREATOR_SURFACE_CLASS,
 } from "@src/config/opsControlCardTokens";
 import { SessionCreatorFactory } from "@src/features/SessionCreator/variants";
-import { agentKanbanCreatorVisibleAtom } from "@src/store/ui/agentKanbanCreatorAtom";
+import { opsControlCreatorVisibleAtom } from "@src/store/ui/opsControlCreatorAtom";
 
 const OpsControlTaskCreator: React.FC = memo(() => {
-  const [visible, setVisible] = useAtom(agentKanbanCreatorVisibleAtom);
+  const [visible, setVisible] = useAtom(opsControlCreatorVisibleAtom);
 
   const handleClose = useCallback(() => {
     setVisible(false);

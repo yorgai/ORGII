@@ -104,7 +104,7 @@ const DiaryDateControls: React.FC<DiaryDateControlsProps> = ({
         iconOnly
         icon={<ChevronLeft size={14} />}
         onClick={handlePrevious}
-        title={t("kanban.diary.previousDay")}
+        title={t("opsControl.diary.previousDay")}
       />
       <Select
         value={dayKey}
@@ -125,7 +125,7 @@ const DiaryDateControls: React.FC<DiaryDateControlsProps> = ({
         iconOnly
         icon={<ChevronRight size={14} />}
         onClick={handleNext}
-        title={t("kanban.diary.nextDay")}
+        title={t("opsControl.diary.nextDay")}
       />
     </div>
   );

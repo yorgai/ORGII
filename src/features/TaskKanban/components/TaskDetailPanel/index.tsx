@@ -161,7 +161,7 @@ const SessionTaskPanel: React.FC<SessionTaskPanelProps> = ({
       const rawMessage = error instanceof Error ? error.message : String(error);
       setMergeError(
         isDirtyRepoMergeError(rawMessage)
-          ? t("kanban.merge.dirtyRepo")
+          ? t("opsControl.merge.dirtyRepo")
           : rawMessage
       );
     } finally {
@@ -209,7 +209,7 @@ const SessionTaskPanel: React.FC<SessionTaskPanelProps> = ({
   }, []);
 
   const mergeButtonTitle = isRetryState
-    ? t("kanban.merge.retryMerge")
+    ? t("opsControl.merge.retryMerge")
     : t("common:actions.confirm");
 
   return (

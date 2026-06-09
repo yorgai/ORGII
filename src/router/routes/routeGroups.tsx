@@ -89,7 +89,7 @@ const WORK_STATION_PATHS = [
   "workstation/browser",
   "workstation/chat",
   "workstation/project",
-  "workstation/kanban",
+  "workstation/ops-control",
 ] as const;
 
 export const workStationRouteGroup: RouteObject[] = WORK_STATION_PATHS.map(

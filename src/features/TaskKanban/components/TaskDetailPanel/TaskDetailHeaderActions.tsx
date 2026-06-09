@@ -51,20 +51,20 @@ const TaskDetailHeaderActions: React.FC<TaskDetailHeaderActionsProps> = ({
         size="small"
         variant="tertiary"
         onClick={onReplay}
-        title={t("kanban.replay.replaySession")}
+        title={t("opsControl.replay.replaySession")}
         icon={<Play size={14} fill="currentColor" strokeWidth={0} />}
       >
-        {t("kanban.replay.replaySession")}
+        {t("opsControl.replay.replaySession")}
       </Button>
     )}
     <Button
       size="small"
       variant="tertiary"
       onClick={onOpenDiffWindow}
-      title={t("kanban.diff.openDiffWindow")}
+      title={t("opsControl.diff.openDiffWindow")}
       icon={<GitCompare size={14} strokeWidth={1.75} />}
     >
-      {t("kanban.diff.openDiffWindow")}
+      {t("opsControl.diff.openDiffWindow")}
     </Button>
     {canMerge && (
       <>
@@ -86,8 +86,8 @@ const TaskDetailHeaderActions: React.FC<TaskDetailHeaderActionsProps> = ({
             iconOnly
             onClick={onToggleStrategy}
             disabled={mergeLoading || discardLoading}
-            title={t("kanban.merge.strategyLabel")}
-            aria-label={t("kanban.merge.strategyLabel")}
+            title={t("opsControl.merge.strategyLabel")}
+            aria-label={t("opsControl.merge.strategyLabel")}
             icon={<ChevronDown size={14} strokeWidth={1.75} />}
           />
           {strategyOpen && (

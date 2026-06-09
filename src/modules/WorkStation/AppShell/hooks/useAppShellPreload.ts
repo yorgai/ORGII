@@ -8,7 +8,7 @@ export function useAppShellPreload(): void {
     const preloadOtherWorkStationApps = () => {
       void import("../../Browser");
       void import("../../DatabaseManager");
-      preloadRouteByPath(ROUTES.workStation.kanban.path);
+      preloadRouteByPath(ROUTES.workStation.opsControl.path);
     };
 
     if (typeof window.requestIdleCallback === "function") {

@@ -226,9 +226,9 @@ const WorkItemDetailEntry: RendererEntry = {
 // Ops Control / Launchpad renderers
 // ============================================
 
-const KanbanStationEntry: RendererEntry = {
-  Component: lazy(() => import("./renderers/kanbanStation")),
-  debugLabel: "kanban-station",
+const OpsControlStationEntry: RendererEntry = {
+  Component: lazy(() => import("./renderers/opsControlStation")),
+  debugLabel: "ops-control-station",
 };
 
 const BenchmarkEntry: RendererEntry = {
@@ -310,7 +310,7 @@ export const REGISTRY: TabContentRegistry = {
   "agent-config": AgentConfigEntry,
 
   // Ops Control
-  "kanban-station": KanbanStationEntry,
+  "ops-control-station": OpsControlStationEntry,
 
   // Canvas Preview
   "canvas-preview": CanvasPreviewEntry,

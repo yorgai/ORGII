@@ -38,14 +38,14 @@
     "folders": "Pastas",
     "inbox": "Caixa de Entrada",
     "issues": "Itens de Trabalho",
-    "agentKanban": "Ops Control",
     "history": "Histórico",
     "controlTower": "Torre de Controle",
     "backgroundTasks": "Tarefas em Segundo Plano",
     "project": "Projeto",
     "projects": "Histórias",
     "projectManager": "Project Manager",
-    "diff": "Diff"
+    "diff": "Diff",
+    "opsControl": "Ops Control"
   },
   "trajectoryPanel": {
     "title": "Trajetória",
@@ -58,7 +58,6 @@
     "session": "Chat",
     "startSession": "Iniciar sessão",
     "sessions": "Sessões",
-    "kanban": "Ops Control",
     "selectProject": "Selecionar História",
     "startPage": "Página Inicial",
     "inbox": "Caixa de Entrada",
@@ -82,7 +81,8 @@
     "signingIn": "Entrando...",
     "launchpad": "Launchpad",
     "ideaArea": "Área de Ideias",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "opsControl": "Ops Control"
   },
   "appGrid": {
     "customizeGrid": "Personalizar Grade",

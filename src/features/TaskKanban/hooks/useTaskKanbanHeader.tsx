@@ -54,11 +54,11 @@ export function useTaskKanbanHeader({
     () => [
       {
         key: DIARY_TIMELINE_DISPLAY_MODE.Timeline,
-        label: t("kanban.diary.timelineMode.timeline"),
+        label: t("opsControl.diary.timelineMode.timeline"),
       },
       {
         key: DIARY_TIMELINE_DISPLAY_MODE.Gantt,
-        label: t("kanban.diary.timelineMode.gantt"),
+        label: t("opsControl.diary.timelineMode.gantt"),
       },
     ],
     [t]
@@ -138,7 +138,7 @@ export function useTaskKanbanHeader({
   }, [diaryControls, headerTrailing, viewMode]);
 
   usePublishWorkstationTabHeader({
-    host: "kanban",
+    host: "opsControl",
     content: headerContent,
     enabled: !hidden,
   });

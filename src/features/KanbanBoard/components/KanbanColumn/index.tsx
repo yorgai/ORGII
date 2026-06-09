@@ -154,7 +154,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
           <div className="kanban-column__title">
             {/* `column.title` is the source of truth for the header label.
              * It must be an i18n key (optionally namespace-prefixed, e.g.
-             * "sessions:kanban.boardColumns.todo"). i18next returns the key
+             * "sessions:opsControl.boardColumns.todo"). i18next returns the key
              * unchanged when no translation is found, so plain strings still
              * render correctly — but every consumer should pass a key so
              * locale switching works. */}

@@ -38,14 +38,14 @@
     "folders": "Thư mục",
     "inbox": "Hộp thư đến",
     "issues": "Hạng mục công việc",
-    "agentKanban": "Ops Control",
     "history": "Lịch sử",
     "controlTower": "Control Tower",
     "backgroundTasks": "Tác vụ nền",
     "project": "Dự án",
     "projects": "Project",
     "projectManager": "Project Manager",
-    "diff": "Diff"
+    "diff": "Diff",
+    "opsControl": "Ops Control"
   },
   "trajectoryPanel": {
     "title": "Quỹ đạo",
@@ -58,7 +58,6 @@
     "session": "Trò chuyện",
     "startSession": "Bắt đầu phiên",
     "sessions": "Các Session",
-    "kanban": "Ops Control",
     "selectProject": "Chọn Project",
     "startPage": "Trang bắt đầu",
     "inbox": "Hộp thư đến",
@@ -82,7 +81,8 @@
     "signingIn": "Đang đăng nhập...",
     "launchpad": "Launchpad",
     "ideaArea": "Khu vực ý tưởng",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "opsControl": "Ops Control"
   },
   "appGrid": {
     "customizeGrid": "Tùy chỉnh lưới",

@@ -32,11 +32,11 @@ function isWorkStationHost(host: string): host is Exclude<DockFilter, "all"> {
 
 export function useAppShellDerivedState({
   dockFilter,
-  isKanbanStation,
+  isOpsControlStation,
   opsControlPeekHost,
 }: {
   dockFilter: DockFilter;
-  isKanbanStation: boolean;
+  isOpsControlStation: boolean;
   opsControlPeekHost: "code" | "browser" | "data" | "project" | null;
 }): AppShellDerivedState {
   const activeHost = useAtomValue(activeHostAtom);
@@ -59,7 +59,7 @@ export function useAppShellDerivedState({
   const setActiveStatusBarApp = useSetAtom(activeStatusBarAppAtom);
   useEffect(() => {
     let appType: StatusBarAppType;
-    if (isKanbanStation && opsControlPeekHost !== null) {
+    if (isOpsControlStation && opsControlPeekHost !== null) {
       appType = opsControlPeekHost;
     } else if (effectiveHost === "browser") {
       appType = "browser";
@@ -73,7 +73,7 @@ export function useAppShellDerivedState({
     setActiveStatusBarApp(appType);
   }, [
     effectiveHost,
-    isKanbanStation,
+    isOpsControlStation,
     opsControlPeekHost,
     setActiveStatusBarApp,
   ]);

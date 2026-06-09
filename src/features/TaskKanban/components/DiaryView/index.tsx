@@ -59,7 +59,7 @@ function getCommitsRowTitle(
   translate: TFunction<"sessions">
 ): string {
   if (repoPaths.length === 0) {
-    return translate("kanban.diary.commits");
+    return translate("opsControl.diary.commits");
   }
 
   const repoNames = Array.from(
@@ -71,10 +71,10 @@ function getCommitsRowTitle(
   );
 
   if (repoNames.length === 1) {
-    return translate("kanban.diary.commitsTo", { repo: repoNames[0] });
+    return translate("opsControl.diary.commitsTo", { repo: repoNames[0] });
   }
 
-  return translate("kanban.diary.commitsToMultiple", {
+  return translate("opsControl.diary.commitsToMultiple", {
     repos: repoNames.join(", "),
   });
 }

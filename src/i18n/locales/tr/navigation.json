@@ -38,14 +38,14 @@
     "folders": "Klasörler",
     "inbox": "Gelen Kutusu",
     "issues": "İş öğeleri",
-    "agentKanban": "Ops Control",
     "history": "Geçmiş",
     "controlTower": "Control Tower",
     "backgroundTasks": "Arka plan görevleri",
     "project": "Proje",
     "projects": "Projects",
     "projectManager": "Project Manager",
-    "diff": "Diff"
+    "diff": "Diff",
+    "opsControl": "Ops Control"
   },
   "trajectoryPanel": {
     "title": "Yörünge",
@@ -58,7 +58,6 @@
     "session": "Sohbet",
     "startSession": "Oturum başlat",
     "sessions": "Session",
-    "kanban": "Ops Control",
     "selectProject": "Project Seç",
     "startPage": "Başlangıç Sayfası",
     "inbox": "Gelen Kutusu",
@@ -82,7 +81,8 @@
     "signingIn": "Giriş yapılıyor...",
     "launchpad": "Launchpad",
     "ideaArea": "Fikir Alanı",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "opsControl": "Ops Control"
   },
   "appGrid": {
     "customizeGrid": "Izgarayı Özelleştir",

@@ -26,7 +26,9 @@ import { StatusBarRenderer } from "../shared/StatusBar/StatusBarRenderer";
 import AgentStationChromeFrame from "./AgentStationChromeFrame";
 import AgentStationTopHeader from "./AgentStationTopHeader";
 import { AppShellContent } from "./AppShellContent";
-import WorkstationTabBar, { KanbanStationTabBar } from "./WorkstationTabBar";
+import WorkstationTabBar, {
+  OpsControlStationTabBar,
+} from "./WorkstationTabBar";
 import WorkstationTabHeader from "./WorkstationTabHeader";
 import { useAppShellActions } from "./hooks/useAppShellActions";
 import { useAppShellDerivedState } from "./hooks/useAppShellDerivedState";
@@ -77,7 +79,7 @@ const AppShell = React.memo(
 
     const {
       isAgentStation,
-      isKanbanStation,
+      isOpsControlStation,
       opsControlPeekHost,
       hasVisitedAgentStation,
       illuminateAgentStationChrome,
@@ -104,7 +106,7 @@ const AppShell = React.memo(
       projectContentVisible,
     } = useAppShellDerivedState({
       dockFilter,
-      isKanbanStation,
+      isOpsControlStation,
       opsControlPeekHost,
     });
 
@@ -112,7 +114,7 @@ const AppShell = React.memo(
     const hasVisitedData = visitedModes.has("data");
     const hasVisitedBrowser = visitedModes.has("browser");
     const hasVisitedProject = visitedModes.has("project");
-    const hasVisitedKanbanStation = visitedModes.has("kanban");
+    const hasVisitedOpsControlStation = visitedModes.has("opsControl");
 
     const showCodeEditorBottomPanelToggle =
       codeContentVisible && !isAgentStation;
@@ -130,7 +132,7 @@ const AppShell = React.memo(
     const showStatusBar = !statusBarHidden && !isAgentStation;
     const useFloatingStatusBar = internalLayoutMode === "comfort";
     const showOpsControlEmptyStatusBar =
-      isKanbanStation && opsControlPeekHost === null;
+      isOpsControlStation && opsControlPeekHost === null;
 
     return (
       <div
@@ -144,8 +146,8 @@ const AppShell = React.memo(
           captionVisible={agentStationCaptionVisible}
         >
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            {isKanbanStation ? (
-              <KanbanStationTabBar />
+            {isOpsControlStation ? (
+              <OpsControlStationTabBar />
             ) : (
               !isAgentStation && (
                 <WorkstationTabBar
@@ -170,10 +172,10 @@ const AppShell = React.memo(
                 isActive={isActive}
                 chatPanelFocused={chatPanelFocused}
                 isAgentStation={isAgentStation}
-                isKanbanStation={isKanbanStation}
+                isOpsControlStation={isOpsControlStation}
                 opsControlPeekHost={opsControlPeekHost}
                 hasVisitedAgentStation={hasVisitedAgentStation}
-                hasVisitedKanbanStation={hasVisitedKanbanStation}
+                hasVisitedOpsControlStation={hasVisitedOpsControlStation}
                 hasVisitedCode={hasVisitedCode}
                 hasVisitedData={hasVisitedData}
                 hasVisitedBrowser={hasVisitedBrowser}
@@ -193,7 +195,7 @@ const AppShell = React.memo(
           {showStatusBar && !showOpsControlEmptyStatusBar && (
             <StatusBarRenderer floating={useFloatingStatusBar} />
           )}
-          {!isAgentStation && !isKanbanStation && (
+          {!isAgentStation && !isOpsControlStation && (
             <StationDockChrome
               autoHide={dockAutoHide}
               showTopBorder={!useFloatingStatusBar}

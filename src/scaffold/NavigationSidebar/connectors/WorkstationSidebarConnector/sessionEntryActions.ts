@@ -4,30 +4,19 @@ import type { NavigateFunction } from "react-router-dom";
 import { ROUTES } from "@src/config/routes";
 import type { GoToNewSessionOptions } from "@src/hooks/navigation/useAppNavigation";
 import {
-  CHAT_PANEL_CONTENT_MODE,
   CHAT_PANEL_CREATE_TARGET,
-  type ChatPanelContentMode,
-  type ChatPanelCreateProjectContext,
+  CHAT_PANEL_SURFACE_KIND,
   type ChatPanelCreateTarget,
-  type ChatPanelSelectedProject,
-  type ChatPanelSelectedWorkItem,
-  type ChatPanelSelectedWorkspace,
+  type ChatPanelNavigateCommand,
 } from "@src/store/ui/chatPanelAtom";
-
-type NullableSetter<T> = (value: T | null) => void;
 
 interface UseSessionEntryActionsParams {
   goToNewSession: (options?: GoToNewSessionOptions) => void;
   navigate: NavigateFunction;
+  navigateChatPanel: (command: ChatPanelNavigateCommand) => void;
   pathname: string;
   resetOpsControlStateForProjectsContent: () => void;
-  setChatPanelContentMode: (mode: ChatPanelContentMode) => void;
-  setChatPanelCreateProjectContext: NullableSetter<ChatPanelCreateProjectContext>;
   setChatPanelCreateTarget: (target: ChatPanelCreateTarget) => void;
-  setChatPanelSelectedProject: NullableSetter<ChatPanelSelectedProject>;
-  setChatPanelSelectedWorkItem: NullableSetter<ChatPanelSelectedWorkItem>;
-  setChatPanelSelectedWorkspace: NullableSetter<ChatPanelSelectedWorkspace>;
-  setChatPanelStickyNotesOpen: (open: boolean) => void;
 }
 
 interface UseSessionEntryActionsResult {
@@ -38,57 +27,32 @@ interface UseSessionEntryActionsResult {
 export function useSessionEntryActions({
   goToNewSession,
   navigate,
+  navigateChatPanel,
   pathname,
   resetOpsControlStateForProjectsContent,
-  setChatPanelContentMode,
-  setChatPanelCreateProjectContext,
   setChatPanelCreateTarget,
-  setChatPanelSelectedProject,
-  setChatPanelSelectedWorkItem,
-  setChatPanelSelectedWorkspace,
-  setChatPanelStickyNotesOpen,
 }: UseSessionEntryActionsParams): UseSessionEntryActionsResult {
   const handleGoToNewSession = useCallback(
     (options?: GoToNewSessionOptions) => {
-      setChatPanelSelectedWorkItem(null);
-      setChatPanelSelectedProject(null);
-      setChatPanelSelectedWorkspace(null);
-      setChatPanelStickyNotesOpen(false);
+      navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.SESSION });
       setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
       goToNewSession(options);
     },
-    [
-      goToNewSession,
-      setChatPanelCreateTarget,
-      setChatPanelSelectedProject,
-      setChatPanelSelectedWorkspace,
-      setChatPanelSelectedWorkItem,
-      setChatPanelStickyNotesOpen,
-    ]
+    [goToNewSession, navigateChatPanel, setChatPanelCreateTarget]
   );
 
   const handleOpenStickyNotes = useCallback(() => {
     resetOpsControlStateForProjectsContent();
-    setChatPanelSelectedWorkItem(null);
-    setChatPanelSelectedProject(null);
-    setChatPanelSelectedWorkspace(null);
-    setChatPanelCreateProjectContext(null);
+    navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.STICKY_NOTES });
     setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-    setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-    setChatPanelStickyNotesOpen(true);
     const targetRoute = ROUTES.workStation.code.path;
     if (pathname !== targetRoute) navigate(targetRoute);
   }, [
     navigate,
+    navigateChatPanel,
     pathname,
     resetOpsControlStateForProjectsContent,
-    setChatPanelContentMode,
-    setChatPanelCreateProjectContext,
     setChatPanelCreateTarget,
-    setChatPanelSelectedProject,
-    setChatPanelSelectedWorkspace,
-    setChatPanelSelectedWorkItem,
-    setChatPanelStickyNotesOpen,
   ]);
 
   return { handleGoToNewSession, handleOpenStickyNotes };

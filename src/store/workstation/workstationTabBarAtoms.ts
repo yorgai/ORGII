@@ -78,15 +78,15 @@ export const workstationProjectTabBarAtom = atom<{
 workstationProjectTabBarAtom.debugLabel = "workstationProjectTabBarAtom";
 
 export const OPS_CONTROL_HOME_TAB = {
-  KANBAN: "kanban",
-  STORIES: "projects",
+  OPS_CONTROL: "ops-control",
+  PROJECTS: "projects",
 } as const;
 
 export type OpsControlHomeTab =
   (typeof OPS_CONTROL_HOME_TAB)[keyof typeof OPS_CONTROL_HOME_TAB];
 
 export const opsControlHomeTabAtom = atom<OpsControlHomeTab>(
-  OPS_CONTROL_HOME_TAB.KANBAN
+  OPS_CONTROL_HOME_TAB.OPS_CONTROL
 );
 opsControlHomeTabAtom.debugLabel = "opsControlHomeTabAtom";
 
@@ -171,10 +171,10 @@ const projectWorkstationTabHeaderAtom = atom<WorkstationTabHeaderSlots | null>(
 );
 projectWorkstationTabHeaderAtom.debugLabel = "projectWorkstationTabHeaderAtom";
 
-const kanbanWorkstationTabHeaderAtom = atom<WorkstationTabHeaderSlots | null>(
-  null
-);
-kanbanWorkstationTabHeaderAtom.debugLabel = "kanbanWorkstationTabHeaderAtom";
+const opsControlWorkstationTabHeaderAtom =
+  atom<WorkstationTabHeaderSlots | null>(null);
+opsControlWorkstationTabHeaderAtom.debugLabel =
+  "opsControlWorkstationTabHeaderAtom";
 
 /**
  * Simulator (Agent Station replay) tab-header slot. Unlike the My Station
@@ -195,7 +195,7 @@ export const workstationTabHeaderAtomByHost = {
   browser: browserWorkstationTabHeaderAtom,
   data: dataWorkstationTabHeaderAtom,
   project: projectWorkstationTabHeaderAtom,
-  kanban: kanbanWorkstationTabHeaderAtom,
+  opsControl: opsControlWorkstationTabHeaderAtom,
   simulator: simulatorWorkstationTabHeaderAtom,
 } as const;
 
@@ -211,7 +211,7 @@ export const activeWorkstationTabHeaderAtom =
       return get(
         opsControlPeekHost
           ? workstationTabHeaderAtomByHost[opsControlPeekHost]
-          : workstationTabHeaderAtomByHost.kanban
+          : workstationTabHeaderAtomByHost.opsControl
       );
     }
 

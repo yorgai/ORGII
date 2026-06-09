@@ -98,13 +98,13 @@ interface AgentKanbanColumnConfig {
 
 /**
  * Column ID → i18n key mapping for translation at render time.
- * Keys reference sessions:kanban.columns.* namespace.
+ * Keys reference sessions:opsControl.columns.* namespace.
  */
 const COLUMN_TITLE_KEYS: Record<string, string> = {
-  todo: "kanban.columns.todo",
-  in_progress: "kanban.columns.inProgress",
-  your_turn: "kanban.columns.yourTurn",
-  finished: "kanban.columns.finished",
+  todo: "opsControl.columns.todo",
+  in_progress: "opsControl.columns.inProgress",
+  your_turn: "opsControl.columns.yourTurn",
+  finished: "opsControl.columns.finished",
 };
 
 export function getColumnTitleKey(columnId: string): string {
@@ -114,7 +114,7 @@ export function getColumnTitleKey(columnId: string): string {
 export const KANBAN_COLUMNS: AgentKanbanColumnConfig[] = [
   {
     id: "todo",
-    title: "sessions:kanban.columns.todo",
+    title: "sessions:opsControl.columns.todo",
     icon: Circle,
     color: "var(--color-fill-4)",
     bgColor: "color-mix(in srgb, var(--color-fill-4) 55%, transparent)",
@@ -124,7 +124,7 @@ export const KANBAN_COLUMNS: AgentKanbanColumnConfig[] = [
   },
   {
     id: "in_progress",
-    title: "sessions:kanban.columns.inProgress",
+    title: "sessions:opsControl.columns.inProgress",
     icon: Clock,
     color: "var(--color-primary-6)",
     bgColor: "color-mix(in srgb, var(--color-primary-6) 10%, transparent)",
@@ -133,7 +133,7 @@ export const KANBAN_COLUMNS: AgentKanbanColumnConfig[] = [
   },
   {
     id: "your_turn",
-    title: "sessions:kanban.columns.yourTurn",
+    title: "sessions:opsControl.columns.yourTurn",
     icon: MessageCircleWarning,
     color: "#FF8C42",
     bgColor: "rgba(255, 140, 66, 0.1)",
@@ -142,7 +142,7 @@ export const KANBAN_COLUMNS: AgentKanbanColumnConfig[] = [
   },
   {
     id: "finished",
-    title: "sessions:kanban.columns.finished",
+    title: "sessions:opsControl.columns.finished",
     icon: Archive,
     color: "#52C41A",
     bgColor: "rgba(82, 196, 26, 0.1)",
@@ -243,21 +243,21 @@ export const KANBAN_TIME_FILTERS: {
   key: KanbanTimeFilter;
   labelKey: string;
 }[] = [
-  { key: "12h", labelKey: "kanban.timeFilter.12h" },
-  { key: "24h", labelKey: "kanban.timeFilter.24h" },
-  { key: "3d", labelKey: "kanban.timeFilter.3d" },
-  { key: "7d", labelKey: "kanban.timeFilter.7d" },
+  { key: "12h", labelKey: "opsControl.timeFilter.12h" },
+  { key: "24h", labelKey: "opsControl.timeFilter.24h" },
+  { key: "3d", labelKey: "opsControl.timeFilter.3d" },
+  { key: "7d", labelKey: "opsControl.timeFilter.7d" },
 ];
 
 export const KANBAN_AUTO_ARCHIVE_TTLS: {
   key: KanbanAutoArchiveTtl;
   labelKey: string;
 }[] = [
-  { key: "never", labelKey: "kanban.autoArchive.never" },
-  { key: "12h", labelKey: "kanban.autoArchive.12h" },
-  { key: "24h", labelKey: "kanban.autoArchive.24h" },
-  { key: "3d", labelKey: "kanban.autoArchive.3d" },
-  { key: "7d", labelKey: "kanban.autoArchive.7d" },
+  { key: "never", labelKey: "opsControl.autoArchive.never" },
+  { key: "12h", labelKey: "opsControl.autoArchive.12h" },
+  { key: "24h", labelKey: "opsControl.autoArchive.24h" },
+  { key: "3d", labelKey: "opsControl.autoArchive.3d" },
+  { key: "7d", labelKey: "opsControl.autoArchive.7d" },
 ];
 
 const TIME_FILTER_MS: Record<KanbanTimeFilter, number> = {

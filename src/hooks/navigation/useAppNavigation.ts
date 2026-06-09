@@ -53,13 +53,8 @@ import {
   workstationActiveSessionIdAtom,
 } from "@src/store/session";
 import {
-  CHAT_PANEL_CONTENT_MODE,
-  chatPanelContentModeAtom,
-  chatPanelExploreOpenAtom,
-  chatPanelSelectedWorkItemAtom,
-  chatPanelSelectedWorkspaceAtom,
-  chatPanelStickyNotesOpenAtom,
-  chatPanelWorkspaceDashboardOpenAtom,
+  CHAT_PANEL_SURFACE_KIND,
+  chatPanelNavigateAtom,
 } from "@src/store/ui/chatPanelAtom";
 
 // ============================================
@@ -150,18 +145,7 @@ export function useAppNavigation(): UseAppNavigationReturn {
   const setWorkstationActiveSessionId = useSetAtom(
     workstationActiveSessionIdAtom
   );
-  const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
-  const setChatPanelWorkspaceDashboardOpen = useSetAtom(
-    chatPanelWorkspaceDashboardOpenAtom
-  );
-  const setChatPanelExploreOpen = useSetAtom(chatPanelExploreOpenAtom);
-  const setChatPanelSelectedWorkItem = useSetAtom(
-    chatPanelSelectedWorkItemAtom
-  );
-  const setChatPanelSelectedWorkspace = useSetAtom(
-    chatPanelSelectedWorkspaceAtom
-  );
-  const setChatPanelStickyNotesOpen = useSetAtom(chatPanelStickyNotesOpenAtom);
+  const navigateChatPanel = useSetAtom(chatPanelNavigateAtom);
   const startNewSessionCreatorDraft = useSetAtom(
     startNewSessionCreatorDraftAtom
   );
@@ -307,12 +291,7 @@ export function useAppNavigation(): UseAppNavigationReturn {
   const goToNewSession = useCallback(
     (options?: GoToNewSessionOptions) => {
       dispatchClearSession();
-      setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.SESSION);
-      setChatPanelSelectedWorkItem(null);
-      setChatPanelWorkspaceDashboardOpen(false);
-      setChatPanelExploreOpen(false);
-      setChatPanelSelectedWorkspace(null);
-      setChatPanelStickyNotesOpen(false);
+      navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.SESSION });
       // Starting a session changes chat identity, not the WorkStation layout.
       setActiveSessionId(null);
       setWorkstationActiveSessionId(null);
@@ -342,13 +321,8 @@ export function useAppNavigation(): UseAppNavigationReturn {
     },
     [
       dispatchClearSession,
+      navigateChatPanel,
       setActiveSessionId,
-      setChatPanelContentMode,
-      setChatPanelExploreOpen,
-      setChatPanelWorkspaceDashboardOpen,
-      setChatPanelSelectedWorkspace,
-      setChatPanelSelectedWorkItem,
-      setChatPanelStickyNotesOpen,
       setWorkstationActiveSessionId,
       promoteActiveSessionCreatorDraft,
       selectSessionCreatorDraft,

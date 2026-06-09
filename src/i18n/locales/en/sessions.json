@@ -72,14 +72,14 @@
       }
     }
   },
-  "kanban": {
+  "opsControl": {
     "sessions": "Sessions",
-    "replayBarAriaLabel": "Kanban replay timeline",
-    "followLabel": "Current Kanban",
+    "replayBarAriaLabel": "Ops Control replay timeline",
+    "followLabel": "Current Ops Control",
     "view": {
-      "kanban": "Kanban",
       "list": "List",
-      "diary": "Diary"
+      "diary": "Diary",
+      "opsControl": "Ops Control"
     },
     "list": {
       "updated": "Updated",

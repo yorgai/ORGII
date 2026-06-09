@@ -6,16 +6,9 @@ import { ROUTES } from "@src/config/routes";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import type { Repo } from "@src/store/repo";
 import {
-  CHAT_PANEL_CONTENT_MODE,
-  CHAT_PANEL_CREATE_TARGET,
-  type ChatPanelContentMode,
-  type ChatPanelCreateProjectContext,
-  type ChatPanelCreateTarget,
-  type ChatPanelSelectedProject,
-  type ChatPanelSelectedWorkItem,
-  type ChatPanelSelectedWorkspace,
+  CHAT_PANEL_SURFACE_KIND,
+  type ChatPanelNavigateCommand,
   WORKSPACE_OVERVIEW_TAB,
-  type WorkspaceOverviewTab,
 } from "@src/store/ui/chatPanelAtom";
 import type { WorkspaceFolder } from "@src/types/workspace";
 
@@ -90,16 +83,7 @@ interface UseFoldersMenuItemClickParams {
   repos: readonly Repo[];
   resetOpsControlStateForProjectsContent: () => void;
   savedWorkspaces: readonly WorkspaceRecord[];
-  setChatPanelContentMode: (mode: ChatPanelContentMode) => void;
-  setChatPanelCreateProjectContext: NullableSetter<ChatPanelCreateProjectContext>;
-  setChatPanelCreateTarget: (target: ChatPanelCreateTarget) => void;
-  setChatPanelSelectedProject: NullableSetter<ChatPanelSelectedProject>;
-  setChatPanelSelectedWorkItem: NullableSetter<ChatPanelSelectedWorkItem>;
-  setChatPanelSelectedWorkspace: NullableSetter<ChatPanelSelectedWorkspace>;
-  setChatPanelExploreOpen: (open: boolean) => void;
-  setChatPanelStickyNotesOpen: (open: boolean) => void;
-  setChatPanelWorkspaceDashboardOpen: (open: boolean) => void;
-  setChatPanelWorkspaceOverviewTab: (tab: WorkspaceOverviewTab) => void;
+  navigateChatPanel: (command: ChatPanelNavigateCommand) => void;
   setFoldersDashboardSelected: (selected: boolean) => void;
   setFoldersExploreSelected: (selected: boolean) => void;
   setProjectsSelectedMenuItemId: (id: string) => void;
@@ -110,16 +94,7 @@ export function useFoldersMenuItemClick({
   repos,
   resetOpsControlStateForProjectsContent,
   savedWorkspaces,
-  setChatPanelContentMode,
-  setChatPanelCreateProjectContext,
-  setChatPanelCreateTarget,
-  setChatPanelSelectedProject,
-  setChatPanelSelectedWorkItem,
-  setChatPanelExploreOpen,
-  setChatPanelSelectedWorkspace,
-  setChatPanelStickyNotesOpen,
-  setChatPanelWorkspaceDashboardOpen,
-  setChatPanelWorkspaceOverviewTab,
+  navigateChatPanel,
   setFoldersDashboardSelected,
   setFoldersExploreSelected,
   setProjectsSelectedMenuItemId,
@@ -134,15 +109,9 @@ export function useFoldersMenuItemClick({
         setProjectsSelectedMenuItemId("");
         setFoldersDashboardSelected(true);
         setFoldersExploreSelected(false);
-        setChatPanelWorkspaceDashboardOpen(true);
-        setChatPanelExploreOpen(false);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateProjectContext(null);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        navigateChatPanel({
+          kind: CHAT_PANEL_SURFACE_KIND.WORKSPACE_DASHBOARD,
+        });
         navigate(ROUTES.workStation.code.path);
         return;
       }
@@ -152,15 +121,7 @@ export function useFoldersMenuItemClick({
         setProjectsSelectedMenuItemId("");
         setFoldersDashboardSelected(false);
         setFoldersExploreSelected(true);
-        setChatPanelExploreOpen(true);
-        setChatPanelWorkspaceDashboardOpen(false);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateProjectContext(null);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
+        navigateChatPanel({ kind: CHAT_PANEL_SURFACE_KIND.WORKSPACE_EXPLORE });
         navigate(ROUTES.workStation.code.path);
         return;
       }
@@ -177,25 +138,19 @@ export function useFoldersMenuItemClick({
         setProjectsSelectedMenuItemId("");
         setFoldersDashboardSelected(false);
         setFoldersExploreSelected(false);
-        setChatPanelExploreOpen(false);
-        setChatPanelWorkspaceDashboardOpen(false);
-        setChatPanelSelectedWorkItem(null);
-        setChatPanelSelectedProject(null);
-        setChatPanelSelectedWorkspace(null);
-        setChatPanelStickyNotesOpen(false);
-        setChatPanelCreateProjectContext(null);
-        setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-        setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-        setChatPanelSelectedWorkspace({
-          kind: "workspace",
-          id: workspace.workspaceId,
-          name: workspace.name,
-          folderCount: workspace.folders.length,
-          repoIds: workspace.folders
-            .map((folder) => folder.repoId)
-            .filter((repoId): repoId is string => Boolean(repoId)),
+        navigateChatPanel({
+          kind: CHAT_PANEL_SURFACE_KIND.WORKSPACE_OVERVIEW,
+          workspace: {
+            kind: "workspace",
+            id: workspace.workspaceId,
+            name: workspace.name,
+            folderCount: workspace.folders.length,
+            repoIds: workspace.folders
+              .map((folder) => folder.repoId)
+              .filter((repoId): repoId is string => Boolean(repoId)),
+          },
+          tab: WORKSPACE_OVERVIEW_TAB.OVERVIEW,
         });
-        setChatPanelWorkspaceOverviewTab(WORKSPACE_OVERVIEW_TAB.OVERVIEW);
         navigate(ROUTES.workStation.code.path);
         return;
       }
@@ -209,38 +164,24 @@ export function useFoldersMenuItemClick({
       setProjectsSelectedMenuItemId("");
       setFoldersDashboardSelected(false);
       setFoldersExploreSelected(false);
-      setChatPanelExploreOpen(false);
-      setChatPanelWorkspaceDashboardOpen(false);
-      setChatPanelSelectedWorkItem(null);
-      setChatPanelSelectedProject(null);
-      setChatPanelStickyNotesOpen(false);
-      setChatPanelCreateProjectContext(null);
-      setChatPanelCreateTarget(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
-      setChatPanelContentMode(CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-      setChatPanelSelectedWorkspace({
-        kind: "repo",
-        id: repoId,
-        name: repo ? getRepoDisplayName(repo) : item.label,
-        path: repo?.path ?? undefined,
+      navigateChatPanel({
+        kind: CHAT_PANEL_SURFACE_KIND.WORKSPACE_OVERVIEW,
+        workspace: {
+          kind: "repo",
+          id: repoId,
+          name: repo ? getRepoDisplayName(repo) : item.label,
+          path: repo?.path ?? undefined,
+        },
+        tab: WORKSPACE_OVERVIEW_TAB.OVERVIEW,
       });
-      setChatPanelWorkspaceOverviewTab(WORKSPACE_OVERVIEW_TAB.OVERVIEW);
       navigate(ROUTES.workStation.code.path);
     },
     [
       navigate,
       repos,
+      navigateChatPanel,
       resetOpsControlStateForProjectsContent,
       savedWorkspaces,
-      setChatPanelContentMode,
-      setChatPanelCreateProjectContext,
-      setChatPanelCreateTarget,
-      setChatPanelSelectedProject,
-      setChatPanelExploreOpen,
-      setChatPanelSelectedWorkspace,
-      setChatPanelSelectedWorkItem,
-      setChatPanelStickyNotesOpen,
-      setChatPanelWorkspaceDashboardOpen,
-      setChatPanelWorkspaceOverviewTab,
       setFoldersDashboardSelected,
       setFoldersExploreSelected,
       setProjectsSelectedMenuItemId,

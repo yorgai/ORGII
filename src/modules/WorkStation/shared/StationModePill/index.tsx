@@ -75,7 +75,7 @@ const StationModePill: React.FC = () => {
   const { t } = useTranslation("common");
   const mySegment = t("terminology.myStation");
   const agentSegment = t("terminology.agentStation");
-  const kanbanSegment = t("navigation:routes.kanban");
+  const opsControlSegment = t("navigation:routes.opsControl");
 
   const shortcut = getShortcutKeys(STATION_MODE_SHORTCUT_ID);
   const activeStationMode = stationMode;
@@ -85,13 +85,13 @@ const StationModePill: React.FC = () => {
       setStationMode(mode);
 
       if (mode === "ops-control") {
-        if (location.pathname !== ROUTES.workStation.kanban.path) {
-          navigate(ROUTES.workStation.kanban.path);
+        if (location.pathname !== ROUTES.workStation.opsControl.path) {
+          navigate(ROUTES.workStation.opsControl.path);
         }
         return;
       }
 
-      if (location.pathname === ROUTES.workStation.kanban.path) {
+      if (location.pathname === ROUTES.workStation.opsControl.path) {
         navigate(ROUTES.workStation.base.path);
       }
     },
@@ -105,14 +105,14 @@ const StationModePill: React.FC = () => {
     >
       {activeStationMode === "ops-control" && (
         <IconSwitchButton
-          label={kanbanSegment}
+          label={opsControlSegment}
           tooltipLabel={t("actions.switchToStation", {
-            station: kanbanSegment,
+            station: opsControlSegment,
           })}
           icon={Radar}
           selected
           onClick={() => handleChange("ops-control")}
-          testId="station-mode-kanban"
+          testId="station-mode-ops-control"
           shortcut={shortcut}
           selectedClassName="bg-warning-6 text-white"
         />

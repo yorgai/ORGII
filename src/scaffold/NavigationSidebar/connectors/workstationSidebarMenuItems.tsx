@@ -16,9 +16,9 @@ import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import {
   NEW_SESSION_MENU_ITEM_ID,
+  OPS_CONTROL_MENU_ITEM_ID,
   PROJECTS_NEW_PROJECT_MENU_ITEM_ID,
   PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID,
-  QUICKSTART_KANBAN_MENU_ITEM_ID,
   STICKY_NOTES_MENU_ITEM_ID,
   getDraftMenuItemId,
   getDraftPreviewText,
@@ -27,8 +27,9 @@ import {
 interface BuildPinnedMenuItemsParams {
   newSessionLabel: string;
   newSessionShortcut: string;
-  kanbanLabel: string;
-  kanbanRoutePath: string;
+  opsControlLabel: string;
+  opsControlRoutePath: string;
+  opsControlShortcut: string;
   stickyNotesLabel: string;
 }
 
@@ -47,8 +48,9 @@ interface BuildFoldersPinnedMenuItemsParams {
 export function buildPinnedMenuItems({
   newSessionLabel,
   newSessionShortcut,
-  kanbanLabel,
-  kanbanRoutePath,
+  opsControlLabel,
+  opsControlRoutePath,
+  opsControlShortcut,
   stickyNotesLabel,
 }: BuildPinnedMenuItemsParams): NavigationMenuItem[] {
   return [
@@ -68,12 +70,13 @@ export function buildPinnedMenuItems({
       iconName: "sticky-note",
     },
     {
-      id: QUICKSTART_KANBAN_MENU_ITEM_ID,
-      key: QUICKSTART_KANBAN_MENU_ITEM_ID,
-      label: kanbanLabel,
+      id: OPS_CONTROL_MENU_ITEM_ID,
+      key: OPS_CONTROL_MENU_ITEM_ID,
+      label: opsControlLabel,
       icon: Radar,
       iconName: "radar",
-      routePath: kanbanRoutePath,
+      routePath: opsControlRoutePath,
+      shortcut: opsControlShortcut,
     },
   ];
 }

@@ -72,14 +72,14 @@
       }
     }
   },
-  "kanban": {
+  "opsControl": {
     "sessions": "Session",
-    "replayBarAriaLabel": "Dòng thời gian phát lại Kanban",
-    "followLabel": "Kanban hiện tại",
+    "replayBarAriaLabel": "Ops Control replay timeline",
+    "followLabel": "Current Ops Control",
     "view": {
-      "kanban": "Kanban",
       "list": "Danh sách",
-      "diary": "Nhật ký"
+      "diary": "Nhật ký",
+      "opsControl": "Ops Control"
     },
     "list": {
       "updated": "Đã cập nhật",

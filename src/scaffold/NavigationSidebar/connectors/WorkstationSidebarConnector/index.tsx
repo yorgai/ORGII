@@ -38,15 +38,14 @@ import {
 import {
   activeStationChatVisibleAtom,
   chatPanelContentModeAtom,
-  chatPanelCreateProjectContextAtom,
   chatPanelCreateTargetAtom,
   chatPanelExploreOpenAtom,
+  chatPanelNavigateAtom,
   chatPanelSelectedProjectAtom,
   chatPanelSelectedWorkItemAtom,
   chatPanelSelectedWorkspaceAtom,
   chatPanelStickyNotesOpenAtom,
   chatPanelWorkspaceDashboardOpenAtom,
-  chatPanelWorkspaceOverviewTabAtom,
 } from "@src/store/ui/chatPanelAtom";
 import { type StationMode, stationModeAtom } from "@src/store/ui/simulatorAtom";
 import { spotlightOpenAtom } from "@src/store/ui/uiAtom";
@@ -147,27 +146,13 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const chatPanelSelectedWorkspace = useAtomValue(
     chatPanelSelectedWorkspaceAtom
   );
-  const chatPanelStickyNotesOpen = useAtomValue(chatPanelStickyNotesOpenAtom);
-  const setChatPanelContentMode = useSetAtom(chatPanelContentModeAtom);
-  const setChatPanelCreateProjectContext = useSetAtom(
-    chatPanelCreateProjectContextAtom
-  );
-  const setChatPanelCreateTarget = useSetAtom(chatPanelCreateTargetAtom);
-  const setChatPanelWorkspaceDashboardOpen = useSetAtom(
+  const chatPanelWorkspaceDashboardOpen = useAtomValue(
     chatPanelWorkspaceDashboardOpenAtom
   );
-  const setChatPanelExploreOpen = useSetAtom(chatPanelExploreOpenAtom);
-  const setChatPanelSelectedProject = useSetAtom(chatPanelSelectedProjectAtom);
-  const setChatPanelSelectedWorkItem = useSetAtom(
-    chatPanelSelectedWorkItemAtom
-  );
-  const setChatPanelSelectedWorkspace = useSetAtom(
-    chatPanelSelectedWorkspaceAtom
-  );
-  const setChatPanelWorkspaceOverviewTab = useSetAtom(
-    chatPanelWorkspaceOverviewTabAtom
-  );
-  const setChatPanelStickyNotesOpen = useSetAtom(chatPanelStickyNotesOpenAtom);
+  const chatPanelExploreOpen = useAtomValue(chatPanelExploreOpenAtom);
+  const chatPanelStickyNotesOpen = useAtomValue(chatPanelStickyNotesOpenAtom);
+  const setChatPanelCreateTarget = useSetAtom(chatPanelCreateTargetAtom);
+  const navigateChatPanel = useSetAtom(chatPanelNavigateAtom);
   const setStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
   const setStationMode = useSetAtom(stationModeAtom);
   const setOpsControlPeekHost = useSetAtom(opsControlPeekHostAtom);
@@ -180,9 +165,8 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const [activeFolderMoreMenuId, setActiveFolderMoreMenuId] = useState("");
   const [projectsSelectedMenuItemId, setProjectsSelectedMenuItemId] =
     useState("");
-  const [foldersDashboardSelected, setFoldersDashboardSelected] =
-    useState(false);
-  const [foldersExploreSelected, setFoldersExploreSelected] = useState(false);
+  const [, setFoldersDashboardSelected] = useState(false);
+  const [, setFoldersExploreSelected] = useState(false);
   const tabs = useWorkstationSidebarTabs(t);
 
   const handleTabChange = useCallback((key: string) => {
@@ -449,9 +433,9 @@ export const WorkstationSidebarConnector: React.FC = () => {
       chatPanelSelectedWorkItem,
       chatPanelSelectedWorkspace,
       chatPanelStickyNotesOpen,
-      foldersDashboardSelected,
-      foldersExploreSelected,
-      kanbanRoutePath: ROUTES.workStation.kanban.path,
+      chatPanelWorkspaceDashboardOpen,
+      chatPanelExploreOpen,
+      opsControlRoutePath: ROUTES.workStation.opsControl.path,
       pathname: location.pathname,
       projectsSelectedMenuItemId,
       sessionCreatorDrafts,
@@ -479,15 +463,10 @@ export const WorkstationSidebarConnector: React.FC = () => {
     useSessionEntryActions({
       goToNewSession,
       navigate,
+      navigateChatPanel,
       pathname: location.pathname,
       resetOpsControlStateForProjectsContent,
-      setChatPanelContentMode,
-      setChatPanelCreateProjectContext,
       setChatPanelCreateTarget,
-      setChatPanelSelectedProject,
-      setChatPanelSelectedWorkItem,
-      setChatPanelSelectedWorkspace,
-      setChatPanelStickyNotesOpen,
     });
 
   const {
@@ -548,16 +527,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
     repos,
     resetOpsControlStateForProjectsContent,
     savedWorkspaces,
-    setChatPanelContentMode,
-    setChatPanelCreateProjectContext,
-    setChatPanelCreateTarget,
-    setChatPanelExploreOpen,
-    setChatPanelSelectedProject,
-    setChatPanelSelectedWorkItem,
-    setChatPanelSelectedWorkspace,
-    setChatPanelStickyNotesOpen,
-    setChatPanelWorkspaceDashboardOpen,
-    setChatPanelWorkspaceOverviewTab,
+    navigateChatPanel,
     setFoldersDashboardSelected,
     setFoldersExploreSelected,
     setProjectsSelectedMenuItemId,
@@ -566,18 +536,12 @@ export const WorkstationSidebarConnector: React.FC = () => {
     activateMyStationRouteForProjectsContent,
     getProjectsLoadMoreGroupId,
     loadProjectsLinearOrgWorkItems,
+    navigateChatPanel,
     openProjectsLinearWorkItem: openProjectsLinearWorkItem,
     projectsLinearWorkItemMap,
     projectsProjectMap,
     projectsWorkItemMap,
     resetOpsControlStateForProjectsContent,
-    setChatPanelContentMode,
-    setChatPanelCreateProjectContext,
-    setChatPanelCreateTarget,
-    setChatPanelSelectedProject,
-    setChatPanelSelectedWorkItem,
-    setChatPanelSelectedWorkspace,
-    setChatPanelStickyNotesOpen,
     setProjectsGroupVisibleCounts,
     setProjectsSelectedMenuItemId,
     toChatPanelProject,

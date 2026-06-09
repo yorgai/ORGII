@@ -63,7 +63,7 @@ export type WorkStationTabType =
   // table rows; mirrors how skills are previewed).
   | "agent-config"
   // Ops Control station tabs
-  | "kanban-station"
+  | "ops-control-station"
   // Canvas preview tab — renders agent-generated canvas from canvasPreviewAtom
   | "canvas-preview"
   // GitHub Issues detail tab — opened from the sidebar Issues panel
@@ -437,7 +437,7 @@ export const TOOL_TAB_TYPES = [
   "chat-session",
   "subagent-detail",
   "agent-config",
-  "kanban-station",
+  "ops-control-station",
   // GitHub Issues detail
   "github-issue-detail",
 ] as const;
