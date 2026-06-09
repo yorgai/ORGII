@@ -243,6 +243,7 @@ fn infer_display_status(
             "completed" | "success" | "verified" => return EventDisplayStatus::Completed,
             "failed" | "error" => return EventDisplayStatus::Failed,
             "pending" => return EventDisplayStatus::Pending,
+            "running" => return EventDisplayStatus::Running,
             _ => {}
         }
     }

@@ -70,14 +70,35 @@ mod tests {
 
         assert_eq!(chunks.len(), 1);
         assert_eq!(chunks[0].action_type, "tool_call");
+        assert_eq!(chunks[0].chunk_id, "tool-call-cmd_1");
         assert_eq!(chunks[0].function, "Shell");
         // Check command was unwrapped from bash wrapper
         assert_eq!(chunks[0].args["command"], "ls -la");
+        assert_eq!(chunks[0].result["call_id"], "cmd_1");
         assert_eq!(chunks[0].result["success"]["exitCode"], 0);
         assert!(chunks[0].result["success"]["stdout"]
             .as_str()
             .unwrap()
             .contains("file1.txt"));
+    }
+
+    #[test]
+    fn test_codex_item_started_and_completed_share_stable_id() {
+        let mut parser = CodexParser::new("test-session");
+        let started = r#"{"type":"item.started","item":{"type":"file_change","id":"fc_1","changes":[{"path":"/tmp/a.md"}]}}"#;
+        let completed = r#"{"type":"item.completed","item":{"type":"file_change","id":"fc_1","changes":[{"path":"/tmp/a.md"}],"status":"completed"}}"#;
+
+        let start_chunks = parser.parse_line(started);
+        let complete_chunks = parser.parse_line(completed);
+
+        assert_eq!(start_chunks.len(), 1);
+        assert_eq!(complete_chunks.len(), 1);
+        assert_eq!(start_chunks[0].chunk_id, "tool-call-fc_1");
+        assert_eq!(complete_chunks[0].chunk_id, "tool-call-fc_1");
+        assert_eq!(start_chunks[0].result["status"], "running");
+        assert_eq!(start_chunks[0].result["call_id"], "fc_1");
+        assert_eq!(complete_chunks[0].result["call_id"], "fc_1");
+        assert_eq!(complete_chunks[0].result["success"]["path"], "/tmp/a.md");
     }
 
     #[test]
@@ -171,6 +192,23 @@ mod tests {
             .is_empty());
     }
 
+    #[test]
+    fn test_gemini_tool_use_and_result_share_stable_id() {
+        let mut parser = GeminiParser::new("test-session");
+        let started = r#"{"type":"tool_use","tool_id":"gem_tool_1","tool_name":"edit_file","parameters":{"path":"/tmp/a.md","old_string":"","new_string":"hi"}}"#;
+        let completed = r#"{"type":"tool_result","tool_id":"gem_tool_1","result":"diff"}"#;
+
+        let start_chunks = parser.parse_line(started);
+        let complete_chunks = parser.parse_line(completed);
+
+        assert_eq!(start_chunks.len(), 1);
+        assert_eq!(complete_chunks.len(), 1);
+        assert_eq!(start_chunks[0].chunk_id, "tool-call-gem_tool_1");
+        assert_eq!(complete_chunks[0].chunk_id, "tool-call-gem_tool_1");
+        assert_eq!(start_chunks[0].result["status"], "running");
+        assert_eq!(complete_chunks[0].result["call_id"], "gem_tool_1");
+    }
+
     // ── Cursor Parser Tests ─────────────────────────────────────
 
     #[test]
@@ -188,13 +226,31 @@ mod tests {
     #[test]
     fn test_cursor_tool_call_shell() {
         let mut parser = CursorParser::new("test-session");
-        let line = r#"{"type":"tool_call","subtype":"completed","tool_call":{"shellToolCall":{"args":{"command":"ls"},"result":{"success":{"exitCode":0,"stdout":"file1.txt","stderr":""}}}}}"#;
+        let line = r#"{"type":"tool_call","subtype":"completed","call_id":"tool_1","tool_call":{"shellToolCall":{"args":{"command":"ls"},"result":{"success":{"exitCode":0,"stdout":"file1.txt","stderr":""}}}}}"#;
         let chunks = parser.parse_line(line);
 
         assert_eq!(chunks.len(), 1);
         assert_eq!(chunks[0].action_type, "tool_call");
+        assert_eq!(chunks[0].chunk_id, "tool-call-tool_1");
         assert_eq!(chunks[0].function, "Shell");
         assert_eq!(chunks[0].result["success"]["exitCode"], 0);
+    }
+
+    #[test]
+    fn test_cursor_tool_call_started_and_completed_share_stable_id() {
+        let mut parser = CursorParser::new("test-session");
+        let started = r#"{"type":"tool_call","subtype":"started","call_id":"tool_edit_1","tool_call":{"editFileByReplaceToolCall":{"args":{"path":"/tmp/a.md","streamContent":"hi"}}}}"#;
+        let completed = r#"{"type":"tool_call","status":"completed","call_id":"tool_edit_1","tool_call":{"editFileByReplaceToolCall":{"args":{"path":"/tmp/a.md","streamContent":"hi"},"result":{"success":{}}}}}"#;
+
+        let start_chunks = parser.parse_line(started);
+        let complete_chunks = parser.parse_line(completed);
+
+        assert_eq!(start_chunks.len(), 1);
+        assert_eq!(complete_chunks.len(), 1);
+        assert_eq!(start_chunks[0].chunk_id, "tool-call-tool_edit_1");
+        assert_eq!(complete_chunks[0].chunk_id, "tool-call-tool_edit_1");
+        assert_eq!(start_chunks[0].result["status"], "running");
+        assert_eq!(complete_chunks[0].result["success"], serde_json::json!({}));
     }
 
     #[test]

@@ -377,23 +377,48 @@ impl CliAgentParser for CursorParser {
                     .to_string();
 
                 let mut chunk = ActivityChunk::new(&self.session_id, "tool_call", &tool_name);
+                if !call_id.is_empty() {
+                    chunk.chunk_id = format!("tool-call-{call_id}");
+                }
 
-                match subtype {
-                    "started" => {
+                let normalized_subtype = match subtype {
+                    "started" | "completed" => subtype,
+                    _ => data
+                        .get("status")
+                        .or_else(|| data.get("tool_call_status"))
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(subtype),
+                };
+
+                match normalized_subtype {
+                    "started" | "running" => {
                         chunk.args = args;
                         chunk.result = serde_json::json!({"call_id": call_id, "status": "running"});
                     }
-                    "completed" => {
+                    "completed" | "success" => {
                         chunk.args = args;
                         chunk.result = result;
-                        // Inject call_id into result
                         if let Some(obj) = chunk.result.as_object_mut() {
                             obj.insert("call_id".to_string(), Value::String(call_id));
+                        }
+                    }
+                    "failed" | "error" => {
+                        chunk.args = args;
+                        chunk.result = result;
+                        if let Some(obj) = chunk.result.as_object_mut() {
+                            obj.insert("call_id".to_string(), Value::String(call_id));
+                            obj.entry("status".to_string())
+                                .or_insert_with(|| Value::String("failed".to_string()));
                         }
                     }
                     _ => {
                         chunk.args = args;
                         chunk.result = result;
+                        if !call_id.is_empty() {
+                            if let Some(obj) = chunk.result.as_object_mut() {
+                                obj.insert("call_id".to_string(), Value::String(call_id));
+                            }
+                        }
                     }
                 }
 

@@ -15,7 +15,7 @@
  *   - Reply-target clear after successful send
  */
 import { useAtomValue, useStore } from "jotai";
-import React, { useCallback } from "react";
+import React, { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { rejectQuestion, respondQuestion } from "@src/api/tauri/agent";
@@ -99,6 +99,7 @@ export function useSubmitMessage({
   const { t } = useTranslation("sessions");
   const store = useStore();
   const wpReadOnly = useAtomValue(wpReadOnlyAtom);
+  const submitInFlightKeyRef = useRef<string | null>(null);
 
   return useCallback(
     async (options: SubmitMessageOptions = {}) => {
@@ -191,128 +192,142 @@ export function useSubmitMessage({
       }
 
       const imageDataUrls = imageAttachment.images.map((img) => img.dataUrl);
+      const submitKey = JSON.stringify({
+        draftSessionId,
+        displayText,
+        agentContent,
+        imageDataUrls,
+        forceSendNow: options.forceSendNow === true,
+        forceQueueAsActiveTurn: options.forceQueueAsActiveTurn === true,
+      });
+      if (submitInFlightKeyRef.current === submitKey) return;
+      submitInFlightKeyRef.current = submitKey;
 
-      // ── Snapshot before optimistic clear ─────────────────────────────────
-      // Lets us restore the full composer state (text + images + cite-code)
-      // if the outgoing request fails, preventing silent data loss.
-      const editorSnapshot = refs.composerInputRef.current.getSnapshot();
-      const imagesSnapshot: ChatImageAttachment[] =
-        imageAttachment.images.slice();
-      const citeSnapshot: CiteCodeSnapshot | null = citeCode.isCiteCode
-        ? citeCode.captureCiteCode()
-        : null;
-
-      // ── Optimistic clear ──────────────────────────────────────────────────
-      refs.composerInputRef.current.clear();
-      refs.setHasContent(false);
-      if (citeCode.isCiteCode) {
-        citeCode.clearCiteCode();
-      }
-      imageAttachment.clearImages();
-      clearImageDraft(draftSessionId);
-
-      if (draftSessionId) {
-        void flushDraft("").catch((err: unknown) => {
-          console.warn("[useSubmitMessage] flushDraft(clear) failed:", err);
-        });
-      }
-
-      // ── Dispatch ──────────────────────────────────────────────────────────
       let submitSucceeded = false;
       try {
-        const dispatchImages =
-          imageDataUrls.length > 0 ? imageDataUrls : undefined;
-        const overrideHandled = onSubmitOverride
-          ? await onSubmitOverride({
-              displayText: displayText || "(image)",
-              agentContent,
-              imageDataUrls: dispatchImages,
-            })
-          : false;
-        if (!overrideHandled) {
-          const latestRuntimeStatus = store.get(sessionRuntimeStatusAtom);
-          const runtimeIsWorking =
-            latestRuntimeStatus === "running" ||
-            latestRuntimeStatus === "installing" ||
-            latestRuntimeStatus === "waiting_for_user" ||
-            latestRuntimeStatus === "waiting_for_funds" ||
-            (draftSessionId
-              ? sessionHasComposerStopBlockingWork(
-                  store.get(sortedEventsAtom),
-                  draftSessionId
-                )
-              : false);
-          const forceQueueAsActiveTurn =
-            options.forceQueueAsActiveTurn ||
-            store.get(isSessionActiveAtom) ||
-            runtimeIsWorking ||
-            store.get(isPendingCancelAtom) ||
-            isWpGeneWorking ||
-            isPendingCancel;
-          await handleSessChatSubmit(
-            undefined,
-            displayText || "(image)",
-            agentContent,
-            dispatchImages,
-            options.forceSendNow || forceQueueAsActiveTurn
-              ? {
-                  forceSendNow: options.forceSendNow,
-                  forceQueueAsActiveTurn,
-                }
-              : undefined
-          );
+        // ── Snapshot before optimistic clear ─────────────────────────────────
+        // Lets us restore the full composer state (text + images + cite-code)
+        // if the outgoing request fails, preventing silent data loss.
+        const editorSnapshot = refs.composerInputRef.current.getSnapshot();
+        const imagesSnapshot: ChatImageAttachment[] =
+          imageAttachment.images.slice();
+        const citeSnapshot: CiteCodeSnapshot | null = citeCode.isCiteCode
+          ? citeCode.captureCiteCode()
+          : null;
+
+        // ── Optimistic clear ──────────────────────────────────────────────────
+        refs.composerInputRef.current.clear();
+        refs.setHasContent(false);
+        if (citeCode.isCiteCode) {
+          citeCode.clearCiteCode();
         }
-        submitSucceeded = true;
-      } catch (err) {
-        // ── Restore on failure ────────────────────────────────────────────
-        // Each restore branch is independent so one failure doesn't block others.
+        imageAttachment.clearImages();
+        clearImageDraft(draftSessionId);
+
+        if (draftSessionId) {
+          void flushDraft("").catch((err: unknown) => {
+            console.warn("[useSubmitMessage] flushDraft(clear) failed:", err);
+          });
+        }
+
+        // ── Dispatch ──────────────────────────────────────────────────────────
         try {
-          const editor = refs.composerInputRef.current;
-          if (editor && editorSnapshot) {
-            editor.setContent(editorSnapshot);
-            refs.setHasContent(true);
-            if (draftSessionId) {
-              const restoredText = editor.getTextWithPills();
-              void flushDraft(restoredText).catch((err: unknown) => {
-                console.warn(
-                  "[useSubmitMessage] flushDraft(restore) failed:",
-                  err
-                );
-              });
+          const dispatchImages =
+            imageDataUrls.length > 0 ? imageDataUrls : undefined;
+          const overrideHandled = onSubmitOverride
+            ? await onSubmitOverride({
+                displayText: displayText || "(image)",
+                agentContent,
+                imageDataUrls: dispatchImages,
+              })
+            : false;
+          if (!overrideHandled) {
+            const latestRuntimeStatus = store.get(sessionRuntimeStatusAtom);
+            const runtimeIsWorking =
+              latestRuntimeStatus === "running" ||
+              latestRuntimeStatus === "installing" ||
+              latestRuntimeStatus === "waiting_for_user" ||
+              latestRuntimeStatus === "waiting_for_funds" ||
+              (draftSessionId
+                ? sessionHasComposerStopBlockingWork(
+                    store.get(sortedEventsAtom),
+                    draftSessionId
+                  )
+                : false);
+            const forceQueueAsActiveTurn =
+              options.forceQueueAsActiveTurn ||
+              store.get(isSessionActiveAtom) ||
+              runtimeIsWorking ||
+              store.get(isPendingCancelAtom) ||
+              isWpGeneWorking ||
+              isPendingCancel;
+            await handleSessChatSubmit(
+              undefined,
+              displayText || "(image)",
+              agentContent,
+              dispatchImages,
+              options.forceSendNow || forceQueueAsActiveTurn
+                ? {
+                    forceSendNow: options.forceSendNow,
+                    forceQueueAsActiveTurn,
+                  }
+                : undefined
+            );
+          }
+          submitSucceeded = true;
+        } catch (err) {
+          // ── Restore on failure ────────────────────────────────────────────
+          // Each restore branch is independent so one failure doesn't block others.
+          try {
+            const editor = refs.composerInputRef.current;
+            if (editor && editorSnapshot) {
+              editor.setContent(editorSnapshot);
+              refs.setHasContent(true);
+              if (draftSessionId) {
+                const restoredText = editor.getTextWithPills();
+                void flushDraft(restoredText).catch((err: unknown) => {
+                  console.warn(
+                    "[useSubmitMessage] flushDraft(restore) failed:",
+                    err
+                  );
+                });
+              }
+            }
+          } catch (restoreErr) {
+            console.warn(
+              "[useSubmitMessage] failed to restore editor content:",
+              restoreErr
+            );
+          }
+
+          if (imagesSnapshot.length > 0) {
+            try {
+              imageAttachment.restoreImages(imagesSnapshot);
+            } catch (restoreErr) {
+              console.warn(
+                "[useSubmitMessage] failed to restore image attachments:",
+                restoreErr
+              );
             }
           }
-        } catch (restoreErr) {
-          console.warn(
-            "[useSubmitMessage] failed to restore editor content:",
-            restoreErr
-          );
-        }
 
-        if (imagesSnapshot.length > 0) {
-          try {
-            imageAttachment.restoreImages(imagesSnapshot);
-          } catch (restoreErr) {
-            console.warn(
-              "[useSubmitMessage] failed to restore image attachments:",
-              restoreErr
-            );
+          if (citeSnapshot) {
+            try {
+              citeCode.restoreCiteCode(citeSnapshot);
+            } catch (restoreErr) {
+              console.warn(
+                "[useSubmitMessage] failed to restore cite-code state:",
+                restoreErr
+              );
+            }
           }
-        }
 
-        if (citeSnapshot) {
-          try {
-            citeCode.restoreCiteCode(citeSnapshot);
-          } catch (restoreErr) {
-            console.warn(
-              "[useSubmitMessage] failed to restore cite-code state:",
-              restoreErr
-            );
-          }
+          const reason = err instanceof Error ? err.message : String(err);
+          const baseMsg = t("chat.failedToSendMessage");
+          Message.error(reason ? `${baseMsg}: ${reason}` : baseMsg);
         }
-
-        const reason = err instanceof Error ? err.message : String(err);
-        const baseMsg = t("chat.failedToSendMessage");
-        Message.error(reason ? `${baseMsg}: ${reason}` : baseMsg);
+      } finally {
+        submitInFlightKeyRef.current = null;
       }
 
       if (!submitSucceeded) return;

@@ -536,7 +536,7 @@ const js = {
         const visibleInputShells = Array.from(document.querySelectorAll('[data-testid="chat-input"]')).filter(isVisible);
         const activeInputShell = visibleInputShells[visibleInputShells.length - 1] ?? null;
         const scopedButtons = activeInputShell
-          ? Array.from(activeInputShell.querySelectorAll('[data-testid="chat-send-button"]'))
+          ? Array.from(activeInputShell.querySelectorAll('[data-testid="chat-send-button"]')).filter(isVisible)
           : [];
         const buttons = scopedButtons.length > 0
           ? scopedButtons
@@ -546,7 +546,7 @@ const js = {
       })(),
       queuedItems: Array.from(document.querySelectorAll('[data-testid="queued-message-item"]')).map((node) => ({
         id: node.getAttribute('data-queued-message-id') || '',
-        text: node.textContent || '',
+        text: node.getAttribute('data-queued-message-content') || node.textContent || '',
       })),
       assistantTexts: Array.from(document.querySelectorAll('[data-testid="chat-message-assistant"]')).map((node) => (node.textContent || "").trim()).slice(-3),
       imageAttachmentState: (() => {
@@ -1598,22 +1598,46 @@ async function stopActiveTurnIfNeeded(label) {
   const sendState = await execJS(js.sendState).catch(() => null);
   const mode = await execJS(js.mode).catch(() => "unknown");
   if (mode !== "chat" || sendState?.state !== "stop") return;
-  const clicked = await execJS(js.click('[data-testid="chat-send-button"]'));
+  const clicked = await execJS(
+    js.clickWhenState('[data-testid="chat-send-button"]', "stop")
+  );
   if (clicked !== "clicked") {
     throw new Error(
       `${label} failed to stop active turn before reconfigure: ${clicked}`
     );
   }
-  await browser.waitUntil(
-    async () => {
-      const nextState = await execJS(js.sendState).catch(() => null);
-      return nextState?.state !== "stop";
-    },
-    {
-      timeout: 30_000,
-      timeoutMsg: `${label} active turn did not stop before reconfigure; dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+
+  const observedStopped = (state) => state?.state === "stop";
+  const observedNotStopped = (state) => state && state.state !== "stop";
+  try {
+    await browser.waitUntil(
+      async () => {
+        const nextState = await execJS(js.sendState).catch(() => null);
+        const nextDump = await execJS(js.pageDump).catch(() => null);
+        return (
+          observedNotStopped(nextState) ||
+          observedNotStopped(nextDump?.sendState)
+        );
+      },
+      {
+        timeout: 30_000,
+        timeoutMsg: `${label} active turn did not stop before reconfigure; dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+      }
+    );
+  } catch (error) {
+    const finalState = await execJS(js.sendState).catch(() => null);
+    const finalDump = await execJS(js.pageDump).catch(() => null);
+    if (
+      observedNotStopped(finalState) ||
+      observedNotStopped(finalDump?.sendState)
+    ) {
+      return;
     }
-  );
+    if (!observedStopped(finalState) && !observedStopped(finalDump?.sendState)) {
+      return;
+    }
+    throw error;
+  }
 }
 
 async function configureScenario(config, overrides = {}) {

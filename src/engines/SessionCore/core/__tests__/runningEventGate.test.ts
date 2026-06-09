@@ -104,12 +104,12 @@ describe("runningEventGate", () => {
 
   it("tracks running assistant activity after the latest user turn", () => {
     const activityAt = "2026-06-08T17:06:05.000Z";
-    const events = [
+    const events: SessionEvent[] = [
       messageEvent("user-1", "user", "2026-06-08T17:06:00.000Z"),
       {
         ...messageEvent("assistant-1", "assistant", activityAt),
         displayStatus: "running",
-      },
+      } as SessionEvent,
     ];
 
     expect(latestAssistantActivityAfterLastUserAt(events, "session-1")).toBe(

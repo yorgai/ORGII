@@ -41,6 +41,12 @@ export interface QueuedMessage {
    */
   releaseAfterTurnId?: string;
   /**
+   * Monotonic queue-watermark for sibling messages parked behind an explicit
+   * Send Now turn. Natural dispatch must wait for a queue release observed
+   * after this timestamp, even if the sibling was originally queued earlier.
+   */
+  releaseAfterMs?: number;
+  /**
    * User explicitly pressed Send after Stop restored the draft while Rust was
    * still winding down. This message is the next active prompt once cancel
    * settles; older queued follow-ups must stay parked behind it.
@@ -127,13 +133,22 @@ export const forceSendMessageAtom = atom(
   (get, set, messageId: string) => {
     const message = get(messageQueueAtom).find((msg) => msg.id === messageId);
     if (!message) return;
-    set(messageQueueAtom, (prev) => prev.filter((msg) => msg.id !== messageId));
     set(forceSendPendingQueueAtom, (prev) => {
       const duplicate = prev.some((msg) => msg.id === messageId);
       return duplicate
         ? prev
         : [{ ...message, requiresRuntimeSettle: false }, ...prev];
     });
+    const releaseAfterMs = Date.now();
+    set(messageQueueAtom, (prev) =>
+      prev
+        .filter((msg) => msg.id !== messageId)
+        .map((msg) =>
+          msg.sessionId === message.sessionId
+            ? { ...msg, requiresRuntimeSettle: true, releaseAfterMs }
+            : msg
+        )
+    );
   }
 );
 forceSendMessageAtom.debugLabel = "forceSendMessageAtom";

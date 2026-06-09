@@ -80,6 +80,22 @@ function queuedMessageAgeMs(message: QueuedMessage): number {
   return Date.now() - createdAtMs;
 }
 
+function queuedMessageCreatedAtMs(message: QueuedMessage): number {
+  const createdAtMs = Date.parse(message.createdAt);
+  return Number.isFinite(createdAtMs) ? createdAtMs : 0;
+}
+
+function naturalQueueReleaseWatermarkMs(
+  message: QueuedMessage,
+  explicitDispatchBarrierBySession: ReadonlyMap<string, number>
+): number {
+  return Math.max(
+    queuedMessageCreatedAtMs(message),
+    message.releaseAfterMs ?? 0,
+    explicitDispatchBarrierBySession.get(message.sessionId) ?? 0
+  );
+}
+
 function hasTurnBlockingRuntimeEventForSession(sessionId: string): boolean {
   return sessionHasTurnBlockingRuntimeEvent(
     getInstrumentedStore().get(sortedEventsAtom),
@@ -256,6 +272,7 @@ export function useQueueDispatch(): void {
           // surfaces in "recent activity" views (sidebar / Kanban)
           // without waiting for the next session list refresh.
           markSessionActive(sessionId);
+          setSessionRuntimeStatus({ status: "running", source: "queue" });
           rememberSentQueueId(msg.id);
           dequeueMessage(msg.id);
           // Release the lock before Cursor IDE triggers its synthetic idle edge,
@@ -294,6 +311,10 @@ export function useQueueDispatch(): void {
 
   // --- falling-edge dispatch with lock ---
   const dispatchLockRef = useRef(false);
+  // Tracks which queued message currently owns the dispatch path. This prevents
+  // repeated Send Now flush effects from re-entering the same queue item while
+  // the CLI adapter is still waiting for the backend echo/persistence boundary.
+  const inFlightQueueMessageIdRef = useRef<string | null>(null);
   // Tracks which sessionId currently holds the lock, so we can detect
   // session switches and release a stale lock immediately.
   const lockSessionIdRef = useRef<string | null>(null);
@@ -306,6 +327,9 @@ export function useQueueDispatch(): void {
   const flushTimersRef = useRef<number[]>([]);
   const explicitInterruptSessionRef = useRef<string | null>(null);
   const explicitInterruptRequestedAtByQueueIdRef = useRef<Map<string, number>>(
+    new Map()
+  );
+  const explicitDispatchBarrierBySessionRef = useRef<Map<string, number>>(
     new Map()
   );
   const tryDispatchNextRef = useRef<(() => void) | null>(null);
@@ -351,10 +375,10 @@ export function useQueueDispatch(): void {
         hasObservedUnsettledQueueTurn(message.sessionId);
       if (messageRuntimeWorking) return false;
       if (message.requiresRuntimeSettle) {
-        const createdAtMs = Date.parse(message.createdAt);
-        const requiredSettleAfter = Number.isFinite(createdAtMs)
-          ? createdAtMs
-          : 0;
+        const requiredSettleAfter = naturalQueueReleaseWatermarkMs(
+          message,
+          explicitDispatchBarrierBySessionRef.current
+        );
         return hasQueueTurnSettledAfter(
           message.sessionId,
           requiredSettleAfter,
@@ -389,20 +413,22 @@ export function useQueueDispatch(): void {
     const isVisibleSession =
       activeSessionId === latestActiveSessionId ||
       activeSessionId === latestPipelineActiveSessionId;
-    const runtimeWorking =
+    const authoritativeRuntimeWorking =
       latestIsSessionActive ||
       isQueueRuntimeStillWorking(latestRuntimeStatus) ||
       (isVisibleSession &&
         (latestIsSessionActive ||
           isQueueRuntimeStillWorking(latestRuntimeStatus))) ||
-      isSessionRowRuntimeWorking(latestSessionMap, activeSessionId) ||
+      isSessionRowRuntimeWorking(latestSessionMap, activeSessionId);
+    const runtimeWorking =
+      authoritativeRuntimeWorking ||
       hasTurnBlockingRuntimeEventForSession(activeSessionId) ||
       hasObservedUnsettledQueueTurn(activeSessionId);
     if (runtimeWorking && !explicitMsg) return;
     if (explicitMsg) {
       const interruptRequestedAt =
         explicitInterruptRequestedAtByQueueIdRef.current.get(explicitMsg.id);
-      if (runtimeWorking && !interruptRequestedAt) {
+      if (authoritativeRuntimeWorking && !interruptRequestedAt) {
         if (explicitInterruptSessionRef.current === explicitMsg.id) {
           return;
         }
@@ -431,7 +457,7 @@ export function useQueueDispatch(): void {
 
       if (
         interruptRequestedAt &&
-        runtimeWorking &&
+        authoritativeRuntimeWorking &&
         !hasQueueTurnTerminatedAfter(activeSessionId, interruptRequestedAt)
       ) {
         return;
@@ -450,10 +476,7 @@ export function useQueueDispatch(): void {
       userCancelRef.current = false;
     }
 
-    const nextMsg =
-      explicitMsg ??
-      naturalMsg ??
-      queueRef.current.find((message) => message.sessionId === activeSessionId);
+    const nextMsg = explicitMsg ?? naturalMsg;
 
     if (!nextMsg || editingRef.current) {
       return;
@@ -461,11 +484,17 @@ export function useQueueDispatch(): void {
 
     const explicitBypassesRuntimeSettle =
       explicitMsg !== undefined && nextMsg.id === explicitMsg.id;
+    if (explicitBypassesRuntimeSettle) {
+      explicitDispatchBarrierBySessionRef.current.set(
+        nextMsg.sessionId,
+        Date.now()
+      );
+    }
     if (nextMsg.requiresRuntimeSettle && !explicitBypassesRuntimeSettle) {
-      const createdAtMs = Date.parse(nextMsg.createdAt);
-      const requiredSettleAfter = Number.isFinite(createdAtMs)
-        ? createdAtMs
-        : 0;
+      const requiredSettleAfter = naturalQueueReleaseWatermarkMs(
+        nextMsg,
+        explicitDispatchBarrierBySessionRef.current
+      );
       const releasedAt = getQueueTurnReleaseAtAfter(
         nextMsg.sessionId,
         requiredSettleAfter,
@@ -484,14 +513,22 @@ export function useQueueDispatch(): void {
       }
 
       if (!explicitMsg) {
+        const currentActiveSessionId = store.get(sessionIdAtom);
+        const currentPipelineSessionId = store.get(activeSessionIdAtom);
+        const currentRuntimeStatus = store.get(sessionRuntimeStatusAtom);
+        const currentSessionMap = store.get(sessionMapAtom);
+        const isCurrentVisibleSession =
+          nextMsg.sessionId === currentActiveSessionId ||
+          nextMsg.sessionId === currentPipelineSessionId;
         const stillWorking =
-          isSessionRowRuntimeWorking(latestSessionMap, nextMsg.sessionId) ||
+          (isCurrentVisibleSession &&
+            (store.get(isSessionActiveAtom) ||
+              isQueueRuntimeStillWorking(currentRuntimeStatus))) ||
+          isSessionRowRuntimeWorking(currentSessionMap, nextMsg.sessionId) ||
           hasTurnBlockingRuntimeEventForSession(nextMsg.sessionId) ||
           hasObservedUnsettledQueueTurn(nextMsg.sessionId);
         const activeSessionPendingCancel =
-          (nextMsg.sessionId === store.get(sessionIdAtom) ||
-            nextMsg.sessionId === store.get(activeSessionIdAtom)) &&
-          store.get(isPendingCancelAtom);
+          isCurrentVisibleSession && store.get(isPendingCancelAtom);
         if (stillWorking || activeSessionPendingCancel) return;
       }
     }
@@ -511,14 +548,17 @@ export function useQueueDispatch(): void {
     if (
       dispatchLockRef.current &&
       nextMsg &&
-      (lockSessionIdRef.current !== nextMsg.sessionId ||
-        (explicitMsg && nextMsg.id === explicitMsg.id))
+      lockSessionIdRef.current !== nextMsg.sessionId
     ) {
       dispatchLockRef.current = false;
+      inFlightQueueMessageIdRef.current = null;
       lockSessionIdRef.current = null;
     }
 
     if (dispatchLockRef.current) {
+      return;
+    }
+    if (inFlightQueueMessageIdRef.current === nextMsg.id) {
       return;
     }
     if (sentQueuedMessageIdsRef.current.has(nextMsg.id)) {
@@ -530,8 +570,12 @@ export function useQueueDispatch(): void {
       handledFlushRequestRef.current = latestFlushRequest;
     }
     dispatchLockRef.current = true;
+    inFlightQueueMessageIdRef.current = nextMsg.id;
     lockSessionIdRef.current = nextMsg.sessionId;
     dispatchRef.current(nextMsg, () => {
+      if (inFlightQueueMessageIdRef.current === nextMsg.id) {
+        inFlightQueueMessageIdRef.current = null;
+      }
       dispatchLockRef.current = false;
       lockSessionIdRef.current = null;
     });
@@ -558,6 +602,9 @@ export function useQueueDispatch(): void {
   useEffect(() => {
     if (isSessionActive) {
       // Session became active — release any stale lock from a previous dispatch.
+      // Keep the in-flight message guard until dispatchMessage's completion
+      // callback runs; CLI status can flip to running before the backend user
+      // turn is persisted, and repeated flush effects must not resend it.
       dispatchLockRef.current = false;
       lockSessionIdRef.current = null;
     }

@@ -9,6 +9,7 @@ import { atom } from "jotai";
 import { REPLAY_CONFIG } from "@src/config/workspace/replayConfig";
 import { clearLoadedPayloads } from "@src/engines/SessionCore/payloads";
 import { clearLoadedTurnRegistry } from "@src/engines/SessionCore/turns/loadedTurnRegistry";
+import { messageQueueAtom } from "@src/store/ui/messageQueueAtom";
 
 import {
   isVisibleInChat,
@@ -51,6 +52,34 @@ import {
   replayModeAtom,
   replayTimeRangeAtom,
 } from "./replay";
+
+function normalizeUserText(value: string | undefined): string {
+  return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function syntheticMatchesQueuedMessage(
+  event: SessionEvent,
+  queued: { sessionId: string; content: string; displayContent: string }
+): boolean {
+  if (event.sessionId !== queued.sessionId) return false;
+  const eventText = normalizeUserText(event.displayText);
+  const resultMessage = event.result?.message;
+  const eventContent = normalizeUserText(
+    typeof resultMessage === "object" &&
+      resultMessage !== null &&
+      "content" in resultMessage
+      ? String(resultMessage.content ?? "")
+      : event.displayText
+  );
+  const queuedDisplay = normalizeUserText(queued.displayContent);
+  const queuedContent = normalizeUserText(queued.content);
+  return (
+    eventText === queuedDisplay ||
+    eventText === queuedContent ||
+    eventContent === queuedDisplay ||
+    eventContent === queuedContent
+  );
+}
 
 // ============================================
 // Compound Actions (Write-only atoms)
@@ -198,21 +227,47 @@ export const loadSessionAtom = atom(
     const argsMap = extendRunningArgsCache(eventsForLoad);
     const enrichedEvents = applyRunningArgs(argsMap, eventsForLoad);
 
+    const queuedMessagesForSession = get(messageQueueAtom).filter(
+      (message) => message.sessionId === sessionId
+    );
+    const queuedSyntheticEvents = new Set<string>();
+    for (const event of enrichedEvents) {
+      if (
+        isSyntheticUserInputEvent(event) &&
+        queuedMessagesForSession.some((message) =>
+          syntheticMatchesQueuedMessage(event, message)
+        )
+      ) {
+        queuedSyntheticEvents.add(event.id);
+      }
+    }
+    const transcriptEvents =
+      queuedSyntheticEvents.size > 0
+        ? enrichedEvents.filter((event) => !queuedSyntheticEvents.has(event.id))
+        : enrichedEvents;
+
     // Deduplicate: when events already contains the synthetic event (e.g.
     // the initial loadSessionAtom call from launchSession passes it directly),
-    // don't prepend a second copy.
+    // don't prepend a second copy. Synthetic events that correspond to a
+    // still-parked frontend queue item are not transcript turns yet; keeping
+    // them here makes queued follow-ups cross the rendered round boundary
+    // before dispatch.
     let mergedEvents: SessionEvent[];
     if (syntheticUserEvents.length > 0) {
-      const enrichedIds = new Set(enrichedEvents.map((evt) => evt.id));
+      const enrichedIds = new Set(transcriptEvents.map((evt) => evt.id));
       const uniqueSynthetic = syntheticUserEvents.filter(
-        (evt) => !enrichedIds.has(evt.id)
+        (evt) =>
+          !enrichedIds.has(evt.id) &&
+          !queuedMessagesForSession.some((message) =>
+            syntheticMatchesQueuedMessage(evt, message)
+          )
       );
       mergedEvents =
         uniqueSynthetic.length > 0
-          ? [...uniqueSynthetic, ...enrichedEvents]
-          : enrichedEvents;
+          ? [...uniqueSynthetic, ...transcriptEvents]
+          : transcriptEvents;
     } else {
-      mergedEvents = enrichedEvents;
+      mergedEvents = transcriptEvents;
     }
 
     if (mergedEvents.some(isBackendUserMessageEvent)) {

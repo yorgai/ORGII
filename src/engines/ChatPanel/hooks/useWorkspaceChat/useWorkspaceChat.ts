@@ -402,7 +402,9 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
           requiresRuntimeSettle: !effectiveUserInitiatedCancel,
           releaseAfterTurnId: effectiveUserInitiatedCancel
             ? undefined
-            : isAgentSession(sessionId) || hasObservedWorkingTurn
+            : isAgentSession(sessionId) ||
+                isCursorIdeSession(sessionId) ||
+                hasObservedWorkingTurn
               ? PENDING_RUST_ACTIVE_TURN_ID
               : undefined,
           dispatchAfterUserCancel: effectiveUserInitiatedCancel,

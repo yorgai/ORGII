@@ -37,13 +37,8 @@ import { GroupChatPausedBanner } from "@src/engines/ChatPanel/components/ChatSta
 import { useAgentOrgGroupChatController } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatController";
 import { AgentOrgGroupChatLiveSessions } from "@src/engines/ChatPanel/hooks/useAgentOrgGroupChatLiveSessions";
 import { useChatPanelState } from "@src/engines/ChatPanel/hooks/useChatPanelState";
-import {
-  currentEventIdAtom,
-  replayModeAtom,
-} from "@src/engines/SessionCore/core/atoms";
 import { chatEventsAtom } from "@src/engines/SessionCore/derived/chatEvents";
 import { derivePlanApprovalViewState } from "@src/engines/SessionCore/derived/planDisplayEvents";
-import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { useFileReviewSync } from "@src/hooks/fileReview";
 import { useSessionWorkspaceSync } from "@src/hooks/session/useSessionWorkspaceSync";
 import { activeSessionIdAtom } from "@src/store/session";
@@ -51,6 +46,7 @@ import {
   sessionRuntimeStatusAtom,
   streamRetryStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
+import { fileReviewResetSignalAtom } from "@src/store/session/fileReviewAtom";
 import { pendingPlanApprovalsAtom } from "@src/store/session/planApprovalAtom";
 import {
   dequeueMessageAtom,
@@ -61,10 +57,6 @@ import {
   queueFlushRequestAtom,
   reorderQueueAtom,
 } from "@src/store/ui/messageQueueAtom";
-import {
-  simulatorSelectedAppAtom,
-  stationModeAtom,
-} from "@src/store/ui/simulatorAtom";
 import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 
 import ChatFloatingComposer from "./ChatFloatingComposer";
@@ -302,8 +294,12 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const messageQueue = useAtomValue(messageQueueAtom);
     const sessionMessageQueue = useMemo(
       () =>
-        messageQueue.filter((message) => message.sessionId === queueSessionId),
-      [messageQueue, queueSessionId]
+        messageQueue.filter(
+          (message) =>
+            message.sessionId === queueSessionId ||
+            message.sessionId === pipelineSessionId
+        ),
+      [messageQueue, pipelineSessionId, queueSessionId]
     );
     const enqueueCount = useAtomValue(enqueueCountAtom);
     const cancelQueuedMessage = useSetAtom(dequeueMessageAtom);
@@ -380,12 +376,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
       deletions: 0,
     });
     const clearFileChangeStatsTimerRef = useRef<number | null>(null);
-    const handleFilesNavigate = useCallback(() => {
-      store.set(stationModeAtom, "agent-station");
-      store.set(simulatorSelectedAppAtom, AppType.DIFF);
-      store.set(replayModeAtom, "replay");
-      store.set(currentEventIdAtom, null);
-    }, [store]);
+    const fileReviewResetSignal = useAtomValue(fileReviewResetSignalAtom);
 
     useEffect(() => {
       return () => {
@@ -406,6 +397,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
       collapsePlan,
       queueExpanded,
       processExpanded,
+      filesExpanded,
       toggleQueue,
       toggleProcess,
       toggleFiles,
@@ -421,8 +413,20 @@ const ChatView: React.FC<ChatViewProps> = memo(
       hasPermission,
       hasModeSwitch,
       hasPlan,
-      onFilesExpand: handleFilesNavigate,
     });
+
+    useEffect(() => {
+      if (clearFileChangeStatsTimerRef.current !== null) {
+        window.clearTimeout(clearFileChangeStatsTimerRef.current);
+        clearFileChangeStatsTimerRef.current = null;
+      }
+      lastFileChangeStatsRef.current = {
+        count: 0,
+        additions: 0,
+        deletions: 0,
+      };
+      setFileChangeStats({ count: 0, additions: 0, deletions: 0 });
+    }, [fileReviewResetSignal, setFileChangeStats]);
 
     const hasAgentOrgIntervention =
       agentOrgInterventionError !== null || agentOrgIntervention !== null;
@@ -536,6 +540,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
               onModeSwitchDataChange={setHasModeSwitch}
               queueExpanded={queueExpanded}
               processExpanded={processExpanded}
+              filesExpanded={filesExpanded}
               queuedMessages={sessionMessageQueue}
               onCancelQueuedMessage={cancelQueuedMessage}
               onSendQueuedMessageNow={handleSendNow}

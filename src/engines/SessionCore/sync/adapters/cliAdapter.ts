@@ -16,7 +16,11 @@ import { convertFileSrc, invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { enterAgentOrgSessionIntervention } from "@src/api/tauri/agent";
 import type { CancelReason } from "@src/api/tauri/agent/session";
 import type { MergeStatus } from "@src/api/tauri/rpc/schemas/validation";
-import { loadSessionAtom } from "@src/engines/SessionCore/core/atoms";
+import {
+  loadSessionAtom,
+  sessionIdAtom,
+} from "@src/engines/SessionCore/core/atoms";
+import { isTurnBlockingRuntimeEvent } from "@src/engines/SessionCore/core/runningEventGate";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { markQueueTurnSettled } from "@src/engines/SessionCore/hooks/session/queueTurnGate";
@@ -29,12 +33,14 @@ import {
   createStreamMessageId,
   createStreamThinkingId,
 } from "@src/engines/SessionCore/sync/utils/activityIds";
+import { setSessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
 import {
   clearPendingPlanApproval,
   pendingPlanApprovalsAtom,
   upsertPendingPlanApproval,
 } from "@src/store/session/planApprovalAtom";
 import { upsertSession } from "@src/store/session/sessionAtom/mutations";
+import { activeSessionIdAtom } from "@src/store/session/viewAtom";
 import type {
   ActivityChunk,
   CliSessionStatus,
@@ -123,6 +129,11 @@ const CLI_TERMINAL_STATUSES = new Set<CliSessionStatus>([
   "archived",
 ]);
 
+const protectedRunningTurnBySession = new Map<
+  string,
+  { content: string; startedAt: number }
+>();
+
 function isCliTerminalStatus(
   status: CliSessionStatus | undefined
 ): status is CliSessionStatus {
@@ -139,18 +150,24 @@ async function readCliStatus(
 
 async function waitForCliRunBoundary(
   sessionId: string,
-  previousUpdatedAt: string | null | undefined
+  previousStatus: CliStatusResponse | null
 ): Promise<CliStatusResponse | null> {
   const deadline = Date.now() + 15_000;
+  const previousUpdatedAt = previousStatus?.updatedAt;
+  const previousWasTerminal = isCliTerminalStatus(previousStatus?.status);
   let lastStatus: CliStatusResponse | null = null;
   while (Date.now() < deadline) {
     lastStatus = await readCliStatus(sessionId);
     const hasNewStatus =
       !previousUpdatedAt || lastStatus?.updatedAt !== previousUpdatedAt;
+    const hasDurableBoundary =
+      Boolean(previousUpdatedAt) && lastStatus?.updatedAt !== previousUpdatedAt;
+    if (lastStatus?.status === "running" && hasNewStatus) {
+      return lastStatus;
+    }
     if (
-      hasNewStatus &&
-      (lastStatus?.status === "running" ||
-        isCliTerminalStatus(lastStatus?.status))
+      isCliTerminalStatus(lastStatus?.status) &&
+      (hasDurableBoundary || !previousWasTerminal)
     ) {
       return lastStatus;
     }
@@ -160,6 +177,89 @@ async function waitForCliRunBoundary(
   throw new Error(
     `CLI run boundary was not observed for ${sessionId}; lastStatus=${JSON.stringify(lastStatus)}`
   );
+}
+
+async function closeObservedCliTerminalEvents(
+  sessionId: string,
+  status: CliSessionStatus
+): Promise<void> {
+  const events = await eventStoreProxy.getEvents(sessionId);
+  const closableEvents = events.filter((event) => {
+    if (event.sessionId && event.sessionId !== sessionId) return false;
+    return isTurnBlockingRuntimeEvent(event);
+  });
+  if (closableEvents.length === 0) return;
+  const displayStatus =
+    status === "failed" || status === "error" ? "failed" : "completed";
+  await Promise.all(
+    closableEvents.map((event) =>
+      eventStoreProxy.upsert(
+        {
+          ...event,
+          displayStatus,
+          activityStatus: "processed",
+          result: { ...event.result, status: displayStatus },
+          isDelta: false,
+        },
+        sessionId
+      )
+    )
+  );
+}
+
+function markCliRuntimeRunning(sessionId: string): void {
+  if (!isStoreInitialized()) return;
+  const store = getInstrumentedStore();
+  const isVisibleSession =
+    store.get(sessionIdAtom) === sessionId ||
+    store.get(activeSessionIdAtom) === sessionId;
+  if (!isVisibleSession) return;
+  store.set(setSessionRuntimeStatusAtom, { status: "running", source: "sync" });
+}
+
+function isProtectedCliTurnTerminal(
+  sessionId: string,
+  status: CliSessionStatus | undefined
+): boolean {
+  return (
+    isCliTerminalStatus(status) && protectedRunningTurnBySession.has(sessionId)
+  );
+}
+
+function markObservedCliTerminalStatus(
+  sessionId: string,
+  status: CliSessionStatus | undefined
+): void {
+  if (!isCliTerminalStatus(status) || !isStoreInitialized()) return;
+  if (isProtectedCliTurnTerminal(sessionId, status)) return;
+  const store = getInstrumentedStore();
+  const isVisibleSession =
+    store.get(sessionIdAtom) === sessionId ||
+    store.get(activeSessionIdAtom) === sessionId;
+  if (!isVisibleSession) return;
+  store.set(setSessionRuntimeStatusAtom, { status, source: "sync" });
+  void closeObservedCliTerminalEvents(sessionId, status).catch((error) => {
+    console.warn("[cliAdapter] failed to close terminal CLI events:", error);
+  });
+}
+
+async function waitForCliTerminalBoundary(
+  sessionId: string,
+  previousUpdatedAt: string | null | undefined,
+  timeoutMs = 90_000
+): Promise<CliStatusResponse | null> {
+  const deadline = Date.now() + timeoutMs;
+  let lastStatus: CliStatusResponse | null = null;
+  while (Date.now() < deadline) {
+    lastStatus = await readCliStatus(sessionId);
+    const hasNewStatus =
+      !previousUpdatedAt || lastStatus?.updatedAt !== previousUpdatedAt;
+    if (hasNewStatus && isCliTerminalStatus(lastStatus?.status)) {
+      return lastStatus;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return lastStatus;
 }
 
 async function refreshLoadedCliHistory(
@@ -183,18 +283,35 @@ function eventContainsText(event: SessionEvent, text: string): boolean {
 async function waitForPersistedCliUserEvent(
   sessionId: string,
   content: string
-): Promise<void> {
+): Promise<SessionEvent[]> {
   const deadline = Date.now() + 15_000;
   let lastEventCount = 0;
   while (Date.now() < deadline) {
     const events = await refreshLoadedCliHistory(sessionId);
     lastEventCount = events.length;
-    if (events.some((event) => eventContainsText(event, content))) return;
+    if (events.some((event) => eventContainsText(event, content)))
+      return events;
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   throw new Error(
     `CLI user event was not persisted for ${sessionId}; eventCount=${lastEventCount}`
   );
+}
+
+function hasRuntimeOutputAfterUserEvent(
+  events: SessionEvent[],
+  content: string
+): boolean {
+  let userIndex = -1;
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event.source === "user" && eventContainsText(event, content)) {
+      userIndex = index;
+      break;
+    }
+  }
+  if (userIndex < 0) return false;
+  return events.slice(userIndex + 1).some((event) => event.source !== "user");
 }
 
 // ============================================================================
@@ -265,6 +382,7 @@ export const cliAdapter: SessionAdapter = {
     let thinkContent = "";
     let thinkStreamId = "";
     let thinkStartedAt = "";
+    let observedTerminalStatus: CliSessionStatus | undefined;
     const finalizedStreamEventIds = new Set<string>();
     const toolCallDeltaBuffers = new Map<
       number,
@@ -292,6 +410,11 @@ export const cliAdapter: SessionAdapter = {
 
     function clearToolCallDeltaBuffers(): void {
       toolCallDeltaBuffers.clear();
+    }
+
+    function reconcileTerminalEventsIfNeeded(): void {
+      if (!observedTerminalStatus) return;
+      markObservedCliTerminalStatus(sessionId, observedTerminalStatus);
     }
 
     function asString(value: unknown): string | undefined {
@@ -405,7 +528,9 @@ export const cliAdapter: SessionAdapter = {
     }
 
     function handleActivity(chunk: ActivityChunk): void {
-      callbacks.onStatusChange?.("running");
+      if (!observedTerminalStatus) {
+        callbacks.onStatusChange?.("running");
+      }
 
       if (
         chunk.function === "user_message" &&
@@ -508,10 +633,14 @@ export const cliAdapter: SessionAdapter = {
                 clearThinkingStream();
               }
               finalizedStreamEventIds.add(event.id);
-              eventStoreProxy.replaceAndRemove(tempId, event, sessionId);
+              eventStoreProxy
+                .replaceAndRemove(tempId, event, sessionId)
+                .then(reconcileTerminalEventsIfNeeded);
               return;
             }
-            eventStoreProxy.append([event], sessionId);
+            eventStoreProxy
+              .append([event], sessionId)
+              .then(reconcileTerminalEventsIfNeeded);
           })
           .catch((err) => {
             console.warn("[CliAdapter] normalizeChunkRust failed:", err);
@@ -528,10 +657,14 @@ export const cliAdapter: SessionAdapter = {
                 toolCallDeltaBuffers.delete(index);
               }
             }
-            eventStoreProxy.upsert(event, sessionId);
+            eventStoreProxy
+              .upsert(event, sessionId)
+              .then(reconcileTerminalEventsIfNeeded);
             return;
           }
-          eventStoreProxy.append([event], sessionId);
+          eventStoreProxy
+            .append([event], sessionId)
+            .then(reconcileTerminalEventsIfNeeded);
         })
         .catch((err) => {
           console.warn("[CliAdapter] normalizeChunkRust failed:", err);
@@ -561,36 +694,51 @@ export const cliAdapter: SessionAdapter = {
         // overwriting the previous turn's completed assistant message. If they differ,
         // swap them; if they happen to be the same (no delta arrived), just upsert.
         if (tsTempId && tsTempId !== completeEvent.id) {
-          eventStoreProxy.replaceAndRemove(tsTempId, completeEvent, sessionId);
+          eventStoreProxy
+            .replaceAndRemove(tsTempId, completeEvent, sessionId)
+            .then(reconcileTerminalEventsIfNeeded);
         } else {
-          eventStoreProxy.upsert(completeEvent, sessionId);
+          eventStoreProxy
+            .upsert(completeEvent, sessionId)
+            .then(reconcileTerminalEventsIfNeeded);
         }
       } else if (streamType === "thinking") {
         const tsTempId = thinkStreamId;
         clearThinkingStream();
         if (tsTempId && tsTempId !== completeEvent.id) {
-          eventStoreProxy.replaceAndRemove(tsTempId, completeEvent, sessionId);
+          eventStoreProxy
+            .replaceAndRemove(tsTempId, completeEvent, sessionId)
+            .then(reconcileTerminalEventsIfNeeded);
         } else {
-          eventStoreProxy.upsert(completeEvent, sessionId);
+          eventStoreProxy
+            .upsert(completeEvent, sessionId)
+            .then(reconcileTerminalEventsIfNeeded);
         }
       } else {
-        eventStoreProxy.upsert(completeEvent, sessionId);
+        eventStoreProxy
+          .upsert(completeEvent, sessionId)
+          .then(reconcileTerminalEventsIfNeeded);
       }
     }
 
     function handleStatusChange(status: string, errorMessage?: string): void {
+      const terminalStatus = isCliTerminalStatus(status as CliSessionStatus)
+        ? (status as CliSessionStatus)
+        : undefined;
+      if (isProtectedCliTurnTerminal(sessionId, terminalStatus)) {
+        markCliRuntimeRunning(sessionId);
+        return;
+      }
+
       callbacks.onStatusChange?.(status, errorMessage);
 
-      if (
-        status === "completed" ||
-        status === "failed" ||
-        status === "error" ||
-        status === "cancelled"
-      ) {
+      if (terminalStatus) {
+        observedTerminalStatus = terminalStatus;
         clearMessageStream();
         clearThinkingStream();
         clearToolCallDeltaBuffers();
         setStreamingMode(false);
+        markObservedCliTerminalStatus(sessionId, observedTerminalStatus);
         if (status === "cancelled") {
           cancelled = true;
         }
@@ -598,6 +746,8 @@ export const cliAdapter: SessionAdapter = {
       }
 
       if (status === "running") {
+        observedTerminalStatus = undefined;
+        protectedRunningTurnBySession.delete(sessionId);
         cancelled = false;
       }
     }
@@ -663,6 +813,7 @@ export const cliAdapter: SessionAdapter = {
         clearMessageStream();
         clearThinkingStream();
         clearToolCallDeltaBuffers();
+        observedTerminalStatus = undefined;
         cancelled = false;
         _streaming = false;
         eventStoreProxy.setStreaming(false, sessionId);
@@ -693,29 +844,64 @@ export const cliAdapter: SessionAdapter = {
       await enterAgentOrgSessionIntervention(sessionId);
     }
     const previousStatus = await readCliStatus(sessionId);
-    await tauriInvoke("cli_agent_message", {
-      sessionId,
+    protectedRunningTurnBySession.set(sessionId, {
       content,
-      ...(model ? { model } : {}),
-      ...(accountId ? { accountId } : {}),
-      ...(mode ? { mode } : {}),
-      ...(imageDataUrls && imageDataUrls.length > 0
-        ? { images: imageDataUrls }
-        : {}),
-      ...(ideContext ? { ideContext } : {}),
+      startedAt: Date.now(),
     });
+    markCliRuntimeRunning(sessionId);
+    try {
+      await tauriInvoke("cli_agent_message", {
+        sessionId,
+        content,
+        ...(model ? { model } : {}),
+        ...(accountId ? { accountId } : {}),
+        ...(mode ? { mode } : {}),
+        ...(imageDataUrls && imageDataUrls.length > 0
+          ? { images: imageDataUrls }
+          : {}),
+        ...(ideContext ? { ideContext } : {}),
+      });
+    } catch (error) {
+      protectedRunningTurnBySession.delete(sessionId);
+      throw error;
+    }
     const acceptedStatus = await waitForCliRunBoundary(
       sessionId,
-      previousStatus?.updatedAt
+      previousStatus
     );
-    await waitForPersistedCliUserEvent(sessionId, content);
-    if (isCliTerminalStatus(acceptedStatus?.status)) {
+    markCliRuntimeRunning(sessionId);
+    const persistedEvents = await waitForPersistedCliUserEvent(
+      sessionId,
+      content
+    );
+    const acceptedTerminalIsCurrentTurn =
+      isCliTerminalStatus(acceptedStatus?.status) &&
+      hasRuntimeOutputAfterUserEvent(persistedEvents, content);
+    if (acceptedTerminalIsCurrentTurn) {
+      protectedRunningTurnBySession.delete(sessionId);
+      markObservedCliTerminalStatus(sessionId, acceptedStatus.status);
       markQueueTurnSettled(
         sessionId,
         Date.now(),
         undefined,
         acceptedStatus.status
       );
+    } else {
+      void waitForCliTerminalBoundary(
+        sessionId,
+        acceptedStatus?.updatedAt ?? previousStatus?.updatedAt
+      ).then((terminalStatus) => {
+        if (isCliTerminalStatus(terminalStatus?.status)) {
+          protectedRunningTurnBySession.delete(sessionId);
+          markObservedCliTerminalStatus(sessionId, terminalStatus.status);
+          markQueueTurnSettled(
+            sessionId,
+            Date.now(),
+            undefined,
+            terminalStatus.status
+          );
+        }
+      });
     }
   },
 

@@ -67,6 +67,9 @@ const QueuedMessageItem: React.FC<QueuedMessageItemProps> = memo(
         } ${draggable && !isEditing ? "cursor-grab active:cursor-grabbing" : ""}`}
         data-testid="queued-message-item"
         data-queued-message-id={msg.id}
+        data-queued-message-content={msg.displayContent}
+        title={msg.displayContent}
+        aria-label={msg.displayContent}
         {...(draggable && !isEditing ? { ...attributes, ...listeners } : {})}
       >
         <div className="flex h-[14px] w-[14px] shrink-0 items-center justify-center">

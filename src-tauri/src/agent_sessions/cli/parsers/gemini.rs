@@ -287,6 +287,9 @@ impl CliAgentParser for GeminiParser {
                 let normalized_args = Self::normalize_args(&cursor_name, &args);
 
                 let mut chunk = ActivityChunk::new(&self.session_id, "tool_call", &cursor_name);
+                if !tool_id.is_empty() {
+                    chunk.chunk_id = format!("tool-call-{tool_id}");
+                }
                 // Include call_id in args so start/end pairing works
                 let mut args_with_call_id = normalized_args.clone();
                 if let Some(obj) = args_with_call_id.as_object_mut() {
@@ -379,6 +382,9 @@ impl CliAgentParser for GeminiParser {
                 };
 
                 let mut chunk = ActivityChunk::new(&self.session_id, "tool_call", &cursor_name);
+                if !tool_id.is_empty() {
+                    chunk.chunk_id = format!("tool-call-{tool_id}");
+                }
                 // Carry over stored args + call_id so the completed event is self-contained
                 let mut args_with_call_id = stored_args;
                 if let Some(obj) = args_with_call_id.as_object_mut() {

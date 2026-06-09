@@ -231,6 +231,20 @@ fn test_display_status_pending() {
 }
 
 #[test]
+fn test_display_status_running_is_authoritative() {
+    let chunk = RawActivityChunk {
+        chunk_id: Some("chunk-running".to_string()),
+        action_type: Some("tool_call".to_string()),
+        result: Some(serde_json::json!({"call_id": "tool_1", "status": "running"})),
+        created_at: Some("2025-01-15T10:30:08.000Z".to_string()),
+        ..Default::default()
+    };
+
+    let event = normalize_chunk(&chunk, "sess-1");
+    assert_eq!(event.display_status, EventDisplayStatus::Running);
+}
+
+#[test]
 fn test_delta_detection() {
     let chunk = RawActivityChunk {
         chunk_id: Some("chunk-d".to_string()),

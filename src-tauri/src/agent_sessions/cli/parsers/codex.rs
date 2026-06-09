@@ -28,6 +28,24 @@ impl CodexParser {
         }
     }
 
+    fn item_call_id(item: &Value) -> Option<&str> {
+        item.get("id")
+            .or_else(|| item.get("call_id"))
+            .or_else(|| item.get("tool_call_id"))
+            .and_then(|v| v.as_str())
+            .filter(|id| !id.is_empty())
+    }
+
+    fn stamp_tool_call_identity(chunk: &mut ActivityChunk, call_id: Option<&str>) {
+        let Some(call_id) = call_id else {
+            return;
+        };
+        chunk.chunk_id = format!("tool-call-{call_id}");
+        if let Some(obj) = chunk.result.as_object_mut() {
+            obj.insert("call_id".to_string(), Value::String(call_id.to_string()));
+        }
+    }
+
     /// Extract reasoning text from a Codex reasoning item.
     ///
     /// Codex reasoning items use the OpenAI Responses API format:
@@ -112,6 +130,7 @@ impl CodexParser {
                 }
 
                 chunk.result = serde_json::json!({"status": "running"});
+                Self::stamp_tool_call_identity(&mut chunk, Self::item_call_id(item));
                 vec![chunk]
             }
 
@@ -214,6 +233,7 @@ impl CodexParser {
                     _ => {}
                 }
 
+                Self::stamp_tool_call_identity(&mut chunk, Self::item_call_id(item));
                 vec![chunk]
             }
 

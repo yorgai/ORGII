@@ -81,6 +81,8 @@ export interface FileChangeVisibleStats {
 }
 
 interface CompactFileChangesProps {
+  /** Explicit session owner for composer surfaces that may render under a different chat context. */
+  sessionIdOverride?: string | null;
   /** When provided, renders with this static data instead of fetching from the session. */
   initialData?: FileChangesResult;
   /** Called when the user closes the card (header collapse button). */
@@ -92,7 +94,13 @@ interface CompactFileChangesProps {
 }
 
 const CompactFileChanges: React.FC<CompactFileChangesProps> = memo(
-  ({ initialData, onToggle, onVisibleStatsChange, hidden }) => {
+  ({
+    sessionIdOverride,
+    initialData,
+    onToggle,
+    onVisibleStatsChange,
+    hidden,
+  }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { forceRefresh: refreshGitStatus } = useGitStatus();
@@ -100,7 +108,7 @@ const CompactFileChanges: React.FC<CompactFileChangesProps> = memo(
     const setStationMode = useSetAtom(stationModeAtom);
     const contextSessionId = useChatSessionId();
     const globalSessionId = useAtomValue(sessionIdAtom);
-    const sessionId = contextSessionId ?? globalSessionId;
+    const sessionId = sessionIdOverride ?? contextSessionId ?? globalSessionId;
     const earliestSnapshot = useAtomValue(earliestPendingSnapshotAtom);
     const workspacePath = useAtomValue(fileReviewWorkspacePathAtom);
     const dispatchResolveFile = useSetAtom(resolveFileAtom);

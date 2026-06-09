@@ -468,7 +468,7 @@ async function readRenderedRoundBoundarySnapshot(marker) {
       .filter((text) => text.includes(marker));
     const queuedItems = Array.from(document.querySelectorAll('[data-testid="queued-message-item"]'))
       .filter(isVisible)
-      .map((node) => (node.textContent || "").trim())
+      .map((node) => ((node.getAttribute("data-queued-message-content") || node.textContent || "")).trim())
       .filter((text) => text.includes(marker));
     return {
       roundLabel: roundControl ? (roundControl.textContent || "").trim() : "",
@@ -489,7 +489,10 @@ async function assertRenderedRoundBoundaryWhileQueued(label, marker) {
     const state = await inspectChatState(`${label}-round-boundary`);
     const snapshot = await readRenderedRoundBoundarySnapshot(marker);
     samples.push(snapshot);
-    const syntheticPreviewCount = markerSyntheticPreviewEvents(state, marker).length;
+    const syntheticPreviewCount = markerSyntheticPreviewEvents(
+      state,
+      marker
+    ).length;
     if (snapshot.markerUserMessageCount > 0 || syntheticPreviewCount > 0) {
       throw new Error(
         `${label} queued follow-up crossed the rendered round boundary before dispatch; marker=${marker} syntheticPreviewCount=${syntheticPreviewCount} snapshot=${JSON.stringify(snapshot)} state=${JSON.stringify(summarizeChatState(state))}`
@@ -679,7 +682,8 @@ async function clickSendNowForQueuedMarker(marker) {
   if (!queuedMessage) {
     const markerUserEvents = markerUserTranscriptEvents(state, marker);
     const markerPreviewEvents = markerSyntheticPreviewEvents(state, marker);
-    if (markerUserEvents.length === 1 && markerPreviewEvents.length === 0) return;
+    if (markerUserEvents.length === 1 && markerPreviewEvents.length === 0)
+      return;
     throw new Error(
       `Queued state did not contain marker ${marker}: markerUserEvents=${markerUserEvents.length} markerPreviewEvents=${markerPreviewEvents.length} state=${JSON.stringify(summarizeChatState(state))}`
     );
@@ -1184,9 +1188,15 @@ async function runQueueAutodispatchesAfterNaturalCompletionScenario(config) {
       const queuedStillContainsMarker = state.queuedMessages.some((item) =>
         item.content.includes(marker)
       );
-      const markerWasSent = markerUserTranscriptEvents(state, marker).length > 0;
-      const markerPreviewEvents = markerSyntheticPreviewEvents(state, marker).length;
-      return markerWasSent && markerPreviewEvents === 0 && !queuedStillContainsMarker;
+      const markerWasSent =
+        markerUserTranscriptEvents(state, marker).length > 0;
+      const markerPreviewEvents = markerSyntheticPreviewEvents(
+        state,
+        marker
+      ).length;
+      return (
+        markerWasSent && markerPreviewEvents === 0 && !queuedStillContainsMarker
+      );
     },
     {
       timeout: REPLY_TIMEOUT_MS,

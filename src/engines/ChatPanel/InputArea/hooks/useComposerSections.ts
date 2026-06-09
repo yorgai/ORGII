@@ -20,7 +20,13 @@ import {
   MessageCircleMore,
   Terminal,
 } from "lucide-react";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import type { InlineSection } from "../components/CollapsedInlineRow";
 import {
@@ -116,14 +122,35 @@ export function useComposerSections({
     setFileChangeStats({ count: 0, additions: 0, deletions: 0 });
   }
 
-  // Auto-expand queue when new messages arrive
-  const [prevEnqueueCount, setPrevEnqueueCount] = useState(enqueueCount);
-  if (enqueueCount !== prevEnqueueCount) {
-    setPrevEnqueueCount(enqueueCount);
-    if (enqueueCount > prevEnqueueCount) {
+  // Auto-expand queue when messages arrive. Prefer the monotonic enqueue
+  // counter when it is available, but also react to count growth so the queue
+  // stays visible if the counter update and queue filter land in different
+  // render passes or a session switch restores a non-empty queue.
+  const prevEnqueueCountRef = useRef(enqueueCount);
+  const prevQueueCountRef = useRef(queueCount);
+  const queueAutoOpenedForCountRef = useRef(queueCount > 0 ? queueCount : 0);
+  useEffect(() => {
+    const previousEnqueueCount = prevEnqueueCountRef.current;
+    const previousQueueCount = prevQueueCountRef.current;
+    prevEnqueueCountRef.current = enqueueCount;
+    prevQueueCountRef.current = queueCount;
+
+    if (queueCount === 0) {
+      queueAutoOpenedForCountRef.current = 0;
+      return;
+    }
+
+    const hasNewQueueWork =
+      enqueueCount > previousEnqueueCount || queueCount > previousQueueCount;
+    if (
+      hasNewQueueWork ||
+      (activeSection !== "queue" &&
+        queueAutoOpenedForCountRef.current < queueCount)
+    ) {
+      queueAutoOpenedForCountRef.current = queueCount;
       setActiveSection("queue");
     }
-  }
+  }, [activeSection, enqueueCount, queueCount]);
 
   // Restore collapsed → expanded when the card's data resets (new question, new permission, etc.)
   const [prevHasQuestion, setPrevHasQuestion] = useState(hasQuestion);
