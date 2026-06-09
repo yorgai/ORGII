@@ -215,7 +215,7 @@ export async function initPtyConnection({
     return;
   }
 
-  const sessionId = `spotlight-pty-${sessionKey}`;
+  const sessionId = `terminal-pty-${sessionKey}`;
   sessionIdRef.current = sessionId;
 
   try {

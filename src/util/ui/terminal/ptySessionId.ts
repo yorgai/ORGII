@@ -7,5 +7,5 @@ export function isAgentPtySessionId(sessionId: string): boolean {
 export function toBackendPtySessionId(sessionId: string): string {
   return isAgentPtySessionId(sessionId)
     ? sessionId
-    : `spotlight-pty-${sessionId}`;
+    : `terminal-pty-${sessionId}`;
 }

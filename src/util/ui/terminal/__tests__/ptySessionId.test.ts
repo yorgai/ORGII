@@ -6,10 +6,8 @@ import {
 } from "@src/util/ui/terminal/ptySessionId";
 
 describe("ptySessionId", () => {
-  it("maps regular UI terminal ids to spotlight PTY ids", () => {
-    expect(toBackendPtySessionId("terminal-1")).toBe(
-      "spotlight-pty-terminal-1"
-    );
+  it("maps regular UI terminal ids to terminal PTY ids", () => {
+    expect(toBackendPtySessionId("terminal-1")).toBe("terminal-pty-terminal-1");
   });
 
   it("keeps agent PTY ids unchanged", () => {
@@ -24,7 +22,7 @@ describe("ptySessionId", () => {
 
     expect(isAgentPtySessionId(readOnlyAgentTabId)).toBe(false);
     expect(toBackendPtySessionId(readOnlyAgentTabId)).toBe(
-      "spotlight-pty-agent-session-osagent-123"
+      "terminal-pty-agent-session-osagent-123"
     );
   });
 });
