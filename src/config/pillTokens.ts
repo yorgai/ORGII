@@ -169,7 +169,8 @@ export const PILL_BASE_STYLE: CSSProperties = {
  * Chat history read-only pills keep {@link PILL_BASE_STYLE}.
  */
 export const EDITOR_FILE_PILL_BASE_STYLE: CSSProperties = {
-  display: "inline",
+  display: "inline-flex",
+  alignItems: "baseline",
   padding: 0,
   margin: `0 ${PILL_SIZE.marginX}px`,
   borderRadius: 0,

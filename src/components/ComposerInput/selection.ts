@@ -173,6 +173,9 @@ export function placeCaretAtTextOffset(
 }
 
 export function placeCaretAfterPill(pill: HTMLElement): void {
+  const host = pill.closest<HTMLElement>('[contenteditable="true"]');
+  host?.focus({ preventScroll: true });
+
   const range = document.createRange();
   const nextSibling = pill.nextSibling;
   if (nextSibling?.nodeType === Node.TEXT_NODE) {

@@ -354,12 +354,31 @@ pub async fn get_commit_diff(
     Path((repo_id, commit_sha)): Path<(String, String)>,
     Query(query): Query<CommitDiffQuery>,
 ) -> GitApiResult<Json<CommitDiffResponse>> {
-    let repo_path = resolve_repo_path(&repo_id, query.path.as_deref())?;
+    let query_path = query.path.as_deref();
+    let repo_path = resolve_repo_path(&repo_id, query_path)?;
+
+    log::info!(
+        "[GitAPI] commit_diff_route repo_id={} query_path={:?} resolved_repo_path={} commit_sha={} parent_index={:?}",
+        repo_id,
+        query_path,
+        repo_path.display(),
+        commit_sha,
+        query.parent_index
+    );
 
     let context_lines = query.context_lines.unwrap_or(3);
-    let result =
-        commands::get_commit_diff(&repo_path, &commit_sha, query.parent_index, context_lines)
-            .map_err(|message| map_commit_diff_error(&commit_sha, message))?;
+    let result = commands::get_commit_diff(&repo_path, &commit_sha, query.parent_index, context_lines)
+        .map_err(|message| {
+            log::warn!(
+                "[GitAPI] commit_diff_route_failed repo_id={} query_path={:?} resolved_repo_path={} commit_sha={} error={}",
+                repo_id,
+                query_path,
+                repo_path.display(),
+                commit_sha,
+                message
+            );
+            map_commit_diff_error(&commit_sha, message)
+        })?;
 
     Ok(Json(CommitDiffResponse {
         status: 0,

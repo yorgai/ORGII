@@ -2,9 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 
 import { getGitCommitDiff } from "@src/api/http/git/diff";
 import type { CommitDiffResult } from "@src/api/http/git/types";
+import { createLogger } from "@src/hooks/logger";
 import { decodeOctalPath } from "@src/util/file/pathUtils";
 
 type CommitLoadState = "loading" | "ready" | "error" | "no-files";
+
+const logger = createLogger("GitCommitDetailContent");
 
 interface UseCommitDiffLoaderParams {
   commitSha: string;
@@ -47,13 +50,27 @@ export function useCommitDiffLoader({
     let cancelled = false;
 
     const fetchDiff = async () => {
-      if (!repoId || !repoPath || !isRepoReady) return;
+      if (!repoId || !repoPath || !isRepoReady) {
+        logger.warn(
+          `commit diff load skipped sha=${commitSha} repoId=${repoId} repoPath=${repoPath} ready=${isRepoReady}`,
+          {
+            commitSha,
+            repoId,
+            repoPath,
+            isRepoReady,
+          }
+        );
+        return;
+      }
 
-      // eslint-disable-next-line no-console
-      console.debug("[GitCommitDetailContent] commit_load_start", {
-        commitSha,
-        repoId,
-      });
+      logger.info(
+        `commit diff load start sha=${commitSha} repoId=${repoId} repoPath=${repoPath}`,
+        {
+          commitSha,
+          repoId,
+          repoPath,
+        }
+      );
       setCommitLoadState("loading");
       setCommitError(null);
       setCommitDiff(null);
@@ -69,10 +86,14 @@ export function useCommitDiffLoader({
         if (cancelled) return;
 
         if (!result) {
-          // eslint-disable-next-line no-console
-          console.warn("[GitCommitDetailContent] commit_load_empty", {
-            commitSha,
-          });
+          logger.warn(
+            `commit diff load returned empty result sha=${commitSha} repoId=${repoId} repoPath=${repoPath}`,
+            {
+              commitSha,
+              repoId,
+              repoPath,
+            }
+          );
           setCommitLoadState("error");
           setCommitError(`commit=${commitSha}`);
           return;
@@ -82,28 +103,41 @@ export function useCommitDiffLoader({
 
         const files = result.files ?? [];
         if (files.length === 0) {
-          // eslint-disable-next-line no-console
-          console.debug("[GitCommitDetailContent] commit_load_no_files", {
-            commitSha,
-          });
+          logger.info(
+            `commit diff loaded with no files sha=${commitSha} repoId=${repoId} repoPath=${repoPath}`,
+            {
+              commitSha,
+              repoId,
+              repoPath,
+            }
+          );
           setCommitLoadState("no-files");
           return;
         }
 
-        // eslint-disable-next-line no-console
-        console.debug("[GitCommitDetailContent] commit_load_ready", {
-          commitSha,
-          fileCount: files.length,
-        });
+        logger.info(
+          `commit diff load ready sha=${commitSha} repoId=${repoId} repoPath=${repoPath} files=${files.length}`,
+          {
+            commitSha,
+            repoId,
+            repoPath,
+            fileCount: files.length,
+            firstFilePath: files[0]?.file_path,
+          }
+        );
         setCommitLoadState("ready");
         setSelectedFilePath(decodeOctalPath(files[0].file_path));
       } catch (err) {
         if (!cancelled) {
-          // eslint-disable-next-line no-console
-          console.error("[GitCommitDetailContent] commit_load_error", {
-            commitSha,
-            error: err,
-          });
+          logger.error(
+            `commit diff load failed sha=${commitSha} repoId=${repoId} repoPath=${repoPath}`,
+            {
+              commitSha,
+              repoId,
+              repoPath,
+              error: err,
+            }
+          );
           setCommitLoadState("error");
           setCommitError(
             err instanceof Error ? err.message : `commit=${commitSha}`

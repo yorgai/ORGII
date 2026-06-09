@@ -165,9 +165,14 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
           1,
           Math.floor(viewportElement.clientWidth / averageCharacterWidth)
         );
-        const estimatedWrappedLineCount = Math.ceil(
-          formattedCommand.length / estimatedCharactersPerLine
-        );
+        const estimatedWrappedLineCount = formattedCommand
+          .split("\n")
+          .reduce(
+            (total, line) =>
+              total +
+              Math.max(1, Math.ceil(line.length / estimatedCharactersPerLine)),
+            0
+          );
         setCommandOverflows(
           contentHeight > viewportElement.clientHeight + 1 ||
             visibleLineCount > TERMINAL_COMMAND_EXPAND_LINE_THRESHOLD ||

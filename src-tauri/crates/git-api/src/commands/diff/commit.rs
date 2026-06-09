@@ -18,8 +18,10 @@ pub fn get_commit_diff(
     context_lines: u32,
 ) -> Result<CommitDiffResult, String> {
     eprintln!(
-        "[git_diff] commit_diff_start commit_sha={} parent_index={:?}",
-        commit_sha, parent_index
+        "[git_diff] commit_diff_start repo_path={} commit_sha={} parent_index={:?}",
+        repo_path.display(),
+        commit_sha,
+        parent_index
     );
     let repo =
         Repository::open(repo_path).map_err(|e| format!("Failed to open repository: {}", e))?;

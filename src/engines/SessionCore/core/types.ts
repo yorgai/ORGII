@@ -300,6 +300,21 @@ export interface RustExtractedEditData extends RustExtractedFileData {
   applyPatchSegments: RustPatchSegmentWire[];
 }
 
+export type GitArtifactKind = "commit" | "pullRequest";
+
+export interface ExtractedGitArtifactData {
+  kind: GitArtifactKind;
+  url?: string;
+  repoFullName?: string;
+  sha?: string;
+  shortSha?: string;
+  subject?: string;
+  prNumber?: number;
+  prTitle?: string;
+  sourceBranch?: string;
+  targetBranch?: string;
+}
+
 export interface RustExtractedShellData {
   command: string;
   action?: string;
@@ -314,6 +329,7 @@ export interface RustExtractedShellData {
   shellPid?: number;
   shellProcessStatus?: "running" | "background" | "exited" | "killed";
   shellLogPath?: string;
+  gitArtifacts?: ExtractedGitArtifactData[];
 }
 
 export interface RustSearchResult {

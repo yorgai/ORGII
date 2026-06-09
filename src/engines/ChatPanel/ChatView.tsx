@@ -77,6 +77,7 @@ import AgentOrgOverviewPanel from "./InputArea/components/AgentOrgOverviewPanel"
 import { useAgentOrgIntervention } from "./InputArea/components/useAgentOrgIntervention";
 import { useAgentOrgMemberSessionJump } from "./InputArea/components/useAgentOrgMemberSessionJump";
 import { useAgentOrgRunView } from "./InputArea/components/useAgentOrgRunView";
+import { deriveGitArtifactStats } from "./InputArea/hooks/gitArtifactStats";
 import { useComposerSections } from "./InputArea/hooks/useComposerSections";
 import { useQueueEditMode } from "./InputArea/hooks/useQueueEditMode";
 
@@ -223,6 +224,10 @@ const ChatView: React.FC<ChatViewProps> = memo(
       sessionId
     )?.current;
     const chatEvents = useAtomValue(chatEventsAtom);
+    const gitArtifactStats = useMemo(
+      () => deriveGitArtifactStats(chatEvents),
+      [chatEvents]
+    );
     const planViewState = useMemo(
       () =>
         derivePlanApprovalViewState({
@@ -429,6 +434,7 @@ const ChatView: React.FC<ChatViewProps> = memo(
       hasPermission,
       hasModeSwitch,
       hasPlan,
+      gitArtifactStats,
       onFilesExpand: openAgentStationDiff,
     });
 

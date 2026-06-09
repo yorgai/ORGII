@@ -36,8 +36,8 @@ export const ErrorView: React.FC<ErrorViewProps> = ({
     switch (error.type) {
       case "not_found":
         return {
-          title: t("errors.notFound"),
-          subtitle: error.message,
+          title: t("placeholders.unableToLocateFile"),
+          subtitle: t("placeholders.fileMayHaveBeenDeletedOrMoved"),
           onRetry: onReload,
         };
       case "permission":

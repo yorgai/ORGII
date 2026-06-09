@@ -54,6 +54,10 @@ export interface ImperativeApiContext {
 export function buildImperativeApi(
   ctx: ImperativeApiContext
 ): ComposerInputRef {
+  const focusHostAfterRender = () => {
+    requestAnimationFrame(() => ctx.focusHost());
+  };
+
   const buildFacade = (): ComposerEditorFacade => {
     const chain = (): ComposerEditorChain => {
       const api: ComposerEditorChain = {
@@ -217,6 +221,7 @@ export function buildImperativeApi(
         ],
       });
       ctx.commitHistoryBoundary();
+      focusHostAfterRender();
     },
     insertFileReference: (options) => {
       const fileName =

@@ -17,6 +17,7 @@ import {
   CircleHelp,
   ClipboardList,
   Diff,
+  GitCommitHorizontal,
   MessageCircleMore,
   Terminal,
 } from "lucide-react";
@@ -40,6 +41,11 @@ export interface FileChangeStats {
   deletions: number;
 }
 
+export interface GitArtifactStats {
+  commitCount: number;
+  pullRequestCount: number;
+}
+
 export interface UseComposerSectionsOptions {
   sessionId?: string | null;
   queueCount: number;
@@ -52,7 +58,9 @@ export interface UseComposerSectionsOptions {
   hasModeSwitch?: boolean;
   /** Whether the CreatePlanCard currently has a pending plan to review. */
   hasPlan?: boolean;
-  /** Opens the dedicated file-diff surface when the files pill is clicked. */
+  /** Deduplicated commits and pull requests surfaced from session events. */
+  gitArtifactStats?: GitArtifactStats;
+  /** Opens the dedicated file-diff surface when the files/submissions pill is clicked. */
   onFilesExpand: () => void;
 }
 
@@ -64,6 +72,7 @@ export function useComposerSections({
   hasPermission = false,
   hasModeSwitch = false,
   hasPlan = false,
+  gitArtifactStats = { commitCount: 0, pullRequestCount: 0 },
   onFilesExpand,
 }: UseComposerSectionsOptions) {
   // Primary card collapsed states
@@ -204,11 +213,15 @@ export function useComposerSections({
   const hasProcess = processVisibleCount > 0;
   const fileSectionCount = fileChangeStats.count;
   const hasFiles = fileSectionCount > 0;
+  const gitArtifactCount =
+    gitArtifactStats.commitCount + gitArtifactStats.pullRequestCount;
+  const hasGitArtifacts = gitArtifactCount > 0;
 
   const hasAny =
     hasQueue ||
     hasProcess ||
     hasFiles ||
+    hasGitArtifacts ||
     (hasQuestion && questionCollapsed) ||
     (hasPermission && permissionCollapsed) ||
     (hasModeSwitch && modeSwitchCollapsed) ||
@@ -327,6 +340,16 @@ export function useComposerSections({
         testId: "composer-section-files",
       });
     }
+    if (hasGitArtifacts) {
+      sections.push({
+        key: "git-artifacts",
+        icon: React.createElement(GitCommitHorizontal, { size: 13 }),
+        count: gitArtifactCount,
+        active: false,
+        onExpand: onFilesExpand,
+        testId: "composer-section-git-artifacts",
+      });
+    }
 
     return sections;
   }, [
@@ -345,11 +368,13 @@ export function useComposerSections({
     hasQueue,
     hasProcess,
     hasFiles,
+    hasGitArtifacts,
     queueCount,
     processVisibleCount,
     fileSectionCount,
     fileChangeStats.additions,
     fileChangeStats.deletions,
+    gitArtifactCount,
     queueExpanded,
     processExpanded,
     toggleQueue,
