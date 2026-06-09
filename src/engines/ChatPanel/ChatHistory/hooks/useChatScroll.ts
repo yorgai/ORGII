@@ -32,7 +32,7 @@ import { useDebouncedCallback } from "@src/hooks/perf";
 
 export interface UseChatScrollOptions {
   optimizedChatHistoryLength: number;
-  virtuosoRef: RefObject<VirtuosoHandle>;
+  virtuosoRef: RefObject<VirtuosoHandle | null>;
   atBottom: boolean;
   setAtBottom: Dispatch<SetStateAction<boolean>>;
   setIsChatScrolledToBottom: (bottom: boolean) => void;

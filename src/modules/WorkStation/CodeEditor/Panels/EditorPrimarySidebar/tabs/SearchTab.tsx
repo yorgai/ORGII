@@ -94,7 +94,7 @@ export interface SearchTabConfigProps {
   repoPath: string;
   onResultClick: (filePath: string, line: number) => void;
   showFilters: boolean;
-  searchPanelRef: React.RefObject<SearchPanelContentHandle>;
+  searchPanelRef: React.RefObject<SearchPanelContentHandle | null>;
   actions?: SectionHeaderAction[];
   onOpenInTab?: () => void;
 }

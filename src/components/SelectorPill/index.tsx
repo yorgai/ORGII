@@ -21,7 +21,7 @@ import {
   PILL_SM_ICON_SIZE,
   PILL_SM_LABEL_CLASS,
 } from "@src/components/CompoundPill/config";
-import Tooltip from "@src/components/Tooltip";
+import Tooltip, { type TooltipPosition } from "@src/components/Tooltip";
 
 // ── Size variants ────────────────────────────────────────────────────────────
 // "sm" — h-[28px] px-3 text-[12px]  14px icon  (toolbar pills: ModePill, RunningLocationPill)
@@ -172,7 +172,7 @@ export interface SelectorPillProps {
   /** Framed-panel tooltip style (matches chat header / PillGroup segments) */
   tooltipFramed?: boolean;
   /** Tooltip position — defaults to "top" */
-  tooltipPosition?: "top" | "bottom" | "left" | "right";
+  tooltipPosition?: TooltipPosition;
   /** Whether the pill is in an open/active state */
   active?: boolean;
   /** Render label in danger color to signal a missing required selection */

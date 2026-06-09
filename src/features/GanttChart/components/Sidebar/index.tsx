@@ -23,7 +23,7 @@ export interface GanttSidebarProps {
   config: GanttConfig;
   selectedTaskId?: string | null;
   onTaskClick?: (task: GanttTask) => void;
-  sidebarContentRef: RefObject<HTMLDivElement>;
+  sidebarContentRef: RefObject<HTMLDivElement | null>;
   compactHeader?: boolean;
   hideScrollbars?: boolean;
   transparentSurface?: boolean;

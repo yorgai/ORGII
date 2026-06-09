@@ -21,8 +21,8 @@ import {
 
 export interface UseContextPanelReturn {
   panelPos: PanelPosition | null;
-  triggerRef: React.RefObject<HTMLButtonElement>;
-  panelRef: React.RefObject<HTMLDivElement>;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
+  panelRef: React.RefObject<HTMLDivElement | null>;
   toggle: () => void;
   close: () => void;
 }

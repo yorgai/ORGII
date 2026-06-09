@@ -18,7 +18,7 @@ interface TaskDetailHeaderActionsProps {
   strategyOpen: boolean;
   mergeStrategy: MergeStrategy;
   mergeButtonTitle: string;
-  strategyRef: React.RefObject<HTMLDivElement>;
+  strategyRef: React.RefObject<HTMLDivElement | null>;
   t: TFunction<"sessions">;
   onReplay: () => void;
   onOpenDiffWindow: () => void;

@@ -79,7 +79,7 @@ export interface SearchInputProps {
   /** Close button callback (optional - for sidebar variant) */
   onClose?: () => void;
   /** Input ref - supports both input and textarea */
-  inputRef?: React.RefObject<HTMLInputElement | HTMLTextAreaElement>;
+  inputRef?: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
   /** Custom class name */
   className?: string;
   /** Enable multiline input (uses textarea instead of input) */

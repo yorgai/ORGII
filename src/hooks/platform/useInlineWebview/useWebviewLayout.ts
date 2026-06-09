@@ -13,7 +13,7 @@ import {
 } from "@src/hooks/perf/useDebouncedCallback";
 
 export interface UseWebviewLayoutParams {
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
   isWebviewCreated: boolean;
   isWebviewAvailable: boolean;
   labelRef: MutableRefObject<string>;

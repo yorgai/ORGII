@@ -6,9 +6,9 @@
 import { RefObject, useCallback } from "react";
 
 export interface UseGanttScrollOptions {
-  timelineBodyRef: RefObject<HTMLDivElement>;
-  sidebarContentRef: RefObject<HTMLDivElement>;
-  headerScrollRef?: RefObject<HTMLDivElement>;
+  timelineBodyRef: RefObject<HTMLDivElement | null>;
+  sidebarContentRef: RefObject<HTMLDivElement | null>;
+  headerScrollRef?: RefObject<HTMLDivElement | null>;
 }
 
 export function useGanttScroll({

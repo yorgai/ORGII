@@ -5,8 +5,8 @@ import { useTabDragHover } from "@src/engines/ChatPanel/InputArea/hooks/useTabDr
 import { useTabDragEndToPill } from "@src/shared/dnd/useTabDragEndToPill";
 
 export function useTabDragDrop(
-  containerRef: RefObject<HTMLElement>,
-  composerInputRef: RefObject<ComposerInputRef>
+  containerRef: RefObject<HTMLElement | null>,
+  composerInputRef: RefObject<ComposerInputRef | null>
 ): boolean {
   const isDragOver = useTabDragHover(containerRef);
   useTabDragEndToPill(containerRef, composerInputRef);

@@ -40,7 +40,7 @@ export interface UseTextSelectionDropdownOptions {
   /** Whether the dropdown functionality is enabled */
   enabled?: boolean;
   /** Container element to watch for selections */
-  containerRef?: RefObject<HTMLElement>;
+  containerRef?: RefObject<HTMLElement | null>;
   /** Source type for the selection */
   source: "terminal" | "browser" | "editor";
   /** Callback when "Ask Agent" is triggered */

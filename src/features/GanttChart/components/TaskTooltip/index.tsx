@@ -44,7 +44,9 @@ const GanttTaskTooltip: React.FC<GanttTaskTooltipProps> = ({
   onDelete,
   onStatusChange,
 }) => {
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
 
   const {
     isOpen,

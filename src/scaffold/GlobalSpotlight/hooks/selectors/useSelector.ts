@@ -124,7 +124,7 @@ export interface UseSelectorReturn {
   /** Set selected index */
   setSelectedIndex: Dispatch<SetStateAction<number>>;
   /** Input ref for auto-focus */
-  inputRef: RefObject<HTMLInputElement>;
+  inputRef: RefObject<HTMLInputElement | null>;
   /** Keyboard event handler for input */
   handleKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
   /** Click handler for items */

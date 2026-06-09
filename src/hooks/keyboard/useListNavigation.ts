@@ -53,13 +53,13 @@ export interface UseListNavigationOptions<T extends ListItem> {
   isItemSelectable?: (item: T, index: number) => boolean;
   searchQuery?: string;
   enableAutoScroll?: boolean;
-  scrollContainerRef?: RefObject<HTMLDivElement>;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
   additionalKeyHandlers?: Record<
     string,
     (event: ReactKeyboardEvent) => boolean | void
   >;
   enableGlobalListener?: boolean;
-  inputRef?: RefObject<HTMLInputElement>;
+  inputRef?: RefObject<HTMLInputElement | null>;
   hasModalState?: boolean;
   onGoBack?: () => void;
   onEscape?: () => void;
@@ -67,7 +67,7 @@ export interface UseListNavigationOptions<T extends ListItem> {
 
 export interface UseListNavigationReturn {
   handleKeyDown: (event: ReactKeyboardEvent) => void;
-  scrollContainerRef: RefObject<HTMLDivElement>;
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
 }
 
 interface NativeKeyboardEvent extends Event {

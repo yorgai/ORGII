@@ -35,7 +35,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { agentSession } from "@src/api/tauri/rpc/procedures/agentSession";
+import { rpc } from "@src/api/tauri/rpc";
 import Button from "@src/components/Button";
 import Message from "@src/components/Message";
 import {
@@ -99,8 +99,8 @@ export const SecretCaptureModal: FC = () => {
           // broker will mark the old request rejected on the Rust side
           // so the `manage_secrets` tool that was waiting on it surfaces
           // a rejection rather than hanging.
-          agentSession.cancelSecret
-            .invoke({
+          rpc.agentSession
+            .cancelSecret({
               sessionId: prev.sessionId,
               requestId: prev.requestId,
             })
@@ -158,7 +158,7 @@ export const SecretCaptureModal: FC = () => {
     // cannot reveal the value while the IPC is in flight.
     setValue("");
     try {
-      await agentSession.submitSecret.invoke(payload);
+      await rpc.agentSession.submitSecret(payload);
       logger.info(
         `submitted secret label=${request.label} length=${payload.value.length}`
       );
@@ -181,7 +181,7 @@ export const SecretCaptureModal: FC = () => {
     setValue("");
     setSubmitting(false);
     try {
-      await agentSession.cancelSecret.invoke({ sessionId, requestId });
+      await rpc.agentSession.cancelSecret({ sessionId, requestId });
       logger.info(`cancelled secret request label=${label}`);
     } catch (error) {
       logger.warn("failed to cancel secret request:", error);

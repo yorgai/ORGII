@@ -113,11 +113,11 @@ export interface UseComposerInputOptions {
 
 export interface UseComposerInputReturn {
   /** Ref to attach to ComposerInput */
-  composerInputRef: RefObject<ComposerInputRef>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
   /** Keyboard handler ref for context menu navigation */
   contextMenuKeyboardHandlerRef: RefObject<{
     handleKeyDown: (e: KeyboardEvent) => boolean;
-  }>;
+  } | null>;
   /** Keyboard handler ref for slash command navigation */
   slashCommandKeyboardHandlerRef: MutableRefObject<
     ((e: KeyboardEvent) => boolean) | null

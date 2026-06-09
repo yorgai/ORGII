@@ -55,7 +55,7 @@ export interface CursorLoginDetectedPayload {
 
 export interface UseCursorSessionCaptureOptions {
   /** Ref to the container element for the webview */
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
   /** Callback when native OAuth session token is captured */
   onTokenCaptured?: (sessionToken: string) => void;
   /** Callback when URL changes in the webview */

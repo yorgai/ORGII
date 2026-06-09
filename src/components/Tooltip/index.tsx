@@ -258,7 +258,7 @@ function getBestTooltipCandidate(
   );
 }
 
-type TooltipPosition =
+export type TooltipPosition =
   | "top"
   | "top-start"
   | "top-end"
@@ -411,8 +411,8 @@ const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
       null
     );
     const tooltipRef = useRef<HTMLDivElement>(null);
-    const enterTimerRef = useRef<NodeJS.Timeout>();
-    const leaveTimerRef = useRef<NodeJS.Timeout>();
+    const enterTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
+    const leaveTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
     // Callback ref for trigger element
     const triggerRef = useCallback((node: HTMLElement | null) => {

@@ -29,7 +29,7 @@ interface UseAllChangesFilesResult {
   filesWithDiffs: GitFile[];
   sortedFiles: GitFile[];
   loadContentForFile: (file: GitFile) => Promise<void>;
-  getSectionRef: (path: string) => React.RefObject<HTMLDivElement>;
+  getSectionRef: (path: string) => React.RefObject<HTMLDivElement | null>;
 }
 
 export function useAllChangesFiles({
@@ -45,7 +45,7 @@ export function useAllChangesFiles({
   const previousFilesKeyRef = useRef("");
   const isLoadingStatsRef = useRef(false);
   const sectionRefs = useRef(
-    new Map<string, React.RefObject<HTMLDivElement>>()
+    new Map<string, React.RefObject<HTMLDivElement | null>>()
   );
 
   const filesKey = useMemo(

@@ -13,7 +13,7 @@ interface DropdownOptionsContentProps {
   searchPlaceholder?: string;
   searchValue: string;
   onSearchChange: (value: string) => void;
-  searchInputRef: React.RefObject<HTMLInputElement>;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
   filteredOptions: DropdownOption[];
   value?: DropdownSelectValue;
   mode: "single" | "multiple";

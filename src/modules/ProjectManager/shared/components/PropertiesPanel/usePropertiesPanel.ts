@@ -24,7 +24,7 @@ interface UsePropertiesPanelOptions {
   project: ProjectData;
   onUpdate?: (updates: Partial<ProjectData>) => void;
   /** External container ref for click-outside detection (from PropertiesPanel shell) */
-  containerRef?: RefObject<HTMLElement>;
+  containerRef?: RefObject<HTMLElement | null>;
 }
 
 export function usePropertiesPanel({

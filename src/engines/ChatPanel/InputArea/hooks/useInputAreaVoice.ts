@@ -7,8 +7,8 @@ import Message from "@src/components/Message";
 import { type VoiceInputError, useVoiceInput } from "@src/hooks/voice";
 
 interface UseInputAreaVoiceOptions {
-  composerInputRef: React.RefObject<ComposerInputRef>;
-  containerRef: React.RefObject<HTMLDivElement>;
+  composerInputRef: React.RefObject<ComposerInputRef | null>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   enabled: boolean;
   isEditMode: boolean;
 }

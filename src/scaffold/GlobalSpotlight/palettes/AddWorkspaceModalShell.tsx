@@ -16,7 +16,7 @@ import { SpotlightModalView } from "../views";
 export interface AddWorkspaceModalShellProps {
   isOpen: boolean;
   onClose: () => void;
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   modalStage: AddWorkspaceModalStage;
   addWorkspaceFlow: UseAddWorkspaceFlowReturn;

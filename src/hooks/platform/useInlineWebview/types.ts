@@ -2,7 +2,7 @@ import type { Webview } from "@tauri-apps/api/webview";
 import type { RefObject } from "react";
 
 export interface UseInlineWebviewOptions {
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
   url: string;
   isActive?: boolean;
   isVisible?: boolean;

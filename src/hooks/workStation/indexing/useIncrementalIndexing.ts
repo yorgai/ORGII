@@ -99,8 +99,9 @@ export function useIncrementalIndexing(
   // Refs
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastIndexTimeRef = useRef<number>(0);
-  const flushDirtyFilesInternalRef =
-    useRef<() => Promise<IncrementalIndexResult | null>>();
+  const flushDirtyFilesInternalRef = useRef<
+    (() => Promise<IncrementalIndexResult | null>) | undefined
+  >(undefined);
 
   // Internal flush function (used by debounce timer)
   const flushDirtyFilesInternal = useCallback(async () => {

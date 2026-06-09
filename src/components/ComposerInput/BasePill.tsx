@@ -35,7 +35,7 @@ export interface BasePillProps {
   role?: string;
   tabIndex?: number;
   /** Forwarded ref for position calculations (e.g. preview portal in ComposerPill) */
-  pillRef?: React.RefObject<HTMLSpanElement>;
+  pillRef?: React.RefObject<HTMLSpanElement | null>;
   /** Arbitrary data-* attributes */
   [key: `data-${string}`]: unknown;
 }

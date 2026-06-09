@@ -14,7 +14,7 @@ import ComposerInput, { ComposerInputRef } from "@src/components/ComposerInput";
 
 export interface InputEditorProps {
   /** Ref to the Composer input */
-  composerInputRef: React.RefObject<ComposerInputRef>;
+  composerInputRef: React.RefObject<ComposerInputRef | null>;
   /** Whether context menu is visible */
   showContextMenu: boolean;
   /** Keyboard handler ref from context menu */

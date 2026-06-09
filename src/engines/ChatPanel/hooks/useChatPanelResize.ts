@@ -54,7 +54,7 @@ export interface UseChatPanelResizeResult {
   /** Whether currently dragging */
   isDragging: boolean;
   /** Ref to attach to the panel element */
-  panelRef: RefObject<HTMLDivElement>;
+  panelRef: RefObject<HTMLDivElement | null>;
   /** Mouse down handler for drag handle */
   handleMouseDown: (event: ReactMouseEvent) => void;
 }

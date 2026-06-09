@@ -17,7 +17,7 @@ import { RefObject, useCallback, useEffect, useRef } from "react";
 
 export interface UseScrollToBottomOptions {
   /** Reference to the scrollable container */
-  containerRef: RefObject<HTMLElement>;
+  containerRef: RefObject<HTMLElement | null>;
   /** Dependencies to trigger scroll (e.g., content array) */
   dependencies: readonly unknown[];
   /** Whether to always scroll or only when user is at bottom */

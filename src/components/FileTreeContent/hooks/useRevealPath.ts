@@ -33,7 +33,7 @@ export interface UseRevealPathOptions {
   revealPath: string | null;
   revealKey: number | null;
   selectedPath: string | null;
-  virtuosoRef: RefObject<VirtuosoHandle>;
+  virtuosoRef: RefObject<VirtuosoHandle | null>;
   useVirtualization: boolean;
   flattenedNodesRef: MutableRefObject<FlattenedNode[]>;
   lastScrollTopRef: MutableRefObject<number>;

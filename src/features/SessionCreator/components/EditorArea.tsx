@@ -58,7 +58,7 @@ export interface EditorAreaProps {
   /** Remove file handler */
   onRemoveFile: (fileId: string) => void;
   /** Composer input ref */
-  composerInputRef: React.RefObject<ComposerInputRef>;
+  composerInputRef: React.RefObject<ComposerInputRef | null>;
   /** Content change handler */
   onContentChange?: (text: string) => void;
   /** @ mention handler */

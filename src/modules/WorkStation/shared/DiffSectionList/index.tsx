@@ -18,7 +18,7 @@ export interface DiffSectionListProps<TFile extends DiffFileSectionData> {
   repoPath?: string;
   collapseThreshold?: number;
   collapseSignal?: number;
-  getSectionRef?: (path: string) => React.RefObject<HTMLDivElement>;
+  getSectionRef?: (path: string) => React.RefObject<HTMLDivElement | null>;
   focusedPath?: string | null;
   focusedNonce?: number;
   onFileSelect?: (path: string) => void;

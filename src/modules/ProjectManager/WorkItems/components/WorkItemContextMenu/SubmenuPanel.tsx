@@ -13,7 +13,7 @@ import {
 import type { ContextMenuItem } from "@src/types/core/shared";
 
 interface SubmenuPanelProps {
-  panelRef: React.RefObject<HTMLDivElement>;
+  panelRef: React.RefObject<HTMLDivElement | null>;
   items: ContextMenuItem[];
   position: { x: number; y: number };
   activeNestedItemId?: string;

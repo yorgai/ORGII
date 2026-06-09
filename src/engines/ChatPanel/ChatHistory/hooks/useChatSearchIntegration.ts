@@ -32,7 +32,7 @@ import { type UseChatSearchReturn, useChatSearch } from "./useChatSearch";
 export interface UseChatSearchIntegrationOptions {
   chatHistory: SessionEvent[];
   optimizedChatHistory: OptimizedChatItem[];
-  virtuosoRef: RefObject<VirtuosoHandle>;
+  virtuosoRef: RefObject<VirtuosoHandle | null>;
   chatContainerRef: RefObject<HTMLDivElement | null>;
   /** Maps optimizedChatHistory index -> GroupedVirtuoso flat item index. */
   originalToFlatIndex?: Map<number, number>;
@@ -41,7 +41,7 @@ export interface UseChatSearchIntegrationOptions {
 export interface UseChatSearchIntegrationReturn {
   search: UseChatSearchReturn;
   isSearchVisible: boolean;
-  searchBarRef: RefObject<ChatSearchBarHandle>;
+  searchBarRef: RefObject<ChatSearchBarHandle | null>;
   handleOpenSearch: () => void;
   handleCloseSearch: () => void;
 }

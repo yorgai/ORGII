@@ -38,8 +38,8 @@ export function useTerminalProcessPoller({
   activeSession,
   updateSessionInfo,
 }: UseTerminalProcessPollerOptions): void {
-  const prevProcessNameRef = useRef<string | undefined>();
-  const prevLiveCwdRef = useRef<string | undefined>();
+  const prevProcessNameRef = useRef<string | undefined>(undefined);
+  const prevLiveCwdRef = useRef<string | undefined>(undefined);
 
   const sessionId = activeSession?.id;
   const sessionPid = activeSession?.pid;

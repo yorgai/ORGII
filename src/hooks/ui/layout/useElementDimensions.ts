@@ -52,22 +52,22 @@ export interface UseElementDimensionsOptions {
  * const width = useElementDimensions(ref, { dimension: 'width', deps: [isOpen] });
  */
 export function useElementDimensions(
-  ref: RefObject<HTMLElement | { current?: HTMLElement }>,
+  ref: RefObject<HTMLElement | null | { current?: HTMLElement | null }>,
   options: UseElementDimensionsOptions & { dimension: "width" }
 ): number;
 
 export function useElementDimensions(
-  ref: RefObject<HTMLElement | { current?: HTMLElement }>,
+  ref: RefObject<HTMLElement | null | { current?: HTMLElement | null }>,
   options: UseElementDimensionsOptions & { dimension: "height" }
 ): number;
 
 export function useElementDimensions(
-  ref: RefObject<HTMLElement | { current?: HTMLElement }>,
+  ref: RefObject<HTMLElement | null | { current?: HTMLElement | null }>,
   options?: UseElementDimensionsOptions & { dimension?: "both" }
 ): ElementDimensions;
 
 export function useElementDimensions(
-  ref: RefObject<HTMLElement | { current?: HTMLElement }>,
+  ref: RefObject<HTMLElement | null | { current?: HTMLElement | null }>,
   options: UseElementDimensionsOptions = {}
 ): number | ElementDimensions {
   const { dimension = "both", deps = [] } = options;

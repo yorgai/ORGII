@@ -38,7 +38,7 @@ export interface UseSessionLaunchOptions {
   advancedConfig: AdvancedConfig;
   isContentEmpty: boolean;
   validateSessionConfig: () => SessionValidationResult;
-  composerInputRef: RefObject<ComposerInputRef>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
   onLaunchSuccess?: (info: SessionLaunchSuccessInfo) => void;
   launchMode?: SessionCreatorLaunchMode;
   workItemContext?: SessionLaunchWorkItemContext;

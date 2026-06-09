@@ -28,7 +28,7 @@ import { useImageAttachment } from "./useImageAttachment";
 
 interface UseInputAreaEffectsOptions {
   // Refs
-  composerInputRef: RefObject<ComposerInputRef>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
   dropTargetId: string;
   hasContentRef: MutableRefObject<boolean>;
 

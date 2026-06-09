@@ -11,7 +11,7 @@ import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
 
 export interface SpotlightInputProps {
   /** Input ref for focus management */
-  inputRef?: React.RefObject<HTMLInputElement>;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
   /** Current search value */
   value: string;
   /** Change handler */

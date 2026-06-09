@@ -10,7 +10,7 @@ import type { OAuthCaptureConfig } from "./useOAuthCapture";
 import { useOAuthCapture } from "./useOAuthCapture";
 
 interface UseClaudeCodeOAuthCaptureOptions {
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
   onTokenCaptured?: (response: ClaudeCodeOauthExchangeResponse) => void;
   debug?: boolean;
 }

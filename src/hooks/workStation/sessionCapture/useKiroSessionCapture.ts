@@ -69,7 +69,7 @@ export interface UseKiroSessionCaptureOptions {
   /** Enable debug logging */
   debug?: boolean;
   /** Container ref for embedded webview positioning */
-  containerRef?: RefObject<HTMLDivElement>;
+  containerRef?: RefObject<HTMLDivElement | null>;
 }
 
 export interface UseKiroSessionCaptureReturn {

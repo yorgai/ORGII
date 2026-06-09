@@ -32,7 +32,7 @@ export interface UseFileTreeMutationStateOptions {
   baseFlattenedNodes: FlattenedNode[];
   onToggleDirectory: (path: string) => void;
   dispatch: DispatchFn;
-  virtuosoRef: RefObject<VirtuosoHandle>;
+  virtuosoRef: RefObject<VirtuosoHandle | null>;
 }
 
 export interface UseFileTreeMutationStateReturn {

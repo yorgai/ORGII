@@ -42,7 +42,7 @@ export interface RunningLocationDropdownPanelProps {
   onSelect: (location: RunningLocation) => void;
   panelRef?:
     | React.RefCallback<HTMLDivElement>
-    | React.RefObject<HTMLDivElement>
+    | React.RefObject<HTMLDivElement | null>
     | null;
   style?: React.CSSProperties;
   className?: string;

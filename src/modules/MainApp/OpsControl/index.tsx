@@ -51,7 +51,7 @@ const OpsControlPage: React.FC = () => {
     return getFolderName(repoPath) || "Project Manager";
   }, [currentRepo?.name, repoPath]);
 
-  if (activeHomeTab === OPS_CONTROL_HOME_TAB.STORIES) {
+  if (activeHomeTab === OPS_CONTROL_HOME_TAB.PROJECTS) {
     return (
       <OpsControlProjectsSurface
         repoPath={repoPath}

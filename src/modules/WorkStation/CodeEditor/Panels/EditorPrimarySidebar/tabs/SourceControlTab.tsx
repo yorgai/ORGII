@@ -53,7 +53,7 @@ export interface SourceControlTabConfigProps {
   ) => void;
   showFilter: boolean;
   viewMode: "list-tree" | "list";
-  sourceControlRef: React.RefObject<SourceControlContentHandle>;
+  sourceControlRef: React.RefObject<SourceControlContentHandle | null>;
   actions: SectionHeaderAction[];
   isMultiRoot?: boolean;
   showOnlyStashes?: boolean;

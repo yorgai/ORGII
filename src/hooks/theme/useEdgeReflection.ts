@@ -35,9 +35,9 @@ export interface UseEdgeReflectionOptions {
 // Hook return value type
 export interface UseEdgeReflectionReturn {
   /** Ref to attach to the container element */
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
   /** Ref to attach to the canvas element */
-  canvasRef: RefObject<HTMLCanvasElement>;
+  canvasRef: RefObject<HTMLCanvasElement | null>;
   /** Whether the effect is ready to render */
   isReady: boolean;
 }
@@ -313,8 +313,8 @@ export function useEdgeReflection(
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isReady, setIsReady] = useState(false);
-  const animationFrameRef = useRef<number>();
-  const intervalRef = useRef<NodeJS.Timeout>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
+  const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Update canvas size to match container
   const updateCanvasSize = useCallback(() => {

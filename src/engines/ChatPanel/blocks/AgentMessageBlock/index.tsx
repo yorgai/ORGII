@@ -147,7 +147,10 @@ const AgentMessageBlock: React.FC<AgentMessageBlockProps> = ({
       </div>
       {showLocateArrow && (
         <div className="mt-1 flex justify-end">
-          <EventNavigateIcon onClick={handleLocate} variant="footer" />
+          <EventNavigateIcon
+            onClick={handleLocate ?? (() => undefined)}
+            variant="footer"
+          />
         </div>
       )}
     </div>

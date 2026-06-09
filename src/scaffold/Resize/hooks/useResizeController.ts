@@ -38,9 +38,9 @@ import type { ResizeControllerOptions, ResizeSession } from "../types";
 
 export interface UseResizeControllerReturn {
   /** Ref for the container element */
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
   /** Ref for the ghost layer element */
-  ghostRef: RefObject<HTMLDivElement>;
+  ghostRef: RefObject<HTMLDivElement | null>;
   /** Start resize handler */
   start: (event: ReactMouseEvent, currentSize: number) => void;
   /** Whether currently resizing */

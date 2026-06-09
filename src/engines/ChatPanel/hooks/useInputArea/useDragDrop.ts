@@ -29,7 +29,7 @@ function removeDragOverStyle(element: HTMLElement): void {
 }
 
 interface UseDragDropOptions {
-  composerInputRef: RefObject<ComposerInputRef>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
 }
 
 export function useDragDrop(options: UseDragDropOptions): DragDropHandlers {

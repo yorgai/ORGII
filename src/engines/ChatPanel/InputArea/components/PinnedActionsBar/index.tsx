@@ -80,7 +80,7 @@ ActionPill.displayName = "ActionPill";
 
 export interface PinnedActionsBarProps {
   /** Ref to the tiptap editor, used to insert content when a pill is clicked. */
-  composerInputRef: React.RefObject<ComposerInputRef>;
+  composerInputRef: React.RefObject<ComposerInputRef | null>;
   /**
    * Active session ID — when provided, a Canvas pill appears whenever the
    * session has a live canvas payload and the canvas tab is not already open.

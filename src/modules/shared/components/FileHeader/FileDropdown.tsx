@@ -55,7 +55,7 @@ export interface FileDropdownProps {
   currentFilePath: string;
   onFileSelect: (filePath: string) => void;
   onClose: () => void;
-  triggerRef?: React.RefObject<HTMLElement>;
+  triggerRef?: React.RefObject<HTMLElement | null>;
 }
 
 // ============================================

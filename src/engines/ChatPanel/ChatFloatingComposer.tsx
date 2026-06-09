@@ -52,7 +52,7 @@ interface GroupChatPendingMessageView {
 }
 
 interface ChatFloatingComposerProps {
-  composerRef: React.RefObject<HTMLDivElement>;
+  composerRef: React.RefObject<HTMLDivElement | null>;
   inputBoxRef?: React.Ref<HTMLDivElement>;
   chatPanelPosition: "left" | "right";
   sessionId: string;

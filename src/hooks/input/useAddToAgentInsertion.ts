@@ -19,7 +19,7 @@ import { storePillText } from "@src/config/pillTokens";
 import { addToAgentAtom } from "@src/store/ui/addToAgentAtom";
 
 export function useAddToAgentInsertion(
-  composerInputRef: RefObject<ComposerInputRef>
+  composerInputRef: RefObject<ComposerInputRef | null>
 ): void {
   const request = useAtomValue(addToAgentAtom);
   const clearRequest = useSetAtom(addToAgentAtom);

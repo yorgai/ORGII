@@ -1,7 +1,7 @@
 import React from "react";
 
 interface DropdownTriggerWrapperProps {
-  triggerRef: React.RefObject<HTMLDivElement>;
+  triggerRef: React.RefObject<HTMLDivElement | null>;
   disabled: boolean;
   enableKeyboard: boolean;
   onClick: () => void;

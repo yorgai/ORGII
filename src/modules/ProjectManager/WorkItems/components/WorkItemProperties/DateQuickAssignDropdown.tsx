@@ -28,7 +28,7 @@ interface DateQuickAssignDropdownProps {
   fieldVariant: FieldRowVariant;
   emptyLabel?: string;
   portal?: boolean;
-  dropdownRef?: React.RefObject<HTMLDivElement>;
+  dropdownRef?: React.RefObject<HTMLDivElement | null>;
   dropdownPosition?: DropdownEnginePosition;
 }
 

@@ -6,7 +6,7 @@ export interface UseInlineWebviewUrlEffectParams {
   isWebviewCreated: boolean;
   isWebviewAvailable: boolean;
   createDelay: number;
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
   isDestroyedRef: MutableRefObject<boolean>;
   lastRequestedUrlRef: MutableRefObject<string>;
   createWebview: (targetUrl: string) => Promise<void>;

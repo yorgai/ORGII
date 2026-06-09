@@ -90,7 +90,7 @@ export interface UseMonitorMetricsReturn {
   childProcesses: ChildProcessInfo[];
   systemInfo: SystemInfo | null;
   ramHistory: ReturnType<typeof useRamHistory>["stats"];
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
 }
 
 export function useMonitorMetrics(activeTab: string): UseMonitorMetricsReturn {

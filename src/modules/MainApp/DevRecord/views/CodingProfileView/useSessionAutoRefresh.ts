@@ -116,7 +116,9 @@ export function useSessionAutoRefresh<T>({
     () => readPersisted<T>(cacheKey)?.data ?? null
   );
   const [error, setError] = useState<string | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(
+    undefined
+  );
 
   // Re-hydrate local state from the persisted cache when `cacheKey` switches
   // (e.g. the user picked a different date range and an entry already exists

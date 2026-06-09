@@ -45,7 +45,7 @@ export interface DiffFileSectionProps {
   file: DiffFileSectionData;
   defaultExpanded?: boolean;
   repoPath?: string;
-  sectionRef?: React.RefObject<HTMLDivElement>;
+  sectionRef?: React.RefObject<HTMLDivElement | null>;
   onFileSelect?: (path: string) => void;
   onRequestContent?: (file: DiffFileSectionData) => void;
   hideDirectory?: boolean;

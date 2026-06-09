@@ -8,7 +8,7 @@ import type { DropdownPosition } from "./types";
 interface DropdownMenuSurfaceProps {
   visible: boolean;
   getPopupContainer?: () => HTMLElement;
-  dropdownRef: React.RefObject<HTMLDivElement>;
+  dropdownRef: React.RefObject<HTMLDivElement | null>;
   position: DropdownPosition;
   className: string;
   style?: React.CSSProperties;

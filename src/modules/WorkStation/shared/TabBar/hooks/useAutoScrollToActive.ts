@@ -21,7 +21,7 @@ export interface UseAutoScrollToActiveOptions {
   /** Number of tabs (used to detect tab list changes) */
   tabsLength: number;
   /** Ref to the scrollable container */
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
   /**
    * Explicit scroll-reveal request. The `version` field must increment on
    * every request, even when `tabId` is the same as the current active tab.

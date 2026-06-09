@@ -24,9 +24,9 @@ export interface ContextMenuKeyboardHandler {
 
 export interface UseSessionCreatorReturn {
   // Refs
-  fileInputRef: RefObject<HTMLInputElement>;
-  composerInputRef: RefObject<ComposerInputRef>;
-  contextMenuKeyboardHandlerRef: RefObject<ContextMenuKeyboardHandler>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
+  contextMenuKeyboardHandlerRef: RefObject<ContextMenuKeyboardHandler | null>;
   slashCommandKeyboardHandlerRef: MutableRefObject<
     ((e: KeyboardEvent) => boolean) | null
   >;

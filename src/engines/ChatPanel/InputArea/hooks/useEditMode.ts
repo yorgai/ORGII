@@ -43,7 +43,7 @@ interface UseEditModeOptions {
 
 interface UseEditModeReturn {
   /** Ref to attach to the edit container (for click-outside detection) */
-  editContainerRef: React.RefObject<HTMLDivElement>;
+  editContainerRef: React.RefObject<HTMLDivElement | null>;
   /** Submit handler for edit mode */
   handleEditSubmit: () => void;
   /** KeyDown handler for Escape to cancel */

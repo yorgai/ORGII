@@ -48,7 +48,7 @@ export interface ProjectPropertyFieldsProps {
    */
   availableRepos?: LinkedRepoOption[];
   /** Ref forwarded to PropertiesPanel shell for click-outside detection */
-  containerRef?: React.RefObject<HTMLElement>;
+  containerRef?: React.RefObject<HTMLElement | null>;
   /** Visual style for property controls. */
   fieldVariant?: FieldRowVariant;
   /** Optional subset of fields rendered directly in the row/panel. */

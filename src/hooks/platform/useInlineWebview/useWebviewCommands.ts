@@ -12,7 +12,7 @@ import {
 export interface UseWebviewCommandsParams {
   isWebviewAvailable: boolean;
   isUnmountedRef: RefObject<boolean>;
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
   labelRef: MutableRefObject<string>;
   userAgent: string;
   incognito: boolean;

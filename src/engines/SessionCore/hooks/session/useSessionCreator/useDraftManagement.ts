@@ -28,7 +28,7 @@ export interface UseDraftManagementOptions {
   setSessionName: (name: string) => void;
   setEditorContent: (content: string) => void;
   setUploadedFiles: (files: UploadedFile[]) => void;
-  composerInputRef: RefObject<ComposerInputRef>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
   /** Skip draft loading if market listing is being loaded from URL */
   skipDraftLoading?: boolean;
   /** Persist editor content into the shared pre-launch draft store. */

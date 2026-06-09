@@ -44,7 +44,7 @@ export interface PropertiesPanelShellProps {
    * Used for click-outside detection by property field hooks.
    * If not provided, an internal ref is created.
    */
-  containerRef?: React.RefObject<HTMLElement>;
+  containerRef?: React.RefObject<HTMLElement | null>;
   children: React.ReactNode;
 }
 
@@ -55,7 +55,7 @@ const PropertiesPanel: React.FC<PropertiesPanelShellProps> = ({
   children,
 }) => {
   const { t } = useTranslation("projects");
-  const internalRef = useRef<HTMLElement>(null);
+  const internalRef = useRef<HTMLElement | null>(null);
   const containerRef = externalRef ?? internalRef;
   const resolvedTitle = title ?? t("common:common.properties");
   const showHeader = resolvedTitle !== "";

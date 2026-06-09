@@ -21,7 +21,7 @@ import { useTabDragHover } from "./useTabDragHover";
  * via a MutationObserver rather than relying on unavailable HTML5 drag events.
  */
 function useExternalFileDragOver(
-  containerRef: React.RefObject<HTMLDivElement>
+  containerRef: React.RefObject<HTMLDivElement | null>
 ): boolean {
   const [isExternalDragOver, setIsExternalDragOver] = useState(false);
 
@@ -53,8 +53,8 @@ interface UseContainerDragOptions {
   handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   handleDragLeave: (e: React.DragEvent<HTMLDivElement>) => void;
   handleDrop: (e: React.DragEvent<HTMLDivElement>) => void;
-  composerInputRef: React.RefObject<ComposerInputRef>;
-  containerRef: React.RefObject<HTMLDivElement>;
+  composerInputRef: React.RefObject<ComposerInputRef | null>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 interface UseContainerDragReturn {

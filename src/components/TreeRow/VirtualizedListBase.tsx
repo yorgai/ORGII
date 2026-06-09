@@ -122,8 +122,9 @@ function VirtualizedListBaseInner<T>(
   itemsRef.current = items;
 
   // Scroll handler ref for stable virtuosoComponents
-  const scrollHandlerRef =
-    useRef<(event: React.UIEvent<HTMLDivElement>) => void>();
+  const scrollHandlerRef = useRef<
+    ((event: React.UIEvent<HTMLDivElement>) => void) | undefined
+  >(undefined);
 
   // Ref to the actual scroller element for direct scroll control
   const scrollerElementRef = useRef<HTMLDivElement | null>(null);

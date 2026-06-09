@@ -103,7 +103,9 @@ const SubpageLayout: React.FC<SubpageLayoutProps> = ({
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isScrollingRef = useRef(false);
-  const scrollEndTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const scrollEndTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
   const [anchorState, setAnchorState] = useState(() => ({
     anchorsRef: anchors,
     activeId: anchors?.[0]?.id ?? "",

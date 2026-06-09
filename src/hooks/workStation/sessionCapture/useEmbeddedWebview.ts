@@ -41,7 +41,7 @@ export interface EmbeddedWebviewCommands {
 
 export interface UseEmbeddedWebviewOptions {
   labelPrefix: string;
-  containerRef?: RefObject<HTMLDivElement>;
+  containerRef?: RefObject<HTMLDivElement | null>;
   commands: EmbeddedWebviewCommands;
   debug?: boolean;
   /** Extra fields merged into the create command payload (e.g. initial url). */

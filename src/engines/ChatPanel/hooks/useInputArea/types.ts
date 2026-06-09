@@ -54,8 +54,8 @@ export interface SubmitMessageOptions {
 // ============================================
 
 export interface InputAreaRefs {
-  composerInputRef: RefObject<ComposerInputRef>;
-  containerRef: RefObject<HTMLDivElement>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
+  containerRef: RefObject<HTMLDivElement | null>;
   contextMenuKeyboardHandlerRef: MutableRefObject<
     ((event: ReactKeyboardEvent) => boolean) | null
   >;
@@ -128,7 +128,7 @@ export interface FileSelectionHandlers {
 }
 
 export interface UploadContextHandlers {
-  fileInputRef: RefObject<HTMLInputElement>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   handleUploadClick: () => void;
   handleFileUpload: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
 }
@@ -145,8 +145,8 @@ export interface DragDropHandlers {
 
 export interface UseInputAreaReturn {
   // Refs
-  composerInputRef: RefObject<ComposerInputRef>;
-  containerRef: RefObject<HTMLDivElement>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
+  containerRef: RefObject<HTMLDivElement | null>;
   contextMenuKeyboardHandlerRef: MutableRefObject<
     ((event: ReactKeyboardEvent) => boolean) | null
   >;
@@ -203,7 +203,7 @@ export interface UseInputAreaReturn {
   setContextItemsAtChat: (items: string[]) => void;
 
   // Upload
-  fileInputRef: RefObject<HTMLInputElement>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   handleUploadClick: () => void;
   handleFileUpload: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
 

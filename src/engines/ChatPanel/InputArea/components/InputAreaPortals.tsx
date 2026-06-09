@@ -10,7 +10,7 @@ import SlashCommandPortal from "./SlashCommandPortal";
 
 interface InputAreaPortalsProps {
   contextMenuVisible: boolean;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   onContextMenuClose: () => void;
   onAtSelect: (type: MenuItemId, value?: string, displayName?: string) => void;
   customMentionOptions: ReadonlyArray<CustomMentionOption>;

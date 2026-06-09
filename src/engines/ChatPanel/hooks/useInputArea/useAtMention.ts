@@ -19,7 +19,7 @@ import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 import type { AtMentionHandlers, CustomMentionOption } from "./types";
 
 interface UseAtMentionOptions {
-  composerInputRef: RefObject<ComposerInputRef>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
   hasContentRef: MutableRefObject<boolean>;
   setShowContextMenu: (show: boolean) => void;
   setAtSearchQuery: (query: string) => void;

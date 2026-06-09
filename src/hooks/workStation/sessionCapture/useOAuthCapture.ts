@@ -82,7 +82,7 @@ export interface OAuthCaptureConfig<TResponse> {
 // ---------------------------------------------------------------------------
 
 export interface UseOAuthCaptureOptions<TResponse> {
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
   onTokenCaptured?: (response: TResponse) => void;
   debug?: boolean;
 }

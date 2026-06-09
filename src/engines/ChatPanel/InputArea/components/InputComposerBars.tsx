@@ -15,7 +15,7 @@ import InputEditor from "./InputEditor";
 import ReplyInfoDisplay from "./ReplyInfoDisplay";
 
 interface SharedComposerBarProps {
-  composerInputRef: React.RefObject<ComposerInputRef>;
+  composerInputRef: React.RefObject<ComposerInputRef | null>;
   showContextMenu: boolean;
   contextMenuKeyboardHandlerRef: React.MutableRefObject<
     ((event: React.KeyboardEvent) => boolean) | null

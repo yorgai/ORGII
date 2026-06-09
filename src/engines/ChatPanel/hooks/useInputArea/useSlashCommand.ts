@@ -21,7 +21,7 @@ import { useSlashItemsCache } from "./useSlashItemsCache";
 const BUILTIN_SLASH_ITEMS: SlashItem[] = [];
 
 interface UseSlashCommandOptions {
-  composerInputRef: RefObject<ComposerInputRef>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
   setShowSlashMenu: (show: boolean) => void;
   setSlashQuery: (query: string) => void;
   /**

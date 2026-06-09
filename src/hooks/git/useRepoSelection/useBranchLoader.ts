@@ -34,10 +34,14 @@ export function useBranchLoader(): UseBranchLoaderReturn {
   const lastFastBranchRepoRef = useRef<string | null>(null);
 
   // Ref to always call the latest loadBranchesImmediate
-  const loadBranchesImmediateRef = useRef<() => Promise<void>>();
+  const loadBranchesImmediateRef = useRef<(() => Promise<void>) | undefined>(
+    undefined
+  );
 
   // Debounced branch loading
-  const debouncedLoadBranchesRef = useRef<ReturnType<typeof debounce>>();
+  const debouncedLoadBranchesRef = useRef<
+    ReturnType<typeof debounce> | undefined
+  >(undefined);
 
   // ============================================
   // Load Current Branch Name (FAST - for startup)

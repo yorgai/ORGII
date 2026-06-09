@@ -28,7 +28,7 @@ interface BrowserSessionWebviewProps {
   session: BrowserSession;
   isActive: boolean;
   isTabActive: boolean;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   onSessionUpdate: (
     sessionId: string,
     updates: Partial<BrowserSession>

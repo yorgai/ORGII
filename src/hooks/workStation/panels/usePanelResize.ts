@@ -33,7 +33,7 @@ export interface UsePanelResizeReturn {
   /** Mouse down handler for resize handle */
   handleMouseDown: (event: ReactMouseEvent) => void;
   /** Ref for the panel element */
-  panelRef: RefObject<HTMLDivElement>;
+  panelRef: RefObject<HTMLDivElement | null>;
 }
 
 export function usePanelResize({

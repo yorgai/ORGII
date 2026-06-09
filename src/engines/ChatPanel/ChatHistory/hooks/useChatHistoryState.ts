@@ -71,7 +71,7 @@ export interface UseChatHistoryStateReturn {
 
   // Refs
   chatContainerRef: RefObject<HTMLDivElement | null>;
-  virtuosoRef: RefObject<VirtuosoHandle>;
+  virtuosoRef: RefObject<VirtuosoHandle | null>;
   isWpGeneWorkingRef: MutableRefObject<boolean>;
   isExploringRef: MutableRefObject<boolean>;
   handleReplyQuestionRef: MutableRefObject<

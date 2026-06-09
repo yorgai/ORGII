@@ -43,9 +43,9 @@ export interface GanttTimelineProps {
   periods: ViewScopePeriod[];
   columnWidth: number;
   totalWidth: number;
-  timelineBodyRef: RefObject<HTMLDivElement>;
+  timelineBodyRef: RefObject<HTMLDivElement | null>;
   /** Ref for the header scroll container (for horizontal scroll sync) */
-  headerScrollRef?: RefObject<HTMLDivElement>;
+  headerScrollRef?: RefObject<HTMLDivElement | null>;
   onTimelineScroll: () => void;
   onTaskClick?: (task: GanttTask) => void;
   editable?: boolean;

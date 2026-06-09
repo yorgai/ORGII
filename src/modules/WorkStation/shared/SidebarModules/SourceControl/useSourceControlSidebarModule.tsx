@@ -77,7 +77,7 @@ export interface UseSourceControlSidebarModuleResult {
   /** Drop-in `PrimarySidebarTab` config (key, label, icon, sections). */
   tab: PrimarySidebarTab;
   /** Imperative handle for `refresh()` from outside (status-bar Sync button etc.). */
-  ref: React.RefObject<SourceControlTabHandle>;
+  ref: React.RefObject<SourceControlTabHandle | null>;
 }
 
 export function useSourceControlSidebarModule({

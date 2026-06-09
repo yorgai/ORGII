@@ -33,8 +33,8 @@ import {
 } from "@src/store/ui/dragDropAtom";
 
 export interface UseFileUploadOptions {
-  fileInputRef: RefObject<HTMLInputElement>;
-  composerInputRef: RefObject<ComposerInputRef>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
   /**
    * Whether this hook should consume global drag-drop payloads.
    *

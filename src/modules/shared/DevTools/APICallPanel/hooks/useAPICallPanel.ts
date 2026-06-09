@@ -28,7 +28,7 @@ export interface UseAPICallPanelReturn {
   height: number;
   isResizing: boolean;
   expandedCall: string | null;
-  listRef: RefObject<HTMLDivElement>;
+  listRef: RefObject<HTMLDivElement | null>;
   handleResizeStart: (event: ReactMouseEvent) => void;
   toggleExpand: (callId: string) => void;
   setExpandedCall: (callId: string | null) => void;

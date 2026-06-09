@@ -149,8 +149,9 @@ function VirtualizedStickyTreeInner<TNode extends TreeNodeBase>(
   const scrollThrottleRef = useRef<NodeJS.Timeout | null>(null);
 
   // Scroll handler ref for stable Scroller component
-  const scrollHandlerRef =
-    useRef<(event: React.UIEvent<HTMLDivElement>) => void>();
+  const scrollHandlerRef = useRef<
+    ((event: React.UIEvent<HTMLDivElement>) => void) | undefined
+  >(undefined);
 
   // Direct ref to the Virtuoso scroller DOM element — used by
   // useScrollPreservation for precise scrollTop adjustment so we don't

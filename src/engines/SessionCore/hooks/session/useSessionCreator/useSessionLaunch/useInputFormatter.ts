@@ -18,7 +18,7 @@ export interface FormatRepoRef {
 
 export interface FormatUserInputOptions {
   editorContent: string;
-  composerInputRef: RefObject<ComposerInputRef>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
   repo: FormatRepoRef | undefined;
 }
 

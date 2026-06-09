@@ -12,7 +12,7 @@ import { contextItemsAtom } from "@src/store/session";
 import type { FileSelectionHandlers } from "./types";
 
 interface UseFileSelectionOptions {
-  composerInputRef: RefObject<ComposerInputRef>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
   hasContentRef: MutableRefObject<boolean>;
 }
 

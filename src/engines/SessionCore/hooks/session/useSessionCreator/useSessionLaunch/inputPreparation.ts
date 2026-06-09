@@ -13,7 +13,7 @@ export interface PreparedLaunchInput {
 export interface PrepareLaunchInputOptions {
   editorContent: string;
   effectiveSource: SessionSource | null;
-  composerInputRef: RefObject<ComposerInputRef>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
 }
 
 export async function prepareLaunchInput(

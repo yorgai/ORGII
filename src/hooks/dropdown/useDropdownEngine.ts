@@ -109,8 +109,8 @@ export interface UseDropdownEngineReturn<
   setIsOpen: (open: boolean) => void;
   toggle: () => void;
   close: () => void;
-  triggerRef: RefObject<TTrigger>;
-  panelRef: RefObject<HTMLDivElement>;
+  triggerRef: RefObject<TTrigger | null>;
+  panelRef: RefObject<HTMLDivElement | null>;
   panelPosition: DropdownEnginePosition;
   updatePosition: () => void;
   /**

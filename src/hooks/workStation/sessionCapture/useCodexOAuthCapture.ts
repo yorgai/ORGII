@@ -10,7 +10,7 @@ import type { OAuthCaptureConfig } from "./useOAuthCapture";
 import { useOAuthCapture } from "./useOAuthCapture";
 
 interface UseCodexOAuthCaptureOptions {
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
   onTokenCaptured?: (response: CodexOauthExchangeResponse) => void;
   debug?: boolean;
 }

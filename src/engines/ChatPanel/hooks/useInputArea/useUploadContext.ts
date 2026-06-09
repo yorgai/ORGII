@@ -11,13 +11,13 @@ import type { ComposerInputRef } from "@src/components/ComposerInput";
 import { useFileUpload } from "@src/hooks/useFileUpload";
 
 export interface UseUploadContextReturn {
-  fileInputRef: RefObject<HTMLInputElement>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   handleUploadClick: () => void;
   handleFileUpload: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
 }
 
 interface UseUploadContextOptions {
-  composerInputRef: RefObject<ComposerInputRef>;
+  composerInputRef: RefObject<ComposerInputRef | null>;
   imageOwnerId?: string;
 }
 

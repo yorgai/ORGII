@@ -295,7 +295,7 @@ export const SearchEditorDocument: React.FC<SearchEditorDocumentProps> = memo(
     loading = false,
   }) => {
     const { t } = useTranslation();
-    const { isDark } = useCurrentTheme();
+    useCurrentTheme();
     const filePathClickRef = useRef(onFilePathClick);
 
     // Keep ref updated
@@ -304,7 +304,7 @@ export const SearchEditorDocument: React.FC<SearchEditorDocumentProps> = memo(
     }, [onFilePathClick]);
 
     // Theme — passed via `theme` prop (same pattern as CodeMirrorEditor)
-    const theme = getCodeMirrorTheme(isDark);
+    const theme = getCodeMirrorTheme();
 
     // Build extensions (color theme goes through `theme` prop; font/spacing via extension)
     const extensions = useMemo(() => {
@@ -312,7 +312,7 @@ export const SearchEditorDocument: React.FC<SearchEditorDocumentProps> = memo(
         codeMirrorCspNonceExtension,
         editorHistoryKeymapExtension(),
         // Font, spacing, and layout (same as other CM instances)
-        createCodeMirrorTheme(isDark),
+        createCodeMirrorTheme(),
         // Search-specific decorations
         searchEditorTheme,
         // Decorations for matches and file paths
@@ -331,7 +331,7 @@ export const SearchEditorDocument: React.FC<SearchEditorDocumentProps> = memo(
       }
 
       return exts;
-    }, [isDark, matchRanges, filePathRanges, readOnly]);
+    }, [matchRanges, filePathRanges, readOnly]);
 
     // Handle content changes
     const handleChange = useCallback(

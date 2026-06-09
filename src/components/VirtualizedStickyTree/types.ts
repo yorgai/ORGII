@@ -95,7 +95,7 @@ export interface VirtualizedStickyTreeProps<TNode extends TreeNodeBase> {
   emptyMessage?: string;
 
   /** Ref to expose Virtuoso handle */
-  virtuosoRef?: RefObject<VirtuosoHandle>;
+  virtuosoRef?: RefObject<VirtuosoHandle | null>;
 
   /** Called when scrolling near the end of the list */
   onEndReached?: () => void;
@@ -126,7 +126,7 @@ export interface UseStickyScrollReturn<TNode extends TreeNodeBase> {
  */
 export interface UseScrollPreservationOptions<TNode extends TreeNodeBase> {
   flattenedNodes: FlattenedTreeNode<TNode>[];
-  virtuosoRef: RefObject<VirtuosoHandle>;
+  virtuosoRef: RefObject<VirtuosoHandle | null>;
   lastScrollTopRef: MutableRefObject<number>;
   rowHeight: number;
   /** Direct ref to the Virtuoso scroll container DOM element.
