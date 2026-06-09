@@ -33,6 +33,11 @@ import {
   TYPOGRAPHY,
 } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import { getPrStatusLabelKey } from "@src/shared/pr/prStatus";
+import {
+  type NormalizedPullRequest,
+  toNormalizedPullRequest,
+} from "@src/shared/pr/types";
 import {
   workstationPrAtom,
   workstationPrCallbackAtom,
@@ -56,18 +61,6 @@ interface PrCommit {
   authorDate: string;
 }
 
-interface PrDetail {
-  title: string;
-  body: string;
-  state: string;
-  merged: boolean;
-  number: number;
-  htmlUrl: string;
-  additions: number;
-  deletions: number;
-  changedFiles: number;
-}
-
 /** Parse `https://github.com/owner/repo/pull/123` → {full: "owner/repo", number: 123}. */
 function parsePrUrl(
   prUrl: string | undefined
@@ -76,12 +69,6 @@ function parsePrUrl(
   const m = prUrl.match(/github\.com\/([^/]+\/[^/]+)\/pull\/(\d+)/);
   if (!m) return null;
   return { repoFullName: m[1], number: Number(m[2]) };
-}
-
-function normalizeStatus(detail: PrDetail | null): string {
-  if (!detail) return "open";
-  if (detail.merged) return "merged";
-  return detail.state || "open";
 }
 
 export interface PullRequestContentProps {
@@ -102,7 +89,7 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
   const { createPr: onCreatePr } = useAtomValue(workstationPrCallbackAtom);
   const prEligible = readyToCreate;
 
-  const [detail, setDetail] = useState<PrDetail | null>(null);
+  const [detail, setDetail] = useState<NormalizedPullRequest | null>(null);
   const [commits, setCommits] = useState<PrCommit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,17 +117,12 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
         ]);
         if (cancelled) return;
 
-        setDetail({
-          title: String(prJson["title"] ?? ""),
-          body: String(prJson["body"] ?? ""),
-          state: String(prJson["state"] ?? "open"),
-          merged: Boolean(prJson["merged"]),
-          number: Number(prJson["number"] ?? parsedPr.number),
-          htmlUrl: String(prJson["html_url"] ?? prUrl ?? ""),
-          additions: Number(prJson["additions"] ?? 0),
-          deletions: Number(prJson["deletions"] ?? 0),
-          changedFiles: Number(prJson["changed_files"] ?? 0),
-        });
+        setDetail(
+          toNormalizedPullRequest(prJson, {
+            url: prUrl,
+            number: parsedPr.number,
+          })
+        );
 
         setCommits(
           commitJson.map((raw): PrCommit => {
@@ -271,7 +253,7 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
   }
 
   // ── Header (always shown when a PR exists) ──────────────────────────
-  const statusKey = normalizeStatus(detail);
+  const statusKey = detail?.status ?? "open";
   const statusVariant = getPrStatusVariant(statusKey);
   const prNumber = detail?.number ?? parsedPr.number;
   const prTitle = detail?.title || t("labels.pullRequest", "Pull request");
@@ -288,7 +270,7 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
             className={`h-1.5 w-1.5 rounded-full ${statusVariant.dotClass}`}
             aria-hidden
           />
-          {t(`labels.prStatus.${statusKey}`, statusKey)}
+          {t(getPrStatusLabelKey(statusKey), statusKey)}
         </span>
         <span
           className={`${TYPOGRAPHY.secondary} font-medium tabular-nums text-text-3`}
@@ -296,7 +278,7 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
           #{prNumber}
         </span>
         <a
-          href={detail?.htmlUrl ?? prUrl ?? "#"}
+          href={detail?.url ?? prUrl ?? "#"}
           target="_blank"
           rel="noreferrer"
           className={`${HEADER_BUTTON.action} ml-auto`}
@@ -333,16 +315,16 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
         <div className="flex flex-wrap items-center gap-2 text-[11px]">
           <span className="inline-flex items-center gap-1.5 rounded-md bg-fill-2 px-1.5 py-0.5 font-medium tabular-nums">
             <span className="text-success-6">
-              +{formatStatNumber(detail.additions)}
+              +{formatStatNumber(detail.additions ?? 0)}
             </span>
             <span className="text-danger-6">
-              -{formatStatNumber(detail.deletions)}
+              -{formatStatNumber(detail.deletions ?? 0)}
             </span>
           </span>
           <span className="inline-flex items-center gap-1 text-text-3">
             <FileDiff size={12} className="shrink-0" />
             <span className="tabular-nums">
-              {t("labels.fileCount", { count: detail.changedFiles })}
+              {t("labels.fileCount", { count: detail.changedFiles ?? 0 })}
             </span>
           </span>
         </div>

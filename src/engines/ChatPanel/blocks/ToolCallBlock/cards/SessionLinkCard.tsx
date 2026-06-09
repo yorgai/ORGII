@@ -1,5 +1,14 @@
 import { ExternalLink, GitMerge, GitPullRequest, XCircle } from "lucide-react";
 import React from "react";
+import { useTranslation } from "react-i18next";
+
+import { formatStatNumber } from "@src/shared/pr/formatStatNumber";
+import {
+  type PrStatusIconName,
+  getPrStatusIconName,
+  getPrStatusLabelKey,
+  getPrStatusVariant,
+} from "@src/shared/pr/prStatus";
 
 export interface SessionLinkCardData {
   prUrl: string;
@@ -14,40 +23,16 @@ export interface SessionLinkCardData {
   deletions?: number;
 }
 
-interface StatusBadgeConfig {
-  label: string;
-  className: string;
-  icon: React.ReactNode;
-}
-
-function getStatusBadgeConfig(
-  status: SessionLinkCardData["prStatus"]
-): StatusBadgeConfig {
-  switch (status) {
-    case "open":
-      return {
-        label: "Open",
-        className: "bg-success-1 text-success-6",
-        icon: <GitPullRequest size={10} />,
-      };
-    case "merged":
-      return {
-        label: "Merged",
-        className: "bg-primary-1 text-primary-6",
-        icon: <GitMerge size={10} />,
-      };
+/** Map the shared semantic icon name onto a lucide glyph. */
+function StatusIcon({ name }: { name: PrStatusIconName }): React.ReactElement {
+  switch (name) {
+    case "merge":
+      return <GitMerge size={10} />;
     case "closed":
-      return {
-        label: "Closed",
-        className: "bg-danger-1 text-danger-6",
-        icon: <XCircle size={10} />,
-      };
-    case "draft":
-      return {
-        label: "Draft",
-        className: "bg-warning-1 text-warning-6",
-        icon: <GitPullRequest size={10} />,
-      };
+      return <XCircle size={10} />;
+    case "pull-request":
+    default:
+      return <GitPullRequest size={10} />;
   }
 }
 
@@ -56,7 +41,13 @@ interface SessionLinkCardProps {
 }
 
 const SessionLinkCard: React.FC<SessionLinkCardProps> = ({ card }) => {
-  const badgeConfig = getStatusBadgeConfig(card.prStatus);
+  const { t } = useTranslation("common");
+  const badgeClassName = getPrStatusVariant(card.prStatus).badgeClass;
+  const badgeLabel = t(
+    getPrStatusLabelKey(card.prStatus),
+    card.prStatus.charAt(0).toUpperCase() + card.prStatus.slice(1)
+  );
+  const badgeIconName = getPrStatusIconName(card.prStatus);
 
   return (
     <a
@@ -70,10 +61,10 @@ const SessionLinkCard: React.FC<SessionLinkCardProps> = ({ card }) => {
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center gap-2">
             <span
-              className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${badgeConfig.className}`}
+              className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${badgeClassName}`}
             >
-              {badgeConfig.icon}
-              {badgeConfig.label}
+              <StatusIcon name={badgeIconName} />
+              {badgeLabel}
             </span>
             <span className="truncate text-xs text-text-3">
               {card.repoFullName}
@@ -103,7 +94,9 @@ const SessionLinkCard: React.FC<SessionLinkCardProps> = ({ card }) => {
               {card.filesChanged !== undefined && (
                 <>
                   {card.sourceBranch && <span>·</span>}
-                  <span className="shrink-0">{card.filesChanged} files</span>
+                  <span className="shrink-0">
+                    {formatStatNumber(card.filesChanged)} files
+                  </span>
                 </>
               )}
               {card.additions !== undefined && (
@@ -112,13 +105,13 @@ const SessionLinkCard: React.FC<SessionLinkCardProps> = ({ card }) => {
                     <span>·</span>
                   )}
                   <span className="shrink-0 text-success-6">
-                    +{card.additions}
+                    +{formatStatNumber(card.additions)}
                   </span>
                 </>
               )}
               {card.deletions !== undefined && (
                 <span className="shrink-0 text-danger-6">
-                  -{card.deletions}
+                  -{formatStatNumber(card.deletions)}
                 </span>
               )}
             </div>

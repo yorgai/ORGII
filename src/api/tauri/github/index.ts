@@ -259,17 +259,6 @@ export async function listPRCommitsLocal(
   return Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
 }
 
-export async function listPRFilesLocal(
-  repoFullName: string,
-  prNumber: number
-): Promise<Record<string, unknown>[]> {
-  const data = await invokeWithAuth<unknown>("github_list_pr_files", {
-    repoFullName,
-    prNumber,
-  });
-  return Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
-}
-
 export async function cloneRepoLocal(
   repoFullName: string,
   targetDir: string,

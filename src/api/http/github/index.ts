@@ -1,28 +1,14 @@
 /**
  * GitHub integration HTTP helpers (hosted service `/github/*` routes).
  */
-import { appendPullRequestAttributionFooter } from "@src/services/git/operations/commitAttribution";
-
 import {
   deleteHostedServiceApi as deleteApi,
   getHostedServiceApi as getApi,
   postHostedServiceApi as postApi,
 } from "../client";
-import type {
-  CreatePullRequestRequest,
-  GitHubBranch,
-  GitHubConnection,
-  GitHubRepo,
-  PullRequestResponse,
-} from "./types";
+import type { GitHubBranch, GitHubConnection, GitHubRepo } from "./types";
 
-export type {
-  CreatePullRequestRequest,
-  GitHubBranch,
-  GitHubConnection,
-  GitHubRepo,
-  PullRequestResponse,
-} from "./types";
+export type { GitHubBranch, GitHubConnection, GitHubRepo } from "./types";
 
 /**
  * Start GitHub connection flow
@@ -79,22 +65,6 @@ export async function listRepoBranches(
   );
   if (!response || response.status !== 0) return [];
   return Array.isArray(response.data) ? response.data : [];
-}
-
-/**
- * Create a pull request
- */
-export async function createPullRequest(
-  data: CreatePullRequestRequest
-): Promise<PullRequestResponse> {
-  const response = await postApi<PullRequestResponse>("/github/pull-requests", {
-    ...data,
-    body: appendPullRequestAttributionFooter(data.body),
-  });
-  if (!response) {
-    throw new Error("Failed to create pull request");
-  }
-  return response.data as PullRequestResponse;
 }
 
 /**

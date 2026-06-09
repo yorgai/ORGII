@@ -644,6 +644,10 @@
     "voiceErrorUnsupported": "Voice input is not supported in this build.",
     "voiceErrorAudio": "No microphone detected.",
     "voiceErrorGeneric": "Voice input failed. Please try again.",
+    "pr": {
+      "open": "Open PR",
+      "creating": "Creating PR…"
+    },
     "pinnedActions": {
       "manage": "Manage pinned actions",
       "searchPlaceholder": "Search actions to pin…",

@@ -1,0 +1,101 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  getPrStatusIconName,
+  getPrStatusLabelKey,
+  getPrStatusVariant,
+  normalizePrStatus,
+} from "../prStatus";
+
+describe("normalizePrStatus", () => {
+  it("returns 'merged' when merged overrides any state", () => {
+    expect(normalizePrStatus({ state: "open", merged: true })).toBe("merged");
+    expect(normalizePrStatus({ state: "closed", merged: true })).toBe("merged");
+  });
+
+  it("returns 'draft' when draft is set and not merged", () => {
+    expect(normalizePrStatus({ state: "open", draft: true })).toBe("draft");
+  });
+
+  it("lowercases known GitHub states", () => {
+    expect(normalizePrStatus({ state: "OPEN" })).toBe("open");
+    expect(normalizePrStatus({ state: "Closed" })).toBe("closed");
+    expect(normalizePrStatus({ state: "MERGED" })).toBe("merged");
+    expect(normalizePrStatus({ state: "Draft" })).toBe("draft");
+  });
+
+  it("defaults to 'open' for empty / missing state", () => {
+    expect(normalizePrStatus({})).toBe("open");
+    expect(normalizePrStatus({ state: "" })).toBe("open");
+    expect(normalizePrStatus({ state: null })).toBe("open");
+  });
+
+  it("passes through unknown / custom states unchanged", () => {
+    expect(normalizePrStatus({ state: "pending_review" })).toBe(
+      "pending_review"
+    );
+  });
+});
+
+describe("getPrStatusVariant", () => {
+  it("maps each known status to its semantic badge + dot classes", () => {
+    expect(getPrStatusVariant("open")).toEqual({
+      badgeClass: "bg-success-1 text-success-6",
+      dotClass: "bg-success-6",
+    });
+    expect(getPrStatusVariant("merged")).toEqual({
+      badgeClass: "bg-primary-1 text-primary-6",
+      dotClass: "bg-primary-6",
+    });
+    expect(getPrStatusVariant("closed")).toEqual({
+      badgeClass: "bg-danger-1 text-danger-6",
+      dotClass: "bg-danger-6",
+    });
+    expect(getPrStatusVariant("draft")).toEqual({
+      badgeClass: "bg-warning-1 text-warning-6",
+      dotClass: "bg-warning-6",
+    });
+  });
+
+  it("falls back to a neutral variant for unknown states", () => {
+    expect(getPrStatusVariant("pending_review")).toEqual({
+      badgeClass: "bg-fill-2 text-text-3",
+      dotClass: "bg-text-3",
+    });
+  });
+
+  it("falls back to a neutral variant for an empty key", () => {
+    expect(getPrStatusVariant("")).toEqual({
+      badgeClass: "bg-fill-2 text-text-3",
+      dotClass: "bg-text-3",
+    });
+  });
+});
+
+describe("getPrStatusLabelKey", () => {
+  it("returns the common-namespace i18n key for each status", () => {
+    expect(getPrStatusLabelKey("open")).toBe("labels.prStatus.open");
+    expect(getPrStatusLabelKey("merged")).toBe("labels.prStatus.merged");
+    expect(getPrStatusLabelKey("closed")).toBe("labels.prStatus.closed");
+    expect(getPrStatusLabelKey("draft")).toBe("labels.prStatus.draft");
+  });
+
+  it("builds a key for unknown states too (caller supplies fallback)", () => {
+    expect(getPrStatusLabelKey("pending_review")).toBe(
+      "labels.prStatus.pending_review"
+    );
+  });
+});
+
+describe("getPrStatusIconName", () => {
+  it("maps statuses to their semantic icon names", () => {
+    expect(getPrStatusIconName("open")).toBe("pull-request");
+    expect(getPrStatusIconName("draft")).toBe("pull-request");
+    expect(getPrStatusIconName("merged")).toBe("merge");
+    expect(getPrStatusIconName("closed")).toBe("closed");
+  });
+
+  it("defaults to 'pull-request' for unknown states", () => {
+    expect(getPrStatusIconName("pending_review")).toBe("pull-request");
+  });
+});

@@ -20,11 +20,16 @@ import {
   useGitFiles,
 } from "@src/hooks/git/sourceControl";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
+import { gitAutoCreatePrAtom } from "@src/store/ui/editorSettingsAtom";
 import { gitReviewNavigationAtom } from "@src/store/workstation/codeEditor/gitReviewNavigationAtom";
 import { gitOutputIntegrationAtom } from "@src/store/workstation/codeEditor/outputIntegration";
+import {
+  workstationPrAtom,
+  workstationPrCallbackAtom,
+  workstationPrCommitMessageAtom,
+} from "@src/store/workstation/codeEditor/workstationPrAtom";
 
 import { useStashState } from "../useStashState";
-import { useWorkstationPr } from "../useWorkstationPr";
 import type {
   SourceControlState,
   UseSourceControlStateOptions,
@@ -257,29 +262,35 @@ export function useSourceControlState(
     onCreatePrRef,
   });
 
-  const uncommittedCount = gitFiles.length;
-
+  // PR state is owned by the single editor-level useWorkstationPr mount (see
+  // useSourceControlSetup). Mirror its published atoms here instead of mounting
+  // a second copy — that previously caused duplicate GitHub lookups, duplicate
+  // auto-create timers and last-writer-wins races on the global atom.
   const {
     prUrl,
-    prStatus,
     isCreating: prCreating,
-    errorMessage: prErrorMessage,
-    eligible: prEligible,
     readyToCreate: prReadyToCreate,
-    autoCreatePr,
-    handleCreatePr,
-  } = useWorkstationPr({
-    repoPath,
-    repoId: selectedRepoId || repoId,
-    branchName: currentBranch,
-    hasUpstream,
-    uncommittedCount,
-    commitMessage,
-  });
+  } = useAtomValue(workstationPrAtom);
+  const { createPr } = useAtomValue(workstationPrCallbackAtom);
+  const autoCreatePr = useAtomValue(gitAutoCreatePrAtom);
+  const setWorkstationPrCommitMessage = useSetAtom(
+    workstationPrCommitMessageAtom
+  );
+
+  // Publish the commit summary so the single PR mount can build PR titles from
+  // it. Clear it on unmount so a stale message never leaks into a later PR
+  // created from elsewhere (e.g. the PinnedActionsBar pill).
+  useEffect(() => {
+    setWorkstationPrCommitMessage(commitMessage);
+  }, [commitMessage, setWorkstationPrCommitMessage]);
+  useEffect(
+    () => () => setWorkstationPrCommitMessage(""),
+    [setWorkstationPrCommitMessage]
+  );
 
   useEffect(() => {
-    onCreatePrRef.current = handleCreatePr;
-  }, [handleCreatePr]);
+    onCreatePrRef.current = createPr;
+  }, [createPr]);
 
   // Reset optimistic offset when gitStatus updates.
   // Must be an effect — running a setter in the render body causes the
@@ -443,13 +454,13 @@ export function useSourceControlState(
       onStashDrop: stashDrop,
       hasChangesToStash,
       prUrl,
-      prStatus,
+      prStatus: undefined,
       prCreating,
-      prErrorMessage,
+      prErrorMessage: null,
       prReadyToCreate,
-      prEligible,
+      prEligible: prReadyToCreate,
       autoCreatePr,
-      onCreatePr: handleCreatePr,
+      onCreatePr: createPr ?? undefined,
     }),
     [
       gitFiles,
@@ -507,13 +518,10 @@ export function useSourceControlState(
       stashDrop,
       hasChangesToStash,
       prUrl,
-      prStatus,
       prCreating,
-      prErrorMessage,
       prReadyToCreate,
-      prEligible,
       autoCreatePr,
-      handleCreatePr,
+      createPr,
     ]
   );
 

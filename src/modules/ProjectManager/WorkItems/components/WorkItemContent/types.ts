@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import type {
   OrchestratorPhase,
+  PrStatus,
   WorkItemHistoryAction,
 } from "@src/api/http/project";
 import type { Person } from "@src/types/core/shared";
@@ -55,7 +56,7 @@ export interface OutputTabContentProps {
 
 export interface PrSectionProps {
   prUrl?: string;
-  prStatus?: string;
+  prStatus?: PrStatus;
   branch?: string;
   phase: OrchestratorPhase;
   autoCreatePr: boolean;

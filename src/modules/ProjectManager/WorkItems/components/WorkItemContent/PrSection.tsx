@@ -4,15 +4,9 @@ import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
 import InlineAlert from "@src/components/InlineAlert";
+import { getPrStatusVariant } from "@src/shared/pr/prStatus";
 
 import type { PrCreationState, PrSectionProps } from "./types";
-
-const PR_STATUS_COLORS: Record<string, string> = {
-  open: "bg-success-1 text-success-6",
-  merged: "bg-primary-1 text-primary-6",
-  closed: "bg-danger-1 text-danger-6",
-  draft: "bg-warning-1 text-warning-6",
-};
 
 const PrSection: React.FC<PrSectionProps> = ({
   prUrl,
@@ -64,8 +58,7 @@ const PrSection: React.FC<PrSectionProps> = ({
   }, [readyToCreate]);
 
   if (prUrl) {
-    const statusColor =
-      PR_STATUS_COLORS[prStatus ?? ""] ?? "bg-fill-2 text-text-3";
+    const statusColor = getPrStatusVariant(prStatus ?? "").badgeClass;
     return (
       <div className="rounded-lg bg-fill-2 px-4 py-3">
         <div className="flex items-center justify-between">
