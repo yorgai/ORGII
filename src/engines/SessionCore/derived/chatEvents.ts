@@ -6,6 +6,12 @@
  */
 import { atom } from "jotai";
 
+import { isSyntheticUserInputEvent } from "@src/engines/SessionCore/sync/utils/activityIds";
+import {
+  type QueuedMessage,
+  messageQueueAtom,
+} from "@src/store/ui/messageQueueAtom";
+
 import {
   derivedSnapshotAtom,
   eventsAtom,
@@ -54,6 +60,42 @@ function getLiveAssistantCreatedAt(sessionId: string): string {
 
 function normalizeEventText(value: string | null | undefined): string {
   return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function getSyntheticUserText(event: SessionEvent): string {
+  const resultMessage = event.result?.message;
+  if (
+    typeof resultMessage === "object" &&
+    resultMessage !== null &&
+    "content" in resultMessage
+  ) {
+    return normalizeEventText(String(resultMessage.content ?? ""));
+  }
+  return normalizeEventText(event.displayText);
+}
+
+function filterQueuedSyntheticUserEvents(
+  events: SessionEvent[],
+  queuedMessages: QueuedMessage[]
+): SessionEvent[] {
+  if (queuedMessages.length === 0) return events;
+  const queuedBySession = new Map<string, Set<string>>();
+  for (const message of queuedMessages) {
+    let texts = queuedBySession.get(message.sessionId);
+    if (!texts) {
+      texts = new Set<string>();
+      queuedBySession.set(message.sessionId, texts);
+    }
+    texts.add(normalizeEventText(message.content));
+    texts.add(normalizeEventText(message.displayContent));
+  }
+
+  return events.filter((event) => {
+    if (!isSyntheticUserInputEvent(event) || !event.sessionId) return true;
+    const queuedTexts = queuedBySession.get(event.sessionId);
+    if (!queuedTexts) return true;
+    return !queuedTexts.has(getSyntheticUserText(event));
+  });
 }
 
 function getAssistantText(event: SessionEvent): string {
@@ -137,10 +179,13 @@ export const chatEventsAtom = atom((get) => {
   const liveContent = sessionId
     ? (get(streamingDeltaContentAtom).get(sessionId) ?? null)
     : null;
+  const queuedMessages = get(messageQueueAtom);
 
   if (snap && "chatEvents" in snap) {
     const next = appendLiveAssistantEvent(
-      derivePlanDisplayEvents(snap.chatEvents),
+      derivePlanDisplayEvents(
+        filterQueuedSyntheticUserEvents(snap.chatEvents, queuedMessages)
+      ),
       sessionId,
       liveContent
     );
@@ -171,7 +216,12 @@ export const chatEventsAtom = atom((get) => {
   // messagesEventsAtom / simulatorEventsAtom do in their own fallback paths.
   const events = get(eventsAtom);
   return appendLiveAssistantEvent(
-    derivePlanDisplayEvents(events.filter(isVisibleInChat)),
+    derivePlanDisplayEvents(
+      filterQueuedSyntheticUserEvents(
+        events.filter(isVisibleInChat),
+        queuedMessages
+      )
+    ),
     sessionId,
     liveContent
   );
