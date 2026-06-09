@@ -3,14 +3,11 @@ import React from "react";
 import type { CategoryTableContentProps } from "../Tables";
 import { CategoryTableContent } from "../Tables";
 import type { ChannelSlice } from "../types";
-import type { ServiceType } from "./Channels";
 import ChannelPreviewPanel from "./Channels/ChannelPreviewPanel";
-import ServicePreviewPanel from "./Services/Preview/ServicePreviewPanel";
 
 export const ConnectionsCategoryView: React.FC<{
-  selectedIntegrationKind: "git" | "channel" | "service" | null;
+  selectedIntegrationKind: "git" | "channel" | null;
   selectedGitProvider: string | null;
-  selectedServiceType: ServiceType | null;
   onGitConnected?: () => void;
   channel: ChannelSlice;
   tableProps: CategoryTableContentProps;
@@ -21,7 +18,6 @@ export const ConnectionsCategoryView: React.FC<{
 }> = ({
   selectedIntegrationKind,
   selectedGitProvider,
-  selectedServiceType,
   onGitConnected,
   channel,
   tableProps,
@@ -41,17 +37,6 @@ export const ConnectionsCategoryView: React.FC<{
   }
 
   if (fullPage) {
-    if (selectedIntegrationKind === "service" && selectedServiceType) {
-      return (
-        <ServicePreviewPanel
-          serviceType={selectedServiceType}
-          config={channel.config}
-          update={channel.update}
-          onClose={onBack}
-          onExpand={onExpand}
-        />
-      );
-    }
     if (selectedIntegrationKind === "channel" || channel.selectedChannel) {
       return (
         <ChannelPreviewPanel

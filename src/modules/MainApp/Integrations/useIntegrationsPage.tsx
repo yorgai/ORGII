@@ -168,16 +168,19 @@ export function useIntegrationsPage() {
           accountsHook.handleAddAccount();
           break;
         case "add-connection":
-          navigateToCategory("connections");
-          extensions.clearExtensionState();
-          channelState.handleChannelAdd();
-          break;
-        case "add-git-connection":
-          navigateToCategory("connections");
           extensions.clearExtensionState();
           channelState.handleChannelAdd({
-            category: "projects",
-            type: "github",
+            targetPath: buildIntegrationsPath({ category: "connections" }),
+          });
+          break;
+        case "add-git-connection":
+          extensions.clearExtensionState();
+          channelState.handleChannelAdd({
+            initialSelection: {
+              category: "projects",
+              type: "github",
+            },
+            targetPath: buildIntegrationsPath({ category: "connections" }),
           });
           break;
         case "add-database":
@@ -436,8 +439,7 @@ export function useIntegrationsPage() {
     hasConnectionSelection:
       category === "git"
         ? !!connections.selectedGitProvider
-        : connections.selectedIntegrationKind === "channel" ||
-          connections.selectedIntegrationKind === "service",
+        : connections.selectedIntegrationKind === "channel",
   });
 
   const accountListFiltered = useMemo(() => {
@@ -493,7 +495,6 @@ export function useIntegrationsPage() {
       devToolsTab,
       selectedIntegrationKind: connections.selectedIntegrationKind,
       selectedGitProvider: connections.selectedGitProvider,
-      selectedServiceType: connections.selectedServiceType,
       onExitFullPage: handleExitFullPage,
       onEnterFullPage: handleEnterFullPage,
       onClosePreview: handleClosePreview,

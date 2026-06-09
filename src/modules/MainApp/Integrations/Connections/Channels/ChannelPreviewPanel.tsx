@@ -39,7 +39,6 @@ interface ChannelPreviewPanelProps {
     | "refreshProjectConnections"
     | "handleChannelWizardSubmit"
     | "handleChannelWizardCancel"
-    | "handleServiceSubmit"
     | "handleProbeChannel"
     | "handleRemoveChannel"
     | "toggleChannelEnabled"
@@ -72,7 +71,6 @@ const ChannelPreviewPanel: React.FC<ChannelPreviewPanelProps> = ({
     refreshProjectConnections,
     handleChannelWizardSubmit,
     handleChannelWizardCancel,
-    handleServiceSubmit,
     handleProbeChannel,
     handleRemoveChannel,
     toggleChannelEnabled,
@@ -88,7 +86,6 @@ const ChannelPreviewPanel: React.FC<ChannelPreviewPanelProps> = ({
         initialType={channelWizardInitialSelection?.type}
         onGitConnected={onGitConnected}
         onProjectsConnected={refreshProjectConnections}
-        onServiceSubmit={handleServiceSubmit}
       />
     );
   }

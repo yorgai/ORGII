@@ -68,7 +68,6 @@ export function useChannelWizardState({
   const [gitOAuthFlow, setGitOAuthFlow] = useState<OAuthFlowStart | null>(null);
   const [gitSubmitting, setGitSubmitting] = useState(false);
   const [gitSubmitError, setGitSubmitError] = useState<string | null>(null);
-  const [serviceApiKey, setServiceApiKey] = useState("");
   const [projectAuthMethod, setProjectAuthMethod] =
     useState<ProjectSyncAuthMethod>(STORY_SYNC_AUTH_METHOD.OAUTH);
   const [projectToken, setProjectToken] = useState("");
@@ -109,7 +108,6 @@ export function useChannelWizardState({
     : false;
 
   const isGit = selectedType === STORY_SYNC_ADAPTER.GITHUB;
-  const isService = category === "services";
   const isProjects = category === "projects" && !isGit;
   const isChannels = category === "channels";
 
@@ -220,7 +218,6 @@ export function useChannelWizardState({
     isDuplicateName,
     isGit,
     isProjects,
-    isService,
     normalizedAccountName,
     probeErrorDismissed,
     probeResult,
@@ -231,7 +228,6 @@ export function useChannelWizardState({
     projectSubmitting,
     projectToken,
     selectedType,
-    serviceApiKey,
     setErrors,
     setGitOAuthFlow,
     setGitPat,
@@ -244,6 +240,5 @@ export function useChannelWizardState({
     setProjectSubmitError,
     setProjectSubmitting,
     setProjectToken,
-    setServiceApiKey,
   };
 }

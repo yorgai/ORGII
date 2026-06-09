@@ -7,13 +7,14 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 import {
   type SyncConnection,
   syncConnectionsApi,
 } from "@src/api/http/integrations";
 import { toggleChannel } from "@src/api/tauri/agent";
-import { WIZARD_IDS } from "@src/config/mainAppPaths";
+import { WIZARD_IDS, buildWizardPath } from "@src/config/mainAppPaths";
 import { useWizardParam } from "@src/hooks/navigation";
 import type { WizardCategory } from "@src/scaffold/WizardSystem/variants/Channel/channelWizardTypes";
 import { showChannelActionDialogSafely } from "@src/util/dialogs/channelActionDialog";
@@ -25,11 +26,9 @@ import {
   deleteNested,
   getNestedBool,
   getNestedRecord,
-  getNestedString,
 } from "../../AgentOrgs/config/osAgent/utils";
 import {
   CHANNEL_TYPES,
-  SERVICE_TYPES,
   accountPathPrefix,
   probeChannel,
 } from "../Connections/Channels";
@@ -38,7 +37,6 @@ import type {
   ChannelInstance,
   ChannelProbeResult,
   ChannelSelection,
-  ServiceType,
 } from "../Connections/Channels";
 
 function resolveConnectionStatus(
@@ -66,9 +64,15 @@ interface ChannelWizardInitialSelection {
   type: string;
 }
 
+interface ChannelAddOptions {
+  initialSelection?: ChannelWizardInitialSelection;
+  targetPath?: string;
+}
+
 export function useChannelState(options: UseChannelStateOptions = {}) {
   const { channelStatuses } = options;
   const { t: tIntegrations } = useTranslation("integrations");
+  const navigate = useNavigate();
   const { config, loaded, update, rawUpdate } = useOSAgentConfig();
 
   // ── Selection ──
@@ -190,24 +194,6 @@ export function useChannelState(options: UseChannelStateOptions = {}) {
   }, [groupedChannels, projectConnections]);
 
   /** Derive which services have API keys configured */
-  const configuredServices = useMemo(() => {
-    const configPaths: Record<ServiceType, string> = {
-      smithery: "tools.mcpSmithery.apiKey",
-    };
-    const services: { type: ServiceType; configured: boolean }[] = [];
-    for (const svc of SERVICE_TYPES) {
-      const apiKey = getNestedString(
-        config,
-        configPaths[svc.type as ServiceType],
-        ""
-      );
-      if (apiKey) {
-        services.push({ type: svc.type as ServiceType, configured: true });
-      }
-    }
-    return services;
-  }, [config]);
-
   // ── Selection helpers ──
   const selectedChannelPath = useMemo(() => {
     if (!selectedChannel) return "";
@@ -283,12 +269,16 @@ export function useChannelState(options: UseChannelStateOptions = {}) {
   }, []);
 
   const handleChannelAdd = useCallback(
-    (initialSelection?: ChannelWizardInitialSelection) => {
+    (options: ChannelAddOptions = {}) => {
       setSelectedChannel(null);
-      setChannelWizardInitialSelection(initialSelection ?? null);
+      setChannelWizardInitialSelection(options.initialSelection ?? null);
+      if (options.targetPath) {
+        navigate(buildWizardPath(options.targetPath, WIZARD_IDS.CHANNEL_ADD));
+        return;
+      }
       openWizard(WIZARD_IDS.CHANNEL_ADD);
     },
-    [openWizard]
+    [navigate, openWizard]
   );
 
   const handleChannelWizardCancel = useCallback(() => {
@@ -307,19 +297,6 @@ export function useChannelState(options: UseChannelStateOptions = {}) {
       setChannelWizardInitialSelection(null);
       closeWizard();
       setSelectedChannel({ type: channelType, accountId });
-    },
-    [update, closeWizard]
-  );
-
-  const handleServiceSubmit = useCallback(
-    (serviceType: ServiceType, apiKey: string) => {
-      const configPaths: Record<ServiceType, string> = {
-        smithery: "tools.mcpSmithery.apiKey",
-      };
-      const path = configPaths[serviceType];
-      update(path, apiKey);
-      setChannelWizardInitialSelection(null);
-      closeWizard();
     },
     [update, closeWizard]
   );
@@ -445,14 +422,12 @@ export function useChannelState(options: UseChannelStateOptions = {}) {
     projectConnectionsLoading,
     projectConnectionsError,
     existingAccountsMap,
-    configuredServices,
     // Actions
     refreshProjectConnections,
     handleChannelClick,
     handleChannelAdd,
     handleChannelWizardCancel,
     handleChannelWizardSubmit,
-    handleServiceSubmit,
     handleProbeChannel,
     handleRemoveChannel,
     handleRemoveChannelRow,

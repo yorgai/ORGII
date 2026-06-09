@@ -2,13 +2,10 @@ import { Search } from "lucide-react";
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import InlineAlert from "@src/components/InlineAlert";
 import Input from "@src/components/Input";
 import IntegrationIcon from "@src/components/IntegrationIcon";
 import Select from "@src/components/Select";
 import type { SelectOption } from "@src/components/Select";
-import { isRegionSanctioned } from "@src/config/providerRegions";
-import { useRegionCheck } from "@src/hooks/config";
 import {
   COMING_SOON_CHANNEL_TYPES,
   LIVE_CHANNEL_TYPES,
@@ -27,7 +24,6 @@ import type { SelectionGridOption } from "@src/scaffold/WizardSystem/primitives"
 
 import {
   PROJECT_ADAPTER_TYPES,
-  SERVICE_TYPES,
   type WizardCategory,
 } from "./channelWizardTypes";
 
@@ -83,7 +79,6 @@ interface IntegrationSelectionProps {
   onCancel?: () => void;
   footerLeft?: React.ReactNode;
   channelContent?: React.ReactNode;
-  serviceContent?: React.ReactNode;
   projectContent?: React.ReactNode;
   gitContent?: React.ReactNode;
 }
@@ -102,16 +97,11 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
   onCancel,
   footerLeft,
   channelContent,
-  serviceContent,
   projectContent,
   gitContent,
 }) => {
   const { t } = useTranslation("integrations");
   const [connectionSearch, setConnectionSearch] = useState("");
-  const regionCheck = useRegionCheck("");
-  const showSanctionWarning =
-    regionCheck.countryCode && isRegionSanctioned(regionCheck.countryCode);
-
   const typeGroups: TypeOptionGroup[] = useMemo(() => {
     const channelOptions = LIVE_CHANNEL_TYPES.map((channel) => ({
       key: channel.type,
@@ -126,11 +116,6 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
         disabled: true,
       })
     );
-    const serviceOptions = SERVICE_TYPES.map((svc) => ({
-      key: svc.type,
-      label: t(svc.labelKey),
-      iconElement: <IntegrationIcon type={svc.type} size={18} />,
-    }));
     const projectOptions = PROJECT_ADAPTER_TYPES.map((adapter) => ({
       key: adapter.type,
       label: t(
@@ -154,13 +139,6 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
         options: comingSoonChannelOptions,
         selectOptions: [],
         selectable: false,
-      },
-      {
-        category: "services",
-        label: t("categories.services"),
-        options: serviceOptions,
-        selectOptions: toSelectOptions(serviceOptions),
-        selectable: true,
       },
       {
         category: "projects",
@@ -205,8 +183,6 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
       .filter((group) => group.options.length > 0);
   }, [connectionSearch, typeGroups]);
 
-  const isService = category === "services";
-
   const [accountNameTouched, setAccountNameTouched] = useState(false);
 
   const accountNameError =
@@ -214,40 +190,38 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
       ? t("integrations.accountNameDuplicate")
       : errors.name;
 
-  const accountNameContent =
-    !isService && selectedType ? (
-      <SectionContainer>
-        <SectionRow
-          label={t("keyVault.accountName")}
-          description={t("keyVault.accountNameDesc")}
-          required
-        >
-          <Input
-            value={accountName}
-            onChange={(value) => {
-              onAccountNameChange(value);
-              if (accountNameTouched) setAccountNameTouched(false);
-            }}
-            onBlur={() => {
-              if (accountName.trim()) setAccountNameTouched(true);
-            }}
-            placeholder={t("keyVault.accountNamePlaceholder")}
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            style={SECTION_CONTROL_STYLE}
-            errorMessage={accountNameError}
-            errorPlacement="left"
-          />
-        </SectionRow>
-      </SectionContainer>
-    ) : null;
+  const accountNameContent = selectedType ? (
+    <SectionContainer>
+      <SectionRow
+        label={t("keyVault.accountName")}
+        description={t("keyVault.accountNameDesc")}
+        required
+      >
+        <Input
+          value={accountName}
+          onChange={(value) => {
+            onAccountNameChange(value);
+            if (accountNameTouched) setAccountNameTouched(false);
+          }}
+          onBlur={() => {
+            if (accountName.trim()) setAccountNameTouched(true);
+          }}
+          placeholder={t("keyVault.accountNamePlaceholder")}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          style={SECTION_CONTROL_STYLE}
+          errorMessage={accountNameError}
+          errorPlacement="left"
+        />
+      </SectionRow>
+    </SectionContainer>
+  ) : null;
 
   const selectedSetupContent = selectedType ? (
     <div className={SECTION_GAP_CLASSES}>
       {accountNameContent}
       {category === "channels" && channelContent}
-      {category === "services" && serviceContent}
       {projectContent}
       {gitContent}
     </div>
@@ -329,17 +303,6 @@ const IntegrationSelection: React.FC<IntegrationSelectionProps> = ({
         </SectionContainer>
 
         {selectedSetupContent}
-
-        {showSanctionWarning && (
-          <InlineAlert
-            type="warning"
-            title={t("integrations.sanctionWarning.title")}
-          >
-            {t("integrations.sanctionWarning.message", {
-              services: regionCheck.restrictedServices.join(", "),
-            })}
-          </InlineAlert>
-        )}
       </div>
     </WizardStepLayout>
   );

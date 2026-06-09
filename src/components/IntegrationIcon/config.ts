@@ -22,7 +22,6 @@ import MatrixIcon from "@src/assets/channelIcons/matrix.svg";
 import MSTeamsIcon from "@src/assets/channelIcons/msteams.svg";
 import SignalIcon from "@src/assets/channelIcons/signal.svg";
 import SlackIcon from "@src/assets/channelIcons/slack.svg";
-import SmitheryIcon from "@src/assets/channelIcons/smithery.svg";
 import TelegramIcon from "@src/assets/channelIcons/telegram.svg";
 import WeChatIcon from "@src/assets/channelIcons/wechat.svg";
 import WhatsAppIcon from "@src/assets/channelIcons/whatsapp.svg";
@@ -52,8 +51,7 @@ export type BrandIntegrationType =
   | "wecom"
   | "github"
   | "gitlab"
-  | "linear"
-  | "smithery";
+  | "linear";
 
 // ============================================
 // Icon Map
@@ -83,5 +81,4 @@ export const INTEGRATION_ICON_MAP: Record<
   github: GitHubIcon,
   gitlab: GitLabIcon,
   linear: LinearIcon,
-  smithery: SmitheryIcon,
 };

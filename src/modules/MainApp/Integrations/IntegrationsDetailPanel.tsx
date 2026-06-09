@@ -20,7 +20,6 @@ import {
 } from "@src/modules/shared/layouts/blocks";
 
 import type { UseBuiltInToolsReturn } from "./BuiltInTools/useBuiltInTools";
-import type { ServiceType } from "./Connections/Channels";
 import { ConnectionsCategoryView } from "./Connections/ConnectionsCategoryView";
 import { DatabasesCategoryView } from "./Databases/DatabasesCategoryView";
 import type {
@@ -58,9 +57,8 @@ export interface IntegrationsDetailPanelProps {
   category: IntegrationCategory;
   detailMode: DetailMode;
   devToolsTab?: DevToolsTab;
-  selectedIntegrationKind: "git" | "channel" | "service" | null;
+  selectedIntegrationKind: "git" | "channel" | null;
   selectedGitProvider: string | null;
-  selectedServiceType: ServiceType | null;
   onGitConnected?: () => void;
   channel: ChannelSlice;
   accounts: ReturnType<typeof useKeyVaultPage>;
@@ -99,7 +97,6 @@ const IntegrationsDetailPanel: React.FC<IntegrationsDetailPanelProps> = ({
   devToolsTab,
   selectedIntegrationKind,
   selectedGitProvider,
-  selectedServiceType,
   onGitConnected,
   channel,
   accounts,
@@ -221,7 +218,6 @@ const IntegrationsDetailPanel: React.FC<IntegrationsDetailPanelProps> = ({
         <ConnectionsCategoryView
           selectedIntegrationKind={selectedIntegrationKind}
           selectedGitProvider={selectedGitProvider}
-          selectedServiceType={selectedServiceType}
           onGitConnected={onGitConnected}
           channel={channel}
           tableProps={tableProps}

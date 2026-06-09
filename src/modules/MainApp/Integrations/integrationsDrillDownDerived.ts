@@ -119,7 +119,7 @@ export interface DrillDownSelectedIdInput {
   extensionSelectedId: string | null;
   selectedMarkdownRule: { source: string; name: string } | null | undefined;
   selectedRoutineId: string | null | undefined;
-  selectedIntegrationKind: "git" | "channel" | "service" | null;
+  selectedIntegrationKind: "git" | "channel" | null;
   selectedGitProvider: string | null;
   selectedChannel: { type: string; accountId: string } | null | undefined;
 }

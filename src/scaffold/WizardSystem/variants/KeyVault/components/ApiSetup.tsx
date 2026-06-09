@@ -6,19 +6,15 @@
  * the shared ModelTable. Delegates to agent-specific setup components for the credential
  * section. State and logic live in `useApiSetup`.
  */
-import { useSetAtom } from "jotai";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { testModelAvailability } from "@src/api/services/keyValidation";
 import type { QuotaSnapshot } from "@src/api/types/keyVault";
 import { LOCAL_MODEL_PROVIDER } from "@src/api/types/keys";
-import { formatAgentType } from "@src/assets/providers";
 import InlineAlert from "@src/components/InlineAlert";
 import Input from "@src/components/Input";
-import RegionNoticeButton from "@src/components/RegionNoticeButton";
 import Select from "@src/components/Select";
-import { useRegionCheck } from "@src/hooks/config";
 import {
   SECTION_CONTROL_STYLE,
   SECTION_GAP_CLASSES,
@@ -28,7 +24,6 @@ import {
 } from "@src/modules/shared/layouts/SectionLayout";
 import { DETAIL_PANEL_TOKENS } from "@src/modules/shared/layouts/blocks";
 import { SelectionGrid } from "@src/scaffold/WizardSystem/primitives";
-import { integrationsToolbarAtom } from "@src/store/ui/integrationsToolbarAtom";
 import { parseModelVariants } from "@src/util/modelVariants";
 
 import { useApiSetup } from "../hooks/useApiSetup";
@@ -56,8 +51,6 @@ const ApiSetup: React.FC<ApiSetupProps> = ({
 }) => {
   const { t } = useTranslation("integrations");
   const hook = useApiSetup({ data, onChange });
-  const regionCheck = useRegionCheck(data.agent_type);
-  const setToolbarEntry = useSetAtom(integrationsToolbarAtom);
   const [errors, setErrors] = useState<{ agent_type?: string }>({});
 
   const {
@@ -170,61 +163,6 @@ const ApiSetup: React.FC<ApiSetupProps> = ({
       (hook.isCursor && data.validated) ||
       (hook.isOAuthAgent && data.validated) ||
       isLocalModelProvider);
-
-  const showRegionWarning =
-    !!data.agent_type && regionCheck.status === "unsupported";
-
-  const regionWarningTitle = t("keyVault.regionWarning.title");
-  const regionWarningMessage = t("keyVault.regionWarning.message", {
-    provider: formatAgentType(data.agent_type),
-  });
-
-  useEffect(() => {
-    if (!showRegionWarning) {
-      setToolbarEntry((current) => ({
-        ...current,
-        extraButtons: current.extraButtons?.filter(
-          (button) => button.id !== "key-vault-region-warning"
-        ),
-      }));
-      return;
-    }
-
-    setToolbarEntry((current) => ({
-      ...current,
-      extraButtons: [
-        ...(current.extraButtons?.filter(
-          (button) => button.id !== "key-vault-region-warning"
-        ) ?? []),
-        {
-          id: "key-vault-region-warning",
-          title: regionWarningTitle,
-          element: (
-            <RegionNoticeButton
-              title={regionWarningTitle}
-              body={<p className="m-0">{regionWarningMessage}</p>}
-              alertClassName="!border-border-2 !bg-chat-container !text-text-1 shadow-lg"
-            />
-          ),
-          onClick: () => {},
-        },
-      ],
-    }));
-
-    return () => {
-      setToolbarEntry((current) => ({
-        ...current,
-        extraButtons: current.extraButtons?.filter(
-          (button) => button.id !== "key-vault-region-warning"
-        ),
-      }));
-    };
-  }, [
-    regionWarningMessage,
-    regionWarningTitle,
-    setToolbarEntry,
-    showRegionWarning,
-  ]);
 
   const handleTestModel = useCallback(
     async (model: string) => {

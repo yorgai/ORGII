@@ -15,12 +15,7 @@ import {
 } from "@src/api/http/integrations";
 import { WizardShell } from "@src/scaffold/WizardSystem/primitives";
 
-import {
-  ChannelContent,
-  GitContent,
-  ProjectContent,
-  ServiceContent,
-} from "./ChannelSections";
+import { ChannelContent, GitContent, ProjectContent } from "./ChannelSections";
 import {
   ChannelWizardActions,
   ChannelWizardFooterStatus,
@@ -29,13 +24,9 @@ import IntegrationSelection from "./IntegrationSelection";
 import { buildConfigData, validateAccountName } from "./channelWizardHelpers";
 import type {
   ProjectSyncAdapterType,
-  ServiceType,
   WizardCategory,
 } from "./channelWizardTypes";
 import { useChannelWizardState } from "./useChannelWizardState";
-
-export { SERVICE_TYPES } from "./channelWizardTypes";
-export type { ServiceType } from "./channelWizardTypes";
 
 export interface ChannelWizardProps {
   onSubmit: (
@@ -49,7 +40,6 @@ export interface ChannelWizardProps {
   initialType?: string | null;
   onGitConnected?: () => void;
   onProjectsConnected?: () => void | Promise<void>;
-  onServiceSubmit?: (serviceType: ServiceType, apiKey: string) => void;
 }
 
 const ChannelWizard: React.FC<ChannelWizardProps> = ({
@@ -60,7 +50,6 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
   initialType,
   onGitConnected,
   onProjectsConnected,
-  onServiceSubmit,
 }) => {
   const { t } = useTranslation("integrations");
   const wizardState = useChannelWizardState({
@@ -93,7 +82,6 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
     isDuplicateName,
     isGit,
     isProjects,
-    isService,
     normalizedAccountName,
     probeErrorDismissed,
     probeResult,
@@ -104,7 +92,6 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
     projectSubmitting,
     projectToken,
     selectedType,
-    serviceApiKey,
     setErrors,
     setGitOAuthFlow,
     setGitPat,
@@ -117,7 +104,6 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
     setProjectSubmitError,
     setProjectSubmitting,
     setProjectToken,
-    setServiceApiKey,
   } = wizardState;
 
   const handleSubmit = useCallback(() => {
@@ -252,12 +238,6 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
     void handleGitSubmit();
   }, [handleGitSubmit]);
 
-  const handleServiceSubmit = useCallback(() => {
-    if (!selectedType || !serviceApiKey.trim()) return;
-    onServiceSubmit?.(selectedType as ServiceType, serviceApiKey.trim());
-    onCancel();
-  }, [selectedType, serviceApiKey, onServiceSubmit, onCancel]);
-
   const handleProjectSubmit = useCallback(async () => {
     if (!selectedType) return;
 
@@ -324,14 +304,12 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
     <ChannelWizardActions
       categorySelected={!!category}
       isChannels={isChannels}
-      isService={isService}
       isProjects={isProjects}
       isGit={isGit}
       selectedType={selectedType}
       accountName={accountName}
       isDuplicateName={isDuplicateName}
       channelIsValid={channelIsValid}
-      serviceApiKey={serviceApiKey}
       projectAuthMethod={projectAuthMethod}
       projectToken={projectToken}
       projectSubmitting={projectSubmitting}
@@ -341,7 +319,6 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
       gitScanCandidateSelected={!!gitScanCandidate}
       gitSubmitting={gitSubmitting}
       onChannelSubmit={handleSubmit}
-      onServiceSubmit={handleServiceSubmit}
       onProjectSubmit={handleProjectSubmit}
       onGitSubmit={handleGitSubmit}
     />
@@ -365,14 +342,6 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
       onConfigChange={handleConfigChange}
       onProbe={handleProbe}
       onDismissProbeError={() => setProbeErrorDismissed(true)}
-    />
-  ) : null;
-
-  const serviceContent = isService ? (
-    <ServiceContent
-      selectedType={selectedType}
-      serviceApiKey={serviceApiKey}
-      onServiceApiKeyChange={setServiceApiKey}
     />
   ) : null;
 
@@ -428,7 +397,6 @@ const ChannelWizard: React.FC<ChannelWizardProps> = ({
         onCancel={onCancel}
         footerLeft={footerLeft}
         channelContent={channelContent}
-        serviceContent={serviceContent}
         projectContent={projectContent}
         gitContent={gitContent}
       />

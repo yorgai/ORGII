@@ -4,8 +4,6 @@
 export { probeChannel } from "./api";
 export { default as ChannelDetailContent } from "./ChannelDetailContent";
 export { default as ChannelWizard } from "@src/scaffold/WizardSystem/variants/Channel/ChannelWizard";
-export { SERVICE_TYPES } from "@src/scaffold/WizardSystem/variants/Channel/ChannelWizard";
-export type { ServiceType } from "@src/scaffold/WizardSystem/variants/Channel/ChannelWizard";
 export { CHANNEL_TYPES, accountPathPrefix } from "./config";
 export {
   DingTalkConfig,

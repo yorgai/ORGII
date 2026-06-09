@@ -27,7 +27,6 @@ export type ChannelSlice = Pick<
   | "refreshProjectConnections"
   | "handleChannelWizardSubmit"
   | "handleChannelWizardCancel"
-  | "handleServiceSubmit"
   | "handleProbeChannel"
   | "handleRemoveChannel"
   | "toggleChannelEnabled"

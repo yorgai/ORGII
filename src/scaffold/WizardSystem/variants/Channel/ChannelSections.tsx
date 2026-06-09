@@ -23,11 +23,7 @@ import {
 } from "@src/scaffold/WizardSystem/primitives";
 
 import { CHANNEL_FORMS } from "./SetupForms";
-import {
-  type ProjectSyncAuthMethod,
-  SERVICE_CONFIG,
-  type ServiceType,
-} from "./channelWizardTypes";
+import type { ProjectSyncAuthMethod } from "./channelWizardTypes";
 import type { GitScanCandidate } from "./useChannelWizardState";
 
 interface ChannelContentProps {
@@ -92,45 +88,6 @@ export const ChannelContent: React.FC<ChannelContentProps> = ({
         </div>
       )}
     </>
-  );
-};
-
-interface ServiceContentProps {
-  selectedType: string | null;
-  serviceApiKey: string;
-  onServiceApiKeyChange: (apiKey: string) => void;
-}
-
-export const ServiceContent: React.FC<ServiceContentProps> = ({
-  selectedType,
-  serviceApiKey,
-  onServiceApiKeyChange,
-}) => {
-  const { t } = useTranslation("integrations");
-  const serviceConfig = selectedType
-    ? SERVICE_CONFIG[selectedType as ServiceType]
-    : null;
-
-  if (!selectedType || !serviceConfig) return null;
-
-  return (
-    <SectionContainer>
-      <SectionRow
-        label={t(serviceConfig.labelKey)}
-        description={t(serviceConfig.descriptionKey)}
-        required
-      >
-        <Input
-          value={serviceApiKey}
-          onChange={onServiceApiKeyChange}
-          placeholder={t(serviceConfig.placeholderKey)}
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          style={SECTION_CONTROL_STYLE}
-        />
-      </SectionRow>
-    </SectionContainer>
   );
 };
 

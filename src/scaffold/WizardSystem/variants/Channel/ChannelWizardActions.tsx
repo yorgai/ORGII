@@ -10,14 +10,12 @@ import type { ProjectSyncAuthMethod } from "./channelWizardTypes";
 interface ChannelWizardActionsProps {
   categorySelected: boolean;
   isChannels: boolean;
-  isService: boolean;
   isProjects: boolean;
   isGit: boolean;
   selectedType: string | null;
   accountName: string;
   isDuplicateName: boolean;
   channelIsValid: boolean;
-  serviceApiKey: string;
   projectAuthMethod: ProjectSyncAuthMethod;
   projectToken: string;
   projectSubmitting: boolean;
@@ -27,7 +25,6 @@ interface ChannelWizardActionsProps {
   gitScanCandidateSelected: boolean;
   gitSubmitting: boolean;
   onChannelSubmit: () => void;
-  onServiceSubmit: () => void;
   onProjectSubmit: () => void;
   onGitSubmit: () => void;
 }
@@ -35,14 +32,12 @@ interface ChannelWizardActionsProps {
 export const ChannelWizardActions: React.FC<ChannelWizardActionsProps> = ({
   categorySelected,
   isChannels,
-  isService,
   isProjects,
   isGit,
   selectedType,
   accountName,
   isDuplicateName,
   channelIsValid,
-  serviceApiKey,
   projectAuthMethod,
   projectToken,
   projectSubmitting,
@@ -52,7 +47,6 @@ export const ChannelWizardActions: React.FC<ChannelWizardActionsProps> = ({
   gitScanCandidateSelected,
   gitSubmitting,
   onChannelSubmit,
-  onServiceSubmit,
   onProjectSubmit,
   onGitSubmit,
 }) => {
@@ -72,19 +66,6 @@ export const ChannelWizardActions: React.FC<ChannelWizardActionsProps> = ({
           !channelIsValid
         }
         onClick={onChannelSubmit}
-      >
-        {t("common:actions.done")}
-      </Button>
-    );
-  }
-
-  if (isService) {
-    return (
-      <Button
-        variant="primary"
-        size="small"
-        disabled={!selectedType || !serviceApiKey.trim()}
-        onClick={onServiceSubmit}
       >
         {t("common:actions.done")}
       </Button>
