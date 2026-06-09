@@ -1,3 +1,5 @@
+import { normalizePrStatus } from "@src/shared/pr/prStatus";
+
 const WORKSTATION_PR_STORAGE_PREFIX = "orgii.workstation.pr";
 
 export interface WorkstationPrRecord {
@@ -88,18 +90,16 @@ export function formatWorkstationPrTitle(
   return branch;
 }
 
+/**
+ * Normalize a remote PR state string for storage / comparison.
+ *
+ * Thin wrapper over the shared {@link normalizePrStatus} that preserves this
+ * call site's contract of returning `undefined` for a missing state (used to
+ * distinguish "no PR" from "PR with unknown state").
+ */
 export function normalizePullRequestStatus(
   state?: string | null
 ): string | undefined {
   if (!state) return undefined;
-  const normalized = state.toLowerCase();
-  if (
-    normalized === "open" ||
-    normalized === "merged" ||
-    normalized === "closed" ||
-    normalized === "draft"
-  ) {
-    return normalized;
-  }
-  return state;
+  return normalizePrStatus({ state });
 }
