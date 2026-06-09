@@ -2,6 +2,8 @@
 
 Thank you for helping improve ORGII. This project is a Tauri v2 desktop app built with React, TypeScript, webpack, and Rust.
 
+<!-- test/draft-pr-2: minor contributing guide update for PR workflow testing -->
+
 ## Code of conduct
 
 Be respectful, constructive, and specific. Assume good intent, but do not tolerate harassment, discrimination, or personal attacks. Keep issue and pull request discussions focused on the work.
