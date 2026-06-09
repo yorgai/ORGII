@@ -7,7 +7,7 @@
  *
  * Uses the existing getGitCommitDiff API to fetch commit details.
  */
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { ChevronRight } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,6 +24,12 @@ import {
 } from "@src/modules/WorkStation/shared";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { VerticalResizeHandle, useColumnResize } from "@src/scaffold/Resize";
+import {
+  editorHighlightActiveLineAtom,
+  editorLineNumbersAtom,
+  editorWordWrapAtom,
+} from "@src/store/ui/editorSettingsAtom";
+import { activeStatusBarCallbacksAtom } from "@src/store/ui/workStationAtom";
 import type { GitFile } from "@src/types/git/types";
 import { decodeOctalPath } from "@src/util/file/pathUtils";
 
@@ -42,7 +48,7 @@ export interface GitCommitDetailContentProps {
   onFileSelect?: (filePath: string) => void;
   headerVariant?: "commit" | "stash";
   headerRootLabel?: string;
-  publishHeader?: boolean;
+  publishHeaderToWorkstation?: boolean;
 }
 
 const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
@@ -55,12 +61,18 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
   onFileSelect,
   headerVariant = "commit",
   headerRootLabel,
-  publishHeader = true,
+  publishHeaderToWorkstation = true,
 }) => {
   const { t } = useTranslation();
 
   const [fileListCollapsed, setFileListCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<DiffViewMode>("unified");
+  const [lineNumbers, setLineNumbers] = useAtom(editorLineNumbersAtom);
+  const [wordWrap, setWordWrap] = useAtom(editorWordWrapAtom);
+  const [highlightActiveLine, setHighlightActiveLine] = useAtom(
+    editorHighlightActiveLineAtom
+  );
+  const { onOpenSettings } = useAtomValue(activeStatusBarCallbacksAtom);
   const [fileListWidth, setFileListWidth] = useAtom(gitFileListWidthAtom);
   const { columnRef: fileListRef, handleMouseDown: handleFileListResize } =
     useColumnResize({
@@ -131,7 +143,16 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
     setFileListCollapsed((prev) => !prev);
   }, []);
 
+  const handleLineNumbersChange = useCallback(
+    (enabled: boolean) => {
+      setLineNumbers(enabled ? "on" : "off");
+    },
+    [setLineNumbers]
+  );
+
   const stashHeaderPath = `${headerRootLabel ?? shortSha}/${commitMessage}`;
+
+  const hasInlineHeaderAbove = !publishHeaderToWorkstation;
 
   const stashHeaderPublisher =
     headerVariant === "stash" ? (
@@ -140,7 +161,7 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
         repoPath={undefined}
         useFileTypeIcon={false}
         disableNavigation
-        publishToHost="code"
+        publishToHost={publishHeaderToWorkstation ? "code" : undefined}
       />
     ) : null;
 
@@ -167,7 +188,9 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
         shortSha={shortSha}
         commitMessage={commitMessage}
         commitDiff={commitDiff}
-        enabled={publishHeader && headerVariant === "commit"}
+        publishToWorkstationHeader={
+          publishHeaderToWorkstation && headerVariant === "commit"
+        }
       />
       {stashHeaderPublisher}
       {commitLoadState === "loading" ? (
@@ -202,7 +225,10 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
         />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
-          <CommitInfoPanel commitDiff={commitDiff} />
+          <CommitInfoPanel
+            commitDiff={commitDiff}
+            hasInlineHeaderAbove={hasInlineHeaderAbove}
+          />
           <div className="flex min-h-0 flex-1">
             {/* Left: File list panel (resizable, like a sidebar) — the right
               edge is drawn by `VerticalResizeHandle` (1px `bg-border-2`),
@@ -253,6 +279,13 @@ const GitCommitDetailContent: React.FC<GitCommitDetailContentProps> = ({
                     deletions={selectedFile.deletions}
                     viewMode={viewMode}
                     onViewModeChange={setViewMode}
+                    lineNumbersEnabled={lineNumbers !== "off"}
+                    onLineNumbersChange={handleLineNumbersChange}
+                    wordWrapEnabled={wordWrap}
+                    onWordWrapChange={setWordWrap}
+                    highlightActiveLineEnabled={highlightActiveLine}
+                    onHighlightActiveLineChange={setHighlightActiveLine}
+                    onMoreSettings={onOpenSettings}
                     loading={fileLoadState === "loading"}
                     onFileSelect={onFileSelect}
                   />

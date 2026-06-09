@@ -10,7 +10,6 @@
 
   .session-creator-chat-panel-fullscreen-composer {
     position: relative;
-    border-radius: 12px;
   }
 
   .session-creator-chat-panel-fullscreen-composer [data-testid="chat-input"] {
@@ -26,6 +25,7 @@
 
     &:focus-within {
       box-shadow:
+        0 0 0 2px color-mix(in srgb, var(--color-primary-6) 15%, transparent),
         0 1px 3px rgba(0, 0, 0, 0.05),
         0 0 0 1px rgba(0, 0, 0, 0.02) !important;
     }

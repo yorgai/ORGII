@@ -99,7 +99,7 @@ const SourceControlMainContent: React.FC<SourceControlMainContentProps> = ({
                 ? historySelection.stashRef
                 : undefined
             }
-            publishHeader={false}
+            publishHeaderToWorkstation={false}
           />
         </Suspense>
       </div>

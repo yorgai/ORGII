@@ -22,7 +22,7 @@ import {
   Settings,
   Undo2,
 } from "lucide-react";
-import React from "react";
+import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
 import Dropdown from "@src/components/Dropdown";
@@ -159,6 +159,57 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
   const copyRelativePathDisabled = !showCopyRelativePathAction;
   const reloadDisabled = !showReloadButton || loading || reloadMenuCoolingDown;
 
+  const renderToggleRow = useCallback(
+    ({
+      label,
+      checked,
+      enabled,
+      onChange,
+    }: {
+      label: React.ReactNode;
+      checked: boolean;
+      enabled: boolean;
+      onChange: (enabled: boolean) => void;
+    }) => {
+      const handleToggle = (event: React.MouseEvent | React.KeyboardEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!enabled) return;
+        onChange(!checked);
+      };
+
+      return (
+        <div
+          role="menuitemcheckbox"
+          aria-checked={checked}
+          aria-disabled={!enabled}
+          tabIndex={enabled ? 0 : -1}
+          className={`${DROPDOWN_CLASSES.menuControlItem} ${
+            enabled ? "cursor-pointer" : DROPDOWN_CLASSES.itemDisabled
+          }`}
+          onClick={handleToggle}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            handleToggle(event);
+          }}
+        >
+          <span className="min-w-0 flex-1 truncate">{label}</span>
+          <Switch
+            size="small"
+            checked={checked}
+            disabled={!enabled}
+            onChange={(nextChecked, event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onChange(nextChecked);
+            }}
+          />
+        </div>
+      );
+    },
+    []
+  );
+
   return (
     <Dropdown
       droplist={
@@ -261,83 +312,40 @@ export const FileHeaderMoreMenu: React.FC<FileHeaderMoreMenuProps> = ({
 
           <div className={DROPDOWN_CLASSES.menuSeparator} />
 
-          <div
-            className={`${DROPDOWN_CLASSES.menuControlItem} ${
-              showLineNumbersToggle ? "" : DROPDOWN_CLASSES.itemDisabled
-            }`}
-          >
-            <span className="min-w-0 flex-1 truncate">
-              {t("settings:editor.lineNumbers")}
-            </span>
-            <Switch
-              size="small"
-              checked={lineNumbersEnabled}
-              disabled={!showLineNumbersToggle}
-              onChange={onLineNumbersChange}
-            />
-          </div>
+          {renderToggleRow({
+            label: t("settings:editor.lineNumbers"),
+            checked: lineNumbersEnabled,
+            enabled: showLineNumbersToggle,
+            onChange: onLineNumbersChange,
+          })}
 
-          <div
-            className={`${DROPDOWN_CLASSES.menuControlItem} ${
-              showWordWrapToggle ? "" : DROPDOWN_CLASSES.itemDisabled
-            }`}
-          >
-            <span className="min-w-0 flex-1 truncate">
-              {t("settings:editor.wordWrap")}
-            </span>
-            <Switch
-              size="small"
-              checked={wordWrapEnabled}
-              disabled={!showWordWrapToggle}
-              onChange={onWordWrapChange}
-            />
-          </div>
+          {renderToggleRow({
+            label: t("settings:editor.wordWrap"),
+            checked: wordWrapEnabled,
+            enabled: showWordWrapToggle,
+            onChange: onWordWrapChange,
+          })}
 
-          <div
-            className={`${DROPDOWN_CLASSES.menuControlItem} ${
-              showMinimapToggle ? "" : DROPDOWN_CLASSES.itemDisabled
-            }`}
-          >
-            <span className="min-w-0 flex-1 truncate">
-              {t("settings:editor.minimap")}
-            </span>
-            <Switch
-              size="small"
-              checked={minimapEnabled}
-              disabled={!showMinimapToggle}
-              onChange={onMinimapChange}
-            />
-          </div>
+          {renderToggleRow({
+            label: t("settings:editor.minimap"),
+            checked: minimapEnabled,
+            enabled: showMinimapToggle,
+            onChange: onMinimapChange,
+          })}
 
-          <div
-            className={`${DROPDOWN_CLASSES.menuControlItem} ${
-              showHighlightActiveLineToggle ? "" : DROPDOWN_CLASSES.itemDisabled
-            }`}
-          >
-            <span className="min-w-0 flex-1 truncate">
-              {t("settings:editor.highlightActiveLine")}
-            </span>
-            <Switch
-              size="small"
-              checked={highlightActiveLineEnabled}
-              disabled={!showHighlightActiveLineToggle}
-              onChange={onHighlightActiveLineChange}
-            />
-          </div>
+          {renderToggleRow({
+            label: t("settings:editor.highlightActiveLine"),
+            checked: highlightActiveLineEnabled,
+            enabled: showHighlightActiveLineToggle,
+            onChange: onHighlightActiveLineChange,
+          })}
 
-          <div
-            className={`${DROPDOWN_CLASSES.menuControlItem} ${
-              showGitBlameToggle ? "" : DROPDOWN_CLASSES.itemDisabled
-            }`}
-          >
-            <span className="min-w-0 flex-1 truncate">Git Blame</span>
-            <Switch
-              size="small"
-              checked={gitBlameEnabled}
-              disabled={!showGitBlameToggle}
-              onChange={onGitBlameChange}
-            />
-          </div>
+          {renderToggleRow({
+            label: "Git Blame",
+            checked: gitBlameEnabled,
+            enabled: showGitBlameToggle,
+            onChange: onGitBlameChange,
+          })}
 
           <div className={DROPDOWN_CLASSES.menuSeparator} />
 

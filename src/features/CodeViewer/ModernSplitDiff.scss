@@ -211,7 +211,7 @@ $font-mono:
 
 .split-row-gutter {
   width: 40px;
-  padding: 0 8px;
+  padding: 0 8px 0 12px;
   text-align: right;
   font-size: var(--chat-code-font-size, 13px);
   color: var(--color-text-4);

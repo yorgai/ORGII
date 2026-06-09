@@ -29,6 +29,8 @@ export interface TabContentRendererProps {
   fileContentState: UseFileContentManagerReturn;
   /** Git files by path for diff viewing */
   gitFilesByPath: Map<string, GitFile>;
+  /** Source Control files enriched with session attribution. */
+  sourceControlAttributedFiles: GitFile[];
   /** Whether git diff is loading */
   gitDiffLoading: boolean;
   /** Force refresh git status */

@@ -43,6 +43,10 @@ export interface GitFile {
    *  Set when the file comes from a worktree that differs from the host's
    *  main repoPath so diff API calls use the correct repo_path. */
   repoRoot?: string;
+  /** Unique session attribution for Source Control, when exactly one session claims this file. */
+  sourceSessionId?: string;
+  /** All session IDs whose session-file history references this file. */
+  sessionIds?: string[];
 }
 
 /**

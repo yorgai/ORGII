@@ -19,7 +19,6 @@ import { useTranslation } from "react-i18next";
 import UnifiedTabContent from "@src/modules/WorkStation/TabContent/UnifiedTabContent";
 import { REGISTRY } from "@src/modules/WorkStation/TabContent/registry";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { sessionsAtom } from "@src/store/session";
 import type { SearchOptions as StoreSearchOptions } from "@src/store/workstation/codeEditor/search";
 import {
   SOURCE_CONTROL_ALL_SESSIONS_FILTER,
@@ -30,6 +29,7 @@ import type { SubagentDetailTabData } from "@src/store/workstation/tabs/types";
 import type { GitFile } from "@src/types/git/types";
 import { requiresFilePreviewRoute as shouldUseDedicatedPreviewRoute } from "@src/util/file/previewTypes";
 
+import { SOURCE_CONTROL_OTHER_SESSIONS_FILTER } from "../../hooks";
 import type { TabContentRendererProps } from "./types";
 
 // Lazy-load heavy components to avoid parsing on initial load
@@ -116,6 +116,7 @@ const TabContentRenderer: React.FC<TabContentRendererProps> = memo(
     repoId,
     fileContentState,
     gitFilesByPath,
+    sourceControlAttributedFiles,
     gitDiffLoading,
     forceRefresh,
     onFileSelect,
@@ -130,7 +131,6 @@ const TabContentRenderer: React.FC<TabContentRendererProps> = memo(
     editorQuickActions,
   }) => {
     const { t } = useTranslation();
-    const sessions = useAtomValue(sessionsAtom);
     const sourceControlSessionFilter = useAtomValue(
       sourceControlSessionFilterAtom
     );
@@ -331,34 +331,32 @@ const TabContentRenderer: React.FC<TabContentRendererProps> = memo(
             | null
             | undefined) ?? null;
 
-        const gitStatusFiles = Array.from(gitFilesByPath.values()).filter(
-          (file) => {
-            if (sourceControlFilterMode === "staged") return file.staged;
-            if (sourceControlFilterMode === "unstaged") return !file.staged;
+        const gitStatusFiles = Array.from(gitFilesByPath.values());
+        const embeddedFiles = (activeTab.data.files ?? []) as GitFile[];
+        const unfilteredFiles =
+          sourceControlAttributedFiles.length > 0
+            ? sourceControlAttributedFiles
+            : gitStatusFiles.length > 0
+              ? gitStatusFiles
+              : embeddedFiles;
+        const allFiles = unfilteredFiles.filter((file) => {
+          if (sourceControlFilterMode === "staged" && !file.staged)
+            return false;
+          if (sourceControlFilterMode === "unstaged" && file.staged)
+            return false;
+          if (
+            sourceControlFilterMode !== "uncommitted" ||
+            sourceControlSessionFilter === SOURCE_CONTROL_ALL_SESSIONS_FILTER
+          ) {
             return true;
           }
-        );
-        const embeddedFiles = (activeTab.data.files ?? []) as GitFile[];
-        const filteredEmbeddedFiles = embeddedFiles.filter((file) => {
-          if (sourceControlFilterMode === "staged") return file.staged;
-          if (sourceControlFilterMode === "unstaged") return !file.staged;
-          return true;
+          if (
+            sourceControlSessionFilter === SOURCE_CONTROL_OTHER_SESSIONS_FILTER
+          ) {
+            return !file.sourceSessionId;
+          }
+          return file.sourceSessionId === sourceControlSessionFilter;
         });
-        const unfilteredFiles =
-          gitStatusFiles.length > 0 ? gitStatusFiles : filteredEmbeddedFiles;
-        const selectedSession =
-          sourceControlFilterMode !== "uncommitted" ||
-          sourceControlSessionFilter === SOURCE_CONTROL_ALL_SESSIONS_FILTER
-            ? undefined
-            : sessions.find(
-                (session) => session.session_id === sourceControlSessionFilter
-              );
-        const selectedSessionRepoRoot = selectedSession?.worktreePath;
-        const allFiles = selectedSessionRepoRoot
-          ? unfilteredFiles.filter(
-              (file) => file.repoRoot === selectedSessionRepoRoot
-            )
-          : unfilteredFiles;
 
         const focusGitFile = focusPath
           ? (getGitFileForPath(focusPath, repoPath, gitFilesByPath) ?? null)

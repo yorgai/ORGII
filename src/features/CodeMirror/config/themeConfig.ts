@@ -62,6 +62,7 @@ export function createCodeMirrorTheme(): Extension {
     },
     ".cm-lineNumbers": {
       borderRight: "none",
+      paddingLeft: "var(--cm-line-number-padding-left, 8px)",
     },
     ".cm-lineNumbers .cm-gutterElement": {
       borderRight: "none",

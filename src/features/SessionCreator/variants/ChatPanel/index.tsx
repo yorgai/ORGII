@@ -653,7 +653,7 @@ const SessionCreatorChatPanelSingle: React.FC<
             </button>
           )}
 
-          <div className="session-creator-chat-panel-fullscreen-composer composer-focus-breathing-light w-full">
+          <div className="session-creator-chat-panel-fullscreen-composer w-full">
             {editorArea}
             {!hideRepoLine && (
               <div className="session-creator-chat-panel-fullscreen-repo-row px-1 pb-2 pt-3">

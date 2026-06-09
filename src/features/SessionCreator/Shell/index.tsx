@@ -191,12 +191,9 @@ const SessionCreatorShell: React.FC<SessionCreatorShellProps> = ({
       : repoDisplayName;
   const isDisplayedSystemPath = isSystemPathSourceId(displayedRepoId);
 
-  const factoryShellInteractionClasses =
-    "border border-solid border-border-2 transition-[border-color] duration-200 ease-in-out focus-within:border-primary-6 [&:not(:focus-within):hover]:border-border-3";
-
   const rootClassName =
     layout === "factory"
-      ? `composer-focus-breathing-light flex w-full flex-col ${INPUT_AREA.borderRadiusClass} ${factoryShellInteractionClasses} ${INPUT_AREA.backgroundDefaultClass} ${className}`
+      ? `composer-breathing flex w-full flex-col ${INPUT_AREA.borderRadiusClass} ${INPUT_AREA.shellInteractionClasses} ${INPUT_AREA.backgroundDefaultClass} ${className}`
       : `flex w-full flex-col gap-2 ${className}`;
 
   const defaultFactoryHeader = (

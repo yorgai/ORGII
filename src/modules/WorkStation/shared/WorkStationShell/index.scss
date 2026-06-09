@@ -54,9 +54,13 @@
     background-color: transparent;
 
     &--comfort {
-      padding: 8px;
+      padding: 8px 0 8px 8px;
       background-color: var(--cm-editor-background, var(--color-bg-1));
       min-height: 0;
+
+      &.work-station-shell__side-panel--right {
+        padding: 8px 8px 8px 0;
+      }
 
       .station-sidebar-scroll-area {
         overflow: hidden;
