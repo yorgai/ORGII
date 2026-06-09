@@ -6,7 +6,7 @@
  * the user pin or unpin them. Renders via a React portal so it's never
  * clipped by the parent's overflow.
  */
-import { Pin, PinOff, Search } from "lucide-react";
+import { ArrowUp, Pin, PinOff, Search } from "lucide-react";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -74,6 +74,8 @@ interface PinActionsPanelProps {
   pinnedActions: PinnedAction[];
   /** Called when the user pins or unpins an item. */
   onTogglePin: (action: PinnedAction) => void;
+  /** Called when the user inserts an item directly into the composer. */
+  onInsert: (action: PinnedAction) => void;
   /** Called when the user clicks the "Unpin all" footer action. */
   onUnpinAll: () => void;
   /** Called when the panel should close. */
@@ -102,6 +104,7 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
     availableItems,
     pinnedActions,
     onTogglePin,
+    onInsert,
     onUnpinAll,
     onClose,
     loading,
@@ -146,6 +149,13 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
         onTogglePin(slashItemToAction(item));
       },
       [onTogglePin]
+    );
+
+    const handleInsert = useCallback(
+      (item: SlashItem) => {
+        onInsert(slashItemToAction(item));
+      },
+      [onInsert]
     );
 
     const { isPositioned, panelRef, panelPosition, keyboard } =
@@ -238,18 +248,35 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
                     {item.name}
                   </span>
                 </div>
-                <span
-                  className={`shrink-0 transition-colors duration-150 ${
-                    isPinned
-                      ? "text-primary-6"
-                      : "text-text-3 hover:text-text-2"
-                  }`}
-                >
-                  {isPinned ? (
-                    <PinOff size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
-                  ) : (
-                    <Pin size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
-                  )}
+                <span className="flex shrink-0 items-center gap-2">
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    aria-label={t("input.pinnedActions.insert")}
+                    className="text-text-3 transition-colors duration-150 hover:text-primary-6"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleInsert(item);
+                    }}
+                  >
+                    <ArrowUp size={DROPDOWN_ITEM.iconSize} strokeWidth={2} />
+                  </span>
+                  <span
+                    className={`transition-colors duration-150 ${
+                      isPinned
+                        ? "text-primary-6"
+                        : "text-text-3 hover:text-text-2"
+                    }`}
+                  >
+                    {isPinned ? (
+                      <PinOff
+                        size={DROPDOWN_ITEM.iconSize}
+                        strokeWidth={1.75}
+                      />
+                    ) : (
+                      <Pin size={DROPDOWN_ITEM.iconSize} strokeWidth={1.75} />
+                    )}
+                  </span>
                 </span>
               </button>
             );

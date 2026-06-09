@@ -173,11 +173,10 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
     // left edge with the button so it extends rightward from the click target.
     // Otherwise right-align it to the button so it tucks under the trailing
     // edge of the pills row.
+    const hasPinnedActions = pinnedActions.length > 0;
     const hasLeadingPills =
-      showPrPill ||
-      (showCanvasPill && !isCanvasTabOpen) ||
-      pinnedActions.length > 0;
-    const panelAlign: "left" | "right" = hasLeadingPills ? "right" : "left";
+      showPrPill || (showCanvasPill && !isCanvasTabOpen) || hasPinnedActions;
+    const panelAlign: "left" | "right" = "right";
 
     // ── Pin / unpin ───────────────────────────────────────────────────────────
 
@@ -291,10 +290,14 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
           {hasLeadingPills && (
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[var(--color-chat-input)] to-transparent"
+              className="pointer-events-none absolute inset-y-0 right-0 w-3 bg-gradient-to-l from-[var(--color-chat-input)] to-transparent"
             />
           )}
         </div>
+
+        {hasPinnedActions && (
+          <div aria-hidden className="h-4 w-px shrink-0 bg-border-2" />
+        )}
 
         <Button
           ref={moreButtonRef}
@@ -317,6 +320,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
           availableItems={availableItems}
           pinnedActions={pinnedActions}
           onTogglePin={handleTogglePin}
+          onInsert={handlePillClick}
           onUnpinAll={handleUnpinAll}
           onClose={handleClosePanel}
           loading={loadingItems}
