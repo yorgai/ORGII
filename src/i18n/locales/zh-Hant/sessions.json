@@ -638,6 +638,10 @@
     "voiceErrorUnsupported": "目前版本不支援語音輸入。",
     "voiceErrorAudio": "未偵測到麥克風。",
     "voiceErrorGeneric": "語音輸入失敗，請再試一次。",
+    "pr": {
+      "open": "開啟 PR",
+      "creating": "建立 PR 中…"
+    },
     "pinnedActions": {
       "manage": "管理固定操作",
       "searchPlaceholder": "搜尋要固定的操作…",

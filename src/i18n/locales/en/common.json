@@ -107,6 +107,7 @@
     "openInNewWindow": "Open in New Window",
     "openInNewTab": "Open in New Tab",
     "openOnGitHub": "Open on GitHub",
+    "createPullRequest": "Create pull request",
     "confirmDelete": "Confirm Delete",
     "confirmDeleteTitle": "Delete \"{{name}}\"?",
     "confirmDeleteMessage": "This will be permanently deleted. This action cannot be undone.",
@@ -340,6 +341,10 @@
     "gitHistory": "Git History",
     "noPullRequest": "No pull request",
     "pullRequest": "Pull request",
+    "noPullRequestForBranch": "There is no pull request for this branch yet.",
+    "creatingPullRequest": "Creating…",
+    "failedToLoadPullRequest": "Failed to load pull request",
+    "noCommitsInPullRequest": "No commits in this pull request",
     "prStatus": {
       "open": "Open",
       "merged": "Merged",
