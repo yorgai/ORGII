@@ -643,7 +643,8 @@
       "searchPlaceholder": "Tìm hành động để ghim…",
       "loading": "Đang tải…",
       "empty": "Không tìm thấy hành động.",
-      "unpinAll": "Bỏ ghim tất cả"
+      "unpinAll": "Bỏ ghim tất cả",
+      "insert": "Chèn"
     }
   },
   "listPanel": {
@@ -888,9 +889,6 @@
     "manageWorkspaceAddRunning": "Đang thêm Workspace",
     "manageWorkspaceAddDone": "Đã thêm Workspace",
     "manageWorkspaceAddFailed": "Không thể thêm Workspace",
-    "manageWorkspaceCloneRunning": "Đang nhân bản Workspace",
-    "manageWorkspaceCloneDone": "Đã nhân bản Workspace",
-    "manageWorkspaceCloneFailed": "Không thể nhân bản Workspace",
     "manageWorkspaceCreateRunning": "Đang tạo Workspace",
     "manageWorkspaceCreateDone": "Đã tạo Workspace",
     "manageWorkspaceCreateFailed": "Không thể tạo Workspace",

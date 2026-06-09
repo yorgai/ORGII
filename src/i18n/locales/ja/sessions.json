@@ -643,7 +643,8 @@
       "searchPlaceholder": "固定するアクションを検索…",
       "loading": "読み込み中…",
       "empty": "アクションが見つかりません。",
-      "unpinAll": "すべての固定を解除"
+      "unpinAll": "すべての固定を解除",
+      "insert": "挿入"
     }
   },
   "listPanel": {
@@ -888,9 +889,6 @@
     "manageWorkspaceAddRunning": "Workspace を追加中",
     "manageWorkspaceAddDone": "Workspace を追加しました",
     "manageWorkspaceAddFailed": "Workspace の追加に失敗しました",
-    "manageWorkspaceCloneRunning": "Workspace をクローン中",
-    "manageWorkspaceCloneDone": "Workspace をクローンしました",
-    "manageWorkspaceCloneFailed": "Workspace のクローンに失敗しました",
     "manageWorkspaceCreateRunning": "Workspace を作成中",
     "manageWorkspaceCreateDone": "Workspace を作成しました",
     "manageWorkspaceCreateFailed": "Workspace の作成に失敗しました",

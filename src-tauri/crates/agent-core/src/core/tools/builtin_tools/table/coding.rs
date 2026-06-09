@@ -196,7 +196,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
     ToolEntry {
         name: tool_names::MANAGE_WORKSPACE,
         description: "Manage orgii workspaces (git repos and work folders) tracked by the IDE.",
-        description_detail: "Unified tool for listing, adding, cloning, creating, and removing workspaces. Actions: `list` enumerates tracked workspaces (names, paths, kinds); `add` registers an existing directory (auto-detects git vs folder, runs git init if needed); `clone` clones a remote git URL into a target dir; `create` creates a brand-new workspace (git=true|false); `remove` unregisters a workspace without touching files on disk.",
+        description_detail: "Unified tool for listing, adding, creating, and removing workspaces. Actions: `list` enumerates tracked workspaces (names, paths, kinds); `add` registers an existing directory (auto-detects git vs folder); `create` creates a brand-new workspace (git=true|false); `remove` unregisters a workspace without touching files on disk. To clone a remote repo, use `run_shell` with `git clone`, wait for completion with `await_output` if it backgrounds, then register the cloned path with `add`.",
         category: tool_categories::CODING,
         icon_id: "folder-git-2",
         simulator_app: AppCode,
@@ -215,7 +215,6 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         action_icons: &[
             ("list", "folder-git-2"),
             ("add", "folder-plus"),
-            ("clone", "git-branch"),
             ("create", "folder-pen"),
             ("remove", "folder-minus"),
         ],
@@ -229,15 +228,6 @@ pub(super) static TOOLS: &[ToolEntry] = &[
                 labels: "tools.manageWorkspaceAddRunning",
                 "tools.manageWorkspaceAddDone",
                 "tools.manageWorkspaceAddFailed"
-            ),
-            action_sub!(
-                "clone",
-                "Clone a remote git repository into target_dir/<name> and register it",
-                Explore,
-                chat: CbFallback,
-                labels: "tools.manageWorkspaceCloneRunning",
-                "tools.manageWorkspaceCloneDone",
-                "tools.manageWorkspaceCloneFailed"
             ),
             action_sub!(
                 "create",

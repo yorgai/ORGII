@@ -3,7 +3,7 @@
  *
  * Collapsible section in ComposerStack showing currently running/background
  * agent shell processes for the active session. Each row displays the command
- * text with a status badge and a Stop button on hover.
+ * text with a Stop button on hover.
  *
  * Data comes from shellProcessMapAtom, filtered by the active session ID
  * to only include processes with status "running" or "background".

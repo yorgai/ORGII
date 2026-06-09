@@ -27,7 +27,6 @@ import { useBlockHeader } from "../useBlockLocate";
 import McpProgressRow from "./McpProgressRow";
 import OutputContent from "./OutputContent";
 import ToolResultActions from "./ToolResultActions";
-import WorkspaceCloneProgressRow from "./WorkspaceCloneProgressRow";
 import {
   DEFAULT_VISIBLE_LINES,
   SEARCH_NO_RESULT_MESSAGES,
@@ -307,17 +306,6 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
       isLoading && callId && sessionId && !isCollapsed
     );
 
-    // Show a GitHub-Desktop-style strip while `manage_workspace` is in
-    // its `clone` action. The Rust side streams `git clone --progress`
-    // stderr; the strip subscribes to those broadcasts by `callId`.
-    const showCloneProgress = Boolean(
-      isLoading &&
-      !isCollapsed &&
-      callId &&
-      toolName === "manage_workspace" &&
-      args.action === "clone"
-    );
-
     return (
       <div
         className={`${getEventBlockContainerClasses(false)} animate-fade-in`}
@@ -354,17 +342,10 @@ const ToolCallBlock: React.FC<ToolCallBlockProps> = React.memo(
         {!isCollapsed &&
           (hasContent ||
             showMcpProgress ||
-            showCloneProgress ||
             (isLoading && (argsText || streamOutput || styledOutput))) && (
             <div
               className={`${EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES} animate-fade-in`}
             >
-              {showCloneProgress && callId && (
-                <WorkspaceCloneProgressRow
-                  toolCallId={callId}
-                  sessionId={sessionId}
-                />
-              )}
               {showMcpProgress && callId && sessionId && (
                 <McpProgressRow sessionId={sessionId} toolCallId={callId} />
               )}

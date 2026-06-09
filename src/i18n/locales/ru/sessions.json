@@ -645,7 +645,8 @@
       "searchPlaceholder": "Искать действия для закрепления…",
       "loading": "Загрузка…",
       "empty": "Действия не найдены.",
-      "unpinAll": "Открепить все"
+      "unpinAll": "Открепить все",
+      "insert": "Вставить"
     }
   },
   "listPanel": {
@@ -890,9 +891,6 @@
     "manageWorkspaceAddRunning": "Добавление Workspace",
     "manageWorkspaceAddDone": "Workspace добавлен",
     "manageWorkspaceAddFailed": "Не удалось добавить Workspace",
-    "manageWorkspaceCloneRunning": "Клонирование Workspace",
-    "manageWorkspaceCloneDone": "Workspace клонирован",
-    "manageWorkspaceCloneFailed": "Не удалось клонировать Workspace",
     "manageWorkspaceCreateRunning": "Создание Workspace",
     "manageWorkspaceCreateDone": "Workspace создан",
     "manageWorkspaceCreateFailed": "Не удалось создать Workspace",

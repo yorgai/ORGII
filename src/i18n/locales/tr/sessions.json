@@ -643,7 +643,8 @@
       "searchPlaceholder": "Sabitlenecek eylemleri ara…",
       "loading": "Yükleniyor…",
       "empty": "Eylem bulunamadı.",
-      "unpinAll": "Tümünün sabitlemesini kaldır"
+      "unpinAll": "Tümünün sabitlemesini kaldır",
+      "insert": "Ekle"
     }
   },
   "listPanel": {
@@ -888,9 +889,6 @@
     "manageWorkspaceAddRunning": "Workspace ekleniyor",
     "manageWorkspaceAddDone": "Workspace eklendi",
     "manageWorkspaceAddFailed": "Workspace eklenemedi",
-    "manageWorkspaceCloneRunning": "Workspace klonlanıyor",
-    "manageWorkspaceCloneDone": "Workspace klonlandı",
-    "manageWorkspaceCloneFailed": "Workspace klonlanamadı",
     "manageWorkspaceCreateRunning": "Workspace oluşturuluyor",
     "manageWorkspaceCreateDone": "Workspace oluşturuldu",
     "manageWorkspaceCreateFailed": "Workspace oluşturulamadı",

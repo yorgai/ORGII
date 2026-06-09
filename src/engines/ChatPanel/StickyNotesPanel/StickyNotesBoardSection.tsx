@@ -17,8 +17,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useSetAtom } from "jotai";
 import {
-  ChevronDown,
-  ChevronRight,
+  ChevronsDownUp,
+  ChevronsUpDown,
   GripVertical,
   Plus,
   Trash2,
@@ -140,9 +140,9 @@ const StickyNotesBoardSection: React.FC<StickyNotesBoardSectionProps> = ({
           }
           icon={
             isCollapsed ? (
-              <ChevronRight size={14} strokeWidth={2} />
+              <ChevronsUpDown size={14} strokeWidth={2} />
             ) : (
-              <ChevronDown size={14} strokeWidth={2} />
+              <ChevronsDownUp size={14} strokeWidth={2} />
             )
           }
         />

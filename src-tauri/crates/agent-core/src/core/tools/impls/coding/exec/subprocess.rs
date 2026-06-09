@@ -214,6 +214,40 @@ async fn join_reader_task(task: tokio::task::JoinHandle<()>, stream: &str) {
     }
 }
 
+fn configure_git_environment(cmd: &mut tokio::process::Command) {
+    let resolved = match git::resolved_git_executable_details() {
+        Ok(resolved) => resolved,
+        Err(err) => {
+            warn!("[subprocess] Git executable resolution failed: {}", err);
+            return;
+        }
+    };
+
+    if let Some(git_bin_dir) = resolved.path.parent() {
+        let mut paths = vec![git_bin_dir.to_path_buf()];
+        if let Some(existing_path) = std::env::var_os("PATH") {
+            paths.extend(std::env::split_paths(&existing_path));
+        }
+        match std::env::join_paths(paths) {
+            Ok(joined_path) => {
+                cmd.env("PATH", joined_path);
+            }
+            Err(err) => {
+                warn!(
+                    "[subprocess] Failed to join PATH with Git directory: {}",
+                    err
+                );
+            }
+        }
+    }
+
+    if resolved.is_bundled {
+        if let Some(git_exec_path) = git::resolved_git_exec_path(&resolved.path) {
+            cmd.env("GIT_EXEC_PATH", git_exec_path);
+        }
+    }
+}
+
 fn finish_cancelled_process(
     pid: u32,
     session_key: Option<&str>,
@@ -283,6 +317,8 @@ pub async fn execute_via_command(
         c.arg("/C");
         c
     };
+
+    configure_git_environment(&mut cmd);
 
     cmd.arg(command)
         .current_dir(&work_dir)

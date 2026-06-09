@@ -651,7 +651,8 @@
       "searchPlaceholder": "Szukaj akcji do przypięcia…",
       "loading": "Wczytywanie…",
       "empty": "Nie znaleziono akcji.",
-      "unpinAll": "Odepnij wszystkie"
+      "unpinAll": "Odepnij wszystkie",
+      "insert": "Wstaw"
     }
   },
   "listPanel": {
@@ -910,9 +911,6 @@
     "manageWorkspaceAddRunning": "Dodawanie Workspace",
     "manageWorkspaceAddDone": "Dodano Workspace",
     "manageWorkspaceAddFailed": "Nie udało się dodać Workspace",
-    "manageWorkspaceCloneRunning": "Klonowanie Workspace",
-    "manageWorkspaceCloneDone": "Sklonowano Workspace",
-    "manageWorkspaceCloneFailed": "Nie udało się sklonować Workspace",
     "manageWorkspaceCreateRunning": "Tworzenie Workspace",
     "manageWorkspaceCreateDone": "Utworzono Workspace",
     "manageWorkspaceCreateFailed": "Nie udało się utworzyć Workspace",

@@ -643,7 +643,8 @@
       "searchPlaceholder": "고정할 작업 검색…",
       "loading": "로딩 중…",
       "empty": "작업을 찾을 수 없습니다.",
-      "unpinAll": "모두 고정 해제"
+      "unpinAll": "모두 고정 해제",
+      "insert": "삽입"
     }
   },
   "listPanel": {
@@ -888,9 +889,6 @@
     "manageWorkspaceAddRunning": "Workspace 추가 중",
     "manageWorkspaceAddDone": "Workspace 추가됨",
     "manageWorkspaceAddFailed": "Workspace 추가 실패",
-    "manageWorkspaceCloneRunning": "Workspace 복제 중",
-    "manageWorkspaceCloneDone": "Workspace 복제됨",
-    "manageWorkspaceCloneFailed": "Workspace 복제 실패",
     "manageWorkspaceCreateRunning": "Workspace 생성 중",
     "manageWorkspaceCreateDone": "Workspace 생성됨",
     "manageWorkspaceCreateFailed": "Workspace 생성 실패",

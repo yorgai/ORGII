@@ -57,13 +57,12 @@ export interface TerminalBlockProps {
   isLoading?: boolean;
   /** Live streaming output (shown during loading before final output) */
   streamOutput?: string;
-  /** Process ID (for Stop button) */
+  /** Process ID shown for backgrounded processes and used for Stop while actively running. */
   pid?: number;
   /**
    * Process status: running, background, exited, killed.
    * NOTE: `"running"` alone does NOT show the Stop button; `isLoading` must
-   * also be true. Only `"background"` keeps the Stop button visible when
-   * `isLoading` is false.
+   * also be true. Backgrounded processes show status/PID only.
    */
   processStatus?: "running" | "background" | "exited" | "killed";
   /** Optional working directory label for multi-repo shell commands */
@@ -97,8 +96,7 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
     // Visibility policy:
     // - Caller-provided defaults always win.
     // - Errors → expanded (need to see what failed).
-    // - Still running OR backgrounded → expanded (user wants to watch progress;
-    //   backgrounded processes especially need the Stop button reachable).
+    // - Still running OR backgrounded → expanded so progress remains visible.
     // - Done & no error → collapse to a chip by default.
     const effectiveDefaultCollapsed =
       defaultCollapsed ?? (isErrorExit ? false : isStillRunning ? false : true);
@@ -170,20 +168,15 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
 
     // Stop button state — reset when process finishes.
     //
-    // Gate on `isStillRunning` (= isLoading || isBackground) rather than
-    // `processStatus` alone. A stale `processStatus === "running"` left over
-    // when `shell_process_exited` never landed would otherwise keep the Stop
-    // button visible on a card whose title shows no "running" shimmer — a
-    // state the user reads as "already done". Explicit-background processes
-    // (isLoading=false, processStatus="background") still show Stop because
-    // `isBackground` keeps `isStillRunning` true.
+    // Gate on `isLoading` so backgrounded shell cards keep their status/PID
+    // visible without showing an inline stop/end control.
     const [isStopping, setIsStopping] = useState(false);
     useEffect(() => {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       if (!isStillRunning) setIsStopping(false);
     }, [isStillRunning]);
     const effectiveIsStopping = isStopping && isStillRunning;
-    const canStop = pid !== undefined && isStillRunning;
+    const canStop = pid !== undefined && isLoading && !isBackground;
 
     const handleStop = useCallback(
       (event: React.MouseEvent) => {
@@ -217,25 +210,28 @@ const TerminalBlock: React.FC<TerminalBlockProps> = memo(
 
     const hasContent = Boolean(command || displayOutput);
 
-    const headerRight = canStop ? (
-      <div className="flex items-center gap-2 pl-2">
-        {statusLabel}
-        <button
-          type="button"
-          className="flex h-5 w-0 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-none bg-text-2 text-white transition-colors hover:bg-text-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 group-hover/chat-block-header:w-5"
-          onClick={handleStop}
-          disabled={effectiveIsStopping}
-          title={tCommon("common:actions.stop")}
-          aria-label={tCommon("common:actions.stop")}
-        >
-          {effectiveIsStopping ? (
-            <div className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          ) : (
-            <Square size={10} fill="currentColor" strokeWidth={0} />
+    const headerRight =
+      statusLabel || canStop ? (
+        <div className="flex items-center gap-2 pl-2">
+          {statusLabel}
+          {canStop && (
+            <button
+              type="button"
+              className="flex h-5 w-0 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-none bg-text-2 text-white transition-colors hover:bg-text-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 group-hover/chat-block-header:w-5"
+              onClick={handleStop}
+              disabled={effectiveIsStopping}
+              title={tCommon("common:actions.stop")}
+              aria-label={tCommon("common:actions.stop")}
+            >
+              {effectiveIsStopping ? (
+                <div className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <Square size={10} fill="currentColor" strokeWidth={0} />
+              )}
+            </button>
           )}
-        </button>
-      </div>
-    ) : undefined;
+        </div>
+      ) : undefined;
 
     return (
       <div className={getEventBlockContainerClasses(true)}>

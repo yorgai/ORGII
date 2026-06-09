@@ -1,4 +1,9 @@
-import { ChevronDown, Lock, MessageCircle } from "lucide-react";
+import {
+  ChevronsDownUp,
+  ChevronsUpDown,
+  Lock,
+  MessageCircle,
+} from "lucide-react";
 import React, { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -167,11 +172,19 @@ function AgentOrgTaskSubject({
       >
         {text}
       </span>
-      <ChevronDown
-        size={11}
-        strokeWidth={2}
-        className={`mt-0.5 shrink-0 text-text-3 transition-transform ${expanded ? "rotate-180" : ""}`}
-      />
+      {expanded ? (
+        <ChevronsDownUp
+          size={11}
+          strokeWidth={2}
+          className="mt-0.5 shrink-0 text-text-3"
+        />
+      ) : (
+        <ChevronsUpDown
+          size={11}
+          strokeWidth={2}
+          className="mt-0.5 shrink-0 text-text-3"
+        />
+      )}
     </button>
   );
 }

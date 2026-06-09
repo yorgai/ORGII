@@ -227,12 +227,12 @@ impl Tool for ExecTool {
         Set interactive: true ONLY for commands that require user input (passwords, sudo, SSH key passphrases). \
         Set mode: \"background\" up-front for long-running processes (dev servers, watchers, builds \
         you want to spawn then poll). Background mode returns {pid, logPath} as soon as the process \
-        is spawned; use await_output(command=\"wait_for\", handles=[pid]) to monitor.\n\
+        is spawned; use await_output(command=\"wait_for\", handles=[pid]) to monitor until the process exits.\n\
         In the default blocking mode, commands that exceed the timeout are automatically backgrounded \
         (never killed) as a safety net — you get partial output plus a PID handle.\n\
         Kill: set kill_handle to the PID of a backgrounded process to terminate it (SIGTERM → 2s grace → SIGKILL).\n\
-        For long-running commands (builds, installs, tests), prefer mode=\"background\" from the start, \
-        or set 'wait' to a short duration (e.g. 10-30s) for early feedback in blocking mode. \
+        For long-running commands (builds, installs, tests, git clone), prefer mode=\"background\" from the start, \
+        then call await_output(command=\"wait_for\", handles=[pid]); do not treat progress output as completion. \
         IMPORTANT: Always limit output — use | head, --short, --oneline -N, -maxdepth, etc. \
         Do not use executable shell substitutions (`...`, $(...), or ${...}); for literal code fences/backticks, use a single-quoted heredoc such as <<'EOF' or use edit_file/write_file."
     }
@@ -250,13 +250,13 @@ impl Tool for ExecTool {
             Set interactive: true ONLY for commands that require user input (passwords, sudo, SSH key passphrases). \
             Set mode: \"background\" up-front for long-running processes (dev servers, watchers, builds \
             you want to spawn then poll). Background mode returns {{pid, logPath}} immediately after spawn; \
-            use await_output(command=\"wait_for\", handles=[pid]) to monitor.\n\
+            use await_output(command=\"wait_for\", handles=[pid]) to monitor until the process exits.\n\
             In the default blocking mode, commands that exceed the timeout ({timeout}s) are automatically \
             backgrounded (never killed) as a safety net. You get partial output, a PID handle, and a log file path.\n\
             Kill: set kill_handle to the PID of a backgrounded process to terminate it \
             (SIGTERM → 2s grace → SIGKILL).\n\
-            For long-running commands (builds, installs, tests), prefer mode=\"background\" from the start, \
-            or set 'wait' to a short duration (e.g. 10-30s) for early feedback in blocking mode. \
+            For long-running commands (builds, installs, tests, git clone), prefer mode=\"background\" from the start, \
+            then call await_output(command=\"wait_for\", handles=[pid]); do not treat progress output as completion. \
             IMPORTANT: Always limit output — use | head, --short, --oneline -N, -maxdepth, etc. \
             Do not use executable shell substitutions (`...`, $(...), or ${{...}}); for literal code fences/backticks, use a single-quoted heredoc such as <<'EOF' or use edit_file/write_file.",
             cwd = cwd, timeout = self.timeout_secs

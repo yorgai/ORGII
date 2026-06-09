@@ -643,7 +643,8 @@
       "searchPlaceholder": "Nach Aktionen zum Anheften suchen…",
       "loading": "Wird geladen…",
       "empty": "Keine Aktionen gefunden.",
-      "unpinAll": "Alle lösen"
+      "unpinAll": "Alle lösen",
+      "insert": "Einfügen"
     }
   },
   "listPanel": {
@@ -888,9 +889,6 @@
     "manageWorkspaceAddRunning": "Workspace wird hinzugefügt",
     "manageWorkspaceAddDone": "Workspace hinzugefügt",
     "manageWorkspaceAddFailed": "Workspace konnte nicht hinzugefügt werden",
-    "manageWorkspaceCloneRunning": "Workspace wird geklont",
-    "manageWorkspaceCloneDone": "Workspace geklont",
-    "manageWorkspaceCloneFailed": "Workspace konnte nicht geklont werden",
     "manageWorkspaceCreateRunning": "Workspace wird erstellt",
     "manageWorkspaceCreateDone": "Workspace erstellt",
     "manageWorkspaceCreateFailed": "Workspace konnte nicht erstellt werden",

@@ -37,8 +37,6 @@ export const AGENT_SIDE_CHANNEL_EVENTS = {
   HEARTBEAT: "agent-heartbeat",
   /** Detail: `{ sessionId, requestId, toolCallId, label, kind, prompt }`. */
   SECRET_REQUEST: "agent-secret-request",
-  /** Detail: `{ sessionId, toolCallId, phase, percent, raw }`. */
-  WORKSPACE_CLONE_PROGRESS: "agent-workspace-clone-progress",
 } as const;
 
 export interface AgentFileChangeDetail {
@@ -193,58 +191,6 @@ export function handleSecretRequest(
   );
   window.dispatchEvent(
     new CustomEvent(AGENT_SIDE_CHANNEL_EVENTS.SECRET_REQUEST, { detail })
-  );
-}
-
-export interface AgentWorkspaceCloneProgressDetail {
-  sessionId: string;
-  toolCallId: string;
-  /**
-   * Phase name as reported by `git clone --progress` on stderr, e.g.
-   * `"Receiving objects"`, `"Resolving deltas"`, `"Counting objects"`.
-   */
-  phase: string;
-  /** `0..=100` when git supplied a percent, `null` for indeterminate. */
-  percent: number | null;
-  /** Trimmed raw status line, useful for debugging / "expand details". */
-  raw: string;
-}
-
-/**
- * `agent:workspace_clone_progress` — live progress updates from
- * `manage_workspace` with `action: "clone"`. The Rust tool streams
- * `git clone --progress` stderr, parses each `Phase: NN%` line, throttles
- * to ~10 Hz per phase, and broadcasts. We forward as a window event so the
- * matching `ToolCallBlock` (looked up by `toolCallId`) can render a
- * GitHub-Desktop-style progress strip without coupling to the EventStore.
- */
-export function handleWorkspaceCloneProgress(
-  event: AgentWSEvent,
-  eventSessionId: string | undefined
-): void {
-  const raw = event as unknown as Record<string, unknown>;
-  const toolCallId =
-    typeof raw.toolCallId === "string" ? (raw.toolCallId as string) : "";
-  if (!eventSessionId || !toolCallId) return;
-
-  const percentRaw = raw.percent;
-  const percent =
-    typeof percentRaw === "number" && Number.isFinite(percentRaw)
-      ? Math.max(0, Math.min(100, Math.round(percentRaw)))
-      : null;
-
-  const detail: AgentWorkspaceCloneProgressDetail = {
-    sessionId: eventSessionId,
-    toolCallId,
-    phase: typeof raw.phase === "string" ? (raw.phase as string) : "",
-    percent,
-    raw: typeof raw.raw === "string" ? (raw.raw as string) : "",
-  };
-
-  window.dispatchEvent(
-    new CustomEvent(AGENT_SIDE_CHANNEL_EVENTS.WORKSPACE_CLONE_PROGRESS, {
-      detail,
-    })
   );
 }
 

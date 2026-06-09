@@ -4,7 +4,7 @@
  * Always renders the standard collapsible todo list using the same
  * EventBlockHeader + vertical-line pattern as other tool blocks.
  */
-import { Check, ChevronDown, ChevronUp, Lock } from "lucide-react";
+import { Check, ChevronsDownUp, ChevronsUpDown, Lock } from "lucide-react";
 import React, { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -258,9 +258,9 @@ const StandardTodoBlock: React.FC<StandardTodoBlockProps> = memo(
                 >
                   <div className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-text-3 transition-colors group-hover:text-text-1">
                     {isListExpanded ? (
-                      <ChevronUp size={14} strokeWidth={2} />
+                      <ChevronsDownUp size={14} strokeWidth={2} />
                     ) : (
-                      <ChevronDown size={14} strokeWidth={2} />
+                      <ChevronsUpDown size={14} strokeWidth={2} />
                     )}
                   </div>
                   <span className="text-[13px] text-text-3 transition-colors group-hover:text-text-1">

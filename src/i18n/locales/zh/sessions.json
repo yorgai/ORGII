@@ -647,7 +647,8 @@
       "searchPlaceholder": "搜索要固定的操作…",
       "loading": "正在加载…",
       "empty": "未找到操作。",
-      "unpinAll": "全部取消固定"
+      "unpinAll": "全部取消固定",
+      "insert": "插入"
     }
   },
   "listPanel": {
@@ -892,9 +893,6 @@
     "manageWorkspaceAddRunning": "正在添加工作区",
     "manageWorkspaceAddDone": "添加工作区",
     "manageWorkspaceAddFailed": "添加工作区失败",
-    "manageWorkspaceCloneRunning": "正在克隆工作区",
-    "manageWorkspaceCloneDone": "克隆工作区",
-    "manageWorkspaceCloneFailed": "克隆工作区失败",
     "manageWorkspaceCreateRunning": "正在创建工作区",
     "manageWorkspaceCreateDone": "创建工作区",
     "manageWorkspaceCreateFailed": "创建工作区失败",
@@ -1054,7 +1052,7 @@
     "awaitOutputDone": "查看后台任务",
     "awaitOutputFailed": "检查后台任务失败",
     "awaitOutputPatternMatched": "匹配",
-    "awaitOutputKilled": "终止",
+    "awaitOutputKilled": "已终止",
     "awaitOutputNotFound": "后台任务未跟踪",
     "awaitOutputExitCode": "退出码 {{exitCode}}",
     "askUserAnswered": "回答",

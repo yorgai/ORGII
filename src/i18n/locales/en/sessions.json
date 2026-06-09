@@ -653,7 +653,8 @@
       "searchPlaceholder": "Search actions to pin…",
       "loading": "Loading…",
       "empty": "No actions found.",
-      "unpinAll": "Unpin all"
+      "unpinAll": "Unpin all",
+      "insert": "Insert"
     }
   },
   "listPanel": {
@@ -912,9 +913,6 @@
     "manageWorkspaceAddRunning": "Adding workspace",
     "manageWorkspaceAddDone": "Added workspace",
     "manageWorkspaceAddFailed": "Failed to add workspace",
-    "manageWorkspaceCloneRunning": "Cloning workspace",
-    "manageWorkspaceCloneDone": "Cloned workspace",
-    "manageWorkspaceCloneFailed": "Failed to clone workspace",
     "manageWorkspaceCreateRunning": "Creating workspace",
     "manageWorkspaceCreateDone": "Created workspace",
     "manageWorkspaceCreateFailed": "Failed to create workspace",

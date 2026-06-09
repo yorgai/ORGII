@@ -412,7 +412,6 @@ const BUILTIN_ACTIONS_FIXTURE: Map<string, ToolActionInfo[]> = new Map([
     [
       actionInfo("list", labelKeys("manageWorkspaceList"), "explore"),
       actionInfo("add", labelKeys("manageWorkspaceAdd"), "explore"),
-      actionInfo("clone", labelKeys("manageWorkspaceClone"), "explore"),
       actionInfo("create", labelKeys("manageWorkspaceCreate"), "explore"),
       actionInfo("remove", labelKeys("manageWorkspaceRemove"), "explore"),
     ],
