@@ -411,7 +411,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
           sourceControlFilterMode={sourceControlFilterMode}
           showSourceControlModePill={
             sourceControlFilterMode !== "stashed" &&
-            sourceControlFilterMode !== "history"
+            sourceControlFilterMode !== "history" &&
+            sourceControlFilterMode !== "pr"
           }
         />
       </div>

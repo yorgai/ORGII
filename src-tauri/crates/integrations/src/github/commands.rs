@@ -423,6 +423,55 @@ pub async fn github_find_pull_request(
     Ok(pr)
 }
 
+/// Response item for a single PR in `github_list_open_prs`.
+#[derive(Debug, Serialize)]
+pub struct OpenPRItem {
+    pub number: u64,
+    pub url: String,
+    pub title: String,
+    pub state: String,
+    pub head_branch: String,
+    pub base_branch: String,
+    pub draft: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[command]
+pub async fn github_list_open_prs(
+    repo_full_name: String,
+    per_page: Option<u64>,
+) -> Result<Vec<OpenPRItem>, String> {
+    let limit = per_page.unwrap_or(30).min(100);
+    log::info!("[GitHub][Cmd] list_open_prs repo={repo_full_name} per_page={limit}");
+    let client = make_client()?;
+    let data = client
+        .get(&format!(
+            "/repos/{repo_full_name}/pulls?state=open&sort=updated&direction=desc&per_page={limit}"
+        ))
+        .await?;
+    let items: Vec<OpenPRItem> = data
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .map(|item| OpenPRItem {
+                    number: item["number"].as_u64().unwrap_or(0),
+                    url: item["html_url"].as_str().unwrap_or("").to_string(),
+                    title: item["title"].as_str().unwrap_or("").to_string(),
+                    state: item["state"].as_str().unwrap_or("open").to_string(),
+                    head_branch: item["head"]["ref"].as_str().unwrap_or("").to_string(),
+                    base_branch: item["base"]["ref"].as_str().unwrap_or("").to_string(),
+                    draft: item["draft"].as_bool().unwrap_or(false),
+                    created_at: item["created_at"].as_str().unwrap_or("").to_string(),
+                    updated_at: item["updated_at"].as_str().unwrap_or("").to_string(),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    log::info!("[GitHub][Cmd] list_open_prs found {} PRs", items.len());
+    Ok(items)
+}
+
 #[command]
 pub async fn github_get_pr(repo_full_name: String, pr_number: u64) -> Result<Value, String> {
     log::info!("[GitHub][Cmd] get_pr repo={repo_full_name} pr={pr_number}");

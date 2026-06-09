@@ -69,41 +69,54 @@ const SourceControlMainContent: React.FC<SourceControlMainContentProps> = ({
   emptyFocusActions,
 }) => {
   if (historySelection) {
-    const resolvedRepoId = repoId ?? repoPath;
-    const repoReady = Boolean(repoPath && resolvedRepoId);
+    const isPr = historySelection.type === "pr";
+    const commitSha = isPr
+      ? historySelection.selectedCommitSha
+      : historySelection.commitSha;
 
-    return (
-      <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <Suspense
-          fallback={
-            <Placeholder
-              variant="loading"
-              placement="detail-panel"
-              fillParentHeight
+    if (!isPr || commitSha) {
+      const resolvedRepoId = repoId ?? repoPath;
+      const repoReady = Boolean(repoPath && resolvedRepoId);
+      const shortSha = isPr
+        ? (historySelection.selectedShortSha ?? commitSha?.slice(0, 7) ?? "")
+        : historySelection.shortSha;
+      const commitMessage = isPr
+        ? (historySelection.selectedCommitMessage ?? "")
+        : historySelection.commitMessage;
+
+      return (
+        <div className="flex h-full min-h-0 flex-col overflow-hidden">
+          <Suspense
+            fallback={
+              <Placeholder
+                variant="loading"
+                placement="detail-panel"
+                fillParentHeight
+              />
+            }
+          >
+            <GitCommitDetailContent
+              commitSha={commitSha ?? ""}
+              shortSha={shortSha}
+              commitMessage={commitMessage}
+              repoPath={repoPath ?? ""}
+              repoId={resolvedRepoId ?? ""}
+              isRepoReady={repoReady}
+              onFileSelect={onFileSelect}
+              headerVariant={
+                !isPr && historySelection.type === "stash" ? "stash" : "commit"
+              }
+              headerRootLabel={
+                !isPr && historySelection.type === "stash"
+                  ? historySelection.stashRef
+                  : undefined
+              }
+              publishHeaderToWorkstation={false}
             />
-          }
-        >
-          <GitCommitDetailContent
-            commitSha={historySelection.commitSha}
-            shortSha={historySelection.shortSha}
-            commitMessage={historySelection.commitMessage}
-            repoPath={repoPath ?? ""}
-            repoId={resolvedRepoId ?? ""}
-            isRepoReady={repoReady}
-            onFileSelect={onFileSelect}
-            headerVariant={
-              historySelection.type === "stash" ? "stash" : "commit"
-            }
-            headerRootLabel={
-              historySelection.type === "stash"
-                ? historySelection.stashRef
-                : undefined
-            }
-            publishHeaderToWorkstation={false}
-          />
-        </Suspense>
-      </div>
-    );
+          </Suspense>
+        </div>
+      );
+    }
   }
 
   return (

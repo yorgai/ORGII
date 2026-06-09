@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import { fetchRustApi, gitRepoUrl } from "@src/api/http/git/client";
 import { getGitRemotes } from "@src/api/http/git/remotes";
-import { findPullRequestLocal } from "@src/api/tauri/github";
+import { findPullRequestLocal, listOpenPRsLocal } from "@src/api/tauri/github";
 import { Message } from "@src/components/Message";
 import { buildIntegrationsPath } from "@src/config/mainAppPaths/integrations";
 import { createLogger } from "@src/hooks/logger";
@@ -15,6 +15,7 @@ import {
 } from "@src/services/git/operations/createPullRequest";
 import { gitAutoCreatePrAtom } from "@src/store/ui/editorSettingsAtom";
 import {
+  workstationAllOpenPrsAtom,
   workstationPrAtom,
   workstationPrCallbackAtom,
 } from "@src/store/workstation/codeEditor/workstationPrAtom";
@@ -59,6 +60,7 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
   const autoCreatePr = useAtomValue(gitAutoCreatePrAtom);
   const setWorkstationPrAtom = useSetAtom(workstationPrAtom);
   const setWorkstationPrCallbackAtom = useSetAtom(workstationPrCallbackAtom);
+  const setAllOpenPrs = useSetAtom(workstationAllOpenPrsAtom);
   const branchKey = branchName ?? "";
 
   const [remotePrByBranch, setRemotePrByBranch] = useState<
@@ -158,6 +160,38 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
       cancelled = true;
     };
   }, [repoPath, repoId, branchName]);
+
+  useEffect(() => {
+    if (!repoPath) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const remotesData = await getGitRemotes({
+          repo_id: repoId,
+          repo_path: repoPath,
+        });
+        const originRemote = remotesData?.remotes?.find(
+          (remote) => remote.name === "origin"
+        );
+        if (!originRemote?.url) return;
+
+        const repoFullName = parseGithubRepoFullName(originRemote.url);
+        if (!repoFullName) return;
+
+        const prs = await listOpenPRsLocal(repoFullName);
+        if (cancelled) return;
+        setAllOpenPrs(prs);
+      } catch {
+        // Non-critical — swallow silently; current-branch PR lookup is unaffected
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [repoPath, repoId, setAllOpenPrs]);
 
   const eligible = useMemo(
     () =>
@@ -301,8 +335,9 @@ export function useWorkstationPr(options: UseWorkstationPrOptions) {
         isDefaultBranch: false,
       });
       setWorkstationPrCallbackAtom({ createPr: null });
+      setAllOpenPrs([]);
     };
-  }, [setWorkstationPrAtom, setWorkstationPrCallbackAtom]);
+  }, [setWorkstationPrAtom, setWorkstationPrCallbackAtom, setAllOpenPrs]);
 
   return {
     prUrl,

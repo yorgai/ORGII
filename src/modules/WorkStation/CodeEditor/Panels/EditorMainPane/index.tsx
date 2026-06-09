@@ -26,6 +26,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   ChevronRight,
+  ExternalLink,
   ListChevronsDownUp,
 } from "lucide-react";
 import React, {
@@ -40,6 +41,7 @@ import React, {
 import { useTranslation } from "react-i18next";
 
 import { useActionSystem } from "@src/ActionSystem";
+import { GitHubReAuthError, listPRCommitsLocal } from "@src/api/tauri/github";
 import Button from "@src/components/Button";
 import Select from "@src/components/Select";
 import type { SelectOption } from "@src/components/Select";
@@ -84,6 +86,152 @@ import type { EditorContentProps } from "./types";
 const TerminalMainContent = React.lazy(
   () => import("./content/TerminalMainContent")
 );
+
+// ============================================
+// PR Header helpers
+// ============================================
+
+function parsePrUrlForHeader(
+  prUrl: string
+): { repoFullName: string; number: number } | null {
+  const m = prUrl.match(/github\.com\/([^/]+\/[^/]+)\/pull\/(\d+)/);
+  if (!m) return null;
+  return { repoFullName: m[1], number: Number(m[2]) };
+}
+
+interface PrCommit {
+  sha: string;
+  shortSha: string;
+  summary: string;
+}
+
+const prCommitsCache = new Map<string, PrCommit[]>();
+
+interface PrCommitInfo {
+  commitSha: string;
+  shortSha: string;
+  commitMessage: string;
+}
+
+interface PrCommitDropdownProps {
+  prUrl: string;
+  onCommitSelect: (commit: PrCommitInfo) => void;
+}
+
+const PrCommitDropdown: React.FC<PrCommitDropdownProps> = ({
+  prUrl,
+  onCommitSelect,
+}) => {
+  const [commits, setCommits] = useState<PrCommit[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedSha, setSelectedSha] = useState<string | null>(null);
+
+  useEffect(() => {
+    const parsed = parsePrUrlForHeader(prUrl);
+    if (!parsed) return;
+
+    const cached = prCommitsCache.get(prUrl);
+    if (cached) {
+      setCommits(cached);
+      if (cached.length > 0) {
+        const first = cached[0];
+        setSelectedSha(first.sha);
+        onCommitSelect({
+          commitSha: first.sha,
+          shortSha: first.shortSha,
+          commitMessage: first.summary,
+        });
+      }
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const raw = await listPRCommitsLocal(
+          parsed.repoFullName,
+          parsed.number
+        );
+        if (cancelled) return;
+        const parsed2 = raw.map((item): PrCommit => {
+          const sha = String((item as Record<string, unknown>)["sha"] ?? "");
+          const commit = ((item as Record<string, unknown>)["commit"] ??
+            {}) as Record<string, unknown>;
+          const message = String(commit["message"] ?? "");
+          return {
+            sha,
+            shortSha: sha.slice(0, 7),
+            summary: message.split("\n")[0] || sha.slice(0, 7),
+          };
+        });
+        prCommitsCache.set(prUrl, parsed2);
+        setCommits(parsed2);
+        if (parsed2.length > 0) {
+          const first = parsed2[0];
+          setSelectedSha(first.sha);
+          onCommitSelect({
+            commitSha: first.sha,
+            shortSha: first.shortSha,
+            commitMessage: first.summary,
+          });
+        }
+      } catch (err) {
+        if (cancelled || err instanceof GitHubReAuthError) return;
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [prUrl, onCommitSelect]);
+
+  const options = useMemo(
+    () =>
+      commits.map((c) => ({
+        value: c.sha,
+        label: `${c.shortSha} ${c.summary}`,
+        triggerLabel: `${c.shortSha} ${c.summary}`,
+      })),
+    [commits]
+  );
+
+  const handleChange = useCallback(
+    (value: string | number | (string | number)[]) => {
+      const sha = String(Array.isArray(value) ? value[0] : value);
+      const commit = commits.find((c) => c.sha === sha);
+      if (!commit) return;
+      setSelectedSha(sha);
+      onCommitSelect({
+        commitSha: commit.sha,
+        shortSha: commit.shortSha,
+        commitMessage: commit.summary,
+      });
+    },
+    [commits, onCommitSelect]
+  );
+
+  if (commits.length === 0 && !loading) return null;
+
+  return (
+    <Select
+      value={selectedSha ?? undefined}
+      onChange={handleChange}
+      options={options}
+      loading={loading}
+      placeholder="Pick a commit…"
+      size="small"
+      variant="ghost"
+      dropdownWidthMode="min-match"
+      style={{ minWidth: 180, maxWidth: 320 }}
+    />
+  );
+};
 
 // ============================================
 // Main Component
@@ -404,6 +552,8 @@ const EditorContent: React.FC<EditorContentProps> = memo(
 
     const handleOpenSourceControlHistoryInNewTab = useCallback(
       (selection: SourceControlHistorySelection) => {
+        if (selection.type === "pr") return;
+
         const nextTab =
           selection.type === "stash"
             ? createStashDetailTab(
@@ -426,6 +576,42 @@ const EditorContent: React.FC<EditorContentProps> = memo(
       [updatePaneState]
     );
 
+    const handlePrCommitSelect = useCallback(
+      (commit: {
+        commitSha: string;
+        shortSha: string;
+        commitMessage: string;
+      }) => {
+        updatePaneState((state) => {
+          const tabIndex = state.tabs.findIndex(
+            (item) => item.type === "source-control"
+          );
+          if (tabIndex === -1) return state;
+          const existing = state.tabs[tabIndex];
+          const currentSelection = existing.data.historySelection as
+            | SourceControlHistorySelection
+            | null
+            | undefined;
+          if (!currentSelection || currentSelection.type !== "pr") return state;
+          const nextTabs = [...state.tabs];
+          nextTabs[tabIndex] = {
+            ...existing,
+            data: {
+              ...existing.data,
+              historySelection: {
+                ...currentSelection,
+                selectedCommitSha: commit.commitSha,
+                selectedShortSha: commit.shortSha,
+                selectedCommitMessage: commit.commitMessage,
+              },
+            },
+          };
+          return { ...state, tabs: nextTabs };
+        });
+      },
+      [updatePaneState]
+    );
+
     const sourceControlHeaderContent = useMemo(() => {
       if (activeTab?.type !== "source-control") return null;
       const mode =
@@ -435,7 +621,8 @@ const EditorContent: React.FC<EditorContentProps> = memo(
         | null
         | undefined;
       const hasFocusPath = Boolean(activeTab.data.focusPath);
-      const showModePill = showSourceControlModePill;
+      const showModePill =
+        showSourceControlModePill && historySelection?.type !== "pr";
       const showCollapseAll =
         showModePill && mode === "all-changes" && !historySelection;
       const showReviewNavigation =
@@ -473,7 +660,19 @@ const EditorContent: React.FC<EditorContentProps> = memo(
             </>
           )}
 
-          {historySelection && (
+          {historySelection?.type === "pr" && (
+            <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2 overflow-x-auto pl-1 scrollbar-hide">
+              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text-1">
+                {historySelection.prTitle}
+              </span>
+              <PrCommitDropdown
+                prUrl={historySelection.prUrl}
+                onCommitSelect={handlePrCommitSelect}
+              />
+            </div>
+          )}
+
+          {historySelection && historySelection.type !== "pr" && (
             <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-[1px] overflow-x-auto pl-1 scrollbar-hide">
               <span className="inline-flex flex-shrink-0 whitespace-nowrap text-[13px] text-text-2">
                 {historySelection.shortSha}
@@ -490,7 +689,19 @@ const EditorContent: React.FC<EditorContentProps> = memo(
           )}
 
           <span className="ml-auto flex h-7 flex-shrink-0 items-center gap-px">
-            {historySelection && (
+            {historySelection?.type === "pr" && (
+              <a
+                href={historySelection.prUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="flex h-7 w-7 items-center justify-center rounded text-text-3 transition-colors hover:bg-fill-2 hover:text-text-1"
+                title={t("common:actions.openOnGitHub", "Open on GitHub")}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ExternalLink size={HEADER_ICON_SIZE.sm} />
+              </a>
+            )}
+            {historySelection && historySelection.type !== "pr" && (
               <Button
                 htmlType="button"
                 variant="tertiary"
@@ -578,6 +789,7 @@ const EditorContent: React.FC<EditorContentProps> = memo(
       activeTab,
       gitReviewNavigation.total,
       handleOpenSourceControlHistoryInNewTab,
+      handlePrCommitSelect,
       handleReviewNextFile,
       handleReviewPrevFile,
       handleSourceControlCollapseAll,

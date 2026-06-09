@@ -8,19 +8,12 @@
  * - The outer CollapsibleSection header ("ISSUES") is provided by the sidebar module
  */
 import { useSetAtom } from "jotai";
-import {
-  CircleDot,
-  Filter as FilterIcon,
-  ListFilter,
-  RefreshCw,
-  XCircle,
-} from "lucide-react";
+import { CircleDot, ListFilter, RefreshCw, XCircle } from "lucide-react";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import Dropdown from "@src/components/Dropdown";
-import Input from "@src/components/Input";
 import { buildIntegrationsPath } from "@src/config/mainAppPaths/integrations";
 import {
   HEADER_BUTTON,
@@ -28,7 +21,7 @@ import {
   SECTION_ACTION_BUTTON,
 } from "@src/config/workstation/tokens";
 import { useWorkStationTabs } from "@src/hooks/workStation/tabs/useWorkStationTabs";
-import { usePrimarySidebarSurface } from "@src/modules/WorkStation/shared/hooks/usePrimarySidebarSurface";
+import { SectionFilterInput } from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/components/SectionFilterInput";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { workstationIssueCallbackAtom } from "@src/store/workstation/codeEditor/workstationIssueAtom";
 import { createGitHubIssueDetailTab } from "@src/store/workstation/tabs";
@@ -44,14 +37,30 @@ export interface IssuesContentProps {
   branchName?: string;
   remoteUrl?: string;
   onOpenNewIssueForm?: () => void;
+  /** Whether the filter input row is currently open */
+  showFilter?: boolean;
+  /** Active filter query (synced with external useSectionFilter) */
+  filterQuery?: string;
+  /** Called when filter query changes */
+  onFilterQueryChange?: (q: string) => void;
+  /** Called when the filter input should close (Escape pressed) */
+  onFilterClose?: () => void;
 }
 
 const IssuesContent: React.FC<IssuesContentProps> = memo(
-  ({ repoPath, repoId, branchName, remoteUrl }) => {
+  ({
+    repoPath,
+    repoId,
+    branchName,
+    remoteUrl,
+    showFilter = false,
+    filterQuery = "",
+    onFilterQueryChange,
+    onFilterClose,
+  }) => {
     const { t } = useTranslation("common");
     const navigate = useNavigate();
     const setCallbackAtom = useSetAtom(workstationIssueCallbackAtom);
-    const { surfaceBgClass } = usePrimarySidebarSurface();
     const { openTab } = useWorkStationTabs();
 
     const {
@@ -62,7 +71,6 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
       error,
       filterState,
       setFilterState,
-      searchQuery,
       setSearchQuery,
       selectIssue,
       handleCreateIssue,
@@ -78,6 +86,11 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
     const [creatingIssue, setCreatingIssue] = useState(false);
     const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
     const listRef = useRef<HTMLDivElement>(null);
+
+    // Keep internal debounced search in sync with the externally controlled query
+    useEffect(() => {
+      setSearchQuery(filterQuery);
+    }, [filterQuery, setSearchQuery]);
 
     const handleOpenNewIssueForm = useCallback(() => {
       setShowNewIssueForm(true);
@@ -324,17 +337,14 @@ const IssuesContent: React.FC<IssuesContentProps> = memo(
 
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        {/* Filter input — mirrors "Filter changes…" in SourceControlContent */}
-        <div className={`flex-shrink-0 px-3 pb-2 pt-2 ${surfaceBgClass}`}>
-          <Input
-            prefix={<FilterIcon size={14} strokeWidth={1.75} />}
+        {showFilter && (
+          <SectionFilterInput
+            query={filterQuery}
+            onChange={(q) => onFilterQueryChange?.(q)}
+            onClose={() => onFilterClose?.()}
             placeholder={t("git.issues.searchPlaceholder", "Filter issues…")}
-            value={searchQuery}
-            onChange={(val) => setSearchQuery(val)}
-            size="small"
-            className="input-pane-surface"
           />
-        </div>
+        )}
 
         {showNewIssueForm && (
           <NewIssueForm

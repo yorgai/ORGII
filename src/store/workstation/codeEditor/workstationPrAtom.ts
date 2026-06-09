@@ -1,5 +1,7 @@
 import { atom } from "jotai";
 
+import type { OpenPRItem } from "@src/api/tauri/github";
+
 /**
  * Shared PR state for the active workstation repo.
  * Written by `useWorkstationPr` when eligibility or PR URL changes.
@@ -48,6 +50,13 @@ export const workstationPrAtom = atom<WorkstationPrSnapshot>({
  * title falls back to the branch name.
  */
 export const workstationPrCommitMessageAtom = atom<string>("");
+
+/**
+ * All open pull requests for the active workstation repo.
+ * Written by `useWorkstationPr` on mount and when the repo changes.
+ * Read by `PullRequestContent` to render the full PR list.
+ */
+export const workstationAllOpenPrsAtom = atom<OpenPRItem[]>([]);
 
 /**
  * Stable ref-backed callback for triggering PR creation from PinnedActionsBar.

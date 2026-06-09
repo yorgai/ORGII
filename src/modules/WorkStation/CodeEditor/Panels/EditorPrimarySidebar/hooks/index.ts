@@ -6,3 +6,6 @@ export type {
 
 export { useSourceControlActions } from "./useSourceControlActions";
 export type { UseSourceControlActionsOptions } from "./useSourceControlActions";
+
+export { useSectionFilter } from "./useSectionFilter";
+export type { UseSectionFilterReturn } from "./useSectionFilter";

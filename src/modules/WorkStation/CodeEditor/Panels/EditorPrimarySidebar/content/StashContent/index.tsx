@@ -85,7 +85,7 @@ function getStashDisplayMessage(stash: StashEntry): string {
 
 function createStashHistorySelection(
   stash: StashEntry
-): SourceControlHistorySelection {
+): Extract<SourceControlHistorySelection, { type: "stash" }> {
   const stashRef = `stash@{${stash.index}}`;
   const normalizedCommitSha = stash.commit_sha?.trim();
   const stashIdentity = normalizedCommitSha || stashRef;

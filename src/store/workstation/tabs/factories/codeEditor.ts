@@ -222,6 +222,18 @@ export type SourceControlHistorySelection =
       commitSha: string;
       shortSha: string;
       commitMessage: string;
+    }
+  | {
+      type: "pr";
+      prNumber: number;
+      prTitle: string;
+      prUrl: string;
+      prStatus: string;
+      headBranch: string;
+      /** Commit currently selected in PrCommitDropdown — used to drive the main pane diff view */
+      selectedCommitSha?: string;
+      selectedShortSha?: string;
+      selectedCommitMessage?: string;
     };
 
 export interface SourceControlTabData {
