@@ -112,6 +112,11 @@ const PrDetailPanel: React.FC<PrDetailPanelProps> = ({
     setLoading(true);
     setError(null);
 
+    const authErrorMsg = t(
+      "labels.githubAuthMissing",
+      "Connect a GitHub account to view this pull request."
+    );
+
     const load = async () => {
       try {
         const [prJson, commitJson] = await Promise.all([
@@ -145,12 +150,7 @@ const PrDetailPanel: React.FC<PrDetailPanelProps> = ({
       } catch (err) {
         if (cancelled) return;
         if (err instanceof GitHubReAuthError) {
-          setError(
-            t(
-              "labels.githubAuthMissing",
-              "Connect a GitHub account to view this pull request."
-            )
-          );
+          setError(authErrorMsg);
           setDetail(null);
           setCommits([]);
         } else {
@@ -165,7 +165,8 @@ const PrDetailPanel: React.FC<PrDetailPanelProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [parsedPr, pr.url, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsedPr, pr.url]);
 
   const handleCommitSelect = useCallback(
     (commit: PrCommit) => {
@@ -513,9 +514,13 @@ const PullRequestContent: React.FC<PullRequestContentProps> = ({
   const handleCreate = useCallback(async () => {
     if (!onCreatePr || prCreating) return;
     setLocalCreateError(null);
-    const result = await onCreatePr();
-    if (result.error && result.error !== "not_authenticated") {
-      setLocalCreateError(result.error);
+    try {
+      const result = await onCreatePr();
+      if (result.error && result.error !== "not_authenticated") {
+        setLocalCreateError(result.error);
+      }
+    } catch (err) {
+      setLocalCreateError(err instanceof Error ? err.message : String(err));
     }
   }, [onCreatePr, prCreating]);
 
