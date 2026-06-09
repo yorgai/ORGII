@@ -26,6 +26,7 @@
  * cross-repo payload. The fallback is "no context", which is strictly
  * better than "wrong context".
  */
+import { collectAppUiSnapshot } from "@src/services/context/appUiSnapshot";
 import type {
   UserProfileWire,
   WorkspaceSnapshot,
@@ -120,12 +121,15 @@ export function collectIdeContext(
     // up front so both the cross-repo bail and the normal path can attach them.
     let presenceWire;
     let userProfile;
+    let appUi;
     try {
       presenceWire = store.get(userPresenceWireAtom);
       userProfile = buildUserProfileWire(store.get(settingsAtom));
+      appUi = collectAppUiSnapshot();
     } catch {
       presenceWire = undefined;
       userProfile = undefined;
+      appUi = undefined;
     }
 
     const expected = normalizeRepoPath(options.expectedRepoPath);
@@ -141,6 +145,9 @@ export function collectIdeContext(
         }
         if (userProfile) {
           userScopedPayload.userProfile = userProfile;
+        }
+        if (appUi) {
+          userScopedPayload.appUi = appUi;
         }
         return Object.keys(userScopedPayload).length > 0
           ? userScopedPayload
@@ -285,6 +292,10 @@ export function collectIdeContext(
     }
     if (userProfile) {
       payload.userProfile = userProfile;
+      hasData = true;
+    }
+    if (appUi) {
+      payload.appUi = appUi;
       hasData = true;
     }
 

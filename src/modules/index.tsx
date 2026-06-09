@@ -49,7 +49,9 @@ import {
   CodeEditorTour,
   GENERAL_LAYOUT_TOUR_EVENT,
   GENERAL_LAYOUT_TOUR_TARGETS,
+  GUIDE_TARGETS,
   GeneralLayoutTour,
+  GuideHighlightOverlay,
   TUTORIALS_OPEN_EVENT,
   TutorialsModal,
 } from "@src/scaffold/Tutorials";
@@ -433,7 +435,10 @@ const AppShell = () => {
       <BrowserProvider>
         <BrowserEventBridge />
         <SharedBrowserApp />
-        <div className="relative flex h-full">
+        <div
+          className="relative flex h-full"
+          data-guide-target={GUIDE_TARGETS.APP_ROOT}
+        >
           <BackgroundLayer
             image={
               backgroundConfig.backgroundColor ? null : currentBackgroundImage
@@ -468,6 +473,11 @@ const AppShell = () => {
                         : VIEW_CONTAINER_CLASSES.insetWithBg
                   }
                   style={getViewToggleStyle(isWorkStationViewActive)}
+                  data-guide-target={
+                    isWorkStationViewActive
+                      ? GUIDE_TARGETS.WORKSTATION
+                      : undefined
+                  }
                   data-tour-target={
                     isWorkStationViewActive
                       ? GENERAL_LAYOUT_TOUR_TARGETS.workstation
@@ -497,6 +507,7 @@ const AppShell = () => {
             </div>
           </AppLayout>
           <GuiControlToggle />
+          <GuideHighlightOverlay />
           <TutorialsModal
             open={tutorialsModalOpen}
             onClose={() => setTutorialsModalOpen(false)}

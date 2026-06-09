@@ -3,6 +3,7 @@ import React from "react";
 import Button from "@src/components/Button";
 import Modal from "@src/scaffold/ModalSystem";
 
+import { GUIDE_TARGETS } from "./guideTargets";
 import { TUTORIALS, type TutorialEntry } from "./tutorialRegistry";
 
 interface TutorialsModalProps {
@@ -30,7 +31,10 @@ const TutorialsModal: React.FC<TutorialsModalProps> = ({ open, onClose }) => {
       bodyClassName="p-0"
       zIndex={10020}
     >
-      <div className="flex flex-col px-3 py-2">
+      <div
+        className="flex flex-col px-3 py-2"
+        data-guide-target={GUIDE_TARGETS.TUTORIALS_MODAL}
+      >
         {TUTORIALS.map((tutorial) => (
           <div
             key={tutorial.id}

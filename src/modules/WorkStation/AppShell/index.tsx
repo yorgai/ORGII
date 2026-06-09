@@ -12,6 +12,7 @@ import {
   useDockFilterUrlSync,
   useWorkStationPanels,
 } from "@src/hooks/workStation";
+import { GUIDE_TARGETS } from "@src/scaffold/Tutorials";
 import { simulatorCaptionBarEnabledAtom } from "@src/store/ui/simulatorAtom";
 import {
   workStationDockAutoHideAtom,
@@ -150,19 +151,25 @@ const AppShell = React.memo(
               <OpsControlStationTabBar />
             ) : (
               !isAgentStation && (
-                <WorkstationTabBar
-                  appMode={
-                    (effectiveHost === "code" ||
-                    effectiveHost === "browser" ||
-                    effectiveHost === "data" ||
-                    effectiveHost === "project"
-                      ? effectiveHost
-                      : appMode) as AppModeType
-                  }
-                />
+                <div data-guide-target={GUIDE_TARGETS.WORKSTATION_TAB_BAR}>
+                  <WorkstationTabBar
+                    appMode={
+                      (effectiveHost === "code" ||
+                      effectiveHost === "browser" ||
+                      effectiveHost === "data" ||
+                      effectiveHost === "project"
+                        ? effectiveHost
+                        : appMode) as AppModeType
+                    }
+                  />
+                </div>
               )
             )}
-            {!isAgentStation && <WorkstationTabHeader />}
+            {!isAgentStation && (
+              <div data-guide-target={GUIDE_TARGETS.WORKSTATION_TAB_HEADER}>
+                <WorkstationTabHeader />
+              </div>
+            )}
             <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               <AppShellContent
                 repoPath={repoPath}
@@ -200,11 +207,13 @@ const AppShell = React.memo(
               autoHide={dockAutoHide}
               showTopBorder={!useFloatingStatusBar}
             >
-              <Dock
-                segments={myStationDockSegments}
-                activeApp={activeDockApp}
-                onAppClick={handleDockClick}
-              />
+              <div data-guide-target={GUIDE_TARGETS.WORKSTATION_DOCK}>
+                <Dock
+                  segments={myStationDockSegments}
+                  activeApp={activeDockApp}
+                  onAppClick={handleDockClick}
+                />
+              </div>
             </StationDockChrome>
           )}
         </AgentStationChromeFrame>

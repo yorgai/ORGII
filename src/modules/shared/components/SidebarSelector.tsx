@@ -16,6 +16,7 @@ import { WorkstationSidebarConnector } from "@/src/scaffold/NavigationSidebar/co
 import React from "react";
 
 import { GENERAL_LAYOUT_TOUR_TARGETS } from "@src/scaffold/Tutorials/GeneralLayoutTour";
+import { GUIDE_TARGETS } from "@src/scaffold/Tutorials/guideTargets";
 
 import { useRouteLayoutType } from "../hooks";
 
@@ -32,11 +33,15 @@ export const SidebarSelector: React.FC = React.memo(() => {
 
   return (
     <>
-      <div style={isHome ? STYLE_ACTIVE : STYLE_HIDDEN}>
+      <div
+        style={isHome ? STYLE_ACTIVE : STYLE_HIDDEN}
+        data-guide-target={isHome ? GUIDE_TARGETS.SIDEBAR : undefined}
+      >
         <HomeSidebar />
       </div>
       <div
         style={isSession ? STYLE_ACTIVE : STYLE_HIDDEN}
+        data-guide-target={isSession ? GUIDE_TARGETS.SIDEBAR : undefined}
         data-tour-target={
           isSession ? GENERAL_LAYOUT_TOUR_TARGETS.sessionSidebar : undefined
         }

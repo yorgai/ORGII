@@ -3,10 +3,12 @@ import {
   ArrowUp,
   BrushCleaning,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
   Loader2,
   MessageCircle,
   MousePointer2,
-  MousePointerClick,
   X,
   XCircle,
 } from "lucide-react";
@@ -49,6 +51,7 @@ import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
 import { type VoiceInputError, useVoiceInput } from "@src/hooks/voice";
 import { UnifiedModelPalette } from "@src/scaffold/GlobalSpotlight/palettes";
+import { GUIDE_TARGETS } from "@src/scaffold/Tutorials";
 import { collectIdeContext } from "@src/services/context/collectors";
 import { voiceInputEnabledAtom } from "@src/store/platform/voiceInputAtom";
 import {
@@ -299,6 +302,7 @@ export function GuiControlToggle(): React.ReactNode {
   const [draftText, setDraftText] = useState("");
   const [runStatus, setRunStatus] = useState<GuiControlRunStatus>("idle");
   const [controlSessionId, setControlSessionId] = useState<string | null>(null);
+  const [activityCursor, setActivityCursor] = useState(0);
   const activityItems = useGuiControlActivity(controlSessionId);
 
   const placeholder =
@@ -340,6 +344,10 @@ export function GuiControlToggle(): React.ReactNode {
   });
 
   const showVoiceUi = voiceFeatureEnabled && voice.isRecording;
+
+  useEffect(() => {
+    setActivityCursor(0);
+  }, [activityItems.length]);
 
   const handleInputBlur = useCallback(() => undefined, []);
 
@@ -436,8 +444,23 @@ export function GuiControlToggle(): React.ReactNode {
   const handleRefreshSession = useCallback(() => {
     controlSessionIdRef.current = null;
     setControlSessionId(null);
+    setActivityCursor(0);
     setRunStatus("idle");
     requestAnimationFrame(() => composerInputRef.current?.focus());
+  }, []);
+
+  const handlePreviousActivity = useCallback(() => {
+    setActivityCursor((currentCursor) =>
+      Math.min(currentCursor + 1, Math.max(activityItems.length - 1, 0))
+    );
+  }, [activityItems.length]);
+
+  const handleNextActivity = useCallback(() => {
+    setActivityCursor((currentCursor) => Math.max(currentCursor - 1, 0));
+  }, []);
+
+  const handleLatestActivity = useCallback(() => {
+    setActivityCursor(0);
   }, []);
 
   const handleOpenModelSelector = useCallback(() => {
@@ -509,13 +532,16 @@ export function GuiControlToggle(): React.ReactNode {
         ? t("status.error")
         : t("status.running");
   const showStatusLine = runStatus !== "idle" || Boolean(controlSessionId);
-  const latestActivity = activityItems[0];
+  const latestActivity = activityItems[activityCursor];
+  const hasPreviousActivity = activityCursor < activityItems.length - 1;
+  const hasNextActivity = activityCursor > 0;
   const closeShortcut = getShortcutKeys(GUI_CONTROL_TOGGLE_SHORTCUT_ID);
 
   return (
     <div
       ref={containerRef}
       className="fixed inset-x-0 bottom-0 z-[70] flex flex-col items-center px-6 pb-6 pt-16"
+      data-guide-target={GUIDE_TARGETS.GUI_CONTROL_COMPOSER}
     >
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-bg-1 via-bg-1/70 to-transparent"
@@ -543,15 +569,14 @@ export function GuiControlToggle(): React.ReactNode {
             <Button
               variant="tertiary"
               size="mini"
-              shape="round"
+              shape="circle"
               htmlType="button"
               icon={<X size={12} strokeWidth={1.75} />}
+              iconOnly
               aria-label={t("actions.close")}
-              className="bg-bg-2/90 px-2.5 shadow-sm backdrop-blur enabled:hover:bg-fill-3 enabled:hover:text-text-1"
+              className="bg-bg-2/90 shadow-sm backdrop-blur enabled:hover:bg-fill-3 enabled:hover:text-text-1"
               onClick={handleClose}
-            >
-              {t("actions.close")}
-            </Button>
+            />
           </span>
         </Tooltip>
         <Button
@@ -566,38 +591,65 @@ export function GuiControlToggle(): React.ReactNode {
         >
           {t("guiControl.newRound")}
         </Button>
+        <Button
+          variant="tertiary"
+          size="mini"
+          shape="circle"
+          htmlType="button"
+          icon={<ChevronLeft size={12} strokeWidth={1.75} />}
+          iconOnly
+          disabled={!hasPreviousActivity}
+          aria-label={t("actions.previous")}
+          className="bg-bg-2/90 shadow-sm backdrop-blur enabled:hover:bg-fill-3 enabled:hover:text-text-1"
+          onClick={handlePreviousActivity}
+        />
+        <Button
+          variant="tertiary"
+          size="mini"
+          shape="circle"
+          htmlType="button"
+          icon={<ChevronRight size={12} strokeWidth={1.75} />}
+          iconOnly
+          disabled={!hasNextActivity}
+          aria-label={t("actions.next")}
+          className="bg-bg-2/90 shadow-sm backdrop-blur enabled:hover:bg-fill-3 enabled:hover:text-text-1"
+          onClick={handleNextActivity}
+        />
+        <Button
+          variant="tertiary"
+          size="mini"
+          shape="circle"
+          htmlType="button"
+          icon={<ChevronsRight size={12} strokeWidth={1.75} />}
+          iconOnly
+          disabled={!hasNextActivity}
+          aria-label={t("actions.next")}
+          className="bg-bg-2/90 shadow-sm backdrop-blur enabled:hover:bg-fill-3 enabled:hover:text-text-1"
+          onClick={handleLatestActivity}
+        />
       </div>
       {showStatusLine && (
         <div
           className="pointer-events-auto z-10 mb-2 rounded-2xl border border-border-2 bg-bg-2 px-3 py-2 text-[12px] text-text-2 shadow-sm backdrop-blur"
           style={{ width: "min(600px, calc(100vw - 48px))" }}
         >
-          <div className="flex items-start gap-2">
-            <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-1 text-primary-6">
-              <MousePointerClick size={13} strokeWidth={1.8} />
-            </span>
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex items-center gap-1.5 text-text-1">
-                {latestActivity?.status === "running" && (
-                  <Loader2
-                    size={12}
-                    strokeWidth={1.8}
-                    className="animate-spin"
-                  />
-                )}
-                {latestActivity?.status === "failed" && (
-                  <XCircle size={12} strokeWidth={1.8} />
-                )}
-                {latestActivity?.status === "completed" && (
-                  <CheckCircle2 size={12} strokeWidth={1.8} />
-                )}
-                <span className="font-medium">
-                  {latestActivity?.title ?? statusLabel}
-                </span>
-              </div>
-              <div className="whitespace-normal break-words leading-5">
-                {latestActivity?.detail ?? controlModelLabel}
-              </div>
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-1.5 text-text-1">
+              {latestActivity?.status === "running" && (
+                <Loader2 size={12} strokeWidth={1.8} className="animate-spin" />
+              )}
+              {latestActivity?.status === "failed" && (
+                <XCircle size={12} strokeWidth={1.8} />
+              )}
+              {latestActivity?.status === "completed" && (
+                <CheckCircle2 size={12} strokeWidth={1.8} />
+              )}
+              <span className="font-medium">
+                {latestActivity?.title ?? statusLabel}
+              </span>
+            </div>
+            <div className="whitespace-normal break-words leading-5">
+              {latestActivity?.detail ?? controlModelLabel}
             </div>
           </div>
         </div>

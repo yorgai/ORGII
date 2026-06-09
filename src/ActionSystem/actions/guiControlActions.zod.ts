@@ -4,6 +4,14 @@ import { ACTION_ID } from "@src/ActionSystem/actionIds";
 import { defineAppActionRegistration } from "@src/ActionSystem/schema/actionRegistration";
 import { defineZodAction } from "@src/ActionSystem/schema/defineZodAction";
 import { zodActionRegistry } from "@src/ActionSystem/schema/zodRegistry";
+import { GUIDE_TARGETS } from "@src/scaffold/Tutorials/guideTargets";
+import { TUTORIALS } from "@src/scaffold/Tutorials/tutorialRegistry";
+import { collectAppUiSnapshot } from "@src/services/context/appUiSnapshot";
+import {
+  clearGuideHighlightAtom,
+  showGuideHighlightAtom,
+} from "@src/store/ui/guideHighlightAtom";
+import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
 const GUI_CONTROL_SELECTOR = [
   "button",
@@ -67,6 +75,8 @@ interface GuiManifest {
     typeof zodActionRegistry.getGUIControlManifest
   >["actions"];
   controls: GuiManifestDomControl[];
+  guides: typeof TUTORIALS;
+  guideTargets: Array<{ id: string; label: string }>;
 }
 
 function truncateText(value: string): string {
@@ -251,10 +261,19 @@ function collectGuiActions(query?: string): GuiManifest["actions"] {
     .slice(0, MAX_ACTIONS);
 }
 
+function buildGuideTargets(): GuiManifest["guideTargets"] {
+  return Object.values(GUIDE_TARGETS).map((id) => ({
+    id,
+    label: id,
+  }));
+}
+
 function buildGuiManifest(query?: string): GuiManifest {
   return {
     actions: collectGuiActions(query),
     controls: collectDomControls(query),
+    guides: TUTORIALS,
+    guideTargets: buildGuideTargets(),
   };
 }
 
@@ -294,6 +313,22 @@ const GuiInspectParamsSchema = z.object({
     .optional()
     .describe("Optional text filter for actions and visible controls"),
 });
+
+const GuiContextParamsSchema = z.object({});
+
+const GuideListParamsSchema = z.object({});
+
+const GuideStartParamsSchema = z.object({
+  guideId: z.enum(["general-layout", "code-editor"]).describe("Guide to start"),
+});
+
+const GuideHighlightTargetParamsSchema = z.object({
+  targetId: z.string().describe("Stable guide target ID to highlight"),
+  title: z.string().optional().describe("Optional highlight title"),
+  message: z.string().describe("Short user-facing guide message"),
+});
+
+const GuideClearHighlightParamsSchema = z.object({});
 
 const GuiExecuteParamsSchema = z.object({
   targetKind: z.enum(["action", "dom"]),
@@ -335,6 +370,105 @@ export const guiInspectAction = defineZodAction(
     message: "Collected GUI manifest",
     data: buildGuiManifest(query),
   })
+);
+
+export const guiContextAction = defineZodAction(
+  {
+    id: ACTION_ID.GUI_CONTEXT,
+    category: "app",
+    description:
+      "Inspect the current ORGII UI context: route, station, active tab, active session, browser URL, chat surface, overlays, and visible guide targets",
+    params: GuiContextParamsSchema,
+    layer: "gui",
+    tags: ["gui", "context", "route", "station", "tab", "session", "url"],
+    examples: [
+      "what screen is selected",
+      "which station and tab are active",
+      "what URL is open",
+    ],
+  },
+  async () => ({
+    success: true,
+    message: "Collected GUI context",
+    data: collectAppUiSnapshot(),
+  })
+);
+
+export const guideListAction = defineZodAction(
+  {
+    id: ACTION_ID.GUIDE_LIST,
+    category: "app",
+    description: "List available tutorials and stable guide highlight targets",
+    params: GuideListParamsSchema,
+    layer: "gui",
+    tags: ["guide", "tutorial", "highlight", "targets"],
+    examples: ["what tutorials are available", "what can you highlight"],
+  },
+  async () => ({
+    success: true,
+    message: "Collected guide registry",
+    data: {
+      guides: TUTORIALS,
+      guideTargets: buildGuideTargets(),
+      visibleGuideTargets: collectAppUiSnapshot()?.visibleGuideTargets ?? [],
+    },
+  })
+);
+
+export const guideStartAction = defineZodAction(
+  {
+    id: ACTION_ID.GUIDE_START,
+    category: "app",
+    description: "Start an interactive built-in tutorial",
+    params: GuideStartParamsSchema,
+    layer: "gui",
+    tags: ["guide", "tutorial", "tour", "start"],
+    examples: ["start the layout tour", "guide me through code editor"],
+  },
+  async ({ guideId }) => {
+    const tutorial = TUTORIALS.find((entry) => entry.id === guideId);
+    if (!tutorial) {
+      return { success: false, message: `Unknown guide: ${guideId}` };
+    }
+    window.dispatchEvent(new CustomEvent(tutorial.eventName));
+    return { success: true, message: `Started guide: ${tutorial.title}` };
+  }
+);
+
+export const guideHighlightTargetAction = defineZodAction(
+  {
+    id: ACTION_ID.GUIDE_HIGHLIGHT_TARGET,
+    category: "app",
+    description:
+      "Highlight a stable UI target and show a short guide message to the user",
+    params: GuideHighlightTargetParamsSchema,
+    layer: "gui",
+    tags: ["guide", "highlight", "target", "tutorial"],
+    examples: ["highlight the chat panel", "show where the dock is"],
+  },
+  async ({ targetId, title, message }) => {
+    getInstrumentedStore().set(showGuideHighlightAtom, {
+      targetId,
+      title,
+      message,
+    });
+    return { success: true, message: `Highlighted ${targetId}` };
+  }
+);
+
+export const guideClearHighlightAction = defineZodAction(
+  {
+    id: ACTION_ID.GUIDE_CLEAR_HIGHLIGHT,
+    category: "app",
+    description: "Clear the current guide highlight overlay",
+    params: GuideClearHighlightParamsSchema,
+    layer: "gui",
+    tags: ["guide", "highlight", "clear", "dismiss"],
+  },
+  async () => {
+    getInstrumentedStore().set(clearGuideHighlightAtom);
+    return { success: true, message: "Cleared guide highlight" };
+  }
 );
 
 export const guiExecuteAction = defineZodAction(
@@ -425,7 +559,15 @@ export const guiExecuteAction = defineZodAction(
   }
 );
 
-export const guiControlZodActions = [guiInspectAction, guiExecuteAction];
+export const guiControlZodActions = [
+  guiInspectAction,
+  guiContextAction,
+  guiExecuteAction,
+  guideListAction,
+  guideStartAction,
+  guideHighlightTargetAction,
+  guideClearHighlightAction,
+];
 
 export const guiControlActionRegistration =
   defineAppActionRegistration(guiControlZodActions);

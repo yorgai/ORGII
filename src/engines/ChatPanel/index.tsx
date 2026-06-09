@@ -18,6 +18,7 @@ import { useWorkStationTabs } from "@src/hooks/workStation/tabs";
 import { allAgentDefsAtom } from "@src/modules/MainApp/AgentOrgs/store/builtInAgentsAtom";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
 import { VerticalResizeHandle } from "@src/scaffold/Resize";
+import { GUIDE_TARGETS } from "@src/scaffold/Tutorials";
 import { benchmarkAgentBatchStatusAtom } from "@src/store/benchmark";
 import { projectListRefreshAtom } from "@src/store/project/projectAtom";
 import { currentRepoAtom } from "@src/store/repo";
@@ -547,6 +548,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         ref={panelRef}
         data-chat-panel
         data-testid="chat-panel"
+        data-guide-target={GUIDE_TARGETS.CHAT_PANEL}
         className={`relative flex h-full max-w-full flex-col overflow-hidden bg-chat-pane text-sm ${
           useExternalWidth ? "min-w-0 flex-1" : "flex-shrink-0"
         } ${borderClasses}`}

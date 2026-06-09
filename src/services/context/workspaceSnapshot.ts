@@ -5,7 +5,17 @@
  * Kept in a dependency-free module so `api/tauri/agent/types` and RPC schemas
  * do not import `collectors/IdeContextCollector` (which pulls Jotai stores).
  */
+import type { DispatchCategory, KeySource } from "@src/api/tauri/session";
+import type { CliAgentType } from "@src/api/types/keys";
 import type { TechSavvyLevel } from "@src/config/profile/userProfile";
+import type { ViewModeType } from "@src/config/viewModeTypes";
+import type { ChatPanelSurfaceKind } from "@src/store/ui/chatPanelAtom";
+import type { StationMode } from "@src/store/ui/simulatorAtom";
+import type { StatusBarAppType } from "@src/store/ui/workStationLayout/statusBarAtoms";
+import type {
+  WorkStationTabCategory,
+  WorkStationTabType,
+} from "@src/store/workstation/tabs";
 import type { UserPresenceWire } from "@src/types/userPresence";
 
 export interface UserProfileWire {
@@ -13,6 +23,72 @@ export interface UserProfileWire {
   jobRoles?: string[];
   familiarTechStacks?: string[];
   description?: string;
+}
+
+export interface GuideTargetSnapshot {
+  id: string;
+  label: string;
+  bounds: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
+
+export interface AppUiSnapshot {
+  route?: {
+    pathname: string;
+    search: string;
+    hash: string;
+    href: string;
+    viewMode: ViewModeType;
+  };
+  workstation?: {
+    stationMode: StationMode;
+    activeApp: StatusBarAppType;
+    browserUrl?: string;
+    browserIsLoading?: boolean;
+    browserIsPrivate?: boolean;
+    browserSessionCount?: number;
+    browserCurrentSessionIndex?: number;
+    projectName?: string;
+    projectSlug?: string;
+    activeTab?: {
+      id: string;
+      type: WorkStationTabType;
+      category?: WorkStationTabCategory;
+      title: string;
+      filePath?: string;
+      url?: string;
+      sessionId?: string;
+      projectId?: string;
+      projectName?: string;
+    };
+  };
+  session?: {
+    activeSessionId: string | null;
+    workstationActiveSessionId: string | null;
+    name?: string;
+    status?: string;
+    category?: DispatchCategory;
+    repoPath?: string;
+    model?: string;
+    agentExecMode?: string;
+    cliAgentType?: CliAgentType;
+    keySource?: KeySource;
+  };
+  chatPanel?: {
+    visible: boolean;
+    maximized: boolean;
+    surface: ChatPanelSurfaceKind;
+  };
+  overlays?: {
+    spotlightOpen: boolean;
+    guiControlEnabled: boolean;
+    guiControlComposerOpen: boolean;
+  };
+  visibleGuideTargets?: GuideTargetSnapshot[];
 }
 
 export interface WorkspaceSnapshot {
@@ -35,4 +111,10 @@ export interface WorkspaceSnapshot {
    * so the agent can calibrate explanations and examples to the user.
    */
   userProfile?: UserProfileWire;
+  /**
+   * Current ORGII UI state: selected route, WorkStation station/app/tab,
+   * active session, chat-panel surface, visible guide targets, and overlay
+   * state. Used by GUI-control agents to reason about what the user is seeing.
+   */
+  appUi?: AppUiSnapshot;
 }

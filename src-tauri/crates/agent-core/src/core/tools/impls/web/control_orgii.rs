@@ -133,7 +133,7 @@ impl Tool for OrgiiControlTool {
     }
 
     fn description(&self) -> &str {
-        "Inspect and control the ORGII GUI through the frontend ActionSystem. Prefer action=gui.inspect to discover registered actions and visible controls, then action=gui.execute or a direct registered action to execute one."
+        "Inspect and control the ORGII GUI through the frontend ActionSystem. Prefer action=gui.context for current route/station/tab/session/URL state, action=gui.inspect to discover registered actions and visible controls, guide.* actions for tutorials/highlights, then action=gui.execute or a direct registered action to execute one."
     }
 
     fn parameters(&self) -> Value {
@@ -147,7 +147,7 @@ impl Tool for OrgiiControlTool {
                 },
                 "action": {
                     "type": "string",
-                    "description": "Registered frontend ActionSystem action ID. Use gui.inspect to discover actions/controls, gui.execute to execute a manifest target, or an exact registered action ID for obvious actions."
+                    "description": "Registered frontend ActionSystem action ID. Use gui.context to inspect current route/station/tab/session/URL state, gui.inspect to discover actions/controls/guides, guide.* for tutorials/highlights, gui.execute to execute a manifest target, or an exact registered action ID for obvious actions."
                 },
                 "query": {
                     "type": "string",
