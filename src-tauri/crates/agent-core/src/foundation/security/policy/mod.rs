@@ -1,10 +1,8 @@
 //! Security policy for command and path validation.
 //!
-//! Provides defense-in-depth for tool execution using a blacklist + confirmation model:
-//! - `blocked_commands`: Always denied (blacklist)
-//! - `confirmation_commands`: Require user approval via PermissionCard
-//! - Risk classification for additional safety checks
-//! - Rate limiting and path traversal prevention
+//! Provides defense-in-depth for tool execution using blocked commands, optional
+//! explicit confirmation patterns, risk classification, rate limiting, and path
+//! traversal prevention.
 
 mod paths;
 mod risk;
@@ -93,11 +91,8 @@ pub enum ValidationResult {
 
 /// Execution-time security policy for agent tools.
 ///
-/// Uses a blacklist + confirmation model:
-/// - `blocked_commands`: Always denied
-/// - `confirmation_commands`: Require user approval
-/// - Always-ask commands: Require approval
-/// - Everything else: Allowed within the selected access mode
+/// Uses blocked base commands, optional explicit confirmation patterns,
+/// risk classification, and rate limiting.
 pub struct SecurityPolicy {
     pub autonomy: AutonomyLevel,
     pub workspace_dir: PathBuf,
@@ -312,7 +307,7 @@ impl SecurityPolicy {
             return ValidationResult::Denied(reason);
         }
 
-        // Step 2: Check confirmation list — these commands always require approval.
+        // Step 2: Check explicit confirmation patterns.
         if !approved {
             if let Some(reason) = self.requires_confirmation(command) {
                 let risk = self.command_risk_level(command);
@@ -568,13 +563,30 @@ mod tests {
     }
 
     #[test]
-    fn full_autonomy_still_requires_confirmation_list_approval() {
+    fn configured_forbidden_path_denies_access() {
         let policy = SecurityPolicy::new(
             AutonomyLevel::Full,
             std::env::temp_dir(),
             false,
             Vec::new(),
-            vec!["git push".to_string()],
+            Vec::new(),
+            vec!["~/.ssh".to_string()],
+            100,
+            false,
+            CommandRiskRules::default(),
+        );
+
+        assert!(policy.is_path_allowed("~/.ssh/config").is_err());
+    }
+
+    #[test]
+    fn full_autonomy_allows_plain_git_push_by_default() {
+        let policy = SecurityPolicy::new(
+            AutonomyLevel::Full,
+            std::env::temp_dir(),
+            false,
+            Vec::new(),
+            Vec::new(),
             Vec::new(),
             100,
             false,
@@ -583,7 +595,7 @@ mod tests {
 
         assert!(matches!(
             policy.validate_command_execution("git push origin main", false),
-            ValidationResult::NeedsApproval(_, _)
+            ValidationResult::Allowed(CommandRiskLevel::Low)
         ));
     }
 

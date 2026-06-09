@@ -85,9 +85,8 @@ export interface CommandRiskRules {
 
 /** Per-agent unified policy. Mirrors the backend Rust `AgentPolicy`
  *  struct field-for-field. The runtime fields (`confirmation_commands`,
- *  `forbidden_paths`, `max_actions_per_hour`, `block_high_risk_commands`)
- *  are policy invariants supplied at session launch and intentionally
- *  not editable per agent.
+ *  `max_actions_per_hour`, `block_high_risk_commands`) are policy invariants
+ *  supplied at session launch and intentionally not editable per agent.
  *
  *  Tool allow/deny is NOT carried here — it lives entirely on
  *  `AgentDefinition.tools.excludedTools` (per-agent name-based deny)
@@ -99,6 +98,8 @@ export interface AgentPolicy {
   workspaceOnly?: boolean;
   /** Commands always blocked (blacklist) */
   blockedCommands?: string[];
+  /** Filesystem paths that file and shell tools cannot access */
+  forbiddenPaths?: string[];
   /** User-configurable always-ask/block shell command policy rules */
   riskRules?: CommandRiskRules;
 }

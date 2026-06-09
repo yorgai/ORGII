@@ -6,10 +6,7 @@ use super::policy::CommandRiskRules;
 
 /// Security policy configuration for agent tool execution.
 ///
-/// Uses a blacklist + confirmation model:
-/// - `blocked_commands`: Always denied (blacklist)
-/// - `confirmation_commands`: Require user approval via PermissionCard
-/// - Everything else: Allowed (based on risk classification)
+/// Uses blocked base commands plus risk classification for approval/denial.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SecurityConfig {
@@ -22,8 +19,8 @@ pub struct SecurityConfig {
     /// Commands that are always blocked (blacklist). Matches base command name.
     #[serde(default = "default_blocked_commands")]
     pub blocked_commands: Vec<String>,
-    /// Commands that require user confirmation before execution.
-    #[serde(default = "default_confirmation_commands")]
+    /// Additional explicit confirmation patterns; built-in approvals come from risk rules.
+    #[serde(default)]
     pub confirmation_commands: Vec<String>,
     /// Forbidden filesystem paths (absolute or ~/relative).
     #[serde(default = "default_forbidden_paths")]
@@ -46,53 +43,8 @@ fn default_blocked_commands() -> Vec<String> {
         .collect()
 }
 
-fn default_confirmation_commands() -> Vec<String> {
-    vec![
-        "rm -rf",
-        "rm -fr",
-        "rm -Rf",
-        "rm -r -f",
-        "dd",
-        "reboot",
-        "halt",
-        "poweroff",
-        "su",
-        "wget",
-        "nc",
-        "ncat",
-        "ssh",
-        "scp",
-        "ftp",
-        "telnet",
-        "git clean",
-        "git reset --hard",
-        "git push --force",
-        "git push --force-with-lease",
-        "git push --delete",
-        "git branch -D",
-        "git stash drop",
-        "git stash clear",
-    ]
-    .into_iter()
-    .map(String::from)
-    .collect()
-}
-
 fn default_forbidden_paths() -> Vec<String> {
-    vec![
-        "/etc",
-        "/root",
-        "/proc",
-        "/sys",
-        "/dev",
-        "~/.ssh",
-        "~/.gnupg",
-        "~/.aws",
-        "~/.config/gcloud",
-    ]
-    .into_iter()
-    .map(String::from)
-    .collect()
+    Vec::new()
 }
 
 fn default_max_actions_per_hour() -> u32 {
@@ -105,7 +57,7 @@ impl Default for SecurityConfig {
             autonomy: super::AutonomyLevel::Full,
             workspace_only: true,
             blocked_commands: default_blocked_commands(),
-            confirmation_commands: default_confirmation_commands(),
+            confirmation_commands: Vec::new(),
             forbidden_paths: default_forbidden_paths(),
             max_actions_per_hour: default_max_actions_per_hour(),
             block_high_risk_commands: true,

@@ -127,10 +127,9 @@ pub enum AgentTier {
 ///
 /// The runtime execution policy (`foundation::security::SecurityPolicy`)
 /// is built from this at session launch via `to_runtime_security`;
-/// defaults for the richer runtime fields (`confirmation_commands`,
-/// `forbidden_paths`, `max_actions_per_hour`, `block_high_risk_commands`)
-/// are applied at conversion time — they are policy invariants rather
-/// than per-agent configuration.
+/// defaults for runtime-only fields (`max_actions_per_hour`,
+/// `block_high_risk_commands`) are applied at conversion time — they are
+/// policy invariants rather than per-agent configuration.
 ///
 /// Tool allow/deny is NOT carried here — it lives entirely on
 /// `AgentDefinition.tools.excludedTools` (per-agent name-based deny
@@ -151,6 +150,10 @@ pub struct AgentPolicy {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub blocked_commands: Vec<String>,
 
+    /// User-configurable forbidden filesystem paths.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub forbidden_paths: Vec<String>,
+
     /// User-configurable medium/high risk command classification rules.
     #[serde(default)]
     pub risk_rules: CommandRiskRules,
@@ -160,10 +163,9 @@ impl AgentPolicy {
     /// Build a runtime [`SecurityPolicy`] for this policy at session launch.
     ///
     /// The agent-level fields (`autonomy`, `workspace_only`,
-    /// `blocked_commands`) ride on `AgentPolicy`, and the
-    /// session-invariant defaults
-    /// (`confirmation_commands`, `forbidden_paths`, `max_actions_per_hour`,
-    /// `block_high_risk_commands`) are supplied here.
+    /// `blocked_commands`, `forbidden_paths`) ride on `AgentPolicy`;
+    /// runtime-only defaults (`max_actions_per_hour`, `block_high_risk_commands`)
+    /// are supplied here.
     pub fn to_runtime_security(
         &self,
         workspace_dir: std::path::PathBuf,
@@ -175,47 +177,13 @@ impl AgentPolicy {
             workspace_dir,
             self.workspace_only,
             self.blocked_commands.clone(),
-            default_confirmation_commands(),
-            default_forbidden_paths(),
+            Vec::new(),
+            self.forbidden_paths.clone(),
             default_max_actions_per_hour(),
             true, // block_high_risk_commands — invariant across agents
             self.risk_rules.clone(),
         )
     }
-}
-
-fn default_confirmation_commands() -> Vec<String> {
-    [
-        "git push",
-        "gh pr",
-        "gh issue",
-        "gh release",
-        "npm publish",
-        "yarn publish",
-        "pnpm publish",
-        "cargo publish",
-        "twine upload",
-    ]
-    .into_iter()
-    .map(String::from)
-    .collect()
-}
-
-fn default_forbidden_paths() -> Vec<String> {
-    [
-        "/etc",
-        "/root",
-        "/proc",
-        "/sys",
-        "/dev",
-        "~/.ssh",
-        "~/.gnupg",
-        "~/.aws",
-        "~/.config/gcloud",
-    ]
-    .into_iter()
-    .map(String::from)
-    .collect()
 }
 
 fn default_max_actions_per_hour() -> u32 {

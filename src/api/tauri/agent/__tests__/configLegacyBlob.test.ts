@@ -50,6 +50,7 @@ function makeOsDef(
       autonomy: "full",
       workspaceOnly: false,
       blockedCommands: ["rm -rf"],
+      forbiddenPaths: ["~/.ssh"],
     },
     tools: {
       excludedTools: ["pre-existing"],
@@ -131,9 +132,10 @@ describe("assembleAgentConfigBlob — OS kind", () => {
     });
   });
 
-  it("defaults command risk rules into the security blob", () => {
+  it("defaults command risk rules and forbidden paths into the security blob", () => {
     const blob = assembleOs(makeOsDef({ agentPolicy: {} }));
     expect(blob.security).toMatchObject({
+      forbiddenPaths: [],
       riskRules: {
         medium: [...RUST_DEFAULT_COMMAND_RISK_RULES.medium],
         high: [...RUST_DEFAULT_COMMAND_RISK_RULES.high],
@@ -160,14 +162,17 @@ describe("assembleAgentConfigBlob — OS kind", () => {
     });
   });
 
-  it("forwards security.riskRules through extractAgentDefPatch", () => {
+  it("forwards security policy lists through extractAgentDefPatch", () => {
     const blob = assembleOs();
-    (blob.security as Record<string, unknown>).riskRules = {
+    const security = blob.security as Record<string, unknown>;
+    security.forbiddenPaths = ["~/.ssh", "C:\\Users\\you\\.ssh"];
+    security.riskRules = {
       medium: ["git status"],
       high: ["curl"],
     };
     const patch = extractAgentDefPatch(blob);
     expect(patch.agentPolicy).toMatchObject({
+      forbiddenPaths: ["~/.ssh", "C:\\Users\\you\\.ssh"],
       riskRules: {
         medium: ["git status"],
         high: ["curl"],

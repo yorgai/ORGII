@@ -3,11 +3,9 @@
  *
  * Surfaces the per-agent fields that exist on the backend `AgentPolicy`
  * struct: autonomy, workspace-only restriction, blocked-command blacklist,
- * and medium/high command risk rules. Confirmation commands, forbidden paths,
+ * forbidden paths, and medium/high command risk rules. Confirmation commands,
  * max actions per hour, and the security-list master switch are policy
- * invariants (filled in by `AgentPolicy::to_runtime_security`) — surfacing
- * them as editable controls would silently drop the user's value, so they are
- * intentionally not exposed.
+ * invariants filled in by `AgentPolicy::to_runtime_security`.
  *
  * Returns content only — parent wraps in SectionHeading.
  */
@@ -97,6 +95,10 @@ const SecuritySection: React.FC<SecuritySectionProps> = ({
     config,
     "security.blockedCommands"
   );
+  const forbiddenPaths = getNestedStringArray(
+    config,
+    "security.forbiddenPaths"
+  );
   const alwaysAskCommands = getNestedStringArray(
     config,
     "security.riskRules.medium"
@@ -114,6 +116,13 @@ const SecuritySection: React.FC<SecuritySectionProps> = ({
     (val: string) => {
       update("security.blockedCommands", []);
       update("security.riskRules.high", parseLines(val));
+    },
+    [update]
+  );
+
+  const handleSaveForbiddenPaths = useCallback(
+    (val: string) => {
+      update("security.forbiddenPaths", parseLines(val));
     },
     [update]
   );
@@ -203,7 +212,27 @@ const SecuritySection: React.FC<SecuritySectionProps> = ({
         </SectionRow>
       </SectionContainer>
 
-      <SectionContainer>
+      <SectionContainer title={t("sharedAgentConfig.security.pathPolicyTitle")}>
+        <SectionRow
+          label={t("sharedAgentConfig.security.forbiddenPaths")}
+          description={t("sharedAgentConfig.security.forbiddenPathsDesc")}
+          layout="vertical"
+        >
+          <SaveableTextarea
+            value={forbiddenPaths.join("\n")}
+            onSave={handleSaveForbiddenPaths}
+            placeholder={t(
+              "sharedAgentConfig.security.forbiddenPathsPlaceholder"
+            )}
+            dataTestId="agent-orgs-security-forbidden-paths-textarea"
+            saveButtonDataTestId="agent-orgs-security-forbidden-paths-save-button"
+          />
+        </SectionRow>
+      </SectionContainer>
+
+      <SectionContainer
+        title={t("sharedAgentConfig.security.resetPolicyTitle")}
+      >
         <SectionRow
           label={t("sharedAgentConfig.security.resetRiskRules")}
           description={t("sharedAgentConfig.security.resetRiskRulesDesc")}

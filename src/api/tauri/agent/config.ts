@@ -132,6 +132,7 @@ export function assembleAgentConfigBlob(
       autonomy: agentPolicy.autonomy ?? "full",
       workspaceOnly: agentPolicy.workspaceOnly ?? false,
       blockedCommands: agentPolicy.blockedCommands ?? [],
+      forbiddenPaths: agentPolicy.forbiddenPaths ?? [],
       riskRules: riskRulesForBlob(agentPolicy.riskRules, defaultRiskRules),
     },
 
@@ -301,6 +302,8 @@ function buildAgentPolicyPatch(
     merged.workspaceOnly = security.workspaceOnly;
   if ("blockedCommands" in security)
     merged.blockedCommands = security.blockedCommands;
+  if ("forbiddenPaths" in security)
+    merged.forbiddenPaths = security.forbiddenPaths;
   if ("riskRules" in security) merged.riskRules = security.riskRules;
 
   return merged;
