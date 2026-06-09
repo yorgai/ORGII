@@ -9,7 +9,7 @@
  * (`stationMode === "agent-station"`) AND the chat panel is NOT maximized,
  * the agent simulator is rendered alongside the chat and already shows the
  * full message. In that layout, we clamp the message in the chat panel to
- * a 10-line preview with the same expand-overlay pill that TerminalBlock
+ * a 20-line preview with the same expand-overlay pill that TerminalBlock
  * uses, so long replies don't push the user's eye away from the simulator.
  *
  * In every other layout (chat-panel maximized, or any non-agent-station
@@ -40,11 +40,10 @@ import { useBlockHeader } from "../useBlockLocate";
 // bar floating over the message.
 const CHAT_PANE_FADE_FROM = "from-chat-pane";
 
-// Ten lines at ~24px line-height — twice TerminalBlock's collapsed preview
-// (120px). Agent prose carries more signal per line than terminal output,
-// so a deeper preview keeps short-to-medium replies fully visible without
-// triggering the fade.
-const AGENT_MESSAGE_PREVIEW_MAX_HEIGHT = 240;
+// Twenty lines at ~24px line-height. Agent prose carries more signal per
+// line than terminal output, so a deeper preview keeps short-to-medium
+// replies fully visible without triggering the fade.
+const AGENT_MESSAGE_PREVIEW_MAX_HEIGHT = 480;
 
 export interface AgentMessageBlockProps {
   children: React.ReactNode;
