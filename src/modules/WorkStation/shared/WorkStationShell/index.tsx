@@ -96,9 +96,11 @@ export const WorkStationShell: React.FC<WorkStationShellProps> = memo(
         primarySidebarConfig?.resetSize ??
         DEFAULT_PRIMARY_SIDEBAR_CONFIG.resetSize,
       onClose: primarySidebarConfig?.onClose,
+      onPositionChange: primarySidebarConfig?.onPositionChange,
     };
 
     const isLeftMode = layoutMode === "left";
+    const primarySidebarTargetPosition = isLeftMode ? "right" : "left";
 
     // ------------------------------------------------------------------
     // Primary sidebar resize
@@ -120,6 +122,16 @@ export const WorkStationShell: React.FC<WorkStationShellProps> = memo(
       defaultSize: resolvedPrimarySidebar.resetSize,
       minSize: resolvedPrimarySidebar.minSize,
       onSizeChange: resolvedPrimarySidebar.onSizeChange ?? noop,
+      positionAction: resolvedPrimarySidebar.onPositionChange
+        ? {
+            target: primarySidebarTargetPosition,
+            onSelect: () => {
+              resolvedPrimarySidebar.onPositionChange?.(
+                primarySidebarTargetPosition
+              );
+            },
+          }
+        : undefined,
       onClose: resolvedPrimarySidebar.onClose,
     });
 

@@ -18,6 +18,11 @@ import {
 import i18next from "i18next";
 import { type MouseEvent, useCallback } from "react";
 
+export interface ResizeContextMenuPositionAction {
+  target: "left" | "right";
+  onSelect: () => void;
+}
+
 export interface UseResizeContextMenuOptions {
   /** "width" for horizontal resize (left/right panels), "height" for vertical (bottom panel) */
   dimension: "width" | "height";
@@ -29,6 +34,8 @@ export interface UseResizeContextMenuOptions {
   minSize: number;
   /** Callback to apply the new size */
   onSizeChange: (size: number) => void;
+  /** Optional left/right placement action shown after resize commands */
+  positionAction?: ResizeContextMenuPositionAction;
   /** Callback when user selects "Close panel" — shows a separator + close item when provided */
   onClose?: () => void;
 }
@@ -50,6 +57,7 @@ export function useResizeContextMenu({
   defaultSize,
   minSize,
   onSizeChange,
+  positionAction,
   onClose,
 }: UseResizeContextMenuOptions) {
   const handleContextMenu = useCallback(
@@ -89,6 +97,21 @@ export function useResizeContextMenu({
             | Awaited<ReturnType<typeof PredefinedMenuItem.new>>
           > = [resizeDefaultItem, minimizeItem];
 
+          if (positionAction) {
+            const positionSeparator = await PredefinedMenuItem.new({
+              item: "Separator",
+            });
+            const positionItem = await MenuItem.new({
+              text: i18next.t(
+                positionAction.target === "left"
+                  ? "spotlightActions.moveWorkstationSidebarLeft"
+                  : "spotlightActions.moveWorkstationSidebarRight"
+              ),
+              action: positionAction.onSelect,
+            });
+            items.push(positionSeparator, positionItem);
+          }
+
           if (onClose) {
             const closeSeparator = await PredefinedMenuItem.new({
               item: "Separator",
@@ -109,7 +132,15 @@ export function useResizeContextMenu({
         }
       })();
     },
-    [dimension, currentSize, defaultSize, minSize, onSizeChange, onClose]
+    [
+      dimension,
+      currentSize,
+      defaultSize,
+      minSize,
+      onSizeChange,
+      positionAction,
+      onClose,
+    ]
   );
 
   return handleContextMenu;

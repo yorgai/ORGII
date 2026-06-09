@@ -356,6 +356,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
           size: sidebarVisible ? panels.primarySidebarWidth : 0,
           onSizeChange: panels.setPrimarySidebarWidth,
           onClose: panels.closePrimarySidebar,
+          onPositionChange: panels.setLayoutMode,
           minSize: 240,
           maxSize: 500,
           resetSize: CODE_EDITOR_CONFIG.defaultTreeWidth,
@@ -366,6 +367,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
         panels.primarySidebarWidth,
         panels.setPrimarySidebarWidth,
         panels.closePrimarySidebar,
+        panels.setLayoutMode,
       ]
     );
 

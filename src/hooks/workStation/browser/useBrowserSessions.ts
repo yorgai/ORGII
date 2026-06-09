@@ -22,6 +22,7 @@ import {
   workStationBrowserSidebarCollapsedAtom,
   workStationBrowserSidebarCollapsedPersistAtom,
   workStationLayoutModeAtom,
+  workStationLayoutModePersistAtom,
   workStationPrimarySidebarWidthAtom,
   workStationPrimarySidebarWidthPersistAtom,
 } from "@src/store/ui/workStationAtom";
@@ -36,6 +37,7 @@ export interface UseBrowserSessionsReturn {
 
   // Panel state
   layoutMode: "left" | "right";
+  setLayoutMode: (value: "left" | "right") => void;
   primarySidebarCollapsed: boolean;
   setPrimarySidebarCollapsed: (value: boolean | "toggle") => void;
   togglePrimarySidebar: () => void;
@@ -99,6 +101,7 @@ export function useBrowserSessions(
 
   // Browser-specific sidebar state — independent of the shared Code Editor / DB atom.
   const layoutMode = useAtomValue(workStationLayoutModeAtom);
+  const setLayoutMode = useSetAtom(workStationLayoutModePersistAtom);
   const primarySidebarCollapsed = useAtomValue(
     workStationBrowserSidebarCollapsedAtom
   );
@@ -300,6 +303,7 @@ export function useBrowserSessions(
   return {
     browserState,
     layoutMode,
+    setLayoutMode,
     primarySidebarCollapsed,
     setPrimarySidebarCollapsed,
     togglePrimarySidebar,

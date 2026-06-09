@@ -203,6 +203,7 @@ export function useWorkStationPanels(): UseWorkStationPanelsReturn {
  */
 export function usePrimarySidebarState() {
   const layoutMode = useAtomValue(workStationLayoutModeAtom);
+  const setLayoutMode = useSetAtom(workStationLayoutModePersistAtom);
   const primarySidebarCollapsed = useAtomValue(
     workStationPrimarySidebarCollapsedAtom
   );
@@ -224,6 +225,7 @@ export function usePrimarySidebarState() {
 
   return {
     layoutMode,
+    setLayoutMode,
     primarySidebarCollapsed,
     primarySidebarWidth,
     setPrimarySidebarWidth,

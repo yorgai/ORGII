@@ -86,6 +86,7 @@ export const DatabaseLayout: React.FC<DatabaseLayoutProps> = memo(
       primarySidebarCollapsed,
       primarySidebarWidth,
       setPrimarySidebarWidth,
+      setLayoutMode,
       togglePrimarySidebar,
       closePrimarySidebar,
     } = usePrimarySidebarState();
@@ -264,6 +265,7 @@ export const DatabaseLayout: React.FC<DatabaseLayoutProps> = memo(
           size: primarySidebarWidth,
           onSizeChange: setPrimarySidebarWidth,
           onClose: closePrimarySidebar,
+          onPositionChange: setLayoutMode,
           minSize: 200,
           maxSize: 500,
         }),
@@ -279,6 +281,7 @@ export const DatabaseLayout: React.FC<DatabaseLayoutProps> = memo(
         primarySidebarCollapsed,
         primarySidebarWidth,
         setPrimarySidebarWidth,
+        setLayoutMode,
         closePrimarySidebar,
       ]
     );

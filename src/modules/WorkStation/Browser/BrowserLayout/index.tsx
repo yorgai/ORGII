@@ -124,6 +124,7 @@ export const BrowserLayout: React.FC<BrowserLayoutProps> = memo(
           size: state.browser.primarySidebarWidth,
           onSizeChange: state.browser.setPrimarySidebarWidth,
           onClose: state.browser.closePrimarySidebar,
+          onPositionChange: state.browser.setLayoutMode,
           minSize: 180,
           maxSize: 400,
         }),
@@ -141,6 +142,7 @@ export const BrowserLayout: React.FC<BrowserLayoutProps> = memo(
         state.browser.primarySidebarWidth,
         state.browser.setPrimarySidebarWidth,
         state.browser.closePrimarySidebar,
+        state.browser.setLayoutMode,
       ]
     );
 
