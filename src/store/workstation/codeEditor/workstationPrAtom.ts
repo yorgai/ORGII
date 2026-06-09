@@ -38,6 +38,18 @@ export const workstationPrAtom = atom<WorkstationPrSnapshot>({
 });
 
 /**
+ * Latest Source Control commit message for the active workstation repo.
+ *
+ * `useWorkstationPr` is mounted once at the editor level (see
+ * `useSourceControlSetup`) where the commit form — and therefore the commit
+ * message — is not in scope. The Source Control panel publishes its commit
+ * summary here so the single PR mount can derive a meaningful PR title from
+ * it. Empty when no Source Control panel is mounted, in which case the PR
+ * title falls back to the branch name.
+ */
+export const workstationPrCommitMessageAtom = atom<string>("");
+
+/**
  * Stable ref-backed callback for triggering PR creation from PinnedActionsBar.
  * Stored as a ref container to avoid stale closure issues with atom-stored functions.
  */

@@ -1,4 +1,4 @@
-import { useAtom, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import React, { useCallback, useEffect, useMemo } from "react";
 
 import { useGitStatus } from "@src/contexts/git";
@@ -9,6 +9,7 @@ import {
   sourceControlFilterModeHandlerAtom,
   sourceControlFocusTargetAtom,
 } from "@src/store/workstation/codeEditor";
+import { workstationPrCommitMessageAtom } from "@src/store/workstation/codeEditor/workstationPrAtom";
 import type {
   PanelState,
   SourceControlHistorySelection,
@@ -67,9 +68,13 @@ export function useSourceControlSetup({
     sourceControlFilterModeAtom
   );
 
-  // PR lookup — runs at the CodeEditor level so the atom is populated
-  // regardless of which sidebar tab is active (fixes "No pull request" when
-  // Source Control tab has never been mounted).
+  // PR lookup — this is the SINGLE mount of useWorkstationPr. It runs at the
+  // CodeEditor level so the global workstationPrAtom is populated regardless of
+  // which sidebar tab is active (fixes "No pull request" when the Source
+  // Control tab has never been mounted). The Source Control panel no longer
+  // mounts its own copy; it mirrors the atom instead (see useSourceControlState)
+  // and publishes its commit message via workstationPrCommitMessageAtom so PR
+  // titles stay accurate.
   const { currentGitStatus: gitStatus } = useGitStatus();
   const hasUpstream = !!gitStatus?.current_upstream_branch;
   const { files: gitFilesForPr } = useGitFiles({
@@ -77,12 +82,16 @@ export function useSourceControlSetup({
     repoPath,
     autoLoad: true,
   });
+  const workstationPrCommitMessage = useAtomValue(
+    workstationPrCommitMessageAtom
+  );
   useWorkstationPr({
     repoPath,
     repoId: repoId ?? undefined,
     branchName: currentBranch,
     hasUpstream,
     uncommittedCount: gitFilesForPr.length,
+    commitMessage: workstationPrCommitMessage,
   });
 
   const { filesByPath: gitFilesByPath } = gitDiffState.state;
