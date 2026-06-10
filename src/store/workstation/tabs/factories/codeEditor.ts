@@ -463,6 +463,39 @@ export function createTerminalContentTab(
 }
 
 // ============================================
+// DOM Component Preview Tab
+// ============================================
+
+export interface DomComponentPreviewTabData {
+  /** Stable id derived from the paste pill (e.g. `paste://1781082907219-…`) */
+  pasteId: string;
+  /** Human-readable title shown on the tab (e.g. "ComposerShell.json") */
+  fileName: string;
+  /** Raw JSON text exactly as captured from the page */
+  jsonText: string;
+}
+
+export const domComponentPreviewTabFactory =
+  defineTabFactory<DomComponentPreviewTabData>({
+    tabType: "dom-component-preview",
+    idStrategy: {
+      type: "keyed",
+      prefix: "dom-component-preview",
+      getKey: (data) => data.pasteId,
+    },
+    getTitle: (data) => data.fileName,
+    icon: "Code",
+  });
+
+export function createDomComponentPreviewTab(
+  pasteId: string,
+  fileName: string,
+  jsonText: string
+): WorkStationTab {
+  return domComponentPreviewTabFactory({ pasteId, fileName, jsonText });
+}
+
+// ============================================
 // Output Tab
 // ============================================
 

@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import React, {
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -33,7 +34,7 @@ import { createPortal } from "react-dom";
 
 import FileTreePreview from "@src/components/FileTreePreview";
 import FileTypeIcon from "@src/components/FileTypeIcon";
-import { PILL_SIZE } from "@src/config/pillTokens";
+import { PILL_SIZE, readPillText } from "@src/config/pillTokens";
 
 import BasePill from "./BasePill";
 import type { ComposerPillAttrs, PillIconType } from "./types";
@@ -118,6 +119,10 @@ const ComposerPill: React.FC<ComposerPillProps> = ({ attrs, onDelete }) => {
     return !iconType || iconType === "folder" || iconType === "file";
   }, [iconType]);
 
+  const shouldShowPastePreview = iconType === "paste";
+  const shouldShowHoverPreview =
+    shouldShowTreePreview || shouldShowPastePreview;
+
   const handleDelete = useCallback(
     (event: React.MouseEvent) => {
       event.preventDefault();
@@ -161,6 +166,26 @@ const ComposerPill: React.FC<ComposerPillProps> = ({ attrs, onDelete }) => {
         return;
       }
 
+      if (iconType === "paste") {
+        event.preventDefault();
+        event.stopPropagation();
+        // Paste pills carry an inline JSON blob captured from the page.
+        // Route them to the dedicated DomComponentPreview tab which offers
+        // Raw / Preview toggle, instead of reusing the terminal-content tab.
+        const pasteText = window.__orgiiTerminalPillTexts?.[filePath] ?? "";
+        document.dispatchEvent(
+          new CustomEvent("dom-component-preview-click", {
+            detail: {
+              pasteId: filePath,
+              fileName,
+              jsonText: pasteText,
+            },
+            bubbles: true,
+          })
+        );
+        return;
+      }
+
       document.dispatchEvent(
         new CustomEvent("file-pill-click", {
           detail: { filePath, fileName, lineStart, lineEnd, isFolder },
@@ -179,7 +204,7 @@ const ComposerPill: React.FC<ComposerPillProps> = ({ attrs, onDelete }) => {
 
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true);
-    if (!shouldShowTreePreview) return;
+    if (!shouldShowHoverPreview) return;
     if (hideTimeoutRef.current) {
       clearTimeout(hideTimeoutRef.current);
       hideTimeoutRef.current = null;
@@ -188,7 +213,7 @@ const ComposerPill: React.FC<ComposerPillProps> = ({ attrs, onDelete }) => {
       updatePreviewPosition();
       setShowPreview(true);
     }, PREVIEW_SHOW_DELAY);
-  }, [shouldShowTreePreview, updatePreviewPosition]);
+  }, [shouldShowHoverPreview, updatePreviewPosition]);
 
   const handleMouseLeave = useCallback(() => {
     setIsHovered(false);
@@ -313,8 +338,66 @@ const ComposerPill: React.FC<ComposerPillProps> = ({ attrs, onDelete }) => {
           </div>,
           document.body
         )}
+
+      {showPreview &&
+        shouldShowPastePreview &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              left: previewPosition.left,
+              top: previewPosition.top,
+              transform: "translateY(-100%)",
+              zIndex: 9999,
+            }}
+            onMouseEnter={handlePreviewMouseEnter}
+            onMouseLeave={handlePreviewMouseLeave}
+          >
+            <PastePillPreview filePath={filePath} fileName={fileName} />
+          </div>,
+          document.body
+        )}
     </>
   );
 };
+
+const PASTE_PREVIEW_MAX_LINES = 16;
+const PASTE_PREVIEW_MAX_CHARS = 1200;
+
+const PastePillPreview: React.FC<{ filePath: string; fileName: string }> = memo(
+  ({ filePath, fileName }) => {
+    const fullText = readPillText(filePath) ?? "";
+    const lines = fullText.split("\n");
+    const truncated =
+      lines.length > PASTE_PREVIEW_MAX_LINES ||
+      fullText.length > PASTE_PREVIEW_MAX_CHARS;
+    const headLines = lines
+      .slice(0, PASTE_PREVIEW_MAX_LINES)
+      .join("\n")
+      .slice(0, PASTE_PREVIEW_MAX_CHARS);
+
+    return (
+      <div
+        className="overflow-hidden rounded-[8px] border border-solid border-border-2 bg-bg-2 shadow-md"
+        style={{ width: "min(420px, 60vw)" }}
+      >
+        <div className="flex items-center justify-between border-0 border-b border-solid border-border-2 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-text-3">
+          <span className="truncate">{fileName}</span>
+          <span className="ml-2 shrink-0 normal-case text-text-3">
+            {lines.length} lines · click to open
+          </span>
+        </div>
+        <pre
+          className="m-0 max-h-[280px] overflow-hidden whitespace-pre px-3 py-2 text-[11px] leading-snug text-text-2"
+          style={{ fontFamily: "var(--font-mono, ui-monospace, monospace)" }}
+        >
+          {headLines}
+          {truncated ? "\n…" : ""}
+        </pre>
+      </div>
+    );
+  }
+);
+PastePillPreview.displayName = "PastePillPreview";
 
 export default ComposerPill;

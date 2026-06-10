@@ -28,6 +28,7 @@ export type EditorTabType =
   | "source-control"
   | "git-log"
   | "terminal-content"
+  | "dom-component-preview"
   | "terminal"
   | "output"
   | "settings"

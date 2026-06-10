@@ -175,4 +175,24 @@ describe("parsePillTextToSnapshot", () => {
       },
     ]);
   });
+
+  it("round-trips a paste pill (paste://… filePath, paste iconType)", () => {
+    const snapshot = parsePillTextToSnapshot(
+      "look pasted.json [paste:paste://1234-abc]"
+    );
+    expect(snapshot.parts).toEqual([
+      { kind: "text", text: "look " },
+      {
+        kind: "pill",
+        attrs: {
+          filePath: "paste://1234-abc",
+          fileName: "pasted.json",
+          isFolder: false,
+          iconType: "paste",
+          lineStart: null,
+          lineEnd: null,
+        },
+      },
+    ]);
+  });
 });

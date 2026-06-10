@@ -80,6 +80,7 @@ const DEFAULT_CATEGORY_BY_TYPE: Record<
   "git-commit-detail": "git",
   "git-stash-detail": "git",
   "terminal-content": "terminal",
+  "dom-component-preview": "preview",
   terminal: "terminal",
   output: "terminal",
   settings: "settings",

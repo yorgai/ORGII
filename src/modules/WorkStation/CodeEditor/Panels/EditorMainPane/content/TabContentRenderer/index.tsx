@@ -51,6 +51,9 @@ const BenchmarkRenderer = React.lazy(
 const SubagentDetailTab = React.lazy(() => import("../SubagentDetailTab"));
 const TerminalMainContent = React.lazy(() => import("../TerminalMainContent"));
 const UrlPreviewContent = React.lazy(() => import("../UrlPreviewContent"));
+const DomComponentPreviewContent = React.lazy(
+  () => import("../DomComponentPreviewContent")
+);
 const DirectoryExplorerContent = React.lazy(
   () => import("../DirectoryExplorerContent")
 );
@@ -496,6 +499,20 @@ const TabContentRenderer: React.FC<TabContentRendererProps> = memo(
               error={null}
               repoPath=""
               readOnly={true}
+            />
+          </Suspense>
+        );
+      }
+
+      case "dom-component-preview": {
+        const jsonText = String(activeTab.data.jsonText || "");
+        const fileName = String(activeTab.data.fileName || activeTab.title);
+
+        return (
+          <Suspense fallback={<LazyFallback />}>
+            <DomComponentPreviewContent
+              fileName={fileName}
+              jsonText={jsonText}
             />
           </Suspense>
         );

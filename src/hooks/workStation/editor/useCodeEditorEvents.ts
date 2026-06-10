@@ -36,6 +36,7 @@ import {
   consumePendingCodeEditorTab,
   consumePendingFileOpens,
   createDirectoryTab,
+  createDomComponentPreviewTab,
   createFileTab,
   createTerminalContentTab,
   openTab,
@@ -252,6 +253,28 @@ export function useCodeEditorEvents(options: CodeEditorEventsOptions): void {
     };
 
     // ============================================
+    // DOM Component Preview Pill Click (paste pill → Raw / Preview viewer)
+    // ============================================
+    const handleDomComponentPreviewClick = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        pasteId: string;
+        fileName: string;
+        jsonText: string;
+      }>;
+      const { pasteId, fileName, jsonText } = customEvent.detail;
+      if (!pasteId) return;
+
+      focusCodeEditor();
+
+      const tab = createDomComponentPreviewTab(
+        pasteId,
+        fileName || "Pasted JSON",
+        jsonText ?? ""
+      );
+      opts.setPrimaryPanel((prev) => openTab(prev, tab));
+    };
+
+    // ============================================
     // Open File in Editor (from markdown code blocks or cross-window Tauri events)
     // ============================================
     const openFileTab = (
@@ -372,6 +395,10 @@ export function useCodeEditorEvents(options: CodeEditorEventsOptions): void {
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("file-pill-click", handleFilePillClick);
     document.addEventListener("terminal-pill-click", handleTerminalPillClick);
+    document.addEventListener(
+      "dom-component-preview-click",
+      handleDomComponentPreviewClick
+    );
     document.addEventListener("open-file-in-editor", handleOpenFileInEditor);
     document.addEventListener("open-source-control", handleOpenSourceControl);
     window.addEventListener("workstation-open-code-tab", handleOpenCodeTab);
@@ -416,6 +443,10 @@ export function useCodeEditorEvents(options: CodeEditorEventsOptions): void {
       document.removeEventListener(
         "terminal-pill-click",
         handleTerminalPillClick
+      );
+      document.removeEventListener(
+        "dom-component-preview-click",
+        handleDomComponentPreviewClick
       );
       document.removeEventListener(
         "open-file-in-editor",

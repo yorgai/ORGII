@@ -74,6 +74,7 @@ export {
   gitStashDetailTabFactory,
   terminalTabFactory,
   terminalContentTabFactory,
+  domComponentPreviewTabFactory,
   outputTabFactory,
   settingsTabFactory,
   aiImpactTabFactory,
@@ -95,6 +96,7 @@ export {
   createStashDetailTab,
   createTerminalTab,
   createTerminalContentTab,
+  createDomComponentPreviewTab,
   createOutputTab,
   createSettingsTab,
   createAIImpactTab,
@@ -174,6 +176,7 @@ export type {
   GitStashDetailTabData,
   TerminalTabData,
   TerminalContentTabData,
+  DomComponentPreviewTabData,
   OutputTabData,
   SearchTabData,
   // Database data types

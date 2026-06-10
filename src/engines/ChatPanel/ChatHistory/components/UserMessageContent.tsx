@@ -49,6 +49,7 @@ const SINGLE_LINE_PILL_REGEX = new RegExp(
     "workitem",
     "dom-element",
     "skill",
+    "paste",
   ].join("|")}):([^\\]]+)\\]`,
   "g"
 );
@@ -132,7 +133,8 @@ function parseUserMessage(text: string): Segment[] {
         pillType === "terminal" ||
         pillType === "session" ||
         pillType === "browser" ||
-        pillType === "dom-element";
+        pillType === "dom-element" ||
+        pillType === "paste";
       let path = rawPath;
       let terminalText: string | undefined;
       if (isContextPill) {
@@ -171,7 +173,8 @@ function parseUserMessage(text: string): Segment[] {
       s.kind === "pill" &&
       (s.pillType === "terminal" ||
         s.pillType === "session" ||
-        s.pillType === "browser")
+        s.pillType === "browser" ||
+        s.pillType === "paste")
   );
 
   // Strip trailing code blocks — they carry embedded context, not user text
@@ -232,7 +235,8 @@ const InlinePill: React.FC<{ segment: PillSegment }> = memo(({ segment }) => {
   const isClickable =
     segment.pillType === "terminal" ||
     segment.pillType === "file" ||
-    segment.pillType === "folder";
+    segment.pillType === "folder" ||
+    segment.pillType === "paste";
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -259,6 +263,24 @@ const InlinePill: React.FC<{ segment: PillSegment }> = memo(({ segment }) => {
               sessionId,
               fileName: segment.displayName,
               terminalText,
+            },
+          })
+        );
+        return;
+      }
+
+      if (segment.pillType === "paste") {
+        // Route to the dedicated DomComponentPreview tab (Raw / Preview viewer).
+        const pasteText =
+          segment.terminalText ??
+          window.__orgiiTerminalPillTexts?.[segment.path] ??
+          "";
+        document.dispatchEvent(
+          new CustomEvent("dom-component-preview-click", {
+            detail: {
+              pasteId: segment.path,
+              fileName: segment.displayName,
+              jsonText: pasteText,
             },
           })
         );

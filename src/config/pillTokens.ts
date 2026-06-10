@@ -27,6 +27,7 @@ export const PILL_TYPE_LIST = [
   "workitem",
   "dom-element",
   "skill",
+  "paste",
 ] as const;
 
 export type PillType = (typeof PILL_TYPE_LIST)[number];
@@ -54,6 +55,7 @@ export const CONTEXT_PILL_PREFIXES: Record<string, string> = {
   browser: "browser://",
   workitem: "workitem://",
   "dom-element": "dom-element://",
+  paste: "paste://",
 } as const;
 
 /** Pill types that carry async-loaded content stored in the pill cache */

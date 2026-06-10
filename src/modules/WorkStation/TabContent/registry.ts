@@ -72,6 +72,11 @@ const TerminalContentEntry: RendererEntry = {
   debugLabel: "terminal-content",
 };
 
+const DomComponentPreviewEntry: RendererEntry = {
+  Component: lazy(() => import("./renderers/domComponentPreview")),
+  debugLabel: "dom-component-preview",
+};
+
 const TerminalEntry: RendererEntry = {
   Component: lazy(() => import("./renderers/terminal")),
   debugLabel: "terminal",
@@ -270,6 +275,7 @@ export const REGISTRY: TabContentRegistry = {
   "git-commit-detail": GitCommitDetailEntry,
   "git-stash-detail": GitStashDetailEntry,
   "terminal-content": TerminalContentEntry,
+  "dom-component-preview": DomComponentPreviewEntry,
   terminal: TerminalEntry,
   output: OutputEntry,
   settings: SettingsEntry,

@@ -26,6 +26,7 @@ export type WorkStationTabType =
   | "git-commit-detail" // Git commit detail (split: file list + diff)
   | "git-stash-detail" // Git stash detail (split: file list + diff)
   | "terminal-content" // Terminal output viewer (read-only, from pill double-click)
+  | "dom-component-preview" // Pasted DOM-component JSON viewer (Raw / Preview iframe)
   | "terminal"
   | "output"
   | "settings"
@@ -405,6 +406,7 @@ export const FILE_TAB_TYPES = [
   "git-commit-detail",
   "git-stash-detail",
   "terminal-content",
+  "dom-component-preview",
 ] as const;
 
 /** Tab types that are TOOL tabs (global, not cached per-repo) */
