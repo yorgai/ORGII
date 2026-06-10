@@ -23,6 +23,7 @@
 | Agent configuration   | [Agents](Agents)                               |
 | Contribution guide    | [Contributing](Contributing)                   |
 | FAQ                   | [FAQ](FAQ)                                     |
+| Changelog             | [Changelog](Changelog)                         |
 
 ## Download
 

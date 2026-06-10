@@ -23,6 +23,7 @@
 | 智能体配置            | [智能体](Agents.zh)                  |
 | 贡献指南              | [贡献](Contributing.zh)              |
 | 常见问题              | [FAQ](FAQ.zh)                        |
+| 更新日志              | [Changelog](Changelog.zh)            |
 
 ## 下载
 

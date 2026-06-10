@@ -23,6 +23,7 @@
 | Configuration des agents          | [Agents](Agents.fr)                      |
 | Guide de contribution             | [Contribuer](Contributing.fr)            |
 | FAQ                               | [FAQ](FAQ.fr)                            |
+| Journal des modifications         | [Changelog](Changelog.fr)                |
 
 ## Téléchargement
 

@@ -14,6 +14,7 @@
 - [Key Vault](Key-Vault) · [fr](Key-Vault.fr) · [中文](Key-Vault.zh)
 - [Agents](Agents) · [fr](Agents.fr) · [中文](Agents.zh)
 - [FAQ](FAQ) · [fr](FAQ.fr) · [中文](FAQ.zh)
+- [Changelog](Changelog) · [fr](Changelog.fr) · [中文](Changelog.zh)
 
 ---
 
