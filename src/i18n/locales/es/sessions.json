@@ -370,7 +370,7 @@
           "tabLabel": "Envíos",
           "commits": "Commits",
           "pr": "PR",
-          "empty": "Aún no hay envíos.",
+          "empty": "Aún no hay envíos",
           "selectSubmission": "Selecciona un envío para ver los detalles.",
           "noCommits": "Aún no hay Commits",
           "noPullRequests": "Aún no hay Pull Requests"

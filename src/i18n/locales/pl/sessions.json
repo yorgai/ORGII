@@ -385,7 +385,7 @@
           "tabLabel": "Zgłoszenia",
           "commits": "Commits",
           "pr": "PR",
-          "empty": "Brak zgłoszeń.",
+          "empty": "Brak zgłoszeń",
           "selectSubmission": "Wybierz zgłoszenie, aby zobaczyć szczegóły.",
           "noCommits": "Brak Commits",
           "noPullRequests": "Brak Pull Requests"

@@ -370,7 +370,7 @@
           "tabLabel": "Einreichungen",
           "commits": "Commits",
           "pr": "PR",
-          "empty": "Noch keine Einreichungen.",
+          "empty": "Noch keine Einreichungen",
           "selectSubmission": "Wählen Sie eine Einreichung aus, um Details anzuzeigen.",
           "noCommits": "Noch keine Commits",
           "noPullRequests": "Noch keine Pull Requests"

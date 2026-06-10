@@ -370,7 +370,7 @@
           "tabLabel": "제출",
           "commits": "Commits",
           "pr": "PR",
-          "empty": "아직 제출이 없습니다.",
+          "empty": "아직 제출이 없습니다",
           "selectSubmission": "세부 정보를 보려면 제출을 선택하세요.",
           "noCommits": "아직 Commits가 없습니다",
           "noPullRequests": "아직 Pull Requests가 없습니다"

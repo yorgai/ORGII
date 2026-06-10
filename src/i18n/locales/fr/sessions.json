@@ -370,7 +370,7 @@
           "tabLabel": "Soumissions",
           "commits": "Commits",
           "pr": "PR",
-          "empty": "Aucune soumission pour le moment.",
+          "empty": "Aucune soumission pour le moment",
           "selectSubmission": "Sélectionnez une soumission pour afficher les détails.",
           "noCommits": "Aucun Commit pour le moment",
           "noPullRequests": "Aucune Pull Request pour le moment"

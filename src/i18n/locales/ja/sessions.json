@@ -370,7 +370,7 @@
           "tabLabel": "提出",
           "commits": "Commits",
           "pr": "PR",
-          "empty": "提出はまだありません。",
+          "empty": "提出はまだありません",
           "selectSubmission": "提出を選択して詳細を表示します。",
           "noCommits": "Commits はまだありません",
           "noPullRequests": "Pull Requests はまだありません"

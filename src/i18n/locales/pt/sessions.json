@@ -383,7 +383,7 @@
           "tabLabel": "Submissões",
           "commits": "Commits",
           "pr": "PR",
-          "empty": "Ainda não há submissões.",
+          "empty": "Ainda não há submissões",
           "selectSubmission": "Selecione uma submissão para ver os detalhes.",
           "noCommits": "Ainda não há Commits",
           "noPullRequests": "Ainda não há Pull Requests"

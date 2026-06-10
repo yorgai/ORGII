@@ -370,7 +370,7 @@
           "tabLabel": "Gönderimler",
           "commits": "Commits",
           "pr": "PR",
-          "empty": "Henüz gönderim yok.",
+          "empty": "Henüz gönderim yok",
           "selectSubmission": "Ayrıntıları görüntülemek için bir gönderim seçin.",
           "noCommits": "Henüz Commits yok",
           "noPullRequests": "Henüz Pull Requests yok"

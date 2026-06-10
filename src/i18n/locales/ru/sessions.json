@@ -372,7 +372,7 @@
           "tabLabel": "Отправки",
           "commits": "Commits",
           "pr": "PR",
-          "empty": "Отправок пока нет.",
+          "empty": "Отправок пока нет",
           "selectSubmission": "Выберите отправку, чтобы посмотреть детали.",
           "noCommits": "Commits пока нет",
           "noPullRequests": "Pull Requests пока нет"

@@ -377,7 +377,7 @@
           "tabLabel": "提交",
           "commits": "Commits",
           "pr": "PR",
-          "empty": "暫無提交。",
+          "empty": "暫無提交",
           "selectSubmission": "選擇一項提交以查看詳情。",
           "noCommits": "暫無 Commits",
           "noPullRequests": "暫無 Pull Requests"

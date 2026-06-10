@@ -370,7 +370,7 @@
           "tabLabel": "Bài gửi",
           "commits": "Commits",
           "pr": "PR",
-          "empty": "Chưa có bài gửi.",
+          "empty": "Chưa có bài gửi",
           "selectSubmission": "Chọn một bài gửi để xem chi tiết.",
           "noCommits": "Chưa có Commits",
           "noPullRequests": "Chưa có Pull Requests"
