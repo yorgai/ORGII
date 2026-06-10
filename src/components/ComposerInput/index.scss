@@ -72,11 +72,19 @@
   }
 
   // Placeholder driven by [data-placeholder] on the host when empty.
+  // Pin to the content padding box and clip with ellipsis so a long
+  // placeholder cannot bleed over neighbouring grid columns (e.g. the
+  // ComposerBar pills cluster when the editor column shrinks).
   &.is-empty::before {
     content: attr(data-placeholder);
     position: absolute;
+    left: 12px;
+    right: 12px;
     color: var(--color-text-3);
     pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   // Empty paragraph stand-in. We render text + <br> directly into the host,
@@ -166,6 +174,13 @@
     &.is-empty {
       width: 100%;
       min-height: 24px;
+
+      // Compact row uses 8px horizontal padding; mirror it on the placeholder
+      // so the ellipsis lines up with the actual caret position.
+      &::before {
+        left: 8px;
+        right: 8px;
+      }
     }
   }
 }
