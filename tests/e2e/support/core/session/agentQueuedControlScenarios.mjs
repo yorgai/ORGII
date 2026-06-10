@@ -1559,6 +1559,44 @@ async function runForceSendScenario(config) {
       `${config.label} Force Send still rendered only Round 1 after multiple user turns; surfaces=${JSON.stringify(surfaces)}`
     );
   }
+  // turn_intent_id round-corruption regression pin (2026-06-10).
+  // Before the canonical user-intent id wire (commits 830c5330..e6752742),
+  // a Stop + Send Now sequence could produce 3+ user rounds for what was
+  // actually two genuine user submits (the first synthetic + backend pair
+  // and the second synthetic + backend pair each looked like their own
+  // round to the turn indexer). The lifecycle store now drops the
+  // invalidated intent and collapses same-intent pairs into one round,
+  // so the visible round label MUST be exactly "Round 2" — no more.
+  const roundMatch = /Round\s+(\d+)\b/.exec(surfaces.myStation.roundLabel);
+  if (!roundMatch) {
+    throw new Error(
+      `${config.label} Force Send rendered an unparseable round label; surfaces=${JSON.stringify(surfaces)}`
+    );
+  }
+  const renderedRoundIndex = Number.parseInt(roundMatch[1], 10);
+  if (renderedRoundIndex > 2) {
+    throw new Error(
+      `${config.label} Force Send produced extra phantom rounds (rendered=${renderedRoundIndex}, expected=2). Regression: stale turn_intent_id rows are leaking past the indexer. surfaces=${JSON.stringify(surfaces)}`
+    );
+  }
+  // Cross-check sources of truth: backend-persisted user_message events
+  // in the transcript should also be exactly 2 (synthetic optimistic rows
+  // carry syntheticUserInput=true and are excluded from the count).
+  const transcriptState = await inspectChatState(
+    `${config.label}-force-send-round-count`
+  );
+  const backendUserMessages = (transcriptState.rawEvents ?? []).filter(
+    (event) => {
+      if (!event || event.source !== "user") return false;
+      const result = parseEventResult(event.result);
+      return result.syntheticUserInput !== true;
+    }
+  );
+  if (backendUserMessages.length !== 2) {
+    throw new Error(
+      `${config.label} Force Send persisted ${backendUserMessages.length} backend user_message events, expected exactly 2. Regression: scheduler or persist bridge is writing multiple rows per turn_intent_id. events=${JSON.stringify(backendUserMessages.map((e) => ({ id: e.id, text: (e.displayText ?? "").slice(0, 60) })))}`
+    );
+  }
 
   const active = unwrap(
     await invokeE2E("getActiveSessionId"),
