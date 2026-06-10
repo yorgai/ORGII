@@ -1,7 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  markTurnRunning,
+  markTurnTerminal,
+} from "@src/engines/SessionCore/control/turnLifecycle";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
-import { markQueueTurnSettled } from "@src/engines/SessionCore/hooks/session/queueTurnGate";
 import { createSessionEventHandlerCallbacks } from "@src/engines/SessionCore/sync/sessionSyncStateHelpers";
 import type { SessionEventHandlerStateActions } from "@src/engines/SessionCore/sync/sessionSyncStateHelpers";
 
@@ -16,9 +19,15 @@ vi.mock("@src/store/session", () => ({
   updateSessionStatus: vi.fn(),
 }));
 
-vi.mock("@src/engines/SessionCore/hooks/session/queueTurnGate", () => ({
-  markQueueTurnSettled: vi.fn(),
-  markQueueTurnWorking: vi.fn(),
+vi.mock("@src/engines/SessionCore/control/turnLifecycle", () => ({
+  markTurnRunning: vi.fn(),
+  markTurnTerminal: vi.fn(),
+  toTurnTerminalStatus: (status: string) =>
+    status === "failed" || status === "error" || status === "timeout"
+      ? "failed"
+      : status === "cancelled" || status === "abandoned"
+        ? "cancelled"
+        : "completed",
 }));
 
 function createActions(): SessionEventHandlerStateActions & {
@@ -42,6 +51,10 @@ function createActions(): SessionEventHandlerStateActions & {
 }
 
 describe("session sync state callbacks", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("clears live streaming content before completed status can leave Stop UI stuck", () => {
     const actions = createActions();
     actions.streamingMap.set("session-1", "live answer");
@@ -71,7 +84,7 @@ describe("session sync state callbacks", () => {
     expect(eventStoreProxy.unpinSession).toHaveBeenCalledWith("session-1");
   });
 
-  it("marks terminal status changes as queue release edges", () => {
+  it("marks terminal status changes as FSM turn terminals", () => {
     const actions = createActions();
     const callbacks = createSessionEventHandlerCallbacks(
       "session-1",
@@ -84,11 +97,34 @@ describe("session sync state callbacks", () => {
       turnStatus: "completed",
     });
 
-    expect(markQueueTurnSettled).toHaveBeenCalledWith(
+    expect(markTurnTerminal).toHaveBeenCalledWith("session-1", "completed");
+  });
+
+  it("does NOT mark the FSM terminal for intermediate status signals", () => {
+    const actions = createActions();
+    const callbacks = createSessionEventHandlerCallbacks(
       "session-1",
-      expect.any(Number),
-      "turn-1",
-      "completed"
+      actions,
+      vi.fn()
     );
+
+    callbacks.onStatusChange?.("completed", undefined, {
+      intermediate: true,
+    });
+
+    expect(markTurnTerminal).not.toHaveBeenCalled();
+  });
+
+  it("opens the FSM turn on running status", () => {
+    const actions = createActions();
+    const callbacks = createSessionEventHandlerCallbacks(
+      "session-1",
+      actions,
+      vi.fn()
+    );
+
+    callbacks.onStatusChange?.("running");
+
+    expect(markTurnRunning).toHaveBeenCalledWith("session-1");
   });
 });

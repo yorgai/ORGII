@@ -9,11 +9,14 @@ import {
   loadSessionAtom,
   sessionIdAtom,
 } from "@src/engines/SessionCore";
+import { resetTurnLifecycleForTests } from "@src/engines/SessionCore/control/turnLifecycle";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import {
   loadEvents,
   loadInitialTurnWindow,
 } from "@src/engines/SessionCore/storage/cacheAdapter";
+import { cliAdapter } from "@src/engines/SessionCore/sync/adapters";
+import { getAdapterForSession } from "@src/engines/SessionCore/sync/types";
 import { reposAtom, selectedRepoIdAtom } from "@src/store/repo/atoms";
 import {
   type ContextUsageSnapshot,
@@ -51,13 +54,13 @@ import {
   chatWidthAtom,
 } from "@src/store/ui/chatPanelAtom";
 import {
-  forceSendPendingQueueAtom,
   messageQueueAtom,
   queueEditTargetAtom,
   queueFlushRequestAtom,
 } from "@src/store/ui/messageQueueAtom";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
 import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";
+import { isCliSession } from "@src/util/session/sessionDispatch";
 
 import { asError } from "../result";
 import type { E2EStore, Json, Result } from "../types";
@@ -211,9 +214,9 @@ export function createSessionHelpers(store: E2EStore) {
       store.set(chatWidthAtom, 560);
       store.set(sessionIdAtom, null);
       store.set(messageQueueAtom, []);
-      store.set(forceSendPendingQueueAtom, []);
       store.set(queueEditTargetAtom, null);
       store.set(queueFlushRequestAtom, 0);
+      resetTurnLifecycleForTests();
       store.set(chatImageAttachmentsAtom, []);
       store.set(isPendingCancelAtom, false);
       store.set(userInitiatedCancelAtom, false);
@@ -367,10 +370,19 @@ export function createSessionHelpers(store: E2EStore) {
       store.set(sessionRuntimeStatusAtom, "idle");
       await eventStoreProxy.switchSession(sessionId);
       const initialWindow = await loadInitialTurnWindow(sessionId);
-      const events =
+      let events =
         initialWindow.turns.length > 0
           ? initialWindow.events
           : await loadEvents(sessionId);
+      if (events.length === 0) {
+        const adapter = isCliSession(sessionId)
+          ? cliAdapter
+          : getAdapterForSession(sessionId);
+        const controller = new AbortController();
+        events = adapter
+          ? await adapter.loadHistory(sessionId, controller.signal)
+          : [];
+      }
       if (events.length > 0) {
         await eventStoreProxy.set(events, sessionId);
       }

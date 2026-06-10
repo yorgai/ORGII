@@ -3,6 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { processChatItems } from "@src/engines/ChatPanel/ChatHistory/chatItemPipeline";
 import { sessionIdAtom } from "@src/engines/SessionCore";
 import {
+  getTurnGeneration,
+  getTurnPhase,
+} from "@src/engines/SessionCore/control/turnLifecycle";
+import {
   derivedSnapshotAtom,
   sortedEventsAtom,
   streamingDeltaContentAtom,
@@ -28,7 +32,7 @@ import {
 } from "@src/store/session/viewAtom";
 import { chatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";
 import {
-  forceSendPendingQueueAtom,
+  type QueuedMessage,
   messageQueueAtom,
   queueEditingAtom,
   queueFlushRequestAtom,
@@ -59,6 +63,8 @@ export function createInspectChatStateHelper(store: E2EStore) {
       isPendingCancel: boolean;
       isQueueEditing: boolean;
       userInitiatedCancel: boolean;
+      turnPhase: string;
+      turnGeneration: number;
       queueFlushRequest: number;
       queuedMessages: Array<{ id: string; sessionId: string; content: string }>;
       forceSendPendingMessages: Array<{
@@ -127,28 +133,20 @@ export function createInspectChatStateHelper(store: E2EStore) {
       const { items: pipelineItems, stats: pipelineStats } =
         processChatItems(chatEvents);
       const events = store.get(sortedEventsAtom);
-      const serializeQueuedMessage = (message: {
-        id: string;
-        sessionId: string;
-        content: string;
-        requiresRuntimeSettle?: boolean;
-        releaseAfterTurnId?: string;
-        dispatchAfterUserCancel?: boolean;
-        createdAt: string;
-      }) => ({
+      const serializeQueuedMessage = (message: QueuedMessage) => ({
         id: message.id,
         sessionId: message.sessionId,
         content: message.content,
-        requiresRuntimeSettle: message.requiresRuntimeSettle,
-        releaseAfterTurnId: message.releaseAfterTurnId,
-        dispatchAfterUserCancel: message.dispatchAfterUserCancel,
+        priority: message.priority,
+        requiresExplicitDispatch: message.requiresExplicitDispatch ?? false,
         createdAt: message.createdAt,
       });
-      const queuedMessages = store
-        .get(messageQueueAtom)
-        .map(serializeQueuedMessage);
-      const forceSendPendingMessages = store
-        .get(forceSendPendingQueueAtom)
+      const queue = store.get(messageQueueAtom);
+      const queuedMessages = queue.map(serializeQueuedMessage);
+      // Explicit "now" dispatches awaiting the FSM — the unified-queue
+      // equivalent of the old forceSendPendingQueueAtom.
+      const forceSendPendingMessages = queue
+        .filter((message) => message.priority === "now")
         .map(serializeQueuedMessage);
       const activeSessionId = store.get(activeSessionIdAtom);
       const activeSession = activeSessionId
@@ -212,6 +210,10 @@ export function createInspectChatStateHelper(store: E2EStore) {
         isPendingCancel: store.get(isPendingCancelAtom),
         isQueueEditing: store.get(queueEditingAtom),
         userInitiatedCancel: store.get(userInitiatedCancelAtom),
+        turnPhase: activeSessionId ? getTurnPhase(activeSessionId) : "idle",
+        turnGeneration: activeSessionId
+          ? getTurnGeneration(activeSessionId)
+          : 0,
         queueFlushRequest: store.get(queueFlushRequestAtom),
         queuedMessages,
         forceSendPendingMessages,

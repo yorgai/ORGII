@@ -142,9 +142,6 @@ const InputArea: React.FC<InputAreaProps> = memo(
       clearCiteCode,
       handleDivSubmit,
       isWpGeneWorking,
-      isSessionActive,
-      runtimeStatus,
-      hasComposerStopBlockingWork,
       isPendingCancel,
       interruptSession,
       resumeSession,
@@ -285,31 +282,13 @@ const InputArea: React.FC<InputAreaProps> = memo(
       () => setReplyInfo({ isReply: false }),
       [setReplyInfo]
     );
+    // Queue-vs-direct is decided by handleSessChatSubmit against the
+    // turn-lifecycle FSM — the composer just forwards the captured text.
     const submitMessage = useCallback(
       (capturedText?: string) => {
-        const runtimeIsWorking =
-          runtimeStatus === "running" ||
-          runtimeStatus === "installing" ||
-          runtimeStatus === "waiting_for_user" ||
-          runtimeStatus === "waiting_for_funds";
-        void handleDivSubmit({
-          forceQueueAsActiveTurn:
-            isWpGeneWorking ||
-            isSessionActive ||
-            runtimeIsWorking ||
-            hasComposerStopBlockingWork ||
-            isPendingCancel,
-          capturedText,
-        });
+        void handleDivSubmit({ capturedText });
       },
-      [
-        handleDivSubmit,
-        hasComposerStopBlockingWork,
-        isPendingCancel,
-        isSessionActive,
-        isWpGeneWorking,
-        runtimeStatus,
-      ]
+      [handleDivSubmit]
     );
 
     return (

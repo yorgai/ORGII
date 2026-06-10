@@ -30,6 +30,7 @@ import {
   runQueueAutodispatchesAfterNaturalCompletionScenario,
   runQueueDoesNotAutoflushWhileActiveScenario,
   runRewindScenario,
+  runSendAfterIdleDoesNotQueueScenario,
   runStopDoubleClickDoesNotResubmitScenario,
   runStopRestoresInFlightScenario,
   rustAgentConfigs,
@@ -143,6 +144,7 @@ const CONTROL_SCENARIO_NAMES = [
   "chaos-control-flow",
   "burst-queue-send-now-ordering",
   "queue-autodispatch-after-natural-completion",
+  "send-after-idle-does-not-queue",
   "queue-does-not-autoflush-while-active",
   "stop-double-click-no-resubmit",
   "force-send",
@@ -268,6 +270,15 @@ describe("ORGII force-send queued follow-up behavior", function () {
     await runScenario(
       "queue-autodispatch-after-natural-completion",
       runQueueAutodispatchesAfterNaturalCompletionScenario,
+      this
+    );
+  });
+
+  it("sends new prompts directly after the previous turn is idle instead of queueing them", async function () {
+    this.timeout(1_200_000);
+    await runScenario(
+      "send-after-idle-does-not-queue",
+      runSendAfterIdleDoesNotQueueScenario,
       this
     );
   });

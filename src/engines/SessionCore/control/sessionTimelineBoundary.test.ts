@@ -18,6 +18,7 @@ const killAgentShellProcessSpy = vi.hoisted(() => vi.fn());
 
 vi.mock("@src/util/core/state/instrumentedStore", () => ({
   getInstrumentedStore: () => ({ get: storeGetSpy, set: storeSetSpy }),
+  isStoreInitialized: () => false,
 }));
 
 vi.mock("@src/engines/SessionCore/services/SessionService", () => ({

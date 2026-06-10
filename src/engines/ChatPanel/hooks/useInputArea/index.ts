@@ -404,8 +404,6 @@ export function useInputArea(
     imageAttachment,
     citeCode,
     handleSessChatSubmit,
-    isWpGeneWorking,
-    isPendingCancel,
     onSubmitOverride,
   });
 
@@ -519,8 +517,6 @@ export function useInputArea(
     handleDivSubmit,
     isWpGeneWorking,
     isSessionActive,
-    runtimeStatus,
-    hasComposerStopBlockingWork,
     isPendingCancel,
     wpReadOnly,
 

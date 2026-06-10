@@ -49,6 +49,7 @@ import {
   streamRetryStatusAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 import { pendingPlanApprovalsAtom } from "@src/store/session/planApprovalAtom";
+import { chatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";
 import {
   dequeueMessageAtom,
   editMessageAtom,
@@ -306,13 +307,16 @@ const ChatView: React.FC<ChatViewProps> = memo(
 
     // Message queue — keep this aligned with InputArea.sessionId so queued
     // follow-ups written by the composer are visible on the same surface.
+    // Promoted "now" messages are hidden: from the user's perspective Send
+    // Now dispatched them; the dispatcher delivers the moment the FSM allows.
     const messageQueue = useAtomValue(messageQueueAtom);
     const sessionMessageQueue = useMemo(
       () =>
         messageQueue.filter(
           (message) =>
-            message.sessionId === queueSessionId ||
-            message.sessionId === pipelineSessionId
+            (message.sessionId === queueSessionId ||
+              message.sessionId === pipelineSessionId) &&
+            message.priority !== "now"
         ),
       [messageQueue, pipelineSessionId, queueSessionId]
     );
@@ -403,11 +407,22 @@ const ChatView: React.FC<ChatViewProps> = memo(
     const setStationMode = useSetAtom(stationModeAtom);
     const setSelectedSimulatorApp = useSetAtom(simulatorSelectedAppAtom);
     const setReplayMode = useSetAtom(replayModeAtom);
+    const setChatPanelMaximized = useSetAtom(chatPanelMaximizedAtom);
     const openAgentStationDiff = useCallback(() => {
+      // Un-maximize the chat panel so ActivitySimulator becomes visible.
+      // When chatPanelMaximized is true, AppShellContent suppresses the
+      // simulator pane entirely (chatPanelFocused guard), so switching to
+      // the Diff app would have no visible effect.
+      setChatPanelMaximized(false);
       setStationMode("agent-station");
       setSelectedSimulatorApp(AppType.DIFF);
       setReplayMode("replay");
-    }, [setReplayMode, setSelectedSimulatorApp, setStationMode]);
+    }, [
+      setChatPanelMaximized,
+      setReplayMode,
+      setSelectedSimulatorApp,
+      setStationMode,
+    ]);
 
     const {
       questionCollapsed,

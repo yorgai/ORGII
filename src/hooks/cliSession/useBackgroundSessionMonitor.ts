@@ -20,7 +20,10 @@ import {
   notifyTaskCompletion,
 } from "@src/api/services/notification";
 import Message from "@src/components/Toast";
-import { markQueueTurnSettled } from "@src/engines/SessionCore/hooks/session/queueTurnGate";
+import {
+  markTurnTerminal,
+  toTurnTerminalStatus,
+} from "@src/engines/SessionCore/control/turnLifecycle";
 import { type SessionStatus, updateSessionStatus } from "@src/store/session";
 import { notificationSettingsAtom } from "@src/store/ui/notificationAtom";
 import { isTerminalStatus } from "@src/types/session/session";
@@ -55,7 +58,7 @@ export function useBackgroundSessionMonitor(): void {
 
       const sessionName = msg.session_name || "Background session";
 
-      markQueueTurnSettled(msg.session_id, Date.now(), undefined, msg.status);
+      markTurnTerminal(msg.session_id, toTurnTerminalStatus(msg.status));
       updateSessionStatus(msg.session_id, msg.status as SessionStatus);
 
       if (msg.status === "completed") {

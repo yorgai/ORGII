@@ -660,6 +660,7 @@ export interface E2EHelpers {
     workspacePath?: string | null
   ) => Promise<{ ok: true } | Err>;
   navigateTo: (path: string) => Promise<{ ok: true } | Err>;
+  openAgentStationDiff: () => Promise<{ ok: true } | Err>;
   openWorkspaceWorkItemsTab: () => Promise<{ ok: true } | Err>;
   openProjectWorkItemsTab: (
     projectId: string,

@@ -238,8 +238,6 @@ export function createRustAgentAdapter(
       //   summaries cannot re-trigger "running" after completion.
       let _runningSignaled = false;
       let _turnCompleted = false;
-      let _hasQueuedFollowup = false;
-
       // Disposal guard: set to true when dispose() is called so that any
       // in-flight promise chain steps are no-ops. Without this, a slow
       // promise chain could write events from the old session into the
@@ -272,7 +270,11 @@ export function createRustAgentAdapter(
         onStatusChange: (
           status: string,
           errorMessage?: string,
-          meta?: { turnId?: string; turnStatus?: string }
+          meta?: {
+            turnId?: string;
+            turnStatus?: string;
+            intermediate?: boolean;
+          }
         ) => {
           callbacks.onStatusChange?.(status, errorMessage, meta);
         },
@@ -394,10 +396,8 @@ export function createRustAgentAdapter(
             event.result.startsWith(PLAN_SUBMITTED_END_TURN_PREFIX);
           const isTerminal =
             TERMINAL_EVENTS.has(event.type) || isPlanReadyTerminal;
-          const queuePendingCount = event.pendingCount ?? 0;
           const isQueueStatus = event.type === "agent:queue_status";
           const queueIsProcessing = event.isProcessing === true;
-          const hasQueuedFollowup = queueIsProcessing && queuePendingCount > 0;
           const isActiveQueueStatus = isQueueStatus && queueIsProcessing;
           const isTrailing =
             ALWAYS_TRAILING_EVENTS.has(event.type) ||
@@ -405,17 +405,9 @@ export function createRustAgentAdapter(
             (isQueueStatus && !isActiveQueueStatus);
 
           if (isQueueStatus) {
-            const hadQueuedFollowup = _hasQueuedFollowup;
-            _hasQueuedFollowup = hasQueuedFollowup;
             if (isActiveQueueStatus && !_runningSignaled) {
               _runningSignaled = true;
               callbacks.onStatusChange?.("running");
-            } else if (
-              !isActiveQueueStatus &&
-              hadQueuedFollowup &&
-              !_lastTurnFailed
-            ) {
-              callbacks.onStatusChange?.("completed");
             }
           }
 
@@ -529,7 +521,6 @@ export function createRustAgentAdapter(
           _streaming = false;
           _runningSignaled = false;
           _turnCompleted = false;
-          _hasQueuedFollowup = false;
           _lastTurnFailed = false;
           _consecutiveDispatchFailures = 0;
           eventStoreProxy.setStreaming(false, sessionId);

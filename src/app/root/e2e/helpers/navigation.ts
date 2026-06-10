@@ -1,6 +1,8 @@
 import { enrichedWorkItemToUI, projectApi } from "@src/api/http/project";
 import { rpc } from "@src/api/tauri/rpc";
 import { buildAgentOrgsPath } from "@src/config/mainAppPaths";
+import { replayModeAtom } from "@src/engines/SessionCore";
+import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { agentOrgsActiveTabAtom } from "@src/modules/MainApp/AgentOrgs/store/agentOrgsActiveTabAtom";
 import { allAgentDefsAtom } from "@src/modules/MainApp/AgentOrgs/store/builtInAgentsAtom";
 import { router } from "@src/router";
@@ -13,7 +15,10 @@ import {
   chatPanelSelectedWorkItemAtom,
   chatWidthAtom,
 } from "@src/store/ui/chatPanelAtom";
-import { stationModeAtom } from "@src/store/ui/simulatorAtom";
+import {
+  simulatorSelectedAppAtom,
+  stationModeAtom,
+} from "@src/store/ui/simulatorAtom";
 import {
   editorPanelPositionPersistAtom,
   workStationEditorSecondaryCollapsedPersistAtom,
@@ -336,6 +341,21 @@ export function createNavigationHelpers(store: E2EStore) {
     }
   };
 
+  const openAgentStationDiff = async (): Promise<{ ok: true } | Err> => {
+    try {
+      // Un-maximize the chat panel so ActivitySimulator is not suppressed
+      // (AppShellContent only renders ActivitySimulator when !chatPanelFocused,
+      // which requires chatPanelMaximized to be false).
+      store.set(chatPanelMaximizedAtom, false);
+      store.set(stationModeAtom, "agent-station");
+      store.set(simulatorSelectedAppAtom, AppType.DIFF);
+      store.set(replayModeAtom, "replay");
+      return { ok: true };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   return {
     navigateTo,
     getLocationPathname,
@@ -345,5 +365,6 @@ export function createNavigationHelpers(store: E2EStore) {
     openAgentTab,
     openOrgTab,
     inspectWorkstationSurface,
+    openAgentStationDiff,
   };
 }

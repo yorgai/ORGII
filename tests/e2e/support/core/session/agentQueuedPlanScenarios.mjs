@@ -3,6 +3,7 @@ import path from "node:path";
 
 import {
   clickMainAction,
+  waitForRuntimeIdle,
   waitForWorkingTurn,
 } from "./agentQueuedControlScenarios.mjs";
 import {
@@ -614,8 +615,8 @@ function hasRunningToolFeedback(snapshot) {
   );
 }
 
-function hasRunningLiveDelta(snapshot) {
-  return snapshot.running && snapshot.liveDeltaLength > 0;
+function hasObservableLiveDelta(snapshot) {
+  return snapshot.liveDeltaLength > 0;
 }
 
 async function waitForIntermediateStreamEvents(label, finalText = null) {
@@ -624,7 +625,7 @@ async function waitForIntermediateStreamEvents(label, finalText = null) {
   let latestSnapshot = null;
   let sawIncrementalProgress = false;
   let sawRunningToolFeedback = false;
-  let sawRunningLiveDelta = false;
+  let sawObservableLiveDelta = false;
   await browser.waitUntil(
     async () => {
       const state = await inspectChatState(`${label}-intermediate-stream`);
@@ -637,8 +638,8 @@ async function waitForIntermediateStreamEvents(label, finalText = null) {
         if (!firstSnapshot) {
           firstSnapshot = snapshot;
         }
-        if (hasRunningLiveDelta(snapshot)) {
-          sawRunningLiveDelta = true;
+        if (hasObservableLiveDelta(snapshot)) {
+          sawObservableLiveDelta = true;
           return true;
         }
         if (hasRunningToolFeedback(snapshot)) {
@@ -685,7 +686,7 @@ async function waitForIntermediateStreamEvents(label, finalText = null) {
   }
   if (
     !sawIncrementalProgress &&
-    !sawRunningLiveDelta &&
+    !sawObservableLiveDelta &&
     !sawRunningToolFeedback
   ) {
     throw new Error(
@@ -1146,6 +1147,11 @@ async function runPlanBuildDirectScenario(config) {
 
     const filePath = path.join(repoPath, markerFile);
     await waitForMarkerFile(config, filePath, markerText);
+    // Wait for the build turn to fully complete before inspecting the file
+    // changes panel — the marker file exists as soon as the tool call lands, but
+    // the agent session may still be streaming its final assistant message and
+    // the file-change review buttons only activate once the turn is idle.
+    await waitForRuntimeIdle(`${config.label}-plan-direct-build-complete`);
     await waitForFileChangesPanel(`${config.label}-plan-direct-rewind`);
     await clickUndoAllAndConfirm(`${config.label}-plan-direct-rewind`);
 
@@ -1216,9 +1222,10 @@ async function runPlanUpdateSupersedesScenario(config) {
     `${config.label}-plan-update-second`
   );
   updatePrompt = [
-    `Use this updated ORGII_PLAN_REQUEST.md content as the source of truth for ${config.label}:`,
+    `Use these updated inline requirements as the complete source of truth for ${config.label}:`,
     updatedRequestContent.replace(/\s+/g, " ").trim(),
-    "The request file has changed; revise the pending plan from that content before implementation starts.",
+    "Research is complete; do not answer in prose.",
+    "Revise the pending plan from this content before implementation starts.",
     "Submit the revised plan for approval.",
   ].join(" ");
   const chatInputSelector = await waitForChatInput();

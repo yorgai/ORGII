@@ -25,7 +25,7 @@
  * the simulator entry having to know which sub-mode is active.
  */
 import { useAtomValue } from "jotai";
-import { Undo2 } from "lucide-react";
+import { Redo2, Undo2 } from "lucide-react";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -51,9 +51,10 @@ const SimulatorWorkstationTabHeaderComponent: React.FC<
   const { t } = useTranslation("common");
   const headerSlots = useAtomValue(workstationTabHeaderAtomByHost.simulator);
   const globalSessionId = useAtomValue(sessionIdAtom);
-  const { pendingCount, onUndoAll } =
+  const { pendingCount, redoSnapshotAnchors, onUndoAll, onRedo } =
     useFileReviewBatchActions(globalSessionId);
   const [isUndoingAll, setIsUndoingAll] = useState(false);
+  const [isRedoing, setIsRedoing] = useState(false);
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -78,7 +79,18 @@ const SimulatorWorkstationTabHeaderComponent: React.FC<
     }
   }, [t, pendingCount, onUndoAll]);
 
+  const handleRedo = useCallback(async () => {
+    setIsRedoing(true);
+    try {
+      await onRedo();
+    } finally {
+      if (mountedRef.current) setIsRedoing(false);
+    }
+  }, [onRedo]);
+
   const showUndoAll = pendingCount > 0 && !isUndoingAll;
+  const showRedo =
+    redoSnapshotAnchors.length > 0 && !isRedoing && !isUndoingAll;
 
   // Border lives on this row (not on `ReplayTabBar` above) so the chrome
   // shape mirrors My Station: tab bar transparent, header strip carries
@@ -99,19 +111,36 @@ const SimulatorWorkstationTabHeaderComponent: React.FC<
       </NoDragRegion>
       <WorkstationHeaderSectionSeparator />
       <WorkstationTabHeaderSlotsView slots={headerSlots} />
-      {showUndoAll && (
-        <NoDragRegion className="ml-auto flex shrink-0 items-center">
-          <Button
-            htmlType="button"
-            variant="tertiary"
-            appearance="ghost"
-            size="small"
-            icon={<Undo2 size={14} strokeWidth={1.75} />}
-            onClick={handleUndoAll}
-            title={t("actions.undoAll")}
-          >
-            {t("actions.undoAll")}
-          </Button>
+      {(showUndoAll || showRedo) && (
+        <NoDragRegion className="ml-auto flex shrink-0 items-center gap-1">
+          {showRedo && (
+            <Button
+              htmlType="button"
+              variant="tertiary"
+              appearance="ghost"
+              size="small"
+              icon={<Redo2 size={14} strokeWidth={1.75} />}
+              onClick={handleRedo}
+              title={t("actions.redoAll")}
+              data-testid="file-changes-redo-all"
+            >
+              {t("actions.redoAll")}
+            </Button>
+          )}
+          {showUndoAll && (
+            <Button
+              htmlType="button"
+              variant="tertiary"
+              appearance="ghost"
+              size="small"
+              icon={<Undo2 size={14} strokeWidth={1.75} />}
+              onClick={handleUndoAll}
+              title={t("actions.undoAll")}
+              data-testid="file-changes-undo-all"
+            >
+              {t("actions.undoAll")}
+            </Button>
+          )}
         </NoDragRegion>
       )}
     </div>

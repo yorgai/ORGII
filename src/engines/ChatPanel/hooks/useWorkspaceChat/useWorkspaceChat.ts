@@ -17,25 +17,16 @@ import { enterAgentOrgSessionIntervention } from "@src/api/tauri/agent";
 import { isHostedKey } from "@src/api/tauri/session";
 import Message from "@src/components/Message";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
-import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
-import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
 import {
-  latestAssistantActivityAfterLastUserAt,
-  sessionHasComposerStopBlockingWork,
-} from "@src/engines/SessionCore/core/runningEventGate";
+  beginTurnDispatch,
+  forceTurnIdle,
+  getTurnPhase,
+} from "@src/engines/SessionCore/control/turnLifecycle";
+import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import { useSessionId } from "@src/engines/SessionCore/hooks/session";
 import {
-  PENDING_RUST_ACTIVE_TURN_ID,
-  hasObservedUnsettledQueueTurn,
-  hasQueueTurnSettledAfter,
-  markQueueTurnWorking,
-  shouldQueueSubmitAsActiveTurn,
-} from "@src/engines/SessionCore/hooks/session/queueTurnGate";
-import {
-  isPendingCancelAtom,
   isSessionActiveAtom,
   lastUserMessageAtom,
-  sessionRuntimeStatusAtom,
   setSessionRuntimeStatusAtom,
   userInitiatedCancelAtom,
 } from "@src/store/session/cliSessionStatusAtom";
@@ -51,14 +42,12 @@ import {
 } from "@src/store/session/viewAtom";
 import {
   enqueueMessageAtom,
-  forceSendPendingQueueAtom,
   messageQueueAtom,
   queueFlushRequestAtom,
 } from "@src/store/ui/messageQueueAtom";
 import {
   isAgentSession,
   isCliSession,
-  isCursorIdeSession,
 } from "@src/util/session/sessionDispatch";
 
 import {
@@ -120,11 +109,6 @@ interface UseWorkspaceChatOptions {
   sessionId?: string;
 }
 
-export interface SubmitOptions {
-  forceDispatch?: boolean;
-  forceQueueAsActiveTurn?: boolean;
-}
-
 const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
   const { sessionId: propSessionId } = options;
   const { t } = useTranslation("sessions");
@@ -182,29 +166,11 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
   // Sync the shared submit guard with runtime status so it clears
   // when the session finishes, regardless of which instance started it.
   useEffect(() => {
-    const observedSessionId =
-      propSessionId ||
-      coreSessionId ||
-      resolvedSessionId ||
-      activeSessionId ||
-      workstationActiveSessionId ||
-      null;
-    if (isWpGeneWorking && observedSessionId) {
-      markQueueTurnWorking(observedSessionId);
-      return;
-    }
     if (!isWpGeneWorking) {
       _sharedSubmitGuard.current = false;
       _sharedSubmitPayload.current = null;
     }
-  }, [
-    activeSessionId,
-    coreSessionId,
-    isWpGeneWorking,
-    propSessionId,
-    resolvedSessionId,
-    workstationActiveSessionId,
-  ]);
+  }, [isWpGeneWorking]);
 
   // ============================================
   // Session ID Helper
@@ -252,8 +218,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       e?: React.FormEvent,
       inputValue?: string,
       agentContent?: string,
-      imageDataUrls?: string[],
-      options: SubmitOptions = {}
+      imageDataUrls?: string[]
     ) => {
       e?.preventDefault();
       const finalInput = inputValue || sessChatInput;
@@ -268,19 +233,6 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         throw new Error("No session ID");
       }
 
-      const latestSessionRuntimeStatus = store.get(sessionRuntimeStatusAtom);
-      const latestIsSessionActive = store.get(isSessionActiveAtom);
-      const latestIsPendingCancel = store.get(isPendingCancelAtom);
-      const latestUserInitiatedCancel = store.get(userInitiatedCancelAtom);
-      const runtimeIsWorking =
-        latestSessionRuntimeStatus === "running" ||
-        latestSessionRuntimeStatus === "installing" ||
-        latestSessionRuntimeStatus === "waiting_for_user" ||
-        latestSessionRuntimeStatus === "waiting_for_funds" ||
-        sessionHasComposerStopBlockingWork(
-          store.get(sortedEventsAtom),
-          sessionId
-        );
       const submitPayloadKey = buildSubmitPayloadKey(
         sessionId,
         finalInput,
@@ -291,7 +243,6 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         submitPayloadKey
       )}`;
       if (
-        !options.forceDispatch &&
         consumeRestoredStopSubmitSuppression({
           sessionId,
           displayContent: finalInput,
@@ -300,60 +251,42 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       ) {
         return;
       }
-      const restoredStopDraftSubmit =
-        !options.forceDispatch && consumeRestoredStopDraft(sessionId);
-      const effectiveUserInitiatedCancel =
-        latestUserInitiatedCancel || restoredStopDraftSubmit;
-      const hasQueuedSibling =
-        store
-          .get(messageQueueAtom)
-          .some((message) => message.sessionId === sessionId) ||
-        store
-          .get(forceSendPendingQueueAtom)
-          .some((message) => message.sessionId === sessionId);
-      const latestTurnActivityAt = latestAssistantActivityAfterLastUserAt(
-        store.get(sortedEventsAtom),
-        sessionId
-      );
-      const hasUnsettledRenderedTurnActivity =
-        latestTurnActivityAt !== undefined &&
-        !hasQueueTurnSettledAfter(sessionId, latestTurnActivityAt);
-      const hasObservedWorkingTurn = hasObservedUnsettledQueueTurn(sessionId);
-      const submitShouldQueueAsActiveTurn =
-        options.forceQueueAsActiveTurn ||
-        effectiveUserInitiatedCancel ||
-        hasQueuedSibling ||
-        hasObservedWorkingTurn ||
-        hasUnsettledRenderedTurnActivity ||
-        shouldQueueSubmitAsActiveTurn({
-          sessionId,
-          isActive: latestIsSessionActive,
-          runtimeIsWorking,
-          pendingCancel: latestIsPendingCancel,
-        });
-      const supportsQueuedFollowups =
-        submitShouldQueueAsActiveTurn ||
-        isAgentSession(sessionId) ||
-        isCliSession(sessionId) ||
-        isCursorIdeSession(sessionId);
+      // Re-submitting the exact draft a Stop restored is an explicit
+      // post-Stop dispatch; so is any submit while a stop episode is open.
+      const restoredStopDraftSubmit = consumeRestoredStopDraft({
+        sessionId,
+        displayContent: finalInput,
+        imageDataUrls,
+      });
+      const explicitPostStopSubmit =
+        store.get(userInitiatedCancelAtom) || restoredStopDraftSubmit;
+
+      // Duplicate-submit guard: the exact payload of the in-flight direct
+      // dispatch is dropped until the runtime settles (double-click safety).
       if (
-        !options.forceDispatch &&
         _sharedSubmitGuard.current &&
-        !isWpGeneWorking &&
         _sharedSubmitPayload.current === submitPayloadKey
       ) {
         return;
       }
-      // Enqueue if the agent is running OR a cancel is mid-flight.
-      // Ordinary queued follow-ups stay frontend-owned until a non-cancel
-      // terminal settle explicitly releases them; they must not enter Rust's
-      // scheduler queue early, because Rust will auto-run scheduler entries
-      // immediately after a Stop/cancelled turn.
-      if (
-        !options.forceDispatch &&
-        supportsQueuedFollowups &&
-        submitShouldQueueAsActiveTurn
-      ) {
+
+      // ── submitOrEnqueue: THE single queue/direct decision ────────────────
+      // Queue when the turn-lifecycle FSM says a turn is open (or closing),
+      // when a stop episode makes this an explicit post-Stop dispatch, or
+      // when older natural siblings are still queued (FIFO ordering).
+      const turnPhase = getTurnPhase(sessionId);
+      const hasQueuedNaturalSibling = store
+        .get(messageQueueAtom)
+        .some(
+          (message) =>
+            message.sessionId === sessionId && !message.requiresExplicitDispatch
+        );
+      const shouldEnqueue =
+        explicitPostStopSubmit ||
+        turnPhase !== "idle" ||
+        hasQueuedNaturalSibling;
+
+      if (shouldEnqueue) {
         setSessChatInput("");
 
         // Build the snapshot from the session row, falling back to the
@@ -387,7 +320,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
           (session?.agentExecMode as AgentExecMode | undefined) ??
           creatorDefaultMode;
 
-        if (effectiveUserInitiatedCancel) {
+        if (explicitPostStopSubmit) {
           setUserInitiatedCancel(false);
         }
 
@@ -399,19 +332,13 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
           imageDataUrls,
           modelSelection: snapshotSelection,
           agentExecMode: snapshotMode,
-          requiresRuntimeSettle: !effectiveUserInitiatedCancel,
-          releaseAfterTurnId: effectiveUserInitiatedCancel
-            ? undefined
-            : isAgentSession(sessionId) ||
-                isCursorIdeSession(sessionId) ||
-                hasObservedWorkingTurn
-              ? PENDING_RUST_ACTIVE_TURN_ID
-              : undefined,
-          dispatchAfterUserCancel: effectiveUserInitiatedCancel,
+          // Explicit post-Stop dispatches jump the queue and may interrupt;
+          // everything else is a natural FIFO follow-up.
+          priority: explicitPostStopSubmit ? "now" : "next",
           status: "queued",
           createdAt: new Date().toISOString(),
         });
-        if (effectiveUserInitiatedCancel) {
+        if (explicitPostStopSubmit) {
           setQueueFlushRequest((requestId) => requestId + 1);
         }
         return;
@@ -426,6 +353,11 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         imageDataUrls: restoreImageDataUrls,
       });
 
+      // Synchronously reserve the turn BEFORE any await: from this instant,
+      // every concurrent submit and the queue dispatcher observe this session
+      // as busy, so nothing can race a second direct dispatch.
+      beginTurnDispatch(sessionId);
+
       // Mark running BEFORE appending the user message event.
       // usePlanningIndicator's cold-start path records `activationVersion`
       // synchronously on the same render where isSessionActive flips true.
@@ -433,7 +365,6 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       // before `activationVersion` is captured, breaking the cold-start
       // condition (`activationVersion === version`) and forcing the indicator
       // to wait the full 1-second warm-path delay instead of appearing instantly.
-      markQueueTurnWorking(sessionId);
       setSessionRuntimeStatus({ status: "running", source: "dispatch" });
       setSessChatInput("");
       setLoading(true);
@@ -466,6 +397,10 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
         _sharedSubmitGuard.current = false;
         _sharedSubmitPayload.current = null;
         setSessionRuntimeStatus({ status: "idle", source: "dispatch" });
+        // Close the turn reserved above. If the failure happened inside
+        // dispatchMessageBySessionType it already marked its own generation
+        // terminal, in which case this is a no-op generation bump.
+        forceTurnIdle(sessionId);
         if (!userEventAppended) throw error;
         // NOT re-thrown after user event append: the message is already visible
         // in chat, so restoring the editor would create a duplicate-send risk.
@@ -475,7 +410,6 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
     },
     [
       sessChatInput,
-      isWpGeneWorking,
       addUserMessage,
       enqueueMessage,
       sessionMap,

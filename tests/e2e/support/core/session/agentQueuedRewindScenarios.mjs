@@ -84,14 +84,41 @@ async function ensureMarkerFileCreated(config, filePath, markerText) {
 async function reloadAndOpenActiveSession(sessionId, label) {
   await browser.refresh();
   await waitForApp();
-  unwrap(await invokeE2E("openSession", sessionId), `${label}-openSession`);
+  // CLI sessions may need a moment for the adapter to settle after page
+  // reload before openSession can locate the session in the store. Retry
+  // the openSession call up to 3 times with a short delay if chatEventCount
+  // is still 0 — this is a known race on reload for CLI sessions where the
+  // session-persistence cache eviction races against the initial history load.
+  const MAX_OPEN_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_OPEN_ATTEMPTS; attempt++) {
+    unwrap(
+      await invokeE2E("openSession", sessionId),
+      `${label}-openSession-attempt-${attempt}`
+    );
+    const settled = await browser
+      .waitUntil(
+        async () => {
+          const state = await invokeE2E("inspectChatState");
+          return state.activeSessionId === sessionId && state.chatEventCount > 0;
+        },
+        { timeout: 20_000, interval: 1_000 }
+      )
+      .catch(() => false);
+    if (settled) return;
+    if (attempt < MAX_OPEN_ATTEMPTS) {
+      // Give the CLI adapter more time to finish the post-reload history load
+      // before retrying openSession.
+      await new Promise((resolve) => setTimeout(resolve, 3_000));
+    }
+  }
+  // Final check with full error message if all attempts exhausted.
   await browser.waitUntil(
     async () => {
       const state = await invokeE2E("inspectChatState");
       return state.activeSessionId === sessionId && state.chatEventCount > 0;
     },
     {
-      timeout: 60_000,
+      timeout: 5_000,
       interval: 1_000,
       timeoutMsg: `${label} did not restore session after reload; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
     }

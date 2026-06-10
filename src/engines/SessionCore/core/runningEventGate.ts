@@ -11,17 +11,14 @@ const TURN_BLOCKING_SHELL_PROCESS_STATUSES = new Set(["running"]);
  * - Live runtime resource: anything still alive or diagnostically relevant.
  *   Includes background shells and hidden status sentinels. Use for replay,
  *   planning footer, visibility filtering, dedup, and diagnostic surfaces.
- * - Turn-blocking runtime event: work that should hold queue dispatch because
- *   the current turn may still be authoritative.
- * - Composer stop-blocking work: foreground user-stoppable work only. This is
- *   the only event-list fallback that may hold the main composer in Stop state
- *   or force a normal submit into the active-turn queue.
+ * - Composer stop-blocking work: foreground user-stoppable work only. This
+ *   may hold the main composer in Stop state (Stop vs. Send icon).
  * - Timeline boundary closable event: running work that can be force-closed
  *   during stop/force-send/rewind boundary transitions.
  *
- * Do not use live-resource gates for composer or submit behavior. That
- * recreates the completed-turn-still-shows-Stop bug when stale hidden running
- * records or background process markers remain in EventStore.
+ * NONE of these gates participate in queue dispatch or submit routing — turn
+ * finality is owned exclusively by the turn-lifecycle FSM
+ * (`control/turnLifecycle.ts`).
  */
 
 export function shellProcessStatusFromArgs(args: unknown): string | undefined {
@@ -56,16 +53,6 @@ export function isLiveRuntimeResourceEvent(event: SessionEvent): boolean {
   );
 }
 
-export function sessionHasLiveRuntimeResource(
-  events: readonly SessionEvent[],
-  sessionId: string
-): boolean {
-  return events.some((event) => {
-    if (event.sessionId && event.sessionId !== sessionId) return false;
-    return isLiveRuntimeResourceEvent(event);
-  });
-}
-
 export function isTurnBlockingRuntimeEvent(event: SessionEvent): boolean {
   const shellProcessStatus = shellProcessStatusFromArgs(event.args);
   if (shellProcessStatus) {
@@ -74,16 +61,6 @@ export function isTurnBlockingRuntimeEvent(event: SessionEvent): boolean {
   return (
     event.displayStatus === "running" || event.result?.status === "running"
   );
-}
-
-export function sessionHasTurnBlockingRuntimeEvent(
-  events: readonly SessionEvent[],
-  sessionId: string
-): boolean {
-  return events.some((event) => {
-    if (event.sessionId && event.sessionId !== sessionId) return false;
-    return isTurnBlockingRuntimeEvent(event);
-  });
 }
 
 export function isComposerStopBlockingEvent(event: SessionEvent): boolean {
@@ -107,48 +84,6 @@ export function sessionHasComposerStopBlockingWork(
     if (event.sessionId && event.sessionId !== sessionId) return false;
     return isComposerStopBlockingEvent(event);
   });
-}
-
-function eventTimestampMs(event: SessionEvent): number {
-  const parsed = Date.parse(event.createdAt);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function isAssistantTurnActivity(event: SessionEvent): boolean {
-  if (event.source !== "assistant") return false;
-  if (!isTurnBlockingRuntimeEvent(event)) return false;
-  if (
-    event.displayVariant === "thinking" ||
-    event.displayVariant === "tool_call"
-  ) {
-    return true;
-  }
-  return (
-    event.actionType === "assistant" ||
-    event.actionType === "llm_thinking" ||
-    event.actionType === "tool_call"
-  );
-}
-
-export function latestAssistantActivityAfterLastUserAt(
-  events: readonly SessionEvent[],
-  sessionId: string
-): number | undefined {
-  let lastUserAt = 0;
-  let latestActivityAt = 0;
-  for (const event of events) {
-    if (event.sessionId && event.sessionId !== sessionId) continue;
-    const at = eventTimestampMs(event);
-    if (event.source === "user") {
-      lastUserAt = Math.max(lastUserAt, at);
-      latestActivityAt = 0;
-      continue;
-    }
-    if (at >= lastUserAt && isAssistantTurnActivity(event)) {
-      latestActivityAt = Math.max(latestActivityAt, at);
-    }
-  }
-  return latestActivityAt > 0 ? latestActivityAt : undefined;
 }
 
 export function isTimelineBoundaryClosableRuntimeEvent(

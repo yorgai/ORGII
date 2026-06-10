@@ -25,6 +25,7 @@ import { editTruncationTimestampAtom } from "@src/engines/SessionCore";
 import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import { deleteSession as deleteCachedSession } from "@src/engines/SessionCore/storage/cacheAdapter";
 import {
   clearPendingPlanApproval,
   pendingPlanApprovalsAtom,
@@ -165,6 +166,26 @@ export function useEditUserMessage(): (
               createdAt,
               revertFiles,
             });
+            // Purge the session-persistence cache and Rust EventStore so that
+            // after a browser reload the session reloads from the authoritative
+            // code_session_chunks SQLite table rather than from stale cached
+            // events that predate the rewind.
+            await Promise.all([
+              deleteCachedSession(initiatedSessionId).catch((err) =>
+                console.warn(
+                  "[useEditUserMessage] deleteSession failed (non-fatal):",
+                  err
+                )
+              ),
+              eventStoreProxy
+                .evictSession(initiatedSessionId)
+                .catch((err) =>
+                  console.warn(
+                    "[useEditUserMessage] evictSession failed (non-fatal):",
+                    err
+                  )
+                ),
+            ]);
           }
         }
 

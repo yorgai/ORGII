@@ -12,7 +12,10 @@ const restoredSubmitSuppression: SuppressedRestoredSubmit = {
   expiresAt: 0,
 };
 
-const restoredStopDraftSessionIds = new Set<string>();
+const restoredStopDraftsBySessionId = new Map<
+  string,
+  { displayContent: string; imageDataUrls: string[] }
+>();
 
 function normalizedImages(imageDataUrls?: string[]): string[] {
   return imageDataUrls ?? [];
@@ -32,18 +35,37 @@ export function suppressRestoredStopSubmit(options: {
   restoredSubmitSuppression.expiresAt = Date.now() + (options.ttlMs ?? 50);
 }
 
-export function markRestoredStopDraft(sessionId: string): void {
-  restoredStopDraftSessionIds.add(sessionId);
+export function markRestoredStopDraft(options: {
+  sessionId: string;
+  displayContent: string;
+  imageDataUrls?: string[];
+}): void {
+  restoredStopDraftsBySessionId.set(options.sessionId, {
+    displayContent: options.displayContent,
+    imageDataUrls: normalizedImages(options.imageDataUrls),
+  });
 }
 
-export function consumeRestoredStopDraft(sessionId: string): boolean {
-  if (!restoredStopDraftSessionIds.has(sessionId)) return false;
-  restoredStopDraftSessionIds.delete(sessionId);
+export function consumeRestoredStopDraft(options: {
+  sessionId: string;
+  displayContent: string;
+  imageDataUrls?: string[];
+}): boolean {
+  const restored = restoredStopDraftsBySessionId.get(options.sessionId);
+  if (!restored) return false;
+  if (restored.displayContent !== options.displayContent) return false;
+  if (
+    JSON.stringify(restored.imageDataUrls) !==
+    JSON.stringify(normalizedImages(options.imageDataUrls))
+  ) {
+    return false;
+  }
+  restoredStopDraftsBySessionId.delete(options.sessionId);
   return true;
 }
 
 export function clearRestoredStopDraft(sessionId: string): void {
-  restoredStopDraftSessionIds.delete(sessionId);
+  restoredStopDraftsBySessionId.delete(sessionId);
 }
 
 export function consumeRestoredStopSubmitSuppression(options: {

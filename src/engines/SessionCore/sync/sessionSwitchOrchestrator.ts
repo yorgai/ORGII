@@ -1,6 +1,7 @@
 import { cursorBridgeComposerLastUpdatedAt } from "@src/api/tauri/cursorBridge";
 import { Message } from "@src/components/Message";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
+import { isVisibleInChat } from "@src/engines/SessionCore/ingestion/visibilityFilters";
 import type { Logger } from "@src/hooks/logger";
 import {
   composerIdFromSessionId,
@@ -133,7 +134,7 @@ async function handleCacheHit(
   if (abortController.signal.aborted) return;
 
   const cacheHitInFlight = isInFlightRunStatus(postResult?.runStatus);
-  let displayEvents = await eventStoreProxy.getEvents();
+  let displayEvents = await eventStoreProxy.getEvents(sessionId);
   if (abortController.signal.aborted) return;
 
   if (!cacheHitInFlight) {
@@ -141,7 +142,10 @@ async function handleCacheHit(
       await eventStoreProxy.loadInitialTurnWindow(sessionId);
       if (abortController.signal.aborted) return;
       displayEvents = await eventStoreProxy.getEvents(sessionId);
-    } else if (displayEvents.length === 0) {
+    } else if (
+      displayEvents.length === 0 ||
+      !displayEvents.some(isVisibleInChat)
+    ) {
       displayEvents = await loadPersistedHistory(
         adapter,
         sessionId,

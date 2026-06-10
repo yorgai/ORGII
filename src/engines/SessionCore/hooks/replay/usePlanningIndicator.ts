@@ -45,6 +45,8 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { markTurnTerminal } from "@src/engines/SessionCore/control/turnLifecycle";
+import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import {
   derivedSnapshotAtom,
   eventStoreVersionAtom,
@@ -133,6 +135,7 @@ export function usePlanningIndicator(): PlanningIndicatorState {
   const snapshot = useAtomValue(derivedSnapshotAtom);
   const version = useAtomValue(eventStoreVersionAtom);
   const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
+  const activeSessionId = useAtomValue(sessionIdAtom);
 
   const anyRunning = useMemo(() => {
     if (!snapshot || !("chatEvents" in snapshot)) return false;
@@ -288,11 +291,16 @@ export function usePlanningIndicator(): PlanningIndicatorState {
           "or the idle agent:queue_status frame."
       );
       setSessionRuntimeStatus({ status: "completed", source: "planning" });
+      // Last-resort finality: also close the turn-lifecycle FSM so queued
+      // follow-ups are not blocked forever by the dropped terminal.
+      if (activeSessionId) {
+        markTurnTerminal(activeSessionId, "completed");
+      }
     }, PLANNING_WATCHDOG_MS);
     return () => {
       window.clearTimeout(timerId);
     };
-  }, [visible, setSessionRuntimeStatus]);
+  }, [visible, setSessionRuntimeStatus, activeSessionId]);
 
   // Re-roll the variant index on every hidden → visible transition.
   // Using a large random integer and letting the consumer mod by the

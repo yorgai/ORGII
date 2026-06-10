@@ -17,13 +17,18 @@ import { enterAgentOrgSessionIntervention } from "@src/api/tauri/agent";
 import type { CancelReason } from "@src/api/tauri/agent/session";
 import type { MergeStatus } from "@src/api/tauri/rpc/schemas/validation";
 import {
+  confirmTurnRunning,
+  getTurnGeneration,
+  markTurnTerminal,
+  toTurnTerminalStatus,
+} from "@src/engines/SessionCore/control/turnLifecycle";
+import {
   loadSessionAtom,
   sessionIdAtom,
 } from "@src/engines/SessionCore/core/atoms";
 import { isTurnBlockingRuntimeEvent } from "@src/engines/SessionCore/core/runningEventGate";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
-import { markQueueTurnSettled } from "@src/engines/SessionCore/hooks/session/queueTurnGate";
 import {
   normalizeChunkRust,
   processChunksRust,
@@ -208,6 +213,9 @@ async function closeObservedCliTerminalEvents(
 }
 
 function markCliRuntimeRunning(sessionId: string): void {
+  // FSM running ack is visibility-independent: the dispatch reserved the
+  // turn, so promote it to "working" even for background sessions.
+  confirmTurnRunning(sessionId);
   if (!isStoreInitialized()) return;
   const store = getInstrumentedStore();
   const isVisibleSession =
@@ -383,6 +391,7 @@ export const cliAdapter: SessionAdapter = {
     let thinkStreamId = "";
     let thinkStartedAt = "";
     let observedTerminalStatus: CliSessionStatus | undefined;
+    let finalAssistantSettleTimer: ReturnType<typeof setTimeout> | undefined;
     const finalizedStreamEventIds = new Set<string>();
     const toolCallDeltaBuffers = new Map<
       number,
@@ -412,9 +421,57 @@ export const cliAdapter: SessionAdapter = {
       toolCallDeltaBuffers.clear();
     }
 
+    function clearFinalAssistantSettleTimer(): void {
+      if (!finalAssistantSettleTimer) return;
+      clearTimeout(finalAssistantSettleTimer);
+      finalAssistantSettleTimer = undefined;
+    }
+
     function reconcileTerminalEventsIfNeeded(): void {
       if (!observedTerminalStatus) return;
+      clearFinalAssistantSettleTimer();
       markObservedCliTerminalStatus(sessionId, observedTerminalStatus);
+    }
+
+    function scheduleFinalAssistantSettleFallback(): void {
+      if (observedTerminalStatus) return;
+      const protectedTurn = protectedRunningTurnBySession.get(sessionId);
+      if (!protectedTurn) return;
+      clearFinalAssistantSettleTimer();
+      finalAssistantSettleTimer = setTimeout(() => {
+        if (observedTerminalStatus) return;
+        if (protectedRunningTurnBySession.get(sessionId) !== protectedTurn) {
+          return;
+        }
+        void readCliStatus(sessionId)
+          .then((statusResponse) => {
+            if (observedTerminalStatus) return;
+            if (
+              protectedRunningTurnBySession.get(sessionId) !== protectedTurn
+            ) {
+              return;
+            }
+            const terminalStatus = isCliTerminalStatus(statusResponse?.status)
+              ? statusResponse.status
+              : "completed";
+            observedTerminalStatus = terminalStatus;
+            protectedRunningTurnBySession.delete(sessionId);
+            callbacks.onStatusChange?.(terminalStatus);
+            markObservedCliTerminalStatus(sessionId, terminalStatus);
+            markTurnTerminal(sessionId, toTurnTerminalStatus(terminalStatus));
+            clearMessageStream();
+            clearThinkingStream();
+            clearToolCallDeltaBuffers();
+            setStreamingMode(false);
+            callbacks.onAgentComplete?.();
+          })
+          .catch((error) => {
+            console.warn(
+              "[CliAdapter] final assistant settle fallback failed:",
+              error
+            );
+          });
+      }, 1_500);
     }
 
     function asString(value: unknown): string | undefined {
@@ -623,6 +680,14 @@ export const cliAdapter: SessionAdapter = {
       // appending a duplicate assistant/thinking message.
       if (isMessageType || isThinkingType) {
         const tempId = isMessageType ? msgStreamId : thinkStreamId;
+        const isFinalAssistantMessage =
+          isMessageType && chunk.result?.is_full_content === true;
+        const reconcileAfterFinalEvent = () => {
+          reconcileTerminalEventsIfNeeded();
+          if (isFinalAssistantMessage) {
+            scheduleFinalAssistantSettleFallback();
+          }
+        };
         normalizeChunkRust(chunk, sessionId)
           .then((event) => {
             if (finalizedStreamEventIds.has(event.id)) return;
@@ -635,12 +700,12 @@ export const cliAdapter: SessionAdapter = {
               finalizedStreamEventIds.add(event.id);
               eventStoreProxy
                 .replaceAndRemove(tempId, event, sessionId)
-                .then(reconcileTerminalEventsIfNeeded);
+                .then(reconcileAfterFinalEvent);
               return;
             }
             eventStoreProxy
               .append([event], sessionId)
-              .then(reconcileTerminalEventsIfNeeded);
+              .then(reconcileAfterFinalEvent);
           })
           .catch((err) => {
             console.warn("[CliAdapter] normalizeChunkRust failed:", err);
@@ -689,6 +754,10 @@ export const cliAdapter: SessionAdapter = {
       if (streamType === "message") {
         const tsTempId = msgStreamId;
         clearMessageStream();
+        const reconcileAfterCompleteMessage = () => {
+          reconcileTerminalEventsIfNeeded();
+          scheduleFinalAssistantSettleFallback();
+        };
         // Remove the TS-side placeholder and insert Rust's authoritative event atomically.
         // The TS placeholder has a per-turn unique ID (stream-msg-ts-*) to avoid
         // overwriting the previous turn's completed assistant message. If they differ,
@@ -696,11 +765,11 @@ export const cliAdapter: SessionAdapter = {
         if (tsTempId && tsTempId !== completeEvent.id) {
           eventStoreProxy
             .replaceAndRemove(tsTempId, completeEvent, sessionId)
-            .then(reconcileTerminalEventsIfNeeded);
+            .then(reconcileAfterCompleteMessage);
         } else {
           eventStoreProxy
             .upsert(completeEvent, sessionId)
-            .then(reconcileTerminalEventsIfNeeded);
+            .then(reconcileAfterCompleteMessage);
         }
       } else if (streamType === "thinking") {
         const tsTempId = thinkStreamId;
@@ -734,6 +803,7 @@ export const cliAdapter: SessionAdapter = {
 
       if (terminalStatus) {
         observedTerminalStatus = terminalStatus;
+        clearFinalAssistantSettleTimer();
         clearMessageStream();
         clearThinkingStream();
         clearToolCallDeltaBuffers();
@@ -810,6 +880,7 @@ export const cliAdapter: SessionAdapter = {
       },
 
       reset(): void {
+        clearFinalAssistantSettleTimer();
         clearMessageStream();
         clearThinkingStream();
         clearToolCallDeltaBuffers();
@@ -870,6 +941,9 @@ export const cliAdapter: SessionAdapter = {
       previousStatus
     );
     markCliRuntimeRunning(sessionId);
+    // Capture the FSM generation of THIS dispatch so the async terminal
+    // observers below can never close a newer turn (late-terminal safety).
+    const dispatchGeneration = getTurnGeneration(sessionId);
     const persistedEvents = await waitForPersistedCliUserEvent(
       sessionId,
       content
@@ -880,11 +954,10 @@ export const cliAdapter: SessionAdapter = {
     if (acceptedTerminalIsCurrentTurn) {
       protectedRunningTurnBySession.delete(sessionId);
       markObservedCliTerminalStatus(sessionId, acceptedStatus.status);
-      markQueueTurnSettled(
+      markTurnTerminal(
         sessionId,
-        Date.now(),
-        undefined,
-        acceptedStatus.status
+        toTurnTerminalStatus(acceptedStatus?.status ?? "completed"),
+        { generation: dispatchGeneration }
       );
     } else {
       void waitForCliTerminalBoundary(
@@ -894,11 +967,10 @@ export const cliAdapter: SessionAdapter = {
         if (isCliTerminalStatus(terminalStatus?.status)) {
           protectedRunningTurnBySession.delete(sessionId);
           markObservedCliTerminalStatus(sessionId, terminalStatus.status);
-          markQueueTurnSettled(
+          markTurnTerminal(
             sessionId,
-            Date.now(),
-            undefined,
-            terminalStatus.status
+            toTurnTerminalStatus(terminalStatus.status),
+            { generation: dispatchGeneration }
           );
         }
       });

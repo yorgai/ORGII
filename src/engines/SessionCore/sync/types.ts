@@ -82,7 +82,7 @@ export interface EventHandlerCallbacks {
   onStatusChange?: (
     status: string,
     error?: string,
-    meta?: { turnId?: string; turnStatus?: string }
+    meta?: { turnId?: string; turnStatus?: string; intermediate?: boolean }
   ) => void;
   /** Called when CLI token usage updates. */
   onTokenUpdate?: (tokens: number) => void;

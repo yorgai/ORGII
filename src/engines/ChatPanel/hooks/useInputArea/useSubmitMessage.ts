@@ -22,13 +22,6 @@ import { rejectQuestion, respondQuestion } from "@src/api/tauri/agent";
 import Message from "@src/components/Message";
 import { extractQuestionBatch } from "@src/engines/ChatPanel/InputArea/AskQuestionCard/extractQuestionBatch";
 import { chatEventsAtom } from "@src/engines/SessionCore";
-import { sortedEventsAtom } from "@src/engines/SessionCore/core/atoms/events";
-import { sessionHasComposerStopBlockingWork } from "@src/engines/SessionCore/core/runningEventGate";
-import {
-  isPendingCancelAtom,
-  isSessionActiveAtom,
-  sessionRuntimeStatusAtom,
-} from "@src/store/session/cliSessionStatusAtom";
 import type { ChatImageAttachment } from "@src/store/ui/chatImageAtom";
 import { wpReadOnlyAtom } from "@src/store/ui/chatPanelAtom";
 
@@ -67,15 +60,8 @@ export interface UseSubmitMessageOptions {
     event: React.FormEvent | undefined,
     displayText: string,
     agentContent?: string,
-    imageDataUrls?: string[],
-    options?: {
-      forceDispatch?: boolean;
-      forceSendNow?: boolean;
-      forceQueueAsActiveTurn?: boolean;
-    }
+    imageDataUrls?: string[]
   ) => Promise<void>;
-  isWpGeneWorking: boolean;
-  isPendingCancel: boolean;
   onSubmitOverride?: (input: SubmitOverrideInput) => Promise<boolean>;
 }
 
@@ -92,8 +78,6 @@ export function useSubmitMessage({
   imageAttachment,
   citeCode,
   handleSessChatSubmit,
-  isWpGeneWorking,
-  isPendingCancel,
   onSubmitOverride,
 }: UseSubmitMessageOptions): (options?: SubmitMessageOptions) => Promise<void> {
   const { t } = useTranslation("sessions");
@@ -197,8 +181,6 @@ export function useSubmitMessage({
         displayText,
         agentContent,
         imageDataUrls,
-        forceSendNow: options.forceSendNow === true,
-        forceQueueAsActiveTurn: options.forceQueueAsActiveTurn === true,
       });
       if (submitInFlightKeyRef.current === submitKey) return;
       submitInFlightKeyRef.current = submitKey;
@@ -216,15 +198,22 @@ export function useSubmitMessage({
           : null;
 
         // ── Optimistic clear ──────────────────────────────────────────────────
-        refs.composerInputRef.current.clear();
-        refs.setHasContent(false);
-        if (citeCode.isCiteCode) {
-          citeCode.clearCiteCode();
+        const editorTextBeforeClear =
+          refs.composerInputRef.current.getTextWithPills();
+        const editorStillContainsSubmittedText =
+          editorTextBeforeClear === displayText ||
+          editorTextBeforeClear.trim() === displayText.trim();
+        if (editorStillContainsSubmittedText) {
+          refs.composerInputRef.current.clear();
+          refs.setHasContent(false);
+          if (citeCode.isCiteCode) {
+            citeCode.clearCiteCode();
+          }
+          imageAttachment.clearImages();
+          clearImageDraft(draftSessionId);
         }
-        imageAttachment.clearImages();
-        clearImageDraft(draftSessionId);
 
-        if (draftSessionId) {
+        if (draftSessionId && editorStillContainsSubmittedText) {
           void flushDraft("").catch((err: unknown) => {
             console.warn("[useSubmitMessage] flushDraft(clear) failed:", err);
           });
@@ -242,36 +231,13 @@ export function useSubmitMessage({
               })
             : false;
           if (!overrideHandled) {
-            const latestRuntimeStatus = store.get(sessionRuntimeStatusAtom);
-            const runtimeIsWorking =
-              latestRuntimeStatus === "running" ||
-              latestRuntimeStatus === "installing" ||
-              latestRuntimeStatus === "waiting_for_user" ||
-              latestRuntimeStatus === "waiting_for_funds" ||
-              (draftSessionId
-                ? sessionHasComposerStopBlockingWork(
-                    store.get(sortedEventsAtom),
-                    draftSessionId
-                  )
-                : false);
-            const forceQueueAsActiveTurn =
-              options.forceQueueAsActiveTurn ||
-              store.get(isSessionActiveAtom) ||
-              runtimeIsWorking ||
-              store.get(isPendingCancelAtom) ||
-              isWpGeneWorking ||
-              isPendingCancel;
+            // Queue-vs-direct is decided inside handleSessChatSubmit against
+            // the turn-lifecycle FSM — no composer-side heuristics.
             await handleSessChatSubmit(
               undefined,
               displayText || "(image)",
               agentContent,
-              dispatchImages,
-              options.forceSendNow || forceQueueAsActiveTurn
-                ? {
-                    forceSendNow: options.forceSendNow,
-                    forceQueueAsActiveTurn,
-                  }
-                : undefined
+              dispatchImages
             );
           }
           submitSucceeded = true;
@@ -346,8 +312,6 @@ export function useSubmitMessage({
       wpReadOnly,
       store,
       handleSessChatSubmit,
-      isWpGeneWorking,
-      isPendingCancel,
       citeCode,
       refs,
       imageAttachment,

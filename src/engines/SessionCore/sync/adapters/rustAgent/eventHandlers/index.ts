@@ -8,8 +8,8 @@
  * All events use a single `agent:*` namespace. Feature flags control
  * which capabilities are active per session (not per variant).
  */
+import { confirmTurnRunning } from "@src/engines/SessionCore/control/turnLifecycle";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
-import { markQueueTurnWorking } from "@src/engines/SessionCore/hooks/session/queueTurnGate";
 import { createLogger } from "@src/hooks/logger";
 
 import {
@@ -187,8 +187,10 @@ export async function dispatchAgentEvent(
     clearStreamRetryStatus(ctx, sessionId);
   }
 
+  // Raw event traffic is a low-trust signal: it may trail a terminal, so it
+  // only confirms a pending dispatch — it never opens a turn from idle.
   if (sessionId && QUEUE_TURN_ACTIVITY_EVENTS.has(event.type)) {
-    markQueueTurnWorking(sessionId);
+    confirmTurnRunning(sessionId);
   }
 
   switch (event.type) {

@@ -44,8 +44,6 @@ export interface UseInputAreaOptions {
 }
 
 export interface SubmitMessageOptions {
-  forceSendNow?: boolean;
-  forceQueueAsActiveTurn?: boolean;
   capturedText?: string;
 }
 
@@ -218,8 +216,6 @@ export interface UseInputAreaReturn {
   handleDivSubmit: (options?: SubmitMessageOptions) => Promise<void>;
   isWpGeneWorking: boolean;
   isSessionActive: boolean;
-  runtimeStatus: string;
-  hasComposerStopBlockingWork: boolean;
   /** True while a cancel has been dispatched but Rust hasn't acknowledged yet. */
   isPendingCancel: boolean;
   wpReadOnly: boolean;

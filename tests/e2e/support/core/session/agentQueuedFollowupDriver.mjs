@@ -619,8 +619,8 @@ function summarizeChatState(state) {
       id: message.id,
       sessionId: message.sessionId,
       content: truncateDiagnosticText(message.content),
-      requiresRuntimeSettle: message.requiresRuntimeSettle,
-      dispatchAfterUserCancel: message.dispatchAfterUserCancel,
+      priority: message.priority,
+      requiresExplicitDispatch: message.requiresExplicitDispatch,
       createdAt: message.createdAt,
     })),
     forceSendPendingMessages: (state.forceSendPendingMessages ?? []).map(
@@ -628,11 +628,13 @@ function summarizeChatState(state) {
         id: message.id,
         sessionId: message.sessionId,
         content: truncateDiagnosticText(message.content),
-        requiresRuntimeSettle: message.requiresRuntimeSettle,
-        dispatchAfterUserCancel: message.dispatchAfterUserCancel,
+        priority: message.priority,
+        requiresExplicitDispatch: message.requiresExplicitDispatch,
         createdAt: message.createdAt,
       })
     ),
+    turnPhase: state.turnPhase,
+    turnGeneration: state.turnGeneration,
     queueFlushRequest: state.queueFlushRequest,
     isPendingCancel: state.isPendingCancel,
     userInitiatedCancel: state.userInitiatedCancel,
@@ -1796,15 +1798,21 @@ async function waitForModePill(label, expectedText) {
   );
 }
 
+function isFinalAssistantReplyEvent(event, expectedText) {
+  if (event.source !== "assistant") return false;
+  if (event.displayVariant !== "message") return false;
+  if (event.displayStatus !== "completed") return false;
+  if (!String(event.displayText ?? "").includes(expectedText)) return false;
+  const args = parseMaybeJson(event.args);
+  return args?.syntheticLive !== true;
+}
+
 async function assertProgressUiSettledAfterAssistantReply(label, expectedText) {
   await browser.waitUntil(
     async () => {
       const state = await inspectChatState(`${label}-assistant-reply`);
-      return (state.chatEvents ?? []).some(
-        (event) =>
-          event.source === "assistant" &&
-          event.displayVariant === "message" &&
-          String(event.displayText ?? "").includes(expectedText)
+      return (state.chatEvents ?? []).some((event) =>
+        isFinalAssistantReplyEvent(event, expectedText)
       );
     },
     {

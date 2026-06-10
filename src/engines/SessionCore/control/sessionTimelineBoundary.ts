@@ -1,4 +1,8 @@
 import { CANCEL_REASON } from "@src/api/tauri/agent";
+import {
+  beginTurnStopping,
+  forceTurnIdle,
+} from "@src/engines/SessionCore/control/turnLifecycle";
 import { isTimelineBoundaryClosableRuntimeEvent } from "@src/engines/SessionCore/core/runningEventGate";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
@@ -13,6 +17,7 @@ import {
   userInitiatedCancelAtom,
 } from "@src/store/session/cliSessionStatusAtom";
 import { shellProcessMapAtom } from "@src/store/session/shellProcessAtom";
+import { holdSessionQueueForStopAtom } from "@src/store/ui/messageQueueAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
 import { streamingDeltaContentAtom } from "../core/atoms";
@@ -104,8 +109,34 @@ export function beginTimelineBoundary(
   reason: TimelineBoundaryReason
 ): void {
   const store = getInstrumentedStore();
+  const isUserStop = reason === "stop";
+
+  // Drive the turn-lifecycle FSM first so any submit/dispatch racing this
+  // boundary already observes the new phase.
+  // - stop / force-send: the turn stays blocked ("stopping") until the
+  //   provider confirms the cancel with a terminal (bounded by the FSM's
+  //   stopping dead-man).
+  // - rewind: the timeline is being rewritten — force idle immediately and
+  //   invalidate any in-flight terminal of the overridden turn.
+  if (reason === "rewind") {
+    forceTurnIdle(sessionId);
+  } else {
+    beginTurnStopping(sessionId);
+  }
+
+  if (isUserStop) {
+    store.set(userInitiatedCancelAtom, true);
+    store.set(isPendingCancelAtom, true);
+    // Stop parks every queued follow-up of this session: the natural drain
+    // skips them permanently; only an explicit Send Now dispatches them.
+    store.set(holdSessionQueueForStopAtom, sessionId);
+  } else {
+    store.set(userInitiatedCancelAtom, false);
+    store.set(isPendingCancelAtom, false);
+  }
+
   clearLiveStreamingForSession(sessionId);
-  if (reason === "stop") {
+  if (isUserStop) {
     void killActiveShellProcessesForStop(sessionId).catch((error) => {
       console.warn(
         "[sessionTimelineBoundary] failed to kill active shell processes",
@@ -127,15 +158,6 @@ export function beginTimelineBoundary(
     status: "idle",
     source: "timeline-boundary",
   });
-
-  if (reason === "stop") {
-    store.set(userInitiatedCancelAtom, true);
-    store.set(isPendingCancelAtom, true);
-    return;
-  }
-
-  store.set(userInitiatedCancelAtom, false);
-  store.set(isPendingCancelAtom, false);
 }
 
 export function beginStopBoundary(sessionId: string): void {

@@ -188,7 +188,13 @@ export async function handleStreamingComplete(
   if (streamType === "message") {
     clearMessageStreamRefs(ctx);
     ctx.setStreaming(false);
-    ctx.onStatusChangeRef.current?.("completed");
+    // `intermediate: true` — a per-message stream completion is NOT this
+    // turn's terminal. Multi-step turns complete several message streams
+    // before the real agent:complete / agent:turn_completed arrives, so this
+    // must never feed the turn-lifecycle FSM.
+    ctx.onStatusChangeRef.current?.("completed", undefined, {
+      intermediate: true,
+    });
     if (ctx.streamingCompleteHandledRef) {
       ctx.streamingCompleteHandledRef.current = true;
     }

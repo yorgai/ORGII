@@ -13,6 +13,7 @@ import {
   cancelTurnForTimelineBoundary,
   clearLiveStreamingForSession,
 } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
+import { forceTurnIdle } from "@src/engines/SessionCore/control/turnLifecycle";
 import { pendingSyntheticEventAtom } from "@src/engines/SessionCore/core/atoms";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { clearSessionStreamingStopped } from "@src/engines/SessionCore/sync/adapters/rustAgent/eventHandlers/streamHelpers";
@@ -116,106 +117,93 @@ export function useSessionActions(options: UseSessionActionsOptions) {
   }, [getSessionId, t]);
 
   /**
-   * Interrupt the current turn.
+   * Interrupt the current turn (user Stop).
    *
-   * `options.restoreQueueHead`:
-   *   - `true` (default) — User clicked the Stop button. Performs instant UI
-   *     updates synchronously before the Rust RPC fires.
-   *   - `false` — Programmatic interrupt for Send Now. The queued message
-   *     becomes the next user turn immediately.
+   * Send Now interrupts are NOT routed here — the queue dispatcher issues its
+   * own "force-send" timeline boundary.
    *
    * Stop is an O(1) timeline boundary: it updates local runtime state, restores
    * the click-time prompt to the composer, and signals Rust cancellation. It
    * must not read/repair DB history or scan/mutate the EventStore.
    */
-  const interruptSession = useCallback(
-    async (options?: { restoreQueueHead?: boolean }) => {
-      const restoreQueueHead = options?.restoreQueueHead ?? true;
-      const sessionId = getSessionId();
-      if (!sessionId) {
-        console.error("[useSessionActions] No session ID found for interrupt");
-        return;
-      }
+  const interruptSession = useCallback(async () => {
+    const sessionId = getSessionId();
+    if (!sessionId) {
+      console.error("[useSessionActions] No session ID found for interrupt");
+      return;
+    }
 
-      if (restoreQueueHead) {
-        beginStopBoundary(sessionId);
-        markRestoredStopDraft(sessionId);
-        setSessionRolledBack(false);
+    beginStopBoundary(sessionId);
+    setSessionRolledBack(false);
 
-        const pendingSyntheticEvent = store.get(pendingSyntheticEventAtom);
-        const currentUserMessage = resolveRestorableUserMessage({
-          lastUserMessage: store.get(lastUserMessageAtom),
-          pendingDisplayText:
-            pendingSyntheticEvent?.source === "user"
-              ? pendingSyntheticEvent.displayText
-              : undefined,
-          pendingImages: pendingSyntheticEvent?.result?.images,
+    const pendingSyntheticEvent = store.get(pendingSyntheticEventAtom);
+    const currentUserMessage = resolveRestorableUserMessage({
+      lastUserMessage: store.get(lastUserMessageAtom),
+      pendingDisplayText:
+        pendingSyntheticEvent?.source === "user"
+          ? pendingSyntheticEvent.displayText
+          : undefined,
+      pendingImages: pendingSyntheticEvent?.result?.images,
+    });
+
+    if (currentUserMessage) {
+      setRestoreToInput({
+        displayContent: currentUserMessage.displayContent,
+        imageDataUrls: currentUserMessage.imageDataUrls,
+      });
+      markRestoredStopDraft({
+        sessionId,
+        displayContent: currentUserMessage.displayContent,
+        imageDataUrls: currentUserMessage.imageDataUrls,
+      });
+      suppressRestoredStopSubmit({
+        sessionId,
+        displayContent: currentUserMessage.displayContent,
+        imageDataUrls: currentUserMessage.imageDataUrls,
+      });
+    }
+
+    void (async () => {
+      window.setTimeout(() => {
+        const latestStatus = store.get(sessionRuntimeStatusAtom);
+        const runtimeStartedAnotherTurn =
+          latestStatus === "running" ||
+          latestStatus === "installing" ||
+          latestStatus === "waiting_for_user" ||
+          latestStatus === "waiting_for_funds";
+        if (runtimeStartedAnotherTurn) return;
+        setPendingCancel(false);
+        setSessionRuntimeStatus({
+          status: "idle",
+          source: "timeline-boundary",
         });
+        stopVisibleStreaming(sessionId);
+      }, 10_000);
 
-        if (currentUserMessage) {
-          setRestoreToInput({
-            displayContent: currentUserMessage.displayContent,
-            imageDataUrls: currentUserMessage.imageDataUrls,
-          });
-          suppressRestoredStopSubmit({
-            sessionId,
-            displayContent: currentUserMessage.displayContent,
-            imageDataUrls: currentUserMessage.imageDataUrls,
-          });
-        }
-
-        void (async () => {
-          window.setTimeout(() => {
-            const latestStatus = store.get(sessionRuntimeStatusAtom);
-            const runtimeStartedAnotherTurn =
-              latestStatus === "running" ||
-              latestStatus === "installing" ||
-              latestStatus === "waiting_for_user" ||
-              latestStatus === "waiting_for_funds";
-            if (runtimeStartedAnotherTurn) return;
-            setPendingCancel(false);
-            setSessionRuntimeStatus({
-              status: "idle",
-              source: "timeline-boundary",
-            });
-            stopVisibleStreaming(sessionId);
-          }, 10_000);
-
-          await cancelTurnForTimelineBoundary(sessionId, "stop", {
-            onError: (msg: string) => {
-              Message.error(t(msg));
-              setPendingCancel(false);
-              setSessionRuntimeStatus({
-                status: "idle",
-                source: "timeline-boundary",
-              });
-              stopVisibleStreaming(sessionId);
-            },
-          });
-        })();
-        return;
-      }
-
-      await cancelTurnForTimelineBoundary(sessionId, "force-send", {
+      await cancelTurnForTimelineBoundary(sessionId, "stop", {
         onError: (msg: string) => {
           Message.error(t(msg));
+          setPendingCancel(false);
+          setSessionRuntimeStatus({
+            status: "idle",
+            source: "timeline-boundary",
+          });
+          stopVisibleStreaming(sessionId);
+          // Interrupt RPC failed — no terminal will arrive, unlock now.
+          forceTurnIdle(sessionId);
         },
       });
-      setPendingCancel(false);
-      setSessionRuntimeStatus({ status: "idle", source: "timeline-boundary" });
-      stopVisibleStreaming(sessionId);
-    },
-    [
-      getSessionId,
-      setPendingCancel,
-      setRestoreToInput,
-      setSessionRolledBack,
-      setSessionRuntimeStatus,
-      stopVisibleStreaming,
-      store,
-      t,
-    ]
-  );
+    })();
+  }, [
+    getSessionId,
+    setPendingCancel,
+    setRestoreToInput,
+    setSessionRolledBack,
+    setSessionRuntimeStatus,
+    stopVisibleStreaming,
+    store,
+    t,
+  ]);
 
   /** User-initiated stop entrypoint kept separate for call-site clarity. */
   const stopSession = interruptSession;

@@ -25,6 +25,7 @@ export {
   runFreshStopRollbackScenario,
   runQueueAutodispatchesAfterNaturalCompletionScenario,
   runQueueDoesNotAutoflushWhileActiveScenario,
+  runSendAfterIdleDoesNotQueueScenario,
   runStopDoubleClickDoesNotResubmitScenario,
   runStopRestoresInFlightScenario,
 } from "./agentQueuedControlScenarios.mjs";

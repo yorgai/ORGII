@@ -12,6 +12,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { sessionLaunch } from "@src/api/tauri/agent/session";
 import { DISPATCH_CATEGORY, KEY_SOURCE } from "@src/api/tauri/session";
 import { Message } from "@src/components/Message";
+import { markTurnRunning } from "@src/engines/SessionCore/control/turnLifecycle";
 import {
   loadSessionAtom,
   pendingSyntheticEventAtom,
@@ -378,6 +379,11 @@ export function useSessionLaunch(
         setPendingSyntheticEvent,
         userInput,
       });
+
+      // The launch dispatched this session's first turn — open it in the
+      // turn-lifecycle FSM so follow-up submits queue until the provider
+      // delivers the turn's terminal.
+      markTurnRunning(result.sessionId);
 
       if (isBackgroundLaunch) {
         clearDraft(null);

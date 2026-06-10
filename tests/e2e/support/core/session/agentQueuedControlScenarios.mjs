@@ -727,15 +727,28 @@ async function clickSendNowForQueuedMarker(marker) {
       const instantState = await inspectChatState(
         `${marker}-force-send-instant`
       );
+      // Unified-queue contract: Send Now instantly promotes the item to
+      // priority "now" (visible queue hides it); the atom entry survives
+      // until the dispatcher actually sends it.
+      const visibleItems = await execJS(js.queuedItems);
+      const visibleStillContainsMarker = visibleItems.some((item) =>
+        item.text.includes(marker)
+      );
+      const promotedToNow = (
+        instantState.forceSendPendingMessages ?? []
+      ).some((item) => item.content.includes(marker));
       const queuedStillContainsMarker = instantState.queuedMessages.some(
         (item) => item.content.includes(marker)
       );
-      return !queuedStillContainsMarker;
+      return (
+        !visibleStillContainsMarker &&
+        (promotedToNow || !queuedStillContainsMarker)
+      );
     },
     {
       timeout: 2_000,
       interval: 100,
-      timeoutMsg: `Send Now did not immediately remove queue item for ${marker}; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+      timeoutMsg: `Send Now did not immediately promote/hide queue item for ${marker}; state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
     }
   );
 
@@ -1206,6 +1219,58 @@ async function runQueueAutodispatchesAfterNaturalCompletionScenario(config) {
   );
 }
 
+async function runSendAfterIdleDoesNotQueueScenario(config) {
+  const suffix = `${config.label.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
+  const firstPrompt = repoExplorationPromptForConfig(config, 1);
+  const marker = `SEND_AFTER_IDLE_DIRECT_${suffix}`;
+  const secondPrompt = `This prompt is sent only after the previous turn is fully idle and must not enter the frontend queue: ${marker}`;
+
+  await configureScenario(config);
+  const inputSelector = await waitForChatInput();
+  await typeAndClickSend(inputSelector, firstPrompt);
+  await waitForChatLaunched(firstPrompt);
+  await waitForRuntimeIdle(`${config.label}-send-after-idle-first-turn`);
+  await waitForIdleSendButton(`${config.label}-send-after-idle-first-turn`);
+
+  const beforeSecond = await inspectChatState(
+    `${config.label}-send-after-idle-before-second-send`
+  );
+  throwIfProviderRuntimeBlocked(beforeSecond, `${config.label}-send-after-idle`);
+  if (beforeSecond.queuedMessages.length > 0) {
+    throw new Error(
+      `${config.label} had leftover queued messages before idle direct-send assertion; state=${JSON.stringify(summarizeChatState(beforeSecond))}`
+    );
+  }
+
+  const chatInputSelector = await waitForChatInput();
+  await typeAndClickSend(chatInputSelector, secondPrompt);
+
+  await browser.waitUntil(
+    async () => {
+      const state = await inspectChatState(`${config.label}-send-after-idle`);
+      throwIfProviderRuntimeBlocked(state, `${config.label}-send-after-idle`);
+      const queuedMarkerCount = state.queuedMessages.filter((item) =>
+        item.content.includes(marker)
+      ).length;
+      const markerUserTurnCount = markerUserTranscriptEvents(
+        state,
+        marker
+      ).length;
+      if (queuedMarkerCount > 0) {
+        throw new Error(
+          `${config.label} idle follow-up incorrectly entered messageQueueAtom; marker=${marker} state=${JSON.stringify(summarizeChatState(state))}`
+        );
+      }
+      return markerUserTurnCount === 1;
+    },
+    {
+      timeout: QUEUE_TIMEOUT_MS,
+      interval: 500,
+      timeoutMsg: `${config.label} idle follow-up did not become a direct user turn; marker=${marker} state=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
+    }
+  );
+}
+
 async function runQueueDoesNotAutoflushWhileActiveScenario(config) {
   const suffix = `${config.label.replace(/[^a-zA-Z0-9]/g, "_")}_${Date.now()}`;
   const firstPrompt = repoExplorationPromptForConfig(config);
@@ -1519,6 +1584,7 @@ export {
   runFreshStopRollbackScenario,
   runQueueAutodispatchesAfterNaturalCompletionScenario,
   runQueueDoesNotAutoflushWhileActiveScenario,
+  runSendAfterIdleDoesNotQueueScenario,
   runStopDoubleClickDoesNotResubmitScenario,
   runStopRestoresInFlightScenario,
   waitForIdleSendButton,

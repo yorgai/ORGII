@@ -277,6 +277,7 @@ export const E2EBootstrap: FC = () => {
       openAgentTab,
       openOrgTab,
       inspectWorkstationSurface,
+      openAgentStationDiff,
     } = createNavigationHelpers(store);
 
     const {
@@ -430,6 +431,7 @@ export const E2EBootstrap: FC = () => {
       mcpSetServerDisabled,
       navigateTo,
       getLocationPathname,
+      openAgentStationDiff,
       openWorkspaceWorkItemsTab,
       openProjectWorkItemsTab,
       openChatPanelWorkItem,

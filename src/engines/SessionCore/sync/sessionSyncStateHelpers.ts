@@ -1,14 +1,15 @@
 import type { SetStateAction } from "react";
 
+import {
+  markTurnRunning,
+  markTurnTerminal,
+  toTurnTerminalStatus,
+} from "@src/engines/SessionCore/control/turnLifecycle";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import type {
   SessionEvent,
   SessionLoadStatus,
 } from "@src/engines/SessionCore/core/types";
-import {
-  markQueueTurnSettled,
-  markQueueTurnWorking,
-} from "@src/engines/SessionCore/hooks/session/queueTurnGate";
 import { type SessionStatus, updateSessionStatus } from "@src/store/session";
 import type {
   ContextBreakdown,
@@ -71,6 +72,13 @@ const TERMINAL_HANDLER_STATUSES = new Set<string>([
   "failed",
   "cancelled",
 ]);
+
+const RUNNING_HANDLER_STATUSES = new Set<string>([
+  "running",
+  "installing",
+  "waiting_for_user",
+  "waiting_for_funds",
+]);
 export function resetSessionSwitchState(
   actions: SessionSwitchStateActions
 ): void {
@@ -102,12 +110,11 @@ export function applyPostLoadResult(
   if (postResult.runStatus !== undefined) {
     actions.setSessionRuntimeStatus(toCliSessionStatus(postResult.runStatus));
     if (TERMINAL_HANDLER_STATUSES.has(postResult.runStatus)) {
-      markQueueTurnSettled(
-        sessionId,
-        Date.now(),
-        undefined,
-        postResult.runStatus
-      );
+      markTurnTerminal(sessionId, toTurnTerminalStatus(postResult.runStatus));
+    } else if (RUNNING_HANDLER_STATUSES.has(postResult.runStatus)) {
+      // Restored a session whose turn is still in flight — open the turn so
+      // queueing decisions see it as active until the provider terminal lands.
+      markTurnRunning(sessionId);
     }
     updateSessionStatus(sessionId, postResult.runStatus as SessionStatus);
   }
@@ -176,18 +183,21 @@ export function createSessionEventHandlerCallbacks(
         actions.setSessionRuntimeError(errorMessage);
       }
       if (TERMINAL_HANDLER_STATUSES.has(status)) {
-        markQueueTurnSettled(
-          sessionId,
-          Date.now(),
-          meta?.turnId,
-          meta?.turnStatus ?? status
-        );
+        // Turn finality has exactly one ingestion point: a terminal status
+        // here, unless the producer flagged it as an intermediate signal
+        // (e.g. per-message streaming_complete inside a multi-step turn).
+        if (!meta?.intermediate) {
+          markTurnTerminal(
+            sessionId,
+            toTurnTerminalStatus(meta?.turnStatus ?? status)
+          );
+        }
         actions.setPendingCancel(false);
         eventStoreProxy.unpinSession(sessionId);
         updateSessionStatus(sessionId, status as SessionStatus);
       }
       if (status === "running") {
-        markQueueTurnWorking(sessionId);
+        markTurnRunning(sessionId);
         actions.setSessionRuntimeError(null);
         eventStoreProxy.pinSession(sessionId);
         actions.setSessionRolledBack(false);

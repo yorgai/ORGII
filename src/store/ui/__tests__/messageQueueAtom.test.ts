@@ -10,7 +10,7 @@ import {
   editMessageAtom,
   enqueueMessageAtom,
   forceSendMessageAtom,
-  forceSendPendingQueueAtom,
+  holdSessionQueueForStopAtom,
   messageQueueAtom,
   queueEditTargetAtom,
   queueEditingAtom,
@@ -24,6 +24,7 @@ function makeMessage(
     sessionId: "session-1",
     content: `content-${overrides.id}`,
     displayContent: `display-${overrides.id}`,
+    priority: "next",
     status: "queued",
     createdAt: "2026-01-01T00:00:00Z",
     ...overrides,
@@ -117,14 +118,13 @@ describe("messageQueueAtom", () => {
       expect(store.get(messageQueueAtom)).toHaveLength(1);
     });
 
-    it("also removes matching force-send pending messages", () => {
+    it("removes promoted (priority now) messages too", () => {
       store.set(enqueueMessageAtom, makeMessage({ id: "m1" }));
       store.set(forceSendMessageAtom, "m1");
 
       store.set(dequeueMessageAtom, "m1");
 
       expect(store.get(messageQueueAtom)).toEqual([]);
-      expect(store.get(forceSendPendingQueueAtom)).toEqual([]);
     });
   });
 
@@ -133,51 +133,99 @@ describe("messageQueueAtom", () => {
   // =============================================
 
   describe("forceSendMessageAtom", () => {
-    it("moves a visible queued message into the force-send pending queue", () => {
+    it("promotes the message to priority now and clears any Stop hold", () => {
       const msg1 = makeMessage({ id: "m1" });
-      const msg2 = makeMessage({ id: "m2" });
+      const msg2 = makeMessage({ id: "m2", requiresExplicitDispatch: true });
       store.set(enqueueMessageAtom, msg1);
       store.set(enqueueMessageAtom, msg2);
 
       store.set(forceSendMessageAtom, "m2");
 
-      expect(store.get(messageQueueAtom)).toEqual([msg1]);
-      expect(store.get(forceSendPendingQueueAtom)).toEqual([
-        { ...msg2, requiresRuntimeSettle: false },
-      ]);
+      const queue = store.get(messageQueueAtom);
+      expect(queue).toHaveLength(2);
+      expect(queue.find((m) => m.id === "m1")).toEqual(msg1);
+      expect(queue.find((m) => m.id === "m2")).toMatchObject({
+        priority: "now",
+        requiresExplicitDispatch: false,
+      });
     });
 
-    it("keeps the force-sent message at pending priority without duplicating it", () => {
-      const msg = makeMessage({ id: "m1" });
-      store.set(enqueueMessageAtom, msg);
+    it("is idempotent", () => {
+      store.set(enqueueMessageAtom, makeMessage({ id: "m1" }));
 
       store.set(forceSendMessageAtom, "m1");
       store.set(forceSendMessageAtom, "m1");
 
-      expect(store.get(messageQueueAtom)).toEqual([]);
-      expect(store.get(forceSendPendingQueueAtom)).toEqual([
-        { ...msg, requiresRuntimeSettle: false },
-      ]);
+      const queue = store.get(messageQueueAtom);
+      expect(queue).toHaveLength(1);
+      expect(queue[0].priority).toBe("now");
     });
 
-    it("clears runtime-settle gating for explicit force-send", () => {
-      const msg = makeMessage({ id: "m1", requiresRuntimeSettle: true });
-      store.set(enqueueMessageAtom, msg);
+    it("does not touch siblings", () => {
+      const sibling = makeMessage({ id: "m2", sessionId: "session-1" });
+      const otherSession = makeMessage({ id: "m3", sessionId: "session-2" });
+      store.set(enqueueMessageAtom, makeMessage({ id: "m1" }));
+      store.set(enqueueMessageAtom, sibling);
+      store.set(enqueueMessageAtom, otherSession);
 
       store.set(forceSendMessageAtom, "m1");
 
       expect(
-        store.get(forceSendPendingQueueAtom)[0].requiresRuntimeSettle
-      ).toBe(false);
+        store.get(messageQueueAtom).find((message) => message.id === "m2")
+      ).toEqual(sibling);
+      expect(
+        store.get(messageQueueAtom).find((message) => message.id === "m3")
+      ).toEqual(otherSession);
     });
 
-    it("is a no-op when ID is not in the visible queue", () => {
+    it("is a no-op when ID is not in the queue", () => {
       store.set(enqueueMessageAtom, makeMessage({ id: "m1" }));
 
       store.set(forceSendMessageAtom, "unknown");
 
-      expect(store.get(messageQueueAtom)).toHaveLength(1);
-      expect(store.get(forceSendPendingQueueAtom)).toHaveLength(0);
+      const queue = store.get(messageQueueAtom);
+      expect(queue).toHaveLength(1);
+      expect(queue[0].priority).toBe("next");
+    });
+  });
+
+  // =============================================
+  // holdSessionQueueForStopAtom
+  // =============================================
+
+  describe("holdSessionQueueForStopAtom", () => {
+    it("parks every queued message of the session", () => {
+      store.set(enqueueMessageAtom, makeMessage({ id: "m1" }));
+      store.set(enqueueMessageAtom, makeMessage({ id: "m2" }));
+      store.set(
+        enqueueMessageAtom,
+        makeMessage({ id: "m3", sessionId: "session-2" })
+      );
+
+      store.set(holdSessionQueueForStopAtom, "session-1");
+
+      const queue = store.get(messageQueueAtom);
+      expect(queue.find((m) => m.id === "m1")?.requiresExplicitDispatch).toBe(
+        true
+      );
+      expect(queue.find((m) => m.id === "m2")?.requiresExplicitDispatch).toBe(
+        true
+      );
+      expect(
+        queue.find((m) => m.id === "m3")?.requiresExplicitDispatch
+      ).toBeUndefined();
+    });
+
+    it("Send Now lifts the hold afterwards", () => {
+      store.set(enqueueMessageAtom, makeMessage({ id: "m1" }));
+      store.set(holdSessionQueueForStopAtom, "session-1");
+
+      store.set(forceSendMessageAtom, "m1");
+
+      expect(store.get(messageQueueAtom)[0]).toMatchObject({
+        priority: "now",
+        requiresExplicitDispatch: false,
+      });
     });
   });
 
@@ -221,7 +269,7 @@ describe("messageQueueAtom", () => {
       expect(remaining[0].id).toBe("m2");
     });
 
-    it("also clears force-send pending messages for the session", () => {
+    it("also clears promoted (priority now) messages for the session", () => {
       store.set(
         enqueueMessageAtom,
         makeMessage({ id: "m1", sessionId: "sess-a" })
@@ -235,10 +283,7 @@ describe("messageQueueAtom", () => {
 
       store.set(clearSessionQueueAtom, "sess-a");
 
-      expect(store.get(messageQueueAtom)).toEqual([]);
-      expect(store.get(forceSendPendingQueueAtom).map((msg) => msg.id)).toEqual(
-        ["m2"]
-      );
+      expect(store.get(messageQueueAtom).map((msg) => msg.id)).toEqual(["m2"]);
     });
   });
 

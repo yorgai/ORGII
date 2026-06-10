@@ -14,25 +14,29 @@ use super::{schedule_notify, EventStoreState};
 
 /// Set the active session (the default target for commands without an
 /// explicit `session_id`). Returns true if a store for the session already
-/// exists (i.e. events are in-memory), false if the caller should load from
-/// SQLite.
+/// exists with events in-memory, false if the caller should load from SQLite.
+/// Empty stores are treated as misses so an early switch notification cannot
+/// publish an empty snapshot before history hydration.
 #[tauri::command]
 pub async fn es_switch_session(
     app: AppHandle,
     state: State<'_, EventStoreState>,
     session_id: String,
 ) -> Result<bool, String> {
-    let (hit, evicted) = {
+    let (hit, event_count, evicted) = {
         let mut mgr = state
             .session_manager
             .lock()
             .unwrap_or_else(|e| e.into_inner());
         let evicted = mgr.set_active(&session_id);
-        let hit = {
+        let event_count = {
             let stores = state.stores.lock().unwrap_or_else(|e| e.into_inner());
-            stores.contains_key(&session_id)
+            stores
+                .get(&session_id)
+                .map(|store| store.events().len())
+                .unwrap_or(0)
         };
-        (hit, evicted)
+        (event_count > 0, event_count, evicted)
     };
 
     if !evicted.is_empty() {
@@ -42,7 +46,9 @@ pub async fn es_switch_session(
         }
     }
 
-    schedule_notify(&app, &state, &session_id);
+    if event_count > 0 {
+        schedule_notify(&app, &state, &session_id);
+    }
     Ok(hit)
 }
 

@@ -10,6 +10,11 @@ import { useSetAtom } from "jotai";
 import { useCallback } from "react";
 
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
+import {
+  beginTurnDispatch,
+  confirmTurnRunning,
+  markTurnTerminal,
+} from "@src/engines/SessionCore/control/turnLifecycle";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
 import { createSyntheticUserEvent } from "@src/engines/SessionCore/sync/adapters/shared";
@@ -90,6 +95,11 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
         creatorDefaultMode;
       const { model, accountId } = resolveModelForMessage(lastModelSelection);
 
+      // Synchronous turn reserve: every dispatch funnels through here, so the
+      // FSM observes the session as busy before the first await. A concurrent
+      // submit therefore queues instead of double-dispatching.
+      const dispatchGeneration = beginTurnDispatch(sessionId);
+
       // Optimistically mark the session as running so the planning indicator
       // (usePlanningIndicator) starts immediately on the cold-start path too.
       // Mirrors the queued-dispatch path in useQueueDispatch; without this the
@@ -110,6 +120,9 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
           imageDataUrls,
           clientMessageId,
         });
+        // Backend accepted the message — the turn is running even if the
+        // provider's running ack has not been observed yet.
+        confirmTurnRunning(sessionId);
         // Bump the row's `updated_at` to "now" so the sidebar /
         // Kanban "recent activity" views float this session to the
         // top immediately. The backend's authoritative timestamp
@@ -117,12 +130,20 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
         // this — see `markSessionActive` doc for the policy.
         markSessionActive(sessionId);
         if (isCursorIdeSession(sessionId)) {
+          // Cursor IDE sessions have no turn lifecycle (the CDP stream has no
+          // terminal event) — close the turn right after a successful handoff.
           setSessionRuntimeStatus({ status: "idle", source: "dispatch" });
+          markTurnTerminal(sessionId, "completed", {
+            generation: dispatchGeneration,
+          });
         }
       } catch (err) {
         // IPC failed before Rust even received the message — reset so the UI
         // does not stay stuck in the optimistic "running" state.
         setSessionRuntimeStatus({ status: "idle", source: "dispatch" });
+        markTurnTerminal(sessionId, "failed", {
+          generation: dispatchGeneration,
+        });
         throw err;
       }
     },

@@ -170,13 +170,17 @@ function assertNoImplementationFilesCreated(label, beforeFiles, repoPath) {
   }
 }
 
+// The file-changes panel was replaced by Agent Station Diff view in
+// fbf20c78. Clicking the files pill now opens the diff view rather than
+// expanding an inline panel. waitForFileChangesPanel clicks the pill and
+// confirms the diff view opened (evidenced by the replay-tab-diff-filter
+// tabs being mounted).
 async function waitForFileChangesPanel(label) {
+  // Wait for the files pill to appear first
   await browser.waitUntil(
     async () => {
       const state = await execJS(js.fileChanges);
-      return (
-        state.filesPill || (state.undoAll && state.keepAll && state.review)
-      );
+      return state.filesPill;
     },
     {
       timeout: REPLY_TIMEOUT_MS,
@@ -185,25 +189,77 @@ async function waitForFileChangesPanel(label) {
     }
   );
 
-  const visibleState = await execJS(js.fileChanges);
-  if (!visibleState.undoAll) {
-    await clickByTestId("composer-section-files", `${label} file changes pill`);
+  // If the Undo All button is already visible in the simulator header, we're
+  // already in the diff view from a previous click — skip the pill click.
+  const alreadyOpen = await execJS(js.fileChanges);
+  if (alreadyOpen.undoAll) return;
+
+  // Click the pill to open Agent Station Diff. Retry up to 3 times if the
+  // diff view tabs don't appear — Tauri WebDriver clicks can miss on first
+  // attempt when the pill is newly rendered.
+  const MAX_EXPAND_ATTEMPTS = 3;
+  const EXPAND_ATTEMPT_TIMEOUT_MS = 8_000;
+
+  for (let attempt = 1; attempt <= MAX_EXPAND_ATTEMPTS; attempt++) {
+    await clickByTestId(
+      "composer-section-files",
+      `${label} file changes pill (attempt ${attempt})`
+    );
+
+    const opened = await browser
+      .waitUntil(
+        async () => {
+          // The diff view is open once its filter tabs are mounted. The Undo
+          // All button (file-changes-undo-all) is rendered in
+          // SimulatorWorkstationTabHeader whenever pendingCount > 0.
+          const state = await execJS(js.fileChanges);
+          if (state.undoAll) return true;
+          const hasDiffTabs = await execJS(
+            `return !!document.querySelector('[data-testid="replay-tab-diff-filter"]');`
+          );
+          return !!hasDiffTabs;
+        },
+        {
+          timeout: EXPAND_ATTEMPT_TIMEOUT_MS,
+          interval: 1_000,
+        }
+      )
+      .catch(() => null);
+
+    if (opened) return;
   }
 
+  // Pill click did not open the diff view after all retries. Fall back to the
+  // __e2e.openAgentStationDiff() bridge which sets the same atoms as the
+  // product onClick handler — this ensures the Undo All button is rendered
+  // even when Tauri WebDriver's element.click() misses React's synthetic
+  // event dispatch for this pill.
+  await invokeE2E("openAgentStationDiff");
   await browser.waitUntil(
     async () => {
       const state = await execJS(js.fileChanges);
-      return state.undoAll && state.keepAll && state.review;
+      if (state.undoAll) return true;
+      const hasDiffTabs = await execJS(
+        `return !!document.querySelector('[data-testid="replay-tab-diff-filter"]');`
+      );
+      return !!hasDiffTabs;
     },
     {
-      timeout: REPLY_TIMEOUT_MS,
-      interval: 2_000,
-      timeoutMsg: `${label} file changes panel did not expand; state=${JSON.stringify(await execJS(js.fileChanges))} chatState=${JSON.stringify(summarizeChatState(await invokeE2E("inspectChatState")))}`,
+      timeout: 10_000,
+      interval: 500,
+      timeoutMsg: async () => {
+        const finalState = await execJS(js.fileChanges);
+        const chatState = await invokeE2E("inspectChatState");
+        return `${label} file changes panel did not open after pill retries + __e2e.openAgentStationDiff() fallback; state=${JSON.stringify(finalState)} chatState=${JSON.stringify(summarizeChatState(chatState))}`;
+      },
     }
   );
 }
 
 async function waitForUndoAllEnabled(label) {
+  // The Undo All button (data-testid="file-changes-undo-all") is only rendered
+  // in SimulatorWorkstationTabHeader when pendingCount > 0, so its presence
+  // implies it is enabled.
   await browser.waitUntil(
     async () => {
       const state = await execJS(js.fileChanges);

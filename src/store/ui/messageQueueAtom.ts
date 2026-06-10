@@ -7,6 +7,8 @@ import type { LastModelSelection } from "@src/store/session/creatorDefaultModelA
 // Types
 // ============================================
 
+export type QueuedMessagePriority = "now" | "next";
+
 export interface QueuedMessage {
   id: string;
   sessionId: string;
@@ -30,41 +32,31 @@ export interface QueuedMessage {
    */
   agentExecMode?: AgentExecMode;
   /**
-   * True when this was enqueued while a turn was active/pending. It must not
-   * dispatch until the queue watcher observes a terminal edge after enqueue.
+   * Dispatch priority.
+   * - "next": natural follow-up — drains FIFO once the turn-lifecycle FSM
+   *   reports the session idle.
+   * - "now": explicit user dispatch (Send Now, or a submit issued after a
+   *   user Stop) — jumps ahead of every "next" item and may interrupt an
+   *   active turn via the timeline boundary.
    */
-  requiresRuntimeSettle?: boolean;
+  priority: QueuedMessagePriority;
   /**
-   * Rust-native active turn id observed at enqueue time. When present, natural
-   * queue release must be driven by that exact turn's terminal event rather
-   * than by session-level status edges, which can briefly flap during tool use.
+   * Set when the user pressed Stop while this message was parked. The
+   * natural drain skips these permanently; only an explicit user action
+   * (Send Now — which flips priority to "now" and clears this flag) can
+   * dispatch them.
    */
-  releaseAfterTurnId?: string;
-  /**
-   * Monotonic queue-watermark for sibling messages parked behind an explicit
-   * Send Now turn. Natural dispatch must wait for a queue release observed
-   * after this timestamp, even if the sibling was originally queued earlier.
-   */
-  releaseAfterMs?: number;
-  /**
-   * User explicitly pressed Send after Stop restored the draft while Rust was
-   * still winding down. This message is the next active prompt once cancel
-   * settles; older queued follow-ups must stay parked behind it.
-   */
-  dispatchAfterUserCancel?: boolean;
+  requiresExplicitDispatch?: boolean;
   status: "queued";
   createdAt: string;
 }
 
 // ============================================
-// Core Atom
+// Core Atom — THE single queue
 // ============================================
 
 export const messageQueueAtom = atom<QueuedMessage[]>([]);
 messageQueueAtom.debugLabel = "messageQueueAtom";
-
-export const forceSendPendingQueueAtom = atom<QueuedMessage[]>([]);
-forceSendPendingQueueAtom.debugLabel = "forceSendPendingQueueAtom";
 
 /** Tracks which queued message is currently being edited in the main input box. */
 export interface QueueEditTarget {
@@ -96,10 +88,7 @@ export const enqueueMessageAtom = atom(
   null,
   (_get, set, message: QueuedMessage) => {
     let added = false;
-    const targetAtom = message.dispatchAfterUserCancel
-      ? forceSendPendingQueueAtom
-      : messageQueueAtom;
-    set(targetAtom, (prev) => {
+    set(messageQueueAtom, (prev) => {
       const duplicate = prev.some(
         (existing) =>
           existing.sessionId === message.sessionId &&
@@ -108,12 +97,7 @@ export const enqueueMessageAtom = atom(
       );
       if (duplicate) return prev;
       added = true;
-      return [
-        ...prev,
-        message.dispatchAfterUserCancel
-          ? { ...message, requiresRuntimeSettle: false }
-          : message,
-      ];
+      return [...prev, message];
     });
     if (added) set(enqueueCountAtom, (n) => n + 1);
   }
@@ -122,44 +106,54 @@ enqueueMessageAtom.debugLabel = "enqueueMessageAtom";
 
 export const dequeueMessageAtom = atom(null, (_get, set, messageId: string) => {
   set(messageQueueAtom, (prev) => prev.filter((msg) => msg.id !== messageId));
-  set(forceSendPendingQueueAtom, (prev) =>
-    prev.filter((msg) => msg.id !== messageId)
-  );
 });
 dequeueMessageAtom.debugLabel = "dequeueMessageAtom";
 
+/**
+ * Send Now: promote a parked message to an explicit "now" dispatch. The
+ * queue dispatcher interrupts the active turn (timeline boundary) if needed
+ * and dispatches this message the moment the session is idle. Clearing
+ * `requiresExplicitDispatch` lifts a previous Stop hold — Send Now IS the
+ * explicit dispatch.
+ */
 export const forceSendMessageAtom = atom(
   null,
   (get, set, messageId: string) => {
-    const message = get(messageQueueAtom).find((msg) => msg.id === messageId);
-    if (!message) return;
-    set(forceSendPendingQueueAtom, (prev) => {
-      const duplicate = prev.some((msg) => msg.id === messageId);
-      return duplicate
-        ? prev
-        : [{ ...message, requiresRuntimeSettle: false }, ...prev];
-    });
-    const releaseAfterMs = Date.now();
+    if (!get(messageQueueAtom).some((msg) => msg.id === messageId)) return;
     set(messageQueueAtom, (prev) =>
-      prev
-        .filter((msg) => msg.id !== messageId)
-        .map((msg) =>
-          msg.sessionId === message.sessionId
-            ? { ...msg, requiresRuntimeSettle: true, releaseAfterMs }
-            : msg
-        )
+      prev.map((msg) =>
+        msg.id === messageId
+          ? { ...msg, priority: "now", requiresExplicitDispatch: false }
+          : msg
+      )
     );
   }
 );
 forceSendMessageAtom.debugLabel = "forceSendMessageAtom";
 
+/**
+ * Stop boundary: park every queued message of the session. Held messages are
+ * permanently skipped by the natural drain — only Send Now (or queue edit
+ * actions) can dispatch them afterwards.
+ */
+export const holdSessionQueueForStopAtom = atom(
+  null,
+  (_get, set, sessionId: string) => {
+    set(messageQueueAtom, (prev) =>
+      prev.map((msg) =>
+        msg.sessionId === sessionId && !msg.requiresExplicitDispatch
+          ? { ...msg, requiresExplicitDispatch: true }
+          : msg
+      )
+    );
+  }
+);
+holdSessionQueueForStopAtom.debugLabel = "holdSessionQueueForStopAtom";
+
 export const clearSessionQueueAtom = atom(
   null,
   (_get, set, sessionId: string) => {
     set(messageQueueAtom, (prev) =>
-      prev.filter((msg) => msg.sessionId !== sessionId)
-    );
-    set(forceSendPendingQueueAtom, (prev) =>
       prev.filter((msg) => msg.sessionId !== sessionId)
     );
   }
@@ -204,9 +198,9 @@ export const editMessageAtom = atom(
 editMessageAtom.debugLabel = "editMessageAtom";
 
 /**
- * Bumped to request an immediate queue flush when the session is idle.
- * Watched by useQueueDispatch to trigger tryDispatchNext on demand
- * (e.g. "Send Now" while the agent is not running).
+ * Bumped to request an immediate queue dispatch pass (e.g. "Send Now"
+ * clicked, or a post-Stop explicit submit was enqueued). Watched by
+ * useQueueDispatch.
  */
 export const queueFlushRequestAtom = atom(0);
 queueFlushRequestAtom.debugLabel = "queueFlushRequest";

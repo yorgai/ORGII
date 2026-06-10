@@ -17,8 +17,13 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 
-import { markQueueTurnSettled } from "@src/engines/SessionCore/hooks/session/queueTurnGate";
+import {
+  markTurnRunning,
+  markTurnTerminal,
+  toTurnTerminalStatus,
+} from "@src/engines/SessionCore/control/turnLifecycle";
 import { type SessionStatus, updateSessionStatus } from "@src/store/session";
+import { isTerminalStatus } from "@src/types/session/session";
 
 interface SessionStatusChangedPayload {
   sessionId: string;
@@ -31,7 +36,11 @@ export function useNativeSessionStatusMonitor(): void {
       "session-status-changed",
       (event) => {
         const { sessionId, status } = event.payload;
-        markQueueTurnSettled(sessionId, Date.now(), undefined, status);
+        if (isTerminalStatus(status)) {
+          markTurnTerminal(sessionId, toTurnTerminalStatus(status));
+        } else if (status === "running") {
+          markTurnRunning(sessionId);
+        }
         updateSessionStatus(sessionId, status as SessionStatus);
       }
     );

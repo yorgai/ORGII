@@ -337,7 +337,13 @@ describe("Rust Agent stream handlers", () => {
     expect(ctx.assistantStreamRef?.current.idRef.current).toBe("");
     expect(ctx.assistantStreamRef?.current.contentRef.current).toBe("");
     expect(ctx.setStreaming).toHaveBeenCalledWith(false);
-    expect(ctx.onStatusChangeRef.current).toHaveBeenCalledWith("completed");
+    // Stream completion is an intermediate signal — it must NOT be treated
+    // as a turn terminal by the FSM ingestion layer.
+    expect(ctx.onStatusChangeRef.current).toHaveBeenCalledWith(
+      "completed",
+      undefined,
+      { intermediate: true }
+    );
     expect(replaceAndRemoveSpy).not.toHaveBeenCalled();
     expect(removeByIdPrefixSpy).not.toHaveBeenCalled();
   });
