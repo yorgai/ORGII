@@ -83,11 +83,15 @@ const sourceOrgiiHome =
   (isolatedRun
     ? join(homedir(), ".orgii")
     : (process.env.ORGII_HOME ?? join(homedir(), ".orgii")));
+// Isolation is the DEFAULT: non-isolated runs previously used the real
+// ~/.orgii, which is how "E2E Custom Member Agent" fixtures leaked into
+// the user's actual agent-definitions.json whenever a spec crashed
+// before its finally-cleanup. Touching the real home now requires the
+// explicit opt-in E2E_USE_REAL_HOME=1.
+const useRealHome = process.env.E2E_USE_REAL_HOME === "1";
 const orgiiHome =
   process.env.E2E_ORGII_HOME ??
-  (allowParallel || isolatedRun
-    ? mkdtempSync(join(tmpdir(), "orgii-e2e-shard-"))
-    : undefined);
+  (useRealHome ? undefined : mkdtempSync(join(tmpdir(), "orgii-e2e-shard-")));
 
 const ORGII_HOME_SEED_ENTRIES = [
   "agent-definitions.json",

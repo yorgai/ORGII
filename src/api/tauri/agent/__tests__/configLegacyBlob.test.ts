@@ -106,15 +106,11 @@ describe("assembleAgentConfigBlob — OS kind", () => {
     expect(blob.disabledMcpTools).toEqual([]);
   });
 
-  it("echoes the full AgentToolSelection in _agentTools for read-modify-write", () => {
+  it("no longer carries _agentTools echo (backend patches merge field-level)", () => {
     const blob = assembleOs();
-    expect(blob._agentTools).toEqual({
-      excludedTools: ["pre-existing"],
-      userAllowedTools: [],
-      disabledMcpServers: ["serverA"],
-      disabledMcpTools: [],
-      systemRestrictToTools: null,
-    });
+    expect(blob).not.toHaveProperty("_agentTools");
+    expect(blob).not.toHaveProperty("_agentPolicy");
+    expect(blob).not.toHaveProperty("_sessionModel");
   });
 
   it("echoes subAgents at top level (P0-15)", () => {
@@ -181,8 +177,11 @@ describe("assembleAgentConfigBlob — OS kind", () => {
   });
 });
 
-describe("extractAgentDefPatch — AgentToolSelection round-trip (P0-13)", () => {
-  it("emits a wholesale tools patch on excludedTools edit, preserving siblings", () => {
+describe("extractAgentDefPatch — AgentToolSelectionPatch (P0-13)", () => {
+  // The backend now merges tools field-level (AgentToolSelectionPatch):
+  // absent keys keep the stored lists, so the patch carries ONLY the
+  // edited fields and never touches systemRestrictToTools.
+  it("emits a field-level tools patch on excludedTools edit", () => {
     const blob = assembleOs();
     blob.excludedTools = ["pre-existing", "newly-disabled"];
     const patch = extractAgentDefPatch(blob);
@@ -191,11 +190,10 @@ describe("extractAgentDefPatch — AgentToolSelection round-trip (P0-13)", () =>
       userAllowedTools: [],
       disabledMcpServers: ["serverA"],
       disabledMcpTools: [],
-      systemRestrictToTools: null,
     });
   });
 
-  it("preserves systemRestrictToTools when previously set (specialist agents)", () => {
+  it("never sends systemRestrictToTools (backend keeps stored value)", () => {
     const def = makeOsDef({
       tools: {
         excludedTools: [],
@@ -209,10 +207,11 @@ describe("extractAgentDefPatch — AgentToolSelection round-trip (P0-13)", () =>
     blob.excludedTools = ["one-more"];
     const patch = extractAgentDefPatch(blob);
     const tools = patch.tools as Record<string, unknown>;
-    expect(tools.systemRestrictToTools).toEqual(["explore", "ls"]);
+    expect(tools).not.toHaveProperty("systemRestrictToTools");
+    expect(tools.excludedTools).toEqual(["one-more"]);
   });
 
-  it("emits tools patch echoing prior values when nothing was edited (idempotent)", () => {
+  it("emits tools patch from the blob's top-level mirrors (idempotent)", () => {
     const blob = assembleOs();
     const patch = extractAgentDefPatch(blob);
     expect(patch.tools).toEqual({
@@ -220,11 +219,10 @@ describe("extractAgentDefPatch — AgentToolSelection round-trip (P0-13)", () =>
       userAllowedTools: [],
       disabledMcpServers: ["serverA"],
       disabledMcpTools: [],
-      systemRestrictToTools: null,
     });
   });
 
-  it("forwards userAllowedTools edits in the patch, preserving siblings", () => {
+  it("forwards userAllowedTools edits in the patch", () => {
     const blob = assembleOs();
     blob.userAllowedTools = ["bash", "grep"];
     const patch = extractAgentDefPatch(blob);
@@ -233,7 +231,6 @@ describe("extractAgentDefPatch — AgentToolSelection round-trip (P0-13)", () =>
       userAllowedTools: ["bash", "grep"],
       disabledMcpServers: ["serverA"],
       disabledMcpTools: [],
-      systemRestrictToTools: null,
     });
   });
 });
@@ -285,7 +282,9 @@ describe("extractIntegrationsPatch — integration UIs own app-wide integration 
 });
 
 describe("SessionModel preservation (P0-16) — mode + processingLock", () => {
-  it("OS Singleton mode survives a compaction-only edit", () => {
+  // The backend merges field-level (SessionModelPatch): absent keys keep
+  // the stored mode/processingLock, so the patch carries ONLY the edits.
+  it("compaction-only edit sends only compaction (mode kept server-side)", () => {
     const def = makeOsDef({
       sessionModel: {
         mode: "singleton",
@@ -300,15 +299,16 @@ describe("SessionModel preservation (P0-16) — mode + processingLock", () => {
       triggerRatio: 0.85,
     };
     const patch = extractAgentDefPatch(blob);
-    expect(patch.sessionModel).toEqual({
-      mode: "singleton",
-      processingLock: true,
-      maxIterations: 500,
-      compaction: { enabled: false, triggerRatio: 0.85 },
-    });
+    const session = patch.sessionModel as Record<string, unknown>;
+    expect(session.compaction).toEqual({ enabled: false, triggerRatio: 0.85 });
+    // mode / processingLock are never sent — SessionModelPatch keeps the
+    // stored values for absent keys. (A full blob still carries
+    // maxIterations as an unchanged echo; that is value-identical.)
+    expect(session).not.toHaveProperty("mode");
+    expect(session).not.toHaveProperty("processingLock");
   });
 
-  it("OS maxIterations edit also preserves Singleton mode", () => {
+  it("maxIterations edit sends only maxIterations", () => {
     const def = makeOsDef({
       sessionModel: {
         mode: "singleton",
@@ -320,12 +320,10 @@ describe("SessionModel preservation (P0-16) — mode + processingLock", () => {
     const blob = assembleOs(def);
     blob.maxIterations = 1000;
     const patch = extractAgentDefPatch(blob);
-    expect(patch.sessionModel).toEqual({
-      mode: "singleton",
-      processingLock: true,
-      maxIterations: 1000,
-      compaction: {},
-    });
+    const session = patch.sessionModel as Record<string, unknown>;
+    expect(session.maxIterations).toBe(1000);
+    expect(session).not.toHaveProperty("mode");
+    expect(session).not.toHaveProperty("processingLock");
   });
 
   it("SDE per-session + processingLock survive a compaction-only edit", () => {
@@ -353,12 +351,10 @@ describe("SessionModel preservation (P0-16) — mode + processingLock", () => {
     );
     blob.compaction = { enabled: false };
     const patch = extractAgentDefPatch(blob);
-    expect(patch.sessionModel).toEqual({
-      mode: "per-session",
-      processingLock: true,
-      maxIterations: 500,
-      compaction: { enabled: false },
-    });
+    const session = patch.sessionModel as Record<string, unknown>;
+    expect(session.compaction).toEqual({ enabled: false });
+    expect(session).not.toHaveProperty("mode");
+    expect(session).not.toHaveProperty("processingLock");
   });
 });
 
@@ -489,8 +485,10 @@ describe("Compaction 8 knobs round-trip (top-level compaction key)", () => {
       reservedSummaryTokens: 24_000,
       bufferTokens: 13_000,
     });
-    expect(session.mode).toBe("singleton");
-    expect(session.processingLock).toBe(true);
+    // mode / processingLock are no longer echoed — the backend's
+    // SessionModelPatch keeps the stored values for absent keys.
+    expect(session).not.toHaveProperty("mode");
+    expect(session).not.toHaveProperty("processingLock");
   });
 
   it("editing bufferTokens preserves all other compaction siblings", () => {

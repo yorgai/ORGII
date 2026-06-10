@@ -668,50 +668,11 @@ fn apply_member_launch_overrides_to_snapshot(
     members: &mut [OrgMember],
     overrides: &HashMap<String, OrgMemberLaunchOverride>,
 ) -> Result<(), String> {
-    let mut applied_member_ids = HashSet::new();
-    apply_member_launch_overrides_recursive(members, overrides, &mut applied_member_ids)?;
-    let mut unknown_member_ids = overrides
-        .keys()
-        .filter(|member_id| !applied_member_ids.contains(*member_id))
-        .cloned()
-        .collect::<Vec<_>>();
-    unknown_member_ids.sort();
-    if !unknown_member_ids.is_empty() {
-        return Err(format!(
-            "Agent Org launch override references unknown member id(s): {}",
-            unknown_member_ids.join(", ")
-        ));
-    }
-    Ok(())
-}
-
-fn apply_member_launch_overrides_recursive(
-    members: &mut [OrgMember],
-    overrides: &HashMap<String, OrgMemberLaunchOverride>,
-    applied_member_ids: &mut HashSet<String>,
-) -> Result<(), String> {
-    for member in members {
-        if let Some(member_override) = overrides.get(&member.id) {
-            applied_member_ids.insert(member.id.clone());
-            if let Some(agent_id) = member_override
-                .agent_id
-                .as_deref()
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-            {
-                member.agent_id = agent_id.to_string();
-            }
-            if let Some(runtime_config) = member_override.runtime_config.clone() {
-                member.runtime_config = Some(runtime_config);
-            }
-        }
-        apply_member_launch_overrides_recursive(
-            &mut member.children,
-            overrides,
-            applied_member_ids,
-        )?;
-    }
-    Ok(())
+    crate::definitions::orgs::apply_overrides_to_member_tree(
+        members,
+        overrides,
+        "Agent Org launch override",
+    )
 }
 
 fn validate_launch_agent_definitions(

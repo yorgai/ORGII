@@ -142,13 +142,8 @@ export function assembleAgentConfigBlob(
     disabledMcpServers: agentTools.disabledMcpServers ?? [],
     disabledMcpTools: agentTools.disabledMcpTools ?? [],
 
-    // Echo authoritative previous values so writers can do
-    // read-modify-write without losing siblings (the backend replaces
-    // these structs wholesale).
+    // Risk-rule defaults still ride along for UI rendering fallbacks.
     _defaultRiskRules: cloneCommandRiskRules(defaultRiskRules),
-    _agentPolicy: agentPolicy,
-    _agentTools: agentTools,
-    _sessionModel: sessionModel,
   };
   return blob;
 }
@@ -244,7 +239,7 @@ export function extractAgentDefPatch(
   // the blob's `security.workspaceOnly` below.
 
   if ("compaction" in blob || "maxIterations" in blob) {
-    patch.sessionModel = buildSessionModelPatch(blob, {
+    patch.sessionModel = buildSessionModelPatch({
       compaction: "compaction" in blob ? blob.compaction : undefined,
       maxIterations: "maxIterations" in blob ? blob.maxIterations : undefined,
     });
@@ -280,63 +275,45 @@ export function extractIntegrationsPatch(
 }
 
 /**
- * Build a full `AgentPolicy` patch from the unified blob shape.
+ * Build an `AgentPolicyPatch` from the unified blob shape.
  *
- * `AgentDefinitionPatch` replaces `agentPolicy` wholesale, so we
- * echo the authoritative previous value (carried in `_agentPolicy`)
- * and overlay the UI-edited `security.*` fields. Tool allow/deny is
- * not represented on `AgentPolicy` anymore — it lives on
- * `AgentDefinition.tools.excludedTools` and the runtime access-mode policy.
+ * The backend now merges field-level (`AgentPolicyPatch`): absent keys
+ * keep the stored value, so we forward ONLY the edited `security.*`
+ * fields — no `_agentPolicy` echo, no read-modify-write.
  */
 function buildAgentPolicyPatch(
   blob: Record<string, unknown>
 ): Record<string, unknown> {
-  const previous = toRecord(blob._agentPolicy);
   const security = toRecord(blob.security);
 
-  const merged: Record<string, unknown> = { ...previous };
-  if ("autonomy" in security) merged.autonomy = security.autonomy;
-  if ("workspaceOnly" in security)
-    merged.workspaceOnly = security.workspaceOnly;
+  const patch: Record<string, unknown> = {};
+  if ("autonomy" in security) patch.autonomy = security.autonomy;
+  if ("workspaceOnly" in security) patch.workspaceOnly = security.workspaceOnly;
   if ("blockedCommands" in security)
-    merged.blockedCommands = security.blockedCommands;
+    patch.blockedCommands = security.blockedCommands;
   if ("forbiddenPaths" in security)
-    merged.forbiddenPaths = security.forbiddenPaths;
-  if ("riskRules" in security) merged.riskRules = security.riskRules;
+    patch.forbiddenPaths = security.forbiddenPaths;
+  if ("riskRules" in security) patch.riskRules = security.riskRules;
 
-  return merged;
+  return patch;
 }
 
 /**
- * Build a full `SessionModel` patch from the unified blob shape.
+ * Build a `SessionModelPatch` from the unified blob shape.
  *
- * `AgentDefinitionPatch.session_model: Option<SessionModel>` is applied
- * wholesale — `target.session_model = Some(v)` — so any field we omit
- * silently snaps back to the `Default` value. That means an OS Agent
- * (`mode: Singleton`) edit of just `compaction` would flip `mode` to
- * `PerSession`. We must echo the previous value (carried in
- * `_sessionModel`) and only overlay the explicitly-edited fields.
+ * The backend merges field-level (`SessionModelPatch`): absent keys keep
+ * the stored values, so editing just `compaction` can no longer snap
+ * `mode` back to `per-session`. Forward ONLY the edited fields.
  */
-function buildSessionModelPatch(
-  blob: Record<string, unknown>,
-  edits: { compaction?: unknown; maxIterations?: unknown }
-): Record<string, unknown> {
-  const previous = toRecord(blob._sessionModel);
-  const merged: Record<string, unknown> = {
-    // SessionMode is `serde(rename_all = "kebab-case")` on the wire —
-    // `"singleton"` / `"per-session"`. Default matches Rust's
-    // `SessionMode::default()` which is `PerSession`.
-    mode: previous.mode ?? "per-session",
-    processingLock: previous.processingLock ?? true,
-    maxIterations: previous.maxIterations ?? 500,
-  };
-  if (previous.compaction !== undefined) {
-    merged.compaction = previous.compaction;
-  }
-  if (edits.compaction !== undefined) merged.compaction = edits.compaction;
+function buildSessionModelPatch(edits: {
+  compaction?: unknown;
+  maxIterations?: unknown;
+}): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  if (edits.compaction !== undefined) patch.compaction = edits.compaction;
   if (edits.maxIterations !== undefined)
-    merged.maxIterations = edits.maxIterations;
-  return merged;
+    patch.maxIterations = edits.maxIterations;
+  return patch;
 }
 
 function hasAgentToolsEdit(blob: Record<string, unknown>): boolean {
@@ -349,39 +326,23 @@ function hasAgentToolsEdit(blob: Record<string, unknown>): boolean {
 }
 
 /**
- * Build a full `AgentToolSelection` patch from the unified blob shape.
+ * Build an `AgentToolSelectionPatch` from the unified blob shape.
  *
- * The backend replaces `tools` wholesale, so we merge the authoritative
- * previous value (echoed in `_agentTools`) with the UI's mutated fields.
- *
- * Fields that the user can edit through the new tools section:
- *   - `userAllowedTools` — user additions on top of the system set
- *   - `excludedTools` — user subtractions
- *   - `disabledMcpServers` / `disabledMcpTools` — MCP toggles
- *
- * `systemRestrictToTools` is preserved from the previous value — it is
- * authored by builtin definitions and is read-only in the UI. We must
- * not silently overwrite it.
+ * The backend merges field-level (`AgentToolSelectionPatch`): absent
+ * keys keep the stored lists, and `systemRestrictToTools` is never sent
+ * from this path (it is authored by builtin definitions and stripped by
+ * `gate_for_builtin` anyway). No `_agentTools` echo needed.
  */
 function buildAgentToolsPatch(
   blob: Record<string, unknown>
 ): Record<string, unknown> {
-  const previous = toRecord(blob._agentTools);
-  const merged: Record<string, unknown> = {
-    userAllowedTools: previous.userAllowedTools ?? [],
-    excludedTools: previous.excludedTools ?? [],
-    disabledMcpServers: previous.disabledMcpServers ?? [],
-    disabledMcpTools: previous.disabledMcpTools ?? [],
-  };
-  if (previous.systemRestrictToTools !== undefined) {
-    merged.systemRestrictToTools = previous.systemRestrictToTools;
-  }
+  const patch: Record<string, unknown> = {};
   if ("userAllowedTools" in blob)
-    merged.userAllowedTools = blob.userAllowedTools;
-  if ("excludedTools" in blob) merged.excludedTools = blob.excludedTools;
+    patch.userAllowedTools = blob.userAllowedTools;
+  if ("excludedTools" in blob) patch.excludedTools = blob.excludedTools;
   if ("disabledMcpServers" in blob)
-    merged.disabledMcpServers = blob.disabledMcpServers;
+    patch.disabledMcpServers = blob.disabledMcpServers;
   if ("disabledMcpTools" in blob)
-    merged.disabledMcpTools = blob.disabledMcpTools;
-  return merged;
+    patch.disabledMcpTools = blob.disabledMcpTools;
+  return patch;
 }

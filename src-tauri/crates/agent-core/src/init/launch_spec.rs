@@ -151,6 +151,15 @@ async fn resolve_definition_for_launch(
         });
     }
 
+    // Last resort: prefix mapping. Custom agents share the sdeagent-/
+    // osagent- prefixes, so reaching this branch for a custom agent
+    // collapses its identity to a builtin — warn loudly so the missing
+    // persisted agent_definition_id gets noticed.
+    tracing::warn!(
+        "[launch] session '{}' has no in-memory definition and no persisted \
+         agent_definition_id; falling back to builtin prefix mapping",
+        session_id
+    );
     crate::definitions::prefix_lookup::definition_for_session_id(session_id).ok_or_else(|| {
         format!(
             "session '{}' has no persisted agent_definition_id and no builtin prefix mapping",

@@ -348,21 +348,8 @@ impl AgentOrgsStore {
             .find(|existing| existing.id == org_id)
             .ok_or_else(|| format!("Agent Org '{}' not found", org_id))?;
 
-        let mut applied_member_ids = HashSet::new();
-        apply_overrides_to_members(&mut org.children, overrides, &mut applied_member_ids)?;
-        let mut unknown_member_ids = overrides
-            .keys()
-            .filter(|member_id| !applied_member_ids.contains(*member_id))
-            .cloned()
-            .collect::<Vec<_>>();
-        unknown_member_ids.sort();
-        if !unknown_member_ids.is_empty() {
-            return Err(format!(
-                "Agent Org '{}' has no member id(s) for override: {}",
-                org.name,
-                unknown_member_ids.join(", ")
-            ));
-        }
+        let context = format!("Agent Org '{}'", org.name);
+        apply_overrides_to_member_tree(&mut org.children, overrides, &context)?;
         let snapshot = orgs.clone();
         drop(orgs);
         self.persist(&snapshot);
@@ -394,6 +381,35 @@ impl AgentOrgsStore {
         drop(orgs);
         self.persist(&snapshot);
         Ok(())
+    }
+}
+
+/// Apply member launch overrides to an org member tree, erroring on any
+/// override that references an unknown member id. SHARED implementation —
+/// both the persisted-org path (`apply_member_launch_overrides`) and the
+/// run-snapshot path (`session::launch`) call this; they previously held
+/// line-for-line copies that could drift.
+pub fn apply_overrides_to_member_tree(
+    members: &mut [OrgMember],
+    overrides: &HashMap<String, OrgMemberLaunchOverride>,
+    context_label: &str,
+) -> Result<(), String> {
+    let mut applied_member_ids = HashSet::new();
+    apply_overrides_to_members(members, overrides, &mut applied_member_ids)?;
+    let mut unknown_member_ids = overrides
+        .keys()
+        .filter(|member_id| !applied_member_ids.contains(*member_id))
+        .cloned()
+        .collect::<Vec<_>>();
+    unknown_member_ids.sort();
+    if unknown_member_ids.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "{} has no member id(s) for override: {}",
+            context_label,
+            unknown_member_ids.join(", ")
+        ))
     }
 }
 

@@ -56,10 +56,123 @@ where
 use super::capabilities::CapabilitySet;
 use super::schema::{
     AgentDefinition, AgentLearningsConfig, AgentPolicy, AgentSkillsConfig, AgentTier,
-    AgentToolSelection, DelegationConfig, SessionModel, SubAgentRef,
+    AgentToolSelection, CompactionConfig, DelegationConfig, SessionMode, SessionModel,
+    SubAgentRef,
 };
 use crate::core::config::ReliabilityConfig;
+use crate::foundation::security::policy::AutonomyLevel;
+use crate::foundation::security::CommandRiskRules;
 use crate::integrations::config::ExecutionMode;
+
+/// Field-level patch for [`AgentPolicy`]. Absent fields keep the target's
+/// current value — the frontend no longer has to echo the full struct
+/// (the old wholesale-replace semantics forced `_agentPolicy` shadow
+/// copies and read-modify-write reconstruction in TS, and any forgotten
+/// echo silently reset siblings).
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct AgentPolicyPatch {
+    pub autonomy: Option<AutonomyLevel>,
+    pub workspace_only: Option<bool>,
+    pub blocked_commands: Option<Vec<String>>,
+    pub forbidden_paths: Option<Vec<String>>,
+    pub risk_rules: Option<CommandRiskRules>,
+}
+
+impl AgentPolicyPatch {
+    fn apply(self, target: &mut AgentPolicy) {
+        if let Some(v) = self.autonomy {
+            target.autonomy = v;
+        }
+        if let Some(v) = self.workspace_only {
+            target.workspace_only = v;
+        }
+        if let Some(v) = self.blocked_commands {
+            target.blocked_commands = v;
+        }
+        if let Some(v) = self.forbidden_paths {
+            target.forbidden_paths = v;
+        }
+        if let Some(v) = self.risk_rules {
+            target.risk_rules = v;
+        }
+    }
+}
+
+/// Field-level patch for [`SessionModel`]. Absent fields keep the
+/// target's current values — editing just `compaction` can no longer
+/// snap `mode` back to `PerSession` (a previously-shipped bug class).
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct SessionModelPatch {
+    pub mode: Option<SessionMode>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_optional_nullable"
+    )]
+    pub compaction: Option<Option<CompactionConfig>>,
+    pub processing_lock: Option<bool>,
+    pub max_iterations: Option<u32>,
+}
+
+impl SessionModelPatch {
+    fn apply(self, target: &mut SessionModel) {
+        if let Some(v) = self.mode {
+            target.mode = v;
+        }
+        if let Some(v) = self.compaction {
+            target.compaction = v;
+        }
+        if let Some(v) = self.processing_lock {
+            target.processing_lock = v;
+        }
+        if let Some(v) = self.max_iterations {
+            target.max_iterations = v;
+        }
+    }
+}
+
+/// Field-level patch for [`AgentToolSelection`]. Absent fields keep the
+/// target's current values — the Settings tool editor sends only the
+/// lists it edited instead of read-modify-writing the whole struct.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct AgentToolSelectionPatch {
+    /// System-pinned allowlist. Tri-state: absent = keep, `null` = clear,
+    /// list = set. Stripped by `gate_for_builtin` for builtin agents.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_optional_nullable",
+        alias = "restrictToTools"
+    )]
+    pub system_restrict_to_tools: Option<Option<Vec<String>>>,
+    pub user_allowed_tools: Option<Vec<String>>,
+    pub excluded_tools: Option<Vec<String>>,
+    pub disabled_mcp_servers: Option<Vec<String>>,
+    pub disabled_mcp_tools: Option<Vec<String>>,
+}
+
+impl AgentToolSelectionPatch {
+    fn apply(self, target: &mut AgentToolSelection) {
+        if let Some(v) = self.system_restrict_to_tools {
+            target.system_restrict_to_tools = v;
+        }
+        if let Some(v) = self.user_allowed_tools {
+            target.user_allowed_tools = v;
+        }
+        if let Some(v) = self.excluded_tools {
+            target.excluded_tools = v;
+        }
+        if let Some(v) = self.disabled_mcp_servers {
+            target.disabled_mcp_servers = v;
+        }
+        if let Some(v) = self.disabled_mcp_tools {
+            target.disabled_mcp_tools = v;
+        }
+    }
+}
 
 /// Typed patch for [`AgentDefinition`]. Every field is `Option<T>`:
 /// `None` means "leave this field unchanged", `Some(value)` replaces
@@ -76,7 +189,7 @@ pub struct AgentDefinitionPatch {
     pub tier: Option<AgentTier>,
     pub inherits_from: Option<String>,
     pub capabilities: Option<CapabilitySet>,
-    pub session_model: Option<SessionModel>,
+    pub session_model: Option<SessionModelPatch>,
     /// Tri-state nullable on the wire (`null` clears, `0` is treated as
     /// "auto" sentinel and also clears, positive values replace).
     #[serde(
@@ -105,7 +218,7 @@ pub struct AgentDefinitionPatch {
     pub soul_content: Option<Option<String>>,
     pub sovereign_prompt: Option<bool>,
     pub sub_agents: Option<Vec<SubAgentRef>>,
-    pub tools: Option<AgentToolSelection>,
+    pub tools: Option<AgentToolSelectionPatch>,
     pub load_workspace_resources: Option<bool>,
     pub load_workspace_rules: Option<bool>,
     pub skills_config: Option<AgentSkillsConfig>,
@@ -155,7 +268,7 @@ pub struct AgentDefinitionPatch {
     // `agent_policy.workspace_only` — write there if you want to flip
     // workspace restriction per-agent.
     pub learnings: Option<AgentLearningsConfig>,
-    pub agent_policy: Option<AgentPolicy>,
+    pub agent_policy: Option<AgentPolicyPatch>,
     pub reliability: Option<ReliabilityConfig>,
 }
 
@@ -221,7 +334,9 @@ impl AgentDefinitionPatch {
             target.capabilities = Some(v);
         }
         if let Some(v) = self.session_model {
-            target.session_model = Some(v);
+            let mut current = target.session_model.clone().unwrap_or_default();
+            v.apply(&mut current);
+            target.session_model = Some(current);
         }
         if let Some(v) = self.context_window {
             // 0 is the "auto" sentinel — clear instead of storing Some(0).
@@ -242,15 +357,8 @@ impl AgentDefinitionPatch {
         if let Some(v) = self.sub_agents {
             target.sub_agents = Some(v);
         }
-        if let Some(mut v) = self.tools {
-            // `system_restrict_to_tools` is the only Option<_> field on
-            // AgentToolSelection. When the patch leaves it as None (e.g.
-            // gate_for_builtin stripped it), preserve the existing target
-            // value instead of clobbering it.
-            if v.system_restrict_to_tools.is_none() {
-                v.system_restrict_to_tools = target.tools.system_restrict_to_tools.clone();
-            }
-            target.tools = v;
+        if let Some(v) = self.tools {
+            v.apply(&mut target.tools);
         }
         if let Some(v) = self.load_workspace_resources {
             target.load_workspace_resources = Some(v);
@@ -290,7 +398,9 @@ impl AgentDefinitionPatch {
             target.learnings = Some(v);
         }
         if let Some(v) = self.agent_policy {
-            target.agent_policy = Some(v);
+            let mut current = target.agent_policy.clone().unwrap_or_default();
+            v.apply(&mut current);
+            target.agent_policy = Some(current);
         }
         if let Some(v) = self.reliability {
             target.reliability = Some(v);
@@ -392,9 +502,9 @@ mod tests {
             sovereign_prompt: Some(true),
             sub_agents: Some(vec![]),
             skills_config: Some(AgentSkillsConfig::default()),
-            tools: Some(AgentToolSelection::default()),
+            tools: Some(AgentToolSelectionPatch::default()),
             learnings: Some(AgentLearningsConfig::default()),
-            agent_policy: Some(AgentPolicy::default()),
+            agent_policy: Some(AgentPolicyPatch::default()),
             ..Default::default()
         };
 
@@ -437,10 +547,10 @@ mod tests {
     #[test]
     fn gate_for_builtin_strips_system_restrict_to_tools_inside_tools_patch() {
         let patch = AgentDefinitionPatch {
-            tools: Some(AgentToolSelection {
-                system_restrict_to_tools: Some(vec!["tampered".to_string()]),
-                user_allowed_tools: vec!["user_kept".to_string()],
-                excluded_tools: vec!["user_excluded".to_string()],
+            tools: Some(AgentToolSelectionPatch {
+                system_restrict_to_tools: Some(Some(vec!["tampered".to_string()])),
+                user_allowed_tools: Some(vec!["user_kept".to_string()]),
+                excluded_tools: Some(vec!["user_excluded".to_string()]),
                 ..Default::default()
             }),
             ..Default::default()
@@ -452,8 +562,14 @@ mod tests {
             tools.system_restrict_to_tools.is_none(),
             "system_restrict_to_tools stripped on builtin"
         );
-        assert_eq!(tools.user_allowed_tools, vec!["user_kept"]);
-        assert_eq!(tools.excluded_tools, vec!["user_excluded"]);
+        assert_eq!(
+            tools.user_allowed_tools,
+            Some(vec!["user_kept".to_string()])
+        );
+        assert_eq!(
+            tools.excluded_tools,
+            Some(vec!["user_excluded".to_string()])
+        );
     }
 
     #[test]
@@ -563,10 +679,10 @@ mod tests {
         };
 
         let patch = AgentDefinitionPatch {
-            tools: Some(AgentToolSelection {
+            tools: Some(AgentToolSelectionPatch {
                 system_restrict_to_tools: None,
-                user_allowed_tools: vec!["user_added".to_string()],
-                excluded_tools: vec![],
+                user_allowed_tools: Some(vec!["user_added".to_string()]),
+                excluded_tools: None,
                 ..Default::default()
             }),
             ..Default::default()
