@@ -66,19 +66,6 @@ Multi-root behavior must be treated as a first-class product contract, not a dis
 - Any E2E helper that sets `activeFolder`, `selectedRepo`, `workspaceFolders`, or launch workspace fields must return a snapshot of all related atoms/paths and the test must assert the durable/active distinction immediately. If a failure message shows the target path inside the folder dump but matching failed, inspect argument marshaling and path normalization before adding fallback display logic.
 - Do not fix multi-repo bugs with display-only band-aids. A valid fix names the data contract, centralizes extraction/resolution once, wires all consumers to that contract, and adds negative tests that would fail if a component-local fallback or single-repo pinning returned.
 
-### Multi-repo acceptance matrix
-
-For any multi-repo fix, cover these dimensions or explicitly state why a dimension is out of scope:
-
-- Session Creator launch payload: primary root is durable `workspace_path`; secondary roots are `additional_directories`.
-- Rendered Session Creator `@` search: colliding basenames show persistent repo badges and insert a pill from the chosen repo.
-- Existing chat composer `@` search: same source badge/pill behavior after a session already exists.
-- Context menu search roots: all workspace folders searched; same relative path in two repos remains two distinct rows.
-- Active-folder drift: focusing/selecting a secondary file changes current UI folder only, not default agent launch root.
-- Read-file rendering: individual block, grouped read block, and action-summary aggregation all show real paths.
-- Payload variants: snake_case, camelCase, nested success/output payloads, and filename fallback are all tested through shared extractors.
-- E2E helpers: setup/cleanup may restore single repo only after assertions, never between multi-root seed and the behavior under test.
-
 ## Matrix evidence policy
 
 For requested provider/runtime matrices, each row needs current-code evidence and a clear outcome.
@@ -182,6 +169,9 @@ E2E_ALLOW_PORT_CLEANUP=1 E2E_CONTROL_SCENARIOS=rewind npm test -- --spec './spec
 E2E_ALLOW_PORT_CLEANUP=1 E2E_CONTROL_SCENARIOS=plan-build-direct npm test -- --spec './specs/core/session-controls-ui.spec.mjs'
 E2E_ALLOW_PORT_CLEANUP=1 E2E_CONTROL_SCENARIOS=plan-update npm test -- --spec './specs/core/session-controls-ui.spec.mjs'
 E2E_ALLOW_PORT_CLEANUP=1 E2E_CONTROL_SCENARIOS=plan-edit-resend npm test -- --spec './specs/core/session-controls-ui.spec.mjs'
+
+# Core UI:
+E2E_ALLOW_PORT_CLEANUP=1 npm test -- --spec './specs/core/chat-rendering-ui.spec.mjs'
 ```
 
 ## Result-driven orchestration regressions
@@ -199,7 +189,15 @@ For Agent Org / multi-member / queue scenarios, every complex spec should state 
 
 A Rust runtime E2E that posts protocol messages or calls debug endpoints is not proof that Agent Org works in the app. Rendered Agent Org acceptance must drive the production launch path from the UI, wait for production wake/drain/member-session turns, and then assert both UI and durable DB finality. Unit tests and Rust E2E can pin regressions, but they cannot be used as the sole evidence for “Agent Org advances correctly.”
 
-Minimum failure cases that a valid Agent Org spec must catch:
+Minimum failure cases that a valid orchestration spec must catch:
+
+- A `running` run with no active member session and no unread inbox work to wake/drain (stalled run).
+- `status = "in_progress"` with `owner = null` (ownerless work persisted).
+- A `completed` run that still has `pending` or `in_progress` tasks.
+- A run that appears visually populated but cannot make forward progress without a corrective second prompt.
+
+<details>
+<summary>Agent Org-specific failure cases</summary>
 
 - A `running` run with `pending` / `in_progress` tasks, no active member session, and no unread inbox work to wake/drain.
 - A ready assigned `pending` task whose dependencies are all completed, but whose owner has no unread `TaskAssigned` inbox row and no active member turn.
@@ -209,6 +207,8 @@ Minimum failure cases that a valid Agent Org spec must catch:
 - Member sessions visible in the coordinator overview but absent from the left sidebar.
 - Multiple org members sharing the same `agent_id` / `agent_definition_id` while inbox delivery, wake, drain, task owner, and task-tool authorization are only keyed by `agent_id`.
 - A run that appears visually populated but cannot make forward progress from the original user prompt without a corrective second prompt.
+
+</details>
 
 ## File changes panel and diff view
 
@@ -259,15 +259,3 @@ CLI sessions (claude-code, codex, cursor-cli, gemini-cli) reload history from SQ
 - After `cli_agent_truncate_after_chunk` (edit-resend / rewind), the product code calls `deleteCachedSession` and `evictSession` to ensure a clean reload. Tests that reload after rewind must wait for `chatEventCount > 0`, not just `activeSessionId` match.
 - `reloadAndOpenActiveSession` retries `openSession` up to 3× with 3s gaps — CLI adapter settling after reload is a known race that does not affect real users (who wait for UI to render before clicking).
 - Do not mark CLI reload as a product failure if `chatEventCount: 0` appears only after a programmatic `browser.refresh()` + immediate `openSession`. Verify with multiple runs before treating as a stable product bug.
-
-## File changes panel and diff view
-
-The inline file-review panel was removed in `fbf20c78`. The composer "files pill" now opens Agent Station Diff view. Tests that assert file-change review must account for this:
-
-- The files pill (`data-testid="composer-section-files"`) click calls `openAgentStationDiff`, which sets `chatPanelMaximized=false`, `stationMode="agent-station"`, `simulatorSelectedAppAtom=AppType.DIFF`, and `replayModeAtom="replay"`.
-- **`chatPanelMaximized` must be false** before `ActivitySimulator` renders. If the chat panel is maximized, the diff view pane is suppressed and `SimulatorWorkstationTabHeader` buttons are invisible.
-- Undo All: `data-testid="file-changes-undo-all"` in `SimulatorWorkstationTabHeader` (rendered only when `pendingCount > 0`).
-- Redo All: `data-testid="file-changes-redo-all"` in `SimulatorWorkstationTabHeader` (rendered only when `redoSnapshotAnchors.length > 0`).
-- `__e2e.openAgentStationDiff()` sets the same atoms as the product pill callback and is available as a fallback when Tauri WebDriver `element.click()` misses React synthetic events.
-- `waitForFileChangesPanel` in `agentQueuedWorkspaceHelpers.mjs` encapsulates this: retries pill click 3×, falls back to `invokeE2E("openAgentStationDiff")`, then waits for `[data-testid="file-changes-undo-all"]` or `[data-testid="replay-tab-diff-filter"]`.
-- For plan-build-direct: always call `waitForRuntimeIdle()` before `waitForFileChangesPanel()` — the Undo All button only activates after the build turn is fully idle.
