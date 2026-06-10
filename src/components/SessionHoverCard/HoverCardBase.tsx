@@ -9,6 +9,8 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { getViewportSize } from "@src/util/ui/window/viewport";
+
 import {
   allocateInstanceId,
   cancelPendingClose,
@@ -91,13 +93,15 @@ function computePortalStyle(
   let top = 0;
   let left = 0;
 
+  const viewport = getViewportSize();
+
   if (position === "right-start") {
     top = rect.top;
     left = rect.right + TRIGGER_GAP_PX;
 
     if (
       cardWidth > 0 &&
-      left + cardWidth > window.innerWidth - VIEWPORT_PADDING_PX
+      left + cardWidth > viewport.width - VIEWPORT_PADDING_PX
     ) {
       const leftSide = rect.left - cardWidth - TRIGGER_GAP_PX;
       if (leftSide >= VIEWPORT_PADDING_PX) {
@@ -112,13 +116,13 @@ function computePortalStyle(
   if (cardWidth > 0) {
     left = Math.max(
       VIEWPORT_PADDING_PX,
-      Math.min(left, window.innerWidth - cardWidth - VIEWPORT_PADDING_PX)
+      Math.min(left, viewport.width - cardWidth - VIEWPORT_PADDING_PX)
     );
   }
   if (cardHeight > 0) {
     top = Math.max(
       VIEWPORT_PADDING_PX,
-      Math.min(top, window.innerHeight - cardHeight - VIEWPORT_PADDING_PX)
+      Math.min(top, viewport.height - cardHeight - VIEWPORT_PADDING_PX)
     );
   }
 

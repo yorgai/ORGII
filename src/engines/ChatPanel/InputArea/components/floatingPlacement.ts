@@ -1,4 +1,5 @@
 import { DROPDOWN_PANEL } from "@src/components/Dropdown/tokens";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 export type FloatingPlacement = "up" | "down";
 export type FloatingPlacementStrategy =
@@ -64,8 +65,8 @@ export function computeFloatingPosition({
   floatingWidth,
   floatingHeight,
   placement = "prefer-up",
-  viewportWidth = window.innerWidth,
-  viewportHeight = window.innerHeight,
+  viewportWidth = getViewportSize().width,
+  viewportHeight = getViewportSize().height,
   margin = DEFAULT_VIEWPORT_MARGIN,
   minAvailableHeight = DEFAULT_MIN_AVAILABLE_HEIGHT,
 }: ComputeFloatingPositionOptions): FloatingPosition {

@@ -195,8 +195,9 @@
   }
 
   &__pagination {
-    position: sticky;
-    bottom: 0;
+    // Avoid position:sticky;bottom + CSS zoom: WebKit miscalculates sticky
+    // positions inside overflow:auto when the root has style.zoom set.
+    // The pagination bar stays at the bottom of the canvas content instead.
     z-index: 7;
     display: flex;
     align-items: center;

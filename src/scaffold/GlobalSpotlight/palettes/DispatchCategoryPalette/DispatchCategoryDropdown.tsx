@@ -31,6 +31,7 @@ import {
 } from "@src/hooks/dropdown";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
 import { useFilteredItems } from "@src/hooks/search";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 import type { SpotlightItem } from "../../types";
 import type { DispatchCategoryPaletteProps } from "./types";
@@ -209,9 +210,10 @@ export const DispatchCategoryDropdown: React.FC<
   if (!isOpen || !isPositioned) return null;
 
   const width = Math.max(MIN_DROPDOWN_WIDTH, panelPosition.width);
+  const { width: vw } = getViewportSize();
   const left = Math.max(
     VIEWPORT_MARGIN,
-    Math.min(panelPosition.left, window.innerWidth - VIEWPORT_MARGIN - width)
+    Math.min(panelPosition.left, vw - VIEWPORT_MARGIN - width)
   );
 
   return createPortal(

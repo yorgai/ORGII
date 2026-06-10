@@ -18,6 +18,7 @@ import {
   DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 // ============================================
 // FieldRow - Interactive row that opens dropdowns
@@ -154,7 +155,9 @@ function useResolvedDropdownAlign(align: DropdownAlign) {
       const rect = dropdown.getBoundingClientRect();
       const viewportPadding = 12;
       const nextAlign =
-        rect.right > window.innerWidth - viewportPadding ? "right" : "left";
+        rect.right > getViewportSize().width - viewportPadding
+          ? "right"
+          : "left";
       if (resolvedAlign !== nextAlign) setResolvedAlign(nextAlign);
     },
     [align, resolvedAlign]
@@ -249,15 +252,16 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
       const rect = anchorElement.getBoundingClientRect();
       const menuWidth = 200;
       const viewportPadding = 8;
+      const { width: vw } = getViewportSize();
       const shouldAlignRight =
         resolvedAlign === "right" ||
-        rect.left + menuWidth > window.innerWidth - viewportPadding;
+        rect.left + menuWidth > vw - viewportPadding;
 
       setPortalPosition({
         top: rect.top,
         left: shouldAlignRight ? undefined : rect.left,
         right: shouldAlignRight
-          ? Math.max(viewportPadding, window.innerWidth - rect.right)
+          ? Math.max(viewportPadding, vw - rect.right)
           : undefined,
       });
     };

@@ -26,6 +26,7 @@ import {
 import { rpc } from "@src/api/tauri/rpc";
 import { createLogger } from "@src/hooks/logger";
 import { useTauriListen } from "@src/hooks/platform/useTauriListen";
+import { getUiScale } from "@src/util/platform/tauri/nativeFrame";
 
 import { useEmbeddedWebview } from "./useEmbeddedWebview";
 
@@ -265,12 +266,13 @@ export function useCursorSessionCapture(
       setTimeout(() => {
         if (!containerRef.current) return;
         const newRect = containerRef.current.getBoundingClientRect();
+        const scale = getUiScale();
         void invoke("update_inline_webview_position", {
           label,
-          x: Math.round(newRect.left + INSET),
-          y: Math.round(newRect.top + INSET),
-          width: Math.round(newRect.width - INSET * 2),
-          height: Math.round(newRect.height - INSET * 2),
+          x: Math.round((newRect.left + INSET) * scale),
+          y: Math.round((newRect.top + INSET) * scale),
+          width: Math.round((newRect.width - INSET * 2) * scale),
+          height: Math.round((newRect.height - INSET * 2) * scale),
         }).catch(() => {
           // Ignore — webview may have been closed before this fires.
         });

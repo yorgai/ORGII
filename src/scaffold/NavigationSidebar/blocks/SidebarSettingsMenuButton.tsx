@@ -37,6 +37,7 @@ import { WorkstationToolbarTooltip } from "@src/modules/WorkStation/shared";
 import { openAgentControlSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
 import { GUI_CONTROL_TOGGLE_SHORTCUT_ID } from "@src/scaffold/GlobalSpotlight/palettes/AgentControlPalette";
 import { TUTORIALS_OPEN_EVENT } from "@src/scaffold/Tutorials/tutorialRegistry";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 import HoverAnimatedIcon, {
   triggerIconAnimation,
@@ -59,14 +60,15 @@ function getSubmenuPosition(
 ): SubmenuPosition {
   const rect = trigger.getBoundingClientRect();
   const parentRect = parentPanel?.getBoundingClientRect();
+  const { width: vpWidth, height: vpHeight } = getViewportSize();
   const rightSideLeft = rect.right + SUBMENU_GAP_PX;
   const left =
-    rightSideLeft + SUBMENU_WIDTH_PX > window.innerWidth
+    rightSideLeft + SUBMENU_WIDTH_PX > vpWidth
       ? rect.left - SUBMENU_WIDTH_PX - SUBMENU_GAP_PX
       : rightSideLeft;
   return {
     left,
-    bottom: parentRect ? window.innerHeight - parentRect.bottom : 8,
+    bottom: parentRect ? vpHeight - parentRect.bottom : 8,
   };
 }
 

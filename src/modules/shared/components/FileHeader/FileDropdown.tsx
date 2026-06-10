@@ -34,6 +34,7 @@ import {
   gitFileStatusMapAtom,
   gitFolderStatusMapAtom,
 } from "@src/store/git/gitStatusAtom";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 // ============================================
 // Types
@@ -160,25 +161,23 @@ const FileDropdown: React.FC<FileDropdownProps> = ({
   const updatePosition = useCallback(() => {
     if (!triggerRef?.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
+    const { width: vw, height: vh } = getViewportSize();
     const preferredLeft = rect.right + DROPDOWN_PANEL.triggerGapTight;
     const fallbackLeft = rect.left;
     const left = Math.max(
       VIEWPORT_MARGIN,
       Math.min(
-        preferredLeft + FILE_TREE_DROPDOWN_WIDTH <=
-          window.innerWidth - VIEWPORT_MARGIN
+        preferredLeft + FILE_TREE_DROPDOWN_WIDTH <= vw - VIEWPORT_MARGIN
           ? preferredLeft
           : fallbackLeft,
-        window.innerWidth - FILE_TREE_DROPDOWN_WIDTH - VIEWPORT_MARGIN
+        vw - FILE_TREE_DROPDOWN_WIDTH - VIEWPORT_MARGIN
       )
     );
     const top = Math.max(
       VIEWPORT_MARGIN,
       Math.min(
         rect.top,
-        window.innerHeight -
-          Math.min(MAX_VISIBLE_ROWS * TREE_ROW_HEIGHT, window.innerHeight) -
-          VIEWPORT_MARGIN
+        vh - Math.min(MAX_VISIBLE_ROWS * TREE_ROW_HEIGHT, vh) - VIEWPORT_MARGIN
       )
     );
     setPosition({ top, left });

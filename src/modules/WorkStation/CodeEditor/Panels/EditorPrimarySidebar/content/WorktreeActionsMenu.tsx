@@ -15,6 +15,7 @@ import {
   HEADER_BUTTON,
   PRIMARY_SIDEBAR_HOVER,
 } from "@src/modules/WorkStation/shared/tokens";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 interface WorktreeActionsMenuProps {
   onRemove: () => void;
@@ -44,9 +45,7 @@ export const WorktreeActionsMenu: React.FC<WorktreeActionsMenuProps> = memo(
 
     const triggerRightEdge = panelPosition.left + panelPosition.width;
     const viewportWidth =
-      typeof document !== "undefined"
-        ? document.documentElement.clientWidth
-        : 0;
+      typeof window !== "undefined" ? getViewportSize().width : 0;
 
     return (
       <>

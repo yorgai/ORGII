@@ -13,7 +13,7 @@ use std::pin::Pin;
 use agent_core::foundation::session_bridge::{
     self, CliLaunchOutcome, CliLaunchParams, CliPlanApprovalResponseParams, CliToolsSnapshot,
 };
-use agent_core::interaction::plan_approval::{self, persistence::PlanApprovalStore};
+use agent_core::interaction::plan_approval::{self, PlanResolution};
 use agent_core::session::AgentExecMode;
 use agent_core::tools::names as tool_names;
 
@@ -118,39 +118,28 @@ fn respond_plan_approval(
     params: CliPlanApprovalResponseParams,
 ) -> Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>> {
     Box::pin(async move {
-        let edited = match params.choice.as_str() {
-            "approve" => None,
-            "approve_with_edits" => Some(
-                params
-                    .edited_content
-                    .ok_or_else(|| "approve_with_edits requires `edited_content`".to_string())?,
-            ),
-            "reject" => None,
-            other => return Err(format!("Invalid plan-approval choice: {other}")),
-        };
+        let resolution =
+            match params.choice.as_str() {
+                "approve" => PlanResolution::Approved { edited: None },
+                "approve_with_edits" => PlanResolution::Approved {
+                    edited: Some(params.edited_content.ok_or_else(|| {
+                        "approve_with_edits requires `edited_content`".to_string()
+                    })?),
+                },
+                "reject" => PlanResolution::Rejected,
+                other => return Err(format!("Invalid plan-approval choice: {other}")),
+            };
         let rejected = params.choice == "reject";
+        let edited = params.choice == "approve_with_edits";
 
-        let snapshot = plan_approval::load_snapshot_for_session(&params.session_id)
-            .await?
+        let snapshot = plan_approval::resolve_pending(&params.session_id, resolution, None)
+            .await
             .ok_or_else(|| {
                 format!(
                     "No pending CLI plan approval for session {}",
                     params.session_id
                 )
             })?;
-
-        if let Some(ref new_content) = edited {
-            std::fs::write(&snapshot.plan_path, new_content.as_bytes())
-                .map_err(|err| format!("Failed to persist edited plan: {err}"))?;
-        }
-
-        let session_id_for_delete = params.session_id.clone();
-        tokio::task::spawn_blocking(move || {
-            PlanApprovalStore::delete_by_session(&session_id_for_delete)
-        })
-        .await
-        .map_err(|err| format!("Task error deleting CLI pending plan: {err}"))?
-        .map_err(|err| format!("Failed to delete CLI pending plan: {err}"))?;
 
         let restore_mode = AgentExecMode::Build;
         persistence::update_agent_exec_mode(&params.session_id, restore_mode.as_str())
@@ -167,7 +156,7 @@ fn respond_plan_approval(
                 "planRevisionId": &snapshot.plan_revision_id,
                 "originToolCallId": &snapshot.origin_tool_call_id,
                 "restoreMode": restore_mode.as_str(),
-                "edited": edited.is_some(),
+                "edited": edited,
                 "rejected": rejected,
             }),
         );
@@ -183,7 +172,7 @@ fn respond_plan_approval(
              Execute the approved plan directly. Use the available coding tools to make the requested changes. \
              Do not enter plan mode again and do not create another plan.\n\n\
              ## Approved plan\n\n{plan_body}",
-            edited_marker = if edited.is_some() { " (edited)" } else { "" },
+            edited_marker = if edited { " (edited)" } else { "" },
         );
 
         cli_agent_message(

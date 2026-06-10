@@ -30,6 +30,14 @@ interface ParsedUnifiedDiffPayload {
   newStartLine?: number;
 }
 
+/**
+ * Convert a unified diff string into separate old/new content strings.
+ *
+ * Gap placeholder lines are inserted between hunks so that each hunk's
+ * absolute line numbers (from the @@ header) are preserved in the output.
+ * Without this, multi-hunk diffs produce wrong line offsets when the diff
+ * viewer re-computes its diff from the reconstructed old/new values.
+ */
 function parseUnifiedDiffPayload(
   diff: string | undefined
 ): ParsedUnifiedDiffPayload | null {
@@ -38,12 +46,28 @@ function parseUnifiedDiffPayload(
   const newLines: string[] = [];
   let oldStartLine: number | undefined;
   let newStartLine: number | undefined;
+  let oldCursor = 0;
+  let newCursor = 0;
 
   for (const line of diff.split("\n")) {
     const hunkMatch = HUNK_HEADER_REGEX.exec(line);
     if (hunkMatch) {
-      oldStartLine ??= Number.parseInt(hunkMatch[1], 10);
-      newStartLine ??= Number.parseInt(hunkMatch[2], 10);
+      const hunkOldStart = Number.parseInt(hunkMatch[1], 10);
+      const hunkNewStart = Number.parseInt(hunkMatch[2], 10);
+      if (oldStartLine === undefined) {
+        oldStartLine = hunkOldStart;
+        newStartLine = hunkNewStart;
+      } else {
+        const oldGap = hunkOldStart - oldCursor;
+        const newGap = hunkNewStart - newCursor;
+        const gapCount = Math.max(oldGap, newGap, 0);
+        for (let i = 0; i < gapCount; i++) {
+          if (i < oldGap) oldLines.push("");
+          if (i < newGap) newLines.push("");
+        }
+      }
+      oldCursor = hunkOldStart;
+      newCursor = hunkNewStart;
       continue;
     }
 
@@ -58,12 +82,16 @@ function parseUnifiedDiffPayload(
 
     if (line.startsWith("-")) {
       oldLines.push(line.slice(1));
+      oldCursor++;
     } else if (line.startsWith("+")) {
       newLines.push(line.slice(1));
+      newCursor++;
     } else if (line.startsWith(" ") || line === "") {
       const content = line.startsWith(" ") ? line.slice(1) : line;
       oldLines.push(content);
       newLines.push(content);
+      oldCursor++;
+      newCursor++;
     }
   }
 

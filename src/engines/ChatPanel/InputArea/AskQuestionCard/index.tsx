@@ -24,6 +24,7 @@ import {
 } from "@src/types/userPresence";
 import { isCliSession } from "@src/util/session/sessionDispatch";
 
+import { QuestionCardLoadingShell } from "./QuestionCardLoadingShell";
 import { QuestionCardShell } from "./QuestionCardShell";
 import type { AskQuestionCardProps } from "./types";
 import { useOptionSelection } from "./useOptionSelection";
@@ -39,7 +40,8 @@ const AskQuestionCard: React.FC<AskQuestionCardProps> = ({
   const { t } = useTranslation("sessions");
   const { submitAnswers, skipQuestion, isSubmitting } = useQuestionSubmission();
 
-  const { pendingBatches, currentBatch, dismissBatch } = useQuestionBatches();
+  const { pendingBatches, currentBatch, dismissBatch, isStreaming } =
+    useQuestionBatches();
 
   const customInputRefs = useRef<Map<number, HTMLTextAreaElement | null>>(
     new Map()
@@ -162,13 +164,20 @@ const AskQuestionCard: React.FC<AskQuestionCardProps> = ({
   // Render
   // ============================================
 
-  const hasData = forceVisible || pendingBatches.length > 0;
+  const hasData = forceVisible || pendingBatches.length > 0 || isStreaming;
 
   useEffect(() => {
     onHasDataChange?.(pendingBatches.length > 0);
   }, [pendingBatches.length, onHasDataChange]);
 
   if (!hasData) return null;
+
+  // Streaming gap: tool call started but `args.questions` hasn't streamed in
+  // far enough for a renderable batch. Show a shimmer header so the user sees
+  // the agent is preparing questions instead of an empty input area.
+  if (!currentBatch && !forceVisible && isStreaming) {
+    return <QuestionCardLoadingShell />;
+  }
 
   const batch = currentBatch || { questions: [], blocking: false };
 

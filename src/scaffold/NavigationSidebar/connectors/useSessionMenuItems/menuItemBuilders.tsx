@@ -81,10 +81,12 @@ export function buildSessionMenuItem({
       ? worktreeSubtitle(session.worktreeBranch)
       : undefined,
     icon: resolveSessionRowIcon(session),
+    workingIndicator:
+      inProgress && !pendingAsking ? renderBreathingStatusDot() : undefined,
     trailingElement: pendingAsking
       ? renderStatusDot(statusDotTone)
       : inProgress
-        ? renderBreathingStatusDot()
+        ? undefined
         : renderStatusDot(statusDotTone),
     shortcut: formatRelativeTime(timestampSrc, "nano"),
   };

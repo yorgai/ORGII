@@ -19,6 +19,7 @@ import {
   KeyboardShortcut,
 } from "@src/components/KeyboardShortcut";
 import type { ContextMenuItem } from "@src/types/core/shared";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 import { SubmenuPanel } from "./SubmenuPanel";
 import { getShortcutLabel, matchesContextShortcut } from "./contextMenuUtils";
@@ -53,8 +54,7 @@ const WorkItemContextMenu: React.FC<WorkItemContextMenuProps> = ({
 
     const menu = menuRef.current;
     const rect = menu.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    const { width: viewportWidth, height: viewportHeight } = getViewportSize();
 
     let adjustedX = position.x;
     let adjustedY = position.y;
@@ -78,8 +78,7 @@ const WorkItemContextMenu: React.FC<WorkItemContextMenuProps> = ({
 
     const submenu = submenuRef.current;
     const rect = submenu.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    const { width: viewportWidth, height: viewportHeight } = getViewportSize();
 
     if (rect.right > viewportWidth) {
       const menuRect = menuRef.current?.getBoundingClientRect();
@@ -98,8 +97,7 @@ const WorkItemContextMenu: React.FC<WorkItemContextMenuProps> = ({
 
     const nestedSubmenu = nestedSubmenuRef.current;
     const rect = nestedSubmenu.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    const { width: viewportWidth, height: viewportHeight } = getViewportSize();
 
     if (rect.right > viewportWidth) {
       const submenuRect = submenuRef.current?.getBoundingClientRect();

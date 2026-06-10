@@ -25,7 +25,10 @@ import type { Atom } from "jotai";
 import { useStore } from "jotai";
 import { useCallback, useEffect, useRef } from "react";
 
-import { enterAgentOrgSessionIntervention } from "@src/api/tauri/agent";
+import {
+  enterAgentOrgSessionIntervention,
+  getSession,
+} from "@src/api/tauri/agent";
 import { Message } from "@src/components/Message";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { cancelTurnForTimelineBoundary } from "@src/engines/SessionCore/control/sessionTimelineBoundary";
@@ -57,9 +60,14 @@ import {
   queueEditingAtom,
   queueFlushRequestAtom,
 } from "@src/store/ui/messageQueueAtom";
+import { invokeTauri } from "@src/util/platform/tauri/init";
 import { resolveModelForMessage } from "@src/util/session/resolveModelForMessage";
 import { selectionFromSession } from "@src/util/session/selectionFromSession";
-import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
+import {
+  isAgentSession,
+  isCliSession,
+  isCursorIdeSession,
+} from "@src/util/session/sessionDispatch";
 
 const MAX_SENT_QUEUE_ID_CACHE = 200;
 
@@ -74,6 +82,53 @@ function queuedMessageAgeMs(message: QueuedMessage): number {
   const createdAtMs = Date.parse(message.createdAt);
   if (!Number.isFinite(createdAtMs)) return MIN_QUEUE_VISIBLE_MS;
   return Date.now() - createdAtMs;
+}
+
+/**
+ * Backend statuses that mean "a turn is genuinely still executing".
+ * `waiting_for_user` / `waiting_for_funds` keep the turn open too — a natural
+ * follow-up must not be injected while an interactive tool blocks the turn.
+ */
+const BACKEND_ACTIVE_STATUSES = new Set([
+  "running",
+  "installing",
+  "waiting_for_user",
+  "waiting_for_funds",
+]);
+
+/** Re-check cadence while the backend reports the session still busy. */
+const QUEUE_BACKEND_RECHECK_MS = 3_000;
+
+/**
+ * Authoritative pre-dispatch gate for the natural FIFO drain.
+ *
+ * The turn-lifecycle FSM can be forced idle without a real provider terminal
+ * (planning watchdog, dispatching dead-man, rewind boundary, stray
+ * session-status broadcasts). Dispatching on a falsely-idle FSM injects the
+ * queued message into the middle of a still-running turn. This asks the
+ * backend — the only authority on execution — before letting a natural drain
+ * proceed. Fail-open on RPC errors: if the backend is unreachable the
+ * dispatch itself will fail and park the message.
+ */
+async function isSessionBusyOnBackend(sessionId: string): Promise<boolean> {
+  try {
+    if (isCliSession(sessionId)) {
+      const status = (await invokeTauri("cli_agent_status", { sessionId })) as {
+        status?: string;
+      } | null;
+      return (
+        status?.status !== undefined &&
+        BACKEND_ACTIVE_STATUSES.has(status.status)
+      );
+    }
+    if (isAgentSession(sessionId)) {
+      const meta = await getSession(sessionId);
+      return meta !== null && BACKEND_ACTIVE_STATUSES.has(meta.status);
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 export function useQueueDispatch(): void {
@@ -297,12 +352,39 @@ export function useQueueDispatch(): void {
       }
       dispatchLockRef.current = true;
       inFlightMessageIdRef.current = msg.id;
-      dispatchMessage(msg, () => {
-        if (inFlightMessageIdRef.current === msg.id) {
+      // Authoritative gate: the FSM can be forced idle without a real
+      // provider terminal (watchdog / dead-man / rewind). Confirm with the
+      // backend before injecting a natural follow-up into the session.
+      void isSessionBusyOnBackend(msg.sessionId).then((busy) => {
+        if (inFlightMessageIdRef.current !== msg.id) return;
+        if (busy) {
+          // Still executing — back off and re-check. Do NOT mark the FSM:
+          // presentation state may legitimately disagree; the queue only
+          // needs to know "not yet".
           inFlightMessageIdRef.current = null;
+          dispatchLockRef.current = false;
+          if (wakeTimerRef.current === null) {
+            wakeTimerRef.current = window.setTimeout(() => {
+              wakeTimerRef.current = null;
+              tryDispatchNextRef.current();
+            }, QUEUE_BACKEND_RECHECK_MS);
+          }
+          return;
         }
-        dispatchLockRef.current = false;
-        tryDispatchNextRef.current();
+        if (getTurnPhase(msg.sessionId) !== "idle") {
+          // FSM re-busied while we were checking (a real dispatch won).
+          inFlightMessageIdRef.current = null;
+          dispatchLockRef.current = false;
+          tryDispatchNextRef.current();
+          return;
+        }
+        dispatchMessage(msg, () => {
+          if (inFlightMessageIdRef.current === msg.id) {
+            inFlightMessageIdRef.current = null;
+          }
+          dispatchLockRef.current = false;
+          tryDispatchNextRef.current();
+        });
       });
       return;
     }

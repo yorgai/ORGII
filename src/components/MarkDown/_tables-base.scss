@@ -4,7 +4,9 @@
   display: block;
   width: max-content;
   max-width: 100%;
-  overflow: hidden;
+  // Horizontally scroll wide tables instead of clipping the trailing
+  // columns when they overflow the chat column width.
+  overflow-x: auto;
   margin: 12px 0;
   border-radius: 8px;
   border: 1px solid var(--color-border-2);

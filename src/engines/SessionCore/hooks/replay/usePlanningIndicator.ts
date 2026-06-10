@@ -45,8 +45,6 @@
 import { useAtomValue, useSetAtom } from "jotai";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { markTurnTerminal } from "@src/engines/SessionCore/control/turnLifecycle";
-import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
 import {
   derivedSnapshotAtom,
   eventStoreVersionAtom,
@@ -135,7 +133,6 @@ export function usePlanningIndicator(): PlanningIndicatorState {
   const snapshot = useAtomValue(derivedSnapshotAtom);
   const version = useAtomValue(eventStoreVersionAtom);
   const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
-  const activeSessionId = useAtomValue(sessionIdAtom);
 
   const anyRunning = useMemo(() => {
     if (!snapshot || !("chatEvents" in snapshot)) return false;
@@ -282,6 +279,14 @@ export function usePlanningIndicator(): PlanningIndicatorState {
   // `visible` to false (via the idle-timer arm in the effect above),
   // which cancels this timer; on the next idle the watchdog re-arms.
   // We only trip on genuine "no activity at all" stalls.
+  //
+  // UI-only: this clears the runtime-status mirror so the footer stops
+  // saying "Planning…", but deliberately does NOT touch the turn-lifecycle
+  // FSM. A long quiet stretch (subagent wait, slow tool) is not proof the
+  // turn ended, and a synthetic terminal here released the message queue
+  // mid-turn (queued follow-ups were auto-sent into a still-running turn).
+  // If Rust genuinely dropped agent:complete, the queue's backend status
+  // gate re-checks and drains once the session row reads terminal.
   useEffect(() => {
     if (!visible) return;
     const timerId = window.setTimeout(() => {
@@ -291,16 +296,11 @@ export function usePlanningIndicator(): PlanningIndicatorState {
           "or the idle agent:queue_status frame."
       );
       setSessionRuntimeStatus({ status: "completed", source: "planning" });
-      // Last-resort finality: also close the turn-lifecycle FSM so queued
-      // follow-ups are not blocked forever by the dropped terminal.
-      if (activeSessionId) {
-        markTurnTerminal(activeSessionId, "completed");
-      }
     }, PLANNING_WATCHDOG_MS);
     return () => {
       window.clearTimeout(timerId);
     };
-  }, [visible, setSessionRuntimeStatus, activeSessionId]);
+  }, [visible, setSessionRuntimeStatus]);
 
   // Re-roll the variant index on every hidden → visible transition.
   // Using a large random integer and letting the consumer mod by the

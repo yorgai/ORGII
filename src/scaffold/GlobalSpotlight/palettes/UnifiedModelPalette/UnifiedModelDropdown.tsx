@@ -32,6 +32,7 @@ import {
 } from "@src/hooks/dropdown";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
 import { useFilteredItems } from "@src/hooks/search";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 import type { SpotlightItem } from "../../shared";
 import type { UnifiedModelPaletteProps } from "./types";
@@ -437,20 +438,17 @@ export const UnifiedModelDropdown: React.FC<UnifiedModelDropdownProps> = ({
 
   if (!isOpen || !isPositioned) return null;
 
+  const { width: vw, height: vh } = getViewportSize();
   const left = Math.max(
     VIEWPORT_MARGIN,
-    Math.min(
-      panelPosition.left,
-      window.innerWidth - VIEWPORT_MARGIN - DROPDOWN_WIDTH
-    )
+    Math.min(panelPosition.left, vw - VIEWPORT_MARGIN - DROPDOWN_WIDTH)
   );
   const rightSubmenuLeft = left + DROPDOWN_WIDTH + SUBMENU_GAP;
   const leftSubmenuLeft = left - SUBMENU_GAP - SUBMENU_WIDTH;
   const canOpenSubmenuRight =
-    rightSubmenuLeft + SUBMENU_WIDTH <= window.innerWidth - VIEWPORT_MARGIN;
+    rightSubmenuLeft + SUBMENU_WIDTH <= vw - VIEWPORT_MARGIN;
   const canOpenSubmenuLeft = leftSubmenuLeft >= VIEWPORT_MARGIN;
-  const rightAvailableWidth =
-    window.innerWidth - rightSubmenuLeft - VIEWPORT_MARGIN;
+  const rightAvailableWidth = vw - rightSubmenuLeft - VIEWPORT_MARGIN;
   const leftAvailableWidth = left - SUBMENU_GAP - VIEWPORT_MARGIN;
   const submenuSide: SubmenuSide =
     canOpenSubmenuRight ||
@@ -461,7 +459,7 @@ export const UnifiedModelDropdown: React.FC<UnifiedModelDropdownProps> = ({
     VIEWPORT_MARGIN,
     Math.min(
       submenuSide === "right" ? rightSubmenuLeft : leftSubmenuLeft,
-      window.innerWidth - VIEWPORT_MARGIN - SUBMENU_WIDTH
+      vw - VIEWPORT_MARGIN - SUBMENU_WIDTH
     )
   );
   const submenuEstimatedHeight = Math.min(
@@ -473,10 +471,7 @@ export const UnifiedModelDropdown: React.FC<UnifiedModelDropdownProps> = ({
     (submenuAnchorTop ?? fallbackSubmenuTop) - SUBMENU_VERTICAL_OFFSET;
   const submenuTop = Math.max(
     VIEWPORT_MARGIN,
-    Math.min(
-      preferredSubmenuTop,
-      window.innerHeight - VIEWPORT_MARGIN - submenuEstimatedHeight
-    )
+    Math.min(preferredSubmenuTop, vh - VIEWPORT_MARGIN - submenuEstimatedHeight)
   );
   const primaryPanelTop =
     primaryPanelMetrics?.top ?? panelPosition.top ?? VIEWPORT_MARGIN;

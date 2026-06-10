@@ -20,6 +20,7 @@ import {
 
 import { DROPDOWN_PANEL } from "@src/components/Dropdown/tokens";
 import { useOverlayLayer } from "@src/store/ui/overlayLayerAtom";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 import { useDropdownAutoKeyboard } from "./useDropdownAutoKeyboard";
 import type {
@@ -175,7 +176,7 @@ export function useDropdownEngine<
     if (!triggerElement) return;
 
     const triggerRect = triggerElement.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
+    const { width: viewportWidth, height: viewportHeight } = getViewportSize();
     const dropdownHeight =
       panelRef.current?.getBoundingClientRect().height ?? DROPDOWN_EST_HEIGHT;
 
@@ -195,7 +196,7 @@ export function useDropdownEngine<
 
     const leftValue = triggerRect.left;
     const rightValue =
-      align === "right" ? window.innerWidth - triggerRect.right : undefined;
+      align === "right" ? viewportWidth - triggerRect.right : undefined;
 
     if (openAbove) {
       setPanelPosition({

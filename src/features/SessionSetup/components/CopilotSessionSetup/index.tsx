@@ -25,6 +25,7 @@ import {
   SectionRow,
 } from "@src/modules/shared/layouts/SectionLayout";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
+import { toNativeFrame } from "@src/util/platform/tauri/nativeFrame";
 
 // ============================================
 // Type Definitions
@@ -145,10 +146,7 @@ const CopilotSessionSetup: React.FC<CopilotSessionSetupProps> = ({
         parentWindow: parentLabel,
         label: webviewLabelRef.current,
         url: GITHUB_PAT_URL,
-        x: Math.round(rect.left + INSET),
-        y: Math.round(rect.top + INSET),
-        width: Math.round(rect.width - INSET * 2),
-        height: Math.round(rect.height - INSET * 2),
+        ...toNativeFrame(rect, INSET),
         incognito: true, // Fresh login
       });
 
@@ -164,10 +162,7 @@ const CopilotSessionSetup: React.FC<CopilotSessionSetupProps> = ({
             try {
               await invoke("update_inline_webview_position", {
                 label: webviewLabelRef.current,
-                x: Math.round(newRect.left + INSET),
-                y: Math.round(newRect.top + INSET),
-                width: Math.round(newRect.width - INSET * 2),
-                height: Math.round(newRect.height - INSET * 2),
+                ...toNativeFrame(newRect, INSET),
               });
             } catch {
               // Ignore - webview might be closed
@@ -230,10 +225,7 @@ const CopilotSessionSetup: React.FC<CopilotSessionSetupProps> = ({
     try {
       await invoke("update_inline_webview_position", {
         label: webviewLabelRef.current,
-        x: Math.round(rect.left + INSET),
-        y: Math.round(rect.top + INSET),
-        width: Math.round(rect.width - INSET * 2),
-        height: Math.round(rect.height - INSET * 2),
+        ...toNativeFrame(rect, INSET),
       });
     } catch {
       // Ignore - webview might be closed

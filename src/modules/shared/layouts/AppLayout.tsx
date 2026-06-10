@@ -18,7 +18,7 @@
  */
 import { HoverSidebar } from "@/src/scaffold/NavigationSidebar";
 import { useAtomValue } from "jotai";
-import React, { memo, useMemo } from "react";
+import React, { memo, useEffect, useMemo } from "react";
 
 import { ActionSystemProvider } from "@src/ActionSystem";
 import { ChatProvider } from "@src/contexts/workspace/ChatContext";
@@ -202,6 +202,47 @@ const AppLayoutComponent: React.FC<AppLayoutProps> = ({
     }),
     [paddingValue, chatWidth, isSlotVisible, chatPanelMaximized, isChatOnLeft]
   );
+
+  // TEMP DIAG: workstation toggle resize 留白
+  // Logs ChatPanel slot geometry vs window width whenever slot visibility,
+  // chatWidth, or maximize state changes. Remove after root cause confirmed.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handle = window.requestAnimationFrame(() => {
+      const slot = document.querySelector<HTMLElement>("[data-chat-slot-mode]");
+      const content = document.querySelector<HTMLElement>(
+        "[data-main-content]"
+      );
+      const slotRect = slot?.getBoundingClientRect();
+      const contentRect = content?.getBoundingClientRect();
+      // eslint-disable-next-line no-console
+      console.log("[ws-blank-diag]", {
+        chatLayout,
+        chatPosition,
+        chatWidth,
+        chatPanelMaximized,
+        isChatVisible,
+        isSlotVisible,
+        windowInnerWidth: window.innerWidth,
+        contentLeft: contentRect?.left,
+        contentRight: contentRect?.right,
+        contentWidth: contentRect?.width,
+        slotLeft: slotRect?.left,
+        slotRight: slotRect?.right,
+        slotWidth: slotRect?.width,
+        gapRightOfSlot:
+          contentRect && slotRect ? contentRect.right - slotRect.right : null,
+      });
+    });
+    return () => window.cancelAnimationFrame(handle);
+  }, [
+    chatLayout,
+    chatPosition,
+    chatWidth,
+    chatPanelMaximized,
+    isChatVisible,
+    isSlotVisible,
+  ]);
 
   // Slot content: either the live chat panel or the in-slot Settings surface.
   // Both share the slot's outer maximize/inset behaviour — only the inner

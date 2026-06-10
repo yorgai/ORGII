@@ -1,3 +1,5 @@
+import { getViewportSize } from "@src/util/ui/window/viewport";
+
 import { DROPDOWN_PANEL } from "./tokens";
 import type { DropdownPosition } from "./types";
 
@@ -155,19 +157,18 @@ export function calculateDropdownPosition({
     const dropdownRect = dropdownElement.getBoundingClientRect();
     const viewportPadding = 8;
 
+    const { width: vw } = getViewportSize();
     if (
       position.startsWith("bottom") &&
       dropdownRect.width > 0 &&
-      triggerRect.left + dropdownRect.width >
-        window.innerWidth - viewportPadding
+      triggerRect.left + dropdownRect.width > vw - viewportPadding
     ) {
       left = triggerRect.right - containerRect.left;
       transform = "translateX(-100%)";
     } else if (
       position.startsWith("right") &&
       dropdownRect.width > 0 &&
-      triggerRect.right + gap + dropdownRect.width >
-        window.innerWidth - viewportPadding
+      triggerRect.right + gap + dropdownRect.width > vw - viewportPadding
     ) {
       left = triggerRect.left - containerRect.left - gap;
       transform = position.endsWith("end")
@@ -182,7 +183,7 @@ export function calculateDropdownPosition({
           ? left - dropdownRect.width / 2
           : left;
       const minLeft = viewportPadding - containerRect.left;
-      const maxLeft = window.innerWidth - viewportPadding - containerRect.left;
+      const maxLeft = vw - viewportPadding - containerRect.left;
 
       if (transformedLeft < minLeft) {
         left += minLeft - transformedLeft;

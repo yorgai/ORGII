@@ -29,6 +29,7 @@ import UserMessageContent from "@src/engines/ChatPanel/ChatHistory/components/Us
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { chatEventsForSessionAtomFamily } from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
 import { useDropdownEngine } from "@src/hooks/dropdown";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 const PROMPT_PANEL_WIDTH = 440;
 const PROMPT_PANEL_MARGIN = 12;
@@ -79,7 +80,7 @@ const SubagentPromptToggleComponent: React.FC<SubagentPromptToggleProps> = ({
   });
 
   const panelStyle = useMemo<React.CSSProperties>(() => {
-    const viewportWidth = window.innerWidth;
+    const { width: viewportWidth } = getViewportSize();
     const width = Math.min(
       PROMPT_PANEL_WIDTH,
       Math.max(0, viewportWidth - PROMPT_PANEL_MARGIN * 2)

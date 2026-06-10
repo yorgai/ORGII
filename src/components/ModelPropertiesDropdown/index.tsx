@@ -37,6 +37,7 @@ import {
   type ModelReasoningLevel,
   formatReasoningLevel,
 } from "@src/util/modelVariants";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 import {
   type VariantEditOptions,
   type VariantSelection,
@@ -200,9 +201,10 @@ export const ModelPropertiesDropdown: React.FC<
           const belowTop = sideTop + sideHeight + SIDE_PANEL_GAP;
           const aboveTop =
             sideTop - MODEL_PROPERTIES_PANEL_EST_HEIGHT - SIDE_PANEL_GAP;
+          const { width: vw, height: vh } = getViewportSize();
           const fitsBelow =
             belowTop + MODEL_PROPERTIES_PANEL_EST_HEIGHT <=
-            window.innerHeight - VIEWPORT_MARGIN;
+            vh - VIEWPORT_MARGIN;
           const preferredTop = fitsBelow ? belowTop : aboveTop;
           setCenteredStyle({
             position: "fixed",
@@ -210,9 +212,7 @@ export const ModelPropertiesDropdown: React.FC<
               VIEWPORT_MARGIN,
               Math.min(
                 preferredTop,
-                window.innerHeight -
-                  VIEWPORT_MARGIN -
-                  MODEL_PROPERTIES_PANEL_EST_HEIGHT
+                vh - VIEWPORT_MARGIN - MODEL_PROPERTIES_PANEL_EST_HEIGHT
               )
             ),
             left: sideLeft,
@@ -229,12 +229,12 @@ export const ModelPropertiesDropdown: React.FC<
         if (modelRow && mainPanel) {
           const rowRect = modelRow.getBoundingClientRect();
           const panelRect = mainPanel.getBoundingClientRect();
+          const { width: vw, height: vh } = getViewportSize();
           const rightLeft = panelRect.right + SIDE_PANEL_GAP;
           const leftLeft =
             panelRect.left - MODEL_PROPERTIES_PANEL_WIDTH - SIDE_PANEL_GAP;
           const fitsRight =
-            rightLeft + MODEL_PROPERTIES_PANEL_WIDTH <=
-            window.innerWidth - VIEWPORT_MARGIN;
+            rightLeft + MODEL_PROPERTIES_PANEL_WIDTH <= vw - VIEWPORT_MARGIN;
           const preferredLeft = fitsRight ? rightLeft : leftLeft;
           setCenteredStyle({
             position: "fixed",
@@ -242,18 +242,14 @@ export const ModelPropertiesDropdown: React.FC<
               VIEWPORT_MARGIN,
               Math.min(
                 rowRect.top,
-                window.innerHeight -
-                  VIEWPORT_MARGIN -
-                  MODEL_PROPERTIES_PANEL_EST_HEIGHT
+                vh - VIEWPORT_MARGIN - MODEL_PROPERTIES_PANEL_EST_HEIGHT
               )
             ),
             left: Math.max(
               VIEWPORT_MARGIN,
               Math.min(
                 preferredLeft,
-                window.innerWidth -
-                  VIEWPORT_MARGIN -
-                  MODEL_PROPERTIES_PANEL_WIDTH
+                vw - VIEWPORT_MARGIN - MODEL_PROPERTIES_PANEL_WIDTH
               )
             ),
             zIndex: centeredZ + 1,

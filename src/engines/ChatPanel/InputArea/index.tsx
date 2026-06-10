@@ -50,6 +50,7 @@ interface InputAreaProps {
   showEditHeader?: boolean;
   quietEditSurface?: boolean;
   editImages?: string[];
+  onRemoveEditImage?: (index: number) => void;
   surfaceBg?: boolean;
   omitChatHeader?: boolean;
   chatPanelPosition?: "left" | "right";
@@ -75,6 +76,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
     showEditHeader = true,
     quietEditSurface = false,
     editImages,
+    onRemoveEditImage,
     surfaceBg = false,
     omitChatHeader = false,
     chatPanelPosition = "right",
@@ -349,6 +351,7 @@ const InputArea: React.FC<InputAreaProps> = memo(
               isEditMode={isEditMode}
               editImages={editImages}
               dropTargetId={dropTargetId}
+              onRemoveEditImage={onRemoveEditImage}
             />
 
             {isEditMode ? (

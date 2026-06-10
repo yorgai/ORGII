@@ -11,6 +11,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { getViewportSize } from "@src/util/ui/window/viewport";
+
 import {
   PANEL_GAP,
   PANEL_WIDTH,
@@ -36,15 +38,15 @@ export function useContextPanel(): UseContextPanelReturn {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return null;
 
-    const idealRight =
-      window.innerWidth - rect.right - PANEL_WIDTH / 2 + RING_SIZE / 2;
+    const { width: vw, height: vh } = getViewportSize();
+    const idealRight = vw - rect.right - PANEL_WIDTH / 2 + RING_SIZE / 2;
     const right = Math.max(
       VIEWPORT_PADDING,
-      Math.min(idealRight, window.innerWidth - PANEL_WIDTH - VIEWPORT_PADDING)
+      Math.min(idealRight, vw - PANEL_WIDTH - VIEWPORT_PADDING)
     );
 
     return {
-      bottom: window.innerHeight - rect.top + PANEL_GAP,
+      bottom: vh - rect.top + PANEL_GAP,
       right,
     };
   }, []);

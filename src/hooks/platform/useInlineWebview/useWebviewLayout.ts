@@ -11,6 +11,7 @@ import {
   DEBOUNCE_DELAYS,
   useDebouncedCallback,
 } from "@src/hooks/perf/useDebouncedCallback";
+import { getUiScale } from "@src/util/platform/tauri/nativeFrame";
 
 export interface UseWebviewLayoutParams {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -23,14 +24,6 @@ export interface UseWebviewLayoutParams {
 export interface UseWebviewLayoutReturn {
   getContainerRect: () => DOMRect | null;
   updatePosition: (options?: { force?: boolean }) => Promise<void>;
-}
-
-function getUiScale(): number {
-  const scaleValue = window
-    .getComputedStyle(document.documentElement)
-    .getPropertyValue("--ui-scale");
-  const parsedScale = Number.parseFloat(scaleValue);
-  return Number.isFinite(parsedScale) && parsedScale > 0 ? parsedScale : 1;
 }
 
 export function useWebviewLayout(

@@ -194,7 +194,7 @@ export function useSlashCommand(
       setSlashQuery("");
       queryRef.current = "";
       if (composerInputRef.current) {
-        composerInputRef.current.clear();
+        composerInputRef.current.consumeSlashQuery();
       }
     },
     [setMode, setShowSlashMenu, setSlashQuery, composerInputRef]

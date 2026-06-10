@@ -1,6 +1,8 @@
 /**
  * Highlight overlay creation and management.
  */
+import { getViewportSize } from "@src/util/ui/window/viewport";
+
 import {
   areLabelsHidden,
   getCurrentLevel,
@@ -226,7 +228,7 @@ export const updateHighlight = (element: Element | null) => {
     // Position parent label at the top-right of the parent, offset to not overlap main label
     const parentLabelTop = parentRect.top + 4;
     parentLabelOverlay.style.top = `${parentLabelTop}px`;
-    parentLabelOverlay.style.left = `${Math.min(parentRect.right - 200, window.innerWidth - 210)}px`;
+    parentLabelOverlay.style.left = `${Math.min(parentRect.right - 200, getViewportSize().width - 210)}px`;
   } else if (parentHighlightOverlay && parentLabelOverlay) {
     parentHighlightOverlay.style.display = "none";
     parentLabelOverlay.style.display = "none";

@@ -20,6 +20,7 @@ import {
 import { type StationMode, stationModeAtom } from "@src/store/ui/simulatorAtom";
 import { type DockFilter, dockFilterAtom } from "@src/store/workstation";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 export const GENERAL_LAYOUT_TOUR_EVENT = "orgii:start-general-layout-tour";
 
@@ -156,8 +157,7 @@ function buildOverlaySegments(rect: TargetRect): React.CSSProperties[] {
     width: rect.width + TARGET_PADDING * 2,
     height: rect.height + TARGET_PADDING * 2,
   };
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
+  const { width: viewportWidth, height: viewportHeight } = getViewportSize();
   const top = clamp(highlight.top, 0, viewportHeight);
   const left = clamp(highlight.left, 0, viewportWidth);
   const right = clamp(highlight.left + highlight.width, 0, viewportWidth);
@@ -177,10 +177,9 @@ function buildOverlaySegments(rect: TargetRect): React.CSSProperties[] {
 }
 
 function buildPopoverStyle(rect: TargetRect): React.CSSProperties {
-  const hasRoomBelow =
-    window.innerHeight - (rect.top + rect.height) > POPOVER_ESTIMATED_HEIGHT;
-  const hasRoomRight =
-    window.innerWidth - (rect.left + rect.width) > POPOVER_WIDTH + 36;
+  const { width: vw, height: vh } = getViewportSize();
+  const hasRoomBelow = vh - (rect.top + rect.height) > POPOVER_ESTIMATED_HEIGHT;
+  const hasRoomRight = vw - (rect.left + rect.width) > POPOVER_WIDTH + 36;
   const hasRoomLeft = rect.left > POPOVER_WIDTH + 36;
 
   if (hasRoomRight) {
@@ -188,7 +187,7 @@ function buildPopoverStyle(rect: TargetRect): React.CSSProperties {
       top: clamp(
         rect.top + rect.height / 2 - POPOVER_ESTIMATED_HEIGHT / 2,
         VIEWPORT_PADDING,
-        window.innerHeight - POPOVER_ESTIMATED_HEIGHT - VIEWPORT_PADDING
+        vh - POPOVER_ESTIMATED_HEIGHT - VIEWPORT_PADDING
       ),
       left: rect.left + rect.width + TARGET_PADDING + 12,
       width: POPOVER_WIDTH,
@@ -200,7 +199,7 @@ function buildPopoverStyle(rect: TargetRect): React.CSSProperties {
       top: clamp(
         rect.top + rect.height / 2 - POPOVER_ESTIMATED_HEIGHT / 2,
         VIEWPORT_PADDING,
-        window.innerHeight - POPOVER_ESTIMATED_HEIGHT - VIEWPORT_PADDING
+        vh - POPOVER_ESTIMATED_HEIGHT - VIEWPORT_PADDING
       ),
       left: rect.left - POPOVER_WIDTH - TARGET_PADDING - 12,
       width: POPOVER_WIDTH,
@@ -215,12 +214,12 @@ function buildPopoverStyle(rect: TargetRect): React.CSSProperties {
     top: clamp(
       top,
       VIEWPORT_PADDING,
-      window.innerHeight - POPOVER_ESTIMATED_HEIGHT - VIEWPORT_PADDING
+      vh - POPOVER_ESTIMATED_HEIGHT - VIEWPORT_PADDING
     ),
     left: clamp(
       rect.left + rect.width / 2 - POPOVER_WIDTH / 2,
       VIEWPORT_PADDING,
-      window.innerWidth - POPOVER_WIDTH - VIEWPORT_PADDING
+      vw - POPOVER_WIDTH - VIEWPORT_PADDING
     ),
     width: POPOVER_WIDTH,
   };
@@ -360,7 +359,7 @@ const GeneralLayoutTour: React.FC<GeneralLayoutTourProps> = ({
     ? buildPopoverStyle(targetRect)
     : {
         top: VIEWPORT_PADDING,
-        left: window.innerWidth - POPOVER_WIDTH - VIEWPORT_PADDING,
+        left: getViewportSize().width - POPOVER_WIDTH - VIEWPORT_PADDING,
         width: POPOVER_WIDTH,
       };
 

@@ -356,13 +356,31 @@ export function useInputArea(
   // into `sessionByIdAtom`) leave the live editor alone.
   useEffect(() => {
     if (!draftSessionId) {
+      // TEMP DIAG [draft-bug]
+      console.log(
+        "[draft-bug] seed-effect: no draftSessionId, resetting seeded ref"
+      );
       seededSessionRef.current = null;
       return;
     }
+    // TEMP DIAG [draft-bug]
+    console.log("[draft-bug] seed-effect fired", {
+      draftSessionId,
+      seededRef: seededSessionRef.current,
+      shortCircuit: seededSessionRef.current === draftSessionId,
+      persistedDraftLength: persistedDraft?.length ?? 0,
+      editorMounted: Boolean(refs.composerInputRef.current),
+      editorTextLength:
+        refs.composerInputRef.current?.getText()?.length ?? null,
+    });
     if (seededSessionRef.current === draftSessionId) return;
     const editor = refs.composerInputRef.current;
     if (!editor) return;
     if (!persistedDraft) {
+      // TEMP DIAG [draft-bug]
+      console.trace(
+        "[draft-bug] seed-effect calling editor.clear() — no persisted draft"
+      );
       editor.clear();
       refs.setHasContent(false);
       seededSessionRef.current = draftSessionId;
@@ -376,12 +394,21 @@ export function useInputArea(
         persistedDraftLength: persistedDraft.length,
         reason: skipReason,
       });
+      // TEMP DIAG [draft-bug]
+      console.trace(
+        "[draft-bug] seed-effect calling editor.clear() — skipReason",
+        skipReason
+      );
       editor.clear();
       refs.setHasContent(false);
       seededSessionRef.current = draftSessionId;
       return;
     }
 
+    // TEMP DIAG [draft-bug]
+    console.log("[draft-bug] seed-effect applying persistedDraft", {
+      length: persistedDraft.length,
+    });
     applyParsedContent(editor, persistedDraft);
     refs.setHasContent(true);
     seededSessionRef.current = draftSessionId;

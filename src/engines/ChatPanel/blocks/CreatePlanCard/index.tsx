@@ -23,7 +23,10 @@ import {
 } from "@src/engines/SessionCore/derived/planDisplayEvents";
 import { useMountedCleanup } from "@src/hooks/lifecycle/useMounted";
 import { currentRepoAtom } from "@src/store/repo";
-import { sessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
+import {
+  sessionRuntimeStatusAtom,
+  setSessionRuntimeStatusAtom,
+} from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultModelSelectionAtom } from "@src/store/session/creatorDefaultModelAtom";
 import {
   clearPendingPlanApproval,
@@ -121,6 +124,7 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
     const sessionId = sessionIdProp ?? activeSessionId;
     const approvalMap = useAtomValue(pendingPlanApprovalsAtom);
     const setPendingPlanApprovals = useSetAtom(pendingPlanApprovalsAtom);
+    const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
     const runtimeStatus = useAtomValue(sessionRuntimeStatusAtom);
     // Read the plan's *own* session row for model+key — approving a
     // plan should not silently use whatever model the user happens to
@@ -238,6 +242,12 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
           setPendingPlanApprovals((prev) =>
             clearPendingPlanApproval(prev, sessionId, cardRevisionId)
           );
+          // Build kicks off a synthetic turn on the backend without going
+          // through useMessageDispatch — optimistically flip to running so
+          // the planning indicator appears immediately (P3). Skip stays idle.
+          if (choice !== "reject" && sessionId === activeSessionId) {
+            setSessionRuntimeStatus({ status: "running", source: "dispatch" });
+          }
           if (mountedRef.current) setIsEditing(false);
         } catch (err) {
           Message.error(
@@ -255,6 +265,8 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
         creatorDefaultSelection,
         currentRepo,
         setPendingPlanApprovals,
+        setSessionRuntimeStatus,
+        activeSessionId,
         cardRevisionId,
         t,
         mountedRef,

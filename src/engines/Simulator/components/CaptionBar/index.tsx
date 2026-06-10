@@ -2,6 +2,7 @@ import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import Markdown from "@src/components/MarkDown";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 export interface CaptionBarProps {
   text: string;
@@ -24,9 +25,10 @@ const CaptionBar: React.FC<CaptionBarProps> = memo(
       const node = rootRef.current;
       if (!node) return;
       const rect = node.getBoundingClientRect();
+      const { width: vw, height: vh } = getViewportSize();
       const bounds = getPortalBounds?.() ?? {
         left: 12,
-        right: window.innerWidth - 12,
+        right: vw - 12,
       };
       const availableWidth = Math.max(160, bounds.right - bounds.left);
       const width = Math.min(600, availableWidth);
@@ -37,10 +39,7 @@ const CaptionBar: React.FC<CaptionBarProps> = memo(
         Math.min(desiredCenter, bounds.right - halfWidth)
       );
       const top = rect.bottom + 6;
-      const maxHeight = Math.max(
-        96,
-        Math.min(240, window.innerHeight - top - 12)
-      );
+      const maxHeight = Math.max(96, Math.min(240, vh - top - 12));
       setPanelPosition({ top, left, width, maxHeight });
     }, [getPortalBounds]);
 

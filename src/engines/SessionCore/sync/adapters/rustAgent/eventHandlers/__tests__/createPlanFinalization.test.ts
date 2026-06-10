@@ -199,7 +199,8 @@ describe("create_plan streaming finalization", () => {
         planRevisionId: "call_plan_1",
         originToolCallId: "call_plan_1",
       },
-      "session-1"
+      "session-1",
+      createCtx()
     );
 
     expect(patchByIdsSpy).toHaveBeenCalledWith(

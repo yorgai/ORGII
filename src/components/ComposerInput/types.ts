@@ -189,6 +189,13 @@ export interface ComposerInputRef {
   triggerAtMention: () => void;
   /** Open the slash context menu without a typed `/` character */
   triggerSlashContext: () => void;
+  /**
+   * Delete the slash trigger character + query that opened the command
+   * popover, without clearing the rest of the composer content.
+   * Call this when confirming a slash-command selection (e.g. mode pick)
+   * so only the `/query` token is removed and prior text is preserved.
+   */
+  consumeSlashQuery: () => void;
 }
 
 /**

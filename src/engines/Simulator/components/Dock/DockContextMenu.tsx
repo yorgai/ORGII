@@ -13,6 +13,7 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import Glass from "@src/components/Glass";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 import { AppType } from "../../types/appTypes";
 import { WINDOW_ICONS } from "../../types/windowTypes";
@@ -80,7 +81,7 @@ export const DockContextMenu: React.FC<DockContextMenuProps> = ({
       if (!node || !visible) return;
 
       const rect = node.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
+      const { width: viewportWidth } = getViewportSize();
 
       let newX = position.x;
       let newY = position.y;

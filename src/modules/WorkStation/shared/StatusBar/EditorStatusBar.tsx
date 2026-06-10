@@ -37,6 +37,7 @@ import {
   indexingProgressAtom,
   isIndexingAtom,
 } from "@src/store/workstation/codeEditor/search/indexingProgressAtom";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 import {
   BaseStatusBar,
@@ -118,9 +119,10 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = memo(
         setLspDropdownOpen(true);
         if (lspButtonRef.current) {
           const rect = lspButtonRef.current.getBoundingClientRect();
+          const { width: vw, height: vh } = getViewportSize();
           setLspDropdownPosition({
-            bottom: window.innerHeight - rect.top + 4,
-            right: window.innerWidth - rect.right,
+            bottom: vh - rect.top + 4,
+            right: vw - rect.right,
           });
         }
       }

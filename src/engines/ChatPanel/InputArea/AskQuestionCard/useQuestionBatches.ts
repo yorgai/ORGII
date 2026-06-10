@@ -41,7 +41,10 @@ import {
 import { useChatHistory } from "@src/contexts/workspace/ChatContext";
 import { editTruncationTimestampAtom } from "@src/engines/SessionCore";
 
-import { extractQuestionBatch } from "./extractQuestionBatch";
+import {
+  extractQuestionBatch,
+  isAskUserQuestionsEvent,
+} from "./extractQuestionBatch";
 import type { QuestionBatch } from "./types";
 
 export interface UseQuestionBatchesReturn {
@@ -50,6 +53,14 @@ export interface UseQuestionBatchesReturn {
   currentBatch: QuestionBatch | undefined;
   setBatchIndex: Dispatch<SetStateAction<number>>;
   dismissBatch: (questionId: string) => void;
+  /**
+   * True when an ask_user_questions tool call is in-flight but its
+   * `args.questions` payload has not streamed far enough for
+   * `extractQuestionBatch` to produce a renderable batch yet. AskQuestionCard
+   * uses this to show a loading shell instead of staying hidden during the
+   * streaming gap.
+   */
+  isStreaming: boolean;
 }
 
 export function useQuestionBatches(): UseQuestionBatchesReturn {
@@ -94,6 +105,31 @@ export function useQuestionBatches(): UseQuestionBatchesReturn {
     return batches;
   }, [chatHistory, dismissedMap, editTruncation]);
 
+  // Streaming detection: an ask_user_questions event whose args.questions
+  // payload hasn't reached "has at least one question with text" yet. The
+  // parser returns null for those, so they don't appear in `pendingBatches`,
+  // but we still want to render a loading shell.
+  const streamingCount = useMemo(() => {
+    let count = 0;
+    for (const event of chatHistory) {
+      if (!isAskUserQuestionsEvent(event)) continue;
+      // Already renderable — handled by the normal batch path.
+      if (extractQuestionBatch(event)) continue;
+      // Terminal: nothing to wait for.
+      if (
+        event.displayStatus === "completed" ||
+        event.displayStatus === "failed"
+      ) {
+        continue;
+      }
+      const result = event.result as Record<string, unknown> | undefined;
+      if (result?.success === true) continue;
+      if (result?.error) continue;
+      count += 1;
+    }
+    return count;
+  }, [chatHistory]);
+
   const [rawBatchIndex, setBatchIndex] = useState(0);
   const batchIndex = useMemo(() => {
     if (pendingBatches.length === 0) return 0;
@@ -108,5 +144,6 @@ export function useQuestionBatches(): UseQuestionBatchesReturn {
     currentBatch,
     setBatchIndex,
     dismissBatch,
+    isStreaming: pendingBatches.length === 0 && streamingCount > 0,
   };
 }

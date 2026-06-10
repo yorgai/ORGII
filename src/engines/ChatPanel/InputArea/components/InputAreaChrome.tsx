@@ -81,12 +81,14 @@ interface EditImagePreviewsProps {
   isEditMode: boolean;
   editImages?: string[];
   dropTargetId: string;
+  onRemoveEditImage?: (index: number) => void;
 }
 
 export const EditImagePreviews: React.FC<EditImagePreviewsProps> = ({
   isEditMode,
   editImages,
   dropTargetId,
+  onRemoveEditImage,
 }) => {
   if (!isEditMode) return null;
 
@@ -99,6 +101,11 @@ export const EditImagePreviews: React.FC<EditImagePreviewsProps> = ({
               key={imageIndex}
               dataUrl={dataUrl}
               alt={`Attached image ${imageIndex + 1}`}
+              onRemove={
+                onRemoveEditImage
+                  ? () => onRemoveEditImage(imageIndex)
+                  : undefined
+              }
             />
           ))}
         </div>

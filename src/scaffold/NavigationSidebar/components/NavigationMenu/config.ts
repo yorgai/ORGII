@@ -31,6 +31,13 @@ export interface NavigationMenuItem {
   iconElement?: ReactNode;
   /** Optional element rendered at the far right edge of the row. */
   trailingElement?: ReactNode;
+  /**
+   * Status indicator (e.g. "working" breathing dot) rendered at the trailing
+   * edge but BEFORE the grid-stacked content, and NOT faded out on hover.
+   * Use when a state must remain visible while hover-only content
+   * (timestamps, action buttons) is shown.
+   */
+  workingIndicator?: ReactNode;
   /** Shows a chevron to indicate the row opens a deeper sidebar level. */
   showDrillDownIndicator?: boolean;
   visualTone?: "default" | "secondary";

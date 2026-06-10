@@ -40,10 +40,10 @@ import { useBlockHeader } from "../useBlockLocate";
 // bar floating over the message.
 const CHAT_PANE_FADE_FROM = "from-chat-pane";
 
-// Twenty lines at ~24px line-height. Agent prose carries more signal per
-// line than terminal output, so a deeper preview keeps short-to-medium
-// replies fully visible without triggering the fade.
-const AGENT_MESSAGE_PREVIEW_MAX_HEIGHT = 480;
+// Ten lines at ~24px line-height. Earlier clamp keeps the chat-panel
+// preview compact so the user's eye stays on the simulator side; the
+// expand pill is the escape hatch when they want the full message.
+const AGENT_MESSAGE_PREVIEW_MAX_HEIGHT = 240;
 
 export interface AgentMessageBlockProps {
   children: React.ReactNode;

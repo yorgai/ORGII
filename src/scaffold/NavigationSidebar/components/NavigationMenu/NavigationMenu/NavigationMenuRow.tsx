@@ -303,6 +303,7 @@ function renderLeafRowAccessory({
   if (item.showMoreActions) {
     return (
       <NavigationMenuRowAccessorySlot
+        workingIndicatorContent={item.workingIndicator}
         persistentContent={item.trailingElement}
         hoverContent={
           item.shortcut ? (
@@ -321,12 +322,18 @@ function renderLeafRowAccessory({
     );
   }
 
-  if (!item.shortcut && !item.trailingElement && !item.showDrillDownIndicator) {
+  if (
+    !item.shortcut &&
+    !item.trailingElement &&
+    !item.workingIndicator &&
+    !item.showDrillDownIndicator
+  ) {
     return null;
   }
 
   return (
     <NavigationMenuRowAccessorySlot
+      workingIndicatorContent={item.workingIndicator}
       persistentContent={
         <>
           {item.trailingElement}

@@ -6,11 +6,11 @@ export function renderBreathingStatusDot(): ReactNode {
   return (
     <span
       aria-label="Working"
-      className="h-1.5 w-1.5 rounded-full bg-primary-6 motion-safe:animate-[sidebar-working-dot-breathe_1.6s_ease-in-out_infinite] motion-reduce:opacity-80"
+      className="h-2 w-2 rounded-full bg-primary-6 ring-2 ring-primary-6/25 motion-safe:animate-[sidebar-working-dot-breathe_1.6s_ease-in-out_infinite] motion-reduce:opacity-80"
     >
       <style>{`
         @keyframes sidebar-working-dot-breathe {
-          0%, 100% { opacity: 0.45; transform: scale(0.9); }
+          0%, 100% { opacity: 0.6; transform: scale(0.9); }
           50% { opacity: 1; transform: scale(1); }
         }
       `}</style>

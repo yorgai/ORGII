@@ -36,6 +36,7 @@ import {
   compactModelLabel,
   formatModelNameFull,
 } from "@src/util/formatModelName";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 const DROPDOWN_WIDTH = 320;
 const LIST_MAX_HEIGHT = 280;
@@ -196,12 +197,10 @@ export const CursorModelDropdown: React.FC<CursorModelDropdownProps> = ({
 
   if (!isOpen || !isPositioned) return null;
 
+  const { width: vw } = getViewportSize();
   const left = Math.max(
     VIEWPORT_MARGIN,
-    Math.min(
-      panelPosition.left,
-      window.innerWidth - VIEWPORT_MARGIN - DROPDOWN_WIDTH
-    )
+    Math.min(panelPosition.left, vw - VIEWPORT_MARGIN - DROPDOWN_WIDTH)
   );
 
   return createPortal(

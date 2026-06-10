@@ -9,6 +9,7 @@ import React, {
 import { createPortal } from "react-dom";
 
 import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 import { SidebarTabButton } from "./SidebarTabButton";
 import { cn } from "./cn";
@@ -132,7 +133,7 @@ const TabPill: React.FC<TabPillProps> = ({
     const rect = dropdownTriggerRef.current.getBoundingClientRect();
     setDropdownPos({
       top: rect.bottom + 6,
-      right: window.innerWidth - rect.right,
+      right: getViewportSize().width - rect.right,
     });
     setDropdownPositioned(true);
   }, []);

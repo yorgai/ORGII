@@ -78,12 +78,12 @@ export const AuthCallback = React.lazy(
 );
 
 export const TabWindow = React.lazy(
-  () => import(/* webpackChunkName: "windows" */ "@src/shells/TabWindow")
+  () => import(/* webpackChunkName: "windows" */ "@src/windows/TabWindow")
 );
 
 export const ModeSelectionWindow = React.lazy(
   () =>
-    import(/* webpackChunkName: "windows" */ "@src/shells/ModeSelectionWindow")
+    import(/* webpackChunkName: "windows" */ "@src/windows/ModeSelectionWindow")
 );
 
 export const WingmanWindow = React.lazy(

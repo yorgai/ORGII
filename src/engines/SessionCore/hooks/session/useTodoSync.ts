@@ -15,7 +15,7 @@
  * directly to `updateTodosForSessionAtom` via the Jotai store — no
  * browser CustomEvent relay needed.
  */
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { useEffect, useRef } from "react";
 
 import { getTodos } from "@src/api/tauri/agent";
@@ -28,6 +28,8 @@ import { isTodoEvent } from "@src/modules/WorkStation/Chat/Communication/utils";
 import {
   type TodoItem,
   clearTodosForSessionAtom,
+  getTodosForSession,
+  sessionTodoMapAtom,
   updateTodosForSessionAtom,
 } from "@src/store/ui/todoAtom";
 
@@ -107,6 +109,7 @@ export function useTodoSync(sessionId?: string): void {
   const currentEvent = useAtomValue(currentEventAtom);
   const updateTodosForSession = useSetAtom(updateTodosForSessionAtom);
   const clearTodosForSession = useSetAtom(clearTodosForSessionAtom);
+  const store = useStore();
 
   const lastSessionIdRef = useRef<string | undefined>(sessionId);
   const processedCountRef = useRef<number>(0);
@@ -120,7 +123,11 @@ export function useTodoSync(sessionId?: string): void {
       lastSessionIdRef.current = sessionId;
       processedCountRef.current = 0;
       lastProcessedTodoIdRef.current = null;
-      if (prev) clearTodosForSession(prev);
+      // Only clear when actually switching to a *different* session.
+      // A transient undefined (panel remount / layout shuffle) must not
+      // wipe the live slot — that caused the todo pill to flash 0 and
+      // then "recover" via the async getTodos reload below.
+      if (prev && sessionId && prev !== sessionId) clearTodosForSession(prev);
     }
 
     if (!sessionId) return;
@@ -132,6 +139,15 @@ export function useTodoSync(sessionId?: string): void {
       .then((items) => {
         if (cancelled) return;
         if (currentSessionId !== lastSessionIdRef.current) return;
+        // Cold-start restore only: if live `agent:todos_updated` pushes
+        // already populated this slot while the fetch was in flight, the
+        // persisted snapshot is staler than what's on screen — overwriting
+        // would visibly regress the progress pill (e.g. 6/12 → 0/12).
+        const liveTodos = getTodosForSession(
+          store.get(sessionTodoMapAtom),
+          currentSessionId
+        );
+        if (liveTodos.length > 0) return;
         const todos = normalizePersistedTodoList(items);
         if (todos.length === 0) return;
         updateTodosForSession({
@@ -158,7 +174,7 @@ export function useTodoSync(sessionId?: string): void {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, clearTodosForSession, updateTodosForSession]);
+  }, [sessionId, clearTodosForSession, updateTodosForSession, store]);
 
   // Process todo events — find the LATEST manage_todo event up to current replay position
   useEffect(() => {

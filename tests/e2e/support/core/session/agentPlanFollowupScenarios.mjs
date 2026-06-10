@@ -1540,13 +1540,17 @@ async function waitForSessionInactive(label) {
   );
 }
 
+// The file-changes panel was replaced by Agent Station Diff view in
+// fbf20c78. Clicking the files pill now opens the diff view rather than
+// expanding an inline panel. waitForFileChangesPanel clicks the pill and
+// confirms the diff view opened (evidenced by the Undo All button appearing
+// in SimulatorWorkstationTabHeader).
 async function waitForFileChangesPanel(label) {
+  // Wait for the files pill to appear first
   await browser.waitUntil(
     async () => {
       const state = await execJS(js.fileChanges);
-      return (
-        state.filesPill || (state.undoAll && state.keepAll && state.review)
-      );
+      return state.filesPill;
     },
     {
       timeout: REPLY_TIMEOUT_MS,
@@ -1554,26 +1558,48 @@ async function waitForFileChangesPanel(label) {
       timeoutMsg: `${label} file changes pill never appeared; fileChanges=${JSON.stringify(await execJS(js.fileChanges))} state=${JSON.stringify(summarizeChatState(await inspectChatState(label)))} dump=${JSON.stringify(summarizePageDump(await execJS(js.pageDump)))}`,
     }
   );
-  const visibleState = await execJS(js.fileChanges);
-  if (!visibleState.undoAll) {
+
+  // If Undo All is already visible we're already in the diff view
+  const alreadyOpen = await execJS(js.fileChanges);
+  if (alreadyOpen.undoAll) return;
+
+  // Click the pill to open Agent Station Diff. Retry up to 3 times.
+  const MAX_EXPAND_ATTEMPTS = 3;
+  const EXPAND_ATTEMPT_TIMEOUT_MS = 8_000;
+
+  for (let attempt = 1; attempt <= MAX_EXPAND_ATTEMPTS; attempt++) {
     const clicked = await execJS(
       js.click('[data-testid="composer-section-files"]')
     );
-    if (clicked !== "clicked") {
+    if (clicked !== "clicked" && attempt === 1) {
       throw new Error(`${label} file changes pill click failed: ${clicked}`);
     }
-  }
-  await browser.waitUntil(
-    async () => {
-      const state = await execJS(js.fileChanges);
-      return state.undoAll && state.keepAll && state.review;
-    },
-    {
-      timeout: REPLY_TIMEOUT_MS,
-      interval: 2_000,
-      timeoutMsg: `${label} file changes panel did not expand; fileChanges=${JSON.stringify(await execJS(js.fileChanges))}`,
+
+    const opened = await browser
+      .waitUntil(
+        async () => {
+          const state = await execJS(js.fileChanges);
+          if (state.undoAll) return true;
+          const hasDiffTabs = await execJS(
+            `return !!document.querySelector('[data-testid="replay-tab-diff-filter"]');`
+          );
+          return !!hasDiffTabs;
+        },
+        {
+          timeout: EXPAND_ATTEMPT_TIMEOUT_MS,
+          interval: 1_000,
+        }
+      )
+      .catch(() => null);
+
+    if (opened) return;
+
+    if (attempt === MAX_EXPAND_ATTEMPTS) {
+      throw new Error(
+        `${label} file changes panel did not expand after ${MAX_EXPAND_ATTEMPTS} attempts; fileChanges=${JSON.stringify(await execJS(js.fileChanges))}`
+      );
     }
-  );
+  }
 }
 
 async function clickUndoAllAndConfirm(label) {

@@ -4,17 +4,34 @@ interface NavigationMenuRowAccessorySlotProps {
   persistentContent?: React.ReactNode;
   hoverContent?: React.ReactNode;
   actionContent?: React.ReactNode;
+  /**
+   * Status indicator (e.g. "working" breathing dot) rendered to the LEFT of the
+   * grid-stacked content and NOT faded out on hover. Use only for state that
+   * must remain visible while hover-only content (timestamps, actions) is shown.
+   */
+  workingIndicatorContent?: React.ReactNode;
 }
 
 export function NavigationMenuRowAccessorySlot({
   persistentContent,
   hoverContent,
   actionContent,
+  workingIndicatorContent,
 }: NavigationMenuRowAccessorySlotProps): React.ReactElement | null {
-  if (!persistentContent && !hoverContent && !actionContent) return null;
+  if (
+    !persistentContent &&
+    !hoverContent &&
+    !actionContent &&
+    !workingIndicatorContent
+  ) {
+    return null;
+  }
 
-  return (
-    <span className="ml-1 grid flex-shrink-0 items-center justify-end leading-none">
+  const hasStacked = Boolean(
+    persistentContent || hoverContent || actionContent
+  );
+  const stackedContent = hasStacked ? (
+    <span className="grid items-center justify-end leading-none">
       {persistentContent && (
         <span className="col-start-1 row-start-1 inline-flex items-center justify-end leading-none transition-opacity duration-150 group-hover:pointer-events-none group-hover:opacity-0">
           {persistentContent}
@@ -34,6 +51,17 @@ export function NavigationMenuRowAccessorySlot({
           )}
         </span>
       )}
+    </span>
+  ) : null;
+
+  return (
+    <span className="ml-1 flex flex-shrink-0 items-center justify-end leading-none">
+      {workingIndicatorContent && (
+        <span className="mr-1.5 inline-flex items-center justify-end leading-none">
+          {workingIndicatorContent}
+        </span>
+      )}
+      {stackedContent}
     </span>
   );
 }

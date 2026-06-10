@@ -39,6 +39,7 @@ import {
   simulatorEffectiveDockAppAtom,
 } from "@src/store/ui/simulatorAtom";
 import { sessionChatPositionAtom } from "@src/store/ui/workStationAtom";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 import {
   NoDragRegion,
@@ -102,9 +103,10 @@ const AgentStationTopHeader: React.FC = memo(() => {
   }, [handleToggleCaption]);
 
   const getCaptionPortalBounds = useCallback(() => {
+    const { width: vw } = getViewportSize();
     return {
       left: 12,
-      right: window.innerWidth - 12,
+      right: vw - 12,
     };
   }, []);
 

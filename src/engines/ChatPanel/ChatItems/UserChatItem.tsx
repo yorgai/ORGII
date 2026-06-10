@@ -140,6 +140,11 @@ const UserChatItem = ({
   }, [isEditing, onEditingChange]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [previewFile, setPreviewFile] = useState<string | null>(null);
+  // Editable copy of the message's attached images; seeded on edit entry so
+  // the user can remove stale duplicates before resending.
+  const [editImageList, setEditImageList] = useState<string[] | undefined>(
+    undefined
+  );
   const messageContentRef = useRef<HTMLDivElement | null>(null);
 
   const event = chatItem.event;
@@ -226,25 +231,30 @@ const UserChatItem = ({
   }, []);
 
   const handleEditClick = useCallback(() => {
+    setEditImageList(messageImages);
     setIsEditing(true);
-  }, []);
+  }, [messageImages]);
 
   const handleEditCancel = useCallback(() => {
     setIsEditing(false);
+  }, []);
+
+  const handleRemoveEditImage = useCallback((index: number) => {
+    setEditImageList((prev) => prev?.filter((_, i) => i !== index));
   }, []);
 
   const handleEditSubmitInternal = useCallback(
     (newText: string, addedImageDataUrls?: string[]) => {
       setIsEditing(false);
       const rustImages = [
-        ...((messageImages && messageImages.length > 0
-          ? messageImages.map(imageRefToRustPath)
+        ...((editImageList && editImageList.length > 0
+          ? editImageList.map(imageRefToRustPath)
           : []) as string[]),
         ...(addedImageDataUrls ?? []),
       ];
       onEditSubmit?.(newText, rustImages.length > 0 ? rustImages : undefined);
     },
-    [onEditSubmit, messageImages]
+    [onEditSubmit, editImageList]
   );
 
   // Edit mode
@@ -258,7 +268,8 @@ const UserChatItem = ({
         editLabel={t("input.editingSentMessage")}
         editHeaderActions={false}
         quietEditSurface
-        editImages={messageImages}
+        editImages={editImageList}
+        onRemoveEditImage={handleRemoveEditImage}
       />
     );
   }
@@ -343,7 +354,7 @@ const UserChatItem = ({
                       ? { maxHeight: 72, overflow: "hidden" }
                       : isExpanded && displayNeedsTruncation
                         ? {
-                            maxHeight: "50vh",
+                            maxHeight: 240,
                             overflowY: "auto",
                             overflowX: "hidden",
                           }

@@ -40,6 +40,7 @@ import {
 } from "@src/components/Dropdown/tokens";
 import { Session, recentSessionsAtom } from "@src/store/session";
 import { stripPillReferences } from "@src/util/session/stripPillReferences";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 import {
   DropdownAction,
@@ -283,8 +284,7 @@ const TextSelectionDropdown: React.FC<TextSelectionDropdownProps> = ({
     }
 
     const dropdownRect = dropdownRef.current.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    const { width: viewportWidth, height: viewportHeight } = getViewportSize();
     const padding = 10;
 
     let safeX = position.x;

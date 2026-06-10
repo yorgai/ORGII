@@ -514,6 +514,21 @@ export const cliAdapter: SessionAdapter = {
       );
     }
 
+    // Abandoned / orphaned / superseded resolutions arrive only as this
+    // broadcast (no paired exit_plan_mode), so the pending atom must be
+    // cleared here or the Build card stays pinned on CLI sessions too.
+    function handlePlanApprovalArchivedBroadcast(raw: RawSessionEvent): void {
+      const store = getStore();
+      if (!store) return;
+      store.set(pendingPlanApprovalsAtom, (prev) =>
+        clearPendingPlanApproval(
+          prev,
+          sessionId,
+          rawString(raw, "planRevisionId") ?? rawString(raw, "toolCallId")
+        )
+      );
+    }
+
     function handlePlanApprovalActivity(chunk: ActivityChunk): boolean {
       if (chunk.action_type !== "plan_approval") return false;
       const store = getStore();
@@ -838,6 +853,8 @@ export const cliAdapter: SessionAdapter = {
           handlePlanReadyForApproval(raw);
         } else if (raw.type === "agent:exit_plan_mode") {
           handleExitPlanMode(raw);
+        } else if (raw.type === "agent:plan_approval_archived") {
+          handlePlanApprovalArchivedBroadcast(raw);
         } else if (raw.type === "code_session.activity" && raw.chunk) {
           handleActivity(raw.chunk as unknown as ActivityChunk);
         } else if (raw.type === "agent:streaming_complete") {

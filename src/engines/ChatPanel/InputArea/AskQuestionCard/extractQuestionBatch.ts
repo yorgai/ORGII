@@ -19,6 +19,23 @@ const ASK_QUESTION_FUNCTIONS = new Set([
   "ask_followup_question",
 ]);
 
+/**
+ * Predicate shared by `extractQuestionBatch` and `useQuestionBatches`'s
+ * streaming-detection pass. Returns true for the activity event AND any
+ * `tool_call` event whose `functionName` matches one of the recognized
+ * ask-question aliases — same set the parser walks below.
+ */
+export function isAskUserQuestionsEvent(event: SessionEvent): boolean {
+  if (event.actionType === "ask_user_questions") return true;
+  if (
+    event.actionType === "tool_call" &&
+    ASK_QUESTION_FUNCTIONS.has(event.functionName)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function extractQuestionBatch(
   event: SessionEvent
 ): QuestionBatch | null {

@@ -12,6 +12,7 @@ import {
   showGuideHighlightAtom,
 } from "@src/store/ui/guideHighlightAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 const GUI_CONTROL_SELECTOR = [
   "button",
@@ -109,8 +110,8 @@ function isElementVisible(element: Element): element is HTMLElement {
   const rect = element.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return false;
   if (rect.bottom < 0 || rect.right < 0) return false;
-  if (rect.top > window.innerHeight || rect.left > window.innerWidth)
-    return false;
+  const { width: vw, height: vh } = getViewportSize();
+  if (rect.top > vh || rect.left > vw) return false;
   const style = window.getComputedStyle(element);
   return (
     style.visibility !== "hidden" &&

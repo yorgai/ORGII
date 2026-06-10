@@ -177,9 +177,17 @@ export function stripLineNumberPrefixes(content: string): {
 // Unified diff → old/new content splitter
 // ============================================
 
+const EXTRACT_HUNK_HEADER_RE =
+  /^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@/;
+
 /**
  * Split a unified diff string into old/new plain-text values.
  * Shared by simulator variant rendering and playground file operations.
+ *
+ * Gap placeholder lines are inserted between hunks so that the absolute
+ * line numbers from each @@ header are preserved in the output strings.
+ * Without this, multi-hunk diffs produce wrong line numbers when the
+ * diff viewer re-computes a diff from the old/new values.
  */
 export function parseUnifiedDiffToOldNew(diffStr: string): {
   oldValue: string;
@@ -192,24 +200,47 @@ export function parseUnifiedDiffToOldNew(diffStr: string): {
   const newLines: string[] = [];
   let oldStartLine: number | undefined;
   let newStartLine: number | undefined;
+  let oldCursor = 0;
+  let newCursor = 0;
+  let firstHunk = true;
 
   for (const line of lines) {
-    const hunkMatch = /^@@\s+-(\d+)(?:,\d+)?\s+\+(\d+)(?:,\d+)?\s+@@/.exec(
-      line
-    );
+    if (line.startsWith("---") || line.startsWith("+++")) continue;
+    if (line.startsWith("diff ") || line.startsWith("index ")) continue;
+
+    const hunkMatch = EXTRACT_HUNK_HEADER_RE.exec(line);
     if (hunkMatch) {
-      oldStartLine ??= Number.parseInt(hunkMatch[1], 10);
-      newStartLine ??= Number.parseInt(hunkMatch[2], 10);
+      const hunkOldStart = Number.parseInt(hunkMatch[1], 10);
+      const hunkNewStart = Number.parseInt(hunkMatch[3], 10);
+      oldStartLine ??= hunkOldStart;
+      newStartLine ??= hunkNewStart;
+      if (firstHunk) {
+        firstHunk = false;
+      } else {
+        const oldGap = hunkOldStart - oldCursor;
+        const newGap = hunkNewStart - newCursor;
+        const gapCount = Math.max(oldGap, newGap, 0);
+        for (let i = 0; i < gapCount; i++) {
+          if (i < oldGap) oldLines.push("");
+          if (i < newGap) newLines.push("");
+        }
+      }
+      oldCursor = hunkOldStart;
+      newCursor = hunkNewStart;
       continue;
     }
-    if (line.startsWith("---") || line.startsWith("+++")) continue;
+
     if (line.startsWith("-")) {
       oldLines.push(line.slice(1));
+      oldCursor++;
     } else if (line.startsWith("+")) {
       newLines.push(line.slice(1));
+      newCursor++;
     } else if (line.startsWith(" ")) {
       oldLines.push(line.slice(1));
       newLines.push(line.slice(1));
+      oldCursor++;
+      newCursor++;
     }
   }
   return {

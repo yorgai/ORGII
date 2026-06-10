@@ -20,6 +20,7 @@ import { useDropdownEngine } from "@src/hooks/dropdown";
 import type { PinnedAction } from "@src/store/session/pinnedActionsAtom";
 import type { SlashItem } from "@src/types/extensions";
 import { fuzzyMatch, fuzzyScore } from "@src/util/search/fuzzy";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 /** Skill name for the setup-repo skill that is superseded by the Setup Repo action pill. */
 const SETUP_REPO_SKILL_NAME = "setup-repo";
@@ -179,13 +180,14 @@ const PinActionsPanel: React.FC<PinActionsPanelProps> = memo(
 
     const PANEL_WIDTH = 240;
     const VIEWPORT_PADDING = 8;
+    const { width: vw } = getViewportSize();
     const alignedLeft =
       panelPosition.right !== undefined
-        ? window.innerWidth - panelPosition.right - PANEL_WIDTH
+        ? vw - panelPosition.right - PANEL_WIDTH
         : panelPosition.left;
     const left = Math.max(
       VIEWPORT_PADDING,
-      Math.min(alignedLeft, window.innerWidth - PANEL_WIDTH - VIEWPORT_PADDING)
+      Math.min(alignedLeft, vw - PANEL_WIDTH - VIEWPORT_PADDING)
     );
 
     return createPortal(

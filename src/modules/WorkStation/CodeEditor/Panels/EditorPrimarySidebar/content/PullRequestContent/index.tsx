@@ -5,11 +5,11 @@
  * inline detail panel. Clicking a row fires `onHistorySelectionChange`
  * with `type: "pr"`, which moves PR context into the top header bar.
  *
- * Stats (additions/deletions/file count) and timestamps are tucked into a
- * hover tooltip on an info icon so the row stays compact.
+ * Stats (additions/deletions/file count) and timestamps surface in a
+ * hover tooltip on the row itself so the row stays compact.
  */
 import { useAtomValue } from "jotai";
-import { Info, Loader2, TriangleAlert } from "lucide-react";
+import { Loader2, TriangleAlert } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -99,45 +99,32 @@ const PrListRow: React.FC<PrListRowProps> = ({
   );
 
   return (
-    <button
-      type="button"
-      onClick={() => onClick(pr)}
-      className={`group flex w-full items-center gap-1.5 px-3 py-1.5 text-left transition-colors ${
-        isSelected ? SURFACE_TOKENS.selected : PRIMARY_SIDEBAR_HOVER.row
-      } ${isCurrentBranch ? "border-l-2 border-primary-5 pl-[10px]" : ""}`}
+    <Tooltip
+      content={tooltipContent}
+      position="bottom-end"
+      smartPlacement
+      panelStyle
+      mouseEnterDelay={200}
     >
-      {/* Status dot */}
-      <span
-        className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusVariant.dotClass}`}
-        aria-hidden
-      />
-
-      {/* PR title */}
-      <span
-        className="min-w-0 flex-1 truncate text-[12px] leading-snug text-text-1"
-        title={pr.title}
+      <button
+        type="button"
+        onClick={() => onClick(pr)}
+        className={`flex w-full items-center gap-1.5 px-3 py-1.5 text-left transition-colors ${
+          isSelected ? SURFACE_TOKENS.selected : PRIMARY_SIDEBAR_HOVER.row
+        } ${isCurrentBranch ? "border-l-2 border-primary-5 pl-[10px]" : ""}`}
       >
-        {pr.title}
-      </span>
+        {/* Status dot */}
+        <span
+          className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusVariant.dotClass}`}
+          aria-hidden
+        />
 
-      {/* Info icon — stopPropagation on the wrapper div so the button's onClick doesn't fire */}
-      <div
-        className="ml-auto shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Tooltip
-          content={tooltipContent}
-          position="bottom-end"
-          smartPlacement
-          panelStyle
-          mouseEnterDelay={200}
-        >
-          <span className="flex cursor-default items-center">
-            <Info size={12} className="text-text-3" />
-          </span>
-        </Tooltip>
-      </div>
-    </button>
+        {/* PR title */}
+        <span className="min-w-0 flex-1 truncate text-[12px] leading-snug text-text-1">
+          {pr.title}
+        </span>
+      </button>
+    </Tooltip>
   );
 };
 

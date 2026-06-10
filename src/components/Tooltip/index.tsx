@@ -39,6 +39,8 @@ import React, {
 } from "react";
 import ReactDOM from "react-dom";
 
+import { getViewportSize } from "@src/util/ui/window/viewport";
+
 import "./index.scss";
 
 /**
@@ -430,9 +432,10 @@ const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
       const gap = framedPanel ? 8 : 12;
 
       const padding = 8;
+      const { width: vpWidth, height: vpHeight } = getViewportSize();
       const viewport: TooltipViewport = {
-        width: window.innerWidth,
-        height: window.innerHeight,
+        width: vpWidth,
+        height: vpHeight,
         padding,
       };
       const candidate = getBestTooltipCandidate(
@@ -448,11 +451,11 @@ const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
 
       top = Math.max(
         padding,
-        Math.min(top, window.innerHeight - tooltipRect.height - padding)
+        Math.min(top, vpHeight - tooltipRect.height - padding)
       );
       left = Math.max(
         padding,
-        Math.min(left, window.innerWidth - tooltipRect.width - padding)
+        Math.min(left, vpWidth - tooltipRect.width - padding)
       );
 
       // Calculate arrow offset to keep it pointing at trigger center

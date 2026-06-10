@@ -15,6 +15,7 @@ import {
   guideHighlightAtom,
 } from "@src/store/ui/guideHighlightAtom";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
+import { getViewportSize } from "@src/util/ui/window/viewport";
 
 interface TargetRect {
   top: number;
@@ -69,13 +70,13 @@ function buildHighlightStyle(rect: TargetRect): React.CSSProperties {
 }
 
 function buildPopoverStyle(rect: TargetRect): React.CSSProperties {
-  const hasRoomRight =
-    window.innerWidth - (rect.left + rect.width) > POPOVER_WIDTH + 36;
+  const { width: vw, height: vh } = getViewportSize();
+  const hasRoomRight = vw - (rect.left + rect.width) > POPOVER_WIDTH + 36;
   const hasRoomLeft = rect.left > POPOVER_WIDTH + 36;
   const verticalCenter = clamp(
     rect.top + rect.height / 2 - POPOVER_ESTIMATED_HEIGHT / 2,
     VIEWPORT_PADDING,
-    window.innerHeight - POPOVER_ESTIMATED_HEIGHT - VIEWPORT_PADDING
+    vh - POPOVER_ESTIMATED_HEIGHT - VIEWPORT_PADDING
   );
 
   if (hasRoomRight) {
@@ -94,8 +95,7 @@ function buildPopoverStyle(rect: TargetRect): React.CSSProperties {
     };
   }
 
-  const hasRoomBelow =
-    window.innerHeight - (rect.top + rect.height) > POPOVER_ESTIMATED_HEIGHT;
+  const hasRoomBelow = vh - (rect.top + rect.height) > POPOVER_ESTIMATED_HEIGHT;
   const top = hasRoomBelow
     ? rect.top + rect.height + TARGET_PADDING + 10
     : rect.top - POPOVER_ESTIMATED_HEIGHT - TARGET_PADDING - 10;
@@ -104,12 +104,12 @@ function buildPopoverStyle(rect: TargetRect): React.CSSProperties {
     top: clamp(
       top,
       VIEWPORT_PADDING,
-      window.innerHeight - POPOVER_ESTIMATED_HEIGHT - VIEWPORT_PADDING
+      vh - POPOVER_ESTIMATED_HEIGHT - VIEWPORT_PADDING
     ),
     left: clamp(
       rect.left + rect.width / 2 - POPOVER_WIDTH / 2,
       VIEWPORT_PADDING,
-      window.innerWidth - POPOVER_WIDTH - VIEWPORT_PADDING
+      vw - POPOVER_WIDTH - VIEWPORT_PADDING
     ),
     width: POPOVER_WIDTH,
   };

@@ -46,12 +46,59 @@ export function resolveFileOperationPayload(
   }
 
   if (isEmptyEventPlaceholder(op.event)) {
+    // TEMP DIAG [file-blank] — empty event placeholder, can't rehydrate content
+    // eslint-disable-next-line no-console
+    console.log("[file-blank] empty-event-placeholder", {
+      filePath: op.filePath,
+      type: op.type,
+      eventId: op.eventId,
+      isCurrent: op.isCurrent,
+      hasRelatedOps: !!op.relatedOperations?.length,
+      relatedEventIds: op.relatedEventIds,
+    });
     return { language: op.language };
   }
 
   const reconverted = convertToFileOperation(op.event, op.isCurrent);
   if (!reconverted) {
+    // TEMP DIAG [file-blank] — converter returned null
+    // eslint-disable-next-line no-console
+    console.log("[file-blank] reconvert-null", {
+      filePath: op.filePath,
+      type: op.type,
+      eventId: op.eventId,
+      functionName: (op.event as { functionName?: string })?.functionName,
+      eventKeys: Object.keys(op.event as object),
+    });
     return { language: op.language };
+  }
+
+  // TEMP DIAG [file-blank] — only log when we still can't produce content for a READ
+  if (op.type === "read" && reconverted.content === undefined) {
+    const ev = op.event as {
+      functionName?: string;
+      result?: Record<string, unknown>;
+      args?: Record<string, unknown>;
+      extracted?: unknown;
+    };
+    // eslint-disable-next-line no-console
+    console.log("[file-blank] reconvert-no-content", {
+      filePath: op.filePath,
+      eventId: op.eventId,
+      functionName: ev?.functionName,
+      hasResult: !!ev?.result,
+      resultKeys: ev?.result ? Object.keys(ev.result) : [],
+      hasOutput: !!(ev?.result as { output?: unknown })?.output,
+      outputType: typeof (ev?.result as { output?: unknown })?.output,
+      outputKeys:
+        ev?.result &&
+        typeof (ev.result as { output?: unknown }).output === "object"
+          ? Object.keys(
+              (ev.result as { output?: Record<string, unknown> }).output || {}
+            )
+          : [],
+      hasExtracted: !!ev?.extracted,
+    });
   }
 
   return {

@@ -24,6 +24,8 @@ import {
 } from "react";
 import { v4 as uuidv4 } from "uuid";
 
+import { toNativeFrame } from "@src/util/platform/tauri/nativeFrame";
+
 /** Tauri command names wired to a specific auth webview type. */
 export interface EmbeddedWebviewCommands {
   /** Command to create the webview. Must accept: parentWindow, label, x, y, width, height + optional extra fields. */
@@ -104,13 +106,11 @@ export function useEmbeddedWebview({
         const appWindow = getCurrentWindow();
         log("Creating webview at rect:", rect);
 
+        const frame = toNativeFrame(rect, INSET);
         await invoke(commands.create, {
           parentWindow: appWindow.label,
           label: labelRef.current,
-          x: Math.round(rect.left + INSET),
-          y: Math.round(rect.top + INSET),
-          width: Math.round(rect.width - INSET * 2),
-          height: Math.round(rect.height - INSET * 2),
+          ...frame,
           ...(url ? { url } : {}),
           ...extraCreateArgs,
         });
@@ -147,13 +147,11 @@ export function useEmbeddedWebview({
     if (rect.width === 0 || rect.height === 0) return;
 
     try {
+      const frame = toNativeFrame(rect, INSET);
       if (commands.updatePosition) {
         await invoke(commands.updatePosition, {
           label: labelRef.current,
-          x: Math.round(rect.left + INSET),
-          y: Math.round(rect.top + INSET),
-          width: Math.round(rect.width - INSET * 2),
-          height: Math.round(rect.height - INSET * 2),
+          ...frame,
         });
       } else {
         // Close + recreate at new position
@@ -164,10 +162,7 @@ export function useEmbeddedWebview({
           parentWindow: appWindow.label,
           label: labelRef.current,
           url: savedUrl,
-          x: Math.round(rect.left + INSET),
-          y: Math.round(rect.top + INSET),
-          width: Math.round(rect.width - INSET * 2),
-          height: Math.round(rect.height - INSET * 2),
+          ...frame,
           ...extraCreateArgs,
         });
       }

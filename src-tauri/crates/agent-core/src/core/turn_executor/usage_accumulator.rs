@@ -52,7 +52,13 @@ impl UsageTotals {
         self.prompt += iter_prompt;
         self.completion += iter_completion;
         self.total += iter_total;
-        self.last_prompt = iter_prompt;
+        // Context-window fill = full prompt as seen by the provider. With
+        // prompt caching, Anthropic's `prompt_tokens` is billable input only
+        // (cache misses); the cached prefix arrives in cache_read/cache_write.
+        // Summing them reconstructs the real context size — otherwise a
+        // fully-cached 200K prompt reports as "2 tokens used" and every
+        // breakdown percentage (computed against used_tokens) explodes.
+        self.last_prompt = iter_prompt + iter_cache_read + iter_cache_write;
         self.cache_read += iter_cache_read;
         self.cache_write += iter_cache_write;
 
