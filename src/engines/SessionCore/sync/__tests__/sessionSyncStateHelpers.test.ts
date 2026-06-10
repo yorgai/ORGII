@@ -7,6 +7,7 @@ import {
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { createSessionEventHandlerCallbacks } from "@src/engines/SessionCore/sync/sessionSyncStateHelpers";
 import type { SessionEventHandlerStateActions } from "@src/engines/SessionCore/sync/sessionSyncStateHelpers";
+import { updateSessionStatus } from "@src/store/session";
 
 vi.mock("@src/engines/SessionCore/core/store/EventStoreProxy", () => ({
   eventStoreProxy: {
@@ -113,6 +114,28 @@ describe("session sync state callbacks", () => {
     });
 
     expect(markTurnTerminal).not.toHaveBeenCalled();
+  });
+
+  it("does NOT leak intermediate signals into any session-level state", () => {
+    // Regression: a per-message streaming_complete mid-turn used to write
+    // "completed" into the runtime-status mirror, flipping the composer's
+    // Stop button back to Send while the agent was still executing tools
+    // (2026-06-10). Intermediate signals must be a full no-op.
+    const actions = createActions();
+    const callbacks = createSessionEventHandlerCallbacks(
+      "session-1",
+      actions,
+      vi.fn()
+    );
+
+    callbacks.onStatusChange?.("completed", undefined, {
+      intermediate: true,
+    });
+
+    expect(actions.setSessionRuntimeStatus).not.toHaveBeenCalled();
+    expect(actions.setPendingCancel).not.toHaveBeenCalled();
+    expect(eventStoreProxy.unpinSession).not.toHaveBeenCalled();
+    expect(updateSessionStatus).not.toHaveBeenCalled();
   });
 
   it("opens the FSM turn on running status", () => {

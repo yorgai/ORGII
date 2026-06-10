@@ -178,20 +178,27 @@ export function createSessionEventHandlerCallbacks(
     },
     onStatusChange: (status, errorMessage, meta) => {
       logStatusChange(status, errorMessage);
+      // Intermediate signals (e.g. per-message streaming_complete inside a
+      // multi-step turn) are stream bookkeeping, NOT session-status
+      // transitions. They must not touch ANY session-level state: writing
+      // "completed" into the runtime-status mirror mid-turn flips the
+      // composer's Stop button back to Send until the next agent:tool_call
+      // re-signals "running" (the "agent still working but button not
+      // stoppable" bug, 2026-06-10). The FSM guard alone was not enough —
+      // the UI mirror, pendingCancel, pin state, and the session row all
+      // leaked the phantom terminal.
+      if (meta?.intermediate) return;
       actions.setSessionRuntimeStatus(toCliSessionStatus(status));
       if (status === "failed" && errorMessage) {
         actions.setSessionRuntimeError(errorMessage);
       }
       if (TERMINAL_HANDLER_STATUSES.has(status)) {
         // Turn finality has exactly one ingestion point: a terminal status
-        // here, unless the producer flagged it as an intermediate signal
-        // (e.g. per-message streaming_complete inside a multi-step turn).
-        if (!meta?.intermediate) {
-          markTurnTerminal(
-            sessionId,
-            toTurnTerminalStatus(meta?.turnStatus ?? status)
-          );
-        }
+        // here. Intermediate signals already returned above.
+        markTurnTerminal(
+          sessionId,
+          toTurnTerminalStatus(meta?.turnStatus ?? status)
+        );
         actions.setPendingCancel(false);
         eventStoreProxy.unpinSession(sessionId);
         updateSessionStatus(sessionId, status as SessionStatus);
