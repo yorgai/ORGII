@@ -49,12 +49,32 @@ function overlayFileOperation(
   );
 
   if (existingIndex >= 0) {
+    const existing = next[existingIndex];
+    // A still-running live event has no result payload yet — its converted
+    // entry carries `content: undefined` and an event without `result`.
+    // Spreading it over the existing entry would clobber the completed
+    // payload (and the rehydration source `event`), blanking the viewer
+    // until the user navigates away. Keep the richer payload of the two.
+    const liveHasPayload =
+      liveOperation.content !== undefined ||
+      liveOperation.oldContent !== undefined ||
+      liveOperation.newContent !== undefined ||
+      liveOperation.diff !== undefined;
     next[existingIndex] = {
-      ...next[existingIndex],
+      ...existing,
       ...liveOperation,
-      relatedEventIds: next[existingIndex].relatedEventIds,
-      relatedOperations: next[existingIndex].relatedOperations,
-      editCount: next[existingIndex].editCount,
+      ...(liveHasPayload
+        ? {}
+        : {
+            content: existing.content,
+            oldContent: existing.oldContent,
+            newContent: existing.newContent,
+            diff: existing.diff,
+            event: existing.event ?? liveOperation.event,
+          }),
+      relatedEventIds: existing.relatedEventIds,
+      relatedOperations: existing.relatedOperations,
+      editCount: existing.editCount,
     };
     return next;
   }

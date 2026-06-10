@@ -226,6 +226,16 @@ impl AgentAppState {
                         if session.is_singleton() {
                             continue;
                         }
+                        // A session with an executing or queued turn is NOT idle,
+                        // even if the user hasn't sent a message in over an hour
+                        // (refresh_last_active only fires on send_message). Evicting
+                        // it mid-turn broadcasts session_evicted, which makes the
+                        // frontend downgrade a genuinely-working session to idle.
+                        if session.scheduler.is_processing()
+                            || session.scheduler.pending_count() > 0
+                        {
+                            continue;
+                        }
                         let idle = session.idle_duration().await;
                         if idle >= SESSION_IDLE_EVICTION_TIMEOUT {
                             expired_ids.push(id.clone());

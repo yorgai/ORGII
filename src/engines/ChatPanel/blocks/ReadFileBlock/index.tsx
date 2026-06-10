@@ -19,6 +19,7 @@ import { formatRepoPathForDisplay } from "@src/util/file/repoPathDisplay";
 
 import { extractResultText } from "../ToolCallBlock/helpers";
 import {
+  EVENT_LOADING_SHIMMER_TEXT_CLASSES,
   EventBlockHeader,
   EventBlockHeaderIcon,
   EventBlockHeaderSubtitle,
@@ -111,7 +112,10 @@ export const ReadFileBlock: React.FC<ReadFileBlockProps> = (props) => {
             size="small"
             className="mr-1.5 shrink-0"
           />
-          <span data-testid="read-file-path" className="min-w-0 truncate">
+          <span
+            data-testid="read-file-path"
+            className={`min-w-0 truncate ${isLoading ? `font-bold ${EVENT_LOADING_SHIMMER_TEXT_CLASSES}` : ""}`.trim()}
+          >
             {displayName}
           </span>
         </EventBlockHeaderSubtitle>
