@@ -3,6 +3,7 @@
 use crate::foundation::session_bridge::{self, CliPlanApprovalResponseParams};
 use crate::interaction::mode_switch::ModeSwitchChoice;
 use crate::interaction::permission::PermissionResponse;
+use crate::interaction::plan_approval::PlanResolution;
 use crate::session::persistence as session_persistence;
 use crate::session::AgentExecMode;
 use crate::state::AgentAppState;
@@ -286,9 +287,9 @@ pub async fn agent_plan_approval_response(
     let session = state.get_session(&session_id).await;
 
     if session_bridge::get_cli_tools_snapshot(&session_id)?.is_some() {
-        let rejected = choice == "reject";
-        let cli_snapshot =
-            crate::interaction::plan_approval::load_snapshot_for_session(&session_id).await?;
+        // The CLI bridge resolves the pending plan through
+        // `plan_approval::resolve_pending`, which pushes the terminal
+        // transcript event itself — no wire-side event push needed here.
         session_bridge::respond_cli_plan_approval(CliPlanApprovalResponseParams {
             session_id,
             choice,
@@ -298,11 +299,6 @@ pub async fn agent_plan_approval_response(
             workspace_path,
         })
         .await?;
-        if let (Some(handle), Some(snapshot)) = (state.app_handle.as_ref(), cli_snapshot.as_ref()) {
-            crate::interaction::plan_approval::push_plan_approval_resolution_event(
-                handle, snapshot, rejected,
-            );
-        }
         return Ok(());
     }
 
@@ -327,33 +323,24 @@ pub async fn agent_plan_approval_response(
         .as_ref()
         .ok_or_else(|| format!("Session {} has no plan-approval manager", session_id))?;
 
-    let edited = match choice.as_str() {
-        "approve" => None,
-        "approve_with_edits" => Some(
-            edited_content
-                .ok_or_else(|| "approve_with_edits requires `edited_content`".to_string())?,
-        ),
-        "reject" => None,
+    let resolution = match choice.as_str() {
+        "approve" => PlanResolution::Approved { edited: None },
+        "approve_with_edits" => PlanResolution::Approved {
+            edited: Some(
+                edited_content
+                    .ok_or_else(|| "approve_with_edits requires `edited_content`".to_string())?,
+            ),
+        },
+        "reject" => PlanResolution::Rejected,
         other => return Err(format!("Invalid plan-approval choice: {}", other)),
     };
     let rejected = choice == "reject";
+    let edited = choice == "approve_with_edits";
 
-    let snapshot = if rejected {
-        manager
-            .reject_pending()
+    let snapshot =
+        crate::interaction::plan_approval::resolve_pending(&session_id, resolution, Some(manager))
             .await
-            .ok_or_else(|| format!("No pending plan approval for session {}", session_id))?
-    } else {
-        manager
-            .take_pending()
-            .await
-            .ok_or_else(|| format!("No pending plan approval for session {}", session_id))?
-    };
-
-    if let Some(ref new_content) = edited {
-        std::fs::write(&snapshot.plan_path, new_content.as_bytes())
-            .map_err(|err| format!("Failed to persist edited plan: {}", err))?;
-    }
+            .ok_or_else(|| format!("No pending plan approval for session {}", session_id))?;
 
     let restore_mode = session
         .pre_plan_mode_cache
@@ -377,7 +364,7 @@ pub async fn agent_plan_approval_response(
             "planRevisionId": &snapshot.plan_revision_id,
             "originToolCallId": &snapshot.origin_tool_call_id,
             "restoreMode": restore_mode.as_str(),
-            "edited": edited.is_some(),
+            "edited": edited,
             "rejected": rejected,
         }),
     );
@@ -402,7 +389,7 @@ pub async fn agent_plan_approval_response(
          If the plan is genuinely complex, you may use `manage_todo` with its schema to track execution, \
          but do not create another plan.\n\n\
          ## Approved plan\n\n{plan_body}",
-        edited_marker = if edited.is_some() { " (edited)" } else { "" },
+        edited_marker = if edited { " (edited)" } else { "" },
     );
 
     // Prefer the FE-supplied identity (model / account_id / workspace_path)

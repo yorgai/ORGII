@@ -244,9 +244,20 @@ export function handlePlanReadyForApproval(
 
 export function handlePlanApprovalArchived(
   event: AgentWSEvent,
-  eventSessionId: string | undefined
+  eventSessionId: string | undefined,
+  ctx: EventHandlerContext
 ): void {
   if (!eventSessionId || !event.planRevisionId) return;
+
+  // Abandoned / orphaned / superseded resolutions arrive only as this
+  // broadcast (no paired plan_ready_for_approval upsert), so the pending
+  // atom must be cleared here or the Build card stays pinned.
+  const store = ctx.getDefaultStore();
+  if (store) {
+    store.set(pendingPlanApprovalsAtom, (prev) =>
+      clearPendingPlanApproval(prev, eventSessionId, event.planRevisionId)
+    );
+  }
 
   void eventStoreProxy.patchByIds(
     [event.planRevisionId, `tool-call-${event.planRevisionId}`],

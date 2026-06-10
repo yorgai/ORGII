@@ -749,6 +749,15 @@ pub fn run() {
             unified_state.set_pty_sessions(pty_sessions_arc.clone());
             unified_state.set_app_handle(app.handle().clone());
 
+            // Plan-approval lifecycle: process-wide AppHandle for terminal
+            // transcript events pushed outside a live session manager, then
+            // a one-shot GC pass that archives orphaned pending-plan rows
+            // (missing plan file / deleted session / session left plan mode).
+            agent_core::interaction::plan_approval::install_app_handle(app.handle().clone());
+            tauri::async_runtime::spawn(async {
+                agent_core::interaction::plan_approval::gc_orphaned_pending_plans().await;
+            });
+
             // Install the production `MemberShutdownHook` for the
             // inbox-drain side effect that fires when the coordinator
             // accepts a member's `ShutdownResponse{accepted=true}`.

@@ -14,6 +14,7 @@ import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { eventsAtom } from "@src/engines/SessionCore/core/atoms";
 import { eventStoreProxy } from "@src/engines/SessionCore/core/store/EventStoreProxy";
 import { SessionService } from "@src/engines/SessionCore/services/SessionService";
+import { setSessionRuntimeStatusAtom } from "@src/store/session/cliSessionStatusAtom";
 import { creatorDefaultModelSelectionAtom } from "@src/store/session/creatorDefaultModelAtom";
 import { cursorModeOverrideAtomFamily } from "@src/store/session/cursorModeOverrideAtom";
 import { sessionByIdAtom, upsertSession } from "@src/store/session/sessionAtom";
@@ -213,13 +214,30 @@ async function switchAgentMode(
     : fallback;
   const { model, accountId } = resolveModelForMessage(lastModelSelection);
 
-  await SessionService.sendMessage({
-    sessionId,
-    content: lastUserText,
-    model,
-    accountId,
-    mode: targetMode,
+  // Optimistically mark running BEFORE the resend, mirroring
+  // useMessageDispatch. Mode-switch resends bypass that hook, and without
+  // this the planning indicator stays hidden until Rust's first
+  // status_changed lands — the user just sees a frozen panel (P3).
+  store.set(setSessionRuntimeStatusAtom, {
+    status: "running",
+    source: "dispatch",
   });
+
+  try {
+    await SessionService.sendMessage({
+      sessionId,
+      content: lastUserText,
+      model,
+      accountId,
+      mode: targetMode,
+    });
+  } catch (error) {
+    store.set(setSessionRuntimeStatusAtom, {
+      status: "idle",
+      source: "dispatch",
+    });
+    throw error;
+  }
 }
 
 function isE2EModeSwitchMockEnabled(): boolean {

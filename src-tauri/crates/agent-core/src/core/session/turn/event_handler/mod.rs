@@ -124,6 +124,22 @@ pub struct UnifiedEventHandler {
     /// Streaming buffer for message/thinking accumulation (Rust single source of truth).
     streaming_buffer: StreamingBuffer,
     flushed_message_sessions: Mutex<HashSet<String>>,
+    /// Per-index accumulation of streamed `create_plan` tool args, keyed by
+    /// the provider's tool-call block index. Powers the live drafting plan
+    /// card: a skeleton tool_call event is pushed on block start, then
+    /// `title` / partial `content` are patched in as deltas arrive. The
+    /// authoritative `on_tool_call` event later overwrites the same
+    /// `tool-call-{id}` row, so nothing here survives the final state.
+    plan_draft_streams: Mutex<std::collections::HashMap<usize, PlanDraftStream>>,
+}
+
+/// Accumulated state for one streaming `create_plan` call.
+struct PlanDraftStream {
+    tool_call_id: String,
+    args_buf: String,
+    /// Length of `streamContent` at the last patch push — used to skip
+    /// no-op patches when a delta only advanced JSON syntax.
+    last_pushed_len: usize,
 }
 
 impl UnifiedEventHandler {
@@ -155,6 +171,7 @@ impl UnifiedEventHandler {
             todo_called: AtomicBool::new(false),
             streaming_buffer: StreamingBuffer::with_default_timeout(),
             flushed_message_sessions: Mutex::new(HashSet::new()),
+            plan_draft_streams: Mutex::new(std::collections::HashMap::new()),
         }
     }
 
@@ -225,6 +242,27 @@ impl UnifiedEventHandler {
             return;
         };
         event_pipeline_bridge::push_events(handle, session_id, vec![event]);
+    }
+
+    fn broadcast_tool_call_delta(
+        &self,
+        session_id: &str,
+        index: usize,
+        tool_call_id: Option<&str>,
+        tool_name: Option<&str>,
+        arguments_delta: Option<&str>,
+    ) {
+        broadcast_event(
+            "agent:tool_call_delta",
+            serde_json::json!({
+                "sessionId": session_id,
+                "turnId": self.config.turn_id.as_deref(),
+                "index": index,
+                "toolCallId": tool_call_id,
+                "tool": tool_name,
+                "argumentsDelta": arguments_delta,
+            }),
+        );
     }
 
     /// Flip `is_delta` to `false` on all TS-side streaming placeholders in
@@ -307,17 +345,84 @@ impl TurnEventHandler for UnifiedEventHandler {
             self.finalize_streaming_in_store(session_id);
         }
 
-        broadcast_event(
-            "agent:tool_call_delta",
-            serde_json::json!({
-                "sessionId": session_id,
-                "turnId": self.config.turn_id.as_deref(),
-                "index": index,
-                "toolCallId": tool_call_id,
-                "tool": tool_name,
-                "argumentsDelta": arguments_delta,
-            }),
-        );
+        // Live drafting plan card: when a `create_plan` block starts, push
+        // a skeleton tool_call event (Running) immediately so the card
+        // appears on the first frame; as argument deltas accumulate, patch
+        // partial `title` / `streamContent` into the same row. The
+        // authoritative `on_tool_call` later overwrites the row with final
+        // args. Failure to parse partials just means the skeleton stays
+        // title-less — never blocks the stream.
+        if is_block_start && tool_name == Some(tool_names::CREATE_PLAN) {
+            if let Some(call_id) = tool_call_id {
+                if let Ok(mut streams) = self.plan_draft_streams.lock() {
+                    streams.insert(
+                        index,
+                        PlanDraftStream {
+                            tool_call_id: call_id.to_string(),
+                            args_buf: String::new(),
+                            last_pushed_len: 0,
+                        },
+                    );
+                }
+                let event = event_factory::build_tool_call_event(
+                    session_id,
+                    call_id,
+                    tool_names::CREATE_PLAN,
+                    "create_plan",
+                    &serde_json::json!({ "streamContent": "" }),
+                    self.config.active_repo_path.as_deref(),
+                );
+                self.push_to_store(session_id, event);
+            }
+        } else if let Some(delta) = arguments_delta {
+            let patch = {
+                let Ok(mut streams) = self.plan_draft_streams.lock() else {
+                    return;
+                };
+                let Some(stream) = streams.get_mut(&index) else {
+                    drop(streams);
+                    self.broadcast_tool_call_delta(
+                        session_id,
+                        index,
+                        tool_call_id,
+                        tool_name,
+                        arguments_delta,
+                    );
+                    return;
+                };
+                stream.args_buf.push_str(delta);
+                let (title, content) = helpers::parse_partial_plan_args(&stream.args_buf);
+                let content_len = content.as_deref().map(str::len).unwrap_or(0);
+                if content_len > stream.last_pushed_len || title.is_some() {
+                    stream.last_pushed_len = content_len;
+                    Some((stream.tool_call_id.clone(), title, content))
+                } else {
+                    None
+                }
+            };
+
+            if let Some((call_id, title, content)) = patch {
+                if let Some(ref handle) = self.config.app_handle {
+                    let mut merge_args = serde_json::Map::new();
+                    if let Some(title) = title {
+                        merge_args.insert("title".into(), serde_json::json!(title));
+                    }
+                    if let Some(content) = content {
+                        merge_args.insert("streamContent".into(), serde_json::json!(content));
+                    }
+                    if !merge_args.is_empty() {
+                        event_pipeline_bridge::update_tool_args_by_call_id(
+                            handle,
+                            session_id,
+                            &call_id,
+                            Value::Object(merge_args),
+                        );
+                    }
+                }
+            }
+        }
+
+        self.broadcast_tool_call_delta(session_id, index, tool_call_id, tool_name, arguments_delta);
     }
 
     fn on_context_usage(&self, session_id: &str, usage: &ContextUsageSnapshot) {
@@ -351,6 +456,12 @@ impl TurnEventHandler for UnifiedEventHandler {
         self.tool_call_count.fetch_add(1, Ordering::Relaxed);
         if tool_name == tool_names::MANAGE_TODO {
             self.todo_called.store(true, Ordering::Relaxed);
+        }
+        if tool_name == tool_names::CREATE_PLAN {
+            // The authoritative event replaces the streaming skeleton row.
+            if let Ok(mut streams) = self.plan_draft_streams.lock() {
+                streams.retain(|_, stream| stream.tool_call_id != tool_call_id);
+            }
         }
 
         // Flush pending streaming before tool call so message/thinking

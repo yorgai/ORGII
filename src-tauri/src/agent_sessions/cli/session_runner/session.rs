@@ -49,7 +49,7 @@ fn cli_exec_mode_bridge(mode: Option<&str>) -> Option<&'static str> {
             "You are running inside ORGII PLAN mode. Plan mode is read-only unless the user explicitly approves Build later. ",
             "Do not implement, edit source files, run shell commands, or create the acceptance artifact.\n",
             "- If the user asks to draft, create, update, revise, or submit an approval plan, use an ORGII plan tool such as create_plan, EnterPlanMode/ExitPlanMode, or a plan-file workflow if available.\n",
-            "- If no plan tool is available for an explicit plan request, output exactly one concise markdown plan with a title and concrete Build steps; ORGII will canonicalize that markdown into the approval card.\n",
+            "- If no plan tool is available for an explicit plan request, write the plan as a markdown file (e.g. `plan.md`) with a title and concrete Build steps; ORGII canonicalizes the written plan file into the approval card.\n",
             "- If the user asks an ordinary question, asks for clarification, or explicitly says not to modify the pending plan, answer the question directly and do not create, revise, or submit a plan.\n",
             "- After submitting/outputting an approval plan, stop.\n",
             "</orgii_cli_exec_mode_bridge>"
@@ -177,59 +177,6 @@ fn looks_like_buildable_plan_body(text: &str) -> bool {
         || lower.contains("exactly")
         || lower.contains("no other");
     has_action_marker && has_change_marker && has_verification_marker
-}
-
-fn looks_like_cli_plan_markdown(text: &str) -> bool {
-    looks_like_buildable_plan_body(text)
-}
-
-fn user_requested_cli_plan(user_input: &str) -> bool {
-    let lower = user_input.to_ascii_lowercase();
-    let has_plan_word = lower.contains("plan")
-        || lower.contains("approval")
-        || lower.contains("build button")
-        || lower.contains("build phase")
-        || lower.contains("实施计划")
-        || lower.contains("执行计划")
-        || lower.contains("计划");
-    if !has_plan_word {
-        return false;
-    }
-    let has_plan_action = lower.contains("draft")
-        || lower.contains("create")
-        || lower.contains("make")
-        || lower.contains("submit")
-        || lower.contains("update")
-        || lower.contains("revise")
-        || lower.contains("replace")
-        || lower.contains("generate")
-        || lower.contains("write")
-        || lower.contains("准备")
-        || lower.contains("创建")
-        || lower.contains("生成")
-        || lower.contains("更新")
-        || lower.contains("修改");
-    let negates_plan_change = lower.contains("do not create")
-        || lower.contains("do not revise")
-        || lower.contains("do not submit")
-        || lower.contains("do not modify the pending plan")
-        || lower.contains("don't create")
-        || lower.contains("don't revise")
-        || lower.contains("don't submit")
-        || lower.contains("不要创建")
-        || lower.contains("不要生成")
-        || lower.contains("不要修改")
-        || lower.contains("别创建")
-        || lower.contains("别生成")
-        || lower.contains("别修改");
-    has_plan_action && !negates_plan_change
-}
-
-fn is_assistant_text_chunk(chunk: &ActivityChunk) -> bool {
-    matches!(
-        chunk.action_type.as_str(),
-        "assistant" | "assistant_delta" | "message" | "message_delta"
-    )
 }
 
 fn create_plan_content_from_chunk(chunk: &ActivityChunk) -> Option<String> {
@@ -1915,8 +1862,8 @@ pub async fn run_session(
             let mut cli_plan_active = mode == Some("plan");
             let mut cli_plan_registered_this_turn = false;
             let mut cli_plan_approval_gate_triggered = false;
+            let mut cli_plan_gate_announced = false;
             let mut cli_plan_drain_timed_out = false;
-            let cli_plan_registration_allowed = user_requested_cli_plan(&user_input);
 
             let read_result = tokio::time::timeout(session_timeout, async {
                 use tokio::io::AsyncBufReadExt;
@@ -1988,17 +1935,16 @@ pub async fn run_session(
                                 if is_successful_mode_tool(&chunk, "enter_plan_mode") {
                                     cli_plan_active = true;
                                 }
-                                if cli_plan_active
-                                    && cli_plan_registration_allowed
-                                    && !cli_plan_registered_this_turn
-                                {
-                                    let synthetic_plan_text = if is_assistant_text_chunk(&chunk) {
-                                        chunk_text(&chunk)
-                                            .filter(|text| looks_like_cli_plan_markdown(text))
-                                    } else {
-                                        create_plan_content_from_chunk(&chunk)
-                                    };
-                                    if let Some(plan_text) = synthetic_plan_text {
+                                // Plan registration accepts only explicit signals:
+                                // a plan-shaped tool call (e.g. Cursor's plan tool),
+                                // a successful write to a plan markdown file, or
+                                // exit_plan_mode. The former assistant-text
+                                // heuristic (keyword-sniffing normal replies into
+                                // synthetic plan cards) produced false-positive
+                                // cards and was removed.
+                                if cli_plan_active && !cli_plan_registered_this_turn {
+                                    if let Some(plan_text) = create_plan_content_from_chunk(&chunk)
+                                    {
                                         match register_synthetic_cli_plan_approval(
                                             &session_id,
                                             &plan_text,
@@ -2027,7 +1973,6 @@ pub async fn run_session(
                                 {
                                     last_plan_candidate_path = Some(candidate_path);
                                     if cli_plan_active
-                                        && cli_plan_registration_allowed
                                         && !cli_plan_registered_this_turn
                                     {
                                         match register_cli_plan_approval(
@@ -2053,7 +1998,7 @@ pub async fn run_session(
                                     }
                                 }
                                 if is_successful_mode_tool(&chunk, "exit_plan_mode") {
-                                    if cli_plan_registration_allowed && !cli_plan_registered_this_turn {
+                                    if !cli_plan_registered_this_turn {
                                         if let Some(plan_path) = last_plan_candidate_path.as_ref() {
                                             match register_cli_plan_approval(
                                                 &session_id,
@@ -2085,10 +2030,36 @@ pub async fn run_session(
                                     cli_plan_active = false;
                                 }
                                 emit_chunk(&chunk, &session_id, &mut sequence);
-                                if cli_plan_approval_gate_triggered {
+                                if cli_plan_approval_gate_triggered && !cli_plan_gate_announced {
+                                    cli_plan_gate_announced = true;
                                     tracing::info!(
                                         "[CodeSession] CLI plan approval gate reached for {}; draining child output until natural exit",
                                         session_id
+                                    );
+                                    // Terminal-at-sentinel: the plan card is the only thing
+                                    // awaiting the user now. Unlock the composer immediately
+                                    // instead of holding Stop for up to the 45s drain window
+                                    // while the child process winds down. The final
+                                    // status_changed after child exit is idempotent.
+                                    flush_and_broadcast(&session_id);
+                                    if let Err(err) = persistence::update_status(
+                                        &session_id,
+                                        SessionStatus::Completed,
+                                    ) {
+                                        tracing::warn!(
+                                            "[CodeSession] Failed to persist plan-gate completed status for {}: {}",
+                                            session_id,
+                                            err
+                                        );
+                                    }
+                                    websocket_handler::broadcast(
+                                        serde_json::json!({
+                                            "type": "code_session.status_changed",
+                                            "session_id": session_id,
+                                            "status": SessionStatus::Completed.as_ref(),
+                                            "plan_gate": true,
+                                        })
+                                        .to_string(),
                                     );
                                 }
                             }
@@ -2602,35 +2573,21 @@ mod tests {
         assert!(bridge.contains("draft, create, update, revise, or submit an approval plan"));
         assert!(bridge.contains("answer the question directly"));
         assert!(bridge.contains("do not create, revise, or submit a plan"));
-        assert!(bridge.contains("canonicalize that markdown into the approval card"));
-    }
-
-    #[test]
-    fn cli_plan_text_fallback_requires_user_plan_intent() {
-        assert!(user_requested_cli_plan(
-            "Draft a short implementation plan with a Build button."
-        ));
-        assert!(user_requested_cli_plan(
-            "Revise the existing pending approval plan to create latest.md."
-        ));
-        assert!(!user_requested_cli_plan(
-            "Answer this ordinary side question: what is the exact marker? Do not create, revise, or submit an approval plan."
-        ));
-        assert!(!user_requested_cli_plan(
-            "Before building, reply with the exact marker. Do not modify the pending plan."
-        ));
+        assert!(bridge.contains("canonicalizes the written plan file into the approval card"));
     }
 
     #[test]
     fn cli_plan_markdown_detection_accepts_buildable_plan_text_only() {
-        assert!(looks_like_cli_plan_markdown(
+        assert!(looks_like_buildable_plan_body(
             "### Build Approval Plan\n\nChange: Create `artifact.md`.\n\nScope: one low-risk filesystem change.\n\nVerification: confirm the file exists and content matches."
         ));
-        assert!(looks_like_cli_plan_markdown(
+        assert!(looks_like_buildable_plan_body(
             "# Create Acceptance Artifact\n\n1. Create `artifact.md` with exactly `ORGII_MARKER`.\n2. Make no other filesystem changes.\n3. Verify the new file contains the required content exactly."
         ));
-        assert!(!looks_like_cli_plan_markdown("I will submit a plan soon."));
-        assert!(!looks_like_cli_plan_markdown(
+        assert!(!looks_like_buildable_plan_body(
+            "I will submit a plan soon."
+        ));
+        assert!(!looks_like_buildable_plan_body(
             "Here is a general explanation without any build or verification details."
         ));
     }
@@ -2669,7 +2626,6 @@ mod tests {
         chunk.result = serde_json::json!({
             "content": "Entered plan mode. You should now focus on exploring the codebase and designing an implementation approach."
         });
-        assert!(!is_assistant_text_chunk(&chunk));
         assert!(create_plan_content_from_chunk(&chunk).is_none());
     }
 

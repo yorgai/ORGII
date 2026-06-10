@@ -292,6 +292,30 @@ pub(crate) async fn send_message_impl(
         }
     }
 
+    // Chokepoint A: a user-initiated Build-mode turn while a plan is still
+    // pending means the user bypassed the Build button ("just do it" typed
+    // into the composer). Resolve the pending plan as Abandoned so the DB
+    // row, transcript card, and FE pin all converge before the turn runs.
+    //
+    // The plan-approval Build turn cannot trip this: `agent_plan_approval_response`
+    // awaits `resolve_pending(Approved)` BEFORE re-entering `send_message_impl`,
+    // so by the time the synthetic message arrives nothing is pending.
+    // Resume/wake turns (`is_resume` or empty content) are excluded — they are
+    // not a user decision about the plan.
+    if matches!(agent_mode, crate::session::AgentExecMode::Build)
+        && !is_resume
+        && !content.trim().is_empty()
+    {
+        if let Some(ref manager) = session_handle.plan_approval_manager {
+            crate::interaction::plan_approval::resolve_pending(
+                &session_id,
+                crate::interaction::plan_approval::PlanResolution::Abandoned,
+                Some(manager),
+            )
+            .await;
+        }
+    }
+
     let execute: crate::session::scheduler::ExecuteFn = Box::new(move || {
         let sid = sid_for_closure;
         let content = content_for_closure;

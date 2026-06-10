@@ -257,7 +257,7 @@ export async function dispatchAgentEvent(
       handlePlanReadyForApproval(event, eventSessionId, ctx);
       break;
     case "agent:plan_approval_archived":
-      handlePlanApprovalArchived(event, eventSessionId);
+      handlePlanApprovalArchived(event, eventSessionId, ctx);
       break;
     case "agent:exit_plan_mode":
       handleExitPlanMode(event, eventSessionId, ctx);

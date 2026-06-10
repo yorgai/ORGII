@@ -179,6 +179,43 @@ impl PlanApprovalStore {
         )?;
         Ok(())
     }
+
+    /// Full-table scan used by the startup orphan GC. Returns every pending
+    /// row across all sessions so the GC can validate plan-file existence,
+    /// session existence, and exec mode in one pass.
+    pub fn list_all() -> Result<Vec<PendingPlanRow>, StoreError> {
+        let conn = get_connection()?;
+        let mut stmt = conn.prepare(
+            "SELECT session_id, tool_call_id, plan_id, plan_revision_id, origin_tool_call_id,
+                    plan_path, plan_title, plan_content, created_at
+             FROM pending_plan_approvals",
+        )?;
+        let rows = stmt
+            .query_map([], |r| {
+                let loaded_session_id: String = r.get(0)?;
+                let tool_call_id: Option<String> = r.get(1)?;
+                let plan_path: String = r.get(5)?;
+                let fallback_plan_id = fallback_plan_id(&loaded_session_id, &plan_path);
+                let plan_id = r.get::<_, Option<String>>(2)?.unwrap_or(fallback_plan_id);
+                let plan_revision_id = r
+                    .get::<_, Option<String>>(3)?
+                    .or_else(|| tool_call_id.clone())
+                    .unwrap_or_else(|| plan_id.clone());
+                Ok(PendingPlanRow {
+                    session_id: loaded_session_id,
+                    tool_call_id,
+                    plan_id,
+                    plan_revision_id,
+                    origin_tool_call_id: r.get(4)?,
+                    plan_path,
+                    plan_title: r.get(6)?,
+                    plan_content: r.get(7)?,
+                    created_at_ms: r.get(8)?,
+                })
+            })?
+            .collect::<SqliteResult<Vec<_>>>()?;
+        Ok(rows)
+    }
 }
 
 #[cfg(test)]
