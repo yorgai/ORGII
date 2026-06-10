@@ -266,5 +266,12 @@ export function buildImperativeApi(
     triggerSlashContext: () => {
       ctx.triggerSlashContext();
     },
+    consumeSlashQuery: () => {
+      const slashCommand = ctx.getSlashCommandState();
+      if (slashCommand.active) {
+        ctx.consumeSlashCommandQuery();
+        ctx.closeSlashCommand();
+      }
+    },
   };
 }
