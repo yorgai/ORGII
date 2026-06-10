@@ -95,3 +95,26 @@ export const isBrowserEvent = (event: SessionEvent): boolean => {
 export const isManageTodoEvent = (event: SessionEvent): boolean => {
   return getUiCanonical(event) === "manage_todo";
 };
+
+/**
+ * Terminal agent-error event (quota exhausted, rate limited, auth failure,
+ * stream retry budget exhausted, …).
+ *
+ * SINGLE SOURCE OF TRUTH for "is this event an error card". Matches the
+ * shape stamped by both producers:
+ * - Rust `lifecycle::build_session_error_event` (id `session-error-…`)
+ * - FE `makeErrorEvent` in sync/adapters/shared/eventFactories.ts
+ *
+ * Mirrors Claude Code's `isApiErrorMessage` contract: every render,
+ * filter, and collapse path must treat these as always-visible — a
+ * failed turn whose error card is dropped renders as blank space
+ * (the 2026-06-10 quota-error bug). Consumers: ActivityRouter (renders
+ * AgentErrorChatItem), useChatGroups (collapse survivor set).
+ */
+export const isAgentErrorEvent = (event: SessionEvent): boolean => {
+  return (
+    event.functionName === "system" &&
+    event.displayStatus === "failed" &&
+    event.displayVariant === "message"
+  );
+};

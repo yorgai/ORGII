@@ -24,6 +24,7 @@ import {
 import AgentChatItemDefault from "../ChatItems/AgentChatItemDefault";
 import AgentErrorChatItem from "../ChatItems/AgentErrorChatItem";
 import "./ActivityRouter.scss";
+import { isAgentErrorEvent } from "./chatItemPipeline/classifiers";
 import UserMessageContent from "./components/UserMessageContent";
 
 export type ActivityStatus = "processed" | "pending" | "agent";
@@ -208,11 +209,7 @@ const ActivityChatItem: React.FC<ActivityChatItemProps> = memo(
       const functionName = event.functionName;
       const eventType = getRegistryEventType(event);
 
-      if (
-        functionName === "system" &&
-        event.displayStatus === "failed" &&
-        event.result?.observation
-      ) {
+      if (isAgentErrorEvent(event) && event.result?.observation) {
         return (
           <AgentErrorChatItem errorMessage={String(event.result.observation)} />
         );

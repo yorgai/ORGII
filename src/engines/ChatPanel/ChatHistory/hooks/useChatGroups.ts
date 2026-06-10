@@ -32,6 +32,7 @@
  */
 import { useMemo } from "react";
 
+import { isAgentErrorEvent } from "../chatItemPipeline/classifiers";
 import { isAssistantMessageEvent } from "../chatItemPipeline/dedup";
 import type { OptimizedChatItem } from "../chatItemPipeline/types";
 
@@ -107,6 +108,21 @@ function isCompletedAssistantMessage(item: OptimizedChatItem): boolean {
   if (!event) return false;
   if (event.displayStatus !== "completed") return false;
   return isAssistantMessageEvent(event);
+}
+
+/**
+ * Terminal error card predicate. Delegates to the shared
+ * `isAgentErrorEvent` chokepoint (chatItemPipeline/classifiers.ts) so the
+ * collapse layer and ActivityRouter can never drift on what counts as an
+ * error. These must survive the turn collapse — otherwise a failed turn
+ * collapses down to its last successful narration line and the error is
+ * invisible (the "quota error shows as blank space" bug, 2026-06-10).
+ */
+function isAgentErrorItem(item: OptimizedChatItem): boolean {
+  if (isUnloadedTurnItem(item)) return false;
+  const event = item.event;
+  if (!event) return false;
+  return isAgentErrorEvent(event);
 }
 
 interface ChatGroup {
@@ -355,6 +371,28 @@ export function useChatGroups(
           break;
         }
       }
+      // Terminal error cards (quota/rate-limit/stream-exhausted) must stay
+      // visible in the collapsed view — they are the turn's actual outcome.
+      // Keep every error item at/after the kept reply (or all of them when
+      // the turn produced no completed reply at all).
+      const errorIdxs: number[] = [];
+      for (let i = Math.max(keepIdx + 1, 0); i < group.items.length; i++) {
+        if (isAgentErrorItem(group.items[i])) {
+          errorIdxs.push(i);
+        }
+      }
+      if (keepIdx === -1 && errorIdxs.length > 0) {
+        const keptIdxSet = new Set(errorIdxs);
+        const kept = errorIdxs.map((idx) => group.items[idx]);
+        survivingPerGroup[gi] = kept;
+        groupCounts[gi] = kept.length;
+        const firstKeptFlatIdx = runningFlatIdx;
+        droppedItemTargetByGroup[gi] = group.items.map((_, idx) =>
+          keptIdxSet.has(idx) ? null : firstKeptFlatIdx
+        );
+        runningFlatIdx += kept.length;
+        continue;
+      }
       if (keepIdx === -1) {
         const structuralSourceIndex = group.items.findIndex(
           (item) => !isUnloadedTurnItem(item)
@@ -381,17 +419,20 @@ export function useChatGroups(
         continue;
       }
 
-      const kept = [group.items[keepIdx]];
+      // Keep the final reply plus any terminal error cards after it.
+      const keptIdxList = [keepIdx, ...errorIdxs];
+      const keptIdxSet = new Set(keptIdxList);
+      const kept = keptIdxList.map((idx) => group.items[idx]);
       survivingPerGroup[gi] = kept;
-      groupCounts[gi] = 1;
-      // Dropped items point at the surviving kept item's *new* flat index.
-      // Since `runningFlatIdx` is the flat index of the kept item now,
+      groupCounts[gi] = kept.length;
+      // Dropped items point at the surviving kept reply's *new* flat index.
+      // Since `runningFlatIdx` is the flat index of the kept reply now,
       // every dropped index in this group maps to it.
       const keptFlatIdx = runningFlatIdx;
       droppedItemTargetByGroup[gi] = group.items.map((_, idx) =>
-        idx === keepIdx ? null : keptFlatIdx
+        keptIdxSet.has(idx) ? null : keptFlatIdx
       );
-      runningFlatIdx += 1;
+      runningFlatIdx += kept.length;
     }
 
     const flatItems: OptimizedChatItem[] = [];

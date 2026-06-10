@@ -1,0 +1,212 @@
+/**
+ * useChatGroups — turn-collapse survivor tests.
+ *
+ * Focus: the structural collapse transform must keep terminal error cards
+ * (quota exhausted / rate limited / stream retry budget exhausted) visible.
+ * Regression coverage for the "quota error renders as blank space" bug
+ * (2026-06-10): a collapsed turn whose tail was tool calls + error event
+ * previously dropped the error and survived as a structural-only row.
+ *
+ * Runs in the node environment by mocking React's useMemo as a
+ * pass-through (same pattern as useWebviewCommands.test.ts — the host
+ * project doesn't ship @testing-library/react).
+ */
+import { describe, expect, it, vi } from "vitest";
+
+import type { SessionEvent } from "@src/engines/SessionCore/core/types";
+
+import type { OptimizedChatItem } from "../../chatItemPipeline/types";
+import { useChatGroups } from "../useChatGroups";
+
+vi.mock("react", () => ({
+  useMemo: <Value>(factory: () => Value) => factory(),
+}));
+
+let counter = 0;
+
+function makeEvent(overrides: Partial<SessionEvent>): SessionEvent {
+  counter++;
+  return {
+    id: `event-${counter}`,
+    chunk_id: `event-${counter}`,
+    sessionId: "session-test",
+    createdAt: `2026-06-10T10:00:${String(counter).padStart(2, "0")}Z`,
+    functionName: "read_file",
+    uiCanonical: "",
+    actionType: "tool_call",
+    args: {},
+    result: {},
+    source: "assistant",
+    displayText: "",
+    displayStatus: "completed",
+    displayVariant: "tool_call",
+    activityStatus: "agent",
+    ...overrides,
+  } as SessionEvent;
+}
+
+function item(event: SessionEvent): OptimizedChatItem {
+  return { chunk_id: event.id, type: "activity", event };
+}
+
+function userItem(text: string): OptimizedChatItem {
+  return item(
+    makeEvent({
+      functionName: "user_message",
+      actionType: "raw",
+      source: "user",
+      displayText: text,
+      displayVariant: "message",
+    })
+  );
+}
+
+function toolItem(): OptimizedChatItem {
+  return item(
+    makeEvent({
+      functionName: "run_shell",
+      actionType: "tool_call",
+      displayText: "run_shell",
+    })
+  );
+}
+
+function assistantItem(text: string): OptimizedChatItem {
+  return item(
+    makeEvent({
+      functionName: "assistant_message",
+      actionType: "assistant",
+      displayText: text,
+      displayVariant: "message",
+      result: { content: text },
+    })
+  );
+}
+
+/** Shape stamped by Rust build_session_error_event / FE makeErrorEvent. */
+function errorItem(message: string): OptimizedChatItem {
+  return item(
+    makeEvent({
+      functionName: "system",
+      actionType: "assistant",
+      displayText: `Error: ${message}`,
+      displayStatus: "failed",
+      displayVariant: "message",
+      result: { observation: `Error: ${message}` },
+    })
+  );
+}
+
+function flatTexts(items: OptimizedChatItem[]): string[] {
+  return items.map((entry) => entry.event?.displayText ?? "");
+}
+
+describe("useChatGroups collapse — terminal error survival", () => {
+  it("keeps the error card when a collapsed turn has no completed assistant reply", () => {
+    const history = [
+      userItem("first turn"),
+      toolItem(),
+      toolItem(),
+      errorItem("rate limit exceeded"),
+      // Second turn makes turn 1 a non-tail group → collapsed by default.
+      userItem("second turn"),
+      assistantItem("second reply"),
+    ];
+
+    const result = useChatGroups(history, { collapseOverrides: new Map() });
+
+    const texts = flatTexts(result.flatItems);
+    expect(texts).toContain("Error: rate limit exceeded");
+    // Tool calls are dropped by the collapse.
+    expect(texts.filter((text) => text === "run_shell")).toHaveLength(0);
+    // No structural-only placeholder for turn 1 — the error IS the survivor.
+    expect(result.flatItems.some((entry) => entry.structuralOnly)).toBe(false);
+  });
+
+  it("keeps both the final reply and the trailing error in a collapsed turn", () => {
+    const history = [
+      userItem("first turn"),
+      assistantItem("found the bug"),
+      toolItem(),
+      errorItem("credit balance too low"),
+      userItem("second turn"),
+      assistantItem("second reply"),
+    ];
+
+    const result = useChatGroups(history, { collapseOverrides: new Map() });
+
+    const texts = flatTexts(result.flatItems);
+    expect(texts).toContain("found the bug");
+    expect(texts).toContain("Error: credit balance too low");
+    expect(result.groupCounts[0]).toBe(2);
+  });
+
+  it("does not resurrect errors that precede the final reply", () => {
+    const history = [
+      userItem("first turn"),
+      errorItem("transient blip"),
+      assistantItem("recovered and finished"),
+      userItem("second turn"),
+      assistantItem("second reply"),
+    ];
+
+    const result = useChatGroups(history, { collapseOverrides: new Map() });
+
+    const texts = flatTexts(result.flatItems);
+    // The turn recovered: the pre-reply error stays collapsed away.
+    expect(texts).not.toContain("Error: transient blip");
+    expect(texts).toContain("recovered and finished");
+    expect(result.groupCounts[0]).toBe(1);
+  });
+
+  it("collapses to the last reply only when the turn has no errors", () => {
+    const history = [
+      userItem("first turn"),
+      toolItem(),
+      assistantItem("all done"),
+      userItem("second turn"),
+      assistantItem("second reply"),
+    ];
+
+    const result = useChatGroups(history, { collapseOverrides: new Map() });
+
+    expect(result.groupCounts[0]).toBe(1);
+    expect(flatTexts(result.flatItems)).toContain("all done");
+  });
+
+  it("maps dropped items to the surviving error's flat index", () => {
+    const history = [
+      userItem("first turn"), // orig 0 (header)
+      toolItem(), // orig 1 (dropped)
+      errorItem("quota gone"), // orig 2 (survivor, flat 0)
+      userItem("second turn"), // orig 3 (header)
+      assistantItem("second reply"), // orig 4 (flat 1)
+    ];
+
+    const result = useChatGroups(history, { collapseOverrides: new Map() });
+
+    expect(result.flatItems[0]?.event?.displayText).toBe("Error: quota gone");
+    expect(result.originalToFlatIndex.get(1)).toBe(0);
+    expect(result.originalToFlatIndex.get(2)).toBe(0);
+    expect(result.totalFlatItems).toBe(2);
+  });
+
+  it("keeps errors visible in expanded (non-collapsed) turns untouched", () => {
+    const history = [
+      userItem("first turn"),
+      toolItem(),
+      errorItem("rate limit exceeded"),
+      userItem("second turn"),
+      assistantItem("second reply"),
+    ];
+
+    const firstTurnId = history[0].event!.id;
+    const result = useChatGroups(history, {
+      collapseOverrides: new Map([[firstTurnId, false]]),
+    });
+
+    const texts = flatTexts(result.flatItems);
+    expect(texts).toContain("Error: rate limit exceeded");
+    expect(texts.filter((text) => text === "run_shell")).toHaveLength(1);
+  });
+});
