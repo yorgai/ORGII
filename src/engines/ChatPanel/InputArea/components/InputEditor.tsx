@@ -175,10 +175,10 @@ const InputEditor: React.FC<InputEditorProps> = memo(
           className={
             compact
               ? "chat-input-editor chat-input-compact h-full max-h-9 min-h-0"
-              : "chat-input-editor max-h-[200px] min-h-[60px] overflow-y-auto"
+              : "chat-input-editor max-h-[140px] min-h-[60px] overflow-y-auto"
           }
           minHeight={compact ? 0 : 60}
-          maxHeight={compact ? 36 : 200}
+          maxHeight={compact ? 36 : 140}
           overflowY={compact ? "visible" : undefined}
           onKeyDownForDropdown={handleKeyDownForDropdown}
           onSlashCommand={onSlashCommand}

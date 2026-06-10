@@ -533,10 +533,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           autoFocus={autoFocus}
           className="session-editor flex-1 cursor-text overflow-y-auto rounded-md text-[14px] text-text-1"
           minHeight={editorMinHeight ?? (isChatPanel ? 60 : 100)}
-          maxHeight={
-            editorMaxHeight ??
-            (isChatPanelFullScreen ? 140 : isChatPanel ? 200 : 300)
-          }
+          maxHeight={editorMaxHeight ?? (isChatPanel ? 140 : 300)}
           onKeyDownForDropdown={handleKeyDownForDropdown}
           onSlashCommand={onSlashCommand}
           onSlashCommandClose={onSlashCommandClose}

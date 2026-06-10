@@ -354,7 +354,7 @@ const UserChatItem = ({
                       ? { maxHeight: 72, overflow: "hidden" }
                       : isExpanded && displayNeedsTruncation
                         ? {
-                            maxHeight: "50vh",
+                            maxHeight: 240,
                             overflowY: "auto",
                             overflowX: "hidden",
                           }
