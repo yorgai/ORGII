@@ -5,7 +5,6 @@ import {
   Plus,
   Radar,
   SquarePen,
-  StickyNote,
 } from "lucide-react";
 import React from "react";
 
@@ -19,7 +18,6 @@ import {
   OPS_CONTROL_MENU_ITEM_ID,
   PROJECTS_NEW_PROJECT_MENU_ITEM_ID,
   PROJECTS_NEW_WORK_ITEM_MENU_ITEM_ID,
-  STICKY_NOTES_MENU_ITEM_ID,
   getDraftMenuItemId,
   getDraftPreviewText,
 } from "./sidebarConnectorUtils";
@@ -30,7 +28,6 @@ interface BuildPinnedMenuItemsParams {
   opsControlLabel: string;
   opsControlRoutePath: string;
   opsControlShortcut: string;
-  stickyNotesLabel: string;
 }
 
 interface BuildProjectsPinnedMenuItemsParams {
@@ -51,7 +48,6 @@ export function buildPinnedMenuItems({
   opsControlLabel,
   opsControlRoutePath,
   opsControlShortcut,
-  stickyNotesLabel,
 }: BuildPinnedMenuItemsParams): NavigationMenuItem[] {
   return [
     {
@@ -61,13 +57,6 @@ export function buildPinnedMenuItems({
       icon: Plus,
       iconName: "plus",
       shortcut: newSessionShortcut,
-    },
-    {
-      id: STICKY_NOTES_MENU_ITEM_ID,
-      key: STICKY_NOTES_MENU_ITEM_ID,
-      label: stickyNotesLabel,
-      icon: StickyNote,
-      iconName: "sticky-note",
     },
     {
       id: OPS_CONTROL_MENU_ITEM_ID,

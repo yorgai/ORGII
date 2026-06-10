@@ -62,7 +62,6 @@ interface ChatPanelHeaderProps {
   currentSessionId: string | null;
   eventsLength: number;
   exploreAgentSearchEnabled: boolean;
-  handleAddStickyNotesSection: () => void;
   handleChatFocusToggle: () => void;
   handleCopyEventJson: () => void;
   handleCreateTargetChange: (
@@ -104,7 +103,6 @@ interface ChatPanelHeaderProps {
   showProjectAgentCreator: boolean;
   showProjectAgentSwitchInHeader: boolean;
   showSessionContent: boolean;
-  showStickyNotesContent: boolean;
   showWorkItemAgentCreator: boolean;
   showWorkItemAgentSwitchInHeader: boolean;
   t: TFunction<["sessions", "common", "projects", "navigation"]>;
@@ -122,7 +120,6 @@ export function ChatPanelHeader({
   currentSessionId,
   eventsLength,
   exploreAgentSearchEnabled,
-  handleAddStickyNotesSection,
   handleChatFocusToggle,
   handleCopyEventJson,
   handleCreateTargetChange,
@@ -162,7 +159,6 @@ export function ChatPanelHeader({
   showProjectAgentCreator,
   showProjectAgentSwitchInHeader,
   showSessionContent,
-  showStickyNotesContent,
   showWorkItemAgentCreator,
   showWorkItemAgentSwitchInHeader,
   t,
@@ -270,36 +266,6 @@ export function ChatPanelHeader({
               icon={
                 <MoreHorizontal
                   size={CHAT_PANEL_HEADER_ICON_SIZE}
-                  strokeWidth={2}
-                />
-              }
-            />
-          </span>
-        </Tooltip>
-      )}
-      {showStickyNotesContent && (
-        <Tooltip
-          content={
-            <KeyboardShortcutTooltipContent
-              label={t("navigation:stickyNotes.addSection")}
-            />
-          }
-          position="bottom-end"
-          mouseEnterDelay={200}
-          framedPanel
-        >
-          <span className="inline-flex">
-            <Button
-              htmlType="button"
-              variant="tertiary"
-              size="small"
-              iconOnly
-              onClick={handleAddStickyNotesSection}
-              aria-label={t("navigation:stickyNotes.addSection")}
-              data-testid="chat-panel-sticky-notes-add-section"
-              icon={
-                <Plus
-                  size={CHAT_PANEL_HEADER_PROMINENT_ICON_SIZE}
                   strokeWidth={2}
                 />
               }
@@ -536,14 +502,13 @@ export function ChatPanelHeader({
         showSessionContent ||
         selectedWorkItemVisible ||
         selectedProjectVisible ||
-        showStickyNotesContent ||
         headerTitleContent ? (
         <>
           <div
             className="flex h-9 min-w-0 shrink items-center"
             style={CHAT_PANEL_HEADER_NO_DRAG_STYLE}
           >
-            {showBenchmarkSessionGroupContent || showStickyNotesContent ? (
+            {showBenchmarkSessionGroupContent ? (
               <ChatPanelHeaderTitlePill>{headerTitle}</ChatPanelHeaderTitlePill>
             ) : headerTitleContent ? (
               <span

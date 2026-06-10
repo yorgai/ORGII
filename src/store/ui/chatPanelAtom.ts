@@ -310,9 +310,9 @@ chatPanelWorkspaceDashboardOpenAtom.debugLabel =
 /**
  * Whether the chat-panel slot is rendering the GitHub repo search /
  * "Explore" view. Mutually exclusive with the workspace dashboard,
- * sticky notes, project, work item, and session surfaces at the render
- * layer (precedence enforced in `ChatPanel/index.tsx`). Entry points
- * that open Explore must clear those sibling atoms.
+ * project, work item, and session surfaces at the render layer
+ * (precedence enforced in `ChatPanel/index.tsx`). Entry points that
+ * open Explore must clear those sibling atoms.
  */
 export const chatPanelExploreOpenAtom = atom<boolean>(false);
 chatPanelExploreOpenAtom.debugLabel = "chatPanelExploreOpenAtom";
@@ -345,15 +345,6 @@ export const chatPanelWorkspaceOverviewTabAtom = atom<WorkspaceOverviewTab>(
 chatPanelWorkspaceOverviewTabAtom.debugLabel =
   "chatPanelWorkspaceOverviewTabAtom";
 
-/**
- * Whether the chat-panel slot is rendering the full-page Sticky Notes
- * board. Mutually exclusive with WorkItem/Project at the render layer
- * (precedence enforced in ChatPanel/index.tsx) — entry points must
- * clear sibling atoms when flipping this on.
- */
-export const chatPanelStickyNotesOpenAtom = atom<boolean>(false);
-chatPanelStickyNotesOpenAtom.debugLabel = "chatPanelStickyNotesOpenAtom";
-
 export const CHAT_PANEL_SURFACE_KIND = {
   SESSION: "session",
   BENCHMARK_SESSION_GROUP: "benchmarkSessionGroup",
@@ -364,7 +355,6 @@ export const CHAT_PANEL_SURFACE_KIND = {
   WORKSPACE_DASHBOARD: "workspaceDashboard",
   WORKSPACE_EXPLORE: "workspaceExplore",
   WORKSPACE_OVERVIEW: "workspaceOverview",
-  STICKY_NOTES: "stickyNotes",
 } as const;
 
 export type ChatPanelSurfaceKind =
@@ -389,8 +379,7 @@ export type ChatPanelSurfaceState =
       kind: typeof CHAT_PANEL_SURFACE_KIND.WORKSPACE_OVERVIEW;
       workspace: ChatPanelSelectedWorkspace;
       tab: WorkspaceOverviewTab;
-    }
-  | { kind: typeof CHAT_PANEL_SURFACE_KIND.STICKY_NOTES };
+    };
 
 export type ChatPanelNavigateCommand =
   | { kind: typeof CHAT_PANEL_SURFACE_KIND.SESSION }
@@ -417,8 +406,7 @@ export type ChatPanelNavigateCommand =
       kind: typeof CHAT_PANEL_SURFACE_KIND.WORKSPACE_OVERVIEW;
       workspace: ChatPanelSelectedWorkspace;
       tab?: WorkspaceOverviewTab;
-    }
-  | { kind: typeof CHAT_PANEL_SURFACE_KIND.STICKY_NOTES };
+    };
 
 type SetAtom = <Value, Args extends unknown[], Result>(
   atomToSet: WritableAtom<Value, Args, Result>,
@@ -431,7 +419,6 @@ function resetChatPanelSurfaceState(set: SetAtom): void {
   set(chatPanelSelectedWorkspaceAtom, null);
   set(chatPanelWorkspaceDashboardOpenAtom, false);
   set(chatPanelExploreOpenAtom, false);
-  set(chatPanelStickyNotesOpenAtom, false);
   set(chatPanelCreateProjectContextAtom, null);
   set(chatPanelCreateTargetAtom, DEFAULT_CHAT_PANEL_CREATE_TARGET);
   set(chatPanelWorkspaceOverviewTabAtom, WORKSPACE_OVERVIEW_TAB.OVERVIEW);
@@ -492,10 +479,6 @@ export const chatPanelNavigateAtom = atom(
           command.tab ?? WORKSPACE_OVERVIEW_TAB.OVERVIEW
         );
         return;
-      case CHAT_PANEL_SURFACE_KIND.STICKY_NOTES:
-        set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.NON_SESSION);
-        set(chatPanelStickyNotesOpenAtom, true);
-        return;
     }
   }
 );
@@ -535,10 +518,6 @@ export const activeChatPanelSurfaceAtom = atom<ChatPanelSurfaceState>((get) => {
       workspace: selectedWorkspace,
       tab: get(chatPanelWorkspaceOverviewTabAtom),
     };
-  }
-
-  if (get(chatPanelStickyNotesOpenAtom)) {
-    return { kind: CHAT_PANEL_SURFACE_KIND.STICKY_NOTES };
   }
 
   const createTarget = get(chatPanelCreateTargetAtom);

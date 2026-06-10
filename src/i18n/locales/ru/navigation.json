@@ -362,25 +362,5 @@
     "details": "Подробности",
     "frontend": "Frontend",
     "backend": "Backend"
-  },
-  "stickyNotes": {
-    "sidebarButton": "Стикеры",
-    "boardTitle": "Стикеры",
-    "addSection": "Добавить раздел",
-    "addNoteToSection": "Добавить заметку",
-    "sectionTitlePlaceholder": "Название раздела",
-    "noteTitlePlaceholder": "Заголовок",
-    "noteBodyPlaceholder": "Напишите что-нибудь… (поддерживается Markdown)",
-    "deleteNote": "Удалить заметку",
-    "deleteSection": "Удалить раздел",
-    "deleteSectionConfirm": "Удалить этот раздел и все его заметки?",
-    "color": "Цвет",
-    "untitledSection": "Новый раздел",
-    "untitledNote": "Без названия",
-    "emptyBoard": "Пока нет разделов. Нажмите «+ Добавить раздел», чтобы начать.",
-    "emptySection": "В этом разделе пока нет заметок",
-    "dragSection": "Перетащите, чтобы изменить порядок раздела",
-    "expandSection": "Развернуть раздел",
-    "collapseSection": "Свернуть раздел"
   }
 }

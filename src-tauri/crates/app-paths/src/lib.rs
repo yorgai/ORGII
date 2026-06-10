@@ -414,16 +414,6 @@ pub fn sync_connections() -> PathBuf {
     orgii_root().join("sync_connections.json")
 }
 
-/// User sticky-notes store: `~/.orgii/sticky-notes.json`.
-///
-/// Sidebar sticky notes (notes grouped under user-defined sections) live in
-/// a single JSON document so users can hand-edit, back up, or sync the file
-/// independently of the rest of the app's state. Read/written exclusively by
-/// the `infrastructure::sticky_notes` Tauri commands.
-pub fn sticky_notes() -> PathBuf {
-    orgii_root().join("sticky-notes.json")
-}
-
 /// Global project sync connection token store: `~/.orgii/sync_connection_tokens.json`.
 pub fn sync_connection_tokens() -> PathBuf {
     orgii_root().join("sync_connection_tokens.json")

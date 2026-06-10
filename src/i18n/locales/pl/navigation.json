@@ -362,25 +362,5 @@
     "details": "Szczegóły",
     "frontend": "Frontend",
     "backend": "Backend"
-  },
-  "stickyNotes": {
-    "sidebarButton": "Karteczki",
-    "boardTitle": "Karteczki",
-    "addSection": "Dodaj sekcję",
-    "addNoteToSection": "Dodaj notatkę",
-    "sectionTitlePlaceholder": "Nazwa sekcji",
-    "noteTitlePlaceholder": "Tytuł",
-    "noteBodyPlaceholder": "Napisz coś… (obsługuje Markdown)",
-    "deleteNote": "Usuń notatkę",
-    "deleteSection": "Usuń sekcję",
-    "deleteSectionConfirm": "Usunąć tę sekcję wraz ze wszystkimi notatkami?",
-    "color": "Kolor",
-    "untitledSection": "Nowa sekcja",
-    "untitledNote": "Bez tytułu",
-    "emptyBoard": "Brak sekcji. Kliknij „Dodaj sekcję”, aby zacząć.",
-    "emptySection": "W tej sekcji nie ma jeszcze notatek",
-    "dragSection": "Przeciągnij, aby zmienić kolejność sekcji",
-    "expandSection": "Rozwiń sekcję",
-    "collapseSection": "Zwiń sekcję"
   }
 }

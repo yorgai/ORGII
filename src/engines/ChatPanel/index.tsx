@@ -27,7 +27,6 @@ import {
   sessionCreatorStateAtom,
   workstationActiveSessionIdAtom,
 } from "@src/store/session";
-import { addSectionAtom } from "@src/store/stickyNotes/stickyNotesAtom";
 import {
   CHAT_PANEL_SURFACE_KIND,
   chatPanelContentModeAtom,
@@ -40,7 +39,6 @@ import {
   chatPanelSelectedProjectAtom,
   chatPanelSelectedWorkItemAtom,
   chatPanelSelectedWorkspaceAtom,
-  chatPanelStickyNotesOpenAtom,
   chatPanelWorkspaceDashboardOpenAtom,
   chatTurnPaginationEnabledAtom,
   chatWidthAtom,
@@ -113,7 +111,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       chatPanelWorkspaceDashboardOpenAtom
     );
     const exploreOpen = useAtomValue(chatPanelExploreOpenAtom);
-    const stickyNotesOpen = useAtomValue(chatPanelStickyNotesOpenAtom);
     const createProjectContext = useAtomValue(
       chatPanelCreateProjectContextAtom
     );
@@ -176,7 +173,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     );
     const setSelectedWorkItem = useSetAtom(chatPanelSelectedWorkItemAtom);
     const setSelectedProject = useSetAtom(chatPanelSelectedProjectAtom);
-    const addStickyNotesSection = useSetAtom(addSectionAtom);
     const dispatchClearSession = useSetAtom(clearSessionAtom);
     const creatorState = useAtomValue(sessionCreatorStateAtom);
     const setCreatorState = useSetAtom(sessionCreatorStateAtom);
@@ -238,10 +234,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       setActiveSessionId,
       setWorkstationActiveSessionId,
     ]);
-
-    const handleAddStickyNotesSection = useCallback(() => {
-      addStickyNotesSection();
-    }, [addStickyNotesSection]);
 
     const eventCount = useAtomValue(eventCountAtom);
     const events = useAtomValue(eventsAtom);
@@ -314,7 +306,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       sidebarCollapsed,
       sessionCreatorAvailable: Boolean(SessionCreatorSlot),
       sessionSidebarVisible,
-      stickyNotesOpen,
       viewMode,
     });
 
@@ -428,8 +419,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       contentState.showBenchmarkSessionGroupContent ||
       contentState.showExploreContent ||
       contentState.showWorkspaceDashboardContent ||
-      contentState.showWorkspaceOverviewContent ||
-      contentState.showStickyNotesContent;
+      contentState.showWorkspaceOverviewContent;
 
     const headerSection = (
       <>
@@ -454,7 +444,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           currentSessionId={currentSessionId ?? null}
           eventsLength={eventCount}
           exploreAgentSearchEnabled={exploreAgentSearchEnabled}
-          handleAddStickyNotesSection={handleAddStickyNotesSection}
           handleChatFocusToggle={handleChatFocusToggle}
           handleCopyEventJson={handleCopyEventJson}
           handleCreateTargetChange={handleCreateTargetChange}
@@ -500,7 +489,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
             contentState.showProjectAgentSwitchInHeader
           }
           showSessionContent={contentState.showSessionContent}
-          showStickyNotesContent={contentState.showStickyNotesContent}
           showWorkItemAgentCreator={showWorkItemAgentCreator}
           showWorkItemAgentSwitchInHeader={
             contentState.showWorkItemAgentSwitchInHeader
@@ -534,7 +522,6 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         showPanelContent={contentState.showPanelContent}
         showProjectContent={contentState.showProjectContent}
         showSessionContent={contentState.showSessionContent}
-        showStickyNotesContent={contentState.showStickyNotesContent}
         showWorkItemContent={contentState.showWorkItemContent}
         showWorkspaceDashboardContent={
           contentState.showWorkspaceDashboardContent

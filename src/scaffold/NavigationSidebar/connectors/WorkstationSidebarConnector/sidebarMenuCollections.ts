@@ -32,7 +32,6 @@ interface UsePinnedMenuItemsParams {
   createProjectLabel: string;
   createWorkItemLabel: string;
   newSessionLabel: string;
-  stickyNotesLabel: string;
   t: TFunction<"navigation">;
 }
 
@@ -46,7 +45,6 @@ export function usePinnedMenuItems({
   createProjectLabel,
   createWorkItemLabel,
   newSessionLabel,
-  stickyNotesLabel,
   t,
 }: UsePinnedMenuItemsParams): UsePinnedMenuItemsResult {
   const sessionPinnedMenuItems = useMemo<NavigationMenuItem[]>(
@@ -57,9 +55,8 @@ export function usePinnedMenuItems({
         opsControlLabel: t("routes.opsControl"),
         opsControlRoutePath: ROUTES.workStation.opsControl.path,
         opsControlShortcut: getShortcutKeys("open_ops_control"),
-        stickyNotesLabel,
       }),
-    [newSessionLabel, stickyNotesLabel, t]
+    [newSessionLabel, t]
   );
   const projectsPinnedMenuItems = useMemo<NavigationMenuItem[]>(
     () =>

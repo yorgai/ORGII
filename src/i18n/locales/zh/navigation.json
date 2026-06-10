@@ -453,25 +453,5 @@
     "details": "详情",
     "frontend": "Frontend",
     "backend": "Backend"
-  },
-  "stickyNotes": {
-    "sidebarButton": "便签",
-    "boardTitle": "便签",
-    "addSection": "添加分组",
-    "addNoteToSection": "添加便签",
-    "sectionTitlePlaceholder": "分组名称",
-    "noteTitlePlaceholder": "标题",
-    "noteBodyPlaceholder": "写点什么……（支持 Markdown）",
-    "deleteNote": "删除便签",
-    "deleteSection": "删除分组",
-    "deleteSectionConfirm": "确定删除此分组及其中所有便签？",
-    "color": "颜色",
-    "untitledSection": "新分组",
-    "untitledNote": "无标题",
-    "emptyBoard": "暂无分组。点击「添加分组」开始使用。",
-    "emptySection": "此分组下暂无便签",
-    "dragSection": "拖动以重新排序分组",
-    "expandSection": "展开分组",
-    "collapseSection": "折叠分组"
   }
 }

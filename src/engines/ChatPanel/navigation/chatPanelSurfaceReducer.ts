@@ -23,7 +23,6 @@ export interface ChatPanelSurfaceSnapshot {
   selectedWorkspace: ChatPanelSelectedWorkspace | null;
   workspaceDashboardOpen: boolean;
   exploreOpen: boolean;
-  stickyNotesOpen: boolean;
   workspaceOverviewTab: WorkspaceOverviewTab;
 }
 
@@ -36,7 +35,6 @@ export const EMPTY_CHAT_PANEL_SURFACE_SNAPSHOT: ChatPanelSurfaceSnapshot = {
   selectedWorkspace: null,
   workspaceDashboardOpen: false,
   exploreOpen: false,
-  stickyNotesOpen: false,
   workspaceOverviewTab: WORKSPACE_OVERVIEW_TAB.OVERVIEW,
 };
 
@@ -96,11 +94,6 @@ export function reduceChatPanelSurfaceCommand(
         ...next,
         selectedWorkspace: command.workspace,
         workspaceOverviewTab: command.tab ?? WORKSPACE_OVERVIEW_TAB.OVERVIEW,
-      };
-    case CHAT_PANEL_SURFACE_KIND.STICKY_NOTES:
-      return {
-        ...next,
-        stickyNotesOpen: true,
       };
   }
 }

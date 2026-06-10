@@ -362,25 +362,5 @@
     "details": "세부 정보",
     "frontend": "Frontend",
     "backend": "Backend"
-  },
-  "stickyNotes": {
-    "sidebarButton": "스티커 메모",
-    "boardTitle": "스티커 메모",
-    "addSection": "섹션 추가",
-    "addNoteToSection": "메모 추가",
-    "sectionTitlePlaceholder": "섹션 이름",
-    "noteTitlePlaceholder": "제목",
-    "noteBodyPlaceholder": "무언가 작성하세요… (Markdown 지원)",
-    "deleteNote": "메모 삭제",
-    "deleteSection": "섹션 삭제",
-    "deleteSectionConfirm": "이 섹션과 모든 메모를 삭제하시겠습니까?",
-    "color": "색상",
-    "untitledSection": "새 섹션",
-    "untitledNote": "제목 없음",
-    "emptyBoard": "아직 섹션이 없습니다. + 섹션 추가를 클릭하여 시작하세요.",
-    "emptySection": "이 섹션에는 아직 메모가 없습니다",
-    "dragSection": "드래그하여 섹션 순서 변경",
-    "expandSection": "섹션 펼치기",
-    "collapseSection": "섹션 접기"
   }
 }

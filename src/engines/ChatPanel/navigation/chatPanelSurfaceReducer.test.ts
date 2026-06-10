@@ -39,7 +39,6 @@ describe("reduceChatPanelSurfaceCommand", () => {
     expect(snapshot.selectedWorkspace).toBeNull();
     expect(snapshot.selectedProject).toBeNull();
     expect(snapshot.selectedWorkItem).toBeNull();
-    expect(snapshot.stickyNotesOpen).toBe(false);
   });
 
   it("clears Explore and dashboard state when navigating to New Project", () => {
@@ -62,7 +61,6 @@ describe("reduceChatPanelSurfaceCommand", () => {
     expect(snapshot.createTarget).toBe(CHAT_PANEL_CREATE_TARGET.AGENT_SESSION);
     expect(snapshot.exploreOpen).toBe(false);
     expect(snapshot.workspaceDashboardOpen).toBe(false);
-    expect(snapshot.stickyNotesOpen).toBe(false);
     expect(snapshot.selectedWorkItem).toBeNull();
   });
 

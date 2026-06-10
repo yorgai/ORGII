@@ -9,7 +9,6 @@ import {
   type ChatPanelSelectedWorkspace,
 } from "@src/store/ui/chatPanelAtom";
 
-import { STICKY_NOTES_MENU_ITEM_ID } from "../sidebarConnectorUtils";
 import {
   getSelectedDraftMenuItemId,
   getSelectedMenuItemId,
@@ -31,7 +30,6 @@ interface ResolveSelectedMenuItemIdParams {
   chatPanelSelectedProject: ChatPanelSelectedProject | null;
   chatPanelSelectedWorkItem: ChatPanelSelectedWorkItem | null;
   chatPanelSelectedWorkspace: ChatPanelSelectedWorkspace | null;
-  chatPanelStickyNotesOpen: boolean;
   chatPanelWorkspaceDashboardOpen: boolean;
   chatPanelExploreOpen: boolean;
   opsControlRoutePath: string;
@@ -54,7 +52,6 @@ export function resolveSelectedMenuItemIds({
   chatPanelSelectedProject,
   chatPanelSelectedWorkItem,
   chatPanelSelectedWorkspace,
-  chatPanelStickyNotesOpen,
   chatPanelWorkspaceDashboardOpen,
   chatPanelExploreOpen,
   opsControlRoutePath,
@@ -74,11 +71,10 @@ export function resolveSelectedMenuItemIds({
     chatPanelContentMode === CHAT_PANEL_CONTENT_MODE.NON_SESSION ||
     Boolean(chatPanelSelectedWorkItem) ||
     Boolean(chatPanelSelectedProject);
-  const sessionSelectedMenuItemId = chatPanelStickyNotesOpen
-    ? STICKY_NOTES_MENU_ITEM_ID
-    : chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.PROJECT ||
-        chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM ||
-        isChatPanelProjectsContentSelected
+  const sessionSelectedMenuItemId =
+    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.PROJECT ||
+    chatPanelCreateTarget === CHAT_PANEL_CREATE_TARGET.WORK_ITEM ||
+    isChatPanelProjectsContentSelected
       ? ""
       : getSelectedMenuItemId({
           selectedPinnedMenuItemId,

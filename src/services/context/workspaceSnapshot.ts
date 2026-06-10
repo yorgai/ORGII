@@ -47,8 +47,7 @@ export type ChatPanelSurfaceKind =
   | "workItem"
   | "workspaceDashboard"
   | "workspaceExplore"
-  | "workspaceOverview"
-  | "stickyNotes";
+  | "workspaceOverview";
 
 export interface AppUiSnapshot {
   route?: {

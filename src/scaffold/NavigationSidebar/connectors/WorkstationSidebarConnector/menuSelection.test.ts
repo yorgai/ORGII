@@ -26,7 +26,6 @@ function resolveFoldersSelection(overrides: {
     chatPanelSelectedProject: null,
     chatPanelSelectedWorkItem: null,
     chatPanelSelectedWorkspace: overrides.chatPanelSelectedWorkspace ?? null,
-    chatPanelStickyNotesOpen: false,
     chatPanelWorkspaceDashboardOpen:
       overrides.chatPanelWorkspaceDashboardOpen ?? false,
     chatPanelExploreOpen: overrides.chatPanelExploreOpen ?? false,

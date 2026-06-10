@@ -384,25 +384,5 @@
     "details": "Details",
     "frontend": "Frontend",
     "backend": "Backend"
-  },
-  "stickyNotes": {
-    "sidebarButton": "Sticky Notes",
-    "boardTitle": "Sticky Notes",
-    "addSection": "Add section",
-    "addNoteToSection": "Add note",
-    "sectionTitlePlaceholder": "Section name",
-    "noteTitlePlaceholder": "Title",
-    "noteBodyPlaceholder": "Write something… (Markdown supported)",
-    "deleteNote": "Delete note",
-    "deleteSection": "Delete section",
-    "deleteSectionConfirm": "Delete this section and all its notes?",
-    "color": "Color",
-    "untitledSection": "New section",
-    "untitledNote": "Untitled",
-    "emptyBoard": "No sections yet. Click + Add Section to start.",
-    "emptySection": "No notes in this section yet",
-    "dragSection": "Drag to reorder section",
-    "expandSection": "Expand section",
-    "collapseSection": "Collapse section"
   }
 }

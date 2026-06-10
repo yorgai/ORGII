@@ -364,25 +364,5 @@
     "details": "Details",
     "frontend": "Frontend",
     "backend": "Backend"
-  },
-  "stickyNotes": {
-    "sidebarButton": "Haftnotizen",
-    "boardTitle": "Haftnotizen",
-    "addSection": "Abschnitt hinzufügen",
-    "addNoteToSection": "Notiz hinzufügen",
-    "sectionTitlePlaceholder": "Abschnittsname",
-    "noteTitlePlaceholder": "Titel",
-    "noteBodyPlaceholder": "Schreibe etwas… (Markdown unterstützt)",
-    "deleteNote": "Notiz löschen",
-    "deleteSection": "Abschnitt löschen",
-    "deleteSectionConfirm": "Diesen Abschnitt und alle seine Notizen löschen?",
-    "color": "Farbe",
-    "untitledSection": "Neuer Abschnitt",
-    "untitledNote": "Ohne Titel",
-    "emptyBoard": "Noch keine Abschnitte. Klicke auf „+ Abschnitt hinzufügen“, um zu beginnen.",
-    "emptySection": "In diesem Abschnitt gibt es noch keine Notizen",
-    "dragSection": "Ziehen, um den Abschnitt neu zu ordnen",
-    "expandSection": "Abschnitt ausklappen",
-    "collapseSection": "Abschnitt einklappen"
   }
 }

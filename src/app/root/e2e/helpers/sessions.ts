@@ -50,7 +50,6 @@ import {
   chatPanelCreateTargetAtom,
   chatPanelMaximizedAtom,
   chatPanelSelectedWorkItemAtom,
-  chatPanelStickyNotesOpenAtom,
   chatWidthAtom,
 } from "@src/store/ui/chatPanelAtom";
 import {
@@ -209,7 +208,6 @@ export function createSessionHelpers(store: E2EStore) {
       store.set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.SESSION);
       store.set(chatPanelCreateTargetAtom, DEFAULT_CHAT_PANEL_CREATE_TARGET);
       store.set(chatPanelSelectedWorkItemAtom, null);
-      store.set(chatPanelStickyNotesOpenAtom, false);
       store.set(chatPanelMaximizedAtom, true);
       store.set(chatWidthAtom, 560);
       store.set(sessionIdAtom, null);
@@ -362,7 +360,6 @@ export function createSessionHelpers(store: E2EStore) {
       store.set(chatPanelContentModeAtom, CHAT_PANEL_CONTENT_MODE.SESSION);
       store.set(chatPanelCreateTargetAtom, DEFAULT_CHAT_PANEL_CREATE_TARGET);
       store.set(chatPanelSelectedWorkItemAtom, null);
-      store.set(chatPanelStickyNotesOpenAtom, false);
       store.set(chatPanelMaximizedAtom, true);
       store.set(chatWidthAtom, 560);
       store.set(openSessionAtom, { sessionId, sessionName, repoPath });

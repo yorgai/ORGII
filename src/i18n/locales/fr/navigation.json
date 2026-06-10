@@ -364,25 +364,5 @@
     "details": "Détails",
     "frontend": "Frontend",
     "backend": "Backend"
-  },
-  "stickyNotes": {
-    "sidebarButton": "Notes autocollantes",
-    "boardTitle": "Notes autocollantes",
-    "addSection": "Ajouter une section",
-    "addNoteToSection": "Ajouter une note",
-    "sectionTitlePlaceholder": "Nom de la section",
-    "noteTitlePlaceholder": "Titre",
-    "noteBodyPlaceholder": "Écrivez quelque chose… (Markdown pris en charge)",
-    "deleteNote": "Supprimer la note",
-    "deleteSection": "Supprimer la section",
-    "deleteSectionConfirm": "Supprimer cette section et toutes ses notes ?",
-    "color": "Couleur",
-    "untitledSection": "Nouvelle section",
-    "untitledNote": "Sans titre",
-    "emptyBoard": "Aucune section. Cliquez sur « Ajouter une section » pour commencer.",
-    "emptySection": "Aucune note dans cette section",
-    "dragSection": "Glisser pour réorganiser la section",
-    "expandSection": "Développer la section",
-    "collapseSection": "Réduire la section"
   }
 }

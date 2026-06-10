@@ -44,7 +44,6 @@ import {
   chatPanelSelectedProjectAtom,
   chatPanelSelectedWorkItemAtom,
   chatPanelSelectedWorkspaceAtom,
-  chatPanelStickyNotesOpenAtom,
   chatPanelWorkspaceDashboardOpenAtom,
 } from "@src/store/ui/chatPanelAtom";
 import { type StationMode, stationModeAtom } from "@src/store/ui/simulatorAtom";
@@ -62,7 +61,6 @@ import {
 
 import { SidebarBottomBar } from "../../blocks";
 import NavigationSidebar from "../../variants/NavigationSidebar";
-import { STICKY_NOTES_MENU_ITEM_ID } from "../sidebarConnectorUtils";
 import {
   projectsSidebarGroupByAtom,
   sidebarGroupByAtom,
@@ -150,7 +148,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
     chatPanelWorkspaceDashboardOpenAtom
   );
   const chatPanelExploreOpen = useAtomValue(chatPanelExploreOpenAtom);
-  const chatPanelStickyNotesOpen = useAtomValue(chatPanelStickyNotesOpenAtom);
   const setChatPanelCreateTarget = useSetAtom(chatPanelCreateTargetAtom);
   const navigateChatPanel = useSetAtom(chatPanelNavigateAtom);
   const setStationChatVisible = useSetAtom(activeStationChatVisibleAtom);
@@ -229,7 +226,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const createProjectLabel = tProjects("projects.createProject");
   const createWorkItemLabel = tProjects("workItems.createWorkItem");
   const homeLabel = t("sidebar.tabs.build");
-  const stickyNotesLabel = t("stickyNotes.sidebarButton");
 
   const { menuItems, sessionMap, isLoadMoreId, getLoadMoreGroupId } =
     useSessionMenuItems({
@@ -271,7 +267,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
     createProjectLabel,
     createWorkItemLabel,
     newSessionLabel,
-    stickyNotesLabel,
     t,
   });
   const sessionSidebarMenuItems = useSessionSidebarMenuItems({
@@ -432,7 +427,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
       chatPanelSelectedProject,
       chatPanelSelectedWorkItem,
       chatPanelSelectedWorkspace,
-      chatPanelStickyNotesOpen,
       chatPanelWorkspaceDashboardOpen,
       chatPanelExploreOpen,
       opsControlRoutePath: ROUTES.workStation.opsControl.path,
@@ -459,15 +453,11 @@ export const WorkstationSidebarConnector: React.FC = () => {
     if (location.pathname !== targetRoute) navigate(targetRoute);
   }, [location.pathname, navigate, resetOpsControlStateForProjectsContent]);
 
-  const { handleGoToNewSession, handleOpenStickyNotes } =
-    useSessionEntryActions({
-      goToNewSession,
-      navigate,
-      navigateChatPanel,
-      pathname: location.pathname,
-      resetOpsControlStateForProjectsContent,
-      setChatPanelCreateTarget,
-    });
+  const { handleGoToNewSession } = useSessionEntryActions({
+    goToNewSession,
+    navigateChatPanel,
+    setChatPanelCreateTarget,
+  });
 
   const {
     handleDeleteSession,
@@ -550,17 +540,6 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const handleOpenSpotlight = useCallback(() => {
     setSpotlightOpen(true);
   }, [setSpotlightOpen]);
-  const workstationMenuItemClick = useCallback(
-    (key: string, item: NavigationMenuItem) => {
-      if (item.id === STICKY_NOTES_MENU_ITEM_ID) {
-        handleOpenStickyNotes();
-        return;
-      }
-      handleMenuItemClick(key, item);
-    },
-    [handleMenuItemClick, handleOpenStickyNotes]
-  );
-
   const renderSessionMenuItemWrapper =
     useRenderSessionMenuItemWrapper(sessionMap);
   const renderProjectsMenuItemWrapper = useRenderProjectsMenuItemWrapper({
@@ -573,7 +552,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
       ? handleProjectsMenuItemClick
       : activeSidebarKey === "folders"
         ? handleFoldersMenuItemClick
-        : workstationMenuItemClick;
+        : handleMenuItemClick;
 
   const handleFoldersMenuItemContextMenu = useCallback(
     (event: React.MouseEvent, _key: string, item: NavigationMenuItem) => {

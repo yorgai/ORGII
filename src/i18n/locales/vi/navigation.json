@@ -362,25 +362,5 @@
     "details": "Chi tiết",
     "frontend": "Frontend",
     "backend": "Backend"
-  },
-  "stickyNotes": {
-    "sidebarButton": "Ghi chú dán",
-    "boardTitle": "Ghi chú dán",
-    "addSection": "Thêm mục",
-    "addNoteToSection": "Thêm ghi chú",
-    "sectionTitlePlaceholder": "Tên mục",
-    "noteTitlePlaceholder": "Tiêu đề",
-    "noteBodyPlaceholder": "Viết gì đó… (hỗ trợ Markdown)",
-    "deleteNote": "Xóa ghi chú",
-    "deleteSection": "Xóa mục",
-    "deleteSectionConfirm": "Xóa mục này và tất cả ghi chú bên trong?",
-    "color": "Màu",
-    "untitledSection": "Mục mới",
-    "untitledNote": "Không có tiêu đề",
-    "emptyBoard": "Chưa có mục nào. Nhấn + Thêm mục để bắt đầu.",
-    "emptySection": "Mục này chưa có ghi chú nào",
-    "dragSection": "Kéo để sắp xếp lại mục",
-    "expandSection": "Mở rộng mục",
-    "collapseSection": "Thu gọn mục"
   }
 }

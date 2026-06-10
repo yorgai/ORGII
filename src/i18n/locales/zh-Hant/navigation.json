@@ -453,25 +453,5 @@
     "details": "詳情",
     "frontend": "Frontend",
     "backend": "Backend"
-  },
-  "stickyNotes": {
-    "sidebarButton": "便利貼",
-    "boardTitle": "便利貼",
-    "addSection": "新增分組",
-    "addNoteToSection": "新增便利貼",
-    "sectionTitlePlaceholder": "分組名稱",
-    "noteTitlePlaceholder": "標題",
-    "noteBodyPlaceholder": "寫點什麼……（支援 Markdown）",
-    "deleteNote": "刪除便利貼",
-    "deleteSection": "刪除分組",
-    "deleteSectionConfirm": "確定刪除此分組及其中所有便利貼？",
-    "color": "顏色",
-    "untitledSection": "新分組",
-    "untitledNote": "未命名",
-    "emptyBoard": "尚無分組。點擊「新增分組」開始使用。",
-    "emptySection": "此分組內尚無便利貼",
-    "dragSection": "拖曳以重新排序分組",
-    "expandSection": "展開分組",
-    "collapseSection": "收合分組"
   }
 }

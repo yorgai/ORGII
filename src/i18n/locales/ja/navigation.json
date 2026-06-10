@@ -362,25 +362,5 @@
     "details": "詳細",
     "frontend": "Frontend",
     "backend": "Backend"
-  },
-  "stickyNotes": {
-    "sidebarButton": "付箋",
-    "boardTitle": "付箋",
-    "addSection": "セクションを追加",
-    "addNoteToSection": "付箋を追加",
-    "sectionTitlePlaceholder": "セクション名",
-    "noteTitlePlaceholder": "タイトル",
-    "noteBodyPlaceholder": "何か書いてください…（Markdown 対応）",
-    "deleteNote": "付箋を削除",
-    "deleteSection": "セクションを削除",
-    "deleteSectionConfirm": "このセクションとすべての付箋を削除しますか？",
-    "color": "色",
-    "untitledSection": "新しいセクション",
-    "untitledNote": "無題",
-    "emptyBoard": "セクションがありません。「+ セクションを追加」をクリックして始めましょう。",
-    "emptySection": "このセクションにはまだ付箋がありません",
-    "dragSection": "ドラッグしてセクションを並び替え",
-    "expandSection": "セクションを展開",
-    "collapseSection": "セクションを折りたたむ"
   }
 }

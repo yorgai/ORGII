@@ -362,25 +362,5 @@
     "details": "Ayrıntılar",
     "frontend": "Frontend",
     "backend": "Backend"
-  },
-  "stickyNotes": {
-    "sidebarButton": "Yapışkan Notlar",
-    "boardTitle": "Yapışkan Notlar",
-    "addSection": "Bölüm ekle",
-    "addNoteToSection": "Not ekle",
-    "sectionTitlePlaceholder": "Bölüm adı",
-    "noteTitlePlaceholder": "Başlık",
-    "noteBodyPlaceholder": "Bir şeyler yazın… (Markdown destekli)",
-    "deleteNote": "Notu sil",
-    "deleteSection": "Bölümü sil",
-    "deleteSectionConfirm": "Bu bölüm ve içindeki tüm notlar silinsin mi?",
-    "color": "Renk",
-    "untitledSection": "Yeni bölüm",
-    "untitledNote": "Başlıksız",
-    "emptyBoard": "Henüz bölüm yok. Başlamak için + Bölüm Ekle'ye tıklayın.",
-    "emptySection": "Bu bölümde henüz not yok",
-    "dragSection": "Bölümü yeniden sıralamak için sürükleyin",
-    "expandSection": "Bölümü genişlet",
-    "collapseSection": "Bölümü daralt"
   }
 }

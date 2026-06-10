@@ -14,7 +14,6 @@ import type {
 
 import ChatView from "./ChatView";
 import ProjectPanelView from "./ProjectPanelView";
-import StickyNotesPanelView from "./StickyNotesPanelView";
 import WorkItemPanelView from "./WorkItemPanelView";
 import WorkspaceDashboardPanelView from "./WorkspaceDashboardPanelView";
 import WorkspaceExplorePanelView from "./WorkspaceExplorePanelView";
@@ -37,7 +36,6 @@ interface ChatPanelContentProps {
   showPanelContent: boolean;
   showProjectContent: boolean;
   showSessionContent: boolean;
-  showStickyNotesContent: boolean;
   showWorkItemContent: boolean;
   showWorkspaceDashboardContent: boolean;
   showWorkspaceOverviewContent: boolean;
@@ -60,7 +58,6 @@ export function ChatPanelContent({
   showPanelContent,
   showProjectContent,
   showSessionContent,
-  showStickyNotesContent,
   showWorkItemContent,
   showWorkspaceDashboardContent,
   showWorkspaceOverviewContent,
@@ -86,8 +83,6 @@ export function ChatPanelContent({
         <WorkspaceExplorePanelView />
       ) : showWorkspaceOverviewContent && selectedWorkspace ? (
         <WorkspaceOverviewPanelView selectedWorkspace={selectedWorkspace} />
-      ) : showStickyNotesContent ? (
-        <StickyNotesPanelView />
       ) : showSessionContent && currentSessionId ? (
         <ChatView
           sessionId={currentSessionId}
