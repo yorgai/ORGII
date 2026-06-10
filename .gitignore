@@ -105,6 +105,10 @@ src-tauri/bin/SOYD Helper (Semantic)-*
 .orgiiproject/
 .soydproject/
 
+# GitHub wiki content (maintained as a separate git remote — wiki.git)
+# Assets (screenshots, diagrams) live here but must not inflate the main repo
+wiki/
+
 # Agent transcript dumps (never check these in)
 chathistory.json
 cursor_chat_export.json
