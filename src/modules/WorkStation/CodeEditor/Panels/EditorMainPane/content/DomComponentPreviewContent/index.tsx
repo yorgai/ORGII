@@ -128,30 +128,46 @@ function serializeClonedElement(el: Element): string {
 // ─────────────────────────────────────────────────────────────────────────────
 // Host CSS (module-scoped lazy cache)
 //
-// Inlining the host window's stylesheets into the iframe is the load-bearing
-// reason Tailwind / CSS custom properties resolve correctly. The set of
-// stylesheets is stable for the lifetime of the window, so we compute it on
-// first use and reuse the same string for every preview tab.
+// Each host stylesheet maps to one of two iframe entries:
+//   • External `<link rel="stylesheet">` → re-emitted as a `<link>` in the
+//     iframe. We can't reliably read `sheet.cssRules` on production builds
+//     (MiniCssExtractPlugin emits separate CSS files that WebKit treats as
+//     non-readable from JS in some Tauri configurations) — but a `<link>`
+//     with the same same-origin URL loads and parses normally inside the
+//     iframe.
+//   • Inline `<style>` (dev `style-loader`, runtime injected) → has no `href`,
+//     so we serialize its `cssRules` into a single `<style>` block.
+//
+// The set of stylesheets is stable for the lifetime of the window, so we
+// compute the head fragment on first use and reuse it for every preview tab.
 // ─────────────────────────────────────────────────────────────────────────────
 
-let cachedHostCss: string | null = null;
+let cachedHostStyleHead: string | null = null;
 
-function getHostCss(): string {
-  if (cachedHostCss !== null) return cachedHostCss;
-  const chunks: string[] = [];
+function getHostStyleHead(): string {
+  if (cachedHostStyleHead !== null) return cachedHostStyleHead;
+  const parts: string[] = [];
+  const inlineChunks: string[] = [];
   for (const sheet of Array.from(document.styleSheets)) {
+    if (sheet.href) {
+      parts.push(`<link rel="stylesheet" href="${escapeHtml(sheet.href)}" />`);
+      continue;
+    }
     try {
       const rules = sheet.cssRules;
       if (!rules) continue;
       for (const rule of Array.from(rules)) {
-        chunks.push(rule.cssText);
+        inlineChunks.push(rule.cssText);
       }
     } catch {
-      // Cross-origin stylesheet — skip silently.
+      // Inline stylesheet became unreadable for some reason — skip silently.
     }
   }
-  cachedHostCss = chunks.join("\n");
-  return cachedHostCss;
+  if (inlineChunks.length > 0) {
+    parts.push(`<style>${inlineChunks.join("\n")}</style>`);
+  }
+  cachedHostStyleHead = parts.join("\n");
+  return cachedHostStyleHead;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -176,7 +192,7 @@ function buildSrcDoc({
 <head>
 <meta charset="utf-8" />
 <base href="${escapeHtml(baseHref)}" />
-<style>${getHostCss()}</style>
+${getHostStyleHead()}
 <style>
   html, body { margin: 0; padding: 0; background: transparent; color: inherit; }
   body {
