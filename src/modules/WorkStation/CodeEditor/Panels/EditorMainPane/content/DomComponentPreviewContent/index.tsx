@@ -60,6 +60,15 @@ const PREVIEW_PADDING = 32;
 const CHECKERBOARD =
   "repeating-conic-gradient(var(--color-bg-2, #1f1f1f) 0% 25%, var(--color-bg-1, #141414) 0% 50%) 50% / 16px 16px";
 
+/**
+ * CSP nonce that matches the `'nonce-...'` token in tauri.conf.json's
+ * `security.csp.style-src`. When a style-src directive carries a nonce, the
+ * `'unsafe-inline'` keyword is ignored per CSP3, so every inline <style> we
+ * emit MUST stamp this nonce — otherwise the production WKWebView refuses to
+ * apply the preview's bootstrap styles and the iframe renders unstyled.
+ */
+const PREVIEW_STYLE_NONCE = "orgii-codemirror-style";
+
 const TOGGLE_OPTIONS: readonly ToggleOption[] = [
   { value: "raw", label: "Raw" },
   { value: "preview", label: "Preview" },
@@ -164,7 +173,9 @@ function getHostStyleHead(): string {
     }
   }
   if (inlineChunks.length > 0) {
-    parts.push(`<style>${inlineChunks.join("\n")}</style>`);
+    parts.push(
+      `<style nonce="${PREVIEW_STYLE_NONCE}">${inlineChunks.join("\n")}</style>`
+    );
   }
   cachedHostStyleHead = parts.join("\n");
   return cachedHostStyleHead;
@@ -177,23 +188,16 @@ function getHostStyleHead(): string {
 interface BuildSrcDocInput {
   innerHtml: string;
   baseHref: string;
-  width: number;
-  height: number;
 }
 
-function buildSrcDoc({
-  innerHtml,
-  baseHref,
-  width,
-  height,
-}: BuildSrcDocInput): string {
+function buildSrcDoc({ innerHtml, baseHref }: BuildSrcDocInput): string {
   return `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8" />
 <base href="${escapeHtml(baseHref)}" />
 ${getHostStyleHead()}
-<style>
+<style nonce="${PREVIEW_STYLE_NONCE}">
   html, body { margin: 0; padding: 0; background: transparent; color: inherit; }
   body {
     display: flex;
@@ -204,21 +208,9 @@ ${getHostStyleHead()}
     box-sizing: border-box;
   }
   .__preview-host {
-    width: ${width}px;
-    height: ${height}px;
+    display: inline-block;
     box-sizing: border-box;
     position: relative;
-    overflow: visible;
-  }
-  /* Element-picker capture often pins width/flex on the captured element via
-     surrounding flex layout. Force it to fill the host so the rendered
-     dimensions match the requested preview size. */
-  .__preview-host > * {
-    width: 100% !important;
-    height: 100% !important;
-    flex: none !important;
-    max-width: none !important;
-    max-height: none !important;
   }
 </style>
 </head>
@@ -234,51 +226,45 @@ ${getHostStyleHead()}
 
 interface PreviewFrameProps {
   parsed: ParsedDomComponent;
-  width: number;
-  height: number;
 }
 
-const PreviewFrame: React.FC<PreviewFrameProps> = memo(
-  ({ parsed, width, height }) => {
-    const srcDoc = useMemo(() => {
-      const el = findHostElement(parsed.cssSelector);
-      if (!el) return null;
-      const innerHtml = serializeClonedElement(el);
-      return buildSrcDoc({
-        innerHtml,
-        baseHref: parsed.meta?.url ?? window.location.href,
-        width,
-        height,
-      });
-    }, [parsed.cssSelector, parsed.meta?.url, width, height]);
+const PreviewFrame: React.FC<PreviewFrameProps> = memo(({ parsed }) => {
+  const srcDoc = useMemo(() => {
+    const el = findHostElement(parsed.cssSelector);
+    if (!el) return null;
+    const innerHtml = serializeClonedElement(el);
+    return buildSrcDoc({
+      innerHtml,
+      baseHref: parsed.meta?.url ?? window.location.href,
+    });
+  }, [parsed.cssSelector, parsed.meta?.url]);
 
-    if (!srcDoc) {
-      return (
-        <Placeholder
-          variant="empty"
-          placement="detail-panel"
-          title="Captured element is no longer mounted"
-          subtitle="Re-capture the component on the live page to refresh this preview, or switch to Raw to inspect the JSON."
-          fillParentHeight
-        />
-      );
-    }
-
+  if (!srcDoc) {
     return (
-      <iframe
-        title="DOM component preview"
-        sandbox="allow-same-origin"
-        srcDoc={srcDoc}
-        style={{
-          width: "100%",
-          height: "100%",
-          border: "none",
-          background: CHECKERBOARD,
-        }}
+      <Placeholder
+        variant="empty"
+        placement="detail-panel"
+        title="Captured element is no longer mounted"
+        subtitle="Re-capture the component on the live page to refresh this preview, or switch to Raw to inspect the JSON."
+        fillParentHeight
       />
     );
   }
-);
+
+  return (
+    <iframe
+      title="DOM component preview"
+      sandbox="allow-same-origin"
+      srcDoc={srcDoc}
+      style={{
+        width: "100%",
+        height: "100%",
+        border: "none",
+        background: CHECKERBOARD,
+      }}
+    />
+  );
+});
 PreviewFrame.displayName = "PreviewFrame";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -355,7 +341,7 @@ const PreviewBody: React.FC<{ parsed: ParsedDomComponent }> = ({ parsed }) => {
         url={parsed.meta?.url}
       />
       <div className="min-h-0 flex-1">
-        <PreviewFrame parsed={parsed} width={width} height={height} />
+        <PreviewFrame parsed={parsed} />
       </div>
     </div>
   );
