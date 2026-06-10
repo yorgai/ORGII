@@ -303,7 +303,7 @@ $font-mono: var(
   // The container (via Virtuoso styling) expands to fit the longest line
   min-width: 100%;
 
-  // Line number gutters - sticky on horizontal scroll
+  // Line number gutters
   &-gutter {
     flex-shrink: 0;
     width: 48px;
@@ -316,10 +316,8 @@ $font-mono: var(
     align-items: center;
     justify-content: flex-end;
     background: var(--color-bg-3);
-    // Sticky positioning for horizontal scroll
-    position: sticky;
-    left: 0;
-    z-index: 1;
+    // Avoid position:sticky + CSS zoom combination (breaks layout in WebKit
+    // when the root element has a zoom factor applied via JS).
   }
 
   // Change indicator
@@ -692,7 +690,7 @@ $font-mono: var(
   min-width: 100%;
   background: transparent;
 
-  // Line number gutter - sticky on horizontal scroll
+  // Line number gutter
   &-gutter {
     flex-shrink: 0;
     width: 48px;
@@ -704,17 +702,9 @@ $font-mono: var(
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    // Sticky positioning for horizontal scroll
-    position: sticky;
-    left: 0;
-    z-index: 1;
     background: var(--color-bg-2);
-    // Subtle border to separate from content when scrolled
-    box-shadow: 1px 0 0 var(--color-border-2);
-  }
-
-  &-gutter--plain {
-    box-shadow: none;
+    // Avoid position:sticky + CSS zoom combination (breaks layout in WebKit
+    // when the root element has a zoom factor applied via JS).
   }
 
   // Line content

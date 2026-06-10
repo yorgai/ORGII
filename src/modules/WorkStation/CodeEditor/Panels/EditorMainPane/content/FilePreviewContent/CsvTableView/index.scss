@@ -109,9 +109,8 @@
     background: var(--color-fill-1);
     border-right: 1px solid var(--color-border-1);
     min-width: 40px;
-    position: sticky;
-    left: 0;
-    z-index: 5;
+    // Avoid position:sticky;left + CSS zoom: WebKit miscalculates sticky
+    // positions when an ancestor has style.zoom set (global UI zoom).
 
     // Header row number styling
     .csv-table__header-row & {

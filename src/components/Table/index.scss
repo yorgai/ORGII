@@ -388,8 +388,8 @@
   &.table-settings-pin-last-column {
     .table-thead tr > .table-th:last-child,
     .table-row > .table-td:last-child {
-      position: sticky;
-      right: 0;
+      // Avoid position:sticky;right + CSS zoom: WebKit miscalculates sticky
+      // positions inside overflow-x:auto when the root has style.zoom set.
       background: var(--color-surface-container);
 
       &::before {
