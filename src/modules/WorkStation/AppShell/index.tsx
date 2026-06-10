@@ -13,6 +13,7 @@ import {
   useWorkStationPanels,
 } from "@src/hooks/workStation";
 import { GUIDE_TARGETS } from "@src/scaffold/Tutorials";
+import { workstationActiveSessionIdAtom } from "@src/store/session";
 import { simulatorCaptionBarEnabledAtom } from "@src/store/ui/simulatorAtom";
 import {
   workStationDockAutoHideAtom,
@@ -70,6 +71,9 @@ const AppShell = React.memo(
     );
     const captionEnabled = useAtomValue(simulatorCaptionBarEnabledAtom);
     const captionMessage = useCurrentTurnLastAgentMessage();
+    const workstationActiveSessionId = useAtomValue(
+      workstationActiveSessionIdAtom
+    );
 
     const { repoPath, repoName, pathExists, lastSeenPath } = useAppShellRepo();
     const { visitedModes, handleDockClick } = useAppShellDock();
@@ -87,7 +91,10 @@ const AppShell = React.memo(
     } = useAppShellStationMode({ followAgentHighlightEnabled });
 
     const agentStationCaptionVisible =
-      isAgentStation && captionEnabled && !!captionMessage;
+      isAgentStation &&
+      captionEnabled &&
+      !!captionMessage &&
+      !!workstationActiveSessionId;
 
     const workStationPanels = useWorkStationPanels();
     useAppShellSimulatorPanelSync({ isAgentStation, workStationPanels });

@@ -29,6 +29,7 @@ import { HEADER_ICON_SIZE } from "@src/modules/WorkStation/shared/tokens";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
 import { CollapsedSidebarButton } from "@src/scaffold/NavigationSidebar/CollapsedSidebarButton";
 import { WorkStationViewService } from "@src/services/workStation/WorkStationViewService";
+import { workstationActiveSessionIdAtom } from "@src/store/session";
 import {
   activeStationChatVisibleAtom,
   chatWidthAtom,
@@ -68,6 +69,9 @@ const AgentStationTopHeader: React.FC = memo(() => {
     simulatorCaptionBarEnabledAtom
   );
   const captionMessage = useCurrentTurnLastAgentMessage();
+  const workstationActiveSessionId = useAtomValue(
+    workstationActiveSessionIdAtom
+  );
   const showAgentMessageNotice =
     captionMessage?.isCurrentEvent && effectiveDockApp === AppType.CHANNELS;
   const captionText = showAgentMessageNotice
@@ -79,7 +83,8 @@ const AgentStationTopHeader: React.FC = memo(() => {
     : t("chat.restoreChatPanel");
   const hideWorkstationLabel = t("chat.hideWorkstation");
 
-  const showCaptionBar = captionEnabled && !!captionMessage;
+  const showCaptionBar =
+    captionEnabled && !!captionMessage && !!workstationActiveSessionId;
 
   const handleToggleCaption = useCallback(() => {
     setCaptionEnabled((prev) => !prev);
