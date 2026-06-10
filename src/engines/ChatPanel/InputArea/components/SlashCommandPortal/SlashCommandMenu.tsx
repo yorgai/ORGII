@@ -22,6 +22,7 @@ import {
   DROPDOWN_PANEL,
 } from "@src/components/Dropdown/tokens";
 import { useTauriSelectAllShortcut } from "@src/hooks/keyboard";
+import { useMouseMoved } from "@src/hooks/ui/useMouseMoved";
 
 import { useFloatingPortalPosition } from "../useFloatingPortalPosition";
 import FlyoutSubmenu from "./FlyoutSubmenu";
@@ -171,6 +172,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
   }, [visible, isPositioned, onClose]);
 
   const menuReady = visible && isPositioned && Boolean(portalPosition);
+  const mouseMovedRef = useMouseMoved(menuReady);
 
   // Wire keyboard navigation
   useKeyboard({
@@ -304,6 +306,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
                     keyboardNavigated && entry.flatIndex === highlightIndex
                   }
                   onMouseEnter={() => {
+                    if (!mouseMovedRef.current) return;
                     setKeyboardNavigated(false);
                     setHighlightIndex(entry.flatIndex);
                     setOpenFlyout(null);
@@ -326,6 +329,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
                   }
                   isCurrent={entry.mode.id === currentMode}
                   onMouseEnter={() => {
+                    if (!mouseMovedRef.current) return;
                     setKeyboardNavigated(false);
                     setHighlightIndex(entry.flatIndex);
                     setOpenFlyout(null);
@@ -348,6 +352,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
                     openFlyout.category === category
                   }
                   onMouseEnter={(e) => {
+                    if (!mouseMovedRef.current) return;
                     setKeyboardNavigated(false);
                     setHighlightIndex(flatIndex);
                     setOpenFlyout({
@@ -383,6 +388,7 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
                 item={item}
                 isActive={keyboardNavigated && flatIndex === highlightIndex}
                 onMouseEnter={() => {
+                  if (!mouseMovedRef.current) return;
                   setKeyboardNavigated(false);
                   setHighlightIndex(flatIndex);
                   setOpenFlyout(null);
@@ -417,7 +423,10 @@ const SlashCommandMenu: React.FC<SlashCommandPortalProps> = ({
             highlightIndex={flyoutHighlightIndex}
             keyboardNavigated={keyboardNavigated}
             onHighlightChange={setFlyoutHighlightIndex}
-            onPointerNavigate={() => setKeyboardNavigated(false)}
+            onPointerNavigate={() => {
+              if (!mouseMovedRef.current) return;
+              setKeyboardNavigated(false);
+            }}
             onSelect={(item) => {
               onSelect(item);
               setOpenFlyout(null);

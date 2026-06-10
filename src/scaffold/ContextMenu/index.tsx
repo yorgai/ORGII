@@ -15,6 +15,7 @@ import { AtSign } from "lucide-react";
 import React, { memo, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { DROPDOWN_CLASSES } from "@src/components/Dropdown/tokens";
+import { useMouseMoved } from "@src/hooks/ui/useMouseMoved";
 import { useContextMenu } from "@src/hooks/workStation/panels/useContextMenu";
 
 import { SearchResultsPanel, SecondLayerPanel } from "./MenuSections";
@@ -39,6 +40,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   keyboardOpened = false,
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mouseMovedRef = useMouseMoved(visible);
 
   const recentCount = Math.min(
     recentFiles.length,
@@ -92,13 +94,15 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   });
 
   const resetActiveIndex = useCallback(() => {
+    if (!mouseMovedRef.current) return;
     setKeyboardNavigated(false);
     setActiveIndex(-1);
-  }, [setActiveIndex, setKeyboardNavigated]);
+  }, [mouseMovedRef, setActiveIndex, setKeyboardNavigated]);
   const resetSecondLayerIndex = useCallback(() => {
+    if (!mouseMovedRef.current) return;
     setKeyboardNavigated(false);
     setSecondLayerActiveIndex(-1);
-  }, [setSecondLayerActiveIndex, setKeyboardNavigated]);
+  }, [mouseMovedRef, setSecondLayerActiveIndex, setKeyboardNavigated]);
 
   useEffect(() => {
     if (!visible || !keyboardOpened) return;
@@ -133,18 +137,20 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 
   const handleMainItemHover = useCallback(
     (itemIndex: number) => {
+      if (!mouseMovedRef.current) return;
       setKeyboardNavigated(false);
       setActiveIndex(itemIndex);
     },
-    [setActiveIndex, setKeyboardNavigated]
+    [mouseMovedRef, setActiveIndex, setKeyboardNavigated]
   );
 
   const handleSecondLayerHover = useCallback(
     (itemIndex: number) => {
+      if (!mouseMovedRef.current) return;
       setKeyboardNavigated(false);
       setSecondLayerActiveIndex(itemIndex);
     },
-    [setSecondLayerActiveIndex, setKeyboardNavigated]
+    [mouseMovedRef, setSecondLayerActiveIndex, setKeyboardNavigated]
   );
 
   if (!visible) return null;
