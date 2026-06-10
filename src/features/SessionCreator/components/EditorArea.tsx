@@ -16,7 +16,6 @@ import ComposerInput, { ComposerInputRef } from "@src/components/ComposerInput";
 import ComposerShell from "@src/components/ComposerShell";
 import Message from "@src/components/Message";
 import { VoiceInputButton, VoiceRecordingBar } from "@src/components/Voice";
-import { INPUT_AREA } from "@src/config/inputAreaTokens";
 import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import ContextMenuPortal from "@src/engines/ChatPanel/InputArea/components/ContextMenuPortal";
 import SlashCommandPortal from "@src/engines/ChatPanel/InputArea/components/SlashCommandPortal";
@@ -29,7 +28,7 @@ import type { SlashItem } from "@src/types/extensions";
 import { SESSION_CONFIG } from "../config";
 import { useTabDragDrop } from "../hooks/useTabDragDrop";
 import type { AdvancedConfig, UploadedFile } from "../types";
-import ControlButtons from "./ControlButtons";
+import ControlButtons, { type DropdownDirection } from "./ControlButtons";
 import ImageThumbnailRow from "./ImageThumbnailRow";
 import LaunchButton from "./LaunchButton";
 import SessionInfoLine from "./SessionInfoLine";
@@ -40,19 +39,11 @@ import UploadPills from "./UploadPills";
 // ============================================
 
 /** Variant type for different layouts */
-export type EditorAreaVariant =
-  | "default"
-  | "kanban"
-  | "chatPanel"
-  | "chatPanelFullScreen";
+export type EditorAreaVariant = "default" | "chatPanelFullScreen";
 
 export interface EditorAreaProps {
   /** Variant for different layouts (default: "default") */
   variant?: EditorAreaVariant;
-  /** Title to display (used in kanban variant) */
-  title?: string;
-  /** Title change handler (used in kanban variant for editable title) */
-  onTitleChange?: (title: string) => void;
   /** Uploaded files */
   uploadedFiles: UploadedFile[];
   /** Remove file handler */
@@ -145,6 +136,8 @@ export interface EditorAreaProps {
   editorPlaceholder?: string;
   /** Optional content rendered at the top of the composer shell. */
   headerContent?: React.ReactNode;
+  /** When set, controls whether composer dropdowns open above or below the trigger. */
+  dropdownDirection?: DropdownDirection;
   /** When true, hides the per-composer launch button. */
   hideLaunchButton?: boolean;
 
@@ -171,8 +164,6 @@ export interface EditorAreaProps {
 
 const EditorArea: React.FC<EditorAreaProps> = ({
   variant = "default",
-  title,
-  onTitleChange,
   uploadedFiles,
   onRemoveFile,
   composerInputRef,
@@ -215,6 +206,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   autoFocus = false,
   editorPlaceholder: editorPlaceholderOverride,
   headerContent,
+  dropdownDirection,
   hideLaunchButton = false,
   showSlashMenu = false,
   slashQuery = "",
@@ -228,11 +220,10 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   slashLoading = false,
   onPrefetchSlashItems,
 }) => {
-  const isKanban = variant === "kanban";
   const isChatPanelFullScreen = variant === "chatPanelFullScreen";
-  const isChatPanel = variant === "chatPanel" || isChatPanelFullScreen;
-  const usesKanbanShell = isKanban;
-  const isCompact = isKanban || isChatPanel;
+  const isCompact = isChatPanelFullScreen;
+  const resolvedDropdownDirection =
+    dropdownDirection ?? (isChatPanelFullScreen ? "up" : "down");
 
   // ============================================
   // Hooks
@@ -344,7 +335,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   });
 
   const showVoiceUi =
-    voiceFeatureEnabled && voice.isRecording && !isKanban && !hideLaunchButton;
+    voiceFeatureEnabled && voice.isRecording && !hideLaunchButton;
 
   // Ctrl+M acts as push-to-talk while focus is inside this composer container.
   useEffect(() => {
@@ -447,15 +438,14 @@ const EditorArea: React.FC<EditorAreaProps> = ({
   return (
     <div
       data-testid="chat-input"
-      className={`relative w-full ${isChatPanel ? "session-creator-chat-panel" : ""}`}
+      className={`relative w-full ${isChatPanelFullScreen ? "session-creator-chat-panel" : ""}`}
     >
       <ComposerShell
         ref={editorContainerRef}
-        variant={isChatPanel ? "embedded" : "default"}
+        variant="default"
         data-chat-drop-target
         className={[
           "wp_text_area",
-          usesKanbanShell ? "border-none shadow-none" : "",
           isDragOver
             ? "!border-primary-6 !bg-[color-mix(in_srgb,var(--color-primary-6)_5%,var(--color-chat-input))] !shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-primary-6)_20%,transparent)]"
             : "",
@@ -465,25 +455,8 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           .join(" ")}
         style={{
           height: isCompact ? "auto" : `${SESSION_CONFIG.EDITOR_HEIGHT}px`,
-          ...(isKanban && {
-            borderBottom: `1px solid ${INPUT_AREA.borderColorVar}`,
-            borderRadius: 0,
-          }),
         }}
       >
-        {/* Title - only for kanban variant (editable input) */}
-        {isKanban && (
-          <div className="px-3">
-            <input
-              type="text"
-              value={title || ""}
-              onChange={(event) => onTitleChange?.(event.target.value)}
-              placeholder={tSessions("creator.newItem")}
-              className="w-full bg-transparent text-[16px] font-semibold text-text-1 outline-none placeholder:text-text-3"
-            />
-          </div>
-        )}
-
         {headerContent}
 
         {/* Uploaded Files Pills */}
@@ -532,8 +505,8 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           requireCmdEnter={true}
           autoFocus={autoFocus}
           className="session-editor flex-1 cursor-text overflow-y-auto rounded-md text-[14px] text-text-1"
-          minHeight={editorMinHeight ?? (isChatPanel ? 60 : 100)}
-          maxHeight={editorMaxHeight ?? (isChatPanel ? 200 : 300)}
+          minHeight={editorMinHeight ?? (isChatPanelFullScreen ? 60 : 100)}
+          maxHeight={editorMaxHeight ?? (isChatPanelFullScreen ? 200 : 300)}
           onKeyDownForDropdown={handleKeyDownForDropdown}
           onSlashCommand={onSlashCommand}
           onSlashCommandClose={onSlashCommandClose}
@@ -552,7 +525,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           recentFiles={[]}
           repoPath={repoPath}
           keyboardHandlerRef={contextMenuFunctionRef}
-          placement="down"
+          placement={resolvedDropdownDirection}
         />
 
         {/* Slash Command Menu - inline "/" trigger */}
@@ -560,7 +533,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           <SlashCommandPortal
             visible={showSlashMenu}
             containerRef={editorContainerRef}
-            placement="down"
+            placement={resolvedDropdownDirection}
             items={filteredSlashItems}
             loading={slashLoading}
             currentMode={currentMode}
@@ -579,7 +552,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
           <SlashCommandPortal
             visible={showPlusSlashMenu}
             containerRef={editorContainerRef}
-            placement="down"
+            placement={resolvedDropdownDirection}
             items={filteredSlashItems}
             loading={slashLoading}
             currentMode={currentMode}
@@ -619,7 +592,7 @@ const EditorArea: React.FC<EditorAreaProps> = ({
             onOpenSkillsTools={
               onSlashCommand ? handleOpenSkillsTools : undefined
             }
-            dropdownDirection={isChatPanel ? "up" : "down"}
+            dropdownDirection={resolvedDropdownDirection}
             repoPath={repoPath}
             toolbarItemGap={false}
             bottomPaddingClassName="pb-1"
@@ -628,14 +601,14 @@ const EditorArea: React.FC<EditorAreaProps> = ({
               <ControlButtons
                 advancedConfig={advancedConfig}
                 onConfigChange={onAdvancedConfigChange}
-                dropdownDirection={isChatPanel ? "up" : "down"}
+                dropdownDirection={resolvedDropdownDirection}
                 requestModelOpen={requestModelOpen}
                 onModelOpenHandled={onModelOpenHandled}
                 hideModelSourcePill={hideModelSourcePill}
               />
             }
             submitButton={
-              !isKanban && !hideLaunchButton ? (
+              !hideLaunchButton ? (
                 <>
                   {voiceFeatureEnabled && (
                     <VoiceInputButton

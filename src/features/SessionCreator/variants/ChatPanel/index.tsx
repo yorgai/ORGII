@@ -17,6 +17,7 @@ import type { ModelType } from "@src/api/tauri/rpc/schemas/validation";
 import Button from "@src/components/Button";
 import type { ComposerInputRef } from "@src/components/ComposerInput";
 import ModelIcon from "@src/components/ModelIcon";
+import SelectorPill from "@src/components/SelectorPill";
 import { resolveAgentIcon } from "@src/config/agentIcons";
 import { DETAIL_PANEL_TOKENS } from "@src/config/detailPanelTokens";
 import { isRegionSanctioned } from "@src/config/providerRegions";
@@ -68,6 +69,7 @@ import {
 } from "@src/util/session/sessionDispatch";
 
 import { EditorArea, SessionInfoLine } from "../../components";
+import type { DropdownDirection } from "../../components/ControlButtons";
 import AttachmentPanel from "./AttachmentPopover";
 import ScreenPickerModal from "./ScreenPickerModal";
 import SessionCreatorAgentHero from "./SessionCreatorAgentHero";
@@ -80,14 +82,17 @@ import { useSessionCreatorChatPanelHandlers } from "./useSessionCreatorChatPanel
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type SessionCreatorChatPanelVariant = "default" | "fullScreen";
+type SessionCreatorChatPanelHeaderLayout = "hero" | "compact";
 
 export interface SessionCreatorChatPanelProps {
   centerFullScreenContent?: boolean;
   className?: string;
   footerSlot?: React.ReactNode;
   leadingActionSlot?: React.ReactNode;
+  headerLayout?: SessionCreatorChatPanelHeaderLayout;
   hideRepoLine?: boolean;
   initialContent?: string;
+  dropdownDirection?: DropdownDirection;
   onRegionNoticeChange?: (notice: ChatPanelRegionNotice | null) => void;
   onSessionStart?: (info: SessionLaunchSuccessInfo) => void;
   variant?: SessionCreatorChatPanelVariant;
@@ -109,8 +114,10 @@ const SessionCreatorChatPanelSingle: React.FC<
   className = "",
   footerSlot,
   leadingActionSlot,
+  headerLayout = "hero",
   hideRepoLine = false,
   initialContent,
+  dropdownDirection = "up",
   onRegionNoticeChange,
   onSessionStart,
   hidePresenceButton = false,
@@ -437,6 +444,10 @@ const SessionCreatorChatPanelSingle: React.FC<
     () => createAgentSelectorIcon(20),
     [createAgentSelectorIcon]
   );
+  const compactHeaderIcon = useMemo(
+    () => createAgentSelectorIcon(14),
+    [createAgentSelectorIcon]
+  );
 
   const heroContent = useMemo(
     () =>
@@ -530,27 +541,51 @@ const SessionCreatorChatPanelSingle: React.FC<
       : repoDisplayName;
   const isDisplayedSystemPath = isSystemPathSourceId(displayedRepoId);
 
+  const sessionInfoLine = (
+    <SessionInfoLine
+      repoId={displayedRepoId}
+      repoName={displayedRepoName}
+      repoPath={currentRepoPath}
+      onRepoChange={handleRepoChange}
+      onRepoSelect={handleRepoSelectForSession}
+      repoKind={sessionRepoKind}
+      includeSystemPaths={isOSMode || isSDEMode}
+      branchName={isOSMode && !sessionRepoId ? undefined : effectiveBranchName}
+      onBranchChange={handleBranchChange}
+      worktreeLocation={isDisplayedSystemPath ? undefined : runningLocation}
+      onWorktreeLocationChange={handleWorktreeLocationChange}
+      fullWidth
+      pillVariant={headerLayout === "compact" ? "ghost" : undefined}
+    />
+  );
+
   const repoPills = (
     <div className="flex w-full justify-center">
       <div
         className={`flex w-full flex-wrap items-center justify-start gap-0.5 ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
       >
-        <SessionInfoLine
-          repoId={displayedRepoId}
-          repoName={displayedRepoName}
-          repoPath={currentRepoPath}
-          onRepoChange={handleRepoChange}
-          onRepoSelect={handleRepoSelectForSession}
-          repoKind={sessionRepoKind}
-          includeSystemPaths={isOSMode || isSDEMode}
-          branchName={
-            isOSMode && !sessionRepoId ? undefined : effectiveBranchName
-          }
-          onBranchChange={handleBranchChange}
-          worktreeLocation={isDisplayedSystemPath ? undefined : runningLocation}
-          onWorktreeLocationChange={handleWorktreeLocationChange}
-          fullWidth
-        />
+        {sessionInfoLine}
+      </div>
+    </div>
+  );
+
+  const compactHeader = headerLayout === "compact" && (
+    <div className="session-creator-chat-panel-compact-header flex w-full items-center justify-between gap-2 bg-bg-2 px-1 pb-2 pt-1">
+      <SelectorPill
+        ref={agentHeroRef}
+        icon={compactHeaderIcon}
+        label={heroContent.name}
+        active={isCategorySelectorOpen}
+        danger={heroContent.danger}
+        size="md"
+        tooltip={t("creator.switchAgent")}
+        tooltipPosition="top"
+        onClick={() => setIsCategorySelectorOpen(true)}
+        ariaLabel={heroContent.name}
+        variant="ghost"
+      />
+      <div className="ml-auto flex min-w-0 flex-1 flex-wrap items-center justify-end gap-0.5">
+        {sessionInfoLine}
       </div>
     </div>
   );
@@ -605,6 +640,7 @@ const SessionCreatorChatPanelSingle: React.FC<
         currentMode={currentMode}
         filteredSlashItems={filteredSlashItems}
         slashLoading={slashLoading}
+        dropdownDirection={dropdownDirection}
       />
     </div>
   );
@@ -628,15 +664,17 @@ const SessionCreatorChatPanelSingle: React.FC<
         <div
           className={`flex w-full flex-col items-stretch gap-3 ${DETAIL_PANEL_TOKENS.contentMaxWidth}`}
         >
-          <SessionCreatorAgentHero
-            ref={agentHeroRef}
-            name={heroContent.name}
-            description={heroContent.description}
-            avatarIcon={heroIcon}
-            active={isCategorySelectorOpen}
-            danger={heroContent.danger}
-            onClick={() => setIsCategorySelectorOpen(true)}
-          />
+          {headerLayout !== "compact" && (
+            <SessionCreatorAgentHero
+              ref={agentHeroRef}
+              name={heroContent.name}
+              description={heroContent.description}
+              avatarIcon={heroIcon}
+              active={isCategorySelectorOpen}
+              danger={heroContent.danger}
+              onClick={() => setIsCategorySelectorOpen(true)}
+            />
+          )}
 
           {isWingmanMode && (
             <button
@@ -653,9 +691,16 @@ const SessionCreatorChatPanelSingle: React.FC<
             </button>
           )}
 
-          <div className="session-creator-chat-panel-fullscreen-composer w-full">
+          <div
+            className={`session-creator-chat-panel-fullscreen-composer w-full ${
+              headerLayout === "compact"
+                ? "session-creator-chat-panel-fullscreen-composer-compact"
+                : ""
+            }`}
+          >
+            {compactHeader}
             {editorArea}
-            {!hideRepoLine && (
+            {!hideRepoLine && headerLayout !== "compact" && (
               <div className="session-creator-chat-panel-fullscreen-repo-row px-1 pb-2 pt-3">
                 {repoPills}
               </div>
