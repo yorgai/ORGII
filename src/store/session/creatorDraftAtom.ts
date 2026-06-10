@@ -10,6 +10,7 @@ import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 
 import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
+import type { ComposerSnapshot } from "@src/components/ComposerInput";
 import type { UploadedFile } from "@src/features/SessionCreator/types";
 
 const SESSION_CREATOR_DRAFT_STORAGE_KEY = "orgii:sessionCreatorDrafts";
@@ -18,6 +19,10 @@ export interface SessionCreatorDraft {
   id: string;
   sessionName: string;
   editorContent: string;
+  /** Full structured snapshot of the composer, including pill atoms. When
+   *  present, this takes precedence over `editorContent` on restore so pills
+   *  are reconstructed rather than being converted to plain text. */
+  editorSnapshot?: ComposerSnapshot;
   uploadedFiles: Array<{
     id: string;
     name: string;

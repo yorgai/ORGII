@@ -44,8 +44,12 @@
   outline: none;
   caret-color: var(--color-primary-6);
   font-size: 14px;
-  // Match pill height (20px) + margin.
-  line-height: 24px;
+  // 1.43 ≈ 20px at 14px font — matches the pill visual height so the caret
+  // on a text-only line is the same height as a line that contains a pill.
+  // The extra vertical rhythm previously provided by 24px is now supplied by
+  // padding-top so layout does not change.
+  line-height: 1.43;
+  padding-top: 2px;
   // Long unbroken strings (no spaces) must still wrap inside the composer.
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -62,8 +66,6 @@
 
   > [data-composer-pill="true"].is-selection-covered {
     background: Highlight;
-    color: HighlightText;
-    border-radius: 3px;
   }
 
   > [data-composer-pill="true"].is-selection-covered .composer-pill,
@@ -153,7 +155,7 @@
     height: auto;
     padding: 0 8px !important;
     min-height: 0 !important;
-    line-height: 24px !important;
+    line-height: 1.43 !important;
     font-size: 14px;
     display: block;
     // Keep visible so just-inserted second-line caret paints before the

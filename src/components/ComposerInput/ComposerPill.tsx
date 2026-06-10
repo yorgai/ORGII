@@ -127,6 +127,10 @@ const ComposerPill: React.FC<ComposerPillProps> = ({ attrs, onDelete }) => {
     [onDelete]
   );
 
+  const handlePillMouseDown = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+  }, []);
+
   const handlePillClick = useCallback(
     (event: React.MouseEvent) => {
       if ((event.target as HTMLElement).closest("svg")) return;
@@ -275,6 +279,7 @@ const ComposerPill: React.FC<ComposerPillProps> = ({ attrs, onDelete }) => {
           outline: "none",
         }}
         onClick={handlePillClick}
+        onMouseDown={handlePillMouseDown}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >

@@ -32,11 +32,14 @@ import ComposerPill from "./ComposerPill";
 import { createCutHandler } from "./cutHandler";
 import { buildImperativeApi } from "./imperativeApi";
 import "./index.scss";
-import { type MentionState, createKeyDownHandler } from "./keyboard";
+import {
+  type MentionState,
+  createKeyDownHandler,
+  removePillForDeleteDirection,
+} from "./keyboard";
 import { createPasteHandler } from "./pasteHandlers";
 import {
   caretTextOffset,
-  normalizeCollapsedSelectionAroundPills,
   placeCaretAfterPill,
   placeCaretAtEnd,
   placeCaretAtPoint,
@@ -56,6 +59,7 @@ import {
 export type {
   ComposerInputProps,
   ComposerInputRef,
+  ComposerSnapshot,
   PillIconType,
 } from "./types";
 
@@ -391,6 +395,18 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
       const handleBeforeInput = (event: InputEvent) => {
         if (isComposingRef.current) return;
         ops.markHistoryBoundary();
+        if (event.inputType.startsWith("deleteContent")) {
+          const direction = event.inputType.endsWith("Forward")
+            ? "forward"
+            : "backward";
+          if (removePillForDeleteDirection(host, direction, false)) {
+            event.preventDefault();
+            ops.reconcilePillsFromDom();
+            ops.commitHistoryBoundary();
+            handleInput();
+            return;
+          }
+        }
         if (event.inputType === "insertText" && event.data) {
           const sanitized = sanitizeText(event.data);
           if (sanitized !== event.data) {
@@ -625,11 +641,38 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
           attrs={entry.attrs}
           onDelete={() => {
             ops.markHistoryBoundary();
-            target.parentNode?.removeChild(target);
+            const host = ops.hostRef.current;
+            const parent = target.parentNode;
+            const previousSibling = target.previousSibling;
+            const childIndex = parent
+              ? Array.prototype.indexOf.call(parent.childNodes, target)
+              : -1;
+            parent?.removeChild(target);
+            if (host && parent && childIndex >= 0) {
+              const range = document.createRange();
+              if (
+                previousSibling?.nodeType === Node.TEXT_NODE &&
+                parent.contains(previousSibling)
+              ) {
+                const anchor = previousSibling as Text;
+                range.setStart(anchor, (anchor.textContent ?? "").length);
+              } else {
+                range.setStart(
+                  parent,
+                  Math.min(childIndex, parent.childNodes.length)
+                );
+              }
+              range.collapse(true);
+              const selection = window.getSelection();
+              if (selection) {
+                host.focus({ preventScroll: true });
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
+            }
             ops.reconcilePillsFromDom();
             ops.commitHistoryBoundary();
             updateEmptyState();
-            const host = ops.hostRef.current;
             if (host) onContentChangeRef.current?.(extractPlainText(host));
           }}
         />,
@@ -639,9 +682,6 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
     });
 
     useLayoutEffect(() => {
-      const host = hostRef.current;
-      if (!host) return;
-      normalizeCollapsedSelectionAroundPills(host);
       if (!pendingCaretAfterPillRef.current) return;
 
       const frameId = requestAnimationFrame(() => {

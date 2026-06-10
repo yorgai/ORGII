@@ -147,7 +147,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
     const handleSetupRepo = useCallback(() => {
       if (!composerInputRef.current) return;
-      composerInputRef.current.appendFilePill(
+      composerInputRef.current.insertFilePill(
         "/setup-repo",
         false,
         "skill",
@@ -217,7 +217,7 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
         if (action.category === "skill") {
           const skillToken = `/${action.skillName ?? action.name}`;
-          composerInputRef.current.appendFilePill(
+          composerInputRef.current.insertFilePill(
             skillToken,
             false,
             "skill",
@@ -320,13 +320,13 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
             {hasActionPills && (
               <div aria-hidden className="mx-2 h-4 w-px shrink-0 bg-border-2" />
             )}
-            <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-hide">
+            <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-0.5 scrollbar-hide">
               {actionPills}
             </div>
           </>
         ) : (
           <>
-            <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-hide">
+            <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-0.5 scrollbar-hide">
               {leadingContent}
               {actionPills}
             </div>

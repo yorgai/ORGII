@@ -134,6 +134,17 @@ export function useEditorOperations(): UseEditorOperationsResult {
       pillHostsRef.current.set(id, span);
       pillAttrsRef.current.set(id, attrs);
       insertNodeAtCaret(host, span);
+
+      // Guarantee a text node immediately before the pill so:
+      //   a) ArrowLeft can always land in it (without this, browsers sometimes
+      //      drop the caret before the host when the pill is the first child), and
+      //   b) the Backspace deletion logic always has a text-node neighbour to
+      //      inspect, avoiding the ELEMENT_NODE fallback that miscounts offsets.
+      const prev = span.previousSibling;
+      if (!prev || prev.nodeType !== Node.TEXT_NODE) {
+        span.parentNode?.insertBefore(document.createTextNode(""), span);
+      }
+
       syncPillEntries();
     },
     [syncPillEntries]
@@ -239,6 +250,14 @@ export function useEditorOperations(): UseEditorOperationsResult {
         } else if (part.kind === "newline") {
           host.appendChild(document.createElement("br"));
         } else {
+          // Guarantee a text node before each pill so ArrowLeft can always
+          // land in a text position to the pill's left, and so Backspace
+          // detection reliably finds a text-node neighbour.
+          const lastChild = host.lastChild;
+          if (!lastChild || lastChild.nodeType !== Node.TEXT_NODE) {
+            host.appendChild(document.createTextNode(""));
+          }
+
           const id = nextPillId();
           const span = document.createElement("span");
           const dataAttrs = pillDataAttributes(part.attrs);

@@ -15,7 +15,148 @@
  * All callbacks are accessed via getters at event time so a single
  * handler instance can survive every prop change without re-binding.
  */
-import { caretTextOffset, rangeInsideHost } from "./selection";
+import {
+  caretTextOffset,
+  findPillAncestor,
+  rangeInsideHost,
+} from "./selection";
+import { PILL_DATA_ATTR } from "./utils";
+
+/**
+ * Move the caret one position to the left, skipping over any pill as a unit
+ * and ensuring it always lands in a text node to the pill's left (not inside
+ * the contenteditable="false" span or before the host root).
+ */
+function moveCaretLeftPastPill(
+  host: HTMLElement,
+  event: KeyboardEvent
+): boolean {
+  if (event.key !== "ArrowLeft") return false;
+  if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey)
+    return false;
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || !selection.isCollapsed)
+    return false;
+  const range = selection.getRangeAt(0);
+  if (!host.contains(range.startContainer)) return false;
+
+  const container = range.startContainer;
+  const offset = range.startOffset;
+
+  // Case 1: caret is in a text node at offset 0 — look left for a pill.
+  if (container.nodeType === Node.TEXT_NODE && offset === 0) {
+    const prevSibling = container.previousSibling;
+    const pill = findPillAncestor(prevSibling);
+    if (!pill) return false;
+    // Land in the text node to the pill's left (or before the pill in the parent).
+    const pillPrev = pill.previousSibling;
+    const newRange = document.createRange();
+    if (pillPrev?.nodeType === Node.TEXT_NODE) {
+      const txt = pillPrev.textContent ?? "";
+      newRange.setStart(pillPrev, txt.length);
+    } else {
+      const pillIndex = Array.prototype.indexOf.call(
+        pill.parentNode!.childNodes,
+        pill
+      );
+      newRange.setStart(pill.parentNode!, pillIndex);
+    }
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+    return true;
+  }
+
+  // Case 2: caret is directly inside the host at an element boundary.
+  if (container.nodeType === Node.ELEMENT_NODE && container === host) {
+    const candidate = host.childNodes[offset - 1] ?? null;
+    const pill = findPillAncestor(candidate);
+    if (!pill) return false;
+    const pillPrev = pill.previousSibling;
+    const newRange = document.createRange();
+    if (pillPrev?.nodeType === Node.TEXT_NODE) {
+      const txt = pillPrev.textContent ?? "";
+      newRange.setStart(pillPrev, txt.length);
+    } else {
+      const pillIndex = Array.prototype.indexOf.call(host.childNodes, pill);
+      newRange.setStart(host, pillIndex);
+    }
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Move the caret one position to the right, skipping over any pill as a unit
+ * and landing in the text node to the pill's right.
+ */
+function moveCaretRightPastPill(
+  host: HTMLElement,
+  event: KeyboardEvent
+): boolean {
+  if (event.key !== "ArrowRight") return false;
+  if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey)
+    return false;
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || !selection.isCollapsed)
+    return false;
+  const range = selection.getRangeAt(0);
+  if (!host.contains(range.startContainer)) return false;
+
+  const container = range.startContainer;
+  const offset = range.startOffset;
+
+  // Case 1: caret is in a text node at its end — look right for a pill.
+  if (container.nodeType === Node.TEXT_NODE) {
+    const text = container.textContent ?? "";
+    if (offset !== text.length) return false;
+    const nextSibling = container.nextSibling;
+    const pill = findPillAncestor(nextSibling);
+    if (!pill) return false;
+    const pillNext = pill.nextSibling;
+    const newRange = document.createRange();
+    if (pillNext?.nodeType === Node.TEXT_NODE) {
+      newRange.setStart(pillNext, 0);
+    } else {
+      const pillIndex = Array.prototype.indexOf.call(
+        pill.parentNode!.childNodes,
+        pill
+      );
+      newRange.setStart(pill.parentNode!, pillIndex + 1);
+    }
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+    return true;
+  }
+
+  // Case 2: caret is directly inside the host at an element boundary.
+  if (container.nodeType === Node.ELEMENT_NODE && container === host) {
+    const candidate = host.childNodes[offset] ?? null;
+    const pill = findPillAncestor(candidate);
+    if (!pill) return false;
+    const pillNext = pill.nextSibling;
+    const newRange = document.createRange();
+    if (pillNext?.nodeType === Node.TEXT_NODE) {
+      newRange.setStart(pillNext, 0);
+    } else {
+      const pillIndex = Array.prototype.indexOf.call(host.childNodes, pill);
+      newRange.setStart(host, pillIndex + 1);
+    }
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+    return true;
+  }
+
+  return false;
+}
 
 const DROPDOWN_NAV_KEYS = ["ArrowUp", "ArrowDown", "Enter", "Tab", "Escape"];
 
@@ -86,6 +227,169 @@ function caretCoords(host: HTMLElement): { x: number; y: number } {
   return { x: rect.left, y: rect.bottom };
 }
 
+export type PillDeleteDirection = "backward" | "forward";
+
+function removePillAndPlaceCaret(
+  host: HTMLElement,
+  pill: HTMLElement,
+  direction: PillDeleteDirection,
+  dispatchInput = true
+): boolean {
+  if (!host.contains(pill)) return false;
+
+  const parent = pill.parentNode;
+  if (!parent) return false;
+
+  const nextSibling = pill.nextSibling;
+  const previousSibling = pill.previousSibling;
+  const childIndex = Array.prototype.indexOf.call(parent.childNodes, pill);
+
+  // For Backspace: caret should land where the pill was — i.e. in the
+  // text before the pill (end of previousSibling text node), or right
+  // at the slot index if there is no text neighbour.
+  // For Delete: caret lands after the deletion — i.e. at the start of
+  // the text node that follows the pill.
+  let anchorNode: Text | null = null;
+  let anchorOffset = 0;
+
+  if (direction === "backward") {
+    if (previousSibling?.nodeType === Node.TEXT_NODE) {
+      anchorNode = previousSibling as Text;
+      anchorOffset = (anchorNode.textContent ?? "").length;
+    }
+  } else {
+    if (nextSibling?.nodeType === Node.TEXT_NODE) {
+      anchorNode = nextSibling as Text;
+      anchorOffset = 0;
+    }
+  }
+
+  parent.removeChild(pill);
+
+  const range = document.createRange();
+  if (anchorNode && parent.contains(anchorNode)) {
+    range.setStart(
+      anchorNode,
+      Math.min(anchorOffset, (anchorNode.textContent ?? "").length)
+    );
+  } else {
+    range.setStart(parent, Math.min(childIndex, parent.childNodes.length));
+  }
+  range.collapse(true);
+
+  const selection = window.getSelection();
+  if (selection) {
+    host.focus({ preventScroll: true });
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  if (dispatchInput) {
+    host.dispatchEvent(
+      new InputEvent("input", { bubbles: true, inputType: "deleteContent" })
+    );
+  }
+  return true;
+}
+
+export function removePillForDeleteDirection(
+  host: HTMLElement,
+  direction: PillDeleteDirection,
+  dispatchInput = true
+): boolean {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return false;
+
+  const range = selection.getRangeAt(0);
+  if (
+    !host.contains(range.startContainer) ||
+    !host.contains(range.endContainer)
+  ) {
+    return false;
+  }
+
+  if (!selection.isCollapsed) {
+    const includesPill = Array.from(
+      host.querySelectorAll<HTMLElement>(`[${PILL_DATA_ATTR}]`)
+    ).some((pill) => range.intersectsNode(pill));
+    if (!includesPill) return false;
+    range.deleteContents();
+    if (dispatchInput) {
+      host.dispatchEvent(
+        new InputEvent("input", { bubbles: true, inputType: "deleteContent" })
+      );
+    }
+    return true;
+  }
+
+  const pillAncestor = findPillAncestor(range.startContainer);
+  if (pillAncestor) {
+    return removePillAndPlaceCaret(
+      host,
+      pillAncestor,
+      direction,
+      dispatchInput
+    );
+  }
+
+  const container = range.startContainer;
+  const offset = range.startOffset;
+
+  // Check for an adjacent pill next to the caret's text node.
+  // If the caret is anywhere inside a short spacer text node that sits
+  // directly next to a pill, treat the whole spacer as zero-width and
+  // remove the adjacent pill.
+  const SPACER_MAX_LEN = 2;
+  if (container.nodeType === Node.TEXT_NODE) {
+    const text = container.textContent ?? "";
+    const isShortSpacer =
+      text.replace(/\s/g, "").length === 0 && text.length <= SPACER_MAX_LEN;
+    if (direction === "backward") {
+      const prev = container.previousSibling;
+      const pill = findPillAncestor(prev);
+      if (pill && (offset === 0 || isShortSpacer)) {
+        return removePillAndPlaceCaret(host, pill, direction, dispatchInput);
+      }
+    }
+    if (direction === "forward") {
+      const next = container.nextSibling;
+      const pill = findPillAncestor(next);
+      if (pill && (offset === text.length || isShortSpacer)) {
+        return removePillAndPlaceCaret(host, pill, direction, dispatchInput);
+      }
+    }
+  }
+
+  if (container.nodeType === Node.ELEMENT_NODE) {
+    const element = container as Element;
+    const siblingIndex = direction === "backward" ? offset - 1 : offset;
+    const candidate = element.childNodes[siblingIndex] ?? null;
+    const adjacentPill = findPillAncestor(candidate);
+    if (adjacentPill) {
+      return removePillAndPlaceCaret(
+        host,
+        adjacentPill,
+        direction,
+        dispatchInput
+      );
+    }
+  }
+
+  return false;
+}
+
+function removePillForDeleteKey(
+  host: HTMLElement,
+  event: KeyboardEvent
+): boolean {
+  if (event.key !== "Backspace" && event.key !== "Delete") return false;
+  if (event.altKey || event.ctrlKey || event.metaKey) return false;
+  return removePillForDeleteDirection(
+    host,
+    event.key === "Backspace" ? "backward" : "forward"
+  );
+}
+
 export function createKeyDownHandler(ctx: KeyDownHandlerContext) {
   return (event: KeyboardEvent): void => {
     if (ctx.isComposing(event)) return;
@@ -116,6 +420,23 @@ export function createKeyDownHandler(ctx: KeyDownHandlerContext) {
         event.preventDefault();
         return;
       }
+    }
+
+    if (removePillForDeleteKey(host, event)) {
+      event.preventDefault();
+      ctx.setAtMention({ active: false, startOffset: 0 });
+      ctx.setSlashCommand({ active: false, startOffset: 0 });
+      ctx.getOnAtMentionClose()?.();
+      ctx.getOnSlashCommandClose()?.();
+      return;
+    }
+
+    if (
+      moveCaretLeftPastPill(host, event) ||
+      moveCaretRightPastPill(host, event)
+    ) {
+      event.preventDefault();
+      return;
     }
 
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {

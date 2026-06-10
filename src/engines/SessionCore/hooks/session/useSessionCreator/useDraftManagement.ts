@@ -11,6 +11,7 @@ import { type RefObject, useEffect, useRef } from "react";
 import type { CliAgentType } from "@src/api/tauri/rpc/schemas/validation";
 import type { ComposerInputRef } from "@src/components/ComposerInput";
 import type { UploadedFile } from "@src/features/SessionCreator/types";
+import { createLogger } from "@src/hooks/logger";
 import {
   type SessionCreatorDraft,
   activeSessionCreatorDraftIdAtom,
@@ -18,6 +19,8 @@ import {
   saveDraft,
   sessionCreatorDraftAtom,
 } from "@src/store/session";
+
+const logger = createLogger("DraftManagement");
 
 export interface UseDraftManagementOptions {
   sessionName: string;
@@ -115,30 +118,38 @@ export function useDraftManagement(options: UseDraftManagementOptions) {
 
     let retryTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
-    // Restores editorContent into the ComposerInput editor, skipping the call when
+    // Restores the editor from a saved draft. Prefers the structured snapshot
+    // (which preserves pills) over the plain text fallback. Skips the call when
     // the editor already shows the same text — setContent unconditionally fires
     // onAtMentionClose, so a no-op call would dismiss an active @ menu.
-    const restoreEditorContent = (content: string) => {
+    const restoreEditorContent = () => {
+      const snapshot = currentDraft.editorSnapshot;
+      const plainText = currentDraft.editorContent;
+
+      const applyRestore = (ref: ComposerInputRef) => {
+        if (snapshot) {
+          ref.setContent(snapshot);
+          logger.debug("restored editor from snapshot with pills");
+        } else if (ref.getText() !== plainText) {
+          ref.setContent(plainText);
+        }
+      };
+
       if (!composerInputRef.current) {
         retryTimeoutId = setTimeout(() => {
-          if (
-            composerInputRef.current &&
-            composerInputRef.current.getText() !== content
-          ) {
-            composerInputRef.current.setContent(content);
+          if (composerInputRef.current) {
+            applyRestore(composerInputRef.current);
           }
         }, 100);
         return;
       }
-      if (composerInputRef.current.getText() !== content) {
-        composerInputRef.current.setContent(content);
-      }
+      applyRestore(composerInputRef.current);
     };
 
     const mainTimeoutId = setTimeout(() => {
       setSessionName(currentDraft.sessionName);
       setEditorContent(currentDraft.editorContent);
-      restoreEditorContent(currentDraft.editorContent);
+      restoreEditorContent();
       setUploadedFiles(
         currentDraft.uploadedFiles.map((file) => ({
           ...file,
@@ -164,12 +175,15 @@ export function useDraftManagement(options: UseDraftManagementOptions) {
     if (!draftLoadedRef.current || !persistDraft) return;
 
     const timer = setTimeout(() => {
+      const editorSnapshot = composerInputRef.current?.getSnapshot();
+
       const currentDraft: SessionCreatorDraft = saveDraft({
         id: activeDraftId ?? draftRef.current?.id,
         createdAt: draftRef.current?.createdAt,
         sidebarVisible: draftRef.current?.sidebarVisible,
         sessionName,
         editorContent,
+        editorSnapshot,
         uploadedFiles: uploadedFilesRef.current.map((file) => ({
           id: file.id,
           name: file.name,
@@ -192,6 +206,7 @@ export function useDraftManagement(options: UseDraftManagementOptions) {
     activeDraftId,
     agentIconId,
     cliAgentType,
+    composerInputRef,
     editorContent,
     persistDraft,
     sessionName,

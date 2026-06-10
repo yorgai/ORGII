@@ -190,6 +190,7 @@ export const EDITOR_FILE_PILL_ICON_STYLE: CSSProperties = {
   height: `${PILL_SIZE.iconSize}px`,
   marginRight: `${PILL_SIZE.gap}px`,
   verticalAlign: "-0.125em",
+  transform: "translateY(2px)",
 };
 
 /** Icon container dimensions */
