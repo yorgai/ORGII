@@ -17,6 +17,7 @@ use super::super::types::{ChatCompletionRequest, RequestBuilderExt, StreamChunk}
 use super::error_classify::{looks_overloaded, parse_retry_after_ms};
 use super::index_resolver::resolve_tool_call_index;
 use super::parse::{build_stream_parse_error_args, parse_streamed_tool_args, ParsedToolArgs};
+use super::think_split::ThinkTagSplitter;
 use crate::providers::openai_policy::ChatTokenLimitField;
 use crate::providers::safe_truncate::safe_truncate_utf8;
 use crate::providers::traits::{
@@ -146,6 +147,13 @@ pub(super) async fn run_chat_streaming(
     // Process SSE stream
     let mut accumulated_content = String::new();
     let mut accumulated_reasoning = String::new();
+    // Demuxes inline `<think>…</think>` reasoning out of `delta.content` for
+    // providers that don't use the separate `reasoning_content` channel (QwQ,
+    // some vLLM/SGLang builds, soydrelay/vincetest1, …). Stateful across chunks
+    // because a tag may straddle the SSE frame boundary. Providers that already
+    // emit `reasoning_content` are unaffected: the splitter only fires when it
+    // actually sees a `<think>` open tag in `delta.content`.
+    let mut think_splitter = ThinkTagSplitter::new();
     let mut tool_call_accumulators: HashMap<usize, (String, String, String, Option<Value>)> =
         HashMap::new(); // index -> (id, name, args, thought_signature)
                         // Tracks the index we will assign to an index-less continuation
@@ -331,16 +339,31 @@ pub(super) async fn run_chat_streaming(
             };
 
             for choice in &chunk.choices {
-                // Content delta
+                // Content delta — demux inline `<think>…</think>` reasoning
+                // before fanning out. Most providers' chunks have no `<` and
+                // pass through the splitter's fast path with zero overhead.
                 if let Some(ref content) = choice.delta.content {
-                    accumulated_content.push_str(content);
-                    on_delta(StreamDelta {
-                        content: Some(content.clone()),
-                        reasoning: None,
-                        tool_call_delta: None,
-                        finish_reason: None,
-                        usage: None,
-                    });
+                    let split = think_splitter.push(content);
+                    if !split.content.is_empty() {
+                        accumulated_content.push_str(&split.content);
+                        on_delta(StreamDelta {
+                            content: Some(split.content),
+                            reasoning: None,
+                            tool_call_delta: None,
+                            finish_reason: None,
+                            usage: None,
+                        });
+                    }
+                    if !split.reasoning.is_empty() {
+                        accumulated_reasoning.push_str(&split.reasoning);
+                        on_delta(StreamDelta {
+                            content: None,
+                            reasoning: Some(split.reasoning),
+                            tool_call_delta: None,
+                            finish_reason: None,
+                            usage: None,
+                        });
+                    }
                 }
 
                 // Reasoning content delta
@@ -435,6 +458,31 @@ pub(super) async fn run_chat_streaming(
         if stream_done {
             break;
         }
+    }
+
+    // Drain any bytes held inside the think-tag splitter — a server crash
+    // mid-stream may leave us with an unclosed `<think>` carry. Better to
+    // surface partial reasoning than to silently drop it.
+    let tail = think_splitter.flush();
+    if !tail.content.is_empty() {
+        accumulated_content.push_str(&tail.content);
+        on_delta(StreamDelta {
+            content: Some(tail.content),
+            reasoning: None,
+            tool_call_delta: None,
+            finish_reason: None,
+            usage: None,
+        });
+    }
+    if !tail.reasoning.is_empty() {
+        accumulated_reasoning.push_str(&tail.reasoning);
+        on_delta(StreamDelta {
+            content: None,
+            reasoning: Some(tail.reasoning),
+            tool_call_delta: None,
+            finish_reason: None,
+            usage: None,
+        });
     }
 
     // Assemble final tool calls — discard incomplete entries from stream interruption

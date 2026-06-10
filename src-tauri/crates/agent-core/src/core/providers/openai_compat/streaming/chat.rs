@@ -6,6 +6,7 @@ use tracing::{info, warn};
 
 use super::super::client::OpenAICompatClient;
 use super::super::types::{ChatCompletionRequest, ChatCompletionResponse, RequestBuilderExt};
+use super::think_split::ThinkTagSplitter;
 use crate::providers::openai_policy::ChatTokenLimitField;
 use crate::providers::safe_truncate::safe_truncate_utf8;
 use crate::providers::traits::{finish_reason as finish, LLMResponse, ProviderError};
@@ -154,14 +155,22 @@ pub(super) async fn run_chat(
         .map(|tcs| OpenAICompatClient::parse_tool_calls(tcs))
         .unwrap_or_default();
 
+    // Demux inline `<think>…</think>` reasoning out of the message content.
+    // Mirrors the same logic used in `sse_stream::run_chat_streaming` so the
+    // streaming and non-streaming paths surface reasoning identically.
+    let (content, reasoning_content) = split_inline_thinking(
+        choice.message.content,
+        choice.message.reasoning_content,
+    );
+
     let response = LLMResponse {
-        content: choice.message.content,
+        content,
         tool_calls,
         finish_reason: choice
             .finish_reason
             .unwrap_or_else(|| finish::STOP.to_string()),
         usage,
-        reasoning_content: choice.message.reasoning_content,
+        reasoning_content,
         blocks: Vec::new(),
         stream_error_kind: None,
         retry_after_ms: None,
@@ -175,4 +184,51 @@ pub(super) async fn run_chat(
     );
 
     Ok(response)
+}
+
+/// Split inline `<think>…</think>` blocks out of `content` into the reasoning
+/// channel. If `existing_reasoning` is already populated the splitter still
+/// runs on `content` (some providers do both — DeepSeek-R1 always uses
+/// `reasoning_content`, but a relay forwarding from a model that uses inline
+/// tags may pass them through unchanged regardless), and inline reasoning is
+/// appended after the existing buffer.
+fn split_inline_thinking(
+    content: Option<String>,
+    existing_reasoning: Option<String>,
+) -> (Option<String>, Option<String>) {
+    let Some(content) = content else {
+        return (None, existing_reasoning);
+    };
+
+    let mut splitter = ThinkTagSplitter::new();
+    let split = splitter.push(&content);
+    let tail = splitter.flush();
+
+    let mut new_content = split.content;
+    new_content.push_str(&tail.content);
+
+    let mut new_reasoning = split.reasoning;
+    new_reasoning.push_str(&tail.reasoning);
+
+    // No inline `<think>` actually fired — keep the input untouched so we
+    // don't accidentally drop trailing whitespace that the splitter's
+    // tag-tracking might have shuffled around.
+    if !splitter.saw_think_tag() {
+        return (Some(content), existing_reasoning);
+    }
+
+    let merged_reasoning = match (existing_reasoning, new_reasoning.is_empty()) {
+        (Some(prev), true) => Some(prev),
+        (Some(prev), false) => Some(format!("{prev}\n{new_reasoning}")),
+        (None, true) => None,
+        (None, false) => Some(new_reasoning),
+    };
+
+    let content_out = if new_content.is_empty() {
+        None
+    } else {
+        Some(new_content)
+    };
+
+    (content_out, merged_reasoning)
 }

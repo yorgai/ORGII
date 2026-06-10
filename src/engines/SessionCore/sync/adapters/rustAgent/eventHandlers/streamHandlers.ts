@@ -5,7 +5,6 @@
  * Also handles agent:streaming_complete from Rust StreamingBuffer.
  */
 import { mergeStreamingText } from "../../shared/streamTextAccumulator";
-import { extractThinkContent } from "../../shared/streamingParsers";
 import { capStreamContent } from "../../shared/subagentTracking";
 import type { AgentWSEvent, StreamRefs } from "../../shared/types";
 import {
@@ -62,10 +61,6 @@ export function handleMessageDelta(
 
   const streamRefs = ctx.assistantStreamRef.current;
   const rawAccumulated = streamRefs.contentRef.current;
-  const inlineThinking = extractThinkContent(rawAccumulated);
-  if (inlineThinking && ctx.inlineThinkingIdRef) {
-    ctx.inlineThinkingIdRef.current ||= `thinking-inline-${Date.now()}`;
-  }
 
   updateStreamingInfo(ctx, true, false, rawAccumulated);
 }

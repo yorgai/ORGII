@@ -41,7 +41,6 @@ export interface EventHandlerContext {
 
   assistantStreamRef?: MutableRefObject<StreamRefs>;
   thinkingStreamRef?: MutableRefObject<StreamRefs>;
-  inlineThinkingIdRef?: MutableRefObject<string>;
 
   toolCallDeltaBuffersRef?: MutableRefObject<Map<number, ToolCallDeltaBuffer>>;
 

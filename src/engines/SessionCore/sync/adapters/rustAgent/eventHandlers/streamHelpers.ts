@@ -84,7 +84,6 @@ export function isSessionStreamingStopped(
 export function resetAllStreamingState(ctx: EventHandlerContext): void {
   if (ctx.assistantStreamRef) resetStreamRefs(ctx.assistantStreamRef.current);
   if (ctx.thinkingStreamRef) resetStreamRefs(ctx.thinkingStreamRef.current);
-  if (ctx.inlineThinkingIdRef) ctx.inlineThinkingIdRef.current = "";
   ctx.execOutputBufferRef.current = "";
   if (ctx.toolCallDeltaBuffersRef) ctx.toolCallDeltaBuffersRef.current.clear();
   clearStreamingInfo(ctx);
@@ -138,7 +137,6 @@ export function clearThinkingStreamRefs(ctx: EventHandlerContext): void {
     ctx.thinkingStreamRef.current.contentRef.current = "";
     ctx.thinkingStreamRef.current.idRef.current = "";
   }
-  if (ctx.inlineThinkingIdRef) ctx.inlineThinkingIdRef.current = "";
   clearStreamingInfo(ctx);
 }
 

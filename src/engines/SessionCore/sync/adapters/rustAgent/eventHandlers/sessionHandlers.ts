@@ -150,17 +150,6 @@ export function handleError(
   // Persist error immediately so it survives session switches
   void eventStoreProxy.saveToCache(sessionId);
 
-  // SDE: update inline thinking
-  if (ctx.inlineThinkingIdRef?.current) {
-    eventStoreProxy.updateById(
-      ctx.inlineThinkingIdRef.current,
-      {
-        displayStatus: "completed",
-      },
-      sessionId
-    );
-  }
-
   // Reset all streaming state
   resetAllStreamingState(ctx);
   ctx.setStreaming(false);

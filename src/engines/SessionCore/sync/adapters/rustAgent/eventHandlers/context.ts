@@ -48,7 +48,6 @@ export function createEventHandlerContext(
 
   ctx.assistantStreamRef = ref(createStreamRefs());
   ctx.thinkingStreamRef = ref(createStreamRefs());
-  ctx.inlineThinkingIdRef = ref("");
   ctx.toolCallDeltaBuffersRef = ref(new Map());
   ctx.streamingInfoRef = ref({
     isStreaming: false,

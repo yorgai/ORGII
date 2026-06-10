@@ -70,6 +70,13 @@ pub(super) struct StreamDeltaResponse {
     pub content: Option<String>,
     #[serde(default)]
     pub tool_calls: Option<Vec<StreamToolCallDelta>>,
+    /// Reasoning channel — aliases cover the four field names seen in the wild:
+    /// `reasoning_content` (DeepSeek-R1, Kimi K1.5, Mistral Magistral),
+    /// `reasoning` (OpenRouter, some vLLM builds),
+    /// `thinking` / `thinking_content` (LiteLLM proxies, some forks).
+    /// Models that inline reasoning inside `delta.content` with `<think>…</think>`
+    /// tags are split out by `ThinkTagSplitter` in `sse_stream`.
+    #[serde(alias = "reasoning", alias = "thinking", alias = "thinking_content")]
     pub reasoning_content: Option<String>,
 }
 
@@ -125,7 +132,11 @@ pub(super) struct MessageResponse {
     pub content: Option<String>,
     #[serde(default)]
     pub tool_calls: Option<Vec<ToolCallResponse>>,
-    /// Reasoning/thinking content (DeepSeek-R1, Kimi k1.5, etc.)
+    /// Reasoning/thinking content. Aliases cover the same flavors as
+    /// `StreamDeltaResponse::reasoning_content` (see there for the list).
+    /// Non-streaming responses with inline `<think>…</think>` in `content`
+    /// are split by the same `ThinkTagSplitter` invoked from `chat::run_chat`.
+    #[serde(alias = "reasoning", alias = "thinking", alias = "thinking_content")]
     pub reasoning_content: Option<String>,
 }
 
@@ -209,5 +220,53 @@ pub(super) trait RequestBuilderExt {
 impl RequestBuilderExt for reqwest::RequestBuilder {
     fn bearer_token(self, token: &str) -> Self {
         self.header("Authorization", format!("Bearer {}", token))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse_delta(s: &str) -> StreamDeltaResponse {
+        serde_json::from_str(s).expect("delta should parse")
+    }
+
+    #[test]
+    fn reasoning_content_field_is_recognised() {
+        let d = parse_delta(r#"{"reasoning_content":"r1 trace"}"#);
+        assert_eq!(d.reasoning_content.as_deref(), Some("r1 trace"));
+    }
+
+    #[test]
+    fn reasoning_alias_openrouter_shape() {
+        let d = parse_delta(r#"{"reasoning":"openrouter trace"}"#);
+        assert_eq!(d.reasoning_content.as_deref(), Some("openrouter trace"));
+    }
+
+    #[test]
+    fn thinking_alias_litellm_shape() {
+        let d = parse_delta(r#"{"thinking":"litellm trace"}"#);
+        assert_eq!(d.reasoning_content.as_deref(), Some("litellm trace"));
+    }
+
+    #[test]
+    fn thinking_content_alias() {
+        let d = parse_delta(r#"{"thinking_content":"alt trace"}"#);
+        assert_eq!(d.reasoning_content.as_deref(), Some("alt trace"));
+    }
+
+    #[test]
+    fn content_and_reasoning_can_coexist() {
+        let d = parse_delta(r#"{"content":"out","reasoning":"in"}"#);
+        assert_eq!(d.content.as_deref(), Some("out"));
+        assert_eq!(d.reasoning_content.as_deref(), Some("in"));
+    }
+
+    #[test]
+    fn message_response_supports_aliases() {
+        let m: MessageResponse =
+            serde_json::from_str(r#"{"content":"x","reasoning":"trace"}"#).unwrap();
+        assert_eq!(m.content.as_deref(), Some("x"));
+        assert_eq!(m.reasoning_content.as_deref(), Some("trace"));
     }
 }

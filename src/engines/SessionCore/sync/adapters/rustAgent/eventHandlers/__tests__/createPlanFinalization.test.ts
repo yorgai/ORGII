@@ -119,7 +119,6 @@ function createCtx(
     filterSessionIdRef: ref("session-1"),
     assistantStreamRef: ref({ idRef: ref(""), contentRef: ref("") }),
     thinkingStreamRef: ref({ idRef: ref(""), contentRef: ref("") }),
-    inlineThinkingIdRef: ref(""),
     toolCallDeltaBuffersRef: ref(new Map()),
     execOutputBufferRef: ref(""),
     onAgentCompleteRef: ref(undefined),
