@@ -15,10 +15,8 @@
     }
 
     .kanban-column {
-      flex: 0 0 300px;
-      width: 300px;
+      flex: 1 0 300px;
       min-width: 300px;
-      max-width: 300px;
       height: 100%;
     }
   }

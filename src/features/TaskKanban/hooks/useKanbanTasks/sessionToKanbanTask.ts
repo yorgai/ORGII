@@ -19,7 +19,7 @@ function getResultStatus(
   session: Session,
   columnId: AgentKanbanColumnId
 ): KanbanResultStatus | undefined {
-  if (columnId === "finished") return KANBAN_RESULT_STATUS.Archived;
+  if (columnId === "archived") return KANBAN_RESULT_STATUS.Archived;
 
   switch (session.status) {
     case "failed":
@@ -27,14 +27,8 @@ function getResultStatus(
     case "timeout":
     case "killed":
       return KANBAN_RESULT_STATUS.Failed;
-    case "pending":
-    case "queued":
-    case "running":
-    case "in_progress":
-    case "installing":
-      return undefined;
     default:
-      return KANBAN_RESULT_STATUS.Completed;
+      return undefined;
   }
 }
 
@@ -60,7 +54,7 @@ function getWorkspaceName(session: Session): string | undefined {
 export function sessionToKanbanTask(
   session: Session,
   visitedSessions: ReadonlySet<string>,
-  manualFinishedSessionIds: ReadonlySet<string>,
+  manualArchivedSessionIds: ReadonlySet<string>,
   autoArchiveTtl: KanbanAutoArchiveTtl,
   nowMs: number
 ): KanbanTask {
@@ -74,7 +68,7 @@ export function sessionToKanbanTask(
   }
 
   const columnId = mapSessionToKanbanColumn(session, {
-    manualFinishedSessionIds,
+    manualArchivedSessionIds,
     autoArchiveTtl,
     nowMs,
   });

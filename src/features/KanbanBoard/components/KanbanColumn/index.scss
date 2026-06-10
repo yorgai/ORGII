@@ -4,20 +4,14 @@
 
 .kanban-column {
   display: flex;
+  flex: 1 0 320px;
   flex-direction: column;
-  flex-shrink: 0;
-  width: 320px;
+  min-width: 320px;
   height: 100%;
   transition: opacity 0.2s ease;
 
   &--dragging {
     opacity: 0.6;
-  }
-
-  &--receiving {
-    .kanban-column__body {
-      background: var(--color-fill-1);
-    }
   }
 }
 

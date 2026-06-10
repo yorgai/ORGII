@@ -82,7 +82,8 @@ function getEndOfLocalDay(date: Date): Date {
 function isTerminalTask(task: KanbanTask): boolean {
   const status = task.status as string;
   return (
-    status === "finished" ||
+    status === "archived" ||
+    status === "turn_finished" ||
     status === "done" ||
     status === "cancelled" ||
     task.resultStatus !== undefined

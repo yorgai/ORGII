@@ -22,7 +22,7 @@ import {
   kanbanReplayEventsAtom,
   kanbanReplayModeAtom,
 } from "@src/store/ui/kanbanReplayAtom";
-import { kanbanManualFinishedSessionsAtom } from "@src/store/ui/kanbanViewStateAtom";
+import { kanbanManualArchivedSessionsAtom } from "@src/store/ui/kanbanViewStateAtom";
 import { isPrimarySessionListSession } from "@src/util/session/sessionVisibility";
 
 import type {
@@ -79,8 +79,8 @@ export function useKanbanTasks(
   } = options;
   const sessions = useAtomValue(sessionsAtom);
   const visitedSessions = useAtomValue(visitedSessionsAtom);
-  const manualFinishedSessionIds = useAtomValue(
-    kanbanManualFinishedSessionsAtom
+  const manualArchivedSessionIds = useAtomValue(
+    kanbanManualArchivedSessionsAtom
   );
   const replayMode = useAtomValue(kanbanReplayModeAtom);
   const replayCursor = useAtomValue(kanbanReplayCursorAtom);
@@ -113,7 +113,7 @@ export function useKanbanTasks(
       task: sessionToKanbanTask(
         session,
         visitedSessions,
-        manualFinishedSessionIds,
+        manualArchivedSessionIds,
         autoArchiveTtl,
         nowTick
       ),
@@ -121,7 +121,7 @@ export function useKanbanTasks(
   }, [
     sessions,
     visitedSessions,
-    manualFinishedSessionIds,
+    manualArchivedSessionIds,
     autoArchiveTtl,
     nowTick,
     sessionIdFilter,
@@ -206,13 +206,13 @@ export function useKanbanTasks(
       grouped.get(task.status as AgentKanbanColumnId)?.push(task);
     });
 
-    // Within the Finished column, surface unread cards first so freshly
+    // Within the Archived column, surface unread cards first so freshly
     // completed but unopened sessions don't get buried by the existing
     // "all clear" pile. Stable sort: relative order of equally-unread
     // tasks (and equally-read tasks) is preserved.
-    const finishedList = grouped.get("finished");
-    if (finishedList && finishedList.length > 1) {
-      finishedList.sort((a, b) => {
+    const archivedList = grouped.get("archived");
+    if (archivedList && archivedList.length > 1) {
+      archivedList.sort((a, b) => {
         const unreadA = a.isUnread ? 1 : 0;
         const unreadB = b.isUnread ? 1 : 0;
         if (unreadA !== unreadB) return unreadB - unreadA;

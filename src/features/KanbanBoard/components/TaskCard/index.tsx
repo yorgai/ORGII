@@ -34,8 +34,6 @@ export interface TaskCardProps {
 
 function getResultStatusClass(resultStatus: KanbanResultStatus): string {
   switch (resultStatus) {
-    case KANBAN_RESULT_STATUS.Completed:
-      return "kanban-task-card__result-badge--completed";
     case KANBAN_RESULT_STATUS.Failed:
       return "kanban-task-card__result-badge--failed";
     case KANBAN_RESULT_STATUS.Archived:

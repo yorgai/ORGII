@@ -27,7 +27,7 @@ import {
   kanbanAgentTypeFilterAtom,
   kanbanAutoArchiveTtlAtom,
   kanbanDetailPanelVisibleAtom,
-  kanbanManualFinishedSessionIdsAtom,
+  kanbanManualArchivedSessionIdsAtom,
   kanbanSelectedTaskIdAtom,
   kanbanSidebarFilterAtom,
   kanbanTimeFilterAtom,
@@ -105,8 +105,8 @@ const Kanban: React.FC<TaskKanbanProps> = ({
   const sidebarFilter = useAtomValue(kanbanSidebarFilterAtom);
   const agentTypeFilter = useAtomValue(kanbanAgentTypeFilterAtom);
   const [autoArchiveTtl, setAutoArchiveTtl] = useAtom(kanbanAutoArchiveTtlAtom);
-  const setManualFinishedSessionIds = useSetAtom(
-    kanbanManualFinishedSessionIdsAtom
+  const setManualArchivedSessionIds = useSetAtom(
+    kanbanManualArchivedSessionIdsAtom
   );
   const [creatorVisible, setCreatorVisible] = useAtom(
     opsControlCreatorVisibleAtom
@@ -250,16 +250,16 @@ const Kanban: React.FC<TaskKanbanProps> = ({
   const handleTaskMove = useCallback(
     (taskId: string, newStatus: TaskStatus) => {
       const targetStatus = newStatus as AgentKanbanColumnId;
-      setManualFinishedSessionIds((previousIds) => {
+      setManualArchivedSessionIds((previousIds) => {
         const nextIds = previousIds.filter(
           (existingId) => existingId !== taskId
         );
-        if (targetStatus === "finished") {
+        if (targetStatus === "archived") {
           return [taskId, ...nextIds].slice(0, 1000);
         }
         return nextIds;
       });
-      if (selectedTaskId === taskId && targetStatus === "finished") {
+      if (selectedTaskId === taskId && targetStatus === "archived") {
         setDetailPanelVisible(false);
         setSelectedTaskId(null);
       }
@@ -267,7 +267,7 @@ const Kanban: React.FC<TaskKanbanProps> = ({
     [
       selectedTaskId,
       setDetailPanelVisible,
-      setManualFinishedSessionIds,
+      setManualArchivedSessionIds,
       setSelectedTaskId,
     ]
   );

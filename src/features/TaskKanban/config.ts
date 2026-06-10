@@ -1,5 +1,6 @@
 import {
   Archive,
+  CheckCircle2,
   Circle,
   Clock,
   type LucideIcon,
@@ -17,16 +18,16 @@ import type { Session } from "@src/store/session";
  *
  * Defines session-based column settings for the Agent Kanban board.
  *
- * The board uses a single axis: "does this session still need human review?"
- *   - Todo        → agent is queued and has not started running yet
- *   - In Progress → agent is actively running or installing
- *   - Your Turn   → agent is idle/stopped and needs user review
- *   - Finished    → manually completed or stale by TTL
+ * The board mirrors the sidebar status lights:
+ *   - Todo          → agent is queued and has not started running yet
+ *   - In Progress   → agent is actively running or installing
+ *   - Blocking      → user action is pending (`waiting_for_user`)
+ *   - Turn Finished → agent has stopped and the user's review/next turn can begin
+ *   - Archived      → manually archived or stale by TTL
  *
  * The Agent Kanban widens the column id space beyond the shared `TaskStatus`
- * union with extra local buckets. `your_turn` absorbs stopped/idle sessions
- * until the user manually finishes them or the auto-archive TTL expires.
- * Cards keep their precise backend result badges independent of column routing.
+ * union with extra local buckets. Cards keep their precise backend result
+ * badges independent of column routing.
  * These ids are kept local to this module so other consumers of `TaskStatus`
  * (WorkItems, Gantt) are not affected.
  */
@@ -42,14 +43,20 @@ export type DiaryTimelineDisplayMode =
   (typeof DIARY_TIMELINE_DISPLAY_MODE)[keyof typeof DIARY_TIMELINE_DISPLAY_MODE];
 
 /** Agent-Kanban-only column ids on top of the shared `TaskStatus` set. */
-export type AgentExtraColumnId = "todo" | "done" | "your_turn" | "finished";
+export type AgentExtraColumnId =
+  | "todo"
+  | "done"
+  | "blocking"
+  | "turn_finished"
+  | "archived";
 
 export const KANBAN_SIDEBAR_FILTER = {
   ALL: "all",
   TODO: "todo",
   IN_PROGRESS: "in_progress",
-  YOUR_TURN: "your_turn",
-  FINISHED: "finished",
+  BLOCKING: "blocking",
+  TURN_FINISHED: "turn_finished",
+  ARCHIVED: "archived",
 } as const;
 
 export type KanbanSidebarFilter =
@@ -103,8 +110,9 @@ interface AgentKanbanColumnConfig {
 const COLUMN_TITLE_KEYS: Record<string, string> = {
   todo: "opsControl.columns.todo",
   in_progress: "opsControl.columns.inProgress",
-  your_turn: "opsControl.columns.yourTurn",
-  finished: "opsControl.columns.finished",
+  blocking: "opsControl.columns.blocking",
+  turn_finished: "opsControl.columns.turnFinished",
+  archived: "opsControl.columns.archived",
 };
 
 export function getColumnTitleKey(columnId: string): string {
@@ -132,8 +140,8 @@ export const KANBAN_COLUMNS: AgentKanbanColumnConfig[] = [
     headerBgColor: "color-mix(in srgb, var(--color-primary-6) 8%, transparent)",
   },
   {
-    id: "your_turn",
-    title: "sessions:opsControl.columns.yourTurn",
+    id: "blocking",
+    title: "sessions:opsControl.columns.blocking",
     icon: MessageCircleWarning,
     color: "#FF8C42",
     bgColor: "rgba(255, 140, 66, 0.1)",
@@ -141,13 +149,22 @@ export const KANBAN_COLUMNS: AgentKanbanColumnConfig[] = [
     headerBgColor: "rgba(255, 140, 66, 0.08)",
   },
   {
-    id: "finished",
-    title: "sessions:opsControl.columns.finished",
-    icon: Archive,
+    id: "turn_finished",
+    title: "sessions:opsControl.columns.turnFinished",
+    icon: CheckCircle2,
     color: "#52C41A",
     bgColor: "rgba(82, 196, 26, 0.1)",
     dotColor: "#52C41A",
     headerBgColor: "rgba(82, 196, 26, 0.08)",
+  },
+  {
+    id: "archived",
+    title: "sessions:opsControl.columns.archived",
+    icon: Archive,
+    color: "var(--color-text-3)",
+    bgColor: "color-mix(in srgb, var(--color-fill-4) 18%, transparent)",
+    dotColor: "var(--color-text-3)",
+    headerBgColor: "color-mix(in srgb, var(--color-fill-4) 14%, transparent)",
   },
 ];
 
@@ -196,18 +213,15 @@ const ACTIVE_SESSION_STATUSES = new Set<string>([
  * Priority order (first match wins):
  *   1. Pending / queued session statuses     → todo
  *   2. Running / installing session statuses → in_progress
- *   3. Manual Finished override              → finished
- *   4. Idle longer than auto-archive TTL     → finished
- *   5. Everything else                       → your_turn
- *
- * Successful completion is deliberately not enough to route to Finished:
- * an agent stopping only means the next decision belongs to the user. Finished
- * is a review/archival state, so it comes from manual drag or TTL cleanup.
+ *   3. Waiting for user action               → blocking
+ *   4. Manual archive override               → archived
+ *   5. Idle longer than auto-archive TTL     → archived
+ *   6. Everything else                       → turn_finished
  */
 export function mapSessionToKanbanColumn(
   session: Session,
   options: {
-    manualFinishedSessionIds?: ReadonlySet<string>;
+    manualArchivedSessionIds?: ReadonlySet<string>;
     autoArchiveTtl?: KanbanAutoArchiveTtl;
     nowMs?: number;
   } = {}
@@ -221,15 +235,19 @@ export function mapSessionToKanbanColumn(
     return "in_progress";
   }
 
-  if (options.manualFinishedSessionIds?.has(session.session_id)) {
-    return "finished";
+  if (status === KANBAN_SESSION_STATUS.WAITING_FOR_USER) {
+    return "blocking";
+  }
+
+  if (options.manualArchivedSessionIds?.has(session.session_id)) {
+    return "archived";
   }
 
   if (isSessionAutoArchived(session, options.autoArchiveTtl, options.nowMs)) {
-    return "finished";
+    return "archived";
   }
 
-  return "your_turn";
+  return "turn_finished";
 }
 
 // ============================================

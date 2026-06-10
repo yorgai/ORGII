@@ -24,7 +24,6 @@ export type TaskStatus =
   | "duplicate";
 
 export const KANBAN_RESULT_STATUS = {
-  Completed: "completed",
   Failed: "failed",
   Archived: "archived",
 } as const;
@@ -49,7 +48,7 @@ export interface KanbanTask {
   /**
    * True when this task represents a session the user has not yet opened
    * since it reached a terminal state. Drives unread visual emphasis and
-   * intra-column "unread first" sorting in the Finished column.
+   * intra-column "unread first" sorting in terminal result columns.
    */
   isUnread?: boolean;
   /** Terminal result shown as a small badge inside consolidated result columns. */

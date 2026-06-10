@@ -13,7 +13,13 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import cn from "classnames";
 import { Plus } from "lucide-react";
-import React, { useMemo } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -33,6 +39,11 @@ import "./index.scss";
 interface DropIndicatorState {
   columnId: string | null;
   beforeTaskId: string | null;
+}
+
+interface ScrollEdgeState {
+  atTop: boolean;
+  atBottom: boolean;
 }
 
 export interface KanbanColumnProps {
@@ -89,6 +100,34 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: column.id,
   });
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const [scrollEdges, setScrollEdges] = useState<ScrollEdgeState>({
+    atTop: true,
+    atBottom: true,
+  });
+  const updateScrollEdges = useCallback(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    const maxScrollTop = Math.max(0, body.scrollHeight - body.clientHeight);
+    const nextEdges = {
+      atTop: body.scrollTop <= 1,
+      atBottom: body.scrollTop >= maxScrollTop - 1,
+    };
+    setScrollEdges((previousEdges) =>
+      previousEdges.atTop === nextEdges.atTop &&
+      previousEdges.atBottom === nextEdges.atBottom
+        ? previousEdges
+        : nextEdges
+    );
+  }, []);
+  const setBodyNode = useCallback(
+    (node: HTMLDivElement | null) => {
+      bodyRef.current = node;
+      setDroppableRef(node);
+      updateScrollEdges();
+    },
+    [setDroppableRef, updateScrollEdges]
+  );
 
   // Get filtered tasks (excluding the actively dragged task)
   const filteredTasks = useMemo(
@@ -101,6 +140,10 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
     () => filteredTasks.map((task) => task.id),
     [filteredTasks]
   );
+
+  useEffect(() => {
+    updateScrollEdges();
+  }, [filteredTasks.length, showAddButton, updateScrollEdges]);
 
   // Check if we should show indicator at end of column (when beforeTaskId is null)
   const showEndIndicator =
@@ -180,15 +223,14 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
 
       {/* Column Body - Droppable Area */}
       <div
-        ref={setDroppableRef}
+        ref={setBodyNode}
         className={cn("kanban-column__body", {
           "kanban-column__body--dragging-over":
             isOver || dropIndicator !== null,
+          "kanban-column__body--at-top": scrollEdges.atTop,
+          "kanban-column__body--at-bottom": scrollEdges.atBottom,
         })}
-        style={{
-          backgroundColor:
-            isOver || dropIndicator !== null ? column.bgColor : "transparent",
-        }}
+        onScroll={updateScrollEdges}
       >
         <SortableContext
           items={taskIds}

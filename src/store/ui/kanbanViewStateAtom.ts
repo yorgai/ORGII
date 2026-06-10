@@ -35,15 +35,16 @@ const AGENT_TYPE_FILTER_STORAGE_KEY = "orgii:kanbanAgentTypeFilter";
 const SIDEBAR_FILTER_STORAGE_KEY = "orgii:kanbanSidebarFilter";
 const TIME_FILTER_STORAGE_KEY = "orgii:kanbanTimeFilter";
 const AUTO_ARCHIVE_TTL_STORAGE_KEY = "orgii:kanbanAutoArchiveTtl";
-const MANUAL_FINISHED_STORAGE_KEY = "orgii:kanbanManualFinishedSessions";
-const MAX_MANUAL_FINISHED_SESSION_IDS = 1000;
+const MANUAL_ARCHIVED_STORAGE_KEY = "orgii:kanbanManualArchivedSessions";
+const MAX_MANUAL_ARCHIVED_SESSION_IDS = 1000;
 
 const KNOWN_KANBAN_SIDEBAR_FILTERS = new Set<KanbanSidebarFilter>([
   KANBAN_SIDEBAR_FILTER.ALL,
   KANBAN_SIDEBAR_FILTER.TODO,
   KANBAN_SIDEBAR_FILTER.IN_PROGRESS,
-  KANBAN_SIDEBAR_FILTER.YOUR_TURN,
-  KANBAN_SIDEBAR_FILTER.FINISHED,
+  KANBAN_SIDEBAR_FILTER.BLOCKING,
+  KANBAN_SIDEBAR_FILTER.TURN_FINISHED,
+  KANBAN_SIDEBAR_FILTER.ARCHIVED,
 ]);
 
 const KNOWN_TIME_FILTERS = new Set<KanbanTimeFilter>([
@@ -187,14 +188,14 @@ const autoArchiveTtlStorage = {
   },
 };
 
-const manualFinishedSessionIdsStorage = {
+const manualArchivedSessionIdsStorage = {
   getItem(key: string, initialValue: string[]): string[] {
     if (typeof window === "undefined") return initialValue;
     try {
       const stored = window.localStorage.getItem(key);
       if (stored == null) return initialValue;
       const parsed: unknown = JSON.parse(stored);
-      return parseStringArray(parsed).slice(0, MAX_MANUAL_FINISHED_SESSION_IDS);
+      return parseStringArray(parsed).slice(0, MAX_MANUAL_ARCHIVED_SESSION_IDS);
     } catch {
       return initialValue;
     }
@@ -203,7 +204,7 @@ const manualFinishedSessionIdsStorage = {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(
       key,
-      JSON.stringify(value.slice(0, MAX_MANUAL_FINISHED_SESSION_IDS))
+      JSON.stringify(value.slice(0, MAX_MANUAL_ARCHIVED_SESSION_IDS))
     );
   },
   removeItem(key: string) {
@@ -241,18 +242,18 @@ export const kanbanAutoArchiveTtlAtom = atomWithStorage<KanbanAutoArchiveTtl>(
 );
 kanbanAutoArchiveTtlAtom.debugLabel = "kanban/autoArchiveTtl";
 
-export const kanbanManualFinishedSessionIdsAtom = atomWithStorage<string[]>(
-  MANUAL_FINISHED_STORAGE_KEY,
+export const kanbanManualArchivedSessionIdsAtom = atomWithStorage<string[]>(
+  MANUAL_ARCHIVED_STORAGE_KEY,
   [],
-  manualFinishedSessionIdsStorage
+  manualArchivedSessionIdsStorage
 );
-kanbanManualFinishedSessionIdsAtom.debugLabel =
-  "kanban/manualFinishedSessionIds";
+kanbanManualArchivedSessionIdsAtom.debugLabel =
+  "kanban/manualArchivedSessionIds";
 
-export const kanbanManualFinishedSessionsAtom = atom<Set<string>>((get) => {
-  return new Set(get(kanbanManualFinishedSessionIdsAtom));
+export const kanbanManualArchivedSessionsAtom = atom<Set<string>>((get) => {
+  return new Set(get(kanbanManualArchivedSessionIdsAtom));
 });
-kanbanManualFinishedSessionsAtom.debugLabel = "kanban/manualFinishedSessions";
+kanbanManualArchivedSessionsAtom.debugLabel = "kanban/manualArchivedSessions";
 
 /** Currently previewed task id. `null` when no task is selected. */
 export const kanbanSelectedTaskIdAtom = atom<string | null>(null);
