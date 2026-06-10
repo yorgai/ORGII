@@ -176,10 +176,77 @@ function normalizePathCandidate(candidate: string): string | null {
   return normalized;
 }
 
-async function resolveOpenPath(path: string): Promise<string> {
-  if (!path.startsWith("~/")) return path;
+/**
+ * Lexically collapses `.` and `..` segments out of `path`. Pure string
+ * transform — no filesystem IO and no symlink resolution, which matches
+ * what we want here: we never want to chase a symlink just to render a
+ * chat-message file card.
+ *
+ * Tauri's plugin-fs scope checker rejects any path containing a `..`
+ * component outright with `cannot traverse directory, rewrite the path
+ * without the use of '../'`, even when the resolved path still falls
+ * inside the allowed scope. Chat messages routinely include relative
+ * forms like `/Users/me/proj/../sibling/file.ts` (typed by the user or
+ * synthesised by the assistant), so we collapse those segments before
+ * handing the path to any file operation.
+ *
+ * Behaviour:
+ *   - `/A/B/../C`           → `/A/C`
+ *   - `/A/./B`              → `/A/B`
+ *   - `/A/B/..`             → `/A`
+ *   - `/..`                 → `/`        (cannot escape filesystem root)
+ *   - `A/B/../../../C`      → `../C`     (relative roots may still go up)
+ *   - empty / no segments   → returned unchanged
+ *
+ * Trailing slashes are preserved when present so directory paths keep
+ * their visual cue.
+ */
+export function collapseRelativePathSegments(path: string): string {
+  if (
+    !path ||
+    (!path.includes("/./") &&
+      !path.includes("/../") &&
+      !path.endsWith("/.") &&
+      !path.endsWith("/.."))
+  ) {
+    return path;
+  }
+
+  const isAbsolute = path.startsWith("/");
+  const hasTrailingSlash = path.length > 1 && path.endsWith("/");
+  const segments = path.split("/").filter((segment) => segment.length > 0);
+  const stack: string[] = [];
+
+  for (const segment of segments) {
+    if (segment === ".") continue;
+    if (segment === "..") {
+      // Absolute paths can never escape the filesystem root. Relative
+      // paths preserve leading `..` segments so things like `../sibling`
+      // still resolve relative to their caller.
+      if (stack.length > 0 && stack[stack.length - 1] !== "..") {
+        stack.pop();
+      } else if (!isAbsolute) {
+        stack.push("..");
+      }
+      continue;
+    }
+    stack.push(segment);
+  }
+
+  const joined = stack.join("/");
+  if (isAbsolute) {
+    const body = joined.length > 0 ? `/${joined}` : "/";
+    return hasTrailingSlash && body !== "/" ? `${body}/` : body;
+  }
+  if (joined.length === 0) return ".";
+  return hasTrailingSlash ? `${joined}/` : joined;
+}
+
+export async function resolveOpenPath(path: string): Promise<string> {
+  if (!path.startsWith("~/")) return collapseRelativePathSegments(path);
   const home = await homeDir();
-  return `${home.replace(/\/+$/, "")}/${path.slice(2)}`;
+  const expanded = `${home.replace(/\/+$/, "")}/${path.slice(2)}`;
+  return collapseRelativePathSegments(expanded);
 }
 
 function getUrlHost(url: string): string {
