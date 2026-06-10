@@ -644,23 +644,28 @@ const ComposerInput = forwardRef<ComposerInputRef, ComposerInputProps>(
             const host = ops.hostRef.current;
             const parent = target.parentNode;
             const previousSibling = target.previousSibling;
-            const childIndex = parent
-              ? Array.prototype.indexOf.call(parent.childNodes, target)
-              : -1;
             parent?.removeChild(target);
-            if (host && parent && childIndex >= 0) {
+            if (host && parent) {
               const range = document.createRange();
-              if (
-                previousSibling?.nodeType === Node.TEXT_NODE &&
-                parent.contains(previousSibling)
-              ) {
-                const anchor = previousSibling as Text;
-                range.setStart(anchor, (anchor.textContent ?? "").length);
-              } else {
-                range.setStart(
-                  parent,
-                  Math.min(childIndex, parent.childNodes.length)
-                );
+              // Walk left past any empty sentinel text nodes to find real content.
+              // If nothing is to the left, fall back to end of parent (after the
+              // last remaining child) so the caret never snaps to position 0.
+              let placed = false;
+              let node: ChildNode | null = previousSibling as ChildNode | null;
+              while (node) {
+                if (
+                  node.nodeType === Node.TEXT_NODE &&
+                  (node.textContent ?? "").length > 0 &&
+                  parent.contains(node)
+                ) {
+                  range.setStart(node, (node.textContent ?? "").length);
+                  placed = true;
+                  break;
+                }
+                node = node.previousSibling;
+              }
+              if (!placed) {
+                range.setStart(parent, parent.childNodes.length);
               }
               range.collapse(true);
               const selection = window.getSelection();

@@ -242,39 +242,75 @@ function removePillAndPlaceCaret(
 
   const nextSibling = pill.nextSibling;
   const previousSibling = pill.previousSibling;
-  const childIndex = Array.prototype.indexOf.call(parent.childNodes, pill);
-
-  // For Backspace: caret should land where the pill was — i.e. in the
-  // text before the pill (end of previousSibling text node), or right
-  // at the slot index if there is no text neighbour.
-  // For Delete: caret lands after the deletion — i.e. at the start of
-  // the text node that follows the pill.
-  let anchorNode: Text | null = null;
-  let anchorOffset = 0;
-
-  if (direction === "backward") {
-    if (previousSibling?.nodeType === Node.TEXT_NODE) {
-      anchorNode = previousSibling as Text;
-      anchorOffset = (anchorNode.textContent ?? "").length;
-    }
-  } else {
-    if (nextSibling?.nodeType === Node.TEXT_NODE) {
-      anchorNode = nextSibling as Text;
-      anchorOffset = 0;
-    }
-  }
 
   parent.removeChild(pill);
 
+  // Place the caret at the nearest meaningful position after deletion.
+  // Walk outward from where the pill was to find the best anchor:
+  //   Backspace → prefer end of the closest non-empty text node to the left,
+  //               then the start of the closest non-empty text node to the right.
+  //   Delete    → prefer start of the closest non-empty text node to the right,
+  //               then the end of the closest non-empty text node to the left.
+  // Empty sentinel text nodes (guaranteed by insertPill) are skipped — they
+  // are zero-width and placing the caret at offset 0 inside one of them looks
+  // identical to "jumped to the beginning".
+  const findNonEmptyTextLeft = (start: ChildNode | null): Text | null => {
+    let node = start;
+    while (node) {
+      if (
+        node.nodeType === Node.TEXT_NODE &&
+        (node.textContent ?? "").length > 0
+      ) {
+        return node as Text;
+      }
+      node = node.previousSibling;
+    }
+    return null;
+  };
+  const findNonEmptyTextRight = (start: ChildNode | null): Text | null => {
+    let node = start;
+    while (node) {
+      if (
+        node.nodeType === Node.TEXT_NODE &&
+        (node.textContent ?? "").length > 0
+      ) {
+        return node as Text;
+      }
+      node = node.nextSibling;
+    }
+    return null;
+  };
+
   const range = document.createRange();
-  if (anchorNode && parent.contains(anchorNode)) {
-    range.setStart(
-      anchorNode,
-      Math.min(anchorOffset, (anchorNode.textContent ?? "").length)
-    );
+
+  if (direction === "backward") {
+    const left = findNonEmptyTextLeft(previousSibling as ChildNode | null);
+    if (left && parent.contains(left)) {
+      range.setStart(left, (left.textContent ?? "").length);
+    } else {
+      const right = findNonEmptyTextRight(nextSibling as ChildNode | null);
+      if (right && parent.contains(right)) {
+        range.setStart(right, 0);
+      } else {
+        // Host is now all pills / empty sentinels — place after the last
+        // remaining child, or at 0 if the host is empty.
+        range.setStart(parent, parent.childNodes.length);
+      }
+    }
   } else {
-    range.setStart(parent, Math.min(childIndex, parent.childNodes.length));
+    const right = findNonEmptyTextRight(nextSibling as ChildNode | null);
+    if (right && parent.contains(right)) {
+      range.setStart(right, 0);
+    } else {
+      const left = findNonEmptyTextLeft(previousSibling as ChildNode | null);
+      if (left && parent.contains(left)) {
+        range.setStart(left, (left.textContent ?? "").length);
+      } else {
+        range.setStart(parent, parent.childNodes.length);
+      }
+    }
   }
+
   range.collapse(true);
 
   const selection = window.getSelection();
