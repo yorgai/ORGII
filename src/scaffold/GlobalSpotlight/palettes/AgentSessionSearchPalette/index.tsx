@@ -11,12 +11,15 @@ import { useTranslation } from "react-i18next";
 
 import { useFilteredItems } from "@src/hooks/search";
 import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
+import { renderBreathingStatusDot } from "@src/scaffold/NavigationSidebar/connectors/useSessionMenuItems/statusIndicators";
 import {
   loadSidebarSessions,
   sessionLoadingAtom,
   sessionsAtom,
 } from "@src/store/session";
 import type { Session } from "@src/store/session";
+import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
+import { isSessionInProgress } from "@src/util/session/sessionInProgress";
 import {
   getSessionListDisplayName,
   resolveSessionRowIcon,
@@ -115,6 +118,8 @@ export const AgentSessionSearchPalette: React.FC<
         );
         const timestamp = getSessionTimestamp(session);
 
+        const inProgress = isSessionInProgress(session.status, session);
+
         return {
           id: session.session_id,
           label: sessionName,
@@ -122,7 +127,11 @@ export const AgentSessionSearchPalette: React.FC<
           type: "option" as const,
           data: {
             rightLabel: formatRelativeTime(timestamp, "nano"),
-            tagLabel: session.status,
+            tagLabel: inProgress ? undefined : session.status,
+            statusContent: inProgress ? renderBreathingStatusDot() : undefined,
+            iconTone: isCursorIdeSession(session.session_id)
+              ? "primary"
+              : undefined,
           },
           action: () => handleOpenSession(session),
         };

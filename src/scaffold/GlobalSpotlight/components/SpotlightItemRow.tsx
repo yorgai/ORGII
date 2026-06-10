@@ -165,7 +165,13 @@ export const SpotlightItemRow = memo<SpotlightItemRowProps>(
     const isDisabled = !!data.disabled;
     const isDanger = !!data.isDanger;
     const itemTextClassName = isDanger ? "text-danger-6" : "text-text-1";
-    const itemIconClassName = isDanger ? "text-danger-6" : "text-text-2";
+    const iconTone =
+      typeof data.iconTone === "string" ? data.iconTone : undefined;
+    const itemIconClassName = isDanger
+      ? "text-danger-6"
+      : iconTone === "primary"
+        ? "text-primary-6"
+        : "text-text-2";
     // Only the currently-checked option uses medium weight; regular rows are normal.
     const labelWeightClass = isCurrentSelection ? "font-medium" : "font-normal";
     const modelSection =
@@ -400,15 +406,22 @@ export const SpotlightItemRow = memo<SpotlightItemRowProps>(
                 </span>
               ))}
 
-          {data.tagLabel && item.type !== "branch" && (
-            <span
-              className={`${TAG_BASE_CLASSES} px-[10px] py-1.5 text-[11px] ${
-                isDisabled ? "bg-fill-2 text-text-3" : "text-slate-600"
-              }`}
-            >
-              {isDisabled && <Lock size={10} />}
-              {data.tagLabel}
+          {data.statusContent ? (
+            <span className="flex h-6 w-6 items-center justify-center">
+              {data.statusContent as React.ReactNode}
             </span>
+          ) : (
+            data.tagLabel &&
+            item.type !== "branch" && (
+              <span
+                className={`${TAG_BASE_CLASSES} px-[10px] py-1.5 text-[11px] ${
+                  isDisabled ? "bg-fill-2 text-text-3" : "text-slate-600"
+                }`}
+              >
+                {isDisabled && <Lock size={10} />}
+                {data.tagLabel}
+              </span>
+            )
           )}
 
           {(item.type === "action" ||
