@@ -10,7 +10,12 @@ use super::crud::normalize_session_sequences;
 const USER_MESSAGE_FUNCTION: &str = "user_message";
 const TURN_STATUS_PENDING: &str = "pending";
 const TURN_STATUS_COMPLETED: &str = "completed";
-const TURN_INDEX_VERSION: i64 = 4;
+const TURN_STATUS_FAILED: &str = "failed";
+
+/// Bump the index version every time the build_turn_drafts algorithm or
+/// the status derivation changes shape — `ensure_turn_index_fresh`
+/// rebuilds when the stored version is older.
+const TURN_INDEX_VERSION: i64 = 5;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -53,6 +58,10 @@ struct TurnDraft {
     user_preview: String,
     event_count: i64,
     body_event_count: i64,
+    /// Canonical user-intent id for this turn, if the source rows carried
+    /// one. Used by `build_turn_drafts` to collapse a synthetic + backend
+    /// pair into a single draft.
+    turn_intent_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -109,8 +118,58 @@ fn is_synthetic_user_input(row: &IndexEventRow) -> bool {
         .unwrap_or(false)
 }
 
+/// Extract the canonical user-intent id from a user_message row's
+/// `result_json`. Returns `None` for legacy rows (no id was minted) and
+/// for malformed JSON.
+fn turn_intent_id_for_row(row: &IndexEventRow) -> Option<String> {
+    serde_json::from_str::<serde_json::Value>(&row.result_json)
+        .ok()
+        .and_then(|result| {
+            result
+                .get("turnIntentId")
+                .and_then(|value| value.as_str())
+                .map(str::to_string)
+                .filter(|id| !id.is_empty())
+        })
+}
+
 fn is_user_message(row: &IndexEventRow) -> bool {
     row.function_name.as_deref() == Some(USER_MESSAGE_FUNCTION) && !is_synthetic_user_input(row)
+}
+
+/// Lookup of intent ids that the indexer must treat as not yielding a
+/// durable round (Stale / Superseded). Built from the lifecycle store at
+/// rebuild time.
+type StaleIntentIds = std::collections::HashSet<String>;
+
+/// Lifecycle status overlay for non-stale intents. Keyed by intent id;
+/// the value is the durable lifecycle status (`completed`, `failed`,
+/// `cancelled`, `running`, `queued`, `optimistic`). The indexer uses
+/// this in preference to the legacy `body_event_count > 0` heuristic so
+/// a turn that the user cancelled mid-stream is marked correctly even
+/// when no body events landed.
+type IntentStatusOverlay = std::collections::HashMap<String, String>;
+
+fn load_stale_intent_ids(session_id: &str) -> StaleIntentIds {
+    super::turn_intents::list_for_session(session_id)
+        .map(|rows| {
+            rows.into_iter()
+                .filter(|row| row.status.is_pre_durable_terminal())
+                .map(|row| row.turn_intent_id)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn load_intent_status_overlay(session_id: &str) -> IntentStatusOverlay {
+    super::turn_intents::list_for_session(session_id)
+        .map(|rows| {
+            rows.into_iter()
+                .filter(|row| !row.status.is_pre_durable_terminal())
+                .map(|row| (row.turn_intent_id, row.status.as_str().to_string()))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 fn user_event_id_for_message(message_id: &str) -> String {
@@ -284,12 +343,41 @@ fn max_timestamp(left: &str, right: &str) -> String {
     }
 }
 
-fn build_turn_drafts(rows: &[IndexEventRow]) -> Vec<TurnDraft> {
+fn build_turn_drafts(rows: &[IndexEventRow], stale_intent_ids: &StaleIntentIds) -> Vec<TurnDraft> {
     let mut drafts: Vec<TurnDraft> = Vec::new();
     let mut current: Option<TurnDraft> = None;
 
     for row in rows {
         if is_user_message(row) {
+            let row_intent_id = turn_intent_id_for_row(row);
+
+            // Lifecycle-pre-durable terminal: this intent will never yield
+            // a durable round (Stale = invalidated, Superseded = replaced
+            // by a later submit). Drop the row entirely so the indexer
+            // does not paint a phantom turn.
+            if let Some(ref intent_id) = row_intent_id {
+                if stale_intent_ids.contains(intent_id) {
+                    continue;
+                }
+            }
+
+            // Group-by-intent: if the row shares an intent with the open
+            // turn, merge into it (the optimistic synthetic event landed
+            // first; the durable backend row arrives later with the same
+            // id). Adds the new event id so user_event_ids tracks both,
+            // but does not open a new round.
+            if let (Some(ref intent_id), Some(ref mut turn)) =
+                (row_intent_id.as_ref(), current.as_mut())
+            {
+                if turn.turn_intent_id.as_ref() == Some(*intent_id) {
+                    turn.user_event_ids.push(row.id.clone());
+                    turn.event_count += 1;
+                    turn.ended_at =
+                        Some(max_timestamp(&turn.started_at, &row.created_at));
+                    continue;
+                }
+            }
+
             if let Some(mut completed) = current.take() {
                 completed.end_sequence = Some(row.order_sequence);
                 completed.next_turn_id = Some(row.id.clone());
@@ -307,6 +395,7 @@ fn build_turn_drafts(rows: &[IndexEventRow]) -> Vec<TurnDraft> {
                 user_preview: row.content.clone(),
                 event_count: 1,
                 body_event_count: 0,
+                turn_intent_id: row_intent_id,
             });
             continue;
         }
@@ -372,7 +461,13 @@ fn rebuild_turn_index_inner(session_id: &str) -> SqliteResult<Vec<CachedTurnSumm
     backfill_missing_user_events(&conn, session_id)?;
     normalize_session_sequences(&conn, session_id)?;
     let rows = load_index_rows(&conn, session_id)?;
-    let drafts = build_turn_drafts(&rows);
+    // Consult the lifecycle store so the indexer can drop rows whose
+    // intent was retired before it ran (Stale / Superseded). Read failure
+    // falls back to an empty set, which preserves the legacy behaviour of
+    // building rounds purely from events.
+    let stale_intent_ids = load_stale_intent_ids(session_id);
+    let intent_status_overlay = load_intent_status_overlay(session_id);
+    let drafts = build_turn_drafts(&rows, &stale_intent_ids);
     let (event_count, max_sequence) = event_state(&conn, session_id)?;
     let rebuilt_at = Utc::now().to_rfc3339();
 
@@ -394,11 +489,31 @@ fn rebuild_turn_index_inner(session_id: &str) -> SqliteResult<Vec<CachedTurnSumm
         for draft in &drafts {
             let user_event_ids_json =
                 serde_json::to_string(&draft.user_event_ids).unwrap_or_else(|_| "[]".to_string());
-            let status = if draft.body_event_count > 0 {
-                TURN_STATUS_COMPLETED
-            } else {
-                TURN_STATUS_PENDING
-            };
+            // Status derivation: lifecycle store wins when available.
+            // Falls back to the legacy `body_event_count > 0` heuristic for
+            // rows that predate the canonical intent id (no row in
+            // `session_turn_intents`). The lifecycle store is the
+            // authoritative source for cancelled turns that had zero body
+            // events and for turns interrupted mid-stream.
+            let status = draft
+                .turn_intent_id
+                .as_ref()
+                .and_then(|intent_id| intent_status_overlay.get(intent_id))
+                .map(|status| match status.as_str() {
+                    "completed" => TURN_STATUS_COMPLETED,
+                    "failed" | "cancelled" => TURN_STATUS_FAILED,
+                    // Running / queued / optimistic all surface as pending
+                    // — the round is open and we don't yet know the
+                    // terminal outcome.
+                    _ => TURN_STATUS_PENDING,
+                })
+                .unwrap_or_else(|| {
+                    if draft.body_event_count > 0 {
+                        TURN_STATUS_COMPLETED
+                    } else {
+                        TURN_STATUS_PENDING
+                    }
+                });
             stmt.execute(params![
                 session_id,
                 draft.turn_id,
@@ -610,7 +725,7 @@ mod tests {
             ),
         ];
 
-        let drafts = build_turn_drafts(&rows);
+        let drafts = build_turn_drafts(&rows, &StaleIntentIds::new());
 
         assert_eq!(drafts.len(), 1);
         assert_eq!(drafts[0].turn_id, "user-message-authoritative");
@@ -635,7 +750,7 @@ mod tests {
             row("assistant-event", Some("assistant_message"), "{}", 3),
         ];
 
-        let drafts = build_turn_drafts(&rows);
+        let drafts = build_turn_drafts(&rows, &StaleIntentIds::new());
 
         assert_eq!(drafts.len(), 1);
         assert_eq!(drafts[0].turn_id, "user-message-authoritative");
@@ -652,10 +767,78 @@ mod tests {
             1,
         )];
 
-        let drafts = build_turn_drafts(&rows);
+        let drafts = build_turn_drafts(&rows, &StaleIntentIds::new());
 
         assert_eq!(drafts.len(), 1);
         assert_eq!(drafts[0].turn_id, "user-message-latest");
         assert_eq!(drafts[0].body_event_count, 0);
+    }
+
+    #[test]
+    fn two_rows_with_same_turn_intent_id_collapse_into_one_round() {
+        // The optimistic synthetic event is normally filtered out by
+        // `is_synthetic_user_input`, but a backend can also legitimately
+        // persist two user_message rows under the same intent (inbox
+        // transcript followed by main submit). The indexer must collapse
+        // them into a single round so the user sees one bubble, not two.
+        let intent = r#"{"backendPersisted":true,"turnIntentId":"intent-A"}"#;
+        let rows = vec![
+            row("user-message-1", Some(USER_MESSAGE_FUNCTION), intent, 1),
+            row("user-message-2", Some(USER_MESSAGE_FUNCTION), intent, 2),
+            row("assistant-event", Some("assistant_message"), "{}", 3),
+        ];
+
+        let drafts = build_turn_drafts(&rows, &StaleIntentIds::new());
+
+        assert_eq!(drafts.len(), 1);
+        // The first user_message that opened the round wins as turn_id;
+        // both user event ids are tracked.
+        assert_eq!(drafts[0].turn_id, "user-message-1");
+        assert_eq!(
+            drafts[0].user_event_ids,
+            vec!["user-message-1".to_string(), "user-message-2".to_string()]
+        );
+        assert_eq!(drafts[0].event_count, 3);
+        assert_eq!(drafts[0].body_event_count, 1);
+    }
+
+    #[test]
+    fn rows_with_stale_intent_are_dropped() {
+        // Reproduces the Stop + model switch + Send Now path: the first
+        // submit's intent was retired (stale) before its user_message
+        // row was even persisted. The indexer must not paint a phantom
+        // round for it.
+        let stale = r#"{"backendPersisted":true,"turnIntentId":"intent-stale"}"#;
+        let fresh = r#"{"backendPersisted":true,"turnIntentId":"intent-fresh"}"#;
+        let rows = vec![
+            row("user-message-stale", Some(USER_MESSAGE_FUNCTION), stale, 1),
+            row("user-message-fresh", Some(USER_MESSAGE_FUNCTION), fresh, 2),
+            row("assistant-event", Some("assistant_message"), "{}", 3),
+        ];
+
+        let mut stale_ids = StaleIntentIds::new();
+        stale_ids.insert("intent-stale".to_string());
+        let drafts = build_turn_drafts(&rows, &stale_ids);
+
+        assert_eq!(drafts.len(), 1);
+        assert_eq!(drafts[0].turn_id, "user-message-fresh");
+    }
+
+    #[test]
+    fn rows_with_distinct_turn_intent_ids_stay_separate() {
+        let intent_a = r#"{"backendPersisted":true,"turnIntentId":"intent-A"}"#;
+        let intent_b = r#"{"backendPersisted":true,"turnIntentId":"intent-B"}"#;
+        let rows = vec![
+            row("user-message-a", Some(USER_MESSAGE_FUNCTION), intent_a, 1),
+            row("assistant-1", Some("assistant_message"), "{}", 2),
+            row("user-message-b", Some(USER_MESSAGE_FUNCTION), intent_b, 3),
+            row("assistant-2", Some("assistant_message"), "{}", 4),
+        ];
+
+        let drafts = build_turn_drafts(&rows, &StaleIntentIds::new());
+
+        assert_eq!(drafts.len(), 2);
+        assert_eq!(drafts[0].turn_id, "user-message-a");
+        assert_eq!(drafts[1].turn_id, "user-message-b");
     }
 }
