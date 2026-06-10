@@ -5,9 +5,9 @@
  * Collapsed: label + "X/Y" progress counter.
  * Expanded: individual todo rows with status icons.
  */
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { Check, ChevronRight, ListTodo, Lock } from "lucide-react";
-import React, { memo, useState } from "react";
+import React, { memo, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -15,7 +15,12 @@ import {
   COMPOSER_STACK_ROW_LABEL,
 } from "@src/config/composerStackTokens";
 import { isSessionActiveAtom } from "@src/store/session/cliSessionStatusAtom";
-import { getTodoBatchTitle, todosAtom } from "@src/store/ui/todoAtom";
+import { workstationActiveSessionIdAtom } from "@src/store/session/viewAtom";
+import {
+  clearTodosForSessionAtom,
+  getTodoBatchTitle,
+  todosAtom,
+} from "@src/store/ui/todoAtom";
 
 import ComposerStackHeader, {
   ComposerStackHeaderCountBadge,
@@ -72,18 +77,28 @@ const PlanTodoPinBar: React.FC = memo(() => {
   const { t } = useTranslation("sessions");
   const todos = useAtomValue(todosAtom);
   const isAgentWorking = useAtomValue(isSessionActiveAtom);
+  const activeSessionId = useAtomValue(workstationActiveSessionIdAtom);
+  const clearTodosForSession = useSetAtom(clearTodosForSessionAtom);
   const [expanded, setExpanded] = useState(false);
+
+  const allTerminal =
+    todos.length > 0 &&
+    todos.every((todo) => TERMINAL_STATUSES.has(todo.status.toLowerCase()));
+
+  // Once a turn finishes with every todo in a terminal state and the agent is
+  // idle, drop the slot entirely so the next turn doesn't resurrect the old
+  // batch above the composer.
+  useEffect(() => {
+    if (!isAgentWorking && allTerminal && activeSessionId) {
+      clearTodosForSession(activeSessionId);
+    }
+  }, [isAgentWorking, allTerminal, activeSessionId, clearTodosForSession]);
 
   if (todos.length === 0) return null;
 
   const completedCount = todos.filter((t) =>
     t.status.toLowerCase().includes("completed")
   ).length;
-
-  const allDone =
-    !isAgentWorking &&
-    todos.every((todo) => TERMINAL_STATUSES.has(todo.status.toLowerCase()));
-  if (allDone) return null;
 
   const progressBadge = (
     <ComposerStackHeaderCountBadge>
