@@ -17,21 +17,25 @@
  * - ChatPanel: ALWAYS mounted (hidden via CSS when inactive to preserve state)
  */
 import { HoverSidebar } from "@/src/scaffold/NavigationSidebar";
-import { useAtomValue } from "jotai";
-import React, { memo, useEffect, useMemo } from "react";
+import { useAtomValue, useSetAtom } from "jotai";
+import React, { memo, useCallback, useEffect, useMemo } from "react";
 
 import { ActionSystemProvider } from "@src/ActionSystem";
 import { ChatProvider } from "@src/contexts/workspace/ChatContext";
 import { DataProvider } from "@src/contexts/workspace/DataContext";
 import ChatPanel from "@src/engines/ChatPanel";
 import { MAX_WIDTH as CHAT_MAX_WIDTH } from "@src/engines/ChatPanel/config";
+import type { SessionLaunchSuccessInfo } from "@src/engines/SessionCore/hooks/session/useSessionCreator/useSessionLaunch/types";
 import SessionSyncProvider from "@src/engines/SessionCore/sync/SessionSyncProvider";
 import { SessionCreatorChatPanel } from "@src/features/SessionCreator/variants";
+import type { SessionCreatorChatPanelProps } from "@src/features/SessionCreator/variants/ChatPanel";
 import SettingsSlot from "@src/modules/MainApp/Settings/SettingsSlot";
+import { ADE_SESSION_PROPOSAL_RESPONSE_EVENT } from "@src/modules/WorkStation/ActionSystem/registration/actions/sessionActions.zod";
 import GlobalSessionSync from "@src/modules/shared/components/GlobalSessionSync";
 import { GlobalSpotlightPortal } from "@src/modules/shared/components/GlobalSpotlightPortal";
 import { GENERAL_LAYOUT_TOUR_TARGETS } from "@src/scaffold/Tutorials/GeneralLayoutTour";
 import { currentRepoAtom } from "@src/store/repo";
+import { adeManagerPaletteAtom } from "@src/store/session/adeManagerPaletteAtom";
 import {
   type ChatPanelMode,
   DEFAULT_CHAT_WIDTH,
@@ -44,6 +48,50 @@ import { GlobalModals } from "./GlobalModals";
 import { MainContentArea } from "./MainContentArea";
 
 export type ChatLayout = "inset" | "full" | "compact";
+
+// ============================================
+// ADE-aware session creator slot
+// ============================================
+
+/**
+ * Wraps SessionCreatorChatPanel so that when there is a pending ADE proposal,
+ * launching from the chat panel's creator fires the proposal response event,
+ * resolving the Rust-side `session.propose` promise.
+ */
+const AdeAwareSessionCreatorSlot: React.FC<SessionCreatorChatPanelProps> = (
+  props
+) => {
+  const paletteState = useAtomValue(adeManagerPaletteAtom);
+  const setPaletteState = useSetAtom(adeManagerPaletteAtom);
+  const pendingProposal = paletteState.pendingProposal;
+
+  const handleSessionStart = useCallback(
+    (info: SessionLaunchSuccessInfo) => {
+      if (pendingProposal) {
+        window.dispatchEvent(
+          new CustomEvent(ADE_SESSION_PROPOSAL_RESPONSE_EVENT, {
+            detail: {
+              correlationId: pendingProposal.correlationId,
+              approved: true,
+              name: info.sessionId,
+              task: pendingProposal.task,
+              agentDefinitionId: pendingProposal.agentDefinitionId,
+              repoPath: pendingProposal.repoPath,
+              model: pendingProposal.model,
+            },
+          })
+        );
+        setPaletteState((prev) => ({ ...prev, pendingProposal: null }));
+      }
+      props.onSessionStart?.(info);
+    },
+    [pendingProposal, setPaletteState, props]
+  );
+
+  return (
+    <SessionCreatorChatPanel {...props} onSessionStart={handleSessionStart} />
+  );
+};
 
 // ============================================
 // Types
@@ -260,7 +308,7 @@ const AppLayoutComponent: React.FC<AppLayoutProps> = ({
         active={showChatPanel}
         useExternalWidth={chatPanelMaximized}
         position={chatPosition}
-        sessionCreatorSlot={SessionCreatorChatPanel}
+        sessionCreatorSlot={AdeAwareSessionCreatorSlot}
       />
     );
 

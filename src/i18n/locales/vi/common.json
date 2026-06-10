@@ -12,7 +12,10 @@
     "submit": "Gửi nội dung Agent Control",
     "menuToggle": "ADE Manager",
     "selectModel": "Chọn model",
-    "newRound": "Vòng mới"
+    "newRound": "Vòng mới",
+    "proposalTitle": "Phiên được đề xuất",
+    "proposalTaskLabel": "Nhiệm vụ",
+    "proposalLaunch": "Khởi chạy"
   },
   "secretCapture": {
     "title": "Cung cấp một bí mật",
@@ -222,7 +225,8 @@
     "sending": "Đang gửi…",
     "scanningFileExtensions": "Đang quét phần mở rộng tệp…",
     "testing": "Đang kiểm tra...",
-    "empty": "Trống"
+    "empty": "Trống",
+    "launching": "Đang khởi chạy..."
   },
   "pagination": {
     "totalItems": "{{count}} mục",

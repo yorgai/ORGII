@@ -12,7 +12,10 @@
     "submit": "Agent Control 入力を送信",
     "menuToggle": "ADE Manager",
     "selectModel": "モデルを選択",
-    "newRound": "新しいラウンド"
+    "newRound": "新しいラウンド",
+    "proposalTitle": "提案されたセッション",
+    "proposalTaskLabel": "タスク",
+    "proposalLaunch": "起動"
   },
   "secretCapture": {
     "title": "シークレットを入力",
@@ -222,7 +225,8 @@
     "sending": "送信中…",
     "scanningFileExtensions": "ファイル拡張子をスキャン中…",
     "testing": "テスト中...",
-    "empty": "空"
+    "empty": "空",
+    "launching": "起動中..."
   },
   "pagination": {
     "totalItems": "{{count}} 件",

@@ -3,13 +3,9 @@ import React from "react";
 import ModelSelectorPill from "@src/components/ModelSelectorPill";
 import type { LastModelSelection } from "@src/store/session/creatorDefaultModelAtom";
 
-import { AgentControlModePill } from "./AgentControlModePill";
 import { AgentControlSubmitButton } from "./AgentControlSubmitButton";
-import type { GuiControlMode } from "./types";
 
 export interface AgentControlInputTrailingProps {
-  mode: GuiControlMode;
-  onToggleMode: () => void;
   selection: LastModelSelection | null;
   selectModelLabel: string;
   modelSelectorActive: boolean;
@@ -21,8 +17,6 @@ export interface AgentControlInputTrailingProps {
 export const AgentControlInputTrailing: React.FC<
   AgentControlInputTrailingProps
 > = ({
-  mode,
-  onToggleMode,
   selection,
   selectModelLabel,
   modelSelectorActive,
@@ -32,7 +26,6 @@ export const AgentControlInputTrailing: React.FC<
 }) => {
   return (
     <div className="flex items-center gap-2">
-      <AgentControlModePill mode={mode} onClick={onToggleMode} />
       <ModelSelectorPill
         selection={selection}
         defaultLabel={selectModelLabel}

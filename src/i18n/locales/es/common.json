@@ -12,7 +12,10 @@
     "submit": "Enviar entrada de Agent Control",
     "menuToggle": "ADE Manager",
     "selectModel": "Seleccionar modelo",
-    "newRound": "Nueva ronda"
+    "newRound": "Nueva ronda",
+    "proposalTitle": "Sesión propuesta",
+    "proposalTaskLabel": "Tarea",
+    "proposalLaunch": "Lanzar"
   },
   "secretCapture": {
     "title": "Proporcionar un secreto",
@@ -222,7 +225,8 @@
     "sending": "Enviando…",
     "scanningFileExtensions": "Escaneando extensiones de archivo…",
     "testing": "Probando...",
-    "empty": "Vacío"
+    "empty": "Vacío",
+    "launching": "Lanzando..."
   },
   "pagination": {
     "totalItems": "{{count}} elementos",

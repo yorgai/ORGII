@@ -12,7 +12,10 @@
     "submit": "Submit Agent Control input",
     "menuToggle": "ADE Manager",
     "selectModel": "Select model",
-    "newRound": "New round"
+    "newRound": "New round",
+    "proposalTitle": "Proposed session",
+    "proposalTaskLabel": "Task",
+    "proposalLaunch": "Launch"
   },
   "secretCapture": {
     "title": "Provide a secret",
@@ -229,7 +232,8 @@
     "noResults": "No results",
     "sending": "Sending…",
     "testing": "Testing...",
-    "empty": "Empty"
+    "empty": "Empty",
+    "launching": "Launching..."
   },
   "pagination": {
     "totalItems": "{{count}} items",

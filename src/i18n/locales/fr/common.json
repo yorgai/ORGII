@@ -12,7 +12,10 @@
     "submit": "Envoyer la saisie Agent Control",
     "menuToggle": "ADE Manager",
     "selectModel": "Choisir le modèle",
-    "newRound": "Nouveau tour"
+    "newRound": "Nouveau tour",
+    "proposalTitle": "Session proposée",
+    "proposalTaskLabel": "Tâche",
+    "proposalLaunch": "Lancer"
   },
   "secretCapture": {
     "title": "Fournir un secret",
@@ -222,7 +225,8 @@
     "sending": "Envoi en cours…",
     "scanningFileExtensions": "Analyse des extensions de fichier…",
     "testing": "Test en cours...",
-    "empty": "Vide"
+    "empty": "Vide",
+    "launching": "Lancement..."
   },
   "pagination": {
     "totalItems": "{{count}} éléments",

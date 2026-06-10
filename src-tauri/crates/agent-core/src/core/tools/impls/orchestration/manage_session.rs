@@ -49,9 +49,19 @@ impl Tool for SessionTool {
     }
 
     fn description(&self) -> &str {
-        "Manage coding agent sessions: create, monitor, and intervene.\n\n\
+        "Manage coding agent sessions: propose, create, monitor, intervene, and update metadata.\n\n\
          ## Actions\n\
-         - **create** — Start a new SDE agent session with a task description\n\
+         - **propose** — PREFERRED for ADE Manager: surface a pre-filled session proposal card \
+           to the user and wait for confirmation before launching. Use this whenever you are \
+           suggesting a new session on the user's behalf — it shows the task, repo, and agent \
+           to the user who can edit and approve. The session is only created after approval. \
+           IMPORTANT: call propose at most ONCE per turn. Do not propose multiple sessions in \
+           the same response — propose one, wait for the result, then stop. Only propose \
+           another session in a subsequent turn after the user has interacted.\n\
+         - **create** — Immediately start a new agent session. Only use when the user has \
+           explicitly confirmed they want a session launched right now (e.g. after a propose \
+           was already shown and approved). Do NOT use create as the first step — use propose \
+           instead. Also limited to one call per turn.\n\
          - **list** — List sessions, optionally filtered by status\n\
          - **get_status** — Get detailed status of a session (includes pending questions)\n\
          - **send_message** — Send a text follow-up or instruction to a session\n\
@@ -59,7 +69,9 @@ impl Tool for SessionTool {
          - **pause** / **resume** / **cancel** — Lifecycle control\n\
          - **open** — Navigate to the session workspace in the IDE\n\
          - **upload_file** — Upload a file to the session context\n\
-         - **merge** — Merge a completed session's worktree branch"
+         - **merge** — Merge a completed session's worktree branch\n\
+         - **rename** — Rename a session (sets the display name)\n\
+         - **update_stats** — Write outcome stats (commits, PRs, file/line changes) to the session record"
     }
 
     fn parameters(&self) -> Value {
@@ -68,11 +80,12 @@ impl Tool for SessionTool {
             "properties": {
                 "action": {
                     "type": "string",
-                    "description": "Action to perform",
+                    "description": "Action to perform. Use 'propose' (not 'create') when suggesting a new session — it shows a confirmation card to the user first.",
                     "enum": [
-                        "create", "list", "get_status",
+                        "propose", "create", "list", "get_status",
                         "send_message", "answer_question",
-                        "pause", "resume", "cancel", "open", "upload_file", "merge"
+                        "pause", "resume", "cancel", "open", "upload_file", "merge",
+                        "rename", "update_stats"
                     ]
                 },
                 "task": {
@@ -135,6 +148,38 @@ impl Tool for SessionTool {
                     "type": "string",
                     "description": "Merge strategy: \"auto\", \"leave\", or \"ff\" (for merge, default: auto)",
                     "enum": ["auto", "leave", "ff"]
+                },
+                "new_name": {
+                    "type": "string",
+                    "description": "New display name for the session (for rename)"
+                },
+                "commit_count": {
+                    "type": "integer",
+                    "description": "Number of git commits made this session (for update_stats)"
+                },
+                "pr_count": {
+                    "type": "integer",
+                    "description": "Number of pull requests opened this session (for update_stats)"
+                },
+                "pr_url": {
+                    "type": "string",
+                    "description": "URL of the primary PR opened (for update_stats; omit to leave unchanged, pass empty string to clear)"
+                },
+                "files_changed": {
+                    "type": "integer",
+                    "description": "Distinct files changed this session (for update_stats)"
+                },
+                "lines_added": {
+                    "type": "integer",
+                    "description": "Lines added across all edits this session (for update_stats)"
+                },
+                "lines_removed": {
+                    "type": "integer",
+                    "description": "Lines removed across all edits this session (for update_stats)"
+                },
+                "branch": {
+                    "type": "string",
+                    "description": "Git branch to append to this session's branch history (for update_stats). Safe to call on every turn — server deduplicates. For worktree sessions the branch is already recorded automatically; use this for mid-session branch switches in the main workspace."
                 }
             },
             "required": ["action"]
@@ -145,14 +190,18 @@ impl Tool for SessionTool {
         let action = required_string(&params, "action")?;
 
         match action.as_str() {
+            "propose" => self.exec_propose(&params).await,
             "create" => self.exec_create(&params).await,
             "list" => self.exec_list(&params).await,
             "get_status" => self.exec_get_status(&params).await,
+            "rename" => self.exec_rename(&params).await,
+            "update_stats" => self.exec_update_stats(&params).await,
             "send_message" | "answer_question" | "pause" | "resume" | "cancel" | "open"
             | "upload_file" | "merge" => self.exec_intervene(&action, &params).await,
             other => Err(ToolError::InvalidParams(format!(
-                "Unknown session action: \"{}\". Use create, list, get_status, send_message, \
-                 answer_question, pause, resume, cancel, open, upload_file, or merge.",
+                "Unknown session action: \"{}\". Use propose, create, list, get_status, \
+                 send_message, answer_question, pause, resume, cancel, open, upload_file, \
+                 merge, rename, or update_stats.",
                 other
             ))),
         }
@@ -160,6 +209,43 @@ impl Tool for SessionTool {
 }
 
 impl SessionTool {
+    /// Propose a new session to the user — shows a confirmation card in the ADE Manager
+    /// palette with pre-filled parameters. The Rust agent blocks until the user approves
+    /// or rejects (up to 5 minutes). If approved the session is created by the frontend
+    /// and the new session ID is returned. If rejected or timed out, returns an error so
+    /// the agent knows to stop.
+    async fn exec_propose(&self, params: &Value) -> Result<String, ToolError> {
+        let task = required_string(params, "task")?;
+        let mut inner = serde_json::json!({ "task": task });
+
+        if let Some(repo_path) = optional_string(params, "repo_path") {
+            inner["repoPath"] = Value::String(repo_path);
+        }
+        if let Some(name) = optional_string(params, "name") {
+            inner["name"] = Value::String(name);
+        }
+        if let Some(model) = optional_string(params, "model") {
+            inner["model"] = Value::String(model);
+        }
+        if let Some(def_id) = optional_string(params, "agent_definition_id") {
+            inner["agentDefinitionId"] = Value::String(def_id);
+        }
+
+        let bridge_params = serde_json::json!({
+            "action": "session.propose",
+            "params": inner
+        });
+
+        // Use a longer timeout — the user needs time to read and confirm.
+        execute_gui_action_with_timeout(
+            &self.bridge,
+            "session",
+            bridge_params,
+            5 * 60, // 5 minutes
+        )
+        .await
+    }
+
     async fn exec_create(&self, params: &Value) -> Result<String, ToolError> {
         let task = required_string(params, "task")?;
         let mut inner = serde_json::json!({ "task": task });
@@ -241,6 +327,76 @@ impl SessionTool {
         let bridge_params = serde_json::json!({
             "action": "session.getStatus",
             "params": { "sessionId": session_id }
+        });
+
+        execute_gui_action_with_timeout(
+            &self.bridge,
+            "session",
+            bridge_params,
+            SESSION_ACTION_TIMEOUT_SECS,
+        )
+        .await
+    }
+
+    async fn exec_rename(&self, params: &Value) -> Result<String, ToolError> {
+        let session_id = required_string(params, "session_id")?;
+        let new_name = required_string(params, "new_name")?;
+
+        let bridge_params = serde_json::json!({
+            "action": "session.patch",
+            "params": {
+                "sessionId": session_id,
+                "name": new_name
+            }
+        });
+
+        execute_gui_action_with_timeout(
+            &self.bridge,
+            "session",
+            bridge_params,
+            SESSION_ACTION_TIMEOUT_SECS,
+        )
+        .await
+    }
+
+    async fn exec_update_stats(&self, params: &Value) -> Result<String, ToolError> {
+        let session_id = required_string(params, "session_id")?;
+
+        // Build a minimal patch containing only the stats fields that were provided.
+        let mut patch = serde_json::json!({ "sessionId": session_id });
+
+        if let Some(val) = params.get("commit_count").and_then(|v| v.as_i64()) {
+            patch["commitCount"] = Value::Number(serde_json::Number::from(val));
+        }
+        if let Some(val) = params.get("pr_count").and_then(|v| v.as_i64()) {
+            patch["prCount"] = Value::Number(serde_json::Number::from(val));
+        }
+        if let Some(pr_url) = params.get("pr_url") {
+            if pr_url.is_null() || pr_url.as_str().map(str::is_empty).unwrap_or(false) {
+                patch["prUrl"] = Value::Null;
+            } else if let Some(url_str) = pr_url.as_str() {
+                patch["prUrl"] = Value::String(url_str.to_string());
+            }
+        }
+        if let Some(val) = params.get("files_changed").and_then(|v| v.as_i64()) {
+            patch["filesChanged"] = Value::Number(serde_json::Number::from(val));
+        }
+        if let Some(val) = params.get("lines_added").and_then(|v| v.as_i64()) {
+            patch["linesAdded"] = Value::Number(serde_json::Number::from(val));
+        }
+        if let Some(val) = params.get("lines_removed").and_then(|v| v.as_i64()) {
+            patch["linesRemoved"] = Value::Number(serde_json::Number::from(val));
+        }
+        if let Some(branch) = params.get("branch").and_then(|v| v.as_str()) {
+            let trimmed = branch.trim();
+            if !trimmed.is_empty() {
+                patch["branch"] = Value::String(trimmed.to_string());
+            }
+        }
+
+        let bridge_params = serde_json::json!({
+            "action": "session.patch",
+            "params": patch
         });
 
         execute_gui_action_with_timeout(

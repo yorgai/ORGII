@@ -84,6 +84,15 @@ pub fn ade_manager() -> AgentDefinition {
             && tool != tool_names::LIST_SESSION_WORKSPACE
     });
 
+    // Hard-block subagent spawning. The `agent` tool is how the LLM delegates
+    // tasks to subagents. Excluding it removes the tool from ADE Manager's
+    // schema entirely — the LLM never sees it and cannot call it, regardless
+    // of any allowlist bypass in the runtime (builtin:explore / builtin:general
+    // are ordinarily exempt from the sub_agents allowlist check, so sub_agents:
+    // Some(vec![]) alone is not sufficient). ADE Manager proposes new sessions
+    // via session.propose instead of spawning inline subagents.
+    excluded_tools.push(tool_names::AGENT.to_string());
+
     AgentDefinition {
         id: ADE_MANAGER_ID.to_string(),
         name: "ADE Manager".to_string(),
@@ -134,8 +143,7 @@ pub fn ade_manager() -> AgentDefinition {
         context_window: None,
         max_tokens: None,
         temperature: Some(0.0),
-        // `builtin:explore` and `builtin:general` are delegation primitives
-        // and are always reachable regardless of this list.
+        // Empty list + `agent` tool excluded = no subagent spawning at all.
         sub_agents: Some(vec![]),
         // The three relevant builtin playbooks (`create-orgii-agent`,
         // `create-skill`, `create-rule`) are binary-embedded and always
@@ -220,6 +228,17 @@ mod tests {
                 "{tool} must NOT be excluded — ADE Manager subsumes GUI Control"
             );
         }
+    }
+
+    #[test]
+    fn ade_manager_cannot_spawn_subagents() {
+        let excluded = &ade_manager().tools.excluded_tools;
+        assert!(
+            excluded.iter().any(|t| t == tool_names::AGENT),
+            "The `agent` tool must be excluded — ADE Manager proposes sessions via \
+             session.propose instead of spawning inline subagents. sub_agents: Some(vec![]) \
+             alone is insufficient because builtin:explore/builtin:general bypass the allowlist."
+        );
     }
 
     #[test]

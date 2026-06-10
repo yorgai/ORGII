@@ -12,7 +12,10 @@
     "submit": "提交 Agent Control 输入",
     "menuToggle": "ADE Manager",
     "selectModel": "选择模型",
-    "newRound": "新一轮"
+    "newRound": "新一轮",
+    "proposalTitle": "建议的会话",
+    "proposalTaskLabel": "任务",
+    "proposalLaunch": "启动"
   },
   "secretCapture": {
     "title": "请输入敏感信息",
@@ -224,7 +227,8 @@
     "sending": "发送中…",
     "scanningFileExtensions": "正在扫描文件扩展名…",
     "testing": "测试中...",
-    "empty": "空"
+    "empty": "空",
+    "launching": "启动中..."
   },
   "pagination": {
     "totalItems": "共 {{count}} 项",

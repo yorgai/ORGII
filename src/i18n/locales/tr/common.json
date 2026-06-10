@@ -12,7 +12,10 @@
     "submit": "Agent Control girdisini gönder",
     "menuToggle": "ADE Manager",
     "selectModel": "Model seç",
-    "newRound": "Yeni tur"
+    "newRound": "Yeni tur",
+    "proposalTitle": "Önerilen oturum",
+    "proposalTaskLabel": "Görev",
+    "proposalLaunch": "Başlat"
   },
   "secretCapture": {
     "title": "Bir gizli değer girin",
@@ -222,7 +225,8 @@
     "sending": "Gönderiliyor…",
     "scanningFileExtensions": "Dosya uzantıları taranıyor…",
     "testing": "Test ediliyor...",
-    "empty": "Boş"
+    "empty": "Boş",
+    "launching": "Başlatılıyor..."
   },
   "pagination": {
     "totalItems": "{{count}} öğe",

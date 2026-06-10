@@ -12,7 +12,10 @@
     "submit": "Отправить ввод Agent Control",
     "menuToggle": "ADE Manager",
     "selectModel": "Выбрать модель",
-    "newRound": "Новый раунд"
+    "newRound": "Новый раунд",
+    "proposalTitle": "Предложенная сессия",
+    "proposalTaskLabel": "Задача",
+    "proposalLaunch": "Запустить"
   },
   "secretCapture": {
     "title": "Введите секрет",
@@ -222,7 +225,8 @@
     "sending": "Отправка…",
     "scanningFileExtensions": "Сканирование расширений файлов…",
     "testing": "Тестирование...",
-    "empty": "Пусто"
+    "empty": "Пусто",
+    "launching": "Запуск..."
   },
   "pagination": {
     "totalItems": "{{count}} записей",

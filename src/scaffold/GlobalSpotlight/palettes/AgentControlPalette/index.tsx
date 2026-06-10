@@ -9,6 +9,7 @@ import { modelSelectorAtom } from "@src/store/ui/modelSelectorAtom";
 
 import { PaletteBody, SpotlightShell } from "../../shell";
 import { AgentControlInputTrailing } from "./AgentControlInputTrailing";
+import { AgentControlProposalCard } from "./AgentControlProposalCard";
 import { AgentControlStatus } from "./AgentControlStatus";
 import { AgentControlToolbar } from "./AgentControlToolbar";
 import { useAgentControlPalette } from "./useAgentControlPalette";
@@ -39,8 +40,6 @@ export const AgentControlPalette: React.FC<AgentControlPaletteProps> = ({
 
   const inputTrailingSlot = (
     <AgentControlInputTrailing
-      mode={palette.mode}
-      onToggleMode={palette.handleToggleMode}
       selection={palette.creatorDefaultLastModel}
       selectModelLabel={palette.selectModelLabel}
       modelSelectorActive={isModelOpen}
@@ -67,6 +66,13 @@ export const AgentControlPalette: React.FC<AgentControlPaletteProps> = ({
           label={palette.statusLabel}
           detail={palette.statusDetail}
           spinning={palette.statusSpinning}
+          isMarkdown={palette.statusIsMarkdown}
+        />
+      )}
+      {palette.pendingProposal && (
+        <AgentControlProposalCard
+          proposal={palette.pendingProposal}
+          onDismiss={palette.handleDismissProposal}
         />
       )}
       {palette.showSessionControls && (

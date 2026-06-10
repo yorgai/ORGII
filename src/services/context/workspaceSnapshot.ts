@@ -133,6 +133,8 @@ export interface WorkspaceSnapshot {
   workspaceFolders?: string[];
   /** The PR for the current branch, enriched with commits and description. */
   currentPullRequest?: CurrentPullRequestSnapshot;
+  /** Active repository path selected in the IDE toolbar. Maps to IdeContext.repo_path on the Rust side. */
+  repoPath?: string;
   /**
    * QQ-style availability the user set in the sidebar footer. Shipped on
    * every turn even when there is no IDE data so the agent can adapt to

@@ -40,3 +40,6 @@ export { urlPreviewActions } from "./urlPreviewActions.zod";
 
 // Repo / Workspace
 export { repoZodActions } from "./repoActions.zod";
+
+// Session management (manage_session bridge)
+export { sessionZodActions } from "./sessionActions.zod";

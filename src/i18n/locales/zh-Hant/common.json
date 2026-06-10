@@ -12,7 +12,10 @@
     "submit": "提交 Agent Control 輸入",
     "menuToggle": "ADE Manager",
     "selectModel": "選擇模型",
-    "newRound": "新一輪"
+    "newRound": "新一輪",
+    "proposalTitle": "建議的 Session",
+    "proposalTaskLabel": "任務",
+    "proposalLaunch": "啟動"
   },
   "secretCapture": {
     "title": "請輸入敏感資訊",
@@ -224,7 +227,8 @@
     "sending": "發送中…",
     "scanningFileExtensions": "正在掃描文件擴展名…",
     "testing": "測試中...",
-    "empty": "空"
+    "empty": "空",
+    "launching": "啟動中..."
   },
   "pagination": {
     "totalItems": "共 {{count}} 項",

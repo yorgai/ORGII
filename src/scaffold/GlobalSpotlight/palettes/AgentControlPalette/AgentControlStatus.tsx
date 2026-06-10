@@ -1,5 +1,7 @@
 import React from "react";
 
+import Markdown from "@src/components/MarkDown";
+
 export interface AgentControlStatusProps {
   icon: React.ComponentType<{
     size?: number;
@@ -9,6 +11,7 @@ export interface AgentControlStatusProps {
   label: string;
   detail: string;
   spinning?: boolean;
+  isMarkdown?: boolean;
 }
 
 export const AgentControlStatus: React.FC<AgentControlStatusProps> = ({
@@ -16,6 +19,7 @@ export const AgentControlStatus: React.FC<AgentControlStatusProps> = ({
   label,
   detail,
   spinning = false,
+  isMarkdown = false,
 }) => {
   return (
     <div className="border-t border-border-2/50 px-4 py-3 text-[12px] text-text-2">
@@ -28,7 +32,20 @@ export const AgentControlStatus: React.FC<AgentControlStatusProps> = ({
           />
           <span className="font-medium">{label}</span>
         </div>
-        <div className="whitespace-normal break-words leading-5">{detail}</div>
+        {isMarkdown ? (
+          <div className="ade-status-markdown max-h-[320px] overflow-y-auto leading-5">
+            <Markdown
+              textContent={detail}
+              useChatCodeBlock={false}
+              enableFileNavigation={false}
+              skipPreprocess={true}
+            />
+          </div>
+        ) : (
+          <div className="whitespace-normal break-words leading-5">
+            {detail}
+          </div>
+        )}
       </div>
     </div>
   );

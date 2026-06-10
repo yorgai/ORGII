@@ -3,7 +3,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { KeyboardShortcutTooltipContent } from "@src/components/KeyboardShortcut";
-import { Tooltip } from "@src/components/Tooltip";
+import Tooltip from "@src/components/Tooltip";
 import { INPUT_AREA_BUTTONS } from "@src/config/inputAreaTokens";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 

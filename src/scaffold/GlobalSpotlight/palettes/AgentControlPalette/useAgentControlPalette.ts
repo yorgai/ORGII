@@ -6,16 +6,9 @@ import {
   ChevronsRight,
   DraftingCompass,
   Loader2,
-  MessageCircle,
   XCircle,
 } from "lucide-react";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { sessionLaunch } from "@src/api/tauri/agent/session";
@@ -24,8 +17,11 @@ import Message from "@src/components/Message";
 import { chatEventsForSessionAtomFamily } from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
+import type { AdeSessionProposalDetail } from "@src/modules/WorkStation/ActionSystem/registration/actions/sessionActions.zod";
+import { ADE_SESSION_PROPOSAL_EVENT } from "@src/modules/WorkStation/ActionSystem/registration/actions/sessionActions.zod";
 import type { SpotlightItem } from "@src/scaffold/GlobalSpotlight/types";
 import { collectIdeContext } from "@src/services/context/collectors";
+import { adeManagerPaletteAtom } from "@src/store/session/adeManagerPaletteAtom";
 import {
   creatorDefaultModelSelectionAtom,
   extractModelPair,
@@ -37,14 +33,12 @@ import { BUILTIN_ADE_MANAGER_DEF_ID } from "@src/util/session/sessionDispatch";
 
 import { useSelectorKernel } from "../core";
 import {
-  GUI_CONTROL_MODE,
   GUI_CONTROL_SESSION_NAME,
   GUI_CONTROL_SUBMIT_EVENT,
   GUI_CONTROL_TOGGLE_SHORTCUT_ID,
 } from "./constants";
 import type {
   GuiControlActivityItem,
-  GuiControlMode,
   GuiControlRunStatus,
   GuiControlSubmitDetail,
 } from "./types";
@@ -87,14 +81,73 @@ export function useAgentControlPalette({
   const setCreatorDefaultModel = useSetAtom(creatorDefaultModelSelectionAtom);
   const setGuiControlEnabled = useSetAtom(guiControlEnabledAtom);
   const setSelectorState = useSetAtom(modelSelectorAtom);
-  const controlSessionIdRef = useRef<string | null>(null);
+
+  // Persistent palette state — survives palette open/close cycles
+  const paletteState = useAtomValue(adeManagerPaletteAtom);
+  const setPaletteState = useSetAtom(adeManagerPaletteAtom);
+
+  const {
+    sessionId: controlSessionId,
+    draftText,
+    runStatus,
+    activityCursor,
+    pendingProposal,
+  } = paletteState;
+
+  const setDraftText = useCallback(
+    (text: string) => setPaletteState((prev) => ({ ...prev, draftText: text })),
+    [setPaletteState]
+  );
+  const setRunStatus = useCallback(
+    (status: GuiControlRunStatus) =>
+      setPaletteState((prev) => ({ ...prev, runStatus: status })),
+    [setPaletteState]
+  );
+  const setControlSessionId = useCallback(
+    (id: string | null) =>
+      setPaletteState((prev) => ({ ...prev, sessionId: id })),
+    [setPaletteState]
+  );
+  const setActivityCursor = useCallback(
+    (cursor: number | ((prev: number) => number)) =>
+      setPaletteState((prev) => ({
+        ...prev,
+        activityCursor:
+          typeof cursor === "function" ? cursor(prev.activityCursor) : cursor,
+      })),
+    [setPaletteState]
+  );
+  const setPendingProposal = useCallback(
+    (proposal: AdeSessionProposalDetail | null) =>
+      setPaletteState((prev) => ({ ...prev, pendingProposal: proposal })),
+    [setPaletteState]
+  );
+
+  // Keep a ref in sync with atom so async callbacks always see fresh value
+  const controlSessionIdRef = useRef<string | null>(controlSessionId);
+  useEffect(() => {
+    controlSessionIdRef.current = controlSessionId;
+  }, [controlSessionId]);
+
   const sendingRef = useRef(false);
-  const [mode, setMode] = useState<GuiControlMode>(GUI_CONTROL_MODE.INPUT);
-  const [draftText, setDraftText] = useState("");
-  const [runStatus, setRunStatus] = useState<GuiControlRunStatus>("idle");
-  const [controlSessionId, setControlSessionId] = useState<string | null>(null);
-  const [activityCursor, setActivityCursor] = useState(0);
   const activityItems = useGuiControlActivity(controlSessionId);
+
+  // Listen for session proposals emitted by session.propose Zod action
+  useEffect(() => {
+    function handleProposal(evt: Event) {
+      const detail = (evt as CustomEvent<AdeSessionProposalDetail>).detail;
+      if (!detail?.correlationId) return;
+      setPendingProposal(detail);
+    }
+    window.addEventListener(ADE_SESSION_PROPOSAL_EVENT, handleProposal);
+    return () => {
+      window.removeEventListener(ADE_SESSION_PROPOSAL_EVENT, handleProposal);
+    };
+  }, [setPendingProposal]);
+
+  const handleDismissProposal = useCallback(() => {
+    setPendingProposal(null);
+  }, [setPendingProposal]);
 
   const items = useMemo<SpotlightItem[]>(() => [], []);
 
@@ -103,7 +156,7 @@ export function useAgentControlPalette({
     if (!text || sendingRef.current) return;
 
     setGuiControlEnabled(true);
-    const prompt = buildControlPrompt(mode, text);
+    const prompt = buildControlPrompt(text);
     const modelConfig = resolveControlModel(creatorDefaultLastModel);
     const ideContext = collectIdeContext({ expectedRepoPath: null });
     sendingRef.current = true;
@@ -144,7 +197,7 @@ export function useAgentControlPalette({
 
         window.dispatchEvent(
           new CustomEvent<GuiControlSubmitDetail>(GUI_CONTROL_SUBMIT_EVENT, {
-            detail: { mode, text, modelSelection: creatorDefaultLastModel },
+            detail: { text, modelSelection: creatorDefaultLastModel },
           })
         );
 
@@ -156,7 +209,14 @@ export function useAgentControlPalette({
         sendingRef.current = false;
       }
     })();
-  }, [creatorDefaultLastModel, draftText, mode, setGuiControlEnabled]);
+  }, [
+    creatorDefaultLastModel,
+    draftText,
+    setControlSessionId,
+    setDraftText,
+    setGuiControlEnabled,
+    setRunStatus,
+  ]);
 
   const handleExternalKeyDown = useCallback(
     (
@@ -191,7 +251,7 @@ export function useAgentControlPalette({
 
   useEffect(() => {
     setActivityCursor(0);
-  }, [activityItems.length]);
+  }, [activityItems.length, setActivityCursor]);
 
   const handleRefreshSession = useCallback(() => {
     controlSessionIdRef.current = null;
@@ -199,21 +259,21 @@ export function useAgentControlPalette({
     setActivityCursor(0);
     setRunStatus("idle");
     kernel.focusInput();
-  }, [kernel]);
+  }, [kernel, setActivityCursor, setControlSessionId, setRunStatus]);
 
   const handlePreviousActivity = useCallback(() => {
     setActivityCursor((currentCursor) =>
       Math.min(currentCursor + 1, Math.max(activityItems.length - 1, 0))
     );
-  }, [activityItems.length]);
+  }, [activityItems.length, setActivityCursor]);
 
   const handleNextActivity = useCallback(() => {
     setActivityCursor((currentCursor) => Math.max(currentCursor - 1, 0));
-  }, []);
+  }, [setActivityCursor]);
 
   const handleLatestActivity = useCallback(() => {
     setActivityCursor(0);
-  }, []);
+  }, [setActivityCursor]);
 
   const handleModelConfigChange = useCallback(
     (config: AdvancedConfig) => {
@@ -223,15 +283,6 @@ export function useAgentControlPalette({
     },
     [kernel, setCreatorDefaultModel, setSelectorState]
   );
-
-  const handleToggleMode = useCallback(() => {
-    setMode((currentMode) =>
-      currentMode === GUI_CONTROL_MODE.INPUT
-        ? GUI_CONTROL_MODE.SELECTION
-        : GUI_CONTROL_MODE.INPUT
-    );
-    kernel.focusInput();
-  }, [kernel]);
 
   const handleCloseModelSelector = useCallback(() => {
     setSelectorState({ isOpen: false });
@@ -244,12 +295,11 @@ export function useAgentControlPalette({
         type: "action" as const,
         id: "agent-control",
         label: "ADE Manager",
-        icon:
-          mode === GUI_CONTROL_MODE.SELECTION ? MessageCircle : DraftingCompass,
+        icon: DraftingCompass,
         color: "",
       },
     ],
-    [mode]
+    []
   );
 
   const latestActivity = activityItems[activityCursor];
@@ -273,24 +323,21 @@ export function useAgentControlPalette({
     creatorDefaultLastModel,
     draftText,
     handleCloseModelSelector,
+    handleDismissProposal,
     handleLatestActivity,
     handleModelConfigChange,
     handleNextActivity,
     handlePreviousActivity,
     handleRefreshSession,
     handleSubmit,
-    handleToggleMode,
     hasNextActivity: activityCursor > 0,
     hasPreviousActivity: activityCursor < activityItems.length - 1,
     isModelOpen: false,
     items,
     kernel,
-    mode,
     modePath,
-    placeholder:
-      mode === GUI_CONTROL_MODE.SELECTION
-        ? t("guiControl.selectionPlaceholder")
-        : t("guiControl.inputPlaceholder"),
+    pendingProposal,
+    placeholder: t("guiControl.inputPlaceholder"),
     runStatus,
     selectModelLabel: t("guiControl.selectModel"),
     shortcutId: GUI_CONTROL_TOGGLE_SHORTCUT_ID,
@@ -298,6 +345,7 @@ export function useAgentControlPalette({
       latestActivity?.detail ??
       resolveControlModelLabel(creatorDefaultLastModel),
     statusIcon,
+    statusIsMarkdown: latestActivity?.isMarkdown ?? false,
     statusLabel: latestActivity?.title ?? statusLabel,
     statusSpinning:
       latestActivity?.status === "running" ||

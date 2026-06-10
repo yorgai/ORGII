@@ -16,14 +16,9 @@ import {
   GUI_CONTROL_AGENT_EXEC_MODE,
   GUI_CONTROL_AGENT_ICON_ID,
   GUI_CONTROL_AGENT_NAME,
-  GUI_CONTROL_MODE,
   GUI_CONTROL_SESSION_NAME,
 } from "./constants";
-import type {
-  GuiControlActivityItem,
-  GuiControlActivityStatus,
-  GuiControlMode,
-} from "./types";
+import type { GuiControlActivityItem, GuiControlActivityStatus } from "./types";
 
 export const EMPTY_GUI_CONTROL_EVENTS_ATOM = atom<SessionEvent[]>([]);
 
@@ -46,13 +41,8 @@ export function resolveControlModel(selection: LastModelSelection | null): {
   };
 }
 
-export function buildControlPrompt(mode: GuiControlMode, text: string): string {
-  const instruction =
-    mode === GUI_CONTROL_MODE.SELECTION
-      ? "Answer the user's question about the current ORGII UI. Use GUI-reading/navigation actions if needed, but do not modify the UI unless the user explicitly asks."
-      : "Control the ORGII GUI to complete the user's request. Navigate and use GUI automation actions when appropriate.";
-
-  return `${instruction}\n\nUser request:\n${text}`;
+export function buildControlPrompt(text: string): string {
+  return text;
 }
 
 export function resolveControlModelLabel(
@@ -120,8 +110,9 @@ export function toGuiControlActivityItem(
     return {
       id: event.id,
       title: "Response",
-      detail: formatActivityText(event.displayText),
+      detail: event.displayText,
       status,
+      isMarkdown: true,
     };
   }
 

@@ -12,7 +12,10 @@
     "submit": "Agent Control-Eingabe senden",
     "menuToggle": "ADE Manager",
     "selectModel": "Modell auswählen",
-    "newRound": "Neue Runde"
+    "newRound": "Neue Runde",
+    "proposalTitle": "Vorgeschlagene Sitzung",
+    "proposalTaskLabel": "Aufgabe",
+    "proposalLaunch": "Starten"
   },
   "secretCapture": {
     "title": "Geheimnis eingeben",
@@ -222,7 +225,8 @@
     "sending": "Wird gesendet…",
     "scanningFileExtensions": "Dateierweiterungen werden gescannt…",
     "testing": "Testen...",
-    "empty": "Leer"
+    "empty": "Leer",
+    "launching": "Wird gestartet..."
   },
   "pagination": {
     "totalItems": "{{count}} Einträge",

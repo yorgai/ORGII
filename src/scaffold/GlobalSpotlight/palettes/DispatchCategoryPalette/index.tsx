@@ -271,11 +271,13 @@ export const DispatchCategoryPalette: React.FC<
       const parsed = CliAgentTypeSchema.safeParse(agent.name);
       if (!parsed.success) return [];
       const agentType = parsed.data;
+      // CLI agents only show plan (subscription) accounts in the badge —
+      // API key accounts are not relevant for the session-launch decision.
       const compatibleAccounts = getCliCompatibleAccounts(
         registry,
         agentType,
         accounts
-      );
+      ).filter((acc) => !isApiKeyProvider(acc.modelType));
       return [
         {
           id: `cli:${agent.name}`,
@@ -551,7 +553,6 @@ export const DispatchCategoryPalette: React.FC<
             mode: "cli",
             agentType: option.cliAgentType,
             accounts,
-            showIncompatible: true,
           };
         }
         return {

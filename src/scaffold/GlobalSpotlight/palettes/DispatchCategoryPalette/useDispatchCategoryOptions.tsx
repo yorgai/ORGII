@@ -237,11 +237,12 @@ export function useDispatchCategoryOptions(
       const parsed = CliAgentTypeSchema.safeParse(agent.name);
       if (!parsed.success) return [];
       const agentType = parsed.data;
+      // CLI agents only show plan (subscription) accounts in the badge.
       const compatibleAccounts = getCliCompatibleAccounts(
         registry,
         agentType,
         accounts
-      );
+      ).filter((acc) => !isApiKeyProvider(acc.modelType));
       return [
         {
           id: `cli:${agent.name}`,

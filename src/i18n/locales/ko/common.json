@@ -12,7 +12,10 @@
     "submit": "Agent Control 입력 제출",
     "menuToggle": "ADE Manager",
     "selectModel": "모델 선택",
-    "newRound": "새 라운드"
+    "newRound": "새 라운드",
+    "proposalTitle": "제안된 세션",
+    "proposalTaskLabel": "작업",
+    "proposalLaunch": "시작"
   },
   "secretCapture": {
     "title": "시크릿 입력",
@@ -222,7 +225,8 @@
     "sending": "전송 중…",
     "scanningFileExtensions": "파일 확장자 스캔 중…",
     "testing": "테스트 중...",
-    "empty": "비어 있음"
+    "empty": "비어 있음",
+    "launching": "시작 중..."
   },
   "pagination": {
     "totalItems": "{{count}}개 항목",

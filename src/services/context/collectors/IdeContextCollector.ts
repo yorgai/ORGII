@@ -298,6 +298,22 @@ export function collectIdeContext(
       /* workspace folders not available */
     }
 
+    // Active repository selected in the toolbar — maps to IdeContext.repo_path on the Rust side.
+    // workspaceFolders lists all registered roots but does not identify which is selected;
+    // this field fills that gap so the agent always knows the active repo context.
+    try {
+      const toolbarRepo = store.get(currentRepoAtom);
+      const repoPath = normalizeRepoPath(
+        toolbarRepo?.path ?? toolbarRepo?.fs_uri
+      );
+      if (repoPath) {
+        payload.repoPath = repoPath;
+        hasData = true;
+      }
+    } catch {
+      /* toolbar repo not available */
+    }
+
     // User-scoped ambient state ships on every turn even when the IDE has
     // nothing else to report. Read up front (above) so the cross-repo bail
     // path can still attach it.

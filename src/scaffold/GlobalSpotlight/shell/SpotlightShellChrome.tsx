@@ -72,7 +72,18 @@ export const SpotlightShellChrome: React.FC<SpotlightShellChromeProps> = ({
 
   const handlePanelClick = (event: React.MouseEvent) => {
     if (stopPropagation) event.stopPropagation();
-    refocusInput();
+    // Only refocus the default search input when clicking a non-interactive
+    // dead zone. If the click landed on (or inside) a focusable element —
+    // input, textarea, contenteditable, button, select, or a custom
+    // interactive component — let the browser's native focus stand so that
+    // embedded editors (e.g. the session creator composer) remain editable.
+    const target = event.target as HTMLElement;
+    const interactive = target.closest(
+      "input, textarea, [contenteditable], button, select, a, [tabindex]"
+    );
+    if (!interactive) {
+      refocusInput();
+    }
   };
 
   const panel = (
