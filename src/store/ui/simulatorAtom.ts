@@ -138,6 +138,17 @@ simulatorEffectiveDockAppAtom.debugLabel = "simulatorEffectiveDockAppAtom";
 export const simulatorFollowAppLockAtom = atom<AppType | null>(null);
 simulatorFollowAppLockAtom.debugLabel = "simulatorFollowAppLockAtom";
 
+export interface SimulatorDiffCommitNavigationRequest {
+  sessionId?: string | null;
+  commitSha: string;
+  nonce: number;
+}
+
+export const simulatorDiffCommitNavigationRequestAtom =
+  atom<SimulatorDiffCommitNavigationRequest | null>(null);
+simulatorDiffCommitNavigationRequestAtom.debugLabel =
+  "simulatorDiffCommitNavigationRequestAtom";
+
 /**
  * Playback speed for simulator replay (grid cells).
  * Matches replay bar options: 0.25x–2x; default 1x.

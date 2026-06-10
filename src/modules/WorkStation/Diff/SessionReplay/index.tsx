@@ -13,7 +13,7 @@
  * Focus / All Changes pill reuses the Source Control `TabPill` component
  * and `common:sourceControl.pill.*` i18n keys.
  */
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { GitBranch, Send } from "lucide-react";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -50,6 +50,7 @@ import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { getGitArtifactsFromEvent } from "@src/shared/git/sessionGitArtifacts";
 import { sessionByIdAtom } from "@src/store/session";
 import {
+  simulatorDiffCommitNavigationRequestAtom,
   simulatorPrimarySidebarCollapsedAtom,
   simulatorPrimarySidebarPositionAtom,
   simulatorPrimarySidebarWidthAtom,
@@ -155,6 +156,22 @@ function commitMatchesSubmission(
   );
 }
 
+function commitShaMatchesSubmission(
+  requestedSha: string,
+  submission: SubmissionCommit
+): boolean {
+  const sha = requestedSha.toLowerCase();
+  const submissionSha = submission.sha.toLowerCase();
+  const submissionShortSha = submission.short_sha.toLowerCase();
+  return (
+    submissionSha === sha ||
+    submissionSha.startsWith(sha) ||
+    sha.startsWith(submissionSha) ||
+    submissionShortSha === sha ||
+    sha.startsWith(submissionShortSha)
+  );
+}
+
 function mergeResolvedCommit(
   submission: SubmissionCommit,
   resolved: GitCommitInfo | undefined,
@@ -233,6 +250,9 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   );
   const session = useAtomValue(sessionByIdAtom(sessionId ?? ""));
   const sessionRepoPath = session?.repoPath ?? "";
+  const [diffCommitNavigationRequest, setDiffCommitNavigationRequest] = useAtom(
+    simulatorDiffCommitNavigationRequestAtom
+  );
   const { entries, counts, displayEntry, selectedEntryId, selectEntry } =
     useDiff();
 
@@ -521,6 +541,40 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     },
     []
   );
+
+  useEffect(() => {
+    if (!diffCommitNavigationRequest?.commitSha) return;
+    if (
+      diffCommitNavigationRequest.sessionId &&
+      sessionId &&
+      diffCommitNavigationRequest.sessionId !== sessionId
+    ) {
+      return;
+    }
+
+    const matchingCommit = submissionCommits.find((commit) =>
+      commitShaMatchesSubmission(diffCommitNavigationRequest.commitSha, commit)
+    );
+    if (!matchingCommit) return;
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setActiveTab("submissions");
+      handleSubmissionCommitSelect(matchingCommit);
+      setDiffCommitNavigationRequest(null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    diffCommitNavigationRequest,
+    handleSubmissionCommitSelect,
+    sessionId,
+    setDiffCommitNavigationRequest,
+    submissionCommits,
+  ]);
 
   const handleSidebarItemSelect = useCallback(
     (item: DiffFileNavigationItem<DiffFileSectionData>) => {

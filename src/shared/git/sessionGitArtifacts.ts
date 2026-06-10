@@ -9,9 +9,30 @@ const GITHUB_COMMIT_URL_PATTERN =
   /https?:\/\/github\.com\/([^\s/]+)\/([^\s/]+)\/commit\/([0-9a-f]{7,40})(?:[^\s<>"'`)\]}]*)?/gi;
 const ASSISTANT_COMMIT_LINE_PATTERN =
   /^\s*(?:[-*•]\s*)?`?([0-9a-f]{7,40})`?\s+([a-z][a-z0-9-]*(?:\([^)]+\))?!?:\s+[^\n]+)$/gim;
+const ASSISTANT_SHA_DASH_SUBJECT_PATTERN =
+  /^\s*(?:[-*•]\s*)?(?:[A-Za-z][A-Za-z\s-]{0,32}:\s*)?`?([0-9a-f]{7,40})`?\s*(?:—|–|-)\s*([a-z][a-z0-9-]*(?:\([^)]+\))?!?:\s+[^\n]+)$/gim;
+const ASSISTANT_CONTEXTUAL_COMMIT_SHA_PATTERN =
+  /\b(?:commit(?:ted|s)?|commit\s+(?:created|sha|tip)|branch\s+tip|synced\s+at)\b[^\n]{0,120}?`?([0-9a-f]{7,40})`?/gi;
+const BARE_GIT_SHA_PATTERN = /(?<![#0-9a-f-])([0-9a-f]{7,40})(?![0-9a-f-])/gi;
+const ASSISTANT_COMMIT_SUBJECT_LINE_PATTERN =
+  /^\s*(?:[-*•]\s*)?`?([a-z][a-z0-9-]*(?:\([^)]+\))?!?:\s+[^`\n]+?)`?\s*$/i;
 
 function shortSha(sha: string): string {
-  return sha.slice(0, 7);
+  return sha.length <= 12 ? sha : sha.slice(0, 7);
+}
+
+function findNearestCommitSubjectBefore(
+  text: string,
+  index: number
+): string | undefined {
+  const before = text.slice(0, index).split("\n").slice(-6).reverse();
+  for (const line of before) {
+    const match = ASSISTANT_COMMIT_SUBJECT_LINE_PATTERN.exec(line.trim());
+    ASSISTANT_COMMIT_SUBJECT_LINE_PATTERN.lastIndex = 0;
+    const subject = match?.[1]?.trim();
+    if (subject) return subject;
+  }
+  return undefined;
 }
 
 export function getGitArtifactDedupeKey(
@@ -74,6 +95,18 @@ export function parseGitArtifactsFromText(
     });
   }
 
+  for (const match of text.matchAll(ASSISTANT_SHA_DASH_SUBJECT_PATTERN)) {
+    const sha = match[1]?.toLowerCase();
+    const subject = match[2]?.trim();
+    if (!sha || !subject) continue;
+    pushArtifact({
+      kind: "commit",
+      sha,
+      shortSha: shortSha(sha),
+      subject,
+    });
+  }
+
   for (const match of text.matchAll(ASSISTANT_COMMIT_LINE_PATTERN)) {
     const sha = match[1]?.toLowerCase();
     const subject = match[2]?.trim();
@@ -83,6 +116,27 @@ export function parseGitArtifactsFromText(
       sha,
       shortSha: shortSha(sha),
       subject,
+    });
+  }
+
+  for (const match of text.matchAll(ASSISTANT_CONTEXTUAL_COMMIT_SHA_PATTERN)) {
+    const sha = match[1]?.toLowerCase();
+    if (!sha) continue;
+    pushArtifact({
+      kind: "commit",
+      sha,
+      shortSha: shortSha(sha),
+      subject: findNearestCommitSubjectBefore(text, match.index ?? 0),
+    });
+  }
+
+  for (const match of text.matchAll(BARE_GIT_SHA_PATTERN)) {
+    const sha = match[1]?.toLowerCase();
+    if (!sha) continue;
+    pushArtifact({
+      kind: "commit",
+      sha,
+      shortSha: shortSha(sha),
     });
   }
 

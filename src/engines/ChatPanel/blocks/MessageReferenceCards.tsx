@@ -1,22 +1,42 @@
 import { homeDir } from "@tauri-apps/api/path";
 import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
-import { useAtomValue } from "jotai";
-import { Copy, FileText, Folder, Globe } from "lucide-react";
-import React, { useCallback, useMemo, useState } from "react";
+import { useAtomValue, useSetAtom } from "jotai";
+import {
+  ArrowRight,
+  Copy,
+  FileText,
+  Folder,
+  GitCommitHorizontal,
+  Globe,
+} from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { getGitCommits } from "@src/api/http/git";
+import type { GitCommitInfo } from "@src/api/http/git/types";
 import Button from "@src/components/Button";
 import Dropdown from "@src/components/Dropdown";
 import { openUrlInBrowserApp } from "@src/components/MarkDown/markdownUtils";
 import Menu from "@src/components/Menu";
 import Message from "@src/components/Message";
+import { replayModeAtom } from "@src/engines/SessionCore";
+import { AppType } from "@src/engines/Simulator/types/appTypes";
+import { parseGitArtifactsFromText } from "@src/shared/git/sessionGitArtifacts";
 import { currentRepoAtom } from "@src/store/repo";
+import { sessionByIdAtom } from "@src/store/session";
+import { chatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";
+import {
+  simulatorDiffCommitNavigationRequestAtom,
+  simulatorSelectedAppAtom,
+  stationModeAtom,
+} from "@src/store/ui/simulatorAtom";
 import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";
 import { copyText } from "@src/util/data/clipboard";
 import {
   SESSION_REFERENCE_FILE_MANAGER_REVEAL_KEYS,
   getFileManagerRevealLabelKey,
 } from "@src/util/platform/fileManagerLabels";
+import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 import { openFileInEditor } from "@src/util/ui/openFileInEditor";
 
 const WEB_URL_PATTERN = /https?:\/\/[^\s<>"'`\])}]+/gi;
@@ -24,6 +44,7 @@ const LOCAL_PATH_PATTERN =
   /(?:~\/|(?:\.\.\/|\.\/)|[A-Za-z]:[\\/]|\/(?:Users|home|Volumes|Applications|tmp|var|opt|usr|etc)\/|(?:documents|desktop|downloads|github|users)\/)[^\s<>"'`\])}]+/gi;
 const TRAILING_REFERENCE_PUNCTUATION_PATTERN = /[.,;:!?]+$/;
 const MAX_REFERENCE_CARDS = 4;
+const COMMIT_METADATA_LOOKUP_LIMIT = 200;
 const PATH_SEGMENT_LABELS: Record<string, string> = {
   documents: "Documents",
   desktop: "Desktop",
@@ -38,7 +59,7 @@ const HOME_RELATIVE_ROOTS = new Set([
   "github",
 ]);
 
-export type MessageReferenceKind = "web_url" | "local_path";
+export type MessageReferenceKind = "web_url" | "local_path" | "git_commit";
 
 export interface MessageReferenceItem {
   kind: MessageReferenceKind;
@@ -46,6 +67,11 @@ export interface MessageReferenceItem {
   title: string;
   subtitle: string;
   isDirectory?: boolean;
+  url?: string;
+  sha?: string;
+  shortSha?: string;
+  authorName?: string;
+  authorDate?: string;
 }
 
 function stripFencedCodeBlocks(content: string): string {
@@ -164,6 +190,77 @@ function getUrlHost(url: string): string {
   }
 }
 
+function isGitHubCommitUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.hostname === "github.com" &&
+      /\/[^/]+\/[^/]+\/commit\/[0-9a-f]{7,40}$/i.test(parsed.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function makeCommitReferenceItem(artifact: {
+  sha?: string;
+  shortSha?: string;
+  subject?: string;
+  repoFullName?: string;
+  url?: string;
+}): MessageReferenceItem | null {
+  const sha = artifact.sha?.trim().toLowerCase();
+  const shortSha = artifact.shortSha ?? sha?.slice(0, 7);
+  if (!sha && !shortSha) return null;
+  const label = shortSha ?? sha ?? "";
+  return {
+    kind: "git_commit",
+    value: sha ?? label,
+    title: artifact.subject || `Commit ${label}`,
+    subtitle: artifact.repoFullName
+      ? `${label} · ${artifact.repoFullName}`
+      : label,
+    url: artifact.url,
+    sha,
+    shortSha: label,
+  };
+}
+
+function commitMatchesReference(
+  commit: GitCommitInfo,
+  item: MessageReferenceItem
+): boolean {
+  if (item.kind !== "git_commit" || !item.sha) return false;
+  const itemSha = item.sha.toLowerCase();
+  const commitSha = commit.sha.toLowerCase();
+  return commitSha.startsWith(itemSha) || itemSha.startsWith(commitSha);
+}
+
+function mergeCommitMetadata(
+  item: MessageReferenceItem,
+  commit: GitCommitInfo
+): MessageReferenceItem {
+  if (item.kind !== "git_commit") return item;
+  const shortSha = commit.short_sha || item.shortSha || item.sha;
+  const authorName = commit.author?.name;
+  const authorDate = commit.author?.date;
+  const metaParts = [
+    shortSha,
+    authorName,
+    authorDate ? formatRelativeTime(authorDate, "nano") : undefined,
+  ].filter(Boolean);
+  return {
+    ...item,
+    value: commit.sha,
+    title: commit.summary || item.title,
+    subtitle: metaParts.join(" · "),
+    sha: commit.sha,
+    shortSha,
+    authorName,
+    authorDate,
+  };
+}
+
 function getPathTitle(path: string): string {
   const trimmed = path.replace(/\/+$/, "");
   const segments = trimmed.split("/").filter(Boolean);
@@ -194,6 +291,9 @@ function collectWorkspacePathCandidates(
 }
 
 function makeReferenceKey(item: MessageReferenceItem): string {
+  if (item.kind === "git_commit") {
+    return `git_commit:${item.sha ?? item.shortSha ?? item.value}`;
+  }
   return `${item.kind}:${item.value}`;
 }
 
@@ -206,6 +306,17 @@ export function extractMessageReferences(
   let pathSearchContent = searchableContent;
   const references: MessageReferenceItem[] = [];
   const seen = new Set<string>();
+
+  for (const artifact of parseGitArtifactsFromText(searchableContent)) {
+    if (artifact.kind !== "commit") continue;
+    const item = makeCommitReferenceItem(artifact);
+    if (!item) continue;
+    const key = makeReferenceKey(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    references.push(item);
+    if (references.length >= MAX_REFERENCE_CARDS) return references;
+  }
 
   for (const match of searchableContent.matchAll(WEB_URL_PATTERN)) {
     // Blank out the URL and any non-whitespace characters that directly
@@ -231,6 +342,7 @@ export function extractMessageReferences(
       pathSearchContent.slice(tokenEnd);
     const url = normalizeUrlCandidate(match[0]);
     if (!url) continue;
+    if (isGitHubCommitUrl(url)) continue;
     if (excludeUrls?.has(url)) continue;
     if (
       isUrlCitedInParentheses(
@@ -293,24 +405,89 @@ export function extractMessageReferences(
   return references;
 }
 
+function useCommitMetadataReferences(
+  references: MessageReferenceItem[],
+  repoPath: string | undefined
+): MessageReferenceItem[] {
+  const [metadataState, setMetadataState] = useState<{
+    repoPath: string;
+    commits: GitCommitInfo[];
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const commitReferences = references.filter(
+      (item) => item.kind === "git_commit" && item.sha
+    );
+    if (!repoPath || commitReferences.length === 0) return;
+
+    async function loadCommitMetadata() {
+      const result = await getGitCommits({
+        repo_id: repoPath ?? "",
+        repo_path: repoPath,
+        limit: COMMIT_METADATA_LOOKUP_LIMIT,
+      });
+      if (cancelled || !result?.commits?.length || !repoPath) return;
+      setMetadataState({ repoPath, commits: result.commits });
+    }
+
+    void loadCommitMetadata();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [references, repoPath]);
+
+  return useMemo(() => {
+    if (!metadataState || metadataState.repoPath !== repoPath)
+      return references;
+    return references.map((item) => {
+      if (item.kind !== "git_commit") return item;
+      const commit = metadataState.commits.find((candidate) =>
+        commitMatchesReference(candidate, item)
+      );
+      return commit ? mergeCommitMetadata(item, commit) : item;
+    });
+  }, [metadataState, references, repoPath]);
+}
+
 interface MessageReferenceCardProps {
   item: MessageReferenceItem;
+  sessionId?: string | null;
 }
 
 const MessageReferenceCard: React.FC<MessageReferenceCardProps> = ({
   item,
+  sessionId,
 }) => {
   const { t } = useTranslation("sessions");
+  const { t: tCommon } = useTranslation("common");
   const [dropdownVisible, setDropdownVisible] = useState(false);
-  const copyLabel =
-    item.kind === "web_url" ? t("cards.url.copyUrl") : t("cards.path.copyPath");
-  const copiedLabel =
-    item.kind === "web_url" ? t("cards.url.copied") : t("cards.path.copied");
-  const openLabel =
-    item.kind === "web_url" ? t("cards.url.open") : t("cards.path.open");
+  const setChatPanelMaximized = useSetAtom(chatPanelMaximizedAtom);
+  const setStationMode = useSetAtom(stationModeAtom);
+  const setSelectedSimulatorApp = useSetAtom(simulatorSelectedAppAtom);
+  const setReplayMode = useSetAtom(replayModeAtom);
+  const setDiffCommitNavigationRequest = useSetAtom(
+    simulatorDiffCommitNavigationRequestAtom
+  );
+  const isCommit = item.kind === "git_commit";
+  const isUrl = item.kind === "web_url";
+  const isLocalPath = item.kind === "local_path";
+  const isOpenable = isUrl || isLocalPath || Boolean(item.url);
+  const copyLabel = isUrl
+    ? t("cards.url.copyUrl")
+    : isLocalPath
+      ? t("cards.path.copyPath")
+      : tCommon("actions.copy");
+  const copiedLabel = isUrl
+    ? t("cards.url.copied")
+    : isLocalPath
+      ? t("cards.path.copied")
+      : tCommon("copied");
+  const openLabel = isLocalPath ? t("cards.path.open") : t("cards.url.open");
   const openInAppLabel = t("cards.actions.openInApp");
   const externalOpenLabel =
-    item.kind === "web_url"
+    isUrl || isCommit
       ? t("cards.actions.openWithDefaultBrowser")
       : t(
           getFileManagerRevealLabelKey(
@@ -320,8 +497,8 @@ const MessageReferenceCard: React.FC<MessageReferenceCardProps> = ({
 
   const handleOpen = useCallback(() => {
     setDropdownVisible(false);
-    if (item.kind === "web_url") {
-      openUrlInBrowserApp(item.value, { navigate: true });
+    if (item.kind === "web_url" || item.url) {
+      openUrlInBrowserApp(item.url ?? item.value, { navigate: true });
       return;
     }
 
@@ -337,8 +514,8 @@ const MessageReferenceCard: React.FC<MessageReferenceCardProps> = ({
 
   const handleExternalOpen = useCallback(() => {
     setDropdownVisible(false);
-    if (item.kind === "web_url") {
-      void openUrl(item.value).catch(() => {
+    if (item.kind === "web_url" || item.url) {
+      void openUrl(item.url ?? item.value).catch(() => {
         Message.error(t("cards.url.openExternalFailed"));
       });
       return;
@@ -353,15 +530,43 @@ const MessageReferenceCard: React.FC<MessageReferenceCardProps> = ({
 
   const handleCopy = useCallback(async () => {
     try {
-      await copyText(item.value);
+      await copyText(item.sha ?? item.value);
       Message.success(copiedLabel);
     } catch {
       Message.error(t("failedToCopyContent"));
     }
-  }, [copiedLabel, item.value, t]);
+  }, [copiedLabel, item.sha, item.value, t]);
 
-  const Icon =
-    item.kind === "web_url" ? Globe : item.isDirectory ? Folder : FileText;
+  const handleOpenCommitInDiff = useCallback(() => {
+    const commitSha = item.sha ?? item.value;
+    if (!commitSha) return;
+    setChatPanelMaximized(false);
+    setStationMode("agent-station");
+    setSelectedSimulatorApp(AppType.DIFF);
+    setReplayMode("replay");
+    setDiffCommitNavigationRequest({
+      sessionId,
+      commitSha,
+      nonce: Date.now(),
+    });
+  }, [
+    item.sha,
+    item.value,
+    sessionId,
+    setChatPanelMaximized,
+    setDiffCommitNavigationRequest,
+    setReplayMode,
+    setSelectedSimulatorApp,
+    setStationMode,
+  ]);
+
+  const Icon = isUrl
+    ? Globe
+    : isCommit
+      ? GitCommitHorizontal
+      : item.isDirectory
+        ? Folder
+        : FileText;
 
   return (
     <div className="flex min-w-0 items-center gap-3 rounded-xl border border-border-2 bg-bg-2 p-3">
@@ -385,43 +590,57 @@ const MessageReferenceCard: React.FC<MessageReferenceCardProps> = ({
           title={copyLabel}
           onClick={handleCopy}
         />
-        <Button
-          variant="primary"
-          size="small"
-          onClick={handleOpen}
-          dropdownMenu={
-            <Dropdown
-              droplist={
-                <Menu>
-                  <Menu.Item key="open-in-app" onClick={handleOpen}>
-                    {openInAppLabel}
-                  </Menu.Item>
-                  <Menu.Item key="external-open" onClick={handleExternalOpen}>
-                    {externalOpenLabel}
-                  </Menu.Item>
-                </Menu>
-              }
-              trigger="click"
-              position="bottom-end"
-              popupVisible={dropdownVisible}
-              onVisibleChange={setDropdownVisible}
-              getPopupContainer={() => document.body}
-              avoidViewportOverflow
-              className="z-[9999]"
-              style={{ zIndex: 9999 }}
-            >
-              <div />
-            </Dropdown>
-          }
-          onDropdownClick={(event) => {
-            event.stopPropagation();
-            setDropdownVisible(!dropdownVisible);
-          }}
-          dropdownVisible={dropdownVisible}
-          splitWidthMode="hug"
-        >
-          {openLabel}
-        </Button>
+        {isCommit && (
+          <Button
+            variant="secondary"
+            appearance="ghost"
+            size="small"
+            icon={<ArrowRight size={14} />}
+            iconOnly
+            aria-label={tCommon("actions.open")}
+            title={tCommon("actions.open")}
+            onClick={handleOpenCommitInDiff}
+          />
+        )}
+        {isOpenable && (
+          <Button
+            variant="primary"
+            size="small"
+            onClick={handleOpen}
+            dropdownMenu={
+              <Dropdown
+                droplist={
+                  <Menu>
+                    <Menu.Item key="open-in-app" onClick={handleOpen}>
+                      {openInAppLabel}
+                    </Menu.Item>
+                    <Menu.Item key="external-open" onClick={handleExternalOpen}>
+                      {externalOpenLabel}
+                    </Menu.Item>
+                  </Menu>
+                }
+                trigger="click"
+                position="bottom-end"
+                popupVisible={dropdownVisible}
+                onVisibleChange={setDropdownVisible}
+                getPopupContainer={() => document.body}
+                avoidViewportOverflow
+                className="z-[9999]"
+                style={{ zIndex: 9999 }}
+              >
+                <div />
+              </Dropdown>
+            }
+            onDropdownClick={(event) => {
+              event.stopPropagation();
+              setDropdownVisible(!dropdownVisible);
+            }}
+            dropdownVisible={dropdownVisible}
+            splitWidthMode="hug"
+          >
+            {openLabel}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -432,6 +651,7 @@ interface MessageReferenceCardsProps {
   enabled?: boolean;
   items?: MessageReferenceItem[];
   excludeUrls?: ReadonlySet<string>;
+  sessionId?: string | null;
 }
 
 const MessageReferenceCards: React.FC<MessageReferenceCardsProps> = ({
@@ -439,8 +659,10 @@ const MessageReferenceCards: React.FC<MessageReferenceCardsProps> = ({
   enabled = true,
   items,
   excludeUrls,
+  sessionId,
 }) => {
   const currentRepo = useAtomValue(currentRepoAtom);
+  const session = useAtomValue(sessionByIdAtom(sessionId ?? ""));
   const workspaceFolders = useAtomValue(workspaceFoldersAtom);
   const workspaceReferencePaths = useMemo(
     () => [
@@ -462,13 +684,22 @@ const MessageReferenceCards: React.FC<MessageReferenceCardsProps> = ({
         : []),
     [content, enabled, excludeUrls, items, workspaceReferencePaths]
   );
+  const metadataRepoPath = session?.repoPath || currentRepo?.path;
+  const resolvedReferences = useCommitMetadataReferences(
+    references,
+    metadataRepoPath
+  );
 
-  if (references.length === 0) return null;
+  if (resolvedReferences.length === 0) return null;
 
   return (
     <div className="mt-3 flex w-full flex-col gap-2">
-      {references.map((item) => (
-        <MessageReferenceCard key={makeReferenceKey(item)} item={item} />
+      {resolvedReferences.map((item) => (
+        <MessageReferenceCard
+          key={makeReferenceKey(item)}
+          item={item}
+          sessionId={sessionId}
+        />
       ))}
     </div>
   );

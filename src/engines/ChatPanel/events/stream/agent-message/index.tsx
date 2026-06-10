@@ -149,6 +149,7 @@ const ChatVariant: React.FC<ChatVariantProps> = ({
             content={content || ""}
             enabled={!isStreaming}
             excludeUrls={canvasUrls}
+            sessionId={sessionId}
           />
         </AgentMessageBlock>
       )}

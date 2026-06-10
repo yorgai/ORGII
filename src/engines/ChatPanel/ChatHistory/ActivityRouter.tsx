@@ -8,6 +8,7 @@
 import React, { Suspense, memo, useMemo } from "react";
 
 import { AgentMessageBlock } from "@src/engines/ChatPanel/blocks";
+import MessageReferenceCards from "@src/engines/ChatPanel/blocks/MessageReferenceCards";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import {
   chatRequiresItemIndex,
@@ -109,10 +110,21 @@ const ActivityLoadingFallback: React.FC = () => (
 
 function getAssistantMessageContent(event: SessionEvent): string | null {
   const text =
+    extractTextFromContent(event.result?.message) ||
     extractTextFromContent(event.result?.observation) ||
     extractTextFromContent(event.result?.content) ||
     extractTextFromContent(event.displayText);
   return text?.trim() ? text : null;
+}
+
+function isAssistantMessageLikeEvent(
+  event: SessionEvent,
+  eventType: string
+): boolean {
+  if (eventType === "agent_message") return true;
+  if (event.uiCanonical === "assistant_message") return true;
+  if (event.functionName === "assistant_message") return true;
+  return event.source === "assistant" && event.displayVariant === "message";
 }
 
 // ============================================
@@ -194,6 +206,7 @@ const ActivityChatItem: React.FC<ActivityChatItemProps> = memo(
     const renderContent = () => {
       const actionType = event.actionType;
       const functionName = event.functionName;
+      const eventType = getRegistryEventType(event);
 
       if (
         functionName === "system" &&
@@ -203,6 +216,29 @@ const ActivityChatItem: React.FC<ActivityChatItemProps> = memo(
         return (
           <AgentErrorChatItem errorMessage={String(event.result.observation)} />
         );
+      }
+
+      if (isAssistantMessageLikeEvent(event, eventType)) {
+        const assistantContent = getAssistantMessageContent(event);
+        if (assistantContent) {
+          return (
+            <AgentMessageBlock>
+              <AgentChatItemDefault
+                itemIndex={itemIndex}
+                expand={true}
+                finish={!isStreaming}
+                streamHtml={isStreaming}
+              >
+                {assistantContent}
+              </AgentChatItemDefault>
+              <MessageReferenceCards
+                content={assistantContent}
+                enabled={!isStreaming}
+                sessionId={event.sessionId}
+              />
+            </AgentMessageBlock>
+          );
+        }
       }
 
       if (actionType === "raw" || actionType === "raw_event") {
@@ -216,26 +252,6 @@ const ActivityChatItem: React.FC<ActivityChatItemProps> = memo(
         }
         if (!functionName) {
           return null;
-        }
-      }
-
-      const eventType = getRegistryEventType(event);
-
-      if (eventType === "agent_message") {
-        const assistantContent = getAssistantMessageContent(event);
-        if (assistantContent) {
-          return (
-            <AgentMessageBlock>
-              <AgentChatItemDefault
-                itemIndex={itemIndex}
-                expand={true}
-                finish={!isStreaming}
-                streamHtml={isStreaming}
-              >
-                {assistantContent}
-              </AgentChatItemDefault>
-            </AgentMessageBlock>
-          );
         }
       }
 

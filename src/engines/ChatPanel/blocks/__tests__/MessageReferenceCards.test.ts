@@ -3,17 +3,27 @@ import { describe, expect, it } from "vitest";
 import { extractMessageReferences } from "../MessageReferenceCards";
 
 describe("extractMessageReferences", () => {
-  it("upgrades GitHub PR URLs to PR reference cards", () => {
-    const references = extractMessageReferences(
-      "Created PR: https://github.com/orgii/app/pull/42"
-    );
+  it("extracts agent commit lines into commit reference cards", () => {
+    const references = extractMessageReferences(`
+Committed the diff-view work.
 
-    expect(references).toHaveLength(1);
+Commit:
+
+4e7c7b77 fix(diff): align replay line numbers and submission filters
+Pre-commit checks passed, including:
+
+lint-staged
+scoped TypeScript check
+staged file lint stats
+`);
+
     expect(references[0]).toMatchObject({
-      kind: "github_pr",
-      value: "https://github.com/orgii/app/pull/42",
-      title: "Pull request #42",
-      subtitle: "orgii/app",
+      kind: "git_commit",
+      value: "4e7c7b77",
+      title: "fix(diff): align replay line numbers and submission filters",
+      subtitle: "4e7c7b77",
+      sha: "4e7c7b77",
+      shortSha: "4e7c7b77",
     });
   });
 
@@ -24,10 +34,11 @@ describe("extractMessageReferences", () => {
 
     expect(references).toHaveLength(1);
     expect(references[0]).toMatchObject({
-      kind: "github_commit",
-      value: "https://github.com/orgii/app/commit/abcdef1234567890",
+      kind: "git_commit",
+      value: "abcdef1234567890",
       title: "Commit abcdef1",
-      subtitle: "orgii/app",
+      subtitle: "abcdef1 · orgii/app",
+      url: "https://github.com/orgii/app/commit/abcdef1234567890",
     });
   });
 
