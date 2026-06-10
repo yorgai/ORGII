@@ -31,7 +31,7 @@ export const OPS_CONTROL_SESSION_CREATOR_MIN_HEIGHT_CLASS = "min-h-[180px]";
 export const OPS_CONTROL_SESSION_CREATOR_FLOW_CLASS = `mx-auto flex w-full ${OPS_CONTROL_SESSION_CREATOR_MAX_WIDTH_CLASS} ${OPS_CONTROL_SESSION_CREATOR_MIN_HEIGHT_CLASS} flex-col`;
 
 export const OPS_CONTROL_SESSION_CREATOR_OVERLAY_CLASS =
-  "pointer-events-none absolute inset-x-0 bottom-0 top-0 z-50 flex items-end px-2 pb-2 pt-1";
+  "pointer-events-none absolute inset-x-0 bottom-0 top-0 z-50 flex items-end bg-gradient-to-t from-bg-1/90 via-bg-1/55 to-transparent px-2 pb-2 pt-12";
 
 export const OPS_CONTROL_SESSION_CREATOR_SURFACE_CLASS = `mx-auto w-full ${OPS_CONTROL_SESSION_CREATOR_MAX_WIDTH_CLASS} pointer-events-auto`;
 

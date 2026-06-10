@@ -5,7 +5,7 @@ import {
   OPS_CONTROL_SESSION_CREATOR_OVERLAY_CLASS,
   OPS_CONTROL_SESSION_CREATOR_SURFACE_CLASS,
 } from "@src/config/opsControlCardTokens";
-import { SessionCreatorFactory } from "@src/features/SessionCreator/variants";
+import { SessionCreatorKanban } from "@src/features/SessionCreator/variants";
 import { opsControlCreatorVisibleAtom } from "@src/store/ui/opsControlCreatorAtom";
 
 const OpsControlTaskCreator: React.FC = memo(() => {
@@ -19,7 +19,7 @@ const OpsControlTaskCreator: React.FC = memo(() => {
 
   return (
     <div className={OPS_CONTROL_SESSION_CREATOR_OVERLAY_CLASS}>
-      <SessionCreatorFactory
+      <SessionCreatorKanban
         className={OPS_CONTROL_SESSION_CREATOR_SURFACE_CLASS}
         onSessionStart={handleClose}
         onClose={handleClose}
