@@ -17,6 +17,7 @@ import {
   getStatusLetterForFile,
 } from "@src/config/gitStatus";
 import { CodeMirrorDiff } from "@src/features/CodeMirror";
+import { FileHeader } from "@src/modules/WorkStation/shared";
 import { DIFF_STATS } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import {
@@ -53,6 +54,11 @@ export interface DiffFileSectionProps {
   hideDirectory?: boolean;
   showBottomBorder?: boolean;
   dataPath?: string;
+  /**
+   * When true, renders a flat FileHeader (matching source control style)
+   * instead of the collapsible chevron button. Content is always expanded.
+   */
+  flat?: boolean;
 }
 
 function getDisplayPath(path: string, repoPath?: string): string {
@@ -83,6 +89,7 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
   hideDirectory = false,
   showBottomBorder = true,
   dataPath,
+  flat = false,
 }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -163,6 +170,81 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
   const displayPath = getDisplayPath(file.path, repoPath);
   const { fileName, dirPath } = getFileNameAndDir(displayPath);
 
+  const diffContent = (
+    <div ref={containerRef}>
+      {isPreviewable ? (
+        <Placeholder
+          variant="empty"
+          title={t("placeholders.previewNotAvailableInline")}
+          className="py-8"
+          action={
+            onFileSelect
+              ? {
+                  label: t("actions.openInTab"),
+                  onClick: () => onFileSelect(file.path),
+                }
+              : undefined
+          }
+        />
+      ) : isBinary ? (
+        <Placeholder
+          variant="empty"
+          title={t("placeholders.unsupportedFileType")}
+          subtitle={t("placeholders.binaryUnsupportedEncoding")}
+        />
+      ) : hasContent ? (
+        <CodeMirrorDiff
+          oldValue={file.oldContent || ""}
+          newValue={file.newContent || ""}
+          filePath={file.path}
+          changeType={file.status}
+          oldStartLine={file.oldStartLine}
+          newStartLine={file.newStartLine}
+          viewMode="unified"
+          readOnly={true}
+          mergeControls={false}
+          collapseUnchanged={true}
+          autoHeight
+        />
+      ) : (
+        <Placeholder
+          variant="loading"
+          placement="detail-panel"
+          title={t("placeholders.loadingChanges")}
+        />
+      )}
+    </div>
+  );
+
+  if (flat) {
+    return (
+      <>
+        <div
+          ref={sectionRef}
+          className={showBottomBorder ? "border-b border-border-2" : undefined}
+          data-diff-section-path={dataPath}
+        >
+          <FileHeader
+            filePath={file.path}
+            repoPath={repoPath}
+            additions={additions}
+            deletions={deletions}
+            publishEnabled={false}
+          />
+          {diffContent}
+        </div>
+        <TextSelectionDropdown
+          visible={dropdownVisible}
+          position={dropdownPosition}
+          selectedText={selectedText}
+          source="terminal"
+          onClose={hideDropdown}
+          onAddToContext={handleAddToContext}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <div
@@ -209,51 +291,7 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
           </span>
         </button>
 
-        {expanded && (
-          <div ref={containerRef}>
-            {isPreviewable ? (
-              <Placeholder
-                variant="empty"
-                title={t("placeholders.previewNotAvailableInline")}
-                className="py-8"
-                action={
-                  onFileSelect
-                    ? {
-                        label: t("actions.openInTab"),
-                        onClick: () => onFileSelect(file.path),
-                      }
-                    : undefined
-                }
-              />
-            ) : isBinary ? (
-              <Placeholder
-                variant="empty"
-                title={t("placeholders.unsupportedFileType")}
-                subtitle={t("placeholders.binaryUnsupportedEncoding")}
-              />
-            ) : hasContent ? (
-              <CodeMirrorDiff
-                oldValue={file.oldContent || ""}
-                newValue={file.newContent || ""}
-                filePath={file.path}
-                changeType={file.status}
-                oldStartLine={file.oldStartLine}
-                newStartLine={file.newStartLine}
-                viewMode="unified"
-                readOnly={true}
-                mergeControls={false}
-                collapseUnchanged={true}
-                autoHeight
-              />
-            ) : (
-              <Placeholder
-                variant="loading"
-                placement="detail-panel"
-                title={t("placeholders.loadingChanges")}
-              />
-            )}
-          </div>
-        )}
+        {expanded && diffContent}
       </div>
       <TextSelectionDropdown
         visible={dropdownVisible}

@@ -802,6 +802,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
         )}
         collapseThreshold={Number.POSITIVE_INFINITY}
         showBottomBorder={false}
+        flat
       />
     );
   }, [

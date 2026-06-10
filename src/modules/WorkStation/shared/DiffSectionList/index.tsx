@@ -25,6 +25,8 @@ export interface DiffSectionListProps<TFile extends DiffFileSectionData> {
   onRequestContent?: (file: TFile) => void;
   sectionKeySuffix?: (section: DiffSectionListItem<TFile>) => string | number;
   showBottomBorder?: boolean;
+  /** When true, each section renders a flat FileHeader instead of the collapsible chevron button. */
+  flat?: boolean;
 }
 
 const DEFAULT_COLLAPSE_THRESHOLD = 10;
@@ -44,6 +46,7 @@ function DiffSectionListInner<TFile extends DiffFileSectionData>({
   onRequestContent,
   sectionKeySuffix,
   showBottomBorder,
+  flat = false,
 }: DiffSectionListProps<TFile>) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -106,7 +109,9 @@ function DiffSectionListInner<TFile extends DiffFileSectionData>({
               key={`${section.key}-${collapseSignal}-${isFocused ? focusedNonce : 0}-${suffix}`}
               file={section.file}
               defaultExpanded={
-                isFocused || (collapseSignal > 0 ? false : !shouldAutoCollapse)
+                flat ||
+                isFocused ||
+                (collapseSignal > 0 ? false : !shouldAutoCollapse)
               }
               repoPath={repoPath}
               sectionRef={getSectionRef?.(section.file.path)}
@@ -118,6 +123,7 @@ function DiffSectionListInner<TFile extends DiffFileSectionData>({
                   : undefined
               }
               showBottomBorder={showBottomBorder}
+              flat={flat}
             />
           );
         })}
