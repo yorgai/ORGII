@@ -45,12 +45,12 @@ import { GitHubReAuthError, listPRCommitsLocal } from "@src/api/tauri/github";
 import Button from "@src/components/Button";
 import Select from "@src/components/Select";
 import type { SelectOption } from "@src/components/Select";
-import TabPill from "@src/components/TabPill";
 import { useGitStatus } from "@src/contexts/git";
 import {
   usePublishWorkstationTabHeader,
   useWorkStationTabShortcutBridge,
 } from "@src/hooks/workStation";
+import { WorkStationTabPill } from "@src/modules/WorkStation/shared";
 import {
   NoTabsPlaceholder,
   TabBarBottomPanelToggle,
@@ -640,7 +640,7 @@ const EditorContent: React.FC<EditorContentProps> = memo(
                 className="pointer-events-none mx-1.5 h-4 w-px shrink-0 bg-border-2"
                 aria-hidden
               />
-              <TabPill
+              <WorkStationTabPill
                 activeTab={mode}
                 tabs={[
                   { key: "focus", label: t("sourceControl.pill.focus") },

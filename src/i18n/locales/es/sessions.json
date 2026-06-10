@@ -112,16 +112,18 @@
     "columns": {
       "todo": "Por hacer",
       "inProgress": "En progreso",
-      "yourTurn": "Tu turno",
-      "finished": "Finalizado"
+      "blocking": "Tu turno",
+      "turnFinished": "Turno finalizado",
+      "archived": "Archivado"
     },
     "boardColumns": {
       "todo": "Por hacer",
       "in_progress": "En progreso",
       "in_review": "En revisión",
-      "your_turn": "Tu turno",
+      "blocking": "Tu turno",
+      "turn_finished": "Turno finalizado",
+      "archived": "Archivado",
       "done": "Completado",
-      "finished": "Finalizado",
       "cancelled": "Fallido"
     },
     "sidebar": {
@@ -131,7 +133,6 @@
       "removeDraft": "Eliminar borrador"
     },
     "resultStatus": {
-      "completed": "Completado",
       "failed": "Fallido",
       "archived": "Archivado"
     },

@@ -22,7 +22,6 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import TabPill from "@src/components/TabPill";
 import { TerminalCommand } from "@src/components/TerminalDisplay";
 import "@src/components/TerminalDisplay/index.scss";
 import { TreeRowBase } from "@src/components/TreeRow";
@@ -32,6 +31,7 @@ import {
   TERMINAL_OUTPUT_MAX_LENGTH,
   processTerminalOutput,
 } from "@src/modules/WorkStation/CodeEditor/util/terminalOutput";
+import { WorkStationTabPill } from "@src/modules/WorkStation/shared";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import {
   HorizontalResizeHandle,
@@ -252,7 +252,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = memo(
         {/* Header - full width, matching WorkStation BottomPanelHeader layout */}
         <div className="flex h-10 shrink-0 items-center justify-between pl-2 pr-3">
           <div className="flex min-w-0 flex-1 items-center">
-            <TabPill
+            <WorkStationTabPill
               activeTab="terminal"
               tabs={terminalTabs}
               onChange={() => {}}

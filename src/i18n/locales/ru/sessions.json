@@ -112,16 +112,18 @@
     "columns": {
       "todo": "К выполнению",
       "inProgress": "В процессе",
-      "yourTurn": "Ваш ход",
-      "finished": "Завершено"
+      "blocking": "Ваш ход",
+      "turnFinished": "Ход завершён",
+      "archived": "Архивировано"
     },
     "boardColumns": {
       "todo": "К выполнению",
       "in_progress": "В процессе",
       "in_review": "На проверке",
-      "your_turn": "Ваш ход",
+      "blocking": "Ваш ход",
+      "turn_finished": "Ход завершён",
+      "archived": "Архивировано",
       "done": "Завершено",
-      "finished": "Завершено",
       "cancelled": "Неудачно"
     },
     "sidebar": {
@@ -131,7 +133,6 @@
       "removeDraft": "Удалить черновик"
     },
     "resultStatus": {
-      "completed": "Завершено",
       "failed": "Неудачно",
       "archived": "Архивировано"
     },

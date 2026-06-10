@@ -11,7 +11,6 @@ import { useAtomValue } from "jotai";
 import React, { Suspense, lazy, memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import TabPill from "@src/components/TabPill";
 import { useAgentOrgRunView } from "@src/engines/ChatPanel/InputArea/components/useAgentOrgRunView";
 import EventWrapper from "@src/engines/ChatPanel/adapters/EventWrapper";
 import { sessionIdAtom } from "@src/engines/SessionCore/core/atoms";
@@ -24,6 +23,7 @@ import {
 import type { SimulatorAppBaseState } from "@src/engines/Simulator/apps/core/types";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { matchesCanvasEvent } from "@src/modules/WorkStation/Canvas/config";
+import { WorkStationTabPill } from "@src/modules/WorkStation/shared";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { canvasPreviewAtom } from "@src/store/session/canvasPreviewAtom";
 import { simulatorEffectiveDockAppAtom } from "@src/store/ui/simulatorAtom";
@@ -170,7 +170,7 @@ const SimulatorMessagesComponent: React.FC<SimulatorMessagesProps> = ({
   const planTrailingSlot =
     isPlanDoc && isPlanPending ? (
       <div className="flex h-full items-center gap-2 px-2">
-        <TabPill
+        <WorkStationTabPill
           activeTab={isPreviewMode ? "preview" : "source"}
           tabs={[
             { key: "source", label: t("common:common.sourceCode") },

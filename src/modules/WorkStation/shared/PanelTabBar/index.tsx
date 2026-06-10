@@ -21,10 +21,11 @@
 import type { ReactNode } from "react";
 import React, { memo, useCallback, useMemo } from "react";
 
-import TabPill from "@src/components/TabPill";
 import { TabBar } from "@src/modules/WorkStation/shared/TabBar";
 import type { SecondaryPanelPosition } from "@src/store/ui/workStationAtom";
 import type { WorkStationTab } from "@src/store/workstation/tabs";
+
+import { WorkStationTabPill } from "../WorkStationTabPill";
 
 export { PanelPositionToggle } from "./PositionToggle";
 
@@ -128,7 +129,7 @@ const PanelTabBar: React.FC<PanelTabBarProps> = memo(
         >
           <div className="flex flex-wrap items-center justify-between gap-y-1 pb-1.5 pt-1.5 @[520px]/spheader:h-10 @[520px]/spheader:flex-nowrap @[520px]/spheader:gap-x-1.5 @[520px]/spheader:py-0 @[520px]/spheader:pl-2 @[520px]/spheader:pr-2">
             <div className="secondary-panel-header__tab-scroll order-1 flex min-w-0 flex-1 items-center overflow-x-auto overflow-y-hidden pl-2 scrollbar-hide @[520px]/spheader:pl-0">
-              <TabPill
+              <WorkStationTabPill
                 activeTab={activeTabKey}
                 tabs={pillTabs}
                 onChange={onTabChange}

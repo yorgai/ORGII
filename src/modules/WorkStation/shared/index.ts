@@ -120,6 +120,8 @@ export type {
 } from "./PropertyEditor";
 
 // Tab bar
+export { WorkStationTabPill } from "./WorkStationTabPill";
+export type { WorkStationTabPillProps } from "./WorkStationTabPill";
 export {
   TabBar,
   TAB_BAR_HEIGHT,

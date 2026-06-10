@@ -34,11 +34,11 @@ import {
   DROPDOWN_PANEL,
   DROPDOWN_WIDTHS,
 } from "@src/components/Dropdown/tokens";
-import TabPill from "@src/components/TabPill";
 import { useDropdownEngine } from "@src/hooks/dropdown";
 import { SIDEBAR_MEMORY_KIND, useSidebarMemoryEntry } from "@src/hooks/perf";
 
 import { NoDragRegion } from "../NoDragRegion";
+import { WorkStationTabPill } from "../WorkStationTabPill";
 import { usePrimarySidebarSurface } from "../hooks/usePrimarySidebarSurface";
 import CollapsibleSection from "./CollapsibleSection";
 
@@ -348,7 +348,7 @@ export const PrimarySidebarLayoutWithSections: React.FC<PrimarySidebarLayoutWith
             {!hideTabs && (
               <div className="relative flex h-[40px] flex-shrink-0 items-center bg-transparent">
                 <NoDragRegion className="mx-auto flex items-center justify-center gap-1">
-                  <TabPill
+                  <WorkStationTabPill
                     activeTab={activeTab}
                     tabs={tabs}
                     onChange={(key) => onTabChange(key)}

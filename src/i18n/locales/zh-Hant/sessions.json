@@ -112,16 +112,18 @@
     "columns": {
       "todo": "待辦",
       "inProgress": "進行中",
-      "yourTurn": "該你了",
-      "finished": "已結束"
+      "blocking": "該你了",
+      "turnFinished": "回合結束",
+      "archived": "已歸檔"
     },
     "boardColumns": {
       "todo": "待辦",
       "in_progress": "進行中",
       "in_review": "審覈中",
-      "your_turn": "該你了",
+      "blocking": "該你了",
+      "turn_finished": "回合結束",
+      "archived": "已歸檔",
       "done": "已完成",
-      "finished": "已結束",
       "cancelled": "失敗"
     },
     "sidebar": {
@@ -131,7 +133,6 @@
       "removeDraft": "刪除草稿"
     },
     "resultStatus": {
-      "completed": "已完成",
       "failed": "失敗",
       "archived": "已歸檔"
     },

@@ -27,9 +27,9 @@ import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "@src/components/Button";
-import TabPill from "@src/components/TabPill";
 import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
 import { useRatioResize } from "@src/hooks/ui";
+import { WorkStationTabPill } from "@src/modules/WorkStation/shared";
 import {
   PanelPositionToggle,
   PanelTabBar,
@@ -239,7 +239,7 @@ const WebDevTools: React.FC<WebDevToolsProps> = memo(
                   style={treeSectionStyle}
                 >
                   <div className="flex h-10 shrink-0 items-center justify-between px-3">
-                    <TabPill
+                    <WorkStationTabPill
                       activeTab="dom-tree"
                       tabs={[{ key: "dom-tree", label: t("tooltips.domTree") }]}
                       variant="simple"
@@ -312,7 +312,7 @@ const WebDevTools: React.FC<WebDevToolsProps> = memo(
                   style={designSectionStyle}
                 >
                   <div className="flex h-10 shrink-0 items-center justify-between px-3">
-                    <TabPill
+                    <WorkStationTabPill
                       activeTab={componentsSubTab}
                       onChange={(key) =>
                         setComponentsSubTab(key as ComponentsSubTab)

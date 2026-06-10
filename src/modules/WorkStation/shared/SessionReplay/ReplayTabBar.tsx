@@ -158,7 +158,7 @@ const TabItem: React.FC<TabItemProps> = ({ tab, isActive, onClick }) => {
       >
         {icon}
       </span>
-      <span className="max-w-[160px] truncate text-[13px]">{tab.label}</span>
+      <span className="max-w-[160px] truncate">{tab.label}</span>
     </WorkStationTabPillSurface>
   );
 };

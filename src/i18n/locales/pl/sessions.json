@@ -118,16 +118,18 @@
     "columns": {
       "todo": "Do zrobienia",
       "inProgress": "W trakcie",
-      "yourTurn": "Twoja kolej",
-      "finished": "Zakończone"
+      "blocking": "Twoja kolej",
+      "turnFinished": "Tura zakończona",
+      "archived": "Zarchiwizowane"
     },
     "boardColumns": {
       "todo": "Do zrobienia",
       "in_progress": "W trakcie",
       "in_review": "Do przeglądu",
-      "your_turn": "Twoja kolej",
+      "blocking": "Twoja kolej",
+      "turn_finished": "Tura zakończona",
+      "archived": "Zarchiwizowane",
       "done": "Ukończone",
-      "finished": "Zakończone",
       "cancelled": "Nieudane"
     },
     "sidebar": {
@@ -137,7 +139,6 @@
       "removeDraft": "Usuń wersję roboczą"
     },
     "resultStatus": {
-      "completed": "Ukończone",
       "failed": "Nieudane",
       "archived": "Zarchiwizowane"
     },

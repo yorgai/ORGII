@@ -112,16 +112,18 @@
     "columns": {
       "todo": "Todo",
       "inProgress": "進行中",
-      "yourTurn": "あなたの番",
-      "finished": "終了"
+      "blocking": "あなたの番",
+      "turnFinished": "ターン終了",
+      "archived": "アーカイブ済み"
     },
     "boardColumns": {
       "todo": "Todo",
       "in_progress": "進行中",
       "in_review": "レビュー中",
-      "your_turn": "あなたの番",
+      "blocking": "あなたの番",
+      "turn_finished": "ターン終了",
+      "archived": "アーカイブ済み",
       "done": "完了",
-      "finished": "終了",
       "cancelled": "失敗"
     },
     "sidebar": {
@@ -131,7 +133,6 @@
       "removeDraft": "ドラフトを削除"
     },
     "resultStatus": {
-      "completed": "完了",
       "failed": "失敗",
       "archived": "アーカイブ済み"
     },

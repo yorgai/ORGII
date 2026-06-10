@@ -15,6 +15,11 @@ import { cn } from "./cn";
 import { renderTabContent } from "./tabContent";
 import type { TabPillItem, TabPillProps } from "./types";
 
+export {
+  TAB_PILL_SELECT_28_TEXT_CLASS,
+  TabPillSurface,
+  type TabPillSurfaceProps,
+} from "./TabPillSurface";
 export type { TabPillItem, TabPillProps } from "./types";
 
 const TabPill: React.FC<TabPillProps> = ({
@@ -32,6 +37,8 @@ const TabPill: React.FC<TabPillProps> = ({
   wrap = false,
   size = "default",
   colorScheme = "default",
+  surfaceClassName,
+  textClassName,
   onDropdownRef,
 }) => {
   const isMulti = activeTabs !== undefined;
@@ -261,6 +268,7 @@ const TabPill: React.FC<TabPillProps> = ({
                 : size === "large"
                   ? "h-full text-[16px]"
                   : "h-full text-[13px]",
+            textClassName,
             "border-0 bg-transparent outline-none",
             isActive
               ? "font-semibold text-text-1"
@@ -305,6 +313,7 @@ const TabPill: React.FC<TabPillProps> = ({
               : size === "large"
                 ? "text-[16px]"
                 : "text-xs",
+          textClassName,
           iconOnly
             ? size === "mini"
               ? "h-6 px-1 py-[2px]"
@@ -410,6 +419,7 @@ const TabPill: React.FC<TabPillProps> = ({
           !usePillWrapGrid &&
           "flex-wrap content-start justify-start gap-1",
         fillWidth && !wrap && "flex-1",
+        surfaceClassName,
         className
       )}
     >

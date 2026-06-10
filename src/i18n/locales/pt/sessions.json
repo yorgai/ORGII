@@ -118,16 +118,18 @@
     "columns": {
       "todo": "A fazer",
       "inProgress": "Em andamento",
-      "yourTurn": "Sua vez",
-      "finished": "Finalizado"
+      "blocking": "Sua vez",
+      "turnFinished": "Turno finalizado",
+      "archived": "Arquivado"
     },
     "boardColumns": {
       "todo": "A fazer",
       "in_progress": "Em andamento",
       "in_review": "Em revisão",
-      "your_turn": "Sua vez",
+      "blocking": "Sua vez",
+      "turn_finished": "Turno finalizado",
+      "archived": "Arquivado",
       "done": "Concluído",
-      "finished": "Finalizado",
       "cancelled": "Falhou"
     },
     "sidebar": {
@@ -137,7 +139,6 @@
       "removeDraft": "Remover rascunho"
     },
     "resultStatus": {
-      "completed": "Concluído",
       "failed": "Falhou",
       "archived": "Arquivado"
     },

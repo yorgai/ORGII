@@ -20,13 +20,13 @@ import { useTranslation } from "react-i18next";
 
 import { getGitCommits } from "@src/api/http/git";
 import type { GitCommitInfo } from "@src/api/http/git/types";
-import TabPill from "@src/components/TabPill";
 import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { simulatorEventsAtom } from "@src/engines/SessionCore/derived/simulatorEvents";
 import type { SimulatorAppProps } from "@src/engines/Simulator/apps/core/types";
 import { createLogger } from "@src/hooks/logger";
 import { usePublishWorkstationTabHeader } from "@src/hooks/workStation";
+import { WorkStationTabPill } from "@src/modules/WorkStation/shared";
 import {
   type DiffFileNavigationItem,
   DiffFileNavigationList,
@@ -288,7 +288,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   const diffHeaderContent = useMemo(
     () => (
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        <TabPill
+        <WorkStationTabPill
           activeTab={pillMode}
           tabs={[
             { key: "focus", label: tCommon("sourceControl.pill.focus") },

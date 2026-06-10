@@ -112,16 +112,18 @@
     "columns": {
       "todo": "Zu erledigen",
       "inProgress": "In Bearbeitung",
-      "yourTurn": "Du bist dran",
-      "finished": "Abgeschlossen"
+      "blocking": "Du bist dran",
+      "turnFinished": "Runde beendet",
+      "archived": "Archiviert"
     },
     "boardColumns": {
       "todo": "Zu erledigen",
       "in_progress": "In Bearbeitung",
       "in_review": "In Prüfung",
-      "your_turn": "Du bist dran",
+      "blocking": "Du bist dran",
+      "turn_finished": "Runde beendet",
+      "archived": "Archiviert",
       "done": "Abgeschlossen",
-      "finished": "Abgeschlossen",
       "cancelled": "Fehlgeschlagen"
     },
     "sidebar": {
@@ -131,7 +133,6 @@
       "removeDraft": "Entwurf entfernen"
     },
     "resultStatus": {
-      "completed": "Abgeschlossen",
       "failed": "Fehlgeschlagen",
       "archived": "Archiviert"
     },

@@ -32,7 +32,7 @@ const FactoryViewPill: React.FC = () => {
   const activeView = parseFactoryViewMode(location.search);
   const tabs = useMemo<TabPillItem[]>(
     () => [
-      { key: "kanban", label: t("opsControl.view.opsControl") },
+      { key: "kanban", label: t("simulator.tabs.kanban") },
       { key: "list", label: t("opsControl.view.list") },
       { key: "diary", label: t("opsControl.view.diary") },
     ],

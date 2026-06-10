@@ -41,7 +41,7 @@ export const OpsControlStationTabBar: React.FC = memo(() => {
     () => ({
       id: "ops-control-home",
       type: "ops-control-station",
-      title: t("sessions:opsControl.view.opsControl"),
+      title: t("sessions:simulator.tabs.kanban"),
       icon: "Radar",
       data: {},
       closable: false,
