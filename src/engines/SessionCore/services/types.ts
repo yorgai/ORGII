@@ -90,6 +90,13 @@ export interface SessionSendMessageParams {
   /** Client-side idempotency key used to suppress duplicate sends. */
   clientMessageId?: string;
   /**
+   * Canonical user-intent id minted at the FE submit boundary.
+   * Passed to `agent_send_message` so the backend wire layer, scheduler,
+   * persisted user_message event, and `session_turn_intents` lifecycle
+   * row all observe the same logical identity.
+   */
+  turnIntentId?: string;
+  /**
    * When `true`, this is a user-initiated Resume after a failed turn.
    * Backend runs deletion-based orphan tool-use filter.
    */

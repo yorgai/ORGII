@@ -147,6 +147,11 @@ export interface AdapterSendInput {
   /** Client-side idempotency key used to suppress duplicate sends. */
   clientMessageId?: string;
   /**
+   * Canonical user-intent id minted at the FE submit boundary. See
+   * `QueuedMessage.turnIntentId` for the propagation contract.
+   */
+  turnIntentId?: string;
+  /**
    * When `true`, this is a user-initiated Resume after a failed turn.
    * The backend runs deletion-based orphan tool-use filter instead of
    * injecting a synthetic continuation user message.

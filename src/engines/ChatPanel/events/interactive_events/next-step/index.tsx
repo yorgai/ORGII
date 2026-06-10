@@ -227,8 +227,23 @@ const ChatVariant: React.FC<{
 
       void (async () => {
         try {
-          await addUserMessage(step.command);
-          await dispatchMessageBySessionType(sessionId, step.command);
+          // Mint one canonical user-intent id and use it for both the
+          // optimistic synthetic event and the wire dispatch so the turn
+          // indexer can collapse the two rows under a single round.
+          const turnIntentId =
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `tii-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+          await addUserMessage(step.command, undefined, turnIntentId);
+          await dispatchMessageBySessionType(
+            sessionId,
+            step.command,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            turnIntentId
+          );
         } catch (err) {
           console.error("[NextStepEvent] send failed:", err);
           setSelectedIdx(null);

@@ -21,6 +21,10 @@ function makeMessage(
   overrides: Partial<QueuedMessage> & Pick<QueuedMessage, "id">
 ): QueuedMessage {
   return {
+    // Default to a per-test unique turnIntentId so the new id-based
+    // dedupe doesn't accidentally collapse unrelated test rows. Tests
+    // that exercise dedupe explicitly override this to a shared value.
+    turnIntentId: `tii-${overrides.id}`,
     sessionId: "session-1",
     content: `content-${overrides.id}`,
     displayContent: `display-${overrides.id}`,
@@ -79,20 +83,43 @@ describe("messageQueueAtom", () => {
       expect(store.get(messageQueueAtom)[0].imageDataUrls).toEqual(images);
     });
 
-    it("ignores duplicate enqueue requests for the same session and content", () => {
+    it("ignores duplicate enqueue requests with the same turn_intent_id", () => {
       const msg1 = makeMessage({
         id: "m1",
+        turnIntentId: "intent-A",
         content: "same",
         displayContent: "same display",
       });
       const msg2 = makeMessage({
         id: "m2",
+        turnIntentId: "intent-A",
         content: "same",
         displayContent: "same display",
       });
       store.set(enqueueMessageAtom, msg1);
       store.set(enqueueMessageAtom, msg2);
       expect(store.get(messageQueueAtom)).toEqual([msg1]);
+    });
+
+    it("allows two enqueues with identical content but different turn_intent_id", () => {
+      // Different submit boundary → different intent → both rows kept.
+      // Mirrors the bug we fixed: Stop + Send Now must re-submit, not
+      // get silently dropped as a content duplicate.
+      const msg1 = makeMessage({
+        id: "m1",
+        turnIntentId: "intent-A",
+        content: "same",
+        displayContent: "same display",
+      });
+      const msg2 = makeMessage({
+        id: "m2",
+        turnIntentId: "intent-B",
+        content: "same",
+        displayContent: "same display",
+      });
+      store.set(enqueueMessageAtom, msg1);
+      store.set(enqueueMessageAtom, msg2);
+      expect(store.get(messageQueueAtom)).toEqual([msg1, msg2]);
     });
   });
 

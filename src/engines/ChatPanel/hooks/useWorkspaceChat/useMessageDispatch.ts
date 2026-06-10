@@ -44,7 +44,11 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
   const setLastUserMessage = useSetAtom(lastUserMessageAtom);
 
   const addUserMessage = useCallback(
-    async (content: string, imageDataUrls?: string[]): Promise<void> => {
+    async (
+      content: string,
+      imageDataUrls?: string[],
+      turnIntentId?: string
+    ): Promise<void> => {
       const sessionId = getSessionId();
       if (!sessionId) {
         throw new Error(
@@ -53,6 +57,7 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
       }
       const userEvent = createSyntheticUserEvent(sessionId, content, {
         imageDataUrls,
+        turnIntentId,
       });
       await eventStoreProxy.append([userEvent], sessionId);
 
@@ -71,7 +76,8 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
       imageDataUrls?: string[],
       modelSelectionOverride?: LastModelSelection,
       displayText?: string,
-      clientMessageId?: string
+      clientMessageId?: string,
+      turnIntentId?: string
     ): Promise<void> => {
       // Read directly from the store at call time to avoid stale-closure
       // race: if the user changes the mode pill and immediately sends a
@@ -119,6 +125,7 @@ export function useMessageDispatch(options: UseMessageDispatchOptions) {
           mode: agentExecMode,
           imageDataUrls,
           clientMessageId,
+          turnIntentId,
         });
         // Backend accepted the message — the turn is running even if the
         // provider's running ack has not been observed yet.

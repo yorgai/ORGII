@@ -247,13 +247,26 @@ export function makeRateLimitHintEvent(sessionId: string): SessionEvent {
 export function createSyntheticUserEvent(
   sessionId: string,
   content: string,
-  options?: { createdAt?: string; imageDataUrls?: string[] }
+  options?: {
+    createdAt?: string;
+    imageDataUrls?: string[];
+    /**
+     * Canonical user-intent id. Threaded all the way through the queue,
+     * the wire layer, and the persisted user_message event so the turn
+     * indexer can collapse the synthetic row with the backend row that
+     * shares the same id (instead of relying on content-equality and
+     * timestamp ordering, which fails after Stop + model switch +
+     * Send Now).
+     */
+    turnIntentId?: string;
+  }
 ): SessionEvent {
   // Synthetic user placeholders are distinguished by their frontend-only
   // event shape, not by ID prefix. CLI backend user events can also use
   // user-input-* IDs, so consumers must use isSyntheticUserInputEvent().
   const id = `${ID_PREFIX.USER_INPUT}${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   const images = options?.imageDataUrls;
+  const turnIntentId = options?.turnIntentId;
   return {
     id,
     chunk_id: null,
@@ -269,6 +282,7 @@ export function createSyntheticUserEvent(
       message: { content, role: "user" },
       syntheticUserInput: true,
       ...(images && images.length > 0 ? { images } : {}),
+      ...(turnIntentId ? { turnIntentId } : {}),
     },
     displayText: content,
     displayStatus: "completed",

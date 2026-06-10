@@ -11,6 +11,25 @@ export type QueuedMessagePriority = "now" | "next";
 
 export interface QueuedMessage {
   id: string;
+  /**
+   * Canonical user-intent id. Minted once at the submit boundary
+   * (ChatPanel / queue / Send Now / Resume) and propagated through:
+   *
+   *   QueuedMessage           (this field)
+   *   createSyntheticUserEvent options.turnIntentId
+   *   SessionService.sendMessage params.turnIntentId
+   *   agent_send_message Tauri command turnIntentId
+   *   ScheduledMessage.turn_intent_id
+   *   TurnInput.turn_intent_id
+   *   persist_user_message_event(... turn_intent_id ...)
+   *   session_turn_intents row
+   *
+   * The turn indexer reads `result.turnIntentId` off both the synthetic
+   * row (when the FE supplies one) and the backend-persisted row, and
+   * groups them under the same logical round. See the lifecycle store in
+   * `session-persistence::turn_intents`.
+   */
+  turnIntentId: string;
   sessionId: string;
   content: string;
   displayContent: string;
@@ -89,11 +108,17 @@ export const enqueueMessageAtom = atom(
   (_get, set, message: QueuedMessage) => {
     let added = false;
     set(messageQueueAtom, (prev) => {
-      const duplicate = prev.some(
-        (existing) =>
-          existing.sessionId === message.sessionId &&
-          existing.content === message.content &&
-          existing.displayContent === message.displayContent
+      // Dedupe by canonical user-intent id. Falls back to content-
+      // equality only when the caller hasn't minted an id yet (legacy
+      // entry points during the migration window). Once every submit
+      // boundary mints, the content fallback becomes dead code and can
+      // be removed.
+      const duplicate = prev.some((existing) =>
+        message.turnIntentId
+          ? existing.turnIntentId === message.turnIntentId
+          : existing.sessionId === message.sessionId &&
+            existing.content === message.content &&
+            existing.displayContent === message.displayContent
       );
       if (duplicate) return prev;
       added = true;

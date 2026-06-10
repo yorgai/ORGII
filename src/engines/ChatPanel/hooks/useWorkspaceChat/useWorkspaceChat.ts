@@ -242,6 +242,14 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
       const directClientMessageId = `direct:${sessionId}:${stableSubmitHash(
         submitPayloadKey
       )}`;
+      // Mint the canonical user-intent id once at the submit boundary.
+      // This is the same value that travels through the queue, the synthetic
+      // user event, and the wire call to `agent_send_message`. See
+      // `QueuedMessage.turnIntentId` for the full propagation contract.
+      const turnIntentId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `tii-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
       if (
         consumeRestoredStopSubmitSuppression({
           sessionId,
@@ -326,6 +334,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
 
         enqueueMessage({
           id: `queued-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          turnIntentId,
           sessionId,
           content: contentForAgent,
           displayContent: finalInput,
@@ -373,7 +382,7 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
 
       let userEventAppended = false;
       try {
-        await addUserMessage(finalInput, imageDataUrls);
+        await addUserMessage(finalInput, imageDataUrls, turnIntentId);
         userEventAppended = true;
         void enterAgentOrgSessionIntervention(sessionId).catch((error) => {
           console.warn("[useWorkspaceChat] intervention failed:", error);
@@ -389,7 +398,8 @@ const useWorkspaceChat = (options: UseWorkspaceChatOptions = {}) => {
           imageDataUrls,
           undefined,
           displayTextForDispatch,
-          directClientMessageId
+          directClientMessageId,
+          turnIntentId
         );
       } catch (error) {
         console.error("Error sending message:", error);

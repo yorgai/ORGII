@@ -210,6 +210,7 @@ export function useQueueDispatch(): void {
             displayContent,
             {
               imageDataUrls,
+              turnIntentId: msg.turnIntentId,
             }
           );
           await eventStoreProxy.append([userEvent], sessionId);
@@ -230,6 +231,7 @@ export function useQueueDispatch(): void {
             mode: agentExecMode,
             imageDataUrls,
             clientMessageId: `queued:${sessionId}:${msg.id}`,
+            turnIntentId: msg.turnIntentId,
           });
           // Backend accepted the message — confirm the turn as running.
           confirmTurnRunning(sessionId);

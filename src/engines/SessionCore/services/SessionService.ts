@@ -295,6 +295,7 @@ export const SessionService = {
       imageDataUrls,
       isResume,
       clientMessageId,
+      turnIntentId,
     } = params;
     // Gate IDE context on the session row's persisted repo so a session
     // on repo A doesn't ship repo B's editor / git / LSP state when the
@@ -323,6 +324,7 @@ export const SessionService = {
         imageDataUrls,
         isResume,
         clientMessageId,
+        turnIntentId,
         ideContext,
         sessionRepoPath: sessionRow?.repoPath ?? null,
       });
