@@ -27,6 +27,8 @@ export interface DiffSectionListProps<TFile extends DiffFileSectionData> {
   showBottomBorder?: boolean;
   /** When true, each section renders a flat FileHeader instead of the collapsible chevron button. */
   flat?: boolean;
+  /** When true, removes the bottom scroll padding (for contexts that have no bottom panel). */
+  hideBottomPadding?: boolean;
 }
 
 const DEFAULT_COLLAPSE_THRESHOLD = 10;
@@ -47,6 +49,7 @@ function DiffSectionListInner<TFile extends DiffFileSectionData>({
   sectionKeySuffix,
   showBottomBorder,
   flat = false,
+  hideBottomPadding = false,
 }: DiffSectionListProps<TFile>) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -99,7 +102,7 @@ function DiffSectionListInner<TFile extends DiffFileSectionData>({
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div
         ref={scrollContainerRef}
-        className="min-h-0 flex-1 overflow-auto pb-[100px]"
+        className={`min-h-0 flex-1 overflow-auto${hideBottomPadding ? "" : "pb-[100px]"}`}
       >
         {sections.map((section) => {
           const isFocused = focusedPath === section.file.path;
@@ -124,6 +127,7 @@ function DiffSectionListInner<TFile extends DiffFileSectionData>({
               }
               showBottomBorder={showBottomBorder}
               flat={flat}
+              noBottomPadding={hideBottomPadding}
             />
           );
         })}

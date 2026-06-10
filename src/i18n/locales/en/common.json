@@ -745,6 +745,7 @@
     "noFilesSubtitle": "Try a different search query",
     "untitled": "Untitled",
     "loadingChanges": "Loading changes...",
+    "diffContentUnavailable": "Diff content unavailable",
     "parsingSymbols": "Parsing symbols...",
     "discoveringTests": "Discovering tests...",
     "noTestsFound": "No tests found",
@@ -2150,5 +2151,8 @@
     "noData": "No project data yet",
     "topLanguage": "Top Language",
     "editCount": "Edits"
+  },
+  "dashboard": {
+    "other": "Other"
   }
 }

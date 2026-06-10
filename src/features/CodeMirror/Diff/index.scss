@@ -276,6 +276,10 @@
     overflow: auto;
     padding-bottom: 80px;
 
+    &.codemirror-diff--no-bottom-padding {
+      padding-bottom: 0;
+    }
+
     :global {
       .cm-mergeView {
         min-height: 100%;

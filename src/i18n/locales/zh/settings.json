@@ -96,7 +96,6 @@
     "setupWalkthrough": "设置向导",
     "profile": "个人资料",
     "settingsFile": "设置 JSON 存储位置",
-    "settingsFileDesc": "VS Code 风格配置，可通过界面或外部编辑器编辑",
     "settingsFileSection": "设置文件",
     "theme": "主题",
     "appearanceMode": "外观",
@@ -178,12 +177,7 @@
     },
     "security": "安全",
     "voiceInput": "语音输入",
-    "voiceInputDesc": "在聊天和会话编辑器中显示麦克风按钮，并启用 Ctrl+M 按住说话快捷键",
     "voiceInputPermission": "麦克风权限",
-    "voiceInputPermissionDesc": "尚未请求麦克风权限",
-    "voiceInputPermissionDescGranted": "已允许麦克风访问",
-    "voiceInputPermissionDescDenied": "麦克风访问已被阻止。请在系统设置中启用",
-    "voiceInputPermissionDescUnsupported": "未检测到麦克风,或当前环境不支持音频采集",
     "voiceInputPermissionAction": "请求权限",
     "voiceInputPermissionStatusGranted": "已授予",
     "voiceInputPermissionStatusDenied": "已拒绝",
@@ -775,7 +769,7 @@
   "update": {
     "title": "App 更新",
     "detectUpdate": "检测更新",
-    "detectUpdateDesc": "检查可用的应用更新"
+    "currentVersion": "当前版本"
   },
   "monitor": {
     "resourceUsage": "资源使用",

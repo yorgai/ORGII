@@ -721,6 +721,7 @@
     "noFilesSubtitle": "Spróbuj innego zapytania",
     "untitled": "Bez tytułu",
     "loadingChanges": "Ładowanie zmian...",
+    "diffContentUnavailable": "Zawartość diff niedostępna",
     "parsingSymbols": "Analizowanie symboli...",
     "discoveringTests": "Wykrywanie testów...",
     "noTestsFound": "Nie znaleziono testów",
@@ -2073,5 +2074,8 @@
     "noData": "Brak danych projektu",
     "topLanguage": "Najczęstszy język",
     "editCount": "Edycje"
+  },
+  "dashboard": {
+    "other": "Inne"
   }
 }

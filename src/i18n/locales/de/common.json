@@ -721,6 +721,7 @@
     "noFilesSubtitle": "Versuchen Sie eine andere Suchanfrage",
     "untitled": "Unbenannt",
     "loadingChanges": "Änderungen werden geladen...",
+    "diffContentUnavailable": "Diff-Inhalt nicht verfügbar",
     "parsingSymbols": "Symbole werden analysiert...",
     "discoveringTests": "Tests werden entdeckt...",
     "noTestsFound": "Keine Tests gefunden",
@@ -2081,5 +2082,8 @@
     "noData": "Noch keine Projektdaten",
     "topLanguage": "Hauptsprache",
     "editCount": "Bearbeitungen"
+  },
+  "dashboard": {
+    "other": "Andere"
   }
 }

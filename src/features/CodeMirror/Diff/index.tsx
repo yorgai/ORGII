@@ -86,6 +86,11 @@ export interface CodeMirrorDiffProps {
   newStartLine?: number;
   /** Custom class name */
   className?: string;
+  /**
+   * When true, suppresses the bottom padding on the split-view scroll container
+   * (for contexts without a bottom panel, e.g. agent station diff, source control).
+   */
+  noBottomPadding?: boolean;
 }
 
 // ============================================
@@ -178,6 +183,7 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
   oldStartLine = 1,
   newStartLine = 1,
   className = "",
+  noBottomPadding = false,
 }) => {
   const appearanceSettings = useEditorAppearanceSettings();
   const isFullDeletion =
@@ -602,7 +608,7 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
       {/* Split view — always mounted, hidden when unified is active */}
       <div
         ref={splitContainerRef}
-        className="codemirror-diff codemirror-diff--split"
+        className={`codemirror-diff codemirror-diff--split${noBottomPadding ? "codemirror-diff--no-bottom-padding" : ""}`}
         spellCheck={false}
         style={!unifiedVisible ? visiblePaneStyle : hiddenPaneStyle}
       />

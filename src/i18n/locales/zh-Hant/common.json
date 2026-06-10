@@ -733,6 +733,7 @@
     "noFilesSubtitle": "請嘗試其他搜索查詢",
     "untitled": "未命名",
     "loadingChanges": "加載變更中...",
+    "diffContentUnavailable": "Diff 內容不可用",
     "parsingSymbols": "解析符號中...",
     "discoveringTests": "發現測試中...",
     "noTestsFound": "未找到測試",
@@ -2091,5 +2092,8 @@
     "noData": "暫無項目數據",
     "topLanguage": "主要語言",
     "editCount": "編輯次數"
+  },
+  "dashboard": {
+    "other": "其他"
   }
 }

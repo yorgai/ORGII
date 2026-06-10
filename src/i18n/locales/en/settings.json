@@ -96,7 +96,6 @@
     "setupWalkthrough": "Setup Walkthrough",
     "profile": "Profile",
     "settingsFile": "Settings JSON Location",
-    "settingsFileDesc": "VS Code-style config. Editable via GUI or external editors",
     "settingsFileSection": "Settings file",
     "theme": "Theme",
     "appearanceMode": "Appearance",
@@ -178,12 +177,7 @@
     },
     "security": "Security",
     "voiceInput": "Voice input",
-    "voiceInputDesc": "Show the microphone button in chat and session composers, and bind Ctrl+M for push-to-talk dictation",
     "voiceInputPermission": "Microphone access",
-    "voiceInputPermissionDesc": "Permission has not been requested yet",
-    "voiceInputPermissionDescGranted": "Microphone access is allowed",
-    "voiceInputPermissionDescDenied": "Microphone access is blocked. Enable it in System Settings",
-    "voiceInputPermissionDescUnsupported": "No microphone detected, or this environment does not support audio capture",
     "voiceInputPermissionAction": "Request access",
     "voiceInputPermissionStatusGranted": "Granted",
     "voiceInputPermissionStatusDenied": "Denied",
@@ -775,7 +769,7 @@
   "update": {
     "title": "App Update",
     "detectUpdate": "Detect Update",
-    "detectUpdateDesc": "Check for available app updates"
+    "currentVersion": "Current Version"
   },
   "monitor": {
     "resourceUsage": "Resource Usage",

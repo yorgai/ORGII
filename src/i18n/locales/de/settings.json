@@ -96,7 +96,6 @@
     "setupWalkthrough": "Einrichtungsassistent",
     "profile": "Profil",
     "settingsFile": "Speicherort der Einstellungs-JSON",
-    "settingsFileDesc": "VS-Code-Style-Konfig. Bearbeitbar über GUI oder externe Editoren",
     "settingsFileSection": "Einstellungsdatei",
     "theme": "Design",
     "appearanceMode": "Erscheinungsbild",
@@ -178,12 +177,7 @@
     },
     "security": "Sicherheit",
     "voiceInput": "Spracheingabe",
-    "voiceInputDesc": "Zeigt die Mikrofontaste in Chat- und Sitzungs-Composern und bindet Ctrl+M als Push-to-Talk-Diktat",
     "voiceInputPermission": "Mikrofonzugriff",
-    "voiceInputPermissionDesc": "Berechtigung wurde noch nicht angefordert",
-    "voiceInputPermissionDescGranted": "Mikrofonzugriff ist erlaubt",
-    "voiceInputPermissionDescDenied": "Mikrofonzugriff ist blockiert. Aktivieren Sie ihn in den Systemeinstellungen",
-    "voiceInputPermissionDescUnsupported": "Kein Mikrofon erkannt oder diese Umgebung unterstützt keine Audioaufnahme",
     "voiceInputPermissionAction": "Zugriff anfordern",
     "voiceInputPermissionStatusGranted": "Gewährt",
     "voiceInputPermissionStatusDenied": "Verweigert",
@@ -775,7 +769,7 @@
   "update": {
     "title": "App-Update",
     "detectUpdate": "Update erkennen",
-    "detectUpdateDesc": "Nach verfügbaren App-Updates suchen"
+    "currentVersion": "Aktuelle Version"
   },
   "monitor": {
     "resourceUsage": "Ressourcennutzung",

@@ -96,7 +96,6 @@
     "setupWalkthrough": "Trình hướng dẫn thiết lập",
     "profile": "Hồ sơ",
     "settingsFile": "Vị trí JSON cài đặt",
-    "settingsFileDesc": "Cấu hình kiểu VS Code. Chỉnh sửa qua GUI hoặc trình soạn thảo bên ngoài",
     "settingsFileSection": "Tệp cài đặt",
     "theme": "Giao diện",
     "appearanceMode": "Diện mạo",
@@ -178,12 +177,7 @@
     },
     "security": "Bảo mật",
     "voiceInput": "Nhập bằng giọng nói",
-    "voiceInputDesc": "Hiển thị nút micrô trong trình soạn chat và phiên làm việc, đồng thời gán Ctrl+M làm phím tắt đọc chính tả nhấn-giữ",
     "voiceInputPermission": "Quyền truy cập micrô",
-    "voiceInputPermissionDesc": "Chưa yêu cầu quyền",
-    "voiceInputPermissionDescGranted": "Đã cho phép truy cập micrô",
-    "voiceInputPermissionDescDenied": "Quyền truy cập micrô bị chặn. Bật trong Cài đặt hệ thống",
-    "voiceInputPermissionDescUnsupported": "Không phát hiện micrô hoặc môi trường này không hỗ trợ thu âm",
     "voiceInputPermissionAction": "Yêu cầu quyền",
     "voiceInputPermissionStatusGranted": "Đã cấp",
     "voiceInputPermissionStatusDenied": "Bị từ chối",
@@ -775,7 +769,7 @@
   "update": {
     "title": "Cập nhật App",
     "detectUpdate": "Phát hiện cập nhật",
-    "detectUpdateDesc": "Kiểm tra các bản cập nhật ứng dụng"
+    "currentVersion": "Phiên bản hiện tại"
   },
   "monitor": {
     "resourceUsage": "Sử dụng tài nguyên",

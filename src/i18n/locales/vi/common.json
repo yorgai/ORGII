@@ -721,6 +721,7 @@
     "noFilesSubtitle": "Hãy thử truy vấn tìm kiếm khác",
     "untitled": "Chưa đặt tên",
     "loadingChanges": "Đang tải thay đổi...",
+    "diffContentUnavailable": "Nội dung diff không khả dụng",
     "parsingSymbols": "Đang phân tích ký hiệu...",
     "discoveringTests": "Đang khám phá các bài kiểm thử...",
     "noTestsFound": "Không tìm thấy bài kiểm thử",
@@ -2074,5 +2075,8 @@
     "noData": "Chưa có dữ liệu dự án",
     "topLanguage": "Ngôn ngữ chính",
     "editCount": "Chỉnh sửa"
+  },
+  "dashboard": {
+    "other": "Khác"
   }
 }

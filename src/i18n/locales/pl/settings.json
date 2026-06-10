@@ -96,7 +96,6 @@
     "setupWalkthrough": "Kreator konfiguracji",
     "profile": "Profil",
     "settingsFile": "Lokalizacja pliku JSON ustawień",
-    "settingsFileDesc": "Konfiguracja w stylu VS Code. Edytowalna przez GUI lub edytory zewnętrzne",
     "settingsFileSection": "Plik ustawień",
     "theme": "Motyw",
     "appearanceMode": "Wygląd",
@@ -178,12 +177,7 @@
     },
     "security": "Bezpieczeństwo",
     "voiceInput": "Wprowadzanie głosowe",
-    "voiceInputDesc": "Pokazuje przycisk mikrofonu w kompozytorach czatu i sesji oraz przypisuje Ctrl+M jako skrót push-to-talk do dyktowania",
     "voiceInputPermission": "Dostęp do mikrofonu",
-    "voiceInputPermissionDesc": "Uprawnienia nie zostały jeszcze poproszone",
-    "voiceInputPermissionDescGranted": "Dostęp do mikrofonu jest dozwolony",
-    "voiceInputPermissionDescDenied": "Dostęp do mikrofonu jest zablokowany. Włącz go w Ustawieniach systemu",
-    "voiceInputPermissionDescUnsupported": "Nie wykryto mikrofonu lub to środowisko nie obsługuje przechwytywania dźwięku",
     "voiceInputPermissionAction": "Poproś o dostęp",
     "voiceInputPermissionStatusGranted": "Przyznano",
     "voiceInputPermissionStatusDenied": "Odmówiono",
@@ -775,7 +769,7 @@
   "update": {
     "title": "Aktualizacja aplikacji",
     "detectUpdate": "Wykryj aktualizację",
-    "detectUpdateDesc": "Sprawdź dostępne aktualizacje aplikacji"
+    "currentVersion": "Aktualna wersja"
   },
   "monitor": {
     "resourceUsage": "Zużycie zasobów",

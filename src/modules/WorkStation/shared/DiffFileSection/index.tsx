@@ -42,6 +42,8 @@ export interface DiffFileSectionData {
   oldStartLine?: number;
   newStartLine?: number;
   isBinary?: boolean;
+  /** True when the file was edited but content could not be retrieved (e.g. Cursor IDE blob pruned). */
+  isUnavailable?: boolean;
 }
 
 export interface DiffFileSectionProps {
@@ -59,6 +61,11 @@ export interface DiffFileSectionProps {
    * instead of the collapsible chevron button. Content is always expanded.
    */
   flat?: boolean;
+  /**
+   * When true, suppresses the bottom padding added by the diff viewer
+   * (used in contexts without a bottom panel, e.g. agent station diff).
+   */
+  noBottomPadding?: boolean;
 }
 
 function getDisplayPath(path: string, repoPath?: string): string {
@@ -90,6 +97,7 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
   showBottomBorder = true,
   dataPath,
   flat = false,
+  noBottomPadding = false,
 }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -151,7 +159,8 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
   }, [file]);
 
   const hasContent =
-    file.oldContent !== undefined || file.newContent !== undefined;
+    !file.isUnavailable &&
+    (file.oldContent !== undefined || file.newContent !== undefined);
 
   const isBinary =
     file.isBinary === true ||
@@ -204,7 +213,14 @@ const DiffFileSection: React.FC<DiffFileSectionProps> = ({
           readOnly={true}
           mergeControls={false}
           collapseUnchanged={true}
+          noBottomPadding={noBottomPadding}
           autoHeight
+        />
+      ) : file.isUnavailable ? (
+        <Placeholder
+          variant="empty"
+          placement="detail-panel"
+          title={t("placeholders.diffContentUnavailable")}
         />
       ) : (
         <Placeholder

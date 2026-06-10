@@ -19,6 +19,7 @@ import {
   SectionRow,
 } from "@/src/modules/shared/layouts/SectionLayout";
 import { Placeholder } from "@/src/modules/shared/layouts/blocks";
+import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { useAtom, useSetAtom } from "jotai";
 import { RefreshCw } from "lucide-react";
@@ -119,6 +120,18 @@ const GeneralTabBody: React.FC = () => {
     style: SECTION_CONTROL_STYLE,
   });
 
+  const [appVersion, setAppVersion] = useState<string>("");
+
+  useEffect(() => {
+    let cancelled = false;
+    getVersion().then((v) => {
+      if (!cancelled) setAppVersion(v);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const [devModeEnabled, setDevModeEnabled] = useAtom(devModeEnabledAtom);
   const [preventSleepWhileRunning, setPreventSleepWhileRunning] = useAtom(
     preventSleepWhileRunningAtom
@@ -195,21 +208,6 @@ const GeneralTabBody: React.FC = () => {
         return t("general.voiceInputPermissionStatusUnsupported");
       default:
         return t("common:status.unknown");
-    }
-  }, [micPermissionStatus, t]);
-
-  const micStatusDescription = useMemo(() => {
-    switch (micPermissionStatus) {
-      case "granted":
-        return t("general.voiceInputPermissionDescGranted");
-      case "denied":
-        return t("general.voiceInputPermissionDescDenied");
-      case "unsupported":
-        return t("general.voiceInputPermissionDescUnsupported");
-      case "prompt":
-      case "unknown":
-      default:
-        return t("general.voiceInputPermissionDesc");
     }
   }, [micPermissionStatus, t]);
 
@@ -378,18 +376,11 @@ const GeneralTabBody: React.FC = () => {
       </SectionContainer>
 
       <SectionContainer>
-        <SectionRow
-          label={t("general.voiceInput")}
-          description={t("general.voiceInputDesc")}
-        >
+        <SectionRow label={t("general.voiceInput")}>
           <Switch checked={voiceInputEnabled} onChange={setVoiceInputEnabled} />
         </SectionRow>
         {voiceInputEnabled && (
-          <SectionRow
-            label={t("general.voiceInputPermission")}
-            description={micStatusDescription}
-            indent
-          >
+          <SectionRow label={t("general.voiceInputPermission")} indent>
             <div className="flex items-center gap-2">
               <span className="whitespace-nowrap text-xs text-text-1">
                 {micStatusBadge}
@@ -433,10 +424,7 @@ const GeneralTabBody: React.FC = () => {
       </SectionContainer>
 
       <SectionContainer>
-        <SectionRow
-          label={t("update.detectUpdate")}
-          description={t("update.detectUpdateDesc")}
-        >
+        <SectionRow label={t("update.detectUpdate")}>
           <Button
             size="default"
             onClick={checkForUpdatesManually}
@@ -445,12 +433,16 @@ const GeneralTabBody: React.FC = () => {
             {t("update.detectUpdate")}
           </Button>
         </SectionRow>
+        <SectionRow label={t("update.currentVersion")}>
+          <span className={SECTION_VALUE_TEXT_CLASSES}>
+            {appVersion ? `v${appVersion}` : "—"}
+          </span>
+        </SectionRow>
       </SectionContainer>
 
       <SectionContainer>
         <PathCopyOpenRow
           label={t("general.settingsFile")}
-          description={t("general.settingsFileDesc")}
           path={settingsFilePath}
           onCopy={() => {
             void copyText(settingsFilePath).then(() => {

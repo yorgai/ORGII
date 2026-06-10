@@ -96,7 +96,6 @@
     "setupWalkthrough": "設置嚮導",
     "profile": "個人資料",
     "settingsFile": "設置 JSON 存儲位置",
-    "settingsFileDesc": "VS Code 風格配置，可通過界面或外部編輯器編輯",
     "settingsFileSection": "設置文件",
     "theme": "主題",
     "appearanceMode": "外觀",
@@ -178,12 +177,7 @@
     },
     "security": "安全",
     "voiceInput": "語音輸入",
-    "voiceInputDesc": "在聊天和會話編輯器中顯示麥克風按鈕，並啟用 Ctrl+M 按住說話快捷鍵",
     "voiceInputPermission": "麥克風權限",
-    "voiceInputPermissionDesc": "尚未請求麥克風權限",
-    "voiceInputPermissionDescGranted": "已允許麥克風存取",
-    "voiceInputPermissionDescDenied": "麥克風存取已被封鎖。請在系統設定中啟用",
-    "voiceInputPermissionDescUnsupported": "未偵測到麥克風,或目前環境不支援音訊擷取",
     "voiceInputPermissionAction": "請求權限",
     "voiceInputPermissionStatusGranted": "已授予",
     "voiceInputPermissionStatusDenied": "已拒絕",
@@ -775,7 +769,7 @@
   "update": {
     "title": "App 更新",
     "detectUpdate": "檢測更新",
-    "detectUpdateDesc": "檢查可用的應用更新"
+    "currentVersion": "目前版本"
   },
   "monitor": {
     "resourceUsage": "資源使用",

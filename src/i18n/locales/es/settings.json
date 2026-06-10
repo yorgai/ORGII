@@ -96,7 +96,6 @@
     "setupWalkthrough": "Asistente de configuración",
     "profile": "Perfil",
     "settingsFile": "Ubicación de JSON de configuración",
-    "settingsFileDesc": "Config estilo VS Code. Editable por GUI o editores externos",
     "settingsFileSection": "Archivo de configuración",
     "theme": "Tema",
     "appearanceMode": "Apariencia",
@@ -178,12 +177,7 @@
     },
     "security": "Seguridad",
     "voiceInput": "Entrada de voz",
-    "voiceInputDesc": "Muestra el botón de micrófono en los compositores de chat y sesión, y activa Ctrl+M para dictado push-to-talk",
     "voiceInputPermission": "Acceso al micrófono",
-    "voiceInputPermissionDesc": "Aún no se ha solicitado el permiso",
-    "voiceInputPermissionDescGranted": "El acceso al micrófono está permitido",
-    "voiceInputPermissionDescDenied": "El acceso al micrófono está bloqueado. Habilítalo en Ajustes del Sistema",
-    "voiceInputPermissionDescUnsupported": "No se detectó micrófono o este entorno no admite captura de audio",
     "voiceInputPermissionAction": "Solicitar acceso",
     "voiceInputPermissionStatusGranted": "Concedido",
     "voiceInputPermissionStatusDenied": "Denegado",
@@ -775,7 +769,7 @@
   "update": {
     "title": "Actualización de App",
     "detectUpdate": "Detectar actualización",
-    "detectUpdateDesc": "Buscar actualizaciones disponibles"
+    "currentVersion": "Versión actual"
   },
   "monitor": {
     "resourceUsage": "Uso de recursos",

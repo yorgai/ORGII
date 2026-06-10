@@ -721,6 +721,8 @@
     "noFilesSubtitle": "Попробуйте другой поисковый запрос",
     "untitled": "Без названия",
     "loadingChanges": "Загрузка изменений...",
+    "diffContentUnavailable": "Содержимое diff недоступно",
+    "diffContentUnavailable": "Содержимое diff недоступно",
     "parsingSymbols": "Анализ символов...",
     "discoveringTests": "Поиск тестов...",
     "noTestsFound": "Тесты не найдены",
@@ -2073,5 +2075,8 @@
     "noData": "Нет данных по проектам",
     "topLanguage": "Основной язык",
     "editCount": "Правки"
+  },
+  "dashboard": {
+    "other": "Другое"
   }
 }

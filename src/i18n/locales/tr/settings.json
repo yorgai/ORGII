@@ -96,7 +96,6 @@
     "setupWalkthrough": "Kurulum Sihirbazı",
     "profile": "Profil",
     "settingsFile": "Ayar JSON konumu",
-    "settingsFileDesc": "VS Code tarzı yapılandırma. GUI veya harici editörlerle düzenlenebilir",
     "settingsFileSection": "Ayar dosyası",
     "theme": "Tema",
     "appearanceMode": "Görünüm",
@@ -178,12 +177,7 @@
     },
     "security": "Güvenlik",
     "voiceInput": "Sesli giriş",
-    "voiceInputDesc": "Sohbet ve oturum bestecilerinde mikrofon düğmesini gösterir ve Ctrl+M'yi bas-konuş dikte kısayolu olarak bağlar",
     "voiceInputPermission": "Mikrofon erişimi",
-    "voiceInputPermissionDesc": "İzin henüz istenmedi",
-    "voiceInputPermissionDescGranted": "Mikrofon erişimine izin verildi",
-    "voiceInputPermissionDescDenied": "Mikrofon erişimi engellendi. Sistem Ayarları'ndan etkinleştirin",
-    "voiceInputPermissionDescUnsupported": "Mikrofon algılanmadı veya bu ortam ses kaydını desteklemiyor",
     "voiceInputPermissionAction": "Erişim iste",
     "voiceInputPermissionStatusGranted": "Verildi",
     "voiceInputPermissionStatusDenied": "Reddedildi",
@@ -775,7 +769,7 @@
   "update": {
     "title": "App Güncelleme",
     "detectUpdate": "Güncelleme Algıla",
-    "detectUpdateDesc": "Mevcut uygulama güncellemelerini kontrol et"
+    "currentVersion": "Mevcut Sürüm"
   },
   "monitor": {
     "resourceUsage": "Kaynak Kullanımı",

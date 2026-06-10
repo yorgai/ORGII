@@ -733,6 +733,7 @@
     "noFilesSubtitle": "请尝试其他搜索查询",
     "untitled": "未命名",
     "loadingChanges": "加载变更中...",
+    "diffContentUnavailable": "Diff 内容不可用",
     "parsingSymbols": "解析符号中...",
     "discoveringTests": "发现测试中...",
     "noTestsFound": "未找到测试",
@@ -2091,5 +2092,8 @@
     "noData": "暂无项目数据",
     "topLanguage": "主要语言",
     "editCount": "编辑次数"
+  },
+  "dashboard": {
+    "other": "其他"
   }
 }

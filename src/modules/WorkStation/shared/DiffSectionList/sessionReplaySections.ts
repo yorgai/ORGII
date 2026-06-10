@@ -55,11 +55,13 @@ export function buildSessionReplayDiffSectionItems(
       : [editData];
 
   return segments.flatMap((segment, index) => {
-    const parsed =
-      segment.diff &&
-      (segment.oldContent === undefined || segment.newContent === undefined)
-        ? parseUnifiedDiffToOldNew(segment.diff)
-        : undefined;
+    // When a compact diff string is available, always parse it into
+    // old/new values. This avoids passing full file bodies to CodeMirrorDiff
+    // (which would show the entire file as context) and gives correct
+    // oldStartLine/newStartLine from the hunk headers.
+    const parsed = segment.diff
+      ? parseUnifiedDiffToOldNew(segment.diff)
+      : undefined;
     const isDeleted = segment.isDeleted;
     const oldContent = isDeleted
       ? (parsed?.oldValue ?? segment.oldContent ?? segment.content ?? "")
@@ -70,7 +72,7 @@ export function buildSessionReplayDiffSectionItems(
     const rawPath = segment.filePath || entry.filePath;
     const path = normalizeDiffFilePath(rawPath);
     if (!path) return [];
-    if (!oldContent && !newContent && !isDeleted) return [];
+    const contentUnavailable = !oldContent && !newContent && !isDeleted;
 
     return {
       key: `${entry.entryId}:${index}:${path}`,
@@ -80,10 +82,11 @@ export function buildSessionReplayDiffSectionItems(
         staged: false,
         additions: segment.linesAdded,
         deletions: segment.linesRemoved,
-        oldContent,
-        newContent,
+        oldContent: contentUnavailable ? undefined : oldContent,
+        newContent: contentUnavailable ? undefined : newContent,
         oldStartLine: segment.oldStartLine ?? parsed?.oldStartLine,
         newStartLine: segment.newStartLine ?? parsed?.newStartLine,
+        isUnavailable: contentUnavailable || undefined,
       },
       entryIds: [entry.entryId],
     };

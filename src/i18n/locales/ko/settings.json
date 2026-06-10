@@ -96,7 +96,6 @@
     "setupWalkthrough": "설정 마법사",
     "profile": "프로필",
     "settingsFile": "설정 JSON 위치",
-    "settingsFileDesc": "VS Code 스타일 설정. GUI 또는 외부 편집기로 편집 가능",
     "settingsFileSection": "설정 파일",
     "theme": "테마",
     "appearanceMode": "모양",
@@ -178,12 +177,7 @@
     },
     "security": "보안",
     "voiceInput": "음성 입력",
-    "voiceInputDesc": "채팅 및 세션 작성기에 마이크 버튼을 표시하고, Ctrl+M을 푸시투토크 받아쓰기 단축키로 바인딩합니다",
     "voiceInputPermission": "마이크 권한",
-    "voiceInputPermissionDesc": "아직 권한이 요청되지 않았습니다",
-    "voiceInputPermissionDescGranted": "마이크 접근이 허용되어 있습니다",
-    "voiceInputPermissionDescDenied": "마이크 접근이 차단되었습니다. 시스템 설정에서 활성화하세요",
-    "voiceInputPermissionDescUnsupported": "마이크를 감지할 수 없거나 이 환경은 오디오 캡처를 지원하지 않습니다",
     "voiceInputPermissionAction": "권한 요청",
     "voiceInputPermissionStatusGranted": "허용됨",
     "voiceInputPermissionStatusDenied": "거부됨",
@@ -775,7 +769,7 @@
   "update": {
     "title": "App 업데이트",
     "detectUpdate": "업데이트 감지",
-    "detectUpdateDesc": "사용 가능한 앱 업데이트 확인"
+    "currentVersion": "현재 버전"
   },
   "monitor": {
     "resourceUsage": "리소스 사용량",

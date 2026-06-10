@@ -721,6 +721,7 @@
     "noFilesSubtitle": "Farklı bir arama sorgusu deneyin",
     "untitled": "Başlıksız",
     "loadingChanges": "Değişiklikler yükleniyor...",
+    "diffContentUnavailable": "Diff içeriği kullanılamıyor",
     "parsingSymbols": "Semboller ayrıştırılıyor...",
     "discoveringTests": "Testler keşfediliyor...",
     "noTestsFound": "Test bulunamadı",
@@ -2077,5 +2078,8 @@
     "noData": "Henüz proje verisi yok",
     "topLanguage": "Ana Dil",
     "editCount": "Düzenleme"
+  },
+  "dashboard": {
+    "other": "Diğer"
   }
 }

@@ -721,6 +721,7 @@
     "noFilesSubtitle": "別の検索クエリをお試しください",
     "untitled": "無題",
     "loadingChanges": "変更を読み込み中...",
+    "diffContentUnavailable": "Diff コンテンツは利用できません",
     "parsingSymbols": "シンボルを解析中...",
     "discoveringTests": "テストを検出中...",
     "noTestsFound": "テストが見つかりません",
@@ -2079,5 +2080,8 @@
     "noData": "プロジェクトデータがありません",
     "topLanguage": "主要言語",
     "editCount": "編集回数"
+  },
+  "dashboard": {
+    "other": "その他"
   }
 }

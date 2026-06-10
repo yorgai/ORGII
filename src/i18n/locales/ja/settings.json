@@ -96,7 +96,6 @@
     "setupWalkthrough": "セットアップウィザード",
     "profile": "プロフィール",
     "settingsFile": "設定JSONの保存場所",
-    "settingsFileDesc": "VS Code スタイルの設定。GUI または外部エディタで編集可能",
     "settingsFileSection": "設定ファイル",
     "theme": "テーマ",
     "appearanceMode": "外観",
@@ -178,12 +177,7 @@
     },
     "security": "セキュリティ",
     "voiceInput": "音声入力",
-    "voiceInputDesc": "チャットおよびセッション入力欄にマイクボタンを表示し、Ctrl+M をプッシュ・トゥ・トークの口述ショートカットに割り当てます",
     "voiceInputPermission": "マイクへのアクセス",
-    "voiceInputPermissionDesc": "権限はまだリクエストされていません",
-    "voiceInputPermissionDescGranted": "マイクへのアクセスは許可されています",
-    "voiceInputPermissionDescDenied": "マイクへのアクセスはブロックされています。システム設定で有効にしてください",
-    "voiceInputPermissionDescUnsupported": "マイクが検出されないか、この環境は音声キャプチャをサポートしていません",
     "voiceInputPermissionAction": "アクセスをリクエスト",
     "voiceInputPermissionStatusGranted": "許可済み",
     "voiceInputPermissionStatusDenied": "拒否",
@@ -775,7 +769,7 @@
   "update": {
     "title": "App アップデート",
     "detectUpdate": "更新を検出",
-    "detectUpdateDesc": "利用可能なアプリの更新を確認"
+    "currentVersion": "現在のバージョン"
   },
   "monitor": {
     "resourceUsage": "リソース使用状況",

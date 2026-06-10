@@ -14,12 +14,13 @@
  * and `common:sourceControl.pill.*` i18n keys.
  */
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { GitBranch, Send } from "lucide-react";
+import { GitBranch, ListChevronsDownUp, Send } from "lucide-react";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getGitCommits } from "@src/api/http/git";
 import type { GitCommitInfo } from "@src/api/http/git/types";
+import Button from "@src/components/Button";
 import TabPill from "@src/components/TabPill";
 import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
@@ -242,6 +243,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
   } | null>(null);
   const [focusedDiffPath, setFocusedDiffPath] = useState<string | null>(null);
   const [focusedDiffNonce, setFocusedDiffNonce] = useState(0);
+  const [collapseAllSignal, setCollapseAllSignal] = useState(0);
   const simulatorEvents = useAtomValue(simulatorEventsAtom);
   const sessionId = useMemo(
     () =>
@@ -285,6 +287,10 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     if (key === "focus" || key === "all-changes") setPillMode(key);
   }, []);
 
+  const handleCollapseAll = useCallback(() => {
+    setCollapseAllSignal((prev) => prev + 1);
+  }, []);
+
   const diffHeaderContent = useMemo(
     () => (
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -303,9 +309,21 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
           fillWidth={false}
           size="small"
         />
+        {pillMode === "all-changes" && (
+          <Button
+            htmlType="button"
+            variant="tertiary"
+            size="small"
+            iconOnly
+            className="flex-shrink-0"
+            onClick={handleCollapseAll}
+            title={tCommon("actions.collapseAll")}
+            icon={<ListChevronsDownUp size={14} />}
+          />
+        )}
       </div>
     ),
-    [pillMode, handlePillModeChange, tCommon]
+    [pillMode, handlePillModeChange, handleCollapseAll, tCommon]
   );
 
   const fallbackRepoContext = useMemo(() => {
@@ -789,6 +807,8 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
           )}
           focusedPath={focusedDiffPath}
           focusedNonce={focusedDiffNonce}
+          collapseSignal={collapseAllSignal}
+          hideBottomPadding
         />
       );
     }
@@ -803,6 +823,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
         collapseThreshold={Number.POSITIVE_INFINITY}
         showBottomBorder={false}
         flat
+        hideBottomPadding
       />
     );
   }, [
@@ -820,6 +841,7 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
     focusedSections,
     focusedDiffPath,
     focusedDiffNonce,
+    collapseAllSignal,
     t,
   ]);
 

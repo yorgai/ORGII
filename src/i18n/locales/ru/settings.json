@@ -96,7 +96,6 @@
     "setupWalkthrough": "Мастер настройки",
     "profile": "Профиль",
     "settingsFile": "Расположение JSON настроек",
-    "settingsFileDesc": "Настройки в стиле VS Code. Редактируется через GUI или внешние редакторы",
     "settingsFileSection": "Файл настроек",
     "theme": "Тема",
     "appearanceMode": "Оформление",
@@ -178,12 +177,7 @@
     },
     "security": "Безопасность",
     "voiceInput": "Голосовой ввод",
-    "voiceInputDesc": "Показывает кнопку микрофона в редакторах чата и сессии и включает Ctrl+M для удержания-для-разговора",
     "voiceInputPermission": "Доступ к микрофону",
-    "voiceInputPermissionDesc": "Разрешение ещё не запрашивалось",
-    "voiceInputPermissionDescGranted": "Доступ к микрофону разрешён",
-    "voiceInputPermissionDescDenied": "Доступ к микрофону заблокирован. Включите его в Системных настройках",
-    "voiceInputPermissionDescUnsupported": "Микрофон не обнаружен, или среда не поддерживает запись звука",
     "voiceInputPermissionAction": "Запросить доступ",
     "voiceInputPermissionStatusGranted": "Предоставлен",
     "voiceInputPermissionStatusDenied": "Отклонён",
@@ -775,7 +769,7 @@
   "update": {
     "title": "Обновление App",
     "detectUpdate": "Обнаружить обновление",
-    "detectUpdateDesc": "Проверить наличие обновлений приложения"
+    "currentVersion": "Текущая версия"
   },
   "monitor": {
     "resourceUsage": "Использование ресурсов",

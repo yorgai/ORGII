@@ -721,6 +721,7 @@
     "noFilesSubtitle": "다른 검색 쿼리를 시도해 보세요",
     "untitled": "제목 없음",
     "loadingChanges": "변경사항 로딩 중...",
+    "diffContentUnavailable": "Diff 콘텐츠를 사용할 수 없습니다",
     "parsingSymbols": "심볼 분석 중...",
     "discoveringTests": "테스트 검색 중...",
     "noTestsFound": "테스트를 찾을 수 없습니다",
@@ -2077,5 +2078,8 @@
     "noData": "프로젝트 데이터가 없습니다",
     "topLanguage": "주요 언어",
     "editCount": "편집 횟수"
+  },
+  "dashboard": {
+    "other": "기타"
   }
 }
