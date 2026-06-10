@@ -1,41 +1,63 @@
 /**
- * Edit-mode read-only image thumbnail with overlay preview.
+ * Edit-mode image thumbnail with overlay preview and optional remove (X).
  */
+import { X } from "lucide-react";
 import React, { memo, useCallback, useState } from "react";
 
 import ImagePreviewOverlay from "@src/components/ImagePreviewOverlay";
 
-const EditModeImageThumbnail: React.FC<{ dataUrl: string; alt: string }> = memo(
-  ({ dataUrl, alt }) => {
-    const [showOverlay, setShowOverlay] = useState(false);
+const EditModeImageThumbnail: React.FC<{
+  dataUrl: string;
+  alt: string;
+  onRemove?: () => void;
+}> = memo(({ dataUrl, alt, onRemove }) => {
+  const [showOverlay, setShowOverlay] = useState(false);
 
-    const handleClick = useCallback(() => setShowOverlay(true), []);
-    const handleClose = useCallback(() => setShowOverlay(false), []);
+  const handleClick = useCallback(() => setShowOverlay(true), []);
+  const handleClose = useCallback(() => setShowOverlay(false), []);
+  const handleRemove = useCallback(
+    (event: React.MouseEvent) => {
+      event.stopPropagation();
+      onRemove?.();
+    },
+    [onRemove]
+  );
 
-    return (
-      <>
-        <div
-          className="group relative inline-flex h-10 w-10 flex-shrink-0 cursor-pointer overflow-hidden rounded-md border border-border-2 bg-fill-1"
-          onClick={handleClick}
-        >
-          <img
-            src={dataUrl}
-            alt={alt}
-            className="h-full w-full object-cover"
-            draggable={false}
-          />
-        </div>
-        {showOverlay && (
-          <ImagePreviewOverlay
-            dataUrl={dataUrl}
-            onClose={handleClose}
-            showCopyButton={false}
-          />
+  return (
+    <>
+      <div
+        className="group relative inline-flex h-10 w-10 flex-shrink-0 cursor-pointer overflow-hidden rounded-md border border-border-2 bg-fill-1"
+        onClick={handleClick}
+        data-testid="edit-mode-image-thumbnail"
+      >
+        <img
+          src={dataUrl}
+          alt={alt}
+          className="h-full w-full object-cover"
+          draggable={false}
+        />
+        {onRemove && (
+          <button
+            type="button"
+            onClick={handleRemove}
+            className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-bg-3 text-text-2 opacity-0 shadow-sm transition-opacity hover:bg-fill-2 hover:text-text-1 group-hover:opacity-100"
+            aria-label={`Remove ${alt}`}
+            data-testid="edit-mode-image-remove"
+          >
+            <X size={10} strokeWidth={2.5} />
+          </button>
         )}
-      </>
-    );
-  }
-);
+      </div>
+      {showOverlay && (
+        <ImagePreviewOverlay
+          dataUrl={dataUrl}
+          onClose={handleClose}
+          showCopyButton={false}
+        />
+      )}
+    </>
+  );
+});
 EditModeImageThumbnail.displayName = "EditModeImageThumbnail";
 
 export default EditModeImageThumbnail;
