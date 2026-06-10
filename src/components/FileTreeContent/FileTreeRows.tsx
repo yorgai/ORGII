@@ -158,7 +158,7 @@ export function StickyTreeHeader({
       <div className="flex h-4 w-5 flex-shrink-0 items-center justify-center">
         {gitInfo && (
           <div
-            className={`h-2 w-2 rounded-full ${getStatusBgColor(gitInfo.status)}`}
+            className={`h-1.5 w-1.5 rounded-full ${getStatusBgColor(gitInfo.status)}`}
             title={`Contains ${gitInfo.status} files`}
           />
         )}

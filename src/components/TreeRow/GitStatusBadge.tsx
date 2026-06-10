@@ -25,7 +25,7 @@ export const GitStatusBadge: React.FC<GitStatusBadgeProps> = React.memo(
       return (
         <div className="flex h-4 w-5 flex-shrink-0 items-center justify-center">
           <div
-            className={`h-2 w-2 rounded-full ${getStatusBgColor(status.status)}`}
+            className={`h-1.5 w-1.5 rounded-full ${getStatusBgColor(status.status)}`}
             title={title ?? `Contains ${status.status} files`}
           />
         </div>
