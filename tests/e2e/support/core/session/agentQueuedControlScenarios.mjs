@@ -1562,22 +1562,27 @@ async function runForceSendScenario(config) {
   // turn_intent_id round-corruption regression pin (2026-06-10).
   // Before the canonical user-intent id wire (commits 830c5330..e6752742),
   // a Stop + Send Now sequence could produce 3+ user rounds for what was
-  // actually two genuine user submits (the first synthetic + backend pair
-  // and the second synthetic + backend pair each looked like their own
-  // round to the turn indexer). The lifecycle store now drops the
-  // invalidated intent and collapses same-intent pairs into one round,
-  // so the visible round label MUST be exactly "Round 2" — no more.
-  const roundMatch = /Round\s+(\d+)\b/.exec(surfaces.myStation.roundLabel);
-  if (!roundMatch) {
-    throw new Error(
-      `${config.label} Force Send rendered an unparseable round label; surfaces=${JSON.stringify(surfaces)}`
-    );
-  }
-  const renderedRoundIndex = Number.parseInt(roundMatch[1], 10);
-  if (renderedRoundIndex > 2) {
-    throw new Error(
-      `${config.label} Force Send produced extra phantom rounds (rendered=${renderedRoundIndex}, expected=2). Regression: stale turn_intent_id rows are leaking past the indexer. surfaces=${JSON.stringify(surfaces)}`
-    );
+  // actually two genuine user submits. The lifecycle store now drops the
+  // invalidated intent and collapses same-intent pairs, so the indexer
+  // must materialize at most 2 rounds (1 is also legal: a stopped first
+  // turn with zero body events is dropped by materialized_turn_drafts).
+  //
+  // The pagination label is NOT usable here — the latest page always
+  // renders as "Latest Round", never "Round N". The session detail panel
+  // "Rounds·N round(s)" line is the rendered projection of
+  // session_turns — assert on it when present (the panel is not
+  // guaranteed to be rendered in every surface snapshot; the durable
+  // backend user_message count below is the hard assertion either way).
+  const roundCountMatch = /Rounds·(\d+)\s+round/.exec(
+    surfaces.myStation.bodyText
+  );
+  if (roundCountMatch) {
+    const renderedRoundCount = Number.parseInt(roundCountMatch[1], 10);
+    if (renderedRoundCount > 2) {
+      throw new Error(
+        `${config.label} Force Send produced extra phantom rounds (rendered=${renderedRoundCount}, expected<=2). Regression: stale turn_intent_id rows are leaking past the indexer. surfaces=${JSON.stringify(surfaces)}`
+      );
+    }
   }
   // Cross-check sources of truth: backend-persisted user_message events
   // in the transcript should also be exactly 2 (synthetic optimistic rows
