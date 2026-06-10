@@ -1,0 +1,464 @@
+//! Routine trigger scheduler.
+//!
+//! Background task that evaluates every enabled routine's trigger
+//! (`RoutineTrigger::Cron` / `RoutineTrigger::OneTime`) and fires it through
+//! the same path as the manual "Fire Now" command. The whole loop runs in the
+//! backend so routines work unattended — the frontend never participates.
+//!
+//! Catch-up: missed trigger times in `(last_evaluated_at, now]` (app was
+//! closed) are resolved per the routine's `catch_up_policy`. Every
+//! scheduler-originated fire carries an idempotency key
+//! `"{routine_id}:{scheduled_at}"` so a crash between fire-insert and
+//! watermark-update cannot double-fire after restart.
+
+use chrono::{DateTime, Utc};
+use tracing::{info, warn};
+
+use project_management::projects::io;
+use project_management::projects::types::{
+    RoutineCatchUpPolicy, RoutineDefinition, RoutineTrigger,
+};
+
+const POLL_INTERVAL_SECS: u64 = 30;
+
+/// Spawn the routine scheduler background task. Polls every 30 seconds.
+pub fn spawn(app_handle: tauri::AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        info!(
+            "[routine-scheduler] started (poll={}s)",
+            POLL_INTERVAL_SECS
+        );
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(POLL_INTERVAL_SECS)).await;
+            if let Err(err) = tick(&app_handle, Utc::now()).await {
+                warn!("[routine-scheduler] tick error: {}", err);
+            }
+        }
+    });
+}
+
+/// Run one scheduler evaluation pass (e2e/debug hook).
+pub async fn debug_run_once(app: &tauri::AppHandle) -> Result<(), String> {
+    tick(app, Utc::now()).await
+}
+
+async fn tick(app: &tauri::AppHandle, now: DateTime<Utc>) -> Result<(), String> {
+    let routines = match tokio::task::spawn_blocking(io::list_enabled_routines).await {
+        Ok(Ok(routines)) => routines,
+        Ok(Err(err)) => return Err(err),
+        Err(err) => return Err(format!("Task join error: {err}")),
+    };
+
+    for routine in routines {
+        if let Err(err) = evaluate_routine(app, &routine, now).await {
+            warn!(
+                "[routine-scheduler] evaluation of {} failed: {}",
+                routine.id, err
+            );
+        }
+    }
+    Ok(())
+}
+
+async fn evaluate_routine(
+    app: &tauri::AppHandle,
+    routine: &RoutineDefinition,
+    now: DateTime<Utc>,
+) -> Result<(), String> {
+    let window_start = watermark(routine, now);
+    let due = due_times(&routine.trigger, &window_start, &now)?;
+    let to_fire = apply_catch_up_policy(
+        &due,
+        &routine.output_policy.catch_up_policy,
+        routine.output_policy.max_catch_up_runs,
+        &now,
+    );
+
+    for scheduled_at in &to_fire {
+        fire(app, routine, scheduled_at).await;
+    }
+
+    if matches!(routine.trigger, RoutineTrigger::OneTime { .. }) && !due.is_empty() {
+        let routine_id = routine.id.clone();
+        tokio::task::spawn_blocking(move || io::disable_routine(&routine_id))
+            .await
+            .map_err(|err| format!("Task join error: {err}"))??;
+    }
+
+    let next_fire_at = match &routine.trigger {
+        RoutineTrigger::OneTime { .. } if !due.is_empty() => None,
+        trigger => next_occurrence(trigger, &now)?,
+    };
+    let routine_id = routine.id.clone();
+    tokio::task::spawn_blocking(move || {
+        io::update_routine_schedule_marks(
+            &routine_id,
+            now.timestamp_millis(),
+            next_fire_at.map(|at| at.timestamp_millis()),
+        )
+    })
+    .await
+    .map_err(|err| format!("Task join error: {err}"))??;
+
+    Ok(())
+}
+
+async fn fire(app: &tauri::AppHandle, routine: &RoutineDefinition, scheduled_at: &DateTime<Utc>) {
+    use tauri::Manager;
+    let state = app.state::<crate::state::AgentAppState>();
+    let org_store = app.state::<crate::definitions::orgs::AgentOrgsStore>();
+    let key = idempotency_key(&routine.id, scheduled_at);
+
+    info!(
+        "[routine-scheduler] firing routine {} (scheduled {})",
+        routine.id, scheduled_at
+    );
+    match crate::state::commands::routines::fire_routine_internal(
+        state.inner(),
+        org_store.inner(),
+        app,
+        routine,
+        Some(key),
+    )
+    .await
+    {
+        Ok(result) => info!(
+            "[routine-scheduler] routine {} fire {} → {:?}",
+            routine.id, result.fire.id, result.fire.status
+        ),
+        Err(err) => warn!(
+            "[routine-scheduler] routine {} fire failed: {}",
+            routine.id, err
+        ),
+    }
+}
+
+fn idempotency_key(routine_id: &str, scheduled_at: &DateTime<Utc>) -> String {
+    format!("{}:{}", routine_id, scheduled_at.to_rfc3339())
+}
+
+/// Evaluation window start: persisted watermark, or "now − poll interval"
+/// for routines that have never been evaluated (avoids replaying the entire
+/// cron history of a freshly created routine).
+fn watermark(routine: &RoutineDefinition, now: DateTime<Utc>) -> DateTime<Utc> {
+    routine
+        .last_evaluated_at
+        .as_deref()
+        .and_then(|raw| DateTime::parse_from_rfc3339(raw).ok())
+        .map(|parsed| parsed.with_timezone(&Utc))
+        .unwrap_or_else(|| now - chrono::Duration::seconds(POLL_INTERVAL_SECS as i64))
+}
+
+/// All trigger times in `(window_start, now]`.
+fn due_times(
+    trigger: &RoutineTrigger,
+    window_start: &DateTime<Utc>,
+    now: &DateTime<Utc>,
+) -> Result<Vec<DateTime<Utc>>, String> {
+    match trigger {
+        RoutineTrigger::OneTime { at } => {
+            let at_time = parse_trigger_time(at)?;
+            if at_time > *window_start && at_time <= *now {
+                Ok(vec![at_time])
+            } else if at_time <= *window_start {
+                // Missed while the app was closed — still due exactly once;
+                // catch-up policy decides whether it actually runs.
+                Ok(vec![at_time])
+            } else {
+                Ok(Vec::new())
+            }
+        }
+        RoutineTrigger::Cron { cron } => {
+            let parsed = croner::Cron::new(cron)
+                .parse()
+                .map_err(|err| format!("invalid cron expression '{cron}': {err}"))?;
+            let mut due = Vec::new();
+            let mut cursor = *window_start;
+            // Bounded to avoid unbounded loops on pathological expressions
+            // after long downtime.
+            const MAX_DUE: usize = 1000;
+            while due.len() < MAX_DUE {
+                match parsed.find_next_occurrence(&cursor, false) {
+                    Ok(next) if next <= *now => {
+                        due.push(next);
+                        cursor = next;
+                    }
+                    _ => break,
+                }
+            }
+            Ok(due)
+        }
+    }
+}
+
+/// Reduce the due list according to the catch-up policy. The latest due time
+/// always fires; earlier (missed) ones are policy-dependent.
+fn apply_catch_up_policy(
+    due: &[DateTime<Utc>],
+    policy: &RoutineCatchUpPolicy,
+    max_catch_up_runs: u32,
+    now: &DateTime<Utc>,
+) -> Vec<DateTime<Utc>> {
+    if due.is_empty() {
+        return Vec::new();
+    }
+    match policy {
+        RoutineCatchUpPolicy::SkipMissed => {
+            // Only the most recent tick fires; older missed ones are dropped.
+            vec![*due.last().expect("due is non-empty")]
+        }
+        RoutineCatchUpPolicy::RunOnce => {
+            // One catch-up run for the whole missed window, stamped with the
+            // latest due time.
+            let _ = now;
+            vec![*due.last().expect("due is non-empty")]
+        }
+        RoutineCatchUpPolicy::RunAllLimited => {
+            let limit = (max_catch_up_runs.max(1)) as usize;
+            let start = due.len().saturating_sub(limit);
+            due[start..].to_vec()
+        }
+    }
+}
+
+fn next_occurrence(
+    trigger: &RoutineTrigger,
+    now: &DateTime<Utc>,
+) -> Result<Option<DateTime<Utc>>, String> {
+    match trigger {
+        RoutineTrigger::OneTime { at } => {
+            let at_time = parse_trigger_time(at)?;
+            Ok((at_time > *now).then_some(at_time))
+        }
+        RoutineTrigger::Cron { cron } => {
+            let parsed = croner::Cron::new(cron)
+                .parse()
+                .map_err(|err| format!("invalid cron expression '{cron}': {err}"))?;
+            Ok(parsed.find_next_occurrence(now, false).ok())
+        }
+    }
+}
+
+fn parse_trigger_time(raw: &str) -> Result<DateTime<Utc>, String> {
+    if let Ok(parsed) = DateTime::parse_from_rfc3339(raw) {
+        return Ok(parsed.with_timezone(&Utc));
+    }
+    if let Ok(parsed) = chrono::NaiveDateTime::parse_from_str(raw, "%Y-%m-%dT%H:%M:%S") {
+        return Ok(parsed.and_utc());
+    }
+    Err(format!("invalid one-time trigger timestamp: {raw}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone;
+
+    fn at(y: i32, mo: u32, d: u32, h: u32, mi: u32) -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(y, mo, d, h, mi, 0).unwrap()
+    }
+
+    // ============================================
+    // due_times — cron
+    // ============================================
+
+    #[test]
+    fn cron_no_tick_in_window_returns_empty() {
+        let trigger = RoutineTrigger::Cron {
+            cron: "0 9 * * *".to_string(),
+        };
+        let window_start = at(2026, 6, 10, 10, 0);
+        let now = at(2026, 6, 10, 10, 5);
+        assert!(due_times(&trigger, &window_start, &now).unwrap().is_empty());
+    }
+
+    #[test]
+    fn cron_single_tick_in_window() {
+        let trigger = RoutineTrigger::Cron {
+            cron: "0 9 * * *".to_string(),
+        };
+        let window_start = at(2026, 6, 10, 8, 0);
+        let now = at(2026, 6, 10, 10, 0);
+        let due = due_times(&trigger, &window_start, &now).unwrap();
+        assert_eq!(due, vec![at(2026, 6, 10, 9, 0)]);
+    }
+
+    #[test]
+    fn cron_multiple_missed_ticks_accumulate() {
+        let trigger = RoutineTrigger::Cron {
+            cron: "0 9 * * *".to_string(),
+        };
+        // Three days of downtime → three missed 09:00 ticks.
+        let window_start = at(2026, 6, 7, 12, 0);
+        let now = at(2026, 6, 10, 12, 0);
+        let due = due_times(&trigger, &window_start, &now).unwrap();
+        assert_eq!(
+            due,
+            vec![
+                at(2026, 6, 8, 9, 0),
+                at(2026, 6, 9, 9, 0),
+                at(2026, 6, 10, 9, 0)
+            ]
+        );
+    }
+
+    #[test]
+    fn cron_invalid_expression_is_error() {
+        let trigger = RoutineTrigger::Cron {
+            cron: "not a cron".to_string(),
+        };
+        let now = Utc::now();
+        assert!(due_times(&trigger, &now, &now).is_err());
+    }
+
+    // ============================================
+    // due_times — one-time
+    // ============================================
+
+    #[test]
+    fn one_time_future_not_due() {
+        let trigger = RoutineTrigger::OneTime {
+            at: "2099-01-01T00:00:00Z".to_string(),
+        };
+        let window_start = at(2026, 6, 10, 8, 0);
+        let now = at(2026, 6, 10, 10, 0);
+        assert!(due_times(&trigger, &window_start, &now).unwrap().is_empty());
+    }
+
+    #[test]
+    fn one_time_in_window_is_due() {
+        let trigger = RoutineTrigger::OneTime {
+            at: "2026-06-10T09:00:00Z".to_string(),
+        };
+        let window_start = at(2026, 6, 10, 8, 0);
+        let now = at(2026, 6, 10, 10, 0);
+        let due = due_times(&trigger, &window_start, &now).unwrap();
+        assert_eq!(due, vec![at(2026, 6, 10, 9, 0)]);
+    }
+
+    #[test]
+    fn one_time_missed_before_window_is_still_due() {
+        let trigger = RoutineTrigger::OneTime {
+            at: "2026-06-01T09:00:00Z".to_string(),
+        };
+        let window_start = at(2026, 6, 10, 8, 0);
+        let now = at(2026, 6, 10, 10, 0);
+        let due = due_times(&trigger, &window_start, &now).unwrap();
+        assert_eq!(due.len(), 1);
+    }
+
+    // ============================================
+    // apply_catch_up_policy
+    // ============================================
+
+    #[test]
+    fn skip_missed_keeps_only_latest() {
+        let due = vec![
+            at(2026, 6, 8, 9, 0),
+            at(2026, 6, 9, 9, 0),
+            at(2026, 6, 10, 9, 0),
+        ];
+        let now = at(2026, 6, 10, 12, 0);
+        let fired = apply_catch_up_policy(&due, &RoutineCatchUpPolicy::SkipMissed, 5, &now);
+        assert_eq!(fired, vec![at(2026, 6, 10, 9, 0)]);
+    }
+
+    #[test]
+    fn run_once_collapses_to_single_run() {
+        let due = vec![at(2026, 6, 8, 9, 0), at(2026, 6, 9, 9, 0)];
+        let now = at(2026, 6, 10, 12, 0);
+        let fired = apply_catch_up_policy(&due, &RoutineCatchUpPolicy::RunOnce, 5, &now);
+        assert_eq!(fired, vec![at(2026, 6, 9, 9, 0)]);
+    }
+
+    #[test]
+    fn run_all_limited_respects_max() {
+        let due = vec![
+            at(2026, 6, 7, 9, 0),
+            at(2026, 6, 8, 9, 0),
+            at(2026, 6, 9, 9, 0),
+            at(2026, 6, 10, 9, 0),
+        ];
+        let now = at(2026, 6, 10, 12, 0);
+        let fired = apply_catch_up_policy(&due, &RoutineCatchUpPolicy::RunAllLimited, 2, &now);
+        assert_eq!(fired, vec![at(2026, 6, 9, 9, 0), at(2026, 6, 10, 9, 0)]);
+    }
+
+    #[test]
+    fn empty_due_fires_nothing() {
+        let now = Utc::now();
+        assert!(apply_catch_up_policy(&[], &RoutineCatchUpPolicy::RunOnce, 1, &now).is_empty());
+    }
+
+    // ============================================
+    // next_occurrence / idempotency
+    // ============================================
+
+    #[test]
+    fn next_occurrence_cron() {
+        let trigger = RoutineTrigger::Cron {
+            cron: "0 9 * * *".to_string(),
+        };
+        let now = at(2026, 6, 10, 10, 0);
+        let next = next_occurrence(&trigger, &now).unwrap().unwrap();
+        assert_eq!(next, at(2026, 6, 11, 9, 0));
+    }
+
+    #[test]
+    fn next_occurrence_one_time_past_is_none() {
+        let trigger = RoutineTrigger::OneTime {
+            at: "2020-01-01T00:00:00Z".to_string(),
+        };
+        let now = Utc::now();
+        assert!(next_occurrence(&trigger, &now).unwrap().is_none());
+    }
+
+    #[test]
+    fn idempotency_key_is_stable_per_tick() {
+        let tick = at(2026, 6, 10, 9, 0);
+        assert_eq!(
+            idempotency_key("routine-1", &tick),
+            idempotency_key("routine-1", &tick)
+        );
+        assert_ne!(
+            idempotency_key("routine-1", &tick),
+            idempotency_key("routine-2", &tick)
+        );
+    }
+
+    #[test]
+    fn watermark_defaults_to_one_poll_interval() {
+        let routine = RoutineDefinition {
+            id: "r".into(),
+            name: "r".into(),
+            description: String::new(),
+            enabled: true,
+            trigger: RoutineTrigger::Cron {
+                cron: "* * * * *".into(),
+            },
+            run_template: project_management::projects::types::RoutineRunTemplate {
+                prompt: String::new(),
+                target: project_management::projects::types::RoutineRunTarget::AgentDefinition {
+                    agent_definition_id: None,
+                },
+                resources: project_management::projects::types::RoutineResourceSelection {
+                    key_source: None,
+                    account_id: None,
+                    model: None,
+                    native_harness_type: None,
+                },
+                workspace: project_management::projects::types::RoutineWorkspaceTarget::None,
+                mode: None,
+                name: None,
+            },
+            output_policy: Default::default(),
+            last_evaluated_at: None,
+            next_fire_at: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+        };
+        let now = Utc::now();
+        let mark = watermark(&routine, now);
+        assert_eq!(now - mark, chrono::Duration::seconds(30));
+    }
+}

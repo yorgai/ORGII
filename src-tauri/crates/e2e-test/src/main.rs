@@ -1285,12 +1285,7 @@ fn delete_e2e_project_rows(tx: &rusqlite::Transaction<'_>) -> rusqlite::Result<u
     )?;
 
     if sqlite_table_exists(tx, "workitems")? {
-        for table_name in [
-            "workitem_labels",
-            "workitem_extras",
-            "workitem_assigned_agents",
-            "workitem_reviewers",
-        ] {
+        for table_name in ["workitem_labels", "workitem_extras"] {
             if sqlite_table_exists(tx, table_name)? {
                 tx.execute(
                     &format!(

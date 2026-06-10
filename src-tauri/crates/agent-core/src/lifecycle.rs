@@ -415,6 +415,13 @@ pub async fn finalize_session(
                 err
             );
         }
+
+        crate::orchestrator_notify::notify_routine_fire_session_terminal(
+            &sid,
+            final_status,
+            app_handle_clone.as_ref(),
+        )
+        .await;
     }
 
     if let Err(message) = response {

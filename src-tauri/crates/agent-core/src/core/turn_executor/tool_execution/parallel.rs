@@ -21,7 +21,7 @@ use super::super::helpers::{
 use super::super::types::{PermissionProvider, TurnEventHandler};
 
 use super::detect_stream_parse_error;
-use super::inject_call_id;
+use super::inject_framework_meta;
 use super::is_cancelled;
 use super::is_error_text;
 use super::normalize_tool_use_concurrency;
@@ -212,7 +212,7 @@ pub(super) async fn execute_parallel_group(
                 let tool_name = &calls[*idx].name;
                 let call_id = &calls[*idx].id;
                 let mut args = effective_args.clone();
-                inject_call_id(&mut args, call_id);
+                inject_framework_meta(&mut args, call_id, session_id);
                 async move {
                     let start = Instant::now();
                     let raw_result = tools.execute_with_policy(tool_name, args, policy).await;

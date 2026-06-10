@@ -545,7 +545,8 @@
       "tokens": "Token",
       "cycles": "döngü"
     },
-    "viewWorkItems": "Work Item'ları görüntüle"
+    "viewWorkItems": "Work Item'ları görüntüle",
+    "fromRoutine": "From routine: {{name}}"
   },
   "settings": {
     "sidebarGeneral": "Genel",

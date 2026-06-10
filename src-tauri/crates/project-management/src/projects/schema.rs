@@ -9,8 +9,6 @@
 //! - `labels`           — global label catalog (per-project, scoped via `project_id`)
 //! - `milestones`       — milestone catalog (per-project)
 //! - `members`          — known project members / assignees
-//! - `workitem_assigned_agents` — execution targets assigned to work items
-//! - `workitem_reviewers` — human / agent review targets for work items
 //! - `routine_definitions` — durable automation definitions that launch agent runs
 //! - `routine_fires`    — provenance for each routine occurrence
 //!
@@ -365,32 +363,6 @@ fn init_local_tables(conn: &Connection) -> SqliteResult<()> {
         CREATE INDEX IF NOT EXISTS idx_members_project ON members(project_id);
 
         -- ============================================
-        -- workitem_assigned_agents
-        -- ============================================
-        CREATE TABLE IF NOT EXISTS workitem_assigned_agents (
-            work_item_id  TEXT NOT NULL REFERENCES workitems(id) ON DELETE CASCADE,
-            target_type   TEXT NOT NULL, -- agent | agent_org
-            target_id     TEXT NOT NULL,
-            created_at    INTEGER NOT NULL,
-            PRIMARY KEY (work_item_id, target_type, target_id)
-        );
-        CREATE INDEX IF NOT EXISTS idx_workitem_assigned_agents_target
-            ON workitem_assigned_agents(target_type, target_id);
-
-        -- ============================================
-        -- workitem_reviewers
-        -- ============================================
-        CREATE TABLE IF NOT EXISTS workitem_reviewers (
-            work_item_id  TEXT NOT NULL REFERENCES workitems(id) ON DELETE CASCADE,
-            target_type   TEXT NOT NULL, -- human | agent | agent_org
-            target_id     TEXT NOT NULL,
-            created_at    INTEGER NOT NULL,
-            PRIMARY KEY (work_item_id, target_type, target_id)
-        );
-        CREATE INDEX IF NOT EXISTS idx_workitem_reviewers_target
-            ON workitem_reviewers(target_type, target_id);
-
-        -- ============================================
         -- routine_definitions / routine_fires
         -- ============================================
         CREATE TABLE IF NOT EXISTS routine_definitions (
@@ -448,6 +420,10 @@ fn init_local_tables(conn: &Connection) -> SqliteResult<()> {
         "CREATE INDEX IF NOT EXISTS idx_routine_fires_status ON routine_fires(routine_id, status, fired_at DESC)",
         [],
     )?;
+    // Drop the never-wired multi-assignee tables. Zero read/write paths ever
+    // existed; rebuild the schema when multi-agent assignment actually ships.
+    conn.execute("DROP TABLE IF EXISTS workitem_assigned_agents", [])?;
+    conn.execute("DROP TABLE IF EXISTS workitem_reviewers", [])?;
     Ok(())
 }
 
@@ -461,7 +437,9 @@ fn ensure_routine_definitions_durable_columns(conn: &Connection) -> SqliteResult
         "routine_definitions",
         "output_policy_json",
         "TEXT NOT NULL DEFAULT '{}'",
-    )
+    )?;
+    ensure_column(conn, "routine_definitions", "last_evaluated_at", "INTEGER")?;
+    ensure_column(conn, "routine_definitions", "next_fire_at", "INTEGER")
 }
 
 fn ensure_routine_fires_durable_columns(conn: &Connection) -> SqliteResult<()> {
@@ -560,8 +538,6 @@ mod tests {
             "labels",
             "milestones",
             "members",
-            "workitem_assigned_agents",
-            "workitem_reviewers",
             "routine_definitions",
             "routine_fires",
             "outbox_entries",
@@ -578,6 +554,30 @@ mod tests {
                 )
                 .expect("query");
             assert_eq!(count, 1, "table {} should exist", name);
+        }
+    }
+
+    #[test]
+    fn init_drops_dead_assignment_tables() {
+        let conn = open_in_memory();
+        // Simulate a legacy DB that still carries the never-wired tables.
+        conn.execute_batch(
+            "CREATE TABLE workitem_assigned_agents (work_item_id TEXT);
+             CREATE TABLE workitem_reviewers (work_item_id TEXT);",
+        )
+        .expect("create legacy tables");
+
+        init_project_tables(&conn).expect("init");
+
+        for name in ["workitem_assigned_agents", "workitem_reviewers"] {
+            let count: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name = ?1",
+                    [name],
+                    |row| row.get(0),
+                )
+                .expect("query");
+            assert_eq!(count, 0, "dead table {} should be dropped", name);
         }
     }
 
@@ -724,17 +724,6 @@ mod tests {
                 expected,
                 workitem_cols
             );
-        }
-
-        for table_name in ["workitem_assigned_agents", "workitem_reviewers"] {
-            let count: i64 = conn
-                .query_row(
-                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name = ?1",
-                    [table_name],
-                    |row| row.get(0),
-                )
-                .expect("query assignment table");
-            assert_eq!(count, 1, "{} should exist", table_name);
         }
     }
 

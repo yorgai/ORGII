@@ -43,10 +43,21 @@ fn row_to_routine(row: &rusqlite::Row<'_>) -> rusqlite::Result<RoutineDefinition
             },
         )?,
         output_policy: decode_output_policy(&output_policy_json)?,
+        last_evaluated_at: row.get::<_, Option<i64>>(9)?.map(to_iso8601),
+        next_fire_at: row.get::<_, Option<i64>>(10)?.map(to_iso8601),
         created_at: to_iso8601(row.get(7)?),
         updated_at: to_iso8601(row.get(8)?),
     })
 }
+
+const ROUTINE_SELECT_COLUMNS: &str =
+    "id, name, description, enabled, trigger_json, run_template_json,
+     output_policy_json, created_at, updated_at, last_evaluated_at, next_fire_at";
+
+const FIRE_SELECT_COLUMNS: &str =
+    "id, routine_id, fired_at, status, session_id, agent_org_run_id,
+     work_item_id, coalesced_into_fire_id, idempotency_key, started_at,
+     completed_at, error";
 
 fn decode_output_policy(raw: &str) -> rusqlite::Result<RoutineOutputPolicy> {
     if raw.trim().is_empty() || raw.trim() == "{}" {
@@ -106,12 +117,28 @@ fn status_to_str(status: &RoutineFireStatus) -> &'static str {
 
 pub fn list_routines() -> Result<Vec<RoutineDefinition>, String> {
     let connection = conn()?;
-    let mut stmt = map_db(connection.prepare(
-        "SELECT id, name, description, enabled, trigger_json, run_template_json,
-                output_policy_json, created_at, updated_at
+    let mut stmt = map_db(connection.prepare(&format!(
+        "SELECT {ROUTINE_SELECT_COLUMNS}
          FROM routine_definitions
          ORDER BY updated_at DESC, created_at DESC",
-    ))?;
+    )))?;
+    let rows = map_db(stmt.query_map([], row_to_routine))?;
+    let mut routines = Vec::new();
+    for entry in rows {
+        routines.push(map_db(entry)?);
+    }
+    Ok(routines)
+}
+
+/// List enabled routines for scheduler evaluation.
+pub fn list_enabled_routines() -> Result<Vec<RoutineDefinition>, String> {
+    let connection = conn()?;
+    let mut stmt = map_db(connection.prepare(&format!(
+        "SELECT {ROUTINE_SELECT_COLUMNS}
+         FROM routine_definitions
+         WHERE enabled = 1
+         ORDER BY created_at ASC",
+    )))?;
     let rows = map_db(stmt.query_map([], row_to_routine))?;
     let mut routines = Vec::new();
     for entry in rows {
@@ -125,10 +152,11 @@ pub fn read_routine(id: &str) -> Result<RoutineDefinition, String> {
     let routine = map_db(
         connection
             .query_row(
-                "SELECT id, name, description, enabled, trigger_json, run_template_json,
-                        output_policy_json, created_at, updated_at
-                 FROM routine_definitions
-                 WHERE id = ?1",
+                &format!(
+                    "SELECT {ROUTINE_SELECT_COLUMNS}
+                     FROM routine_definitions
+                     WHERE id = ?1",
+                ),
                 params![id],
                 row_to_routine,
             )
@@ -189,6 +217,35 @@ pub fn delete_routine(id: &str) -> Result<bool, String> {
     Ok(removed > 0)
 }
 
+/// Persist the scheduler evaluation watermark and the next computed fire time.
+/// Deliberately does NOT touch `updated_at` — scheduler bookkeeping is not a
+/// user edit and must not reorder the routines list.
+pub fn update_routine_schedule_marks(
+    id: &str,
+    last_evaluated_at_ms: i64,
+    next_fire_at_ms: Option<i64>,
+) -> Result<(), String> {
+    let connection = conn()?;
+    map_db(connection.execute(
+        "UPDATE routine_definitions
+         SET last_evaluated_at = ?2, next_fire_at = ?3
+         WHERE id = ?1",
+        params![id, last_evaluated_at_ms, next_fire_at_ms],
+    ))?;
+    Ok(())
+}
+
+/// Disable a routine without touching `updated_at` (used by the scheduler
+/// after a one-time trigger fires).
+pub fn disable_routine(id: &str) -> Result<(), String> {
+    let connection = conn()?;
+    map_db(connection.execute(
+        "UPDATE routine_definitions SET enabled = 0 WHERE id = ?1",
+        params![id],
+    ))?;
+    Ok(())
+}
+
 pub fn list_routine_fires(routine_id: &str) -> Result<Vec<RoutineFire>, String> {
     let connection = conn()?;
     let mut stmt = map_db(connection.prepare(
@@ -227,9 +284,43 @@ pub fn create_routine_fire_for_policy(
     routine_id: &str,
     policy: &RoutineOutputPolicy,
 ) -> Result<RoutineFire, String> {
+    create_routine_fire_for_policy_with_key(routine_id, policy, None)
+}
+
+/// Like [`create_routine_fire_for_policy`], with an optional idempotency key.
+///
+/// If a fire with the same key already exists (unique index), the existing
+/// fire is returned unchanged — the caller must treat a non-Pending result
+/// as "do not execute".
+pub fn create_routine_fire_for_policy_with_key(
+    routine_id: &str,
+    policy: &RoutineOutputPolicy,
+    idempotency_key: Option<&str>,
+) -> Result<RoutineFire, String> {
     let mut connection = conn()?;
     let transaction =
         map_db(connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate))?;
+
+    if let Some(key) = idempotency_key {
+        let existing = map_db(
+            transaction
+                .query_row(
+                    &format!(
+                        "SELECT {FIRE_SELECT_COLUMNS}
+                         FROM routine_fires
+                         WHERE idempotency_key = ?1",
+                    ),
+                    params![key],
+                    row_to_fire,
+                )
+                .optional(),
+        )?;
+        if let Some(existing_fire) = existing {
+            map_db(transaction.commit())?;
+            return Ok(existing_fire);
+        }
+    }
+
     let active = find_active_routine_fire_in_transaction(&transaction, routine_id)?;
     let fire = match active {
         None => insert_routine_fire_in_transaction(
@@ -237,6 +328,7 @@ pub fn create_routine_fire_for_policy(
             routine_id,
             RoutineFireInsert {
                 status: RoutineFireStatus::Pending,
+                idempotency_key: idempotency_key.map(str::to_string),
                 ..Default::default()
             },
         )?,
@@ -247,6 +339,7 @@ pub fn create_routine_fire_for_policy(
                 RoutineFireInsert {
                     status: RoutineFireStatus::Coalesced,
                     coalesced_into_fire_id: Some(active_fire.id),
+                    idempotency_key: idempotency_key.map(str::to_string),
                     error: Some("Coalesced into active routine fire".to_string()),
                     completed_at_ms: Some(now_ms()),
                     ..Default::default()
@@ -257,6 +350,7 @@ pub fn create_routine_fire_for_policy(
                 routine_id,
                 RoutineFireInsert {
                     status: RoutineFireStatus::Skipped,
+                    idempotency_key: idempotency_key.map(str::to_string),
                     error: Some(format!(
                         "Skipped because routine has active fire {}",
                         active_fire.id
@@ -270,6 +364,7 @@ pub fn create_routine_fire_for_policy(
                 routine_id,
                 RoutineFireInsert {
                     status: RoutineFireStatus::Queued,
+                    idempotency_key: idempotency_key.map(str::to_string),
                     error: Some(format!("Queued behind active fire {}", active_fire.id)),
                     ..Default::default()
                 },
@@ -279,6 +374,7 @@ pub fn create_routine_fire_for_policy(
                 routine_id,
                 RoutineFireInsert {
                     status: RoutineFireStatus::Pending,
+                    idempotency_key: idempotency_key.map(str::to_string),
                     ..Default::default()
                 },
             )?,
@@ -406,6 +502,25 @@ pub fn mark_routine_fire_work_item_created(
     read_routine_fire(fire_id)
 }
 
+/// Link a fire to a work item and mark it `Started` — used when the routine
+/// drives a work item whose session lifecycle determines the fire's terminal
+/// state (CreateWorkItem with auto_start, UpdateExistingWorkItem).
+pub fn mark_routine_fire_work_item_started(
+    fire_id: &str,
+    work_item_id: &str,
+    session_id: Option<&str>,
+) -> Result<RoutineFire, String> {
+    let connection = conn()?;
+    let now = now_ms();
+    map_db(connection.execute(
+        "UPDATE routine_fires
+         SET status = ?2, work_item_id = ?3, session_id = ?4, started_at = ?5, error = NULL
+         WHERE id = ?1",
+        params![fire_id, "started", work_item_id, session_id, now],
+    ))?;
+    read_routine_fire(fire_id)
+}
+
 pub fn mark_routine_fire_failed(fire_id: &str, error: &str) -> Result<RoutineFire, String> {
     let connection = conn()?;
     let now = now_ms();
@@ -416,6 +531,120 @@ pub fn mark_routine_fire_failed(fire_id: &str, error: &str) -> Result<RoutineFir
         params![fire_id, "failed", error, now],
     ))?;
     read_routine_fire(fire_id)
+}
+
+/// Mark a fire as succeeded (session reached a successful terminal state).
+pub fn mark_routine_fire_succeeded(fire_id: &str) -> Result<RoutineFire, String> {
+    let connection = conn()?;
+    let now = now_ms();
+    map_db(connection.execute(
+        "UPDATE routine_fires
+         SET status = ?2, completed_at = ?3, error = NULL
+         WHERE id = ?1",
+        params![fire_id, "succeeded", now],
+    ))?;
+    read_routine_fire(fire_id)
+}
+
+/// Look up the non-terminal fire that launched `session_id`, if any.
+/// Used by the session-terminal write-back path.
+pub fn find_started_fire_by_session(session_id: &str) -> Result<Option<RoutineFire>, String> {
+    let connection = conn()?;
+    map_db(
+        connection
+            .query_row(
+                &format!(
+                    "SELECT {FIRE_SELECT_COLUMNS}
+                     FROM routine_fires
+                     WHERE session_id = ?1 AND status IN ('pending', 'started')
+                     ORDER BY fired_at DESC
+                     LIMIT 1",
+                ),
+                params![session_id],
+                row_to_fire,
+            )
+            .optional(),
+    )
+}
+
+/// Look up the non-terminal fire that drives `work_item_id`, if any.
+/// Used when the work item orchestrator reaches a terminal phase
+/// (CreateWorkItem auto_start / UpdateExistingWorkItem fires).
+pub fn find_started_fire_by_work_item(work_item_id: &str) -> Result<Option<RoutineFire>, String> {
+    let connection = conn()?;
+    map_db(
+        connection
+            .query_row(
+                &format!(
+                    "SELECT {FIRE_SELECT_COLUMNS}
+                     FROM routine_fires
+                     WHERE work_item_id = ?1 AND status IN ('pending', 'started')
+                     ORDER BY fired_at DESC
+                     LIMIT 1",
+                ),
+                params![work_item_id],
+                row_to_fire,
+            )
+            .optional(),
+    )
+}
+
+/// Atomically promote the oldest `Queued` fire of a routine to `Pending`,
+/// returning it for execution. Returns `None` when nothing is queued.
+/// Only valid to call after the previously active fire reached a terminal
+/// state — the promotion itself is guarded inside one immediate transaction.
+pub fn take_next_queued_fire(routine_id: &str) -> Result<Option<RoutineFire>, String> {
+    let mut connection = conn()?;
+    let transaction =
+        map_db(connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate))?;
+
+    // Another pending/started fire may have appeared in the meantime;
+    // promoting a queued fire next to it would violate the concurrency policy.
+    let still_active = map_db(
+        transaction
+            .query_row(
+                "SELECT id FROM routine_fires
+                 WHERE routine_id = ?1 AND status IN ('pending', 'started')
+                 LIMIT 1",
+                params![routine_id],
+                |row| row.get::<_, String>(0),
+            )
+            .optional(),
+    )?;
+    if still_active.is_some() {
+        map_db(transaction.commit())?;
+        return Ok(None);
+    }
+
+    let queued = map_db(
+        transaction
+            .query_row(
+                &format!(
+                    "SELECT {FIRE_SELECT_COLUMNS}
+                     FROM routine_fires
+                     WHERE routine_id = ?1 AND status = 'queued'
+                     ORDER BY fired_at ASC
+                     LIMIT 1",
+                ),
+                params![routine_id],
+                row_to_fire,
+            )
+            .optional(),
+    )?;
+
+    let Some(mut fire) = queued else {
+        map_db(transaction.commit())?;
+        return Ok(None);
+    };
+
+    map_db(transaction.execute(
+        "UPDATE routine_fires SET status = 'pending', error = NULL WHERE id = ?1",
+        params![fire.id],
+    ))?;
+    map_db(transaction.commit())?;
+    fire.status = RoutineFireStatus::Pending;
+    fire.error = None;
+    Ok(Some(fire))
 }
 
 fn read_routine_fire(fire_id: &str) -> Result<RoutineFire, String> {
@@ -473,6 +702,8 @@ mod tests {
                 name: Some("Routine fixture session".to_string()),
             },
             output_policy: policy,
+            last_evaluated_at: None,
+            next_fire_at: None,
             created_at: String::new(),
             updated_at: String::new(),
         }
@@ -489,6 +720,9 @@ mod tests {
             create_work_item_project_slug: None,
             create_work_item_title: None,
             create_work_item_body: None,
+            auto_start: true,
+            update_work_item_short_id: None,
+            update_work_item_project_slug: None,
         }
     }
 
@@ -684,6 +918,132 @@ mod tests {
         assert!(linked.started_at.is_some());
         assert!(linked.completed_at.is_some());
         assert!(linked.error.is_none());
+    }
+
+    #[test]
+    fn idempotency_key_dedupes_fires() {
+        let _sandbox = test_env::sandbox();
+        upsert_routine(routine_fixture(
+            "routine-idem",
+            policy(RoutineConcurrencyPolicy::AlwaysCreate),
+        ))
+        .expect("upsert routine");
+
+        let first = create_routine_fire_for_policy_with_key(
+            "routine-idem",
+            &policy(RoutineConcurrencyPolicy::AlwaysCreate),
+            Some("routine-idem:2026-06-10T09:00:00Z"),
+        )
+        .expect("first fire");
+        let second = create_routine_fire_for_policy_with_key(
+            "routine-idem",
+            &policy(RoutineConcurrencyPolicy::AlwaysCreate),
+            Some("routine-idem:2026-06-10T09:00:00Z"),
+        )
+        .expect("second fire");
+
+        assert_eq!(first.id, second.id, "same key must return the same fire");
+        assert_eq!(
+            second.idempotency_key.as_deref(),
+            Some("routine-idem:2026-06-10T09:00:00Z")
+        );
+    }
+
+    #[test]
+    fn mark_succeeded_completes_started_fire() {
+        let _sandbox = test_env::sandbox();
+        upsert_routine(routine_fixture(
+            "routine-succeed",
+            policy(RoutineConcurrencyPolicy::CoalesceIfActive),
+        ))
+        .expect("upsert routine");
+        let fire = create_routine_fire("routine-succeed").expect("create fire");
+        mark_routine_fire_started(&fire.id, "session-9", None).expect("mark started");
+
+        let succeeded = mark_routine_fire_succeeded(&fire.id).expect("mark succeeded");
+        assert_eq!(succeeded.status, RoutineFireStatus::Succeeded);
+        assert!(succeeded.completed_at.is_some());
+        assert!(succeeded.error.is_none());
+    }
+
+    #[test]
+    fn find_started_fire_by_session_matches_only_active() {
+        let _sandbox = test_env::sandbox();
+        upsert_routine(routine_fixture(
+            "routine-find",
+            policy(RoutineConcurrencyPolicy::CoalesceIfActive),
+        ))
+        .expect("upsert routine");
+        let fire = create_routine_fire("routine-find").expect("create fire");
+        mark_routine_fire_started(&fire.id, "session-find", None).expect("mark started");
+
+        let found = find_started_fire_by_session("session-find")
+            .expect("query")
+            .expect("fire found");
+        assert_eq!(found.id, fire.id);
+
+        mark_routine_fire_succeeded(&fire.id).expect("mark succeeded");
+        assert!(find_started_fire_by_session("session-find")
+            .expect("query")
+            .is_none());
+    }
+
+    #[test]
+    fn take_next_queued_fire_promotes_oldest_when_idle() {
+        let _sandbox = test_env::sandbox();
+        upsert_routine(routine_fixture(
+            "routine-dequeue",
+            policy(RoutineConcurrencyPolicy::QueueIfActive),
+        ))
+        .expect("upsert routine");
+
+        let active = create_routine_fire_for_policy(
+            "routine-dequeue",
+            &policy(RoutineConcurrencyPolicy::QueueIfActive),
+        )
+        .expect("active fire");
+        let queued = create_routine_fire_for_policy(
+            "routine-dequeue",
+            &policy(RoutineConcurrencyPolicy::QueueIfActive),
+        )
+        .expect("queued fire");
+        assert_eq!(queued.status, RoutineFireStatus::Queued);
+
+        // Active fire still pending → nothing to dequeue.
+        assert!(take_next_queued_fire("routine-dequeue")
+            .expect("dequeue")
+            .is_none());
+
+        mark_routine_fire_failed(&active.id, "boom").expect("fail active");
+
+        let promoted = take_next_queued_fire("routine-dequeue")
+            .expect("dequeue")
+            .expect("queued fire promoted");
+        assert_eq!(promoted.id, queued.id);
+        assert_eq!(promoted.status, RoutineFireStatus::Pending);
+
+        // Promotion is one-shot.
+        assert!(take_next_queued_fire("routine-dequeue")
+            .expect("dequeue")
+            .is_none());
+    }
+
+    #[test]
+    fn schedule_marks_round_trip_without_touching_updated_at() {
+        let _sandbox = test_env::sandbox();
+        let saved = upsert_routine(routine_fixture(
+            "routine-marks",
+            policy(RoutineConcurrencyPolicy::CoalesceIfActive),
+        ))
+        .expect("upsert routine");
+
+        update_routine_schedule_marks("routine-marks", 1_750_000_000_000, Some(1_750_000_060_000))
+            .expect("update marks");
+
+        let read = read_routine("routine-marks").expect("read routine");
+        assert!(read.last_evaluated_at.is_some());
+        assert!(read.next_fire_at.is_some());
+        assert_eq!(read.updated_at, saved.updated_at);
     }
 
     #[test]

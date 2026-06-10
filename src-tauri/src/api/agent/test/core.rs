@@ -1194,6 +1194,14 @@ pub async fn debug_work_item_scheduler_run_once() -> Result<serde_json::Value, S
     Ok(serde_json::json!({ "ran": true }))
 }
 
+#[tauri::command]
+pub async fn debug_routine_scheduler_run_once() -> Result<serde_json::Value, String> {
+    let handle = crate::api::get_app_handle()
+        .ok_or_else(|| "AppHandle not initialized. Is the Tauri app running?".to_string())?;
+    agent_core::coordination::routine_scheduler::debug_run_once(&handle).await?;
+    Ok(serde_json::json!({ "ran": true }))
+}
+
 pub async fn test_work_item_launch_parse(
     Json(body): Json<serde_json::Value>,
 ) -> Json<serde_json::Value> {

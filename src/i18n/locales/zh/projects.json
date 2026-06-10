@@ -545,7 +545,8 @@
       "tokens": "Token",
       "cycles": "轮次"
     },
-    "viewWorkItems": "查看 Work Items"
+    "viewWorkItems": "查看 Work Items",
+    "fromRoutine": "来自 Routine：{{name}}"
   },
   "settings": {
     "sidebarGeneral": "常规",

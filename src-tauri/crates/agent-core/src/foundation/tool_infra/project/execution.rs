@@ -68,6 +68,106 @@ pub(crate) fn build_agent_prompt(
     parts.join("\n")
 }
 
+/// Build a review task prompt (Rust port of the frontend's
+/// `buildReviewTaskPrompt` — the backend launches review sessions now).
+pub(crate) fn build_review_prompt(
+    short_id: &str,
+    frontmatter: &WorkItemFrontmatter,
+    body: &str,
+) -> String {
+    let mut parts = Vec::new();
+    parts.push(format!("Review the code changes for work item: {}", short_id));
+    parts.push(format!("\n## Work Item Title\n{}", frontmatter.title));
+    if !body.is_empty() {
+        parts.push(format!("\n## Work Item Description\n{}", body));
+    }
+    if !frontmatter.todos.is_empty() {
+        parts.push("\n## Acceptance Criteria / Todos".to_string());
+        for todo in &frontmatter.todos {
+            let check = if todo.status == super::helpers::TODO_STATUS_COMPLETED {
+                "[x]"
+            } else {
+                "[ ]"
+            };
+            parts.push(format!("  {} {}", check, todo.content));
+        }
+    }
+
+    let branch = frontmatter
+        .proof_of_work
+        .as_ref()
+        .and_then(|pow| pow.branch.clone());
+    parts.push("\n## Branch Information".to_string());
+    if let Some(ref branch_name) = branch {
+        parts.push(format!("- Work item branch: `{}`", branch_name));
+    }
+    parts.push("- Base branch: `main`".to_string());
+    parts.push(format!(
+        "- Run: `git diff main..{}` to see all changes",
+        branch.as_deref().unwrap_or("HEAD")
+    ));
+
+    if let Some(feedback) = frontmatter
+        .proof_of_work
+        .as_ref()
+        .and_then(|pow| pow.review_feedback.as_ref())
+        .filter(|fb| !matches!(fb.outcome, ReviewOutcome::Approved))
+    {
+        parts.push("\n## Previous Review Feedback (from the last review round)".to_string());
+        parts.push(format!("Outcome: {:?}", feedback.outcome));
+        parts.push(format!("Summary: {}", feedback.summary));
+        let round = frontmatter
+            .proof_of_work
+            .as_ref()
+            .map(|pow| pow.review_history.len())
+            .unwrap_or(0)
+            + 1;
+        parts.push(format!(
+            "\nThis is review round {}. Check if the above issues from the previous round \
+             have been addressed in the current diff.",
+            round
+        ));
+    }
+
+    parts.join("\n")
+}
+
+/// Append review feedback the coding agent must address (fix rounds).
+pub(crate) fn append_fix_feedback(prompt: &mut String, frontmatter: &WorkItemFrontmatter) {
+    let Some(feedback) = frontmatter
+        .proof_of_work
+        .as_ref()
+        .and_then(|pow| pow.review_feedback.as_ref())
+        .filter(|fb| !matches!(fb.outcome, ReviewOutcome::Approved))
+    else {
+        return;
+    };
+
+    prompt.push_str("\n\n## Review Feedback To Address\n");
+    prompt.push_str(&format!("Outcome: {:?}\n", feedback.outcome));
+    prompt.push_str(&format!("Summary: {}\n", feedback.summary));
+    if !feedback.comments.is_empty() {
+        prompt.push_str("Address all of the following items before finishing:\n");
+        for (idx, comment) in feedback.comments.iter().enumerate() {
+            let loc = match (&comment.file_path, comment.line) {
+                (Some(path), Some(line)) => format!("{}:{} — ", path, line),
+                (Some(path), None) => format!("{} — ", path),
+                _ => String::new(),
+            };
+            prompt.push_str(&format!(
+                "  {}. [{:?}] {}{}\n",
+                idx + 1,
+                comment.severity,
+                loc,
+                comment.message
+            ));
+        }
+    }
+    prompt.push_str(
+        "\nFix the issues above explicitly and verify they are resolved before you finish.\n",
+    );
+}
+
 fn parse_agent_defs_for_execution(
     content: &str,
     path: &std::path::Path,
@@ -196,32 +296,25 @@ fn resolve_agent_def_id_from_assignee(
     }
 }
 
-/// Start a work item's orchestrator workflow and launch an agent session.
-///
-/// Does everything the frontend does in one call:
-///   1. Validates orchestrator config (must have account_id)
-///   2. Runs orchestrator_start (snapshot config, set phase)
-///   3. Builds the agent prompt from work item content
-///   4. Creates and starts an agent session in background
-///
-/// The host repo for the agent session is resolved from
-/// `frontmatter.orchestrator_config.worktree_path` first, then from the
-/// project's `linked_repos[0]`. Returns a human-readable summary with the
-/// session ID.
-///
-/// When `session_account_id` is set (non-empty), that account is used for the
-/// agent session launch even if the work item omits `selected_account_id`.
-/// Model resolution: session override (`session_model_id`) if non-empty,
-/// otherwise `selected_model_id` from the work item.
-pub async fn start_work_item(
+/// Resolved launch context shared by initial starts and phase launches
+/// (review / fix / retry).
+struct LaunchContext {
+    data: WorkItemData,
+    config: OrchestratorConfig,
+    agent_def_id: Option<String>,
+    agent_def: Option<crate::definitions::AgentDefinition>,
+    account_id: String,
+    model_id: String,
+    worktree_path: String,
+    linked_repos: Vec<String>,
+}
+
+async fn resolve_launch_context(
     project_slug: &str,
     short_id: &str,
-    app: &tauri::AppHandle,
     session_account_id: Option<&str>,
     session_model_id: Option<&str>,
-) -> Result<String, String> {
-    use project_management::orchestrator::state_machine;
-
+) -> Result<LaunchContext, String> {
     let slug = project_slug.to_string();
     let sid = short_id.to_string();
 
@@ -299,8 +392,6 @@ pub async fn start_work_item(
     };
 
     // Resolve host repo: config.worktree_path → linked_repos first valid dir.
-    // The work-item-level `worktree_path` overrides; otherwise we fall back to
-    // the project's `linked_repos`.
     let project_data = {
         let slug_for_read = slug.clone();
         run_blocking("read_project_meta", move || {
@@ -333,33 +424,104 @@ pub async fn start_work_item(
                 .to_string(),
         )?;
 
-    let (agent_role, mut prompt) = if let Some(ref definition) = agent_def {
-        let prompt = build_agent_prompt(&sid, &data.frontmatter, &data.body);
+    Ok(LaunchContext {
+        data,
+        config,
+        agent_def_id,
+        agent_def,
+        account_id,
+        model_id,
+        worktree_path,
+        linked_repos,
+    })
+}
+
+fn append_workspace_section(prompt: &mut String, ctx: &LaunchContext) {
+    if ctx.linked_repos.is_empty() {
+        return;
+    }
+    prompt.push_str("\n\n## Project Workspace\n");
+    prompt.push_str(&format!("Primary repo: `{}`\n", ctx.worktree_path));
+    if ctx.linked_repos.len() > 1
+        || ctx.linked_repos.first().map(|r| r.as_str()) != Some(ctx.worktree_path.as_str())
+    {
+        prompt.push_str("All linked repos:\n");
+        for linked_repo in &ctx.linked_repos {
+            prompt.push_str(&format!("- `{}`\n", linked_repo));
+        }
+        prompt.push_str(
+            "You can navigate to any of these repos if the task requires cross-repo work.\n",
+        );
+    }
+}
+
+/// Start a work item's orchestrator workflow and launch an agent session.
+///
+/// Does everything the frontend does in one call:
+///   1. Validates orchestrator config (must have account_id)
+///   2. Runs orchestrator_start (snapshot config, set phase)
+///   3. Builds the agent prompt from work item content
+///   4. Creates and starts an agent session in background
+///
+/// The host repo for the agent session is resolved from
+/// `frontmatter.orchestrator_config.worktree_path` first, then from the
+/// project's `linked_repos[0]`. Returns a human-readable summary with the
+/// session ID.
+///
+/// When `session_account_id` is set (non-empty), that account is used for the
+/// agent session launch even if the work item omits `selected_account_id`.
+/// Model resolution: session override (`session_model_id`) if non-empty,
+/// otherwise `selected_model_id` from the work item.
+pub async fn start_work_item(
+    project_slug: &str,
+    short_id: &str,
+    app: &tauri::AppHandle,
+    session_account_id: Option<&str>,
+    session_model_id: Option<&str>,
+) -> Result<String, String> {
+    start_work_item_with_reason(
+        project_slug,
+        short_id,
+        app,
+        session_account_id,
+        session_model_id,
+        WorkItemExecutionLockReason::ManualStart,
+    )
+    .await
+}
+
+/// [`start_work_item`] with an explicit execution-lock reason so
+/// scheduler/routine-originated starts are attributed correctly.
+pub async fn start_work_item_with_reason(
+    project_slug: &str,
+    short_id: &str,
+    app: &tauri::AppHandle,
+    session_account_id: Option<&str>,
+    session_model_id: Option<&str>,
+    lock_reason: WorkItemExecutionLockReason,
+) -> Result<String, String> {
+    use project_management::orchestrator::state_machine;
+
+    let slug = project_slug.to_string();
+    let sid = short_id.to_string();
+
+    let ctx =
+        resolve_launch_context(project_slug, short_id, session_account_id, session_model_id)
+            .await?;
+
+    let (agent_role, mut prompt) = if let Some(ref definition) = ctx.agent_def {
+        let prompt = build_agent_prompt(&sid, &ctx.data.frontmatter, &ctx.data.body);
         (definition.name.clone(), prompt)
     } else {
         (
             "sde".to_string(),
-            build_project_prompt(&sid, &data.frontmatter, &data.body),
+            build_project_prompt(&sid, &ctx.data.frontmatter, &ctx.data.body),
         )
     };
 
-    if !linked_repos.is_empty() {
-        prompt.push_str("\n\n## Project Workspace\n");
-        prompt.push_str(&format!("Primary repo: `{}`\n", worktree_path));
-        if linked_repos.len() > 1
-            || linked_repos.first().map(|r| r.as_str()) != Some(&worktree_path)
-        {
-            prompt.push_str("All linked repos:\n");
-            for linked_repo in &linked_repos {
-                prompt.push_str(&format!("- `{}`\n", linked_repo));
-            }
-            prompt.push_str(
-                "You can navigate to any of these repos if the task requires cross-repo work.\n",
-            );
-        }
-    }
+    append_workspace_section(&mut prompt, &ctx);
 
-    let linked_role = if agent_def_id.is_some() {
+    let linked_role = if ctx.agent_def_id.is_some() {
         AgentRole::Custom
     } else {
         AgentRole::Coding
@@ -409,16 +571,17 @@ pub async fn start_work_item(
     let session_id = crate::session::launch::launch_agent_session(
         app,
         crate::session::launch::WorkItemLaunchRequest {
-            workspace_path: &worktree_path,
+            workspace_path: &ctx.worktree_path,
             prompt: &prompt,
-            model: &model_id,
-            account_id: &account_id,
+            model: &ctx.model_id,
+            account_id: &ctx.account_id,
             work_item_id: &sid,
             project_slug: &slug,
-            worktree_path: Some(&worktree_path),
-            agent_definition_id: agent_def_id.as_deref(),
+            worktree_path: Some(&ctx.worktree_path),
+            agent_definition_id: ctx.agent_def_id.as_deref(),
             agent_role: &agent_role,
-            sub_agent_ids: config.sub_agent_ids.as_slice(),
+            sub_agent_ids: ctx.config.sub_agent_ids.as_slice(),
+            lock_reason,
         },
     )
     .await?;
@@ -431,8 +594,125 @@ pub async fn start_work_item(
          Account: {}\n\n\
          The agent is now running in the background. \
          Use session(action=\"list\") or session(action=\"get_status\") to check progress.",
-        sid, session_id, agent_role, model_id, account_id
+        sid, session_id, agent_role, ctx.model_id, ctx.account_id
     ))
+}
+
+/// Which post-transition session the orchestrator needs launched.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PhaseLaunch {
+    /// State machine moved to Review and already queued a pending review
+    /// linked session — launch the reviewer.
+    Review,
+    /// Review requested changes; state machine moved back to Coding and
+    /// queued a pending coding linked session — launch the fix round.
+    Fix,
+    /// Coding failed and auto-retry is on; phase is already back at Coding —
+    /// relaunch the owner agent.
+    Retry,
+}
+
+/// Launch the session demanded by an orchestrator transition
+/// (LaunchReview / LaunchFix / RetryAgent). Unlike [`start_work_item`] this
+/// does NOT run `snapshot_config` or phase validation: the state machine has
+/// already performed the transition; we only materialize the session.
+///
+/// Review reuses the work item's account; the review config may override
+/// account/model.
+pub async fn launch_phase_session(
+    project_slug: &str,
+    short_id: &str,
+    app: &tauri::AppHandle,
+    phase: PhaseLaunch,
+) -> Result<String, String> {
+    let (review_account, review_model) = if phase == PhaseLaunch::Review {
+        let ctx_data = run_blocking("read_review_config", {
+            let slug = project_slug.to_string();
+            let sid = short_id.to_string();
+            move || io::read_work_item(&slug, &sid)
+        })
+        .await?;
+        let review_config = ctx_data
+            .frontmatter
+            .orchestrator_config
+            .as_ref()
+            .and_then(|c| c.effective_review_config());
+        (
+            review_config.as_ref().and_then(|rc| rc.account_id.clone()),
+            review_config.as_ref().and_then(|rc| rc.model_id.clone()),
+        )
+    } else {
+        (None, None)
+    };
+
+    let ctx = resolve_launch_context(
+        project_slug,
+        short_id,
+        review_account.as_deref(),
+        review_model.as_deref(),
+    )
+    .await?;
+
+    let (agent_role, mut prompt) = match phase {
+        PhaseLaunch::Review => (
+            "review".to_string(),
+            build_review_prompt(short_id, &ctx.data.frontmatter, &ctx.data.body),
+        ),
+        PhaseLaunch::Fix | PhaseLaunch::Retry => {
+            let mut prompt = if ctx.agent_def.is_some() {
+                build_agent_prompt(short_id, &ctx.data.frontmatter, &ctx.data.body)
+            } else {
+                build_project_prompt(short_id, &ctx.data.frontmatter, &ctx.data.body)
+            };
+            if phase == PhaseLaunch::Fix {
+                append_fix_feedback(&mut prompt, &ctx.data.frontmatter);
+            }
+            let role = ctx
+                .agent_def
+                .as_ref()
+                .map(|d| d.name.clone())
+                .unwrap_or_else(|| "sde".to_string());
+            (role, prompt)
+        }
+    };
+
+    append_workspace_section(&mut prompt, &ctx);
+
+    // Review sessions run the plain SDE harness (no custom agent definition)
+    // so the reviewer judges with fresh eyes.
+    let agent_definition_id = match phase {
+        PhaseLaunch::Review => None,
+        _ => ctx.agent_def_id.clone(),
+    };
+
+    let session_id = crate::session::launch::launch_agent_session(
+        app,
+        crate::session::launch::WorkItemLaunchRequest {
+            workspace_path: &ctx.worktree_path,
+            prompt: &prompt,
+            model: &ctx.model_id,
+            account_id: &ctx.account_id,
+            work_item_id: short_id,
+            project_slug,
+            worktree_path: Some(&ctx.worktree_path),
+            agent_definition_id: agent_definition_id.as_deref(),
+            agent_role: &agent_role,
+            sub_agent_ids: ctx.config.sub_agent_ids.as_slice(),
+            lock_reason: WorkItemExecutionLockReason::FollowUp,
+        },
+    )
+    .await?;
+
+    {
+        use tauri::Emitter;
+        let ts = chrono::Utc::now().to_rfc3339();
+        let _ = app.emit(
+            project_management::projects::events::DATA_CHANGED_EVENT,
+            &ts,
+        );
+    }
+
+    Ok(session_id)
 }
 
 #[cfg(test)]

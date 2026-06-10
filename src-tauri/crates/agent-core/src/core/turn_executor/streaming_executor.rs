@@ -35,7 +35,9 @@ use std::collections::HashMap;
 use serde_json::Value;
 use tracing::info;
 
-use crate::core::turn_executor::tool_execution::{inject_call_id, normalize_tool_use_concurrency};
+use crate::core::turn_executor::tool_execution::{
+    inject_framework_meta, normalize_tool_use_concurrency,
+};
 use crate::providers::traits::{ToolCallDelta, ToolCallRequest};
 use crate::tools::policy::{ResolvedToolPolicy, ToolVerdict};
 use crate::tools::registry::ToolRegistry;
@@ -231,6 +233,7 @@ impl StreamingToolAccumulator {
 pub(crate) async fn execute_prevalidated(
     tool_calls: Vec<ToolCallRequest>,
     registry: &ToolRegistry,
+    session_id: &str,
     max_tool_use_concurrency: usize,
 ) -> Vec<StreamedToolResult> {
     if tool_calls.is_empty() {
@@ -253,7 +256,7 @@ pub(crate) async fn execute_prevalidated(
                 let tool_ref = registry.get(&tc.name);
                 let saved_args = tc.arguments.clone();
                 let mut exec_args = tc.arguments;
-                inject_call_id(&mut exec_args, &tc.id);
+                inject_framework_meta(&mut exec_args, &tc.id, session_id);
                 async move {
                     let result = match tool_ref {
                         Some(tool) => match tool.execute(exec_args).await {
@@ -519,7 +522,7 @@ mod tests {
             thought_signature: None,
         }];
 
-        let results = execute_prevalidated(calls, &reg, 10).await;
+        let results = execute_prevalidated(calls, &reg, "test-session", 10).await;
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].tool_call_id, "tc_1");
         assert!(results[0].result.is_ok());
@@ -544,14 +547,14 @@ mod tests {
             },
         ];
 
-        let results = execute_prevalidated(calls, &reg, 10).await;
+        let results = execute_prevalidated(calls, &reg, "test-session", 10).await;
         assert_eq!(results.len(), 2);
     }
 
     #[tokio::test]
     async fn execute_prevalidated_empty_returns_empty() {
         let reg = make_registry();
-        let results = execute_prevalidated(Vec::new(), &reg, 10).await;
+        let results = execute_prevalidated(Vec::new(), &reg, "test-session", 10).await;
         assert!(results.is_empty());
     }
 }

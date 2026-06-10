@@ -63,6 +63,14 @@ export interface RoutineOutputPolicy {
   createWorkItemProjectSlug?: string;
   createWorkItemTitle?: string;
   createWorkItemBody?: string;
+  /** CreateWorkItem mode: immediately start the created item.
+   *  Backend default is false (legacy policies stay backlog-only);
+   *  the wizard defaults new routines to true. */
+  autoStart: boolean;
+  /** UpdateExistingWorkItem mode: target work item short_id. */
+  updateWorkItemShortId?: string;
+  /** UpdateExistingWorkItem mode: project slug of the target item. */
+  updateWorkItemProjectSlug?: string;
 }
 export type RoutineRunTarget =
   | { kind: "agent_definition"; agentDefinitionId?: string }
@@ -108,6 +116,10 @@ export interface RoutineDefinition {
   trigger: RoutineTrigger;
   runTemplate: RoutineRunTemplate;
   outputPolicy: RoutineOutputPolicy;
+  /** Scheduler evaluation watermark (ISO 8601), backend-managed. */
+  lastEvaluatedAt?: string;
+  /** Next computed fire time (ISO 8601), backend-managed, display only. */
+  nextFireAt?: string;
   createdAt: string;
   updatedAt: string;
 }

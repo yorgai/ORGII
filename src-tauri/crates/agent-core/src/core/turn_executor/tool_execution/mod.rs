@@ -55,6 +55,14 @@ use single::{execute_single_tool, SingleResult};
 /// `__`-prefixed keys are framework-internal metadata, not LLM-facing args.
 pub(crate) const TOOL_CALL_ID_KEY: &str = "__call_id";
 
+/// Framework-reserved key for injecting the *dispatching* session's id into
+/// tool params. Unlike `ToolRegistry::set_session_key` (shared mutable state
+/// that concurrent background subagents inheriting the parent registry can
+/// stomp — last writer wins), this is per-call and race-free. Tools that need
+/// correct session attribution under concurrency (e.g. `create_plan`) must
+/// prefer this over their stored session key.
+pub(crate) const SESSION_ID_KEY: &str = "__session_id";
+
 /// Prefix that marks a tool-result string as an error.
 ///
 /// Both `single` and `parallel` execution paths build error tool_result
@@ -81,22 +89,33 @@ pub(crate) fn is_cancelled(cancel_flag: Option<&Arc<AtomicBool>>) -> bool {
     cancel_flag.is_some_and(|flag| flag.load(std::sync::atomic::Ordering::Relaxed))
 }
 
-/// Inject the LLM-assigned `tool_call_id` into the top-level params object
-/// so tools that need per-call identity can read it without relying on
-/// global side-channels. No-op when `params` is not a JSON object
-/// (defensive; tool params are always objects in practice).
+/// Inject framework metadata (`__call_id`, `__session_id`) into the
+/// top-level params object so tools that need per-call identity can read it
+/// without relying on global side-channels. No-op when `params` is not a
+/// JSON object (defensive; tool params are always objects in practice).
 ///
-/// This is the single source of truth for the `__call_id` contract — all
-/// three tool dispatch paths (sequential `single`, parallel read-only
-/// group, streaming prevalidated) call this helper immediately before
-/// handing `params` to `Tool::execute`. Adding a new metadata field
+/// This is the single source of truth for the `__`-prefixed metadata
+/// contract — all three tool dispatch paths (sequential `single`, parallel
+/// read-only group, streaming prevalidated) call this helper immediately
+/// before handing `params` to `Tool::execute`. Adding a new metadata field
 /// (e.g., `__turn_index`, `__parent_call_id`) is a one-line change here
 /// rather than a three-way copy-paste across dispatch sites.
-pub(crate) fn inject_call_id(params: &mut Value, call_id: &str) {
+///
+/// `__session_id` exists because `ToolRegistry::set_session_key` is shared
+/// mutable state: background subagents that inherit the parent's registry
+/// re-stamp every shared tool instance with their own session id at turn
+/// start, so the stored key is last-writer-wins while a subagent runs
+/// concurrently. Session-sensitive tools (`create_plan`) must read this
+/// per-call value instead.
+pub(crate) fn inject_framework_meta(params: &mut Value, call_id: &str, session_id: &str) {
     if let Some(obj) = params.as_object_mut() {
         obj.insert(
             TOOL_CALL_ID_KEY.to_string(),
             Value::String(call_id.to_string()),
+        );
+        obj.insert(
+            SESSION_ID_KEY.to_string(),
+            Value::String(session_id.to_string()),
         );
     }
 }
@@ -426,6 +445,24 @@ mod tests {
         let calls: Vec<ToolCallRequest> = vec![];
         let groups = partition_tool_calls(&calls, &reg);
         assert!(groups.is_empty());
+    }
+
+    // ---- inject_framework_meta ----
+
+    #[test]
+    fn inject_framework_meta_inserts_call_and_session_ids() {
+        let mut params = serde_json::json!({"title": "t"});
+        inject_framework_meta(&mut params, "tc_1", "session-abc");
+        assert_eq!(params[TOOL_CALL_ID_KEY], "tc_1");
+        assert_eq!(params[SESSION_ID_KEY], "session-abc");
+        assert_eq!(params["title"], "t");
+    }
+
+    #[test]
+    fn inject_framework_meta_noop_for_non_object() {
+        let mut params = serde_json::json!("not an object");
+        inject_framework_meta(&mut params, "tc_1", "session-abc");
+        assert_eq!(params, serde_json::json!("not an object"));
     }
 
     // ---- max_tool_use_concurrency ----

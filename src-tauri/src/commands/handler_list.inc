@@ -692,6 +692,7 @@ agent_core::state::commands::session::debug::security::debug_session_validate_co
 agent_core::state::commands::session::debug::subagent::debug_session_subagent_snapshot,
 api::agent::test::core::debug_work_item_runtime_launch,
 api::agent::test::core::debug_work_item_scheduler_run_once,
+api::agent::test::core::debug_routine_scheduler_run_once,
 // Structured introspection of the live model + fallback chain for an
 // active session. Used by `audit-models-llm.spec.mjs` to prove the
 // L4→L5 hop: `AgentDefinition.{selectedModelId, selectedAccountId}`

@@ -1,8 +1,12 @@
+import { listen } from "@tauri-apps/api/event";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { type RoutineDefinition, projectApi } from "@src/api/http/project";
-import type { AvailableAgent } from "@src/config/cliAgents";
+import {
+  type RoutineDefinition,
+  invalidateProjectCache,
+  projectApi,
+} from "@src/api/http/project";
 import { WIZARD_IDS } from "@src/config/mainAppPaths";
 import { useWizardParam } from "@src/hooks/navigation";
 import {
@@ -12,6 +16,9 @@ import {
 import type { RoutinesDetailState } from "@src/modules/MainApp/Integrations/Routines/RoutinesCategoryView";
 
 import type { DetailMode, IntegrationCategory } from "../types";
+
+/** Fine-grained routine event emitted by the Rust backend. */
+const ROUTINE_CHANGED_EVENT = "orgii-routine-changed";
 
 export interface UseRoutinesStateReturn {
   routinesState: Omit<RoutinesDetailState, "onClose">;
@@ -53,6 +60,28 @@ export function useRoutinesState(
     return () => window.clearTimeout(refreshTimer);
   }, [routinesActive, refreshRoutines]);
 
+  // Live updates: scheduler fires / terminal write-backs happen entirely in
+  // the backend, so the page must react to the fine-grained routine event.
+  useEffect(() => {
+    if (!routinesActive) return undefined;
+    let unlisten: (() => void) | undefined;
+    let cancelled = false;
+    void listen(ROUTINE_CHANGED_EVENT, () => {
+      invalidateProjectCache("__routines__");
+      void refreshRoutines();
+    }).then((dispose) => {
+      if (cancelled) {
+        dispose();
+      } else {
+        unlisten = dispose;
+      }
+    });
+    return () => {
+      cancelled = true;
+      unlisten?.();
+    };
+  }, [routinesActive, refreshRoutines]);
+
   const { wizard, entityId, openWizard, closeWizard } = useWizardParam();
   const routineWizardMode =
     wizard === WIZARD_IDS.ROUTINE_ADD || wizard === WIZARD_IDS.ROUTINE_EDIT;
@@ -77,8 +106,6 @@ export function useRoutinesState(
     () => [...builtInAgents, ...customAgents],
     [builtInAgents, customAgents]
   );
-
-  const cliAgents = useMemo<AvailableAgent[]>(() => [], []);
 
   const clearRoutinesState = useCallback(() => {
     setSelectedRoutineId(null);
@@ -147,7 +174,6 @@ export function useRoutinesState(
       wizardMode: routineWizardMode,
       editingRoutine,
       agents: allAgents,
-      cliAgents,
       onWizardSave: handleWizardSave,
       onWizardCancel: handleWizardCancel,
       onEdit: handleEdit,
@@ -160,7 +186,6 @@ export function useRoutinesState(
       routineWizardMode,
       editingRoutine,
       allAgents,
-      cliAgents,
       handleWizardSave,
       handleWizardCancel,
       handleEdit,

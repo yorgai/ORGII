@@ -50,10 +50,13 @@ pub use project::{
     resolve_slug,
     slugify,
     // execution
+    launch_phase_session,
     start_work_item,
+    start_work_item_with_reason,
     update_project,
     update_work_item,
     OrchestratorConfigOverrides,
+    PhaseLaunch,
 };
 
 use std::time::Duration;

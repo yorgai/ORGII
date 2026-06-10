@@ -237,17 +237,32 @@ impl Tool for CreatePlanTool {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        let session_id = self
-            .context
-            .session_id
-            .lock()
-            .await
-            .clone()
-            .ok_or_else(|| {
-                ToolError::ExecutionFailed(
-                    "create_plan invoked before session_id was set — this is a wiring bug".into(),
-                )
-            })?;
+        // Session attribution: prefer the framework-injected `__session_id`
+        // (per-call, race-free) over the stored `set_session_key` value.
+        // The stored key is shared mutable state — a concurrent background
+        // subagent that inherits the parent's ToolRegistry re-stamps every
+        // shared tool instance with its own session id at turn start, so a
+        // parent-issued create_plan could be misattributed to the subagent
+        // (observed 2026-06-10: parent plan submission rejected as
+        // "invoked from subagent session agent-builtin:explore-…").
+        let session_id = match params
+            .get(crate::core::turn_executor::tool_execution::SESSION_ID_KEY)
+            .and_then(|v| v.as_str())
+        {
+            Some(injected) => injected.to_string(),
+            None => self
+                .context
+                .session_id
+                .lock()
+                .await
+                .clone()
+                .ok_or_else(|| {
+                    ToolError::ExecutionFailed(
+                        "create_plan invoked before session_id was set — this is a wiring bug"
+                            .into(),
+                    )
+                })?,
+        };
 
         let pending_plan = if new_plan {
             None

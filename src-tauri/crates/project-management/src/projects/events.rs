@@ -7,3 +7,8 @@
 /// Tauri event name emitted whenever any project / work item / orchestrator
 /// state has been mutated and the frontend should re-fetch.
 pub const DATA_CHANGED_EVENT: &str = "orgii-data-changed";
+
+/// Tauri event name emitted when a routine or one of its fires changes
+/// (fired, started, succeeded, failed, …). Payload:
+/// `{ routineId, fireId?, status }`.
+pub const ROUTINE_CHANGED_EVENT: &str = "orgii-routine-changed";

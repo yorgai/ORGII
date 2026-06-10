@@ -37,6 +37,10 @@ const FREQUENCY_OPTIONS: { value: ScheduleFrequency; labelKey: string }[] = [
   { value: "monthly", labelKey: "common:schedule.freq.monthly" },
 ];
 
+// Recurring execution moved to the Routine system ("Routine = recurring,
+// work item = tracking"): existing cron schedules are auto-migrated to
+// routines at startup; new ones can no longer be created here. The
+// "recurring" mode remains readable for legacy values until migration runs.
 const MODE_OPTIONS: {
   value: ScheduleMode;
   labelKey: string;
@@ -48,7 +52,6 @@ const MODE_OPTIONS: {
     labelKey: "common:schedule.oneShot",
     Icon: CalendarClock,
   },
-  { value: "recurring", labelKey: "common:schedule.recurring", Icon: Repeat },
 ];
 
 const WEEKDAY_VALUES = [0, 1, 2, 3, 4, 5, 6] as const;
@@ -110,19 +113,33 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     []
   );
 
-  const modeOptions = useMemo<SelectOption[]>(
-    () =>
-      MODE_OPTIONS.map(({ value, labelKey, Icon }) => ({
-        value,
+  const modeOptions = useMemo<SelectOption[]>(() => {
+    const base = MODE_OPTIONS.map(({ value, labelKey, Icon }) => ({
+      value,
+      dataTestId: `work-item-schedule-mode-option-${value}`,
+      label: (
+        <span className="inline-flex items-center gap-2">
+          <Icon size={DROPDOWN_ITEM.iconSize} className="shrink-0" />
+          <span className="truncate">{t(labelKey)}</span>
+        </span>
+      ),
+    }));
+    // Legacy escape hatch: a not-yet-migrated cron schedule still renders
+    // its current value, but "recurring" is not offered for new schedules.
+    if (currentMode === "recurring") {
+      base.push({
+        value: "recurring",
+        dataTestId: "work-item-schedule-mode-option-recurring",
         label: (
           <span className="inline-flex items-center gap-2">
-            <Icon size={DROPDOWN_ITEM.iconSize} className="shrink-0" />
-            <span className="truncate">{t(labelKey)}</span>
+            <Repeat size={DROPDOWN_ITEM.iconSize} className="shrink-0" />
+            <span className="truncate">{t("common:schedule.recurring")}</span>
           </span>
         ),
-      })),
-    [t]
-  );
+      });
+    }
+    return base;
+  }, [t, currentMode]);
 
   const frequencyOptions = useMemo<SelectOption[]>(
     () =>
@@ -290,6 +307,7 @@ const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
               value={currentMode}
               options={modeOptions}
               onChange={handleModeChange}
+              dataTestId="work-item-schedule-mode-select"
             />
           </div>
           {schedule && (

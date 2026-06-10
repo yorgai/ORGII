@@ -177,6 +177,8 @@ async fn launch_rust_agent(
             project_slug,
             work_item_id,
             agent_role: params.agent_role.clone(),
+            lock_reason:
+                project_management::projects::types::WorkItemExecutionLockReason::ManualStart,
         },
         _ => LaunchProvenance::UserSession,
     };

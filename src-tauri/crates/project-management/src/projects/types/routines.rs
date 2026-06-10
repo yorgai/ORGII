@@ -61,6 +61,21 @@ pub struct RoutineOutputPolicy {
     pub create_work_item_title: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub create_work_item_body: Option<String>,
+    /// CreateWorkItem mode: immediately start the created work item's
+    /// orchestrator workflow (project-scoped items only).
+    ///
+    /// Serde default is `false`: policies stored before this field existed
+    /// (and e2e contract fixtures) keep their "create into backlog, fire
+    /// succeeds immediately" behavior. The wizard sets `true` for new
+    /// routines.
+    #[serde(default)]
+    pub auto_start: bool,
+    /// UpdateExistingWorkItem mode: target work item short_id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub update_work_item_short_id: Option<String>,
+    /// UpdateExistingWorkItem mode: project slug of the target work item.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub update_work_item_project_slug: Option<String>,
 }
 
 impl Default for RoutineOutputPolicy {
@@ -75,6 +90,9 @@ impl Default for RoutineOutputPolicy {
             create_work_item_project_slug: None,
             create_work_item_title: None,
             create_work_item_body: None,
+            auto_start: false,
+            update_work_item_short_id: None,
+            update_work_item_project_slug: None,
         }
     }
 }
@@ -146,6 +164,13 @@ pub struct RoutineDefinition {
     pub run_template: RoutineRunTemplate,
     #[serde(default = "default_output_policy")]
     pub output_policy: RoutineOutputPolicy,
+    /// Scheduler evaluation watermark (ISO 8601). Triggers due in
+    /// `(last_evaluated_at, now]` are fired on each scheduler tick.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_evaluated_at: Option<String>,
+    /// Next computed fire time (ISO 8601), for display only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_fire_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }

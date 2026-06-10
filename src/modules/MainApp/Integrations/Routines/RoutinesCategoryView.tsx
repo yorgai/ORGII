@@ -1,7 +1,6 @@
 import React from "react";
 
 import type { RoutineDefinition } from "@src/api/http/project";
-import type { AvailableAgent } from "@src/config/cliAgents";
 import type { AgentDefinition } from "@src/modules/MainApp/AgentOrgs/types";
 import type { CategoryTableContentProps } from "@src/modules/MainApp/Integrations/Tables";
 import { CategoryTableContent } from "@src/modules/MainApp/Integrations/Tables";
@@ -12,7 +11,6 @@ export interface RoutinesDetailState {
   wizardMode: boolean;
   editingRoutine: RoutineDefinition | undefined;
   agents: AgentDefinition[];
-  cliAgents: AvailableAgent[];
   onClose: () => void;
   onWizardSave: (routine: RoutineDefinition) => void;
   onWizardCancel: () => void;
@@ -39,7 +37,6 @@ export const RoutinesCategoryView: React.FC<RoutinesCategoryViewProps> = ({
       <RoutineWizard
         routine={routines.editingRoutine}
         agents={routines.agents}
-        cliAgents={routines.cliAgents}
         onSave={routines.onWizardSave}
         onCancel={routines.onWizardCancel}
       />

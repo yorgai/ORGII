@@ -75,26 +75,6 @@ export function useWorkItemActions(options: UseWorkItemActionsOptions = {}) {
     [options, projectSlug]
   );
 
-  const duplicateWorkItem = useCallback(
-    async (id: string) => {
-      setUpdating(id);
-      setError(null);
-
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        options.onSuccess?.();
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to duplicate work item";
-        setError(errorMessage);
-        options.onError?.(errorMessage);
-      } finally {
-        setUpdating(null);
-      }
-    },
-    [options]
-  );
-
   const createWorkItem = useCallback(
     async (data: {
       name: string;
@@ -167,7 +147,6 @@ export function useWorkItemActions(options: UseWorkItemActionsOptions = {}) {
     createWorkItem,
     deleteWorkItem,
     restoreWorkItem,
-    duplicateWorkItem,
     updating,
     error,
   };

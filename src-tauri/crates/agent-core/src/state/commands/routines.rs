@@ -17,6 +17,7 @@ const WORK_ITEM_PRIORITY_NONE: &str = "none";
 pub async fn project_fire_routine(
     state: tauri::State<'_, AgentAppState>,
     org_store: tauri::State<'_, AgentOrgsStore>,
+    app: tauri::AppHandle,
     routine_id: String,
 ) -> Result<types::RoutineFireResult, String> {
     let routine_id_for_read = routine_id.clone();
@@ -27,10 +28,31 @@ pub async fn project_fire_routine(
     if !routine.enabled {
         return Err(format!("Routine is disabled: {routine_id}"));
     }
+    fire_routine_internal(state.inner(), org_store.inner(), &app, &routine, None).await
+}
+
+/// Create a fire for `routine` (respecting its concurrency policy) and execute
+/// it according to the output policy. Shared by the `project_fire_routine`
+/// command (manual "Fire Now") and the routine scheduler.
+///
+/// `idempotency_key` dedupes scheduler-originated fires across restarts; the
+/// manual path passes `None`.
+pub async fn fire_routine_internal(
+    state: &AgentAppState,
+    org_store: &AgentOrgsStore,
+    app: &tauri::AppHandle,
+    routine: &types::RoutineDefinition,
+    idempotency_key: Option<String>,
+) -> Result<types::RoutineFireResult, String> {
     let routine_id_for_fire = routine.id.clone();
     let output_policy_for_fire = routine.output_policy.clone();
+    let key_for_fire = idempotency_key.clone();
     let pending_fire = tokio::task::spawn_blocking(move || {
-        io::create_routine_fire_for_policy(&routine_id_for_fire, &output_policy_for_fire)
+        io::create_routine_fire_for_policy_with_key(
+            &routine_id_for_fire,
+            &output_policy_for_fire,
+            key_for_fire.as_deref(),
+        )
     })
     .await
     .map_err(|err| format!("Task join error: {}", err))??;
@@ -43,12 +65,24 @@ pub async fn project_fire_routine(
         });
     }
 
-    match &routine.output_policy.mode {
+    execute_pending_fire(state, org_store, app, routine, &pending_fire).await
+}
+
+/// Execute an already-Pending fire according to the routine's output policy.
+/// Also the entry point for dequeued (Queued → Pending) fires.
+pub async fn execute_pending_fire(
+    state: &AgentAppState,
+    org_store: &AgentOrgsStore,
+    app: &tauri::AppHandle,
+    routine: &types::RoutineDefinition,
+    pending_fire: &types::RoutineFire,
+) -> Result<types::RoutineFireResult, String> {
+    let result = match &routine.output_policy.mode {
         types::RoutineOutputMode::DirectSession => {
-            launch_routine_direct_session(&state, org_store.inner(), &routine, &pending_fire).await
+            launch_routine_direct_session(state, org_store, routine, pending_fire).await
         }
         types::RoutineOutputMode::CreateWorkItem => {
-            match create_work_item_from_routine(&routine, &pending_fire).await {
+            match create_work_item_from_routine(routine, pending_fire, app).await {
                 Ok(result) => Ok(result),
                 Err(err) => {
                     let fire_id = pending_fire.id.clone();
@@ -62,17 +96,63 @@ pub async fn project_fire_routine(
             }
         }
         types::RoutineOutputMode::UpdateExistingWorkItem => {
-            let fire_id = pending_fire.id.clone();
-            let error =
-                "Routine output mode update_existing_work_item is not implemented".to_string();
-            let error_for_mark = error.clone();
-            let _ = tokio::task::spawn_blocking(move || {
-                io::mark_routine_fire_failed(&fire_id, &error_for_mark)
-            })
-            .await;
-            Err(error)
+            match update_existing_work_item_from_routine(routine, pending_fire, app).await {
+                Ok(result) => Ok(result),
+                Err(err) => {
+                    let fire_id = pending_fire.id.clone();
+                    let error = err.clone();
+                    let _ = tokio::task::spawn_blocking(move || {
+                        io::mark_routine_fire_failed(&fire_id, &error)
+                    })
+                    .await;
+                    Err(err)
+                }
+            }
         }
+    };
+
+    emit_routine_changed(
+        app,
+        &routine.id,
+        Some(&pending_fire.id),
+        match &result {
+            Ok(fire_result) => fire_status_str(&fire_result.fire.status),
+            Err(_) => "failed",
+        },
+    );
+
+    result
+}
+
+fn fire_status_str(status: &types::RoutineFireStatus) -> &'static str {
+    match status {
+        types::RoutineFireStatus::Pending => "pending",
+        types::RoutineFireStatus::Started => "started",
+        types::RoutineFireStatus::Succeeded => "succeeded",
+        types::RoutineFireStatus::Failed => "failed",
+        types::RoutineFireStatus::Skipped => "skipped",
+        types::RoutineFireStatus::Coalesced => "coalesced",
+        types::RoutineFireStatus::Queued => "queued",
     }
+}
+
+/// Emit the fine-grained routine event so the Routines page can refresh
+/// without a full `orgii-data-changed` reload.
+pub fn emit_routine_changed(
+    app: &tauri::AppHandle,
+    routine_id: &str,
+    fire_id: Option<&str>,
+    status: &str,
+) {
+    use tauri::Emitter;
+    let _ = app.emit(
+        project_management::projects::events::ROUTINE_CHANGED_EVENT,
+        serde_json::json!({
+            "routineId": routine_id,
+            "fireId": fire_id,
+            "status": status,
+        }),
+    );
 }
 
 async fn launch_routine_direct_session(
@@ -113,10 +193,13 @@ async fn launch_routine_direct_session(
 async fn create_work_item_from_routine(
     routine: &types::RoutineDefinition,
     pending_fire: &types::RoutineFire,
+    app: &tauri::AppHandle,
 ) -> Result<types::RoutineFireResult, String> {
-    let routine = routine.clone();
-    let pending_fire = pending_fire.clone();
-    tokio::task::spawn_blocking(move || {
+    let routine_owned = routine.clone();
+    let pending_fire_owned = pending_fire.clone();
+    let (project_slug, short_id) = tokio::task::spawn_blocking(move || {
+        let routine = routine_owned;
+        let pending_fire = pending_fire_owned;
         let project_slug = routine
             .output_policy
             .create_work_item_project_slug
@@ -193,15 +276,162 @@ async fn create_work_item_from_routine(
         } else {
             io::write_standalone_work_item(None, &short_id, &frontmatter, &body)?;
         }
-        let fire = io::mark_routine_fire_work_item_created(&pending_fire.id, &short_id)?;
-        Ok(types::RoutineFireResult {
-            fire,
-            session_id: None,
-            agent_org_run_id: None,
-        })
+        Ok::<_, String>((project_slug, short_id))
     })
     .await
-    .map_err(|err| format!("Task join error: {}", err))?
+    .map_err(|err| format!("Task join error: {}", err))??;
+
+    // auto_start only applies to project-scoped items: start_work_item
+    // requires a project slug (standalone items cannot run the orchestrator).
+    if routine.output_policy.auto_start {
+        if let Some(slug) = project_slug.as_deref() {
+            match crate::tool_infra::start_work_item_with_reason(
+                slug,
+                &short_id,
+                app,
+                None,
+                None,
+                types::WorkItemExecutionLockReason::RoutineAutoStart,
+            )
+            .await
+            {
+                Ok(_) => {
+                    let fire_id = pending_fire.id.clone();
+                    let short_id_for_mark = short_id.clone();
+                    let fire = tokio::task::spawn_blocking(move || {
+                        io::mark_routine_fire_work_item_started(
+                            &fire_id,
+                            &short_id_for_mark,
+                            None,
+                        )
+                    })
+                    .await
+                    .map_err(|err| format!("Task join error: {}", err))??;
+                    return Ok(types::RoutineFireResult {
+                        fire,
+                        session_id: None,
+                        agent_org_run_id: None,
+                    });
+                }
+                Err(err) => {
+                    tracing::warn!(
+                        "[routine] auto_start of {} failed, leaving item in backlog: {}",
+                        short_id,
+                        err
+                    );
+                }
+            }
+        }
+    }
+
+    let fire_id = pending_fire.id.clone();
+    let short_id_for_mark = short_id.clone();
+    let fire = tokio::task::spawn_blocking(move || {
+        io::mark_routine_fire_work_item_created(&fire_id, &short_id_for_mark)
+    })
+    .await
+    .map_err(|err| format!("Task join error: {}", err))??;
+    Ok(types::RoutineFireResult {
+        fire,
+        session_id: None,
+        agent_org_run_id: None,
+    })
+}
+
+/// UpdateExistingWorkItem mode: reset the target item's orchestrator phase,
+/// record the trigger in its history, then run it. Each run's linked session
+/// stays on the item, so the tracking history accumulates.
+async fn update_existing_work_item_from_routine(
+    routine: &types::RoutineDefinition,
+    pending_fire: &types::RoutineFire,
+    app: &tauri::AppHandle,
+) -> Result<types::RoutineFireResult, String> {
+    let short_id = routine
+        .output_policy
+        .update_work_item_short_id
+        .clone()
+        .filter(|value| !value.trim().is_empty())
+        .ok_or("Routine output policy is missing update_work_item_short_id")?;
+    let project_slug = routine
+        .output_policy
+        .update_work_item_project_slug
+        .clone()
+        .filter(|value| !value.trim().is_empty())
+        .ok_or("Routine output policy is missing update_work_item_project_slug")?;
+
+    let routine_name = routine.name.clone();
+    let routine_id = routine.id.clone();
+    let fire_id = pending_fire.id.clone();
+    let fired_at = pending_fire.fired_at.clone();
+    {
+        let slug = project_slug.clone();
+        let sid = short_id.clone();
+        tokio::task::spawn_blocking(move || {
+            io::update_work_item_atomic(&slug, &sid, |frontmatter, _body| {
+                use project_management::projects::types::OrchestratorPhase;
+                if let Some(ref lock) = frontmatter.execution_lock {
+                    if lock.active_session_id.is_some() {
+                        return Err(format!(
+                            "Work item {sid} already has a running session; \
+                             cannot re-trigger from routine"
+                        ));
+                    }
+                }
+                if let Some(ref mut state) = frontmatter.orchestrator_state {
+                    state.current_phase = OrchestratorPhase::Idle;
+                    state.interrupted = false;
+                    state.interrupted_phase = None;
+                }
+                frontmatter.status = "planned".to_string();
+                frontmatter.routine_source = Some(types::WorkItemRoutineSource {
+                    routine_id: routine_id.clone(),
+                    routine_fire_id: fire_id.clone(),
+                    routine_name: routine_name.clone(),
+                    fired_at: fired_at.clone(),
+                });
+                frontmatter.history.push(types::WorkItemHistoryEvent {
+                    id: format!("routine-trigger-{}", fire_id),
+                    action: types::WorkItemHistoryAction::Updated,
+                    timestamp: chrono::Utc::now().to_rfc3339(),
+                    actor_id: Some(routine_id.clone()),
+                    actor_name: Some(ROUTINE_CREATED_BY.to_string()),
+                    changes: Vec::new(),
+                    summary: Some(format!(
+                        "Triggered by routine \"{}\" at {}",
+                        routine_name, fired_at
+                    )),
+                });
+                frontmatter.updated_at = chrono::Utc::now().to_rfc3339();
+                Ok(())
+            })
+        })
+        .await
+        .map_err(|err| format!("Task join error: {}", err))??;
+    }
+
+    crate::tool_infra::start_work_item_with_reason(
+        &project_slug,
+        &short_id,
+        app,
+        None,
+        None,
+        types::WorkItemExecutionLockReason::RoutineAutoStart,
+    )
+    .await?;
+
+    let fire_id = pending_fire.id.clone();
+    let short_id_for_mark = short_id.clone();
+    let fire = tokio::task::spawn_blocking(move || {
+        io::mark_routine_fire_work_item_started(&fire_id, &short_id_for_mark, None)
+    })
+    .await
+    .map_err(|err| format!("Task join error: {}", err))??;
+
+    Ok(types::RoutineFireResult {
+        fire,
+        session_id: None,
+        agent_org_run_id: None,
+    })
 }
 
 fn routine_to_orchestrator_config(routine: &types::RoutineDefinition) -> types::OrchestratorConfig {

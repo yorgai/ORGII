@@ -545,7 +545,8 @@
       "tokens": "Token",
       "cycles": "Zyklen"
     },
-    "viewWorkItems": "Work Items anzeigen"
+    "viewWorkItems": "Work Items anzeigen",
+    "fromRoutine": "From routine: {{name}}"
   },
   "settings": {
     "sidebarGeneral": "Allgemein",

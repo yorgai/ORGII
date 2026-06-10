@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { RoutineDefinition } from "@src/api/http/project";
+import type { RoutineDefinition, RoutineFire } from "@src/api/http/project";
+import { projectApi } from "@src/api/http/project";
 import SettingsTable, {
   SETTINGS_TABLE_CELL,
   SETTINGS_TABLE_COL,
@@ -44,10 +45,80 @@ interface RoutinesTableProps {
   onFire?: () => void;
 }
 
+const FIRE_STATUS_COLOR: Record<string, string> = {
+  pending: "bg-warning-6",
+  started: "bg-primary-6",
+  succeeded: "bg-success-6",
+  failed: "bg-danger-6",
+  skipped: "bg-fill-3",
+  coalesced: "bg-fill-3",
+  queued: "bg-warning-6",
+};
+
+/** Expanded-row fire history list, lazily fetched per routine. */
+const RoutineFireHistory: React.FC<{ routineId: string }> = ({ routineId }) => {
+  const { t } = useTranslation("integrations");
+  const [fires, setFires] = useState<RoutineFire[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    projectApi.listRoutineFires(routineId).then((result) => {
+      if (!cancelled) setFires(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [routineId]);
+
+  if (fires === null) return null;
+  if (fires.length === 0) {
+    return (
+      <span className="text-[12px] text-text-3">
+        {t("routineFields.noFires")}
+      </span>
+    );
+  }
+
+  return (
+    <div
+      className="flex max-h-48 flex-col gap-1 overflow-y-auto"
+      data-testid={`integrations-routine-fires-${routineId}`}
+    >
+      {fires.slice(0, 20).map((fire) => (
+        <div
+          key={fire.id}
+          className="flex items-center gap-2 text-[12px] text-text-2"
+        >
+          <StatusDot
+            color={FIRE_STATUS_COLOR[fire.status] ?? "bg-fill-3"}
+            label={fire.status}
+          />
+          <span className="text-text-3">
+            {new Date(fire.firedAt).toLocaleString()}
+          </span>
+          {fire.sessionId && (
+            <span className="truncate text-text-4">{fire.sessionId}</span>
+          )}
+          {fire.workItemId && (
+            <span className="truncate text-text-4">{fire.workItemId}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 function getTriggerLabel(routine: RoutineDefinition): string {
   if (routine.trigger.kind === "one_time")
     return `One-time: ${routine.trigger.at}`;
   return `Cron: ${routine.trigger.cron}`;
+}
+
+function getNextFireLabel(routine: RoutineDefinition): string | null {
+  if (!routine.enabled || !routine.nextFireAt) return null;
+  const next = new Date(routine.nextFireAt);
+  if (Number.isNaN(next.getTime())) return null;
+  return next.toLocaleString();
 }
 
 function getRoutineTargetLabel(routine: RoutineDefinition): string {
@@ -265,6 +336,12 @@ export const RoutinesTable: React.FC<RoutinesTableProps> = ({
                                   {routine.runTemplate.prompt}
                                 </span>
                               </InfoRow>
+                              {getNextFireLabel(routine) && (
+                                <InfoRow
+                                  label={t("routineFields.nextFire")}
+                                  value={getNextFireLabel(routine) ?? ""}
+                                />
+                              )}
                               {onToggleEnabled && (
                                 <InfoRow label={t("status.enabled")}>
                                   <Switch
@@ -275,6 +352,12 @@ export const RoutinesTable: React.FC<RoutinesTableProps> = ({
                                   />
                                 </InfoRow>
                               )}
+                              <InfoRow
+                                label={t("routineFields.fireHistory")}
+                                layout="vertical"
+                              >
+                                <RoutineFireHistory routineId={routine.id} />
+                              </InfoRow>
                             </InlineCardColumnStack>
                           }
                         />

@@ -545,7 +545,8 @@
       "tokens": "Token",
       "cycles": "サイクル"
     },
-    "viewWorkItems": "Work Item を表示"
+    "viewWorkItems": "Work Item を表示",
+    "fromRoutine": "From routine: {{name}}"
   },
   "settings": {
     "sidebarGeneral": "一般",

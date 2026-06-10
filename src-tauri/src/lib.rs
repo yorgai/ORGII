@@ -794,6 +794,35 @@ pub fn run() {
                 tracing::info!("[scheduler] Work item scheduler started");
             }
 
+            // Migrate legacy work-item cron schedules into routines, then
+            // spawn the routine trigger scheduler.
+            {
+                let routine_handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    match tokio::task::spawn_blocking(
+                        agent_core::coordination::work_item_scheduler::migrate_cron_schedules,
+                    )
+                    .await
+                    {
+                        Ok(Ok(0)) => {}
+                        Ok(Ok(count)) => tracing::info!(
+                            "[scheduler] Migrated {} work item cron schedules to routines",
+                            count
+                        ),
+                        Ok(Err(err)) => tracing::warn!(
+                            "[scheduler] work item cron→routine migration failed: {}",
+                            err
+                        ),
+                        Err(err) => tracing::warn!(
+                            "[scheduler] cron→routine migration join error: {}",
+                            err
+                        ),
+                    }
+                    agent_core::coordination::routine_scheduler::spawn(routine_handle);
+                    tracing::info!("[scheduler] Routine scheduler started");
+                });
+            }
+
             // Spawn pluggable sync worker. Drains `outbox_entries`
             // rows on the configured push tick and runs a pull cycle
             // on the longer pull tick. The AppHandle is stashed via

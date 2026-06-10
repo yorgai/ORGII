@@ -545,7 +545,8 @@
       "tokens": "Token",
       "cycles": "chu kỳ"
     },
-    "viewWorkItems": "Xem Work Items"
+    "viewWorkItems": "Xem Work Items",
+    "fromRoutine": "From routine: {{name}}"
   },
   "settings": {
     "sidebarGeneral": "Chung",

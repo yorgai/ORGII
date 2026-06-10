@@ -6,9 +6,13 @@ import {
   ROUTINE_CATCH_UP_POLICY,
   ROUTINE_CONCURRENCY_POLICY,
   ROUTINE_OUTPUT_MODE,
+  type RoutineCatchUpPolicy,
+  type RoutineConcurrencyPolicy,
   type RoutineDefinition,
+  type RoutineOutputMode,
   type RoutineRunTarget,
   type RoutineWorkspaceTarget,
+  projectApi,
 } from "@src/api/http/project";
 import { rpc } from "@src/api/tauri/rpc";
 import type { DispatchCategory } from "@src/api/tauri/session";
@@ -16,11 +20,18 @@ import Button from "@src/components/Button";
 import Input from "@src/components/Input";
 import ModelIcon from "@src/components/ModelIcon";
 import Select from "@src/components/Select";
+import Switch from "@src/components/Switch";
 import Textarea from "@src/components/Textarea";
+import TimePicker from "@src/components/TimePicker";
 import { resolveAgentIcon } from "@src/config/agentIcons";
-import type { AvailableAgent } from "@src/config/cliAgents";
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import type { AgentDefinition } from "@src/modules/MainApp/AgentOrgs/types";
+import {
+  type CronParts,
+  type ScheduleFrequency,
+  buildCron,
+  parseCron,
+} from "@src/modules/ProjectManager/WorkItems/components/ScheduleEditor/cronUtils";
 import {
   SECTION_CONTROL_STYLE,
   SECTION_GAP_CLASSES,
@@ -60,7 +71,6 @@ const ROUTINE_WORKSPACE_KIND = {
 interface RoutineWizardProps {
   routine?: RoutineDefinition;
   agents?: AgentDefinition[];
-  cliAgents?: AvailableAgent[];
   onSave: (routine: RoutineDefinition) => void;
   onCancel: () => void;
 }
@@ -90,6 +100,8 @@ interface RoutineDraft {
   triggerKind: keyof typeof ROUTINE_TRIGGER_KIND;
   at: string;
   cron: string;
+  /** Whether the user is typing a raw cron instead of using the builder. */
+  customCron: boolean;
   /** Consolidated "Agent responsible for this routine" — agent def or org. */
   target: RoutineAgentTarget | null;
   /** Display label for the agent trigger row (built-in name or custom). */
@@ -111,6 +123,13 @@ interface RoutineDraft {
   modelLabel: string;
   /** Provider/model type for the model trigger icon. */
   modelType?: string;
+  outputMode: RoutineOutputMode;
+  concurrencyPolicy: RoutineConcurrencyPolicy;
+  catchUpPolicy: RoutineCatchUpPolicy;
+  createWorkItemProjectSlug: string;
+  autoStart: boolean;
+  updateWorkItemProjectSlug: string;
+  updateWorkItemShortId: string;
 }
 
 /** file:// URIs land in `RepoItem.fs_uri`; the wire format wants a plain path. */
@@ -161,6 +180,11 @@ function draftFromRoutine(routine?: RoutineDefinition): RoutineDraft {
     };
   }
 
+  const existingCron =
+    routine?.trigger.kind === ROUTINE_TRIGGER_KIND.CRON
+      ? routine.trigger.cron
+      : "";
+
   return {
     name: routine?.name ?? "",
     description: routine?.description ?? "",
@@ -170,10 +194,8 @@ function draftFromRoutine(routine?: RoutineDefinition): RoutineDraft {
       routine?.trigger.kind === ROUTINE_TRIGGER_KIND.ONE_TIME
         ? isoForInput(routine.trigger.at)
         : "",
-    cron:
-      routine?.trigger.kind === ROUTINE_TRIGGER_KIND.CRON
-        ? routine.trigger.cron
-        : "",
+    cron: existingCron,
+    customCron: existingCron !== "" && parseCron(existingCron) === null,
     target: storedTarget,
     targetLabel: "",
     targetIconId: undefined,
@@ -196,13 +218,25 @@ function draftFromRoutine(routine?: RoutineDefinition): RoutineDraft {
     accountId: routine?.runTemplate.resources.accountId ?? "",
     modelLabel: routine?.runTemplate.resources.model ?? "",
     modelType: undefined,
+    outputMode:
+      routine?.outputPolicy.mode ?? ROUTINE_OUTPUT_MODE.DIRECT_SESSION,
+    concurrencyPolicy:
+      routine?.outputPolicy.concurrencyPolicy ??
+      ROUTINE_CONCURRENCY_POLICY.COALESCE_IF_ACTIVE,
+    catchUpPolicy:
+      routine?.outputPolicy.catchUpPolicy ?? ROUTINE_CATCH_UP_POLICY.RUN_ONCE,
+    createWorkItemProjectSlug:
+      routine?.outputPolicy.createWorkItemProjectSlug ?? "",
+    autoStart: routine?.outputPolicy.autoStart ?? true,
+    updateWorkItemProjectSlug:
+      routine?.outputPolicy.updateWorkItemProjectSlug ?? "",
+    updateWorkItemShortId: routine?.outputPolicy.updateWorkItemShortId ?? "",
   };
 }
 
 const RoutineWizard: React.FC<RoutineWizardProps> = ({
   routine,
   agents = [],
-  cliAgents: _cliAgents = [],
   onSave,
   onCancel,
 }) => {
@@ -211,6 +245,9 @@ const RoutineWizard: React.FC<RoutineWizardProps> = ({
     draftFromRoutine(routine)
   );
   const [agentOrgs, setAgentOrgs] = useState<AgentOrgOption[]>([]);
+  const [projects, setProjects] = useState<{ slug: string; name: string }[]>(
+    []
+  );
   const [isAgentPaletteOpen, setIsAgentPaletteOpen] = useState(false);
   const [isWorkspacePaletteOpen, setIsWorkspacePaletteOpen] = useState(false);
   const [isModelPaletteOpen, setIsModelPaletteOpen] = useState(false);
@@ -228,6 +265,15 @@ const RoutineWizard: React.FC<RoutineWizardProps> = ({
           id: org.id,
           name: org.name,
           agentId: org.agentId,
+        }))
+      );
+    });
+    projectApi.readProjects().then((projectList) => {
+      if (cancelled) return;
+      setProjects(
+        projectList.map((project) => ({
+          slug: project.slug,
+          name: project.meta.name,
         }))
       );
     });
@@ -265,6 +311,12 @@ const RoutineWizard: React.FC<RoutineWizardProps> = ({
 
   const targetSelected = draft.target !== null;
 
+  const outputConfigValid =
+    draft.outputMode === ROUTINE_OUTPUT_MODE.UPDATE_EXISTING_WORK_ITEM
+      ? draft.updateWorkItemProjectSlug.trim() !== "" &&
+        draft.updateWorkItemShortId.trim() !== ""
+      : true;
+
   const canSave =
     draft.name.trim() !== "" &&
     draft.prompt.trim() !== "" &&
@@ -272,7 +324,8 @@ const RoutineWizard: React.FC<RoutineWizardProps> = ({
     (draft.triggerKind === "CRON"
       ? draft.cron.trim() !== ""
       : draft.at.trim() !== "") &&
-    (draft.workspaceKind === "NONE" || draft.workspacePath.trim() !== "");
+    (draft.workspaceKind === "NONE" || draft.workspacePath.trim() !== "") &&
+    outputConfigValid;
 
   const updateDraft = useCallback(function updateRoutineDraft<
     Key extends keyof RoutineDraft,
@@ -372,10 +425,171 @@ const RoutineWizard: React.FC<RoutineWizardProps> = ({
 
   const triggerOptions = useMemo(
     () => [
-      { value: "ONE_TIME", label: t("routineFields.oneTime") },
-      { value: "CRON", label: t("routineFields.cron") },
+      {
+        value: "ONE_TIME",
+        label: t("routineFields.oneTime"),
+        dataTestId: "routine-wizard-trigger-option-one_time",
+      },
+      {
+        value: "CRON",
+        label: t("routineFields.cron"),
+        dataTestId: "routine-wizard-trigger-option-cron",
+      },
     ],
     [t]
+  );
+
+  // Cron builder state: derive the structured parts from the raw cron, the
+  // same round-trip ScheduleEditor uses. Unparseable expressions fall back
+  // to the raw text input (customCron).
+  const cronParts = useMemo<CronParts>(() => {
+    const parsed = draft.cron ? parseCron(draft.cron) : null;
+    return parsed ?? { frequency: "daily", hour: 9, minute: 0 };
+  }, [draft.cron]);
+
+  const updateCronParts = useCallback((next: CronParts) => {
+    setDraft((current) => ({ ...current, cron: buildCron(next) }));
+  }, []);
+
+  const frequencyOptions = useMemo(
+    () => [
+      {
+        value: "daily",
+        label: t("common:schedule.freq.daily"),
+        dataTestId: "routine-wizard-cron-frequency-option-daily",
+      },
+      {
+        value: "weekday",
+        label: t("common:schedule.freq.weekday"),
+        dataTestId: "routine-wizard-cron-frequency-option-weekday",
+      },
+      {
+        value: "weekly",
+        label: t("common:schedule.freq.weekly"),
+        dataTestId: "routine-wizard-cron-frequency-option-weekly",
+      },
+      {
+        value: "monthly",
+        label: t("common:schedule.freq.monthly"),
+        dataTestId: "routine-wizard-cron-frequency-option-monthly",
+      },
+    ],
+    [t]
+  );
+
+  const weekdayOptions = useMemo(
+    () =>
+      (["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const).map(
+        (key, day) => ({
+          value: day,
+          label: t(`common:schedule.days.${key}`),
+        })
+      ),
+    [t]
+  );
+
+  const monthDayOptions = useMemo(
+    () =>
+      Array.from({ length: 28 }, (_, index) => ({
+        value: index + 1,
+        label: String(index + 1),
+      })),
+    []
+  );
+
+  const outputModeOptions = useMemo(
+    () => [
+      {
+        value: ROUTINE_OUTPUT_MODE.DIRECT_SESSION,
+        label: t("routineFields.outputDirectSession"),
+        dataTestId: "routine-wizard-output-mode-option-direct_session",
+      },
+      {
+        value: ROUTINE_OUTPUT_MODE.CREATE_WORK_ITEM,
+        label: t("routineFields.outputCreateWorkItem"),
+        dataTestId: "routine-wizard-output-mode-option-create_work_item",
+      },
+      {
+        value: ROUTINE_OUTPUT_MODE.UPDATE_EXISTING_WORK_ITEM,
+        label: t("routineFields.outputUpdateWorkItem"),
+        dataTestId:
+          "routine-wizard-output-mode-option-update_existing_work_item",
+      },
+    ],
+    [t]
+  );
+
+  const concurrencyOptions = useMemo(
+    () => [
+      {
+        value: ROUTINE_CONCURRENCY_POLICY.COALESCE_IF_ACTIVE,
+        label: t("routineFields.concurrencyCoalesce"),
+        dataTestId: "routine-wizard-concurrency-option-coalesce_if_active",
+      },
+      {
+        value: ROUTINE_CONCURRENCY_POLICY.SKIP_IF_ACTIVE,
+        label: t("routineFields.concurrencySkip"),
+        dataTestId: "routine-wizard-concurrency-option-skip_if_active",
+      },
+      {
+        value: ROUTINE_CONCURRENCY_POLICY.QUEUE_IF_ACTIVE,
+        label: t("routineFields.concurrencyQueue"),
+        dataTestId: "routine-wizard-concurrency-option-queue_if_active",
+      },
+      {
+        value: ROUTINE_CONCURRENCY_POLICY.ALWAYS_CREATE,
+        label: t("routineFields.concurrencyAlways"),
+        dataTestId: "routine-wizard-concurrency-option-always_create",
+      },
+    ],
+    [t]
+  );
+
+  const catchUpOptions = useMemo(
+    () => [
+      {
+        value: ROUTINE_CATCH_UP_POLICY.SKIP_MISSED,
+        label: t("routineFields.catchUpSkipMissed"),
+        dataTestId: "routine-wizard-catch-up-option-skip_missed",
+      },
+      {
+        value: ROUTINE_CATCH_UP_POLICY.RUN_ONCE,
+        label: t("routineFields.catchUpRunOnce"),
+        dataTestId: "routine-wizard-catch-up-option-run_once",
+      },
+      {
+        value: ROUTINE_CATCH_UP_POLICY.RUN_ALL_LIMITED,
+        label: t("routineFields.catchUpRunAll"),
+        dataTestId: "routine-wizard-catch-up-option-run_all_limited",
+      },
+    ],
+    [t]
+  );
+
+  const projectOptions = useMemo(
+    () => [
+      {
+        value: "",
+        label: t("routineFields.standaloneItem"),
+        dataTestId: "routine-wizard-output-project-option-standalone",
+      },
+      ...projects.map((project) => ({
+        value: project.slug,
+        label: project.name,
+        dataTestId: `routine-wizard-output-project-option-${project.slug}`,
+      })),
+    ],
+    [projects, t]
+  );
+
+  const updateProjectOptions = useMemo(
+    () =>
+      projects.map((project) => ({
+        value: project.slug,
+        label: project.name,
+        dataTestId: `routine-wizard-update-project-option-${project.slug}`,
+      })),
+    [projects]
   );
 
   const workspaceKindOptions = useMemo(
@@ -440,13 +654,30 @@ const RoutineWizard: React.FC<RoutineWizardProps> = ({
         mode: draft.mode.trim() || undefined,
         name: draft.name.trim(),
       },
-      outputPolicy: routine?.outputPolicy ?? {
-        mode: ROUTINE_OUTPUT_MODE.DIRECT_SESSION,
-        concurrencyPolicy: ROUTINE_CONCURRENCY_POLICY.COALESCE_IF_ACTIVE,
-        catchUpPolicy: ROUTINE_CATCH_UP_POLICY.RUN_ONCE,
-        maxCatchUpRuns: 1,
-        idempotencyScope: "routine_fire",
-        createWorkItemStatus: "planned",
+      outputPolicy: {
+        mode: draft.outputMode,
+        concurrencyPolicy: draft.concurrencyPolicy,
+        catchUpPolicy: draft.catchUpPolicy,
+        maxCatchUpRuns: routine?.outputPolicy.maxCatchUpRuns ?? 1,
+        idempotencyScope:
+          routine?.outputPolicy.idempotencyScope ?? "routine_fire",
+        createWorkItemStatus:
+          routine?.outputPolicy.createWorkItemStatus ?? "planned",
+        createWorkItemProjectSlug:
+          draft.outputMode === ROUTINE_OUTPUT_MODE.CREATE_WORK_ITEM
+            ? draft.createWorkItemProjectSlug.trim() || undefined
+            : routine?.outputPolicy.createWorkItemProjectSlug,
+        createWorkItemTitle: routine?.outputPolicy.createWorkItemTitle,
+        createWorkItemBody: routine?.outputPolicy.createWorkItemBody,
+        autoStart: draft.autoStart,
+        updateWorkItemShortId:
+          draft.outputMode === ROUTINE_OUTPUT_MODE.UPDATE_EXISTING_WORK_ITEM
+            ? draft.updateWorkItemShortId.trim() || undefined
+            : undefined,
+        updateWorkItemProjectSlug:
+          draft.outputMode === ROUTINE_OUTPUT_MODE.UPDATE_EXISTING_WORK_ITEM
+            ? draft.updateWorkItemProjectSlug.trim() || undefined
+            : undefined,
       },
       createdAt: routine?.createdAt ?? now,
       updatedAt: now,
@@ -505,12 +736,19 @@ const RoutineWizard: React.FC<RoutineWizardProps> = ({
             <SectionRow label={t("routineFields.trigger")} required>
               <Select
                 value={draft.triggerKind}
-                onChange={(value) =>
-                  updateDraft(
-                    "triggerKind",
-                    String(value) as RoutineDraft["triggerKind"]
-                  )
-                }
+                onChange={(value) => {
+                  const kind = String(value) as RoutineDraft["triggerKind"];
+                  setDraft((current) => ({
+                    ...current,
+                    triggerKind: kind,
+                    // Builder mode needs a concrete expression immediately,
+                    // otherwise canSave blocks on the empty string.
+                    cron:
+                      kind === "CRON" && !current.cron
+                        ? buildCron({ frequency: "daily", hour: 9, minute: 0 })
+                        : current.cron,
+                  }));
+                }}
                 options={triggerOptions}
                 size="default"
                 style={SECTION_CONTROL_STYLE}
@@ -533,19 +771,119 @@ const RoutineWizard: React.FC<RoutineWizardProps> = ({
                 />
               </SectionRow>
             ) : (
-              <SectionRow label={t("routineFields.cronExpression")} required>
-                <Input
-                  value={draft.cron}
-                  onChange={(value) => updateDraft("cron", value)}
-                  placeholder="0 9 * * 1"
-                  size="default"
-                  style={SECTION_CONTROL_STYLE}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  data-testid="routine-wizard-cron-input"
-                />
-              </SectionRow>
+              <>
+                {!draft.customCron && (
+                  <>
+                    <SectionRow
+                      label={t("common:schedule.frequency")}
+                      required
+                      indent
+                    >
+                      <Select
+                        value={cronParts.frequency}
+                        onChange={(value) =>
+                          updateCronParts({
+                            ...cronParts,
+                            frequency: String(value) as ScheduleFrequency,
+                          })
+                        }
+                        options={frequencyOptions}
+                        size="default"
+                        style={SECTION_CONTROL_STYLE}
+                        dataTestId="routine-wizard-cron-frequency-select"
+                      />
+                    </SectionRow>
+                    {cronParts.frequency === "weekly" && (
+                      <SectionRow label={t("common:schedule.dayOfWeek")} indent>
+                        <Select
+                          value={cronParts.dayOfWeek ?? 1}
+                          onChange={(value) =>
+                            updateCronParts({
+                              ...cronParts,
+                              dayOfWeek: Number(value),
+                            })
+                          }
+                          options={weekdayOptions}
+                          size="default"
+                          style={SECTION_CONTROL_STYLE}
+                          dataTestId="routine-wizard-cron-weekday-select"
+                        />
+                      </SectionRow>
+                    )}
+                    {cronParts.frequency === "monthly" && (
+                      <SectionRow
+                        label={t("common:schedule.dayOfMonth")}
+                        indent
+                      >
+                        <Select
+                          value={cronParts.dayOfMonth ?? 1}
+                          onChange={(value) =>
+                            updateCronParts({
+                              ...cronParts,
+                              dayOfMonth: Number(value),
+                            })
+                          }
+                          options={monthDayOptions}
+                          size="default"
+                          style={SECTION_CONTROL_STYLE}
+                          dataTestId="routine-wizard-cron-monthday-select"
+                        />
+                      </SectionRow>
+                    )}
+                    <SectionRow label={t("common:schedule.time")} indent>
+                      <TimePicker
+                        hour={cronParts.hour}
+                        minute={cronParts.minute}
+                        onChange={(hour, minute) =>
+                          updateCronParts({ ...cronParts, hour, minute })
+                        }
+                        variant="ghost"
+                      />
+                    </SectionRow>
+                  </>
+                )}
+                {draft.customCron && (
+                  <SectionRow
+                    label={t("routineFields.cronExpression")}
+                    required
+                    indent
+                  >
+                    <Input
+                      value={draft.cron}
+                      onChange={(value) => updateDraft("cron", value)}
+                      placeholder="0 9 * * 1"
+                      size="default"
+                      style={SECTION_CONTROL_STYLE}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      data-testid="routine-wizard-cron-input"
+                    />
+                  </SectionRow>
+                )}
+                <SectionRow label="" indent>
+                  <button
+                    type="button"
+                    className="text-[11px] text-primary-6 hover:underline"
+                    onClick={() => {
+                      // Entering builder mode discards an unparseable
+                      // custom cron (the builder always emits valid ones).
+                      setDraft((current) => ({
+                        ...current,
+                        customCron: !current.customCron,
+                        cron: current.customCron
+                          ? buildCron(cronParts)
+                          : current.cron,
+                      }));
+                    }}
+                    data-testid="routine-wizard-cron-toggle"
+                  >
+                    {draft.customCron
+                      ? t("common:schedule.hideCustomCron")
+                      : t("common:schedule.customCron")}
+                  </button>
+                </SectionRow>
+              </>
             )}
           </SectionContainer>
 
@@ -662,6 +1000,115 @@ const RoutineWizard: React.FC<RoutineWizardProps> = ({
                 }
                 dataTestId="routine-wizard-model-trigger"
                 ariaLabel={t("routineFields.model")}
+              />
+            </SectionRow>
+          </SectionContainer>
+
+          <SectionContainer>
+            <SectionRow label={t("routineFields.output")} required>
+              <Select
+                value={draft.outputMode}
+                onChange={(value) =>
+                  updateDraft("outputMode", String(value) as RoutineOutputMode)
+                }
+                options={outputModeOptions}
+                size="default"
+                style={SECTION_CONTROL_STYLE}
+                dataTestId="routine-wizard-output-mode-select"
+              />
+            </SectionRow>
+
+            {draft.outputMode === ROUTINE_OUTPUT_MODE.CREATE_WORK_ITEM && (
+              <>
+                <SectionRow label={t("routineFields.project")} indent>
+                  <Select
+                    value={draft.createWorkItemProjectSlug}
+                    onChange={(value) =>
+                      updateDraft("createWorkItemProjectSlug", String(value))
+                    }
+                    options={projectOptions}
+                    size="default"
+                    style={SECTION_CONTROL_STYLE}
+                    dataTestId="routine-wizard-output-project-select"
+                  />
+                </SectionRow>
+                <SectionRow label={t("routineFields.autoStart")} indent>
+                  <Switch
+                    size="small"
+                    checked={draft.autoStart}
+                    onChange={(checked) => updateDraft("autoStart", checked)}
+                    dataTestId="routine-wizard-auto-start-switch"
+                  />
+                </SectionRow>
+              </>
+            )}
+
+            {draft.outputMode ===
+              ROUTINE_OUTPUT_MODE.UPDATE_EXISTING_WORK_ITEM && (
+              <>
+                <SectionRow label={t("routineFields.project")} required indent>
+                  <Select
+                    value={draft.updateWorkItemProjectSlug}
+                    onChange={(value) =>
+                      updateDraft("updateWorkItemProjectSlug", String(value))
+                    }
+                    options={updateProjectOptions}
+                    size="default"
+                    style={SECTION_CONTROL_STYLE}
+                    dataTestId="routine-wizard-update-project-select"
+                  />
+                </SectionRow>
+                <SectionRow
+                  label={t("routineFields.targetWorkItem")}
+                  required
+                  indent
+                >
+                  <Input
+                    value={draft.updateWorkItemShortId}
+                    onChange={(value) =>
+                      updateDraft("updateWorkItemShortId", value)
+                    }
+                    placeholder="ABC-0042"
+                    size="default"
+                    style={SECTION_CONTROL_STYLE}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    data-testid="routine-wizard-update-short-id-input"
+                  />
+                </SectionRow>
+              </>
+            )}
+
+            <SectionRow label={t("routineFields.concurrencyPolicy")}>
+              <Select
+                value={draft.concurrencyPolicy}
+                onChange={(value) =>
+                  updateDraft(
+                    "concurrencyPolicy",
+                    String(value) as RoutineConcurrencyPolicy
+                  )
+                }
+                options={concurrencyOptions}
+                size="default"
+                style={SECTION_CONTROL_STYLE}
+                dataTestId="routine-wizard-concurrency-select"
+              />
+            </SectionRow>
+
+            <SectionRow label={t("routineFields.catchUpPolicy")}>
+              <Select
+                value={draft.catchUpPolicy}
+                onChange={(value) =>
+                  updateDraft(
+                    "catchUpPolicy",
+                    String(value) as RoutineCatchUpPolicy
+                  )
+                }
+                options={catchUpOptions}
+                size="default"
+                style={SECTION_CONTROL_STYLE}
+                dataTestId="routine-wizard-catch-up-select"
               />
             </SectionRow>
           </SectionContainer>

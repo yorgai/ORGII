@@ -1,4 +1,4 @@
-import { Bot, Terminal } from "lucide-react";
+import { Bot, Repeat, Terminal } from "lucide-react";
 import React, { useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -195,23 +195,39 @@ const WorkItemContent: React.FC<WorkItemContentProps> = ({
   });
 
   const descriptionSection = (
-    <ProjectContentEditor
-      key={workItem.session_id}
-      ref={editorRef}
-      title={workItem.name || ""}
-      onTitleChange={handleTitleChange}
-      initialDescription={resolvedDescription ?? rawDescription}
-      onDescriptionChange={handleDescriptionChange}
-      onImageInsert={onUpdateWorkItem ? handleImageInsert : undefined}
-      titleVisible={false}
-      separatorVisible={false}
-      descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
-      editable={!!onUpdateWorkItem}
-      descriptionMaxHeight={600}
-      descriptionClassName="no-bottom-border"
-      repoPath={repoPath}
-      className="w-full"
-    />
+    <>
+      {workItem.routineSource && (
+        <div
+          className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-fill-2 px-2 py-0.5 text-[11px] text-text-3"
+          data-testid="work-item-routine-source-chip"
+          title={workItem.routineSource.firedAt}
+        >
+          <Repeat size={11} className="shrink-0" />
+          <span className="truncate">
+            {t("workItems.fromRoutine", {
+              name: workItem.routineSource.routineName,
+            })}
+          </span>
+        </div>
+      )}
+      <ProjectContentEditor
+        key={workItem.session_id}
+        ref={editorRef}
+        title={workItem.name || ""}
+        onTitleChange={handleTitleChange}
+        initialDescription={resolvedDescription ?? rawDescription}
+        onDescriptionChange={handleDescriptionChange}
+        onImageInsert={onUpdateWorkItem ? handleImageInsert : undefined}
+        titleVisible={false}
+        separatorVisible={false}
+        descriptionPlaceholder={t("workItems.descriptionPlaceholder")}
+        editable={!!onUpdateWorkItem}
+        descriptionMaxHeight={600}
+        descriptionClassName="no-bottom-border"
+        repoPath={repoPath}
+        className="w-full"
+      />
+    </>
   );
 
   const todosSection = (

@@ -91,6 +91,7 @@ pub(crate) enum LaunchProvenance {
         project_slug: String,
         work_item_id: String,
         agent_role: Option<String>,
+        lock_reason: project_types::WorkItemExecutionLockReason,
     },
     RoutineFire {
         routine_fire_id: String,
@@ -138,6 +139,7 @@ pub struct WorkItemLaunchRequest<'a> {
     pub agent_definition_id: Option<&'a str>,
     pub agent_role: &'a str,
     pub sub_agent_ids: &'a [String],
+    pub lock_reason: project_types::WorkItemExecutionLockReason,
 }
 
 pub async fn launch_agent_session(
@@ -156,6 +158,7 @@ pub async fn launch_agent_session(
         agent_definition_id,
         agent_role,
         sub_agent_ids,
+        lock_reason,
     } = request;
 
     let workspace = match worktree_path.filter(|path| !path.is_empty()) {
@@ -195,6 +198,7 @@ pub async fn launch_agent_session(
                 project_slug: project_slug.to_string(),
                 work_item_id: work_item_id.to_string(),
                 agent_role: Some(agent_role.to_string()),
+                lock_reason,
             },
             mode: Some(crate::session::AgentExecMode::Build.as_str().to_string()),
             name: Some(format!("{}: {}", agent_role, work_item_id)),
@@ -348,6 +352,7 @@ pub(crate) async fn launch_rust_agent_run(
             work_item_id_value,
             &session_id,
             agent_role.as_deref(),
+            provenance_lock_reason(&request.provenance),
         )
         .await
         {
@@ -1197,6 +1202,7 @@ fn provenance_fields(
             project_slug,
             work_item_id,
             agent_role,
+            ..
         } => (
             Some(project_slug.clone()),
             Some(work_item_id.clone()),
@@ -1206,6 +1212,15 @@ fn provenance_fields(
         LaunchProvenance::RoutineFire {
             routine_fire_id, ..
         } => (None, None, None, Some(routine_fire_id.clone())),
+    }
+}
+
+fn provenance_lock_reason(
+    provenance: &LaunchProvenance,
+) -> project_types::WorkItemExecutionLockReason {
+    match provenance {
+        LaunchProvenance::WorkItem { lock_reason, .. } => lock_reason.clone(),
+        _ => project_types::WorkItemExecutionLockReason::ManualStart,
     }
 }
 
@@ -1356,6 +1371,7 @@ async fn acquire_work_item_execution_lock(
     work_item_id: &str,
     session_id: &str,
     agent_role: Option<&str>,
+    lock_reason: project_types::WorkItemExecutionLockReason,
 ) -> Result<(), String> {
     let project_slug = project_slug.to_string();
     let work_item_id = work_item_id.to_string();
@@ -1367,7 +1383,7 @@ async fn acquire_work_item_execution_lock(
             &work_item_id,
             &session_id,
             agent_role.as_deref(),
-            project_types::WorkItemExecutionLockReason::ManualStart,
+            lock_reason,
         )
     })
     .await

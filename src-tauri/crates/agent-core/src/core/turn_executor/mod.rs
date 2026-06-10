@@ -469,8 +469,13 @@ pub async fn execute_turn(
                 let calls = acc.take_ready_tool_calls();
                 (ids, calls)
             };
-            let pre_results =
-                execute_prevalidated(ready_calls, tools, config.max_tool_use_concurrency).await;
+            let pre_results = execute_prevalidated(
+                ready_calls,
+                tools,
+                session_id,
+                config.max_tool_use_concurrency,
+            )
+            .await;
 
             // Inject pre-computed results for tools that completed during streaming
             if !pre_results.is_empty() {

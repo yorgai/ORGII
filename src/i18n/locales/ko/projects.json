@@ -545,7 +545,8 @@
       "tokens": "Token",
       "cycles": "사이클"
     },
-    "viewWorkItems": "Work Item 보기"
+    "viewWorkItems": "Work Item 보기",
+    "fromRoutine": "From routine: {{name}}"
   },
   "settings": {
     "sidebarGeneral": "일반",

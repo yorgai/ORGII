@@ -4,16 +4,16 @@
 //! store and auto-starts items when:
 //! - `start_date` is in the past and status is `backlog` / `planned` / `todo`
 //! - `schedule.at` is in the past (one-shot)
-//! - `schedule.cron` matches (recurring via croner)
+//!
+//! Recurring (cron) execution is the Routine system's job — see
+//! `routine_scheduler` and the startup migration in `migrate_cron_schedules`.
 //!
 //! On failure, writes a notification to the user's inbox.
 
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
 use project_management::projects::io;
-use project_management::projects::types::{
-    OrchestratorPhase, WorkItemFrontmatter, WorkItemSchedule,
-};
+use project_management::projects::types::{WorkItemFrontmatter, WorkItemSchedule};
 
 const POLL_INTERVAL_SECS: u64 = 30;
 
@@ -74,7 +74,16 @@ async fn check_and_trigger(app: &tauri::AppHandle) -> Result<(), String> {
                     short_id, slug
                 );
 
-                match crate::tool_infra::start_work_item(slug, short_id, app, None, None).await {
+                match crate::tool_infra::start_work_item_with_reason(
+                    slug,
+                    short_id,
+                    app,
+                    None,
+                    None,
+                    project_management::projects::types::WorkItemExecutionLockReason::RoutineAutoStart,
+                )
+                .await
+                {
                     Ok(msg) => {
                         info!("[scheduler] Started: {}", msg);
                         update_status_in_progress(slug, short_id);
@@ -95,13 +104,6 @@ async fn check_and_trigger(app: &tauri::AppHandle) -> Result<(), String> {
             if should_trigger_at(schedule, &now) {
                 handle_schedule_trigger(slug, short_id, fm, app).await;
                 disable_one_shot_schedule(slug, short_id);
-                continue;
-            }
-
-            if should_trigger_cron(schedule, &now) {
-                reset_orchestrator_phase(slug, short_id);
-                handle_schedule_trigger(slug, short_id, fm, app).await;
-                update_cron_last_run(slug, short_id, &now);
             }
         }
     }
@@ -129,7 +131,16 @@ async fn handle_schedule_trigger(
         short_id, slug
     );
 
-    match crate::tool_infra::start_work_item(slug, short_id, app, None, None).await {
+    match crate::tool_infra::start_work_item_with_reason(
+        slug,
+        short_id,
+        app,
+        None,
+        None,
+        project_management::projects::types::WorkItemExecutionLockReason::RoutineAutoStart,
+    )
+    .await
+    {
         Ok(msg) => {
             info!("[scheduler] Started: {}", msg);
             update_status_in_progress(slug, short_id);
@@ -168,6 +179,7 @@ fn should_trigger_by_start_date(fm: &WorkItemFrontmatter) -> bool {
     false
 }
 
+/// Check if a one-shot schedule should fire.
 fn should_trigger_at(schedule: &WorkItemSchedule, now: &chrono::DateTime<chrono::Utc>) -> bool {
     if let Some(ref at_str) = schedule.at {
         if let Ok(at_time) = chrono::DateTime::parse_from_rfc3339(at_str) {
@@ -180,55 +192,9 @@ fn should_trigger_at(schedule: &WorkItemSchedule, now: &chrono::DateTime<chrono:
     false
 }
 
-/// Check if a cron schedule should fire: parse the expression, find the most
-/// recent tick, and compare against `last_run`.
-fn should_trigger_cron(schedule: &WorkItemSchedule, now: &chrono::DateTime<chrono::Utc>) -> bool {
-    let cron_expr = match &schedule.cron {
-        Some(expr) if !expr.is_empty() => expr,
-        _ => return false,
-    };
-
-    let cron = match croner::Cron::new(cron_expr).parse() {
-        Ok(cron) => cron,
-        Err(err) => {
-            error!(
-                "[scheduler] Invalid cron expression '{}': {}",
-                cron_expr, err
-            );
-            return false;
-        }
-    };
-
-    let window_start = *now - chrono::Duration::seconds(POLL_INTERVAL_SECS as i64 + 5);
-    match cron.find_next_occurrence(&window_start, false) {
-        Ok(next_tick) if next_tick <= *now => {
-            let already_fired = schedule.last_run.as_ref().is_some_and(|lr| {
-                chrono::DateTime::parse_from_rfc3339(lr)
-                    .map(|t| t >= next_tick)
-                    .unwrap_or(false)
-            });
-            !already_fired
-        }
-        _ => false,
-    }
-}
-
 fn update_status_in_progress(slug: &str, short_id: &str) {
     let _ = io::update_work_item_atomic(slug, short_id, |fm, _body| {
         fm.status = "in_progress".to_string();
-        fm.updated_at = chrono::Utc::now().to_rfc3339();
-        Ok(fm.title.clone())
-    });
-}
-
-/// Reset orchestrator phase to Idle so a recurring work item can be re-triggered.
-fn reset_orchestrator_phase(slug: &str, short_id: &str) {
-    let _ = io::update_work_item_atomic(slug, short_id, |fm, _body| {
-        if let Some(ref mut state) = fm.orchestrator_state {
-            state.current_phase = OrchestratorPhase::Idle;
-            state.interrupted_phase = None;
-        }
-        fm.status = "todo".to_string();
         fm.updated_at = chrono::Utc::now().to_rfc3339();
         Ok(fm.title.clone())
     });
@@ -245,14 +211,94 @@ fn disable_one_shot_schedule(slug: &str, short_id: &str) {
     });
 }
 
-fn update_cron_last_run(slug: &str, short_id: &str, now: &chrono::DateTime<chrono::Utc>) {
-    let now_iso = now.to_rfc3339();
-    let _ = io::update_work_item_atomic(slug, short_id, |fm, _body| {
-        if let Some(ref mut sched) = fm.schedule {
-            sched.last_run = Some(now_iso.clone());
+/// One-time startup migration: work items carrying a recurring
+/// `schedule.cron` violate "work item = tracking" (each re-run wipes the
+/// previous run's state). Convert each into a Routine with
+/// `UpdateExistingWorkItem` output mode pointing back at the item, then
+/// clear the item's schedule.
+pub fn migrate_cron_schedules() -> Result<usize, String> {
+    use project_management::projects::types::{
+        RoutineDefinition, RoutineOutputMode, RoutineOutputPolicy, RoutineResourceSelection,
+        RoutineRunTarget, RoutineRunTemplate, RoutineTrigger, RoutineWorkspaceTarget,
+    };
+
+    let projects = io::read_all_projects()?;
+    let mut migrated = 0usize;
+
+    for project in &projects {
+        let slug = &project.slug;
+        let items = match io::read_all_work_items(slug) {
+            Ok(items) => items,
+            Err(_) => continue,
+        };
+        for item in &items {
+            let fm = &item.frontmatter;
+            let cron = match fm.schedule.as_ref() {
+                Some(sched) if sched.enabled => match sched.cron.as_deref() {
+                    Some(expr) if !expr.is_empty() => expr.to_string(),
+                    _ => continue,
+                },
+                _ => continue,
+            };
+
+            let config = fm.orchestrator_config.clone().unwrap_or_default();
+            let routine = RoutineDefinition {
+                id: String::new(),
+                name: format!("Recurring: {}", fm.title),
+                description: format!(
+                    "Migrated from work item {} recurring schedule",
+                    fm.short_id
+                ),
+                enabled: true,
+                trigger: RoutineTrigger::Cron { cron },
+                run_template: RoutineRunTemplate {
+                    prompt: fm.title.clone(),
+                    target: RoutineRunTarget::AgentDefinition {
+                        agent_definition_id: config.agent_definition_id.clone(),
+                    },
+                    resources: RoutineResourceSelection {
+                        key_source: None,
+                        account_id: config.selected_account_id.clone(),
+                        model: config.selected_model_id.clone(),
+                        native_harness_type: None,
+                    },
+                    workspace: RoutineWorkspaceTarget::None,
+                    mode: config.agent_mode.clone(),
+                    name: Some(fm.title.clone()),
+                },
+                output_policy: RoutineOutputPolicy {
+                    mode: RoutineOutputMode::UpdateExistingWorkItem,
+                    update_work_item_short_id: Some(fm.short_id.clone()),
+                    update_work_item_project_slug: Some(slug.clone()),
+                    ..Default::default()
+                },
+                last_evaluated_at: None,
+                next_fire_at: None,
+                created_at: String::new(),
+                updated_at: String::new(),
+            };
+
+            if let Err(err) = io::upsert_routine(routine) {
+                warn!(
+                    "[scheduler] cron→routine migration failed for {}: {}",
+                    fm.short_id, err
+                );
+                continue;
+            }
+
+            let _ = io::update_work_item_atomic(slug, &fm.short_id, |fm, _body| {
+                fm.schedule = None;
+                fm.updated_at = chrono::Utc::now().to_rfc3339();
+                Ok(fm.title.clone())
+            });
+            migrated += 1;
+            info!(
+                "[scheduler] migrated work item {} cron schedule to a routine",
+                fm.short_id
+            );
         }
-        Ok(fm.title.clone())
-    });
+    }
+    Ok(migrated)
 }
 
 /// Write a "blocked" notification to the user's inbox.
