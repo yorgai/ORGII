@@ -431,6 +431,9 @@ fn build_non_streaming_response(parsed: MessagesResponse) -> LLMResponse {
     let finish_reason = match parsed.stop_reason.as_deref() {
         Some("end_turn") => finish::STOP,
         Some("tool_use") => finish::TOOL_CALLS,
+        // Map `max_tokens` to the unified LENGTH value so the turn
+        // executor's truncation recovery fires (see stream_parser.rs).
+        Some("max_tokens") => finish::LENGTH,
         Some(other) => other,
         None => finish::STOP,
     };

@@ -26,6 +26,11 @@ use crate::providers::traits::{
 // `finish_reason` values from `traits` at end-of-stream.
 const ANTHROPIC_STOP_END_TURN: &str = "end_turn";
 const ANTHROPIC_STOP_TOOL_USE: &str = "tool_use";
+// Output hit `max_tokens` — MUST map to `finish::LENGTH` or the turn
+// executor's truncation recovery (Tier-1 escalation / auto-continue)
+// never fires and a mid-thought cut is treated as a normal completion,
+// ending the turn (and flushing any queued messages) prematurely.
+const ANTHROPIC_STOP_MAX_TOKENS: &str = "max_tokens";
 
 /// Per-index accumulator for Anthropic streaming content blocks.
 ///
@@ -127,6 +132,7 @@ pub(super) fn handle_event(
                 state.finish_reason = match reason {
                     ANTHROPIC_STOP_END_TURN => finish::STOP.to_string(),
                     ANTHROPIC_STOP_TOOL_USE => finish::TOOL_CALLS.to_string(),
+                    ANTHROPIC_STOP_MAX_TOKENS => finish::LENGTH.to_string(),
                     other => other.to_string(),
                 };
             }
