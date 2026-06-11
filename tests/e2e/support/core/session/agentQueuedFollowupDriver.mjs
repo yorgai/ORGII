@@ -1761,24 +1761,26 @@ function rustAgentConfigs(configs) {
 
 async function readCurrentModeFromMenu(label) {
   const skillsToolsButtonSelector = '[data-testid="composer-skills-tools-button"]';
-  const flyoutTriggerSelector = '[data-testid="slash-command-mode-flyout-trigger"]';
-  let triggerText = await execJS(`
-    const node = document.querySelector('[data-testid="slash-command-mode-flyout-trigger"]');
-    return node ? (node.textContent || '').trim() : null;
-  `);
+  // The slash menu renders mode entries as flat ModeRow items (the Mode
+  // flyout trigger was removed in ddcbdbdd); the current mode row carries
+  // a lucide Check icon via DropdownSelectedCheck.
+  const modeOptionSelector = '[data-testid^="slash-command-mode-option-"]';
+  const readCurrentModeRow = `
+    const rows = Array.from(document.querySelectorAll('[data-testid^="slash-command-mode-option-"]'));
+    const current = rows.find((row) => row.querySelector('svg.lucide-check'));
+    return current ? (current.textContent || '').trim() : null;
+  `;
+  let triggerText = await execJS(readCurrentModeRow);
   if (!triggerText) {
     const opened = await execJS(js.visibleClick(skillsToolsButtonSelector));
     if (opened !== "clicked") {
       return { ok: false, reason: `skills/tools open failed: ${opened}` };
     }
-    await browser.waitUntil(async () => execJS(js.exists(flyoutTriggerSelector)), {
+    await browser.waitUntil(async () => execJS(js.exists(modeOptionSelector)), {
       timeout: 5_000,
-      timeoutMsg: `${label} slash command Mode flyout trigger never rendered`,
+      timeoutMsg: `${label} slash command mode rows never rendered`,
     });
-    triggerText = await execJS(`
-      const node = document.querySelector('[data-testid="slash-command-mode-flyout-trigger"]');
-      return node ? (node.textContent || '').trim() : null;
-    `);
+    triggerText = await execJS(readCurrentModeRow);
   }
   return { ok: true, triggerText };
 }
