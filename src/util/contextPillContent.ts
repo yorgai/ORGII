@@ -17,6 +17,8 @@ import { globalTabsAtom } from "@src/store/ui/globalTabsAtom";
 import type { ActivityChunk } from "@src/types/session/session";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
+export { capPillText } from "@src/config/pillTokens";
+
 const logger = createLogger("contextPill");
 
 const MAX_CONTENT_LENGTH = 100_000;

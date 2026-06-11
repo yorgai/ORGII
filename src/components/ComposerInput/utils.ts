@@ -66,6 +66,14 @@ export function serializePillNode(
   if (iconTypeStr === "member") return `@${displayName}`;
   if (iconTypeStr === "skill") return `${displayName} [skill:${path}]`;
 
+  // Session pills pass only the session ID — no transcript embedding
+  if (iconTypeStr === "session") {
+    const sessionId = path.startsWith("session://")
+      ? path.replace("session://", "").split("/")[0]
+      : path;
+    return `${displayName} [session:${sessionId}]`;
+  }
+
   const contextPrefix = CONTEXT_PILL_PREFIXES[iconType as string];
   if (contextPrefix && path.startsWith(contextPrefix)) {
     const stored = readPillText(path);

@@ -129,11 +129,11 @@ function parseUserMessage(text: string): Segment[] {
     const rawPath = match[3];
 
     if (PILL_TYPES.has(pillType)) {
-      // Context pills (terminal, session, browser) may embed base64 content
-      // after "::" or have a code block fallback in the same message
+      // Context pills (terminal, browser) may embed base64 content
+      // after "::" or have a code block fallback in the same message.
+      // Session pills carry only the session ID — no embedded content.
       const isContextPill =
         pillType === "terminal" ||
-        pillType === "session" ||
         pillType === "browser" ||
         pillType === "dom-element" ||
         pillType === "paste";
@@ -169,12 +169,11 @@ function parseUserMessage(text: string): Segment[] {
     lastIndex = matchStart + match[0].length;
   }
 
-  // Check if any context pill (terminal/session/browser) consumed the code block
+  // Check if any context pill (terminal/browser) consumed the code block
   const hasContextPill = segments.some(
     (s) =>
       s.kind === "pill" &&
       (s.pillType === "terminal" ||
-        s.pillType === "session" ||
         s.pillType === "browser" ||
         s.pillType === "paste")
   );

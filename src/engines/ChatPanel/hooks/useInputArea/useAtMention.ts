@@ -10,8 +10,8 @@ import type { ComposerInputRef } from "@src/components/ComposerInput";
 import { getTerminalBuffer } from "@src/components/TerminalInteractive/bufferCache";
 import { storePillText } from "@src/config/pillTokens";
 import {
+  capPillText,
   loadBrowserPillContent,
-  loadSessionPillContent,
   loadWorkItemPillContent,
 } from "@src/util/contextPillContent";
 import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
@@ -115,14 +115,15 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
           const ptySessionId = toBackendPtySessionId(value);
           const buffer = getTerminalBuffer(ptySessionId);
           if (buffer) {
-            const lineCount = buffer.split("\n").length;
+            const capped = capPillText(buffer);
+            const lineCount = capped.split("\n").length;
             const pillPath = `terminal://${value}/${Date.now()}`;
             const pillDisplayName =
               lineCount > 1
                 ? `${resolvedDisplayName} (1-${lineCount})`
                 : resolvedDisplayName;
 
-            storePillText(pillPath, buffer);
+            storePillText(pillPath, capped);
 
             composerInputRef.current.insertFilePill(
               pillPath,
@@ -150,7 +151,6 @@ export function useAtMention(options: UseAtMentionOptions): AtMentionHandlers {
             "session",
             resolvedDisplayName
           );
-          loadSessionPillContent(value, sessionPillPath);
           hasContentRef.current = true;
           break;
         }

@@ -26,8 +26,8 @@ import type { AgentExecMode } from "@src/config/sessionCreatorConfig";
 import { useSlashCommand } from "@src/engines/ChatPanel/hooks/useInputArea/useSlashCommand";
 import type { SlashItem } from "@src/types/extensions";
 import {
+  capPillText,
   loadBrowserPillContent,
-  loadSessionPillContent,
 } from "@src/util/contextPillContent";
 import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 import { useCurrentTheme } from "@src/util/ui/theme/themeUtils";
@@ -310,14 +310,15 @@ export function useComposerInput(
         const ptySessionId = toBackendPtySessionId(value);
         const buffer = getTerminalBuffer(ptySessionId);
         if (buffer) {
-          const lineCount = buffer.split("\n").length;
+          const capped = capPillText(buffer);
+          const lineCount = capped.split("\n").length;
           const pillPath = `terminal://${value}/${Date.now()}`;
           const pillDisplayName =
             lineCount > 1
               ? `${displayName || "Terminal"} (1-${lineCount})`
               : displayName || "Terminal";
 
-          storePillText(pillPath, buffer);
+          storePillText(pillPath, capped);
 
           composerInputRef.current.insertFilePill(
             pillPath,
@@ -338,7 +339,7 @@ export function useComposerInput(
         // No buffer available — fall through to default pill (navigation-only)
       }
 
-      // Session pills: load chat history and store as context
+      // Session pills: pass session ID only — no transcript loading
       if (iconType === "session") {
         const pillPath = `session://${value}/${Date.now()}`;
         const pillDisplayName = displayName || "Session";
@@ -348,7 +349,6 @@ export function useComposerInput(
           "session",
           pillDisplayName
         );
-        loadSessionPillContent(value, pillPath);
 
         const newItems = [
           ...contextItems,

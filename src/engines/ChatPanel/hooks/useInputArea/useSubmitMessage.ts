@@ -160,13 +160,30 @@ export function useSubmitMessage({
         await import("@src/util/contextPillContent");
       await waitForPendingPills();
 
+      // ── Session pill ID injection ─────────────────────────────────────────
+      // Session pills carry only the session ID (no transcript). Extract them
+      // from the serialized display text and append lightweight references.
+      const sessionPillPattern = /([^[\s]+)\s*\[session:([^\]]+)\]/g;
+      const sessionRefs: string[] = [];
+      let sessionMatch: RegExpExecArray | null;
+      while (
+        (sessionMatch = sessionPillPattern.exec(
+          hasSkillPills ? skillExpanded : displayText
+        )) !== null
+      ) {
+        sessionRefs.push(`[Session Reference: ${sessionMatch[2]}]`);
+      }
+
       // ── Terminal/PR pill text collection ─────────────────────────────────
       const terminalTexts =
         refs.composerInputRef.current.getTerminalPillTexts();
       const terminalEntries = Object.entries(terminalTexts);
       let agentContent: string | undefined;
+      const base = hasSkillPills ? skillExpanded : displayText;
+      const contextBlocks: string[] = [];
+
       if (terminalEntries.length > 0) {
-        const blocks = terminalEntries.map(([path, text]) => {
+        for (const [path, text] of terminalEntries) {
           if (path.startsWith("pr://")) {
             try {
               const prData = JSON.parse(text) as Record<string, unknown>;
@@ -185,17 +202,24 @@ export function useSubmitMessage({
                   : []),
                 `URL: ${prData["prUrl"]}`,
               ];
-              return lines.join("\n");
+              contextBlocks.push(lines.join("\n"));
             } catch {
-              return "```\n" + text + "\n```";
+              contextBlocks.push("```\n" + text + "\n```");
             }
+          } else {
+            contextBlocks.push("```\n" + text + "\n```");
           }
-          return "```\n" + text + "\n```";
-        });
-        const base = hasSkillPills ? skillExpanded : displayText;
-        agentContent = base + "\n\n" + blocks.join("\n\n");
+        }
+      }
+
+      if (sessionRefs.length > 0) {
+        contextBlocks.push(...sessionRefs);
+      }
+
+      if (contextBlocks.length > 0) {
+        agentContent = base + "\n\n" + contextBlocks.join("\n\n");
       } else if (hasSkillPills) {
-        agentContent = skillExpanded;
+        agentContent = base;
       }
 
       const imageDataUrls = imageAttachment.images.map((img) => img.dataUrl);

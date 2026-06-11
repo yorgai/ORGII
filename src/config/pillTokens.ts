@@ -52,7 +52,6 @@ export const PILL_REGEX = new RegExp(
 
 export const CONTEXT_PILL_PREFIXES: Record<string, string> = {
   terminal: "terminal://",
-  session: "session://",
   browser: "browser://",
   workitem: "workitem://",
   "dom-element": "dom-element://",
@@ -71,11 +70,11 @@ export const CONTEXT_PILL_TYPES: ReadonlySet<string> = new Set(
 
 /** Matches serialized context pill references like [terminal:terminal://...] */
 export const CONTEXT_PILL_REF_REGEX =
-  /\[(terminal|session|browser|dom-element|pr):(terminal|session|browser|dom-element|pr):\/\/[^\]]+\]/;
+  /\[(terminal|browser|dom-element|pr):(terminal|browser|dom-element|pr):\/\/[^\]]+\]/;
 
 /** Matches context headers and trace markers injected by the agent pipeline */
 export const CONTEXT_TRACE_MARKER_REGEX =
-  /(\[Terminal Context\]|\[Session Context\]|\[Browser Context\]|\[Tool:|(?:^|\n)User:\s|(?:^|\n)Agent:\s)/;
+  /(\[Terminal Context\]|\[Browser Context\]|\[Tool:|(?:^|\n)User:\s|(?:^|\n)Agent:\s)/;
 
 // ==============================================
 // Pill Text Cache (window.__orgiiTerminalPillTexts)
@@ -103,6 +102,19 @@ declare global {
       timestamp: number;
     };
   }
+}
+
+const MAX_PILL_TEXT_LENGTH = 100_000;
+
+/**
+ * Cap stored pill text to MAX_PILL_TEXT_LENGTH, keeping the tail so that the
+ * most recent output is preserved (e.g. terminal scrollback).
+ */
+export function capPillText(text: string): string {
+  if (text.length <= MAX_PILL_TEXT_LENGTH) return text;
+  const capped = text.slice(-MAX_PILL_TEXT_LENGTH);
+  const firstNewline = capped.indexOf("\n");
+  return firstNewline > 0 ? capped.slice(firstNewline + 1) : capped;
 }
 
 /**
