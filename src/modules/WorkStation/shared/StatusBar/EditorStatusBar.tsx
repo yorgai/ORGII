@@ -1,6 +1,7 @@
 import { useAtomValue } from "jotai";
 import {
   ArrowDown,
+  ArrowRightLeft,
   ArrowUp,
   Braces,
   Check,
@@ -31,7 +32,8 @@ import {
 } from "@src/components/Dropdown/tokens";
 import { SPINNER_TOKENS } from "@src/config/spinnerTokens";
 import { useRepoGitInitialization } from "@src/hooks/git";
-import { currentRepoAtom } from "@src/store/repo";
+import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
+import { currentRepoAtom, sessionRepoHintAtom } from "@src/store/repo";
 import { diagnosticHealthAtom } from "@src/store/workstation/codeEditor/diagnostics";
 import {
   indexingProgressAtom,
@@ -97,6 +99,12 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = memo(
     const currentRepo = useAtomValue(currentRepoAtom);
     const repoPath = currentRepo?.path ?? currentRepo?.fs_uri;
     const { isGitInitialized } = useRepoGitInitialization(repoPath);
+
+    const sessionRepoHint = useAtomValue(sessionRepoHintAtom);
+    const { selectRepo } = useRepoSelection({ autoLoad: false });
+    const handleSwitchToSessionRepo = useCallback(() => {
+      if (sessionRepoHint) selectRepo(sessionRepoHint.repoId);
+    }, [sessionRepoHint, selectRepo]);
     const showGitControls = isGitInitialized === true;
 
     const diagnosticHealth = useAtomValue(diagnosticHealthAtom);
@@ -253,6 +261,23 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = memo(
             </StatusBarButton>
           )}
 
+          {sessionRepoHint && (
+            <StatusBarButton
+              onClick={handleSwitchToSessionRepo}
+              title={t("workstation.switchToSessionRepo", {
+                name: sessionRepoHint.repoName,
+              })}
+              variant="primary"
+            >
+              <ArrowRightLeft size={13} />
+              <span className="font-medium">
+                {t("workstation.switchToSessionRepo", {
+                  name: sessionRepoHint.repoName,
+                })}
+              </span>
+            </StatusBarButton>
+          )}
+
           {showIndexingIndicator && (
             <StatusBarSegment
               className="text-text-1"
@@ -327,6 +352,8 @@ export const EditorStatusBar: React.FC<EditorStatusBarProps> = memo(
         isMultiRoot,
         workspaceLabel,
         workspaceTooltip,
+        sessionRepoHint,
+        handleSwitchToSessionRepo,
         t,
       ]
     );

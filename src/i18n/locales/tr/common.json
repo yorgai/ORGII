@@ -929,6 +929,7 @@
     "scanningFiles": "Scanning files...",
     "branchTooltip": "Dal: {{branch}}",
     "branchTooltipSwitching": "Dal: {{branch}} (geçiş yapılıyor…)",
+    "switchToSessionRepo": "{{name}} konumuna geç",
     "embeddingProgress": "Embedding: {{count}} chunk işlendi",
     "embeddingProgressWithPercent": "Embedding: {{count}} chunk işlendi ({{percent}}%)",
     "embeddingShort": "Embedding {{percent}}%",

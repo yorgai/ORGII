@@ -99,6 +99,8 @@ export {
   reposByTypeAtom,
   repoTotalStatsAtom,
   repoAgeSecondsAtom,
+  // Session repo hint
+  sessionRepoHintAtom,
   // Kind-based filtering
   gitReposAtom,
   workFoldersAtom,

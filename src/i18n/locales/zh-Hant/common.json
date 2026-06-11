@@ -941,6 +941,7 @@
     "scanningFiles": "正在掃描文件...",
     "branchTooltip": "分支：{{branch}}",
     "branchTooltipSwitching": "分支：{{branch}}（切換中…）",
+    "switchToSessionRepo": "切換到 {{name}}",
     "embeddingProgress": "嵌入：已處理 {{count}} 個 chunk",
     "embeddingProgressWithPercent": "嵌入：已處理 {{count}} 個 chunk（{{percent}}%）",
     "embeddingShort": "嵌入 {{percent}}%",

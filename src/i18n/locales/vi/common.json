@@ -929,6 +929,7 @@
     "scanningFiles": "Scanning files...",
     "branchTooltip": "Nhánh: {{branch}}",
     "branchTooltipSwitching": "Nhánh: {{branch}} (đang chuyển…)",
+    "switchToSessionRepo": "Chuyển sang {{name}}",
     "embeddingProgress": "Embedding: đã xử lý {{count}} chunk",
     "embeddingProgressWithPercent": "Embedding: đã xử lý {{count}} chunk ({{percent}}%)",
     "embeddingShort": "Embedding {{percent}}%",
