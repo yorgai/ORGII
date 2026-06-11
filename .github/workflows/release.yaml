@@ -85,6 +85,12 @@ jobs:
           node-version: "20"
           cache: "pnpm"
 
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('pnpm-lock.yaml') }}
+
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
