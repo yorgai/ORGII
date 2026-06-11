@@ -130,6 +130,14 @@ pub fn lsp_bin_dir() -> PathBuf {
     orgii_root().join("lsp-bin")
 }
 
+/// Sidecar binaries downloaded at runtime: `~/.orgii/bin/`.
+///
+/// Peekaboo, agent-browser, and bundled git live here after the first-run
+/// download so they are never bundled in the notarized `.app` bundle.
+pub fn sidecar_bin_dir() -> PathBuf {
+    orgii_root().join("bin")
+}
+
 /// Global LSP configuration: `~/.orgii/lsp.json`.
 pub fn lsp_config() -> PathBuf {
     orgii_root().join("lsp.json")
@@ -307,6 +315,9 @@ pub fn bundled_git_candidate_paths() -> Vec<PathBuf> {
     if let Ok(explicit_path) = std::env::var("ORGII_BUNDLED_GIT") {
         paths.push(PathBuf::from(explicit_path));
     }
+
+    // Runtime-downloaded git (post-notarized download): ~/.orgii/bin/git/bin/git
+    paths.push(join_segments(sidecar_bin_dir(), BUNDLED_GIT_RELATIVE_PATH));
 
     if let Ok(current_exe) = std::env::current_exe() {
         if let Some(macos_dir) = current_exe.parent() {

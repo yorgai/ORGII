@@ -879,9 +879,13 @@ fn require_existing_path(path: &Path, label: &str) -> Result<PathBuf, String> {
 }
 
 fn vendored_agent_browser_paths() -> Vec<PathBuf> {
-    let mut paths = vec![src_tauri_dir()
-        .join("bin")
-        .join(VENDORED_AGENT_BROWSER_BINARY)];
+    let mut paths = Vec::new();
+
+    // Runtime-downloaded binary (post-notarized download): ~/.orgii/bin/agent-browser-*
+    paths.push(
+        app_paths::sidecar_bin_dir()
+            .join(VENDORED_AGENT_BROWSER_BINARY),
+    );
 
     if let Ok(current_exe) = std::env::current_exe() {
         if let Some(macos_dir) = current_exe.parent() {
@@ -895,6 +899,13 @@ fn vendored_agent_browser_paths() -> Vec<PathBuf> {
             }
         }
     }
+
+    // Dev fallback: src-tauri/bin/
+    paths.push(
+        src_tauri_dir()
+            .join("bin")
+            .join(VENDORED_AGENT_BROWSER_BINARY),
+    );
 
     paths
 }

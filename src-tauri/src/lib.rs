@@ -445,6 +445,11 @@ pub fn run() {
             app.manage(screenshot_store.clone());
             tracing::info!("[Browser] Agent browser controller and screenshot store initialized");
 
+            // Download peekaboo, agent-browser, and bundled git into ~/.orgii/bin/
+            // on first launch (post-notarized download strategy). Non-blocking.
+            spawn_sidecar_setup();
+            tracing::info!("[sidecar_setup] background sidecar download spawned");
+
             // Initialize Unified Agent State (replaces separate OS/SDE states)
             let mut unified_state = agent_core::state::AgentAppState::with_browser(
                 agent_browser.clone(),

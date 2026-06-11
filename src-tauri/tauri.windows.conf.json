@@ -3,8 +3,7 @@
     "resources": {
       "model/": "model/",
       "../scripts/tools/download.py": "scripts/tools/download.py",
-      "resources/drag-icons/": "resources/drag-icons/",
-      "bin/agent-browser-x86_64-pc-windows-msvc.exe": "bin/agent-browser-x86_64-pc-windows-msvc.exe"
+      "resources/drag-icons/": "resources/drag-icons/"
     }
   }
 }

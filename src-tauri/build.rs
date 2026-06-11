@@ -13,14 +13,10 @@ use std::path::{Path, PathBuf};
 
 const OPTIONAL_SIDECAR_PLACEHOLDER_MARKER: &str = "ORGII_GENERATED_OPTIONAL_SIDECAR_PLACEHOLDER";
 
-const OPTIONAL_SIDECAR_RESOURCES: &[&str] = &[
-    "bin/agent-browser-aarch64-apple-darwin",
-    "bin/peekaboo",
-    "bin/peekaboo-LICENSE",
-    "bin/peekaboo-VERSION",
-    "bin/peekaboo-aarch64-apple-darwin",
-    "bin/peekaboo-x86_64-apple-darwin",
-];
+// Peekaboo, agent-browser, and dugite/git are downloaded at runtime into
+// ~/.orgii/bin/ (post-notarized download strategy) and are no longer bundled
+// inside the .app. No placeholder generation is needed for them.
+const OPTIONAL_SIDECAR_RESOURCES: &[&str] = &[];
 
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));

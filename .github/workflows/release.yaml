@@ -1,27 +1,30 @@
 # Build, sign, notarize, and release ORGII for macOS (Apple Silicon) and Windows (x64).
 #
-# Trigger: push a tag matching v* (e.g. v0.2.0, v0.2.0-rc.1)
+# Trigger: push a tag matching v* (e.g. v1.0.1, v1.0.1-nightly.20260611)
+#
+# Sidecar binaries (peekaboo, agent-browser, dugite/git) are NOT bundled in the
+# .app. They are downloaded at first launch into ~/.orgii/bin/ by the app itself
+# (post-notarized download strategy). This keeps the notarized bundle small and
+# eliminates the historical notarization hang caused by thousands of dugite files.
 #
 # Required GitHub Secrets (macOS):
 #   APPLE_CERTIFICATE               — base64-encoded .p12 Developer ID certificate
 #   APPLE_CERTIFICATE_PASSWORD      — password for the .p12
-#   APPLE_SIGNING_IDENTITY          — e.g. "Developer ID Application: ORGII AI Inc (XXXXXXXXXX)"
+#   APPLE_SIGNING_IDENTITY          — e.g. "Developer ID Application: HOUYi HE (S4UG24G7HJ)"
 #   APPLE_ID                        — Apple account email for notarization
 #   APPLE_PASSWORD                  — app-specific password for notarization
 #   APPLE_TEAM_ID                   — 10-char Apple Team ID
-#   TAURI_SIGNING_PRIVATE_KEY       — Tauri updater ed25519 private key (shared with Windows)
+#   TAURI_SIGNING_PRIVATE_KEY       — Tauri updater ed25519 private key
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — password for the updater key
 #
 # Required GitHub Secrets (Windows — Azure Trusted Signing via OIDC):
 #   AZURE_CLIENT_ID                 — App Registration client ID (Federated Credential)
 #   AZURE_TENANT_ID                 — Entra ID tenant ID
 #   AZURE_SUBSCRIPTION_ID           — Azure subscription ID
-#   No client secret needed — uses GitHub OIDC federated identity
 #
 # Azure Trusted Signing config (already provisioned):
 #   Account:  orgii-codesign  (East US — https://eus.codesigning.azure.net/)
 #   Profile:  orgii-windows   (Public Trust, SHA256)
-#   Role:     Artifact Signing Certificate Profile Signer on the profile
 
 name: "Release ORGII"
 
@@ -75,17 +78,11 @@ jobs:
       # ── Stamp version from git tag ──────────────────────────
       - name: Set version from tag
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"  # v0.2.0-rc.1 → 0.2.0-rc.1
+          VERSION="${GITHUB_REF_NAME#v}"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "=== Release version: $VERSION ==="
-
-          # Patch tauri.conf.json
           sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
-
-          # Patch package.json
           sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
-
-          # Verify
           grep '"version"' src-tauri/tauri.conf.json package.json
 
       # ── Node.js + pnpm ───────────────────────────────────────
@@ -117,103 +114,18 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: "./src-tauri -> target"
-          shared-key: "release-macos-aarch64" # shared across all tag refs
-
-      # ── Download sidecar binaries (peekaboo, agent-browser) ──
-      - name: Cache sidecar binaries
-        uses: actions/cache@v5
-        with:
-          path: src-tauri/bin
-          key: sidecars-peekaboo-v3.2.3-agent-browser-v0.27.2-macos
-
-      - name: Download sidecar binaries
-        run: python3 scripts/tools/download_sidecars.py
-
-      # ── Pre-sign sidecar binaries before Tauri copies them ──────
-      - name: Pre-sign sidecar binaries
-        if: env.HAS_APPLE_CERT == 'true'
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-        run: |
-          SIDECAR_ENTITLEMENTS="src-tauri/sidecar-entitlements.plist"
-
-          # dugite git binaries — hardened runtime + timestamp
-          echo "Pre-signing dugite git binaries..."
-          find "node_modules/dugite/git" -type f | while read -r bin; do
-            if file "$bin" | grep -qE "Mach-O|executable|dylib|bundle"; then
-              codesign --force --sign "$APPLE_SIGNING_IDENTITY" \
-                --options runtime --timestamp \
-                "$bin" 2>/dev/null && echo "Signed: $bin" || echo "Skipped: $bin"
-            fi
-          done
-
-          # sidecar binaries (peekaboo, agent-browser) — use sidecar entitlements
-          # to ensure get-task-allow is NOT present
-          echo "Pre-signing sidecar binaries..."
-          for bin in src-tauri/bin/peekaboo \
-                     src-tauri/bin/peekaboo-aarch64-apple-darwin \
-                     src-tauri/bin/peekaboo-x86_64-apple-darwin \
-                     src-tauri/bin/agent-browser-aarch64-apple-darwin; do
-            if [ -f "$bin" ] && file "$bin" | grep -qE "Mach-O|executable"; then
-              codesign --force --sign "$APPLE_SIGNING_IDENTITY" \
-                --options runtime --timestamp \
-                --entitlements "$SIDECAR_ENTITLEMENTS" \
-                "$bin" && echo "Signed: $bin" || echo "Failed: $bin"
-            fi
-          done
-          echo "Done pre-signing sidecar binaries"
+          shared-key: "release-macos-aarch64"
 
       # ── Build Tauri app (sign + notarize + updater artifacts) ─
       - name: Build ORGII
         env:
-          # Apple signing & notarization (Tauri reads these automatically)
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Tauri updater signing
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        # Semantic search archived; no extra `--features` needed.
         run: pnpm tauri build --target aarch64-apple-darwin
-
-      # ── Re-sign sidecar binaries inside the assembled .app ──────
-      # Tauri calls codesign on the whole bundle, but it doesn't re-sign
-      # nested Resources/bin/* with hardened runtime. We do it here so
-      # Apple's notarization service sees the correct signatures.
-      - name: Re-sign sidecar binaries in .app bundle
-        if: env.HAS_APPLE_CERT == 'true'
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-        run: |
-          APP="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/ORGII.app"
-          SIDECAR_ENTITLEMENTS="src-tauri/sidecar-entitlements.plist"
-          RESOURCES_BIN="$APP/Contents/Resources/bin"
-
-          if [ ! -d "$APP" ]; then
-            echo "No .app bundle found, skipping"
-            exit 0
-          fi
-
-          echo "Re-signing sidecar binaries in $RESOURCES_BIN ..."
-          for bin in peekaboo peekaboo-aarch64-apple-darwin peekaboo-x86_64-apple-darwin \
-                     agent-browser-aarch64-apple-darwin; do
-            target="$RESOURCES_BIN/$bin"
-            if [ -f "$target" ] && file "$target" | grep -qE "Mach-O|executable"; then
-              codesign --force --sign "$APPLE_SIGNING_IDENTITY" \
-                --options runtime --timestamp \
-                --entitlements "$SIDECAR_ENTITLEMENTS" \
-                "$target" && echo "Re-signed: $target" || echo "Failed: $target"
-            fi
-          done
-
-          # Re-sign the whole bundle to include the updated nested signatures
-          echo "Re-signing the top-level .app bundle..."
-          codesign --force --deep --sign "$APPLE_SIGNING_IDENTITY" \
-            --options runtime --timestamp \
-            --entitlements "src-tauri/entitlements.plist" \
-            "$APP"
-          echo "Bundle re-sign complete"
 
       # ── Locate build artifacts ────────────────────────────────
       - name: Gather release artifacts
@@ -221,11 +133,9 @@ jobs:
         run: |
           BUNDLE_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle"
 
-          # .dmg installer
           DMG=$(find "$BUNDLE_DIR/dmg" -name "*.dmg" | head -1)
           echo "dmg=$DMG" >> "$GITHUB_OUTPUT"
 
-          # Updater: .app.tar.gz and .app.tar.gz.sig
           UPDATER_TAR=$(find "$BUNDLE_DIR/macos" -name "*.app.tar.gz" ! -name "*.sig" | head -1)
           UPDATER_SIG=$(find "$BUNDLE_DIR/macos" -name "*.app.tar.gz.sig" | head -1)
           echo "updater_tar=$UPDATER_TAR" >> "$GITHUB_OUTPUT"
@@ -272,7 +182,7 @@ jobs:
             ${{ steps.artifacts.outputs.updater_sig }}
             latest.json
 
-      # ── Cleanup keychain (only if certificate was imported) ────
+      # ── Cleanup keychain ────────────────────────────────────────
       - name: Cleanup keychain
         if: always() && env.HAS_APPLE_CERT == 'true'
         run: |
@@ -285,7 +195,7 @@ jobs:
   build-windows:
     name: Build & Release (Windows x64)
     runs-on: windows-latest
-    needs: build-and-release  # upload to the release the macOS job already created
+    needs: build-and-release
     env:
       HAS_AZURE_SIGNING: ${{ secrets.AZURE_CLIENT_ID != '' }}
     steps:
@@ -329,16 +239,6 @@ jobs:
           workspaces: "./src-tauri -> target"
           shared-key: "release-windows-x64"
 
-      # ── Download sidecar binaries (agent-browser Windows) ───────
-      - name: Cache sidecar binaries
-        uses: actions/cache@v5
-        with:
-          path: src-tauri/bin
-          key: sidecars-agent-browser-v0.27.2-windows
-
-      - name: Download sidecar binaries
-        run: python3 scripts/tools/download_sidecars.py
-
       # ── Build Tauri app ──────────────────────────────────────────
       - name: Build ORGII
         env:
@@ -354,7 +254,6 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          # No client-secret — uses GitHub OIDC federated identity (id-token: write)
 
       - name: Sign Windows artifacts
         if: env.HAS_AZURE_SIGNING == 'true'
@@ -384,16 +283,16 @@ jobs:
           NSIS_ZIP=$(find "$BUNDLE_DIR/nsis" -name "*.nsis.zip" | head -1)
           NSIS_SIG=$(find "$BUNDLE_DIR/nsis" -name "*.nsis.zip.sig" | head -1)
 
-          echo "msi=$MSI"             >> "$GITHUB_OUTPUT"
-          echo "msi_zip=$MSI_ZIP"     >> "$GITHUB_OUTPUT"
-          echo "msi_sig=$MSI_SIG"     >> "$GITHUB_OUTPUT"
-          echo "nsis=$NSIS"           >> "$GITHUB_OUTPUT"
-          echo "nsis_zip=$NSIS_ZIP"   >> "$GITHUB_OUTPUT"
-          echo "nsis_sig=$NSIS_SIG"   >> "$GITHUB_OUTPUT"
+          echo "msi=$MSI"           >> "$GITHUB_OUTPUT"
+          echo "msi_zip=$MSI_ZIP"   >> "$GITHUB_OUTPUT"
+          echo "msi_sig=$MSI_SIG"   >> "$GITHUB_OUTPUT"
+          echo "nsis=$NSIS"         >> "$GITHUB_OUTPUT"
+          echo "nsis_zip=$NSIS_ZIP" >> "$GITHUB_OUTPUT"
+          echo "nsis_sig=$NSIS_SIG" >> "$GITHUB_OUTPUT"
 
           echo "=== Windows artifacts ==="
-          echo "MSI:      $MSI"
-          echo "NSIS:     $NSIS"
+          echo "MSI:  $MSI"
+          echo "NSIS: $NSIS"
 
       # ── Upload to existing GitHub Release ───────────────────────
       - name: Upload Windows artifacts to release

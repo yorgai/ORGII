@@ -669,6 +669,13 @@ async fn run_peekaboo_cli_command(
 }
 
 fn resolve_peekaboo_executable(app_handle: Option<&tauri::AppHandle>) -> Result<PathBuf, String> {
+    // 1. Runtime-downloaded binary (post-notarized download): ~/.orgii/bin/peekaboo
+    let downloaded_path = app_paths::sidecar_bin_dir().join("peekaboo");
+    if is_real_sidecar_file(&downloaded_path) {
+        return Ok(downloaded_path);
+    }
+
+    // 2. Bundled inside .app Resources (legacy / dev builds that include it)
     if let Some(handle) = app_handle {
         match handle.path().resolve(
             BUNDLED_PEEKABOO_RESOURCE,
@@ -677,7 +684,7 @@ fn resolve_peekaboo_executable(app_handle: Option<&tauri::AppHandle>) -> Result<
             Ok(resource_path) if is_real_sidecar_file(&resource_path) => return Ok(resource_path),
             Ok(resource_path) => {
                 warn!(
-                    "[peekaboo] bundled resource path does not exist: {}",
+                    "[peekaboo] bundled resource path is placeholder: {}",
                     resource_path.display()
                 );
             }
@@ -690,15 +697,19 @@ fn resolve_peekaboo_executable(app_handle: Option<&tauri::AppHandle>) -> Result<
         }
     }
 
+    // 3. Development path: src-tauri/bin/peekaboo
     let dev_path = dev_peekaboo_path(env!("CARGO_MANIFEST_DIR"));
     if is_real_sidecar_file(&dev_path) {
         return Ok(dev_path);
     }
 
     Err(format!(
-        "Bundled Peekaboo CLI was not found. Expected packaged resource '{}' or development path '{}'.",
+        "Peekaboo CLI not found. Run the app once to trigger automatic download, \
+         or install manually to '{}'. Checked: '{}', '{}', '{}'.",
+        downloaded_path.display(),
+        downloaded_path.display(),
         BUNDLED_PEEKABOO_RESOURCE,
-        dev_path.display()
+        dev_path.display(),
     ))
 }
 
