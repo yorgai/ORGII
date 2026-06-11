@@ -30,7 +30,7 @@ jobs:
     steps:
       # ── Checkout ──────────────────────────────────────────────
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           path: .
@@ -88,16 +88,16 @@ jobs:
 
       # ── Node.js + pnpm ───────────────────────────────────────
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: "pnpm"
 
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: node_modules
           key: node-modules-${{ hashFiles('pnpm-lock.yaml') }}
@@ -126,7 +126,7 @@ jobs:
 
       # ── Download sidecar binaries (peekaboo, agent-browser) ──
       - name: Cache sidecar binaries
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: src-tauri/bin
           key: sidecars-peekaboo-v3.2.3-agent-browser-v0.27.2-macos
@@ -266,7 +266,7 @@ jobs:
 
       # ── Create GitHub Release ─────────────────────────────────
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: false
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-nightly') }}
