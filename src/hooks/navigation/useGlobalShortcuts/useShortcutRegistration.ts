@@ -1,7 +1,10 @@
 import { type MutableRefObject, useEffect } from "react";
 
 import { shortcutRegistry } from "@src/hooks/keyboard";
-import { openAgentControlSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
+import {
+  openAgentControlSpotlight,
+  openSessionCreatorSpotlight,
+} from "@src/scaffold/GlobalSpotlight/openSpotlight";
 import { WorkStationViewService } from "@src/services/workStation/WorkStationViewService";
 import { spotlightOpenAtom } from "@src/store/ui/uiAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
@@ -136,7 +139,7 @@ export function useShortcutRegistration(options: ShortcutRegistrationOptions) {
         "maximize_work_station",
         () => void WorkStationViewService.showWorkStation()
       ),
-      shortcutRegistry.on("new_session", handleCreateNewSession),
+      shortcutRegistry.on("new_session", openSessionCreatorSpotlight),
       shortcutRegistry.on("new_tab", () => handleGoToCreateSession("Cmd+T")),
       shortcutRegistry.on("new_tab_alt", () =>
         handleGoToCreateSession("Cmd+L")

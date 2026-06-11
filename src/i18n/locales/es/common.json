@@ -1445,6 +1445,15 @@
         },
         "resetZoom": {
           "label": "Restablecer zoom"
+        },
+        "openSessionCreator": {
+          "label": "Nueva sesión"
+        },
+        "createProject": {
+          "label": "Crear Project"
+        },
+        "createWorkItem": {
+          "label": "Crear Work Item"
         }
       },
       "toast": {

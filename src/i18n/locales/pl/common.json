@@ -1445,6 +1445,15 @@
         },
         "resetZoom": {
           "label": "Resetuj powiększenie"
+        },
+        "openSessionCreator": {
+          "label": "Nowa sesja"
+        },
+        "createProject": {
+          "label": "Utwórz historię"
+        },
+        "createWorkItem": {
+          "label": "Utwórz zadanie"
         }
       },
       "toast": {

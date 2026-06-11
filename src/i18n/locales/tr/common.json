@@ -1446,6 +1446,15 @@
         },
         "resetZoom": {
           "label": "Yakınlaştırmayı sıfırla"
+        },
+        "openSessionCreator": {
+          "label": "Yeni oturum"
+        },
+        "createProject": {
+          "label": "Project oluştur"
+        },
+        "createWorkItem": {
+          "label": "Work Item Oluştur"
         }
       },
       "toast": {

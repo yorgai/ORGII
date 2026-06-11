@@ -1446,6 +1446,15 @@
         },
         "resetZoom": {
           "label": "Đặt lại thu phóng"
+        },
+        "openSessionCreator": {
+          "label": "Phiên mới"
+        },
+        "createProject": {
+          "label": "Tạo Project"
+        },
+        "createWorkItem": {
+          "label": "Tạo Work Item"
         }
       },
       "toast": {

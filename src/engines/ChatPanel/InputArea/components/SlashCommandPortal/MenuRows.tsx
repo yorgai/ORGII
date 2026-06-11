@@ -103,6 +103,7 @@ export const ModeRow: React.FC<ModeRowProps> = React.memo(
     return (
       <div
         data-slash-flat
+        data-testid={`slash-command-mode-option-${mode.id}`}
         className={`${rowClass(isActive)} justify-between`}
         onMouseEnter={onMouseEnter}
         onMouseDown={(e) => {

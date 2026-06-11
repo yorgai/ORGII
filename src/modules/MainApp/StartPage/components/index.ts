@@ -5,4 +5,3 @@
  */
 
 export { default as AppGrid } from "./AppGrid";
-export { default as OpenSourceCountdown } from "./OpenSourceCountdown";

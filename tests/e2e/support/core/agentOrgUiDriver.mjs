@@ -743,6 +743,30 @@ export async function selectRenderedExecMode(mode) {
     if (openResult !== "clicked") {
       throw new Error(`Agent exec mode pill did not open: ${openResult}`);
     }
+    // The composer pill is rendered with `resetToDefaultOnClick`: when the
+    // current mode is non-default, clicking RESETS to build and closes —
+    // no dropdown opens. Detect that: if the pill vanished (hideWhenDefault)
+    // or now shows the default, the reset happened. When the caller wanted
+    // the default mode we are done; otherwise fall through to the slash
+    // menu path below to pick the explicit mode.
+    await new Promise((resolveSleep) => setTimeout(resolveSleep, 300));
+    const pillStillRendered = await execJS(js.exists(pillSelector));
+    const optionsOpened = await execJS(
+      `return !!document.querySelector('[data-testid^="agent-exec-mode-option-"]');`
+    );
+    if (!optionsOpened) {
+      const postClickText = pillStillRendered
+        ? String(await execJS(js.text(pillSelector))).toLowerCase()
+        : "";
+      const resetLanded =
+        !pillStillRendered ||
+        postClickText.includes(DEFAULT_AGENT_EXEC_MODE_LABEL);
+      if (resetLanded && mode === "build") return;
+      if (resetLanded) {
+        await selectExecModeViaSlashMenu(mode);
+        return;
+      }
+    }
     const optionSelector = `[data-testid="agent-exec-mode-option-${mode}"]`;
     let renderedOptions = [];
     await browser.waitUntil(
@@ -783,6 +807,12 @@ export async function selectRenderedExecMode(mode) {
     return;
   }
 
+  await selectExecModeViaSlashMenu(mode);
+}
+
+const DEFAULT_AGENT_EXEC_MODE_LABEL = "build";
+
+async function selectExecModeViaSlashMenu(mode) {
   const skillsToolsButtonSelector =
     '[data-testid="composer-skills-tools-button"]';
   await browser.waitUntil(
@@ -800,21 +830,9 @@ export async function selectRenderedExecMode(mode) {
       `Composer skills/tools button did not open: ${openSlashResult}`
     );
   }
-  const flyoutTriggerSelector =
-    '[data-testid="slash-command-mode-flyout-trigger"]';
-  await browser.waitUntil(
-    async () => execJS(js.exists(flyoutTriggerSelector)),
-    {
-      timeout: RENDER_TIMEOUT_MS,
-      timeoutMsg: "Slash command Mode flyout trigger never rendered",
-    }
-  );
-  const openFlyoutResult = await execJS(js.visibleClick(flyoutTriggerSelector));
-  if (openFlyoutResult !== "clicked") {
-    throw new Error(
-      `Slash command Mode flyout did not open: ${openFlyoutResult}`
-    );
-  }
+  // The slash menu renders ModeRow entries flat (showModeRows) — there is
+  // no "Mode" flyout trigger anymore. Click the mode option directly.
+  // ModeRow commits on mousedown (visibleClick dispatches it).
   const slashModeOptionSelector = `[data-testid="slash-command-mode-option-${mode}"]`;
   await browser.waitUntil(
     async () => execJS(js.exists(slashModeOptionSelector)),
@@ -850,6 +868,29 @@ export async function selectRenderedAgentOrg(agentOrgId) {
     throw new Error(`agent selector did not open: ${openResult}`);
   }
   const optionSelector = `[data-testid="session-creator-agent-option-org-${agentOrgId}"]`;
+  // The dispatch palette virtualizes when there are >30 options, so a
+  // far-down org row may never exist in the DOM. Narrow the list through
+  // the spotlight search input first. Search matches name+desc (not id),
+  // so resolve the org's display name via the e2e bridge.
+  if (!(await execJS(js.exists(optionSelector)))) {
+    const orgsResult = unwrap(
+      await invokeE2E("listAgentOrgs"),
+      `listAgentOrgs for ${agentOrgId}`
+    );
+    const targetOrg = (orgsResult.orgs ?? []).find(
+      (org) => org.id === agentOrgId
+    );
+    if (targetOrg?.name) {
+      const typeResult = await execJS(
+        js.inputValue('[data-spotlight-input="true"]', targetOrg.name)
+      );
+      if (typeResult !== "typed") {
+        throw new Error(
+          `Spotlight search input rejected org name filter: ${typeResult}`
+        );
+      }
+    }
+  }
   await browser.waitUntil(async () => execJS(js.exists(optionSelector)), {
     timeout: RENDER_TIMEOUT_MS,
     timeoutMsg: `Agent Org option ${agentOrgId} never rendered`,
@@ -1037,18 +1078,24 @@ export async function waitForRenderedGroupChatActive(label) {
   );
 }
 
-export async function assertRenderedGroupChatComposerHasNoStop(label) {
+export async function assertRenderedGroupChatComposerResponsive(label) {
+  // Since cfe19aab ("align Stop with Cursor queue semantics") the composer
+  // intentionally shows Stop while a run is active — typed sends queue as
+  // non-interrupting inbox messages and Stop is the explicit interrupt.
+  // The pin is therefore NOT "no Stop"; it is "the composer is never in
+  // the disabled dead-end" (button missing or working-cannot-stop).
   await waitForRenderedGroupChatActive(label);
   const state = await execJS(`
     const inputShell = document.querySelector('[data-chat-input-shell]');
     const sendButton = inputShell?.querySelector('[data-testid="chat-send-button"]') ?? null;
     return {
+      present: !!sendButton,
       sendState: sendButton?.getAttribute('data-state') ?? null,
       sendDisabled: sendButton?.hasAttribute('disabled') ?? null,
     };
   `);
-  if (state.sendState === "stop") {
-    throw new Error(`group chat composer exposed Stop for ${label}: ${JSON.stringify(state)}`);
+  if (!state.present || state.sendDisabled === true) {
+    throw new Error(`group chat composer not responsive for ${label}: ${JSON.stringify(state)}`);
   }
 }
 

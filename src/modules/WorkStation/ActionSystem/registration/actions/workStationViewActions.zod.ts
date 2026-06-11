@@ -235,6 +235,57 @@ export const workstationOpenSearchSidebar = defineZodAction(
   }
 );
 
+export const workstationCreateProject = defineZodAction(
+  {
+    id: ACTION_ID.WORKSTATION_CREATE_PROJECT,
+    category: "navigation",
+    description: "Navigate to My Station and open the Create Project form",
+    params: z.object({}),
+    tags: ["workstation", "project", "create", "navigation"],
+    examples: ["create project", "new project", "add project"],
+  },
+  async () => {
+    const workStationViewService = await getWorkStationViewService();
+    await workStationViewService.openStationMode("my-station");
+    const { chatPanelNavigateAtom, CHAT_PANEL_SURFACE_KIND } =
+      await import("@src/store/ui/chatPanelAtom");
+    const { getInstrumentedStore } =
+      await import("@src/util/core/state/instrumentedStore");
+    getInstrumentedStore().set(chatPanelNavigateAtom, {
+      kind: CHAT_PANEL_SURFACE_KIND.NEW_PROJECT,
+    });
+    return { success: true, message: "Opened Create Project" };
+  }
+);
+
+export const workstationCreateWorkItem = defineZodAction(
+  {
+    id: ACTION_ID.WORKSTATION_CREATE_WORK_ITEM,
+    category: "navigation",
+    description: "Navigate to My Station and open the Create Work Item form",
+    params: z.object({}),
+    tags: ["workstation", "work-item", "create", "navigation"],
+    examples: [
+      "create work item",
+      "new work item",
+      "add work item",
+      "new task",
+    ],
+  },
+  async () => {
+    const workStationViewService = await getWorkStationViewService();
+    await workStationViewService.openStationMode("my-station");
+    const { chatPanelNavigateAtom, CHAT_PANEL_SURFACE_KIND } =
+      await import("@src/store/ui/chatPanelAtom");
+    const { getInstrumentedStore } =
+      await import("@src/util/core/state/instrumentedStore");
+    getInstrumentedStore().set(chatPanelNavigateAtom, {
+      kind: CHAT_PANEL_SURFACE_KIND.NEW_WORK_ITEM,
+    });
+    return { success: true, message: "Opened Create Work Item" };
+  }
+);
+
 export const workstationOpenTerminalTab = defineZodAction(
   {
     id: ACTION_ID.WORKSTATION_OPEN_TERMINAL_TAB,
@@ -268,4 +319,6 @@ export const workStationViewZodActions = [
   workstationOpenSourceControlTab,
   workstationOpenSearchSidebar,
   workstationOpenTerminalTab,
+  workstationCreateProject,
+  workstationCreateWorkItem,
 ];

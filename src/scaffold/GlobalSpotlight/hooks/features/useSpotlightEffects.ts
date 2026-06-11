@@ -37,6 +37,7 @@ export interface UseSpotlightEffectsOptions {
   ) => void;
   onOpenAgentSessionSearchLayer?: () => void;
   onOpenAgentControlLayer?: () => void;
+  onOpenSessionCreatorLayer?: () => void;
 }
 
 // ============================================
@@ -52,6 +53,7 @@ export function useSpotlightEffects(options: UseSpotlightEffectsOptions): void {
     onOpenWorkspaceLayer,
     onOpenAgentSessionSearchLayer,
     onOpenAgentControlLayer,
+    onOpenSessionCreatorLayer,
   } = options;
 
   // Reset state on close
@@ -106,6 +108,8 @@ export function useSpotlightEffects(options: UseSpotlightEffectsOptions): void {
       onOpenAgentSessionSearchLayer?.();
     } else if (initialQuery.layer?.kind === "agentControl") {
       onOpenAgentControlLayer?.();
+    } else if (initialQuery.layer?.kind === "sessionCreator") {
+      onOpenSessionCreatorLayer?.();
     } else if (initialQuery.query) {
       dispatch({
         type: "SET_SEARCH_QUERY",
@@ -122,6 +126,7 @@ export function useSpotlightEffects(options: UseSpotlightEffectsOptions): void {
     onOpenBranchLayer,
     onOpenEditorLayer,
     onOpenWorkspaceLayer,
+    onOpenSessionCreatorLayer,
     setInitialQuery,
     dispatch,
   ]);

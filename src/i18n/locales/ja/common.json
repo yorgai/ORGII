@@ -1446,6 +1446,15 @@
         },
         "resetZoom": {
           "label": "ズームをリセット"
+        },
+        "openSessionCreator": {
+          "label": "新しいセッション"
+        },
+        "createProject": {
+          "label": "Projectを作成"
+        },
+        "createWorkItem": {
+          "label": "Work Item を作成"
         }
       },
       "toast": {

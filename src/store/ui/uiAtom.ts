@@ -236,7 +236,8 @@ export type SpotlightInitialLayer =
   | { kind: "branch" }
   | { kind: "editor"; mode?: SpotlightInitialEditorMode }
   | { kind: "agentSessionSearch" }
-  | { kind: "agentControl" };
+  | { kind: "agentControl" }
+  | { kind: "sessionCreator" };
 
 export interface SpotlightInitialQuery {
   query: string;

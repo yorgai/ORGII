@@ -17,7 +17,7 @@ import {
   assertNoMemberIntervention,
   assertRenderedGroupChatNoQuoteOrUnreadPreview,
   assertRenderedGroupChatToggleIsIdempotent,
-  assertRenderedGroupChatComposerHasNoStop,
+  assertRenderedGroupChatComposerResponsive,
   assertAgentOrgOverviewHasRunControl,
   assertRenderedInboxPinBarAbsent,
   clickGroupChatResumeButton,
@@ -123,7 +123,7 @@ describe("Agent Org pause, resume, and sidebar rendered UI", () => {
       throw new Error("Pause/Resume test: launch did not create a session id");
     }
     await waitForRenderedGroupChatActive("default Agent Org group chat after launch");
-    await assertRenderedGroupChatComposerHasNoStop("default Agent Org group chat after launch");
+    await assertRenderedGroupChatComposerResponsive("default Agent Org group chat after launch");
     await assertAgentOrgOverviewHasRunControl("default Agent Org group chat after launch");
 
     // Wait for the Pause button to appear in the UI while the run is live.
@@ -867,7 +867,7 @@ describe("Agent Org pause, resume, and sidebar rendered UI", () => {
     await waitForGroupChatPausedBanner(
       "historical paused run after reopening from sidebar"
     );
-    await assertRenderedGroupChatComposerHasNoStop(
+    await assertRenderedGroupChatComposerResponsive(
       "historical paused run after reopening from sidebar"
     );
     await assertAgentOrgOverviewHasRunControl(
@@ -1003,7 +1003,7 @@ describe("Agent Org pause, resume, and sidebar rendered UI", () => {
       text: followUpPrompt,
       label: "send-message resume follow-up retained",
     });
-    await assertRenderedGroupChatComposerHasNoStop(
+    await assertRenderedGroupChatComposerResponsive(
       "historical send-message resume group chat"
     );
 

@@ -1458,6 +1458,15 @@
         },
         "resetZoom": {
           "label": "重置缩放"
+        },
+        "openSessionCreator": {
+          "label": "新建会话"
+        },
+        "createProject": {
+          "label": "创建项目"
+        },
+        "createWorkItem": {
+          "label": "创建 Work Item"
         }
       },
       "toast": {

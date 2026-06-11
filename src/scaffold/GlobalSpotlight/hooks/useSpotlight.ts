@@ -22,7 +22,10 @@ import { useAppNavigation } from "@src/hooks/navigation/useAppNavigation";
 import { showScaleMessage } from "@src/hooks/navigation/useGlobalShortcuts/types";
 import { useFilteredItems } from "@src/hooks/search";
 import type { SupportedLanguage } from "@src/i18n";
-import { openAgentControlSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
+import {
+  openAgentControlSpotlight,
+  openSessionCreatorSpotlight,
+} from "@src/scaffold/GlobalSpotlight/openSpotlight";
 import { AppViewService } from "@src/services/app";
 import { PanelService } from "@src/services/panel";
 import { WorkStationViewService } from "@src/services/workStation";
@@ -154,8 +157,28 @@ export function useSpotlight(
         SpotlightStaticActionFallback,
         () => void
       > = {
-        "create-session": () => {
-          void AppViewService.createAgentStationSession();
+        "open-session-creator": openSessionCreatorSpotlight,
+        "create-project": () => {
+          void WorkStationViewService.openStationMode("my-station").then(
+            async () => {
+              const { chatPanelNavigateAtom, CHAT_PANEL_SURFACE_KIND } =
+                await import("@src/store/ui/chatPanelAtom");
+              getInstrumentedStore().set(chatPanelNavigateAtom, {
+                kind: CHAT_PANEL_SURFACE_KIND.NEW_PROJECT,
+              });
+            }
+          );
+        },
+        "create-work-item": () => {
+          void WorkStationViewService.openStationMode("my-station").then(
+            async () => {
+              const { chatPanelNavigateAtom, CHAT_PANEL_SURFACE_KIND } =
+                await import("@src/store/ui/chatPanelAtom");
+              getInstrumentedStore().set(chatPanelNavigateAtom, {
+                kind: CHAT_PANEL_SURFACE_KIND.NEW_WORK_ITEM,
+              });
+            }
+          );
         },
         "search-agent-sessions": () => onOpenAgentSessionSearch?.(),
         "agent-control": openAgentControlSpotlight,

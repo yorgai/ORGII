@@ -16,6 +16,7 @@ import {
   openAgentSessionSearchSpotlight,
   openBranchSpotlight,
   openEditorSpotlight,
+  openSessionCreatorSpotlight,
   openWorkspaceSpotlight,
 } from "@src/scaffold/GlobalSpotlight/openSpotlight";
 import { spotlightOpenAtom } from "@src/store/ui/uiAtom";
@@ -198,6 +199,22 @@ const spotlightOpenAgentControl = defineZodAction(
   }
 );
 
+const spotlightOpenSessionCreator = defineZodAction(
+  {
+    id: ACTION_ID.SPOTLIGHT_OPEN_SESSION_CREATOR,
+    category: "spotlight",
+    description: "Open Spotlight's inline session creator",
+    params: z.object({}),
+    layer: "gui",
+    shortcut: getShortcutKeys("new_session"),
+    examples: ["new session", "create session", "open session creator"],
+  },
+  async () => {
+    openSessionCreatorSpotlight();
+    return { success: true, message: "Opened session creator" };
+  }
+);
+
 // ============================================
 // Export
 // ============================================
@@ -213,6 +230,7 @@ export const spotlightZodActions = [
   spotlightOpenEditorSymbol,
   spotlightOpenAgentSessionSearch,
   spotlightOpenAgentControl,
+  spotlightOpenSessionCreator,
 ];
 
 export const spotlightActionRegistration =

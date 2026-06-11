@@ -1446,6 +1446,15 @@
         },
         "resetZoom": {
           "label": "확대/축소 초기화"
+        },
+        "openSessionCreator": {
+          "label": "새 세션"
+        },
+        "createProject": {
+          "label": "Project 만들기"
+        },
+        "createWorkItem": {
+          "label": "Work Item 생성"
         }
       },
       "toast": {

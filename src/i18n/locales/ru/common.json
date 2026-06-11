@@ -1445,6 +1445,15 @@
         },
         "resetZoom": {
           "label": "Сбросить масштаб"
+        },
+        "openSessionCreator": {
+          "label": "Новая сессия"
+        },
+        "createProject": {
+          "label": "Создать Project"
+        },
+        "createWorkItem": {
+          "label": "Создать Work Item"
         }
       },
       "toast": {

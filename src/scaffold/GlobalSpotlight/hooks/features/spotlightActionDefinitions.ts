@@ -15,6 +15,7 @@ import {
   ArrowBigLeft,
   ArrowBigRight,
   ArrowLeftRight,
+  Box,
   Contrast,
   Dock,
   DraftingCompass,
@@ -35,6 +36,7 @@ import {
   RotateCcw,
   Search,
   Sparkles,
+  SquarePen,
   SquareTerminal,
   Sun,
   ZoomIn,
@@ -51,7 +53,9 @@ import type { SpotlightItem } from "../../types";
 // ============================================
 
 export type SpotlightStaticActionId =
-  | "create-session"
+  | "open-session-creator"
+  | "create-project"
+  | "create-work-item"
   | "search-agent-sessions"
   | "open-agent-control"
   | "switch-workspace"
@@ -91,7 +95,9 @@ export type SpotlightStaticActionId =
   | "open-terminal-tab";
 
 export type SpotlightStaticActionFallback =
-  | "create-session"
+  | "open-session-creator"
+  | "create-project"
+  | "create-work-item"
   | "search-agent-sessions"
   | "agent-control"
   | "workspace-switch"
@@ -164,14 +170,47 @@ export const AGENT_SESSION_ACTIONS = [
     closeOnSuccess: false,
   },
   {
-    id: "create-session",
-    labelKey: "selectors.spotlight.actions.createSession.label",
+    id: "open-session-creator",
+    labelKey: "selectors.spotlight.actions.openSessionCreator.label",
     icon: Play,
-    keywords: ["new session", "create session", "agent station", "start agent"],
+    keywords: [
+      "new session",
+      "create session",
+      "agent station",
+      "start agent",
+      "open session creator",
+    ],
     shortcut: getShortcutKeys("new_session"),
-    actionId: ACTION_ID.AGENT_STATION_CREATE_SESSION,
+    actionId: ACTION_ID.SPOTLIGHT_OPEN_SESSION_CREATOR,
     payload: {},
-    fallback: "create-session",
+    fallback: "open-session-creator",
+    closeOnSuccess: false,
+  },
+  {
+    id: "create-project",
+    labelKey: "selectors.spotlight.actions.createProject.label",
+    icon: Box,
+    keywords: ["create project", "new project", "add project", "project"],
+    actionId: ACTION_ID.WORKSTATION_CREATE_PROJECT,
+    payload: {},
+    fallback: "create-project",
+    closeOnSuccess: true,
+  },
+  {
+    id: "create-work-item",
+    labelKey: "selectors.spotlight.actions.createWorkItem.label",
+    icon: SquarePen,
+    keywords: [
+      "create work item",
+      "new work item",
+      "add work item",
+      "new task",
+      "task",
+      "work item",
+    ],
+    actionId: ACTION_ID.WORKSTATION_CREATE_WORK_ITEM,
+    payload: {},
+    fallback: "create-work-item",
     closeOnSuccess: true,
   },
   {

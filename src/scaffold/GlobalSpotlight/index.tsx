@@ -28,6 +28,7 @@ import {
   BranchPalette,
   EditorPalette,
   RepoPalette,
+  SessionCreatorPalette,
 } from "./palettes";
 import type { BranchPaletteMode } from "./palettes/BranchPalette";
 import type { EditorPaletteMode } from "./palettes/EditorPalette/types";
@@ -75,6 +76,7 @@ const GlobalSpotlightInner: React.FC<
   const [branchPickerOpen, setBranchPickerOpen] = useState(false);
   const [agentSessionSearchOpen, setAgentSessionSearchOpen] = useState(false);
   const [agentControlOpen, setAgentControlOpen] = useState(false);
+  const [sessionCreatorOpen, setSessionCreatorOpen] = useState(false);
   const [embeddedEditorPalette, setEmbeddedEditorPalette] =
     useState<EmbeddedEditorPaletteState | null>(null);
   const lastActivatedItemIdRef = useRef<string | null>(null);
@@ -104,6 +106,10 @@ const GlobalSpotlightInner: React.FC<
 
   const handleOpenAgentControl = useCallback(() => {
     setAgentControlOpen(true);
+  }, []);
+
+  const handleOpenSessionCreator = useCallback(() => {
+    setSessionCreatorOpen(true);
   }, []);
 
   const handleOpenEditorPalette = useCallback(
@@ -137,6 +143,11 @@ const GlobalSpotlightInner: React.FC<
 
   const handleCloseAgentControl = useCallback(() => {
     setAgentControlOpen(false);
+    restoreLastActivatedItem();
+  }, [restoreLastActivatedItem]);
+
+  const handleCloseSessionCreator = useCallback(() => {
+    setSessionCreatorOpen(false);
     restoreLastActivatedItem();
   }, [restoreLastActivatedItem]);
 
@@ -268,6 +279,7 @@ const GlobalSpotlightInner: React.FC<
       setBranchPickerOpen(false);
       setAgentSessionSearchOpen(false);
       setAgentControlOpen(false);
+      setSessionCreatorOpen(false);
       setEmbeddedEditorPalette(null);
       lastActivatedItemIdRef.current = null;
       setPendingRestoreItemId(null);
@@ -301,7 +313,8 @@ const GlobalSpotlightInner: React.FC<
       !workspacePickerMode &&
       !branchPickerOpen &&
       !agentSessionSearchOpen &&
-      !agentControlOpen,
+      !agentControlOpen &&
+      !sessionCreatorOpen,
     dispatch: spotlightDispatch,
     closeModal,
     onOpenWorkspaceLayer: handleOpenWorkspacePicker,
@@ -309,6 +322,7 @@ const GlobalSpotlightInner: React.FC<
     onOpenEditorLayer: handleOpenEditorPalette,
     onOpenAgentSessionSearchLayer: handleOpenAgentSessionSearch,
     onOpenAgentControlLayer: handleOpenAgentControl,
+    onOpenSessionCreatorLayer: handleOpenSessionCreator,
   });
 
   // Default view kernel — same hook every palette uses. Owns the input
@@ -357,6 +371,7 @@ const GlobalSpotlightInner: React.FC<
       !branchPickerOpen &&
       !agentSessionSearchOpen &&
       !agentControlOpen &&
+      !sessionCreatorOpen &&
       !activeEditorPalette,
     onClose: closeModal,
     items: spotlight.items,
@@ -380,6 +395,7 @@ const GlobalSpotlightInner: React.FC<
       branchPickerOpen ||
       agentSessionSearchOpen ||
       agentControlOpen ||
+      sessionCreatorOpen ||
       !pendingRestoreItemId
     ) {
       return;
@@ -408,6 +424,7 @@ const GlobalSpotlightInner: React.FC<
     branchPickerOpen,
     agentSessionSearchOpen,
     agentControlOpen,
+    sessionCreatorOpen,
   ]);
 
   // ============ NORMAL MODE ============
@@ -448,6 +465,7 @@ const GlobalSpotlightInner: React.FC<
     branchPickerOpen ||
     agentSessionSearchOpen ||
     agentControlOpen ||
+    sessionCreatorOpen ||
     !!activeEditorPalette ||
     spotlight.state.path.length > 0;
   const effectiveCurrentRepoId = selectedRepoId || undefined;
@@ -503,6 +521,13 @@ const GlobalSpotlightInner: React.FC<
       onGoBackToParent={handleCloseAgentControl}
       asBody
     />
+  ) : sessionCreatorOpen ? (
+    <SessionCreatorPalette
+      isOpen={isOpen}
+      onClose={closeModal}
+      onGoBackToParent={handleCloseSessionCreator}
+      asBody
+    />
   ) : activeEditorPalette ? (
     <EditorPalette
       key={activeEditorPalette.query}
@@ -539,7 +564,7 @@ const GlobalSpotlightInner: React.FC<
       onClose={closeModal}
       hasActiveAction={hasActiveAction}
       activeActionChip={activeActionChip}
-      hideFooter={!!showConfirmation || agentControlOpen}
+      hideFooter={!!showConfirmation || agentControlOpen || sessionCreatorOpen}
     >
       {body}
     </SpotlightShell>
