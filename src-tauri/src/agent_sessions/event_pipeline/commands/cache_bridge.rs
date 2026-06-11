@@ -342,8 +342,8 @@ pub async fn cache_load_full_session(
 mod tests {
     use super::{
         cached_event_to_session_event, dedup_by_call_id, is_synthetic_persistence_artifact,
-        is_ts_placeholder_id,
     };
+    use crate::agent_sessions::event_pipeline::commands::event_conversion::is_ts_placeholder_id;
     use crate::agent_sessions::event_pipeline::types::{
         ActivityStatus, EventDisplayStatus, EventDisplayVariant, EventSource, PayloadRef,
         SessionEvent,

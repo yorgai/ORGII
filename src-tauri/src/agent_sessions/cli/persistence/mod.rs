@@ -293,8 +293,7 @@ mod create_session_input_guards {
     //! code calls before issuing the INSERT — a typo'd input MUST fail
     //! at the boundary, otherwise `row_to_session` would later refuse to
     //! load the row and the session would be created-but-unloadable.
-    use super::*;
-    use super::super::types::SessionRunner;
+    use super::super::types::{KeySource, SessionRunner};
 
     #[test]
     fn key_source_typo_rejected_at_parse() {

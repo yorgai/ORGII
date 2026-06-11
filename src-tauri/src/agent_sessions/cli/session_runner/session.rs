@@ -1692,7 +1692,15 @@ fn resolve_sde_skills() -> agent_core::core::definitions::SkillsParams {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::oauth_setup::is_api_overloaded_message;
+    use core_types::providers::{CODEX_ID_TOKEN_ENV_KEY, CODEX_REFRESH_TOKEN_ENV_KEY};
+    use super::super::plan_approval::{
+        looks_like_buildable_plan_body, plan_content_from_successful_write_chunk,
+        synthetic_cli_plan_path,
+    };
+    use core_types::activity::ActivityChunk;
     use serde_json::Value;
+    use std::collections::HashMap;
     use std::sync::Mutex as StdMutex;
 
     static ORGII_HOME_TEST_LOCK: StdMutex<()> = StdMutex::new(());
