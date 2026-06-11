@@ -5,7 +5,7 @@
  */
 import React from "react";
 
-import { AppGrid, OpenSourceCountdown } from "./components";
+import { AppGrid } from "./components";
 import "./index.scss";
 
 const SuggestionsPage: React.FC = () => {
@@ -21,7 +21,6 @@ const SuggestionsPage: React.FC = () => {
         className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 scrollbar-hide"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
-        <OpenSourceCountdown />
         <AppGrid />
       </section>
     </div>
