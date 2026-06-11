@@ -740,7 +740,7 @@ agent_core::state::commands::desktop::agent_request_desktop_permissions,
 agent_core::state::commands::desktop::agent_get_desktop_config,
 agent_core::state::commands::desktop::agent_set_desktop_config,
 agent_core::state::commands::session::channel::agent_probe_channel,
-agent_core::state::commands::session::channel::agent_ide_action_result,
+agent_core::state::commands::session::channel::agent_ade_action_result,
 // Agent shell commands
 agent_core::utils::shell_commands::agent_kill_shell_process,
 agent_core::utils::shell_commands::agent_list_running_shell_jobs,

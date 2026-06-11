@@ -156,7 +156,7 @@ pub async fn agent_probe_channel(
 }
 
 #[tauri::command]
-pub async fn agent_ide_action_result(
+pub async fn agent_ade_action_result(
     state: tauri::State<'_, AgentAppState>,
     correlation_id: String,
     success: bool,
@@ -173,7 +173,7 @@ pub async fn agent_ide_action_result(
     );
     if !resolved {
         warn!(
-            "[channel_ide_action_result] No pending request for correlation_id: {}",
+            "[channel_ade_action_result] No pending request for correlation_id: {}",
             correlation_id
         );
     }

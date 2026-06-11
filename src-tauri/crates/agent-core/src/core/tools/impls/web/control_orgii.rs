@@ -10,10 +10,10 @@
 //! - Channel plumbing.
 //!
 //! Request-response mechanism:
-//! 1. Caller broadcasts `agent:ide_action` (delivered to the frontend over
+//! 1. Caller broadcasts `agent:ade_action` (delivered to the frontend over
 //!    the Tauri IPC Channel) with a correlation ID.
 //! 2. Frontend dispatches the action through zodActionRegistry.
-//! 3. Frontend calls `agent_ide_action_result` Tauri command with the result.
+//! 3. Frontend calls `agent_ade_action_result` Tauri command with the result.
 //! 4. Bridge resolves the pending oneshot channel and returns the result.
 //!
 //! `control_orgii` wraps this bridge for the dedicated GUI Control agent;
@@ -46,7 +46,7 @@ pub struct ActionBridgeResult {
 /// Shared bridge for pending GUI action requests.
 ///
 /// Stored as `Arc<ActionBridge>` in `AgentAppState`. Both the `ide` and `app`
-/// tools, plus the `agent_ide_action_result` Tauri command, share this.
+/// tools, plus the `agent_ade_action_result` Tauri command, share this.
 #[derive(Default)]
 pub struct ActionBridge {
     pending: Mutex<HashMap<String, oneshot::Sender<ActionBridgeResult>>>,
@@ -247,7 +247,7 @@ async fn execute_gui_operation_with_timeout(
     }
 
     broadcast_event(
-        "agent:ide_action",
+        "agent:ade_action",
         serde_json::json!({
             "sessionId": "",
             "correlationId": correlation_id,
@@ -322,7 +322,7 @@ pub async fn execute_gui_action_with_timeout(
 
     // Broadcast the action event to the frontend (Tauri IPC Channel)
     broadcast_event(
-        "agent:ide_action",
+        "agent:ade_action",
         serde_json::json!({
             "sessionId": "",
             "correlationId": correlation_id,

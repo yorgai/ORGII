@@ -18,6 +18,7 @@ import {
 } from "../../shared/subagentTracking";
 import type { AgentWSEvent } from "../../shared/types";
 import {
+  handleAdeAction,
   handleExitPlanMode,
   handlePermissionRequest,
   handlePlanApprovalArchived,
@@ -241,7 +242,8 @@ export async function dispatchAgentEvent(
     case "agent:turn_summary":
       handleTurnSummary(event, sessionId);
       break;
-    case "agent:ide_action":
+    case "agent:ade_action":
+      handleAdeAction(event);
       break;
     case "agent:todos_updated":
       if (ctx.features.hasFileChangeEvents)

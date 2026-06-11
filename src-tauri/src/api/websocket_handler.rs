@@ -185,10 +185,10 @@ fn dispatch_to_channel_entries(
 /// frontend listener to answer resolves the bridge correlation ID.
 fn dispatch_to_channels(message: &str) {
     let target_session_id = extract_session_id(message);
-    let is_global_ide_action =
-        target_session_id.is_none() && event_type(message).as_deref() == Some("agent:ide_action");
+    let is_global_ade_action =
+        target_session_id.is_none() && event_type(message).as_deref() == Some("agent:ade_action");
 
-    if !is_global_ide_action && target_session_id.is_none() {
+    if !is_global_ade_action && target_session_id.is_none() {
         return;
     }
 

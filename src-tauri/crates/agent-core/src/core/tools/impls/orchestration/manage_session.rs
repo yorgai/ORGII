@@ -4,7 +4,7 @@
 //! `session_intervene` into a single tool with an `action` parameter.
 //! All actions route through the frontend ActionSystem via the `ActionBridge`
 //! request/response mechanism (events delivered over the Tauri IPC Channel,
-//! results returned via the `agent_ide_action_result` Tauri command).
+//! results returned via the `agent_ade_action_result` Tauri command).
 
 use async_trait::async_trait;
 use serde_json::Value;
