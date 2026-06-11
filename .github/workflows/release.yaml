@@ -103,7 +103,12 @@ jobs:
           key: node-modules-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          if [ -L "node_modules" ] || [ -d "node_modules/.bin" ]; then
+            echo "node_modules already present via symlink or cache, skipping install"
+          else
+            pnpm install --frozen-lockfile
+          fi
 
       # ── Rust ──────────────────────────────────────────────────
       - name: Install Rust stable
