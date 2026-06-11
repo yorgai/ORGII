@@ -7,7 +7,6 @@ const baseInput = {
   isSessionActive: true,
   isPendingCancel: false,
   hasAwaitingUserInteraction: false,
-  lastIsSettledAssistantMessage: false,
   anyRunning: false,
   coldStartVisible: false,
   idleAfterVersion: 10,
@@ -35,13 +34,8 @@ describe("shouldShowPlanningIndicator", () => {
     ).toBe(false);
   });
 
-  it("hides after a settled assistant reply", () => {
-    expect(
-      shouldShowPlanningIndicator({
-        ...baseInput,
-        lastIsSettledAssistantMessage: true,
-      })
-    ).toBe(false);
+  it("stays visible after a settled assistant reply while the turn is still running", () => {
+    expect(shouldShowPlanningIndicator(baseInput)).toBe(true);
   });
 
   it("shows when non-visible running events exist but no visible running row is painted", () => {

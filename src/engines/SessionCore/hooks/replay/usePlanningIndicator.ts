@@ -14,7 +14,10 @@
  * in which case the slow hint is suppressed. From the user's point of view
  * the agent has just finished talking; promoting the footer to "taking
  * longer than usual" while the turn executor is doing its post-batch
- * "anything else?" LLM round trip is misleading.
+ * "anything else?" LLM round trip is misleading. The base indicator itself
+ * is NOT suppressed in that state: mid-turn the agent routinely narrates
+ * (settled assistant message) and then thinks for seconds before the next
+ * tool call, and hiding the footer there reads as a frozen UI.
  *
  * Watchdog: if the indicator stays visible for PLANNING_WATCHDOG_MS (60s),
  * we assume Rust dropped `agent:complete` (or `agent:queue_status` idle)
@@ -77,7 +80,6 @@ export interface PlanningIndicatorVisibilityInput {
   isSessionActive: boolean;
   isPendingCancel: boolean;
   hasAwaitingUserInteraction: boolean;
-  lastIsSettledAssistantMessage: boolean;
   anyRunning: boolean;
   coldStartVisible: boolean;
   idleAfterVersion: number | null;
@@ -89,7 +91,6 @@ export function shouldShowPlanningIndicator({
   isSessionActive,
   isPendingCancel,
   hasAwaitingUserInteraction,
-  lastIsSettledAssistantMessage,
   anyRunning,
   coldStartVisible,
   idleAfterVersion,
@@ -105,7 +106,6 @@ export function shouldShowPlanningIndicator({
     isSessionActive &&
     !isPendingCancel &&
     !hasAwaitingUserInteraction &&
-    !lastIsSettledAssistantMessage &&
     !anyRunning &&
     (coldStartVisible || idleAfterVersion === version)
   );
@@ -252,7 +252,6 @@ export function usePlanningIndicator(): PlanningIndicatorState {
     isSessionActive,
     isPendingCancel,
     hasAwaitingUserInteraction,
-    lastIsSettledAssistantMessage,
     anyRunning,
     coldStartVisible,
     idleAfterVersion,
