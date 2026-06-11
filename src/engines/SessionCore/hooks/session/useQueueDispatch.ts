@@ -96,6 +96,42 @@ const BACKEND_ACTIVE_STATUSES = new Set([
   "waiting_for_funds",
 ]);
 
+/**
+ * Failure-class terminal statuses: the session is dead and the backend will
+ * accept-but-swallow any message sent to it (no scheduler turn ever runs).
+ * Natural drain must park instead of dispatch — observed 2026-06-11 when six
+ * queued messages were flushed into a panicked subagent 20 minutes after it
+ * failed and silently vanished.
+ *
+ * `completed` is deliberately NOT here: a completed turn is the normal
+ * drain trigger (finish turn → status completed → dispatch next queued
+ * message). `cancelled` is also dispatchable — a user Stop already parks
+ * via `holdSessionQueueForStopAtom`, and a follow-up resumes the session.
+ */
+const BACKEND_DEAD_STATUSES = new Set([
+  "failed",
+  "error",
+  "timeout",
+  "killed",
+  "abandoned",
+  "archived",
+]);
+
+export type BackendDispatchVerdict = "busy" | "dead" | "ready";
+
+/**
+ * Pure classifier for a backend-reported session status.
+ * Exported for tests — the async wrapper below owns the RPC plumbing.
+ */
+export function classifyBackendSessionStatus(
+  status: string | undefined | null
+): BackendDispatchVerdict {
+  if (!status) return "ready";
+  if (BACKEND_ACTIVE_STATUSES.has(status)) return "busy";
+  if (BACKEND_DEAD_STATUSES.has(status)) return "dead";
+  return "ready";
+}
+
 /** Re-check cadence while the backend reports the session still busy. */
 const QUEUE_BACKEND_RECHECK_MS = 3_000;
 
@@ -105,29 +141,29 @@ const QUEUE_BACKEND_RECHECK_MS = 3_000;
  * The turn-lifecycle FSM can be forced idle without a real provider terminal
  * (planning watchdog, dispatching dead-man, rewind boundary, stray
  * session-status broadcasts). Dispatching on a falsely-idle FSM injects the
- * queued message into the middle of a still-running turn. This asks the
- * backend — the only authority on execution — before letting a natural drain
- * proceed. Fail-open on RPC errors: if the backend is unreachable the
- * dispatch itself will fail and park the message.
+ * queued message into the middle of a still-running turn — or into a session
+ * that already died. This asks the backend — the only authority on execution
+ * — before letting a natural drain proceed. Fail-open ("ready") on RPC
+ * errors: if the backend is unreachable the dispatch itself will fail and
+ * park the message.
  */
-async function isSessionBusyOnBackend(sessionId: string): Promise<boolean> {
+async function getBackendDispatchVerdict(
+  sessionId: string
+): Promise<BackendDispatchVerdict> {
   try {
     if (isCliSession(sessionId)) {
       const status = (await invokeTauri("cli_agent_status", { sessionId })) as {
         status?: string;
       } | null;
-      return (
-        status?.status !== undefined &&
-        BACKEND_ACTIVE_STATUSES.has(status.status)
-      );
+      return classifyBackendSessionStatus(status?.status);
     }
     if (isAgentSession(sessionId)) {
       const meta = await getSession(sessionId);
-      return meta !== null && BACKEND_ACTIVE_STATUSES.has(meta.status);
+      return classifyBackendSessionStatus(meta?.status);
     }
-    return false;
+    return "ready";
   } catch {
-    return false;
+    return "ready";
   }
 }
 
@@ -357,9 +393,9 @@ export function useQueueDispatch(): void {
       // Authoritative gate: the FSM can be forced idle without a real
       // provider terminal (watchdog / dead-man / rewind). Confirm with the
       // backend before injecting a natural follow-up into the session.
-      void isSessionBusyOnBackend(msg.sessionId).then((busy) => {
+      void getBackendDispatchVerdict(msg.sessionId).then((verdict) => {
         if (inFlightMessageIdRef.current !== msg.id) return;
-        if (busy) {
+        if (verdict === "busy") {
           // Still executing — back off and re-check. Do NOT mark the FSM:
           // presentation state may legitimately disagree; the queue only
           // needs to know "not yet".
@@ -371,6 +407,29 @@ export function useQueueDispatch(): void {
               tryDispatchNextRef.current();
             }, QUEUE_BACKEND_RECHECK_MS);
           }
+          return;
+        }
+        if (verdict === "dead") {
+          // The session terminated as failed/killed — a natural dispatch
+          // would be accepted by the IPC layer and then silently swallowed
+          // (no scheduler turn ever runs in a dead session). Park the
+          // message visibly instead: it stays in the queue UI flagged for
+          // explicit dispatch, so the user can Send Now (restart attempt),
+          // edit it, or move it elsewhere. Never silently drop it.
+          inFlightMessageIdRef.current = null;
+          dispatchLockRef.current = false;
+          store.set(messageQueueAtom, (prev) =>
+            prev.map((item) =>
+              item.id === msg.id
+                ? { ...item, requiresExplicitDispatch: true }
+                : item
+            )
+          );
+          Message.warning({
+            content: `Session has ended — queued message was kept on hold. Use Send Now to dispatch it explicitly.`,
+            duration: 6000,
+          });
+          tryDispatchNextRef.current();
           return;
         }
         if (getTurnPhase(msg.sessionId) !== "idle") {
