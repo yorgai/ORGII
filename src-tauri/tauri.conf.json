@@ -86,7 +86,7 @@
         "https://github.com/YORG-AI/ORGII/releases/latest/download/latest.json"
       ],
       "dialog": false,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU1NDMyREQ2MUFBMTkyRTQKUldUa2txRWExaTFENVY5TzdsbVpzUk9DN1h2emZ1WVhMQi9BSVJqZE4xajVVb3Zmci9pbXZaOUkK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDExNEQ5NjIzMjA1ODI5OUMKUldTY0tWZ2dJNVpORWFiWXB3NW5UaWwyOHVxRXhzVmRVbXl2WktZNnhiN2tqcXlVY3gxTTlPV3EK"
     },
     "shell": {
       "open": "^((mailto:\\w+)|(tel:\\w+)|(https?://[^\\s]+)|(vscode://\\S+)|(cursor://\\S+)|(idea://\\S+)|(subl://\\S+)|(x-apple\\.systempreferences:\\S+)|(ms-settings:\\S+))"
