@@ -17,6 +17,13 @@
 //! let pairs = extract_batch(&events); // Vec<(event_id, ExtractedData)>
 //! ```
 
+mod file_extractor;
+mod helpers;
+pub mod lang;
+mod misc_extractor;
+mod search_extractor;
+mod shell_extractor;
+
 #[allow(clippy::module_inception)]
 pub mod extractors;
 pub mod types;

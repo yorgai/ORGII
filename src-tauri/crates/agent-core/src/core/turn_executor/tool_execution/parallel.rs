@@ -8,7 +8,7 @@ use serde_json::Value;
 use tracing::info;
 
 use crate::core::tools::traits::ToolExecuteResult;
-use crate::intelligence::policies::activation::SessionScopedContextActivator;
+use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::providers::traits::ToolCallRequest;
 use crate::tools::policy::ResolvedToolPolicy;
 use crate::tools::registry::ToolRegistry;

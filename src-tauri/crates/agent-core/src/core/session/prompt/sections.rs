@@ -1395,11 +1395,11 @@ impl PromptSection for RulesSection {
     }
     fn render(&self, ctx: &PromptCtx) -> Option<String> {
         let enabled_rules: Vec<(String, String)> = if ctx.is_channel_session {
-            crate::intelligence::policies::load_enabled_unconditional_policies_for_os_agent(
+            crate::specialization::policies::load_enabled_unconditional_policies_for_os_agent(
                 &ctx.config.agent_id,
             )
         } else if let Some(ref ws) = ctx.config.workspace {
-            crate::intelligence::policies::load_enabled_unconditional_policies_with_workspace_scope(
+            crate::specialization::policies::load_enabled_unconditional_policies_with_workspace_scope(
                 ws.working_dir(),
                 &ctx.config.agent_id,
                 ctx.config.load_workspace_rules,
@@ -1407,7 +1407,7 @@ impl PromptSection for RulesSection {
         } else if ctx.sovereign {
             // Sovereign agents reuse the OS-agent rule loader so personal
             // rules apply to gateway-style agents as well.
-            crate::intelligence::policies::load_enabled_unconditional_policies_for_os_agent(
+            crate::specialization::policies::load_enabled_unconditional_policies_for_os_agent(
                 &ctx.config.agent_id,
             )
         } else {

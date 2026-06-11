@@ -13,6 +13,7 @@
 mod analytics;
 mod batch_update;
 mod cache_bridge;
+mod event_conversion;
 mod extractors;
 mod history;
 mod ingestion;
@@ -21,6 +22,7 @@ mod search;
 mod session_manager;
 mod snapshot;
 mod store_commands;
+mod turn_window;
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
@@ -668,8 +670,8 @@ pub fn push_events_to_session(
 
     let mut persistable: Vec<_> = events
         .iter()
-        .filter(|e| !cache_bridge::is_ts_placeholder_id(&e.id))
-        .map(|e| cache_bridge::session_event_to_cached_event(e))
+        .filter(|e| !event_conversion::is_ts_placeholder_id(&e.id))
+        .map(|e| event_conversion::session_event_to_cached_event(e))
         .collect();
 
     let merged_tool_calls = state.with_store_mut(session_id, |store| {
@@ -692,10 +694,10 @@ pub fn push_events_to_session(
     });
 
     for event in merged_tool_calls {
-        if cache_bridge::is_ts_placeholder_id(&event.id) {
+        if event_conversion::is_ts_placeholder_id(&event.id) {
             continue;
         }
-        persistable.push(cache_bridge::session_event_to_cached_event(&event));
+        persistable.push(event_conversion::session_event_to_cached_event(&event));
     }
 
     schedule_notify(app, state, session_id);
@@ -739,8 +741,8 @@ pub fn update_spawning_tool_args_with_persist(
 
     schedule_notify(app, state, session_id);
 
-    if !cache_bridge::is_ts_placeholder_id(&event.id) {
-        let cached = cache_bridge::session_event_to_cached_event(&event);
+    if !event_conversion::is_ts_placeholder_id(&event.id) {
+        let cached = event_conversion::session_event_to_cached_event(&event);
         persist_events_with_retry(
             "spawning-tool",
             session_id.to_string(),
@@ -774,8 +776,8 @@ pub fn update_tool_args_by_call_id_with_persist(
 
     schedule_notify(app, state, session_id);
 
-    if !cache_bridge::is_ts_placeholder_id(&event.id) {
-        let cached = cache_bridge::session_event_to_cached_event(&event);
+    if !event_conversion::is_ts_placeholder_id(&event.id) {
+        let cached = event_conversion::session_event_to_cached_event(&event);
         persist_events_with_retry(
             "call-id",
             session_id.to_string(),
@@ -805,6 +807,12 @@ pub use snapshot::*;
 
 // Cache bridge commands
 pub use cache_bridge::*;
+
+// Event conversion helpers (CachedEvent <-> SessionEvent, dedup, backfill, filtering)
+pub use event_conversion::*;
+
+// Turn window commands
+pub use turn_window::*;
 
 // Analytics commands
 pub use analytics::*;

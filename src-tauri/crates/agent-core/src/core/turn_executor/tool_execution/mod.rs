@@ -37,7 +37,7 @@ use std::sync::Arc;
 use serde_json::Value;
 
 use crate::core::providers::openai_compat::STREAM_PARSE_ERROR_KEY;
-use crate::intelligence::policies::activation::SessionScopedContextActivator;
+use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::providers::traits::ToolCallRequest;
 use crate::tools::policy::ResolvedToolPolicy;
 use crate::tools::registry::ToolRegistry;

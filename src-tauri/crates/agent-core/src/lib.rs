@@ -35,7 +35,7 @@
 pub mod core;
 pub mod foundation;
 pub mod integrations;
-pub mod intelligence;
+pub mod specialization;
 pub mod state;
 // Standalone modules
 pub mod init;
@@ -58,4 +58,4 @@ pub use self::core::{
 };
 pub use foundation::{bus, flow_awareness, nodes, persistence, security, tool_infra, utils};
 pub use integrations::{automation, channels, gateway};
-pub use intelligence::{mcp, memory, policies, skills};
+pub use specialization::{mcp, memory, policies, skills};

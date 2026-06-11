@@ -6,7 +6,7 @@ use std::time::Instant;
 
 use crate::definitions::AgentDefinition;
 use crate::definitions::SessionMode;
-use crate::intelligence::policies::activation::SessionScopedContextActivator;
+use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::interaction::mode_switch::ModeSwitchManager;
 use crate::interaction::permission::AgentPermissionManager;
 use crate::interaction::plan_approval::PlanApprovalManager;

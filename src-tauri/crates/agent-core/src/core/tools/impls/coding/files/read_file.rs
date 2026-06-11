@@ -7,7 +7,7 @@ use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use tokio::sync::Mutex;
 
-use crate::intelligence::skills::builtin;
+use crate::specialization::skills::builtin;
 
 use super::{map_err, merge_additional_dirs, ActiveAllowedDir, WorkspaceStateHandle};
 use crate::tools::impls::coding::action_router::ActionRouter;

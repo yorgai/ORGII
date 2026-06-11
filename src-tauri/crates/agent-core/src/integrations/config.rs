@@ -211,9 +211,9 @@ pub enum ExecutionMode {
 /// App-level (per I-SCOPE-PURITY): embedding choice is a workspace index
 /// concern, not agent behaviour. Lives on `IntegrationsConfig.embedding`
 /// and is consumed by:
-/// - `intelligence::memory::embeddings::AutoEmbeddingProvider` (provider
+/// - `specialization::memory::embeddings::AutoEmbeddingProvider` (provider
 ///   resolution), and
-/// - `intelligence::memory::consolidation` (recall mode probe).
+/// - `specialization::memory::consolidation` (recall mode probe).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EmbeddingConfig {

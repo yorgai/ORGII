@@ -31,17 +31,11 @@
 //!   `learnings.source_session_id` to prevent dangling references but
 //!   the rows themselves are retained forever.
 
-use std::fs;
-use std::time::{Duration, SystemTime};
+mod housekeeping_orphans;
+mod housekeeping_ttl;
+use housekeeping_orphans::*;
+use housekeeping_ttl::*;
 
-// `file_history` lives under `agent_core::tools` but is structurally
-// infrastructure work (TTL prune, manifest cap, blob GC over
-// `~/.orgii/file-history/`). Breaking this last reverse edge would
-// require either moving `file_history/` into `infrastructure/` (which
-// pulls its `agent_core::persistence::session_snapshots` DB
-// dependency along with it) or extracting a `FileHistoryCleanup` trait
-// in `core_types`. Both are larger reshuffles than this dependency
-// pass — keep the import but treat the cycle as deferred.
 use agent_core::tools::file_history;
 use app_paths as paths;
 
@@ -265,511 +259,12 @@ pub fn run_deferred_cleanup() -> HousekeepingStats {
     stats
 }
 
-/// Visit every session that currently has at least one `agent_snapshots`
-/// row and run the per-session cap helper on it. Returns
-/// `(sessions_touched, manifests_removed, blobs_removed)`.
-fn cap_all_surviving_sessions() -> std::io::Result<(usize, usize, usize)> {
-    let session_ids = agent_core::persistence::session_snapshots::list_sessions_with_snapshots()
-        .map_err(|err| std::io::Error::other(format!("DB list failed: {}", err)))?;
-
-    let mut touched = 0;
-    let mut manifests = 0;
-    let mut blobs = 0;
-    for sid in session_ids {
-        match file_history::evict_old_manifests_for_session(&sid) {
-            Ok(stats) => {
-                if stats.manifests_removed > 0 || stats.blobs_removed > 0 {
-                    touched += 1;
-                    manifests += stats.manifests_removed;
-                    blobs += stats.blobs_removed;
-                }
-            }
-            Err(err) => tracing::warn!("[housekeeping] cap failed for session {}: {}", sid, err),
-        }
-    }
-    Ok((touched, manifests, blobs))
-}
-
-/// Walk `~/.orgii/logs/` and delete any file whose mtime is older than
-/// `max_age_days`. The active (un-rotated) log is protected by its mtime
-/// being "now"; only rotated history files age out.
-///
-/// Directories inside `logs/` (if any are ever introduced) are skipped
-/// entirely — retention is strictly per-file.
-fn prune_old_log_files(max_age_days: u64) -> std::io::Result<usize> {
-    prune_old_files_in_dir(paths::logs_dir(), max_age_days)
-}
-
-/// Shared worker: delete every regular file directly in `dir` whose mtime is
-/// older than `max_age_days`. Sub-directories are left alone so callers can
-/// attach this to any flat file cache without worrying about recursion.
-fn prune_old_files_in_dir(dir: std::path::PathBuf, max_age_days: u64) -> std::io::Result<usize> {
-    if !dir.exists() {
-        return Ok(0);
-    }
-    let cutoff = SystemTime::now()
-        .checked_sub(Duration::from_secs(max_age_days.saturating_mul(86_400)))
-        .unwrap_or(SystemTime::UNIX_EPOCH);
-
-    let mut removed = 0;
-    for entry in fs::read_dir(&dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if !path.is_file() {
-            continue;
-        }
-        let Ok(metadata) = entry.metadata() else {
-            continue;
-        };
-        let Ok(mtime) = metadata.modified() else {
-            continue;
-        };
-        if mtime >= cutoff {
-            continue;
-        }
-        if let Err(err) = fs::remove_file(&path) {
-            tracing::warn!(
-                "[housekeeping] failed to remove aged file {}: {}",
-                path.display(),
-                err
-            );
-            continue;
-        }
-        removed += 1;
-    }
-
-    if removed > 0 {
-        tracing::info!(
-            "[housekeeping] removed {} file(s) under {} older than {} days",
-            removed,
-            dir.display(),
-            max_age_days
-        );
-    }
-
-    Ok(removed)
-}
-
-/// Fetch every session_id currently present in both the `agent_sessions`
-/// table (Rust-native agents) and the `code_sessions` table (CLI agents).
-///
-/// Agent worktrees are created exclusively for CLI agent sessions
-/// (`code_sessions`), so omitting that table would cause every active
-/// CLI worktree to be classified as orphaned and evicted prematurely.
-///
-/// Used by the orphan sweep to decide whether a per-session directory
-/// still has a live owner. Returns an empty set if neither table exists
-/// (fresh install / DB migration in progress) — callers treat `Err` as
-/// "skip sweep".
-fn list_known_session_ids() -> Result<std::collections::HashSet<String>, String> {
-    let conn =
-        session_persistence::get_connection().map_err(|err| format!("get_connection: {}", err))?;
-
-    let mut known = std::collections::HashSet::new();
-
-    // Rust-native agent sessions
-    let mut stmt = conn
-        .prepare("SELECT session_id FROM agent_sessions")
-        .map_err(|err| format!("prepare agent_sessions: {}", err))?;
-    let rows = stmt
-        .query_map([], |row| row.get::<_, String>(0))
-        .map_err(|err| format!("query_map agent_sessions: {}", err))?;
-    for row in rows {
-        match row {
-            Ok(id) => {
-                known.insert(id);
-            }
-            Err(err) => tracing::warn!("[housekeeping] agent_sessions row decode failed: {}", err),
-        }
-    }
-
-    // CLI agent sessions — worktrees are only created for these
-    let cli_table_exists: bool = conn
-        .prepare("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='code_sessions'")
-        .and_then(|mut s| s.query_row([], |row| row.get::<_, i64>(0)))
-        .map(|n| n > 0)
-        .unwrap_or(false);
-
-    if cli_table_exists {
-        let mut cli_stmt = conn
-            .prepare("SELECT session_id FROM code_sessions")
-            .map_err(|err| format!("prepare code_sessions: {}", err))?;
-        let cli_rows = cli_stmt
-            .query_map([], |row| row.get::<_, String>(0))
-            .map_err(|err| format!("query_map code_sessions: {}", err))?;
-        for row in cli_rows {
-            match row {
-                Ok(id) => {
-                    known.insert(id);
-                }
-                Err(err) => {
-                    tracing::warn!("[housekeeping] code_sessions row decode failed: {}", err)
-                }
-            }
-        }
-    }
-
-    Ok(known)
-}
-
-/// Evict every subdirectory of `root` whose name is a session_id that no
-/// longer exists in `known_session_ids`. Files directly under `root`
-/// (if any) are untouched.
-fn evict_orphan_session_dirs(
-    root: std::path::PathBuf,
-    known_session_ids: &std::collections::HashSet<String>,
-) -> std::io::Result<usize> {
-    if !root.exists() {
-        return Ok(0);
-    }
-
-    let mut removed = 0;
-    for entry in fs::read_dir(&root)? {
-        let entry = entry?;
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
-            continue;
-        };
-        if known_session_ids.contains(name) {
-            continue;
-        }
-        if let Err(err) = fs::remove_dir_all(&path) {
-            tracing::warn!(
-                "[housekeeping] failed to evict orphan session dir {}: {}",
-                path.display(),
-                err
-            );
-            continue;
-        }
-        removed += 1;
-    }
-
-    if removed > 0 {
-        tracing::info!(
-            "[housekeeping] evicted {} orphan session dir(s) under {}",
-            removed,
-            root.display()
-        );
-    }
-
-    Ok(removed)
-}
-
-/// Walk `~/.orgii/agent-worktrees/<repo_hash>/<session_id>/` two levels
-/// deep and remove every `session_id` directory whose id is not in
-/// `known_session_ids`.
-///
-/// Unlike the flat `cursor-config/<sid>/` layout, worktrees are grouped
-/// by repo hash one level above the session id, which is why we can't
-/// reuse `evict_orphan_session_dirs` directly. Empty repo-hash parents
-/// are *not* pruned because `git worktree` expects the directory to
-/// survive across session lifetimes.
-fn evict_orphan_agent_worktrees(
-    root: std::path::PathBuf,
-    known_session_ids: &std::collections::HashSet<String>,
-) -> std::io::Result<usize> {
-    if !root.exists() {
-        return Ok(0);
-    }
-
-    let mut removed = 0;
-    for repo_entry in fs::read_dir(&root)? {
-        let repo_entry = repo_entry?;
-        let repo_path = repo_entry.path();
-        if !repo_path.is_dir() {
-            continue;
-        }
-        for sid_entry in fs::read_dir(&repo_path)? {
-            let sid_entry = sid_entry?;
-            let sid_path = sid_entry.path();
-            if !sid_path.is_dir() {
-                continue;
-            }
-            let Some(name) = sid_path.file_name().and_then(|n| n.to_str()) else {
-                continue;
-            };
-            if known_session_ids.contains(name) {
-                continue;
-            }
-            if let Err(err) = fs::remove_dir_all(&sid_path) {
-                tracing::warn!(
-                    "[housekeeping] failed to evict orphan worktree {}: {}",
-                    sid_path.display(),
-                    err
-                );
-                continue;
-            }
-            removed += 1;
-        }
-    }
-
-    if removed > 0 {
-        tracing::info!(
-            "[housekeeping] evicted {} orphan agent-worktree dir(s) under {}",
-            removed,
-            root.display()
-        );
-    }
-
-    Ok(removed)
-}
-
-/// Recursive variant of [`prune_old_files_in_dir`]. Walks `dir` bottom-up,
-/// deleting any regular file whose mtime is older than `max_age_days` and
-/// then pruning any directory that became empty as a result.
-///
-/// Used for nested layouts like `~/.orgii/plans/<agent_id>/*.plan.md` where
-/// the top level is a grouping layer rather than content.
-fn prune_old_files_recursive(dir: std::path::PathBuf, max_age_days: u64) -> std::io::Result<usize> {
-    if !dir.exists() {
-        return Ok(0);
-    }
-    let cutoff = SystemTime::now()
-        .checked_sub(Duration::from_secs(max_age_days.saturating_mul(86_400)))
-        .unwrap_or(SystemTime::UNIX_EPOCH);
-
-    let mut removed = 0;
-    remove_old_files_recursive_inner(&dir, cutoff, &mut removed)?;
-
-    if removed > 0 {
-        tracing::info!(
-            "[housekeeping] removed {} file(s) under {} older than {} days",
-            removed,
-            dir.display(),
-            max_age_days
-        );
-    }
-
-    Ok(removed)
-}
-
-fn remove_old_files_recursive_inner(
-    dir: &std::path::Path,
-    cutoff: SystemTime,
-    removed: &mut usize,
-) -> std::io::Result<()> {
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        let file_type = entry.file_type()?;
-        if file_type.is_dir() {
-            remove_old_files_recursive_inner(&path, cutoff, removed)?;
-            // Prune the directory if it became empty.
-            if fs::read_dir(&path)?.next().is_none() {
-                let _ = fs::remove_dir(&path);
-            }
-            continue;
-        }
-        if !file_type.is_file() {
-            continue;
-        }
-        let Ok(metadata) = entry.metadata() else {
-            continue;
-        };
-        let Ok(mtime) = metadata.modified() else {
-            continue;
-        };
-        if mtime >= cutoff {
-            continue;
-        }
-        if let Err(err) = fs::remove_file(&path) {
-            tracing::warn!(
-                "[housekeeping] failed to remove aged file {}: {}",
-                path.display(),
-                err
-            );
-            continue;
-        }
-        *removed += 1;
-    }
-    Ok(())
-}
-
-/// Delete files under `~/.orgii/session-images/` whose `file_name()` is
-/// not referenced by any row in `agent_messages.images` (a JSON array
-/// of absolute paths). Image filenames are content-addressed hashes so
-/// once no message points to them they are irreclaimably dead.
-///
-/// Returns the number of files actually removed.
-fn evict_orphan_session_images() -> std::io::Result<usize> {
-    let images_dir = paths::session_images_dir();
-    if !images_dir.exists() {
-        return Ok(0);
-    }
-
-    // Collect every image filename still referenced by a surviving message.
-    let referenced = match live_session_image_filenames() {
-        Ok(set) => set,
-        Err(err) => {
-            tracing::warn!(
-                "[housekeeping] could not enumerate live image refs: {}; skipping",
-                err
-            );
-            return Ok(0);
-        }
-    };
-
-    let mut removed = 0;
-    for entry in fs::read_dir(&images_dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if !path.is_file() {
-            continue;
-        }
-        let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
-            continue;
-        };
-        if referenced.contains(name) {
-            continue;
-        }
-        if let Err(err) = fs::remove_file(&path) {
-            tracing::warn!(
-                "[housekeeping] failed to remove orphan session image {}: {}",
-                path.display(),
-                err
-            );
-            continue;
-        }
-        removed += 1;
-    }
-
-    if removed > 0 {
-        tracing::info!(
-            "[housekeeping] evicted {} orphan session-image file(s) under {}",
-            removed,
-            images_dir.display()
-        );
-    }
-
-    Ok(removed)
-}
-
-/// Collect the `file_name()` of every path currently stored in
-/// `agent_messages.images` (a JSON-array column). We compare filenames
-/// rather than full paths because the column may store paths rooted at
-/// the previous install location (e.g. user moved `~/.orgii/`); the
-/// filename is a content hash and therefore stable across moves.
-fn live_session_image_filenames() -> Result<std::collections::HashSet<String>, String> {
-    let conn =
-        session_persistence::get_connection().map_err(|err| format!("get_connection: {}", err))?;
-    let mut stmt = conn
-        .prepare("SELECT images FROM agent_messages WHERE images IS NOT NULL")
-        .map_err(|err| format!("prepare: {}", err))?;
-    let rows = stmt
-        .query_map([], |row| row.get::<_, String>(0))
-        .map_err(|err| format!("query_map: {}", err))?;
-
-    let mut names = std::collections::HashSet::new();
-    for row in rows.flatten() {
-        let Ok(paths) = serde_json::from_str::<Vec<String>>(&row) else {
-            continue;
-        };
-        for p in paths {
-            if p.starts_with("data:") {
-                continue;
-            }
-            if let Some(name) = std::path::Path::new(&p)
-                .file_name()
-                .and_then(|n| n.to_str())
-            {
-                names.insert(name.to_string());
-            }
-        }
-    }
-    Ok(names)
-}
-
-/// Delete `gateway_bindings` rows whose `target_session_id` is not in
-/// `known_session_ids`.
-///
-/// # Memory-vs-DB tradeoff
-///
-/// [`BindingStore`] holds an in-memory cache keyed by `session_key`.
-/// Housekeeping runs from `spawn_blocking` with no handle to the async
-/// `AgentAppState` (and no `tokio::Runtime` context to acquire the
-/// store's `RwLock`), so we delete straight from SQLite here.
-///
-/// This is **intentionally permitted** because:
-/// 1. The row we evict points at a session already removed from
-///    `agent_sessions` — `Tier-0` routing for it would fail anyway.
-/// 2. If the in-memory cache still has the orphan entry, the next
-///    inbound hit resolves to a missing target session → handler
-///    falls back to Tier-1 LLM routing (graceful degradation, no
-///    data corruption, no cross-session leak).
-/// 3. [`BindingStore::load_from_db`] rehydrates from SQLite at every
-///    gateway startup, so at worst the stale cache entry survives
-///    until the next process restart.
-///
-/// [`BindingStore`]: agent_core::integrations::gateway::binding::BindingStore
-/// [`BindingStore::load_from_db`]: agent_core::integrations::gateway::binding::BindingStore::load_from_db
-fn evict_orphan_gateway_bindings(
-    known_session_ids: &std::collections::HashSet<String>,
-) -> Result<usize, String> {
-    let conn =
-        session_persistence::get_connection().map_err(|err| format!("get_connection: {}", err))?;
-
-    // Only consider the table present — first bootable gateway migration
-    // creates it. When absent we simply report zero evictions.
-    let has_table: bool = conn
-        .prepare(
-            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='gateway_bindings'",
-        )
-        .and_then(|mut stmt| stmt.query_row([], |row| row.get::<_, i64>(0)))
-        .map(|n| n > 0)
-        .unwrap_or(false);
-    if !has_table {
-        return Ok(0);
-    }
-
-    let mut stmt = conn
-        .prepare("SELECT session_key, target_session_id FROM gateway_bindings")
-        .map_err(|err| format!("prepare: {}", err))?;
-    let rows = stmt
-        .query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-        })
-        .map_err(|err| format!("query_map: {}", err))?;
-
-    let orphans: Vec<String> = rows
-        .flatten()
-        .filter_map(|(key, target)| {
-            if known_session_ids.contains(&target) {
-                None
-            } else {
-                Some(key)
-            }
-        })
-        .collect();
-
-    for key in &orphans {
-        if let Err(err) = conn.execute("DELETE FROM gateway_bindings WHERE session_key = ?1", [key])
-        {
-            tracing::warn!(
-                "[housekeeping] failed to delete orphan gateway_binding {}: {}",
-                key,
-                err
-            );
-        }
-    }
-
-    if !orphans.is_empty() {
-        tracing::info!(
-            "[housekeeping] evicted {} orphan gateway_binding row(s)",
-            orphans.len()
-        );
-    }
-
-    Ok(orphans.len())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_utils::test_env;
     use std::path::Path;
+    use std::time::{Duration, SystemTime};
 
     /// Test-only mtime helper (not compiled into release builds).
     fn set_mtime_days_ago(path: &Path, days: u64) -> std::io::Result<()> {
@@ -792,12 +287,12 @@ mod tests {
     fn prune_old_log_files_removes_only_aged_entries() {
         with_sandbox(|_| {
             let dir = paths::logs_dir();
-            fs::create_dir_all(&dir).unwrap();
+            std::fs::create_dir_all(&dir).unwrap();
 
             let fresh = dir.join("frontend.log.fresh");
             let aged = dir.join("frontend.log.aged");
-            fs::write(&fresh, b"fresh").unwrap();
-            fs::write(&aged, b"aged").unwrap();
+            std::fs::write(&fresh, b"fresh").unwrap();
+            std::fs::write(&aged, b"aged").unwrap();
 
             // Age the second file 60 days back.
             set_mtime_days_ago(&aged, 60).unwrap();
@@ -824,15 +319,15 @@ mod tests {
             let plans = paths::orgii_root().join("plans");
             let agent_a = plans.join("agent-a");
             let agent_b = plans.join("agent-b");
-            fs::create_dir_all(&agent_a).unwrap();
-            fs::create_dir_all(&agent_b).unwrap();
+            std::fs::create_dir_all(&agent_a).unwrap();
+            std::fs::create_dir_all(&agent_b).unwrap();
 
             let fresh = agent_a.join("keep.plan.md");
             let aged_nested = agent_a.join("drop.plan.md");
             let aged_only = agent_b.join("lone-old.plan.md");
-            fs::write(&fresh, b"keep").unwrap();
-            fs::write(&aged_nested, b"drop").unwrap();
-            fs::write(&aged_only, b"drop").unwrap();
+            std::fs::write(&fresh, b"keep").unwrap();
+            std::fs::write(&aged_nested, b"drop").unwrap();
+            std::fs::write(&aged_only, b"drop").unwrap();
             set_mtime_days_ago(&aged_nested, 60).unwrap();
             set_mtime_days_ago(&aged_only, 60).unwrap();
 
@@ -853,10 +348,10 @@ mod tests {
             let repo = root.join("abc123");
             let live_sid = "agent-live-sid";
             let dead_sid = "agent-dead-sid";
-            fs::create_dir_all(repo.join(live_sid).join("sub")).unwrap();
-            fs::create_dir_all(repo.join(dead_sid).join("sub")).unwrap();
-            fs::write(repo.join(live_sid).join("marker"), b"live").unwrap();
-            fs::write(repo.join(dead_sid).join("marker"), b"dead").unwrap();
+            std::fs::create_dir_all(repo.join(live_sid).join("sub")).unwrap();
+            std::fs::create_dir_all(repo.join(dead_sid).join("sub")).unwrap();
+            std::fs::write(repo.join(live_sid).join("marker"), b"live").unwrap();
+            std::fs::write(repo.join(dead_sid).join("marker"), b"dead").unwrap();
 
             let mut known = std::collections::HashSet::new();
             known.insert(live_sid.to_string());
@@ -933,11 +428,11 @@ mod tests {
         with_sandbox(|_| {
             agent_core::foundation::persistence::session_snapshots::ensure_tables().unwrap();
             let dir = paths::session_images_dir();
-            fs::create_dir_all(&dir).unwrap();
+            std::fs::create_dir_all(&dir).unwrap();
             let referenced = dir.join("live-hash.png");
             let orphan = dir.join("dead-hash.png");
-            fs::write(&referenced, b"live").unwrap();
-            fs::write(&orphan, b"dead").unwrap();
+            std::fs::write(&referenced, b"live").unwrap();
+            std::fs::write(&orphan, b"dead").unwrap();
 
             // Seed one message row referencing only `live-hash.png`.
             let conn = session_persistence::get_connection().unwrap();

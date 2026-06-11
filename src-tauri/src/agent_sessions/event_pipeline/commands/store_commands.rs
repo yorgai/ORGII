@@ -14,7 +14,7 @@ use crate::agent_sessions::event_pipeline::types::{
     ActivityStatus, EventDisplayStatus, EventSource, SessionEvent, SessionEventPatch,
 };
 
-use super::cache_bridge::normalize_event_record_value;
+use super::event_conversion::normalize_event_record_value;
 use super::{schedule_notify, EventStoreState};
 
 fn normalize_event_records(event: &mut SessionEvent) {
@@ -88,7 +88,7 @@ pub async fn es_append(
     session_id: Option<String>,
     mut events: Vec<SessionEvent>,
 ) -> Result<(), String> {
-    use super::cache_bridge::{is_ts_placeholder_id, session_event_to_cached_event};
+    use super::event_conversion::{is_ts_placeholder_id, session_event_to_cached_event};
     use super::{save_events_retry, BULK_WRITE_MAX_RETRIES};
 
     for event in &mut events {

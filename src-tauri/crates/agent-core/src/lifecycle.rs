@@ -436,17 +436,17 @@ pub async fn finalize_session(
 
         // Fire HookEvent::SessionStop — session lifecycle ended.
         if let Some(root) = workspace_path {
-            let executor = crate::intelligence::hooks::HookExecutor::load_with_workspace_scope(
+            let executor = crate::specialization::hooks::HookExecutor::load_with_workspace_scope(
                 root,
                 load_workspace_resources,
             );
-            if executor.has_hooks_for(crate::intelligence::hooks::HookEvent::SessionStop) {
-                let ctx = crate::intelligence::hooks::events::HookContext::for_session(session_id)
+            if executor.has_hooks_for(crate::specialization::hooks::HookEvent::SessionStop) {
+                let ctx = crate::specialization::hooks::events::HookContext::for_session(session_id)
                     .with_var("ORGII_SESSION_STATUS", final_status.as_ref());
                 let sid = session_id.to_string();
                 tokio::spawn(async move {
                     executor
-                        .run(crate::intelligence::hooks::HookEvent::SessionStop, &ctx)
+                        .run(crate::specialization::hooks::HookEvent::SessionStop, &ctx)
                         .await;
                     tracing::info!("[lifecycle] SessionStop hooks fired for {}", sid);
                 });

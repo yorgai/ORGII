@@ -68,15 +68,15 @@ impl UnifiedMessageProcessor {
 
         // 9a. Fire HookEvent::Stop — agent turn concluded.
         if let Some(ref executor) = self.event_handler_config.hook_executor {
-            if executor.has_hooks_for(crate::intelligence::hooks::HookEvent::Stop) {
-                let ctx = crate::intelligence::hooks::events::HookContext::for_session(session_id)
+            if executor.has_hooks_for(crate::specialization::hooks::HookEvent::Stop) {
+                let ctx = crate::specialization::hooks::events::HookContext::for_session(session_id)
                     .with_var("ORGII_TURN_ID", turn_id)
                     .with_var("ORGII_TOOL_CALLS", tool_calls_count.to_string())
                     .with_var("ORGII_TOTAL_TOKENS", result.total_tokens.to_string());
                 let stop_executor = executor.clone();
                 tokio::spawn(async move {
                     stop_executor
-                        .run(crate::intelligence::hooks::HookEvent::Stop, &ctx)
+                        .run(crate::specialization::hooks::HookEvent::Stop, &ctx)
                         .await;
                 });
             }
