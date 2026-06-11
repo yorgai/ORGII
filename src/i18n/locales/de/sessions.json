@@ -752,6 +752,7 @@
     "addTagPrompt": "Add tag (e.g. review, infra):",
     "permissionPrompt": "Deine Berechtigung wird benötigt",
     "questionsPrompt": "Deine Eingabe wird benötigt",
+    "generatingQuestions": "Fragen werden generiert",
     "commandConfirmTitle": "Befehl erfordert Genehmigung",
     "allow": "Erlauben",
     "deny": "Ablehnen",

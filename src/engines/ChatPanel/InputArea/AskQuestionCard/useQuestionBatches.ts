@@ -109,22 +109,31 @@ export function useQuestionBatches(): UseQuestionBatchesReturn {
   // payload hasn't reached "has at least one question with text" yet. The
   // parser returns null for those, so they don't appear in `pendingBatches`,
   // but we still want to render a loading shell.
+  //
+  // Positive whitelist: only treat the event as still-streaming when
+  // displayStatus is one of the in-flight states AND no tool_result has
+  // arrived yet. Any other state (skipped/cancelled/completed/failed/
+  // answered/undefined) is treated as terminal — prevents the shell from
+  // sticking forever when a question is dismissed or finalized via a
+  // status the parser doesn't recognise.
   const streamingCount = useMemo(() => {
     let count = 0;
     for (const event of chatHistory) {
       if (!isAskUserQuestionsEvent(event)) continue;
       // Already renderable — handled by the normal batch path.
       if (extractQuestionBatch(event)) continue;
-      // Terminal: nothing to wait for.
+      // Only in-flight statuses can be "still streaming".
+      const status = event.displayStatus;
       if (
-        event.displayStatus === "completed" ||
-        event.displayStatus === "failed"
+        status !== "running" &&
+        status !== "pending" &&
+        status !== "awaiting_user"
       ) {
         continue;
       }
+      // Any tool_result presence means the call already finalized.
       const result = event.result as Record<string, unknown> | undefined;
-      if (result?.success === true) continue;
-      if (result?.error) continue;
+      if (result && Object.keys(result).length > 0) continue;
       count += 1;
     }
     return count;

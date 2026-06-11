@@ -752,6 +752,7 @@
     "addTagPrompt": "Add tag (e.g. review, infra):",
     "permissionPrompt": "あなたの許可が必要です",
     "questionsPrompt": "あなたの入力が必要です",
+    "generatingQuestions": "質問を生成中",
     "commandConfirmTitle": "コマンドの承認が必要です",
     "allow": "許可",
     "deny": "拒否",

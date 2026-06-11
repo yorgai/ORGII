@@ -754,6 +754,7 @@
     "addTagPrompt": "Add tag (e.g. review, infra):",
     "permissionPrompt": "Требуется ваше разрешение",
     "questionsPrompt": "Требуется ваш ответ",
+    "generatingQuestions": "Генерация вопросов",
     "commandConfirmTitle": "Команда требует одобрения",
     "allow": "Разрешить",
     "deny": "Отклонить",

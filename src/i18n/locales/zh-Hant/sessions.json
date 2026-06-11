@@ -756,6 +756,7 @@
     "addTagPrompt": "Add tag (e.g. review, infra):",
     "permissionPrompt": "需要你的授權",
     "questionsPrompt": "需要你的輸入",
+    "generatingQuestions": "正在生成問題",
     "commandConfirmTitle": "命令需要審批",
     "allow": "允許",
     "deny": "拒絕",

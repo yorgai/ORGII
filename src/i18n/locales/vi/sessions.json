@@ -752,6 +752,7 @@
     "addTagPrompt": "Add tag (e.g. review, infra):",
     "permissionPrompt": "Cần quyền của bạn",
     "questionsPrompt": "Cần phản hồi của bạn",
+    "generatingQuestions": "Đang tạo câu hỏi",
     "commandConfirmTitle": "Lệnh cần được phê duyệt",
     "allow": "Cho phép",
     "deny": "Từ chối",

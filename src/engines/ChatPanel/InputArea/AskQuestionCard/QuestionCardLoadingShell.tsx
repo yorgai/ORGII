@@ -27,7 +27,7 @@ export function QuestionCardLoadingShell() {
         <span
           className={`min-w-0 truncate text-[13px] font-bold ${EVENT_LOADING_SHIMMER_TEXT_CLASSES}`}
         >
-          {t("chat.questionsPrompt")}
+          {t("chat.generatingQuestions")}
         </span>
       </div>
     </div>

@@ -760,6 +760,7 @@
     "addTagPrompt": "Add tag (e.g. review, infra):",
     "permissionPrompt": "Wymagane jest Twoje pozwolenie",
     "questionsPrompt": "Wymagane są Twoje dane",
+    "generatingQuestions": "Generowanie pytań",
     "commandConfirmTitle": "Polecenie wymaga zatwierdzenia",
     "permissionFailed": "Nie udało się odpowiedzieć na prośbę o uprawnienia",
     "allow": "Zezwól",

@@ -752,6 +752,7 @@
     "addTagPrompt": "Add tag (e.g. review, infra):",
     "permissionPrompt": "Votre autorisation est requise",
     "questionsPrompt": "Votre réponse est requise",
+    "generatingQuestions": "Génération des questions",
     "commandConfirmTitle": "La commande nécessite une approbation",
     "allow": "Autoriser",
     "deny": "Refuser",

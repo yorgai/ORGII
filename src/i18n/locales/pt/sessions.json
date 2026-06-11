@@ -758,6 +758,7 @@
     "addTagPrompt": "Add tag (e.g. review, infra):",
     "permissionPrompt": "Sua permissão é necessária",
     "questionsPrompt": "Sua entrada é necessária",
+    "generatingQuestions": "Gerando perguntas",
     "commandConfirmTitle": "Comando requer aprovação",
     "permissionFailed": "Falha ao responder solicitação de permissão",
     "allow": "Permitir",

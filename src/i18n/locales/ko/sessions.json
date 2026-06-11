@@ -752,6 +752,7 @@
     "addTagPrompt": "Add tag (e.g. review, infra):",
     "permissionPrompt": "권한이 필요합니다",
     "questionsPrompt": "입력이 필요합니다",
+    "generatingQuestions": "질문 생성 중",
     "commandConfirmTitle": "명령에 승인이 필요합니다",
     "allow": "허용",
     "deny": "거부",
