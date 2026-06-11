@@ -441,6 +441,15 @@ fn executable_substitution(command: &str) -> Option<ShellSubstitution> {
             continue;
         }
 
+        // `index` advances byte-by-byte and may sit inside a multi-byte UTF-8
+        // char; slicing `command[index..]` there panics. All shell syntax we
+        // care about is ASCII, so non-boundary bytes can be skipped outright.
+        if !command.is_char_boundary(index) {
+            index += 1;
+            at_line_start = false;
+            continue;
+        }
+
         if !in_single_quote && !in_double_quote {
             if let Some((delimiter, body_start)) = quoted_heredoc_start(&command[index..]) {
                 heredoc_until = Some(delimiter);
@@ -630,6 +639,22 @@ mod tests {
         assert!(matches!(
             policy.validate_command_execution(command, false),
             ValidationResult::Allowed(CommandRiskLevel::Low)
+        ));
+    }
+
+    #[test]
+    fn substitution_scan_handles_multibyte_chars_without_panicking() {
+        let policy = SecurityPolicy::permissive(std::env::temp_dir());
+        let command = "echo ===MenuRows mode 部分===; sed -n '90,130p' file.tsx";
+
+        assert!(matches!(
+            policy.validate_command_execution(command, false),
+            ValidationResult::Allowed(CommandRiskLevel::Low)
+        ));
+
+        assert!(matches!(
+            policy.validate_command_execution("echo 部分 $(whoami)", false),
+            ValidationResult::Denied(reason) if reason.contains("$() subshell")
         ));
     }
 
