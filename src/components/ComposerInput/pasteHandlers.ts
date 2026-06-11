@@ -13,7 +13,7 @@
  *   6. Otherwise, sanitize the plain-text payload and insert it manually so
  *      `contenteditable` does not pull in formatted HTML from the source.
  */
-import { storePillText } from "@src/config/pillTokens";
+import { capPillText, storePillText } from "@src/config/pillTokens";
 import { createLogger } from "@src/hooks/logger";
 import type { InstalledSkill } from "@src/types/extensions";
 
@@ -287,7 +287,7 @@ export function createPasteHandler(ctx: PasteHandlerContext) {
         lineStart: 1,
         lineEnd: lineCount,
       });
-      storePillText(pillPath, terminalRef.text);
+      storePillText(pillPath, capPillText(terminalRef.text));
       event.preventDefault();
       return true;
     }
@@ -337,7 +337,7 @@ export function createPasteHandler(ctx: PasteHandlerContext) {
           lineStart: null,
           lineEnd: null,
         });
-        storePillText(pillPath, jsonHit.pretty);
+        storePillText(pillPath, capPillText(jsonHit.pretty));
         event.preventDefault();
         return true;
       }

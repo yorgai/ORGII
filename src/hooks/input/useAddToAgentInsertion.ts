@@ -15,7 +15,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { type RefObject, useEffect } from "react";
 
 import type { ComposerInputRef } from "@src/components/ComposerInput";
-import { storePillText } from "@src/config/pillTokens";
+import { capPillText, storePillText } from "@src/config/pillTokens";
 import { addToAgentAtom } from "@src/store/ui/addToAgentAtom";
 
 export function useAddToAgentInsertion(
@@ -53,16 +53,17 @@ export function useAddToAgentInsertion(
           lineEnd: stableRequest.lineEnd,
         });
       } else if (stableRequest.type === "terminal") {
-        const lineCount = stableRequest.text.split("\n").length;
+        const capped = capPillText(stableRequest.text);
+        const lineCount = capped.split("\n").length;
         const pillPath = `terminal://selection/${Date.now()}`;
         const label =
           stableRequest.displayName ??
           (lineCount > 1 ? `Terminal (1-${lineCount})` : "Terminal");
-        storePillText(pillPath, stableRequest.text);
+        storePillText(pillPath, capped);
         editor.insertFilePill(pillPath, false, "terminal", label);
       } else if (stableRequest.type === "dom-element") {
         const pillPath = `dom-element://selection/${Date.now()}`;
-        storePillText(pillPath, stableRequest.text);
+        storePillText(pillPath, capPillText(stableRequest.text));
         editor.insertFilePill(
           pillPath,
           false,
@@ -73,7 +74,7 @@ export function useAddToAgentInsertion(
         const pillPath = `paste://${Date.now()}-${Math.random()
           .toString(36)
           .slice(2, 8)}`;
-        storePillText(pillPath, stableRequest.jsonText);
+        storePillText(pillPath, capPillText(stableRequest.jsonText));
         editor.insertFilePill(pillPath, false, "paste", stableRequest.fileName);
       } else {
         editor.insertFilePill(stableRequest.filePath, false, "file");
