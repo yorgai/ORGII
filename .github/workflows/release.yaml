@@ -104,8 +104,10 @@ jobs:
 
       - name: Install frontend dependencies
         run: |
-          if [ -L "node_modules" ] || [ -d "node_modules/.bin" ]; then
-            echo "node_modules already present via symlink or cache, skipping install"
+          if [ -L "node_modules" ]; then
+            echo "node_modules symlinked from local repo, skipping install"
+          elif [ -f "node_modules/.modules.yaml" ]; then
+            echo "node_modules restored from cache, skipping install"
           else
             pnpm install --frozen-lockfile
           fi
