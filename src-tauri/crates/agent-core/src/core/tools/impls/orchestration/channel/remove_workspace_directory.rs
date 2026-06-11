@@ -70,7 +70,11 @@ impl Tool for RemoveWorkspaceDirectoryTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let path_str = required_string(&params, "path")?;
         let path = std::path::PathBuf::from(&path_str);
 

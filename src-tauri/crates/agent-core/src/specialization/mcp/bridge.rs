@@ -7,7 +7,6 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serde_json::Value;
-use tokio::sync::Mutex;
 
 use crate::tools::traits::{McpMeta, Tool, ToolError, ToolExecuteResult, ToolSchemaCacheScope};
 
@@ -60,14 +59,6 @@ pub struct McpBridgeTool {
     tool_schema: Value,
     /// Shared MCP manager for dispatching calls.
     manager: Arc<McpManager>,
-    /// Current session key, refreshed each turn via [`Tool::set_session_key`].
-    ///
-    /// Populated by `turn_executor::mod.rs` right before tool execution so
-    /// the progress callback in [`Tool::execute`] can stamp `sessionId` on
-    /// every `agent:mcp_progress` event. Uses the same
-    /// `Arc<Mutex<Option<_>>>` pattern the gateway routing tools use for
-    /// their per-turn `ChannelContext`.
-    session_key: Arc<Mutex<Option<String>>>,
 }
 
 /// Max characters we ever advertise to the LLM in an MCP tool description.
@@ -189,7 +180,6 @@ impl McpBridgeTool {
             tool_description,
             tool_schema,
             manager,
-            session_key: Arc::new(Mutex::new(None)),
         }
     }
 }
@@ -232,61 +222,30 @@ impl Tool for McpBridgeTool {
     /// any `notifications/progress` the server emits for this tool
     /// becomes an `agent:mcp_progress` Tauri/WS event. The progress
     /// callback runs synchronously inside the SDK's `ProgressDispatcher`
-    /// (see `McpClient::call_tool_typed_with_progress`). The required
-    /// per-call context — `__call_id` (injected by
-    /// `turn_executor::tool_execution::single` before every
-    /// `execute_with_policy` call) and `session_key` (refreshed each
-    /// turn via `Tool::set_session_key`) — is stamped into every event.
-    async fn execute(&self, params: Value) -> Result<ToolExecuteResult, ToolError> {
-        // Both fields are protected by upstream invariants:
-        // `__call_id` is injected by `turn_executor::tool_execution::
-        // single` before every `execute_with_policy` call, and
-        // `session_key` is refreshed each turn via
-        // `Tool::set_session_key`. A missing value is therefore a
-        // logic bug — `debug_assert!` so dev builds fail loudly,
-        // and the empty-string fallback is preserved in release
-        // so the call still proceeds (UI may filter the broadcast,
-        // but the actual tool result still threads through).
-        let call_id = params
-            .as_object()
-            .and_then(|obj| obj.get("__call_id"))
-            .and_then(|v| v.as_str())
-            .map(str::to_string);
-        if call_id.is_none() {
+    /// (see `McpClient::call_tool_typed_with_progress`). Per-call context
+    /// (`call_id`, `session_id`) comes from the typed `CallContext`
+    /// threaded by `turn_executor::tool_execution` — no `__`-prefixed
+    /// key reading or `set_session_key` Mutex.
+    async fn execute(
+        &self,
+        params: Value,
+        ctx: &crate::tools::traits::CallContext,
+    ) -> Result<ToolExecuteResult, ToolError> {
+        if ctx.call_id.is_empty() {
             tracing::warn!(
                 tool = %self.full_name,
-                "mcp::bridge::execute: __call_id missing from params (turn_executor invariant violation); progress events will have empty toolCallId"
+                "mcp::bridge::execute: ctx.call_id empty (direct caller path); progress events will have empty toolCallId"
             );
         }
-        debug_assert!(
-            call_id.is_some(),
-            "mcp::bridge::execute: __call_id must be injected by turn_executor"
-        );
-        let call_id = call_id.unwrap_or_default();
-        let session_key = self.session_key.lock().await.clone();
-        if session_key.is_none() {
+        if ctx.session_id.is_empty() {
             tracing::warn!(
                 tool = %self.full_name,
-                "mcp::bridge::execute: session_key not set (Tool::set_session_key invariant violation); progress events will have empty sessionId"
+                "mcp::bridge::execute: ctx.session_id empty (direct caller path); progress events will have empty sessionId"
             );
         }
-        debug_assert!(
-            session_key.is_some(),
-            "mcp::bridge::execute: session_key must be set each turn"
-        );
-        let session_key = session_key.unwrap_or_default();
+        let call_id = ctx.call_id.clone();
+        let session_key = ctx.session_id.clone();
         let tool_name_full = self.full_name.clone();
-
-        // Strip the framework-reserved `__` meta namespace before the
-        // params leave the process. External MCP servers must only see
-        // LLM-supplied arguments: strict servers (additionalProperties:
-        // false) reject unknown keys — the exact failure mode that hit
-        // the agent-org task tools — and `__session_id` is internal
-        // attribution that must not leak to third-party servers.
-        let mut params = params;
-        if let Some(obj) = params.as_object_mut() {
-            obj.retain(|key, _| !key.starts_with("__"));
-        }
 
         let result = self
             .manager
@@ -326,25 +285,6 @@ impl Tool for McpBridgeTool {
             .await
             .map_err(|err| ToolError::ExecutionFailed(err.to_string()))?;
         Ok(call_result_to_execute_result(result))
-    }
-
-    /// Required fallback per the `Tool` trait contract. Never called in
-    /// practice because `execute` is overridden above, but we implement
-    /// it so the trait is satisfied and so legacy string-only callers
-    /// still get the flattened text if something routes around
-    /// `execute`.
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
-        self.manager
-            .call_tool(&self.server_name, &self.tool_name, params)
-            .await
-            .map_err(ToolError::ExecutionFailed)
-    }
-
-    /// Called once per turn by `turn_executor::mod.rs` right before
-    /// tool dispatch. Stashes the session id so the
-    /// `agent:mcp_progress` callback can stamp it on every tick.
-    async fn set_session_key(&self, session_key: &str) {
-        *self.session_key.lock().await = Some(session_key.to_string());
     }
 }
 

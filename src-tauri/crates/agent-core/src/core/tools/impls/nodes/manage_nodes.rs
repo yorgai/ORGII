@@ -129,7 +129,11 @@ impl Tool for NodesTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let action = required_string(&params, "action")?;
         let timeout_ms = params
             .get("timeout_ms")

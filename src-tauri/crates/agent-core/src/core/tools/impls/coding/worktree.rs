@@ -134,7 +134,11 @@ impl Tool for WorktreeTool {
         params_schema::<WorktreeParams>()
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let params: WorktreeParams = parse_params(params)?;
         match params {
             WorktreeParams::Add { branch, base_ref } => {
@@ -558,7 +562,7 @@ mod tests {
     #[tokio::test]
     async fn leave_without_add_fails() {
         let tool = test_tool();
-        let result = tool.execute(json!({ "action": "leave" })).await;
+        let result = tool.execute(json!({ "action": "leave" }), &crate::tools::call_context::CallContext::default()).await;
         assert!(result.is_err());
     }
 }

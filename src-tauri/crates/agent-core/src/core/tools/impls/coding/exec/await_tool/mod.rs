@@ -145,7 +145,11 @@ impl Tool for AwaitTool {
         *self.session_key.lock().await = Some(session_key.to_string());
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         // `command` is optional — defaults to "monitor" (the safe, non-blocking
         // snapshot). But if the caller passed params that ONLY make sense on
         // `wait_for` (pattern / wait_mode — both strictly blocking-intent

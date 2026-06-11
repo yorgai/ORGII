@@ -61,7 +61,11 @@ impl Tool for SpotlightTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let operation = params
             .get("operation")
             .and_then(Value::as_str)

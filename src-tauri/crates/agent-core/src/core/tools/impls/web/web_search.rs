@@ -80,7 +80,11 @@ impl Tool for WebSearchTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let query = required_string(&params, "query")?;
         let count = optional_int(&params, "count").unwrap_or(5).clamp(1, 10);
 

@@ -25,7 +25,7 @@
 //!          │
 //!          ▼  (after stream ends)
 //! ┌─ execute_prevalidated ──────────────────────┐
-//! │ for each read-only TC: spawn tool.execute() │
+//! │ for each read-only TC: spawn tool.execute(, &crate::tools::call_context::CallContext::default()) │
 //! │ join_all → Vec<StreamedToolResult>           │
 //! └──────────────────────────────────────────────┘
 //! ```
@@ -35,9 +35,7 @@ use std::collections::HashMap;
 use serde_json::Value;
 use tracing::info;
 
-use crate::core::turn_executor::tool_execution::{
-    inject_framework_meta, normalize_tool_use_concurrency,
-};
+use crate::core::turn_executor::tool_execution::normalize_tool_use_concurrency;
 use crate::providers::traits::{ToolCallDelta, ToolCallRequest};
 use crate::tools::policy::{ResolvedToolPolicy, ToolVerdict};
 use crate::tools::registry::ToolRegistry;
@@ -255,11 +253,10 @@ pub(crate) async fn execute_prevalidated(
             .map(|tc| {
                 let tool_ref = registry.get(&tc.name);
                 let saved_args = tc.arguments.clone();
-                let mut exec_args = tc.arguments;
-                inject_framework_meta(&mut exec_args, &tc.id, session_id);
+                let ctx = crate::tools::call_context::CallContext::new(&tc.id, session_id);
                 async move {
                     let result = match tool_ref {
-                        Some(tool) => match tool.execute(exec_args).await {
+                        Some(tool) => match tool.execute(tc.arguments, &ctx).await {
                             Ok(output) => Ok(output),
                             Err(err) => Err(format!("{}", err)),
                         },
@@ -302,7 +299,7 @@ mod tests {
         fn is_read_only(&self) -> bool {
             true
         }
-        async fn execute_text(&self, _params: Value) -> Result<String, ToolError> {
+        async fn execute_text(&self, _params: Value, _ctx: &crate::tools::traits::CallContext) -> Result<String, ToolError> {
             Ok("file_content_here".into())
         }
     }
@@ -319,7 +316,7 @@ mod tests {
         fn parameters(&self) -> Value {
             serde_json::json!({"type":"object","properties":{}})
         }
-        async fn execute_text(&self, _params: Value) -> Result<String, ToolError> {
+        async fn execute_text(&self, _params: Value, _ctx: &crate::tools::traits::CallContext) -> Result<String, ToolError> {
             Ok("edited".into())
         }
     }
@@ -339,7 +336,7 @@ mod tests {
         fn is_read_only(&self) -> bool {
             true
         }
-        async fn execute_text(&self, _params: Value) -> Result<String, ToolError> {
+        async fn execute_text(&self, _params: Value, _ctx: &crate::tools::traits::CallContext) -> Result<String, ToolError> {
             Ok("search_result".into())
         }
     }

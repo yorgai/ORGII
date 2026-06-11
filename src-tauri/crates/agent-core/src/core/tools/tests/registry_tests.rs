@@ -107,7 +107,11 @@ impl Tool for MockTool {
         })
     }
 
-    async fn execute_text(&self, _params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        _params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         Ok(format!("executed:{}", self.tool_name))
     }
 }
@@ -326,14 +330,14 @@ async fn execute_runs_registered_tool() {
     let mut registry = ToolRegistry::new();
     registry.register(Box::new(MockTool::new("my_tool")));
 
-    let result = registry.execute("my_tool", json!({})).await.unwrap();
+    let result = registry.execute("my_tool", json!({}), &crate::tools::call_context::CallContext::default()).await.unwrap();
     assert_eq!(result.text, "executed:my_tool");
 }
 
 #[tokio::test]
 async fn execute_returns_error_for_missing_tool() {
     let registry = ToolRegistry::new();
-    let err = registry.execute("missing", json!({})).await.unwrap_err();
+    let err = registry.execute("missing", json!({}), &crate::tools::call_context::CallContext::default()).await.unwrap_err();
     assert!(err.contains("not found"));
 }
 
@@ -344,7 +348,7 @@ async fn execute_fallback_tool() {
     let inner_arc = Arc::new(inner);
 
     let outer = ToolRegistry::with_fallback(inner_arc);
-    let result = outer.execute("fb_tool", json!({})).await.unwrap();
+    let result = outer.execute("fb_tool", json!({}), &crate::tools::call_context::CallContext::default()).await.unwrap();
     assert_eq!(result.text, "executed:fb_tool");
 }
 
@@ -616,7 +620,7 @@ async fn tool_search_finds_deferred_tools() {
 
     let search_tool = crate::tools::impls::meta::tool_search::ToolSearchTool::new(registry_arc);
     let result = search_tool
-        .execute(json!({"query": "database"}))
+        .execute(json!({"query": "database"}), &crate::tools::call_context::CallContext::default())
         .await
         .unwrap();
 
@@ -633,7 +637,7 @@ async fn tool_search_empty_query_lists_all() {
     let registry_arc = Arc::new(registry);
 
     let search_tool = crate::tools::impls::meta::tool_search::ToolSearchTool::new(registry_arc);
-    let result = search_tool.execute(json!({"query": ""})).await.unwrap();
+    let result = search_tool.execute(json!({"query": ""}), &crate::tools::call_context::CallContext::default()).await.unwrap();
 
     assert!(result.contains("All deferred tools (2)"));
     assert!(result.contains("tool_a"));
@@ -648,7 +652,7 @@ async fn tool_search_no_matches() {
 
     let search_tool = crate::tools::impls::meta::tool_search::ToolSearchTool::new(registry_arc);
     let result = search_tool
-        .execute(json!({"query": "nonexistent"}))
+        .execute(json!({"query": "nonexistent"}), &crate::tools::call_context::CallContext::default())
         .await
         .unwrap();
 
@@ -662,7 +666,7 @@ async fn tool_search_no_deferred_tools() {
     let registry_arc = Arc::new(registry);
 
     let search_tool = crate::tools::impls::meta::tool_search::ToolSearchTool::new(registry_arc);
-    let result = search_tool.execute(json!({"query": ""})).await.unwrap();
+    let result = search_tool.execute(json!({"query": ""}), &crate::tools::call_context::CallContext::default()).await.unwrap();
 
     assert!(result.contains("No deferred tools available"));
 }

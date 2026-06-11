@@ -209,7 +209,11 @@ impl Tool for ReadFileTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let raw_path = required_string(&params, "path")?;
         let offset = optional_int(&params, "offset");
         let limit = optional_int(&params, "limit").map(|v| v.max(1) as usize);
@@ -434,7 +438,7 @@ mod tests {
     async fn reads_embedded_builtin_skill_uri() {
         let tool = ReadFileTool::new(None);
         let output = tool
-            .execute(serde_json::json!({ "path": "builtin://create-orgii-agent/SKILL.md" }))
+            .execute(serde_json::json!({ "path": "builtin://create-orgii-agent/SKILL.md" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
 
@@ -460,7 +464,7 @@ mod tests {
                 "path": "builtin://create-orgii-agent/SKILL.md",
                 "offset": 1,
                 "limit": 3
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
 
@@ -475,7 +479,7 @@ mod tests {
             .join("create-orgii-agent")
             .join("SKILL.md");
         let output = tool
-            .execute(serde_json::json!({ "path": path.to_string_lossy() }))
+            .execute(serde_json::json!({ "path": path.to_string_lossy() }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
 
@@ -493,7 +497,7 @@ mod tests {
     async fn unknown_embedded_builtin_skill_errors_explicitly() {
         let tool = ReadFileTool::new(None);
         let err = tool
-            .execute(serde_json::json!({ "path": "builtin://missing-skill/SKILL.md" }))
+            .execute(serde_json::json!({ "path": "builtin://missing-skill/SKILL.md" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap_err();
 
@@ -510,13 +514,13 @@ mod tests {
 
         let tool = ReadFileTool::new(Some(repo.path().to_path_buf()));
         let first = tool
-            .execute(serde_json::json!({ "path": "marker.txt" }))
+            .execute(serde_json::json!({ "path": "marker.txt" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         assert!(first.contains("hello"), "output was: {}", first);
 
         let second = tool
-            .execute(serde_json::json!({ "path": "marker.txt" }))
+            .execute(serde_json::json!({ "path": "marker.txt" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         assert!(
@@ -539,7 +543,7 @@ mod tests {
 
         let tool = ReadFileTool::new(Some(repo.path().to_path_buf()));
         let first = tool
-            .execute(serde_json::json!({ "path": "marker.txt" }))
+            .execute(serde_json::json!({ "path": "marker.txt" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         assert!(first.contains("hello"), "output was: {}", first);
@@ -548,7 +552,7 @@ mod tests {
         std::fs::write(&path, "updated").unwrap();
 
         let second = tool
-            .execute(serde_json::json!({ "path": "marker.txt" }))
+            .execute(serde_json::json!({ "path": "marker.txt" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         assert!(second.contains("updated"), "output was: {}", second);
@@ -567,7 +571,7 @@ mod tests {
 
         let tool = ReadFileTool::new(Some(repo_a.path().to_path_buf()));
         let err = tool
-            .execute(serde_json::json!({ "path": "marker.txt" }))
+            .execute(serde_json::json!({ "path": "marker.txt" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap_err();
         assert!(
@@ -578,7 +582,7 @@ mod tests {
 
         tool.set_active_repo(&repo_b.path().to_string_lossy()).await;
         let output = tool
-            .execute(serde_json::json!({ "path": "marker.txt" }))
+            .execute(serde_json::json!({ "path": "marker.txt" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         assert!(output.contains("hello"), "output was: {}", output);

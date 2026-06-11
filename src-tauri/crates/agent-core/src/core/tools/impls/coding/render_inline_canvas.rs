@@ -125,7 +125,11 @@ impl Tool for RenderInlineCanvasTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let mode = params
             .get("mode")
             .and_then(Value::as_str)

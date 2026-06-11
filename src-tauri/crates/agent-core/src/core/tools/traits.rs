@@ -74,6 +74,7 @@ use crate::turn_executor::PermissionProvider;
 // Re-export the metadata / result / error / params types from their dedicated
 // modules so existing `use crate::core::tools::traits::*` imports
 // keep working after the split.
+pub use super::call_context::CallContext;
 pub use super::error::ToolError;
 pub use super::metadata::{ToolAction, ToolPriority, ToolSchemaCacheScope, ToolUIMetadata};
 pub use super::params::{
@@ -138,6 +139,11 @@ pub trait Tool: Send + Sync {
 
     /// Execute the tool with given parameters.
     ///
+    /// `ctx` carries the per-call framework metadata (`call_id`,
+    /// `session_id`) — see [`CallContext`] for the full contract and
+    /// why this is a typed parameter rather than `__`-prefixed keys
+    /// inside `params`.
+    ///
     /// Default implementation delegates to [`Self::execute_text`] and wraps
     /// its `String` result into a plain-text [`ToolExecuteResult`]. Native
     /// tools should override [`Self::execute_text`] only.
@@ -147,8 +153,14 @@ pub trait Tool: Send + Sync {
     /// bridge and any future provider that returns non-text
     /// content. In that case, override `execute` and leave `execute_text`
     /// to its default fallback.
-    async fn execute(&self, params: Value) -> Result<ToolExecuteResult, ToolError> {
-        self.execute_text(params).await.map(ToolExecuteResult::text)
+    async fn execute(
+        &self,
+        params: Value,
+        ctx: &CallContext,
+    ) -> Result<ToolExecuteResult, ToolError> {
+        self.execute_text(params, ctx)
+            .await
+            .map(ToolExecuteResult::text)
     }
 
     /// Execute the tool and return its LLM-facing text only.
@@ -158,7 +170,13 @@ pub trait Tool: Send + Sync {
     /// plain-text [`ToolExecuteResult`]. Tools with structured output
     /// (MCP bridge) should override [`Self::execute`] directly and leave
     /// this method as the default `unimplemented!()`.
-    async fn execute_text(&self, _params: Value) -> Result<String, ToolError> {
+    ///
+    /// `ctx` carries the per-call framework metadata — see [`CallContext`].
+    async fn execute_text(
+        &self,
+        _params: Value,
+        _ctx: &CallContext,
+    ) -> Result<String, ToolError> {
         Err(ToolError::ExecutionFailed(format!(
             "tool '{}' did not implement execute_text or override execute",
             self.name()

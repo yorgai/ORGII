@@ -114,7 +114,11 @@ impl Tool for McpAuthTool {
         ToolSchemaCacheScope::LiveSuffix
     }
 
-    async fn execute_text(&self, _params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        _params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         // stdio / missing URL → cannot OAuth. Return a descriptive
         // message instead of pretending we can.
         if !Self::is_oauth_applicable(&self.config) {
@@ -267,7 +271,7 @@ mod tests {
         let manager = Arc::new(McpManager::new());
         let tool = McpAuthTool::new("legacy".to_string(), stdio_config(), manager);
         let result = tool
-            .execute(json!({}))
+            .execute(json!({}), &crate::tools::call_context::CallContext::default())
             .await
             .expect("stdio path returns Ok");
         assert!(result.contains("does not support OAuth"));

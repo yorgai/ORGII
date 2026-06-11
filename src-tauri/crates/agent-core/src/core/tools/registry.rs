@@ -264,12 +264,20 @@ impl ToolRegistry {
     ///
     /// The error path returns a pre-formatted `"Error: ..."` string so
     /// callers can persist it verbatim into the LLM tool_result message.
-    pub async fn execute(&self, name: &str, params: Value) -> Result<ToolExecuteResult, String> {
+    ///
+    /// `ctx` carries the per-call framework metadata — see
+    /// [`crate::tools::call_context::CallContext`].
+    pub async fn execute(
+        &self,
+        name: &str,
+        params: Value,
+        ctx: &crate::tools::call_context::CallContext,
+    ) -> Result<ToolExecuteResult, String> {
         let Some(tool) = self.get(name) else {
             return Err(format!("Error: Tool '{}' not found", name));
         };
 
-        match tool.execute(params).await {
+        match tool.execute(params, ctx).await {
             Ok(result) => Ok(result),
             Err(err) => Err(format!("Error executing {}: {}", name, err)),
         }
@@ -281,6 +289,7 @@ impl ToolRegistry {
         name: &str,
         params: Value,
         policy: &ResolvedToolPolicy,
+        ctx: &crate::tools::call_context::CallContext,
     ) -> Result<ToolExecuteResult, String> {
         if !policy.is_allowed(name) {
             return Err(format!(
@@ -288,7 +297,7 @@ impl ToolRegistry {
                 name
             ));
         }
-        self.execute(name, params).await
+        self.execute(name, params, ctx).await
     }
 
     /// Get list of registered tool names (including fallback).

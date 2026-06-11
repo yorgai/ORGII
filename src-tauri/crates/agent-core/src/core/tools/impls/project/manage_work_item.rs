@@ -140,12 +140,16 @@ impl WorkItemTool {
         Ok(merged_items)
     }
 
-    async fn execute_batch(&self, params: &Value) -> Result<String, ToolError> {
+    async fn execute_batch(
+        &self,
+        params: &Value,
+        ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let items = Self::batch_items(params)?;
         let mut lines = vec![format!("Batch completed: {} operation(s)", items.len())];
         for (idx, item) in items.into_iter().enumerate() {
             let tool = WorkItemTool::new(self.session_id.clone());
-            let result = Box::pin(tool.execute_text(item)).await;
+            let result = Box::pin(tool.execute_text(item, ctx)).await;
             match result {
                 Ok(text) => lines.push(format!("{}. OK: {}", idx + 1, text)),
                 Err(err) => lines.push(format!("{}. ERROR: {}", idx + 1, err)),
@@ -743,10 +747,14 @@ impl Tool for WorkItemTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let action = required_string(&params, "action")?;
         if action == "batch" {
-            return self.execute_batch(&params).await;
+            return self.execute_batch(&params, _ctx).await;
         }
         let scope = Self::resolve_scope(&params)?;
 

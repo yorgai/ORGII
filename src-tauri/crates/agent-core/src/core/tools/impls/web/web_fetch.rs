@@ -67,7 +67,11 @@ impl Tool for WebFetchTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let url = required_string(&params, "url")?;
         let max_chars = optional_int(&params, "max_chars")
             .map(|v| v as usize)

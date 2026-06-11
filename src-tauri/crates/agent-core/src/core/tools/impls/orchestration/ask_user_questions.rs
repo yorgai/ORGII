@@ -119,7 +119,11 @@ impl Tool for QuestionTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let session_id = self
             .context
             .session_id
@@ -144,15 +148,14 @@ impl Tool for QuestionTool {
 
         let request_id = format!("question-{}", uuid::Uuid::new_v4());
 
-        // Read the framework-injected tool_call_id from `params` (see
-        // `tool_execution::inject_call_id`). The `__call_id` key is the
-        // single source of truth for per-call identity across all tool
-        // dispatch paths; the QuestionManager no longer needs a
-        // side-channel Mutex to thread this through.
-        let tool_call_id = params
-            .get(crate::core::turn_executor::tool_execution::TOOL_CALL_ID_KEY)
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+        // Per-call tool_call_id flows through `CallContext` (constructed
+        // by `tool_execution` dispatch sites). Empty when a direct
+        // in-process caller forgot to populate ctx.
+        let tool_call_id = if ctx.call_id.is_empty() {
+            None
+        } else {
+            Some(ctx.call_id.clone())
+        };
 
         // Send question to frontend and return a receiver.
         let receiver = self

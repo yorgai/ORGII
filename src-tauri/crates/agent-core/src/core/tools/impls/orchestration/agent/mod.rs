@@ -52,7 +52,6 @@ use crate::tools::policy::ResolvedToolPolicy;
 use crate::tools::registration::{self, ToolDeps};
 use crate::tools::registry::ToolRegistry;
 use crate::tools::traits::{Tool, ToolError};
-use crate::turn_executor::tool_execution::TOOL_CALL_ID_KEY;
 use crate::turn_executor::TurnConfig;
 
 struct DisabledOrgSendMessageTool;
@@ -79,7 +78,11 @@ impl Tool for DisabledOrgSendMessageTool {
         serde_json::json!({ "type": "object", "properties": {} })
     }
 
-    async fn execute_text(&self, _params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        _params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         Err(ToolError::InvalidParams(
             "org_send_message is available only to canonical Agent Org participants with a member_id"
                 .to_string(),
@@ -487,11 +490,16 @@ impl Tool for AgentTool {
         schema::parameters()
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
-        let parent_call_id = params
-            .get(TOOL_CALL_ID_KEY)
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+    async fn execute_text(
+        &self,
+        params: Value,
+        ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
+        let parent_call_id = if ctx.call_id.is_empty() {
+            None
+        } else {
+            Some(ctx.call_id.clone())
+        };
 
         // Handle kill subcommand before regular launch logic
         if params.get("command").and_then(|v| v.as_str()) == Some("kill") {

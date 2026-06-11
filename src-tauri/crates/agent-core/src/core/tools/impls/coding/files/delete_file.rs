@@ -81,7 +81,11 @@ impl Tool for DeleteFileTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let raw_path = required_string(&params, "path")?;
 
         if let Some(ref router) = self.router {
@@ -143,7 +147,7 @@ mod tests {
 
         let tool = DeleteFileTool::new(Some(repo.path().to_path_buf()));
         let output = tool
-            .execute(serde_json::json!({ "path": "old.rs" }))
+            .execute(serde_json::json!({ "path": "old.rs" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
 
@@ -158,7 +162,7 @@ mod tests {
 
         let tool = DeleteFileTool::new(Some(repo.path().to_path_buf()));
         let err = tool
-            .execute(serde_json::json!({ "path": "nested" }))
+            .execute(serde_json::json!({ "path": "nested" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap_err();
 
@@ -178,7 +182,7 @@ mod tests {
 
         let tool = DeleteFileTool::new(Some(repo.path().to_path_buf()));
         let err = tool
-            .execute(serde_json::json!({ "path": outside_file.to_string_lossy() }))
+            .execute(serde_json::json!({ "path": outside_file.to_string_lossy() }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap_err();
 

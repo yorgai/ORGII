@@ -205,16 +205,19 @@ impl Tool for CreatePlanTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
-        // Framework-injected tool_call_id (see
-        // `tool_execution::inject_call_id`). Tools must never put
-        // `__call_id` in their JSON Schema; it is metadata, not a
-        // user-facing argument. Read it up-front so the rest of the
-        // function does not need to touch `params` again.
-        let tool_call_id = params
-            .get(crate::core::turn_executor::tool_execution::TOOL_CALL_ID_KEY)
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+    async fn execute_text(
+        &self,
+        params: Value,
+        ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
+        // Per-call tool_call_id flows through `CallContext` (constructed
+        // by `tool_execution` dispatch sites). Empty when a direct
+        // in-process caller forgot to populate ctx.
+        let tool_call_id = if ctx.call_id.is_empty() {
+            None
+        } else {
+            Some(ctx.call_id.clone())
+        };
 
         let title = params
             .get("title")
@@ -237,21 +240,19 @@ impl Tool for CreatePlanTool {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        // Session attribution: prefer the framework-injected `__session_id`
-        // (per-call, race-free) over the stored `set_session_key` value.
-        // The stored key is shared mutable state — a concurrent background
-        // subagent that inherits the parent's ToolRegistry re-stamps every
-        // shared tool instance with its own session id at turn start, so a
-        // parent-issued create_plan could be misattributed to the subagent
-        // (observed 2026-06-10: parent plan submission rejected as
-        // "invoked from subagent session agent-builtin:explore-…").
-        let session_id = match params
-            .get(crate::core::turn_executor::tool_execution::SESSION_ID_KEY)
-            .and_then(|v| v.as_str())
-        {
-            Some(injected) => injected.to_string(),
-            None => self
-                .context
+        // Per-call session attribution comes from `CallContext` —
+        // race-free even when concurrent background subagents share the
+        // parent's ToolRegistry. (The legacy stored `set_session_key`
+        // value was shared mutable state: a concurrent subagent could
+        // re-stamp it at turn start, last-writer-wins, causing the
+        // parent's create_plan to load the subagent's session row and
+        // trip the wiring-bug assertion.) Fall back to the stored value
+        // only for direct in-process callers / tests that didn't
+        // populate ctx.
+        let session_id = if !ctx.session_id.is_empty() {
+            ctx.session_id.clone()
+        } else {
+            self.context
                 .session_id
                 .lock()
                 .await
@@ -261,7 +262,7 @@ impl Tool for CreatePlanTool {
                         "create_plan invoked before session_id was set — this is a wiring bug"
                             .into(),
                     )
-                })?,
+                })?
         };
 
         let pending_plan = if new_plan {
@@ -491,7 +492,7 @@ mod tests {
         let tool = tool_without_manager();
         tool.set_session_key("s1").await;
         let err = tool
-            .execute(serde_json::json!({ "content": "body" }))
+            .execute(serde_json::json!({ "content": "body" }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("missing title must fail");
         assert!(matches!(err, ToolError::InvalidParams(_)));
@@ -502,7 +503,7 @@ mod tests {
         let tool = tool_without_manager();
         tool.set_session_key("s1").await;
         let err = tool
-            .execute(serde_json::json!({ "title": "   ", "content": "body" }))
+            .execute(serde_json::json!({ "title": "   ", "content": "body" }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("blank title must fail");
         assert!(matches!(err, ToolError::InvalidParams(_)));
@@ -513,7 +514,7 @@ mod tests {
         let tool = tool_without_manager();
         tool.set_session_key("s1").await;
         let err = tool
-            .execute(serde_json::json!({ "title": "Plan A" }))
+            .execute(serde_json::json!({ "title": "Plan A" }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("missing content must fail");
         assert!(matches!(err, ToolError::InvalidParams(_)));
@@ -523,7 +524,7 @@ mod tests {
     async fn rejects_when_session_key_unset() {
         let tool = tool_without_manager();
         let err = tool
-            .execute(serde_json::json!({ "title": "Plan A", "content": "x" }))
+            .execute(serde_json::json!({ "title": "Plan A", "content": "x" }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("unset session key must fail");
         assert!(matches!(err, ToolError::ExecutionFailed(_)));

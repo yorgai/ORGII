@@ -174,7 +174,11 @@ pub async fn debug_session_execute_tool(
 
     let mut result = runtime
         .tool_registry
-        .execute(&tool_name, params.clone())
+        .execute(
+            &tool_name,
+            params.clone(),
+            &crate::tools::call_context::CallContext::default(),
+        )
         .await
         .map_err(|err| err.to_string());
 
@@ -233,7 +237,11 @@ pub async fn debug_session_execute_org_tool(
     Ok(DebugOrgToolResult::from_tool_result(
         runtime
             .tool_registry
-            .execute(&tool_name, params)
+            .execute(
+                &tool_name,
+                params,
+                &crate::tools::call_context::CallContext::default(),
+            )
             .await
             .map_err(|err| err.to_string()),
     ))
@@ -274,14 +282,14 @@ pub async fn debug_agent_org_execute_tool_as_agent(
             Arc::new(NoopInboxWakeHook),
             Arc::new(NoopSelfAbortHook),
         )
-        .execute(params)
+        .execute(params, &crate::tools::call_context::CallContext::default())
         .await
         .map_err(|err| err.to_string()),
         names::TASK_CREATE => {
             let context =
                 task_tools_context(org_context, sender_agent_id, sender_member_id.clone());
             TaskCreateTool::new(context)
-                .execute(params)
+                .execute(params, &crate::tools::call_context::CallContext::default())
                 .await
                 .map_err(|err| err.to_string())
         }
@@ -289,7 +297,7 @@ pub async fn debug_agent_org_execute_tool_as_agent(
             let context =
                 task_tools_context(org_context, sender_agent_id, sender_member_id.clone());
             TaskUpdateTool::new(context)
-                .execute(params)
+                .execute(params, &crate::tools::call_context::CallContext::default())
                 .await
                 .map_err(|err| err.to_string())
         }
@@ -297,7 +305,7 @@ pub async fn debug_agent_org_execute_tool_as_agent(
             let context =
                 task_tools_context(org_context, sender_agent_id, sender_member_id.clone());
             TaskListTool::new(context)
-                .execute(params)
+                .execute(params, &crate::tools::call_context::CallContext::default())
                 .await
                 .map_err(|err| err.to_string())
         }
@@ -305,7 +313,7 @@ pub async fn debug_agent_org_execute_tool_as_agent(
             let context =
                 task_tools_context(org_context, sender_agent_id, sender_member_id.clone());
             TaskGetTool::new(context)
-                .execute(params)
+                .execute(params, &crate::tools::call_context::CallContext::default())
                 .await
                 .map_err(|err| err.to_string())
         }

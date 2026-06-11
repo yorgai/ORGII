@@ -340,7 +340,11 @@ impl Tool for TaskCreateTool {
         params_schema::<TaskCreateParams>()
     }
 
-    async fn execute_text(&self, params_value: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params_value: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let params: TaskCreateParams = parse_params(params_value)?;
         if params.subject.trim().is_empty() {
             return Err(ToolError::InvalidParams(
@@ -524,7 +528,11 @@ impl Tool for TaskUpdateTool {
         params_schema::<TaskUpdateParams>()
     }
 
-    async fn execute_text(&self, params_value: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params_value: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let owner_member_id_value = params_value.get("owner_member_id").cloned();
         let params: TaskUpdateParams = parse_params(params_value)?;
         let task_id = params.id.trim().to_string();
@@ -736,7 +744,11 @@ impl Tool for TaskListTool {
         params_schema::<TaskListParams>()
     }
 
-    async fn execute_text(&self, params_value: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params_value: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let params: TaskListParams = parse_params(params_value)?;
         let status_filter = match params.status.as_deref() {
             None => None,
@@ -832,7 +844,11 @@ impl Tool for TaskGetTool {
         params_schema::<TaskGetParams>()
     }
 
-    async fn execute_text(&self, params_value: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params_value: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let params: TaskGetParams = parse_params(params_value)?;
         let task_id = params.id.trim().to_string();
         if task_id.is_empty() {
@@ -973,7 +989,7 @@ mod tests {
         let ctx = ctx(COORDINATOR_MEMBER_ID);
         let tool = TaskCreateTool::new(Arc::clone(&ctx));
         let res = tool
-            .execute_text(json!({ "subject": "S1" }))
+            .execute_text(json!({ "subject": "S1" }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("task_create succeeds");
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -997,7 +1013,7 @@ mod tests {
                 "subject": "S2",
                 "owner_member_id": "m-alice",
                 "description": "do the thing",
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("task_create succeeds");
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1029,7 +1045,7 @@ mod tests {
                 "id": "stable-task-id",
                 "subject": "Original subject",
                 "owner_member_id": "m-alice",
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("first task_create succeeds");
         let first_value: Value = serde_json::from_str(&first).unwrap();
@@ -1041,7 +1057,7 @@ mod tests {
                 "id": "stable-task-id",
                 "subject": "Retry subject should not replace original",
                 "owner_member_id": "m-bob",
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("duplicate task_create returns existing task");
         let second_value: Value = serde_json::from_str(&second).unwrap();
@@ -1068,7 +1084,7 @@ mod tests {
             .execute_text(json!({
                 "subject": "Coordinator started work",
                 "status": "in_progress"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("ownerless in_progress task_create is invalid");
         match err {
@@ -1086,7 +1102,7 @@ mod tests {
                 "subject": "Coordinator explicit work",
                 "status": "in_progress",
                 "owner_member_id": "coordinator"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("coordinator can explicitly own in-progress work");
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1103,7 +1119,7 @@ mod tests {
                 "subject": "Coordinator assigned member work",
                 "status": "pending",
                 "owner_member_id": "m-alice"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("task_create assigns pending member work");
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1122,7 +1138,7 @@ mod tests {
             .execute_text(json!({
                 "subject": "Alice started work",
                 "status": "in_progress"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("ownerless in_progress task_create is invalid");
         match err {
@@ -1140,7 +1156,7 @@ mod tests {
                 "subject": "Coordinator attempted member start",
                 "status": "in_progress",
                 "owner_member_id": "m-alice"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("coordinator cannot start another member's work");
         match err {
@@ -1158,7 +1174,7 @@ mod tests {
                 "subject": "Alice attempted Bob start",
                 "status": "in_progress",
                 "owner_member_id": "m-bob"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("member cannot start another member's work");
         match err {
@@ -1176,7 +1192,7 @@ mod tests {
                 "subject": "Alice started self work",
                 "status": "in_progress",
                 "owner_member_id": "m-alice"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("member can start self-owned work");
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1193,7 +1209,7 @@ mod tests {
                 "subject": "Shared SDE coordinator explicit start",
                 "status": "in_progress",
                 "owner_member_id": "coordinator"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("shared-agent coordinator task_create uses member_id only");
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1206,7 +1222,7 @@ mod tests {
         let _sandbox = task_tools_sandbox();
         let tool = TaskCreateTool::new(ctx(COORDINATOR_MEMBER_ID));
         let err = tool
-            .execute_text(json!({ "subject": "S3", "owner_member_id": "ghost" }))
+            .execute_text(json!({ "subject": "S3", "owner_member_id": "ghost" }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("must reject unknown owner");
         assert!(matches!(err, ToolError::InvalidParams(_)));
@@ -1221,7 +1237,7 @@ mod tests {
                 "id": "cycle-self",
                 "subject": "S3-cycle",
                 "blocked_by": ["cycle-self"]
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("must reject task dependency cycle");
         match err {
@@ -1240,17 +1256,17 @@ mod tests {
                 "id": "first-cycle",
                 "subject": "First",
                 "blocks": ["second-cycle"]
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         create
-            .execute_text(json!({ "id": "second-cycle", "subject": "Second" }))
+            .execute_text(json!({ "id": "second-cycle", "subject": "Second" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
 
         let update = TaskUpdateTool::new(Arc::clone(&ctx));
         let err = update
-            .execute_text(json!({ "id": "second-cycle", "blocks": ["first-cycle"] }))
+            .execute_text(json!({ "id": "second-cycle", "blocks": ["first-cycle"] }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("must reject task dependency cycle");
         match err {
@@ -1265,13 +1281,13 @@ mod tests {
         let ctx = ctx(COORDINATOR_MEMBER_ID);
         let create = TaskCreateTool::new(Arc::clone(&ctx));
         create
-            .execute_text(json!({ "id": "coord-start", "subject": "Coordinator start" }))
+            .execute_text(json!({ "id": "coord-start", "subject": "Coordinator start" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
 
         let update = TaskUpdateTool::new(Arc::clone(&ctx));
         let err = update
-            .execute_text(json!({ "id": "coord-start", "status": "in_progress" }))
+            .execute_text(json!({ "id": "coord-start", "status": "in_progress" }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("ownerless in_progress task_update is invalid");
         match err {
@@ -1290,13 +1306,13 @@ mod tests {
                 "id": "coordinator-owned-start",
                 "subject": "Coordinator owned start",
                 "owner_member_id": "coordinator"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
 
         let update = TaskUpdateTool::new(Arc::clone(&ctx));
         let res = update
-            .execute_text(json!({ "id": "coordinator-owned-start", "status": "in_progress" }))
+            .execute_text(json!({ "id": "coordinator-owned-start", "status": "in_progress" }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("coordinator starts explicitly owned task");
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1314,13 +1330,13 @@ mod tests {
                 "id": "member-owned-start-attempt",
                 "subject": "Member owned start attempt",
                 "owner_member_id": "m-alice"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
 
         let update = TaskUpdateTool::new(Arc::clone(&ctx));
         let err = update
-            .execute_text(json!({ "id": "member-owned-start-attempt", "status": "in_progress" }))
+            .execute_text(json!({ "id": "member-owned-start-attempt", "status": "in_progress" }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("coordinator cannot start member-owned task");
         match err {
@@ -1339,14 +1355,14 @@ mod tests {
                 "id": "bob-owned-start-attempt",
                 "subject": "Bob owned start attempt",
                 "owner_member_id": "m-bob"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
 
         let alice = ctx("m-alice");
         let update = TaskUpdateTool::new(Arc::clone(&alice));
         let err = update
-            .execute_text(json!({ "id": "bob-owned-start-attempt", "status": "in_progress" }))
+            .execute_text(json!({ "id": "bob-owned-start-attempt", "status": "in_progress" }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("member cannot start another member's task");
         match err {
@@ -1365,14 +1381,14 @@ mod tests {
                 "id": "shared-member-owned-start",
                 "subject": "Shared member owned start",
                 "owner_member_id": "sde-planner"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
 
         let planner = shared_sde_ctx(Some("sde-planner"));
         let update = TaskUpdateTool::new(Arc::clone(&planner));
         let res = update
-            .execute_text(json!({ "id": "shared-member-owned-start", "status": "in_progress" }))
+            .execute_text(json!({ "id": "shared-member-owned-start", "status": "in_progress" }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("shared-agent member starts own task");
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1386,7 +1402,7 @@ mod tests {
         let coord = ctx(COORDINATOR_MEMBER_ID);
         let create = TaskCreateTool::new(Arc::clone(&coord));
         create
-            .execute_text(json!({ "id": "alice-start", "subject": "Alice start" }))
+            .execute_text(json!({ "id": "alice-start", "subject": "Alice start" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
 
@@ -1397,7 +1413,7 @@ mod tests {
                 "id": "alice-start",
                 "owner_member_id": "m-alice",
                 "status": "in_progress"
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("member task_update starts explicit member-owned task");
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1411,7 +1427,7 @@ mod tests {
         let ctx = ctx(COORDINATOR_MEMBER_ID);
         let create = TaskCreateTool::new(Arc::clone(&ctx));
         let res = create
-            .execute_text(json!({ "subject": "S4", "owner_member_id": "m-alice" }))
+            .execute_text(json!({ "subject": "S4", "owner_member_id": "m-alice" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let task_id = serde_json::from_str::<Value>(&res).unwrap()["task"]["id"]
@@ -1421,7 +1437,7 @@ mod tests {
 
         let update = TaskUpdateTool::new(Arc::clone(&ctx));
         let res = update
-            .execute_text(json!({ "id": task_id, "owner_member_id": "m-bob" }))
+            .execute_text(json!({ "id": task_id, "owner_member_id": "m-bob" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1437,7 +1453,7 @@ mod tests {
         let ctx = ctx(COORDINATOR_MEMBER_ID);
         let create = TaskCreateTool::new(Arc::clone(&ctx));
         create
-            .execute_text(json!({ "id": "blocker-task", "subject": "Blocker" }))
+            .execute_text(json!({ "id": "blocker-task", "subject": "Blocker" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let blocked = create
@@ -1446,7 +1462,7 @@ mod tests {
                 "subject": "Blocked work",
                 "owner_member_id": "m-alice",
                 "blocked_by": ["blocker-task"]
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let blocked_value: Value = serde_json::from_str(&blocked).unwrap();
@@ -1457,7 +1473,7 @@ mod tests {
 
         let update = TaskUpdateTool::new(Arc::clone(&ctx));
         let completed = update
-            .execute_text(json!({ "id": "blocker-task", "status": "completed" }))
+            .execute_text(json!({ "id": "blocker-task", "status": "completed" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let completed_value: Value = serde_json::from_str(&completed).unwrap();
@@ -1481,7 +1497,7 @@ mod tests {
         let ctx = ctx(COORDINATOR_MEMBER_ID);
         let create = TaskCreateTool::new(Arc::clone(&ctx));
         create
-            .execute_text(json!({ "id": "manual-blocker", "subject": "Manual blocker" }))
+            .execute_text(json!({ "id": "manual-blocker", "subject": "Manual blocker" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         create
@@ -1490,7 +1506,7 @@ mod tests {
                 "subject": "Manual unblock",
                 "owner_member_id": "m-alice",
                 "blocked_by": ["manual-blocker"]
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         assert!(
@@ -1501,7 +1517,7 @@ mod tests {
 
         let update = TaskUpdateTool::new(Arc::clone(&ctx));
         let res = update
-            .execute_text(json!({ "id": "manually-unblocked", "blocked_by": [] }))
+            .execute_text(json!({ "id": "manually-unblocked", "blocked_by": [] }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1514,7 +1530,7 @@ mod tests {
         );
 
         let repeat = update
-            .execute_text(json!({ "id": "manually-unblocked", "description": "metadata update" }))
+            .execute_text(json!({ "id": "manually-unblocked", "description": "metadata update" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let repeat_value: Value = serde_json::from_str(&repeat).unwrap();
@@ -1533,7 +1549,7 @@ mod tests {
         let ctx = ctx(COORDINATOR_MEMBER_ID);
         let create = TaskCreateTool::new(Arc::clone(&ctx));
         let res = create
-            .execute_text(json!({ "subject": "S5", "owner_member_id": "m-alice" }))
+            .execute_text(json!({ "subject": "S5", "owner_member_id": "m-alice" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let task_id = serde_json::from_str::<Value>(&res).unwrap()["task"]["id"]
@@ -1547,7 +1563,7 @@ mod tests {
 
         let update = TaskUpdateTool::new(Arc::clone(&ctx));
         let res = update
-            .execute_text(json!({ "id": task_id, "owner_member_id": null }))
+            .execute_text(json!({ "id": task_id, "owner_member_id": null }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1565,7 +1581,7 @@ mod tests {
         let ctx = ctx(COORDINATOR_MEMBER_ID);
         let create = TaskCreateTool::new(Arc::clone(&ctx));
         let res = create
-            .execute_text(json!({ "subject": "S6" }))
+            .execute_text(json!({ "subject": "S6" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let task_id = serde_json::from_str::<Value>(&res).unwrap()["task"]["id"]
@@ -1575,7 +1591,7 @@ mod tests {
 
         let update = TaskUpdateTool::new(Arc::clone(&ctx));
         let res = update
-            .execute_text(json!({ "id": task_id, "status": "deleted" }))
+            .execute_text(json!({ "id": task_id, "status": "deleted" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1595,14 +1611,14 @@ mod tests {
             if let Some(o) = owner {
                 req["owner_member_id"] = json!(o);
             }
-            create.execute_text(req).await.unwrap();
+            create.execute_text(req, &crate::tools::call_context::CallContext::default()).await.unwrap();
         }
         let coord_list = TaskListTool::new(Arc::clone(&coord));
-        let res = coord_list.execute_text(json!({})).await.unwrap();
+        let res = coord_list.execute_text(json!({}), &crate::tools::call_context::CallContext::default()).await.unwrap();
         let value: Value = serde_json::from_str(&res).unwrap();
         assert_eq!(value["total"].as_u64().unwrap(), 3);
         let res = coord_list
-            .execute_text(json!({ "owner_member_id": "m-alice" }))
+            .execute_text(json!({ "owner_member_id": "m-alice" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1611,7 +1627,7 @@ mod tests {
         let alice = ctx("m-alice");
         let alice_list = TaskListTool::new(alice);
         let res = alice_list
-            .execute_text(json!({ "mine_only": true }))
+            .execute_text(json!({ "mine_only": true }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let value: Value = serde_json::from_str(&res).unwrap();
@@ -1624,7 +1640,7 @@ mod tests {
         let ctx = ctx(COORDINATOR_MEMBER_ID);
         let create = TaskCreateTool::new(Arc::clone(&ctx));
         let res = create
-            .execute_text(json!({ "subject": "G1", "description": "details" }))
+            .execute_text(json!({ "subject": "G1", "description": "details" }), &crate::tools::call_context::CallContext::default())
             .await
             .unwrap();
         let task_id = serde_json::from_str::<Value>(&res).unwrap()["task"]["id"]
@@ -1632,7 +1648,7 @@ mod tests {
             .unwrap()
             .to_string();
         let get = TaskGetTool::new(Arc::clone(&ctx));
-        let res = get.execute_text(json!({ "id": task_id })).await.unwrap();
+        let res = get.execute_text(json!({ "id": task_id }), &crate::tools::call_context::CallContext::default()).await.unwrap();
         let value: Value = serde_json::from_str(&res).unwrap();
         assert_eq!(value["task"]["subject"], "G1");
         assert_eq!(value["task"]["description"], "details");

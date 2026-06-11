@@ -13,6 +13,7 @@
 //!   `supported_agents_for()`
 
 pub mod builtin_tools;
+pub mod call_context;
 pub mod categories;
 pub mod defaults;
 pub mod error;

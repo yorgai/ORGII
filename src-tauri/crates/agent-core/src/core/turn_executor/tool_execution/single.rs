@@ -24,7 +24,6 @@ use super::super::types::{PermissionProvider, TurnEventHandler};
 
 use super::detect_stream_parse_error;
 use super::diff_feedback::compute_diff_feedback;
-use super::inject_framework_meta;
 use super::is_cancelled;
 use super::is_error_text;
 use super::ToolBatchOutcome;
@@ -221,10 +220,10 @@ pub(super) async fn execute_single_tool(
             );
 
             let exec_start = Instant::now();
-            let mut exec_args = effective_args.clone();
-            inject_framework_meta(&mut exec_args, &tool_call.id, session_id);
+            let ctx =
+                crate::tools::call_context::CallContext::new(&tool_call.id, session_id);
             let raw_outcome = tools
-                .execute_with_policy(&tool_call.name, exec_args, policy)
+                .execute_with_policy(&tool_call.name, effective_args.clone(), policy, &ctx)
                 .await;
             let duration_ms = exec_start.elapsed().as_millis() as u64;
 

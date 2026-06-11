@@ -95,17 +95,12 @@ pub fn params_schema<T: JsonSchema>() -> Value {
 ///     // params is now fully typed!
 /// }
 /// ```
-pub fn parse_params<T: DeserializeOwned>(mut params: Value) -> Result<T, ToolError> {
-    if let Value::Object(object) = &mut params {
-        // `__`-prefixed keys are framework-injected metadata
-        // (`__call_id`, `__session_id`, …; see
-        // turn_executor::tool_execution::inject_framework_meta), not
-        // LLM-supplied arguments. Strip the whole reserved namespace so
-        // `deny_unknown_fields` params structs don't reject every call —
-        // the old hardcoded `__call_id`-only removal broke all agent-org
-        // task tools the moment `__session_id` was added.
-        object.retain(|key, _| !key.starts_with("__"));
-    }
+pub fn parse_params<T: DeserializeOwned>(params: Value) -> Result<T, ToolError> {
+    // No `__`-prefix stripping needed: per-call framework metadata is
+    // threaded via `CallContext` since the call_context refactor — the
+    // params `Value` carries only LLM-supplied arguments. If a `__`-key
+    // ever shows up here it's a real wiring bug, not metadata leakage,
+    // and `deny_unknown_fields` will surface it.
     serde_json::from_value(params)
         .map_err(|err| ToolError::InvalidParams(format!("parameter validation failed: {}", err)))
 }
@@ -160,24 +155,34 @@ mod tests {
     }
 
     #[test]
-    fn parse_params_strips_all_framework_meta_for_strict_structs() {
+    fn parse_params_accepts_clean_strict_params() {
         let params = serde_json::json!({
             "subject": "audit yoyo-evolve",
-            "__call_id": "call-1",
-            "__session_id": "sdeagent-abc",
         });
         let parsed: StrictParams = parse_params(params)
-            .expect("framework __-prefixed meta must never trip deny_unknown_fields");
+            .expect("clean params must deserialize");
         assert_eq!(parsed.subject, "audit yoyo-evolve");
     }
 
     #[test]
-    fn parse_params_still_rejects_real_unknown_fields() {
-        let params = serde_json::json!({
+    fn parse_params_rejects_unknown_fields_including_framework_meta() {
+        // Post-CallContext refactor: framework metadata flows via
+        // CallContext, NOT via `__`-prefixed keys in params. If anyone
+        // ever puts `__`-keys back into params they must show up as a
+        // real validation failure here — that surfaces the wiring bug
+        // rather than silently swallowing it.
+        let meta_leaked = serde_json::json!({
+            "subject": "x",
+            "__call_id": "call-1",
+        });
+        let result: Result<StrictParams, _> = parse_params(meta_leaked);
+        assert!(result.is_err(), "framework meta in params is a wiring bug, must fail closed");
+
+        let real_unknown = serde_json::json!({
             "subject": "x",
             "bogus_field": true,
         });
-        let result: Result<StrictParams, _> = parse_params(params);
+        let result: Result<StrictParams, _> = parse_params(real_unknown);
         assert!(result.is_err(), "non-framework unknown fields must still fail closed");
     }
 }
