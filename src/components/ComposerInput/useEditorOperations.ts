@@ -398,7 +398,10 @@ export function useEditorOperations(): UseEditorOperationsResult {
     // should reflect that the document is no longer empty.
     const text = extractPlainText(host);
     if (text.includes("\n")) return false;
-    return text.trim().length === 0;
+    // Strip only zero-width space artifacts (injected by insertNewline for
+    // caret anchoring) — NOT all whitespace. A regular space typed by the
+    // user is real content and must hide the placeholder.
+    return text.replace(/\u200B/g, "").length === 0;
   }, []);
 
   /**
