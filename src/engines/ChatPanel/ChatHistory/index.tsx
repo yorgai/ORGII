@@ -443,6 +443,11 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     flatItems,
     lastAssistantFlatIndexPerItem,
     cursorIdeTurnSummaries,
+    // Surfaces that hide user-message cards (subagent cells) must not
+    // paginate user-only turns into standalone pages — those pages would
+    // render structurally blank (e.g. queued messages flushed into a
+    // dead subagent session).
+    mergeUserOnlyPages: hideGroupUserMessage,
   });
   const virtuosoDataKey = `${activeId ?? "no-session"}:${turnPaginationEnabled ? `page-${currentPageIndex}` : "all"}`;
 

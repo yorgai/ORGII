@@ -22,6 +22,17 @@ interface UseChatTurnPaginationOptions {
   flatItems: OptimizedChatItem[];
   lastAssistantFlatIndexPerItem: (number | null)[];
   cursorIdeTurnSummaries?: CursorIdeTurnSummary[];
+  /**
+   * Treat groups that contain a user header but ZERO agent items as part
+   * of an adjacent contentful page instead of giving them their own page.
+   *
+   * Surfaces that hide the per-turn user-message card (subagent grid
+   * cells via `hideGroupUserMessage`) would otherwise render such pages
+   * as structurally blank — e.g. a dead subagent whose tail is a batch
+   * of queued user messages flushed after the session already failed
+   * pinned "Latest Round" to an empty frame.
+   */
+  mergeUserOnlyPages?: boolean;
 }
 
 export interface UseChatTurnPaginationReturn {
@@ -47,12 +58,14 @@ export function useChatTurnPagination({
   flatItems,
   lastAssistantFlatIndexPerItem,
   cursorIdeTurnSummaries = [],
+  mergeUserOnlyPages = false,
 }: UseChatTurnPaginationOptions): UseChatTurnPaginationReturn {
   return useMemo(() => {
     const pages = buildTurnPages(
       groupCounts,
       groupHeaders,
-      cursorIdeTurnSummaries
+      cursorIdeTurnSummaries,
+      mergeUserOnlyPages
     );
     const pageCount = pages.length;
     const currentPageIndex = clampPageIndex(activePageIndex, pageCount);
@@ -146,13 +159,15 @@ export function useChatTurnPagination({
     flatItems,
     lastAssistantFlatIndexPerItem,
     cursorIdeTurnSummaries,
+    mergeUserOnlyPages,
   ]);
 }
 
 function buildTurnPages(
   groupCounts: number[],
   groupHeaders: (OptimizedChatItem | null)[],
-  cursorIdeTurnSummaries: CursorIdeTurnSummary[]
+  cursorIdeTurnSummaries: CursorIdeTurnSummary[],
+  mergeUserOnlyPages = false
 ): ChatTurnPage[] {
   if (cursorIdeTurnSummaries.length > 0) {
     return buildCursorIdeTurnPages(
@@ -174,7 +189,15 @@ function buildTurnPages(
     const hasUserHeader = groupHeaders[groupIndex] !== null;
     const isLastGroup = groupIndex === groupCounts.length - 1;
 
-    if (hasUserHeader || hasAgentItems || isLastGroup) {
+    // With `mergeUserOnlyPages`, a user header alone does not close a
+    // page — the group is folded into the next contentful page so that
+    // surfaces hiding user-message cards never produce a blank page.
+    // Trailing user-only groups are folded backwards after the loop.
+    const closesPage = mergeUserOnlyPages
+      ? hasAgentItems
+      : hasUserHeader || hasAgentItems || isLastGroup;
+
+    if (closesPage) {
       rawPages.push({
         startGroupIndex,
         endGroupIndex: groupIndex,
@@ -187,6 +210,27 @@ function buildTurnPages(
     }
 
     flatCursor = nextFlatCursor;
+  }
+
+  if (mergeUserOnlyPages) {
+    // Fold any trailing user-only groups into the final contentful page
+    // (or into a single page when no contentful page exists at all) so
+    // the tail of the timeline is never a structurally blank page.
+    if (startGroupIndex <= groupCounts.length - 1) {
+      const lastPage = rawPages[rawPages.length - 1];
+      if (lastPage) {
+        lastPage.endGroupIndex = groupCounts.length - 1;
+        lastPage.flatEndIndex = flatCursor;
+      } else if (groupCounts.length > 0) {
+        rawPages.push({
+          startGroupIndex: 0,
+          endGroupIndex: groupCounts.length - 1,
+          flatStartIndex: 0,
+          flatEndIndex: flatCursor,
+          cursorIdeSummary: null,
+        });
+      }
+    }
   }
 
   return rawPages;
