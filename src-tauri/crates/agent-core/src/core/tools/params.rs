@@ -97,7 +97,14 @@ pub fn params_schema<T: JsonSchema>() -> Value {
 /// ```
 pub fn parse_params<T: DeserializeOwned>(mut params: Value) -> Result<T, ToolError> {
     if let Value::Object(object) = &mut params {
-        object.remove("__call_id");
+        // `__`-prefixed keys are framework-injected metadata
+        // (`__call_id`, `__session_id`, …; see
+        // turn_executor::tool_execution::inject_framework_meta), not
+        // LLM-supplied arguments. Strip the whole reserved namespace so
+        // `deny_unknown_fields` params structs don't reject every call —
+        // the old hardcoded `__call_id`-only removal broke all agent-org
+        // task tools the moment `__session_id` was added.
+        object.retain(|key, _| !key.starts_with("__"));
     }
     serde_json::from_value(params)
         .map_err(|err| ToolError::InvalidParams(format!("parameter validation failed: {}", err)))
@@ -137,4 +144,40 @@ pub fn optional_int(params: &Value, key: &str) -> Option<i64> {
 /// Extract an optional boolean parameter from a JSON object.
 pub fn optional_bool(params: &Value, key: &str) -> Option<bool> {
     params.get(key).and_then(|val| val.as_bool())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde::Deserialize;
+
+    /// Mirrors the agent-org task tools: strict params that reject any
+    /// unknown LLM-supplied field.
+    #[derive(Debug, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct StrictParams {
+        subject: String,
+    }
+
+    #[test]
+    fn parse_params_strips_all_framework_meta_for_strict_structs() {
+        let params = serde_json::json!({
+            "subject": "audit yoyo-evolve",
+            "__call_id": "call-1",
+            "__session_id": "sdeagent-abc",
+        });
+        let parsed: StrictParams = parse_params(params)
+            .expect("framework __-prefixed meta must never trip deny_unknown_fields");
+        assert_eq!(parsed.subject, "audit yoyo-evolve");
+    }
+
+    #[test]
+    fn parse_params_still_rejects_real_unknown_fields() {
+        let params = serde_json::json!({
+            "subject": "x",
+            "bogus_field": true,
+        });
+        let result: Result<StrictParams, _> = parse_params(params);
+        assert!(result.is_err(), "non-framework unknown fields must still fail closed");
+    }
 }
