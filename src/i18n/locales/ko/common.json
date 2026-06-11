@@ -929,6 +929,7 @@
     "scanningFiles": "Scanning files...",
     "branchTooltip": "브랜치: {{branch}}",
     "branchTooltipSwitching": "브랜치: {{branch}} (전환 중…)",
+    "switchToSessionRepo": "{{name}}(으)로 전환",
     "embeddingProgress": "Embedding: {{count}}개 청크 처리됨",
     "embeddingProgressWithPercent": "Embedding: {{count}}개 청크 처리됨 ({{percent}}%)",
     "embeddingShort": "Embedding {{percent}}%",

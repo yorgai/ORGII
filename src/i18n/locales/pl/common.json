@@ -928,6 +928,7 @@
     "scanningFiles": "Skanowanie plików...",
     "branchTooltip": "Gałąź: {{branch}}",
     "branchTooltipSwitching": "Gałąź: {{branch}} (przełączanie...)",
+    "switchToSessionRepo": "Przełącz na {{name}}",
     "embeddingProgress": "Embedding: przetworzono {{count}} fragmentów",
     "embeddingProgressWithPercent": "Embedding: przetworzono {{count}} fragmentów ({{percent}}%)",
     "embeddingShort": "Embedding {{percent}}%",

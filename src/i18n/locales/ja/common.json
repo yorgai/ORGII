@@ -929,6 +929,7 @@
     "scanningFiles": "Scanning files...",
     "branchTooltip": "ブランチ: {{branch}}",
     "branchTooltipSwitching": "ブランチ: {{branch}}（切り替え中…）",
+    "switchToSessionRepo": "{{name}} に切り替え",
     "embeddingProgress": "Embedding: {{count}} チャンク処理済み",
     "embeddingProgressWithPercent": "Embedding: {{count}} チャンク処理済み ({{percent}}%)",
     "embeddingShort": "Embedding {{percent}}%",

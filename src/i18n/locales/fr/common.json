@@ -928,6 +928,7 @@
     "scanningFiles": "Scanning files...",
     "branchTooltip": "Branche : {{branch}}",
     "branchTooltipSwitching": "Branche : {{branch}} (changement en cours…)",
+    "switchToSessionRepo": "Basculer vers {{name}}",
     "embeddingProgress": "Embedding : {{count}} chunks traités",
     "embeddingProgressWithPercent": "Embedding : {{count}} chunks traités ({{percent}}%)",
     "embeddingShort": "Embedding {{percent}}%",

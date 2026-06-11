@@ -928,6 +928,7 @@
     "scanningFiles": "Scanning files...",
     "branchTooltip": "Ветка: {{branch}}",
     "branchTooltipSwitching": "Ветка: {{branch}} (переключение…)",
+    "switchToSessionRepo": "Переключиться на {{name}}",
     "embeddingProgress": "Embedding: обработано чанков — {{count}}",
     "embeddingProgressWithPercent": "Embedding: обработано чанков — {{count}} ({{percent}}%)",
     "embeddingShort": "Embedding {{percent}}%",

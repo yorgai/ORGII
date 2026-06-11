@@ -5,6 +5,8 @@
  */
 import { atom } from "jotai";
 
+import { sessionsAtom } from "@src/store/session/sessionAtom/atoms";
+import { workstationActiveSessionIdAtom } from "@src/store/session/viewAtom";
 import { workspaceFoldersAtom } from "@src/store/ui/workspaceFoldersAtom";
 import { activeFolderAtom } from "@src/store/workspace/derived";
 
@@ -207,3 +209,41 @@ export const repoAgeSecondsAtom = atom<number | null>((get) => {
   return Math.floor((Date.now() - lastCheck.getTime()) / 1000);
 });
 repoAgeSecondsAtom.debugLabel = "repoAgeSecondsAtom";
+
+/**
+ * When the active WorkStation session's repo differs from the currently
+ * selected workspace repo, returns the matching known repo so the status
+ * bar can show a "Switch to <name>" hint button.
+ *
+ * Returns `null` when:
+ * - no active session, or the session has no repoPath
+ * - the session repo already matches the current workspace
+ * - the session repo is not found in the known repos list
+ */
+export const sessionRepoHintAtom = atom<{
+  repoId: string;
+  repoName: string;
+} | null>((get) => {
+  const activeSessionId = get(workstationActiveSessionIdAtom);
+  if (!activeSessionId) return null;
+
+  const sessions = get(sessionsAtom);
+  const session = sessions.find((s) => s.session_id === activeSessionId);
+  const sessionRepoPath = session?.repoPath;
+  if (!sessionRepoPath) return null;
+
+  const selectedId = get(selectedRepoIdAtom);
+  const repos = get(reposAtom);
+
+  const normalized = sessionRepoPath.replace(/\/+$/, "");
+  const match = repos.find((repo) => {
+    const repoPath = (repo.path ?? repo.fs_uri ?? "").replace(/\/+$/, "");
+    return repoPath === normalized;
+  });
+
+  if (!match) return null;
+  if (match.id === selectedId) return null;
+
+  return { repoId: match.id, repoName: match.name };
+});
+sessionRepoHintAtom.debugLabel = "sessionRepoHintAtom";
