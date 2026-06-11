@@ -11,12 +11,19 @@ from __future__ import annotations
 import os
 import platform
 import shutil
+import ssl
 import stat
 import sys
 import tarfile
 import tempfile
 import urllib.request
 from pathlib import Path
+
+try:
+    import certifi
+    SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+except ImportError:
+    SSL_CONTEXT = ssl.create_default_context()
 
 AGENT_BROWSER_VERSION = "v0.27.2"
 PEEKABOO_VERSION = "v3.2.3"
@@ -82,7 +89,18 @@ def ensure_executable(path: Path) -> None:
 def download_file(url: str, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     print(f"Downloading {url}")
-    urllib.request.urlretrieve(url, destination, reporthook=progress_bar)
+    with urllib.request.urlopen(url, context=SSL_CONTEXT) as response:
+        total_size = int(response.headers.get("Content-Length", 0))
+        downloaded = 0
+        block_size = 8192
+        with open(destination, "wb") as out_file:
+            while True:
+                block = response.read(block_size)
+                if not block:
+                    break
+                out_file.write(block)
+                downloaded += len(block)
+                progress_bar(downloaded // block_size, block_size, total_size)
     print("\nDownload complete.")
 
 
