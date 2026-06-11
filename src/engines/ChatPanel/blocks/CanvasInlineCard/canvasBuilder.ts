@@ -3,7 +3,14 @@
  *
  * All documents are injected via `srcDoc` into sandboxed iframes
  * (sandbox="allow-scripts") — no allow-same-origin, no network access.
+ *
+ * CSP note: tauri.conf.json's `style-src` carries a nonce token, which per
+ * CSP3 invalidates the `'unsafe-inline'` keyword sitting next to it. Every
+ * inline `<style>` we emit MUST stamp `nonce="orgii-codemirror-style"` or
+ * WKWebView silently drops it.
  */
+
+const STYLE_NONCE = "orgii-codemirror-style";
 
 const BASE_STYLES = `
   *,*::before,*::after{box-sizing:border-box;}
@@ -24,18 +31,54 @@ const BASE_STYLES = `
   ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px;}
 `;
 
-/** Wrap arbitrary HTML in the sandbox template. */
-export function buildHtmlDocument(html: string): string {
-  return `<!DOCTYPE html><html lang="en"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>${BASE_STYLES}</style>
-<script>
+const EVAL_BRIDGE_SCRIPT = `
 window.addEventListener('message',(e)=>{
-  if(e.data?.type==='canvas_eval'&&e.data.javascript){
+  if(e.data&&e.data.type==='canvas_eval'&&e.data.javascript){
     try{eval(e.data.javascript);}catch(err){console.error('[canvas]',err);}
   }
 });
-</script>
+`;
+
+/**
+ * Detect a payload that is already a full HTML document. Nesting another
+ * `<html>` / `<head>` inside our wrapper `<body>` produces malformed markup
+ * that WebKit recovers from by dropping the nested `<head>` (and its
+ * `<style>`) — every custom class then renders unstyled. When the agent
+ * ships a complete document, we stamp nonces onto its inline styles and
+ * return it as-is rather than re-wrapping.
+ */
+function isFullHtmlDocument(html: string): boolean {
+  const head = html.trimStart().slice(0, 200).toLowerCase();
+  return head.startsWith("<!doctype html") || head.startsWith("<html");
+}
+
+/**
+ * Stamp `nonce="..."` onto every inline `<style>` tag that doesn't already
+ * carry a nonce attribute. Required for WKWebView under Tauri's CSP.
+ */
+function injectStyleNonces(html: string): string {
+  return html.replace(
+    /<style(\s[^>]*)?>/gi,
+    (match, attrs: string | undefined) => {
+      const attrString = attrs ?? "";
+      if (/\snonce\s*=/i.test(attrString)) return match;
+      return `<style${attrString} nonce="${STYLE_NONCE}">`;
+    }
+  );
+}
+
+/** Wrap arbitrary HTML in the sandbox template. */
+export function buildHtmlDocument(html: string): string {
+  if (isFullHtmlDocument(html)) {
+    // Agent supplied a full document. Stamp nonces onto its inline <style>
+    // blocks and ship it directly — wrapping it in another <html>/<body>
+    // would invalidate the markup and strip the agent's styles.
+    return injectStyleNonces(html);
+  }
+  return `<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style nonce="${STYLE_NONCE}">${BASE_STYLES}</style>
+<script nonce="${STYLE_NONCE}">${EVAL_BRIDGE_SCRIPT}</script>
 </head><body style="padding:16px">${html}</body></html>`;
 }

@@ -38,8 +38,8 @@ interface PayloadRecord {
   payload: CanvasInlinePayload;
 }
 
-/** Maximum number of A2UI JSONL lines retained per session to prevent unbounded growth. */
-const MAX_A2UI_LINES = 500;
+/** Maximum number of characters retained in the merged A2UI buffer per session to prevent unbounded growth. */
+const MAX_A2UI_CONTENT_CHARS = 200_000;
 
 export function useCanvasInlineStream(
   sessionId: string | null | undefined
@@ -73,21 +73,25 @@ export function useCanvasInlineStream(
         }
 
         // Accumulate A2UI content across multiple streaming pushes.
-        // Cap at MAX_A2UI_LINES to prevent unbounded string growth — when the
-        // limit is reached we drop the oldest lines (tail-buffer strategy).
+        // We concatenate raw strings with a "\n" boundary between pushes —
+        // the actual JSONL splitting happens in CanvasInlineCard, which is
+        // aware of multi-line element fields (e.g. code blocks). Splitting
+        // and filtering here would corrupt elements whose content fields
+        // contain newlines.
+        // Cap the merged content length (not line count) to prevent
+        // unbounded string growth — keep the tail when the limit is hit.
         if (incoming.mode === "a2ui" && prev.payload.mode === "a2ui") {
-          const prevLines = prev.payload.content
-            ? prev.payload.content.split("\n").filter(Boolean)
-            : [];
-          const newLines = (incoming.content ?? "").split("\n").filter(Boolean);
-          const merged = [...prevLines, ...newLines];
-          const capped =
-            merged.length > MAX_A2UI_LINES
-              ? merged.slice(merged.length - MAX_A2UI_LINES)
-              : merged;
+          const prevContent = prev.payload.content ?? "";
+          const incomingContent = incoming.content ?? "";
+          const joiner =
+            prevContent.length === 0 || prevContent.endsWith("\n") ? "" : "\n";
+          let merged = `${prevContent}${joiner}${incomingContent}`;
+          if (merged.length > MAX_A2UI_CONTENT_CHARS) {
+            merged = merged.slice(merged.length - MAX_A2UI_CONTENT_CHARS);
+          }
           return {
             sessionId: prev.sessionId,
-            payload: { ...incoming, content: capped.join("\n") },
+            payload: { ...incoming, content: merged },
           };
         }
 

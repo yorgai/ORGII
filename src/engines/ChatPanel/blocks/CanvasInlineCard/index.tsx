@@ -36,6 +36,46 @@ function resolveInitialStep(initialHeight: number): number {
   return idx >= 0 ? idx : 0;
 }
 
+// ─── A2UI JSONL splitter ──────────────────────────────────────────────────────
+
+/**
+ * Split a JSONL content string into individual element strings.
+ *
+ * Naïve `content.split("\n")` corrupts elements whose string fields contain
+ * real newlines (e.g. `{"type":"code","content":"a\nb\nc"}`): the inner
+ * newlines get treated as element separators, shredding one valid JSON record
+ * into many invalid fragments. The a2ui core then throws
+ * "Cannot create component el-N without a type".
+ *
+ * Strategy: walk physical lines, accumulating into a buffer. After each line
+ * is appended, try `JSON.parse(buffer)`. On success → emit + reset. On
+ * failure → keep accumulating, re-attaching the `\n` so multi-line string
+ * values survive intact. Lines that never parse (truly malformed input) are
+ * dropped at end-of-input.
+ */
+function splitA2UIContent(content: string): string[] {
+  const result: string[] = [];
+  const physicalLines = content.split("\n");
+  let buffer = "";
+  for (const line of physicalLines) {
+    buffer = buffer.length === 0 ? line : `${buffer}\n${line}`;
+    const trimmed = buffer.trim();
+    if (trimmed.length === 0) {
+      buffer = "";
+      continue;
+    }
+    try {
+      JSON.parse(trimmed);
+      result.push(trimmed);
+      buffer = "";
+    } catch {
+      // Incomplete JSON — keep accumulating across physical newlines.
+    }
+  }
+  // Discard any trailing partial buffer (mid-stream chunk, not yet closed).
+  return result;
+}
+
 // ─── streaming cursor ─────────────────────────────────────────────────────────
 
 const StreamingDot: React.FC = () => (
@@ -93,11 +133,18 @@ const CanvasInlineCard: React.FC<CanvasInlineCardProps> = ({
 
   const currentHeight = HEIGHT_STEPS[heightStep % HEIGHT_STEPS.length];
 
-  // Split A2UI content into individual lines — React state update on each
-  // streaming chunk causes A2UIRenderer to diff only new elements.
+  // Split A2UI content into individual JSONL elements — React state update on
+  // each streaming chunk causes A2UIRenderer to diff only new elements.
+  //
+  // We can't naïvely split on "\n": elements like `code` carry multi-line
+  // content whose real newlines must not be treated as JSONL separators
+  // (otherwise the element JSON gets shredded and the a2ui core throws
+  // "Cannot create component el-N without a type"). Instead, scan
+  // line-by-line and only emit a JSONL element once the accumulated buffer
+  // parses as a complete JSON value.
   const a2uiLines = useMemo(() => {
     if (mode !== "a2ui" || !content) return [];
-    return content.split("\n").filter(Boolean);
+    return splitA2UIContent(content);
   }, [mode, content]);
 
   // Build the srcDoc only for html mode. For a2ui mode we no longer generate
