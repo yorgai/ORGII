@@ -5,6 +5,7 @@
  * Parses the serialized pill format: `displayName [type:path]`
  * produced by ComposerInput.getTextWithPills().
  */
+import { useAtomValue } from "jotai";
 import {
   Code,
   Folder,
@@ -29,6 +30,7 @@ import {
   PILL_TYPES,
 } from "@src/config/pillTokens";
 import type { PillType } from "@src/config/pillTokens";
+import { sessionByIdAtom } from "@src/store/session/sessionAtom";
 
 /**
  * Local variant of PILL_REGEX that restricts the display-name capture group
@@ -234,6 +236,33 @@ PillIcon.displayName = "PillIcon";
 // Inline Pill (read-only, clickable)
 // ============================================
 
+/**
+ * Extract the bare session id from a serialized session pill path.
+ * Current serialization stores the bare id (`[session:sdeagent-…]`);
+ * legacy messages may carry `session://<id>/<ts>` (optionally with an
+ * inline `::base64` suffix).
+ */
+function sessionIdFromPillPath(path: string): string {
+  const withoutScheme = path.startsWith("session://")
+    ? path.slice("session://".length)
+    : path;
+  return withoutScheme.split("::")[0].split("/")[0];
+}
+
+/**
+ * Session pill labels resolve the LIVE session name from the store instead
+ * of trusting the serialized token: the `displayName [type:path]` grammar
+ * is single-token only, so multi-word session titles cannot round-trip
+ * through it (they used to render as the last token, e.g. "啊p…").
+ */
+const SessionPillLabel: React.FC<{ path: string; fallback: string }> = memo(
+  ({ path, fallback }) => {
+    const session = useAtomValue(sessionByIdAtom(sessionIdFromPillPath(path)));
+    return <span>{session?.name?.trim() || fallback}</span>;
+  }
+);
+SessionPillLabel.displayName = "SessionPillLabel";
+
 const InlinePill: React.FC<{ segment: PillSegment }> = memo(({ segment }) => {
   const isClickable =
     segment.pillType === "terminal" ||
@@ -337,7 +366,11 @@ const InlinePill: React.FC<{ segment: PillSegment }> = memo(({ segment }) => {
       onClick={isClickable ? handleClick : undefined}
       onMouseDown={handleMouseDown}
     >
-      <span>{segment.displayName}</span>
+      {segment.pillType === "session" ? (
+        <SessionPillLabel path={segment.path} fallback={segment.displayName} />
+      ) : (
+        <span>{segment.displayName}</span>
+      )}
     </BasePill>
   );
 });

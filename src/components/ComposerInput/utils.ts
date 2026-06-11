@@ -46,6 +46,19 @@ export function isInvalidFilePillPath(path: string): boolean {
 }
 
 /**
+ * The pill grammar `displayName [type:path]` can only round-trip when the
+ * display name is a single token: every parser (UserMessageContent,
+ * pillContentParser) splits the label from preceding prose at the LAST
+ * whitespace. Display names with spaces — session titles especially — used
+ * to mangle into "last token only" labels after send. Collapse whitespace
+ * runs to "-" and strip square brackets (which would break the bracket
+ * grammar itself) so the serialized label is always one regex-safe token.
+ */
+export function sanitizePillDisplayLabel(name: string): string {
+  return name.trim().replace(/[[\]]/g, "").replace(/\s+/g, "-");
+}
+
+/**
  * Serialize a single pill to the agent-consumable text format. This is the
  * exact contract that `getTextWithPills()` exposes — every pill becomes
  * `<displayName> [<iconType>:<path>]` (with a few special cases for
@@ -55,15 +68,18 @@ export function serializePillNode(
   attrs: Pick<ComposerPillAttrs, "filePath" | "fileName" | "iconType">
 ): string {
   const path = attrs.filePath ?? "";
-  const displayName = attrs.fileName ?? path.split("/").pop() ?? path;
+  const rawDisplayName = attrs.fileName ?? path.split("/").pop() ?? path;
   const iconType = (attrs.iconType ?? "file") as PillIconType;
 
   const iconTypeStr = iconType as string;
+  if (iconTypeStr === "member") return `@${rawDisplayName}`;
+
+  const displayName =
+    sanitizePillDisplayLabel(rawDisplayName) || rawDisplayName;
   if (iconTypeStr === "repo") return `${displayName} [repo:${path}]`;
   if (iconTypeStr === "branch") return `${displayName} [branch:${path}]`;
   if (iconTypeStr === "folder") return `${displayName} [folder:${path}]`;
   if (iconTypeStr === "project") return `${displayName} [project:${path}]`;
-  if (iconTypeStr === "member") return `@${displayName}`;
   if (iconTypeStr === "skill") return `${displayName} [skill:${path}]`;
 
   // Session pills pass only the session ID — no transcript embedding
