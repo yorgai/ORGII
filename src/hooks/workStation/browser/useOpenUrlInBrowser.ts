@@ -103,7 +103,7 @@ export function useOpenUrlInBrowser(): void {
         content: normalized,
         title: tRef.current("browser.openedInBrowser"),
         closable: true,
-        duration: 6,
+        duration: 6000,
         cancel: {
           label: tRef.current("browser.goToBrowser"),
           closeOnClick: true,
