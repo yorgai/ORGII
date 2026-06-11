@@ -134,23 +134,39 @@ jobs:
       - name: Download sidecar binaries
         run: python3 scripts/tools/download_sidecars.py
 
-      # ── Sign bundled git binaries (required for notarization) ───
-      - name: Sign dugite git binaries
+      # ── Pre-sign sidecar binaries before Tauri copies them ──────
+      - name: Pre-sign sidecar binaries
         if: env.HAS_APPLE_CERT == 'true'
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
-          DUGITE_DIR="node_modules/dugite/git"
-          echo "Signing binaries in $DUGITE_DIR..."
-          find "$DUGITE_DIR" -type f | while read -r bin; do
+          SIDECAR_ENTITLEMENTS="src-tauri/sidecar-entitlements.plist"
+
+          # dugite git binaries — hardened runtime + timestamp
+          echo "Pre-signing dugite git binaries..."
+          find "node_modules/dugite/git" -type f | while read -r bin; do
             if file "$bin" | grep -qE "Mach-O|executable|dylib|bundle"; then
               codesign --force --sign "$APPLE_SIGNING_IDENTITY" \
-                --options runtime \
-                --timestamp \
+                --options runtime --timestamp \
                 "$bin" 2>/dev/null && echo "Signed: $bin" || echo "Skipped: $bin"
             fi
           done
-          echo "Done signing dugite binaries"
+
+          # sidecar binaries (peekaboo, agent-browser) — use sidecar entitlements
+          # to ensure get-task-allow is NOT present
+          echo "Pre-signing sidecar binaries..."
+          for bin in src-tauri/bin/peekaboo \
+                     src-tauri/bin/peekaboo-aarch64-apple-darwin \
+                     src-tauri/bin/peekaboo-x86_64-apple-darwin \
+                     src-tauri/bin/agent-browser-aarch64-apple-darwin; do
+            if [ -f "$bin" ] && file "$bin" | grep -qE "Mach-O|executable"; then
+              codesign --force --sign "$APPLE_SIGNING_IDENTITY" \
+                --options runtime --timestamp \
+                --entitlements "$SIDECAR_ENTITLEMENTS" \
+                "$bin" && echo "Signed: $bin" || echo "Failed: $bin"
+            fi
+          done
+          echo "Done pre-signing sidecar binaries"
 
       # ── Build Tauri app (sign + notarize + updater artifacts) ─
       - name: Build ORGII
@@ -165,6 +181,44 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         # Semantic search archived; no extra `--features` needed.
         run: pnpm tauri build --target aarch64-apple-darwin
+
+      # ── Re-sign sidecar binaries inside the assembled .app ──────
+      # Tauri calls codesign on the whole bundle, but it doesn't re-sign
+      # nested Resources/bin/* with hardened runtime. We do it here so
+      # Apple's notarization service sees the correct signatures.
+      - name: Re-sign sidecar binaries in .app bundle
+        if: env.HAS_APPLE_CERT == 'true'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          APP="src-tauri/target/aarch64-apple-darwin/release/bundle/macos/ORGII.app"
+          SIDECAR_ENTITLEMENTS="src-tauri/sidecar-entitlements.plist"
+          RESOURCES_BIN="$APP/Contents/Resources/bin"
+
+          if [ ! -d "$APP" ]; then
+            echo "No .app bundle found, skipping"
+            exit 0
+          fi
+
+          echo "Re-signing sidecar binaries in $RESOURCES_BIN ..."
+          for bin in peekaboo peekaboo-aarch64-apple-darwin peekaboo-x86_64-apple-darwin \
+                     agent-browser-aarch64-apple-darwin; do
+            target="$RESOURCES_BIN/$bin"
+            if [ -f "$target" ] && file "$target" | grep -qE "Mach-O|executable"; then
+              codesign --force --sign "$APPLE_SIGNING_IDENTITY" \
+                --options runtime --timestamp \
+                --entitlements "$SIDECAR_ENTITLEMENTS" \
+                "$target" && echo "Re-signed: $target" || echo "Failed: $target"
+            fi
+          done
+
+          # Re-sign the whole bundle to include the updated nested signatures
+          echo "Re-signing the top-level .app bundle..."
+          codesign --force --deep --sign "$APPLE_SIGNING_IDENTITY" \
+            --options runtime --timestamp \
+            --entitlements "src-tauri/entitlements.plist" \
+            "$APP"
+          echo "Bundle re-sign complete"
 
       # ── Locate build artifacts ────────────────────────────────
       - name: Gather release artifacts
