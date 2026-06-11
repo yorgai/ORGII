@@ -238,7 +238,11 @@ Skip this tool when:\n\
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let action = required_string(&params, "action")?;
 
         match action.as_str() {

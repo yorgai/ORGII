@@ -44,7 +44,11 @@ impl Tool for InternalBrowserTool {
         })
     }
 
-    async fn execute_text(&self, _params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        _params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         Err(ToolError::ExecutionFailed(
             INTERNAL_BROWSER_UNAVAILABLE_MESSAGE.to_string(),
         ))

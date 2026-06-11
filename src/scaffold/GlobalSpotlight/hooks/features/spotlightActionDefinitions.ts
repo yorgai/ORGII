@@ -151,7 +151,7 @@ export interface SpotlightEditorActionDefinition {
 export const AGENT_SESSION_ACTIONS = [
   {
     id: "open-agent-control",
-    labelKey: "common:guiControl.menuToggle",
+    labelKey: "common:adeManager.menuToggle",
     icon: DraftingCompass,
     keywords: [
       "ade manager",
@@ -163,7 +163,7 @@ export const AGENT_SESSION_ACTIONS = [
       "manage agents",
       "manage workspaces",
     ],
-    shortcut: getShortcutKeys("toggle_gui_control"),
+    shortcut: getShortcutKeys("toggle_ade_manager"),
     actionId: ACTION_ID.SPOTLIGHT_OPEN_AGENT_CONTROL,
     payload: {},
     fallback: "agent-control",

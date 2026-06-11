@@ -1,22 +1,36 @@
 /**
- * useCellReplayState Hook
+ * useCellReplayState — explicit-mode replay engine for a single grid cell.
  *
- * Manages replay state for each grid cell in the video-editor clip model.
+ * Owns ALL cursor state for one cell as an explicit FSM with three modes:
  *
- * ## Modes
+ *   ┌─────────┐  user interaction        ┌──────────┐
+ *   │ follow  │ ───────────────────────▶ │ detached │
+ *   └─────────┘                          └──────────┘
+ *      ▲                                     │
+ *      │   syncToMain() with no              │ syncToMain()
+ *      │   external cursor                   │
+ *      │                                     ▼
+ *   ┌─────────┐  user interaction       ┌──────────┐
+ *   │ synced  │ ─────────────────────── │  (same)  │
+ *   └─────────┘                          └──────────┘
  *
- * 1. **Synced** (default when `externalCursorMs` is provided): the cell
- *    follows the main replay cursor. The current event is resolved via a
- *    binary-search by timestamp against the cell's event list.
+ *  - `follow`   — live tail: new events always move the cursor to the end.
+ *  - `synced`   — cursor is slaved to `externalCursorMs` via timestamp lookup.
+ *  - `detached` — the user owns the cursor. Event growth and external cursor
+ *                 movement NEVER touch it. This is the only mode in which the
+ *                 user-set position is durable.
  *
- * 2. **Independent** (when the user manually interacts with the cell, or
- *    when no external cursor is provided): the cell uses its own local
- *    `currentIndex` and runs its own auto-play timer.
+ * Scrub sessions
+ * --------------
+ * `beginScrub` opens a transient scrub session. While open, the cursor follows
+ * `scrub(index)` calls instantly without committing to persistence, and BOTH
+ * external writes (event growth, external cursor) are gated off. `endScrub`
+ * commits the final index once through the persisted setter and transitions
+ * to `detached` mode. This replaces the old `IndependentGridCell` 16 ms
+ * `setTimeout` debounce + duplicated `isDraggingSlider` state.
  *
- * Implementation is split across:
- * - cellReplayTypes.ts — shared types and findIndexAtTime utility
- * - useCellPersistence.ts — per-cell persisted state via cellReplayStatesAtom
- * - useCellPlayback.ts — auto-play timer and global replay sync
+ * All cursor writes go through `commitIndex` — there is no `setCurrentIndexLocal`
+ * bypass any more; persisted state and live state cannot diverge.
  */
 import { useAtomValue } from "jotai";
 import {
@@ -33,13 +47,14 @@ import {
   simulatorPlaybackSpeedAtom,
 } from "@src/store/ui/simulatorAtom";
 
+import { findIndexAtTime } from "../utils/findIndexAtTime";
 import type {
   CellReplayControls,
   CellReplayState,
+  ReplayMode,
   UseCellReplayStateOptions,
   UseCellReplayStateReturn,
 } from "./cellReplayTypes";
-import { findIndexAtTime } from "./cellReplayTypes";
 import { useCellPersistence } from "./useCellPersistence";
 import { useCellPlayback } from "./useCellPlayback";
 
@@ -47,9 +62,17 @@ import { useCellPlayback } from "./useCellPlayback";
 export type {
   CellReplayState,
   CellReplayControls,
+  ReplayMode,
   UseCellReplayStateOptions,
   UseCellReplayStateReturn,
 };
+
+function clampIndex(index: number, eventCount: number): number {
+  if (eventCount <= 0) return -1;
+  if (index < 0) return 0;
+  if (index > eventCount - 1) return eventCount - 1;
+  return index;
+}
 
 export function useCellReplayState(
   options: UseCellReplayStateOptions
@@ -66,9 +89,11 @@ export function useCellReplayState(
   const { persistedState, hasUserOverride, patchCellState } =
     useCellPersistence(cellId);
 
-  const isSyncMode = externalCursorMs != null && !hasUserOverride;
+  // `hasUserOverride` is the persisted "user has detached this cell" flag.
+  // Treat it as the durable representation of `detached` mode.
+  const isDetached = hasUserOverride;
 
-  // ── Local state ──────────────────────────────────────────────────────
+  // ── Local cursor state ───────────────────────────────────────────────
   const [currentIndex, setCurrentIndexLocal] = useState(() => {
     if (persistedState?.currentIndex !== undefined) {
       return Math.min(
@@ -83,17 +108,71 @@ export function useCellReplayState(
   );
   const [localPlaybackSpeed, setLocalPlaybackSpeed] = useState(1);
 
+  // ── Scrub session ─────────────────────────────────────────────────────
+  // During a scrub session the user owns the displayed cursor outright.
+  // `scrubIndex` is the live (uncommitted) value shown in the UI.
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+  const isScrubbing = scrubIndex !== null;
+  const isScrubbingRef = useRef(isScrubbing);
+  useLayoutEffect(() => {
+    isScrubbingRef.current = isScrubbing;
+  }, [isScrubbing]);
+
   // Read global speed before passing to playback hook
   const globalPlaybackSpeed = useAtomValue(simulatorPlaybackSpeedAtom);
   const playbackSpeed =
     localPlaybackSpeed !== 1 ? localPlaybackSpeed : globalPlaybackSpeed;
+
+  // ── Mode derivation ───────────────────────────────────────────────────
+  // Mode is derived (not stored) — `detached` is persisted as
+  // `hasUserOverride`; `synced` vs `follow` is decided by whether the
+  // parent supplies an external cursor.
+  const mode: ReplayMode = useMemo(() => {
+    if (isDetached) return "detached";
+    if (externalCursorMs != null) return "synced";
+    return "follow";
+  }, [isDetached, externalCursorMs]);
+
+  // ── Single cursor-write chokepoint ────────────────────────────────────
+  // Every persisted cursor change goes through here. Optional `detach: true`
+  // transitions the mode to `detached` in the same patch.
+  const commitIndex = useCallback(
+    (
+      updater: number | ((prev: number) => number),
+      opts: { detach?: boolean; isPlayingOverride?: boolean } = {}
+    ) => {
+      setCurrentIndexLocal((prev) => {
+        const raw = typeof updater === "function" ? updater(prev) : updater;
+        const newValue = clampIndex(raw, events.length);
+        patchCellState({
+          currentIndex: newValue,
+          isPlaying: opts.isPlayingOverride ?? isPlaying,
+          ...(opts.detach ? { hasUserOverride: true } : {}),
+        });
+        return newValue;
+      });
+    },
+    [patchCellState, isPlaying, events.length]
+  );
+
+  const commitPlaying = useCallback(
+    (value: boolean, opts: { detach?: boolean } = {}) => {
+      setIsPlayingLocal(value);
+      patchCellState({
+        currentIndex,
+        isPlaying: value,
+        ...(opts.detach ? { hasUserOverride: true } : {}),
+      });
+    },
+    [patchCellState, currentIndex]
+  );
 
   // ── Playback timer + global sync ─────────────────────────────────────
   useCellPlayback({
     events,
     autoPlayInterval,
     isPlaying,
-    isSyncMode,
+    isSyncMode: mode === "synced",
     playbackSpeed,
     setCurrentIndexLocal,
     setIsPlayingLocal,
@@ -103,47 +182,11 @@ export function useCellReplayState(
 
   const autoScroll = useAtomValue(simulatorAutoScrollAtom);
 
-  // ── Persistent index wrapper ─────────────────────────────────────────
-  const setCurrentIndex = useCallback(
-    (
-      updater: number | ((prev: number) => number),
-      markOverride: boolean = true
-    ) => {
-      setCurrentIndexLocal((prev) => {
-        const newValue =
-          typeof updater === "function" ? updater(prev) : updater;
-        patchCellState({
-          currentIndex: newValue,
-          isPlaying,
-          ...(markOverride ? { hasUserOverride: true } : {}),
-        });
-        return newValue;
-      });
-    },
-    [patchCellState, isPlaying]
-  );
-
-  const setIsPlaying = useCallback(
-    (value: boolean, markOverride: boolean = true) => {
-      setIsPlayingLocal(value);
-      patchCellState({
-        currentIndex,
-        isPlaying: value,
-        ...(markOverride ? { hasUserOverride: true } : {}),
-      });
-    },
-    [patchCellState, currentIndex]
-  );
-
-  // ── Follow mode ──────────────────────────────────────────────────────
+  // ── Follow-mode tailing ───────────────────────────────────────────────
+  // The ONLY place new events advance the cursor. Gated by mode AND scrub
+  // AND playback so a scrub release on a live subagent doesn't teleport
+  // the handle back to the right edge.
   const prevEventsLengthRef = useRef(events.length);
-  const setCurrentIndexLocalRef = useRef(setCurrentIndexLocal);
-  const setIsPlayingLocalRef = useRef(setIsPlayingLocal);
-  useLayoutEffect(() => {
-    setCurrentIndexLocalRef.current = setCurrentIndexLocal;
-    setIsPlayingLocalRef.current = setIsPlayingLocal;
-  }, [setCurrentIndexLocal, setIsPlayingLocal]);
-
   useEffect(() => {
     const prevLen = prevEventsLengthRef.current;
     prevEventsLengthRef.current = events.length;
@@ -154,24 +197,36 @@ export function useCellReplayState(
         setCurrentIndexLocal(0);
         setIsPlayingLocal(false);
       });
-    } else if (events.length > prevLen && !isPlaying) {
-      const newLen = events.length;
-      queueMicrotask(() => setCurrentIndexLocal(newLen - 1));
-    } else if (startAtEnd && !persistedState && prevLen === 0) {
-      const newLen = events.length;
-      queueMicrotask(() => setCurrentIndexLocal(newLen - 1));
+      return;
     }
-  }, [events.length, isPlaying, startAtEnd, persistedState]);
+    if (isScrubbingRef.current) return;
+    if (mode !== "follow") return;
+    if (isPlaying) return; // playback timer owns the cursor while playing
 
-  // ── Mode-aware index ─────────────────────────────────────────────────
+    const newLen = events.length;
+    queueMicrotask(() => {
+      // Use the persisted chokepoint so live + persisted stay in lockstep.
+      // `markOverride` deliberately false — follow-mode tail is not a user
+      // detach action.
+      setCurrentIndexLocal(newLen - 1);
+      patchCellState({ currentIndex: newLen - 1, isPlaying });
+    });
+  }, [events.length, isPlaying, mode, patchCellState]);
+
+  // ── Synced-mode external-cursor mapping ──────────────────────────────
   const safeIndex = useMemo(() => {
     if (events.length === 0) return -1;
-    if (isSyncMode && externalCursorMs != null) {
-      const idx = findIndexAtTime(events, externalCursorMs);
+    if (isScrubbing && scrubIndex !== null) {
+      return clampIndex(scrubIndex, events.length);
+    }
+    if (mode === "synced" && externalCursorMs != null) {
+      const idx = findIndexAtTime(events, externalCursorMs, {
+        preStart: "clamp",
+      });
       return Math.max(0, idx);
     }
-    return Math.max(0, Math.min(currentIndex, events.length - 1));
-  }, [currentIndex, events, externalCursorMs, isSyncMode]);
+    return clampIndex(currentIndex, events.length);
+  }, [currentIndex, events, externalCursorMs, mode, isScrubbing, scrubIndex]);
 
   const currentEvent = useMemo(() => {
     if (safeIndex < 0 || safeIndex >= events.length) return null;
@@ -185,25 +240,26 @@ export function useCellReplayState(
 
   // ── Controls ─────────────────────────────────────────────────────────
   const play = useCallback(() => {
-    const startFrom = isSyncMode
-      ? safeIndex
-      : currentIndex >= events.length - 1
-        ? 0
-        : currentIndex;
-    setCurrentIndex(startFrom);
-    setIsPlaying(true);
+    const startFrom =
+      mode === "synced"
+        ? safeIndex
+        : currentIndex >= events.length - 1
+          ? 0
+          : currentIndex;
+    commitIndex(startFrom, { detach: true });
+    commitPlaying(true, { detach: true });
   }, [
-    isSyncMode,
+    mode,
     safeIndex,
     currentIndex,
     events.length,
-    setCurrentIndex,
-    setIsPlaying,
+    commitIndex,
+    commitPlaying,
   ]);
 
   const pause = useCallback(() => {
-    setIsPlaying(false);
-  }, [setIsPlaying]);
+    commitPlaying(false);
+  }, [commitPlaying]);
 
   const togglePlay = useCallback(() => {
     if (isPlaying) pause();
@@ -211,29 +267,29 @@ export function useCellReplayState(
   }, [isPlaying, play, pause]);
 
   const next = useCallback(() => {
-    const base = isSyncMode ? safeIndex : currentIndex;
-    setCurrentIndex(Math.min(base + 1, events.length - 1));
-  }, [isSyncMode, safeIndex, currentIndex, events.length, setCurrentIndex]);
+    const base = mode === "synced" ? safeIndex : currentIndex;
+    commitIndex(Math.min(base + 1, events.length - 1), { detach: true });
+  }, [mode, safeIndex, currentIndex, events.length, commitIndex]);
 
   const prev = useCallback(() => {
-    const base = isSyncMode ? safeIndex : currentIndex;
-    setCurrentIndex(Math.max(base - 1, 0));
-  }, [isSyncMode, safeIndex, currentIndex, setCurrentIndex]);
+    const base = mode === "synced" ? safeIndex : currentIndex;
+    commitIndex(Math.max(base - 1, 0), { detach: true });
+  }, [mode, safeIndex, currentIndex, commitIndex]);
 
   const goToIndex = useCallback(
     (index: number) => {
-      setCurrentIndex(Math.max(0, Math.min(index, events.length - 1)));
+      commitIndex(index, { detach: true });
     },
-    [events.length, setCurrentIndex]
+    [commitIndex]
   );
 
   const goToProgress = useCallback(
     (progressValue: number) => {
       if (events.length <= 1) return;
       const index = Math.round((progressValue / 100) * (events.length - 1));
-      goToIndex(index);
+      commitIndex(index, { detach: true });
     },
-    [events.length, goToIndex]
+    [events.length, commitIndex]
   );
 
   const setSpeed = useCallback((speed: number) => {
@@ -241,19 +297,54 @@ export function useCellReplayState(
   }, []);
 
   const reset = useCallback(() => {
-    setCurrentIndex(0);
-    setIsPlaying(false);
-  }, [setCurrentIndex, setIsPlaying]);
+    commitIndex(0, { detach: true });
+    commitPlaying(false, { detach: true });
+  }, [commitIndex, commitPlaying]);
 
   const goToEnd = useCallback(() => {
-    setCurrentIndex(events.length - 1);
-    setIsPlaying(false);
-  }, [events.length, setCurrentIndex, setIsPlaying]);
+    commitIndex(events.length - 1, { detach: true });
+    commitPlaying(false, { detach: true });
+  }, [events.length, commitIndex, commitPlaying]);
 
   const syncToMain = useCallback(() => {
     setIsPlayingLocal(false);
+    setScrubIndex(null);
     patchCellState({ isPlaying: false, hasUserOverride: false });
   }, [patchCellState]);
+
+  // Scrub session API. The bar calls `beginScrub` on pointer-down, `scrub`
+  // on each move, and `endScrub` on pointer-up. The cursor is only persisted
+  // at `endScrub` time, so transient drag positions never enter the atom
+  // (and event growth during the drag cannot fight the user).
+  const beginScrub = useCallback(() => {
+    setScrubIndex((prev) =>
+      prev != null ? prev : clampIndex(currentIndex, events.length)
+    );
+  }, [currentIndex, events.length]);
+
+  const scrub = useCallback(
+    (index: number) => {
+      setScrubIndex(clampIndex(index, events.length));
+    },
+    [events.length]
+  );
+
+  const endScrub = useCallback(
+    (index: number) => {
+      const final = clampIndex(index, events.length);
+      setScrubIndex(null);
+      // Pause playback when scrubbing ends — a scrub is an explicit "I'm
+      // taking the wheel" action, identical to pressing pause + step.
+      setIsPlayingLocal(false);
+      patchCellState({
+        currentIndex: final,
+        isPlaying: false,
+        hasUserOverride: true,
+      });
+      setCurrentIndexLocal(final);
+    },
+    [events.length, patchCellState]
+  );
 
   // ── Return ───────────────────────────────────────────────────────────
   const state: CellReplayState = useMemo(
@@ -265,7 +356,8 @@ export function useCellReplayState(
       totalEvents: events.length,
       progress,
       autoScroll,
-      isDetached: hasUserOverride,
+      mode,
+      isDetached,
     }),
     [
       safeIndex,
@@ -275,7 +367,8 @@ export function useCellReplayState(
       events.length,
       progress,
       autoScroll,
-      hasUserOverride,
+      mode,
+      isDetached,
     ]
   );
 
@@ -292,6 +385,9 @@ export function useCellReplayState(
       reset,
       goToEnd,
       syncToMain,
+      beginScrub,
+      scrub,
+      endScrub,
     }),
     [
       play,
@@ -305,6 +401,9 @@ export function useCellReplayState(
       reset,
       goToEnd,
       syncToMain,
+      beginScrub,
+      scrub,
+      endScrub,
     ]
   );
 

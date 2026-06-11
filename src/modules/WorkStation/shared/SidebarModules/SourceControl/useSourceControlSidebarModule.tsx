@@ -44,7 +44,6 @@ import {
   useSourceControlTabConfig,
 } from "@src/modules/WorkStation/CodeEditor/Panels/EditorPrimarySidebar/tabs/SourceControlTab";
 import type { PrimarySidebarTab } from "@src/modules/WorkStation/shared/PrimarySidebarLayout";
-import { sourceControlFilterModeHandlerAtom } from "@src/store/workstation/codeEditor/sourceControlFilterModeAtom";
 import { workstationIssueCallbackAtom } from "@src/store/workstation/codeEditor/workstationIssueAtom";
 import type { SourceControlHistorySelection } from "@src/store/workstation/tabs";
 import type { GitFile } from "@src/types/git/types";
@@ -124,7 +123,6 @@ export function useSourceControlSidebarModule({
     toggle: handleToggleHistoryFilter,
     clear: clearHistoryFilter,
   } = useSectionFilter();
-  const filterModeHandler = useAtomValue(sourceControlFilterModeHandlerAtom);
   const filterMode = controlledFilterMode ?? "uncommitted";
   const isHistoryMode = filterMode === "history";
   const isPrMode = filterMode === "pr";

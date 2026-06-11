@@ -138,18 +138,10 @@ const ModePill: React.FC<ModePillProps> = memo(
 
     const handleSelect = useCallback(
       (selected: AgentExecMode) => {
-        // TEMP DIAG [draft-bug]
-        console.log("[draft-bug] ModePill.handleSelect", {
-          selected,
-          previous: mode,
-          sessionId,
-          isControlled,
-          isInSessionMode,
-        });
         setModeValue(selected);
         close();
       },
-      [setModeValue, close, mode, sessionId, isControlled, isInSessionMode]
+      [setModeValue, close]
     );
 
     const handleTriggerClick = useCallback(() => {

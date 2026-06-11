@@ -35,7 +35,6 @@ import {
   RulerDimensionLine,
   Settings2,
   Settings as SettingsIcon,
-  Smartphone,
   Sparkles,
   Toolbox,
   Unplug,
@@ -143,10 +142,6 @@ export const SEGMENT_REGISTRY: Record<string, SegmentRegistryEntry> = {
   // settings sections
   general: { labelKey: "settings:sections.general", icon: Settings2 },
   appearance: { labelKey: "settings:sections.appearance", icon: Palette },
-  "mobile-remote": {
-    labelKey: "settings:sections.mobileRemote",
-    icon: Smartphone,
-  },
   editor: { labelKey: "settings:sections.editorAndWorkspace", icon: Code },
   update: { labelKey: "settings:sections.appUpdate", icon: Package },
   monitor: { labelKey: "settings:sections.monitor", icon: Activity },

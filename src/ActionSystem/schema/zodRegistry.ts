@@ -131,13 +131,13 @@ export class ZodActionRegistry {
   }
 
   /**
-   * Get actions exposed to the OS agent's `ide` tool.
+   * Get actions exposed to the agent's `ade` tool (Agentic Development Environment).
    * Returns only "gui" actions — "action" layer is excluded
-   * because the OS agent has native Rust tools for those.
+   * because the agent has native Rust tools for those.
    * (The frontend auto-mirrors native tool calls as GUI effects
    * via useAgentGUISync, so the agent never needs to think about GUI.)
    */
-  getIDEExposedActions(): ZodAction<z.ZodTypeAny>[] {
+  getADEExposedActions(): ZodAction<z.ZodTypeAny>[] {
     return this.getAll().filter((action) => {
       const layer = action.meta.layer ?? "gui";
       return layer === "gui";
@@ -146,7 +146,7 @@ export class ZodActionRegistry {
 
   getGUIControlManifest(): GUIControlManifest {
     return {
-      actions: this.getIDEExposedActions()
+      actions: this.getADEExposedActions()
         .map(zodActionToGUIControlManifestAction)
         .sort((left, right) => left.id.localeCompare(right.id)),
     };

@@ -23,25 +23,18 @@ import {
   Pause,
   Play,
 } from "lucide-react";
-import React, {
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import Slider from "@src/components/Slider";
+import ReplayProgressBar from "@src/components/ReplayProgressBar";
 import { SURFACE_TOKENS } from "@src/config/surfaceTokens";
 import { REPLAY_CONFIG } from "@src/config/workspace/replayConfig";
 import { focusedSubagentCellAtom } from "@src/store/ui/simulatorAtom";
 
 import { useCellReplayState } from "../../hooks/useCellReplayState";
 import type { GridCellProps } from "../../types/gridTypes";
+import { eventReplayTimeMs } from "../../utils/findIndexAtTime";
 import { mergeSessionEventsToolResultsByCallId } from "../../utils/mergeSessionEventsToolResultsByCallId";
-import "./IndependentGridCell.scss";
 import { SubagentChatPane } from "./SubagentChatPane";
 import { SubagentPinnedPreviewPopover } from "./SubagentPinnedPreviewPopover";
 
@@ -70,30 +63,33 @@ const IndependentGridCellComponent: React.FC<GridCellProps> = ({
     [events]
   );
 
+  // Persist replay overrides under a stable, session-scoped key when
+  // available. Falling back to `cell-${index}` would conflate two different
+  // sessions occupying the same grid slot across rerenders.
+  const cellId = threadId ?? `cell-${index}`;
+
   const { state, controls } = useCellReplayState({
     events: mergedEvents,
     startAtEnd: true,
-    cellId: threadId || `cell-${index}`,
+    cellId,
     externalCursorMs: externalCursorMs ?? null,
   });
 
-  /** Same Slider + REPLAY_CONFIG mapping as `MusicPlayerReplayBar`. */
   const eventCount = state.totalEvents;
   const currentIndex = state.currentIndex;
-  const [isDraggingSlider, setIsDraggingSlider] = useState(false);
-  const [dragSliderValue, setDragSliderValue] = useState(0);
   const [isPointerInReplayRegion, setIsPointerInReplayRegion] = useState(false);
-  const dragSliderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isScrubbing, setIsScrubbing] = useState(false);
 
-  const showReplayFooter = isPointerInReplayRegion || isDraggingSlider;
+  const showReplayFooter = isPointerInReplayRegion || isScrubbing;
 
+  // Map between the engine's integer event index and the slider's [0, MAX]
+  // continuous value space. The math is the single bridge between domains;
+  // everything else lives in the engine.
   const sliderValue = useMemo(() => {
     if (eventCount <= 1) return 0;
     const safeIndex = Math.max(0, currentIndex);
     return (safeIndex / (eventCount - 1)) * REPLAY_CONFIG.MAX_VALUE;
   }, [currentIndex, eventCount]);
-
-  const displaySliderValue = isDraggingSlider ? dragSliderValue : sliderValue;
 
   const sliderValueToIndex = useCallback(
     (value: number): number => {
@@ -103,45 +99,31 @@ const IndependentGridCellComponent: React.FC<GridCellProps> = ({
     [eventCount]
   );
 
+  // Scrub session — opened on first onChange, closed on onAfterChange. The
+  // engine owns the transient cursor and the commit, so the cell holds no
+  // index state of its own and there is no debounce timer to leak.
   const handleSliderChange = useCallback(
     (value: number | number[]) => {
       const numVal = Array.isArray(value) ? value[0] : value;
-      setIsDraggingSlider(true);
-      setDragSliderValue(numVal);
-
-      if (dragSliderTimerRef.current) {
-        clearTimeout(dragSliderTimerRef.current);
+      const idx = sliderValueToIndex(numVal);
+      if (!isScrubbing) {
+        controls.beginScrub();
+        setIsScrubbing(true);
       }
-
-      dragSliderTimerRef.current = setTimeout(() => {
-        controls.goToIndex(sliderValueToIndex(numVal));
-      }, 16);
+      controls.scrub(idx);
     },
-    [controls, sliderValueToIndex]
+    [controls, sliderValueToIndex, isScrubbing]
   );
 
   const handleSliderAfterChange = useCallback(
     (value: number | number[]) => {
       const numVal = Array.isArray(value) ? value[0] : value;
-
-      if (dragSliderTimerRef.current) {
-        clearTimeout(dragSliderTimerRef.current);
-        dragSliderTimerRef.current = null;
-      }
-
-      controls.goToIndex(sliderValueToIndex(numVal));
-      setIsDraggingSlider(false);
+      const idx = sliderValueToIndex(numVal);
+      controls.endScrub(idx);
+      setIsScrubbing(false);
     },
     [controls, sliderValueToIndex]
   );
-
-  useEffect(() => {
-    return () => {
-      if (dragSliderTimerRef.current) {
-        clearTimeout(dragSliderTimerRef.current);
-      }
-    };
-  }, []);
 
   const replaySliderDisabled = eventCount === 0;
 
@@ -152,18 +134,20 @@ const IndependentGridCellComponent: React.FC<GridCellProps> = ({
    * - number ⇒ replay scrub; ChatHistory will only render events with
    *   `createdAt <= cursorMs`.
    *
-   * We treat "cursor at last index AND not actively scrubbing" as live
-   * tail so the streaming UX is identical to a top-level ChatHistory.
+   * Uses `eventReplayTimeMs` (`lastActivityAt ?? createdAt`) so a cursor at
+   * the last merged tool_call event covers the tool result's completion
+   * time — this is what makes the final frame render non-blank when the
+   * tail event is a tool call whose chat output postdates the call start.
    */
   const cursorMsForPane = useMemo<number | null>(() => {
     if (eventCount === 0) return null;
     const atTail = currentIndex >= eventCount - 1;
-    if (atTail && !isDraggingSlider) return null;
+    if (atTail && !isScrubbing) return null;
     const ev = state.currentEvent;
-    if (!ev?.createdAt) return null;
-    const t = Date.parse(ev.createdAt);
+    if (!ev) return null;
+    const t = eventReplayTimeMs(ev);
     return Number.isFinite(t) ? t : null;
-  }, [currentIndex, eventCount, isDraggingSlider, state.currentEvent]);
+  }, [currentIndex, eventCount, isScrubbing, state.currentEvent]);
 
   return (
     <div
@@ -311,17 +295,17 @@ const IndependentGridCellComponent: React.FC<GridCellProps> = ({
             >
               <ChevronRight size={12} strokeWidth={2} />
             </button>
-            <div className="subagent-cell-replay-slider min-w-0 flex-1 px-1">
-              <Slider
-                value={displaySliderValue}
+            <div className="min-w-0 flex-1 px-1">
+              <ReplayProgressBar
+                value={sliderValue}
                 max={REPLAY_CONFIG.MAX_VALUE}
                 onChange={handleSliderChange}
                 onAfterChange={handleSliderAfterChange}
-                style={{ width: "100%", padding: 0 }}
-                showTooltip={false}
-                defaultValue={0}
-                noPadding
+                isFollowMode={state.mode === "follow" && !isScrubbing}
                 disabled={replaySliderDisabled}
+                ariaLabel={t("simulator.replay.scrub", {
+                  defaultValue: "Replay scrub bar",
+                })}
               />
             </div>
           </div>

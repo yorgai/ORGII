@@ -529,17 +529,17 @@ export async function wingmanListMonitors(): Promise<WingmanMonitor[]> {
   return rpc.agentSession.wingmanListMonitors();
 }
 
-export interface IdeActionResultPayload {
+export interface AdeActionResultPayload {
   success: boolean;
   message: string;
   data?: unknown;
 }
 
-export async function sendIdeActionResult(
+export async function sendAdeActionResult(
   correlationId: string,
-  result: IdeActionResultPayload
+  result: AdeActionResultPayload
 ): Promise<void> {
-  return rpc.agentSession.sendIdeActionResult({
+  return rpc.agentSession.sendAdeActionResult({
     correlationId,
     success: result.success,
     message: result.message,

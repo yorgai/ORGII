@@ -14,7 +14,6 @@
   "sections": {
     "general": "General",
     "appearance": "Appearance",
-    "mobileRemote": "Remote Control",
     "shortcuts": "Keyboard Shortcuts",
     "notifications": "Notifications",
     "codeEditor": "Code Editor",
@@ -1254,103 +1253,6 @@
     "tabApp": "App",
     "tabCodeEditor": "Code Editor",
     "tabChatPanel": "Chat Panel"
-  },
-  "mobileRemote": {
-    "title": "Mobile Remote Control",
-    "description": "Control your desktop agents from your phone. Pair a device to get started.",
-    "comingSoon": "Coming soon",
-    "pairButton": "Pair new device",
-    "pairedListTitle": "Paired devices",
-    "emptyState": {
-      "title": "No paired devices yet",
-      "body": "Set up your relay server and pair your phone to control sessions remotely.",
-      "ctaPair": "Pair a phone"
-    },
-    "relayUrl": {
-      "label": "Relay URL",
-      "default": "Default ({{url}})",
-      "custom": "Custom ({{url}})",
-      "edit": "Edit relay URL",
-      "placeholder": "https://relay.example.com",
-      "helperText": "Enter the HTTPS URL of your orgii-mobile-relay deployment. Leave empty to reset to the bundled default.",
-      "invalidUrl": "Enter a valid http:// or https:// URL.",
-      "reset": "Reset to default"
-    },
-    "tier": {
-      "readOnly": "Read only",
-      "fullControl": "Full control"
-    },
-    "tierPicker": {
-      "label": "Permission level",
-      "readOnlyDescription": "View sessions and read messages only.",
-      "fullControlDescription": "Send messages and trigger actions on your behalf."
-    },
-    "labelInput": {
-      "placeholder": "Device label (e.g. iPhone)"
-    },
-    "pairingDialog": {
-      "title": "Pair new device",
-      "scanInstruction": "Open the ORGII PWA on your phone and scan this QR code.",
-      "confirmPhraseInstruction": "On your phone, confirm this phrase matches before approving.",
-      "confirmPhraseLabel": "Confirmation phrase",
-      "waitingForMobile": "Waiting for the mobile device to confirm...",
-      "preparing": "Preparing pairing session...",
-      "success": "Device paired successfully",
-      "errorTitle": "Pairing failed",
-      "start": "Generate QR",
-      "retry": "Try again",
-      "cancel": "Cancel"
-    },
-    "deviceCard": {
-      "lastSeen": "Last seen {{relativeTime}}",
-      "never": "Never connected",
-      "revoke": "Revoke",
-      "setPrimary": "Set as primary",
-      "primaryBadge": "Primary"
-    },
-    "relativeTime": {
-      "justNow": "just now",
-      "minutesAgo": "{{count}}m ago",
-      "hoursAgo": "{{count}}h ago",
-      "daysAgo": "{{count}}d ago"
-    },
-    "errors": {
-      "pairInitFailed": "Could not start a pairing session. Check the relay URL and try again.",
-      "codeExpired": "The pairing code expired. Please start a new pairing session.",
-      "unknown": "Something went wrong while talking to the relay"
-    },
-    "hosting": {
-      "title": "Where should the relay run?",
-      "subtitle": "The relay is the broker that lets your phone reach this desktop. Pick the option that matches how you want to use the app, then paste its URL into the Relay URL field below.",
-      "copyCommand": "Copy command",
-      "cost": {
-        "free": "Free"
-      },
-      "setupTime": {
-        "fifteenMin": "15 min"
-      },
-      "reachableFrom": {
-        "public": "Anywhere"
-      },
-      "tunnel": {
-        "title": "Cloudflare Tunnel (free, public URL)",
-        "summary": "Exposes your local relay over a Cloudflare-managed HTTPS hostname. No VPS, no port forwarding, no fixed IP.",
-        "step1": "1. Install cloudflared (one-time):",
-        "step2": "2. Start the relay locally:",
-        "step3": "3. In a second terminal, open the tunnel:",
-        "step4": "4. Cloudflare prints a URL like https://random-name.trycloudflare.com — paste that into the Relay URL field below.",
-        "note": "The trycloudflare.com URL is ephemeral. For a stable hostname, sign up for a Cloudflare account and follow their named-tunnel guide."
-      }
-    },
-    "devices": {
-      "tier": {
-        "readOnly": "Read only",
-        "full": "Full control"
-      },
-      "lastSeen": "Last seen {{relativeTime}}",
-      "primary": "Primary",
-      "revoke": "Revoke"
-    }
   },
   "editPanel": {
     "addAction": "Add Action",

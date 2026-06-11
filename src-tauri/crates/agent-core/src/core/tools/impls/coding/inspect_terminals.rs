@@ -121,7 +121,11 @@ impl Tool for InspectTerminalsTool {
         params_schema::<InspectTerminalsParams>()
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let params: InspectTerminalsParams = parse_params(params)?;
 
         match params {

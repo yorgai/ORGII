@@ -25,10 +25,8 @@ import type {
 import { getIconSize } from "@src/components/CompoundPill/config";
 import ModelIcon from "@src/components/ModelIcon";
 import PillGroup, { type PillGroupSegment } from "@src/components/PillGroup";
-import {
-  CursorModelDropdown,
-  CursorModelPalette,
-} from "@src/scaffold/GlobalSpotlight/palettes";
+import { CursorModelPalette } from "@src/scaffold/GlobalSpotlight/palettes/CursorModelPalette";
+import { CursorModelDropdown } from "@src/scaffold/GlobalSpotlight/palettes/CursorModelPalette/CursorModelDropdown";
 import { modelPickerStyleAtom } from "@src/store/ui/chatPanelAtom";
 import {
   compactModelLabel,

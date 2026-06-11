@@ -14,7 +14,6 @@
   "sections": {
     "general": "通用",
     "appearance": "外观",
-    "mobileRemote": "远程控制",
     "shortcuts": "键盘快捷键",
     "notifications": "通知",
     "codeEditor": "代码编辑器",
@@ -1254,103 +1253,6 @@
     "tabApp": "应用",
     "tabCodeEditor": "代码编辑器",
     "tabChatPanel": "聊天面板"
-  },
-  "mobileRemote": {
-    "title": "移动端远程控制",
-    "description": "用手机远程控制桌面端的 Agent。配对设备即可开始使用。",
-    "comingSoon": "即将推出",
-    "pairButton": "配对新设备",
-    "pairedListTitle": "已配对设备",
-    "emptyState": {
-      "title": "暂未配对设备",
-      "body": "配置 Relay 服务器并配对手机,即可远程控制会话。",
-      "ctaPair": "配对手机"
-    },
-    "relayUrl": {
-      "label": "Relay URL",
-      "default": "默认 ({{url}})",
-      "custom": "自定义 ({{url}})",
-      "edit": "编辑 Relay URL",
-      "placeholder": "https://relay.example.com",
-      "helperText": "输入您的 orgii-mobile-relay 部署的 HTTPS 地址。留空可恢复为内置默认值。",
-      "invalidUrl": "请输入有效的 http:// 或 https:// URL。",
-      "reset": "恢复默认值"
-    },
-    "tier": {
-      "readOnly": "只读",
-      "fullControl": "完全控制"
-    },
-    "tierPicker": {
-      "label": "权限级别",
-      "readOnlyDescription": "仅可查看会话和读取消息。",
-      "fullControlDescription": "可代表你发送消息并触发操作。"
-    },
-    "labelInput": {
-      "placeholder": "设备名称(例如:iPhone)"
-    },
-    "pairingDialog": {
-      "title": "配对新设备",
-      "scanInstruction": "在手机上打开 ORGII PWA 并扫描此 QR 码。",
-      "confirmPhraseInstruction": "在手机上确认显示的短语与下方一致后再批准。",
-      "confirmPhraseLabel": "确认短语",
-      "waitingForMobile": "正在等待移动端确认……",
-      "preparing": "正在准备配对会话……",
-      "success": "设备配对成功",
-      "errorTitle": "配对失败",
-      "start": "生成 QR",
-      "retry": "重试",
-      "cancel": "取消"
-    },
-    "deviceCard": {
-      "lastSeen": "最近活跃 {{relativeTime}}",
-      "never": "从未连接",
-      "revoke": "撤销",
-      "setPrimary": "设为主设备",
-      "primaryBadge": "主设备"
-    },
-    "relativeTime": {
-      "justNow": "刚刚",
-      "minutesAgo": "{{count}} 分钟前",
-      "hoursAgo": "{{count}} 小时前",
-      "daysAgo": "{{count}} 天前"
-    },
-    "errors": {
-      "pairInitFailed": "无法启动配对会话。请检查 Relay URL 后重试。",
-      "codeExpired": "配对码已过期,请重新发起配对。",
-      "unknown": "与 Relay 通信时发生错误"
-    },
-    "hosting": {
-      "title": "Relay 应该在哪里运行?",
-      "subtitle": "Relay 是让手机连接到桌面端的中转服务。选择适合你使用方式的方案,然后将其 URL 粘贴到下方的 Relay URL 字段。",
-      "copyCommand": "复制命令",
-      "cost": {
-        "free": "免费"
-      },
-      "setupTime": {
-        "fifteenMin": "15 分钟"
-      },
-      "reachableFrom": {
-        "public": "任何位置"
-      },
-      "tunnel": {
-        "title": "Cloudflare Tunnel (免费,公网 URL)",
-        "summary": "通过 Cloudflare 托管的 HTTPS 域名暴露本地 Relay。无需 VPS、无需端口转发、无需固定 IP。",
-        "step1": "1. 安装 cloudflared (仅需一次):",
-        "step2": "2. 在本地启动 Relay:",
-        "step3": "3. 在另一个终端打开 tunnel:",
-        "step4": "4. Cloudflare 会输出形如 https://random-name.trycloudflare.com 的 URL,将其粘贴到下方的 Relay URL 字段。",
-        "note": "trycloudflare.com 的 URL 是临时的。如需固定域名,请注册 Cloudflare 账号并按其 named tunnel 指南配置。"
-      }
-    },
-    "devices": {
-      "tier": {
-        "readOnly": "只读",
-        "full": "完全控制"
-      },
-      "lastSeen": "最近活跃 {{relativeTime}}",
-      "primary": "主设备",
-      "revoke": "撤销"
-    }
   },
   "editPanel": {
     "addAction": "添加动作",

@@ -125,7 +125,11 @@ impl Tool for SuggestModeSwitchTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let target_mode = params
             .get("target_mode")
             .and_then(|v| v.as_str())
@@ -145,15 +149,15 @@ impl Tool for SuggestModeSwitchTool {
             .clone()
             .unwrap_or_default();
 
-        // Read the framework-injected tool_call_id from `params` so the
-        // finalized event targets the right chat block. See
-        // `tool_execution::inject_call_id` — the `__call_id` key is the
-        // single source of truth for per-call identity across all tool
-        // dispatch paths.
-        let tool_call_id = params
-            .get(crate::core::turn_executor::tool_execution::TOOL_CALL_ID_KEY)
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+        // Per-call tool_call_id flows through `CallContext` (constructed
+        // by `tool_execution` dispatch sites) so the finalized event
+        // targets the right chat block. Empty when a direct in-process
+        // caller forgot to populate ctx — that path predates this tool.
+        let tool_call_id = if ctx.call_id.is_empty() {
+            None
+        } else {
+            Some(ctx.call_id.clone())
+        };
 
         let receiver = self
             .context

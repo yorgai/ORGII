@@ -9,14 +9,9 @@
  * Supports two repo-click modes via props:
  * - onRepoChange (switch): switches the Human Station workspace
  * - onRepoSelect (session-only): picks a repo for session creation only.
- *   Flow: repo → branch → "switch workspace too?" selector
+ *   Repo switch immediately also switches the Human Station workspace;
+ *   branch is kept as-is (last used / checked-out).
  */
-import {
-  BranchDropdown,
-  BranchPalette,
-  RepoDropdown,
-  RepoPalette,
-} from "@/src/scaffold/GlobalSpotlight/palettes";
 import type { RepoItem } from "@/src/scaffold/GlobalSpotlight/types";
 import { useAtomValue, useSetAtom, useStore } from "jotai";
 import React, {
@@ -40,6 +35,10 @@ import {
   isSystemPathRepoItem,
 } from "@src/features/SessionCreator/utils/systemPathSource";
 import { useDropdownEngine } from "@src/hooks/dropdown";
+import { BranchPalette } from "@src/scaffold/GlobalSpotlight/palettes/BranchPalette";
+import { BranchDropdown } from "@src/scaffold/GlobalSpotlight/palettes/BranchPalette/BranchDropdown";
+import { RepoPalette } from "@src/scaffold/GlobalSpotlight/palettes/RepoPalette";
+import { RepoDropdown } from "@src/scaffold/GlobalSpotlight/palettes/RepoPalette/RepoDropdown";
 import { REPO_KIND, type RepoKind } from "@src/store/repo/types";
 import { modelPickerStyleAtom } from "@src/store/ui/chatPanelAtom";
 import {
@@ -50,7 +49,6 @@ import {
 import { isMultiRootWorkspaceAtom } from "@src/store/ui/workspaceFoldersAtom";
 import { workspaceNameAtom } from "@src/store/workspace/derived";
 
-import SwitchWorkspaceSelector from "./SessionInfoLine/SwitchWorkspaceSelector";
 import {
   buildSessionInfoSegments,
   getSessionInfoDisplayState,
@@ -152,7 +150,6 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
 
   const [isRepoSelectorOpen, setIsRepoSelectorOpen] = useState(false);
   const [isBranchSelectorOpen, setIsBranchSelectorOpen] = useState(false);
-  const [isSwitchPromptOpen, setIsSwitchPromptOpen] = useState(false);
 
   const locationRows = useMemo<LocationRow[]>(
     () =>
@@ -202,20 +199,6 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
     closeLocationRef.current = closeLocation;
   }, [closeLocation]);
 
-  // In session-only mode (onRepoSelect provided), we stash the picked repo
-  // so that after branch is chosen we can ask whether to also switch
-  // the Human Station workspace.
-  const [pendingSwitch, setPendingSwitch] = useState<{
-    repoId: string;
-    repoName: string;
-    repoKind?: RepoKind;
-  } | null>(null);
-
-  // BranchPalette calls both onSelect and onClose when a branch is picked.
-  // This flag tells handleBranchClose to preserve pendingSwitch in that case
-  // so the follow-up switch prompt can open.
-  const branchJustSelectedRef = useRef(false);
-
   // ============================================
   // Anchored dropdown refs (used when modelPickerStyle === "dropdown")
   // ============================================
@@ -244,34 +227,13 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
       if (isSystemPathRepoItem(repo)) {
         onRepoSelect?.(selectedRepoId, repo);
         setIsRepoSelectorOpen(false);
-        setPendingSwitch(null);
         return;
       }
 
       const kind = (repo.kind as RepoKind) ?? REPO_KIND.GIT;
-      const isFolder = kind === REPO_KIND.FOLDER;
-
-      if (onRepoSelect) {
-        onRepoSelect(selectedRepoId, repo);
-        setIsRepoSelectorOpen(false);
-        setPendingSwitch({
-          repoId: selectedRepoId,
-          repoName: repo.name,
-          repoKind: kind,
-        });
-        if (isFolder) {
-          // Folders have no branch — jump straight to switch prompt
-          setTimeout(() => setIsSwitchPromptOpen(true), 100);
-        } else {
-          setTimeout(() => setIsBranchSelectorOpen(true), 100);
-        }
-      } else {
-        onRepoChange?.(selectedRepoId, { repoKind: kind });
-        setIsRepoSelectorOpen(false);
-        if (!isFolder) {
-          setTimeout(() => setIsBranchSelectorOpen(true), 100);
-        }
-      }
+      onRepoSelect?.(selectedRepoId, repo);
+      onRepoChange?.(selectedRepoId, { repoKind: kind });
+      setIsRepoSelectorOpen(false);
     },
     [onRepoSelect, onRepoChange]
   );
@@ -280,47 +242,14 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
 
   const handleBranchSelect = useCallback(
     (branch: string) => {
-      branchJustSelectedRef.current = true;
       onBranchChange?.(branch);
       setIsBranchSelectorOpen(false);
-      // In session-only mode, advance to switch prompt after branch is picked
-      if (pendingSwitch) {
-        setTimeout(() => setIsSwitchPromptOpen(true), 100);
-      }
     },
-    [onBranchChange, pendingSwitch]
+    [onBranchChange]
   );
 
   const handleBranchClose = useCallback(() => {
     setIsBranchSelectorOpen(false);
-    // If the close was triggered by a successful select, keep pendingSwitch
-    // so the switch prompt can open. Otherwise the user dismissed the
-    // branch selector — drop any pending session-only state.
-    if (branchJustSelectedRef.current) {
-      branchJustSelectedRef.current = false;
-    } else {
-      setPendingSwitch(null);
-    }
-  }, []);
-
-  const handleConfirmSwitch = useCallback(() => {
-    if (pendingSwitch) {
-      onRepoChange?.(pendingSwitch.repoId, {
-        repoKind: pendingSwitch.repoKind,
-      });
-    }
-    setIsSwitchPromptOpen(false);
-    setPendingSwitch(null);
-  }, [pendingSwitch, onRepoChange]);
-
-  const handleSkipSwitch = useCallback(() => {
-    setIsSwitchPromptOpen(false);
-    setPendingSwitch(null);
-  }, []);
-
-  const handleSwitchPromptClose = useCallback(() => {
-    setIsSwitchPromptOpen(false);
-    setPendingSwitch(null);
   }, []);
 
   // ============================================
@@ -530,17 +459,6 @@ const SessionInfoLine: React.FC<SessionInfoLineProps> = ({
             hideActionClose
           />
         ))}
-
-      {/* Follow-up: switch workspace too? (opens after branch is chosen) */}
-      {pendingSwitch && (
-        <SwitchWorkspaceSelector
-          isOpen={isSwitchPromptOpen}
-          onClose={handleSwitchPromptClose}
-          onSwitch={handleConfirmSwitch}
-          onSkip={handleSkipSwitch}
-          repoName={pendingSwitch.repoName}
-        />
-      )}
 
       {/* Location dropdown portal */}
       {worktreeLocation !== undefined &&

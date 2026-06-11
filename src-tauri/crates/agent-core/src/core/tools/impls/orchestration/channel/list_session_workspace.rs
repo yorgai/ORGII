@@ -67,7 +67,11 @@ impl Tool for ListSessionWorkspaceTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let sid = resolve_target_session_id(&self.app_handle, &params, &self.channel_ctx).await?;
         let state = self.app_handle.state::<crate::state::AgentAppState>();
         let view = crate::state::commands::session::workspace_list(&state, &sid)

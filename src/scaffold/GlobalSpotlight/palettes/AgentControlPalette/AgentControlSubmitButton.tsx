@@ -28,7 +28,7 @@ export const AgentControlSubmitButton: React.FC<
           : INPUT_AREA_BUTTONS.iconButtonActive
       }`}
       style={{ lineHeight: 0 }}
-      aria-label={t("guiControl.submit")}
+      aria-label={t("adeManager.submit")}
     >
       <ArrowUp size={INPUT_AREA_BUTTONS.iconSize} strokeWidth={2} />
     </button>
@@ -40,7 +40,7 @@ export const AgentControlSubmitButton: React.FC<
     <Tooltip
       content={
         <KeyboardShortcutTooltipContent
-          label={t("guiControl.submit")}
+          label={t("adeManager.submit")}
           shortcut={getShortcutKeys("chat_send")}
         />
       }

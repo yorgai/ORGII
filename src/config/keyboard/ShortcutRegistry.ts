@@ -180,7 +180,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     showInMenu: false,
   },
   {
-    id: "toggle_gui_control",
+    id: "toggle_ade_manager",
     description: "Open ADE Manager",
     key: "g",
     modifiers: ["cmd", "alt"],

@@ -162,6 +162,12 @@ function createFolderMenuItem({
       shortcut: getWorkspaceFolderCountLabel(workspace.folders.length),
       showMoreActions: true,
       rowActions,
+      dragPayload: {
+        path: `workspace://${workspace.workspaceId}`,
+        name: workspace.name,
+        iconType: "folder",
+        isFolder: true,
+      },
     };
   }
 
@@ -180,6 +186,7 @@ function createFolderMenuItem({
       onClick: (event) => onMoreActionsForRepo(event, repo),
     },
   ];
+  const repoPath = repo.path ?? repo.fs_uri ?? repo.id;
   return {
     id: itemId,
     key: itemId,
@@ -188,6 +195,11 @@ function createFolderMenuItem({
     iconName: "code",
     showMoreActions: true,
     rowActions,
+    dragPayload: {
+      path: repoPath,
+      name: getRepoDisplayName(repo),
+      iconType: "repo",
+    },
   };
 }
 

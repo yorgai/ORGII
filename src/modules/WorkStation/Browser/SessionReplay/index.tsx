@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import Message from "@src/components/Message";
 import { SIMULATOR_PRIMARY_SIDEBAR } from "@src/config/simulatorPrimarySidebar";
+import { useBrowserAutomation } from "@src/engines/BrowserCore/hooks/useBrowserAutomation";
 import EventWrapper from "@src/engines/ChatPanel/adapters/EventWrapper";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { usePublishWorkstationTabHeader } from "@src/hooks/workStation";
@@ -13,7 +14,6 @@ import {
   buildSelectedElementLabel,
   buildSelectedElementText,
 } from "@src/modules/WorkStation/Browser/BrowserLayout/browserLayoutUtils";
-import { useBrowserAutomation } from "@src/modules/WorkStation/Browser/hooks/osagent/useBrowserAutomation";
 import {
   NoTabsPlaceholder,
   SimulatorReplayChrome,
@@ -184,6 +184,7 @@ const SessionReplayBrowserComponent: React.FC<SessionReplayBrowserProps> = ({
     showAgentBrowserCategory && isBrowserReplayActive;
 
   const displayScreenshot = displayData?.screenshot ?? null;
+  const isCurrentEventLoading = activeEntry !== null && !displayData;
   const displayScreenshotSrc = useMemo(() => {
     if (!displayScreenshot) return null;
     return `data:${inferImageMime(displayScreenshot)};base64,${displayScreenshot}`;

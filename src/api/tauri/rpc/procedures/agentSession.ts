@@ -160,7 +160,7 @@ export const agentSession = {
   wingmanListMonitors: defineProcedure("wingman_list_monitors")
     .output(z.array(schemas.agentSession.WingmanMonitorSchema))
     .build(),
-  sendIdeActionResult: defineProcedure("agent_ide_action_result")
-    .input(schemas.agentSession.IdeActionResultInput)
+  sendAdeActionResult: defineProcedure("agent_ade_action_result")
+    .input(schemas.agentSession.AdeActionResultInput)
     .build(),
 } as const;

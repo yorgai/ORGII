@@ -45,47 +45,6 @@ pub async fn send_message_impl_for_wake(
     .await
 }
 
-/// Mobile-remote-control entry point for forwarding a follow-up
-/// message from a paired phone into a running session.
-///
-/// The mobile bridge dispatch layer (`api::mobile_remote::dispatch`)
-/// resolves `AgentAppState` from the held `AppHandle` and delegates
-/// here rather than re-invoking `agent_send_message` through Tauri's
-/// IPC layer (which would force a serde round-trip and re-marshal
-/// every argument). Exposed as `pub` for the same reason
-/// [`send_message_impl_for_wake`] is: the underlying
-/// [`send_message_impl`] is `pub(super)` and we don't widen its
-/// visibility just for one external caller.
-///
-/// Mobile peers do not carry `IdentityOverrides` on the wire today,
-/// so this helper passes a default — letting `send_message_impl`'s
-/// resolver fall back to the session's in-memory `SessionRuntime`
-/// cache and then its DB persistence row. That matches "use whatever
-/// the desktop last used for this session", which is the least
-/// surprising behavior for a remote-control follow-up.
-pub async fn send_message_impl_for_mobile_remote(
-    state: &AgentAppState,
-    session_id: String,
-    content: String,
-) -> Result<AgentResponse, String> {
-    send_message_impl(
-        state,
-        session_id,
-        content,
-        None,
-        IdentityOverrides::default(),
-        None,
-        None,
-        None,
-        false,
-        true,
-        None,
-        None,
-        TurnIntentBridgeSource::MobileRemote,
-    )
-    .await
-}
-
 /// Debug-only entry point for E2E follow-up turns.
 ///
 /// The production `agent_send_message` Tauri command is `pub` but

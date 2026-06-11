@@ -55,7 +55,16 @@ export function insertPillFromTabPayload(
   const isFolder = payload.isFolder ?? iconType === "folder";
   const displayName = getDisplayName(payload.path, payload.name);
 
-  if (payload.pointerX != null && payload.pointerY != null) {
+  // Only place the caret at the drop point when the input already has
+  // content and is focused — inserting into a position that exists.
+  // When the input is empty (or unfocused) the pill will be the first
+  // element, so pointer-based placement would produce a visible caret
+  // flash before the pill DOM is ready.
+  if (
+    payload.pointerX != null &&
+    payload.pointerY != null &&
+    !composerInputRef.current.isEmpty()
+  ) {
     composerInputRef.current.placeCaretAtPoint(
       payload.pointerX,
       payload.pointerY

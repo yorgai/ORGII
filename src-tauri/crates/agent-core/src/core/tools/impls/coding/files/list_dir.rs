@@ -85,7 +85,11 @@ impl Tool for ListDirTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let raw_path = required_string(&params, "path")?;
 
         if let Some(ref router) = self.router {

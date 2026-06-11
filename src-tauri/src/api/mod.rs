@@ -7,8 +7,6 @@
 //! handler.
 
 pub mod agent;
-pub mod mobile_remote_host;
-
 mod server;
 pub mod websocket_handler;
 

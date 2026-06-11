@@ -10,7 +10,14 @@
 //! - **File attribution**: Correlate file changes with the frontmost IDE
 //! - **Local-only**: All data in `~/.orgii/sessions.db`, never sent to backend
 //!
-//! ## Modules
+//! ## IDE modules
+//!
+//! - `cursor/` — Cursor IDE session cache + bubble history reader
+//! - `claude_code/` — Claude Code session cache + JSONL history reader
+//! - `codex/` — Codex app JSONL history reader
+//! - `windsurf/` — Windsurf vscdb history reader
+//!
+//! ## Shared modules
 //!
 //! - `types` — Typed enums and structs
 //! - `schema` — SQLite table definitions
@@ -22,14 +29,12 @@
 //! - `queries` — Aggregation and summary queries
 //! - `commands` — Tauri command handlers
 
-pub mod claude_code_db;
-pub mod claude_code_history;
+pub mod claude_code;
 pub mod cli_session_db;
-pub mod codex_app;
+pub mod codex;
 pub mod collector;
 pub mod commands;
-pub mod cursor_db;
-pub mod cursor_db_history;
+pub mod cursor;
 pub mod heartbeat_import;
 pub mod ide_attribution;
 pub mod ide_detector;
@@ -38,7 +43,7 @@ pub mod queries;
 pub mod retroactive;
 pub mod schema;
 pub mod types;
-pub mod windsurf_history;
+pub mod windsurf;
 
 pub use commands::*;
 

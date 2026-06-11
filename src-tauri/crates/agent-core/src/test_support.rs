@@ -111,7 +111,11 @@ impl Tool for FakeTool {
         self.is_read_only
     }
 
-    async fn execute_text(&self, _params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        _params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         if self.result.starts_with("Error:") {
             Err(ToolError::ExecutionFailed(self.result.clone()))
         } else {

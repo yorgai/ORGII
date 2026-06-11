@@ -30,7 +30,7 @@ import {
 } from "@src/engines/ChatPanel/ChatHistory/renderers/ExtendedItemRenderers";
 import { useSessionEvents } from "@src/engines/SessionCore/core/store/useSessionEvents";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
-import { findIndexAtTime } from "@src/engines/Simulator/hooks/cellReplayTypes";
+import { findIndexAtTime } from "@src/engines/Simulator/utils/findIndexAtTime";
 
 import { NestedBlockContext } from "../primitives/nestedBlockContext";
 
@@ -113,15 +113,14 @@ const NestedActivityList: React.FC<NestedActivityListProps> = memo(
     // events that existed at that timestamp. The slice happens *before*
     // processChatItems so grouping (read_file groups, action summaries) sees
     // a consistent prefix and doesn't fold events that haven't "happened"
-    // yet at cursor T.
+    // yet at cursor T. Pre-spawn semantics: `preStart: "empty"` so cursor
+    // before the first event renders nothing (the "not started" placeholder
+    // branch below).
     const slicedEvents = useMemo(() => {
       if (externalCursorMs == null || events.length === 0) return events;
-      const firstMs = new Date(events[0].createdAt).getTime();
-      // Cursor strictly before the first child event → nothing has happened
-      // in the subagent yet. Return an empty list so the block renders the
-      // "not started" placeholder branch (visibleItems.length === 0).
-      if (externalCursorMs < firstMs) return [];
-      const idx = findIndexAtTime(events, externalCursorMs);
+      const idx = findIndexAtTime(events, externalCursorMs, {
+        preStart: "empty",
+      });
       if (idx < 0) return [];
       return events.slice(0, idx + 1);
     }, [events, externalCursorMs]);

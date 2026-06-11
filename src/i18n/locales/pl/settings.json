@@ -14,7 +14,6 @@
   "sections": {
     "general": "Ogólne",
     "appearance": "Wygląd",
-    "mobileRemote": "Zdalne sterowanie",
     "shortcuts": "Skróty klawiaturowe",
     "notifications": "Powiadomienia",
     "codeEditor": "Edytor kodu",
@@ -1254,103 +1253,6 @@
     "tabApp": "Aplikacja",
     "tabCodeEditor": "Edytor kodu",
     "tabChatPanel": "Panel czatu"
-  },
-  "mobileRemote": {
-    "title": "Zdalne sterowanie mobilne",
-    "description": "Steruj swoimi Agentami pulpitu z telefonu. Sparuj urządzenie, aby rozpocząć.",
-    "comingSoon": "Wkrótce",
-    "pairButton": "Sparuj nowe urządzenie",
-    "pairedListTitle": "Sparowane urządzenia",
-    "emptyState": {
-      "title": "Brak sparowanych urządzeń",
-      "body": "Skonfiguruj swój serwer relay i sparuj telefon, aby zdalnie sterować sesjami.",
-      "ctaPair": "Sparuj telefon"
-    },
-    "relayUrl": {
-      "label": "URL relay",
-      "default": "Domyślny ({{url}})",
-      "custom": "Własny ({{url}})",
-      "edit": "Edytuj URL relay",
-      "placeholder": "https://relay.example.com",
-      "helperText": "Wprowadź URL HTTPS swojego wdrożenia orgii-mobile-relay. Pozostaw puste, aby przywrócić domyślny dołączony.",
-      "invalidUrl": "Wprowadź prawidłowy URL http:// lub https://.",
-      "reset": "Przywróć domyślny"
-    },
-    "tier": {
-      "readOnly": "Tylko do odczytu",
-      "fullControl": "Pełna kontrola"
-    },
-    "tierPicker": {
-      "label": "Poziom uprawnień",
-      "readOnlyDescription": "Tylko podgląd sesji i odczyt wiadomości.",
-      "fullControlDescription": "Wysyłaj wiadomości i wyzwalaj akcje w Twoim imieniu."
-    },
-    "labelInput": {
-      "placeholder": "Etykieta urządzenia (np. iPhone)"
-    },
-    "pairingDialog": {
-      "title": "Sparuj nowe urządzenie",
-      "scanInstruction": "Otwórz PWA ORGII na telefonie i zeskanuj ten kod QR.",
-      "confirmPhraseInstruction": "Na telefonie potwierdź, że ta fraza się zgadza, przed zatwierdzeniem.",
-      "confirmPhraseLabel": "Fraza potwierdzająca",
-      "waitingForMobile": "Oczekiwanie na potwierdzenie z urządzenia mobilnego...",
-      "preparing": "Przygotowywanie sesji parowania...",
-      "success": "Urządzenie sparowane pomyślnie",
-      "errorTitle": "Parowanie nie powiodło się",
-      "start": "Generuj QR",
-      "retry": "Spróbuj ponownie",
-      "cancel": "Anuluj"
-    },
-    "deviceCard": {
-      "lastSeen": "Ostatnio widziano {{relativeTime}}",
-      "never": "Nigdy nie połączono",
-      "revoke": "Cofnij",
-      "setPrimary": "Ustaw jako główne",
-      "primaryBadge": "Główne"
-    },
-    "relativeTime": {
-      "justNow": "przed chwilą",
-      "minutesAgo": "{{count}} min temu",
-      "hoursAgo": "{{count}} godz. temu",
-      "daysAgo": "{{count}} dni temu"
-    },
-    "errors": {
-      "pairInitFailed": "Nie udało się rozpocząć sesji parowania. Sprawdź URL relay i spróbuj ponownie.",
-      "codeExpired": "Kod parowania wygasł. Rozpocznij nową sesję parowania.",
-      "unknown": "Coś poszło nie tak podczas komunikacji z relay"
-    },
-    "hosting": {
-      "title": "Gdzie powinien działać relay?",
-      "subtitle": "Relay to broker, który pozwala Twojemu telefonowi dotrzeć do tego pulpitu. Wybierz opcję pasującą do tego, jak chcesz używać aplikacji, a następnie wklej jej URL do pola URL relay poniżej.",
-      "copyCommand": "Kopiuj polecenie",
-      "cost": {
-        "free": "Bezpłatne"
-      },
-      "setupTime": {
-        "fifteenMin": "15 min"
-      },
-      "reachableFrom": {
-        "public": "Wszędzie"
-      },
-      "tunnel": {
-        "title": "Cloudflare Tunnel (bezpłatny, publiczny URL)",
-        "summary": "Udostępnia Twój lokalny relay przez hostname HTTPS zarządzany przez Cloudflare. Bez VPS, bez przekierowania portów, bez stałego IP.",
-        "step1": "1. Zainstaluj cloudflared (jednorazowo):",
-        "step2": "2. Uruchom relay lokalnie:",
-        "step3": "3. W drugim terminalu otwórz tunel:",
-        "step4": "4. Cloudflare wypisze URL podobny do https://random-name.trycloudflare.com — wklej go do pola URL relay poniżej.",
-        "note": "URL trycloudflare.com jest tymczasowy. Aby uzyskać stabilny hostname, załóż konto Cloudflare i postępuj zgodnie z ich przewodnikiem nazwanych tuneli."
-      }
-    },
-    "devices": {
-      "tier": {
-        "readOnly": "Tylko do odczytu",
-        "full": "Pełna kontrola"
-      },
-      "lastSeen": "Ostatnio widziano {{relativeTime}}",
-      "primary": "Główne",
-      "revoke": "Cofnij"
-    }
   },
   "editPanel": {
     "addAction": "Dodaj akcję",

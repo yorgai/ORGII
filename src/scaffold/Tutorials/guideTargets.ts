@@ -6,7 +6,7 @@ export const GUIDE_TARGETS = {
   WORKSTATION_TAB_HEADER: "workstation.tabHeader",
   WORKSTATION_DOCK: "workstation.dock",
   CHAT_PANEL: "chatPanel.surface",
-  GUI_CONTROL_COMPOSER: "guiControl.composer",
+  ADE_MANAGER_COMPOSER: "adeManager.composer",
   TUTORIALS_MODAL: "tutorials.modal",
 } as const;
 

@@ -78,8 +78,8 @@ fn expand_skill_slash_command(content: &str, workspace: Option<&std::path::Path>
 
     let ws_root = workspace.unwrap_or_else(|| std::path::Path::new(""));
     let ws = ws_root.join(".orgii");
-    let loader = crate::intelligence::skills::loader::SkillsLoader::new(&ws)
-        .with_builtin_dir(crate::intelligence::skills::loader::global_skills_dir());
+    let loader = crate::specialization::skills::loader::SkillsLoader::new(&ws)
+        .with_builtin_dir(crate::specialization::skills::loader::global_skills_dir());
 
     let Some(skill_md) = loader.load_skill(slash_name) else {
         return content.to_string();
@@ -154,7 +154,7 @@ pub async fn process_message(
     let screenshot_store = extract_screenshot_store(&app_handle);
 
     let hook_executor = Arc::new(
-        crate::intelligence::hooks::HookExecutor::load_with_workspace_scope(
+        crate::specialization::hooks::HookExecutor::load_with_workspace_scope(
             &workspace_path,
             runtime.resolved.load_workspace_resources,
         ),
@@ -211,8 +211,8 @@ pub async fn process_message(
 
     let skill_ws = workspace_path.join(".orgii");
     let skill_loader_fn = |name: &str| -> Option<String> {
-        let loader = crate::intelligence::skills::loader::SkillsLoader::new(&skill_ws)
-            .with_builtin_dir(crate::intelligence::skills::loader::global_skills_dir());
+        let loader = crate::specialization::skills::loader::SkillsLoader::new(&skill_ws)
+            .with_builtin_dir(crate::specialization::skills::loader::global_skills_dir());
         loader.load_skill(name)
     };
 

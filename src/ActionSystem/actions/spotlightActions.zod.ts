@@ -190,8 +190,8 @@ const spotlightOpenAgentControl = defineZodAction(
     description: "Open Spotlight's Agent Control flow",
     params: z.object({}),
     layer: "gui",
-    shortcut: getShortcutKeys("toggle_gui_control"),
-    examples: ["agent control", "control the GUI", "open Agent Control"],
+    shortcut: getShortcutKeys("toggle_ade_manager"),
+    examples: ["ade manager", "open ADE Manager", "manage agents"],
   },
   async () => {
     openAgentControlSpotlight();

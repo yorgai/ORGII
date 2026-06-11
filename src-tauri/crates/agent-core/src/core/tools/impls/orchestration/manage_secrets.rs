@@ -121,14 +121,18 @@ impl Tool for SecretTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let action = params
             .get("action")
             .and_then(|v| v.as_str())
             .ok_or_else(|| ToolError::InvalidParams("Missing 'action'".into()))?;
 
         match action {
-            ACTION_REQUEST => self.handle_request(&params).await,
+            ACTION_REQUEST => self.handle_request(&params, ctx).await,
             ACTION_LIST => self.handle_list().await,
             ACTION_DISCARD => self.handle_discard(&params).await,
             other => Err(ToolError::InvalidParams(format!(
@@ -143,7 +147,11 @@ impl Tool for SecretTool {
 }
 
 impl SecretTool {
-    async fn handle_request(&self, params: &Value) -> Result<String, ToolError> {
+    async fn handle_request(
+        &self,
+        params: &Value,
+        ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let session_id = self
             .context
             .session_id
@@ -166,10 +174,11 @@ impl SecretTool {
             .ok_or_else(|| ToolError::InvalidParams("Missing 'prompt' for request".into()))?;
 
         let request_id = format!("secret-req-{}", uuid::Uuid::new_v4());
-        let tool_call_id = params
-            .get(crate::core::turn_executor::tool_execution::TOOL_CALL_ID_KEY)
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+        let tool_call_id = if ctx.call_id.is_empty() {
+            None
+        } else {
+            Some(ctx.call_id.clone())
+        };
 
         let receiver = self
             .context

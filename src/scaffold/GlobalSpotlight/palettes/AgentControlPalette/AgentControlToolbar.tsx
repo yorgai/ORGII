@@ -37,7 +37,7 @@ export const AgentControlToolbar: React.FC<AgentControlToolbarProps> = ({
         htmlType="button"
         onClick={onNewRound}
       >
-        {t("guiControl.newRound")}
+        {t("adeManager.newRound")}
       </Button>
       <Button
         variant="tertiary"

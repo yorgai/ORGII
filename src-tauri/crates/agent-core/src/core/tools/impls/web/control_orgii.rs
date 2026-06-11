@@ -163,7 +163,11 @@ impl Tool for OrgiiControlTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         execute_gui_control_operation(&self.bridge, tool_names::CONTROL_ORGII, params).await
     }
 }

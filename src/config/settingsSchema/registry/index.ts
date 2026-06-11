@@ -6,7 +6,6 @@ import { EDITOR_SETTINGS_REGISTRY } from "./editor";
 import { EXTERNAL_IDE_SETTINGS_REGISTRY } from "./externalIde";
 import { GENERAL_SETTINGS_REGISTRY } from "./general";
 import { GIT_SETTINGS_REGISTRY } from "./git";
-import { MOBILE_REMOTE_SETTINGS_REGISTRY } from "./mobileRemote";
 import { NETWORK_SETTINGS_REGISTRY } from "./network";
 import { NOTIFICATIONS_SETTINGS_REGISTRY } from "./notifications";
 import { TERMINAL_SETTINGS_REGISTRY } from "./terminal";
@@ -24,7 +23,6 @@ export const SETTINGS_REGISTRY = {
   ...AGENT_SETTINGS_REGISTRY,
   ...AGENT_BROWSER_SETTINGS_REGISTRY,
   ...NETWORK_SETTINGS_REGISTRY,
-  ...MOBILE_REMOTE_SETTINGS_REGISTRY,
 } as const satisfies Record<string, SettingDefinition>;
 
 export const SETTINGS_CATEGORY_LABELS: Record<SettingsCategory, string> = {

@@ -14,10 +14,8 @@ import CursorModePillCreator from "@src/engines/ChatPanel/InputArea/components/C
 import CursorModelPillCreator from "@src/engines/ChatPanel/InputArea/components/CursorModelPill/CursorModelPillCreator";
 import ModePill from "@src/engines/ChatPanel/InputArea/components/ModePill";
 import type { AgentExecMode } from "@src/features/SessionCreator/config";
-import {
-  UnifiedModelDropdown,
-  UnifiedModelPalette,
-} from "@src/scaffold/GlobalSpotlight/palettes";
+import { UnifiedModelPalette } from "@src/scaffold/GlobalSpotlight/palettes/UnifiedModelPalette";
+import { UnifiedModelDropdown } from "@src/scaffold/GlobalSpotlight/palettes/UnifiedModelPalette/UnifiedModelDropdown";
 import { dispatchCategoryAtom } from "@src/store/session/creatorStateAtom";
 import { modelPickerStyleAtom } from "@src/store/ui/chatPanelAtom";
 import { modelSelectorAtom } from "@src/store/ui/modelSelectorAtom";

@@ -15,10 +15,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import Message from "@src/components/Message";
 import { ROUTES } from "@src/config/routes";
+import { useBrowserAutomation } from "@src/engines/BrowserCore/hooks/useBrowserAutomation";
 import { useWorkStationTabShortcutBridge } from "@src/hooks/workStation";
 import { useBrowserPaneState } from "@src/hooks/workStation/browser/useBrowserPaneState";
 import { useBrowserSessions } from "@src/hooks/workStation/browser/useBrowserSessions";
-import { useBrowserAutomation } from "@src/modules/WorkStation/Browser/hooks/osagent/useBrowserAutomation";
 import { useGlobalTokens } from "@src/modules/WorkStation/Browser/hooks/useGlobalTokens";
 import { addToAgentAtom } from "@src/store/ui/addToAgentAtom";
 import {

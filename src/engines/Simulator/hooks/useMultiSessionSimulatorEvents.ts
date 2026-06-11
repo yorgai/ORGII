@@ -35,6 +35,28 @@ function trimEventWindow(events: SessionEvent[]): SessionEvent[] {
   return events.slice(events.length - MAX_EVENTS_PER_SUBAGENT_SESSION);
 }
 
+function eventCreatedAtMs(event: SessionEvent): number {
+  const t = new Date(event.createdAt).getTime();
+  return Number.isFinite(t) ? t : 0;
+}
+
+/**
+ * Insert `event` into `events` so the array remains sorted ascending by
+ * `createdAt`. Uses linear scan from the tail because streaming arrivals are
+ * almost always in order; the rare out-of-order arrival walks back at most
+ * a handful of positions, never breaking the sorted invariant that every
+ * binary search downstream relies on.
+ */
+function insertSorted(events: SessionEvent[], event: SessionEvent): number {
+  const eventMs = eventCreatedAtMs(event);
+  let i = events.length;
+  while (i > 0 && eventCreatedAtMs(events[i - 1]) > eventMs) {
+    i--;
+  }
+  events.splice(i, 0, event);
+  return i;
+}
+
 function mergeEventUpserts(
   previousEvents: SessionEvent[],
   upserts: SessionEvent[]
@@ -50,8 +72,13 @@ function mergeEventUpserts(
   for (const upsert of upserts) {
     const existingIndex = indexById.get(upsert.id);
     if (existingIndex === undefined) {
-      indexById.set(upsert.id, nextEvents.length);
-      nextEvents.push(upsert);
+      const insertedAt = insertSorted(nextEvents, upsert);
+      // `splice` invalidates downstream indices in the map; rebuild the
+      // affected range so subsequent upserts find the right slot.
+      indexById.set(upsert.id, insertedAt);
+      for (let j = insertedAt + 1; j < nextEvents.length; j++) {
+        indexById.set(nextEvents[j].id, j);
+      }
     } else {
       nextEvents[existingIndex] = upsert;
     }

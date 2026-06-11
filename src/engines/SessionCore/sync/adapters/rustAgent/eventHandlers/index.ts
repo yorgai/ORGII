@@ -19,7 +19,6 @@ import {
 import type { AgentWSEvent } from "../../shared/types";
 import {
   handleExitPlanMode,
-  handleIdeAction,
   handlePermissionRequest,
   handlePlanApprovalArchived,
   handlePlanReadyForApproval,
@@ -243,7 +242,6 @@ export async function dispatchAgentEvent(
       handleTurnSummary(event, sessionId);
       break;
     case "agent:ide_action":
-      handleIdeAction(event);
       break;
     case "agent:todos_updated":
       if (ctx.features.hasFileChangeEvents)

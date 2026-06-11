@@ -17,6 +17,25 @@ export const SPOTLIGHT_CONFIG = {
   containerZIndex: 9999,
 } as const;
 
+// ============ TYPOGRAPHY TOKENS ============
+
+export const SPOTLIGHT_TOKENS = {
+  /** Input / pill text */
+  inputFontSize: "text-[14px]",
+  /** Primary item label */
+  labelFontSize: "text-[14px]",
+  /** Secondary / desc / subtitle text */
+  subFontSize: "text-[11px]",
+  /** Badge / tag text */
+  badgeFontSize: "text-[10px]",
+  /** Item row height (no desc) */
+  itemHeight: 34,
+  /** Item row height (with desc line) */
+  itemHeightWithDesc: 48,
+  /** Icon size inside item rows */
+  iconSize: 16,
+} as const;
+
 // ============ LIMITS ============
 
 export const LIMITS = {

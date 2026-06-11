@@ -97,7 +97,11 @@ impl Tool for StaticTool {
     fn parameters(&self) -> Value {
         json!({"type": "object", "properties": {}})
     }
-    async fn execute_text(&self, _params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        _params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         Ok("ok".into())
     }
 }
@@ -115,7 +119,11 @@ impl Tool for DynamicTool {
     fn parameters(&self) -> Value {
         json!({"type": "object", "properties": {}})
     }
-    async fn execute_text(&self, _params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        _params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         Ok("ok".into())
     }
     fn llm_description(&self) -> Option<String> {

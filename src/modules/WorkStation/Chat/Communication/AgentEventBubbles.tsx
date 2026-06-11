@@ -199,7 +199,7 @@ export const OrgSendMessageBubble: React.FC<OrgSendMessageBubbleProps> = memo(
         subject,
         defaultValue: "{{subject}} sent a message",
       });
-    }, [args, message.event, orgMembers, rawAgentName, result, t]);
+    }, [args, orgMembers, rawAgentName, result, t]);
 
     return (
       <Framed

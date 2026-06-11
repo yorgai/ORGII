@@ -616,7 +616,11 @@ impl Tool for OrgSendMessageTool {
         Some(self.dynamic_llm_description())
     }
 
-    async fn execute_text(&self, params_value: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params_value: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let params: OrgSendMessageParams = parse_params(params_value)?;
         let recipients = self
             .resolve_recipient(&params)
@@ -966,7 +970,7 @@ mod tests {
         );
 
         let result = tool
-            .execute_text(params("builder"))
+            .execute_text(params("builder"), &crate::tools::call_context::CallContext::default())
             .await
             .expect("send should succeed");
         let value: serde_json::Value = serde_json::from_str(&result).expect("json result");
@@ -1004,7 +1008,7 @@ mod tests {
             "kind": "shutdown_response",
             "request_id": "req-1",
             "accepted": true
-        }))
+        }), &crate::tools::call_context::CallContext::default())
         .await
         .expect("shutdown response should send");
 
@@ -1031,7 +1035,7 @@ mod tests {
                 "kind": "shutdown_response",
                 "request_id": "req-2",
                 "accepted": true
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect_err("shutdown response to non-coordinator should fail")
             .to_string();

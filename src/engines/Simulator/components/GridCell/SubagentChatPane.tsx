@@ -74,6 +74,7 @@ import ChatHistory from "@src/engines/ChatPanel/ChatHistory";
 import { ChatHistoryOverrideContext } from "@src/engines/ChatPanel/ChatHistoryOverrideContext";
 import { ChatSessionContext } from "@src/engines/ChatPanel/ChatSessionContext";
 import { chatEventsForSessionAtomFamily } from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
+import { findIndexAtTime } from "@src/engines/Simulator/utils/findIndexAtTime";
 import { setAllBlocksCollapsedAtom } from "@src/store/ui/collapseStateAtom";
 
 import { SubagentPromptToggle } from "./SubagentPromptToggle";
@@ -105,36 +106,21 @@ const SubagentChatPaneComponent: React.FC<SubagentChatPaneProps> = ({
   // Slice events to the replay cursor. When `cursorMs` is null OR the
   // cursor is at/past the last event, we pass `undefined` so the
   // ChatHistory pipeline reads the full array directly from the atom
-  // (live-tail mode, no override allocation).
+  // (live-tail mode, no override allocation). Uses the canonical
+  // `findIndexAtTime` so pre-spawn semantics match the rest of the
+  // replay subsystem: `preStart: "empty"` → an empty slice when the
+  // cursor is before any chat event.
   const slicedEvents = useMemo(() => {
     if (cursorMs == null) return undefined;
     if (allEvents.length === 0) return undefined;
-    // Fast path: if the cursor is at or past the last event, no slice
-    // needed. Comparing createdAt strings lexicographically is safe for
-    // ISO-8601 timestamps.
+    // Fast path: cursor at/past last event → no slice, full live render.
     const lastCreatedAt = allEvents[allEvents.length - 1].createdAt;
     const lastMs = Date.parse(lastCreatedAt);
     if (Number.isFinite(lastMs) && cursorMs >= lastMs) return undefined;
 
-    // Binary-search for the largest index whose createdAt <= cursorMs.
-    let lo = 0;
-    let hi = allEvents.length - 1;
-    let best = -1;
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1;
-      const t = Date.parse(allEvents[mid].createdAt);
-      if (Number.isFinite(t) && t <= cursorMs) {
-        best = mid;
-        lo = mid + 1;
-      } else {
-        hi = mid - 1;
-      }
-    }
-    if (best < 0) {
-      // Cursor is before any chat event — render an empty list.
-      return [];
-    }
-    return allEvents.slice(0, best + 1);
+    const idx = findIndexAtTime(allEvents, cursorMs, { preStart: "empty" });
+    if (idx < 0) return [];
+    return allEvents.slice(0, idx + 1);
   }, [allEvents, cursorMs]);
 
   // When the session has no events at all (yet), render a minimal static
@@ -142,9 +128,13 @@ const SubagentChatPaneComponent: React.FC<SubagentChatPaneProps> = ({
   // path surfaces a "Session data may not have loaded — Reload" prompt
   // which is the wrong affordance for a subagent cell that simply hasn't
   // produced any output yet (or whose owner hasn't been delegated a
-  // task). The cell still re-renders automatically once the first event
-  // streams in.
-  if (allEvents.length === 0) {
+  // task). Same placeholder fires when the active slice is empty (cursor
+  // before the first event), so a blank ChatHistory render is structurally
+  // impossible regardless of timestamp domain.
+  const isEmpty =
+    allEvents.length === 0 ||
+    (slicedEvents !== undefined && slicedEvents.length === 0);
+  if (isEmpty) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-chat-pane px-4 text-center">
         <span className="text-[12px] text-text-3">

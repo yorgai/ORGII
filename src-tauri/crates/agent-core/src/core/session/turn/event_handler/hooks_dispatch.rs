@@ -10,8 +10,8 @@ use std::sync::Arc;
 use serde_json::Value;
 use tracing::info;
 
-use crate::intelligence::hooks::events::HookContext;
-use crate::intelligence::hooks::{HookEvent, HookExecutor};
+use crate::specialization::hooks::events::HookContext;
+use crate::specialization::hooks::{HookEvent, HookExecutor};
 use crate::tools::impls::coding::query_lsp::get_post_edit_diagnostics;
 use crate::tools::names as tool_names;
 use crate::turn_executor::ToolHookIntervention;

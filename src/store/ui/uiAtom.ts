@@ -257,9 +257,9 @@ inspectModeLockedAtom.debugLabel = "inspectModeLockedAtom";
 export const inspectModeEnabledAtom = atom<boolean>(false);
 inspectModeEnabledAtom.debugLabel = "inspectModeEnabledAtom";
 
-/** Global agent GUI-control mode. When enabled, agent-originated GUI actions may dispatch through the Zod ActionSystem. */
-export const guiControlEnabledAtom = atom<boolean>(false);
-guiControlEnabledAtom.debugLabel = "guiControlEnabledAtom";
+/** ADE Manager active state. When enabled, agent-originated GUI actions may dispatch through the Zod ActionSystem. */
+export const adeManagerEnabledAtom = atom<boolean>(false);
+adeManagerEnabledAtom.debugLabel = "adeManagerEnabledAtom";
 
 // ============================================
 // Loading & Status

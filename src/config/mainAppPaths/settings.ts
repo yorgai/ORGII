@@ -9,7 +9,6 @@ import { SETTINGS_BASE, settingsPathParts } from "./shared";
 export type SettingsSectionSegment =
   | "general"
   | "appearance"
-  | "mobile-remote"
   | "editor"
   | "update"
   | "monitor";
@@ -19,7 +18,6 @@ export type SettingsSubpageSegment = "editor-appearance";
 export const SETTINGS_SECTIONS: readonly SettingsSectionSegment[] = [
   "general",
   "appearance",
-  "mobile-remote",
   "editor",
   "update",
   "monitor",

@@ -35,15 +35,12 @@ members = [
     "crates/integrations",
     "crates/key-vault",
     "crates/lsp",
-    "crates/mobile-remote",
     "crates/perf-utils",
     "crates/project-management",
     "crates/search",
     "crates/session-persistence",
     "crates/settings",
     "crates/shared-state",
-    "crates/orgii-mobile-relay",
-    "crates/orgii-protocol",
     "crates/system-services",
     "crates/terminal",
     "crates/test-helpers",
@@ -138,10 +135,10 @@ dispatch2 = "0.3"
 zip = "2"                # ZIP compression — used by app, agent-core, extensions, lsp
 lzma-sys = { version = "0.1.20", features = ["static"] } # Static liblzma so distributed macOS apps do not depend on Homebrew xz
 sysinfo = "0.38"         # CPU / memory / process metrics — used by perf-utils, dev-record, terminal
-rand = "0.9"             # CSPRNG — used by app, project-management, orgii-mobile-relay
+rand = "0.9"             # CSPRNG — used by app, project-management
 webpki-roots = "1.0"     # TLS root certs — used by integrations
 base64 = "0.22"          # Base64 codec — used by 8 crates (app, agent-core, app-window, browser, extensions, git, key-vault, project-management, shared-state)
-thiserror = "2"          # Derive macros for error types — used by app, agent-core, cursor-bridge, lsp, orgii-mobile-relay
+thiserror = "2"          # Derive macros for error types — used by app, agent-core, cursor-bridge, lsp
 schemars = "1.0"         # JSON Schema generation for tool params — used by app, agent-core
 
 [package]
@@ -295,11 +292,6 @@ dev_record = { path = "crates/dev-record" }
 # `app` crate just re-registers them in `commands/handler_list.inc`.
 key_vault = { path = "crates/key-vault" }
 
-# Wire protocol shared between desktop bridge, mobile relay, and PWA. Pure
-# data, no IO. Used by `api::mobile_remote` to type RPC frames, pairing
-# DTOs, permission tiers, and identifier newtypes.
-orgii_protocol = { path = "crates/orgii-protocol" }
-
 # SQLite connection plumbing. Leaf crate — depends only on `app_paths`. The
 # schema-init dispatcher lives here as a registration cell;
 # `app::register_database_schemas` wires every domain initializer into it
@@ -445,16 +437,6 @@ api_search = { path = "crates/api-search" }
 # into `app`.
 session_persistence = { path = "crates/session-persistence" }
 
-# Mobile Remote Control — desktop-side bridge to the ORGII mobile relay.
-# Connect-with-reconnect WS client, RPC dispatch, pairing flow,
-# allowlist + audit, optional in-process LAN relay. Pure leaf — the
-# `DispatchHost` trait is the integration point; the production
-# `TauriDispatchHost` impl lives in `app::api::mobile_remote_host`
-# and is plugged in via `BridgeSupervisor::set_host_factory` at boot.
-# Owns ~12 `#[tauri::command]`s, re-registered from
-# `commands/handler_list.inc` via bare `mobile_remote::…` paths.
-mobile_remote = { path = "crates/mobile-remote" }
-
 # PTY session management + agent-core terminal tool plumbing. Hoisting
 # both halves into one crate collapses what used to be a cycle between
 # `work_station::terminal` (Tauri commands) and
@@ -573,8 +555,8 @@ urlencoding = "2.1"      # URL encoding/decoding for Cursor token parsing
 # hashing, similar diff/patch, sysinfo memory breakdown, memchr binary
 # sniffing, infer magic-byte detection) moved to the `perf_utils` workspace
 # crate. `app/src` only needs the two remainders: `rayon` for the api/git
-# diff_ops parallelism and `sha2` for the mobile-remote pairing QR digest.
-sha2 = "0.10"            # SHA-256 for mobile-remote pairing QR digest
+# diff_ops parallelism. `sha2` is used by OAuth PKCE flows (cursor, codex, etc.).
+sha2 = "0.10"            # SHA-256 for OAuth PKCE code challenges
 hex = "0.4"              # Hex encoding for QR digest + db_browser bytea rendering
 rand = { workspace = true }   # CSPRNG for OAuth PKCE (state + code_verifier)
 

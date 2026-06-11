@@ -1,5 +1,5 @@
 {
-  "guiControl": {
+  "adeManager": {
     "enabledLabel": "Agent Control: 켜짐",
     "disabledLabel": "Agent Control: 꺼짐",
     "enableAction": "Agent Control 켜기",
@@ -1559,7 +1559,8 @@
     "disableDockAutoHide": "Workstation Dock 항상 표시",
     "openMyStation": "My Station으로 이동",
     "openAgentStation": "Agent Station으로 이동",
-    "openOpsControl": "Ops Control로 이동"
+    "openOpsControl": "Ops Control로 이동",
+    "changeLanguage": "언어 변경"
   },
   "commands": {
     "showBottomPanel": "하단 패널 표시",

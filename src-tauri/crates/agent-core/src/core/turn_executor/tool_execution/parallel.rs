@@ -8,7 +8,7 @@ use serde_json::Value;
 use tracing::info;
 
 use crate::core::tools::traits::ToolExecuteResult;
-use crate::intelligence::policies::activation::SessionScopedContextActivator;
+use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::providers::traits::ToolCallRequest;
 use crate::tools::policy::ResolvedToolPolicy;
 use crate::tools::registry::ToolRegistry;
@@ -21,7 +21,6 @@ use super::super::helpers::{
 use super::super::types::{PermissionProvider, TurnEventHandler};
 
 use super::detect_stream_parse_error;
-use super::inject_framework_meta;
 use super::is_cancelled;
 use super::is_error_text;
 use super::normalize_tool_use_concurrency;
@@ -35,7 +34,7 @@ pub(super) enum ParallelResult {
 /// Execute a group of read-only tool calls concurrently.
 ///
 /// Pre-execution hooks and post-execution processing happen sequentially,
-/// but the actual `tool.execute()` calls run in parallel via `join_all`.
+/// but the actual `tool.execute(, &crate::tools::call_context::CallContext::default())` calls run in parallel via `join_all`.
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn execute_parallel_group(
     messages: &mut Vec<Value>,
@@ -211,11 +210,12 @@ pub(super) async fn execute_parallel_group(
             .map(|(idx, effective_args, _display_name)| {
                 let tool_name = &calls[*idx].name;
                 let call_id = &calls[*idx].id;
-                let mut args = effective_args.clone();
-                inject_framework_meta(&mut args, call_id, session_id);
+                let ctx = crate::tools::call_context::CallContext::new(call_id, session_id);
+                let args = effective_args.clone();
                 async move {
                     let start = Instant::now();
-                    let raw_result = tools.execute_with_policy(tool_name, args, policy).await;
+                    let raw_result =
+                        tools.execute_with_policy(tool_name, args, policy, &ctx).await;
                     let duration_ms = start.elapsed().as_millis() as u64;
                     (*idx, raw_result, duration_ms)
                 }

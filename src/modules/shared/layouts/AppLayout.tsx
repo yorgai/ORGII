@@ -21,17 +21,17 @@ import { useAtomValue } from "jotai";
 import React, { memo, useCallback, useEffect, useMemo } from "react";
 
 import { ActionSystemProvider } from "@src/ActionSystem";
-import { sendIdeActionResult } from "@src/api/tauri/agent";
+import { sendAdeActionResult } from "@src/api/tauri/agent";
 import { ChatProvider } from "@src/contexts/workspace/ChatContext";
 import { DataProvider } from "@src/contexts/workspace/DataContext";
 import ChatPanel from "@src/engines/ChatPanel";
 import { MAX_WIDTH as CHAT_MAX_WIDTH } from "@src/engines/ChatPanel/config";
 import type { SessionLaunchSuccessInfo } from "@src/engines/SessionCore/hooks/session/useSessionCreator/useSessionLaunch/types";
+import { pendingSessionProposal } from "@src/engines/SessionCore/hooks/useAgentADEActions";
 import SessionSyncProvider from "@src/engines/SessionCore/sync/SessionSyncProvider";
 import { SessionCreatorChatPanel } from "@src/features/SessionCreator/variants";
 import type { SessionCreatorChatPanelProps } from "@src/features/SessionCreator/variants/ChatPanel";
 import SettingsSlot from "@src/modules/MainApp/Settings/SettingsSlot";
-import { pendingSessionProposal } from "@src/modules/WorkStation/Browser/hooks/osagent/useOSAgentIDEActions";
 import GlobalSessionSync from "@src/modules/shared/components/GlobalSessionSync";
 import { GlobalSpotlightPortal } from "@src/modules/shared/components/GlobalSpotlightPortal";
 import { GENERAL_LAYOUT_TOUR_TARGETS } from "@src/scaffold/Tutorials/GeneralLayoutTour";
@@ -56,7 +56,7 @@ export type ChatLayout = "inset" | "full" | "compact";
 /**
  * Thin wrapper around SessionCreatorChatPanel. When there is a pending ADE
  * session.propose, launching from the creator directly resolves the Rust-side
- * tool call via sendIdeActionResult — no custom events, no Zod actions.
+ * tool call via sendAdeActionResult — no custom events, no Zod actions.
  */
 const AdeAwareSessionCreatorSlot: React.FC<SessionCreatorChatPanelProps> = (
   props
@@ -66,7 +66,7 @@ const AdeAwareSessionCreatorSlot: React.FC<SessionCreatorChatPanelProps> = (
       const proposal = pendingSessionProposal.current;
       if (proposal) {
         pendingSessionProposal.current = null;
-        void sendIdeActionResult(proposal.correlationId, {
+        void sendAdeActionResult(proposal.correlationId, {
           success: true,
           message: `Session created: ${info.sessionId}`,
           data: { sessionId: info.sessionId },

@@ -2,7 +2,7 @@
  * Feature-Gated Handlers
  *
  * Handlers gated by session feature flags.
- * ide_action, todos_updated, permission:request, question_request
+ * ade_action, todos_updated, permission:request, question_request
  */
 import { rpc } from "@src/api/tauri/rpc";
 import {
@@ -49,13 +49,13 @@ function coerceAgentExecMode(raw: string | undefined): AgentExecMode {
 }
 
 // ============================================================================
-// IDE action handlers
+// ADE action handlers
 // ============================================================================
 
-export function handleIdeAction(event: AgentWSEvent): void {
+export function handleAdeAction(event: AgentWSEvent): void {
   if (event.correlationId && (event.action || event.operation)) {
     window.dispatchEvent(
-      new CustomEvent("agent-ide-action", {
+      new CustomEvent("agent-ade-action", {
         detail: {
           correlationId: event.correlationId,
           operation: event.operation,

@@ -121,8 +121,8 @@ export const ACTIONS: ActionDefinition[] = [
   {
     id: ACTION_ID.SETTINGS_SET_LANGUAGE,
     label: "Change language",
-    labelKey: "settings:general.language",
-    pillLabelKey: "settings:general.language",
+    labelKey: "common:spotlightActions.changeLanguage",
+    pillLabelKey: "common:spotlightActions.changeLanguage",
     icon: ICONS.language,
     color: "primary",
     requiredParams: ["language"],

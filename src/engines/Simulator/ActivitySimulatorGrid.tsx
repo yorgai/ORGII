@@ -129,6 +129,16 @@ const arePropsEqual = (
   next: ActivitySimulatorGridProps
 ): boolean => {
   if (prev.layout !== next.layout) return false;
+  if (prev.forceAppType !== next.forceAppType) return false;
+  if (prev.selectedThreadId !== next.selectedThreadId) return false;
+
+  // Data props are compared by reference — callers either keep them stable
+  // (memoized) or the rerender is correct. Skipping these is what caused
+  // multi-task cells to show stale event lists when the underlying array
+  // changed but the highlighted event id didn't.
+  if (prev.events !== next.events) return false;
+  if (prev.specs !== next.specs) return false;
+  if (prev.taskThreads !== next.taskThreads) return false;
 
   const prevEventId = prev.currentEvent?.id;
   const nextEventId = next.currentEvent?.id;
@@ -143,7 +153,6 @@ const arePropsEqual = (
 
   if (prev.currentEvent?.functionName !== next.currentEvent?.functionName)
     return false;
-  if (prev.forceAppType !== next.forceAppType) return false;
 
   return true;
 };

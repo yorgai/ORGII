@@ -62,7 +62,11 @@ impl Tool for BrowserCliTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let command = required_string(&params, "command")?;
         let args = split_browser_cli_command(&command)
             .map_err(|err| ToolError::InvalidParams(err.to_string()))?;

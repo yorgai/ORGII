@@ -72,7 +72,8 @@ export function createWorkItemRow(
 
 export function buildProjectOverviewRow(
   t: TFunction,
-  projectSlug: string
+  projectSlug: string,
+  projectName?: string
 ): NavigationMenuItem {
   const id = getProjectOverviewMenuItemId(projectSlug);
   return {
@@ -82,6 +83,11 @@ export function buildProjectOverviewRow(
     icon: Box,
     iconName: "box",
     dataTestId: `sidebar-project-overview-${projectSlug}`,
+    dragPayload: {
+      path: projectSlug,
+      name: projectName ?? projectSlug,
+      iconType: "project",
+    },
   };
 }
 
@@ -94,11 +100,21 @@ export function buildWorkItemRow(
       ? getWorkItemMenuItemId(workItem.id)
       : getLinearWorkItemMenuItemId(workItem.id);
 
+  const workItemPath =
+    workItem.source === "local"
+      ? `${(workItem as { projectSlug?: string }).projectSlug ?? ""}/${workItem.id}`
+      : workItem.id;
+
   return {
     id,
     key: id,
     label: workItem.title || t("projects:workItems.untitledWorkItem"),
     iconElement: statusIconElement(toWorkItemStatus(workItem.status)),
     dataTestId: `sidebar-work-item-${workItem.id}`,
+    dragPayload: {
+      path: workItemPath,
+      name: workItem.title || t("projects:workItems.untitledWorkItem"),
+      iconType: "workitem",
+    },
   };
 }

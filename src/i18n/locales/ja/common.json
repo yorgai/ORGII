@@ -1,5 +1,5 @@
 {
-  "guiControl": {
+  "adeManager": {
     "enabledLabel": "Agent Control: オン",
     "disabledLabel": "Agent Control: オフ",
     "enableAction": "Agent Control を有効化",
@@ -1561,7 +1561,8 @@
     "disableDockAutoHide": "Workstation Dock を常に表示",
     "openMyStation": "My Station に移動",
     "openAgentStation": "Agent Station に移動",
-    "openOpsControl": "Ops Control に移動"
+    "openOpsControl": "Ops Control に移動",
+    "changeLanguage": "言語を変更"
   },
   "commands": {
     "showBottomPanel": "ボトムパネルを表示",

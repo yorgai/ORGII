@@ -129,7 +129,11 @@ impl Tool for EditTool {
         params_schema::<EditFileParams>()
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let params: EditFileParams = parse_params(params)?;
 
         let file_path = params.file_path;

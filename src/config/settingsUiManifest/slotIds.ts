@@ -3,8 +3,6 @@ export const SETTINGS_SECTION_SLOT_IDS = {
   APP_APPEARANCE: "app.appearance",
   APP_EDITOR: "app.editor",
 
-  APP_MOBILE_REMOTE: "app.mobileRemote",
-
   APP_MONITOR: "app.monitor",
 
   AGENT_OS_CONFIG: "agent.osAgentConfig",

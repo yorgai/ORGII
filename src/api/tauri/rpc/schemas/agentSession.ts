@@ -325,7 +325,7 @@ export const WingmanMonitorSchema = z.object({
   isPrimary: z.boolean(),
 });
 
-export const IdeActionResultInput = z.object({
+export const AdeActionResultInput = z.object({
   correlationId: z.string(),
   success: z.boolean(),
   message: z.string(),

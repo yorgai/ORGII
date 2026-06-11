@@ -2,6 +2,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import React from "react";
 
 import type { NavigationMenuItem } from "../config";
+import { NavItemDragGhost } from "./NavItemDragGhost";
 import { NavigationMenuRowAccessorySlot } from "./RowAccessorySlot";
 import { NavigationMenuRowActionButton } from "./RowActionButton";
 import type {
@@ -10,6 +11,7 @@ import type {
   NavigationMenuRowActionClickHandler,
   NavigationMenuRowMouseEnterHandler,
 } from "./types";
+import { useNavItemDrag } from "./useNavItemDrag";
 
 interface NavigationMenuParentRowProps extends Omit<
   React.HTMLAttributes<HTMLDivElement>,
@@ -58,11 +60,14 @@ export const NavigationMenuParentRow = React.forwardRef<
 ): React.ReactElement {
   const iconColor = submenuSelected ? "text-primary-6" : "text-text-1";
 
+  const { dragHandlers, dragState } = useNavItemDrag(item);
+
   return (
     <div
       {...rootProps}
+      {...dragHandlers}
       ref={ref}
-      className={`mb-1 ${rootProps.className ?? ""}`}
+      className={`mb-1 ${rootProps.className ?? ""} ${item.dragPayload ? "cursor-grab active:cursor-grabbing" : ""}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onContextMenu={
@@ -72,6 +77,7 @@ export const NavigationMenuParentRow = React.forwardRef<
           : undefined
       }
     >
+      {dragState && <NavItemDragGhost dragState={dragState} />}
       <div
         data-testid={item.dataTestId}
         className={`group flex min-h-[36px] cursor-pointer items-center justify-between rounded-lg transition-colors duration-150 ${
@@ -199,17 +205,21 @@ export const NavigationMenuLeafRow = React.forwardRef<
         ? "text-text-2"
         : "text-text-1";
 
+  const { dragHandlers, dragState } = useNavItemDrag(item);
+
   return (
     <div
       {...rootProps}
+      {...dragHandlers}
       ref={ref}
-      className={rootProps.className}
+      className={`${rootProps.className ?? ""} ${item.dragPayload ? "cursor-grab active:cursor-grabbing" : ""}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onContextMenu={(event: React.MouseEvent) =>
         onMenuItemContextMenu?.(event, item.key, item)
       }
     >
+      {dragState && <NavItemDragGhost dragState={dragState} />}
       <div
         data-testid={item.dataTestId}
         className={`group flex min-h-[36px] items-center justify-between overflow-hidden rounded-lg transition-colors duration-150 ${

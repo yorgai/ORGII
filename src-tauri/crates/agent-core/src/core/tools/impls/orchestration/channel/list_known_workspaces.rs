@@ -52,7 +52,11 @@ impl Tool for ListKnownWorkspacesTool {
         })
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let limit = params
             .get("limit")
             .and_then(|v| v.as_u64())

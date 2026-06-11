@@ -50,7 +50,7 @@ export const GLOBAL_SHORTCUTS: ShortcutEntry[] = [
     category: "navigation",
   },
   {
-    id: "toggle_gui_control",
+    id: "toggle_ade_manager",
     command: "Open ADE Manager",
     macKeys: "⌥⌘G",
     winKeys: "Ctrl+Alt+G",

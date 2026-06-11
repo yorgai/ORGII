@@ -59,11 +59,8 @@ const ReplayProgressBar: React.FC<ReplayProgressBarProps> = memo(
     return (
       <div
         className={`replay-progress-bar relative z-40 w-full overflow-visible ${className ?? ""}`}
-        role="slider"
+        role="group"
         aria-label={ariaLabel}
-        aria-valuemin={0}
-        aria-valuemax={max}
-        aria-valuenow={Math.round(value)}
         data-follow-mode={isFollowMode ? "true" : undefined}
         style={{ marginTop: "-1px", touchAction: "none" }}
         onPointerDown={(event) => event.stopPropagation()}

@@ -14,7 +14,6 @@
   "sections": {
     "general": "일반",
     "appearance": "모양",
-    "mobileRemote": "원격 제어",
     "shortcuts": "키보드 단축키",
     "notifications": "알림",
     "codeEditor": "코드 편집기",
@@ -1254,104 +1253,6 @@
     "tabApp": "앱",
     "tabCodeEditor": "코드 편집기",
     "tabChatPanel": "채팅 패널"
-  },
-  "mobileRemote": {
-    "_translation_status": "draft",
-    "title": "모바일 리모트 컨트롤",
-    "description": "휴대폰에서 데스크톱 Agent 를 제어하세요. 기기를 페어링하여 시작합니다.",
-    "comingSoon": "출시 예정",
-    "pairButton": "새 기기 페어링",
-    "pairedListTitle": "페어링된 기기",
-    "emptyState": {
-      "title": "페어링된 기기가 없습니다",
-      "body": "Relay 서버를 설정하고 휴대폰을 페어링하면 세션을 원격으로 제어할 수 있습니다.",
-      "ctaPair": "휴대폰 페어링"
-    },
-    "relayUrl": {
-      "label": "Relay URL",
-      "default": "기본값 ({{url}})",
-      "custom": "사용자 지정 ({{url}})",
-      "edit": "Relay URL 편집",
-      "placeholder": "https://relay.example.com",
-      "helperText": "orgii-mobile-relay 배포의 HTTPS URL을 입력하세요. 비워 두면 번들된 기본값으로 재설정됩니다.",
-      "invalidUrl": "유효한 http:// 또는 https:// URL을 입력하세요.",
-      "reset": "기본값으로 재설정"
-    },
-    "tier": {
-      "readOnly": "읽기 전용",
-      "fullControl": "전체 제어"
-    },
-    "tierPicker": {
-      "label": "권한 수준",
-      "readOnlyDescription": "세션 보기와 메시지 읽기만 가능합니다.",
-      "fullControlDescription": "사용자를 대신해 메시지를 보내고 작업을 실행합니다."
-    },
-    "labelInput": {
-      "placeholder": "기기 이름 (예: iPhone)"
-    },
-    "pairingDialog": {
-      "title": "새 기기 페어링",
-      "scanInstruction": "휴대폰에서 ORGII PWA 를 열고 이 QR 코드를 스캔하세요.",
-      "confirmPhraseInstruction": "승인 전에 휴대폰에 표시된 문구가 동일한지 확인하세요.",
-      "confirmPhraseLabel": "확인 문구",
-      "waitingForMobile": "모바일 기기의 확인을 기다리는 중...",
-      "preparing": "페어링 세션을 준비하는 중...",
-      "success": "기기 페어링 성공",
-      "errorTitle": "페어링 실패",
-      "start": "QR 생성",
-      "retry": "다시 시도",
-      "cancel": "취소"
-    },
-    "deviceCard": {
-      "lastSeen": "마지막 활동 {{relativeTime}}",
-      "never": "연결된 적 없음",
-      "revoke": "해제",
-      "setPrimary": "주 기기로 설정",
-      "primaryBadge": "주 기기"
-    },
-    "relativeTime": {
-      "justNow": "방금",
-      "minutesAgo": "{{count}}분 전",
-      "hoursAgo": "{{count}}시간 전",
-      "daysAgo": "{{count}}일 전"
-    },
-    "errors": {
-      "pairInitFailed": "페어링 세션을 시작할 수 없습니다. Relay URL 을 확인한 후 다시 시도하세요.",
-      "codeExpired": "페어링 코드가 만료되었습니다. 새 세션을 시작하세요.",
-      "unknown": "Relay 와 통신하는 중 오류가 발생했습니다"
-    },
-    "hosting": {
-      "title": "Relay 를 어디에서 실행할까요?",
-      "subtitle": "Relay 는 휴대폰이 이 데스크톱에 접근할 수 있도록 하는 중계 서버입니다. 사용 방식에 맞는 옵션을 선택한 뒤, 해당 URL 을 아래 Relay URL 입력란에 붙여 넣으세요.",
-      "copyCommand": "명령 복사",
-      "cost": {
-        "free": "무료"
-      },
-      "setupTime": {
-        "fifteenMin": "15 분"
-      },
-      "reachableFrom": {
-        "public": "어디서나"
-      },
-      "tunnel": {
-        "title": "Cloudflare Tunnel (무료, 공개 URL)",
-        "summary": "Cloudflare 가 관리하는 HTTPS 호스트 이름으로 로컬 Relay 를 공개합니다. VPS, 포트 포워딩, 고정 IP 가 모두 필요 없습니다.",
-        "step1": "1. cloudflared 을 설치합니다 (최초 1 회):",
-        "step2": "2. 로컬에서 Relay 를 시작합니다:",
-        "step3": "3. 두 번째 터미널에서 tunnel 을 엽니다:",
-        "step4": "4. Cloudflare 가 https://random-name.trycloudflare.com 형태의 URL 을 출력합니다. 이를 아래 Relay URL 입력란에 붙여 넣으세요.",
-        "note": "trycloudflare.com URL 은 일회성입니다. 고정 호스트 이름이 필요하다면 Cloudflare 계정을 만들고 named tunnel 가이드를 따르세요."
-      }
-    },
-    "devices": {
-      "tier": {
-        "readOnly": "읽기 전용",
-        "full": "전체 제어"
-      },
-      "lastSeen": "마지막 활동 {{relativeTime}}",
-      "primary": "주 기기",
-      "revoke": "해제"
-    }
   },
   "editPanel": {
     "addAction": "액션 추가",

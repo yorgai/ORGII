@@ -331,7 +331,11 @@ impl Tool for ExecTool {
         *self.permission_provider.lock().await = Some(provider);
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let command = optional_string(&params, "command");
         let kill_handle = params
             .get("kill_handle")
@@ -555,7 +559,7 @@ mod tests {
         assert!(!stale_repo.exists());
 
         let result = tool
-            .execute_text(json!({"command": "/bin/echo hello"}))
+            .execute_text(json!({"command": "/bin/echo hello"}), &crate::tools::call_context::CallContext::default())
             .await
             .expect("run_shell should succeed after fallback");
 
@@ -575,7 +579,7 @@ mod tests {
             .execute_text(json!({
                 "command": "/bin/echo nope",
                 "working_dir": bogus.to_string_lossy(),
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await;
 
         match result {
@@ -598,7 +602,7 @@ mod tests {
             .execute_text(json!({
                 "command": "/bin/echo hello",
                 "working_dir": "",
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("empty working_dir should fall back to default workspace");
 
@@ -614,7 +618,7 @@ mod tests {
             .execute_text(json!({
                 "command": "/bin/echo hello",
                 "kill_handle": "",
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("empty kill_handle should not take the kill path");
 
@@ -630,7 +634,7 @@ mod tests {
             .execute_text(json!({
                 "command": "/bin/echo hello",
                 "kill_handle": "/dev/null",
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await
             .expect("path-like kill_handle should not take the kill path when command is present");
 
@@ -645,7 +649,7 @@ mod tests {
         let result = tool
             .execute_text(json!({
                 "kill_handle": "/dev/null",
-            }))
+            }), &crate::tools::call_context::CallContext::default())
             .await;
 
         match result {
@@ -667,10 +671,11 @@ mod tests {
         tool.set_cancel_flag(Arc::clone(&cancel_flag)).await;
 
         let started = std::time::Instant::now();
+        let ctx = crate::tools::call_context::CallContext::default();
         let run = tool.execute_text(json!({
             "command": "sleep 5",
             "wait": 10,
-        }));
+        }), &ctx);
         tokio::pin!(run);
 
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;

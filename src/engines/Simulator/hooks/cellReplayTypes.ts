@@ -3,6 +3,25 @@
  */
 import type { SessionEvent } from "@src/engines/SessionCore";
 
+/**
+ * Explicit replay mode for a cell.
+ *
+ *  - `follow`   — live tail. New events advance the cursor. Used when the cell
+ *                 has no external cursor and the user has not interacted.
+ *  - `synced`   — cursor slaved to the main replay cursor (`externalCursorMs`).
+ *                 New events do not move the cursor; the cursor only moves
+ *                 when the external cursor moves.
+ *  - `detached` — user owns the cursor (after scrub / step / play). New events
+ *                 NEVER touch the cursor; the external cursor is ignored.
+ *                 The `syncToMain` control returns to `synced` or `follow`.
+ *
+ * The "scrub" interaction is NOT a mode — it's a transient session opened with
+ * `beginScrub()` / `endScrub()` while a mode is active. While a scrub session
+ * is open, all external writes are queued; the final committed value goes
+ * through the single persisted setter.
+ */
+export type ReplayMode = "follow" | "synced" | "detached";
+
 export interface CellReplayState {
   /** Current event index in the events array */
   currentIndex: number;
@@ -18,7 +37,12 @@ export interface CellReplayState {
   progress: number;
   /** Whether auto-scroll is enabled */
   autoScroll: boolean;
-  /** True when the user has detached this cell from the main cursor (independent mode). */
+  /** Current replay mode (see `ReplayMode`). */
+  mode: ReplayMode;
+  /**
+   * Convenience flag: `true` when the user has detached this cell from the
+   * shared timeline (mode === "detached"). Kept for existing UI consumers.
+   */
   isDetached: boolean;
 }
 
@@ -43,8 +67,18 @@ export interface CellReplayControls {
   reset: () => void;
   /** Jump to end (follow mode) */
   goToEnd: () => void;
-  /** Re-attach this cell to the main replay cursor (clears user override). */
+  /** Re-attach this cell to the shared timeline (clears detach). */
   syncToMain: () => void;
+  /**
+   * Open a scrub session. While open, the displayed cursor follows
+   * `scrub(index)` calls instantly without committing to persistence, and
+   * external writes (event growth, external cursor) cannot move the cursor.
+   * `endScrub` commits the final index exactly once through the persisted
+   * setter and transitions to `detached` mode.
+   */
+  beginScrub: () => void;
+  scrub: (index: number) => void;
+  endScrub: (index: number) => void;
 }
 
 export interface UseCellReplayStateOptions {
@@ -57,9 +91,9 @@ export interface UseCellReplayStateOptions {
   /** Cell ID for debugging */
   cellId?: string;
   /**
-   * External replay cursor in epoch ms. When non-null and the cell is not
-   * user-detached, the cell shows the event whose createdAt is closest to
-   * (but not after) this timestamp. Pass `null` to disable sync mode.
+   * External replay cursor in epoch ms. When non-null and the cell is in
+   * `synced` mode, the cell shows the event whose `createdAt`/`lastActivityAt`
+   * is closest to (but not after) this timestamp.
    */
   externalCursorMs?: number | null;
 }
@@ -67,40 +101,4 @@ export interface UseCellReplayStateOptions {
 export interface UseCellReplayStateReturn {
   state: CellReplayState;
   controls: CellReplayControls;
-}
-
-/**
- * Binary search for the largest index whose event.createdAt is <= cursorMs.
- * Events must be sorted ascending by createdAt.
- *
- * Clamping behaviour:
- * - cursor is after the last event  → last index  (subagent already finished)
- * - cursor is before the first event → 0           (subagent not yet started)
- * - cursor is in range               → closest index at or before cursor
- *
- * This means a subagent cell always shows something meaningful even when the
- * main cursor sits outside the subagent's time window.
- */
-export function findIndexAtTime(
-  events: SessionEvent[],
-  cursorMs: number
-): number {
-  if (events.length === 0) return -1;
-  const firstMs = new Date(events[0].createdAt).getTime();
-  // Cursor is before the first event — show the first event.
-  if (cursorMs < firstMs) return 0;
-  let lo = 0;
-  let hi = events.length - 1;
-  let best = events.length - 1; // default: cursor is after last event → last index
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    const t = new Date(events[mid].createdAt).getTime();
-    if (t <= cursorMs) {
-      best = mid;
-      lo = mid + 1;
-    } else {
-      hi = mid - 1;
-    }
-  }
-  return best;
 }

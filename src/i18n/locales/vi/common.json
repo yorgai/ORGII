@@ -1,5 +1,5 @@
 {
-  "guiControl": {
+  "adeManager": {
     "enabledLabel": "Agent Control: bật",
     "disabledLabel": "Agent Control: tắt",
     "enableAction": "Bật Agent Control",
@@ -1556,7 +1556,8 @@
     "disableDockAutoHide": "Luôn hiển thị Dock Workstation",
     "openMyStation": "Đi tới My Station",
     "openAgentStation": "Đi tới Agent Station",
-    "openOpsControl": "Đi tới Ops Control"
+    "openOpsControl": "Đi tới Ops Control",
+    "changeLanguage": "Thay đổi ngôn ngữ"
   },
   "commands": {
     "showBottomPanel": "Hiện bảng dưới",

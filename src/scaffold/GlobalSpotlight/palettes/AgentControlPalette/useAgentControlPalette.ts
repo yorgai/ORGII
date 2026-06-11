@@ -15,9 +15,9 @@ import { sessionLaunch } from "@src/api/tauri/agent/session";
 import { DISPATCH_CATEGORY } from "@src/api/tauri/session";
 import Message from "@src/components/Message";
 import { chatEventsForSessionAtomFamily } from "@src/engines/SessionCore/derived/sessionScopedChatEvents";
+import type { PendingSessionProposal } from "@src/engines/SessionCore/hooks/useAgentADEActions";
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useValidatedLastPair } from "@src/hooks/models/useValidatedLastPair";
-import type { PendingSessionProposal } from "@src/modules/WorkStation/Browser/hooks/osagent/useOSAgentIDEActions";
 import type { SpotlightItem } from "@src/scaffold/GlobalSpotlight/types";
 import { collectIdeContext } from "@src/services/context/collectors";
 import { adeManagerPaletteAtom } from "@src/store/session/adeManagerPaletteAtom";
@@ -26,43 +26,43 @@ import {
   extractModelPair,
 } from "@src/store/session/creatorDefaultModelAtom";
 import { modelSelectorAtom } from "@src/store/ui/modelSelectorAtom";
-import { guiControlEnabledAtom } from "@src/store/ui/uiAtom";
+import { adeManagerEnabledAtom } from "@src/store/ui/uiAtom";
 import { invokeTauri } from "@src/util/platform/tauri";
 import { BUILTIN_ADE_MANAGER_DEF_ID } from "@src/util/session/sessionDispatch";
 
 import { useSelectorKernel } from "../core";
 import {
-  GUI_CONTROL_SESSION_NAME,
-  GUI_CONTROL_SUBMIT_EVENT,
-  GUI_CONTROL_TOGGLE_SHORTCUT_ID,
+  ADE_MANAGER_SESSION_NAME,
+  ADE_MANAGER_SUBMIT_EVENT,
+  ADE_MANAGER_TOGGLE_SHORTCUT_ID,
 } from "./constants";
 import type {
-  GuiControlActivityItem,
-  GuiControlRunStatus,
-  GuiControlSubmitDetail,
+  AdeManagerActivityItem,
+  AdeManagerRunStatus,
+  AdeManagerSubmitDetail,
 } from "./types";
 import {
-  EMPTY_GUI_CONTROL_EVENTS_ATOM,
+  EMPTY_ADE_MANAGER_EVENTS_ATOM,
   buildControlPrompt,
   resolveControlModel,
   resolveControlModelLabel,
-  toGuiControlActivityItem,
-  upsertGuiControlSession,
+  toAdeManagerActivityItem,
+  upsertAdeManagerSession,
 } from "./utils";
 
-function useGuiControlActivity(
+function useAdeManagerActivity(
   sessionId: string | null
-): GuiControlActivityItem[] {
+): AdeManagerActivityItem[] {
   const eventsAtom = sessionId
     ? chatEventsForSessionAtomFamily(sessionId)
-    : EMPTY_GUI_CONTROL_EVENTS_ATOM;
+    : EMPTY_ADE_MANAGER_EVENTS_ATOM;
   const events = useAtomValue(eventsAtom);
 
   return useMemo(() => {
     if (!sessionId) return [];
     return events
-      .map(toGuiControlActivityItem)
-      .filter((item): item is GuiControlActivityItem => item !== null)
+      .map(toAdeManagerActivityItem)
+      .filter((item): item is AdeManagerActivityItem => item !== null)
       .slice(-3)
       .reverse();
   }, [events, sessionId]);
@@ -71,14 +71,16 @@ function useGuiControlActivity(
 export function useAgentControlPalette({
   isOpen,
   onClose,
+  onGoBackToParent,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  onGoBackToParent?: () => void;
 }) {
   const { t } = useTranslation("common");
   const creatorDefaultLastModel = useValidatedLastPair();
   const setCreatorDefaultModel = useSetAtom(creatorDefaultModelSelectionAtom);
-  const setGuiControlEnabled = useSetAtom(guiControlEnabledAtom);
+  const setAdeManagerEnabled = useSetAtom(adeManagerEnabledAtom);
   const setSelectorState = useSetAtom(modelSelectorAtom);
 
   // Persistent palette state — survives palette open/close cycles
@@ -98,7 +100,7 @@ export function useAgentControlPalette({
     [setPaletteState]
   );
   const setRunStatus = useCallback(
-    (status: GuiControlRunStatus) =>
+    (status: AdeManagerRunStatus) =>
       setPaletteState((prev) => ({ ...prev, runStatus: status })),
     [setPaletteState]
   );
@@ -129,7 +131,7 @@ export function useAgentControlPalette({
   }, [controlSessionId]);
 
   const sendingRef = useRef(false);
-  const activityItems = useGuiControlActivity(controlSessionId);
+  const activityItems = useAdeManagerActivity(controlSessionId);
 
   // Listen for session proposals from the manage_session tool handler
   useEffect(() => {
@@ -162,7 +164,7 @@ export function useAgentControlPalette({
     const text = draftText.trim();
     if (!text || sendingRef.current) return;
 
-    setGuiControlEnabled(true);
+    setAdeManagerEnabled(true);
     const prompt = buildControlPrompt(text);
     const modelConfig = resolveControlModel(creatorDefaultLastModel);
     const ideContext = collectIdeContext({ expectedRepoPath: null });
@@ -186,7 +188,7 @@ export function useAgentControlPalette({
           const result = await sessionLaunch({
             category: DISPATCH_CATEGORY.RUST_AGENT,
             content: prompt,
-            name: GUI_CONTROL_SESSION_NAME,
+            name: ADE_MANAGER_SESSION_NAME,
             agentDefinitionId: BUILTIN_ADE_MANAGER_DEF_ID,
             keySource: modelConfig.keySource,
             ...(modelConfig.model ? { model: modelConfig.model } : {}),
@@ -197,13 +199,13 @@ export function useAgentControlPalette({
           });
           controlSessionIdRef.current = result.sessionId;
           setControlSessionId(result.sessionId);
-          upsertGuiControlSession(result);
+          upsertAdeManagerSession(result);
         }
 
         setRunStatus("running");
 
         window.dispatchEvent(
-          new CustomEvent<GuiControlSubmitDetail>(GUI_CONTROL_SUBMIT_EVENT, {
+          new CustomEvent<AdeManagerSubmitDetail>(ADE_MANAGER_SUBMIT_EVENT, {
             detail: { text, modelSelection: creatorDefaultLastModel },
           })
         );
@@ -221,7 +223,7 @@ export function useAgentControlPalette({
     draftText,
     setControlSessionId,
     setDraftText,
-    setGuiControlEnabled,
+    setAdeManagerEnabled,
     setRunStatus,
   ]);
 
@@ -241,9 +243,18 @@ export function useAgentControlPalette({
         handleSubmit();
         return;
       }
+      if (
+        (event.key === "Backspace" || event.key === "Delete") &&
+        draftText === "" &&
+        onGoBackToParent
+      ) {
+        event.preventDefault();
+        onGoBackToParent();
+        return;
+      }
       internalHandleKeyDown(event);
     },
-    [handleSubmit]
+    [handleSubmit, draftText, onGoBackToParent]
   );
 
   const kernel = useSelectorKernel({
@@ -344,10 +355,10 @@ export function useAgentControlPalette({
     kernel,
     modePath,
     pendingProposal,
-    placeholder: t("guiControl.inputPlaceholder"),
+    placeholder: t("adeManager.inputPlaceholder"),
     runStatus,
-    selectModelLabel: t("guiControl.selectModel"),
-    shortcutId: GUI_CONTROL_TOGGLE_SHORTCUT_ID,
+    selectModelLabel: t("adeManager.selectModel"),
+    shortcutId: ADE_MANAGER_TOGGLE_SHORTCUT_ID,
     statusDetail:
       latestActivity?.detail ??
       resolveControlModelLabel(creatorDefaultLastModel),

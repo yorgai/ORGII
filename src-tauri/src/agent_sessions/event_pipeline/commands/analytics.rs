@@ -10,7 +10,7 @@ use crate::agent_sessions::event_pipeline::analytics::{
 use crate::agent_sessions::event_pipeline::types::SessionEvent;
 use session_persistence as sqlite_cache;
 
-use super::cache_bridge::cached_event_to_session_event;
+use super::event_conversion::cached_event_to_session_event;
 use super::EventStoreState;
 
 /// Compute analytics for a session's in-memory events.

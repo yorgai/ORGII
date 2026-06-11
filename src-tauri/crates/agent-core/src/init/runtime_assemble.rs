@@ -18,7 +18,7 @@ use tracing::{info, warn};
 use crate::core::definitions::resolved::ResolvedAgent;
 use crate::core::session::overrides::SessionOverrides;
 use crate::integrations::config::IntegrationsConfig;
-use crate::intelligence::policies::activation::SessionScopedContextActivator;
+use crate::specialization::policies::activation::SessionScopedContextActivator;
 use crate::providers::traits::LLMProvider;
 use crate::session::workspace::SessionWorkspace;
 use crate::state::{AgentAppState, AgentSession, SessionRuntime};

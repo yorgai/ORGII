@@ -62,7 +62,11 @@ impl Tool for ToolSearchTool {
         params_schema::<ToolSearchParams>()
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let params: ToolSearchParams = parse_params(params)?;
         let query = params.query.trim();
 

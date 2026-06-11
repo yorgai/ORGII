@@ -101,8 +101,14 @@ function pickRichestFileExtracted(
 
 /**
  * Returns a new event array (same order) where every event with a call id
- * receives the merged `result` for its group and, when available, the richest
- * `extracted` file payload from that group.
+ * receives the merged `result` for its group, the richest `extracted` file
+ * payload from that group when available, and a `lastActivityAt` stamp equal
+ * to the latest `createdAt` across the group (call + folded results).
+ *
+ * `lastActivityAt` is the canonical replay-cursor timestamp for merged
+ * events — see `findIndexAtTime.eventReplayTimeMs`. `createdAt` is left
+ * untouched so any other consumer that depends on call-start ordering is
+ * unaffected.
  */
 export function mergeSessionEventsToolResultsByCallId(
   events: SessionEvent[]
@@ -120,6 +126,7 @@ export function mergeSessionEventsToolResultsByCallId(
 
   const mergedResultByCallId = new Map<string, Record<string, unknown>>();
   const bestExtractedByCallId = new Map<string, ExtractedData | undefined>();
+  const lastActivityByCallId = new Map<string, string>();
 
   for (const [cid, group] of byCallId) {
     const sorted = [...group].sort(
@@ -131,6 +138,8 @@ export function mergeSessionEventsToolResultsByCallId(
     if (bestEx) {
       bestExtractedByCallId.set(cid, bestEx);
     }
+    // The sort above guarantees the last element has the latest createdAt.
+    lastActivityByCallId.set(cid, sorted[sorted.length - 1].createdAt);
   }
 
   return events.map((event) => {
@@ -139,13 +148,17 @@ export function mergeSessionEventsToolResultsByCallId(
 
     const mergedResult = mergedResultByCallId.get(cid);
     const bestEx = bestExtractedByCallId.get(cid);
+    const lastActivityAt = lastActivityByCallId.get(cid);
 
-    const next: SessionEvent = { ...event };
+    const next = { ...event } as SessionEvent & { lastActivityAt?: string };
     if (mergedResult) {
       next.result = mergedResult;
     }
     if (bestEx) {
       next.extracted = bestEx;
+    }
+    if (lastActivityAt && lastActivityAt !== event.createdAt) {
+      next.lastActivityAt = lastActivityAt;
     }
     return next;
   });

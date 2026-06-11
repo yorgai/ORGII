@@ -106,7 +106,7 @@ const BackgroundTasksApp: React.FC<BackgroundTasksAppProps> = ({
               events={entry.events}
               specs={[]}
               sessionType={entry.sessionType}
-              threadId={childCount > 1 ? entry.sessionId : undefined}
+              threadId={entry.sessionId}
               independentReplay
               externalCursorMs={mainCursorMs}
             />

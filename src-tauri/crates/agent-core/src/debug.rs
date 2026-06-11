@@ -32,7 +32,7 @@
 //! 3. **Genuine public surface, no shim, no `#[doc(hidden)]`** — items
 //!    used by non-debug callers too (e.g. `core::session::wingman`,
 //!    `core::session::prompt::builder`, `core::session::turn`,
-//!    `intelligence::mcp::config::insert_server_config`,
+//!    `specialization::mcp::config::insert_server_config`,
 //!    `core::turn_executor::helpers`). The test routes share these with
 //!    production callers; they stay normal public API.
 //!
@@ -119,6 +119,6 @@ pub use crate::state::commands::desktop::debug_parse_desktop_config;
 #[doc(hidden)]
 pub use crate::state::commands::session::message::resolve_agent_mode;
 
-// `intelligence::mcp::config::insert_server_config` is genuine
+// `specialization::mcp::config::insert_server_config` is genuine
 // public-within-crate (used by smithery/hub/bar registries). Already
 // reached at its canonical path; no debug shim needed.

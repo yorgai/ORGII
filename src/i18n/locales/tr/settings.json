@@ -14,7 +14,6 @@
   "sections": {
     "general": "Genel",
     "appearance": "Görünüm",
-    "mobileRemote": "Uzaktan kontrol",
     "shortcuts": "Klavye kısayolları",
     "notifications": "Bildirimler",
     "codeEditor": "Kod Editörü",
@@ -1254,104 +1253,6 @@
     "tabApp": "Uygulama",
     "tabCodeEditor": "Kod Düzenleyici",
     "tabChatPanel": "Sohbet Paneli"
-  },
-  "mobileRemote": {
-    "_translation_status": "draft",
-    "title": "Mobil Uzaktan Kontrol",
-    "description": "Masaüstü Agent'larını telefonundan kontrol et. Başlamak için bir cihaz eşleştir.",
-    "comingSoon": "Çok yakında",
-    "pairButton": "Yeni cihaz eşleştir",
-    "pairedListTitle": "Eşleştirilmiş cihazlar",
-    "emptyState": {
-      "title": "Henüz eşleştirilmiş cihaz yok",
-      "body": "Relay sunucunu kur ve telefonunu eşleştirerek oturumları uzaktan kontrol et.",
-      "ctaPair": "Telefon eşleştir"
-    },
-    "relayUrl": {
-      "label": "Relay URL",
-      "default": "Varsayılan ({{url}})",
-      "custom": "Özel ({{url}})",
-      "edit": "Relay URL’yi düzenle",
-      "placeholder": "https://relay.example.com",
-      "helperText": "orgii-mobile-relay dağıtımınızın HTTPS adresini girin. Varsayılana dönmek için boş bırakın.",
-      "invalidUrl": "Geçerli bir http:// veya https:// URL’si girin.",
-      "reset": "Varsayılana sıfırla"
-    },
-    "tier": {
-      "readOnly": "Yalnızca okuma",
-      "fullControl": "Tam kontrol"
-    },
-    "tierPicker": {
-      "label": "İzin seviyesi",
-      "readOnlyDescription": "Yalnızca oturumları görüntüle ve mesajları oku.",
-      "fullControlDescription": "Senin adına mesaj gönder ve eylemleri tetikle."
-    },
-    "labelInput": {
-      "placeholder": "Cihaz adı (örn. iPhone)"
-    },
-    "pairingDialog": {
-      "title": "Yeni cihaz eşleştir",
-      "scanInstruction": "Telefonunda ORGII PWA'yı aç ve bu QR kodunu tara.",
-      "confirmPhraseInstruction": "Onaylamadan önce telefonundaki ifadenin bununla eşleştiğini doğrula.",
-      "confirmPhraseLabel": "Onay ifadesi",
-      "waitingForMobile": "Mobil cihazın onayı bekleniyor...",
-      "preparing": "Eşleştirme oturumu hazırlanıyor...",
-      "success": "Cihaz başarıyla eşleştirildi",
-      "errorTitle": "Eşleştirme başarısız",
-      "start": "QR oluştur",
-      "retry": "Tekrar dene",
-      "cancel": "İptal"
-    },
-    "deviceCard": {
-      "lastSeen": "Son görülme {{relativeTime}}",
-      "never": "Hiç bağlanmadı",
-      "revoke": "İptal et",
-      "setPrimary": "Birincil olarak ayarla",
-      "primaryBadge": "Birincil"
-    },
-    "relativeTime": {
-      "justNow": "az önce",
-      "minutesAgo": "{{count}} dk önce",
-      "hoursAgo": "{{count}} sa önce",
-      "daysAgo": "{{count}} gün önce"
-    },
-    "errors": {
-      "pairInitFailed": "Eşleştirme oturumu başlatılamadı. Relay URL'sini kontrol edip tekrar dene.",
-      "codeExpired": "Eşleştirme kodunun süresi doldu. Lütfen yeni bir oturum başlat.",
-      "unknown": "Relay ile iletişim sırasında bir hata oluştu"
-    },
-    "hosting": {
-      "title": "Relay nerede çalışmalı?",
-      "subtitle": "Relay, telefonunun bu masaüstüne ulaşmasını sağlayan aracı sunucudur. Kullanım şekline uygun seçeneği belirle ve URL'sini aşağıdaki Relay URL alanına yapıştır.",
-      "copyCommand": "Komutu kopyala",
-      "cost": {
-        "free": "Ücretsiz"
-      },
-      "setupTime": {
-        "fifteenMin": "15 dk"
-      },
-      "reachableFrom": {
-        "public": "Her yerden"
-      },
-      "tunnel": {
-        "title": "Cloudflare Tunnel (ücretsiz, herkese açık URL)",
-        "summary": "Yerel Relay'i Cloudflare tarafından yönetilen bir HTTPS host adı üzerinden yayınlar. VPS, port yönlendirme veya sabit IP gerekmez.",
-        "step1": "1. cloudflared kur (tek seferlik):",
-        "step2": "2. Relay'i yerelde başlat:",
-        "step3": "3. İkinci bir terminalde tunnel'ı aç:",
-        "step4": "4. Cloudflare https://random-name.trycloudflare.com gibi bir URL yazdırır — bunu aşağıdaki Relay URL alanına yapıştır.",
-        "note": "trycloudflare.com URL'si geçicidir. Sabit bir host adı için Cloudflare hesabı oluşturup named tunnel rehberini takip et."
-      }
-    },
-    "devices": {
-      "tier": {
-        "readOnly": "Yalnızca okuma",
-        "full": "Tam kontrol"
-      },
-      "lastSeen": "Son görülme {{relativeTime}}",
-      "primary": "Birincil",
-      "revoke": "İptal et"
-    }
   },
   "editPanel": {
     "addAction": "Eylem ekle",

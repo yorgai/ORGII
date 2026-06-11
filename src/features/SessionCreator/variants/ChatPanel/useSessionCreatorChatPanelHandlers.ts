@@ -27,7 +27,7 @@ import {
   useAgentCompatibility,
 } from "@src/hooks/models/useAgentCompatibility";
 import { preloadWingmanWindows } from "@src/router/lazy/preload";
-import type { AgentSelection } from "@src/scaffold/GlobalSpotlight/palettes";
+import type { AgentSelection } from "@src/scaffold/GlobalSpotlight/palettes/DispatchCategoryPalette";
 import type { RepoItem } from "@src/scaffold/GlobalSpotlight/types";
 import { REPO_KIND, type RepoKind } from "@src/store/repo/types";
 import { sessionCreatorStateAtom, sessionSourceAtom } from "@src/store/session";
@@ -95,8 +95,8 @@ export function useSessionCreatorChatPanelHandlers({
 
   // ── Repo / branch selection ───────────────────────────────────────────────
 
-  // "Switch workspace too?" confirmation path: update the global repo
-  // selection to the picked repo and keep the session draft aligned with it.
+  // Updates the global repo selection and keeps the session draft aligned.
+  // Branch is preserved from the last used / checked-out branch.
   const handleRepoChange = useCallback(
     (repoId: string, options?: { repoKind?: RepoKind }) => {
       selectRepo(repoId);
@@ -123,7 +123,7 @@ export function useSessionCreatorChatPanelHandlers({
     ]
   );
 
-  // Session-only repo pick; the global repo selection is untouched.
+  // Updates session source for the new repo; branch falls back to current.
   const handleRepoSelectForSession = useCallback(
     (selectedRepoId: string, repo: RepoItem) => {
       if (isSystemPathSourceId(repo.id)) {

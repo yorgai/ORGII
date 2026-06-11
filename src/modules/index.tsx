@@ -29,6 +29,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useRouteViewMode } from "@src/config/routeViewModeConfig";
 import { ROUTES } from "@src/config/routes";
 import { BrowserProvider, TerminalProvider } from "@src/contexts/workstation";
+import { useAgentADEActions } from "@src/engines/SessionCore/hooks/useAgentADEActions";
 import { useServiceAuthState } from "@src/hooks/auth";
 import { useProjectDataChangedListener } from "@src/hooks/project";
 import { useBackgroundImage } from "@src/hooks/theme/useBackgroundImage";
@@ -37,7 +38,6 @@ import { useUrlPreviewEvents } from "@src/hooks/workStation/tabs";
 import { useNarrowChatFocus } from "@src/hooks/workStation/useNarrowChatFocus";
 import WorkStationPage from "@src/modules/WorkStation";
 import { useGlobalBrowserWebviewLayering } from "@src/modules/WorkStation/Browser/hooks";
-import { useOSAgentIDEActions } from "@src/modules/WorkStation/Browser/hooks/osagent";
 import { SharedBrowserApp } from "@src/modules/WorkStation/Browser/shared";
 import {
   preloadMainAppRoutes,
@@ -182,7 +182,7 @@ const AppShell = () => {
   // session.list / session.sendMessage / ...). GUI-category actions are
   // gated off inside the hook — see GUI_DISPATCH_DISABLED in
   // useOSAgentIDEActions.ts. Re-enable GUI routing for cowork / voice mode.
-  useOSAgentIDEActions();
+  useAgentADEActions();
 
   // === Listens for project/work-item data-change events from the Rust
   // backend (project_management::projects::events) so cached views invalidate

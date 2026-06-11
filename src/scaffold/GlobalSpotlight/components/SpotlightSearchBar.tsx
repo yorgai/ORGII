@@ -4,11 +4,12 @@
  * Search bar with action/value pills and a contextual input placeholder.
  * Backspace removes segments.
  */
-import { Search } from "lucide-react";
+import { ChevronLeft, Search } from "lucide-react";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { ICONS } from "../config";
+import { SPOTLIGHT_TOKENS } from "../constants";
 import type { PathSegment } from "../types";
 
 // ============ PROPS ============
@@ -85,22 +86,9 @@ export const SpotlightSearchBar: React.FC<SpotlightSearchBarProps> = ({
     inputRef.current?.focus();
   };
 
-  const renderCloseIcon = (onClick: () => void) => {
-    const CloseIcon = ICONS.close;
-    return (
-      <button
-        type="button"
-        className="ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-primary-6 opacity-70 transition-opacity hover:opacity-100"
-        aria-label={t("common:actions.close")}
-        onClick={(event) => {
-          event.stopPropagation();
-          onClick();
-        }}
-      >
-        <CloseIcon size={13} strokeWidth={2.4} />
-      </button>
-    );
-  };
+  const renderBackChevron = () => (
+    <ChevronLeft size={13} strokeWidth={2.5} className="shrink-0" />
+  );
 
   const renderPillIcon = (segment: PathSegment) => {
     if (typeof segment.icon === "function") {
@@ -124,81 +112,93 @@ export const SpotlightSearchBar: React.FC<SpotlightSearchBarProps> = ({
   };
 
   return (
-    <div className="spotlight-search-bar flex h-[56px] min-h-[56px] items-center gap-2 px-4">
-      {!hasPills && (
-        <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center">
-          {IconComponent ? (
-            <IconComponent size={18} className="text-text-2" />
-          ) : typeof displayIcon === "string" ? (
-            <i className={`${displayIcon} text-[18px] text-text-2`} />
-          ) : (
-            <Search className="text-text-2" size={18} />
-          )}
-        </div>
-      )}
+    <div>
+      <div className="spotlight-search-bar flex h-[56px] min-h-[56px] items-center gap-2 px-4">
+        {!hasPills && (
+          <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center">
+            {IconComponent ? (
+              <IconComponent
+                size={SPOTLIGHT_TOKENS.iconSize}
+                className="text-text-2"
+              />
+            ) : typeof displayIcon === "string" ? (
+              <i
+                className={`${displayIcon} text-[${SPOTLIGHT_TOKENS.iconSize}px] text-text-2`}
+              />
+            ) : (
+              <Search
+                className="text-text-2"
+                size={SPOTLIGHT_TOKENS.iconSize}
+              />
+            )}
+          </div>
+        )}
 
-      {hasPills && (
-        <div className="flex min-w-0 flex-shrink-0 items-center gap-2 text-[16px] text-text-1">
-          {path.map((segment, index) => {
-            const canRemove =
-              !!onRemoveSegment &&
-              (segment.type !== "action" || !hideActionClose);
-            const label = getSegmentLabel(segment);
-            return (
-              <div
-                key={`${segment.type}-${segment.id}`}
-                className={`flex items-center gap-1 rounded-full bg-primary-1 px-2.5 py-1 text-primary-6 ${canRemove ? "cursor-pointer" : ""}`}
-                onClick={
-                  canRemove
-                    ? (event) => handlePillRemove(index, event)
-                    : undefined
-                }
-                title={label}
-              >
-                {renderPillIcon(segment)}
-                <span className="max-w-[220px] truncate text-[16px] leading-5">
-                  {label}
-                </span>
-                {canRemove &&
-                  !isCountingDown &&
-                  renderCloseIcon(() => handlePillRemove(index))}
-              </div>
-            );
-          })}
-        </div>
-      )}
+        {hasPills && (
+          <div
+            className={`flex min-w-0 flex-shrink-0 items-center gap-2 ${SPOTLIGHT_TOKENS.inputFontSize} text-text-1`}
+          >
+            {path.map((segment, index) => {
+              const canRemove =
+                !!onRemoveSegment &&
+                (segment.type !== "action" || !hideActionClose);
+              const label = getSegmentLabel(segment);
+              return (
+                <div
+                  key={`${segment.type}-${segment.id}`}
+                  className={`flex items-center gap-1 rounded-full bg-primary-1 px-2.5 py-1 text-primary-6 ${canRemove ? "cursor-pointer" : ""}`}
+                  onClick={
+                    canRemove
+                      ? (event) => handlePillRemove(index, event)
+                      : undefined
+                  }
+                  title={label}
+                >
+                  {canRemove && !isCountingDown && renderBackChevron()}
+                  {!canRemove && renderPillIcon(segment)}
+                  <span
+                    className={`max-w-[220px] truncate ${SPOTLIGHT_TOKENS.inputFontSize}`}
+                  >
+                    {label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-      {!hideInput && (
-        <input
-          ref={inputRef}
-          type="text"
-          value={searchQuery}
-          onChange={(event) => onSearchQueryChange(event.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={placeholder}
-          className="min-w-0 flex-1 bg-transparent text-[16px] text-text-1 placeholder:text-text-1 focus:outline-none"
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck={false}
-          data-spotlight-input="true"
-        />
-      )}
+        {!hideInput && (
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder={placeholder}
+            className={`min-w-0 flex-1 bg-transparent ${SPOTLIGHT_TOKENS.inputFontSize} text-text-1 placeholder:text-text-1 focus:outline-none`}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            data-spotlight-input="true"
+          />
+        )}
 
-      {!hideInput && searchQuery && !isCountingDown && (
-        <button
-          type="button"
-          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-text-3 transition-colors hover:bg-fill-2 hover:text-text-1"
-          aria-label={t("common:actions.clearSearch")}
-          onClick={handleResetSearch}
-        >
-          {React.createElement(ICONS.close, { size: 14 })}
-        </button>
-      )}
+        {!hideInput && searchQuery && !isCountingDown && (
+          <button
+            type="button"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-text-3 transition-colors hover:bg-fill-2 hover:text-text-1"
+            aria-label={t("common:actions.clearSearch")}
+            onClick={handleResetSearch}
+          >
+            {React.createElement(ICONS.close, { size: 14 })}
+          </button>
+        )}
 
-      {trailingSlot ? (
-        <div className="flex flex-shrink-0 items-center">{trailingSlot}</div>
-      ) : null}
+        {trailingSlot ? (
+          <div className="flex flex-shrink-0 items-center">{trailingSlot}</div>
+        ) : null}
+      </div>
     </div>
   );
 };

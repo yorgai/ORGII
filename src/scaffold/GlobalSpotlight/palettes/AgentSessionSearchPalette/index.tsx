@@ -11,20 +11,26 @@ import { useTranslation } from "react-i18next";
 
 import { useFilteredItems } from "@src/hooks/search";
 import { useSessionView } from "@src/hooks/ui/tabs/useSessionView";
-import { renderBreathingStatusDot } from "@src/scaffold/NavigationSidebar/connectors/useSessionMenuItems/statusIndicators";
+import {
+  isSessionCompletedUnread,
+  isSessionPendingAsking,
+} from "@src/scaffold/NavigationSidebar/connectors/useSessionMenuItems/menuItemBuilders";
+import {
+  renderBreathingStatusDot,
+  renderStatusDot,
+} from "@src/scaffold/NavigationSidebar/connectors/useSessionMenuItems/statusIndicators";
 import {
   loadSidebarSessions,
   sessionLoadingAtom,
   sessionsAtom,
+  visitedSessionsAtom,
 } from "@src/store/session";
 import type { Session } from "@src/store/session";
-import { isCursorIdeSession } from "@src/util/session/sessionDispatch";
 import { isSessionInProgress } from "@src/util/session/sessionInProgress";
 import {
   getSessionListDisplayName,
   resolveSessionRowIcon,
 } from "@src/util/session/sessionSidebarRow";
-import { formatRelativeTime } from "@src/util/time/formatRelativeTime";
 
 import type { BasePaletteProps } from "../../shared";
 import { PaletteBody, SpotlightShell } from "../../shell";
@@ -62,6 +68,7 @@ export const AgentSessionSearchPalette: React.FC<
   const { openSession } = useSessionView();
   const sessions = useAtomValue(sessionsAtom);
   const sessionsLoading = useAtomValue(sessionLoadingAtom);
+  const visitedSessions = useAtomValue(visitedSessionsAtom);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -116,9 +123,14 @@ export const AgentSessionSearchPalette: React.FC<
           session,
           fallbackSessionLabel
         );
-        const timestamp = getSessionTimestamp(session);
-
         const inProgress = isSessionInProgress(session.status, session);
+        const pendingAsking = isSessionPendingAsking(session);
+        const unread = isSessionCompletedUnread(session, visitedSessions);
+        const statusDotTone = pendingAsking
+          ? "asking"
+          : unread
+            ? "unread"
+            : "default";
 
         return {
           id: session.session_id,
@@ -126,17 +138,16 @@ export const AgentSessionSearchPalette: React.FC<
           icon: resolveSessionRowIcon(session),
           type: "option" as const,
           data: {
-            rightLabel: formatRelativeTime(timestamp, "nano"),
-            tagLabel: inProgress ? undefined : session.status,
-            statusContent: inProgress ? renderBreathingStatusDot() : undefined,
-            iconTone: isCursorIdeSession(session.session_id)
-              ? "primary"
-              : undefined,
+            statusContent:
+              inProgress && !pendingAsking
+                ? renderBreathingStatusDot()
+                : renderStatusDot(statusDotTone),
+            iconTone: "text1",
           },
           action: () => handleOpenSession(session),
         };
       }),
-    [fallbackSessionLabel, filteredItems, handleOpenSession]
+    [fallbackSessionLabel, filteredItems, handleOpenSession, visitedSessions]
   );
 
   const isItemSelectable = useCallback((item: SpotlightItem) => {

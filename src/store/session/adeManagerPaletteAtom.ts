@@ -1,6 +1,6 @@
 import { atom } from "jotai";
 
-import type { PendingSessionProposal } from "@src/modules/WorkStation/Browser/hooks/osagent/useOSAgentIDEActions";
+import type { PendingSessionProposal } from "@src/engines/SessionCore/hooks/useAgentADEActions";
 import type { GuiControlRunStatus } from "@src/scaffold/GlobalSpotlight/palettes/AgentControlPalette/types";
 
 export interface AdeManagerPaletteState {

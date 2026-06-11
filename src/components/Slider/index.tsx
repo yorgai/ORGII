@@ -200,6 +200,21 @@ const Slider: React.FC<SliderProps> = ({
     return [value, value];
   }, [value]);
 
+  // Refs so document-level drag listeners and keyboard handlers always
+  // observe the latest props/state. Without these, the move/up callbacks
+  // captured `onChange` and `normalizedValue` as of mousedown, leading to
+  // stale-closure bugs the moment the parent re-rendered mid-drag.
+  const onChangeRef = useRef(onChange);
+  const onAfterChangeRef = useRef(onAfterChange);
+  const normalizedValueRef = useRef(normalizedValue);
+  const controlledValueRef = useRef(controlledValue);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    onAfterChangeRef.current = onAfterChange;
+    normalizedValueRef.current = normalizedValue;
+    controlledValueRef.current = controlledValue;
+  });
+
   // Calculate percentage from value
   const valueToPercent = useCallback(
     (val: number): number => {
@@ -248,58 +263,70 @@ const Slider: React.FC<SliderProps> = ({
     [vertical]
   );
 
-  // Update value
-  const handleValueChange = useCallback(
+  // Apply a new value: writes through the uncontrolled state when applicable
+  // and fires the latest `onChange` / `onAfterChange` via refs.
+  const applyValueChange = useCallback(
     (newValue: number | [number, number], final = false) => {
-      if (controlledValue === undefined) {
+      if (controlledValueRef.current === undefined) {
         setInternalValue(newValue);
       }
-
-      onChange?.(newValue);
-
+      onChangeRef.current?.(newValue);
       if (final) {
-        onAfterChange?.(newValue);
+        onAfterChangeRef.current?.(newValue);
       }
     },
-    [controlledValue, onChange, onAfterChange]
+    []
   );
 
-  // Handle drag start
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent | React.TouchEvent, handleIndex: number) => {
+  // Start a drag interaction. `initialPercent` lets the caller seed the
+  // drag with a position computed from a track-press (so clicking on the
+  // rail starts a drag at the press point, not after the first mousemove).
+  const beginDrag = useCallback(
+    (handleIndex: number, isTouch: boolean, initialPercent: number | null) => {
       if (disabled) return;
 
-      e.preventDefault();
       setDraggingHandle(handleIndex);
       setShowTooltipFor(handleIndex);
 
-      // Track the current value during dragging to avoid closure issues
-      let currentDragValue = value;
+      let currentDragValue: number | [number, number] = (() => {
+        if (initialPercent == null) return value;
+        const seeded = percentToValue(initialPercent);
+        if (range) {
+          const [v1, v2] = normalizedValueRef.current;
+          return handleIndex === 0
+            ? ([Math.min(seeded, v2), v2] as [number, number])
+            : ([v1, Math.max(seeded, v1)] as [number, number]);
+        }
+        return seeded;
+      })();
+
+      if (initialPercent != null) {
+        applyValueChange(currentDragValue);
+      }
 
       const handleMove = (moveEvent: MouseEvent | TouchEvent) => {
         const percent = getPositionFromEvent(moveEvent);
         const newVal = percentToValue(percent);
-
         if (range) {
-          const [val1, val2] = normalizedValue;
+          // Read the OTHER handle's value from the ref, not a mousedown-time
+          // snapshot, so controlled parents that move the sibling handle
+          // mid-drag don't see stale clamps.
+          const [val1, val2] = normalizedValueRef.current;
           if (handleIndex === 0) {
             currentDragValue = [Math.min(newVal, val2), val2];
-            handleValueChange(currentDragValue);
           } else {
             currentDragValue = [val1, Math.max(newVal, val1)];
-            handleValueChange(currentDragValue);
           }
         } else {
           currentDragValue = newVal;
-          handleValueChange(newVal);
         }
+        applyValueChange(currentDragValue);
       };
 
       const handleUp = () => {
         setDraggingHandle(null);
         setShowTooltipFor(null);
-        // Use the tracked currentDragValue instead of closure value
-        handleValueChange(currentDragValue, true);
+        applyValueChange(currentDragValue, true);
 
         document.removeEventListener("mousemove", handleMove);
         document.removeEventListener("mouseup", handleUp);
@@ -309,7 +336,10 @@ const Slider: React.FC<SliderProps> = ({
 
       document.addEventListener("mousemove", handleMove);
       document.addEventListener("mouseup", handleUp);
-      document.addEventListener("touchmove", handleMove);
+      // `touchmove` must be non-passive so we can `preventDefault` (set by
+      // the touch-action: none on the rail; we still register passive false
+      // here so any future preventDefault works).
+      document.addEventListener("touchmove", handleMove, { passive: false });
       document.addEventListener("touchend", handleUp);
 
       dragCleanupRef.current = () => {
@@ -318,54 +348,118 @@ const Slider: React.FC<SliderProps> = ({
         document.removeEventListener("touchmove", handleMove);
         document.removeEventListener("touchend", handleUp);
       };
+      // Suppress the immediately-following click on the rail; otherwise
+      // releasing the drag would re-trigger `handleTrackClick`.
+      void isTouch;
     },
     [
       disabled,
       range,
-      normalizedValue,
-      getPositionFromEvent,
-      percentToValue,
-      handleValueChange,
       value,
+      percentToValue,
+      getPositionFromEvent,
+      applyValueChange,
     ]
   );
 
-  // Handle track click
-  const handleTrackClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (disabled || draggingHandle !== null) return;
-
-      const rect = sliderRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      const clientPos = vertical ? e.clientY : e.clientX;
-      const size = vertical ? rect.height : rect.width;
-      const offset = vertical ? rect.bottom - clientPos : clientPos - rect.left;
-      const percent = (offset / size) * 100;
-      const newVal = percentToValue(percent);
-
-      if (range) {
-        const [val1, val2] = normalizedValue;
-        const mid = (val1 + val2) / 2;
-
-        if (newVal < mid) {
-          handleValueChange([newVal, val2], true);
-        } else {
-          handleValueChange([val1, newVal], true);
-        }
-      } else {
-        handleValueChange(newVal, true);
-      }
+  // Handle drag start from the handle pill.
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent | React.TouchEvent, handleIndex: number) => {
+      if (disabled) return;
+      e.preventDefault();
+      const isTouch = "touches" in e;
+      beginDrag(handleIndex, isTouch, null);
     },
-    [
-      disabled,
-      draggingHandle,
-      vertical,
-      percentToValue,
-      range,
-      normalizedValue,
-      handleValueChange,
-    ]
+    [disabled, beginDrag]
+  );
+
+  // Press-anywhere-on-the-rail starts a drag seeded at the press point.
+  // Previously this was a click-only seek, so the user had to hit the tiny
+  // 14 px handle to scrub — a tap on the rail just snapped without
+  // continuing to follow the pointer.
+  const handleRailPointerDown = useCallback(
+    (e: React.MouseEvent | React.TouchEvent) => {
+      if (disabled) return;
+      // Don't double-fire when the press lands on the handle itself.
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest(".slider-handle")) return;
+
+      e.preventDefault();
+      const isTouch = "touches" in e;
+      const nativeEvent = e.nativeEvent as MouseEvent | TouchEvent;
+      const percent = getPositionFromEvent(nativeEvent);
+
+      // Pick the closer handle for range mode; single-handle slider is index 0.
+      let handleIndex = 0;
+      if (range) {
+        const [v1, v2] = normalizedValueRef.current;
+        const seeded = percentToValue(percent);
+        handleIndex = Math.abs(seeded - v1) <= Math.abs(seeded - v2) ? 0 : 1;
+      }
+      beginDrag(handleIndex, isTouch, percent);
+    },
+    [disabled, range, getPositionFromEvent, percentToValue, beginDrag]
+  );
+
+  // Keyboard navigation. The handle already advertises this via `role="slider"`
+  // + tabIndex, but the previous implementation registered no key handlers,
+  // leaving a focusable-but-inoperable control.
+  const handleHandleKeyDown = useCallback(
+    (e: React.KeyboardEvent, handleIndex: number) => {
+      if (disabled) return;
+      let delta = 0;
+      let absolute: number | null = null;
+      const big = Math.max(step, (max - min) / 10);
+      switch (e.key) {
+        case "ArrowLeft":
+        case "ArrowDown":
+          delta = -step;
+          break;
+        case "ArrowRight":
+        case "ArrowUp":
+          delta = step;
+          break;
+        case "PageDown":
+          delta = -big;
+          break;
+        case "PageUp":
+          delta = big;
+          break;
+        case "Home":
+          absolute = min;
+          break;
+        case "End":
+          absolute = max;
+          break;
+        default:
+          return;
+      }
+      e.preventDefault();
+
+      const apply = (raw: number) => {
+        const clamped = Math.max(min, Math.min(max, raw));
+        if (range) {
+          const [v1, v2] = normalizedValueRef.current;
+          const next: [number, number] =
+            handleIndex === 0
+              ? [Math.min(clamped, v2), v2]
+              : [v1, Math.max(clamped, v1)];
+          applyValueChange(next, true);
+        } else {
+          applyValueChange(clamped, true);
+        }
+      };
+
+      if (absolute !== null) {
+        apply(absolute);
+        return;
+      }
+      const current = range
+        ? normalizedValueRef.current[handleIndex]
+        : normalizedValueRef.current[0];
+      apply(current + delta);
+    },
+    [disabled, step, min, max, range, applyValueChange]
   );
 
   const sliderClasses = [
@@ -398,6 +492,7 @@ const Slider: React.FC<SliderProps> = ({
         style={positionStyle}
         onMouseDown={(event) => handleMouseDown(event, handleIndex)}
         onTouchStart={(event) => handleMouseDown(event, handleIndex)}
+        onKeyDown={(event) => handleHandleKeyDown(event, handleIndex)}
         onMouseEnter={() => setShowTooltipFor(handleIndex)}
         onMouseLeave={() => setShowTooltipFor(null)}
         role="slider"
@@ -462,7 +557,12 @@ const Slider: React.FC<SliderProps> = ({
 
   return (
     <div className={sliderClasses} style={style}>
-      <div ref={sliderRef} className="slider-rail" onClick={handleTrackClick}>
+      <div
+        ref={sliderRef}
+        className="slider-rail"
+        onMouseDown={handleRailPointerDown}
+        onTouchStart={handleRailPointerDown}
+      >
         {renderTrack()}
         {range ? (
           <>

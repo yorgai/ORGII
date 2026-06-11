@@ -53,7 +53,6 @@ export * from "./integrationsToolbarAtom";
 export * from "./kanbanViewStateAtom";
 export * from "./kanbanReplayAtom";
 export * from "./opsControlCreatorAtom";
-export * from "./mobileRemoteAtom";
 export * from "./modelSelectorAtom";
 export * from "./settingsToolbarAtom";
 export * from "./globalTabsTypes";

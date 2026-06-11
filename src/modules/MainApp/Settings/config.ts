@@ -25,7 +25,6 @@ export interface SettingsSectionConfig {
 export const SECTION_IDS = {
   GENERAL: "general",
   APPEARANCE: "appearance",
-  MOBILE_REMOTE: "mobile-remote",
   EDITOR: "editor",
 
   MONITOR: "monitor",

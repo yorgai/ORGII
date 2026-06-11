@@ -193,7 +193,7 @@ export function useGlobalKeydownShortcuts(
           if (event.code === "KeyG") {
             event.preventDefault();
             event.stopPropagation();
-            shortcutRegistry.dispatch("toggle_gui_control");
+            shortcutRegistry.dispatch("toggle_ade_manager");
             return;
           }
           if (event.code === "KeyU") {

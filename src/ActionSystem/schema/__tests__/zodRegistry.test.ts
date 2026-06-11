@@ -109,7 +109,7 @@ describe("ZodActionRegistry", () => {
     });
   });
 
-  describe("getByLayer / getIDEExposedActions", () => {
+  describe("getByLayer / getADEExposedActions", () => {
     let registry: ZodActionRegistry;
 
     beforeEach(() => {
@@ -160,8 +160,8 @@ describe("ZodActionRegistry", () => {
       expect(actionActions.map((a) => a.meta.id)).toEqual(["layer.actionOnly"]);
     });
 
-    it("getIDEExposedActions returns only gui-layer actions", () => {
-      const exposed = registry.getIDEExposedActions();
+    it("getADEExposedActions returns only gui-layer actions", () => {
+      const exposed = registry.getADEExposedActions();
       const ids = exposed.map((a) => a.meta.id).sort();
 
       expect(ids).toEqual(["layer.guiDefault", "layer.guiExplicit"]);

@@ -89,5 +89,10 @@ export function buildSessionMenuItem({
         ? undefined
         : renderStatusDot(statusDotTone),
     shortcut: formatRelativeTime(timestampSrc, "nano"),
+    dragPayload: {
+      path: `session://${session.session_id}`,
+      name: displayName,
+      iconType: "session",
+    },
   };
 }

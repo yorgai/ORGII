@@ -4,6 +4,8 @@
 import type { LucideIcon } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 
+import type { TabDragPillPayload } from "@src/modules/WorkStation/shared/TabBar/tabDragTypes";
+
 export interface NavigationMenuRowAction {
   icon?: LucideIcon;
   label: string;
@@ -54,4 +56,10 @@ export interface NavigationMenuItem {
   shortcut?: string;
   disabled?: boolean;
   dataTestId?: string;
+  /**
+   * When set, the row becomes draggable. Dropping it onto a chat input or
+   * session creator inserts a context pill using the existing tab-drag-end
+   * event system.
+   */
+  dragPayload?: TabDragPillPayload;
 }

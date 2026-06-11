@@ -13,14 +13,14 @@ import { upsertSession } from "@src/store/session/sessionAtom";
 import { BUILTIN_ADE_MANAGER_DEF_ID } from "@src/util/session/sessionDispatch";
 
 import {
-  GUI_CONTROL_AGENT_EXEC_MODE,
-  GUI_CONTROL_AGENT_ICON_ID,
-  GUI_CONTROL_AGENT_NAME,
-  GUI_CONTROL_SESSION_NAME,
+  ADE_MANAGER_AGENT_EXEC_MODE,
+  ADE_MANAGER_AGENT_ICON_ID,
+  ADE_MANAGER_AGENT_NAME,
+  ADE_MANAGER_SESSION_NAME,
 } from "./constants";
-import type { GuiControlActivityItem, GuiControlActivityStatus } from "./types";
+import type { AdeManagerActivityItem, AdeManagerActivityStatus } from "./types";
 
-export const EMPTY_GUI_CONTROL_EVENTS_ATOM = atom<SessionEvent[]>([]);
+export const EMPTY_ADE_MANAGER_EVENTS_ATOM = atom<SessionEvent[]>([]);
 
 export function resolveControlModel(selection: LastModelSelection | null): {
   keySource: string;
@@ -79,15 +79,15 @@ function formatGuiAction(action: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function getActivityStatus(event: SessionEvent): GuiControlActivityStatus {
+function getActivityStatus(event: SessionEvent): AdeManagerActivityStatus {
   if (event.displayStatus === "failed") return "failed";
   if (event.displayStatus === "running" || event.isDelta) return "running";
   return "completed";
 }
 
-export function toGuiControlActivityItem(
+export function toAdeManagerActivityItem(
   event: SessionEvent
-): GuiControlActivityItem | null {
+): AdeManagerActivityItem | null {
   if (event.source === "user") return null;
 
   const toolName = event.uiCanonical || event.functionName;
@@ -132,22 +132,22 @@ export function toGuiControlActivityItem(
   return null;
 }
 
-export function upsertGuiControlSession(result: SessionLaunchResult): void {
+export function upsertAdeManagerSession(result: SessionLaunchResult): void {
   upsertSession({
     session_id: result.sessionId,
     status: result.status,
     created_at: result.createdAt,
     updated_at: result.createdAt,
     user_input: result.userInput || result.name,
-    name: result.name || GUI_CONTROL_SESSION_NAME,
+    name: result.name || ADE_MANAGER_SESSION_NAME,
     branch: result.branch ?? "",
     is_active: true,
     category: DISPATCH_CATEGORY.RUST_AGENT,
     model: result.model,
-    agentExecMode: GUI_CONTROL_AGENT_EXEC_MODE,
+    agentExecMode: ADE_MANAGER_AGENT_EXEC_MODE,
     agentDefinitionId: BUILTIN_ADE_MANAGER_DEF_ID,
-    agentIconId: GUI_CONTROL_AGENT_ICON_ID,
-    agentDisplayName: GUI_CONTROL_AGENT_NAME,
+    agentIconId: ADE_MANAGER_AGENT_ICON_ID,
+    agentDisplayName: ADE_MANAGER_AGENT_NAME,
     ...(result.accountId ? { accountId: result.accountId } : {}),
     ...(result.background ? { background: true } : {}),
     ...(result.workspacePath ? { repoPath: result.workspacePath } : {}),

@@ -2,10 +2,10 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { DraftingCompass } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-import { sendIdeActionResult } from "@src/api/tauri/agent";
+import { sendAdeActionResult } from "@src/api/tauri/agent";
 import { DISPATCH_CATEGORY } from "@src/api/tauri/session";
-import { SessionCreatorChatPanel } from "@src/features/SessionCreator/variants";
-import { pendingSessionProposal } from "@src/modules/WorkStation/Browser/hooks/osagent/useOSAgentIDEActions";
+import { pendingSessionProposal } from "@src/engines/SessionCore/hooks/useAgentADEActions";
+import SessionCreatorChatPanel from "@src/features/SessionCreator/variants/ChatPanel";
 import { UnifiedModelPalette } from "@src/scaffold/GlobalSpotlight/palettes/UnifiedModelPalette";
 import type { BasePaletteProps } from "@src/scaffold/GlobalSpotlight/shared";
 import { modelSelectorAtom } from "@src/store/ui/modelSelectorAtom";
@@ -16,8 +16,11 @@ import { AgentControlStatus } from "./AgentControlStatus";
 import { AgentControlToolbar } from "./AgentControlToolbar";
 import { useAgentControlPalette } from "./useAgentControlPalette";
 
+export type { AdeManagerSubmitDetail } from "./types";
 export type { GuiControlSubmitDetail } from "./types";
 export {
+  ADE_MANAGER_SUBMIT_EVENT,
+  ADE_MANAGER_TOGGLE_SHORTCUT_ID,
   GUI_CONTROL_SUBMIT_EVENT,
   GUI_CONTROL_TOGGLE_SHORTCUT_ID,
 } from "./constants";
@@ -74,7 +77,7 @@ const ProposalCreatorPanel: React.FC<ProposalCreatorPanelProps> = ({
       const proposal = pendingSessionProposal.current;
       if (proposal) {
         pendingSessionProposal.current = null;
-        void sendIdeActionResult(proposal.correlationId, {
+        void sendAdeActionResult(proposal.correlationId, {
           success: true,
           message: `Session created: ${info.sessionId}`,
           data: { sessionId: info.sessionId },
@@ -127,12 +130,13 @@ export interface AgentControlPaletteProps extends BasePaletteProps {
 export const AgentControlPalette: React.FC<AgentControlPaletteProps> = ({
   isOpen,
   onClose,
+  onGoBackToParent,
   asBody = false,
 }) => {
   const selectorState = useAtomValue(modelSelectorAtom);
   const setSelectorState = useSetAtom(modelSelectorAtom);
   const isModelOpen = selectorState.isOpen;
-  const palette = useAgentControlPalette({ isOpen, onClose });
+  const palette = useAgentControlPalette({ isOpen, onClose, onGoBackToParent });
 
   const handleOpenModelSelector = useCallback(() => {
     setSelectorState({ isOpen: true });
@@ -155,6 +159,7 @@ export const AgentControlPalette: React.FC<AgentControlPaletteProps> = ({
         kernel={palette.kernel}
         items={palette.items}
         path={palette.modePath}
+        onRemoveSegment={onGoBackToParent ?? onClose}
         placeholder={palette.placeholder}
         inputTrailingSlot={inputTrailingSlot}
         contentOverride={null}

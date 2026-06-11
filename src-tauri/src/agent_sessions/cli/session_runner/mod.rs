@@ -4,19 +4,27 @@
 //! stores ActivityChunks, and broadcasts them via WebSocket.
 //!
 //! Submodules:
-//! - `helpers`       — shared state, emit_chunk, image persistence
-//! - `command`       — CLI command building and parser factory
-//! - `session`       — core run_session function
-//! - `lifecycle`     — kill, cancel, cleanup
-//! - `proxy_release` — market proxy token release
-//! - `cursor_usage`  — Cursor Dashboard API token tracking
+//! - `helpers`        — shared state, emit_chunk, image persistence
+//! - `command`        — CLI command building and parser factory
+//! - `session`        — core run_session function
+//! - `lifecycle`      — kill, cancel, cleanup
+//! - `proxy_release`  — market proxy token release
+//! - `cursor_usage`   — Cursor Dashboard API token tracking
+//! - `context_bridge` — prior-conversation injection for CLI sessions
+//! - `oauth_setup`    — OAuth auth file writing and retry detection
+//! - `plan_approval`  — plan detection and approval card registration
+//! - `token_sync`     — post-run token sync back to key vault
 
 mod command;
+mod context_bridge;
 mod cursor_usage;
 mod helpers;
 mod lifecycle;
+mod oauth_setup;
+mod plan_approval;
 mod proxy_release;
 mod session;
+mod token_sync;
 
 pub use helpers::RUNNING_SESSIONS;
 pub use lifecycle::{

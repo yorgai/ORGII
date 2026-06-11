@@ -7,13 +7,15 @@
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-use super::claude_code_db::{self, ClaudeCodeSession};
-use super::claude_code_history;
+use super::claude_code::db as claude_code_db;
+use super::claude_code::db::ClaudeCodeSession;
+use super::claude_code::history as claude_code_history;
 use super::cli_session_db::{self, CliSession};
-use super::codex_app;
+use super::codex::app as codex_app;
 use super::collector;
-use super::cursor_db::{self, CursorSession};
-use super::cursor_db_history;
+use super::cursor::db as cursor_db;
+use super::cursor::db::CursorSession;
+use super::cursor::history as cursor_db_history;
 use super::heartbeat_import;
 use super::ide_detector;
 use super::queries;
@@ -21,7 +23,7 @@ use super::types::{
     CodingSession, DailySummary, DetectedIde, FileHotspot, HeatmapCell, IdeUsageStat, LanguageStat,
     StreakInfo,
 };
-use super::windsurf_history;
+use super::windsurf::history as windsurf_history;
 
 #[tauri::command]
 pub async fn dev_record_get_summary(

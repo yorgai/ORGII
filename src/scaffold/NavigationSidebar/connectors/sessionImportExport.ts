@@ -112,11 +112,18 @@ export interface SessionImportResult extends SessionImportPreview {
   importedEventCount: number;
 }
 
+type ExportableCategory = "cli_agent" | "rust_agent" | "cursor_ide";
+
 function inferCategory(
   sessionId: string,
   explicit?: DispatchCategory
-): DispatchCategory {
-  if (explicit) return explicit;
+): ExportableCategory {
+  if (
+    explicit === "cli_agent" ||
+    explicit === "rust_agent" ||
+    explicit === "cursor_ide"
+  )
+    return explicit;
   if (isCursorIdeSession(sessionId)) return "cursor_ide";
   if (isCliSession(sessionId)) return "cli_agent";
   return "rust_agent";
@@ -386,6 +393,8 @@ export function formatCategoryLabel(
       return t("chat.importExport.categories.rust");
     case "cursor_ide":
       return t("chat.importExport.categories.cursorIde");
+    case "external_history":
+      return t("chat.importExport.categories.externalHistory");
   }
 }
 

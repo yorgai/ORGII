@@ -1,5 +1,5 @@
 {
-  "guiControl": {
+  "adeManager": {
     "enabledLabel": "Agent Control：开启",
     "disabledLabel": "Agent Control：关闭",
     "enableAction": "开启 Agent Control",
@@ -1573,7 +1573,8 @@
     "disableDockAutoHide": "始终显示工作站 Dock",
     "openMyStation": "前往我的工作站",
     "openAgentStation": "前往 Agent 工作站",
-    "openOpsControl": "前往 Ops Control"
+    "openOpsControl": "前往 Ops Control",
+    "changeLanguage": "更改语言"
   },
   "commands": {
     "showBottomPanel": "显示底部面板",

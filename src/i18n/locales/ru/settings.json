@@ -14,7 +14,6 @@
   "sections": {
     "general": "Общие",
     "appearance": "Внешний вид",
-    "mobileRemote": "Удалённое управление",
     "shortcuts": "Сочетания клавиш",
     "notifications": "Уведомления",
     "codeEditor": "Редактор кода",
@@ -1255,104 +1254,6 @@
     "tabApp": "Приложение",
     "tabCodeEditor": "Редактор кода",
     "tabChatPanel": "Панель чата"
-  },
-  "mobileRemote": {
-    "_translation_status": "draft",
-    "title": "Мобильное удаленное управление",
-    "description": "Управляйте настольными Agent с телефона. Привяжите устройство, чтобы начать.",
-    "comingSoon": "Скоро",
-    "pairButton": "Привязать новое устройство",
-    "pairedListTitle": "Привязанные устройства",
-    "emptyState": {
-      "title": "Привязанных устройств пока нет",
-      "body": "Настройте Relay-сервер и привяжите телефон, чтобы управлять сессиями удаленно.",
-      "ctaPair": "Привязать телефон"
-    },
-    "relayUrl": {
-      "label": "Relay URL",
-      "default": "По умолчанию ({{url}})",
-      "custom": "Пользовательский ({{url}})",
-      "edit": "Изменить Relay URL",
-      "placeholder": "https://relay.example.com",
-      "helperText": "Укажите HTTPS-адрес вашего развертывания orgii-mobile-relay. Оставьте поле пустым, чтобы вернуть встроенное значение по умолчанию.",
-      "invalidUrl": "Введите корректный URL вида http:// или https://.",
-      "reset": "Сбросить к значению по умолчанию"
-    },
-    "tier": {
-      "readOnly": "Только чтение",
-      "fullControl": "Полный контроль"
-    },
-    "tierPicker": {
-      "label": "Уровень доступа",
-      "readOnlyDescription": "Только просмотр сессий и чтение сообщений.",
-      "fullControlDescription": "Отправка сообщений и выполнение действий от вашего имени."
-    },
-    "labelInput": {
-      "placeholder": "Имя устройства (например, iPhone)"
-    },
-    "pairingDialog": {
-      "title": "Привязать новое устройство",
-      "scanInstruction": "Откройте PWA ORGII на телефоне и отсканируйте этот QR-код.",
-      "confirmPhraseInstruction": "На телефоне подтвердите совпадение фразы перед одобрением.",
-      "confirmPhraseLabel": "Фраза подтверждения",
-      "waitingForMobile": "Ожидание подтверждения с мобильного устройства...",
-      "preparing": "Подготовка сессии привязки...",
-      "success": "Устройство успешно привязано",
-      "errorTitle": "Ошибка привязки",
-      "start": "Сгенерировать QR",
-      "retry": "Повторить",
-      "cancel": "Отмена"
-    },
-    "deviceCard": {
-      "lastSeen": "Последнее подключение {{relativeTime}}",
-      "never": "Никогда не подключалось",
-      "revoke": "Отозвать",
-      "setPrimary": "Сделать основным",
-      "primaryBadge": "Основное"
-    },
-    "relativeTime": {
-      "justNow": "только что",
-      "minutesAgo": "{{count}} мин. назад",
-      "hoursAgo": "{{count}} ч. назад",
-      "daysAgo": "{{count}} дн. назад"
-    },
-    "errors": {
-      "pairInitFailed": "Не удалось начать сессию привязки. Проверьте URL Relay и повторите попытку.",
-      "codeExpired": "Срок действия кода привязки истек. Начните новую сессию.",
-      "unknown": "Ошибка при связи с Relay"
-    },
-    "hosting": {
-      "title": "Где должен работать Relay?",
-      "subtitle": "Relay — это посредник, через который ваш телефон достигает этого десктопа. Выберите вариант, подходящий вашему сценарию, и вставьте его URL в поле Relay URL ниже.",
-      "copyCommand": "Скопировать команду",
-      "cost": {
-        "free": "Бесплатно"
-      },
-      "setupTime": {
-        "fifteenMin": "15 мин"
-      },
-      "reachableFrom": {
-        "public": "Откуда угодно"
-      },
-      "tunnel": {
-        "title": "Cloudflare Tunnel (бесплатный публичный URL)",
-        "summary": "Открывает локальный Relay через HTTPS-имя хоста, управляемое Cloudflare. Без VPS, без проброса портов, без статического IP.",
-        "step1": "1. Установите cloudflared (один раз):",
-        "step2": "2. Запустите Relay локально:",
-        "step3": "3. В другом терминале откройте tunnel:",
-        "step4": "4. Cloudflare выведет URL вида https://random-name.trycloudflare.com — вставьте его в поле Relay URL ниже.",
-        "note": "URL trycloudflare.com является временным. Для стабильного имени хоста зарегистрируйте аккаунт Cloudflare и следуйте их руководству по named tunnel."
-      }
-    },
-    "devices": {
-      "tier": {
-        "readOnly": "Только чтение",
-        "full": "Полный контроль"
-      },
-      "lastSeen": "Последнее подключение {{relativeTime}}",
-      "primary": "Основное",
-      "revoke": "Отозвать"
-    }
   },
   "editPanel": {
     "addAction": "Добавить действие",

@@ -105,12 +105,6 @@ export function buildImperativeApi(
     },
     getSnapshot: () => ctx.captureSnapshot(),
     setContent: (content) => {
-      // TEMP DIAG [draft-bug]
-      console.trace("[draft-bug] ComposerInput.setContent", {
-        type: typeof content === "string" ? "string" : "snapshot",
-        length: typeof content === "string" ? content.length : null,
-        preview: typeof content === "string" ? content.slice(0, 40) : undefined,
-      });
       if (typeof content === "string") {
         ctx.setHostContent(content);
       } else {
@@ -118,8 +112,6 @@ export function buildImperativeApi(
       }
     },
     clear: () => {
-      // TEMP DIAG [draft-bug]
-      console.trace("[draft-bug] ComposerInput.clear() called");
       ctx.clearHost();
     },
     focus: () => {

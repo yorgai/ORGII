@@ -81,6 +81,7 @@ function modelLabelOf(model: CursorModelEntry): string {
 export const CursorModelPalette: React.FC<CursorModelPaletteProps> = ({
   isOpen,
   onClose,
+  onGoBackToParent,
   models,
   modelSource,
   effectiveModel,
@@ -218,6 +219,25 @@ export const CursorModelPalette: React.FC<CursorModelPaletteProps> = ({
     ]
   );
 
+  const handleExternalKeyDown = useCallback(
+    (
+      event: React.KeyboardEvent<HTMLInputElement>,
+      internalHandleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void
+    ) => {
+      if (
+        (event.key === "Backspace" || event.key === "Delete") &&
+        searchQuery === "" &&
+        onGoBackToParent
+      ) {
+        event.preventDefault();
+        onGoBackToParent();
+        return;
+      }
+      internalHandleKeyDown(event);
+    },
+    [searchQuery, onGoBackToParent]
+  );
+
   const kernel = useSelectorKernel({
     isOpen,
     onClose,
@@ -226,6 +246,7 @@ export const CursorModelPalette: React.FC<CursorModelPaletteProps> = ({
     onTab: handleSectionTab,
     externalSearchQuery: searchQuery,
     externalSetSearchQuery: setSearchQuery,
+    externalHandleKeyDown: onGoBackToParent ? handleExternalKeyDown : undefined,
   });
 
   // Mirror the UnifiedModelPalette wording so every model picker in
@@ -265,6 +286,7 @@ export const CursorModelPalette: React.FC<CursorModelPaletteProps> = ({
         kernel={kernel}
         items={filteredItems}
         path={path}
+        onRemoveSegment={onGoBackToParent ?? onClose}
         placeholder={placeholder}
         containerHeight={Math.min(120 + items.length * 40, 380)}
         isLoading={loading}

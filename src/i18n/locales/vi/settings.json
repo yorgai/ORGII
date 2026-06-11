@@ -14,7 +14,6 @@
   "sections": {
     "general": "Chung",
     "appearance": "Giao diện",
-    "mobileRemote": "Điều khiển từ xa",
     "shortcuts": "Phím tắt bàn phím",
     "notifications": "Thông báo",
     "codeEditor": "Trình soạn mã",
@@ -1254,103 +1253,6 @@
     "tabApp": "Ứng dụng",
     "tabCodeEditor": "Trình soạn thảo mã",
     "tabChatPanel": "Bảng trò chuyện"
-  },
-  "mobileRemote": {
-    "title": "Điều khiển từ xa di động",
-    "description": "Điều khiển các Agent trên máy tính từ điện thoại. Ghép nối thiết bị để bắt đầu.",
-    "comingSoon": "Sắp ra mắt",
-    "pairButton": "Ghép nối thiết bị mới",
-    "pairedListTitle": "Thiết bị đã ghép nối",
-    "emptyState": {
-      "title": "Chưa có thiết bị nào được ghép nối",
-      "body": "Thiết lập máy chủ Relay và ghép nối điện thoại để điều khiển phiên từ xa.",
-      "ctaPair": "Ghép nối điện thoại"
-    },
-    "relayUrl": {
-      "label": "Relay URL",
-      "default": "Mặc định ({{url}})",
-      "custom": "Tùy chỉnh ({{url}})",
-      "edit": "Chỉnh sửa Relay URL",
-      "placeholder": "https://relay.example.com",
-      "helperText": "Nhập địa chỉ HTTPS của bản triển khai orgii-mobile-relay của bạn. Để trống để khôi phục giá trị mặc định đi kèm.",
-      "invalidUrl": "Nhập một URL http:// hoặc https:// hợp lệ.",
-      "reset": "Khôi phục mặc định"
-    },
-    "tier": {
-      "readOnly": "Chỉ đọc",
-      "fullControl": "Toàn quyền"
-    },
-    "tierPicker": {
-      "label": "Cấp quyền",
-      "readOnlyDescription": "Chỉ xem phiên và đọc tin nhắn.",
-      "fullControlDescription": "Gửi tin nhắn và kích hoạt hành động thay bạn."
-    },
-    "labelInput": {
-      "placeholder": "Tên thiết bị (vd. iPhone)"
-    },
-    "pairingDialog": {
-      "title": "Ghép nối thiết bị mới",
-      "scanInstruction": "Mở ORGII PWA trên điện thoại và quét mã QR này.",
-      "confirmPhraseInstruction": "Xác nhận trên điện thoại rằng cụm từ này khớp trước khi phê duyệt.",
-      "confirmPhraseLabel": "Cụm từ xác nhận",
-      "waitingForMobile": "Đang chờ thiết bị di động xác nhận...",
-      "preparing": "Đang chuẩn bị phiên ghép nối...",
-      "success": "Đã ghép nối thiết bị thành công",
-      "errorTitle": "Ghép nối thất bại",
-      "start": "Tạo QR",
-      "retry": "Thử lại",
-      "cancel": "Hủy"
-    },
-    "deviceCard": {
-      "lastSeen": "Lần cuối hoạt động {{relativeTime}}",
-      "never": "Chưa từng kết nối",
-      "revoke": "Thu hồi",
-      "setPrimary": "Đặt làm thiết bị chính",
-      "primaryBadge": "Thiết bị chính"
-    },
-    "relativeTime": {
-      "justNow": "vừa xong",
-      "minutesAgo": "{{count}} phút trước",
-      "hoursAgo": "{{count}} giờ trước",
-      "daysAgo": "{{count}} ngày trước"
-    },
-    "errors": {
-      "pairInitFailed": "Không thể bắt đầu phiên ghép nối. Hãy kiểm tra URL Relay và thử lại.",
-      "codeExpired": "Mã ghép nối đã hết hạn. Vui lòng bắt đầu phiên mới.",
-      "unknown": "Đã xảy ra lỗi khi giao tiếp với Relay"
-    },
-    "hosting": {
-      "title": "Relay nên chạy ở đâu?",
-      "subtitle": "Relay là máy chủ trung gian giúp điện thoại của bạn truy cập máy desktop này. Hãy chọn phương án phù hợp với cách bạn sử dụng, sau đó dán URL của nó vào ô Relay URL bên dưới.",
-      "copyCommand": "Sao chép lệnh",
-      "cost": {
-        "free": "Miễn phí"
-      },
-      "setupTime": {
-        "fifteenMin": "15 phút"
-      },
-      "reachableFrom": {
-        "public": "Mọi nơi"
-      },
-      "tunnel": {
-        "title": "Cloudflare Tunnel (miễn phí, URL công khai)",
-        "summary": "Phơi bày Relay cục bộ qua tên máy chủ HTTPS do Cloudflare quản lý. Không cần VPS, không cần port forwarding, không cần IP cố định.",
-        "step1": "1. Cài đặt cloudflared (một lần):",
-        "step2": "2. Khởi động Relay cục bộ:",
-        "step3": "3. Trong terminal thứ hai, mở tunnel:",
-        "step4": "4. Cloudflare in ra URL dạng https://random-name.trycloudflare.com — dán URL đó vào ô Relay URL bên dưới.",
-        "note": "URL trycloudflare.com chỉ tạm thời. Để có tên máy chủ ổn định, đăng ký tài khoản Cloudflare và làm theo hướng dẫn named tunnel của họ."
-      }
-    },
-    "devices": {
-      "tier": {
-        "readOnly": "Chỉ đọc",
-        "full": "Toàn quyền"
-      },
-      "lastSeen": "Lần cuối hoạt động {{relativeTime}}",
-      "primary": "Thiết bị chính",
-      "revoke": "Thu hồi"
-    }
   },
   "editPanel": {
     "addAction": "Thêm hành động",

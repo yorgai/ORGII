@@ -68,7 +68,11 @@ impl Tool for SuggestNextStepsTool {
         params_schema::<SuggestNextStepsParams>()
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let parsed: SuggestNextStepsParams = parse_params(params)?;
 
         if parsed.steps.is_empty() {

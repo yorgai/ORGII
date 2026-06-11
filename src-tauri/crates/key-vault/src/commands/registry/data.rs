@@ -158,29 +158,6 @@ pub(super) fn cli_agent_registry() -> Vec<CliAgentEntry> {
             paired_api_provider: Some("moonshot_api"),
             supports_rust_agents: true,
         },
-        CliAgentEntry {
-            name: "opencode",
-            display_name: "OpenCode",
-            binary: "opencode",
-            description: "Open source AI coding agent for the terminal (75+ providers)",
-            brand_color: "#FF6B35",
-            docs_url: "https://opencode.ai/docs/cli/",
-            has_subscription_plan: false,
-            compatible_api_providers: &[
-                "anthropic_api",
-                "openai_api",
-                "deepseek_api",
-                "gemini_api",
-                "openrouter_api",
-                "moonshot_api",
-            ],
-            is_complex_setup: false,
-            default_setup_method: None,
-            popular: false,
-            icon_provider: "opencode",
-            paired_api_provider: None,
-            supports_rust_agents: true,
-        },
     ]
 }
 
@@ -351,17 +328,6 @@ pub(super) fn api_provider_registry() -> Vec<ApiProviderEntry> {
             popular: false,
             supports_rust_agents: true,
         },
-        ApiProviderEntry {
-            name: "orgii_orchestrator",
-            display_name: "ORGII Token Market",
-            description: "Pay-per-use via ORGII Token Market",
-            brand_color: "#F59E0B",
-            docs_url: "https://soyd.ai/docs/token-market",
-            icon_provider: "orgii",
-            paired_cli_agent: None,
-            popular: false,
-            supports_rust_agents: false,
-        },
     ]
 }
 
@@ -455,15 +421,6 @@ pub(super) fn cli_install_methods(name: &str) -> Vec<CliInstallMethod> {
             ),
             m("uv", "uv", "uv tool install --python 3.13 kimi-cli"),
         ],
-        "opencode" => vec![
-            m(
-                "curl",
-                "curl",
-                "curl -fsSL https://opencode.ai/install | bash",
-            ),
-            m("npm", "npm", "npm install -g opencode-ai"),
-            m("homebrew", "Homebrew", "brew install anomalyco/tap/opencode"),
-        ],
         // The caller iterates `cli_agent_registry()` entries, so any
         // CLI agent that ships in the registry but has no install_methods
         // entry here would silently render the "Install" UI as a no-op.
@@ -514,15 +471,6 @@ pub(super) fn cli_uninstall_methods(name: &str) -> Vec<CliInstallMethod> {
         ],
         "gemini_cli" => vec![m("npm", "npm", "npm uninstall -g @google/gemini-cli")],
         "kimi_cli" => vec![m("uv", "uv", "uv tool uninstall kimi-cli")],
-        "opencode" => vec![
-            m("native", "Native", "opencode uninstall"),
-            m("npm", "npm", "npm uninstall -g opencode-ai"),
-            m(
-                "homebrew",
-                "Homebrew",
-                "brew uninstall anomalyco/tap/opencode",
-            ),
-        ],
         // Same fail-loud principle as `cli_install_methods` above.
         other => {
             tracing::warn!(
@@ -596,13 +544,6 @@ pub(super) fn cli_env_config(name: &str) -> Option<AgentEnvConfig> {
             true,
             "codeAccounts.apiKeyPlaceholder.kimi_cli",
             Some("https://api.moonshot.cn/v1"),
-        )),
-        "opencode" => Some(cfg(
-            "OPENCODE_API_KEY",
-            None,
-            false,
-            "codeAccounts.apiKeyPlaceholder.opencode",
-            None,
         )),
         // The caller iterates `cli_agent_registry()` entries, so a CLI
         // agent that ships in the registry but has no env config here

@@ -126,7 +126,7 @@ export interface AgentWSEvent {
   files?: string[];
   workspacePath?: string;
   todos?: unknown[];
-  /** OS Agent: IDE action correlation (agent:ide_action) */
+  /** OS Agent: ADE action correlation (agent:ade_action) */
   correlationId?: string;
   operation?: "list" | "inspect" | "dispatch";
   action?: string;

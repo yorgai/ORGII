@@ -42,9 +42,6 @@
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 use tauri::Manager;
 
-const DEFAULT_WORKTREE_CLEANUP_INTERVAL_HOURS: u64 = 6;
-const WORKTREE_CLEANUP_INTERVAL_SETTING: &str = "git.worktree.cleanupIntervalHours";
-
 #[cfg(unix)]
 fn write_panic_report_to_stderr(report: &str) {
     unsafe {
@@ -71,9 +68,12 @@ pub mod api;
 pub mod benchmark;
 pub mod cursor_ide_watch; // cursor_ide streaming delta watch commands
 pub mod infrastructure; // In-tree-only cross-cutting infrastructure (paths, platform, archive, index_manager, jsonrpc, housekeeping). Leaf pieces live in their own workspace crates.
+pub(crate) mod setup;
 
 #[cfg(test)]
 pub mod test_utils;
+
+use crate::setup::*;
 
 use infrastructure::index_manager::IndexManager;
 
@@ -108,277 +108,6 @@ use infrastructure::index_manager::IndexManager;
 /// // Called from main.rs
 /// app_lib::run();
 /// ```
-/// Prune stale agent worktrees whose sessions no longer exist in the DB.
-fn prune_stale_agent_worktrees() -> Result<(), String> {
-    let cli_sessions = agent_sessions::cli::persistence::list_sessions()
-        .map_err(|err| format!("DB error listing CLI sessions: {}", err))?;
-    let rust_sessions = agent_core::session::persistence::list_sessions(
-        &agent_core::session::SessionListFilter::default(),
-    )
-    .map_err(|err| format!("DB error listing Rust agent sessions: {}", err))?;
-
-    let active_ids: Vec<String> = cli_sessions
-        .iter()
-        .map(|session| session.session_id.clone())
-        .chain(
-            rust_sessions
-                .iter()
-                .map(|session| session.session_id.clone()),
-        )
-        .collect();
-
-    // Group sessions by repo_path/workspace_path so we prune per-repo.
-    let mut repos_seen = std::collections::HashSet::new();
-    for session in &cli_sessions {
-        if let Some(ref repo_path) = session.repo_path {
-            if !repo_path.is_empty() {
-                repos_seen.insert(repo_path.clone());
-            }
-        }
-    }
-    for session in &rust_sessions {
-        if let Some(ref workspace_path) = session.workspace_path {
-            if !workspace_path.is_empty() {
-                repos_seen.insert(workspace_path.clone());
-            }
-        }
-    }
-
-    let mut total_pruned = 0u32;
-    for repo_path in &repos_seen {
-        let repo = std::path::Path::new(repo_path);
-        if !repo.is_dir() {
-            continue;
-        }
-        match git::worktree::prune_stale_worktrees(repo, &active_ids) {
-            Ok(pruned) => total_pruned += pruned,
-            Err(err) => tracing::warn!(
-                "[worktree] Failed to prune worktrees for {}: {}",
-                repo_path,
-                err
-            ),
-        }
-    }
-
-    if total_pruned > 0 {
-        tracing::info!("[worktree] Pruned {} stale agent worktrees", total_pruned);
-    }
-
-    Ok(())
-}
-
-fn worktree_cleanup_interval_hours() -> u64 {
-    settings::file_io::read_settings()
-        .ok()
-        .and_then(|settings| {
-            settings
-                .get(WORKTREE_CLEANUP_INTERVAL_SETTING)
-                .and_then(|value| value.as_u64())
-        })
-        .filter(|hours| *hours > 0)
-        .unwrap_or(DEFAULT_WORKTREE_CLEANUP_INTERVAL_HOURS)
-}
-
-async fn run_worktree_cleanup_loop() {
-    loop {
-        if let Err(err) = prune_stale_agent_worktrees() {
-            tracing::warn!("[worktree] Failed to prune stale agent worktrees: {}", err);
-        }
-
-        tokio::time::sleep(std::time::Duration::from_secs(
-            worktree_cleanup_interval_hours().saturating_mul(60 * 60),
-        ))
-        .await;
-    }
-}
-
-/// Wire the per-domain schema initializers into the `database` crate's
-/// dispatcher.
-///
-/// `database` is a leaf crate (it doesn't depend on `app`), so each domain
-/// module's `init_*_tables` is registered here as a function pointer. The
-/// dispatcher then runs them in this order on the first call to
-/// `database::db::get_connection()` / `get_projects_connection()` — once
-/// per physical DB path per process.
-///
-/// Tests get the same registration via `test_utils::test_env::prime_schema`.
-fn register_database_schemas() {
-    fn init_sessions(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
-        session_persistence::init_session_tables(conn)?;
-
-        agent_core::persistence::session_snapshots::ensure_tables_with(conn)?;
-        agent_core::session::persistence::init(conn)?;
-
-        agent_sessions::cli::init_cli_agent_tables(conn)?;
-
-        inbox::init_inbox_tables(conn)?;
-
-        // Drop legacy knowledge graph tables (removed in the L3 memory rebuild).
-        // IF EXISTS is safe on fresh installs. Best-effort: any error is non-fatal.
-        let _ = conn.execute_batch(
-            "DROP TABLE IF EXISTS kg_entities_fts;\n\
-             DROP TABLE IF EXISTS kg_relations;\n\
-             DROP TABLE IF EXISTS kg_entities;\n\
-             DROP TABLE IF EXISTS group_chat_session_links;\n\
-             DROP TABLE IF EXISTS group_chat_messages;\n\
-             DROP TABLE IF EXISTS group_chat_members;\n\
-             DROP TABLE IF EXISTS group_chats;",
-        );
-
-        dev_record::schema::init_tables(conn)?;
-
-        project_management::lineage::schema::init_lineage_tables(conn)?;
-
-        // Orchestrator runtime state lives in `workitem_extras.extras_json`
-        // on `projects.db` — there is no longer a parallel mirror table on
-        // `sessions.db`. See `projects::io::orchestrator_view` for the read
-        // path used by orchestrator commands and recovery.
-
-        // Unified session persistence returns a non-sqlite error type; we
-        // demote it to a warning because failure here is recoverable (the
-        // unified layer is optional for most sessions).
-        if let Err(err) = agent_core::session::persistence::init(conn) {
-            tracing::warn!(
-                "[database::db] Unified session persistence init failed: {}",
-                err
-            );
-        }
-
-        agent_core::coordination::agent_org_runs::init_schema(conn)?;
-        agent_core::coordination::agent_inbox::init_schema(conn)?;
-        agent_core::coordination::agent_org_tasks::init_schema(conn)?;
-        agent_core::coordination::agent_member_interventions::init_schema(conn)?;
-
-        // Pending plan-approval snapshots (one row per session with a Build
-        // button still awaiting the user). Persists the pending action so the
-        // Build button is restored when the session is re-opened after an app
-        // restart, instead of being silently lost.
-        agent_core::interaction::plan_approval::persistence::init_schema(conn)?;
-
-        Ok(())
-    }
-
-    fn init_projects(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
-        project_management::projects::schema::init_project_tables(conn)
-    }
-
-    database::register_sessions_init(init_sessions);
-    database::register_projects_init(init_projects);
-}
-
-/// Wire the inversion-of-control hooks the `git` crate uses to call back into
-/// the rest of the app (websocket broadcast, dev_record telemetry, automation
-/// bridge). Registered once at startup before any git watcher can fire.
-fn register_git_hooks() {
-    git::hooks::register_websocket_broadcast(Box::new(|msg| {
-        api::websocket_handler::broadcast(msg);
-    }));
-    git::hooks::register_file_change(Box::new(
-        |project, file_path, lines_added, lines_removed| {
-            dev_record::collector::record_file_change(
-                project,
-                file_path,
-                lines_added,
-                lines_removed,
-            );
-        },
-    ));
-    git::hooks::register_git_event(Box::new(|ev| {
-        agent_core::automation::bridge::send_git_event(agent_core::automation::GitBroadcastEvent {
-            operation: ev.operation,
-            repo_id: ev.repo_id,
-            change_type: ev.change_type,
-        });
-    }));
-}
-
-/// Wire the inversion-of-control hook the `settings` crate uses to push
-/// settings-file changes back into `agent_core` (HTTP version preference,
-/// applied to new provider clients without restart). Registered once at
-/// startup before the settings watcher spins up so the very first change
-/// event after launch is delivered.
-fn register_settings_hooks() {
-    settings::hooks::register_on_settings_changed(Box::new(|value| {
-        if let Some(http_version) = value.get("network.httpVersion").and_then(|v| v.as_str()) {
-            let pref = agent_core::utils::HttpVersionPref::from_setting(http_version);
-            agent_core::utils::set_global_http_version_pref(pref);
-        }
-    }));
-}
-
-/// Wire the inversion-of-control hook `integrations::computer_use_lock` uses
-/// to broadcast the user-initiated abort (ESC) to the frontend. Registered
-/// once at startup so the `integrations` crate doesn't have to depend on
-/// `agent_core::bus`.
-fn register_integrations_hooks() {
-    integrations::computer_use_lock::register_abort_broadcaster(Box::new(|session_id| {
-        agent_core::bus::broadcast_event(
-            "agent:computer_use_aborted",
-            serde_json::json!({ "sessionId": session_id }),
-        );
-    }));
-}
-
-/// Wire the inversion-of-control hook the `lsp` crate uses to publish
-/// language-server diagnostics over the IDE WebSocket. Registered once at
-/// startup so the `lsp` crate never has to depend on `api::websocket_handler`.
-fn register_lsp_hooks() {
-    lsp::register_broadcast(api::websocket_handler::broadcast);
-}
-
-/// Wire the IoC hooks the `agent_core::bus` module uses to reach the IDE
-/// WebSocket / IPC layer for event broadcast and subscriber counting.
-/// Registered once at startup so `agent_core` (and the future extracted
-/// `agent-core` crate) never has to depend on `api::websocket_handler`.
-fn register_agent_core_bus_hooks() {
-    agent_core::bus::register_broadcast(api::websocket_handler::broadcast);
-    agent_core::bus::register_subscriber_count(api::websocket_handler::frontend_subscriber_count);
-}
-
-/// Wire the IoC slots `agent_core::bus::event_pipeline_bridge` uses to drive
-/// the live `EventStore` pipeline (push, notify, write-through stamps,
-/// pin/unpin, streaming flush). Registered once at startup so `agent_core`
-/// never has to depend on `agent_sessions::event_pipeline::commands`.
-fn register_event_pipeline_bridge() {
-    agent_sessions::event_pipeline::agent_core_bridge::register();
-}
-
-/// Wire the IoC slot `agent_core::foundation::db_bridge` uses to open
-/// `rusqlite::Connection`s for memory, consolidation, reflection, and
-/// learnings persistence. Registered once at startup so `agent_core`
-/// never has to depend on `session_persistence::get_connection`.
-fn register_persistence_bridge() {
-    session_persistence::agent_core_bridge::register();
-}
-
-/// Wire the `core_types::session_event::EXTRACTOR` slot to the real
-/// `event_pipeline::extractors::extract_event_data` implementation.
-/// Registered once at startup so `SessionEvent::recompute_extracted`
-/// keeps producing typed rendering envelopes after the type was lifted
-/// into `core_types`. Without this, `recompute_extracted` is a silent
-/// no-op and frontend blocks would render against raw `args`/`result`
-/// JSON.
-fn register_session_event_extractor() {
-    agent_sessions::event_pipeline::extractors::register_extractor_hook();
-}
-
-/// Wire `project_management::lineage::git_bridge` to the real
-/// `git2`-backed `get_commit_diff`. `commit_tracker` matches commit
-/// hunks against `node_provenance` and needs the diff at every commit;
-/// without this register, the slot panics with a clear message.
-fn register_lineage_git_bridge() {
-    git_api::lineage_bridge::register();
-}
-
-/// Wire the `agent_core::foundation::session_bridge::launch_cli_agent`
-/// slot to the real `cli_agent_create` + `cli_agent_run` adapter in
-/// `agent_sessions::cli::agent_core_bridge`. Paired with
-/// `register_persistence_bridge`, which fills the session_bridge's
-/// token-usage slot from the same wire crate.
-fn register_cli_launch_bridge() {
-    crate::agent_sessions::cli::agent_core_bridge::register();
-}
-
 pub fn run() {
     // Wire schema initializers into the `database` crate before any other
     // setup runs — anything that opens a connection (logging dir creation,
@@ -652,7 +381,7 @@ pub fn run() {
             // Start L3 offline consolidation tick (60s interval, fires on
             // idle/forced triggers). Non-blocking, runs on its own thread +
             // ad-hoc tokio runtime.
-            agent_core::intelligence::memory::consolidation::spawn_consolidation_tick();
+            agent_core::specialization::memory::consolidation::spawn_consolidation_tick();
 
             // Retroactive backfill: scan git history + IDE databases for offline activity,
             // then scan IDE local history for file-edit timestamps
@@ -830,41 +559,7 @@ pub fn run() {
             project_management::sync::start_worker(app.handle().clone());
             tracing::info!("[sync::worker] Sync worker started");
 
-            // Boot the mobile-remote bridge through its supervisor
-            // so subsequent Settings actions (URL change, first
-            // pairing, device revoke) can call `restart` and have
-            // the live bridge actually pick the change up. Without
-            // the supervisor the returned handle would drop here,
-            // leaving the spawned tasks orphaned and unreachable.
-            //
-            // If the user has no paired devices, the bridge stays
-            // inactive (`start` returns `Ok(None)`); the supervisor
-            // records that state and the next `pair_complete` will
-            // drive a restart.
-            let mobile_remote_app_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                let supervisor = mobile_remote::supervisor::BridgeSupervisor::global();
-                // Install the production `DispatchHost` factory before
-                // `start`. The factory captures the live `AppHandle` and
-                // builds a fresh `TauriDispatchHost` for every restart
-                // — this is what keeps `mobile_remote` a pure leaf
-                // crate (it doesn't depend on `agent_core` /
-                // `agent_sessions`; the impl lives here).
-                let factory_handle = mobile_remote_app_handle.clone();
-                supervisor
-                    .set_host_factory(move || {
-                        let h = factory_handle.clone();
-                        std::sync::Arc::new(crate::api::mobile_remote_host::TauriDispatchHost::new(
-                            h,
-                        ))
-                    })
-                    .await;
-                if let Err(err) = supervisor.start().await {
-                    tracing::warn!(?err, "[mobile_remote] bridge start failed");
-                }
-            });
-
-            // Restore previously-enabled channels (e.g. feishu was toggled on last run)
+                        // Restore previously-enabled channels (e.g. feishu was toggled on last run)
             let app_handle_for_restore = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 let state = app_handle_for_restore.state::<agent_core::state::AgentAppState>();

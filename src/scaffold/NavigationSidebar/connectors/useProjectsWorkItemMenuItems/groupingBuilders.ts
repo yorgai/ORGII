@@ -194,7 +194,13 @@ function appendLocalOrgItems(
     );
     consumedProjectIds.add(project.projectData.meta.id);
     items.push(separator(projectGroupId, project.projectData.meta.name));
-    items.push(buildProjectOverviewRow(context.t, project.projectData.slug));
+    items.push(
+      buildProjectOverviewRow(
+        context.t,
+        project.projectData.slug,
+        project.projectData.meta.name
+      )
+    );
     appendGroupItems(items, projectGroupId, projectItems, context);
   }
 
@@ -295,7 +301,8 @@ export function buildByProjectMenuItems(
     )?.projectSlug;
     items.push(separator(groupId, groupItems[0]?.projectName ?? key));
     if (projectSlug) {
-      items.push(buildProjectOverviewRow(context.t, projectSlug));
+      const projectName = groupItems[0]?.projectName ?? undefined;
+      items.push(buildProjectOverviewRow(context.t, projectSlug, projectName));
     }
     appendGroupItems(items, groupId, groupItems, context);
   }

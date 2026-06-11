@@ -35,7 +35,7 @@ import { useAppNavigation } from "@src/hooks/navigation";
 import { useAppearanceState } from "@src/modules/MainApp/Settings/sections/useAppearanceState";
 import { WorkstationToolbarTooltip } from "@src/modules/WorkStation/shared";
 import { openAgentControlSpotlight } from "@src/scaffold/GlobalSpotlight/openSpotlight";
-import { GUI_CONTROL_TOGGLE_SHORTCUT_ID } from "@src/scaffold/GlobalSpotlight/palettes/AgentControlPalette";
+import { ADE_MANAGER_TOGGLE_SHORTCUT_ID } from "@src/scaffold/GlobalSpotlight/palettes/AgentControlPalette/constants";
 import { TUTORIALS_OPEN_EVENT } from "@src/scaffold/Tutorials/tutorialRegistry";
 import { getViewportSize } from "@src/util/ui/window/viewport";
 
@@ -126,7 +126,7 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
   } = useAppearanceState();
 
   const openSettingsShortcut = getShortcutKeys("open_settings");
-  const guiControlShortcut = getShortcutKeys(GUI_CONTROL_TOGGLE_SHORTCUT_ID);
+  const guiControlShortcut = getShortcutKeys(ADE_MANAGER_TOGGLE_SHORTCUT_ID);
   const settingsButtonClassName = isOpen ? "text-primary-6" : "text-text-2";
 
   useEffect(() => {
@@ -286,7 +286,7 @@ const SidebarSettingsMenuButton: React.FC = React.memo(() => {
                     className={MENU_ICON_CLASS_NAME}
                   />
                   <span className="truncate">
-                    {t("common:guiControl.menuToggle")}
+                    {t("common:adeManager.menuToggle")}
                   </span>
                 </span>
                 <KeyboardShortcut

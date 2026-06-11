@@ -5,14 +5,16 @@
  * letting the user configure and launch a new session without leaving
  * the palette (no navigation to Agent Station).
  */
-import { X } from "lucide-react";
-import React, { useCallback } from "react";
+import { Plus } from "lucide-react";
+import React, { useCallback, useMemo } from "react";
 
 import type { SessionLaunchSuccessInfo } from "@src/engines/SessionCore/hooks/session/useSessionCreator/useSessionLaunch/types";
 import { SessionCreatorChatPanel } from "@src/features/SessionCreator/variants";
 import type { BasePaletteProps } from "@src/scaffold/GlobalSpotlight/shared";
 
+import { SpotlightPillBar } from "../../components";
 import { SpotlightShell } from "../../shell";
+import type { PathSegment } from "../../types";
 
 export interface SessionCreatorPaletteProps extends BasePaletteProps {
   asBody?: boolean;
@@ -24,6 +26,8 @@ export function SessionCreatorPalette({
   onGoBackToParent,
   asBody: _asBody,
 }: SessionCreatorPaletteProps) {
+  const handleBack = onGoBackToParent ?? onClose;
+
   const handleSessionStart = useCallback(
     (_info: SessionLaunchSuccessInfo) => {
       onClose();
@@ -31,19 +35,22 @@ export function SessionCreatorPalette({
     [onClose]
   );
 
+  const path = useMemo<PathSegment[]>(
+    () => [
+      {
+        type: "action",
+        id: "new-session",
+        label: "New Session",
+        icon: Plus,
+        color: "primary",
+      },
+    ],
+    []
+  );
+
   const body = (
     <div className="flex min-h-0 flex-col">
-      {/* Back pill */}
-      <div className="flex items-center gap-2 border-b border-border-2/40 px-3 py-2">
-        <button
-          className="flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs text-text-2 transition-colors hover:bg-fill-2 hover:text-text-1"
-          onClick={onGoBackToParent ?? onClose}
-        >
-          <X size={11} />
-          <span>New Session</span>
-        </button>
-      </div>
-
+      <SpotlightPillBar path={path} onRemoveSegment={handleBack} />
       <SessionCreatorChatPanel
         hidePresenceButton
         onSessionStart={handleSessionStart}

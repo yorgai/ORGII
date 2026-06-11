@@ -161,7 +161,11 @@ impl Tool for SearchTool {
         }
     }
 
-    async fn execute_text(&self, params: Value) -> Result<String, ToolError> {
+    async fn execute_text(
+        &self,
+        params: Value,
+        _ctx: &crate::tools::traits::CallContext,
+    ) -> Result<String, ToolError> {
         let action = required_string(&params, "action")?;
         let max_results = optional_int(&params, "max_results")
             .map(|val| val as usize)

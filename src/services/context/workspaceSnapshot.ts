@@ -98,7 +98,7 @@ export interface AppUiSnapshot {
   };
   overlays?: {
     spotlightOpen: boolean;
-    guiControlEnabled: boolean;
+    adeManagerEnabled: boolean;
   };
   visibleGuideTargets?: GuideTargetSnapshot[];
 }

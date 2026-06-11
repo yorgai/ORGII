@@ -164,7 +164,7 @@ export function useShortcutRegistration(options: ShortcutRegistrationOptions) {
         handlePreviousTab("Cmd+Option+←")
       ),
       shortcutRegistry.on("toggle_api_panel", handleToggleAPICallPanel),
-      shortcutRegistry.on("toggle_gui_control", () => {
+      shortcutRegistry.on("toggle_ade_manager", () => {
         const store = getInstrumentedStore();
         if (store.get(spotlightOpenAtom)) {
           store.set(spotlightOpenAtom, false);

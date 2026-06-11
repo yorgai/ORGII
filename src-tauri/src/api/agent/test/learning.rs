@@ -387,7 +387,7 @@ pub async fn test_learnings_consolidate(
     // oneshot channel so the axum handler can stay async + Send.
     let scope = request.agent_scope.clone();
     let (tx, rx) = tokio::sync::oneshot::channel::<
-        Result<agent_core::intelligence::memory::consolidation::EventCounts, String>,
+        Result<agent_core::specialization::memory::consolidation::EventCounts, String>,
     >();
 
     std::thread::spawn(move || {
@@ -402,7 +402,7 @@ pub async fn test_learnings_consolidate(
             }
         };
         let result = rt.block_on(async {
-            use agent_core::intelligence::memory::consolidation::{
+            use agent_core::specialization::memory::consolidation::{
                 consolidate, ConsolidationTrigger,
             };
             consolidate(&scope, ConsolidationTrigger::Manual).await

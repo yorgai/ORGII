@@ -14,7 +14,6 @@
   "sections": {
     "general": "一般",
     "appearance": "外観",
-    "mobileRemote": "リモート操作",
     "shortcuts": "キーボードショートカット",
     "notifications": "通知",
     "codeEditor": "コードエディタ",
@@ -1254,103 +1253,6 @@
     "tabApp": "アプリ",
     "tabCodeEditor": "コードエディタ",
     "tabChatPanel": "チャットパネル"
-  },
-  "mobileRemote": {
-    "title": "モバイルリモート操作",
-    "description": "スマートフォンからデスクトップの Agent を操作できます。デバイスをペアリングして始めましょう。",
-    "comingSoon": "近日公開",
-    "pairButton": "新しいデバイスをペアリング",
-    "pairedListTitle": "ペアリング済みデバイス",
-    "emptyState": {
-      "title": "ペアリング済みデバイスはありません",
-      "body": "Relay サーバーを設定してスマートフォンをペアリングすると、セッションをリモート操作できます。",
-      "ctaPair": "スマートフォンをペアリング"
-    },
-    "relayUrl": {
-      "label": "Relay URL",
-      "default": "デフォルト ({{url}})",
-      "custom": "カスタム ({{url}})",
-      "edit": "Relay URL を編集",
-      "placeholder": "https://relay.example.com",
-      "helperText": "orgii-mobile-relay デプロイ先の HTTPS URL を入力してください。空欄にするとバンドルされた既定値に戻ります。",
-      "invalidUrl": "有効な http:// または https:// URL を入力してください。",
-      "reset": "デフォルトに戻す"
-    },
-    "tier": {
-      "readOnly": "読み取り専用",
-      "fullControl": "フル コントロール"
-    },
-    "tierPicker": {
-      "label": "権限レベル",
-      "readOnlyDescription": "セッションの閲覧とメッセージの読み取りのみ。",
-      "fullControlDescription": "あなたに代わってメッセージ送信や操作の実行を許可します。"
-    },
-    "labelInput": {
-      "placeholder": "デバイス名 (例: iPhone)"
-    },
-    "pairingDialog": {
-      "title": "新しいデバイスをペアリング",
-      "scanInstruction": "スマートフォンで ORGII PWA を開いて、この QR コードをスキャンしてください。",
-      "confirmPhraseInstruction": "スマートフォン側で表示される確認フレーズが一致することを承認前に確認してください。",
-      "confirmPhraseLabel": "確認フレーズ",
-      "waitingForMobile": "モバイル側の確認を待っています...",
-      "preparing": "ペアリングセッションを準備中...",
-      "success": "デバイスのペアリングに成功しました",
-      "errorTitle": "ペアリングに失敗しました",
-      "start": "QR を生成",
-      "retry": "再試行",
-      "cancel": "キャンセル"
-    },
-    "deviceCard": {
-      "lastSeen": "最終アクセス {{relativeTime}}",
-      "never": "未接続",
-      "revoke": "失効",
-      "setPrimary": "プライマリに設定",
-      "primaryBadge": "プライマリ"
-    },
-    "relativeTime": {
-      "justNow": "たった今",
-      "minutesAgo": "{{count}} 分前",
-      "hoursAgo": "{{count}} 時間前",
-      "daysAgo": "{{count}} 日前"
-    },
-    "errors": {
-      "pairInitFailed": "ペアリングセッションを開始できませんでした。Relay URL を確認して再試行してください。",
-      "codeExpired": "ペアリングコードの有効期限が切れました。再度ペアリングを開始してください。",
-      "unknown": "Relay との通信中にエラーが発生しました"
-    },
-    "hosting": {
-      "title": "Relay はどこで実行しますか?",
-      "subtitle": "Relay は、スマートフォンからこのデスクトップにアクセスするための仲介サーバーです。利用方法に合った選択肢を選び、その URL を下の Relay URL 欄に貼り付けてください。",
-      "copyCommand": "コマンドをコピー",
-      "cost": {
-        "free": "無料"
-      },
-      "setupTime": {
-        "fifteenMin": "15 分"
-      },
-      "reachableFrom": {
-        "public": "どこからでも"
-      },
-      "tunnel": {
-        "title": "Cloudflare Tunnel (無料、公開 URL)",
-        "summary": "Cloudflare 管理の HTTPS ホスト名で、ローカルの Relay を公開します。VPS もポートフォワーディングも固定 IP も不要です。",
-        "step1": "1. cloudflared をインストールします (初回のみ):",
-        "step2": "2. ローカルで Relay を起動します:",
-        "step3": "3. 別のターミナルで tunnel を開きます:",
-        "step4": "4. Cloudflare が https://random-name.trycloudflare.com のような URL を表示します。それを下の Relay URL 欄に貼り付けてください。",
-        "note": "trycloudflare.com の URL は一時的なものです。固定のホスト名が必要な場合は、Cloudflare アカウントを作成し、named tunnel ガイドに従ってください。"
-      }
-    },
-    "devices": {
-      "tier": {
-        "readOnly": "読み取り専用",
-        "full": "フル コントロール"
-      },
-      "lastSeen": "最終アクセス {{relativeTime}}",
-      "primary": "プライマリ",
-      "revoke": "失効"
-    }
   },
   "editPanel": {
     "addAction": "アクションを追加",

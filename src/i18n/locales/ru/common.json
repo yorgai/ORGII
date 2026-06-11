@@ -1,5 +1,5 @@
 {
-  "guiControl": {
+  "adeManager": {
     "enabledLabel": "Agent Control: включено",
     "disabledLabel": "Agent Control: выключено",
     "enableAction": "Включить Agent Control",
@@ -1555,7 +1555,8 @@
     "disableDockAutoHide": "Всегда показывать Dock Workstation",
     "openMyStation": "Перейти в My Station",
     "openAgentStation": "Перейти в Agent Station",
-    "openOpsControl": "Перейти в Ops Control"
+    "openOpsControl": "Перейти в Ops Control",
+    "changeLanguage": "Изменить язык"
   },
   "commands": {
     "showBottomPanel": "Показать нижнюю панель",

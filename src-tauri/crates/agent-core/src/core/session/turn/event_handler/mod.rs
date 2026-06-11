@@ -28,7 +28,7 @@ mod hooks_dispatch;
 mod snapshots;
 mod wingman_tee;
 
-// Re-exported solely so `intelligence::hooks::tests` can reach the helper
+// Re-exported solely so `specialization::hooks::tests` can reach the helper
 // at this stable path. Internal callers (`hooks_dispatch::dispatch_pre_tool`)
 // use `super::helpers::parse_hook_decision` directly.
 #[cfg(test)]
@@ -45,7 +45,7 @@ use tracing::warn;
 use crate::bus::broadcast_event;
 use crate::bus::event_pipeline_bridge;
 use crate::foundation::streaming::{StreamType, StreamingBuffer};
-use crate::intelligence::hooks::HookExecutor;
+use crate::specialization::hooks::HookExecutor;
 use crate::tools::names as tool_names;
 use crate::turn_executor::{ContextUsageSnapshot, ToolHookIntervention, TurnEventHandler};
 use core_types::session_event::SessionEvent;

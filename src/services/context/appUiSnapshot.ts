@@ -10,7 +10,7 @@ import {
   chatVisibleAtom,
 } from "@src/store/ui/chatPanelAtom";
 import { stationModeAtom } from "@src/store/ui/simulatorAtom";
-import { guiControlEnabledAtom, spotlightOpenAtom } from "@src/store/ui/uiAtom";
+import { adeManagerEnabledAtom, spotlightOpenAtom } from "@src/store/ui/uiAtom";
 import {
   activeStatusBarAppAtom,
   activeStatusBarStateAtom,
@@ -154,7 +154,7 @@ export function collectAppUiSnapshot(): AppUiSnapshot | undefined {
 
   snapshot.overlays = {
     spotlightOpen: store.get(spotlightOpenAtom),
-    guiControlEnabled: store.get(guiControlEnabledAtom),
+    adeManagerEnabled: store.get(adeManagerEnabledAtom),
   };
 
   const guideTargets = collectVisibleGuideTargets();

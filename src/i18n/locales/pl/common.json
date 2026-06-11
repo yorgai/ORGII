@@ -1,5 +1,5 @@
 {
-  "guiControl": {
+  "adeManager": {
     "enabledLabel": "Agent Control: wł.",
     "disabledLabel": "Agent Control: wył.",
     "enableAction": "Włącz Agent Control",
@@ -1555,7 +1555,8 @@
     "disableDockAutoHide": "Zawsze pokazuj Dock Workstation",
     "openMyStation": "Przejdź do My Station",
     "openAgentStation": "Przejdź do Agent Station",
-    "openOpsControl": "Przejdź do Ops Control"
+    "openOpsControl": "Przejdź do Ops Control",
+    "changeLanguage": "Zmień język"
   },
   "commands": {
     "showBottomPanel": "Pokaż dolny panel",
