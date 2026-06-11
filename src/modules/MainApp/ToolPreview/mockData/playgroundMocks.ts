@@ -7,6 +7,7 @@ export const MOCK_QUEUED_MESSAGES: import("@src/store/ui/messageQueueAtom").Queu
   [
     {
       id: "q1",
+      turnIntentId: "intent-q1",
       sessionId: "playground",
       content:
         "Can you refactor the auth module to use the new session API? Make sure all existing integration tests still pass and update the migration guide with the breaking changes introduced by the new token-based auth flow.",
@@ -18,6 +19,7 @@ export const MOCK_QUEUED_MESSAGES: import("@src/store/ui/messageQueueAtom").Queu
     },
     {
       id: "q2",
+      turnIntentId: "intent-q2",
       sessionId: "playground",
       content: "Also update the tests to match the new interface",
       displayContent: "Also update the tests to match the new interface",
@@ -27,6 +29,7 @@ export const MOCK_QUEUED_MESSAGES: import("@src/store/ui/messageQueueAtom").Queu
     },
     {
       id: "q3",
+      turnIntentId: "intent-q3",
       sessionId: "playground",
       content: "Run the linter after you're done",
       displayContent: "Run the linter after you're done",
@@ -36,6 +39,7 @@ export const MOCK_QUEUED_MESSAGES: import("@src/store/ui/messageQueueAtom").Queu
     },
     {
       id: "q4",
+      turnIntentId: "intent-q4",
       sessionId: "playground",
       content:
         "After that, please review the entire codebase for any remaining references to the deprecated credential store and replace them with the new KeyVault API, including updating environment variable names and removing backward-compatible shims",
@@ -47,6 +51,7 @@ export const MOCK_QUEUED_MESSAGES: import("@src/store/ui/messageQueueAtom").Queu
     },
     {
       id: "q5",
+      turnIntentId: "intent-q5",
       sessionId: "playground",
       content: "Add error handling for the edge cases we discussed",
       displayContent: "Add error handling for the edge cases we discussed",

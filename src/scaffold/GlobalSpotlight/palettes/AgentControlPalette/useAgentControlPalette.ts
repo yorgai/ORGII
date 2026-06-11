@@ -36,7 +36,11 @@ import {
   ADE_MANAGER_SUBMIT_EVENT,
   ADE_MANAGER_TOGGLE_SHORTCUT_ID,
 } from "./constants";
-import type { AdeManagerActivityItem, AdeManagerSubmitDetail } from "./types";
+import type {
+  AdeManagerActivityItem,
+  AdeManagerRunStatus,
+  AdeManagerSubmitDetail,
+} from "./types";
 import {
   EMPTY_ADE_MANAGER_EVENTS_ATOM,
   buildControlPrompt,
@@ -96,7 +100,7 @@ export function useAgentControlPalette({
     [setPaletteState]
   );
   const setRunStatus = useCallback(
-    (status: GuiControlRunStatus) =>
+    (status: AdeManagerRunStatus) =>
       setPaletteState((prev) => ({ ...prev, runStatus: status })),
     [setPaletteState]
   );

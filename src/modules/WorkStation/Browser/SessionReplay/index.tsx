@@ -184,6 +184,7 @@ const SessionReplayBrowserComponent: React.FC<SessionReplayBrowserProps> = ({
     showAgentBrowserCategory && isBrowserReplayActive;
 
   const displayScreenshot = displayData?.screenshot ?? null;
+  const isCurrentEventLoading = activeEntry !== null && !displayData;
   const displayScreenshotSrc = useMemo(() => {
     if (!displayScreenshot) return null;
     return `data:${inferImageMime(displayScreenshot)};base64,${displayScreenshot}`;

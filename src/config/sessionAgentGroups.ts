@@ -43,6 +43,14 @@ export const SESSION_GROUP_ORDER: readonly SessionGroupKey[] = [
   ...IMPORTED_HISTORY_SOURCES.map((source) => source.listCategory),
 ];
 
+const IMPORTED_HISTORY_LABELS: Record<ImportedHistoryListCategory, string> =
+  Object.fromEntries(
+    IMPORTED_HISTORY_SOURCES.map((source) => [
+      source.listCategory,
+      source.groupLabel,
+    ])
+  ) as Record<ImportedHistoryListCategory, string>;
+
 export const SESSION_GROUP_LABELS: Record<SessionGroupKey, string> = {
   [RUST_AGENT_TYPE.OS]: "OS Agent",
   [RUST_AGENT_TYPE.SDE]: "SDE Agent",
@@ -50,10 +58,5 @@ export const SESSION_GROUP_LABELS: Record<SessionGroupKey, string> = {
   [RUST_AGENT_TYPE.CUSTOM]: "Custom Agent",
   cli: "CLI Agent",
   cursor_ide: "Cursor History",
-  ...Object.fromEntries(
-    IMPORTED_HISTORY_SOURCES.map((source) => [
-      source.listCategory,
-      source.groupLabel,
-    ])
-  ),
+  ...IMPORTED_HISTORY_LABELS,
 };

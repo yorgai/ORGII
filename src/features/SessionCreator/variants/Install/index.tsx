@@ -19,7 +19,7 @@ import SelectorPill from "@src/components/SelectorPill";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import type { AdvancedConfig } from "@src/features/SessionCreator/types";
 import { useModelPillLabel } from "@src/hooks/models";
-import { UnifiedModelPalette } from "@src/scaffold/GlobalSpotlight/palettes";
+import { UnifiedModelPalette } from "@src/scaffold/GlobalSpotlight/palettes/UnifiedModelPalette";
 
 export interface SessionCreatorInstallProps {
   advancedConfig: AdvancedConfig;

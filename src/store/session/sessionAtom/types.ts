@@ -119,6 +119,12 @@ export interface Session {
   pinned?: boolean;
   created_time?: string;
   updated_time?: string;
+  /** Number of files changed in this session (written by the frontend diff pipeline). */
+  filesChanged?: number;
+  /** Number of lines added in this session (written by the frontend diff pipeline). */
+  linesAdded?: number;
+  /** Number of lines removed in this session (written by the frontend diff pipeline). */
+  linesRemoved?: number;
 }
 
 // ============================================

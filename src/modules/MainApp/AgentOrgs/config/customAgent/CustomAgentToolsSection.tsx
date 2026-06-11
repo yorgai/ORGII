@@ -174,14 +174,7 @@ const CustomAgentToolsSection: React.FC<CustomAgentToolsSectionProps> = ({
         if (catDiff !== 0) return catDiff;
         return rowA.name.localeCompare(rowB.name);
       });
-  }, [
-    rawTools,
-    editor.systemRestrictToTools,
-    editor.userAllowedTools,
-    editor.excludedTools,
-    editor.agentKind,
-    editor.resolvedToolState,
-  ]);
+  }, [rawTools, editor]);
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();

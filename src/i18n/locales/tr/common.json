@@ -1448,7 +1448,8 @@
           "label": "Yakınlaştırmayı sıfırla"
         },
         "openSessionCreator": {
-          "label": "Yeni oturum"
+          "label": "Yeni oturum",
+          "pillLabel": "Yeni oturum"
         },
         "createProject": {
           "label": "Project oluştur"

@@ -778,9 +778,11 @@ const SessionReplayDiff: React.FC<SimulatorAppProps> = ({
           <SubmissionCommitsContent
             commits={submissionCommits}
             selectedCommitSha={
-              historySelection?.type === "commit"
-                ? historySelection.commitSha
-                : null
+              historySelection?.type === "pr"
+                ? (historySelection.selectedCommitSha ?? null)
+                : historySelection?.type === "stash"
+                  ? historySelection.commitSha
+                  : null
             }
             onCommitSelect={handleSubmissionCommitSelect}
             emptyLabel={t(

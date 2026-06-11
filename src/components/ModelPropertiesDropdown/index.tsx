@@ -201,7 +201,7 @@ export const ModelPropertiesDropdown: React.FC<
           const belowTop = sideTop + sideHeight + SIDE_PANEL_GAP;
           const aboveTop =
             sideTop - MODEL_PROPERTIES_PANEL_EST_HEIGHT - SIDE_PANEL_GAP;
-          const { width: vw, height: vh } = getViewportSize();
+          const { height: vh } = getViewportSize();
           const fitsBelow =
             belowTop + MODEL_PROPERTIES_PANEL_EST_HEIGHT <=
             vh - VIEWPORT_MARGIN;

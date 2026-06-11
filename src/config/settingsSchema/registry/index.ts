@@ -37,4 +37,5 @@ export const SETTINGS_CATEGORY_LABELS: Record<SettingsCategory, string> = {
   agent: "Agent",
   agentBrowser: "Computer Use",
   network: "Network",
+  mobileRemote: "Mobile Remote",
 };

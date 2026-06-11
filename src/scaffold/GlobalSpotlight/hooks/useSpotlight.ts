@@ -244,12 +244,7 @@ export function useSpotlight(
 
       fallbackHandlers[fallback]();
     },
-    [
-      dispatchActionOrFallback,
-      onOpenAgentSessionSearch,
-      onOpenBranchPicker,
-      onOpenWorkspacePicker,
-    ]
+    [onOpenAgentSessionSearch, onOpenBranchPicker, onOpenWorkspacePicker]
   );
 
   const handleSelectStaticAction = useCallback(

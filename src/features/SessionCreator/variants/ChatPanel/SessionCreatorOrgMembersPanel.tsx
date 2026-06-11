@@ -23,11 +23,9 @@ import {
   type OrgMemberLaunchOverride,
   type OrgMemberRuntimeConfig,
 } from "@src/modules/MainApp/AgentOrgs/types";
-import {
-  DispatchCategoryPalette,
-  UnifiedModelPalette,
-} from "@src/scaffold/GlobalSpotlight/palettes";
+import { DispatchCategoryPalette } from "@src/scaffold/GlobalSpotlight/palettes/DispatchCategoryPalette";
 import type { AgentSelection } from "@src/scaffold/GlobalSpotlight/palettes/DispatchCategoryPalette";
+import { UnifiedModelPalette } from "@src/scaffold/GlobalSpotlight/palettes/UnifiedModelPalette";
 import { flattenOrgToMembers } from "@src/scaffold/WizardSystem/variants/AgentOrg/orgTree";
 
 import type { AdvancedConfig } from "../../types";

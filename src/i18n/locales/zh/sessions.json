@@ -844,7 +844,8 @@
       "categories": {
         "cli": "CLI Agent",
         "rust": "Rust Agent",
-        "cursorIde": "Cursor IDE"
+        "cursorIde": "Cursor IDE",
+        "externalHistory": "外部历史"
       },
       "fields": {
         "session": "Session",

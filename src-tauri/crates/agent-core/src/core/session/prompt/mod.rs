@@ -11,4 +11,8 @@ pub(crate) mod gui_control_retrieval;
 pub(crate) mod helpers;
 pub mod ide_context;
 pub(crate) mod registry;
+pub(crate) mod section_builders;
 pub(crate) mod sections;
+
+#[cfg(test)]
+pub(crate) mod section_tests;

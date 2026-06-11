@@ -1,7 +1,3 @@
-import {
-  DispatchCategoryDropdown,
-  DispatchCategoryPalette,
-} from "@/src/scaffold/GlobalSpotlight/palettes";
 import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { Airplay, Network, Paperclip, Tags } from "lucide-react";
 import React, {
@@ -40,6 +36,8 @@ import { useAgentCompatibility } from "@src/hooks/models/useAgentCompatibility";
 import { useAgentDefinitions } from "@src/modules/MainApp/AgentOrgs/hooks/useAgentDefinitions";
 import { useAgentOrgs } from "@src/modules/MainApp/AgentOrgs/hooks/useAgentOrgs";
 import { useCliAgents } from "@src/modules/MainApp/Integrations/KeyVault/CliClients/hooks/useCliAgents";
+import { DispatchCategoryPalette } from "@src/scaffold/GlobalSpotlight/palettes/DispatchCategoryPalette";
+import { DispatchCategoryDropdown } from "@src/scaffold/GlobalSpotlight/palettes/DispatchCategoryPalette/DispatchCategoryDropdown";
 import { PresenceMenuButton } from "@src/scaffold/NavigationSidebar/blocks/SidebarBottomBar";
 import { REPO_KIND } from "@src/store/repo/types";
 import {

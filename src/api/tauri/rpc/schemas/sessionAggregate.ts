@@ -98,6 +98,9 @@ export const SessionPatchInput = z.object({
       tags: z.array(z.string()).optional(),
       // P5: pin toggle (absent = leave alone)
       pinned: z.boolean().optional(),
+      filesChanged: z.number().optional(),
+      linesAdded: z.number().optional(),
+      linesRemoved: z.number().optional(),
     })
     .refine(
       (p) =>
@@ -106,7 +109,10 @@ export const SessionPatchInput = z.object({
         p.draftText !== undefined ||
         p.replyTargetEventId !== undefined ||
         p.tags !== undefined ||
-        p.pinned !== undefined,
+        p.pinned !== undefined ||
+        p.filesChanged !== undefined ||
+        p.linesAdded !== undefined ||
+        p.linesRemoved !== undefined,
       { message: "session_patch: at least one field must be set" }
     )
     .refine((p) => !(p.accountId !== undefined && p.model === undefined), {

@@ -590,21 +590,19 @@ export const DispatchCategoryPalette: React.FC<
   const footerAction = <ManageModelsFooterAction onClose={onClose} />;
 
   // When the caller pre-selects a target (e.g. an org member row), surface
-  // it as a non-removable context pill above the input. The path uses an
-  // `action` segment so the existing search-bar variant renders it
-  // verbatim without claiming back-navigation semantics.
   const path = useMemo<PathSegment[]>(() => {
-    if (!titleLabel) return [];
+    const label =
+      titleLabel ?? tCommon("filters.searchAgentOrOrg", "Select Agent");
     return [
       {
         type: "action",
         id: "dispatch-category-title",
-        label: titleLabel,
+        label,
         icon: titleIcon ?? "",
-        color: "",
+        color: "primary",
       },
     ];
-  }, [titleLabel, titleIcon]);
+  }, [titleLabel, titleIcon, tCommon]);
 
   return (
     <SpotlightShell isOpen={isOpen} onClose={onClose}>

@@ -7,6 +7,9 @@
 export { SpotlightSearchBar } from "./SpotlightSearchBar";
 export type { SpotlightSearchBarProps } from "./SpotlightSearchBar";
 
+export { SpotlightPillBar } from "./SpotlightPillBar";
+export type { SpotlightPillBarProps } from "./SpotlightPillBar";
+
 export { SpotlightItemList } from "./SpotlightItemList";
 export type { SpotlightItemListProps } from "./SpotlightItemList";
 
