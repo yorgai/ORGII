@@ -206,12 +206,28 @@ jobs:
           fetch-depth: 0
 
       # ── Stamp version from git tag ───────────────────────────────
+      #
+      # MSI's ProductVersion only accepts numeric `major.minor.build[.revision]`
+      # with each segment <= 65535. Any SemVer pre-release identifier (e.g.
+      # `-nightly.20260611`, `-rc.1`) makes `tauri build` abort the bundling
+      # step with:
+      #   "optional pre-release identifier in app version must be numeric-only
+      #    and cannot be greater than 65535 for msi target"
+      #
+      # So on Windows we always strip the pre-release/build-metadata suffix
+      # from the tag before writing it into tauri.conf.json. package.json keeps
+      # the full SemVer (npm tolerates it) so chat surfaces / About box can
+      # still display the original "1.0.1-nightly.20260611".
       - name: Set version from tag
         shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+          MSI_VERSION="${VERSION%%-*}"   # strip "-nightly.20260611" / "-rc.1" / ...
+          MSI_VERSION="${MSI_VERSION%%+*}" # strip SemVer build metadata "+sha.abc"
+          echo "VERSION=$VERSION"         >> "$GITHUB_ENV"
+          echo "MSI_VERSION=$MSI_VERSION" >> "$GITHUB_ENV"
+          echo "=== Release version: $VERSION (msi: $MSI_VERSION) ==="
+          sed -i "s/\"version\": \".*\"/\"version\": \"$MSI_VERSION\"/" src-tauri/tauri.conf.json
           sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
 
       # ── Node.js + pnpm ──────────────────────────────────────────
