@@ -41,8 +41,9 @@ async function pointerClick(selector, label, options = {}) {
   let point = null;
   await browser.waitUntil(
     async () => {
-      point = await browser.executeScript(
+      const rawPoint = await browser.executeScript(
         `
+          try {
           const selector = arguments[0];
           const rootSelector = arguments[1];
           const roots = rootSelector ? [...document.querySelectorAll(rootSelector)] : [document];
@@ -52,17 +53,53 @@ async function pointerClick(selector, label, options = {}) {
             const style = window.getComputedStyle(element);
             return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
           });
-          const element = candidates[candidates.length - 1] ?? null;
-          if (!element) {
-            return { found: false, selector, bodyText: document.body.innerText.slice(0, 2000) };
+          if (candidates.length === 0) {
+            return JSON.stringify({ found: false, selector, bodyText: document.body.innerText.slice(0, 2000) });
           }
-          element.scrollIntoView({ block: "center", inline: "center" });
-          const rect = element.getBoundingClientRect();
-          const x = Math.floor(rect.left + rect.width / 2);
-          const y = Math.floor(rect.top + rect.height / 2);
-          const hit = document.elementFromPoint(x, y);
-          const hitMatches = !!hit?.closest?.(selector);
-          return {
+          // Probe candidates from last to first and, within each, several
+          // vertical sample points. A sticky table header can cover the
+          // geometric center of an otherwise fully clickable row; the old
+          // single-point single-candidate probe reported those as covered.
+          const probeElement = (element) => {
+            element.scrollIntoView({ block: "center", inline: "center" });
+            const rect = element.getBoundingClientRect();
+            const x = Math.floor(rect.left + rect.width / 2);
+            const ys = [
+              Math.floor(rect.top + rect.height / 2),
+              Math.floor(rect.top + rect.height * 0.75),
+              Math.floor(rect.top + rect.height * 0.25),
+            ];
+            for (const y of ys) {
+              const hit = document.elementFromPoint(x, y);
+              if (hit?.closest?.(selector)) {
+                return { element, rect, x, y, hit, hitMatches: true };
+              }
+            }
+            const y = ys[0];
+            const hit = document.elementFromPoint(x, y);
+            const chain = [];
+            let node = hit;
+            for (let d = 0; d < 6 && node; d += 1) {
+              chain.push({
+                tag: node.tagName,
+                testId: node.getAttribute?.("data-testid") || null,
+                cls: typeof node.className === "string" ? node.className.slice(0, 80) : null,
+              });
+              node = node.parentElement;
+            }
+            const theadRects = [...document.querySelectorAll(".table-thead")].map((el) => {
+              const r = el.getBoundingClientRect();
+              return { top: Math.round(r.top), left: Math.round(r.left), w: Math.round(r.width), h: Math.round(r.height) };
+            });
+            return { element, rect, x, y, hit, hitMatches: false, debug: { chain, theadRects, scrollY: window.scrollY } };
+          };
+          let probe = null;
+          for (let i = candidates.length - 1; i >= 0; i -= 1) {
+            probe = probeElement(candidates[i]);
+            if (probe.hitMatches) break;
+          }
+          const { element, rect, x, y, hit, hitMatches } = probe;
+          return JSON.stringify({
             found: true,
             selector,
             x,
@@ -77,20 +114,32 @@ async function pointerClick(selector, label, options = {}) {
               text: (hit.textContent || "").trim().replace(/\\s+/g, " ").slice(0, 180),
             } : null,
             text: (element.textContent || "").trim().replace(/\\s+/g, " ").slice(0, 180),
-          };
+            debug: probe.debug ?? null,
+          });
+          } catch (err) {
+            return JSON.stringify({ scriptError: String(err && err.stack || err) });
+          }
         `,
-        [selector, options.rootSelector ?? currentAgentConfigRootSelector]
+        [selector, (options.rootSelector ?? currentAgentConfigRootSelector) || ""]
       );
+      point = typeof rawPoint === "string" ? JSON.parse(rawPoint) : rawPoint;
       return point?.found === true && (options.jsClick === true || point?.hitMatches === true);
     },
     {
       timeout: WAIT_TIMEOUT_MS,
       interval: 250,
-      timeoutMsg: `${label} not clickable: ${JSON.stringify(point, null, 2)}`,
+      // NOTE: timeoutMsg is rendered lazily in the catch below — inlining
+      // JSON.stringify(point) here would freeze the pre-loop null value.
+      timeoutMsg: `${label} not clickable`,
     }
-  );
+  ).catch((err) => {
+    throw new Error(
+      `${label} not clickable; last probe: ${JSON.stringify(point, null, 2)}`,
+      { cause: err }
+    );
+  });
   if (options.jsClick === true) {
-    const clickState = await browser.executeScript(
+    const rawClickState = await browser.executeScript(
       `
         const selector = arguments[0];
         const rootSelector = arguments[1];
@@ -102,12 +151,13 @@ async function pointerClick(selector, label, options = {}) {
           return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
         });
         const element = candidates[candidates.length - 1] ?? null;
-        if (!element) return { ok: false, reason: "missing" };
+        if (!element) return JSON.stringify({ ok: false, reason: "missing" });
         element.click();
-        return { ok: true, text: element.textContent?.trim() ?? "" };
+        return JSON.stringify({ ok: true, text: element.textContent?.trim() ?? "" });
       `,
-      [selector, options.rootSelector ?? currentAgentConfigRootSelector]
+      [selector, (options.rootSelector ?? currentAgentConfigRootSelector) || ""]
     );
+    const clickState = typeof rawClickState === "string" ? JSON.parse(rawClickState) : rawClickState;
     if (clickState?.ok !== true) {
       throw new Error(`${label} js click failed: ${JSON.stringify(clickState)}`);
     }

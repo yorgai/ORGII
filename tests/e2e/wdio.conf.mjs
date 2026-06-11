@@ -181,6 +181,22 @@ function seedOrgiiHomeForParallel(sourceHome, targetHome) {
   }
 }
 
+// E2E hit-testing (elementFromPoint vs getBoundingClientRect) assumes
+// zoom=1. The user's seeded settings may carry general.uiScale != 100,
+// which WebKit renders via CSS zoom and breaks coordinate math in specs
+// (clicks land on the wrong element). Normalize the isolated home's copy.
+function normalizeUiScaleForIsolatedRun(targetHome) {
+  if (!(allowParallel || isolatedRun) || !targetHome) return;
+  const settingsPath = join(targetHome, "settings.jsonc");
+  if (!existsSync(settingsPath)) return;
+  const raw = readFileSync(settingsPath, "utf8");
+  const patched = raw.replace(
+    /("general\.uiScale"\s*:\s*)\d+/,
+    "$1100"
+  );
+  if (patched !== raw) writeFileSync(settingsPath, patched);
+}
+
 function resetDerivedProjectDatabaseForIsolatedRun(targetHome) {
   if (!isolatedRun || !targetHome) return;
   rmSync(join(targetHome, "projects", "projects.db"), {
@@ -450,6 +466,7 @@ function mirrorRotatedOAuthTokensBack(sourceHome, isoHome) {
 
 if (orgiiHome) {
   seedOrgiiHomeForParallel(sourceOrgiiHome, orgiiHome);
+normalizeUiScaleForIsolatedRun(orgiiHome);
   reconcileOAuthRotationFields(sourceOrgiiHome, orgiiHome);
   reconcilePreservedOAuthCredentialStatus(sourceOrgiiHome, orgiiHome);
   resetDerivedProjectDatabaseForIsolatedRun(orgiiHome);
