@@ -44,6 +44,16 @@ export interface BackgroundConfig {
    * background behind them. Defaults to true when undefined.
    */
   adaptiveColors?: boolean;
+  /**
+   * Page panel opacity as an integer percent. Range is clamped to
+   * [MIN_PAGE_OPACITY, 100]. Undefined or 100 = fully opaque.
+   */
+  pageOpacity?: number;
+  /**
+   * Sidebar surface opacity as an integer percent. Range is clamped to
+   * [MIN_SIDEBAR_OPACITY, 100]. Undefined or 100 = fully opaque.
+   */
+  sidebarOpacity?: number;
 }
 
 export interface BackgroundSettingsProps {

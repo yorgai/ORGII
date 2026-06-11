@@ -48,12 +48,50 @@ const GRID_STYLES = `
   }
   
   .vision-app-icon {
-    transition: box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
+    transition: box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, filter 0.2s ease;
     pointer-events: none;
   }
-  
+
+  /* Liquid-glass specular sheen: simulates light catching the top of a
+     curved glass surface. Sits below the icon (which is z-index: 1). */
+  .vision-app-icon::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--start-app-icon-sheen, none);
+    pointer-events: none;
+  }
+
+  /* Refraction rim: masked to the outer band of the circle, it re-filters
+     the backdrop (extra blur + brightness + saturation) and carries a conic
+     edge-light, so the edge reads as light bending through a lens. WebKit
+     has no SVG displacement in backdrop-filter, so this band is the
+     distortion stand-in. */
+  .vision-app-icon::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--start-app-icon-rim-light, none);
+    backdrop-filter: var(--start-app-icon-rim-filter, none);
+    -webkit-backdrop-filter: var(--start-app-icon-rim-filter, none);
+    -webkit-mask-image: radial-gradient(
+      circle closest-side,
+      transparent 70%,
+      black 88%
+    );
+    mask-image: radial-gradient(
+      circle closest-side,
+      transparent 70%,
+      black 88%
+    );
+    pointer-events: none;
+  }
+
   .vision-app-item:not(.shaking):hover .vision-app-icon {
     transform: scale(1.08);
+    filter: brightness(1.06);
   }
 
   /* iOS-style shake animation */

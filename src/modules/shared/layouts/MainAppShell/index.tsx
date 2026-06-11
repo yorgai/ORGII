@@ -32,7 +32,11 @@ import { useLocation } from "react-router-dom";
 import { deriveRouteCacheKey } from "@src/config/mainAppPaths";
 import { hasForceVisibleSidebar } from "@src/config/sidebarRegistry";
 import ScrollRestorationWrapper from "@src/modules/shared/components/ScrollRestorationWrapper";
-import { PAGE_PANEL_BG } from "@src/modules/shared/layouts/viewContainerTokens";
+import {
+  PAGE_PANEL_BG,
+  getPagePanelBackgroundStyle,
+} from "@src/modules/shared/layouts/viewContainerTokens";
+import { resolvedBackgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
 import { globalLayoutMethodAtom } from "@src/store/ui/uiAtom";
 
@@ -47,6 +51,7 @@ import { globalLayoutMethodAtom } from "@src/store/ui/uiAtom";
 const MainAppShell: React.FC = () => {
   const globalLayoutMethod = useAtomValue(globalLayoutMethodAtom);
   const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
+  const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
   const location = useLocation();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -124,8 +129,12 @@ const MainAppShell: React.FC = () => {
           borderTopLeftRadius: 0,
         }
       : undefined;
+  const pageOpacityStyle = getPagePanelBackgroundStyle(
+    backgroundConfig.pageOpacity
+  );
   const innerPanelStyle = {
     ...innerStyle,
+    ...pageOpacityStyle,
     WebkitAppRegion: "no-drag",
   } as React.CSSProperties;
 
@@ -177,10 +186,14 @@ export default MainAppShell;
  */
 export const ShellFallback: React.FC = () => {
   const globalLayoutMethod = useAtomValue(globalLayoutMethodAtom);
+  const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
   const isCompact = globalLayoutMethod === "compact";
   const shellDragStyle = !isCompact
     ? ({ WebkitAppRegion: "drag" } as React.CSSProperties)
     : undefined;
+  const pageOpacityStyle = getPagePanelBackgroundStyle(
+    backgroundConfig.pageOpacity
+  );
   return (
     <div
       className={`relative flex h-full w-full flex-col overflow-hidden ${
@@ -201,7 +214,12 @@ export const ShellFallback: React.FC = () => {
         className={`min-h-0 flex-1 overflow-hidden ${
           isCompact ? PAGE_PANEL_BG.flat : PAGE_PANEL_BG.rounded
         }`}
-        style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        style={
+          {
+            ...pageOpacityStyle,
+            WebkitAppRegion: "no-drag",
+          } as React.CSSProperties
+        }
       />
     </div>
   );

@@ -241,7 +241,9 @@
     "noCustomImages": "暂无自定义图片",
     "source": "来源",
     "addCustomColor": "添加自定义颜色",
-    "customColorsLimit": "最多可保存 {{max}} 个自定义颜色。"
+    "customColorsLimit": "最多可保存 {{max}} 个自定义颜色。",
+    "pageOpacity": "页面透明度",
+    "sidebarOpacity": "侧边栏透明度"
   },
   "shortcuts": {
     "title": "键盘快捷键",

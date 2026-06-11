@@ -241,7 +241,9 @@
     "noCustomImages": "暫無自定義圖片",
     "source": "來源",
     "addCustomColor": "添加自定義顏色",
-    "customColorsLimit": "最多可保存 {{max}} 個自定義顏色。"
+    "customColorsLimit": "最多可保存 {{max}} 個自定義顏色。",
+    "pageOpacity": "頁面透明度",
+    "sidebarOpacity": "側邊欄透明度"
   },
   "shortcuts": {
     "title": "鍵盤快捷鍵",

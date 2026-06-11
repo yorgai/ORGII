@@ -33,7 +33,9 @@ import {
 } from "@src/config/windowChromeRadius";
 import { useSidebarState } from "@src/hooks/ui/sidebar/useSidebarState";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
+import { getSidebarSurfaceBackgroundStyle } from "@src/modules/shared/layouts/viewContainerTokens";
 import { VerticalResizeHandle } from "@src/scaffold/Resize";
+import { resolvedBackgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
 import { hoverSidebarOpenAtom } from "@src/store/ui/hoverSidebarAtom";
 import {
   DEFAULT_SIDEBAR_WIDTH,
@@ -89,6 +91,11 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
     const hideSidebarShortcut = getShortcutKeys("toggle_sidebar");
     const isFullscreen = useAtomValue(windowFullscreenAtom);
     const isCompactLayout = useIsCompactLayout();
+    const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
+    const sidebarOpacityStyle = useMemo(
+      () => getSidebarSurfaceBackgroundStyle(backgroundConfig.sidebarOpacity),
+      [backgroundConfig.sidebarOpacity]
+    );
 
     // Check for force visible from context (for hover sidebar)
     const forceVisibleFromContext = useForceVisibleSidebar();
@@ -410,6 +417,7 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
           boxShadow: sidebarBoxShadow,
           backdropFilter: "var(--sidebar-backdrop)",
           WebkitBackdropFilter: "var(--sidebar-backdrop)",
+          ...sidebarOpacityStyle,
         };
 
     // Wrapped content

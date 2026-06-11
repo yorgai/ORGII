@@ -241,7 +241,9 @@
     "noCustomImages": "Özel görsel yok",
     "source": "Kaynak",
     "addCustomColor": "Özel renk ekle",
-    "customColorsLimit": "En fazla {{max}} özel renk kaydedebilirsiniz."
+    "customColorsLimit": "En fazla {{max}} özel renk kaydedebilirsiniz.",
+    "pageOpacity": "Sayfa şeffaflığı",
+    "sidebarOpacity": "Kenar çubuğu şeffaflığı"
   },
   "shortcuts": {
     "title": "Klavye Kısayolları",

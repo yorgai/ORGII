@@ -7,6 +7,10 @@
 import type { CSSProperties } from "react";
 
 import { ROUTES } from "@src/config/routes";
+import {
+  sanitizePageOpacity,
+  sanitizeSidebarOpacity,
+} from "@src/store/ui/backgroundConfigAtom";
 
 /**
  * Routes that intentionally bleed the wallpaper through chrome even when the
@@ -28,26 +32,43 @@ export function isWallpaperRoutePath(pathname: string): boolean {
   return WALLPAPER_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-/** Page/panel background variants - shared by MainAppShell, ShellFallback, view containers */
+/**
+ * Page/panel background variants — shared by MainAppShell, ShellFallback,
+ * view containers.
+ *
+ * NOTE: the surface paint (`bg-bg-2`) lives on the inline style produced
+ * by `getPagePanelBackgroundStyle()` so it can honor the page opacity
+ * setting. These class tokens only contribute geometry (radius), not
+ * color, to avoid re-painting an opaque layer on top.
+ */
 export const PAGE_PANEL_BG = {
   /** Rounded corners, used for inset/card layout */
-  rounded: "rounded-page bg-bg-2",
+  rounded: "rounded-page",
   /** Flat, no radius - used for full/edge layout */
-  flat: "bg-bg-2",
+  flat: "",
 } as const;
 
-/** View container class strings for modules/index.tsx */
+/**
+ * View container class strings for modules/index.tsx
+ *
+ * `WithBg` suffix preserved for backward-compat in caller code. The
+ * surface paint actually arrives via `getPagePanelBackgroundStyle()`
+ * applied by MainAppShell / ShellFallback — these classes contribute
+ * only geometry. Loading-state callers that mount these containers
+ * standalone (outside MainAppShell) keep an explicit `bg-bg-2` token
+ * so they don't render transparent.
+ */
 export const VIEW_CONTAINER_CLASSES = {
   /** Full mode: edge-to-edge with bg for loading state (no rounded corners) */
-  fullWithBg: `absolute inset-0 ${PAGE_PANEL_BG.flat}`,
+  fullWithBg: "absolute inset-0 bg-bg-2",
   /** Inset mode: card-like with rounded corners and bg for loading state */
-  insetWithBg: `absolute inset-0 ${PAGE_PANEL_BG.rounded}`,
+  insetWithBg: "absolute inset-0 rounded-page bg-bg-2",
   /**
    * Compact mode: same as full visually (flat, no radius), but reserved as a
    * separate token so consumers can branch by mode rather than infer from
    * `flat` alone.
    */
-  compactWithBg: `absolute inset-0 ${PAGE_PANEL_BG.flat}`,
+  compactWithBg: "absolute inset-0 bg-bg-2",
 } as const;
 
 /** Style for visibility toggle - prevents flash when switching views */
@@ -66,3 +87,71 @@ export function getViewToggleStyle(
 export const LAYOUT_CONTAIN_STYLE: CSSProperties = {
   contain: "layout style",
 };
+
+/**
+ * Build the inline style for the page panel surface. Always emits a
+ * `backgroundColor` (via `color-mix`) so callers can drop the redundant
+ * `bg-bg-2` Tailwind class — there's a single source of truth for the
+ * surface paint. At 100% opacity the mix collapses to `var(--color-bg-2)`.
+ */
+export function getPagePanelBackgroundStyle(
+  pageOpacity: number | undefined
+): CSSProperties {
+  const opacity = sanitizePageOpacity(pageOpacity);
+  return {
+    backgroundColor: `color-mix(in srgb, var(--color-bg-2) ${opacity}%, transparent)`,
+  };
+}
+
+/** Same as `getPagePanelBackgroundStyle` but for the sidebar surface. */
+export function getSidebarSurfaceBackgroundStyle(
+  sidebarOpacity: number | undefined
+): CSSProperties {
+  const opacity = sanitizeSidebarOpacity(sidebarOpacity);
+  return {
+    backgroundColor: `color-mix(in srgb, var(--sidebar-bg) ${opacity}%, transparent)`,
+  };
+}
+
+/**
+ * Inline style for the chat panel root. Sets its own background and
+ * rebinds `--color-chat-pane` / `--color-chat-container` on this subtree
+ * so every descendant Tailwind `bg-chat-pane` / `bg-chat-container` class
+ * (sticky group headers, pagination toolbar wrapper, turn-page list,
+ * loading bar, agent-org overview panel, pinned card backdrop, etc.)
+ * automatically inherits the same transparency. Avoids threading inline
+ * styles into every sticky strip.
+ *
+ * The mix reads `--color-chat-pane-base` (not `--color-chat-pane`) to
+ * avoid a circular var reference once we overwrite the unsuffixed name.
+ * Theme files declare both: `*-base` holds the literal color, the
+ * unsuffixed name is the consumable alias.
+ */
+export function getChatPanelBackgroundStyle(
+  pageOpacity: number | undefined
+): CSSProperties {
+  const opacity = sanitizePageOpacity(pageOpacity);
+  const chatPaneMix = `color-mix(in srgb, var(--color-chat-pane-base) ${opacity}%, transparent)`;
+  const chatContainerMix = `color-mix(in srgb, var(--color-chat-container-base) ${opacity}%, transparent)`;
+  return {
+    backgroundColor: chatPaneMix,
+    "--color-chat-pane": chatPaneMix,
+    "--color-chat-container": chatContainerMix,
+  } as CSSProperties;
+}
+
+/**
+ * Inline style for the pinned-area tinted backdrop when painted *outside*
+ * the chat panel subtree (e.g. the SessionCreator fullscreen composer's
+ * repo row on the Start / Select Repo wallpaper routes). Inside the chat
+ * panel subtree, prefer the Tailwind `bg-chat-container` class — the
+ * variable rebind on the chat panel root already handles transparency.
+ */
+export function getChatContainerBackgroundStyle(
+  pageOpacity: number | undefined
+): CSSProperties {
+  const opacity = sanitizePageOpacity(pageOpacity);
+  return {
+    backgroundColor: `color-mix(in srgb, var(--color-chat-container-base) ${opacity}%, transparent)`,
+  };
+}

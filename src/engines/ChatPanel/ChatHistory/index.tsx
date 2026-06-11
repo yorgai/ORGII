@@ -686,7 +686,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
     displayGroupHeaders,
     displayGroupMeta,
     displayGroupCount: displayGroupCounts.length,
-    surfaceBgClass,
     hasPinnedContent,
     collapseLabelVariant: groupChat?.enabled ? "agents" : "agent",
     turnPaginationEnabled,

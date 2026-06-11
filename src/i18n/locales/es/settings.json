@@ -241,7 +241,9 @@
     "noCustomImages": "Sin imágenes personalizadas",
     "source": "Origen",
     "addCustomColor": "Añadir color personalizado",
-    "customColorsLimit": "Puedes guardar hasta {{max}} colores personalizados."
+    "customColorsLimit": "Puedes guardar hasta {{max}} colores personalizados.",
+    "pageOpacity": "Transparencia de la página",
+    "sidebarOpacity": "Transparencia de la barra lateral"
   },
   "shortcuts": {
     "title": "Atajos de teclado",

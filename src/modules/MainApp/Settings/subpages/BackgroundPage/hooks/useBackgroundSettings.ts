@@ -33,7 +33,11 @@ import {
   globalThemeIdAtom,
   updateSettingsBatchAtom,
 } from "@src/store";
-import type { BackgroundConfig } from "@src/store/ui/backgroundConfigAtom";
+import {
+  type BackgroundConfig,
+  sanitizePageOpacity,
+  sanitizeSidebarOpacity,
+} from "@src/store/ui/backgroundConfigAtom";
 import { getStorageInfo } from "@src/util/core/storage/backgroundImage";
 import { setGlassThickness } from "@src/util/platform/ipcRenderer";
 import { prewarmColor } from "@src/util/ui/theme/glassMaterial";
@@ -67,6 +71,8 @@ export interface UseBackgroundSettingsReturn {
   handleAddCustomPaletteHex: (hex: string) => void;
   handleRemoveCustomPaletteHex: (hex: string, event: React.MouseEvent) => void;
   handleBlurChange: (val: number | number[]) => void;
+  handlePageOpacityChange: (val: number | number[]) => void;
+  handleSidebarOpacityChange: (val: number | number[]) => void;
   handleUpload: (file: File) => Promise<boolean>;
   handleDeleteCustomImage: (
     event: React.MouseEvent,
@@ -397,6 +403,24 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
     [config, setConfigWithUndo]
   );
 
+  const handlePageOpacityChange = useCallback(
+    (val: number | number[]) => {
+      const raw = Array.isArray(val) ? val[0] : val;
+      const pageOpacity = sanitizePageOpacity(raw);
+      setConfigWithUndo({ ...config, pageOpacity });
+    },
+    [config, setConfigWithUndo]
+  );
+
+  const handleSidebarOpacityChange = useCallback(
+    (val: number | number[]) => {
+      const raw = Array.isArray(val) ? val[0] : val;
+      const sidebarOpacity = sanitizeSidebarOpacity(raw);
+      setConfigWithUndo({ ...config, sidebarOpacity });
+    },
+    [config, setConfigWithUndo]
+  );
+
   const applyThemeChange = useCallback(
     async (themeIdValue: string) => {
       const themeId = normalizeGlobalThemeId(themeIdValue);
@@ -466,6 +490,8 @@ export function useBackgroundSettings(): UseBackgroundSettingsReturn {
     handleAddCustomPaletteHex,
     handleRemoveCustomPaletteHex,
     handleBlurChange,
+    handlePageOpacityChange,
+    handleSidebarOpacityChange,
     handleUpload,
     handleDeleteCustomImage,
     handleAppearanceModeChange,

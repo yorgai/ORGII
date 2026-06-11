@@ -241,7 +241,9 @@
     "noCustomImages": "Aucune image personnalisée",
     "source": "Source",
     "addCustomColor": "Ajouter une couleur personnalisée",
-    "customColorsLimit": "Vous pouvez enregistrer jusqu’à {{max}} couleurs personnalisées."
+    "customColorsLimit": "Vous pouvez enregistrer jusqu’à {{max}} couleurs personnalisées.",
+    "pageOpacity": "Transparence des pages",
+    "sidebarOpacity": "Transparence de la barre latérale"
   },
   "shortcuts": {
     "title": "Raccourcis clavier",

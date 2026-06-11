@@ -241,7 +241,9 @@
     "noCustomImages": "カスタム画像はありません",
     "source": "ソース",
     "addCustomColor": "カスタムカラーを追加",
-    "customColorsLimit": "最大 {{max}} 件のカスタムカラーを保存できます。"
+    "customColorsLimit": "最大 {{max}} 件のカスタムカラーを保存できます。",
+    "pageOpacity": "ページの透明度",
+    "sidebarOpacity": "サイドバーの透明度"
   },
   "shortcuts": {
     "title": "キーボードショートカット",

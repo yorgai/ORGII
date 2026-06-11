@@ -11,11 +11,20 @@ import React, { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Select from "@src/components/Select";
+import Slider from "@src/components/Slider";
 import {
   SECTION_CONTROL_STYLE,
   SectionContainer,
   SectionRow,
 } from "@src/modules/shared/layouts/SectionLayout";
+import {
+  DEFAULT_PAGE_OPACITY,
+  DEFAULT_SIDEBAR_OPACITY,
+  MAX_PAGE_OPACITY,
+  MAX_SIDEBAR_OPACITY,
+  MIN_PAGE_OPACITY,
+  MIN_SIDEBAR_OPACITY,
+} from "@src/store/ui/backgroundConfigAtom";
 
 import { AnimationSection, ColorSection, ImageSection } from "./components";
 import { useBackgroundSettings } from "./hooks";
@@ -54,6 +63,8 @@ export const BackgroundSettings: React.FC<BackgroundSettingsProps> = ({
     handleAddCustomPaletteHex,
     handleRemoveCustomPaletteHex,
     handleBlurChange,
+    handlePageOpacityChange,
+    handleSidebarOpacityChange,
     handleUpload,
     handleDeleteCustomImage,
     handleAppearanceModeChange,
@@ -167,6 +178,30 @@ export const BackgroundSettings: React.FC<BackgroundSettingsProps> = ({
             onDeleteCustomImage={handleDeleteCustomImage}
           />
         )}
+
+        <SectionRow label={t("background.pageOpacity")}>
+          <div className="min-w-0" style={SECTION_CONTROL_STYLE}>
+            <Slider
+              min={MIN_PAGE_OPACITY}
+              max={MAX_PAGE_OPACITY}
+              value={config.pageOpacity ?? DEFAULT_PAGE_OPACITY}
+              onChange={handlePageOpacityChange}
+              noPadding
+            />
+          </div>
+        </SectionRow>
+
+        <SectionRow label={t("background.sidebarOpacity")}>
+          <div className="min-w-0" style={SECTION_CONTROL_STYLE}>
+            <Slider
+              min={MIN_SIDEBAR_OPACITY}
+              max={MAX_SIDEBAR_OPACITY}
+              value={config.sidebarOpacity ?? DEFAULT_SIDEBAR_OPACITY}
+              onChange={handleSidebarOpacityChange}
+              noPadding
+            />
+          </div>
+        </SectionRow>
       </SectionContainer>
     </>
   );

@@ -241,7 +241,9 @@
     "noCustomImages": "Keine eigenen Bilder",
     "source": "Quelle",
     "addCustomColor": "Benutzerdefinierte Farbe hinzufügen",
-    "customColorsLimit": "Sie können bis zu {{max}} benutzerdefinierte Farben speichern."
+    "customColorsLimit": "Sie können bis zu {{max}} benutzerdefinierte Farben speichern.",
+    "pageOpacity": "Seitentransparenz",
+    "sidebarOpacity": "Seitenleisten-Transparenz"
   },
   "shortcuts": {
     "title": "Tastenkombinationen",

@@ -44,6 +44,17 @@ export interface BackgroundConfig {
   matrixCharSet?: "binary" | "latin" | "symbols" | "katakana";
   /** Glass thickness level. Undefined = off. */
   glass?: "regular" | "medium" | "thick";
+  /**
+   * Opacity of the page panel surface (`bg-bg-2`) as an integer percent
+   * 0–100. Lower values let more of the wallpaper / desktop background
+   * bleed through. Undefined or 100 = fully opaque (no bleed-through).
+   */
+  pageOpacity?: number;
+  /**
+   * Opacity of the navigation sidebar surface (`var(--sidebar-bg)`) as
+   * an integer percent. Same semantics as `pageOpacity`.
+   */
+  sidebarOpacity?: number;
 }
 
 // ============================================
@@ -56,6 +67,45 @@ const VALID_GLASS_LEVELS = new Set(["regular", "medium", "thick"]);
 
 const DEFAULT_BACKGROUND_COLOR_ID = "graphite";
 
+export const DEFAULT_PAGE_OPACITY = 100;
+export const MIN_PAGE_OPACITY = 40;
+export const MAX_PAGE_OPACITY = 100;
+
+export const DEFAULT_SIDEBAR_OPACITY = 100;
+export const MIN_SIDEBAR_OPACITY = 40;
+export const MAX_SIDEBAR_OPACITY = 100;
+
+function clampOpacity(
+  value: unknown,
+  min: number,
+  max: number,
+  fallback: number
+): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  const rounded = Math.round(value);
+  if (rounded < min) return min;
+  if (rounded > max) return max;
+  return rounded;
+}
+
+export function sanitizePageOpacity(value: unknown): number {
+  return clampOpacity(
+    value,
+    MIN_PAGE_OPACITY,
+    MAX_PAGE_OPACITY,
+    DEFAULT_PAGE_OPACITY
+  );
+}
+
+export function sanitizeSidebarOpacity(value: unknown): number {
+  return clampOpacity(
+    value,
+    MIN_SIDEBAR_OPACITY,
+    MAX_SIDEBAR_OPACITY,
+    DEFAULT_SIDEBAR_OPACITY
+  );
+}
+
 const DEFAULT_BACKGROUND_CONFIG: BackgroundConfig = {
   imageUrl: DEFAULT_BUNDLED_BACKGROUND_IMAGE,
   blurAmount: 0,
@@ -63,6 +113,8 @@ const DEFAULT_BACKGROUND_CONFIG: BackgroundConfig = {
   customColors: [],
   adaptiveColors: true,
   backgroundColorId: DEFAULT_BACKGROUND_COLOR_ID,
+  pageOpacity: DEFAULT_PAGE_OPACITY,
+  sidebarOpacity: DEFAULT_SIDEBAR_OPACITY,
 };
 
 function getStoredBackgroundConfig(): BackgroundConfig {
@@ -80,6 +132,8 @@ function getStoredBackgroundConfig(): BackgroundConfig {
       return {
         ...merged,
         customColors: sanitizeCustomColorsArray(merged.customColors),
+        pageOpacity: sanitizePageOpacity(merged.pageOpacity),
+        sidebarOpacity: sanitizeSidebarOpacity(merged.sidebarOpacity),
       };
     }
   } catch (err) {

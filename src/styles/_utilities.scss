@@ -285,10 +285,13 @@
 /**
  * Hide scrollbars for the Settings app shell and all nested scroll regions.
  * Applied on `.settings-page` roots (Settings module + AgentOrgs/Integrations).
+ *
+ * Surface paint lives on the SettingsSlot body wrapper — which honors the
+ * user's page transparency setting via `getPagePanelBackgroundStyle()`.
+ * Painting it again here would re-establish a fully opaque layer that
+ * masks the wallpaper bleed-through.
  */
 .settings-page {
-  background: var(--color-bg-2);
-
   &,
   *:not(.cm-scroller) {
     scrollbar-width: none;

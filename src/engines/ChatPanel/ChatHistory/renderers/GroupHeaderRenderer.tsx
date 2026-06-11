@@ -23,7 +23,6 @@ export interface GroupHeaderRendererProps {
   /** Per-group metadata aligned with `groupHeaders`. */
   groupMeta: ChatGroupMeta[];
   groupCount: number;
-  surfaceBgClass: string;
   /** Whether any pinned todo content exists for the current session. */
   hasPinnedContent: boolean;
   collapseLabelVariant?: "agent" | "agents";
@@ -62,7 +61,6 @@ export const GroupHeaderRenderer: React.FC<GroupHeaderRendererProps> = memo(
     groupHeaders,
     groupMeta,
     groupCount,
-    surfaceBgClass,
     hasPinnedContent,
     collapseLabelVariant = "agent",
     hideCollapseTimeRange = false,
@@ -128,25 +126,17 @@ export const GroupHeaderRenderer: React.FC<GroupHeaderRendererProps> = memo(
 
     return (
       <div
-        className={`${surfaceBgClass} ${CHAT_ITEM_PADDING_X} ${DETAIL_PANEL_TOKENS.contentWidth} ${headerPaddingBottomClass}`.trim()}
+        className={`${CHAT_ITEM_PADDING_X} ${DETAIL_PANEL_TOKENS.contentWidth} ${headerPaddingBottomClass}`.trim()}
       >
         {/*
-          Two-layer when pinned content exists:
-            • Outer "bg" layer (chat-container) — only painted when there's a
-              pinned list; tinted backdrop with a 6px gap between the
-              message and the todo strip. No padding, no border, no hover.
-            • The user message is its own bordered card (border + hover on
-              the input area); the pinned todo strip sits below it directly
-              on the same frame as the session creator bottom area.
+          User message and any pinned bars sit directly on the chat
+          surface — the user message owns its own bordered card, the
+          pinned strip flows underneath. No outer tinted wrapper: it
+          added a second translucent layer once page transparency
+          landed, which read as visual noise.
         */}
         {!hideUserMessage && (
-          <div
-            className={
-              showPinnedBars
-                ? "flex flex-col rounded-[12px] bg-chat-container"
-                : "contents"
-            }
-          >
+          <>
             <UserChatItem
               chatItem={header}
               onEditSubmit={onEditSubmit ? handleEdit : undefined}
@@ -155,7 +145,7 @@ export const GroupHeaderRenderer: React.FC<GroupHeaderRendererProps> = memo(
               }
             />
             {showPinnedBars && <ChatPinnedBars />}
-          </div>
+          </>
         )}
         {showCollapseBar && turnId && (
           <TurnCollapsePinBar

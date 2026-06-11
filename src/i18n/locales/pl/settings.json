@@ -241,7 +241,9 @@
     "noCustomImages": "Brak własnych obrazów",
     "source": "Źródło",
     "addCustomColor": "Dodaj własny kolor",
-    "customColorsLimit": "Możesz zapisać do {{max}} własnych kolorów."
+    "customColorsLimit": "Możesz zapisać do {{max}} własnych kolorów.",
+    "pageOpacity": "Przezroczystość strony",
+    "sidebarOpacity": "Przezroczystość paska bocznego"
   },
   "shortcuts": {
     "title": "Skróty klawiszowe",

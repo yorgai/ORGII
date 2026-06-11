@@ -36,6 +36,7 @@ import { useAgentCompatibility } from "@src/hooks/models/useAgentCompatibility";
 import { useAgentDefinitions } from "@src/modules/MainApp/AgentOrgs/hooks/useAgentDefinitions";
 import { useAgentOrgs } from "@src/modules/MainApp/AgentOrgs/hooks/useAgentOrgs";
 import { useCliAgents } from "@src/modules/MainApp/Integrations/KeyVault/CliClients/hooks/useCliAgents";
+import { getChatContainerBackgroundStyle } from "@src/modules/shared/layouts/viewContainerTokens";
 import { DispatchCategoryPalette } from "@src/scaffold/GlobalSpotlight/palettes/DispatchCategoryPalette";
 import { DispatchCategoryDropdown } from "@src/scaffold/GlobalSpotlight/palettes/DispatchCategoryPalette/DispatchCategoryDropdown";
 import { PresenceMenuButton } from "@src/scaffold/NavigationSidebar/blocks/SidebarBottomBar";
@@ -54,6 +55,7 @@ import {
 import { restoreToInputAtom } from "@src/store/session/cliSessionStatusAtom";
 import { runningLocationAtom } from "@src/store/session/runningLocationAtom";
 import { selectedWorktreePathAtom } from "@src/store/session/selectedWorktreePathAtom";
+import { resolvedBackgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
 import {
   type ChatImageAttachment,
   chatImageAttachmentsAtom,
@@ -226,6 +228,11 @@ const SessionCreatorChatPanelSingle: React.FC<
     setIsTagPanelOpen((prev) => !prev);
   }, []);
   const modelPickerStyle = useAtomValue(modelPickerStyleAtom);
+  const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
+  const repoRowBackgroundStyle = useMemo(
+    () => getChatContainerBackgroundStyle(backgroundConfig.pageOpacity),
+    [backgroundConfig.pageOpacity]
+  );
   const [openOrgMembersPanelId, setOpenOrgMembersPanelId] = useState<
     string | null
   >(null);
@@ -695,7 +702,10 @@ const SessionCreatorChatPanelSingle: React.FC<
             {compactHeader}
             {editorArea}
             {!hideRepoLine && headerLayout !== "compact" && (
-              <div className="session-creator-chat-panel-fullscreen-repo-row px-1 pb-2 pt-3">
+              <div
+                className="session-creator-chat-panel-fullscreen-repo-row px-1 pb-2 pt-3"
+                style={repoRowBackgroundStyle}
+              >
                 {repoPills}
               </div>
             )}

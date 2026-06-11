@@ -241,7 +241,9 @@
     "noCustomImages": "Chưa có hình tùy chỉnh",
     "source": "Nguồn",
     "addCustomColor": "Thêm màu tùy chỉnh",
-    "customColorsLimit": "Bạn có thể lưu tới {{max}} màu tùy chỉnh."
+    "customColorsLimit": "Bạn có thể lưu tới {{max}} màu tùy chỉnh.",
+    "pageOpacity": "Độ trong suốt của trang",
+    "sidebarOpacity": "Độ trong suốt của thanh bên"
   },
   "shortcuts": {
     "title": "Phím tắt",

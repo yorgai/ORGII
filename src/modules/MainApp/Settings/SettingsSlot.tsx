@@ -62,9 +62,11 @@ import SplitViewLayout from "@src/modules/shared/layouts/SplitViewLayout";
 // AGENT_ORGS and MY_ROLE roots host larger surfaces that already exist
 // as full-page modules; the slot lazy-loads them on demand.
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
+import { getPagePanelBackgroundStyle } from "@src/modules/shared/layouts/viewContainerTokens";
 import { AgentOrgsPage, MyRolePage } from "@src/router/lazy/pages";
 import { CollapsedSidebarButton } from "@src/scaffold/NavigationSidebar/CollapsedSidebarButton";
 import { VerticalResizeHandle } from "@src/scaffold/Resize";
+import { resolvedBackgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
 import { toggleChatPanelMaximizedAtom } from "@src/store/ui/chatPanelAtom";
 import { sidebarCollapsedAtom } from "@src/store/ui/sidebarAtom";
 import { settingsReturnRouteAtom } from "@src/store/ui/viewModeAtom";
@@ -255,6 +257,10 @@ const SettingsSlot: React.FC<SettingsSlotProps> = ({
   const navigate = useNavigate();
   const settingsReturnRoute = useAtomValue(settingsReturnRouteAtom);
   const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
+  const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
+  const pageOpacityStyle = getPagePanelBackgroundStyle(
+    backgroundConfig.pageOpacity
+  );
   const isCompactLayout = useIsCompactLayout();
   const shouldOffsetHeaderForCollapsedSidebar = useShouldOffsetChatPanelHeader({
     position,
@@ -339,12 +345,13 @@ const SettingsSlot: React.FC<SettingsSlotProps> = ({
             is the maximize toggle — closing is handled by the global
             navigation back-button, not a panel-local X. */}
         <div
-          className={`workspace-header header-tab-group relative z-30 flex flex-shrink-0 items-center gap-1.5 bg-bg-2 px-2 ${
+          className={`workspace-header header-tab-group relative z-30 flex flex-shrink-0 items-center gap-1.5 px-2 ${
             isCompactLayout ? "h-11 min-h-11 pt-2" : "h-9 min-h-9"
           }`}
           data-tauri-drag-region
           style={
             {
+              ...pageOpacityStyle,
               paddingLeft: shouldOffsetHeaderForCollapsedSidebar
                 ? COLLAPSED_SIDEBAR_CHROME_OFFSET
                 : undefined,
@@ -414,8 +421,13 @@ const SettingsSlot: React.FC<SettingsSlotProps> = ({
         </div>
 
         <div
-          className="flex min-h-0 flex-1 flex-col bg-bg-2"
-          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          className="flex min-h-0 flex-1 flex-col"
+          style={
+            {
+              ...pageOpacityStyle,
+              WebkitAppRegion: "no-drag",
+            } as React.CSSProperties
+          }
         >
           <Body />
         </div>

@@ -17,6 +17,7 @@ import { useShouldOffsetChatPanelHeader } from "@src/hooks/ui/sidebar/useCollaps
 import { useWorkStationTabs } from "@src/hooks/workStation/tabs";
 import { allAgentDefsAtom } from "@src/modules/MainApp/AgentOrgs/store/builtInAgentsAtom";
 import { useIsCompactLayout } from "@src/modules/shared/layouts/useCompactLayout";
+import { getChatPanelBackgroundStyle } from "@src/modules/shared/layouts/viewContainerTokens";
 import { VerticalResizeHandle } from "@src/scaffold/Resize";
 import { GUIDE_TARGETS } from "@src/scaffold/Tutorials";
 import { benchmarkAgentBatchStatusAtom } from "@src/store/benchmark";
@@ -27,6 +28,7 @@ import {
   sessionCreatorStateAtom,
   workstationActiveSessionIdAtom,
 } from "@src/store/session";
+import { resolvedBackgroundConfigAtom } from "@src/store/ui/backgroundConfigAtom";
 import {
   CHAT_PANEL_SURFACE_KIND,
   chatPanelContentModeAtom,
@@ -122,6 +124,11 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const toggleChatFocus = useSetAtom(toggleChatPanelMaximizedAtom);
     const showChatFocusToggle = viewMode === "workStation";
     const rawChatWidth = useAtomValue(chatWidthAtom);
+    const backgroundConfig = useAtomValue(resolvedBackgroundConfigAtom);
+    const chatPanelOpacityStyle = React.useMemo(
+      () => getChatPanelBackgroundStyle(backgroundConfig.pageOpacity),
+      [backgroundConfig.pageOpacity]
+    );
     const chatWidth =
       rawChatWidth > 0 ? Math.min(rawChatWidth, CHAT_MAX_WIDTH) : rawChatWidth;
     const { isDragging, panelRef, handleMouseDown } = useChatPanelResize({
@@ -546,6 +553,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           borderRadius: embedded ? 0 : "var(--radius-page)",
           contain: isDragging ? "strict" : undefined,
           willChange: isDragging ? "width" : undefined,
+          ...chatPanelOpacityStyle,
         }}
       >
         {headerSection}

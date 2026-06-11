@@ -241,7 +241,9 @@
     "noCustomImages": "No custom images",
     "source": "Source",
     "addCustomColor": "Add custom color",
-    "customColorsLimit": "You can save up to {{max}} custom colors."
+    "customColorsLimit": "You can save up to {{max}} custom colors.",
+    "pageOpacity": "Page transparency",
+    "sidebarOpacity": "Sidebar transparency"
   },
   "shortcuts": {
     "title": "Keyboard Shortcuts",

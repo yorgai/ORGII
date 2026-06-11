@@ -241,7 +241,9 @@
     "noCustomImages": "Nenhuma imagem personalizada",
     "source": "Origem",
     "addCustomColor": "Adicionar cor personalizada",
-    "customColorsLimit": "Você pode salvar até {{max}} cores personalizadas."
+    "customColorsLimit": "Você pode salvar até {{max}} cores personalizadas.",
+    "pageOpacity": "Transparência da página",
+    "sidebarOpacity": "Transparência da barra lateral"
   },
   "shortcuts": {
     "title": "Atalhos de Teclado",
