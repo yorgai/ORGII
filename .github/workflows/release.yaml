@@ -1,25 +1,40 @@
-# Build, sign, notarize, and release ORGII for macOS (Apple Silicon).
+# Build, sign, notarize, and release ORGII for macOS (Apple Silicon) and Windows (x64).
 #
 # Trigger: push a tag matching v* (e.g. v0.2.0, v0.2.0-rc.1)
 #
-# Required GitHub Secrets:
+# Required GitHub Secrets (macOS):
 #   APPLE_CERTIFICATE               — base64-encoded .p12 Developer ID certificate
 #   APPLE_CERTIFICATE_PASSWORD      — password for the .p12
 #   APPLE_SIGNING_IDENTITY          — e.g. "Developer ID Application: ORGII AI Inc (XXXXXXXXXX)"
 #   APPLE_ID                        — Apple account email for notarization
 #   APPLE_PASSWORD                  — app-specific password for notarization
 #   APPLE_TEAM_ID                   — 10-char Apple Team ID
-#   TAURI_SIGNING_PRIVATE_KEY       — Tauri updater ed25519 private key
+#   TAURI_SIGNING_PRIVATE_KEY       — Tauri updater ed25519 private key (shared with Windows)
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — password for the updater key
+#
+# Required GitHub Secrets (Windows — Azure Trusted Signing):
+#   AZURE_TENANT_ID                 — Entra ID tenant ID
+#   AZURE_CLIENT_ID                 — App Registration client ID
+#   AZURE_CLIENT_SECRET             — App Registration client secret
+#   AZURE_TRUSTED_SIGNING_ENDPOINT  — e.g. https://eus.codesigning.azure.net/
+#   AZURE_TRUSTED_SIGNING_ACCOUNT   — Trusted Signing account name
+#   AZURE_TRUSTED_SIGNING_PROFILE   — Certificate Profile name
+#
+# Azure Trusted Signing setup:
+#   1. portal.azure.com → create Trusted Signing Account (Basic tier ~$9.99/mo)
+#   2. Create a Certificate Profile (type: Public Trust)
+#   3. Create an App Registration in Entra ID; note Client ID + Tenant ID; create a Client Secret
+#   4. Grant the App Registration the "Artifact Signing Certificate Profile Signer" role
 
-name: "Release ORGII (macOS)"
+name: "Release ORGII"
 
 on:
   push:
     tags: ["v*"]
 
 permissions:
-  contents: write # needed to create releases and upload assets
+  contents: write  # create releases and upload assets
+  id-token: write  # Azure OIDC for Trusted Signing (Windows job)
 
 jobs:
   build-and-release:
