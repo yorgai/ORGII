@@ -10,15 +10,14 @@ import { useEffect } from "react";
 
 import { useMounted } from "@src/hooks/lifecycle/useMounted";
 import type { ElementInfo } from "@src/modules/WorkStation/Browser/hooks/useWebviewInspector";
+import type { AddToAgentRequest } from "@src/store/ui/addToAgentAtom";
 import {
   browserStatusBarCallbacksAtom,
   browserStatusBarStateAtom,
 } from "@src/store/ui/workStationAtom";
 
-import {
-  buildSelectedElementLabel,
-  buildSelectedElementText,
-} from "./browserLayoutUtils";
+import { buildSelectedElementLabel } from "./browserLayoutUtils";
+import { buildDomComponentJsonFromElementInfo } from "./buildDomComponentJson";
 
 interface BrowserStatusBarSyncOptions {
   isActive: boolean;
@@ -37,11 +36,7 @@ interface BrowserStatusBarSyncOptions {
   handlePrevSession: () => void;
   handleNextSession: () => void;
   clearSelection: () => void;
-  setAddToAgent: (payload: {
-    type: "dom-element";
-    text: string;
-    displayName: string;
-  }) => void;
+  setAddToAgent: (payload: AddToAgentRequest) => void;
   toastSuccess: (msg: string) => void;
   chatSentToastMessage: string;
 }
@@ -111,9 +106,11 @@ export function useBrowserStatusBar({
     if (!isActive) return;
     const handleSendSelectedElementToChat = () => {
       if (!selectedElement) return;
-      const label = buildSelectedElementLabel(selectedElement);
-      const text = buildSelectedElementText(selectedElement, currentUrl);
-      setAddToAgent({ type: "dom-element", text, displayName: label });
+      const { jsonText, fileName } = buildDomComponentJsonFromElementInfo(
+        selectedElement,
+        currentUrl
+      );
+      setAddToAgent({ type: "dom-component", fileName, jsonText });
       toastSuccess(chatSentToastMessage);
     };
 

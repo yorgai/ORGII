@@ -10,10 +10,8 @@ import EventWrapper from "@src/engines/ChatPanel/adapters/EventWrapper";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { usePublishWorkstationTabHeader } from "@src/hooks/workStation";
 import { useBrowserSessions } from "@src/hooks/workStation/browser/useBrowserSessions";
-import {
-  buildSelectedElementLabel,
-  buildSelectedElementText,
-} from "@src/modules/WorkStation/Browser/BrowserLayout/browserLayoutUtils";
+import { buildSelectedElementLabel } from "@src/modules/WorkStation/Browser/BrowserLayout/browserLayoutUtils";
+import { buildDomComponentJsonFromElementInfo } from "@src/modules/WorkStation/Browser/BrowserLayout/buildDomComponentJson";
 import {
   NoTabsPlaceholder,
   SimulatorReplayChrome,
@@ -387,13 +385,15 @@ const SessionReplayBrowserComponent: React.FC<SessionReplayBrowserProps> = ({
     const element = myTabsBrowser.selectedElement;
     if (!element) return;
 
-    const label = buildSelectedElementLabel(element);
-    const text = buildSelectedElementText(element, myTabsBrowser.currentUrl);
+    const { jsonText, fileName } = buildDomComponentJsonFromElementInfo(
+      element,
+      myTabsBrowser.currentUrl
+    );
 
     setAddToAgent({
-      type: "dom-element",
-      text,
-      displayName: label,
+      type: "dom-component",
+      fileName,
+      jsonText,
     });
     Message.success(tCommon("browser.selectedElement.sentToChat"));
   }, [

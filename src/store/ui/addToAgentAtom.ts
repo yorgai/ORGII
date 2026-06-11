@@ -40,6 +40,13 @@ export type AddToAgentRequest =
       text: string;
       /** Short display label for the pill (e.g. "div.hp_trivia_outer"). */
       displayName: string;
+    }
+  | {
+      type: "dom-component";
+      /** Paste-pill display name, e.g. "ComposerShell.json" */
+      fileName: string;
+      /** JSON text matching the DomComponentPreview schema */
+      jsonText: string;
     };
 
 export const addToAgentAtom = atom<AddToAgentRequest | null>(null);

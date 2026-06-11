@@ -69,6 +69,12 @@ export function useAddToAgentInsertion(
           "dom-element",
           stableRequest.displayName
         );
+      } else if (stableRequest.type === "dom-component") {
+        const pillPath = `paste://${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`;
+        storePillText(pillPath, stableRequest.jsonText);
+        editor.insertFilePill(pillPath, false, "paste", stableRequest.fileName);
       } else {
         editor.insertFilePill(stableRequest.filePath, false, "file");
       }
