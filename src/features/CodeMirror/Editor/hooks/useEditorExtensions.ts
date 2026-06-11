@@ -73,6 +73,8 @@ export interface UseEditorExtensionsOptions {
   enableGitBlame?: boolean;
   /** Ref to blame data map (line number -> BlameLineData) */
   blameDataRef?: RefObject<Map<number, BlameLineData>>;
+  /** 1-indexed file line of the first document line (default: 1). */
+  lineNumberStart?: number;
 }
 
 // ============================================
@@ -106,6 +108,7 @@ export function useEditorExtensions(
     onDiagnosticsChange,
     enableGitBlame,
     blameDataRef,
+    lineNumberStart,
   } = options;
 
   const appearanceSettings = useEditorAppearanceSettings();
@@ -162,7 +165,18 @@ export function useEditorExtensions(
 
     // Custom line number modes (relative and interval)
     // IMPORTANT: Add BEFORE fold gutter to maintain correct visual order
-    if (appearanceSettings.lineNumbers === "relative") {
+    // A ranged-excerpt offset (lineNumberStart > 1) takes precedence so the
+    // gutter shows real file line numbers; basicSetup's lineNumbers is
+    // disabled by the editor component in that case.
+    const lineNumberOffset =
+      lineNumberStart && lineNumberStart > 1 ? lineNumberStart - 1 : 0;
+    if (lineNumberOffset > 0) {
+      exts.push(
+        lineNumbers({
+          formatNumber: (lineNo: number) => String(lineNo + lineNumberOffset),
+        })
+      );
+    } else if (appearanceSettings.lineNumbers === "relative") {
       exts.push(
         lineNumbers({
           formatNumber: (lineNo: number, state: EditorState) => {
@@ -281,6 +295,7 @@ export function useEditorExtensions(
     appearanceSettings.wordWrap,
     appearanceSettings.tabSize,
     appearanceSettings.lineNumbers,
+    lineNumberStart,
     minimapHostRef,
     callbackRefs,
   ]);

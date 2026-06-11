@@ -74,6 +74,12 @@ export interface CodeMirrorEditorProps {
   enableGitBlame?: boolean;
   /** Repo root path (for computing relative file path for blame) */
   repoPath?: string;
+  /**
+   * 1-indexed file line of the first document line (default: 1). Used by
+   * read-only viewers showing a ranged file excerpt so the gutter displays
+   * real file line numbers instead of restarting at 1.
+   */
+  lineNumberStart?: number;
 }
 
 // ============================================

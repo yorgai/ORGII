@@ -10,6 +10,7 @@ import type { FileOperationEntry } from "./types";
 
 export interface ResolvedFilePayload {
   content?: string;
+  contentStartLine?: number;
   oldContent?: string;
   newContent?: string;
   diff?: string;
@@ -36,6 +37,7 @@ export function resolveFileOperationPayload(
   ) {
     return {
       content: op.content,
+      contentStartLine: op.contentStartLine,
       oldContent: op.oldContent,
       newContent: op.newContent,
       diff: op.diff,
@@ -103,6 +105,7 @@ export function resolveFileOperationPayload(
 
   return {
     content: reconverted.content,
+    contentStartLine: reconverted.contentStartLine,
     oldContent: reconverted.oldContent,
     newContent: reconverted.newContent,
     diff: reconverted.diff,

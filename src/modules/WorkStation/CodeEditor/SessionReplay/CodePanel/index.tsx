@@ -352,6 +352,7 @@ export const CodePanel: React.FC<CodePanelProps> = memo(
                   }
                   language={resolvedLanguage}
                   filePath={filePath}
+                  startLine={resolvedPayload?.contentStartLine}
                 />
               )
             ) : isLoading ? (

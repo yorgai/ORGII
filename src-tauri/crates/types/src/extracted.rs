@@ -50,6 +50,12 @@ pub struct ExtractedFileData {
     pub language: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub line_count: Option<usize>,
+    /// 1-indexed line number of the first content line, parsed from the
+    /// numbered `read_file` output. `None` (or 1) means the read started at
+    /// the top of the file. Viewers use this to offset their line gutter so
+    /// ranged reads (offset/limit) show real file line numbers.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_line: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

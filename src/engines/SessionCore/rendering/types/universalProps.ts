@@ -174,6 +174,8 @@ export interface ExtractedFileData {
   content?: string;
   language?: string;
   lineCount?: number;
+  /** 1-indexed first line of a ranged read (offset/limit); 1 or absent = from top. */
+  startLine?: number;
 }
 
 export interface ExtractedEditData extends ExtractedFileData {

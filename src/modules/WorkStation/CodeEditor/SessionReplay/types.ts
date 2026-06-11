@@ -49,6 +49,8 @@ export interface FileOperationEntry {
   linesRemoved?: number;
   /** File content (for reads) */
   content?: string;
+  /** 1-indexed first line of a ranged read (offset/limit); 1 or absent = from top. */
+  contentStartLine?: number;
   /** Old content (for writes) */
   oldContent?: string;
   /** New content (for writes) */

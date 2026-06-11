@@ -448,6 +448,26 @@ describe("extractFileData", () => {
       const data = extractFileData(props);
       expect(data.content).toBe(plainContent);
       expect(data.lineCount).toBe(2);
+      expect(data.startLine).toBeUndefined();
+    });
+
+    it("reports startLine for ranged reads (offset/limit)", () => {
+      const rangedContent = "[action: read_text]\n   120│fn main() {\n   121│}";
+      const props = makeUniversalProps({
+        args: { file_path: "main.rs" },
+        result: { content: rangedContent },
+      });
+      const data = extractFileData(props);
+      expect(data.content).toBe("fn main() {\n}");
+      expect(data.startLine).toBe(120);
+    });
+
+    it("reports startLine 1 for reads from the top", () => {
+      const props = makeUniversalProps({
+        args: { file_path: "top.ts" },
+        result: { content: "     1│a\n     2│b" },
+      });
+      expect(extractFileData(props).startLine).toBe(1);
     });
   });
 

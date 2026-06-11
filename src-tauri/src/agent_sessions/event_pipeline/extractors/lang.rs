@@ -73,6 +73,13 @@ fn looks_like_numbered_line(line: &str) -> bool {
 ///
 /// Both are written purely for the LLM's benefit; the UI must not show them.
 pub fn strip_line_number_prefixes_pub(content: &str) -> String {
+    strip_line_number_prefixes_with_start(content).0
+}
+
+/// Like [`strip_line_number_prefixes_pub`], but also returns the 1-indexed
+/// line number parsed from the first numbered line (the read's start offset).
+/// `None` when the content carried no line-number prefixes.
+pub fn strip_line_number_prefixes_with_start(content: &str) -> (String, Option<usize>) {
     let lines: Vec<&str> = content.split('\n').collect();
 
     // Skip a single leading `[action: ...]` marker if present.
@@ -96,21 +103,29 @@ pub fn strip_line_number_prefixes_pub(content: &str) -> String {
         // Nothing to strip beyond the action marker; preserve original
         // structure unless we explicitly removed the marker.
         return if body_start > 0 {
-            body.join("\n")
+            (body.join("\n"), None)
         } else {
-            content.to_string()
+            (content.to_string(), None)
         };
     };
 
     if !looks_like_numbered_line(first_line) {
         return if body_start > 0 {
-            body.join("\n")
+            (body.join("\n"), None)
         } else {
-            content.to_string()
+            (content.to_string(), None)
         };
     }
 
-    body.iter()
+    let start_line = first_line.trim_start();
+    let digits: String = start_line
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect();
+    let parsed_start = digits.parse::<usize>().ok();
+
+    let stripped = body
+        .iter()
         .map(|l| {
             if let Some((idx, sep)) = find_line_number_separator(l) {
                 &l[idx + sep.len_utf8()..]
@@ -119,5 +134,6 @@ pub fn strip_line_number_prefixes_pub(content: &str) -> String {
             }
         })
         .collect::<Vec<_>>()
-        .join("\n")
+        .join("\n");
+    (stripped, parsed_start)
 }

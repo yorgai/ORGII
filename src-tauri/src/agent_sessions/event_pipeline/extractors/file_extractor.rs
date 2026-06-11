@@ -5,12 +5,8 @@ use perf_utils::diff_patch::{convert_patch_to_unified, PatchSegment};
 use super::helpers::{
     extract_fenced_diff, get_success_data, obj_str, parse_diff_start_lines, safe_str,
 };
-use super::lang::{detect_language, strip_line_number_prefixes_pub};
+use super::lang::{detect_language, strip_line_number_prefixes_with_start};
 use crate::agent_sessions::event_pipeline::extractors::types::*;
-
-fn strip_line_number_prefixes(content: &str) -> String {
-    strip_line_number_prefixes_pub(content)
-}
 
 pub(super) fn extract_file(
     args: Option<&serde_json::Map<String, serde_json::Value>>,
@@ -59,7 +55,13 @@ pub(super) fn extract_file(
         .or_else(|| result.and_then(|r| obj_str(r, "file_content")))
         .or_else(|| result.and_then(|r| obj_str(r, "observation")));
 
-    let content = raw_content.map(|c| strip_line_number_prefixes(&c));
+    let (content, start_line) = match raw_content {
+        Some(c) => {
+            let (stripped, start) = strip_line_number_prefixes_with_start(&c);
+            (Some(stripped), start)
+        }
+        None => (None, None),
+    };
     let language = detect_language(&file_name);
     let line_count = content.as_ref().map(|c| c.split('\n').count());
 
@@ -69,6 +71,7 @@ pub(super) fn extract_file(
         content,
         language: language.to_string(),
         line_count,
+        start_line,
     }
 }
 

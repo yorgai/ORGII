@@ -133,18 +133,24 @@ const LINE_PREFIX_REGEX = /^\s*\d+[│→]/;
 const ACTION_MARKER_REGEX = /^\[action:[^\]]*\]$/;
 const MAX_STRIP_CACHE = 500;
 
-const stripCache = new LRUCache<string, { content: string; lineCount: number }>(
-  MAX_STRIP_CACHE
-);
+const stripCache = new LRUCache<
+  string,
+  { content: string; lineCount: number; startLine?: number }
+>(MAX_STRIP_CACHE);
 
 /**
  * Strip the leading `[action: ...]` marker plus per-line `<digits><sep>`
  * prefixes from `read_file` content. Results are cached by a
  * length+head+tail key to avoid repeated work across re-renders.
+ *
+ * `startLine` is the 1-indexed line number parsed from the first numbered
+ * line — for ranged reads (offset/limit) this is the read's start offset.
+ * Undefined when the content carried no line-number prefixes.
  */
 export function stripLineNumberPrefixes(content: string): {
   content: string;
   lineCount: number;
+  startLine?: number;
 } {
   const key = cacheKey(content);
   const cached = stripCache.get(key);
@@ -165,10 +171,15 @@ export function stripLineNumberPrefixes(content: string): {
     return result;
   }
 
+  const startLine =
+    numbered && firstNonEmpty !== undefined
+      ? Number.parseInt(firstNonEmpty.trimStart(), 10) || undefined
+      : undefined;
+
   const stripped = numbered
     ? body.map((line) => line.replace(LINE_PREFIX_REGEX, "")).join("\n")
     : body.join("\n");
-  const result = { content: stripped, lineCount: body.length };
+  const result = { content: stripped, lineCount: body.length, startLine };
   stripCache.set(key, result);
   return result;
 }

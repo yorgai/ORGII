@@ -614,6 +614,7 @@ fn test_extracted_data_serialization_shape() {
             content: None,
             language: "rust".to_string(),
             line_count: None,
+            start_line: None,
         },
     );
     let json = serde_json::to_string(&data).unwrap();
@@ -772,4 +773,24 @@ fn strip_line_prefixes_removes_action_marker_even_without_numbered_body() {
     let input = "[action: read_image]\nImage: foo.png (image/png, 12kb)";
     let stripped = strip_line_number_prefixes_pub(input);
     assert_eq!(stripped, "Image: foo.png (image/png, 12kb)");
+}
+
+#[test]
+fn strip_line_prefixes_with_start_reports_ranged_read_offset() {
+    use super::super::lang::strip_line_number_prefixes_with_start;
+
+    // Ranged read starting at line 120 — gutters must keep real line numbers.
+    let input = "[action: read_text]\n   120│fn main() {\n   121│}";
+    let (stripped, start) = strip_line_number_prefixes_with_start(input);
+    assert_eq!(stripped, "fn main() {\n}");
+    assert_eq!(start, Some(120));
+
+    // Read from the top → start is 1.
+    let from_top = "     1│a\n     2│b";
+    let (_, start_top) = strip_line_number_prefixes_with_start(from_top);
+    assert_eq!(start_top, Some(1));
+
+    // Plain content → no start line.
+    let (_, none) = strip_line_number_prefixes_with_start("const x = 1;");
+    assert_eq!(none, None);
 }

@@ -22,6 +22,7 @@ function stripFileOperationPayload(op: FileOperationEntry): FileOperationEntry {
   return {
     ...op,
     content: undefined,
+    contentStartLine: undefined,
     oldContent: undefined,
     newContent: undefined,
     diff: undefined,

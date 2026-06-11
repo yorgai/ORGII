@@ -183,6 +183,7 @@ export function convertToFileOperation(
     const { fileName, directory } = parseFilePath(data.filePath);
 
     let content = data.content;
+    let contentStartLine = data.startLine;
     if (!content) {
       const result = event.result || {};
       const output = result.output as Record<string, unknown> | undefined;
@@ -214,7 +215,9 @@ export function convertToFileOperation(
       }
 
       if (rawFallback) {
-        content = stripLineNumberPrefixes(rawFallback).content;
+        const stripped = stripLineNumberPrefixes(rawFallback);
+        content = stripped.content;
+        contentStartLine = stripped.startLine;
       }
     }
 
@@ -228,6 +231,7 @@ export function convertToFileOperation(
       eventId: event.id,
       isCurrent,
       content,
+      contentStartLine,
       language: data.language,
     };
   } else {

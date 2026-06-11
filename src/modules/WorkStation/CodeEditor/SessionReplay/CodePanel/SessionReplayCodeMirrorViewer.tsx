@@ -10,10 +10,12 @@ export interface SessionReplayCodeMirrorViewerProps {
   content: string;
   filePath?: string;
   language?: string;
+  /** 1-indexed file line of the first content line (ranged reads). */
+  startLine?: number;
 }
 
 export const SessionReplayCodeMirrorViewer: React.FC<SessionReplayCodeMirrorViewerProps> =
-  memo(({ content, filePath, language }) => {
+  memo(({ content, filePath, language, startLine }) => {
     return (
       <div className="h-full min-h-0 min-w-0 overflow-hidden [&_.codemirror-editor-wrapper]:h-full">
         <CodeMirrorEditor
@@ -27,6 +29,7 @@ export const SessionReplayCodeMirrorViewer: React.FC<SessionReplayCodeMirrorView
           enableDirtyDiff={false}
           registerWithService={false}
           enableGitBlame={false}
+          lineNumberStart={startLine}
         />
       </div>
     );

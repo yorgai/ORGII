@@ -67,6 +67,7 @@ function overlayFileOperation(
         ? {}
         : {
             content: existing.content,
+            contentStartLine: existing.contentStartLine,
             oldContent: existing.oldContent,
             newContent: existing.newContent,
             diff: existing.diff,

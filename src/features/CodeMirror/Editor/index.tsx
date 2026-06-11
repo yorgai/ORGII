@@ -116,6 +116,7 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   registerWithService = true,
   enableGitBlame = false,
   repoPath,
+  lineNumberStart,
 }) => {
   // ============================================
   // APPEARANCE SETTINGS: Read from global store
@@ -287,6 +288,7 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
     onDiagnosticsChange,
     enableGitBlame,
     blameDataRef,
+    lineNumberStart,
   });
 
   // ============================================
@@ -306,15 +308,22 @@ export const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   // the external host lifecycle stay in sync.
   const editorInstanceKey = effectiveMinimap ? "minimap-on" : "minimap-off";
 
-  // Dynamic basicSetup config based on appearance settings
+  // Dynamic basicSetup config based on appearance settings.
+  // When an offset gutter is active (ranged excerpt), the custom lineNumbers
+  // extension in useEditorExtensions replaces basicSetup's gutter entirely.
+  const hasOffsetGutter = !!lineNumberStart && lineNumberStart > 1;
   const basicSetupConfig = useMemo(
     () => ({
       ...BASIC_SETUP_CONFIG,
-      lineNumbers: appearanceSettings.lineNumbers === "on",
+      lineNumbers: appearanceSettings.lineNumbers === "on" && !hasOffsetGutter,
       highlightActiveLine: appearanceSettings.highlightActiveLine,
       highlightActiveLineGutter: appearanceSettings.highlightActiveLine,
     }),
-    [appearanceSettings.lineNumbers, appearanceSettings.highlightActiveLine]
+    [
+      appearanceSettings.lineNumbers,
+      appearanceSettings.highlightActiveLine,
+      hasOffsetGutter,
+    ]
   );
 
   // ============================================
