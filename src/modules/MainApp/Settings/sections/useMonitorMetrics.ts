@@ -140,11 +140,10 @@ export function useMonitorMetrics(activeTab: string): UseMonitorMetricsReturn {
       setChildProcesses(children);
       if (sysInfo) setSystemInfo(sysInfo);
 
-      const childTotal = children.reduce(
-        (sum, child) => sum + child.memory_mb,
-        0
-      );
-      recordRamSample((process.memory_rss_mb ?? 0) + childTotal);
+      const appRamTotal =
+        (process.memory_rss_mb ?? 0) +
+        children.reduce((sum, child) => sum + child.memory_mb, 0);
+      recordRamSample(appRamTotal);
     } catch (error) {
       console.error("[Monitor] Failed to fetch metrics:", error);
     }

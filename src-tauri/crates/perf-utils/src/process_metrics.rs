@@ -383,6 +383,25 @@ fn categorize_process_name(name: &str) -> String {
     }
 }
 
+fn display_process_name(name: &str, category: &str) -> String {
+    let name_lower = name.to_lowercase();
+    match category {
+        PROCESS_CATEGORY_WEBVIEW => {
+            if name_lower.contains("tauri:localhost")
+                || name_lower.contains("webcontent")
+                || name_lower.contains("web content")
+            {
+                "WebView renderer".to_string()
+            } else {
+                name.to_string()
+            }
+        }
+        PROCESS_CATEGORY_GPU if name_lower.contains("webkit") => "WebKit GPU".to_string(),
+        PROCESS_CATEGORY_NETWORK if name_lower.contains("webkit") => "WebKit networking".to_string(),
+        _ => name.to_string(),
+    }
+}
+
 fn is_descendant_process(
     pid: Pid,
     root_pid: Pid,
@@ -497,11 +516,12 @@ pub fn get_child_processes_memory() -> Vec<ChildProcessInfo> {
         };
 
         let depth = descendant_depth.unwrap_or(1);
-        let name = process.name().to_string_lossy().to_string();
+        let raw_name = process.name().to_string_lossy().to_string();
         let parent_pid = process.parent().map(|parent| parent.as_u32());
         let memory_mb = process.memory() as f64 / 1024.0 / 1024.0;
         let virtual_memory_mb = process.virtual_memory() as f64 / 1024.0 / 1024.0;
-        let category = categorize_process_name(&name);
+        let category = categorize_process_name(&raw_name);
+        let name = display_process_name(&raw_name, &category);
 
         children.push(ChildProcessInfo {
             pid: pid.as_u32(),

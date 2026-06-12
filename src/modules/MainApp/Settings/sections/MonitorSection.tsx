@@ -56,12 +56,14 @@ const MonitorSection: React.FC<MonitorSectionProps> = ({
     containerRef,
   } = useMonitorMetrics(activeTab);
 
-  const appMemoryMb = processMetrics?.memory_rss_mb ?? 0;
-  const childTotalMemoryMb = childProcesses.reduce(
-    (sum, child) => sum + child.memory_mb,
-    0
-  );
-  const totalMemoryMb = appMemoryMb + childTotalMemoryMb;
+  const backendMemoryMb = processMetrics?.memory_rss_mb ?? 0;
+  const webviewMemoryMb = childProcesses
+    .filter((proc) => ["webview", "gpu", "network"].includes(proc.category))
+    .reduce((sum, child) => sum + child.memory_mb, 0);
+  const toolProcessMemoryMb = childProcesses
+    .filter((proc) => !["webview", "gpu", "network"].includes(proc.category))
+    .reduce((sum, child) => sum + child.memory_mb, 0);
+  const totalMemoryMb = backendMemoryMb + webviewMemoryMb + toolProcessMemoryMb;
   const systemTotalMb = systemMemory?.total_mb ?? 1;
   const totalMemoryPercent = (totalMemoryMb / systemTotalMb) * 100;
 
@@ -73,8 +75,11 @@ const MonitorSection: React.FC<MonitorSectionProps> = ({
   ).length;
 
   function buildChildProcessDescription(): string {
-    if (childProcesses.length === 0) return t("monitor.noChildProcesses");
-    const parts: string[] = [formatMemory(childTotalMemoryMb)];
+    const helperMemoryMb = webviewMemoryMb + toolProcessMemoryMb;
+    if (childProcesses.length === 0) {
+      return "No WebKit or tool helper processes";
+    }
+    const parts: string[] = [formatMemory(helperMemoryMb)];
     if (terminalCount > 0 && terminalCount === childProcesses.length) {
       parts.unshift(
         terminalCount +
@@ -99,13 +104,13 @@ const MonitorSection: React.FC<MonitorSectionProps> = ({
 
   const categoryLabels: Record<string, string> = useMemo(
     () => ({
-      terminal: t("monitor.terminal"),
-      webview: t("monitor.webview"),
-      gpu: t("monitor.gpu"),
-      network: t("monitor.network"),
-      other: t("monitor.helper"),
+      terminal: "Terminal/tool process",
+      webview: "WebView renderer",
+      gpu: "WebKit GPU",
+      network: "WebKit networking",
+      other: "Helper process",
     }),
-    [t]
+    []
   );
 
   const breakdownRows = useMemo<BreakdownRow[]>(() => {
@@ -113,18 +118,36 @@ const MonitorSection: React.FC<MonitorSectionProps> = ({
     return [
       {
         key: "backendRss",
-        label: t("monitor.backendRss"),
+        label: "Backend process RSS",
         megabytes: memoryBreakdown.backend_rss_mb,
-        totalMb: appMemoryMb,
+        totalMb: totalMemoryMb,
+      },
+      {
+        key: "webkitHelpers",
+        label: "WebKit / WebView helpers",
+        megabytes: webviewMemoryMb,
+        totalMb: totalMemoryMb,
+      },
+      {
+        key: "toolHelpers",
+        label: "Terminal & tool helpers",
+        megabytes: toolProcessMemoryMb,
+        totalMb: totalMemoryMb,
       },
       {
         key: "backendFileCache",
-        label: t("monitor.backendFileCache"),
+        label: "Backend file cache",
         megabytes: memoryBreakdown.file_cache_mb,
-        totalMb: appMemoryMb,
+        totalMb: backendMemoryMb,
       },
     ].sort((rowA, rowB) => rowB.megabytes - rowA.megabytes);
-  }, [memoryBreakdown, appMemoryMb, t]);
+  }, [
+    memoryBreakdown,
+    backendMemoryMb,
+    totalMemoryMb,
+    webviewMemoryMb,
+    toolProcessMemoryMb,
+  ]);
 
   const breakdownColumns = useMemo<SettingsTableColumn<BreakdownRow>[]>(
     () => [
@@ -243,9 +266,13 @@ const MonitorSection: React.FC<MonitorSectionProps> = ({
     formatMemory(totalMemoryMb) +
     " / " +
     formatMemory(systemTotalMb) +
-    (childProcesses.length > 0
-      ? " (+ " + childProcesses.length + " " + t("monitor.childProcesses") + ")"
-      : "");
+    " (backend " +
+    formatMemory(backendMemoryMb) +
+    ", WebKit " +
+    formatMemory(webviewMemoryMb) +
+    ", tools " +
+    formatMemory(toolProcessMemoryMb) +
+    ")";
 
   return (
     <div ref={containerRef} className={SECTION_GAP_CLASSES}>
@@ -319,7 +346,7 @@ const MonitorSection: React.FC<MonitorSectionProps> = ({
 
           <SectionContainer>
             <SectionRow
-              label={t("monitor.childProcessesLabel")}
+              label="WebKit & tool helper processes"
               description={buildChildProcessDescription()}
             />
             {childProcesses.length > 0 && (

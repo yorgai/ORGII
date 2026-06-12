@@ -202,7 +202,20 @@ export class ZodActionRegistry {
 
     // Execute with validated params
     try {
-      return await action.execute(parseResult.data);
+      const result: unknown = await action.execute(parseResult.data);
+
+      if (
+        !result ||
+        typeof result !== "object" ||
+        typeof (result as Partial<ActionResult>).success !== "boolean"
+      ) {
+        return {
+          success: false,
+          message: `Execution failed: Action ${actionId} returned an invalid result`,
+        };
+      }
+
+      return result as ActionResult;
     } catch (error) {
       return {
         success: false,

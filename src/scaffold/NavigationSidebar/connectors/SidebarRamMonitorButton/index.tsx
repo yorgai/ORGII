@@ -46,6 +46,11 @@ export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
   );
   const totalTerminalBufferBytes =
     snapshot.terminalBufferBytes + terminalPtyBufferBytes;
+  const webkitCategories = new Set<string>([
+    CHILD_PROCESS_CATEGORY.WEBVIEW,
+    CHILD_PROCESS_CATEGORY.GPU,
+    CHILD_PROCESS_CATEGORY.NETWORK,
+  ]);
   const tauriWebViewRendererMemoryMb = snapshot.childProcesses
     .filter(
       (childProcess) => childProcess.category === CHILD_PROCESS_CATEGORY.WEBVIEW
@@ -61,9 +66,13 @@ export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
       (childProcess) => childProcess.category === CHILD_PROCESS_CATEGORY.NETWORK
     )
     .reduce((sum, childProcess) => sum + childProcess.memory_mb, 0);
-  const frontendProcessMemoryMb =
+  const webkitProcessMemoryMb =
     tauriWebViewRendererMemoryMb + tauriGpuMemoryMb + tauriNetworkMemoryMb;
-  const appRamMb = appMemoryMb + frontendProcessMemoryMb;
+  const toolProcessMemoryMb = snapshot.childProcesses
+    .filter((childProcess) => !webkitCategories.has(childProcess.category))
+    .reduce((sum, childProcess) => sum + childProcess.memory_mb, 0);
+  const totalAppRamMb =
+    appMemoryMb + webkitProcessMemoryMb + toolProcessMemoryMb;
   const webViewDiagnostics = snapshot.webViewDiagnostics;
   const webViewEstimateBytes =
     (webViewDiagnostics?.decodedImageBytes ?? 0) +
@@ -77,22 +86,28 @@ export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
   const ramBreakdownRows: MemoryBreakdownRow[] = [
     {
       key: "backendGroup",
-      label: tSettings("monitor.backendGroup"),
+      label: "Backend process",
       value: formatMegabytes(backendRssMb),
       bytes: backendRssMb * 1024 * 1024,
     },
     {
       key: "backendFileCache",
-      label: tSettings("monitor.backendFileCache"),
+      label: "File cache",
       value: formatMegabytes(fileCacheMb),
       bytes: fileCacheMb * 1024 * 1024,
       indentLevel: 1,
     },
     {
-      key: "frontendGroup",
-      label: tSettings("monitor.frontendRssGroup"),
-      value: formatMegabytes(frontendProcessMemoryMb),
-      bytes: frontendProcessMemoryMb * 1024 * 1024,
+      key: "webkitGroup",
+      label: "WebKit / WebView helpers",
+      value: formatMegabytes(webkitProcessMemoryMb),
+      bytes: webkitProcessMemoryMb * 1024 * 1024,
+    },
+    {
+      key: "toolHelpersGroup",
+      label: "Terminal & tool helpers",
+      value: formatMegabytes(toolProcessMemoryMb),
+      bytes: toolProcessMemoryMb * 1024 * 1024,
     },
     {
       key: "attributionHintsGroup",
@@ -192,11 +207,11 @@ export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
                 }
               />
               <MemoryStatRow
-                label={tSettings("monitor.appRam", { defaultValue: "App RAM" })}
-                value={formatMegabytes(appRamMb)}
+                label="Total app RAM"
+                value={formatMegabytes(totalAppRamMb)}
                 emphasized
                 tone={
-                  appRamMb > 0 && appRamMb < SUCCESS_RAM_THRESHOLD_MB
+                  totalAppRamMb > 0 && totalAppRamMb < SUCCESS_RAM_THRESHOLD_MB
                     ? "success"
                     : undefined
                 }
