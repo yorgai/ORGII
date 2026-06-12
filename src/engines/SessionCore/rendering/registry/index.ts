@@ -21,6 +21,7 @@ export {
   getBuiltinToolActionIconId,
   getBuiltinToolStatusIconId,
   getToolActions,
+  getToolDisplayBehavior,
   getActionLabels,
   getToolLabel,
   getCliSimulatorApp,
@@ -34,6 +35,7 @@ export {
   _setBuiltinIconIdMap,
   _setBuiltinAppSubtoolMap,
   _setBuiltinChatBlockMap,
+  _setBuiltinDisplayBehaviorMap,
   _setBuiltinLabelsMap,
   _setBuiltinActionsMap,
   _setCliToolAliasMap,
@@ -42,6 +44,7 @@ export {
   type ChatBlock,
   type AliasEntry,
   type ToolActionInfo,
+  type ToolDisplayBehavior,
 } from "./initToolRegistry";
 
 export {

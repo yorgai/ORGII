@@ -26,9 +26,10 @@ import type { SimulatorEventPreview } from "@src/engines/SessionCore";
 
 export interface CurrentTurnLastAgentMessage {
   text: string;
-  /** Event id of the source agent message, useful for keying renderers. */
+  source: "assistant" | "user";
+  /** Event id of the source message, useful for keying renderers. */
   eventId: string;
-  /** Whether the replay cursor is currently on this exact agent message event. */
+  /** Whether the replay cursor is currently on this exact message event. */
   isCurrentEvent: boolean;
 }
 
@@ -53,6 +54,17 @@ export function useCurrentTurnLastAgentMessage(): CurrentTurnLastAgentMessage | 
       ? eventIds.length - 1
       : currentIndex;
 
+  const currentPreview = previewById[eventIds[cursor]];
+  const currentText = currentPreview?.displayText?.trim();
+  if (currentPreview?.source === "user" && currentText) {
+    return {
+      text: currentText,
+      source: "user",
+      eventId: currentPreview.id,
+      isCurrentEvent: true,
+    };
+  }
+
   let turnStart = 0;
   for (let index = cursor; index >= 0; index--) {
     const preview = previewById[eventIds[index]];
@@ -67,7 +79,12 @@ export function useCurrentTurnLastAgentMessage(): CurrentTurnLastAgentMessage | 
     if (!preview || !isAssistantMessagePreview(preview)) continue;
     const text = preview.displayText?.trim();
     if (!text) continue;
-    return { text, eventId: preview.id, isCurrentEvent: index === cursor };
+    return {
+      text,
+      source: "assistant",
+      eventId: preview.id,
+      isCurrentEvent: index === cursor,
+    };
   }
 
   return null;

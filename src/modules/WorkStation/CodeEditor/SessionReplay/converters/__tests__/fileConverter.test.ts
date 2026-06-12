@@ -67,6 +67,26 @@ describe("convertToFileOperation", () => {
     expect(op?.isCurrent).toBe(true);
   });
 
+  it("builds a loading read operation from running args before result arrives", () => {
+    const event = minimalSessionEvent({
+      id: "read-running",
+      functionName: "read_file",
+      args: { path: "/repo/loading.ts" },
+      result: {},
+      displayStatus: "running",
+      status: "running",
+    });
+
+    const op = convertToFileOperation(event, true);
+
+    expect(op).not.toBeNull();
+    expect(op?.type).toBe("read");
+    expect(op?.filePath).toBe("/repo/loading.ts");
+    expect(op?.content).toBeUndefined();
+    expect(op?.isLoading).toBe(true);
+    expect(op?.isCurrent).toBe(true);
+  });
+
   it("preserves hunk line numbers from Rust edit diffs", () => {
     const event = minimalSessionEvent({
       id: "edit-1",

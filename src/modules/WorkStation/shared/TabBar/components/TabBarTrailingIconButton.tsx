@@ -45,7 +45,7 @@ export const TabBarTrailingIconButton: React.FC<TabBarTrailingIconButtonProps> =
           size="small"
           iconOnly
           className={`${active ? "!bg-fill-1 !text-primary-6" : ""} ${className}`.trim()}
-          title={nativeTitle ? title : undefined}
+          title={nativeTitle && !shortcutId ? title : undefined}
           aria-label={buttonProps["aria-label"] ?? title}
           onClick={onClick}
           icon={children}

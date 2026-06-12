@@ -6,7 +6,9 @@
 //! literals live in `table.rs` next to the static they populate.
 
 use super::super::categories as tool_categories;
-use super::super::ui_metadata::{AppSubtool, ChatBlock, HumanToolKey, SimulatorApp, ToolInfo};
+use super::super::ui_metadata::{
+    AppSubtool, ChatBlock, HumanToolKey, SimulatorApp, ToolDisplayBehavior, ToolInfo,
+};
 use crate::definitions::capabilities::RequiredCapability;
 
 /// Static action entry with per-engine, per-state layout recipes.
@@ -20,6 +22,8 @@ pub struct ActionEntry {
     pub app_subtool: Option<AppSubtool>,
     /// Per-action ChatBlock override. `None` inherits `ToolEntry::chat_block`.
     pub chat_block: Option<ChatBlock>,
+    /// Per-action display behavior override. `None` inherits `ToolEntry::display_behavior`.
+    pub display_behavior: Option<ToolDisplayBehavior>,
     /// Optional i18n key overrides. `None` inherits from `ToolEntry`.
     pub label_running: Option<&'static str>,
     pub label_done: Option<&'static str>,
@@ -47,6 +51,7 @@ pub struct ToolEntry {
     /// Chat-panel block dispatch key. Independent from `app_subtool` — the
     /// chat panel uses its own smaller enum with one variant per block.
     pub chat_block: ChatBlock,
+    pub display_behavior: ToolDisplayBehavior,
     pub human_tool_key: Option<HumanToolKey>,
     /// If true, the tool is internal plumbing and not shown in user settings.
     pub hidden: bool,
@@ -91,6 +96,7 @@ pub const DEFAULT_TOOL_ENTRY: ToolEntry = ToolEntry {
     simulator_app: SimulatorApp::Channels,
     app_subtool: AppSubtool::Message,
     chat_block: ChatBlock::Fallback,
+    display_behavior: ToolDisplayBehavior::WaitForResult,
     human_tool_key: None,
     hidden: false,
     action_icons: &[],
@@ -132,6 +138,7 @@ impl ToolEntry {
             simulator_app: self.simulator_app,
             app_subtool: self.app_subtool,
             chat_block: self.chat_block,
+            display_behavior: self.display_behavior,
             human_tool_key: self.human_tool_key,
             hidden: self.hidden,
             label_running: self.label_running.into(),

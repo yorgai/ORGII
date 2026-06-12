@@ -75,6 +75,7 @@ pub(super) fn project_action(action: &ActionEntry, tool: &ToolEntry) -> ToolActi
         summary: action.summary.into(),
         app_subtool: action.app_subtool,
         chat_block: action.chat_block,
+        display_behavior: action.display_behavior,
         label_running: action.label_running.unwrap_or(tool.label_running).into(),
         label_done: action.label_done.unwrap_or(tool.label_done).into(),
         label_failed: action.label_failed.unwrap_or(tool.label_failed).into(),

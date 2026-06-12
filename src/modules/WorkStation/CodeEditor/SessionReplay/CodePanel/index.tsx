@@ -10,6 +10,8 @@ import { Terminal } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { getToolDisplayBehavior } from "@src/engines/SessionCore/rendering/registry/initToolRegistry";
+import { TOOL_DISPLAY_BEHAVIOR } from "@src/engines/SessionCore/rendering/registry/types";
 import { AppType } from "@src/engines/Simulator/types/appTypes";
 import { VirtualizedModernDiff } from "@src/features/CodeViewer/VirtualizedModernDiff";
 import { ImagePreview } from "@src/modules/WorkStation/CodeEditor/Panels/EditorMainPane/content/FilePreviewContent/ImagePreview";
@@ -26,6 +28,7 @@ import {
   getPreviewType,
   supportsPreviewToggle,
 } from "@src/util/file/previewTypes";
+import { deriveToolAction } from "@src/util/ui/rendering/toolAction";
 
 import { resolveFileOperationPayload } from "../resolveFilePayload";
 import {
@@ -45,6 +48,7 @@ import { TerminalContent } from "./TerminalContent";
 import { ToolPanel } from "./ToolPanel";
 import { simulatorSearchHeaderIcon } from "./searchIcons";
 import type { CodePanelProps, PreviewModeState } from "./types";
+import { useLiveReadFileContent } from "./useLiveReadFileContent";
 
 export { type CodePanelProps } from "./types";
 // Re-export atomic components for SimulatorVariant usage
@@ -142,6 +146,26 @@ export const CodePanel: React.FC<CodePanelProps> = memo(
     const resolvedPayload = useMemo(
       () => (operation ? resolveFileOperationPayload(operation) : null),
       [operation]
+    );
+
+    const operationDisplayBehavior = useMemo(() => {
+      if (!operation) return TOOL_DISPLAY_BEHAVIOR.WAIT_FOR_RESULT;
+      const action = deriveToolAction(
+        operation.event.functionName,
+        operation.event.args
+      );
+      return getToolDisplayBehavior(operation.event.functionName, action);
+    }, [operation]);
+
+    const shouldLoadLiveReadContent =
+      operationDisplayBehavior === TOOL_DISPLAY_BEHAVIOR.INSTANT &&
+      operation?.type === FILE_OPERATION_TYPE.READ &&
+      operation.isLoading &&
+      resolvedPayload?.content === undefined &&
+      getPreviewType(operation.filePath) !== "image";
+    const liveReadContent = useLiveReadFileContent(
+      operation?.filePath,
+      shouldLoadLiveReadContent
     );
 
     if (mode === CODE_PANEL_MODE.TERMINAL) {
@@ -300,7 +324,9 @@ export const CodePanel: React.FC<CodePanelProps> = memo(
       );
     }
 
-    const content = resolvedPayload?.content;
+    const content =
+      resolvedPayload?.content ??
+      (type === FILE_OPERATION_TYPE.READ ? liveReadContent.content : undefined);
     const oldContent = resolvedPayload?.oldContent;
     const newContent = resolvedPayload?.newContent;
     const resolvedLanguage = resolvedPayload?.language ?? language;
@@ -356,11 +382,12 @@ export const CodePanel: React.FC<CodePanelProps> = memo(
                   startLine={resolvedPayload?.contentStartLine}
                 />
               )
-            ) : operationIsLoading ? (
-              <Placeholder
-                variant="loading"
-                placement="detail-panel"
-                fillParentHeight
+            ) : operationIsLoading && liveReadContent.status !== "failed" ? (
+              <SessionReplayCodeMirrorViewer
+                content=""
+                language={resolvedLanguage}
+                filePath={filePath}
+                startLine={resolvedPayload?.contentStartLine}
               />
             ) : (
               <NoTabsPlaceholder

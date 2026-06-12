@@ -72,10 +72,14 @@ const AgentStationTopHeader: React.FC = memo(() => {
   const workstationActiveSessionId = useAtomValue(
     workstationActiveSessionIdAtom
   );
-  const showAgentMessageNotice =
+  const showMessageNotice =
     captionMessage?.isCurrentEvent && effectiveDockApp === AppType.CHANNELS;
-  const captionText = showAgentMessageNotice
-    ? t("simulator.agentSentMessageCaption")
+  const captionText = showMessageNotice
+    ? t(
+        captionMessage.source === "user"
+          ? "simulator.userSentMessageCaption"
+          : "simulator.agentSentMessageCaption"
+      )
     : captionMessage?.text;
   const captionToggleLabel = t("simulator.captionBarToggleTooltip");
   const chatPanelLabel = isChatPanelVisible

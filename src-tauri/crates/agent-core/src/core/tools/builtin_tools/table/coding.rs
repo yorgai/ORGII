@@ -14,11 +14,9 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         simulator_app: AppCode,
         app_subtool: FileRead,
         chat_block: CbReadFile,
+        display_behavior: DisplayInstant,
         human_tool_key: Some(HtCode),
-        action_icons: &[
-            ("read_image", "image"),
-            ("read_pdf", "file-box"),
-        ],
+        action_icons: &[("read_image", "image"), ("read_pdf", "file-box")],
         label_running: "tools.readFileRunning",
         label_done: "tools.readFileDone",
         label_failed: "tools.readFileFailed",
@@ -56,6 +54,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         simulator_app: AppCode,
         app_subtool: Shell,
         chat_block: CbShell,
+        display_behavior: DisplayStream,
         human_tool_key: Some(Terminal),
         label_running: "tools.runShellRunning",
         label_done: "tools.runShellDone",
@@ -90,6 +89,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         simulator_app: AppCode,
         app_subtool: Shell,
         chat_block: CbFallback,
+        display_behavior: DisplayStream,
         human_tool_key: Some(Terminal),
         label_running: "tools.inspectTerminalsRunning",
         label_done: "tools.inspectTerminalsDone",
@@ -119,10 +119,8 @@ pub(super) static TOOLS: &[ToolEntry] = &[
         icon_id: "timer",
         simulator_app: AppCode,
         app_subtool: Shell,
-        action_icons: &[
-            ("monitor", "focus"),
-            ("list", "list-tree"),
-        ],
+        display_behavior: DisplayStream,
+        action_icons: &[("monitor", "focus"), ("list", "list-tree")],
         // Tool-level default: each subcommand action overrides chat_block below.
         // `wait_for` / `monitor` render as TitleOnly rows (icon + title + subtitle,
         // no body); `list` renders via the Explore/ToolCallBlock stack list to
@@ -148,6 +146,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
                 "Block until a regex pattern matches, the job completes, or the timeout elapses",
                 Shell,
                 chat: CbTitleOnly,
+                display: DisplayStream,
                 labels: "tools.awaitOutputWaitForRunning", "tools.awaitOutputWaitForDone", "tools.awaitOutputWaitForFailed"
             ),
             action_sub!(
@@ -155,6 +154,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
                 "Non-blocking snapshot of a background job (current status + last N lines)",
                 Shell,
                 chat: CbTitleOnly,
+                display: DisplayStream,
                 labels: "tools.awaitOutputMonitorRunning", "tools.awaitOutputMonitorDone", "tools.awaitOutputMonitorFailed"
             ),
             action_sub!(
@@ -162,6 +162,7 @@ pub(super) static TOOLS: &[ToolEntry] = &[
                 "List all background jobs for this session",
                 Explore,
                 chat: CbFallback,
+                display: DisplayWaitForResult,
                 labels: "tools.awaitOutputListRunning", "tools.awaitOutputListDone", "tools.awaitOutputListFailed"
             ),
         ],
