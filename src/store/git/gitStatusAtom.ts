@@ -190,15 +190,25 @@ export interface RepoGitStatusSummary {
   behind: number;
   hasConflicts?: boolean;
   needsPublish?: boolean; // No upstream branch
+  /**
+   * Set when the last fetch for this repo failed (negative cache entry).
+   * Consumers (e.g. badge renderers) should treat the numbers as stale
+   * and may render an "unavailable" state.
+   */
+  error?: boolean;
 }
 
 /**
  * Cached status entry with metadata
  */
-interface CachedRepoGitStatus {
+export interface CachedRepoGitStatus {
   status: RepoGitStatusSummary;
   fetchedAt: number; // timestamp
   lastAccessed: number; // timestamp
+  /** Consecutive fetch failures (drives exponential retry backoff) */
+  errorCount?: number;
+  /** Negative-cache entries only: earliest timestamp at which a refetch is allowed */
+  retryAt?: number;
 }
 
 /**
@@ -243,7 +253,45 @@ export const GIT_STATUS_CACHE_CONFIG = {
   RECENT_ACCESS_THRESHOLD: 60 * 1000, // 60 seconds
   STALE_THRESHOLD: 2 * 60 * 60 * 1000, // 2 hours
   MAX_ENTRIES: 50, // Max repos to keep in cache
+  ERROR_RETRY_BASE_MS: 10 * 1000, // First retry after a failed fetch
+  ERROR_RETRY_MAX_MS: 5 * 60 * 1000, // Backoff cap (5 minutes)
 } as const;
+
+/**
+ * Compute the retry delay for a failed fetch using exponential backoff.
+ * errorCount = 1 → 10s, 2 → 20s, 3 → 40s, ... capped at 5 minutes.
+ */
+export function computeGitStatusRetryDelay(errorCount: number): number {
+  const exponent = Math.max(0, errorCount - 1);
+  return Math.min(
+    GIT_STATUS_CACHE_CONFIG.ERROR_RETRY_BASE_MS * 2 ** exponent,
+    GIT_STATUS_CACHE_CONFIG.ERROR_RETRY_MAX_MS
+  );
+}
+
+/**
+ * Whether a cached repo git status entry should be refetched.
+ * - Missing entry → stale.
+ * - Negative-cache entry (error) → stale only once its retryAt backoff has elapsed.
+ * - Successful entry → stale when older than its TTL (priority repos refresh faster).
+ */
+export function isRepoGitStatusStale(
+  cached: CachedRepoGitStatus | undefined,
+  isPriority: boolean,
+  now: number = Date.now()
+): boolean {
+  if (!cached) return true;
+
+  if (cached.status.error) {
+    return now >= (cached.retryAt ?? 0);
+  }
+
+  const ttl = isPriority
+    ? GIT_STATUS_CACHE_CONFIG.ACTIVE_REPO_TTL
+    : GIT_STATUS_CACHE_CONFIG.INACTIVE_REPO_TTL;
+
+  return now - cached.fetchedAt > ttl;
+}
 
 /**
  * Prune stale entries from the git status cache.

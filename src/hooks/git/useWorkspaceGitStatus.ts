@@ -9,7 +9,7 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { getGitStatus } from "@src/api/http/git/status";
 import { getCodeEditorWebSocket } from "@src/api/realtime/codeEditorWebSocket";
@@ -33,10 +33,30 @@ export function useWorkspaceGitStatus(): void {
   const registeredFoldersRef = useRef<Map<string, RegisteredFolder>>(new Map());
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Stable key derived from folder paths only — renames/reorders of folders
+  // must not retrigger watcher registration or full status refetches.
+  const folderPathsKey = useMemo(
+    () =>
+      workspaceFolders
+        .map((folder) => folder.path)
+        .sort()
+        .join("\n"),
+    [workspaceFolders]
+  );
+
+  // Keep latest folders in a ref so path-keyed effects can read them
+  // without depending on the array identity. Declared before the consuming
+  // effects so it runs first on every commit.
+  const workspaceFoldersRef = useRef(workspaceFolders);
+  useEffect(() => {
+    workspaceFoldersRef.current = workspaceFolders;
+  }, [workspaceFolders]);
+
   const registerAndUnregisterWatchers = useCallback(async () => {
     if (!isMultiRoot) return;
 
-    const currentPathSet = new Set(workspaceFolders.map((f) => f.path));
+    const folders = workspaceFoldersRef.current;
+    const currentPathSet = new Set(folders.map((f) => f.path));
 
     // Unwatch folders that were removed from the workspace
     const toUnwatch: string[] = [];
@@ -56,7 +76,7 @@ export function useWorkspaceGitStatus(): void {
     }
 
     // Register new folders
-    const reposToRegister = workspaceFolders
+    const reposToRegister = folders
       .filter((folder) => !registeredFoldersRef.current.has(folder.path))
       .map((folder) => ({
         repo_id: folder.id,
@@ -80,13 +100,13 @@ export function useWorkspaceGitStatus(): void {
         error
       );
     }
-  }, [isMultiRoot, workspaceFolders]);
+  }, [isMultiRoot]);
 
-  // Register/unregister watchers when folders change.
+  // Register/unregister watchers when folder paths change.
   // New folders are registered immediately; the delay only applies to
   // the initial mount (avoids thrashing during rapid workspace load).
   useEffect(() => {
-    if (!isMultiRoot || workspaceFolders.length <= 1) return;
+    if (!isMultiRoot || workspaceFoldersRef.current.length <= 1) return;
 
     const hasRegistered = registeredFoldersRef.current.size > 0;
 
@@ -111,15 +131,39 @@ export function useWorkspaceGitStatus(): void {
         pendingTimerRef.current = null;
       }
     };
-  }, [isMultiRoot, workspaceFolders, registerAndUnregisterWatchers]);
+  }, [isMultiRoot, folderPathsKey, registerAndUnregisterWatchers]);
+
+  // When leaving multi-root mode, unwatch everything and clear the map
+  // so stale watchers and entries don't linger.
+  useEffect(() => {
+    if (isMultiRoot) return;
+    if (registeredFoldersRef.current.size === 0) return;
+
+    if (pendingTimerRef.current) {
+      clearTimeout(pendingTimerRef.current);
+      pendingTimerRef.current = null;
+    }
+
+    const registered = [...registeredFoldersRef.current.values()];
+    registeredFoldersRef.current.clear();
+
+    for (const folder of registered) {
+      invoke("unwatch_repo", { repoId: folder.id }).catch(() => {
+        // Already unwatched or manager not ready — safe to ignore
+      });
+    }
+
+    setWorkspaceGitStatusMap((prev) => (prev.size > 0 ? new Map() : prev));
+  }, [isMultiRoot, setWorkspaceGitStatusMap]);
 
   // Fetch initial status for each workspace folder + prune stale entries
   useEffect(() => {
-    if (!isMultiRoot || workspaceFolders.length <= 1) return;
+    const folders = workspaceFoldersRef.current;
+    if (!isMultiRoot || folders.length <= 1) return;
 
     let cancelled = false;
 
-    const currentPaths = new Set(workspaceFolders.map((f) => f.path));
+    const currentPaths = new Set(folders.map((f) => f.path));
     setWorkspaceGitStatusMap((prev) => {
       let pruned = false;
       const next = new Map(prev);
@@ -133,7 +177,7 @@ export function useWorkspaceGitStatus(): void {
     });
 
     const fetchAllStatuses = async () => {
-      for (const folder of workspaceFolders) {
+      for (const folder of folders) {
         if (cancelled) return;
         try {
           const statusData = await getGitStatus({
@@ -158,45 +202,64 @@ export function useWorkspaceGitStatus(): void {
     return () => {
       cancelled = true;
     };
-  }, [isMultiRoot, workspaceFolders, setWorkspaceGitStatusMap]);
+  }, [isMultiRoot, folderPathsKey, setWorkspaceGitStatusMap]);
 
-  // Listen for status updates from all workspace folders
+  // Listen for status updates from all workspace folders.
+  // Handlers on CodeEditorWebSocketClient are client-level and survive socket
+  // reconnects, so subscribing once is reconnect-safe. The only gap is the
+  // singleton not existing yet when this effect runs — poll briefly for it
+  // instead of permanently giving up.
   useEffect(() => {
-    if (!isMultiRoot || workspaceFolders.length <= 1) return;
-
-    const websocket = getCodeEditorWebSocket();
-    if (!websocket) return;
+    const folders = workspaceFoldersRef.current;
+    if (!isMultiRoot || folders.length <= 1) return;
 
     let mounted = true;
+    let unsubscribe: (() => void) | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     const folderPathById = new Map<string, string>();
-    for (const folder of workspaceFolders) {
+    for (const folder of folders) {
       folderPathById.set(folder.id, folder.path);
     }
 
-    const unsubscribe = websocket.on("repo:status_updated", (data) => {
+    const trySubscribe = () => {
       if (!mounted) return;
 
-      const payload = data as {
-        repo_id?: string;
-        status?: GitRepositoryStatus;
-      };
+      const websocket = getCodeEditorWebSocket();
+      if (!websocket) {
+        retryTimer = setTimeout(trySubscribe, 1000);
+        return;
+      }
 
-      if (!payload.repo_id || !payload.status) return;
+      unsubscribe = websocket.on("repo:status_updated", (data) => {
+        if (!mounted) return;
 
-      const folderPath = folderPathById.get(payload.repo_id);
-      if (!folderPath) return;
+        const payload = data as {
+          repo_id?: string;
+          status?: GitRepositoryStatus;
+        };
 
-      setWorkspaceGitStatusMap((prev) => {
-        const next = new Map(prev);
-        next.set(folderPath, payload.status as GitRepositoryStatus);
-        return next;
+        if (!payload.repo_id || !payload.status) return;
+
+        const folderPath = folderPathById.get(payload.repo_id);
+        if (!folderPath) return;
+
+        setWorkspaceGitStatusMap((prev) => {
+          const next = new Map(prev);
+          next.set(folderPath, payload.status as GitRepositoryStatus);
+          return next;
+        });
       });
-    });
+    };
+
+    trySubscribe();
 
     return () => {
       mounted = false;
-      unsubscribe();
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+      }
+      unsubscribe?.();
     };
-  }, [isMultiRoot, workspaceFolders, setWorkspaceGitStatusMap]);
+  }, [isMultiRoot, folderPathsKey, setWorkspaceGitStatusMap]);
 }

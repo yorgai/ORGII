@@ -18,9 +18,11 @@
  *   - isLoading: Whether any fetches are in progress
  */
 import {
-  GIT_STATUS_CACHE_CONFIG,
   RepoGitStatusSummary,
+  computeGitStatusRetryDelay,
   gitStatusFetchingReposAtom,
+  isRepoGitStatusStale,
+  pruneGitStatusCacheAtom,
   repoGitStatusCacheAtom,
 } from "@/src/store/git";
 import { useAtomValue, useSetAtom } from "jotai";
@@ -73,6 +75,7 @@ export const MultiRepoGitStatusProvider: React.FC<{
   const setCache = useSetAtom(repoGitStatusCacheAtom);
   const fetchingRepos = useAtomValue(gitStatusFetchingReposAtom);
   const setFetchingRepos = useSetAtom(gitStatusFetchingReposAtom);
+  const pruneCache = useSetAtom(pruneGitStatusCacheAtom);
   const repoMap = useAtomValue(repoMapAtom);
 
   // Refs for debouncing and request management
@@ -86,7 +89,6 @@ export const MultiRepoGitStatusProvider: React.FC<{
     timeoutId: null,
   });
 
-  const abortControllerRef = useRef<AbortController | null>(null);
   // Track if a fetch is currently in progress to prevent overlap
   const isFetchingRef = useRef(false);
   // Concurrency limit for parallel fetches
@@ -117,15 +119,7 @@ export const MultiRepoGitStatusProvider: React.FC<{
 
   const needsRefresh = useCallback(
     (repoId: string, isPriority: boolean): boolean => {
-      const cached = cache.get(repoId);
-      if (!cached) return true;
-
-      const age = Date.now() - cached.fetchedAt;
-      const threshold = isPriority
-        ? GIT_STATUS_CACHE_CONFIG.ACTIVE_REPO_TTL // 30 seconds for priority
-        : GIT_STATUS_CACHE_CONFIG.INACTIVE_REPO_TTL; // 5 minutes for others
-
-      return age > threshold;
+      return isRepoGitStatusStale(cache.get(repoId), isPriority);
     },
     [cache]
   );
@@ -136,6 +130,34 @@ export const MultiRepoGitStatusProvider: React.FC<{
 
   const fetchRepoStatus = useCallback(
     async (repoId: string, priority: number = 0) => {
+      // Write a negative cache entry with exponential retry backoff so a
+      // failing repo (e.g. deleted path) stops being refetched on every
+      // requestRefresh. Consumers can detect `status.error` to render an
+      // unavailable state.
+      const writeErrorEntry = () => {
+        setCache((prev) => {
+          const updated = new Map(prev);
+          const previous = prev.get(repoId);
+          const errorCount = (previous?.errorCount ?? 0) + 1;
+          const now = Date.now();
+          updated.set(repoId, {
+            status: {
+              ...(previous?.status ?? {
+                uncommittedFiles: 0,
+                ahead: 0,
+                behind: 0,
+              }),
+              error: true,
+            },
+            fetchedAt: now,
+            lastAccessed: previous?.lastAccessed ?? now,
+            errorCount,
+            retryAt: now + computeGitStatusRetryDelay(errorCount),
+          });
+          return updated;
+        });
+      };
+
       try {
         const repo = repoMap.get(repoId);
         const repoPath = repo?.path || repo?.fs_uri;
@@ -144,6 +166,7 @@ export const MultiRepoGitStatusProvider: React.FC<{
           console.warn(
             `[MultiRepoGitStatusContext] No path found for repo ${repoId}`
           );
+          writeErrorEntry();
           return;
         }
         const statusResponse = await gitStatusBatchManager.add(
@@ -165,6 +188,7 @@ export const MultiRepoGitStatusProvider: React.FC<{
           console.warn(
             `[MultiRepoGitStatusContext] ❌ No status data for ${repoId}`
           );
+          writeErrorEntry();
           return;
         }
 
@@ -202,6 +226,7 @@ export const MultiRepoGitStatusProvider: React.FC<{
           `[MultiRepoGitStatusContext] ❌ Error fetching ${repoId}:`,
           error
         );
+        writeErrorEntry();
       }
     },
     [repoMap, setCache]
@@ -248,11 +273,6 @@ export const MultiRepoGitStatusProvider: React.FC<{
 
     // Limit concurrent fetches to prevent file descriptor exhaustion
     const limitedRepos = sortedRepos.slice(0, MAX_CONCURRENT_FETCHES);
-    // Abort previous fetch
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
 
     isFetchingRef.current = true;
 
@@ -297,9 +317,18 @@ export const MultiRepoGitStatusProvider: React.FC<{
         pendingRequestRef.current.timeoutId = setTimeout(() => {
           executeFetch();
         }, 1000); // Longer delay between batches
+      } else {
+        // Batch chain finished: evict stale/excess cache entries
+        pruneCache();
       }
     }
-  }, [fetchingRepos, needsRefresh, fetchRepoStatus, setFetchingRepos]);
+  }, [
+    fetchingRepos,
+    needsRefresh,
+    fetchRepoStatus,
+    setFetchingRepos,
+    pruneCache,
+  ]);
 
   // ============================================
   // Request refresh (optimized - priority repo only by default)
@@ -326,16 +355,16 @@ export const MultiRepoGitStatusProvider: React.FC<{
       // explicitly opens components that need them (e.g., Spotlight dropdown).
       // See: Documentation/Development/bad-file-descriptor-root-cause-0124.md
       if (startupCompleteRef.current) {
-        // After startup: add repos not in cache (lazy load)
+        // After startup: queue uncached repos AND cached repos whose TTL
+        // (or error-retry backoff) has elapsed, so badges don't go permanently stale.
         for (const repoId of repoIds) {
-          if (!cache.has(repoId)) {
+          if (needsRefresh(repoId, repoId === selectedRepoId)) {
             pending.repoIds.add(repoId);
           }
         }
-      } else {
-        // During startup: only add selected repo (already added above if needed)
-        // Skip adding all uncached repos - they'll be fetched when user opens relevant UI
       }
+      // During startup: only the selected repo (already added above if needed).
+      // Other repos are fetched when the user opens relevant UI.
 
       // Nothing to fetch? Skip the debounce machinery
       if (pending.repoIds.size === 0) {
@@ -352,7 +381,7 @@ export const MultiRepoGitStatusProvider: React.FC<{
         executeFetch();
       }, 800);
     },
-    [executeFetch, needsRefresh, cache]
+    [executeFetch, needsRefresh]
   );
 
   // ============================================
@@ -377,15 +406,13 @@ export const MultiRepoGitStatusProvider: React.FC<{
   // ============================================
 
   useEffect(() => {
-    // Capture refs to local variables for cleanup
+    // Capture ref to a local variable for cleanup
     const pendingRequest = pendingRequestRef.current;
-    const abortController = abortControllerRef.current;
 
     return () => {
       if (pendingRequest.timeoutId) {
         clearTimeout(pendingRequest.timeoutId);
       }
-      abortController?.abort();
     };
   }, []);
 
