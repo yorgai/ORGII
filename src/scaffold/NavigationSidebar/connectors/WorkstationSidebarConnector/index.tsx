@@ -162,6 +162,9 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const [activeFolderMoreMenuId, setActiveFolderMoreMenuId] = useState("");
   const [projectsSelectedMenuItemId, setProjectsSelectedMenuItemId] =
     useState("");
+  const [sidebarSearchQueries, setSidebarSearchQueries] = useState<
+    Record<WorkstationSidebarKey, string>
+  >({ folders: "", workstation: "", projects: "" });
   const [, setFoldersDashboardSelected] = useState(false);
   const [, setFoldersExploreSelected] = useState(false);
   const tabs = useWorkstationSidebarTabs(t);
@@ -174,6 +177,19 @@ export const WorkstationSidebarConnector: React.FC = () => {
     }
     setActiveSidebarKey(key);
   }, []);
+
+  const handleSidebarSearchChange = useCallback(
+    (value: string) => {
+      setSidebarSearchQueries((currentQueries) => ({
+        ...currentQueries,
+        [activeSidebarKey]: value,
+      }));
+      if (activeSidebarKey === "workstation") {
+        void loadSidebarSessions();
+      }
+    },
+    [activeSidebarKey]
+  );
 
   useSidebarSessionRefreshEffects();
 
@@ -226,6 +242,13 @@ export const WorkstationSidebarConnector: React.FC = () => {
   const createProjectLabel = tProjects("projects.createProject");
   const createWorkItemLabel = tProjects("workItems.createWorkItem");
   const homeLabel = t("sidebar.tabs.build");
+  const searchPlaceholder =
+    activeSidebarKey === "projects"
+      ? t("sidebar.search.projects")
+      : activeSidebarKey === "folders"
+        ? t("sidebar.search.folders")
+        : t("sidebar.search.sessions");
+  const noSearchResultsTitle = t("sidebar.empty.noSearchResults");
 
   const { menuItems, sessionMap, isLoadMoreId, getLoadMoreGroupId } =
     useSessionMenuItems({
@@ -234,6 +257,7 @@ export const WorkstationSidebarConnector: React.FC = () => {
       repoPathToName,
       groupByMode,
       untitledSession,
+      searchQuery: sidebarSearchQueries.workstation,
       groupVisibleCounts,
     });
   const {
@@ -670,6 +694,16 @@ export const WorkstationSidebarConnector: React.FC = () => {
             onClick={goToStartPage}
           />
         }
+        search={{
+          value: sidebarSearchQueries[activeSidebarKey],
+          filterValue:
+            activeSidebarKey === "workstation"
+              ? ""
+              : sidebarSearchQueries[activeSidebarKey],
+          onChange: handleSidebarSearchChange,
+          placeholder: searchPlaceholder,
+          noResultsTitle: noSearchResultsTitle,
+        }}
         listTopPadding
         bottomContent={
           <SidebarBottomBar rightActions={sidebarBottomRightActions} />

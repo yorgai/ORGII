@@ -27,6 +27,7 @@ import {
 } from "@src/store/session";
 import type { Session } from "@src/store/session";
 import { isSessionInProgress } from "@src/util/session/sessionInProgress";
+import { getSessionSearchText } from "@src/util/session/sessionSearch";
 import {
   getSessionListDisplayName,
   resolveSessionRowIcon,
@@ -43,22 +44,6 @@ export interface AgentSessionSearchPaletteProps extends BasePaletteProps {
 
 function getSessionTimestamp(session: Session): string {
   return session.updated_at || session.updated_time || session.created_at;
-}
-
-function getSessionSearchText(session: Session, fallback: string): string {
-  return [
-    getSessionListDisplayName(session, fallback),
-    session.user_input,
-    session.repo_name,
-    session.repoPath,
-    session.branch,
-    session.agentDisplayName,
-    session.model,
-    session.cliAgentType,
-    ...(session.tags ?? []),
-  ]
-    .filter(Boolean)
-    .join(" ");
 }
 
 export const AgentSessionSearchPalette: React.FC<

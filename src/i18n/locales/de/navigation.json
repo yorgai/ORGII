@@ -135,6 +135,11 @@
       "openHome": "Home öffnen",
       "openWorkstation": "Workstation öffnen"
     },
+    "search": {
+      "folders": "Ordner suchen...",
+      "sessions": "Sessions suchen...",
+      "projects": "Projekte suchen..."
+    },
     "folderCounts": {
       "repo": "{{count}} Repo",
       "repo_plural": "{{count}} Repos",
@@ -157,7 +162,8 @@
       "noItems": "Keine Elemente",
       "noSessions": "Keine Session",
       "noSessionsDesc": "Starten Sie eine neue Session",
-      "noResultsFor": "Keine Ergebnisse für \"{{query}}\""
+      "noResultsFor": "Keine Ergebnisse für \"{{query}}\"",
+      "noSearchResults": "Keine Ergebnisse gefunden"
     },
     "presence": {
       "tooltip": "Lege deinen Status fest — Agenten passen sich an, ob du an der Tastatur bist.",

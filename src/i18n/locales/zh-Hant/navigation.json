@@ -135,6 +135,11 @@
       "openHome": "開啟首頁",
       "openWorkstation": "開啟工作站"
     },
+    "search": {
+      "folders": "搜尋資料夾...",
+      "sessions": "搜尋 Session...",
+      "projects": "搜尋專案..."
+    },
     "folderCounts": {
       "repo": "{{count}}個倉庫",
       "multiRepoWorkspace": "{{count}}個多倉庫工作區"
@@ -155,7 +160,8 @@
       "noItems": "暫無內容",
       "noSessions": "暫無 Session",
       "noSessionsDesc": "開始一個新 Session",
-      "noResultsFor": "未找到 \"{{query}}\" 的結果"
+      "noResultsFor": "未找到 \"{{query}}\" 的結果",
+      "noSearchResults": "未找到結果"
     },
     "presence": {
       "tooltip": "設定你的線上狀態 — Agent 會根據你是否在鍵盤前調整行為。",

@@ -135,6 +135,11 @@
       "openHome": "Открыть Home",
       "openWorkstation": "Открыть Workstation"
     },
+    "search": {
+      "folders": "Искать папки...",
+      "sessions": "Искать Session...",
+      "projects": "Искать проекты..."
+    },
     "folderCounts": {
       "repo": "{{count}} репо",
       "multiRepoWorkspace": "{{count}} мульти-Repo Workspace"
@@ -155,7 +160,8 @@
       "noItems": "Нет элементов",
       "noSessions": "Нет Session",
       "noSessionsDesc": "Начните новую Session",
-      "noResultsFor": "Нет результатов для \"{{query}}\""
+      "noResultsFor": "Нет результатов для \"{{query}}\"",
+      "noSearchResults": "Ничего не найдено"
     },
     "presence": {
       "tooltip": "Установи статус — агенты адаптируются к тому, у клавиатуры ли ты.",

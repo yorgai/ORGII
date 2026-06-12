@@ -135,6 +135,11 @@
       "openHome": "Ouvrir l’accueil",
       "openWorkstation": "Ouvrir le Workstation"
     },
+    "search": {
+      "folders": "Rechercher dans les dossiers...",
+      "sessions": "Rechercher des sessions...",
+      "projects": "Rechercher des projets..."
+    },
     "folderCounts": {
       "repo": "{{count}} Repo",
       "repo_plural": "{{count}} Repos",
@@ -157,7 +162,8 @@
       "noItems": "Aucun élément",
       "noSessions": "Aucune Session",
       "noSessionsDesc": "Démarrez une nouvelle Session pour commencer",
-      "noResultsFor": "Aucun résultat pour \"{{query}}\""
+      "noResultsFor": "Aucun résultat pour \"{{query}}\"",
+      "noSearchResults": "Aucun résultat trouvé"
     },
     "presence": {
       "tooltip": "Définis ta disponibilité — les agents s'adapteront selon que tu es ou non au clavier.",

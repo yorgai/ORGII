@@ -135,6 +135,11 @@
       "openHome": "Mở Home",
       "openWorkstation": "Mở Workstation"
     },
+    "search": {
+      "folders": "Tìm kiếm thư mục...",
+      "sessions": "Tìm kiếm Session...",
+      "projects": "Tìm kiếm dự án..."
+    },
     "folderCounts": {
       "repo": "{{count}} Repo",
       "multiRepoWorkspace": "{{count}} Workspace đa Repo"
@@ -155,7 +160,8 @@
       "noItems": "Không có mục nào",
       "noSessions": "Không có Session nào",
       "noSessionsDesc": "Bắt đầu Session mới",
-      "noResultsFor": "Không có kết quả cho \"{{query}}\""
+      "noResultsFor": "Không có kết quả cho \"{{query}}\"",
+      "noSearchResults": "Không tìm thấy kết quả"
     },
     "presence": {
       "tooltip": "Đặt trạng thái — Agent sẽ điều chỉnh tùy bạn có ở bàn phím hay không.",

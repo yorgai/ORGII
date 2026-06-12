@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { benchmarkApi } from "@src/api/tauri/benchmark";
 import { createLogger } from "@src/hooks/logger";
+import { useFilteredItems } from "@src/hooks/search";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import { benchmarkAgentBatchStatusAtom } from "@src/store/benchmark";
 import {
@@ -11,6 +12,7 @@ import {
   type SessionListCategory,
   sessionPaginationAtom,
 } from "@src/store/session";
+import { getSessionSearchText } from "@src/util/session/sessionSearch";
 import { isPrimarySessionListSession } from "@src/util/session/sessionVisibility";
 
 import {
@@ -50,6 +52,7 @@ export function useSessionMenuItems({
   repoPathToName,
   groupByMode,
   untitledSession,
+  searchQuery = "",
   groupVisibleCounts,
 }: UseSessionMenuItemsParams): UseSessionMenuItemsResult {
   const { t: tCommon } = useTranslation();
@@ -120,14 +123,20 @@ export function useSessionMenuItems({
     ]
   );
 
+  const { filteredItems: searchedSessions, isFiltering } = useFilteredItems({
+    items: visibleSessions,
+    searchQuery,
+    getSearchText: (session) => getSessionSearchText(session, untitledSession),
+  });
+
   const pinnedSessions = useMemo(
-    () => visibleSessions.filter((session) => session.pinned),
-    [visibleSessions]
+    () => searchedSessions.filter((session) => session.pinned),
+    [searchedSessions]
   );
 
   const unpinnedSessions = useMemo(
-    () => visibleSessions.filter((session) => !session.pinned),
-    [visibleSessions]
+    () => searchedSessions.filter((session) => !session.pinned),
+    [searchedSessions]
   );
 
   const sessionMap = useMemo(() => {
@@ -157,13 +166,14 @@ export function useSessionMenuItems({
   );
 
   const trailingLoadMoreItems = useMemo<NavigationMenuItem[]>(() => {
+    if (isFiltering) return [];
     const rows: NavigationMenuItem[] = [];
     for (const category of LOAD_MORE_CATEGORIES) {
       const row = loadMoreRowFor(category);
       if (row) rows.push(row);
     }
     return rows;
-  }, [loadMoreRowFor]);
+  }, [isFiltering, loadMoreRowFor]);
 
   const appendTrailingLoadMoreItems = useCallback(
     (items: NavigationMenuItem[]) => {
@@ -180,8 +190,9 @@ export function useSessionMenuItems({
       groupId: string,
       groupSessions: readonly Session[]
     ): boolean => {
-      const visibleCount =
-        groupVisibleCounts.get(groupId) ?? DEFAULT_GROUP_VISIBLE_COUNT;
+      const visibleCount = isFiltering
+        ? groupSessions.length
+        : (groupVisibleCounts.get(groupId) ?? DEFAULT_GROUP_VISIBLE_COUNT);
       return appendSessionGroup({
         items,
         groupId,
@@ -191,7 +202,7 @@ export function useSessionMenuItems({
         loadMoreLabel: tCommon("common:actions.loadMore"),
       });
     },
-    [buildSessionRow, groupVisibleCounts, tCommon]
+    [buildSessionRow, groupVisibleCounts, isFiltering, tCommon]
   );
 
   const dateGroupLabels: Record<DateGroupKey, string> = useMemo(
@@ -239,12 +250,13 @@ export function useSessionMenuItems({
         unpinnedSessions,
         appendPinnedSessions,
         appendGroupSessions,
-        loadMoreRowFor,
+        loadMoreRowFor: isFiltering ? () => null : loadMoreRowFor,
       }),
     [
       unpinnedSessions,
       appendPinnedSessions,
       appendGroupSessions,
+      isFiltering,
       loadMoreRowFor,
     ]
   );

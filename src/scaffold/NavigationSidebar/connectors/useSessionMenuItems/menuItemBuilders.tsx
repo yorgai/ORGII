@@ -6,6 +6,7 @@ import type { Session } from "@src/store/session";
 import { isTerminalStatus } from "@src/types/session/session";
 import { formatBranchLabel } from "@src/util/git/branchLabel";
 import { isSessionInProgress } from "@src/util/session/sessionInProgress";
+import { getSessionSearchText } from "@src/util/session/sessionSearch";
 import {
   getSessionListDisplayName,
   resolveSessionRowIcon,
@@ -76,6 +77,7 @@ export function buildSessionMenuItem({
     id: session.session_id,
     key: session.session_id,
     label: displayName,
+    searchText: getSessionSearchText(session, untitledSession),
     dataTestId: `sidebar-session-item-${session.session_id}`,
     subtitle: shouldShowWorktreeSubtitle(session)
       ? worktreeSubtitle(session.worktreeBranch)

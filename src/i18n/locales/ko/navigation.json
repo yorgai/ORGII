@@ -135,6 +135,11 @@
       "openHome": "홈 열기",
       "openWorkstation": "Workstation 열기"
     },
+    "search": {
+      "folders": "폴더 검색...",
+      "sessions": "Session 검색...",
+      "projects": "프로젝트 검색..."
+    },
     "folderCounts": {
       "repo": "{{count}}개 Repo",
       "multiRepoWorkspace": "{{count}}개 멀티 Repo Workspace"
@@ -155,7 +160,8 @@
       "noItems": "항목 없음",
       "noSessions": "Session 없음",
       "noSessionsDesc": "새 Session을 시작하세요",
-      "noResultsFor": "\"{{query}}\"에 대한 결과 없음"
+      "noResultsFor": "\"{{query}}\"에 대한 결과 없음",
+      "noSearchResults": "결과를 찾을 수 없음"
     },
     "presence": {
       "tooltip": "상태를 설정 — Agent가 사용자가 키보드 앞에 있는지에 따라 행동을 조정합니다.",

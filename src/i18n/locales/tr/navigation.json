@@ -135,6 +135,11 @@
       "openHome": "Home’u aç",
       "openWorkstation": "Workstation’ı aç"
     },
+    "search": {
+      "folders": "Klasörlerde ara...",
+      "sessions": "Session ara...",
+      "projects": "Projelerde ara..."
+    },
     "folderCounts": {
       "repo": "{{count}} Repo",
       "multiRepoWorkspace": "{{count}} çoklu repo Workspace"
@@ -155,7 +160,8 @@
       "noItems": "Öğe yok",
       "noSessions": "Session yok",
       "noSessionsDesc": "Başlamak için yeni bir Session başlatın",
-      "noResultsFor": "\"{{query}}\" için sonuç bulunamadı"
+      "noResultsFor": "\"{{query}}\" için sonuç bulunamadı",
+      "noSearchResults": "Sonuç bulunamadı"
     },
     "presence": {
       "tooltip": "Durumunu ayarla — Agent'lar klavyenin başında olup olmadığına göre davranır.",

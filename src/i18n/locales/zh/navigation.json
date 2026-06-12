@@ -135,6 +135,11 @@
       "openHome": "打开主页",
       "openWorkstation": "打开工作站"
     },
+    "search": {
+      "folders": "搜索文件夹...",
+      "sessions": "搜索 Session...",
+      "projects": "搜索项目..."
+    },
     "folderCounts": {
       "repo": "{{count}}个仓库",
       "multiRepoWorkspace": "{{count}}个多仓库工作区"
@@ -155,7 +160,8 @@
       "noItems": "暂无内容",
       "noSessions": "暂无 Session",
       "noSessionsDesc": "开始一个新 Session",
-      "noResultsFor": "未找到 \"{{query}}\" 的结果"
+      "noResultsFor": "未找到 \"{{query}}\" 的结果",
+      "noSearchResults": "未找到结果"
     },
     "presence": {
       "tooltip": "设置你的在线状态 — Agent 会根据你是否在键盘前调整行为。",

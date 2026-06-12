@@ -135,6 +135,11 @@
       "openHome": "Otwórz Home",
       "openWorkstation": "Otwórz Workstation"
     },
+    "search": {
+      "folders": "Szukaj folderów...",
+      "sessions": "Szukaj sesji...",
+      "projects": "Szukaj projektów..."
+    },
     "folderCounts": {
       "repo": "{{count}} Repo",
       "multiRepoWorkspace": "{{count}} Workspace z wieloma Repo"
@@ -155,7 +160,8 @@
       "noItems": "Brak elementów",
       "noSessions": "Brak sesji",
       "noSessionsDesc": "Rozpocznij nową sesję, aby zacząć",
-      "noResultsFor": "Brak wyników dla \"{{query}}\""
+      "noResultsFor": "Brak wyników dla \"{{query}}\"",
+      "noSearchResults": "Nie znaleziono wyników"
     },
     "presence": {
       "tooltip": "Ustaw swój status — agenci dostosują się do tego, czy jesteś przy klawiaturze.",

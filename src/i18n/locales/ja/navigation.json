@@ -135,6 +135,11 @@
       "openHome": "ホームを開く",
       "openWorkstation": "Workstation を開く"
     },
+    "search": {
+      "folders": "フォルダーを検索...",
+      "sessions": "Session を検索...",
+      "projects": "プロジェクトを検索..."
+    },
     "folderCounts": {
       "repo": "{{count}} Repo",
       "multiRepoWorkspace": "{{count}} マルチ Repo Workspace"
@@ -155,7 +160,8 @@
       "noItems": "アイテムがありません",
       "noSessions": "Sessionがありません",
       "noSessionsDesc": "新しいSessionを開始してください",
-      "noResultsFor": "\"{{query}}\" の検索結果がありません"
+      "noResultsFor": "\"{{query}}\" の検索結果がありません",
+      "noSearchResults": "結果が見つかりません"
     },
     "presence": {
       "tooltip": "在席状態を設定 — Agent はあなたがキーボード前にいるかに応じて動作を調整します。",

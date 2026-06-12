@@ -9,6 +9,7 @@ export interface UseSessionMenuItemsParams {
   repoPathToName: Map<string, string>;
   groupByMode: GroupByMode;
   untitledSession: string;
+  searchQuery?: string;
   groupVisibleCounts: ReadonlyMap<string, number>;
 }
 

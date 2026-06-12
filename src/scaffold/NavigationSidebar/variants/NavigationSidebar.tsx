@@ -4,10 +4,17 @@
  * Main navigation sidebar with tabs and menu items.
  * Used for: Home page, Config page navigation
  */
-import { ChevronDown, ChevronRight, type LucideIcon } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  type LucideIcon,
+  Search,
+} from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 
+import Input from "@src/components/Input";
 import TabPill from "@src/components/TabPill";
+import { Placeholder } from "@src/modules/shared/layouts/blocks";
 
 import SidebarBase from "../SidebarBase";
 import { SidebarList } from "../blocks";
@@ -22,6 +29,14 @@ import type { SidebarTab } from "../types";
 // ============================================
 // Types
 // ============================================
+
+export interface NavigationSidebarSearchConfig {
+  value: string;
+  filterValue?: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  noResultsTitle?: string;
+}
 
 export interface NavigationSidebarProps {
   items: SidebarTab[];
@@ -57,6 +72,8 @@ export interface NavigationSidebarProps {
   headerActions?: React.ReactNode;
   /** Preserve top padding for the scrollable menu list. */
   listTopPadding?: boolean;
+  /** Optional ghost search row rendered above the scrollable menu list. */
+  search?: NavigationSidebarSearchConfig;
   /** Show loading placeholder instead of menu items */
   isLoading?: boolean;
   /** Enable collapse/expand on section headers (separator-based groups) */
@@ -69,6 +86,63 @@ export interface NavigationSidebarProps {
    */
   collapsedSectionIds?: Set<string>;
   onCollapsedSectionsChange?: (next: Set<string>) => void;
+}
+
+function normalizeSearchValue(value: string): string {
+  return value.trim().toLocaleLowerCase();
+}
+
+function getMenuItemSearchText(item: NavigationMenuItem): string {
+  return [item.label, item.searchText, item.shortcut]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleLowerCase();
+}
+
+function filterMenuItem(
+  item: NavigationMenuItem,
+  normalizedQuery: string
+): NavigationMenuItem | null {
+  const filteredChildren = item.children
+    ?.map((child) => filterMenuItem(child, normalizedQuery))
+    .filter((child): child is NavigationMenuItem => Boolean(child));
+
+  if (
+    getMenuItemSearchText(item).includes(normalizedQuery) ||
+    (filteredChildren && filteredChildren.length > 0)
+  ) {
+    return filteredChildren ? { ...item, children: filteredChildren } : item;
+  }
+
+  return null;
+}
+
+function filterMenuItems(
+  items: readonly NavigationMenuItem[],
+  normalizedQuery: string
+): NavigationMenuItem[] {
+  if (!normalizedQuery) return [...items];
+
+  const filteredItems: NavigationMenuItem[] = [];
+  let pendingSeparator: NavigationMenuItem | null = null;
+
+  for (const item of items) {
+    if (item.id?.startsWith("separator-")) {
+      pendingSeparator = item;
+      continue;
+    }
+
+    const filteredItem = filterMenuItem(item, normalizedQuery);
+    if (!filteredItem) continue;
+
+    if (pendingSeparator) {
+      filteredItems.push(pendingSeparator);
+      pendingSeparator = null;
+    }
+    filteredItems.push(filteredItem);
+  }
+
+  return filteredItems;
 }
 
 // ============================================
@@ -96,11 +170,26 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
     beforeAddNewActions,
     headerActions,
     listTopPadding = false,
+    search,
     isLoading = false,
     collapsibleSections = false,
     collapsedSectionIds,
     onCollapsedSectionsChange,
   }) => {
+    const normalizedSearchQuery = useMemo(
+      () => normalizeSearchValue(search?.filterValue ?? search?.value ?? ""),
+      [search?.filterValue, search?.value]
+    );
+    const filteredPinnedMenuItems = useMemo(
+      () => filterMenuItems(pinnedMenuItems, normalizedSearchQuery),
+      [normalizedSearchQuery, pinnedMenuItems]
+    );
+    const filteredMenuItems = useMemo(
+      () => filterMenuItems(menuItems, normalizedSearchQuery),
+      [menuItems, normalizedSearchQuery]
+    );
+    const hasSearchInput = Boolean(search?.value.trim());
+
     // Memoize section grouping — only recompute when menuItems changes
     // Separator items (id starts with "separator-") split the list into sections.
     // If a separator has a non-empty label, it becomes the section title.
@@ -116,7 +205,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
       let currentId = "default";
       let currentHeaderActions: readonly NavigationMenuRowAction[] | undefined;
 
-      menuItems.forEach((item, index) => {
+      filteredMenuItems.forEach((item, index) => {
         if (item.id?.startsWith("separator-")) {
           if (index > 0) {
             result.push({
@@ -148,7 +237,7 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
       }
 
       return result;
-    }, [menuItems]);
+    }, [filteredMenuItems]);
 
     const [uncontrolledCollapsed, setUncontrolledCollapsed] = useState<
       Set<string>
@@ -260,10 +349,32 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
           </div>
         )}
 
-        {pinnedMenuItems.length > 0 && (
+        {search && (
+          <div className="px-3 pt-1">
+            <Input
+              type="search"
+              value={search.value}
+              onChange={search.onChange}
+              placeholder={search.placeholder}
+              borderless
+              bgless
+              autoHeight
+              allowClear
+              prefix={
+                <Search size={14} strokeWidth={2} className="text-text-3" />
+              }
+              className="h-9 rounded-lg text-text-1 [&_.input-inner]:!h-9 [&_.input-inner]:gap-3 [&_.input-inner]:!px-2 [&_.input-prefix]:mr-0"
+              inputClassName="text-[13px] font-normal placeholder:text-text-3"
+              style={{ height: 36 }}
+              inputStyle={{ transform: "none" }}
+            />
+          </div>
+        )}
+
+        {filteredPinnedMenuItems.length > 0 && (
           <div className="px-3 pt-1">
             <NavigationMenu
-              items={pinnedMenuItems}
+              items={filteredPinnedMenuItems}
               selectedKeys={selectedKeys}
               collapsed={false}
               defaultOpenKeys={resolvedDefaultOpenKeys}
@@ -277,74 +388,88 @@ const NavigationSidebar: React.FC<NavigationSidebarProps> = React.memo(
 
         {/* Section Container */}
         <SidebarList isLoading={isLoading} topPadding={listTopPadding}>
-          {sections.map((section) => {
-            const isSectionCollapsed =
-              collapsibleSections && collapsedSections.has(section.id);
+          {hasSearchInput &&
+          filteredPinnedMenuItems.length === 0 &&
+          sections.length === 0 ? (
+            <Placeholder
+              variant="no-results"
+              title={search?.noResultsTitle}
+              placement="sidebar"
+            />
+          ) : (
+            sections.map((section) => {
+              const isSectionCollapsed =
+                !hasSearchInput &&
+                collapsibleSections &&
+                collapsedSections.has(section.id);
 
-            return (
-              <div key={section.id}>
-                {section.title &&
-                  (collapsibleSections ? (
-                    <div
-                      className={`${isSectionCollapsed ? "" : "mb-px"} group/section-title flex h-7 cursor-pointer items-center gap-2 px-2`}
-                      onClick={() => toggleSection(section.id)}
-                    >
-                      <span className="min-w-0 truncate text-[11px] font-medium uppercase tracking-wider text-text-2">
-                        {section.title}
-                      </span>
-                      <span className="hidden flex-shrink-0 items-center leading-none text-text-2 group-hover/section-title:inline-flex">
-                        {isSectionCollapsed ? (
-                          <ChevronRight size={14} strokeWidth={2} />
-                        ) : (
-                          <ChevronDown size={14} strokeWidth={2} />
-                        )}
-                      </span>
-                      {section.headerActions && (
-                        <span className="ml-auto hidden flex-shrink-0 items-center gap-0.5 leading-none text-text-2 group-hover/section-title:inline-flex">
-                          {section.headerActions.map((action) => {
-                            const ActionIcon = action.icon;
-                            return (
-                              <button
-                                key={action.label}
-                                type="button"
-                                title={action.label}
-                                aria-label={action.label}
-                                className="flex h-5 w-5 items-center justify-center rounded text-text-2 transition-colors duration-150 hover:bg-fill-2 hover:text-text-1 focus:outline-none"
-                                onClick={(event) => {
-                                  event.preventDefault();
-                                  event.stopPropagation();
-                                  action.onClick(event);
-                                }}
-                              >
-                                {ActionIcon ? (
-                                  <ActionIcon size={14} strokeWidth={2} />
-                                ) : null}
-                              </button>
-                            );
-                          })}
+              return (
+                <div key={section.id}>
+                  {section.title &&
+                    (collapsibleSections ? (
+                      <div
+                        className={`${isSectionCollapsed ? "" : "mb-px"} group/section-title flex h-7 cursor-pointer items-center gap-2 px-2`}
+                        onClick={() => {
+                          if (!hasSearchInput) toggleSection(section.id);
+                        }}
+                      >
+                        <span className="min-w-0 truncate text-[11px] font-medium uppercase tracking-wider text-text-2">
+                          {section.title}
                         </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="mb-2 px-2 text-[11px] font-medium uppercase tracking-wider text-text-2">
-                      {section.title}
-                    </div>
-                  ))}
-                {!isSectionCollapsed && (
-                  <NavigationMenu
-                    items={section.items}
-                    selectedKeys={selectedKeys}
-                    collapsed={false}
-                    defaultOpenKeys={resolvedDefaultOpenKeys}
-                    enableHoverIconAnimation={enableHoverIconAnimation}
-                    onMenuItemClick={handleMenuItemClick}
-                    onMenuItemContextMenu={handleMenuItemContextMenu}
-                    renderMenuItemWrapper={renderMenuItemWrapper}
-                  />
-                )}
-              </div>
-            );
-          })}
+                        <span className="hidden flex-shrink-0 items-center leading-none text-text-2 group-hover/section-title:inline-flex">
+                          {isSectionCollapsed ? (
+                            <ChevronRight size={14} strokeWidth={2} />
+                          ) : (
+                            <ChevronDown size={14} strokeWidth={2} />
+                          )}
+                        </span>
+                        {section.headerActions && (
+                          <span className="ml-auto hidden flex-shrink-0 items-center gap-0.5 leading-none text-text-2 group-hover/section-title:inline-flex">
+                            {section.headerActions.map((action) => {
+                              const ActionIcon = action.icon;
+                              return (
+                                <button
+                                  key={action.label}
+                                  type="button"
+                                  title={action.label}
+                                  aria-label={action.label}
+                                  className="flex h-5 w-5 items-center justify-center rounded text-text-2 transition-colors duration-150 hover:bg-fill-2 hover:text-text-1 focus:outline-none"
+                                  onClick={(event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    action.onClick(event);
+                                  }}
+                                >
+                                  {ActionIcon ? (
+                                    <ActionIcon size={14} strokeWidth={2} />
+                                  ) : null}
+                                </button>
+                              );
+                            })}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mb-2 px-2 text-[11px] font-medium uppercase tracking-wider text-text-2">
+                        {section.title}
+                      </div>
+                    ))}
+                  {!isSectionCollapsed && (
+                    <NavigationMenu
+                      items={section.items}
+                      selectedKeys={selectedKeys}
+                      collapsed={false}
+                      defaultOpenKeys={resolvedDefaultOpenKeys}
+                      enableHoverIconAnimation={enableHoverIconAnimation}
+                      onMenuItemClick={handleMenuItemClick}
+                      onMenuItemContextMenu={handleMenuItemContextMenu}
+                      renderMenuItemWrapper={renderMenuItemWrapper}
+                    />
+                  )}
+                </div>
+              );
+            })
+          )}
         </SidebarList>
 
         {/* Bottom Content */}

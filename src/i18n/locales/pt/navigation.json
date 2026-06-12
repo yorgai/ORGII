@@ -135,6 +135,11 @@
       "openHome": "Abrir início",
       "openWorkstation": "Abrir Workstation"
     },
+    "search": {
+      "folders": "Pesquisar pastas...",
+      "sessions": "Pesquisar sessões...",
+      "projects": "Pesquisar projetos..."
+    },
     "folderCounts": {
       "repo": "{{count}} Repo",
       "repo_plural": "{{count}} Repos",
@@ -157,7 +162,8 @@
       "noItems": "Nenhum item",
       "noSessions": "Nenhuma sessão",
       "noSessionsDesc": "Inicie uma nova sessão para começar",
-      "noResultsFor": "Nenhum resultado para \"{{query}}\""
+      "noResultsFor": "Nenhum resultado para \"{{query}}\"",
+      "noSearchResults": "Nenhum resultado encontrado"
     },
     "presence": {
       "tooltip": "Define a tua disponibilidade — os agentes adaptam-se a se estás ou não ao teclado.",
