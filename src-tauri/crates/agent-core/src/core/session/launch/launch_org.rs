@@ -293,6 +293,7 @@ pub(super) async fn send_initial_turn(
     ide_context: Option<IdeContext>,
     agent_definition_id: Option<String>,
     sub_agent_ids: Vec<String>,
+    source: crate::foundation::session_bridge::TurnIntentBridgeSource,
 ) -> Result<(), String> {
     if sub_agent_ids.is_empty() {
         crate::state::commands::session::message::send_message_impl(
@@ -313,7 +314,7 @@ pub(super) async fn send_initial_turn(
             false,
             None,
             None,
-            crate::foundation::session_bridge::TurnIntentBridgeSource::AgentOrg,
+            source,
         )
         .await?;
         return Ok(());
