@@ -25,18 +25,26 @@ import { invokeTauri } from "@src/util/platform/tauri/init";
  * `agent_core::session::workspace::DirectorySource` (serde
  * `rename_all = "camelCase"`).
  *
- * Frontend wiring currently only produces `"session"` — the transient
- * in-memory scope that dies with the runtime. The other variants are
- * reserved for future settings-layer and CLI-flag integrations.
+ * Frontend wiring produces two variants:
+ *  - `"session"` — transient grants made *by the agent* (e.g. the
+ *    `/add-dir` slash command) or by ad-hoc UI actions. Dies with the
+ *    runtime. The IDE sync layer must never add or remove these.
+ *  - `"ideWorkspace"` — entries mirrored from the IDE's multi-root
+ *    workspace folders by `useSessionWorkspaceSync`. This is the only
+ *    source the IDE sync layer is allowed to manage.
+ *
+ * The settings/CLI variants are produced by the backend only.
  */
 export type DirectorySource =
   | "session"
+  | "ideWorkspace"
   | "localSettings"
   | "userSettings"
   | "cliArg";
 
 export const DIRECTORY_SOURCE = {
   SESSION: "session",
+  IDE_WORKSPACE: "ideWorkspace",
   LOCAL_SETTINGS: "localSettings",
   USER_SETTINGS: "userSettings",
   CLI_ARG: "cliArg",
@@ -50,13 +58,32 @@ export interface AdditionalDirectoryView {
 
 /**
  * Full snapshot of a session's workspace. Paths are absolute and
- * canonicalised by the backend at insertion time.
+ * canonicalised by the backend at insertion time (the add/remove/launch
+ * entry points all run `canonicalize` before storing), so frontend
+ * consumers can compare paths with plain string equality.
  */
 export interface SessionWorkspaceView {
   sessionId: string;
   workspaceRoot: string;
   workingDir: string;
   isWorktree: boolean;
+  additionalDirectories: AdditionalDirectoryView[];
+}
+
+/**
+ * Tauri event channel emitted by the backend whenever a session's
+ * workspace changes (directory added/removed, runtime rebuilt).
+ */
+export const WORKSPACE_CHANGED_EVENT = "workspace:changed";
+
+/**
+ * Payload of the `workspace:changed` Tauri event. All paths are
+ * canonical (camelCase serde rename on the Rust side).
+ */
+export interface WorkspaceChangedPayload {
+  sessionId: string;
+  workspaceRoot: string;
+  workingDir: string;
   additionalDirectories: AdditionalDirectoryView[];
 }
 
@@ -70,11 +97,14 @@ export interface WorktreeMergeResult {
 
 /**
  * Grant the session access to `path` in addition to its `workspace_root`.
+ * The backend canonicalises `path` before storing it.
  *
  * Returns `true` if the directory was inserted, `false` if it was
  * already present (first-writer-wins — the original `source` is kept).
  *
  * `source` defaults to `"session"` on the Rust side when omitted.
+ * IDE workspace sync MUST pass `"ideWorkspace"` so its entries stay
+ * distinguishable from agent-initiated grants.
  */
 export async function addSessionDirectory(
   sessionId: string,
