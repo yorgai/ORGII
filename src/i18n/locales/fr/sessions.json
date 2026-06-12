@@ -2104,6 +2104,7 @@
     "viewAllSessions": "Voir toutes les sessions",
     "noSessionsYet": "Aucune session pour le moment",
     "myAgents": "Mes {{count}} Agents",
+    "myAgentOrgs": "Mes {{count}} organisations d'Agents",
     "noAgentsAvailable": "Aucun Agent disponible",
     "newAgentSession": "Nouvelle session {{agent}}",
     "addAgent": "Ajouter un Agent",

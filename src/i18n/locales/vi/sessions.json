@@ -2104,6 +2104,7 @@
     "viewAllSessions": "Xem tất cả phiên",
     "noSessionsYet": "Chưa có phiên nào",
     "myAgents": "{{count}} Agent của tôi",
+    "myAgentOrgs": "{{count}} tổ chức Agent của tôi",
     "noAgentsAvailable": "Không có Agent khả dụng",
     "newAgentSession": "Phiên {{agent}} mới",
     "addAgent": "Thêm Agent",

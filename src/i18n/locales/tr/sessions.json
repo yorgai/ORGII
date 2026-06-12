@@ -2105,6 +2105,7 @@
     "viewAllSessions": "Tüm oturumları görüntüle",
     "noSessionsYet": "Henüz oturum yok",
     "myAgents": "{{count}} Agent'ım",
+    "myAgentOrgs": "{{count}} Agent organizasyonum",
     "noAgentsAvailable": "Kullanılabilir Agent yok",
     "newAgentSession": "Yeni {{agent}} oturumu",
     "addAgent": "Agent ekle",

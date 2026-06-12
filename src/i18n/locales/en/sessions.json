@@ -2115,6 +2115,7 @@
     "viewAllSessions": "View all sessions",
     "noSessionsYet": "No sessions yet",
     "myAgents": "My {{count}} Agents",
+    "myAgentOrgs": "My {{count}} Agent Orgs",
     "noAgentsAvailable": "No agents available",
     "newAgentSession": "New {{agent}} session",
     "addAgent": "Add agent",

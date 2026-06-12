@@ -2112,6 +2112,7 @@
     "viewAllSessions": "Все сессии",
     "noSessionsYet": "Пока нет сессий",
     "myAgents": "Мои Agent ({{count}})",
+    "myAgentOrgs": "Мои организации Agent ({{count}})",
     "noAgentsAvailable": "Нет доступных Agent",
     "newAgentSession": "Новая сессия {{agent}}",
     "addAgent": "Добавить Agent",

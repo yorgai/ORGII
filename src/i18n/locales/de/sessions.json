@@ -2104,6 +2104,7 @@
     "viewAllSessions": "Alle Sitzungen anzeigen",
     "noSessionsYet": "Noch keine Sitzungen",
     "myAgents": "Meine {{count}} Agents",
+    "myAgentOrgs": "Meine {{count}} Agent-Orgs",
     "noAgentsAvailable": "Keine Agents verfügbar",
     "newAgentSession": "Neue {{agent}}-Sitzung",
     "addAgent": "Agent hinzufügen",

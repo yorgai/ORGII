@@ -3,6 +3,7 @@ import {
   FolderOpen,
   FolderTree,
   MoreHorizontal,
+  Network,
   Plus,
 } from "lucide-react";
 import React, { type MouseEvent } from "react";
@@ -13,14 +14,15 @@ import ModelIcon from "@src/components/ModelIcon";
 import { resolveAgentIcon } from "@src/config/agentIcons";
 import type { AvailableAgent } from "@src/config/cliAgents";
 import type { KeyVaultAccount } from "@src/hooks/keyVault/types";
-import type { AgentDefinition } from "@src/modules/MainApp/AgentOrgs/types";
-import { rustBuiltInVariantsFromDefinitions } from "@src/modules/shared/launchpad/hooks";
+import type {
+  AgentDefinition,
+  OrgMember,
+} from "@src/modules/MainApp/AgentOrgs/types";
 import type {
   NavigationMenuItem,
   NavigationMenuRowAction,
 } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import type { Repo } from "@src/store/repo";
-import { getRustAgentType } from "@src/util/session/sessionDispatch";
 
 export const FOLDERS_WORKSPACES_SECTION_ID = "separator-folders-workspaces";
 export const FOLDERS_REPOS_SECTION_ID = "separator-folders-repos";
@@ -28,9 +30,13 @@ export const FOLDERS_DASHBOARD_ITEM_ID = "folders-dashboard";
 export const FOLDERS_EXPLORE_ITEM_ID = "folders-explore";
 const FOLDERS_MY_KEYS_SECTION_ID = "separator-folders-my-keys";
 export const FOLDERS_MY_AGENTS_SECTION_ID = "separator-folders-my-agents";
+const FOLDERS_MY_AGENT_ORGS_SECTION_ID = "separator-folders-my-agent-orgs";
 export const FOLDERS_MY_AGENTS_COLLAPSE_SECTION_ID = "folders-my-agents";
+export const FOLDERS_MY_AGENT_ORGS_COLLAPSE_SECTION_ID =
+  "folders-my-agent-orgs";
 export const FOLDERS_WORKSPACE_ITEM_PREFIX = "folders-workspace:";
 export const FOLDERS_REPO_ITEM_PREFIX = "folders-repo:";
+const FOLDERS_AGENT_ORG_ITEM_PREFIX = "folders-agent-org:";
 const FOLDERS_KEY_ITEM_PREFIX = "folders-key:";
 const FOLDERS_AGENT_ITEM_PREFIX = "folders-agent:";
 export interface FolderTarget {
@@ -65,10 +71,12 @@ interface BuildFoldersSidebarMenuItemsParams extends FolderRowActionHandlers {
   installedCliAgents: readonly AvailableAgent[];
   builtInRustAgents: readonly AgentDefinition[];
   customRustAgents: readonly AgentDefinition[];
+  agentOrgs: readonly OrgMember[];
   multiRepoWorkspaceCountLabel: (count: number) => string;
   repoCountLabel: (count: number) => string;
   myKeysLabel: string;
   myAgentsLabel: string;
+  myAgentOrgsLabel: string;
 }
 
 export function getFolderItemId(target: FolderTarget): string {
@@ -221,6 +229,20 @@ function buildFoldersKeyMenuItems(
   }));
 }
 
+function buildFoldersAgentOrgMenuItems(
+  agentOrgs: readonly OrgMember[]
+): NavigationMenuItem[] {
+  return agentOrgs.map((org) => ({
+    id: `${FOLDERS_AGENT_ORG_ITEM_PREFIX}${org.id}`,
+    key: `${FOLDERS_AGENT_ORG_ITEM_PREFIX}${org.id}`,
+    label: org.name,
+    searchText: [org.name, org.description].filter(Boolean).join(" "),
+    icon: Network,
+    iconName: "network",
+    disabled: true,
+  }));
+}
+
 function buildFoldersAgentMenuItems({
   installedCliAgents,
   builtInRustAgents,
@@ -246,19 +268,12 @@ function buildFoldersAgentMenuItems({
       disabled: true,
     }));
 
-  const rustBuiltInVariants = rustBuiltInVariantsFromDefinitions([
-    ...builtInRustAgents,
-  ]);
-  const rustItems = rustBuiltInVariants.map((rustType) => {
-    const definition = builtInRustAgents.find(
-      (definitionItem) => getRustAgentType(definitionItem.id) === rustType
-    );
-    const IconComponent = resolveAgentIcon(definition?.iconId);
-    const label = definition?.name ?? rustType;
+  const rustItems = builtInRustAgents.map((definition) => {
+    const IconComponent = resolveAgentIcon(definition.iconId);
     return {
-      id: `${FOLDERS_AGENT_ITEM_PREFIX}rust:${rustType}`,
-      key: `${FOLDERS_AGENT_ITEM_PREFIX}rust:${rustType}`,
-      label,
+      id: `${FOLDERS_AGENT_ITEM_PREFIX}rust:${definition.id}`,
+      key: `${FOLDERS_AGENT_ITEM_PREFIX}rust:${definition.id}`,
+      label: definition.name,
       iconElement: (
         <IconComponent size={16} strokeWidth={1.75} className="text-text-2" />
       ),
@@ -289,10 +304,12 @@ export function buildFoldersSidebarMenuItems({
   installedCliAgents,
   builtInRustAgents,
   customRustAgents,
+  agentOrgs,
   multiRepoWorkspaceCountLabel,
   repoCountLabel,
   myKeysLabel,
   myAgentsLabel,
+  myAgentOrgsLabel,
   onAddWorkspaceFolder,
   onCreateMultiRepoWorkspace,
   onOpenWorkspace,
@@ -388,6 +405,13 @@ export function buildFoldersSidebarMenuItems({
       customRustAgents,
     })
   );
+
+  items.push({
+    id: FOLDERS_MY_AGENT_ORGS_SECTION_ID,
+    key: FOLDERS_MY_AGENT_ORGS_SECTION_ID,
+    label: myAgentOrgsLabel,
+  });
+  items.push(...buildFoldersAgentOrgMenuItems(agentOrgs));
 
   return items;
 }

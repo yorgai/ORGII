@@ -2110,6 +2110,7 @@
     "viewAllSessions": "查看所有 Session",
     "noSessionsYet": "暂无 Session",
     "myAgents": "我的 {{count}} 个 Agent",
+    "myAgentOrgs": "我的 {{count}} 个 Agent 组织",
     "noAgentsAvailable": "暂无可用的 Agent",
     "newAgentSession": "新建 {{agent}} Session",
     "addAgent": "添加 Agent",

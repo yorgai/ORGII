@@ -6,8 +6,10 @@ import type { AvailableAgent } from "@src/config/cliAgents";
 import { getShortcutKeys } from "@src/config/keyboard/shortcutDisplay";
 import { ROUTES } from "@src/config/routes";
 import type { KeyVaultAccount } from "@src/hooks/keyVault/types";
-import type { AgentDefinition } from "@src/modules/MainApp/AgentOrgs/types";
-import { rustBuiltInVariantsFromDefinitions } from "@src/modules/shared/launchpad/hooks";
+import type {
+  AgentDefinition,
+  OrgMember,
+} from "@src/modules/MainApp/AgentOrgs/types";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import type { Repo } from "@src/store/repo";
 import type { SessionCreatorDraft } from "@src/store/session";
@@ -109,6 +111,7 @@ export function useSessionSidebarMenuItems({
 interface UseFoldersSidebarMenuItemsParams {
   builtInRustAgents: readonly AgentDefinition[];
   customRustAgents: readonly AgentDefinition[];
+  agentOrgs: readonly OrgMember[];
   installedCliAgents: readonly AvailableAgent[];
   localAccounts: readonly KeyVaultAccount[];
   repos: readonly Repo[];
@@ -133,6 +136,7 @@ interface UseFoldersSidebarMenuItemsParams {
 export function useFoldersSidebarMenuItems({
   builtInRustAgents,
   customRustAgents,
+  agentOrgs,
   installedCliAgents,
   localAccounts,
   repos,
@@ -147,17 +151,11 @@ export function useFoldersSidebarMenuItems({
   onMoreActionsForRepo,
   activeMoreMenuId,
 }: UseFoldersSidebarMenuItemsParams): NavigationMenuItem[] {
-  // Total agents count — must mirror what buildFoldersAgentMenuItems
-  // renders. Rust built-ins are deduped via the catalog helper so the
-  // tile/row counts agree (one row per unique RustAgentType variant).
-  const rustBuiltInVariantCount = useMemo(
-    () => rustBuiltInVariantsFromDefinitions([...builtInRustAgents]).length,
-    [builtInRustAgents]
-  );
   const totalAgentsCount =
     installedCliAgents.length +
-    rustBuiltInVariantCount +
+    builtInRustAgents.length +
     customRustAgents.length;
+  const totalAgentOrgsCount = agentOrgs.length;
 
   return useMemo<NavigationMenuItem[]>(
     () =>
@@ -168,6 +166,7 @@ export function useFoldersSidebarMenuItems({
         installedCliAgents,
         builtInRustAgents,
         customRustAgents,
+        agentOrgs,
         multiRepoWorkspaceCountLabel: (count) =>
           t("sidebar.folderCounts.multiRepoWorkspace", { count }),
         repoCountLabel: (count) => t("sidebar.folderCounts.repo", { count }),
@@ -176,6 +175,9 @@ export function useFoldersSidebarMenuItems({
         }),
         myAgentsLabel: t("sessions:controlTower.myAgents", {
           count: totalAgentsCount,
+        }),
+        myAgentOrgsLabel: t("sessions:controlTower.myAgentOrgs", {
+          count: totalAgentOrgsCount,
         }),
         onAddWorkspaceFolder,
         onCreateMultiRepoWorkspace,
@@ -197,7 +199,9 @@ export function useFoldersSidebarMenuItems({
       }),
     [
       totalAgentsCount,
+      totalAgentOrgsCount,
       activeMoreMenuId,
+      agentOrgs,
       builtInRustAgents,
       customRustAgents,
       installedCliAgents,

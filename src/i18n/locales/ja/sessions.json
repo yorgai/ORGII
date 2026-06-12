@@ -2104,6 +2104,7 @@
     "viewAllSessions": "すべてのセッションを表示",
     "noSessionsYet": "セッションはまだありません",
     "myAgents": "マイ Agent {{count}} 件",
+    "myAgentOrgs": "マイ Agent 組織 {{count}} 件",
     "noAgentsAvailable": "利用可能な Agent がありません",
     "newAgentSession": "新しい {{agent}} セッション",
     "addAgent": "Agent を追加",

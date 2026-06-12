@@ -2105,6 +2105,7 @@
     "viewAllSessions": "모든 세션 보기",
     "noSessionsYet": "아직 세션이 없습니다",
     "myAgents": "내 Agent {{count}}개",
+    "myAgentOrgs": "내 Agent 조직 {{count}}개",
     "noAgentsAvailable": "사용 가능한 Agent가 없습니다",
     "newAgentSession": "새 {{agent}} 세션",
     "addAgent": "Agent 추가",

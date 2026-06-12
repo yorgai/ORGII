@@ -137,7 +137,7 @@
       "joinSharedSession": "공유 세션 참여…"
     },
     "search": {
-      "folders": "폴더 검색...",
+      "folders": "워크스페이스 검색...",
       "sessions": "세션 검색...",
       "projects": "프로젝트 검색..."
     },
