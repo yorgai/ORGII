@@ -90,22 +90,33 @@ export function attachSimulatorPreviewFields<TSnapshot extends Snapshot>(
   };
 }
 
+export function isSessionEvent(value: unknown): value is SessionEvent {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    typeof (value as SessionEvent).id === "string"
+  );
+}
+
 export function buildNormalizedCache(
   snapshot: Snapshot
 ): NormalizedSnapshotCache | null {
   if (!("events" in snapshot)) return null;
+  const events = snapshot.events.filter(isSessionEvent);
+  const chatEvents = snapshot.chatEvents.filter(isSessionEvent);
+  const messagesEvents = snapshot.messagesEvents.filter(isSessionEvent);
+  const sortedSimulatorEvents =
+    snapshot.sortedSimulatorEvents.filter(isSessionEvent);
   const eventsById = new Map<string, SessionEvent>();
-  for (const event of snapshot.events) {
+  for (const event of events) {
     eventsById.set(event.id, event);
   }
   const cache: NormalizedSnapshotCache = {
     eventsById,
-    eventIds: snapshot.events.map((event) => event.id),
-    chatEventIds: snapshot.chatEvents.map((event) => event.id),
-    messagesEventIds: snapshot.messagesEvents.map((event) => event.id),
-    sortedSimulatorEventIds: snapshot.sortedSimulatorEvents.map(
-      (event) => event.id
-    ),
+    eventIds: events.map((event) => event.id),
+    chatEventIds: chatEvents.map((event) => event.id),
+    messagesEventIds: messagesEvents.map((event) => event.id),
+    sortedSimulatorEventIds: sortedSimulatorEvents.map((event) => event.id),
     eventPreviewById: {},
     createdAtById: {},
     threadIdById: {},
@@ -113,7 +124,7 @@ export function buildNormalizedCache(
     displayStatusById: {},
     displayVariantById: {},
   };
-  rebuildSimulatorPreviewIndexes(cache, snapshot.sortedSimulatorEvents);
+  rebuildSimulatorPreviewIndexes(cache, sortedSimulatorEvents);
   return cache;
 }
 
@@ -132,6 +143,32 @@ function buildEventIndex(events: SessionEvent[]): Record<string, number> {
     eventIndex[events[index].id] = index;
   }
   return eventIndex;
+}
+
+export function materializeFullSnapshot(
+  snapshot: DerivedSnapshot,
+  cache: NormalizedSnapshotCache
+): DerivedSnapshot {
+  const events = eventsForIds(cache, cache.eventIds);
+  const sortedSimulatorEvents = eventsForIds(
+    cache,
+    cache.sortedSimulatorEventIds
+  );
+  rebuildSimulatorPreviewIndexes(cache, sortedSimulatorEvents);
+  return attachSimulatorPreviewFields(
+    {
+      ...snapshot,
+      events,
+      chatEvents: eventsForIds(cache, cache.chatEventIds),
+      messagesEvents: eventsForIds(cache, cache.messagesEventIds),
+      sortedSimulatorEvents,
+      lastEvent: snapshot.lastEvent?.id
+        ? (cache.eventsById.get(snapshot.lastEvent.id) ?? null)
+        : null,
+      eventIndex: buildEventIndex(events),
+    },
+    cache
+  );
 }
 
 export function materializeSnapshot(
@@ -166,9 +203,15 @@ export function materializeSnapshot(
 export function materializeStreamingSnapshot(
   snapshot: StreamingSnapshot
 ): StreamingSnapshot {
+  const chatEvents = snapshot.chatEvents.filter(isSessionEvent);
+  const sortedSimulatorEvents =
+    snapshot.sortedSimulatorEvents.filter(isSessionEvent);
+
   if (snapshot.sortedSimulatorEventIds && snapshot.eventPreviewById) {
     return {
       ...snapshot,
+      chatEvents,
+      sortedSimulatorEvents,
       sortedSimulatorEventIds: snapshot.sortedSimulatorEventIds,
       eventPreviewById: snapshot.eventPreviewById,
       createdAtById: snapshot.createdAtById ?? {},
@@ -182,11 +225,9 @@ export function materializeStreamingSnapshot(
   const cache: NormalizedSnapshotCache = {
     eventsById: new Map(),
     eventIds: [],
-    chatEventIds: snapshot.chatEvents.map((event) => event.id),
+    chatEventIds: chatEvents.map((event) => event.id),
     messagesEventIds: [],
-    sortedSimulatorEventIds: snapshot.sortedSimulatorEvents.map(
-      (event) => event.id
-    ),
+    sortedSimulatorEventIds: sortedSimulatorEvents.map((event) => event.id),
     eventPreviewById: {},
     createdAtById: {},
     threadIdById: {},
@@ -194,6 +235,13 @@ export function materializeStreamingSnapshot(
     displayStatusById: {},
     displayVariantById: {},
   };
-  rebuildSimulatorPreviewIndexes(cache, snapshot.sortedSimulatorEvents);
-  return attachSimulatorPreviewFields(snapshot, cache);
+  rebuildSimulatorPreviewIndexes(cache, sortedSimulatorEvents);
+  return attachSimulatorPreviewFields(
+    {
+      ...snapshot,
+      chatEvents,
+      sortedSimulatorEvents,
+    },
+    cache
+  );
 }

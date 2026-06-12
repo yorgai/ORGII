@@ -5,10 +5,11 @@ import type {
   SnapshotPayload,
 } from "./EventStoreProxyTypes";
 import {
-  attachSimulatorPreviewFields,
   buildNormalizedCache,
+  isSessionEvent,
   isSnapshotDelta,
   isStreamingSnapshot,
+  materializeFullSnapshot,
   materializeSnapshot,
   materializeStreamingSnapshot,
 } from "./snapshotMaterialization";
@@ -32,6 +33,7 @@ export async function resolveSnapshotPayload(
     cache.eventsById.delete(removedId);
   }
   for (const event of payload.upserts) {
+    if (!isSessionEvent(event)) continue;
     cache.eventsById.set(event.id, event);
   }
   cache.eventIds = payload.eventIds;
@@ -58,7 +60,7 @@ export function rememberSnapshot(
 
   const normalized = buildNormalizedCache(snapshot);
   const snapshotToStore = normalized
-    ? attachSimulatorPreviewFields(snapshot as DerivedSnapshot, normalized)
+    ? materializeFullSnapshot(snapshot as DerivedSnapshot, normalized)
     : isStreamingSnapshot(snapshot)
       ? materializeStreamingSnapshot(snapshot)
       : snapshot;

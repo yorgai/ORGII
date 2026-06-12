@@ -269,7 +269,9 @@ function stringValue(value: unknown): string | null {
 }
 
 function resultCallId(event: SessionEvent): string | null {
-  return stringValue(event.result.call_id) ?? stringValue(event.result.callId);
+  return (
+    stringValue(event.result?.call_id) ?? stringValue(event.result?.callId)
+  );
 }
 
 let _prevEventsForIndex: SessionEvent[] = [];
