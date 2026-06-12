@@ -889,10 +889,11 @@
     "installedVia": "Kurulum yöntemi",
     "cliAccounts": "Uyumlu Abonelik Planları",
     "apiKeys": "Uyumlu API Key'ler",
-    "noCliAccounts": "Bu CLI için Key eklenmedi",
+    "noSubscriptions": "Bu CLI için abonelik eklenmedi",
     "noApiKeys": "Bu CLI kendi API Key'inizi desteklemiyor",
     "noApiKeysAdded": "Henüz uyumlu API Key eklenmedi",
     "notSupported": "Desteklenmiyor",
+    "subscriptions": "Abonelikler",
     "cliKeys": "Subscription",
     "compatibleApis": "Supported Keys",
     "docs": "Belge",
@@ -905,7 +906,7 @@
     "filterAllInstall": "Tüm Kurulum Durumları",
     "filterAllReady": "Tüm Hazır Durumları",
     "filterReady": "Hazır",
-    "filterNoKeys": "Anahtar Yok"
+    "filterNoSubscriptions": "Abonelik yok"
   },
   "lspPreview": {
     "enable": "Etkinleştir",

@@ -892,10 +892,11 @@
     "installedVia": "Установлено через",
     "cliAccounts": "Совместимые планы подписки",
     "apiKeys": "Совместимые API-ключи",
-    "noCliAccounts": "Для этого CLI ключи не добавлены",
+    "noSubscriptions": "Для этого CLI подписки не добавлены",
     "noApiKeys": "Этот CLI не поддерживает собственный API-ключ",
     "noApiKeysAdded": "Совместимые API-ключи ещё не добавлены",
     "notSupported": "Не поддерживается",
+    "subscriptions": "Подписки",
     "cliKeys": "Subscription",
     "compatibleApis": "Supported Keys",
     "docs": "Док",
@@ -908,7 +909,7 @@
     "filterAllInstall": "Все статусы установки",
     "filterAllReady": "Все статусы готовности",
     "filterReady": "Готов",
-    "filterNoKeys": "Нет ключей"
+    "filterNoSubscriptions": "Нет подписок"
   },
   "lspPreview": {
     "enable": "Включить",

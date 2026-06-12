@@ -889,10 +889,11 @@
     "installedVia": "Zainstalowano przez",
     "cliAccounts": "Zgodne plany subskrypcji",
     "apiKeys": "Zgodne klucze API",
-    "noCliAccounts": "Brak dodanych kluczy dla tego CLI",
+    "noSubscriptions": "Brak dodanych subskrypcji dla tego CLI",
     "noApiKeys": "Ten CLI nie obsługuje bring-your-own klucza API",
     "noApiKeysAdded": "Nie dodano jeszcze zgodnych kluczy API",
     "notSupported": "Nieobsługiwane",
+    "subscriptions": "Subskrypcje",
     "cliKeys": "Subskrypcja",
     "compatibleApis": "Obsługiwane klucze",
     "docs": "Dok.",
@@ -905,7 +906,7 @@
     "filterAllInstall": "Dowolny status instalacji",
     "filterAllReady": "Dowolny status gotowości",
     "filterReady": "Gotowe",
-    "filterNoKeys": "Brak kluczy"
+    "filterNoSubscriptions": "Brak subskrypcji"
   },
   "lspPreview": {
     "enable": "Włącz",

@@ -892,10 +892,11 @@
     "installedVia": "Installé via",
     "cliAccounts": "Plans d'abonnement compatibles",
     "apiKeys": "API Keys compatibles",
-    "noCliAccounts": "Aucune clé ajoutée pour ce CLI",
+    "noSubscriptions": "Aucun abonnement ajouté pour ce CLI",
     "noApiKeys": "Ce CLI ne prend pas en charge l'API Key personnelle",
     "noApiKeysAdded": "Aucune API Key compatible ajoutée",
     "notSupported": "Non pris en charge",
+    "subscriptions": "Abonnements",
     "cliKeys": "Subscription",
     "compatibleApis": "Supported Keys",
     "docs": "Doc",
@@ -908,7 +909,7 @@
     "filterAllInstall": "Tous les statuts d'installation",
     "filterAllReady": "Tous les statuts prêts",
     "filterReady": "Prêt",
-    "filterNoKeys": "Pas de clés"
+    "filterNoSubscriptions": "Aucun abonnement"
   },
   "lspPreview": {
     "enable": "Activer",

@@ -892,10 +892,11 @@
     "installedVia": "Cài đặt qua",
     "cliAccounts": "Gói đăng ký tương thích",
     "apiKeys": "API Key tương thích",
-    "noCliAccounts": "Chưa thêm Key cho CLI này",
+    "noSubscriptions": "Chưa thêm gói đăng ký cho CLI này",
     "noApiKeys": "CLI này không hỗ trợ sử dụng API Key riêng",
     "noApiKeysAdded": "Chưa thêm API Key tương thích nào",
     "notSupported": "Không hỗ trợ",
+    "subscriptions": "Gói đăng ký",
     "cliKeys": "Subscription",
     "compatibleApis": "Supported Keys",
     "docs": "Tài liệu",
@@ -908,7 +909,7 @@
     "filterAllInstall": "Tất cả trạng thái cài đặt",
     "filterAllReady": "Tất cả trạng thái sẵn sàng",
     "filterReady": "Sẵn sàng",
-    "filterNoKeys": "Không có khóa"
+    "filterNoSubscriptions": "Không có gói đăng ký"
   },
   "lspPreview": {
     "enable": "Bật",

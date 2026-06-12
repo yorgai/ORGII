@@ -892,10 +892,11 @@
     "installedVia": "インストール方法",
     "cliAccounts": "互換性のあるサブスクリプションプラン",
     "apiKeys": "互換性のある API Key",
-    "noCliAccounts": "この CLI の Key は未追加です",
+    "noSubscriptions": "この CLI のサブスクリプションは未追加です",
     "noApiKeys": "この CLI は自前の API Key に対応していません",
     "noApiKeysAdded": "互換性のある API Key がまだ追加されていません",
     "notSupported": "非対応",
+    "subscriptions": "サブスクリプション",
     "cliKeys": "Subscription",
     "compatibleApis": "Supported Keys",
     "docs": "ドキュメント",
@@ -908,7 +909,7 @@
     "filterAllInstall": "すべてのインストール状態",
     "filterAllReady": "すべての準備状態",
     "filterReady": "準備完了",
-    "filterNoKeys": "キーなし"
+    "filterNoSubscriptions": "サブスクリプションなし"
   },
   "lspPreview": {
     "enable": "有効",
