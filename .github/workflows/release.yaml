@@ -1,6 +1,8 @@
 # Build, sign, notarize, and release ORGII for macOS (Apple Silicon) and Windows (x64).
 #
-# Trigger: push a tag matching v* (e.g. v1.0.1, v1.0.1-nightly.20260611)
+# Trigger: push a tag matching v* (e.g. v1.0.1, v1.0.2, v1.0.1.1, v1.0.1.2)
+# Use four-part numeric versioning for builds (1.0.1.1, 1.0.1.2 ...) — compatible
+# with macOS, Windows MSI/WiX, and Tauri's updater without any format conversion.
 #
 # Sidecar binaries (peekaboo, agent-browser, dugite/git) are NOT bundled in the
 # .app. They are downloaded at first launch into ~/.orgii/bin/ by the app itself
@@ -206,17 +208,12 @@ jobs:
           fetch-depth: 0
 
       # ── Stamp version from git tag ───────────────────────────────
-      # MSI requires a numeric-only version (MAJOR.MINOR.PATCH); strip
-      # pre-release suffixes like "-nightly.20260612" for the bundle config.
       - name: Set version from tag
         shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          # Strip pre-release suffix for MSI/NSIS compatibility: 1.0.1-nightly.X → 1.0.1
-          VERSION_NUMERIC="$(echo "$VERSION" | sed 's/-.*//')"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "VERSION_NUMERIC=$VERSION_NUMERIC" >> "$GITHUB_ENV"
-          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION_NUMERIC\"/" src-tauri/tauri.conf.json
+          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
           sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
 
       # ── Node.js + pnpm ──────────────────────────────────────────
