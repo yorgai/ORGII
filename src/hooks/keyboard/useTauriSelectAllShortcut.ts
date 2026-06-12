@@ -86,7 +86,7 @@ export function useTauriSelectAllShortcut(): (
   }, []);
 }
 
-function handleSelectAllEvent(event: SelectAllEventLike): void {
+export function handleSelectAllEvent(event: SelectAllEventLike): void {
   if (event.defaultPrevented) return;
   if (!(event.metaKey || event.ctrlKey)) return;
   if (event.shiftKey || event.altKey) return;
