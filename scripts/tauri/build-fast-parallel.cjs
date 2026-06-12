@@ -67,7 +67,11 @@ function runParallel(commands) {
   });
 }
 
-// ─── env (strip signing so codesign doesn't run locally) ─────────────────────
+// ─── env: strip all signing/notarization so no certificate is required ────────
+//
+// Without this, tauri falls back to ad-hoc signing (-) which still invokes
+// codesign on every binary and adds ~10-20s with no benefit for a local build.
+// Setting CODESIGN_IDENTITY="" tells tauri-bundler to skip codesign entirely.
 
 const env = { ...process.env };
 for (const key of [
@@ -77,9 +81,11 @@ for (const key of [
   "APPLE_API_KEY",
   "APPLE_API_KEY_PATH",
   "APPLE_API_ISSUER",
+  "CODESIGN_IDENTITY",
 ]) {
   delete env[key];
 }
+env.CODESIGN_IDENTITY = "";
 
 // ─── phase 1: webpack + cargo in parallel ─────────────────────────────────────
 
@@ -135,7 +141,14 @@ async function main() {
     },
     bundle: {
       createUpdaterArtifacts: false,
-      macOS: { signingIdentity: null },
+      macOS: {
+        // null = no Developer ID signing. Combined with CODESIGN_IDENTITY=""
+        // in env, tauri-bundler skips codesign entirely — no certificate needed,
+        // no ad-hoc signing pass, no entitlements processing.
+        signingIdentity: null,
+        entitlements: null,
+        hardened_runtime: false,
+      },
     },
   });
 
