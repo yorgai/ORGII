@@ -273,6 +273,19 @@ pub struct DiffWithHunksResult {
     pub max_line_number: usize,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnifiedDiffNormalization {
+    pub old_content: String,
+    pub new_content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub old_start_line: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub new_start_line: Option<usize>,
+    pub lines_added: usize,
+    pub lines_removed: usize,
+}
+
 // ============================================
 // Internal Types
 // ============================================

@@ -118,6 +118,14 @@ const SegmentView: React.FC<SegmentViewProps> = ({
 
   const diffPayload = useMemo(() => {
     if (!isDiff || !resolvedDiff) return undefined;
+    if (segment.oldContent !== undefined && segment.newContent !== undefined) {
+      return {
+        oldValue: decodeStreamContent(segment.oldContent),
+        newValue: decodeStreamContent(segment.newContent),
+        oldStartLine: segment.oldStartLine,
+        newStartLine: segment.newStartLine,
+      };
+    }
     const parsed = parseUnifiedDiffToOldNew(resolvedDiff);
     return {
       oldValue: parsed.oldValue,
@@ -125,7 +133,14 @@ const SegmentView: React.FC<SegmentViewProps> = ({
       oldStartLine: parsed.oldStartLine,
       newStartLine: parsed.newStartLine,
     };
-  }, [isDiff, resolvedDiff]);
+  }, [
+    isDiff,
+    resolvedDiff,
+    segment.oldContent,
+    segment.newContent,
+    segment.oldStartLine,
+    segment.newStartLine,
+  ]);
 
   // For new-file writes, append a muted "New" suffix next to the green `+N` count.
   const trailingTags = syntheticAddDiff

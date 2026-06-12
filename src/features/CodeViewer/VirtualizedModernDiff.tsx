@@ -72,6 +72,7 @@ const VirtualizedModernDiffComponent: React.FC<ModernDiffProps> = ({
   indicatorStyle = "icon",
   oldStartLine = 1,
   newStartLine = 1,
+  className,
 }) => {
   const themes = useAtomValue(themesAtom);
   const isDark = isThemeCssPathDark(themes);
@@ -176,6 +177,14 @@ const VirtualizedModernDiffComponent: React.FC<ModernDiffProps> = ({
     ]
   );
 
+  const rootClassName = [
+    noWrapper ? "modern-diff-no-wrapper" : "modern-diff",
+    cherrypicking ? "modern-diff-cherrypicking" : "",
+    className ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   // Calculate container height
   const containerHeight =
     typeof height === "number" ? height : height === "100%" ? "100%" : height;
@@ -184,7 +193,7 @@ const VirtualizedModernDiffComponent: React.FC<ModernDiffProps> = ({
   if (isComputing || diffLines.length === 0) {
     return (
       <div
-        className={`${noWrapper ? "modern-diff-no-wrapper" : "modern-diff"} ${cherrypicking ? "modern-diff-cherrypicking" : ""}`}
+        className={rootClassName}
         style={{
           height: containerHeight,
           width: typeof width === "number" ? `${width}px` : width,
@@ -216,7 +225,7 @@ const VirtualizedModernDiffComponent: React.FC<ModernDiffProps> = ({
 
   return (
     <div
-      className={`${noWrapper ? "modern-diff-no-wrapper" : "modern-diff"} ${cherrypicking ? "modern-diff-cherrypicking" : ""}`}
+      className={rootClassName}
       style={{
         height: internalScroll ? containerHeight : "auto",
         width: typeof width === "number" ? `${width}px` : width,

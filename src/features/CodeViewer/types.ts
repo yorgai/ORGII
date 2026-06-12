@@ -43,6 +43,7 @@ export interface ModernSplitDiffProps {
   oldStartLine?: number;
   /** Starting line number for new content (default: 1). Use this when showing a hunk instead of full file. */
   newStartLine?: number;
+  className?: string;
 }
 
 export interface AlignedLine {

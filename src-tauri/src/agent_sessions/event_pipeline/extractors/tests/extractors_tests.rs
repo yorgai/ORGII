@@ -169,6 +169,73 @@ fn test_extract_apply_patch_prefers_real_diff_result() {
             assert!(diff.contains(" line5"));
             assert_eq!(edit.lines_added, Some(1));
             assert_eq!(edit.lines_removed, Some(1));
+            assert_eq!(
+                edit.old_content.as_deref(),
+                Some("line1\nline2\nold\nline4\nline5\n")
+            );
+            assert_eq!(
+                edit.new_content.as_deref(),
+                Some("line1\nline2\nnew\nline4\nline5\n")
+            );
+            assert_eq!(edit.old_start_line, Some(1));
+            assert_eq!(edit.new_start_line, Some(1));
+        }
+        _ => panic!("Expected Edit variant"),
+    }
+}
+
+#[test]
+fn test_extract_apply_patch_normalizes_real_diff_segments() {
+    let event = make_event(
+        "apply_patch",
+        EventDisplayVariant::ToolCall,
+        serde_json::json!({"patch_text": "*** Begin Patch\n*** End Patch"}),
+        serde_json::json!({
+            "content": "Patch applied successfully.",
+            "diffString": "--- a/a.ts\n+++ b/a.ts\n@@ -1,1 +1,1 @@\n-oldA\n+newA\n--- a/b.ts\n+++ b/b.ts\n@@ -5,1 +5,1 @@\n-oldB\n+newB",
+            "linesAdded": 2,
+            "linesRemoved": 2,
+            "filePaths": ["a.ts", "b.ts"],
+            "segments": [
+                {
+                    "filePath": "a.ts",
+                    "diff": "--- a/a.ts\n+++ b/a.ts\n@@ -1,1 +1,1 @@\n-oldA\n+newA",
+                    "linesAdded": 1,
+                    "linesRemoved": 1,
+                    "isDeleted": false
+                },
+                {
+                    "filePath": "b.ts",
+                    "diff": "--- a/b.ts\n+++ b/b.ts\n@@ -5,1 +5,1 @@\n-oldB\n+newB",
+                    "linesAdded": 1,
+                    "linesRemoved": 1,
+                    "isDeleted": false
+                }
+            ]
+        }),
+    );
+
+    let data = extract_event_data(&event).unwrap();
+    match data {
+        ExtractedData::Edit(edit) => {
+            assert_eq!(edit.apply_patch_segments.len(), 2);
+            assert_eq!(
+                edit.apply_patch_segments[0].old_content.as_deref(),
+                Some("oldA")
+            );
+            assert_eq!(
+                edit.apply_patch_segments[0].new_content.as_deref(),
+                Some("newA")
+            );
+            assert_eq!(edit.apply_patch_segments[1].old_start_line, Some(5));
+            assert_eq!(
+                edit.apply_patch_segments[1].old_content.as_deref(),
+                Some("oldB")
+            );
+            assert_eq!(
+                edit.apply_patch_segments[1].new_content.as_deref(),
+                Some("newB")
+            );
         }
         _ => panic!("Expected Edit variant"),
     }

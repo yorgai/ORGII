@@ -119,8 +119,12 @@ export function extractEditData(props: UniversalEventProps): ExtractedEditData {
 
   const resultContent =
     typeof result?.content === "string" ? result.content : undefined;
+  const resultOutput = result?.output as Record<string, unknown> | undefined;
   const diff =
     (successData?.diffString as string) ||
+    (successData?.diff as string) ||
+    (resultOutput?.diffString as string) ||
+    (resultOutput?.diff as string) ||
     (result?.diffString as string) ||
     (result?.diff as string) ||
     extractFencedDiff(resultContent) ||

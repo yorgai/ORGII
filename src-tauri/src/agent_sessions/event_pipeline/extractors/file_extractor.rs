@@ -1,6 +1,6 @@
 //! File read, edit, apply_patch, and delete extractors.
 
-use perf_utils::diff_patch::{convert_patch_to_unified, PatchSegment};
+use perf_utils::diff_patch::{convert_patch_to_unified, normalize_unified_diff, PatchSegment};
 
 use super::helpers::{
     extract_fenced_diff, get_success_data, obj_str, parse_diff_start_lines, safe_str,
@@ -73,6 +73,33 @@ pub(super) fn extract_file(
         line_count,
         start_line,
     }
+}
+
+fn normalize_edit(mut edit: ExtractedEditData) -> ExtractedEditData {
+    let Some(diff) = edit.diff.as_deref().filter(|value| !value.is_empty()) else {
+        return edit;
+    };
+
+    let normalized = normalize_unified_diff(diff);
+    if edit.old_content.is_none() {
+        edit.old_content = Some(normalized.old_content);
+    }
+    if edit.new_content.is_none() {
+        edit.new_content = Some(normalized.new_content);
+    }
+    if edit.old_start_line.is_none() {
+        edit.old_start_line = normalized.old_start_line;
+    }
+    if edit.new_start_line.is_none() {
+        edit.new_start_line = normalized.new_start_line;
+    }
+    if edit.lines_added.is_none() {
+        edit.lines_added = Some(normalized.lines_added);
+    }
+    if edit.lines_removed.is_none() {
+        edit.lines_removed = Some(normalized.lines_removed);
+    }
+    edit
 }
 
 pub(super) fn extract_edit(
@@ -149,7 +176,7 @@ pub(super) fn extract_edit(
         lines_added
     };
 
-    ExtractedEditData {
+    normalize_edit(ExtractedEditData {
         file_path: file_data.file_path,
         file_name: file_data.file_name,
         language: file_data.language,
@@ -164,7 +191,7 @@ pub(super) fn extract_edit(
         lines_removed,
         is_deleted: false,
         apply_patch_segments: Vec::new(),
-    }
+    })
 }
 
 pub(super) fn extract_apply_patch(
@@ -203,7 +230,7 @@ pub(super) fn extract_apply_patch(
     let has_diff = !converted.diff.is_empty();
     let diff = if has_diff { Some(converted.diff) } else { None };
     let (old_start_line, new_start_line) = parse_diff_start_lines(diff.as_deref());
-    ExtractedEditData {
+    normalize_edit(ExtractedEditData {
         file_path: first_path,
         file_name,
         language: "diff".to_string(),
@@ -218,7 +245,7 @@ pub(super) fn extract_apply_patch(
         lines_removed: Some(converted.lines_removed),
         is_deleted: false,
         apply_patch_segments: segments,
-    }
+    })
 }
 
 pub(super) fn extract_real_apply_patch_result(
@@ -254,7 +281,7 @@ pub(super) fn extract_real_apply_patch_result(
             let diff = obj_str(segment, "diff");
             let (old_start_line, new_start_line) = parse_diff_start_lines(diff.as_deref());
 
-            ExtractedEditData {
+            normalize_edit(ExtractedEditData {
                 file_path,
                 file_name,
                 language,
@@ -275,7 +302,7 @@ pub(super) fn extract_real_apply_patch_result(
                     .map(|value| value as usize),
                 is_deleted,
                 apply_patch_segments: Vec::new(),
-            }
+            })
         })
         .collect();
 
@@ -301,7 +328,7 @@ pub(super) fn extract_real_apply_patch_result(
     let (old_start_line, new_start_line) = parse_diff_start_lines(diff.as_deref());
     let segment_count = segments.len();
 
-    Some(ExtractedEditData {
+    Some(normalize_edit(ExtractedEditData {
         file_path: first_path,
         file_name,
         language: "diff".to_string(),
@@ -330,7 +357,7 @@ pub(super) fn extract_real_apply_patch_result(
         } else {
             Vec::new()
         },
-    })
+    }))
 }
 
 pub(super) fn segment_to_edit(
@@ -392,7 +419,7 @@ pub(super) fn segment_to_edit(
     };
     let (old_start_line, new_start_line) = parse_diff_start_lines(diff.as_deref());
 
-    ExtractedEditData {
+    normalize_edit(ExtractedEditData {
         file_path: segment.file_path.clone(),
         file_name,
         language,
@@ -407,5 +434,5 @@ pub(super) fn segment_to_edit(
         lines_removed: Some(segment.lines_removed),
         is_deleted: false,
         apply_patch_segments: Vec::new(),
-    }
+    })
 }

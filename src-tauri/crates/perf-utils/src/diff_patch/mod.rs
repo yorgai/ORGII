@@ -10,8 +10,10 @@ mod merge;
 mod patch;
 mod structured;
 mod types;
+mod unified;
 
 pub use types::*;
+pub use unified::normalize_unified_diff;
 
 use similar::{ChangeTag, TextDiff};
 use tauri::command;

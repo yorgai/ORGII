@@ -601,6 +601,15 @@ describe("extractEditData", () => {
       expect(extractEditData(props).diff).toBe(diffStr);
     });
 
+    it("extracts diff from result.output.diff fallback", () => {
+      const diffStr = "--- a\n+++ b\n@@ -1 +1 @@\n-x\n+y";
+      const props = makeUniversalProps({
+        args: { file_path: "src/app.ts" },
+        result: { output: { diff: diffStr } },
+      });
+      expect(extractEditData(props).diff).toBe(diffStr);
+    });
+
     it("extracts linesAdded and linesRemoved from successData", () => {
       const props = makeUniversalProps({
         args: { file_path: "src/app.ts" },

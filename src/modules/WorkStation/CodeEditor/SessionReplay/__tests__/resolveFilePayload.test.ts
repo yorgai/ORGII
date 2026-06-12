@@ -109,4 +109,24 @@ describe("resolveFileOperationPayload", () => {
     expect(payload.oldStartLine).toBe(10);
     expect(payload.newStartLine).toBe(10);
   });
+
+  it("keeps normalized inline old and new content without reparsing diff", () => {
+    const op = baseFileOp({
+      eventId: "e5",
+      filePath: "/repo/z.ts",
+      type: FILE_OPERATION_TYPE.WRITE,
+      oldContent: "normalized old",
+      newContent: "normalized new",
+      diff: "--- a/repo/z.ts\n+++ b/repo/z.ts\n@@ -1,1 +1,1 @@\n-legacy old\n+legacy new",
+      oldStartLine: 20,
+      newStartLine: 21,
+    });
+
+    const payload = resolveFileOperationPayload(op);
+
+    expect(payload.oldContent).toBe("normalized old");
+    expect(payload.newContent).toBe("normalized new");
+    expect(payload.oldStartLine).toBe(20);
+    expect(payload.newStartLine).toBe(21);
+  });
 });
