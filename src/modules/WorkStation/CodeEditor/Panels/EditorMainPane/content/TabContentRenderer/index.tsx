@@ -123,6 +123,7 @@ const TabContentRenderer: React.FC<TabContentRendererProps> = memo(
     gitDiffLoading,
     forceRefresh,
     onFileSelect,
+    onFileSelectWithLine,
     onDiagnosticsChange,
     onCursorPositionChange,
     onSearchTabTitleChange,
@@ -153,12 +154,14 @@ const TabContentRenderer: React.FC<TabContentRendererProps> = memo(
 
     // Memoized callback for search result click
     const handleSearchResultClick = useCallback(
-      (filePath: string, _line: number, _column?: number) => {
-        // Navigate to file at specific line
-        onFileSelect?.(filePath);
-        // TODO: Add line number navigation support
+      (filePath: string, line: number, _column?: number) => {
+        if (line > 0 && onFileSelectWithLine) {
+          onFileSelectWithLine(filePath, line);
+        } else {
+          onFileSelect?.(filePath);
+        }
       },
-      [onFileSelect]
+      [onFileSelect, onFileSelectWithLine]
     );
 
     // No active tab - show empty editor

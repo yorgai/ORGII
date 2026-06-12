@@ -888,6 +888,7 @@ const EditorContent: React.FC<EditorContentProps> = memo(
                   gitDiffLoading={gitDiffLoading}
                   forceRefresh={forceRefresh}
                   onFileSelect={onFileSelect}
+                  onFileSelectWithLine={onFileSelectWithLine}
                   onDiagnosticsChange={onDiagnosticsChange}
                   onCursorPositionChange={onCursorPositionChange}
                   onSearchTabTitleChange={handleSearchTabTitleChange}

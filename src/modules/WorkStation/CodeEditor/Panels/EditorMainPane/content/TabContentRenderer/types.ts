@@ -37,6 +37,8 @@ export interface TabContentRendererProps {
   forceRefresh: () => void;
   /** File select callback */
   onFileSelect: (path: string) => void;
+  /** File select with line number callback (for navigating to a specific line) */
+  onFileSelectWithLine?: (path: string, line: number) => void;
   /** Diagnostics change callback */
   onDiagnosticsChange?: (diagnostics: Diagnostic[]) => void;
   /** Cursor position change callback */
