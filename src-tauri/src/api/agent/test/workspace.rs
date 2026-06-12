@@ -77,7 +77,7 @@ pub async fn test_session_workspace_add_directory(
                 return Json(serde_json::json!({
                     "ok": false,
                     "error": format!(
-                        "source must be one of \"session\"|\"localSettings\"|\"userSettings\"|\"cliArg\": {err}"
+                        "source must be one of \"session\"|\"ideWorkspace\"|\"localSettings\"|\"userSettings\"|\"cliArg\": {err}"
                     ),
                 }));
             }

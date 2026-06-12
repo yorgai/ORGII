@@ -39,7 +39,7 @@ use crate::interaction::secret_broker::{Resolve, SecretBroker};
 use crate::tools::names as tool_names;
 use crate::tools::traits::{Tool, ToolError};
 
-use super::{merge_additional_dirs, WorkspaceStateHandle};
+use super::{allowed_roots, WorkspaceStateHandle};
 
 use zeroize::Zeroizing;
 
@@ -158,7 +158,7 @@ impl Tool for WriteEnvFileTool {
         let allowed_dir = self.allowed_dir();
         let static_dirs: Vec<PathBuf> = self.scratchpad_dir.iter().cloned().collect();
         let extras: Vec<PathBuf> =
-            merge_additional_dirs(&static_dirs, self.workspace_state.as_ref());
+            allowed_roots(&static_dirs, self.workspace_state.as_ref());
         let resolved = resolve_path_with_extras(path_str, allowed_dir.as_deref(), &extras)
             .map_err(ToolError::PermissionDenied)?;
 

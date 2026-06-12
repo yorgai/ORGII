@@ -26,17 +26,57 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+/// Canonicalize `path`, falling back to lexical normalization (`.`/`..`
+/// resolution without filesystem access) when the path does not exist.
+///
+/// This is the single normalization function for every path that enters
+/// or is compared against the workspace authorization set. Reuses the
+/// crate-wide `normalize_lexical` from `tool_infra::file` so there is
+/// exactly one lexical normalizer in the codebase.
+pub fn canonicalize_or_lexical(path: &Path) -> PathBuf {
+    path.canonicalize()
+        .unwrap_or_else(|_| crate::foundation::tool_infra::file::normalize_lexical(path))
+}
+
+/// Canonicalize a candidate path for containment checks. Unlike
+/// [`canonicalize_or_lexical`], a not-yet-existing leaf (e.g. a file
+/// about to be created) resolves through its parent: canonicalize the
+/// parent and re-append the filename, so symlinked parents cannot be
+/// used to escape. Falls back to lexical normalization when even the
+/// parent does not exist.
+fn canonicalize_candidate(path: &Path) -> PathBuf {
+    if let Ok(canonical) = path.canonicalize() {
+        return canonical;
+    }
+    if let (Some(parent), Some(file_name)) = (path.parent(), path.file_name()) {
+        if let Ok(canonical_parent) = parent.canonicalize() {
+            return canonical_parent.join(file_name);
+        }
+    }
+    crate::foundation::tool_infra::file::normalize_lexical(path)
+}
+
 /// Source that granted an [`AdditionalDirectory`].
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DirectorySource {
-    /// In-memory only; dies with the session. Default because it is
+    /// Runtime grant (agent `/add-dir`, channel tool, ad-hoc UI action).
+    /// Persisted with the session row (`workspace_additional_json`) like
+    /// every other entry — it survives restarts of the same session but
+    /// is never mirrored to any settings file. Default because it is
     /// the safest assumption when deserialising an entry with missing
-    /// `source` — we never want to upgrade silently to a persisted
-    /// scope.
+    /// `source`.
     #[default]
     Session,
-    /// Workspace-scoped, persisted to `<workspace_root>/.orgii/settings.local.json`.
+    /// Mirrored from the IDE's multi-root workspace folders by the
+    /// frontend sync layer (`useSessionWorkspaceSync`). Managed
+    /// exclusively by that layer — the agent must not add or remove
+    /// these.
+    IdeWorkspace,
+    /// Historical variant kept for serde compatibility with old session
+    /// rows. The promised mirror to
+    /// `<workspace_root>/.orgii/settings.local.json` was never
+    /// implemented; no code path writes this source today.
     LocalSettings,
     /// User-scoped, persisted to `~/.orgii/settings.json`. Currently
     /// only READ by the agent (round-trips hand-edited entries); no
@@ -50,10 +90,10 @@ pub enum DirectorySource {
 
 /// A single additional directory entry.
 ///
-/// The `path` is expected to be canonicalised at insertion time by
-/// the caller (see `state/commands/session/workspace.rs` when that
-/// lands in PR-C). `source` is first-writer-wins: re-adding the same
-/// path with a different source returns `false` from
+/// `path` is normalized via [`canonicalize_or_lexical`] inside
+/// [`SessionWorkspace::add_directory`] — callers may pass any spelling.
+/// `source` is first-writer-wins: re-adding the same path with a
+/// different source returns `false` from
 /// [`SessionWorkspace::add_directory`] and leaves the original
 /// source in place.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -102,6 +142,22 @@ impl SessionWorkspace {
         }
     }
 
+    /// [`Self::new_worktree`] that also inherits the parent session's
+    /// `additional_directories` (already canonical — copied verbatim).
+    /// Used by subagent worktree isolation so a worker keeps every
+    /// directory the parent was granted via `/add-dir`.
+    pub fn new_worktree_inheriting(
+        workspace_root: PathBuf,
+        worktree_path: PathBuf,
+        parent: &SessionWorkspace,
+    ) -> Self {
+        Self {
+            workspace_root,
+            working_dir: worktree_path,
+            additional_directories: parent.additional_directories.clone(),
+        }
+    }
+
     // ── Accessors ──
 
     /// User-visible workspace root path (stable identity shown in UI).
@@ -135,9 +191,48 @@ impl SessionWorkspace {
         out
     }
 
-    /// Additional dirs filtered by source. Used by persistence to
-    /// pick which entries should be mirrored to `settings.local.json`
-    /// vs kept only on the live session row.
+    /// [`Self::effective_roots`] with every root passed through
+    /// [`canonicalize_or_lexical`]. Additional dirs are already
+    /// canonical (normalized at insertion); `workspace_root` and
+    /// `working_dir` may carry symlinked spellings from launch params,
+    /// so they are normalized here.
+    pub fn effective_roots_canonical(&self) -> Vec<PathBuf> {
+        self.effective_roots()
+            .iter()
+            .map(|root| canonicalize_or_lexical(root))
+            .collect()
+    }
+
+    /// THE single path-containment check for this session.
+    ///
+    /// `candidate` is canonicalized (falling back through its parent for
+    /// not-yet-existing leaves, then lexically) and tested with
+    /// `starts_with` against every canonical effective root plus
+    /// `extra_allowed` (e.g. the active IDE repo). The rejection
+    /// message lists every allowed root so the model can self-correct.
+    pub fn is_path_allowed(&self, candidate: &Path, extra_allowed: &[PathBuf]) -> Result<(), String> {
+        let resolved = canonicalize_candidate(candidate);
+        let mut roots = self.effective_roots_canonical();
+        roots.extend(extra_allowed.iter().map(|p| canonicalize_or_lexical(p)));
+
+        if roots.iter().any(|root| resolved.starts_with(root)) {
+            return Ok(());
+        }
+
+        Err(format!(
+            "Path '{}' is outside the session workspace. Allowed roots: {}",
+            candidate.display(),
+            roots
+                .iter()
+                .map(|p| p.display().to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        ))
+    }
+
+    /// Additional dirs filtered by source. Used by callers that need
+    /// to distinguish runtime grants from IDE-mirrored entries (e.g.
+    /// CLI launch `--add-dir` projection, IDE sync diffing).
     pub fn additional_by_source(
         &self,
         source: DirectorySource,
@@ -149,22 +244,34 @@ impl SessionWorkspace {
 
     // ── Mutators ──
 
-    /// Insert. Returns `true` if the path was newly added, `false`
-    /// if it already existed (first-writer-wins for source).
+    /// Insert. The single write entry point for additional directories:
+    /// `dir.path` is normalized via [`canonicalize_or_lexical`] before
+    /// being used as the map key, so two spellings of the same directory
+    /// (symlink vs real, trailing `..` etc.) collapse to one entry.
+    /// Returns `true` if the path was newly added, `false` if it
+    /// already existed (first-writer-wins for source).
     pub fn add_directory(&mut self, dir: AdditionalDirectory) -> bool {
         use std::collections::btree_map::Entry;
-        match self.additional_directories.entry(dir.path.clone()) {
+        let canonical = canonicalize_or_lexical(&dir.path);
+        match self.additional_directories.entry(canonical.clone()) {
             Entry::Vacant(slot) => {
-                slot.insert(dir);
+                slot.insert(AdditionalDirectory {
+                    path: canonical,
+                    source: dir.source,
+                });
                 true
             }
             Entry::Occupied(_) => false,
         }
     }
 
-    /// Remove; returns the removed entry if present.
+    /// Remove; returns the removed entry if present. `path` is
+    /// normalized through the same [`canonicalize_or_lexical`] as
+    /// [`Self::add_directory`], so any spelling of a granted directory
+    /// removes it.
     pub fn remove_directory(&mut self, path: &Path) -> Option<AdditionalDirectory> {
-        self.additional_directories.remove(path)
+        self.additional_directories
+            .remove(&canonicalize_or_lexical(path))
     }
 }
 
@@ -324,5 +431,179 @@ mod tests {
             ws.effective_roots(),
             vec![pb("/proj"), pb("/a"), pb("/m"), pb("/z")]
         );
+    }
+
+    // ── canonicalization entry point ──
+
+    #[cfg(unix)]
+    #[test]
+    fn add_directory_canonicalizes_symlinked_spelling() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let real = tmp.path().join("real");
+        std::fs::create_dir(&real).unwrap();
+        let link = tmp.path().join("link");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+
+        let mut ws = SessionWorkspace::new(pb("/proj"));
+        assert!(ws.add_directory(AdditionalDirectory {
+            path: link.clone(),
+            source: DirectorySource::Session,
+        }));
+
+        let canonical_real = real.canonicalize().unwrap();
+        assert!(
+            ws.additional_directories.contains_key(&canonical_real),
+            "expected canonical key {canonical_real:?}, got {:?}",
+            ws.additional_directories.keys().collect::<Vec<_>>()
+        );
+        // Re-adding the real spelling is a duplicate, not a second entry.
+        assert!(!ws.add_directory(AdditionalDirectory {
+            path: real,
+            source: DirectorySource::Session,
+        }));
+        assert_eq!(ws.additional_directories.len(), 1);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn remove_directory_accepts_alternate_spelling() {
+        let tmp = tempfile::TempDir::new().unwrap();
+        let real = tmp.path().join("real");
+        std::fs::create_dir(&real).unwrap();
+        let link = tmp.path().join("link");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+
+        let mut ws = SessionWorkspace::new(pb("/proj"));
+        ws.add_directory(AdditionalDirectory {
+            path: real,
+            source: DirectorySource::Session,
+        });
+        // Remove via the symlink spelling — must hit the same entry.
+        assert!(ws.remove_directory(&link).is_some());
+        assert!(ws.additional_directories.is_empty());
+    }
+
+    #[test]
+    fn add_directory_normalizes_lexically_when_path_missing() {
+        let mut ws = SessionWorkspace::new(pb("/proj"));
+        ws.add_directory(session_dir("/nonexistent/a/../b"));
+        assert!(ws
+            .additional_directories
+            .contains_key(Path::new("/nonexistent/b")));
+        assert!(ws.remove_directory(Path::new("/nonexistent/b/.")).is_some());
+    }
+
+    // ── is_path_allowed ──
+
+    #[test]
+    fn is_path_allowed_accepts_paths_under_any_root() {
+        let workspace = tempfile::TempDir::new().unwrap();
+        let extra = tempfile::TempDir::new().unwrap();
+        let mut ws = SessionWorkspace::new(workspace.path().to_path_buf());
+        ws.add_directory(AdditionalDirectory {
+            path: extra.path().to_path_buf(),
+            source: DirectorySource::Session,
+        });
+
+        std::fs::write(workspace.path().join("a.txt"), "x").unwrap();
+        std::fs::write(extra.path().join("b.txt"), "x").unwrap();
+
+        assert!(ws
+            .is_path_allowed(&workspace.path().join("a.txt"), &[])
+            .is_ok());
+        assert!(ws.is_path_allowed(&extra.path().join("b.txt"), &[]).is_ok());
+        // Not-yet-existing leaf resolves through its parent.
+        assert!(ws
+            .is_path_allowed(&extra.path().join("new.txt"), &[])
+            .is_ok());
+    }
+
+    #[test]
+    fn is_path_allowed_rejection_lists_all_roots() {
+        let workspace = tempfile::TempDir::new().unwrap();
+        let extra = tempfile::TempDir::new().unwrap();
+        let outside = tempfile::TempDir::new().unwrap();
+        let mut ws = SessionWorkspace::new(workspace.path().to_path_buf());
+        ws.add_directory(AdditionalDirectory {
+            path: extra.path().to_path_buf(),
+            source: DirectorySource::Session,
+        });
+
+        let err = ws
+            .is_path_allowed(&outside.path().join("secret.txt"), &[])
+            .unwrap_err();
+        let canonical_ws = workspace.path().canonicalize().unwrap();
+        let canonical_extra = extra.path().canonicalize().unwrap();
+        assert!(
+            err.contains(&canonical_ws.display().to_string()),
+            "missing workspace root in: {err}"
+        );
+        assert!(
+            err.contains(&canonical_extra.display().to_string()),
+            "missing extra root in: {err}"
+        );
+    }
+
+    #[test]
+    fn is_path_allowed_honors_extra_allowed_argument() {
+        let workspace = tempfile::TempDir::new().unwrap();
+        let active_repo = tempfile::TempDir::new().unwrap();
+        let ws = SessionWorkspace::new(workspace.path().to_path_buf());
+
+        assert!(ws.is_path_allowed(active_repo.path(), &[]).is_err());
+        assert!(ws
+            .is_path_allowed(active_repo.path(), &[active_repo.path().to_path_buf()])
+            .is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn is_path_allowed_rejects_symlink_escape() {
+        let workspace = tempfile::TempDir::new().unwrap();
+        let outside = tempfile::TempDir::new().unwrap();
+        let secret = outside.path().join("secret.txt");
+        std::fs::write(&secret, "x").unwrap();
+        let link = workspace.path().join("escape.txt");
+        std::os::unix::fs::symlink(&secret, &link).unwrap();
+
+        let ws = SessionWorkspace::new(workspace.path().to_path_buf());
+        assert!(ws.is_path_allowed(&link, &[]).is_err());
+    }
+
+    // ── worktree inheritance ──
+
+    #[test]
+    fn new_worktree_inheriting_copies_parent_extras() {
+        let mut parent = SessionWorkspace::new(pb("/proj"));
+        parent.add_directory(session_dir("/peer"));
+        parent.add_directory(AdditionalDirectory {
+            path: pb("/ide"),
+            source: DirectorySource::IdeWorkspace,
+        });
+
+        let child = SessionWorkspace::new_worktree_inheriting(pb("/proj"), pb("/shadow"), &parent);
+        assert!(child.is_worktree());
+        assert_eq!(
+            child.effective_roots(),
+            vec![pb("/proj"), pb("/shadow"), pb("/ide"), pb("/peer")]
+        );
+        assert_eq!(
+            child
+                .additional_directories
+                .get(Path::new("/ide"))
+                .unwrap()
+                .source,
+            DirectorySource::IdeWorkspace
+        );
+    }
+
+    #[test]
+    fn ide_workspace_source_serialises_camel_case() {
+        let dir = AdditionalDirectory {
+            path: pb("/x"),
+            source: DirectorySource::IdeWorkspace,
+        };
+        let json = serde_json::to_string(&dir).expect("serialise");
+        assert!(json.contains("\"ideWorkspace\""), "got: {json}");
     }
 }

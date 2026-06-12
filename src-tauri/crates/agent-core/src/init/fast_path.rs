@@ -8,7 +8,12 @@
 //! Match criteria are deliberately conservative:
 //!   - account: must match exactly (None==None or Some(a)==Some(a))
 //!   - model: only checked when the caller pinned one (no pin → accept anything)
-//!   - workspace root: must match exactly
+//!   - workspace: the runtime's live `working_dir()` must match the
+//!     caller's resolved workspace path. Identity resolution projects a
+//!     worktree session onto its working dir, so comparing against
+//!     `working_dir()` (NOT the stable `user_visible()` root) keeps
+//!     worktree sessions on the fast path instead of rebuilding the
+//!     runtime on every message.
 //!
 //! The model rule is the load-bearing one: when the channel re-injects an
 //! inbound message, it does NOT know which model the user picked, so it
@@ -41,7 +46,7 @@ pub(super) async fn try_reuse_existing(
         Some(req) => existing.model == req,
         None => true,
     };
-    let project_matches = existing.workspace_state.read().user_visible() == workspace_root;
+    let project_matches = existing.workspace_state.read().working_dir() == workspace_root;
 
     if account_matches && model_matches && project_matches {
         Some(existing)

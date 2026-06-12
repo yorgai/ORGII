@@ -23,18 +23,21 @@
 //! Mutations covered this phase:
 //!
 //! - [`add_directory`]: inserts a new [`AdditionalDirectory`] with a
-//!   caller-specified `DirectorySource` (`session` / `localSettings`).
-//!   Canonicalisation of the path is the caller's responsibility;
-//!   [`SessionWorkspace::add_directory`] uses the path verbatim as
-//!   the map key.
-//! - [`remove_directory`]: removes an entry. Returns `false` if the
-//!   path wasn't present so callers can distinguish "no-op" from
-//!   "removed".
+//!   caller-specified `DirectorySource` (`session` / `ideWorkspace`).
+//!   [`SessionWorkspace::add_directory`] canonicalizes the path before
+//!   keying — callers may pass any spelling.
+//! - [`remove_directory`]: removes an entry (same canonicalization as
+//!   add). Returns `false` if the path wasn't present so callers can
+//!   distinguish "no-op" from "removed".
 //! - [`list_workspaces`]: read-only snapshot of `workspace_root`,
 //!   `working_dir`, and every `additional_directory` entry for a
 //!   session. Used by slash-command output + IDE popover.
 //! - [`enter_worktree`]: switch the current session's `working_dir`
 //!   into a git worktree while preserving stable `workspace_root` identity.
+//!
+//! Successful add/remove mutations additionally emit
+//! [`WORKSPACE_CHANGED_EVENT`] so the frontend mirror
+//! (`useSessionWorkspaceSync`) refreshes without polling.
 
 use std::path::PathBuf;
 
@@ -54,6 +57,60 @@ use crate::state::AgentAppState;
 pub struct AdditionalDirectoryView {
     pub path: PathBuf,
     pub source: DirectorySource,
+}
+
+/// Tauri event channel emitted whenever a session's workspace changes
+/// (directory added/removed, runtime rebuilt). The frontend mirror
+/// (`useSessionWorkspaceSync`) listens on this name — keep in sync with
+/// `src/api/tauri/agent/sessionWorkspace.ts` (`WORKSPACE_CHANGED_EVENT`).
+pub const WORKSPACE_CHANGED_EVENT: &str = "workspace:changed";
+
+/// Payload of [`WORKSPACE_CHANGED_EVENT`]. All paths canonical;
+/// camelCase wire shape pinned by the frontend `WorkspaceChangedPayload`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceChangedPayload {
+    pub session_id: String,
+    pub workspace_root: PathBuf,
+    pub working_dir: PathBuf,
+    pub additional_directories: Vec<AdditionalDirectoryView>,
+}
+
+/// Emit [`WORKSPACE_CHANGED_EVENT`] for `workspace`. Best-effort: a
+/// missing app handle (headless tests, gateway) or emit failure is
+/// logged and ignored — the frontend falls back to its pull-based
+/// snapshot on session remount.
+pub fn emit_workspace_changed(
+    app_handle: Option<&tauri::AppHandle>,
+    session_id: &str,
+    workspace: &crate::session::workspace::SessionWorkspace,
+) {
+    let Some(app) = app_handle else {
+        return;
+    };
+    use tauri::Emitter;
+    let payload = WorkspaceChangedPayload {
+        session_id: session_id.to_string(),
+        workspace_root: crate::session::workspace::canonicalize_or_lexical(
+            &workspace.workspace_root,
+        ),
+        working_dir: crate::session::workspace::canonicalize_or_lexical(workspace.working_dir()),
+        additional_directories: workspace
+            .additional_directories
+            .values()
+            .map(|d| AdditionalDirectoryView {
+                path: d.path.clone(),
+                source: d.source,
+            })
+            .collect(),
+    };
+    if let Err(err) = app.emit(WORKSPACE_CHANGED_EVENT, &payload) {
+        warn!(
+            session_id = %session_id,
+            error = %err,
+            "[session-workspace] failed to emit workspace:changed",
+        );
+    }
 }
 
 /// Caller-facing snapshot of the full workspace for one session.
@@ -146,11 +203,10 @@ pub async fn add_directory(
     };
     // Persist outside the write lock so the DB call doesn't hold up
     // concurrent tool reads.
-    {
-        let snapshot = handle.read().clone();
-        persist(session_id, &snapshot)?;
-    }
+    let snapshot = handle.read().clone();
+    persist(session_id, &snapshot)?;
     invalidate_workspace_prompt_cache(state, session_id).await;
+    emit_workspace_changed(state.app_handle.as_ref(), session_id, &snapshot);
     Ok(inserted)
 }
 
@@ -174,6 +230,7 @@ pub async fn remove_directory(
         let snapshot = handle.read().clone();
         persist(session_id, &snapshot)?;
         invalidate_workspace_prompt_cache(state, session_id).await;
+        emit_workspace_changed(state.app_handle.as_ref(), session_id, &snapshot);
     }
     Ok(removed)
 }

@@ -1,51 +1,27 @@
-//! Path validation methods on [`SecurityPolicy`].
+//! Path syntax validation on [`SecurityPolicy`].
 //!
 //! Split from `policy/mod.rs` purely for file-size hygiene; these
 //! methods retain access to private fields because Rust permits child
 //! modules to read parent-module privates.
+//!
+//! Path *containment* (is this path inside the session's allowed
+//! roots?) is NOT decided here — the single source of truth for that
+//! is `core::session::workspace::SessionWorkspace::is_path_allowed`.
+//! This module only rejects syntactically dangerous paths and the
+//! user-configured forbidden list.
 
 use std::path::{Component, Path, PathBuf};
 
 use super::SecurityPolicy;
 
 impl SecurityPolicy {
-    /// Add a directory to the allowed workspace list (e.g. IDE active repo).
+    /// Validate path *syntax* and the configured forbidden list.
     ///
-    /// Paths added here are treated the same as `workspace_dir` for
-    /// `workspace_only` checks. Duplicates are ignored.
-    pub fn add_allowed_dir(&self, dir: PathBuf) {
-        let mut dirs = self.extra_allowed_dirs.lock().unwrap_or_else(|err| {
-            tracing::error!(
-                "[security] POISONED LOCK on extra_allowed_dirs (add_allowed_dir) — recovering"
-            );
-            err.into_inner()
-        });
-        if !dirs.iter().any(|existing| existing == &dir) {
-            dirs.push(dir);
-        }
-    }
-
-    /// Check if an absolute path falls within the workspace or any extra allowed dir.
-    pub(super) fn is_within_allowed_dirs(&self, path: &Path) -> bool {
-        if path.starts_with(&self.workspace_dir) {
-            return true;
-        }
-        let dirs = self
-            .extra_allowed_dirs
-            .lock()
-            .unwrap_or_else(|err| {
-                tracing::error!("[security] POISONED LOCK on extra_allowed_dirs (is_within_allowed_dirs) — recovering");
-                err.into_inner()
-            });
-        dirs.iter().any(|allowed| path.starts_with(allowed))
-    }
-
-    /// Validate that a path is allowed for tool access.
-    ///
-    /// Rejects null bytes, `..` components, URL-encoded traversal,
-    /// out-of-workspace absolute paths (when `workspace_only`), and
-    /// any path inside the configured forbidden list.
-    pub fn is_path_allowed(&self, path: &str) -> Result<(), String> {
+    /// Rejects null bytes, `..` components, URL-encoded traversal, and
+    /// any path inside `forbidden_paths`. Containment against the
+    /// session workspace is the caller's responsibility (combine with
+    /// `SessionWorkspace::is_path_allowed` when `workspace_only`).
+    pub fn validate_path_syntax(&self, path: &str) -> Result<(), String> {
         if path.contains('\0') {
             return Err("Path contains null bytes.".into());
         }
@@ -74,14 +50,6 @@ impl SecurityPolicy {
             PathBuf::from(path)
         };
 
-        if self.workspace_only && expanded.is_absolute() && !self.is_within_allowed_dirs(&expanded)
-        {
-            return Err(format!(
-                "Path '{}' is outside the workspace directory.",
-                path
-            ));
-        }
-
         for forbidden in &self.forbidden_paths {
             let forbidden_expanded = if let Some(suffix) = forbidden.strip_prefix("~/") {
                 let home = dirs::home_dir().unwrap_or_else(std::env::temp_dir);
@@ -96,51 +64,5 @@ impl SecurityPolicy {
         }
 
         Ok(())
-    }
-
-    /// Check if a resolved (canonicalized) path is within the workspace.
-    ///
-    /// Call this AFTER `std::fs::canonicalize()` to catch symlink escapes.
-    /// Only relevant when `workspace_only` is true.
-    pub fn is_resolved_path_allowed(&self, resolved: &Path) -> Result<(), String> {
-        if !self.workspace_only {
-            return Ok(());
-        }
-
-        let workspace_root = self.workspace_dir.canonicalize().map_err(|err| {
-            format!(
-                "Cannot canonicalize workspace '{}': {} — denying path access (fail-closed)",
-                self.workspace_dir.display(),
-                err
-            )
-        })?;
-
-        if resolved.starts_with(&workspace_root) {
-            return Ok(());
-        }
-
-        let dirs = self.extra_allowed_dirs.lock().unwrap_or_else(|err| {
-            tracing::error!(
-                "[security] POISONED LOCK on extra_allowed_dirs (symlink check) — recovering"
-            );
-            err.into_inner()
-        });
-        for dir in dirs.iter() {
-            let canonical = dir.canonicalize().map_err(|err| {
-                format!(
-                    "Cannot canonicalize extra allowed dir '{}': {} — denying path access (fail-closed)",
-                    dir.display(),
-                    err
-                )
-            })?;
-            if resolved.starts_with(&canonical) {
-                return Ok(());
-            }
-        }
-
-        Err(format!(
-            "Resolved path '{}' escapes the workspace (possible symlink escape).",
-            resolved.display()
-        ))
     }
 }

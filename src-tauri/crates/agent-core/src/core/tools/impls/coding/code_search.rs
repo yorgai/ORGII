@@ -52,17 +52,37 @@ impl SearchTool {
     }
 
     /// Resolve the repo path: explicit param > active IDE repo > current workspace.
-    async fn resolve_repo(&self, params: &Value) -> PathBuf {
+    ///
+    /// An explicit `repo_path` is validated against the live session
+    /// workspace (single path-authorization source) — plus the active
+    /// IDE repo — when `workspace_state` is attached. Without a
+    /// workspace handle (tests, standalone construction) the explicit
+    /// path is used as-is, matching the other workspace-less tools.
+    async fn resolve_repo(&self, params: &Value) -> Result<PathBuf, ToolError> {
         if let Some(explicit) = optional_string(params, "repo_path") {
-            return PathBuf::from(explicit);
+            let path = PathBuf::from(explicit);
+            if let Some(ref workspace) = self.workspace_state {
+                let extra: Vec<PathBuf> = self
+                    .active_repo
+                    .lock()
+                    .await
+                    .clone()
+                    .into_iter()
+                    .collect();
+                workspace
+                    .read()
+                    .is_path_allowed(&path, &extra)
+                    .map_err(ToolError::PermissionDenied)?;
+            }
+            return Ok(path);
         }
         let active = self.active_repo.lock().await;
-        active.clone().unwrap_or_else(|| {
+        Ok(active.clone().unwrap_or_else(|| {
             self.workspace_state
                 .as_ref()
                 .map(|workspace| workspace.read().working_dir().to_path_buf())
                 .unwrap_or_else(|| self.default_repo.clone())
-        })
+        }))
     }
 }
 
@@ -171,7 +191,7 @@ impl Tool for SearchTool {
             .map(|val| val as usize)
             .unwrap_or(20)
             .clamp(1, 100);
-        let repo_path = self.resolve_repo(&params).await;
+        let repo_path = self.resolve_repo(&params).await?;
 
         // Workstation routing: route "grep" searches through ActionSystem.
         // Falls back to direct search on timeout (e.g. after hot reload).

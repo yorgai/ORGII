@@ -13,7 +13,10 @@ use std::path::{Path, PathBuf};
 
 /// Normalize a path lexically (without filesystem access).
 /// Resolves `.` and `..` components via stack-based traversal.
-pub(super) fn normalize_lexical(path: &Path) -> PathBuf {
+///
+/// Single crate-wide implementation — `core::session::workspace::
+/// canonicalize_or_lexical` builds on this for its fallback branch.
+pub(crate) fn normalize_lexical(path: &Path) -> PathBuf {
     let mut out = PathBuf::new();
     for comp in path.components() {
         match comp {
@@ -108,10 +111,17 @@ pub fn resolve_path_with_extras(
             });
 
             if !in_extra {
+                let mut allowed_roots = vec![canonical_allowed.display().to_string()];
+                allowed_roots.extend(
+                    additional_allowed_dirs
+                        .iter()
+                        .map(|dir| dir.display().to_string()),
+                );
                 return Err(format!(
-                    "Path '{}' is outside the allowed directory '{}'",
+                    "Path '{}' is outside the allowed directory '{}'. Allowed roots: {}",
                     raw,
-                    canonical_allowed.display()
+                    canonical_allowed.display(),
+                    allowed_roots.join(", ")
                 ));
             }
         }

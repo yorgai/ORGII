@@ -91,6 +91,7 @@ impl Tool for ListSessionWorkspaceTool {
             for dir in &view.additional_directories {
                 let source_tag = match dir.source {
                     crate::session::workspace::DirectorySource::Session => "session",
+                    crate::session::workspace::DirectorySource::IdeWorkspace => "ideWorkspace",
                     crate::session::workspace::DirectorySource::LocalSettings => "localSettings",
                     crate::session::workspace::DirectorySource::UserSettings => "userSettings",
                     crate::session::workspace::DirectorySource::CliArg => "cliArg",

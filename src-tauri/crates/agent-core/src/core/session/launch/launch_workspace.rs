@@ -17,6 +17,13 @@ pub(super) async fn prepare_rust_agent_workspace_for_launch(
         if isolate || existing_worktree_path.is_some() {
             return Err("Worktree mode requires a workspace path".to_string());
         }
+        if !additional_directories.is_empty() {
+            return Err(format!(
+                "additional_directories requires a workspace path — got {} extra dir(s) ({}) with an empty workspace_path. Set workspace_path or drop the extras.",
+                additional_directories.len(),
+                additional_directories.join(", ")
+            ));
+        }
         return Ok(None);
     }
 
@@ -65,6 +72,7 @@ pub(super) async fn prepare_rust_agent_workspace_for_launch(
             if path == workspace.workspace_root || path == workspace.working_dir {
                 continue;
             }
+            // `add_directory` canonicalizes the path before keying.
             workspace.add_directory(AdditionalDirectory {
                 path,
                 source: DirectorySource::Session,

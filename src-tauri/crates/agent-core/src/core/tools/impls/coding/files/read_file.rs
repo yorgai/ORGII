@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 
 use crate::specialization::skills::builtin;
 
-use super::{map_err, merge_additional_dirs, ActiveAllowedDir, WorkspaceStateHandle};
+use super::{allowed_roots, live_allowed_dir, map_err, WorkspaceStateHandle};
 use crate::tools::impls::coding::action_router::ActionRouter;
 use crate::tools::names as tool_names;
 use crate::tools::traits::{optional_int, required_string, Tool, ToolError};
@@ -79,11 +79,16 @@ impl ReadFileCache {
 }
 
 pub struct ReadFileTool {
-    allowed_dir: ActiveAllowedDir,
-    /// Static extra dirs granted at construction time — currently just the
-    /// scratchpad. Persistent "additional workspace directories" (added via
-    /// `/add-dir`) live on `workspace_state` and are merged in at call time so
-    /// mutations are visible without a registry rebuild.
+    /// Construction-time sandbox root; `None` = unrestricted. When
+    /// `workspace_state` is attached the live `working_dir()` is read on
+    /// every call instead — this field then only signals "restricted" and
+    /// serves as a fallback for workspace-less construction (tests).
+    allowed_dir: Option<PathBuf>,
+    /// Static extra dirs granted at construction time (scratchpad,
+    /// readonly skill dirs). Live workspace roots (workspace_root,
+    /// worktree working_dir, `/add-dir` grants) come from
+    /// `workspace_state` via `allowed_roots()` at call time so mutations
+    /// are visible without a registry rebuild.
     additional_allowed_dirs: Vec<PathBuf>,
     workspace_state: Option<WorkspaceStateHandle>,
     router: Option<ActionRouter>,
@@ -93,7 +98,7 @@ pub struct ReadFileTool {
 impl ReadFileTool {
     pub fn new(allowed_dir: Option<PathBuf>) -> Self {
         Self {
-            allowed_dir: ActiveAllowedDir::new(allowed_dir),
+            allowed_dir,
             additional_allowed_dirs: Vec::new(),
             workspace_state: None,
             router: None,
@@ -122,6 +127,15 @@ impl ReadFileTool {
     pub fn with_workspace_state(mut self, state: WorkspaceStateHandle) -> Self {
         self.workspace_state = Some(state);
         self
+    }
+
+    /// Live primary sandbox root — see [`live_allowed_dir`].
+    fn current_allowed_dir(&self) -> Option<PathBuf> {
+        live_allowed_dir(
+            self.allowed_dir.is_some(),
+            self.workspace_state.as_ref(),
+            self.allowed_dir.as_ref(),
+        )
     }
 }
 
@@ -158,10 +172,10 @@ impl Tool for ReadFileTool {
 
     fn llm_description(&self) -> Option<String> {
         let mut roots = Vec::new();
-        if let Some(root) = self.allowed_dir.snapshot() {
+        if let Some(root) = self.current_allowed_dir() {
             roots.push(root);
         }
-        roots.extend(merge_additional_dirs(
+        roots.extend(allowed_roots(
             &self.additional_allowed_dirs,
             self.workspace_state.as_ref(),
         ));
@@ -234,9 +248,8 @@ impl Tool for ReadFileTool {
             }
         }
 
-        let allowed = self.allowed_dir.snapshot();
-        let extras =
-            merge_additional_dirs(&self.additional_allowed_dirs, self.workspace_state.as_ref());
+        let allowed = self.current_allowed_dir();
+        let extras = allowed_roots(&self.additional_allowed_dirs, self.workspace_state.as_ref());
         let stat =
             crate::tool_infra::file::stat_file_with_extras(&raw_path, allowed.as_deref(), &extras)
                 .await
@@ -304,12 +317,6 @@ impl Tool for ReadFileTool {
         Ok(output)
     }
 
-    async fn set_active_repo(&self, repo_path: &str) {
-        let path = PathBuf::from(repo_path);
-        if path.is_dir() {
-            self.allowed_dir.update_if_restricted(path);
-        }
-    }
 }
 
 fn format_file_unchanged_stub(path: &str, entry: &ReadCacheEntry) -> String {
@@ -561,43 +568,6 @@ mod tests {
             "output was: {}",
             second
         );
-    }
-
-    #[tokio::test]
-    async fn set_active_repo_updates_restricted_sandbox() {
-        let repo_a = TempDir::new().unwrap();
-        let repo_b = TempDir::new().unwrap();
-        std::fs::write(repo_b.path().join("marker.txt"), "hello").unwrap();
-
-        let tool = ReadFileTool::new(Some(repo_a.path().to_path_buf()));
-        let err = tool
-            .execute(serde_json::json!({ "path": "marker.txt" }), &crate::tools::call_context::CallContext::default())
-            .await
-            .unwrap_err();
-        assert!(
-            matches!(err, ToolError::ExecutionFailed(_)),
-            "unexpected error variant: {:?}",
-            err
-        );
-
-        tool.set_active_repo(&repo_b.path().to_string_lossy()).await;
-        let output = tool
-            .execute(serde_json::json!({ "path": "marker.txt" }), &crate::tools::call_context::CallContext::default())
-            .await
-            .unwrap();
-        assert!(output.contains("hello"), "output was: {}", output);
-    }
-
-    #[tokio::test]
-    async fn set_active_repo_is_noop_for_unrestricted_tool() {
-        let repo = TempDir::new().unwrap();
-        std::fs::write(repo.path().join("x.txt"), "y").unwrap();
-
-        // Start with no sandbox — set_active_repo must not retroactively
-        // install one.
-        let tool = ReadFileTool::new(None);
-        tool.set_active_repo(&repo.path().to_string_lossy()).await;
-        assert!(tool.allowed_dir.snapshot().is_none());
     }
 
     #[test]

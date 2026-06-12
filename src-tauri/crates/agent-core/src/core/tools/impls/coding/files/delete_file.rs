@@ -4,13 +4,16 @@ use async_trait::async_trait;
 use serde_json::Value;
 use std::path::PathBuf;
 
-use super::{map_err, merge_additional_dirs, ActiveAllowedDir, WorkspaceStateHandle};
+use super::{allowed_roots, live_allowed_dir, map_err, WorkspaceStateHandle};
 use crate::tools::impls::coding::action_router::ActionRouter;
 use crate::tools::names as tool_names;
 use crate::tools::traits::{required_string, Tool, ToolError};
 
 pub struct DeleteFileTool {
-    allowed_dir: ActiveAllowedDir,
+    /// Construction-time sandbox root; `None` = unrestricted. When
+    /// `workspace_state` is attached the live `working_dir()` is read on
+    /// every call instead.
+    allowed_dir: Option<PathBuf>,
     additional_allowed_dirs: Vec<PathBuf>,
     workspace_state: Option<WorkspaceStateHandle>,
     router: Option<ActionRouter>,
@@ -19,7 +22,7 @@ pub struct DeleteFileTool {
 impl DeleteFileTool {
     pub fn new(allowed_dir: Option<PathBuf>) -> Self {
         Self {
-            allowed_dir: ActiveAllowedDir::new(allowed_dir),
+            allowed_dir,
             additional_allowed_dirs: Vec::new(),
             workspace_state: None,
             router: None,
@@ -41,6 +44,15 @@ impl DeleteFileTool {
         self.workspace_state = Some(state);
         self
     }
+
+    /// Live primary sandbox root — see [`live_allowed_dir`].
+    fn current_allowed_dir(&self) -> Option<PathBuf> {
+        live_allowed_dir(
+            self.allowed_dir.is_some(),
+            self.workspace_state.as_ref(),
+            self.allowed_dir.as_ref(),
+        )
+    }
 }
 
 #[async_trait]
@@ -59,8 +71,7 @@ impl Tool for DeleteFileTool {
 
     fn llm_description(&self) -> Option<String> {
         let workspace = self
-            .allowed_dir
-            .snapshot()
+            .current_allowed_dir()
             .map(|path| path.display().to_string())
             .unwrap_or_else(|| "(unrestricted)".to_string());
         Some(format!(
@@ -99,9 +110,8 @@ impl Tool for DeleteFileTool {
             }
         }
 
-        let allowed = self.allowed_dir.snapshot();
-        let extras =
-            merge_additional_dirs(&self.additional_allowed_dirs, self.workspace_state.as_ref());
+        let allowed = self.current_allowed_dir();
+        let extras = allowed_roots(&self.additional_allowed_dirs, self.workspace_state.as_ref());
         let resolved = crate::tool_infra::file::resolve_path_with_extras(
             &raw_path,
             allowed.as_deref(),
@@ -126,12 +136,6 @@ impl Tool for DeleteFileTool {
         Ok(format!("Deleted {}", raw_path))
     }
 
-    async fn set_active_repo(&self, repo_path: &str) {
-        let path = PathBuf::from(repo_path);
-        if path.is_dir() {
-            self.allowed_dir.update_if_restricted(path);
-        }
-    }
 }
 
 #[cfg(test)]

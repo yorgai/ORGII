@@ -1,7 +1,7 @@
 //! Security policy for command and path validation.
 //!
 //! Provides defense-in-depth for tool execution using blocked commands, optional
-//! explicit confirmation patterns, risk classification, rate limiting, and path
+//! explicit confirmation patterns, risk classification, and path
 //! traversal prevention.
 
 mod paths;
@@ -13,11 +13,8 @@ pub use risk::{
 };
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use std::sync::Mutex;
 
 use self::risk::{classify_command_with_rules, command_pattern_matches};
-use super::tracker::ActionTracker;
 
 /// Normalize shell pipeline/chain separators to \x00 for segment splitting.
 ///
@@ -104,11 +101,13 @@ pub enum ValidationResult {
 
 /// Execution-time security policy for agent tools.
 ///
-/// Uses blocked base commands, optional explicit confirmation patterns,
-/// risk classification, and rate limiting.
+/// Owns command policy (blocklist, confirmation, risk classification)
+/// and path *syntax* validation (`validate_path_syntax`).
+/// Path containment is NOT decided here — the single source of truth
+/// is `core::session::workspace::SessionWorkspace::is_path_allowed`;
+/// callers combine it with `workspace_only` from this policy.
 pub struct SecurityPolicy {
     pub autonomy: AutonomyLevel,
-    pub workspace_dir: PathBuf,
     pub workspace_only: bool,
     /// Commands that are always blocked (blacklist). Matches base command name.
     pub blocked_commands: Vec<String>,
@@ -116,13 +115,8 @@ pub struct SecurityPolicy {
     /// longer token pattern such as "git push --force".
     pub confirmation_commands: Vec<String>,
     pub forbidden_paths: Vec<String>,
-    pub max_actions_per_hour: u32,
     pub block_high_risk_commands: bool,
     pub risk_rules: CommandRiskRules,
-    tracker: ActionTracker,
-    /// Additional directories that are allowed when `workspace_only` is true.
-    /// Used to whitelist the IDE's active repo path alongside the agent workspace.
-    extra_allowed_dirs: Mutex<Vec<PathBuf>>,
 }
 
 impl SecurityPolicy {
@@ -130,44 +124,34 @@ impl SecurityPolicy {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         autonomy: AutonomyLevel,
-        workspace_dir: PathBuf,
         workspace_only: bool,
         blocked_commands: Vec<String>,
         confirmation_commands: Vec<String>,
         forbidden_paths: Vec<String>,
-        max_actions_per_hour: u32,
         block_high_risk_commands: bool,
         risk_rules: CommandRiskRules,
     ) -> Self {
         Self {
             autonomy,
-            workspace_dir,
             workspace_only,
             blocked_commands,
             confirmation_commands,
             forbidden_paths,
-            max_actions_per_hour,
             block_high_risk_commands,
             risk_rules,
-            tracker: ActionTracker::new(),
-            extra_allowed_dirs: Mutex::new(Vec::new()),
         }
     }
 
     /// Create a permissive policy (for testing or full-autonomy mode).
-    pub fn permissive(workspace_dir: PathBuf) -> Self {
+    pub fn permissive() -> Self {
         Self {
             autonomy: AutonomyLevel::Full,
-            workspace_dir,
             workspace_only: false,
             blocked_commands: Vec::new(),
             confirmation_commands: Vec::new(),
             forbidden_paths: Vec::new(),
-            max_actions_per_hour: u32::MAX,
             block_high_risk_commands: false,
             risk_rules: CommandRiskRules::default(),
-            tracker: ActionTracker::new(),
-            extra_allowed_dirs: Mutex::new(Vec::new()),
         }
     }
 
@@ -309,7 +293,7 @@ impl SecurityPolicy {
         highest
     }
 
-    /// Full validation: blocklist + confirmation + risk + autonomy + rate limit.
+    /// Full validation: blocklist + confirmation + risk + autonomy.
     ///
     /// Call this before executing any shell command. The `approved` flag
     /// indicates whether the user has already approved this specific command
@@ -351,35 +335,14 @@ impl SecurityPolicy {
             CommandRiskLevel::Low => {}
         }
 
-        // Step 4: Rate limit check
-        match self.tracker.try_record(self.max_actions_per_hour as usize) {
-            Ok(_) => ValidationResult::Allowed(risk),
-            Err(count) => ValidationResult::Denied(format!(
-                "Rate limit exceeded: {} actions in the last hour (max {}).",
-                count, self.max_actions_per_hour
-            )),
-        }
-    }
-
-    /// Get a reference to the action tracker.
-    ///
-    /// Path validation methods (`is_path_allowed`, `is_resolved_path_allowed`,
-    /// `add_allowed_dir`) are split into [`policy::paths`].
-    pub fn tracker(&self) -> &ActionTracker {
-        &self.tracker
+        ValidationResult::Allowed(risk)
     }
 }
 
 impl std::fmt::Debug for SecurityPolicy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let extra_count = self
-            .extra_allowed_dirs
-            .lock()
-            .map(|dirs| dirs.len())
-            .unwrap_or(0);
         f.debug_struct("SecurityPolicy")
             .field("autonomy", &self.autonomy)
-            .field("workspace_dir", &self.workspace_dir)
             .field("workspace_only", &self.workspace_only)
             .field("blocked_commands_count", &self.blocked_commands.len())
             .field(
@@ -387,11 +350,9 @@ impl std::fmt::Debug for SecurityPolicy {
                 &self.confirmation_commands.len(),
             )
             .field("forbidden_paths_count", &self.forbidden_paths.len())
-            .field("max_actions_per_hour", &self.max_actions_per_hour)
             .field("block_high_risk_commands", &self.block_high_risk_commands)
             .field("medium_risk_rules_count", &self.risk_rules.medium.len())
             .field("high_risk_rules_count", &self.risk_rules.high.len())
-            .field("extra_allowed_dirs_count", &extra_count)
             .finish()
     }
 }
@@ -588,29 +549,25 @@ mod tests {
     fn configured_forbidden_path_denies_access() {
         let policy = SecurityPolicy::new(
             AutonomyLevel::Full,
-            std::env::temp_dir(),
             false,
             Vec::new(),
             Vec::new(),
             vec!["~/.ssh".to_string()],
-            100,
             false,
             CommandRiskRules::default(),
         );
 
-        assert!(policy.is_path_allowed("~/.ssh/config").is_err());
+        assert!(policy.validate_path_syntax("~/.ssh/config").is_err());
     }
 
     #[test]
     fn full_autonomy_allows_plain_git_push_by_default() {
         let policy = SecurityPolicy::new(
             AutonomyLevel::Full,
-            std::env::temp_dir(),
             false,
             Vec::new(),
             Vec::new(),
             Vec::new(),
-            100,
             false,
             CommandRiskRules::default(),
         );
@@ -623,7 +580,7 @@ mod tests {
 
     #[test]
     fn full_autonomy_allows_literal_backticks_inside_single_quotes() {
-        let policy = SecurityPolicy::permissive(std::env::temp_dir());
+        let policy = SecurityPolicy::permissive();
 
         assert!(matches!(
             policy.validate_command_execution("python -c 'print(`not shell`)'", false),
@@ -633,7 +590,7 @@ mod tests {
 
     #[test]
     fn full_autonomy_allows_literal_backticks_in_quoted_heredoc_body() {
-        let policy = SecurityPolicy::permissive(std::env::temp_dir());
+        let policy = SecurityPolicy::permissive();
         let command = "python <<'PY'\nprint(`not shell`)\nPY";
 
         assert!(matches!(
@@ -644,7 +601,7 @@ mod tests {
 
     #[test]
     fn substitution_scan_handles_multibyte_chars_without_panicking() {
-        let policy = SecurityPolicy::permissive(std::env::temp_dir());
+        let policy = SecurityPolicy::permissive();
         let command = "echo ===MenuRows mode 部分===; sed -n '90,130p' file.tsx";
 
         assert!(matches!(
@@ -660,7 +617,7 @@ mod tests {
 
     #[test]
     fn full_autonomy_still_denies_executable_subshells() {
-        let policy = SecurityPolicy::permissive(std::env::temp_dir());
+        let policy = SecurityPolicy::permissive();
 
         assert!(matches!(
             policy.validate_command_execution("echo `whoami`", false),
@@ -678,7 +635,7 @@ mod tests {
 
     #[test]
     fn full_autonomy_denies_subshells_inside_double_quotes() {
-        let policy = SecurityPolicy::permissive(std::env::temp_dir());
+        let policy = SecurityPolicy::permissive();
 
         assert!(matches!(
             policy.validate_command_execution("echo \"`whoami`\"", false),
@@ -688,7 +645,7 @@ mod tests {
 
     #[test]
     fn shell_substitution_denial_explains_not_autonomy_permission() {
-        let policy = SecurityPolicy::permissive(std::env::temp_dir());
+        let policy = SecurityPolicy::permissive();
 
         let result = policy.validate_command_execution("echo `whoami`", false);
         match result {
@@ -706,12 +663,10 @@ mod tests {
     fn custom_risk_rules_classify_always_ask_command() {
         let policy = SecurityPolicy::new(
             AutonomyLevel::Full,
-            std::env::temp_dir(),
             false,
             Vec::new(),
             Vec::new(),
             Vec::new(),
-            100,
             false,
             CommandRiskRules {
                 medium: vec!["git status".to_string()],
@@ -729,12 +684,10 @@ mod tests {
     fn confirmation_patterns_match_flags_after_arguments() {
         let policy = SecurityPolicy::new(
             AutonomyLevel::Full,
-            std::env::temp_dir(),
             false,
             Vec::new(),
             vec!["git push --force".to_string()],
             Vec::new(),
-            100,
             false,
             CommandRiskRules {
                 medium: Vec::new(),
@@ -756,12 +709,10 @@ mod tests {
     fn custom_risk_rules_classify_high_command() {
         let policy = SecurityPolicy::new(
             AutonomyLevel::Full,
-            std::env::temp_dir(),
             false,
             Vec::new(),
             Vec::new(),
             Vec::new(),
-            100,
             true,
             CommandRiskRules {
                 medium: Vec::new(),

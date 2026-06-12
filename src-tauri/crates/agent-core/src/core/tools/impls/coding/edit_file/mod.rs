@@ -142,21 +142,28 @@ impl Tool for EditTool {
         let new_string = params.new_string;
         let replace_all = params.replace_all;
 
-        // Validate path against workspace sandbox + scratchpad + live
-        // `additional_directories` from the session's `SessionWorkspace`.
+        // Validate path against the live session workspace (single source
+        // of truth): primary root = live working_dir(); extras = every
+        // effective root (workspace_root, worktree working_dir, `/add-dir`
+        // grants) + static scratchpad.
         let extras: Vec<PathBuf> = {
             let mut out = self.additional_allowed_dirs.clone();
             if let Some(ref state) = self.workspace_state {
-                let ws = state.read();
-                for (path, _) in ws.additional_directories.iter() {
-                    out.push(path.clone());
-                }
+                out.extend(state.read().effective_roots());
             }
             out
         };
+        let allowed_dir = if self.workspace.is_some() {
+            self.workspace_state
+                .as_ref()
+                .map(|state| state.read().working_dir().to_path_buf())
+                .or_else(|| self.workspace.clone())
+        } else {
+            None
+        };
         let resolved = crate::tool_infra::file::resolve_path_with_extras(
             &file_path,
-            self.workspace.as_deref(),
+            allowed_dir.as_deref(),
             &extras,
         )
         .map_err(|err| {

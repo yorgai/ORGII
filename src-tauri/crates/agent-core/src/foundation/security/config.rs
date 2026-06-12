@@ -25,9 +25,6 @@ pub struct SecurityConfig {
     /// Forbidden filesystem paths (absolute or ~/relative).
     #[serde(default = "default_forbidden_paths")]
     pub forbidden_paths: Vec<String>,
-    /// Maximum tool actions per hour (sliding window).
-    #[serde(default = "default_max_actions_per_hour")]
-    pub max_actions_per_hour: u32,
     /// Whether to block high-risk commands entirely.
     #[serde(default = "app_utils::default_true")]
     pub block_high_risk_commands: bool,
@@ -47,13 +44,6 @@ fn default_forbidden_paths() -> Vec<String> {
     Vec::new()
 }
 
-/// Effectively-unlimited rate cap. The old default (100/hour) throttled
-/// legitimate long refactor sessions mid-task; the tracker is kept as a
-/// runaway-loop circuit breaker only.
-fn default_max_actions_per_hour() -> u32 {
-    100_000
-}
-
 impl Default for SecurityConfig {
     fn default() -> Self {
         Self {
@@ -62,7 +52,6 @@ impl Default for SecurityConfig {
             blocked_commands: default_blocked_commands(),
             confirmation_commands: Vec::new(),
             forbidden_paths: default_forbidden_paths(),
-            max_actions_per_hour: default_max_actions_per_hour(),
             block_high_risk_commands: true,
             risk_rules: CommandRiskRules::default(),
         }

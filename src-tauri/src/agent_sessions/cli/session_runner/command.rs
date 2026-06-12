@@ -30,8 +30,8 @@ pub(super) fn resolve_cursor_agent_path() -> String {
 /// `api_key` is passed for agents that accept an explicit key argument (e.g. Cursor `--api-key`).
 /// `endpoint` overrides the CLI's API endpoint URL (e.g. Cursor `--endpoint`).
 /// `additional_dirs` extends the CLI's working set; only `claude_code`
-/// and `codex` accept the flag today, so the slice is silently ignored
-/// for CLI agents that don't support it.
+/// and `codex` accept the flag today — other CLI agents log a warning
+/// and the extra dirs are not passed through.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn build_command(
     agent: &ModelType,
@@ -44,6 +44,16 @@ pub(super) fn build_command(
     repo_path: Option<&str>,
     additional_dirs: &[String],
 ) -> Vec<String> {
+    // Only claude_code and codex accept `--add-dir`. For every other CLI
+    // agent, extra workspace roots cannot be expressed on the command
+    // line — warn loudly instead of silently dropping the grant.
+    if !additional_dirs.is_empty() && !matches!(agent, ModelType::ClaudeCode | ModelType::Codex) {
+        tracing::warn!(
+            agent = ?agent,
+            dirs = ?additional_dirs,
+            "[cli-runner] CLI agent does not support --add-dir; additional directories will NOT be visible to it",
+        );
+    }
     match agent {
         ModelType::CursorCli => {
             let cursor_agent_bin = resolve_cursor_agent_path();

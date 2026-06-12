@@ -78,10 +78,7 @@ pub async fn debug_session_security_snapshot(
         .ok_or_else(|| format!("session runtime not initialized: {}", session_id))?;
 
     let workspace = runtime.resolved.workspace.clone();
-    let policy = runtime
-        .resolved
-        .policy
-        .to_runtime_security(workspace.clone());
+    let policy = runtime.resolved.policy.to_runtime_security();
 
     Ok(SessionSecuritySnapshot {
         session_id: session_id.clone(),
@@ -144,8 +141,7 @@ pub async fn debug_session_validate_command(
     // a fresh policy means the rate-limit tracker for this validation
     // is independent — audit specs can fire many calls in a row
     // without polluting the live session's hourly bucket.
-    let workspace = runtime.resolved.workspace.clone();
-    let policy = runtime.resolved.policy.to_runtime_security(workspace);
+    let policy = runtime.resolved.policy.to_runtime_security();
 
     let approved = approved.unwrap_or(false);
     let result = policy.validate_command_execution(&command, approved);

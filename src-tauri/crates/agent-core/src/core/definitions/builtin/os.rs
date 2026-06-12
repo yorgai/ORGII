@@ -70,7 +70,7 @@ pub fn os_agent() -> AgentDefinition {
 
         agent_policy: Some(AgentPolicy {
             autonomy: AutonomyLevel::Full,
-            workspace_only: true,
+            workspace_only: false,
             ..Default::default()
         }),
 

@@ -4,13 +4,11 @@
 //! tool-level access policy (`ResolvedToolPolicy`):
 //!
 //! - **[`SecurityPolicy`]**: Command allowlisting, pipeline validation,
-//!   risk classification, rate limiting, path traversal prevention
-//! - **[`ActionTracker`]**: Sliding-window rate limiter
+//!   risk classification, path traversal prevention
 //! - **[`AutonomyLevel`]**: ReadOnly / Full access modes
 
 pub mod config;
 pub mod policy;
-pub mod tracker;
 
 // Items kept at the `security::` surface:
 // - `SecurityPolicy`, `ValidationResult` — flat-imported by tool registration
@@ -20,10 +18,9 @@ pub mod tracker;
 //   tool (`security::requires_user_confirmation`); also referenced as
 //   `super::AutonomyLevel` from sibling `config.rs`.
 //
-// `SecurityConfig`, `ActionTracker`, and `CommandRiskLevel` were flat
-// re-exported but never imported as `security::<name>` anywhere; they're
-// always reached via the deeper `config::` / `tracker::` / `policy::`
-// segment, so we no longer flatten them.
+// `SecurityConfig` and `CommandRiskLevel` were flat re-exported but never
+// imported as `security::<name>` anywhere; they're always reached via the
+// deeper `config::` / `policy::` segment, so we no longer flatten them.
 pub use policy::{
     requires_user_confirmation, AutonomyLevel, CommandRiskRules, SecurityPolicy, ValidationResult,
 };

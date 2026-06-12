@@ -163,15 +163,11 @@ impl AgentPolicy {
     /// `blocked_commands`, `forbidden_paths`) ride on `AgentPolicy`;
     /// runtime-only defaults (`max_actions_per_hour`, `block_high_risk_commands`)
     /// are supplied here.
-    pub fn to_runtime_security(
-        &self,
-        workspace_dir: std::path::PathBuf,
-    ) -> crate::foundation::security::SecurityPolicy {
+    pub fn to_runtime_security(&self) -> crate::foundation::security::SecurityPolicy {
         use crate::foundation::security::SecurityPolicy;
 
         SecurityPolicy::new(
             self.autonomy,
-            workspace_dir,
             self.workspace_only,
             self.blocked_commands.clone(),
             Vec::new(),

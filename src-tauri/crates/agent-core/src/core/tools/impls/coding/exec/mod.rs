@@ -312,9 +312,6 @@ impl Tool for ExecTool {
     async fn set_active_repo(&self, repo_path: &str) {
         let path = PathBuf::from(repo_path);
         if path.exists() {
-            if let Some(ref policy) = self.security_policy {
-                policy.add_allowed_dir(path.clone());
-            }
             *self.active_repo.lock().await = Some(path);
         }
     }
@@ -421,19 +418,36 @@ impl Tool for ExecTool {
 
         let work_dir = if let Some(ref dir) = custom_dir {
             let path = PathBuf::from(dir);
+            // Path syntax (null bytes, `..`, forbidden list) — command
+            // policy owns this. Containment is decided below by the
+            // live SessionWorkspace, the single path-authorization source.
             if let Some(ref policy) = self.security_policy {
                 policy
-                    .is_path_allowed(dir)
+                    .validate_path_syntax(dir)
                     .map_err(ToolError::PermissionDenied)?;
-                if let Ok(resolved) = path.canonicalize() {
-                    policy
-                        .is_resolved_path_allowed(&resolved)
+            }
+            let workspace_only = self
+                .security_policy
+                .as_ref()
+                .is_some_and(|policy| policy.workspace_only);
+            if self.restrict_to_workspace || workspace_only {
+                if let Some(ref workspace) = self.workspace_state {
+                    let extra: Vec<PathBuf> = self
+                        .active_repo
+                        .lock()
+                        .await
+                        .clone()
+                        .into_iter()
+                        .collect();
+                    workspace
+                        .read()
+                        .is_path_allowed(&path, &extra)
                         .map_err(ToolError::PermissionDenied)?;
+                } else if !path.starts_with(&current_workspace_dir) {
+                    return Err(ToolError::PermissionDenied(
+                        "Working directory is outside workspace".to_string(),
+                    ));
                 }
-            } else if self.restrict_to_workspace && !path.starts_with(&current_workspace_dir) {
-                return Err(ToolError::PermissionDenied(
-                    "Working directory is outside workspace".to_string(),
-                ));
             }
             Some(path)
         } else {

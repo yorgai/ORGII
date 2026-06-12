@@ -33,8 +33,9 @@ pub use persistence::*;
 // path.
 pub use workspace::{
     add_directory as workspace_add_directory, apply_worktree as workspace_apply_worktree,
-    delete_worktree as workspace_delete_worktree, enter_worktree as workspace_enter_worktree,
-    list_workspaces as workspace_list, remove_directory as workspace_remove_directory,
+    delete_worktree as workspace_delete_worktree, emit_workspace_changed,
+    enter_worktree as workspace_enter_worktree, list_workspaces as workspace_list,
+    remove_directory as workspace_remove_directory,
 };
 
 use crate::definitions::orgs::AgentOrgsStore;

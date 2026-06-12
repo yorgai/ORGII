@@ -32,13 +32,17 @@ use super::{register_if_enabled, ToolDeps};
 /// `manage_workspace`, `edit_file`, `query_lsp`, `manage_lsp`, `todo`,
 /// `repo_setup`, `work_item`.
 pub fn register(registry: &mut ToolRegistry, deps: &ToolDeps, disabled: &HashSet<String>) {
-    // Snapshot the current `working_dir()` once for tools that still pin
-    // a launch-time cwd. File tools and the worktree mutator take `workspace`
-    // as an `Arc` clone so mid-session workspace updates are visible without
-    // rebuilding the registry.
+    // Snapshot the current `working_dir()` once — used ONLY for
+    // construction-time plumbing that needs a concrete path now
+    // (terminal_logs_root, LSP roots, constructor fallbacks). Path
+    // authorization is NOT derived from this snapshot: every file tool
+    // takes `deps.workspace` as an `Arc` clone and reads the live
+    // `working_dir()` / `effective_roots()` on each call.
     let working_dir: PathBuf = deps.workspace.read().working_dir().to_path_buf();
 
-    let allowed_dir = if deps.restrict_to_workspace {
+    // Restricted tools get the snapshot as constructor fallback; the live
+    // workspace handle attached below supersedes it at call time.
+    let restricted_dir = if deps.restrict_to_workspace {
         Some(working_dir.clone())
     } else {
         None
@@ -61,7 +65,7 @@ pub fn register(registry: &mut ToolRegistry, deps: &ToolDeps, disabled: &HashSet
     });
 
     // ── File tools ──
-    let mut read = ReadFileTool::new(allowed_dir.clone());
+    let mut read = ReadFileTool::new(restricted_dir.clone());
     if let Some(ref scratch) = deps.scratchpad_dir {
         read = read.with_scratchpad(scratch.clone());
     }
@@ -74,7 +78,7 @@ pub fn register(registry: &mut ToolRegistry, deps: &ToolDeps, disabled: &HashSet
     }
     register_if_enabled(registry, Box::new(read), disabled);
 
-    let mut list_dir = ListDirTool::new(allowed_dir);
+    let mut list_dir = ListDirTool::new(restricted_dir.clone());
     if let Some(ref scratch) = deps.scratchpad_dir {
         list_dir = list_dir.with_scratchpad(scratch.clone());
     }
@@ -171,11 +175,7 @@ pub fn register(registry: &mut ToolRegistry, deps: &ToolDeps, disabled: &HashSet
     }
 
     // ── Delete file ──
-    let mut delete_file = DeleteFileTool::new(if deps.restrict_to_workspace {
-        Some(working_dir.clone())
-    } else {
-        None
-    });
+    let mut delete_file = DeleteFileTool::new(restricted_dir);
     if let Some(ref scratch) = deps.scratchpad_dir {
         delete_file = delete_file.with_scratchpad(scratch.clone());
     }

@@ -403,10 +403,12 @@ async fn ensure_session_initialized(
     let node_registry = capabilities::build_node_registry(&cap_flags, &integrations);
     let bus = capabilities::channel_bus_for(&cap_flags, state);
     // Single SecurityPolicy instance per session — shared by ToolDeps
-    // (exec tool) AND the subagent AgentTool config so rate limiting and
-    // /add-dir grants observe one state.
-    let exec_security_policy =
-        Arc::new(resolved.policy.to_runtime_security(workspace_root.clone()));
+    // (exec tool) AND the subagent AgentTool config so rate limiting
+    // observes one state. This policy owns command policy + path
+    // *syntax* validation only; path containment is decided by the
+    // live `SessionWorkspace` (the single source of truth for
+    // workspace roots and `/add-dir` grants).
+    let exec_security_policy = Arc::new(resolved.policy.to_runtime_security());
 
     let log_prefix = if resolved.name.is_empty() {
         "agent".to_string()
@@ -430,6 +432,13 @@ async fn ensure_session_initialized(
         .ok();
     let workspace_state =
         tool_assembly::hydrate_workspace_state(&workspace_root, session_id, &log_prefix);
+    // Runtime (re)build re-hydrated the workspace from DB — push the fresh
+    // snapshot to the frontend mirror (`useSessionWorkspaceSync`).
+    crate::state::commands::session::emit_workspace_changed(
+        state.app_handle.as_ref(),
+        session_id,
+        &workspace_state.read().clone(),
+    );
 
     // Resolve the Agent Org run context up-front so tool registrations
     // that branch on org-membership (currently `create_plan`, which routes
