@@ -138,8 +138,8 @@ export function useCompactFileData({
       }
 
       const args = event.args;
-      const result = event.result;
-      const success = asRecord(result.success);
+      const result = asRecord(event.result);
+      const success = asRecord(result?.success);
       const extracted = asRecord(event.extracted);
       const filePath =
         event.filePath ??

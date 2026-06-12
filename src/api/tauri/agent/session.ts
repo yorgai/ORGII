@@ -535,14 +535,31 @@ export interface AdeActionResultPayload {
   data?: unknown;
 }
 
+function normalizeAdeActionResult(
+  result: AdeActionResultPayload | null | undefined
+): AdeActionResultPayload {
+  if (!result) {
+    return {
+      success: false,
+      message: "ADE action returned an empty result",
+    };
+  }
+
+  return result;
+}
+
 export async function sendAdeActionResult(
   correlationId: string,
-  result: AdeActionResultPayload
+  result: AdeActionResultPayload | null | undefined
 ): Promise<void> {
+  const normalizedResult = normalizeAdeActionResult(result);
+
   return rpc.agentSession.sendAdeActionResult({
     correlationId,
-    success: result.success,
-    message: result.message,
-    ...(typeof result.data === "undefined" ? {} : { data: result.data }),
+    success: normalizedResult.success,
+    message: normalizedResult.message,
+    ...(typeof normalizedResult.data === "undefined"
+      ? {}
+      : { data: normalizedResult.data }),
   });
 }
