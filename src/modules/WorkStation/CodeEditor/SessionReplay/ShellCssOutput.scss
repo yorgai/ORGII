@@ -8,7 +8,7 @@
   --simulator-shell-letter-spacing: normal;
   --simulator-shell-line-height: 1.45;
 
-  background: var(--terminal-selection, var(--color-fill-2));
+  background: var(--cm-editor-background, var(--color-bg-1));
 
   &,
   * {
