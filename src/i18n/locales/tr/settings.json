@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "Mevcut durumum",
+    "tabs": {
+      "presence": "Durum",
+      "profile": "Profillerim"
+    },
+    "presence": {
+      "instructionForAgent": "Agent için talimat"
+    },
     "profile": {
-      "title": "Hakkımda",
+      "title": "Profillerim",
       "techSavvy": "Teknik düzey",
       "techSavvyDescription": "Agent'ın ne kadar açıkladığını ve neyi varsaydığını ayarlamasına yardımcı olur",
       "techSavvyPlaceholder": "Seviye seç…",
@@ -597,8 +604,8 @@
     "modelsTitle": "Modeller",
     "compactionTitle": "Sıkıştırma",
     "autoTimeoutTitle": "Otomatik zaman aşımı",
-    "questionAutoSkipTimeoutByStatus": "{{status}} sorularını otomatik atla",
-    "questionAutoSkipTimeoutByStatusDesc": "Bu durumda zaman aşımı sonrasında Agent sorularını otomatik atla (0 = devre dışı)",
+    "questionAutoSkipTimeoutByStatus": "Soruları otomatik atla",
+    "questionAutoSkipTimeoutByStatusDesc": "Bu zaman aşımından sonra Agent sorularını otomatik atla (0 = devre dışı)",
     "resourceTabs": {
       "tools": "Araçlar",
       "mcp": "MCP",

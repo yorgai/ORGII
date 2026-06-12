@@ -31,10 +31,21 @@ import {
   computeBackAtMs,
 } from "@src/types/userPresence";
 
+export const MY_ROLES_TAB = {
+  PRESENCE: "presence",
+  PROFILE: "profile",
+} as const;
+
+export type MyRolesTab = (typeof MY_ROLES_TAB)[keyof typeof MY_ROLES_TAB];
+
 type PresenceGuidanceKey =
   | "general.presenceGuidanceOnline"
   | "general.presenceGuidanceInvisible"
   | "general.presenceGuidanceAway";
+
+interface MyRolesSectionProps {
+  activeTab?: MyRolesTab;
+}
 
 const CUSTOM_ROLE_COLOR_CLASS = "text-primary-6";
 
@@ -59,7 +70,9 @@ const BUILT_IN_STATUS_OPTIONS = [
   },
 ] as const;
 
-const MyRolesSection: React.FC = () => {
+const MyRolesSection: React.FC<MyRolesSectionProps> = ({
+  activeTab = MY_ROLES_TAB.PRESENCE,
+}) => {
   const { t } = useTranslation(["settings", "navigation"]);
   const settings = useAllSettings();
   const updateSetting = useSetAtom(updateSettingAtom);
@@ -220,6 +233,69 @@ const MyRolesSection: React.FC = () => {
     [t]
   );
 
+  if (activeTab === MY_ROLES_TAB.PROFILE) {
+    return (
+      <div className="flex flex-col gap-3">
+        <SectionContainer title={t("myRoles.profile.title")}>
+          <SectionRow
+            label={t("myRoles.profile.techSavvy")}
+            description={t("myRoles.profile.techSavvyDescription")}
+          >
+            <Select
+              value={techSavvy}
+              onChange={handleTechSavvyChange}
+              options={techSavvyOptions}
+              placeholder={t("myRoles.profile.techSavvyPlaceholder")}
+              allowClear
+              style={SECTION_CONTROL_STYLE}
+            />
+          </SectionRow>
+          <SectionRow
+            label={t("myRoles.profile.jobRoles")}
+            description={t("myRoles.profile.jobRolesDescription")}
+            layout="vertical"
+          >
+            <TagsInput
+              value={jobRoles}
+              onChange={handleJobRolesChange}
+              placeholder={t("myRoles.profile.jobRolesPlaceholder")}
+              removeAriaLabel={removeJobRoleAriaLabel}
+            />
+          </SectionRow>
+          <SectionRow
+            label={t("myRoles.profile.familiarTechStacks")}
+            description={t("myRoles.profile.familiarTechStacksDescription")}
+            layout="vertical"
+          >
+            <Select
+              value={familiarTechStacks}
+              onChange={handleFamiliarTechStacksChange}
+              options={familiarTechStackOptions}
+              placeholder={t("myRoles.profile.familiarTechStacksPlaceholder")}
+              mode="multiple"
+              showSearch
+              allowClear
+              maxTagCount={4}
+              dropdownWidthMode="match"
+            />
+          </SectionRow>
+          <SectionRow
+            label={t("myRoles.profile.description")}
+            description={t("myRoles.profile.descriptionHelp")}
+            layout="vertical"
+          >
+            <Textarea
+              value={profileDescription}
+              onChange={handleProfileDescriptionChange}
+              rows={4}
+              placeholder={t("myRoles.profile.descriptionPlaceholder")}
+            />
+          </SectionRow>
+        </SectionContainer>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <SectionContainer>
@@ -233,9 +309,9 @@ const MyRolesSection: React.FC = () => {
         </SectionRow>
       </SectionContainer>
 
-      <SectionContainer title={t("general.presenceGuidanceOnline")}>
+      <SectionContainer title={t("navigation:sidebar.presence.online")}>
         <SectionRow
-          label={t("general.presenceGuidanceOnline")}
+          label={t("myRoles.presence.instructionForAgent")}
           layout="vertical"
         >
           <Textarea
@@ -248,9 +324,7 @@ const MyRolesSection: React.FC = () => {
           />
         </SectionRow>
         <SectionRow
-          label={t("sdeAgent.questionAutoSkipTimeoutByStatus", {
-            status: t("navigation:sidebar.presence.online"),
-          })}
+          label={t("sdeAgent.questionAutoSkipTimeoutByStatus")}
           description={t("sdeAgent.questionAutoSkipTimeoutByStatusDesc")}
         >
           <NumberInput
@@ -268,9 +342,9 @@ const MyRolesSection: React.FC = () => {
         </SectionRow>
       </SectionContainer>
 
-      <SectionContainer title={t("general.presenceGuidanceInvisible")}>
+      <SectionContainer title={t("navigation:sidebar.presence.invisible")}>
         <SectionRow
-          label={t("general.presenceGuidanceInvisible")}
+          label={t("myRoles.presence.instructionForAgent")}
           layout="vertical"
         >
           <Textarea
@@ -283,9 +357,7 @@ const MyRolesSection: React.FC = () => {
           />
         </SectionRow>
         <SectionRow
-          label={t("sdeAgent.questionAutoSkipTimeoutByStatus", {
-            status: t("navigation:sidebar.presence.invisible"),
-          })}
+          label={t("sdeAgent.questionAutoSkipTimeoutByStatus")}
           description={t("sdeAgent.questionAutoSkipTimeoutByStatusDesc")}
         >
           <NumberInput
@@ -303,8 +375,11 @@ const MyRolesSection: React.FC = () => {
         </SectionRow>
       </SectionContainer>
 
-      <SectionContainer title={t("general.presenceGuidanceAway")}>
-        <SectionRow label={t("general.presenceGuidanceAway")} layout="vertical">
+      <SectionContainer title={t("navigation:sidebar.presence.away")}>
+        <SectionRow
+          label={t("myRoles.presence.instructionForAgent")}
+          layout="vertical"
+        >
           <Textarea
             value={presenceGuidanceAway}
             onChange={handlePresenceGuidanceChange(
@@ -315,9 +390,7 @@ const MyRolesSection: React.FC = () => {
           />
         </SectionRow>
         <SectionRow
-          label={t("sdeAgent.questionAutoSkipTimeoutByStatus", {
-            status: t("navigation:sidebar.presence.away"),
-          })}
+          label={t("sdeAgent.questionAutoSkipTimeoutByStatus")}
           description={t("sdeAgent.questionAutoSkipTimeoutByStatusDesc")}
         >
           <NumberInput
@@ -331,63 +404,6 @@ const MyRolesSection: React.FC = () => {
             suffix={t("common:common.s")}
             controlsPosition="sides"
             style={SECTION_CONTROL_STYLE}
-          />
-        </SectionRow>
-      </SectionContainer>
-
-      <SectionContainer title={t("myRoles.profile.title")}>
-        <SectionRow
-          label={t("myRoles.profile.techSavvy")}
-          description={t("myRoles.profile.techSavvyDescription")}
-        >
-          <Select
-            value={techSavvy}
-            onChange={handleTechSavvyChange}
-            options={techSavvyOptions}
-            placeholder={t("myRoles.profile.techSavvyPlaceholder")}
-            allowClear
-            style={SECTION_CONTROL_STYLE}
-          />
-        </SectionRow>
-        <SectionRow
-          label={t("myRoles.profile.jobRoles")}
-          description={t("myRoles.profile.jobRolesDescription")}
-          layout="vertical"
-        >
-          <TagsInput
-            value={jobRoles}
-            onChange={handleJobRolesChange}
-            placeholder={t("myRoles.profile.jobRolesPlaceholder")}
-            removeAriaLabel={removeJobRoleAriaLabel}
-          />
-        </SectionRow>
-        <SectionRow
-          label={t("myRoles.profile.familiarTechStacks")}
-          description={t("myRoles.profile.familiarTechStacksDescription")}
-          layout="vertical"
-        >
-          <Select
-            value={familiarTechStacks}
-            onChange={handleFamiliarTechStacksChange}
-            options={familiarTechStackOptions}
-            placeholder={t("myRoles.profile.familiarTechStacksPlaceholder")}
-            mode="multiple"
-            showSearch
-            allowClear
-            maxTagCount={4}
-            dropdownWidthMode="match"
-          />
-        </SectionRow>
-        <SectionRow
-          label={t("myRoles.profile.description")}
-          description={t("myRoles.profile.descriptionHelp")}
-          layout="vertical"
-        >
-          <Textarea
-            value={profileDescription}
-            onChange={handleProfileDescriptionChange}
-            rows={4}
-            placeholder={t("myRoles.profile.descriptionPlaceholder")}
           />
         </SectionRow>
       </SectionContainer>

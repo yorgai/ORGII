@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "Мой текущий статус",
+    "tabs": {
+      "presence": "Присутствие",
+      "profile": "Мои профили"
+    },
+    "presence": {
+      "instructionForAgent": "Инструкция для Agent"
+    },
     "profile": {
-      "title": "Обо мне",
+      "title": "Мои профили",
       "techSavvy": "Технический уровень",
       "techSavvyDescription": "Помогает агенту калибровать, сколько объяснять и что предполагать",
       "techSavvyPlaceholder": "Выберите уровень…",
@@ -597,8 +604,8 @@
     "modelsTitle": "Модели",
     "compactionTitle": "Сжатие",
     "autoTimeoutTitle": "Автоматический тайм-аут",
-    "questionAutoSkipTimeoutByStatus": "Автопропуск вопросов — {{status}}",
-    "questionAutoSkipTimeoutByStatusDesc": "Автоматически пропускать вопросы Agent после тайм-аута для этого статуса (0 = отключено)",
+    "questionAutoSkipTimeoutByStatus": "Автопропуск вопросов",
+    "questionAutoSkipTimeoutByStatusDesc": "Автоматически пропускать вопросы Agent после этого тайм-аута (0 = отключено)",
     "resourceTabs": {
       "tools": "Инструменты",
       "mcp": "MCP",

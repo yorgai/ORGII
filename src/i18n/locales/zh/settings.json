@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "我的当前状态",
+    "tabs": {
+      "presence": "在线状态",
+      "profile": "我的资料"
+    },
+    "presence": {
+      "instructionForAgent": "Agent 行为指引"
+    },
     "profile": {
-      "title": "关于我",
+      "title": "我的资料",
       "techSavvy": "技术熟练程度",
       "techSavvyDescription": "帮助 Agent 校准解释的详细程度以及可以预设的前提",
       "techSavvyPlaceholder": "选择熟悉程度…",
@@ -597,8 +604,8 @@
     "modelsTitle": "模型",
     "compactionTitle": "压缩",
     "autoTimeoutTitle": "自动超时",
-    "questionAutoSkipTimeoutByStatus": "{{status}} 提问自动跳过",
-    "questionAutoSkipTimeoutByStatusDesc": "此状态下超时后自动跳过 Agent 提问 (0 = 禁用)",
+    "questionAutoSkipTimeoutByStatus": "自动跳过提问",
+    "questionAutoSkipTimeoutByStatusDesc": "超过此时间后自动跳过 Agent 提问 (0 = 禁用)",
     "resourceTabs": {
       "tools": "工具",
       "mcp": "MCP",

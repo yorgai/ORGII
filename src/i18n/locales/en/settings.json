@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "My current status",
+    "tabs": {
+      "presence": "Presence",
+      "profile": "My profiles"
+    },
+    "presence": {
+      "instructionForAgent": "Instruction for Agent"
+    },
     "profile": {
-      "title": "About me",
+      "title": "My profiles",
       "techSavvy": "Tech-savvy level",
       "techSavvyDescription": "Helps the agent calibrate how much it explains and assumes",
       "techSavvyPlaceholder": "Select a level…",
@@ -597,8 +604,8 @@
     "modelsTitle": "Models",
     "compactionTitle": "Compaction",
     "autoTimeoutTitle": "Auto-timeout",
-    "questionAutoSkipTimeoutByStatus": "{{status}} question auto-skip",
-    "questionAutoSkipTimeoutByStatusDesc": "Auto-skip Agent questions after timeout for this status (0 = disabled)",
+    "questionAutoSkipTimeoutByStatus": "Auto-skip questions",
+    "questionAutoSkipTimeoutByStatusDesc": "Auto-skip Agent questions after this timeout (0 = disabled)",
     "resourceTabs": {
       "tools": "Tools",
       "mcp": "MCP",

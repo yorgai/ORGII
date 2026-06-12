@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "내 현재 상태",
+    "tabs": {
+      "presence": "상태",
+      "profile": "내 프로필"
+    },
+    "presence": {
+      "instructionForAgent": "Agent 지침"
+    },
     "profile": {
-      "title": "나에 대하여",
+      "title": "내 프로필",
       "techSavvy": "기술 숙련도",
       "techSavvyDescription": "Agent 가 설명의 깊이와 전제를 조정하는 데 도움이 됩니다",
       "techSavvyPlaceholder": "수준 선택…",
@@ -597,8 +604,8 @@
     "modelsTitle": "모델",
     "compactionTitle": "압축",
     "autoTimeoutTitle": "자동 타임아웃",
-    "questionAutoSkipTimeoutByStatus": "{{status}} 질문 자동 건너뛰기",
-    "questionAutoSkipTimeoutByStatusDesc": "이 상태에서 타임아웃 후 Agent 질문 자동 건너뛰기 (0 = 비활성)",
+    "questionAutoSkipTimeoutByStatus": "질문 자동 건너뛰기",
+    "questionAutoSkipTimeoutByStatusDesc": "이 타임아웃 후 Agent 질문 자동 건너뛰기 (0 = 비활성)",
     "resourceTabs": {
       "tools": "도구",
       "mcp": "MCP",

@@ -6,7 +6,7 @@
  *   2. Detail view (item selected)
  *   3. Default: SettingsTable for the active category
  */
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import TabPill from "@src/components/TabPill";
@@ -30,7 +30,10 @@ import type { DevToolsTab } from "./DevTools/DevToolsCategoryView";
 import { ExternalSkillsetsCategoryView } from "./ExternalSkillsets/ExternalSkillsetsCategoryView";
 import { GitCategoryView } from "./Git/GitCategoryView";
 import { AccountCategoryView } from "./KeyVault/AccountCategoryView";
-import MyRolesSection from "./KeyVault/MyRoles/MyRolesSection";
+import MyRolesSection, {
+  MY_ROLES_TAB,
+  type MyRolesTab,
+} from "./KeyVault/MyRoles/MyRolesSection";
 import type { useKeyVaultPage } from "./KeyVault/hooks/useKeyVaultPage";
 import type { McpDetailState } from "./Mcp/types";
 import {
@@ -47,9 +50,6 @@ import type { ChannelSlice, DetailMode, IntegrationCategory } from "./types";
 const DevToolsCategoryView = lazy(
   () => import("./DevTools/DevToolsCategoryView")
 );
-
-const MY_ROLE_TAB_KEY = "my-role";
-const noopTabChange = () => undefined;
 
 // ── Props ──
 
@@ -116,6 +116,22 @@ const IntegrationsDetailPanel: React.FC<IntegrationsDetailPanelProps> = ({
   onExternalSkillsetsTabChange,
 }) => {
   const { t } = useTranslation("settings");
+  const [myRolesActiveTab, setMyRolesActiveTab] = useState<MyRolesTab>(
+    MY_ROLES_TAB.PRESENCE
+  );
+  const myRolesTabs = useMemo(
+    () => [
+      {
+        key: MY_ROLES_TAB.PRESENCE,
+        label: t("myRoles.tabs.presence"),
+      },
+      {
+        key: MY_ROLES_TAB.PROFILE,
+        label: t("myRoles.tabs.profile"),
+      },
+    ],
+    [t]
+  );
   const isFullPage = detailMode === "full";
   const onExpand = isFullPage ? undefined : onEnterFullPage;
   switch (category) {
@@ -139,14 +155,9 @@ const IntegrationsDetailPanel: React.FC<IntegrationsDetailPanelProps> = ({
             className={DETAIL_PANEL_TOKENS.headerWidth}
             tabs={
               <TabPill
-                tabs={[
-                  {
-                    key: MY_ROLE_TAB_KEY,
-                    label: t("coreSidebar.tabs.myRole"),
-                  },
-                ]}
-                activeTab={MY_ROLE_TAB_KEY}
-                onChange={noopTabChange}
+                tabs={myRolesTabs}
+                activeTab={myRolesActiveTab}
+                onChange={(tab) => setMyRolesActiveTab(tab as MyRolesTab)}
                 variant="simple"
                 fillWidth={false}
                 size="large"
@@ -157,7 +168,7 @@ const IntegrationsDetailPanel: React.FC<IntegrationsDetailPanelProps> = ({
             className={`scroll-fade-at-top ${DETAIL_PANEL_TOKENS.scrollContentNoTop}`}
           >
             <div className={DETAIL_PANEL_TOKENS.contentWidthWithPaddingNoTop}>
-              <MyRolesSection />
+              <MyRolesSection activeTab={myRolesActiveTab} />
             </div>
           </ScrollFadeContainer>
         </DetailPanelContainer>

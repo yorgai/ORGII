@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "Trạng thái hiện tại của tôi",
+    "tabs": {
+      "presence": "Trạng thái",
+      "profile": "Hồ sơ của tôi"
+    },
+    "presence": {
+      "instructionForAgent": "Chỉ dẫn cho Agent"
+    },
     "profile": {
-      "title": "Về tôi",
+      "title": "Hồ sơ của tôi",
       "techSavvy": "Trình độ kỹ thuật",
       "techSavvyDescription": "Giúp Agent điều chỉnh mức độ giải thích và những giả định nó đưa ra",
       "techSavvyPlaceholder": "Chọn trình độ…",
@@ -597,8 +604,8 @@
     "modelsTitle": "Mô hình",
     "compactionTitle": "Nén",
     "autoTimeoutTitle": "Hết thời gian tự động",
-    "questionAutoSkipTimeoutByStatus": "Tự động bỏ qua câu hỏi — {{status}}",
-    "questionAutoSkipTimeoutByStatusDesc": "Tự động bỏ qua câu hỏi Agent sau khi hết thời gian cho trạng thái này (0 = tắt)",
+    "questionAutoSkipTimeoutByStatus": "Tự động bỏ qua câu hỏi",
+    "questionAutoSkipTimeoutByStatusDesc": "Tự động bỏ qua câu hỏi Agent sau thời gian này (0 = tắt)",
     "resourceTabs": {
       "tools": "Công cụ",
       "mcp": "MCP",

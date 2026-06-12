@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "Mein aktueller Status",
+    "tabs": {
+      "presence": "Präsenz",
+      "profile": "Meine Profile"
+    },
+    "presence": {
+      "instructionForAgent": "Anweisung für den Agent"
+    },
     "profile": {
-      "title": "Über mich",
+      "title": "Meine Profile",
       "techSavvy": "Technisches Niveau",
       "techSavvyDescription": "Hilft dem Agent zu kalibrieren, wie viel er erklärt und voraussetzt",
       "techSavvyPlaceholder": "Niveau auswählen…",
@@ -597,8 +604,8 @@
     "modelsTitle": "Modelle",
     "compactionTitle": "Kompaktierung",
     "autoTimeoutTitle": "Automatisches Timeout",
-    "questionAutoSkipTimeoutByStatus": "Fragen automatisch überspringen — {{status}}",
-    "questionAutoSkipTimeoutByStatusDesc": "Agent-Fragen nach Timeout für diesen Status automatisch überspringen (0 = deaktiviert)",
+    "questionAutoSkipTimeoutByStatus": "Fragen automatisch überspringen",
+    "questionAutoSkipTimeoutByStatusDesc": "Agent-Fragen nach diesem Timeout automatisch überspringen (0 = deaktiviert)",
     "resourceTabs": {
       "tools": "Werkzeuge",
       "mcp": "MCP",

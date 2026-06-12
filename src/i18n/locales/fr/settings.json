@@ -61,8 +61,15 @@
   },
   "myRoles": {
     "currentStatus": "Mon statut actuel",
+    "tabs": {
+      "presence": "Présence",
+      "profile": "Mes profils"
+    },
+    "presence": {
+      "instructionForAgent": "Instruction pour l'Agent"
+    },
     "profile": {
-      "title": "À propos de moi",
+      "title": "Mes profils",
       "techSavvy": "Niveau technique",
       "techSavvyDescription": "Aide l'agent à calibrer ses explications et ses hypothèses",
       "techSavvyPlaceholder": "Sélectionner un niveau…",
@@ -597,8 +604,8 @@
     "modelsTitle": "Modèles",
     "compactionTitle": "Compaction",
     "autoTimeoutTitle": "Délai d'attente automatique",
-    "questionAutoSkipTimeoutByStatus": "Passer automatiquement les questions — {{status}}",
-    "questionAutoSkipTimeoutByStatusDesc": "Passer automatiquement les questions de l'Agent après le délai pour ce statut (0 = désactivé)",
+    "questionAutoSkipTimeoutByStatus": "Passer automatiquement les questions",
+    "questionAutoSkipTimeoutByStatusDesc": "Passer automatiquement les questions de l'Agent après ce délai (0 = désactivé)",
     "resourceTabs": {
       "tools": "Outils",
       "mcp": "MCP",
