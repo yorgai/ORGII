@@ -34,7 +34,16 @@ export function editorHistoryKeymapExtension(): Extension {
  * Indentation guides extension
  */
 export function indentGuidesExtension(): Extension {
-  return indentationMarkers();
+  return indentationMarkers({
+    thickness: 1,
+    activeThickness: 1,
+    colors: {
+      light: "var(--color-border-2)",
+      dark: "var(--color-border-2)",
+      activeLight: "var(--color-border-2)",
+      activeDark: "var(--color-border-2)",
+    },
+  });
 }
 
 // ============================================
