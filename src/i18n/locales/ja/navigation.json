@@ -147,7 +147,8 @@
     },
     "bottomBar": {
       "settings": "設定",
-      "clockLabel": "現在時刻"
+      "clockLabel": "現在時刻",
+      "updateAvailable": "アップデート v{{version}} をダウンロード"
     },
     "settingsMenu": {
       "appearance": "外観",

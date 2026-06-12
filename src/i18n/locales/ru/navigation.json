@@ -147,7 +147,8 @@
     },
     "bottomBar": {
       "settings": "Настройки",
-      "clockLabel": "Текущее время"
+      "clockLabel": "Текущее время",
+      "updateAvailable": "Скачать обновление v{{version}}"
     },
     "settingsMenu": {
       "appearance": "Внешний вид",

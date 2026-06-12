@@ -147,7 +147,8 @@
     },
     "bottomBar": {
       "settings": "설정",
-      "clockLabel": "현재 시각"
+      "clockLabel": "현재 시각",
+      "updateAvailable": "업데이트 v{{version}} 다운로드"
     },
     "settingsMenu": {
       "appearance": "모양",

@@ -147,7 +147,8 @@
     },
     "bottomBar": {
       "settings": "Ayarlar",
-      "clockLabel": "Şu anki saat"
+      "clockLabel": "Şu anki saat",
+      "updateAvailable": "Güncelleme v{{version}} indir"
     },
     "settingsMenu": {
       "appearance": "Görünüm",

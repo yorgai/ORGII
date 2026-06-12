@@ -149,7 +149,8 @@
     },
     "bottomBar": {
       "settings": "Einstellungen",
-      "clockLabel": "Aktuelle Uhrzeit"
+      "clockLabel": "Aktuelle Uhrzeit",
+      "updateAvailable": "Update v{{version}} herunterladen"
     },
     "settingsMenu": {
       "appearance": "Darstellung",

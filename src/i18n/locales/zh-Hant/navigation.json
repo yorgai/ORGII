@@ -147,7 +147,8 @@
     },
     "bottomBar": {
       "settings": "設定",
-      "clockLabel": "目前時間"
+      "clockLabel": "目前時間",
+      "updateAvailable": "下載更新 v{{version}}"
     },
     "settingsMenu": {
       "appearance": "外觀",

@@ -147,7 +147,8 @@
     },
     "bottomBar": {
       "settings": "Cài đặt",
-      "clockLabel": "Thời gian hiện tại"
+      "clockLabel": "Thời gian hiện tại",
+      "updateAvailable": "Tải bản cập nhật v{{version}}"
     },
     "settingsMenu": {
       "appearance": "Giao diện",
