@@ -76,8 +76,6 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
       clampedPercentage >= WARNING_THRESHOLD &&
       clampedPercentage < DANGER_THRESHOLD;
     const isDanger = clampedPercentage >= DANGER_THRESHOLD;
-    const showNewSessionCta = clampedPercentage >= WARNING_THRESHOLD;
-    const fillLabel = `${clampedPercentage.toFixed(0)}% ${t("contextInfo.full")}`;
 
     const handleMouseEnter = useCallback(
       (key: string) => () => setHoveredKey(key),
@@ -139,21 +137,14 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
                   <span className="text-[13px] font-semibold text-text-1">
                     {t("contextInfo.title")}
                   </span>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-[12px] font-semibold tabular-nums ${isDanger ? "text-danger-6" : isWarning ? "text-warning-6" : "text-text-1"}`}
-                    >
-                      {fillLabel}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={close}
-                      className="flex h-5 w-5 items-center justify-center rounded text-text-3 transition-colors hover:bg-fill-2 hover:text-text-2"
-                      aria-label={t("common:actions.close")}
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={close}
+                    className="flex h-5 w-5 items-center justify-center rounded text-text-3 transition-colors hover:bg-fill-2 hover:text-text-2"
+                    aria-label={t("common:actions.close")}
+                  >
+                    <X size={12} />
+                  </button>
                 </div>
 
                 <p className="mt-0.5 text-[11px] text-text-3">{tokenLabel}</p>
@@ -185,27 +176,6 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
                       />
                     ))}
                   </div>
-                </div>
-              )}
-
-              {contextUsage?.warnings?.length ? (
-                <div className="px-4 py-2">
-                  <p className="text-[10px] text-text-4">
-                    {contextUsage.warnings[0]}
-                  </p>
-                </div>
-              ) : null}
-
-              {/* New-session CTA when context is filling up */}
-              {showNewSessionCta && (
-                <div className="border-t border-border-2 px-4 py-3">
-                  <p
-                    className={`text-[11px] leading-snug ${isDanger ? "text-danger-6" : "text-warning-6"}`}
-                  >
-                    {isDanger
-                      ? t("contextInfo.dangerHint")
-                      : t("contextInfo.warningHint")}
-                  </p>
                 </div>
               )}
             </div>,

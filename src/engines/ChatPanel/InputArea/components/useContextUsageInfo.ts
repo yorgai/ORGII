@@ -38,10 +38,15 @@ export function useContextUsageInfo(): ContextUsageInfo {
   const contextWindowK = modelInfo?.contextWindow ?? 200;
   const modelMaxTokens = contextWindowK * 1000;
   const maxTokens = contextUsage?.maxTokens ?? modelMaxTokens;
-  const displayTokens = contextUsage?.usedTokens ?? sessionTokens;
+  const snapshotTokens = contextUsage?.usedTokens ?? 0;
+  const displayTokens = sessionTokens > 0 ? sessionTokens : snapshotTokens;
+  const hasFreshSnapshot = contextUsage?.usedTokens === displayTokens;
   const percentage =
-    contextUsage?.percentUsed ??
-    (maxTokens > 0 ? (displayTokens / maxTokens) * 100 : 0);
+    hasFreshSnapshot && contextUsage?.percentUsed != null
+      ? contextUsage.percentUsed
+      : maxTokens > 0
+        ? (displayTokens / maxTokens) * 100
+        : 0;
   const clampedPercentage = Math.min(percentage, 100);
 
   const tokenLabel = `${clampedPercentage.toFixed(1)}% · ${formatTokenCount(displayTokens)} / ${formatTokenCount(maxTokens)} ${t("contextInfo.contextUsed")}`;

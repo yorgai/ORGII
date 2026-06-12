@@ -364,7 +364,7 @@ describe("Composer skills menu", () => {
     expect(conversationRow).toEqual(expect.stringContaining("Conversation"));
     expect(conversationRow).toEqual(expect.stringContaining("75%"));
     expect(conversationRow).toEqual(expect.stringContaining("9.0K"));
-    expect(panelText).toEqual(
+    expect(panelText).not.toEqual(
       expect.stringContaining("backend context usage warning sentinel")
     );
     expect(panelText).not.toEqual(
