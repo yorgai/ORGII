@@ -23,15 +23,29 @@ pub async fn get_available_agents() -> Result<Vec<AvailableAgent>, String> {
     let stored_keys = KEY_SERVICE.list_keys();
 
     let which_cmd = if cfg!(windows) { "where" } else { "which" };
+
+    // Explicitly pass the current PATH so the augmented login-shell PATH
+    // (set by app_paths::augment_path_from_shell at startup) is visible even
+    // if the async tokio runtime was initialised before the env was updated.
+    let current_path = std::env::var("PATH").unwrap_or_default();
+    tracing::debug!("[get_available_agents] PATH={}", current_path);
+
     let mut results = Vec::new();
     for entry in &registry {
         let output = tokio::process::Command::new(which_cmd)
             .arg(entry.binary)
+            .env("PATH", &current_path)
             .output()
             .await
             .ok();
 
         let installed = output.as_ref().map(|o| o.status.success()).unwrap_or(false);
+        tracing::debug!(
+            "[get_available_agents] {} ({}) → installed={}",
+            entry.display_name,
+            entry.binary,
+            installed
+        );
 
         let installed_via = if installed {
             output.as_ref().and_then(|o| {

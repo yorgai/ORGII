@@ -595,6 +595,11 @@ fn parse_version(raw: &str) -> Option<String> {
 }
 
 async fn probe_one(probe: &Probe) -> DependencyStatus {
+    // Explicitly forward PATH so the augmented login-shell PATH set by
+    // app_paths::augment_path_from_shell() at startup is visible to child
+    // processes even across async executor threads.
+    let current_path = std::env::var("PATH").unwrap_or_default();
+
     let mut command = match probe.source {
         ProbeSource::BundledGit => match app_paths::bundled_git_executable() {
             Some(path) => tokio::process::Command::new(path),
@@ -605,6 +610,7 @@ async fn probe_one(probe: &Probe) -> DependencyStatus {
 
     let result = command
         .args(probe.version_flag.split_whitespace())
+        .env("PATH", &current_path)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .output()
@@ -638,6 +644,7 @@ async fn probe_one(probe: &Probe) -> DependencyStatus {
                     let which_cmd = if cfg!(windows) { "where" } else { "which" };
                     let which_result = tokio::process::Command::new(which_cmd)
                         .arg(probe.binary)
+                        .env("PATH", &current_path)
                         .stdout(std::process::Stdio::piped())
                         .stderr(std::process::Stdio::null())
                         .output()

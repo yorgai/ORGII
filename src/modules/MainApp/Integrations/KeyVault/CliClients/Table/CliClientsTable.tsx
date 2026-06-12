@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -20,6 +20,7 @@ import {
   getCliCompatibleAccounts,
   useAgentCompatibility,
 } from "@src/hooks/models/useAgentCompatibility";
+import { useRefreshSpin } from "@src/hooks/ui";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
 import { openAgentConfigInWorkStation } from "@src/util/ui/openAgentConfigInWorkStation";
 
@@ -82,6 +83,10 @@ const CliClientsTable: React.FC<CliClientsTableProps> = ({
   );
   const [readyFilter, setReadyFilter] = useState<ReadyFilter>(READY_FILTER.ALL);
   const { registry } = useAgentCompatibility();
+  const { spinClass, handleClick: handleRefreshClick } = useRefreshSpin(
+    fetchAgents ?? (() => undefined),
+    loading
+  );
 
   const credentialsByAgent = useMemo(() => {
     const planMap = new Map<string, number>();
@@ -348,17 +353,34 @@ const CliClientsTable: React.FC<CliClientsTableProps> = ({
   const addButtonLabel = tIntegrations("common:actions.add", {
     defaultValue: "Add",
   });
-  const addButton = onAdd ? (
-    <Button
-      variant="secondary"
-      size="default"
-      icon={<Plus size={14} />}
-      iconOnly
-      aria-label={addButtonLabel}
-      title={addButtonLabel}
-      onClick={onAdd}
-    />
-  ) : null;
+  const refreshButtonLabel = tIntegrations("common:actions.refresh", {
+    defaultValue: "Refresh",
+  });
+
+  const headerActions = (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="secondary"
+        size="default"
+        icon={<RefreshCw size={14} className={spinClass} />}
+        iconOnly
+        aria-label={refreshButtonLabel}
+        title={refreshButtonLabel}
+        onClick={handleRefreshClick}
+      />
+      {onAdd && (
+        <Button
+          variant="secondary"
+          size="default"
+          icon={<Plus size={14} />}
+          iconOnly
+          aria-label={addButtonLabel}
+          title={addButtonLabel}
+          onClick={onAdd}
+        />
+      )}
+    </div>
+  );
 
   if (error)
     return (
@@ -385,7 +407,7 @@ const CliClientsTable: React.FC<CliClientsTableProps> = ({
         onSearchChange: setSearchQuery,
         searchPlaceholder: t("cliConfig.searchPlaceholder"),
         allowSearchClear: true,
-        rightContent: addButton,
+        rightContent: headerActions,
       }}
     />
   );

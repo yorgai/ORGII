@@ -57,10 +57,13 @@ pub const LANGUAGE_DISPLAY_NAMES: &[(&str, &str)] = &[
 
 /// Check if a command exists in PATH
 pub fn command_exists(cmd: &str) -> bool {
+    // Explicitly forward PATH so the login-shell-augmented PATH is visible.
+    let current_path = std::env::var("PATH").unwrap_or_default();
     #[cfg(unix)]
     {
         Command::new("which")
             .arg(cmd)
+            .env("PATH", &current_path)
             .output()
             .map(|output| output.status.success())
             .unwrap_or(false)
@@ -69,6 +72,7 @@ pub fn command_exists(cmd: &str) -> bool {
     {
         Command::new("where")
             .arg(cmd)
+            .env("PATH", &current_path)
             .output()
             .map(|output| output.status.success())
             .unwrap_or(false)
