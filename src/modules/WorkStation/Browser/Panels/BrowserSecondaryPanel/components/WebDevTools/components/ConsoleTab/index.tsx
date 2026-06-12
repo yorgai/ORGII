@@ -348,7 +348,7 @@ export const ConsoleTab: React.FC<ConsoleTabProps> = memo(
           {filteredEntries.length === 0 ? (
             <Placeholder
               variant="empty"
-              placement="detail-panel"
+              placement="sidebar"
               title={t("placeholders.noOutput")}
               fillParentHeight
             />

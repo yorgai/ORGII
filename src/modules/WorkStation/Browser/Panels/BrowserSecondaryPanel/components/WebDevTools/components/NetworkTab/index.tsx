@@ -174,7 +174,7 @@ export const NetworkTab: React.FC<NetworkTabProps> = memo(
           {filteredEntries.length === 0 ? (
             <Placeholder
               variant="empty"
-              placement="detail-panel"
+              placement="sidebar"
               title={t("placeholders.noRequests")}
               fillParentHeight
             />

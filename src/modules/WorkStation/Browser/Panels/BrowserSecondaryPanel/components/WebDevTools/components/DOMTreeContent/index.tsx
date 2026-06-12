@@ -215,7 +215,7 @@ export const DOMTreeContent: React.FC<DOMTreeContentProps> = memo(
       return (
         <Placeholder
           variant="empty"
-          placement="detail-panel"
+          placement="sidebar"
           title={emptyMessage ?? t("placeholders.noDomTree")}
           fillParentHeight
         />
