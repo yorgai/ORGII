@@ -17,8 +17,8 @@
  *
  * Contract:
  *   - `paths` always contains real filesystem paths (not Blob URLs).
- *   - `position` is in physical pixels — we scale by `devicePixelRatio` to
- *     resolve the DOM element under the cursor.
+ *   - `position` is in native pixels — hit-testing converts it back to DOM
+ *     viewport pixels using `devicePixelRatio` and the main WebView zoom.
  */
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useEffect } from "react";
