@@ -100,7 +100,9 @@ export function SearchSummaryHeader({
 }): React.ReactElement {
   const keywords = parseSearchKeywords(query);
   return (
-    <div className="flex w-full min-w-0 flex-col gap-2 border-b border-border-2 px-3 py-2">
+    <div
+      className={`flex w-full min-w-0 flex-col gap-2 px-3 py-2 ${countLabel ? "border-b border-border-2" : ""}`}
+    >
       <div className="flex h-9 min-w-0 items-center gap-2 rounded-full border border-border-2 bg-workstation-bg px-3 shadow-sm">
         <HeaderPrimarySegment icon={<Search size={14} />} label={toolLabel} />
         <HeaderSeparator />
@@ -135,7 +137,9 @@ export function DirectorySummaryHeader({
 }): React.ReactElement {
   const displayDirectory = directory || "/";
   return (
-    <div className="flex w-full min-w-0 flex-col gap-2 border-b border-border-2 px-3 py-2">
+    <div
+      className={`flex w-full min-w-0 flex-col gap-2 px-3 py-2 ${countLabel ? "border-b border-border-2" : ""}`}
+    >
       <div className="flex h-9 min-w-0 items-center gap-2 rounded-full border border-border-2 bg-workstation-bg px-3 shadow-sm">
         <HeaderPrimarySegment
           icon={<FolderOpen size={14} />}

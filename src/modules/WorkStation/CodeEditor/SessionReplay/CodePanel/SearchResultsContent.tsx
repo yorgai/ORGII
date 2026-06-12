@@ -123,13 +123,7 @@ export const SearchResultsContent: React.FC<{
 
   if (isLoading) {
     return (
-      <div className="flex min-h-0 min-h-full w-full min-w-0 flex-1 flex-col">
-        <Placeholder
-          variant="loading"
-          placement="detail-panel"
-          fillParentHeight
-        />
-      </div>
+      <div className="flex min-h-0 min-h-full w-full min-w-0 flex-1 flex-col" />
     );
   }
 
@@ -144,12 +138,16 @@ export const SearchResultsContent: React.FC<{
         : visibleFileList.length;
     const showTruncationHint =
       !directoryNotFoundMessage && Boolean(operation.listDirDisplayTruncated);
+    const hasVisibleBody =
+      Boolean(directoryNotFoundMessage) ||
+      visibleFileList.length > 0 ||
+      showTruncationHint;
     return (
       <div className="flex w-full min-w-0 flex-col">
         <DirectorySummaryHeader
           directory={workspaceDirectoryHint}
           countLabel={
-            hasResultPayload
+            hasResultPayload && hasVisibleBody
               ? tSessions("simulator.replay.ide.codePanel.resultCount", {
                   count: fileCount,
                 })
@@ -225,6 +223,7 @@ export const SearchResultsContent: React.FC<{
     const visibleFiles = fileList.slice(0, visibleExploreResultCount);
     const hiddenFileCount = Math.max(0, fileList.length - visibleFiles.length);
     const fileCount = totalMatches > 0 ? totalMatches : fileList.length;
+    const hasVisibleBody = visibleFiles.length > 0 || hiddenFileCount > 0;
     return (
       <div className="flex w-full min-w-0 flex-col">
         <SearchSummaryHeader
@@ -235,7 +234,7 @@ export const SearchResultsContent: React.FC<{
             exploreType === "file_search" ? "find_files" : "glob"
           )}
           countLabel={
-            hasResultPayload
+            hasResultPayload && hasVisibleBody
               ? tSessions("simulator.replay.ide.codePanel.resultCount", {
                   count: fileCount,
                 })
@@ -400,11 +399,16 @@ export const SearchResultsContent: React.FC<{
         : totalMatches > 0
           ? totalMatches
           : visibleResultCount;
-    const countLabel = hasResultPayload
-      ? tSessions("simulator.replay.ide.codePanel.resultCount", {
-          count: resultCount,
-        })
-      : undefined;
+    const hasVisibleBody =
+      visibleSearchResults.length > 0 ||
+      visibleFileFallbackList.length > 0 ||
+      hiddenResultCount > 0;
+    const countLabel =
+      hasResultPayload && hasVisibleBody
+        ? tSessions("simulator.replay.ide.codePanel.resultCount", {
+            count: resultCount,
+          })
+        : undefined;
     const highlightTerms = parseSearchKeywords(_query);
 
     return (
