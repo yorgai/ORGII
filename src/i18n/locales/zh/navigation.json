@@ -138,7 +138,7 @@
     },
     "search": {
       "folders": "搜索文件夹...",
-      "sessions": "搜索 Session...",
+      "sessions": "搜索会话...",
       "projects": "搜索项目..."
     },
     "folderCounts": {
