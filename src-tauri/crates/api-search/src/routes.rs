@@ -13,13 +13,11 @@ async fn api_info() -> Json<serde_json::Value> {
         "version": "1.0.0",
         "status": "running",
         "endpoints": {
-            "swagger_ui": "/swagger-ui",
             "openapi_spec": "/api-docs/openapi.json",
             "file_search": "/api/search/files?query=...&root_path=...",
             "file_index": "/api/search/files/index",
             "symbol_search": "/api/search/code/symbols?repo_path=...",
-        },
-        "documentation": "Visit /swagger-ui for interactive API documentation"
+        }
     }))
 }
 

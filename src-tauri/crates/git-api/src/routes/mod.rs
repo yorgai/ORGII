@@ -52,11 +52,9 @@ async fn api_info() -> axum::Json<serde_json::Value> {
         "version": "2.0.0",
         "status": "running",
         "endpoints": {
-            "swagger_ui": "/swagger-ui",
             "openapi_spec": "/api-docs/openapi.json",
             "git_status": "/api/git/repo/{repo_id}/status",
             "ahead_behind": "/api/git/repo/{repo_id}/ahead-behind"
-        },
-        "documentation": "Visit /swagger-ui for interactive API documentation"
+        }
     }))
 }

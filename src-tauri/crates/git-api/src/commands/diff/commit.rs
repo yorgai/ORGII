@@ -17,12 +17,6 @@ pub fn get_commit_diff(
     parent_index: Option<usize>,
     context_lines: u32,
 ) -> Result<CommitDiffResult, String> {
-    eprintln!(
-        "[git_diff] commit_diff_start repo_path={} commit_sha={} parent_index={:?}",
-        repo_path.display(),
-        commit_sha,
-        parent_index
-    );
     let repo =
         Repository::open(repo_path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
@@ -112,10 +106,6 @@ pub fn get_commit_diff(
         Some(_) => COMMIT_PARENT_MODE_SELECTED_PARENT,
         None => COMMIT_PARENT_MODE_ROOT_COMMIT,
     };
-    eprintln!(
-        "[git_diff] commit_diff_mode commit_sha={} mode={} selected_parent_index={:?}",
-        commit_sha, parent_mode, selected_parent_index
-    );
 
     Ok(CommitDiffResult {
         commit_sha: commit.id().to_string(),

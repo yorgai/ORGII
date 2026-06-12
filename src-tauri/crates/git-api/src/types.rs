@@ -1,6 +1,6 @@
 //! Git HTTP API types — request/response and shared value objects
 //!
-//! All types derive `utoipa::ToSchema` for automatic OpenAPI/Swagger generation.
+//! All types derive `utoipa::ToSchema` for automatic OpenAPI generation.
 //! Covers: git status, diff, branches, commits, remotes, stash, merge state.
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

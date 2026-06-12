@@ -20,7 +20,6 @@ regex = "1.9.5"
 ignore = "0.4"
 rayon = "1.8"
 scopeguard = "1.2"
-crossbeam-channel = "0.5"
 
 # File-name fuzzy matcher (same one Helix uses).
 nucleo-matcher = "0.3"
@@ -41,10 +40,8 @@ tree-sitter-typescript = "0.23"
 streaming-iterator = "0.1"
 petgraph = { workspace = true }
 
-# Workspace cache: blake3 hashes per file in the merkle tree, plus fs_extra
-# for atomic snapshot-file replacement.
+# Workspace cache: blake3 hashes per file in the merkle tree.
 blake3 = "1.5"
-fs_extra = "1.3"
 
 [dev-dependencies]
 app_utils = { path = "../app-utils", features = ["testing"] }

@@ -160,12 +160,19 @@ default-run = "orgii"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 # cargo-machete cannot see through the `tauri::generate_handler!` macro
-# expansion, which is the only consumer for these three workspace crates
-# inside `src/commands/handler_list.inc`. Without this allow-list machete
-# flags them as unused on every run. Removing any of these entries will
-# silently drop ~30 Tauri commands at runtime.
+# expansion, which is the only consumer for these workspace crates inside
+# `src/commands/handler_list.inc`. Without this allow-list machete flags them
+# as unused on every run. Removing any of these entries will silently drop
+# Tauri commands at runtime.
 [package.metadata.cargo-machete]
-ignored = ["agent_cli", "cursor_bridge_app", "db_clients"]
+ignored = [
+    "advanced_search",
+    "agent_cli",
+    "container",
+    "cursor_bridge_app",
+    "db_browser",
+    "db_clients",
+]
 
 [lib]
 name = "app_lib"
@@ -183,7 +190,6 @@ cc = "1.0"
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-schemars = { workspace = true }
 log = "0.4"
 tauri = { workspace = true }
 tauri-plugin-shell = "2"
@@ -199,7 +205,6 @@ tauri-plugin-store = "2"
 tauri-plugin-drag = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-webdriver-automation = { version = "0.1", optional = true }
-open = "5"     # Open URLs/files in default app
 portable-pty = "0.9"
 tokio = { workspace = true }
 uuid = { version = "1", features = ["v4"] }
@@ -219,11 +224,6 @@ core_types = { path = "crates/types" }
 # leaf-most (only `dirs` + `tracing`). The `app::infrastructure::storage_commands`
 # disk-usage report composes these paths into a per-category summary.
 app_paths = { path = "crates/app-paths" }
-
-# Platform-specific FFI shims (e.g. `objc_bridge::with_objc_catch` for
-# macOS Cocoa calls). Hoisted from `infrastructure::platform::*` so
-# `agent_core` can resolve them without depending on `app`.
-app_platform = { path = "crates/app-platform" }
 
 # Small JSON file I/O helpers (read, write, merge, atomic save). Used by
 # CLI agent config modules and sensitive-token stores (auth, github,
@@ -446,12 +446,6 @@ session_persistence = { path = "crates/session-persistence" }
 terminal = { path = "crates/terminal" }
 
 
-# File search / parallelism — only the crates `app/src` actually imports.
-# Search-stack crates live in the `search` workspace crate. Keeping them out
-# of `app` shrinks the rust-analyzer index for `cargo check -p orgii` and
-# clarifies ownership.
-rayon = "1.8"            # Parallel processing — used by api/git diff_ops
-
 parking_lot = "0.12"           # Fast RwLock for state store
 rusqlite = { workspace = true } # SQLite driver
 # `sqlx` (Postgres + MySQL async drivers) used to live here, but `app/src`
@@ -477,36 +471,8 @@ base64 = { workspace = true }
 # HTTP Server with OpenAPI documentation
 axum = { workspace = true }                              # Fast, ergonomic web framework with WebSocket support
 utoipa = { version = "5", features = ["axum_extras"] }  # OpenAPI code-first documentation (v5: OpenAPI 3.1 only, schemas auto-collected)
-utoipa-swagger-ui = { version = "9", features = ["axum", "vendored"] }  # Swagger UI integration; `vendored` ships the swagger-ui assets in-tree so build.rs never downloads from GitHub (offline-friendly, deterministic)
 tower-http = { version = "0.6", features = ["cors", "timeout"] }  # CORS + response timeout
-async-stream = "0.3"                                     # Async stream macros for SSE
-# WebSocket + TLS via rustls (native-roots so corporate / on-prem PKI works
-# the same way it did under native-tls). Used by Feishu / Discord / WeCom
-# `connect_async()` callers in `agent_core::integrations::channels::*`.
-tokio-tungstenite = { workspace = true }
 futures-util = "0.3"                                     # Stream utilities for WebSocket
-
-# Git operations (libgit2 bindings) — local-only.
-#
-# `default-features = false` drops `https` (→ openssl-sys), `ssh`
-# (→ libssh2-sys), and `ssh_key_from_memory`. Network ops shell out to
-# the system `git` CLI in `integrations::github::commands::
-# github_clone_repo` (ORGII already requires `git` on PATH —
-# `git/bundle.rs` shells out for `git bundle create`), so libgit2 only
-# needs the local-repo half of its API: open / diff / blame / log /
-# status / tree walks under `api/git/commands/diff/*` and
-# `git/repos/*`.
-#
-# `vendored-libgit2` is required because libgit2-sys with no features
-# defaults to `pkg-config libgit2` against the system, which dev
-# machines almost never have installed. Vendoring builds libgit2 from
-# C source (~150 MB of artifacts) — orders of magnitude cheaper than
-# the previous `vendored-openssl` which compiled ~2k OpenSSL C files
-# (~1–2 GB).
-git2 = { version = "0.20", default-features = false, features = ["vendored-libgit2"] }
-
-# File type detection via magic bytes
-infer = "0.19"  # Detects file types by magic number signatures
 
 # ===========================================
 # Code Search & Parsing — extracted to other crates
@@ -521,11 +487,6 @@ regex = "1.9.5"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 tracing-appender = "0.2"
-blake3 = "1.5"
-async-trait = "0.1"
-thiserror = { workspace = true }
-anyhow = "1.0"
-futures = "0.3"
 # HTTP client — rustls only. `default-features = false` strips out
 # reqwest's `default-tls` (which would otherwise drag in `hyper-tls`,
 # `native-tls`, and `openssl 0.10.x` even when we asked for `rustls-tls`,
@@ -536,7 +497,6 @@ futures = "0.3"
 # `build_http_client` keep working). `charset` and
 # `macos-system-configuration` are 0.12+ features and don't exist here.
 reqwest = { workspace = true }
-time = "0.3"               # Date/time for certificate validity periods
 # `default-features = false` + explicit `ring` provider drops the
 # `aws-lc-rs` / `aws-lc-sys` BoringSSL C build (~5–10 min cold compile,
 # ~150 MB intermediate artifacts). `ring` is already in the graph via
@@ -545,7 +505,6 @@ time = "0.3"               # Date/time for certificate validity periods
 # of pulling both.
 tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "tls12", "ring"] }
 url = "2"                 # URL parsing for proxy routing
-urlencoding = "2.1"      # URL encoding/decoding for Cursor token parsing
 
 # ===========================================
 # Performance Optimizations
@@ -553,10 +512,8 @@ urlencoding = "2.1"      # URL encoding/decoding for Cursor token parsing
 # Hot-path leaf utilities (image luminance, simd-json, sha2/blake3 batch
 # hashing, similar diff/patch, sysinfo memory breakdown, memchr binary
 # sniffing, infer magic-byte detection) moved to the `perf_utils` workspace
-# crate. `app/src` only needs the two remainders: `rayon` for the api/git
-# diff_ops parallelism. `sha2` is used by OAuth PKCE flows (cursor, codex, etc.).
+# crate. `app/src` only needs SHA-256 for OAuth PKCE flows.
 sha2 = "0.10"            # SHA-256 for OAuth PKCE code challenges
-hex = "0.4"              # Hex encoding for QR digest + db_browser bytea rendering
 rand = { workspace = true }   # CSPRNG for OAuth PKCE (state + code_verifier)
 
 # ===========================================
@@ -569,7 +526,6 @@ rand = { workspace = true }   # CSPRNG for OAuth PKCE (state + code_verifier)
 # rustls 0.23 to enable `aws-lc-rs` (BoringSSL C build), and we need
 # rustls's crypto provider to come from our `tokio-rustls` (ring) dep so
 # Cargo can unify across the workspace.
-http = "1"           # HeaderName / HeaderValue for rmcp custom_headers
 tokio-util = { workspace = true }  # CancellationToken (in default surface) for rmcp serve_with_ct + wingman
 csv = "1.4.0"
 calamine = "0.35.0"

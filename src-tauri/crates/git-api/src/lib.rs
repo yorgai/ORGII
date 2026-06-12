@@ -16,8 +16,6 @@
 //!   app's combined `axum::Router` at startup)
 //! - `commands/` — git CLI / git2 command wrappers consumed by the
 //!   route handlers and by `lineage_bridge`
-//! - `server` — standalone `start_server` (reference; the main app
-//!   composes `routes::create_routes` into its own router instead)
 //! - `lineage_bridge` — registers a `commit→diff` callback used by
 //!   `project_management::lineage` for git-aware navigation
 //! - `file_types` — request/response shapes for the file blob endpoints
@@ -28,7 +26,6 @@ pub mod extractors;
 pub mod file_types;
 pub mod lineage_bridge;
 pub mod routes;
-pub mod server;
 pub mod types;
 
 #[cfg(test)]

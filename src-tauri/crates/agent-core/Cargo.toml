@@ -38,7 +38,6 @@ shared_state = { path = "../shared-state" }
 
 # Sibling subsystems that agent_core orchestrates over. Each is a leaf
 # from agent_core's perspective.
-browser = { path = "../browser" }
 git = { path = "../git" }
 integrations = { path = "../integrations" }
 lsp = { path = "../lsp" }
@@ -121,7 +120,6 @@ regex = "1.9.5"
 # ---------------------------------------------------------------------------
 # Misc utilities
 # ---------------------------------------------------------------------------
-scopeguard = "1.2"
 tempfile = "3.13"
 tiktoken-rs = "0.9"
 similar = "2.6"
@@ -132,8 +130,6 @@ open = "5"
 urlencoding = "2.1"
 html2text = "0.14"
 pdf-extract = "0.7"
-flate2 = "1.1.9"
-tar = "0.4.44"
 zip = { workspace = true }
 ignore = "0.4"
 croner = "2"

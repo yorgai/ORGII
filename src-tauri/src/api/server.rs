@@ -12,7 +12,6 @@ use tokio::sync::broadcast;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::timeout::TimeoutLayer;
 use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
 
 use super::websocket_handler;
 
@@ -227,7 +226,7 @@ Unified REST and WebSocket API for IDE backend operations.
 - `/ws` - Real-time events (file changes, git status updates, LSP diagnostics)
 
 ## Documentation
-Visit `/swagger-ui` for interactive API documentation.
+The OpenAPI spec is served at `/api-docs/openapi.json`.
         "#,
     )
 )]
@@ -264,10 +263,13 @@ pub async fn start_server(
         .route("/ws", axum::routing::get(websocket_handler::ws_handler))
         .with_state(ws_tx.clone());
 
-    // Create main app with nested routes and Swagger UI
+    // Create main app with nested routes
     let app = Router::new()
-        // Swagger UI
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        // OpenAPI spec (machine-readable; no Swagger UI)
+        .route(
+            "/api-docs/openapi.json",
+            axum::routing::get(|| async { axum::Json(ApiDoc::openapi()) }),
+        )
         // Git API routes (without /api prefix, nested under /git)
         .nest("/git", git_api::routes::create_routes())
         // Search API routes (without /api prefix, nested under /search)
@@ -304,7 +306,6 @@ pub async fn start_server(
     println!("📄 File API: http://{}/api/file/*", addr);
     println!("🤖 Agent API: http://{}/agent/*", addr);
     println!("🔌 WebSocket: ws://{}/ws", addr);
-    println!("📖 Swagger UI: http://{}/swagger-ui", addr);
 
     // Start server
     let listener = tokio::net::TcpListener::bind(addr).await?;

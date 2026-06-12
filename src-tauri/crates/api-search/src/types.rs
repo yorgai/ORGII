@@ -12,7 +12,6 @@ pub struct ApiInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct EndpointsList {
-    pub swagger_ui: String,
     pub openapi_spec: String,
     pub file_search: String,
 }

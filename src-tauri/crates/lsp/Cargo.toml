@@ -13,6 +13,11 @@ rust-version = "1.85.0"
 # the lint-tool catalog (eslint, ruff, mypy, golangci-lint, clippy, …) and
 # the per-workspace LSP/lint config that gates which servers auto-start.
 #
+# cargo-machete cannot see that `lzma-sys` is intentionally included to force
+# static liblzma for the transitive `xz2` extractor used by install_pipeline.
+[package.metadata.cargo-machete]
+ignored = ["lzma-sys"]
+
 # Inversion-of-control points (so this crate never depends back into `app`):
 # - `broadcast::register_broadcast` — `app::run` registers the IDE WebSocket
 #   `api::websocket_handler::broadcast` function pointer at startup so the
