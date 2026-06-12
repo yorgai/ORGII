@@ -9,8 +9,13 @@
  *
  * Design: uses shared secondary buttons so pinned actions match other composer controls.
  */
-import { useAtom, useAtomValue } from "jotai";
-import { GitPullRequest, Layout, MoreHorizontal } from "lucide-react";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import {
+  GitCommit,
+  GitPullRequest,
+  Layout,
+  MoreHorizontal,
+} from "lucide-react";
 import React, { memo, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -18,8 +23,14 @@ import Button from "@src/components/Button";
 import type { ComposerInputRef } from "@src/components/ComposerInput";
 import UserActionButton from "@src/engines/ChatPanel/InputArea/components/UserActionButton";
 import { useSlashItemsCache } from "@src/engines/ChatPanel/hooks/useInputArea/useSlashItemsCache";
+import { useMessageDispatch } from "@src/engines/ChatPanel/hooks/useWorkspaceChat/useMessageDispatch";
+import { mintTurnIntentId } from "@src/engines/SessionCore/sync/adapters/shared/eventFactories";
 import { EditorTabService } from "@src/services/workStation";
 import { canvasPreviewAtom } from "@src/store/session/canvasPreviewAtom";
+import {
+  isSessionActiveAtom,
+  setSessionRuntimeStatusAtom,
+} from "@src/store/session/cliSessionStatusAtom";
 import {
   type PinnedAction,
   pinnedActionsAtom,
@@ -143,6 +154,54 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
       setCanvasEntry(null);
     }, [setCanvasEntry]);
 
+    // ── Commit & Push pill ────────────────────────────────────────────────────
+
+    const isSessionActive = useAtomValue(isSessionActiveAtom);
+    const setSessionRuntimeStatus = useSetAtom(setSessionRuntimeStatusAtom);
+    const { addUserMessage, dispatchMessageBySessionType } = useMessageDispatch(
+      {
+        getSessionId: () => sessionId ?? null,
+      }
+    );
+    const commitPushPendingRef = useRef(false);
+
+    const showCommitPushPill = Boolean(sessionId);
+
+    const handleCommitAndPush = useCallback(() => {
+      if (!sessionId || isSessionActive || commitPushPendingRef.current) return;
+      commitPushPendingRef.current = true;
+      const prompt = "Commit all current changes and push to the remote.";
+      setSessionRuntimeStatus({
+        status: "running",
+        source: "interactive-event",
+      });
+      void (async () => {
+        try {
+          const turnIntentId = mintTurnIntentId();
+          await addUserMessage(prompt, undefined, turnIntentId);
+          await dispatchMessageBySessionType(
+            sessionId,
+            prompt,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            turnIntentId
+          );
+        } catch (err) {
+          console.error("[PinnedActionsBar] commit & push failed:", err);
+        } finally {
+          commitPushPendingRef.current = false;
+        }
+      })();
+    }, [
+      sessionId,
+      isSessionActive,
+      addUserMessage,
+      dispatchMessageBySessionType,
+      setSessionRuntimeStatus,
+    ]);
+
     // ── Built-in "Setup Repo" action ──────────────────────────────────────────
 
     const handleSetupRepo = useCallback(() => {
@@ -180,7 +239,8 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
 
     const hasPinnedActions = pinnedActions.length > 0;
     const showCanvasAction = showCanvasPill && !isCanvasTabOpen;
-    const hasActionPills = showPrPill || showCanvasAction || hasPinnedActions;
+    const hasActionPills =
+      showPrPill || showCommitPushPill || showCanvasAction || hasPinnedActions;
 
     // ── Pin / unpin ───────────────────────────────────────────────────────────
 
@@ -285,6 +345,23 @@ const PinnedActionsBar: React.FC<PinnedActionsBarProps> = memo(
             {prIsCreating
               ? t("input.pr.creating", { defaultValue: "Creating PR…" })
               : t("input.pr.open", { defaultValue: "Open PR" })}
+          </Button>
+        )}
+
+        {showCommitPushPill && (
+          <Button
+            variant="secondary"
+            size="small"
+            shape="round"
+            title={t("input.commitPush.run", {
+              defaultValue: "Commit & Push",
+            })}
+            onClick={handleCommitAndPush}
+            disabled={isSessionActive}
+            icon={<GitCommit size={12} strokeWidth={1.75} />}
+            className="max-w-[180px] shrink-0 select-none"
+          >
+            {t("input.commitPush.run", { defaultValue: "Commit & Push" })}
           </Button>
         )}
 
