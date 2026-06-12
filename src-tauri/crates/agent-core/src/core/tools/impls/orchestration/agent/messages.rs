@@ -129,6 +129,7 @@ pub(crate) fn build_resume_messages(
             resume_id
         )));
     }
+    let history = shrink_oversized_resume_history(history, resume_id);
     let mut msgs = Vec::with_capacity(history.len() + 2);
     msgs.push(serde_json::json!({
         "role": "system",
@@ -165,4 +166,44 @@ fn build_fresh_messages(full_system_prompt: &str, prompt: &str) -> Vec<Value> {
             "content": prompt,
         }),
     ]
+}
+
+/// Token threshold above which a resumed history is compressed before the
+/// turn starts. Conservative: below every supported model's context window
+/// (smallest hint is 128K), with headroom for the system prompt, tool
+/// definitions, and the new turn's output.
+const RESUME_HISTORY_TOKEN_BUDGET: usize = 100_000;
+
+/// Guard against the "resume a context-exploded session → instantly explode
+/// again" failure mode. A subagent that died with `ContextTooLong` persists
+/// its oversized transcript; reloading it verbatim makes resume useless.
+/// Force-clear old tool results first (cheap, lossless for narration), then
+/// hard-truncate head-preservingly if still over budget.
+fn shrink_oversized_resume_history(mut history: Vec<Value>, resume_id: &str) -> Vec<Value> {
+    use crate::model_context::{compaction::ContextCompactor, microcompact};
+
+    let tokens = ContextCompactor::estimate_messages_tokens(&history);
+    if tokens <= RESUME_HISTORY_TOKEN_BUDGET {
+        return history;
+    }
+    info!(
+        "[agent] Resume history for '{}' is ~{} tokens (> {} budget); compacting before resume",
+        resume_id, tokens, RESUME_HISTORY_TOKEN_BUDGET
+    );
+    let mc_config = microcompact::MicrocompactConfig::default();
+    microcompact::force_microcompact_messages(&mut history, &mc_config);
+
+    let tokens_after = ContextCompactor::estimate_messages_tokens(&history);
+    if tokens_after > RESUME_HISTORY_TOKEN_BUDGET {
+        let truncated = ContextCompactor::simple_truncate(&history, RESUME_HISTORY_TOKEN_BUDGET);
+        info!(
+            "[agent] Resume history for '{}' still ~{} tokens after microcompact; truncated {} -> {} messages",
+            resume_id,
+            tokens_after,
+            history.len(),
+            truncated.len()
+        );
+        return truncated;
+    }
+    history
 }

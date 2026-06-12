@@ -119,7 +119,29 @@ impl AgentTool {
                 )
             }
             Err(err) => {
-                let msg = format!("Agent '{}' failed: {}", agent.name, err);
+                // A failed turn must still surface whatever the subagent
+                // produced before dying — `messages` was mutated in place by
+                // `execute_turn`, so the partial transcript is right here.
+                // Losing a 35-minute run to a terminal `ContextTooLong` and
+                // returning only the bare error is exactly the incident this
+                // guards against.
+                let mut msg = format!("Agent '{}' failed: {}", agent.name, err);
+                if let Some(partial) = turn_executor::last_assistant_text(&messages) {
+                    info!(
+                        "[agent] '{}' failed but recovered {} chars of partial progress",
+                        agent.name,
+                        partial.len()
+                    );
+                    msg.push_str(&format!(
+                        "\n\nPartial progress before failure:\n{}",
+                        partial
+                    ));
+                }
+                msg.push_str(&format!(
+                    "\n\nThe partial transcript was saved. You may retry with \
+                     resume_session_id=\"{}\" to continue from it.",
+                    subagent_session_id
+                ));
                 handler.broadcast_error();
                 (
                     LinkedSessionStatus::Failed,

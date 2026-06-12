@@ -511,33 +511,61 @@ impl ContextCompactor {
     }
 
     /// Fallback: simple truncation when LLM-based compaction fails or is not feasible.
+    ///
+    /// Always preserves the head of the conversation (leading system
+    /// messages plus the first user message — i.e. the task statement) and
+    /// truncates from the message *after* it. Truncating from index 0 used
+    /// to drop the task goal first, leaving the agent amnesiac about what
+    /// it was even doing.
     pub(crate) fn simple_truncate(history: &[Value], budget_tokens: usize) -> Vec<Value> {
-        let mut start_idx = 0;
-        let total_tokens = Self::estimate_messages_tokens(history);
+        // Head = leading system messages + the first user message.
+        let mut head_len = 0usize;
+        for msg in history {
+            let role = msg.get("role").and_then(|val| val.as_str()).unwrap_or("");
+            if role == "system" {
+                head_len += 1;
+            } else if role == "user" {
+                head_len += 1;
+                break;
+            } else {
+                break;
+            }
+        }
 
+        let total_tokens = Self::estimate_messages_tokens(history);
+        let head_tokens: usize = history[..head_len]
+            .iter()
+            .map(Self::estimate_message_tokens)
+            .sum();
+        let tail_budget = budget_tokens.saturating_sub(head_tokens);
+
+        let mut start_idx = head_len;
         if total_tokens > budget_tokens {
             let mut trimmed = 0usize;
-            for (idx, msg) in history.iter().enumerate() {
+            let tail_tokens = total_tokens.saturating_sub(head_tokens);
+            for (offset, msg) in history[head_len..].iter().enumerate() {
                 trimmed += Self::estimate_message_tokens(msg);
-                if total_tokens - trimmed <= budget_tokens {
-                    start_idx = idx + 1;
+                if tail_tokens.saturating_sub(trimmed) <= tail_budget {
+                    start_idx = head_len + offset + 1;
                     break;
                 }
             }
         }
 
-        if start_idx > 0 && start_idx < history.len() {
+        if start_idx > head_len && start_idx < history.len() {
             start_idx = Self::adjust_split_for_tool_pairs(history, start_idx);
         }
 
-        let mut result = Vec::new();
-        if start_idx > 0 && start_idx < history.len() {
+        let mut result: Vec<Value> = history[..head_len.min(history.len())].to_vec();
+        if start_idx > head_len && start_idx < history.len() {
             result.push(serde_json::json!({
                 "role": "system",
-                "content": format!("[{} earlier messages truncated to fit context window]", start_idx),
+                "content": format!("[{} earlier messages truncated to fit context window]", start_idx - head_len),
             }));
         }
-        result.extend_from_slice(&history[start_idx..]);
+        if start_idx < history.len() {
+            result.extend_from_slice(&history[start_idx..]);
+        }
         result
     }
 }

@@ -212,7 +212,26 @@ impl AgentTool {
                     }
                 }
                 Err(err) => {
-                    let msg = format!("Agent '{}' failed: {}", bg_agent_name, err);
+                    // Same partial-progress contract as the foreground path:
+                    // a failed run must not discard what the subagent already
+                    // found. `messages` holds the in-place transcript.
+                    let mut msg = format!("Agent '{}' failed: {}", bg_agent_name, err);
+                    if let Some(partial) = turn_executor::last_assistant_text(&messages) {
+                        info!(
+                            "[agent:bg] '{}' failed but recovered {} chars of partial progress",
+                            bg_agent_name,
+                            partial.len()
+                        );
+                        msg.push_str(&format!(
+                            "\n\nPartial progress before failure:\n{}",
+                            partial
+                        ));
+                    }
+                    msg.push_str(&format!(
+                        "\n\nThe partial transcript was saved. You may retry with \
+                         resume_session_id=\"{}\" to continue from it.",
+                        bg_session_id
+                    ));
                     broadcasting_handler.broadcast_error();
                     job_registry::set_final_result(&bg_session_id, msg.clone());
                     job_registry::mark_exited(&bg_session_id, job_registry::JobStatus::Failed);

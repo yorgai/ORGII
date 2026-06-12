@@ -130,6 +130,40 @@ pub fn microcompact_messages(
         Some(gap) => gap,
         None => return MicrocompactStats::default(),
     };
+    let stats = clear_old_tool_results(messages, config);
+    if stats.trimmed_count > 0 || stats.images_cleared > 0 {
+        info!(
+            "[microcompact] Time-based trigger fired (gap {}s > {}s). Cleared {} tool result(s) + {} image(s), saved ~{} chars",
+            gap_secs, config.gap_threshold_secs,
+            stats.trimmed_count, stats.images_cleared, stats.chars_saved
+        );
+    }
+    stats
+}
+
+/// Run the microcompact clearing pass **unconditionally**, bypassing the
+/// time-based trigger. Used as the first-line `ContextTooLong` rescue in
+/// `execute_turn`: clearing old tool results is lossy but cheap, never
+/// fails, and is strictly better than aborting the turn (and losing all
+/// progress) because the provider rejected the prompt.
+pub fn force_microcompact_messages(
+    messages: &mut [Value],
+    config: &MicrocompactConfig,
+) -> MicrocompactStats {
+    let stats = clear_old_tool_results(messages, config);
+    if stats.trimmed_count > 0 || stats.images_cleared > 0 {
+        info!(
+            "[microcompact] Forced pass (context rescue). Cleared {} tool result(s) + {} image(s), saved ~{} chars",
+            stats.trimmed_count, stats.images_cleared, stats.chars_saved
+        );
+    }
+    stats
+}
+
+fn clear_old_tool_results(
+    messages: &mut [Value],
+    config: &MicrocompactConfig,
+) -> MicrocompactStats {
 
     let tool_result_indices: Vec<usize> = messages
         .iter()
@@ -188,14 +222,6 @@ pub fn microcompact_messages(
                 stats.images_cleared += 1;
             }
         }
-    }
-
-    if stats.trimmed_count > 0 || stats.images_cleared > 0 {
-        info!(
-            "[microcompact] Time-based trigger fired (gap {}s > {}s). Cleared {} tool result(s) + {} image(s), saved ~{} chars",
-            gap_secs, config.gap_threshold_secs,
-            stats.trimmed_count, stats.images_cleared, stats.chars_saved
-        );
     }
 
     stats
