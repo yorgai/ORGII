@@ -562,7 +562,13 @@ const TurnPaginationControls: React.FC<TurnPaginationControlsProps> = memo(
                         aria-label={t("common:pagination.round", {
                           current: Math.max(1, pageCount),
                         })}
-                        icon={<ChevronsRight size={18} strokeWidth={1.75} />}
+                        icon={
+                          <ChevronsRight
+                            size={18}
+                            strokeWidth={1.75}
+                            className="translate-y-[0.5px]"
+                          />
+                        }
                       />
                     </span>
                   </Tooltip>
