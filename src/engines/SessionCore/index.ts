@@ -168,11 +168,10 @@ export {
 // Ingestion (Normalizers)
 // ============================================
 
-// Visibility filters — event filtering for UI contexts
+// Visibility filters — chat visibility only; simulator/messages visibility
+// is computed exclusively in Rust (derived.rs) and consumed via snapshots
 export {
   isVisibleInChat,
-  isVisibleInSimulator,
-  isVisibleInMessages,
   stripTerminalCodeBlocks,
 } from "./ingestion/visibilityFilters";
 

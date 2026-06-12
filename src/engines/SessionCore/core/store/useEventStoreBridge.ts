@@ -79,6 +79,10 @@ export function useEventStoreBridge(): void {
   const activeSessionId = useAtomValue(sessionIdAtom);
   const activeSessionIdRef = useRef(activeSessionId);
   const lastDerivedRef = useRef<DerivedSnapshot | null>(null);
+  // Sessions for which a full-snapshot hydration has already been requested.
+  // Prevents a getSnapshot() stampede when many StreamingSnapshots arrive
+  // before the first DerivedSnapshot baseline.
+  const hydrationRequestedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
@@ -177,8 +181,44 @@ export function useEventStoreBridge(): void {
               setVersion(merged.version);
               return;
             }
-            // No prior DerivedSnapshot yet — fall through and store as-is.
-            // Events will appear once the first DerivedSnapshot arrives.
+            // No prior DerivedSnapshot yet — the StreamingSnapshot only
+            // carries a bounded window of events (chatEvents + capped
+            // simulator upserts), so rendering it alone would truncate the
+            // session history. Pull the full derived snapshot once per
+            // session as a baseline; subsequent streaming snapshots merge on
+            // top of it via the branch above.
+            if (!hydrationRequestedRef.current.has(sessionId)) {
+              hydrationRequestedRef.current.add(sessionId);
+              void eventStoreProxy
+                .getSnapshot(sessionId)
+                .then((full) => {
+                  if (
+                    !full ||
+                    (activeSessionIdRef.current &&
+                      sessionId !== activeSessionIdRef.current)
+                  ) {
+                    return;
+                  }
+                  // Only apply if we still lack a derived baseline (a real
+                  // DerivedSnapshot push may have landed in the meantime).
+                  if (!lastDerivedRef.current) {
+                    lastDerivedRef.current = full;
+                    setSnapshot(full);
+                    setVersion(full.version);
+                  }
+                })
+                .catch((err) => {
+                  // Allow a retry on the next streaming snapshot.
+                  hydrationRequestedRef.current.delete(sessionId);
+                  console.warn(
+                    "[useEventStoreBridge] full snapshot hydration failed",
+                    sessionId,
+                    err
+                  );
+                });
+            }
+            // Fall through and store the streaming snapshot as-is so chat
+            // stays live while hydration is in flight.
           } else {
             lastDerivedRef.current = snapshot as DerivedSnapshot;
           }
@@ -192,13 +232,13 @@ export function useEventStoreBridge(): void {
     return () => {
       destroyed = true;
       unsubscribe?.();
-      // Tear down the Tauri IPC listener so it is not orphaned when the
+      // Tear down only the Tauri IPC listener so it is not orphaned when the
       // component unmounts before init() resolves (e.g. StrictMode double-mount,
-      // fast navigation, HMR). Without this call _unlistenTauri stays alive
-      // but _globalListeners is empty, and a subsequent init() call silently
-      // returns early because _initialized is still true — making the bridge
-      // permanently deaf to es:changed events in that lifecycle.
-      eventStoreProxy.destroy();
+      // fast navigation, HMR). detachTauri() keeps _sessionListeners and the
+      // snapshot caches intact so other live consumers (subagent grids,
+      // per-session subscribers) survive a bridge remount; full destroy() is
+      // reserved for app exit / tests.
+      eventStoreProxy.detachTauri();
     };
   }, [setSnapshot, setVersion]);
 }

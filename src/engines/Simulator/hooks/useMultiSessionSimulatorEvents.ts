@@ -8,10 +8,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import {
-  type SessionEvent,
-  isVisibleInSimulator,
-} from "@src/engines/SessionCore";
+import { type SessionEvent } from "@src/engines/SessionCore";
 import {
   eventStoreProxy,
   isStreamingSnapshot,
@@ -92,20 +89,18 @@ function extractSimulatorEvents(
   previousEvents: SessionEvent[]
 ): SessionEvent[] {
   if (!isStreamingSnapshot(snapshot)) {
+    // DerivedSnapshot: `sortedSimulatorEvents` is the Rust-side pre-filtered
+    // result (derived.rs is_visible_in_simulator) — consume it directly,
+    // including the legitimately-empty case.
     const derived = snapshot as DerivedSnapshot;
-    if (derived.sortedSimulatorEvents?.length > 0) {
-      return trimEventWindow(derived.sortedSimulatorEvents);
-    }
-  } else {
-    const streaming = snapshot as StreamingSnapshot;
-    return mergeEventUpserts(
-      previousEvents,
-      streaming.simulatorEventUpserts ?? []
-    );
+    return trimEventWindow(derived.sortedSimulatorEvents ?? []);
   }
 
-  const raw = snapshot.chatEvents ?? [];
-  return trimEventWindow(raw.filter(isVisibleInSimulator));
+  const streaming = snapshot as StreamingSnapshot;
+  return mergeEventUpserts(
+    previousEvents,
+    streaming.simulatorEventUpserts ?? []
+  );
 }
 
 export function useMultiSessionSimulatorEvents(
@@ -117,27 +112,67 @@ export function useMultiSessionSimulatorEvents(
   const lastEventsPerSessionRef = useRef<Map<string, SessionEvent[]>>(
     new Map()
   );
+  // Sessions that have received at least one DerivedSnapshot (full baseline).
+  const derivedSeenRef = useRef<Set<string>>(new Set());
+  // Sessions with an in-flight/completed full-snapshot hydration request,
+  // so repeated StreamingSnapshots don't trigger a getSnapshot stampede.
+  const hydrationRequestedRef = useRef<Set<string>>(new Set());
+
+  const applySnapshot = useCallback((sessionId: string, snapshot: Snapshot) => {
+    if (!isStreamingSnapshot(snapshot)) {
+      derivedSeenRef.current.add(sessionId);
+    }
+    const previousEvents = lastEventsPerSessionRef.current.get(sessionId) ?? [];
+    const events = extractSimulatorEvents(snapshot, previousEvents);
+    lastEventsPerSessionRef.current.set(sessionId, events);
+    mapKeysRef.current.add(sessionId);
+    setEventsMap((prev) => {
+      const next = new Map(prev);
+      next.set(sessionId, events);
+      return next;
+    });
+  }, []);
 
   const handleSnapshot = useCallback(
     (sessionId: string, snapshot: Snapshot) => {
-      const previousEvents =
-        lastEventsPerSessionRef.current.get(sessionId) ?? [];
-      const events = extractSimulatorEvents(snapshot, previousEvents);
-      lastEventsPerSessionRef.current.set(sessionId, events);
-      mapKeysRef.current.add(sessionId);
-      setEventsMap((prev) => {
-        const next = new Map(prev);
-        next.set(sessionId, events);
-        return next;
-      });
+      if (
+        isStreamingSnapshot(snapshot) &&
+        !derivedSeenRef.current.has(sessionId) &&
+        !hydrationRequestedRef.current.has(sessionId)
+      ) {
+        // StreamingSnapshot before any DerivedSnapshot baseline: the
+        // streaming payload only carries a capped upsert window, so the grid
+        // would show a truncated history. Pull the full derived snapshot
+        // once; the per-session Set prevents duplicate fetches.
+        hydrationRequestedRef.current.add(sessionId);
+        void eventStoreProxy
+          .getSnapshot(sessionId)
+          .then((full) => {
+            if (full && !derivedSeenRef.current.has(sessionId)) {
+              applySnapshot(sessionId, full as Snapshot);
+            }
+          })
+          .catch((err) => {
+            hydrationRequestedRef.current.delete(sessionId);
+            console.warn(
+              "[multiSessionSimulator] full snapshot hydration failed",
+              sessionId,
+              err
+            );
+          });
+      }
+
+      applySnapshot(sessionId, snapshot);
     },
-    []
+    [applySnapshot]
   );
 
   useEffect(() => {
     if (subagentSessions.length === 0) {
       loadedRef.current.clear();
       lastEventsPerSessionRef.current.clear();
+      derivedSeenRef.current.clear();
+      hydrationRequestedRef.current.clear();
       if (mapKeysRef.current.size > 0) {
         mapKeysRef.current.clear();
         queueMicrotask(() => setEventsMap(EMPTY_MAP));
@@ -172,7 +207,17 @@ export function useMultiSessionSimulatorEvents(
                 handleSnapshot(sid, snap as Snapshot);
               }
             })
-            .catch((_err) => {});
+            .catch((err) => {
+              // Allow a retry on the next effect run — without this delete the
+              // session would be permanently stuck with no events after a
+              // transient cache failure.
+              loadedRef.current.delete(sid);
+              console.warn(
+                "[multiSessionSimulator] cache load failed",
+                sid,
+                err
+              );
+            });
         }
       }
     }
@@ -199,6 +244,8 @@ export function useMultiSessionSimulatorEvents(
       if (!sessionIds.has(sid)) {
         loadedRef.current.delete(sid);
         lastEventsPerSessionRef.current.delete(sid);
+        derivedSeenRef.current.delete(sid);
+        hydrationRequestedRef.current.delete(sid);
       }
     }
 

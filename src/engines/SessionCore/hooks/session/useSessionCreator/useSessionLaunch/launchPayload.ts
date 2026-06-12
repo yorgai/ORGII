@@ -57,6 +57,18 @@ function normalizePath(path: string): string {
   return path.replace(/\/+$/, "");
 }
 
+/**
+ * Loose comparison key for matching the session repo path against IDE
+ * workspace folder paths: trailing slashes stripped + case-insensitive
+ * (macOS default filesystems are case-insensitive, and the two sides
+ * may come from differently-cased sources). Canonical-path comparison
+ * is the backend's job — this only guards launch-time seeding against
+ * trivial formatting drift.
+ */
+function looseMatchKey(path: string): string {
+  return normalizePath(path).toLowerCase();
+}
+
 function getAdditionalDirectories(
   sessionRepoPath: string,
   workspaceFolders: WorkspaceFolderRef[]
@@ -64,19 +76,47 @@ function getAdditionalDirectories(
   const normalizedProject = sessionRepoPath
     ? normalizePath(sessionRepoPath)
     : "";
-  const workspaceIncludesProject =
-    !!normalizedProject &&
+  if (!normalizedProject || workspaceFolders.length === 0) {
+    return [];
+  }
+
+  const exactMatch = workspaceFolders.some(
+    (folder) => normalizePath(folder.path) === normalizedProject
+  );
+
+  const projectKey = looseMatchKey(normalizedProject);
+  const looseMatch =
+    exactMatch ||
     workspaceFolders.some(
-      (folder) => normalizePath(folder.path) === normalizedProject
+      (folder) => looseMatchKey(folder.path) === projectKey
     );
 
-  if (!workspaceIncludesProject) {
+  if (!exactMatch && looseMatch) {
+    console.warn(
+      "[launchPayload] session repoPath only loose-matched a workspace folder (trailing slash / case drift) — proceeding with loose match",
+      {
+        sessionRepoPath,
+        workspaceFolderPaths: workspaceFolders.map((folder) => folder.path),
+      }
+    );
+  }
+
+  if (!looseMatch) {
+    const dropped = workspaceFolders
+      .map((folder) => normalizePath(folder.path))
+      .filter((path) => path && looseMatchKey(path) !== projectKey);
+    if (dropped.length > 0) {
+      console.warn(
+        "[launchPayload] session repoPath is not among the IDE workspace folders — dropping additional directories",
+        { sessionRepoPath, droppedDirectories: dropped }
+      );
+    }
     return [];
   }
 
   return workspaceFolders
     .map((folder) => normalizePath(folder.path))
-    .filter((path) => path && path !== normalizedProject);
+    .filter((path) => path && looseMatchKey(path) !== projectKey);
 }
 
 function getRustAgentIdentityFields(options: {

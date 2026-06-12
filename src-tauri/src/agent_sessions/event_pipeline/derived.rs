@@ -1,8 +1,16 @@
 //! Derived computations for session events
 //!
-//! Rust port of the JS visibility filters (`isVisibleInChat`, `isVisibleInSimulator`,
-//! `isVisibleInMessages`) and the full `compute_derived()` single-pass function
-//! that produces a `DerivedSnapshot` without any intermediate allocations.
+//! Single source of truth for event visibility (`is_visible_in_chat`,
+//! `is_visible_in_simulator`, `is_visible_in_messages`) and the full
+//! `compute_derived()` single-pass function that produces a
+//! `DerivedSnapshot` without any intermediate allocations.
+//!
+//! Simulator/Messages visibility is computed exclusively here; the frontend
+//! consumes the pre-filtered `sorted_simulator_events` / `messages_events`
+//! from snapshots instead of re-filtering. Chat visibility keeps a TS twin
+//! (`isVisibleInChat` in `visibilityFilters.ts`) for synchronous Jotai
+//! paths — parity is enforced by the shared fixture in
+//! `fixtures/visibility_parity.json`.
 
 use std::{cmp::Ordering, collections::HashMap};
 
@@ -11,38 +19,42 @@ use crate::agent_sessions::event_pipeline::types::{
     DerivedSnapshot, EventDisplayStatus, EventDisplayVariant, EventSource, SessionEvent,
     SimulatorEventPreview,
 };
-use agent_core::tools::names;
 
-/// Tool function names that spawn subagents.
-/// Running-state events for these tools are shown in Trajectory/Simulator so
-/// users can see subagent progress before the spawning call completes.
-const SPAWNING_TOOL_NAMES: &[&str] = &["agent", "task", "Task", "spawn_sub_agent", "subagent"];
+/// Background-shell process states stamped onto tool_call args as
+/// `shellProcessStatus` (see `EventStore::update_last_shell_process`).
+/// Terminal states mean the shell is no longer a live runtime resource even
+/// if the event's display_status is still "running".
+const TERMINAL_SHELL_PROCESS_STATUSES: &[&str] = &["exited", "killed"];
+const ACTIVE_SHELL_PROCESS_STATUSES: &[&str] = &["running", "background"];
 
-/// Shell tool names whose running-state events should stay visible in the
-/// Simulator so the COMMANDS panel shows live streamOutput while a command
-/// executes.  Must mirror SHELL_TOOL_NAMES in TS visibilityFilters.ts.
-const SHELL_TOOL_NAMES: &[&str] = &[
-    "bash",
-    "shell",
-    "execute_command",
-    "run_terminal_command",
-    "terminal",
-    "terminal_command",
-    "run_shell",
-];
-
-const PLAN_EVENT_NAMES: &[&str] = &[names::CREATE_PLAN, names::PLAN_APPROVAL];
-
-fn is_spawning_tool_call(event: &SessionEvent) -> bool {
-    event.action_type == "tool_call" && SPAWNING_TOOL_NAMES.contains(&event.function_name.as_str())
+fn shell_process_status(event: &SessionEvent) -> Option<&str> {
+    event
+        .args
+        .as_object()
+        .and_then(|obj| obj.get("shellProcessStatus"))
+        .and_then(|v| v.as_str())
 }
 
-fn is_shell_tool_call(event: &SessionEvent) -> bool {
-    event.action_type == "tool_call" && SHELL_TOOL_NAMES.contains(&event.function_name.as_str())
-}
-
-fn is_plan_display_event(event: &SessionEvent) -> bool {
-    PLAN_EVENT_NAMES.contains(&event.function_name.as_str())
+/// Whether the event represents work that is still alive at runtime
+/// (running tool, streaming message, active/background shell process).
+///
+/// Mirrors `isLiveRuntimeResourceEvent` in TS `runningEventGate.ts`.
+fn is_live_runtime_resource_event(event: &SessionEvent) -> bool {
+    if let Some(status) = shell_process_status(event) {
+        if TERMINAL_SHELL_PROCESS_STATUSES.contains(&status) {
+            return false;
+        }
+        if ACTIVE_SHELL_PROCESS_STATUSES.contains(&status) {
+            return true;
+        }
+    }
+    event.display_status == EventDisplayStatus::Running
+        || event
+            .result
+            .as_object()
+            .and_then(|obj| obj.get("status"))
+            .and_then(|v| v.as_str())
+            == Some("running")
 }
 
 /// Check if an event should be shown in the chat panel.
@@ -99,27 +111,35 @@ pub fn is_visible_in_chat(event: &SessionEvent) -> bool {
     true
 }
 
-/// Check if an event should be shown in the simulator.
+/// Shared visibility rule for the Simulator and the Messages app.
 ///
-/// Mirrors JS `isVisibleInSimulator` from `normalizers.ts`.
+/// Both contexts show completed tool calls, thinking events, and messages but
+/// hide streaming deltas and in-progress non-tool events.
 ///
-/// Spawning tool calls (agent, task, …) and shell tool calls are shown even
-/// while Running so subagent progress and live command output are visible.
-pub fn is_visible_in_simulator(event: &SessionEvent) -> bool {
+/// All `tool_call` events are shown while running so every agent station app
+/// can display a loading state immediately when the tool starts, mirroring
+/// the chat panel's shimmer behaviour. Standalone `tool_result` events are
+/// hidden — their content belongs to the merged parent tool_call; if one
+/// slips past the merger (missing call_id) it must not show as a duplicate.
+fn is_visible_in_simulator_or_messages(event: &SessionEvent) -> bool {
     if event.is_delta == Some(true) {
         return false;
     }
-    // AwaitingUser tool calls (interactive tools) must stay visible while
-    // blocking the turn — they own the user-facing input surface. Same for
-    // spawning tool calls (subagent progress) and shell tool calls (live
-    // streamOutput while the command executes).
-    if event.display_status == EventDisplayStatus::Running
-        && !is_spawning_tool_call(event)
-        && !is_shell_tool_call(event)
-        && !is_plan_display_event(event)
+
+    // Hide standalone tool_result events (orphans of tool_call_merger).
+    if event.action_type == "tool_result" {
+        return false;
+    }
+
+    // Hide live non-tool_call events (e.g. bare assistant messages that are
+    // still streaming) — only tool_call events get a loading state in the
+    // apps. Background shells stay visible via the shellProcessStatus check
+    // inside is_live_runtime_resource_event.
+    if is_live_runtime_resource_event(event) && event.display_variant != EventDisplayVariant::ToolCall
     {
         return false;
     }
+
     matches!(
         event.display_variant,
         EventDisplayVariant::ToolCall
@@ -128,26 +148,16 @@ pub fn is_visible_in_simulator(event: &SessionEvent) -> bool {
     )
 }
 
+/// Check if an event should be shown in the simulator.
+pub fn is_visible_in_simulator(event: &SessionEvent) -> bool {
+    is_visible_in_simulator_or_messages(event)
+}
+
 /// Check if an event should be shown in the Messages app.
 ///
 /// Same rules as [`is_visible_in_simulator`].
 pub fn is_visible_in_messages(event: &SessionEvent) -> bool {
-    if event.is_delta == Some(true) {
-        return false;
-    }
-    if event.display_status == EventDisplayStatus::Running
-        && !is_spawning_tool_call(event)
-        && !is_shell_tool_call(event)
-        && !is_plan_display_event(event)
-    {
-        return false;
-    }
-    matches!(
-        event.display_variant,
-        EventDisplayVariant::ToolCall
-            | EventDisplayVariant::Thinking
-            | EventDisplayVariant::Message
-    )
+    is_visible_in_simulator_or_messages(event)
 }
 
 pub struct SimulatorPreviewIndexes {

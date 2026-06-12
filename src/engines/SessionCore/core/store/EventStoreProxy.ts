@@ -52,6 +52,13 @@ class EventStoreProxyImpl {
   private _unlistenTauri: UnlistenFn | null = null;
   private _initialized = false;
   private _initGeneration = 0;
+  /**
+   * Per-session promise chains serializing envelope processing.
+   * `_handleSnapshotEnvelope` awaits `getSnapshot` for delta-base misses;
+   * without serialization, two envelopes for the same session can interleave
+   * and apply out of order (older snapshot remembered after a newer one).
+   */
+  private _envelopeChains = new Map<string, Promise<void>>();
 
   /**
    * Initialize the Tauri event listener. Call once at app startup.
@@ -80,6 +87,29 @@ class EventStoreProxyImpl {
   }
 
   private async _handleSnapshotEnvelope(
+    envelope: SnapshotEnvelope
+  ): Promise<void> {
+    const { sessionId } = envelope;
+    // Serialize per session: chain this envelope after the previous one so
+    // async delta resolution can't interleave snapshots out of order.
+    const previous = this._envelopeChains.get(sessionId) ?? Promise.resolve();
+    const current = previous
+      .catch(() => {
+        // Previous envelope failures must not poison the chain.
+      })
+      .then(() => this._processSnapshotEnvelope(envelope));
+    this._envelopeChains.set(sessionId, current);
+    try {
+      await current;
+    } finally {
+      // Drop the chain entry once the tail settles to avoid leaking sessions.
+      if (this._envelopeChains.get(sessionId) === current) {
+        this._envelopeChains.delete(sessionId);
+      }
+    }
+  }
+
+  private async _processSnapshotEnvelope(
     envelope: SnapshotEnvelope
   ): Promise<void> {
     const { sessionId, ...payload } = envelope;
@@ -114,18 +144,33 @@ class EventStoreProxyImpl {
     );
   }
 
-  /** Clean up the Tauri event listener. */
-  destroy(): void {
+  /**
+   * Detach only the Tauri `es:changed` listener.
+   *
+   * Used by the bridge hook's unmount cleanup (StrictMode double-mount, fast
+   * navigation, HMR): the IPC listener must be torn down so it isn't
+   * orphaned, but per-session subscribers (`_sessionListeners`) and the
+   * snapshot caches (`_latestSnapshots` / `_normalizedSnapshots`) must
+   * survive so other live consumers (e.g. subagent grids) keep their data
+   * and the next `init()` can resume without a cold cache.
+   */
+  detachTauri(): void {
     this._initGeneration++;
     if (this._unlistenTauri) {
       this._unlistenTauri();
       this._unlistenTauri = null;
     }
+    this._initialized = false;
+  }
+
+  /** Full clean-up: Tauri listener, all listeners, and all snapshot caches.
+   * Use on app exit or in tests; bridge unmounts should call detachTauri(). */
+  destroy(): void {
+    this.detachTauri();
     this._globalListeners.clear();
     this._sessionListeners.clear();
     this._latestSnapshots.clear();
     this._normalizedSnapshots.clear();
-    this._initialized = false;
   }
 
   // =========================================================================

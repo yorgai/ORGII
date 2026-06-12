@@ -1,16 +1,16 @@
 /**
  * Event Visibility Filters
  *
- * Determines which events should be shown in different UI contexts:
- * - Chat panel
- * - Simulator (replay)
- * - Messages app
+ * Chat-panel visibility only. Simulator/Messages visibility is computed
+ * exclusively in Rust (`event_pipeline/derived.rs`) — the frontend consumes
+ * the pre-filtered `sortedSimulatorEvents` / `messagesEvents` arrays from
+ * Rust snapshots instead of re-filtering.
  *
- * These filters are also implemented in Rust (event_store/derived.rs)
- * for the Tauri-side derived computations. The TS versions are used
- * by Jotai derived atoms that need synchronous filtering.
+ * `isVisibleInChat` keeps a TS twin for synchronous Jotai paths; parity with
+ * the Rust implementation is enforced by the shared fixture in
+ * `src-tauri/src/agent_sessions/event_pipeline/fixtures/visibility_parity.json`
+ * (see `__tests__/visibilityParity.test.ts`).
  */
-import { isLiveRuntimeResourceEvent } from "../core/runningEventGate";
 import type { SessionEvent } from "../core/types";
 
 // ============================================
@@ -114,55 +114,4 @@ export function isVisibleInChat(event: SessionEvent): boolean {
   }
 
   return true;
-}
-
-/**
- * Shared implementation for simulator and Messages app visibility.
- * Both contexts show completed tool calls, thinking events, and messages
- * but hide streaming deltas and in-progress status events.
- *
- * All tool_call events are shown while running so every agent station app can
- * display a loading state immediately when the tool starts, mirroring the chat
- * panel's shimmer behaviour. Shell, spawning, and plan events additionally
- * show live content (stream output / subagent progress / plan text) while
- * running.
- */
-function isVisibleInSimulatorOrMessages(event: SessionEvent): boolean {
-  // Hide streaming deltas (show only final events)
-  if (event.isDelta) {
-    return false;
-  }
-
-  // Hide running non-tool_call events (e.g. bare assistant messages that are
-  // still streaming) — only tool_call events get a loading state in the apps.
-  if (
-    isLiveRuntimeResourceEvent(event) &&
-    event.displayVariant !== "tool_call"
-  ) {
-    return false;
-  }
-
-  // Show tool calls, thinking, and messages (including user turns)
-  return (
-    event.displayVariant === "tool_call" ||
-    event.displayVariant === "thinking" ||
-    event.displayVariant === "message"
-  );
-}
-
-/**
- * Check if an event should be shown in simulator.
- * Includes tool_call, thinking, and message events (assistant and user).
- * Excludes streaming deltas and "running" status events (show only completed).
- */
-export function isVisibleInSimulator(event: SessionEvent): boolean {
-  return isVisibleInSimulatorOrMessages(event);
-}
-
-/**
- * Check if an event should be shown in the Messages app.
- * Uses the same visibility rules as {@link isVisibleInSimulator}.
- */
-export function isVisibleInMessages(event: SessionEvent): boolean {
-  return isVisibleInSimulatorOrMessages(event);
 }

@@ -22,11 +22,7 @@ export {
   mergeToolResults,
 } from "./agentMessageAdapters";
 
-// Visibility filters - event filtering for UI contexts
+// Visibility filters - chat visibility only; simulator/messages visibility
+// is computed exclusively in Rust (derived.rs) and consumed via snapshots
 // NOTE: normalizeChunk/normalizeChunks have been archived — use rustBridge instead
-export {
-  stripTerminalCodeBlocks,
-  isVisibleInChat,
-  isVisibleInSimulator,
-  isVisibleInMessages,
-} from "./visibilityFilters";
+export { stripTerminalCodeBlocks, isVisibleInChat } from "./visibilityFilters";

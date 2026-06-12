@@ -245,6 +245,53 @@ fn test_display_status_running_is_authoritative() {
 }
 
 #[test]
+fn test_unknown_action_type_with_empty_result_defaults_completed() {
+    // Unknown action types with an empty result object must not show a
+    // permanent spinner — fallback is Completed, not Running.
+    let chunk = RawActivityChunk {
+        chunk_id: Some("chunk-unknown".to_string()),
+        action_type: Some("some_unknown_action".to_string()),
+        result: Some(serde_json::json!({})),
+        created_at: Some("2025-01-15T10:30:08.000Z".to_string()),
+        ..Default::default()
+    };
+
+    let event = normalize_chunk(&chunk, "sess-1");
+    assert_eq!(event.display_status, EventDisplayStatus::Completed);
+
+    // But streaming message events with empty result stay Running.
+    let chunk_msg = RawActivityChunk {
+        chunk_id: Some("chunk-streaming-msg".to_string()),
+        action_type: Some("assistant".to_string()),
+        result: Some(serde_json::json!({})),
+        created_at: Some("2025-01-15T10:30:08.000Z".to_string()),
+        ..Default::default()
+    };
+    let event_msg = normalize_chunk(&chunk_msg, "sess-1");
+    assert_eq!(event_msg.display_status, EventDisplayStatus::Running);
+}
+
+#[test]
+fn test_created_at_backfilled_when_missing() {
+    let chunk = RawActivityChunk {
+        chunk_id: Some("chunk-no-ts".to_string()),
+        action_type: Some("tool_call".to_string()),
+        function: Some("Read".to_string()),
+        result: Some(serde_json::json!({"content": "x"})),
+        created_at: None,
+        ..Default::default()
+    };
+
+    let event = normalize_chunk(&chunk, "sess-1");
+    assert!(
+        !event.created_at.is_empty(),
+        "created_at must be backfilled with current time"
+    );
+    // RFC-3339 sanity check
+    assert!(chrono::DateTime::parse_from_rfc3339(&event.created_at).is_ok());
+}
+
+#[test]
 fn test_delta_detection() {
     let chunk = RawActivityChunk {
         chunk_id: Some("chunk-d".to_string()),

@@ -19,21 +19,13 @@ import {
   navigateToEventAtom,
   replayModeAtom,
 } from "../core/atoms";
-import {
-  derivedSnapshotAtom,
-  eventIndexAtom,
-  eventsAtom,
-} from "../core/atoms/events";
+import { derivedSnapshotAtom, eventIndexAtom } from "../core/atoms/events";
 import type { DerivedSnapshot } from "../core/store/EventStoreProxy";
 import type {
   ReplayMode,
   SessionEvent,
   SimulatorEventPreview,
 } from "../core/types";
-import {
-  isVisibleInMessages,
-  isVisibleInSimulator,
-} from "../ingestion/visibilityFilters";
 import { isSubagentSpawningTool } from "../sync/adapters/shared/subagentTracking";
 
 function buildSimulatorEventPreview(
@@ -100,8 +92,10 @@ export const simulatorEventsAtom = atom((get) => {
     return (snap as DerivedSnapshot).sortedSimulatorEvents;
   }
 
-  const events = get(eventsAtom);
-  return events.filter(isVisibleInSimulator);
+  // No snapshot yet — simulator visibility is computed exclusively in Rust
+  // (derived.rs is_visible_in_simulator); without a snapshot there is nothing
+  // pre-filtered to show.
+  return [] as SessionEvent[];
 });
 simulatorEventsAtom.debugLabel = "session/simulatorEvents";
 
@@ -116,8 +110,9 @@ export const messagesEventsAtom = atom((get) => {
     return (snap as DerivedSnapshot).messagesEvents;
   }
 
-  const events = get(eventsAtom);
-  return events.filter(isVisibleInMessages);
+  // No derived snapshot baseline — messages visibility is pre-computed in
+  // Rust (derived.rs is_visible_in_messages); nothing to show yet.
+  return [] as SessionEvent[];
 });
 messagesEventsAtom.debugLabel = "session/messagesEvents";
 

@@ -243,12 +243,16 @@ fn emit_snapshot(app: &AppHandle, state: &EventStoreState, session_id: &str) {
 
     if store.should_emit_full_snapshot() {
         let derived = compute_derived(store.events(), store.version());
-        store.mark_full_snapshot_emitted();
         let envelope = SnapshotEnvelope {
             session_id: session_id.to_string(),
             snapshot: derived,
         };
-        app.emit(NOTIFY_EVENT_NAME, &envelope).ok();
+        // Only mark the full snapshot as emitted when the emit actually
+        // succeeded; otherwise we'd silently drop the baseline and the
+        // frontend would never receive a full snapshot for this version.
+        if app.emit(NOTIFY_EVENT_NAME, &envelope).is_ok() {
+            store.mark_full_snapshot_emitted();
+        }
         return;
     }
 
@@ -671,7 +675,7 @@ pub fn push_events_to_session(
     let mut persistable: Vec<_> = events
         .iter()
         .filter(|e| !event_conversion::is_ts_placeholder_id(&e.id))
-        .map(|e| event_conversion::session_event_to_cached_event(e))
+        .map(event_conversion::session_event_to_cached_event)
         .collect();
 
     let merged_tool_calls = state.with_store_mut(session_id, |store| {

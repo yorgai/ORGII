@@ -1,0 +1,184 @@
+[
+  {
+    "name": "thinking delta with content is visible in chat",
+    "event": {
+      "id": "evt-delta-1",
+      "chunk_id": "evt-delta-1",
+      "sessionId": "parity-session",
+      "createdAt": "2026-01-01T00:00:01.000Z",
+      "functionName": "thinking",
+      "uiCanonical": "thinking",
+      "actionType": "llm_thinking_delta",
+      "args": {},
+      "result": { "thought": "streaming reasoning..." },
+      "source": "assistant",
+      "displayText": "streaming reasoning...",
+      "displayStatus": "running",
+      "displayVariant": "thinking",
+      "activityStatus": "agent",
+      "isDelta": true
+    },
+    "expectedChat": true
+  },
+  {
+    "name": "running tool_call is visible in chat",
+    "event": {
+      "id": "evt-running-tc-1",
+      "chunk_id": "evt-running-tc-1",
+      "sessionId": "parity-session",
+      "createdAt": "2026-01-01T00:00:02.000Z",
+      "functionName": "read_file",
+      "uiCanonical": "read_file",
+      "actionType": "tool_call",
+      "args": { "file_path": "/src/main.rs" },
+      "result": {},
+      "source": "assistant",
+      "displayText": "read_file",
+      "displayStatus": "running",
+      "displayVariant": "tool_call",
+      "activityStatus": "agent"
+    },
+    "expectedChat": true
+  },
+  {
+    "name": "running assistant message with content is visible in chat",
+    "event": {
+      "id": "evt-running-msg-1",
+      "chunk_id": "evt-running-msg-1",
+      "sessionId": "parity-session",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "functionName": "message",
+      "uiCanonical": "agent_message",
+      "actionType": "assistant",
+      "args": {},
+      "result": { "content": "Partial streamed answer" },
+      "source": "assistant",
+      "displayText": "Partial streamed answer",
+      "displayStatus": "running",
+      "displayVariant": "message",
+      "activityStatus": "agent"
+    },
+    "expectedChat": true
+  },
+  {
+    "name": "orphan tool_result is hidden from chat",
+    "event": {
+      "id": "evt-orphan-tr-1",
+      "chunk_id": "evt-orphan-tr-1",
+      "sessionId": "parity-session",
+      "createdAt": "2026-01-01T00:00:04.000Z",
+      "functionName": "read_file",
+      "uiCanonical": "read_file",
+      "actionType": "tool_result",
+      "args": {},
+      "result": { "content": "orphan output without callId" },
+      "source": "assistant",
+      "displayText": "read_file",
+      "displayStatus": "completed",
+      "displayVariant": "tool_call",
+      "activityStatus": "agent"
+    },
+    "expectedChat": false
+  },
+  {
+    "name": "background shell tool_call is visible in chat",
+    "event": {
+      "id": "evt-bg-shell-1",
+      "chunk_id": "evt-bg-shell-1",
+      "sessionId": "parity-session",
+      "createdAt": "2026-01-01T00:00:05.000Z",
+      "functionName": "run_command_line",
+      "uiCanonical": "run_shell",
+      "actionType": "tool_call",
+      "args": { "command": "npm run dev", "shellProcessStatus": "background" },
+      "result": {},
+      "source": "assistant",
+      "displayText": "Command: npm run dev",
+      "displayStatus": "running",
+      "displayVariant": "tool_call",
+      "activityStatus": "agent",
+      "command": "npm run dev"
+    },
+    "expectedChat": true
+  },
+  {
+    "name": "completed assistant message is visible in chat",
+    "event": {
+      "id": "evt-msg-1",
+      "chunk_id": "evt-msg-1",
+      "sessionId": "parity-session",
+      "createdAt": "2026-01-01T00:00:06.000Z",
+      "functionName": "message",
+      "uiCanonical": "agent_message",
+      "actionType": "assistant",
+      "args": {},
+      "result": { "content": "Here is the final answer." },
+      "source": "assistant",
+      "displayText": "Here is the final answer.",
+      "displayStatus": "completed",
+      "displayVariant": "message",
+      "activityStatus": "agent"
+    },
+    "expectedChat": true
+  },
+  {
+    "name": "thinking with content is visible in chat",
+    "event": {
+      "id": "evt-think-1",
+      "chunk_id": "evt-think-1",
+      "sessionId": "parity-session",
+      "createdAt": "2026-01-01T00:00:07.000Z",
+      "functionName": "thinking",
+      "uiCanonical": "thinking",
+      "actionType": "llm_thinking",
+      "args": {},
+      "result": { "thought": "Let me analyze the repo structure." },
+      "source": "assistant",
+      "displayText": "Let me analyze the repo structure.",
+      "displayStatus": "completed",
+      "displayVariant": "thinking",
+      "activityStatus": "agent"
+    },
+    "expectedChat": true
+  },
+  {
+    "name": "session event is hidden from chat",
+    "event": {
+      "id": "evt-session-1",
+      "chunk_id": "evt-session-1",
+      "sessionId": "parity-session",
+      "createdAt": "2026-01-01T00:00:08.000Z",
+      "functionName": "session_start",
+      "uiCanonical": "session_start",
+      "actionType": "session_start",
+      "args": { "model": "claude-4" },
+      "result": {},
+      "source": "assistant",
+      "displayText": "Session started (claude-4)",
+      "displayStatus": "completed",
+      "displayVariant": "session",
+      "activityStatus": "agent"
+    },
+    "expectedChat": false
+  },
+  {
+    "name": "empty thinking is hidden from chat",
+    "event": {
+      "id": "evt-think-empty-1",
+      "chunk_id": "evt-think-empty-1",
+      "sessionId": "parity-session",
+      "createdAt": "2026-01-01T00:00:09.000Z",
+      "functionName": "thinking",
+      "uiCanonical": "thinking",
+      "actionType": "llm_thinking",
+      "args": {},
+      "result": { "thought": "   " },
+      "source": "assistant",
+      "displayText": "Thinking...",
+      "displayStatus": "completed",
+      "displayVariant": "thinking",
+      "activityStatus": "agent"
+    },
+    "expectedChat": false
+  }
+]

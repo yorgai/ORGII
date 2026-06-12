@@ -11,11 +11,7 @@ import { clearLoadedPayloads } from "@src/engines/SessionCore/payloads";
 import { clearLoadedTurnRegistry } from "@src/engines/SessionCore/turns/loadedTurnRegistry";
 import { messageQueueAtom } from "@src/store/ui/messageQueueAtom";
 
-import {
-  isVisibleInChat,
-  isVisibleInMessages,
-  isVisibleInSimulator,
-} from "../../ingestion/visibilityFilters";
+import { isVisibleInChat } from "../../ingestion/visibilityFilters";
 import {
   isBackendUserMessageEvent,
   isSyntheticUserInputEvent,
@@ -55,6 +51,32 @@ import {
 
 function normalizeUserText(value: string | undefined): string {
   return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Local approximation of the Rust simulator/messages visibility rule
+ * (`is_visible_in_simulator_or_messages` in `derived.rs`).
+ *
+ * Used ONLY for synchronous optimistic paths: seeding the local snapshot
+ * before the Rust `mergeEvents` push lands, and picking a follow/display
+ * target from freshly appended events. The authoritative pre-filtered arrays
+ * (`sortedSimulatorEvents` / `messagesEvents`) arrive with the next Rust
+ * snapshot and overwrite anything computed here.
+ */
+function isSimulatorVisibleApprox(event: SessionEvent): boolean {
+  if (event.isDelta) return false;
+  if (event.actionType === "tool_result") return false;
+  if (
+    isLiveRuntimeResourceEvent(event) &&
+    event.displayVariant !== "tool_call"
+  ) {
+    return false;
+  }
+  return (
+    event.displayVariant === "tool_call" ||
+    event.displayVariant === "thinking" ||
+    event.displayVariant === "message"
+  );
 }
 
 function syntheticMatchesQueuedMessage(
@@ -315,8 +337,8 @@ export const loadSessionAtom = atom(
       eventCount: mergedEvents.length,
       events: mergedEvents,
       chatEvents: mergedEvents.filter(isVisibleInChat),
-      messagesEvents: mergedEvents.filter(isVisibleInMessages),
-      sortedSimulatorEvents: mergedEvents.filter(isVisibleInSimulator),
+      messagesEvents: mergedEvents.filter(isSimulatorVisibleApprox),
+      sortedSimulatorEvents: mergedEvents.filter(isSimulatorVisibleApprox),
       lastEvent: mergedEvents[mergedEvents.length - 1] ?? null,
       eventIndex,
       chatEventCount: mergedEvents.filter(isVisibleInChat).length,
@@ -375,7 +397,7 @@ export const loadSessionAtom = atom(
       // have no simulator renderer and would leave the center blank.
       let displayTarget: SessionEvent | null = null;
       for (let idx = events.length - 1; idx >= 0; idx--) {
-        if (isVisibleInSimulator(events[idx])) {
+        if (isSimulatorVisibleApprox(events[idx])) {
           displayTarget = events[idx];
           break;
         }
@@ -445,7 +467,7 @@ export const appendEventsAtom = atom(
       if (mode === "follow") {
         let followTarget = lastNew;
         for (let idx = uniqueNew.length - 1; idx >= 0; idx--) {
-          if (isVisibleInSimulator(uniqueNew[idx])) {
+          if (isSimulatorVisibleApprox(uniqueNew[idx])) {
             followTarget = uniqueNew[idx];
             break;
           }
@@ -571,7 +593,7 @@ export const goLiveAtom = atom(null, (get, set) => {
     // doesn't land on an unrenderable session_end
     let target = sorted[sorted.length - 1];
     for (let idx = sorted.length - 1; idx >= 0; idx--) {
-      if (isVisibleInSimulator(sorted[idx])) {
+      if (isSimulatorVisibleApprox(sorted[idx])) {
         target = sorted[idx];
         break;
       }

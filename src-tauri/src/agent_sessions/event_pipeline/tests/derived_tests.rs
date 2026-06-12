@@ -176,11 +176,60 @@ fn test_simulator_hides_delta() {
 }
 
 #[test]
-fn test_simulator_hides_running_non_spawning() {
+fn test_simulator_shows_running_tool_call() {
+    // All running tool_calls are visible so apps can render a loading state
+    // the moment the tool starts (mirrors the chat shimmer behaviour).
     let mut event = make_event("s2", EventDisplayVariant::ToolCall);
     event.display_status = EventDisplayStatus::Running;
-    // function_name is "test" (not a spawning tool) → hidden
+    assert!(is_visible_in_simulator(&event));
+}
+
+#[test]
+fn test_simulator_hides_running_message() {
+    // Running non-tool_call events (e.g. still-streaming assistant messages)
+    // have no loading state in the apps and stay hidden until complete.
+    let mut event = make_event("s2m", EventDisplayVariant::Message);
+    event.action_type = "assistant".to_string();
+    event.display_status = EventDisplayStatus::Running;
     assert!(!is_visible_in_simulator(&event));
+}
+
+#[test]
+fn test_simulator_hides_standalone_tool_result() {
+    // Orphan tool_result events that escaped the merger must not show as
+    // duplicate entries next to their parent tool_call.
+    let mut event = make_event("s2r", EventDisplayVariant::ToolCall);
+    event.action_type = "tool_result".to_string();
+    assert!(!is_visible_in_simulator(&event));
+}
+
+#[test]
+fn test_simulator_hides_exited_background_shell_message() {
+    // A message-variant event whose shellProcessStatus is terminal is not a
+    // live runtime resource — but it's also not running, so it shows.
+    let mut event = make_event("s2bg", EventDisplayVariant::Message);
+    event.action_type = "assistant".to_string();
+    event.args = serde_json::json!({ "shellProcessStatus": "exited" });
+    assert!(is_visible_in_simulator(&event));
+}
+
+#[test]
+fn test_simulator_hides_background_shell_non_tool_call() {
+    // shellProcessStatus=background marks the event as a live runtime
+    // resource even when display_status is completed; non-tool_call variants
+    // with live resources stay hidden.
+    let mut event = make_event("s2bg2", EventDisplayVariant::Message);
+    event.action_type = "assistant".to_string();
+    event.args = serde_json::json!({ "shellProcessStatus": "background" });
+    assert!(!is_visible_in_simulator(&event));
+}
+
+#[test]
+fn test_simulator_shows_background_shell_tool_call() {
+    let mut event = make_event("s2bg3", EventDisplayVariant::ToolCall);
+    event.display_status = EventDisplayStatus::Running;
+    event.args = serde_json::json!({ "shellProcessStatus": "background" });
+    assert!(is_visible_in_simulator(&event));
 }
 
 #[test]
@@ -226,6 +275,39 @@ fn test_messages_hides_delta() {
     let mut event = make_event("m1", EventDisplayVariant::Message);
     event.is_delta = Some(true);
     assert!(!is_visible_in_messages(&event));
+}
+
+// =========================================================================
+// Visibility parity fixture (shared with TS visibilityParity.test.ts)
+// =========================================================================
+
+/// Shared fixture: each case carries a full serde-serialized SessionEvent and
+/// the expected `is_visible_in_chat` verdict. The TS twin
+/// (`src/engines/SessionCore/ingestion/__tests__/visibilityParity.test.ts`)
+/// loads the same file and asserts `isVisibleInChat` parity.
+#[test]
+fn test_visibility_parity_fixture() {
+    #[derive(serde::Deserialize)]
+    struct ParityCase {
+        name: String,
+        event: SessionEvent,
+        #[serde(rename = "expectedChat")]
+        expected_chat: bool,
+    }
+
+    let raw = include_str!("../fixtures/visibility_parity.json");
+    let cases: Vec<ParityCase> =
+        serde_json::from_str(raw).expect("visibility_parity.json must parse as Vec<ParityCase>");
+    assert!(!cases.is_empty(), "fixture must contain cases");
+
+    for case in &cases {
+        assert_eq!(
+            is_visible_in_chat(&case.event),
+            case.expected_chat,
+            "parity mismatch for case: {}",
+            case.name
+        );
+    }
 }
 
 // =========================================================================

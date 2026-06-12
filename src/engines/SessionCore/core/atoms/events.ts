@@ -109,7 +109,28 @@ eventStoreVersionAtom.debugLabel = "session/eventStoreVersion";
  * Writes delegate to the Rust EventStore via eventStoreProxy.
  * The Rust store mutates and pushes a new snapshot which updates this atom.
  */
-let _lastKnownEvents: SessionEvent[] = [];
+
+/**
+ * Session-keyed single-slot cache for the last full events array.
+ *
+ * Keyed by sessionId (derived from the snapshot's own events) so a
+ * StreamingSnapshot from session B can never serve session A's cached events
+ * (cross-session bleed). When the streaming snapshot's session doesn't match
+ * the cached one, we return an empty array instead of stale foreign events.
+ */
+let _lastKnownEventsCache: {
+  sessionId: string | null;
+  events: SessionEvent[];
+} = { sessionId: null, events: [] };
+
+/** Best-effort sessionId extraction from a snapshot's own event payloads. */
+function snapshotSessionId(snap: Snapshot): string | null {
+  if ("events" in snap) {
+    const derived = snap as DerivedSnapshot;
+    return derived.lastEvent?.sessionId ?? derived.events[0]?.sessionId ?? null;
+  }
+  return snap.lastEvent?.sessionId ?? snap.chatEvents?.[0]?.sessionId ?? null;
+}
 
 export const eventsAtom = atom(
   (get) => {
@@ -117,17 +138,29 @@ export const eventsAtom = atom(
     if (!snap) {
       // Session cleared (loadSessionAtom sets derivedSnapshotAtom to null on
       // session switch). Reset the cache so the new session starts fresh.
-      _lastKnownEvents = [];
+      _lastKnownEventsCache = { sessionId: null, events: [] };
       return [] as SessionEvent[];
     }
     if ("events" in snap) {
-      _lastKnownEvents = snap.events;
+      _lastKnownEventsCache = {
+        sessionId: snapshotSessionId(snap),
+        events: snap.events,
+      };
       return snap.events;
     }
     // StreamingSnapshot: no `events` field. Return the last DerivedSnapshot's
     // events so fallback consumers (messagesEventsAtom, eventIndexAtom, …)
-    // don't see an empty array mid-stream.
-    return _lastKnownEvents;
+    // don't see an empty array mid-stream — but only when the cached events
+    // belong to the same session as this streaming snapshot.
+    const streamingSessionId = snapshotSessionId(snap);
+    if (
+      streamingSessionId !== null &&
+      _lastKnownEventsCache.sessionId !== null &&
+      streamingSessionId !== _lastKnownEventsCache.sessionId
+    ) {
+      return [] as SessionEvent[];
+    }
+    return _lastKnownEventsCache.events;
   },
   (
     _get,

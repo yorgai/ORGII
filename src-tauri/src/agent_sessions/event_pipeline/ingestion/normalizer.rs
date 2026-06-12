@@ -55,7 +55,13 @@ pub fn normalize_chunk(chunk: &RawActivityChunk, session_id: &str) -> SessionEve
     let ui_canonical = resolve_ui_canonical(&function_name);
 
     let chunk_id = chunk.chunk_id.clone().unwrap_or_default();
-    let created_at = chunk.created_at.clone().unwrap_or_default();
+    // Backfill missing timestamps with the current time so downstream ordering
+    // and rendering never see an empty created_at.
+    let created_at = chunk
+        .created_at
+        .clone()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| chrono::Utc::now().to_rfc3339());
     let sid = chunk
         .session_id
         .as_deref()
@@ -281,7 +287,18 @@ fn infer_display_status(
         return EventDisplayStatus::Completed;
     }
 
-    EventDisplayStatus::Running
+    // Streaming message/thinking events without a result are genuinely in
+    // progress (their content arrives via deltas).
+    if matches!(
+        action_type,
+        "assistant" | "assistant_delta" | "message" | "message_delta" | "thinking" | "thinking_delta"
+    ) {
+        return EventDisplayStatus::Running;
+    }
+
+    // Unknown action types with an empty result object: default to Completed
+    // so historical/one-shot events never show a permanent loading spinner.
+    EventDisplayStatus::Completed
 }
 
 fn is_ask_question_action(

@@ -48,6 +48,14 @@ export function rememberSnapshot(
   normalizedSnapshots: Map<string, NormalizedSnapshotCache>,
   maxSnapshots: number
 ): Snapshot {
+  // Reject version regressions: a late-arriving older snapshot (e.g. a slow
+  // getSnapshot() resolving after a newer push was already remembered) must
+  // not clobber the newer cache state. Keep and return the cached snapshot.
+  const cached = latestSnapshots.get(sessionId);
+  if (cached && snapshot.version < cached.version) {
+    return cached;
+  }
+
   const normalized = buildNormalizedCache(snapshot);
   const snapshotToStore = normalized
     ? attachSimulatorPreviewFields(snapshot as DerivedSnapshot, normalized)

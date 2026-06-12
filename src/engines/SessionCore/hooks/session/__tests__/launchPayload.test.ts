@@ -70,4 +70,89 @@ describe("launchPayload", () => {
     expect(launchParams.workspacePath).toBe("/workspace/repo-a");
     expect(launchParams.additionalDirectories).toEqual(["/workspace/repo-b"]);
   });
+
+  it("loose-matches repoPath against workspace folders (trailing slash + case)", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const { launchParams } = buildSessionLaunchPayload({
+        ...baseLaunchOptions(),
+        effectiveSource: {
+          type: "local",
+          repoId: "repo-a",
+          repoName: "Repo A",
+          repoPath: "/Workspace/Repo-A/",
+        },
+        workspaceFolders: [
+          { path: "/workspace/repo-a" },
+          { path: "/workspace/repo-b" },
+        ],
+      });
+
+      expect(launchParams.additionalDirectories).toEqual(["/workspace/repo-b"]);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("loose-matched"),
+        expect.objectContaining({ sessionRepoPath: "/Workspace/Repo-A/" })
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("drops additional directories with a warning when repoPath matches no folder", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const { launchParams } = buildSessionLaunchPayload({
+        ...baseLaunchOptions(),
+        effectiveSource: {
+          type: "local",
+          repoId: "repo-x",
+          repoName: "Repo X",
+          repoPath: "/elsewhere/repo-x",
+        },
+        workspaceFolders: [
+          { path: "/workspace/repo-a" },
+          { path: "/workspace/repo-b" },
+        ],
+      });
+
+      expect(launchParams.additionalDirectories).toBeUndefined();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("dropping additional directories"),
+        expect.objectContaining({
+          sessionRepoPath: "/elsewhere/repo-x",
+          droppedDirectories: ["/workspace/repo-a", "/workspace/repo-b"],
+        })
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });
+
+function baseLaunchOptions(): Parameters<typeof buildSessionLaunchPayload>[0] {
+  return {
+    agentExecMode: "build",
+    agentInput: "hello",
+    advancedConfig: {},
+    dispatchCategory: DISPATCH_CATEGORY.RUST_AGENT,
+    effectiveSource: null,
+    ideContext: undefined,
+    imageDataUrls: undefined,
+    isBackgroundLaunch: false,
+    resolvedKeys: {
+      accountId: "account-1",
+      keySource: "own_key",
+      model: "model-1",
+      cliAgentType: undefined,
+      nativeHarnessType: undefined,
+      branch: undefined,
+    },
+    runningLocation: "local",
+    selectedAgentDefId: "builtin:sde",
+    selectedAgentOrgId: null,
+    selectedWorktreePath: null,
+    sessionName: "Test session",
+    targetKind: SESSION_TARGET_KIND.AGENT,
+    workspaceFolders: [],
+  };
+}
