@@ -212,22 +212,18 @@ export function useChatPanelContentState({
           handleBenchmarkSessionGroupHeaderClick();
         }}
       >
-        <span className="min-w-0 -translate-y-px truncate">
-          {benchmarkSessionGroupTitle}
-        </span>
+        <span className="min-w-0 truncate">{benchmarkSessionGroupTitle}</span>
       </button>
       <span className="shrink-0 text-text-4">&gt;</span>
       {currentSessionId ? (
         <SessionHoverCard sessionId={currentSessionId}>
           <span className={`${BENCHMARK_HEADER_SEGMENT_CLASS} cursor-default`}>
-            <span className="min-w-0 -translate-y-px truncate">
-              {panelTitle}
-            </span>
+            <span className="min-w-0 truncate">{panelTitle}</span>
           </span>
         </SessionHoverCard>
       ) : (
         <span className={`${BENCHMARK_HEADER_SEGMENT_CLASS} cursor-default`}>
-          <span className="min-w-0 -translate-y-px truncate">{panelTitle}</span>
+          <span className="min-w-0 truncate">{panelTitle}</span>
         </span>
       )}
     </span>
@@ -235,7 +231,7 @@ export function useChatPanelContentState({
     showExploreContent ||
     showWorkspaceOverviewContent ? (
     <span className={`${BENCHMARK_HEADER_SEGMENT_CLASS} cursor-default`}>
-      <span className="min-w-0 -translate-y-px truncate">{headerTitle}</span>
+      <span className="min-w-0 truncate">{headerTitle}</span>
     </span>
   ) : undefined;
 

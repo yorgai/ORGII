@@ -2,6 +2,7 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import React, { memo, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { DISPATCH_CATEGORY } from "@src/api/tauri/session";
 import { useRouteViewMode } from "@src/config/routeViewModeConfig";
 import {
   MAX_WIDTH as CHAT_MAX_WIDTH,
@@ -12,6 +13,7 @@ import {
   eventCountAtom,
   eventsAtom,
 } from "@src/engines/SessionCore/core/atoms";
+import { ShareSessionDialog } from "@src/features/SessionSharing/ShareSessionDialog";
 import { useDropdownEngine } from "@src/hooks/dropdown";
 import { useShouldOffsetChatPanelHeader } from "@src/hooks/ui/sidebar/useCollapsedSidebarChromeOffset";
 import { useWorkStationTabs } from "@src/hooks/workStation/tabs";
@@ -105,6 +107,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
     const [showProjectAgentCreator, setShowProjectAgentCreator] = useState(
       Boolean(SessionCreatorSlot)
     );
+    const [shareDialogSessionId, setShareDialogSessionId] = useState<
+      string | null
+    >(null);
 
     const selectedWorkItem = useAtomValue(chatPanelSelectedWorkItemAtom);
     const selectedProject = useAtomValue(chatPanelSelectedProjectAtom);
@@ -216,6 +221,12 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
       closeHeaderActionsMenu();
     }, [closeHeaderActionsMenu, handleReloadSession]);
 
+    const handleOpenShareSession = useCallback(() => {
+      if (!currentSessionId) return;
+      setShareDialogSessionId(currentSessionId);
+      closeHeaderActionsMenu();
+    }, [closeHeaderActionsMenu, currentSessionId]);
+
     const handlePaginationToggle = useCallback(
       (checked: boolean) => {
         setPaginationEnabled(checked);
@@ -286,6 +297,9 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
         t,
       });
 
+    const shareSessionAvailable =
+      activeSession?.category === DISPATCH_CATEGORY.CLI_AGENT ||
+      activeSession?.category === DISPATCH_CATEGORY.RUST_AGENT;
     const sessionSidebarVisible = sessionSidebarWidth > 0;
     const benchmarkMasterSessionId = benchmarkBatchStatus?.masterSessionId;
     const benchmarkSessionGroupTitle =
@@ -458,6 +472,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           handleOpenExportSessionJson={handleOpenExportSessionJson}
           handleOpenLinkWorkItem={handleOpenLinkWorkItem}
           handleOpenSearch={handleOpenSearch}
+          handleOpenShareSession={handleOpenShareSession}
           handleNewSession={handleNewSession}
           handlePaginationToggle={handlePaginationToggle}
           handleProjectAgentCreatorToggle={handleProjectAgentCreatorToggle}
@@ -477,6 +492,7 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           isHeaderActionsPositioned={isHeaderActionsPositioned}
           isProjectTarget={contentState.isProjectTarget}
           paginationEnabled={paginationEnabled}
+          shareSessionAvailable={shareSessionAvailable}
           selectedProjectVisible={Boolean(selectedProject)}
           selectedWorkItemVisible={Boolean(selectedWorkItem)}
           shouldOffsetHeaderForCollapsedSidebar={
@@ -570,6 +586,12 @@ const ChatPanel: React.FC<ChatPanelProps> = memo(
           {mainPanel}
         </div>
         {sessionModals}
+        {shareDialogSessionId && (
+          <ShareSessionDialog
+            sessionId={shareDialogSessionId}
+            onClose={() => setShareDialogSessionId(null)}
+          />
+        )}
       </>
     );
   }

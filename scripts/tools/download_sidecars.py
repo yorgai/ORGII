@@ -11,19 +11,12 @@ from __future__ import annotations
 import os
 import platform
 import shutil
-import ssl
 import stat
 import sys
 import tarfile
 import tempfile
 import urllib.request
 from pathlib import Path
-
-try:
-    import certifi
-    SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
-except ImportError:
-    SSL_CONTEXT = ssl.create_default_context()
 
 AGENT_BROWSER_VERSION = "v0.27.2"
 PEEKABOO_VERSION = "v3.2.3"
@@ -89,18 +82,7 @@ def ensure_executable(path: Path) -> None:
 def download_file(url: str, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     print(f"Downloading {url}")
-    with urllib.request.urlopen(url, context=SSL_CONTEXT) as response:
-        total_size = int(response.headers.get("Content-Length", 0))
-        downloaded = 0
-        block_size = 8192
-        with open(destination, "wb") as out_file:
-            while True:
-                block = response.read(block_size)
-                if not block:
-                    break
-                out_file.write(block)
-                downloaded += len(block)
-                progress_bar(downloaded // block_size, block_size, total_size)
+    urllib.request.urlretrieve(url, destination, reporthook=progress_bar)
     print("\nDownload complete.")
 
 
@@ -165,28 +147,10 @@ def install_peekaboo(system_name: str, machine_name: str) -> None:
         BIN_DIR.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_binary, universal_destination)
         shutil.copy2(source_binary, arch_destination)
-        # Also install the x86_64 copy so Tauri resource validation passes
-        x86_destination = BIN_DIR / "peekaboo-x86_64-apple-darwin"
-        shutil.copy2(source_binary, x86_destination)
         ensure_executable(universal_destination)
         ensure_executable(arch_destination)
-        ensure_executable(x86_destination)
-
-        # Write VERSION and LICENSE placeholders that satisfy Tauri resource validation
-        version_file = BIN_DIR / "peekaboo-VERSION"
-        license_file = BIN_DIR / "peekaboo-LICENSE"
-        version_file.write_text(f"{PEEKABOO_VERSION}\n")
-        # Fetch LICENSE from the release tarball extract directory if present
-        license_source = next(extract_dir.rglob("LICENSE*"), None)
-        if license_source:
-            shutil.copy2(license_source, license_file)
-        else:
-            license_file.write_text("MIT License — https://github.com/steipete/peekaboo\n")
-
-        print(f"Installed peekaboo (universal) to {universal_destination}")
-        print(f"Installed peekaboo (aarch64) to {arch_destination}")
-        print(f"Installed peekaboo (x86_64) to {x86_destination}")
-        print(f"Wrote peekaboo VERSION and LICENSE")
+        print(f"Installed peekaboo to {universal_destination}")
+        print(f"Installed peekaboo platform copy to {arch_destination}")
 
 
 def is_placeholder(path: Path) -> bool:

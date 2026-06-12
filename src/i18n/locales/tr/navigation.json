@@ -133,7 +133,8 @@
       "collapseAll": "Tümünü daralt",
       "markAllRead": "Tümünü okundu olarak işaretle",
       "openHome": "Home’u aç",
-      "openWorkstation": "Workstation’ı aç"
+      "openWorkstation": "Workstation’ı aç",
+      "joinSharedSession": "Paylaşılan oturuma katıl…"
     },
     "search": {
       "folders": "Klasörlerde ara...",

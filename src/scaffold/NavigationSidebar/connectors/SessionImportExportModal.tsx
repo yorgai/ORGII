@@ -7,7 +7,6 @@ import { FileJson, FolderInput, FolderOutput } from "lucide-react";
 import React, { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import Button from "@src/components/Button";
 import Message from "@src/components/Message";
 import { createLogger } from "@src/hooks/logger";
 import Modal from "@src/scaffold/ModalSystem";
@@ -15,10 +14,10 @@ import type { Session } from "@src/store/session";
 
 import {
   SESSION_JSON_FILTER,
+  type SessionExportDraft,
   type SessionExportPreview,
   type SessionImportPreview,
-  buildSessionExportFile,
-  buildSessionExportPreview,
+  buildSessionExportDraft,
   formatCategoryLabel,
   formatEventCount,
   importSessionExportFile,
@@ -64,17 +63,19 @@ export function SessionImportExportModal({
   onImported,
 }: SessionImportExportModalProps) {
   const { t } = useTranslation("sessions");
-  const { t: tCommon } = useTranslation("common");
-  const [exportPreview, setExportPreview] =
-    useState<SessionExportPreview | null>(null);
+  const [exportDraft, setExportDraft] = useState<SessionExportDraft | null>(
+    null
+  );
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(
     null
   );
   const [loading, setLoading] = useState(false);
+  const exportPreview: SessionExportPreview | null =
+    exportDraft?.preview ?? null;
 
   React.useEffect(() => {
     if (!visible) {
-      setExportPreview(null);
+      setExportDraft(null);
       setPendingImport(null);
       setLoading(false);
       return;
@@ -83,9 +84,9 @@ export function SessionImportExportModal({
 
     let cancelled = false;
     setLoading(true);
-    buildSessionExportPreview(activeSession, sessionFallbackName)
-      .then((preview) => {
-        if (!cancelled) setExportPreview(preview);
+    buildSessionExportDraft(activeSession, sessionFallbackName)
+      .then((draft) => {
+        if (!cancelled) setExportDraft(draft);
       })
       .catch((error: unknown) => {
         logger.error("failed to build export preview:", error);
@@ -126,19 +127,18 @@ export function SessionImportExportModal({
   }, [t]);
 
   const handleConfirmExport = useCallback(async () => {
-    if (!activeSession) return;
-    setLoading(true);
+    if (!exportDraft) return;
     try {
-      const exportFile = await buildSessionExportFile(
-        activeSession,
-        sessionFallbackName
-      );
       const filePath = await saveDialog({
-        defaultPath: exportPreview?.fileName,
+        defaultPath: exportDraft.preview.fileName,
         filters: [SESSION_JSON_FILTER],
       });
       if (!filePath) return;
-      await writeTextFile(filePath, stringifySessionExportFile(exportFile));
+      setLoading(true);
+      await writeTextFile(
+        filePath,
+        stringifySessionExportFile(exportDraft.file)
+      );
       Message.success(t("chat.importExport.exportSuccess"));
       onClose();
     } catch (error) {
@@ -147,7 +147,7 @@ export function SessionImportExportModal({
     } finally {
       setLoading(false);
     }
-  }, [activeSession, exportPreview?.fileName, onClose, sessionFallbackName, t]);
+  }, [exportDraft, onClose, t]);
 
   const handleConfirmImport = useCallback(async () => {
     if (!pendingImport) return;
@@ -172,45 +172,42 @@ export function SessionImportExportModal({
     }
   }, [onClose, onImported, pendingImport, t]);
 
-  const footer = (
-    <div className="flex w-full items-center justify-end gap-2">
-      <Button
-        size="small"
-        variant="secondary"
-        onClick={onClose}
-        disabled={loading}
-      >
-        {tCommon("actions.cancel")}
-      </Button>
-      {mode === "import" && !pendingImport && (
-        <Button size="small" onClick={handleChooseImportFile} loading={loading}>
-          {t("chat.importExport.chooseJson")}
-        </Button>
-      )}
-      {mode === "import" && pendingImport && (
-        <Button size="small" onClick={handleConfirmImport} loading={loading}>
-          {t("chat.importExport.importAction")}
-        </Button>
-      )}
-      {mode === "export" && (
-        <Button
-          size="small"
-          onClick={handleConfirmExport}
-          loading={loading}
-          disabled={!activeSession || !exportPreview}
-        >
-          {t("chat.importExport.exportAction")}
-        </Button>
-      )}
-    </div>
-  );
+  const handleOk = useCallback(async () => {
+    if (mode === "export") {
+      await handleConfirmExport();
+      return;
+    }
+    if (pendingImport) {
+      await handleConfirmImport();
+      return;
+    }
+    await handleChooseImportFile();
+  }, [
+    handleChooseImportFile,
+    handleConfirmExport,
+    handleConfirmImport,
+    mode,
+    pendingImport,
+  ]);
+
+  const okText =
+    mode === "export"
+      ? t("chat.importExport.exportAction")
+      : pendingImport
+        ? t("chat.importExport.importAction")
+        : t("chat.importExport.chooseJson");
+  const okDisabled = mode === "export" && (!activeSession || !exportPreview);
 
   return (
     <Modal
       visible={visible}
       title={title}
       onCancel={onClose}
-      footer={footer}
+      onOk={handleOk}
+      okText={okText}
+      cancelText={t("common:actions.cancel")}
+      okButtonProps={{ loading, disabled: okDisabled }}
+      cancelButtonProps={{ disabled: loading }}
       width={440}
       maskClosable={!loading}
       escToExit={!loading}

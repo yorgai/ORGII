@@ -133,7 +133,8 @@
       "collapseAll": "全部摺疊",
       "markAllRead": "全部標為已讀",
       "openHome": "開啟首頁",
-      "openWorkstation": "開啟工作站"
+      "openWorkstation": "開啟工作站",
+      "joinSharedSession": "加入共享工作階段…"
     },
     "search": {
       "folders": "搜尋資料夾...",

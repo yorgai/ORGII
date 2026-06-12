@@ -133,7 +133,8 @@
       "collapseAll": "Свернуть все",
       "markAllRead": "Отметить все как прочитанные",
       "openHome": "Открыть Home",
-      "openWorkstation": "Открыть Workstation"
+      "openWorkstation": "Открыть Workstation",
+      "joinSharedSession": "Присоединиться к общему сеансу…"
     },
     "search": {
       "folders": "Искать папки...",

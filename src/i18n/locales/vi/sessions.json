@@ -826,23 +826,24 @@
     "importExport": {
       "exportTitle": "Xuất Session JSON",
       "importTitle": "Nhập Session JSON",
-      "exportAction": "Xuất Session",
+      "exportAction": "Xuất",
       "importAction": "Nhập Session",
-      "exportDescription": "Xuất Session đang hoạt động thành ảnh chụp nhanh JSON di động.",
+      "exportDescription": "Xuất Session đang hoạt động thành ảnh chụp nhanh JSON di động",
       "importDescription": "Nhập ảnh chụp nhanh Session JSON vào thanh bên.",
-      "jsonSnapshotNote": "Sessions đã nhập là ảnh chụp nhanh chỉ đọc và giữ nguyên lịch sử sự kiện gốc.",
+      "jsonSnapshotNote": "Sessions đã nhập là ảnh chụp nhanh chỉ đọc và giữ nguyên lịch sử sự kiện gốc",
       "chooseJson": "Chọn tệp JSON",
       "chooseJsonHint": "Chọn tệp xuất .orgii-session.json.",
       "loadingPreview": "Đang đếm sự kiện Session…",
       "noActiveSession": "Chưa chọn Session đang hoạt động.",
       "importedName": "Session đã nhập: {{name}}",
-      "exportSuccess": "Đã xuất Session JSON.",
+      "exportSuccess": "Đã xuất Session JSON",
       "importSuccess": "Đã nhập {{count}} sự kiện.",
       "categories": {
         "cli": "CLI Agent",
         "rust": "Rust Agent",
         "cursorIde": "Cursor IDE",
-        "externalHistory": "Lịch sử bên ngoài"
+        "externalHistory": "Lịch sử bên ngoài",
+        "remoteShared": "Session chia sẻ từ xa"
       },
       "fields": {
         "session": "Session",
@@ -854,7 +855,7 @@
       "errors": {
         "invalidJson": "Tệp này không phải JSON hợp lệ.",
         "previewFailed": "Không thể xem trước bản xuất Session này.",
-        "exportFailed": "Không thể xuất Session JSON.",
+        "exportFailed": "Không thể xuất Session JSON",
         "importReadFailed": "Không thể đọc tệp JSON.",
         "importFailed": "Không thể nhập Session JSON."
       }
@@ -2359,5 +2360,23 @@
     "summarize": "Tóm tắt với Agent",
     "waiting": "Đang chờ nội dung…",
     "empty": "Không có nội dung"
+  },
+  "sharing": {
+    "remoteReadOnlyBanner": "Bản sao phiên chia sẻ ở chế độ chỉ đọc. Việc thực thi Agent và nhập phiên thông thường bị tắt cho bản sao cục bộ này.",
+    "shareSession": "Chia sẻ phiên…",
+    "shareDialogTitle": "Chia sẻ phiên",
+    "sharePrivacyWarning": "Bất kỳ ai có mã này và PIN đều có thể xem tin nhắn phiên hiển thị, đầu ra công cụ và đường dẫn được hiển thị. Người xem chỉ có quyền đọc.",
+    "pinLabel": "PIN",
+    "generateOffer": "Tạo mã đề nghị",
+    "offerCodeLabel": "Mã đề nghị",
+    "answerCodeLabel": "Mã phản hồi",
+    "acceptAnswer": "Chấp nhận phản hồi",
+    "joinDialogTitle": "Tham gia phiên chia sẻ",
+    "joinDialogDescription": "Dán mã đề nghị của máy chủ và PIN. Gửi mã phản hồi được tạo lại cho máy chủ để hoàn tất kết nối.",
+    "joinSharedSession": "Tham gia phiên chia sẻ",
+    "viewerMessages": "Tin nhắn người xem",
+    "viewerLabel": "Người xem",
+    "viewerMessagePlaceholder": "Gửi tin nhắn người xem cho máy chủ…",
+    "sendViewerMessage": "Gửi"
   }
 }

@@ -19,6 +19,10 @@
     &:hover {
       background: var(--color-fill-1);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+      .kanban-task-card__meta-pill {
+        background: var(--color-fill-2);
+      }
     }
 
     &:active {
@@ -163,6 +167,9 @@
   flex-shrink: 1;
   align-items: center;
   gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--color-fill-1);
   color: var(--color-text-3);
   font-size: 11px;
   line-height: 1;

@@ -828,23 +828,24 @@
     "importExport": {
       "exportTitle": "Экспорт Session JSON",
       "importTitle": "Импорт Session JSON",
-      "exportAction": "Экспортировать Session",
+      "exportAction": "Экспорт",
       "importAction": "Импортировать Session",
-      "exportDescription": "Экспортируйте активную Session как переносимый JSON-снимок.",
+      "exportDescription": "Экспортируйте активную Session как переносимый JSON-снимок",
       "importDescription": "Импортируйте JSON-снимок Session в боковую панель.",
-      "jsonSnapshotNote": "Импортированные Sessions являются снимками только для чтения и сохраняют исходную историю событий.",
+      "jsonSnapshotNote": "Импортированные Sessions являются снимками только для чтения и сохраняют исходную историю событий",
       "chooseJson": "Выбрать JSON-файл",
       "chooseJsonHint": "Выберите файл экспорта .orgii-session.json.",
       "loadingPreview": "Подсчет событий Session…",
       "noActiveSession": "Активная Session не выбрана.",
       "importedName": "Импортированная Session: {{name}}",
-      "exportSuccess": "Session JSON экспортирована.",
+      "exportSuccess": "Session JSON экспортирована",
       "importSuccess": "Импортировано событий: {{count}}.",
       "categories": {
         "cli": "CLI Agent",
         "rust": "Rust Agent",
         "cursorIde": "Cursor IDE",
-        "externalHistory": "Внешняя история"
+        "externalHistory": "Внешняя история",
+        "remoteShared": "Удалённая общая Session"
       },
       "fields": {
         "session": "Session",
@@ -856,7 +857,7 @@
       "errors": {
         "invalidJson": "Этот файл не является допустимым JSON.",
         "previewFailed": "Не удалось предварительно просмотреть этот экспорт Session.",
-        "exportFailed": "Не удалось экспортировать Session JSON.",
+        "exportFailed": "Не удалось экспортировать Session JSON",
         "importReadFailed": "Не удалось прочитать JSON-файл.",
         "importFailed": "Не удалось импортировать Session JSON."
       }
@@ -2367,5 +2368,23 @@
     "summarize": "Обобщить с Agent",
     "waiting": "Ожидание контента…",
     "empty": "Нет содержимого"
+  },
+  "sharing": {
+    "remoteReadOnlyBanner": "Зеркало общего сеанса доступно только для чтения. Выполнение Agent и обычный ввод сеанса отключены для этой локальной копии.",
+    "shareSession": "Поделиться сеансом…",
+    "shareDialogTitle": "Поделиться сеансом",
+    "sharePrivacyWarning": "Любой, у кого есть этот код и PIN, сможет видеть видимые сообщения сеанса, вывод инструментов и показанные пути. Для зрителя доступ только для чтения.",
+    "pinLabel": "PIN",
+    "generateOffer": "Создать код предложения",
+    "offerCodeLabel": "Код предложения",
+    "answerCodeLabel": "Код ответа",
+    "acceptAnswer": "Принять ответ",
+    "joinDialogTitle": "Присоединиться к общему сеансу",
+    "joinDialogDescription": "Вставьте код предложения хоста и PIN. Отправьте созданный код ответа хосту, чтобы завершить подключение.",
+    "joinSharedSession": "Присоединиться к общему сеансу",
+    "viewerMessages": "Сообщения зрителя",
+    "viewerLabel": "Зритель",
+    "viewerMessagePlaceholder": "Отправить сообщение зрителя хосту…",
+    "sendViewerMessage": "Отправить"
   }
 }

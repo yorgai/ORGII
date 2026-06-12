@@ -830,23 +830,24 @@
     "importExport": {
       "exportTitle": "导出 Session JSON",
       "importTitle": "导入 Session JSON",
-      "exportAction": "导出 Session",
+      "exportAction": "导出",
       "importAction": "导入 Session",
-      "exportDescription": "将当前 Session 导出为可移植的 JSON 快照。",
+      "exportDescription": "将当前 Session 导出为可移植的 JSON 快照",
       "importDescription": "将 Session JSON 快照导入到侧边栏。",
-      "jsonSnapshotNote": "导入的 Session 是只读快照，并保留原始事件历史。",
+      "jsonSnapshotNote": "导入的 Session 是只读快照，并保留原始事件历史",
       "chooseJson": "选择 JSON 文件",
       "chooseJsonHint": "选择一个 .orgii-session.json 导出文件。",
       "loadingPreview": "正在统计 Session 事件…",
       "noActiveSession": "未选择活动 Session。",
       "importedName": "导入 Session：{{name}}",
-      "exportSuccess": "Session JSON 导出。",
+      "exportSuccess": "Session JSON 导出",
       "importSuccess": "导入 {{count}} 个事件。",
       "categories": {
         "cli": "CLI Agent",
         "rust": "Rust Agent",
         "cursorIde": "Cursor IDE",
-        "externalHistory": "外部历史"
+        "externalHistory": "外部历史",
+        "remoteShared": "远程共享 Session"
       },
       "fields": {
         "session": "Session",
@@ -858,7 +859,7 @@
       "errors": {
         "invalidJson": "此文件不是有效的 JSON。",
         "previewFailed": "无法预览此 Session 导出。",
-        "exportFailed": "无法导出 Session JSON。",
+        "exportFailed": "无法导出 Session JSON",
         "importReadFailed": "无法读取 JSON 文件。",
         "importFailed": "无法导入 Session JSON。"
       }
@@ -2368,5 +2369,23 @@
     "summarize": "让 Agent 总结",
     "waiting": "等待内容中…",
     "empty": "无内容"
+  },
+  "sharing": {
+    "remoteReadOnlyBanner": "共享会话镜像为只读。此本地副本已禁用 Agent 执行和普通会话输入。",
+    "shareSession": "分享会话…",
+    "shareDialogTitle": "分享会话",
+    "sharePrivacyWarning": "拥有此代码和 PIN 的任何人都可以查看可见的会话消息、工具输出和显示的路径。对观看者而言，分享是只读的。",
+    "pinLabel": "PIN",
+    "generateOffer": "生成邀请代码",
+    "offerCodeLabel": "邀请代码",
+    "answerCodeLabel": "应答代码",
+    "acceptAnswer": "接受应答",
+    "joinDialogTitle": "加入共享会话",
+    "joinDialogDescription": "粘贴主持方的邀请代码和 PIN。将生成的应答代码发回主持方以完成连接。",
+    "joinSharedSession": "加入共享会话",
+    "viewerMessages": "观看者消息",
+    "viewerLabel": "观看者",
+    "viewerMessagePlaceholder": "向主持方发送观看者消息…",
+    "sendViewerMessage": "发送"
   }
 }

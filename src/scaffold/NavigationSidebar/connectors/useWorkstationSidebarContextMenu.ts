@@ -5,6 +5,7 @@ import {
 } from "@tauri-apps/api/menu";
 import { type MouseEvent, useCallback } from "react";
 
+import { DISPATCH_CATEGORY } from "@src/api/tauri/session";
 import type { NavigationMenuItem } from "@src/scaffold/NavigationSidebar/components/NavigationMenu/config";
 import type { Session } from "@src/store/session";
 import {
@@ -26,6 +27,7 @@ interface UseWorkstationSidebarContextMenuParams {
   handleExportMarkdown: (sessionId: string) => Promise<void>;
   handleTogglePin: (sessionId: string) => Promise<void>;
   handleAddTag: (sessionId: string) => Promise<void>;
+  onShareSession: (sessionId: string) => void;
   tCommon: (key: string, defaultValue?: string) => string;
 }
 
@@ -37,6 +39,7 @@ export function useWorkstationSidebarContextMenu({
   handleExportMarkdown,
   handleTogglePin,
   handleAddTag,
+  onShareSession,
   tCommon,
 }: UseWorkstationSidebarContextMenuParams): (
   event: MouseEvent,
@@ -76,6 +79,10 @@ export function useWorkstationSidebarContextMenu({
           text: tCommon("sessions:chat.exportAsMarkdown", "Export as Markdown"),
           action: () => handleExportMarkdown(item.id),
         });
+        const shareItem = await MenuItem.new({
+          text: tCommon("sessions:sharing.shareSession", "Share Session…"),
+          action: () => onShareSession(item.id),
+        });
         const pinLabel = session?.pinned
           ? tCommon("sessions:chat.unpinSession", "Unpin")
           : tCommon("sessions:chat.pinSession", "Pin");
@@ -94,16 +101,15 @@ export function useWorkstationSidebarContextMenu({
         const menuSeparator = await PredefinedMenuItem.new({
           item: "Separator",
         });
+        const shareableSession =
+          session?.category === DISPATCH_CATEGORY.CLI_AGENT ||
+          session?.category === DISPATCH_CATEGORY.RUST_AGENT;
+        const primaryItems = shareableSession
+          ? [renameItem, exportItem, shareItem]
+          : [renameItem, exportItem];
         const menuItems = isCliSessionItem
-          ? [renameItem, exportItem, menuSeparator, deleteItem]
-          : [
-              renameItem,
-              exportItem,
-              pinItem,
-              addTagItem,
-              menuSeparator,
-              deleteItem,
-            ];
+          ? [...primaryItems, menuSeparator, deleteItem]
+          : [...primaryItems, pinItem, addTagItem, menuSeparator, deleteItem];
         const menu = await TauriMenu.new({ items: menuItems });
         await menu.popup();
       } catch (error) {
@@ -119,6 +125,7 @@ export function useWorkstationSidebarContextMenu({
       handleExportMarkdown,
       handleTogglePin,
       handleAddTag,
+      onShareSession,
     ]
   );
 }

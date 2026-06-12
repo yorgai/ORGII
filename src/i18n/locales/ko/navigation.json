@@ -133,7 +133,8 @@
       "collapseAll": "모두 접기",
       "markAllRead": "모두 읽음으로 표시",
       "openHome": "홈 열기",
-      "openWorkstation": "Workstation 열기"
+      "openWorkstation": "Workstation 열기",
+      "joinSharedSession": "공유 세션 참여…"
     },
     "search": {
       "folders": "폴더 검색...",

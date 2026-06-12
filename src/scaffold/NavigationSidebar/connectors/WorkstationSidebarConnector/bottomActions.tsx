@@ -19,6 +19,7 @@ interface UseSidebarBottomRightActionsParams {
   handleCollapseAllActiveSections: () => void;
   handleMarkAllRead: () => void;
   handleRefreshSessions: () => void;
+  onJoinSharedSession: () => void;
   projectsGroupByMode: ProjectsGroupByMode;
   setGroupByMode: (mode: GroupByMode) => void;
   setProjectsCollapsedSectionIds: (ids: Set<string>) => void;
@@ -37,6 +38,7 @@ export function useSidebarBottomRightActions({
   handleCollapseAllActiveSections,
   handleMarkAllRead,
   handleRefreshSessions,
+  onJoinSharedSession,
   projectsGroupByMode,
   setGroupByMode,
   setProjectsCollapsedSectionIds,
@@ -126,6 +128,7 @@ export function useSidebarBottomRightActions({
       onCollapseAll={handleCollapseAll}
       onMarkAllRead={handleMarkAllRead}
       onRefreshSessions={handleRefreshSessions}
+      onJoinSharedSession={onJoinSharedSession}
     />
   );
 }

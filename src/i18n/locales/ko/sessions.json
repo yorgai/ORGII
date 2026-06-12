@@ -826,23 +826,24 @@
     "importExport": {
       "exportTitle": "Session JSON 내보내기",
       "importTitle": "Session JSON 가져오기",
-      "exportAction": "Session 내보내기",
+      "exportAction": "내보내기",
       "importAction": "Session 가져오기",
-      "exportDescription": "활성 Session을 휴대용 JSON 스냅샷으로 내보냅니다.",
+      "exportDescription": "활성 Session을 휴대용 JSON 스냅샷으로 내보냅니다",
       "importDescription": "Session JSON 스냅샷을 사이드바로 가져옵니다.",
-      "jsonSnapshotNote": "가져온 Sessions는 읽기 전용 스냅샷이며 원본 이벤트 기록을 유지합니다.",
+      "jsonSnapshotNote": "가져온 Sessions는 읽기 전용 스냅샷이며 원본 이벤트 기록을 유지합니다",
       "chooseJson": "JSON 파일 선택",
       "chooseJsonHint": ".orgii-session.json 내보내기 파일을 선택하세요.",
       "loadingPreview": "Session 이벤트 계산 중…",
       "noActiveSession": "활성 Session이 선택되지 않았습니다.",
       "importedName": "가져온 Session: {{name}}",
-      "exportSuccess": "Session JSON을 내보냈습니다.",
+      "exportSuccess": "Session JSON을 내보냈습니다",
       "importSuccess": "{{count}}개 이벤트를 가져왔습니다.",
       "categories": {
         "cli": "CLI Agent",
         "rust": "Rust Agent",
         "cursorIde": "Cursor IDE",
-        "externalHistory": "외부 기록"
+        "externalHistory": "외부 기록",
+        "remoteShared": "원격 공유 Session"
       },
       "fields": {
         "session": "Session",
@@ -854,7 +855,7 @@
       "errors": {
         "invalidJson": "이 파일은 유효한 JSON이 아닙니다.",
         "previewFailed": "이 Session 내보내기를 미리 볼 수 없습니다.",
-        "exportFailed": "Session JSON을 내보낼 수 없습니다.",
+        "exportFailed": "Session JSON을 내보낼 수 없습니다",
         "importReadFailed": "JSON 파일을 읽을 수 없습니다.",
         "importFailed": "Session JSON을 가져올 수 없습니다."
       }
@@ -2360,5 +2361,23 @@
     "summarize": "Agent로 요약",
     "waiting": "콘텐츠 대기 중…",
     "empty": "콘텐츠 없음"
+  },
+  "sharing": {
+    "remoteReadOnlyBanner": "공유 세션 미러는 읽기 전용입니다. 이 로컬 복사본에서는 Agent 실행과 일반 세션 입력이 비활성화됩니다.",
+    "shareSession": "세션 공유…",
+    "shareDialogTitle": "세션 공유",
+    "sharePrivacyWarning": "이 코드와 PIN을 가진 사람은 표시되는 세션 메시지, 도구 출력, 표시된 경로를 볼 수 있습니다. 뷰어에게는 읽기 전용으로 공유됩니다.",
+    "pinLabel": "PIN",
+    "generateOffer": "제안 코드 생성",
+    "offerCodeLabel": "제안 코드",
+    "answerCodeLabel": "응답 코드",
+    "acceptAnswer": "응답 수락",
+    "joinDialogTitle": "공유 세션 참여",
+    "joinDialogDescription": "호스트의 제안 코드와 PIN을 붙여넣으세요. 생성된 응답 코드를 호스트에게 보내 연결을 완료하세요.",
+    "joinSharedSession": "공유 세션 참여",
+    "viewerMessages": "뷰어 메시지",
+    "viewerLabel": "뷰어",
+    "viewerMessagePlaceholder": "호스트에게 뷰어 메시지 보내기…",
+    "sendViewerMessage": "보내기"
   }
 }

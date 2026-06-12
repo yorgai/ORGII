@@ -826,23 +826,24 @@
     "importExport": {
       "exportTitle": "Exportar Session JSON",
       "importTitle": "Importar Session JSON",
-      "exportAction": "Exportar Session",
+      "exportAction": "Exportar",
       "importAction": "Importar Session",
-      "exportDescription": "Exporta la Session activa como una instantánea JSON portátil.",
+      "exportDescription": "Exporta la Session activa como una instantánea JSON portátil",
       "importDescription": "Importa una instantánea JSON de Session en la barra lateral.",
-      "jsonSnapshotNote": "Las Sessions importadas son instantáneas de solo lectura y conservan el historial de eventos original.",
+      "jsonSnapshotNote": "Las Sessions importadas son instantáneas de solo lectura y conservan el historial de eventos original",
       "chooseJson": "Elegir archivo JSON",
       "chooseJsonHint": "Selecciona un archivo de exportación .orgii-session.json.",
       "loadingPreview": "Contando eventos de Session…",
       "noActiveSession": "No hay ninguna Session activa seleccionada.",
       "importedName": "Session importada: {{name}}",
-      "exportSuccess": "Session JSON exportada.",
+      "exportSuccess": "Session JSON exportada",
       "importSuccess": "Se importaron {{count}} eventos.",
       "categories": {
         "cli": "CLI Agent",
         "rust": "Rust Agent",
         "cursorIde": "Cursor IDE",
-        "externalHistory": "Historial externo"
+        "externalHistory": "Historial externo",
+        "remoteShared": "Session compartida remota"
       },
       "fields": {
         "session": "Session",
@@ -854,7 +855,7 @@
       "errors": {
         "invalidJson": "Este archivo no es JSON válido.",
         "previewFailed": "No se pudo previsualizar esta exportación de Session.",
-        "exportFailed": "No se pudo exportar la Session JSON.",
+        "exportFailed": "No se pudo exportar la Session JSON",
         "importReadFailed": "No se pudo leer el archivo JSON.",
         "importFailed": "No se pudo importar la Session JSON."
       }
@@ -2359,5 +2360,23 @@
     "summarize": "Resumir con Agent",
     "waiting": "Esperando contenido…",
     "empty": "Sin contenido"
+  },
+  "sharing": {
+    "remoteReadOnlyBanner": "El espejo de sesión compartida es de solo lectura. La ejecución del Agent y la entrada normal de sesión están desactivadas para esta copia local.",
+    "shareSession": "Compartir sesión…",
+    "shareDialogTitle": "Compartir sesión",
+    "sharePrivacyWarning": "Cualquiera con este código y PIN puede ver los mensajes visibles, la salida de herramientas y las rutas mostradas. Para el visor, el uso compartido es de solo lectura.",
+    "pinLabel": "PIN",
+    "generateOffer": "Generar código de oferta",
+    "offerCodeLabel": "Código de oferta",
+    "answerCodeLabel": "Código de respuesta",
+    "acceptAnswer": "Aceptar respuesta",
+    "joinDialogTitle": "Unirse a sesión compartida",
+    "joinDialogDescription": "Pega el código de oferta del anfitrión y el PIN. Envía el código de respuesta generado al anfitrión para completar la conexión.",
+    "joinSharedSession": "Unirse a la sesión compartida",
+    "viewerMessages": "Mensajes del visor",
+    "viewerLabel": "Visor",
+    "viewerMessagePlaceholder": "Enviar un mensaje de visor al anfitrión…",
+    "sendViewerMessage": "Enviar"
   }
 }

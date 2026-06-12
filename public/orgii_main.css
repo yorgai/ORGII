@@ -147,14 +147,13 @@ body {
   --color-surface-container: #f7f7f7;
 
   /* Chat Panel */
-  /* `*-base` variants hold the unmixed surface color so the chat panel root
-   * can rebind `--color-chat-pane` / `--color-chat-container` to a
-   * `color-mix()` of the *-base value without creating a circular var
-   * reference (which would happen if the rebind read the same name). */
+  /* `--color-chat-pane-base` holds the unmixed surface color so the chat
+   * panel root can rebind `--color-chat-pane` to a `color-mix()` of the
+   * -base value without creating a circular var reference (which would
+   * happen if the rebind read the same name). */
   --color-chat-pane-base: var(--color-workstation-bg);
   --color-chat-pane: var(--color-chat-pane-base);
-  --color-chat-container-base: #f2f2f2;
-  --color-chat-container: var(--color-chat-container-base);
+  --color-chat-container: #f2f2f2;
   --color-chat-input: #ffffff;
   --color-event-block: #ffffff;
   --color-event-block-fade: var(--color-event-block);

@@ -87,7 +87,7 @@ const SessionExportFileSchema = z.object({
   }),
 });
 
-type SessionExportFile = z.output<typeof SessionExportFileSchema>;
+export type SessionExportFile = z.output<typeof SessionExportFileSchema>;
 
 export interface SessionExportPreview {
   sessionId: string;
@@ -96,6 +96,11 @@ export interface SessionExportPreview {
   eventCount: number;
   fileName: string;
   exportedAt: string;
+}
+
+export interface SessionExportDraft {
+  file: SessionExportFile;
+  preview: SessionExportPreview;
 }
 
 export interface SessionImportPreview {
@@ -253,35 +258,21 @@ async function loadSessionEventsForExport(
   return cacheAdapter.loadEvents(sessionId);
 }
 
-export async function buildSessionExportPreview(
+export async function buildSessionExportDraft(
   session: Session,
   fallback: string
-): Promise<SessionExportPreview> {
+): Promise<SessionExportDraft> {
   const events = await loadSessionEventsForExport(session);
   const exportedAt = new Date().toISOString();
-  return {
-    sessionId: session.session_id,
-    displayName: getSessionListDisplayName(session, fallback),
-    category: inferCategory(session.session_id, session.category),
-    eventCount: events.length,
-    fileName: buildExportFileName(session, fallback),
-    exportedAt,
-  };
-}
-
-export async function buildSessionExportFile(
-  session: Session,
-  _fallback: string
-): Promise<SessionExportFile> {
-  const events = await loadSessionEventsForExport(session);
-  const exportedAt = new Date().toISOString();
-  return {
+  const category = inferCategory(session.session_id, session.category);
+  const fileName = buildExportFileName(session, fallback);
+  const file: SessionExportFile = {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
     exportedAt,
     session: cloneSessionForExport(session),
     metadata: {
-      originalCategory: inferCategory(session.session_id, session.category),
+      originalCategory: category,
       eventCount: events.length,
     },
     payload: {
@@ -290,6 +281,33 @@ export async function buildSessionExportFile(
       timeRange: getTimeRange(events, session),
     },
   };
+  return {
+    file,
+    preview: {
+      sessionId: session.session_id,
+      displayName: getSessionListDisplayName(session, fallback),
+      category,
+      eventCount: events.length,
+      fileName,
+      exportedAt,
+    },
+  };
+}
+
+export async function buildSessionExportPreview(
+  session: Session,
+  fallback: string
+): Promise<SessionExportPreview> {
+  const draft = await buildSessionExportDraft(session, fallback);
+  return draft.preview;
+}
+
+export async function buildSessionExportFile(
+  session: Session,
+  fallback: string
+): Promise<SessionExportFile> {
+  const draft = await buildSessionExportDraft(session, fallback);
+  return draft.file;
 }
 
 export function parseSessionImportFile(
@@ -395,6 +413,8 @@ export function formatCategoryLabel(
       return t("chat.importExport.categories.cursorIde");
     case "external_history":
       return t("chat.importExport.categories.externalHistory");
+    case "remote_shared_session":
+      return t("chat.importExport.categories.remoteShared");
   }
 }
 

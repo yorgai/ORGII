@@ -826,23 +826,24 @@
     "importExport": {
       "exportTitle": "Session JSON dışa aktar",
       "importTitle": "Session JSON içe aktar",
-      "exportAction": "Session dışa aktar",
+      "exportAction": "Dışa aktar",
       "importAction": "Session içe aktar",
-      "exportDescription": "Etkin Session'ı taşınabilir bir JSON anlık görüntüsü olarak dışa aktarın.",
+      "exportDescription": "Etkin Session'ı taşınabilir bir JSON anlık görüntüsü olarak dışa aktarın",
       "importDescription": "Bir Session JSON anlık görüntüsünü kenar çubuğuna içe aktarın.",
-      "jsonSnapshotNote": "İçe aktarılan Sessions salt okunur anlık görüntülerdir ve özgün olay geçmişini korur.",
+      "jsonSnapshotNote": "İçe aktarılan Sessions salt okunur anlık görüntülerdir ve özgün olay geçmişini korur",
       "chooseJson": "JSON dosyası seç",
       "chooseJsonHint": "Bir .orgii-session.json dışa aktarma dosyası seçin.",
       "loadingPreview": "Session olayları sayılıyor…",
       "noActiveSession": "Etkin Session seçilmedi.",
       "importedName": "İçe aktarılan Session: {{name}}",
-      "exportSuccess": "Session JSON dışa aktarıldı.",
+      "exportSuccess": "Session JSON dışa aktarıldı",
       "importSuccess": "{{count}} olay içe aktarıldı.",
       "categories": {
         "cli": "CLI Agent",
         "rust": "Rust Agent",
         "cursorIde": "Cursor IDE",
-        "externalHistory": "Harici Geçmiş"
+        "externalHistory": "Harici Geçmiş",
+        "remoteShared": "Uzak paylaşılan Session"
       },
       "fields": {
         "session": "Session",
@@ -854,7 +855,7 @@
       "errors": {
         "invalidJson": "Bu dosya geçerli bir JSON değil.",
         "previewFailed": "Bu Session dışa aktarımı önizlenemedi.",
-        "exportFailed": "Session JSON dışa aktarılamadı.",
+        "exportFailed": "Session JSON dışa aktarılamadı",
         "importReadFailed": "JSON dosyası okunamadı.",
         "importFailed": "Session JSON içe aktarılamadı."
       }
@@ -2360,5 +2361,23 @@
     "summarize": "Agent ile özetle",
     "waiting": "İçerik bekleniyor…",
     "empty": "İçerik yok"
+  },
+  "sharing": {
+    "remoteReadOnlyBanner": "Paylaşılan oturum aynası salt okunurdur. Bu yerel kopyada Agent yürütmesi ve normal oturum girişi devre dışıdır.",
+    "shareSession": "Oturumu paylaş…",
+    "shareDialogTitle": "Oturumu paylaş",
+    "sharePrivacyWarning": "Bu koda ve PIN’e sahip herkes görünen oturum mesajlarını, araç çıktısını ve görüntülenen yolları görebilir. İzleyici için paylaşım salt okunurdur.",
+    "pinLabel": "PIN",
+    "generateOffer": "Teklif kodu oluştur",
+    "offerCodeLabel": "Teklif kodu",
+    "answerCodeLabel": "Yanıt kodu",
+    "acceptAnswer": "Yanıtı kabul et",
+    "joinDialogTitle": "Paylaşılan oturuma katıl",
+    "joinDialogDescription": "Host teklif kodunu ve PIN’i yapıştırın. Bağlantıyı tamamlamak için oluşturulan yanıt kodunu hosta gönderin.",
+    "joinSharedSession": "Paylaşılan oturuma katıl",
+    "viewerMessages": "İzleyici mesajları",
+    "viewerLabel": "İzleyici",
+    "viewerMessagePlaceholder": "Hosta izleyici mesajı gönder…",
+    "sendViewerMessage": "Gönder"
   }
 }

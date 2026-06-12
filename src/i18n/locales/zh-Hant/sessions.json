@@ -830,23 +830,24 @@
     "importExport": {
       "exportTitle": "匯出 Session JSON",
       "importTitle": "匯入 Session JSON",
-      "exportAction": "匯出 Session",
+      "exportAction": "匯出",
       "importAction": "匯入 Session",
-      "exportDescription": "將目前 Session 匯出為可攜式 JSON 快照。",
+      "exportDescription": "將目前 Session 匯出為可攜式 JSON 快照",
       "importDescription": "將 Session JSON 快照匯入側邊欄。",
-      "jsonSnapshotNote": "匯入的 Session 是唯讀快照，並保留原始事件歷史。",
+      "jsonSnapshotNote": "匯入的 Session 是唯讀快照，並保留原始事件歷史",
       "chooseJson": "選擇 JSON 檔案",
       "chooseJsonHint": "選擇一個 .orgii-session.json 匯出檔案。",
       "loadingPreview": "正在統計 Session 事件…",
       "noActiveSession": "未選取作用中 Session。",
       "importedName": "匯入 Session：{{name}}",
-      "exportSuccess": "Session JSON 匯出。",
+      "exportSuccess": "Session JSON 匯出",
       "importSuccess": "匯入 {{count}} 個事件。",
       "categories": {
         "cli": "CLI Agent",
         "rust": "Rust Agent",
         "cursorIde": "Cursor IDE",
-        "externalHistory": "外部歷史"
+        "externalHistory": "外部歷史",
+        "remoteShared": "遠端共享 Session"
       },
       "fields": {
         "session": "Session",
@@ -858,7 +859,7 @@
       "errors": {
         "invalidJson": "此檔案不是有效的 JSON。",
         "previewFailed": "無法預覽此 Session 匯出。",
-        "exportFailed": "無法匯出 Session JSON。",
+        "exportFailed": "無法匯出 Session JSON",
         "importReadFailed": "無法讀取 JSON 檔案。",
         "importFailed": "無法匯入 Session JSON。"
       }
@@ -2363,5 +2364,23 @@
     "summarize": "讓 Agent 總結",
     "waiting": "等待內容中…",
     "empty": "無內容"
+  },
+  "sharing": {
+    "remoteReadOnlyBanner": "共享工作階段鏡像為唯讀。此本機副本已停用 Agent 執行與一般工作階段輸入。",
+    "shareSession": "分享工作階段…",
+    "shareDialogTitle": "分享工作階段",
+    "sharePrivacyWarning": "任何擁有此代碼與 PIN 的人都能查看可見的工作階段訊息、工具輸出與顯示的路徑。對觀看者而言，分享為唯讀。",
+    "pinLabel": "PIN",
+    "generateOffer": "產生邀請代碼",
+    "offerCodeLabel": "邀請代碼",
+    "answerCodeLabel": "回應代碼",
+    "acceptAnswer": "接受回應",
+    "joinDialogTitle": "加入共享工作階段",
+    "joinDialogDescription": "貼上主持方的邀請代碼與 PIN。將產生的回應代碼傳回主持方以完成連線。",
+    "joinSharedSession": "加入共享工作階段",
+    "viewerMessages": "觀看者訊息",
+    "viewerLabel": "觀看者",
+    "viewerMessagePlaceholder": "傳送觀看者訊息給主持方…",
+    "sendViewerMessage": "傳送"
   }
 }

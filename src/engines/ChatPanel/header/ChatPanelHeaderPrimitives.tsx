@@ -62,7 +62,7 @@ export const ChatPanelHeaderTitlePill = React.forwardRef<
 ): React.ReactElement {
   return (
     <span ref={ref} className={className} {...props}>
-      <span className="min-w-0 -translate-y-px truncate" data-testid={testId}>
+      <span className="min-w-0 truncate" data-testid={testId}>
         {children}
       </span>
     </span>

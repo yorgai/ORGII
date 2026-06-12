@@ -133,7 +133,8 @@
       "collapseAll": "すべて折りたたむ",
       "markAllRead": "すべて既読にする",
       "openHome": "ホームを開く",
-      "openWorkstation": "Workstation を開く"
+      "openWorkstation": "Workstation を開く",
+      "joinSharedSession": "共有セッションに参加…"
     },
     "search": {
       "folders": "フォルダーを検索...",

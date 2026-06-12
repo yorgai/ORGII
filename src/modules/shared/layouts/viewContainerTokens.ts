@@ -115,12 +115,15 @@ export function getSidebarSurfaceBackgroundStyle(
 
 /**
  * Inline style for the chat panel root. Sets its own background and
- * rebinds `--color-chat-pane` / `--color-chat-container` on this subtree
- * so every descendant Tailwind `bg-chat-pane` / `bg-chat-container` class
- * (sticky group headers, pagination toolbar wrapper, turn-page list,
- * loading bar, agent-org overview panel, pinned card backdrop, etc.)
- * automatically inherits the same transparency. Avoids threading inline
- * styles into every sticky strip.
+ * rebinds `--color-chat-pane` on this subtree so every descendant Tailwind
+ * `bg-chat-pane` class (sticky group headers, pagination toolbar wrapper,
+ * turn-page list, loading bar, agent-org overview panel, etc.)
+ * automatically inherits the same transparency.
+ *
+ * `--color-chat-container` is intentionally NOT rebound: it backs distinct
+ * cards/badges that sit on top of the chat surface (region notices, pinned
+ * pop-out cards, inline tool blocks). Those should read as solid surfaces
+ * over the wallpaper-tinted chat pane, not also bleed through.
  *
  * The mix reads `--color-chat-pane-base` (not `--color-chat-pane`) to
  * avoid a circular var reference once we overwrite the unsuffixed name.
@@ -132,26 +135,8 @@ export function getChatPanelBackgroundStyle(
 ): CSSProperties {
   const opacity = sanitizePageOpacity(pageOpacity);
   const chatPaneMix = `color-mix(in srgb, var(--color-chat-pane-base) ${opacity}%, transparent)`;
-  const chatContainerMix = `color-mix(in srgb, var(--color-chat-container-base) ${opacity}%, transparent)`;
   return {
     backgroundColor: chatPaneMix,
     "--color-chat-pane": chatPaneMix,
-    "--color-chat-container": chatContainerMix,
   } as CSSProperties;
-}
-
-/**
- * Inline style for the pinned-area tinted backdrop when painted *outside*
- * the chat panel subtree (e.g. the SessionCreator fullscreen composer's
- * repo row on the Start / Select Repo wallpaper routes). Inside the chat
- * panel subtree, prefer the Tailwind `bg-chat-container` class — the
- * variable rebind on the chat panel root already handles transparency.
- */
-export function getChatContainerBackgroundStyle(
-  pageOpacity: number | undefined
-): CSSProperties {
-  const opacity = sanitizePageOpacity(pageOpacity);
-  return {
-    backgroundColor: `color-mix(in srgb, var(--color-chat-container-base) ${opacity}%, transparent)`,
-  };
 }

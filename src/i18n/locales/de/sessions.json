@@ -826,23 +826,24 @@
     "importExport": {
       "exportTitle": "Session JSON exportieren",
       "importTitle": "Session JSON importieren",
-      "exportAction": "Session exportieren",
+      "exportAction": "Exportieren",
       "importAction": "Session importieren",
-      "exportDescription": "Exportiert die aktive Session als portablen JSON-Snapshot.",
+      "exportDescription": "Exportiert die aktive Session als portablen JSON-Snapshot",
       "importDescription": "Importiert einen Session-JSON-Snapshot in die Seitenleiste.",
-      "jsonSnapshotNote": "Importierte Sessions sind schreibgeschützte Snapshots und behalten den ursprünglichen Ereignisverlauf.",
+      "jsonSnapshotNote": "Importierte Sessions sind schreibgeschützte Snapshots und behalten den ursprünglichen Ereignisverlauf",
       "chooseJson": "JSON-Datei auswählen",
       "chooseJsonHint": "Wähle eine .orgii-session.json-Exportdatei aus.",
       "loadingPreview": "Session-Ereignisse werden gezählt…",
       "noActiveSession": "Keine aktive Session ausgewählt.",
       "importedName": "Importierte Session: {{name}}",
-      "exportSuccess": "Session JSON exportiert.",
+      "exportSuccess": "Session JSON exportiert",
       "importSuccess": "{{count}} Ereignisse importiert.",
       "categories": {
         "cli": "CLI Agent",
         "rust": "Rust Agent",
         "cursorIde": "Cursor IDE",
-        "externalHistory": "Externer Verlauf"
+        "externalHistory": "Externer Verlauf",
+        "remoteShared": "Remote geteilte Session"
       },
       "fields": {
         "session": "Session",
@@ -854,7 +855,7 @@
       "errors": {
         "invalidJson": "Diese Datei ist kein gültiges JSON.",
         "previewFailed": "Dieser Session-Export konnte nicht als Vorschau geladen werden.",
-        "exportFailed": "Session JSON konnte nicht exportiert werden.",
+        "exportFailed": "Session JSON konnte nicht exportiert werden",
         "importReadFailed": "Die JSON-Datei konnte nicht gelesen werden.",
         "importFailed": "Session JSON konnte nicht importiert werden."
       }
@@ -2359,5 +2360,23 @@
     "summarize": "Mit Agent zusammenfassen",
     "waiting": "Warte auf Inhalt…",
     "empty": "Kein Inhalt"
+  },
+  "sharing": {
+    "remoteReadOnlyBanner": "Der Spiegel der geteilten Sitzung ist schreibgeschützt. Agent-Ausführung und normale Sitzungseingaben sind für diese lokale Kopie deaktiviert.",
+    "shareSession": "Sitzung teilen…",
+    "shareDialogTitle": "Sitzung teilen",
+    "sharePrivacyWarning": "Jede Person mit diesem Code und der PIN kann sichtbare Sitzungsnachrichten, Tool-Ausgaben und angezeigte Pfade sehen. Für Betrachter ist die Freigabe schreibgeschützt.",
+    "pinLabel": "PIN",
+    "generateOffer": "Angebotscode erstellen",
+    "offerCodeLabel": "Angebotscode",
+    "answerCodeLabel": "Antwortcode",
+    "acceptAnswer": "Antwort akzeptieren",
+    "joinDialogTitle": "Geteilter Sitzung beitreten",
+    "joinDialogDescription": "Fügen Sie den Angebotscode des Hosts und die PIN ein. Senden Sie den generierten Antwortcode an den Host, um die Verbindung abzuschließen.",
+    "joinSharedSession": "Geteilter Sitzung beitreten",
+    "viewerMessages": "Betrachter-Nachrichten",
+    "viewerLabel": "Betrachter",
+    "viewerMessagePlaceholder": "Betrachter-Nachricht an den Host senden…",
+    "sendViewerMessage": "Senden"
   }
 }

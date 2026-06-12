@@ -826,23 +826,24 @@
     "importExport": {
       "exportTitle": "Session JSON をエクスポート",
       "importTitle": "Session JSON をインポート",
-      "exportAction": "Session をエクスポート",
+      "exportAction": "エクスポート",
       "importAction": "Session をインポート",
-      "exportDescription": "アクティブな Session をポータブルな JSON スナップショットとしてエクスポートします。",
+      "exportDescription": "アクティブな Session をポータブルな JSON スナップショットとしてエクスポートします",
       "importDescription": "Session JSON スナップショットをサイドバーにインポートします。",
-      "jsonSnapshotNote": "インポートされた Session は読み取り専用スナップショットで、元のイベント履歴を保持します。",
+      "jsonSnapshotNote": "インポートされた Session は読み取り専用スナップショットで、元のイベント履歴を保持します",
       "chooseJson": "JSON ファイルを選択",
       "chooseJsonHint": ".orgii-session.json エクスポートファイルを選択してください。",
       "loadingPreview": "Session イベントを集計中…",
       "noActiveSession": "アクティブな Session が選択されていません。",
       "importedName": "インポート済み Session: {{name}}",
-      "exportSuccess": "Session JSON をエクスポートしました。",
+      "exportSuccess": "Session JSON をエクスポートしました",
       "importSuccess": "{{count}} 件のイベントをインポートしました。",
       "categories": {
         "cli": "CLI Agent",
         "rust": "Rust Agent",
         "cursorIde": "Cursor IDE",
-        "externalHistory": "外部履歴"
+        "externalHistory": "外部履歴",
+        "remoteShared": "リモート共有 Session"
       },
       "fields": {
         "session": "Session",
@@ -854,7 +855,7 @@
       "errors": {
         "invalidJson": "このファイルは有効な JSON ではありません。",
         "previewFailed": "この Session エクスポートをプレビューできませんでした。",
-        "exportFailed": "Session JSON をエクスポートできませんでした。",
+        "exportFailed": "Session JSON をエクスポートできませんでした",
         "importReadFailed": "JSON ファイルを読み取れませんでした。",
         "importFailed": "Session JSON をインポートできませんでした。"
       }
@@ -2359,5 +2360,23 @@
     "summarize": "Agent で要約",
     "waiting": "コンテンツを待機中…",
     "empty": "コンテンツなし"
+  },
+  "sharing": {
+    "remoteReadOnlyBanner": "共有セッションのミラーは読み取り専用です。このローカルコピーでは Agent の実行と通常のセッション入力が無効です。",
+    "shareSession": "セッションを共有…",
+    "shareDialogTitle": "セッションを共有",
+    "sharePrivacyWarning": "このコードと PIN を持つ人は、表示されているセッションメッセージ、ツール出力、表示パスを閲覧できます。閲覧者側は読み取り専用です。",
+    "pinLabel": "PIN",
+    "generateOffer": "オファーコードを生成",
+    "offerCodeLabel": "オファーコード",
+    "answerCodeLabel": "回答コード",
+    "acceptAnswer": "回答を承認",
+    "joinDialogTitle": "共有セッションに参加",
+    "joinDialogDescription": "ホストのオファーコードと PIN を貼り付けてください。生成された回答コードをホストへ送信すると接続が完了します。",
+    "joinSharedSession": "共有セッションに参加",
+    "viewerMessages": "閲覧者メッセージ",
+    "viewerLabel": "閲覧者",
+    "viewerMessagePlaceholder": "ホストへ閲覧者メッセージを送信…",
+    "sendViewerMessage": "送信"
   }
 }

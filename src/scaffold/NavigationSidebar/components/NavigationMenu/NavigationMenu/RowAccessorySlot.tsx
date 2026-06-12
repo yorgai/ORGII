@@ -49,7 +49,7 @@ export function NavigationMenuRowAccessorySlot({
             </span>
           )}
           {actionContent && (
-            <span className="inline-flex items-center justify-end gap-1">
+            <span className="-mr-0.5 inline-flex items-center justify-end gap-1">
               {actionContent}
             </span>
           )}

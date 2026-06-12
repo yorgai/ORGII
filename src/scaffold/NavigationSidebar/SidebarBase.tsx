@@ -407,16 +407,29 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
     // with the content panel, and `backdrop-filter` samples beyond the
     // rounded clip on WebKit, leaving a visible "shade" tracing the
     // corner. Drop both in compact so the corner is a clean fill.
-    const sidebarBoxShadow = isCompactLayout ? "none" : "var(--sidebar-shadow)";
-    const sidebarBackdropFilter = isCompactLayout
-      ? "none"
-      : "var(--sidebar-backdrop)";
+    //
+    // Floating / hover sidebar: it pops out over the workspace content as
+    // a transient overlay. It should feel solid (so it's legible against
+    // whatever's behind it) and should ignore the user's sidebarOpacity
+    // setting. We paint `--color-bg-1` (the design-system solid raised
+    // surface) and keep the floating drop shadow regardless of the
+    // current layout mode so it visually detaches from the workspace.
+    const sidebarBoxShadow =
+      isCompactLayout && !shouldForceVisible ? "none" : "var(--sidebar-shadow)";
+    const sidebarBackdropFilter =
+      shouldForceVisible || isCompactLayout
+        ? "none"
+        : "var(--sidebar-backdrop)";
+    const floatingSurfaceOverride: React.CSSProperties = shouldForceVisible
+      ? { backgroundColor: "var(--color-bg-1)" }
+      : {};
     const surfaceStyle = themeStyles
       ? {
           ...themeStyles,
           boxShadow: sidebarBoxShadow,
           backdropFilter: sidebarBackdropFilter,
           WebkitBackdropFilter: sidebarBackdropFilter,
+          ...floatingSurfaceOverride,
         }
       : {
           backgroundColor: "var(--sidebar-bg)",
@@ -424,7 +437,8 @@ const SidebarBase: React.FC<SidebarBaseProps> = React.memo(
           boxShadow: sidebarBoxShadow,
           backdropFilter: sidebarBackdropFilter,
           WebkitBackdropFilter: sidebarBackdropFilter,
-          ...sidebarOpacityStyle,
+          ...(shouldForceVisible ? {} : sidebarOpacityStyle),
+          ...floatingSurfaceOverride,
         };
 
     // Wrapped content

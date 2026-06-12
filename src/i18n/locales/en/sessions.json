@@ -836,23 +836,24 @@
     "importExport": {
       "exportTitle": "Export Session JSON",
       "importTitle": "Import Session JSON",
-      "exportAction": "Export Session",
+      "exportAction": "Export",
       "importAction": "Import Session",
-      "exportDescription": "Export the active Session as a portable JSON snapshot.",
+      "exportDescription": "Export the active Session as a portable JSON snapshot",
       "importDescription": "Import a Session JSON snapshot into the sidebar.",
-      "jsonSnapshotNote": "Imported Sessions are read-only snapshots and keep the original event history.",
+      "jsonSnapshotNote": "Imported Sessions are read-only snapshots and keep the original event history",
       "chooseJson": "Choose JSON file",
       "chooseJsonHint": "Select an .orgii-session.json export file.",
       "loadingPreview": "Counting Session events…",
       "noActiveSession": "No active Session selected.",
       "importedName": "Imported Session: {{name}}",
-      "exportSuccess": "Session JSON exported.",
+      "exportSuccess": "Session JSON exported",
       "importSuccess": "Imported {{count}} events.",
       "categories": {
         "cli": "CLI Agent",
         "rust": "Rust Agent",
         "cursorIde": "Cursor IDE",
-        "externalHistory": "External History"
+        "externalHistory": "External History",
+        "remoteShared": "Remote Shared Session"
       },
       "fields": {
         "session": "Session",
@@ -864,7 +865,7 @@
       "errors": {
         "invalidJson": "This file is not valid JSON.",
         "previewFailed": "Failed to preview this Session export.",
-        "exportFailed": "Failed to export Session JSON.",
+        "exportFailed": "Failed to export Session JSON",
         "importReadFailed": "Failed to read the JSON file.",
         "importFailed": "Failed to import Session JSON."
       }
@@ -2373,5 +2374,23 @@
     "empty": "No canvas rendered yet",
     "sidebarTitle": "Canvases",
     "noCanvases": "No canvases yet"
+  },
+  "sharing": {
+    "remoteReadOnlyBanner": "Shared session mirror is read-only. Agent execution and normal session input are disabled for this local copy.",
+    "shareSession": "Share Session…",
+    "shareDialogTitle": "Share Session",
+    "sharePrivacyWarning": "Anyone with this code and PIN can view visible session messages, tool output, and displayed paths. Sharing is read-only for the viewer.",
+    "pinLabel": "PIN",
+    "generateOffer": "Generate offer code",
+    "offerCodeLabel": "Offer code",
+    "answerCodeLabel": "Answer code",
+    "acceptAnswer": "Accept answer",
+    "joinDialogTitle": "Join Shared Session",
+    "joinDialogDescription": "Paste the host offer code and PIN. Send the generated answer code back to the host to complete the connection.",
+    "joinSharedSession": "Join shared session",
+    "viewerMessages": "Viewer messages",
+    "viewerLabel": "Viewer",
+    "viewerMessagePlaceholder": "Send a viewer message to the host…",
+    "sendViewerMessage": "Send"
   }
 }

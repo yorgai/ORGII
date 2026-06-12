@@ -133,6 +133,16 @@ jobs:
           workspaces: "./src-tauri -> target"
           shared-key: "release-macos-aarch64"
 
+      # ── Download sidecar binaries (peekaboo, agent-browser) ──
+      - name: Cache sidecar binaries
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/bin
+          key: sidecars-peekaboo-v3.2.3-agent-browser-v0.27.2-aarch64
+
+      - name: Download sidecar binaries
+        run: python3 scripts/tools/download_sidecars.py
+
       # ── Build Tauri app (sign + notarize + updater artifacts) ─
       - name: Build ORGII
         env:
