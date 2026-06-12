@@ -91,10 +91,6 @@
       // Scrollbar handled globally in index.scss
     }
 
-    .cm-selectionLayer {
-      z-index: 4;
-    }
-
     .cm-selectionBackground,
     .cm-editor.cm-focused .cm-selectionBackground,
     .cm-selectionLayer .cm-selectionBackground,
@@ -108,9 +104,21 @@
       opacity: 1 !important;
     }
 
-    .cm-gutters {
+    .cm-gutters,
+    .cm-gutter,
+    .cm-lineNumbers,
+    .cm-foldGutter,
+    .cm-changeGutter {
       border-right: none !important;
-      border: none !important;
+      box-shadow: none !important;
+    }
+
+    .cm-lineNumbers::after,
+    .cm-foldGutter::after,
+    .cm-changeGutter::after {
+      border-right: 0 !important;
+      box-shadow: none !important;
+      background: transparent !important;
     }
 
     .cm-lineNumbers {
@@ -120,6 +128,12 @@
 
     .cm-lineNumbers .cm-gutterElement {
       border-right: none !important;
+    }
+
+    .cm-editor .cm-gutters .cm-gutterElement,
+    .cm-editor .cm-gutters .cm-gutterElement * {
+      border-right: none !important;
+      box-shadow: none !important;
     }
 
     // Merge view change gutter - match Editor's dirty-diff gutter width

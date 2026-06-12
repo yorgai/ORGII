@@ -9,7 +9,7 @@ import {
   useRef,
 } from "react";
 
-import { getUiScale } from "@src/util/platform/tauri/nativeFrame";
+import { toNativeFrame } from "@src/util/platform/tauri/nativeFrame";
 
 export interface UseWebviewCommandsParams {
   isWebviewAvailable: boolean;
@@ -113,15 +113,12 @@ export function useWebviewCommands(
 
         log("Creating WebView via Rust command at rect:", rect);
 
-        const scale = getUiScale();
+        const frame = toNativeFrame(rect);
         await invoke("create_inline_webview", {
           parentWindow: parentLabel,
           label: labelRef.current,
           url: targetUrl,
-          x: Math.round(rect.left * scale),
-          y: Math.round(rect.top * scale),
-          width: Math.round(rect.width * scale),
-          height: Math.round(rect.height * scale),
+          ...frame,
           userAgent: userAgent,
           incognito: incognito,
           generation,

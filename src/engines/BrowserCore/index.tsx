@@ -28,6 +28,7 @@ import type { UseBrowserStateReturn } from "./hooks/useBrowserState";
 import "./index.scss";
 
 const ABOUT_BLANK_URL = "about:blank";
+const SHOW_WEBVIEW_FRAME_ANCHOR = false;
 
 function isBlankBrowserUrl(url?: string): boolean {
   const normalizedUrl = url?.trim().toLowerCase();
@@ -90,8 +91,9 @@ export const BrowserCore: React.FC<BrowserCoreProps> = ({
     !bypassStationModeBlocking &&
     stationMode !== "agent-station";
 
-  // Ref for webview container
+  // Refs for the browser content host and the exact native WebView anchor.
   const contentAreaRef = useRef<HTMLDivElement>(null);
+  const webviewFrameAnchorRef = useRef<HTMLDivElement>(null);
 
   // Find current session
   const currentSession = sessions.find((s) => s.id === activeSessionId);
@@ -171,6 +173,13 @@ export const BrowserCore: React.FC<BrowserCoreProps> = ({
           host so an existing webview session cannot split the panel underneath. */}
       {shouldRenderContentArea && (
         <div className="browser-content" ref={contentAreaRef}>
+          <div
+            ref={webviewFrameAnchorRef}
+            className={`browser-webview-frame-anchor ${
+              SHOW_WEBVIEW_FRAME_ANCHOR ? "debug-visible" : ""
+            }`}
+            aria-hidden="true"
+          />
           {shouldShowUrlPlaceholder && (
             <div
               className={`browser-native-info ${EDITOR_TAB_CANVAS_BG_CLASS}`}
@@ -214,7 +223,7 @@ export const BrowserCore: React.FC<BrowserCoreProps> = ({
                 session={session}
                 isActive={session.id === activeSessionId}
                 isTabActive={isTabReallyActive}
-                containerRef={contentAreaRef}
+                containerRef={webviewFrameAnchorRef}
                 onSessionUpdate={updateSession}
                 onNewTab={addSession}
               />

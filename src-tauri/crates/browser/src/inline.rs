@@ -40,6 +40,23 @@ static WEBVIEW_CANCELLED_GENERATIONS: OnceLock<Mutex<HashMap<String, u64>>> = On
 const OFFSCREEN_POSITION: f64 = -10000.0;
 const OFFSCREEN_MIN_SIZE: f64 = 1.0;
 
+fn frame_from_corners(
+    x: f64,
+    y: f64,
+    a: Option<f64>,
+    b: Option<f64>,
+    width: f64,
+    height: f64,
+) -> (f64, f64, f64, f64) {
+    let resolved_width = a
+        .map(|right| (right - x).max(OFFSCREEN_MIN_SIZE))
+        .unwrap_or(width);
+    let resolved_height = b
+        .map(|bottom| (bottom - y).max(OFFSCREEN_MIN_SIZE))
+        .unwrap_or(height);
+    (x, y, resolved_width, resolved_height)
+}
+
 fn ref_counts() -> &'static Mutex<HashMap<String, u32>> {
     WEBVIEW_REF_COUNTS.get_or_init(|| Mutex::new(HashMap::new()))
 }
@@ -159,6 +176,8 @@ pub async fn create_inline_webview(
     url: String,
     x: f64,
     y: f64,
+    a: Option<f64>,
+    b: Option<f64>,
     width: f64,
     height: f64,
     user_agent: Option<String>,
@@ -166,6 +185,7 @@ pub async fn create_inline_webview(
     generation: Option<u64>,
     visible: bool,
 ) -> Result<(), String> {
+    let (x, y, width, height) = frame_from_corners(x, y, a, b, width, height);
     println!(
         "[InlineWebview] Creating webview: {} at ({}, {}) size {}x{}",
         label, x, y, width, height
@@ -248,7 +268,6 @@ pub async fn create_inline_webview(
     .initialization_script(ELEMENT_INSPECTOR_SCRIPT)
     .initialization_script(PAGE_AGENT_SCRIPT)
     .initialization_script(SHORTCUT_FORWARDING_SCRIPT)
-    .auto_resize()
     .on_new_window(move |new_window_url, _cookies| {
         let url_str = new_window_url.to_string();
         println!("[InlineWebview] New window requested: {}", url_str);
@@ -333,17 +352,21 @@ pub async fn create_inline_webview(
 ///
 /// Uses catch_unwind to handle wry panics when webview is in invalid state.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub fn update_inline_webview_position(
     app: AppHandle,
     label: String,
     x: f64,
     y: f64,
+    a: Option<f64>,
+    b: Option<f64>,
     width: f64,
     height: f64,
 ) -> Result<(), String> {
+    let (x, y, width, height) = frame_from_corners(x, y, a, b, width, height);
     if let Some(webview) = app.get_webview(&label) {
-        let pos = tauri::LogicalPosition::new(x, y);
-        let size = tauri::LogicalSize::new(width, height);
+        let pos = tauri::Position::Logical(tauri::LogicalPosition::new(x, y));
+        let size = tauri::Size::Logical(tauri::LogicalSize::new(width, height));
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             webview.set_position(pos)?;
@@ -414,17 +437,21 @@ pub fn set_inline_webview_visibility(
 /// If the webview does not exist yet (still being created), returns `Ok(())`
 /// silently — the caller should retry when `isWebviewCreated` becomes true.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub fn reposition_and_show_webview(
     app: AppHandle,
     label: String,
     x: f64,
     y: f64,
+    a: Option<f64>,
+    b: Option<f64>,
     width: f64,
     height: f64,
 ) -> Result<(), String> {
+    let (x, y, width, height) = frame_from_corners(x, y, a, b, width, height);
     if let Some(webview) = app.get_webview(&label) {
-        let pos = tauri::LogicalPosition::new(x, y);
-        let size = tauri::LogicalSize::new(width, height);
+        let pos = tauri::Position::Logical(tauri::LogicalPosition::new(x, y));
+        let size = tauri::Size::Logical(tauri::LogicalSize::new(width, height));
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             webview.set_position(pos)?;

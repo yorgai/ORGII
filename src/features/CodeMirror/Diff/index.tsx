@@ -36,6 +36,7 @@ import { useSelectionExtension } from "../Editor/hooks/useSelectionExtension";
 import type { TextSelectionInfo } from "../Editor/types";
 import type { CallbackRefs } from "../Editor/types";
 import {
+  CODEMIRROR_BASE_LAYOUT_THEME,
   codeMirrorCspNonceExtension,
   customFoldGutter,
   editorHistoryKeymapExtension,
@@ -247,6 +248,7 @@ export const CodeMirrorDiff: React.FC<CodeMirrorDiffProps> = ({
     const exts: Extension[] = [codeMirrorCspNonceExtension];
 
     exts.push(getCodeMirrorTheme());
+    exts.push(CODEMIRROR_BASE_LAYOUT_THEME);
 
     if (appearanceSettings.lineNumbers === "on") {
       exts.push(lineNumbers({ formatNumber: formatAbsoluteLineNumber }));

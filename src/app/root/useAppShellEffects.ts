@@ -6,7 +6,7 @@
  * and cleans up its own DOM mutations on unmount.
  *
  * Managed properties:
- * - CSS zoom + `--ui-scale`                                  (uiScaleAtom, 0–200 %)
+ * - Native WebView scale + coordinate scale variables         (uiScaleAtom, 0–200 %)
  * - `--app-font-family`                                    (applicationUiFontAtom)
  * - `html.fullscreen` class                                (windowFullscreenAtom)
  *
@@ -17,12 +17,15 @@ import { useAtomValue } from "jotai";
 import { useEffect } from "react";
 
 import { getApplicationUiFontStack } from "@src/config/appearance/applicationUiFonts";
+import { createLogger } from "@src/hooks/logger";
 import {
   applicationUiFontAtom,
   uiScaleAtom,
   windowFullscreenAtom,
 } from "@src/store/ui/uiAtom";
 import { invokeTauri } from "@src/util/platform/tauri/init";
+
+const logger = createLogger("AppShellEffects");
 
 export function useAppShellEffects(): void {
   const uiScale = useAtomValue(uiScaleAtom);
@@ -31,13 +34,25 @@ export function useAppShellEffects(): void {
 
   useEffect(() => {
     const root = document.documentElement;
+    const appRoot = document.getElementById("root");
     const scaleValue = uiScale / 100;
 
-    root.style.zoom = String(scaleValue);
-    root.style.setProperty("--ui-scale", String(scaleValue));
-    invokeTauri("set_main_webview_zoom", { scaleFactor: 1 }).catch((error) => {
-      console.error("[UI Scale] Failed to reset native WebView zoom:", error);
-    });
+    root.style.zoom = "";
+    root.style.setProperty("--ui-scale", "1");
+    root.style.setProperty("--native-frame-scale", String(scaleValue));
+    invokeTauri("set_main_webview_zoom", { scaleFactor: scaleValue }).catch(
+      (error) => {
+        logger.error("failed to set native WebView zoom:", error);
+      }
+    );
+
+    if (appRoot) {
+      appRoot.style.transform = "";
+      appRoot.style.transformOrigin = "";
+      appRoot.style.width = "";
+      appRoot.style.height = "";
+    }
+
     requestAnimationFrame(() => {
       window.dispatchEvent(new CustomEvent("orgii-ui-scale-applied"));
     });
@@ -45,6 +60,7 @@ export function useAppShellEffects(): void {
     return () => {
       root.style.zoom = "";
       root.style.removeProperty("--ui-scale");
+      root.style.removeProperty("--native-frame-scale");
     };
   }, [uiScale]);
 

@@ -1,48 +1,80 @@
 /**
  * nativeFrame
  *
- * Converts a CSS-pixel DOMRect to native window coordinates for Tauri IPC.
+ * Converts a DOMRect to native window coordinates for Tauri IPC.
  *
- * CSS `zoom` on `<html>` shifts all layout APIs (getBoundingClientRect,
- * offsetLeft, clientWidth, …) into a zoom-adjusted CSS-pixel space. Wry
- * positions child WebViews in the *unzoomed* native window coordinate space,
- * so every rect that crosses the Tauri boundary must be re-expanded by the
- * current UI scale factor.
+ * The app shell uses native WebView zoom for the main UI. DOMRect values are
+ * CSS-pixel measurements, while native child WebViews are positioned in the
+ * parent window's logical coordinate space, so inline WebView frames apply the
+ * dedicated `--native-frame-scale` compensation factor.
  */
-
-/**
- * Reads the current UI scale factor from the CSS custom property `--ui-scale`
- * set by `useAppShellEffects`. Returns 1 if the property is absent or invalid.
- */
-export function getUiScale(): number {
-  if (typeof document === "undefined") return 1;
-  const raw = getComputedStyle(document.documentElement)
-    .getPropertyValue("--ui-scale")
-    .trim();
-  const parsed = parseFloat(raw);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
-}
 
 export interface NativeFrame {
   x: number;
   y: number;
+  a: number;
+  b: number;
   width: number;
   height: number;
 }
 
+export interface NativeFrameCorners {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+export function getNativeFrameScale(): number {
+  if (typeof document === "undefined") return 1;
+
+  const rawScale = getComputedStyle(document.documentElement)
+    .getPropertyValue("--native-frame-scale")
+    .trim();
+  const scale = Number.parseFloat(rawScale);
+
+  if (!Number.isFinite(scale) || scale <= 0) return 1;
+  return scale;
+}
+
+export function toNativeFrameFromCorners(
+  corners: NativeFrameCorners,
+  scale = 1
+): NativeFrame {
+  const left = Math.round(corners.left * scale);
+  const top = Math.round(corners.top * scale);
+  const right = Math.round(corners.right * scale);
+  const bottom = Math.round(corners.bottom * scale);
+
+  return {
+    x: left,
+    y: top,
+    a: right,
+    b: bottom,
+    width: Math.max(1, right - left),
+    height: Math.max(1, bottom - top),
+  };
+}
+
 /**
  * Converts a CSS-layout DOMRect (optionally with a uniform inset) to native
- * window pixel coordinates suitable for Tauri `invoke` payloads.
+ * window coordinates suitable for Tauri `invoke` payloads.
+ *
+ * The frame is derived from start/end corners first, then converted to
+ * x/y/a/b/width/height. This avoids width/height rounding drift between the
+ * React overlay and native child WebView.
  *
  * @param rect  - Value from `element.getBoundingClientRect()`
  * @param inset - Uniform pixel inset to apply before scaling (default 0)
  */
 export function toNativeFrame(rect: DOMRect, inset = 0): NativeFrame {
-  const scale = getUiScale();
-  return {
-    x: Math.round((rect.left + inset) * scale),
-    y: Math.round((rect.top + inset) * scale),
-    width: Math.round((rect.width - inset * 2) * scale),
-    height: Math.round((rect.height - inset * 2) * scale),
-  };
+  return toNativeFrameFromCorners(
+    {
+      left: rect.left + inset,
+      top: rect.top + inset,
+      right: rect.right - inset,
+      bottom: rect.bottom - inset,
+    },
+    getNativeFrameScale()
+  );
 }

@@ -1,6 +1,8 @@
 import { useSetAtom } from "jotai";
 import React, { useEffect, useLayoutEffect, useRef } from "react";
 
+import { WEBVIEW_LAYOUT_CHANGED_EVENT } from "@src/hooks/platform/useInlineWebview/webviewLayoutEvents";
+
 import {
   SHARED_BROWSER_HOST,
   SHARED_BROWSER_HOST_SCOPE,
@@ -104,11 +106,13 @@ export const SharedBrowserHostSlot: React.FC<SharedBrowserHostSlotProps> = ({
     resizeObserver.observe(element);
     window.addEventListener("resize", publish);
     window.addEventListener("scroll", publish, true);
+    window.addEventListener(WEBVIEW_LAYOUT_CHANGED_EVENT, publish);
 
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener("resize", publish);
       window.removeEventListener("scroll", publish, true);
+      window.removeEventListener(WEBVIEW_LAYOUT_CHANGED_EVENT, publish);
       if (animationFrame !== null) {
         window.cancelAnimationFrame(animationFrame);
       }

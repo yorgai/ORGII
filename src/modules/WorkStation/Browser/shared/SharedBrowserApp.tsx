@@ -1,8 +1,9 @@
 import { useAtomValue } from "jotai";
-import React, { memo, useMemo } from "react";
+import React, { memo, useEffect, useMemo } from "react";
 
 import BrowserCore from "@src/engines/BrowserCore";
 import { useBrowserContextAdapter } from "@src/engines/BrowserCore/hooks/useBrowserContextAdapter";
+import { dispatchWebviewLayoutChanged } from "@src/hooks/platform/useInlineWebview/webviewLayoutEvents";
 import { webviewOverlayBlockedAtom } from "@src/store/ui/overlayAtom";
 
 import { activeSharedBrowserHostAtom } from "./sharedBrowserHostAtoms";
@@ -36,6 +37,10 @@ export const SharedBrowserApp: React.FC = memo(() => {
       overflow: "hidden",
       zIndex: 0,
     };
+  }, [activeRect]);
+
+  useEffect(() => {
+    dispatchWebviewLayoutChanged();
   }, [activeRect]);
 
   return (
