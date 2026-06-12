@@ -12,7 +12,7 @@ import {
   deleteWorkspace,
   listWorkspaces,
 } from "@src/api/tauri/workspace";
-import Message from "@src/components/Toast";
+import Message from "@src/components/Message";
 import { createLogger } from "@src/hooks/logger";
 import type { Repo } from "@src/store/repo";
 import { confirmDestructiveAction } from "@src/util/dialogs/confirmDestructiveAction";

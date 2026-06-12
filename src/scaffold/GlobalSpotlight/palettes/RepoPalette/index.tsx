@@ -15,7 +15,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { repoApi } from "@src/api/tauri/repo";
-import Message from "@src/components/Toast";
+import Message from "@src/components/Message";
 import { addWorkspaceInitialStageAtom } from "@src/store/ui/overlayAtom";
 import {
   isMultiRootWorkspaceAtom,

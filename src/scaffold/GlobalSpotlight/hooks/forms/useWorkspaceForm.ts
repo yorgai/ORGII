@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { zodActionRegistry } from "@src/ActionSystem/schema/zodRegistry";
 import { repoApi } from "@src/api/tauri/repo";
-import Message from "@src/components/Toast";
+import Message from "@src/components/Message";
 import { createLogger } from "@src/hooks/logger";
 import {
   effectiveWorkspaceDefaultRepoLocationAtom,

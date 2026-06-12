@@ -19,7 +19,7 @@ import {
   notifyError,
   notifyTaskCompletion,
 } from "@src/api/services/notification";
-import Message from "@src/components/Toast";
+import Message from "@src/components/Message";
 import {
   markTurnTerminal,
   toTurnTerminalStatus,

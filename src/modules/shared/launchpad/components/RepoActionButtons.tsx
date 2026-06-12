@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 
 import { repoApi } from "@src/api/tauri/repo";
 import Button, { type ButtonProps } from "@src/components/Button";
-import Message from "@src/components/Toast";
+import Message from "@src/components/Message";
 import { ROUTES } from "@src/config/routes";
 import { useRepoSelection } from "@src/hooks/git/useRepoSelection";
 import { createLogger } from "@src/hooks/logger";

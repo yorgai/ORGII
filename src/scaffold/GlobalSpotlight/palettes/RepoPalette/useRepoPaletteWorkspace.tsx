@@ -19,7 +19,7 @@ import {
   deleteWorkspace,
   listWorkspaces,
 } from "@src/api/tauri/workspace";
-import Message from "@src/components/Toast";
+import Message from "@src/components/Message";
 import { useFilteredItems } from "@src/hooks/search";
 import {
   activeWorkspaceIdAtom,

@@ -19,7 +19,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useSetAtom } from "jotai";
 import { useEffect, useRef } from "react";
 
-import Message from "@src/components/Toast";
+import Message from "@src/components/Message";
 import { ROUTES } from "@src/config/routes";
 import { createEditorSpotlightRequest } from "@src/scaffold/GlobalSpotlight/openSpotlight";
 import { FileOperationsService } from "@src/services/file/FileOperationsService";

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { zodActionRegistry } from "@src/ActionSystem/schema/zodRegistry";
 import type { GitHubRepo } from "@src/api/http/github/types";
-import Message from "@src/components/Toast";
+import Message from "@src/components/Message";
 import { useGitHubConnections } from "@src/hooks/git";
 import {
   effectiveWorkspaceDefaultRepoLocationAtom,

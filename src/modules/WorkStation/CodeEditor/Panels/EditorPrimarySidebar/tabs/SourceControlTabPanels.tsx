@@ -23,7 +23,7 @@ import { useTranslation } from "react-i18next";
 import { removeGitWorktree } from "@src/api/http/git";
 import type { GitWorktreeEntry } from "@src/api/http/git/types";
 import { repoApi } from "@src/api/tauri/repo";
-import Message from "@src/components/Toast";
+import Message from "@src/components/Message";
 import { FolderHeaderRow } from "@src/modules/WorkStation/shared/FolderHeaderRow";
 import { FOLDER_HEADER } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";

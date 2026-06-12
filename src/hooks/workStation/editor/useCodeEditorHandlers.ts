@@ -11,7 +11,7 @@ import { useSetAtom } from "jotai";
 import { useCallback } from "react";
 
 import { getGitFileContent } from "@src/api/http/git/diff";
-import Message from "@src/components/Toast";
+import Message from "@src/components/Message";
 import { useGitStatus } from "@src/contexts/git";
 import { createLogger } from "@src/hooks/logger";
 import {
