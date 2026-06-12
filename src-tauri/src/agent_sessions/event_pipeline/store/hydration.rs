@@ -7,8 +7,7 @@ use std::collections::HashSet;
 
 use super::helpers::{
     is_authoritative_transcript_message, is_turn_placeholder, loaded_turn_ids_from_events,
-    placeholder_turn_id, reconcile_loaded_synthetic_transcript_placeholders,
-    timeline_source_order,
+    placeholder_turn_id, reconcile_loaded_synthetic_transcript_placeholders, timeline_source_order,
 };
 use super::EventStore;
 use crate::agent_sessions::event_pipeline::store::HydrationMode;

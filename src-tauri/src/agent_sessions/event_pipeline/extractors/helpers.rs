@@ -59,17 +59,11 @@ pub(super) fn parse_diff_start_lines(diff: Option<&str>) -> (Option<usize>, Opti
     (None, None)
 }
 
-pub(super) fn obj_i64(
-    obj: &serde_json::Map<String, serde_json::Value>,
-    key: &str,
-) -> Option<i64> {
+pub(super) fn obj_i64(obj: &serde_json::Map<String, serde_json::Value>, key: &str) -> Option<i64> {
     obj.get(key).and_then(|v| v.as_i64())
 }
 
-pub(super) fn obj_f64(
-    obj: &serde_json::Map<String, serde_json::Value>,
-    key: &str,
-) -> Option<f64> {
+pub(super) fn obj_f64(obj: &serde_json::Map<String, serde_json::Value>, key: &str) -> Option<f64> {
     obj.get(key).and_then(|v| v.as_f64())
 }
 

@@ -191,8 +191,6 @@ pub async fn test_learnings_get_status(
 /// `auto_dream_enabled`. `agent_id` is optional and defaults to
 /// `builtin:sde`; the learning suite pins it to `builtin:os` explicitly.
 pub async fn test_agent_config_set(Json(raw): Json<serde_json::Value>) -> Json<serde_json::Value> {
-    
-
     let obj = match raw.as_object() {
         Some(o) => o,
         None => return Json(serde_json::json!({ "error": "body must be an object" })),
@@ -243,8 +241,6 @@ pub async fn test_agent_config_set(Json(raw): Json<serde_json::Value>) -> Json<s
 pub async fn test_agent_config_reset(
     Json(raw): Json<serde_json::Value>,
 ) -> Json<serde_json::Value> {
-    
-
     let agent_id = raw
         .get("agent_id")
         .and_then(|v| v.as_str())

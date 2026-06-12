@@ -392,11 +392,8 @@ pub fn update_model_and_account(
         )
         .optional()?;
     let mapped_cli_session_id = if let Some(target_account_id) = account_id {
-        let mapped = mapped_cli_session_id_for_account_with_conn(
-            &tx,
-            session_id,
-            Some(target_account_id),
-        )?;
+        let mapped =
+            mapped_cli_session_id_for_account_with_conn(&tx, session_id, Some(target_account_id))?;
         match (mapped, current.as_ref()) {
             (Some(cli_session_id), _) => Some(cli_session_id),
             (None, Some((current_account_id, current_cli_session_id)))

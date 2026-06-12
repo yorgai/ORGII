@@ -135,7 +135,8 @@ fn is_visible_in_simulator_or_messages(event: &SessionEvent) -> bool {
     // still streaming) — only tool_call events get a loading state in the
     // apps. Background shells stay visible via the shellProcessStatus check
     // inside is_live_runtime_resource_event.
-    if is_live_runtime_resource_event(event) && event.display_variant != EventDisplayVariant::ToolCall
+    if is_live_runtime_resource_event(event)
+        && event.display_variant != EventDisplayVariant::ToolCall
     {
         return false;
     }

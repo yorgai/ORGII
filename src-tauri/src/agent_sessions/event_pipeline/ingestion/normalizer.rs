@@ -291,7 +291,12 @@ fn infer_display_status(
     // progress (their content arrives via deltas).
     if matches!(
         action_type,
-        "assistant" | "assistant_delta" | "message" | "message_delta" | "thinking" | "thinking_delta"
+        "assistant"
+            | "assistant_delta"
+            | "message"
+            | "message_delta"
+            | "thinking"
+            | "thinking_delta"
     ) {
         return EventDisplayStatus::Running;
     }

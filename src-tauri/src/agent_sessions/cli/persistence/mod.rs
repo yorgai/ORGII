@@ -13,8 +13,8 @@ pub use worktree_state::*;
 #[cfg(test)]
 mod resume_state_tests {
     use super::*;
-    use agent_core::foundation::session_bridge;
     use crate::test_utils::test_env;
+    use agent_core::foundation::session_bridge;
 
     fn create_test_session(session_id: &str, account_id: &str) {
         create_session(

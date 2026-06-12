@@ -147,7 +147,6 @@ async function main() {
         // no ad-hoc signing pass, no entitlements processing.
         signingIdentity: null,
         entitlements: null,
-        hardened_runtime: false,
       },
     },
   });

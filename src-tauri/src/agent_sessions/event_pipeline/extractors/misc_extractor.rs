@@ -27,8 +27,7 @@ pub(super) fn extract_thinking(
 }
 
 pub(super) fn extract_message(event: &SessionEvent) -> ExtractedMessageData {
-    let is_user =
-        event.source == crate::agent_sessions::event_pipeline::types::EventSource::User;
+    let is_user = event.source == crate::agent_sessions::event_pipeline::types::EventSource::User;
     let content = event
         .result
         .as_object()

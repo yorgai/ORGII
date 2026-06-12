@@ -167,4 +167,3 @@ impl EventStore {
         Some(primary_id)
     }
 }
-

@@ -6,9 +6,7 @@ use std::path::Path;
 
 use chrono::{SecondsFormat, Utc};
 use core_types::activity::ActivityChunk;
-use core_types::providers::{
-    CODEX_ID_TOKEN_ENV_KEY, CODEX_REFRESH_TOKEN_ENV_KEY,
-};
+use core_types::providers::{CODEX_ID_TOKEN_ENV_KEY, CODEX_REFRESH_TOKEN_ENV_KEY};
 use key_vault::key_store::{ModelType, KEY_SERVICE};
 
 use super::super::types::KeySource;
@@ -150,10 +148,7 @@ pub(super) fn sanitize_cli_oauth_env_for_child(
 
 // ── Auth file writers ─────────────────────────────────────────────────────────
 
-pub(super) fn write_codex_cli_auth_file(
-    account_id: &str,
-    env_vars: &HashMap<String, String>,
-) {
+pub(super) fn write_codex_cli_auth_file(account_id: &str, env_vars: &HashMap<String, String>) {
     let codex_home = app_paths::codex_cli_profile_dir(account_id);
     if let Err(err) = std::fs::create_dir_all(&codex_home) {
         tracing::warn!("[CodeSession] Failed to create Codex home: {}", err);
@@ -303,7 +298,9 @@ pub(super) fn write_gemini_cli_oauth_files(
     write_gemini_cli_oauth_files_at(&app_paths::gemini_cli_profile_dir(account_id), env_vars)
 }
 
-pub(super) fn write_gemini_cli_api_key_settings_at(gemini_home: &std::path::Path) -> Result<(), String> {
+pub(super) fn write_gemini_cli_api_key_settings_at(
+    gemini_home: &std::path::Path,
+) -> Result<(), String> {
     let gemini_dir = gemini_home.join(".gemini");
     std::fs::create_dir_all(&gemini_dir)
         .map_err(|err| format!("Failed to create Gemini home: {}", err))?;

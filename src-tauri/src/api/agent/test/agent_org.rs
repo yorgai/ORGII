@@ -1223,7 +1223,13 @@ pub async fn test_agent_org_send_message_direct(
 
     let tool = OrgSendMessageTool::new(context, sender_member_id);
 
-    match tool.execute_text(params_value, &agent_core::tools::call_context::CallContext::default()).await {
+    match tool
+        .execute_text(
+            params_value,
+            &agent_core::tools::call_context::CallContext::default(),
+        )
+        .await
+    {
         Ok(text) => Json(serde_json::json!({ "ok": true, "tool_result": text })),
         Err(err) => {
             let kind = tool_err_kind(&err);
@@ -1296,12 +1302,18 @@ pub async fn test_agent_org_task_tool_direct(
     let result = match operation {
         "create" => {
             TaskCreateTool::new(Arc::clone(&ctx))
-                .execute_text(params_value, &agent_core::tools::call_context::CallContext::default())
+                .execute_text(
+                    params_value,
+                    &agent_core::tools::call_context::CallContext::default(),
+                )
                 .await
         }
         "update" => {
             TaskUpdateTool::new(Arc::clone(&ctx))
-                .execute_text(params_value, &agent_core::tools::call_context::CallContext::default())
+                .execute_text(
+                    params_value,
+                    &agent_core::tools::call_context::CallContext::default(),
+                )
                 .await
         }
         _ => unreachable!(),

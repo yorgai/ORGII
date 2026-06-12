@@ -707,4 +707,3 @@ fn build_searchable_content(event: &SessionEvent) -> String {
     }
     parts.join(" ")
 }
-

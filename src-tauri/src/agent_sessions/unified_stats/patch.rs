@@ -177,20 +177,14 @@ fn validate_account_model_compat(account_id: &str, model: &str) -> Result<(), St
         ));
     };
     if !key.enabled {
-        return Err(format!(
-            "session_patch: account {account_id} is disabled"
-        ));
+        return Err(format!("session_patch: account {account_id} is disabled"));
     }
     if key.enabled_models.is_empty() {
         return Ok(());
     }
-    let compatible = key
-        .enabled_models
-        .iter()
-        .any(|enabled| {
-            enabled == model || model.starts_with(enabled.as_str()) || enabled.starts_with(model)
-        })
-        || key.model_aliases.iter().any(|alias| alias.alias == model);
+    let compatible = key.enabled_models.iter().any(|enabled| {
+        enabled == model || model.starts_with(enabled.as_str()) || enabled.starts_with(model)
+    }) || key.model_aliases.iter().any(|alias| alias.alias == model);
     if !compatible {
         return Err(format!(
             "session_patch: model {model} is not enabled for account {account_id} \
@@ -213,8 +207,7 @@ pub fn apply_session_patch(session_id: &str, patch: &SessionPatch) -> Result<(),
                 .to_string(),
         );
     }
-    if let (Some(account_id), Some(model)) = (patch.account_id.as_deref(), patch.model.as_deref())
-    {
+    if let (Some(account_id), Some(model)) = (patch.account_id.as_deref(), patch.model.as_deref()) {
         validate_account_model_compat(account_id, model)?;
     }
     if patch.model.is_none()

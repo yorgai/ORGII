@@ -10,8 +10,8 @@ use agent_core::core::tools::names as tool_names;
 use agent_core::core::tools::ui_metadata::AppSubtool;
 
 use super::file_extractor::{extract_edit, extract_file};
-use super::misc_extractor::extract_delete_file;
 use super::helpers::obj_str;
+use super::misc_extractor::extract_delete_file;
 use super::misc_extractor::{
     extract_message, extract_org_task, extract_subagent, extract_thinking, extract_todo,
     extract_web_search,

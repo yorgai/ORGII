@@ -70,7 +70,13 @@ pub async fn test_code_search_tool(
     use std::path::PathBuf;
 
     let tool = SearchTool::new(PathBuf::from(request.default_repo));
-    match tool.execute_text(request.params, &agent_core::tools::call_context::CallContext::default()).await {
+    match tool
+        .execute_text(
+            request.params,
+            &agent_core::tools::call_context::CallContext::default(),
+        )
+        .await
+    {
         Ok(output) => Json(serde_json::json!({ "ok": true, "output": output })),
         Err(err) => Json(serde_json::json!({ "ok": false, "error": err.to_string() })),
     }

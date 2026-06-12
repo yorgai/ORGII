@@ -15,11 +15,11 @@ use crate::agent_sessions::event_pipeline::types::{
 use session_persistence as sqlite_cache;
 
 use super::{
-    schedule_notify, EventStoreState,
     event_conversion::{
         backfill_subagent_links, backfill_tool_inputs_from_messages, cached_event_to_session_event,
         dedup_by_call_id,
     },
+    schedule_notify, EventStoreState,
 };
 
 // ============================================================================

@@ -220,7 +220,11 @@ impl EventStore {
 
     /// Replace a single event by ID, and remove another by ID atomically.
     /// Used for stream finalization: remove the streaming placeholder, insert final event.
-    pub fn replace_and_remove(&mut self, remove_id: Option<&str>, mut new_event: SessionEvent) -> bool {
+    pub fn replace_and_remove(
+        &mut self,
+        remove_id: Option<&str>,
+        mut new_event: SessionEvent,
+    ) -> bool {
         self.stamp_repo(&mut new_event);
         if let Some(rid) = remove_id {
             if let Some(&remove_idx) = self.id_index.get(rid) {
@@ -516,11 +520,10 @@ impl EventStore {
         &mut self,
         new_event: &mut SessionEvent,
     ) -> bool {
-        let placeholder_prefix =
-            match stream_placeholder_prefix_for_authoritative(&new_event.id) {
-                Some(prefix) => prefix,
-                None => return false,
-            };
+        let placeholder_prefix = match stream_placeholder_prefix_for_authoritative(&new_event.id) {
+            Some(prefix) => prefix,
+            None => return false,
+        };
         let display_text = new_event.display_text.trim();
         if display_text.is_empty() {
             return false;

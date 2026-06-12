@@ -3,39 +3,38 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-static LANG_MAP: LazyLock<HashMap<&'static str, &'static str>> =
-    LazyLock::new(|| {
-        let mut m = HashMap::new();
-        m.insert("ts", "typescript");
-        m.insert("tsx", "typescript");
-        m.insert("js", "javascript");
-        m.insert("jsx", "javascript");
-        m.insert("py", "python");
-        m.insert("rs", "rust");
-        m.insert("go", "go");
-        m.insert("java", "java");
-        m.insert("rb", "ruby");
-        m.insert("php", "php");
-        m.insert("css", "css");
-        m.insert("scss", "scss");
-        m.insert("html", "html");
-        m.insert("json", "json");
-        m.insert("yaml", "yaml");
-        m.insert("yml", "yaml");
-        m.insert("md", "markdown");
-        m.insert("sh", "bash");
-        m.insert("sql", "sql");
-        m.insert("toml", "toml");
-        m.insert("xml", "xml");
-        m.insert("c", "c");
-        m.insert("cpp", "cpp");
-        m.insert("h", "c");
-        m.insert("hpp", "cpp");
-        m.insert("cs", "csharp");
-        m.insert("swift", "swift");
-        m.insert("kt", "kotlin");
-        m
-    });
+static LANG_MAP: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
+    let mut m = HashMap::new();
+    m.insert("ts", "typescript");
+    m.insert("tsx", "typescript");
+    m.insert("js", "javascript");
+    m.insert("jsx", "javascript");
+    m.insert("py", "python");
+    m.insert("rs", "rust");
+    m.insert("go", "go");
+    m.insert("java", "java");
+    m.insert("rb", "ruby");
+    m.insert("php", "php");
+    m.insert("css", "css");
+    m.insert("scss", "scss");
+    m.insert("html", "html");
+    m.insert("json", "json");
+    m.insert("yaml", "yaml");
+    m.insert("yml", "yaml");
+    m.insert("md", "markdown");
+    m.insert("sh", "bash");
+    m.insert("sql", "sql");
+    m.insert("toml", "toml");
+    m.insert("xml", "xml");
+    m.insert("c", "c");
+    m.insert("cpp", "cpp");
+    m.insert("h", "c");
+    m.insert("hpp", "cpp");
+    m.insert("cs", "csharp");
+    m.insert("swift", "swift");
+    m.insert("kt", "kotlin");
+    m
+});
 
 pub fn detect_language(file_name: &str) -> &'static str {
     let ext = file_name.rsplit('.').next().unwrap_or("");
