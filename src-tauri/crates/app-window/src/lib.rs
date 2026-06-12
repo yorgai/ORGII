@@ -217,8 +217,7 @@ pub fn create_window(app: &AppHandle, options: CreateWindowOptions) -> Result<()
             .min_inner_size(min_width, min_height)
             .resizable(options.resizable)
             .visible(true)
-            .decorations(true)
-            .transparent(true);
+            .decorations(true);
 
     // macOS-specific styling
     #[cfg(target_os = "macos")]
@@ -288,7 +287,6 @@ pub fn recreate_main_window(app: &AppHandle) -> Result<(), String> {
         .resizable(true)
         .visible(true)
         .decorations(true)
-        .transparent(true)
         .center();
 
     #[cfg(target_os = "macos")]
@@ -335,7 +333,6 @@ pub fn create_new_app_window(app: &AppHandle) -> Result<(), String> {
         .resizable(true)
         .visible(true)
         .decorations(true)
-        .transparent(true)
         .center();
 
     #[cfg(target_os = "macos")]

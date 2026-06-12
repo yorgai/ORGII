@@ -69,7 +69,6 @@ pub async fn open_browser_window(
     .resizable(true)
     .visible(true)
     .decorations(true)
-    .transparent(true)
     .initialization_script(SPA_NAVIGATION_SCRIPT)
     .on_navigation(move |navigation_url: &url::Url| {
         let url_str = navigation_url.to_string();
