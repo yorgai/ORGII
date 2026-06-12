@@ -103,6 +103,8 @@ export interface ShellOperationEntry {
   commandKeywords: string;
   /** Working directory */
   cwd?: string;
+  /** Agent-provided human summary */
+  description?: string;
   /** Command output (final, after completion) */
   output?: string;
   /** Live streaming output while command is running */
@@ -129,6 +131,9 @@ export interface ShellOperationEntry {
 
 export interface CurrentShellData {
   command: string;
+  shortCommand?: string;
+  commandKeywords?: string;
+  description?: string;
   output?: string;
   exitCode?: number;
   cwd?: string;

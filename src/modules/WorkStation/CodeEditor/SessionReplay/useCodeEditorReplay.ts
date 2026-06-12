@@ -332,10 +332,11 @@ export function useCodeEditorReplay(
 
     return {
       command: currentShellData.command,
-      shortCommand:
-        currentShellData.command.split(/\s+/)[0] || currentShellData.command,
-      commandKeywords: currentShellData.command.split(/\s+/)[0] || "",
+      shortCommand: currentShellData.shortCommand || currentShellData.command,
+      commandKeywords:
+        currentShellData.commandKeywords || currentShellData.shortCommand || "",
       cwd: currentShellData.cwd,
+      description: currentShellData.description,
       output: currentShellData.output,
       exitCode: currentShellData.exitCode,
       executionTime: currentShellData.executionTime,

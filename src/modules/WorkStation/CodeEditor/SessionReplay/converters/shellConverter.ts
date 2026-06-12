@@ -3,6 +3,7 @@
  *
  * Converts SessionEvents into ShellOperationEntry for the IDE simulator view.
  */
+import { TOOL_NAMES } from "@src/api/tauri/agent/toolNames";
 import type { SessionEvent } from "@src/engines/SessionCore/core/types";
 import { extractShellData } from "@src/engines/SessionCore/rendering/props";
 import { APP_SUBTOOL } from "@src/engines/SessionCore/rendering/registry";
@@ -12,13 +13,25 @@ import { getEventStatus } from "@src/util/data/converters/eventStatus";
 
 import type { ShellOperationEntry } from "../types";
 
-export function parseCommandKeywords(command: string): string {
-  if (!command) return "";
-  const parts = command.split(/(?:&&|\|\||;|\|)/);
-  const commands = parts
-    .map((part) => part.trim().split(/\s+/)[0])
-    .filter(Boolean);
-  return [...new Set(commands)].join(", ");
+function commandFromAction(event: SessionEvent): string {
+  const action =
+    typeof event.args?.action === "string" ? event.args.action : "";
+  if (!action) return "";
+
+  if (event.functionName === TOOL_NAMES.INSPECT_TERMINALS) {
+    return `${TOOL_NAMES.INSPECT_TERMINALS} ${action}`;
+  }
+
+  return "";
+}
+
+function resolveEventStatus(event: SessionEvent): EventStatus {
+  const status = getEventStatus(event) || event.displayStatus || "completed";
+  return status as EventStatus;
+}
+
+function isLiveShellProcess(status: unknown): boolean {
+  return status === "running" || status === "background";
 }
 
 /**
@@ -34,7 +47,7 @@ export function convertToShellOperation(
   const subtool = getAppSubtool(eventType);
 
   if (subtool === APP_SUBTOOL.SHELL) {
-    const statusString = getEventStatus(event) as EventStatus;
+    const statusString = resolveEventStatus(event);
 
     const propsForExtraction = {
       eventId: event.id,
@@ -47,20 +60,22 @@ export function convertToShellOperation(
     };
 
     const data = extractShellData(propsForExtraction);
+    const command = data.command || commandFromAction(event);
 
-    if (!data.command) return null;
+    if (!command) return null;
 
-    const isLoading = statusString === "running" || statusString === "pending";
-    const rawStreamOutput =
-      typeof event.args?.streamOutput === "string"
-        ? event.args.streamOutput
-        : undefined;
+    const isLoading =
+      statusString === "running" ||
+      statusString === "pending" ||
+      isLiveShellProcess(data.shellProcessStatus);
+    const rawStreamOutput = data.streamOutput;
 
     return {
-      command: data.command,
-      shortCommand: data.command.split(/\s+/)[0] || data.command,
-      commandKeywords: parseCommandKeywords(data.command),
+      command,
+      shortCommand: data.shortCommand || command,
+      commandKeywords: data.commandKeywords || data.shortCommand || "",
       cwd: data.cwd,
+      description: data.description,
       output: data.output,
       streamOutput: isLoading ? rawStreamOutput : undefined,
       exitCode: data.exitCode,

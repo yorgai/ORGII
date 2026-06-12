@@ -312,7 +312,8 @@ const SessionReplayIDEComponent: React.FC<SimulatorIDEProps> = ({
       }
     );
     const shellTabs: TimestampedReplayTab[] = allShellOperations.map((op) => {
-      const label = op.commandKeywords || op.shortCommand || op.command;
+      const label =
+        op.description || op.commandKeywords || op.shortCommand || op.command;
       return {
         eventId: op.eventId,
         kind: "terminal",

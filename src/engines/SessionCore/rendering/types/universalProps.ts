@@ -215,6 +215,8 @@ export interface RustPatchConversionResult {
 
 export interface ExtractedShellData {
   command: string;
+  shortCommand?: string;
+  commandKeywords?: string;
   action?: string;
   killHandle?: string;
   description?: string;

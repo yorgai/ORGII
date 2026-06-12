@@ -28,13 +28,31 @@ function resolveAction(
   return undefined;
 }
 
+function getShellCommandDisplay(command: string): {
+  shortCommand?: string;
+  commandKeywords?: string;
+} {
+  if (!command) return {};
+  const parts = command.split(/(?:&&|\|\||;|\|)/);
+  const commands = parts
+    .map((part) => part.trim().split(/\s+/)[0])
+    .filter(Boolean);
+  return {
+    shortCommand: command.trim().split(/\s+/)[0] || command,
+    commandKeywords: [...new Set(commands)].join(", "),
+  };
+}
+
 export function extractShellData(
   props: UniversalEventProps
 ): ExtractedShellData {
   if (props.rustExtracted?.kind === "shell") {
     const s = props.rustExtracted;
+    const display = getShellCommandDisplay(s.command);
     return {
       command: s.command,
+      shortCommand: display.shortCommand,
+      commandKeywords: display.commandKeywords,
       action: s.action,
       killHandle: s.killHandle,
       description: s.description,
@@ -101,6 +119,7 @@ export function extractShellData(
     undefined;
 
   const cwd = (args?.cwd as string) || undefined;
+  const display = getShellCommandDisplay(command);
 
   const shellPid = (args?.shellPid as number) ?? undefined;
   const shellProcessStatus =
@@ -113,6 +132,8 @@ export function extractShellData(
 
   return {
     command,
+    shortCommand: display.shortCommand,
+    commandKeywords: display.commandKeywords,
     action,
     killHandle,
     description,
