@@ -97,10 +97,25 @@ function extractAnsweredData(props: RawEventInput): {
       (result.answers as unknown[]).length > 0) ||
     (typeof result?.answer === "string" && result.answer.length > 0);
 
+  // Fallback signal: Rust's `question::format_answers_for_llm` emits a
+  // stable "User has answered your questions: ..." prefix on the LLM-facing
+  // content. When `result.answers`/`result.status` get clobbered by a
+  // subsequent generic `agent:tool_result` merge (Object → String fallback
+  // in `EventStore::merge_events_with_hydration`), this prefix is the only
+  // surviving evidence the user actually responded. Match it so the history
+  // card doesn't downgrade a real answer to "Questions skipped".
+  const resultContent =
+    (typeof result?.content === "string" ? result.content : "") ||
+    (typeof result?.observation === "string" ? result.observation : "");
+  const contentSignalsAnswered = resultContent.startsWith(
+    "User has answered your questions"
+  );
+
   const isAnswered =
     result?.status === "answered" ||
     result?.status === "responsed" ||
-    hasAnswerPayload;
+    hasAnswerPayload ||
+    contentSignalsAnswered;
 
   // Try to extract structured questions from args
   const structuredQuestions = args?.questions as
@@ -113,6 +128,44 @@ function extractAnsweredData(props: RawEventInput): {
   // `agent:tool_result` events.
   const resultAnswers = result?.answers as string[][] | undefined;
   const resultAnswer = result?.answer as string | undefined;
+
+  // When the structured `answers` field was clobbered, parse the answer
+  // tokens out of the LLM-facing content. Format is stable (see Rust
+  // `question::format_answers_for_llm`):
+  //   `User has answered your questions: "Q1" = "A1", "Q2" = "A2". You can ...`
+  // We strip the prefix + trailing sentence, then split on the literal
+  // `", "` separator between question/answer pairs. Each token's answer
+  // is the substring between the first `= "` and the trailing `"`.
+  const parsedContentAnswers: string[][] | undefined =
+    contentSignalsAnswered && !resultAnswers
+      ? (() => {
+          const prefix = "User has answered your questions: ";
+          const trailing = ". You can now continue";
+          let body = resultContent.slice(prefix.length);
+          const trailIdx = body.indexOf(trailing);
+          if (trailIdx >= 0) body = body.slice(0, trailIdx);
+          // Split on the literal `", "` between Q/A pairs. The answer text
+          // itself may contain `, ` (without quotes), which won't match.
+          const tokens = body.split(/",\s*"/);
+          // Normalise the first/last token to drop the outer quotes that
+          // `split` left dangling (only on the boundary tokens).
+          const answers = tokens
+            .map((token, idx) => {
+              let t = token;
+              if (idx === 0 && t.startsWith('"')) t = t.slice(1);
+              if (idx === tokens.length - 1 && t.endsWith('"'))
+                t = t.slice(0, -1);
+              const eqIdx = t.indexOf('" = "');
+              if (eqIdx < 0) return [];
+              const answer = t.slice(eqIdx + 5);
+              return [answer];
+            })
+            .filter((arr) => arr.length > 0);
+          return answers.length > 0 ? answers : undefined;
+        })()
+      : undefined;
+
+  const effectiveAnswers = resultAnswers ?? parsedContentAnswers;
 
   if (Array.isArray(structuredQuestions) && structuredQuestions.length > 0) {
     const topLevelText =
@@ -129,8 +182,8 @@ function extractAnsweredData(props: RawEventInput): {
         "";
 
       let answers: string[] = [];
-      if (Array.isArray(resultAnswers) && resultAnswers[idx]) {
-        answers = resultAnswers[idx];
+      if (Array.isArray(effectiveAnswers) && effectiveAnswers[idx]) {
+        answers = effectiveAnswers[idx];
       } else if (idx === 0 && resultAnswer) {
         answers = [resultAnswer];
       }

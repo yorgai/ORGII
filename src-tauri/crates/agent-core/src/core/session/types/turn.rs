@@ -138,3 +138,181 @@ impl DialogTurn {
         self.started_at.elapsed()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_turn(input: &str) -> DialogTurn {
+        DialogTurn::new(input.to_string(), Arc::new(AtomicBool::new(false)))
+    }
+
+    // -----------------------------------------------------------------------
+    // Initial state
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn new_turn_starts_in_running_state() {
+        let turn = make_turn("hello");
+        assert_eq!(turn.state, DialogTurnState::Running);
+    }
+
+    #[test]
+    fn new_turn_preserves_user_input() {
+        let turn = make_turn("my message");
+        assert_eq!(turn.user_input, "my message");
+    }
+
+    #[test]
+    fn new_turn_is_not_finished() {
+        let turn = make_turn("hello");
+        assert!(!turn.is_finished());
+    }
+
+    #[test]
+    fn new_turn_has_zeroed_stats() {
+        let turn = make_turn("hello");
+        assert_eq!(turn.stats.prompt_tokens, 0);
+        assert_eq!(turn.stats.completion_tokens, 0);
+        assert_eq!(turn.stats.tool_calls_count, 0);
+    }
+
+    #[test]
+    fn new_turn_has_unique_turn_id() {
+        let a = make_turn("a");
+        let b = make_turn("b");
+        assert_ne!(a.turn_id, b.turn_id, "turn_ids must be unique per turn");
+    }
+
+    // -----------------------------------------------------------------------
+    // cancel() — sets atomic flag without changing state
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn cancel_sets_flag_without_changing_state() {
+        let turn = make_turn("hello");
+        turn.cancel();
+        // The cancel flag is now set …
+        assert!(turn.cancel_flag.load(Ordering::SeqCst));
+        // … but state is still Running until finalize() is called
+        assert_eq!(turn.state, DialogTurnState::Running);
+        assert!(!turn.is_finished());
+    }
+
+    // -----------------------------------------------------------------------
+    // finalize() — state transitions: Running → terminal
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn finalize_completed_transitions_state() {
+        let mut turn = make_turn("hello");
+        let stats = TurnStats { prompt_tokens: 10, completion_tokens: 20, ..Default::default() };
+        turn.finalize(DialogTurnState::Completed, stats);
+        assert_eq!(turn.state, DialogTurnState::Completed);
+        assert!(turn.is_finished());
+    }
+
+    #[test]
+    fn finalize_cancelled_transitions_state() {
+        let mut turn = make_turn("hello");
+        turn.finalize(DialogTurnState::Cancelled, TurnStats::default());
+        assert_eq!(turn.state, DialogTurnState::Cancelled);
+        assert!(turn.is_finished());
+    }
+
+    #[test]
+    fn finalize_failed_transitions_state() {
+        let mut turn = make_turn("hello");
+        turn.finalize(DialogTurnState::Failed, TurnStats::default());
+        assert_eq!(turn.state, DialogTurnState::Failed);
+        assert!(turn.is_finished());
+    }
+
+    #[test]
+    fn finalize_records_token_stats() {
+        let mut turn = make_turn("hello");
+        let stats = TurnStats {
+            prompt_tokens: 50,
+            completion_tokens: 75,
+            total_tokens: 125,
+            tool_calls_count: 3,
+            ..Default::default()
+        };
+        turn.finalize(DialogTurnState::Completed, stats);
+        assert_eq!(turn.stats.prompt_tokens, 50);
+        assert_eq!(turn.stats.completion_tokens, 75);
+        assert_eq!(turn.stats.total_tokens, 125);
+        assert_eq!(turn.stats.tool_calls_count, 3);
+    }
+
+    #[test]
+    fn finalize_sets_duration_in_stats() {
+        let mut turn = make_turn("hello");
+        turn.finalize(DialogTurnState::Completed, TurnStats::default());
+        assert!(
+            turn.stats.duration.is_some(),
+            "finalize() must populate stats.duration"
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // DialogTurnState — is_finished boundaries
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn only_running_is_not_finished() {
+        let running_turn = make_turn("hello");
+        assert!(!running_turn.is_finished(), "Running turn must not be finished");
+        // All terminal variants must satisfy is_finished via `!= Running` logic
+        let terminal = [
+            DialogTurnState::Completed,
+            DialogTurnState::Cancelled,
+            DialogTurnState::Failed,
+        ];
+        for state in terminal {
+            let mut turn = make_turn("hello");
+            turn.finalize(state, TurnStats::default());
+            assert!(turn.is_finished(), "{:?} turn must be finished", state);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // DialogTurnState serde round-trip
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn turn_state_serializes_to_snake_case() {
+        assert_eq!(
+            serde_json::to_string(&DialogTurnState::Running).unwrap(),
+            "\"running\""
+        );
+        assert_eq!(
+            serde_json::to_string(&DialogTurnState::Completed).unwrap(),
+            "\"completed\""
+        );
+        assert_eq!(
+            serde_json::to_string(&DialogTurnState::Cancelled).unwrap(),
+            "\"cancelled\""
+        );
+        assert_eq!(
+            serde_json::to_string(&DialogTurnState::Failed).unwrap(),
+            "\"failed\""
+        );
+    }
+
+    #[test]
+    fn turn_state_deserializes_from_snake_case() {
+        let states = ["running", "completed", "cancelled", "failed"];
+        let expected = [
+            DialogTurnState::Running,
+            DialogTurnState::Completed,
+            DialogTurnState::Cancelled,
+            DialogTurnState::Failed,
+        ];
+        for (s, expected) in states.iter().zip(expected.iter()) {
+            let json = format!("\"{}\"", s);
+            let got: DialogTurnState = serde_json::from_str(&json).unwrap();
+            assert_eq!(got, *expected, "Deserializing {:?}", s);
+        }
+    }
+}
