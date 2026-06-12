@@ -92,7 +92,9 @@ export const DatabasePrimarySidebar: React.FC<DatabasePrimarySidebarProps> =
         onOpenDbSelector,
       });
 
-      const queryHistoryTab = useQueryHistoryTabConfig();
+      const queryHistoryTab = useQueryHistoryTabConfig({
+        connectionId: selectedConnectionId,
+      });
 
       // Build tabs array
       const tabs: PrimarySidebarTab[] = useMemo(

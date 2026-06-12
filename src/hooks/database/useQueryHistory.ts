@@ -2,15 +2,15 @@
  * useQueryHistory Hook
  *
  * Manages SQL query history for a database connection.
- * History is persisted to localStorage.
+ * History is persisted to localStorage via `queryHistoryAtom` (atomWithStorage).
  */
-import { useCallback, useState } from "react";
+import { useAtom } from "jotai";
+import { useCallback } from "react";
 
 import {
+  MAX_HISTORY_PER_CONNECTION,
   type QueryHistoryItem,
-  clearQueryHistory,
-  loadQueryHistory,
-  saveQueryToHistory,
+  queryHistoryAtom,
 } from "@src/store/workstation/database";
 
 // ============================================
@@ -22,10 +22,8 @@ export interface UseQueryHistoryReturn {
   history: QueryHistoryItem[];
   /** Add a query to history */
   addQuery: (item: Omit<QueryHistoryItem, "timestamp">) => void;
-  /** Clear all history */
+  /** Clear all history for this connection */
   clearHistory: () => void;
-  /** Refresh history from storage */
-  refresh: () => void;
 }
 
 // ============================================
@@ -33,20 +31,12 @@ export interface UseQueryHistoryReturn {
 // ============================================
 
 export function useQueryHistory(connectionId: string): UseQueryHistoryReturn {
-  // Initialize history from storage (computed during render, not in effect)
-  const [history, setHistory] = useState<QueryHistoryItem[]>(() =>
-    connectionId ? loadQueryHistory(connectionId) : []
-  );
+  const [allHistory, setAllHistory] = useAtom(queryHistoryAtom);
 
-  // Track connection changes and reload history
-  const [prevConnectionId, setPrevConnectionId] = useState(connectionId);
-  if (connectionId !== prevConnectionId) {
-    setPrevConnectionId(connectionId);
-    const loaded = connectionId ? loadQueryHistory(connectionId) : [];
-    setHistory(loaded);
-  }
+  const history: QueryHistoryItem[] = connectionId
+    ? (allHistory[connectionId] ?? [])
+    : [];
 
-  // Add a query to history
   const addQuery = useCallback(
     (item: Omit<QueryHistoryItem, "timestamp">) => {
       if (!connectionId) return;
@@ -56,41 +46,31 @@ export function useQueryHistory(connectionId: string): UseQueryHistoryReturn {
         timestamp: Date.now(),
       };
 
-      // Save to storage
-      saveQueryToHistory(connectionId, fullItem);
-
-      // Update local state
-      setHistory((prev) => {
-        const newHistory = [fullItem, ...prev];
-        // Keep max 50
-        if (newHistory.length > 50) {
-          newHistory.length = 50;
+      setAllHistory((prev) => {
+        const existing = prev[connectionId] ?? [];
+        const updated = [fullItem, ...existing];
+        if (updated.length > MAX_HISTORY_PER_CONNECTION) {
+          updated.length = MAX_HISTORY_PER_CONNECTION;
         }
-        return newHistory;
+        return { ...prev, [connectionId]: updated };
       });
     },
-    [connectionId]
+    [connectionId, setAllHistory]
   );
 
-  // Clear all history
   const clearHistory = useCallback(() => {
     if (!connectionId) return;
-    clearQueryHistory(connectionId);
-    setHistory([]);
-  }, [connectionId]);
-
-  // Refresh from storage
-  const refresh = useCallback(() => {
-    if (!connectionId) return;
-    const loaded = loadQueryHistory(connectionId);
-    setHistory(loaded);
-  }, [connectionId]);
+    setAllHistory((prev) => {
+      const next = { ...prev };
+      delete next[connectionId];
+      return next;
+    });
+  }, [connectionId, setAllHistory]);
 
   return {
     history,
     addQuery,
     clearHistory,
-    refresh,
   };
 }
 

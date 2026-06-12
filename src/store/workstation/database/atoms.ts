@@ -14,6 +14,7 @@
  * - IDatabaseService: Service instances (managed by factory)
  */
 import { atom } from "jotai";
+import { atomWithStorage } from "jotai/utils";
 
 import type {
   DatabaseConnectionConfig,
@@ -240,7 +241,7 @@ export interface QueryHistoryItem {
 // ============================================
 
 const QUERY_HISTORY_KEY = "orgii:database-query-history";
-const MAX_HISTORY_PER_CONNECTION = 50;
+export const MAX_HISTORY_PER_CONNECTION = 50;
 
 /**
  * Load query history for a connection from localStorage
@@ -311,3 +312,46 @@ export function clearQueryHistory(connectionId: string): void {
     console.warn("Failed to clear query history:", error);
   }
 }
+
+// ============================================
+// Query History Atom (atomWithStorage)
+// ============================================
+
+type QueryHistoryMap = Record<string, QueryHistoryItem[]>;
+
+const queryHistoryStorage = {
+  getItem: (key: string, initialValue: QueryHistoryMap): QueryHistoryMap => {
+    try {
+      const stored = localStorage.getItem(key);
+      if (!stored) return initialValue;
+      const parsed = JSON.parse(stored) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return initialValue;
+      }
+      return parsed as QueryHistoryMap;
+    } catch {
+      return initialValue;
+    }
+  },
+  setItem: (key: string, value: QueryHistoryMap): void => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.warn("Failed to persist query history:", error);
+    }
+  },
+  removeItem: (key: string): void => {
+    localStorage.removeItem(key);
+  },
+};
+
+/**
+ * Persisted query history atom keyed by connectionId.
+ * Each connection stores up to MAX_HISTORY_PER_CONNECTION entries (most recent first).
+ */
+export const queryHistoryAtom = atomWithStorage<QueryHistoryMap>(
+  QUERY_HISTORY_KEY,
+  {},
+  queryHistoryStorage
+);
+queryHistoryAtom.debugLabel = "queryHistoryAtom";

@@ -12,10 +12,20 @@ import type { PrimarySidebarTab } from "@src/modules/WorkStation/shared";
 import QueryHistoryContent from "../content/QueryHistoryContent";
 
 // ============================================
+// Types
+// ============================================
+
+interface UseQueryHistoryTabConfigOptions {
+  connectionId: string | null;
+}
+
+// ============================================
 // Hook
 // ============================================
 
-export function useQueryHistoryTabConfig(): PrimarySidebarTab {
+export function useQueryHistoryTabConfig({
+  connectionId,
+}: UseQueryHistoryTabConfigOptions): PrimarySidebarTab {
   const { t } = useTranslation();
   return useMemo(
     () => ({
@@ -26,12 +36,12 @@ export function useQueryHistoryTabConfig(): PrimarySidebarTab {
         {
           key: "query-history",
           title: t("labels.history"),
-          content: <QueryHistoryContent />,
+          content: <QueryHistoryContent connectionId={connectionId} />,
           defaultFlexGrow: 1,
           resizable: false,
         },
       ],
     }),
-    [t]
+    [t, connectionId]
   );
 }
