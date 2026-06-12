@@ -109,6 +109,13 @@ use infrastructure::index_manager::IndexManager;
 /// app_lib::run();
 /// ```
 pub fn run() {
+    // Augment $PATH from the user's login shell so binary probes (`which npm`,
+    // `which claude`, etc.) work correctly when the app is launched from the
+    // Dock/Finder, where macOS only provides the minimal system PATH.
+    // Clear the stale cache so it is rebuilt with the correct PATH on first use.
+    app_paths::augment_path_from_shell();
+    app_paths::clear_dependencies_cache();
+
     // Wire schema initializers into the `database` crate before any other
     // setup runs — anything that opens a connection (logging dir creation,
     // background tasks, the Tauri setup hook) relies on the dispatcher
@@ -295,14 +302,19 @@ pub fn run() {
                 }
             }
 
-            // Windows 11+: align native frame rounding with web `--radius-page` (DWM small corners).
             {
                 use tauri::Manager;
                 if let Some(main_window) = app.handle().get_webview_window("main") {
+                    #[cfg(target_os = "macos")]
+                    app_window::set_traffic_light_position(
+                        &main_window,
+                        app_window::TRAFFIC_LIGHT_X,
+                        app_window::TRAFFIC_LIGHT_Y,
+                    );
+
                     app_window::apply_host_desktop_window_chrome(&main_window);
                 }
             }
-
 
             // Initialize transport layer (unified event emission)
             {

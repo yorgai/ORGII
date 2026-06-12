@@ -153,6 +153,25 @@ pub fn dependencies_cache() -> PathBuf {
     orgii_root().join("dependencies.json")
 }
 
+/// Delete the dependency probe cache so the next call to
+/// `detect_system_dependencies` rescans from scratch.
+///
+/// Call this once at startup after `augment_path_from_shell()` so that a
+/// stale cache written under the old (stripped) PATH is not served back to
+/// the frontend as if it were still valid.
+pub fn clear_dependencies_cache() {
+    let path = dependencies_cache();
+    if path.exists() {
+        if let Err(err) = std::fs::remove_file(&path) {
+            tracing::warn!(
+                path = %path.display(),
+                error = %err,
+                "[app_paths] could not clear dependency cache; stale probe results may persist"
+            );
+        }
+    }
+}
+
 /// Per-repo Merkle snapshots root: `~/.orgii/merkle/`.
 ///
 /// Read/written by the `search` crate's merkle workspace cache. Hoisted
@@ -357,6 +376,69 @@ fn git_binary_name() -> &'static str {
         "git.exe"
     } else {
         "git"
+    }
+}
+
+/// Augment the process `$PATH` with the user's login-shell PATH.
+///
+/// macOS `.app` bundles launched from the Dock or Finder start with a
+/// stripped PATH (`/usr/bin:/bin:/usr/sbin:/sbin`), so `which npm`,
+/// `which claude`, etc. fail even when those tools are installed via
+/// Homebrew (`/opt/homebrew/bin`) or nvm/fnm (`~/.nvm/...`).
+///
+/// This function spawns `$SHELL -l -c 'echo $PATH'` (a non-interactive
+/// login shell), captures the output, and prepends any new directories
+/// to the current process PATH. Safe to call multiple times (idempotent).
+/// On Windows it's a no-op — the OS resolves PATH differently.
+///
+/// Call once at app startup before any binary-detection probes run.
+pub fn augment_path_from_shell() {
+    #[cfg(unix)]
+    {
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+
+        let Ok(output) = Command::new(&shell)
+            .args(["-l", "-c", "echo $PATH"])
+            .stdin(Stdio::null())
+            .stderr(Stdio::null())
+            .output()
+        else {
+            return;
+        };
+
+        if !output.status.success() {
+            return;
+        }
+
+        let shell_path = String::from_utf8_lossy(&output.stdout);
+        let shell_path = shell_path.trim();
+        if shell_path.is_empty() {
+            return;
+        }
+
+        let current_path = std::env::var("PATH").unwrap_or_default();
+        let current_dirs: HashSet<&str> = current_path.split(':').collect();
+
+        let new_dirs: Vec<&str> = shell_path
+            .split(':')
+            .filter(|dir| !dir.is_empty() && !current_dirs.contains(dir))
+            .collect();
+
+        if new_dirs.is_empty() {
+            return;
+        }
+
+        let augmented = if current_path.is_empty() {
+            new_dirs.join(":")
+        } else {
+            format!("{}:{}", new_dirs.join(":"), current_path)
+        };
+
+        std::env::set_var("PATH", &augmented);
+        tracing::info!(
+            "[app_paths] augmented PATH with {} new dirs from login shell",
+            new_dirs.len()
+        );
     }
 }
 
