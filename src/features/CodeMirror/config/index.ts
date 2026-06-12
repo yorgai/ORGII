@@ -13,6 +13,7 @@ export {
   CODE_FONT_SIZE,
   CODE_FONT_SIZE_SMALL,
   CODE_LINE_HEIGHT,
+  CODEMIRROR_VISUAL_OVERRIDE_THEME,
   getCodeMirrorTheme,
   createCodeMirrorTheme,
 } from "./themeConfig";

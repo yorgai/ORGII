@@ -97,6 +97,17 @@
 // ============================================
 
 .terminal-output {
+  &,
+  * {
+    &::selection {
+      background: var(--terminal-selection, var(--color-fill-2));
+    }
+
+    &::-moz-selection {
+      background: var(--terminal-selection, var(--color-fill-2));
+    }
+  }
+
   // Wrap long lines in the panel; vertical scroll only (no horizontal bar).
   overflow-x: hidden;
   overflow-y: auto;

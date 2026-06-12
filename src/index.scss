@@ -170,10 +170,47 @@ strong {
   font-weight: bold;
 }
 
-// Global text selection color — matches the CodeMirror selection token so all
-// surfaces (chat, markdown, labels, etc.) use the same neutral fill tone.
+// Global text selection color — use the same neutral fill tone across
+// code, terminal, chat, markdown, and form surfaces.
 ::selection {
-  background: var(--cm-editor-selection);
+  background: var(--color-fill-2);
+}
+
+.cm-editor .cm-content {
+  caret-color: var(--cm-editor-caret, var(--color-primary-6)) !important;
+}
+
+.cm-editor .cm-cursor,
+.cm-editor.cm-focused .cm-cursor,
+.cm-editor .cm-dropCursor {
+  border-left: 2px solid var(--cm-editor-caret, var(--color-primary-6)) !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  box-sizing: border-box !important;
+}
+
+.cm-editor .cm-selectionBackground,
+.cm-editor.cm-focused .cm-selectionBackground,
+.cm-editor .cm-selectionLayer .cm-selectionBackground,
+.cm-editor.cm-focused .cm-selectionLayer .cm-selectionBackground,
+.cm-editor .cm-line .cm-selectionBackground,
+.cm-editor .cm-selectionMatch {
+  background: var(--cm-editor-selection, var(--color-fill-2)) !important;
+  background-color: var(--cm-editor-selection, var(--color-fill-2)) !important;
+  opacity: 1 !important;
+}
+
+.cm-editor .cm-content::selection,
+.cm-editor .cm-content ::selection,
+.cm-editor .cm-line::selection,
+.cm-editor .cm-line ::selection,
+.cm-editor .cm-line span::selection,
+.cm-editor .cm-line del::selection,
+.cm-editor .cm-deletedChunk ::selection,
+.cm-editor .cm-insertedChunk ::selection {
+  background: var(--cm-editor-selection, var(--color-fill-2)) !important;
+  background-color: var(--cm-editor-selection, var(--color-fill-2)) !important;
 }
 
 // Trailing bottom padding on every CodeMirror scroller so the last line can

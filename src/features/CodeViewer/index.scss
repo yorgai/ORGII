@@ -332,6 +332,14 @@ $font-mono: var(
 
   // Line content - no individual scrollbar, parent handles scrolling
   &-content {
+    &,
+    * {
+      &::selection {
+        background: var(--color-fill-2);
+        color: var(--color-text-1);
+      }
+    }
+
     flex: 1;
     padding: 0 16px 0 8px;
     display: flex;
@@ -721,6 +729,14 @@ $font-mono: var(
 
   // Line content
   &-content {
+    &,
+    * {
+      &::selection {
+        background: var(--color-fill-2);
+        color: var(--color-text-1);
+      }
+    }
+
     flex: 1;
     padding: 0 16px 0 8px;
     display: flex;

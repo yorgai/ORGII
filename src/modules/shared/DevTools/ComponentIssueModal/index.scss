@@ -266,9 +266,8 @@
     -ms-user-select: text;
   }
 
-  // Ensure selection highlight is visible over the search highlight
   &::selection {
-    background: color-mix(in srgb, var(--color-primary-6) 60%, transparent);
+    background: var(--color-fill-2);
     color: var(--color-text-1);
   }
 

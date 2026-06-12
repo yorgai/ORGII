@@ -82,14 +82,22 @@
       z-index: 10;
     }
 
-    // Cursor glow effect
     .xterm-cursor-bar {
-      box-shadow: 0 0 6px rgba(34, 211, 238, 0.4);
+      background-color: var(
+        --terminal-caret,
+        var(--color-primary-6)
+      ) !important;
+      border-left: 2px solid var(--terminal-caret, var(--color-primary-6)) !important;
+      box-shadow: none !important;
     }
 
-    // Selection styling
+    .xterm-cursor-outline {
+      border-color: var(--terminal-caret, var(--color-primary-6)) !important;
+    }
+
     .xterm-selection div {
-      background: rgba(34, 211, 238, 0.25) !important;
+      background: var(--terminal-selection, var(--color-fill-2)) !important;
+      opacity: 1 !important;
     }
   }
 

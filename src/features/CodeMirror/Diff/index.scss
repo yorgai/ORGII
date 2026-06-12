@@ -91,6 +91,23 @@
       // Scrollbar handled globally in index.scss
     }
 
+    .cm-selectionLayer {
+      z-index: 4;
+    }
+
+    .cm-selectionBackground,
+    .cm-editor.cm-focused .cm-selectionBackground,
+    .cm-selectionLayer .cm-selectionBackground,
+    .cm-line .cm-selectionBackground,
+    .cm-selectionMatch {
+      background: var(--cm-editor-selection, var(--color-fill-2)) !important;
+      background-color: var(
+        --cm-editor-selection,
+        var(--color-fill-2)
+      ) !important;
+      opacity: 1 !important;
+    }
+
     .cm-gutters {
       border-right: none !important;
       border: none !important;

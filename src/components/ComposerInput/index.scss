@@ -65,12 +65,12 @@
   }
 
   > [data-composer-pill="true"].is-selection-covered {
-    background: Highlight;
+    background: var(--color-fill-2);
   }
 
   > [data-composer-pill="true"].is-selection-covered .composer-pill,
   > [data-composer-pill="true"].is-selection-covered .composer-pill * {
-    color: HighlightText !important;
+    color: var(--color-text-1) !important;
   }
 
   // Placeholder driven by [data-placeholder] on the host when empty.
@@ -98,8 +98,7 @@
   }
 }
 
-// Pill selection: when the user selects across pills, highlight in the
-// system Highlight color (matches ComposerInput behavior).
+// Pill selection follows the app-wide neutral selection fill.
 .composer-pill {
   user-select: none;
   -webkit-user-select: none;
@@ -107,7 +106,7 @@
 
   &::selection,
   *::selection {
-    background: Highlight;
+    background: var(--color-fill-2);
   }
 }
 

@@ -15,15 +15,53 @@ import type { ITheme } from "@xterm/xterm";
 import type { TerminalThemeName } from "@src/store/ui/uiAtom";
 import { TERMINAL_THEMES } from "@src/util/ui/terminal/themes";
 
+const CSS_VAR_REFERENCE_PATTERN = /^var\(\s*(--[^,\s)]+)\s*(?:,\s*(.+))?\)$/;
+
+function getDocumentColorToken(
+  tokenName: string,
+  fallback: string,
+  seenTokens = new Set<string>()
+): string {
+  if (typeof window === "undefined") return fallback;
+  if (seenTokens.has(tokenName)) return fallback;
+
+  seenTokens.add(tokenName);
+  const cssVar = getComputedStyle(document.documentElement)
+    .getPropertyValue(tokenName)
+    .trim();
+  if (!cssVar) return fallback;
+
+  const referenceMatch = cssVar.match(CSS_VAR_REFERENCE_PATTERN);
+  if (!referenceMatch) return cssVar;
+
+  const [, referencedTokenName, referencedFallback] = referenceMatch;
+  return getDocumentColorToken(
+    referencedTokenName,
+    referencedFallback?.trim() || fallback,
+    seenTokens
+  );
+}
+
 /** Read --cm-editor-background from documentElement. */
 export function getBgColor(themeName: TerminalThemeName): string {
-  const fallback = TERMINAL_THEMES[themeName].background;
-  if (typeof window === "undefined") return fallback;
-  const cssVar = getComputedStyle(document.documentElement)
-    .getPropertyValue("--cm-editor-background")
-    .trim();
-  if (!cssVar || cssVar.startsWith("var(")) return fallback;
-  return cssVar;
+  return getDocumentColorToken(
+    "--cm-editor-background",
+    TERMINAL_THEMES[themeName].background
+  );
+}
+
+function getSelectionColor(themeName: TerminalThemeName): string {
+  return getDocumentColorToken(
+    "--terminal-selection",
+    TERMINAL_THEMES[themeName].selection
+  );
+}
+
+function getCursorColor(themeName: TerminalThemeName): string {
+  return getDocumentColorToken(
+    "--terminal-caret",
+    TERMINAL_THEMES[themeName].cursor
+  );
 }
 
 export function getXTermTheme(themeName: TerminalThemeName): ITheme {
@@ -32,9 +70,9 @@ export function getXTermTheme(themeName: TerminalThemeName): ITheme {
   return {
     background: bg,
     foreground: theme.foreground,
-    cursor: theme.cursor,
+    cursor: getCursorColor(themeName),
     cursorAccent: bg,
-    selectionBackground: theme.selection,
+    selectionBackground: getSelectionColor(themeName),
     black: theme.black,
     red: theme.red,
     green: theme.green,
