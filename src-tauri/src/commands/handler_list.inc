@@ -746,6 +746,9 @@ agent_core::utils::shell_commands::agent_kill_shell_process,
 agent_core::utils::shell_commands::agent_list_running_shell_jobs,
 agent_core::utils::shell_commands::agent_list_running_subagent_jobs,
 agent_core::utils::shell_commands::agent_kill_subagent_job,
+// Always-on at the wire layer; returns Err in release builds. Drives the
+// real register_subagent broadcast chain for the WDIO wire-path spec.
+agent_core::utils::shell_commands::debug_seed_subagent_job,
 // Settings commands (JSONC file at ~/.orgii/settings.jsonc)
 settings::commands::settings_read,
 settings::commands::settings_write,

@@ -551,6 +551,13 @@ export interface E2EHelpers {
     subagentType?: string;
     status?: "running" | "completed" | "failed" | "killed";
   }) => Promise<Result<{ sessionId: string; handle: string }>>;
+  debugSeedSubagentJobWire: (input: {
+    sessionId: string;
+    handle: string;
+    agentName: string;
+    subagentType?: string;
+  }) => Promise<Result<{ sessionId: string; handle: string }>>;
+  killSubagentJobWire: (handle: string) => Promise<{ ok: true } | Err>;
   inspectChatState: () => Promise<
     Result<{
       activeSessionId: string | null;

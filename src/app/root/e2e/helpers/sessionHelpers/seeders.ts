@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api/core";
+
 import { loadSessionAtom, sessionIdAtom } from "@src/engines/SessionCore";
 import { navigateToEventAtom } from "@src/engines/SessionCore/core/atoms";
 import { derivedSnapshotAtom } from "@src/engines/SessionCore/core/atoms/events";
@@ -333,11 +335,59 @@ export function createSessionSeederHelpers(store: E2EStore) {
     }
   };
 
+  /**
+   * Wire-path variant of `seedSubagentJob`: drives the debug-only Tauri
+   * command `debug_seed_subagent_job`, which calls the PRODUCTION
+   * `registry::register_subagent` in Rust. The resulting
+   * `agent:subagent_job_changed` broadcast travels the real bus → IPC
+   * channel → `handleSubagentJobChanged` → atom chain. No store writes
+   * happen here — if the row appears in the pin bar, the whole wire
+   * worked.
+   */
+  const debugSeedSubagentJobWire = async (input: {
+    sessionId: string;
+    handle: string;
+    agentName: string;
+    subagentType?: string;
+  }): Promise<Result<{ sessionId: string; handle: string }>> => {
+    try {
+      if (!input.sessionId || !input.handle) {
+        return {
+          ok: false,
+          error: "debugSeedSubagentJobWire: `sessionId` and `handle` required",
+        };
+      }
+      await invoke("debug_seed_subagent_job", {
+        sessionId: input.sessionId,
+        handle: input.handle,
+        agentName: input.agentName,
+        subagentType: input.subagentType ?? "delegate",
+      });
+      return { ok: true, sessionId: input.sessionId, handle: input.handle };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
+  /** Wire-path kill: same Tauri command the pin bar's Stop button calls. */
+  const killSubagentJobWire = async (
+    handle: string
+  ): Promise<{ ok: true } | Result<never>> => {
+    try {
+      await invoke("agent_kill_subagent_job", { handle });
+      return { ok: true };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   return {
     seedChatEvents,
     seedModeSwitchSession,
     seedPlanCard,
     seedShellProcess,
     seedSubagentJob,
+    debugSeedSubagentJobWire,
+    killSubagentJobWire,
   };
 }

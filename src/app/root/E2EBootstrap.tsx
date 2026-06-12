@@ -230,6 +230,8 @@ export const E2EBootstrap: FC = () => {
       seedPlanCard,
       seedShellProcess,
       seedSubagentJob,
+      debugSeedSubagentJobWire,
+      killSubagentJobWire,
       inspectChatState,
     } = createSessionHelpers(store);
 
@@ -411,6 +413,8 @@ export const E2EBootstrap: FC = () => {
       seedPlanCard,
       seedShellProcess,
       seedSubagentJob,
+      debugSeedSubagentJobWire,
+      killSubagentJobWire,
       inspectChatState,
       debugSessionSkillsSnapshot,
       debugSessionGeneralSnapshot,

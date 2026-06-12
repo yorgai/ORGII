@@ -47,3 +47,35 @@ pub fn agent_kill_subagent_job(handle: String) -> Result<(), String> {
     info!("[agent_kill_subagent_job] Killing subagent '{}'", handle);
     registry::kill_subagent(&handle)
 }
+
+/// Debug-only: drive the REAL background-subagent registration path without
+/// an LLM turn.
+///
+/// Calls the production `registry::register_subagent`, which broadcasts
+/// `agent:subagent_job_changed` through the real bus → IPC channel →
+/// frontend handler chain. Used by the WDIO wire-path spec so the only
+/// substituted link in the e2e chain is the LLM's decision to launch a
+/// worker — everything downstream (registry, broadcast, channel dispatch,
+/// atom, pin bar, kill round-trip) is live production code.
+#[tauri::command]
+pub fn debug_seed_subagent_job(
+    session_id: String,
+    handle: String,
+    agent_name: String,
+    subagent_type: Option<String>,
+) -> Result<(), String> {
+    if !cfg!(debug_assertions) {
+        return Err("debug_seed_subagent_job is only available in debug builds".into());
+    }
+    info!(
+        "[debug_seed_subagent_job] Registering wire-path fixture '{}' for session {}",
+        handle, session_id
+    );
+    let (_tx, _cancel_flag) = registry::register_subagent(
+        handle,
+        subagent_type.unwrap_or_else(|| "delegate".into()),
+        agent_name,
+        session_id,
+    );
+    Ok(())
+}
