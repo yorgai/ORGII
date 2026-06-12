@@ -71,8 +71,7 @@ export const SidebarRamMonitorPanel: React.FC<SidebarRamMonitorPanelProps> = ({
   const toolProcessMemoryMb = snapshot.childProcesses
     .filter((childProcess) => !webkitCategories.has(childProcess.category))
     .reduce((sum, childProcess) => sum + childProcess.memory_mb, 0);
-  const totalAppRamMb =
-    appMemoryMb + webkitProcessMemoryMb + toolProcessMemoryMb;
+  const totalAppRamMb = appMemoryMb + webkitProcessMemoryMb;
   const webViewDiagnostics = snapshot.webViewDiagnostics;
   const webViewEstimateBytes =
     (webViewDiagnostics?.decodedImageBytes ?? 0) +
