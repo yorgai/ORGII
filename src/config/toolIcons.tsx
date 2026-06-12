@@ -92,6 +92,7 @@ import {
   getBuiltinToolActionIconId,
   getBuiltinToolIconId,
   getBuiltinToolStatusIconId,
+  getCliUiCanonical,
 } from "@src/engines/SessionCore/rendering/registry/initToolRegistry";
 import { normalizeFunctionName } from "@src/lib/activityData/activityNormalizers";
 
@@ -244,10 +245,6 @@ export const TOOL_ICON_COMPONENTS: Record<string, LucideIcon> = {
   Monitor: Terminal,
   monitor: Terminal,
 
-  // Claude Code code intelligence
-  LSP: BookSearch,
-  lsp: BookSearch,
-
   // Claude Code notebook editing
   NotebookEdit: FilePenLine,
   notebook_edit: FilePenLine,
@@ -325,15 +322,19 @@ export function getToolIconComponent(
   iconId?: string | null,
   action?: string | null
 ): LucideIcon {
+  const uiCanonical = getCliUiCanonical(toolName);
+
   // 1. Explicit icon id takes precedence
   if (iconId) {
     const byId = ICON_BY_ID[iconId];
     if (byId) return byId;
   }
 
-  // 2. Action-specific icon from Rust (e.g., control_browser + "navigate" → globe)
+  // 2. Action-specific icon from Rust (e.g. control_browser + "navigate" → globe)
   if (action) {
-    const actionIconId = getBuiltinToolActionIconId(toolName, action);
+    const actionIconId =
+      getBuiltinToolActionIconId(toolName, action) ??
+      getBuiltinToolActionIconId(uiCanonical, action);
     if (actionIconId) {
       const fromAction = ICON_BY_ID[actionIconId];
       if (fromAction) return fromAction;
@@ -341,20 +342,24 @@ export function getToolIconComponent(
   }
 
   // 3. Tool's default icon from Rust
-  const builtinKebab = getBuiltinToolIconId(toolName);
+  const builtinKebab =
+    getBuiltinToolIconId(toolName) ?? getBuiltinToolIconId(uiCanonical);
   if (builtinKebab) {
     const fromBuiltin = ICON_BY_ID[builtinKebab];
     if (fromBuiltin) return fromBuiltin;
   }
 
   // 4. Frontend alias fallbacks
-  const direct = TOOL_ICON_COMPONENTS[toolName];
+  const direct =
+    TOOL_ICON_COMPONENTS[toolName] ?? TOOL_ICON_COMPONENTS[uiCanonical];
   if (direct) return direct;
 
   // 5. Prefix-based fallbacks (includes ui_canonical aliases from Rust)
   if (
     toolName === "internal_browser" ||
-    toolName === "control_internal_browser"
+    toolName === "control_internal_browser" ||
+    uiCanonical === "internal_browser" ||
+    uiCanonical === "control_internal_browser"
   ) {
     return MousePointerClick;
   }
@@ -363,12 +368,19 @@ export function getToolIconComponent(
     toolName === "control_browser_with_agent_browser" ||
     toolName === "control_browser_with_playwright" ||
     toolName === "control_external_browser" ||
-    toolName.startsWith("browser")
+    toolName.startsWith("browser") ||
+    uiCanonical === "browser" ||
+    uiCanonical === "control_browser_with_agent_browser" ||
+    uiCanonical === "control_browser_with_playwright" ||
+    uiCanonical === "control_external_browser" ||
+    uiCanonical.startsWith("browser")
   ) {
     return Chrome;
   }
-  if (toolName.startsWith("db_")) return Database;
-  if (isTerminalTool(toolName)) return Terminal;
+  if (toolName.startsWith("db_") || uiCanonical.startsWith("db_")) {
+    return Database;
+  }
+  if (isTerminalTool(toolName) || isTerminalTool(uiCanonical)) return Terminal;
 
   return Wrench;
 }
@@ -414,8 +426,12 @@ export function getEventIconComponent(
   status?: string | null,
   action?: string | null
 ): LucideIcon {
+  const uiCanonical = getCliUiCanonical(eventType);
+
   if (status) {
-    const statusIconId = getBuiltinToolStatusIconId(eventType, status);
+    const statusIconId =
+      getBuiltinToolStatusIconId(eventType, status) ??
+      getBuiltinToolStatusIconId(uiCanonical, status);
     if (statusIconId) {
       const icon = ICON_BY_ID[statusIconId];
       if (icon) return icon;

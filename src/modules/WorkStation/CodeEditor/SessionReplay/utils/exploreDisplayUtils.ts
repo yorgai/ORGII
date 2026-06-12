@@ -26,6 +26,8 @@ function getListDirTarget(op: ExploreOperationEntry): string | undefined {
 
 function getCodeSearchPrimary(op: ExploreOperationEntry): string {
   const action = op.exploreAction?.toLowerCase();
+  if (action === "grep") return "Grep";
+  if (action === "glob") return "Glob";
   const functionName = op.event?.functionName ?? op.exploreType;
   return getToolDisplayLabelFromRegistry(functionName, action);
 }
@@ -47,7 +49,7 @@ export function getExploreDisplayParts(
 
   if (op.exploreType === "glob") {
     return {
-      primary: getToolDisplayLabelFromRegistry("code_search", "glob"),
+      primary: "Glob",
       secondary: op.query || undefined,
     };
   }

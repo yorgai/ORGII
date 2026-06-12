@@ -1,9 +1,7 @@
 import i18next from "i18next";
 
-import {
-  type LifecycleState,
-  getToolLabel,
-} from "@src/engines/SessionCore/rendering/registry";
+import { getToolLabel } from "@src/engines/SessionCore/rendering/registry/initToolRegistry";
+import type { LifecycleState } from "@src/engines/SessionCore/rendering/registry/useToolLabel";
 import type { EventStatus } from "@src/engines/SessionCore/rendering/types/universalProps";
 
 import { formatToolName } from "./formatToolName";

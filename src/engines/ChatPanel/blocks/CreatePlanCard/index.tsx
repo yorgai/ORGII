@@ -46,7 +46,6 @@ import {
 import { useBlockHeader } from "../useBlockLocate";
 
 const PLAN_ICON_SIZE = 14;
-const PLAN_ICON = getToolIcon("create_plan", { size: PLAN_ICON_SIZE });
 
 function deriveDisplayTitle(title: string, content: string): string {
   const trimmedTitle = title.trim();
@@ -317,6 +316,7 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
           <X size={12} strokeWidth={2} />
         </button>
       ) : null;
+    const planIcon = getToolIcon("create_plan", { size: PLAN_ICON_SIZE });
 
     return (
       <div
@@ -339,7 +339,7 @@ const CreatePlanCard: React.FC<CreatePlanCardProps> = memo(
           rightContent={collapseButton}
         >
           <EventBlockHeaderIcon
-            icon={PLAN_ICON}
+            icon={planIcon}
             isCollapsed={isCollapsed}
             isHeaderHovered={isHeaderHovered}
             iconSize={PLAN_ICON_SIZE}

@@ -75,7 +75,7 @@ describe("getExploreDisplayName", () => {
       }),
     });
 
-    expect(getExploreDisplayName(op)).toBe("Globbed · **/*.ts");
+    expect(getExploreDisplayName(op)).toBe("Glob · **/*.ts");
   });
 
   it("shows list directory entries as concise ls labels", () => {
