@@ -1109,6 +1109,8 @@ impl Tool for AgentTool {
                 effective_policy,
                 workspace: run_workspace.as_path(),
                 subagent_session_id,
+                parent_session_id,
+                subagent_type_label: subagent_type_wire,
                 handler,
                 instance_number,
                 model,

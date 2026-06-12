@@ -427,6 +427,17 @@ export function createSessionSeederHelpers(store: E2EStore) {
     }
   };
 
+  const listRunningSubagentJobsWire = async (): Promise<
+    Result<{ jobs: unknown[] }>
+  > => {
+    try {
+      const jobs = await invoke<unknown[]>("agent_list_running_subagent_jobs");
+      return { ok: true, jobs };
+    } catch (err) {
+      return asError(err);
+    }
+  };
+
   /**
    * Wire-path variant for the subagent MONITOR (clip model): seeds a child
    * `agent_sessions` row via the debug-only Tauri command
@@ -518,6 +529,7 @@ export function createSessionSeederHelpers(store: E2EStore) {
     seedSubagentJob,
     debugSeedSubagentJobWire,
     killSubagentJobWire,
+    listRunningSubagentJobsWire,
     debugSeedChildSessionWire,
     debugSeedPendingPlanWire,
     deleteSessionWire,

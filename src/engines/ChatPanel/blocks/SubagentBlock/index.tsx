@@ -95,8 +95,9 @@ const SubagentBlock: React.FC<SubagentBlockProps> = memo(
 
     // ── Stop button ──
     const [isStopping, setIsStopping] = useState(false);
-    const effectiveIsStopping = isStopping && isLoading;
-    const canStop = isLoading && hasNestedSession;
+    const isActive = status === "running" || status === "pending" || isLoading;
+    const effectiveIsStopping = isStopping && isActive;
+    const canStop = isActive && hasNestedSession;
 
     useEffect(() => {
       if (!isLoading) setIsStopping(false);
@@ -134,6 +135,7 @@ const SubagentBlock: React.FC<SubagentBlockProps> = memo(
         {canStop && (
           <button
             type="button"
+            data-testid="subagent-card-stop-button"
             className="flex h-5 w-0 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-none bg-text-2 text-white transition-colors hover:bg-text-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 group-hover/chat-block-header:w-5"
             onClick={handleStop}
             disabled={effectiveIsStopping}

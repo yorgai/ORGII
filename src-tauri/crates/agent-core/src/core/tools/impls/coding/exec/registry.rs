@@ -171,9 +171,34 @@ pub fn register_subagent(
     agent_name: String,
     session_id: String,
 ) -> (broadcast::Sender<String>, Arc<AtomicBool>) {
+    let cancel_flag = Arc::new(AtomicBool::new(false));
+    let sender = register_subagent_with_flag(
+        handle,
+        subagent_type,
+        agent_name,
+        session_id,
+        Arc::clone(&cancel_flag),
+    );
+    (sender, cancel_flag)
+}
+
+/// Register a subagent whose turn loop observes an EXISTING cancel flag.
+///
+/// Used by foreground subagents, whose `execute_turn` already watches the
+/// parent session's cancel flag: registering with that same flag makes
+/// `kill_subagent` reach them through the one chokepoint. Note the shared
+/// flag means killing a foreground worker also ends the parent's turn at
+/// its next checkpoint — by design: the parent is blocked on the worker
+/// anyway, and Stop means stop.
+pub fn register_subagent_with_flag(
+    handle: String,
+    subagent_type: String,
+    agent_name: String,
+    session_id: String,
+    cancel_flag: Arc<AtomicBool>,
+) -> broadcast::Sender<String> {
     let (tx, _) = broadcast::channel(BROADCAST_CAPACITY);
     let sender = tx.clone();
-    let cancel_flag = Arc::new(AtomicBool::new(false));
     let job = BackgroundJob {
         handle: handle.clone(),
         label: agent_name.clone(),
@@ -195,7 +220,7 @@ pub fn register_subagent(
     reg.insert(handle.clone(), job);
     drop(reg);
     broadcast_subagent_job_changed(&session_id, &handle, &agent_name, &subagent_type, "running");
-    (sender, cancel_flag)
+    sender
 }
 
 /// Broadcast a background-subagent lifecycle change to the frontend.

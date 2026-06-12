@@ -1091,6 +1091,163 @@ async function assertBackgroundSubagentPinnedToChatSession() {
  * through the same Tauri command the Stop button invokes, and the
  * resulting "killed" broadcast must remove the row.
  */
+function makeRunningSubagentEvent({ sessionId, eventId, subagentSessionId, agentName, prompt }) {
+  return {
+    id: eventId,
+    chunk_id: eventId,
+    sessionId,
+    createdAt: new Date().toISOString(),
+    functionName: "agent",
+    uiCanonical: "agent",
+    actionType: "tool_call",
+    args: {
+      action: "delegate",
+      description: agentName,
+      subagentSessionId,
+      prompt,
+    },
+    result: {
+      success: false,
+      status: "running",
+      is_delta: false,
+    },
+    source: "assistant",
+    displayText: prompt,
+    displayStatus: "running",
+    displayVariant: "tool_call",
+    activityStatus: "agent",
+    isDelta: false,
+  };
+}
+
+async function assertSubagentCardStopUsesJobRegistryFallback() {
+  const sessionId = `sdeagent-e2e-subagent-card-stop-${Date.now()}`;
+  const agentName = `E2E Card Stop Worker ${RUN_ID}`;
+  const subagentSessionId = `agent-builtin:general-card-stop-${RUN_ID}`;
+  const prompt = `Card stop should cancel ${subagentSessionId}`;
+  const userEvent = {
+    id: "subagent-card-stop-user",
+    chunk_id: "subagent-card-stop-user",
+    sessionId,
+    createdAt: new Date().toISOString(),
+    functionName: "user_message",
+    uiCanonical: "user_message",
+    actionType: "raw",
+    args: {},
+    result: {
+      type: "user",
+      message: "Launch a worker, then stop it from the card",
+      is_delta: false,
+    },
+    source: "user",
+    displayText: "Launch a worker, then stop it from the card",
+    displayStatus: "completed",
+    displayVariant: "message",
+    activityStatus: "processed",
+    isDelta: false,
+  };
+  const subagentEventId = "subagent-card-stop-running";
+  const seed = await invokeE2E(
+    "seedChatEvents",
+    sessionId,
+    [
+      userEvent,
+      makeRunningSubagentEvent({
+        sessionId,
+        eventId: subagentEventId,
+        subagentSessionId,
+        agentName,
+        prompt,
+      }),
+    ],
+    {
+      chatPanelMaximized: true,
+      runtimeStatus: "running",
+      stationMode: "my-station",
+    }
+  );
+  if (!seed || seed.ok !== true) {
+    throw new Error(`seedChatEvents failed for subagent card stop: ${seed?.error ?? "unknown"}`);
+  }
+
+  await browser.pause(500);
+  const wireSeed = await invokeE2E("debugSeedSubagentJobWire", {
+    sessionId,
+    handle: subagentSessionId,
+    agentName,
+    subagentType: "delegate",
+  });
+  if (!wireSeed || wireSeed.ok !== true) {
+    throw new Error(`debugSeedSubagentJobWire failed: ${wireSeed?.error ?? "unknown"}`);
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const state = await execJS(`
+        const body = document.body.innerText || "";
+        const card = document.querySelector('[data-tool-call-name="agent"]');
+        const stopButton = card?.querySelector('[data-testid="subagent-card-stop-button"]');
+        return {
+          hasPrompt: body.includes(${JSON.stringify(prompt)}),
+          hasStopButton: Boolean(stopButton),
+          body: body.slice(0, 3000),
+        };
+      `);
+      return state.hasPrompt && state.hasStopButton;
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `subagent card stop fixture did not render: ${JSON.stringify(
+        await execJS(`
+          const body = document.body.innerText || "";
+          return {
+            body: body.slice(0, 3000),
+            cards: document.querySelectorAll('[data-tool-call-name="agent"]').length,
+            buttons: Array.from(document.querySelectorAll('button')).map((button) => ({ title: button.title, aria: button.getAttribute('aria-label') })).slice(0, 50),
+            pills: Array.from(document.querySelectorAll('[data-testid="composer-section-process"]')).map((el) => el.textContent || ""),
+          };
+        `)
+      )}`,
+    }
+  );
+
+  const clicked = await execJS(`
+    const card = document.querySelector('[data-tool-call-name="agent"]');
+    const stopButton = card?.querySelector('[data-testid="subagent-card-stop-button"]');
+    if (!stopButton) return false;
+    stopButton.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, view: window, button: 0 }));
+    stopButton.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, view: window, button: 0 }));
+    stopButton.click();
+    return true;
+  `);
+  if (!clicked) {
+    throw new Error("subagent card Stop button was not clickable");
+  }
+
+  await browser.waitUntil(
+    async () => {
+      const jobsResult = await invokeE2E("listRunningSubagentJobsWire");
+      const jobs = jobsResult?.jobs ?? [];
+      const state = await execJS(`
+        const card = document.querySelector('[data-tool-call-name="agent"]');
+        const stopButton = card?.querySelector('[data-testid="subagent-card-stop-button"]');
+        return { stopDisabled: stopButton ? stopButton.disabled : false };
+      `);
+      return (
+        jobsResult?.ok === true &&
+        !jobs.some((job) => job && job.handle === subagentSessionId) &&
+        state.stopDisabled
+      );
+    },
+    {
+      timeout: RENDER_TIMEOUT_MS,
+      timeoutMsg: `subagent card Stop did not cancel registry job: ${JSON.stringify(
+        await invokeE2E("listRunningSubagentJobsWire")
+      )}`,
+    }
+  );
+}
+
 async function assertBackgroundSubagentWirePath() {
   // MUST be `sdeagent-` prefixed: getAdapterForSession resolves the rust
   // agent adapter (and thus the channel event handler) by id prefix —
@@ -1596,6 +1753,15 @@ describe("Core chat rendering UI", () => {
     }
 
     await assertBackgroundSubagentWirePath();
+  });
+
+  it("cancels a running subagent from the rendered card Stop button", async function () {
+    if (!shouldRunScenario("subagent-card-stop-wire")) {
+      this.skip();
+      return;
+    }
+
+    await assertSubagentCardStopUsesJobRegistryFallback();
   });
 
   it("shows the working footer when running events are hidden from chat", async function () {

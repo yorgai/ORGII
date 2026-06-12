@@ -11,6 +11,7 @@ use tracing::{info, warn};
 use super::AgentTool;
 use crate::definitions::AgentDefinition;
 use crate::providers::traits::LLMProvider;
+use crate::tools::impls::coding::exec::registry as job_registry;
 use crate::tools::impls::orchestration::subagent_handler::UnifiedSubagentHandler;
 use crate::tools::policy::ResolvedToolPolicy;
 use crate::tools::registry::ToolRegistry;
@@ -28,6 +29,8 @@ pub(super) struct ForegroundRunArgs<'a> {
     pub effective_policy: ResolvedToolPolicy,
     pub workspace: &'a Path,
     pub subagent_session_id: String,
+    pub parent_session_id: String,
+    pub subagent_type_label: String,
     pub handler: UnifiedSubagentHandler,
     pub instance_number: u32,
     pub model: String,
@@ -54,11 +57,32 @@ impl AgentTool {
             effective_policy,
             workspace,
             subagent_session_id,
+            parent_session_id,
+            subagent_type_label,
             handler,
             instance_number,
             model,
             provider,
         } = args;
+
+        // Register in the job registry so the pin bar / kill chokepoint can
+        // see and stop foreground workers too — previously only background
+        // subagents were registered, which made foreground workers
+        // un-killable from `kill_subagent` (the user's only per-worker stop
+        // affordance). The job observes the SAME flag `execute_turn` watches:
+        // the parent session's flag when wired, else a job-private flag.
+        let fg_cancel_flag = self
+            .config
+            .parent_cancel_flag
+            .clone()
+            .unwrap_or_else(|| Arc::new(std::sync::atomic::AtomicBool::new(false)));
+        let _job_tx = job_registry::register_subagent_with_flag(
+            subagent_session_id.clone(),
+            subagent_type_label,
+            agent.name.clone(),
+            parent_session_id,
+            Arc::clone(&fg_cancel_flag),
+        );
 
         // 1. Execute turn
         let turn_result = turn_executor::execute_turn(
@@ -70,7 +94,7 @@ impl AgentTool {
             &subagent_session_id,
             &handler,
             None,
-            self.config.parent_cancel_flag.as_ref(),
+            Some(&fg_cancel_flag),
             Some(workspace),
             None,
         )
@@ -95,6 +119,12 @@ impl AgentTool {
         // never receives an empty subagent result. This is the right layer
         // to do it — this function is the seam where the subagent's
         // transcript is collapsed into a single response for the caller.
+        //
+        // A cooperative cancel (kill_subagent / parent-Stop) makes
+        // `execute_turn` return Ok with no content — classify as Cancelled,
+        // not Completed (same rule as the background path). The registry
+        // status is already `Killed` (sticky in mark_exited).
+        let was_cancelled = fg_cancel_flag.load(std::sync::atomic::Ordering::SeqCst);
         let (final_status, tokens, response) = match turn_result {
             Ok(result) => {
                 let resp = result.content.or_else(|| {
@@ -106,14 +136,27 @@ impl AgentTool {
                         );
                     })
                 }).unwrap_or_else(|| {
-                    format!(
-                        "Agent '{}' completed but produced no text response.",
-                        agent.name
-                    )
+                    if was_cancelled {
+                        format!("Agent '{}' was cancelled before completing.", agent.name)
+                    } else {
+                        format!(
+                            "Agent '{}' completed but produced no text response.",
+                            agent.name
+                        )
+                    }
                 });
                 handler.broadcast_complete();
+                job_registry::mark_exited(&subagent_session_id, job_registry::JobStatus::Completed);
+                // The result is returned inline as the parent's tool result —
+                // suppress the unread-output system reminder that background
+                // jobs rely on.
+                job_registry::acknowledge_output(&subagent_session_id);
                 (
-                    LinkedSessionStatus::Completed,
+                    if was_cancelled {
+                        LinkedSessionStatus::Cancelled
+                    } else {
+                        LinkedSessionStatus::Completed
+                    },
                     result.total_tokens,
                     Ok(resp),
                 )
@@ -143,6 +186,8 @@ impl AgentTool {
                     subagent_session_id
                 ));
                 handler.broadcast_error();
+                job_registry::mark_exited(&subagent_session_id, job_registry::JobStatus::Failed);
+                job_registry::acknowledge_output(&subagent_session_id);
                 (
                     LinkedSessionStatus::Failed,
                     0i64,
@@ -157,6 +202,16 @@ impl AgentTool {
         };
         self.update_linked_session(&subagent_session_id, final_status, tokens, &result_preview)
             .await;
+
+        // Same registry grace period as the background path so a Killed/
+        // Completed verdict stays readable briefly, then the row is GC'd.
+        {
+            let gc_handle = subagent_session_id.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(120)).await;
+                job_registry::remove(&gc_handle);
+            });
+        }
 
         match &response {
             Ok(_) => {
