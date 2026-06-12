@@ -55,7 +55,7 @@ export function createSessionSeederHelpers(store: E2EStore) {
         | "waiting_for_user"
         | "waiting_for_funds";
       stationMode?: "my-station" | "agent-station";
-      selectedApp?: "CODE_EDITOR";
+      selectedApp?: "CODE_EDITOR" | "CHANNELS";
     }
   ): Promise<Result<{ eventCount: number; chatEventCount: number }>> => {
     try {
@@ -84,6 +84,9 @@ export function createSessionSeederHelpers(store: E2EStore) {
       if (options?.selectedApp === "CODE_EDITOR") {
         store.set(simulatorSelectedAppAtom, AppType.CODE_EDITOR);
         store.set(simulatorFollowAppLockAtom, AppType.CODE_EDITOR);
+      } else if (options?.selectedApp === "CHANNELS") {
+        store.set(simulatorSelectedAppAtom, AppType.CHANNELS);
+        store.set(simulatorFollowAppLockAtom, AppType.CHANNELS);
       } else {
         store.set(simulatorSelectedAppAtom, null);
         store.set(simulatorFollowAppLockAtom, null);

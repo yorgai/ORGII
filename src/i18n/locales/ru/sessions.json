@@ -466,13 +466,6 @@
           ],
           "labelLatest": "Последняя мысль",
           "labelThought": "Мысль"
-        },
-        "todo": {
-          "summaryActive": "активных: {{count}}",
-          "summaryDone": "готово: {{count}}",
-          "summaryPending": "ожидает: {{count}}",
-          "summaryCancelled": "отменено: {{count}}",
-          "summaryItemsOnly": "{{count}} пунктов"
         }
       },
       "database": {

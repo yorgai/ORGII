@@ -464,13 +464,6 @@
           ],
           "labelLatest": "Son düşünce",
           "labelThought": "Düşünce"
-        },
-        "todo": {
-          "summaryActive": "{{count}} aktif",
-          "summaryDone": "{{count}} tamamlandı",
-          "summaryPending": "{{count}} beklemede",
-          "summaryCancelled": "{{count}} iptal",
-          "summaryItemsOnly": "{{count}} öğe"
         }
       },
       "database": {

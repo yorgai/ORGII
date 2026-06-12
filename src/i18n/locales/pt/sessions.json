@@ -477,13 +477,6 @@
           ],
           "labelLatest": "Pensamento mais recente",
           "labelThought": "Pensamento"
-        },
-        "todo": {
-          "summaryActive": "{{count}} ativas",
-          "summaryDone": "{{count}} concluídas",
-          "summaryPending": "{{count}} pendentes",
-          "summaryCancelled": "{{count}} canceladas",
-          "summaryItemsOnly": "{{count}} itens"
         }
       },
       "database": {

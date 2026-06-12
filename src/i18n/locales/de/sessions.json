@@ -464,13 +464,6 @@
           ],
           "labelLatest": "Letzter Gedanke",
           "labelThought": "Gedanke"
-        },
-        "todo": {
-          "summaryActive": "{{count}} aktiv",
-          "summaryDone": "{{count}} erledigt",
-          "summaryPending": "{{count}} ausstehend",
-          "summaryCancelled": "{{count}} abgebrochen",
-          "summaryItemsOnly": "{{count}} Einträge"
         }
       },
       "database": {

@@ -464,13 +464,6 @@
           ],
           "labelLatest": "Suy nghĩ mới nhất",
           "labelThought": "Suy nghĩ"
-        },
-        "todo": {
-          "summaryActive": "{{count}} đang làm",
-          "summaryDone": "{{count}} xong",
-          "summaryPending": "{{count}} chờ",
-          "summaryCancelled": "{{count}} đã hủy",
-          "summaryItemsOnly": "{{count}} mục"
         }
       },
       "project": {

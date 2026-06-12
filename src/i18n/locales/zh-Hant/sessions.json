@@ -471,13 +471,6 @@
           ],
           "labelLatest": "最新思考",
           "labelThought": "思考"
-        },
-        "todo": {
-          "summaryActive": "{{count}} 個進行中",
-          "summaryDone": "{{count}} 個已完成",
-          "summaryPending": "{{count}} 個待處理",
-          "summaryCancelled": "{{count}} 個已取消",
-          "summaryItemsOnly": "{{count}} 項"
         }
       },
       "database": {

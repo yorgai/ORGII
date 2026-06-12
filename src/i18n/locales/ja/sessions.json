@@ -464,13 +464,6 @@
           ],
           "labelLatest": "最新の思考",
           "labelThought": "思考"
-        },
-        "todo": {
-          "summaryActive": "進行中 {{count}} 件",
-          "summaryDone": "完了 {{count}} 件",
-          "summaryPending": "保留 {{count}} 件",
-          "summaryCancelled": "キャンセル {{count}} 件",
-          "summaryItemsOnly": "{{count}} 件"
         }
       },
       "database": {

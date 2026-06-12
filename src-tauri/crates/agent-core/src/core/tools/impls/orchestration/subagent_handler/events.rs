@@ -174,14 +174,27 @@ impl UnifiedSubagentHandler {
     }
 
     /// Build a `SessionEvent` for a tool_result (merged into tool_call via call_id).
+    ///
+    /// When the tool provided structured `ui_metadata` (dual-track response
+    /// pattern), it is embedded into the result object under `uiMetadata` so
+    /// extractors can consume exact structured data instead of re-parsing
+    /// the LLM-facing text.
     pub(super) fn build_tool_result_event(
         &self,
         tool_call_id: &str,
         tool_name: &str,
         display_name: &str,
         result: &str,
+        ui_metadata: Option<&crate::tools::traits::ToolUIMetadata>,
     ) -> SessionEvent {
         let now = chrono::Utc::now().to_rfc3339();
+        let result_value = match ui_metadata.and_then(|meta| serde_json::to_value(meta).ok()) {
+            Some(meta_value) => serde_json::json!({
+                "content": result,
+                "uiMetadata": meta_value,
+            }),
+            None => Value::String(result.to_string()),
+        };
         SessionEvent {
             id: format!("tr-{}", tool_call_id),
             chunk_id: None,
@@ -191,7 +204,7 @@ impl UnifiedSubagentHandler {
             ui_canonical: core_types::cli_alias::get_ui_canonical(tool_name).to_string(),
             action_type: "tool_result".to_string(),
             args: Value::Object(serde_json::Map::new()),
-            result: Value::String(result.to_string()),
+            result: result_value,
             source: EventSource::Assistant,
             display_text: display_name.to_string(),
             display_status: EventDisplayStatus::Completed,

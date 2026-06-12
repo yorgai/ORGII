@@ -185,11 +185,44 @@ mod tests {
             "read_file",
             "Read File",
             "file contents here",
+            None,
         );
         assert_eq!(event.id, "tr-call-42");
         assert_eq!(event.session_id, "sub-2");
         assert_eq!(event.action_type, "tool_result");
         assert_eq!(event.call_id, Some("call-42".to_string()));
         assert_eq!(event.display_status, EventDisplayStatus::Completed);
+    }
+
+    #[test]
+    fn test_build_tool_result_event_embeds_ui_metadata() {
+        let handler = UnifiedSubagentHandler::simple(
+            "parent-1".to_string(),
+            "sub-2".to_string(),
+            "test".to_string(),
+            "test".to_string(),
+        );
+        let meta = crate::tools::traits::ToolUIMetadata {
+            display_type: "todo_list".to_string(),
+            data: serde_json::json!({"todos": [{"index": 0, "content": "x", "status": "pending"}]}),
+            summary: Some("1 todos (1 remaining)".to_string()),
+        };
+        let event = handler.build_tool_result_event(
+            "call-43",
+            "manage_todo",
+            "Manage Todo",
+            "1 todos (1 remaining)\n[...]",
+            Some(&meta),
+        );
+        let result = event.result.as_object().expect("object result");
+        assert_eq!(
+            result["content"].as_str(),
+            Some("1 todos (1 remaining)\n[...]")
+        );
+        assert_eq!(
+            result["uiMetadata"]["display_type"].as_str(),
+            Some("todo_list")
+        );
+        assert!(result["uiMetadata"]["data"]["todos"].is_array());
     }
 }

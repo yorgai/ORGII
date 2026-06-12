@@ -464,13 +464,6 @@
           ],
           "labelLatest": "최근 생각",
           "labelThought": "생각"
-        },
-        "todo": {
-          "summaryActive": "진행 중 {{count}}개",
-          "summaryDone": "완료 {{count}}개",
-          "summaryPending": "대기 {{count}}개",
-          "summaryCancelled": "취소 {{count}}개",
-          "summaryItemsOnly": "{{count}}개 항목"
         }
       },
       "database": {

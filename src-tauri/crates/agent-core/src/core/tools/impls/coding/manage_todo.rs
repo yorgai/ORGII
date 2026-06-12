@@ -18,7 +18,7 @@ use tokio::sync::Mutex;
 use crate::persistence::db_helpers::todos as todo_persistence;
 use crate::persistence::db_helpers::todos::{TodoRecord, TodoUpdate};
 use crate::tools::names as tool_names;
-use crate::tools::traits::{required_string, Tool, ToolError};
+use crate::tools::traits::{required_string, Tool, ToolError, ToolUIMetadata};
 
 /// Shared session ID holder so the todo tool knows which session it belongs to.
 /// Set via `set_session_key` before each turn.
@@ -260,6 +260,31 @@ Skip this tool when:\n\
     async fn set_session_key(&self, session_key: &str) {
         *self.context.session_id.lock().await = Some(session_key.to_string());
     }
+
+    /// Dual-track response: expose the exact todo snapshot as structured
+    /// data so renderers never have to re-parse the LLM-facing text.
+    /// `render_result` always embeds the snapshot as a pretty-printed JSON
+    /// array between the header line and the nudge; parse it back out here.
+    fn ui_metadata(&self, _params: &Value, result: &str) -> Option<ToolUIMetadata> {
+        let todos = parse_embedded_todo_array(result)?;
+        Some(ToolUIMetadata {
+            display_type: "todo_list".to_string(),
+            data: serde_json::json!({ "todos": todos }),
+            summary: result.lines().next().map(str::to_string),
+        })
+    }
+}
+
+/// Extract the pretty-printed JSON array that `render_result` /
+/// `exec_list_ready` embed in the tool's text output. Returns `None` for
+/// outputs without a snapshot (e.g. "No todos for this session.").
+fn parse_embedded_todo_array(result: &str) -> Option<Vec<Value>> {
+    let start = result.find('[')?;
+    let end = result.rfind(']')?;
+    if end <= start {
+        return None;
+    }
+    serde_json::from_str::<Vec<Value>>(&result[start..=end]).ok()
 }
 
 impl TodoTool {
@@ -552,7 +577,7 @@ fn broadcast_todos(session_id: &str, records: &[TodoRecord]) {
 
 #[cfg(test)]
 mod tests {
-    use super::sanitize_todo_text;
+    use super::{parse_embedded_todo_array, sanitize_todo_text};
 
     #[test]
     fn sanitize_todo_text_replaces_standalone_internal_plan_artifacts() {
@@ -584,5 +609,36 @@ mod tests {
             sanitize_todo_text("Create orgii-plan-updated-123.md"),
             "Create orgii-plan-updated-123.md"
         );
+    }
+
+    #[test]
+    fn parse_embedded_todo_array_round_trips_render_result_output() {
+        let records = vec![
+            super::TodoRecord {
+                content: "Fix bug".to_string(),
+                active_form: Some("Fixing bug".to_string()),
+                status: "in_progress".to_string(),
+                priority: "high".to_string(),
+                blocked_by: vec![],
+            },
+            super::TodoRecord {
+                content: "Write tests".to_string(),
+                active_form: None,
+                status: "pending".to_string(),
+                priority: "medium".to_string(),
+                blocked_by: vec![0],
+            },
+        ];
+        let rendered = super::render_result(&records, super::TodoAction::Updated(0));
+        let parsed = parse_embedded_todo_array(&rendered).expect("snapshot must parse");
+        assert_eq!(parsed.len(), 2);
+        assert_eq!(parsed[0]["content"], "Fix bug");
+        assert_eq!(parsed[0]["activeForm"], "Fixing bug");
+        assert_eq!(parsed[1]["blockedBy"], serde_json::json!([0]));
+    }
+
+    #[test]
+    fn parse_embedded_todo_array_rejects_no_snapshot_output() {
+        assert!(parse_embedded_todo_array("No todos for this session.").is_none());
     }
 }

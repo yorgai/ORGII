@@ -189,7 +189,10 @@ const StandardTodoBlock: React.FC<StandardTodoBlockProps> = memo(
     });
 
     return (
-      <div className={getEventBlockContainerClasses(false)}>
+      <div
+        className={getEventBlockContainerClasses(false)}
+        data-testid="chat-todo-block"
+      >
         <EventBlockHeader
           isCollapsed={isCollapsed}
           onClick={handleHeaderClick}

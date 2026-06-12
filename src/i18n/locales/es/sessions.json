@@ -464,13 +464,6 @@
           ],
           "labelLatest": "Último pensamiento",
           "labelThought": "Pensamiento"
-        },
-        "todo": {
-          "summaryActive": "{{count}} activas",
-          "summaryDone": "{{count}} hechas",
-          "summaryPending": "{{count}} pendientes",
-          "summaryCancelled": "{{count}} canceladas",
-          "summaryItemsOnly": "{{count}} elementos"
         }
       },
       "database": {

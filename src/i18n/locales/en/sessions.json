@@ -477,13 +477,6 @@
           ],
           "labelLatest": "Latest thought",
           "labelThought": "Thought"
-        },
-        "todo": {
-          "summaryActive": "{{count}} active",
-          "summaryDone": "{{count}} done",
-          "summaryPending": "{{count}} pending",
-          "summaryCancelled": "{{count}} cancelled",
-          "summaryItemsOnly": "{{count}} items"
         }
       },
       "database": {

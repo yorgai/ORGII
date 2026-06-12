@@ -549,6 +549,25 @@ impl TurnEventHandler for UnifiedEventHandler {
         display_name: &str,
         result: &str,
     ) {
+        self.on_tool_result_with_metadata(
+            session_id,
+            tool_call_id,
+            tool_name,
+            display_name,
+            result,
+            None,
+        );
+    }
+
+    fn on_tool_result_with_metadata(
+        &self,
+        session_id: &str,
+        tool_call_id: &str,
+        tool_name: &str,
+        display_name: &str,
+        result: &str,
+        ui_metadata: Option<&crate::tools::traits::ToolUIMetadata>,
+    ) {
         if let Err(err) =
             unified_persistence::save_tool_result_msg(session_id, tool_call_id, tool_name, result)
         {
@@ -582,6 +601,7 @@ impl TurnEventHandler for UnifiedEventHandler {
             tool_name,
             display_name,
             result,
+            ui_metadata,
         );
         self.push_to_store(session_id, event);
 

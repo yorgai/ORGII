@@ -519,7 +519,7 @@ export interface E2EHelpers {
         | "waiting_for_user"
         | "waiting_for_funds";
       stationMode?: "my-station" | "agent-station";
-      selectedApp?: "CODE_EDITOR";
+      selectedApp?: "CODE_EDITOR" | "CHANNELS";
     }
   ) => Promise<Result<{ eventCount: number; chatEventCount: number }>>;
   seedSessionContextUsage: (

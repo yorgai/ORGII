@@ -356,6 +356,8 @@ export interface RustTodoItem {
   id: string;
   content: string;
   status: string;
+  /** Present-continuous label preferred while the todo is in_progress. */
+  activeForm?: string;
   blockedBy?: number[];
 }
 

@@ -479,13 +479,6 @@
           ],
           "labelLatest": "Najnowsza myśl",
           "labelThought": "Myśl"
-        },
-        "todo": {
-          "summaryActive": "{{count}} aktywnych",
-          "summaryDone": "{{count}} ukończonych",
-          "summaryPending": "{{count}} oczekujących",
-          "summaryCancelled": "{{count}} anulowanych",
-          "summaryItemsOnly": "{{count}} elementów"
         }
       },
       "database": {

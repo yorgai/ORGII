@@ -44,46 +44,64 @@ pub(super) fn extract_todo(
     let mut todos_value: Option<serde_json::Value> = None;
     let mut was_merge = false;
 
-    // Try observation first (primary source)
-    if let Some(obs) = result.and_then(|r| r.get("observation")) {
-        let parsed = if let Some(s) = obs.as_str() {
-            // The todo tool emits its observation as a JSON-stringified
-            // object. Falling back to `None` here is intentional — the
-            // event-pipeline extractors must not abort the whole event
-            // on a corrupt observation string — but we warn so the
-            // upstream-tool corruption surfaces in logs instead of
-            // silently producing a "no todos" UI panel.
-            match serde_json::from_str::<serde_json::Value>(s) {
-                Ok(v) => Some(v),
-                Err(err) => {
-                    tracing::warn!(
-                        error = %err,
-                        len = s.len(),
-                        "extractors::extract_todo: observation string is not valid JSON; skipping"
-                    );
-                    None
-                }
-            }
-        } else {
-            Some(obs.clone())
-        };
+    // Primary source: structured `uiMetadata` embedded by the dual-track
+    // tool-result path (`Tool::ui_metadata` → `build_tool_result_event`).
+    // This is exact data from the tool — no text re-parsing involved.
+    if let Some(meta_todos) = result
+        .and_then(|r| r.get("uiMetadata"))
+        .and_then(|v| v.as_object())
+        .filter(|meta| {
+            meta.get("display_type").and_then(|v| v.as_str()) == Some("todo_list")
+        })
+        .and_then(|meta| meta.get("data"))
+        .and_then(|v| v.as_object())
+        .and_then(|data| data.get("todos"))
+    {
+        todos_value = Some(meta_todos.clone());
+    }
 
-        if let Some(ref parsed_val) = parsed {
-            if let Some(obj) = parsed_val.as_object() {
-                if let Some(success) = obj.get("success").and_then(|v| v.as_object()) {
-                    if let Some(t) = success.get("todos") {
+    // Try observation next (legacy hosted-service source)
+    if todos_value.is_none() {
+        if let Some(obs) = result.and_then(|r| r.get("observation")) {
+            let parsed = if let Some(s) = obs.as_str() {
+                // The todo tool emits its observation as a JSON-stringified
+                // object. Falling back to `None` here is intentional — the
+                // event-pipeline extractors must not abort the whole event
+                // on a corrupt observation string — but we warn so the
+                // upstream-tool corruption surfaces in logs instead of
+                // silently producing a "no todos" UI panel.
+                match serde_json::from_str::<serde_json::Value>(s) {
+                    Ok(v) => Some(v),
+                    Err(err) => {
+                        tracing::warn!(
+                            error = %err,
+                            len = s.len(),
+                            "extractors::extract_todo: observation string is not valid JSON; skipping"
+                        );
+                        None
+                    }
+                }
+            } else {
+                Some(obs.clone())
+            };
+
+            if let Some(ref parsed_val) = parsed {
+                if let Some(obj) = parsed_val.as_object() {
+                    if let Some(success) = obj.get("success").and_then(|v| v.as_object()) {
+                        if let Some(t) = success.get("todos") {
+                            todos_value = Some(t.clone());
+                            was_merge = success
+                                .get("wasMerge")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+                        }
+                    } else if let Some(t) = obj.get("todos") {
                         todos_value = Some(t.clone());
-                        was_merge = success
+                        was_merge = obj
                             .get("wasMerge")
                             .and_then(|v| v.as_bool())
                             .unwrap_or(false);
                     }
-                } else if let Some(t) = obj.get("todos") {
-                    todos_value = Some(t.clone());
-                    was_merge = obj
-                        .get("wasMerge")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(false);
                 }
             }
         }
@@ -120,6 +138,24 @@ pub(super) fn extract_todo(
         }
     }
 
+    // Last resort — covers every persisted ORGII `manage_todo` event before
+    // the dual-track uiMetadata path existed: the native tool's result is
+    // `{"content": "<header>\n[pretty-printed JSON array]\n<nudge>"}`. None
+    // of the structured probes above match that shape, so parse the embedded
+    // array back out of the LLM-facing text. `args.todos` only exists for
+    // `action:"write"`; `update`/`read` events depend entirely on this path.
+    let still_empty = todos_value
+        .as_ref()
+        .map(|t| t.as_array().map(|a| a.is_empty()).unwrap_or(true))
+        .unwrap_or(true);
+    if still_empty {
+        if let Some(text) = result.and_then(|r| obj_str(r, "content")) {
+            if let Some(parsed) = parse_embedded_todo_array(&text) {
+                todos_value = Some(parsed);
+            }
+        }
+    }
+
     let todos: Vec<TodoItem> = todos_value
         .as_ref()
         .and_then(|t| t.as_array())
@@ -136,12 +172,21 @@ pub(super) fn extract_todo(
                                 .collect()
                         })
                         .unwrap_or_default();
+                    // Native tool snapshots key rows by `index`; hosted
+                    // formats use a string `id`. Either works as a stable id.
+                    let id = obj_str(obj, "id").unwrap_or_else(|| {
+                        obj.get("index")
+                            .and_then(|v| v.as_u64())
+                            .map(|n| n.to_string())
+                            .unwrap_or_default()
+                    });
                     Some(TodoItem {
-                        id: obj_str(obj, "id").unwrap_or_default(),
+                        id,
                         content: obj_str(obj, "content")
                             .or_else(|| obj_str(obj, "description"))
                             .unwrap_or_default(),
                         status: obj_str(obj, "status").unwrap_or_else(|| "pending".to_string()),
+                        active_form: obj_str(obj, "activeForm").filter(|s| !s.is_empty()),
                         blocked_by,
                     })
                 })
@@ -150,6 +195,21 @@ pub(super) fn extract_todo(
         .unwrap_or_default();
 
     ExtractedTodoData { todos, was_merge }
+}
+
+/// Parse the pretty-printed JSON array that the native `manage_todo` tool
+/// embeds in its text output between the header line and the progress nudge.
+/// Returns `None` when no parseable array of objects is present.
+fn parse_embedded_todo_array(text: &str) -> Option<serde_json::Value> {
+    let start = text.find('[')?;
+    let end = text.rfind(']')?;
+    if end <= start {
+        return None;
+    }
+    match serde_json::from_str::<serde_json::Value>(&text[start..=end]) {
+        Ok(value @ serde_json::Value::Array(_)) => Some(value),
+        _ => None,
+    }
 }
 
 pub(super) fn extract_web_search(
