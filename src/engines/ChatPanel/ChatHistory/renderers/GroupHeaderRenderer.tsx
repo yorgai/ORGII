@@ -136,7 +136,13 @@ export const GroupHeaderRenderer: React.FC<GroupHeaderRendererProps> = memo(
           landed, which read as visual noise.
         */}
         {!hideUserMessage && (
-          <>
+          <div
+            className={
+              showPinnedBars
+                ? "flex flex-col rounded-[12px] bg-chat-container"
+                : "contents"
+            }
+          >
             <UserChatItem
               chatItem={header}
               onEditSubmit={onEditSubmit ? handleEdit : undefined}
@@ -145,7 +151,7 @@ export const GroupHeaderRenderer: React.FC<GroupHeaderRendererProps> = memo(
               }
             />
             {showPinnedBars && <ChatPinnedBars />}
-          </>
+          </div>
         )}
         {showCollapseBar && turnId && (
           <TurnCollapsePinBar
