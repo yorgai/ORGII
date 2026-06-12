@@ -14,13 +14,10 @@ import type { AgentOrgRunMemberView } from "@src/api/tauri/agent";
 import Button from "@src/components/Button";
 import CanvasInlineCard from "@src/engines/ChatPanel/blocks/CanvasInlineCard";
 import type { CanvasInlinePayload } from "@src/engines/ChatPanel/blocks/CanvasInlineCard/useCanvasInlineStream";
-import { PlanningFooter } from "@src/engines/ChatPanel/blocks/primitives";
-import { replayModeAtom } from "@src/engines/SessionCore/core/atoms/replay";
 import {
   derivePlanApprovalViewState,
   isPlanDisplayEvent,
 } from "@src/engines/SessionCore/derived/planDisplayEvents";
-import { usePlanningIndicator } from "@src/engines/SessionCore/hooks";
 import type { SessionReplayPlaceholderMode } from "@src/modules/WorkStation/shared";
 import { pendingPlanApprovalsAtom } from "@src/store/session/planApprovalAtom";
 
@@ -142,19 +139,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
   }, [setViewMode]);
   const { t } = useTranslation(["common", "sessions"]);
   const approvalMap = useAtomValue(pendingPlanApprovalsAtom);
-  // "Planning next step…" footer for the live Messages view. The registry
-  // always instantiates this surface with sessionReplayMode="simulation",
-  // so liveness comes from replayModeAtom instead: "follow" means the
-  // viewer is pinned to the live tail of the ACTIVE session (the same
-  // session the global planning signals describe). A scrubbed/historical
-  // cursor ("replay") never animates.
-  const replayMode = useAtomValue(replayModeAtom);
-  const {
-    count: planningIndicatorCount,
-    showSlowHint: planningShowSlowHint,
-    variantIndex: planningVariantIndex,
-  } = usePlanningIndicator();
-  const showPlanningFooter = viewMode === "chat" && replayMode === "follow";
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const loadMoreScrollAnchorRef = useRef<{
     scrollTop: number;
@@ -380,13 +364,6 @@ export const MessageViewer: React.FC<MessageViewerProps> = ({
               content={canvasPayload.content}
               url={canvasPayload.url}
               isStreaming={canvasPayload.streaming ?? false}
-            />
-          )}
-          {showPlanningFooter && (
-            <PlanningFooter
-              count={planningIndicatorCount}
-              showSlowHint={planningShowSlowHint}
-              variantIndex={planningVariantIndex}
             />
           )}
         </div>
