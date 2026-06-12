@@ -9,12 +9,10 @@
  *   - Sections come from the final provider request payload only.
  *   - Categories with no live data are hidden — no mock/placeholder values.
  */
-import { Sparkles, X } from "lucide-react";
+import { X } from "lucide-react";
 import React, { memo, useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-
-import { AppViewService } from "@src/services/app";
 
 import ContextBreakdownBar from "./ContextBreakdownBar";
 import ContextCategoryRow from "./ContextCategoryRow";
@@ -86,11 +84,6 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
       []
     );
     const handleMouseLeave = useCallback(() => setHoveredKey(null), []);
-
-    const handleStartNewSession = useCallback(() => {
-      close();
-      void AppViewService.createAgentStationSession();
-    }, [close]);
 
     const ringTone = isDanger ? "danger" : isWarning ? "warning" : "neutral";
     const cornerLabelClass = isDanger
@@ -207,24 +200,12 @@ const ContextInfoButton: React.FC<ContextInfoButtonProps> = memo(
               {showNewSessionCta && (
                 <div className="border-t border-border-2 px-4 py-3">
                   <p
-                    className={`mb-2 text-[11px] leading-snug ${isDanger ? "text-danger-6" : "text-warning-6"}`}
+                    className={`text-[11px] leading-snug ${isDanger ? "text-danger-6" : "text-warning-6"}`}
                   >
                     {isDanger
                       ? t("contextInfo.dangerHint")
                       : t("contextInfo.warningHint")}
                   </p>
-                  <button
-                    type="button"
-                    onClick={handleStartNewSession}
-                    className={`flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                      isDanger
-                        ? "hover:bg-danger-7 bg-danger-6 text-white"
-                        : "bg-fill-2 text-text-1 hover:bg-fill-3"
-                    }`}
-                  >
-                    <Sparkles size={12} />
-                    {t("contextInfo.startNewSession")}
-                  </button>
                 </div>
               )}
             </div>,
