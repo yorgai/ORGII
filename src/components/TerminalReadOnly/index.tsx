@@ -192,7 +192,7 @@ const TerminalReadOnly: React.FC<TerminalReadOnlyProps> = ({
       fontWeight: "400",
       fontWeightBold: "700",
       letterSpacing: terminalLetterSpacing,
-      lineHeight: 1.0,
+      lineHeight: 1.2,
       cursorBlink: false,
       cursorStyle: "underline",
       cursorInactiveStyle: "none",

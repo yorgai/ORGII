@@ -47,7 +47,7 @@ export function createTerminalInstance({
     fontWeight: "400",
     fontWeightBold: "700",
     letterSpacing: terminalLetterSpacing,
-    lineHeight: 1.0,
+    lineHeight: 1.2,
     cursorBlink: true,
     cursorStyle: "bar",
     cursorInactiveStyle: "outline",

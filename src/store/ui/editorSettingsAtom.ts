@@ -149,12 +149,12 @@ export const resolvedTerminalFontFamilyAtom = atom<string>((get) => {
   if (preset === "custom") {
     const customFont = get(customCodeFontFamilyAtom).trim();
     if (customFont) {
-      return `"${customFont}", "Hack", "Menlo", "Monaco", "Courier New", monospace`;
+      return `"${customFont}", "Hack", "SF Mono", "Menlo", "Monaco", "Consolas", monospace`;
     }
-    return '"Hack", Menlo, Monaco, "Courier New", monospace';
+    return '"Hack", "SF Mono", "Menlo", "Monaco", "Consolas", monospace';
   }
   if (preset === "system") {
-    return '"Hack", Menlo, Monaco, "Courier New", monospace';
+    return '"Hack", "SF Mono", "Menlo", "Monaco", "Consolas", monospace';
   }
   return CODE_FONT_FAMILY_CSS[preset];
 });
