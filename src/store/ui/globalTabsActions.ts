@@ -9,7 +9,6 @@ import { atom } from "jotai";
 import { isTauriDesktop } from "@src/util/platform/tauri";
 import { toBackendPtySessionId } from "@src/util/ui/terminal/ptySessionId";
 
-import { globalTabsAtom } from "./globalTabsAtom";
 import type {
   BrowserTab,
   DocumentFile,
@@ -27,6 +26,7 @@ import {
   MAX_WORKSPACE_SESSIONS,
   evictOldest,
 } from "./globalTabsTypes";
+import { navigationSidebarTabsAtom } from "./navigationSidebarTabsAtom";
 
 // ============================================
 // Browser Tabs
@@ -35,10 +35,10 @@ import {
 export const addBrowserTabAtom = atom(
   null,
   (get, set, tab: Omit<BrowserTab, "timestamp">) => {
-    const state = get(globalTabsAtom);
+    const state = get(navigationSidebarTabsAtom);
     const existing = state.browser.find((b) => b.id === tab.id);
     if (existing) {
-      set(globalTabsAtom, {
+      set(navigationSidebarTabsAtom, {
         ...state,
         browser: state.browser.map((b) =>
           b.id === tab.id
@@ -48,7 +48,7 @@ export const addBrowserTabAtom = atom(
       });
       return;
     }
-    set(globalTabsAtom, {
+    set(navigationSidebarTabsAtom, {
       ...state,
       browser: evictOldest(
         state.browser
@@ -62,8 +62,8 @@ export const addBrowserTabAtom = atom(
 addBrowserTabAtom.debugLabel = "addBrowserTabAtom";
 
 export const removeBrowserTabAtom = atom(null, (get, set, tabId: string) => {
-  const state = get(globalTabsAtom);
-  set(globalTabsAtom, {
+  const state = get(navigationSidebarTabsAtom);
+  set(navigationSidebarTabsAtom, {
     ...state,
     browser: state.browser.filter((b) => b.id !== tabId),
   });
@@ -71,8 +71,8 @@ export const removeBrowserTabAtom = atom(null, (get, set, tabId: string) => {
 removeBrowserTabAtom.debugLabel = "removeBrowserTabAtom";
 
 export const setActiveBrowserTabAtom = atom(null, (get, set, tabId: string) => {
-  const state = get(globalTabsAtom);
-  set(globalTabsAtom, {
+  const state = get(navigationSidebarTabsAtom);
+  set(navigationSidebarTabsAtom, {
     ...state,
     browser: state.browser.map((b) => ({
       ...b,
@@ -85,8 +85,8 @@ setActiveBrowserTabAtom.debugLabel = "setActiveBrowserTabAtom";
 export const updateBrowserTabAtom = atom(
   null,
   (get, set, update: { id: string; title?: string; url?: string }) => {
-    const state = get(globalTabsAtom);
-    set(globalTabsAtom, {
+    const state = get(navigationSidebarTabsAtom);
+    set(navigationSidebarTabsAtom, {
       ...state,
       browser: state.browser.map((b) =>
         b.id === update.id ? { ...b, ...update, timestamp: Date.now() } : b
@@ -103,10 +103,10 @@ updateBrowserTabAtom.debugLabel = "updateBrowserTabAtom";
 export const addTerminalSessionAtom = atom(
   null,
   (get, set, session: Omit<TerminalSession, "timestamp">) => {
-    const state = get(globalTabsAtom);
+    const state = get(navigationSidebarTabsAtom);
     const existing = state.terminal.find((t) => t.id === session.id);
     if (existing) {
-      set(globalTabsAtom, {
+      set(navigationSidebarTabsAtom, {
         ...state,
         terminal: state.terminal.map((t) =>
           t.id === session.id
@@ -116,7 +116,7 @@ export const addTerminalSessionAtom = atom(
       });
       return;
     }
-    set(globalTabsAtom, {
+    set(navigationSidebarTabsAtom, {
       ...state,
       terminal: evictOldest(
         state.terminal
@@ -143,8 +143,8 @@ export const removeTerminalSessionAtom = atom(
           );
         });
     }
-    const state = get(globalTabsAtom);
-    set(globalTabsAtom, {
+    const state = get(navigationSidebarTabsAtom);
+    set(navigationSidebarTabsAtom, {
       ...state,
       terminal: state.terminal.filter((t) => t.id !== sessionId),
     });
@@ -155,8 +155,8 @@ removeTerminalSessionAtom.debugLabel = "removeTerminalSessionAtom";
 export const setActiveTerminalSessionAtom = atom(
   null,
   (get, set, sessionId: string) => {
-    const state = get(globalTabsAtom);
-    set(globalTabsAtom, {
+    const state = get(navigationSidebarTabsAtom);
+    set(navigationSidebarTabsAtom, {
       ...state,
       terminal: state.terminal.map((t) => ({
         ...t,
@@ -174,9 +174,9 @@ setActiveTerminalSessionAtom.debugLabel = "setActiveTerminalSessionAtom";
 export const addEditorRepoAtom = atom(
   null,
   (get, set, repo: Omit<EditorRepo, "timestamp">) => {
-    const state = get(globalTabsAtom);
+    const state = get(navigationSidebarTabsAtom);
     if (state.editor.some((e) => e.id === repo.id)) {
-      set(globalTabsAtom, {
+      set(navigationSidebarTabsAtom, {
         ...state,
         editor: state.editor.map((e) => ({
           ...e,
@@ -185,7 +185,7 @@ export const addEditorRepoAtom = atom(
       });
       return;
     }
-    set(globalTabsAtom, {
+    set(navigationSidebarTabsAtom, {
       ...state,
       editor: evictOldest(
         state.editor
@@ -199,8 +199,8 @@ export const addEditorRepoAtom = atom(
 addEditorRepoAtom.debugLabel = "addEditorRepoAtom";
 
 export const removeEditorRepoAtom = atom(null, (get, set, repoId: string) => {
-  const state = get(globalTabsAtom);
-  set(globalTabsAtom, {
+  const state = get(navigationSidebarTabsAtom);
+  set(navigationSidebarTabsAtom, {
     ...state,
     editor: state.editor.filter((e) => e.id !== repoId),
   });
@@ -210,8 +210,8 @@ removeEditorRepoAtom.debugLabel = "removeEditorRepoAtom";
 export const setActiveEditorRepoAtom = atom(
   null,
   (get, set, repoId: string) => {
-    const state = get(globalTabsAtom);
-    set(globalTabsAtom, {
+    const state = get(navigationSidebarTabsAtom);
+    set(navigationSidebarTabsAtom, {
       ...state,
       editor: state.editor.map((e) => ({
         ...e,
@@ -229,9 +229,9 @@ setActiveEditorRepoAtom.debugLabel = "setActiveEditorRepoAtom";
 export const addDocumentFileAtom = atom(
   null,
   (get, set, doc: Omit<DocumentFile, "timestamp">) => {
-    const state = get(globalTabsAtom);
+    const state = get(navigationSidebarTabsAtom);
     if (state.files.some((f) => f.id === doc.id)) {
-      set(globalTabsAtom, {
+      set(navigationSidebarTabsAtom, {
         ...state,
         files: state.files.map((f) => ({
           ...f,
@@ -240,7 +240,7 @@ export const addDocumentFileAtom = atom(
       });
       return;
     }
-    set(globalTabsAtom, {
+    set(navigationSidebarTabsAtom, {
       ...state,
       files: evictOldest(
         state.files
@@ -254,8 +254,8 @@ export const addDocumentFileAtom = atom(
 addDocumentFileAtom.debugLabel = "addDocumentFileAtom";
 
 export const removeDocumentFileAtom = atom(null, (get, set, docId: string) => {
-  const state = get(globalTabsAtom);
-  set(globalTabsAtom, {
+  const state = get(navigationSidebarTabsAtom);
+  set(navigationSidebarTabsAtom, {
     ...state,
     files: state.files.filter((f) => f.id !== docId),
   });
@@ -265,8 +265,8 @@ removeDocumentFileAtom.debugLabel = "removeDocumentFileAtom";
 export const setActiveDocumentFileAtom = atom(
   null,
   (get, set, docId: string) => {
-    const state = get(globalTabsAtom);
-    set(globalTabsAtom, {
+    const state = get(navigationSidebarTabsAtom);
+    set(navigationSidebarTabsAtom, {
       ...state,
       files: state.files.map((f) => ({
         ...f,
@@ -284,9 +284,9 @@ setActiveDocumentFileAtom.debugLabel = "setActiveDocumentFileAtom";
 export const addWorkspaceSessionAtom = atom(
   null,
   (get, set, session: Omit<WorkspaceSession, "timestamp">) => {
-    const state = get(globalTabsAtom);
+    const state = get(navigationSidebarTabsAtom);
     if (state.sessions.some((s) => s.session_id === session.session_id)) {
-      set(globalTabsAtom, {
+      set(navigationSidebarTabsAtom, {
         ...state,
         sessions: state.sessions.map((s) => ({
           ...s,
@@ -295,7 +295,7 @@ export const addWorkspaceSessionAtom = atom(
       });
       return;
     }
-    set(globalTabsAtom, {
+    set(navigationSidebarTabsAtom, {
       ...state,
       sessions: evictOldest(
         state.sessions
@@ -311,8 +311,8 @@ addWorkspaceSessionAtom.debugLabel = "addWorkspaceSessionAtom";
 export const removeWorkspaceSessionAtom = atom(
   null,
   (get, set, sessionId: string) => {
-    const state = get(globalTabsAtom);
-    set(globalTabsAtom, {
+    const state = get(navigationSidebarTabsAtom);
+    set(navigationSidebarTabsAtom, {
       ...state,
       sessions: state.sessions.filter((s) => s.session_id !== sessionId),
     });
@@ -323,8 +323,8 @@ removeWorkspaceSessionAtom.debugLabel = "removeWorkspaceSessionAtom";
 export const setActiveWorkspaceSessionAtom = atom(
   null,
   (get, set, sessionId: string) => {
-    const state = get(globalTabsAtom);
-    set(globalTabsAtom, {
+    const state = get(navigationSidebarTabsAtom);
+    set(navigationSidebarTabsAtom, {
       ...state,
       sessions: state.sessions.map((s) => ({
         ...s,
@@ -342,9 +342,9 @@ setActiveWorkspaceSessionAtom.debugLabel = "setActiveWorkspaceSessionAtom";
 export const addShortcutAtom = atom(
   null,
   (get, set, shortcut: Omit<ShortcutItem, "timestamp">) => {
-    const state = get(globalTabsAtom);
+    const state = get(navigationSidebarTabsAtom);
     if (state.shortcuts.some((s) => s.id === shortcut.id)) {
-      set(globalTabsAtom, {
+      set(navigationSidebarTabsAtom, {
         ...state,
         shortcuts: state.shortcuts.map((s) => ({
           ...s,
@@ -353,7 +353,7 @@ export const addShortcutAtom = atom(
       });
       return;
     }
-    set(globalTabsAtom, {
+    set(navigationSidebarTabsAtom, {
       ...state,
       shortcuts: evictOldest(
         state.shortcuts
@@ -367,8 +367,8 @@ export const addShortcutAtom = atom(
 addShortcutAtom.debugLabel = "addShortcutAtom";
 
 export const removeShortcutAtom = atom(null, (get, set, shortcutId: string) => {
-  const state = get(globalTabsAtom);
-  set(globalTabsAtom, {
+  const state = get(navigationSidebarTabsAtom);
+  set(navigationSidebarTabsAtom, {
     ...state,
     shortcuts: state.shortcuts.filter((s) => s.id !== shortcutId),
   });
@@ -378,8 +378,8 @@ removeShortcutAtom.debugLabel = "removeShortcutAtom";
 export const setActiveShortcutAtom = atom(
   null,
   (get, set, shortcutId: string) => {
-    const state = get(globalTabsAtom);
-    set(globalTabsAtom, {
+    const state = get(navigationSidebarTabsAtom);
+    set(navigationSidebarTabsAtom, {
       ...state,
       shortcuts: state.shortcuts.map((s) => ({
         ...s,

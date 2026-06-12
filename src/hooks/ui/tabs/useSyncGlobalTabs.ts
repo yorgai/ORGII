@@ -5,7 +5,7 @@
  * Use this hook in your context providers to automatically track tabs globally.
  *
  * These hooks sync local state (from contexts like BrowserContext, TerminalContext)
- * to the globalTabsAtom for display in the GlobalTabsSidebar.
+ * to the navigationSidebarTabsAtom for display in the GlobalTabsSidebar.
  *
  * PERFORMANCE: Each sync hook now uses focused hooks instead of the combined
  * useGlobalTabs hook, preventing unnecessary re-renders when other tab categories change.
@@ -27,8 +27,8 @@ import {
  *
  * Used by: BrowserContext
  *
- * ONE-WAY sync: BrowserContext sessions -> globalTabsAtom.browser
- * This hook should NOT cause re-renders when globalTabsAtom changes.
+ * ONE-WAY sync: BrowserContext sessions -> navigationSidebarTabsAtom.browser
+ * This hook should NOT cause re-renders when navigationSidebarTabsAtom changes.
  */
 export const useSyncBrowserTabs = (
   sessions: Array<{
@@ -122,7 +122,7 @@ export const useSyncBrowserTabs = (
  *
  * Used by: TerminalContext
  *
- * ONE-WAY sync: TerminalContext sessions -> globalTabsAtom.terminal
+ * ONE-WAY sync: TerminalContext sessions -> navigationSidebarTabsAtom.terminal
  */
 export const useSyncTerminalSessions = (
   sessions: Array<{ id: string; name: string; isActive?: boolean }>,
@@ -175,7 +175,7 @@ export const useSyncTerminalSessions = (
  *
  * Used by: EditorContext
  *
- * ONE-WAY sync: EditorContext repos -> globalTabsAtom.editor
+ * ONE-WAY sync: EditorContext repos -> navigationSidebarTabsAtom.editor
  */
 export const useSyncEditorRepos = (
   repos: Array<{ id: string; name: string; description?: string }>,
@@ -225,7 +225,7 @@ export const useSyncEditorRepos = (
  *
  * Used by: FilesContext
  *
- * ONE-WAY sync: FilesContext documents -> globalTabsAtom.files
+ * ONE-WAY sync: FilesContext documents -> navigationSidebarTabsAtom.files
  */
 export const useSyncDocumentFiles = (
   documents: Array<{ id: string; title: string; updatedAt?: string }>,

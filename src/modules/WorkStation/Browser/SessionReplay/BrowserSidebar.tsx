@@ -30,7 +30,7 @@ import { PANEL_CONSTANTS } from "@src/modules/WorkStation/CodeEditor/Panels/Edit
 import { PrimarySidebarLayoutWithSections } from "@src/modules/WorkStation/shared";
 import type { PrimarySidebarTab } from "@src/modules/WorkStation/shared/PrimarySidebarLayout/PrimarySidebarLayoutWithSections";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { getSiteNameFromUrl } from "@src/store/ui/globalTabsAtom";
+import { getSiteNameFromUrl } from "@src/store/ui/navigationSidebarTabsAtom";
 import { isPlaceholderBrowserSessionTitle } from "@src/store/workstation/browser/tabs";
 import { deriveToolAction } from "@src/util/ui/rendering/toolAction";
 

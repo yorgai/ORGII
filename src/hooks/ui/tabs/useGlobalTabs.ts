@@ -37,21 +37,39 @@ import {
   activeShortcutAtom,
   activeTerminalSessionAtom,
   activeWorkspaceSessionAtom,
-  globalTabsAtom,
+  navigationSidebarTabsAtom,
   tabCountsAtom,
-} from "@src/store/ui/globalTabsAtom";
+} from "@src/store/ui/navigationSidebarTabsAtom";
 import { activeEditorRepoAtom } from "@src/store/workstation/tabs";
 
 // ============================================
 // Selector Atoms (created once, reused)
 // ============================================
 
-const browserTabsAtom = selectAtom(globalTabsAtom, (tabs) => tabs.browser);
-const terminalTabsAtom = selectAtom(globalTabsAtom, (tabs) => tabs.terminal);
-const editorTabsAtom = selectAtom(globalTabsAtom, (tabs) => tabs.editor);
-const filesTabsAtom = selectAtom(globalTabsAtom, (tabs) => tabs.files);
-const sessionsTabsAtom = selectAtom(globalTabsAtom, (tabs) => tabs.sessions);
-const shortcutsTabsAtom = selectAtom(globalTabsAtom, (tabs) => tabs.shortcuts);
+const browserTabsAtom = selectAtom(
+  navigationSidebarTabsAtom,
+  (tabs) => tabs.browser
+);
+const terminalTabsAtom = selectAtom(
+  navigationSidebarTabsAtom,
+  (tabs) => tabs.terminal
+);
+const editorTabsAtom = selectAtom(
+  navigationSidebarTabsAtom,
+  (tabs) => tabs.editor
+);
+const filesTabsAtom = selectAtom(
+  navigationSidebarTabsAtom,
+  (tabs) => tabs.files
+);
+const sessionsTabsAtom = selectAtom(
+  navigationSidebarTabsAtom,
+  (tabs) => tabs.sessions
+);
+const shortcutsTabsAtom = selectAtom(
+  navigationSidebarTabsAtom,
+  (tabs) => tabs.shortcuts
+);
 
 // ============================================
 // Focused Hooks - Use these for better performance

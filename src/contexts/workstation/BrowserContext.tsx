@@ -280,7 +280,7 @@ export const BrowserProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []); // Empty deps - only run on unmount
 
-  // ✨ Sync to global tabs state (for components that use globalTabsAtom)
+  // ✨ Sync to global tabs state (for components that use navigationSidebarTabsAtom)
   useSyncBrowserTabs(sessions, activeSessionId);
 
   // Ensure active session exists (or is empty if no sessions)

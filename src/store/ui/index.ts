@@ -10,7 +10,7 @@
  * - Editor: editorSettingsAtom, fileTreeSelectionAtom, searchResultSelectionAtom
  * - Settings: settingsPanelAtoms (panel-internal side-channel state),
  *   settingsSyncAtom
- * - Tabs: globalTabsAtom, globalSelectorAtom, homeTabAtom
+ * - Tabs: navigationSidebarTabsAtom, globalSelectorAtom, homeTabAtom
  */
 
 // Sidebar
@@ -29,7 +29,7 @@ export * from "./settingsSyncAtom";
 export * from "./languageAtom";
 
 // Tabs
-export * from "./globalTabsAtom";
+export * from "./navigationSidebarTabsAtom";
 export * from "./globalTabsActions";
 export * from "./globalSelectorAtom";
 export * from "./homeTabAtom";

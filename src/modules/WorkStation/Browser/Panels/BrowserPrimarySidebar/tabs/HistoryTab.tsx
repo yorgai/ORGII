@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import { FaviconIcon } from "@src/components/FaviconIcon";
 import { TreeRowBase, type TreeRowNode } from "@src/components/TreeRow";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { getSiteNameFromUrl } from "@src/store/ui/globalTabsAtom";
+import { getSiteNameFromUrl } from "@src/store/ui/navigationSidebarTabsAtom";
 import { isPlaceholderBrowserSessionTitle } from "@src/store/workstation/browser/tabs";
 
 interface BrowserHistoryListEntry extends BrowserHistoryEntry {

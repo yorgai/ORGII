@@ -15,7 +15,7 @@ import { TreeRowBase, type TreeRowNode } from "@src/components/TreeRow";
 import { WorkstationToolbarTooltip } from "@src/modules/WorkStation/shared";
 import { HEADER_BUTTON } from "@src/modules/WorkStation/shared/tokens";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { getSiteNameFromUrl } from "@src/store/ui/globalTabsAtom";
+import { getSiteNameFromUrl } from "@src/store/ui/navigationSidebarTabsAtom";
 import {
   NEW_TAB_TITLE,
   isPlaceholderBrowserSessionTitle,

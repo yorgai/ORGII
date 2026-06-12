@@ -17,7 +17,7 @@
 import { Globe, HatGlasses, Loader2 } from "lucide-react";
 import React, { memo, useEffect, useState } from "react";
 
-import { getFaviconUrl } from "@src/store/ui/globalTabsAtom";
+import { getFaviconUrl } from "@src/store/ui/navigationSidebarTabsAtom";
 
 export interface FaviconIconProps {
   url: string | undefined;

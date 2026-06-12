@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 
 import { EDITOR_TAB_CANVAS_BG_CLASS } from "@src/config/workstation/tokens";
 import type { WorkstationTabHeaderHost } from "@src/hooks/workStation";
-import { getSiteNameFromUrl } from "@src/store/ui/globalTabsAtom";
+import { getSiteNameFromUrl } from "@src/store/ui/navigationSidebarTabsAtom";
 import {
   closeBrowserTabAtom,
   extractSessionId,

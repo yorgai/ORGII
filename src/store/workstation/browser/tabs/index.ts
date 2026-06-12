@@ -13,7 +13,7 @@
  */
 import { atom } from "jotai";
 
-import { getSiteNameFromUrl } from "@src/store/ui/globalTabsAtom";
+import { getSiteNameFromUrl } from "@src/store/ui/navigationSidebarTabsAtom";
 import type { PanelState } from "@src/store/workstation/tabs";
 import { workstationLayoutAtom } from "@src/store/workstation/tabs/atoms";
 import {

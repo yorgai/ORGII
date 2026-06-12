@@ -97,7 +97,7 @@ export const TerminalProvider: React.FC<{ children: React.ReactNode }> = ({
     () => new Set(getDefaultState().initializedSessionIds)
   );
 
-  // ✨ Sync to global tabs state (for components that use globalTabsAtom)
+  // ✨ Sync to global tabs state (for components that use navigationSidebarTabsAtom)
   useSyncTerminalSessions(sessions, activeSessionId);
 
   // Keep sessionsRef up to date

@@ -9,7 +9,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 import { type TodoEntry, projectApi } from "@src/api/http/project";
 import { storePillText } from "@src/config/pillTokens";
-import { globalTabsAtom } from "@src/store/ui/globalTabsAtom";
+import { navigationSidebarTabsAtom } from "@src/store/ui/navigationSidebarTabsAtom";
 import { getInstrumentedStore } from "@src/util/core/state/instrumentedStore";
 
 export { capPillText } from "@src/config/pillTokens";
@@ -42,7 +42,7 @@ export async function waitForPendingPills(): Promise<void> {
  */
 export function loadBrowserPillContent(tabId: string, pillPath: string): void {
   const store = getInstrumentedStore();
-  const tabs = store.get(globalTabsAtom);
+  const tabs = store.get(navigationSidebarTabsAtom);
   const tab = tabs.browser.find((browserTab) => browserTab.id === tabId);
   const url = tab?.url || "";
   const webviewLabel = `browser-session-${tabId}`;
