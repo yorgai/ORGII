@@ -8,6 +8,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { z } from "zod/v4";
 
+import { recordDiagnosticsRpc } from "@src/diagnostics/runtimeCounters";
+
 // ============================================================================
 // Error types
 // ============================================================================
@@ -106,13 +108,16 @@ export async function typedInvoke<
 
   // Call Rust
   recordE2ERpcInvoke(command);
+  const diagnosticsStart = performance.now();
   let raw: unknown;
   try {
     raw = await invoke(
       command,
       (validatedInput as Record<string, unknown>) ?? {}
     );
+    recordDiagnosticsRpc(command, performance.now() - diagnosticsStart, true);
   } catch (err) {
+    recordDiagnosticsRpc(command, performance.now() - diagnosticsStart, false);
     throw new RpcError(
       command,
       typeof err === "string" ? err : String(err),

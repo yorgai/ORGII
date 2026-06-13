@@ -6,6 +6,7 @@
  */
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 
+import { recordDiagnosticsHttp } from "@src/diagnostics/runtimeCounters";
 import { createLogger } from "@src/hooks/logger";
 import { triggerSessionExpired } from "@src/store/ui/uiAtom";
 import { getGlobalCommonHeaders } from "@src/util/config/headers";
@@ -80,8 +81,12 @@ export async function makeRequest<T>(
     config.data = payload;
   }
 
+  const diagnosticsStart = performance.now();
+  let diagnosticsOk = false;
+
   try {
     const response: AxiosResponse<DataField<T>> = await axios(config);
+    diagnosticsOk = response.data.status !== 1;
 
     if (response.data.status === 1) {
       const errorData = response.data.data as {
@@ -229,6 +234,12 @@ export async function makeRequest<T>(
     log.error(`API ${method} error [${url}]:`, typedError.response);
     onError?.();
     return undefined;
+  } finally {
+    recordDiagnosticsHttp(
+      target,
+      performance.now() - diagnosticsStart,
+      diagnosticsOk
+    );
   }
 }
 
@@ -256,6 +267,8 @@ export async function makeDeleteRequest<T>(
   const baseUrl = API_BASE_URLS[target];
   const isAgentApi = target === "agent";
   const fullUrl = baseUrl + url;
+  const diagnosticsStart = performance.now();
+  let diagnosticsOk = false;
 
   try {
     const response: AxiosResponse<DataField<T>> = await axios.delete(fullUrl, {
@@ -263,6 +276,7 @@ export async function makeDeleteRequest<T>(
       params,
       __captureId: captureId,
     } as AxiosRequestConfig & { __captureId?: string });
+    diagnosticsOk = response.data.status !== 1;
 
     if (response.data.status === 1) {
       showResponseErrorNotification(
@@ -322,5 +336,11 @@ export async function makeDeleteRequest<T>(
     log.error(`API DELETE error [${url}]:`, typedError.response);
     onError?.();
     return undefined;
+  } finally {
+    recordDiagnosticsHttp(
+      target,
+      performance.now() - diagnosticsStart,
+      diagnosticsOk
+    );
   }
 }

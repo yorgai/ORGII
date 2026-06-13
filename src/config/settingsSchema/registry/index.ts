@@ -8,6 +8,7 @@ import { GENERAL_SETTINGS_REGISTRY } from "./general";
 import { GIT_SETTINGS_REGISTRY } from "./git";
 import { NETWORK_SETTINGS_REGISTRY } from "./network";
 import { NOTIFICATIONS_SETTINGS_REGISTRY } from "./notifications";
+import { PRIVACY_SETTINGS_REGISTRY } from "./privacy";
 import { TERMINAL_SETTINGS_REGISTRY } from "./terminal";
 import { WORKSPACE_SETTINGS_REGISTRY } from "./workspace";
 
@@ -23,6 +24,7 @@ export const SETTINGS_REGISTRY = {
   ...AGENT_SETTINGS_REGISTRY,
   ...AGENT_BROWSER_SETTINGS_REGISTRY,
   ...NETWORK_SETTINGS_REGISTRY,
+  ...PRIVACY_SETTINGS_REGISTRY,
 } as const satisfies Record<string, SettingDefinition>;
 
 export const SETTINGS_CATEGORY_LABELS: Record<SettingsCategory, string> = {
@@ -37,5 +39,6 @@ export const SETTINGS_CATEGORY_LABELS: Record<SettingsCategory, string> = {
   agent: "Agent",
   agentBrowser: "Computer Use",
   network: "Network",
+  privacy: "Privacy",
   mobileRemote: "Mobile Remote",
 };

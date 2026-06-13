@@ -69,6 +69,7 @@ pub mod benchmark;
 pub mod cursor_ide_watch; // cursor_ide streaming delta watch commands
 pub mod infrastructure; // In-tree-only cross-cutting infrastructure (paths, platform, archive, index_manager, jsonrpc, housekeeping). Leaf pieces live in their own workspace crates.
 pub(crate) mod setup;
+pub mod usage_diagnostics;
 
 #[cfg(test)]
 pub mod test_utils;

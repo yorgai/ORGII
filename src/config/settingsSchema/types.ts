@@ -25,4 +25,5 @@ export type SettingsCategory =
   | "agent"
   | "agentBrowser"
   | "network"
+  | "privacy"
   | "mobileRemote";

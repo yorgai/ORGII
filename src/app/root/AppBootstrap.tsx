@@ -21,6 +21,7 @@ import {
   DeferredGitStatusProvider,
   MultiRepoGitStatusProvider,
 } from "@src/contexts/git";
+import { useDiagnosticsBootstrap } from "@src/diagnostics";
 import { useGlobalFlowTracker } from "@src/hooks/flowAwareness";
 import { useModelAliasRegistry } from "@src/hooks/models";
 import {
@@ -68,6 +69,7 @@ export const AppBootstrap: FC = () => {
   useFirstPaintSignal();
   useGlobalFlowTracker(); // Track user activities for agent context
   useModelAliasRegistry();
+  useDiagnosticsBootstrap();
 
   return (
     <DeferredGitStatusProvider>
