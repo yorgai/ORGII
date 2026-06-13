@@ -45,6 +45,8 @@ export function useWindowShortcuts() {
       jotaiStore.set(isAppQuittingAtom, true);
 
       await requestNativeQuitAfterRelease();
+      quitInProgress = false;
+      jotaiStore.set(isAppQuittingAtom, false);
     } catch (error) {
       const jotaiStore = getInstrumentedStore();
       jotaiStore.set(isAppQuittingAtom, false);

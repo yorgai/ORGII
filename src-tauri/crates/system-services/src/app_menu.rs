@@ -13,7 +13,7 @@
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::sync::Mutex;
 use tauri::menu::{Menu, MenuBuilder, MenuItem, Submenu, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager, Wry};
 
@@ -29,9 +29,6 @@ const EVENT_HOLD_TO_QUIT_CANCEL: &str = "native-hold-to-quit-cancel";
 static RECENT_PATHS: Mutex<Vec<String>> = Mutex::new(Vec::new());
 static HOLD_TO_QUIT_ACTIVE: AtomicBool = AtomicBool::new(false);
 static HOLD_TO_QUIT_READY_TO_EXIT: AtomicBool = AtomicBool::new(false);
-static HOLD_TO_QUIT_MONITOR_STARTED: AtomicBool = AtomicBool::new(false);
-static HOLD_TO_QUIT_MONITOR_AVAILABLE: AtomicBool = AtomicBool::new(false);
-static HOLD_TO_QUIT_APP: OnceLock<AppHandle> = OnceLock::new();
 
 /// Create the application menu bar
 pub fn create_app_menu(app: &AppHandle) -> Result<Menu<Wry>, tauri::Error> {
@@ -476,9 +473,7 @@ fn emit_main_window(app: &AppHandle, event: &str) {
 }
 
 fn begin_hold_to_quit(app: &AppHandle) {
-    if HOLD_TO_QUIT_ACTIVE.swap(true, Ordering::AcqRel) {
-        return;
-    }
+    HOLD_TO_QUIT_ACTIVE.store(true, Ordering::Release);
     HOLD_TO_QUIT_READY_TO_EXIT.store(false, Ordering::Release);
     emit_main_window(app, EVENT_HOLD_TO_QUIT_START);
 }
@@ -491,174 +486,14 @@ fn cancel_hold_to_quit_state(app: &AppHandle) {
     emit_main_window(app, EVENT_HOLD_TO_QUIT_CANCEL);
 }
 
-fn finish_hold_to_quit_if_ready(app: &AppHandle) -> bool {
-    if HOLD_TO_QUIT_READY_TO_EXIT.swap(false, Ordering::AcqRel) {
-        HOLD_TO_QUIT_ACTIVE.store(false, Ordering::Release);
-        app.exit(0);
-        return true;
-    }
-    false
+fn finish_hold_to_quit(app: &AppHandle) {
+    HOLD_TO_QUIT_READY_TO_EXIT.store(false, Ordering::Release);
+    HOLD_TO_QUIT_ACTIVE.store(false, Ordering::Release);
+    app.exit(0);
 }
-
-#[cfg(target_os = "macos")]
-fn install_hold_to_quit_key_monitor(app: AppHandle) {
-    let _ = HOLD_TO_QUIT_APP.set(app);
-    if HOLD_TO_QUIT_MONITOR_STARTED.swap(true, Ordering::AcqRel) {
-        return;
-    }
-
-    std::thread::Builder::new()
-        .name("orgii-hold-to-quit-monitor".into())
-        .spawn(run_hold_to_quit_event_tap)
-        .expect("failed to spawn hold-to-quit monitor thread");
-}
-
-#[cfg(not(target_os = "macos"))]
-fn install_hold_to_quit_key_monitor(_app: AppHandle) {}
-
-#[cfg(target_os = "macos")]
-fn run_hold_to_quit_event_tap() {
-    unsafe {
-        let tap = CGEventTapCreate(
-            K_CG_SESSION_EVENT_TAP,
-            K_CG_HEAD_INSERT_EVENT_TAP,
-            K_CG_EVENT_TAP_OPTION_LISTEN,
-            HOLD_TO_QUIT_EVENT_MASK,
-            hold_to_quit_tap_callback,
-            std::ptr::null_mut(),
-        );
-        if tap.is_null() {
-            tracing::warn!(
-                target: "app_menu.hold_to_quit",
-                "CGEventTapCreate returned null; native key-up hold-to-quit guard is disabled."
-            );
-            return;
-        }
-
-        HOLD_TO_QUIT_MONITOR_AVAILABLE.store(true, Ordering::Release);
-
-        let source = CFMachPortCreateRunLoopSource(std::ptr::null(), tap, 0);
-        if source.is_null() {
-            CFRelease(tap);
-            return;
-        }
-
-        let run_loop = CFRunLoopGetCurrent();
-        CFRunLoopAddSource(run_loop, source, kCFRunLoopCommonModes);
-        CFRunLoopRun();
-
-        CFRelease(source);
-        CFRelease(tap);
-    }
-}
-
-#[cfg(target_os = "macos")]
-extern "C" fn hold_to_quit_tap_callback(
-    _proxy: *mut std::ffi::c_void,
-    event_type: u32,
-    event: *mut std::ffi::c_void,
-    _user_info: *mut std::ffi::c_void,
-) -> *mut std::ffi::c_void {
-    if event.is_null() {
-        return event;
-    }
-
-    let keycode = unsafe { CGEventGetIntegerValueField(event, K_CG_KEYBOARD_EVENT_KEYCODE) };
-    let is_quit_chord_release = match event_type {
-        K_CG_EVENT_KEY_UP => keycode == KEYCODE_Q,
-        K_CG_EVENT_FLAGS_CHANGED => {
-            keycode == KEYCODE_LEFT_COMMAND || keycode == KEYCODE_RIGHT_COMMAND
-        }
-        _ => false,
-    };
-    if !is_quit_chord_release {
-        return event;
-    }
-
-    match event_type {
-        K_CG_EVENT_FLAGS_CHANGED | K_CG_EVENT_KEY_UP => {
-            if let Some(app) = HOLD_TO_QUIT_APP.get() {
-                if finish_hold_to_quit_if_ready(app) {
-                    return event;
-                }
-            }
-            if HOLD_TO_QUIT_ACTIVE.swap(false, Ordering::AcqRel) {
-                HOLD_TO_QUIT_READY_TO_EXIT.store(false, Ordering::Release);
-                if let Some(app) = HOLD_TO_QUIT_APP.get() {
-                    emit_main_window(app, EVENT_HOLD_TO_QUIT_CANCEL);
-                }
-            }
-        }
-        _ => {}
-    }
-
-    event
-}
-
-#[cfg(target_os = "macos")]
-#[link(name = "CoreGraphics", kind = "framework")]
-extern "C" {
-    fn CGEventTapCreate(
-        tap: u32,
-        place: u32,
-        options: u32,
-        events_of_interest: u64,
-        callback: extern "C" fn(
-            proxy: *mut std::ffi::c_void,
-            event_type: u32,
-            event: *mut std::ffi::c_void,
-            user_info: *mut std::ffi::c_void,
-        ) -> *mut std::ffi::c_void,
-        user_info: *mut std::ffi::c_void,
-    ) -> *mut std::ffi::c_void;
-
-    fn CFMachPortCreateRunLoopSource(
-        allocator: *const std::ffi::c_void,
-        port: *mut std::ffi::c_void,
-        order: i64,
-    ) -> *mut std::ffi::c_void;
-
-    fn CFRunLoopGetCurrent() -> *mut std::ffi::c_void;
-    fn CFRunLoopAddSource(
-        rl: *mut std::ffi::c_void,
-        source: *mut std::ffi::c_void,
-        mode: *const std::ffi::c_void,
-    );
-    fn CFRunLoopRun();
-    fn CGEventGetIntegerValueField(event: *mut std::ffi::c_void, field: u32) -> i64;
-    fn CFRelease(cf: *const std::ffi::c_void);
-}
-
-#[cfg(target_os = "macos")]
-extern "C" {
-    static kCFRunLoopCommonModes: *const std::ffi::c_void;
-}
-
-#[cfg(target_os = "macos")]
-const K_CG_SESSION_EVENT_TAP: u32 = 1;
-#[cfg(target_os = "macos")]
-const K_CG_HEAD_INSERT_EVENT_TAP: u32 = 0;
-#[cfg(target_os = "macos")]
-const K_CG_EVENT_TAP_OPTION_LISTEN: u32 = 1;
-#[cfg(target_os = "macos")]
-const K_CG_EVENT_KEY_UP: u32 = 11;
-#[cfg(target_os = "macos")]
-const K_CG_EVENT_FLAGS_CHANGED: u32 = 12;
-#[cfg(target_os = "macos")]
-const K_CG_KEYBOARD_EVENT_KEYCODE: u32 = 9;
-#[cfg(target_os = "macos")]
-const KEYCODE_Q: i64 = 12;
-#[cfg(target_os = "macos")]
-const KEYCODE_LEFT_COMMAND: i64 = 55;
-#[cfg(target_os = "macos")]
-const KEYCODE_RIGHT_COMMAND: i64 = 54;
-#[cfg(target_os = "macos")]
-const HOLD_TO_QUIT_EVENT_MASK: u64 = (1 << K_CG_EVENT_KEY_UP) | (1 << K_CG_EVENT_FLAGS_CHANGED);
 
 /// Setup menu event handlers
 pub fn setup_menu_events(app: &AppHandle) {
-    install_hold_to_quit_key_monitor(app.clone());
-
     let app_handle = app.clone();
 
     app.on_menu_event(move |app, event| {
@@ -827,24 +662,7 @@ pub fn menu_clear_recent(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub fn complete_hold_to_quit(app: AppHandle) {
-    #[cfg(target_os = "macos")]
-    if !HOLD_TO_QUIT_ACTIVE.load(Ordering::Acquire) {
-        return;
-    }
-
-    HOLD_TO_QUIT_READY_TO_EXIT.store(true, Ordering::Release);
-
-    #[cfg(target_os = "macos")]
-    {
-        if !HOLD_TO_QUIT_MONITOR_AVAILABLE.load(Ordering::Acquire) {
-            let _ = finish_hold_to_quit_if_ready(&app);
-        }
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    {
-        let _ = finish_hold_to_quit_if_ready(&app);
-    }
+    finish_hold_to_quit(&app);
 }
 
 #[tauri::command]
