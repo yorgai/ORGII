@@ -43,6 +43,8 @@ import {
 } from "@src/store/session";
 import { resolveModelForMessage } from "@src/util/session/resolveModelForMessage";
 
+import { sanitizeAgentErrorMessage } from "./sanitizeAgentErrorMessage";
+
 export interface AgentErrorChatItemProps {
   errorMessage: string;
 }
@@ -140,7 +142,7 @@ const AgentErrorChatItem: React.FC<AgentErrorChatItemProps> = memo(
       creatorDefaultMode,
     ]);
 
-    const cleanMessage = errorMessage.replace(/^Error:\s*/i, "");
+    const cleanMessage = sanitizeAgentErrorMessage(errorMessage);
 
     return (
       <div className="animate-fade-in">
