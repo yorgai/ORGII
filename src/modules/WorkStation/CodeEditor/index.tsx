@@ -229,6 +229,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
     const explorerTab = useMemo(() => explorerTabFactory({}), []);
     const pinnedTabs = useMemo(
       () => [
+        explorerTab,
         terminalTabFactory({
           sessionId: CODE_EDITOR_MAIN_TERMINAL_SESSION_ID,
           sessionName: "Terminal",
@@ -240,7 +241,6 @@ export const CodeEditor: React.FC<CodeEditorProps> = memo(
           focusPath: null,
           historySelection: null,
         }),
-        explorerTab,
       ],
       [explorerTab, sourceControlFilterCounts.unstaged]
     );
