@@ -1121,7 +1121,7 @@
       "chooseModel": "Chọn một mô hình",
       "chooseKey": "Chọn một khóa",
       "noCompatibleAccounts": "Không có khóa tương thích",
-      "hoverModelHint": "Di chuột qua một mô hình để xem các khóa khả dụng",
+      "chooseModelHint": "Dùng bàn phím để điều hướng hoặc dùng chuột nhấp vào một mô hình",
       "variantFast": "Fast",
       "selectAccount": "Chọn tài khoản"
     },

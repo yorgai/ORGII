@@ -1120,7 +1120,7 @@
       "chooseModel": "Выберите модель",
       "chooseKey": "Выберите ключ",
       "noCompatibleAccounts": "Нет совместимых ключей",
-      "hoverModelHint": "Наведите на модель, чтобы увидеть доступные ключи",
+      "chooseModelHint": "Используйте клавиатуру для навигации или щелкните модель мышью",
       "variantFast": "Fast",
       "selectAccount": "Выберите аккаунт"
     },

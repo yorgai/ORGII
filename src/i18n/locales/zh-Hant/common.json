@@ -1133,7 +1133,7 @@
       "chooseModel": "選擇模型",
       "chooseKey": "選擇金鑰",
       "noCompatibleAccounts": "無相容金鑰",
-      "hoverModelHint": "懸停模型以查看可用金鑰",
+      "chooseModelHint": "使用鍵盤導覽，或用滑鼠點擊模型",
       "variantFast": "Fast",
       "selectAccount": "選擇帳號"
     },

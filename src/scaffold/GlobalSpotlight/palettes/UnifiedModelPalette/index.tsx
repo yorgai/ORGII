@@ -315,12 +315,20 @@ export const UnifiedModelPalette: React.FC<UnifiedModelPaletteProps> = ({
     [kernel, setActiveColumn]
   );
 
+  const handleItemSelect = useCallback(
+    (item: SpotlightItem, index: number) => {
+      kernel.setSelectedIndex(index);
+      kernel.handleItemClick(item);
+    },
+    [kernel]
+  );
+
   // ============ RENDER ============
   const content = (
     <TwoColumnModelBody
       items={filteredItems}
       selectedIndex={kernel.selectedIndex}
-      onItemSelect={kernel.handleItemClick}
+      onItemSelect={handleItemSelect}
       onItemHover={handleItemHover}
       searchQuery={searchQuery}
       activeColumn={activeColumn}

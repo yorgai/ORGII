@@ -1120,7 +1120,7 @@
       "chooseModel": "Elige un modelo",
       "chooseKey": "Elige una clave",
       "noCompatibleAccounts": "Sin claves compatibles",
-      "hoverModelHint": "Pasa el cursor sobre un modelo para ver las claves disponibles",
+      "chooseModelHint": "Usa el teclado para navegar o haz clic en un modelo con el mouse",
       "variantFast": "Fast",
       "selectAccount": "Seleccionar una cuenta"
     },

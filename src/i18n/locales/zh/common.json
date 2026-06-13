@@ -1134,7 +1134,7 @@
       "chooseModel": "选择模型",
       "chooseKey": "选择密钥",
       "noCompatibleAccounts": "无兼容密钥",
-      "hoverModelHint": "悬停模型以查看可用密钥",
+      "chooseModelHint": "使用键盘导航，或用鼠标点击模型",
       "variantFast": "Fast",
       "selectAccount": "选择账号"
     },

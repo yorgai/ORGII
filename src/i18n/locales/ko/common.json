@@ -1121,7 +1121,7 @@
       "chooseModel": "모델 선택",
       "chooseKey": "키 선택",
       "noCompatibleAccounts": "호환되는 키 없음",
-      "hoverModelHint": "모델 위에 마우스를 올리면 사용 가능한 키가 표시됩니다",
+      "chooseModelHint": "키보드로 이동하거나 마우스로 모델을 클릭하세요",
       "variantFast": "Fast",
       "selectAccount": "계정 선택"
     },

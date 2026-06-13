@@ -153,6 +153,7 @@ export function buildModelSelectionSpotlightItem({
 
 interface BuildAllModelItemsParams {
   accountLookup: ReadonlyMap<string, unknown>;
+  accounts: KeyVaultAccount[];
   handleModelSelect: (
     modelId: string,
     modelLabel: string,
@@ -164,6 +165,7 @@ interface BuildAllModelItemsParams {
 
 export function buildAllModelItems({
   accountLookup,
+  accounts,
   handleModelSelect,
   modelAliasVersion,
   resolveGroupLaunchModel,
@@ -173,6 +175,18 @@ export function buildAllModelItems({
   const items: SpotlightItem[] = [];
   const modelIds = Array.from(accountLookup.keys());
   const groups = groupModels(modelIds);
+
+  const getAccountCount = (modelIdsForRow: string[]) =>
+    accounts.filter(
+      (account) =>
+        account.status === "ready" &&
+        account.hasKey &&
+        modelIdsForRow.some((modelId) => accountHasModel(account, modelId))
+    ).length;
+
+  const renderAccountCount = (count: number) => (
+    <span className="text-[12px] text-text-3">{count}</span>
+  );
 
   for (const group of groups) {
     const sortedVariants = [...group.models].sort(compareModelsByVersion);
@@ -187,6 +201,7 @@ export function buildAllModelItems({
       void info;
 
       const ModelItemIcon = () => <ModelIcon modelName={modelId} size={14} />;
+      const accountCount = getAccountCount([modelId]);
 
       const labelContent = aliasDisplayName ? (
         <>
@@ -209,6 +224,7 @@ export function buildAllModelItems({
           modelSection: MODEL_SECTION.ALL,
           modelId,
           groupModelIds: [modelId],
+          rightContent: renderAccountCount(accountCount),
           ...(labelContent ? { labelContent } : {}),
           searchAlias: aliasDisplayName ? modelId : undefined,
         },
@@ -241,6 +257,7 @@ export function buildAllModelItems({
     ].join(" ");
 
     const launchModel = resolveGroupLaunchModel(sortedVariants);
+    const accountCount = getAccountCount(sortedVariants);
 
     items.push({
       id: `group:${group.label}:${group.sortVersion}`,
@@ -253,6 +270,7 @@ export function buildAllModelItems({
         modelId: launchModel,
         groupModelIds: sortedVariants,
         labelContent,
+        rightContent: renderAccountCount(accountCount),
       },
       action: () =>
         handleModelSelect(

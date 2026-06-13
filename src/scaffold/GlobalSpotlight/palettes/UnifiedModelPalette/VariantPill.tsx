@@ -78,7 +78,7 @@ export const VariantPill: React.FC<VariantPillProps> = ({
       {variant?.thinking && (
         <span
           className={`mr-1 inline-flex items-center justify-center self-center ${
-            active ? "text-text-1" : "group-hover:text-text-1"
+            active ? "text-text-1" : "group-hover/variant-pill:text-text-1"
           }`}
         >
           <Brain size={12} strokeWidth={1.75} />
@@ -89,13 +89,19 @@ export const VariantPill: React.FC<VariantPillProps> = ({
           {index > 0 && (
             <span
               className={
-                active ? "text-text-1" : "text-text-4 group-hover:text-text-1"
+                active
+                  ? "text-text-1"
+                  : "text-text-4 group-hover/variant-pill:text-text-1"
               }
             >
               ·
             </span>
           )}
-          <span className={active ? "text-text-1" : "group-hover:text-text-1"}>
+          <span
+            className={
+              active ? "text-text-1" : "group-hover/variant-pill:text-text-1"
+            }
+          >
             {part}
           </span>
         </React.Fragment>
@@ -103,7 +109,9 @@ export const VariantPill: React.FC<VariantPillProps> = ({
       {showsDefault && (
         <span
           className={
-            active ? "text-text-1" : "text-text-3 group-hover:text-text-1"
+            active
+              ? "text-text-1"
+              : "text-text-3 group-hover/variant-pill:text-text-1"
           }
         >
           Default
@@ -114,7 +122,7 @@ export const VariantPill: React.FC<VariantPillProps> = ({
           className={
             active
               ? "ml-1 text-text-1"
-              : "ml-1 text-text-3 group-hover:text-text-1"
+              : "ml-1 text-text-3 group-hover/variant-pill:text-text-1"
           }
           size={10}
         />
@@ -123,7 +131,11 @@ export const VariantPill: React.FC<VariantPillProps> = ({
   );
 
   if (!editable || !onApply) {
-    return <span className={pillClasses}>{renderBody(false)}</span>;
+    return (
+      <span className={`${pillClasses} group/variant-pill`}>
+        {renderBody(false)}
+      </span>
+    );
   }
 
   return (
@@ -146,7 +158,7 @@ export const VariantPill: React.FC<VariantPillProps> = ({
             // open (`isActive`), we pin the lifted colours via JSX so
             // the pill stays in its "active" appearance without
             // depending on the cursor staying inside.
-            className={`${pillClasses} group cursor-pointer hover:border-border-3 hover:bg-fill-4 ${
+            className={`${pillClasses} group/variant-pill cursor-pointer hover:border-border-3 hover:bg-fill-4 ${
               isActive ? "border-border-3 bg-fill-4" : ""
             }`}
           >

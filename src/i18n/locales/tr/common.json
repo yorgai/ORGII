@@ -1121,7 +1121,7 @@
       "chooseModel": "Bir model seçin",
       "chooseKey": "Bir anahtar seçin",
       "noCompatibleAccounts": "Uyumlu anahtar yok",
-      "hoverModelHint": "Kullanılabilir anahtarları görmek için bir modelin üzerine gelin",
+      "chooseModelHint": "Gezinmek için klavyeyi kullanın veya fareyle bir modele tıklayın",
       "variantFast": "Fast",
       "selectAccount": "Hesap seç"
     },

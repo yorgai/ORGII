@@ -30,7 +30,7 @@ export interface TwoColumnModelBodyProps {
   items: SpotlightItem[];
   /** Kernel cursor over `items`. */
   selectedIndex: number;
-  onItemSelect: (item: SpotlightItem) => void;
+  onItemSelect: (item: SpotlightItem, index: number) => void;
   onItemHover: (index: number) => void;
   searchQuery: string;
   activeColumn: "models" | "sources";
@@ -71,7 +71,7 @@ const RowColumn: React.FC<{
   isKeyboardMode: boolean;
   searchQuery: string;
   maxHeight: number;
-  onSelect: (item: SpotlightItem) => void;
+  onSelect: (item: SpotlightItem, index: number) => void;
   onHover: (index: number) => void;
   onMouseMove: (event: React.MouseEvent) => void;
   dataKeyboardMode: string;
@@ -99,7 +99,7 @@ const RowColumn: React.FC<{
         index={index}
         isSelected={selectedIndex === index}
         isKeyboardMode={isKeyboardMode}
-        onSelect={onSelect}
+        onSelect={() => onSelect(item, index)}
         onHover={onHover}
         searchQuery={searchQuery}
       />
@@ -241,7 +241,7 @@ export const TwoColumnModelBody: React.FC<TwoColumnModelBodyProps> = ({
               searchQuery={searchQuery}
               maxHeight={COLUMN_HEIGHT}
               onSelect={onItemSelect}
-              onHover={onItemHover}
+              onHover={() => undefined}
               onMouseMove={handleMouseMove}
               dataKeyboardMode={dataKeyboardMode}
             />
@@ -282,7 +282,7 @@ export const TwoColumnModelBody: React.FC<TwoColumnModelBodyProps> = ({
                 title={
                   hasFocusedModel
                     ? t("selectors.modelSelector.noCompatibleAccounts")
-                    : t("selectors.modelSelector.hoverModelHint")
+                    : t("selectors.modelSelector.chooseModelHint")
                 }
                 placement="sidebar"
               />

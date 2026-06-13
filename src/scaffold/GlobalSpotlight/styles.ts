@@ -24,7 +24,8 @@ export const SPOTLIGHT_STYLES = `
    */
   
   /* Selected item - always visible regardless of input mode */
-  .spotlight-item.selected {
+  .spotlight-item.selected,
+  .spotlight-item:hover {
     background: var(--color-fill-2);
   }
 `;

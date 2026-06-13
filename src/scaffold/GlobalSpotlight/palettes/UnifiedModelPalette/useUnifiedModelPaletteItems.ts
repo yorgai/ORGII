@@ -254,12 +254,14 @@ export function useUnifiedModelPaletteItems({
     (): SpotlightItem[] =>
       buildAllModelItems({
         accountLookup,
+        accounts,
         handleModelSelect,
         modelAliasVersion,
         resolveGroupLaunchModel,
       }),
     [
       accountLookup,
+      accounts,
       handleModelSelect,
       modelAliasVersion,
       resolveGroupLaunchModel,
@@ -270,12 +272,14 @@ export function useUnifiedModelPaletteItems({
     (): SpotlightItem[] =>
       buildAllModelItems({
         accountLookup,
+        accounts,
         handleModelSelect: handleModelPreview ?? handleModelSelect,
         modelAliasVersion,
         resolveGroupLaunchModel,
       }),
     [
       accountLookup,
+      accounts,
       handleModelPreview,
       handleModelSelect,
       modelAliasVersion,

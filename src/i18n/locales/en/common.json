@@ -1190,7 +1190,7 @@
       "chooseModel": "Choose a model",
       "chooseKey": "Choose a key",
       "noCompatibleAccounts": "No compatible keys",
-      "hoverModelHint": "Hover a model to see available keys",
+      "chooseModelHint": "Use the keyboard to navigate, or click a model with the mouse",
       "variantFast": "Fast",
       "selectAccount": "Select an account"
     },
