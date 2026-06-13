@@ -9,7 +9,6 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 const TerserPlugin = require("terser-webpack-plugin");
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 const { EsbuildPlugin } = require("esbuild-loader");
-const WebpackObfuscator = require("webpack-obfuscator");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 
 // ForkTsCheckerWebpackPlugin removed - causes memory issues with large codebase
@@ -28,11 +27,9 @@ module.exports = (env, argv) => {
 
   // FAST_PROD=true: use esbuild for transpilation + minification in production.
   // Saves ~30-40s vs the SWC+Terser path. Trades some dead-code elimination
-  // depth for speed. Intended for `tauri:build:fast:parallel` (local .app
-  // builds). Never set for release builds (use OBFUSCATE=true path instead).
+  // depth for speed. Intended for local fast .app builds, not release builds.
   const useFastProd = isProduction && process.env.FAST_PROD === "true";
 
-  const useObfuscation = isProduction && process.env.OBFUSCATE === "true";
   const isE2E = process.env.ORGII_E2E === "1";
   const devServerPort = Number.parseInt(
     process.env.WEBPACK_DEV_SERVER_PORT ?? process.env.PORT ?? "1998",
@@ -486,36 +483,6 @@ module.exports = (env, argv) => {
         new CopyWebpackPlugin({
           patterns: [{ from: "public/**/*.css", to: "[name][ext]" }],
         }),
-      // JavaScript obfuscation for release builds — makes reverse engineering significantly harder.
-      // Only enabled when OBFUSCATE=true (via `pnpm run build:release` or `pnpm run tauri:build:release`).
-      // Excludes vendor chunks (node_modules) since they're public code and obfuscating them
-      // bloats bundle size for no security benefit.
-      useObfuscation &&
-        new WebpackObfuscator(
-          {
-            rotateStringArray: true,
-            stringArray: true,
-            stringArrayThreshold: 0.75,
-            stringArrayEncoding: ["base64"],
-            stringArrayWrappersCount: 2,
-            splitStrings: true,
-            splitStringsChunkLength: 10,
-            identifierNamesGenerator: "hexadecimal",
-            renameGlobals: false,
-            selfDefending: true,
-            transformObjectKeys: true,
-            unicodeEscapeSequence: false,
-            controlFlowFlattening: true,
-            controlFlowFlatteningThreshold: 0.5,
-            deadCodeInjection: true,
-            deadCodeInjectionThreshold: 0.2,
-            debugProtection: false,
-            disableConsoleOutput: true,
-            numbersToExpressions: true,
-          },
-          // Exclude vendor chunks — no point obfuscating open-source code
-          ["vendors.*.js", "vendor.*.js"]
-        ),
       // ForkTsCheckerWebpackPlugin disabled - causes memory issues with large codebase
       // Type checking is handled by IDE instead. transpileOnly: true provides fast builds.
     ].filter(Boolean),

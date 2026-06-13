@@ -12,7 +12,7 @@
     "download:sidecars": "python3 scripts/tools/download_sidecars.py",
     "tauri:dev": "node scripts/dev/tauri.js",
     "tauri:dev:only": "node scripts/tauri/run-with-features.cjs dev",
-    "build:release": "rm -rf build node_modules/.cache && OBFUSCATE=true webpack --mode production",
+    "build:release": "rm -rf build node_modules/.cache && webpack --mode production",
     "tauri:build": "node scripts/tauri/run-with-features.cjs build",
     "tauri:build:semantic": "node scripts/tauri/run-with-features.cjs build --semantic",
     "tauri:build:fast": "node scripts/tauri/build-fast-parallel.cjs",
@@ -20,7 +20,7 @@
     "tauri:build:fast:local": "node scripts/tauri/build-fast-local.cjs",
     "tauri:build:fast:open": "node scripts/tauri/build-fast-open.cjs",
     "tauri:build:fast:open:semantic": "node scripts/tauri/build-fast-open.cjs --semantic",
-    "tauri:build:release": "OBFUSCATE=true node scripts/tauri/run-with-features.cjs build",
+    "tauri:build:release": "node scripts/tauri/run-with-features.cjs build",
     "clean:cache": "rm -rf node_modules/.cache",
     "clean:cargo": "./scripts/maintenance/cargo-cleanup.sh",
     "clean:cargo:full": "./scripts/maintenance/cargo-cleanup.sh --full",
@@ -197,7 +197,6 @@
     "fork-ts-checker-webpack-plugin": "^9.1.0",
     "html-webpack-plugin": "^5.6.6",
     "husky": "^8.0.3",
-    "javascript-obfuscator": "^5.1.0",
     "lint-staged": "^15.2.0",
     "mini-css-extract-plugin": "^2.9.2",
     "postcss": "^8.4.32",
@@ -217,8 +216,7 @@
     "webpack": "^5.91.0",
     "webpack-bundle-analyzer": "^5.1.0",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1",
-    "webpack-obfuscator": "^3.6.0"
+    "webpack-dev-server": "^4.15.1"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,jsx}": [
