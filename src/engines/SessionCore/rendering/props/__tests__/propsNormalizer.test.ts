@@ -291,6 +291,38 @@ describe("normalizeEventProps", () => {
     });
   });
 
+  describe("shell process state", () => {
+    it("preserves shell process state from chat session events", () => {
+      const input = makeChatInput({
+        shellPid: 12345,
+        shellProcessStatus: "background",
+        shellExitCode: 0,
+        shellLogPath: "/tmp/orgii-shell.log",
+      }) as unknown as RawEventInput;
+      const output = normalizeEventProps(input, "run_shell");
+
+      expect(output!.shellPid).toBe(12345);
+      expect(output!.shellProcessStatus).toBe("background");
+      expect(output!.shellExitCode).toBe(0);
+      expect(output!.shellLogPath).toBe("/tmp/orgii-shell.log");
+    });
+
+    it("preserves snake-case shell process state from flat events", () => {
+      const input = makeSimulatorInput({
+        shell_pid: 12345,
+        shell_process_status: "running",
+        shell_exit_code: 0,
+        shell_log_path: "/tmp/orgii-shell.log",
+      }) as unknown as RawEventInput;
+      const output = normalizeEventProps(input, "run_shell");
+
+      expect(output!.shellPid).toBe(12345);
+      expect(output!.shellProcessStatus).toBe("running");
+      expect(output!.shellExitCode).toBe(0);
+      expect(output!.shellLogPath).toBe("/tmp/orgii-shell.log");
+    });
+  });
+
   describe("active event painting freshness", () => {
     it("keeps active painting for running events created within 30 minutes", () => {
       vi.useFakeTimers();

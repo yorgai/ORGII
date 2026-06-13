@@ -1178,6 +1178,26 @@ describe("extractShellData", () => {
   });
 
   describe("shell process state", () => {
+    it("top-level shell process state overrides stale Rust-extracted state", () => {
+      const props = makeUniversalProps({
+        rustExtracted: {
+          kind: "shell",
+          command: "npm start",
+          isFailure: false,
+          shellPid: 11111,
+          shellProcessStatus: "running",
+          shellLogPath: "/tmp/old-shell.log",
+        },
+        shellPid: 22222,
+        shellProcessStatus: "background",
+        shellLogPath: "/tmp/background-shell.log",
+      });
+      const data = extractShellData(props);
+      expect(data.shellPid).toBe(22222);
+      expect(data.shellProcessStatus).toBe("background");
+      expect(data.shellLogPath).toBe("/tmp/background-shell.log");
+    });
+
     it("extracts shellPid, shellProcessStatus, shellLogPath from args", () => {
       const props = makeUniversalProps({
         args: {
@@ -1185,6 +1205,34 @@ describe("extractShellData", () => {
           shellPid: 12345,
           shellProcessStatus: "running",
           shellLogPath: "/tmp/shell.log",
+        },
+      });
+      const data = extractShellData(props);
+      expect(data.shellPid).toBe(12345);
+      expect(data.shellProcessStatus).toBe("running");
+      expect(data.shellLogPath).toBe("/tmp/shell.log");
+    });
+
+    it("extracts top-level normalized shell process state", () => {
+      const props = makeUniversalProps({
+        args: { command: "npm start" },
+        shellPid: 12345,
+        shellProcessStatus: "background",
+        shellLogPath: "/tmp/shell.log",
+      });
+      const data = extractShellData(props);
+      expect(data.shellPid).toBe(12345);
+      expect(data.shellProcessStatus).toBe("background");
+      expect(data.shellLogPath).toBe("/tmp/shell.log");
+    });
+
+    it("extracts snake-case shell process state from args", () => {
+      const props = makeUniversalProps({
+        args: {
+          command: "npm start",
+          shell_pid: 12345,
+          shell_process_status: "running",
+          shell_log_path: "/tmp/shell.log",
         },
       });
       const data = extractShellData(props);

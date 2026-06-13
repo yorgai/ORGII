@@ -62,9 +62,9 @@ export function extractShellData(
       cwd: s.cwd,
       executionTime: s.executionTime,
       isFailure: s.isFailure,
-      shellPid: s.shellPid,
-      shellProcessStatus: s.shellProcessStatus,
-      shellLogPath: s.shellLogPath,
+      shellPid: props.shellPid ?? s.shellPid,
+      shellProcessStatus: props.shellProcessStatus ?? s.shellProcessStatus,
+      shellLogPath: props.shellLogPath ?? s.shellLogPath,
     };
   }
 
@@ -121,14 +121,21 @@ export function extractShellData(
   const cwd = (args?.cwd as string) || undefined;
   const display = getShellCommandDisplay(command);
 
-  const shellPid = (args?.shellPid as number) ?? undefined;
+  const shellPid =
+    props.shellPid ??
+    (args?.shellPid as number) ??
+    (args?.shell_pid as number) ??
+    undefined;
   const shellProcessStatus =
-    (args?.shellProcessStatus as
-      | "running"
-      | "background"
-      | "exited"
-      | "killed") ?? undefined;
-  const shellLogPath = (args?.shellLogPath as string) ?? undefined;
+    props.shellProcessStatus ??
+    (args?.shellProcessStatus as ExtractedShellData["shellProcessStatus"]) ??
+    (args?.shell_process_status as ExtractedShellData["shellProcessStatus"]) ??
+    undefined;
+  const shellLogPath =
+    props.shellLogPath ??
+    (args?.shellLogPath as string) ??
+    (args?.shell_log_path as string) ??
+    undefined;
 
   return {
     command,

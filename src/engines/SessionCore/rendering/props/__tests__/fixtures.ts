@@ -87,6 +87,14 @@ export function makeSessionEvent(
     ...(overrides.threadId ? { threadId: overrides.threadId } : {}),
     ...(overrides.processId ? { processId: overrides.processId } : {}),
     ...(overrides.callId ? { callId: overrides.callId } : {}),
+    ...(overrides.shellPid ? { shellPid: overrides.shellPid } : {}),
+    ...(overrides.shellProcessStatus
+      ? { shellProcessStatus: overrides.shellProcessStatus }
+      : {}),
+    ...(overrides.shellExitCode !== undefined
+      ? { shellExitCode: overrides.shellExitCode }
+      : {}),
+    ...(overrides.shellLogPath ? { shellLogPath: overrides.shellLogPath } : {}),
   } as SessionEvent;
 }
 

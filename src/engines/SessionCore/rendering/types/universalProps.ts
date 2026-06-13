@@ -112,6 +112,14 @@ export interface UniversalEventProps {
   timestamp?: string;
   /** Whether active-state visual treatment should be shown for running/pending events. */
   showActiveEventPainting?: boolean;
+  /** Shell process PID attached by shell process lifecycle events. */
+  shellPid?: number;
+  /** Shell process status attached by shell process lifecycle events. */
+  shellProcessStatus?: "running" | "background" | "exited" | "killed";
+  /** Shell process exit code attached by shell process lifecycle events. */
+  shellExitCode?: number;
+  /** Shell process log path attached by shell process lifecycle events. */
+  shellLogPath?: string;
 
   // ─────────────────────────────────────────
   // Rendering Control

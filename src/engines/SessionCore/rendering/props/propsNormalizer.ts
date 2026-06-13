@@ -217,6 +217,10 @@ export function normalizeEventProps(
         status,
         sessionEvent.createdAt
       ),
+      shellPid: sessionEvent.shellPid,
+      shellProcessStatus: sessionEvent.shellProcessStatus,
+      shellExitCode: sessionEvent.shellExitCode,
+      shellLogPath: sessionEvent.shellLogPath,
       variant,
       context,
       isSelected: input.isSelected,
@@ -242,6 +246,16 @@ export function normalizeEventProps(
   const rawFunctionName =
     ((input as { functionName?: string }).functionName as string | undefined) ||
     ((input as { function?: string }).function as string | undefined);
+  const shellInput = input as {
+    shellPid?: number;
+    shell_pid?: number;
+    shellProcessStatus?: UniversalEventProps["shellProcessStatus"];
+    shell_process_status?: UniversalEventProps["shellProcessStatus"];
+    shellExitCode?: number;
+    shell_exit_code?: number;
+    shellLogPath?: string;
+    shell_log_path?: string;
+  };
 
   return {
     eventId,
@@ -261,6 +275,11 @@ export function normalizeEventProps(
       status,
       normalized.createdAt
     ),
+    shellPid: shellInput.shellPid ?? shellInput.shell_pid,
+    shellProcessStatus:
+      shellInput.shellProcessStatus ?? shellInput.shell_process_status,
+    shellExitCode: shellInput.shellExitCode ?? shellInput.shell_exit_code,
+    shellLogPath: shellInput.shellLogPath ?? shellInput.shell_log_path,
     variant,
     context,
     isSelected: input.isSelected,

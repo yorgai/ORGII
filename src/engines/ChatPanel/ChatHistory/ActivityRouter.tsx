@@ -90,6 +90,12 @@ function arePropsEqual(
   if (prevEvent.displayStatus !== nextEvent.displayStatus) return false;
   if (prevEvent.displayText !== nextEvent.displayText) return false;
   if (prevEvent.displayVariant !== nextEvent.displayVariant) return false;
+  if (prevEvent.shellPid !== nextEvent.shellPid) return false;
+  if (prevEvent.shellProcessStatus !== nextEvent.shellProcessStatus) {
+    return false;
+  }
+  if (prevEvent.shellExitCode !== nextEvent.shellExitCode) return false;
+  if (prevEvent.shellLogPath !== nextEvent.shellLogPath) return false;
   if (prevEvent.extracted !== nextEvent.extracted) return false;
   if (prevEvent.payloadRefs !== nextEvent.payloadRefs) return false;
 
@@ -241,14 +247,16 @@ const ActivityChatItem: React.FC<ActivityChatItemProps> = memo(
                 expand={true}
                 finish={!isStreaming}
                 streamHtml={isStreaming}
+                appendedContent={
+                  <MessageReferenceCards
+                    content={assistantContent}
+                    enabled={!isStreaming}
+                    sessionId={event.sessionId}
+                  />
+                }
               >
                 {assistantContent}
               </AgentChatItemDefault>
-              <MessageReferenceCards
-                content={assistantContent}
-                enabled={!isStreaming}
-                sessionId={event.sessionId}
-              />
             </AgentMessageBlock>
           );
         }
