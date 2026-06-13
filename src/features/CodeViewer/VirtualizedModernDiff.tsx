@@ -9,14 +9,11 @@
  * - Smooth scrolling for any file size
  * - All features from ModernDiff (cherry-picking, syntax highlighting, etc.)
  */
-import { useAtomValue } from "jotai";
 import { Check } from "lucide-react";
 import React, { useCallback, useRef } from "react";
 import { Components, Virtuoso, VirtuosoHandle } from "react-virtuoso";
 
-import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { Placeholder } from "@src/modules/shared/layouts/blocks";
-import { themesAtom } from "@src/store/ui/uiAtom";
 
 import { DiffLineComponent } from "./DiffLineComponent";
 import "./index.scss";
@@ -74,8 +71,6 @@ const VirtualizedModernDiffComponent: React.FC<ModernDiffProps> = ({
   newStartLine = 1,
   className,
 }) => {
-  const themes = useAtomValue(themesAtom);
-  const isDark = isThemeCssPathDark(themes);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
 
   // Diff computation, language detection, expansion, and flattening
@@ -137,7 +132,6 @@ const VirtualizedModernDiffComponent: React.FC<ModernDiffProps> = ({
         <DiffLineComponent
           line={line}
           language={language}
-          isDark={isDark}
           onExpand={
             line.type === "collapse"
               ? () => handleExpand(collapseIndex)
@@ -163,7 +157,6 @@ const VirtualizedModernDiffComponent: React.FC<ModernDiffProps> = ({
     [
       flattenedLines,
       language,
-      isDark,
       cherrypicking,
       selectedLines,
       toggleLineSelection,

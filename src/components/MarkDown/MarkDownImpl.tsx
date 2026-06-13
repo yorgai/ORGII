@@ -16,16 +16,13 @@ import { useAtomValue } from "jotai";
 import React, { memo, useCallback, useMemo } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { Prism as SyntaxHighlighterPrism } from "react-syntax-highlighter";
-import {
-  oneDark,
-  oneLight,
-} from "react-syntax-highlighter/dist/esm/styles/prism";
 import remarkGfm from "remark-gfm";
 
 import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { getLanguageFromPath } from "@src/config/languageMap";
 import CanvasInlineCard from "@src/engines/ChatPanel/blocks/CanvasInlineCard";
 import ChatCodeBlock from "@src/engines/ChatPanel/blocks/CodeBlock";
+import { codeMirrorPrismTheme } from "@src/features/CodeMirror/themes";
 import { themesAtom } from "@src/store";
 
 import MermaidBlock from "./MermaidBlock";
@@ -142,13 +139,8 @@ export interface MarkdownProps {
 // Static Styles (moved outside component for performance)
 // ============================================
 
-const THEME_STYLES = {
-  dark: oneDark,
-  light: oneLight,
-} as const;
-
 const CODE_CUSTOM_STYLE: React.CSSProperties = {
-  fontFamily: "var(--code-font-family)",
+  fontFamily: "var(--cm-font-family)",
   fontSize: "12px",
   lineHeight: "1.6",
   margin: 0,
@@ -205,10 +197,6 @@ function splitIntoStableMarkdownBlocks(content: string): string[] {
   return blocks;
 }
 
-// Just use the theme styles directly
-const COMBINED_STYLE_DARK = THEME_STYLES.dark;
-const COMBINED_STYLE_LIGHT = THEME_STYLES.light;
-
 // ============================================
 // Memoized Code Block Component
 // ============================================
@@ -216,15 +204,14 @@ const COMBINED_STYLE_LIGHT = THEME_STYLES.light;
 interface CodeBlockProps {
   children: string;
   language: string;
-  isDarkMode: boolean;
 }
 
 const CodeBlock = memo<CodeBlockProps>(
-  ({ children, language, isDarkMode }) => (
+  ({ children, language }) => (
     <div className="code-block-wrapper" style={CODE_WRAPPER_STYLE}>
       <SyntaxHighlighter
         customStyle={CODE_CUSTOM_STYLE}
-        style={isDarkMode ? COMBINED_STYLE_DARK : COMBINED_STYLE_LIGHT}
+        style={codeMirrorPrismTheme}
         language={language}
         PreTag="div"
         showLineNumbers={false}
@@ -236,9 +223,7 @@ const CodeBlock = memo<CodeBlockProps>(
     </div>
   ),
   (prev, next) =>
-    prev.children === next.children &&
-    prev.language === next.language &&
-    prev.isDarkMode === next.isDarkMode
+    prev.children === next.children && prev.language === next.language
 );
 CodeBlock.displayName = "CodeBlock";
 
@@ -422,11 +407,7 @@ const MarkdownComponent: React.FC<MarkdownProps> = ({
             );
           }
 
-          return (
-            <CodeBlock isDarkMode={isDarkMode} language={language}>
-              {codeContent}
-            </CodeBlock>
-          );
+          return <CodeBlock language={language}>{codeContent}</CodeBlock>;
         }
         return <pre {...props}>{children}</pre>;
       },

@@ -5,3 +5,4 @@
  */
 
 export { createGithubTheme } from "./github";
+export { codeMirrorPrismTheme } from "./prism";

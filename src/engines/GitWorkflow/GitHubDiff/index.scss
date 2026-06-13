@@ -378,41 +378,41 @@
 // ============================================
 
 .github-diff {
-  // Override highlight.js styles for better integration
+  // Override highlight.js styles with CodeMirror-backed public theme tokens
   .hljs-comment,
   .hljs-quote {
-    color: #8b949e;
+    color: var(--cm-syntax-comment);
   }
 
   .hljs-keyword,
   .hljs-selector-tag,
   .hljs-type {
-    color: #ff7b72;
+    color: var(--cm-syntax-keyword);
   }
 
   .hljs-string,
-  .hljs-title,
   .hljs-section {
-    color: #a5d6ff;
+    color: var(--cm-syntax-string);
+  }
+
+  .hljs-title {
+    color: var(--cm-syntax-function);
   }
 
   .hljs-number,
-  .hljs-literal {
-    color: #79c0ff;
+  .hljs-literal,
+  .hljs-variable,
+  .hljs-attr {
+    color: var(--cm-syntax-variable);
   }
 
   .hljs-built_in,
   .hljs-builtin-name {
-    color: #ffa657;
+    color: var(--cm-syntax-constant);
   }
 
   .hljs-function,
   .hljs-name {
-    color: #d2a8ff;
-  }
-
-  .hljs-variable,
-  .hljs-attr {
-    color: #79c0ff;
+    color: var(--cm-syntax-function);
   }
 }

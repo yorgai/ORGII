@@ -10,18 +10,12 @@
  * - Optional internal scrolling
  * - Virtualization for large files
  */
-import { useAtomValue } from "jotai";
 import React, { useMemo } from "react";
 import { Prism as PrismHighlighter } from "react-syntax-highlighter";
-import {
-  a11yDark,
-  oneLight,
-} from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Components, Virtuoso } from "react-virtuoso";
 
-import { isThemeCssPathDark } from "@src/config/appearance/globalThemes";
 import { getLanguageFromPath } from "@src/config/languageMap";
-import { themesAtom } from "@src/store/ui/uiAtom";
+import { codeMirrorPrismTheme } from "@src/features/CodeMirror/themes";
 import { getLanguageFromFilePath } from "@src/util/editor/extension";
 
 import "./index.scss";
@@ -128,7 +122,6 @@ interface CodeLineProps {
   content: string;
   language?: string;
   showLineNumbers?: boolean;
-  isDark?: boolean;
   /** When true, no vertical separator between gutter and code (matches flat panels). */
   plainGutter?: boolean;
 }
@@ -139,11 +132,8 @@ const CodeLine = React.memo<CodeLineProps>(
     content,
     language,
     showLineNumbers = true,
-    isDark = true,
     plainGutter = false,
   }) => {
-    const theme = isDark ? a11yDark : oneLight;
-
     return (
       <div className="code-line">
         {showLineNumbers && (
@@ -157,7 +147,7 @@ const CodeLine = React.memo<CodeLineProps>(
           {content ? (
             <SyntaxHighlighter
               language={language || "text"}
-              style={theme}
+              style={codeMirrorPrismTheme}
               customStyle={SYNTAX_CUSTOM_STYLE}
               codeTagProps={SYNTAX_CODE_TAG_PROPS}
               PreTag="span"
@@ -196,9 +186,6 @@ export const ModernCodeViewer: React.FC<ModernCodeViewerProps> = ({
   plainLineGutter = false,
   className = "",
 }) => {
-  const themes = useAtomValue(themesAtom);
-  const isDark = isThemeCssPathDark(themes);
-
   // Detect language
   const detectedLanguage = useMemo(() => {
     if (language) return language;
@@ -226,7 +213,6 @@ export const ModernCodeViewer: React.FC<ModernCodeViewerProps> = ({
       content={lines[index]}
       language={detectedLanguage}
       showLineNumbers={showLineNumbers}
-      isDark={isDark}
       plainGutter={plainLineGutter}
     />
   );

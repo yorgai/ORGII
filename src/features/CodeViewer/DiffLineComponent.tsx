@@ -12,10 +12,8 @@ import {
 } from "lucide-react";
 import React from "react";
 import { Prism as PrismHighlighter } from "react-syntax-highlighter";
-import {
-  a11yDark,
-  oneLight,
-} from "react-syntax-highlighter/dist/esm/styles/prism";
+
+import { codeMirrorPrismTheme } from "@src/features/CodeMirror/themes";
 
 import type { DiffLine } from "./types";
 
@@ -38,26 +36,7 @@ const SyntaxHighlighter =
   PrismHighlighter as unknown as React.FC<SyntaxHighlighterProps>;
 
 // Code font family - uses CSS variable for user-configurable font
-const CODE_FONT = "var(--code-font-family)";
-
-// Create custom themes with forced font family
-const createCustomTheme = (
-  baseTheme: Record<string, React.CSSProperties>
-): Record<string, React.CSSProperties> => {
-  const customTheme: Record<string, React.CSSProperties> = {};
-  for (const key in baseTheme) {
-    customTheme[key] = {
-      ...baseTheme[key],
-      fontFamily: CODE_FONT,
-      fontSize: "12px",
-      lineHeight: "1.5",
-    };
-  }
-  return customTheme;
-};
-
-const darkTheme = createCustomTheme(a11yDark);
-const lightTheme = createCustomTheme(oneLight);
+const CODE_FONT = "var(--cm-font-family)";
 
 // Pre-defined style objects to avoid re-creating on every render
 const SYNTAX_CUSTOM_STYLE: React.CSSProperties = {
@@ -134,7 +113,6 @@ export interface DiffLineComponentProps {
   rangeSelected?: boolean;
   onToggleRange?: () => void;
   isSingleLineRange?: boolean;
-  isDark?: boolean;
   showLineNumbers?: boolean;
   allowExpand?: boolean;
   /** Style for change indicators: "icon" shows +/- icons, "border" shows colored left border */
@@ -153,7 +131,6 @@ export const DiffLineComponent = React.memo<DiffLineComponentProps>(
     rangeSelected = false,
     onToggleRange,
     isSingleLineRange = false,
-    isDark = true,
     showLineNumbers = true,
     allowExpand = true,
     indicatorStyle = "icon",
@@ -261,7 +238,7 @@ export const DiffLineComponent = React.memo<DiffLineComponentProps>(
           {content ? (
             <SyntaxHighlighter
               language={language || "text"}
-              style={isDark ? darkTheme : lightTheme}
+              style={codeMirrorPrismTheme}
               customStyle={SYNTAX_CUSTOM_STYLE}
               codeTagProps={SYNTAX_CODE_TAG_PROPS}
               PreTag="span"
@@ -284,7 +261,6 @@ export const DiffLineComponent = React.memo<DiffLineComponentProps>(
     return (
       prevProps.line === nextProps.line &&
       prevProps.language === nextProps.language &&
-      prevProps.isDark === nextProps.isDark &&
       prevProps.cherrypicking === nextProps.cherrypicking &&
       prevProps.isSelected === nextProps.isSelected &&
       prevProps.isRangeStart === nextProps.isRangeStart &&
