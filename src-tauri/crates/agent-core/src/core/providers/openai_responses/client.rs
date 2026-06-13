@@ -94,14 +94,15 @@ impl OpenAIResponsesClient {
 
     /// Parse HTTP error response into ProviderError.
     pub(super) fn parse_error(status: u16, body: &str, retry_after: Option<u64>) -> ProviderError {
+        let message = crate::providers::http_error_body::clean_error_message(status, body);
         match status {
-            401 => ProviderError::AuthError(body.to_string()),
+            401 => ProviderError::AuthError(message),
             429 => ProviderError::RateLimited {
-                message: body.to_string(),
+                message,
                 retry_after_secs: retry_after,
             },
-            404 => ProviderError::ModelNotFound(body.to_string()),
-            _ => ProviderError::RequestFailed(format!("HTTP {}: {}", status, body)),
+            404 => ProviderError::ModelNotFound(message),
+            _ => ProviderError::RequestFailed(format!("HTTP {}: {}", status, message)),
         }
     }
 }

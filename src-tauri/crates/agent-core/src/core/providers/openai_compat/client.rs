@@ -197,7 +197,7 @@ impl OpenAICompatClient {
         ProviderError::RequestFailed(format!(
             "HTTP {}: {}",
             status,
-            safe_truncate_utf8(body, 500)
+            crate::providers::http_error_body::clean_error_message(status, body)
         ))
     }
 

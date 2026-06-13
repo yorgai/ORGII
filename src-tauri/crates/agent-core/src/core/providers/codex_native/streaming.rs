@@ -111,14 +111,15 @@ impl LLMProvider for CodexNativeClient {
                     .await
                     .map_err(|err| ProviderError::ParseError(err.to_string()))?;
                 let code = status.as_u16();
+                let message = crate::providers::http_error_body::clean_error_message(code, &body);
                 return Err(match code {
-                    401 => ProviderError::AuthError(body),
+                    401 => ProviderError::AuthError(message),
                     429 => ProviderError::RateLimited {
-                        message: body,
+                        message,
                         retry_after_secs: retry_after,
                     },
-                    404 => ProviderError::ModelNotFound(body),
-                    _ => ProviderError::RequestFailed(format!("HTTP {}: {}", code, body)),
+                    404 => ProviderError::ModelNotFound(message),
+                    _ => ProviderError::RequestFailed(format!("HTTP {}: {}", code, message)),
                 });
             }
 

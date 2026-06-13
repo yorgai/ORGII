@@ -90,7 +90,8 @@ impl std::fmt::Display for ClientError {
                 http_version,
                 body,
             } => {
-                let snippet = &body[..body.len().min(300)];
+                let snippet =
+                    crate::providers::http_error_body::clean_error_message(*status, body);
                 write!(formatter, "HTTP {} ({}): {}", status, http_version, snippet)
             }
             Self::Decode(err) => write!(formatter, "proto decode failed: {}", err),

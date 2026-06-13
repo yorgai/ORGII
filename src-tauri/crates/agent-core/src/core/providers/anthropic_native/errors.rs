@@ -4,7 +4,6 @@
 //! (streaming + non-streaming) can branch on overload / rate-limit / auth
 //! / context-too-long etc. rather than parsing strings.
 
-use crate::providers::safe_truncate::safe_truncate_utf8;
 use crate::providers::traits::ProviderError;
 
 use reqwest::header::HeaderMap;
@@ -25,8 +24,8 @@ pub(super) fn classify_error(
     headers: Option<&HeaderMap>,
     retry_after_secs: Option<u64>,
 ) -> AnthropicErrorClassification {
-    let message =
-        extract_error_message(body).unwrap_or_else(|| safe_truncate_utf8(body, 500).to_string());
+    let message = extract_error_message(body)
+        .unwrap_or_else(|| crate::providers::http_error_body::clean_error_message(status, body));
     let lower = message.to_lowercase();
     let parsed_retry_after =
         retry_after_secs.or_else(|| headers.and_then(parse_anthropic_retry_after));

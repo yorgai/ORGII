@@ -398,7 +398,7 @@ fn map_error(status: u16, body: &str, retry_after_secs: Option<u64>) -> Provider
                 })
                 .or(error.message)
         })
-        .unwrap_or_else(|| body.to_string());
+        .unwrap_or_else(|| crate::providers::http_error_body::clean_error_message(status, body));
     let retry_after_secs = retry_after_secs
         .or_else(|| {
             detail_summary
