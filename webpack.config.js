@@ -17,13 +17,19 @@ const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 module.exports = (env, argv) => {
   const isProduction = argv.mode === "production";
 
+  const isLightDev = !isProduction && process.env.ORGII_LIGHT_DEV === "true";
+
   // Development build mode:
   // - Default: SWC (fast builds ~3-5s + React Fast Refresh for state-preserving HMR)
   // - FAST_DEV=true: esbuild (fastest ~2s, but full app remount on changes)
+  // - ORGII_LIGHT_DEV=true: esbuild, no HMR, no source maps
   //
   // SWC is a Rust-based compiler that's nearly as fast as esbuild but supports
   // React Fast Refresh. esbuild is faster but can't support Fast Refresh.
-  const useFastDev = !isProduction && process.env.FAST_DEV === "true";
+  const useFastDev =
+    !isProduction && (isLightDev || process.env.FAST_DEV === "true");
+  const useDevSourceMaps =
+    !isProduction && !isLightDev && process.env.DEV_SOURCEMAPS !== "false";
 
   // FAST_PROD=true: use esbuild for transpilation + minification in production.
   // Saves ~30-40s vs the SWC+Terser path. Trades some dead-code elimination
@@ -457,9 +463,10 @@ module.exports = (env, argv) => {
       }),
       // NOTE: HotModuleReplacementPlugin is automatically added by webpack-dev-server when hot: true
       // ReactRefreshWebpackPlugin works with SWC's refresh: true option to enable
-      // state-preserving hot reload. Only enabled when not using esbuild (FAST_DEV mode).
+      // state-preserving hot reload. Only enabled when not using esbuild/light mode.
       !isProduction &&
         !useFastDev &&
+        !isLightDev &&
         new ReactRefreshWebpackPlugin({ overlay: false }),
       new Dotenv({
         systemvars: true,
@@ -488,9 +495,9 @@ module.exports = (env, argv) => {
     ].filter(Boolean),
     devServer: {
       port: devServerPort,
-      hot: true,
-      // Disable liveReload when HMR is enabled to prevent double reloads
-      liveReload: false,
+      hot: !isLightDev,
+      // Light dev uses full page reloads to avoid HMR runtime overhead.
+      liveReload: isLightDev,
       historyApiFallback: true,
       // Disable static file watching to prevent full page reloads during HMR.
       // Default behavior watches public/ directory, which can race with HMR
@@ -546,8 +553,8 @@ module.exports = (env, argv) => {
       // Only show minimal info in dev mode
       preset: isProduction ? "normal" : "minimal",
     },
-    // eval-cheap-module-source-map: maps to original lines (not columns) via loaders
-    // ~1-2s faster rebuilds than eval-source-map; column precision rarely needed in dev
-    devtool: isProduction ? false : "eval-cheap-module-source-map",
+    // eval-cheap-module-source-map maps to original lines via loaders.
+    // Light dev disables source maps to reduce renderer and compiler memory.
+    devtool: useDevSourceMaps ? "eval-cheap-module-source-map" : false,
   };
 };

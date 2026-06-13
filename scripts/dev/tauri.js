@@ -66,9 +66,11 @@ function printBanner(features) {
 
   const title = `${paint("ORG", STYLE.muted, STYLE.bold)} ${paint("II", STYLE.white, STYLE.bold)}`;
   const subtitle = paint("Tauri Dev", STYLE.muted);
+  const lightDevLabel =
+    process.env.ORGII_LIGHT_DEV === "true" ? "light dev, " : "";
   const featureLabel = features.length
-    ? `features: ${features.join(", ")}`
-    : "default desktop profile";
+    ? `${lightDevLabel}features: ${features.join(", ")}`
+    : `${lightDevLabel}default desktop profile`;
   const logoText = paint(
     "   II   ",
     STYLE.white,
@@ -137,7 +139,7 @@ function shouldSuppressLine(clean) {
   return (
     clean.startsWith("Info Watching ") ||
     clean.startsWith("Running DevCommand (`cargo ") ||
-    clean.startsWith("Running BeforeDevCommand (`pnpm run start:fast`)") ||
+    clean.startsWith("Running BeforeDevCommand (`pnpm run dev:frontend`)") ||
     clean.startsWith(
       "Info `tauri` dependency has workspace inheritance enabled"
     ) ||
@@ -333,6 +335,16 @@ function startTauriDev(features) {
   const args = ["dev"];
   if (features.length > 0) {
     args.push("--features", features.join(","));
+  }
+  if (process.env.ORGII_LIGHT_DEV === "true") {
+    args.push(
+      "--config",
+      JSON.stringify({
+        build: {
+          beforeDevCommand: "pnpm run dev:frontend:light",
+        },
+      })
+    );
   }
 
   const isWindows = process.platform === "win32";

@@ -221,7 +221,12 @@ const runServer = async () => {
 
     const port = devServerOptions.port || config.devServer?.port || 8080;
     const host = devServerOptions.host || config.devServer?.host || "localhost";
-    const modeLabel = isSlowMode ? "slow, ts-loader" : "fast, esbuild";
+    const modeLabel =
+      process.env.ORGII_LIGHT_DEV === "true"
+        ? "light, esbuild, no HMR/source maps"
+        : isSlowMode
+          ? "slow, ts-loader"
+          : "fast, esbuild";
 
     console.log(`✨ ORGII Dev Server: http://${host}:${port} (${modeLabel})`);
   } catch (error) {
