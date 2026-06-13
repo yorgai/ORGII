@@ -1714,7 +1714,8 @@
     "taskGetFailed": "Failed to fetch task",
     "orgSendMessageRunning": "Sending message to {{recipient}}",
     "orgSendMessageDone": "Sent message to {{recipient}}",
-    "orgSendMessageFailed": "Failed to send message to {{recipient}}"
+    "orgSendMessageFailed": "Failed to send message to {{recipient}}",
+    "noMatch": "No match"
   },
   "hoverCard": {
     "commits": "Commits",

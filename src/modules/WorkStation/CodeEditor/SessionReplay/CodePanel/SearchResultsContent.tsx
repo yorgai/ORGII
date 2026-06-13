@@ -65,6 +65,19 @@ function isDirectoryNotFoundMessage(message: string): boolean {
   return /Execution failed:\s*Directory not found/i.test(message);
 }
 
+function NoMatchPlaceholder(): React.ReactElement {
+  const { t: tSessions } = useTranslation("sessions");
+
+  return (
+    <Placeholder
+      variant="no-results"
+      placement="detail-panel"
+      fillParentHeight
+      title={tSessions("tools.noMatch")}
+    />
+  );
+}
+
 function groupResultsByFile(
   results: SearchResult[]
 ): GroupedExploreResult<SearchResult>[] {
@@ -142,6 +155,10 @@ export const SearchResultsContent: React.FC<{
       Boolean(directoryNotFoundMessage) ||
       visibleFileList.length > 0 ||
       showTruncationHint;
+    if (hasResultPayload && !hasVisibleBody) {
+      return <NoMatchPlaceholder />;
+    }
+
     return (
       <div className="flex w-full min-w-0 flex-col">
         <DirectorySummaryHeader
@@ -224,6 +241,11 @@ export const SearchResultsContent: React.FC<{
     const hiddenFileCount = Math.max(0, fileList.length - visibleFiles.length);
     const fileCount = totalMatches > 0 ? totalMatches : fileList.length;
     const hasVisibleBody = visibleFiles.length > 0 || hiddenFileCount > 0;
+
+    if (hasResultPayload && !hasVisibleBody) {
+      return <NoMatchPlaceholder />;
+    }
+
     return (
       <div className="flex w-full min-w-0 flex-col">
         <SearchSummaryHeader
@@ -410,6 +432,10 @@ export const SearchResultsContent: React.FC<{
           })
         : undefined;
     const highlightTerms = parseSearchKeywords(_query);
+
+    if (hasResultPayload && !hasVisibleBody) {
+      return <NoMatchPlaceholder />;
+    }
 
     return (
       <div className="flex w-full min-w-0 flex-col">

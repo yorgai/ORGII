@@ -1690,7 +1690,8 @@
     "taskGetFailed": "Failed to fetch task",
     "orgSendMessageRunning": "{{recipient}} 에게 메시지를 보내는 중",
     "orgSendMessageDone": "{{recipient}} 에게 메시지를 보냈습니다",
-    "orgSendMessageFailed": "{{recipient}} 에게 메시지를 보내지 못했습니다"
+    "orgSendMessageFailed": "{{recipient}} 에게 메시지를 보내지 못했습니다",
+    "noMatch": "No match"
   },
   "hoverCard": {
     "commits": "커밋",

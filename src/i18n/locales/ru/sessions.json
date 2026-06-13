@@ -1696,7 +1696,8 @@
     "taskGetFailed": "Failed to fetch task",
     "orgSendMessageRunning": "Отправка сообщения {{recipient}}",
     "orgSendMessageDone": "Сообщение отправлено {{recipient}}",
-    "orgSendMessageFailed": "Не удалось отправить сообщение {{recipient}}"
+    "orgSendMessageFailed": "Не удалось отправить сообщение {{recipient}}",
+    "noMatch": "No match"
   },
   "hoverCard": {
     "commits": "Коммиты",

@@ -1690,7 +1690,8 @@
     "taskGetFailed": "Failed to fetch task",
     "orgSendMessageRunning": "Đang gửi tin nhắn đến {{recipient}}",
     "orgSendMessageDone": "Đã gửi tin nhắn đến {{recipient}}",
-    "orgSendMessageFailed": "Không gửi được tin nhắn đến {{recipient}}"
+    "orgSendMessageFailed": "Không gửi được tin nhắn đến {{recipient}}",
+    "noMatch": "No match"
   },
   "hoverCard": {
     "commits": "Commit",

@@ -1690,7 +1690,8 @@
     "taskGetFailed": "Failed to fetch task",
     "orgSendMessageRunning": "Enviando mensaje a {{recipient}}",
     "orgSendMessageDone": "Mensaje enviado a {{recipient}}",
-    "orgSendMessageFailed": "Error al enviar el mensaje a {{recipient}}"
+    "orgSendMessageFailed": "Error al enviar el mensaje a {{recipient}}",
+    "noMatch": "No match"
   },
   "hoverCard": {
     "commits": "Commits",

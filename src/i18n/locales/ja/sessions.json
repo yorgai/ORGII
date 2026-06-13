@@ -1690,7 +1690,8 @@
     "taskGetFailed": "Failed to fetch task",
     "orgSendMessageRunning": "{{recipient}} にメッセージを送信中",
     "orgSendMessageDone": "{{recipient}} にメッセージを送信しました",
-    "orgSendMessageFailed": "{{recipient}} へのメッセージ送信に失敗"
+    "orgSendMessageFailed": "{{recipient}} へのメッセージ送信に失敗",
+    "noMatch": "No match"
   },
   "hoverCard": {
     "commits": "コミット",

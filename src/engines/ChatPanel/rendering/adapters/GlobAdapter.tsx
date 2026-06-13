@@ -29,6 +29,13 @@ function extractPattern(props: UniversalEventProps): string {
   );
 }
 
+function extractTotalFiles(props: UniversalEventProps): number | null {
+  if (props.rustExtracted?.kind === "glob") {
+    return props.rustExtracted.totalFiles;
+  }
+  return null;
+}
+
 export const GlobAdapter: React.FC<UniversalEventProps> = (props) => {
   const action =
     (props.args?.action as string | undefined) ??
@@ -39,19 +46,23 @@ export const GlobAdapter: React.FC<UniversalEventProps> = (props) => {
   if (state === "failed") return null;
 
   const pattern = extractPattern(props);
-  const title =
-    labels[state] || getToolDisplayLabelFromRegistry(props.eventType, action);
+  const totalFiles = extractTotalFiles(props);
+  const isLoading =
+    props.status === "running" && props.showActiveEventPainting === true;
+  const showNoMatch = state === "done" && !isLoading && totalFiles === 0;
+  const title = showNoMatch
+    ? getToolDisplayLabelFromRegistry(props.eventType, action)
+    : labels[state] || getToolDisplayLabelFromRegistry(props.eventType, action);
   const toolName = props.functionName || props.eventType;
 
   return (
     <div data-tool-call-event-id={props.eventId} data-tool-call-name={toolName}>
       <GlobBlock
         pattern={pattern}
-        isLoading={
-          props.status === "running" && props.showActiveEventPainting === true
-        }
+        isLoading={isLoading}
         eventId={props.eventId}
         title={title}
+        showNoMatch={showNoMatch}
       />
     </div>
   );

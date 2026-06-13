@@ -1694,7 +1694,8 @@
     "taskGetFailed": "Failed to fetch task",
     "orgSendMessageRunning": "正在向 {{recipient}} 傳送訊息",
     "orgSendMessageDone": "向 {{recipient}} 傳送訊息",
-    "orgSendMessageFailed": "向 {{recipient}} 傳送訊息失敗"
+    "orgSendMessageFailed": "向 {{recipient}} 傳送訊息失敗",
+    "noMatch": "No match"
   },
   "hoverCard": {
     "commits": "提交",

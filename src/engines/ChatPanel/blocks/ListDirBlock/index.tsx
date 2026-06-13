@@ -7,11 +7,14 @@
  * tab, so chat stays compact for what is usually a high-volume,
  * low-information event.
  */
+import { SearchX } from "lucide-react";
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 import { getToolIcon } from "@src/config/toolIcons";
 
 import {
+  EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES,
   EventBlockHeader,
   EventBlockHeaderIcon,
   EventBlockHeaderSubtitle,
@@ -35,10 +38,19 @@ export interface ListDirBlockProps {
   title: string;
   /** Optional repo-relative target path label for multi-root workspaces. */
   targetPath?: string;
+  showNoMatch?: boolean;
 }
 
 const ListDirBlock: React.FC<ListDirBlockProps> = React.memo(
-  ({ dirPath, isLoading = false, eventId, title, targetPath }) => {
+  ({
+    dirPath,
+    isLoading = false,
+    eventId,
+    title,
+    targetPath,
+    showNoMatch = false,
+  }) => {
+    const { t } = useTranslation("sessions");
     const {
       isHeaderHovered,
       handleHeaderMouseEnter,
@@ -75,7 +87,7 @@ const ListDirBlock: React.FC<ListDirBlockProps> = React.memo(
             })}
             isCollapsed
             isHeaderHovered={isHeaderHovered}
-            hasContent={false}
+            hasContent={showNoMatch}
             revealChevronOnIconHoverOnly={Boolean(eventId)}
             isLoading={isLoading}
           />
@@ -92,6 +104,16 @@ const ListDirBlock: React.FC<ListDirBlockProps> = React.memo(
             </EventBlockHeaderSubtitle>
           )}
         </EventBlockHeader>
+        {showNoMatch && !isLoading && (
+          <div className="animate-fade-in overflow-hidden">
+            <div className={EVENT_BLOCK_TRANSPARENT_EXPANDED_SHELL_CLASSES}>
+              <div className="chat-block-content flex items-center gap-2 px-3 py-2 text-text-3">
+                <SearchX size={13} className="shrink-0 text-text-4" />
+                <span>{t("tools.noMatch")}</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
